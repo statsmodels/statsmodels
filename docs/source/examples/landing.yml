@@ -64,7 +64,7 @@
     text: Ordinal Regression
   - img: ../_static/images/count_hurdle.png
     target: notebooks/generated/count_hurdle.html
-    text: Hurdel count Models
+    text: Hurdle Count Models
   - img: ../_static/images/post_estimation.png
     target: notebooks/generated/postestimation_poisson.html
     text: Post-estimation for Poisson Regression
@@ -149,6 +149,9 @@
   - img: ../_static/images/deterministics.png
     target: notebooks/generated/deterministics.html
     text: Deterministic Terms
+  - img: ../_static/images/autoregressive_integrated_moving_average.png
+    target: notebooks/generated/autoregressive_integrated_moving_average.html
+    text: 'Autoregressive Integrated Moving Average (ARIMA) Tutorial'
   - img: ../_static/images/tsa_arma0.png
     target: notebooks/generated/tsa_arma_0.html
     text: 'ARMA: Sunspots Data'
@@ -173,9 +176,15 @@
   - img: ../_static/images/mstl_decomposition.png
     target: notebooks/generated/mstl_decomposition.html
     text: Multi-seasonal Decomposition
+  - img: ../_static/images/stl_seasonal_diagnostic_plot.png
+    target: notebooks/generated/stl_seasonal_diagnostic_plot.html
+    text: Seasonal Diagnostic Plots
   - img: ../_static/images/stationarity_detrending_adf_kpss.png
     target: notebooks/generated/stationarity_detrending_adf_kpss.html
     text: Stationarity and detrending (ADF/KPSS)
+  - img: ../_static/images/local_projections.png
+    target: notebooks/generated/local_projections.html
+    text: Local Projections
 - header: State space models
   id: statespace
   links:
@@ -209,6 +218,9 @@
   - img: ../_static/images/statespace_seasonal.png
     target: notebooks/generated/statespace_seasonal.html
     text: Seasonality in Time Series Data
+  - img: ../_static/images/arima_seasonal.png
+    target: notebooks/generated/arima_alternative_estimators_seasonal_differencing.html
+    text: Seasonal Differencing for ARIMA Models
   - img: ../_static/images/statespace_fixed_params.png
     target: notebooks/generated/statespace_fixed_params.html
     text: Fixed / constrained parameters in state space models
@@ -216,7 +228,7 @@
     target: notebooks/generated/statespace_tvpvar_mcmc_cfa.html
     text: TVP-VAR, MCMC, and sparse simulation smoothing
   - img: ../_static/images/statespace_sarimax_pymc3.png
-    target: notebooks/generated/statespace_sarimax_pymc3.html
+    target: notebooks/generated/statespace_sarimax_pymc.html
     text: SARIMAX estimation with Bayesian methods
   - img: ../_static/images/statespace_news.png
     target: notebooks/generated/statespace_news.html
@@ -248,6 +260,9 @@
   - img: ../_static/images/pca_fertility_factors.png
     target: notebooks/generated/pca_fertility_factors.html
     text: Principal Component Analysis
+  - img: ../_static/images/multivariate_ls.png
+    target: notebooks/generated/multivariate_ls.html
+    text: Multivariate Least Squares
 - header: User Notes
   id: user
   links:

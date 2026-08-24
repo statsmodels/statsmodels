@@ -12,7 +12,9 @@ Journal of Forecasting, 19(2), 287-290.
 Fioruci, J. A., Pellegrini, T. R., Louzada, F., & Petropoulos, F. (2015).
 The optimized theta method. arXiv preprint arXiv:1503.03529.
 """
-from typing import TYPE_CHECKING, Optional, Tuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -41,6 +43,21 @@ if TYPE_CHECKING:
 
 
 def extend_index(steps: int, index: pd.Index) -> pd.Index:
+    """
+    Extend a pandas index by a number of periods
+
+    Parameters
+    ----------
+    steps : int
+        The number of periods to extend the index by.
+    index : pd.Index
+        The index to extend.
+
+    Returns
+    -------
+    pd.Index
+        The extended index.
+    """
     return DeterministicTerm._extend_index(index, steps)
 
 
@@ -50,28 +67,27 @@ class ThetaModel:
 
     Parameters
     ----------
-    endog : array_like, 1d
-        The data to forecast.
-    period : int, default None
+    endog : array_like
+        The data to forecast, 1-d.
+    period : int, optional
         The period of the data that is used in the seasonality test and
-        adjustment. If None then the period is determined from y's index,
-        if available.
-    deseasonalize : bool, default True
-        A flag indicating whether the deseasonalize the data. If True and
-        use_test is True, the data is only deseasonalized if the null of no
-        seasonal component is rejected.
-    use_test : bool, default True
-        A flag indicating whether test the period-th autocorrelation. If this
-        test rejects using a size of 10%, then decomposition is used. Set to
+        adjustment. If None, the period is determined from y's index, if
+        available.
+    deseasonalize : bool, optional
+        Whether to deseasonalize the data. If True and use_test is True,
+        the data is only deseasonalized if the null of no seasonal
+        component is rejected.
+    use_test : bool, optional
+        Whether to test the period-th autocorrelation. If this test
+        rejects using a size of 10%, then decomposition is used. Set to
         False to skip the test.
-    method : {"auto", "additive", "multiplicative"}, default "auto"
+    method : {"auto", "additive", "multiplicative"}, optional
         The model used for the seasonal decomposition. "auto" uses a
-        multiplicative if y is non-negative and all estimated seasonal
-        components are positive. If either of these conditions is False,
-        then it uses an additive decomposition.
-    difference : bool, default False
-        A flag indicating to difference the data before testing for
-        seasonality.
+        multiplicative decomposition if y is non-negative and all
+        estimated seasonal components are positive. If either of these
+        conditions is False, then it uses an additive decomposition.
+    difference : bool, optional
+        Whether to difference the data before testing for seasonality.
 
     See Also
     --------
@@ -129,7 +145,7 @@ class ThetaModel:
         self,
         endog,
         *,
-        period: Optional[int] = None,
+        period: int | None = None,
         deseasonalize: bool = True,
         use_test: bool = True,
         method: str = "auto",
@@ -151,6 +167,8 @@ class ThetaModel:
             "model",
             options=("auto", "additive", "multiplicative", "mul", "add"),
         )
+        if self._method == "auto":
+            self._method = "mul" if self._y.min() > 0 else "add"
         if self._period is None and self._deseasonalize:
             idx = getattr(endog, "index", None)
             pfreq = None
@@ -179,13 +197,10 @@ class ThetaModel:
         # CV is 10% from a chi2(1), 1.645**2
         self._has_seasonality = stat > 2.705543454095404
 
-    def _deseasonalize_data(self) -> Tuple[np.ndarray, np.ndarray]:
+    def _deseasonalize_data(self) -> tuple[np.ndarray, np.ndarray]:
         y = self._y
         if not self._has_seasonality:
             return self._y, np.empty(0)
-        self._method = (
-            "mul" if self._method == "auto" and self._y.min() > 0 else "add"
-        )
 
         res = seasonal_decompose(y, model=self._method, period=self._period)
         if res.seasonal.min() <= 0:
@@ -197,19 +212,24 @@ class ThetaModel:
 
     def fit(
         self, use_mle: bool = False, disp: bool = False
-    ) -> "ThetaModelResults":
+    ) -> ThetaModelResults:
         r"""
-        Estimate model parameters.
+        Estimate model parameters
 
         Parameters
         ----------
-        use_mle : bool, default False
+        use_mle : bool, optional
             Estimate the parameters using MLE by fitting an ARIMA(0,1,1) with
             a drift.  If False (the default), estimates parameters using OLS
             of a constant and a time-trend and by fitting a SES to the model
             data.
-        disp : bool, default True
+        disp : bool, optional
             Display iterative output from fitting the model.
+
+        Returns
+        -------
+        ThetaModelResults
+            Model results and forecasting
 
         Notes
         -----
@@ -231,11 +251,6 @@ class ThetaModel:
         .. math::
 
            \tilde{X}_{t+1} = \alpha X_{t} + (1-\alpha)\tilde{X}_{t}
-
-        Returns
-        -------
-        ThetaModelResult
-            Model results and forecasting
         """
         if self._deseasonalize and self._use_test:
             self._test_seasonality()
@@ -294,7 +309,7 @@ class ThetaModel:
 
 class ThetaModelResults:
     """
-    Results class from estimated Theta Models.
+    Results class from estimated Theta Models
 
     Parameters
     ----------
@@ -302,8 +317,10 @@ class ThetaModelResults:
         The estimated trend slope.
     alpha : float
         The estimated SES parameter.
-    sigma2 : float
-        The estimated residual variance from the SES/IMA model.
+    sigma2 : float or None
+        The estimated residual variance from the SES/IMA model. If None,
+        the variance is estimated lazily from an ARIMA(0,1,1) model when
+        first accessed.
     one_step : float
         The one-step forecast from the SES.
     seasonal : ndarray
@@ -318,7 +335,7 @@ class ThetaModelResults:
         self,
         b0: float,
         alpha: float,
-        sigma2: Optional[float],
+        sigma2: float | None,
         one_step: float,
         seasonal: np.ndarray,
         use_mle: bool,
@@ -359,9 +376,9 @@ class ThetaModelResults:
 
         Parameters
         ----------
-        steps : int
+        steps : int, optional
             The number of steps ahead to compute the forecast components.
-        theta : float
+        theta : float, optional
             The theta value to use when computing the weight to combine
             the trend and the SES forecasts.
 
@@ -426,7 +443,7 @@ class ThetaModelResults:
 
         Parameters
         ----------
-        steps : int
+        steps : int, optional
             The number of steps ahead to compute the forecast components.
 
         Returns
@@ -542,8 +559,8 @@ class ThetaModelResults:
         data = np.asarray(self.params)[:, None]
         st = SimpleTable(
             data,
-            ["Parameters", "Estimate"],
-            list(self.params.index),
+            ["Estimate"],
+            ["Parameters"] + list(self.params.index),
             title="Parameter Estimates",
             txt_fmt=table_fmt,
         )
@@ -555,14 +572,16 @@ class ThetaModelResults:
         self, steps: int = 1, theta: float = 2, alpha: float = 0.05
     ) -> pd.DataFrame:
         r"""
+        Compute the prediction intervals for the forecast
+
         Parameters
         ----------
-        steps : int, default 1
+        steps : int, optional
             The number of steps ahead to compute the forecast components.
-        theta : float, default 2
+        theta : float, optional
             The theta value to use when computing the weight to combine
             the trend and the SES forecasts.
-        alpha : float, default 0.05
+        alpha : float, optional
             Significance level for the confidence intervals.
 
         Returns
@@ -574,10 +593,10 @@ class ThetaModelResults:
         -----
         The variance of the h-step forecast is assumed to follow from the
         integrated Moving Average structure of the Theta model, and so is
-        :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2)`. The prediction interval
+        :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`. The prediction interval
         assumes that innovations are normally distributed.
         """
-        model_alpha = self.params[1]
+        model_alpha = self.params.iloc[1]
         sigma2_h = (
             1 + np.arange(steps) * (1 + (model_alpha - 1) ** 2)
         ) * self.sigma2
@@ -595,33 +614,33 @@ class ThetaModelResults:
         self,
         steps: int = 1,
         theta: float = 2,
-        alpha: Optional[float] = 0.05,
+        alpha: float | None = 0.05,
         in_sample: bool = False,
-        fig: Optional["matplotlib.figure.Figure"] = None,
-        figsize: Tuple[float, float] = None,
-    ) -> "matplotlib.figure.Figure":
+        fig: matplotlib.figure.Figure | None = None,
+        figsize: tuple[float, float] | None = None,
+    ) -> matplotlib.figure.Figure:
         r"""
         Plot forecasts, prediction intervals and in-sample values
 
         Parameters
         ----------
-        steps : int, default 1
+        steps : int, optional
             The number of steps ahead to compute the forecast components.
-        theta : float, default 2
+        theta : float, optional
             The theta value to use when computing the weight to combine
             the trend and the SES forecasts.
-        alpha : {float, None}, default 0.05
+        alpha : float or None, optional
             The tail probability not covered by the confidence interval. Must
             be in (0, 1). Confidence interval is constructed assuming normally
             distributed shocks. If None, figure will not show the confidence
             interval.
-        in_sample : bool, default False
+        in_sample : bool, optional
             Flag indicating whether to include the in-sample period in the
             plot.
-        fig : Figure, default None
+        fig : Figure, optional
             An existing figure handle. If not provided, a new figure is
             created.
-        figsize: tuple[float, float], default None
+        figsize : tuple of float, optional
             Tuple containing the figure size.
 
         Returns
@@ -633,8 +652,8 @@ class ThetaModelResults:
         -----
         The variance of the h-step forecast is assumed to follow from the
         integrated Moving Average structure of the Theta model, and so is
-        :math:`\sigma^2(\alpha^2 + (h-1))`. The prediction interval assumes
-        that innovations are normally distributed.
+        :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`. The prediction interval
+        assumes that innovations are normally distributed.
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 
@@ -654,7 +673,7 @@ class ThetaModelResults:
         ax.plot(pred_index, predictions)
         if alpha is not None:
             pi = self.prediction_intervals(steps, theta, alpha)
-            label = "{0:.0%} confidence interval".format(1 - alpha)
+            label = f"{1 - alpha:.0%} confidence interval"
             ax.fill_between(
                 pred_index,
                 pi["lower"],

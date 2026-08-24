@@ -2,6 +2,7 @@
 Variance functions for use with the link functions in statsmodels.family.links
 """
 import numpy as np
+
 FLOAT_EPS = np.finfo(float).eps
 
 
@@ -46,6 +47,16 @@ class VarianceFunction:
     def deriv(self, mu):
         """
         Derivative of the variance function v'(mu)
+
+        Parameters
+        ----------
+        mu : array_like
+            mean parameters
+
+        Returns
+        -------
+        v' : ndarray
+            zeros(mu.shape)
         """
         return np.zeros_like(mu)
 
@@ -65,7 +76,7 @@ class Power:
 
     Parameters
     ----------
-    power : float
+    power : float, optional
         exponent used in power variance function
 
     Methods
@@ -108,6 +119,16 @@ class Power:
         Derivative of the variance function v'(mu)
 
         May be undefined at zero.
+
+        Parameters
+        ----------
+        mu : array_like
+            mean parameters
+
+        Returns
+        -------
+        v' : ndarray
+            The value of the derivative of the power variance function
         """
 
         der = self.power * np.fabs(mu) ** (self.power - 1)
@@ -198,9 +219,23 @@ class Binomial:
     # TODO: inherit from super
     def deriv(self, mu):
         """
-        Derivative of the variance function v'(mu)
+        Derivative of the variance function V'(mu).
+
+        For the Binomial variance V(mu) = p*(1 - p)*n where p = mu/n, the
+        derivative with respect to mu is dV/dmu = 1 - 2*p.
+
+        Parameters
+        ----------
+        mu : array_like
+            mean parameters
+
+        Returns
+        -------
+        V' : ndarray
+            The value of the derivative of the binomial variance function
         """
-        return 1 - 2*mu
+        p = self._clean(mu / self.n)
+        return 1 - 2 * p
 
 
 binary = Binomial()
@@ -214,12 +249,12 @@ This is an alias of Binomial(n=1)
 
 
 class NegativeBinomial:
-    '''
+    """
     Negative binomial variance function
 
     Parameters
     ----------
-    alpha : float
+    alpha : float, optional
         The ancillary parameter for the negative binomial variance function.
         `alpha` is assumed to be nonstochastic.  The default is 1.
 
@@ -239,7 +274,7 @@ class NegativeBinomial:
 
     A private method _clean trims the data by machine epsilon so that p is
     in (0,inf)
-    '''
+    """
 
     def __init__(self, alpha=1.):
         self.alpha = alpha
@@ -267,6 +302,17 @@ class NegativeBinomial:
     def deriv(self, mu):
         """
         Derivative of the negative binomial variance function.
+
+        Parameters
+        ----------
+        mu : array_like
+            mean parameters
+
+        Returns
+        -------
+        V' : ndarray
+            The value of the derivative of the negative binomial variance
+            function
         """
 
         p = self._clean(mu)

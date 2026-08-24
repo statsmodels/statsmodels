@@ -11,9 +11,9 @@ from statsmodels.tsa.ardl.model import (
 __all__ = [
     "ARDL",
     "UECM",
+    "ARDLOrderSelectionResults",
     "ARDLResults",
+    "BoundsTestResult",
     "UECMResults",
     "ardl_select_order",
-    "ARDLOrderSelectionResults",
-    "BoundsTestResult",
 ]

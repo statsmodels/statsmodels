@@ -1,7 +1,8 @@
+"""Reference results for Grunfeld clustered covariance tests."""
+
 import numpy as np
 
 from statsmodels.tools.testing import ParamsTableTestBunch
-
 
 est = dict(
     N_clust=10,
@@ -40,18 +41,18 @@ params_table = np.array([
     -2.0912580352272,  .06604843284516, -88.919387334862,  3.4906493013959,
     9,  2.2621571627982,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     .00025262993207, -.00065043385106,  .20961897960949, -.00065043385106,
     .00721940994738, -1.2171040967615,  .20961897960949, -1.2171040967615,
     417.18890043724]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_cluster = ParamsTableTestBunch(
@@ -97,7 +98,7 @@ est = dict(
     r2c=.8124080178314146,
     r2u=.8710896173136538,
     clustvar="company",
-    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on company",  # noqa:E501
+    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on company",
     hacsubtitleB="Estimates efficient for homoskedasticity only",
     title="OLS estimation",
     predict="ivreg2_p",
@@ -123,18 +124,18 @@ params_table = np.array([
     -2.2155410088072,  .02672295281194, -80.501358543152, -4.9273794903145,
     np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     .000225081844, -.00057950714469,   .1867610305767, -.00057950714469,
     .00643216775713, -1.0843847053056,   .1867610305767, -1.0843847053056,
     371.69644244987]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_cluster_large = ParamsTableTestBunch(
@@ -146,6 +147,7 @@ results_cluster_large = ParamsTableTestBunch(
     cov_rownames=cov_rownames,
     **est
 )
+
 
 est = dict(
     N=200,
@@ -175,18 +177,18 @@ params_table = np.array([
     -3.5039501641153,   .0066818746948, -70.290850216489, -15.137887816977,
     9,  2.2621571627982,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     .00018052657317, -.00035661054613, -.06728261073866, -.00035661054613,
     .0024312795189, -.32394785247278, -.06728261073866, -.32394785247278,
     148.60456447156]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_nw_groupsum4 = ParamsTableTestBunch(
@@ -225,18 +227,18 @@ params_table = np.array([
     -2.6401049523298,  .00895205094219, -74.620718612662, -10.808019420804,
     197,  1.9720790337785,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     .0001305958131, -.00022910455176,  .00889686530849, -.00022910455176,
     .00468152667913, -.88403667445531,  .00889686530849, -.88403667445531,
     261.76140136858]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_nw_panel4 = ParamsTableTestBunch(
@@ -285,7 +287,7 @@ est = dict(
     yy=13620706.07273678,
     Fdf2=9,
     clustvar="company time",
-    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on company and time",  # noqa:E501
+    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on company and time",
     hacsubtitleB="Estimates efficient for homoskedasticity only",
     title="OLS estimation",
     predict="ivreg2_p",
@@ -314,18 +316,18 @@ params_table = np.array([
     -2.189850750062,  .05626393734425, -86.839118533508,  1.4103805000422,
     9,  2.2621571627982,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     .00026737985466, -.00070163493529,  .19641438763743, -.00070163493529,
     .0061581549818, -.99627581152391,  .19641438763743, -.99627581152391,
     380.46872042467]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_cluster_2groups_small = ParamsTableTestBunch(
@@ -373,7 +375,7 @@ est = dict(
     yyc=9359943.916562419,
     yy=13620706.07273678,
     clustvar="company time",
-    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on company and time",  # noqa:E501
+    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on company and time",
     hacsubtitleB="Estimates efficient for homoskedasticity only",
     title="OLS estimation",
     predict="ivreg2_p",
@@ -401,18 +403,18 @@ params_table = np.array([
     -2.319993065515,  .02034125246974, -78.800091055978, -6.6286469774879,
     np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     .00023822335794, -.00062512499511,  .17499633632219, -.00062512499511,
     .00548663757926, -.88763669036779,  .17499633632219, -.88763669036779,
     338.98042277032]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_cluster_2groups_large = ParamsTableTestBunch(
@@ -459,8 +461,8 @@ est = dict(
     r2u=.8710896173136538,
     yyc=9359943.916562419,
     clustvar="year",
-    hacsubtitleV2="and kernel-robust to common correlated disturbances (Driscoll-Kraay)",  # noqa:E501
-    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on year",  # noqa:E501
+    hacsubtitleV2="and kernel-robust to common correlated disturbances (Driscoll-Kraay)",
+    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on year",
     hacsubtitleB="Estimates efficient for homoskedasticity only",
     title="OLS estimation",
     predict="ivreg2_p",
@@ -489,18 +491,18 @@ params_table = np.array([
     -3.5039501641153,  .00045841113727, -66.607010456823, -18.821727576643,
     np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     .00018052657317, -.00035661054613, -.06728261073866, -.00035661054613,
     .0024312795189, -.32394785247278, -.06728261073866, -.32394785247278,
     148.60456447156]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_nw_groupsum4_ivreg_large = ParamsTableTestBunch(
@@ -548,8 +550,8 @@ est = dict(
     yyc=9359943.916562419,
     yy=13620706.07273678,
     clustvar="year",
-    hacsubtitleV2="and kernel-robust to common correlated disturbances (Driscoll-Kraay)",  # noqa:E501
-    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on year",  # noqa:E501
+    hacsubtitleV2="and kernel-robust to common correlated disturbances (Driscoll-Kraay)",
+    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on year",
     hacsubtitleB="Estimates efficient for homoskedasticity only",
     title="OLS estimation",
     predict="ivreg2_p",
@@ -579,18 +581,18 @@ params_table = np.array([
     -3.3980228752988,  .00301793225123,  -69.02443375196, -16.404304281506,
     19,  2.0930240544083,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     .00019195718975, -.00037919048186, -.07154282413568, -.00037919048186,
     .00258522374705, -.34445964542925, -.07154282413568, -.34445964542925,
     158.01393710842]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_nw_groupsum4_ivreg_small = ParamsTableTestBunch(
@@ -644,18 +646,18 @@ params_table = np.array([
     -3.9526702081656,  .00010767530575, -13.898516363832, -4.6461508703863,
     197,  1.9720790337785,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     .00005906623137,  6.805470065e-06, -.01210153268743,  6.805470065e-06,
     .00009740892653, -.01511046663892, -.01210153268743, -.01511046663892,
     5.502967366154]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_hc1_wls_small = ParamsTableTestBunch(
@@ -707,18 +709,18 @@ params_table = np.array([
     -1.6209032690934,  .13948922172294, -22.212942910549,  3.6682756763312,
     9,  2.2621571627982,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se t pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     .00068101693289, -.00006496077364, -.08926939086077, -.00006496077364,
     .00052252600559,  -.0697116307149, -.08926939086077,  -.0697116307149,
     32.723812971732]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_cluster_wls_small = ParamsTableTestBunch(
@@ -764,7 +766,7 @@ est = dict(
     r2c=.772822462592346,
     r2u=.8261050632949187,
     clustvar="company",
-    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on company",  # noqa:E501
+    hacsubtitleV="Statistics robust to heteroskedasticity and clustering on company",
     hacsubtitleB="Estimates efficient for homoskedasticity only",
     title="OLS estimation",
     predict="ivreg2_p",
@@ -792,18 +794,18 @@ params_table = np.array([
     -1.7172331694572,  .08593657730569, -19.855311086568,    1.31064385235,
     np.nan,  1.9599639845401,                0]).reshape(3, 9)
 
-params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+params_table_colnames = "b se z pvalue ll ul df crit eform".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     .00060675528745, -.00005787711139, -.07953498994782, -.00005787711139,
     .00046554703915, -.06210991017966, -.07953498994782, -.06210991017966,
     29.155437386372]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_cluster_wls_large = ParamsTableTestBunch(
@@ -815,3 +817,398 @@ results_cluster_wls_large = ParamsTableTestBunch(
     cov_rownames=cov_rownames,
     **est
 )
+
+# new CRV types
+# CRV3
+# library(AER)
+# library(summclust)
+# data(Grunfeld)
+# Grunfeld <- Grunfeld[1:200, ]
+# lm_fit <- lm(
+# invest ~ value + capital,
+# data = Grunfeld)
+# summclust_res <- summclust(
+# obj = lm_fit,
+# cluster = ~firm,
+# params = c("value", "capital", "(Intercept)"),
+# type = "CRV3"
+# )
+# tidy(summclust_res)
+# summclust_res$vcov[c(2, 3, 1), c(2, 3, 1)]
+
+est = dict(
+    N_clust=10,
+    N=200,
+    df_m=2,
+    df_r=9,
+    # F=51.59060716590177,
+    # r2=.8124080178314147,
+    # rmse=94.40840193979599,
+    # mss=7604093.484267689,
+    # rss=1755850.432294737,
+    # r2_a=.8105035307027997,
+    # ll=-1191.80235741801,
+    # ll_0=-1359.150955647688,
+    rank=3,
+    cmdline="regress invest mvalue kstock, vce(cluster company)",
+    title="Linear regression",
+    marginsok="XB default",
+    vce="cluster",
+    depvar="invest",
+    cmd="regress",
+    # properties="b V",
+    # predict="regres_p",
+    model="ols",
+    # estat_cmd="regress_estat",
+    vcetype="Robust",
+    clustvar="company",
+    )
+
+params_table = np.array([
+    0.1155622 , 0.01612997, 7.164436, 0.0000528288, 0.07907362, 0.1520507,
+    0.2306785, 0.14733088, 1.565717, 0.1518557711, -0.10260711, 0.5639641,
+    -42.7143694 , 34.81338218, -1.226953,
+    0.2509677931, -121.46771129, 36.0389724
+]).reshape(3, 6)
+
+params_table_colnames = 'b se t pvalue ll ul'.split()
+
+params_table_rownames = 'mvalue kstock _cons'.split()
+
+cov = np.array([
+    0.0002601760, -0.0006664354,    0.2173403,
+    -0.0006664354,  0.0217063876,   -4.4847950,
+    0.2173402673, -4.4847950039, 1211.9715786]).reshape(3, 3)
+
+cov_colnames = 'mvalue kstock _cons'.split()
+
+cov_rownames = 'mvalue kstock _cons'.split()
+
+
+results_cluster_crv3 = ParamsTableTestBunch(
+    params_table=params_table,
+    params_table_colnames=params_table_colnames,
+    params_table_rownames=params_table_rownames,
+    cov=cov,
+    cov_colnames=cov_colnames,
+    cov_rownames=cov_rownames,
+    **est
+    )
+
+
+# CRV-jackknife.
+# library(AER)
+# library(summclust)
+# data(Grunfeld)
+# Grunfeld <- Grunfeld[1:200, ]
+# lm_fit <- lm(
+# invest ~ value + capital,
+# data = Grunfeld)
+# summclust_res <- summclust(
+# obj = lm_fit,
+# cluster = ~firm,
+# params = c("value", "capital", "(Intercept)"),
+# type = "CRV3J"
+# )
+# tidy(summclust_res)
+# summclust_res$vcov[c(2, 3, 1), c(2, 3, 1)]
+
+est = dict(
+    N_clust=10,
+    N=200,
+    df_m=2,
+    df_r=9,
+    rank=3,
+    cmdline="regress invest mvalue kstock, vce(cluster company)",
+    title="Linear regression",
+    marginsok="XB default",
+    vce="cluster",
+    depvar="invest",
+    cmd="regress",
+    # properties="b V",
+    # predict="regres_p",
+    model="ols",
+    # estat_cmd="regress_estat",
+    vcetype="Robust",
+    clustvar="company",
+    )
+
+params_table = np.array([
+    0.1155622, 0.01604534, 7.202226 , 5.070967e-05,  0.07926508,  0.1518592,
+    0.2306785, 0.14636496, 1.576050, 1.494682e-01, -0.10042206, 0.5617790,
+    -42.7143694, 34.42252880, -1.240884,  2.460189e-01,
+    -120.58353952, 35.1548006
+    ]).reshape(3, 6)
+
+params_table_colnames = 'b se t pvalue ll ul'.split()
+
+params_table_rownames = 'mvalue kstock _cons'.split()
+
+cov = np.array([
+
+    0.0002574529, -0.0006942295,    0.2259246,
+    -0.0006942295,  0.0214227025,   -4.3971775,
+    0.2259245878, -4.3971774822, 1184.9104889]).reshape(3, 3)
+
+cov_colnames = 'mvalue kstock _cons'.split()
+
+cov_rownames = 'mvalue kstock _cons'.split()
+
+results_cluster_crv_jk = ParamsTableTestBunch(
+    params_table=params_table,
+    params_table_colnames=params_table_colnames,
+    params_table_rownames=params_table_rownames,
+    cov=cov,
+    cov_colnames=cov_colnames,
+    cov_rownames=cov_rownames,
+    **est
+    )
+
+# CRV3 - WLS
+# library(AER)
+# library(summclust)
+#
+# data(Grunfeld)
+# Grunfeld <- Grunfeld[1:200, ]
+# Grunfeld$weights <- 1:nrow(Grunfeld)
+#
+# lm_fit <- lm(
+#  invest ~ value + capital,
+#  data = Grunfeld,
+#  weights = Grunfeld$weights
+# )
+#
+# summclust_res <- summclust(
+#  obj = lm_fit,
+#  cluster = ~firm,
+#  params = c("value", "capital", "(Intercept)"),
+#  type = "CRV3"
+# )
+#
+# summclust_res <- summclust(
+#   obj = lm_fit,
+#   cluster = ~firm,
+#   params = c("value", "capital", "(Intercept)"),
+#   type = "CRV3J"
+# )
+# tidy(summclust_res)[c(2, 3, 1), c(1, 3, 2, 4, 5, 6)]
+#
+# summclust_res$vcov[c(2, 3, 1), c(2, 3, 1)]
+
+
+est = dict(
+    N_clust=10,
+    N=200,
+    df_m=2,
+    df_r=9,
+    # F=51.59060716590177,
+    # r2=.8124080178314147,
+    # rmse=94.40840193979599,
+    # mss=7604093.484267689,
+    # rss=1755850.432294737,
+    # r2_a=.8105035307027997,
+    # ll=-1191.80235741801,
+    # ll_0=-1359.150955647688,
+    rank=3,
+    cmdline="regress invest mvalue kstock, vce(cluster company)",
+    title="Linear regression",
+    marginsok="XB default",
+    vce="cluster",
+    depvar="invest",
+    cmd="regress",
+    # properties="b V",
+    # predict="regres_p",
+    model="ols",
+    # estat_cmd="regress_estat",
+    vcetype="Robust",
+    clustvar="company",
+    )
+
+params_table = np.array([
+    0.1155455,  0.04609930,  2.506448, 0.03350546,   0.011261637,  0.2198294,
+    0.1322743,  0.05464912,  2.420428, 0.03858354,   0.008649359,  0.2558992,
+    -22.8586442, 21.67061826, -1.054822, 0.31899940, -71.880988565, 26.1637001
+    ]).reshape(3, 6)
+
+params_table_colnames = 'b se t pvalue ll ul'.split()
+
+params_table_rownames = 'mvalue kstock _cons'.split()
+
+cov = np.array([
+    0.0021251457 , 0.0004465362 , -0.6472085,
+    0.0004465362 , 0.0029865262 , -0.9030029,
+    -0.6472084770, -0.9030028664, 469.6156959
+    ]).reshape(3, 3)
+
+cov_colnames = 'mvalue kstock _cons'.split()
+
+cov_rownames = 'mvalue kstock _cons'.split()
+
+
+results_cluster_crv3_wls = ParamsTableTestBunch(
+    params_table=params_table,
+    params_table_colnames=params_table_colnames,
+    params_table_rownames=params_table_rownames,
+    cov=cov,
+    cov_colnames=cov_colnames,
+    cov_rownames=cov_rownames,
+    **est
+    )
+
+
+est = dict(
+    N_clust=10,
+    N=200,
+    df_m=2,
+    df_r=9,
+    rank=3,
+    cmdline="regress invest mvalue kstock, vce(cluster company)",
+    title="Linear regression",
+    marginsok="XB default",
+    vce="cluster",
+    depvar="invest",
+    cmd="regress",
+    # properties="b V",
+    # predict="regres_p",
+    model="ols",
+    # estat_cmd="regress_estat",
+    vcetype="Robust",
+    clustvar="company",
+    )
+
+params_table = np.array([
+    0.1155455,  0.04609157,  2.506868, 0.03348236,   0.011279124,
+    0.2198119, 0.1322743 , 0.05461995,  2.421720, 0.03850184,
+    0.008715339 , 0.2558332, -22.8586442, 21.66885303, -1.054908,
+    0.31896217, -71.876995329, 26.1597069
+    ]).reshape(3, 6)
+
+params_table_colnames = 'b se t pvalue ll ul'.split()
+
+params_table_rownames = 'mvalue kstock _cons'.split()
+
+cov = np.array([
+    0.0021244331,  0.0004480432 , -0.6469750,
+    0.0004480432,  0.0029833392,  -0.9034966,
+    -0.6469749816, -0.9034966486, 469.5391916
+    ]).reshape(3, 3)
+
+cov_colnames = 'mvalue kstock _cons'.split()
+
+cov_rownames = 'mvalue kstock _cons'.split()
+
+
+results_cluster_crv_jk_wls = ParamsTableTestBunch(
+    params_table=params_table,
+    params_table_colnames=params_table_colnames,
+    params_table_rownames=params_table_rownames,
+    cov=cov,
+    cov_colnames=cov_colnames,
+    cov_rownames=cov_rownames,
+    **est
+    )
+
+
+# ---------------------------------------------------------------------
+# Independent cross-check against the CRAN `sandwich` package's vcovJK(),
+# a second, actively-maintained R implementation of the same leave-one-
+# cluster-out jackknife/CRV3 estimator (MacKinnon, Nielsen & Webb 2022)
+# used above via the `summclust` package. Generated by, in order:
+#   1. generate_crv3_jackknife.py   (writes grunfeld_crv3_jackknife.csv)
+#   2. crv3_jackknife_r_results.R   (prints the arrays pasted in below)
+# `center="estimate"` (cluster-crv3) and `center="mean"` (cluster-jk).
+# Columns of params_table: b, se, t, pvalue.
+# Row/column order: value, capital, const (matches statsmodels' exog
+# order from add_constant(..., prepend=False)).
+# ---------------------------------------------------------------------
+
+params_table_colnames_r = "b se t pvalue".split()
+params_table_rownames_r = "mvalue kstock _cons".split()
+
+ols_crv3 = np.array([
+    0.1155621564, 0.01612997208, 7.16443623, 5.282879938e-05,
+    0.2306784887, 0.1473308781, 1.565717192, 0.1518557711,
+    -42.71436944, 34.81338218, -1.22695259, 0.2509677931,
+]).reshape(3, 4)
+
+ols_crv3_cov = np.array([
+    0.0002601759993, -0.0006664354164, 0.2173402673,
+    -0.0006664354164, 0.02170638763, -4.484795004,
+    0.2173402673, -4.484795004, 1211.971579,
+]).reshape(3, 3)
+
+ols_jk = np.array([
+    0.1155621564, 0.01604533828, 7.202226237, 5.070966928e-05,
+    0.2306784887, 0.1463649632, 1.576049921, 0.1494682119,
+    -42.71436944, 34.4225288, -1.240884122, 0.2460188922,
+]).reshape(3, 4)
+
+ols_jk_cov = np.array([
+    0.0002574528806, -0.0006942294519, 0.2259245878,
+    -0.0006942294519, 0.02142270245, -4.397177482,
+    0.2259245878, -4.397177482, 1184.910489,
+]).reshape(3, 3)
+
+wls_crv3 = np.array([
+    0.1155455057, 0.04609930297, 2.506447998, 0.03350546242,
+    0.1322742557, 0.05464911913, 2.420427955, 0.03858354221,
+    -22.85864424, 21.67061826, -1.05482197, 0.3189993998,
+]).reshape(3, 4)
+
+wls_crv3_cov = np.array([
+    0.002125145734, 0.0004465361751, -0.647208477,
+    0.0004465361751, 0.002986526222, -0.9030028664,
+    -0.647208477, -0.9030028664, 469.6156959,
+]).reshape(3, 3)
+
+wls_jk = np.array([
+    0.1155455057, 0.04609157291, 2.506868357, 0.03348236078,
+    0.1322742557, 0.0546199524, 2.421720449, 0.03850184369,
+    -22.85864424, 21.66885303, -1.0549079, 0.318962168,
+]).reshape(3, 4)
+
+wls_jk_cov = np.array([
+    0.002124433093, 0.0004480432261, -0.6469749816,
+    0.0004480432261, 0.0029833392, -0.9034966486,
+    -0.6469749816, -0.9034966486, 469.5391916,
+]).reshape(3, 3)
+
+results_cluster_crv3_sandwich_r = ParamsTableTestBunch(
+    params_table=ols_crv3,
+    params_table_colnames=params_table_colnames_r,
+    params_table_rownames=params_table_rownames_r,
+    cov=ols_crv3_cov,
+    cov_colnames=params_table_rownames_r,
+    cov_rownames=params_table_rownames_r,
+    **est
+    )
+
+results_cluster_jk_sandwich_r = ParamsTableTestBunch(
+    params_table=ols_jk,
+    params_table_colnames=params_table_colnames_r,
+    params_table_rownames=params_table_rownames_r,
+    cov=ols_jk_cov,
+    cov_colnames=params_table_rownames_r,
+    cov_rownames=params_table_rownames_r,
+    **est
+    )
+
+results_cluster_crv3_wls_sandwich_r = ParamsTableTestBunch(
+    params_table=wls_crv3,
+    params_table_colnames=params_table_colnames_r,
+    params_table_rownames=params_table_rownames_r,
+    cov=wls_crv3_cov,
+    cov_colnames=params_table_rownames_r,
+    cov_rownames=params_table_rownames_r,
+    **est
+    )
+
+results_cluster_jk_wls_sandwich_r = ParamsTableTestBunch(
+    params_table=wls_jk,
+    params_table_colnames=params_table_colnames_r,
+    params_table_rownames=params_table_rownames_r,
+    cov=wls_jk_cov,
+    cov_colnames=params_table_rownames_r,
+    cov_rownames=params_table_rownames_r,
+    **est
+    )

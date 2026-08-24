@@ -6,14 +6,16 @@ Notes
 These functions have not been formally tested.
 """
 
-from scipy import stats
 import numpy as np
+from scipy import stats
+
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.validation import array_like
 
 
 def durbin_watson(resids, axis=0):
     r"""
-    Calculates the Durbin-Watson statistic.
+    Calculates the Durbin-Watson statistic
 
     Parameters
     ----------
@@ -25,7 +27,7 @@ def durbin_watson(resids, axis=0):
 
     Returns
     -------
-    dw : float, array_like
+    dw : float or ndarray
         The Durbin-Watson statistic.
 
     Notes
@@ -57,13 +59,17 @@ def omni_normtest(resids, axis=0):
 
     Parameters
     ----------
-    resid : array_like
+    resids : array_like
+        Data to test for normality.
     axis : int, optional
-        Default is 0
+        Axis to use if data has more than 1 dimension. Default is 0.
 
     Returns
     -------
-    Chi^2 score, two-tail probability
+    statistic : float or ndarray
+        The Chi^2 test statistic.
+    pvalue : float or ndarray
+        The two-tailed p-value for the hypothesis test.
     """
     # TODO: change to exception in summary branch and catch in summary()
     #   behavior changed between scipy 0.9 and 0.10
@@ -71,8 +77,8 @@ def omni_normtest(resids, axis=0):
     n = resids.shape[axis]
     if n < 8:
         from warnings import warn
-        warn("omni_normtest is not valid with less than 8 observations; %i "
-             "samples were given." % int(n), ValueWarning)
+        warn(f"omni_normtest is not valid with less than 8 observations; {int(n):d} "
+             "samples were given.", ValueWarning, stacklevel=2)
         return np.nan, np.nan
 
     return stats.normaltest(resids, axis=axis)
@@ -80,7 +86,7 @@ def omni_normtest(resids, axis=0):
 
 def jarque_bera(resids, axis=0):
     r"""
-    The Jarque-Bera test of normality.
+    The Jarque-Bera test of normality
 
     Parameters
     ----------
@@ -92,13 +98,13 @@ def jarque_bera(resids, axis=0):
 
     Returns
     -------
-    JB : {float, ndarray}
+    JB : float or ndarray
         The Jarque-Bera test statistic.
-    JBpv : {float, ndarray}
+    JBpv : float or ndarray
         The pvalue of the test statistic.
-    skew : {float, ndarray}
+    skew : float or ndarray
         Estimated skewness of the data.
-    kurtosis : {float, ndarray}
+    kurtosis : float or ndarray
         Estimated kurtosis of the data.
 
     Notes
@@ -176,11 +182,13 @@ def robust_skewness(y, axis=0):
 
         SK_{4}=\\frac{\\mu-\\hat{q}_{0.5}}{\\hat{\\sigma}}
 
+    References
+    ----------
     .. [*] Tae-Hwan Kim and Halbert White, "On more robust estimation of
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
     """
-
+    y = array_like(y, "y")
     if axis is None:
         y = y.ravel()
         axis = 0
@@ -219,7 +227,7 @@ def _kr3(y, alpha=5.0, beta=50.0):
         Data to compute use in the estimator.
     alpha : float, optional
         Lower cut-off for measuring expectation in tail.
-    beta :  float, optional
+    beta : float, optional
         Lower cut-off for measuring expectation in center.
 
     Returns
@@ -228,8 +236,8 @@ def _kr3(y, alpha=5.0, beta=50.0):
         Robust kurtosis estimator based on standardized lower- and upper-tail
         expected values
 
-    Notes
-    -----
+    References
+    ----------
     .. [*] Tae-Hwan Kim and Halbert White, "On more robust estimation of
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
@@ -248,7 +256,7 @@ def _kr3(y, alpha=5.0, beta=50.0):
 def expected_robust_kurtosis(ab=(5.0, 50.0), dg=(2.5, 25.0)):
     """
     Calculates the expected value of the robust kurtosis measures in Kim and
-    White assuming the data are normally distributed.
+    White assuming the data are normally distributed
 
     Parameters
     ----------
@@ -256,10 +264,10 @@ def expected_robust_kurtosis(ab=(5.0, 50.0), dg=(2.5, 25.0)):
         Contains 100*(alpha, beta) in the kr3 measure where alpha is the tail
         quantile cut-off for measuring the extreme tail and beta is the central
         quantile cutoff for the standardization of the measure
-    db : iterable, optional
+    dg : iterable, optional
         Contains 100*(delta, gamma) in the kr4 measure where delta is the tail
         quantile for measuring extreme values and gamma is the central quantile
-        used in the the standardization of the measure
+        used in the standardization of the measure
 
     Returns
     -------
@@ -296,19 +304,19 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
 
     Parameters
     ----------
-    y : array_like
+    y : ndarray
         Data to compute use in the estimator.
     axis : int or None, optional
         Axis along which the kurtosis are computed.  If `None`, the
         entire array is used.
-    a iterable, optional
+    ab : iterable, optional
         Contains 100*(alpha, beta) in the kr3 measure where alpha is the tail
         quantile cut-off for measuring the extreme tail and beta is the central
         quantile cutoff for the standardization of the measure
-    db : iterable, optional
+    dg : iterable, optional
         Contains 100*(delta, gamma) in the kr4 measure where delta is the tail
         quantile for measuring extreme values and gamma is the central quantile
-        used in the the standardization of the measure
+        used in the standardization of the measure
     excess : bool, optional
         If true (default), computed values are excess of those for a standard
         normal distribution.
@@ -348,10 +356,13 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
 
     where :math:`\\hat{q}_{p}` is the estimated quantile at :math:`p`.
 
+    References
+    ----------
     .. [*] Tae-Hwan Kim and Halbert White, "On more robust estimation of
        skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
        March 2004.
     """
+    y = array_like(y, "y")
     if (axis is None or
             (y.squeeze().ndim == 1 and y.ndim != 1)):
         y = y.ravel()
@@ -379,9 +390,11 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     return kr1, kr2, kr3, kr4
 
 
-def _medcouple_1d(y):
+def _medcouple_1d_legacy(y):
     """
-    Calculates the medcouple robust measure of skew.
+    Calculates the medcouple robust measure of skew. Less efficient version of
+    the algorithm which computes in O(N**2) time. Useful for validating the
+    O(N log N) version and for applications requiring legacy behavior.
 
     Parameters
     ----------
@@ -395,9 +408,11 @@ def _medcouple_1d(y):
 
     Notes
     -----
-    The current algorithm requires a O(N**2) memory allocations, and so may
+    This version of the algorithm requires a O(N**2) memory allocations, and so may
     not work for very large arrays (N>10000).
 
+    References
+    ----------
     .. [*] M. Hubert and E. Vandervieren, "An adjusted boxplot for skewed
        distributions" Computational Statistics & Data Analysis, vol. 52, pp.
        5186-5201, August 2008.
@@ -429,47 +444,459 @@ def _medcouple_1d(y):
     # GH5395
     num_ties = np.sum(lower == 0.0)
     if num_ties:
+
         # Replacements has -1 above the anti-diagonal, 0 on the anti-diagonal,
         # and 1 below the anti-diagonal
         replacements = np.ones((num_ties, num_ties)) - np.eye(num_ties)
         replacements -= 2 * np.triu(replacements)
+
         # Convert diagonal to anti-diagonal
         replacements = np.fliplr(replacements)
+
         # Always replace upper right block
         h[:num_ties, -num_ties:] = replacements
 
     return np.median(h)
 
 
-def medcouple(y, axis=0):
+def _wmedian(A, W):
+    r"""
+    Compute the weighted median of the values in A using the associated weights in W.
+
+    Parameters
+    ----------
+    A : ndarray
+        1-d array of the numeric values for which the weighted median is to
+        be computed.
+    W : ndarray
+        1-d array of the corresponding non-negative integer weights for each
+        value in A.
+
+    Returns
+    -------
+    float
+        The weighted median of A. If there are multiple medians due to tied weights,
+        the lower median is returned.
+
+    Notes
+    -----
+    This is a helper function for the O(N log N) medcouple algorithm.
     """
-    Calculate the medcouple robust measure of skew.
+
+    # Validation: NaN protection
+    if np.any(np.isnan(A)) or np.any(np.isnan(W)):
+        raise ValueError("A and W may not contain NaN.")
+
+    # Ensure 1-d arrays
+    if A.ndim != 1 or W.ndim != 1:
+        raise ValueError("A and W must be 1-dimensional arrays.")
+
+    # Ensure same length
+    if A.shape[0] != W.shape[0]:
+        raise ValueError("A and W must have the same length.")
+
+    # Sort A and W according to A
+    idx = np.argsort(A)
+    A_sorted = A[idx]
+    W_sorted = W[idx]
+
+    # Compute cumulative sum of weights
+    w_cumsum = np.cumsum(W_sorted)
+    wtot = w_cumsum[-1]
+
+    # Find the smallest index i such that cumulative weight >= total weight / 2
+    median_idx = np.searchsorted(w_cumsum, wtot / 2, side="left")
+
+    return A_sorted[median_idx]
+
+
+def _construct_A_W(L, R, Zplus, Zminus, n_plus, eps2):
+    """
+    Vectorized construction of A and W as NumPy arrays.
+
+    Parameters
+    ----------
+    L : ndarray
+        1-d array of left bounds.
+    R : ndarray
+        1-d array of right bounds.
+    Zplus : ndarray
+        1-d array of input values.
+    Zminus : ndarray
+        1-d array of input values.
+    n_plus : int
+    eps2 : float
+
+    Returns
+    -------
+    A : ndarray
+        Array of kernel values.
+    W : ndarray
+        Corresponding weights.
+    valid_i : ndarray
+        Indices used for construction.
+    """
+    valid_i = np.where(L <= R)[0]
+    L_valid = L[valid_i]
+    R_valid = R[valid_i]
+    mid_indices = (L_valid + R_valid) // 2
+
+    A = np.empty_like(valid_i, dtype=float)
+    for k in range(valid_i.size):
+        A[k] = _h_kern(valid_i[k], mid_indices[k], Zplus, Zminus, n_plus, eps2)
+
+    W = R_valid - L_valid + 1
+    return A, W, valid_i
+
+
+def _h_kern(index_plus, index_minus, Zplus, Zminus, n_plus, eps2):
+    """
+    H kernel function.
+
+    Parameters
+    ----------
+    index_plus : int-like
+        Index of Zplus.
+    index_minus : int-like
+        Index of Zminus.
+    Zplus : ndarray
+        1-d array of input values.
+    Zminus : ndarray
+        1-d array of input values.
+    n_plus : int
+    eps2 : float
+
+    Returns
+    -------
+    float
+    """
+
+    zp_i = Zplus[index_plus]
+    zm_i = Zminus[index_minus]
+
+    # tie breaker: np.sign functionally equivalent to signum
+    if abs(zp_i - zm_i) <= 2 * eps2:
+        return np.sign(n_plus - 1 - index_plus - index_minus)
+    return (zp_i + zm_i) / (zp_i - zm_i)
+
+
+def _finalize_h_kernel_sweep(L, R, Zplus, Zminus, n_plus, eps2):
+    """
+    Compute the final array A.
+
+    Parameters
+    ----------
+    L : ndarray
+        1-d array of left indices.
+    R : ndarray
+        1-d array of right indices.
+    Zplus : ndarray
+        1-d array of input values.
+    Zminus : ndarray
+        1-d array of input values.
+    n_plus : int
+    eps2 : float
+
+    Returns
+    -------
+    A : ndarray of float
+        1-d array of sorted h_kern values in descending order.
+    """
+
+    # Determine total number of h_kern values.
+    total_count = int(np.sum(R - L + 1))
+
+    # Preallocate an array for the results.
+    A = np.empty(total_count, dtype=np.float64)
+
+    # Position to insert next block of values.
+    pos = 0
+
+    # Loop over each index_plus element.
+    for i in range(L.shape[0]):
+        left = L[i]
+        right = R[i]
+
+        # Loop over each corresponding index_minus.
+        for j in range(left, right + 1):
+
+            # Here both i and j are scalars.
+            A[pos] = _h_kern(i, j, Zplus, Zminus, n_plus, eps2)
+            pos += 1
+
+    # Sort in descending order and return.
+    return np.sort(A)[::-1]
+
+
+def _medcouple_nlogn(X, eps1=2**-52, eps2=2**-1022):
+    r"""
+    Calculates the medcouple robust measure of skewness. Faster version of the
+    algorithm which computes in O(N log N) time.
+
+    Parameters
+    ----------
+    X : ndarray
+        Input 1-d array of numeric values.
+    eps1 : float, optional
+        Relative tolerance used to detect extreme values and near-ties.
+    eps2 : float, optional
+        Absolute tolerance used as a tie breaker in the H kernel.
+
+    Returns
+    -------
+    float
+        The medcouple statistic.
+
+    Notes
+    -----
+
+    NaNs are not automatically removed. If present in the input, the result
+    will be NaN.
+
+    .. [*] Guy Brys, Mia Hubert and Anja Struyf (2004) A Robust Measure
+       of Skewness; JCGS 13 (4), 996-1017.
+    """
+
+    if np.any(np.isnan(X)):
+        return np.nan
+
+    n = X.shape[0]
+
+    if n < 3:
+        from warnings import warn
+        msg = (
+            "medcouple is undefined for input with less than 3 elements. "
+            "Returning NaN."
+        )
+        warn(msg, ValueWarning, stacklevel=2)
+        return np.nan
+
+    if n < 10:
+        from warnings import warn
+        msg = (
+            "Fast medcouple algorithm (use_fast=True) is not recommended "
+            "for small datasets (N < 10). Results may be unstable. Consider "
+            "using use_fast=False for accuracy."
+        )
+        warn(msg, UserWarning, stacklevel=2)
+
+    Z = np.sort(X)[::-1]
+    n2 = (n - 1) // 2
+    Zmed = Z[n2] if n % 2 else (Z[n2] + Z[n2 + 1]) / 2
+
+    if np.abs(Z[0] - Zmed) < eps1 * (eps1 + np.abs(Zmed)):
+        return -1.0
+    if np.abs(Z[-1] - Zmed) < eps1 * (eps1 + np.abs(Zmed)):
+        return 1.0
+
+    Z -= Zmed
+    Zden = 2 * max(Z[0], -Z[-1])
+    Z /= Zden
+    Zmed /= Zden
+    Zeps = eps1 * (eps1 + np.abs(Zmed))
+
+    # Zplus, Zminus are 1-d np.ndarrays
+    Zplus = Z[Z >= -Zeps]
+    Zminus = Z[Z <= Zeps]
+
+    # get lengths
+    n_plus = Zplus.shape[0]
+    n_minus = Zminus.shape[0]
+
+    Rtot = n_minus * n_plus
+    medc_idx = Rtot // 2
+
+    if Rtot % 2:
+        # Odd number of pairwise h values: the medcouple is the single
+        # value at the middle rank.
+        return _select_kth_h_value(Zplus, Zminus, n_plus, n_minus, medc_idx, eps1, eps2)
+
+    # Even number of pairwise h values: the medcouple is the average of
+    # the two values straddling the middle, at ranks medc_idx - 1 and
+    # medc_idx (0-indexed). Returning only one of them (as opposed to
+    # their average) silently produces the wrong answer whenever
+    # n_plus * n_minus is even, which happens for roughly half of all
+    # input sizes -- see GH#10098.
+    lo = _select_kth_h_value(Zplus, Zminus, n_plus, n_minus, medc_idx - 1, eps1, eps2)
+    hi = _select_kth_h_value(Zplus, Zminus, n_plus, n_minus, medc_idx, eps1, eps2)
+    return (lo + hi) / 2.0
+
+
+def _select_kth_h_value(Zplus, Zminus, n_plus, n_minus, k, eps1, eps2):
+    """
+    Select the value of rank `k` (0-indexed) among the n_plus * n_minus
+    pairwise h-kernel values, without materializing the full array.
+
+    Parameters
+    ----------
+    Zplus : ndarray
+        1-d array of input values with Zplus >= -Zeps.
+    Zminus : ndarray
+        1-d array of input values with Zminus <= Zeps.
+    n_plus : int
+    n_minus : int
+    k : int
+        0-indexed rank, among the n_plus * n_minus pairwise h-kernel
+        values sorted in ascending order, of the value to select.
+    eps1 : float
+    eps2 : float
+
+    Returns
+    -------
+    float
+        The h-kernel value of rank `k`.
+
+    Notes
+    -----
+    This is a helper for the O(N log N) medcouple algorithm. Finding the
+    medcouple requires this to be called once (odd total count) or twice
+    with adjacent ranks that are then averaged (even total count).
+    """
+
+    # construct L, R as numpy arrays
+    L = np.zeros(n_plus, dtype=int)
+    R = np.full(n_plus, n_minus - 1, dtype=int)
+
+    Ltot = 0
+    Rtot = n_minus * n_plus
+
+    while Rtot - Ltot > n_plus:
+
+        # Construct A, W as NumPy arrays
+        A, W, _ = _construct_A_W(L, R, Zplus, Zminus, n_plus, eps2)
+
+        h_med = _wmedian(A, W)
+
+        Am_eps = eps1 * (eps1 + np.abs(h_med))
+
+        # Preallocate arrays P and Q of length n_plus.
+        P = np.empty(n_plus, dtype=int)
+        Q = np.empty(n_plus, dtype=int)
+
+        # Construct P. Note: We traverse i in reversed order.
+        j = 0
+        for idx in range(n_plus):
+
+            # i goes in reversed order; use reversed indices.
+            i = n_plus - 1 - idx
+
+            # Increase j until the condition is no longer met.
+            while j < n_minus and \
+                    _h_kern(i, j, Zplus, Zminus, n_plus, eps2) - h_med > Am_eps:
+                j += 1
+
+            # j-1 is our current value for that i.
+            # Store it in P at the reversed index; we will fix the order later.
+            P[idx] = j - 1
+
+        # Reverse P to get the correct order.
+        P = P[::-1]
+
+        # Construct Q.
+        j = n_minus - 1
+        for i in range(n_plus):
+            while j >= 0 and \
+                    _h_kern(i, j, Zplus, Zminus, n_plus, eps2) - h_med < -Am_eps:
+                j -= 1
+            Q[i] = j + 1
+
+        # Compute sumP and sumQ.
+        sumP = np.sum(P) + n_plus
+        sumQ = np.sum(Q)
+
+        if k <= sumP - 1:
+            R = P
+            Rtot = sumP
+        elif k > sumQ - 1:
+            L = Q
+            Ltot = sumQ
+        else:
+            return h_med
+
+    A = _finalize_h_kernel_sweep(L, R, Zplus, Zminus, n_plus, eps2)
+    return A[k - Ltot]
+
+
+def _medcouple_1d(y, use_fast=True):
+    """
+    Calculates the medcouple robust measure of skew.
+
+    Parameters
+    ----------
+    y : ndarray
+        1-d data to compute use in the estimator.
+    use_fast : bool, optional
+        Whether to use the O(n log n) implementation. Defaults to True.
+
+    Returns
+    -------
+    mc : float
+        The medcouple statistic
+    """
+    y = np.squeeze(y)
+    if y.ndim != 1:
+        raise ValueError("y must be squeezable to a 1-d array")
+
+    if use_fast:
+        return _medcouple_nlogn(y)
+    else:
+        return _medcouple_1d_legacy(y)
+
+
+def medcouple(y, axis=0, use_fast=True):
+    """
+    Calculate the medcouple robust measure of skew
 
     Parameters
     ----------
     y : array_like
         Data to compute use in the estimator.
-    axis : {int, None}
+    axis : int or None, optional
         Axis along which the medcouple statistic is computed.  If `None`, the
         entire array is used.
+    use_fast : bool, optional
+        Whether to use the faster O(N log N) implementation. Default is True.
+        To use the legacy O(N**2) version, set to False.
 
     Returns
     -------
-    mc : ndarray
-        The medcouple statistic with the same shape as `y`, with the specified
-        axis removed.
+    mc : float or ndarray
+        The medcouple statistic.
 
     Notes
     -----
-    The current algorithm requires a O(N**2) memory allocations, and so may
-    not work for very large arrays (N>10000).
+    The legacy algorithm (``use_fast=False``) uses an O(N**2) implementation
+    which provides exact results and is reliable for all dataset sizes,
+    including small inputs and cases with ties. However, it requires a O(N**2)
+    memory allocations, and so may not work for very large arrays (N>10000).
 
+    The fast algorithm (``use_fast=True``) implements an O(N log N)
+    approximation which is optimized for large datasets. **It is not intended
+    for small sample sizes (N < 10)** or datasets with a high proportion of
+    ties, as it may yield numerically unstable or inaccurate results in these
+    cases. For such inputs, prefer ``use_fast=False`` to ensure correctness.
+
+    If NaNs are present in the input when use_fast=True, the result will be
+    NaN. To preserve legacy behavior, a number may be returned when
+    use_fast=False.
+
+    If the size of ``y`` is less than 3 and ``use_fast=True``, the result will
+    be NaN. To preserve legacy behavior, a value may be returned when
+    ``use_fast=False``.
+
+    Small numerical differences are possible based on the choice of algorithm.
+
+    .. [*] Guy Brys, Mia Hubert and Anja Struyf (2004) A Robust Measure
+       of Skewness; JCGS 13 (4), 996-1017.
+
+    References
+    ----------
     .. [*] M. Hubert and E. Vandervieren, "An adjusted boxplot for skewed
        distributions" Computational Statistics & Data Analysis, vol. 52, pp.
        5186-5201, August 2008.
     """
     y = np.asarray(y, dtype=np.double)  # GH 4243
     if axis is None:
-        return _medcouple_1d(y.ravel())
+        return _medcouple_1d(y.ravel(), use_fast=use_fast)
 
-    return np.apply_along_axis(_medcouple_1d, axis, y)
+    return np.apply_along_axis(_medcouple_1d, axis, y, use_fast=use_fast)

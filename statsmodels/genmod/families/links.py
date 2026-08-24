@@ -2,9 +2,10 @@
 Defines the link functions to be used with GLM and GEE families.
 """
 
+import warnings
+
 import numpy as np
 import scipy.stats
-import warnings
 
 FLOAT_EPS = np.finfo(float).eps
 
@@ -13,7 +14,8 @@ def _link_deprecation_warning(old, new):
     warnings.warn(
         f"The {old} link alias is deprecated. Use {new} instead. The {old} "
         f"link alias will be removed after the 0.15.0 release.",
-        FutureWarning
+        FutureWarning,
+        stacklevel=2,
     )
     # raise
 
@@ -65,6 +67,7 @@ class Link:
         Parameters
         ----------
         p : array_like
+            Probabilities
 
         Returns
         -------
@@ -74,11 +77,13 @@ class Link:
         return NotImplementedError
 
     def deriv2(self, p):
-        """Second derivative of the link function g''(p)
+        """
+        Second derivative of the link function g''(p)
 
         implemented through numerical differentiation
         """
         from statsmodels.tools.numdiff import _approx_fprime_cs_scalar
+
         return _approx_fprime_cs_scalar(p, self.deriv)
 
     def inverse_deriv(self, z):
@@ -153,7 +158,7 @@ class Logit(Link):
         pclip : ndarray
             Clipped probabilities
         """
-        return np.clip(p, FLOAT_EPS, 1. - FLOAT_EPS)
+        return np.clip(p, FLOAT_EPS, 1.0 - FLOAT_EPS)
 
     def __call__(self, p):
         """
@@ -174,7 +179,7 @@ class Logit(Link):
         g(p) = log(p / (1 - p))
         """
         p = self._clean(p)
-        return np.log(p / (1. - p))
+        return np.log(p / (1.0 - p))
 
     def inverse(self, z):
         """
@@ -196,7 +201,7 @@ class Logit(Link):
         """
         z = np.asarray(z)
         t = np.exp(-z)
-        return 1. / (1. + t)
+        return 1.0 / (1.0 + t)
 
     def deriv(self, p):
         """
@@ -220,7 +225,7 @@ class Logit(Link):
         logit = Logit()
         """
         p = self._clean(p)
-        return 1. / (p * (1 - p))
+        return 1.0 / (p * (1 - p))
 
     def inverse_deriv(self, z):
         """
@@ -254,7 +259,7 @@ class Logit(Link):
             The value of the second derivative of the logit function
         """
         v = p * (1 - p)
-        return (2 * p - 1) / v ** 2
+        return (2 * p - 1) / v**2
 
 
 class Power(Link):
@@ -263,19 +268,19 @@ class Power(Link):
 
     Parameters
     ----------
-    power : float
+    power : float, optional
         The exponent of the power transform
 
     Notes
     -----
     Aliases of Power:
-    Inverse = Power(power=-1)
+    InversePower = Power(power=-1)
     Sqrt = Power(power=.5)
     InverseSquared = Power(power=-2.)
     Identity = Power(power=1.)
     """
 
-    def __init__(self, power=1.):
+    def __init__(self, power=1.0):
         self.power = power
 
     def __call__(self, p):
@@ -307,22 +312,22 @@ class Power(Link):
 
         Parameters
         ----------
-        `z` : array_like
+        z : array_like
             Value of the transformed mean parameters at `p`
 
         Returns
         -------
-        `p` : ndarray
+        p : ndarray
             Mean parameters
 
         Notes
         -----
-        g^(-1)(z`) = `z`**(1/`power`)
+        g^(-1)(z) = `z`**(1/`power`)
         """
         if self.power == 1:
             return z
         else:
-            return np.power(z, 1. / self.power)
+            return np.power(z, 1.0 / self.power)
 
     def deriv(self, p):
         """
@@ -408,8 +413,11 @@ class Power(Link):
         if self.power == 1:
             return np.zeros_like(z)
         else:
-            return ((1 - self.power) *
-                    np.power(z, (1 - 2*self.power)/self.power) / self.power**2)
+            return (
+                (1 - self.power)
+                * np.power(z, (1 - 2 * self.power) / self.power)
+                / self.power**2
+            )
 
 
 class InversePower(Power):
@@ -420,11 +428,11 @@ class InversePower(Power):
     -----
     g(p) = 1/p
 
-    Alias of statsmodels.family.links.Power(power=-1.)
+    Alias of statsmodels.genmod.families.links.Power(power=-1.)
     """
 
     def __init__(self):
-        super().__init__(power=-1.)
+        super().__init__(power=-1.0)
 
 
 class Sqrt(Power):
@@ -435,11 +443,11 @@ class Sqrt(Power):
     -----
     g(`p`) = sqrt(`p`)
 
-    Alias of statsmodels.family.links.Power(power=.5)
+    Alias of statsmodels.genmod.families.links.Power(power=.5)
     """
 
     def __init__(self):
-        super().__init__(power=.5)
+        super().__init__(power=0.5)
 
 
 class InverseSquared(Power):
@@ -450,11 +458,11 @@ class InverseSquared(Power):
     -----
     g(`p`) = 1/(`p`\*\*2)
 
-    Alias of statsmodels.family.links.Power(power=2.)
+    Alias of statsmodels.genmod.families.links.Power(power=2.)
     """
 
     def __init__(self):
-        super().__init__(power=-2.)
+        super().__init__(power=-2.0)
 
 
 class Identity(Power):
@@ -465,11 +473,11 @@ class Identity(Power):
     -----
     g(`p`) = `p`
 
-    Alias of statsmodels.family.links.Power(power=1.)
+    Alias of statsmodels.genmod.families.links.Power(power=1.)
     """
 
     def __init__(self):
-        super().__init__(power=1.)
+        super().__init__(power=1.0)
 
 
 class Log(Link):
@@ -491,13 +499,13 @@ class Log(Link):
 
         Parameters
         ----------
-        x : array_like
+        p : array_like
             Mean parameters
 
         Returns
         -------
         z : ndarray
-            log(x)
+            log(p)
 
         Notes
         -----
@@ -512,7 +520,7 @@ class Log(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -545,7 +553,7 @@ class Log(Link):
         g'(x) = 1/x
         """
         p = self._clean(p)
-        return 1. / p
+        return 1.0 / p
 
     def deriv2(self, p):
         """
@@ -566,7 +574,7 @@ class Log(Link):
         g''(x) = -1/x^2
         """
         p = self._clean(p)
-        return -1. / p ** 2
+        return -1.0 / p**2
 
     def inverse_deriv(self, z):
         """
@@ -574,7 +582,7 @@ class Log(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -597,7 +605,7 @@ class LogC(Link):
     """
 
     def _clean(self, x):
-        return np.clip(x, FLOAT_EPS, 1. - FLOAT_EPS)
+        return np.clip(x, FLOAT_EPS, 1.0 - FLOAT_EPS)
 
     def __call__(self, p, **extra):
         """
@@ -605,13 +613,13 @@ class LogC(Link):
 
         Parameters
         ----------
-        x : array_like
+        p : array_like
             Mean parameters
 
         Returns
         -------
         z : ndarray
-            log(1 - x)
+            log(1 - p)
 
         Notes
         -----
@@ -626,7 +634,7 @@ class LogC(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -659,7 +667,7 @@ class LogC(Link):
         g'(x) = -1/(1 - x)
         """
         p = self._clean(p)
-        return -1. / (1. - p)
+        return -1.0 / (1.0 - p)
 
     def deriv2(self, p):
         """
@@ -680,7 +688,7 @@ class LogC(Link):
         g''(x) = -(-1/(1 - x))^2
         """
         p = self._clean(p)
-        return -1 * np.power(-1. / (1. - p), 2)
+        return -1 * np.power(-1.0 / (1.0 - p), 2)
 
     def inverse_deriv(self, z):
         """
@@ -689,7 +697,7 @@ class LogC(Link):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -728,7 +736,7 @@ class CDFLink(Logit):
 
     Parameters
     ----------
-    dbn : scipy.stats distribution
+    dbn : scipy.stats distribution, optional
         Default is dbn=scipy.stats.norm
 
     Notes
@@ -799,7 +807,7 @@ class CDFLink(Logit):
         g'(`p`) = 1./ `dbn`.pdf(`dbn`.ppf(`p`))
         """
         p = self._clean(p)
-        return 1. / self.dbn.pdf(self.dbn.ppf(p))
+        return 1.0 / self.dbn.pdf(self.dbn.ppf(p))
 
     def deriv2(self, p):
         """
@@ -809,7 +817,7 @@ class CDFLink(Logit):
         """
         p = self._clean(p)
         linpred = self.dbn.ppf(p)
-        return - self.inverse_deriv2(linpred) / self.dbn.pdf(linpred) ** 3
+        return -self.inverse_deriv2(linpred) / self.dbn.pdf(linpred) ** 3
 
     def deriv2_numdiff(self, p):
         """
@@ -818,6 +826,7 @@ class CDFLink(Logit):
         implemented through numerical differentiation
         """
         from statsmodels.tools.numdiff import _approx_fprime_scalar
+
         p = np.atleast_1d(p)
         # Note: special function for norm.ppf does not support complex
         return _approx_fprime_scalar(p, self.deriv, centered=True)
@@ -828,7 +837,7 @@ class CDFLink(Logit):
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             The inverse of the link function at `p`
 
         Returns
@@ -861,6 +870,7 @@ class CDFLink(Logit):
         The inherited method is implemented through numerical differentiation.
         """
         from statsmodels.tools.numdiff import _approx_fprime_scalar
+
         z = np.atleast_1d(z)
 
         # Note: special function for norm.ppf does not support complex
@@ -882,15 +892,37 @@ class Probit(CDFLink):
         """
         Second derivative of the inverse link function
 
-        This is the derivative of the pdf in a CDFLink
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
 
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The value of the second derivative of the inverse of the
+            probit link function
+
+        Notes
+        -----
+        This is the derivative of the pdf in a CDFLink
         """
-        return - z * self.dbn.pdf(z)
+        return -z * self.dbn.pdf(z)
 
     def deriv2(self, p):
         """
         Second derivative of the link function g''(p)
 
+        Parameters
+        ----------
+        p : array_like
+            Probabilities
+
+        Returns
+        -------
+        g''(p) : ndarray
+            The value of the second derivative of the probit link
+            function
         """
         p = self._clean(p)
         linpred = self.dbn.ppf(p)
@@ -927,11 +959,25 @@ class Cauchy(CDFLink):
         """
         p = self._clean(p)
         a = np.pi * (p - 0.5)
-        d2 = 2 * np.pi ** 2 * np.sin(a) / np.cos(a) ** 3
+        d2 = 2 * np.pi**2 * np.sin(a) / np.cos(a) ** 3
         return d2
 
     def inverse_deriv2(self, z):
-        return - 2 * z / (np.pi * (z ** 2 + 1) ** 2)
+        """
+        Second derivative of the inverse of the Cauchy transform
+
+        Parameters
+        ----------
+        z : array_like
+            `z` is usually the linear predictor for a GLM or GEE model.
+
+        Returns
+        -------
+        g^(-1)''(z) : ndarray
+            The value of the second derivative of the inverse of the
+            Cauchy link function
+        """
+        return -2 * z / (np.pi * (z**2 + 1) ** 2)
 
 
 class CLogLog(Logit):
@@ -952,7 +998,7 @@ class CLogLog(Logit):
 
         Parameters
         ----------
-        p : ndarray
+        p : array_like
             Mean parameters
 
         Returns
@@ -1007,7 +1053,7 @@ class CLogLog(Logit):
         g'(p) = - 1 / ((p-1)*log(1-p))
         """
         p = self._clean(p)
-        return 1. / ((p - 1) * (np.log(1 - p)))
+        return 1.0 / ((p - 1) * (np.log(1 - p)))
 
     def deriv2(self, p):
         """
@@ -1060,7 +1106,7 @@ class LogLog(Logit):
 
         Parameters
         ----------
-        p : ndarray
+        p : array_like
             Mean parameters
 
         Returns
@@ -1115,7 +1161,7 @@ class LogLog(Logit):
         g'(p) = - 1 /(p * log(p))
         """
         p = self._clean(p)
-        return -1. / (p * (np.log(p)))
+        return -1.0 / (p * (np.log(p)))
 
     def deriv2(self, p):
         """
@@ -1180,7 +1226,7 @@ class NegativeBinomial(Link):
         Permissible values are usually assumed to be in (.01, 2).
     """
 
-    def __init__(self, alpha=1.):
+    def __init__(self, alpha=1.0):
         self.alpha = alpha
 
     def _clean(self, x):
@@ -1245,7 +1291,7 @@ class NegativeBinomial(Link):
         -----
         g'(x) = 1/(x+alpha*x^2)
         """
-        return 1 / (p + self.alpha * p ** 2)
+        return 1 / (p + self.alpha * p**2)
 
     def deriv2(self, p):
         """
@@ -1267,7 +1313,7 @@ class NegativeBinomial(Link):
         g''(x) = -(1+2*alpha*x)/(x+alpha*x^2)^2
         """
         numer = -(1 + 2 * self.alpha * p)
-        denom = (p + self.alpha * p ** 2) ** 2
+        denom = (p + self.alpha * p**2) ** 2
         return numer / denom
 
     def inverse_deriv(self, z):
@@ -1294,13 +1340,13 @@ class logit(Logit):
     """
     Alias of Logit
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Logit instead.
     """
 
     def __init__(self):
-        _link_deprecation_warning('logit', 'Logit')
+        _link_deprecation_warning("logit", "Logit")
         super().__init__()
 
 
@@ -1308,13 +1354,13 @@ class inverse_power(InversePower):
     """
     Deprecated alias of InversePower.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use InversePower instead.
     """
 
     def __init__(self):
-        _link_deprecation_warning('inverse_power', 'InversePower')
+        _link_deprecation_warning("inverse_power", "InversePower")
         super().__init__()
 
 
@@ -1322,13 +1368,13 @@ class sqrt(Sqrt):
     """
     Deprecated alias of Sqrt.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use Sqrt instead.
     """
 
     def __init__(self):
-        _link_deprecation_warning('sqrt', 'Sqrt')
+        _link_deprecation_warning("sqrt", "Sqrt")
         super().__init__()
 
 
@@ -1336,13 +1382,13 @@ class inverse_squared(InverseSquared):
     """
     Deprecated alias of InverseSquared.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use InverseSquared instead.
     """
 
     def __init__(self):
-        _link_deprecation_warning('inverse_squared', 'InverseSquared')
+        _link_deprecation_warning("inverse_squared", "InverseSquared")
         super().__init__()
 
 
@@ -1350,13 +1396,13 @@ class identity(Identity):
     """
     Deprecated alias of Identity.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
         Use Identity instead.
     """
 
     def __init__(self):
-        _link_deprecation_warning('identity', 'Identity')
+        _link_deprecation_warning("identity", "Identity")
         super().__init__()
 
 
@@ -1364,7 +1410,7 @@ class log(Log):
     """
     The log transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Log instead.
 
@@ -1374,7 +1420,7 @@ class log(Log):
     """
 
     def __init__(self):
-        _link_deprecation_warning('log', 'Log')
+        _link_deprecation_warning("log", "Log")
         super().__init__()
 
 
@@ -1382,7 +1428,7 @@ class logc(LogC):
     """
     The log-complement transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use LogC instead.
 
@@ -1392,7 +1438,7 @@ class logc(LogC):
     """
 
     def __init__(self):
-        _link_deprecation_warning('logc', 'LogC')
+        _link_deprecation_warning("logc", "LogC")
         super().__init__()
 
 
@@ -1400,7 +1446,7 @@ class probit(Probit):
     """
     The probit (standard normal CDF) transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Probit instead.
 
@@ -1410,7 +1456,7 @@ class probit(Probit):
     """
 
     def __init__(self):
-        _link_deprecation_warning('probit', 'Probit')
+        _link_deprecation_warning("probit", "Probit")
         super().__init__()
 
 
@@ -1418,7 +1464,7 @@ class cauchy(Cauchy):
     """
     The Cauchy (standard Cauchy CDF) transform
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use Cauchy instead.
 
@@ -1428,7 +1474,7 @@ class cauchy(Cauchy):
     """
 
     def __init__(self):
-        _link_deprecation_warning('cauchy', 'Cauchy')
+        _link_deprecation_warning("cauchy", "Cauchy")
         super().__init__()
 
 
@@ -1436,7 +1482,7 @@ class cloglog(CLogLog):
     """
     The CLogLog transform link function.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use CLogLog instead.
 
@@ -1449,7 +1495,7 @@ class cloglog(CLogLog):
     """
 
     def __init__(self):
-        _link_deprecation_warning('cloglog', 'CLogLog')
+        _link_deprecation_warning("cloglog", "CLogLog")
         super().__init__()
 
 
@@ -1457,7 +1503,7 @@ class loglog(LogLog):
     """
     The LogLog transform link function.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use LogLog instead.
 
@@ -1470,7 +1516,7 @@ class loglog(LogLog):
     """
 
     def __init__(self):
-        _link_deprecation_warning('loglog', 'LogLog')
+        _link_deprecation_warning("loglog", "LogLog")
         super().__init__()
 
 
@@ -1478,7 +1524,7 @@ class nbinom(NegativeBinomial):
     """
     The negative binomial link function.
 
-    .. deprecated: 0.14.0
+    .. deprecated:: 0.14.0
 
        Use NegativeBinomial instead.
 
@@ -1490,6 +1536,6 @@ class nbinom(NegativeBinomial):
     nbinom = NegativeBinomial(alpha=1.)
     """
 
-    def __init__(self, alpha=1.):
-        _link_deprecation_warning('nbinom', 'NegativeBinomial')
+    def __init__(self, alpha=1.0):
+        _link_deprecation_warning("nbinom", "NegativeBinomial")
         super().__init__(alpha=alpha)

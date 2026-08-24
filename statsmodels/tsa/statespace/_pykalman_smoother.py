@@ -18,6 +18,27 @@ SMOOTHER_ALL = (
 
 
 class _KalmanSmoother:
+    """
+    Pure Python Kalman smoother
+
+    Parameters
+    ----------
+    model : KalmanFilter
+        The state space model.
+    kfilter : FilterResults
+        The Cython Kalman filter results object with which filtering has
+        already been performed.
+    smoother_output : int
+        Bitmask value to indicate what smoother output to compute. See
+        `SMOOTHER_STATE`, `SMOOTHER_STATE_COV`, `SMOOTHER_DISTURBANCE`,
+        `SMOOTHER_DISTURBANCE_COV`, and `SMOOTHER_ALL` for more details.
+
+    Notes
+    -----
+    This is a pure Python (and therefore relatively slow) implementation of
+    the Kalman smoother algorithm, intended to be used as a check on, or
+    a substitute for, the faster Cython implementation.
+    """
 
     def __init__(self, model, kfilter, smoother_output):
         # Save values
@@ -25,6 +46,7 @@ class _KalmanSmoother:
         self.kfilter = kfilter
         self._kfilter = model._kalman_filter
         self.smoother_output = smoother_output
+        self.t = -1
 
         # Create storage
         self.scaled_smoothed_estimator = None
@@ -75,6 +97,19 @@ class _KalmanSmoother:
                          dtype=kfilter.dtype))
 
     def seek(self, t):
+        """
+        Seek the smoother to a specific point in time
+
+        Parameters
+        ----------
+        t : int
+            Observation index to seek to.
+
+        Raises
+        ------
+        IndexError
+            If `t` is out of range for the observations in the model.
+        """
         if t >= self.model.nobs:
             raise IndexError("Observation index out of range")
         self.t = t
@@ -85,7 +120,7 @@ class _KalmanSmoother:
     def __call__(self):
         self.seek(self.model.nobs-1)
         # Perform backwards smoothing iterations
-        for i in range(self.model.nobs-1, -1, -1):
+        for _ in range(self.model.nobs-1, -1, -1):
             next(self)
 
     def next(self):
@@ -150,7 +185,7 @@ class _KalmanSmoother:
         if missing_partial_obs:
             design = np.array(
                 _kfilter.selected_design[:k_endog*model.k_states], copy=True
-            ).reshape(k_endog, model.k_states, order='F')
+            ).reshape(k_endog, model.k_states, order="F")
             obs_cov = np.array(
                 _kfilter.selected_obs_cov[:k_endog**2], copy=True
             ).reshape(k_endog, k_endog)
@@ -158,7 +193,7 @@ class _KalmanSmoother:
 
             forecasts_error_cov = np.array(
                 _kfilter.forecast_error_cov[:, :, t], copy=True
-                ).ravel(order='F')[:k_endog**2].reshape(k_endog, k_endog)
+                ).ravel(order="F")[:k_endog**2].reshape(k_endog, k_endog)
             forecasts_error = np.array(
                 _kfilter.forecast_error[:k_endog, t], copy=True)
             F_inv = np.linalg.inv(forecasts_error_cov)

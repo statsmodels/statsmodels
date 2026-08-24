@@ -1,30 +1,30 @@
 """U.S. Strike Duration Data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This is public domain."""
+TITLE = __doc__
+SOURCE = """
 This is a subset of the data used in Kennan (1985). It was originally
 published by the Bureau of Labor Statistics.
 
 ::
 
     Kennan, J. 1985. "The duration of contract strikes in US manufacturing.
-        `Journal of Econometrics` 28.1, 5-28.
+        *Journal of Econometrics* 28.1, 5-28.
 """
 
-DESCRSHORT  = """Contains data on the length of strikes in US manufacturing and
+DESCRSHORT = """Contains data on the length of strikes in US manufacturing and
 unanticipated industrial production."""
 
-DESCRLONG   = """Contains data on the length of strikes in US manufacturing and
+DESCRLONG = """Contains data on the length of strikes in US manufacturing and
 unanticipated industrial production. The data is a subset of the data originally
 used by Kennan. The data here is data for the months of June only to avoid
 seasonal issues."""
 
-#suggested notes
-NOTE        = """::
+# suggested notes
+NOTE = """::
 
     Number of observations - 62
 
@@ -37,7 +37,6 @@ NOTE        = """::
 """
 
 
-
 def load_pandas():
     """
     Load the strikes data and return a Dataset class instance.
@@ -45,7 +44,8 @@ def load_pandas():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     data = _get_data()
     return du.process_pandas(data, endog_idx=0)
@@ -58,10 +58,11 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     return load_pandas()
 
 
 def _get_data():
-    return du.load_csv(__file__,'strikes.csv').astype(float)
+    return du.load_csv(__file__, "strikes.csv").astype(float)

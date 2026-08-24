@@ -1,22 +1,22 @@
-"""Name of dataset."""
+"""Name of dataset"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """E.g., This is public domain."""
-TITLE       = """Title of the dataset"""
-SOURCE      = """
+COPYRIGHT = """E.g., This is public domain."""
+TITLE = """Title of the dataset"""
+SOURCE = """
 This section should provide a link to the original dataset if possible and
 attribution and correspondance information for the dataset's original author
 if so desired.
 """
 
-DESCRSHORT  = """A short description."""
+DESCRSHORT = """A short description."""
 
-DESCRLONG   = """A longer description of the dataset."""
+DESCRLONG = """A longer description of the dataset."""
 
-#suggested notes
-NOTE        = """
+# suggested notes
+NOTE = """
 ::
 
     Number of observations:
@@ -34,7 +34,8 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     return load_pandas()
 
@@ -46,11 +47,12 @@ def load_pandas():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     data = _get_data()
     return du.process_pandas(data, endog_idx=0)
 
 
 def _get_data():
-    return du.load_csv(__file__, 'DatasetName.csv')
+    return du.load_csv(__file__, "DatasetName.csv")

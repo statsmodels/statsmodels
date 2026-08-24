@@ -1,11 +1,11 @@
 """Euro area 18 - Total Turnover Index, Manufacture of electrical equipment"""
-import os
+from pathlib import Path
 
 import pandas as pd
 
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
 COPYRIGHT = """This is public domain."""
 TITLE = __doc__
@@ -30,18 +30,30 @@ NOTE = """::
 
 
 def load_pandas():
+    """
+    Load the EU Electrical Equipment manufacturing data into a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data`` and ``names`` attributes.
+
+    Notes
+    -----
+    The Dataset instance does not contain endog and exog attributes.
+    """
     data = _get_data()
     return du.Dataset(data=data, names=list(data.columns))
 
 
 def load():
     """
-    Load the EU Electrical Equipment manufacturing data into a Dataset class
+    Load the EU Electrical Equipment manufacturing data into a Dataset class.
 
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``names`` attributes.
 
     Notes
     -----
@@ -51,9 +63,9 @@ def load():
 
 
 def _get_data():
-    curr_dir = os.path.split(os.path.abspath(__file__))[0]
-    data = pd.read_csv(os.path.join(curr_dir, 'elec_equip.csv'))
-    data.index = pd.to_datetime(data.pop('DATE'))
+    curr_dir = Path(__file__).resolve().parent
+    data = pd.read_csv(curr_dir / "elec_equip.csv")
+    data.index = pd.to_datetime(data.pop("DATE"))
     return data
 
 

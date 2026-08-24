@@ -1,11 +1,11 @@
-"""Name of dataset."""
+"""Engel (1857) food expenditure data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = """Engel (1857) food expenditure data"""
-SOURCE      = """
+COPYRIGHT = """This is public domain."""
+TITLE = """Engel (1857) food expenditure data"""
+SOURCE = """
 This dataset was used in Koenker and Bassett (1982) and distributed alongside
 the ``quantreg`` package for R.
 
@@ -16,12 +16,12 @@ Roger Koenker (2012). quantreg: Quantile Regression. R package version 4.94.
 http://CRAN.R-project.org/package=quantreg
 """
 
-DESCRSHORT  = """Engel food expenditure data."""
+DESCRSHORT = """Engel food expenditure data."""
 
-DESCRLONG   = """Data on income and food expenditure for 235 working class households in 1857 Belgium."""
+DESCRLONG = """Data on income and food expenditure for 235 working class households in 1857 Belgium."""
 
-#suggested notes
-NOTE        = """::
+# suggested notes
+NOTE = """::
 
     Number of observations: 235
     Number of variables: 2
@@ -30,6 +30,7 @@ NOTE        = """::
         foodexp - annual household food expenditure (Belgian francs)
 """
 
+
 def load():
     """
     Load the data and return a Dataset class instance.
@@ -37,15 +38,25 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     return load_pandas()
 
 
 def load_pandas():
+    """
+    Load the data and return a Dataset class instance.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
+    """
     data = _get_data()
     return du.process_pandas(data, endog_idx=0, exog_idx=None)
 
 
 def _get_data():
-    return du.load_csv(__file__, 'engel.csv')
+    return du.load_csv(__file__, "engel.csv")

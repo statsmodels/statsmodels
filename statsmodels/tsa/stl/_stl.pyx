@@ -81,10 +81,15 @@ work    workspace of (n+2*np)*5 locations.
 """
 from typing import Dict, Union
 
-import pandas as pd
 import numpy as np
-from libc.math cimport fabs, sqrt, isnan, NAN
+import pandas as pd
 
+from libc.math cimport NAN, fabs, isnan, sqrt
+
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
+from statsmodels.tools.validation import array_like
+from statsmodels.tsa.seasonal._seasonal import DecomposeResult
 from statsmodels.tsa.tsatools import freq_to_period
 
 
@@ -103,9 +108,7 @@ def _is_pos_int(x, odd):
 
 cdef class STL(object):
     """
-    STL(endog, period=None, seasonal=7, trend=None, low_pass=None,
-        seasonal_deg=1, trend_deg=1, low_pass_deg=1, robust=False,
-        seasonal_jump=1, trend_jump=1, low_pass_jump=1)
+    STL(endog, period=None, seasonal=7, trend=None, low_pass=None, seasonal_deg=1, trend_deg=1, low_pass_deg=1, robust=False, seasonal_jump=1, trend_jump=1, low_pass_jump=1)
 
     Season-Trend decomposition using LOESS.
 
@@ -156,7 +159,9 @@ cdef class STL(object):
     See Also
     --------
     statsmodels.tsa.seasonal.DecomposeResult
+        Container class for all seasonal decomposition results
     statsmodels.tsa.seasonal.seasonal_decompose
+        Seasonal decomposition using moving averages
 
     Notes
     -----
@@ -171,8 +176,8 @@ cdef class STL(object):
     References
     ----------
     .. [1] R. B. Cleveland, W. S. Cleveland, J.E. McRae, and I. Terpenning
-        (1990) STL: A Seasonal-Trend Decomposition Procedure Based on LOESS.
-        Journal of Official Statistics, 6, 3-73.
+       (1990) STL: A Seasonal-Trend Decomposition Procedure Based on LOESS.
+       Journal of Official Statistics, 6, 3-73.
 
     Examples
     --------
@@ -186,7 +191,7 @@ cdef class STL(object):
     >>> from pandas.plotting import register_matplotlib_converters
     >>> register_matplotlib_converters()
     >>> data = co2.load(True).data
-    >>> data = data.resample('M').mean().ffill()
+    >>> data = data.resample('ME').mean().ffill()
 
     The period (12) is automatically detected from the data's frequency ('M').
 
@@ -209,15 +214,14 @@ cdef class STL(object):
                  seasonal_deg=1, trend_deg=1, low_pass_deg=1,
                  robust=False, seasonal_jump=1, trend_jump=1, low_pass_jump=1):
         self.endog = endog
-        y = np.ascontiguousarray(np.squeeze(np.asarray(endog)), dtype=np.double)
-        if y.ndim != 1:
-            raise ValueError('y must be a 1d array')
+        y = array_like(endog, "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
         self._ya = y
         self.nobs = y.shape[0]  # n
         if period is None:
             freq = None
             if isinstance(endog, (pd.Series, pd.DataFrame)):
-                freq = getattr(endog.index, 'inferred_freq', None)
+                with _infer_freq_returns_offset():
+                    freq = getattr(endog.index, 'inferred_freq', None)
             if freq is None:
                 raise ValueError('Unable to determine period from endog')
             period = freq_to_period(freq)
@@ -248,11 +252,11 @@ cdef class STL(object):
         self.low_pass_deg = low_pass_deg  # ildeg
         self.robust = robust
         if not _is_pos_int(low_pass_jump, False):
-            raise ValueError('low_pass_jump must be a positve integer')
+            raise ValueError('low_pass_jump must be a positive integer')
         if not _is_pos_int(seasonal_jump, False):
-            raise ValueError('seasonal_jump must be a positve integer')
+            raise ValueError('seasonal_jump must be a positive integer')
         if not _is_pos_int(trend_jump, False):
-            raise ValueError('trend_jump must be a positve integer')
+            raise ValueError('trend_jump must be a positive integer')
         self.low_pass_jump = low_pass_jump
         self.seasonal_jump = seasonal_jump
         self.trend_jump = trend_jump
@@ -360,9 +364,6 @@ cdef class STL(object):
             season = pd.Series(season, index=index, name='season')
             trend = pd.Series(trend, index=index, name='trend')
             rw = pd.Series(rw, index=index, name='robust_weight')
-
-        # Avoid circular imports
-        from statsmodels.tsa.seasonal import DecomposeResult
 
         return DecomposeResult(self.endog, season, trend, resid, rw)
 

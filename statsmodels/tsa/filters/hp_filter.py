@@ -1,19 +1,22 @@
+from statsmodels.compat.scipy import SP_LT_2
 
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
-from statsmodels.tools.validation import array_like, PandasWrapper
+
+from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tsa.filters.filtertools import CycleTrendResult
 
 
 def hpfilter(x, lamb=1600):
     """
-    Hodrick-Prescott filter.
+    Hodrick-Prescott filter
 
     Parameters
     ----------
     x : array_like
         The time series to filter, 1-d.
-    lamb : float
+    lamb : float, optional
         The Hodrick-Prescott smoothing parameter. A value of 1600 is
         suggested for quarterly data. Ravn and Uhlig suggest using a value
         of 6.25 (1600/4**4) for annual data and 129600 (1600*3**4) for monthly
@@ -21,10 +24,13 @@ def hpfilter(x, lamb=1600):
 
     Returns
     -------
-    cycle : ndarray
-        The estimated cycle in the data given lamb.
-    trend : ndarray
-        The estimated trend in the data given lamb.
+    CycleTrendResult
+        A result object with fields:
+
+        cycle : ndarray or Series
+            The estimated cycle in the data given lamb.
+        trend : ndarray or Series
+            The estimated trend in the data given lamb.
 
     See Also
     --------
@@ -39,7 +45,7 @@ def hpfilter(x, lamb=1600):
 
     Notes
     -----
-    The HP filter removes a smooth trend, `T`, from the data `x`. by solving
+    The HP filter removes a smooth trend, `T`, from the data `x` by solving
 
     min sum((x[t] - T[t])**2 + lamb*((T[t+1] - T[t]) - (T[t] - T[t-1]))**2)
      T   t
@@ -62,11 +68,11 @@ def hpfilter(x, lamb=1600):
     References
     ----------
     Hodrick, R.J, and E. C. Prescott. 1980. "Postwar U.S. Business Cycles: An
-        Empirical Investigation." `Carnegie Mellon University discussion
-        paper no. 451`.
-    Ravn, M.O and H. Uhlig. 2002. "Notes On Adjusted the Hodrick-Prescott
-        Filter for the Frequency of Observations." `The Review of Economics and
-        Statistics`, 84(2), 371-80.
+        Empirical Investigation." *Carnegie Mellon University discussion
+        paper no. 451*.
+    Ravn, M.O and H. Uhlig. 2002. "On Adjusting the Hodrick-Prescott
+        Filter for the Frequency of Observations." *The Review of Economics
+        and Statistics*, 84(2), 371-80.
 
     Examples
     --------
@@ -90,15 +96,22 @@ def hpfilter(x, lamb=1600):
     .. plot:: plots/hpf_plot.py
     """
     pw = PandasWrapper(x)
-    x = array_like(x, 'x', ndim=1)
+    x = array_like(x, "x", ndim=1)
     nobs = len(x)
-    I = sparse.eye(nobs, nobs)  # noqa:E741
     offsets = np.array([0, 1, 2])
     data = np.repeat([[1.], [-2.], [1.]], nobs, axis=1)
-    K = sparse.dia_matrix((data, offsets), shape=(nobs - 2, nobs))
+
+    if SP_LT_2:
+        eye = sparse.eye(nobs, nobs)
+        K = sparse.dia_matrix((data, offsets), shape=(nobs - 2, nobs))
+    else:
+        eye = sparse.eye_array(nobs, nobs)
+        K = sparse.dia_array((data, offsets), shape=(nobs - 2, nobs))
 
     use_umfpack = True
-    trend = spsolve(I+lamb*K.T.dot(K), x, use_umfpack=use_umfpack)
+    trend = spsolve((eye+lamb*K.T.dot(K)).tocsc(), x, use_umfpack=use_umfpack)
 
     cycle = x - trend
-    return pw.wrap(cycle, append='cycle'), pw.wrap(trend, append='trend')
+    return CycleTrendResult(
+        pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
+    )

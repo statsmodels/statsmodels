@@ -1,10 +1,11 @@
 import numpy as np
+
 from statsmodels.tools.tools import Bunch
 
 
 class _MinimalWLS:
     """
-    Minimal implementation of WLS optimized for performance.
+    Minimal implementation of WLS optimized for performance
 
     Parameters
     ----------
@@ -18,7 +19,7 @@ class _MinimalWLS:
     weights : array_like, optional
         1d array of weights.  If you supply 1/W then the variables are pre-
         multiplied by 1/sqrt(W).  If no weights are supplied the default value
-        is 1 and WLS reults are the same as OLS.
+        is 1 and WLS results are the same as OLS.
     check_endog : bool, optional
         Flag indicating whether to check for inf/nan in endog.
         If True and any are found, ValueError is raised.
@@ -33,9 +34,10 @@ class _MinimalWLS:
 
     Does not perform any checks on the input data for type or shape
     compatibility
+
     """
 
-    msg = 'NaN, inf or invalid value detected in {0}, estimation infeasible.'
+    msg = "NaN, inf or invalid value detected in {0}, estimation infeasible."
 
     def __init__(self, endog, exog, weights=1.0, check_endog=False,
                  check_weights=False):
@@ -45,11 +47,11 @@ class _MinimalWLS:
         w_half = np.sqrt(weights)
         if check_weights:
             if not np.all(np.isfinite(w_half)):
-                raise ValueError(self.msg.format('weights'))
+                raise ValueError(self.msg.format("weights"))
 
         if check_endog:
             if not np.all(np.isfinite(endog)):
-                raise ValueError(self.msg.format('endog'))
+                raise ValueError(self.msg.format("endog"))
 
         self.wendog = w_half * endog
         if np.isscalar(weights):
@@ -57,13 +59,13 @@ class _MinimalWLS:
         else:
             self.wexog = np.asarray(w_half)[:, None] * exog
 
-    def fit(self, method='pinv'):
+    def fit(self, method="pinv"):
         """
-        Minimal implementation of WLS optimized for performance.
+        Estimate the model parameters using weighted least squares
 
         Parameters
         ----------
-        method : str, optional
+        method : {'pinv', 'qr', 'lstsq'}, optional
             Method to use to estimate parameters.  "pinv", "qr" or "lstsq"
 
               * "pinv" uses the Moore-Penrose pseudoinverse
@@ -73,7 +75,7 @@ class _MinimalWLS:
 
         Returns
         -------
-        results : namedtuple
+        results : Bunch
             Named tuple containing the fewest terms needed to implement
             iterative estimation in models. Currently
 
@@ -85,16 +87,17 @@ class _MinimalWLS:
 
         Notes
         -----
-        Does not perform and checks on the input data
+        Does not perform any checks on the input data
 
         See Also
         --------
         statsmodels.regression.linear_model.WLS
+
         """
-        if method == 'pinv':
+        if method == "pinv":
             pinv_wexog = np.linalg.pinv(self.wexog)
             params = pinv_wexog.dot(self.wendog)
-        elif method == 'qr':
+        elif method == "qr":
             Q, R = np.linalg.qr(self.wexog)
             params = np.linalg.solve(R, np.dot(Q.T, self.wendog))
         else:
@@ -106,13 +109,22 @@ class _MinimalWLS:
         """
         Construct results
 
+        Parameters
+        ----------
         params : ndarray
             Model parameters
+
+        Returns
+        -------
+        Bunch
+            Named tuple containing the fewest terms needed to implement
+            iterative estimation in models.
 
         Notes
         -----
         Allows results to be constructed from either existing parameters or
-        when estimated using using ``fit``
+        when estimated using ``fit``
+
         """
         fitted_values = self.exog.dot(params)
         resid = self.endog - fitted_values

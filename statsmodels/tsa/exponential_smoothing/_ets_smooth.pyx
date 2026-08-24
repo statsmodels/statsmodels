@@ -1,10 +1,11 @@
 #!python
-#cython: wraparound=False, boundscheck=False, cdivision=True
+#cython: wraparound=False, boundscheck=False, cdivision=True, cpow=True
 
 from cpython cimport bool
-import numpy as np
-cimport numpy as np
 
+import numpy as np
+
+cimport numpy as np
 
 np.import_array()
 
@@ -17,7 +18,7 @@ ctypedef fused numeric:
 cpdef _initialize_ets_smooth(
     numeric [:] params,
     numeric[:,:] xhat,
-    long [:] is_fixed,
+    np.int64_t [:] is_fixed,
     numeric [:] fixed_values,
     bool use_beta_star=False,
     bool use_gamma_star=False,
@@ -65,7 +66,7 @@ def _ets_smooth_add_add(numeric [:] params,
                         numeric [:] y,
                         numeric [:] yhat,
                         numeric [:,:] xhat,
-                        long [:] is_fixed,
+                        np.int64_t [:] is_fixed,
                         numeric [:] fixed_values,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):
@@ -100,7 +101,7 @@ def _ets_smooth_add_mul(numeric [:] params,
                         numeric [:] y,
                         numeric [:] yhat,
                         numeric [:,:] xhat,
-                        long [:] is_fixed,
+                        np.int64_t [:] is_fixed,
                         numeric [:] fixed_values,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):
@@ -135,7 +136,7 @@ def _ets_smooth_mul_add(numeric [:] params,
                         numeric [:] y,
                         numeric [:] yhat,
                         numeric [:,:] xhat,
-                        long [:] is_fixed,
+                        np.int64_t [:] is_fixed,
                         numeric [:] fixed_values,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):
@@ -170,7 +171,7 @@ def _ets_smooth_mul_mul(numeric [:] params,
                         numeric [:] y,
                         numeric [:] yhat,
                         numeric [:,:] xhat,
-                        long [:] is_fixed,
+                        np.int64_t [:] is_fixed,
                         numeric [:] fixed_values,
                         bool use_beta_star=False,
                         bool use_gamma_star=False):

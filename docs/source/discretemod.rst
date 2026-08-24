@@ -36,8 +36,8 @@ Examples
 Detailed examples can be found here:
 
 
-* `Overview <examples/notebooks/generated/discrete_choice_overview.html>`__
-* `Examples <examples/notebooks/generated/discrete_choice_example.html>`__
+* `Overview <examples/notebooks/generated/discrete_choice_overview.ipynb>`_
+* `Examples <examples/notebooks/generated/discrete_choice_example.ipynb>`_
 
 Technical Documentation
 -----------------------
@@ -136,7 +136,9 @@ The specific result classes are:
    ProbitResults
    CountResults
    MultinomialResults
+   PoissonResults
    NegativeBinomialResults
+   NegativeBinomialPResults
    GeneralizedPoissonResults
 
 .. currentmodule:: statsmodels.discrete.count_model
@@ -163,7 +165,7 @@ The specific result classes are:
    :toctree: generated/
 
    ConditionalResults
-   
+
 .. currentmodule:: statsmodels.miscmodels.ordinal_model
 
 .. autosummary::

@@ -1,20 +1,20 @@
 """Statewide Crime Data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """Public domain."""
-TITLE       = """Statewide Crime Data 2009"""
-SOURCE      = """
+COPYRIGHT = "Public domain."
+TITLE = "Statewide Crime Data 2009"
+SOURCE = """
 All data is for 2009 and was obtained from the American Statistical Abstracts except as indicated below.
 """
 
-DESCRSHORT  = """State crime data 2009"""
+DESCRSHORT = """State crime data 2009"""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-#suggested notes
-NOTE        = """::
+# suggested notes
+NOTE = """::
 
     Number of observations: 51
     Number of variables: 8
@@ -44,7 +44,7 @@ NOTE        = """::
         Percent of population that is one race - white only. From 2009 American
         Community Survey
     single
-        Calculated from 2009 1-year American Community Survey obtained obtained
+        Calculated from 2009 1-year American Community Survey obtained
         from Census. Variable is Male householder, no wife present, family
         household combined with Female householder, no husband present, family
         household, divided by the total number of Family households.
@@ -54,6 +54,15 @@ NOTE        = """::
 
 
 def load_pandas():
+    """
+    Load the statecrime data and return a Dataset class instance.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
+    """
     data = _get_data()
     return du.process_pandas(data, endog_idx=2, exog_idx=[7, 4, 3, 5], index_idx=0)
 
@@ -65,10 +74,11 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     return load_pandas()
 
 
 def _get_data():
-    return du.load_csv(__file__, 'statecrime.csv')
+    return du.load_csv(__file__, "statecrime.csv")

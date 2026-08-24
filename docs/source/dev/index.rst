@@ -15,6 +15,11 @@ Submitting a Bug Report
 - Specify the statsmodels version used. You can do this with ``sm.version.full_version``
 - If the issue looks to involve other dependencies, also include the output of ``sm.show_versions()``
 
+Use of AI Tools
+---------------
+See the :ref:`statsmodels AI policy <ai-policy-label>` for guidance on using AI tools
+in development and testing.
+
 Making Changes to the Code
 --------------------------
 
@@ -50,7 +55,9 @@ greatly helps the job of maintaining and releasing the software a shared effort.
     make html
 
   Check that the build output does not have *any* warnings due to your changes.
-- Follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ style guidelines wherever possible. 
+
+  Generating the docs requires additional dependencies, see ``docs/README.md`` for details.
+- Follow `PEP8 <https://www.python.org/dev/peps/pep-0008/>`_ style guidelines wherever possible.
   Lint your code by running ``LINT=true ./lint.sh``. 
 - Compare your changes to what’s in main by running ``git diff upstream/main``.
 - Finally, please add your changes to the release notes. Open the
@@ -96,6 +103,7 @@ Contents
 .. toctree::
    :maxdepth: 1
 
+   ai-policy
    git_notes
    maintainer_notes
    test_notes

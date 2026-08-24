@@ -1,10 +1,16 @@
 __all__ = [
-    "GLM", "GEE", "OrdinalGEE", "NominalGEE",
-    "BinomialBayesMixedGLM", "PoissonBayesMixedGLM",
-    "families", "cov_struct"
+    "GEE",
+    "GLM",
+    "QIF",
+    "BinomialBayesMixedGLM",
+    "NominalGEE",
+    "OrdinalGEE",
+    "PoissonBayesMixedGLM",
+    "cov_struct",
+    "families"
 ]
-from .generalized_linear_model import GLM
-from .generalized_estimating_equations import GEE, OrdinalGEE, NominalGEE
+from . import cov_struct, families
 from .bayes_mixed_glm import BinomialBayesMixedGLM, PoissonBayesMixedGLM
-from . import families
-from . import cov_struct
+from .generalized_estimating_equations import GEE, NominalGEE, OrdinalGEE
+from .generalized_linear_model import GLM
+from .qif import QIF

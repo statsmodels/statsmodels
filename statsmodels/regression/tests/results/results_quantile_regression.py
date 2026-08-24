@@ -1,7 +1,8 @@
+"""Reference results for quantile regression tests."""
+
 import numpy as np
 
 from statsmodels.tools.tools import Bunch
-
 
 epanechnikov_hsheather_q75 = Bunch()
 epanechnikov_hsheather_q75.table = np.array([

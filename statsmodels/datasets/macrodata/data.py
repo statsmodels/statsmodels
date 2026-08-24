@@ -1,11 +1,11 @@
 """United States Macroeconomic data"""
 from statsmodels.datasets import utils as du
 
-__docformat__ = 'restructuredtext'
+__docformat__ = "restructuredtext"
 
-COPYRIGHT   = """This is public domain."""
-TITLE       = __doc__
-SOURCE      = """
+COPYRIGHT = """This is public domain."""
+TITLE = __doc__
+SOURCE = """
 Compiled by Skipper Seabold. All data are from the Federal Reserve Bank of St.
 Louis [1] except the unemployment rate which was taken from the National
 Bureau of Labor Statistics [2]. ::
@@ -18,11 +18,11 @@ Bureau of Labor Statistics [2]. ::
         http://www.bls.gov/data/; accessed December 15, 2009.
 """
 
-DESCRSHORT  = """US Macroeconomic Data for 1959Q1 - 2009Q3"""
+DESCRSHORT = """US Macroeconomic Data for 1959Q1 - 2009Q3"""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG = DESCRSHORT
 
-NOTE        = """::
+NOTE = """::
     Number of Observations - 203
 
     Number of Variables - 14
@@ -56,6 +56,18 @@ NOTE        = """::
 
 
 def load_pandas():
+    """
+    Load the US macro data and return a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data`` and ``names`` attributes.
+
+    Notes
+    -----
+    The macrodata Dataset instance does not contain endog and exog attributes.
+    """
     data = _get_data()
     return du.Dataset(data=data, names=list(data.columns))
 
@@ -67,7 +79,7 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``names`` attributes.
 
     Notes
     -----
@@ -77,7 +89,7 @@ def load():
 
 
 def _get_data():
-    return du.load_csv(__file__, 'macrodata.csv').astype(float)
+    return du.load_csv(__file__, "macrodata.csv").astype(float)
 
 
 variable_names = ["realcons", "realgdp", "realinv"]

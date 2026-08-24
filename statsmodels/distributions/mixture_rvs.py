@@ -1,8 +1,26 @@
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
 
-def _make_index(prob,size):
+from statsmodels.tools.rng_qrng import check_random_state
+
+
+def _make_index(prob, size, rng=None):
     """
     Returns a boolean index for given probabilities.
+
+    Parameters
+    ----------
+    prob : array_like
+        Probability of sampling from each distribution in dist.
+    size : int
+        The length of the returned sample.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `rng` is None, a new ``Generator`` is created using fresh
+        entropy from the operating system. If `rng` is an int or array
+        of ints, a new ``Generator`` is created, seeded with `rng`. If
+        `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
 
     Notes
     -----
@@ -10,11 +28,13 @@ def _make_index(prob,size):
     being True and a 25% chance of the second column being True. The
     columns are mutually exclusive.
     """
-    rv = np.random.uniform(size=(size,1))
+    rng = check_random_state(rng)
+    rv = rng.uniform(size=(size, 1))
     cumprob = np.cumsum(prob)
-    return np.logical_and(np.r_[0,cumprob[:-1]] <= rv, rv < cumprob)
+    return np.logical_and(np.r_[0, cumprob[:-1]] <= rv, rv < cumprob)
 
-def mixture_rvs(prob, size, dist, kwargs=None):
+
+def mixture_rvs(prob, size, dist, kwargs=None, rng=None):
     """
     Sample from a mixture of distributions.
 
@@ -30,6 +50,20 @@ def mixture_rvs(prob, size, dist, kwargs=None):
         A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
         args to be passed to the respective distribution in dist.  If not
         provided, the distribution defaults are used.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``RandomState`` instance is created, seeded with `rng`. If `rng`
+        is already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
+
+    Returns
+    -------
+    ndarray
+        Sample from the mixture distribution, with length `size`.
 
     Examples
     --------
@@ -48,36 +82,72 @@ def mixture_rvs(prob, size, dist, kwargs=None):
         raise ValueError("prob does not sum to 1")
 
     if kwargs is None:
-        kwargs = ({},)*len(prob)
+        kwargs = ({},) * len(prob)
 
-    idx = _make_index(prob,size)
+    idx = _make_index(prob, size, rng)
     sample = np.empty(size)
     for i in range(len(prob)):
-        sample_idx = idx[...,i]
+        sample_idx = idx[..., i]
         sample_size = sample_idx.sum()
-        loc = kwargs[i].get('loc',0)
-        scale = kwargs[i].get('scale',1)
-        args = kwargs[i].get('args',())
-        sample[sample_idx] = dist[i].rvs(*args, **dict(loc=loc,scale=scale,
-            size=sample_size))
+        loc = kwargs[i].get("loc", 0)
+        scale = kwargs[i].get("scale", 1)
+        args = kwargs[i].get("args", ())
+        sample[sample_idx] = dist[i].rvs(
+            *args, **dict(loc=loc, scale=scale, size=sample_size, random_state=rng)
+        )
     return sample
 
 
 class MixtureDistribution:
-    '''univariate mixture distribution
+    """univariate mixture distribution
 
     for simple case for now (unbound support)
     does not yet inherit from scipy.stats.distributions
 
     adding pdf to mixture_rvs, some restrictions on broadcasting
     Currently it does not hold any state, all arguments included in each method.
-    '''
+    """
 
-    #def __init__(self, prob, size, dist, kwargs=None):
+    # def __init__(self, prob, size, dist, kwargs=None):
 
-    def rvs(self, prob, size, dist, kwargs=None):
-        return mixture_rvs(prob, size, dist, kwargs=kwargs)
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, prob, size, dist, kwargs=None, rng=None):
+        """
+        Sample from a mixture of distributions.
 
+        Parameters
+        ----------
+        prob : array_like
+            Probability of sampling from each distribution in dist
+        size : int
+            The length of the returned sample.
+        dist : array_like
+            An iterable of distributions objects from scipy.stats.
+        kwargs : tuple of dicts, optional
+            A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
+            args to be passed to the respective distribution in dist.  If not
+            provided, the distribution defaults are used.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, the legacy global (singleton) ``RandomState``
+            provided by ``numpy.random`` is used; this behavior is
+            deprecated and will change to creating a new ``Generator``
+            using fresh entropy from the operating system in a future
+            release. If `rng` is an int or array of ints, a new
+            ``RandomState`` instance is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        ndarray
+            Sample from the mixture distribution.
+        """
+        return mixture_rvs(prob, size, dist, kwargs=kwargs, rng=rng)
 
     def pdf(self, x, prob, dist, kwargs=None):
         """
@@ -96,6 +166,11 @@ class MixtureDistribution:
             args to be passed to the respective distribution in dist.  If not
             provided, the distribution defaults are used.
 
+        Returns
+        -------
+        ndarray
+            Pdf of the mixture distribution evaluated at `x`.
+
         Examples
         --------
         Say we want 5000 random variables from mixture of normals with two
@@ -117,13 +192,13 @@ class MixtureDistribution:
             raise ValueError("prob does not sum to 1")
 
         if kwargs is None:
-            kwargs = ({},)*len(prob)
+            kwargs = ({},) * len(prob)
 
         for i in range(len(prob)):
-            loc = kwargs[i].get('loc',0)
-            scale = kwargs[i].get('scale',1)
-            args = kwargs[i].get('args',())
-            if i == 0:  #assume all broadcast the same as the first dist
+            loc = kwargs[i].get("loc", 0)
+            scale = kwargs[i].get("scale", 1)
+            args = kwargs[i].get("args", ())
+            if i == 0:  # assume all broadcast the same as the first dist
                 pdf_ = prob[i] * dist[i].pdf(x, *args, loc=loc, scale=scale)
             else:
                 pdf_ += prob[i] * dist[i].pdf(x, *args, loc=loc, scale=scale)
@@ -139,14 +214,17 @@ class MixtureDistribution:
             Array containing locations where the CDF should be evaluated
         prob : array_like
             Probability of sampling from each distribution in dist
-        size : int
-            The length of the returned sample.
         dist : array_like
             An iterable of distributions objects from scipy.stats.
         kwargs : tuple of dicts, optional
             A tuple of dicts.  Each dict in kwargs can have keys loc, scale, and
             args to be passed to the respective distribution in dist.  If not
             provided, the distribution defaults are used.
+
+        Returns
+        -------
+        ndarray
+            Cdf of the mixture distribution evaluated at `x`.
 
         Examples
         --------
@@ -160,7 +238,7 @@ class MixtureDistribution:
         >>> x = np.arange(-4.0, 4.0, 0.01)
         >>> prob = [.75,.25]
         >>> mixture = MixtureDistribution()
-        >>> Y = mixture.pdf(x, prob, dist=[stats.norm, stats.norm],
+        >>> Y = mixture.cdf(x, prob, dist=[stats.norm, stats.norm],
         ...                 kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
         """
         if len(prob) != len(dist):
@@ -169,20 +247,20 @@ class MixtureDistribution:
             raise ValueError("prob does not sum to 1")
 
         if kwargs is None:
-            kwargs = ({},)*len(prob)
+            kwargs = ({},) * len(prob)
 
         for i in range(len(prob)):
-            loc = kwargs[i].get('loc',0)
-            scale = kwargs[i].get('scale',1)
-            args = kwargs[i].get('args',())
-            if i == 0:  #assume all broadcast the same as the first dist
+            loc = kwargs[i].get("loc", 0)
+            scale = kwargs[i].get("scale", 1)
+            args = kwargs[i].get("args", ())
+            if i == 0:  # assume all broadcast the same as the first dist
                 cdf_ = prob[i] * dist[i].cdf(x, *args, loc=loc, scale=scale)
             else:
                 cdf_ += prob[i] * dist[i].cdf(x, *args, loc=loc, scale=scale)
         return cdf_
 
 
-def mv_mixture_rvs(prob, size, dist, nvars, **kwargs):
+def mv_mixture_rvs(prob, size, dist, nvars, rng=None, **kwargs):
     """
     Sample from a mixture of multivariate distributions.
 
@@ -194,10 +272,25 @@ def mv_mixture_rvs(prob, size, dist, nvars, **kwargs):
         The length of the returned sample.
     dist : array_like
         An iterable of distributions instances with callable method rvs.
-    nvargs : int
+    nvars : int
         dimension of the multivariate distribution, could be inferred instead
-    kwargs : tuple of dicts, optional
-        ignored
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        If `rng` is None, the legacy global (singleton) ``RandomState``
+        provided by ``numpy.random`` is used; this behavior is
+        deprecated and will change to creating a new ``Generator``
+        using fresh entropy from the operating system in a future
+        release. If `rng` is an int or array of ints, a new
+        ``RandomState`` instance is created, seeded with `rng`. If `rng`
+        is already a ``Generator`` or ``RandomState`` instance, that
+        instance is used.
+    **kwargs
+        Ignored.
+
+    Returns
+    -------
+    ndarray
+        Sample from the mixture of multivariate distributions, with shape
+        (`size`, `nvars`).
 
     Examples
     --------
@@ -222,58 +315,20 @@ def mv_mixture_rvs(prob, size, dist, nvars, **kwargs):
     if not np.allclose(np.sum(prob), 1):
         raise ValueError("prob does not sum to 1")
 
-    if kwargs is None:
-        kwargs = ({},)*len(prob)
+    # if kwargs is None:
+    #     kwargs = ({},) * len(prob)
 
-    idx = _make_index(prob,size)
+    idx = _make_index(prob, size, rng)
     sample = np.empty((size, nvars))
     for i in range(len(prob)):
-        sample_idx = idx[...,i]
+        sample_idx = idx[..., i]
         sample_size = sample_idx.sum()
-        #loc = kwargs[i].get('loc',0)
-        #scale = kwargs[i].get('scale',1)
-        #args = kwargs[i].get('args',())
+        # loc = kwargs[i].get('loc',0)
+        # scale = kwargs[i].get('scale',1)
+        # args = kwargs[i].get('args',())
         # use int to avoid numpy bug with np.random.multivariate_normal
-        sample[sample_idx] = dist[i].rvs(size=int(sample_size))
+        try:
+            sample[sample_idx] = dist[i].rvs(size=int(sample_size), rng=rng)
+        except TypeError:
+            sample[sample_idx] = dist[i].rvs(size=int(sample_size), random_state=rng)
     return sample
-
-
-
-if __name__ == '__main__':
-
-    from scipy import stats
-
-    obs_dist = mixture_rvs([.25,.75], size=10000, dist=[stats.norm, stats.beta],
-                kwargs=(dict(loc=-1,scale=.5),dict(loc=1,scale=1,args=(1,.5))))
-
-
-
-    nobs = 10000
-    mix = MixtureDistribution()
-##    mrvs = mixture_rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
-##                   kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.75)))
-
-    mix_kwds = (dict(loc=-1,scale=.25),dict(loc=1,scale=.75))
-    mrvs = mix.rvs([1/3.,2/3.], size=nobs, dist=[stats.norm, stats.norm],
-                   kwargs=mix_kwds)
-
-    grid = np.linspace(-4,4, 100)
-    mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
-                   kwargs=mix_kwds)
-    mcdf = mix.cdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
-                   kwargs=mix_kwds)
-
-    doplot = 1
-    if doplot:
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.hist(mrvs, bins=50, normed=True, color='red')
-        plt.title('histogram of sample and pdf')
-        plt.plot(grid, mpdf, lw=2, color='black')
-
-        plt.figure()
-        plt.hist(mrvs, bins=50, normed=True, cumulative=True, color='red')
-        plt.title('histogram of sample and pdf')
-        plt.plot(grid, mcdf, lw=2, color='black')
-
-        plt.show()

@@ -1,25 +1,21 @@
-import os
+from pathlib import Path
 
 import numpy as np
-from statsmodels.duration.survfunc import (
-    SurvfuncRight, survdiff, plot_survfunc,
-    CumIncidenceRight)
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
-# If true, the output is written to a multi-page pdf file.
-pdf_output = False
+from statsmodels.duration.survfunc import (
+    CumIncidenceRight,
+    SurvfuncRight,
+    plot_survfunc,
+    survdiff,
+)
 
 try:
     import matplotlib.pyplot as plt
 except ImportError:
     pass
-
-
-def close_or_save(pdf, fig):
-    if pdf_output:
-        pdf.savefig(fig)
 
 
 """
@@ -41,7 +37,7 @@ times1 = np.r_[1, 2, 3, 5]
 surv_prob1 = np.r_[0.8750000, 0.7291667, 0.5468750, 0.0000000]
 surv_prob_se1 = np.r_[0.1169268, 0.1649762, 0.2005800, np.nan]
 n_risk1 = np.r_[8, 6, 4, 1]
-n_events1 = np.r_[1.,  1.,  1.,  1.]
+n_events1 = np.r_[1.0, 1.0, 1.0, 1.0]
 
 ti2 = np.r_[1, 1, 2, 3, 7, 1, 5, 3, 9]
 st2 = np.r_[0, 1, 0, 0, 1, 0, 1, 0, 1]
@@ -49,10 +45,10 @@ times2 = np.r_[1, 5, 7, 9]
 surv_prob2 = np.r_[0.8888889, 0.5925926, 0.2962963, 0.0000000]
 surv_prob_se2 = np.r_[0.1047566, 0.2518034, 0.2444320, np.nan]
 n_risk2 = np.r_[9, 3, 2, 1]
-n_events2 = np.r_[1., 1., 1., 1.]
+n_events2 = np.r_[1.0, 1.0, 1.0, 1.0]
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-fp = os.path.join(cur_dir, 'results', 'bmt.csv')
+cur_dir = Path(__file__).resolve().parent
+fp = Path(cur_dir).joinpath("results", "bmt.csv")
 bmt = pd.read_csv(fp)
 
 
@@ -65,6 +61,31 @@ def test_survfunc1():
     assert_allclose(sr.surv_times, times1)
     assert_allclose(sr.n_risk, n_risk1)
     assert_allclose(sr.n_events, n_events1)
+
+    df = sr.summary()
+    assert list(df.index) == list(sr.surv_times)
+    assert_allclose(df["Surv prob"].values, sr.surv_prob)
+    assert_allclose(df["Surv prob SE"].values, sr.surv_prob_se)
+    assert_allclose(df["num at risk"].values, sr.n_risk)
+    assert_allclose(df["num events"].values, sr.n_events)
+
+    # quantile(p): first time where the survival curve drops below 1-p,
+    # i.e. the smallest t with P(T > t) < 1-p
+    for p in (0.1, 0.5, 0.9):
+        q = sr.quantile(p)
+        ii = np.flatnonzero(sr.surv_prob < 1 - p)
+        expected = np.nan if len(ii) == 0 else sr.surv_times[ii[0]]
+        if np.isnan(expected):
+            assert np.isnan(q)
+        else:
+            assert q == expected
+            # the survival probability at (just before) the quantile has
+            # indeed just dropped below 1-p
+            assert sr.surv_prob[sr.surv_times == q][0] < 1 - p
+
+    # p beyond the lowest observed survival probability: no such time
+    p_beyond = 1 - sr.surv_prob.min() + 0.01
+    assert np.isnan(sr.quantile(p_beyond))
 
 
 def test_survfunc2():
@@ -84,7 +105,7 @@ def test_survdiff_basic():
     ti = np.concatenate((ti1, ti2))
     st = np.concatenate((st1, st2))
     groups = np.ones(len(ti))
-    groups[0:len(ti1)] = 0
+    groups[0 : len(ti1)] = 0
     z, p = survdiff(ti, st, groups)
     assert_allclose(z, 2.14673, atol=1e-4, rtol=1e-4)
     assert_allclose(p, 0.14287, atol=1e-4, rtol=1e-4)
@@ -102,15 +123,16 @@ def test_simultaneous_cb():
 
     ti = sf.surv_times.tolist()
     ix = [ti.index(x) for x in (110, 122, 129, 172)]
-    assert_allclose(lcb1[ix], np.r_[0.43590582, 0.42115592,
-                                    0.4035897, 0.38785927])
-    assert_allclose(ucb1[ix], np.r_[0.93491636, 0.89776803,
-                                    0.87922239, 0.85894181])
+    assert_allclose(lcb1[ix], np.r_[0.43590582, 0.42115592, 0.4035897, 0.38785927])
+    assert_allclose(ucb1[ix], np.r_[0.93491636, 0.89776803, 0.87922239, 0.85894181])
 
-    assert_allclose(lcb2[ix], np.r_[0.52115708, 0.48079378,
-                                    0.45595321, 0.43341115])
-    assert_allclose(ucb2[ix], np.r_[0.96465636,  0.92745068,
-                                    0.90885428, 0.88796708])
+    assert_allclose(lcb2[ix], np.r_[0.52115708, 0.48079378, 0.45595321, 0.43341115])
+    assert_allclose(ucb2[ix], np.r_[0.96465636, 0.92745068, 0.90885428, 0.88796708])
+
+    with pytest.raises(ValueError, match="method"):
+        sf.simultaneous_cb(method="not-a-method")
+    with pytest.raises(ValueError, match="transform"):
+        sf.simultaneous_cb(transform="not-a-transform")
 
 
 def test_bmt():
@@ -120,16 +142,18 @@ def test_bmt():
 
     # Confidence intervals for 25% percentile of the survival
     # distribution (for "ALL" subjects), taken from the SAS web site
-    cb = {"linear": [107, 276],
-          "cloglog": [86, 230],
-          "log": [107, 332],
-          "asinsqrt": [104, 276],
-          "logit": [104, 230]}
+    cb = {
+        "linear": [107, 276],
+        "cloglog": [86, 230],
+        "log": [107, 332],
+        "asinsqrt": [104, 276],
+        "logit": [104, 230],
+    }
 
     dfa = bmt[bmt.Group == "ALL"]
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    fp = os.path.join(cur_dir, 'results', 'bmt_results.csv')
+    cur_dir = Path(__file__).resolve().parent
+    fp = Path(cur_dir).joinpath("results", "bmt_results.csv")
     rslt = pd.read_csv(fp)
 
     sf = SurvfuncRight(dfa["T"].values, dfa.Status.values)
@@ -141,6 +165,9 @@ def test_bmt():
     for method in "linear", "cloglog", "log", "logit", "asinsqrt":
         lcb, ucb = sf.quantile_ci(0.25, method=method)
         assert_allclose(cb[method], np.r_[lcb, ucb])
+
+    with pytest.raises(ValueError, match="method"):
+        sf.quantile_ci(0.25, method="not-a-method")
 
 
 def test_survdiff():
@@ -158,16 +185,15 @@ def test_survdiff():
     assert_allclose(stat, 15.38787, atol=1e-4, rtol=1e-4)
     stat, p = survdiff(df["T"], df.Status, df.Group, weight_type="tw")
     assert_allclose(stat, 14.98382, atol=1e-4, rtol=1e-4)
-    stat, p = survdiff(df["T"], df.Status, df.Group, weight_type="fh",
-                       fh_p=0.5)
+    stat, p = survdiff(df["T"], df.Status, df.Group, weight_type="fh", fh_p=0.5)
     assert_allclose(stat, 14.46866, atol=1e-4, rtol=1e-4)
-    stat, p = survdiff(df["T"], df.Status, df.Group, weight_type="fh",
-                       fh_p=1)
+    stat, p = survdiff(df["T"], df.Status, df.Group, weight_type="fh", fh_p=1)
     assert_allclose(stat, 14.84500, atol=1e-4, rtol=1e-4)
 
     # Not stratified, >2 groups
-    stat, p = survdiff(full_df["T"], full_df.Status, full_df.Group,
-                       weight_type="fh", fh_p=1)
+    stat, p = survdiff(
+        full_df["T"], full_df.Status, full_df.Group, weight_type="fh", fh_p=1
+    )
     assert_allclose(stat, 15.67247, atol=1e-4, rtol=1e-4)
 
     # 5 strata
@@ -175,52 +201,54 @@ def test_survdiff():
     df["strata"] = strata
     stat, p = survdiff(df["T"], df.Status, df.Group, strata=df.strata)
     assert_allclose(stat, 11.97799, atol=1e-4, rtol=1e-4)
-    stat, p = survdiff(df["T"], df.Status, df.Group, strata=df.strata,
-                       weight_type="fh", fh_p=0.5)
+    stat, p = survdiff(
+        df["T"], df.Status, df.Group, strata=df.strata, weight_type="fh", fh_p=0.5
+    )
     assert_allclose(stat, 12.6257, atol=1e-4, rtol=1e-4)
-    stat, p = survdiff(df["T"], df.Status, df.Group, strata=df.strata,
-                       weight_type="fh", fh_p=1)
+    stat, p = survdiff(
+        df["T"], df.Status, df.Group, strata=df.strata, weight_type="fh", fh_p=1
+    )
     assert_allclose(stat, 12.73565, atol=1e-4, rtol=1e-4)
 
     # 5 strata, >2 groups
     full_strata = np.arange(full_df.shape[0]) % 5
     full_df["strata"] = full_strata
-    stat, p = survdiff(full_df["T"], full_df.Status, full_df.Group,
-                       strata=full_df.strata, weight_type="fh", fh_p=0.5)
+    stat, p = survdiff(
+        full_df["T"],
+        full_df.Status,
+        full_df.Group,
+        strata=full_df.strata,
+        weight_type="fh",
+        fh_p=0.5,
+    )
     assert_allclose(stat, 13.56793, atol=1e-4, rtol=1e-4)
 
     # 8 strata
     df["strata"] = np.arange(df.shape[0]) % 8
     stat, p = survdiff(df["T"], df.Status, df.Group, strata=df.strata)
     assert_allclose(stat, 12.12631, atol=1e-4, rtol=1e-4)
-    stat, p = survdiff(df["T"], df.Status, df.Group, strata=df.strata,
-                       weight_type="fh", fh_p=0.5)
+    stat, p = survdiff(
+        df["T"], df.Status, df.Group, strata=df.strata, weight_type="fh", fh_p=0.5
+    )
     assert_allclose(stat, 12.9633, atol=1e-4, rtol=1e-4)
-    stat, p = survdiff(df["T"], df.Status, df.Group, strata=df.strata,
-                       weight_type="fh", fh_p=1)
+    stat, p = survdiff(
+        df["T"], df.Status, df.Group, strata=df.strata, weight_type="fh", fh_p=1
+    )
     assert_allclose(stat, 13.35259, atol=1e-4, rtol=1e-4)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_km(close_figures):
-
-    if pdf_output:
-        from matplotlib.backends.backend_pdf import PdfPages
-        pdf = PdfPages("test_survfunc.pdf")
-    else:
-        pdf = None
 
     sr1 = SurvfuncRight(ti1, st1)
     sr2 = SurvfuncRight(ti2, st2)
 
     fig = plot_survfunc(sr1)
-    close_or_save(pdf, fig)
 
     fig = plot_survfunc(sr2)
-    close_or_save(pdf, fig)
 
     fig = plot_survfunc([sr1, sr2])
-    close_or_save(pdf, fig)
 
     # Plot the SAS BMT data
     gb = bmt.groupby("Group")
@@ -232,10 +260,9 @@ def test_plot_km(close_figures):
     ax = fig.get_axes()[0]
     ax.set_position([0.1, 0.1, 0.64, 0.8])
     ha, lb = ax.get_legend_handles_labels()
-    fig.legend([ha[k] for k in (0, 2, 4)],
-               [lb[k] for k in (0, 2, 4)],
-               loc='center right')
-    close_or_save(pdf, fig)
+    fig.legend(
+        [ha[k] for k in (0, 2, 4)], [lb[k] for k in (0, 2, 4)], loc="center right"
+    )
 
     # Simultaneous CB for BMT data
     ii = bmt.Group == "ALL"
@@ -249,13 +276,9 @@ def test_plot_km(close_figures):
     lcb, ucb = sf.simultaneous_cb(transform="arcsin")
     plt.plot(sf.surv_times, lcb, color="darkgrey")
     plt.plot(sf.surv_times, ucb, color="darkgrey")
-    plt.plot(sf.surv_times, sf.surv_prob - 2*sf.surv_prob_se, color="red")
-    plt.plot(sf.surv_times, sf.surv_prob + 2*sf.surv_prob_se, color="red")
+    plt.plot(sf.surv_times, sf.surv_prob - 2 * sf.surv_prob_se, color="red")
+    plt.plot(sf.surv_times, sf.surv_prob + 2 * sf.surv_prob_se, color="red")
     plt.xlim(100, 600)
-    close_or_save(pdf, fig)
-
-    if pdf_output:
-        pdf.close()
 
 
 def test_weights1():
@@ -271,11 +294,11 @@ def test_weights1():
 
     sf = SurvfuncRight(tm, st, freq_weights=wt)
     assert_allclose(sf.surv_times, np.r_[1, 3, 6, 7, 9])
-    assert_allclose(sf.surv_prob,
-                    np.r_[0.875, 0.65625, 0.51041667, 0.29166667, 0.])
-    assert_allclose(sf.surv_prob_se,
-                    np.r_[0.07216878, 0.13307266, 0.20591185, 0.3219071,
-                          1.05053519])
+    assert_allclose(sf.surv_prob, np.r_[0.875, 0.65625, 0.51041667, 0.29166667, 0.0])
+    assert_allclose(
+        sf.surv_prob_se,
+        np.r_[0.07216878, 0.13307266, 0.20591185, 0.3219071, 1.05053519],
+    )
 
 
 def test_weights2():
@@ -297,10 +320,19 @@ def test_weights2():
     assert_allclose(sf0.surv_times, sf1.surv_times)
     assert_allclose(sf0.surv_prob, sf1.surv_prob)
 
-    assert_allclose(sf0.surv_prob_se,
-                    np.r_[0.06666667, 0.1210311, 0.14694547,
-                          0.19524829, 0.23183377,
-                          0.30618115, 0.46770386, 0.84778942])
+    assert_allclose(
+        sf0.surv_prob_se,
+        np.r_[
+            0.06666667,
+            0.1210311,
+            0.14694547,
+            0.19524829,
+            0.23183377,
+            0.30618115,
+            0.46770386,
+            0.84778942,
+        ],
+    )
 
 
 def test_incidence():
@@ -321,22 +353,44 @@ def test_incidence():
 
     ci = CumIncidenceRight(ftime, fstat)
 
-    cinc = [np.array([0.11111111, 0.17037037, 0.17037037, 0.17037037,
-                      0.17037037, 0.17037037, 0.17037037]),
-            np.array([0., 0., 0.20740741, 0.20740741,
-                      0.20740741, 0.20740741, 0.20740741]),
-            np.array([0., 0., 0., 0.17777778,
-                      0.26666667, 0.26666667, 0.26666667])]
+    cinc = [
+        np.array(
+            [
+                0.11111111,
+                0.17037037,
+                0.17037037,
+                0.17037037,
+                0.17037037,
+                0.17037037,
+                0.17037037,
+            ]
+        ),
+        np.array(
+            [0.0, 0.0, 0.20740741, 0.20740741, 0.20740741, 0.20740741, 0.20740741]
+        ),
+        np.array([0.0, 0.0, 0.0, 0.17777778, 0.26666667, 0.26666667, 0.26666667]),
+    ]
     assert_allclose(cinc[0], ci.cinc[0])
     assert_allclose(cinc[1], ci.cinc[1])
     assert_allclose(cinc[2], ci.cinc[2])
 
-    cinc_se = [np.array([0.07407407, 0.08976251, 0.08976251, 0.08976251,
-                         0.08976251, 0.08976251, 0.08976251]),
-               np.array([0., 0., 0.10610391, 0.10610391, 0.10610391,
-                         0.10610391, 0.10610391]),
-               np.array([0., 0., 0., 0.11196147, 0.12787781,
-                         0.12787781, 0.12787781])]
+    cinc_se = [
+        np.array(
+            [
+                0.07407407,
+                0.08976251,
+                0.08976251,
+                0.08976251,
+                0.08976251,
+                0.08976251,
+                0.08976251,
+            ]
+        ),
+        np.array(
+            [0.0, 0.0, 0.10610391, 0.10610391, 0.10610391, 0.10610391, 0.10610391]
+        ),
+        np.array([0.0, 0.0, 0.0, 0.11196147, 0.12787781, 0.12787781, 0.12787781]),
+    ]
     assert_allclose(cinc_se[0], ci.cinc_se[0])
     assert_allclose(cinc_se[1], ci.cinc_se[1])
     assert_allclose(cinc_se[2], ci.cinc_se[2])
@@ -364,12 +418,16 @@ def test_survfunc_entry_1():
 
     assert_allclose(sf.n_risk, np.r_[2, 6, 9, 7, 5, 3, 2])
     assert_allclose(sf.surv_times, np.r_[1, 3, 5, 7, 8, 9, 10])
-    assert_allclose(sf.surv_prob, np.r_[
-        0.5000, 0.4167, 0.3241, 0.2778, 0.2222, 0.1481, 0.0741],
-        atol=1e-4)
-    assert_allclose(sf.surv_prob_se, np.r_[
-        0.3536, 0.3043, 0.2436, 0.2132, 0.1776, 0.1330, 0.0846],
-        atol=1e-4)
+    assert_allclose(
+        sf.surv_prob,
+        np.r_[0.5000, 0.4167, 0.3241, 0.2778, 0.2222, 0.1481, 0.0741],
+        atol=1e-4,
+    )
+    assert_allclose(
+        sf.surv_prob_se,
+        np.r_[0.3536, 0.3043, 0.2436, 0.2132, 0.1776, 0.1330, 0.0846],
+        atol=1e-4,
+    )
 
 
 def test_survfunc_entry_2():
@@ -467,15 +525,15 @@ def test_incidence2():
     # Check that the cumulative incidence functions for all competing
     # risks sum to the complementary survival function.
 
-    np.random.seed(2423)
+    rs = np.random.RandomState(2423)
     n = 200
-    time = -np.log(np.random.uniform(size=n))
-    status = np.random.randint(0, 3, size=n)
+    time = -np.log(rs.uniform(size=n))
+    status = rs.randint(0, 3, size=n)
     ii = np.argsort(time)
     time = time[ii]
     status = status[ii]
     ci = CumIncidenceRight(time, status)
-    statusa = 1*(status >= 1)
+    statusa = 1 * (status >= 1)
     sf = SurvfuncRight(time, statusa)
     x = 1 - sf.surv_prob
     y = (ci.cinc[0] + ci.cinc[1])[np.flatnonzero(statusa)]
@@ -485,10 +543,10 @@ def test_incidence2():
 def test_kernel_survfunc1():
     # Regression test
     n = 100
-    np.random.seed(3434)
-    x = np.random.normal(size=(n, 3))
-    time = np.random.uniform(size=n)
-    status = np.random.randint(0, 2, size=n)
+    rs = np.random.RandomState(3434)
+    x = rs.normal(size=(n, 3))
+    time = rs.uniform(size=n)
+    status = rs.randint(0, 2, size=n)
 
     result = SurvfuncRight(time, status, exog=x)
 
@@ -505,10 +563,10 @@ def test_kernel_survfunc2():
     # perfectly when there are tied times).
 
     n = 100
-    np.random.seed(3434)
-    x = np.random.normal(size=(n, 3))
-    time = np.random.uniform(0, 10, size=n)
-    status = np.random.randint(0, 2, size=n)
+    rs = np.random.RandomState(3434)
+    x = rs.normal(size=(n, 3))
+    time = rs.uniform(0, 10, size=n)
+    status = rs.randint(0, 2, size=n)
 
     resultkm = SurvfuncRight(time, status)
     result = SurvfuncRight(time, status, exog=x, bw_factor=10000)
@@ -522,10 +580,10 @@ def test_kernel_survfunc3():
     # cases with tied times
 
     n = 100
-    np.random.seed(3434)
-    x = np.random.normal(size=(n, 3))
-    time = np.random.randint(0, 10, size=n)
-    status = np.random.randint(0, 2, size=n)
+    rs = np.random.RandomState(3434)
+    x = rs.normal(size=(n, 3))
+    time = rs.randint(0, 10, size=n)
+    status = rs.randint(0, 2, size=n)
     SurvfuncRight(time, status, exog=x, bw_factor=10000)
     SurvfuncRight(time, status, exog=x, bw_factor=np.r_[10000, 10000])
 
@@ -537,16 +595,17 @@ def test_kernel_cumincidence1():
     # there are tied times).
 
     n = 100
-    np.random.seed(3434)
-    x = np.random.normal(size=(n, 3))
-    time = np.random.uniform(0, 10, size=n)
-    status = np.random.randint(0, 3, size=n)
+    rs = np.random.RandomState(3434)
+    x = rs.normal(size=(n, 3))
+    time = rs.uniform(0, 10, size=n)
+    status = rs.randint(0, 3, size=n)
 
     result1 = CumIncidenceRight(time, status)
 
     for dimred in False, True:
-        result2 = CumIncidenceRight(time, status, exog=x, bw_factor=10000,
-                                    dimred=dimred)
+        result2 = CumIncidenceRight(
+            time, status, exog=x, bw_factor=10000, dimred=dimred
+        )
 
         assert_allclose(result1.times, result2.times)
         for k in 0, 1:
@@ -558,8 +617,8 @@ def test_kernel_cumincidence2():
     # cases with tied times
 
     n = 100
-    np.random.seed(3434)
-    x = np.random.normal(size=(n, 3))
-    time = np.random.randint(0, 10, size=n)
-    status = np.random.randint(0, 3, size=n)
+    rs = np.random.RandomState(3434)
+    x = rs.normal(size=(n, 3))
+    time = rs.randint(0, 10, size=n)
+    status = rs.randint(0, 3, size=n)
     CumIncidenceRight(time, status, exog=x, bw_factor=10000)

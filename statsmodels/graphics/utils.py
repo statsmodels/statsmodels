@@ -1,21 +1,70 @@
-"""Helper functions for graphics with Matplotlib."""
+"""Helper functions for graphics with Matplotlib"""
 from statsmodels.compat.python import lrange
 
-__all__ = ['create_mpl_ax', 'create_mpl_fig']
+import sys
+
+__all__ = ["create_mpl_ax", "create_mpl_fig"]
 
 
-def _import_mpl():
-    """This function is not needed outside this utils module."""
+def _import_mpl(stacklevel=1):
+    """
+    Import matplotlib.pyplot, raising a clear error if unavailable
+
+    Parameters
+    ----------
+    stacklevel : int, optional
+        How many frames up from this function to look when identifying the
+        caller to name in the error message. Follows the same convention as
+        ``stacklevel`` in ``warnings.warn``: the default, 1, names whichever
+        function directly calls ``_import_mpl``. Pass 2 (or higher) when
+        ``_import_mpl`` is itself called through one or more wrapper
+        functions, such as ``create_mpl_ax``, so that the error message
+        names the original, user-facing caller instead of the wrapper.
+
+    Returns
+    -------
+    module
+        The imported ``matplotlib.pyplot`` module.
+
+    Notes
+    -----
+    This function is not needed outside this utils module.
+    """
+    # Identify the function/method that called _import_mpl (or, with
+    # stacklevel > 1, an earlier ancestor) so the error message below can
+    # name it, e.g. "statsmodels.graphics.gofplots.qqplot".
+    try:
+        frame = sys._getframe(stacklevel)
+    except ValueError:
+        # stacklevel reaches past the bottom of the stack; fall back to the
+        # immediate caller rather than raising here.
+        frame = sys._getframe(1)
+    module = frame.f_globals.get("__name__", "")
+    # co_qualname (Python >= 3.11) already includes the enclosing class,
+    # e.g. "ProbPlot.qqplot"; on 3.10 fall back to the bare function name,
+    # adding the class name when called as a bound or class method.
+    qualname = getattr(frame.f_code, "co_qualname", None)
+    if qualname is None:
+        qualname = frame.f_code.co_name
+        caller = frame.f_locals.get("self", frame.f_locals.get("cls"))
+        if caller is not None:
+            cls = caller if isinstance(caller, type) else type(caller)
+            qualname = f"{cls.__name__}.{qualname}"
+    fn = f"{module}.{qualname}" if module else qualname
+
     try:
         import matplotlib.pyplot as plt
-    except:
-        raise ImportError("Matplotlib is not found.")
+    except ImportError as exc:
+        raise ImportError(
+            f"{fn} requires matplotlib but matplotlib is not installed."
+        ) from exc
 
     return plt
 
 
 def create_mpl_ax(ax=None):
-    """Helper function for when a single plot axis is needed.
+    """
+    Helper function for when a single plot axis is needed
 
     Parameters
     ----------
@@ -51,7 +100,8 @@ def create_mpl_ax(ax=None):
     >>> fig, ax = utils.create_mpl_ax(ax)
     """
     if ax is None:
-        plt = _import_mpl()
+        # stacklevel=2: name create_mpl_ax's own caller, not create_mpl_ax
+        plt = _import_mpl(stacklevel=2)
         fig = plt.figure()
         ax = fig.add_subplot(111)
     else:
@@ -61,7 +111,8 @@ def create_mpl_ax(ax=None):
 
 
 def create_mpl_fig(fig=None, figsize=None):
-    """Helper function for when multiple plot axes are needed.
+    """
+    Helper function for when multiple plot axes are needed
 
     Those axes should be created in the functions they are used in, with
     ``fig.add_subplot()``.
@@ -71,6 +122,9 @@ def create_mpl_fig(fig=None, figsize=None):
     fig : Figure, optional
         If given, this figure is simply returned.  Otherwise a new figure is
         created.
+    figsize : tuple[float, float], optional
+        A ``(width, height)`` tuple in inches passed to ``plt.figure`` when
+        a new figure is created.  Ignored if `fig` is given.
 
     Returns
     -------
@@ -83,7 +137,8 @@ def create_mpl_fig(fig=None, figsize=None):
     create_mpl_ax
     """
     if fig is None:
-        plt = _import_mpl()
+        # stacklevel=2: name create_mpl_fig's own caller, not create_mpl_fig
+        plt = _import_mpl(stacklevel=2)
         fig = plt.figure(figsize=figsize)
 
     return fig
@@ -91,8 +146,26 @@ def create_mpl_fig(fig=None, figsize=None):
 
 def maybe_name_or_idx(idx, model):
     """
-    Give a name or an integer and return the name and integer location of the
-    column in a design matrix.
+    Return the name(s) and integer location(s) of column(s) in a design matrix
+
+    Parameters
+    ----------
+    idx : int, str, list, tuple, or None
+        The column(s) to look up in `model`.  If None, all columns of
+        ``model.exog`` are used.  If an int, it is treated as an integer
+        location.  If a str, it is treated as a column name.  If a list or
+        tuple, each element is resolved recursively and the results are
+        collected into lists.
+    model : Model
+        A fitted or unfitted model instance exposing ``exog`` (the design
+        matrix) and ``exog_names`` (the corresponding column names).
+
+    Returns
+    -------
+    exog_name : str or list[str]
+        The name(s) of the column(s) corresponding to `idx`.
+    exog_idx : int or list[int]
+        The integer location(s) of the column(s) corresponding to `idx`.
     """
     if idx is None:
         idx = lrange(model.exog.shape[1])
@@ -107,7 +180,7 @@ def maybe_name_or_idx(idx, model):
             exog_name_item, exog_idx_item = maybe_name_or_idx(item, model)
             exog_name.append(exog_name_item)
             exog_idx.append(exog_idx_item)
-    else: # assume we've got a string variable
+    else:  # assume we've got a string variable
         exog_name = idx
         exog_idx = model.exog_names.index(idx)
 
@@ -116,14 +189,24 @@ def maybe_name_or_idx(idx, model):
 
 def get_data_names(series_or_dataframe):
     """
-    Input can be an array or pandas-like. Will handle 1d array-like but not
-    2d. Returns a str for 1d data or a list of strings for 2d data.
+    Return the name(s) of a 1d array-like or pandas-like object
+
+    Parameters
+    ----------
+    series_or_dataframe : array_like, Series, or DataFrame
+        Input can be an array or pandas-like.  Will handle 1d array-like but
+        not 2d.
+
+    Returns
+    -------
+    str or list[str]
+        A str for 1d data or a list of strings for 2d data.
     """
-    names = getattr(series_or_dataframe, 'name', None)
+    names = getattr(series_or_dataframe, "name", None)
     if not names:
-        names = getattr(series_or_dataframe, 'columns', None)
+        names = getattr(series_or_dataframe, "columns", None)
     if not names:
-        shape = getattr(series_or_dataframe, 'shape', [1])
+        shape = getattr(series_or_dataframe, "shape", [1])
         nvars = 1 if len(shape) == 1 else series_or_dataframe.shape[1]
         names = ["X%d" for _ in range(nvars)]
         if nvars == 1:
@@ -135,8 +218,32 @@ def get_data_names(series_or_dataframe):
 
 def annotate_axes(index, labels, points, offset_points, size, ax, **kwargs):
     """
-    Annotate Axes with labels, points, offset_points according to the
-    given index.
+    Annotate Axes with labels, points, offset_points according to the given index
+
+    Parameters
+    ----------
+    index : array_like
+        Sequence of integer positions selecting which entries of `labels`,
+        `points`, and `offset_points` to annotate.
+    labels : array_like
+        Sequence of annotation text, one entry per position in `points`.
+    points : array_like
+        Sequence of ``(x, y)`` coordinates to annotate, one per entry in
+        `labels`.
+    offset_points : array_like
+        Sequence of ``(x, y)`` offsets, in points, used as `textcoords` for
+        each annotation.
+    size : float
+        Font size, in points, used for the annotation text.
+    ax : AxesSubplot
+        The axis to annotate.
+    **kwargs
+        Additional keyword arguments passed to ``ax.annotate``.
+
+    Returns
+    -------
+    AxesSubplot
+        The annotated axis, same object as `ax`.
     """
     for i in index:
         label = labels[i]
