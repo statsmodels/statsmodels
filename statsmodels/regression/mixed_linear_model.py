@@ -2305,10 +2305,7 @@ class MixedLM(base.LikelihoodModel):
         -------
         MixedLMResults
             The model instance containing the fitted results.
-
-        if "cov_type" in fit_kwargs:
-            raise NotImplementedError("cov_type is not supported in MixedLM.fit")
-
+        """
         _allowed_kwargs = [
             "gtol",
             "maxiter",
@@ -2318,13 +2315,15 @@ class MixedLM(base.LikelihoodModel):
             "tol",
             "disp",
             "maxls",
-            "cov_type",
         ]
         disallowed_kwargs = sorted(set(fit_kwargs).difference(_allowed_kwargs))
         if disallowed_kwargs:
+            disallowed = ", ".join(disallowed_kwargs)
+            ending = "s" if len(disallowed_kwargs) > 1 else ""
             warnings.warn(
-                "Argument(s) {} not used by MixedLM.fit".format(", ".join(disallowed_kwargs)),
-                RuntimeWarning,
+                f"Argument{ending} {disallowed} not used by MixedLM.fit. Future versions will raise "
+                "on these arguments.",
+                FutureWarning,
                 stacklevel=2,
             )
             fit_kwargs = {k: v for k, v in fit_kwargs.items()
