@@ -933,7 +933,7 @@ class Representation:
             )
         elif initialization == "components":
             initialization = Initialization.from_components(
-                a=a, Pstar=Pstar, Pinf=Pinf, A=A, R0=R0, Q0=Q0
+                self.k_states, a=a, Pstar=Pstar, Pinf=Pinf, A=A, R0=R0, Q0=Q0
             )
         elif initialization == "approximate_diffuse":
             if approximate_diffuse_variance is None:
