@@ -339,6 +339,58 @@ def test_rlm_start_values_errors():
         model.fit(start_params=start_params)
 
 
+def test_rlm_scale_est_callback_receives_model():
+    data = sm.datasets.stackloss.load_pandas()
+    exog = sm.add_constant(data.exog, prepend=False)
+    model = RLM(data.endog, exog, M=norms.HuberT())
+
+    class ScaleEstimator:
+        def __init__(self):
+            self.calls = []
+
+        def __call__(self, rlm_model, resid):
+            self.calls.append((rlm_model, resid.copy()))
+            return mad(resid, center=0)
+
+    scale_est = ScaleEstimator()
+    result = model.fit(scale_est=scale_est)
+
+    assert scale_est.calls
+    assert all(call[0] is model for call in scale_est.calls)
+    assert_allclose(result.scale, mad(result.resid, center=0))
+
+
+def test_rlm_scale_est_one_and_two_inputs():
+    data = sm.datasets.stackloss.load_pandas()
+    exog = sm.add_constant(data.exog, prepend=False)
+    model = RLM(data.endog, exog, M=norms.HuberT())
+
+    def one_input(resid):
+        median = np.median(resid)
+        c = np.sqrt(np.pi / 2)
+        return c * np.mean(np.abs(resid - median))
+
+    def two_inputs(model, resid):
+        median = np.median(resid)
+        c = np.sqrt(np.pi / 2)
+        return c * np.mean(np.abs(resid - median)) * np.sqrt(model.nobs / model.df_resid)
+
+    result_1 = model.fit(scale_est=one_input)
+    result_2 = model.fit(scale_est=two_inputs)
+    assert_allclose(result_1.scale, result_2.scale)
+
+
+def test_rlm_scale_est_resid_callable_df_correction():
+    data = sm.datasets.stackloss.load_pandas()
+    exog = sm.add_constant(data.exog, prepend=False)
+    model = RLM(data.endog, exog, M=norms.HuberT())
+
+    result = model.fit(scale_est=lambda resid: mad(resid, center=0))
+
+    expected = mad(result.resid, center=0) * np.sqrt(model.nobs / model.df_resid)
+    assert_allclose(result.scale, expected)
+
+
 @pytest.fixture(scope="module",
                 params=[norms.AndrewWave, norms.LeastSquares, norms.HuberT,
                         norms.TrimmedMean, norms.TukeyBiweight, norms.Hampel,
