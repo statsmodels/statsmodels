@@ -153,9 +153,10 @@ history {
     x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+    with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
         ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
+        ft.close()
 
         x13_arima_analysis(dataset, rawspec=ft.name)
 
@@ -195,9 +196,10 @@ history {
     x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+    with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
         ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
+        ft.close()
 
         x13_arima_analysis(dataset, rawspec=ft.name)
 
@@ -259,9 +261,10 @@ x11 {
         x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+    with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
         ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
+        ft.close()
 
         with pytest.raises(X13Error):
 
