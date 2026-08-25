@@ -192,7 +192,7 @@ class NonlinearLS(Model):  # or subclass a model
             The base class does not provide starting values; subclasses
             can override this method to do so.
         """
-        return None
+        return
 
     def geterrors(self, params, weights=None):
         """

@@ -1980,7 +1980,7 @@ class SARIMAXResults(MLEResults):
         """
         z = self.arroots
         if not z.size:
-            return
+            return None
         return np.arctan2(z.imag, z.real) / (2 * np.pi)
 
     @cache_readonly
@@ -1991,7 +1991,7 @@ class SARIMAXResults(MLEResults):
         """
         z = self.maroots
         if not z.size:
-            return
+            return None
         return np.arctan2(z.imag, z.real) / (2 * np.pi)
 
     @cache_readonly

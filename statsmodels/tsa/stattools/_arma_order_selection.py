@@ -24,12 +24,12 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
         )
     except LinAlgError:
         # SVD convergence failure on badly misspecified models
-        return
+        return None
 
     except ValueError as error:
         if start_params is not None:  # do not recurse again
             # user supplied start_params only get one chance
-            return
+            return None
         # try a little harder, should be handled in fit really
         elif "initial" not in error.args[0] or "initial" in str(error):
             start_params = [0.1] * sum(order)
@@ -37,9 +37,9 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
                 start_params = [0.1] + start_params
             return _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params)
         else:
-            return
+            return None
     except Exception:  # no idea what happened
-        return
+        return None
 
 
 def arma_order_select_ic(

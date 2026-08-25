@@ -83,8 +83,7 @@ class Reader:
         for line in self[self._line_num :]:
             if line.strip():
                 break
-            else:
-                self._line_num += 1
+            self._line_num += 1
 
     def eof(self):
         return self._line_num >= len(self._str)
@@ -703,7 +702,7 @@ class Docstring:
         """
         if self._docstring is None:
             # Protection against -oo execution
-            return
+            return None
         if isinstance(parameters, str):
             parameters = [parameters]
         ds_params = {param.name: param for param in self._ds["Parameters"]}
@@ -747,7 +746,7 @@ def remove_parameters(docstring, parameters):
         The modified docstring.
     """
     if docstring is None:
-        return
+        return None
     ds = Docstring(docstring)
     ds.remove_parameters(parameters)
     return str(ds)

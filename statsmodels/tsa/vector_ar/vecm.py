@@ -579,8 +579,7 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace", signif=0.05):
     while r_0 < neqs:
         if test_stat[r_0] < crit_vals[r_0, signif_index]:
             break  # we accept current rank
-        else:
-            r_0 += 1  # we reject current rank and test next possible rank
+        r_0 += 1  # we reject current rank and test next possible rank
 
     return CointRankResults(
         r_0,

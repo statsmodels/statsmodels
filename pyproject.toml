@@ -247,6 +247,10 @@ select = [
   "TRY400", "TRY401",
   # flake8-use-pathlib
   "PTH",
+    "RET501",
+    "RET502",
+    "RET507",
+    "RET508",
 ]
 
 # pydocstyle ("D") is intentionally NOT selected above. This project already
@@ -271,8 +275,6 @@ ignore = [
   # the occasional real violation by hand instead of suppressing it.
   "COM812", # missing-trailing-comma: black decides this, not us
   "COM819", # prohibited-trailing-comma: black decides this, not us
-  "Q001", # bad-quotes-multiline-string
-  "Q002", # bad-quotes-docstring
   "Q003", # avoidable-escaped-quote
 
   ### Intentionally disabled
@@ -380,6 +382,9 @@ ignore = [
   "PTH208", # 3
 ]
 
+[tool.ruff.lint.flake8-quotes]
+multiline-quotes = "double"
+
 [tool.ruff.lint.isort]
 # Mirrors original [tool.isort] below as closely as ruff's isort implementation
 # allows. 
@@ -471,6 +476,9 @@ markers = [
     "singleton_randomstate: mark a test as changing the singleton RandomState",
     "joblib: mark a test as using joblib for parallel computation",
 ]
+
+[tool.ruff.format]
+quote-style = "double"
 
 [tool.coverage.run]
 source = ["statsmodels"]

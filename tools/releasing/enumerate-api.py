@@ -145,7 +145,7 @@ def generate_diff(api, other):
         other_func = other["functions"][key]
         if current_func == tuple(other_func):
             continue
-        elif set(current_func).issuperset(other_func):
+        if set(current_func).issuperset(other_func):
             expanded_funcs[key] = set(current_func).difference(other_func)
         else:
             changed_funcs[key] = {
