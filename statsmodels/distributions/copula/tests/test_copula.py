@@ -8,6 +8,7 @@ License: BSD-3
 
 from statsmodels.compat.pytest import pytest_warns
 
+from unittest import mock
 import warnings
 
 import numpy as np
@@ -32,7 +33,10 @@ from statsmodels.distributions.copula.extreme_value import (
     ExtremeValueCopula,
     copula_bv_ev,
 )
-from statsmodels.distributions.copula.other_copulas import IndependenceCopula
+from statsmodels.distributions.copula.other_copulas import (
+    IndependenceCopula,
+    rvs_kernel,
+)
 import statsmodels.distributions.copula.transforms as tra
 from statsmodels.distributions.tools import (
     approx_copula_pdf,
@@ -899,3 +903,206 @@ class TestGumbelCopula(CheckModernCopula):
 class TestGumbelCopula_3d(CheckRvsDim):
     copula = GumbelCopula(theta=1.5, k_dim=3)
     dim = 3
+
+
+# ---------------------------------------------------------------------
+# Copula.plot_scatter, Copula.plot_pdf, Copula.tau_simulated,
+# GaussianCopula/StudentTCopula.dependence_tail, StudentTCopula.spearmans_rho
+# and other_copulas.rvs_kernel.
+# ---------------------------------------------------------------------
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_scatter_generated_sample(close_figures):
+    copula = GaussianCopula(corr=0.5)
+    fig, sample = copula.plot_scatter(nobs=200, rng=np.random.default_rng(0))
+    assert sample.shape == (200, 2)
+    ax = fig.axes[0]
+    assert ax.get_xlabel() == "u"
+    assert ax.get_ylabel() == "v"
+    # the plotted scatter points should be exactly the returned sample
+    offsets = np.asarray(ax.collections[0].get_offsets())
+    assert_allclose(offsets, sample)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_scatter_given_sample(close_figures):
+    copula = GaussianCopula(corr=0.5)
+    sample = copula.rvs(nobs=100, rng=np.random.default_rng(1))
+    fig, returned = copula.plot_scatter(sample=sample)
+    # a provided sample is used as-is, not regenerated
+    assert returned is sample
+    ax = fig.axes[0]
+    offsets = np.asarray(ax.collections[0].get_offsets())
+    assert_allclose(offsets, sample)
+
+
+def test_plot_scatter_raises_for_higher_dim():
+    cop3 = GaussianCopula(
+        corr=[[1.0, 0.3, 0.2], [0.3, 1.0, 0.4], [0.2, 0.4, 1.0]], k_dim=3
+    )
+    with pytest.raises(ValueError):
+        cop3.plot_scatter()
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_pdf_grid_matches_pdf(close_figures):
+    copula = GaussianCopula(corr=0.6)
+    # grid parameters hardcoded in Copula.plot_pdf
+    eps = 1e-4
+    n_samples = 100
+    uu, vv = np.meshgrid(
+        np.linspace(eps, 1 - eps, n_samples),
+        np.linspace(eps, 1 - eps, n_samples),
+    )
+    expected_points = np.vstack([uu.ravel(), vv.ravel()]).T
+
+    with mock.patch.object(copula, "pdf", wraps=copula.pdf) as mock_pdf:
+        fig = copula.plot_pdf()
+
+    # plot_pdf should evaluate copula.pdf exactly once, on the expected grid
+    assert mock_pdf.call_count == 1
+    used_points = mock_pdf.call_args[0][0]
+    assert_allclose(used_points, expected_points)
+
+    ax = fig.axes[0]
+    assert ax.get_xlabel() == "u"
+    assert ax.get_ylabel() == "v"
+    assert_allclose(ax.get_xlim(), (0, 1))
+    assert_allclose(ax.get_ylim(), (0, 1))
+
+    # the contour color range should be the 5th/95th percentile of the
+    # pdf evaluated on that same grid
+    expected_pdf = copula.pdf(expected_points).T.reshape(uu.shape)
+    expected_min = np.nanpercentile(expected_pdf, 5)
+    expected_max = np.nanpercentile(expected_pdf, 95)
+
+    clim = None
+    for artist in fig.findobj():
+        if hasattr(artist, "get_clim"):
+            clim = artist.get_clim()
+            break
+    assert clim is not None
+    assert_allclose(clim, (expected_min, expected_max))
+
+
+tau_simulated_cases = [
+    GaussianCopula(corr=0.6),
+    StudentTCopula(corr=0.6, df=4),
+    ClaytonCopula(theta=1.5),
+    FrankCopula(theta=3),
+    GumbelCopula(theta=1.5),
+]
+tau_simulated_ids = ["gaussian", "student_t", "clayton", "frank", "gumbel"]
+
+
+@pytest.mark.parametrize("copula", tau_simulated_cases, ids=tau_simulated_ids)
+def test_tau_simulated(copula):
+    # tau_simulated should recover each copula's own exact/closed-form
+    # Kendall's tau (``.tau()``) up to Monte Carlo error.
+    rng = np.random.default_rng(987654321)
+    tau_sim = copula.tau_simulated(nobs=4000, rng=rng)
+    tau_exact = copula.tau()
+    assert_allclose(tau_sim, tau_exact, atol=0.05)
+
+
+def test_gaussian_copula_dependence_tail():
+    # Gaussian copula has zero tail dependence by construction,
+    # Joe (2014) p. 182.
+    copula = GaussianCopula(corr=0.9)
+    assert copula.dependence_tail() == (0, 0)
+    # the corr argument is documented as ignored
+    assert copula.dependence_tail(corr=0.1) == (0, 0)
+
+
+@pytest.mark.parametrize("corr,df", [(0.5, 4), (0.8, 2), (-0.3, 8), (0.0, 6)])
+def test_student_t_copula_dependence_tail_formula(corr, df):
+    # hand-computed closed form, Joe (2014) p. 182:
+    # lambda = 2 * t_{df+1}(-sqrt((df+1)(1-rho)/(1+rho)))
+    copula = StudentTCopula(corr=corr, df=df)
+    lower, upper = copula.dependence_tail()
+
+    t_stat = -np.sqrt((df + 1) * (1 - corr) / (1 + corr))
+    expected = 2 * stats.t.cdf(t_stat, df + 1)
+    assert_allclose(lower, expected, rtol=1e-12)
+    # the bivariate t copula is exchangeable, so lower == upper
+    assert_allclose(upper, expected, rtol=1e-12)
+
+
+def test_student_t_copula_dependence_tail_limits():
+    # as df -> infinity the t copula converges to the Gaussian copula,
+    # whose tail dependence is exactly zero.
+    copula = StudentTCopula(corr=0.5, df=10000)
+    lower, upper = copula.dependence_tail()
+    assert lower < 1e-3
+    assert upper < 1e-3
+
+    # tail dependence increases toward 1 as corr -> 1
+    copula_high = StudentTCopula(corr=0.999, df=4)
+    lower_high, upper_high = copula_high.dependence_tail()
+    assert lower_high > 0.9
+
+
+@pytest.mark.parametrize("corr", [-0.7, -0.2, 0.0, 0.4, 0.9])
+def test_student_t_copula_spearmans_rho_formula(corr):
+    # hand-computed closed form, Joe (2014) p. 182:
+    # rho_s = (6 / pi) * arcsin(rho / 2)
+    copula = StudentTCopula(corr=corr, df=5)
+    rho_s = copula.spearmans_rho()
+    expected = 6 * np.arcsin(corr / 2) / np.pi
+    assert_allclose(rho_s, expected, rtol=1e-12)
+
+
+def test_student_t_copula_spearmans_rho_simulated():
+    # cross check the closed form against an independent, simulation-based
+    # Spearman's rho.
+    corr = 0.6
+    copula = StudentTCopula(corr=corr, df=6)
+    rng = np.random.default_rng(2024)
+    sample = copula.rvs(nobs=4000, rng=rng)
+    rho_hat = stats.spearmanr(sample[:, 0], sample[:, 1])[0]
+    rho_exact = copula.spearmans_rho()
+    assert_allclose(rho_hat, rho_exact, atol=0.05)
+
+
+def test_rvs_kernel_small_bandwidth_stays_near_source():
+    # for a very small bandwidth the Beta-kernel perturbation concentrates
+    # tightly around the resampled source point: the mean of
+    # Beta(x/bw, (1-x)/bw + 1) is x / (1 + bw) -> x as bw -> 0.
+    rng = np.random.default_rng(0)
+    sample = rng.uniform(0.05, 0.95, size=(50, 2))
+    krvs, idx, xi = rvs_kernel(sample, size=500, bw=1e-4, rng=rng, return_extras=True)
+    assert krvs.shape == (500, 2)
+    assert_allclose(xi, sample[idx])
+    assert_allclose(krvs, xi, atol=0.05)
+
+
+def test_rvs_kernel_reproducible_with_rng():
+    # rvs_kernel's docstring promises that passing `rng` fully determines
+    # the output, matching every other ``rvs``-like function in this module.
+    sample = np.random.default_rng(0).uniform(0.05, 0.95, size=(50, 2))
+    r1 = rvs_kernel(sample, size=20, bw=0.5, rng=np.random.default_rng(123))
+    r2 = rvs_kernel(sample, size=20, bw=0.5, rng=np.random.default_rng(123))
+    assert_allclose(r1, r2)
+
+
+def test_rvs_kernel_preserves_dependence():
+    # a beta-kernel bootstrap (small bandwidth) of a sample drawn from a
+    # copula with known Kendall's tau should approximately reproduce that
+    # same tau, and its margins should stay close to Uniform(0, 1).
+    rng = np.random.default_rng(20240815)
+    corr = 0.6
+    copula = GaussianCopula(corr=corr)
+    sample = copula.rvs(nobs=3000, rng=rng)
+
+    krvs = rvs_kernel(sample, size=5000, bw=0.001, rng=rng)
+    assert krvs.shape == (5000, 2)
+    assert np.all((krvs >= 0) & (krvs <= 1))
+
+    tau_hat = stats.kendalltau(krvs[:, 0], krvs[:, 1])[0]
+    tau_exact = copula.tau()
+    assert_allclose(tau_hat, tau_exact, atol=0.05)
+    assert_allclose(krvs.mean(axis=0), 0.5, atol=0.05)
