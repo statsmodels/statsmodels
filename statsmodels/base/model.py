@@ -2139,7 +2139,6 @@ class LikelihoodModelResults(Results):
         else:
             F = np.dot(np.dot(Rbq.T, invcov), Rbq)
 
-        # Preferred order of residual types
         if scalar and F.size == 1:
             F = float(np.squeeze(F))
         if use_f:
