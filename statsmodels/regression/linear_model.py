@@ -704,7 +704,12 @@ class GLS(RegressionModel):
         if self.sigma is None or self.sigma.shape == ():
             return np.ones(self.exog.shape[0])
         elif self.sigma.ndim == 1:
-            return self.cholsigmainv
+            # cholsigmainv is 1 / sqrt(sigma), the per-observation whitening
+            # factor; squaring it gives 1 / sigma, the weight needed so that
+            # (exog.T * hessian_factor).dot(exog) == wexog.T @ wexog, matching
+            # the documented reassembly formula (and WLS's analogous
+            # implementation, which uses weights == 1 / sigma directly).
+            return self.cholsigmainv**2
         else:
             return np.diag(self.cholsigmainv)
 
