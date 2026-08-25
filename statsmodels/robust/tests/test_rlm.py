@@ -360,6 +360,26 @@ def test_rlm_scale_est_callback_receives_model():
     assert_allclose(result.scale, mad(result.resid, center=0))
 
 
+def test_rlm_scale_est_one_and_two_inputs():
+    data = sm.datasets.stackloss.load_pandas()
+    exog = sm.add_constant(data.exog, prepend=False)
+    model = RLM(data.endog, exog, M=norms.HuberT())
+
+    def one_input(resid):
+        median = np.median(resid)
+        c = np.sqrt(np.pi / 2)
+        return c * np.mean(np.abs(resid - median))
+
+    def two_inputs(model, resid):
+        median = np.median(resid)
+        c = np.sqrt(np.pi / 2)
+        return c * np.mean(np.abs(resid - median)) * np.sqrt(model.nobs / model.df_resid)
+
+    result_1 = model.fit(scale_est=one_input)
+    result_2 = model.fit(scale_est=two_inputs)
+    assert_allclose(result_1.scale, result_2.scale)
+
+
 def test_rlm_scale_est_resid_callable_df_correction():
     data = sm.datasets.stackloss.load_pandas()
     exog = sm.add_constant(data.exog, prepend=False)

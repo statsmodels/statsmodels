@@ -14,8 +14,6 @@ R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
 
-import inspect
-
 import numpy as np
 from scipy import stats
 
@@ -218,21 +216,9 @@ class RLM(base.LikelihoodModel):
             return scale_est(self.df_resid, self.nobs, resid)
         else:
             try:
-                parameters = inspect.signature(self.scale_est).parameters.values()
-            except (TypeError, ValueError):
-                parameters = ()
-            n_args = sum(
-                parameter.kind
-                in (
-                    inspect.Parameter.POSITIONAL_ONLY,
-                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                )
-                for parameter in parameters
-            )
-            if n_args > 1:
-                return self.scale_est(self, resid)
-            # use df correction to match HuberScale
-            return scale_est(resid) * np.sqrt(self.nobs / self.df_resid)
+                return scale_est(self, resid)
+            except TypeError:
+                return scale_est(resid) * np.sqrt(self.nobs / self.df_resid)
 
     def fit(
         self,
@@ -264,17 +250,21 @@ class RLM(base.LikelihoodModel):
             See rlm.RLMResults for more information.
         maxiter : int, optional
             The maximum number of iterations to try. Default is 50.
-        scale_est : {'mad'}, HuberScale or callable, optional
+        scale_est : {"mad"}, HuberScale or callable, optional
             Indicates the estimate to use for scaling the weights in the IRLS.
             The default is 'mad' (median absolute deviation).  Other options are
             'HuberScale' for Huber's proposal 2. Huber's proposal 2 has
             optional keyword arguments d, tol, and maxiter for specifying the
             tuning constant, the convergence tolerance, and the maximum number
             of iterations. Custom callables can accept either ``resid`` or
-            ``(model, resid)`` and must return the scale estimate. Single-
-            argument callables use the same degrees-of-freedom correction as
-            the built-in non-Huber scale estimators. See
-            statsmodels.robust.scale for more information.
+            ``(model, resid)`` and must return the scale estimate. The ``model``
+            object provides useful afftributes like ``nobs`` and ``df_reside``
+            that may be needed in scale estimation. Due to backward compatability
+            issues, single- argument callables use the same degrees-of-freedom
+            correction as the built-in non-Huber scale estimators (nobs/df_resid).
+            Scale estimates from two argument functions are used without
+            modification. See statsmodels.robust.scale for more information or
+            the examples below.
         tol : float, optional
             The convergence tolerance of the estimate.  Default is 1e-8.
         update_scale : bool, optional
@@ -294,6 +284,46 @@ class RLM(base.LikelihoodModel):
         -------
         results : statsmodels.robust.robust_linear_model.RLMResults
             Results instance
+
+        Examples
+        --------
+        >>> import statsmodels.api as sm
+        >>> data = sm.datasets.stackloss.load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> rlm_model = sm.RLM(data.endog, data.exog, M=sm.robust.norms.HuberT())
+        >>> rlm_results_mad = rlm_model.fit(scale_est="mad")
+
+        >>> from statsmodels.robust import HuberScale
+        >>> hs = HuberScale(d=1.345, tol=1e-6, maxiter=100)
+        >>> rlm_results_mad = rlm_model.fit(scale_est=hs)
+
+        Next we use a custom callable to estimate the scale. The callable can
+        either accept a single argument (the residuals) or two arguments (the
+        model and the residuals). In this example, we use a callable that computes
+        the average absolute deviation of the residuals. Note that the scale
+        estimate from this one-input callable is adjusted for degrees of freedom,
+        so it will be different than the two-input callable version below.
+
+        >>> import numpy as np
+        >>> def avg_abs_deviation(resid):
+        ...     median = np.median(resid)
+        ...     c = np.sqrt(np.pi / 2)
+        ...     return c * np.mean(np.abs(resid - median))
+        >>> rlm_results_custom = rlm_model.fit(scale_est=avg_abs_deviation)
+        >>> print(f"{rlm_results_custom.scale:.4f}")
+        3.0997
+
+        This second version accepts two versions. While the function value is the same
+        it will behave differently in practice since the scale estimate is not adjusted
+        for degrees of freedom.
+
+        >>> def avg_abs_deviation_with_model(model, resid):
+        ...     median = np.median(resid)
+        ...     c = np.sqrt(np.pi / 2)
+        ...     return c * np.mean(np.abs(resid - median))
+        >>> rlm_results_custom_2 = rlm_model.fit(scale_est=avg_abs_deviation_with_model)
+        >>> print(f"{rlm_results_custom_2.scale:.4f}")
+        2.7686
         """
         # options are upper-cased for display/storage, unlike most other
         # string options in this codebase which are lower-cased
