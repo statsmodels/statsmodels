@@ -1420,8 +1420,7 @@ def test_fit_unsupported_kwargs_ignored():
 
     model = MixedLM.from_formula("y ~ x", groups="g", data=df)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    with pytest.warns(FutureWarning, match="Argument cov_type"):
         result = model.fit(cov_type="hc1")
 
     # Should complete without AttributeError and return valid results
@@ -1440,13 +1439,8 @@ def test_fit_unsupported_kwargs_warns():
 
     model = MixedLM.from_formula("y ~ x", groups="g", data=df)
 
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
+    with pytest.warns(FutureWarning, match="Argument cov_type"):
         model.fit(cov_type="hc1")
-
-    runtime_warnings = [x for x in w if issubclass(x.category, RuntimeWarning)]
-    assert len(runtime_warnings) == 1
-    assert "not used by MixedLM.fit" in str(runtime_warnings[0].message)
 
 
 def test_summary_after_remove_data():

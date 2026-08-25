@@ -2,6 +2,7 @@
 Test functions for genmod.families.family
 """
 from statsmodels.compat.platform import PLATFORM_32
+from statsmodels.compat.scipy import SP_LT_114
 
 import warnings
 
@@ -11,7 +12,6 @@ import pytest
 from scipy import integrate
 
 import statsmodels.genmod.families as F
-from statsmodels.compat.scipy import SP_LT_114
 from statsmodels.genmod.families.family import Binomial, Tweedie
 import statsmodels.genmod.families.links as L
 from statsmodels.tools.sm_exceptions import ValueWarning
