@@ -11,6 +11,7 @@ import pytest
 from scipy import integrate
 
 import statsmodels.genmod.families as F
+from statsmodels.compat.scipy import SP_LT_114
 from statsmodels.genmod.families.family import Binomial, Tweedie
 import statsmodels.genmod.families.links as L
 from statsmodels.tools.sm_exceptions import ValueWarning
@@ -174,10 +175,10 @@ def test_binomial_varfunc_deriv():
 
 
 @pytest.mark.skipif(
-    PLATFORM_32,
+    PLATFORM_32 or SP_LT_114,
     reason=(
             "scipy.special.log_wright_bessel does not have sufficient accuracy on "
-            "32-bit platforms"
+            "32-bit platforms and is only available in SciPy 1.14.0 and later"
     )
 )
 def test_tweedie_log_wright_bessel():
