@@ -678,6 +678,64 @@ class TestKDEMultivariateConditional(KDETestBase):
         npt.assert_equal(dens.bw, bw_user)
 
 
+def test_conditional_imse_matches_hand_computed_cv():
+    # KDEMultivariateConditional.imse implements the leave-one-out CV(h)
+    # objective documented in its docstring; recompute it from scratch with
+    # plain nested loops (rather than the vectorized kron-based
+    # implementation used internally) for a tiny dataset, using the same
+    # elementary kernel definitions
+    # (statsmodels.nonparametric.kernels.gaussian and .gaussian_convolution).
+    rng = np.random.default_rng(20250202)
+    nobs = 6
+    X = rng.normal(size=nobs)
+    Y = 0.5 * X + rng.normal(scale=0.3, size=nobs)
+
+    bw = np.array([0.7, 0.9])  # [h_y, h_x]
+    dens = nparam.KDEMultivariateConditional(
+        endog=[Y], exog=[X], dep_type="c", indep_type="c", bw=bw, rng=0
+    )
+    cv = dens.imse(dens.bw)
+
+    def gaussian_k(h, a, b):
+        # matches statsmodels.nonparametric.kernels.gaussian(h, Xi, x)
+        return 1.0 / np.sqrt(2 * np.pi) * np.exp(-((a - b) ** 2) / (2 * h**2))
+
+    def gaussian_conv_k(h, a, b):
+        # matches kernels.gaussian_convolution(h, Xi, x)
+        return 1.0 / np.sqrt(4 * np.pi) * np.exp(-((a - b) ** 2) / (4 * h**2))
+
+    # gpke additionally divides by the product of bandwidths over the
+    # continuous dimensions used in a given call (see
+    # _kernel_base.gpke: ``dens = Kval.prod(axis=1)/np.prod(bw[iscontinuous])``)
+    hy, hx = bw
+    n = nobs
+    CV = 0.0
+    for ll in range(n):
+        others = [i for i in range(n) if i != ll]
+        Gl = 0.0
+        for i in others:
+            for j in others:
+                Gl += (
+                    (gaussian_k(hx, X[i], X[ll]) / hx)
+                    * (gaussian_k(hx, X[j], X[ll]) / hx)
+                    * (gaussian_conv_k(hy, Y[i], Y[j]) / hy)
+                )
+        Gl /= n**2
+
+        mu_l = sum((gaussian_k(hx, X[i], X[ll]) / hx) for i in others) / n
+        f_l = (
+            sum(
+                (gaussian_k(hy, Y[i], Y[ll]) / hy) * (gaussian_k(hx, X[i], X[ll]) / hx)
+                for i in others
+            )
+            / n
+        )
+        CV += (Gl / mu_l**2) - 2 * (f_l / mu_l)
+    CV /= n
+
+    npt.assert_allclose(cv, CV, rtol=1e-8)
+
+
 @pytest.mark.parametrize("kernel", ["biw", "cos", "epa", "gau", "tri", "triw", "uni"])
 def test_all_kernels(kernel):
     rs = np.random.RandomState(32989053)
