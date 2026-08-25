@@ -2140,16 +2140,15 @@ class LikelihoodModelResults(Results):
             F = np.dot(np.dot(Rbq.T, invcov), Rbq)
 
         # Preferred order of residual types
-        if hasattr(self, "df_resid_inference"):
-            df_resid = self.df_resid_inference
-        elif hasattr(self, "df_resid"):
-            df_resid = self.df_resid
-        else:
-            df_resid = self.resid
-
         if scalar and F.size == 1:
             F = float(np.squeeze(F))
         if use_f:
+            # Defer since only needed in F test
+            if hasattr(self, "df_resid_inference"):
+                df_resid = self.df_resid_inference
+            else:
+                df_resid = self.df_resid
+
             F /= J
             return ContrastResults(F=F, df_denom=df_resid, df_num=J)  # invcov.shape[0])
         else:
