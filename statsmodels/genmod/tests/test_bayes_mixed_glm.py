@@ -6,6 +6,7 @@ from scipy import sparse
 from scipy.optimize import approx_fprime
 
 from statsmodels.genmod.bayes_mixed_glm import (
+    BayesMixedGLMResults,
     BinomialBayesMixedGLM,
     PoissonBayesMixedGLM,
 )
@@ -651,3 +652,26 @@ def test_doc_examples():
     model = PoissonBayesMixedGLM.from_formula("y ~ year_cen", random, data)
     result = model.fit_vb(rng=rs)
     _ = result
+
+
+def test_fit_is_fit_map():
+    # _BayesMixedGLM.fit (inherited unchanged by BinomialBayesMixedGLM and
+    # PoissonBayesMixedGLM -- neither subclass defines its own `fit`) is
+    # documented as being "equivalent to fit_map". Every other test in
+    # this file calls fit_map/fit_vb directly, so the base fit() method
+    # itself is otherwise never exercised. Check that it actually returns
+    # the BayesMixedGLMResults produced by fit_map (it previously fell
+    # off the end of the function without a `return`, so it always
+    # returned None), and that the returned params are, like a directly
+    # computed fit_map() result, an (approximate) stationary point of the
+    # log-posterior.
+    y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
+    exog_vc = sparse.csr_array(exog_vc)
+
+    glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
+    rslt = glmm.fit()
+
+    assert isinstance(rslt, BayesMixedGLMResults)
+    assert_allclose(
+        glmm.logposterior_grad(rslt.params), np.zeros_like(rslt.params), atol=1e-3
+    )

@@ -324,8 +324,7 @@ class Unstructured(CovStruct):
         self.dep_params = cov
 
     def summary(self):
-        print("Estimated covariance structure:")
-        print(self.dep_params)
+        return f"Estimated covariance structure:\n{self.dep_params}"
 
 
 class Exchangeable(CovStruct):

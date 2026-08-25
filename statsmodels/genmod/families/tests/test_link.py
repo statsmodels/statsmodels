@@ -240,3 +240,32 @@ def test_cdflink(m, link1, link2):
     res2 = getattr(link2, m)(p)
 
     assert_allclose(res1, res2, atol=1e-8, rtol=1e-8)
+
+
+def test_link_base_class_placeholders():
+    # Link is a generic base class documented as laying out the methods
+    # "expected of any subclass"; __call__/inverse/deriv are explicitly
+    # documented as placeholders. They are not abstract (no exception is
+    # raised); the base implementation just returns the NotImplementedError
+    # type itself, which is what a concrete subclass is supposed to
+    # override. Exercise that placeholder contract directly, since every
+    # concrete link in this module overrides inverse/deriv and so never
+    # actually runs the base-class bodies.
+    link = links.Link()
+    assert link(0.5) is NotImplementedError
+    assert link.inverse(0.5) is NotImplementedError
+    assert link.deriv(0.5) is NotImplementedError
+
+
+def test_cdflink_deriv2_numdiff():
+    # deriv2_numdiff is a numerical-differentiation fallback for the
+    # second derivative of the link function (central difference of
+    # `deriv`). It should agree with CDFLink's analytic deriv2 (which
+    # is computed via inverse_deriv2 rather than by differencing) to
+    # numerical-differentiation accuracy.
+    link = links.CDFLink(dbn=stats.norm)
+    p = np.linspace(0.05, 0.95, 9)
+
+    analytic = link.deriv2(p)
+    numeric = link.deriv2_numdiff(p)
+    assert_allclose(numeric, analytic, rtol=5e-6, atol=1e-6)
