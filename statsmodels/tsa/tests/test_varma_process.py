@@ -105,3 +105,65 @@ def test_getisinvertible_matches_ma1_boundary():
         vp = VarmaPoly(np.array([[[1.0]]]), ma)
         assert bool(vp.getisinvertible()) == expected
         assert_allclose(vp.maeigenvalues, [theta])
+
+
+def test_vstackarma_minus1_and_hstackarma_minus1_reshape_lags():
+    # Both methods concatenate the ar and ma blocks excluding lag 0 (shape
+    # (nlags-1 + malags-1, nvarall, nvars)) and reshape it to 2d.
+    # vstackarma_minus1 flattens the lag and row axes together; verify
+    # against a hand-built array following that documented layout.
+    vp = VarmaPoly(ar23, ma22)
+
+    expected_v = np.array(
+        [
+            [-0.6, 0.0],
+            [0.2, -0.6],
+            [-0.1, 0.0],
+            [0.1, -0.1],
+            [0.4, 0.0],
+            [0.2, 0.3],
+        ]
+    )
+    assert_array_equal(vp.vstackarma_minus1(), expected_v)
+
+    # hstackarma_minus1 additionally transposes each (nvarall, nvars) block
+    # before flattening (the "Kalman filter representation").
+    expected_h = np.array(
+        [
+            [-0.6, 0.2],
+            [0.0, -0.6],
+            [-0.1, 0.1],
+            [0.0, -0.1],
+            [0.4, 0.2],
+            [0.0, 0.3],
+        ]
+    )
+    assert_array_equal(vp.hstackarma_minus1(), expected_h)
+
+
+def test_reduceform_normalizes_lag_zero_to_identity():
+    # reduceform left-multiplies every lag by inv(apoly[0]); check against
+    # that definition directly for a non-trivial (non-identity) lag-zero
+    # block, and confirm the reduced lag-zero block becomes the identity,
+    # as required for a "reduced form" representation.
+    vp = VarmaPoly(ar23, ma22)
+    apoly = np.array([[[2.0, 0.0], [0.0, 1.0]], [[1.0, 2.0], [3.0, 4.0]]])
+
+    reduced = vp.reduceform(apoly)
+
+    a0inv = np.linalg.inv(apoly[0])
+    expected = np.stack([a0inv @ apoly[0], a0inv @ apoly[1]])
+    assert_allclose(reduced, expected)
+    assert_allclose(reduced[0], np.eye(2))
+
+
+def test_reduceform_errors():
+    import pytest
+
+    vp = VarmaPoly(ar23, ma22)
+    with pytest.raises(ValueError, match="apoly needs to be 3d"):
+        vp.reduceform(np.eye(2))
+
+    singular = np.array([[[0.0, 0.0], [0.0, 0.0]], [[1.0, 2.0], [3.0, 4.0]]])
+    with pytest.raises(ValueError, match="matrix not invertible"):
+        vp.reduceform(singular)
