@@ -47,10 +47,10 @@ from __future__ import annotations
 
 import argparse
 import ast
+from collections import defaultdict
 import json
 import pathlib
 import sys
-from collections import defaultdict
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PKG = ROOT / "statsmodels"
@@ -62,7 +62,7 @@ WRAP_ROOTS = {"ResultsWrapper", "ResultsWrapperMixin"}
 
 
 class ClassInfo:
-    __slots__ = ("name", "file", "lineno", "bases", "methods")
+    __slots__ = ("bases", "file", "lineno", "methods", "name")
 
     def __init__(self, name, file, lineno, bases, methods):
         self.name = name
