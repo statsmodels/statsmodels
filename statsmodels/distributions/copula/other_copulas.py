@@ -185,9 +185,14 @@ def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False, rng=None):
     """
     # vectorized for observations
     n = sample.shape[0]
-    if k_func is None:
-        kfunc = _kernel_rvs_beta1
     rng = check_random_state(rng)
+    if k_func is None:
+
+        def kfunc(x, bw):
+            return _kernel_rvs_beta1(x, bw, rng=rng)
+
+    else:
+        kfunc = k_func
     if isinstance(rng, np.random.RandomState):
         idx = rng.randint(0, n, size=size)
     else:
@@ -201,12 +206,12 @@ def rvs_kernel(sample, size, bw=1, k_func=None, return_extras=False, rng=None):
         return krvs
 
 
-def _kernel_rvs_beta(x, bw):
+def _kernel_rvs_beta(x, bw, rng=None):
     # Beta kernel for density, pdf, estimation
-    return stats.beta.rvs(x / bw + 1, (1 - x) / bw + 1, size=x.shape)
+    return stats.beta.rvs(x / bw + 1, (1 - x) / bw + 1, size=x.shape, random_state=rng)
 
 
-def _kernel_rvs_beta1(x, bw):
+def _kernel_rvs_beta1(x, bw, rng=None):
     # Beta kernel for density, pdf, estimation
     # Kiriliouk, Segers, Tsukuhara 2020 arxiv, using bandwith 1/nobs sample
-    return stats.beta.rvs(x / bw, (1 - x) / bw + 1)
+    return stats.beta.rvs(x / bw, (1 - x) / bw + 1, random_state=rng)

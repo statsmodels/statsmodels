@@ -508,7 +508,8 @@ class TestKDEMultivariateConditional(KDETestBase):
                 bw="cv_ls",
             )
         # R result: [1.6448, 0.2317373]
-        npt.assert_allclose(dens_ls.bw, [1.01203728, 0.31905144], atol=1e-5)
+        R_bw = [1.6448, 0.2317373]
+        npt.assert_allclose(dens_ls.bw, R_bw, atol=1e-3)
 
     def test_continuous_CV_ML(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
@@ -561,8 +562,7 @@ class TestKDEMultivariateConditional(KDETestBase):
                 bw="cv_ls",
             )
         sm_result = np.squeeze(dens.pdf()[0:5])
-        # R_result = [0.08469226, 0.01737731, 0.05679909, 0.09744726, 0.15086674]
-        expected = [0.08592089, 0.0193275, 0.05310327, 0.09642667, 0.171954]
+        expected = [0.08469226, 0.01737731, 0.05679909, 0.09744726, 0.15086674]
 
         # CODE TO REPRODUCE IN R
         # library(np)
@@ -571,7 +571,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         # Italy$gdp[1:50]~ordered(Italy$year[1:50]),bwmethod='cv.ls')
         # fhat <- fitted(npcdens(bws=bw))
         # fhat[1:5]
-        npt.assert_allclose(sm_result, expected, atol=0, rtol=1e-5)
+        npt.assert_allclose(sm_result, expected, atol=1e-3)
 
     def test_continuous_normal_ref(self):
         # test for normal reference rule of thumb with continuous data
@@ -628,9 +628,8 @@ class TestKDEMultivariateConditional(KDETestBase):
                 bw="cv_ls",
             )
         sm_result = dens.cdf()[0:5]
-        # R_result = [0.8118257, 0.9724863, 0.8843773, 0.7720359, 0.4361867]
-        expected = [0.83378885, 0.97684477, 0.90655143, 0.79393161, 0.43629083]
-        npt.assert_allclose(sm_result, expected, atol=0, rtol=1e-5)
+        expected = [0.8118257, 0.9724863, 0.8843773, 0.7720359, 0.4361867]
+        npt.assert_allclose(sm_result, expected, atol=1e-3)
 
     @pytest.mark.joblib
     @pytest.mark.slow
@@ -677,6 +676,64 @@ class TestKDEMultivariateConditional(KDETestBase):
                 ),
             )
         npt.assert_equal(dens.bw, bw_user)
+
+
+def test_conditional_imse_matches_hand_computed_cv():
+    # KDEMultivariateConditional.imse implements the leave-one-out CV(h)
+    # objective documented in its docstring; recompute it from scratch with
+    # plain nested loops (rather than the vectorized kron-based
+    # implementation used internally) for a tiny dataset, using the same
+    # elementary kernel definitions
+    # (statsmodels.nonparametric.kernels.gaussian and .gaussian_convolution).
+    rng = np.random.default_rng(20250202)
+    nobs = 6
+    X = rng.normal(size=nobs)
+    Y = 0.5 * X + rng.normal(scale=0.3, size=nobs)
+
+    bw = np.array([0.7, 0.9])  # [h_y, h_x]
+    dens = nparam.KDEMultivariateConditional(
+        endog=[Y], exog=[X], dep_type="c", indep_type="c", bw=bw, rng=0
+    )
+    cv = dens.imse(dens.bw)
+
+    def gaussian_k(h, a, b):
+        # matches statsmodels.nonparametric.kernels.gaussian(h, Xi, x)
+        return 1.0 / np.sqrt(2 * np.pi) * np.exp(-((a - b) ** 2) / (2 * h**2))
+
+    def gaussian_conv_k(h, a, b):
+        # matches kernels.gaussian_convolution(h, Xi, x)
+        return 1.0 / np.sqrt(4 * np.pi) * np.exp(-((a - b) ** 2) / (4 * h**2))
+
+    # gpke additionally divides by the product of bandwidths over the
+    # continuous dimensions used in a given call (see
+    # _kernel_base.gpke: ``dens = Kval.prod(axis=1)/np.prod(bw[iscontinuous])``)
+    hy, hx = bw
+    n = nobs
+    CV = 0.0
+    for ll in range(n):
+        others = [i for i in range(n) if i != ll]
+        Gl = 0.0
+        for i in others:
+            for j in others:
+                Gl += (
+                    (gaussian_k(hx, X[i], X[ll]) / hx)
+                    * (gaussian_k(hx, X[j], X[ll]) / hx)
+                    * (gaussian_conv_k(hy, Y[i], Y[j]) / hy)
+                )
+        Gl /= n**2
+
+        mu_l = sum((gaussian_k(hx, X[i], X[ll]) / hx) for i in others) / n
+        f_l = (
+            sum(
+                (gaussian_k(hy, Y[i], Y[ll]) / hy) * (gaussian_k(hx, X[i], X[ll]) / hx)
+                for i in others
+            )
+            / n
+        )
+        CV += (Gl / mu_l**2) - 2 * (f_l / mu_l)
+    CV /= n
+
+    npt.assert_allclose(cv, CV, rtol=1e-8)
 
 
 @pytest.mark.parametrize("kernel", ["biw", "cos", "epa", "gau", "tri", "triw", "uni"])

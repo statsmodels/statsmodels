@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 import numpy.testing as npt
 import pytest
+from scipy import stats
 
 import statsmodels.api as sm
 
@@ -778,3 +779,46 @@ def test_invalid_kernel():
             censor_val=0,
             ckertype="silverman",
         )
+
+
+def test_aic_hurvich_matches_hand_computed_trace():
+    # aic_hurvich = log(sigma) + (1 + tr(H)/n) / (1 - (tr(H)+2)/n), where
+    # sigma is the local-constant residual variance and H is the
+    # Nadaraya-Watson smoother (hat) matrix -- see KernelReg.aic_hurvich.
+    rng = np.random.default_rng(20250101)
+    nobs = 40
+    X = rng.normal(size=nobs)
+    Y = 1.0 + 2.0 * X + rng.normal(scale=0.5, size=nobs)
+
+    h = 0.6
+    model = nparam.KernelReg(
+        endog=[Y], exog=[X], reg_type="lc", var_type="c", bw=[h], rng=0
+    )
+    # aic_hurvich internally builds a fresh KernelReg without forwarding
+    # `rng`, which triggers the same singleton-RandomState deprecation
+    # warning as passing bw="aic" (see test_continuous_lc_aic above).
+    with pytest.warns(FutureWarning, match="After 0.17"):
+        aic = model.aic_hurvich(model.bw)
+
+    # ground truth for the fitted values / residual variance: the model's
+    # own, separately-tested fit() method
+    Yhat, _ = model.fit()
+    Yhat = np.asarray(Yhat).reshape(-1)
+    sigma = np.mean((Y - Yhat) ** 2)
+
+    # independently derived trace of the local-constant smoother matrix,
+    # using the plain Gaussian kernel k(u) = (1/sqrt(2 pi)) exp(-u^2 / 2)
+    # (statsmodels.nonparametric.kernels.gaussian). H[i, i] is the
+    # row-normalized weight observation i places on itself; since the
+    # un-normalized kernel matrix's diagonal is the constant k(0) for every
+    # i, tr(H) reduces to a sum of k(0) / (row sum) terms.
+    diffs = (X[:, None] - X[None, :]) / h
+    K = stats.norm.pdf(diffs)
+    denom = K.sum(axis=1)
+    diag_val = stats.norm.pdf(0.0)
+    trace_h = np.sum(diag_val / denom)
+
+    frac = (1 + trace_h / nobs) / (1 - (trace_h + 2) / nobs)
+    aic_expected = np.log(sigma) + frac
+
+    npt.assert_allclose(aic, aic_expected, rtol=1e-8)
