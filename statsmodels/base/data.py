@@ -443,7 +443,7 @@ class ModelData:
             if arr.name:
                 return [arr.name]
             else:
-                return
+                return None
         else:
             try:
                 return arr.dtype.names

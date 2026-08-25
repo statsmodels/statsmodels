@@ -81,14 +81,14 @@ class CheckWeight:
         ):
             # Log-likelihood, scale, deviance is different between repeated vs.
             # exposure/average
-            return None
+            return
         assert_allclose(res1.bse, corr_fact * res2.bse, atol=1e-6, rtol=2e-6)
         if isinstance(self, TestBinomialVsVarWeights):
             # Binomial ll and deviance are different for 1d vs. counts...
-            return None
+            return
         if isinstance(self, TestGlmGaussianWLS):
             # This will not work right now either
-            return None
+            return
         if not isinstance(self, (TestGlmGaussianAwNr, TestGlmGammaAwNr)):
             # Matching R is hard
             assert_allclose(res1.llf, res2.ll, atol=1e-6, rtol=1e-7)
@@ -107,11 +107,11 @@ class CheckWeight:
             ),
         ):
             # This will not match as different number of records
-            return None
+            return
         res1 = self.res1
         res2 = self.res2
         if not hasattr(res2, "resids"):
-            return None  # use SkipError instead
+            return  # use SkipError instead
         resid_all = dict(zip(res2.resids_colnames, res2.resids.T, strict=True))
 
         assert_allclose(
@@ -127,7 +127,7 @@ class CheckWeight:
             res1.resid_working, resid_all["resid_working"], atol=1e-6, rtol=2e-6
         )
         if resid_all.get("resid_anscombe") is None:
-            return None
+            return
         # Stata does not use var_weights in anscombe residuals, it seems.
         # Adjust residuals to match our approach.
         resid_a = res1.resid_anscombe
@@ -153,7 +153,7 @@ class CheckWeight:
                 TestBinomial0RepeatedvsAverage,
             ),
         ):
-            return None
+            return
 
         start_params = res1.params
         # model fit is not thread safe

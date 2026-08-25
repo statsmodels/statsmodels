@@ -728,7 +728,7 @@ def fdrcorrection_twostage(
             ri = rej.sum()
             if (it >= maxiter - 1) or ri == ri_old:
                 break
-            elif ri < ri_old:
+            if ri < ri_old:
                 # prevent cycles and endless loops
                 raise RuntimeError(" oops - should not be here")
             ri_old = ri

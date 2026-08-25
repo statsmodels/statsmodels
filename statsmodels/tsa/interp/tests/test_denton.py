@@ -55,7 +55,7 @@ def test_denton_freq_other_matches_benchmark_sums():
 def test_denton_freq_other_requires_k():
     indicator = np.array([10.0, 12.0, 11.0, 9.0])
     benchmark = np.array([50.0])
-    with pytest.raises(ValueError, match='k must be supplied'):
+    with pytest.raises(ValueError, match="k must be supplied"):
         dentonm(indicator, benchmark, freq="other")
 
 

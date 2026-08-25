@@ -294,7 +294,7 @@ class ExponentialSmoothing(TimeSeriesModel):
     def _check_bounds(self, bounds):
         bounds = dict_like(bounds, "bounds", optional=True)
         if bounds is None:
-            return
+            return None
         msg = (
             "bounds must be a dictionary of 2-element tuples of the form"
             " (lb, ub) where lb < ub, lb>=0 and ub<=1"

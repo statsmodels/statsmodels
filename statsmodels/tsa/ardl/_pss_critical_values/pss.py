@@ -14,7 +14,7 @@ def pss_block(
     file_name = f"pss-k-{k}-case-{case}-i1-{i1}-block-{block_id}.npz"
     file_name = Path(path).joinpath(file_name)
     if save and Path(file_name).exists():
-        return
+        return None
     rs = np.random.default_rng(seed)
     const = np.ones(t - 1)
     tau = np.arange(1, t).astype(float)
