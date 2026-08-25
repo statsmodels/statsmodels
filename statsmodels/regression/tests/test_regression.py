@@ -19,7 +19,7 @@ from numpy.testing import (
 import pandas as pd
 import pytest
 from scipy.linalg import toeplitz
-from scipy.stats import t as student_t
+from scipy.stats import chi2, t as student_t
 
 from statsmodels.datasets import longley
 from statsmodels.formula._manager import FormulaManager
@@ -34,6 +34,7 @@ from statsmodels.regression.linear_model import (
     burg,
     yule_walker,
 )
+from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 from statsmodels.tools.tools import add_constant
 
@@ -1863,3 +1864,122 @@ def test_summary_after_remove_data(fit_func):
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_hessian_factor_gls_wls_matches_numerical_hessian():
+    # GLS.hessian_factor/WLS.hessian_factor had no test coverage. Neither
+    # class implements its own .hessian() (RegressionModel does not define
+    # one, so the inherited base LikelihoodModel.hessian raises
+    # NotImplementedError), so there is nothing to reassemble against
+    # directly the way OLS/BetaModel tests do.
+    #
+    # Instead, cross-check against a numerical Hessian of the fixed-scale
+    # Gaussian log-likelihood of the whitened residuals -- the quantity
+    # "scale is not None" in hessian_factor's own docstring refers to:
+    # ll(params; scale) = const - 0.5*nobs*log(scale) - ssr(params)/(2*scale)
+    # whose params-Hessian is the textbook -wexog.T@wexog/scale. Per the
+    # docstring, "The hessian is obtained by (exog.T*hessian_factor).dot
+    # (exog)" -- comparing against OLS's own working hessian(scale=...)
+    # branch confirms the missing piece is an extra -1/scale applied by the
+    # caller (OLS.hessian(params, scale=s) == -exog.T@exog/s, while
+    # OLS.hessian_factor unconditionally returns ones).
+    rng = np.random.default_rng(348203)
+    n, k = 40, 3
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, k - 1))])
+    beta = np.array([1.0, 0.5, -0.5])
+    endog = exog @ beta + rng.standard_normal(n) * 0.5
+    params = beta + 0.05 * rng.standard_normal(k)
+    scale = 0.83
+
+    def numeric_hessian(mod):
+        def ll_fixed_scale(p):
+            resid = mod.wendog - mod.wexog.dot(p)
+            ssr = np.sum(resid**2)
+            return -0.5 * n * np.log(2 * np.pi * scale) - 0.5 / scale * ssr
+
+        return approx_hess(params, ll_fixed_scale)
+
+    def check(mod):
+        hf = mod.hessian_factor(params, scale=scale)
+        assert hf.shape == (n,)
+        reassembled = (mod.exog.T * hf).dot(mod.exog)
+        assert_allclose(
+            -reassembled / scale, numeric_hessian(mod), rtol=1e-4, atol=1e-6
+        )
+
+    # WLS with heteroskedastic weights.
+    weights = rng.uniform(0.5, 3.0, size=n)
+    check(WLS(endog, exog, weights=weights))
+
+    # GLS with no sigma is equivalent to OLS: hessian_factor is all ones.
+    mod_nosigma = GLS(endog, exog)
+    check(mod_nosigma)
+    assert_allclose(mod_nosigma.hessian_factor(params), np.ones(n))
+
+    # GLS with a 1d (heteroskedastic diagonal) sigma.
+    sigma = rng.uniform(0.3, 4.0, size=n)
+    check(GLS(endog, exog, sigma=sigma))
+
+
+def test_hessian_factor_gls_full_sigma_is_diag_cholsigmainv():
+    # For a full (non-diagonal) sigma, hessian_factor can only return a 1d
+    # per-observation vector, so (exog.T*hessian_factor).dot(exog) can never
+    # reconstruct the true GLS Hessian -exog.T@sigma^-1@exog/scale when
+    # sigma^-1 has off-diagonal entries -- no diagonal reweighting of exog
+    # reproduces an off-diagonal quadratic form. So unlike the None/1d-sigma
+    # cases above, this only exercises the branch and checks it returns what
+    # it documents (the diagonal of cholsigmainv), not full Hessian
+    # equivalence.
+    rng = np.random.default_rng(9284)
+    n, k = 12, 2
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, k - 1))])
+    endog = exog.dot([1.0, -0.5]) + rng.standard_normal(n) * 0.5
+    a = rng.standard_normal((n, n))
+    sigma = a.dot(a.T) + n * np.eye(n)
+
+    mod = GLS(endog, exog, sigma=sigma)
+    hf = mod.hessian_factor(np.array([1.0, -0.5]))
+    assert hf.shape == (n,)
+    assert_allclose(hf, np.diag(mod.cholsigmainv))
+
+
+def test_conf_int_el_matches_own_critical_value_and_shrinks():
+    # OLSResults.conf_int_el had no test coverage in the standard (non-slow)
+    # suite: the only existing calls, in emplike/tests/test_regression.py,
+    # are all marked slow (Matlab-cross-checked reference values there).
+    #
+    # conf_int_el's own docstring describes what it computes: "this function
+    # uses brentq to find the value of beta where test_beta([beta],
+    # param_num)[1] is equal to the critical value... For alpha=.05, the
+    # value is 3.841459" -- i.e. at the returned endpoints, el_test's LR
+    # statistic must equal chi2.ppf(1 - sig, 1). That is an independent,
+    # documented property to check against, not a tautological re-run of
+    # conf_int_el itself.
+    rng = np.random.default_rng(89123)
+    n = 40
+    x = rng.standard_normal(n)
+    y = 1.0 + 0.5 * x + rng.standard_normal(n) * 0.5
+    res = OLS(y, add_constant(x)).fit()
+
+    param_num = 1
+    point_estimate = res.params[param_num]
+
+    sig = 0.05
+    lower, upper = res.conf_int_el(param_num, sig=sig)
+    assert lower < point_estimate < upper
+
+    r0 = chi2.ppf(1 - sig, 1)
+    llr_lower = res.el_test(
+        np.array([lower]), np.array([param_num]), result_object=False
+    )[0]
+    llr_upper = res.el_test(
+        np.array([upper]), np.array([param_num]), result_object=False
+    )[0]
+    assert_allclose(llr_lower, r0, rtol=1e-3)
+    assert_allclose(llr_upper, r0, rtol=1e-3)
+
+    # A smaller significance level (higher confidence) gives a wider
+    # interval.
+    lower_wide, upper_wide = res.conf_int_el(param_num, sig=0.01)
+    lower_narrow, upper_narrow = res.conf_int_el(param_num, sig=0.2)
+    assert (upper_wide - lower_wide) > (upper_narrow - lower_narrow)

@@ -278,3 +278,72 @@ def test_covariance_group_matches_direct_call():
 
     with pytest.raises(ValueError, match="does not exist"):
         res.covariance_group("not-a-real-group")
+
+
+def test_covariance_matches_gaussian_kernel_formula():
+    # ProcessMLE.covariance and ProcessMLEResults.covariance had no direct
+    # test coverage of their own: they were previously only exercised
+    # (with real assertions) inside the @pytest.mark.slow test_arrays/
+    # test_formulas, and only incidentally, as the "expected" ground truth,
+    # by test_covariance_group_matches_direct_call above.
+    #
+    # Reproduce GaussianCovariance's documented squared-exponential kernel
+    # formula by hand -- independent of GaussianCovariance.get_cov's own
+    # code -- and check both covariance() methods against it.
+    rng = np.random.default_rng(20230)
+    res = run_arrays(50, model1, False, rng=rng)
+    mod = res.model
+
+    idx = np.arange(5)
+    t0 = mod.time[idx]
+    scale_data0 = mod.exog_scale[idx, :]
+    smooth_data0 = mod.exog_smooth[idx, :]
+
+    # scale/smooth use a log link to preserve positivity (GaussianCovariance
+    # docstring; also matches ProcessMLE.loglike/score's sc/sm computation).
+    sca = np.exp(scale_data0 @ np.asarray(res.scale_params))
+    smo = np.exp(smooth_data0 @ np.asarray(res.smooth_params))
+    da = np.subtract.outer(t0, t0)
+    ds = np.add.outer(smo, smo) / 2
+    qmat = da * da / ds
+    expected = np.exp(-qmat / 2) / np.sqrt(ds)
+    expected *= np.outer(smo, smo) ** 0.25
+    expected *= np.outer(sca, sca)
+
+    # ProcessMLE.covariance is the model-level method.
+    cv = mod.covariance(
+        t0, res.scale_params, res.smooth_params, scale_data0, smooth_data0
+    )
+    assert_allclose(cv, cv.T)
+    assert_allclose(cv, expected, rtol=1e-10)
+
+    # ProcessMLEResults.covariance forwards to model.covariance using the
+    # fitted scale/smooth params.
+    cv_res = res.covariance(t0, scale_data0, smooth_data0)
+    assert_allclose(cv_res, cv, rtol=1e-12)
+
+
+def test_predict_matches_mean_structure_formula():
+    # ProcessMLE.predict and ProcessMLEResults.predict had no direct test
+    # coverage of their own: they were previously only exercised inside the
+    # @pytest.mark.slow test_arrays/test_formulas. Both are documented to
+    # return the linear mean structure exog @ mean_params (no conditioning
+    # on the fitted Gaussian process); verify against that formula by hand.
+    rng = np.random.default_rng(20231)
+    res = run_arrays(50, model1, False, rng=rng)
+    mod = res.model
+
+    exog0 = mod.exog[:6, :]
+    expected = exog0 @ np.asarray(res.mean_params)
+
+    # ProcessMLE.predict is the model-level method.
+    yhat_model = mod.predict(res.params, exog=exog0)
+    assert_allclose(yhat_model, expected, rtol=1e-10)
+
+    # ProcessMLEResults.predict forwards to model.predict using the fitted
+    # params.
+    yhat_res = res.predict(exog=exog0)
+    assert_allclose(yhat_res, yhat_model, rtol=1e-12)
+
+    # default exog (None) falls back to the model's own exog.
+    assert_allclose(res.predict(), mod.exog @ np.asarray(res.mean_params), rtol=1e-10)

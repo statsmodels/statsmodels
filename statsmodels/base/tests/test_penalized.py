@@ -833,3 +833,27 @@ class TestPenalizedGLMGaussianL2Theil(CheckPenalizedGaussian):
             res1.pvalues[exog_index], res2.pvalues[exog_index], rtol=0.1, atol=5e-3
         )
         assert_allclose(res1.predict(), res2.predict(), rtol=1e-5)
+
+
+def test_loglikeobs_sums_to_loglike():
+    # PenalizedMixin.loglikeobs had no test coverage. Per-observation
+    # penalized log-likelihoods should sum to the (already tested)
+    # aggregate penalized loglike at the same params -- the penalty term is
+    # divided by nobs_llf inside loglikeobs specifically so that summing it
+    # back up reproduces the un-divided penalty used by loglike.
+    rng = np.random.default_rng(87654)
+    nobs, k_vars = 60, 3
+    x = rng.standard_normal((nobs, k_vars))
+    x[:, 0] = 1
+    beta = np.array([0.5, 0.3, -0.2])
+    y = rng.poisson(np.exp(x @ beta))
+
+    mod = PoissonPenalized(y, x, penal=smpen.SCADSmoothed(0.1, c0=0.0001))
+    params = beta + 0.1
+
+    for pen_weight in [None, 0, 5.0]:
+        llobs = mod.loglikeobs(params, pen_weight=pen_weight)
+        assert llobs.shape == (nobs,)
+        assert_allclose(
+            llobs.sum(), mod.loglike(params, pen_weight=pen_weight), rtol=1e-10
+        )

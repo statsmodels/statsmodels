@@ -1525,3 +1525,42 @@ def test_predict_reflects_only_fixed_effects():
 
     packed = np.concatenate([res.fe_params, [999.0]])
     assert_allclose(mod.predict(packed), exog @ res.fe_params)
+
+
+def test_profile_re_likelihood_peaks_at_mle():
+    # MixedLMResults.profile_re had no test coverage in the standard suite:
+    # the only existing call, test_profile_inference above, is marked both
+    # slow and smoke (it only checks the call does not raise).
+    #
+    # profile_re refits the model with the profiled variance component
+    # fixed at each grid point, optimizing over everything else. The grid
+    # point equal to the MLE's own estimate (row `num_low`, since
+    # `left = linspace(low, ru0, num_low + 1)` ends exactly at ru0 and
+    # `right` starts there) is therefore just the original fit again, so
+    # its likelihood should equal the full model's llf; every other grid
+    # point is a genuinely restricted fit and so cannot exceed it.
+    rng = np.random.default_rng(4021)
+    n_groups, n_per_group = 15, 8
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 1))])
+    random_intercepts = rng.standard_normal(n_groups) * 0.6
+    endog = exog @ [1.0, 0.5] + random_intercepts[groups] + rng.standard_normal(n) * 0.5
+
+    res = MixedLM(endog, exog, groups).fit(reml=False)
+
+    num_low, num_high = 2, 2
+    likev = res.profile_re(
+        0,
+        vtype="re",
+        num_low=num_low,
+        dist_low=0.2,
+        num_high=num_high,
+        dist_high=0.2,
+    )
+    assert likev.shape == (num_low + num_high + 1, 2)
+
+    mle_row = likev[num_low]
+    assert_allclose(mle_row[0], res.cov_re[0, 0], rtol=1e-6)
+    assert_allclose(mle_row[1], res.llf, rtol=1e-6)
+    assert np.all(likev[:, 1] <= mle_row[1] + 1e-6)

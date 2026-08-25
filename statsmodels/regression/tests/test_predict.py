@@ -353,3 +353,34 @@ def test_prediction_results_mean_conf_int_invalid_method():
     assert pred.conf_int(method="delta") is not None
     with pytest.raises(ValueError, match="method"):
         pred.conf_int(method="not-a-method")
+
+
+def test_prediction_results_mean_var_pred_mean():
+    # PredictionResultsMean.var_pred_mean had no test coverage -- existing
+    # tests only ever access the related se_mean (== sqrt(self.var_pred)),
+    # which reads self.var_pred directly rather than going through the
+    # var_pred_mean property, so var_pred_mean's own body never ran.
+    #
+    # Use a Gaussian-family, identity-link GLM (numerically equivalent to
+    # OLS) so the get_prediction_glm formula
+    # var_pred_mean = link_deriv**2 * (exog*cov_params@exog.T).sum(1)
+    # reduces to the textbook mean-prediction variance x0 @ cov_params @ x0
+    # for each row x0, which can be computed by hand independently.
+    from statsmodels.genmod.generalized_linear_model import GLM
+
+    rng = np.random.default_rng(918273)
+    n = 40
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(n)
+    res = GLM(endog, exog).fit()
+
+    exog0 = np.column_stack([np.ones(5), rng.standard_normal((5, 2))])
+    pred = res.get_prediction(exog0)
+
+    covb = res.cov_params()
+    expected = np.array([x0 @ covb @ x0 for x0 in exog0])
+    assert_allclose(pred.var_pred_mean, expected, rtol=1e-10)
+
+    # it is documented as a backwards-compatibility alias for var_pred
+    assert pred.var_pred_mean is pred.var_pred
+    assert_allclose(pred.var_pred_mean, pred.se_mean**2, rtol=1e-10)

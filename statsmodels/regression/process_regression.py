@@ -799,8 +799,15 @@ class ProcessMLE(base.LikelihoodModel):
 
         """
         if not hasattr(self.data, "scale_model_spec"):
-            sca = np.dot(scale_data, scale_params)
-            smo = np.dot(smooth_data, smooth_params)
+            # scale and smooth use a log link to preserve positivity (see
+            # class docstring), matching loglike/score's sc = exp(exog_scale
+            # @ scpar) and sm = exp(exog_smooth @ smpar) and the formula
+            # branch just below -- this branch previously omitted the
+            # exp(), so it silently returned wrong (and sometimes
+            # NaN-producing, via a negative "ds" in GaussianCovariance.
+            # get_cov) results for any non-formula-constructed model.
+            sca = np.exp(np.dot(scale_data, scale_params))
+            smo = np.exp(np.dot(smooth_data, smooth_params))
         else:
             mgr = FormulaManager()
             sc = mgr.get_matrices(self.data.scale_model_spec, scale_data, pandas=False)
