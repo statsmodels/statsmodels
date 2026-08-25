@@ -695,6 +695,56 @@ def test_misc():
     assert_equal(sim.simulation_output, 0)
 
 
+def test_simulation_smooth_results_output_flag_properties():
+    # `simulate_state`, `simulate_disturbance`, and `simulate_all` are
+    # boolean flag properties backed by the `simulation_output` bitmask
+    # (the same OptionWrapper-style pattern used elsewhere in
+    # tsa.statespace, e.g. `smoother_state`/`smoother_all` in
+    # kalman_smoother.py). `test_misc` above exercises the *setters*
+    # indirectly (by checking `simulation_output` afterwards) but never
+    # calls the getters, so check the getters directly here against
+    # independently-computed bitmask values.
+    endog = np.arange(10) * 1.0
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
+    mod.update([0.5, 1.0])
+    sim = mod.simulation_smoother()
+
+    sim.simulation_output = 0
+    assert sim.simulate_state is False
+    assert sim.simulate_disturbance is False
+    assert sim.simulate_all is False
+
+    sim.simulation_output = SIMULATION_STATE
+    assert sim.simulate_state is True
+    assert sim.simulate_disturbance is False
+    # SIMULATION_ALL = SIMULATION_STATE | SIMULATION_DISTURBANCE, so
+    # `simulate_all` reads True whenever *either* component bit is set
+    # (matching the analogous `smoother_all`/OptionWrapper "any-bit"
+    # semantics used throughout this subpackage), not only when both are.
+    assert sim.simulate_all is True
+
+    sim.simulation_output = SIMULATION_DISTURBANCE
+    assert sim.simulate_state is False
+    assert sim.simulate_disturbance is True
+    assert sim.simulate_all is True
+
+    sim.simulation_output = SIMULATION_ALL
+    assert sim.simulate_state is True
+    assert sim.simulate_disturbance is True
+    assert sim.simulate_all is True
+
+    # Setters round-trip through the same bitmask; verify by re-reading the
+    # flag itself (not just `simulation_output`).
+    sim.simulate_state = False
+    assert sim.simulation_output == SIMULATION_DISTURBANCE
+    assert sim.simulate_state is False
+    assert sim.simulate_disturbance is True
+
+    sim.simulate_disturbance = False
+    assert sim.simulation_output == 0
+    assert sim.simulate_all is False
+
+
 def test_simulation_smoother_invalid_method_raises():
     dta = datasets.macrodata.load_pandas().data
     dta.index = pd.date_range(start="1959-01-01", end="2009-7-01", freq="QS")

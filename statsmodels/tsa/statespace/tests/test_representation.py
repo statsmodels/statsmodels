@@ -1457,3 +1457,69 @@ def test_missing():
     llf_inject_na = mod.loglikeobs()
 
     assert_allclose(llf_inject_na, llf)
+
+
+def test_initialize_components():
+    # `initialize_components` builds an Initialization from the component
+    # matrices (a, Pstar, Pinf/A) as documented in `Initialization.
+    # from_components` (Durbin and Koopman (2012), Sec. 5.2): the resulting
+    # initialization, evaluated via `__call__`, must reproduce `a` as the
+    # initial state mean, `Pinf = A @ A.T` as the diffuse covariance, and
+    # `Pstar` as the stationary covariance.
+    mod = Representation(1, k_states=3)
+
+    a = np.array([1.0, 2.0, 0.0])
+    Pstar = np.diag([4.0, 9.0, 0.0])
+    A = np.zeros((3, 1))
+    A[2, 0] = 1.0
+
+    mod.initialize_components(a=a, Pstar=Pstar, A=A)
+
+    assert mod.initialization.initialized
+    mean, diffuse_cov, stationary_cov = mod.initialization()
+    assert_allclose(mean, a)
+    assert_allclose(diffuse_cov, A.dot(A.T))
+    assert_allclose(stationary_cov, Pstar)
+
+
+def test_initialize_components_r0_q0_equivalent_to_pstar():
+    # Per the documented contract, `Pstar = R0 @ Q0 @ R0.T`, so specifying
+    # R0/Q0 must give identical results to specifying the equivalent Pstar
+    # directly.
+    Pstar = np.array([[2.0, 0.5], [0.5, 3.0]])
+
+    mod1 = Representation(1, k_states=2)
+    mod1.initialize_components(a=[0.0, 0.0], Pstar=Pstar)
+
+    mod2 = Representation(1, k_states=2)
+    R0 = np.eye(2)
+    Q0 = Pstar
+    mod2.initialize_components(a=[0.0, 0.0], R0=R0, Q0=Q0)
+
+    mean1, diffuse_cov1, stationary_cov1 = mod1.initialization()
+    mean2, diffuse_cov2, stationary_cov2 = mod2.initialization()
+
+    assert_allclose(stationary_cov1, Pstar)
+    assert_allclose(stationary_cov1, stationary_cov2)
+    assert_allclose(mean1, mean2)
+    assert_allclose(diffuse_cov1, diffuse_cov2)
+
+
+def test_initialize_components_default_a_is_zero():
+    # `a` defaults to a zero vector when not specified
+    mod = Representation(1, k_states=2)
+    mod.initialize_components(Pstar=np.eye(2))
+
+    mean, _, stationary_cov = mod.initialization()
+    assert_allclose(mean, np.zeros(2))
+    assert_allclose(stationary_cov, np.eye(2))
+
+
+def test_initialize_components_pstar_and_r0q0_raises():
+    # Cannot specify both Pstar and R0/Q0 (they are documented as mutually
+    # exclusive parameterizations of the same stationary covariance)
+    mod = Representation(1, k_states=2)
+    with pytest.raises(ValueError):
+        mod.initialize_components(
+            a=[0.0, 0.0], Pstar=np.eye(2), R0=np.eye(2), Q0=np.eye(2)
+        )

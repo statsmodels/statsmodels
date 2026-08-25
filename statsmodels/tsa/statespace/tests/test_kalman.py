@@ -852,3 +852,43 @@ def test_stationary_initialization():
     check_stationary_initialization_2dim(np.float64)
     check_stationary_initialization_2dim(np.complex64)
     check_stationary_initialization_2dim(np.complex128)
+
+
+def test_prediction_results_clear():
+    # `PredictionResults.clear()` deletes the cached `_<attr>` values for
+    # `endog` plus the `representation_attributes` and `filter_attributes`
+    # lists (see the method body), forcing them to be recomputed via
+    # `__getattr__` on next access. It deliberately leaves other caches
+    # (e.g. smoother_attributes) untouched.
+    endog = np.arange(10, dtype=float)
+    mod = MLEModel(endog, k_states=1, k_posdef=1)
+    mod.ssm.initialize_known(np.array([0.0]), np.array([[1.0]]))
+    mod["design", 0, 0] = 1.0
+    mod["obs_cov", 0, 0] = 1.0
+    mod["transition", 0, 0] = 0.5
+    mod["selection", 0, 0] = 1.0
+    mod["state_cov", 0, 0] = 1.0
+
+    res = mod.ssm.filter()
+    pred = res.predict()
+
+    cached_attrs = ["endog"] + pred.representation_attributes + pred.filter_attributes
+
+    # Access each attribute once so that it gets cached as `_<attr>`
+    values_before = {}
+    for attr in cached_attrs:
+        values_before[attr] = np.array(getattr(pred, attr), copy=True)
+        assert hasattr(pred, "_" + attr)
+
+    pred.clear()
+
+    # Every cache that `clear()` is documented to reset is actually gone
+    for attr in cached_attrs:
+        assert not hasattr(pred, "_" + attr)
+
+    # Re-accessing reproduces identical values and re-populates the cache
+    # (clear() only drops the cache; it cannot change the underlying,
+    # already-computed filter output)
+    for attr in cached_attrs:
+        assert_allclose(getattr(pred, attr), values_before[attr])
+        assert hasattr(pred, "_" + attr)
