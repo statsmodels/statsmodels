@@ -2528,3 +2528,67 @@ def test_autoregressive_covariance_matrix_and_summary():
     assert_allclose(cmat0, np.eye(d))
 
     assert c.summary() == "Autoregressive(1) dependence parameter: 0.600\n"
+
+
+def test_independence_covariance_matrix_and_summary():
+    # Independence.covariance_matrix must reproduce the identity matrix
+    # regardless of the requested dimension, and summary() must describe
+    # the (fixed, parameter-free) independence assumption.
+    c = cov_struct.Independence()
+    for d in 1, 3, 5:
+        cmat, is_cor = c.covariance_matrix(np.zeros(d), 0)
+        assert is_cor is True
+        assert_allclose(cmat, np.eye(d))
+
+    assert (
+        c.summary() == "Observations within a cluster are modeled as being independent."
+    )
+
+
+def test_exchangeable_covariance_matrix_and_summary():
+    # Exchangeable.covariance_matrix with dependence parameter rho must
+    # reproduce the closed-form (1 - rho) * I + rho * J structure, and
+    # summary() must report the fitted rho.
+    c = cov_struct.Exchangeable()
+    c.dep_params = 0.4
+    d = 4
+
+    cmat, is_cor = c.covariance_matrix(np.zeros(d), 0)
+    assert is_cor is True
+    expected = (1 - 0.4) * np.eye(d) + 0.4 * np.ones((d, d))
+    assert_allclose(cmat, expected)
+
+    assert c.summary() == (
+        "The correlation between two observations in the same cluster is 0.400"
+    )
+
+
+def test_unstructured_summary():
+    # summary() must return (not merely print) a description that
+    # contains the actual fitted correlation values.
+    c = cov_struct.Unstructured()
+    c.dep_params = np.array([[1.0, 0.25], [0.25, 1.0]])
+
+    smry = c.summary()
+    assert isinstance(smry, str)
+    assert "Estimated covariance structure" in smry
+    assert "0.25" in smry
+
+
+def test_stationary_summary():
+    # summary() must return a DataFrame whose Lag/Cov columns reproduce
+    # the fitted per-lag dependence parameters exactly.
+    c = cov_struct.Stationary(max_lag=3, grid=True)
+    c.dep_params = np.array([1.0, 0.5, 0.25, 0.1])
+
+    smry = c.summary()
+    assert isinstance(smry, pd.DataFrame)
+    assert_allclose(smry["Lag"].values, [0, 1, 2, 3])
+    assert_allclose(smry["Cov"].values, c.dep_params)
+
+
+def test_global_odds_ratio_summary():
+    # summary() must report the fitted global odds ratio value.
+    c = cov_struct.GlobalOddsRatio("ordinal")
+    c.dep_params = 2.5
+    assert c.summary() == "Global odds ratio: 2.500\n"
