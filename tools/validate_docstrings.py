@@ -27,11 +27,12 @@ from pathlib import Path
 import pydoc
 import re
 import string
+import subprocess
 import sys
 import tempfile
 import textwrap
+from typing import NamedTuple
 
-import flake8.main.application
 import matplotlib as mpl
 import numpy as np
 from numpydoc.docscrape import NumpyDocString
@@ -48,6 +49,14 @@ mpl.rc("figure", max_open_warning=10000)
 BASE_PATH = Path(__file__).resolve().parent.parent
 
 sys.path.insert(0, str(BASE_PATH))
+
+
+class RuffViolation(NamedTuple):
+    error_code: str
+    message: str
+    count: int
+
+
 # TODO: Single-line ignore GL01, GL02
 # TODO: Complete import location list
 # TODO: Recurse through module to find classes
@@ -205,7 +214,7 @@ ERROR_MSGS = {
     "prefix, use {right_reference} instead.",
     "EX01": "No examples section found",
     "EX02": "Examples do not pass tests:\n{doctest_log}",
-    "EX03": "flake8 error: {error_code} {error_message}{times_happening}",
+    "EX03": "ruff error: {error_code} {error_message}{times_happening}",
     "EX04": "Do not import {imported_library}, as it is imported "
     "automatically for the examples (numpy as np, pandas as pd)",
 }
@@ -707,8 +716,8 @@ class Docstring:
         if not self.examples:
             return
 
-        # F401 is needed to not generate flake8 errors in examples
-        # that do not user numpy or pandas
+        # F401 is needed to not generate ruff errors in examples
+        # that do not use numpy or pandas
         content = "".join(
             (
                 "import numpy as np  # noqa: F401\n",
@@ -718,20 +727,40 @@ class Docstring:
             )
         )
 
-        application = flake8.main.application.Application()
-        application.initialize(["--quiet"])
-
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", suffix=".py", delete=False
+        ) as file:
             file.write(content)
-            file.flush()
-            application.run_checks([file.name])
+            file_name = Path(file.name)
 
-        # We need this to avoid flake8 printing the names of the files to
-        # the standard output
-        application.formatter.write = lambda line, source: None
-        application.report()
+        try:
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "ruff",
+                    "check",
+                    "--isolated",
+                    "--quiet",
+                    "--select=E,W,F,B",
+                    "--output-format=json",
+                    file_name,
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            violations = json.loads(proc.stdout or "[]")
+        finally:
+            file_name.unlink()
 
-        yield from application.guide.stats.statistics_for("")
+        counts = collections.Counter(v["code"] for v in violations)
+        first_message = {}
+        for v in violations:
+            first_message.setdefault(v["code"], v["message"])
+
+        for code, count in counts.items():
+            yield RuffViolation(code, first_message[code], count)
 
 
 def get_validation_data(doc):

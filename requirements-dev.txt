@@ -27,6 +27,4 @@ pyarrow>=14.0.0; python_version < '3.14' and sys_platform != 'darwin'
 pywinpty; os_name == "nt"
 
 # code quality
-flake8
-flake8-bugbear
 ruff

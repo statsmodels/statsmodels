@@ -116,8 +116,6 @@ dev = [
     # Pin on Win32
     "pywinpty; os_name == 'nt'",
     # code quality
-    "flake8",
-    "flake8-bugbear",
     "ruff",
 ]
 polars = [

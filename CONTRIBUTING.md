@@ -67,11 +67,10 @@ software a shared effort.
 ## Linting
 
 ```bash
-ruff statsmodels docs tools --fix
-flake8 statsmodels docs tools
+ruff check statsmodels docs tools --fix
 ```
 
-- Dependencies: ruff, flake8
+- Dependencies: ruff
 
 ## How to Submit a Pull Request
 
