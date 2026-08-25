@@ -2139,11 +2139,13 @@ class LikelihoodModelResults(Results):
         else:
             F = np.dot(np.dot(Rbq.T, invcov), Rbq)
 
-        # Added a try and except statement
-        try:
-            df_resid = getattr(self, "df_resid_inference", self.df_resid)
-        except AttributeError:
-            df_resid = getattr(self, 'df_resid_inference', self.resid)
+        # Preferred order of residual types
+        if hasattr(self, "df_resid_inference"):
+            df_resid = self.df_resid_inference
+        elif hasattr(self, "df_resid"):
+            df_resid = self.df_resid
+        else:
+            df_resid = self.resid
 
         if scalar and F.size == 1:
             F = float(np.squeeze(F))
