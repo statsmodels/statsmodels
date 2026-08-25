@@ -32,6 +32,8 @@ from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 from statsmodels.discrete.discrete_model import (
     CountModel,
     GeneralizedPoisson,
+    L1CountResultsWrapper,
+    L1PoissonResultsWrapper,
     Logit,
     MNLogit,
     NegativeBinomial,
@@ -3939,6 +3941,45 @@ def test_poisson_cdf_pdf_match_scipy():
     lam = np.exp(X)
     assert_allclose(mod.cdf(X), stats.poisson.cdf(endog, lam), rtol=1e-12)
     assert_allclose(mod.pdf(X), stats.poisson.pmf(endog, lam), rtol=1e-12)
+
+
+def test_count_model_fit_regularized_direct():
+    # CountModel.fit_regularized is never reached through any of its own
+    # subclasses: Poisson/GeneralizedPoisson/NegativeBinomial(P) each define
+    # their own fit_regularized override that explicitly calls
+    # super(CountModel, self).fit_regularized(...), deliberately skipping
+    # over CountModel's own version. Exercise CountModel.fit_regularized
+    # directly (unbound, called on a Poisson instance) to test it.
+    rng = np.random.default_rng(20230817)
+    nobs = 200
+    exog = np.column_stack(
+        (np.ones(nobs), rng.standard_normal(nobs), rng.standard_normal(nobs))
+    )
+    beta = np.array([0.3, 0.5, -0.4])
+    endog = rng.poisson(np.exp(exog @ beta))
+
+    mod = Poisson(endog, exog)
+    res_unreg = mod.fit(disp=0)
+
+    # alpha=0 (no penalty) should numerically recover the unregularized MLE
+    res_direct = CountModel.fit_regularized(
+        mod, alpha=0, disp=0, trim_mode="off"
+    )
+    assert isinstance(res_direct, L1CountResultsWrapper)
+    assert_allclose(res_direct.params, res_unreg.params, atol=5e-5, rtol=5e-5)
+
+    # CountModel.fit_regularized and Poisson's own fit_regularized override
+    # both delegate to the identical DiscreteModel.fit_regularized call, so
+    # with identical arguments they must return numerically identical
+    # parameters -- only the results-wrapper class differs.
+    res_poisson_reg = mod.fit_regularized(alpha=0, disp=0, trim_mode="off")
+    assert isinstance(res_poisson_reg, L1PoissonResultsWrapper)
+    assert_allclose(res_direct.params, res_poisson_reg.params, atol=0, rtol=0)
+
+    # A large L1 penalty shrinks parameters toward zero.
+    res_big = CountModel.fit_regularized(mod, alpha=25.0, disp=0)
+    assert np.all(np.abs(res_big.params) <= np.abs(res_unreg.params) + 1e-8)
+    assert np.any(np.abs(res_big.params) < np.abs(res_unreg.params) - 1e-3)
 
 
 def test_logit_family_is_binomial():
