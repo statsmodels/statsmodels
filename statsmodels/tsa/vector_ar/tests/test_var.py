@@ -22,12 +22,13 @@ from statsmodels.datasets import macrodata
 import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.base.datetools import dates_from_str
+from statsmodels.tsa.stattools import acovf
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     ErrorBand,
     ForecastInterval,
 )
-from statsmodels.tsa.vector_ar.var_model import VAR, forecast, var_acf
+from statsmodels.tsa.vector_ar.var_model import VAR, VARProcess, forecast, var_acf
 
 DECIMAL_12 = 12
 DECIMAL_6 = 6
@@ -1172,3 +1173,90 @@ def test_var_model_predict_matches_forecast_and_fittedvalues():
     assert mixed.shape == (steps + 1, 3)
     assert_allclose(mixed[0], res.fittedvalues[-1], atol=1e-12)
     assert_allclose(mixed[1:], res.forecast(data[-lags:], steps), atol=1e-10)
+
+
+def test_sample_acov(bivariate_var_result):
+    # VARResults.sample_acov was never called by any existing test. Check
+    # it against an independently hand-computed cross-product
+    # autocovariance of the (post-presample) endog data, and cross-check
+    # the diagonal (each column's own autocovariance) against the
+    # separately-tested univariate acovf function.
+    res = bivariate_var_result
+    nlags = 4
+    acov = res.sample_acov(nlags=nlags)
+    assert acov.shape == (nlags + 1, 2, 2)
+
+    x = res.endog[res.k_ar :]
+    xm = x - x.mean(axis=0)
+    nobs = xm.shape[0]
+    expected = np.empty_like(acov)
+    for lag in range(nlags + 1):
+        for i in range(2):
+            for j in range(2):
+                a = xm[lag:, i] if lag else xm[:, i]
+                b = xm[: nobs - lag, j] if lag else xm[:, j]
+                expected[lag, i, j] = np.sum(a * b) / nobs
+    assert_allclose(acov, expected)
+
+    for col in range(2):
+        ref = acovf(x[:, col], demean=True, fft=False, nlag=nlags)
+        assert_allclose(acov[:, col, col], ref)
+
+
+def test_sample_acorr(bivariate_var_result):
+    # VARResults.sample_acorr was never called by any existing test. Its
+    # docstring-documented relationship to sample_acov is that it is
+    # normalized by the lag-0 (co)variances, which is checked exactly here,
+    # along with the lag-0 self-autocorrelation being 1.
+    res = bivariate_var_result
+    nlags = 4
+    acov = res.sample_acov(nlags=nlags)
+    acorr = res.sample_acorr(nlags=nlags)
+
+    sd = np.sqrt(np.diag(acov[0]))
+    expected = acov / np.outer(sd, sd)
+    assert_allclose(acorr, expected)
+    assert_allclose(np.diag(acorr[0]), np.ones(2))
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+def test_varprocess_plot_acorr(bivariate_var_result, close_figures):
+    # VARResults defines its own plot_acorr (residual/sample autocorrelation
+    # of a *fitted* model), which shadows VARProcess.plot_acorr (theoretical
+    # autocorrelation of a *known* process) for every VARResults instance,
+    # so `VARResults_instance.plot_acorr()` never runs VARProcess's version.
+    # Build a plain VARProcess from the fitted coefficients to exercise the
+    # VARProcess implementation directly, and check the plotted bar heights
+    # against the already-tested theoretical acorr() output.
+    res = bivariate_var_result
+    process = VARProcess(res.coefs, res.coefs_exog, res.sigma_u, names=res.names)
+    assert type(process).plot_acorr is VARProcess.plot_acorr
+
+    nlags = 4
+    fig = process.plot_acorr(nlags=nlags)
+    expected = process.acorr(nlags=nlags)
+    k = process.neqs
+    assert len(fig.axes) == k * k
+    for idx, ax in enumerate(fig.axes):
+        i, j = divmod(idx, k)
+        heights = np.array([seg[1, 1] for seg in ax.collections[0].get_segments()])
+        assert_allclose(heights, expected[:, i, j])
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_sample_acorr(bivariate_var_result, close_figures):
+    # VARResults.plot_sample_acorr was never called by any existing test.
+    # Check the plotted bar heights against the independently-verified
+    # sample_acorr() output (see test_sample_acorr above).
+    res = bivariate_var_result
+    nlags = 4
+    fig = res.plot_sample_acorr(nlags=nlags)
+    expected = res.sample_acorr(nlags=nlags)
+    k = res.neqs
+    assert len(fig.axes) == k * k
+    for idx, ax in enumerate(fig.axes):
+        i, j = divmod(idx, k)
+        heights = np.array([seg[1, 1] for seg in ax.collections[0].get_segments()])
+        assert_allclose(heights, expected[:, i, j])
