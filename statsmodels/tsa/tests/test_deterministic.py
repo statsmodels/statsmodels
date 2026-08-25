@@ -495,6 +495,28 @@ def test_deterministic_process(
     assert isinstance(terms, pd.DataFrame)
 
 
+def test_index_and_terms_properties(time_index):
+    # .index must equal the index the process was constructed from, and
+    # .terms must equal the list of DeterministicTerm objects that
+    # determine it -- both for terms supplied explicitly via
+    # additional_terms and for the constant/order/seasonal convenience
+    # arguments that build the default term set internally.
+    tt = TimeTrend(constant=True, order=2)
+    seas = Seasonality(period=5)
+    dp = DeterministicProcess(time_index, additional_terms=[tt, seas])
+    pd.testing.assert_index_equal(dp.index, time_index)
+    assert dp.terms == [tt, seas]
+
+    idx2 = pd.RangeIndex(0, 50)
+    dp2 = DeterministicProcess(idx2, constant=True, order=1, seasonal=True, period=4)
+    pd.testing.assert_index_equal(dp2.index, idx2)
+    assert dp2.terms == [TimeTrend(True, 1), Seasonality(4)]
+
+    # no terms at all is a valid (if useless) configuration
+    dp3 = DeterministicProcess(idx2)
+    assert dp3.terms == []
+
+
 @pytest.mark.parametrize("drop", [True, False])
 def test_out_of_sample_without_in_sample(drop):
     # GH: out_of_sample()/range() on a fresh DeterministicProcess used to raise
