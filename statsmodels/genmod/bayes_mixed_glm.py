@@ -472,7 +472,7 @@ class _BayesMixedGLM(base.Model):
 
         Use `fit_vb` to fit the model using variational Bayes.
         """
-        self.fit_map(method, minim_opts)
+        return self.fit_map(method, minim_opts)
 
     def fit_map(self, method="BFGS", minim_opts=None, scale_fe=False, rng=None):
         """
