@@ -871,18 +871,18 @@ params_table = np.array([
     0.2509677931, -121.46771129, 36.0389724
 ]).reshape(3, 6)
 
-params_table_colnames = 'b se t pvalue ll ul'.split()
+params_table_colnames = "b se t pvalue ll ul".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     0.0002601760, -0.0006664354,    0.2173403,
     -0.0006664354,  0.0217063876,   -4.4847950,
     0.2173402673, -4.4847950039, 1211.9715786]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_cluster_crv3 = ParamsTableTestBunch(
@@ -940,9 +940,9 @@ params_table = np.array([
     -120.58353952, 35.1548006
     ]).reshape(3, 6)
 
-params_table_colnames = 'b se t pvalue ll ul'.split()
+params_table_colnames = "b se t pvalue ll ul".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
 
@@ -950,9 +950,9 @@ cov = np.array([
     -0.0006942295,  0.0214227025,   -4.3971775,
     0.2259245878, -4.3971774822, 1184.9104889]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 results_cluster_crv_jk = ParamsTableTestBunch(
     params_table=params_table,
@@ -1030,9 +1030,9 @@ params_table = np.array([
     -22.8586442, 21.67061826, -1.054822, 0.31899940, -71.880988565, 26.1637001
     ]).reshape(3, 6)
 
-params_table_colnames = 'b se t pvalue ll ul'.split()
+params_table_colnames = "b se t pvalue ll ul".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     0.0021251457 , 0.0004465362 , -0.6472085,
@@ -1040,9 +1040,9 @@ cov = np.array([
     -0.6472084770, -0.9030028664, 469.6156959
     ]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_cluster_crv3_wls = ParamsTableTestBunch(
@@ -1083,9 +1083,9 @@ params_table = np.array([
     0.31896217, -71.876995329, 26.1597069
     ]).reshape(3, 6)
 
-params_table_colnames = 'b se t pvalue ll ul'.split()
+params_table_colnames = "b se t pvalue ll ul".split()
 
-params_table_rownames = 'mvalue kstock _cons'.split()
+params_table_rownames = "mvalue kstock _cons".split()
 
 cov = np.array([
     0.0021244331,  0.0004480432 , -0.6469750,
@@ -1093,9 +1093,9 @@ cov = np.array([
     -0.6469749816, -0.9034966486, 469.5391916
     ]).reshape(3, 3)
 
-cov_colnames = 'mvalue kstock _cons'.split()
+cov_colnames = "mvalue kstock _cons".split()
 
-cov_rownames = 'mvalue kstock _cons'.split()
+cov_rownames = "mvalue kstock _cons".split()
 
 
 results_cluster_crv_jk_wls = ParamsTableTestBunch(

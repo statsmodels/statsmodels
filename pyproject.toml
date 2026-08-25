@@ -271,7 +271,6 @@ ignore = [
   # the occasional real violation by hand instead of suppressing it.
   "COM812", # missing-trailing-comma: black decides this, not us
   "COM819", # prohibited-trailing-comma: black decides this, not us
-  "Q000", # bad-quotes-inline-string: quote style is the formatter's job
   "Q001", # bad-quotes-multiline-string
   "Q002", # bad-quotes-docstring
   "Q003", # avoidable-escaped-quote

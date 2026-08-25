@@ -11,38 +11,38 @@ from statsmodels.compat.python import lzip
 import numpy as np
 
 descriptions = {
-    'HC0': 'Standard Errors are heteroscedasticity robust (HC0)',
-    'HC1': 'Standard Errors are heteroscedasticity robust (HC1)',
-    'HC2': 'Standard Errors are heteroscedasticity robust (HC2)',
-    'HC3': 'Standard Errors are heteroscedasticity robust (HC3)',
-    'HAC': 'Standard Errors are heteroscedasticity and autocorrelation '
-           'robust (HAC) using {maxlags} lags and '
-           '{correction} small sample correction',
-    'fixed_scale': 'Standard Errors are based on fixed scale',
-    'cluster': 'Standard Errors are robust to cluster correlation (CRV1)',
-    'cluster-crv3': 'Standard Errors are robust to cluster correlation (CRV3)',
-    'cluster-jk': 'Standard Errors are robust to cluster correlation',
-    'HAC-Panel': 'Standard Errors are robust to '
-                 'cluster correlation (HAC-Panel)',
-    'HAC-Groupsum': 'Driscoll and Kraay Standard Errors are robust to '
-                    'cluster correlation (HAC-Groupsum)',
-    'none': 'Covariance matrix not calculated.',
-    'approx': 'Covariance matrix calculated using numerical ({approx_type}) '
-              'differentiation.',
-    'OPG': 'Covariance matrix calculated using the outer product of '
-           'gradients ({approx_type}).',
-    'OIM': 'Covariance matrix calculated using the observed information '
-           'matrix ({approx_type}) described in Harvey (1989).',
-    'robust': 'Quasi-maximum likelihood covariance matrix used for '
-              'robustness to some misspecifications; calculated using '
-              'numerical ({approx_type}) differentiation.',
-    'robust-OIM': 'Quasi-maximum likelihood covariance matrix used for '
-                  'robustness to some misspecifications; calculated using the '
-                  'observed information matrix ({approx_type}) described in '
-                  'Harvey (1989).',
-    'robust-approx': 'Quasi-maximum likelihood covariance matrix used for '
-                     'robustness to some misspecifications; calculated using '
-                     'numerical ({approx_type}) differentiation.',
+    "HC0": "Standard Errors are heteroscedasticity robust (HC0)",
+    "HC1": "Standard Errors are heteroscedasticity robust (HC1)",
+    "HC2": "Standard Errors are heteroscedasticity robust (HC2)",
+    "HC3": "Standard Errors are heteroscedasticity robust (HC3)",
+    "HAC": "Standard Errors are heteroscedasticity and autocorrelation "
+           "robust (HAC) using {maxlags} lags and "
+           "{correction} small sample correction",
+    "fixed_scale": "Standard Errors are based on fixed scale",
+    "cluster": "Standard Errors are robust to cluster correlation (CRV1)",
+    "cluster-crv3": "Standard Errors are robust to cluster correlation (CRV3)",
+    "cluster-jk": "Standard Errors are robust to cluster correlation",
+    "HAC-Panel": "Standard Errors are robust to "
+                 "cluster correlation (HAC-Panel)",
+    "HAC-Groupsum": "Driscoll and Kraay Standard Errors are robust to "
+                    "cluster correlation (HAC-Groupsum)",
+    "none": "Covariance matrix not calculated.",
+    "approx": "Covariance matrix calculated using numerical ({approx_type}) "
+              "differentiation.",
+    "OPG": "Covariance matrix calculated using the outer product of "
+           "gradients ({approx_type}).",
+    "OIM": "Covariance matrix calculated using the observed information "
+           "matrix ({approx_type}) described in Harvey (1989).",
+    "robust": "Quasi-maximum likelihood covariance matrix used for "
+              "robustness to some misspecifications; calculated using "
+              "numerical ({approx_type}) differentiation.",
+    "robust-OIM": "Quasi-maximum likelihood covariance matrix used for "
+                  "robustness to some misspecifications; calculated using the "
+                  "observed information matrix ({approx_type}) described in "
+                  "Harvey (1989).",
+    "robust-approx": "Quasi-maximum likelihood covariance matrix used for "
+                     "robustness to some misspecifications; calculated using "
+                     "numerical ({approx_type}) differentiation.",
 }
 
 
