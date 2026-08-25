@@ -73,14 +73,13 @@ unreviewed, or exploratory AI output.
 
 Concretely, every pull request must:
 
-- **Lint cleanly.** All Python code must pass both ``ruff`` and
-  ``flake8`` with the project’s configuration, with no new warnings or
-  errors. You can check your diff locally, for example:
+- **Lint cleanly.** All Python code must pass ``ruff`` with the
+  project’s configuration, with no new warnings or errors. You can check
+  your changes locally, for example:
 
   .. code:: bash
 
-     ruff check .
-     git diff upstream/main -u -- "*.py" | flake8 --diff --isolated
+     ruff check statsmodels tools docs
 
   CI will fail on lint errors, and PRs with unresolved lint failures will not be reviewed.
 

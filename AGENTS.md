@@ -41,7 +41,7 @@ if the source `.pyx` file is newer than the compiled `.so` or `.dll` file.
   `[tool.ruff.lint.isort]`). Import sections: `future`, `compat`,
   `standard-library`, `third-party`, `first-party`, `local-folder` — with
   `statsmodels.compat` treated as its own `compat` section.
-- `ruff check .` and `flake8 .` must pass when run from the repo root.
+- `ruff check .` must pass when run from the repo root.
 - `black` (line-length 88) is acceptable for auto-formatting, but not required.
   Only use `black` to format changes to files, or in new files. Do not use `black` to
   wholesale reformat existing files.
