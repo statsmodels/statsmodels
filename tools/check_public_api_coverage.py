@@ -182,6 +182,12 @@ def build_api_surface() -> list[dict]:
                 PKG_ROOT.parent.resolve()).as_posix()
         except Exception:
             return None
+        if "/sandbox/" in rel:
+            # Excluded regardless of discovery path (also skipped in
+            # coverage_public_api.cfg and class_coverage_report.py):
+            # sandbox is explicitly documented as unfinished, uneven-quality
+            # incubator code, not held to the same coverage bar.
+            return None
         key = (rel, s)
         rec = records.setdefault(key, {"file": rel, "start": s, "labels": set()})
         rec["labels"].add(label)
