@@ -66,8 +66,10 @@ software a shared effort.
 
 ## Linting
 
+Code must pass ``ruff``,
+
 ```bash
-ruff check statsmodels docs tools --fix
+ruff check . --fix
 ```
 
 - Dependencies: ruff

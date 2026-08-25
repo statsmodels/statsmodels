@@ -26,6 +26,7 @@ from statsmodels.tools.eval_measures import (
     mse,
     rmse,
     rmspe,
+    stde,
     vare,
 )
 
@@ -162,3 +163,32 @@ def test_measures_empty_input_keeps_axis_shape(measure):
     empty = np.empty((0, 3))
 
     assert_equal(measure(empty, empty), np.full(3, np.nan))
+
+
+def test_stde():
+    # stde is std(x1 - x2, ddof, axis); check both against a direct
+    # hand-computable formula and against the (separately tested) vare,
+    # since variance is standard deviation squared
+    x1 = np.array([1.0, 2.0, 3.0, 4.0])
+    x2 = np.array([2.0, 2.0, 2.0, 2.0])
+    diff = x1 - x2
+
+    expected_pop = np.sqrt(np.mean((diff - diff.mean()) ** 2))
+    assert_almost_equal(stde(x1, x2), expected_pop, decimal=14)
+    assert_almost_equal(stde(x1, x2, ddof=0), np.std(diff, ddof=0), decimal=14)
+
+    expected_sample = np.sqrt(np.sum((diff - diff.mean()) ** 2) / (len(diff) - 1))
+    assert_almost_equal(stde(x1, x2, ddof=1), expected_sample, decimal=14)
+
+    assert_almost_equal(stde(x1, x2, ddof=1) ** 2, vare(x1, x2, ddof=1), decimal=14)
+
+
+def test_stde_axis():
+    rs = np.random.RandomState(32893190)
+    x1 = rs.standard_normal((6, 4))
+    x2 = rs.standard_normal((6, 4))
+
+    assert_almost_equal(stde(x1, x2, axis=0) ** 2, vare(x1, x2, axis=0), decimal=14)
+    assert_almost_equal(stde(x1, x2, axis=1) ** 2, vare(x1, x2, axis=1), decimal=14)
+    assert_equal(stde(x1, x2, axis=0).shape, (4,))
+    assert_equal(stde(x1, x2, axis=1).shape, (6,))

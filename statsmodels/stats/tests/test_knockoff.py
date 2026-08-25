@@ -61,6 +61,40 @@ def test_sdp():
     assert_allclose(cm1 - cm3, np.diag(sl * np.ones(4)), rtol=1e-5, atol=1e-5)
 
 
+def test_threshold():
+    # threshold() is exercised in test_sim below, but that test is marked
+    # slow; check it here as a fast, non-slow test with a real assertion.
+    #
+    # Two boundary cases are fully deterministic, independent of the
+    # random equi-correlated construction: a negative target FDR can
+    # never be achieved (FDR estimates are always >= 0), and an
+    # arbitrarily large target FDR is trivially achieved by the smallest
+    # observed statistic. A third, "real" target is checked against the
+    # independently populated `stats`/`fdr` attributes (computed earlier
+    # in __init__, before threshold() ever runs), confirming threshold()
+    # returns the *smallest* statistic whose fdr is at or below target.
+    rs = np.random.default_rng(4589)
+    n, p, npos, es = 300, 30, 15, 6.0
+    x = rs.normal(size=(n, p))
+    x /= np.sqrt(np.sum(x * x, 0))
+    coeff = es * (-1.0) ** np.arange(npos)
+    y = x[:, :npos].dot(coeff) + rs.normal(size=n)
+
+    kn = RegressionFDR(y, x, kr.OLSEffects(), rng=rs)
+
+    assert kn.threshold(-1.0) == np.inf
+    assert kn.threshold(1e6) == np.min(kn.stats)
+
+    tfdr = 0.1
+    tr = kn.threshold(tfdr)
+    unq_stats = np.unique(kn.stats)
+    fdr_at = {s: kn.fdr[kn.stats == s][0] for s in unq_stats}
+
+    assert tr != np.inf
+    assert fdr_at[tr] <= tfdr
+    assert all(fdr_at[s] > tfdr for s in unq_stats if s < tr)
+
+
 @pytest.mark.parametrize("p", [49, 50])
 @pytest.mark.parametrize(
     "tester",

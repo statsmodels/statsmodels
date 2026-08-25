@@ -4,6 +4,7 @@ import pytest
 
 from statsmodels.base.distributed_estimation import (
     DistributedModel,
+    DistributedResults,
     _calc_grad,
     _calc_wdesign_mat,
     _est_regularized_debiased,
@@ -305,6 +306,50 @@ def test_fit_invalid_parallel_method_raises():
     mod = DistributedModel(1, model_class=OLS)
     with pytest.raises(ValueError, match="parallel_method"):
         mod.fit(_data_gen(y, X, 1), parallel_method="not-a-method")
+
+
+@pytest.mark.joblib
+def test_fit_joblib_single_partition_matches_sequential():
+    # test_fit_joblib below covers several partition counts but is marked
+    # slow; with a single partition, joblib's Parallel(n_jobs=1) runs
+    # in-process (no subprocess spawned), so this exercises the same
+    # fit_joblib code path quickly. Cross check against the (separately
+    # tested) sequential path, since both partition schemes combine the
+    # same per-partition estimates with the same join_method and so must
+    # agree exactly for a single partition.
+    rs = np.random.RandomState(435265)
+    X = rs.normal(size=(50, 3))
+    y = rs.randint(0, 2, size=50)
+
+    mod = DistributedModel(1, model_class=OLS)
+    fit_seq = mod.fit(
+        _data_gen(y, X, 1), parallel_method="sequential", fit_kwds={"alpha": 0.5}
+    )
+    fit_par = mod.fit(
+        _data_gen(y, X, 1), parallel_method="joblib", fit_kwds={"alpha": 0.5}
+    )
+
+    assert_allclose(fit_par.params, fit_seq.params)
+
+
+def test_distributed_results_predict():
+    # DistributedResults is not used as any default results_class, so it
+    # must be requested explicitly; predict() should just delegate to the
+    # (fake) model's own predict, which for OLS is exog @ params.
+    rs = np.random.RandomState(435265)
+    X = rs.normal(size=(50, 3))
+    y = rs.randint(0, 2, size=50)
+
+    mod = DistributedModel(2, model_class=OLS, results_class=DistributedResults)
+    fit = mod.fit(
+        _data_gen(y, X, 2), parallel_method="sequential", fit_kwds={"alpha": 0.5}
+    )
+    assert isinstance(fit, DistributedResults)
+
+    Xnew = rs.normal(size=(5, 3))
+    pred = fit.predict(Xnew)
+
+    assert_allclose(pred, Xnew.dot(fit.params))
 
 
 @pytest.mark.joblib

@@ -1,95 +1,59 @@
-"""
-Tests for vendored deprecate_kwarg.
-
-Adapted directly from:
-    pandas/tests/util/test_deprecate_kwarg.py
-"""
-
-from statsmodels.compat.pandas import deprecate_kwarg
-
-import warnings
-
-import pytest
+from statsmodels.tools.docstring_helpers import Substitution, indent
 
 
-@deprecate_kwarg(old_arg_name="old", new_arg_name="new")
-def _f1(new=False):
-    return new
+def test_substitution_update_dict_params():
+    # update() mutates the dict of keyword substitution params in place,
+    # so a later application of the decorator picks up the new value
+    sub = Substitution(name="Ada")
+
+    @sub
+    def f():
+        "Hello %(name)s"
+
+    assert f.__doc__ == "Hello Ada"
+
+    sub.update(name="Grace")
+
+    @sub
+    def g():
+        "Hello %(name)s"
+
+    assert g.__doc__ == "Hello Grace"
 
 
-_f2_mappings = {"yes": True, "no": False}
+def test_substitution_update_noop_for_positional_params():
+    # update() is documented as a no-op when Substitution was constructed
+    # with positional args (self.params is a tuple, not a dict)
+    sub = Substitution("Ada", "Lovelace")
+
+    sub.update(extra="ignored")
+
+    assert sub.params == ("Ada", "Lovelace")
+
+    @sub
+    def f():
+        "%s %s wrote this"
+
+    assert f.__doc__ == "Ada Lovelace wrote this"
 
 
-@deprecate_kwarg(old_arg_name="old", new_arg_name="new", mapping=_f2_mappings)
-def _f2(new=False):
-    return new
+def test_indent_multiline():
+    # first line is left alone; every subsequent line gets `indents` many
+    # 4-space blocks prepended
+    assert indent("a\nb\nc", indents=1) == "a\n    b\n    c"
+    assert indent("a\nb", indents=2) == "a\n        b"
+    assert indent("a\nb", indents=0) == "a\nb"
 
 
-def _f3_mapping(x):
-    return x + 1
+def test_indent_single_line_unchanged():
+    assert indent("solo", indents=3) == "solo"
 
 
-@deprecate_kwarg(old_arg_name="old", new_arg_name="new", mapping=_f3_mapping)
-def _f3(new=0):
-    return new
+def test_indent_none_or_empty_returns_empty_string():
+    assert indent(None) == ""
+    assert indent("") == ""
 
 
-@deprecate_kwarg(old_arg_name="old", new_arg_name=None)
-def _f4(old=True, unchanged=True):
-    return old, unchanged
-
-
-@pytest.mark.parametrize("key,warns", [("old", True), ("new", False)])
-def test_deprecate_kwarg(key, warns):
-    x = 78
-    if warns:
-        with pytest.warns(FutureWarning):
-            assert _f1(**{key: x}) == x
-    else:
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            assert _f1(**{key: x}) == x
-        assert len(w) == 0
-
-
-@pytest.mark.parametrize("key", list(_f2_mappings.keys()))
-def test_dict_deprecate_kwarg(key):
-    with pytest.warns(FutureWarning):
-        assert _f2(old=key) == _f2_mappings[key]
-
-
-@pytest.mark.parametrize("key", ["bogus", 12345, -1.23])
-def test_missing_deprecate_kwarg(key):
-    # keys not in mapping are forwarded unchanged
-    with pytest.warns(FutureWarning):
-        assert _f2(old=key) == key
-
-
-@pytest.mark.parametrize("x", [1, -1.4, 0])
-def test_callable_deprecate_kwarg(x):
-    with pytest.warns(FutureWarning):
-        assert _f3(old=x) == _f3_mapping(x)
-
-
-def test_bad_deprecate_kwarg():
-    msg = "mapping from old to new argument values must be dict or callable!"
-    with pytest.raises(TypeError, match=msg):
-
-        @deprecate_kwarg("old", "new", mapping=0)
-        def f4(new=None):
-            return new
-
-
-@pytest.mark.parametrize("key", ["old", "unchanged"])
-def test_deprecate_keyword(key):
-    x = 9
-    if key == "old":
-        expected = (x, True)
-        with pytest.warns(FutureWarning):
-            assert _f4(**{key: x}) == expected
-    else:
-        expected = (True, x)
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            assert _f4(**{key: x}) == expected
-        assert len(w) == 0
+def test_indent_non_string_returns_empty_string():
+    # documented as robust to non-str/None input, returning ""
+    assert indent(12345) == ""

@@ -79,7 +79,7 @@ Concretely, every pull request must:
 
   .. code:: bash
 
-     ruff check statsmodels tools docs
+     ruff check . --fix
 
   CI will fail on lint errors, and PRs with unresolved lint failures will not be reviewed.
 

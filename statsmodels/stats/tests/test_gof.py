@@ -5,13 +5,16 @@ Created on Thu Feb 28 13:24:59 2013
 Author: Josef Perktold
 """
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pytest
+from scipy import stats
 
 from statsmodels.stats.gof import (
     chisquare,
     chisquare_effectsize,
     chisquare_power,
+    gof_binning_discrete,
+    gof_chisquare_discrete,
     powerdiscrepancy,
 )
 from statsmodels.tools.testing import Holder
@@ -36,6 +39,56 @@ def test_powerdiscrepancy_lambd_aliases():
 
     with pytest.raises(ValueError, match="lambd"):
         powerdiscrepancy(observed, expected, lambd="not-a-lambd")
+
+
+def test_gof_binning_discrete_bernoulli():
+    # With nsupp=20 and a 2-point support, each mass (0.7, 0.3) already
+    # exceeds the minimum bin mass 1/20, so the algorithm's bins align
+    # exactly with the distribution's support: bin 0 catches rvs==0 and
+    # bin 1 catches rvs==1. This lets freq/expfreq be hand-verified
+    # directly from the sample and from the Bernoulli pmf, independently
+    # of the general binning algorithm.
+    rng = np.random.default_rng(12345)
+    p = 0.3
+    n = 500
+    rvs = (rng.random(n) < p).astype(int)
+    distfn = stats.bernoulli
+    arg = (p,)
+
+    freq, expfreq, histsupp = gof_binning_discrete(rvs, distfn, arg, nsupp=20)
+
+    assert_equal(freq, np.array([(rvs == 0).sum(), (rvs == 1).sum()]))
+    assert_allclose(expfreq, n * np.array([1 - p, p]))
+    assert freq.sum() == n
+    assert_allclose(histsupp, np.array([0.0, 1e-8, 1 + 1e-8]))
+
+
+def test_gof_chisquare_discrete_bernoulli():
+    # gof_chisquare_discrete duplicates gof_binning_discrete's binning
+    # internally (see the module docstring/comments) and then calls
+    # scipy.stats.chisquare on the result; check its output against doing
+    # exactly that using the independently-verified binning above.
+    rng = np.random.default_rng(12345)
+    p = 0.3
+    n = 500
+    rvs = (rng.random(n) < p).astype(int)
+    distfn = stats.bernoulli
+    arg = (p,)
+    alpha = 0.05
+
+    chis, pval, truefalse, outstr = gof_chisquare_discrete(
+        distfn, arg, rvs, alpha, "bernoulli test"
+    )
+
+    freq, expfreq, _ = gof_binning_discrete(rvs, distfn, arg, nsupp=20)
+    chis_expected, pval_expected = stats.chisquare(freq, expfreq)
+
+    assert_almost_equal(chis, chis_expected, decimal=12)
+    assert_almost_equal(pval, pval_expected, decimal=12)
+    assert truefalse == (pval_expected > alpha)
+    assert "bernoulli test" in outstr
+    assert str(arg) in outstr
+    assert str(pval) in outstr
 
 
 def test_chisquare_power():

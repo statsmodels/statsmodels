@@ -1,9 +1,12 @@
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
+from pathlib import Path
 import subprocess
 import sys
 
 import pytest
+
+import statsmodels
 
 
 @pytest.mark.skipif(
@@ -35,3 +38,39 @@ def test_docstring_optimization_compat():
     out = p.communicate()
     rc = p.returncode
     assert rc == 0, out
+
+
+def test_test_builds_pytest_command_and_reports_success(monkeypatch):
+    # statsmodels.test() is a thin shim around PytestTester; mock
+    # pytest.main so this does not actually recurse into the full suite
+    calls = {}
+
+    def fake_main(cmd):
+        calls["cmd"] = cmd
+        return 0
+
+    monkeypatch.setattr(pytest, "main", fake_main)
+
+    result = statsmodels.test(extra_args=["-k", "doesnotexist"], exit=False)
+
+    assert result is True
+    assert calls["cmd"][0] == str(Path(statsmodels.__file__).parent)
+    assert calls["cmd"][1:] == ["-k", "doesnotexist"]
+
+
+def test_test_default_args_and_failure_status(monkeypatch):
+    def fake_main(cmd):
+        assert cmd[1:] == ["--tb=short", "--disable-pytest-warnings"]
+        return 1
+
+    monkeypatch.setattr(pytest, "main", fake_main)
+
+    assert statsmodels.test() is False
+
+
+def test_test_exit_true_calls_sys_exit(monkeypatch):
+    monkeypatch.setattr(pytest, "main", lambda cmd: 3)
+
+    with pytest.raises(SystemExit) as excinfo:
+        statsmodels.test(exit=True)
+    assert excinfo.value.code == 3

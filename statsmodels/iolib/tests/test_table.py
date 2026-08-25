@@ -300,3 +300,18 @@ def test_csv2st_mismatched_row_lengths_raises(tmp_path):
     csv_path.write_text("a,b\n1,2\n3\n", encoding="utf-8")
     with pytest.raises(OSError, match="All rows"):
         csv2st(str(csv_path))
+
+
+def test_simple_table_pad():
+    # SimpleTable.pad is a deprecated instance-method wrapper that simply
+    # delegates to the module-level pad() function.
+    from statsmodels.iolib.table import pad as pad_func
+
+    tbl = SimpleTable([[1, 2]], ["h1", "h2"], ["s1"])
+
+    assert tbl.pad("abc", 6, "l") == "abc   "
+    assert tbl.pad("abc", 6, "r") == "   abc"
+    assert tbl.pad("abc", 7, "c") == "  abc  "
+
+    for align in ("l", "r", "c"):
+        assert tbl.pad("xy", 5, align) == pad_func("xy", 5, align)

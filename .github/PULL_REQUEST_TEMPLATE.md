@@ -33,7 +33,7 @@ Please complete **one** of the following:
 * New code additions must be well formatted. Changes should pass ruff. You can
   verify your changes are well formatted by running
   ```
-  ruff check statsmodels docs tools
+  ruff check . --fix
   ```
   assuming `ruff` is installed. While passing this test is not required, it is good practice and it help
   improve code quality in `statsmodels`.

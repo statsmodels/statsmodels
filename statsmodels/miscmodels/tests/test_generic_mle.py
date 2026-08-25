@@ -246,6 +246,45 @@ class TestTwoPeakLLHNoExog:
         res.summary()
 
 
+def test_reduceparams_expandparams_roundtrip():
+    # GenericLikelihoodModel.reduceparams/expandparams are not overridden
+    # by MyPareto; reduceparams is the (partial) inverse of expandparams,
+    # so a round trip on the free parameters should recover them exactly.
+    nobs = 20
+    rs = np.random.RandomState(1234)
+    rvs = stats.pareto.rvs(2, 0, 2, size=nobs, random_state=rs)
+
+    mod_par = MyPareto(rvs)
+    fixdf = np.array([np.nan, -0.1, np.nan])
+    mod_par.fixed_params = fixdf
+    mod_par.fixed_paramsmask = np.isnan(fixdf)
+
+    reduced = np.array([2.5, 1.8])
+    full = mod_par.expandparams(reduced)
+    assert_allclose(full, [2.5, -0.1, 1.8])
+    assert_allclose(mod_par.reduceparams(full), reduced)
+
+
+def test_nloglike_matches_nloglikeobs_sum():
+    # GenericLikelihoodModel.nloglike is not overridden by MyPareto (only
+    # nloglikeobs and loglike are), so calling it exercises the
+    # base-class implementation: nloglike(p) == -loglikeobs(p).sum(0),
+    # and loglikeobs is itself the base-class -nloglikeobs(p).
+    nobs = 20
+    rs = np.random.RandomState(1234)
+    rvs = stats.pareto.rvs(2, 0, 2, size=nobs, random_state=rs)
+
+    mod_par = MyPareto(rvs)
+    mod_par.fixed_params = None
+    mod_par.fixed_paramsmask = None
+
+    params = np.array([2.0, -0.5, 2.2])
+    expected = mod_par.nloglikeobs(params).sum(0)
+
+    assert_allclose(mod_par.nloglike(params), expected)
+    assert_allclose(mod_par.nloglike(params), -mod_par.loglike(params))
+
+
 def test_summary_after_remove_data():
     # summary() must still work after remove_data() has been called
     # MyPareto does not set its own results_class, so fit() returns a plain

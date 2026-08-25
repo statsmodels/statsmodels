@@ -278,7 +278,7 @@ ignore = [
   "Q003", # avoidable-escaped-quote
 
   ### Intentionally disabled
-  # Counts below are from `ruff check statsmodels tools docs --select ALL`
+  # Counts below are from `ruff check . --select ALL`
   # (this project's conformance scope), refreshed 2026-07-27.
   # Too many arguments to function call
   "PLR0913", # 645

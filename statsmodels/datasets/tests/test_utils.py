@@ -100,3 +100,29 @@ def test_webuse_pandas():
         pytest.skip("Failed with HTTP Error, these are random")
     res1 = res1.astype(float)
     assert_frame_equal(res1, dta.astype(float))
+
+
+def test_clear_data_home(tmp_path):
+    # clear_data_home is documented to delete the entire data home cache;
+    # populate it with a file and confirm the whole directory disappears.
+    data_home = utils.get_data_home(str(tmp_path / "sm_data"))
+    assert Path(data_home).is_dir()
+    (Path(data_home) / "cached_file.csv").write_text("a,b\n1,2\n")
+    assert (Path(data_home) / "cached_file.csv").exists()
+
+    utils.clear_data_home(data_home)
+
+    assert not Path(data_home).exists()
+
+
+def test_clear_data_home_uses_default_when_none(tmp_path, monkeypatch):
+    # data_home=None (the default) falls back to get_data_home's own
+    # default resolution (env var or ~/statsmodels_data)
+    monkeypatch.setenv("STATSMODELS_DATA", str(tmp_path / "env_data_home"))
+
+    data_home = utils.get_data_home(None)
+    assert Path(data_home).is_dir()
+
+    utils.clear_data_home(None)
+
+    assert not Path(data_home).exists()
