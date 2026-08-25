@@ -909,3 +909,44 @@ def test_alternative_invalid():
     x1 = [1, 2, 3, 4, 5, 6, 2, 4, 6, 8]
     with pytest.raises(ValueError, match="alternative must be one of"):
         ztest(x1, value=3, alternative="bogus")
+
+
+def test_ttost_mean_matches_two_one_sided_ttests():
+    # ttost_mean (TOST) is documented as combining two one-sided ttest_mean
+    # calls at the equivalence bounds; check its three-part return value
+    # against calling ttest_mean directly at each bound.
+    rng = np.random.default_rng(348923)
+    x = rng.normal(loc=0.3, scale=1.2, size=40)
+    d1 = DescrStatsW(x)
+
+    low, upp = -0.5, 0.5
+    pvalue, lower, upper = d1.ttost_mean(low, upp)
+
+    t1, pv1, df1 = d1.ttest_mean(low, alternative="larger")
+    t2, pv2, df2 = d1.ttest_mean(upp, alternative="smaller")
+
+    assert_allclose(lower, (t1, pv1, df1))
+    assert_allclose(upper, (t2, pv2, df2))
+    assert_allclose(pvalue, max(pv1, pv2))
+
+
+def test_ztost_ind_matches_two_one_sided_ztests():
+    # ztost_ind (TOST) is documented as combining two one-sided ztest_ind
+    # calls at the equivalence bounds; check its three-part return value
+    # against calling ztest_ind directly at each bound, for both usevar
+    # options.
+    rng = np.random.default_rng(93482)
+    x1 = rng.normal(loc=1.0, scale=1.0, size=30)
+    x2 = rng.normal(loc=0.6, scale=1.3, size=35)
+    cm = CompareMeans(DescrStatsW(x1), DescrStatsW(x2))
+
+    low, upp = -0.2, 0.8
+    for usevar in ("pooled", "unequal"):
+        pvalue, tt1, tt2 = cm.ztost_ind(low, upp, usevar=usevar)
+
+        tt1_expected = cm.ztest_ind(alternative="larger", usevar=usevar, value=low)
+        tt2_expected = cm.ztest_ind(alternative="smaller", usevar=usevar, value=upp)
+
+        assert_allclose(tt1, tt1_expected)
+        assert_allclose(tt2, tt2_expected)
+        assert_allclose(pvalue, max(tt1_expected[1], tt2_expected[1]))
