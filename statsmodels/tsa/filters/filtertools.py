@@ -378,8 +378,11 @@ def miso_lfilter(ar, ma, x, useic=False):
         currently only 2d is supported.
     x : array_like
         The 2-d input data series, time in rows, variables in columns.
-    useic : bool, optional
-        Flag indicating whether to use initial conditions.
+    useic : array_like or bool, optional
+        Initial conditions for the AR filter, as accepted by
+        ``scipy.signal.lfiltic`` (i.e. an array_like of the initial values
+        of the filtered series, of length ``ar.shape[0] - 1``). Use the
+        default, False, for zero initial conditions.
 
     Returns
     -------
@@ -404,9 +407,9 @@ def miso_lfilter(ar, ma, x, useic=False):
     """
     ma = array_like(ma, "ma")
     ar = array_like(ar, "ar")
-    inp = signal.correlate(x, ma[::-1, :])[:, (x.shape[1] + 1) // 2]
+    inp = signal.correlate(x, ma[::-1, :])[:, x.shape[1] - 1]
     # for testing 2d equivalence between convolve and correlate
-    #  inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]
+    #  inp2 = signal.convolve(x, ma[:,::-1])[:, x.shape[1]-1]
     #  np.testing.assert_almost_equal(inp2, inp)
     nobs = x.shape[0]
     # cut of extra values at end

@@ -25,6 +25,7 @@ from statsmodels.tsa.filters.filtertools import (
     convolution_filter,
     fftconvolve3,
     fftconvolveinv,
+    miso_lfilter,
     recursive_filter,
 )
 from statsmodels.tsa.filters.hp_filter import hpfilter
@@ -1159,3 +1160,63 @@ def test_fftconvolveinv_roundtrip():
     convolved = np.convolve(x, filt)
     res = fftconvolveinv(convolved, filt, mode="full")[: x.shape[0]]
     assert_allclose(res, x, atol=1e-8)
+
+
+@pytest.mark.parametrize("nvars", [1, 2, 3, 4, 5])
+def test_miso_lfilter_combines_inputs_like_a_causal_fir_filter(nvars):
+    # With ar = [1] (no autoregressive feedback), miso_lfilter reduces to a
+    # causal FIR combination of the input columns:
+    #     y_t = sum_lag ma[lag] . x[t - lag]
+    # treating x as zero before t=0. Verify against that definition
+    # directly, for several numbers of input variables. This is a
+    # regression test for a column-selection bug that silently produced
+    # wrong results (or raised an IndexError for a single variable)
+    # whenever nvars was not 2 or 3.
+    rng = np.random.default_rng(0)
+    nobs, nlags = 8, 3
+    ar = array([1.0])
+    x = rng.standard_normal((nobs, nvars))
+    ma = rng.standard_normal((nlags, nvars))
+
+    y, inp = miso_lfilter(ar, ma, x)
+
+    expected = np.zeros(nobs)
+    for t in range(nobs):
+        for lag in range(nlags):
+            if t - lag >= 0:
+                expected[t] += ma[lag] @ x[t - lag]
+    assert_allclose(y, expected)
+    assert_allclose(inp, expected)
+
+
+def test_miso_lfilter_applies_ar_dynamics_to_combined_input():
+    # With genuine AR feedback, miso_lfilter must satisfy ar(L) y_t = inp_t,
+    # i.e. y is the ordinary lfilter of the combined input series `inp`.
+    from scipy import signal
+
+    rng = np.random.default_rng(1)
+    nobs, nlags, nvars = 10, 2, 2
+    x = rng.standard_normal((nobs, nvars))
+    ma = rng.standard_normal((nlags, nvars))
+    ar = array([1.0, -0.5, 0.1])
+
+    y, inp = miso_lfilter(ar, ma, x)
+
+    assert_allclose(y, signal.lfilter([1.0], ar, inp)[:nobs])
+
+
+def test_miso_lfilter_useic_zero_matches_default():
+    # Explicit zero initial conditions -- the array_like form required by
+    # scipy.signal.lfiltic, of length len(ar) - 1 -- reproduce the default
+    # useic=False (zero initial condition) behavior.
+    rng = np.random.default_rng(2)
+    nobs, nlags, nvars = 8, 2, 2
+    x = rng.standard_normal((nobs, nvars))
+    ma = rng.standard_normal((nlags, nvars))
+    ar = array([1.0, -0.5, 0.1])
+
+    y_false, inp_false = miso_lfilter(ar, ma, x, useic=False)
+    y_ic, inp_ic = miso_lfilter(ar, ma, x, useic=[0.0, 0.0])
+
+    assert_allclose(y_ic, y_false)
+    assert_allclose(inp_ic, inp_false)

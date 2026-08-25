@@ -442,7 +442,9 @@ def ar2arma(ar_des, p, q, n=20, mse="ar", start=None):
     Parameters
     ----------
     ar_des : array_like
-        The coefficients of original AR lag polynomial, including lag zero.
+        The target impulse response/AR-representation to approximate,
+        including lag zero, e.g. the (zero-padded or truncated) coefficients
+        of the original AR lag polynomial. Must have ``n`` elements.
     p : int
         The length of desired AR lag polynomials.
     q : int
