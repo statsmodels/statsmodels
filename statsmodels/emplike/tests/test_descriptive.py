@@ -1,7 +1,8 @@
+import itertools
 import warnings
 
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_allclose, assert_almost_equal
 import pytest
 
 from statsmodels.datasets import star98
@@ -220,3 +221,112 @@ def test_multivariate_namedtuple(attr, args):
         legacy = meth(*args)
     assert len(legacy) == 2
     assert_almost_equal(legacy, full[:2], 10)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib and monkeypatches Axes.contour")
+@pytest.mark.matplotlib
+def test_uv_plot_contour(close_figures, monkeypatch):
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
+
+    rng = np.random.default_rng(348203)
+    data = rng.standard_normal(150) * 2 + 5
+    uv = DescStat(data)
+    mean0 = data.mean()
+    var0 = data.var()
+
+    captured = {}
+    real_contour = Axes.contour
+
+    def fake_contour(self, *args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return real_contour(self, *args, **kwargs)
+
+    monkeypatch.setattr(Axes, "contour", fake_contour)
+
+    fig = uv.plot_contour(mean0 - 3, mean0 + 3, var0 * 0.5, var0 * 1.5, 0.5, 0.5)
+    assert isinstance(fig, Figure)
+
+    mu_vect, var_vect, z = captured["args"]
+    levels = captured["kwargs"]["levels"]
+    # levels are significance levels and must be passed to matplotlib in
+    # increasing order -- matplotlib raises ValueError otherwise, which the
+    # (.2, .1, .05, .01, .001) default used to trigger.
+    assert list(levels) == sorted(levels)
+
+    z = np.asarray(z)
+    # z holds p-values (see _opt_var(..., pval=True)), so must lie in [0, 1]
+    assert np.all((z >= 0) & (z <= 1))
+
+    # independent recomputation via _opt_var, which is separately exercised
+    # (against MATLAB-verified reference values) by test_test_var/test_ci_var
+    z_expected = np.empty_like(z)
+    for i, sig0 in enumerate(var_vect):
+        uv.sig2_0 = sig0
+        for j, mu0 in enumerate(mu_vect):
+            z_expected[i, j] = uv._opt_var(mu0, pval=True)
+    assert_allclose(z, z_expected)
+
+    # the grid point closest to the sample (mean, var) should be the least
+    # rejected (highest p-value) point on the grid, and clearly "inside"
+    # even the tightest conventional confidence region
+    i_star = int(np.argmin(np.abs(np.array(var_vect) - var0)))
+    j_star = int(np.argmin(np.abs(np.array(mu_vect) - mean0)))
+    assert (i_star, j_star) == np.unravel_index(np.argmax(z), z.shape)
+    assert z[i_star, j_star] > 0.5
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib and monkeypatches Axes.contour")
+@pytest.mark.matplotlib
+def test_mv_mean_contour(close_figures, monkeypatch):
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
+
+    rng = np.random.default_rng(9082)
+    cov = np.array([[1.0, 0.3], [0.3, 1.0]])
+    data = rng.standard_normal((250, 2)) @ cov + np.array([2.0, -1.0])
+    mv = DescStat(data)
+    mean_mv = data.mean(0)
+
+    captured = {}
+    real_contour = Axes.contour
+
+    def fake_contour(self, *args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return real_contour(self, *args, **kwargs)
+
+    monkeypatch.setattr(Axes, "contour", fake_contour)
+
+    fig = mv.mv_mean_contour(
+        mean_mv[0] - 1, mean_mv[0] + 1, mean_mv[1] - 1, mean_mv[1] + 1, 0.25, 0.25
+    )
+    assert isinstance(fig, Figure)
+
+    x, y, z = captured["args"]
+    z = np.asarray(z)
+    # z must hold p-values (bounded in [0, 1]), not the unbounded -2 log
+    # likelihood ratio statistic -- which can run into the thousands and
+    # would make every requested level (<= 0.2) meaningless/degenerate,
+    # since it would then only ever be crossed in an infinitesimal region
+    # right at the sample mean.
+    assert np.all((z >= 0) & (z <= 1))
+
+    # independent recomputation via mv_test_mean, which is separately
+    # exercised (against MATLAB-verified reference values) by
+    # test_mv_test_mean
+    pairs = list(itertools.product(x, y))
+    z_expected = np.array(
+        [mv.mv_test_mean(np.asarray(i), result_object=True).pvalue for i in pairs]
+    )
+    X, Y = np.meshgrid(x, y)
+    z_expected = z_expected.reshape(X.shape[1], Y.shape[0]).T
+    assert_allclose(z, z_expected)
+
+    # the sample mean lies deep inside the confidence region (p ~ 1); a
+    # point far away in every direction is clearly excluded (p ~ 0)
+    p0 = mv.mv_test_mean(mean_mv, result_object=True).pvalue
+    assert p0 > 0.99
+    p_far = mv.mv_test_mean(mean_mv + 10, result_object=True).pvalue
+    assert p_far < 1e-6
