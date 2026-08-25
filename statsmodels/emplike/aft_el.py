@@ -256,7 +256,7 @@ class emplikeAFT:
         test if beta = b0 for any vector b0, respectively.
 
     predict
-        Returns the linear predictor, params multiplied by endog.
+        Returns the linear predictor, params multiplied by exog.
 
     Notes
     -----
@@ -390,27 +390,27 @@ class emplikeAFT:
         """
         return AFTResults(self)
 
-    def predict(self, params, endog=None):
+    def predict(self, params, exog=None):
         """
-        Return the linear predictor, params multiplied by endog
+        Return the linear predictor, params multiplied by exog
 
         Parameters
         ----------
         params : ndarray
             Regression coefficients used to form the prediction.
-        endog : ndarray, optional
-            Values of the response variable at which to form the
-            prediction.  If None, the model's endog is used.  Default is
+        exog : ndarray, optional
+            Values of the explanatory variables at which to form the
+            prediction.  If None, the model's exog is used.  Default is
             None.
 
         Returns
         -------
         ndarray
-            The predicted values, endog dot params.
+            The predicted values, exog dot params.
         """
-        if endog is None:
-            endog = self.endog
-        return np.dot(endog, params)
+        if exog is None:
+            exog = self.exog
+        return np.dot(exog, params)
 
 
 class AFTResults(OptAFT):
