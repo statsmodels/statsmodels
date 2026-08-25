@@ -1,12 +1,14 @@
 import warnings
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pytest
 
 from statsmodels.datasets import cancer
 from statsmodels.emplike.descriptive import EmpLikeTestResult
 from statsmodels.emplike.originregress import ELOriginRegress
+from statsmodels.regression.linear_model import OLS
+from statsmodels.tools.tools import add_constant
 
 from .results.el_results import OriginResults
 
@@ -28,6 +30,37 @@ class TestOrigin(GenRes):
     """
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.test_params, 4)
+
+    def test_predict(self):
+        # Built independently of the class fixture's `res1.model` (an OLS
+        # instance with an added constant, not an ELOriginRegress), so that
+        # this exercises ELOriginRegress.predict itself.
+        data = cancer.load()
+        mod = ELOriginRegress(data.endog, data.exog)
+        res = mod.fit()
+        exog = np.asarray(mod.exog)
+
+        # documented formula: predict = [1, exog] @ params, intercept fixed 0
+        pred = mod.predict(res.params)
+        expected = np.dot(add_constant(exog, prepend=True), res.params)
+        assert_allclose(pred, expected, rtol=1e-12)
+
+        # explicit in-sample exog matches the exog=None default
+        assert_allclose(pred, mod.predict(res.params, exog=exog), rtol=1e-12)
+
+        # out-of-sample exog
+        new_exog = exog[:5] + 1.0
+        pred_new = mod.predict(res.params, exog=new_exog)
+        expected_new = np.dot(add_constant(new_exog, prepend=True), res.params)
+        assert_allclose(pred_new, expected_new, rtol=1e-12)
+
+        # sanity check against a plain origin-constrained OLS fit (no EL
+        # weighting) on the same data: predictions should be close, since
+        # both are consistent estimators of the same origin-restricted
+        # linear relationship.
+        ols_origin = OLS(np.asarray(mod.endog), exog).fit()
+        pred_ols = ols_origin.predict(new_exog)
+        assert_allclose(pred_new, pred_ols, rtol=0.05)
 
     def test_llf(self):
         assert_almost_equal(self.res1.llf_el, self.res2.test_llf_hat, 4)
