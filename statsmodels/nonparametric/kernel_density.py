@@ -41,9 +41,37 @@ from ._kernel_base import (
     _adjust_shape,
     gpke,
     initialize_generator,
+    kernel_func,
 )
 
 __all__ = ["EstimatorSettings", "KDEMultivariate", "KDEMultivariateConditional"]
+
+
+def _gpke_pairwise(
+    bw,
+    data,
+    data_predict,
+    var_type,
+    ckertype="gaussian",
+    okertype="wangryzin",
+    ukertype="aitchisonaitken",
+):
+    """Product kernel evaluated pairwise, elementwise between two samples.
+
+    Like :func:`statsmodels.nonparametric._kernel_base.gpke`, except that
+    `data_predict` is a 2-D array with the same shape as `data`: row ``k`` of
+    `data` is paired with row ``k`` of `data_predict`, instead of `gpke`'s
+    assumption that `data_predict` is a single evaluation point shared by
+    every row of `data`.
+    """
+    kertypes = dict(c=ckertype, o=okertype, u=ukertype)
+    Kval = np.empty(data.shape)
+    for ii, vtype in enumerate(var_type):
+        func = kernel_func[kertypes[vtype]]
+        Kval[:, ii] = func(bw[ii], data[:, ii], data_predict[:, ii])
+
+    iscontinuous = np.array([c == "c" for c in var_type])
+    return Kval.prod(axis=1) / np.prod(bw[iscontinuous])
 
 
 class KDEMultivariate(GenericKDE):
@@ -760,7 +788,11 @@ class KDEMultivariateConditional(GenericKDE):
                 var_type=self.indep_type,
                 tosum=False,
             )
-            K2_Yi_Yj = gpke(
+            # NOTE: this is *not* a plain gpke call: Ye_R holds one
+            # evaluation point per row of Ye_L (every (i, j) pair among the
+            # leave-one-out observations), not a single shared evaluation
+            # point, so the pairing has to be done elementwise.
+            K2_Yi_Yj = _gpke_pairwise(
                 bw[0 : self.k_dep],
                 data=Ye_L,
                 data_predict=Ye_R,
@@ -768,7 +800,6 @@ class KDEMultivariateConditional(GenericKDE):
                 ckertype="gauss_convolution",
                 okertype="wangryzin_convolution",
                 ukertype="aitchisonaitken_convolution",
-                tosum=False,
             )
             G = (K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj).sum() / nobs**2
             f_X_Y = (

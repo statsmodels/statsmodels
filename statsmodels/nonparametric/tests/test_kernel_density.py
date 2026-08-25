@@ -508,7 +508,8 @@ class TestKDEMultivariateConditional(KDETestBase):
                 bw="cv_ls",
             )
         # R result: [1.6448, 0.2317373]
-        npt.assert_allclose(dens_ls.bw, [1.01203728, 0.31905144], atol=1e-5)
+        R_bw = [1.6448, 0.2317373]
+        npt.assert_allclose(dens_ls.bw, R_bw, atol=1e-3)
 
     def test_continuous_CV_ML(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
@@ -561,8 +562,7 @@ class TestKDEMultivariateConditional(KDETestBase):
                 bw="cv_ls",
             )
         sm_result = np.squeeze(dens.pdf()[0:5])
-        # R_result = [0.08469226, 0.01737731, 0.05679909, 0.09744726, 0.15086674]
-        expected = [0.08592089, 0.0193275, 0.05310327, 0.09642667, 0.171954]
+        expected = [0.08469226, 0.01737731, 0.05679909, 0.09744726, 0.15086674]
 
         # CODE TO REPRODUCE IN R
         # library(np)
@@ -571,7 +571,7 @@ class TestKDEMultivariateConditional(KDETestBase):
         # Italy$gdp[1:50]~ordered(Italy$year[1:50]),bwmethod='cv.ls')
         # fhat <- fitted(npcdens(bws=bw))
         # fhat[1:5]
-        npt.assert_allclose(sm_result, expected, atol=0, rtol=1e-5)
+        npt.assert_allclose(sm_result, expected, atol=1e-3)
 
     def test_continuous_normal_ref(self):
         # test for normal reference rule of thumb with continuous data
@@ -628,9 +628,8 @@ class TestKDEMultivariateConditional(KDETestBase):
                 bw="cv_ls",
             )
         sm_result = dens.cdf()[0:5]
-        # R_result = [0.8118257, 0.9724863, 0.8843773, 0.7720359, 0.4361867]
-        expected = [0.83378885, 0.97684477, 0.90655143, 0.79393161, 0.43629083]
-        npt.assert_allclose(sm_result, expected, atol=0, rtol=1e-5)
+        expected = [0.8118257, 0.9724863, 0.8843773, 0.7720359, 0.4361867]
+        npt.assert_allclose(sm_result, expected, atol=1e-3)
 
     @pytest.mark.joblib
     @pytest.mark.slow
