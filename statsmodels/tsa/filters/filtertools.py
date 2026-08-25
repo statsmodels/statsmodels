@@ -404,9 +404,9 @@ def miso_lfilter(ar, ma, x, useic=False):
     """
     ma = array_like(ma, "ma")
     ar = array_like(ar, "ar")
-    inp = signal.correlate(x, ma[::-1, :])[:, (x.shape[1] + 1) // 2]
+    inp = signal.correlate(x, ma[::-1, :])[:, x.shape[1] - 1]
     # for testing 2d equivalence between convolve and correlate
-    #  inp2 = signal.convolve(x, ma[:,::-1])[:, (x.shape[1]+1)//2]
+    #  inp2 = signal.convolve(x, ma[:,::-1])[:, x.shape[1]-1]
     #  np.testing.assert_almost_equal(inp2, inp)
     nobs = x.shape[0]
     # cut of extra values at end
