@@ -882,7 +882,7 @@ class DescStatUV(_OptFuncts):
         var_high,
         mu_step,
         var_step,
-        levs=(0.2, 0.1, 0.05, 0.01, 0.001),
+        levs=(0.001, 0.01, 0.05, 0.1, 0.2),
     ):
         """
         Returns a plot of the confidence region for a univariate
@@ -910,7 +910,8 @@ class DescStatUV(_OptFuncts):
 
         levs : sequence of float, optional
             Which values of significance the contour lines will be drawn.
-            Default is (.2, .1, .05, .01, .001)
+            Must be given in increasing order. Default is
+            (.001, .01, .05, .1, .2)
 
         Returns
         -------
@@ -1379,7 +1380,9 @@ class DescStatMV(_OptFuncts):
         pairs = itertools.product(x, y)
         z = []
         for i in pairs:
-            z.append(self.mv_test_mean(np.asarray(i), result_object=True).llr)
+            # levs are p-values (significance levels), so contour the
+            # p-value, not the unbounded -2 log-likelihood ratio.
+            z.append(self.mv_test_mean(np.asarray(i), result_object=True).pvalue)
         X, Y = np.meshgrid(x, y)
         z = np.asarray(z)
         z = z.reshape(X.shape[1], Y.shape[0])
