@@ -6,8 +6,12 @@ references anywhere else in the repository. These tests independently
 verify its stationarity/invertibility checks against textbook AR/MA root
 conditions rather than merely asserting the methods run.
 """
+
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal
+import pytest
 
 from statsmodels.tsa.varma_process import VarmaPoly
 
@@ -69,7 +73,7 @@ def test_stacksquare_is_companion_form():
 
     assert sq.shape == (lenpk, lenpk)
     assert_array_equal(sq[:, : vp.nvars], vp.vstack())
-    assert_array_equal(sq[:, vp.nvars:], np.eye(lenpk, k=vp.nvars)[:, vp.nvars:])
+    assert_array_equal(sq[:, vp.nvars :], np.eye(lenpk, k=vp.nvars)[:, vp.nvars :])
 
 
 def test_getisstationary_matches_ar1_boundary():
@@ -93,9 +97,7 @@ def test_getisstationary_matches_independent_root_computation():
     is_stationary = vp.getisstationary()
 
     assert is_stationary == bool((np.abs(roots) > 1).all())
-    assert_allclose(
-        np.sort(1 / vp.areigenvalues), np.sort(roots), rtol=1e-10
-    )
+    assert_allclose(np.sort(1 / vp.areigenvalues), np.sort(roots), rtol=1e-10)
 
 
 def test_getisinvertible_matches_ma1_boundary():
@@ -158,11 +160,14 @@ def test_reduceform_normalizes_lag_zero_to_identity():
 
 
 def test_reduceform_errors():
-    import pytest
-
     vp = VarmaPoly(ar23, ma22)
     with pytest.raises(ValueError, match="apoly needs to be 3d"):
         vp.reduceform(np.eye(2))
+
+
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="linalg error not raised on WASM")
+def test_reduceform_linalg_error():
+    vp = VarmaPoly(ar23, ma22)
 
     singular = np.array([[[0.0, 0.0], [0.0, 0.0]], [[1.0, 2.0], [3.0, 4.0]]])
     with pytest.raises(ValueError, match="matrix not invertible"):
