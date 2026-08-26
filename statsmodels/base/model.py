@@ -2128,10 +2128,15 @@ class LikelihoodModelResults(Results):
         else:
             F = np.dot(np.dot(Rbq.T, invcov), Rbq)
 
-        df_resid = getattr(self, "df_resid_inference", self.df_resid)
         if scalar and F.size == 1:
             F = float(np.squeeze(F))
         if use_f:
+            # Defer since only needed in F test
+            if hasattr(self, "df_resid_inference"):
+                df_resid = self.df_resid_inference
+            else:
+                df_resid = self.df_resid
+
             F /= J
             return ContrastResults(F=F, df_denom=df_resid, df_num=J)  # invcov.shape[0])
         else:
