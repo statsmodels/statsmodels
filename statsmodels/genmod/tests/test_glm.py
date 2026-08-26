@@ -3219,6 +3219,7 @@ def test_glm_fit_cov_p_fallback_on_linalg_error():
     # GH-9776: when np.linalg.inv raises LinAlgError the non-IRLS fit path
     # must fall back to rslt.normalized_cov_params/scale rather than None.
     from unittest.mock import patch
+
     from numpy.linalg import LinAlgError as _LinAlgError
 
     data = cpunish.load_pandas()
