@@ -288,6 +288,25 @@ class MICEData:
         self.update_all(1)
         return self.data
 
+    def __iter__(self):
+        """
+        Return the iterator object; iterating yields imputed datasets
+
+        Each step of the iteration performs one full MICE update cycle
+        (equivalent to calling ``update_all(1)``) and yields the current
+        imputed dataset. Iteration is infinite; use ``itertools.islice``
+        or break in the caller to stop.
+
+        Notes
+        -----
+        As with ``next_sample``, each yielded value is a reference to the
+        ``data`` attribute and should be copied before making any changes.
+        """
+        return self
+
+    def __next__(self):
+        return self.next_sample()
+
     def _initial_imputation(self):
         """
         Use a PMM-like procedure for initial imputed values

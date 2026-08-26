@@ -672,6 +672,8 @@ New Features and Enhancements
 Notable Bug Fixes
 ====================
 
+- Make ``MICEData`` iterable; each iteration step advances the MICE chain by
+  one update cycle and yields the current imputed dataset. :issue:`7110`
 - Fix a typo in the ``InfeasibleTestError`` exception string. :pr:`8878`
 - Correct diagnostics for changes in pandas. :pr:`8887`
 - MNLogit Wald tests: fix ``ravel``, string ``cov_names``. :pr:`8907`

@@ -1,3 +1,4 @@
+import itertools
 import warnings
 
 import numpy as np
@@ -446,3 +447,23 @@ def test_micedata_miss1():
 
     for key, val in ix_miss.items():
         assert_equal(data_imp.ix_miss[key], val)
+
+
+def test_mice_data_iterable():
+    # gh-7110: iterating over MICEData should yield successive
+    # imputed datasets, one update cycle per step.
+    rs = np.random.RandomState(986431)
+    df = gendat()
+    imp_data = mice.MICEData(df, rng=rs)
+
+    it = iter(imp_data)
+    assert iter(imp_data) is imp_data
+
+    first = next(it)
+    assert isinstance(first, pd.DataFrame)
+    assert first.shape == df.shape
+    assert not first.isna().any().any()
+
+    datasets = list(itertools.islice(it, 3))
+    assert len(datasets) == 3
+    assert all(isinstance(d, pd.DataFrame) for d in datasets)
