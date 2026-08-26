@@ -1147,6 +1147,18 @@ class HurdleCountModel(CountModel):
                                                        p=p)
             self.k_extra2 += 1
 
+    @property
+    def _k_zero(self):
+        """
+        Index that splits the parameter vector into its two components.
+
+        Parameters are ordered as the zero model's exog parameters, the zero
+        model's extra parameters, the main model's exog parameters and then
+        the main model's extra parameters. ``params[:_k_zero]`` therefore
+        belongs to the zero model and ``params[_k_zero:]`` to the main model.
+        """
+        return self.k_exog + self.k_extra1
+
     def loglike(self, params):
         """
         Log-likelihood of Generic Hurdle model.
@@ -1161,8 +1173,7 @@ class HurdleCountModel(CountModel):
         loglike : float
             The log-likelihood function of the model evaluated at `params`.
         """
-        k = int((len(params) - self.k_extra1 - self.k_extra2) / 2
-                ) + self.k_extra1
+        k = self._k_zero
         return (self.model1.loglike(params[:k]) +
                 self.model2.loglike(params[k:]))
 
@@ -1236,8 +1247,113 @@ class HurdleCountModel(CountModel):
         qc_tol=0.03,
         **kwargs,
     ):
+        r"""
+        Fit the model using a regularized maximum likelihood.
+
+        The zero model and the main model are penalized and fit separately,
+        and the combined parameter vector is then refit jointly.
+
+        Parameters
+        ----------
+        start_params : array_like, optional
+            Initial guess of the solution for the log-likelihood
+            maximization. The default is an array of zeros. Ordered as
+            described under `alpha`.
+        method : {'l1', 'l1_cvxopt_cp'}, optional
+            See notes for details.
+        maxiter : int or 'defined_by_method', optional
+            Maximum number of iterations to perform.
+            If 'defined_by_method', then use method defaults (see notes).
+        full_output : bool, optional
+            Set to True to have all available output in the Results object's
+            mle_retvals attribute. The output is dependent on the solver.
+            See LikelihoodModelResults notes section for more information.
+        disp : bool, optional
+            Set to True to print convergence messages.
+        callback : callable, optional
+            Called after each iteration, as callback(xk), where xk is the
+            current parameter vector.
+        alpha : float or array_like, optional
+            Non-negative. The weight multiplying the l1 penalty term. If a
+            scalar, every exog parameter of both components is penalized by
+            this value and the extra parameters are left unpenalized, for
+            example the shape parameter of a NegativeBinomialP component.
+
+            If an array, it must have one entry per parameter, ordered as the
+            zero model's exog parameters, the zero model's extra parameters,
+            the main model's exog parameters and then the main model's extra
+            parameters. For example, a hurdle model with 3 exog variables,
+            ``zerodist="poisson"`` and ``dist="negbin"`` takes an `alpha` of
+            length 7, whose last entry is the weight on the main model's
+            shape parameter.
+        trim_mode : {'auto', 'size', 'off'}, optional
+            If not 'off', trim (set to zero) parameters that would have been
+            zero if the solver reached the theoretical minimum.
+            If 'auto', trim params using the theory in the notes below.
+            If 'size', trim params if they have very small absolute value.
+        auto_trim_tol : float, optional
+            Tolerance used when trim_mode == 'auto'.
+        size_trim_tol : float, optional
+            Tolerance used when trim_mode == 'size'.
+        qc_tol : float, optional
+            Print warning and do not allow auto trim when condition (ii) in
+            the notes below is violated by this much.
+        **kwargs
+            Additional keyword arguments used when fitting the model.
+
+        Returns
+        -------
+        L1HurdleCountResultsWrapper
+            A results instance.
+
+        Notes
+        -----
+        Using 'l1_cvxopt_cp' requires the cvxopt module.
+
+        Optional arguments for the solvers (available in
+        Results.mle_settings)::
+
+            'l1'
+                acc : float (default 1e-6)
+                    Requested accuracy as used by slsqp
+            'l1_cvxopt_cp'
+                abstol : float
+                    absolute accuracy (default: 1e-7).
+                reltol : float
+                    relative accuracy (default: 1e-6).
+                feastol : float
+                    tolerance for feasibility conditions (default: 1e-7).
+                refinement : int
+                    number of iterative refinement steps when solving KKT
+                    equations (default: 1).
+
+        Optimization methodology
+
+        With :math:`L` the negative log likelihood, we solve the convex but
+        non-smooth problem
+
+        .. math:: \min_\beta L(\beta) + \sum_k\alpha_k |\beta_k|
+
+        via the transformation to the smooth, convex, constrained problem
+        in twice as many variables (adding the "added variables" :math:`u_k`)
+
+        .. math:: \min_{\beta,u} L(\beta) + \sum_k\alpha_k u_k,
+
+        subject to
+
+        .. math:: -u_k \leq \beta_k \leq u_k.
+
+        With :math:`\partial_k L` the derivative of :math:`L` in the
+        :math:`k^{th}` parameter direction, theory dictates that, at the
+        minimum, exactly one of two conditions holds:
+
+        (i) :math:`|\partial_k L| = \alpha_k`  and  :math:`\beta_k \neq 0`
+        (ii) :math:`|\partial_k L| \leq \alpha_k`  and  :math:`\beta_k = 0`
+        """
         _validate_l1_method(method)
 
+        k_zero = self._k_zero
+        k_params = k_zero + self.k_exog + self.k_extra2
         if np.size(alpha) == 1:
             # Do not penalize extra parameters if alpha is a scalar
             alpha = alpha * np.concatenate([
@@ -1246,15 +1362,25 @@ class HurdleCountModel(CountModel):
                 np.ones(self.k_exog),
                 np.zeros(self.k_extra2),
             ])
-        alpha1 = alpha[: self.k_exog + self.k_extra1]
-        alpha2 = alpha[self.k_exog + self.k_extra1 :]
+        else:
+            alpha = np.asarray(alpha, dtype=float)
+            if alpha.ndim != 1 or alpha.size != k_params:
+                raise ValueError(
+                    "alpha must be a scalar or a 1-dimensional array with "
+                    f"one entry per parameter. The model has {k_params} "
+                    f"parameters, {k_zero} in the zero model and "
+                    f"{k_params - k_zero} in the main model, but alpha has "
+                    f"shape {np.shape(alpha)}."
+                )
+        alpha1 = alpha[:k_zero]
+        alpha2 = alpha[k_zero:]
 
         if start_params is None:
             start_params1 = None
             start_params2 = None
         else:
-            start_params1 = start_params[: self.k_exog + self.k_extra1]
-            start_params2 = start_params[self.k_exog + self.k_extra1 :]
+            start_params1 = start_params[:k_zero]
+            start_params2 = start_params[k_zero:]
 
         results1 = self.model1.fit_regularized(
             start_params=start_params1,
@@ -1325,8 +1451,6 @@ class HurdleCountModel(CountModel):
         )
         return self.result_class_reg_wrapper(hurdlefit)
 
-    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
-
     def score_obs(self, params):
         """
         Hurdle model score (gradient) vector of the log-likelihood.
@@ -1338,14 +1462,11 @@ class HurdleCountModel(CountModel):
 
         Returns
         -------
-        score : ndarray, 1-D
-            The score vector of the model, i.e., the first derivative of the
-            log-likelihood function, evaluated at `params`
+        score_obs : ndarray, 2-D
+            The derivative of the log-likelihood for each observation,
+            evaluated at `params`, with shape (nobs, k_params).
         """
-        k_zero = (
-            int((len(params) - self.k_extra1 - self.k_extra2) / 2)
-            + self.k_extra1
-        )
+        k_zero = self._k_zero
         params_zero = params[:k_zero]
         params_main = params[k_zero:]
         score_zero = self.model1.score_obs(params_zero)
@@ -1379,10 +1500,7 @@ class HurdleCountModel(CountModel):
             The Hessian, second derivative of loglikelihood function, evaluated
             at `params`
         """
-        k_zero = (
-            int((len(params) - self.k_extra1 - self.k_extra2) / 2)
-            + self.k_extra1
-        )
+        k_zero = self._k_zero
         params_zero = params[:k_zero]
         params_main = params[k_zero:]
         hessian_zero = self.model1.hessian(params_zero)
