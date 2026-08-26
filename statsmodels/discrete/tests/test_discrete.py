@@ -8,6 +8,7 @@ in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
 from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 # pylint: disable-msg=E1101
 from pathlib import Path
@@ -3982,6 +3983,7 @@ def test_count_model_fit_regularized_direct():
     assert np.any(np.abs(res_big.params) < np.abs(res_unreg.params) - 1e-3)
 
 
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="LinAlgError not raised on WASM")
 def test_cov_params_func_l1_raises_on_nonfinite_hessian():
     # cov_params_func_l1's LinAlgError guard only ever caught a singular
     # Hessian: np.linalg.inv does not raise on non-finite input, it
