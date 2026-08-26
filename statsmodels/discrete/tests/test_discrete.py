@@ -8,6 +8,7 @@ in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
 from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 # pylint: disable-msg=E1101
 from pathlib import Path
@@ -3980,6 +3981,46 @@ def test_count_model_fit_regularized_direct():
     res_big = CountModel.fit_regularized(mod, alpha=25.0, disp=0)
     assert np.all(np.abs(res_big.params) <= np.abs(res_unreg.params) + 1e-8)
     assert np.any(np.abs(res_big.params) < np.abs(res_unreg.params) - 1e-3)
+
+
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="LinAlgError not raised on WASM")
+def test_cov_params_func_l1_raises_on_nonfinite_hessian():
+    # cov_params_func_l1's LinAlgError guard only ever caught a singular
+    # Hessian: np.linalg.inv does not raise on non-finite input, it
+    # silently returns an all-NaN matrix, so a NaN (or inf) Hessian used to
+    # produce a results object whose every standard error, z-value, p-value
+    # and confidence interval was NaN, with no error raised at all.
+    rng = np.random.default_rng(0)
+    nobs = 50
+    exog = np.column_stack([np.ones(nobs), rng.standard_normal(nobs)])
+    endog = rng.poisson(np.exp(0.5 + 0.3 * exog[:, 1]))
+    mod = Poisson(endog, exog)
+
+    class _NonFiniteHessianModel:
+        # Anything with a .hessian(params) is accepted by
+        # cov_params_func_l1 -- it never touches `self`, only the
+        # `likelihood_model` argument -- so a minimal stand-in is enough to
+        # exercise the guard directly and deterministically, rather than
+        # trying to coax a real optimizer into landing on a NaN Hessian.
+        def hessian(self, params):
+            H = -np.eye(len(params))
+            H[0, 1] = H[1, 0] = np.nan
+            return H
+
+    xopt = np.zeros(2)
+    retvals = {"trimmed": np.array([False, False])}
+    with pytest.raises(np.linalg.LinAlgError, match="non-finite"):
+        mod.cov_params_func_l1(_NonFiniteHessianModel(), xopt, retvals)
+
+    # The pre-existing singular-but-finite path is unaffected by the new
+    # check -- still reaches np.linalg.inv and still raises its own,
+    # differently-worded LinAlgError.
+    class _SingularHessianModel:
+        def hessian(self, params):
+            return -np.ones((len(params), len(params)))
+
+    with pytest.raises(np.linalg.LinAlgError, match="singular"):
+        mod.cov_params_func_l1(_SingularHessianModel(), xopt, retvals)
 
 
 def test_logit_family_is_binomial():

@@ -909,3 +909,71 @@ class TestHurdleL1Compatibility(CheckL1Compatability):
         assert_almost_equal(f_unreg_main.pvalue, f_reg_main.pvalue, 3)
 
 
+@pytest.mark.parametrize(
+    "dist,zerodist", [
+        ("poisson", "poisson"),
+        ("negbin", "poisson"),
+        ("poisson", "negbin"),
+        ("negbin", "negbin"),
+    ]
+)
+def test_fit_accepts_start_params_split_across_components(dist, zerodist):
+    # HurdleCountModel.fit used to pass the same unsplit start_params vector
+    # to both component models' own .fit(), even though neither wants the
+    # full vector: the zero model needs k_exog + k_extra1 entries and the
+    # main model needs k_exog + k_extra2. Every properly-sized start_params
+    # raised a shapes-mismatch ValueError from deep inside the optimizer.
+    # Verify all four dist/zerodist combinations now accept a start_params
+    # vector sized for the whole model, and that starting from an already-
+    # converged optimum reproduces that same optimum (not just "doesn't
+    # crash").
+    rng = np.random.default_rng(0)
+    nobs = 400
+    exog = np.column_stack([np.ones(nobs), rng.standard_normal(nobs)])
+    endog = rng.poisson(np.exp(0.5 + 0.3 * exog[:, 1]))
+    endog[rng.random(nobs) < 0.1] = 0
+
+    mod = HurdleCountModel(endog, exog, dist=dist, zerodist=zerodist)
+    res_default = mod.fit(disp=0)
+
+    mod2 = HurdleCountModel(endog, exog, dist=dist, zerodist=zerodist)
+    res_explicit = mod2.fit(start_params=res_default.params, disp=0)
+    assert_allclose(res_explicit.params, res_default.params, atol=1e-6, rtol=1e-6)
+
+
+def test_fit_start_params_wrong_size_raises_clear_error():
+    rng = np.random.default_rng(0)
+    nobs = 200
+    exog = np.column_stack([np.ones(nobs), rng.standard_normal(nobs)])
+    endog = rng.poisson(np.exp(0.5 + 0.3 * exog[:, 1]))
+    endog[rng.random(nobs) < 0.1] = 0
+
+    mod = HurdleCountModel(endog, exog)  # poisson/poisson, 4 params total
+    with pytest.raises(ValueError, match="start_params must have one entry"):
+        mod.fit(start_params=np.ones(3), disp=0)
+
+
+def test_fit_regularized_converged_reports_joint_fit_too():
+    # fit_regularized runs the two component fits, then a joint refit on
+    # their concatenated solution -- params comes from that joint refit.
+    # mle_retvals["converged"] used to be overwritten with only the two
+    # component fits' flags afterward, discarding the joint refit's own
+    # flag even though it's the one that actually produced params.
+    rng = np.random.default_rng(0)
+    nobs = 300
+    exog = np.column_stack([np.ones(nobs), rng.standard_normal(nobs)])
+    endog = rng.poisson(np.exp(0.5 + 0.3 * exog[:, 1]))
+    endog[rng.random(nobs) < 0.1] = 0
+
+    mod = HurdleCountModel(endog, exog)
+    res = mod.fit_regularized(alpha=0.01, disp=0)
+    converged = res.mle_retvals["converged"]
+
+    # Previously always exactly 2 entries; a 3rd can only appear by keeping
+    # the joint fit's own flag alongside, not in place of, the components'.
+    assert len(converged) == 3
+    assert converged[0] == res.results_zero.mle_retvals["converged"]
+    assert converged[1] == res.results_count.mle_retvals["converged"]
+    assert isinstance(converged[2], (bool, np.bool_))
+
+

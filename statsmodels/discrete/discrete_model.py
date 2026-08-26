@@ -465,6 +465,23 @@ class DiscreteModel(base.LikelihoodModel):
         if nnz_params > 0:
             H_restricted = H[nz_idx[:, None], nz_idx]
             # Covariance estimate for the nonzero params
+            if not np.isfinite(H_restricted).all():
+                # np.linalg.inv does not raise on non-finite input -- it
+                # silently returns an all-NaN matrix -- so this has to be
+                # checked explicitly, or a NaN Hessian produces a results
+                # object whose every standard error, z-value, p-value and
+                # confidence interval is NaN with no error at all.
+                raise np.linalg.LinAlgError(
+                    "Hessian matrix contains non-finite values and cannot "
+                    "be inverted. This can happen when the optimizer moves "
+                    "far enough from the data's scale that the "
+                    "log-likelihood's second derivative overflows, often "
+                    "itself a symptom of perfect or quasi-perfect "
+                    "separation in the data, or of multicollinearity among "
+                    "predictors. Consider checking your data for "
+                    "separation, removing redundant predictors, or "
+                    "increasing the regularization penalty (alpha)."
+                )
             try:
                 H_restricted_inv = np.linalg.inv(-H_restricted)
             except np.linalg.LinAlgError as e:
