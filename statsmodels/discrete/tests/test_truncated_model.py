@@ -953,3 +953,27 @@ def test_fit_start_params_wrong_size_raises_clear_error():
         mod.fit(start_params=np.ones(3), disp=0)
 
 
+def test_fit_regularized_converged_reports_joint_fit_too():
+    # fit_regularized runs the two component fits, then a joint refit on
+    # their concatenated solution -- params comes from that joint refit.
+    # mle_retvals["converged"] used to be overwritten with only the two
+    # component fits' flags afterward, discarding the joint refit's own
+    # flag even though it's the one that actually produced params.
+    rng = np.random.default_rng(0)
+    nobs = 300
+    exog = np.column_stack([np.ones(nobs), rng.standard_normal(nobs)])
+    endog = rng.poisson(np.exp(0.5 + 0.3 * exog[:, 1]))
+    endog[rng.random(nobs) < 0.1] = 0
+
+    mod = HurdleCountModel(endog, exog)
+    res = mod.fit_regularized(alpha=0.01, disp=0)
+    converged = res.mle_retvals["converged"]
+
+    # Previously always exactly 2 entries; a 3rd can only appear by keeping
+    # the joint fit's own flag alongside, not in place of, the components'.
+    assert len(converged) == 3
+    assert converged[0] == res.results_zero.mle_retvals["converged"]
+    assert converged[1] == res.results_count.mle_retvals["converged"]
+    assert isinstance(converged[2], (bool, np.bool_))
+
+

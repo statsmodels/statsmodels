@@ -1478,8 +1478,13 @@ class HurdleCountModel(CountModel):
             qc_tol=qc_tol,
             **kwargs,
         )
+        # params comes from this joint refit, not from either component fit,
+        # so its own converged flag (already set by the call above) has to
+        # be kept, not replaced by the two component flags.
         cntfit.mle_retvals["converged"] = [
-            results1.mle_retvals["converged"], results2.mle_retvals["converged"]
+            results1.mle_retvals["converged"],
+            results2.mle_retvals["converged"],
+            cntfit.mle_retvals["converged"],
         ]
         self.k_extra1 += getattr(results1._results, "k_extra", 0)
         self.k_extra2 += getattr(results2._results, "k_extra", 0)
