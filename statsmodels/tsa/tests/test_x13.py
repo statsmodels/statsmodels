@@ -65,7 +65,11 @@ def test_x13_arima_select_order(dataset, use_numpy):
         dataset = np.squeeze(np.asarray(dataset))
         start = index[0]
         if isinstance(index, pd.DatetimeIndex):
-            freq = index.inferred_freq
+            try:
+                with pd.option_context("future.infer_freq_returns_offset", True):
+                    freq = index.inferred_freq.freqstr
+            except (AttributeError, ImportError):
+                freq = index.inferred_freq
         elif isinstance(index, pd.PeriodIndex):
             start = start.to_timestamp()
             freq = index.freq

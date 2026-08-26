@@ -1041,8 +1041,8 @@ class FactorResults:
             high = np.abs(loadings_df2.values).argmax(1)
             loadings_df2["high"] = high
             loadings_df2["largest"] = np.abs(loadings_df.values[np.arange(n_f), high])
-            loadings_df2.sort_values(
-                by=["high", "largest"], ascending=[True, False], inplace=True
+            loadings_df2 = loadings_df2.sort_values(
+                by=["high", "largest"], ascending=[True, False]
             )
             loadings_df = loadings_df2.drop(["high", "largest"], axis=1)
 

@@ -837,7 +837,7 @@ class Grouping:
                 out = out.sort_index()
             else:
                 out = pd.DataFrame(data, index=index)
-                out = out.sort_index(inplace=False)  # copies
+                out = out.sort_index()  # copies
             return np.array(out), out.index
         elif data_util._is_using_pandas(data, None):
             out = data
