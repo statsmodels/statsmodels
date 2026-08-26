@@ -583,6 +583,8 @@ New Features and Enhancements
 Notable Bug Fixes
 ====================
 
+- Clarify the ``VARResults.df_model`` docstring: it counts parameters per
+  equation, not across all equations. :issue:`8183`
 - Fix a typo in the ``InfeasibleTestError`` exception string. :pr:`8878`
 - Correct diagnostics for changes in pandas. :pr:`8887`
 - MNLogit Wald tests: fix ``ravel``, string ``cov_names``. :pr:`8907`
@@ -1666,6 +1668,10 @@ The following Pull Requests were merged since the last release:
 - :pr:`10170`: ENH: Simplify aliases
 - :pr:`10171`: REF: Delegate ETS breakvar test to the shared implementation
 - :pr:`10172`: BUG: fix SARIMAX time-varying regression with differencing in the state vector
+- :pr:`10173`: ENH: Improve string checking
+- :pr:`10174`: BUG: Add array_like for offset
+- :pr:`10175`: BUG: Remove cache_readonly the presented parameter
+- :pr:`time-varying regression with differencing in the state vector
 - :pr:`10173`: ENH: Improve string checking
 - :pr:`10174`: BUG: Add array_like for offset
 - :pr:`10175`: BUG: Remove cache_readonly the presented parameter
