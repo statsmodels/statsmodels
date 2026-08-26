@@ -700,6 +700,16 @@ class GLS(RegressionModel):
             A 1d weight vector used in the calculation of the Hessian.
             The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`.
 
+        Raises
+        ------
+        NotImplementedError
+            If `sigma` is a full (non-diagonal) covariance matrix. A 1d
+            per-observation weight vector cannot represent the
+            off-diagonal correlation terms, so no choice of
+            `hessian_factor` can satisfy the reassembly formula above in
+            this case; `fit`, `predict`, and other core results are
+            unaffected; only this diagnostic is unavailable.
+
         """
         if self.sigma is None or self.sigma.shape == ():
             return np.ones(self.exog.shape[0])
@@ -711,7 +721,16 @@ class GLS(RegressionModel):
             # implementation, which uses weights == 1 / sigma directly).
             return self.cholsigmainv**2
         else:
-            return np.diag(self.cholsigmainv)
+            raise NotImplementedError(
+                "hessian_factor is not available for GLS with a full "
+                "(non-diagonal) sigma: a 1d per-observation weight vector "
+                "cannot represent sigma's off-diagonal correlation terms, "
+                "so (exog.T * hessian_factor).dot(exog) can never equal "
+                "the true GLS Hessian in this case. This affects only "
+                "diagnostics built on hessian_factor (e.g. score_test, "
+                "MLEInfluence.resid_score_factor); fit(), predict(), and "
+                "other core results are unaffected."
+            )
 
     @Appender(_fit_regularized_doc)
     def fit_regularized(
