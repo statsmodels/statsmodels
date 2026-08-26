@@ -672,6 +672,8 @@ New Features and Enhancements
 Notable Bug Fixes
 ====================
 
+- Make ``MICEData`` iterable; each iteration step advances the MICE chain by
+  one update cycle and yields the current imputed dataset. :issue:`7110`
 - Clarify the ``VARResults.df_model`` docstring: it counts parameters per
   equation, not across all equations. :issue:`8183`
 - Fix a typo in the ``InfeasibleTestError`` exception string. :pr:`8878`
