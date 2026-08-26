@@ -1192,15 +1192,32 @@ class HurdleCountModel(CountModel):
         if cov_type != "nonrobust":
             raise ValueError("robust cov_type currently not supported")
 
+        k_zero = self._k_zero
+        if start_params is None:
+            start_params1 = None
+            start_params2 = None
+        else:
+            start_params = array_like(start_params, "start_params", ndim=1)
+            k_params = k_zero + self.k_exog + self.k_extra2
+            if start_params.size != k_params:
+                raise ValueError(
+                    "start_params must have one entry per parameter. The "
+                    f"model has {k_params} parameters, {k_zero} in the zero "
+                    f"model and {k_params - k_zero} in the main model, but "
+                    f"start_params has {start_params.size}."
+                )
+            start_params1 = start_params[:k_zero]
+            start_params2 = start_params[k_zero:]
+
         results1 = self.model1.fit(
-            start_params=start_params,
+            start_params=start_params1,
             method=method, maxiter=maxiter, disp=disp,
             full_output=full_output, callback=lambda x: x,
             **kwargs
             )
 
         results2 = self.model2.fit(
-            start_params=start_params,
+            start_params=start_params2,
             method=method, maxiter=maxiter, disp=disp,
             full_output=full_output, callback=lambda x: x,
             **kwargs
