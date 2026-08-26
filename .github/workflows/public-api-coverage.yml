@@ -1,0 +1,152 @@
+name: Public API coverage ratchet
+
+on:
+  push:
+    branches: [ 'main' ]
+  pull_request:
+    branches: [ 'main' ]
+  workflow_dispatch:
+
+env:
+  OPENBLAS_NUM_THREADS: 1
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  coverage-ratchet:
+    name: Check public API coverage has not regressed
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout statsmodels
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v6
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install build and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
+
+      - name: Install statsmodels (editable)
+        run: python -m pip install --no-build-isolation --editable .
+
+      - name: Run test suite with coverage
+        run: |
+          pytest -m "not slow and not example" -n auto  --dist loadscope \
+            --cov-config pyproject.toml --cov=statsmodels --cov-report json:coverage.json statsmodels
+
+      # Advisory only: this step never fails the job, even when new
+      # zero-coverage public API objects are found. Reasons (if any) are
+      # written to the job summary and, on a pull_request run, posted/
+      # updated as a PR comment by the next step. A hard failure here would
+      # block merging on a signal that's often a false positive (e.g. code
+      # legitimately not yet covered by design), which is why this is a
+      # ratchet advisory rather than a required check.
+      - name: Check public API coverage has not regressed
+        id: coverage-check
+        run: |
+          set +e
+          python tools/check_public_api_coverage.py coverage.json \
+            --baseline tools/public_api_coverage_baseline.json \
+            > coverage_check_output.txt 2>&1
+          status=$?
+          set -e
+
+          cat coverage_check_output.txt
+
+          if [ "$status" -ne 0 ]; then
+            echo "regressed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "regressed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo "## Public API coverage ratchet"
+            echo
+            if [ "$status" -ne 0 ]; then
+              echo "**New zero-coverage public API objects detected below.** This check is advisory only and does not fail the build."
+            else
+              echo "No new zero-coverage public API objects."
+            fi
+            echo
+            echo '```'
+            cat coverage_check_output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post coverage advisory comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require("fs");
+            const regressed = "${{ steps.coverage-check.outputs.regressed }}" === "true";
+            const output = fs.readFileSync("coverage_check_output.txt", "utf8").trim();
+            const COMMENT_MARKER = "<!-- public-api-coverage-ratchet -->";
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+
+            const message = regressed
+              ? [
+                  COMMENT_MARKER,
+                  "### Public API coverage ratchet: possible regression",
+                  "",
+                  "This PR appears to introduce new public API objects (or code paths) with " +
+                    "**zero test coverage**. This is advisory only and does not block merging.",
+                  "",
+                  "```",
+                  output,
+                  "```",
+                  "",
+                  "If this is expected (e.g. deliberately-untested scaffolding), no action is " +
+                    "needed. Otherwise, consider adding a test for the newly-uncovered code.",
+                ].join("\n")
+              : [
+                  COMMENT_MARKER,
+                  "### Public API coverage ratchet: no new gaps",
+                  "",
+                  "No new zero-coverage public API objects detected.",
+                ].join("\n");
+
+            let existing;
+            try {
+              const comments = await github.rest.issues.listComments({
+                owner, repo, issue_number, per_page: 100,
+              });
+              existing = comments.data.find(
+                (c) => c.user.type === "Bot" && c.body.includes(COMMENT_MARKER)
+              );
+            } catch (err) {
+              core.warning(`Could not list PR comments (likely a fork PR without write access): ${err.message}`);
+              return;
+            }
+
+            try {
+              if (existing) {
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body: message });
+              } else if (regressed) {
+                // Only create a brand-new comment when there is something to
+                // flag; don't add a "no new gaps" comment to every PR that
+                // never had one.
+                await github.rest.issues.createComment({ owner, repo, issue_number, body: message });
+              }
+            } catch (err) {
+              core.warning(`Could not post PR comment (likely a fork PR without write access): ${err.message}`);
+            }

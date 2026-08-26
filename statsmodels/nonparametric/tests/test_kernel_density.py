@@ -425,7 +425,7 @@ class TestKDEMultivariate(KDETestBase):
                 data=[Y, C1],
                 var_type="cc",
                 bw="cv_ls",
-                defaults=nparam.EstimatorSettings(efficient=True, n_sub=100),
+                defaults=nparam.EstimatorSettings(efficient=True, n_sub=100, n_jobs=2),
             )
         # dens = nparam.KDEMultivariate(data=[Y, C1], var_type='cc', bw='cv_ls',
         #                  defaults=nparam.EstimatorSettings(efficient=False))
@@ -447,7 +447,7 @@ class TestKDEMultivariate(KDETestBase):
                 data=[Y, C1],
                 var_type="cc",
                 bw="cv_ml",
-                defaults=nparam.EstimatorSettings(efficient=True, n_sub=100),
+                defaults=nparam.EstimatorSettings(efficient=True, n_sub=100, n_jobs=2),
             )
         # dens = nparam.KDEMultivariate(data=[Y, C1], var_type='cc', bw='cv_ml',
         #                  defaults=nparam.EstimatorSettings(efficient=False))
@@ -470,7 +470,7 @@ class TestKDEMultivariate(KDETestBase):
                 var_type="cc",
                 bw="cv_ml",
                 defaults=nparam.EstimatorSettings(
-                    efficient=True, randomize=False, n_sub=100
+                    efficient=True, randomize=False, n_sub=100, n_jobs=2
                 ),
             )
         with pytest.warns(FutureWarning, match="After 0.17"):
@@ -650,7 +650,7 @@ class TestKDEMultivariateConditional(KDETestBase):
             dep_type="c",
             indep_type="c",
             bw="cv_ml",
-            defaults=nparam.EstimatorSettings(efficient=True, n_sub=50),
+            defaults=nparam.EstimatorSettings(efficient=True, n_sub=50, n_jobs=2),
             rng=12345,
         )
 

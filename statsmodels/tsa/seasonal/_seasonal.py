@@ -327,7 +327,7 @@ class DecomposeResult:
     @property
     def nobs(self):
         """Number of observations"""
-        return self._observed.shape
+        return self._observed.shape[0]
 
     def plot(
         self,
