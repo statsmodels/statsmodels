@@ -1492,7 +1492,16 @@ class VARResults(VARProcess):
 
     @property
     def df_model(self):
-        """Number of estimated parameters per variable, including the intercept / trends"""
+        """
+        Number of estimated parameters per equation, including the
+        intercept / trends
+
+        Each equation in the VAR is estimated by OLS, so this counts the
+        number of free parameters entering each individual equation:
+        ``neqs * k_ar`` lagged terms plus ``k_exog`` deterministic terms.
+        It is not the total number of estimated coefficients across all
+        equations.
+        """
         return self.neqs * self.k_ar + self.k_exog
 
     @property
