@@ -38,7 +38,7 @@ jobs:
       - name: Install build and test dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install numpy scipy pandas cython
+          python -m pip install -r requirements.txt
           python -m pip install -r requirements-dev.txt
 
       - name: Install statsmodels (editable)
@@ -46,9 +46,8 @@ jobs:
 
       - name: Run test suite with coverage
         run: |
-          pytest -m "not slow and not joblib" --skip-examples -n auto \
-            --dist loadscope --durations=25 --cov-config pyproject.toml \
-            --cov=statsmodels --cov-report json:coverage.json statsmodels
+          pytest -m "not slow and not example" -n auto  --dist loadscope \
+            --cov-config pyproject.toml --cov=statsmodels --cov-report json:coverage.json statsmodels
 
       # Advisory only: this step never fails the job, even when new
       # zero-coverage public API objects are found. Reasons (if any) are
