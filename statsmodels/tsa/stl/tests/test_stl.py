@@ -337,3 +337,4 @@ def test_squezable_to_1d():
     data = data.resample(MONTH_END).mean().ffill()
     res = STL(data).fit()
     assert isinstance(res, DecomposeResult)
+    assert res.nobs == data.shape[0]

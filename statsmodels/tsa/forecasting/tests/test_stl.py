@@ -40,6 +40,7 @@ def test_smoke(data):
     assert isinstance(res.result, DecomposeResult)
     assert isinstance(res.model, ARIMA)
     assert hasattr(res.model_result, "forecast")
+    assert res.result.nobs == 500
 
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
