@@ -1149,6 +1149,41 @@ class ARDLResults(AutoRegResults):
         """
 
         existing = self.model
+
+        # These two checks must run before the ARDL(...) reconstruction
+        # below, not after it: existing._order is a dict keyed by the
+        # original exog's column names (DataFrame) or positions (ndarray),
+        # so almost any exog mismatch -- missing entirely, wrong number of
+        # columns, different column names -- makes _format_order raise its
+        # own "extra keys"/"array_like" error first, while trying to apply
+        # that stale order to the new exog. That error gets caught by the
+        # try/except below and wrapped into a generic message, so the
+        # specific, actionable errors here were previously unreachable for
+        # most of the mismatches they exist to describe.
+        if (exog is None) != (existing.exog is None):
+            if existing.exog is not None:
+                raise ValueError(
+                    "exog must be provided when the original model contained "
+                    "exog variables"
+                )
+            raise ValueError(
+                "exog must be None when the original model did not contain "
+                "exog variables"
+            )
+        if existing.exog is not None:
+            # Mirrors _format_order's own type check: a DataFrame's column
+            # count is read directly, anything else goes through the same
+            # array_like coercion _format_order itself uses.
+            if isinstance(exog, pd.DataFrame):
+                n_exog = exog.shape[1]
+            else:
+                n_exog = array_like(exog, "exog", ndim=2, maxdim=2).shape[1]
+            if existing.exog.shape[1] != n_exog:
+                raise ValueError(
+                    "The number of exog variables passed must match the "
+                    f"original Number of exog values ({existing.exog.shape[1]})"
+                )
+
         try:
             deterministic = existing.deterministic
             if deterministic is not None:
@@ -1181,21 +1216,6 @@ class ARDLResults(AutoRegResults):
             exc.args = (error, ) + exc.args
             raise exc.with_traceback(exc.__traceback__) from exc
 
-        if (mod.exog is None) != (existing.exog is None):
-            if existing.exog is not None:
-                raise ValueError(
-                    "exog must be provided when the original model contained "
-                    "exog variables"
-                )
-            raise ValueError(
-                "exog must be None when the original model did not contain "
-                "exog variables"
-            )
-        if existing.exog is not None and existing.exog.shape[1] != mod.exog.shape[1]:
-            raise ValueError(
-                "The number of exog variables passed must match the original "
-                f"Number of exog values ({existing.exog.shape[1]})"
-            )
         if refit:
             fit_kwargs = {} if fit_kwargs is None else fit_kwargs
             return mod.fit(**fit_kwargs)

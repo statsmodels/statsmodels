@@ -667,6 +667,40 @@ def test_apply_unexpected_exog_raises():
         res_no_exog.apply(endog=y.iloc[:50], exog=x.iloc[:50])
 
 
+def test_apply_missing_exog_raises():
+    """
+    apply()'s own explicit check for this case ("exog must be provided
+    when the original model contained exog variables") used to be
+    unreachable: order=existing._order is keyed by the original exog's
+    columns, so reconstructing with exog=None made _format_order raise its
+    own array_like error first, wrapped into a generic message that never
+    mentioned exog at all.
+    """
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    res = ARDL(y.iloc[:45], 3, x.iloc[:45], order=3, trend="c").fit()
+
+    with pytest.raises(ValueError, match="exog must be provided"):
+        res.apply(endog=y.iloc[:50], exog=None)
+
+
+def test_apply_wrong_number_of_exog_columns_raises():
+    """
+    apply()'s own explicit check for a column-count mismatch used to be
+    reachable only when the new exog's columns were a superset of the
+    original order dict's keys (e.g. more columns, same names/positions
+    reused) -- the much more common case, fewer or renamed columns, made
+    _format_order raise its own "extra keys" error first, about the order
+    dict rather than about exog itself.
+    """
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    res = ARDL(y.iloc[:45], 3, x.iloc[:45], order=3, trend="c").fit()
+
+    with pytest.raises(ValueError, match="number of exog variables"):
+        res.apply(endog=y.iloc[:50], exog=x.iloc[:50, :2])
+
+
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
