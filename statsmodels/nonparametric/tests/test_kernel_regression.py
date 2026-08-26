@@ -430,7 +430,7 @@ class TestKernelReg(KernelRegressionTestBase):
             reg_type="lc",
             var_type="c",
             bw="cv_ls",
-            defaults=nparam.EstimatorSettings(efficient=True, n_sub=100),
+            defaults=nparam.EstimatorSettings(efficient=True, n_sub=100, n_jobs=2),
             rng=20260111,
         )
         with pytest.warns(FutureWarning, match="After 0.17"):

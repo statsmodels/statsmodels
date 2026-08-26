@@ -13,6 +13,6 @@ def test_parallel():
     x = arange(10.0)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        parallel, p_func, n_jobs = parallel_func(sqrt, n_jobs=-1, verbose=0)
+        parallel, p_func, n_jobs = parallel_func(sqrt, n_jobs=2, verbose=0)
         y = parallel(p_func(i**2) for i in range(10))
     testing.assert_equal(x, y)
