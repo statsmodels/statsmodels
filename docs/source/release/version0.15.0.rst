@@ -8,7 +8,7 @@ Release summary
 ===============
 
 This note covers all changes merged into ``main`` between the ``v0.15.0.dev0``
-tag (2023-05-05) and the current development head (2026-08-24).
+tag (2023-05-05) and the current development head (2026-08-26).
 
 statsmodels is using github to store the updated documentation. Two versions
 are available:
@@ -28,11 +28,11 @@ docstrings.
 Release Statistics
 -------------------
 
-- **Issues closed**: 351
-- **Pull requests merged**: 617
-- **Non-merge commits**: 1647
-- **Contributors** (by git log author, unique names): 162
-- **Time span**: 2023-05-05 through 2026-08-24
+- **Issues closed**: 355
+- **Pull requests merged**: 649
+- **Non-merge commits**: 1730
+- **Contributors** (by git log author, unique names): 169
+- **Time span**: 2023-05-05 through 2026-08-26
 
 The Highlights
 ===============
@@ -280,7 +280,7 @@ touched, and it changes behavior in two distinct ways:
   ``"inc"``, ``"d"``, ``"dec"``, or ``"2"`` were accepted but never
   documented. These still work today, but now raise a ``FutureWarning``
   naming the documented spelling to switch to, and will stop being accepted
-  after statsmodels 0.16 (:pr:`10170`). This affects, among others,
+  after statsmodels 0.16 (:pr:`10170`, :pr:`10180`). This affects, among others,
   :class:`~statsmodels.stats.weightstats.DescrStatsW`/
   :class:`~statsmodels.stats.weightstats.CompareMeans` and the module-level
   ``ztest``/``zconfint``/``ztost``/``ttest_ind``/``ttost_ind`` functions in
@@ -334,10 +334,91 @@ A few of the more consequential correctness fixes in this release (see
   ``ra``/``aipw``/``aipw_wls``/``ipw_ra`` methods was labeled ``.method =
   "IPW"``, regardless of which method actually produced it. Each method now
   labels its own result correctly. :pr:`10164`
+- ``BinomialBayesMixedGLM.fit``/``PoissonBayesMixedGLM.fit`` (documented as
+  equivalent to ``fit_map``) called ``fit_map`` and discarded its return
+  value, so ``.fit()`` always returned ``None`` instead of the fitted
+  results instance -- any code using the documented ``.fit()`` entry point
+  (rather than calling ``.fit_map()`` directly) could not get a usable
+  result. :pr:`10195`
+- The state space univariate filter/smoother (used for exact diffuse
+  initialization, and as the automatic fallback whenever the multivariate
+  filter hits a singular forecast-error covariance) computed the smoothed
+  measurement disturbance in a whitened basis and never transformed it
+  back, so ``smoothed_measurement_disturbance`` was wrong by an
+  observation-dependent factor for any model that exercised this code
+  path -- off by as much as 124 in one of the affected test cases. The
+  corresponding disturbance *covariance* cannot be recovered the same way
+  from what the univariate recursions compute, so that quantity now raises
+  a warning instead of silently returning a value in the wrong basis.
+  :pr:`9979`
+- ``GLS.hessian_factor`` returned incorrect values for both non-scalar
+  ``sigma`` cases: for a 1-d (heteroskedastic-weights) ``sigma`` it
+  returned the whitening factor ``1 / sqrt(sigma)`` instead of the
+  Hessian weight ``1 / sigma`` (:pr:`10196`), and for a full 2-d
+  (non-diagonal) ``sigma`` its output does not correspond to the actual
+  Hessian at all; rather than continue to return a plausible-looking but
+  wrong answer, the 2-d case now raises ``NotImplementedError``
+  (:pr:`10203`, see *Breaking Changes and Deprecations* below).
+- In the non-IRLS gradient-optimizer path of ``GLM.fit``, the fallback that
+  is supposed to reuse ``normalized_cov_params`` when the observed Hessian
+  cannot be inverted was unreachable dead code, so ``bse``/``cov_params()``
+  silently came back as all-``NaN`` any time the Hessian inversion failed,
+  even though a usable covariance estimate from the optimizer was
+  available. :pr:`9794`
+- ``LikelihoodModel.fit(method="newton")`` used the opposite sign
+  convention from every other optimizer for its internal score/Hessian
+  closures. This made no difference to the Newton step itself, but it
+  meant the ``ridge_factor`` Hessian regularization (used to stabilize
+  the solve when the Hessian is poorly conditioned) was applied with the
+  wrong sign -- shrinking the regularized Hessian's magnitude instead of
+  increasing it, the opposite of what regularization is supposed to do.
+  This is most consequential for models fit with a non-default
+  ``ridge_factor`` or a near-singular Hessian. :pr:`10184`
+- ``Tweedie`` GLM log-likelihood (``1 < var_power < 2``, the compound
+  Poisson-Gamma case commonly used for claim-severity/insurance-style
+  data) computed ``log(wright_bessel(...))``, which overflows to ``inf``
+  before the log is taken for a range of realistic ``endog``/``mu``/scale
+  combinations, silently producing an infinite or garbage
+  log-likelihood. Fixed by using ``scipy.special.log_wright_bessel``
+  directly, which does not have this overflow. Requires SciPy >= 1.14 to
+  take effect; on older SciPy (or 32-bit platforms, where
+  ``log_wright_bessel`` is not accurate enough) the previous,
+  overflow-prone computation is still used. :pr:`10179`, :pr:`10186`,
+  :pr:`10188`
 
 
 Breaking Changes and Deprecations
 ===================================
+
+Previously-silent wrong results now raise or warn
+--------------------------------------------------------
+
+A few of the correctness fixes described above change what a call does,
+not just the numbers it returns, because the previous behavior had no
+correct fallback:
+
+- ``GLS.hessian_factor`` (and anything built on it, e.g. ``GLS.hessian``)
+  raises ``NotImplementedError`` for a full 2-d (non-diagonal) ``sigma``,
+  instead of silently returning a value that does not correspond to the
+  actual Hessian. The 1-d (heteroskedastic-weights) and scalar ``sigma``
+  cases are unaffected and continue to work. :pr:`10203`
+- The state space simulation smoother's smoothed measurement disturbance
+  *covariance* (as opposed to the disturbance itself, which is now
+  computed correctly, see above) cannot be recovered in the original
+  basis from what the univariate filter/smoother computes, so requesting
+  it now raises a warning instead of silently returning a value in the
+  wrong basis. :pr:`9979`
+- ``psturng`` (the studentized range p-value approximation underlying
+  Tukey's HSD and the Games-Howell test) raises ``ValueError`` for degrees
+  of freedom ``1 <= v < 2`` combined with a very small p-value, instead of
+  returning a fabricated ``0.1``. Neither R's ``ptukey`` nor the
+  literature this implementation follows supports a real computation in
+  that region. :pr:`7327`
+- ``MixedLM.fit``'s warning for keyword arguments it does not recognize
+  changed from ``RuntimeWarning`` to ``FutureWarning``, and now states
+  that a future version will raise instead of dropping the argument.
+  Code that specifically filters ``RuntimeWarning`` to silence this
+  message will need to filter ``FutureWarning`` instead. :pr:`9695`
 
 ``seed``/``random_state`` -> ``rng`` (SPEC-007)
 ---------------------------------------------------
@@ -412,7 +493,7 @@ parameter (``"2s"``, ``"l"``, ``"s"``, ``"i"``, ``"inc"``, ``"d"``, ``"dec"``,
 :mod:`~statsmodels.stats.meta_analysis` and
 :mod:`~statsmodels.stats._lilliefors`) now raise a ``FutureWarning`` naming
 the documented replacement instead of working silently, and will be removed
-after statsmodels 0.16. :pr:`10170`, :pr:`10173`
+after statsmodels 0.16. :pr:`10170`, :pr:`10173`, :pr:`10180`
 
 Several previously-undocumented, silently-accepted string values elsewhere
 were similarly tightened to raise ``ValueError`` for anything outside the
@@ -572,6 +653,14 @@ New Features and Enhancements
 - Make the ``ndim`` check in ``array_like`` orthogonal to ``maxdim``, so
   the two can be combined instead of one silently overriding the
   other. :pr:`10090`
+- ``NominalGEE`` accepts non-numeric ``groups`` labels (for example
+  strings), instead of failing to cast them to ``float64``
+  internally. :pr:`10182`
+- Robust linear model (``RLM``) scale-estimator callables passed via
+  ``scale_est`` may now optionally accept the fitted model and residuals,
+  in addition to the previously-supported single-argument (residuals
+  only) form, which continues to work unchanged. :pr:`10191`
+- Add ``fit_regularized`` to ``HurdleCountModel``. :pr:`10204`
 
 .. rubric:: Performance
 
@@ -758,7 +847,61 @@ Notable Bug Fixes
   splines with few interior knots, where it previously produced
   incorrect (non-equally-spaced) knots or raised. :pr:`10177`
 - Pass ``transformed`` through to the likelihood when computing the
-  ``MarkovSwitching`` Hessian, matching ``score``. :issue:`10148`
+  ``MarkovSwitching`` Hessian, matching ``score``. :pr:`10187`, :issue:`10148`
+- ``wald_test`` (chi-square path, the default) raised ``AttributeError``
+  for any results class without a ``df_resid`` attribute, such as
+  ``MarkovRegressionResults``/``MarkovAutoregressionResults``, even though
+  ``df_resid`` is only needed for the F-test (``use_f=True``)
+  path. :pr:`9297`
+- ``BinomialBayesMixedGLM.fit``/``PoissonBayesMixedGLM.fit`` always
+  returned ``None`` instead of the fitted results instance (see
+  *Breaking Changes and Deprecations* above). ``VariedCovStruct.summary()``
+  (in ``genmod.cov_struct``) printed directly instead of returning a
+  string like the other covariance-structure ``summary()``
+  methods. :pr:`10195`
+- ``GLS.hessian_factor`` was wrong for both non-scalar ``sigma`` cases,
+  and ``ProcessMLE.covariance()`` omitted the ``exp()`` link transform on
+  the scale/smoothing parameters for models not built from a formula,
+  silently producing wrong (and sometimes ``NaN``, through a negative
+  variance) covariance matrices. :pr:`10196`; see also :pr:`10203` and
+  *Breaking Changes and Deprecations* above.
+- In the non-IRLS gradient-optimizer path of ``GLM.fit``, a valid
+  ``normalized_cov_params`` fallback was discarded whenever the observed
+  Hessian could not be inverted, so ``bse`` came back all-``NaN`` even
+  though a usable covariance estimate existed. :pr:`9794`
+- The ``ridge_factor`` Hessian regularization in
+  ``LikelihoodModel.fit(method="newton")`` was applied with the wrong
+  sign for the "newton" branch specifically. :pr:`10184`
+- Fix the ``Tweedie`` GLM log-likelihood overflowing to ``inf`` for
+  ``1 < var_power < 2`` by using ``scipy.special.log_wright_bessel``
+  (SciPy >= 1.14). :pr:`10179`, :pr:`10186`, :pr:`10188`
+- ``psturng``/Tukey's HSD/Games-Howell: raise a clear error instead of
+  returning a fabricated p-value for degrees of freedom ``1 <= v < 2``
+  with an extreme statistic; also fixes wording in related error
+  messages. :pr:`7327`
+- ``MNLogit.score_test(exog_extra=...)`` crashed with ``AttributeError``
+  because ``MNLogit`` did not implement ``score_factor``/
+  ``hessian_factor``. :pr:`10185`
+- ``emplikeAFT.predict`` used ``endog`` where it meant ``exog``, so
+  passing new data to predict from raised or produced nonsensical
+  output. :pr:`10197`
+- Two contour-plotting bugs in ``emplike`` descriptive statistics:
+  ``DescStatUV.plot_contour``'s default levels were in decreasing order,
+  which recent Matplotlib rejects outright, and
+  ``DescStatMV.mv_mean_contour`` contoured the unbounded ``-2`` log
+  log-likelihood ratio against levels documented as significance levels
+  instead of the already-computed p-value, making the plotted region
+  degenerate. :pr:`10197`
+- ``rvs_kernel``'s Beta-kernel perturbation step ignored the ``rng``
+  argument and always drew from SciPy's global default state, so two
+  calls with identically-seeded generators did not reproduce the same
+  output. :pr:`10198`
+- ``Representation.initialize_components`` raised ``TypeError`` on every
+  call (missing the required ``k_states`` argument in its internal
+  ``Initialization.from_components`` call). :pr:`10200`
+- ``miso_lfilter`` selected the wrong output column for any number of
+  input variables other than 2 or 3 (an ``IndexError`` for 1 variable,
+  silently wrong output with no error for 4 or more). :pr:`10201`
 
 
 Build, Packaging, and Infrastructure
@@ -1003,6 +1146,32 @@ Selected items:
 - Add a marker for matplotlib-dependent tests. :pr:`10166`
 - CI: work around a Cython/conda incompatibility that intermittently broke
   the legacy conda test job. :pr:`10158`, :pr:`10160`, :pr:`10162`
+- Add ``tools/check_public_api_coverage.py`` and
+  ``tools/class_coverage_report.py``, AST-based scripts that find public
+  API surface and estimation-class code with no test coverage, plus a CI
+  job that runs them with a baseline so the zero-coverage set cannot grow;
+  this tooling drove much of the coverage-motivated bug-hunting elsewhere
+  in this release. :pr:`10189`
+- Standardize fully on ``ruff`` for linting and drop ``flake8`` from CI
+  and pre-commit, now that ``ruff`` covers the rules previously split
+  across both tools. :pr:`10192`, :pr:`10193`
+- Add further regression tests from the public-API coverage audit for
+  ``statsmodels.test``, ``docstring_helpers``, ``eval_measures.stde``,
+  ``moment_helpers.mnc2mvsk``, ``gof.gof_chisquare_discrete``/
+  ``gof_binning_discrete``, ``RegressionFDR.threshold``,
+  ``weightstats.DescrStatsW.ttost_mean``/``CompareMeans.ztost_ind``,
+  ``datasets.utils.clear_data_home``, ``iolib.table.SimpleTable.pad``,
+  ``GenericLikelihoodModel.reduceparams``/``nloglike``, and
+  ``DistributedModel.fit_joblib``/``DistributedResults.predict``, each
+  checked against an independent reference rather than only asserting no
+  exception is raised. :pr:`10194`
+- Add coverage for ``VARProcess``/``VARResults`` autocorrelation
+  methods. :pr:`10199`
+- Reduce the number of Linux CI jobs to speed up completion. :pr:`10181`
+- Further ``pandas``-compatibility maintenance (``factor.py``,
+  ``grouputils.py``, an ``x13`` test). :pr:`10206`
+- Skip a test requiring an exact ``LinAlgError`` message on
+  WASM/Pyodide. :pr:`10202`
 
 
 Major Bugs Fixed
@@ -1672,3 +1841,35 @@ The following Pull Requests were merged since the last release:
 - :pr:`10176`: BUG: Ensure array_like covnull is coerced
 - :pr:`10177`: BUG: Correct bug in knot centereing
 - :pr:`10178`: BUG: Ensure linepred is always available
+- :pr:`7327`: BUG: Fix libsturng issue #6541
+- :pr:`9297`: Update model.py --corrected wald test error for RegimeSwitchingmodels
+- :pr:`9695`: Fix: cov_type in MixedLM.fit
+- :pr:`9794`: fix: use normalized_cov_params as fallback when hessian inversion fails in GLM.fit
+- :pr:`9979`: BUG: back-transform the univariate smoothed measurement disturbance
+- :pr:`10179`: ENH/BUG: Use scipy.special.log_wright_bessel for the Tweedie log-likelihood
+- :pr:`10180`: ENH: Add explicit target for removal of string aliases
+- :pr:`10181`: CI: Reduce Linux jobs to speed up completion
+- :pr:`10182`: ENH: Allow string type for groups in NominalGEE
+- :pr:`10183`: DOC: Update the release notes
+- :pr:`10184`: MAINT: Fix the sign when using Newton's method
+- :pr:`10185`: BUG: Fix MNLogit score_test crash with exog_extra (GH#9273)
+- :pr:`10186`: MAINT: Add scipy version check
+- :pr:`10187`: BUG: pass transformed through to MarkovSwitching.hessian
+- :pr:`10188`: TST: Avoid test where log_wright_bessel is not available
+- :pr:`10189`: MAINT: Add coverage analysis tooling for the estimation API
+- :pr:`10190`: BUG: Fix bad merge
+- :pr:`10191`: BUG: support model-aware RLM scale callbacks
+- :pr:`10192`: MAINT: Standardize on ruff
+- :pr:`10193`: MAINT: Increase rule use from ruff
+- :pr:`10194`: TST: Cover public API coverage gaps (batch: tools/stats/base/iolib)
+- :pr:`10195`: BUG: Fix _BayesMixedGLM.fit silently returning None
+- :pr:`10196`: BUG: Fix GLS.hessian_factor for 1d (heteroskedastic) sigma
+- :pr:`10197`: BUG: Fix emplikeAFT.predict using endog instead of exog
+- :pr:`10198`: BUG: Fix rvs_kernel ignoring rng for the Beta-kernel draws
+- :pr:`10199`: TST: Add coverage for VARProcess/VARResults acorr methods
+- :pr:`10200`: BUG: Fix Representation.initialize_components missing k_states arg
+- :pr:`10201`: BUG: Fix miso_lfilter column selection for nvars != 2, 3
+- :pr:`10202`: TST: Add skip on WASM for linalg error
+- :pr:`10203`: BUG: Return NotImplementedError rather than wrong result in GLS.hessian_factor
+- :pr:`10204`: ENH: Add fit_regularized to HurdleCountModel
+- :pr:`10206`: MAINT: Address future changes in pandas
