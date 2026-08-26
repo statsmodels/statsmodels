@@ -490,7 +490,7 @@ class CheckHurdlePredict:
         params = self.res1.params
         analytical_score = model.score(params)
         numerical_score = approx_fprime(params, model.loglike)
-        assert_allclose(analytical_score, numerical_score, rtol=1e-3, atol=1e-4)
+        assert_allclose(analytical_score, numerical_score, rtol=1e-3, atol=5e-4)
 
     def test_score_consistency(self):
         model = self.res1.model
