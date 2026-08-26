@@ -72,20 +72,26 @@ exog = DATA[exog_names]
 
 hurdle = HurdleCountModel(endog=endog, exog=exog, dist="poisson", zerodist="poisson")
 hurdle_result = hurdle.fit_regularized(method="l1", alpha=1)
+
+# bse and conf_int regenerated after the standard errors were switched from
+# the two component fits to the joint covariance. The earlier values had a
+# nan for x1, whose standard error came from a component fit that trimmed it
+# even though the reported params, taken from the joint refit, did not.
+# params, nnz_params, aic and bic are unaffected by that change.
 """
 hurdle_l1.params = [
         0.01919266, 0.38688315, 0.21549933, 0.01229817, 0.20997089, 1.54160776
 ]
 hurdle_l1.conf_int = [
-    [-0.01755779, 0.05594311],
-    [0.34039707, 0.43336923],
-    [0.11909076, 0.3119079],
-    [np.nan, np.nan],
-    [0.20107289, 0.21886889],
-    [1.51681052, 1.56640499],
+    [-0.01755772, 0.05594304],
+    [0.34039722, 0.43336909],
+    [0.11909105, 0.31190761],
+    [0.00241333, 0.02218300],
+    [0.20116318, 0.21877859],
+    [1.51128059, 1.57193492],
 ]
 hurdle_l1.bse = [
-    0.01875057, 0.02371782, 0.04918895, np.nan, 0.00453988, 0.01265188
+    0.01875054, 0.02371775, 0.04918880, 0.00504338, 0.00449381, 0.01547333
 ]
 hurdle_l1.nnz_params = 6
 hurdle_l1.aic = 27237.819293111268

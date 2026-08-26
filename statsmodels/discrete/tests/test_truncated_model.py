@@ -504,8 +504,13 @@ class CheckHurdlePredict:
         params = self.res1.params
         analytical_hessian = model.hessian(params)
         numerical_hessian = approx_hess(params, model.loglike)
+        # The cross-model block is analytically zero but is only zero up to
+        # approximation error in approx_hess, and that error scales with the
+        # magnitude of the Hessian, so the absolute tolerance has to as well.
+        # A fixed atol makes this test depend on the BLAS in use.
+        atol = 1e-6 * np.abs(numerical_hessian).max()
         assert_allclose(
-            analytical_hessian, numerical_hessian, rtol=1e-4, atol=1e-5
+            analytical_hessian, numerical_hessian, rtol=1e-4, atol=atol
         )
 
     def test_predict(self, close_figures):
@@ -675,7 +680,31 @@ def test_truncated_negative_binomial_dispersion_factor():
         np.exp(mu_hat ** (p - 1)) - 1)
     assert_allclose(res._dispersion_factor, expected)
 
-class TestRegularizedHurdleSimulated(CheckHurdlePredict):
+class CheckHurdleL1Coherence:
+    """
+    params, bse and trimmed must all describe the same fit.
+
+    params come from the joint refit, so the standard errors have to come
+    from the joint covariance too. Taking them from the two component fits
+    instead let a component trim a parameter that the joint fit kept, which
+    surfaced as a non-zero coefficient reported with a nan standard error.
+    """
+
+    def test_bse_agrees_with_trimmed(self):
+        res1 = self.res1
+        params = np.asarray(res1.params)
+        bse = np.asarray(res1.bse)
+        trimmed = np.asarray(res1.trimmed)
+        assert bse.shape == params.shape
+        # A trimmed parameter is exactly zero and has no standard error, an
+        # untrimmed one is non-zero and has a finite standard error.
+        assert_equal(np.isnan(bse), trimmed)
+        assert_equal(params[trimmed], 0)
+        assert np.all(np.isfinite(bse[~trimmed]))
+        assert res1.nnz_params == (~trimmed).sum()
+
+
+class TestRegularizedHurdleSimulated(CheckHurdlePredict, CheckHurdleL1Coherence):
 
     @classmethod
     def setup_class(cls):
@@ -723,7 +752,7 @@ class TestRegularizedHurdleSimulated(CheckHurdlePredict):
         )
 
 
-class TestHurdleL1(CheckLikelihoodModelL1):
+class TestHurdleL1(CheckLikelihoodModelL1, CheckHurdleL1Coherence):
 
     @classmethod
     def setup_class(cls):
@@ -878,3 +907,5 @@ class TestHurdleL1Compatibility(CheckL1Compatability):
             f_unreg_main.fvalue, f_reg_main.fvalue, rtol=1e-4, atol=5e-2
         )
         assert_almost_equal(f_unreg_main.pvalue, f_reg_main.pvalue, 3)
+
+

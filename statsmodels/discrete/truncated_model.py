@@ -1469,15 +1469,15 @@ class HurdleCountModel(CountModel):
         self.k_extra = (self.k_extra1 + self.k_extra2 + 1)
         xnames1 = ["zm_" + name for name in self.model1.exog_names]
         self.exog_names[:] = xnames1 + self.model2.exog_names
-        cntfit.normalized_cov_params = None
-        try:
-            cov1 = results1._results.cov_params()
-            cov2 = results2._results.cov_params()
-            cntfit.normalized_cov_params = block_diag(cov1, cov2)
-        except ValueError as e:
-            if "need covariance" not in str(e):
-                # could be some other problem
-                raise
+        # Deliberately keep the covariance that came back from the joint
+        # refit. fit has no joint optimization step, so it has to assemble a
+        # covariance out of the two component fits, but here
+        # DiscreteModel.cov_params_func_l1 has already built one from the
+        # joint hessian and the joint set of trimmed parameters. Replacing it
+        # with a block diagonal of the component covariances would pair the
+        # params of one optimization with the standard errors of another,
+        # which shows up as a non-zero coefficient reported with a nan
+        # standard error whenever the two disagree about trimming.
 
         hurdlefit = self.result_class_reg(
             self, cntfit, results_zero=results1, results_count=results2
@@ -1790,10 +1790,22 @@ class L1HurdleCountResults(HurdleCountResults):
         self.nnz_params = (~self.trimmed).sum()
 
         # Set degrees of freedom. Adjust for extra parameters not included in
-        # df_model.
+        # df_model. Unlike L1CountResults, df_resid does not add k_extra back,
+        # so that it agrees with HurdleCountResults on an untrimmed fit.
         k_extra = getattr(self.model, "k_extra", 0)
         self.df_model = self.nnz_params - 1 - k_extra
         self.df_resid = self.model.endog.shape[0] - self.nnz_params
+
+    @cache_readonly
+    def bse(self):
+        # Not HurdleCountResults.bse, which concatenates the standard errors
+        # of the two component fits. params come from the joint refit, so the
+        # standard errors have to come from the joint covariance as well, or
+        # the two disagree about which parameters were trimmed. This is the
+        # standard LikelihoodModelResults.bse.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            return np.sqrt(np.diag(self.cov_params()))
 
 
 class HurdleCountResultsWrapper(lm.RegressionResultsWrapper):
