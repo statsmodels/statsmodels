@@ -32,6 +32,13 @@ import statsmodels.regression.linear_model as lm
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    float_like,
+    int_like,
+    string_like,
+)
 
 
 class TruncatedLFGeneric(CountModel):
@@ -1114,10 +1121,11 @@ class HurdleCountModel(CountModel):
             missing=missing,
             **kwargs
             )
-        if len(exog.shape) == 1:
-            self.k_exog = 1
-        else:
-            self.k_exog = exog.shape[1]
+        # Use self.exog rather than the exog argument: the base class has
+        # already converted it to a 2-dimensional ndarray, so this also
+        # accepts the array_like inputs (lists, Series, DataFrames) that
+        # every other count model accepts.
+        self.k_exog = self.exog.shape[1]
         self.k_extra1 = 0
         self.k_extra2 = 0
 
@@ -1351,27 +1359,44 @@ class HurdleCountModel(CountModel):
         (ii) :math:`|\partial_k L| \leq \alpha_k`  and  :math:`\beta_k = 0`
         """
         _validate_l1_method(method)
+        if maxiter != "defined_by_method":
+            maxiter = int_like(maxiter, "maxiter")
+            if maxiter < 0:
+                raise ValueError("maxiter must be non-negative")
+        full_output = bool_like(full_output, "full_output")
+        disp = bool_like(disp, "disp")
+        if callback is not None and not callable(callback):
+            raise TypeError("callback must be callable or None")
+        trim_mode = string_like(
+            trim_mode, "trim_mode", options=("auto", "size", "off"),
+            lower=False
+        )
+        auto_trim_tol = float_like(auto_trim_tol, "auto_trim_tol")
+        size_trim_tol = float_like(size_trim_tol, "size_trim_tol")
+        qc_tol = float_like(qc_tol, "qc_tol")
 
         k_zero = self._k_zero
         k_params = k_zero + self.k_exog + self.k_extra2
         if np.size(alpha) == 1:
             # Do not penalize extra parameters if alpha is a scalar
-            alpha = alpha * np.concatenate([
+            alpha = float_like(alpha, "alpha") * np.concatenate([
                 np.ones(self.k_exog),
                 np.zeros(self.k_extra1),
                 np.ones(self.k_exog),
                 np.zeros(self.k_extra2),
             ])
         else:
-            alpha = np.asarray(alpha, dtype=float)
-            if alpha.ndim != 1 or alpha.size != k_params:
+            alpha = array_like(alpha, "alpha", ndim=1)
+            if alpha.size != k_params:
                 raise ValueError(
                     "alpha must be a scalar or a 1-dimensional array with "
                     f"one entry per parameter. The model has {k_params} "
                     f"parameters, {k_zero} in the zero model and "
                     f"{k_params - k_zero} in the main model, but alpha has "
-                    f"shape {np.shape(alpha)}."
+                    f"{alpha.size}."
                 )
+        if not np.all(alpha >= 0):
+            raise ValueError("alpha must be non-negative")
         alpha1 = alpha[:k_zero]
         alpha2 = alpha[k_zero:]
 
@@ -1379,6 +1404,14 @@ class HurdleCountModel(CountModel):
             start_params1 = None
             start_params2 = None
         else:
+            start_params = array_like(start_params, "start_params", ndim=1)
+            if start_params.size != k_params:
+                raise ValueError(
+                    "start_params must have one entry per parameter. The "
+                    f"model has {k_params} parameters, {k_zero} in the zero "
+                    f"model and {k_params - k_zero} in the main model, but "
+                    f"start_params has {start_params.size}."
+                )
             start_params1 = start_params[:k_zero]
             start_params2 = start_params[k_zero:]
 
