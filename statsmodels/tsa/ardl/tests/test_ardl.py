@@ -667,6 +667,28 @@ def test_apply_unexpected_exog_raises():
         res_no_exog.apply(endog=y.iloc[:50], exog=x.iloc[:50])
 
 
+def test_apply_no_exog_roundtrip():
+    """
+    apply()ing a no-exog model with exog=None -- the ordinary, documented
+    case for such a model -- used to crash. ARDLResults.apply reconstructs
+    the clone with order=existing._order, and _order for a no-exog model is
+    `{}` (the *resolved* empty order, not the raw None the user originally
+    passed), which _format_order's `order in (0, None)` guard does not
+    match; it fell through to array_like(None, ...) and raised. append()
+    delegates to apply() and hit the identical crash.
+    """
+    y = dane_data.lrm
+    res_no_exog = ARDL(y.iloc[:45], 3, trend="c").fit()
+
+    applied = res_no_exog.apply(endog=y.iloc[:50], exog=None)
+    assert applied.model.exog is None
+    assert np.all(np.isfinite(applied.params))
+
+    appended = res_no_exog.append(endog=y.iloc[45:50], exog=None)
+    assert appended.model.exog is None
+    assert_allclose(applied.model._x, appended.model._x)
+
+
 def test_apply_missing_exog_raises():
     """
     apply()'s own explicit check for this case ("exog must be provided

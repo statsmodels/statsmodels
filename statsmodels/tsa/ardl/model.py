@@ -141,7 +141,15 @@ def _format_order(
 ) -> dict[Hashable, list[int]]:
     keys: list[Hashable]
     exog_order: dict[Hashable, int | Sequence[int] | None]
-    if exog is None and order in (0, None):
+    if exog is None and (order in (0, None) or not order):
+        # order is `{}`, the resolved (already-formatted) empty order that
+        # a no-exog model's own _order attribute holds -- ARDLResults.apply
+        # and .append round-trip _order back through this function when
+        # cloning a fitted model onto new data, so `order in (0, None)`
+        # alone isn't enough: an empty dict is truthy-equal to neither `0`
+        # nor `None`, so without this it falls through to the array_like
+        # call below and raises on the None exog that's completely
+        # legitimate for a model that never had exog to begin with.
         return {}
     if not isinstance(exog, pd.DataFrame):
         exog = array_like(exog, "exog", ndim=2, maxdim=2)
