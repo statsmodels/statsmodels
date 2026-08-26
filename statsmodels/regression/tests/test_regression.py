@@ -1921,15 +1921,16 @@ def test_hessian_factor_gls_wls_matches_numerical_hessian():
     check(GLS(endog, exog, sigma=sigma))
 
 
-def test_hessian_factor_gls_full_sigma_is_diag_cholsigmainv():
+def test_hessian_factor_gls_full_sigma_raises():
     # For a full (non-diagonal) sigma, hessian_factor can only return a 1d
     # per-observation vector, so (exog.T*hessian_factor).dot(exog) can never
     # reconstruct the true GLS Hessian -exog.T@sigma^-1@exog/scale when
     # sigma^-1 has off-diagonal entries -- no diagonal reweighting of exog
-    # reproduces an off-diagonal quadratic form. So unlike the None/1d-sigma
-    # cases above, this only exercises the branch and checks it returns what
-    # it documents (the diagonal of cholsigmainv), not full Hessian
-    # equivalence.
+    # reproduces an off-diagonal quadratic form. This used to silently
+    # return the diagonal of cholsigmainv (a genuinely wrong Hessian, not
+    # just an unnormalized one -- see GH real-bugs.md); it now raises
+    # instead of returning a value nothing could use correctly. fit() uses
+    # the full cholsigmainv matrix, not hessian_factor, so it's unaffected.
     rng = np.random.default_rng(9284)
     n, k = 12, 2
     exog = np.column_stack([np.ones(n), rng.standard_normal((n, k - 1))])
@@ -1938,9 +1939,13 @@ def test_hessian_factor_gls_full_sigma_is_diag_cholsigmainv():
     sigma = a.dot(a.T) + n * np.eye(n)
 
     mod = GLS(endog, exog, sigma=sigma)
-    hf = mod.hessian_factor(np.array([1.0, -0.5]))
-    assert hf.shape == (n,)
-    assert_allclose(hf, np.diag(mod.cholsigmainv))
+    with pytest.raises(NotImplementedError, match="hessian_factor"):
+        mod.hessian_factor(np.array([1.0, -0.5]))
+
+    # fit() itself is unaffected -- it whitens with the full cholsigmainv
+    # matrix, never going through hessian_factor.
+    res = mod.fit()
+    assert np.isfinite(res.params).all()
 
 
 def test_conf_int_el_matches_own_critical_value_and_shrinks():
