@@ -1856,6 +1856,18 @@ class UECM(ARDL):
     then the 0-th lag of the exogenous variables is not included and the
     sum starts at ``m=1``.
 
+    The coefficient names used in the summary follow the lag-operator
+    notation
+
+    * ``<name>.L<k>`` : the level of variable ``<name>`` lagged by ``k``
+      periods, i.e. ``name[t-k]``. In a UECM, these are the long-run
+      (error-correction) terms.
+    * ``D.<name>`` : the first difference of ``<name>``, i.e.
+      ``name[t] - name[t-1]``
+    * ``D.<name>.L<k>`` : the first difference lagged by ``k`` periods,
+      i.e. ``name[t-k] - name[t-k-1]``, so that ``D.lry.L1`` is
+      ``lry[t-1] - lry[t-2]``
+
     Examples
     --------
     >>> from statsmodels.tsa.api import UECM
@@ -1883,6 +1895,13 @@ class UECM(ARDL):
     >>> lrma = np.asarray(lrm)
     >>> exoga = np.asarray(exog)
     >>> UECM(lrma, 3, exoga, {0: 1, 1: 3, 2: 2})
+
+    The estimated coefficient names use the ``D.`` and ``.Lk`` notation
+    described in the Notes section
+
+    >>> res = UECM(data.lrm, 2, data[["lry"]], 2).fit()
+    >>> res.params.index.tolist()
+    ['const', 'lrm.L1', 'lry.L1', 'D.lrm.L1', 'D.lry.L0', 'D.lry.L1']
     """
 
     def __init__(
