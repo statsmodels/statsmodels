@@ -8,7 +8,7 @@ Release summary
 ===============
 
 This note covers all changes merged into ``main`` between the ``v0.15.0.dev0``
-tag (2023-05-05) and the current development head (2026-08-26).
+tag (2023-05-05) and the ``v0.15.0`` release (2026-08-27).
 
 statsmodels is using github to store the updated documentation. Two versions
 are available:
@@ -28,11 +28,11 @@ docstrings.
 Release Statistics
 -------------------
 
-- **Issues closed**: 355
-- **Pull requests merged**: 649
-- **Non-merge commits**: 1730
-- **Contributors** (by git log author, unique names): 169
-- **Time span**: 2023-05-05 through 2026-08-26
+- **Issues closed**: 358
+- **Pull requests merged**: 655
+- **Non-merge commits**: 1740
+- **Contributors** (by git log author, unique names): 171
+- **Time span**: 2023-05-05 through 2026-08-27
 
 The Highlights
 ===============
@@ -278,7 +278,7 @@ touched, and it changes behavior in two distinct ways:
   ``"increasing"``/``"decreasing"``/``"two-sided"`` for heteroskedasticity
   tests): informal short forms such as ``"2s"``, ``"l"``, ``"s"``, ``"i"``,
   ``"inc"``, ``"d"``, ``"dec"``, or ``"2"`` were accepted but never
-  documented. These still work today, but now raise a ``FutureWarning``
+  documented. These still work in 0.15.0, but now raise a ``FutureWarning``
   naming the documented spelling to switch to, and will stop being accepted
   after statsmodels 0.16 (:pr:`10170`, :pr:`10180`). This affects, among others,
   :class:`~statsmodels.stats.weightstats.DescrStatsW`/
@@ -385,6 +385,22 @@ A few of the more consequential correctness fixes in this release (see
   ``log_wright_bessel`` is not accurate enough) the previous,
   overflow-prone computation is still used. :pr:`10179`, :pr:`10186`,
   :pr:`10188`
+- ``HurdleCountModel.fit`` passed its caller's ``start_params`` unsplit to
+  both of its two component models, so any ``start_params`` of the
+  documented, whole-model length raised a shape-mismatch error from deep
+  inside the optimizer instead of fitting. It is now split the same way
+  ``fit_regularized`` already splits it. The same fix also makes
+  ``fit_regularized`` report the joint refit's own convergence flag
+  (previously overwritten by the two component fits' flags) and makes
+  the L1-penalized solver's Hessian-inversion fallback raise on a
+  non-finite (rather than merely singular) Hessian instead of silently
+  proceeding with a ``NaN`` covariance. :pr:`10205`
+- ``ARDLResults.apply``/``append`` raised for a model that originally had
+  no ``exog`` and was applied to a series with no ``exog`` either -- a
+  legitimate no-op round trip -- and, separately, its two specific,
+  documented ``exog``-mismatch errors were unreachable for most of the
+  mismatches they describe because model reconstruction failed first
+  with an unrelated, confusing error. :pr:`10207`
 
 
 Breaking Changes and Deprecations
@@ -661,6 +677,10 @@ New Features and Enhancements
   in addition to the previously-supported single-argument (residuals
   only) form, which continues to work unchanged. :pr:`10191`
 - Add ``fit_regularized`` to ``HurdleCountModel``. :pr:`10204`
+- ``MICEData`` is now iterable: each iteration step advances the chain by
+  one update cycle and yields the current imputed dataset, so
+  ``itertools.islice(mice_data, n)`` produces ``n`` successive imputed
+  datasets. :pr:`10210`
 
 .. rubric:: Performance
 
@@ -672,10 +692,6 @@ New Features and Enhancements
 Notable Bug Fixes
 ====================
 
-- Make ``MICEData`` iterable; each iteration step advances the MICE chain by
-  one update cycle and yields the current imputed dataset. :issue:`7110`
-- Clarify the ``VARResults.df_model`` docstring: it counts parameters per
-  equation, not across all equations. :issue:`8183`
 - Fix a typo in the ``InfeasibleTestError`` exception string. :pr:`8878`
 - Correct diagnostics for changes in pandas. :pr:`8887`
 - MNLogit Wald tests: fix ``ravel``, string ``cov_names``. :pr:`8907`
@@ -906,6 +922,14 @@ Notable Bug Fixes
 - ``miso_lfilter`` selected the wrong output column for any number of
   input variables other than 2 or 3 (an ``IndexError`` for 1 variable,
   silently wrong output with no error for 4 or more). :pr:`10201`
+- ``HurdleCountModel.fit`` now splits ``start_params`` between its zero and
+  main components instead of passing the full vector to both, and
+  ``fit_regularized`` reports the joint refit's own convergence flag; the
+  L1-penalized solver also raises on a non-finite Hessian instead of
+  silently returning a ``NaN`` covariance. :pr:`10205`
+- ``ARDLResults.apply``/``append`` no longer raises on a legitimate
+  no-``exog``-to-no-``exog`` round trip, and its ``exog``-mismatch error
+  messages are now actually reachable. :pr:`10207`
 
 
 Build, Packaging, and Infrastructure
@@ -1067,6 +1091,9 @@ and the ``AGENTS.md`` guidance used to drive this pass (:pr:`10125`).
 - Replace broken OECD glossary links in the ``endog``/``exog``
   documentation. :pr:`10122`
 - Improve the ``pacf`` docstring. :pr:`10169`
+- Clarify that ``VARResults.df_model`` counts free parameters per equation
+  (``neqs * k_ar`` lagged terms plus ``k_exog`` deterministic terms), not
+  the total across all equations. :pr:`10209`
 
 
 Testing, Linting, and Maintenance
@@ -1192,8 +1219,8 @@ Development summary and credits
 
 Thanks to everyone who contributed code, documentation, bug reports, and
 review to this release cycle. The following list of contributors is
-generated from ``git log`` between ``v0.15.0.dev0`` and the current
-development head, and may not be complete or fully deduplicated across
+generated from ``git log`` between ``v0.15.0.dev0`` and the ``v0.15.0``
+release, and may not be complete or fully deduplicated across
 differently-configured git identities:
 
 Achraf Ez, Aditi Juneja, Adrian Ross, Agriya Khetarpal, Alex Alborghetti,
@@ -1209,7 +1236,7 @@ Joey Scanga, Josef Perktold, Joshua Markovic, Justin Mahlik, Kaif,
 Kakarot35, Kayvan Zahiri, Kevin Sheppard, Kevin Gregory, Kumar Aditya,
 Lakshmi786, Loi Nguyen, Luke J, Maciej Skorski, Manlai Amar, Marc Bresson,
 Mathias Hauser, Maxime Gourguechon, Melissa Wu, Michał Górny, Michel de
-Ruiter, Naimish Machchhar, Pranav Achar, Puneet Dixit, Rahul Rathnavel K,
+Ruiter, Naimish Machchhar, Panzerkampfwagen-del, Pranav Achar, Puneet Dixit, Rahul Rathnavel K,
 Ralf Gommers, Rebecca N. Palmer, Ritika shrestha, RoyS, Seaic Mac
 Murchadha, Sebastian Pölsterl, Shamus, Solaris-star, Sreekant Baheti,
 Tartopohm, Vedant Madane, Vikram Kumar, Viktor, Vitaliy, Vladimir
@@ -1842,10 +1869,6 @@ The following Pull Requests were merged since the last release:
 - :pr:`10173`: ENH: Improve string checking
 - :pr:`10174`: BUG: Add array_like for offset
 - :pr:`10175`: BUG: Remove cache_readonly the presented parameter
-- :pr:`time-varying regression with differencing in the state vector
-- :pr:`10173`: ENH: Improve string checking
-- :pr:`10174`: BUG: Add array_like for offset
-- :pr:`10175`: BUG: Remove cache_readonly the presented parameter
 - :pr:`10176`: BUG: Ensure array_like covnull is coerced
 - :pr:`10177`: BUG: Correct bug in knot centereing
 - :pr:`10178`: BUG: Ensure linepred is always available
@@ -1880,4 +1903,10 @@ The following Pull Requests were merged since the last release:
 - :pr:`10202`: TST: Add skip on WASM for linalg error
 - :pr:`10203`: BUG: Return NotImplementedError rather than wrong result in GLS.hessian_factor
 - :pr:`10204`: ENH: Add fit_regularized to HurdleCountModel
+- :pr:`10205`: BUG: Split start_params across HurdleCountModel.fit's two components
 - :pr:`10206`: MAINT: Address future changes in pandas
+- :pr:`10207`: BUG: Validate exog before reconstructing the model in ARDLResults.apply
+- :pr:`10208`: DOC: Update release notes
+- :pr:`10209`: DOC: clarify VARResults.df_model counts parameters per equation
+- :pr:`10210`: ENH: make MICEData iterable, yielding successive imputed datasets
+- :pr:`8712`: STY: change nobs2 to nobs0 for consistency/style
