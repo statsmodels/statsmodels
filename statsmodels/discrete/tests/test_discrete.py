@@ -4163,3 +4163,27 @@ class TestMNLogitScoreTest:
         assert 0 <= test_result.pvalue.item() <= 1
         # 1 extra column * (J-1=3) equations = 3 constraints
         assert test_result.k_constraint == 3
+
+
+def test_logit_loglikeobs_extreme_linpred():
+    # gh-3923: log(cdf(z)) overflowed in exp for large |z|, producing -inf
+    # loglikeobs values and RuntimeWarnings.  The logaddexp-based
+    # computation is stable and agrees with the stable reference.
+    from scipy.special import log_expit
+
+    n = 50
+    z = np.linspace(-1e4, 1e4, n)
+    X = np.column_stack([np.ones(n), z])
+    y = np.ones(n)
+    params = np.array([0.0, 1.0])
+
+    model = sm.Logit(y, X)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        loglikeobs = model.loglikeobs(params)
+        loglike = model.loglike(params)
+
+    assert np.all(np.isfinite(loglikeobs))
+    assert np.all(np.isfinite(loglike))
+    assert_allclose(loglikeobs, log_expit(z), rtol=1e-14)
+    assert_allclose(loglike, loglikeobs.sum(), rtol=1e-14)
