@@ -2677,8 +2677,11 @@ class Logit(BinaryModel):
         q = 2 * self.endog - 1
         linpred = self.predict(params, which="linear")
         # log Λ(z) = -log(1 + exp(-z)), evaluated with logaddexp so that
-        # large |z| does not overflow (gh-3923)
-        return np.sum(-np.logaddexp(0, -q * linpred))
+        # large |z| does not overflow (gh-3923); asarray ensures a float
+        # dtype since logaddexp does not accept integer arrays on all
+        # numpy builds
+        z = np.asarray(-q * linpred, dtype=np.float64)
+        return np.sum(-np.logaddexp(0, z))
 
     def loglikeobs(self, params):
         """
@@ -2710,7 +2713,8 @@ class Logit(BinaryModel):
         q = 2 * self.endog - 1
         linpred = self.predict(params, which="linear")
         # see the note in loglike above
-        return -np.logaddexp(0, -q * linpred)
+        z = np.asarray(-q * linpred, dtype=np.float64)
+        return -np.logaddexp(0, z)
 
     def score(self, params):
         """

@@ -4174,7 +4174,7 @@ def test_logit_loglikeobs_extreme_linpred():
     n = 50
     z = np.linspace(-1e4, 1e4, n)
     X = np.column_stack([np.ones(n), z])
-    y = np.ones(n)
+    y = np.ones(n, dtype=int)  # integer endog exercises the asarray path
     params = np.array([0.0, 1.0])
 
     model = sm.Logit(y, X)
