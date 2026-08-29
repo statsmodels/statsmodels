@@ -2568,6 +2568,27 @@ class GeneralizedPoisson(CountModel):
         return distr
 
 
+def _log_1pexp(w):
+    """Compute log(1 + exp(w)) without overflow.
+
+    The real-valued case uses logaddexp, the complex-valued case
+    (complex-step differentiation) uses a piecewise log1p form; both
+    are stable for arbitrarily large ``|Re(w)|``.  Integer and boolean
+    inputs are promoted to float64 since logaddexp does not accept
+    them on all numpy builds.
+    """
+    w = np.asarray(w)
+    if w.dtype.kind in "biu":
+        w = w.astype(np.float64)
+    if not np.iscomplexobj(w):
+        return np.logaddexp(0.0, w)
+    out = np.empty(w.shape, dtype=np.complex128)
+    pos = w.real > 0
+    out[pos] = w[pos] + np.log1p(np.exp(-w[pos]))
+    out[~pos] = np.log1p(np.exp(w[~pos]))
+    return out
+
+
 class Logit(BinaryModel):
     __doc__ = f"""
     Logit Model
@@ -2676,12 +2697,11 @@ class Logit(BinaryModel):
         """
         q = 2 * self.endog - 1
         linpred = self.predict(params, which="linear")
-        # log Λ(z) = -log(1 + exp(-z)), evaluated with logaddexp so that
-        # large |z| does not overflow (gh-3923); asarray ensures a float
-        # dtype since logaddexp does not accept integer arrays on all
-        # numpy builds
-        z = np.asarray(-q * linpred, dtype=np.float64)
-        return np.sum(-np.logaddexp(0, z))
+        # log Λ(z) = -log(1 + exp(-z)), evaluated stably so that large
+        # |z| does not overflow (gh-3923); complex inputs (used by
+        # complex-step differentiation) are preserved
+        z = -q * linpred
+        return np.sum(-_log_1pexp(z))
 
     def loglikeobs(self, params):
         """
@@ -2713,8 +2733,8 @@ class Logit(BinaryModel):
         q = 2 * self.endog - 1
         linpred = self.predict(params, which="linear")
         # see the note in loglike above
-        z = np.asarray(-q * linpred, dtype=np.float64)
-        return -np.logaddexp(0, z)
+        z = -q * linpred
+        return -_log_1pexp(z)
 
     def score(self, params):
         """
