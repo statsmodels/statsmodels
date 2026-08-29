@@ -35,6 +35,9 @@
   - img: ../_static/images/variance_components.png
     target: notebooks/generated/variance_components.html
     text: Variance Component Analysis
+  - img: ../_static/images/model_comparison.png
+    target: notebooks/generated/model_comparison.html
+    text: Model Comparison
 - header: Plotting
   id: plotting
   links:
