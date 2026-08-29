@@ -300,3 +300,34 @@ class TestSummaryLabels:
         table = summary_col(results=self.mod, include_r2=False)
         assert "R-squared" not in str(table)
         assert "R-squared Adj." not in str(table)
+
+
+def test_summarycol_fixed_effects_before_info_dict():
+    # gh-9282: the fixed-effects indicator rows belong with the
+    # parameters, i.e. before the rows generated from info_dict
+    from statsmodels.datasets.fair import load_pandas
+
+    df_fair = load_pandas().data
+
+    res0 = OLS.from_formula("affairs ~ yrs_married", df_fair).fit()
+    form1 = "affairs ~ yrs_married + C(occupation)"
+    res1 = OLS.from_formula(form1, df_fair).fit()
+
+    summary = summary_col(
+        [res0, res1],
+        model_names=["ols0", "ols1"],
+        float_format="%0.2f",
+        info_dict={"N": lambda x: f"{int(x.nobs):d}"},
+        fixed_effects=["occupation"],
+    )
+
+    assert list(summary.tables[0].index) == [
+        "Intercept",
+        "",
+        "yrs_married",
+        "",
+        "occupation FE",
+        "R-squared",
+        "R-squared Adj.",
+        "N",
+    ]

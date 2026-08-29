@@ -701,13 +701,13 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
             idx.append(index[i + 1])
     summ.index = idx
 
-    # add fixed effects info
+    # add fixed effects info.  The fixed-effects indicator rows belong
+    # with the parameters and are placed before the other model info
+    # rows (gh-9282), so they are built separately from info_dict.
+    fe_dict = {}
     if fixed_effects:
-        if not info_dict:
-            info_dict = {}
-
         for fe in fixed_effects:
-            info_dict[fe + " FE"] = (
+            fe_dict[fe + " FE"] = (
                 lambda x, fe=fe, fe_present=fe_present, fe_absent=fe_absent:
                     fe_present
                     if any((f"C({fe})" in param) for param in x.params.index)
@@ -718,22 +718,47 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
     if info_dict:
         cols = [_col_info(x, info_dict.get(x.model.__class__.__name__,
                                            info_dict)) for x in results]
-    else:
+    elif not fixed_effects:
         cols = [_col_info(x, getattr(x, "default_model_infos", None)) for x in
                 results]
+    else:
+        # fixed_effects without info_dict: no user info rows are added,
+        # matching the historical output of this combination
+        cols = [_col_info(x, {}) for x in results]
     # use unique column names, otherwise the merge will not succeed
     for df, name in zip(cols, _make_unique([df.columns[0] for df in cols]), strict=True):
         df.columns = [name]
 
     info = reduce(merg, cols)
-    dat = pd.DataFrame(np.vstack([summ, info]))  # pd.concat better, but error
+
+    if fe_dict:
+        fe_cols = [_col_info(x, fe_dict) for x in results]
+        for df, name in zip(fe_cols,
+                            _make_unique([df.columns[0] for df in fe_cols]),
+                            strict=True):
+            df.columns = [name]
+        fe_info = reduce(merg, fe_cols)
+
+        # the R-squared rows end the params block; place them after the
+        # fixed-effects indicators and before the other model info rows
+        r_squared_rows = [ix for ix in summ.index if "R-squared" in str(ix)]
+        r_squared_section = summ.loc[r_squared_rows]
+        summ = summ.drop(index=r_squared_rows)
+
+        dat = pd.DataFrame(np.vstack([summ, fe_info, r_squared_section, info]))
+        dat.index = pd.Index(summ.index.tolist() + fe_info.index.tolist()
+                             + r_squared_section.index.tolist()
+                             + info.index.tolist())
+    else:
+        dat = pd.DataFrame(np.vstack([summ, info]))  # pd.concat better, but error
+        dat.index = pd.Index(summ.index.tolist() + info.index.tolist())
     dat.columns = summ.columns
-    dat.index = pd.Index(summ.index.tolist() + info.index.tolist())
     summ = dat
 
     summ = summ.fillna("")
 
-    # fixed effects processing
+    # fixed effects processing: drop the C(fe) coefficient rows, the
+    # fixed-effects indicator rows convey their presence
     if fixed_effects:
         index_series = pd.Series(summ.index, index=summ.index)
         skip_flag = index_series.apply(
@@ -742,11 +767,6 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         skip_next_flag = skip_flag.shift(fill_value=False)
         final_skip = skip_flag | skip_next_flag
         summ = summ[~final_skip]
-
-        r_squared_rows = summ.index[summ.index.str.contains("R-squared")]
-        r_squared_section = summ.loc[r_squared_rows]
-        summ = summ.drop(index=r_squared_rows)
-        summ = pd.concat([summ, r_squared_section])
 
     smry = Summary()
     smry._merge_latex = True
