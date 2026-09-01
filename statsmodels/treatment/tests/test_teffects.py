@@ -106,7 +106,7 @@ class TestTEffects:
         assert_allclose(res1.params, res2.table[idx, 0], rtol=1e-4)
         assert_allclose(res1.bse, res2.table[idx, 1], rtol=0.05)
 
-        # test effects on the treated, not available for aipw
+        # test effects on the treated, no Stata reference values for aipw
         if not meth.startswith("aipw"):
             table = res2.table_t
 
@@ -134,6 +134,43 @@ class TestTEffects:
             assert_allclose(res1, res0.effect, rtol=1e-12)
             assert_allclose(res0.start_params, res0.results_gmm.params,
                             rtol=1e-12)
+
+    @pytest.mark.parametrize("meth", ["aipw", "aipw_wls"])
+    @pytest.mark.parametrize("effect_group", [1, 0])
+    def test_aipw_effect_group(self, meth, effect_group):
+        # no Stata reference values, check against direct computation
+        teff = self.teff
+        res1 = getattr(teff, meth)(return_results=False,
+                                   effect_group=effect_group)
+        res0 = getattr(teff, meth)(return_results=True,
+                                   effect_group=effect_group)
+        assert_allclose(res1, res0.effect, rtol=1e-12)
+        assert_allclose(res0.start_params, res0.results_gmm.params,
+                        rtol=1e-12)
+        assert res0.effect_group == effect_group
+
+        tind = teff.treatment
+        endog = teff.model_pool.endog
+        exog = teff.model_pool.exog
+        prob = res_probit.predict()
+        if meth == "aipw":
+            fit0 = teff.results0.predict(exog)
+            fit1 = teff.results1.predict(exog)
+        else:
+            fit0 = teff.results_ipwwls0.predict(exog)
+            fit1 = teff.results_ipwwls1.predict(exog)
+        if effect_group == 0:
+            # ATC by symmetry: swap treatment and control
+            tind, prob = 1 - tind, 1 - prob
+            fit0, fit1 = fit1, fit0
+        treated = tind == 1
+        odds = prob / (1 - prob)
+        pom_t = endog[treated].mean()
+        pom_c = (fit0[treated].sum()
+                 + (odds * (endog - fit0))[~treated].sum()) / treated.sum()
+        if effect_group == 0:
+            pom_t, pom_c = pom_c, pom_t
+        assert_allclose(res1, [pom_t - pom_c, pom_c, pom_t], rtol=1e-12)
 
 
 @pytest.mark.parametrize("meth", ["ipw_ra", "aipw_wls"])
