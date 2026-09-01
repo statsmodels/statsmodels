@@ -37,6 +37,7 @@ from statsmodels.regression.linear_model import WLS
 from statsmodels.sandbox.regression.gmm import GMM
 from statsmodels.stats.contrast import ContrastResults
 from statsmodels.tools.docstring import indent
+from statsmodels.tools.validation import array_like
 
 
 def _mom_ate(params, endog, tind, prob, weighted=True):
@@ -799,7 +800,7 @@ class TreatmentEffect:
     _cov_type : str, optional
         Internal keyword. The keyword does not affect GMMResults which always
         corresponds to HC0 standard errors.
-    ps_bounds : tuple of float, optional
+    ps_bounds : array_like of float, optional
         Lower and upper bounds for clipping the propensity score, i.e. the
         predicted probabilities of the selection model. The same bounds are
         used for point estimates and for the GMM moment conditions of all
@@ -826,6 +827,11 @@ class TreatmentEffect:
         self.__dict__.update(kwds)  # currently not used
         self.treatment = np.asarray(treatment)
         self.treat_mask = treat_mask = (treatment == 1)
+        ps_bounds = array_like(ps_bounds, "ps_bounds", shape=(2,))
+        if not 0 < ps_bounds[0] < ps_bounds[1] < 1:
+            raise ValueError(
+                "ps_bounds values must satisfy 0 < lower < upper < 1"
+                )
         self.ps_bounds = ps_bounds
 
         if results_select is not None:
