@@ -134,3 +134,19 @@ class TestTEffects:
             assert_allclose(res1, res0.effect, rtol=1e-12)
             assert_allclose(res0.start_params, res0.results_gmm.params,
                             rtol=1e-12)
+
+
+@pytest.mark.parametrize("meth", ["ipw_ra", "aipw_wls"])
+def test_select_params_not_six(meth):
+    # GMM moment conditions used to hardcode 6 selection parameters
+    formula_sel = "mbsmoke_ ~ mmarried_ + mage + fbaby_"
+    res_sel = Probit.from_formula(formula_sel, dta_cat).fit(disp=0)
+    formula_outcome = "bweight ~ prenatal1_ + mmarried_ + mage + fbaby_"
+    mod = OLS.from_formula(formula_outcome, dta_cat)
+    tind = np.asarray(dta_cat["mbsmoke_"])
+    teff = TreatmentEffect(mod, tind, results_select=res_sel)
+
+    res1 = getattr(teff, meth)(return_results=False)
+    res0 = getattr(teff, meth)(return_results=True)
+    assert_allclose(res1, res0.effect, rtol=1e-12)
+    assert_allclose(res0.start_params, res0.results_gmm.params, rtol=1e-12)
