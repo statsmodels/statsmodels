@@ -260,6 +260,41 @@ def ate_ipw(endog, tind, prob, weighted=True, probt=None):
     return (endog * wdiff).mean(), (endog * w0).mean(), (endog * w1).mean()
 
 
+def _aipw_pom_terms(endog, tind, prob, fitted0, fitted1, effect_group):
+    """Observation terms of AIPW potential outcome means for a target group
+
+    Returns (tmean0, tmean1, sind) where sind is the indicator of the target
+    population. POM_t is sum(tmean_t) / sum(sind).
+    """
+    if effect_group == "all":
+        sind = np.ones_like(prob)
+        c0 = 1 / (1 - prob)
+        c1 = 1 / prob
+    elif effect_group == 1:
+        sind = tind
+        c0 = prob / (1 - prob)
+        c1 = 1.
+    elif effect_group == 0:
+        sind = 1 - tind
+        c0 = 1.
+        c1 = (1 - prob) / prob
+    else:
+        raise ValueError("incorrect option for effect_group")
+    tmean0 = sind * fitted0 + (1 - tind) * c0 * (endog - fitted0)
+    tmean1 = sind * fitted1 + tind * c1 * (endog - fitted1)
+    return tmean0, tmean1, sind
+
+
+def _standardize_effect_group(effect_group):
+    if effect_group in [1, "treated"]:
+        return 1
+    if effect_group in [0, "untreated", "control"]:
+        return 0
+    if effect_group == "all":
+        return "all"
+    raise ValueError("incorrect option for effect_group")
+
+
 class _TEGMMGeneric1(GMM):
     """
     GMM class to get cov_params for treatment effects
@@ -477,15 +512,10 @@ class _AIPWGMM(_TEGMMGeneric1):
         # moments for target statistics, ATE and POM
         tind = ra.treatment
         tind = np.concatenate((tind[~treat_mask], tind[treat_mask]))
-        correct0 = (endog - fitted0) / (1 - prob) * (1 - tind)
-        correct1 = (endog - fitted1) / prob * tind
-
-        tmean0 = fitted0 + correct0
-        tmean1 = fitted1 + correct1
-        ate = tmean1 - tmean0
-
-        mm = ate - pm
-        mpom = tmean0 - ppom
+        tmean0, tmean1, sind = _aipw_pom_terms(
+            endog, tind, prob, fitted0, fitted1, self.effect_group)
+        mm = (tmean1 - tmean0 - sind * pm) / sind.mean()
+        mpom = (tmean0 - sind * ppom) / sind.mean()
         mm = np.column_stack((mm, mpom))
 
         # Note: res_select has original data order,
@@ -554,15 +584,10 @@ class _AIPWWLSGMM(_TEGMMGeneric1):
         tind = ra.treatment
         tind = np.concatenate((tind[~treat_mask], tind[treat_mask]))
 
-        correct0 = (endog - fitted0) / (1 - prob) * (1 - tind)
-        correct1 = (endog - fitted1) / prob * tind
-
-        tmean0 = fitted0 + correct0
-        tmean1 = fitted1 + correct1
-        ate = tmean1 - tmean0
-
-        mm = ate - pm
-        mpom = tmean0 - ppom
+        tmean0, tmean1, sind = _aipw_pom_terms(
+            endog, tind, prob, fitted0, fitted1, self.effect_group)
+        mm = (tmean1 - tmean0 - sind * pm) / sind.mean()
+        mpom = (tmean0 - sind * ppom) / sind.mean()
         mm = np.column_stack((mm, mpom))
 
         # Note: res_select has original data order,
@@ -749,23 +774,6 @@ effect_group : {"all", 0, 1}
     returned.
     If effect_group is 0, "untreated" or "control", then effects on
     untreated, i.e., control group, are returned.
-disp : bool, optional
-    Indicates whether the scipy optimizer should display the
-    optimization results
-
-Returns
--------
-TreatmentEffectResults or tuple
-    Results instance if `return_results` is True, otherwise the tuple
-    (ATE, POM0, POM1).
-"""
-
-doc_params_returns2 = """\
-Parameters
-----------
-return_results : bool, optional
-    If True, then a results instance is returned.
-    If False, just ATE, POM0 and POM1 are returned.
 disp : bool, optional
     Indicates whether the scipy optimizer should display the
     optimization results
@@ -1018,8 +1026,8 @@ class TreatmentEffect:
                                      )
         return res
 
-    @Substitution(params_returns=indent(doc_params_returns2, " " * 8))
-    def aipw(self, return_results=True, disp=False):
+    @Substitution(params_returns=indent(doc_params_returns, " " * 8))
+    def aipw(self, return_results=True, effect_group="all", disp=False):
         """
         ATE and POM from double robust augmented inverse probability weighting
         \n%(params_returns)s
@@ -1027,22 +1035,24 @@ class TreatmentEffect:
         --------
         TreatmentEffectResults
         """
-        nobs = self.nobs
+        effect_group = _standardize_effect_group(effect_group)
         prob = self.prob_select
         tind = self.treatment
+        endog = self.model_pool.endog
         exog = self.model_pool.exog  # in original order
-        correct0 = (self.results0.resid / (1 - prob[tind == 0])).sum() / nobs
-        correct1 = (self.results1.resid / (prob[tind == 1])).sum() / nobs
-        tmean0 = self.results0.predict(exog).mean() + correct0
-        tmean1 = self.results1.predict(exog).mean() + correct1
+        tmean0, tmean1, sind = _aipw_pom_terms(
+            endog, tind, prob, self.results0.predict(exog),
+            self.results1.predict(exog), effect_group)
+        tmean0 = tmean0.sum() / sind.sum()
+        tmean1 = tmean1.sum() / sind.sum()
         ate = tmean1 - tmean0
         if not return_results:
             return ate, tmean0, tmean1
 
-        endog = self.model_pool.endog
         p2_aipw = np.asarray([ate, tmean0])
 
-        mag_aipw1 = _AIPWGMM(endog, self.results_select, None, teff=self)
+        mag_aipw1 = _AIPWGMM(endog, self.results_select, None, teff=self,
+                             effect_group=effect_group)
         start_params = np.concatenate((
             p2_aipw,
             self.results0.params, self.results1.params,
@@ -1056,24 +1066,23 @@ class TreatmentEffect:
 
         res = TreatmentEffectResults(self, res_gmm, "AIPW",
                                      start_params=start_params,
-                                     effect_group="all",
+                                     effect_group=effect_group,
                                      )
         return res
 
-    @Substitution(params_returns=indent(doc_params_returns2, " " * 8))
-    def aipw_wls(self, return_results=True, disp=False):
+    @Substitution(params_returns=indent(doc_params_returns, " " * 8))
+    def aipw_wls(self, return_results=True, effect_group="all", disp=False):
         """
-        ATE and POM from double robust augmented inverse probability weighting
+        ATE and POM from double robust augmented inverse probability weighting.
 
         This uses weighted outcome regression, while `aipw` uses unweighted
         outcome regression.
-        Option for effect on treated or on untreated is not available.
         \n%(params_returns)s
         See Also
         --------
         TreatmentEffectResults
         """
-        nobs = self.nobs
+        effect_group = _standardize_effect_group(effect_group)
         prob = self.prob_select
 
         endog = self.model_pool.endog
@@ -1085,21 +1094,20 @@ class TreatmentEffect:
         mod1 = WLS(endog[treat_mask], exog[treat_mask],
                    weights=ww1[treat_mask])
         result1 = mod1.fit(cov_type="HC1")
-        mean1_ipw2 = result1.predict(exog).mean()
 
         ww0 = (1 - tind) / (1 - prob) * ((1 - tind) / (1 - prob) - 1)
         mod0 = WLS(endog[~treat_mask], exog[~treat_mask],
                    weights=ww0[~treat_mask])
         result0 = mod0.fit(cov_type="HC1")
-        mean0_ipw2 = result0.predict(exog).mean()
 
         self.results_ipwwls0 = result0
         self.results_ipwwls1 = result1
 
-        correct0 = (result0.resid / (1 - prob[tind == 0])).sum() / nobs
-        correct1 = (result1.resid / (prob[tind == 1])).sum() / nobs
-        tmean0 = mean0_ipw2 + correct0
-        tmean1 = mean1_ipw2 + correct1
+        tmean0, tmean1, sind = _aipw_pom_terms(
+            endog, tind, prob, result0.predict(exog), result1.predict(exog),
+            effect_group)
+        tmean0 = tmean0.sum() / sind.sum()
+        tmean1 = tmean1.sum() / sind.sum()
         ate = tmean1 - tmean0
 
         if not return_results:
@@ -1109,7 +1117,7 @@ class TreatmentEffect:
 
         # GMM
         mod_gmm = _AIPWWLSGMM(endog, self.results_select, None,
-                              teff=self)
+                              teff=self, effect_group=effect_group)
         start_params = np.concatenate((
             p2_aipw_wls,
             result0.params,
@@ -1123,7 +1131,7 @@ class TreatmentEffect:
             maxiter=1)
         res = TreatmentEffectResults(self, res_gmm, "AIPW-WLS",
                                      start_params=start_params,
-                                     effect_group="all",
+                                     effect_group=effect_group,
                                      )
         return res
 
