@@ -519,7 +519,7 @@ class _AIPWWLSGMM(_TEGMMGeneric1):
         pm = params[0]  # ATE parameter
         p0 = params[1:k+1]
         p1 = params[k+1:2*k+1]
-        ps = params[-6:]
+        ps = params[-self.k_select:]
         mod0 = ra.results0.model
         mod1 = ra.results1.model
         # use reordered exog, endog so it matches sub models by group
@@ -633,7 +633,7 @@ class _IPWRAGMM(_TEGMMGeneric1):
         pm = params[0]  # ATE parameter
         p0 = params[1:k+1]
         p1 = params[k+1:2*k+1]
-        ps = params[-6:]
+        ps = params[-self.k_select:]
         mod0 = ra.results0.model
         mod1 = ra.results1.model
 
