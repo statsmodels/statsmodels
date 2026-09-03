@@ -4187,3 +4187,73 @@ def test_logit_loglikeobs_extreme_linpred():
     assert np.all(np.isfinite(loglike))
     assert_allclose(loglikeobs, log_expit(z), rtol=1e-14)
     assert_allclose(loglike, loglikeobs.sum(), rtol=1e-14)
+
+
+def test_probit_loglikeobs_extreme_linpred():
+    # log(clip(cdf(z), eps, 1)) was flat at log(eps) for z below about -8
+    # and log(cdf(z)) underflows to -inf below about -38.  The log_ndtr
+    # based computation is exact and agrees with the stable reference.
+    from scipy import stats
+
+    n = 50
+    z = np.linspace(-1e4, 1e4, n)
+    X = np.column_stack([np.ones(n), z])
+    y = np.ones(n, dtype=int)
+    params = np.array([0.0, 1.0])
+
+    model = sm.Probit(y, X)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        loglikeobs = model.loglikeobs(params)
+        loglike = model.loglike(params)
+        score_obs = model.score_obs(params)
+        hessian = model.hessian(params)
+
+    assert np.all(np.isfinite(loglikeobs))
+    assert np.all(np.isfinite(score_obs))
+    assert np.all(np.isfinite(hessian))
+    assert_allclose(loglikeobs, stats.norm.logcdf(z), rtol=1e-14)
+    assert_allclose(loglike, loglikeobs.sum(), rtol=1e-14)
+    # score factor is the inverse Mills ratio phi(z) / Phi(z)
+    mills = np.exp(stats.norm.logpdf(z) - stats.norm.logcdf(z))
+    assert_allclose(score_obs, mills[:, None] * X, rtol=1e-12)
+
+
+def test_probit_extreme_observation_fit():
+    # One extreme, misclassified observation drives q * XB to -60 at
+    # reasonable params.  The clipped loglike and score were far from the
+    # exact values there, the unclipped hessian was nan, and bfgs stopped
+    # at a spurious optimum with nan standard errors.
+    from scipy import optimize, stats
+
+    from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
+
+    rng = np.random.default_rng(1)
+    n = 300
+    x = rng.standard_normal(n)
+    y = (1.5 * x + rng.standard_normal(n) > 0).astype(int)
+    x = np.append(x, 40.0)
+    y = np.append(y, 0)
+    X = np.column_stack([np.ones(n + 1), x])
+    q = 2 * y - 1
+    model = sm.Probit(y, X)
+
+    params = np.array([0.0, 1.5])
+    z = q * (X @ params)
+    assert z.min() < -50
+    assert_allclose(model.loglike(params), stats.norm.logcdf(z).sum(), rtol=1e-12)
+    mills = np.exp(stats.norm.logpdf(z) - stats.norm.logcdf(z))
+    assert_allclose(model.score(params), X.T @ (q * mills), rtol=1e-12)
+    assert_allclose(model.score(params), approx_fprime_cs(params, model.loglike), rtol=1e-8)
+    assert_allclose(model.hessian(params), approx_hess(params, model.loglike), rtol=1e-4)
+
+    # both optimizers agree with a direct minimization of the exact loglike
+    ref = optimize.minimize(
+        lambda b: -stats.norm.logcdf(q * (X @ b)).sum(), params, method="BFGS"
+    )
+    for method in ["newton", "bfgs"]:
+        res = model.fit(method=method, disp=0, maxiter=200)
+        assert res.mle_retvals["converged"]
+        assert_allclose(res.params, ref.x, rtol=1e-4)
+        assert_allclose(res.llf, -ref.fun, rtol=1e-8)
+        assert np.all(np.isfinite(res.bse))
