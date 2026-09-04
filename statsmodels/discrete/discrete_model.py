@@ -2568,6 +2568,27 @@ class GeneralizedPoisson(CountModel):
         return distr
 
 
+def _norm_logcdf(z):
+    """Compute log(Phi(z)) without underflow.
+
+    ``log(norm.cdf(z))`` underflows to ``log(0)`` for ``z`` below about
+    -38 and loses precision well before that; ``log_ndtr`` is exact for
+    arbitrarily large ``|z|`` and supports complex inputs, so complex-step
+    differentiation keeps working.
+    """
+    return special.log_ndtr(z)
+
+
+def _norm_mills(z):
+    """Compute the inverse Mills ratio phi(z) / Phi(z) without underflow.
+
+    Evaluated in log space so that the ratio stays finite and accurate
+    where ``norm.cdf(z)`` underflows to zero (``z`` below about -38); the
+    ratio behaves like ``-z`` there.
+    """
+    return np.exp(stats.norm._logpdf(z) - special.log_ndtr(z))
+
+
 def _log_1pexp(w):
     """Compute log(1 + exp(w)) without overflow.
 
@@ -2991,7 +3012,9 @@ class Probit(BinaryModel):
 
         q = 2 * self.endog - 1
         linpred = self.predict(params, which="linear")
-        return np.sum(np.log(np.clip(self.cdf(q * linpred), FLOAT_EPS, 1)))
+        # log Phi(z) evaluated in log space so that large |z| neither
+        # underflows to log(0) nor gets clipped to a constant
+        return np.sum(_norm_logcdf(q * linpred))
 
     def loglikeobs(self, params):
         """
@@ -3020,7 +3043,7 @@ class Probit(BinaryModel):
 
         q = 2 * self.endog - 1
         linpred = self.predict(params, which="linear")
-        return np.log(np.clip(self.cdf(q * linpred), FLOAT_EPS, 1))
+        return _norm_logcdf(q * linpred)
 
     def score(self, params):
         """
@@ -3048,8 +3071,7 @@ class Probit(BinaryModel):
         X = self.exog
         XB = self.predict(params, which="linear")
         q = 2 * y - 1
-        # clip to get rid of invalid divide complaint
-        L = q * self.pdf(q * XB) / np.clip(self.cdf(q * XB), FLOAT_EPS, 1 - FLOAT_EPS)
+        L = q * _norm_mills(q * XB)
         return np.dot(L, X)
 
     def score_obs(self, params):
@@ -3080,8 +3102,7 @@ class Probit(BinaryModel):
         X = self.exog
         XB = self.predict(params, which="linear")
         q = 2 * y - 1
-        # clip to get rid of invalid divide complaint
-        L = q * self.pdf(q * XB) / np.clip(self.cdf(q * XB), FLOAT_EPS, 1 - FLOAT_EPS)
+        L = q * _norm_mills(q * XB)
         return L[:, None] * X
 
     def score_factor(self, params):
@@ -3111,8 +3132,7 @@ class Probit(BinaryModel):
         y = self.endog
         XB = self.predict(params, which="linear")
         q = 2 * y - 1
-        # clip to get rid of invalid divide complaint
-        L = q * self.pdf(q * XB) / np.clip(self.cdf(q * XB), FLOAT_EPS, 1 - FLOAT_EPS)
+        L = q * _norm_mills(q * XB)
         return L
 
     def hessian(self, params):
@@ -3143,7 +3163,7 @@ class Probit(BinaryModel):
         X = self.exog
         XB = self.predict(params, which="linear")
         q = 2 * self.endog - 1
-        L = q * self.pdf(q * XB) / self.cdf(q * XB)
+        L = q * _norm_mills(q * XB)
         return np.dot(-L * (L + XB) * X.T, X)
 
     def hessian_factor(self, params):
@@ -3173,7 +3193,7 @@ class Probit(BinaryModel):
         """
         XB = self.predict(params, which="linear")
         q = 2 * self.endog - 1
-        L = q * self.pdf(q * XB) / self.cdf(q * XB)
+        L = q * _norm_mills(q * XB)
         return -L * (L + XB)
 
     @Appender(DiscreteModel.fit.__doc__)
@@ -3218,10 +3238,12 @@ class Probit(BinaryModel):
 
         linpred = self.predict(params, which="linear")
 
-        pdf_ = self.pdf(linpred)
-        # clip to get rid of invalid divide complaint
-        cdf_ = np.clip(self.cdf(linpred), FLOAT_EPS, 1 - FLOAT_EPS)
-        deriv = pdf_ / cdf_ / (1 - cdf_)  # deriv factor
+        # phi / (Phi * (1 - Phi)) in log space, using 1 - Phi(z) = Phi(-z)
+        deriv = np.exp(
+            stats.norm._logpdf(linpred)
+            - special.log_ndtr(linpred)
+            - special.log_ndtr(-linpred)
+        )
         return deriv[:, None] * self.exog
 
 
