@@ -15,6 +15,7 @@ from statsmodels.nonparametric.kde import (
     kdensity,
     kdensityfft,
 )
+from statsmodels.nonparametric.linbin import fast_linbin
 from statsmodels.sandbox.nonparametric import kernels
 
 # get results from Stata
@@ -406,6 +407,43 @@ def test_kde_bw_positive():
     kde = KDE(x)
     kde.fit()
     assert kde.bw > 0
+
+
+def test_fast_linbin_boundary_observations():
+    # GH 9556: an observation at the upper grid boundary (li == M - 1) was
+    # split onto gcnts[M], one past the end of the array, and observations
+    # in the first two bins were dropped, so the counts did not sum to nobs.
+    x = np.array([0.0, 0.3, 1.0])
+    counts = fast_linbin(x, 0.0, 1.0, 5)
+    npt.assert_allclose(counts, [1.0, 0.8, 0.2, 0.0, 1.0])
+
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(200)
+    counts = fast_linbin(x, x.min(), x.max(), 512)
+    assert counts.shape == (512,)
+    npt.assert_allclose(counts.sum(), 200)
+    # linear binning preserves the first moment
+    grid = np.linspace(x.min(), x.max(), 512)
+    npt.assert_allclose(counts @ grid, x.sum())
+
+    # observations outside [a, b] are dropped, or moved to the end points
+    x = np.array([-1.0, 0.5, 2.0])
+    npt.assert_allclose(fast_linbin(x, 0.0, 1.0, 5), [0.0, 0.0, 1.0, 0.0, 0.0])
+    npt.assert_allclose(
+        fast_linbin(x, 0.0, 1.0, 5, trunc=0), [1.0, 0.0, 1.0, 0.0, 1.0]
+    )
+
+
+def test_kde_fft_cut_zero():
+    # GH 9556: with cut=0 the largest observation sits exactly on the last
+    # grid point; the FFT path wrote past the end of the bin counts and
+    # dropped the smallest observation, so the density integrated to 5/6.
+    x = [24.0, 43.0, 27.0, 15.0, 37.0, 8.82]
+    kde = KDE(x)
+    kde.fit(fft=True, cut=0)
+    density, support = kde.density, kde.support
+    integral = np.sum(0.5 * (density[1:] + density[:-1]) * np.diff(support))
+    npt.assert_allclose(integral, 1.0, atol=0.01)
 
 
 def test_fit_self():
