@@ -3142,6 +3142,28 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
 
 
+@pytest.mark.parametrize(
+    "order, seasonal_order, expected",
+    [
+        ((1, 0, 1), (1, 0, 2, 4), "SARIMAX(1, 0, 1)x(1, 0, 2, 4)"),
+        ((1, 0, 0), (0, 0, 1, 4), "SARIMAX(1, 0, 0)x(0, 0, 1, 4)"),
+        ((0, 0, 2), (2, 0, 1, 12), "SARIMAX(0, 0, 2)x(2, 0, 1, 12)"),
+        ((1, 0, 1), (1, 0, [2], 4), "SARIMAX(1, 0, 1)x(1, 0, [2], 4)"),
+    ],
+)
+def test_summary_seasonal_ma_order(order, seasonal_order, expected):
+    # GH 9490: the seasonal MA order was compared against the number of
+    # non-seasonal MA parameters, so whenever q != Q the summary printed Q
+    # as the list of seasonal MA lags, e.g. "x(1, 0, [1, 2], 4)".
+    endog = np.arange(40, dtype=float) % 4
+    mod = sarimax.SARIMAX(endog, order=order, seasonal_order=seasonal_order)
+    params = np.zeros(mod.k_params)
+    params[-1] = 1.0
+    res = mod.filter(params)
+
+    assert expected in res.summary().tables[0].as_text()
+
+
 def test_model_latex_names_matches_model_names_structure():
     rs = np.random.RandomState(19)
     endog = rs.standard_normal(60).cumsum()
