@@ -719,7 +719,12 @@ def acorr_ljungbox(
         # obtain thresholds
         q = 2.4
         threshold = np.sqrt(q * np.log(nobs))
-        threshold_metric = np.abs(sacf).max() * np.sqrt(nobs)
+        # The threshold maximises over lags 1..maxlag. sacf[0] is the lag-0
+        # autocorrelation, which is identically 1, so including it fixed
+        # threshold_metric at sqrt(nobs) for every input and made the
+        # comparison below equivalent to nobs <= q * log(nobs), which has no
+        # solution. The penalty on the first branch was therefore never used.
+        threshold_metric = np.abs(sacf[1:]).max() * np.sqrt(nobs)
 
         # compute penalized sum of squared autocorrelations
         if threshold_metric <= threshold:
@@ -727,8 +732,11 @@ def acorr_ljungbox(
         else:
             q_sacf = q_sacf - (2 * np.arange(1, nobs))
 
+        # q_sacf is built from sacf[1:] and penalised with np.arange(1, nobs),
+        # so q_sacf[j] is the criterion for lag j + 1. Convert the index of the
+        # maximum into a lag rather than using it directly.
         # note: np.argmax returns first (i.e., smallest) index of largest value
-        lags = np.argmax(q_sacf)
+        lags = np.argmax(q_sacf) + 1
         lags = max(1, lags)  # optimal lag has to be at least 1
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
