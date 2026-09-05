@@ -2523,7 +2523,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             "nonmissing" if there are no NaN values or "missing" if there are.
         full_output : bool, optional
             Set to True to have all available output from EM iterations in
-            the Results object's mle_retvals attribute.
+            the Results object's mle_retvals attribute, including whether the
+            iterations converged.
         return_params : bool, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
@@ -2713,6 +2714,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
         # Check for convergence
         not_converged = (i == maxiter and delta > tolerance)
+        converged = bool(not terminate and delta <= tolerance)
 
         # If no convergence without explicit termination, warn users
         if not_converged:
@@ -2758,7 +2760,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             # Save the output
             if full_output:
                 llf.append(result.llf)
-                em_retvals = Bunch(params=np.array(params), llf=np.array(llf), iter=i, inits=inits)
+                em_retvals = Bunch(
+                    params=np.array(params), llf=np.array(llf), iter=i,
+                    converged=converged, inits=inits)
                 em_settings = Bunch(method="em", tolerance=tolerance, maxiter=maxiter)
             else:
                 em_retvals = None

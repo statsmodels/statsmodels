@@ -2073,7 +2073,7 @@ class SARIMAXResults(MLEResults):
             else:
                 order_seasonal_ar = list(self.model._spec.seasonal_ar_lags)
             tmp = int(self.model.k_seasonal_ma / self.model.seasonal_periods)
-            if tmp == self.model.k_ma_params:
+            if tmp == self.model.k_seasonal_ma_params:
                 order_seasonal_ma = tmp
             else:
                 order_seasonal_ma = list(self.model._spec.seasonal_ma_lags)

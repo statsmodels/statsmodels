@@ -20,6 +20,7 @@ import pytest
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import add_constant
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, EstimationWarning
 from statsmodels.tsa.statespace import (
     dynamic_factor,
     dynamic_factor_mq,
@@ -1778,6 +1779,59 @@ def test_em_invalid_mstep_method():
     )
     with pytest.raises(ValueError, match="mstep_method"):
         mod.fit_em(maxiter=1, mstep_method="invalid")
+
+
+def _get_small_em_model():
+    rng = np.random.default_rng(0)
+    nobs, k_endog = 30, 2
+    factor = np.cumsum(rng.standard_normal(nobs)) * 0.3
+    endog = factor[:, None] * rng.uniform(0.6, 1.4, k_endog)
+    endog += rng.standard_normal((nobs, k_endog)) * 0.5
+    return dynamic_factor_mq.DynamicFactorMQ(
+        endog, factors=1, factor_orders=1, idiosyncratic_ar1=False
+    )
+
+
+@pytest.mark.parametrize(
+    ("maxiter", "converged"), [(1, False), (500, True)]
+)
+def test_em_convergence_flag(maxiter, converged):
+    mod = _get_small_em_model()
+    if converged:
+        res = mod.fit_em(maxiter=maxiter, tolerance=1e-6, disp=False)
+    else:
+        with pytest.warns(ConvergenceWarning, match="maximum number of iterations"):
+            res = mod.fit_em(maxiter=maxiter, tolerance=1e-6, disp=False)
+
+    assert res.mle_retvals.converged is converged
+
+
+def test_em_convergence_flag_after_revert(monkeypatch):
+    mod = _get_small_em_model()
+    original_iteration = mod._em_iteration
+    previous_llf = None
+    iteration = 0
+
+    def decrease_second_iteration(params0, init=None, mstep_method=None):
+        nonlocal iteration, previous_llf
+        result, params1 = original_iteration(
+            params0, init=init, mstep_method=mstep_method
+        )
+        iteration += 1
+        current_llf = result.llf_obs.sum()
+        if iteration == 2:
+            result.llf_obs += (
+                previous_llf - 1.0 - current_llf
+            ) / result.llf_obs.size
+        previous_llf = result.llf_obs.sum()
+        return result, params1
+
+    monkeypatch.setattr(mod, "_em_iteration", decrease_second_iteration)
+    with pytest.warns(EstimationWarning, match="Log-likelihood decreased"):
+        res = mod.fit_em(maxiter=10, tolerance=1e-10, disp=False)
+
+    assert res.mle_retvals.iter < 10
+    assert res.mle_retvals.converged is False
 
 
 @pytest.mark.filterwarnings("ignore:Log-likelihood decreased")
