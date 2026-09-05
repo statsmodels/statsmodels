@@ -83,6 +83,20 @@ def test_custom_exog_and_binary(teff):
     assert list(teff.balance_table(x.to_numpy()).index) == ["x0", "x1"]
 
 
+def test_constant_column_unequal_groups():
+    # Rounding makes group means of 0.1 differ, so variances are not exactly 0.
+    selection = SimpleNamespace(
+        predict=lambda: np.full(9, 0.5),
+        model=SimpleNamespace(exog=np.full((9, 1), 0.1), exog_names=["c"]),
+    )
+    teff = TreatmentEffect(
+        OLS(np.zeros(9), np.ones((9, 1))),
+        np.array([0, 0, 0, 1, 1, 1, 1, 1, 1]),
+        results_select=selection,
+    )
+    assert teff.balance_table().loc["c", ["smd", "smd_weighted"]].isna().all()
+
+
 @pytest.mark.parametrize(
     "exog",
     [
