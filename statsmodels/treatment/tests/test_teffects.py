@@ -136,6 +136,13 @@ class TestTEffects:
                             rtol=1e-12)
 
     @pytest.mark.parametrize("meth", ["aipw", "aipw_wls"])
+    @pytest.mark.parametrize("disp", [False, True])
+    def test_aipw_positional_disp(self, meth, disp):
+        estimate = getattr(self.teff, meth)
+        assert_allclose(estimate(False, disp), estimate(return_results=False),
+                        rtol=1e-12)
+
+    @pytest.mark.parametrize("meth", ["aipw", "aipw_wls"])
     @pytest.mark.parametrize("effect_group", [1, 0])
     def test_aipw_effect_group(self, meth, effect_group):
         # no Stata reference values, check against direct computation

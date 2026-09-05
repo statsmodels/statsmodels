@@ -1027,7 +1027,7 @@ class TreatmentEffect:
         return res
 
     @Substitution(params_returns=indent(doc_params_returns, " " * 8))
-    def aipw(self, return_results=True, effect_group="all", disp=False):
+    def aipw(self, return_results=True, disp=False, *, effect_group="all"):
         """
         ATE and POM from double robust augmented inverse probability weighting
         \n%(params_returns)s
@@ -1071,7 +1071,7 @@ class TreatmentEffect:
         return res
 
     @Substitution(params_returns=indent(doc_params_returns, " " * 8))
-    def aipw_wls(self, return_results=True, effect_group="all", disp=False):
+    def aipw_wls(self, return_results=True, disp=False, *, effect_group="all"):
         """
         ATE and POM from double robust augmented inverse probability weighting.
 
