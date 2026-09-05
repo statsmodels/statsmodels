@@ -11,7 +11,7 @@ from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
-from statsmodels.discrete.discrete_model import Probit
+from statsmodels.discrete.discrete_model import Logit, Probit
 from statsmodels.regression.linear_model import OLS
 from statsmodels.treatment.treatment_effects import TreatmentEffect
 
@@ -171,6 +171,21 @@ class TestTEffects:
         if effect_group == 0:
             pom_t, pom_c = pom_c, pom_t
         assert_allclose(res1, [pom_t - pom_c, pom_c, pom_t], rtol=1e-12)
+
+
+@pytest.mark.parametrize("meth", ["aipw", "aipw_wls"])
+@pytest.mark.parametrize("effect_group", [1, 0])
+def test_aipw_effect_group_doubleml(meth, effect_group):
+    # reference values from DoubleML, see results_teffects.py
+    xnames = "prenatal1_ + mmarried_ + mage + mage2 + fbaby_ + medu"
+    res_logit = Logit.from_formula("mbsmoke_ ~ " + xnames, dta_cat).fit(disp=0)
+    mod = OLS.from_formula("bweight ~ " + xnames, dta_cat)
+    tind = np.asarray(dta_cat["mbsmoke_"])
+    teff = TreatmentEffect(mod, tind, results_select=res_logit,
+                           ps_bounds=(0.01, 0.99))
+    res = getattr(teff, meth)(return_results=False, effect_group=effect_group)
+    key = meth + ("_att" if effect_group == 1 else "_atc")
+    assert_allclose(res[0], res_st.results_aipw_atet_dml[key], rtol=1e-7)
 
 
 @pytest.mark.parametrize("meth", ["ipw_ra", "aipw_wls"])
