@@ -357,3 +357,19 @@ results_ipwra = Bunch(
                 table_t_colnames=table_t_colnames,
                 table_t_rownames=table_t_rownames,
                 )
+
+
+# ATET and ATC for aipw and aipw_wls from DoubleML 0.11.4
+# (DoubleMLIRM, score="ATTE", trimming_threshold=0.01, scikit-learn 1.9.0).
+# Nuisance models are fit on the full sample (no cross-fitting):
+#   propensity: logit on prenatal1_ mmarried_ mage mage2 fbaby_ medu
+#   outcome:    OLS on the same covariates, by treatment group
+# ATC is obtained by relabeling the treatment as 1 - d.
+# For aipw_wls the DoubleML score is evaluated with external_predictions
+# equal to the weighted outcome regressions of TreatmentEffect.aipw_wls.
+results_aipw_atet_dml = Bunch(
+                aipw_att=-226.178244689,
+                aipw_atc=-230.764615449,
+                aipw_wls_att=-223.448320722,
+                aipw_wls_atc=-223.602248802,
+                )
