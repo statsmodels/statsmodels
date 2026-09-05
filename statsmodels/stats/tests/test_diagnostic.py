@@ -34,6 +34,7 @@ import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.stattools import acf
 
 cur_dir = Path(__file__).parent.resolve()
 
@@ -1806,6 +1807,40 @@ def test_ljungbox_auto_lag_whitenoise():
     # TODO: compare selected lags with Stata/ R to confirm
     # that correct auto_lag is selected
     assert res.shape[0] >= 1  # auto lag selected must be at least 1
+
+
+def test_ljungbox_auto_lag_selects_the_lag_not_the_index():
+    # q_sacf[j] is the penalised criterion for lag j + 1, so the index of the
+    # maximum must be converted to a lag. On an MA(7) the only autocorrelation
+    # is at lag 7, so the automatic rule has to select 7.
+    rs = np.random.RandomState(20090151)
+    e = rs.standard_normal(307)
+    y = e[7:] + 0.6 * e[:-7]
+    res = smsdia.acorr_ljungbox(y, auto_lag=True)
+    assert res.shape[0] == 7
+    assert res["lb_pvalue"].iloc[-1] < 1e-6
+    # the same series scored at the lag one below is not significant at 5%,
+    # so the off-by-one changed the conclusion of the test, not just the lag
+    assert smsdia.acorr_ljungbox(y, lags=[6])["lb_pvalue"].iloc[0] > 0.05
+
+
+def test_ljungbox_auto_lag_threshold_excludes_lag_zero():
+    # The threshold metric maximises |rho_j| over j >= 1. sacf[0] is identically
+    # 1, so including it pinned the metric at sqrt(nobs) and the comparison
+    # became nobs <= 2.4 * log(nobs), which is false for every nobs. The first
+    # penalty branch was therefore unreachable and the rule always used 2 * p.
+    rs = np.random.RandomState(21)
+    data = rs.standard_normal(500)
+
+    sacf = acf(data, nlags=len(data) - 1, fft=False)
+    assert np.abs(sacf).max() == sacf[0] == 1.0
+    threshold = np.sqrt(2.4 * np.log(len(data)))
+    assert np.abs(sacf[1:]).max() * np.sqrt(len(data)) <= threshold
+    assert np.abs(sacf).max() * np.sqrt(len(data)) > threshold
+
+    # This is white noise, so the heavier penalty applies and the rule should
+    # collapse to a single lag. Under the 2 * p penalty it selected ten.
+    assert smsdia.acorr_ljungbox(data, auto_lag=True).shape[0] == 1
 
 
 def test_ljungbox_errors_warnings():
