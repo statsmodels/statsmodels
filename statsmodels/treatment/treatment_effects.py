@@ -992,7 +992,7 @@ class TreatmentEffect:
         weighted1 = np.average(x1, axis=0, weights=w1)
         scale = np.sqrt((x0.var(axis=0, ddof=1)
                          + x1.var(axis=0, ddof=1)) / 2)
-        scale[scale == 0] = np.nan
+        scale[(np.ptp(x0, axis=0) == 0) & (np.ptp(x1, axis=0) == 0)] = np.nan
         return pd.DataFrame({
             "mean_control": mean0,
             "mean_treated": mean1,
