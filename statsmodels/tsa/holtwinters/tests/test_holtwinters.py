@@ -18,6 +18,7 @@ import pytest
 import scipy.stats
 
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa.holtwinters import (
     PY_SMOOTHERS,
     SMOOTHERS,
@@ -745,11 +746,11 @@ class TestHoltWinters:
                 59.487190,
                 35.758854,
                 44.600641,
-                47.751384,
+                47.913736,
                 59.487190,
                 35.758854,
                 44.600641,
-                47.751384,
+                47.913736,
             ],
             2,
         )
@@ -2164,3 +2165,83 @@ def test_all_initial_values():
     assert_allclose(fit2.params["initial_level"], lvl)
     assert_allclose(fit2.params["initial_trend"], trend)
     assert_allclose(fit2.params["initial_seasons"], seas)
+
+
+@pytest.mark.parametrize("trend", [None, "add"])
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+def test_seasonal_forecast_uses_final_season(trend, seasonal):
+    # GH 9538: forecasts at horizons h = m, 2m, ... used the seasonal factor
+    # from one full period before the end of the sample, s[T - m], instead
+    # of the final in-sample factor s[T].
+    m = 4
+    nobs = 32
+    rs = np.random.RandomState(12345)
+    y = 10 + 0.1 * np.arange(nobs) + np.tile([1.0, -1.0, 2.0, -2.0], nobs // m)
+    y += 0.3 * rs.standard_normal(nobs)
+    alpha, beta, gamma = 0.3, 0.1, 0.4
+    if seasonal == "add":
+        initial_seasonal = [0.9, -1.1, 2.2, -2.0]
+    else:
+        initial_seasonal = [1.09, 0.91, 1.19, 0.81]
+    has_trend = trend is not None
+    mod = ExponentialSmoothing(
+        y,
+        trend=trend,
+        seasonal=seasonal,
+        seasonal_periods=m,
+        initialization_method="known",
+        initial_level=10.0,
+        initial_trend=0.1 if has_trend else None,
+        initial_seasonal=initial_seasonal,
+    )
+    res = mod.fit(
+        smoothing_level=alpha,
+        smoothing_trend=beta if has_trend else None,
+        smoothing_seasonal=gamma,
+        optimized=False,
+    )
+    h = 2 * m + 1
+    fcast = res.forecast(h)
+
+    # Hyndman & Athanasopoulos, FPP, Holt-Winters' method:
+    # y[T+h|T] = (l[T] + h * b[T]) (+ or *) s[T + h - m * (k + 1)]
+    level = res.level[-1]
+    slope = res.trend[-1] if has_trend else 0.0
+    season = np.asarray(res.season)[-m:]
+    expected = []
+    for step in range(1, h + 1):
+        s_t = season[(step - 1) % m]
+        base = level + step * slope
+        expected.append(base + s_t if seasonal == "add" else base * s_t)
+    assert_allclose(fcast, expected, rtol=1e-12)
+
+    if seasonal == "mul":
+        # ETSModel's multiplicative-seasonal update differs from the
+        # Holt-Winters recursion, so only the additive case is cross-checked.
+        return
+
+    # ETSModel is an independent implementation of the same recursions.
+    # Its smoothing_trend is beta* = alpha * beta in Holt-Winters notation.
+    ets = ETSModel(
+        y,
+        error="add",
+        trend=trend,
+        seasonal="add",
+        seasonal_periods=m,
+        initialization_method="known",
+        initial_level=10.0,
+        initial_trend=0.1 if has_trend else None,
+        initial_seasonal=initial_seasonal,
+    )
+    ets_params = {
+        "smoothing_level": alpha,
+        "smoothing_trend": alpha * beta,
+        "smoothing_seasonal": gamma,
+        "initial_level": 10.0,
+        "initial_trend": 0.1,
+    }
+    for i, value in enumerate(initial_seasonal):
+        ets_params[f"initial_seasonal.{i}"] = value
+    ets_res = ets.smooth([ets_params[name] for name in ets.param_names])
+    assert_allclose(res.fittedvalues, ets_res.fittedvalues, rtol=1e-10)
+    assert_allclose(fcast, ets_res.forecast(h), rtol=1e-10)

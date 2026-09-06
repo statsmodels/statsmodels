@@ -1286,7 +1286,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 b[:nobs] = dampen(b[:nobs], phi)
                 b[nobs:] = dampen(b[nobs], phi_h)
             trend = trended(lvls, b)
-            s[nobs + m - 1 :] = [s[(nobs - 1) + j % m] for j in range(h + 1 + 1)]
+            s[nobs + m :] = [s[nobs + j % m] for j in range(h + 1)]
             fitted = trend * s[:-m]
         elif seasonal == "add":
             for i in range(1, nobs + 1):
@@ -1311,7 +1311,7 @@ class ExponentialSmoothing(TimeSeriesModel):
                 b[:nobs] = dampen(b[:nobs], phi)
                 b[nobs:] = dampen(b[nobs], phi_h)
             trend = trended(lvls, b)
-            s[nobs + m - 1 :] = [s[(nobs - 1) + j % m] for j in range(h + 1 + 1)]
+            s[nobs + m :] = [s[nobs + j % m] for j in range(h + 1)]
             fitted = trend + s[:-m]
         else:
             for i in range(1, nobs + 1):
