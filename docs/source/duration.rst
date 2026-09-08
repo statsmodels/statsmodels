@@ -181,7 +181,7 @@ depending on the value of the covariates.
    print(rslt.summary())
 
 
-See :ref:`statsmodels-examples` for more detailed examples.
+See the `examples <https://www.statsmodels.org/stable/examples/index.html>`_ for more detailed examples.
 
 
 There are some notebook examples on the Wiki:
