@@ -1216,7 +1216,7 @@ class ARDLResults(AutoRegResults):
             )
         except Exception as exc:
             error = (
-                "An exception occured during the creation of the cloned "
+                "An exception occurred during the creation of the cloned "
                 "ARDL instance when applying the existing model "
                 "specification to the new data. The original traceback appears below"
             )
