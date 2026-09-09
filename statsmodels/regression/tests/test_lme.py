@@ -18,6 +18,7 @@ from scipy import sparse
 
 from statsmodels.base import _penalties as penalties
 from statsmodels.iolib.summary2 import Summary
+from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.mixed_linear_model import (
     MixedLM,
     MixedLMParams,
@@ -1333,6 +1334,102 @@ def test_singular():
     with pytest.warns(SingularMatrixWarning, match=r"effects"):
         mdf = md.fit()
     mdf.summary()
+
+
+def _dense_gls(model, cov_re):
+    # Reference solution with no eigen-splitting shortcuts at all: build
+    # V = Z cov_re Z' + I densely per group and solve GLS directly.
+    n = int(model.nobs)
+    vdense = np.eye(n)
+    row = 0
+    for zg in model.exog_re_li:
+        ng = zg.shape[0]
+        vdense[row:row + ng, row:row + ng] += zg @ cov_re @ zg.T
+        row += ng
+    vinv = np.linalg.inv(vdense)
+    exog, endog = model.exog, model.endog
+    return np.linalg.solve(exog.T @ vinv @ exog, exog.T @ vinv @ endog)
+
+
+def test_get_fe_params_singular_cov_re_matches_ols():
+    # GH 10239: when every eigenvalue of cov_re collapses below get_fe_params'
+    # tol, the fixed effects should smoothly approach the OLS solution (the
+    # cov_re -> 0 limit), not jump to a within-group fixed-effects fit (the
+    # cov_re -> infinity limit) with between-group coefficients zeroed out.
+    rng = np.random.default_rng(0)
+    n_groups, n_per_group = 30, 3
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)  # constant within each group
+    within = np.tile(np.arange(n_per_group, dtype=float), n_groups)
+    exog = np.column_stack([np.ones(n), between, within])
+    endog = (10.0 + 5.0 * between + 2.0 * within
+             + rng.standard_normal(n))
+
+    model = MixedLM(endog, exog, groups)
+    ols_params = OLS(endog, exog).fit().params
+
+    for v in [1e-9, 1e-10, 9.9e-11, 1e-12, 0.0]:
+        fe_params, singular = model.get_fe_params(np.array([[v]]), np.array([]))
+        assert_allclose(fe_params, ols_params, atol=1e-8)
+        assert singular == (v < 1e-10)
+
+
+def test_get_fe_params_partial_singular_cov_re():
+    # GH 10239 follow-up: with two random effects (intercept and a slope),
+    # only one eigendirection of cov_re needs to collapse to trigger the
+    # bug -- the other, perfectly well-conditioned direction does not
+    # protect the fixed effects from being zeroed out.
+    rng = np.random.default_rng(1)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re)
+
+    # Only the intercept direction (variance v0) is pushed below tol; the
+    # slope direction (variance 2.0) stays perfectly well-conditioned.
+    for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
+        cov_re = np.diag([v0, 2.0])
+        fe_params, singular = model.get_fe_params(cov_re, np.array([]))
+        gold = _dense_gls(model, np.diag([max(v0, 1e-12), 2.0]))
+        assert_allclose(fe_params, gold, atol=1e-4)
+        assert singular == (v0 < 1e-10)
+
+
+def test_get_fe_params_correlated_singular_cov_re():
+    # GH 10239 follow-up: a *correlated* near-singular cov_re (as a real
+    # optimizer would produce for dependent random effects, rather than a
+    # clean diagonal with an exact 0.0) previously could make get_fe_params
+    # feed enormous, ill-conditioned values into the Woodbury solver and
+    # crash with LinAlgError. It should instead drop the degenerate
+    # eigendirection and match the dense GLS solution without raising.
+    rng = np.random.default_rng(1)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re)
+
+    a = np.random.default_rng(1).standard_normal((2, 1)) * np.sqrt(2.0)
+    cov_re_good = a @ a.T
+    for noise_scale in [1e-6, 1e-8, 1e-11, 1e-15]:
+        noise = np.random.default_rng(2).standard_normal((2, 2)) * noise_scale
+        cov_re = cov_re_good + noise @ noise.T
+
+        fe_params, singular = model.get_fe_params(cov_re, np.array([]))
+        gold = _dense_gls(model, cov_re)
+        assert_allclose(fe_params, gold, atol=1e-4)
 
 
 def test_get_distribution():
