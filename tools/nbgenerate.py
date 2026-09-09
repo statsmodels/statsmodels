@@ -53,7 +53,7 @@ def execute_nb(src, dst, allow_errors=False, timeout=1000, kernel_name=None):
     allow_errors: bool
     timeout: int
     kernel_name: str
-        defualts to value set in notebook metadata
+        defaults to value set in notebook metadata
 
     Returns
     -------
