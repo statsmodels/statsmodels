@@ -1444,13 +1444,18 @@ class MixedLM(base.LikelihoodModel):
         xtxy = 0.0
         for group_ix, _group in enumerate(self.group_labels):
             vc_var = self._expand_vcomp(vcomp, group_ix)
+            vc_project = False
             if vc_var.size > 0:
                 if vc_var.min() < tol:
-                    # Pseudo-inverse
+                    # Same reasoning as for cov_re above: a variance
+                    # component whose variance has collapsed to
+                    # (numerically) zero should be dropped from the design
+                    # entirely, not given zero precision while its column
+                    # is still passed through the Woodbury solver.
                     sing = True
-                    ii = np.flatnonzero(vc_var >= tol)
-                    vc_vari = np.zeros_like(vc_var)
-                    vc_vari[ii] = 1 / vc_var[ii]
+                    vc_project = True
+                    vc_ii = np.flatnonzero(vc_var >= tol)
+                    vc_vari = 1 / vc_var[vc_ii]
                 else:
                     vc_vari = 1 / vc_var
             else:
@@ -1467,6 +1472,17 @@ class MixedLM(base.LikelihoodModel):
                 cov_re_inv = np.diag(1 / wi_good)
             else:
                 ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
+
+            if vc_project:
+                # ex_r's trailing vc_var.size columns are always the full,
+                # untrimmed variance-component design (re_project only
+                # ever touches the columns before them), so drop the
+                # degenerate ones and recompute ex2_r to match -- same
+                # drop-don't-zero-fill fix as re_project above.
+                re_width = ex_r.shape[1] - vc_var.size
+                good = np.concatenate((np.arange(re_width), re_width + vc_ii))
+                ex_r = ex_r[:, good]
+                ex2_r = np.dot(ex_r.T, ex_r)
 
             if ex_r.shape[1] == 0:
                 # No random effects (or variance components) survive for
