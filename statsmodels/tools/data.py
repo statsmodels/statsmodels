@@ -203,5 +203,11 @@ def _to_pandas(obj):
         Returns the original object unchanged otherwise.
     """
     if _POLARS_TYPES and isinstance(obj, _POLARS_TYPES):
-        return obj.to_pandas()
+        try:
+            return obj.to_pandas()
+        except (ModuleNotFoundError, ImportError):
+            import pandas as pd
+            if hasattr(obj, "to_dict"):
+                return pd.DataFrame(obj.to_dict())
+            return pd.Series(obj.to_numpy(), name=getattr(obj, "name", None))
     return obj

@@ -309,3 +309,26 @@ class TestPolarsEdgeCases:
         np.testing.assert_allclose(
             result_polars.params.values, result_pandas.params.values, rtol=1e-10
         )
+
+    def test_polars_add_constant(self):
+        from statsmodels.tools.tools import add_constant
+
+        df = pl.DataFrame({"x1": [1.0, 2.0, 3.0], "x2": [4.0, 5.0, 6.0]})
+        res = add_constant(df)
+        assert isinstance(res, pd.DataFrame)
+        assert list(res.columns) == ["const", "x1", "x2"]
+        assert res["const"].tolist() == [1.0, 1.0, 1.0]
+
+        s = pl.Series("feat", [10.0, 20.0, 30.0])
+        res_s = add_constant(s)
+        assert isinstance(res_s, pd.DataFrame)
+        assert list(res_s.columns) == ["const", "feat"]
+
+    def test_polars_to_pandas_fallback(self):
+        from statsmodels.tools.data import _to_pandas
+
+        df = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
+        res = _to_pandas(df)
+        assert isinstance(res, pd.DataFrame)
+        assert list(res.columns) == ["a", "b"]
+

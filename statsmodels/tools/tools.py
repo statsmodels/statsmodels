@@ -111,6 +111,9 @@ def add_constant(data, prepend=True, has_constant="skip"):
     is 'const'.
 
     """
+    from statsmodels.tools.data import _to_pandas
+    data = _to_pandas(data)
+
     if _is_using_pandas(data, None):
         from statsmodels.tsa.tsatools import add_trend
 
