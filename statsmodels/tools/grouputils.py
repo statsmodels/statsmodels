@@ -618,7 +618,7 @@ class Grouping:
         if isinstance(index, (Index, MultiIndex)):
             if names is not None:
                 if hasattr(index, "set_names"):  # newer pandas
-                    index.set_names(names, inplace=True)
+                    index = index.set_names(names)
                 else:
                     index.names = names
             self.index = index
@@ -630,7 +630,7 @@ class Grouping:
             if names is None:
                 names = _make_generic_names(self.index)
                 if hasattr(self.index, "set_names"):
-                    self.index.set_names(names, inplace=True)
+                    self.index = self.index.set_names(names)
                 else:
                     self.index.names = names
 

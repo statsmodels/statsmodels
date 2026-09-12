@@ -952,8 +952,7 @@ class NewsResults:
 
         # Drop revisions and totals columns if applicable
         if not show_revisions_columns:
-            impacts.drop(["impact of revisions", "total impact"], axis=1,
-                         inplace=True)
+            impacts = impacts.drop(["impact of revisions", "total impact"], axis=1)
 
         params_data = impacts.values
         params_header = impacts.columns.tolist()
@@ -1132,8 +1131,9 @@ class NewsResults:
         # observed into the index
         base_levels = [0, 1, 2, 3]
         if groupby_overall == "update":
-            details.set_index([columns["current"], columns["prev"]],
-                              append=True, inplace=True)
+            details = details.set_index(
+                [columns["current"], columns["prev"]], append=True
+            )
             details.index = details.index.reorder_levels([0, 1, 4, 5, 2, 3])
             base_levels = [0, 1, 4, 5]
 

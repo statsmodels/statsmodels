@@ -816,7 +816,7 @@ class CheckConcentratedInitialization:
             drop += ["damping_trend"]
         if not cls.mod.seasonal:
             drop += ["smoothing_seasonal"]
-        cls.params.drop(drop, inplace=True)
+        cls.params = cls.params.drop(drop)
 
     @pytest.mark.thread_unsafe(reason="statespace cython code is not thread safe")
     def test_given_params(self):

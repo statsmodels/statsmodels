@@ -322,7 +322,7 @@ class MICEData:
             di = np.abs(di)
             ix = di.idxmin()
             imp_values[col] = self.data[col].loc[ix]
-        self.data.fillna(imp_values, inplace=True)
+        self.data = self.data.fillna(imp_values)
 
     def _split_indices(self, vec):
         null = pd.isna(vec)
