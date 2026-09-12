@@ -291,6 +291,15 @@ def test_covdetmcd():
     assert_allclose(shape, shape_r, rtol=1e-5)
 
 
+def test_cov_starting_handles_more_than_half_as_many_variables_as_observations():
+    rs = np.random.RandomState(10241)
+    x = rs.standard_normal((8, 4))
+
+    results = robcov._cov_starting(x)
+
+    assert_allclose(results[0].mean, x.mean(axis=0))
+
+
 def test_covdetmm():
 
     # results from rrcov

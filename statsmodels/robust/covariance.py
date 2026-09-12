@@ -1395,10 +1395,12 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 
     cov_all = []
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
-    percentiles = [(k_vars + 2) / nobs * 100 * 2, 25, 50, 85]
+    # Use the full sample when the deterministic starting subset is too large.
+    first_percentile = min((k_vars + 2) / nobs * 100 * 2, 100)
+    percentiles = [first_percentile, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
     for p, cutoff in zip(percentiles, cutoffs, strict=True):
-        xsp = xs[d < cutoff]
+        xsp = xs[d <= cutoff] if p == 100 else xs[d < cutoff]
         c = np.cov(xsp.T)
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
         c0 = CovStartingResult(
