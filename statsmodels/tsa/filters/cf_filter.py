@@ -66,7 +66,7 @@ def cffilter(x, low=6, high=32, drift=True):
     >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data
     >>> index = pd.DatetimeIndex(start='1959Q1', end='2009Q4', freq='Q')
-    >>> dta.set_index(index, inplace=True)
+    >>> dta = dta.set_index(index)
 
     >>> cf_cycles, cf_trend = sm.tsa.filters.cffilter(dta[["infl", "unemp"]])
 

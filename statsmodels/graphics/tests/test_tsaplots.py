@@ -376,7 +376,7 @@ def test_plot_quarter(close_figures):
     from statsmodels.compat.pandas import PD_LT_2_2_0
 
     FREQ = "Q-Oct" if PD_LT_2_2_0 else "Q-OCT"
-    dta.set_index(pd.PeriodIndex(dates, freq=FREQ), inplace=True)
+    dta = dta.set_index(pd.PeriodIndex(dates, freq=FREQ))
     quarter_plot(dta.unemp)
 
     # w freq

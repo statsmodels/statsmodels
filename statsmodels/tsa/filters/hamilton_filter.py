@@ -101,7 +101,7 @@ def hamilton_filter(x, h=8, p=4):
     >>> import pandas as pd
     >>> dta = sm.datasets.macrodata.load_pandas().data
     >>> index = pd.period_range('1959Q1', '2009Q3', freq='Q')
-    >>> dta.set_index(index, inplace=True)
+    >>> dta = dta.set_index(index)
     >>> cycle, trend = sm.tsa.filters.hamilton_filter(dta[["infl", "unemp"]], h=8, p=4)
 
     >>> import matplotlib.pyplot as plt

@@ -713,8 +713,8 @@ def test_init_api():
     # single-variable index grouping
     index_group = multi_index_panel.get_level_values(0)
     grouping = Grouping(index_group)
-    # the original multi_index_panel had it's name changed inplace above
-    np.testing.assert_array_equal(grouping.group_names, ["firms"])
+    # No more inplace operations
+    np.testing.assert_array_equal(grouping.group_names, ["firm"])
     np.testing.assert_array_equal(grouping.index_shape, (220,))
 
     # single variable list grouping

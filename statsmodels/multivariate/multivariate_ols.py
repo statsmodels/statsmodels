@@ -842,7 +842,7 @@ class MultivariateTestResults:
             df.append(tmp.reset_index())
         df = pd.concat(df, axis=0)
         df = df.set_index(["Effect", "index"])
-        df.index.set_names(["Effect", "Statistic"], inplace=True)
+        df.index = df.index.set_names(["Effect", "Statistic"])
         return df
 
     def summary(self, show_contrast_L=False, show_transform_M=False,
