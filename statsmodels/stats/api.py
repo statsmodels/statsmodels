@@ -86,7 +86,7 @@ from .multivariate import (
     test_mvmean,
     test_mvmean_2indep,
 )
-from .nonparametric import jonckheere_terpstra
+from .nonparametric import dunn_test, jonckheere_terpstra
 from .oaxaca import OaxacaBlinder
 from .oneway import (  # mean and scale; power; from stats; effect size
     anova_generic,
@@ -249,6 +249,7 @@ __all__ = [
     "cov_white_simple",
     "covariance",
     "diagnostic",
+    "dunn_test",
     "durbin_watson",
     "effectsize_2proportions",
     "effectsize_oneway",
