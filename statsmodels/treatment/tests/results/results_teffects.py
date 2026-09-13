@@ -357,3 +357,18 @@ results_ipwra = Bunch(
                 table_t_colnames=table_t_colnames,
                 table_t_rownames=table_t_rownames,
                 )
+
+
+# Effects on the treated (att) and on the controls (atc) were obtained from
+# DoubleML 0.11.4, DoubleMLIRM with score="ATTE" and trimming at 0.01.
+# Logit propensity score and OLS outcome models are fit on the full sample
+# without cross-fitting; atc negates the effect for relabeled treatment 1 - d.
+# For aipw_wls, DoubleML's score is evaluated at the WLS outcome predictions
+# of TreatmentEffect.aipw_wls (external_predictions).
+# Reproduce the comparison with teffects_doubleml.py in this directory.
+results_aipw_atet_dml = Bunch(
+                aipw_att=-226.178244783,
+                aipw_atc=-230.764613267,
+                aipw_wls_att=-223.448320722,
+                aipw_wls_atc=-223.602248802,
+                )
