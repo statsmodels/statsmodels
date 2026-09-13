@@ -296,12 +296,17 @@ def test_cov_starting_small_nobs():
     # 200 * (k_vars + 2) / nobs, which is above 100 when
     # nobs < 2 * k_vars + 4, so np.percentile raised a ValueError.
     # The first starting subset should then fall back to the full sample.
+    # Trims with at most k_vars observations are skipped, since their
+    # covariance is singular.
     rng = np.random.default_rng(10241)
     x = rng.standard_normal((60, 30))
+    k_vars = x.shape[1]
 
     starts = robcov._cov_starting(x)
     assert_allclose(starts[0].mean, x.mean(axis=0))
     assert_allclose(starts[0].cov, np.cov(x.T))
+    for start in starts:
+        assert np.linalg.matrix_rank(start.cov) == k_vars
 
     # with standardization, the full-sample start is rotated back to the
     # covariance of the original data
