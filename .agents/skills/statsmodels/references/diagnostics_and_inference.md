@@ -129,7 +129,7 @@ For fitted parameters, common result APIs are:
 ```python
 parameter_ci = results.conf_int(alpha=0.05)
 single_test = results.t_test("x1 = 0")
-joint_test = results.f_test("x1 = x2 = 0")
+joint_test = results.f_test("x1 = 0, x2 = 0")
 ```
 
 `conf_int()` returns intervals for parameters. `t_test`, `f_test`, and
