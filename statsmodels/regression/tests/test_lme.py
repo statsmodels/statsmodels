@@ -18,9 +18,11 @@ from scipy import sparse
 
 from statsmodels.base import _penalties as penalties
 from statsmodels.iolib.summary2 import Summary
+from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.mixed_linear_model import (
     MixedLM,
     MixedLMParams,
+    VCSpec,
     _smw_logdet,
     _smw_solver,
 )
@@ -1333,6 +1335,222 @@ def test_singular():
     with pytest.warns(SingularMatrixWarning, match=r"effects"):
         mdf = md.fit()
     mdf.summary()
+
+
+def _dense_gls(model, cov_re):
+    # Reference solution with no eigen-splitting shortcuts at all: build
+    # V = Z cov_re Z' + I densely per group and solve GLS directly.
+    n = int(model.nobs)
+    vdense = np.eye(n)
+    row = 0
+    for zg in model.exog_re_li:
+        ng = zg.shape[0]
+        vdense[row:row + ng, row:row + ng] += zg @ cov_re @ zg.T
+        row += ng
+    vinv = np.linalg.inv(vdense)
+    exog, endog = model.exog, model.endog
+    return np.linalg.solve(exog.T @ vinv @ exog, exog.T @ vinv @ endog)
+
+
+def test_get_fe_params_singular_cov_re_matches_ols():
+    # GH 10239: when every eigenvalue of cov_re collapses below get_fe_params'
+    # tol, the fixed effects should smoothly approach the OLS solution (the
+    # cov_re -> 0 limit), not jump to a within-group fixed-effects fit (the
+    # cov_re -> infinity limit) with between-group coefficients zeroed out.
+    rng = np.random.default_rng(0)
+    n_groups, n_per_group = 30, 3
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)  # constant within each group
+    within = np.tile(np.arange(n_per_group, dtype=float), n_groups)
+    exog = np.column_stack([np.ones(n), between, within])
+    endog = (10.0 + 5.0 * between + 2.0 * within
+             + rng.standard_normal(n))
+
+    model = MixedLM(endog, exog, groups)
+    ols_params = OLS(endog, exog).fit().params
+
+    for v in [1e-9, 1e-10, 9.9e-11, 1e-12, 0.0]:
+        fe_params, singular = model.get_fe_params(np.array([[v]]), np.array([]))
+        assert_allclose(fe_params, ols_params, atol=1e-8)
+        assert singular == (v < 1e-10)
+
+
+def test_get_fe_params_partial_singular_cov_re():
+    # GH 10239 follow-up: with two random effects (intercept and a slope),
+    # only one eigendirection of cov_re needs to collapse to trigger the
+    # bug -- the other, perfectly well-conditioned direction does not
+    # protect the fixed effects from being zeroed out.
+    rng = np.random.default_rng(1)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re)
+
+    # Only the intercept direction (variance v0) is pushed below tol; the
+    # slope direction (variance 2.0) stays perfectly well-conditioned.
+    for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
+        cov_re = np.diag([v0, 2.0])
+        fe_params, singular = model.get_fe_params(cov_re, np.array([]))
+        gold = _dense_gls(model, np.diag([max(v0, 1e-12), 2.0]))
+        assert_allclose(fe_params, gold, atol=1e-4)
+        assert singular == (v0 < 1e-10)
+
+
+def test_get_fe_params_correlated_singular_cov_re():
+    # GH 10239 follow-up: a *correlated* near-singular cov_re (as a real
+    # optimizer would produce for dependent random effects, rather than a
+    # clean diagonal with an exact 0.0) previously could make get_fe_params
+    # feed enormous, ill-conditioned values into the Woodbury solver and
+    # crash with LinAlgError. It should instead drop the degenerate
+    # eigendirection and match the dense GLS solution without raising.
+    rng = np.random.default_rng(1)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re)
+
+    a = np.random.default_rng(1).standard_normal((2, 1)) * np.sqrt(2.0)
+    cov_re_good = a @ a.T
+    for noise_scale in [1e-6, 1e-8, 1e-11, 1e-15]:
+        noise = np.random.default_rng(2).standard_normal((2, 2)) * noise_scale
+        cov_re = cov_re_good + noise @ noise.T
+
+        fe_params, singular = model.get_fe_params(cov_re, np.array([]))
+        gold = _dense_gls(model, cov_re)
+        assert_allclose(fe_params, gold, atol=1e-4)
+
+
+def _dense_gls_vc(model, cov_re, vcomp):
+    # Reference solution with no eigen-splitting shortcuts at all: build
+    # V = Z_re cov_re Z_re' + Z_vc diag(vcomp) Z_vc' + I densely per group
+    # and solve GLS directly. Generalizes _dense_gls to also cover
+    # variance components.
+    n = int(model.nobs)
+    vdense = np.eye(n)
+    row = 0
+    for group_ix, _ in enumerate(model.group_labels):
+        ng = model.exog_li[group_ix].shape[0]
+        block = np.zeros((ng, ng))
+        if model.k_re > 0:
+            zg = model.exog_re_li[group_ix]
+            block += zg @ cov_re @ zg.T
+        for j in range(len(model.exog_vc.names)):
+            mat = np.asarray(model.exog_vc.mats[j][group_ix])
+            block += vcomp[j] * (mat @ mat.T)
+        vdense[row:row + ng, row:row + ng] += block
+        row += ng
+    vinv = np.linalg.inv(vdense)
+    exog, endog = model.exog, model.endog
+    return np.linalg.solve(exog.T @ vinv @ exog, exog.T @ vinv @ endog)
+
+
+def test_get_fe_params_singular_vcomp_matches_ols():
+    # GH 10239 follow-up: the same zero-fills-the-inverse bug that affected
+    # cov_re also affected variance components (vcomp). When a variance
+    # component's variance collapses below get_fe_params' tol, the fixed
+    # effects should smoothly approach the OLS solution (the vcomp -> 0
+    # limit), not jump to a within-group fixed-effects fit with
+    # between-group coefficients zeroed out.
+    rng = np.random.default_rng(0)
+    n_groups, n_per_group = 30, 3
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)  # constant within each group
+    within = np.tile(np.arange(n_per_group, dtype=float), n_groups)
+    exog = np.column_stack([np.ones(n), between, within])
+    endog = (10.0 + 5.0 * between + 2.0 * within
+             + rng.standard_normal(n))
+
+    vc_mats = [np.ones((n_per_group, 1)) for _ in range(n_groups)]
+    vc_colnames = [["vc0"] for _ in range(n_groups)]
+    exog_vc = VCSpec(["vc0"], [vc_colnames], [vc_mats])
+
+    model = MixedLM(endog, exog, groups, exog_vc=exog_vc)
+    ols_params = OLS(endog, exog).fit().params
+
+    for v in [1e-9, 1e-10, 9.9e-11, 1e-12, 0.0]:
+        fe_params, singular = model.get_fe_params(np.empty((0, 0)), np.array([v]))
+        assert_allclose(fe_params, ols_params, atol=1e-8)
+        assert singular == (v < 1e-10)
+
+
+def test_get_fe_params_partial_singular_vcomp():
+    # GH 10239 follow-up: with two variance components, only one needs to
+    # collapse to trigger the bug -- the other, well-conditioned component
+    # does not protect the fixed effects from being zeroed out.
+    rng = np.random.default_rng(1)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+
+    vc0_mats = [np.ones((n_per_group, 1)) for _ in range(n_groups)]
+    vc1_mats = [x[groups == g][:, None] for g in range(n_groups)]
+    exog_vc = VCSpec(
+        ["vc0", "vc1"],
+        [[["vc0"] for _ in range(n_groups)], [["vc1"] for _ in range(n_groups)]],
+        [vc0_mats, vc1_mats],
+    )
+
+    model = MixedLM(endog, exog, groups, exog_vc=exog_vc)
+
+    # Only vc0 (variance v0) is pushed below tol; vc1 (variance 2.0)
+    # stays perfectly well-conditioned.
+    for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
+        vcomp = np.array([v0, 2.0])
+        fe_params, singular = model.get_fe_params(np.empty((0, 0)), vcomp)
+        gold = _dense_gls_vc(
+            model, np.empty((0, 0)), np.array([max(v0, 1e-12), 2.0])
+        )
+        assert_allclose(fe_params, gold, atol=1e-4)
+        assert singular == (v0 < 1e-10)
+
+
+def test_get_fe_params_mixed_singular_cov_re_and_vcomp():
+    # GH 10239 follow-up: cov_re and vcomp can collapse simultaneously.
+    # Exercises re_project and vc_project both firing in the same call, so
+    # the vc_project trimming step must correctly locate the vc columns in
+    # ex_r even though re_project already shrank the re part of ex_r.
+    rng = np.random.default_rng(2)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+
+    vc_mats = [np.ones((n_per_group, 1)) for _ in range(n_groups)]
+    exog_vc = VCSpec(["vc0"], [[["vc0"] for _ in range(n_groups)]], [vc_mats])
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re, exog_vc=exog_vc)
+
+    for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
+        cov_re = np.diag([v0, 2.0])
+        vcomp = np.array([v0])
+        fe_params, singular = model.get_fe_params(cov_re, vcomp)
+        gold = _dense_gls_vc(
+            model, np.diag([max(v0, 1e-12), 2.0]), np.array([max(v0, 1e-12)])
+        )
+        assert_allclose(fe_params, gold, atol=1e-4)
+        assert singular == (v0 < 1e-10)
 
 
 def test_get_distribution():
