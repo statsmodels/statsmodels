@@ -228,6 +228,21 @@ class TestQn:
         # sunspot.year from datasets in R only goes up to 289
         assert_almost_equal(scale.qn_scale(self.sunspot[0:289]), 33.50901, DECIMAL)
 
+    @pytest.mark.parametrize("n", [46341, 72000])
+    def test_qn_large_n(self, n):
+        # n * (n + 1) // 2 and n ** 2 pass 2 ** 31 - 1 at n = 46341, which
+        # used to break the counters in _qn. Qn of arange(n) is exact and
+        # cheap to state: the distance d occurs n - d times among the pairs,
+        # so the k-th order statistic of the distances is found by counting.
+        h = n // 2 + 1
+        k = h * (h - 1) // 2
+        counts = np.cumsum(n - np.arange(1, n, dtype=np.int64))
+        d = np.searchsorted(counts, k) + 1
+        assert_allclose(
+            scale.qn_scale(np.arange(n, dtype=float)),
+            scale.ONE_OVER_SQRT2_GAUSSIAN_5_8 * d,
+        )
+
     def test_qn_empty(self):
         empty = np.empty(0)
         assert np.isnan(scale.qn_scale(empty))
