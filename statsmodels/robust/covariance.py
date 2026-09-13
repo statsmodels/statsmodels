@@ -1395,47 +1395,64 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 
     cov_all = []
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
-    percentiles = [(k_vars + 2) / nobs * 100 * 2, 25, 50, 85]
+    # Clamp the first cutoff to a valid percentile; np.percentile rejects
+    # values above 100, in which case the whole sample is used.
+    first_frac = (k_vars + 2) / nobs * 2
+    first_percentile = min((k_vars + 2) / nobs * 100 * 2, 100)
+    percentiles = [first_percentile, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
+    # the quantile trimming in _cov_iter also needs k_vars + 1 observations
+    use_iter = quantile * (nobs - 1) > k_vars
     for p, cutoff in zip(percentiles, cutoffs, strict=True):
-        xsp = xs[d < cutoff]
+        xsp = xs[d <= cutoff] if first_frac > 1 and p == 100 else xs[d < cutoff]
+        # a starting covariance needs more observations than variables
+        if xsp.shape[0] <= k_vars:
+            continue
         c = np.cov(xsp.T)
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
-        c0 = CovStartingResult(
-            cov=c * corr_factor,
-            mean=xsp.mean(0) * std + center,
-            method="pearson truncated",
-        )
-        c01 = _cov_iter(
-            xs,
-            weights_quantile,
-            weights_args=(quantile,),
-            rescale="med",
-            cov_init=c0.cov,
-            maxiter=100,
-        )
-
+        starts = [
+            CovStartingResult(
+                cov=c * corr_factor,
+                mean=xsp.mean(0) * std + center,
+                method="pearson truncated",
+            )
+        ]
+        if use_iter:
+            starts.append(
+                _cov_iter(
+                    xs,
+                    weights_quantile,
+                    weights_args=(quantile,),
+                    rescale="med",
+                    cov_init=starts[0].cov,
+                    maxiter=100,
+                )
+            )
         c02 = CovStartingResult(
             cov=_naive_ledoit_wolf_shrinkage(xsp, 0).cov * corr_factor,
             mean=xsp.mean(0) * std + center,
             method="ledoit_wolf",
         )
-        c03 = _cov_iter(
-            xs,
-            weights_quantile,
-            weights_args=(quantile,),
-            rescale="med",
-            cov_init=c02.cov,
-            maxiter=100,
-        )
+        starts.append(c02)
+        if use_iter:
+            starts.append(
+                _cov_iter(
+                    xs,
+                    weights_quantile,
+                    weights_args=(quantile,),
+                    rescale="med",
+                    cov_init=c02.cov,
+                    maxiter=100,
+                )
+            )
 
         if not standardize or not retransform:
-            cov_all.extend([c0, c01, c02, c03])
+            cov_all.extend(starts)
         else:
             # compensate for initial rescaling
             # TODO: this does not return list of named tuples anymore
             s = np.outer(std, std)
-            cov_all.extend([r.cov * s for r in [c0, c01, c02, c03]])
+            cov_all.extend([r.cov * s for r in starts])
 
     c2 = cov_ogk(xs)
     cov_all.append(c2)
