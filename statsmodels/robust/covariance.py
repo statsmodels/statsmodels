@@ -1395,10 +1395,19 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 
     cov_all = []
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
-    percentiles = [(k_vars + 2) / nobs * 100 * 2, 25, 50, 85]
+    # The first cutoff is the fraction 2 * (k_vars + 2) / nobs expressed as
+    # a percentile. When that fraction is above 1 the percentile exceeds
+    # 100, which np.percentile rejects, so it is clamped to 100 and the
+    # whole sample is used for this starting set. At exactly 100
+    # (nobs == 2 * k_vars + 4) and below, the strict d < cutoff selection is
+    # unchanged. GH-10241.
+    first_frac = (k_vars + 2) / nobs * 2
+    first_percentile = min((k_vars + 2) / nobs * 100 * 2, 100)
+    percentiles = [first_percentile, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
     for p, cutoff in zip(percentiles, cutoffs, strict=True):
-        xsp = xs[d < cutoff]
+        # only the clamped first starting set keeps observations at the cutoff
+        xsp = xs[d <= cutoff] if first_frac > 1 and p == 100 else xs[d < cutoff]
         c = np.cov(xsp.T)
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
         c0 = CovStartingResult(
