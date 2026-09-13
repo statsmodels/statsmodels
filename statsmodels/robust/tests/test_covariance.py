@@ -291,6 +291,34 @@ def test_covdetmcd():
     assert_allclose(shape, shape_r, rtol=1e-5)
 
 
+def test_cov_starting_small_nobs():
+    # GH-10241: the first deterministic starting percentile is
+    # 200 * (k_vars + 2) / nobs, which is above 100 when
+    # nobs < 2 * k_vars + 4, so np.percentile raised a ValueError.
+    # The first starting subset should then fall back to the full sample.
+    rng = np.random.default_rng(10241)
+    x = rng.standard_normal((60, 30))
+
+    starts = robcov._cov_starting(x)
+    assert_allclose(starts[0].mean, x.mean(axis=0))
+    assert_allclose(starts[0].cov, np.cov(x.T))
+
+    # with standardization, the full-sample start is rotated back to the
+    # covariance of the original data
+    starts_std = robcov._cov_starting(x, standardize=True, retransform=True)
+    assert_allclose(starts_std[0], np.cov(x.T))
+
+    # the estimators that use the starting sets should not raise
+    for res in (
+        robcov.CovDetMCD(x).fit(45),
+        robcov.CovDetS(x).fit(),
+        robcov.CovDetMM(x).fit(),
+    ):
+        assert res.cov.shape == (30, 30)
+        assert np.isfinite(res.cov).all()
+        assert np.linalg.eigvalsh(res.cov).min() > 0
+
+
 def test_covdetmm():
 
     # results from rrcov
