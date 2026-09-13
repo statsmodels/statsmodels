@@ -37,6 +37,16 @@ Release Statistics
 The Highlights
 ===============
 
+Treatment effect diagnostics
+----------------------------
+
+``TreatmentEffect.overlap_summary`` reports unclipped propensity-score
+summaries and clipping counts by treatment group. ``TreatmentEffect.balance_table``
+reports covariate means and standardized mean differences before and after
+inverse probability weighting for ATE, ATET, or ATC. These methods do not trim
+observations. This partially addresses :issue:`10224`.
+
+
 SPEC-007: consistent use of ``rng`` for randomness
 ---------------------------------------------------
 

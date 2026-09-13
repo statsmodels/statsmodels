@@ -32,3 +32,31 @@ See also overview notebook in
 
    treatment_effects.TreatmentEffect
    treatment_effects.TreatmentEffectResults
+
+Overlap and covariate balance
+-----------------------------
+
+After constructing a ``TreatmentEffect`` with a fitted selection model, inspect
+its numerical diagnostics before interpreting weighted estimates::
+
+    teff.overlap_summary()
+    teff.balance_table()
+    teff.balance_table(effect_group="treated")
+
+The overlap summary describes original, unclipped propensity scores by treatment
+group, including counts outside the clipping bounds. The balance table reports
+selection-model covariate means and standardized mean differences before and
+after weighting, using the estimator's clipped propensity scores. Supply ``exog``
+to examine other numeric covariates in the same observation order.
+
+Standardization uses a fixed pooled unweighted sample standard deviation for all
+weighting targets and numeric columns, including binary columns. Constant
+columns have undefined (NaN) standardized differences. These are descriptive
+diagnostics; they neither establish overlap nor rule out unmeasured confounding.
+Neither method drops observations or refits the models.
+
+.. autosummary::
+   :toctree: generated/
+
+   treatment_effects.TreatmentEffect.overlap_summary
+   treatment_effects.TreatmentEffect.balance_table
