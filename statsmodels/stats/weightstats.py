@@ -167,9 +167,10 @@ class DescrStatsW:
             variance with denominator ``sum_weights - ddof``
         """
         # Rescale the deviations before squaring, the sum of squares can
-        # overflow although the variance is representable.
+        # overflow although the variance is representable. `initial` keeps an
+        # empty sample at the historical 0 / 0 -> nan result.
         demeaned = self.demeaned
-        scale = np.max(np.abs(demeaned), axis=0)
+        scale = np.max(np.abs(demeaned), axis=0, initial=0.0)
         scale = np.where(scale == 0, 1.0, scale)
         sumsquares = np.dot(((demeaned / scale) ** 2).T, self.weights)
         return sumsquares / (self.sum_weights - ddof) * scale * scale

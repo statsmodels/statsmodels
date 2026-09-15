@@ -569,6 +569,14 @@ def test_var_extreme_scale_2d():
     assert_allclose(var, [np.ldexp(1.0, 1022), 1.0])
 
 
+@pytest.mark.parametrize("data", [np.array([]), np.zeros((0, 2))])
+def test_var_empty_input(data):
+    # Empty input keeps the historical 0 / 0 -> nan result instead of raising.
+    with pytest.warns(RuntimeWarning, match="invalid value encountered"):
+        var = DescrStatsW(data).var
+    assert np.all(np.isnan(var))
+
+
 def test_ztest_ztost():
     # compare weightstats with separately tested proportion ztest ztost
     import statsmodels.stats.proportion as smprop
