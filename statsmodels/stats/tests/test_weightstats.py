@@ -540,6 +540,35 @@ def test_ttest_ind_with_uneq_var():
     assert_almost_equal([t, p], [tr, pr], 13)
 
 
+@pytest.mark.parametrize("usevar", ["pooled", "unequal"])
+def test_ttest_ind_extreme_scale(usevar):
+    # At this scale the deviations and their squares are finite, but their
+    # weighted sum overflows. The variance and the test result are still
+    # representable, with t = -sqrt(3/2), df = 6 and p from a high precision
+    # evaluation of the Student-t distribution.
+    x = np.ldexp(np.array([-1.0, 1.0] * 2), 511)
+    y = np.ldexp(np.array([0.0, 2.0] * 2), 511)
+    with np.errstate(over="raise", invalid="raise"):
+        d1 = DescrStatsW(x)
+        d2 = DescrStatsW(y)
+        t, p, df = CompareMeans(d1, d2).ttest_ind(usevar=usevar)
+    assert_allclose(d1.var, np.ldexp(1.0, 1022))
+    assert_allclose(d1.var_ddof(1), 4.0 / 3.0 * np.ldexp(1.0, 1022))
+    assert_allclose(t, -np.sqrt(1.5))
+    assert_allclose(p, 0.26656970338006898, rtol=1e-12)
+    assert_allclose(df, 6.0)
+
+
+def test_var_extreme_scale_2d():
+    # Columns at different scales need to be rescaled independently.
+    x = np.column_stack(
+        (np.ldexp(np.array([-1.0, 1.0] * 2), 511), np.array([-1.0, 1.0] * 2))
+    )
+    with np.errstate(over="raise", invalid="raise"):
+        var = DescrStatsW(x).var
+    assert_allclose(var, [np.ldexp(1.0, 1022), 1.0])
+
+
 def test_ztest_ztost():
     # compare weightstats with separately tested proportion ztest ztost
     import statsmodels.stats.proportion as smprop
