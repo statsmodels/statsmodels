@@ -292,12 +292,10 @@ def test_covdetmcd():
 
 
 def test_cov_starting_small_nobs():
-    # GH-10241: the first deterministic starting percentile is
+    # the first deterministic starting percentile is
     # 200 * (k_vars + 2) / nobs, which is above 100 when
     # nobs < 2 * k_vars + 4, so np.percentile raised a ValueError.
     # The first starting subset should then fall back to the full sample.
-    # Trims with at most k_vars observations are skipped, since their
-    # covariance is singular.
     rng = np.random.default_rng(10241)
     x = rng.standard_normal((60, 30))
     k_vars = x.shape[1]
@@ -305,8 +303,7 @@ def test_cov_starting_small_nobs():
     starts = robcov._cov_starting(x)
     assert_allclose(starts[0].mean, x.mean(axis=0))
     assert_allclose(starts[0].cov, np.cov(x.T))
-    for start in starts:
-        assert np.linalg.matrix_rank(start.cov) == k_vars
+    assert np.linalg.matrix_rank(starts[0].cov) == k_vars
 
     # with standardization, the full-sample start is rotated back to the
     # covariance of the original data
@@ -322,6 +319,28 @@ def test_cov_starting_small_nobs():
         assert res.cov.shape == (30, 30)
         assert np.isfinite(res.cov).all()
         assert np.linalg.eigvalsh(res.cov).min() > 0
+
+
+def test_cov_starting_keeps_trimmed_starts():
+    # starts must not be dropped when a trim retains at most k_vars
+    # observations; that happens at sizes where the estimator already
+    # worked on main, e.g. n=100, k=30 has 25 observations in the
+    # 25% trim. All four percentile trims contribute four starts each,
+    # plus six global starts.
+    rng = np.random.default_rng(10242)
+    starts = robcov._cov_starting(rng.standard_normal((100, 30)))
+    assert len(starts) == 22
+    # rank-deficient trimmed starts are retained and used for ranking
+    ranks = [np.linalg.matrix_rank(start.cov) for start in starts]
+    assert min(ranks) < 30
+
+
+def test_mahalanobis_singular_cov():
+    # a rank-deficient starting covariance must not abort the candidate
+    rng = np.random.default_rng(10243)
+    x = rng.standard_normal((40, 5))
+    d = robcov.mahalanobis(x, cov=np.zeros((5, 5)))
+    assert np.isfinite(d).all()
 
 
 def test_covdetmm():
