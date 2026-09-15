@@ -343,6 +343,31 @@ def test_mahalanobis_singular_cov():
     assert np.isfinite(d).all()
 
 
+def test_cov_weighted_det_non_finite_determinant():
+    # a determinant that overflows must raise instead of letting the
+    # normalization turn the estimator iterations into all-NaN output
+    x = np.eye(6) * 1e30
+    with pytest.raises(np.linalg.LinAlgError, match="must be positive and finite"):
+        robcov.cov_weighted(
+            x, np.ones(6), center=np.zeros(6), weights_cov_denom="det"
+        )
+
+    # a singular cross product has det == 0 and must raise as well
+    x = np.diag([1.0, 0.0])
+    with pytest.raises(np.linalg.LinAlgError, match="must be positive and finite"):
+        robcov.cov_weighted(
+            x, np.ones(2), center=np.zeros(2), weights_cov_denom="det"
+        )
+
+    # a finite determinant is normalized as before: for diag(2, 3) the
+    # cross product is diag(4, 9) with det 36, so det ** (1 / 2) is 6
+    x = np.diag([2.0, 3.0])
+    cov, _ = robcov.cov_weighted(
+        x, np.ones(2), center=np.zeros(2), weights_cov_denom="det"
+    )
+    assert_allclose(cov, np.diag([4 / 6, 9 / 6]), rtol=1e-15)
+
+
 def test_covdetmm():
 
     # results from rrcov

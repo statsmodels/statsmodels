@@ -1114,7 +1114,17 @@ def cov_weighted(
             wsum_cov = weights_cov.sum()
         wcov /= wsum_cov - ddof  # * np.sum(weights_cov**2) / wsum_cov)
     elif weights_cov_denom == "det":
-        wcov /= np.linalg.det(wcov) ** (1 / wcov.shape[0])
+        with np.errstate(
+            over="ignore", invalid="ignore", divide="ignore", under="ignore"
+        ):
+            det = np.linalg.det(wcov)
+        if not np.isfinite(det) or det <= 0:
+            # singular or overflowing scatter cannot be normalized
+            raise np.linalg.LinAlgError(
+                "weighted covariance determinant must be positive and finite,"
+                f" got {det!r}"
+            )
+        wcov /= det ** (1 / wcov.shape[0])
     elif weights_cov_denom == 1:
         pass
     else:
