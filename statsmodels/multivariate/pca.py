@@ -168,7 +168,7 @@ class PCA:
 
     .. math::
 
-        \\Omega^{-\\frac{1}{2}} X
+        \\Omega^{\\frac{1}{2}} X
 
     where :math:`\\Omega` is a diagonal matrix composed of the weights. For
     example, when using the GLS version of PCA, the elements of :math:`\\Omega`
