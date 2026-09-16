@@ -41,6 +41,18 @@ NOTE = """::
 
 
 def load_pandas():
+    """
+    Load the data and return a Dataset class instance.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data`` and ``names`` attributes.
+
+    Notes
+    -----
+    The Dataset instance does not contain endog and exog attributes.
+    """
     data = _get_data()
     index = pd.date_range(start=str(data["date"][0]), periods=len(data), freq="W-SAT")
     dataset = data[["co2"]]
@@ -55,7 +67,11 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``names`` attributes.
+
+    Notes
+    -----
+    The Dataset instance does not contain endog and exog attributes.
     """
     return load_pandas()
 

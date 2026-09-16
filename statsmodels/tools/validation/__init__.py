@@ -1,3 +1,5 @@
+"""Input validation helpers"""
+
 from .validation import (
     PandasWrapper,
     array_like,

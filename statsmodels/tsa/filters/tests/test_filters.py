@@ -21,7 +21,11 @@ from statsmodels.tsa.filters._utils import pandas_wrapper
 from statsmodels.tsa.filters.bk_filter import bkfilter
 from statsmodels.tsa.filters.cf_filter import cffilter
 from statsmodels.tsa.filters.filtertools import (
+    CycleTrendResult,
     convolution_filter,
+    fftconvolve3,
+    fftconvolveinv,
+    miso_lfilter,
     recursive_filter,
 )
 from statsmodels.tsa.filters.hp_filter import hpfilter
@@ -619,8 +623,17 @@ def test_hpfilter():
         ]
     )
     dta = macrodata.load_pandas().data["realgdp"].values
-    res = column_stack(hpfilter(dta, 1600))
+    _result = hpfilter(dta, 1600)
+    res = column_stack((_result.cycle, _result.trend))
     assert_almost_equal(res, hpfilt_res, 6)
+
+
+def test_hpfilter_returns_cycletrendresult():
+    dta = macrodata.load_pandas().data["realgdp"].values
+    res = hpfilter(dta, 1600)
+    assert isinstance(res, CycleTrendResult)
+    assert res[0] is res.cycle
+    assert res[1] is res.trend
 
 
 def test_cfitz_filter():
@@ -833,11 +846,19 @@ def test_cfitz_filter():
         ]
     )
     dta = macrodata.load_pandas().data[["tbilrate", "infl"]].values[1:]
-    cyc, trend = cffilter(dta)
+    cyc = cffilter(dta).cycle
     assert_almost_equal(cyc, cfilt_res, 8)
     # do 1d
-    cyc, trend = cffilter(dta[:, 1])
+    cyc = cffilter(dta[:, 1]).cycle
     assert_almost_equal(cyc, cfilt_res[:, 1], 8)
+
+
+def test_cffilter_returns_cycletrendresult():
+    dta = macrodata.load_pandas().data[["tbilrate", "infl"]].values[1:]
+    res = cffilter(dta)
+    assert isinstance(res, CycleTrendResult)
+    assert res[0] is res.cycle
+    assert res[1] is res.trend
 
 
 def test_bking_pandas():
@@ -866,16 +887,16 @@ def test_cfitz_pandas():
     dta = macrodata.load_pandas().data
     index = date_range(start="1959-01-01", end="2009-10-01", freq=QUARTER_END)
     dta.index = index
-    cycle, trend = cffilter(dta["infl"])
-    ndcycle, ndtrend = cffilter(dta["infl"].values)
+    cycle, _ = cffilter(dta["infl"])
+    ndcycle = cffilter(dta["infl"].values).cycle
     assert_allclose(cycle.values, ndcycle, rtol=1e-14)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
     assert_equal(cycle.name, "infl_cycle")
 
     # 2d
-    cycle, trend = cffilter(dta[["infl", "unemp"]])
-    ndcycle, ndtrend = cffilter(dta[["infl", "unemp"]].values)
+    cycle, _ = cffilter(dta[["infl", "unemp"]])
+    ndcycle = cffilter(dta[["infl", "unemp"]].values).cycle
     assert_allclose(cycle.values, ndcycle, rtol=1e-14)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
@@ -886,8 +907,8 @@ def test_hpfilter_pandas():
     dta = macrodata.load_pandas().data
     index = date_range(start="1959-01-01", end="2009-10-01", freq=QUARTER_END)
     dta.index = index
-    cycle, trend = hpfilter(dta["realgdp"])
-    ndcycle, ndtrend = hpfilter(dta["realgdp"].values)
+    cycle = hpfilter(dta["realgdp"]).cycle
+    ndcycle = hpfilter(dta["realgdp"].values).cycle
     assert_equal(cycle.values, ndcycle)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
@@ -1089,6 +1110,113 @@ def test_pandas_freq_decorator():
     func = pandas_wrapper(dummy_func_array)
     assert_frame_equal(func(x), x)
 
-    expected = x.rename(columns=dict(zip("ABCD", "EFGH")))
+    expected = x.rename(columns=dict(zip("ABCD", "EFGH", strict=True)))
     func = pandas_wrapper(dummy_func_array, names=list("EFGH"))
     assert_frame_equal(func(x), expected)
+
+
+@pytest.mark.parametrize("mode", ["full", "same", "valid"])
+def test_fftconvolve3_modes(mode):
+    # GH: fftconvolve3 raised AttributeError on numpy >= 1.24 (np.complex)
+    # and numpy >= 2.0 (np.product), so no mode was reachable.
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(200)
+    ar = array([1.0, -0.5])
+    ma = array([1.0, 0.4])
+    res = fftconvolve3(x, ma, ar, mode=mode)
+    assert np.all(np.isfinite(res))
+    assert res.ndim == 1
+
+
+def test_fftconvolve3_matches_lfilter():
+    # fftconvolve3(x, ma, ar) applies the ARMA filter ma(L) / ar(L) to x
+    from scipy import signal
+
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(200)
+    ar = array([1.0, -0.5])
+    ma = array([1.0, 0.4])
+    res = fftconvolve3(x, ma, ar, mode="full")[: x.shape[0]]
+    expected = signal.lfilter(ma, ar, x)
+    assert_allclose(res, expected, atol=1e-12)
+
+
+def test_fftconvolve3_complex_dtype():
+    # the complex/real branch is selected via np.issubdtype(..., complexfloating)
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(64)
+    ar = array([1.0, -0.5])
+    ma = array([1.0, 0.4])
+    assert not np.iscomplexobj(fftconvolve3(x, ma, ar, mode="full"))
+    xc = x + 1j * rs.standard_normal(64)
+    assert np.iscomplexobj(fftconvolve3(xc, ma, ar, mode="full"))
+
+
+def test_fftconvolveinv_roundtrip():
+    # fftconvolveinv deconvolves, so it inverts np.convolve
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(200)
+    filt = array([1.0, 0.5, 0.25])
+    convolved = np.convolve(x, filt)
+    res = fftconvolveinv(convolved, filt, mode="full")[: x.shape[0]]
+    assert_allclose(res, x, atol=1e-8)
+
+
+@pytest.mark.parametrize("nvars", [1, 2, 3, 4, 5])
+def test_miso_lfilter_combines_inputs_like_a_causal_fir_filter(nvars):
+    # With ar = [1] (no autoregressive feedback), miso_lfilter reduces to a
+    # causal FIR combination of the input columns:
+    #     y_t = sum_lag ma[lag] . x[t - lag]
+    # treating x as zero before t=0. Verify against that definition
+    # directly, for several numbers of input variables. This is a
+    # regression test for a column-selection bug that silently produced
+    # wrong results (or raised an IndexError for a single variable)
+    # whenever nvars was not 2 or 3.
+    rng = np.random.default_rng(0)
+    nobs, nlags = 8, 3
+    ar = array([1.0])
+    x = rng.standard_normal((nobs, nvars))
+    ma = rng.standard_normal((nlags, nvars))
+
+    y, inp = miso_lfilter(ar, ma, x)
+
+    expected = np.zeros(nobs)
+    for t in range(nobs):
+        for lag in range(nlags):
+            if t - lag >= 0:
+                expected[t] += ma[lag] @ x[t - lag]
+    assert_allclose(y, expected)
+    assert_allclose(inp, expected)
+
+
+def test_miso_lfilter_applies_ar_dynamics_to_combined_input():
+    # With genuine AR feedback, miso_lfilter must satisfy ar(L) y_t = inp_t,
+    # i.e. y is the ordinary lfilter of the combined input series `inp`.
+    from scipy import signal
+
+    rng = np.random.default_rng(1)
+    nobs, nlags, nvars = 10, 2, 2
+    x = rng.standard_normal((nobs, nvars))
+    ma = rng.standard_normal((nlags, nvars))
+    ar = array([1.0, -0.5, 0.1])
+
+    y, inp = miso_lfilter(ar, ma, x)
+
+    assert_allclose(y, signal.lfilter([1.0], ar, inp)[:nobs])
+
+
+def test_miso_lfilter_useic_zero_matches_default():
+    # Explicit zero initial conditions -- the array_like form required by
+    # scipy.signal.lfiltic, of length len(ar) - 1 -- reproduce the default
+    # useic=False (zero initial condition) behavior.
+    rng = np.random.default_rng(2)
+    nobs, nlags, nvars = 8, 2, 2
+    x = rng.standard_normal((nobs, nvars))
+    ma = rng.standard_normal((nlags, nvars))
+    ar = array([1.0, -0.5, 0.1])
+
+    y_false, inp_false = miso_lfilter(ar, ma, x, useic=False)
+    y_ic, inp_ic = miso_lfilter(ar, ma, x, useic=[0.0, 0.0])
+
+    assert_allclose(y_ic, y_false)
+    assert_allclose(inp_ic, inp_false)

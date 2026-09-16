@@ -4,7 +4,7 @@ Tests for CFA simulation smoothing
 Author: Chad Fulton
 License: BSD-3
 """
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -14,7 +14,7 @@ from scipy.linalg import cho_solve_banded
 from statsmodels import datasets
 from statsmodels.tsa.statespace import dynamic_factor, sarimax, structural, varmax
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 dta = datasets.macrodata.load_pandas().data
 dta.index = pd.period_range("1959Q1", "2009Q3", freq="Q")
 dta = np.log(dta[["realcons", "realgdp", "cpi"]]).diff().iloc[1:] * 400

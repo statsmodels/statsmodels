@@ -1,0 +1,36 @@
+name: Documentation
+description: Report an issue with, or suggest an improvement to, the documentation
+title: "DOC: "
+labels: ["Documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve the statsmodels documentation!
+
+  - type: textarea
+    id: location
+    attributes:
+      label: Location of the documentation
+      description: >
+        Link to the page (e.g. on https://www.statsmodels.org/stable/ or
+        https://www.statsmodels.org/dev/) or the source file (e.g. a docstring in
+        `statsmodels/regression/linear_model.py`) that this concerns.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Describe the issue
+      description: >
+        What is incorrect, unclear, or missing? If applicable, quote the relevant
+        section.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix
+      description: If you have a suggestion for how this should read instead, describe it here.

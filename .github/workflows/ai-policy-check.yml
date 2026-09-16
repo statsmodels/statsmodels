@@ -1,0 +1,73 @@
+name: AI Policy Disclosure Check
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  check-disclosure:
+    name: Check AI disclosure in PR description
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Verify AI Disclosure section is completed
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const body = context.payload.pull_request.body || "";
+
+            const noAiChecked = /-\s*\[[xX]\]\s*No AI tools were used/.test(body);
+            const aiUsedChecked = /-\s*\[[xX]\]\s*AI tools were used/.test(body);
+            const placeholderStillPresent = body.includes("<name(s)");
+
+            const COMMENT_MARKER = "<!-- ai-policy-check -->";
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+
+            let message = null;
+            if (!noAiChecked && !aiUsedChecked) {
+              message = [
+                COMMENT_MARKER,
+                "Thanks for the pull request! The **AI Disclosure** checklist item in the PR " +
+                  "description hasn't been completed yet.",
+                "",
+                "Per the [AI Policy](https://www.statsmodels.org/devel/dev/ai-policy.html), please " +
+                  "edit the PR description and check the box that applies: either \"No AI tools were " +
+                  "used\" or \"AI tools were used\" (naming the tool(s) and how they were used).",
+              ].join("\n");
+            } else if (aiUsedChecked && placeholderStillPresent) {
+              message = [
+                COMMENT_MARKER,
+                "The **AI Disclosure** section is checked as \"AI tools were used\", but the " +
+                  "placeholder text (tool name / usage) in the PR description hasn't been filled in.",
+                "",
+                "Per the [AI Policy](https://www.statsmodels.org/devel/dev/ai-policy.html), please " +
+                  "edit the PR description to name the tool(s) used and how they were used.",
+              ].join("\n");
+            }
+
+            const comments = await github.rest.issues.listComments({
+              owner, repo, issue_number, per_page: 100,
+            });
+            const existing = comments.data.find(
+              (c) => c.user.type === "Bot" && c.body.includes(COMMENT_MARKER)
+            );
+
+            if (message) {
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner, repo, comment_id: existing.id, body: message,
+                });
+              } else {
+                await github.rest.issues.createComment({ owner, repo, issue_number, body: message });
+              }
+              core.setFailed("AI Disclosure section in the PR description is incomplete.");
+            } else if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: existing.id,
+                body: COMMENT_MARKER + "\nThanks, the AI Disclosure section looks complete.",
+              });
+            }

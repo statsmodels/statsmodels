@@ -1,4 +1,5 @@
 """
+Results for proportion tests
 
 Created on Fri Mar 01 14:48:59 2013
 

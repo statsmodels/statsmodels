@@ -25,6 +25,9 @@ python -m pip install -r requirements-dev.txt
 
 if [[ ${USE_CONDA} != "true" ]]; then
   python -m pip uninstall numpy scipy pandas cython -y
+else
+  # Clean up packages indirectly installed by pip when using conda
+  python -m pip uninstall numpy cython -y
 fi
 
 if [[ -n ${NUMPY_VERSION} ]]; then CMD="$CMD==${NUMPY_VERSION}"; fi;

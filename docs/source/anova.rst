@@ -1,6 +1,6 @@
 .. currentmodule:: statsmodels.stats.anova
 
-.. _anova:
+.. _anova_ref:
 
 ANOVA
 =====
@@ -30,7 +30,7 @@ Examples
 
 A more detailed example for `anova_lm` can be found here:
 
-*  `ANOVA <examples/notebooks/generated/interactions_anova.ipynb>`_
+*  `ANOVA <examples/notebooks/generated/interactions_anova.html>`_
 
 Module Reference
 ----------------

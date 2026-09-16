@@ -1,11 +1,11 @@
-import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from statsmodels.tools.testing import Holder
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
+cur_dir = Path(__file__).resolve().parent
 
 results_meth = Holder()
 results_meth.type = "ML"
@@ -81,5 +81,4 @@ results_meth.table_precision_oim = np.array([
     7.65411434417314e-06, 0.301946212204644
     ]).reshape(2, 4, order="F")
 
-results_meth.resid = pd.read_csv(os.path.join(cur_dir,
-                                              "resid_methylation.csv"))
+results_meth.resid = pd.read_csv(Path(cur_dir).joinpath("resid_methylation.csv"))

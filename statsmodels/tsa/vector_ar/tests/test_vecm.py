@@ -67,32 +67,7 @@ results_sm_exog = {}
 results_sm_exog_coint = {}
 coint_rank = 1
 
-debug_mode = False
-dont_test_se_t_p = False
 deterministic_terms_list = ["nc", "co", "colo", "ci", "cili"]
-
-all_tests = [
-    "Gamma",
-    "alpha",
-    "beta",
-    "C",
-    "det_coint",
-    "Sigma_u",
-    "VAR repr. A",
-    "VAR to VEC representation",
-    "log_like",
-    "fc",
-    "granger",
-    "inst. causality",
-    "impulse-response",
-    "lag order",
-    "test_norm",
-    "whiteness",
-    "summary",
-    "exceptions",
-    "select_coint_rank",
-]
-to_test = all_tests  # ["beta"]
 
 
 def load_data(dataset, data_dict):
@@ -234,15 +209,8 @@ setup()
 
 
 def test_ml_gamma():
-    if debug_mode:
-        if "Gamma" not in to_test:  # pragma: no cover
-            return
-        print("\n\nGAMMA", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -262,8 +230,6 @@ def test_ml_gamma():
                     "WITH EXOG_COINT: " + err_msg,
                 )
 
-            if debug_mode and dont_test_se_t_p:  # pragma: no cover
-                continue
             # standard errors
             obt = results_sm[ds][dt].stderr_gamma
             obt_exog = results_sm_exog[ds][dt].stderr_gamma
@@ -297,14 +263,8 @@ def test_ml_gamma():
 
 
 def test_ml_alpha():
-    if debug_mode:
-        if "alpha" not in to_test:  # pragma: no cover
-            return
-        print("\n\nALPHA", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -323,8 +283,6 @@ def test_ml_alpha():
                     "WITH EXOG_COINT: " + err_msg,
                 )
 
-            if debug_mode and dont_test_se_t_p:  # pragma: no cover
-                continue
             # standard errors
             obt = results_sm[ds][dt].stderr_alpha
             obt_exog = results_sm_exog[ds][dt].stderr_alpha
@@ -358,15 +316,8 @@ def test_ml_alpha():
 
 
 def test_ml_beta():
-    if debug_mode:
-        if "beta" not in to_test:  # pragma: no cover
-            return
-        print("\n\nBETA", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -390,8 +341,6 @@ def test_ml_beta():
                     "WITH EXOG_COINT: " + err_msg,
                 )
 
-            if debug_mode and dont_test_se_t_p:  # pragma: no cover
-                continue
             # standard errors
             obt = results_sm[ds][dt].stderr_beta[coint_rank:rows]
             obt_exog = results_sm_exog[ds][dt].stderr_beta[coint_rank:rows]
@@ -425,15 +374,8 @@ def test_ml_beta():
 
 
 def test_ml_c():  # test deterministic terms outside coint relation
-    if debug_mode:
-        if "C" not in to_test:  # pragma: no cover
-            return
-        print("\n\nDET_COEF", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -518,8 +460,6 @@ def test_ml_c():  # test deterministic terms outside coint relation
                         lt_obt,
                         "WITH EXOG_COINT: " + err_msg,
                     )
-            if debug_mode and dont_test_se_t_p:  # pragma: no cover
-                continue
             # standard errors
             se_desired = results_ref[ds][dt]["se"]["C"]
             if "co" in dt_string:
@@ -733,15 +673,8 @@ def test_ml_c():  # test deterministic terms outside coint relation
 
 
 def test_ml_det_terms_in_coint_relation():
-    if debug_mode:
-        if "det_coint" not in to_test:  # pragma: no cover
-            return
-        print("\n\nDET_COEF_COINT", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -838,15 +771,8 @@ def test_ml_det_terms_in_coint_relation():
 
 
 def test_ml_sigma():
-    if debug_mode:
-        if "Sigma_u" not in to_test:  # pragma: no cover
-            return
-        print("\n\nSIGMA_U", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -863,15 +789,8 @@ def test_ml_sigma():
 
 
 def test_var_rep():
-    if debug_mode:
-        if "VAR repr. A" not in to_test:  # pragma: no cover
-            return
-        print("\n\nVAR REPRESENTATION", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -889,15 +808,8 @@ def test_var_rep():
 
 
 def test_var_to_vecm():
-    if debug_mode:
-        if "VAR to VEC representation" not in to_test:  # pragma: no cover
-            return
-        print("\n\nVAR TO VEC", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             err_msg = build_err_msg(ds, dt, "VAR to VEC representation")
             sigma_u = results_sm[ds][dt].sigma_u
             coefs = results_sm[ds][dt].var_rep
@@ -933,16 +845,8 @@ def test_var_to_vecm():
 
 
 def test_log_like():
-    if debug_mode:
-        if "log_like" not in to_test:  # pragma: no cover
-            return
-        else:
-            print("\n\nLOG LIKELIHOOD", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -962,16 +866,8 @@ def test_log_like():
 
 
 def test_fc():
-    if debug_mode:
-        if "fc" not in to_test:  # pragma: no cover
-            return
-        else:
-            print("\n\nFORECAST", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             STEPS = 5
             ALPHA = 0.05
             err_msg = build_err_msg(ds, dt, "FORECAST")
@@ -1016,12 +912,12 @@ def test_fc():
             obtained_w_intervals_exog = results_sm_exog[ds][dt].predict(
                 steps=STEPS, alpha=ALPHA, exog_fc=exog_fc
             )
-            obt = obtained_w_intervals[0]  # forecast
-            obt_l = obtained_w_intervals[1]  # lower bound
-            obt_u = obtained_w_intervals[2]  # upper bound
-            obt_exog = obtained_w_intervals_exog[0]
-            obt_exog_l = obtained_w_intervals_exog[1]
-            obt_exog_u = obtained_w_intervals_exog[2]
+            obt = obtained_w_intervals.point_forecast  # forecast
+            obt_l = obtained_w_intervals.forc_lower  # lower bound
+            obt_u = obtained_w_intervals.forc_upper  # upper bound
+            obt_exog = obtained_w_intervals_exog.point_forecast
+            obt_exog_l = obtained_w_intervals_exog.forc_lower
+            obt_exog_u = obtained_w_intervals_exog.forc_upper
             des = results_ref[ds][dt]["fc"]["fc"]
             des_l = results_ref[ds][dt]["fc"]["lower"]
             des_u = results_ref[ds][dt]["fc"]["upper"]
@@ -1071,12 +967,12 @@ def test_fc():
             obtained_w_intervals_exog_coint = results_sm_exog_coint[ds][dt].predict(
                 steps=STEPS, alpha=ALPHA, exog_coint_fc=exog_coint_fc
             )
-            obt = obtained_w_intervals[0]  # forecast
-            obt_l = obtained_w_intervals[1]  # lower bound
-            obt_u = obtained_w_intervals[2]  # upper bound
-            obt_exog_coint = obtained_w_intervals_exog_coint[0]
-            obt_exog_coint_l = obtained_w_intervals_exog_coint[1]
-            obt_exog_coint_u = obtained_w_intervals_exog_coint[2]
+            obt = obtained_w_intervals.point_forecast  # forecast
+            obt_l = obtained_w_intervals.forc_lower  # lower bound
+            obt_u = obtained_w_intervals.forc_upper  # upper bound
+            obt_exog_coint = obtained_w_intervals_exog_coint.point_forecast
+            obt_exog_coint_l = obtained_w_intervals_exog_coint.forc_lower
+            obt_exog_coint_u = obtained_w_intervals_exog_coint.forc_upper
             des = results_ref[ds][dt]["fc"]["fc"]
             des_l = results_ref[ds][dt]["fc"]["lower"]
             des_u = results_ref[ds][dt]["fc"]["upper"]
@@ -1111,16 +1007,8 @@ def test_fc():
 
 
 def test_granger_causality():
-    if debug_mode:
-        if "granger" not in to_test:  # pragma: no cover
-            return
-        else:
-            print("\n\nGRANGER", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -1192,7 +1080,7 @@ def test_granger_causality():
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1 or len(caused_ind) == 1:
                     ci = causing_ind[0] if len(causing_ind) == 1 else causing_ind
@@ -1230,7 +1118,7 @@ def test_granger_causality():
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     g_p_obt_single = granger_sm_single_ind.pvalue
@@ -1247,16 +1135,8 @@ def test_granger_causality():
 
 
 def test_inst_causality():  # test instantaneous causality
-    if debug_mode:
-        if "inst. causality" not in to_test:  # pragma: no cover
-            return
-        else:
-            print("\n\nINST. CAUSALITY", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -1320,7 +1200,7 @@ def test_inst_causality():  # test instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(
@@ -1354,7 +1234,7 @@ def test_inst_causality():  # test instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(
@@ -1374,16 +1254,8 @@ def test_inst_causality():  # test instantaneous causality
 
 
 def test_impulse_response():
-    if debug_mode:
-        if "impulse-response" not in to_test:  # pragma: no cover
-            return
-        else:
-            print("\n\nIMPULSE-RESPONSE", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -1411,16 +1283,8 @@ def test_impulse_response():
 
 
 def test_lag_order_selection():
-    if debug_mode:
-        if "lag order" not in to_test:  # pragma: no cover
-            return
-        else:
-            print("\n\nLAG ORDER SELECTION", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             deterministic = dt[0]
             endog_tot = data[ds]
 
@@ -1431,7 +1295,7 @@ def test_lag_order_selection():
             # "co" is not in exog in any test case
             if "co" in deterministic:
                 deterministic_outside_exog += "co"
-            # "lo" is is in exog only in test cases with seasons>0
+            # "lo" is in exog only in test cases with seasons>0
             if "lo" in deterministic and dt[1] == 0:
                 deterministic_outside_exog += "lo"
 
@@ -1474,16 +1338,8 @@ def test_lag_order_selection():
 
 
 def test_normality():
-    if debug_mode:
-        if "test_norm" not in to_test:  # pragma: no cover
-            return
-        else:
-            print("\n\nTEST NON-NORMALITY", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -1517,16 +1373,8 @@ def test_normality():
 
 
 def test_whiteness():
-    if debug_mode:
-        if "whiteness" not in to_test:  # pragma: no cover
-            return
-        else:
-            print("\n\nTEST WHITENESS OF RESIDUALS", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             exog = results_sm_exog[ds][dt].exog is not None
             exog_coint = results_sm_exog_coint[ds][dt].exog_coint is not None
 
@@ -1602,16 +1450,8 @@ def test_whiteness():
 
 
 def test_summary():
-    if debug_mode:
-        if "summary" not in to_test:  # pragma: no cover
-            return
-        else:
-            print("\n\nSUMMARY", end="")
     for ds in datasets:
         for dt in ds.dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             # see if summary gets printed
             results_sm[ds][dt].summary(alpha=0.05)
 
@@ -1625,11 +1465,6 @@ def test_summary():
 
 
 def test_exceptions():
-    if debug_mode:
-        if "exceptions" not in to_test:  # pragma: no cover
-            return
-        else:
-            print("\n\nEXCEPTIONS\n", end="")
     ds = datasets[0]
     dt = ds.dt_s_list[0]
     endog = data[datasets[0]]
@@ -1647,6 +1482,10 @@ def test_exceptions():
     with pytest.raises(ValueError):
         select_coint_rank(endog, 0, 3, "trace", 0.025)
 
+    # VECM.fit: method argument cannot be anything other than "ml"
+    with pytest.raises(ValueError, match="method"):
+        VECM(endog).fit(method="not-ml")
+
     # Granger_causality:
     # # 0<signif<1
     # this means signif=0
@@ -1663,9 +1502,8 @@ def test_exceptions():
 
     # exceptions in VECM class
     # # choose only one of the two: "co" and "ci"
-    model = VECM(endog, k_ar_diff=1, deterministic="cico")
-    with pytest.raises(ValueError):
-        model.fit()
+    with pytest.raises(ValueError, match="deterministic must be one "):
+        model = VECM(endog, k_ar_diff=1, deterministic="cico")
     # # we analyze multiple time series
     univariate_data = endog[0]
     with pytest.raises(ValueError):
@@ -1738,11 +1576,6 @@ def test_exceptions():
 
 
 def test_select_coint_rank():  # This is only a smoke test.
-    if debug_mode:
-        if "select_coint_rank" not in to_test:  # pragma: no cover
-            return
-        else:
-            print("\n\nSELECT_COINT_RANK\n", end="")
     endog = data[datasets[0]]
     neqs = endog.shape[1]
 
@@ -1771,14 +1604,39 @@ def test_select_coint_rank():  # This is only a smoke test.
         assert (test_stats[rank] < crit_vals[rank])
 
 
+def test_coint_rank_results_summary():
+    # CointRankResults.summary is exported (as the return type of
+    # select_coint_rank) but had no direct test coverage: it renders a
+    # SimpleTable from the same rank/test_stats/crit_vals data already
+    # validated numerically in test_select_coint_rank above.
+    endog = data[datasets[0]]
+
+    trace_result = select_coint_rank(endog, 0, 3, method="trace", signif=0.05)
+    table = trace_result.summary()
+    text = str(table)
+    assert "trace" in text.lower()
+    assert "5%" in text
+    num_tests = min(trace_result.rank, trace_result.neqs - 1)
+    assert len(table.data) == num_tests + 2  # header row + one per test
+    for i in range(num_tests + 1):
+        assert f"{trace_result.test_stats[i]:#0.4g}" in text
+
+    maxeig_result = select_coint_rank(
+        endog, 0, 3, method="maxeig", signif=0.1
+    )
+    text_maxeig = str(maxeig_result.summary())
+    assert "maximum eigenvalue" in text_maxeig.lower()
+    assert "10%" in text_maxeig
+
+
 def test_VECM_seasonal_forecast():
     # timing of seasonal dummies, VAR forecast horizon
-    np.random.seed(964255)
+    rs = np.random.RandomState(964255)
     nobs = 200
     seasons = 6
-    fact = np.cumsum(0.1 + np.random.randn(nobs, 2), 0)
+    fact = np.cumsum(0.1 + rs.randn(nobs, 2), 0)
 
-    xx = np.random.randn(nobs + 2, 3)
+    xx = rs.randn(nobs + 2, 3)
     xx = xx[2:] + 0.6 * xx[1:-1] + 0.25 * xx[:-2]
     xx[:, :2] += fact[:, 0][:, None]
     xx[:, 2:] += fact[:, 1][:, None]
@@ -1833,5 +1691,44 @@ def test_VECM_seasonal_forecast():
         forecast = res.predict(steps=3 * seasons)
         dips = np.sort(np.argsort(forecast, axis=0)[:3], axis=0)
         assert_array_equal(dips, dips_true)
-
     # res2.plot_forecast(steps=18, alpha=0.1, n_last_obs=4*seasons)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_forecast_and_plot_data(close_figures):
+    rs = np.random.RandomState(20260821)
+    n = 100
+    common_trend = np.cumsum(rs.standard_normal(n))
+    endog = np.column_stack([
+        common_trend + rs.standard_normal(n) * 0.3,
+        common_trend + rs.standard_normal(n) * 0.3,
+        common_trend + rs.standard_normal(n) * 0.3,
+    ])
+
+    res = VECM(endog, k_ar_diff=1, coint_rank=1, deterministic="ci").fit()
+
+    fig = res.plot_forecast(steps=10)
+    assert len(fig.axes) == endog.shape[1]
+
+    fig_short = res.plot_forecast(steps=10, plot_conf_int=False, n_last_obs=20)
+    assert len(fig_short.axes) == endog.shape[1]
+
+    fig_data = res.plot_data()
+    assert len(fig_data.axes) == endog.shape[1]
+    for ax in fig_data.axes:
+        assert len(ax.get_lines()) >= 1
+        assert len(ax.get_lines()[0].get_ydata()) == n - res.k_ar
+
+    fig_full = res.plot_data(with_presample=True)
+    for ax in fig_full.axes:
+        assert len(ax.get_lines()[0].get_ydata()) == n
+
+    # plot_data must also work when the model was fit with a date index
+    # (previously crashed: self.dates[self.k_ar:] on a None self.dates
+    # was only reached through the *array* path above)
+    import pandas as pd
+    dated = pd.DataFrame(endog, index=pd.date_range("2000-01-01", periods=n, freq="D"))
+    res_dated = VECM(dated, k_ar_diff=1, coint_rank=1, deterministic="ci").fit()
+    fig_dated = res_dated.plot_data()
+    assert len(fig_dated.axes) == endog.shape[1]

@@ -69,7 +69,7 @@ class TestCell:
         celldata = cell0data, cell1data, row1data[0], row1data[1]
         cells = [Cell(datum, datatype=i % 2)
                  for i, datum in enumerate(celldata)]
-        for cell, datum in zip(cells, celldata):
+        for cell, datum in zip(cells, celldata, strict=True):
             assert_equal(cell.data, datum)
 
 
@@ -84,7 +84,7 @@ class TestSimpleTable:
 * stub2 *    2.00 *       3 *
 *****************************
 """
-        actual = "\n%s\n" % tbl.as_text()
+        actual = f"\n{tbl.as_text()}\n"
         # print('actual')
         # print(actual)
         # print('desired')
@@ -105,7 +105,7 @@ class TestSimpleTable:
 \end{tabular}
 \end{center}
 """
-        actual = "\n%s\n" % tbl.as_latex_tabular()
+        actual = f"\n{tbl.as_latex_tabular()}\n"
         # print(actual)
         # print(desired)
         assert_equal(actual, desired)
@@ -127,7 +127,7 @@ class TestSimpleTable:
 """
         # the previous has significant trailing whitespace that got removed
         # desired = '''\n<table class="simpletable">\n<tr>\n    <td></td>    <th>header1</th> <th>header2</th>\n</tr>\n<tr>\n  <th>stub1</th>   <td>0.0</td>      <td>1</td>   \n</tr>\n<tr>\n  <th>stub2</th>    <td>2</td>     <td>3.333</td> \n</tr>\n</table>\n'''
-        actual = "\n%s\n" % tbl.as_html()
+        actual = f"\n{tbl.as_html()}\n"
         actual = "\n".join(line.rstrip() for line in actual.split("\n"))
         # print(actual)
         # print(desired)
@@ -148,5 +148,5 @@ class TestSimpleTable:
 * stub2 *    2.00 *       3 *
 *****************************
 """
-        actual = "\n%s\n" % tbl.as_text(missing="--")
+        actual = "\n{}\n".format(tbl.as_text(missing="--"))
         assert_equal(actual, desired)

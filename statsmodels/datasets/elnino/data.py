@@ -17,7 +17,7 @@ http://www.cpc.ncep.noaa.gov/data/indices/
 DESCRSHORT = """Averaged monthly sea surface temperature - Pacific Ocean."""
 
 DESCRLONG = """This data contains the averaged monthly sea surface
-temperature in degrees Celcius of the Pacific Ocean, between 0-10 degrees South
+temperature in degrees Celsius of the Pacific Ocean, between 0-10 degrees South
 and 90-80 degrees West, from 1950 to 2010.  This dataset was obtained from
 NOAA.
 """
@@ -30,12 +30,24 @@ NOTE = """::
 
     Variable name definitions::
 
-        TEMPERATURE - average sea surface temperature in degrees Celcius
+        TEMPERATURE - average sea surface temperature in degrees Celsius
                       (12 columns, one per month).
 """
 
 
 def load_pandas():
+    """
+    Load the El Nino data and return a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data`` and ``names`` attributes.
+
+    Notes
+    -----
+    The elnino Dataset instance does not contain endog and exog attributes.
+    """
     data = _get_data()
     dataset = du.Dataset(data=data, names=list(data.columns))
     return dataset
@@ -48,7 +60,7 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``names`` attributes.
 
     Notes
     -----

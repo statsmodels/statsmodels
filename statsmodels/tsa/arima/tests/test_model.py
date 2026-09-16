@@ -20,6 +20,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.datasets import macrodata
+from statsmodels.iolib.summary import Summary
 from statsmodels.tsa.arima.estimators.burg import burg
 from statsmodels.tsa.arima.estimators.hannan_rissanen import hannan_rissanen
 from statsmodels.tsa.arima.estimators.innovations import innovations, innovations_mle
@@ -60,7 +61,7 @@ def test_invalid():
         mod.fit(method="not_a_method")
 
     # Can only use certain methods with fixed parameters
-    # (e.g. 'statespace' and 'hannan-rissanen')
+    # (e.g., 'statespace' and 'hannan-rissanen')
     with mod.fix_params({"ar.L1": 0.5}):
         with pytest.raises(ValueError):
             mod.fit(method="yule_walker")
@@ -94,7 +95,7 @@ def test_yule_walker():
     endog = dta["infl"].iloc[:50]
 
     # AR(2), no trend (since trend would imply GLS estimation)
-    desired_p, _ = yule_walker(endog, ar_order=2, demean=False)
+    desired_p = yule_walker(endog, ar_order=2, demean=False).parameters
     mod = ARIMA(endog, order=(2, 0, 0), trend="n")
     res = mod.fit(method="yule_walker")
     assert_allclose(res.params, desired_p.params)
@@ -105,7 +106,7 @@ def test_burg():
     endog = dta["infl"].iloc[:50]
 
     # AR(2), no trend (since trend would imply GLS estimation)
-    desired_p, _ = burg(endog, ar_order=2, demean=False)
+    desired_p = burg(endog, ar_order=2, demean=False).parameters
     mod = ARIMA(endog, order=(2, 0, 0), trend="n")
     res = mod.fit(method="burg")
     assert_allclose(res.params, desired_p.params)
@@ -116,7 +117,7 @@ def test_hannan_rissanen():
     endog = dta["infl"].diff().iloc[1:101]
 
     # ARMA(1, 1), no trend (since trend would imply GLS estimation)
-    desired_p, _ = hannan_rissanen(endog, ar_order=1, ma_order=1, demean=False)
+    desired_p = hannan_rissanen(endog, ar_order=1, ma_order=1, demean=False).parameters
     mod = ARIMA(endog, order=(1, 0, 1), trend="n")
     res = mod.fit(method="hannan_rissanen")
     assert_allclose(res.params, desired_p.params)
@@ -127,7 +128,7 @@ def test_innovations():
     endog = dta["infl"].iloc[:50]
 
     # MA(2), no trend (since trend would imply GLS estimation)
-    desired_p, _ = innovations(endog, ma_order=2, demean=False)
+    desired_p = innovations(endog, ma_order=2, demean=False).parameters
     mod = ARIMA(endog, order=(0, 0, 2), trend="n")
     res = mod.fit(method="innovations")
     assert_allclose(res.params, desired_p[-1].params)
@@ -138,16 +139,16 @@ def test_innovations_mle():
     endog = dta["infl"].iloc[:100]
 
     # ARMA(1, 1), no trend (since trend would imply GLS estimation)
-    desired_p, _ = innovations_mle(endog, order=(1, 0, 1), demean=False)
+    desired_p = innovations_mle(endog, order=(1, 0, 1), demean=False).parameters
     mod = ARIMA(endog, order=(1, 0, 1), trend="n")
     res = mod.fit(method="innovations_mle")
     # Note: atol is required only due to precision issues on Windows
     assert_allclose(res.params, desired_p.params, atol=1e-5)
 
     # SARMA(1, 0)x(1, 0)4, no trend (since trend would imply GLS estimation)
-    desired_p, _ = innovations_mle(
+    desired_p = innovations_mle(
         endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4), demean=False
-    )
+    ).parameters
     mod = ARIMA(endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4), trend="n")
     res = mod.fit(method="innovations_mle")
     # Note: atol is required only due to precision issues on Windows
@@ -159,7 +160,7 @@ def test_statespace():
     endog = dta["infl"].iloc[:100]
 
     # ARMA(1, 1), no trend
-    desired_p, _ = statespace(endog, order=(1, 0, 1), include_constant=False)
+    desired_p = statespace(endog, order=(1, 0, 1), include_constant=False).parameters
     mod = ARIMA(endog, order=(1, 0, 1), trend="n")
     res = mod.fit(method="statespace")
     # Note: tol changes required due to precision issues on Windows
@@ -167,14 +168,14 @@ def test_statespace():
     assert_allclose(res.params, desired_p.params, rtol=rtol, atol=1e-4)
 
     # ARMA(1, 2), with trend
-    desired_p, _ = statespace(endog, order=(1, 0, 2), include_constant=True)
+    desired_p = statespace(endog, order=(1, 0, 2), include_constant=True).parameters
     mod = ARIMA(endog, order=(1, 0, 2), trend="c")
     res = mod.fit(method="statespace")
     # Note: atol is required only due to precision issues on Windows
     assert_allclose(res.params, desired_p.params, atol=1e-4)
 
     # SARMA(1, 0)x(1, 0)4, no trend
-    desired_p, _spec = statespace(
+    desired_p, _ = statespace(
         endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4), include_constant=False
     )
     mod = ARIMA(endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 4), trend="n")
@@ -199,17 +200,17 @@ def test_low_memory():
     assert_equal(mod.ssm.memory_conserve, 0)
 
     # Check that low memory was actually used (just check a couple)
-    assert (res2.llf_obs is None)
-    assert (res2.predicted_state is None)
-    assert (res2.filtered_state is None)
-    assert (res2.smoothed_state is None)
+    assert res2.llf_obs is None
+    assert res2.predicted_state is None
+    assert res2.filtered_state is None
+    assert res2.smoothed_state is None
 
 
 def check_cloned(mod, endog, exog=None):
     mod_c = mod.clone(endog, exog=exog)
 
     assert_allclose(mod.nobs, mod_c.nobs)
-    assert (mod._index.equals(mod_c._index))
+    assert mod._index.equals(mod_c._index)
     assert_equal(mod.k_params, mod_c.k_params)
     assert_allclose(mod.start_params, mod_c.start_params)
     p = mod.start_params
@@ -351,6 +352,24 @@ def test_append_with_exog_pandas():
     assert_allclose(res2.llf, res_e.llf)
 
 
+def test_extend_with_exog_constant_over_window():
+    # GH 8991: extending with `exog` that is constant over the extension window
+    # (but not over the full sample) must not raise, since `extend` reuses the
+    # already-validated specification of the original model.
+    endog = dta["infl"].iloc[:100].values
+    exog = np.r_[np.arange(50.0), np.ones(50) * 3.0]
+    mod = ARIMA(endog[:50], exog=exog[:50], trend="c")
+    res = mod.fit()
+
+    # Raised ValueError before GH 8991 was fixed
+    res_e = res.extend(endog[50:], exog=exog[50:])
+
+    mod2 = ARIMA(endog, exog=exog, trend="c")
+    res2 = mod2.filter(res.params)
+
+    assert_allclose(res_e.llf_obs, res2.llf_obs[50:])
+
+
 def test_cov_type_none():
     endog = dta["infl"].iloc[:100].values
     mod = ARIMA(endog[:50], trend="c")
@@ -361,8 +380,7 @@ def test_cov_type_none():
 def test_nonstationary_gls_error():
     # GH-6540
     endog = pd.read_csv(
-        io.StringIO(
-            """\
+        io.StringIO("""\
 data\n
 9.112\n9.102\n9.103\n9.099\n9.094\n9.090\n9.108\n9.088\n9.091\n9.083\n9.095\n
 9.090\n9.098\n9.093\n9.087\n9.088\n9.083\n9.095\n9.077\n9.082\n9.082\n9.081\n
@@ -382,8 +400,7 @@ data\n
 9.058\n9.074\n9.063\n9.057\n9.062\n9.058\n9.049\n9.047\n9.062\n9.052\n9.052\n
 9.044\n9.060\n9.062\n9.055\n9.058\n9.054\n9.044\n9.047\n9.050\n9.048\n9.041\n
 9.055\n9.051\n9.028\n9.030\n9.029\n9.027\n9.016\n9.023\n9.031\n9.042\n9.035\n
-"""
-        ),
+"""),
         index_col=None,
     )
     mod = ARIMA(
@@ -410,13 +427,13 @@ def test_hannan_rissanen_with_fixed_params(ar_order, ma_order, fixed_params):
     # Test for basic uses of Hannan-Rissanen estimation with fixed parameters
     endog = dta["infl"].diff().iloc[1:101]
 
-    desired_p, _ = hannan_rissanen(
+    desired_p = hannan_rissanen(
         endog,
         ar_order=ar_order,
         ma_order=ma_order,
         demean=False,
         fixed_params=fixed_params,
-    )
+    ).parameters
     # no constant or trend (since constant or trend would imply GLS estimation)
     mod = ARIMA(
         endog,
@@ -435,7 +452,8 @@ def test_hannan_rissanen_with_fixed_params(ar_order, ma_order, fixed_params):
     "random_state_type", [7, np.random.RandomState, np.random.default_rng]
 )
 def test_reproducible_simulation(random_state_type):
-    x = np.random.randn(100)
+    rg = np.random.RandomState(12345)
+    x = rg.randn(100)
     res = ARIMA(x, order=(1, 0, 0)).fit()
 
     def get_random_state(val):
@@ -443,8 +461,53 @@ def test_reproducible_simulation(random_state_type):
             return 7
         return random_state_type(7)
 
-    random_state = get_random_state(random_state_type)
-    sim1 = res.simulate(1, random_state=random_state)
-    random_state = get_random_state(random_state_type)
-    sim2 = res.simulate(1, random_state=random_state)
+    rng = get_random_state(random_state_type)
+    sim1 = res.simulate(1, rng=rng)
+    rng = get_random_state(random_state_type)
+    sim2 = res.simulate(1, rng=rng)
     assert_allclose(sim1, sim2)
+
+
+def test_alternative_estimators_seasonal_differencing():
+    # Seasonal differencing only (P=0, D=1, Q=0) should be accepted by
+    # non-seasonal estimators; seasonal AR or MA terms should be rejected.
+    rg = np.random.RandomState(12345)
+    endog = rg.standard_normal(48)
+
+    order = (1, 0, 1)
+    seasonal_order = (0, 1, 0, 12)
+
+    # hannan_rissanen should accept seasonal-differencing-only models
+    mod_hr = ARIMA(endog, order=order, seasonal_order=seasonal_order)
+    try:
+        with pytest.warns(UserWarning, match="Provided"):
+            mod_hr.fit(method="hannan_rissanen")
+    except Exception as exc:
+        pytest.fail(
+            f"hannan_rissanen failed on seasonal-differencing-only model: {exc}"
+        )
+
+    # yule_walker: AR-only model with seasonal differencing
+    mod_yw = ARIMA(endog, order=(2, 0, 0), seasonal_order=seasonal_order)
+    try:
+        with pytest.warns(UserWarning, match="Provided"):
+            mod_yw.fit(method="yule_walker")
+    except Exception as exc:
+        pytest.fail(f"yule_walker failed on seasonal-differencing-only model: {exc}")
+
+    # Seasonal AR term (P=1) should still be rejected by hannan_rissanen
+    with pytest.raises(ValueError, match="seasonal"):
+        ARIMA(endog, order=(1, 0, 0), seasonal_order=(1, 0, 0, 12)).fit(
+            method="hannan_rissanen"
+        )
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    endog = dta["infl"].iloc[:50]
+    mod = ARIMA(endog, order=(1, 0, 0), concentrate_scale=True)
+    res = mod.fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

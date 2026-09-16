@@ -39,7 +39,7 @@ Empirical Likelihood-Based Inference for moments of univariate and multivariate 
 Analysis of Variance (ANOVA) Modeling
 -------------------------------------
 
-Support for ANOVA is now available including type I, II, and III sums of squares. See :ref:`anova`.
+Support for ANOVA is now available including type I, II, and III sums of squares. See :ref:`anova_ref`.
 
 .. currentmodule:: statsmodels.nonparametric
 

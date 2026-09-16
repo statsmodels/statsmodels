@@ -6,18 +6,55 @@ License: BSD-3
 
 """
 
+from dataclasses import dataclass
+from typing import ClassVar
+
 import numpy as np
 import pandas as pd
 from scipy import stats
 
-from statsmodels.stats.base import HolderTuple
+from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
+from statsmodels.tools.validation import float_like, string_like
+
+
+@dataclass(frozen=True, slots=True)
+class HomogeneityTestResult(LimitedIterationMixin[float]):
+    """
+    Result of :meth:`CombineResults.test_homogeneity`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic, ``q`` in meta-analysis, this is the pearson_chi2
+        statistic for the fixed effects model.
+    pvalue : float
+        p-value based on the chisquare distribution.
+    df : float
+        Degrees of freedom, equal to the number of studies or samples
+        minus 1.
+    distribution : str
+        Name of the reference distribution used for `pvalue`, ``"chi2"``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+    statistic: float
+    pvalue: float
+    df: float
+    distribution: str
 
 
 class CombineResults:
-    """Results from combined estimate of means or effect sizes
+    """
+    Results from combined estimate of means or effect sizes
 
-    This currently includes intermediate results that might be removed
+    This currently includes intermediate results that might be removed.
     """
 
     def __init__(self, **kwds):
@@ -36,9 +73,13 @@ class CombineResults:
 
         # memoize ci_samples
         self.cache_ci = {}
+        # Populated by `conf_int_samples`; declared here so it exists (as
+        # None) even before that method has been called.
+        self.ci_sample_distr = None
 
     def conf_int_samples(self, alpha=0.05, use_t=None, nobs=None, ci_func=None):
-        """confidence intervals for the effect size estimate of samples
+        """
+        Confidence intervals for the effect size estimate of samples
 
         Additional information needs to be provided for confidence intervals
         that are not based on normal distribution using available variance.
@@ -46,20 +87,20 @@ class CombineResults:
 
         Parameters
         ----------
-        alpha : float in (0, 1)
+        alpha : float in (0, 1), optional
             Significance level for confidence interval. Nominal coverage is
             ``1 - alpha``.
-        use_t : None or bool
+        use_t : None or bool, optional
             If use_t is None, then the attribute `use_t` determines whether
             normal or t-distribution is used for confidence intervals.
             Specifying use_t overrides the attribute.
             If use_t is false, then confidence intervals are based on the
             normal distribution. If it is true, then the t-distribution is
             used.
-        nobs : None or float
+        nobs : None or float, optional
             Number of observations used for degrees of freedom computation.
             Only used if use_t is true.
-        ci_func : None or callable
+        ci_func : None or callable, optional
             User provided function to compute confidence intervals.
             This is not used yet and will allow using non-standard confidence
             intervals.
@@ -119,14 +160,15 @@ class CombineResults:
         return ci_eff
 
     def conf_int(self, alpha=0.05, use_t=None):
-        """confidence interval for the overall mean estimate
+        """
+        Confidence interval for the overall mean estimate
 
         Parameters
         ----------
-        alpha : float in (0, 1)
+        alpha : float in (0, 1), optional
             Significance level for confidence interval. Nominal coverage is
             ``1 - alpha``.
-        use_t : None or bool
+        use_t : None or bool, optional
             If use_t is None, then the attribute `use_t` determines whether
             normal or t-distribution is used for confidence intervals.
             Specifying use_t overrides the attribute.
@@ -136,21 +178,21 @@ class CombineResults:
 
         Returns
         -------
-        ci_eff_fe : tuple of floats
-            Confidence interval for mean effects size based on fixed effects
-            model with scale=1.
-        ci_eff_re : tuple of floats
-            Confidence interval for mean effects size based on random effects
-            model with scale=1
-        ci_eff_fe_wls : tuple of floats
-            Confidence interval for mean effects size based on fixed effects
-            model with estimated scale corresponding to WLS, ie. HKSJ.
-        ci_eff_re_wls : tuple of floats
-            Confidence interval for mean effects size based on random effects
-            model with estimated scale corresponding to WLS, ie. HKSJ.
-            If random effects method is fully iterated, i.e. Paule-Mandel, then
-            the estimated scale is 1.
-
+        ci_eff_fe : ndarray
+            Confidence interval (lower, upper) for mean effects size based on
+            fixed effects model with scale=1.
+        ci_eff_re : ndarray
+            Confidence interval (lower, upper) for mean effects size based on
+            random effects model with scale=1
+        ci_eff_fe_wls : ndarray
+            Confidence interval (lower, upper) for mean effects size based on
+            fixed effects model with estimated scale corresponding to WLS,
+            ie. HKSJ.
+        ci_eff_re_wls : ndarray
+            Confidence interval (lower, upper) for mean effects size based on
+            random effects model with estimated scale corresponding to WLS,
+            ie. HKSJ. If random effects method is fully iterated, i.e.,
+            Paule-Mandel, then the estimated scale is 1.
         """
         if use_t is None:
             use_t = self.use_t
@@ -172,38 +214,34 @@ class CombineResults:
         return ci_eff_fe, ci_eff_re, ci_eff_fe_wls, ci_eff_re_wls
 
     def test_homogeneity(self):
-        """Test whether the means of all samples are the same
+        """
+        Test whether the means of all samples are the same
 
-        currently no options, test uses chisquare distribution
-        default might change depending on `use_t`
+        Currently no options, test uses chisquare distribution.
+        Default might change depending on `use_t`.
 
         Returns
         -------
-        res : HolderTuple instance
-            The results include the following attributes:
-
-            - statistic : float
-                Test statistic, ``q`` in meta-analysis, this is the
-                pearson_chi2 statistic for the fixed effects model.
-            - pvalue : float
-                P-value based on chisquare distribution.
-            - df : float
-                Degrees of freedom, equal to number of studies or samples
-                minus 1.
+        HomogeneityTestResult
+            See :class:`HomogeneityTestResult` for a description of the
+            attributes.
         """
         pvalue = stats.chi2.sf(self.q, self.k - 1)
-        res = HolderTuple(statistic=self.q, pvalue=pvalue, df=self.k - 1, distr="chi2")
+        res = HomogeneityTestResult(
+            statistic=self.q, pvalue=pvalue, df=self.k - 1, distribution="chi2"
+        )
         return res
 
     def summary_array(self, alpha=0.05, use_t=None):
-        """Create array with sample statistics and mean estimates
+        """
+        Create array with sample statistics and mean estimates
 
         Parameters
         ----------
-        alpha : float in (0, 1)
+        alpha : float in (0, 1), optional
             Significance level for confidence interval. Nominal coverage is
             ``1 - alpha``.
-        use_t : None or bool
+        use_t : None or bool, optional
             If use_t is None, then the attribute `use_t` determines whether
             normal or t-distribution is used for confidence intervals.
             Specifying use_t overrides the attribute.
@@ -252,14 +290,15 @@ class CombineResults:
         return res, column_names
 
     def summary_frame(self, alpha=0.05, use_t=None):
-        """Create DataFrame with sample statistics and mean estimates
+        """
+        Create DataFrame with sample statistics and mean estimates
 
         Parameters
         ----------
-        alpha : float in (0, 1)
+        alpha : float in (0, 1), optional
             Significance level for confidence interval. Nominal coverage is
             ``1 - alpha``.
-        use_t : None or bool
+        use_t : None or bool, optional
             If use_t is None, then the attribute `use_t` determines whether
             normal or t-distribution is used for confidence intervals.
             Specifying use_t overrides the attribute.
@@ -273,11 +312,11 @@ class CombineResults:
             pandas DataFrame instance with columns
             ['eff', "sd_eff", "ci_low", "ci_upp", "w_fe","w_re"].
             Rows include statistics for samples and estimates of overall mean.
-
         """
         if use_t is None:
             use_t = self.use_t
-        labels = list(self.row_names) + [
+        labels = [
+            *list(self.row_names),
             "fixed effect",
             "random effect",
             "fixed effect wls",
@@ -288,41 +327,40 @@ class CombineResults:
         return results
 
     def plot_forest(self, alpha=0.05, use_t=None, use_exp=False, ax=None, **kwds):
-        """Forest plot with means and confidence intervals
+        """
+        Forest plot with means and confidence intervals
 
         Parameters
         ----------
-        ax : None or matplotlib axis instance
-            If ax is provided, then the plot will be added to it.
-        alpha : float in (0, 1)
+        alpha : float in (0, 1), optional
             Significance level for confidence interval. Nominal coverage is
             ``1 - alpha``.
-        use_t : None or bool
+        use_t : None or bool, optional
             If use_t is None, then the attribute `use_t` determines whether
             normal or t-distribution is used for confidence intervals.
             Specifying use_t overrides the attribute.
             If use_t is false, then confidence intervals are based on the
             normal distribution. If it is true, then the t-distribution is
             used.
-        use_exp : bool
+        use_exp : bool, optional
             If `use_exp` is True, then the effect size and confidence limits
             will be exponentiated. This transform log-odds-ration into
             odds-ratio, and similarly for risk-ratio.
         ax : AxesSubplot, optional
             If given, this axes is used to plot in instead of a new figure
             being created.
-        kwds : optional keyword arguments
+        **kwds : optional keyword arguments
             Keywords are forwarded to the dot_plot function that creates the
             plot.
 
         Returns
         -------
-        fig : Matplotlib figure instance
+        fig : Figure
+            The forest plot.
 
         See Also
         --------
         dot_plot
-
         """
         from statsmodels.graphics.dotplots import dot_plot
 
@@ -335,13 +373,15 @@ class CombineResults:
             intervals=hw,
             lines=res_df.index,
             line_order=res_df.index,
+            ax=ax,
             **kwds,
         )
         return fig
 
 
 def effectsize_smd(mean1, sd1, nobs1, mean2, sd2, nobs2):
-    """effect sizes for mean difference for use in meta-analysis
+    """
+    Effect sizes for mean difference for use in meta-analysis
 
     mean1, sd1, nobs1 are for treatment
     mean2, sd2, nobs2 are for control
@@ -349,7 +389,7 @@ def effectsize_smd(mean1, sd1, nobs1, mean2, sd2, nobs2):
     Effect sizes are computed for the mean difference ``mean1 - mean2``
     standardized by an estimate of the within variance.
 
-    This does not have option yet.
+    This does not have options yet.
     It uses standardized mean difference with bias correction as effect size.
 
     This currently does not use np.asarray, all computations are possible in
@@ -357,21 +397,22 @@ def effectsize_smd(mean1, sd1, nobs1, mean2, sd2, nobs2):
 
     Parameters
     ----------
-    mean1 : array
-        mean of second sample, treatment groups
-    sd1 : array
-        standard deviation of residuals in treatment groups, within
-    nobs1 : array
-        number of observations in treatment groups
-    mean2, sd2, nobs2 : arrays
-        mean, standard deviation and number of observations of control groups
+    mean1 : array_like
+        Mean of first sample, treatment groups.
+    sd1 : array_like
+        Standard deviation of residuals in treatment groups, within.
+    nobs1 : array_like
+        Number of observations in treatment groups.
+    mean2, sd2, nobs2 : array_like
+        Mean, standard deviation and number of observations of control
+        groups.
 
     Returns
     -------
     smd_bc : array
-        bias corrected estimate of standardized mean difference
+        Bias corrected estimate of standardized mean difference.
     var_smdbc : array
-        estimate of variance of smd_bc
+        Estimate of variance of smd_bc.
 
     Notes
     -----
@@ -386,7 +427,6 @@ def effectsize_smd(mean1, sd1, nobs1, mean2, sd2, nobs2):
     Chen, Ding-Geng, and Karl E. Peace. 2013. Applied Meta-Analysis with R.
         Chapman & Hall/CRC Biostatistics Series.
         Boca Raton: CRC Press/Taylor & Francis Group.
-
     """
     # TODO: not used yet, design and options ?
     # k = len(mean1)
@@ -407,16 +447,17 @@ def effectsize_smd(mean1, sd1, nobs1, mean2, sd2, nobs2):
 def effectsize_2proportions(
     count1, nobs1, count2, nobs2, statistic="diff", zero_correction=None, zero_kwds=None
 ):
-    """Effects sizes for two sample binomial proportions
+    """
+    Effect sizes for two sample binomial proportions
 
     Parameters
     ----------
     count1, nobs1, count2, nobs2 : array_like
-        data for two samples
-    statistic : {"diff", "odds-ratio", "risk-ratio", "arcsine"}
-        statistic for the comparison of two proportions
+        Data for two samples.
+    statistic : {"diff", "odds-ratio", "risk-ratio", "arcsin"}, optional
+        Statistic for the comparison of two proportions.
         Effect sizes for "odds-ratio" and "risk-ratio" are in logarithm.
-    zero_correction : {None, float, "tac", "clip"}
+    zero_correction : {None, float, "tac", "clip"}, optional
         Some statistics are not finite when zero counts are in the data.
         The options to remove zeros are:
 
@@ -427,24 +468,21 @@ def effectsize_2proportions(
         * "clip" : clip proportions without adding a value to all cells
           The clip bounds can be set with zero_kwds["clip_bounds"]
 
-    zero_kwds : dict
-        additional options to handle zero counts
+    zero_kwds : dict, optional
+        Additional options to handle zero counts.
         "clip_bounds" tuple, default (1e-6, 1 - 1e-6) if zero_correction="clip"
-        other options not yet implemented
+        other options not yet implemented.
 
     Returns
     -------
-    effect size : array
+    eff : array
         Effect size for each sample.
-    var_es : array
-        Estimate of variance of the effect size
+    var_eff : array
+        Estimate of variance of the effect size.
 
     Notes
     -----
     Status: API is experimental, Options for zero handling is incomplete.
-
-    The names for ``statistics`` keyword can be shortened to "rd", "rr", "or"
-    and "as".
 
     The statistics are defined as:
 
@@ -456,30 +494,41 @@ def effectsize_2proportions(
     where p1 and p2 are the estimated proportions in sample 1 (treatment) and
     sample 2 (control).
 
-    log-odds-ratio and log-risk-ratio can be transformed back to ``or`` and
-    `rr` using `exp` function.
+    log-odds-ratio and log-risk-ratio can be transformed back to ``odds-ratio`` and
+    ``risk-ratio`` using ``exp`` function.
 
     See Also
     --------
     statsmodels.stats.contingency_tables
     """
+
+    statistic = string_like(
+        statistic,
+        "statistic",
+        options=("diff", "risk-ratio", "odds-ratio", "arcsin"),
+        deprecated={
+            "rd": "diff",
+            "rr": "risk-ratio",
+            "or": "odds-ratio",
+            "arcsine": "arcsin",
+            "as": "arcsin",
+        },
+        removed_after="0.16",
+    )
     if zero_correction is None:
         cc1 = cc2 = 0
     elif zero_correction == "tac":
         # treatment arm continuity correction Ruecker et al 2009, section 3.2
+
         nobs_t = nobs1 + nobs2
         cc1 = nobs2 / nobs_t
         cc2 = nobs1 / nobs_t
     elif zero_correction == "clip":
+        zero_kwds = {} if zero_kwds is None else zero_kwds
         clip_bounds = zero_kwds.get("clip_bounds", (1e-6, 1 - 1e-6))
         cc1 = cc2 = 0
-    elif zero_correction:
-        # TODO: check is float_like
-        cc1 = cc2 = zero_correction
     else:
-        msg = "zero_correction not recognized or supported"
-        raise NotImplementedError(msg)
-
+        cc1 = cc2 = float_like(zero_correction, "zero_correction", optional=False)
     zero_mask1 = (count1 == 0) | (count1 == nobs1)
     zero_mask2 = (count2 == 0) | (count2 == nobs2)
     zmask = np.logical_or(zero_mask1, zero_mask2)
@@ -491,33 +540,30 @@ def effectsize_2proportions(
     if zero_correction == "clip":
         p1 = np.clip(p1, *clip_bounds)
         p2 = np.clip(p2, *clip_bounds)
-
-    if statistic in ["diff", "rd"]:
+    if statistic == "diff":
         rd = p1 - p2
         rd_var = p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2
         eff = rd
         var_eff = rd_var
-    elif statistic in ["risk-ratio", "rr"]:
+    elif statistic == "risk-ratio":
         # rr = p1 / p2
+
         log_rr = np.log(p1) - np.log(p2)
         log_rr_var = (1 - p1) / p1 / n1 + (1 - p2) / p2 / n2
         eff = log_rr
         var_eff = log_rr_var
-    elif statistic in ["odds-ratio", "or"]:
+    elif statistic == "odds-ratio":
         # or_ = p1 / (1 - p1) * (1 - p2) / p2
+
         log_or = np.log(p1) - np.log(1 - p1) - np.log(p2) + np.log(1 - p2)
         log_or_var = 1 / (p1 * (1 - p1) * n1) + 1 / (p2 * (1 - p2) * n2)
         eff = log_or
         var_eff = log_or_var
-    elif statistic in ["arcsine", "arcsin", "as"]:
+    else:  # statistic == "arcsin"
         as_ = np.arcsin(np.sqrt(p1)) - np.arcsin(np.sqrt(p2))
         as_var = (1 / n1 + 1 / n2) / 4
         eff = as_
         var_eff = as_var
-    else:
-        msg = 'statistic not recognized, use one of "rd", "rr", "or", "as"'
-        raise NotImplementedError(msg)
-
     return eff, var_eff
 
 
@@ -530,28 +576,37 @@ def combine_effects(
     alpha=0.05,
     **kwds,
 ):
-    """combining effect sizes for effect sizes using meta-analysis
+    """
+    Combining effect sizes for effect sizes using meta-analysis
 
     This currently does not use np.asarray, all computations are possible in
     pandas.
 
     Parameters
     ----------
-    effect : array
-        mean of effect size measure for all samples
-    variance : array
-        variance of mean or effect size measure for all samples
-    method_re : {"iterated", "chi2"}
-        method that is use to compute the between random effects variance
+    effect : array_like
+        Mean of effect size measure for all samples.
+    variance : array_like
+        Variance of mean or effect size measure for all samples.
+    method_re : {"iterated", "pm", "chi2", "dl"}, optional
+        Method that is used to compute the between random effects variance.
         "iterated" or "pm" uses Paule and Mandel method to iteratively
         estimate the random effects variance. Options for the iteration can
-        be provided in the ``kwds``
+        be provided in the ``kwds``.
         "chi2" or "dl" uses DerSimonian and Laird one-step estimator.
-    row_names : list of strings (optional)
-        names for samples or studies, will be included in results summary and
+    row_names : list of str, optional
+        Names for samples or studies, will be included in results summary and
         table.
-    alpha : float in (0, 1)
-        significance level, default is 0.05, for the confidence intervals
+    use_t : bool, optional
+        If use_t is False, then confidence intervals and hypothesis tests are
+        based on the normal distribution. If use_t is True, then the results
+        instance stores this choice as its `use_t` attribute and it is used
+        when computing confidence intervals with the t-distribution.
+    alpha : float in (0, 1), optional
+        Significance level, default is 0.05, for the confidence intervals.
+    **kwds
+        Additional keyword arguments passed to the function that estimates
+        the random effects variance if ``method_re`` is "iterated" or "pm".
 
     Returns
     -------
@@ -577,8 +632,8 @@ def combine_effects(
     confidence intervals with the correct size. Estimating the scale to account
     for residual variance often improves the small sample properties of
     inference and confidence intervals.
-    This adjustment to the standard errors is often referred to as HKSJ
-    method based attributed to Hartung and Knapp and Sidik and Jonkman.
+    This adjustment to the standard errors is often referred to as the HKSJ
+    method, attributed to Hartung and Knapp and Sidik and Jonkman.
     However, this is equivalent to estimating the scale in WLS.
     The results instance includes both, fixed scale and estimated scale
     versions of standard errors and confidence intervals.
@@ -591,7 +646,6 @@ def combine_effects(
     Chen, Ding-Geng, and Karl E. Peace. 2013. Applied Meta-Analysis with R.
         Chapman & Hall/CRC Biostatistics Series.
         Boca Raton: CRC Press/Taylor & Francis Group.
-
     """
 
     k = len(effect)
@@ -620,14 +674,14 @@ def combine_effects(
     q = (weights_fe * eff**2).sum(0)
     q -= (weights_fe * eff).sum() ** 2 / w_total_fe
     df = k - 1
-
-    if method_re.lower() in ["iterated", "pm"]:
+    method = string_like(
+        method_re, "method_re", options=("iterated", "pm", "chi2", "dl"), lower=True
+    )
+    if method in ("iterated", "pm"):
         tau2, _ = _fit_tau_iterative(eff, var_eff, **kwds)
-    elif method_re.lower() in ["chi2", "dl"]:
+    else:  # method in ["chi2", "dl"]
         c = w_total_fe - (weights_fe**2).sum() / w_total_fe
         tau2 = (q - df) / c
-    else:
-        raise ValueError('method_re should be "iterated" or "chi2"')
 
     weights_re = 1 / (var_eff + tau2)  # no  bias_correction ?
     w_total_re = weights_re.sum(0)
@@ -650,7 +704,8 @@ def combine_effects(
 
 
 def _fit_tau_iterative(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
-    """Paule-Mandel iterative estimate of between random effect variance
+    """
+    Paule-Mandel iterative estimate of between random effect variance
 
     implementation follows DerSimonian and Kacker 2007 Appendix 8
     see also Kacker 2004
@@ -658,23 +713,23 @@ def _fit_tau_iterative(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
     Parameters
     ----------
     eff : ndarray
-        effect sizes
+        Effect sizes.
     var_eff : ndarray
-        variance of effect sizes
-    tau2_start : float
-        starting value for iteration
-    atol : float, default: 1e-5
-        convergence tolerance for absolute value of estimating equation
-    maxiter : int
-        maximum number of iterations
+        Variance of effect sizes.
+    tau2_start : float, optional
+        Starting value for iteration.
+    atol : float, optional
+        Convergence tolerance for absolute value of estimating equation.
+        Default is 1e-5.
+    maxiter : int, optional
+        Maximum number of iterations.
 
     Returns
     -------
     tau2 : float
-        estimate of random effects variance tau squared
+        Estimate of random effects variance tau squared.
     converged : bool
         True if iteration has converged.
-
     """
     tau2 = tau2_start
     k = eff.shape[0]
@@ -701,24 +756,24 @@ def _fit_tau_iterative(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
 
 
 def _fit_tau_mm(eff, var_eff, weights):
-    """one-step method of moment estimate of between random effect variance
+    """
+    One-step method of moment estimate of between random effect variance
 
     implementation follows Kacker 2004 and DerSimonian and Kacker 2007 eq. 6
 
     Parameters
     ----------
     eff : ndarray
-        effect sizes
+        Effect sizes.
     var_eff : ndarray
-        variance of effect sizes
+        Variance of effect sizes.
     weights : ndarray
-        weights for estimating overall weighted mean
+        Weights for estimating overall weighted mean.
 
     Returns
     -------
     tau2 : float
-        estimate of random effects variance tau squared
-
+        Estimate of random effects variance tau squared.
     """
     w = weights
 
@@ -735,7 +790,8 @@ def _fit_tau_mm(eff, var_eff, weights):
 
 
 def _fit_tau_iter_mm(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
-    """iterated method of moment estimate of between random effect variance
+    """
+    Iterated method of moment estimate of between random effect variance
 
     This repeatedly estimates tau, updating weights in each iteration
     see two-step estimators in DerSimonian and Kacker 2007
@@ -743,23 +799,23 @@ def _fit_tau_iter_mm(eff, var_eff, tau2_start=0, atol=1e-5, maxiter=50):
     Parameters
     ----------
     eff : ndarray
-        effect sizes
+        Effect sizes.
     var_eff : ndarray
-        variance of effect sizes
-    tau2_start : float
-        starting value for iteration
-    atol : float, default: 1e-5
-        convergence tolerance for change in tau2 estimate between iterations
-    maxiter : int
-        maximum number of iterations
+        Variance of effect sizes.
+    tau2_start : float, optional
+        Starting value for iteration.
+    atol : float, optional
+        Convergence tolerance for change in tau2 estimate between iterations.
+        Default is 1e-5.
+    maxiter : int, optional
+        Maximum number of iterations.
 
     Returns
     -------
     tau2 : float
-        estimate of random effects variance tau squared
+        Estimate of random effects variance tau squared.
     converged : bool
         True if iteration has converged.
-
     """
     tau2 = tau2_start
     converged = False

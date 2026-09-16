@@ -58,7 +58,8 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     return load_pandas()
 
@@ -70,7 +71,8 @@ def load_pandas():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     data = _get_data()
     return du.process_pandas(data, endog_idx=2, exog_idx=[3, 4, 5, 6, 7, 8])

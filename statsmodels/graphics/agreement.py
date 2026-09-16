@@ -20,7 +20,7 @@ def mean_diff_plot(
     limit_lines_kwds=None,
 ):
     """
-    Construct a Tukey/Bland-Altman Mean Difference Plot.
+    Construct a Tukey/Bland-Altman Mean Difference Plot
 
     Tukey's Mean Difference Plot (also known as a Bland-Altman plot) is a
     graphical method to analyze the differences between two methods of
@@ -35,7 +35,7 @@ def mean_diff_plot(
         A 1-d array.
     m2 : array_like
         A 1-d array.
-    sd_limit : float
+    sd_limit : float, optional
         The limit of agreements expressed in terms of the standard deviation of
         the differences. If `md` is the mean of the differences, and `sd` is
         the standard deviation of those differences, then the limits of
@@ -44,18 +44,20 @@ def mean_diff_plot(
         of the differences. If sd_limit = 0, no limits will be plotted, and
         the ylimit of the plot defaults to 3 standard deviations on either
         side of the mean.
-    ax : AxesSubplot
+    ax : AxesSubplot, optional
         If `ax` is None, then a figure is created. If an axis instance is
         given, the mean difference plot is drawn on the axis.
-    scatter_kwds : dict
-        Options to to style the scatter plot. Accepts any keywords for the
-        matplotlib Axes.scatter plotting method
-    mean_line_kwds : dict
-        Options to to style the scatter plot. Accepts any keywords for the
-        matplotlib Axes.axhline plotting method
-    limit_lines_kwds : dict
-        Options to to style the scatter plot. Accepts any keywords for the
-        matplotlib Axes.axhline plotting method
+    scatter_kwds : dict, optional
+        Options to style the scatter plot. Accepts any keywords for the
+        matplotlib Axes.scatter plotting method.
+    mean_line_kwds : dict, optional
+        Options to style the mean difference line. Accepts any keywords for
+        the matplotlib Axes.axhline plotting method. Keys that are not
+        supplied default to a gray dashed line of width 1.
+    limit_lines_kwds : dict, optional
+        Options to style the limit-of-agreement lines. Accepts any keywords
+        for the matplotlib Axes.axhline plotting method. Keys that are not
+        supplied default to gray dotted lines of width 1.
 
     Returns
     -------
@@ -65,8 +67,8 @@ def mean_diff_plot(
 
     References
     ----------
-    Bland JM, Altman DG (1986). "Statistical methods for assessing agreement
-    between two methods of clinical measurement"
+    .. [1] Bland JM, Altman DG (1986). "Statistical methods for assessing
+           agreement between two methods of clinical measurement"
 
     Examples
     --------
@@ -112,9 +114,9 @@ def mean_diff_plot(
         if "linewidth" not in kwds:
             kwds["linewidth"] = 1
     if "linestyle" not in mean_line_kwds:
-        kwds["linestyle"] = "--"
+        mean_line_kwds["linestyle"] = "--"
     if "linestyle" not in limit_lines_kwds:
-        kwds["linestyle"] = ":"
+        limit_lines_kwds["linestyle"] = ":"
     ax.scatter(means, diffs, **scatter_kwds)  # Plot the means against the diffs.
     ax.axhline(mean_diff, **mean_line_kwds)  # draw mean line.
 

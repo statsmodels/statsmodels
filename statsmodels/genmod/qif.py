@@ -9,7 +9,7 @@ from statsmodels.genmod import families
 from statsmodels.genmod.families import links, varfuncs
 from statsmodels.genmod.generalized_linear_model import GLM
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 
 class QIFCovariance:
@@ -22,13 +22,27 @@ class QIFCovariance:
 
     Subclasses should set the number of basis matrices `num_terms`,
     so that `mat(d, j)` for j=0, ..., num_terms-1 gives the basis
-    of dimension d.`
+    of dimension d.
     """
 
     def mat(self, dim, term):
         """
         Returns the term'th basis matrix, which is a dim x dim
         matrix.
+
+        Parameters
+        ----------
+        dim : int
+            The dimension of the basis matrix.
+        term : int
+            The index of the basis matrix to return, ranging from 0
+            to `num_terms` - 1.
+
+        Returns
+        -------
+        ndarray or None
+            The dim x dim basis matrix for `term`, or None if `term`
+            is greater than or equal to `num_terms`.
         """
         raise NotImplementedError
 
@@ -116,10 +130,15 @@ class QIF(base.Model):
     groups : array_like
         Labels indicating which group each observation belongs to.
         Observations in different groups should be independent.
-    family : genmod family
-        An instance of a GLM family.
-    cov_struct : QIFCovariance instance
-        An instance of a QIFCovariance.
+    family : genmod family, optional
+        An instance of a GLM family. The default is Gaussian.
+    cov_struct : QIFCovariance instance, optional
+        An instance of a QIFCovariance. The default is
+        QIFIndependence.
+    missing : str, optional
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised.
 
     References
     ----------
@@ -177,18 +196,27 @@ class QIF(base.Model):
 
     def objective(self, params):
         """
-        Calculate the gradient of the QIF objective function.
+        Calculate the QIF objective function and its gradient.
 
         Parameters
         ----------
         params : array_like
-            The model parameters at which the gradient is evaluated.
+            The model parameters at which the objective function and
+            its gradient are evaluated.
 
         Returns
         -------
-        grad : array_like
+        qif : float
+            The value of the QIF objective function.
+        grad : ndarray
             The gradient vector of the QIF objective function.
-        gn_deriv : array_like
+        cmat : ndarray
+            The estimated covariance matrix of the estimating
+            equations.
+        gn : ndarray
+            The moment vector, i.e., the average of the estimating
+            equations over the groups.
+        gn_deriv : ndarray
             The gradients of each estimating equation with
             respect to the parameter.
         """
@@ -285,6 +313,17 @@ class QIF(base.Model):
 
         The scale parameter for binomial and Poisson families is
         fixed at 1, otherwise it is estimated from the data.
+
+        Parameters
+        ----------
+        params : array_like
+            The regression coefficients at which the scale is
+            estimated.
+
+        Returns
+        -------
+        float
+            The estimated scale parameter.
         """
 
         if isinstance(self.family, (families.Binomial, families.Poisson)):
@@ -312,14 +351,14 @@ class QIF(base.Model):
         ----------
         formula : str or generic Formula object
             The formula specifying the model
-        groups : array_like or string
+        groups : array_like or str
             Array of grouping labels.  If a string, this is the name
             of a variable in `data` that contains the grouping labels.
         data : array_like
             The data for the model.
-        subset : array_like
+        subset : array_like, optional
             An array_like object of booleans, integers, or index
-            values that indicate the subset of the data to used when
+            values that indicate the subset of the data to use when
             fitting the model.
 
         Returns
@@ -343,14 +382,14 @@ class QIF(base.Model):
 
         Parameters
         ----------
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations.
         start_params : array_like, optional
             Starting values
-        tol : float
+        tol : float, optional
             Convergence threshold for difference of successive
             estimates.
-        gtol : float
+        gtol : float, optional
             Convergence threshold for gradient.
         ddof_scale : int, optional
             Degrees of freedom for the scale parameter
@@ -404,7 +443,15 @@ class QIF(base.Model):
 
 
 class QIFResults(base.LikelihoodModelResults):
-    """Results class for QIF Regression"""
+    """
+    Results class for QIF Regression
+
+    Attributes
+    ----------
+    qif : float
+        The value of the QIF objective function at the estimated
+        parameters.
+    """
     def __init__(self, model, params, cov_params, scale,
                  use_t=False, **kwds):
 
@@ -452,14 +499,14 @@ class QIFResults(base.LikelihoodModelResults):
         ----------
         yname : str, optional
             Default is `y`
-        xname : list[str], optional
-            Names for the exogenous variables, default is `var_#` for ## in
-            the number of regressors. Must match the number of parameters in
-            the model
+        xname : list of str, optional
+            Names for the exogenous variables, default is `var_#` where `#`
+            is the 0-based index of the regressor. Must match the number of
+            parameters in the model
         title : str, optional
             Title for the top table. If not None, then this replaces
             the default title
-        alpha : float
+        alpha : float, optional
             significance level for the confidence intervals
 
         Returns
@@ -488,8 +535,8 @@ class QIFResults(base.LikelihoodModelResults):
                      ("No. clusters:", [len(NY)]),
                      ("Min. cluster size:", [min(NY)]),
                      ("Max. cluster size:", [max(NY)]),
-                     ("Mean cluster size:", ["%.1f" % np.mean(NY)]),
-                     ("Scale:", ["%.3f" % self.scale]),
+                     ("Mean cluster size:", [f"{np.mean(NY):.1f}"]),
+                     ("Scale:", [f"{self.scale:.3f}"]),
                      ]
 
         if title is None:

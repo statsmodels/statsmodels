@@ -1,6 +1,6 @@
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
-import os
+from pathlib import Path
 from socket import timeout
 from urllib.error import HTTPError, URLError
 
@@ -10,19 +10,20 @@ import pytest
 
 from statsmodels.datasets import check_internet, get_rdataset, utils, webuse
 
-CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+CUR_DIR = Path(__file__).resolve().parent
 
 IGNORED_EXCEPTIONS = (HTTPError, URLError, UnicodeEncodeError, timeout)
 if not PYTHON_IMPL_WASM:
     from ssl import SSLError
+
     IGNORED_EXCEPTIONS += (SSLError,)
 
 
 @pytest.mark.smoke
 def test_get_rdataset():
     test_url = (
-            "https://raw.githubusercontent.com/vincentarelbundock/"
-            "Rdatasets/master/csv/datasets/cars.csv"
+        "https://raw.githubusercontent.com/vincentarelbundock/"
+        "Rdatasets/master/csv/datasets/cars.csv"
     )
     internet_available = check_internet(test_url)
     if not internet_available:  # pragma: no cover
@@ -37,6 +38,7 @@ def test_get_rdataset():
 
 
 @pytest.mark.smoke
+@pytest.mark.thread_unsafe(reason="Disk access")
 def test_get_rdataset_write_read_cache():
     # test writing and reading cache
     try:
@@ -51,17 +53,18 @@ def test_get_rdataset_write_read_cache():
         "raw.githubusercontent.com,vincentarelbundock,Rdatasets,master,csv,"
         "HistData,Guerry-v2.csv.zip"
     )
-    os.remove(os.path.join(CUR_DIR, fn))
+    Path(CUR_DIR).joinpath(fn).unlink()
     fn = (
         "raw.githubusercontent.com,vincentarelbundock,Rdatasets,master,doc,"
         "HistData,rst,Guerry-v2.rst.zip"
     )
-    os.remove(os.path.join(CUR_DIR, fn))
+    Path(CUR_DIR).joinpath(fn).unlink()
 
 
 def test_webuse():
     # test copied and adjusted from iolib/tests/test_foreign
     from statsmodels.iolib.tests.results.macrodata import macrodata_result
+
     res2 = np.array([list(row) for row in macrodata_result])
     base_gh = (
         "https://github.com/statsmodels/statsmodels/raw/main/"
@@ -82,6 +85,7 @@ def test_webuse_pandas():
     from statsmodels.compat.pandas import assert_frame_equal
 
     from statsmodels.datasets import macrodata
+
     dta = macrodata.load_pandas().data
     base_gh = (
         "https://github.com/statsmodels/statsmodels/raw/main/"
@@ -96,3 +100,29 @@ def test_webuse_pandas():
         pytest.skip("Failed with HTTP Error, these are random")
     res1 = res1.astype(float)
     assert_frame_equal(res1, dta.astype(float))
+
+
+def test_clear_data_home(tmp_path):
+    # clear_data_home is documented to delete the entire data home cache;
+    # populate it with a file and confirm the whole directory disappears.
+    data_home = utils.get_data_home(str(tmp_path / "sm_data"))
+    assert Path(data_home).is_dir()
+    (Path(data_home) / "cached_file.csv").write_text("a,b\n1,2\n")
+    assert (Path(data_home) / "cached_file.csv").exists()
+
+    utils.clear_data_home(data_home)
+
+    assert not Path(data_home).exists()
+
+
+def test_clear_data_home_uses_default_when_none(tmp_path, monkeypatch):
+    # data_home=None (the default) falls back to get_data_home's own
+    # default resolution (env var or ~/statsmodels_data)
+    monkeypatch.setenv("STATSMODELS_DATA", str(tmp_path / "env_data_home"))
+
+    data_home = utils.get_data_home(None)
+    assert Path(data_home).is_dir()
+
+    utils.clear_data_home(None)
+
+    assert not Path(data_home).exists()

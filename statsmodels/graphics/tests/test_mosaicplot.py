@@ -29,6 +29,7 @@ from statsmodels.graphics.mosaicplot import (
 )
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_data_conversion(close_figures):
     # It will not reorder the elements
@@ -78,6 +79,7 @@ def test_data_conversion(close_figures):
     plt.suptitle("testing data conversion (plot 1 of 4)")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_mosaic_simple(close_figures):
     # display a simple plot of 4 categories of data, splitted in four
@@ -92,7 +94,7 @@ def test_mosaic_simple(close_figures):
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = dict(zip(keys, range(1, 1 + len(keys))))
+    data = dict(zip(keys, range(1, 1 + len(keys)), strict=True))
     # which colours should I use for the various categories?
     # put it into a dict
     props = {}
@@ -111,6 +113,7 @@ def test_mosaic_simple(close_figures):
     plt.suptitle("syntetic data, 4 categories (plot 2 of 4)")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_mosaic(close_figures):
     # make the same analysis on a known dataset
@@ -161,6 +164,7 @@ def test_mosaic(close_figures):
     plt.suptitle("extramarital affairs (plot 3 of 4)")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_mosaic_very_complex(close_figures):
     # make a scattermatrix of mosaic plots to show the correlations between
@@ -174,7 +178,7 @@ def test_mosaic_very_complex(close_figures):
         ["work", "unemployed"],
     )
     keys = list(product(*key_base))
-    data = dict(zip(keys, range(1, 1 + len(keys))))
+    data = dict(zip(keys, range(1, 1 + len(keys)), strict=True))
     props = {}
     props[("male", "old")] = {"color": "r"}
     props[("female",)] = {"color": "pink"}
@@ -212,9 +216,10 @@ def test_mosaic_very_complex(close_figures):
     plt.suptitle("old males should look bright red,  (plot 4 of 4)")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_axes_labeling(close_figures):
-    from numpy.random import rand
+    rs = np.random.RandomState(8389231)
 
     key_set = (
         ["male", "female"],
@@ -225,7 +230,7 @@ def test_axes_labeling(close_figures):
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = dict(zip(keys, rand(len(keys))))
+    data = dict(zip(keys, rs.rand(len(keys)), strict=True))
 
     def labelizer(k):
         return "".join(s[0] for s in k)
@@ -243,6 +248,7 @@ def test_axes_labeling(close_figures):
 
 
 @pytest.mark.smoke
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_mosaic_empty_cells(close_figures):
     # GH#2286
@@ -290,13 +296,13 @@ def eq(x, y):
 
 def test_recursive_split():
     keys = list(product("mf"))
-    data = dict(zip(keys, [1] * len(keys)))
+    data = dict(zip(keys, [1] * len(keys), strict=True))
     res = _hierarchical_split(data, gap=0)
     assert_(list(res.keys()) == keys)
     res[("m",)] = (0.0, 0.0, 0.5, 1.0)
     res[("f",)] = (0.5, 0.0, 0.5, 1.0)
     keys = list(product("mf", "yao"))
-    data = dict(zip(keys, [1] * len(keys)))
+    data = dict(zip(keys, [1] * len(keys), strict=True))
     res = _hierarchical_split(data, gap=0)
     assert_(list(res.keys()) == keys)
     res[("m", "y")] = (0.0, 0.0, 0.5, 1 / 3)
@@ -307,12 +313,30 @@ def test_recursive_split():
     res[("f", "o")] = (0.5, 2 / 3, 0.5, 1 / 3)
 
 
+def test_recursive_split_short_gap_sequence():
+    # a gap sequence shorter than the number of levels is extended with
+    # exponentially decreasing gaps rather than raising
+    keys = list(product("mf", "yao"))
+    data = dict(zip(keys, [1] * len(keys), strict=True))
+
+    res = _hierarchical_split(data, gap=[0.05])
+    assert_(list(res.keys()) == keys)
+
+    # extending continues the decay of the last supplied gap, which makes
+    # the one-element sequence equivalent to the equivalent scalar
+    assert_(res == _hierarchical_split(data, gap=[0.05, 0.05 / 1.5]))
+    assert_(res == _hierarchical_split(data, gap=0.05))
+
+    # a gap sequence longer than the number of levels is still trimmed
+    assert_(res == _hierarchical_split(data, gap=[0.05, 0.05 / 1.5, 1.0]))
+
+
 def test__reduce_dict():
-    data = dict(zip(list(product("mf", "oy", "wn")), [1] * 8))
+    data = dict(zip(list(product("mf", "oy", "wn")), [1] * 8, strict=True))
     eq(_reduce_dict(data, ("m",)), 4)
     eq(_reduce_dict(data, ("m", "o")), 2)
     eq(_reduce_dict(data, ("m", "o", "w")), 1)
-    data = dict(zip(list(product("mf", "oy", "wn")), lrange(8)))
+    data = dict(zip(list(product("mf", "oy", "wn")), lrange(8), strict=True))
     eq(_reduce_dict(data, ("m",)), 6)
     eq(_reduce_dict(data, ("m", "o")), 1)
     eq(_reduce_dict(data, ("m", "o", "w")), 0)
@@ -511,6 +535,7 @@ def test_gap_split():
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_default_arg_index(close_figures):
     # 2116
@@ -524,6 +549,7 @@ def test_default_arg_index(close_figures):
         mosaic(data=df, title="foobar")
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_missing_category(close_figures):
     # GH5639

@@ -18,38 +18,45 @@ import ast
 import collections
 import doctest
 import functools
-import glob
 import importlib
 import inspect
 from io import StringIO
 import json
 import os
+from pathlib import Path
 import pydoc
 import re
 import string
+import subprocess
 import sys
 import tempfile
 import textwrap
+from typing import NamedTuple
 
-import flake8.main.application
-import matplotlib
-import numpy
+import matplotlib as mpl
+import numpy as np
 from numpydoc.docscrape import NumpyDocString
-import pandas
+import pandas as pd
 from pandas.io.formats.printing import pprint_thing
-
-import statsmodels.api
 
 # Template backend makes matplotlib to not plot anything. This is useful
 # to avoid that plot windows are open from the doctests while running the
 # script. Setting here before matplotlib is loaded.
 # We don't warn for the number of open plots, as none is actually being opened
-matplotlib.use("agg")
-matplotlib.rc("figure", max_open_warning=10000)
+mpl.use("agg")
+mpl.rc("figure", max_open_warning=10000)
 
-BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_PATH = Path(__file__).resolve().parent.parent
 
-sys.path.insert(0, os.path.join(BASE_PATH))
+sys.path.insert(0, str(BASE_PATH))
+
+
+class RuffViolation(NamedTuple):
+    error_code: str
+    message: str
+    count: int
+
+
 # TODO: Single-line ignore GL01, GL02
 # TODO: Complete import location list
 # TODO: Recurse through module to find classes
@@ -120,7 +127,7 @@ for member in members:
     if not member[0]:
         continue
     if member[0][0] in string.ascii_uppercase:
-        if not type(member[1]) is type:
+        if type(member[1]) is not type:
             continue
         name = str(member[1]).split("'")[1]
         if not name.startswith("statsmodels."):
@@ -129,7 +136,7 @@ for member in members:
 API_CLASSES = sorted(set(API_CLASSES), key=lambda v: v[0])
 RUN_DOCTESTS = False
 
-sys.path.insert(1, os.path.join(BASE_PATH, "doc", "sphinxext"))
+sys.path.insert(1, Path(BASE_PATH).joinpath("doc", "sphinxext"))
 
 PRIVATE_CLASSES = []
 DIRECTIVES = ["versionadded", "versionchanged", "deprecated"]
@@ -164,8 +171,7 @@ ERROR_MSGS = {
     "whitespace only",
     "GL06": 'Found unknown section "{section}". Allowed sections are: '
     "{allowed_sections}",
-    "GL07": "Sections are in the wrong order. "
-    "Correct order is: {correct_sections}",
+    "GL07": "Sections are in the wrong order. Correct order is: {correct_sections}",
     "GL08": "The object does not have a docstring",
     "GL09": "Deprecation warning should precede extended summary",
     "SS01": "No summary found (a short summary in a single line should be "
@@ -208,7 +214,7 @@ ERROR_MSGS = {
     "prefix, use {right_reference} instead.",
     "EX01": "No examples section found",
     "EX02": "Examples do not pass tests:\n{doctest_log}",
-    "EX03": "flake8 error: {error_code} {error_message}{times_happening}",
+    "EX03": "ruff error: {error_code} {error_message}{times_happening}",
     "EX04": "Do not import {imported_library}, as it is imported "
     "automatically for the examples (numpy as np, pandas as pd)",
 }
@@ -309,7 +315,7 @@ def get_api_items(api_doc_fd):
                 func = getattr(func, part)
 
             yield (
-                ".".join([current_module, item]),
+                f"{current_module}.{item}",
                 func,
                 current_section,
                 current_subsection,
@@ -362,9 +368,7 @@ class Docstring:
                 continue
 
         if "obj" not in locals():
-            raise ImportError(
-                "No module can be imported " 'from "{}"'.format(name)
-            )
+            raise ImportError(f'No module can be imported from "{name}"')
 
         for part in func_parts:
             obj = getattr(obj, part)
@@ -435,9 +439,7 @@ class Docstring:
     @property
     def github_url(self):
         url = "https://github.com/statsmodels/statsmodels/main/"
-        url += "{}#L{}".format(
-            self.source_file_name, self.source_file_def_line
-        )
+        url += f"{self.source_file_name}#L{self.source_file_def_line}"
         return url
 
     @property
@@ -461,9 +463,7 @@ class Docstring:
     @property
     def single_line_docstring(self):
         return (
-            self.raw_doc
-            and "\n" not in self.raw_doc
-            and ALLOW_SINGLE_LINE_DOCSTRINGS
+            self.raw_doc and "\n" not in self.raw_doc and ALLOW_SINGLE_LINE_DOCSTRINGS
         )
 
     @property
@@ -542,7 +542,7 @@ class Docstring:
                         params.append(param)
                     return tuple([param.name for param in doc["Parameters"]])
             except Exception as exc:
-                print(f"!! numpydoc failed  on {str(self.obj)}!!")
+                print(f"!! numpydoc failed  on {self.obj!s}!!")
                 print(exc)
                 return ()
         params = list(sig.parameters.keys())
@@ -551,16 +551,14 @@ class Docstring:
         varargs = [key for key in params if sig.parameters[key].kind == kind]
         if varargs:
             out_params = [
-                "*" + param if param == varargs[0] else param
-                for param in out_params
+                "*" + param if param == varargs[0] else param for param in out_params
             ]
 
         kind = inspect.Parameter.VAR_KEYWORD
         varkw = [key for key in params if sig.parameters[key].kind == kind]
         if varkw:
             out_params = [
-                "**" + param if param == varkw[0] else param
-                for param in out_params
+                "**" + param if param == varkw[0] else param for param in out_params
             ]
 
         params = tuple(out_params)
@@ -696,10 +694,12 @@ class Docstring:
 
     @property
     def examples_errors(self):
+        import statsmodels.api
+
         flags = doctest.NORMALIZE_WHITESPACE | doctest.IGNORE_EXCEPTION_DETAIL
         finder = doctest.DocTestFinder()
         runner = doctest.DocTestRunner(optionflags=flags)
-        context = {"np": numpy, "pd": pandas, "sm": statsmodels.api}
+        context = {"np": np, "pd": pd, "sm": statsmodels.api}
         error_msgs = ""
         for test in finder.find(self.raw_doc, self.name, globs=context):
             f = StringIO()
@@ -716,8 +716,8 @@ class Docstring:
         if not self.examples:
             return
 
-        # F401 is needed to not generate flake8 errors in examples
-        # that do not user numpy or pandas
+        # F401 is needed to not generate ruff errors in examples
+        # that do not use numpy or pandas
         content = "".join(
             (
                 "import numpy as np  # noqa: F401\n",
@@ -727,20 +727,40 @@ class Docstring:
             )
         )
 
-        application = flake8.main.application.Application()
-        application.initialize(["--quiet"])
-
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", suffix=".py", delete=False
+        ) as file:
             file.write(content)
-            file.flush()
-            application.run_checks([file.name])
+            file_name = Path(file.name)
 
-        # We need this to avoid flake8 printing the names of the files to
-        # the standard output
-        application.formatter.write = lambda line, source: None
-        application.report()
+        try:
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "ruff",
+                    "check",
+                    "--isolated",
+                    "--quiet",
+                    "--select=E,W,F,B",
+                    "--output-format=json",
+                    file_name,
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            violations = json.loads(proc.stdout or "[]")
+        finally:
+            file_name.unlink()
 
-        yield from application.guide.stats.statistics_for("")
+        counts = collections.Counter(v["code"] for v in violations)
+        first_message = {}
+        for v in violations:
+            first_message.setdefault(v["code"], v["message"])
+
+        for code, count in counts.items():
+            yield RuffViolation(code, first_message[code], count)
 
 
 def get_validation_data(doc):
@@ -802,17 +822,13 @@ def get_validation_data(doc):
         errs.append(error("GL03"))
     mentioned_errs = doc.mentioned_private_classes
     if mentioned_errs:
-        errs.append(
-            error("GL04", mentioned_private_classes=", ".join(mentioned_errs))
-        )
+        errs.append(error("GL04", mentioned_private_classes=", ".join(mentioned_errs)))
     for line in doc.raw_doc.splitlines():
         if re.match("^ *\t", line):
             errs.append(error("GL05", line_with_tabs=line.lstrip()))
 
     unexpected_sections = [
-        section
-        for section in doc.section_titles
-        if section not in ALLOWED_SECTIONS
+        section for section in doc.section_titles if section not in ALLOWED_SECTIONS
     ]
     for section in unexpected_sections:
         errs.append(
@@ -824,16 +840,12 @@ def get_validation_data(doc):
         )
 
     correct_order = [
-        section
-        for section in ALLOWED_SECTIONS
-        if section in doc.section_titles
+        section for section in ALLOWED_SECTIONS if section in doc.section_titles
     ]
     if correct_order != doc.section_titles:
         errs.append(error("GL07", correct_sections=", ".join(correct_order)))
 
-    if doc.deprecated and not doc.extended_summary.startswith(
-        ".. deprecated:: "
-    ):
+    if doc.deprecated and not doc.extended_summary.startswith(".. deprecated:: "):
         errs.append(error("GL09"))
 
     if not doc.summary:
@@ -849,9 +861,7 @@ def get_validation_data(doc):
             errs.append(error("SS03"))
         if doc.summary != doc.summary.lstrip():
             errs.append(error("SS04"))
-        elif (
-            doc.is_function_or_method and doc.summary.split(" ")[0][-1] == "s"
-        ):
+        elif doc.is_function_or_method and doc.summary.split(" ")[0][-1] == "s":
             errs.append(error("SS05"))
         if doc.num_summary_lines > 1:
             errs.append(error("SS06"))
@@ -951,9 +961,7 @@ def get_validation_data(doc):
                     "EX03",
                     error_code=err.error_code,
                     error_message=err.message,
-                    times_happening=f" ({err.count} times)"
-                    if err.count > 1
-                    else "",
+                    times_happening=f" ({err.count} times)" if err.count > 1 else "",
                 )
             )
         examples_source_code = "".join(doc.examples_source_code)
@@ -1016,14 +1024,14 @@ def validate_all(prefix, ignore_deprecated=False):
     seen = {}
 
     # functions from the API docs
-    api_doc_fnames = os.path.join(BASE_PATH, "docs", "source", "*.rst")
+    api_doc_dir = Path(BASE_PATH).joinpath("docs", "source")
     api_items = []
-    for api_doc_fname in glob.glob(api_doc_fnames):
-        if "sandbox" in api_doc_fname:
+    for api_doc_fname in api_doc_dir.glob("*.rst"):
+        if "sandbox" in str(api_doc_fname):
             continue
-        with open(api_doc_fname, encoding="utf8") as f:
+        with api_doc_fname.open(encoding="utf8") as f:
             api_items += list(get_api_items(f))
-    for func_name, func_obj, section, subsection in api_items:
+    for func_name, _func_obj, section, subsection in api_items:
         if prefix and not func_name.startswith(prefix):
             continue
         doc_info = validate_one(func_name)
@@ -1044,14 +1052,11 @@ def validate_all(prefix, ignore_deprecated=False):
 
         seen[shared_code_key] = func_name
     # functions from introspecting Series and DataFrame
-    api_item_names = set(list(zip(*api_items))[0])
+    api_item_names = set(next(zip(*api_items, strict=True)))
     for class_name, class_ in API_CLASSES:
         for member in inspect.getmembers(class_):
             func_name = class_name + "." + member[0]
-            if (
-                not member[0].startswith("_")
-                and func_name not in api_item_names
-            ):
+            if not member[0].startswith("_") and func_name not in api_item_names:
                 if prefix and not func_name.startswith(prefix):
                     continue
                 doc_info = validate_one(func_name)
@@ -1072,9 +1077,7 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
             side=char * side_len, title=title, adj=adj
         )
 
-        return "\n{full_line}\n{title_line}\n{full_line}\n\n".format(
-            full_line=full_line, title_line=title_line
-        )
+        return f"\n{full_line}\n{title_line}\n{full_line}\n\n"
 
     exit_status = 0
     if func_name is None:
@@ -1094,9 +1097,7 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
                     "]{text}\n"
                 )
             else:
-                raise ValueError(
-                    f'Unknown output_format "{output_format}"'
-                )
+                raise ValueError(f'Unknown output_format "{output_format}"')
 
             output = []
             for name, res in result.items():
@@ -1125,9 +1126,7 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
         sys.stderr.write("{}\n".format(result["docstring"]))
         sys.stderr.write(header("Validation"))
         if result["errors"]:
-            sys.stderr.write(
-                "{} Errors found:\n".format(len(result["errors"]))
-            )
+            sys.stderr.write("{} Errors found:\n".format(len(result["errors"])))
             for err_code, err_desc in result["errors"]:
                 # Failing examples are printed at the end
                 if err_code == "EX02":
@@ -1135,16 +1134,12 @@ def main(func_name, prefix, errors, output_format, ignore_deprecated):
                     continue
                 sys.stderr.write(f"\t{err_desc}\n")
         if result["warnings"]:
-            sys.stderr.write(
-                "{} Warnings found:\n".format(len(result["warnings"]))
-            )
+            sys.stderr.write("{} Warnings found:\n".format(len(result["warnings"])))
             for _, wrn_desc in result["warnings"]:
                 sys.stderr.write(f"\t{wrn_desc}\n")
 
         if not result["errors"]:
-            sys.stderr.write(
-                f'Docstring for "{func_name}" correct. :)\n'
-            )
+            sys.stderr.write(f'Docstring for "{func_name}" correct. :)\n')
 
         if result["examples_errors"]:
             sys.stderr.write(header("Doctests"))
@@ -1160,9 +1155,7 @@ if __name__ == "__main__":
         "if not provided, all docstrings are validated and returned "
         "as JSON"
     )
-    argparser = argparse.ArgumentParser(
-        description="validate pandas docstrings"
-    )
+    argparser = argparse.ArgumentParser(description="validate pandas docstrings")
     argparser.add_argument("function", nargs="?", default=None, help=func_help)
     argparser.add_argument(
         "--format",
@@ -1170,7 +1163,7 @@ if __name__ == "__main__":
         choices=format_opts,
         help="format of the output when validating "
         "multiple docstrings (ignored when validating one)."
-        "It can be {}".format(str(format_opts)[1:-1]),
+        f"It can be {str(format_opts)[1:-1]}",
     )
     argparser.add_argument(
         "--prefix",

@@ -143,6 +143,7 @@ Model Classes
    WLS
    GLSAR
    yule_walker
+   YuleWalkerResult
    burg
 
 .. module:: statsmodels.regression.quantile_regression
@@ -213,6 +214,8 @@ results class of the other linear models.
    :toctree: generated/
 
    RegressionResults
+   CompareLRTestResult
+   ELTestResult
    OLSResults
    PredictionResults
 

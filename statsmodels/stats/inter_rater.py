@@ -1,29 +1,20 @@
-"""Inter Rater Agreement
+"""
+Inter Rater Agreement
 
-contains
---------
-fleiss_kappa
-cohens_kappa
+Created on Thu Dec 06 22:57:56 2012
+Author: Josef Perktold
+License: BSD-3
+
+Notes
+-----
+Contains fleiss_kappa and cohens_kappa.
 
 aggregate_raters:
     helper function to get data into fleiss_kappa format
 to_table:
     helper function to create contingency table, can be used for cohens_kappa
 
-Created on Thu Dec 06 22:57:56 2012
-Author: Josef Perktold
-License: BSD-3
-
-References
-----------
-Wikipedia: kappa's initially based on these two pages
-    https://en.wikipedia.org/wiki/Fleiss%27_kappa
-    https://en.wikipedia.org/wiki/Cohen's_kappa
-SAS-Manual : formulas for cohens_kappa, especially variances
-see also R package irr
-
-TODO
-----
+TODO:
 standard errors and hypothesis tests for fleiss_kappa
 other statistics and tests,
    in R package irr, SAS has more
@@ -32,6 +23,13 @@ inconsistent internal naming, changed variable names as I added more
 convenience functions to create required data format from raw data
    DONE
 
+References
+----------
+Wikipedia: kappa's initially based on these two pages
+    https://en.wikipedia.org/wiki/Fleiss%27_kappa
+    https://en.wikipedia.org/wiki/Cohen's_kappa
+SAS-Manual : formulas for cohens_kappa, especially variances
+see also R package irr
 """
 
 import numpy as np
@@ -55,63 +53,63 @@ class ResultsBunch(dict):
 
 
 def _int_ifclose(x, dec=1, width=4):
-    """helper function for creating result string for int or float
+    """
+    Create a result string for an int or float
 
-    only dec=1 and width=4 is implemented
+    Only dec=1 and width=4 is implemented.
 
     Parameters
     ----------
     x : int or float
-        value to format
-    dec : 1
-        number of decimals to print if x is not an integer
-    width : 4
-        width of string
+        Value to format.
+    dec : int, optional
+        Number of decimals to print if x is not an integer.
+    width : int, optional
+        Width of string.
 
     Returns
     -------
     xint : int or float
-        x is converted to int if it is within 1e-14 of an integer
+        x is converted to int if it is within 1e-14 of an integer.
     x_string : str
-        x formatted as string, either '%4d' or '%4.1f'
-
+        x formatted as string, either '%4d' or '%4.1f'.
     """
     xint = round(x)
     if np.max(np.abs(xint - x)) < 1e-14:
-        return xint, "%4d" % xint
+        return xint, f"{xint:4d}"
     else:
-        return x, "%4.1f" % x
+        return x, f"{x:4.1f}"
 
 
 def aggregate_raters(data, n_cat=None):
-    """convert raw data with shape (subject, rater) to (subject, cat_counts)
+    """
+    Convert raw data with shape (subject, rater) to (subject, cat_counts)
 
-    brings data into correct format for fleiss_kappa
+    Brings data into correct format for fleiss_kappa.
 
     bincount will raise exception if data cannot be converted to integer.
 
     Parameters
     ----------
     data : array_like, 2-Dim
-        data containing category assignment with subjects in rows and raters
+        Data containing category assignment with subjects in rows and raters
         in columns.
-    n_cat : None or int
+    n_cat : None or int, optional
         If None, then the data is converted to integer categories,
         0,1,2,...,n_cat-1. Because of the relabeling only category levels
         with non-zero counts are included.
-        If this is an integer, then the category levels in the data are already
-        assumed to be in integers, 0,1,2,...,n_cat-1. In this case, the
-        returned array may contain columns with zero count, if no subject
-        has been categorized with this level.
+        If this is an integer, then the category levels in the data are
+        already assumed to be in integers, 0,1,2,...,n_cat-1. In this case,
+        the returned array may contain columns with zero count, if no
+        subject has been categorized with this level.
 
     Returns
     -------
-    arr : nd_array, (n_rows, n_cat)
-        Contains counts of raters that assigned a category level to individuals.
-        Subjects are in rows, category levels in columns.
-    categories : nd_array, (n_category_levels,)
+    arr : ndarray, (n_rows, n_cat)
+        Contains counts of raters that assigned a category level to
+        individuals. Subjects are in rows, category levels in columns.
+    categories : ndarray, (n_category_levels,)
         Contains the category levels.
-
     """
     data = np.asarray(data)
     n_rows = data.shape[0]
@@ -133,40 +131,43 @@ def aggregate_raters(data, n_cat=None):
 
 
 def to_table(data, bins=None):
-    """convert raw data with shape (subject, rater) to (rater1, rater2)
+    """
+    Convert raw data with shape (subject, rater) to (rater1, rater2)
 
-    brings data into correct format for cohens_kappa
+    Brings data into correct format for cohens_kappa.
 
     Parameters
     ----------
     data : array_like, 2-Dim
-        data containing category assignment with subjects in rows and raters
+        Data containing category assignment with subjects in rows and raters
         in columns.
-    bins : None, int or tuple of array_like
+    bins : None, int or tuple of array_like, optional
         If None, then the data is converted to integer categories,
         0,1,2,...,n_cat-1. Because of the relabeling only category levels
         with non-zero counts are included.
-        If this is an integer, then the category levels in the data are already
-        assumed to be in integers, 0,1,2,...,n_cat-1. In this case, the
-        returned array may contain columns with zero count, if no subject
-        has been categorized with this level.
-        If bins are a tuple of two array_like, then the bins are directly used
-        by ``numpy.histogramdd``. This is useful if we want to merge categories.
+        If this is an integer, then the category levels in the data are
+        already assumed to be in integers, 0,1,2,...,n_cat-1. In this case,
+        the returned array may contain columns with zero count, if no
+        subject has been categorized with this level.
+        If bins are a tuple of two array_like, then the bins are directly
+        used by ``numpy.histogramdd``. This is useful if we want to merge
+        categories.
 
     Returns
     -------
-    arr : nd_array, (n_cat, n_cat)
+    arr : ndarray, (n_cat, n_cat)
         Contingency table that contains counts of category level with rater1
         in rows and rater2 in columns.
+    bins : ndarray
+        The bin edges used to construct the contingency table.
 
     Notes
     -----
-    no NaN handling, delete rows with missing values
+    No NaN handling, delete rows with missing values.
 
     This works also for more than two raters. In that case the dimension of
     the resulting contingency table is the same as the number of raters
     instead of 2-dimensional.
-
     """
 
     data = np.asarray(data)
@@ -194,15 +195,16 @@ def to_table(data, bins=None):
 
 
 def fleiss_kappa(table, method="fleiss"):
-    """Fleiss' and Randolph's kappa multi-rater agreement measure
+    """
+    Fleiss' and Randolph's kappa multi-rater agreement measure
 
     Parameters
     ----------
     table : array_like, 2-D
-        assumes subjects in rows, and categories in columns. Convert raw data
-        into this format by using
-        :func:`statsmodels.stats.inter_rater.aggregate_raters`
-    method : str
+        Assumes subjects in rows, and categories in columns. Convert raw
+        data into this format by using
+        :func:`statsmodels.stats.inter_rater.aggregate_raters`.
+    method : str, optional
         Method 'fleiss' returns Fleiss' kappa which uses the sample margin
         to define the chance outcome.
         Method 'randolph' or 'uniform' (only first 4 letters are needed)
@@ -212,20 +214,21 @@ def fleiss_kappa(table, method="fleiss"):
     Returns
     -------
     kappa : float
-        Fleiss's or Randolph's kappa statistic for inter rater agreement
+        Fleiss's or Randolph's kappa statistic for inter rater agreement.
 
     Notes
     -----
-    no variance or hypothesis tests yet
+    No variance or hypothesis tests yet.
 
-    Interrater agreement measures like Fleiss's kappa measure agreement relative
-    to chance agreement. Different authors have proposed ways of defining
-    these chance agreements. Fleiss' is based on the marginal sample distribution
-    of categories, while Randolph uses a uniform distribution of categories as
-    benchmark. Warrens (2010) showed that Randolph's kappa is always larger or
-    equal to Fleiss' kappa. Under some commonly observed condition, Fleiss' and
-    Randolph's kappa provide lower and upper bounds for two similar kappa_like
-    measures by Light (1971) and Hubert (1977).
+    Interrater agreement measures like Fleiss's kappa measure agreement
+    relative to chance agreement. Different authors have proposed ways of
+    defining these chance agreements. Fleiss' is based on the marginal
+    sample distribution of categories, while Randolph uses a uniform
+    distribution of categories as benchmark. Warrens (2010) showed that
+    Randolph's kappa is always larger or equal to Fleiss' kappa. Under some
+    commonly observed condition, Fleiss' and Randolph's kappa provide lower
+    and upper bounds for two similar kappa_like measures by Light (1971) and
+    Hubert (1977).
 
     References
     ----------
@@ -270,22 +273,26 @@ def fleiss_kappa(table, method="fleiss"):
 
 
 def cohens_kappa(table, weights=None, return_results=True, wt=None):
-    '''Compute Cohen's kappa with variance and equal-zero test
+    '''
+    Compute Cohen's kappa with variance and equal-zero test
 
     Parameters
     ----------
     table : array_like, 2-Dim
-        square array with results of two raters, one rater in rows, second
-        rater in columns
-    weights : array_like
+        Square array with results of two raters, one rater in rows, second
+        rater in columns.
+    weights : array_like, optional
         The interpretation of weights depends on the wt argument.
         If both are None, then the simple kappa is computed.
-        see wt for the case when wt is not None
+        See wt for the case when wt is not None.
         If weights is two dimensional, then it is directly used as a weight
         matrix. For computing the variance of kappa, the maximum of the
         weights is assumed to be smaller or equal to one.
-        TODO: fix conflicting definitions in the 2-Dim case for
-    wt : {None, str}
+        TODO: fix conflicting definitions in the 2-Dim case for.
+    return_results : bool, optional
+        If True (default), then an instance of KappaResults is returned.
+        If False, then only kappa is computed and returned.
+    wt : {None, 'ca', 'linear', 'fc', 'quadratic', 'toeplitz'}, optional
         If wt and weights are None, then the simple kappa is computed.
         If wt is given, but weights is None, then the weights are set to
         be [0, 1, 2, ..., k].
@@ -294,21 +301,18 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
         wt in ['linear', 'ca' or None] : use linear weights, Cicchetti-Allison
             actual weights are linear in the score "weights" difference
-        wt in ['quadratic', 'fc'] : use linear weights, Fleiss-Cohen
+        wt in ['quadratic', 'fc'] : use quadratic weights, Fleiss-Cohen
             actual weights are squared in the score "weights" difference
         wt = 'toeplitz' : weight matrix is constructed as a toeplitz matrix
             from the one dimensional weights.
 
-    return_results : bool
-        If True (default), then an instance of KappaResults is returned.
-        If False, then only kappa is computed and returned.
-
     Returns
     -------
     results or kappa
-        If return_results is True (default), then a results instance with all
-        statistics is returned
-        If return_results is False, then only kappa is calculated and returned.
+        If return_results is True (default), then a results instance with
+        all statistics is returned.
+        If return_results is False, then only kappa is calculated and
+        returned.
 
     Notes
     -----
@@ -319,9 +323,9 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     Weights for 'linear' and 'quadratic' are interpreted as scores for the
     categories, the weights in the computation are based on the pairwise
     difference between the scores.
-    Weights for 'toeplitz' are a interpreted as weighted distance. The distance
-    only depends on how many levels apart two entries in the table are but
-    not on the levels themselves.
+    Weights for 'toeplitz' are interpreted as weighted distance. The
+    distance only depends on how many levels apart two entries in the table
+    are but not on the levels themselves.
 
     example:
 
@@ -330,7 +334,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     weights = '0, 0, 1, 1' and wt = 'linear' means that the first two levels
     are zero distance apart and the same for the last two levels. This is
-    the sample as forming two aggregated levels by merging the first two and
+    the same as forming two aggregated levels by merging the first two and
     the last two levels, respectively.
 
     weights = [0, 1, 2, 3] and wt = 'quadratic' is the same as squaring these
@@ -340,7 +344,6 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     ----------
     Wikipedia
     SAS Manual
-
     '''
     table = np.asarray(table, float)  # avoid integer division
     agree = np.diag(table).sum()
@@ -472,28 +475,51 @@ _kappa_template = """\
 
 
 class KappaResults(ResultsBunch):
-    """Results for Cohen's kappa
+    """
+    Results for Cohen's kappa
 
     Attributes
     ----------
-    kappa : cohen's kappa
-    var_kappa : variance of kappa
-    std_kappa : standard deviation of kappa
-    alpha : one-sided probability for confidence interval
-    kappa_low : lower (1-alpha) confidence limit
-    kappa_upp : upper (1-alpha) confidence limit
-    var_kappa0 : variance of kappa under H0: kappa=0
-    std_kappa0 : standard deviation of kappa under H0: kappa=0
-    z_value : test statistic for H0: kappa=0, is standard normal distributed
-    pvalue_one_sided : one sided p-value for H0: kappa=0 and H1: kappa>0
-    pvalue_two_sided : two sided p-value for H0: kappa=0 and H1: kappa!=0
-    distribution_kappa : asymptotic normal distribution of kappa
-    distribution_zero_null : asymptotic normal distribution of kappa under
-        H0: kappa=0
+    kind : str
+        "Simple" for the unweighted kappa, or "Weighted" if a weight
+        matrix was used.
+    kappa : float
+        Cohen's kappa.
+    kappa_max : float
+        Maximum value that kappa can attain given the observed marginal
+        frequencies.
+    weights : ndarray or None
+        The weight matrix used to compute the weighted kappa. ``None``
+        for the simple, unweighted kappa.
+    var_kappa : float
+        Variance of kappa.
+    std_kappa : float
+        Standard deviation of kappa.
+    alpha : float
+        One-sided probability for confidence interval.
+    kappa_low : float
+        Lower (1-alpha) confidence limit.
+    kappa_upp : float
+        Upper (1-alpha) confidence limit.
+    var_kappa0 : float
+        Variance of kappa under H0: kappa=0.
+    std_kappa0 : float
+        Standard deviation of kappa under H0: kappa=0.
+    z_value : float
+        Test statistic for H0: kappa=0, is standard normal distributed.
+    pvalue_one_sided : float
+        One sided p-value for H0: kappa=0 and H1: kappa>0.
+    pvalue_two_sided : float
+        Two sided p-value for H0: kappa=0 and H1: kappa!=0.
+    distribution_kappa : scipy.stats.norm
+        Asymptotic normal distribution of kappa.
+    distribution_zero_null : scipy.stats.norm
+        Asymptotic normal distribution of kappa under H0: kappa=0.
 
+    Notes
+    -----
     The confidence interval for kappa and the statistics for the test of
     H0: kappa=0 are based on the asymptotic normal distribution of kappa.
-
     """
 
     template = _kappa_template

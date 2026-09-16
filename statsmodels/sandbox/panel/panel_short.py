@@ -58,7 +58,7 @@ def sum_outer_product_balanced(x, n_groups):
     # ... ? this is getting 3-dimensional  dot, tensordot?
     # needs (n_groups, k_vars, k_vars) array with sum over groups
     # NOT
-    # I only need this for x is 1d, i.e. residual
+    # I only need this for x is 1d, i.e., residual
 
 
 def whiten_individuals_loop(x, transform, group_iter):

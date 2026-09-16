@@ -50,7 +50,8 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
 
     Notes
     -----
@@ -67,7 +68,8 @@ def load_pandas():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
 
     Notes
     -----

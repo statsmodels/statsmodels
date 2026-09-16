@@ -5,7 +5,7 @@ from statsmodels.compat.python import lzip
 import numpy as np
 from scipy.stats import norm
 
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
 
 # margeff helper functions ####
 # NOTE: todo marginal effects for group 2
@@ -15,27 +15,70 @@ from statsmodels.tools.decorators import cache_readonly
 def _check_margeff_args(at, method):
     """
     Checks valid options for margeff
+
+    Parameters
+    ----------
+    at : str
+        Value of the `at` option for marginal effects. See `get_margeff`
+        for the allowed values.
+    method : str
+        Value of the `method` option for marginal effects. See
+        `get_margeff` for the allowed values.
+
+    Raises
+    ------
+    ValueError
+        If `at` or `method` is not one of the allowed values.
     """
     if at not in ["overall", "mean", "median", "zero", "all"]:
-        raise ValueError("%s not a valid option for `at`." % at)
+        raise ValueError(f"{at} not a valid option for `at`.")
     if method not in ["dydx", "eyex", "dyex", "eydx"]:
-        raise ValueError("method is not understood.  Got %s" % method)
+        raise ValueError(f"method is not understood.  Got {method}")
 
 
 def _check_discrete_args(at, method):
     """
     Checks the arguments for margeff if the exogenous variables are discrete.
+
+    Parameters
+    ----------
+    at : str
+        Value of the `at` option for marginal effects. See `get_margeff`
+        for the allowed values.
+    method : str
+        Value of the `method` option for marginal effects. See
+        `get_margeff` for the allowed values.
+
+    Raises
+    ------
+    ValueError
+        If `method` is "dyex" or "eyex", or if `at` is "median" or "zero",
+        none of which are valid for discrete variables.
     """
     if method in ["dyex", "eyex"]:
-        raise ValueError("%s not allowed for discrete variables" % method)
+        raise ValueError(f"{method} not allowed for discrete variables")
     if at in ["median", "zero"]:
-        raise ValueError("%s not allowed for discrete variables" % at)
+        raise ValueError(f"{at} not allowed for discrete variables")
 
 
 def _get_const_index(exog):
     """
     Returns a boolean array of non-constant column indices in exog and
-    an scalar array of where the constant is or None
+    a scalar array of where the constant is or None
+
+    Parameters
+    ----------
+    exog : ndarray
+        Two-dimensional array of exogenous regressors.
+
+    Returns
+    -------
+    effects_idx : ndarray
+        Boolean array that is True for columns of `exog` that are not
+        constant.
+    const_idx : ndarray or None
+        Array containing the column index of the constant column, or None
+        if `exog` does not contain a constant column.
     """
     effects_idx = exog.var(0) != 0
     if np.any(~effects_idx):
@@ -75,6 +118,25 @@ def _isdummy(X):
 
 
 def _get_dummy_index(X, const_idx):
+    """
+    Returns the column indices of dummy variables in `X`.
+
+    Parameters
+    ----------
+    X : array_like
+        A 1d or 2d array of numbers.
+    const_idx : ndarray or None
+        Unused. Present for a consistent signature with
+        `_get_count_index`.
+
+    Returns
+    -------
+    dummy_ind : ndarray or None
+        Column indices of the dummy variables in `X`, or None if `X`
+        contains no dummy variables.
+    dummy : bool
+        True if `X` contains at least one dummy variable.
+    """
     dummy_ind = _isdummy(X)
     dummy = True
 
@@ -114,6 +176,25 @@ def _iscount(X):
 
 
 def _get_count_index(X, const_idx):
+    """
+    Returns the column indices of count variables in `X`.
+
+    Parameters
+    ----------
+    X : array_like
+        A 1d or 2d array of numbers.
+    const_idx : ndarray or None
+        Unused. Present for a consistent signature with
+        `_get_dummy_index`.
+
+    Returns
+    -------
+    count_ind : ndarray or None
+        Column indices of the count variables in `X`, or None if `X`
+        contains no count variables.
+    count : bool
+        True if `X` contains at least one count variable.
+    """
     count_ind = _iscount(X)
     count = True
 
@@ -124,6 +205,32 @@ def _get_count_index(X, const_idx):
 
 
 def _get_margeff_exog(exog, at, atexog, ind):
+    """
+    Builds the exog array at which marginal effects are evaluated.
+
+    Parameters
+    ----------
+    exog : ndarray
+        Exogenous regressors as a 2-dimensional array.
+    at : str
+        One of "overall", "mean", "median", "zero", or "all". See
+        `get_margeff` for details. Only "mean", "median", and "zero" have
+        an effect here.
+    atexog : dict or ndarray, optional
+        User-supplied values to substitute into `exog` before applying
+        `at`. If a dict, keys are the zero-indexed columns of `exog` and
+        values are the replacement values. If an ndarray, it replaces
+        `exog` outright.
+    ind : ndarray
+        Boolean array that is True for the non-constant columns of
+        `exog`. Used when `at` is "zero" to leave the constant column
+        equal to one.
+
+    Returns
+    -------
+    exog : ndarray
+        The exogenous regressors evaluated at the requested `at` option.
+    """
     if atexog is not None:  # user supplied
         if isinstance(atexog, dict):
             # assumes values are singular or of len(exog)
@@ -157,6 +264,29 @@ def _get_count_effects(effects, exog, count_ind, method, model, params):
     """
     If there's a count variable, the predicted difference is taken by
     subtracting one and adding one to exog then averaging the difference
+
+    Parameters
+    ----------
+    effects : ndarray
+        Marginal effects to be updated in place for the count columns.
+    exog : ndarray
+        Exogenous regressors at which the effects are evaluated.
+    count_ind : array_like of int
+        Column indices of `exog` that are count variables.
+    method : str
+        One of "dydx", "eyex", "dyex", or "eydx". See `get_margeff` for
+        details.
+    model : model instance
+        The fitted model whose `predict` method is used to compute the
+        effect.
+    params : ndarray
+        Estimated model parameters.
+
+    Returns
+    -------
+    effects : ndarray
+        The `effects` array with the columns in `count_ind` replaced by
+        the count marginal effects.
     """
     # this is the index for the effect and the index for count col in exog
     for i in count_ind:
@@ -178,6 +308,29 @@ def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
     """
     If there's a dummy variable, the predicted difference is taken at
     0 and 1
+
+    Parameters
+    ----------
+    effects : ndarray
+        Marginal effects to be updated in place for the dummy columns.
+    exog : ndarray
+        Exogenous regressors at which the effects are evaluated.
+    dummy_ind : array_like of int
+        Column indices of `exog` that are dummy variables.
+    method : str
+        One of "dydx", "eyex", "dyex", or "eydx". See `get_margeff` for
+        details.
+    model : model instance
+        The fitted model whose `predict` method is used to compute the
+        effect.
+    params : ndarray
+        Estimated model parameters.
+
+    Returns
+    -------
+    effects : ndarray
+        The `effects` array with the columns in `dummy_ind` replaced by
+        the dummy marginal effects.
     """
     # this is the index for the effect and the index for dummy col in exog
     for i in dummy_ind:
@@ -195,6 +348,23 @@ def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
 
 
 def _effects_at(effects, at):
+    """
+    Reduces `effects` according to the `at` option.
+
+    Parameters
+    ----------
+    effects : ndarray
+        Marginal effects with observations in rows.
+    at : str
+        One of "overall", "mean", "median", "zero", or "all". See
+        `get_margeff` for details.
+
+    Returns
+    -------
+    ndarray
+        `effects` unchanged if `at` is "all", averaged over observations
+        if `at` is "overall", or the single row of `effects` otherwise.
+    """
     if at == "all":
         return effects
     elif at == "overall":
@@ -216,6 +386,33 @@ def _margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind, metho
     f(XB)*X | d = 1 - f(XB)*X | d = 0
 
     Where F is the default prediction of the model.
+
+    Parameters
+    ----------
+    model : model instance
+        The model that returned the fitted results. Its
+        `_derivative_predict` method is used to compute the Jacobian.
+    cov_margins : ndarray
+        Jacobian of the marginal effects with respect to the parameters,
+        updated in place for the columns in `dummy_ind`.
+    params : ndarray
+        Estimated model parameters.
+    exog : ndarray
+        Exogenous regressors at which the Jacobian is evaluated.
+    dummy_ind : array_like of int
+        Column indices of `exog` that are dummy variables.
+    method : str
+        One of "dydx", "eyex", "dyex", or "eydx". See `get_margeff` for
+        details.
+    J : int
+        The number of response categories of the model. This is 1 except
+        for multinomial models.
+
+    Returns
+    -------
+    cov_margins : ndarray
+        The `cov_margins` array with the rows for `dummy_ind` replaced by
+        the Jacobian for the dummy variables.
     """
     for i in dummy_ind:
         exog0 = exog.copy()
@@ -249,6 +446,33 @@ def _margeff_cov_params_count(model, cov_margins, params, exog, count_ind, metho
     (f(XB)*X | d += 1 - f(XB)*X | d -= 1) / 2
 
     where F is the default prediction for the model.
+
+    Parameters
+    ----------
+    model : model instance
+        The model that returned the fitted results. Its
+        `_derivative_predict` method is used to compute the Jacobian.
+    cov_margins : ndarray
+        Jacobian of the marginal effects with respect to the parameters,
+        updated in place for the columns in `count_ind`.
+    params : ndarray
+        Estimated model parameters.
+    exog : ndarray
+        Exogenous regressors at which the Jacobian is evaluated.
+    count_ind : array_like of int
+        Column indices of `exog` that are count variables.
+    method : str
+        One of "dydx", "eyex", "dyex", or "eydx". See `get_margeff` for
+        details.
+    J : int
+        The number of response categories of the model. This is 1 except
+        for multinomial models.
+
+    Returns
+    -------
+    cov_margins : ndarray
+        The `cov_margins` array with the rows for `count_ind` replaced by
+        the Jacobian for the count variables.
     """
     for i in count_ind:
         exog0 = exog.copy()
@@ -296,10 +520,10 @@ def margeff_cov_params(
         - 'zero', The marginal effects at zero for each regressor.
         - 'all', The marginal effects at each observation.
 
-        Only overall has any effect here.you
+        Only overall has any effect here.
 
-    derivative : function or array_like
-        If a function, it returns the marginal effects of the model with
+    derivative : callable or array_like
+        If callable, it returns the marginal effects of the model with
         respect to the exogenous variables evaluated at exog. Expected to be
         called derivative(params, exog). This will be numerically
         differentiated. Otherwise, it can be the Jacobian of the marginal
@@ -308,6 +532,12 @@ def margeff_cov_params(
         Indices of the columns of exog that contain dummy variables
     count_ind : array_like
         Indices of the columns of exog that contain count variables
+    method : str
+        Method to use for the marginal effect, one of 'dydx', 'eyex',
+        'dyex', or 'eydx'. See `get_margeff` for details.
+    J : int
+        The number of response categories of the model. This is 1 except
+        for multinomial models.
 
     Notes
     -----
@@ -357,6 +587,14 @@ def margeff_cov_with_se(
 
     Same function but returns both the covariance of the marginal effects
     and their standard errors.
+
+    Returns
+    -------
+    cov_me : ndarray
+        The covariance of the marginal effects.
+    se : ndarray
+        The standard errors of the marginal effects, the square root of
+        the diagonal of `cov_me`.
     """
     cov_me = margeff_cov_params(
         model, params, exog, cov_params, at, derivative, dummy_ind, count_ind, method, J
@@ -369,6 +607,20 @@ def margeff():
 
 
 def _check_at_is_all(method):
+    """
+    Raises if the marginal effects were computed with `at="all"`.
+
+    Parameters
+    ----------
+    method : dict
+        The `margeff_options` dict of the `DiscreteMargins` instance,
+        which contains the `at` option used to compute the effects.
+
+    Raises
+    ------
+    ValueError
+        If ``method["at"]`` is "all".
+    """
     if method["at"] == "all":
         raise ValueError(
             "Only margeff are available when `at` is "
@@ -431,7 +683,8 @@ class Margins:
 
 # class DiscreteMargins(Margins):
 class DiscreteMargins:
-    """Get marginal effects of a Discrete Choice model.
+    """
+    Get marginal effects of a Discrete Choice model
 
     Parameters
     ----------
@@ -440,7 +693,7 @@ class DiscreteMargins:
     args : tuple
         Args are passed to `get_margeff`. This is the same as
         results.get_margeff. See there for more information.
-    kwargs : dict
+    kwargs : dict, optional
         Keyword args are passed to `get_margeff`. This is the same as
         results.get_margeff. See there for more information.
     """
@@ -465,19 +718,19 @@ class DiscreteMargins:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             Number between 0 and 1. The confidence intervals have the
             probability 1-alpha.
 
         Returns
         -------
-        frame : DataFrames
+        frame : DataFrame
             A DataFrame summarizing the marginal effects.
 
         Notes
         -----
         The dataframe is created on each call and not cached, as are the
-        tables build in `summary()`
+        tables built in `summary()`.
         """
         _check_at_is_all(self.margeff_options)
         results = self.results
@@ -520,7 +773,7 @@ class DiscreteMargins:
             ynames = np.repeat(yname_list, len(var_names))
             xnames = np.tile(var_names, len(yname_list))
             index = MultiIndex.from_tuples(
-                list(zip(ynames, xnames)), names=["endog", "exog"]
+                list(zip(ynames, xnames, strict=True)), names=["endog", "exog"]
             )
         else:
             table = np.column_stack(
@@ -547,7 +800,7 @@ class DiscreteMargins:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             Number between 0 and 1. The confidence intervals have the
             probability 1-alpha.
 
@@ -570,7 +823,7 @@ class DiscreteMargins:
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             Number between 0 and 1. The confidence intervals have the
             probability 1-alpha.
 
@@ -688,7 +941,8 @@ class DiscreteMargins:
     def get_margeff(
         self, at="overall", method="dydx", atexog=None, dummy=False, count=False
     ):
-        """Get marginal effects of the fitted model.
+        """
+        Get marginal effects of the fitted model
 
         Parameters
         ----------
@@ -716,7 +970,7 @@ class DiscreteMargins:
             - 'dyex' - estimate semi-elasticity -- dy/d(lnx)
             - 'eydx' - estimate semi-elasticity -- d(lny)/dx
 
-            Note that tranformations are done after each observation is
+            Note that transformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
             for discrete variables.
@@ -739,7 +993,7 @@ class DiscreteMargins:
         Returns
         -------
         effects : ndarray
-            the marginal effect corresponding to the input options
+            The marginal effect corresponding to the input options.
 
         Notes
         -----

@@ -3,6 +3,7 @@ from statsmodels.compat.python import lrange
 from io import BytesIO
 import os
 import pathlib
+from pathlib import Path
 import tempfile
 
 from numpy.testing import assert_equal
@@ -28,12 +29,12 @@ def test_pickle():
 
     # cleanup, tested on Windows
     try:
-        os.remove(path_str)
-        os.remove(path_pathlib)
-        os.rmdir(tmpdir)
+        Path(path_str).unlink()
+        Path(path_pathlib).unlink()
+        Path(tmpdir).rmdir()
     except OSError:
         pass
-    assert not os.path.exists(tmpdir)
+    assert not Path(tmpdir).exists()
 
     # test with file handle
     fh = BytesIO()

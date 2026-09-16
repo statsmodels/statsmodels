@@ -19,7 +19,7 @@ def test_brockwell_davis_example_513():
     endog = dowj.diff().iloc[1:]
 
     # Burg
-    res, _ = burg(endog, ar_order=1, demean=True)
+    res = burg(endog, ar_order=1, demean=True).parameters
     assert_allclose(res.ar_params, [0.4371], atol=1e-4)
     assert_allclose(res.sigma2, 0.1423, atol=1e-4)
 
@@ -41,14 +41,14 @@ def test_brockwell_davis_example_514():
     assert_allclose(endog.mean(), desired, atol=1e-4)
 
     # Burg
-    res, _ = burg(endog, ar_order=2, demean=True)
+    res = burg(endog, ar_order=2, demean=True).parameters
     assert_allclose(res.ar_params, [1.0449, -0.2456], atol=1e-4)
     assert_allclose(res.sigma2, 0.4706, atol=1e-4)
 
 
 def check_itsmr(lake):
     # Test against R itsmr::burg; see results/results_burg.R
-    res, _ = burg(lake, 10, demean=True)
+    res = burg(lake, 10, demean=True).parameters
     desired_ar_params = [
         1.05853631096,
         -0.32639150878,
@@ -85,7 +85,7 @@ def test_itsmr():
 def test_nonstationary_series():
     # Test against R stats::ar.burg; see results/results_burg.R
     endog = np.arange(1, 12) * 1.0
-    res, _ = burg(endog, 2, demean=False)
+    res = burg(endog, 2, demean=False).parameters
 
     desired_ar_params = [1.9669331547, -0.9892846679]
     assert_allclose(res.ar_params, desired_ar_params)
@@ -116,11 +116,11 @@ def test_invalid():
 def test_misc():
     # Test defaults (order = 0, demean=True)
     endog = lake.copy()
-    res, _ = burg(endog)
+    res = burg(endog).parameters
     assert_allclose(res.params, np.var(endog))
 
     # Test that integer input gives the same result as float-coerced input.
     endog = np.array([1, 2, 5, 3, -2, 1, -3, 5, 2, 3, -1], dtype=int)
-    res_int, _ = burg(endog, 2)
-    res_float, _ = burg(endog * 1.0, 2)
+    res_int = burg(endog, 2).parameters
+    res_float = burg(endog * 1.0, 2).parameters
     assert_allclose(res_int.params, res_float.params)

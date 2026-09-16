@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Union
-
 import numpy as np
 from numpy.linalg import LinAlgError
 import pandas as pd
@@ -14,7 +12,7 @@ from statsmodels.tools.validation import (
     string_like,
 )
 
-ArrayLike1D = Union[np.ndarray, pd.Series, list[float]]
+ArrayLike1D = np.ndarray | pd.Series | list[float]
 
 
 def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
@@ -26,12 +24,12 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
         )
     except LinAlgError:
         # SVD convergence failure on badly misspecified models
-        return
+        return None
 
     except ValueError as error:
         if start_params is not None:  # do not recurse again
             # user supplied start_params only get one chance
-            return
+            return None
         # try a little harder, should be handled in fit really
         elif "initial" not in error.args[0] or "initial" in str(error):
             start_params = [0.1] * sum(order)
@@ -39,34 +37,34 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
                 start_params = [0.1] + start_params
             return _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params)
         else:
-            return
+            return None
     except Exception:  # no idea what happened
-        return
+        return None
 
 
 def arma_order_select_ic(
     y, max_ar=4, max_ma=2, ic="bic", trend="c", model_kw=None, fit_kw=None
 ):
     """
-    Compute information criteria for many ARMA models.
+    Compute information criteria for many ARMA models
 
     Parameters
     ----------
     y : array_like
         Array of time-series data.
-    max_ar : int
+    max_ar : int, optional
         Maximum number of AR lags to use. Default 4.
-    max_ma : int
+    max_ma : int, optional
         Maximum number of MA lags to use. Default 2.
-    ic : str, list
+    ic : str or sequence of str, optional
         Information criteria to report. Either a single string or a list
         of different criteria is possible.
-    trend : str
+    trend : {'n', 'c'}, optional
         The trend to use when fitting the ARMA models.
-    model_kw : dict
-        Keyword arguments to be passed to the ``ARMA`` model.
-    fit_kw : dict
-        Keyword arguments to be passed to ``ARMA.fit``.
+    model_kw : dict, optional
+        Keyword arguments to be passed to the ``ARIMA`` model.
+    fit_kw : dict, optional
+        Keyword arguments to be passed to ``ARIMA.fit``.
 
     Returns
     -------
@@ -80,8 +78,8 @@ def arma_order_select_ic(
     -----
     This method can be used to tentatively identify the order of an ARMA
     process, provided that the time series is stationary and invertible. This
-    function computes the full exact MLE estimate of each model and can be,
-    therefore a little slow. An implementation using approximate estimates
+    function computes the full exact MLE estimate of each model and can
+    therefore be a little slow. An implementation using approximate estimates
     will be provided in the future. In the meantime, consider passing
     {method : "css"} to fit_kw.
 
@@ -95,7 +93,7 @@ def arma_order_select_ic(
     >>> arparams = np.array([.75, -.25])
     >>> maparams = np.array([.65, .35])
     >>> arparams = np.r_[1, -arparams]
-    >>> maparam = np.r_[1, maparams]
+    >>> maparams = np.r_[1, maparams]
     >>> nobs = 250
     >>> np.random.seed(2014)
     >>> y = arma_generate_sample(arparams, maparams, nobs)
@@ -132,7 +130,7 @@ def arma_order_select_ic(
 
     dfs = [pd.DataFrame(res, columns=ma_range, index=ar_range) for res in results]
 
-    res = dict(zip(ic, dfs))
+    res = dict(zip(ic, dfs, strict=True))
 
     # add the minimums to the results dict
     min_res = {}

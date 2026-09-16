@@ -1,3 +1,5 @@
+"""Reference results from glmnet for regularized regression tests."""
+
 import numpy as np
 
 rslt_0 = np.array([

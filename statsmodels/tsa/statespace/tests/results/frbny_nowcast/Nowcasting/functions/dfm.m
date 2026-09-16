@@ -275,13 +275,13 @@ function  [C_new, R_new, A_new, Q_new, Z_0, V_0, loglik] = EMstep(y, A, C, Q, R,
 %    R:      Covariance for observation matrix residuals
 %    Z_0:    Initial values of factors
 %    V_0:    Initial value of factor covariance matrix
-%    r:      Number of common factors for each block (e.g. vector [1 1 1 1])
+%    r:      Number of common factors for each block (e.g., vector [1 1 1 1])
 %    p:      Number of lags in transition equation
-%    R_mat:  Estimation structure for quarterly variables (i.e. "tent")
+%    R_mat:  Estimation structure for quarterly variables (i.e., "tent")
 %    q:      Constraints on loadings
 %    nQ:     Number of quarterly series
 %    i_idio: Indices for monthly variables
-%    blocks: Block structure for each series (i.e. for a series, the structure
+%    blocks: Block structure for each series (i.e., for a series, the structure
 %            [1 0 0 1] indicates loadings on the first and fourth factors)
 %
 %  Output:
@@ -443,7 +443,7 @@ i_idio_M = i_idio(1:nM);            % Gives 1 for monthly series
 n_idio_M = length(find(i_idio_M));  % Number of monthly series
 c_i_idio = cumsum(i_idio);          % Cumulative number of monthly series
 
-for i = 1:n_bl  % Loop through unique loadings (e.g. [1 0 0 0], [1 1 0 0])
+for i = 1:n_bl  % Loop through unique loadings (e.g., [1 0 0 0], [1 1 0 0])
 
     bl_i = bl(i,:);
     rs = sum(r(logical(bl_i)));                    % Total num of blocks loaded
@@ -630,7 +630,7 @@ end
 %  - p:      Number of lags in transition equation
 %  - blocks: Gives series loadings
 %  - optNaN: Option for missing values in spline. See remNaNs_spline() for details.
-%  - Rcon:   Incorporates estimation for quarterly series (i.e. "tent structure")
+%  - Rcon:   Incorporates estimation for quarterly series (i.e., "tent structure")
 %  - q:      Constraints on loadings for quarterly variables
 %  - NQ:     Number of quarterly variables
 %  - i_idio: Logical. Gives index for monthly variables (1) and quarterly (0)
@@ -853,11 +853,11 @@ function [zsmooth, Vsmooth, VVsmooth, loglik] = runKF(Y, A, C, Q, R, Z_0, V_0);
 %
 %  Output parameters:
 %    zsmooth: k-by-(nobs+1) matrix, smoothed factor estimates
-%             (i.e. zsmooth(:,t+1) = Z_t|T)
+%             (i.e., zsmooth(:,t+1) = Z_t|T)
 %    Vsmooth: k-by-k-by-(nobs+1) array, smoothed factor covariance matrices
-%             (i.e. Vsmooth(:,:,t+1) = Cov(Z_t|T))
+%             (i.e., Vsmooth(:,:,t+1) = Cov(Z_t|T))
 %    VVsmooth: k-by-k-by-nobs array, lag 1 factor covariance matrices
-%              (i.e. Cov(Z_t,Z_t-1|T))
+%              (i.e., Cov(Z_t,Z_t-1|T))
 %    loglik: scalar, log-likelihood
 %
 %  References:
@@ -940,10 +940,10 @@ function S = SKF(Y, A, C, Q, R, Z_0, V_0)
       %%% CALCULATING PRIOR DISTIBUTION----------------------------------
       
       % Use transition eqn to create prior estimate for factor
-      % i.e. Z = Z_t|t-1
+      % i.e., Z = Z_t|t-1
       Z   = A * Zu;
       
-      % Prior covariance matrix of Z (i.e. V = V_t|t-1)
+      % Prior covariance matrix of Z (i.e., V = V_t|t-1)
       %   Var(Z) = Var(A*Z + u_t) = Var(A*Z) + Var(\epsilon) = 
       %   A*Vu*A' + Q
       V   = A * Vu* A' + Q; 
@@ -992,7 +992,7 @@ function S = SKF(Y, A, C, Q, R, Z_0, V_0)
       S.Vm(:,:,t) = V;
 
       % Store covariance and state values for t (posteriors)
-      % i.e. Zu = Z_t|t   & Vu = V_t|t
+      % i.e., Zu = Z_t|t   & Vu = V_t|t
       S.ZmU(:,t+1)    = Zu;
       S.VmU(:,:,t+1)  = Vu;
   end 

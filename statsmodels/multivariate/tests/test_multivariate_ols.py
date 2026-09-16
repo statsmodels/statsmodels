@@ -1,4 +1,4 @@
-import os.path
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import (
@@ -15,8 +15,8 @@ from statsmodels.multivariate.multivariate_ols import (
 )
 from statsmodels.regression.linear_model import OLS
 
-dir_path = os.path.dirname(os.path.abspath(__file__))
-csv_path = os.path.join(dir_path, "results", "mvreg.csv")
+dir_path = Path(__file__).resolve().parent
+csv_path = Path(dir_path).joinpath("results", "mvreg.csv")
 data_mvreg = pd.read_csv(csv_path)
 
 data = pd.DataFrame(
@@ -106,6 +106,15 @@ def compare_r_output_dogs_data(method, model):
 def test_glm_dogs_example(model):
     compare_r_output_dogs_data(method="svd", model=model)
     compare_r_output_dogs_data(method="pinv", model=model)
+
+
+@pytest.mark.parametrize("model", models)
+def test_invalid_fit_method_raises(model):
+    mod = model.from_formula(
+        "Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted", data
+    )
+    with pytest.raises(ValueError, match="method"):
+        mod.fit(method="not-a-method")
 
 
 @pytest.mark.parametrize("model", models)
@@ -326,3 +335,50 @@ class TestMultivariateLS(CheckMVConsistent):
         mod = MultivariateLS.from_formula(formula2, data=data_mvreg)
         cls.res = mod.fit()
         # ttn = cls.res.mv_test()
+
+
+def test_multivariate_ls_results_summary():
+    # MultivariateLSResults.summary is exported via the multivariate api
+    # but had no direct test coverage: existing tests call mv_test()
+    # rather than summary() on the fit result itself.
+    mod = MultivariateLS.from_formula(
+        "Histamine0 + Histamine1 + Histamine3 + Histamine5 ~ Drug * Depleted",
+        data,
+    )
+    res = mod.fit(method="svd")
+    smry = res.summary()
+    text = str(smry)
+
+    assert "MultivariateLS Regression Results" in text
+    for name in ["Histamine0", "Histamine1", "Histamine3", "Histamine5"]:
+        assert name in text
+    assert str(res.model.endog.shape[0]) in text  # No. Observations
+
+    custom = res.summary(title="Custom Title")
+    assert "Custom Title" in str(custom)
+
+
+def test_resid_distance_and_hat_matrix_diag():
+    rs = np.random.RandomState(20260821)
+    n, k_endog, k_exog = 40, 3, 2
+    exog = np.column_stack([np.ones(n), rs.standard_normal((n, k_exog))])
+    beta = rs.standard_normal((k_exog + 1, k_endog))
+    endog = exog @ beta + rs.standard_normal((n, k_endog))
+
+    mod = MultivariateLS(endog, exog)
+    res = mod.fit(method="svd")
+
+    resid = res.resid
+    cov = res.cov_resid
+    expected_dist = (resid * np.linalg.solve(cov, resid.T).T).sum(1)
+    assert_allclose(res.resid_distance, expected_dist)
+    assert np.all(res.resid_distance >= 0)
+
+    pinv_exog = np.linalg.pinv(exog)
+    expected_hd = (exog * pinv_exog.T).sum(1)
+    assert_allclose(res._hat_matrix_diag, expected_hd)
+    # OLS leverage: diagonal of a projection matrix, sums to the rank
+    assert_allclose(res._hat_matrix_diag.sum(), np.linalg.matrix_rank(exog),
+                    atol=1e-8)
+    assert np.all(res._hat_matrix_diag > -1e-10)
+    assert np.all(res._hat_matrix_diag < 1 + 1e-10)

@@ -131,3 +131,47 @@ class TestNegBinPMargin(CheckMarginMixin):
         cls.res1 = res_stata.results_negbin_margins_cont
         cls.rtol_fac = 5e1
         # negbin has lower agreement with Stata in this case
+
+
+def test_discrete_margins_summary_single_equation():
+    rs = np.random.RandomState(20260822)
+    n = 200
+    x = rs.standard_normal(n)
+    exog = add_constant(np.column_stack([x, rs.standard_normal(n)]))
+    endog = rs.poisson(np.exp(exog @ [0.2, 0.3, -0.1]))
+
+    res = Poisson(endog, exog).fit(disp=0)
+    marge = res.get_margeff()
+    text = str(marge.summary())
+
+    assert "Poisson Marginal Effects" in text
+    assert res.model.endog_names in text
+    for val, se in zip(marge.margeff, marge.margeff_se, strict=True):
+        assert f"{val:.4f}" in text
+        assert f"{se:.3f}" in text
+
+
+def test_discrete_margins_summary_multi_equation():
+    from statsmodels.discrete.discrete_model import MNLogit
+
+    rs = np.random.RandomState(20260823)
+    n = 300
+    x = rs.standard_normal((n, 2))
+    exog = add_constant(x)
+    lin0 = exog @ [0.0, 0.0, 0.0]
+    lin1 = exog @ [0.5, 0.8, -0.4]
+    lin2 = exog @ [-0.3, -0.2, 0.6]
+    p = np.exp(np.column_stack([lin0, lin1, lin2]))
+    p /= p.sum(1, keepdims=True)
+    endog = np.array([rs.choice(3, p=row) for row in p])
+
+    res = MNLogit(endog, exog).fit(disp=0)
+    marge = res.get_margeff()
+    text = str(marge.summary())
+
+    assert "MNLogit Marginal Effects" in text
+    # one sub-table per outcome category
+    assert marge.margeff.shape[1] == 3
+    for eq in range(marge.margeff.shape[1]):
+        for val in marge.margeff[:, eq]:
+            assert f"{val:.4f}" in text

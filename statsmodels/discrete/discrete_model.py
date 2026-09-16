@@ -5,7 +5,7 @@ Includes binary outcomes, count data, (ordered) ordinal data and limited
 dependent variables.
 
 General References
---------------------
+------------------
 
 A.C. Cameron and P.K. Trivedi.  `Regression Analysis of Count Data`.
     Cambridge, 1998
@@ -27,7 +27,6 @@ __all__ = [
     "Probit",
 ]
 
-from statsmodels.compat.pandas import Appender
 
 import warnings
 
@@ -43,17 +42,21 @@ import statsmodels.base._parameter_inference as pinfer
 from statsmodels.base.data import handle_data  # for mnlogit
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 import statsmodels.base.model as base
+from statsmodels.base.model import LikelihoodModel
 import statsmodels.base.wrapper as wrap
 from statsmodels.distributions import genpoisson_p
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring import Docstring, indent
+from statsmodels.tools.docstring_helpers import Appender, Substitution
 from statsmodels.tools.numdiff import approx_fprime_cs
 from statsmodels.tools.sm_exceptions import (
     PerfectSeparationError,
     PerfectSeparationWarning,
     SpecificationWarning,
 )
+from statsmodels.tools.validation import string_like
 
 try:
     import cvxopt  # noqa:F401
@@ -82,12 +85,17 @@ _discrete_results_docs = """
     Parameters
     ----------
     model : A DiscreteModel instance
-    params : array_like
-        The parameters of a fitted model.
-    hessian : array_like
-        The hessian of the fitted model.
-    scale : float
-        A scale parameter for the covariance matrix.
+        The fitted discrete model.
+    mlefit : LikelihoodModelResults instance
+        Results from fitting the model by maximum likelihood.
+    cov_type : str, optional
+        The covariance estimator used for standard errors. The default is
+        ``"nonrobust"``.
+    cov_kwds : dict, optional
+        Keywords passed to the covariance estimator.
+    use_t : bool, optional
+        If True, use the Student's t distribution for inference. If False,
+        use the normal distribution. If None, use the model default.
 
     Attributes
     ----------
@@ -96,7 +104,7 @@ _discrete_results_docs = """
     df_model : float
         See model definition.
     llf : float
-        Value of the loglikelihood
+        Value of the log-likelihood.
     %(extra_attr)s"""
 
 _l1_results_attr = """    nnz_params : int
@@ -113,7 +121,7 @@ This is a preliminary estimator used as start_params.
 Returns
 -------
 params : ndarray
-    parameter estimate based one one-step moment matching
+    parameter estimate based on one-step moment matching
 
 """
 
@@ -172,11 +180,7 @@ def _validate_l1_method(method):
     ------
     ValueError
     """
-    if method not in ["l1", "l1_cvxopt_cp"]:
-        raise ValueError(
-            "`method` = {method} is not supported, use either "
-            '"l1" or "l1_cvxopt_cp"'.format(method=method)
-        )
+    string_like(method, "method", options=("l1", "l1_cvxopt_cp"), lower=False)
 
 
 # Private Model Classes
@@ -298,43 +302,38 @@ class DiscreteModel(base.LikelihoodModel):
         Parameters
         ----------
         start_params : array_like, optional
-            Initial guess of the solution for the loglikelihood maximization.
+            Initial guess of the solution for the log-likelihood maximization.
             The default is an array of zeros.
-        method : 'l1' or 'l1_cvxopt_cp'
+        method : {'l1', 'l1_cvxopt_cp'}, optional
             See notes for details.
-        maxiter : {int, 'defined_by_method'}
+        maxiter : int or 'defined_by_method', optional
             Maximum number of iterations to perform.
             If 'defined_by_method', then use method defaults (see notes).
-        full_output : bool
+        full_output : bool, optional
             Set to True to have all available output in the Results object's
             mle_retvals attribute. The output is dependent on the solver.
             See LikelihoodModelResults notes section for more information.
-        disp : bool
+        disp : bool, optional
             Set to True to print convergence messages.
-        fargs : tuple
-            Extra arguments passed to the likelihood function, i.e.,
-            loglike(x,*args).
-        callback : callable callback(xk)
+        callback : callable, optional
             Called after each iteration, as callback(xk), where xk is the
             current parameter vector.
-        retall : bool
-            Set to True to return list of solutions at each iteration.
-            Available in Results object's mle_retvals attribute.
-        alpha : non-negative scalar or numpy array (same size as parameters)
-            The weight multiplying the l1 penalty term.
-        trim_mode : 'auto, 'size', or 'off'
+        alpha : float or array_like, optional
+            Non-negative. The weight multiplying the l1 penalty term. If an
+            array, it must be the same size as the parameters.
+        trim_mode : {'auto', 'size', 'off'}, optional
             If not 'off', trim (set to zero) parameters that would have been
             zero if the solver reached the theoretical minimum.
             If 'auto', trim params using the Theory above.
             If 'size', trim params if they have very small absolute value.
-        size_trim_tol : float or 'auto' (default = 'auto')
+        size_trim_tol : float, optional
             Tolerance used when trim_mode == 'size'.
-        auto_trim_tol : float
+        auto_trim_tol : float, optional
             Tolerance used when trim_mode == 'auto'.
-        qc_tol : float
+        qc_tol : float, optional
             Print warning and do not allow auto trim when (ii) (above) is
             violated by this much.
-        qc_verbose : bool
+        qc_verbose : bool, optional
             If true, print out a full QC report upon failure.
         **kwargs
             Additional keyword arguments used when fitting the model.
@@ -466,6 +465,23 @@ class DiscreteModel(base.LikelihoodModel):
         if nnz_params > 0:
             H_restricted = H[nz_idx[:, None], nz_idx]
             # Covariance estimate for the nonzero params
+            if not np.isfinite(H_restricted).all():
+                # np.linalg.inv does not raise on non-finite input -- it
+                # silently returns an all-NaN matrix -- so this has to be
+                # checked explicitly, or a NaN Hessian produces a results
+                # object whose every standard error, z-value, p-value and
+                # confidence interval is NaN with no error at all.
+                raise np.linalg.LinAlgError(
+                    "Hessian matrix contains non-finite values and cannot "
+                    "be inverted. This can happen when the optimizer moves "
+                    "far enough from the data's scale that the "
+                    "log-likelihood's second derivative overflows, often "
+                    "itself a symptom of perfect or quasi-perfect "
+                    "separation in the data, or of multicollinearity among "
+                    "predictors. Consider checking your data for "
+                    "separation, removing redundant predictors, or "
+                    "increasing the regularization penalty (alpha)."
+                )
             try:
                 H_restricted_inv = np.linalg.inv(-H_restricted)
             except np.linalg.LinAlgError as e:
@@ -486,7 +502,7 @@ class DiscreteModel(base.LikelihoodModel):
 
         return cov_params
 
-    def predict(self, params, exog=None, which="mean", linear=None):
+    def predict(self, params, exog=None, which="mean"):
         """
         Predict response variable of a model given exogenous variables.
         """
@@ -535,7 +551,7 @@ class BinaryModel(DiscreteModel):
             if not self._continuous_ok and np.any(self.endog != np.round(self.endog)):
                 raise ValueError("endog must be binary, either 0 or 1")
 
-    def predict(self, params, exog=None, which="mean", linear=None, offset=None):
+    def predict(self, params, exog=None, which="mean", offset=None):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -550,36 +566,20 @@ class BinaryModel(DiscreteModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' returns the estimated variance of endog implied by the
               model.
-
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
+        offset : array_like, optional
+            Offset is added to the linear predictor with coefficient equal
+            to 1. If offset is not provided and exog is None, uses the
+            model's offset if present. If not, uses 0 as the default value.
 
         Returns
         -------
         array
             Fitted values at exog.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, "offset"):
             offset = self.offset
@@ -600,9 +600,7 @@ class BinaryModel(DiscreteModel):
             var_ = mu * (1 - mu)
             return var_
         else:
-            raise ValueError(
-                '`which` must be one of "mean", "linear", or "var"'
-            )
+            raise ValueError('`which` must be one of "mean", "linear", or "var"')
 
     @Appender(DiscreteModel.fit_regularized.__doc__)
     def fit_regularized(
@@ -708,13 +706,14 @@ class BinaryModel(DiscreteModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             parameter at which score is evaluated
 
         Returns
         -------
-        The value of the derivative of the expected endog with respect
-        to the parameter vector.
+        ndarray
+            The value of the derivative of the expected endog with respect
+            to the parameter vector.
         """
         link = self.link
         lin_pred = self.predict(params, which="linear")
@@ -723,31 +722,27 @@ class BinaryModel(DiscreteModel):
         return dmat
 
     def get_distribution(self, params, exog=None, offset=None):
-        """Get frozen instance of distribution based on predicted parameters.
+        """
+        Get frozen instance of distribution based on predicted parameters
 
         Parameters
         ----------
         params : array_like
             The parameters of the model.
-        exog : ndarray, optional
+        exog : array_like, optional
             Explanatory variables for the main count model.
             If ``exog`` is None, then the data from the model will be used.
-        offset : ndarray, optional
+        offset : array_like, optional
             Offset is added to the linear predictor of the mean function with
             coefficient equal to 1.
             Default is zero if exog is not None, and the model offset if exog
             is None.
-        exposure : ndarray, optional
-            Log(exposure) is added to the linear predictor  of the mean
-            function with coefficient equal to 1. If exposure is specified,
-            then it will be logged by the method. The user does not need to
-            log it first.
-            Default is one if exog is is not None, and it is the model exposure
-            if exog is None.
 
         Returns
         -------
-        Instance of frozen scipy distribution.
+        scipy.stats.distributions.rv_frozen
+            Frozen random variable instance representing the distribution
+            implied by the model and the given parameters.
         """
         mu = self.predict(params, exog=exog, offset=offset)
         # distr = stats.bernoulli(mu[:, None])
@@ -769,7 +764,7 @@ class MultinomialModel(BinaryModel):
             yname = "y"
 
         if not isinstance(ynames, dict):
-            ynames = dict(zip(range(endog_dummies.shape[1]), ynames))
+            ynames = dict(zip(range(endog_dummies.shape[1]), ynames, strict=True))
 
         self._ynames_map = ynames
         data = handle_data(endog_dummies, exog, missing, hasconst, **kwargs)
@@ -799,7 +794,7 @@ class MultinomialModel(BinaryModel):
         self.df_model *= self.J - 1  # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J - 1)
 
-    def predict(self, params, exog=None, which="mean", linear=None):
+    def predict(self, params, exog=None, which="mean"):
         """
         Predict response variable of a model given exogenous variables.
 
@@ -818,36 +813,16 @@ class MultinomialModel(BinaryModel):
             Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' returns the estimated variance of endog implied by the
               model.
-
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
 
         Notes
         -----
         Column 0 is the base case, the rest conform to the rows of params
         shifted up one for the base case.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         if exog is None:  # do here to accommodate user-given exog
             exog = self.exog
         if exog.ndim == 1:
@@ -1030,7 +1005,7 @@ class MultinomialModel(BinaryModel):
         return margeff.reshape(len(exog), -1, order="F")
 
     def get_distribution(self, params, exog=None, offset=None):
-        """get frozen instance of distribution"""
+        """Get frozen instance of distribution based on predicted parameters"""
         raise NotImplementedError
 
 
@@ -1114,7 +1089,7 @@ class CountModel(DiscreteModel):
         return exog, offset, exposure
 
     def predict(
-        self, params, exog=None, exposure=None, offset=None, which="mean", linear=None
+        self, params, exog=None, exposure=None, offset=None, which="mean"
     ):
         """
         Predict response variable of a count model given exogenous variables
@@ -1124,7 +1099,7 @@ class CountModel(DiscreteModel):
         params : array_like
             Model parameters
         exog : array_like, optional
-            Design / exogenous data. Is exog is None, model exog is used.
+            Design / exogenous data. If exog is None, model exog is used.
         exposure : array_like, optional
             Log(exposure) is added to the linear prediction with
             coefficient equal to 1. If exposure is not provided and exog
@@ -1135,41 +1110,20 @@ class CountModel(DiscreteModel):
             equal to 1. If offset is not provided and exog
             is None, uses the model's offset if present.  If not, uses
             0 as the default value.
-        which : 'mean', 'linear', 'var', 'prob' (optional)
-            Statitistic to predict. Default is 'mean'.
+        which : {'mean', 'linear', 'var', 'prob'}, optional
+            Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' variance of endog implied by the likelihood model
             - 'prob' predicted probabilities for counts.
-
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
-
 
         Notes
         -----
         If exposure is specified, then it will be logged by the method.
         The user does not need to log it first.
         """
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # the following is copied from GLM predict (without family/link check)
         # Use fit offset if appropriate
         if offset is None and exog is None and hasattr(self, "offset"):
@@ -1252,13 +1206,14 @@ class CountModel(DiscreteModel):
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             parameter at which score is evaluated
 
         Returns
         -------
-        The value of the derivative of the expected endog with respect
-        to the parameter vector.
+        ndarray
+            The value of the derivative of the expected endog with respect
+            to the parameter vector.
         """
         from statsmodels.genmod.families import links
 
@@ -1339,8 +1294,8 @@ class Poisson(CountModel):
     __doc__ = """
     Poisson Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -1348,17 +1303,15 @@ class Poisson(CountModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": """offset : array_like
+    """.format(
+        params=base._model_params_doc,
+        extra_params="""offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-        """
-        + base._missing_param_doc
-        + _check_rank_doc,
-    }
+        """ + base._missing_param_doc + _check_rank_doc,
+    )
 
     @cache_readonly
     def family(self):
@@ -1377,7 +1330,8 @@ class Poisson(CountModel):
 
         Returns
         -------
-        The value of the Poisson CDF at each point.
+        ndarray
+            The value of the Poisson CDF at each point.
 
         Notes
         -----
@@ -1426,7 +1380,7 @@ class Poisson(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Poisson model
+        Log-likelihood of Poisson model.
 
         Parameters
         ----------
@@ -1455,7 +1409,7 @@ class Poisson(CountModel):
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Poisson model
+        Log-likelihood for observations of Poisson model.
 
         Parameters
         ----------
@@ -1464,7 +1418,7 @@ class Poisson(CountModel):
 
         Returns
         -------
-        loglike : array_like
+        loglike : ndarray
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -1562,7 +1516,8 @@ class Poisson(CountModel):
         return L1PoissonResultsWrapper(discretefit)
 
     def fit_constrained(self, constraints, start_params=None, **fit_kwds):
-        """fit the model subject to linear equality constraints
+        """
+        Fit the model subject to linear equality constraints
 
         The constraints are of the form   `R params = q`
         where R is the constraint_matrix and q is the vector of
@@ -1575,11 +1530,11 @@ class Poisson(CountModel):
         ----------
         constraints : formula expression or tuple
             If it is a tuple, then the constraint needs to be given by two
-            arrays (constraint_matrix, constraint_value), i.e. (R, q).
+            arrays (constraint_matrix, constraint_value), i.e., (R, q).
             Otherwise, the constraints can be given as strings or list of
             strings.
             see t_test for details
-        start_params : None or array_like
+        start_params : array_like, optional
             starting values for the optimization. `start_params` needs to be
             given in the original parameter space and are internally
             transformed.
@@ -1637,7 +1592,7 @@ class Poisson(CountModel):
 
     def score(self, params):
         """
-        Poisson model score (gradient) vector of the log-likelihood
+        Poisson model score (gradient) vector of the log-likelihood.
 
         Parameters
         ----------
@@ -1647,8 +1602,8 @@ class Poisson(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            The score vector of the model, i.e., the first derivative of the
+            log-likelihood function, evaluated at `params`
 
         Notes
         -----
@@ -1675,7 +1630,7 @@ class Poisson(CountModel):
 
         Returns
         -------
-        score : array_like
+        score : ndarray
             The score vector (nobs, k_vars) of the model evaluated at `params`
 
         Notes
@@ -1705,7 +1660,7 @@ class Poisson(CountModel):
 
         Returns
         -------
-        score : array_like
+        score : ndarray
             The score factor (nobs, ) of the model evaluated at `params`
 
         Notes
@@ -1726,7 +1681,7 @@ class Poisson(CountModel):
 
     def hessian(self, params):
         """
-        Poisson model Hessian matrix of the loglikelihood
+        Poisson model Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
@@ -1736,7 +1691,7 @@ class Poisson(CountModel):
         Returns
         -------
         hess : ndarray, (k_vars, k_vars)
-            The Hessian, second derivative of loglikelihood function,
+            The Hessian, second derivative of the log-likelihood function,
             evaluated at `params`
 
         Notes
@@ -1765,7 +1720,7 @@ class Poisson(CountModel):
         Returns
         -------
         hess : ndarray, (nobs,)
-            The Hessian factor, second derivative of loglikelihood function
+            The Hessian factor, second derivative of log-likelihood function
             with respect to the linear predictor evaluated at `params`
 
         Notes
@@ -1783,11 +1738,12 @@ class Poisson(CountModel):
         return -L
 
     def _deriv_score_obs_dendog(self, params, scale=None):
-        """derivative of score_obs w.r.t. endog
+        """
+        Derivative of score_obs w.r.t. endog
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             parameter at which score is evaluated
         scale : None or float
             If scale is None, then the default scale will be calculated.
@@ -1796,7 +1752,7 @@ class Poisson(CountModel):
 
         Returns
         -------
-        derivative : ndarray_2d
+        derivative : ndarray
             The derivative of the score_obs with respect to endog. This
             can is given by `score_factor0[:, None] * exog` where
             `score_factor0` is the score_factor without the residual.
@@ -1810,7 +1766,6 @@ class Poisson(CountModel):
         exposure=None,
         offset=None,
         which="mean",
-        linear=None,
         y_values=None,
     ):
         """
@@ -1835,46 +1790,29 @@ class Poisson(CountModel):
         exposure : array_like, optional
             Log(exposure) is added to the linear prediction with coefficient
             equal to 1.
-            Default is one if exog is is not None, and is the model exposure
+            Default is one if exog is not None, and is the model exposure
             if exog is None.
-        which : 'mean', 'linear', 'var', 'prob' (optional)
-            Statitistic to predict. Default is 'mean'.
+        which : {'mean', 'linear', 'var', 'prob'}, optional
+            Statistic to predict. Default is 'mean'.
 
             - 'mean' returns the conditional expectation of endog E(y | x),
-              i.e. exp of linear predictor.
+              i.e., exp of linear predictor.
             - 'linear' returns the linear predictor of the mean function.
             - 'var' returns the estimated variance of endog implied by the
               model.
             - 'prob' return probabilities for counts from 0 to max(endog) or
               for y_values if those are provided.
 
-            .. versionadded: 0.14
-
-               ``which`` replaces and extends the deprecated ``linear``
-               argument.
-
-        linear : bool
-            The ``linear` keyword is deprecated and will be removed,
-            use ``which`` keyword instead.
-            If True, returns the linear predicted values.  If False or None,
-            then the statistic specified by ``which`` will be returned.
-
-            .. deprecated: 0.14
-
-               The ``linear` keyword is deprecated and will be removed,
-               use ``which`` keyword instead.
-
-        y_values : array_like
+        y_values : array_like, optional
             Values of the random variable endog at which pmf is evaluated.
             Only used if ``which="prob"``
+
+        Returns
+        -------
+        array
+            Fitted values at exog.
         """
         # Note docstring is reused by other count models
-
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
 
         if which.startswith("lin"):
             which = "linear"
@@ -1885,7 +1823,6 @@ class Poisson(CountModel):
                 exposure=exposure,
                 offset=offset,
                 which=which,
-                linear=linear,
             )
         # TODO: add full set of which
         elif which == "var":
@@ -1913,7 +1850,8 @@ class Poisson(CountModel):
             raise ValueError("Value of the `which` option is not recognized")
 
     def _prob_nonzero(self, mu, params=None):
-        """Probability that count is not zero
+        """
+        Probability that count is not zero
 
         internal use in Censored model, will be refactored or removed
         """
@@ -1921,38 +1859,42 @@ class Poisson(CountModel):
         return prob_nz
 
     def _var(self, mu, params=None):
-        """variance implied by the distribution
+        """
+        Variance implied by the distribution
 
         internal use, will be refactored or removed
         """
         return mu
 
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
-        """Get frozen instance of distribution based on predicted parameters.
+        """
+        Get frozen instance of distribution based on predicted parameters
 
         Parameters
         ----------
         params : array_like
             The parameters of the model.
-        exog : ndarray, optional
+        exog : array_like, optional
             Explanatory variables for the main count model.
             If ``exog`` is None, then the data from the model will be used.
-        offset : ndarray, optional
+        offset : array_like, optional
             Offset is added to the linear predictor of the mean function with
             coefficient equal to 1.
             Default is zero if exog is not None, and the model offset if exog
             is None.
-        exposure : ndarray, optional
-            Log(exposure) is added to the linear predictor  of the mean
+        exposure : array_like, optional
+            Log(exposure) is added to the linear predictor of the mean
             function with coefficient equal to 1. If exposure is specified,
             then it will be logged by the method. The user does not need to
             log it first.
-            Default is one if exog is is not None, and it is the model exposure
+            Default is one if exog is not None, and it is the model exposure
             if exog is None.
 
         Returns
         -------
-        Instance of frozen scipy distribution subclass.
+        scipy.stats.distributions.rv_frozen
+            Frozen random variable instance representing the distribution
+            implied by the model and the given parameters.
         """
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         distr = stats.poisson(mu)
@@ -1963,8 +1905,8 @@ class GeneralizedPoisson(CountModel):
     __doc__ = """
     Generalized Poisson Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -1972,20 +1914,18 @@ class GeneralizedPoisson(CountModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": """
-    p : scalar
+    """.format(
+        params=base._model_params_doc,
+        extra_params="""
+    p : int, optional
         P denotes parameterizations for GP regression. p=1 for GP-1 and
         p=2 for GP-2. Default is p=1.
-    offset : array_like
+    offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
-        equal to 1."""
-        + base._missing_param_doc
-        + _check_rank_doc,
-    }
+        equal to 1.""" + base._missing_param_doc + _check_rank_doc,
+    )
 
     def __init__(
         self,
@@ -2022,7 +1962,7 @@ class GeneralizedPoisson(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Generalized Poisson model
+        Log-likelihood of Generalized Poisson model.
 
         Parameters
         ----------
@@ -2046,7 +1986,7 @@ class GeneralizedPoisson(CountModel):
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generalized Poisson model
+        Log-likelihood for observations of Generalized Poisson model.
 
         Parameters
         ----------
@@ -2110,16 +2050,14 @@ class GeneralizedPoisson(CountModel):
         a = ((np.abs(resid) / np.sqrt(mu) - 1) * mu ** (-q)).sum() / df_resid
         return a
 
-    @Appender(
-        """
+    @Appender("""
         use_transparams : bool
-            This parameter enable internal transformation to impose
+            This parameter enables internal transformation to impose
             non-negativity. True to enable. Default is False.
             use_transparams=True imposes the no underdispersion (alpha > 0)
             constraint. In case use_transparams=True and method="newton" or
             "ncg" transformation is ignored.
-        """
-    )
+        """)
     @Appender(DiscreteModel.fit.__doc__)
     def fit(
         self,
@@ -2156,7 +2094,11 @@ class GeneralizedPoisson(CountModel):
                 kwds_prelim.update(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g., filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
             start_params = res_poi.params
             a = self._estimate_dispersion(
@@ -2227,7 +2169,11 @@ class GeneralizedPoisson(CountModel):
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g., filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
                     start_params=start_params,
                     method=method,
@@ -2333,8 +2279,8 @@ class GeneralizedPoisson(CountModel):
         Returns
         -------
         dldp : float
-            dldp is first derivative of the loglikelihood function,
-        evaluated at `p-parameter`.
+            dldp is the first derivative of the log-likelihood function,
+            evaluated at `p-parameter`.
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -2355,7 +2301,7 @@ class GeneralizedPoisson(CountModel):
 
     def hessian(self, params):
         """
-        Generalized Poisson model Hessian matrix of the loglikelihood
+        Generalized Poisson model Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
@@ -2365,7 +2311,7 @@ class GeneralizedPoisson(CountModel):
         Returns
         -------
         hess : ndarray, (k_vars, k_vars)
-            The Hessian, second derivative of loglikelihood function,
+            The Hessian, second derivative of the log-likelihood function,
             evaluated at `params`
         """
         if self._transparams:
@@ -2443,17 +2389,17 @@ class GeneralizedPoisson(CountModel):
 
     def hessian_factor(self, params):
         """
-        Generalized Poisson model Hessian matrix of the loglikelihood
+        Generalized Poisson model Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
         -------
         hess : ndarray, (nobs, 3)
-            The Hessian factor, second derivative of loglikelihood function
+            The Hessian factor, second derivative of log-likelihood function
             with respect to linear predictor and dispersion parameter
             evaluated at `params`
             The first column contains the second derivative w.r.t. linpred,
@@ -2560,16 +2506,17 @@ class GeneralizedPoisson(CountModel):
             raise ValueError("keyword 'which' not recognized")
 
     def _deriv_score_obs_dendog(self, params):
-        """derivative of score_obs w.r.t. endog
+        """
+        Derivative of score_obs w.r.t. endog
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             parameter at which score is evaluated
 
         Returns
         -------
-        derivative : ndarray_2d
+        derivative : ndarray
             The derivative of the score_obs with respect to endog.
         """
         # code duplication with NegativeBinomialP
@@ -2589,7 +2536,8 @@ class GeneralizedPoisson(CountModel):
         return np.column_stack((d1, d2))
 
     def _var(self, mu, params=None):
-        """variance implied by the distribution
+        """
+        Variance implied by the distribution
 
         internal use, will be refactored or removed
         """
@@ -2599,7 +2547,8 @@ class GeneralizedPoisson(CountModel):
         return var_
 
     def _prob_nonzero(self, mu, params):
-        """Probability that count is not zero
+        """
+        Probability that count is not zero
 
         internal use in Censored model, will be refactored or removed
         """
@@ -2611,7 +2560,7 @@ class GeneralizedPoisson(CountModel):
 
     @Appender(Poisson.get_distribution.__doc__)
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
-        """get frozen instance of distribution"""
+        """Get frozen instance of distribution based on predicted parameters"""
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         p = self.parameterization + 1
         # distr = genpoisson_p(mu[:, None], params[-1], p)
@@ -2619,14 +2568,56 @@ class GeneralizedPoisson(CountModel):
         return distr
 
 
+def _norm_logcdf(z):
+    """Compute log(Phi(z)) without underflow.
+
+    ``log(norm.cdf(z))`` underflows to ``log(0)`` for ``z`` below about
+    -38 and loses precision well before that; ``log_ndtr`` is exact for
+    arbitrarily large ``|z|`` and supports complex inputs, so complex-step
+    differentiation keeps working.
+    """
+    return special.log_ndtr(z)
+
+
+def _norm_mills(z):
+    """Compute the inverse Mills ratio phi(z) / Phi(z) without underflow.
+
+    Evaluated in log space so that the ratio stays finite and accurate
+    where ``norm.cdf(z)`` underflows to zero (``z`` below about -38); the
+    ratio behaves like ``-z`` there.
+    """
+    return np.exp(stats.norm._logpdf(z) - special.log_ndtr(z))
+
+
+def _log_1pexp(w):
+    """Compute log(1 + exp(w)) without overflow.
+
+    The real-valued case uses logaddexp, the complex-valued case
+    (complex-step differentiation) uses a piecewise log1p form; both
+    are stable for arbitrarily large ``|Re(w)|``.  Integer and boolean
+    inputs are promoted to float64 since logaddexp does not accept
+    them on all numpy builds.
+    """
+    w = np.asarray(w)
+    if w.dtype.kind in "biu":
+        w = w.astype(np.float64)
+    if not np.iscomplexobj(w):
+        return np.logaddexp(0.0, w)
+    out = np.empty(w.shape, dtype=np.complex128)
+    pos = w.real > 0
+    out[pos] = w[pos] + np.log1p(np.exp(-w[pos]))
+    out[~pos] = np.log1p(np.exp(w[~pos]))
+    return out
+
+
 class Logit(BinaryModel):
-    __doc__ = """
+    __doc__ = f"""
     Logit Model
 
-    {params}
-    offset : array_like
+    {base._model_params_doc}
+    offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    {extra_params}
+    {base._missing_param_doc + _check_rank_doc}
 
     Attributes
     ----------
@@ -2634,10 +2625,7 @@ class Logit(BinaryModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + _check_rank_doc,
-    )
+    """
 
     _continuous_ok = True
 
@@ -2659,7 +2647,8 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        1/(1 + exp(-X))
+        ndarray
+            1 / (1 + exp(-X))
 
         Notes
         -----
@@ -2729,7 +2718,11 @@ class Logit(BinaryModel):
         """
         q = 2 * self.endog - 1
         linpred = self.predict(params, which="linear")
-        return np.sum(np.log(self.cdf(q * linpred)))
+        # log Λ(z) = -log(1 + exp(-z)), evaluated stably so that large
+        # |z| does not overflow (gh-3923); complex inputs (used by
+        # complex-step differentiation) are preserved
+        z = -q * linpred
+        return np.sum(-_log_1pexp(z))
 
     def loglikeobs(self, params):
         """
@@ -2760,11 +2753,13 @@ class Logit(BinaryModel):
         """
         q = 2 * self.endog - 1
         linpred = self.predict(params, which="linear")
-        return np.log(self.cdf(q * linpred))
+        # see the note in loglike above
+        z = -q * linpred
+        return -_log_1pexp(z)
 
     def score(self, params):
         """
-        Logit model score (gradient) vector of the log-likelihood
+        Logit model score (gradient) vector of the log-likelihood.
 
         Parameters
         ----------
@@ -2774,8 +2769,8 @@ class Logit(BinaryModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            The score vector of the model, i.e., the first derivative of the
+            log-likelihood function, evaluated at `params`
 
         Notes
         -----
@@ -2798,8 +2793,8 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        jac : array_like
-            The derivative of the loglikelihood for each observation evaluated
+        jac : ndarray
+            The derivative of the log-likelihood for each observation evaluated
             at `params`.
 
         Notes
@@ -2825,8 +2820,8 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        score_factor : array_like
-            The derivative of the loglikelihood for each observation evaluated
+        score_factor : ndarray
+            The derivative of the log-likelihood for each observation evaluated
             at `params`.
 
         Notes
@@ -2845,7 +2840,7 @@ class Logit(BinaryModel):
 
     def hessian(self, params):
         """
-        Logit model Hessian matrix of the log-likelihood
+        Logit model Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
@@ -2855,7 +2850,7 @@ class Logit(BinaryModel):
         Returns
         -------
         hess : ndarray, (k_vars, k_vars)
-            The Hessian, second derivative of loglikelihood function,
+            The Hessian, second derivative of the log-likelihood function,
             evaluated at `params`
 
         Notes
@@ -2878,7 +2873,7 @@ class Logit(BinaryModel):
         Returns
         -------
         hess : ndarray, (nobs,)
-            The Hessian factor, second derivative of loglikelihood function
+            The Hessian factor, second derivative of log-likelihood function
             with respect to the linear predictor evaluated at `params`
         """
         L = self.predict(params)
@@ -2909,16 +2904,17 @@ class Logit(BinaryModel):
         return BinaryResultsWrapper(discretefit)
 
     def _deriv_score_obs_dendog(self, params):
-        """derivative of score_obs w.r.t. endog
+        """
+        Derivative of score_obs w.r.t. endog
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             parameter at which score is evaluated
 
         Returns
         -------
-        derivative : ndarray_2d
+        derivative : ndarray
             The derivative of the score_obs with respect to endog. This
             can is given by `score_factor0[:, None] * exog` where
             `score_factor0` is the score_factor without the residual.
@@ -2927,13 +2923,13 @@ class Logit(BinaryModel):
 
 
 class Probit(BinaryModel):
-    __doc__ = """
+    __doc__ = f"""
     Probit Model
 
-    {params}
-    offset : array_like
+    {base._model_params_doc}
+    offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    {extra_params}
+    {base._missing_param_doc + _check_rank_doc}
 
     Attributes
     ----------
@@ -2941,10 +2937,7 @@ class Probit(BinaryModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    """.format(
-        params=base._model_params_doc,
-        extra_params=base._missing_param_doc + _check_rank_doc,
-    )
+    """
 
     @cache_readonly
     def link(self):
@@ -3019,7 +3012,9 @@ class Probit(BinaryModel):
 
         q = 2 * self.endog - 1
         linpred = self.predict(params, which="linear")
-        return np.sum(np.log(np.clip(self.cdf(q * linpred), FLOAT_EPS, 1)))
+        # log Phi(z) evaluated in log space so that large |z| neither
+        # underflows to log(0) nor gets clipped to a constant
+        return np.sum(_norm_logcdf(q * linpred))
 
     def loglikeobs(self, params):
         """
@@ -3032,7 +3027,7 @@ class Probit(BinaryModel):
 
         Returns
         -------
-        loglike : array_like
+        loglike : ndarray
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -3048,7 +3043,7 @@ class Probit(BinaryModel):
 
         q = 2 * self.endog - 1
         linpred = self.predict(params, which="linear")
-        return np.log(np.clip(self.cdf(q * linpred), FLOAT_EPS, 1))
+        return _norm_logcdf(q * linpred)
 
     def score(self, params):
         """
@@ -3062,8 +3057,8 @@ class Probit(BinaryModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            The score vector of the model, i.e., the first derivative of the
+            log-likelihood function, evaluated at `params`
 
         Notes
         -----
@@ -3076,8 +3071,7 @@ class Probit(BinaryModel):
         X = self.exog
         XB = self.predict(params, which="linear")
         q = 2 * y - 1
-        # clip to get rid of invalid divide complaint
-        L = q * self.pdf(q * XB) / np.clip(self.cdf(q * XB), FLOAT_EPS, 1 - FLOAT_EPS)
+        L = q * _norm_mills(q * XB)
         return np.dot(L, X)
 
     def score_obs(self, params):
@@ -3091,8 +3085,8 @@ class Probit(BinaryModel):
 
         Returns
         -------
-        jac : array_like
-            The derivative of the loglikelihood for each observation evaluated
+        jac : ndarray
+            The derivative of the log-likelihood for each observation evaluated
             at `params`.
 
         Notes
@@ -3108,8 +3102,7 @@ class Probit(BinaryModel):
         X = self.exog
         XB = self.predict(params, which="linear")
         q = 2 * y - 1
-        # clip to get rid of invalid divide complaint
-        L = q * self.pdf(q * XB) / np.clip(self.cdf(q * XB), FLOAT_EPS, 1 - FLOAT_EPS)
+        L = q * _norm_mills(q * XB)
         return L[:, None] * X
 
     def score_factor(self, params):
@@ -3118,13 +3111,13 @@ class Probit(BinaryModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
         -------
-        score_factor : array_like (nobs,)
-            The derivative of the loglikelihood function for each observation
+        score_factor : ndarray, (nobs,)
+            The derivative of the log-likelihood function for each observation
             with respect to linear predictor evaluated at `params`
 
         Notes
@@ -3139,13 +3132,12 @@ class Probit(BinaryModel):
         y = self.endog
         XB = self.predict(params, which="linear")
         q = 2 * y - 1
-        # clip to get rid of invalid divide complaint
-        L = q * self.pdf(q * XB) / np.clip(self.cdf(q * XB), FLOAT_EPS, 1 - FLOAT_EPS)
+        L = q * _norm_mills(q * XB)
         return L
 
     def hessian(self, params):
         """
-        Probit model Hessian matrix of the log-likelihood
+        Probit model Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
@@ -3155,7 +3147,7 @@ class Probit(BinaryModel):
         Returns
         -------
         hess : ndarray, (k_vars, k_vars)
-            The Hessian, second derivative of loglikelihood function,
+            The Hessian, second derivative of the log-likelihood function,
             evaluated at `params`
 
         Notes
@@ -3171,22 +3163,22 @@ class Probit(BinaryModel):
         X = self.exog
         XB = self.predict(params, which="linear")
         q = 2 * self.endog - 1
-        L = q * self.pdf(q * XB) / self.cdf(q * XB)
+        L = q * _norm_mills(q * XB)
         return np.dot(-L * (L + XB) * X.T, X)
 
     def hessian_factor(self, params):
         """
-        Probit model Hessian factor of the log-likelihood
+        Probit model Hessian factor of the log-likelihood.
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
         -------
         hess : ndarray, (nobs,)
-            The Hessian factor, second derivative of loglikelihood function
+            The Hessian factor, second derivative of log-likelihood function
             with respect to linear predictor evaluated at `params`
 
         Notes
@@ -3201,7 +3193,7 @@ class Probit(BinaryModel):
         """
         XB = self.predict(params, which="linear")
         q = 2 * self.endog - 1
-        L = q * self.pdf(q * XB) / self.cdf(q * XB)
+        L = q * _norm_mills(q * XB)
         return -L * (L + XB)
 
     @Appender(DiscreteModel.fit.__doc__)
@@ -3228,16 +3220,17 @@ class Probit(BinaryModel):
         return BinaryResultsWrapper(discretefit)
 
     def _deriv_score_obs_dendog(self, params):
-        """derivative of score_obs w.r.t. endog
+        """
+        Derivative of score_obs w.r.t. endog
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             parameter at which score is evaluated
 
         Returns
         -------
-        derivative : ndarray_2d
+        derivative : ndarray
             The derivative of the score_obs with respect to endog. This
             can is given by `score_factor0[:, None] * exog` where
             `score_factor0` is the score_factor without the residual.
@@ -3245,15 +3238,17 @@ class Probit(BinaryModel):
 
         linpred = self.predict(params, which="linear")
 
-        pdf_ = self.pdf(linpred)
-        # clip to get rid of invalid divide complaint
-        cdf_ = np.clip(self.cdf(linpred), FLOAT_EPS, 1 - FLOAT_EPS)
-        deriv = pdf_ / cdf_ / (1 - cdf_)  # deriv factor
+        # phi / (Phi * (1 - Phi)) in log space, using 1 - Phi(z) = Phi(-z)
+        deriv = np.exp(
+            stats.norm._logpdf(linpred)
+            - special.log_ndtr(linpred)
+            - special.log_ndtr(-linpred)
+        )
         return deriv[:, None] * self.exog
 
 
 class MNLogit(MultinomialModel):
-    __doc__ = """
+    __doc__ = f"""
     Multinomial Logit Model
 
     Parameters
@@ -3267,7 +3262,7 @@ class MNLogit(MultinomialModel):
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An intercept is not included by default
         and should be added by the user. See `statsmodels.tools.add_constant`.
-    {extra_params}
+    {base._missing_param_doc + _check_rank_doc}
 
     Attributes
     ----------
@@ -3293,9 +3288,7 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
-    """.format(
-        extra_params=base._missing_param_doc + _check_rank_doc
-    )
+    """
 
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         super().__init__(endog, exog, check_rank=check_rank, **kwargs)
@@ -3323,7 +3316,7 @@ class MNLogit(MultinomialModel):
 
         Parameters
         ----------
-        X : ndarray
+        X : array_like
             The linear predictor of the model XB.
 
         Returns
@@ -3382,7 +3375,7 @@ class MNLogit(MultinomialModel):
 
         Returns
         -------
-        loglike : array_like
+        loglike : ndarray
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -3407,18 +3400,18 @@ class MNLogit(MultinomialModel):
 
     def score(self, params):
         """
-        Score matrix for multinomial logit model log-likelihood
+        Score matrix for multinomial logit model log-likelihood.
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             The parameters of the multinomial logit model.
 
         Returns
         -------
         score : ndarray, (K * (J-1),)
-            The 2-d score vector, i.e. the first derivative of the
-            loglikelihood function, of the multinomial logit model evaluated at
+            The 2-d score vector, i.e., the first derivative of the
+            log-likelihood function, of the multinomial logit model evaluated at
             `params`.
 
         Notes
@@ -3451,17 +3444,17 @@ class MNLogit(MultinomialModel):
 
     def score_obs(self, params):
         """
-        Jacobian matrix for multinomial logit model log-likelihood
+        Jacobian matrix for multinomial logit model log-likelihood.
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             The parameters of the multinomial logit model.
 
         Returns
         -------
-        jac : array_like
-            The derivative of the loglikelihood for each observation evaluated
+        jac : ndarray
+            The derivative of the log-likelihood for each observation evaluated
             at `params` .
 
         Notes
@@ -3483,7 +3476,7 @@ class MNLogit(MultinomialModel):
 
     def hessian(self, params):
         """
-        Multinomial logit Hessian matrix of the log-likelihood
+        Multinomial logit Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
@@ -3493,7 +3486,7 @@ class MNLogit(MultinomialModel):
         Returns
         -------
         hess : ndarray, (J*K, J*K)
-            The Hessian, second derivative of loglikelihood function with
+            The Hessian, second derivative of log-likelihood function with
             respect to the flattened parameters, evaluated at `params`
 
         Notes
@@ -3533,6 +3526,65 @@ class MNLogit(MultinomialModel):
         )
         return H
 
+    def score_factor(self, params):
+        """
+        Multinomial logit score factor for each observation.
+
+        The score factor is the residual (observed minus predicted probability)
+        for each non-reference category. It has shape (nobs, J-1) where J is
+        the number of outcome categories.
+
+        The full per-observation score is computed from the score factor as:
+            score_obs[i] = kron(score_factor[i], exog[i])
+        which produces a vector of length K * (J-1) per observation.
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model, flattened in column-major order
+            with shape (K * (J-1),).
+
+        Returns
+        -------
+        score_factor : ndarray, shape (nobs, J-1)
+            The residual for each observation and non-reference category.
+        """
+        params = np.asarray(params).reshape(self.K, -1, order="F")
+        pr = self.cdf(np.dot(self.exog, params))
+        return self.wendog[:, 1:] - pr[:, 1:]
+
+    def hessian_factor(self, params):
+        """
+        Multinomial logit Hessian weights for each observation.
+
+        For MNLogit the Hessian has a block structure that cannot be reduced
+        to a single scalar weight per observation. Instead, each observation
+        contributes a (J-1, J-1) weight matrix, so the full Hessian for
+        design matrix X is:
+            H[j,l] = sum_i w[i,j,l] * X[i] @ X[i].T
+
+        The weight for observation i is:
+            w[i,j,l] = -pr[i,j] * (1(j==l) - pr[i,l])
+
+        Parameters
+        ----------
+        params : array_like
+            The parameters of the model, flattened in column-major order
+            with shape (K * (J-1),).
+
+        Returns
+        -------
+        hessian_factor : ndarray, shape (nobs, J-1, J-1)
+            The per-observation weight matrix for the Hessian.
+        """
+        params = np.asarray(params).reshape(self.K, -1, order="F")
+        pr = self.cdf(np.dot(self.exog, params))
+        pr_nr = pr[:, 1:]  # (nobs, J-1)
+        # w[i,j,l] = -pr_j*(delta_jl - pr_l) = pr_j*pr_l - delta_jl*pr_j
+        hf = np.einsum("ij,ik->ijk", pr_nr, pr_nr)
+        hf -= np.einsum("ij,jk->ijk", pr_nr, np.eye(self.J - 1))
+        return hf
+
 
 # TODO: Weibull can replaced by a survival analsysis function
 # like stat's streg (The cox model as well)
@@ -3565,7 +3617,7 @@ class MNLogit(MultinomialModel):
 #
 #    def loglike(self, params):
 #        """
-#        Loglikelihood of Weibull distribution
+#        Log-likelihood of Weibull distribution
 #        """
 #        X = self.exog
 #        cdf = self.cdf(np.dot(X,params))
@@ -3598,8 +3650,8 @@ class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -3614,25 +3666,23 @@ class NegativeBinomial(CountModel):
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
         Press.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": """loglike_method : str
-        Log-likelihood type. 'nb2','nb1', or 'geometric'.
+    """.format(
+        params=base._model_params_doc,
+        extra_params="""loglike_method : {'nb2', 'nb1', 'geometric'}, optional
+        Log-likelihood type.
         Fitted value :math:`\\mu`
         Heterogeneity parameter :math:`\\alpha`
 
         - nb2: Variance equal to :math:`\\mu + \\alpha\\mu^2` (most common)
         - nb1: Variance equal to :math:`\\mu + \\alpha\\mu`
         - geometric: Variance equal to :math:`\\mu + \\mu^2`
-    offset : array_like
+    offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-    """
-        + base._missing_param_doc
-        + _check_rank_doc,
-    }
+    """ + base._missing_param_doc + _check_rank_doc,
+    )
 
     def __init__(
         self,
@@ -3728,7 +3778,7 @@ class NegativeBinomial(CountModel):
 
     def loglike(self, params):
         r"""
-        Loglikelihood for negative binomial model
+        Log-likelihood for negative binomial model.
 
         Parameters
         ----------
@@ -3740,7 +3790,7 @@ class NegativeBinomial(CountModel):
         Returns
         -------
         llf : float
-            The loglikelihood value at `params`
+            The log-likelihood value at `params`
 
         Notes
         -----
@@ -3970,16 +4020,8 @@ class NegativeBinomial(CountModel):
         exposure=None,
         offset=None,
         which="mean",
-        linear=None,
         y_values=None,
     ):
-
-        if linear is not None:
-            msg = 'linear keyword is deprecated, use which="linear"'
-            warnings.warn(msg, FutureWarning, stacklevel=2)
-            if linear is True:
-                which = "linear"
-
         # avoid duplicate computation for get-distribution
         if which == "prob":
             distr = self.get_distribution(
@@ -4075,7 +4117,11 @@ class NegativeBinomial(CountModel):
                 kwds_prelim.update(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g., filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
             start_params = res_poi.params
             if self.loglike_method.startswith("nb"):
@@ -4162,7 +4208,11 @@ class NegativeBinomial(CountModel):
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g., filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
                     start_params=start_params,
                     method=method,
@@ -4200,7 +4250,7 @@ class NegativeBinomial(CountModel):
 
     @Appender(Poisson.get_distribution.__doc__)
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
-        """get frozen instance of distribution"""
+        """Get a frozen instance of distribution"""
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         if self.loglike_method == "geometric":
             # distr = stats.geom(1 / (1 + mu[:, None]), loc=-1)
@@ -4221,12 +4271,19 @@ class NegativeBinomial(CountModel):
         return distr
 
 
+_lm_fit_docstring = Docstring(LikelihoodModel.fit.__doc__)
+
+_nbo_fit_params = _lm_fit_docstring.extract_parameters(
+    ["start_params", "method", "maxiter", "full_output", "disp", "callback"]
+)
+
+
 class NegativeBinomialP(CountModel):
     __doc__ = """
     Generalized Negative Binomial (NB-P) Model
 
-    %(params)s
-    %(extra_params)s
+    {params}
+    {extra_params}
 
     Attributes
     ----------
@@ -4234,23 +4291,18 @@ class NegativeBinomialP(CountModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
-    p : scalar
-        P denotes parameterizations for NB-P regression. p=1 for NB-1 and
-        p=2 for NB-2. Default is p=1.
-    """ % {
-        "params": base._model_params_doc,
-        "extra_params": """p : scalar
+    """.format(
+        params=base._model_params_doc,
+        extra_params="""p : int, optional
         P denotes parameterizations for NB regression. p=1 for NB-1 and
         p=2 for NB-2. Default is p=2.
-    offset : array_like
+    offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
-    exposure : array_like
+    exposure : array_like, optional
         Log(exposure) is added to the linear prediction with coefficient
         equal to 1.
-        """
-        + base._missing_param_doc
-        + _check_rank_doc,
-    }
+        """ + base._missing_param_doc + _check_rank_doc,
+    )
 
     def __init__(
         self,
@@ -4287,7 +4339,7 @@ class NegativeBinomialP(CountModel):
 
     def loglike(self, params):
         """
-        Loglikelihood of Generalized Negative Binomial (NB-P) model
+        Log-likelihood of Generalized Negative Binomial (NB-P) model.
 
         Parameters
         ----------
@@ -4304,7 +4356,7 @@ class NegativeBinomialP(CountModel):
 
     def loglikeobs(self, params):
         """
-        Loglikelihood for observations of Generalized Negative Binomial (NB-P) model
+        Log-likelihood for observations of Generalized Negative Binomial (NB-P) model.
 
         Parameters
         ----------
@@ -4354,8 +4406,8 @@ class NegativeBinomialP(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            The score vector of the model, i.e., the first derivative of the
+            log-likelihood function, evaluated at `params`
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -4385,7 +4437,7 @@ class NegativeBinomialP(CountModel):
 
     def score(self, params):
         """
-        Generalized Negative Binomial (NB-P) model score (gradient) vector of the log-likelihood
+        Generalized Negative Binomial (NB-P) model score (gradient) vector of the log-likelihood.
 
         Parameters
         ----------
@@ -4395,8 +4447,8 @@ class NegativeBinomialP(CountModel):
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            The score vector of the model, i.e., the first derivative of the
+            log-likelihood function, evaluated at `params`
         """
         score = np.sum(self.score_obs(params), axis=0)
         if self._transparams:
@@ -4411,14 +4463,17 @@ class NegativeBinomialP(CountModel):
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
+        endog : array_like, optional
+            Endogenous variable to use in place of the model's `endog`.
+            If None, the model's `endog` is used.
 
         Returns
         -------
         score : ndarray, 1-D
-            The score vector of the model, i.e. the first derivative of the
-            loglikelihood function, evaluated at `params`
+            The score vector of the model, i.e., the first derivative of the
+            log-likelihood function, evaluated at `params`
         """
         params = np.asarray(params)
         if self._transparams:
@@ -4449,7 +4504,7 @@ class NegativeBinomialP(CountModel):
 
     def hessian(self, params):
         """
-        Generalized Negative Binomial (NB-P) model hessian maxtrix of the log-likelihood
+        Generalized Negative Binomial (NB-P) model Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
@@ -4540,11 +4595,11 @@ class NegativeBinomialP(CountModel):
 
     def hessian_factor(self, params):
         """
-        Generalized Negative Binomial (NB-P) model hessian maxtrix of the log-likelihood
+        Generalized Negative Binomial (NB-P) model Hessian matrix of the log-likelihood.
 
         Parameters
         ----------
-        params : array-like
+        params : array_like
             The parameters of the model
 
         Returns
@@ -4642,7 +4697,7 @@ class NegativeBinomialP(CountModel):
         a = ((resid**2 / mu - 1) * mu ** (-q)).sum() / df_resid
         return a
 
-    @Appender(DiscreteModel.fit.__doc__)
+    @Substitution(fit_params=indent(_nbo_fit_params, ""))
     def fit(
         self,
         start_params=None,
@@ -4658,14 +4713,25 @@ class NegativeBinomialP(CountModel):
         optim_kwds_prelim=None,
         **kwargs,
     ):
-        # TODO: Fix doc string
         """
+        Fit the NegativeBinomialP model.
+
+        Parameters
+        ----------
+        %(fit_params)s
         use_transparams : bool
-            This parameter enable internal transformation to impose
-            non-negativity. True to enable. Default is False.
-            use_transparams=True imposes the no underdispersion (alpha > 0)
-            constraint. In case use_transparams=True and method="newton" or
-            "ncg" transformation is ignored.
+            If True, use an internal transformation to impose the
+            no-underdispersion constraint, alpha > 0. Default is False.
+            The transformation is ignored if ``method`` is "newton" or "ncg".
+        cov_type : str, optional
+            Covariance estimator to use when computing parameter covariance.
+        cov_kwds : dict, optional
+            Additional keywords for the selected covariance estimator.
+        use_t : bool, optional
+            If True, use the Student's t distribution for inference.
+        optim_kwds_prelim : dict, optional
+            Additional keyword arguments for the preliminary Poisson fit used
+            to construct starting values when ``start_params`` is None.
         """
         if use_transparams and method not in ["newton", "ncg"]:
             self._transparams = True
@@ -4686,7 +4752,11 @@ class NegativeBinomialP(CountModel):
                 kwds_prelim.update(optim_kwds_prelim)
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g., filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 res_poi = mod_poi.fit(**kwds_prelim)
             start_params = res_poi.params
             a = self._estimate_dispersion(
@@ -4757,7 +4827,11 @@ class NegativeBinomialP(CountModel):
                 offset = None
             mod_poi = Poisson(self.endog, self.exog, offset=offset)
             with warnings.catch_warnings():
-                warnings.simplefilter("always")
+                # Preliminary fit used only to compute start_params; do not
+                # force warnings to be shown here, so that the caller's warning
+                # filters (e.g., filterwarnings("ignore")) are respected for
+                # this internal fit. See GH#9179.
+                warnings.simplefilter("ignore")
                 start_params = mod_poi.fit_regularized(
                     start_params=start_params,
                     method=method,
@@ -4830,7 +4904,7 @@ class NegativeBinomialP(CountModel):
             size, prob = self.convert_params(params, mu)
             return nbinom.pmf(y_values, size[:, None], prob[:, None])
         else:
-            raise ValueError('keyword "which" = %s not recognized' % which)
+            raise ValueError(f'keyword "which" = {which} not recognized')
 
     def convert_params(self, params, mu):
         alpha = params[-1]
@@ -4842,16 +4916,17 @@ class NegativeBinomialP(CountModel):
         return (size, prob)
 
     def _deriv_score_obs_dendog(self, params):
-        """derivative of score_obs w.r.t. endog
+        """
+        Derivative of score_obs w.r.t. endog
 
         Parameters
         ----------
-        params : ndarray
+        params : array_like
             parameter at which score is evaluated
 
         Returns
         -------
-        derivative : ndarray_2d
+        derivative : ndarray
             The derivative of the score_obs with respect to endog.
         """
         from statsmodels.tools.numdiff import _approx_fprime_cs_scalar
@@ -4870,7 +4945,8 @@ class NegativeBinomialP(CountModel):
         return np.column_stack((d1, d2))
 
     def _var(self, mu, params=None):
-        """variance implied by the distribution
+        """
+        Variance implied by the distribution
 
         internal use, will be refactored or removed
         """
@@ -4880,7 +4956,8 @@ class NegativeBinomialP(CountModel):
         return var_
 
     def _prob_nonzero(self, mu, params):
-        """Probability that count is not zero
+        """
+        Probability that count is not zero
 
         internal use in Censored model, will be refactored or removed
         """
@@ -4891,7 +4968,7 @@ class NegativeBinomialP(CountModel):
 
     @Appender(Poisson.get_distribution.__doc__)
     def get_distribution(self, params, exog=None, exposure=None, offset=None):
-        """get frozen instance of distribution"""
+        """Get a frozen instance of distribution"""
         mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)
         size, prob = self.convert_params(params, mu)
         # distr = nbinom(size[:, None], prob[:, None])
@@ -4921,7 +4998,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         self.converged = mlefit.mle_retvals["converged"]
 
         if not hasattr(self, "cov_type"):
-            # do this only if super, i.e. mlefit did not already add cov_type
+            # do this only if super, i.e., mlefit did not already add cov_type
             # robust covariance
             if use_t is not None:
                 self.use_t = use_t
@@ -4929,7 +5006,7 @@ class DiscreteResults(base.LikelihoodModelResults):
                 self.cov_type = "nonrobust"
                 self.cov_kwds = {
                     "description": "Standard Errors assume that the covariance matrix "
-                                   "of the errors is correctly specified."
+                    "of the errors is correctly specified."
                 }
             else:
                 if cov_kwds is None:
@@ -4983,13 +5060,13 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        llnull : {None, float}
+        llnull : None or float
             If llnull is not None, then the value will be directly assigned to
             the cached attribute "llnull".
-        attach_results : bool
+        attach_results : bool, optional
             Sets an internal flag whether the results instance of the null
             model should be attached. By default without calling this method,
-            thenull model results are not attached and only the loglikelihood
+            the null model results are not attached and only the log-likelihood
             value llnull is stored.
         **kwargs
             Additional keyword arguments used as fit keyword arguments for the
@@ -5017,7 +5094,7 @@ class DiscreteResults(base.LikelihoodModelResults):
     @cache_readonly
     def llnull(self):
         """
-        Value of the constant-only loglikelihood
+        Value of the constant-only log-likelihood.
         """
         model = self.model
         kwds = model._get_init_kwds().copy()
@@ -5114,19 +5191,21 @@ class DiscreteResults(base.LikelihoodModelResults):
         return pinfer.im_ratio(self)
 
     def info_criteria(self, crit, dk_params=0):
-        """Return an information criterion for the model.
+        """
+        Return an information criterion for the model
 
         Parameters
         ----------
-        crit : string
-            One of 'aic', 'bic', 'tic' or 'gbic'.
-        dk_params : int or float
+        crit : {'aic', 'bic', 'tic', 'gbic'}
+            The information criterion to compute.
+        dk_params : int or float, optional
             Correction to the number of parameters used in the information
             criterion.
 
         Returns
         -------
-        Value of information criterion.
+        float
+            Value of information criterion.
 
         Notes
         -----
@@ -5134,10 +5213,10 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         References
         ----------
-        Burnham KP, Anderson KR (2002). Model Selection and Multimodel
-        Inference; Springer New York.
+        .. [BurnhamAnderson2002] Burnham KP, Anderson KR (2002). Model Selection
+           and Multimodel Inference; Springer New York.
         """
-        crit = crit.lower()
+        crit = string_like(crit, "crit", options=("aic", "bic", "tic", "gbic"))
         k_extra = getattr(self.model, "k_extra", 0)
         k_params = self.df_model + 1 + k_extra + dk_params
 
@@ -5149,10 +5228,8 @@ class DiscreteResults(base.LikelihoodModelResults):
             return bic
         elif crit == "tic":
             return pinfer.tic(self)
-        elif crit == "gbic":
+        else:  # crit == "gbic"
             return pinfer.gbic(self)
-        else:
-            raise ValueError("Name of information criterion not recognized.")
 
     def score_test(
         self,
@@ -5163,6 +5240,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         cov_kwds=None,
         k_constraints=None,
         observed=True,
+        *,
+        return_object: bool | None = None,
     ):
 
         res = pinfer.score_test(
@@ -5174,6 +5253,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             cov_kwds=cov_kwds,
             k_constraints=k_constraints,
             observed=observed,
+            return_object=return_object,
         )
         return res
 
@@ -5184,7 +5264,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         exog=None,
         transform=True,
         which="mean",
-        linear=None,
         row_labels=None,
         average=False,
         agg_weights=None,
@@ -5205,28 +5284,23 @@ class DiscreteResults(base.LikelihoodModelResults):
             you can pass a data structure that contains x1 and x2 in
             their original form. Otherwise, you'd need to log the data
             first.
-        which : str
+        which : str, optional
             Which statistic is to be predicted. Default is "mean".
             The available statistics and options depend on the model.
             see the model.predict docstring
-        linear : bool
-            Linear has been replaced by the `which` keyword and will be
-            deprecated.
-            If linear is True, then `which` is ignored and the linear
-            prediction is returned.
-        row_labels : list of str or None
-            If row_lables are provided, then they will replace the generated
+        row_labels : list of str, optional
+            If row_labels are provided, then they will replace the generated
             labels.
-        average : bool
+        average : bool, optional
             If average is True, then the mean prediction is computed, that is,
             predictions are computed for individual exog and then the average
             over observation is used.
             If average is False, then the results are the predictions for all
-            observations, i.e. same length as ``exog``.
+            observations, i.e., same length as ``exog``.
         agg_weights : ndarray, optional
             Aggregation weights, only used if average is True.
             The weights are not normalized.
-        y_values : None or nd_array
+        y_values : array_like, optional
             Some predictive statistics like which="prob" are computed at
             values of the response variable. If y_values is not None, then
             it will be used instead of the default set of y_values.
@@ -5238,7 +5312,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             to limit the array size.
         **kwargs :
             Some models can take additional keyword arguments, such as offset,
-            exposure or additional exog in multi-part models like zero inflated
+            exposure or additional exog in multi-part models like zero-inflated
             models.
             See the predict method of the model for the details.
 
@@ -5246,18 +5320,13 @@ class DiscreteResults(base.LikelihoodModelResults):
         -------
         prediction_results : PredictionResults
             The prediction results instance contains prediction and prediction
-            variance and can on demand calculate confidence intervals and
-            summary dataframe for the prediction.
+            variance and can calculate confidence intervals and summary
+            dataframes for the prediction on demand.
 
         Notes
         -----
         Status: new in 0.14, experimental
         """
-
-        if linear is True:
-            # compatibility with old keyword
-            which = "linear"
-
         pred_kwds = kwargs
         # y_values is explicit so we can add it to the docstring
         if y_values is not None:
@@ -5293,7 +5362,8 @@ class DiscreteResults(base.LikelihoodModelResults):
     def get_margeff(
         self, at="overall", method="dydx", atexog=None, dummy=False, count=False
     ):
-        """Get marginal effects of the fitted model.
+        """
+        Get marginal effects of the fitted model
 
         Parameters
         ----------
@@ -5321,7 +5391,7 @@ class DiscreteResults(base.LikelihoodModelResults):
             - 'dyex' - estimate semi-elasticity -- dy/d(lnx)
             - 'eydx' - estimate semi-elasticity -- d(lny)/dx
 
-            Note that tranformations are done after each observation is
+            Note that transformations are done after each observation is
             calculated.  Semi-elasticities for binary variables are computed
             using the midpoint method. 'dyex' and 'eyex' do not make sense
             for discrete variables. For interpretations of these methods
@@ -5395,14 +5465,17 @@ class DiscreteResults(base.LikelihoodModelResults):
         ----------
         yname : str, optional
             The name of the endog variable in the tables. The default is `y`.
-        xname : list[str], optional
+        xname : list of str, optional
             The names for the exogenous variables, default is "var_xx".
             Must match the number of parameters in the model.
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title.
-        alpha : float
+        alpha : float, optional
             The significance level for the confidence intervals.
+        yname_list : list of str, optional
+            Names for the endogenous variables, used for the parameter
+            table. If None, the names are taken from `yname`.
 
         Returns
         -------
@@ -5421,17 +5494,17 @@ class DiscreteResults(base.LikelihoodModelResults):
             ("Method:", [self.method]),
             ("Date:", None),
             ("Time:", None),
-            ("converged:", ["%s" % self.mle_retvals["converged"]]),
+            ("converged:", ["{}".format(self.mle_retvals["converged"])]),
         ]
 
         top_right = [
             ("No. Observations:", None),
             ("Df Residuals:", None),
             ("Df Model:", None),
-            ("Pseudo R-squ.:", ["%#6.4g" % self.prsquared]),
+            ("Pseudo R-squ.:", [f"{self.prsquared:#6.4g}"]),
             ("Log-Likelihood:", None),
-            ("LL-Null:", ["%#8.5g" % self.llnull]),
-            ("LLR p-value:", ["%#6.4g" % self.llr_pvalue]),
+            ("LL-Null:", [f"{self.llnull:#8.5g}"]),
+            ("LLR p-value:", [f"{self.llr_pvalue:#6.4g}"]),
         ]
 
         if hasattr(self, "cov_type"):
@@ -5455,12 +5528,12 @@ class DiscreteResults(base.LikelihoodModelResults):
             xname=xname,
             title=title,
         )
-
+        smry.as_latex()
         # for parameters, etc
         smry.add_table_params(
             self, yname=yname_list, xname=xname, alpha=alpha, use_t=self.use_t
         )
-
+        smry.as_latex()
         if hasattr(self, "constraints"):
             smry.add_extra_txt(
                 ["Model has been estimated subject to linear equality constraints."]
@@ -5476,17 +5549,17 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         Parameters
         ----------
-        yname : str
-            Name of the dependent variable (optional).
-        xname : list[str], optional
+        yname : str, optional
+            Name of the dependent variable.
+        xname : list of str, optional
             List of strings of length equal to the number of parameters
-            Names of the independent variables (optional).
+            Names of the independent variables.
         title : str, optional
             Title for the top table. If not None, then this replaces the
             default title.
-        alpha : float
+        alpha : float, optional
             The significance level for the confidence intervals.
-        float_format : str
+        float_format : str, optional
             The print format for floats in parameters summary.
 
         Returns
@@ -5530,8 +5603,6 @@ class CountResults(DiscreteResults):
         """
         Residuals
 
-        Notes
-        -----
         The residuals for Count models are defined as
 
         .. math:: y - p
@@ -5649,6 +5720,19 @@ class PoissonResults(CountResults):
             The counts for which you want the probabilities. If n is None
             then the probabilities for each count from 0 to max(y) are
             given.
+        exog : array_like, optional
+            Design / exogenous data. If exog is None, model exog is used.
+        exposure : array_like, optional
+            Log(exposure) is added to the linear prediction with
+            coefficient equal to 1. If exposure is not provided and exog
+            is None, uses the model's exposure if present.
+        offset : array_like, optional
+            Offset is added to the linear prediction with coefficient
+            equal to 1. If offset is not provided and exog is None, uses
+            the model's offset if present.
+        transform : bool, optional
+            If the model was fit via a formula, do you want to pass
+            exog through the formula. Default is True.
 
         Returns
         -------
@@ -5677,8 +5761,6 @@ class PoissonResults(CountResults):
         """
         Pearson residuals
 
-        Notes
-        -----
         Pearson residuals are defined to be
 
         .. math:: r_j = \\frac{(y - M_jp_j)}{\\sqrt{M_jp_j(1-p_j)}}
@@ -5756,13 +5838,42 @@ class BinaryResults(DiscreteResults):
         "extra_attr": "",
     }
 
+    def __init__(self, model, mlefit, cov_type="nonrobust", cov_kwds=None, use_t=None):
+        super().__init__(
+            model, mlefit, cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t
+        )
+        # Compute and store the separation diagnostic now, since fittedvalues
+        # and model.endog are cleared by remove_data() and summary() must
+        # still be able to run afterwards.
+        fittedvalues = self.model.cdf(self.fittedvalues)
+        absprederror = np.abs(self.model.endog - fittedvalues)
+        predclose_sum = (absprederror < 1e-4).sum()
+        predclose_frac = predclose_sum / len(fittedvalues)
+
+        etext = []
+        if predclose_sum == len(fittedvalues):  # TODO: nobs?
+            wstr = "Complete Separation: The results show that there is"
+            wstr += "complete separation or perfect prediction.\n"
+            wstr += "In this case the Maximum Likelihood Estimator does "
+            wstr += "not exist and the parameters\n"
+            wstr += "are not identified."
+            etext.append(wstr)
+        elif predclose_frac > 0.1:  # TODO: get better diagnosis
+            wstr = "Possibly complete quasi-separation: A fraction "
+            wstr += f"{predclose_frac:4.2f} of observations can be\n"
+            wstr += "perfectly predicted. This might indicate that there "
+            wstr += "is complete\nquasi-separation. In this case some "
+            wstr += "parameters will not be identified."
+            etext.append(wstr)
+        self._separation_etext = etext
+
     def pred_table(self, threshold=0.5):
         """
         Prediction table
 
         Parameters
         ----------
-        threshold : scalar
+        threshold : float, optional
             Number between 0 and 1. Threshold above which a prediction is
             considered 1 and below which a prediction is considered 0.
 
@@ -5780,29 +5891,8 @@ class BinaryResults(DiscreteResults):
     @Appender(DiscreteResults.summary.__doc__)
     def summary(self, yname=None, xname=None, title=None, alpha=0.05, yname_list=None):
         smry = super().summary(yname, xname, title, alpha, yname_list)
-        fittedvalues = self.model.cdf(self.fittedvalues)
-        absprederror = np.abs(self.model.endog - fittedvalues)
-        predclose_sum = (absprederror < 1e-4).sum()
-        predclose_frac = predclose_sum / len(fittedvalues)
-
-        # add warnings/notes
-        etext = []
-        if predclose_sum == len(fittedvalues):  # TODO: nobs?
-            wstr = "Complete Separation: The results show that there is"
-            wstr += "complete separation or perfect prediction.\n"
-            wstr += "In this case the Maximum Likelihood Estimator does "
-            wstr += "not exist and the parameters\n"
-            wstr += "are not identified."
-            etext.append(wstr)
-        elif predclose_frac > 0.1:  # TODO: get better diagnosis
-            wstr = "Possibly complete quasi-separation: A fraction "
-            wstr += "%4.2f of observations can be\n" % predclose_frac
-            wstr += "perfectly predicted. This might indicate that there "
-            wstr += "is complete\nquasi-separation. In this case some "
-            wstr += "parameters will not be identified."
-            etext.append(wstr)
-        if etext:
-            smry.add_extra_txt(etext)
+        if self._separation_etext:
+            smry.add_extra_txt(self._separation_etext)
         return smry
 
     @cache_readonly
@@ -5810,8 +5900,6 @@ class BinaryResults(DiscreteResults):
         """
         Deviance residuals
 
-        Notes
-        -----
         Deviance residuals are defined
 
         .. math:: d_j = \\pm\\left(2\\left[Y_j\\ln\\left(\\frac{Y_j}{M_jp_j}\\right) + (M_j - Y_j\\ln\\left(\\frac{M_j-Y_j}{M_j(1-p_j)} \\right) \\right] \\right)^{1/2}
@@ -5844,8 +5932,6 @@ class BinaryResults(DiscreteResults):
         """
         Pearson residuals
 
-        Notes
-        -----
         Pearson residuals are defined to be
 
         .. math:: r_j = \\frac{(y - M_jp_j)}{\\sqrt{M_jp_j(1-p_j)}}
@@ -5871,8 +5957,6 @@ class BinaryResults(DiscreteResults):
         """
         The response residuals
 
-        Notes
-        -----
         Response residuals are defined to be
 
         .. math:: y - p
@@ -5893,8 +5977,6 @@ class LogitResults(BinaryResults):
         """
         Generalized residuals
 
-        Notes
-        -----
         The generalized residuals for the Logit model are defined
 
         .. math:: y - p
@@ -5935,8 +6017,6 @@ class ProbitResults(BinaryResults):
         """
         Generalized residuals
 
-        Notes
-        -----
         The generalized residuals for the Probit model are defined
 
         .. math:: y\\frac{\\phi(X\\beta)}{\\Phi(X\\beta)}-(1-y)\\frac{\\phi(X\\beta)}{1-\\Phi(X\\beta)}
@@ -6047,8 +6127,8 @@ class MultinomialResults(DiscreteResults):
     def bic(self):
         return -2 * self.llf + np.log(self.nobs) * (self.df_model + self.model.J - 1)
 
-    def conf_int(self, alpha=0.05, cols=None):
-        confint = super(DiscreteResults, self).conf_int(alpha=alpha, cols=cols)
+    def conf_int(self, alpha=0.05):
+        confint = super(DiscreteResults, self).conf_int(alpha=alpha)
         return confint.transpose(2, 0, 1)
 
     def get_prediction(self):
@@ -6059,12 +6139,28 @@ class MultinomialResults(DiscreteResults):
         raise NotImplementedError("Use get_margeff instead")
 
     @cache_readonly
+    def resid_response(self):
+        """
+        The response residuals
+
+        Response residuals are defined to be
+
+        .. math:: y - p
+
+        where :math:`y` is the nobs x J indicator matrix of the observed
+        categories and :math:`p` are the predicted probabilities. The
+        residuals are a nobs x J array.
+        """
+        # `endog` holds the 1-dim category codes for the multinomial models,
+        # so the base class version does not conform with `predict`. `wendog`
+        # is the indicator matrix of the observed categories, which does.
+        return self.model.wendog - self.predict()
+
+    @cache_readonly
     def resid_misclassified(self):
         """
         Residuals indicating which observations are misclassified.
 
-        Notes
-        -----
         The residuals for the multinomial model are defined as
 
         .. math:: argmax(y_i) \\neq argmax(p_i)
@@ -6080,13 +6176,14 @@ class MultinomialResults(DiscreteResults):
         return (self.model.wendog.argmax(1) != self.predict().argmax(1)).astype(float)
 
     def summary2(self, alpha=0.05, float_format="%.4f"):
-        """Experimental function to summarize regression results
+        """
+        Experimental function to summarize regression results
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             significance level for the confidence intervals
-        float_format : str
+        float_format : str, optional
             print format for floats in parameters summary
 
         Returns

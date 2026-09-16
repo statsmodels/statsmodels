@@ -8,8 +8,15 @@ from statsmodels.compat.scipy import SP_LT_116
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 import pytest
+from scipy import stats
+from scipy.special import gamma as sps_gamma
 
 from statsmodels.sandbox.distributions.multivariate import (
+    bghfactor,
+    chi2_pdf,
+    chi_logpdf,
+    chi_pdf,
+    multivariate_t_rvs,
     mvstdnormcdf,
     mvstdtprob,
 )
@@ -145,7 +152,8 @@ class TestMVDistributions:
         r_val = [0.02914269740502042, 0.02269635555984291, 0.01767593948287269]
         assert_allclose(mvn3b.pdf(cov3), r_val, rtol=1e-13)
 
-    def test_mvt_pdf(self, reset_randomstate):
+    def test_mvt_pdf(self):
+        rs = np.random.RandomState(38909894)
         cov3 = self.cov3
         mu3 = self.mu3
 
@@ -162,7 +170,7 @@ class TestMVDistributions:
         mvt1 = MVT((0, 0), 1, 1)
         mvt1.logpdf(np.array([1.0, 1.0])) - (-3.48579549941151)  # decimal=16
 
-        rvs = mvt.rvs(100000)
+        rvs = mvt.rvs(100000, rng=rs)
         assert_almost_equal(np.cov(rvs, rowvar=False), mvt.cov, decimal=1)
 
         mvt31 = MVT(mu3, cov3, 1)
@@ -180,7 +188,55 @@ class TestMVDistributions:
         )
 
 
-if __name__ == "__main__":
-    import pytest
+def test_chi2_pdf_matches_scipy_with_workaround_extra_arg():
+    # the only way to actually call this function today
+    result = chi2_pdf(2.0, 3)
+    assert_allclose(result, stats.chi2.pdf(2.0, 3), rtol=1e-10)
 
-    pytest.main([__file__, "-vvs", "-x", "--pdb"])
+
+def test_chi_pdf_matches_scipy():
+    x, df = 1.5, 4
+    assert_allclose(chi_pdf(x, df), stats.chi.pdf(x, df), rtol=1e-10)
+
+
+def test_chi_logpdf_matches_scipy():
+    x, df = 1.5, 4
+    assert_allclose(chi_logpdf(x, df), stats.chi.logpdf(x, df), rtol=1e-10)
+
+
+def test_chi_pdf_is_exp_of_chi_logpdf():
+    x, df = 2.3, 7
+    assert_allclose(chi_pdf(x, df), np.exp(chi_logpdf(x, df)), rtol=1e-10)
+
+
+def test_bghfactor_matches_direct_formula():
+    for df in [2, 4, 6.5, 10]:
+        expected = np.power(2.0, 1 - df * 0.5) / sps_gamma(df * 0.5)
+        assert_allclose(bghfactor(df), expected, rtol=1e-10)
+
+
+class TestMultivariateTRvs:
+    def test_shape(self):
+        rvs = multivariate_t_rvs([0.0, 0.0], np.eye(2), df=5, n=37, rng=0)
+        assert rvs.shape == (37, 2)
+
+    def test_reproducible_with_same_rng_seed(self):
+        S = np.array([[1.0, 0.5], [0.5, 1.0]])
+        r1 = multivariate_t_rvs([10.0, 20.0], S, df=6, n=10, rng=42)
+        r2 = multivariate_t_rvs([10.0, 20.0], S, df=6, n=10, rng=42)
+        assert_allclose(r1, r2)
+
+    def test_moments_match_theoretical_by_monte_carlo(self):
+        mean = np.array([10.0, 20.0])
+        S = np.array([[1.0, 0.5], [0.5, 1.0]])
+        df = 6
+        rvs = multivariate_t_rvs(mean, S, df=df, n=300000, rng=0)
+        assert_allclose(rvs.mean(0), mean, atol=0.05)
+        expected_cov = S * df / (df - 2)
+        assert_allclose(np.cov(rvs, rowvar=False), expected_cov, atol=0.05)
+
+    def test_df_inf_reduces_to_multivariate_normal(self):
+        S = np.array([[1.0, 0.5], [0.5, 1.0]])
+        rvs = multivariate_t_rvs([0.0, 0.0], S, df=np.inf, n=300000, rng=0)
+        assert_allclose(rvs.mean(0), [0.0, 0.0], atol=0.02)
+        assert_allclose(np.cov(rvs, rowvar=False), S, atol=0.02)

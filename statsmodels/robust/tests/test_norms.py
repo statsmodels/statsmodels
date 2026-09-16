@@ -35,7 +35,7 @@ dtypes = ["int", np.float64, np.complex128]
 @pytest.mark.parametrize("case", cases)
 def test_norm(case, dtype):
     ncls, args, res = case
-    if ncls in [norms.HuberT] and dtype == np.complex128:
+    if ncls == norms.HuberT and dtype == np.complex128:
         # skip for now
         return
 

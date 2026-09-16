@@ -3,6 +3,7 @@ Created on Tue Nov 08 22:28:48 2011
 
 @author: josef
 """
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import pytest
@@ -25,6 +26,7 @@ from statsmodels.tools.eval_measures import (
     mse,
     rmse,
     rmspe,
+    stde,
     vare,
 )
 
@@ -43,9 +45,7 @@ def test_eval_measures():
 
     assert_almost_equal(
         rmse(x, y),
-        np.array(
-            [8.5732141, 9.35414347, 10.17349497, 11.02270384, 11.89537725]
-        ),
+        np.array([8.5732141, 9.35414347, 10.17349497, 11.02270384, 11.89537725]),
     )
     assert_almost_equal(
         rmse(x, y, axis=1),
@@ -56,10 +56,10 @@ def test_eval_measures():
     loc = np.where(x != 0)
     err[loc] /= x[loc]
     err[np.where(x == 0)] = np.nan
-    expected = np.sqrt(np.nanmean(err ** 2, 0) * 100)
+    expected = np.sqrt(np.nanmean(err**2, 0) * 100)
     assert_almost_equal(rmspe(x, y), expected)
     err[np.where(np.isnan(err))] = 0.0
-    expected = np.sqrt(np.nanmean(err ** 2, 0) * 100)
+    expected = np.sqrt(np.nanmean(err**2, 0) * 100)
     assert_almost_equal(rmspe(x, y, zeros=0), expected)
 
     assert_equal(maxabs(x, y), np.array([14.0, 15.0, 16.0, 17.0, 18.0]))
@@ -86,7 +86,7 @@ ics = [aic, aicc, bic, hqic]
 ics_sig = [aic_sigma, aicc_sigma, bic_sigma, hqic_sigma]
 
 
-@pytest.mark.parametrize("ic,ic_sig", zip(ics, ics_sig))
+@pytest.mark.parametrize(("ic", "ic_sig"), list(zip(ics, ics_sig, strict=True)))
 def test_ic_equivalence(ic, ic_sig):
     # consistency check
 
@@ -119,9 +119,10 @@ def test_ic():
     assert_almost_equal(hqic(0, 10, 2), 2 * np.log(np.log(n)) * k, decimal=14)
 
 
-def test_iqr_axis(reset_randomstate):
-    x1 = np.random.standard_normal((100, 100))
-    x2 = np.random.standard_normal((100, 100))
+def test_iqr_axis():
+    rs = np.random.RandomState(32893190)
+    x1 = rs.standard_normal((100, 100))
+    x2 = rs.standard_normal((100, 100))
     ax_none = iqr(x1, x2, axis=None)
     ax_none_direct = iqr(x1.ravel(), x2.ravel())
     assert_equal(ax_none, ax_none_direct)
@@ -137,3 +138,57 @@ def test_iqr_axis(reset_randomstate):
     assert_almost_equal(ax_1, np.array(ax_1_direct))
 
     assert any(ax_0 != ax_1)
+
+
+@pytest.mark.parametrize(
+    "measure",
+    [bias, iqr, maxabs, meanabs, medianabs, medianbias, mse, rmse, rmspe, vare],
+)
+def test_measures_empty_input(measure):
+    # maxabs and iqr used to raise on an empty input, np.max because it has no
+    # identity element and iqr because it indexes into the sorted differences,
+    # while every other measure here returned nan.
+    empty = np.empty(0)
+
+    assert np.isnan(measure(empty, empty))
+
+
+@pytest.mark.parametrize(
+    "measure",
+    [bias, iqr, maxabs, meanabs, medianabs, medianbias, mse, rmse, rmspe, vare],
+)
+def test_measures_empty_input_keeps_axis_shape(measure):
+    # reducing over an empty axis drops that axis and keeps the rest, so a
+    # (0, 3) input reduces to three nans rather than a scalar
+    empty = np.empty((0, 3))
+
+    assert_equal(measure(empty, empty), np.full(3, np.nan))
+
+
+def test_stde():
+    # stde is std(x1 - x2, ddof, axis); check both against a direct
+    # hand-computable formula and against the (separately tested) vare,
+    # since variance is standard deviation squared
+    x1 = np.array([1.0, 2.0, 3.0, 4.0])
+    x2 = np.array([2.0, 2.0, 2.0, 2.0])
+    diff = x1 - x2
+
+    expected_pop = np.sqrt(np.mean((diff - diff.mean()) ** 2))
+    assert_almost_equal(stde(x1, x2), expected_pop, decimal=14)
+    assert_almost_equal(stde(x1, x2, ddof=0), np.std(diff, ddof=0), decimal=14)
+
+    expected_sample = np.sqrt(np.sum((diff - diff.mean()) ** 2) / (len(diff) - 1))
+    assert_almost_equal(stde(x1, x2, ddof=1), expected_sample, decimal=14)
+
+    assert_almost_equal(stde(x1, x2, ddof=1) ** 2, vare(x1, x2, ddof=1), decimal=14)
+
+
+def test_stde_axis():
+    rs = np.random.RandomState(32893190)
+    x1 = rs.standard_normal((6, 4))
+    x2 = rs.standard_normal((6, 4))
+
+    assert_almost_equal(stde(x1, x2, axis=0) ** 2, vare(x1, x2, axis=0), decimal=14)
+    assert_almost_equal(stde(x1, x2, axis=1) ** 2, vare(x1, x2, axis=1), decimal=14)
+    assert_equal(stde(x1, x2, axis=0).shape, (4,))
+    assert_equal(stde(x1, x2, axis=1).shape, (6,))

@@ -37,15 +37,15 @@ def _faa_di_bruno_partitions(n):
         Each solution is itself a list of the form `[(m, k_m), ...]`
         for non-zero `k_m`. Notice that the index `m` is 1-based.
 
-    Examples:
-    ---------
+    Examples
+    --------
     >>> _faa_di_bruno_partitions(2)
     [[(1, 2)], [(2, 1)]]
     >>> for p in _faa_di_bruno_partitions(4):
     ...     assert 4 == sum(m * k for (m, k) in p)
     """
     if n < 1:
-        raise ValueError("Expected a positive integer; got %s instead" % n)
+        raise ValueError(f"Expected a positive integer; got {n} instead")
     try:
         return _faa_di_bruno_cache[n]
     except KeyError as err:
@@ -59,12 +59,12 @@ def cumulant_from_moments(momt, n):
 
     Parameters
     ----------
-    momt : array_like
+    momt : sequence of float
         `momt[j]` contains `(j+1)`-th moment.
         These can be raw moments around zero, or central moments
         (in which case, `momt[0]` == 0).
     n : int
-        which cumulant to calculate (must be >1)
+        which cumulant to calculate (must be >= 1)
 
     Returns
     -------
@@ -72,10 +72,10 @@ def cumulant_from_moments(momt, n):
         n-th cumulant.
     """
     if n < 1:
-        raise ValueError("Expected a positive integer. Got %s instead." % n)
+        raise ValueError(f"Expected a positive integer. Got {n} instead.")
     if len(momt) < n:
         raise ValueError(
-            "%s-th cumulant requires %s moments, only got %s." % (n, n, len(momt))
+            f"{n}-th cumulant requires {n} moments, only got {len(momt)}."
         )
     kappa = 0.0
     for p in _faa_di_bruno_partitions(n):
@@ -171,7 +171,7 @@ class ExpandedNormal(rv_continuous):
         r = np.real_if_close(self._herm_pdf.roots())
         r = (r - self._mu) / self._sigma
         if r[(np.imag(r) == 0) & (np.abs(r) < 4)].any():
-            mesg = "PDF has zeros at %s " % r
+            mesg = f"PDF has zeros at {r} "
             warnings.warn(mesg, RuntimeWarning, stacklevel=2)
 
         kwds.update({"name": name, "momtype": 0})  # use pdf, not ppf in self.moment()

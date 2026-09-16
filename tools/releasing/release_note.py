@@ -8,10 +8,10 @@ current release begin.
 
 Requires PyGitHub, dateparser and jinja2
 """
-
 from collections import defaultdict
 import datetime as dt
 import os
+from pathlib import Path
 
 import dateparser
 from github import Github, GithubException
@@ -179,10 +179,10 @@ variables = {
 }
 
 # Read the template and generate the output
-with open("release_note.tmpl", encoding="utf-8") as tmpl:
+with Path("release_note.tmpl").open(encoding="utf-8") as tmpl:
     tmpl_data = tmpl.read()
     t = Template(tmpl_data)
     rendered = t.render(**variables)
     file_name = f"version{VERSION}.rst"
-    with open(file_name, encoding="utf-8", mode="w") as out:
+    with Path(file_name).open(encoding="utf-8", mode="w") as out:
         out.write(rendered)

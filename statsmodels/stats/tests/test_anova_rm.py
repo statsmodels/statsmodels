@@ -1,6 +1,6 @@
 from statsmodels.compat.pandas import assert_frame_equal
 
-import os
+from pathlib import Path
 
 from numpy.testing import (
     assert_array_almost_equal,
@@ -11,8 +11,8 @@ import pytest
 
 from statsmodels.stats.anova import AnovaRM
 
-CURRENT_PATH = os.path.dirname(os.path.abspath(__file__))
-ANOVA_RM_DATA = os.path.join(CURRENT_PATH, "results", "anova-rm-test-data.csv")
+CURRENT_PATH = Path(__file__).resolve().parent
+ANOVA_RM_DATA = Path(CURRENT_PATH).joinpath("results", "anova-rm-test-data.csv")
 
 data = pd.read_csv(ANOVA_RM_DATA)
 data["DV"] = data["DV"].astype("int")
@@ -26,6 +26,13 @@ def test_single_factor_repeated_measures_anova():
     df = AnovaRM(data.iloc[:16, :], "DV", "id", within=["B"]).fit()
     a = [[1, 7, 22.4, 0.002125452]]
     assert_array_almost_equal(df.anova_table.iloc[:, [1, 2, 0, 3]].values, a, decimal=5)
+
+    text = df.summary().as_text()
+    assert str(df) == text
+    for col in df.anova_table.columns:
+        assert col in text
+    for term in df.anova_table.index:
+        assert str(term) in text
 
 
 def test_two_factors_repeated_measures_anova():

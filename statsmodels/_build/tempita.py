@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import sys
-import os
 import argparse
+from pathlib import Path
+import sys
 
 import Cython.Tempita
 
@@ -10,7 +10,7 @@ def process_tempita(fromfile, outfile=None):
     """Process tempita templated file and write out the result.
 
     The template file is expected to end in `.c.in` or `.pyx.in`:
-    E.g. processing `template.c.in` generates `template.c`.
+    e.g., processing `template.c.in` generates `template.c`.
 
     """
     from_filename = Cython.Tempita.Template.from_filename
@@ -18,7 +18,7 @@ def process_tempita(fromfile, outfile=None):
 
     content = template.substitute()
 
-    with open(outfile, "w") as f:
+    with Path(outfile).open("w") as f:
         f.write(content)
 
 
@@ -49,10 +49,8 @@ def main():
     if args.outfile:
         outfile = args.outfile
     else:
-        outdir_abs = os.path.join(os.getcwd(), args.outdir)
-        outfile = os.path.join(
-            outdir_abs, os.path.splitext(os.path.split(args.infile)[1])[0]
-        )
+        outdir_abs = Path.cwd() / args.outdir
+        outfile = outdir_abs / Path(args.infile).stem
 
     process_tempita(args.infile, outfile)
 

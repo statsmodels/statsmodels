@@ -100,3 +100,19 @@ while the second array would be the true or observed values.
    eval_measures.rmspe
    eval_measures.stde
    eval_measures.vare
+
+Docstring Helpers :mod:`docstring_helpers`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Vendored docstring decorators previously imported from
+``pandas.util._decorators``. Used internally to append or substitute
+content in function and method docstrings.
+
+.. currentmodule:: statsmodels.tools
+
+.. autosummary::
+   :toctree: generated/
+
+   docstring_helpers.Appender
+   docstring_helpers.Substitution
+   docstring_helpers.indent

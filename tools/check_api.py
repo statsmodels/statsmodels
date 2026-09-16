@@ -42,12 +42,12 @@ for mod in api_modules:
         missing[mod.__name__] = indiv
 
 
-for key in missing:
+for key, values in missing.items():
     print("-" * 60)
     print(key)
     print("-" * 60)
     print()
-    for val in missing[key]:
+    for val in values:
         print(f'"{val}",')
 
 if not missing:

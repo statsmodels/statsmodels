@@ -12,27 +12,26 @@ class TestWeb:
     def test_string(self):
         url = _generate_url("arch", True)
         assert url == (
-                self.stable + "search.html?q=arch&check_keywords=yes&area=default"
+            self.stable + "search.html?q=arch&check_keywords=yes&area=default"
         )
         url = _generate_url("arch", False)
         assert url == (
-                self.devel + "search.html?q=arch&check_keywords=yes&area=default"
+            self.devel + "search.html?q=arch&check_keywords=yes&area=default"
         )
         url = _generate_url("dickey fuller", False)
         assert url == (
-                self.devel +
-                "search.html?q=dickey+fuller&check_keywords=yes&area=default"
+            self.devel + "search.html?q=dickey+fuller&check_keywords=yes&area=default"
         )
 
     def test_function(self):
         url = _generate_url(OLS, True)
-        assert url == (self.stable
-                       + "generated/"
-                         "statsmodels.regression.linear_model.OLS.html")
+        assert url == (
+            self.stable + "generated/statsmodels.regression.linear_model.OLS.html"
+        )
         url = _generate_url(OLS, False)
-        assert url == (self.devel
-                       + "generated/"
-                         "statsmodels.regression.linear_model.OLS.html")
+        assert url == (
+            self.devel + "generated/statsmodels.regression.linear_model.OLS.html"
+        )
 
     def test_nothing(self):
         url = _generate_url(None, True)

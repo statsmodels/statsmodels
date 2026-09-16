@@ -4,7 +4,6 @@ Linear exponential smoothing models
 Author: Chad Fulton
 License: BSD-3
 """
-from statsmodels.compat.pandas import Appender
 
 import numpy as np
 import pandas as pd
@@ -15,6 +14,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -51,6 +51,7 @@ class ExponentialSmoothing(MLEModel):
 
         * 'estimated'
         * 'concentrated'
+        * 'simple'
         * 'heuristic'
         * 'known'
 
@@ -66,14 +67,20 @@ class ExponentialSmoothing(MLEModel):
         or length `seasonal - 1` (in which case the last initial value
         is computed to make the average effect zero). Only used if
         initialization is 'known'.
-    bounds : iterable[tuple], optional
+    bounds : iterable of tuple, optional
         An iterable containing bounds for the parameters. Must contain four
         elements, where each element is a tuple of the form (lower, upper).
         Default is (0.0001, 0.9999) for the level, trend, and seasonal
         smoothing parameters and (0.8, 0.98) for the trend damping parameter.
     concentrate_scale : bool, optional
         Whether or not to concentrate the scale (variance of the error term)
-        out of the likelihood.
+        out of the likelihood. Default is True.
+    dates : array_like of datetime, optional
+        An array-like object of datetime objects. If a Pandas object is given
+        for endog, it is assumed to have a DateIndex.
+    freq : str, optional
+        The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
+        'M', 'A', or 'Q'. This is optional if dates are given.
 
     Notes
     -----
@@ -120,7 +127,7 @@ class ExponentialSmoothing(MLEModel):
     Suppose that the seasonal order is `n_seasons = 4`. Then, because the
     initial state corresponds to time t=0 and the time t=1 is in the same
     season as time t=-3, the initial seasonal factor for time t=1 comes from
-    the lag "L3" initial seasonal factor (i.e. at time t=1 this will be both
+    the lag "L3" initial seasonal factor (i.e., at time t=1 this will be both
     the "L4" seasonal factor as well as the "L0", or current, seasonal factor).
 
     When the initial state is estimated (`initialization_method='estimated'`),
@@ -143,9 +150,9 @@ class ExponentialSmoothing(MLEModel):
 
     References
     ----------
-    [1] Hyndman, Rob, Anne B. Koehler, J. Keith Ord, and Ralph D. Snyder.
-        Forecasting with exponential smoothing: the state space approach.
-        Springer Science & Business Media, 2008.
+    .. [1] Hyndman, Rob, Anne B. Koehler, J. Keith Ord, and Ralph D. Snyder.
+       Forecasting with exponential smoothing: the state space approach.
+       Springer Science & Business Media, 2008.
     """
     def __init__(self, endog, trend=False, damped_trend=False, seasonal=None,
                  initialization_method="estimated", initial_level=None,
@@ -157,11 +164,13 @@ class ExponentialSmoothing(MLEModel):
         self.seasonal_periods = int_like(seasonal, "seasonal", optional=True)
         self.seasonal = self.seasonal_periods is not None
         self.initialization_method = string_like(
-            initialization_method, "initialization_method").lower()
+            initialization_method, "initialization_method",
+            options=("concentrated", "estimated", "simple", "heuristic", "known"),
+        )
         self.concentrate_scale = bool_like(concentrate_scale,
                                            "concentrate_scale")
 
-        # TODO: add validation for bounds (e.g. have all bounds, upper > lower)
+        # TODO: add validation for bounds (e.g., have all bounds, upper > lower)
         # TODO: add `bounds_method` argument to choose between "usual" and
         # "admissible" as in Hyndman et al. (2008)
         self.bounds = bounds
@@ -175,11 +184,6 @@ class ExponentialSmoothing(MLEModel):
         if self.seasonal and self.seasonal_periods is None:
             raise NotImplementedError("Unable to detect season automatically;"
                                       " please specify `seasonal_periods`.")
-
-        if self.initialization_method not in ["concentrated", "estimated",
-                                              "simple", "heuristic", "known"]:
-            raise ValueError('Invalid initialization method "%s".'
-                             % initialization_method)
 
         if self.initialization_method == "known":
             if initial_level is None:
@@ -238,8 +242,7 @@ class ExponentialSmoothing(MLEModel):
 
         # Initialization of the states
         if self.initialization_method != "known":
-            msg = ('Cannot give `%%s` argument when initialization is "%s"'
-                   % initialization_method)
+            msg = (f'Cannot give `%s` argument when initialization is "{initialization_method}"')
             if initial_level is not None:
                 raise ValueError(msg % "initial_level")
             if initial_trend is not None:
@@ -333,7 +336,7 @@ class ExponentialSmoothing(MLEModel):
             state_names += ["trend"]
         if self.seasonal:
             state_names += (
-                ["seasonal"] + ["seasonal.L%d" % i
+                ["seasonal"] + [f"seasonal.L{i:d}"
                                 for i in range(1, self.seasonal_periods)])
 
         return state_names
@@ -358,7 +361,7 @@ class ExponentialSmoothing(MLEModel):
             if self.seasonal:
                 param_names += (
                     ["initial_seasonal"]
-                    + ["initial_seasonal.L%d" % i
+                    + [f"initial_seasonal.L{i:d}"
                        for i in range(1, self.seasonal_periods - 1)])
 
         return param_names
@@ -432,7 +435,7 @@ class ExponentialSmoothing(MLEModel):
                 1 / (1 + np.exp(-unconstrained[i])) * (high - low) + low)
             i += 1
 
-        # Phi in bounds (e.g. default is [0.8, 0.98])
+        # Phi in bounds (e.g., default is [0.8, 0.98])
         if self.damped_trend:
             low, high = self.bounds[3]
             constrained[i] = (
@@ -476,7 +479,7 @@ class ExponentialSmoothing(MLEModel):
             unconstrained[i] = np.log(tmp / (1 - tmp))
             i += 1
 
-        # Phi in bounds (e.g. default is [0.8, 0.98])
+        # Phi in bounds (e.g., default is [0.8, 0.98])
         if self.damped_trend:
             low, high = self.bounds[3]
             tmp = (constrained[i] - low) / (high - low)
@@ -672,9 +675,7 @@ class ExponentialSmoothing(MLEModel):
 
 
 class ExponentialSmoothingResults(MLEResults):
-    """
-    Results from fitting a linear exponential smoothing model
-    """
+    """Results from fitting a linear exponential smoothing model"""
     def __init__(self, model, params, filter_results, cov_type=None,
                  **kwargs):
         super().__init__(model, params, filter_results, cov_type, **kwargs)
@@ -713,8 +714,7 @@ class ExponentialSmoothingResults(MLEResults):
             if params.ndim > 1:
                 params = params[0]
             names = self.model.state_names[1:]
-            param_header = ["initialization method: %s"
-                            % self.model.initialization_method]
+            param_header = [f"initialization method: {self.model.initialization_method}"]
             params_stubs = names
             params_data = [[forg(params[i], prec=4)]
                            for i in range(len(params))]

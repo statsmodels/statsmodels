@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 from statsmodels.compat.pandas import (
+    _infer_freq_returns_offset,
     is_float_index,
     is_int_index,
     is_numeric_dtype,
 )
 
 import numbers
+import re
 import warnings
 
 import numpy as np
+import pandas as pd
 from pandas import (
     DatetimeIndex,
     Index,
@@ -75,7 +78,7 @@ def get_index_loc(key, index):
 
     Notes
     -----
-    If `key` is past the end of of the given index, and the index is either
+    If `key` is past the end of the given index, and the index is either
     an Index with an integral dtype or a date index, this function extends
     the index up to and including key, and then returns the location in the
     new index.
@@ -129,7 +132,7 @@ def get_index_loc(key, index):
             index_fn = date_range
         else:
             index_fn = period_range
-        # Integer key (i.e. already given a location)
+        # Integer key (i.e., already given a location)
         if isinstance(key, (int, np.integer)):
             # Negative indices (that lie in the Index)
             if key < 0 and -key < nobs:
@@ -145,11 +148,15 @@ def get_index_loc(key, index):
                 key = index[-1]
             else:
                 key = index[key]
-        # Other key types (i.e. string date or some datetime-like object)
+        # Other key types (i.e., string date or some datetime-like object)
         else:
             # Convert the key to the appropriate date-like object
             if index_class is PeriodIndex:
                 date_key = Period(key, freq=base_index.freq)
+            elif isinstance(key, str) and re.fullmatch("[0-9]*Q[1-4]", key):
+                # Special case dates with a format like
+                # 2026Q2
+                date_key = pd.Period(key).to_timestamp()
             else:
                 date_key = Timestamp(key)
 
@@ -161,7 +168,7 @@ def get_index_loc(key, index):
                 )
 
                 # Now make sure we include `key`
-                if not index[-1] == date_key:
+                if index[-1] != date_key:
                     index = index_fn(
                         start=base_index[0],
                         periods=len(index) + 1,
@@ -175,6 +182,11 @@ def get_index_loc(key, index):
     # Get the location
     if date_index:
         # (note that get_loc will throw a KeyError if key is invalid)
+        if isinstance(key, str) and re.fullmatch("[0-9]*Q[1-4]", key):
+            # Handle future changes in pandas 4
+            key = pd.Period(key)
+            if isinstance(index, pd.DatetimeIndex):
+                key = key.to_timestamp(freq="Q")
         loc = index.get_loc(key)
     elif int_index or range_index:
         # For NumericIndex and RangeIndex, key is assumed to be the location
@@ -188,7 +200,7 @@ def get_index_loc(key, index):
         #   index[10] on an index of length 9) will raise an IndexError
         #   (as of Pandas 0.22)
         # - Attemtping to index with a type that cannot be cast to integer
-        #   (e.g. a non-numeric string) will raise a ValueError if the
+        #   (e.g., a non-numeric string) will raise a ValueError if the
         #   index is RangeIndex (otherwise will raise an IndexError)
         #   (as of Pandas 0.22)
         except (IndexError, ValueError) as exc:
@@ -292,7 +304,7 @@ def get_prediction_index(
     data=None,
 ) -> tuple[int, int, int, Index | None]:
     """
-    Get the location of a specific key in an index or model row labels
+    Get the location of the start and end of prediction, and the associated index
 
     Parameters
     ----------
@@ -308,14 +320,26 @@ def get_prediction_index(
         pd.Timestamp, or pd.Period object), or some other object in the
         model's row labels.
     nobs : int
+        The number of observations in the model.
     base_index : pd.Index
-
+        The base index of the model, against which `start` and `end` are
+        resolved.
     index : pd.Index, optional
         Optionally an index to associate the predicted results to. If None,
         an attempt is made to create an index for the predicted results
         from the model's index or model's row labels.
     silent : bool, optional
         Argument to silence warnings.
+    index_none : bool, optional
+        Whether the returned prediction index should be forced to None
+        even if a supported index would otherwise be available. Default
+        is False.
+    index_generated : bool, optional
+        Whether the model's underlying index was internally generated
+        rather than taken directly from `endog` / `exog`. Default is None.
+    data : statsmodels.base.data.ModelData, optional
+        The model's data object, used to obtain row labels and to set the
+        `predict_start`, `predict_end`, and `predict_dates` attributes.
 
     Returns
     -------
@@ -329,7 +353,7 @@ def get_prediction_index(
     prediction_index : pd.Index or None
         The index associated with the prediction results. This index covers
         the range [start, end + out_of_sample]. If the model has no given
-        index and no given row labels (i.e. endog/exog is not Pandas), then
+        index and no given row labels (i.e., endog/exog is not Pandas), then
         this will be None.
 
     Notes
@@ -418,14 +442,7 @@ def get_prediction_index(
             prediction_index = data.row_labels[start : end + 1]
         # Otherwise, warn the user that they will get an NumericIndex
         else:
-            warnings.warn(
-                "No supported index is available. In the next"
-                " version, calling this method in a model"
-                " without a supported index will result in an"
-                " exception.",
-                FutureWarning,
-                stacklevel=2,
-            )
+            raise ValueError("No supported index is available.")
     elif index_none:
         prediction_index = None
 
@@ -470,7 +487,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         ----------
         dates : array_like, optional
             An array like object containing dates.
-        freq : str, tuple, datetime.timedelta, DateOffset or None, optional
+        freq : str, tuple, datetime.timedelta, or DateOffset, optional
             A frequency specification for either `dates` or the row labels from
             the endog / exog data.
 
@@ -481,19 +498,19 @@ class TimeSeriesModel(base.LikelihoodModel):
         PeriodIndex.
 
         If Pandas objects, endog / exog may have any type of index. If it is
-        an NumericIndex with values 0, 1, ..., nobs-1 or if it is (coerceable to)
+        a NumericIndex with values 0, 1, ..., nobs-1 or if it is (coercible to)
         a DatetimeIndex or PeriodIndex *with an associated frequency*, then it
         is called a "supported" index. Otherwise it is called an "unsupported"
         index.
 
-        Supported indexes are standardized (i.e. a list of date strings is
+        Supported indexes are standardized (i.e., a list of date strings is
         converted to a DatetimeIndex) and the result is put in `self._index`.
 
         Unsupported indexes are ignored, and a supported NumericIndex is
         generated and put in `self._index`. Warnings are issued in this case
         to alert the user if the returned index from some operation (e.g.
         forecasting) is different from the original data's index. However,
-        whenever possible (e.g. purely in-sample prediction), the original
+        whenever possible (e.g., purely in-sample prediction), the original
         index is returned.
 
         The benefit of supported indexes is that they allow *forecasting*, i.e.
@@ -559,7 +576,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # index below
                     if dates is not None:
                         raise ValueError(
-                            "Non-date index index provided to"
+                            "Non-date index provided to"
                             " `dates` argument."
                         ) from exc
             # Now, if we were given, or coerced, a date-based index, make sure
@@ -567,14 +584,19 @@ class TimeSeriesModel(base.LikelihoodModel):
             if isinstance(index, (DatetimeIndex, PeriodIndex)):
                 # If no frequency, try to get an inferred frequency
                 if freq is None and index.freq is None:
-                    freq = index.inferred_freq
+                    with _infer_freq_returns_offset():
+                        freq = index.inferred_freq
                     # If we got an inferred frequncy, alert the user
                     if freq is not None:
                         inferred_freq = True
                         if freq is not None:
+                            if isinstance(freq, pd.tseries.offsets.BaseOffset):
+                                freqstr = freq.freqstr
+                            else:
+                                freqstr = str(freq)
                             warnings.warn(
                                 "No frequency information was provided, so inferred "
-                                f"frequency {freq} will be used.",
+                                f"frequency {freqstr} will be used.",
                                 ValueWarning,
                                 stacklevel=2,
                             )
@@ -613,7 +635,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 elif (
                     freq is not None
                     and not inferred_freq
-                    and not (index.freq == freq)
+                    and index.freq != freq
                 ):
                     raise ValueError(
                         "The given frequency argument is"
@@ -636,11 +658,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         increment = Index(range(self.endog.shape[0]))
         is_increment = index.equals(increment) if int_index else None
         if date_index:
-            try:
-                is_monotonic = index.is_monotonic_increasing
-            except AttributeError:
-                # Remove after pandas 1.5 is minimum
-                is_monotonic = index.is_monotonic
+            is_monotonic = index.is_monotonic_increasing
         else:
             is_monotonic = None
 
@@ -649,7 +667,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             warnings.warn(
                 "An unsupported index was provided. As a result, forecasts "
                 "cannot be generated. To use the model for forecasting, use on the "
-                "the supported classes of index.",
+                "supported classes of index.",
                 ValueWarning,
                 stacklevel=2,
             )
@@ -657,7 +675,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             warnings.warn(
                 "A date index has been provided, but it has no"
                 " associated frequency information and so will be"
-                " ignored when e.g. forecasting.",
+                " ignored when e.g., forecasting.",
                 ValueWarning,
                 stacklevel=2,
             )
@@ -704,7 +722,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         key : label
             The key for which to find the location if the underlying index is
             a DateIndex or a location if the underlying index is a RangeIndex
-            or an NumericIndex.
+            or a NumericIndex.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -721,8 +739,8 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Notes
         -----
-        If `key` is past the end of of the given index, and the index is either
-        an NumericIndex or a date index, this function extends the index up to
+        If `key` is past the end of the given index, and the index is either
+        a NumericIndex or a date index, this function extends the index up to
         and including key, and then returns the location in the new index.
         """
 
@@ -739,7 +757,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         key : label
             The key for which to find the location if the underlying index is
             a DateIndex or is only being used as row labels, or a location if
-            the underlying index is a RangeIndex or an NumericIndex.
+            the underlying index is a RangeIndex or a NumericIndex.
         base_index : pd.Index, optional
             Optionally the base index to search. If None, the model's index is
             searched.
@@ -769,7 +787,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         self, start, end, index=None, silent=False
     ) -> tuple[int, int, int, Index | None]:
         """
-        Get the location of a specific key in an index or model row labels
+        Get the location of the start and end of prediction, and the associated index
 
         Parameters
         ----------
@@ -803,7 +821,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         prediction_index : pd.Index or None
             The index associated with the prediction results. This index covers
             the range [start, end + out_of_sample]. If the model has no given
-            index and no given row labels (i.e. endog/exog is not Pandas), then
+            index and no given row labels (i.e., endog/exog is not Pandas), then
             this will be None.
 
         Notes

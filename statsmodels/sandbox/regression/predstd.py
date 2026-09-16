@@ -58,7 +58,7 @@ def wls_prediction_std(res, exog=None, weights=None, alpha=0.05):
     res.cov_params() : covariance matrix of parameter estimates
 
     If exog is 1d, then it is interpreted as one observation,
-    i.e. a row vector.
+    i.e., a row vector.
 
     testing status: not compared with other packages
 

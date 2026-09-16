@@ -23,13 +23,13 @@ def test_predict_se():
     nsample = 50
     x1 = np.linspace(0, 20, nsample)
     x = np.c_[x1, (x1 - 5) ** 2, np.ones(nsample)]
-    np.random.seed(0)  # 9876789) #9876543)
+    rs = np.random.RandomState(0)  # 9876789) #9876543)
     beta = [0.5, -0.01, 5.0]
     y_true2 = np.dot(x, beta)
     w = np.ones(nsample)
     w[int(nsample * 6.0 / 10) :] = 3
     sig = 0.5
-    y2 = y_true2 + sig * w * np.random.normal(size=nsample)
+    y2 = y_true2 + sig * w * rs.normal(size=nsample)
     x2 = x[:, [0, 2]]
 
     # estimate OLS
@@ -107,7 +107,7 @@ class TestWLSPrediction:
     def setup_class(cls):
 
         # from example wls.py
-
+        rs = np.random.RandomState(3237219)
         nsample = 50
         x = np.linspace(0, 20, nsample)
         X = np.column_stack((x, (x - 5) ** 2))
@@ -119,7 +119,7 @@ class TestWLSPrediction:
         w = np.ones(nsample)
         w[int(nsample * 6.0 / 10) :] = 3
         y_true = np.dot(X, beta)
-        e = np.random.normal(size=nsample)
+        e = rs.normal(size=nsample)
         y = y_true + sig * w * e
         X = X[:, [0, 1]]
 
@@ -267,7 +267,8 @@ class TestWLSPrediction:
 
 def test_predict_remove_data():
     # GH6887
-    endog = [i + np.random.normal(scale=0.1) for i in range(100)]
+    rs = np.random.RandomState(3821010)
+    endog = [i + rs.normal(scale=0.1) for i in range(100)]
     exog = list(range(100))
     model = WLS(endog, exog, weights=[1 for _ in range(100)]).fit()
     # we need to compute scale before we remove wendog, wexog
@@ -282,3 +283,104 @@ def test_predict_remove_data():
 
     series = model.get_prediction(pd.Series([1])).predicted_mean
     assert_allclose(scalar, series)
+
+
+def test_prediction_results_t_test():
+    from scipy import stats as sp_stats
+
+    from statsmodels.genmod.generalized_linear_model import GLM
+
+    rs = np.random.RandomState(918273)
+    n = 40
+    exog = np.column_stack([np.ones(n), rs.standard_normal((n, 2))])
+    endog = exog @ [1.0, 0.5, -0.5] + rs.standard_normal(n)
+    # GLM.get_prediction returns PredictionResultsMean, the class that
+    # actually implements t_test; OLS's get_prediction is a different,
+    # unrelated PredictionResults class of the same name.
+    res = GLM(endog, exog).fit()
+    pred = res.get_prediction()
+
+    stat, pvalue = pred.t_test(value=0, alternative="two-sided")
+    expected_stat = pred.predicted / pred.se
+    assert_allclose(stat, expected_stat)
+    assert_allclose(pvalue, pred.dist.sf(np.abs(expected_stat), *pred.dist_args) * 2)
+
+    stat_l, pvalue_l = pred.t_test(value=1.0, alternative="larger")
+    expected_stat_l = (pred.predicted - 1.0) / pred.se
+    assert_allclose(stat_l, expected_stat_l)
+    assert_allclose(pvalue_l, pred.dist.sf(expected_stat_l, *pred.dist_args))
+
+    stat_s, pvalue_s = pred.t_test(value=1.0, alternative="smaller")
+    assert_allclose(stat_s, expected_stat_l)
+    assert_allclose(pvalue_s, pred.dist.cdf(expected_stat_l, *pred.dist_args))
+
+    # smaller-side p-value is 1 minus the larger-side p-value for the same
+    # statistic, by definition
+    assert_allclose(pvalue_s, 1 - pvalue_l, atol=1e-10)
+
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        pred.t_test(alternative="not-a-real-option")
+
+    # undocumented short forms still work but warn, and are equivalent to
+    # spelling out the documented alternative
+    for alias, canonical in [("2s", "two-sided"), ("l", "larger"), ("s", "smaller")]:
+        with pytest.warns(FutureWarning, match="is a deprecated alias"):
+            alias_result = pred.t_test(value=1.0, alternative=alias)
+        canonical_result = pred.t_test(value=1.0, alternative=canonical)
+        assert_allclose(alias_result, canonical_result)
+
+    # GLM defaults to use_t=False -> normal reference distribution
+    assert pred.dist is sp_stats.norm
+    assert pred.dist_args == ()
+
+    res_t = GLM(endog, exog).fit(use_t=True)
+    pred_t = res_t.get_prediction()
+    assert pred_t.dist is sp_stats.t
+    assert pred_t.dist_args == (pred_t.df,)
+
+
+def test_prediction_results_mean_conf_int_invalid_method():
+    from statsmodels.genmod.generalized_linear_model import GLM
+
+    rs = np.random.RandomState(918273)
+    n = 40
+    exog = np.column_stack([np.ones(n), rs.standard_normal((n, 2))])
+    endog = exog @ [1.0, 0.5, -0.5] + rs.standard_normal(n)
+    res = GLM(endog, exog).fit()
+    pred = res.get_prediction()
+
+    assert pred.conf_int(method="endpoint") is not None
+    assert pred.conf_int(method="delta") is not None
+    with pytest.raises(ValueError, match="method"):
+        pred.conf_int(method="not-a-method")
+
+
+def test_prediction_results_mean_var_pred_mean():
+    # PredictionResultsMean.var_pred_mean had no test coverage -- existing
+    # tests only ever access the related se_mean (== sqrt(self.var_pred)),
+    # which reads self.var_pred directly rather than going through the
+    # var_pred_mean property, so var_pred_mean's own body never ran.
+    #
+    # Use a Gaussian-family, identity-link GLM (numerically equivalent to
+    # OLS) so the get_prediction_glm formula
+    # var_pred_mean = link_deriv**2 * (exog*cov_params@exog.T).sum(1)
+    # reduces to the textbook mean-prediction variance x0 @ cov_params @ x0
+    # for each row x0, which can be computed by hand independently.
+    from statsmodels.genmod.generalized_linear_model import GLM
+
+    rng = np.random.default_rng(918273)
+    n = 40
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(n)
+    res = GLM(endog, exog).fit()
+
+    exog0 = np.column_stack([np.ones(5), rng.standard_normal((5, 2))])
+    pred = res.get_prediction(exog0)
+
+    covb = res.cov_params()
+    expected = np.array([x0 @ covb @ x0 for x0 in exog0])
+    assert_allclose(pred.var_pred_mean, expected, rtol=1e-10)
+
+    # it is documented as a backwards-compatibility alias for var_pred
+    assert pred.var_pred_mean is pred.var_pred
+    assert_allclose(pred.var_pred_mean, pred.se_mean**2, rtol=1e-10)

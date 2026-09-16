@@ -8,7 +8,15 @@ from statsmodels.stats.contingency_tables import (
     mcnemar,
 )
 
-from . import diagnostic, gof, moment_helpers, multicomp, sandwich_covariance, stattools
+from . import (
+    covariance,
+    diagnostic,
+    gof,
+    moment_helpers,
+    multicomp,
+    sandwich_covariance,
+    stattools,
+)
 from ._adnorm import normal_ad
 from ._knockoff import RegressionFDR
 from ._lilliefors import lilliefors
@@ -21,6 +29,12 @@ from .correlation_tools import (
     corr_thresholded,
     cov_nearest,
     cov_nearest_factor_homog,
+)
+from .covariance import (
+    corr_normal_scores,
+    corr_quadrant,
+    corr_rank,
+    transform_corr_normal,
 )
 from .descriptivestats import Describe
 from .diagnostic import (
@@ -40,6 +54,7 @@ from .diagnostic import (
     linear_lm,
     linear_rainbow,
     linear_reset,
+    pesaran_timmermann,
     recursive_olsresiduals,
     spec_white,
 )
@@ -57,6 +72,7 @@ from .multitest import (
     fdrcorrection,
     fdrcorrection_twostage,
     local_fdr,
+    local_fdr_correction,
     multipletests,
 )
 from .multivariate import (
@@ -70,6 +86,7 @@ from .multivariate import (
     test_mvmean,
     test_mvmean_2indep,
 )
+from .nonparametric import jonckheere_terpstra
 from .oaxaca import OaxacaBlinder
 from .oneway import (  # mean and scale; power; from stats; effect size
     anova_generic,
@@ -148,6 +165,8 @@ from .sandwich_covariance import (
     cov_nw_panel,
     cov_white_simple,
     se_cov,
+    weights_bartlett,
+    weights_uniform,
 )
 from .stattools import durbin_watson, jarque_bera, omni_normtest
 from .weightstats import (
@@ -213,6 +232,9 @@ __all__ = [
     "corr_clipped",
     "corr_nearest",
     "corr_nearest_factor",
+    "corr_normal_scores",
+    "corr_quadrant",
+    "corr_rank",
     "corr_thresholded",
     "cov_cluster",
     "cov_cluster_2groups",
@@ -225,6 +247,7 @@ __all__ = [
     "cov_nearest_factor_homog",
     "cov_nw_panel",
     "cov_white_simple",
+    "covariance",
     "diagnostic",
     "durbin_watson",
     "effectsize_2proportions",
@@ -246,12 +269,14 @@ __all__ = [
     "het_goldfeldquandt",
     "het_white",
     "jarque_bera",
+    "jonckheere_terpstra",
     "lilliefors",
     "linear_harvey_collier",
     "linear_lm",
     "linear_rainbow",
     "linear_reset",
     "local_fdr",
+    "local_fdr_correction",
     "mcnemar",
     "moment_helpers",
     "multicomp",
@@ -260,6 +285,7 @@ __all__ = [
     "nonequivalence_poisson_2indep",
     "normal_ad",
     "omni_normtest",
+    "pesaran_timmermann",
     "power_binom_tost",
     "power_equivalence_neginb_2indep",
     "power_equivalence_oneway",
@@ -301,12 +327,15 @@ __all__ = [
     "tolerance_int_poisson",
     "tost_poisson_2indep",
     "tost_proportions_2indep",
+    "transform_corr_normal",
     "tt_ind_solve_power",
     "tt_solve_power",
     "ttest_ind",
     "ttost_ind",
     "ttost_paired",
     "tukeyhsd",
+    "weights_bartlett",
+    "weights_uniform",
     "wellek_to_f2",
     "zconfint",
     "zt_ind_solve_power",

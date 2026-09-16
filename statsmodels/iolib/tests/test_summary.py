@@ -1,7 +1,4 @@
-"""examples to check summary, not converted to tests yet
-
-
-"""
+"""examples to check summary, not converted to tests yet"""
 
 import numpy as np
 from numpy.testing import assert_equal
@@ -15,7 +12,7 @@ from statsmodels.tools.tools import add_constant
 def test_escaped_variable_name():
     # Rename 'cpi' column to 'CPI_'
     data = macrodata.load().data
-    data.rename(columns={"cpi": "CPI_"}, inplace=True)
+    data = data.rename(columns={"cpi": "CPI_"})
 
     mod = OLS.from_formula("CPI_ ~ 1 + np.log(realgdp)", data=data)
     res = mod.fit()
@@ -23,9 +20,10 @@ def test_escaped_variable_name():
     assert "CPI_" in res.summary().as_text()
 
 
-def test_wrong_len_xname(reset_randomstate):
-    y = np.random.randn(100)
-    x = np.random.randn(100, 2)
+def test_wrong_len_xname():
+    rs = np.random.RandomState(8390293)
+    y = rs.randn(100)
+    x = rs.randn(100, 2)
     res = OLS(y, x).fit()
     with pytest.raises(ValueError):
         res.summary(xname=["x1"])
@@ -53,66 +51,27 @@ class TestSummaryLatex:
         reg = OLS(y, x).fit()
 
         actual = reg.summary().tables[1]._repr_latex_()
-        actual = "\n%s\n" % actual
+        actual = f"\n{actual}\n"
         assert_equal(actual, desired)
 
 
-if __name__ == "__main__":
+def test_summary_as_csv_and_as_html():
+    # as_csv()/as_html() are exported as part of iolib.summary.Summary but,
+    # unlike as_text() and as_latex() above, had no test coverage at all.
+    rs = np.random.RandomState(0)
+    y = rs.standard_normal(50)
+    x = add_constant(rs.standard_normal((50, 2)))
+    res = OLS(y, x).fit()
+    summary = res.summary()
 
-    from statsmodels.regression.tests.test_regression import TestOLS
+    csv = summary.as_csv()
+    assert "OLS Regression Results" in csv
+    assert "R-squared" in csv
+    # csv formatting replaces the fixed-width padding with comma separators
+    assert csv.count(",") > summary.as_text().count(",")
 
-    # def mytest():
-    aregression = TestOLS()
-    TestOLS.setup_class()
-    results = aregression.res1
-    r_summary = str(results.summary_old())
-    print(r_summary)
-    olsres = results
-
-    print("\n\n")
-
-    r_summary = str(results.summary())
-    print(r_summary)
-    print("\n\n")
-
-    from statsmodels.discrete.tests.test_discrete import TestProbitNewton
-
-    aregression = TestProbitNewton()
-    TestProbitNewton.setup_class()
-    results = aregression.res1
-    r_summary = str(results.summary())
-    print(r_summary)
-    print("\n\n")
-
-    probres = results
-
-    from statsmodels.robust.tests.test_rlm import TestHampel
-
-    aregression = TestHampel()
-    # TestHampel.setup_class()
-    results = aregression.res1
-    r_summary = str(results.summary())
-    print(r_summary)
-    rlmres = results
-
-    print("\n\n")
-
-    from statsmodels.genmod.tests.test_glm import TestGlmBinomial
-
-    aregression = TestGlmBinomial()
-    # TestGlmBinomial.setup_class()
-    results = aregression.res1
-    r_summary = str(results.summary())
-    print(r_summary)
-
-    # print(results.summary2(return_fmt='latex'))
-    # print(results.summary2(return_fmt='csv'))
-
-    smry = olsres.summary()
-    print(smry.as_csv())
-
-#    import matplotlib.pyplot as plt
-#    plt.plot(rlmres.model.endog,'o')
-#    plt.plot(rlmres.fittedvalues,'-')
-#
-#    plt.show()
+    html = summary.as_html()
+    assert html.startswith('<table class="simpletable">')
+    assert "OLS Regression Results" in html
+    assert "R-squared" in html
+    assert html.count("<table") == len(summary.tables)

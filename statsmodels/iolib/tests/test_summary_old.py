@@ -8,9 +8,8 @@ def test_regression_summary():
     # little luck getting this test to pass (It should?), can be used for
     # visual testing of the regression.summary table
     # fixed, might fail at minute changes
-    from string import Template
-
     # from test_regression import TestOLS
+    from string import Template
     import time
 
     from statsmodels.regression.tests.test_regression import TestOLS

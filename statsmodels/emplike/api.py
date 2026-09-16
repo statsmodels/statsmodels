@@ -1,7 +1,4 @@
-"""
-API for empirical likelihood
-
-"""
+"""API for empirical likelihood"""
 __all__ = [
     "ANOVA",
     "DescStat",

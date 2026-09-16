@@ -62,11 +62,7 @@ class LeaveOneOut:
             yield train_index, test_index
 
     def __repr__(self):
-        return "%s.%s(n=%i)" % (
-            self.__class__.__module__,
-            self.__class__.__name__,
-            self.n,
-        )
+        return f"{self.__class__.__module__}.{self.__class__.__name__}(n={self.n:d})"
 
 
 class LeavePOut:
@@ -117,12 +113,7 @@ class LeavePOut:
             yield train_index, test_index
 
     def __repr__(self):
-        return "%s.%s(n=%i, p=%i)" % (
-            self.__class__.__module__,
-            self.__class__.__name__,
-            self.n,
-            self.p,
-        )
+        return f"{self.__class__.__module__}.{self.__class__.__name__}(n={self.n:d}, p={self.p:d})"
 
 
 class KFold:
@@ -160,7 +151,7 @@ class KFold:
         All the folds have size trunc(n/k), the last one has the complementary
         """
         assert k > 0, ValueError("cannot have k below 1")
-        assert k < n, ValueError("cannot have k=%d greater than %d" % (k, n))
+        assert k < n, ValueError(f"cannot have k={k:d} greater than {n:d}")
         self.n = n
         self.k = k
 
@@ -179,12 +170,7 @@ class KFold:
             yield train_index, test_index
 
     def __repr__(self):
-        return "%s.%s(n=%i, k=%i)" % (
-            self.__class__.__module__,
-            self.__class__.__name__,
-            self.n,
-            self.k,
-        )
+        return f"{self.__class__.__module__}.{self.__class__.__name__}(n={self.n:d}, k={self.k:d})"
 
 
 class LeaveOneLabelOut:
@@ -236,11 +222,7 @@ class LeaveOneLabelOut:
             yield train_index, test_index
 
     def __repr__(self):
-        return "{}.{}(labels={})".format(
-            self.__class__.__module__,
-            self.__class__.__name__,
-            self.labels,
-        )
+        return f"{self.__class__.__module__}.{self.__class__.__name__}(labels={self.labels})"
 
 
 def split(train_indexes, test_indexes, *args):
@@ -292,7 +274,12 @@ class KStepAhead:
             initial size of data for fitting
         kall : bool
             if true. all values for up to k-step ahead are included in the test index.
-            If false, then only the k-th step ahead value is returnd
+            If false, then only the k-th step ahead value is returned
+        return_slice : bool
+            if true, then the iterator returns slice objects for train and
+            test indexes. If false, then boolean index arrays are returned
+            instead, for compatibility with the other iterators in this
+            module.
 
 
         Notes
@@ -351,8 +338,4 @@ class KStepAhead:
                 yield train_index, test_index
 
     def __repr__(self):
-        return "%s.%s(n=%i)" % (
-            self.__class__.__module__,
-            self.__class__.__name__,
-            self.n,
-        )
+        return f"{self.__class__.__module__}.{self.__class__.__name__}(n={self.n:d})"
