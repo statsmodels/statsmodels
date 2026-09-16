@@ -1407,6 +1407,8 @@ class MixedLM(base.LikelihoodModel):
 
         sing = False
         re_project = False
+        v_good = None
+        wi_good = None
 
         if self.k_re == 0:
             cov_re_inv = np.empty((0, 0))
