@@ -168,20 +168,14 @@ class GLSHet(WLS):
         TODO: possible extension stop iteration if change in parameter
             estimates is smaller than x_tol
 
-        Repeated calls to fit_iterative, will do one redundant pinv_wexog
-        calculation. Calling fit_iterative(maxiter) ones does not do any
-        redundant recalculations (whitening or calculating pinv_wexog).
+        Calling iterative_fit(maxiter) once does not do any redundant
+        recalculations (whitening or calculating pinv_wexog).
         """
 
         import collections
         self.history = collections.defaultdict(list)  # not really necessary
         res_resid = None  # if maxiter < 2 no updating
         for i in range(maxiter):
-            # pinv_wexog is cached
-            if hasattr(self, "pinv_wexog"):
-                del self.pinv_wexog
-            # self.initialize()
-            # print 'wls self',
             results = self.fit()
             self.history["self_params"].append(results.params)
             if not i == maxiter-1:  # s kip for last iteration, could break instead

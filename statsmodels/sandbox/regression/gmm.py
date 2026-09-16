@@ -104,6 +104,10 @@ class IV2SLS(LikelihoodModel):
     def __init__(self, endog, exog, instrument=None):
         self.instrument, self.instrument_names = _ensure_2d(instrument, True)
         super().__init__(endog, exog)
+        # RegressionResults expects these on the model
+        self.weights = None
+        self.sigma = None
+        self.wexog_singular_values = None
         # where is this supposed to be handled
         # Note: Greene p.77/78 dof correction is not necessary (because only
         #       asy results), but most packages do it anyway

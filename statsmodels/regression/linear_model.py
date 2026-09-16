@@ -218,12 +218,18 @@ class RegressionModel(base.LikelihoodModel):
     """
 
     def __init__(self, endog, exog, **kwargs):
+        # set via kwargs by WLS/GLS in _handle_data, None otherwise
+        self.weights: Float64Array | None = None
+        self.sigma: Float64Array | None = None
         super().__init__(endog, exog, **kwargs)
-        self.pinv_wexog: Float64Array | None = None
         self._data_attr.extend(["pinv_wexog", "wendog", "wexog", "weights"])
 
     def initialize(self):
-        """Initialize model components."""
+        """
+        Initialize model components.
+
+        Whitens the data and resets the quantities cached by ``fit``.
+        """
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
@@ -231,7 +237,14 @@ class RegressionModel(base.LikelihoodModel):
 
         self._df_model = None
         self._df_resid = None
-        self.rank = None
+        # cached by fit, None until computed
+        self.rank: int | None = None
+        self.pinv_wexog: Float64Array | None = None
+        self.normalized_cov_params: Float64Array | None = None
+        self.wexog_singular_values: Float64Array | None = None
+        self.exog_Q: Float64Array | None = None
+        self.exog_R: Float64Array | None = None
+        self.effects: Float64Array | None = None
 
     @property
     def df_model(self):
@@ -347,12 +360,11 @@ class RegressionModel(base.LikelihoodModel):
         to solve the least squares minimization.
         """
         if method == "pinv":
-            if not (
-                hasattr(self, "pinv_wexog")
-                and hasattr(self, "normalized_cov_params")
-                and hasattr(self, "rank")
+            if (
+                self.pinv_wexog is None
+                or self.normalized_cov_params is None
+                or self.rank is None
             ):
-
                 self.pinv_wexog, singular_values = pinv_extended(self.wexog)
                 self.normalized_cov_params = np.dot(
                     self.pinv_wexog, np.transpose(self.pinv_wexog)
@@ -365,11 +377,11 @@ class RegressionModel(base.LikelihoodModel):
             beta = np.dot(self.pinv_wexog, self.wendog)
 
         elif method == "qr":
-            if not (
-                hasattr(self, "exog_Q")
-                and hasattr(self, "exog_R")
-                and hasattr(self, "normalized_cov_params")
-                and hasattr(self, "rank")
+            if (
+                self.exog_Q is None
+                or self.exog_R is None
+                or self.normalized_cov_params is None
+                or self.rank is None
             ):
                 Q, R = np.linalg.qr(self.wexog)
                 self.exog_Q, self.exog_R = Q, R
@@ -994,12 +1006,20 @@ class OLS(WLS):
                 "An exception will be raised in the next version."
             )
             warnings.warn(msg, ValueWarning, stacklevel=2)
+        self.offset: Float64Array | None = None  # set by _handle_data if passed
         super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
         if "weights" in self._init_keys:
             self._init_keys.remove("weights")
 
         if type(self) is OLS:
             self._check_kwargs(kwargs, ["offset"])
+
+    def initialize(self):
+        super().initialize()
+        # cached by _setup_score_hess
+        self._wendog_xprod: float | None = None
+        self._wexog_xprod: Float64Array | None = None
+        self._wexog_x_wendog: Float64Array | None = None
 
     def loglike(self, params, scale=None):
         """
@@ -1022,7 +1042,7 @@ class OLS(WLS):
         nobs2 = self.nobs / 2.0
         nobs = float(self.nobs)
         resid = self.endog - np.dot(self.exog, params)
-        if hasattr(self, "offset"):
+        if self.offset is not None:
             resid -= self.offset
         ssr = np.sum(resid**2)
         if scale is None:
@@ -1077,7 +1097,7 @@ class OLS(WLS):
             The score vector.
         """
 
-        if not hasattr(self, "_wexog_xprod"):
+        if self._wexog_xprod is None:
             self._setup_score_hess()
 
         xtxb = np.dot(self._wexog_xprod, params)
@@ -1092,7 +1112,7 @@ class OLS(WLS):
 
     def _setup_score_hess(self):
         y = self.wendog
-        if hasattr(self, "offset"):
+        if self.offset is not None:
             y = y - self.offset
         self._wendog_xprod = np.sum(y * y)
         self._wexog_xprod = np.dot(self.wexog.T, self.wexog)
@@ -1117,7 +1137,7 @@ class OLS(WLS):
             The Hessian matrix.
         """
 
-        if not hasattr(self, "_wexog_xprod"):
+        if self._wexog_xprod is None:
             self._setup_score_hess()
 
         xtxb = np.dot(self._wexog_xprod, params)
@@ -1416,8 +1436,6 @@ class GLSAR(GLS):
         i = -1  # need to initialize for maxiter < 1 (skip loop)
         history = {"params": [], "rho": [self.rho]}
         for i in range(maxiter - 1):
-            if hasattr(self, "pinv_wexog"):
-                del self.pinv_wexog
             self.initialize()
             results = self.fit()
             history["params"].append(results.params)
@@ -1436,8 +1454,6 @@ class GLSAR(GLS):
         # Use kwarg to insert history
         if not converged and maxiter > 0:
             # maxiter <= 0 just does OLS
-            if hasattr(self, "pinv_wexog"):
-                del self.pinv_wexog
             self.initialize()
 
         # if converged then this is a duplicate fit, because we did not
@@ -1723,10 +1739,10 @@ class RegressionResults(base.LikelihoodModelResults):
         super().__init__(model, params, normalized_cov_params, scale)
 
         self._cache = {}
-        if hasattr(model, "wexog_singular_values"):
-            self._wexog_singular_values = model.wexog_singular_values
-        else:
-            self._wexog_singular_values = None
+        # model need not be a RegressionModel: GLM._fit_irls and GLMGam._fit_pirls
+        # wrap start_params in a RegressionResults when maxiter == 0, and
+        # NonlinearLS does the same. Those models never compute singular values.
+        self._wexog_singular_values = getattr(model, "wexog_singular_values", None)
 
         self.df_model = model.df_model
         self.df_resid = model.df_resid
@@ -1824,8 +1840,8 @@ class RegressionResults(base.LikelihoodModelResults):
     def centered_tss(self):
         """The total (weighted) sum of squares centered about the mean."""
         model = self.model
-        weights = getattr(model, "weights", None)
-        sigma = getattr(model, "sigma", None)
+        weights = model.weights
+        sigma = model.sigma
         if weights is not None:
             mean = np.average(model.endog, weights=weights)
             return np.sum(weights * (model.endog - mean) ** 2)
@@ -1942,7 +1958,7 @@ class RegressionResults(base.LikelihoodModelResults):
         Otherwise computed using a Wald-like quadratic form that tests whether
         all coefficients (excluding the constant) are zero.
         """
-        if hasattr(self, "cov_type") and self.cov_type != "nonrobust":
+        if self.cov_type != "nonrobust":
             # with heteroscedasticity or correlation robustness
             k_params = self.normalized_cov_params.shape[0]
             mat = np.eye(k_params)
@@ -2189,9 +2205,6 @@ class RegressionResults(base.LikelihoodModelResults):
             The array `wresid` normalized by the sqrt of the scale to have
             unit variance.
         """
-
-        if not hasattr(self, "resid"):
-            raise ValueError("Method requires residuals.")
         eps = np.finfo(self.wresid.dtype).eps
         if np.sqrt(self.scale) < 10 * eps * self.model.endog.mean():
             # do not divide if scale is zero close to numerical precision
@@ -2310,7 +2323,7 @@ class RegressionResults(base.LikelihoodModelResults):
         # If HAC then need to use HAC
         # If Cluster, should use cluster
 
-        cov_type = getattr(self, "cov_type", "nonrobust")
+        cov_type = self.cov_type
         if cov_type == "nonrobust":
             sigma2 = np.mean(wresid**2)
             xpx = np.dot(wexog.T, wexog) / n
@@ -2368,7 +2381,7 @@ class RegressionResults(base.LikelihoodModelResults):
         (sphericity).
         """
 
-        has_robust1 = getattr(self, "cov_type", "nonrobust") != "nonrobust"
+        has_robust1 = self.cov_type != "nonrobust"
         has_robust2 = getattr(restricted, "cov_type", "nonrobust") != "nonrobust"
 
         if has_robust1 or has_robust2:
@@ -2472,7 +2485,7 @@ class RegressionResults(base.LikelihoodModelResults):
         if large_sample:
             return self.compare_lm_test(restricted, use_lr=True)
 
-        has_robust1 = getattr(self, "cov_type", "nonrobust") != "nonrobust"
+        has_robust1 = self.cov_type != "nonrobust"
         has_robust2 = getattr(restricted, "cov_type", "nonrobust") != "nonrobust"
 
         if has_robust1 or has_robust2:
@@ -2908,8 +2921,7 @@ class RegressionResults(base.LikelihoodModelResults):
             ("Df Model:", None),
         ]
 
-        if hasattr(self, "cov_type"):
-            top_left.append(("Covariance Type:", [self.cov_type]))
+        top_left.append(("Covariance Type:", [self.cov_type]))
 
         rsquared_type = "" if self.k_constant else " (uncentered)"
         top_right = [
@@ -2987,8 +2999,7 @@ class RegressionResults(base.LikelihoodModelResults):
                 "R² is computed without centering (uncentered) since the "
                 "model does not contain a constant."
             )
-        if hasattr(self, "cov_type"):
-            etext.append(self.cov_kwds["description"])
+        etext.append(self.cov_kwds["description"])
         if self.model.exog.shape[0] < self.model.exog.shape[1]:
             wstr = "The input rank is higher than the number of observations."
             etext.append(wstr)
@@ -3096,8 +3107,7 @@ class RegressionResults(base.LikelihoodModelResults):
                 "R² is computed without centering (uncentered) since the \
                 model does not contain a constant."
             )
-        if hasattr(self, "cov_type"):
-            etext.append(self.cov_kwds["description"])
+        etext.append(self.cov_kwds["description"])
         if self.model.exog.shape[0] < self.model.exog.shape[1]:
             wstr = "The input rank is higher than the number of observations."
             etext.append(wstr)

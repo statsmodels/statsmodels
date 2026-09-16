@@ -193,9 +193,8 @@ class ShortPanelGLS(GLS):
         TODO: possible extension stop iteration if change in parameter
             estimates is smaller than x_tol
 
-        Repeated calls to fit_iterative, will do one redundant pinv_wexog
-        calculation. Calling fit_iterative(maxiter) once does not do any
-        redundant recalculations (whitening or calculating pinv_wexog).
+        Calling fit_iterative(maxiter) once does not do any redundant
+        recalculations (whitening or calculating pinv_wexog).
         """
         # Note: in contrast to GLSHet, we do not have an auxiliary regression here
         #      might be needed if there is more structure in cov_i
@@ -211,10 +210,6 @@ class ShortPanelGLS(GLS):
         self.history = collections.defaultdict(list)  # not really necessary
 
         for i in range(maxiter):
-            # pinv_wexog is cached, delete it to force recalculation
-            if hasattr(self, "pinv_wexog"):
-                del self.pinv_wexog
-
             # fit with current cov, GLS, i.e. OLS on whitened endog, exog
             results = self.fit()
             self.history["self_params"].append(results.params)

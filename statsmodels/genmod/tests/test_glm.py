@@ -1715,8 +1715,8 @@ def test_glm_irls_method():
     assert_equal(res2.mle_settings["wls_method"], "pinv")
     assert_equal(res3.mle_settings["wls_method"], "qr")
 
-    assert_(hasattr(res2.results_wls.model, "pinv_wexog"))
-    assert_(hasattr(res3.results_wls.model, "exog_Q"))
+    assert res2.results_wls.model.pinv_wexog is not None
+    assert res3.results_wls.model.exog_Q is not None
 
     # fit_gradient currently does not attach mle_settings
     assert_equal(res_g1.method, "bfgs")
