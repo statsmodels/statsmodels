@@ -217,10 +217,18 @@ class TestPCA:
         assert_equal(x, pc_gls.data)
         assert_equal(x, pc.data)
 
+        # Checking against manual (2 steps) GLS calculation
+        pc_gls_manual = PCA(x * np.sqrt(weights), ncomp=1, standardize=False, demean=False)
+        assert_allclose(x * np.sqrt(weights), pc_gls.transformed_data)
+        assert_allclose(np.abs(pc_gls_manual.factors), np.abs(pc_gls.factors))
+        assert_allclose(np.abs(pc_gls_manual.loadings), np.abs(pc_gls.loadings))
+
         pc_weights = PCA(x, ncomp=1, standardize=False, demean=False, weights=weights)
 
         assert_allclose(weights, pc_weights.weights)
+        assert_allclose(pc_gls.transformed_data, pc_weights.transformed_data)
         assert_allclose(np.abs(pc_weights.factors), np.abs(pc_gls.factors))
+        assert_allclose(pc_gls.loadings, pc_weights.loadings)
 
     @pytest.mark.slow
     def test_wide(self):

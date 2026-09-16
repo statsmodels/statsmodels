@@ -460,7 +460,7 @@ estimates are based on only {eff_series} (effective) series."""
             data = adj_data - self._mu
         else:
             data = adj_data
-        return data / np.sqrt(self.weights)
+        return data * np.sqrt(self.weights)
 
     def _compute_eig(self):
         """
@@ -696,7 +696,7 @@ estimates are based on only {eff_series} (effective) series."""
 
         projection = factors[:, :ncomp].dot(coeff[:ncomp, :])
         if transform or unweight:
-            projection *= np.sqrt(self.weights)
+            projection /= np.sqrt(self.weights)
         if transform:
             # Remove the weights, which do not depend on transformation
             if self._standardize:
