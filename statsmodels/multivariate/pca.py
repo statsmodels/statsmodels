@@ -168,9 +168,10 @@ class PCA:
 
     .. math::
 
-        \\Omega^{\\frac{1}{2}} X
+        X \\Omega^{\\frac{1}{2}}
 
-    where :math:`\\Omega` is a diagonal matrix composed of the weights. For
+    where :math:`\\Omega` is a diagonal matrix composed of the weights,
+    so that each column of X is scaled by the square root of its weight. For
     example, when using the GLS version of PCA, the elements of :math:`\\Omega`
     will be the inverse of the variances of the residuals from
 
