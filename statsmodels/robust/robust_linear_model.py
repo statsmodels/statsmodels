@@ -258,8 +258,8 @@ class RLM(base.LikelihoodModel):
             tuning constant, the convergence tolerance, and the maximum number
             of iterations. Custom callables can accept either ``resid`` or
             ``(model, resid)`` and must return the scale estimate. The ``model``
-            object provides useful afftributes like ``nobs`` and ``df_reside``
-            that may be needed in scale estimation. Due to backward compatability
+            object provides useful attributes like ``nobs`` and ``df_resid``
+            that may be needed in scale estimation. Due to backward compatibility
             issues, single- argument callables use the same degrees-of-freedom
             correction as the built-in non-Huber scale estimators (nobs/df_resid).
             Scale estimates from two argument functions are used without
