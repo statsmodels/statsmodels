@@ -1343,9 +1343,13 @@ class OLS(WLS):
             r = np.linalg.solve(vtav, q)
             params = np.dot(v, r)
 
-        from statsmodels.base.elastic_net import RegularizedResults
+        from statsmodels.base.elastic_net import (
+            RegularizedResults,
+            RegularizedResultsWrapper,
+        )
 
-        return RegularizedResults(self, params)
+        results = RegularizedResults(self, params)
+        return RegularizedResultsWrapper(results)
 
 
 class GLSAR(GLS):

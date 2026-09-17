@@ -1561,6 +1561,24 @@ def test_ridge():
     assert_allclose(fv1, fv2)
 
 
+def test_ridge_pandas():
+    # GH 4724, L1_wt=0 uses the ridge code path, results were not wrapped
+    n = 100
+    p = 5
+    rs = np.random.RandomState(3132)
+    xmat = pd.DataFrame(rs.normal(size=(n, p)), columns=list("abcde"))
+    yvec = pd.Series(xmat.sum(axis=1) + rs.normal(size=n), name="y")
+
+    model = OLS(yvec, xmat)
+    result_ridge = model.fit_regularized(alpha=1.0, L1_wt=0)
+    result_enet = model.fit_regularized(alpha=1.0, L1_wt=1e-10)
+    assert isinstance(result_ridge.params, pd.Series)
+    assert isinstance(result_ridge.fittedvalues, pd.Series)
+    pd.testing.assert_index_equal(result_ridge.params.index, xmat.columns)
+    pd.testing.assert_index_equal(result_ridge.fittedvalues.index, xmat.index)
+    pd.testing.assert_series_equal(result_ridge.params, result_enet.params)
+
+
 def test_regularized_refit():
     n = 100
     p = 5
