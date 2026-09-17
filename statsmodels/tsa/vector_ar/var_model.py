@@ -249,7 +249,7 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
     p, k = coefs.shape[:2]
     if y.shape[0] < p:
         raise ValueError(
-            f"y must by have at least order ({p}) observations. Got {y.shape[0]}."
+            f"y must have at least order ({p}) observations. Got {y.shape[0]}."
         )
     # initial value
     forcs = np.zeros((steps, k))
