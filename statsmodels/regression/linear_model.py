@@ -39,6 +39,7 @@ from typing import TYPE_CHECKING, Literal, NamedTuple
 import warnings
 
 import numpy as np
+import pandas as pd
 from scipy import optimize, stats
 from scipy.linalg import cholesky, toeplitz
 from scipy.linalg.lapack import get_lapack_funcs
@@ -73,9 +74,11 @@ __all__ = [
     "GLSAR",
     "OLS",
     "WLS",
+    "BetaCoefficientsResults",
     "CompareLRTestResult",
     "ELTestResult",
     "PredictionResults",
+    "RegressionResults",
     "RegressionResultsWrapper",
     "YuleWalkerResult",
 ]
@@ -1793,6 +1796,88 @@ class ELTestResult(NamedTuple):
     nuisance_params: np.ndarray | None
 
 
+class BetaCoefficientsResults:
+    """
+    Results class for standardized regression coefficients (beta weights).
+
+    Parameters
+    ----------
+    contrast_res : ContrastResults
+        Underlying ContrastResults from t_test.
+    names : list of str
+        Names of the regressors.
+    is_pandas : bool, default True
+        Whether to return pandas Series/DataFrame or numpy ndarrays.
+    """
+
+    def __init__(self, contrast_res, names, is_pandas=True):
+        self._contrast = contrast_res
+        self.names = list(names)
+        self._is_pandas = is_pandas
+
+    @property
+    def params(self):
+        """Standardized regression coefficients (beta)."""
+        vals = self._contrast.effect
+        if self._is_pandas:
+            return pd.Series(vals, index=self.names, name="beta")
+        return vals
+
+    @property
+    def bse(self):
+        """Standard errors of standardized coefficients."""
+        vals = self._contrast.sd
+        if self._is_pandas:
+            return pd.Series(vals, index=self.names, name="std_err")
+        return vals
+
+    @property
+    def tvalues(self):
+        """t-statistics for standardized coefficients."""
+        vals = self._contrast.tvalue
+        if self._is_pandas:
+            return pd.Series(vals, index=self.names, name="t")
+        return vals
+
+    @property
+    def pvalues(self):
+        """p-values for standardized coefficients."""
+        vals = self._contrast.pvalue
+        if self._is_pandas:
+            return pd.Series(vals, index=self.names, name="pvalue")
+        return vals
+
+    def conf_int(self, alpha=0.05):
+        """Confidence intervals for standardized coefficients."""
+        ci = self._contrast.conf_int(alpha=alpha)
+        if self._is_pandas:
+            return pd.DataFrame(ci, index=self.names, columns=["lower", "upper"])
+        return ci
+
+    def summary_frame(self, alpha=0.05):
+        """
+        Return standardized coefficient results as a pandas DataFrame.
+        """
+        df = self._contrast.summary_frame(alpha=alpha)
+        df.index = self.names
+        df.rename(columns={"coef": "beta"}, inplace=True)
+        return df
+
+    def summary(self, alpha=0.05):
+        """
+        Return a formatted summary table of standardized coefficients.
+        """
+        table = self._contrast.summary(xname=self.names, alpha=alpha)
+        table.title = "Standardized Coefficients (Beta Weights)"
+        return table
+
+    def __str__(self):
+        return str(self.summary())
+
+    def __repr__(self):
+        return self.__str__()
+
+
 class RegressionResults(base.LikelihoodModelResults):
     r"""
     This class summarizes the fit of a linear regression model.
@@ -3425,6 +3510,99 @@ class OLSResults(RegressionResults):
         from statsmodels.stats.outliers_influence import OLSInfluence
 
         return OLSInfluence(self)
+
+    def get_beta_coefficients(
+        self, include_constant=False, standardize_endog=True
+    ):
+        """
+        Compute standardized regression coefficients (beta weights).
+
+        Standardized coefficients quantify the change in the dependent variable
+        (in standard deviation units) associated with a one standard deviation
+        change in an explanatory variable.
+
+        Parameters
+        ----------
+        include_constant : bool, default False
+            Whether to include the intercept in the returned table. If False
+            (default), only slope coefficients are standardized and returned,
+            matching Stata and R `lm.beta`. If True, the constant is included
+            with beta = 0.
+        standardize_endog : bool, default True
+            If True (default), standardizes both explanatory variables (exog)
+            and the dependent variable (endog), i.e.,
+            `beta_j = b_j * (sd(X_j) / sd(Y))`.
+            If False, standardizes only exog (semi-standardized coefficients).
+
+        Returns
+        -------
+        BetaCoefficientsResults
+            An object containing:
+            - `params`: pd.Series (or np.ndarray) of standardized coefficients
+            - `bse`: standard errors of the standardized coefficients
+            - `tvalues`: t-statistics
+            - `pvalues`: p-values
+            - `conf_int()`: confidence intervals
+            - `summary()`: SimpleTable representation
+            - `summary_frame()`: pandas DataFrame representation
+
+        Notes
+        -----
+        Standard errors, t-statistics, and p-values are computed via `t_test`
+        applied to the linear transformation matrix `diag(sd(X) / sd(Y))`.
+        Degrees of freedom and covariance types (e.g. robust/HC standard errors)
+        configured on the results instance are fully respected.
+
+        References
+        ----------
+        .. [1] Bring, J. (1994). "How to standardize regression coefficients."
+               The American Statistician, 48(3), 209-213.
+        """
+        exog = np.asarray(self.model.exog)
+        endog = np.asarray(self.model.endog)
+        std_x = np.std(exog, axis=0, ddof=1)
+        std_y = np.std(endog, ddof=1) if standardize_endog else 1.0
+
+        if std_y == 0 or np.isnan(std_y):
+            raise ValueError(
+                "Dependent variable has zero variance; standardized "
+                "coefficients cannot be computed."
+            )
+
+        k_vars = exog.shape[1]
+        const_idx = getattr(self.model.data, "const_idx", None)
+
+        is_const = np.isclose(std_x, 0)
+        if const_idx is not None:
+            is_const[const_idx] = True
+
+        if include_constant:
+            cols = list(range(k_vars))
+        else:
+            cols = [i for i in range(k_vars) if not is_const[i]]
+
+        if len(cols) == 0:
+            raise ValueError(
+                "No slope variables found to standardize (all variables "
+                "are constants)."
+            )
+
+        names = [self.model.exog_names[i] for i in cols]
+        R = np.zeros((len(cols), k_vars))
+        for r_idx, c_idx in enumerate(cols):
+            if is_const[c_idx]:
+                R[r_idx, c_idx] = 0.0
+            else:
+                R[r_idx, c_idx] = std_x[c_idx] / std_y
+
+        contrast_res = self.t_test(R)
+        is_pandas = hasattr(self.model.data, "orig_exog") and isinstance(
+            self.model.data.orig_exog, (pd.DataFrame, pd.Series)
+        )
+
+        return BetaCoefficientsResults(contrast_res, names, is_pandas=is_pandas)
+
+    beta_coefficients = get_beta_coefficients
 
     def outlier_test(
         self, method="bonf", alpha=0.05, labels=None, order=False, cutoff=None

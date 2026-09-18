@@ -2006,3 +2006,116 @@ def test_conf_int_el_matches_own_critical_value_and_shrinks():
     lower_wide, upper_wide = res.conf_int_el(param_num, sig=0.01)
     lower_narrow, upper_narrow = res.conf_int_el(param_num, sig=0.2)
     assert (upper_wide - lower_wide) > (upper_narrow - lower_narrow)
+
+
+class TestBetaCoefficients:
+
+    @classmethod
+    def setup_class(cls):
+        from scipy import stats
+
+        np.random.seed(42)
+        n = 100
+        x1 = np.random.randn(n) * 2 + 5
+        x2 = np.random.randn(n) * 0.5 - 1
+        x3 = np.random.randn(n) * 3 + 2
+        y = 1.5 + 2.0 * x1 - 3.0 * x2 + 0.5 * x3 + np.random.randn(n)
+
+        cls.df = pd.DataFrame({"y": y, "x1": x1, "x2": x2, "x3": x3})
+        X = add_constant(cls.df[["x1", "x2", "x3"]])
+        cls.res = OLS(cls.df["y"], X).fit()
+
+        # Direct z-score refit
+        df_z = cls.df.apply(stats.zscore)
+        cls.res_z = OLS(df_z["y"], df_z[["x1", "x2", "x3"]]).fit()
+
+    def test_beta_matches_zscore_fit(self):
+        beta_res = self.res.get_beta_coefficients()
+        assert_allclose(beta_res.params.values, self.res_z.params.values, atol=1e-12)
+        assert list(beta_res.params.index) == ["x1", "x2", "x3"]
+
+        # Also test alias
+        beta_alias = self.res.beta_coefficients()
+        assert_allclose(beta_alias.params.values, beta_res.params.values)
+
+    def test_beta_attributes(self):
+        beta_res = self.res.get_beta_coefficients()
+        assert isinstance(beta_res.params, pd.Series)
+        assert isinstance(beta_res.bse, pd.Series)
+        assert isinstance(beta_res.tvalues, pd.Series)
+        assert isinstance(beta_res.pvalues, pd.Series)
+        assert_allclose(
+            beta_res.tvalues.values, self.res.tvalues.iloc[1:].values, atol=1e-12
+        )
+        assert_allclose(
+            beta_res.pvalues.values, self.res.pvalues.iloc[1:].values, atol=1e-12
+        )
+
+    def test_beta_include_constant(self):
+        beta_res = self.res.get_beta_coefficients(include_constant=True)
+        assert list(beta_res.params.index) == ["const", "x1", "x2", "x3"]
+        assert beta_res.params["const"] == 0.0
+        assert_allclose(
+            beta_res.params.iloc[1:].values, self.res_z.params.values, atol=1e-12
+        )
+
+    def test_beta_semi_standardized(self):
+        beta_res = self.res.get_beta_coefficients(standardize_endog=False)
+        std_x = np.std(self.df[["x1", "x2", "x3"]].values, axis=0, ddof=1)
+        expected = self.res.params.iloc[1:].values * std_x
+        assert_allclose(beta_res.params.values, expected, atol=1e-12)
+
+    def test_beta_numpy_inputs(self):
+        X_np = np.asarray(add_constant(self.df[["x1", "x2", "x3"]]))
+        y_np = np.asarray(self.df["y"])
+        res_np = OLS(y_np, X_np).fit()
+        beta_np = res_np.get_beta_coefficients()
+        assert isinstance(beta_np.params, np.ndarray)
+        assert_allclose(beta_np.params, self.res_z.params.values, atol=1e-12)
+
+    def test_beta_summary_and_frame(self):
+        beta_res = self.res.get_beta_coefficients()
+        sf = beta_res.summary_frame()
+        assert list(sf.columns) == [
+            "beta",
+            "std err",
+            "t",
+            "P>|t|",
+            "Conf. Int. Low",
+            "Conf. Int. Upp.",
+        ]
+        assert list(sf.index) == ["x1", "x2", "x3"]
+
+        st = beta_res.summary()
+        text = str(st)
+        assert "Standardized Coefficients" in text
+        assert "x1" in text
+
+        ci = beta_res.conf_int()
+        assert list(ci.columns) == ["lower", "upper"]
+        assert list(ci.index) == ["x1", "x2", "x3"]
+
+    def test_beta_robust_cov(self):
+        res_hc3 = self.res.get_robustcov_results(cov_type="HC3")
+        beta_hc3 = res_hc3.get_beta_coefficients()
+        assert_allclose(beta_hc3.params.values, self.res_z.params.values, atol=1e-12)
+        assert_allclose(
+            beta_hc3.tvalues.values, res_hc3.tvalues[1:], atol=1e-12
+        )
+
+    def test_beta_no_constant_model(self):
+        res_no_const = OLS(self.df["y"], self.df[["x1", "x2"]]).fit()
+        beta_res = res_no_const.get_beta_coefficients()
+        assert list(beta_res.params.index) == ["x1", "x2"]
+
+    def test_beta_errors(self):
+        res_const = OLS(self.df["y"], np.ones((len(self.df), 1))).fit()
+        with pytest.raises(ValueError, match="No slope variables found"):
+            res_const.get_beta_coefficients()
+
+        res_zero_y = OLS(
+            np.ones(len(self.df)), add_constant(self.df[["x1", "x2"]])
+        ).fit()
+        with pytest.raises(ValueError, match="zero variance"):
+            res_zero_y.get_beta_coefficients()
+
