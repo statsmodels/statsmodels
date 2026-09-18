@@ -291,6 +291,83 @@ def test_covdetmcd():
     assert_allclose(shape, shape_r, rtol=1e-5)
 
 
+def test_cov_starting_small_nobs():
+    # the first deterministic starting percentile is
+    # 200 * (k_vars + 2) / nobs, which is above 100 when
+    # nobs < 2 * k_vars + 4, so np.percentile raised a ValueError.
+    # The first starting subset should then fall back to the full sample.
+    rng = np.random.default_rng(10241)
+    x = rng.standard_normal((60, 30))
+    k_vars = x.shape[1]
+
+    starts = robcov._cov_starting(x)
+    assert_allclose(starts[0].mean, x.mean(axis=0))
+    assert_allclose(starts[0].cov, np.cov(x.T))
+    assert np.linalg.matrix_rank(starts[0].cov) == k_vars
+
+    # with standardization, the full-sample start is rotated back to the
+    # covariance of the original data
+    starts_std = robcov._cov_starting(x, standardize=True, retransform=True)
+    assert_allclose(starts_std[0], np.cov(x.T))
+
+    # the estimators that use the starting sets should not raise
+    for res in (
+        robcov.CovDetMCD(x).fit(45),
+        robcov.CovDetS(x).fit(),
+        robcov.CovDetMM(x).fit(),
+    ):
+        assert res.cov.shape == (30, 30)
+        assert np.isfinite(res.cov).all()
+        assert np.linalg.eigvalsh(res.cov).min() > 0
+
+
+def test_cov_starting_keeps_trimmed_starts():
+    # starts must not be dropped when a trim retains at most k_vars
+    # observations; that happens at sizes where the estimator already
+    # worked on main, e.g. n=100, k=30 has 25 observations in the
+    # 25% trim. All four percentile trims contribute four starts each,
+    # plus six global starts.
+    rng = np.random.default_rng(10242)
+    starts = robcov._cov_starting(rng.standard_normal((100, 30)))
+    assert len(starts) == 22
+    # rank-deficient trimmed starts are retained and used for ranking
+    ranks = [np.linalg.matrix_rank(start.cov) for start in starts]
+    assert min(ranks) < 30
+
+
+def test_mahalanobis_singular_cov():
+    # a rank-deficient starting covariance must not abort the candidate
+    rng = np.random.default_rng(10243)
+    x = rng.standard_normal((40, 5))
+    d = robcov.mahalanobis(x, cov=np.zeros((5, 5)))
+    assert np.isfinite(d).all()
+
+
+def test_cov_weighted_det_non_finite_determinant():
+    # a determinant that overflows must raise instead of letting the
+    # normalization turn the estimator iterations into all-NaN output
+    x = np.eye(6) * 1e30
+    with pytest.raises(np.linalg.LinAlgError, match="must be positive and finite"):
+        robcov.cov_weighted(
+            x, np.ones(6), center=np.zeros(6), weights_cov_denom="det"
+        )
+
+    # a singular cross product has det == 0 and must raise as well
+    x = np.diag([1.0, 0.0])
+    with pytest.raises(np.linalg.LinAlgError, match="must be positive and finite"):
+        robcov.cov_weighted(
+            x, np.ones(2), center=np.zeros(2), weights_cov_denom="det"
+        )
+
+    # a finite determinant is normalized as before: for diag(2, 3) the
+    # cross product is diag(4, 9) with det 36, so det ** (1 / 2) is 6
+    x = np.diag([2.0, 3.0])
+    cov, _ = robcov.cov_weighted(
+        x, np.ones(2), center=np.zeros(2), weights_cov_denom="det"
+    )
+    assert_allclose(cov, np.diag([4 / 6, 9 / 6]), rtol=1e-15)
+
+
 def test_covdetmm():
 
     # results from rrcov
