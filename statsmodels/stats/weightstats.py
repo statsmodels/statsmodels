@@ -166,7 +166,14 @@ class DescrStatsW:
         var : float or ndarray
             variance with denominator ``sum_weights - ddof``
         """
-        return self.sumsquares / (self.sum_weights - ddof)
+        # Rescale the deviations before squaring, the sum of squares can
+        # overflow although the variance is representable. `initial` keeps an
+        # empty sample at the historical 0 / 0 -> nan result.
+        demeaned = self.demeaned
+        scale = np.max(np.abs(demeaned), axis=0, initial=0.0)
+        scale = np.where(scale == 0, 1.0, scale)
+        sumsquares = np.dot(((demeaned / scale) ** 2).T, self.weights)
+        return sumsquares / (self.sum_weights - ddof) * scale * scale
 
     def std_ddof(self, ddof=0):
         """
@@ -187,7 +194,7 @@ class DescrStatsW:
     @cache_readonly
     def var(self):
         """variance with default degrees of freedom correction"""
-        return self.sumsquares / (self.sum_weights - self.ddof)
+        return self.var_ddof(self.ddof)
 
     @cache_readonly
     def _var(self):
@@ -196,7 +203,7 @@ class DescrStatsW:
 
         used for statistical tests with controlled ddof
         """
-        return self.sumsquares / self.sum_weights
+        return self.var_ddof(0)
 
     @cache_readonly
     def std(self):
@@ -1039,13 +1046,12 @@ class CompareMeans:
         d1 = self.d1
         d2 = self.d2
         # could make var_pooled into attribute
-        var_pooled = (
-            (d1.sumsquares + d2.sumsquares)
-            /
-            # (d1.nobs - d1.ddof + d2.nobs - d2.ddof))
-            (d1.nobs - 1 + d2.nobs - 1)
-        )
-        return np.sqrt(var_pooled * (1.0 / d1.nobs + 1.0 / d2.nobs))
+        nobs1, nobs2 = d1.nobs, d2.nobs
+        df_pooled = nobs1 + nobs2 - 2
+        # weight the variances instead of the sums of squares, the latter
+        # could overflow although the pooled variance is representable
+        var_pooled = (nobs1 / df_pooled) * d1._var + (nobs2 / df_pooled) * d2._var
+        return np.sqrt(var_pooled * (1.0 / nobs1 + 1.0 / nobs2))
 
     def dof_satt(self):
         """degrees of freedom of Satterthwaite for unequal variance"""
