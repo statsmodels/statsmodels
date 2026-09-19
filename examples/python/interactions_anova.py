@@ -14,7 +14,7 @@
 # # Interactions and ANOVA
 
 # Note: This script is based heavily on Jonathan Taylor's class notes
-# https://web.stanford.edu/class/stats191/notebooks/Interactions.html
+# https://web.archive.org/web/20211022142239/https://web.stanford.edu/class/stats191/notebooks/Interactions.html
 #
 # Download and format data:
 
