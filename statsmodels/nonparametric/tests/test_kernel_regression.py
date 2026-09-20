@@ -760,6 +760,43 @@ def test_invalid_bw():
             nparam.KernelReg(x, y, "c", bw=[12.5, 1.0])
 
 
+@pytest.mark.parametrize("efficient", [False, True])
+def test_scalar_bw_single_variable(efficient):
+    # GH4747 a scalar user-specified bandwidth is promoted to 1-D, so that
+    # it behaves the same as the equivalent length-one sequence.
+    x = np.arange(50.0)
+    y = x**2
+
+    model_scalar = nparam.KernelReg(
+        y,
+        x,
+        "c",
+        bw=0.5,
+        defaults=nparam.EstimatorSettings(efficient=efficient),
+        rng=12345,
+    )
+    model_seq = nparam.KernelReg(
+        y,
+        x,
+        "c",
+        bw=[0.5],
+        defaults=nparam.EstimatorSettings(efficient=efficient),
+        rng=12345,
+    )
+
+    npt.assert_equal(model_scalar.bw, np.array([0.5]))
+    npt.assert_allclose(model_scalar.fit(x)[0], model_seq.fit(x)[0])
+
+
+def test_scalar_bw_dimension_mismatch():
+    # GH4747 a scalar bandwidth for a multivariate model is a dimension
+    # error, not an opaque TypeError from len() on a 0-d array.
+    x = np.arange(50.0)
+    y = x**2
+    with pytest.raises(ValueError, match="same dimension"):
+        nparam.KernelReg(y, [x, x], "cc", bw=0.5, rng=12345)
+
+
 def test_invalid_kernel():
     x = np.arange(400)
     y = x**2

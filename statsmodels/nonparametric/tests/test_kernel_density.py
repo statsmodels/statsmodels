@@ -495,6 +495,31 @@ class TestKDEMultivariate(KDETestBase):
             )
         npt.assert_equal(dens.bw, bw_user)
 
+    @pytest.mark.parametrize("efficient", [False, True])
+    def test_scalar_user_specified_bw(self, efficient):
+        # GH4747 a scalar user-specified bandwidth is promoted to 1-D, so
+        # that it behaves the same as the equivalent length-one sequence.
+        rs = np.random.RandomState(12345)
+        c1 = rs.normal(size=(60,))
+
+        dens_scalar = nparam.KDEMultivariate(
+            data=[c1],
+            var_type="c",
+            bw=0.5,
+            defaults=nparam.EstimatorSettings(efficient=efficient),
+            rng=12345,
+        )
+        dens_seq = nparam.KDEMultivariate(
+            data=[c1],
+            var_type="c",
+            bw=[0.5],
+            defaults=nparam.EstimatorSettings(efficient=efficient),
+            rng=12345,
+        )
+
+        npt.assert_equal(dens_scalar.bw, np.array([0.5]))
+        npt.assert_allclose(dens_scalar.pdf(), dens_seq.pdf())
+
 
 class TestKDEMultivariateConditional(KDETestBase):
     @pytest.mark.slow

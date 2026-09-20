@@ -229,7 +229,7 @@ class GenericKDE:
 
         if not isinstance(bw, str):
             self._bw_method = "user-specified"
-            res = np.asarray(bw)
+            res = array_like(bw, "bw")
         else:
             # The user specified a bandwidth selection method
             self._bw_method = bw
