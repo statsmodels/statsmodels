@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from statsmodels.discrete.discrete_model import Logit
 from statsmodels.iolib.table import SimpleTable, default_html_fmt
 from statsmodels.iolib.tableformatting import fmt_base
 from statsmodels.tools.tools import add_constant
@@ -211,6 +210,8 @@ def brant_test(results, by_var: bool = True) -> BrantResults:
         exog_names = [f"x{i+1}" for i in range(K)]
 
     # Fit J - 1 binary logit models
+    from statsmodels.discrete.discrete_model import Logit
+
     beta_hat = []
     var_hat = []
     pi_hat = []
