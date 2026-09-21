@@ -520,6 +520,20 @@ class TestKDEMultivariate(KDETestBase):
         npt.assert_equal(dens_scalar.bw, np.array([0.5]))
         npt.assert_allclose(dens_scalar.pdf(), dens_seq.pdf())
 
+    @pytest.mark.parametrize("efficient", [False, True])
+    def test_2d_user_specified_bw_raises(self, efficient):
+        # GH4747 the bandwidth is limited to a 1-D array
+        rs = np.random.RandomState(12345)
+        c1 = rs.normal(size=(60,))
+        with pytest.raises(ValueError, match="ndim"):
+            nparam.KDEMultivariate(
+                data=[c1],
+                var_type="c",
+                bw=np.full((2, 2), 0.5),
+                defaults=nparam.EstimatorSettings(efficient=efficient),
+                rng=12345,
+            )
+
 
 class TestKDEMultivariateConditional(KDETestBase):
     @pytest.mark.slow

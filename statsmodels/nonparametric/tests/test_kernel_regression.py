@@ -797,6 +797,22 @@ def test_scalar_bw_dimension_mismatch():
         nparam.KernelReg(y, [x, x], "cc", bw=0.5, rng=12345)
 
 
+@pytest.mark.parametrize("efficient", [False, True])
+def test_2d_bw_raises(efficient):
+    # GH4747 the bandwidth is limited to a 1-D array
+    x = np.arange(50.0)
+    y = x**2
+    with pytest.raises(ValueError, match="ndim"):
+        nparam.KernelReg(
+            y,
+            [x],
+            "c",
+            bw=np.full((2, 2), 0.5),
+            defaults=nparam.EstimatorSettings(efficient=efficient),
+            rng=12345,
+        )
+
+
 def test_invalid_kernel():
     x = np.arange(400)
     y = x**2
