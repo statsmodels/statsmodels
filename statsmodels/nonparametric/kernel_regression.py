@@ -38,6 +38,8 @@ import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
+from statsmodels.tools.validation import array_like
+
 from ._kernel_base import (
     EstimatorSettings,
     GenericKDE,
@@ -160,7 +162,7 @@ class KernelReg(GenericKDE):
         self.rng = rng
         self._generator = initialize_generator(rng)
         if not isinstance(bw, str):
-            bw = np.asarray(bw)
+            bw = array_like(bw, "bw", ndim=1)
             if len(bw) != self.k_vars:
                 raise ValueError(
                     "bw must have the same dimension as the number of variables."
@@ -173,7 +175,7 @@ class KernelReg(GenericKDE):
     def _compute_reg_bw(self, bw):
         if not isinstance(bw, str):
             self._bw_method = "user-specified"
-            return np.asarray(bw)
+            return array_like(bw, "bw", ndim=1)
         else:
             # The user specified a bandwidth selection method e.g., 'cv_ls'
             self._bw_method = bw
