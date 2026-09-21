@@ -1,3 +1,5 @@
+from statsmodels.compat.pandas import PD_LT_3_1_0
+
 import itertools
 import warnings
 
@@ -127,8 +129,13 @@ class TestMICEData:
         assert_allclose(predict_obs_kwds["offset"], x5[ixo])
         assert_allclose(predict_miss_kwds["offset"], x5[ixm])
 
+    @pytest.mark.skipif(not PD_LT_3_1_0, reason="SettingWithCopyWarning removed in pandas 3.1.0")
     def test_settingwithcopywarning(self):
-        "Test that MICEData does not throw a SettingWithCopyWarning when imputing (https://github.com/statsmodels/statsmodels/issues/5430)"
+        """
+        Test that MICEData does not throw a
+        SettingWithCopyWarning when imputing
+        # gh5430
+        """
         rs = np.random.RandomState(8214223)
         df = gendat()
         # There need to be some ints in here for the error to be thrown
