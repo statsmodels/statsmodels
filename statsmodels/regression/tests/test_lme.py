@@ -1338,8 +1338,8 @@ def test_singular():
 
 
 def _dense_gls(model, cov_re):
-    # Reference solution with no eigen-splitting shortcuts at all: build
-    # V = Z cov_re Z' + I densely per group and solve GLS directly.
+    # Reference GLS fit: build V = I + Z cov_re Z' densely and solve
+    # directly, without any eigendecomposition tricks.
     n = int(model.nobs)
     vdense = np.eye(n)
     row = 0
@@ -1353,10 +1353,9 @@ def _dense_gls(model, cov_re):
 
 
 def test_get_fe_params_singular_cov_re_matches_ols():
-    # GH 10239: when every eigenvalue of cov_re collapses below get_fe_params'
-    # tol, the fixed effects should smoothly approach the OLS solution (the
-    # cov_re -> 0 limit), not jump to a within-group fixed-effects fit (the
-    # cov_re -> infinity limit) with between-group coefficients zeroed out.
+    # GH 10239: as cov_re -> 0, the fixed effects should approach OLS.
+    # They used to jump to a within-group fit that zeroed the
+    # between-group coefficient.
     rng = np.random.default_rng(0)
     n_groups, n_per_group = 30, 3
     n = n_groups * n_per_group
@@ -1377,10 +1376,8 @@ def test_get_fe_params_singular_cov_re_matches_ols():
 
 
 def test_get_fe_params_partial_singular_cov_re():
-    # GH 10239 follow-up: with two random effects (intercept and a slope),
-    # only one eigendirection of cov_re needs to collapse to trigger the
-    # bug -- the other, perfectly well-conditioned direction does not
-    # protect the fixed effects from being zeroed out.
+    # GH 10239: the bug also occurs when only one of two eigendirections
+    # of cov_re collapses.
     rng = np.random.default_rng(1)
     n_groups, n_per_group = 40, 4
     n = n_groups * n_per_group
@@ -1393,8 +1390,8 @@ def test_get_fe_params_partial_singular_cov_re():
 
     model = MixedLM(endog, exog, groups, exog_re=exog_re)
 
-    # Only the intercept direction (variance v0) is pushed below tol; the
-    # slope direction (variance 2.0) stays perfectly well-conditioned.
+    # Only the intercept variance goes below tol; the slope variance
+    # stays at 2.0.
     for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
         cov_re = np.diag([v0, 2.0])
         fe_params, singular = model.get_fe_params(cov_re, np.array([]))
@@ -1404,12 +1401,8 @@ def test_get_fe_params_partial_singular_cov_re():
 
 
 def test_get_fe_params_correlated_singular_cov_re():
-    # GH 10239 follow-up: a *correlated* near-singular cov_re (as a real
-    # optimizer would produce for dependent random effects, rather than a
-    # clean diagonal with an exact 0.0) previously could make get_fe_params
-    # feed enormous, ill-conditioned values into the Woodbury solver and
-    # crash with LinAlgError. It should instead drop the degenerate
-    # eigendirection and match the dense GLS solution without raising.
+    # GH 10239: a correlated, nearly singular cov_re used to feed huge
+    # values into the Woodbury solver and raise LinAlgError.
     rng = np.random.default_rng(1)
     n_groups, n_per_group = 40, 4
     n = n_groups * n_per_group
@@ -1434,10 +1427,7 @@ def test_get_fe_params_correlated_singular_cov_re():
 
 
 def _dense_gls_vc(model, cov_re, vcomp):
-    # Reference solution with no eigen-splitting shortcuts at all: build
-    # V = Z_re cov_re Z_re' + Z_vc diag(vcomp) Z_vc' + I densely per group
-    # and solve GLS directly. Generalizes _dense_gls to also cover
-    # variance components.
+    # Same as _dense_gls, but V also includes the variance components.
     n = int(model.nobs)
     vdense = np.eye(n)
     row = 0
@@ -1458,12 +1448,8 @@ def _dense_gls_vc(model, cov_re, vcomp):
 
 
 def test_get_fe_params_singular_vcomp_matches_ols():
-    # GH 10239 follow-up: the same zero-fills-the-inverse bug that affected
-    # cov_re also affected variance components (vcomp). When a variance
-    # component's variance collapses below get_fe_params' tol, the fixed
-    # effects should smoothly approach the OLS solution (the vcomp -> 0
-    # limit), not jump to a within-group fixed-effects fit with
-    # between-group coefficients zeroed out.
+    # GH 10239: same as the cov_re test above, but with a single variance
+    # component collapsing to zero.
     rng = np.random.default_rng(0)
     n_groups, n_per_group = 30, 3
     n = n_groups * n_per_group
@@ -1488,9 +1474,8 @@ def test_get_fe_params_singular_vcomp_matches_ols():
 
 
 def test_get_fe_params_partial_singular_vcomp():
-    # GH 10239 follow-up: with two variance components, only one needs to
-    # collapse to trigger the bug -- the other, well-conditioned component
-    # does not protect the fixed effects from being zeroed out.
+    # GH 10239: the bug also occurs when only one of two variance
+    # components collapses.
     rng = np.random.default_rng(1)
     n_groups, n_per_group = 40, 4
     n = n_groups * n_per_group
@@ -1510,8 +1495,7 @@ def test_get_fe_params_partial_singular_vcomp():
 
     model = MixedLM(endog, exog, groups, exog_vc=exog_vc)
 
-    # Only vc0 (variance v0) is pushed below tol; vc1 (variance 2.0)
-    # stays perfectly well-conditioned.
+    # Only vc0 goes below tol; vc1 stays at 2.0.
     for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
         vcomp = np.array([v0, 2.0])
         fe_params, singular = model.get_fe_params(np.empty((0, 0)), vcomp)
@@ -1523,10 +1507,8 @@ def test_get_fe_params_partial_singular_vcomp():
 
 
 def test_get_fe_params_mixed_singular_cov_re_and_vcomp():
-    # GH 10239 follow-up: cov_re and vcomp can collapse simultaneously.
-    # Exercises re_project and vc_project both firing in the same call, so
-    # the vc_project trimming step must correctly locate the vc columns in
-    # ex_r even though re_project already shrank the re part of ex_r.
+    # GH 10239: cov_re and a variance component collapse together, so
+    # both the re_project and vc_project paths run in the same call.
     rng = np.random.default_rng(2)
     n_groups, n_per_group = 40, 4
     n = n_groups * n_per_group

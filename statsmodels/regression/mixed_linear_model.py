@@ -1389,10 +1389,8 @@ class MixedLM(base.LikelihoodModel):
         vcomp : array_like (1d)
             The variance components.
         tol : float, optional
-            Eigenvalues (of `cov_re`) or variances (of `vcomp`) below
-            this value are treated as zero: the corresponding random
-            effects directions are dropped from the GLS fit entirely,
-            rather than approximated by an inverse of zero.
+            A tolerance parameter to determine when covariances
+            are singular.
 
         Returns
         -------
@@ -1415,17 +1413,7 @@ class MixedLM(base.LikelihoodModel):
         else:
             w, v = np.linalg.eigh(cov_re)
             if w.min() < tol:
-                # cov_re is (numerically) singular along one or more
-                # eigendirections. Using a zero-filled pseudo-inverse here
-                # and passing the *full* random effects design through the
-                # Woodbury solver below would implicitly take the cov_re ->
-                # infinity limit along those directions (a within-group fixed
-                # effects fit), not the cov_re -> 0 limit (OLS) that
-                # a vanishing random effect variance actually corresponds
-                # to. So instead, drop the degenerate eigendirections from
-                # the random effects design entirely (see re_project below),
-                # and keep the true inverse variance for the eigendirections
-                # that remain well-conditioned.
+                # Singular: drop the degenerate directions.
                 sing = True
                 re_project = True
                 ii = np.flatnonzero(w >= tol)
@@ -1449,11 +1437,7 @@ class MixedLM(base.LikelihoodModel):
             vc_project = False
             if vc_var.size > 0:
                 if vc_var.min() < tol:
-                    # Same reasoning as for cov_re above: a variance
-                    # component whose variance has collapsed to
-                    # (numerically) zero should be dropped from the design
-                    # entirely, not given zero precision while its column
-                    # is still passed through the Woodbury solver.
+                    # Drop components with variance below tol.
                     sing = True
                     vc_project = True
                     vc_ii = np.flatnonzero(vc_var >= tol)
@@ -1465,6 +1449,7 @@ class MixedLM(base.LikelihoodModel):
             exog = self.exog_li[group_ix]
 
             if re_project:
+                # Keep only the well-conditioned eigendirections.
                 ex_r_full = self._aex_r[group_ix]
                 re_cols = ex_r_full[:, : self.k_re]
                 vc_cols = ex_r_full[:, self.k_re :]
@@ -1476,19 +1461,15 @@ class MixedLM(base.LikelihoodModel):
                 ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
 
             if vc_project:
-                # ex_r's trailing vc_var.size columns are always the full,
-                # untrimmed variance-component design (re_project only
-                # ever touches the columns before them), so drop the
-                # degenerate ones and recompute ex2_r to match -- same
-                # drop-don't-zero-fill fix as re_project above.
+                # Keep only variance component columns with variance >= tol.
                 re_width = ex_r.shape[1] - vc_var.size
                 good = np.concatenate((np.arange(re_width), re_width + vc_ii))
                 ex_r = ex_r[:, good]
                 ex2_r = np.dot(ex_r.T, ex_r)
 
             if ex_r.shape[1] == 0:
-                # No random effects (or variance components) survive for
-                # this group -- the Woodbury correction is the identity.
+                # No random effects left, so V is the identity and u is
+                # unchanged.
                 u = self._endex_li[group_ix]
             else:
                 solver = _smw_solver(1.0, ex_r, ex2_r, cov_re_inv, vc_vari)
