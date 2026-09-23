@@ -2332,7 +2332,8 @@ class UECMResults(ARDLResults):
         """P-values of normalized cointegrating relationship"""
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            pvalues = 2 * (1 - stats.norm.cdf(np.abs(self.ci_tvalues)))
+            # 2 * (1 - stats.norm.cdf(|t|)) loses the upper tail
+            pvalues = 2 * stats.norm.sf(np.abs(self.ci_tvalues))
         return self._ci_wrap(pvalues, "ci_pvalues")
 
     def ci_conf_int(self, alpha: float = 0.05) -> Float64Array | pd.DataFrame:
@@ -2628,7 +2629,8 @@ def _pss_pvalue(stat: float, k: int, case: int, i1: bool) -> float:
     log_stat = np.log(stat)
     p = small_p if stat > threshold else large_p
     x = [log_stat**i for i in range(len(p))]
-    return 1 - stats.norm.cdf(x @ np.array(p))
+    # 1 - stats.norm.cdf(...) loses the upper tail to cancellation
+    return stats.norm.sf(x @ np.array(p))
 
 
 def _pss_simulate(

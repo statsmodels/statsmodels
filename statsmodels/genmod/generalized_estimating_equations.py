@@ -975,7 +975,8 @@ class GEE(GLM):
             sc2 = np.dot(np.linalg.pinv(score_cov), score2)
         score_statistic = np.dot(score2, sc2)
         score_df = len(score2)
-        score_pvalue = 1 - chi2.cdf(score_statistic, score_df)
+        # 1 - chi2.cdf(score_statistic, score_df) loses the upper tail
+        score_pvalue = chi2.sf(score_statistic, score_df)
         return {"statistic": score_statistic, "df": score_df, "p-value": score_pvalue}
 
     def estimate_scale(self):
@@ -1729,7 +1730,8 @@ class GEE(GLM):
 
         score_statistic = np.dot(score2, np.linalg.solve(score_cov, score2))
         score_df = len(score2)
-        score_pvalue = 1 - chi2.cdf(score_statistic, score_df)
+        # 1 - chi2.cdf(score_statistic, score_df) loses the upper tail
+        score_pvalue = chi2.sf(score_statistic, score_df)
         self.score_test_results = {
             "statistic": score_statistic,
             "df": score_df,

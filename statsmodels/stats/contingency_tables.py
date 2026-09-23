@@ -187,6 +187,7 @@ class Table:
 
         statistic = np.asarray(self.chi2_contribs).sum()
         df = np.prod(np.asarray(self.table.shape) - 1)
+        # 1 - stats.chi2.cdf(statistic, df) loses the upper tail
         pvalue = stats.chi2.sf(statistic, df)
         b = _Bunch()
         b.statistic = statistic
@@ -629,6 +630,7 @@ class SquareTable(Table):
             b.df = df
             return b
 
+        # 1 - stats.chi2.cdf(statistic, df) loses the upper tail
         pvalue = stats.chi2.sf(statistic, df)
 
         b = _Bunch()
@@ -1104,6 +1106,7 @@ class StratifiedTable:
         statistic /= denom
 
         # df is always 1
+        # 1 - stats.chi2.cdf(statistic, 1) loses the upper tail
         pvalue = stats.chi2.sf(statistic, 1)
 
         b = _Bunch()
@@ -1275,6 +1278,7 @@ class StratifiedTable:
             adj /= np.sum(v11)
             statistic -= adj
 
+        # 1 - stats.chi2.cdf(statistic, df) loses the upper tail
         pvalue = stats.chi2.sf(statistic, table.shape[2] - 1)
 
         b = _Bunch()

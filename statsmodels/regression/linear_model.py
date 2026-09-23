@@ -3607,7 +3607,8 @@ class OLSResults(RegressionResults):
                 b0_vals=b0_vals,
                 stochastic_exog=stochastic_exog,
             )
-            pval = 1 - stats.chi2.cdf(llr, len(param_nums))
+            # 1 - stats.chi2.cdf(llr, df) loses the upper tail
+            pval = stats.chi2.sf(llr, len(param_nums))
             weights = opt_fun_inst.new_weights if return_weights else None
         else:
             x0 = np.delete(params, param_nums)
@@ -3637,7 +3638,8 @@ class OLSResults(RegressionResults):
                     args=args,
                 )[1]
 
-            pval = 1 - stats.chi2.cdf(llr, len(param_nums))
+            # 1 - stats.chi2.cdf(llr, df) loses the upper tail
+            pval = stats.chi2.sf(llr, len(param_nums))
             if ret_params:
                 weights = opt_fun_inst.new_weights
                 nuisance_params = opt_fun_inst.new_params
