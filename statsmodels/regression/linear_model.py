@@ -258,14 +258,12 @@ class RegressionModel(base.LikelihoodModel):
 
         self._df_model = None
         self._df_resid = None
-        # cached by fit, None until computed
+        # set by fit, None until the model has been fit
         self.rank: int | None = None
         self.pinv_wexog: Float64Array | None = None
         self.normalized_cov_params: Float64Array | None = None
         self.wexog_singular_values: Float64Array | None = None
-        self.exog_Q: Float64Array | None = None
-        self.exog_R: Float64Array | None = None
-        self.effects: Float64Array | None = None
+        self.effects: Float64Array | None = None  # only set by fit(method="qr")
 
     @property
     def df_model(self):
@@ -1055,6 +1053,13 @@ class OLS(WLS):
             self._check_kwargs(kwargs, ["offset"])
 
     def initialize(self):
+        """
+        Initialize model components.
+
+        Whitens the data and resets the attributes set by ``fit``, and
+        additionally resets the cross products cached by ``score`` and
+        ``hessian``.
+        """
         super().initialize()
         # cached by _setup_score_hess
         self._wendog_xprod: float | None = None
@@ -2623,7 +2628,7 @@ class RegressionResults(base.LikelihoodModelResults):
             # here is self-consistent regardless of `large_sample`.
             lrstat, lr_pvalue, lrdf = self.compare_lm_test(restricted, use_lr=True)
         else:
-            has_robust1 = getattr(self, "cov_type", "nonrobust") != "nonrobust"
+            has_robust1 = self.cov_type != "nonrobust"
             has_robust2 = getattr(restricted, "cov_type", "nonrobust") != "nonrobust"
 
             if has_robust1 or has_robust2:
@@ -3229,8 +3234,7 @@ class RegressionResults(base.LikelihoodModelResults):
                 "R² is computed without centering (uncentered) since the "
                 "model does not contain a constant."
             )
-        if hasattr(self, "cov_type"):
-            etext.append(self.cov_kwds["description"])
+        etext.append(self.cov_kwds["description"])
         rank_deficient = cached(
             "rank_deficient",
             lambda: self.model.exog.shape[0] < self.model.exog.shape[1],

@@ -1779,32 +1779,28 @@ def test_slim_summary():
 
 
 @pytest.mark.parametrize("method", ["pinv", "qr"])
-def test_fit_cache_reset_on_initialize(method):
+def test_fit_attributes_reset_on_initialize(method):
     # GH#9880
     data = longley.load()
     exog = add_constant(np.asarray(data.exog), prepend=False)
     endog = np.asarray(data.endog)
     rs = np.random.RandomState(12345)
     w1, w2 = rs.uniform(0.5, 2.0, size=(2, endog.shape[0]))
-    cached = [
+    fit_attrs = [
         "pinv_wexog", "normalized_cov_params", "rank",
-        "wexog_singular_values", "exog_Q", "exog_R", "effects",
+        "wexog_singular_values", "effects",
     ]
 
     mod = WLS(endog, exog, weights=w1)
-    assert all(getattr(mod, attr) is None for attr in cached)
+    assert all(getattr(mod, attr) is None for attr in fit_attrs)
     mod.fit(method=method)
     assert mod.pinv_wexog is not None
-    assert (mod.exog_Q is None) == (method == "pinv")
-
-    # second fit without initialize reuses the cache
-    ncp = mod.normalized_cov_params
-    mod.fit(method=method)
-    assert mod.normalized_cov_params is ncp
+    assert mod.normalized_cov_params is not None
+    assert (mod.effects is None) == (method == "pinv")
 
     mod.weights = w2
     mod.initialize()
-    assert all(getattr(mod, attr) is None for attr in cached)
+    assert all(getattr(mod, attr) is None for attr in fit_attrs)
     res = mod.fit(method=method)
     expected = WLS(endog, exog, weights=w2).fit(method=method)
     assert_allclose(res.params, expected.params)
@@ -1827,6 +1823,8 @@ def test_ols_offset_and_score_cache():
     assert mod._wexog_xprod is not None
     mod.initialize()
     assert mod._wexog_xprod is None
+
+
 def test_ols_wls_fixed_scale():
     rs = np.random.RandomState(3293829)
     X = add_constant(rs.uniform(size=(50, 2)))
