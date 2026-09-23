@@ -38,6 +38,9 @@
   - img: ../_static/images/model_comparison.png
     target: notebooks/generated/model_comparison.html
     text: Model Comparison
+  - img: ../_static/images/ols_cross_validation.png
+    target: notebooks/generated/ols_cross_validation.html
+    text: OLS Cross-Validation
 - header: Plotting
   id: plotting
   links:
