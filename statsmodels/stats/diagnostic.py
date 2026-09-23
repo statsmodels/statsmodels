@@ -647,12 +647,12 @@ def acorr_ljungbox(
 
         * lb_stat - The Ljung-Box test statistic.
         * lb_pvalue - The p-value based on chi-square distribution. The
-          p-value is computed as 1 - chi2.cdf(lb_stat, dof) where dof is
+          p-value is computed as chi2.sf(lb_stat, dof) where dof is
           lag - model_df. If lag - model_df <= 0, then NaN is returned for
           the pvalue.
         * bp_stat - The Box-Pierce test statistic.
         * bp_pvalue - The p-value based for Box-Pierce test on chi-square
-          distribution. The p-value is computed as 1 - chi2.cdf(bp_stat, dof)
+          distribution. The p-value is computed as chi2.sf(bp_stat, dof)
           where dof is lag - model_df. If lag - model_df <= 0, then NaN is
           returned for the pvalue.
 

@@ -658,3 +658,58 @@ class Test2x2_1(Check2x2Mixin):
         ]
         cls.summary_string = "\n".join(ss)
         cls.initialize()
+
+
+@pytest.mark.parametrize(
+    "table, shift_zeros",
+    [
+        ([[40, 1], [1, 40]], False),
+        ([[30, 1], [1, 30]], False),
+    ],
+)
+def test_nominal_association_small_pvalue(table, shift_zeros):
+    """p-value must not be lost to cancellation in the far upper tail.
+
+    GH#10274. The p-value was formed as ``1 - chi2.cdf(...)``. At a large
+    statistic the CDF rounds to exactly 1.0 and the subtraction cancels the
+    whole tail, returning 0.0 for a probability that is representable.
+    """
+    from scipy import stats
+
+    rslt = ctab.Table(np.asarray(table, dtype=float),
+                      shift_zeros=shift_zeros).test_nominal_association()
+
+    expected = stats.chi2.sf(rslt.statistic, rslt.df)
+
+    assert rslt.pvalue > 0
+    assert_allclose(rslt.pvalue, expected, rtol=1e-12)
+
+
+def test_homogeneity_small_pvalue():
+    """Stuart-Maxwell p-value must survive the far upper tail. GH#10274."""
+    from scipy import stats
+
+    table = np.asarray(
+        [[18, 36, 36], [1, 18, 36], [1, 1, 18]], dtype=float
+    )
+    rslt = ctab.SquareTable(table, shift_zeros=False).homogeneity()
+
+    expected = stats.chi2.sf(rslt.statistic, rslt.df)
+
+    assert rslt.pvalue > 0
+    assert_allclose(rslt.pvalue, expected, rtol=1e-12)
+
+
+def test_stratified_test_null_odds_small_pvalue():
+    """StratifiedTable.test_null_odds p-value must not cancel. GH#10274."""
+    from scipy import stats
+
+    table = np.asarray(
+        [[[60, 60], [1, 1]], [[1, 1], [60, 60]]], dtype=float
+    )
+    rslt = ctab.StratifiedTable(table).test_null_odds()
+
+    expected = stats.chi2.sf(rslt.statistic, 1)
+
+    assert rslt.pvalue > 0
+    assert_allclose(rslt.pvalue, expected, rtol=1e-12)

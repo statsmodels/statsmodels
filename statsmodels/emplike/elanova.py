@@ -169,7 +169,8 @@ class ANOVA(_ANOVAOpt):
             )
             llr = res[1]
             mu_common = float(np.squeeze(res[0]))
-        pval = 1 - chi2.cdf(llr, self.num_groups - 1)
+        # 1 - chi2.cdf(llr, df) loses the upper tail to cancellation
+        pval = chi2.sf(llr, self.num_groups - 1)
 
         if result_object is None and not return_weights:
             warnings.warn(
