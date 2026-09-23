@@ -323,6 +323,10 @@ def fit_constrained(model, constraint_matrix, constraint_values,
     # TODO: refactor to combine with above or offset_all
     if "offset" in init_kwds:
         del init_kwds["offset"]
+    # the formula describes the original design, not the transformed exog,
+    # and a formula without its data breaks pickling of the results
+    init_kwds.pop("formula", None)
+    init_kwds.pop("model_spec", None)
 
     # using offset as keywords is not supported in all modules
     mod_constr = self.__class__(endog, exogp_st, offset=offset, **init_kwds)
