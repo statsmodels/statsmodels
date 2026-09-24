@@ -192,7 +192,10 @@ class ExpandedNormal(rv_continuous):
     def _compute_coefs_pdf(self, cum):
         # scale cumulants by \sigma
         mu, sigma = cum[0], np.sqrt(cum[1])
-        lam = np.asarray(cum)
+        # Copy: mutating the caller's array in place both corrupts it and
+        # breaks the scaling below, which must keep reading the original
+        # variance cum[1] on every iteration.
+        lam = np.array(cum, dtype=float)
         for j in range(lam.shape[0]):
             lam[j] /= cum[1] ** j
 
