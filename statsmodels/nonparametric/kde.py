@@ -292,11 +292,20 @@ class KDEUnivariate:
         Inverse Cumulative Distribution (Quantile) Function
 
         Note: Will not work if fit has not been called. Uses
-        `scipy.stats.mstats.mquantiles`.
+        `scipy.stats.quantile`.
         """
         _checkisfit(self)
         gridsize = len(self.density)
-        return stats.mstats.mquantiles(self.endog, np.linspace(0, 1, gridsize))
+
+        def _quantile(x, p, alphap=0.4, betap=0.4, axis=-1):
+            # Work around for the deprecation of SciPy's mstats.mquantiles
+            x = np.asarray(x)
+            n = x.shape[axis]
+            p = np.asarray(p, dtype=float)
+            p_adj = np.clip(((n + 1 - alphap - betap) * p + alphap - 1) / (n - 1), 0, 1)
+            return stats.quantile(x, p_adj, method="linear", axis=axis)
+
+        return _quantile(self.endog, np.linspace(0, 1, gridsize))
 
     def evaluate(self, point):
         """
