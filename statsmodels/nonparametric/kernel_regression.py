@@ -36,7 +36,6 @@ import warnings
 
 import numpy as np
 from scipy import optimize
-from scipy.stats import quantile
 
 from statsmodels.tools.validation import array_like
 
@@ -1050,11 +1049,11 @@ class TestRegCoefC:
 
         self.t_dist = t_dist
         sig = "Not Significant"
-        if self.test_stat > quantile(t_dist, 0.9):
+        if self.test_stat > np.quantile(t_dist, 0.9):
             sig = "*"
-        if self.test_stat > quantile(t_dist, 0.95):
+        if self.test_stat > np.quantile(t_dist, 0.95):
             sig = "**"
-        if self.test_stat > quantile(t_dist, 0.99):
+        if self.test_stat > np.quantile(t_dist, 0.99):
             sig = "***"
 
         return sig
@@ -1181,11 +1180,11 @@ class TestRegCoefD(TestRegCoefC):
             I_dist[j] = self._compute_test_stat(Y_boot, X)
 
         sig = "Not Significant"
-        if self.test_stat > quantile(I_dist, 0.9):
+        if self.test_stat > np.quantile(I_dist, 0.9):
             sig = "*"
-        if self.test_stat > quantile(I_dist, 0.95):
+        if self.test_stat > np.quantile(I_dist, 0.95):
             sig = "**"
-        if self.test_stat > quantile(I_dist, 0.99):
+        if self.test_stat > np.quantile(I_dist, 0.99):
             sig = "***"
 
         return sig

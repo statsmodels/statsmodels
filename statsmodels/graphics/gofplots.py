@@ -470,7 +470,7 @@ class ProbPlot:
                 # Use quantiles of the smaller set and interpolate quantiles of
                 # the larger data set
                 p = plotting_pos(self.nobs, self.a)
-                s_other = stats.quantile(s_other, p)
+                s_other = np.quantile(s_other, p)
             fig, ax = _do_plot(
                 s_other, s_self, self.dist, ax=ax, line=line, **plotkwargs
             )

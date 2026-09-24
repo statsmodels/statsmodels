@@ -9,7 +9,6 @@ import copy
 
 import numpy as np
 from scipy import optimize
-from scipy.stats import quantile
 
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.validation import array_like
@@ -57,8 +56,8 @@ def _compute_min_std_IQR(data):
         variable.
     """
     s1 = np.std(data, axis=0)
-    q75 = quantile(data, 0.75, axis=0)
-    q25 = quantile(data, 0.25, axis=0)
+    q75 = np.quantile(data, 0.75, axis=0)
+    q25 = np.quantile(data, 0.25, axis=0)
     s2 = (q75 - q25) / 1.349  # IQR
     dispersion = np.minimum(s1, s2)
     return dispersion

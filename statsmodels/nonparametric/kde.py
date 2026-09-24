@@ -18,7 +18,7 @@ from typing import NamedTuple
 import warnings
 
 import numpy as np
-from scipy import integrate, stats
+from scipy import integrate
 
 from statsmodels.sandbox.nonparametric import kernels
 from statsmodels.tools._decorators import cache_readonly
@@ -292,7 +292,7 @@ class KDEUnivariate:
         Inverse Cumulative Distribution (Quantile) Function
 
         Note: Will not work if fit has not been called. Uses
-        `scipy.stats.quantile`.
+        `numpy.quantile`.
         """
         _checkisfit(self)
         gridsize = len(self.density)
@@ -303,7 +303,7 @@ class KDEUnivariate:
             n = x.shape[axis]
             p = np.asarray(p, dtype=float)
             p_adj = np.clip(((n + 1 - alphap - betap) * p + alphap - 1) / (n - 1), 0, 1)
-            return stats.quantile(x, p_adj, method="linear", axis=axis)
+            return np.quantile(x, p_adj, method="linear", axis=axis)
 
         return _quantile(self.endog, np.linspace(0, 1, gridsize))
 
