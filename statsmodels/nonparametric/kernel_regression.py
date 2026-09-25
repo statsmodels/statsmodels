@@ -29,6 +29,7 @@ References
 """
 
 from statsmodels.compat.pandas import deprecate_kwarg
+from statsmodels.compat.scipy import _mquantiles
 
 # TODO: make default behavior efficient=True above a certain n_obs
 import copy
@@ -1049,11 +1050,11 @@ class TestRegCoefC:
 
         self.t_dist = t_dist
         sig = "Not Significant"
-        if self.test_stat > np.quantile(t_dist, 0.9):
+        if self.test_stat > _mquantiles(t_dist, 0.9):
             sig = "*"
-        if self.test_stat > np.quantile(t_dist, 0.95):
+        if self.test_stat > _mquantiles(t_dist, 0.95):
             sig = "**"
-        if self.test_stat > np.quantile(t_dist, 0.99):
+        if self.test_stat > _mquantiles(t_dist, 0.99):
             sig = "***"
 
         return sig
@@ -1180,11 +1181,11 @@ class TestRegCoefD(TestRegCoefC):
             I_dist[j] = self._compute_test_stat(Y_boot, X)
 
         sig = "Not Significant"
-        if self.test_stat > np.quantile(I_dist, 0.9):
+        if self.test_stat > _mquantiles(I_dist, 0.9):
             sig = "*"
-        if self.test_stat > np.quantile(I_dist, 0.95):
+        if self.test_stat > _mquantiles(I_dist, 0.95):
             sig = "**"
-        if self.test_stat > np.quantile(I_dist, 0.99):
+        if self.test_stat > _mquantiles(I_dist, 0.99):
             sig = "***"
 
         return sig

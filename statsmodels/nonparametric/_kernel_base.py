@@ -5,6 +5,8 @@ regression, plus some utilities
 
 from __future__ import annotations
 
+from statsmodels.compat.scipy import _mquantiles
+
 import copy
 
 import numpy as np
@@ -56,8 +58,8 @@ def _compute_min_std_IQR(data):
         variable.
     """
     s1 = np.std(data, axis=0)
-    q75 = np.quantile(data, 0.75, axis=0)
-    q25 = np.quantile(data, 0.25, axis=0)
+    q75 = _mquantiles(data, 0.75, axis=0)
+    q25 = _mquantiles(data, 0.25, axis=0)
     s2 = (q75 - q25) / 1.349  # IQR
     dispersion = np.minimum(s1, s2)
     return dispersion
