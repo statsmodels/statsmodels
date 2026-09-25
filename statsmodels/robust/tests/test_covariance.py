@@ -326,6 +326,25 @@ def test_covdetmm():
     assert_allclose(res.cov, cov_dmm_r, rtol=1e-3, atol=1e-3)
 
 
+def test_det_root_does_not_overflow():
+    # det(10 * I_400) = 10**400 overflows to inf; its 400th root is 10.
+    assert_allclose(robcov._det_root(10 * np.eye(400)), 10.0, rtol=1e-12)
+    a = np.random.default_rng(0).standard_normal((20, 5))
+    cov = a.T @ a
+    assert_allclose(robcov._det_root(cov), np.linalg.det(cov) ** (1 / 5), rtol=1e-12)
+    # singular matrices keep det(cov) ** (1 / k), which is 0
+    assert_equal(robcov._det_root(np.zeros((3, 3))), 0.0)
+
+
+@pytest.mark.parametrize("cov_class", [robcov.CovDetS, robcov.CovDetMM])
+def test_covdet_large_k_det_normalization(cov_class):
+    # GH-10257: normalizing to det(cov) = 1 overflowed for large k_vars and the
+    # fit raised LinAlgError: Singular matrix.
+    x = np.random.default_rng(0).standard_normal((400, 149))
+    res = cov_class(x).fit()
+    assert np.all(np.isfinite(res.cov))
+
+
 def test_cov_tyler_regularized_n_iter():
     # GH: n_iter was accumulated as `n_iter += i` inside `for i in
     # range(maxiter)`, giving a triangular-number count instead of the
