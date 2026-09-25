@@ -2470,7 +2470,7 @@ class RegressionResults(base.LikelihoodModelResults):
             # cluster robust standard errors
             groups = self.cov_kwds["groups"]
             # TODO: Might need demean option in S_crosssection by group?
-            s_inv = inv(sw.S_crosssection(scores, groups))
+            s_inv = inv(sw.S_crosssection(scores, groups) / n)
         else:
             raise ValueError(
                 "Only nonrobust, HC, HAC and cluster are " + "currently connected"

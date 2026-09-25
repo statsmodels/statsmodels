@@ -713,6 +713,18 @@ class TestLM:
         LMstat2 = LMstat_OLS[0]
         assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
+    def test_LM_cluster_nodemean(self):
+        # GH-10284, LM = (sum_i s_i)' (sum_g S_g S_g')^-1 (sum_i s_i)
+        resid = self.res1_restricted.wresid
+        groups = np.repeat(np.arange(20), 5)
+        scores = self.x * resid[:, None]
+        group_sums = np.array([scores[groups == g].sum(0) for g in range(20)])
+        total = scores.sum(0)
+        LMstat = total @ np.linalg.solve(group_sums.T @ group_sums, total)
+        res_full = self.res1_full.get_robustcov_results("cluster", groups=groups)
+        LMstat_OLS = res_full.compare_lm_test(self.res1_restricted, demean=False)
+        assert_almost_equal(LMstat, LMstat_OLS[0], DECIMAL_7)
+
     def test_LM_nonnested(self):
         with pytest.raises(ValueError):
             self.res2_restricted.compare_lm_test(self.res2_full)
