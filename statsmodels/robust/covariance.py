@@ -371,7 +371,11 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
         # einsum might be a bit faster
         d = (x * cov_inv.dot(x.T).T).sum(1)
     elif cov is not None:
-        d = (x * np.linalg.solve(cov, x.T).T).sum(1)
+        try:
+            d = (x * np.linalg.solve(cov, x.T).T).sum(1)
+        except np.linalg.LinAlgError:
+            # a singular starting covariance must not abort the candidate
+            d = (x * np.linalg.pinv(cov).dot(x.T).T).sum(1)
     else:
         raise ValueError("either cov or cov_inv needs to be given")
 
@@ -1110,7 +1114,17 @@ def cov_weighted(
             wsum_cov = weights_cov.sum()
         wcov /= wsum_cov - ddof  # * np.sum(weights_cov**2) / wsum_cov)
     elif weights_cov_denom == "det":
-        wcov /= np.linalg.det(wcov) ** (1 / wcov.shape[0])
+        with np.errstate(
+            over="ignore", invalid="ignore", divide="ignore", under="ignore"
+        ):
+            det = np.linalg.det(wcov)
+        if not np.isfinite(det) or det <= 0:
+            # singular or overflowing scatter cannot be normalized
+            raise np.linalg.LinAlgError(
+                "weighted covariance determinant must be positive and finite,"
+                f" got {det!r}"
+            )
+        wcov /= det ** (1 / wcov.shape[0])
     elif weights_cov_denom == 1:
         pass
     else:
@@ -1395,10 +1409,17 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 
     cov_all = []
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
-    percentiles = [(k_vars + 2) / nobs * 100 * 2, 25, 50, 85]
+    # Clamp the first cutoff to a valid percentile; np.percentile rejects
+    # values above 100. A clamped cutoff uses the full sample; this only
+    # happens when nobs < 2 * k_vars + 4.
+    first_frac = (k_vars + 2) / nobs * 2
+    first_percentile = min((k_vars + 2) / nobs * 100 * 2, 100)
+    percentiles = [first_percentile, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
     for p, cutoff in zip(percentiles, cutoffs, strict=True):
-        xsp = xs[d < cutoff]
+        # `d <= cutoff` only for a clamped percentile, i.e. strictly below
+        # nobs == 2 * k_vars + 4, so the boundary keeps the base behavior.
+        xsp = xs[d <= cutoff] if first_frac > 1 and p == 100 else xs[d < cutoff]
         c = np.cov(xsp.T)
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
         c0 = CovStartingResult(
