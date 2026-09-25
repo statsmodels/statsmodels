@@ -198,7 +198,7 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     if weights is not None:
         weights = np.asarray(weights)
         if (weights.size > 1 and
-                (weights.ndim != 1 or weights.shape[0] == exog.shape[1])):
+                (weights.ndim != 1 or weights.shape[0] != exog.shape[0])):
             raise ValueError("weights has wrong shape")
 
     if pred_kwds is None:
