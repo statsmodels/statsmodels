@@ -14,11 +14,13 @@ Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 
 from __future__ import annotations
 
+from statsmodels.compat.scipy import _mquantiles
+
 from typing import NamedTuple
 import warnings
 
 import numpy as np
-from scipy import integrate, stats
+from scipy import integrate
 
 from statsmodels.sandbox.nonparametric import kernels
 from statsmodels.tools._decorators import cache_readonly
@@ -291,12 +293,14 @@ class KDEUnivariate:
         """
         Inverse Cumulative Distribution (Quantile) Function
 
-        Note: Will not work if fit has not been called. Uses
-        `scipy.stats.mstats.mquantiles`.
+        Note: Will not work if fit has not been called. Uses the same
+        plotting positions as `scipy.stats.mstats.mquantiles`
+        (alphap=0.4, betap=0.4).
         """
         _checkisfit(self)
         gridsize = len(self.density)
-        return stats.mstats.mquantiles(self.endog, np.linspace(0, 1, gridsize))
+
+        return _mquantiles(self.endog, np.linspace(0, 1, gridsize))
 
     def evaluate(self, point):
         """

@@ -1,4 +1,5 @@
 from statsmodels.compat.python import lzip
+from statsmodels.compat.scipy import _mquantiles
 
 import numpy as np
 from scipy import stats
@@ -470,7 +471,7 @@ class ProbPlot:
                 # Use quantiles of the smaller set and interpolate quantiles of
                 # the larger data set
                 p = plotting_pos(self.nobs, self.a)
-                s_other = stats.mstats.mquantiles(s_other, p)
+                s_other = _mquantiles(s_other, p)
             fig, ax = _do_plot(
                 s_other, s_self, self.dist, ax=ax, line=line, **plotkwargs
             )

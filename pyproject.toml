@@ -454,6 +454,7 @@ filterwarnings = [
     "error:Fast medcouple algorithm:UserWarning:",
     "error:medcouple is undefined:UserWarning:",
     "error:Provided `endog` series:UserWarning:",
+    "error:.*is deprecated as of SciPy 2.*:",
     # Strict checks disabled
     # "error:overflow encountered in square:RuntimeWarning",
     # "error:invalid value encountered in cos:RuntimeWarning",
