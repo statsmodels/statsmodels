@@ -2149,9 +2149,9 @@ def test_missing():
 
 
 def test_df_resid_rank_deficient():
-    # GH1928, the degrees of freedom are based on the rank of exog. With the
-    # independence working correlation and a Gaussian family GEE reduces to
-    # GLM, which supplies the reference values.
+    # GH1928, the degrees of freedom are based on the rank of exog. GLM gives
+    # the reference degrees of freedom; the scale is checked against GEE's own
+    # residuals, since GLM's fit of a singular design differs on Pyodide.
     from statsmodels.genmod.generalized_linear_model import GLM
 
     rs = np.random.RandomState(4)
@@ -2168,7 +2168,8 @@ def test_df_resid_rank_deficient():
         res_glm = GLM(endog, exog).fit()
     assert_equal(res.df_model, res_glm.df_model)
     assert_equal(res.df_resid, res_glm.df_resid)
-    assert_allclose(res.scale, res_glm.scale, rtol=1e-10)
+    resid = endog - res.fittedvalues
+    assert_allclose(res.scale, np.sum(resid**2) / res.df_resid, rtol=1e-10)
 
     # more columns than observations, exog has rank 22 and the scale
     # estimate divides by df_resid
