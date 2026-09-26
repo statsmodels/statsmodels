@@ -50,8 +50,20 @@ def median(x):
 
 def _det_root(cov):
     """
-    Return ``det(cov) ** (1 / k)`` for a ``(k, k)`` matrix without overflow.
+    k-th root of the determinant of a square matrix without overflow.
 
+    Parameters
+    ----------
+    cov : ndarray, 2-D
+        Square matrix with shape (k, k), e.g. a covariance or scatter matrix.
+
+    Returns
+    -------
+    root : float
+        ``det(cov) ** (1 / k)``.
+
+    Notes
+    -----
     ``det`` overflows to ``inf`` or underflows to ``0`` for large ``k``, so the
     k-th root is computed from ``slogdet`` when the determinant is positive.
     Otherwise the plain expression is kept, so ``0`` and ``nan`` still result
