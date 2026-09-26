@@ -30,7 +30,7 @@ def test_mean_diff_plot(close_figures):
     fig, ax = plt.subplots(2)
     mean_diff_plot(m1, m2, ax=ax[0])
 
-    # Test the setting of confidence intervals.
+    # Test the setting of limits of agreement.
     mean_diff_plot(m1, m2, sd_limit=0)
 
     # Test asethetic controls.
