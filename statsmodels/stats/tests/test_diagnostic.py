@@ -2203,6 +2203,31 @@ def test_diagnostics_pandas():
     smsdia.spec_white(res.resid, x)
 
 
+@pytest.mark.parametrize("k_vars, skip", [(2, None), (5, None), (3, 20)])
+def test_harvey_collier_skip(k_vars, skip):
+    # GH 8446, the t-test must use the recursive residuals from index skip
+    rs = np.random.RandomState(8446)
+    nobs = 60
+    exog = add_constant(rs.standard_normal((nobs, k_vars - 1)))
+    endog = exog.sum(1) + rs.standard_normal(nobs)
+    res = OLS(endog, exog).fit()
+    hc = smsdia.linear_harvey_collier(res, skip=skip)
+
+    start = k_vars if skip is None else skip
+    rresid = []
+    for t in range(start, nobs):
+        x0 = exog[:t]
+        xtxi = np.linalg.inv(x0.T @ x0)
+        params = xtxi @ x0.T @ endog[:t]
+        err = endog[t] - exog[t] @ params
+        rresid.append(err / np.sqrt(1 + exog[t] @ xtxi @ exog[t]))
+    expected = stats.ttest_1samp(rresid, 0)
+
+    assert_allclose(hc.statistic, expected.statistic, rtol=1e-10)
+    assert_allclose(hc.pvalue, expected.pvalue, rtol=1e-10)
+    assert hc.df == nobs - start - 1
+
+
 def test_diagnostics_hac():
     rs = np.random.RandomState(38342091)
     x = rs.randn(100)
