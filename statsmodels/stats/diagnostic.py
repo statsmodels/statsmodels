@@ -1629,9 +1629,12 @@ def linear_harvey_collier(res, order_by=None, skip=None):
     # I think this has different ddof than
     # B.H. Baltagi, Econometrics, 2011, chapter 8
     # but it matches Gretl and R:lmtest, pvalue at decimal=13
+    if skip is None:
+        skip = res.model.exog.shape[1]
     rr = recursive_olsresiduals(res, skip=skip, alpha=0.95, order_by=order_by)
-
-    return stats.ttest_1samp(rr[3][3:], 0)
+    # recursive residuals start at index skip, earlier entries are nan or
+    # the in-sample residual of the initial OLS fit
+    return stats.ttest_1samp(rr[3][skip:], 0)
 
 
 @deprecate_kwarg("center", None)
