@@ -1809,7 +1809,7 @@ def score_test_proportions_2indep(
         if diff != 0:
             tmp3 = nobs
             tmp2 = (nobs1 + 2 * nobs0) * diff - nobs - count
-            tmp1 = (count0 * diff - nobs - 2 * count0) * diff + count
+            tmp1 = (nobs0 * diff - nobs - 2 * count0) * diff + count
             tmp0 = count0 * diff * (1 - diff)
             q = (
                 (tmp2 / (3 * tmp3)) ** 3
