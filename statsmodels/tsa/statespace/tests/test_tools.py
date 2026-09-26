@@ -40,6 +40,21 @@ class TestCompanionMatrix:
         result = np.array([[1, 2, 5, 6], [3, 4, 7, 8], [1, 0, 0, 0], [0, 1, 0, 0]]).T
         assert_equal(tools.companion_matrix(polynomial), result)
 
+    def test_c0_identity_input_not_mutated_and_tuple_accepted(self):
+        # Passing C_0 = 1 (documented shorthand for an identity matrix) must not
+        # replace the scalar in the caller's list, and must also work when the
+        # polynomial is passed as a tuple.
+        c1 = -np.array([[1.0, 2.0], [3.0, 4.0]])
+        c2 = -np.array([[5.0, 6.0], [7.0, 8.0]])
+
+        poly_list = [1, c1, c2]
+        result_list = tools.companion_matrix(poly_list)
+        assert isinstance(poly_list[0], int)
+        assert poly_list[0] == 1
+
+        result_tuple = tools.companion_matrix((1, c1, c2))
+        assert_equal(result_tuple, result_list)
+
 
 class TestDiff:
 

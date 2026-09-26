@@ -237,6 +237,10 @@ def companion_matrix(polynomial):
             # Check if 1 was passed as the first argument (indicating an
             # identity matrix)
             elif polynomial[0] == 1:
+                # Replace C_0 with the identity matrix on a copy: mutating the
+                # caller's list (or crashing on a tuple) is a side effect the
+                # caller does not expect.
+                polynomial = list(polynomial)
                 polynomial[0] = np.eye(m)
                 identity_matrix = True
         else:
