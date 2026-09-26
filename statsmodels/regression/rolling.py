@@ -698,8 +698,7 @@ class RollingRegressionResults:
     @Appender(get_cached_doc(LikelihoodModelResults.pvalues))
     def pvalues(self):
         if self.use_t:
-            df_resid = getattr(self, "df_resid_inference", self.df_resid)
-            df_resid = np.asarray(df_resid)[:, None]
+            df_resid = np.asarray(self.df_resid)[:, None]
             with np.errstate(invalid="ignore"):
                 return stats.t.sf(np.abs(self.tvalues), df_resid) * 2
         else:
@@ -711,8 +710,7 @@ class RollingRegressionResults:
 
         if self.use_t:
             dist = stats.t
-            df_resid = getattr(self, "df_resid_inference", self.df_resid)
-            df_resid = np.asarray(df_resid)[:, None]
+            df_resid = np.asarray(self.df_resid)[:, None]
             q = dist.ppf(1 - alpha / 2, df_resid)
         else:
             dist = stats.norm

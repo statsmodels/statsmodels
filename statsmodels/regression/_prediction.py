@@ -189,10 +189,12 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     else:
         exog = self.model.exog
         if weights is None:
+            # GLMResults.get_prediction shares this helper, and GLM only
+            # defines ``weights`` (the IRLS working weights) after an IRLS fit.
             weights = getattr(self.model, "weights", None)
 
         if row_labels is None:
-            row_labels = getattr(self.model.data, "row_labels", None)
+            row_labels = self.model.data.row_labels
 
     # need to handle other arrays, TODO: is delegating to model possible ?
     if weights is not None:
