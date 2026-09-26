@@ -13,10 +13,12 @@ from dataclasses import dataclass
 from typing import ClassVar, NamedTuple
 
 import numpy as np
+import pandas as pd
 from scipy import stats
 from scipy.stats import rankdata
 
 from statsmodels.stats.base import LimitedIterationMixin
+from statsmodels.stats.multitest import multipletests
 from statsmodels.stats.weightstats import (
     _tconfint_generic,
     _tstat_generic,
@@ -1409,3 +1411,344 @@ def samplesize_rank_compare_onetail(
         power=power,
         alpha=alpha,
     )
+
+
+class DunnResult:
+    """
+    Results class for Dunn's test of multiple pairwise comparisons.
+
+    Parameters
+    ----------
+    statistic : pd.DataFrame
+        Matrix of pairwise z-test statistics.
+    pvalues : pd.DataFrame
+        Matrix of unadjusted p-values.
+    pvalues_adjusted : pd.DataFrame
+        Matrix of multiple-testing-adjusted p-values.
+    reject : pd.DataFrame
+        Boolean matrix indicating whether the null hypothesis is rejected
+        at the specified significance level `alpha`.
+    mean_ranks : pd.Series
+        Mean rank for each group in the pooled sample.
+    group_names : list of str
+        Names of the groups.
+    comparison_table : pd.DataFrame
+        Table containing pairwise comparisons with columns:
+        ['group1', 'group2', 'z_stat', 'p_value', 'p_value_adj', 'reject'].
+    alpha : float
+        Significance level used for rejection.
+    p_adjust : str or None
+        Multiple testing correction method applied.
+    alternative : str
+        Alternative hypothesis used ('two-sided', 'larger', 'smaller').
+    """
+
+    def __init__(
+        self,
+        statistic,
+        pvalues,
+        pvalues_adjusted,
+        reject,
+        mean_ranks,
+        group_names,
+        comparison_table,
+        alpha=0.05,
+        p_adjust="holm",
+        alternative="two-sided",
+    ):
+        self.statistic = statistic
+        self.pvalues = pvalues
+        self.pvalues_adjusted = pvalues_adjusted
+        self.reject = reject
+        self.mean_ranks = mean_ranks
+        self.group_names = list(group_names)
+        self.comparison_table = comparison_table
+        self.alpha = alpha
+        self.p_adjust = p_adjust
+        self.alternative = alternative
+
+    def summary_frame(self):
+        """
+        Return the pairwise comparison results as a pandas DataFrame.
+        """
+        return self.comparison_table.copy()
+
+    def summary(self):
+        """
+        Return a formatted summary table of Dunn's pairwise comparisons.
+        """
+        from copy import deepcopy
+
+        from statsmodels.iolib.table import SimpleTable, default_html_fmt
+        from statsmodels.iolib.tableformatting import fmt_base
+
+        table_data = []
+        for _, row in self.comparison_table.iterrows():
+            table_data.append(
+                [
+                    f"{row['group1']} vs {row['group2']}",
+                    f"{row['z_stat']:.4f}",
+                    f"{row['p_value']:.4e}"
+                    if row["p_value"] < 1e-3
+                    else f"{row['p_value']:.4f}",
+                    f"{row['p_value_adj']:.4e}"
+                    if row["p_value_adj"] < 1e-3
+                    else f"{row['p_value_adj']:.4f}",
+                    str(bool(row["reject"])),
+                ]
+            )
+
+        padj_name = self.p_adjust if self.p_adjust is not None else "none"
+        headers = [
+            "Comparison",
+            "z-stat",
+            "p-value (raw)",
+            f"p-value ({padj_name})",
+            f"Reject (alpha={self.alpha})",
+        ]
+        title = "Dunn's Pairwise Multiple Comparisons"
+
+        fmt = deepcopy(fmt_base)
+        fmt["data_fmts"] = ["%-20s", "%10s", "%14s", "%16s", "%10s"]
+        fmt_html = deepcopy(default_html_fmt)
+
+        return SimpleTable(
+            table_data,
+            headers=headers,
+            title=title,
+            txt_fmt=fmt,
+            html_fmt=fmt_html,
+        )
+
+    def __str__(self):
+        return str(self.summary())
+
+    def __repr__(self):
+        return self.__str__()
+
+
+def dunn_test(
+    *samples,
+    groups=None,
+    p_adjust="holm",
+    alternative="two-sided",
+    alpha=0.05,
+):
+    r"""
+    Dunn's test of multiple pairwise comparisons after Kruskal-Wallis.
+
+    Dunn's test (Dunn 1964) performs post-hoc pairwise comparisons using
+    pooled rank sums following a significant Kruskal-Wallis test. It includes
+    tie corrections for tied ranks and allows standard multiple comparison
+    p-value corrections (e.g., Holm, Bonferroni, Benjamini-Hochberg).
+
+    Parameters
+    ----------
+    *samples : array_like or sequence of array_like
+        Input sample data. May be passed as:
+        - Separate arguments: `dunn_test(sample1, sample2, sample3)`
+        - A sequence/list of samples: `dunn_test([sample1, sample2, sample3])`
+        - A dictionary of samples: `dunn_test({'G1': sample1, 'G2': sample2})`
+        - A single 1D data array when `groups` is also provided:
+          `dunn_test(data, groups=group_labels)`
+        - A pandas DataFrame: `dunn_test(df)` where each column is treated
+          as a separate group.
+    groups : array_like, optional
+        Group indicators corresponding to observations in `samples[0]`.
+        Must be the same length as the data array.
+    p_adjust : str or None, default 'holm'
+        Method for multiple testing correction:
+        - 'holm' : Holm step-down procedure (default)
+        - 'bonferroni' : one-step Bonferroni correction
+        - 'fdr_bh' : Benjamini/Hochberg false discovery rate
+        - 'sidak' : Sidak correction
+        - None or 'none' : no adjustment (raw p-values reported)
+    alternative : {'two-sided', 'larger', 'smaller'}, default 'two-sided'
+        The alternative hypothesis:
+        - 'two-sided': tests whether group i differs from group j
+        - 'larger': tests whether group i has larger ranks than group j
+        - 'smaller': tests whether group i has smaller ranks than group j
+    alpha : float, default 0.05
+        Significance level for hypothesis rejection.
+
+    Returns
+    -------
+    DunnResult
+        An instance containing:
+        - `statistic`: symmetric matrix of pairwise z-test statistics
+        - `pvalues`: matrix of unadjusted p-values
+        - `pvalues_adjusted`: matrix of adjusted p-values
+        - `reject`: boolean matrix of hypothesis rejections
+        - `mean_ranks`: mean rank per group
+        - `summary()`: SimpleTable summary of comparisons
+        - `summary_frame()`: pandas DataFrame representation
+
+    References
+    ----------
+    .. [1] Dunn, O. J. (1964). "Multiple comparisons using rank sums."
+           Technometrics, 6(3), 241-252.
+    .. [2] Glantz, S. A. (2012). "Primer of Biostatistics." 7th ed.
+    """
+    valid_alts = ("two-sided", "larger", "smaller")
+    if alternative not in valid_alts:
+        raise ValueError(
+            f"alternative must be one of {valid_alts}, got '{alternative}'"
+        )
+
+    # Parse inputs
+    if groups is not None:
+        if len(samples) != 1:
+            raise ValueError(
+                "When `groups` is provided, pass a single 1D data array as "
+                "the first argument."
+            )
+        data = np.asarray(samples[0])
+        grp = np.asarray(groups)
+        if len(data) != len(grp):
+            raise ValueError("`data` and `groups` must have the same length.")
+        # Find unique groups preserving order
+        unique_groups = []
+        for g in grp:
+            if g not in unique_groups:
+                unique_groups.append(g)
+        group_samples = [data[grp == g] for g in unique_groups]
+        group_names = [str(g) for g in unique_groups]
+    elif len(samples) == 1:
+        arg = samples[0]
+        if isinstance(arg, dict):
+            group_names = [str(k) for k in arg.keys()]
+            group_samples = [np.asarray(v) for v in arg.values()]
+        elif isinstance(arg, pd.DataFrame):
+            group_names = list(arg.columns)
+            group_samples = [arg[col].dropna().values for col in arg.columns]
+        elif isinstance(arg, (list, tuple)):
+            if len(arg) > 0 and all(hasattr(item, "__len__") for item in arg):
+                group_samples = [np.asarray(s) for s in arg]
+                group_names = [f"G{i+1}" for i in range(len(group_samples))]
+            else:
+                raise ValueError(
+                    "dunn_test requires at least 2 groups for comparisons."
+                )
+        else:
+            raise ValueError("Invalid sample input format.")
+    else:
+        group_samples = [np.asarray(s) for s in samples]
+        group_names = [f"G{i+1}" for i in range(len(group_samples))]
+
+    k = len(group_samples)
+    if k < 2:
+        raise ValueError("dunn_test requires at least 2 groups for comparisons.")
+
+    for i, s in enumerate(group_samples):
+        if np.asarray(s).size == 0:
+            raise ValueError(
+                f"Group '{group_names[i]}' has 0 observations; all groups "
+                "must have at least one observation."
+            )
+
+    nobs = [len(s) for s in group_samples]
+    N = sum(nobs)
+
+    pooled_vals = np.concatenate(group_samples)
+    pooled_ranks = rankdata(pooled_vals)
+
+    ranks = []
+    idx = 0
+    for n in nobs:
+        ranks.append(pooled_ranks[idx : idx + n])
+        idx += n
+
+    mean_ranks = np.array([np.mean(r) for r in ranks])
+
+    # Tie correction term
+    _, counts = np.unique(pooled_vals, return_counts=True)
+    tie_sum = np.sum(counts**3 - counts)
+    var_base = (N * (N + 1) / 12.0) - (tie_sum / (12.0 * (N - 1)))
+
+    # Matrices for results
+    stat_mat = np.zeros((k, k))
+    pval_mat = np.ones((k, k))
+    pval_adj_mat = np.ones((k, k))
+    reject_mat = np.zeros((k, k), dtype=bool)
+
+    pairs = []
+    raw_pvals = []
+    pair_indices = []
+
+    for i in range(k):
+        for j in range(i + 1, k):
+            diff = mean_ranks[i] - mean_ranks[j]
+            se = np.sqrt(var_base * (1.0 / nobs[i] + 1.0 / nobs[j]))
+            z = diff / se
+
+            if alternative == "two-sided":
+                p_raw = 2.0 * stats.norm.sf(np.abs(z))
+            elif alternative == "larger":
+                p_raw = stats.norm.sf(z)
+            else:  # smaller
+                p_raw = stats.norm.cdf(z)
+
+            stat_mat[i, j] = z
+            stat_mat[j, i] = -z
+            pval_mat[i, j] = p_raw
+            pval_mat[j, i] = p_raw
+
+            pairs.append((group_names[i], group_names[j], z, p_raw))
+            raw_pvals.append(p_raw)
+            pair_indices.append((i, j))
+
+    # Multiple testing correction
+    if p_adjust is None or p_adjust.lower() in ("none", ""):
+        p_adj_vals = np.array(raw_pvals)
+        reject_vals = p_adj_vals < alpha
+    else:
+        reject_vals, p_adj_vals, _, _ = multipletests(
+            raw_pvals, alpha=alpha, method=p_adjust
+        )
+
+    table_rows = []
+    for idx_pair, (i, j) in enumerate(pair_indices):
+        p_adj = p_adj_vals[idx_pair]
+        rej = reject_vals[idx_pair]
+        pval_adj_mat[i, j] = p_adj
+        pval_adj_mat[j, i] = p_adj
+        reject_mat[i, j] = rej
+        reject_mat[j, i] = rej
+
+        table_rows.append(
+            {
+                "group1": group_names[i],
+                "group2": group_names[j],
+                "z_stat": stat_mat[i, j],
+                "p_value": raw_pvals[idx_pair],
+                "p_value_adj": p_adj,
+                "reject": rej,
+            }
+        )
+
+    stat_df = pd.DataFrame(stat_mat, index=group_names, columns=group_names)
+    pval_df = pd.DataFrame(pval_mat, index=group_names, columns=group_names)
+    pval_adj_df = pd.DataFrame(
+        pval_adj_mat, index=group_names, columns=group_names
+    )
+    reject_df = pd.DataFrame(
+        reject_mat, index=group_names, columns=group_names
+    )
+    mean_ranks_series = pd.Series(
+        mean_ranks, index=group_names, name="mean_rank"
+    )
+    comp_df = pd.DataFrame(table_rows)
+
+    return DunnResult(
+        statistic=stat_df,
+        pvalues=pval_df,
+        pvalues_adjusted=pval_adj_df,
+        reject=reject_df,
+        mean_ranks=mean_ranks_series,
+        group_names=group_names,
+        comparison_table=comp_df,
+        alpha=alpha,
+        p_adjust=p_adjust,
+        alternative=alternative,
+    )
+
