@@ -48,6 +48,34 @@ def median(x):
     return np.median(x, axis=0)
 
 
+def _det_root(cov):
+    """
+    k-th root of the determinant of a square matrix without overflow.
+
+    Parameters
+    ----------
+    cov : ndarray, 2-D
+        Square matrix with shape (k, k), e.g. a covariance or scatter matrix.
+
+    Returns
+    -------
+    root : float
+        ``det(cov) ** (1 / k)``.
+
+    Notes
+    -----
+    ``det`` overflows to ``inf`` or underflows to ``0`` for large ``k``, so the
+    k-th root is computed from ``slogdet`` when the determinant is positive.
+    Otherwise the plain expression is kept, so ``0`` and ``nan`` still result
+    for singular and indefinite matrices.
+    """
+    k = cov.shape[0]
+    sign, logdet = np.linalg.slogdet(cov)
+    if sign > 0:
+        return np.exp(logdet / k)
+    return np.linalg.det(cov) ** (1 / k)
+
+
 class NaiveLedoitWolfResult(NamedTuple):
     """
     Result of :func:`_naive_ledoit_wolf_shrinkage`.
@@ -753,7 +781,7 @@ def cov_tyler(data, start_cov=None, normalize=False, maxiter=100, eps=1e-13):
     elif normalize == "trace":
         c /= np.trace(c) / k_vars
     elif normalize == "det":
-        c /= np.linalg.det(c) ** (1.0 / k_vars)
+        c /= _det_root(c)
     elif normalize == "normal":
         _rescale(x, np.zeros(k_vars), c, prob=0.5)
     elif normalize == "weights":
@@ -1110,7 +1138,7 @@ def cov_weighted(
             wsum_cov = weights_cov.sum()
         wcov /= wsum_cov - ddof  # * np.sum(weights_cov**2) / wsum_cov)
     elif weights_cov_denom == "det":
-        wcov /= np.linalg.det(wcov) ** (1 / wcov.shape[0])
+        wcov /= _det_root(wcov)
     elif weights_cov_denom == 1:
         pass
     else:
@@ -1872,7 +1900,7 @@ class CovM:
             shape_old = start_shape
         else:
             shape_old = np.cov(self.data.T)
-            scale = np.linalg.det(shape_old) ** (1 / self.k_vars)
+            scale = _det_root(shape_old)
             shape_old /= scale
             if start_scale is not None:
                 scale_old = scale
@@ -2320,12 +2348,11 @@ class CovDetS:
             Scale of subsample, computed so that cov = shape * scale.
         """
         x_sel = self.data[idx]
-        k = x_sel.shape[1]
 
         mean = x_sel.mean(0)
         cov = np.cov(x_sel.T)
 
-        scale2 = np.linalg.det(cov) ** (1 / k)
+        scale2 = _det_root(cov)
         shape = cov / scale2
         scale = np.sqrt(scale2)
         return mean, shape, scale
