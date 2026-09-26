@@ -1146,6 +1146,27 @@ class StratifiedTable:
         return rr
 
     @cache_readonly
+    def logriskratio_pooled(self):
+        """
+        Returns the logarithm of the pooled risk ratio
+        """
+        return np.log(self.riskratio_pooled)
+
+    @cache_readonly
+    def riskdiff_pooled(self):
+        """
+        Estimate of the pooled risk difference.
+
+        The estimate is the Mantel-Haenszel estimate of the common
+        risk difference across the stratified tables.
+        """
+        rd = (
+            np.sum((self._ad - self._bc) / self._n)
+            / np.sum(self._apb * self._cpd / self._n)
+        )
+        return rd
+
+    @cache_readonly
     def logodds_pooled_se(self):
         """
         Estimated standard error of the pooled log odds ratio
@@ -1287,6 +1308,141 @@ class StratifiedTable:
 
         return b
 
+    @cache_readonly
+    def logriskratio_pooled_se(self):
+        """
+        Estimated standard error of the pooled log risk ratio
+
+        The standard error is based on the Greenland-Robins variance
+        estimator:
+        S. Greenland, J.M. Robins “Estimation of a Common Effect Parameter
+        from Sparse Follow-Up Data.” Biometrics 41, no. 1 (1985): 55–68.
+        """
+        acdns = np.sum(self.table[0, 0, :] * self._cpd / self._n)
+        cabns = np.sum(self.table[1, 0, :] * self._apb / self._n)
+
+        rr_va = (
+            self._apb * self._cpd * self._apc
+            - self.table[0, 0, :] * self.table[1, 0, :] * self._n
+        )
+        rr_va = np.sum(rr_va / self._n**2)
+        rr_va /= acdns * cabns
+
+        return np.sqrt(rr_va)
+
+    def logriskratio_pooled_confint(self, alpha=0.05, method="normal"):
+        """
+        A confidence interval for the pooled log risk ratio
+
+        Parameters
+        ----------
+        alpha : float, optional
+            `1 - alpha` is the nominal coverage probability of the
+            interval.
+        method : {"normal"}, optional
+            The method for producing the confidence interval. Currently
+            must be 'normal' which uses the normal approximation.
+
+        Returns
+        -------
+        lcb : float
+            The lower confidence limit.
+        ucb : float
+            The upper confidence limit.
+        """
+        _ = string_like(method, "method", options=("normal",))
+
+        f = -stats.norm.ppf(alpha / 2)
+
+        lcb = self.logriskratio_pooled - f * self.logriskratio_pooled_se
+        ucb = self.logriskratio_pooled + f * self.logriskratio_pooled_se
+
+        return lcb, ucb
+
+    def riskratio_pooled_confint(self, alpha=0.05, method="normal"):
+        lcb, ucb = self.logriskratio_pooled_confint(alpha, method=method)
+        lcb = np.exp(lcb)
+        ucb = np.exp(ucb)
+        return lcb, ucb
+
+    @cache_readonly
+    def riskdiff_pooled_se(self):
+        """
+        Estimated standard error of the pooled risk difference.
+
+        The variance is estimated using the Sato variance estimator
+        for the Mantel-Haenszel common risk difference:
+        T. Sato. "On the variance estimator for the Mantel-Haenszel
+        risk difference. Biometrics, 45, no. 4 (1989): 1323-1324.
+        """
+        w = self._apb * self._cpd / self._n
+
+        ph = (
+            self._apb**2 * self.table[1, 0, :]
+            - self._cpd**2 * self.table[0, 0, :]
+            + self._apb * self._cpd * (self._cpd - self._apb) / 2
+        ) / self._n**2
+
+        qh = (self._ad + self._bc) / (2 * self._n)
+
+        rd_var = (
+            self.riskdiff_pooled * np.sum(ph) + np.sum(qh)
+        ) / np.sum(w)**2
+
+        return np.sqrt(rd_var)
+
+    def riskdiff_pooled_confint(self, alpha=0.05, method="normal"):
+        """
+        A confidence interval for the pooled risk difference.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            `1 - alpha` is the nominal coverage probability of the
+            interval.
+        method : {"normal"}, optional
+            The method for producing the confidence interval. Currently
+            must be 'normal', which uses the normal approximation.
+
+        Returns
+        -------
+        lcb : float
+            The lower confidence limit.
+        ucb : float
+            The upper confidence limit.
+        """
+        _ = string_like(method, "method", options=("normal",))
+
+        rd = self.riskdiff_pooled
+        rd_se = self.riskdiff_pooled_se
+
+        f = -stats.norm.ppf(alpha / 2)
+
+        lcb = rd - f * rd_se
+        ucb = rd + f * rd_se
+
+        return lcb, ucb
+
+    def test_riskdiff_pooled(self):
+        """
+        Test that the pooled risk difference is equal to 0
+
+        This is the Mantel-Haenszel test for the common risk difference.
+
+        Returns
+        -------
+        Bunch
+            A bunch containing the z test statistic and p-value.
+        """
+        statistic = self.riskdiff_pooled / self.riskdiff_pooled_se
+        pvalue = 2 * stats.norm.cdf(-np.abs(statistic))
+
+        b = _Bunch()
+        b.statistic = statistic
+        b.pvalue = pvalue
+
+        return b
+
     def summary(self, alpha=0.05, float_format="%.3f", method="normal"):
         """
         A summary of all the main results
@@ -1311,12 +1467,17 @@ class StratifiedTable:
 
         co_lcb, co_ucb = self.oddsratio_pooled_confint(alpha=alpha, method=method)
         clo_lcb, clo_ucb = self.logodds_pooled_confint(alpha=alpha, method=method)
+        cr_lcb, cr_ucb = self.riskratio_pooled_confint(alpha=alpha, method=method)
+        clr_lcb, clr_ucb = self.logriskratio_pooled_confint(alpha=alpha, method=method)
+        cd_lcb, cd_ucb = self.riskdiff_pooled_confint(alpha=alpha, method=method)
         headers = ["Estimate", "LCB", "UCB"]
-        stubs = ["Pooled odds", "Pooled log odds", "Pooled risk ratio", ""]
+        stubs = ["Pooled odds", "Pooled log odds", "Pooled risk ratio", "Pooled log risk ratio", "Pooled risk difference", ""]
         data = [
             [fmt(x) for x in [self.oddsratio_pooled, co_lcb, co_ucb]],
             [fmt(x) for x in [self.logodds_pooled, clo_lcb, clo_ucb]],
-            [fmt(x) for x in [self.riskratio_pooled, "", ""]],
+            [fmt(x) for x in [self.riskratio_pooled, cr_lcb, cr_ucb]],
+            [fmt(x) for x in [self.logriskratio_pooled, clr_lcb, clr_ucb]],
+            [fmt(x) for x in [self.riskdiff_pooled, cd_lcb, cd_ucb]],
             ["", "", ""],
         ]
         tab1 = iolib.SimpleTable(
@@ -1324,12 +1485,14 @@ class StratifiedTable:
         )
 
         headers = ["Statistic", "P-value", "   "]
-        stubs = ["Test of OR=1", "Test constant OR"]
+        stubs = ["Test of OR=1", "Test constant OR", "Test of risk_diff=0"]
         rslt1 = self.test_null_odds()
         rslt2 = self.test_equal_odds()
+        rslt3 = self.test_riskdiff_pooled()
         data = [
             [fmt(x) for x in [rslt1.statistic, rslt1.pvalue, "    "]],
             [fmt(x) for x in [rslt2.statistic, rslt2.pvalue, "    "]],
+            [fmt(x) for x in [rslt3.statistic, rslt3.pvalue, "    "]]
         ]
         tab2 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
         tab1.extend(tab2)
