@@ -563,8 +563,15 @@ def lpol_fima(d, n=20):
     # hide import inside function until we use this heavily
     from scipy.special import gammaln
 
-    j = np.arange(n)
-    return np.exp(gammaln(d + j) - gammaln(j + 1) - gammaln(d))
+    # The lag-zero coefficient is 1 for every d, but the gammaln formula is
+    # indeterminate there when d == 0 (inf - inf), so it is set directly and
+    # only the tail is evaluated.
+    ma = np.empty(n)
+    if n:
+        ma[0] = 1.0
+        j = np.arange(1, n)
+        ma[1:] = np.exp(gammaln(d + j) - gammaln(j + 1) - gammaln(d))
+    return ma
 
 
 # moved from sandbox.tsa.try_fi
@@ -594,9 +601,14 @@ def lpol_fiar(d, n=20):
     # hide import inside function until we use this heavily
     from scipy.special import gammaln
 
-    j = np.arange(n)
-    ar = -np.exp(gammaln(-d + j) - gammaln(j + 1) - gammaln(-d))
-    ar[0] = 1
+    # As in lpol_fima, the lag-zero coefficient is 1 for every d and the
+    # gammaln formula is indeterminate there when d == 0, so the tail only
+    # is evaluated.
+    ar = np.empty(n)
+    if n:
+        ar[0] = 1.0
+        j = np.arange(1, n)
+        ar[1:] = -np.exp(gammaln(-d + j) - gammaln(j + 1) - gammaln(-d))
     return ar
 
 
