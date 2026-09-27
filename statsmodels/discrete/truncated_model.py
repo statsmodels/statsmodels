@@ -1248,9 +1248,9 @@ class HurdleCountModel(CountModel):
         except ValueError as e:
             if "need covariance" not in str(e):
                 # could be some other problem
-                raise
-
-        modelfit = self.result_class(self, result._results, results1, results2)
+                raise        modelfit = self.result_class(
+            self, result._results, results1, results2, use_t=use_t
+        )
         result = self.result_class_wrapper(modelfit)
 
         return result
