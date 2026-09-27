@@ -1214,6 +1214,8 @@ class ARDLResults(AutoRegResults):
                 period=existing.period,
                 missing="none",
             )
+            if isinstance(existing, UECM):
+                mod = UECM.from_ardl(mod)
         except Exception as exc:
             error = (
                 "An exception occurred during the creation of the cloned "
@@ -1231,7 +1233,7 @@ class ARDLResults(AutoRegResults):
             "Parameters and standard errors were estimated using a different "
             "dataset and then applied to this dataset"
         )
-        res = ARDLResults(
+        res = mod._results_class(
             mod,
             self.params,
             self.cov_params_default,
@@ -1240,7 +1242,7 @@ class ARDLResults(AutoRegResults):
         )
         res._summary_text = summary_text
 
-        return ARDLResultsWrapper(res)
+        return mod._results_wrapper(res)
 
     def _lag_repr(self) -> np.ndarray:
         """Returns poly repr of an AR, (1 -phi1 L -phi2 L^2-...)"""
