@@ -559,6 +559,41 @@ def test_ttest_ind_extreme_scale(usevar):
     assert_allclose(df, 6.0)
 
 
+@pytest.mark.parametrize("usevar", ["pooled", "unequal"])
+def test_ttest_ind_combine_extreme_scale(usevar):
+    # Each variance contribution is finite, but adding them overflows even
+    # though the standard error and the degrees of freedom are
+    # representable, so the contributions are normalized before combining.
+    # t = -1/sqrt(2), df = 2 and p = 1 - 1/sqrt(5) for the t distribution
+    # with 2 degrees of freedom.
+    s = np.ldexp(1.5, 511)
+    x = np.array([-s, s])
+    y = np.array([0.0, 2 * s])
+    with np.errstate(over="raise", invalid="raise"):
+        d1 = DescrStatsW(x)
+        d2 = DescrStatsW(y)
+        t, p, df = CompareMeans(d1, d2).ttest_ind(usevar=usevar)
+    assert_allclose(t, -1.0 / np.sqrt(2.0))
+    assert_allclose(p, 1.0 - 1.0 / np.sqrt(5.0), rtol=1e-13)
+    assert_allclose(df, 2.0)
+
+
+@pytest.mark.parametrize("usevar", ["pooled", "unequal"])
+def test_ttest_ind_zero_variance(usevar):
+    # constant samples keep std_err = 0, the guard for the normalization
+    # scale must not change zero variance behavior
+    cm = CompareMeans(DescrStatsW(np.ones(5)), DescrStatsW(2 * np.ones(5)))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        std = (
+            cm.std_meandiff_pooledvar
+            if usevar == "pooled"
+            else cm.std_meandiff_separatevar
+        )
+        t, p, df = cm.ttest_ind(usevar=usevar)
+    assert std == 0.0
+    assert t == -np.inf
+
+
 def test_var_extreme_scale_2d():
     # Columns at different scales need to be rescaled independently.
     x = np.column_stack(
