@@ -11,6 +11,7 @@ from io import BytesIO
 import pickle
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
@@ -408,9 +409,15 @@ def test_pickle_fit_constrained_formula():
     # GH#9018
     rs = np.random.RandomState(987689)
     df = pd.DataFrame(rs.randn(50, 2), columns=["x1", "x2"])
+    df["g"] = np.repeat(["a", "b"], 25)
     df["y"] = df["x1"] + df["x2"] + rs.randn(50)
-    results = sm.GLM.from_formula("y ~ x1 + x2 - 1", data=df).fit_constrained(
-        "x1 + x2 = 1"
-    )
+    model = sm.GLM.from_formula("y ~ x1 * x2 + C(g)", data=df)
+    results = model.fit_constrained("x1 + x2 = 1")
     res, _ = check_pickle(results)
     assert_series_equal(res.params, results.params)
+
+    # predict still goes through the formula of the original model
+    exog = model.exog[:5]
+    expected = exog @ results.params.to_numpy()
+    assert_allclose(results.predict(df.iloc[:5]).to_numpy(), expected)
+    assert_allclose(res.predict(df.iloc[:5]).to_numpy(), expected)
