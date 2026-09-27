@@ -930,7 +930,7 @@ class MultinomialModel(BinaryModel):
         sum_eXB = (1 + eXB.sum(1))[:, None]
         J = int(self.J)
         K = int(self.K)
-        repeat_eXB = np.repeat(eXB, J, axis=1)
+        repeat_eXB = np.repeat(eXB, K, axis=1)
         X = np.tile(exog, J - 1)
         # this is the derivative wrt the base level
         F0 = -repeat_eXB * X / sum_eXB**2
