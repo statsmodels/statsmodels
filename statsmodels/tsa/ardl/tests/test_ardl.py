@@ -723,6 +723,32 @@ def test_apply_wrong_number_of_exog_columns_raises():
         res.apply(endog=y.iloc[:50], exog=x.iloc[:50, :2])
 
 
+@pytest.mark.parametrize("causal", [True, False])
+def test_uecm_apply_append_keep_uecm(causal):
+    # UECMResults inherits ARDLResults.apply, which rebuilt the model as an
+    # ARDL and paired it with the UECM parameters
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    res = UECM(y.iloc[:45], 3, x.iloc[:45], 2, trend="c", causal=causal).fit()
+
+    fresh = UECM(y.iloc[:50], 3, x.iloc[:50], 2, trend="c", causal=causal)
+    expected = fresh.predict(res.params)
+
+    applied = res.apply(endog=y.iloc[:50], exog=x.iloc[:50])
+    assert isinstance(applied.model, UECM)
+    assert list(applied.params.index) == list(res.params.index)
+    assert_allclose(applied.model._x, fresh._x)
+    assert_allclose(applied.predict(), expected)
+
+    appended = res.append(endog=y.iloc[45:50], exog=x.iloc[45:50])
+    assert isinstance(appended.model, UECM)
+    assert_allclose(appended.predict(), expected)
+
+    refit = res.apply(endog=y.iloc[:50], exog=x.iloc[:50], refit=True)
+    assert isinstance(refit.model, UECM)
+    assert_allclose(refit.params, fresh.fit().params)
+
+
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
