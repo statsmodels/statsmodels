@@ -3778,6 +3778,54 @@ def test_mnlogit_resid_response():
     assert_allclose(res_mnl.resid_response[:, 0], -res_logit.resid_response, rtol=1e-7)
 
 
+@pytest.mark.parametrize("kind", ["dummy", "count"])
+def test_mnlogit_margeff_dummy_count(kind):
+    # GH5488, get_margeff with dummy=True or count=True raised a ValueError
+    # in _derivative_predict whenever the number of exog columns K differed
+    # from the number of choices J
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rng = np.random.default_rng(5488)
+    nobs = 500
+    exog = sm.add_constant(
+        np.column_stack(
+            [
+                rng.normal(size=nobs),
+                rng.poisson(2, size=nobs),
+                rng.random(nobs) > 0.5,
+            ]
+        ).astype(float)
+    )
+    endog = rng.integers(0, 3, size=nobs)
+    mod = MNLogit(endog, exog)
+    res = mod.fit(disp=0)
+    assert mod.K != mod.J
+
+    col = 3 if kind == "dummy" else 2
+
+    def effect(params):
+        params = params.reshape(mod.K, mod.J - 1, order="F")
+        exog0, exog1 = exog.copy(), exog.copy()
+        if kind == "dummy":
+            exog0[:, col] = 0
+            exog1[:, col] = 1
+            step = 1
+        else:
+            exog0[:, col] -= 1
+            exog1[:, col] += 1
+            step = 2
+        diff = mod.predict(params, exog1) - mod.predict(params, exog0)
+        return (diff / step).mean(0)
+
+    marg = res.get_margeff(**{kind: True})
+    params = res.params.ravel(order="F")
+    jac = approx_fprime(params, effect, centered=True)
+    se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
+    # margeff excludes the constant column
+    assert_allclose(marg.margeff[col - 1], effect(params), rtol=1e-10)
+    assert_allclose(marg.margeff_se[col - 1], se, rtol=1e-6)
+
+
 def _fit_logit_for_summary():
     data = load_spector()
     data.exog = sm.add_constant(data.exog, prepend=False)
