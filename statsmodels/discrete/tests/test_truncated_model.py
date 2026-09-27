@@ -5,6 +5,7 @@ import warnings
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pytest
+from scipy import stats
 
 from statsmodels import datasets
 from statsmodels.discrete.truncated_model import (
