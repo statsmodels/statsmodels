@@ -2081,6 +2081,14 @@ def levinson_durbin(s, nlags=10, isacov=False):
     else:
         sxx_m = acovf(s, fft=False)[: order + 1]  # not tested
 
+    if order >= len(sxx_m):
+        raise ValueError(
+            "The autocovariances available from s are too short for the "
+            f"requested number of lags: nlags={order} requires at least "
+            f"{order + 1} autocovariances, but only {len(sxx_m)} are "
+            "available."
+        )
+
     phi = np.zeros((order + 1, order + 1), "d")
     sig = np.zeros(order + 1)
     # initial points for the recursion

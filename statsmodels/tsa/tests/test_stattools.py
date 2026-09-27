@@ -2198,6 +2198,19 @@ def test_levinson_durbin_acov():
     assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
 
 
+def test_levinson_durbin_nlags_too_long():
+    # requesting more lags than the supplied autocovariances cover used to
+    # raise a bare IndexError from the recursion; it should report the
+    # mismatch instead
+    with pytest.raises(ValueError, match="nlags=5"):
+        levinson_durbin(np.array([2.0, 1.0, 0.5, 0.25, 0.1]), 5, isacov=True)
+    with pytest.raises(ValueError, match="nlags=5"):
+        levinson_durbin(np.array([1.0, 2.0, 3.0, 4.0]), 5, isacov=False)
+    # the boundary case, one autocovariance per lag, still works
+    res = levinson_durbin(np.array([2.0, 1.0, 0.5, 0.25, 0.1]), 4, isacov=True)
+    assert res.arcoefs.shape == (4,)
+
+
 @pytest.mark.parametrize("missing", ["conservative", "drop", "raise", "none"])
 @pytest.mark.parametrize("fft", [False, True])
 @pytest.mark.parametrize("demean", [True, False])
