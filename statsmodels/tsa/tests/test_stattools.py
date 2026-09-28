@@ -2610,6 +2610,18 @@ def test_acf_conservate_nanops():
     assert_allclose(result, expected, rtol=1e-4, atol=1e-4)
 
 
+def test_acf_nlags_validation():
+    # negative and out-of-range nlags used to slice avf silently
+    rs = np.random.RandomState(32738493)
+    e = rs.standard_normal(20)
+    with pytest.raises(ValueError, match="non-negative"):
+        acf(e, nlags=-4)
+    with pytest.raises(ValueError, match="smaller than the number of observations"):
+        acf(e, nlags=20)
+    # the largest valid lag is still allowed
+    assert acf(e, nlags=19).shape == (20,)
+
+
 def test_pacf_nlags_error():
     rs = np.random.RandomState(12487)
     e = rs.standard_normal(99)

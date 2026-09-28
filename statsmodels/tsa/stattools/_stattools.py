@@ -1008,6 +1008,13 @@ def acf(
         nobs = int(np.sum(~np.isnan(x)))
         if nobs == 0:
             raise ValueError("All observations are missing after dropping.")
+    if nlags < 0:
+        raise ValueError(f"nlags must be non-negative, got {nlags}")
+    if nlags >= nobs:
+        raise ValueError(
+            "nlags must be smaller than the number of observations "
+            f"({nobs}), got {nlags}"
+        )
 
     avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
     acf = avf[: nlags + 1] / avf[0]
