@@ -184,6 +184,13 @@ def multipletests(
     import gc
 
     pvals = np.asarray(pvals)
+    if pvals.size and (pvals.min() < 0 or pvals.max() > 1):
+        # out-of-range p-values silently produced out-of-range adjusted
+        # p-values (e.g. a negative one from the Bonferroni product)
+        raise ValueError(
+            "p-values must be in the range [0, 1]; got "
+            f"[{pvals.min()}, {pvals.max()}]"
+        )
     alphaf = alpha  # Notation ?
 
     if not is_sorted:
