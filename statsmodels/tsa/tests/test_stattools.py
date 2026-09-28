@@ -1592,6 +1592,15 @@ class TestKPSS:
             )
         assert_equal(res[2], 18)
 
+    def test_kpss_fails_on_nan(self):
+        # a NaN in the series used to crash deep inside the lag computation
+        # with "cannot convert float NaN to integer"; it must raise
+        # MissingDataError instead
+        x = np.arange(100.0)
+        x[50] = np.nan
+        with pytest.raises(MissingDataError, match="NaNs were encountered"):
+            kpss(x)
+
     def test_kpss_fails_on_nobs_check(self):
         # Test that if lags exceeds number of observations KPSS raises a
         # clear error
