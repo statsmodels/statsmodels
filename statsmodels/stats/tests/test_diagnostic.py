@@ -2348,3 +2348,16 @@ def test_het_goldfeldquandt_alternative_deprecated_alias(
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         smsdia.het_goldfeldquandt(y, x, alternative="bogus", result_object=True)
+
+
+def test_acorr_ljungbox_lags_exceed_nobs():
+    # requesting a lag at or beyond the sample size used to crash inside
+    # acf with a broadcast error
+    x = np.arange(5.0)
+    with pytest.raises(ValueError, match=r"maximum lag \(20\)"):
+        smsdia.acorr_ljungbox(x, lags=[20])
+    with pytest.raises(ValueError, match=r"maximum lag \(5\)"):
+        smsdia.acorr_ljungbox(x, lags=5)
+    # the boundary case, lag == nobs - 1, still works
+    res = smsdia.acorr_ljungbox(x, lags=4)
+    assert np.isfinite(res["lb_pvalue"].iloc[0])

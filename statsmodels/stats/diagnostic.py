@@ -749,6 +749,13 @@ def acorr_ljungbox(
         lags = np.arange(1, lags + 1)
     lags = array_like(lags, "lags", dtype="int")
     maxlag = lags.max()
+    if maxlag >= nobs:
+        # an autocorrelation at lag >= nobs is undefined; requesting one
+        # used to crash inside acf with a broadcast error
+        raise ValueError(
+            f"The maximum lag ({maxlag}) must be smaller than the number "
+            f"of observations ({nobs})"
+        )
 
     # normalize by nobs not (nobs-nlags)
     # SS: unbiased=False is default now
