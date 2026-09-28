@@ -702,3 +702,13 @@ def test_multipletests_empty(method):
     # the corrected alphas are undefined when there is nothing to correct
     assert np.isnan(alphac_sidak)
     assert np.isnan(alphac_bonf)
+
+
+def test_multipletests_rejects_out_of_range_pvals():
+    # out-of-range p-values used to pass through and produce out-of-range
+    # adjusted p-values (a negative one under Bonferroni)
+    with pytest.raises(ValueError, match=r"range \[0, 1\]; got \[-0.1, 1.5\]"):
+        multipletests(np.array([1.5, -0.1]), method="bonferroni")
+    # NaN keeps the previous pass-through behavior
+    res = multipletests(np.array([0.5, np.nan]), method="bonferroni")
+    assert np.isnan(res[1][-1])
