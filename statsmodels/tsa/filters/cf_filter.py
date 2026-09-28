@@ -81,6 +81,11 @@ def cffilter(x, low=6, high=32, drift=True):
     #      and estimates of theta other than random walk.
     if low < 2:
         raise ValueError("low must be >= 2")
+    if not low < high:
+        raise ValueError(
+            f"low ({low}) must be less than high ({high}); the filter passes "
+            "oscillations with periods between the two"
+        )
     pw = PandasWrapper(x)
     x = array_like(x, "x", ndim=2)
     nobs, nseries = x.shape

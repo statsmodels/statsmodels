@@ -1220,3 +1220,27 @@ def test_miso_lfilter_useic_zero_matches_default():
 
     assert_allclose(y_ic, y_false)
     assert_allclose(inp_ic, inp_false)
+
+
+def test_bkfilter_too_short_series():
+    # shorter than the 2K + 1 weights of the centered moving average, the
+    # convolution silently produced garbage; it must report the shortfall
+    with pytest.raises(ValueError, match="at least 25 observations"):
+        bkfilter(np.arange(10.0), low=6, high=24, K=12)
+    # the boundary, exactly 2K + 1 observations, still works
+    res = bkfilter(np.arange(25.0), low=6, high=24, K=12)
+    assert res.shape == (1,)
+
+
+def test_cffilter_band_order():
+    # an empty band used to pass silently and produce all-zero cycles
+    with pytest.raises(ValueError, match=r"low \(6\) must be less than high \(6\)"):
+        cffilter(np.arange(50.0), low=6, high=6)
+
+
+def test_bkfilter_band_order():
+    with pytest.raises(ValueError, match="0 < low < high, got low=24"):
+        bkfilter(np.arange(100.0), low=24, high=6, K=12)
+    # a non-positive low used to crash with ZeroDivisionError (2*pi/low)
+    with pytest.raises(ValueError, match="0 < low < high, got low=0"):
+        bkfilter(np.arange(100.0), low=0, high=32, K=3)
