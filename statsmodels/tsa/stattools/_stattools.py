@@ -1457,6 +1457,8 @@ def pacf(
     nobs = x.shape[0]
     if nlags is None:
         nlags = min(int(10 * np.log10(nobs)), nobs // 2 - 1)
+    if nlags < 0:
+        raise ValueError(f"nlags must be non-negative, got {nlags}")
     nlags = max(nlags, 1)
     if nlags > x.shape[0] // 2:
         raise ValueError(
