@@ -7,7 +7,12 @@ import numpy as np
 import pandas as pd
 from pandas.core.nanops import nanmean as pd_nanmean
 
-from statsmodels.tools.validation import PandasWrapper, array_like, string_like
+from statsmodels.tools.validation import (
+    PandasWrapper,
+    array_like,
+    int_like,
+    string_like,
+)
 from statsmodels.tsa.filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -200,9 +205,14 @@ def seasonal_decompose(
                 "You must specify a period or x must be a pandas object with "
                 "a PeriodIndex or a DatetimeIndex with a freq not set to None"
             )
-    if x.shape[0] < 2 * pfreq:
+    period = int_like(period, "period", optional=False)
+    if period < 2:
+        # period <= 0 crashed with ZeroDivisionError when building the
+        # filter and negative periods silently produced garbage
+        raise ValueError(f"period must be >= 2, got {period}")
+    if x.shape[0] < 2 * period:
         raise ValueError(
-            f"x must have 2 complete cycles requires {2 * pfreq} "
+            f"x must have 2 complete cycles requires {2 * period} "
             f"observations. x only has {x.shape[0]} observation(s)"
         )
 
