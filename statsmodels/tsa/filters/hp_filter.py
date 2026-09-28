@@ -4,7 +4,7 @@ import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
 
-from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tools.validation import PandasWrapper, array_like, float_like
 from statsmodels.tsa.filters.filtertools import CycleTrendResult
 
 
@@ -97,6 +97,12 @@ def hpfilter(x, lamb=1600):
     """
     pw = PandasWrapper(x)
     x = array_like(x, "x", ndim=1)
+    lamb = float_like(lamb, "lamb")
+    if lamb <= 0:
+        # the smoothing penalty must be positive: lamb = 0 makes the trend
+        # identical to the series and negative values solve a non-convex
+        # system, so both silently degenerate
+        raise ValueError(f"lamb must be a positive number, got {lamb}")
     nobs = len(x)
     offsets = np.array([0, 1, 2])
     data = np.repeat([[1.], [-2.], [1.]], nobs, axis=1)
