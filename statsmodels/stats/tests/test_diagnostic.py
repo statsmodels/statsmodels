@@ -431,6 +431,16 @@ class TestDiagnosticG:
         res = ARIMA(data, order=(1, 0, 0), trend="n").fit()
         smsdia.acorr_breusch_godfrey(res, nlags=1, result_object=False)
 
+    def test_acorr_breusch_godfrey_nlags_validation(self):
+        data = sunspots.load_pandas().data["SUNACTIVITY"].to_numpy()[:40]
+        res = OLS(data, np.ones(40)).fit()
+        # a negative nlags used to leak "negative dimensions are not allowed"
+        # from numpy, and nlags >= nobs used to fail deep inside f_test
+        with pytest.raises(ValueError, match="non-negative"):
+            smsdia.acorr_breusch_godfrey(res, nlags=-3)
+        with pytest.raises(ValueError, match="smaller than the number of observations"):
+            smsdia.acorr_breusch_godfrey(res, nlags=40)
+
     def test_acorr_ljung_box(self):
 
         # unit-test which may be useful later

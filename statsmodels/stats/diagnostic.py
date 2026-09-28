@@ -1090,6 +1090,13 @@ def acorr_breusch_godfrey(
     nobs = x.shape[0]
     if nlags is None:
         nlags = min(10, nobs // 5)
+    if nlags < 0:
+        raise ValueError(f"nlags must be non-negative, got {nlags}")
+    if nlags >= nobs:
+        raise ValueError(
+            "nlags must be smaller than the number of observations "
+            f"({nobs}), got {nlags}"
+        )
 
     x = np.concatenate((np.zeros(nlags), x))
 

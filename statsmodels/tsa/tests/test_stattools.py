@@ -1934,6 +1934,21 @@ def test_ccf_different_lengths():
     assert np.all(np.isfinite(result))
 
 
+def test_ccf_nlags_validation():
+    # nlags is used directly as a slice bound, so it must be an in-range int
+    rs = np.random.RandomState(11111)
+    x = rs.normal(size=100)
+    y = rs.normal(size=80)
+    with pytest.raises(ValueError, match="non-negative"):
+        ccf(x, y, nlags=-3)
+    with pytest.raises(ValueError, match="smaller than the number of observations"):
+        ccf(x, y, nlags=101)
+    with pytest.raises(TypeError, match="nlags"):
+        ccf(x, y, nlags=2.5)
+    # the default output length, len(x), remains a valid request
+    assert ccf(x, y, nlags=100).shape == (100,)
+
+
 @pytest.mark.smoke
 @pytest.mark.slow
 def test_arma_order_select_ic():
@@ -2250,6 +2265,15 @@ def test_acovf_nlags_missing(acovf_data, adjusted, demean, fft, missing):
 def test_acovf_error(acovf_data):
     with pytest.raises(ValueError):
         acovf(acovf_data, nlag=250, fft=False)
+
+
+def test_acovf_negative_nlag(acovf_data):
+    # a negative nlag used to slice the full acovf from the wrong end (fft)
+    # or raise a bare numpy negative-dimension error (non-fft)
+    with pytest.raises(ValueError, match="non-negative"):
+        acovf(acovf_data, nlag=-2)
+    with pytest.raises(ValueError, match="non-negative"):
+        acovf(acovf_data, nlag=-2, fft=False)
 
 
 def test_pacf2acf_ar():
@@ -2610,11 +2634,34 @@ def test_acf_conservate_nanops():
     assert_allclose(result, expected, rtol=1e-4, atol=1e-4)
 
 
+def test_acf_nlags_validation():
+    # negative and out-of-range nlags used to slice avf silently
+    rs = np.random.RandomState(32738493)
+    e = rs.standard_normal(20)
+    with pytest.raises(ValueError, match="non-negative"):
+        acf(e, nlags=-4)
+    with pytest.raises(ValueError, match="smaller than the number of observations"):
+        acf(e, nlags=20)
+    # the largest valid lag is still allowed
+    assert acf(e, nlags=19).shape == (20,)
+
+
 def test_pacf_nlags_error():
     rs = np.random.RandomState(12487)
     e = rs.standard_normal(99)
     with pytest.raises(ValueError, match="Can only compute partial"):
         pacf(e, 50)
+
+
+def test_pacf_negative_nlags():
+    # negative nlags used to be clamped to 1 by max(nlags, 1) instead of
+    # raising, silently returning a single lag
+    rs = np.random.RandomState(12487)
+    e = rs.standard_normal(99)
+    with pytest.raises(ValueError, match="non-negative"):
+        pacf(e, -5)
+    # nlags=0 keeps its historical clamp to a single lag
+    assert pacf(e, 0).shape == (2,)
 
 
 def test_coint_auto_tstat():
