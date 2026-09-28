@@ -356,7 +356,10 @@ class TestVARResults(CheckIRF, CheckFEVD):
             # Smoke test
             self.model.fit(maxlags=10, ic=ic, verbose=True)
 
-        with pytest.raises(TypeError):
+        # an unknown ic raises a ValueError naming the valid options; it used
+        # to crash with a TypeError from sorting a non-iterable before the
+        # error message could be produced
+        with pytest.raises(ValueError, match="foo not recognized"):
             self.model.fit(ic="foo")
 
     def test_nobs(self):
