@@ -1250,7 +1250,9 @@ class HurdleCountModel(CountModel):
                 # could be some other problem
                 raise
 
-        modelfit = self.result_class(self, result._results, results1, results2)
+        modelfit = self.result_class(
+            self, result._results, results1, results2, use_t=use_t
+        )
         result = self.result_class_wrapper(modelfit)
 
         return result
@@ -1764,6 +1766,8 @@ class HurdleCountResults(CountResults):
             cov_kwds=cov_kwds,
             use_t=use_t,
             )
+        if use_t is not None:
+            self.use_t = use_t
         self.results_zero = results_zero
         self.results_count = results_count
         # TODO: this is to fix df_resid, should be automatic but is not
