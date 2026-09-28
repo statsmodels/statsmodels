@@ -2252,6 +2252,15 @@ def test_acovf_error(acovf_data):
         acovf(acovf_data, nlag=250, fft=False)
 
 
+def test_acovf_negative_nlag(acovf_data):
+    # a negative nlag used to slice the full acovf from the wrong end (fft)
+    # or raise a bare numpy negative-dimension error (non-fft)
+    with pytest.raises(ValueError, match="non-negative"):
+        acovf(acovf_data, nlag=-2)
+    with pytest.raises(ValueError, match="non-negative"):
+        acovf(acovf_data, nlag=-2, fft=False)
+
+
 def test_pacf2acf_ar():
     pacf = np.zeros(10)
     pacf[0] = 1

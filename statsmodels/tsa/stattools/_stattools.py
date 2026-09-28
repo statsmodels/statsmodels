@@ -566,6 +566,8 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
         xo = x
 
     n = len(x)
+    if nlag is not None and nlag < 0:
+        raise ValueError(f"nlag must be non-negative, got {nlag}")
     lag_len = nlag
     if nlag is None:
         lag_len = n - 1
