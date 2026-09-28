@@ -172,6 +172,33 @@ class TestLagmat:
         lag_data2 = tools.add_lag(data, self.cpi_loc, 3, insert=True)
         assert_equal(lag_data2, results)
 
+    def test_add_lag_pandas_str_col(self):
+        # the docstring example passes a column label; it used to crash with
+        # "'<' not supported between instances of 'str' and 'int'"
+        lag_data = tools.add_lag(self.macro_df, "realgdp", 3)
+        expected = tools.add_lag(self.macro_df, self.realgdp_loc, 3)
+        assert_equal(np.asarray(lag_data), np.asarray(expected))
+
+        lag_data = tools.add_lag(self.macro_df, "realgdp", 3, drop=True)
+        expected = tools.add_lag(self.macro_df, self.realgdp_loc, 3, drop=True)
+        assert_equal(np.asarray(lag_data), np.asarray(expected))
+
+    def test_add_lag_str_col_errors(self):
+        with pytest.raises(KeyError, match="nope"):
+            tools.add_lag(self.macro_df, "nope", 3)
+        with pytest.raises(TypeError, match="pandas"):
+            tools.add_lag(np.ones((5, 2)), "realgdp", 3)
+
+    def test_add_lag_pandas_nonstr_label(self):
+        # any non-int-like col is resolved as a label, not only strings
+        df = self.macro_df.rename(columns={"realgdp": ("realgdp", "level")})
+        label = ("realgdp", "level")
+        loc = list(df.columns).index(label)
+
+        lag_data = tools.add_lag(df, label, 3)
+        expected = tools.add_lag(df, loc, 3)
+        assert_equal(np.asarray(lag_data), np.asarray(expected))
+
     def test_add_lag_ndarray(self):
         data = self.macro_df.values
         nddata = data.astype(float)
