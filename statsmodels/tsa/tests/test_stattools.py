@@ -2617,6 +2617,17 @@ def test_pacf_nlags_error():
         pacf(e, 50)
 
 
+def test_pacf_negative_nlags():
+    # negative nlags used to be clamped to 1 by max(nlags, 1) instead of
+    # raising, silently returning a single lag
+    rs = np.random.RandomState(12487)
+    e = rs.standard_normal(99)
+    with pytest.raises(ValueError, match="non-negative"):
+        pacf(e, -5)
+    # nlags=0 keeps its historical clamp to a single lag
+    assert pacf(e, 0).shape == (2,)
+
+
 def test_coint_auto_tstat():
     rs = np.random.RandomState(3733696641)
     x = np.cumsum(rs.standard_normal(100))
