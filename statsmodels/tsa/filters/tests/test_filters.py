@@ -628,6 +628,15 @@ def test_hpfilter():
     assert_almost_equal(res, hpfilt_res, 6)
 
 
+def test_hpfilter_lamb_validation():
+    # lamb = 0 used to return an all-zero cycle and negative lamb silently
+    # solved a non-convex system; both must report the bad parameter
+    with pytest.raises(ValueError, match="lamb must be a positive number"):
+        hpfilter(np.arange(50.0), lamb=0)
+    with pytest.raises(ValueError, match="lamb must be a positive number"):
+        hpfilter(np.arange(50.0), lamb=-1600)
+
+
 def test_hpfilter_returns_cycletrendresult():
     dta = macrodata.load_pandas().data["realgdp"].values
     res = hpfilter(dta, 1600)
