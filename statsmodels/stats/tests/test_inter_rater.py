@@ -7,6 +7,7 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+import pytest
 
 from statsmodels.stats.inter_rater import (
     aggregate_raters,
@@ -491,3 +492,11 @@ def test_aggregate_raters():
     colsum = np.array([26, 26, 30, 55, 43])
     assert_equal(data_.sum(0), colsum)
     assert_equal(np.unique(diagnoses), categories)
+
+
+def test_cohens_kappa_rejects_non_square_table():
+    # a 1-d table used to crash with a raw AxisError from np.diag
+    with pytest.raises(ValueError, match="square 2-d array"):
+        cohens_kappa(np.array([1, 2, 3]))
+    with pytest.raises(ValueError, match="square 2-d array"):
+        cohens_kappa(np.ones((2, 3)))

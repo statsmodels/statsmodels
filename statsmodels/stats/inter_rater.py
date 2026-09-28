@@ -346,6 +346,12 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     SAS Manual
     '''
     table = np.asarray(table, float)  # avoid integer division
+    if table.ndim != 2 or table.shape[0] != table.shape[1]:
+        # without this a 1-d table crashed with a raw AxisError from the
+        # diag/axis-1 operations below
+        raise ValueError(
+            f"table must be a square 2-d array, got shape {table.shape}"
+        )
     agree = np.diag(table).sum()
     nobs = table.sum()
     probs = table / nobs
