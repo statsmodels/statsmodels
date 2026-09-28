@@ -1934,6 +1934,21 @@ def test_ccf_different_lengths():
     assert np.all(np.isfinite(result))
 
 
+def test_ccf_nlags_validation():
+    # nlags is used directly as a slice bound, so it must be an in-range int
+    rs = np.random.RandomState(11111)
+    x = rs.normal(size=100)
+    y = rs.normal(size=80)
+    with pytest.raises(ValueError, match="non-negative"):
+        ccf(x, y, nlags=-3)
+    with pytest.raises(ValueError, match="smaller than the number of observations"):
+        ccf(x, y, nlags=101)
+    with pytest.raises(TypeError, match="nlags"):
+        ccf(x, y, nlags=2.5)
+    # the default output length, len(x), remains a valid request
+    assert ccf(x, y, nlags=100).shape == (100,)
+
+
 @pytest.mark.smoke
 @pytest.mark.slow
 def test_arma_order_select_ic():

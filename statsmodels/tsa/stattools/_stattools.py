@@ -1645,6 +1645,15 @@ def ccf(
     adjusted = bool_like(adjusted, "adjusted")
     fft = bool_like(fft, "fft", optional=False)
     result_object = bool_like(result_object, "result_object", optional=True)
+    nlags = int_like(nlags, "nlags", optional=True)
+    if nlags is not None:
+        if nlags < 0:
+            raise ValueError(f"nlags must be non-negative, got {nlags}")
+        if nlags > len(x):
+            raise ValueError(
+                "nlags must be smaller than the number of observations in x "
+                f"({len(x)}), got {nlags}"
+            )
 
     cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
     ret = cvf / (np.std(x) * np.std(y))
