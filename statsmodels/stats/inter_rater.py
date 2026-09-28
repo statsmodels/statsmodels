@@ -248,7 +248,14 @@ def fleiss_kappa(table, method="fleiss"):
     https://doi.org/10.1007/s11634-010-0073-4.
     """
 
-    table = 1.0 * np.asarray(table)   # avoid integer division
+    table = 1.0 * np.asarray(table)
+    if table.ndim != 2:
+        # without the 2-d check a 1-d table crashed with a bare
+        # "not enough values to unpack" from the shape assignment
+        raise ValueError(
+            f"table must be a 2-d array of subjects by categories, got a "
+            f"{table.ndim}-d array"
+        )
     n_sub, n_cat = table.shape
     n_total = table.sum()
     n_rater = table.sum(1)

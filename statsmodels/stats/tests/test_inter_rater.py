@@ -500,3 +500,9 @@ def test_cohens_kappa_rejects_non_square_table():
         cohens_kappa(np.array([1, 2, 3]))
     with pytest.raises(ValueError, match="square 2-d array"):
         cohens_kappa(np.ones((2, 3)))
+
+        
+def test_fleiss_kappa_rejects_1d_table():
+    # a 1-d table used to crash with a bare "not enough values to unpack"
+    with pytest.raises(ValueError, match="2-d array"):
+        fleiss_kappa(np.array([5, 5, 5]))
