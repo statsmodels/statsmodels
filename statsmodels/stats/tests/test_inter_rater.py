@@ -7,6 +7,7 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+import pytest
 
 from statsmodels.stats.inter_rater import (
     aggregate_raters,
@@ -491,3 +492,9 @@ def test_aggregate_raters():
     colsum = np.array([26, 26, 30, 55, 43])
     assert_equal(data_.sum(0), colsum)
     assert_equal(np.unique(diagnoses), categories)
+
+
+def test_to_table_rejects_1d_data():
+    # 1-d data used to crash with a bare "not enough values to unpack"
+    with pytest.raises(ValueError, match="2-d array"):
+        to_table(np.array([1, 2, 3]))

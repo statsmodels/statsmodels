@@ -171,6 +171,13 @@ def to_table(data, bins=None):
     """
 
     data = np.asarray(data)
+    if data.ndim != 2:
+        # without the 2-d check a 1-d table crashed with a bare
+        # "not enough values to unpack" from the shape assignment
+        raise ValueError(
+            f"data must be a 2-d array of subjects by raters, got a "
+            f"{data.ndim}-d array"
+        )
     n_rows, n_cols = data.shape
     if bins is None:
         # I could add int conversion (reverse_index) to np.unique
