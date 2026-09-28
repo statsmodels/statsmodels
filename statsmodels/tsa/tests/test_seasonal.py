@@ -1010,3 +1010,15 @@ def test_seasonal_decompose_plot(
     import matplotlib.pyplot as plt
 
     plt.close(fig)
+
+
+def test_seasonal_decompose_period_validation():
+    # period <= 0 used to crash with ZeroDivisionError when building the
+    # filter and negative periods silently produced garbage
+    x = np.arange(48.0) + 10 * np.sin(np.arange(48.0) / 3)
+    for period in (0, -3, 1):
+        with pytest.raises(ValueError, match=f"period must be >= 2, got {period}"):
+            seasonal_decompose(x, period=period)
+    # a float period with an integral value is still tolerated
+    res = seasonal_decompose(x, period=12.0)
+    assert_equal(res.trend.shape[0], 48)
