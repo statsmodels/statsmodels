@@ -180,10 +180,10 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     x : array_like
         An array or NumPy ndarray subclass. Can be either a 1d or 2d array with
         observations in columns.
-    col : int, optional
-        `col` can be an int of the zero-based column index. If it's a
-        1d array `col` can be None.
-    lags : int, optional
+    col : int, label, optional
+        `col` can be an int of the zero-based column index, or the label of
+        a column (e.g., a string) when `x` is a pandas DataFrame. If it's a
+        1d array `col` can be None.    lags : int, optional
         The number of lags desired.
     drop : bool, optional
         Whether to keep the contemporaneous variable for the data.
@@ -211,6 +211,18 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     """
     lags = int_like(lags, "lags")
     drop = bool_like(drop, "drop")
+    if col is not None and not isinstance(col, (int, np.integer)):
+        # Resolve a pandas column label to its position before the
+        # conversion below drops the labels; the docstring example passes a
+        # column name.
+        if not hasattr(x, "columns"):
+            raise TypeError(
+                "col can only be a label when x is a pandas DataFrame"
+            )
+        loc = x.columns.get_loc(col)
+        if not isinstance(loc, (int, np.integer)):
+            raise ValueError(f"col={col!r} does not uniquely identify a column")
+        col = int(loc)
     x = array_like(x, "x", ndim=2)
     if col is None:
         col = 0
