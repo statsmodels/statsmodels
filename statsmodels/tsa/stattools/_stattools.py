@@ -3195,6 +3195,11 @@ def kpss(
     store = bool_like(store, "store")
     result_object = bool_like(result_object, "result_object", optional=True)
 
+    if not np.isfinite(x).all():
+        # without this, a NaN crashed deep inside the lag computation with
+        # "cannot convert float NaN to integer"
+        raise MissingDataError("`x` must contain only finite values, NaNs or infs found.")
+
     nobs = x.shape[0]
     hypo = regression
 
