@@ -540,6 +540,78 @@ def test_ttest_ind_with_uneq_var():
     assert_almost_equal([t, p], [tr, pr], 13)
 
 
+@pytest.mark.parametrize("usevar", ["pooled", "unequal"])
+def test_ttest_ind_extreme_scale(usevar):
+    # At this scale the deviations and their squares are finite, but their
+    # weighted sum overflows. The variance and the test result are still
+    # representable, with t = -sqrt(3/2), df = 6 and p from a high precision
+    # evaluation of the Student-t distribution.
+    x = np.ldexp(np.array([-1.0, 1.0] * 2), 511)
+    y = np.ldexp(np.array([0.0, 2.0] * 2), 511)
+    with np.errstate(over="raise", invalid="raise"):
+        d1 = DescrStatsW(x)
+        d2 = DescrStatsW(y)
+        t, p, df = CompareMeans(d1, d2).ttest_ind(usevar=usevar)
+    assert_allclose(d1.var, np.ldexp(1.0, 1022))
+    assert_allclose(d1.var_ddof(1), 4.0 / 3.0 * np.ldexp(1.0, 1022))
+    assert_allclose(t, -np.sqrt(1.5))
+    assert_allclose(p, 0.26656970338006898, rtol=1e-12)
+    assert_allclose(df, 6.0)
+
+
+@pytest.mark.parametrize("usevar", ["pooled", "unequal"])
+def test_ttest_ind_combine_extreme_scale(usevar):
+    # Each variance contribution is finite, but adding them overflows even
+    # though the standard error and the degrees of freedom are
+    # representable, so the contributions are normalized before combining.
+    # t = -1/sqrt(2), df = 2 and p = 1 - 1/sqrt(5) for the t distribution
+    # with 2 degrees of freedom.
+    s = np.ldexp(1.5, 511)
+    x = np.array([-s, s])
+    y = np.array([0.0, 2 * s])
+    with np.errstate(over="raise", invalid="raise"):
+        d1 = DescrStatsW(x)
+        d2 = DescrStatsW(y)
+        t, p, df = CompareMeans(d1, d2).ttest_ind(usevar=usevar)
+    assert_allclose(t, -1.0 / np.sqrt(2.0))
+    assert_allclose(p, 1.0 - 1.0 / np.sqrt(5.0), rtol=1e-13)
+    assert_allclose(df, 2.0)
+
+
+@pytest.mark.parametrize("usevar", ["pooled", "unequal"])
+def test_ttest_ind_zero_variance(usevar):
+    # constant samples keep std_err = 0, the guard for the normalization
+    # scale must not change zero variance behavior
+    cm = CompareMeans(DescrStatsW(np.ones(5)), DescrStatsW(2 * np.ones(5)))
+    with np.errstate(divide="ignore", invalid="ignore"):
+        std = (
+            cm.std_meandiff_pooledvar
+            if usevar == "pooled"
+            else cm.std_meandiff_separatevar
+        )
+        t, p, df = cm.ttest_ind(usevar=usevar)
+    assert std == 0.0
+    assert t == -np.inf
+
+
+def test_var_extreme_scale_2d():
+    # Columns at different scales need to be rescaled independently.
+    x = np.column_stack(
+        (np.ldexp(np.array([-1.0, 1.0] * 2), 511), np.array([-1.0, 1.0] * 2))
+    )
+    with np.errstate(over="raise", invalid="raise"):
+        var = DescrStatsW(x).var
+    assert_allclose(var, [np.ldexp(1.0, 1022), 1.0])
+
+
+@pytest.mark.parametrize("data", [np.array([]), np.zeros((0, 2))])
+def test_var_empty_input(data):
+    # Empty input keeps the historical 0 / 0 -> nan result instead of raising.
+    with pytest.warns(RuntimeWarning, match="invalid value encountered"):
+        var = DescrStatsW(data).var
+    assert np.all(np.isnan(var))
+
+
 def test_ztest_ztost():
     # compare weightstats with separately tested proportion ztest ztost
     import statsmodels.stats.proportion as smprop
