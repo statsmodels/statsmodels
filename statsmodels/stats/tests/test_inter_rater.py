@@ -494,6 +494,12 @@ def test_aggregate_raters():
     assert_equal(np.unique(diagnoses), categories)
 
 
+def test_to_table_rejects_1d_data():
+    # 1-d data used to crash with a bare "not enough values to unpack"
+    with pytest.raises(ValueError, match="2-d array"):
+        to_table(np.array([1, 2, 3]))
+        
+
 def test_cohens_kappa_rejects_non_square_table():
     # a 1-d table used to crash with a raw AxisError from np.diag
     with pytest.raises(ValueError, match="square 2-d array"):
