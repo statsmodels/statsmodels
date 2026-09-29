@@ -238,7 +238,7 @@ def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
     mask = d <= cutoff
     sample = x[mask]
     loc = sample.mean(0)
-    cov = np.cov(sample.T, ddof=ddof)
+    cov = np.atleast_2d(np.cov(sample.T, ddof=ddof))
     return cov, loc
 
 
@@ -1917,7 +1917,7 @@ class CovM:
         if start_shape is not None:
             shape_old = start_shape
         else:
-            shape_old = np.cov(self.data.T)
+            shape_old = np.atleast_2d(np.cov(self.data.T))
             scale = _det_root(shape_old)
             shape_old /= scale
             if start_scale is not None:
@@ -2097,7 +2097,7 @@ class CovDetMCD:
             idx_sel = np.argpartition(d, h)[:h]
             x_sel = x[idx_sel]
             mean = x_sel.mean(0)
-            cov_new = np.cov(x_sel.T, ddof=1)
+            cov_new = np.atleast_2d(np.cov(x_sel.T, ddof=1))
 
             if ((cov - cov_new) ** 2).mean() < tol:
                 cov = cov_new
@@ -2152,7 +2152,7 @@ class CovDetMCD:
         if mean is None:
             mean = x_sel.mean(0)
         if cov is None:
-            cov = np.cov(x_sel.T, ddof=1)
+            cov = np.atleast_2d(np.cov(x_sel.T, ddof=1))
 
         # updated with c-step
         mean, cov, conv = self._cstep(x, mean, cov, h, maxiter=maxiter)
@@ -2380,7 +2380,7 @@ class CovDetS:
         x_sel = self.data[idx]
 
         mean = x_sel.mean(0)
-        cov = np.cov(x_sel.T)
+        cov = np.atleast_2d(np.cov(x_sel.T))
 
         scale2 = _det_root(cov)
         shape = cov / scale2
