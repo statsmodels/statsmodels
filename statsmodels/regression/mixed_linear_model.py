@@ -2434,12 +2434,16 @@ class MixedLM(base.LikelihoodModel):
             if hist is not None:
                 hist.append(rslt.mle_retvals)
 
-        converged = rslt.mle_retvals["converged"]
-        if not converged:
-            gn = self.score(rslt.params)
-            gn = np.sqrt(np.sum(gn**2))
-            msg = f"Gradient optimization failed, |grad| = {gn:f}"
-            warnings.warn(msg, ConvergenceWarning, stacklevel=2)
+            converged = rslt.mle_retvals["converged"]
+            if not converged:
+                gn = self.score(rslt.params)
+                gn = np.sqrt(np.sum(gn**2))
+                msg = f"Gradient optimization failed, |grad| = {gn:f}"
+                warnings.warn(msg, ConvergenceWarning, stacklevel=2)
+        else:
+            # No optimization, use the starting values as the estimates
+            params = params.get_packed(use_sqrt=self.use_sqrt, has_fe=False)
+            converged = False
 
         # Convert to the final parameterization (i.e., undo the square
         # root transform of the covariance matrix, and the profiling

@@ -1764,3 +1764,22 @@ def test_profile_re_likelihood_peaks_at_mle():
     assert_allclose(mle_row[0], res.cov_re[0, 0], rtol=1e-6)
     assert_allclose(mle_row[1], res.llf, rtol=1e-6)
     assert np.all(likev[:, 1] <= mle_row[1] + 1e-6)
+
+
+def test_fit_do_cg_false():
+    # GH#7980 - do_cg=False skips optimization and returns results at the
+    # starting values instead of raising
+    rs = np.random.RandomState(789)
+    groups = np.repeat(np.arange(20), 10)
+    x = rs.normal(size=200)
+    y = 1 + x + rs.normal(size=20)[groups] + rs.normal(size=200)
+    model = MixedLM(y, np.column_stack((np.ones(200), x)), groups=groups)
+    result = model.fit()
+
+    result0 = model.fit(start_params=result.params_object, do_cg=False)
+    assert_allclose(result0.params, result.params, rtol=1e-5)
+    assert_allclose(result0.llf, result.llf, rtol=1e-8)
+    assert not result0.converged
+
+    result0 = model.fit(do_cg=False)
+    assert_allclose(result0.cov_re_unscaled, np.eye(1))
