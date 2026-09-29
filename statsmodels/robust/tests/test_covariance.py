@@ -326,6 +326,44 @@ def test_covdetmm():
     assert_allclose(res.cov, cov_dmm_r, rtol=1e-3, atol=1e-3)
 
 
+def test_covdet_one_column():
+    # GH-10300: np.cov returns a 0-d array for data with a single column,
+    # so the covariance shape was wrong in CovDetMCD, CovDetS, CovDetMM
+    # and in the no-start branch of CovM.
+    rng = np.random.default_rng(3)
+    x = rng.standard_normal((50, 1))
+    h = 26
+
+    for res in (
+        robcov.CovDetMCD(x).fit(h),
+        robcov.CovDetS(x).fit(),
+        robcov.CovDetMM(x).fit(),
+        robcov.CovM(x).fit(),
+    ):
+        cov = np.asarray(res.cov)
+        assert cov.shape == (1, 1)
+        assert np.all(np.isfinite(cov))
+        assert cov[0, 0] > 0
+
+    # Accuracy on a constructed dataset with an unambiguous optimum: a tight
+    # core of h points plus 24 far outliers. The C-steps converge to the core
+    # for any correct implementation, i.e. to the minimum-variance sliding
+    # window of the sorted data, which is the exact univariate MCD solution.
+    core = 10 + 0.01 * rng.standard_normal((h, 1))
+    outliers = np.concatenate([np.full((12, 1), -100.0), np.full((12, 1), 100.0)])
+    x2 = np.concatenate([core, outliers])
+    raw = robcov.CovDetMCD(x2).fit(h).results_raw
+
+    x2_sorted = np.sort(x2[:, 0])
+    windows = np.lib.stride_tricks.sliding_window_view(x2_sorted, h)
+    window_vars = windows.var(axis=1, ddof=1)
+    idx_min = np.argmin(window_vars)
+    assert_allclose(raw.det_subset, window_vars[idx_min], rtol=1e-12)
+    fac = robcov.coef_normalize_cov_truncated(h / x2.shape[0], 1)
+    assert_allclose(raw.cov, fac * window_vars[idx_min], rtol=1e-12)
+    assert_allclose(raw.mean[0], x2_sorted[idx_min : idx_min + h].mean(), rtol=1e-12)
+
+
 def test_det_root_does_not_overflow():
     # det(10 * I_400) = 10**400 overflows to inf; its 400th root is 10.
     assert_allclose(robcov._det_root(10 * np.eye(400)), 10.0, rtol=1e-12)
