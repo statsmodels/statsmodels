@@ -1,6 +1,7 @@
 from statsmodels.compat.pandas import QUARTER_END
 
 import datetime as dt
+import warnings
 
 import numpy as np
 from numpy.testing import (
@@ -183,6 +184,25 @@ def test_fi():
     n = 100
     mafromar = arma_impulse_response(lpol_fiar(0.4, n=n), [1], n)
     assert_array_almost_equal(mafromar, lpol_fima(0.4, n=n), 13)
+
+
+def test_fi_d_zero():
+    # d == 0 is the identity operator: (1-L)^0 == 1, so the lag polynomial is
+    # 1 followed by zeros.  The gammaln formula is indeterminate at lag zero
+    # when d == 0 (inf - inf) and used to produce a NaN coefficient in
+    # lpol_fima and a RuntimeWarning in both helpers.
+    n = 10
+    expected = np.r_[1.0, np.zeros(n - 1)]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        assert_array_almost_equal(lpol_fima(0.0, n=n), expected, 14)
+        assert_array_almost_equal(lpol_fiar(0.0, n=n), expected, 14)
+        # n == 1 only has the lag-zero coefficient
+        assert_array_almost_equal(lpol_fima(0.0, n=1), [1.0], 14)
+        assert_array_almost_equal(lpol_fiar(0.0, n=1), [1.0], 14)
+        # nonzero d is unaffected; the lag-zero coefficient is still exactly 1
+        assert lpol_fima(0.4, n=n)[0] == 1.0
+        assert lpol_fiar(-0.3, n=n)[0] == 1.0
 
 
 def test_arma_impulse_response():
