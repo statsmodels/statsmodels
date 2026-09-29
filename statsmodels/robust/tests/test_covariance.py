@@ -291,6 +291,32 @@ def test_covdetmcd():
     assert_allclose(shape, shape_r, rtol=1e-5)
 
 
+def test_covdetmcd_rank_by_logdet():
+    # GH-10295: det(cov) overflows to inf for every starting set, so
+    # np.argmin(det_all) silently picked the first start and the selected
+    # start changed with the scale of the data.
+    rng = np.random.default_rng(12345)
+    x = rng.standard_normal((100, 30)) * 5e5
+    h = 65
+
+    res = robcov.CovDetMCD(x).fit(h, maxiter_step=2, reweight=False)
+    res_scaled = robcov.CovDetMCD(x / 4.0).fit(h, maxiter_step=2, reweight=False)
+
+    # the starts of the unscaled data overflow to inf for every determinant
+    assert np.all(np.isinf(res.det_all))
+    # determinants of the scaled data are finite
+    assert np.all(np.isfinite(res_scaled.det_all))
+    # the overflowing fit selects the same start as the old determinant
+    # criterion evaluated on the finite, scaled determinants
+    assert res.idx_best == np.argmin(res_scaled.det_all)
+    # ranking by log-determinant is scale-equivariant ...
+    assert res.idx_best == res_scaled.idx_best
+    assert res.idx_best != 0
+    # ... and exactly preserves a power-of-two rescaling
+    assert_allclose(res.mean, 4.0 * res_scaled.mean)
+    assert_allclose(res.cov, 16.0 * res_scaled.cov)
+
+
 def test_covdetmm():
 
     # results from rrcov
