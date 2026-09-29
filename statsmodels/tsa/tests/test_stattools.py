@@ -1598,7 +1598,12 @@ class TestKPSS:
         # MissingDataError instead
         x = np.arange(100.0)
         x[50] = np.nan
-        with pytest.raises(MissingDataError, match="NaNs were encountered"):
+        with pytest.raises(MissingDataError, match="must contain only finite values"):
+            kpss(x)
+
+        x = np.arange(100.0)
+        x[-3] = -np.inf
+        with pytest.raises(MissingDataError, match="must contain only finite values"):
             kpss(x)
 
     def test_kpss_fails_on_nobs_check(self):
