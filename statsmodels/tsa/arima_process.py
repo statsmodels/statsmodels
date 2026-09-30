@@ -26,7 +26,7 @@ from scipy import linalg, optimize, signal
 
 from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.docstring_helpers import Appender
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, int_like
 
 if NP_LT_2:
     ComplexWarning = np.ComplexWarning
@@ -162,6 +162,10 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
     """
     if dtype is None:
         dtype = np.common_type(np.array(ar), np.array(ma), np.array(sigma2))
+
+    nobs = int_like(nobs, "nobs", optional=False)
+    if nobs < 1:
+        raise ValueError(f"nobs must be a positive integer, got {nobs}")
 
     p = len(ar) - 1
     q = len(ma) - 1
