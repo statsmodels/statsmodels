@@ -27,8 +27,11 @@ from statsmodels.stats.weightstats import (
     CompareMeans,
     DescrStatsW,
     ttest_ind,
+    ttost_ind,
+    ttost_paired,
     zconfint,
     ztest,
+    ztost,
 )
 from statsmodels.tools.testing import Holder
 
@@ -1120,3 +1123,30 @@ def test_quantile_probs_out_of_range():
         DescrStatsW(x).quantile(np.array([0.5, 2.0]))
     q = DescrStatsW(x).quantile(np.array([0.25, 0.75]))
     assert np.isfinite(q).all()
+
+
+def test_tost_rejects_inverted_interval():
+    # an inverted equivalence interval (low >= upp) used to combine two
+    # one-sided tests against an empty interval and silently return a
+    # meaningless p-value
+    rng = np.random.default_rng(348923)
+    x1 = rng.normal(size=30)
+    x2 = rng.normal(size=30)
+    d1 = DescrStatsW(x1)
+    cm = CompareMeans(DescrStatsW(x1), DescrStatsW(x2))
+    match = "equivalence interval must satisfy low < upp"
+    with pytest.raises(ValueError, match=match):
+        d1.ttost_mean(low=1.0, upp=-1.0)
+    with pytest.raises(ValueError, match=match):
+        d1.ztost_mean(low=1.0, upp=-1.0)
+    with pytest.raises(ValueError, match=match):
+        cm.ttost_ind(low=1.0, upp=-1.0)
+    with pytest.raises(ValueError, match=match):
+        cm.ztost_ind(low=1.0, upp=-1.0)
+    # the module-level wrappers funnel through the same methods
+    with pytest.raises(ValueError, match=match):
+        ttost_ind(x1, x2, low=1.0, upp=-1.0)
+    with pytest.raises(ValueError, match=match):
+        ttost_paired(x1, x2, low=1.0, upp=-1.0)
+    with pytest.raises(ValueError, match=match):
+        ztost(x1, low=1.0, upp=-1.0, x2=x2)
