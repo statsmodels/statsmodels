@@ -1524,6 +1524,11 @@ def confint_proportions_2indep(
        in Statistics - Theory and Methods 40 (7): 1271-82.
        https://doi.org/10.1080/03610920903576580.
     """
+    if np.any(np.asarray(count1) < 0) or np.any(np.asarray(count2) < 0):
+        raise ValueError("count1 and count2 must be non-negative")
+    if np.any(np.asarray(nobs1) <= 0) or np.any(np.asarray(nobs2) <= 0):
+        raise ValueError("nobs1 and nobs2 must be positive")
+
     method_default = {
         "diff": "newcomb",
         "ratio": "log-adjusted",
