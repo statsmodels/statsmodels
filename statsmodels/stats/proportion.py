@@ -1186,6 +1186,13 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
     if nobs.size == 1:
         nobs = nobs * np.ones_like(count)
 
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count > nobs):
+        raise ValueError("count must not exceed nobs")
+
     prop = count * 1.0 / nobs
     k_sample = np.size(prop)
     if value is None:
@@ -1314,7 +1321,14 @@ def proportions_chisquare(count, nobs, value=None):
     given and count and nobs are not scalar, then the null hypothesis is
     that all samples have the same proportion.
     """
+    count = np.asarray(count)
     nobs = np.atleast_1d(nobs)
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count > nobs):
+        raise ValueError("count must not exceed nobs")
     table, expected, n_rows = _table_proportion(count, nobs)
     if value is not None:
         expected = np.column_stack((nobs * value, nobs * (1 - value)))
