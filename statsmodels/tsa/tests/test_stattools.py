@@ -2924,3 +2924,14 @@ def test_stattools_fixed_arity_result_objects():
     assert res[0] == res.coint_t
     assert res[1] == res.pvalue
     assert res[2] is res.critical_values
+
+
+def test_arma_order_select_ic_negative_bounds():
+    # a negative max_ar or max_ma used to empty one of the order grids and
+    # leak a bare numpy error from the argmin over the empty sequence
+    rs = np.random.RandomState(12345)
+    y = rs.standard_normal(50)
+    with pytest.raises(ValueError, match="must be non-negative"):
+        arma_order_select_ic(y, max_ar=-1, max_ma=2)
+    with pytest.raises(ValueError, match="must be non-negative"):
+        arma_order_select_ic(y, max_ar=2, max_ma=-1)
