@@ -947,6 +947,10 @@ def test_poisson_2indep(
         np.asarray(count2),
         np.asarray(exposure2),
     )
+    if np.any(y1 < 0) or np.any(y2 < 0):
+        raise ValueError("count1 and count2 must be non-negative")
+    if np.any(n1 <= 0) or np.any(n2 <= 0):
+        raise ValueError("exposure1 and exposure2 must be positive")
     d = n2 / n1
     rate1, rate2 = y1 / n1, y2 / n2
     rates_cmle = None
