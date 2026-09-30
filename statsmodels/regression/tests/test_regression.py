@@ -2018,3 +2018,18 @@ def test_conf_int_el_matches_own_critical_value_and_shrinks():
     lower_wide, upper_wide = res.conf_int_el(param_num, sig=0.01)
     lower_narrow, upper_narrow = res.conf_int_el(param_num, sig=0.2)
     assert (upper_wide - lower_wide) > (upper_narrow - lower_narrow)
+
+
+def test_yule_walker_order_validation():
+    # a negative order used to leak a bare IndexError, order 0 returned
+    # empty arrays, and an oversized order silently produced all-NaN results
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(30)
+    with pytest.raises(ValueError, match="order must be a positive integer"):
+        yule_walker(x, order=-1)
+    with pytest.raises(ValueError, match="order must be a positive integer"):
+        yule_walker(x, order=0)
+    with pytest.raises(ValueError, match="smaller than the number of observations"):
+        yule_walker(x, order=30)
+    rho, sigma = yule_walker(x, order=4)
+    assert rho.shape == (4,)
