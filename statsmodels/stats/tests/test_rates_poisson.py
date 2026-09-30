@@ -1489,6 +1489,34 @@ def test_poisson_2indep_invalid_compare_raises():
         confint_poisson_2indep(5, 10, 8, 10, method="score", compare="not-a-compare")
 
 
+@pytest.mark.parametrize(
+    "count1, exposure1, count2, exposure2",
+    [
+        (-5, 100, 3, 100),
+        (5, 100, -3, 100),
+    ],
+)
+def test_poisson_2indep_negative_count_raises(count1, exposure1, count2, exposure2):
+    # negative event counts are impossible; previously they were silently
+    # accepted and produced nan test statistics
+    with pytest.raises(ValueError, match="count1 and count2 must be non-negative"):
+        smr.test_poisson_2indep(count1, exposure1, count2, exposure2)
+
+
+@pytest.mark.parametrize(
+    "count1, exposure1, count2, exposure2",
+    [
+        (5, -100, 3, 100),
+        (5, 100, 3, 0),
+    ],
+)
+def test_poisson_2indep_nonpositive_exposure_raises(count1, exposure1, count2, exposure2):
+    # exposures must be strictly positive; previously zero or negative
+    # exposures silently produced meaningless results
+    with pytest.raises(ValueError, match="exposure1 and exposure2 must be positive"):
+        smr.test_poisson_2indep(count1, exposure1, count2, exposure2)
+
+
 def test_power_2indep_invalid_method_var_raises():
     with pytest.raises(ValueError, match="method_var"):
         power_poisson_ratio_2indep(
