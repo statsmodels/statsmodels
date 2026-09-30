@@ -119,6 +119,8 @@ class DescrStatsW:
             # TODO: why squeeze?
             if len(self.weights.shape) > 1 and len(self.weights) > 1:
                 self.weights = self.weights.squeeze()
+        if np.any(self.weights < 0):
+            raise ValueError("weights must be non-negative")
         self.ddof = ddof
 
     @cache_readonly
