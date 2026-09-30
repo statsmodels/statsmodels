@@ -57,7 +57,7 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import pinv_extended
-from statsmodels.tools.validation import bool_like, float_like, string_like
+from statsmodels.tools.validation import bool_like, float_like, int_like, string_like
 
 from . import _prediction as pred
 
@@ -1662,6 +1662,16 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
 
     # TODO: Require??
     x = np.array(x, dtype=np.float64)
+    order = int_like(order, "order", optional=False)
+    if order < 1:
+        # order 0 used to return empty arrays and a negative order leaked a
+        # bare IndexError from the autocovariance loop
+        raise ValueError(f"order must be a positive integer, got {order}")
+    if order >= x.shape[0]:
+        raise ValueError(
+            "order must be smaller than the number of observations "
+            f"({x.shape[0]}), got {order}"
+        )
     if demean:
         if not x.flags.writeable:
             x = np.require(x, requirements="W")
