@@ -1028,3 +1028,14 @@ def test_ztost_ind_matches_two_one_sided_ztests():
         assert_allclose(tt1, tt1_expected)
         assert_allclose(tt2, tt2_expected)
         assert_allclose(pvalue, max(tt1_expected[1], tt2_expected[1]))
+
+
+def test_descrstatsw_negative_weights_raises():
+    # negative observation weights are invalid; previously they were silently
+    # accepted and propagated nan into the summary statistics
+    x = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match="weights must be non-negative"):
+        DescrStatsW(x, weights=np.array([1.0, -2.0, 1.0]))
+    # zero weights remain allowed
+    d = DescrStatsW(x, weights=np.array([1.0, 0.0, 1.0]))
+    assert_allclose(d.mean, 2.0)
