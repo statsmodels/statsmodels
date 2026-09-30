@@ -985,6 +985,19 @@ class TTestIndPower(Power):
 
         """
 
+        if ratio < 0:
+            # the docstring documents ratio=0 for a one-sample test; negative
+            # ratios have no sample-size interpretation and used to crash
+            # with a bare ZeroDivisionError
+            raise ValueError(f"ratio must be non-negative, got {ratio}")
+        if ratio == 0:
+            # one-sample test, no second sample contributes
+            nobs2 = 0
+            if df is None:
+                df = nobs1 - 1
+            nobs = nobs1
+            return ttest_power(effect_size, nobs, alpha, df=df, alternative=alternative)
+
         nobs2 = nobs1 * ratio
         # pooled variance
         if df is None:
