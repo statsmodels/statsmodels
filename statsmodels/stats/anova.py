@@ -144,7 +144,9 @@ def anova1_lm_single(
     terms that precede it in the model. Consequently, the results depend
     on the order of the terms when the design is unbalanced.
     """
-    # maybe we should rethink using pinv > qr in OLS/linear models?
+    if np.linalg.matrix_rank(exog) < exog.shape[1]:
+        raise ValueError("Type I ANOVA requires a full-rank design matrix.")
+
     mgr = FormulaManager()
     effects = getattr(model, "effects", None)
     if effects is None:
@@ -393,6 +395,13 @@ def anova_lm(*args, **kwargs):
             F statistic comparing to previous model in args
         PR(>F): float64
             P-value for significance comparing to previous model in args
+
+    Raises
+    ------
+    ValueError
+        If Type I ANOVA is requested for a single model with a rank-deficient
+        design matrix. Remove redundant columns or unused factor levels
+        before fitting the model.
 
     Notes
     -----
