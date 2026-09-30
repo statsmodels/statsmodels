@@ -144,6 +144,11 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
     means = np.asarray(means)
     n_groups = means.shape[0]
 
+    if np.any(np.asarray(vars_) < 0):
+        raise ValueError("vars_ must be non-negative")
+    if np.any(np.asarray(nobs) <= 0):
+        raise ValueError("nobs must be positive")
+
     if np.size(nobs) == 1:
         nobs = np.ones(n_groups) * nobs
 
