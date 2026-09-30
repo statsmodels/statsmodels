@@ -1473,3 +1473,12 @@ def test_proportions_chisquare_pairscontrol_alternative():
     # continue to raise, now via the shared alternative validation
     with pytest.raises(ValueError, match="alternative must be one of"):
         smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="larger")
+
+
+def test_confint_proportions_2indep_invalid_inputs_raises():
+    # negative counts and non-positive nobs previously returned (nan, nan)
+    # or divided by zero instead of raising
+    with pytest.raises(ValueError, match="count1 and count2 must be non-negative"):
+        smprop.confint_proportions_2indep(-1, 10, 3, 10)
+    with pytest.raises(ValueError, match="nobs1 and nobs2 must be positive"):
+        smprop.confint_proportions_2indep(1, 0, 3, 10)
