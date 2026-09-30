@@ -7,6 +7,32 @@ import pytest
 
 from statsmodels.formula.api import ols
 from statsmodels.stats.anova import anova_lm
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
+
+
+@pytest.mark.parametrize("typ", [1, "I"])
+@pytest.mark.parametrize("formula", ["y ~ x + duplicate", "y ~ x + zero"])
+def test_type1_rank_deficient(typ, formula):
+    data = pd.DataFrame(
+        {
+            "y": [0, 1, 0, -1] * 3,
+            "x": np.arange(12),
+            "duplicate": np.arange(12),
+            "zero": np.zeros(12),
+        }
+    )
+    with pytest.warns(SingularMatrixWarning):
+        model = ols(formula, data=data).fit()
+    with pytest.raises(ValueError, match="Type I ANOVA requires a full-rank"):
+        anova_lm(model, typ=typ)
+
+
+def test_type1_more_columns_than_observations():
+    data = pd.DataFrame({"y": [1.0, 2.0, 4.0], "x": [0.0, 1.0, 2.0]})
+    with pytest.warns(SingularMatrixWarning):
+        model = ols("y ~ x + I(x**2) + I(x**3)", data=data).fit()
+    with pytest.raises(ValueError, match="Type I ANOVA requires a full-rank"):
+        anova_lm(model)
 
 kidney_table = StringIO("""Days      Duration Weight ID
     0.0      1      1      1
