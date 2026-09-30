@@ -1473,3 +1473,24 @@ def test_proportions_chisquare_pairscontrol_alternative():
     # continue to raise, now via the shared alternative validation
     with pytest.raises(ValueError, match="alternative must be one of"):
         smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="larger")
+
+
+def test_proportions_ztest_invalid_inputs_raises():
+    # impossible counts previously returned (nan, nan) or silently wrong
+    # p-values (a negative count in a 2-sample test gave z=-2.98, p=0.0029)
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportions_ztest(-1, 10, value=0.1)
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportions_ztest(11, 10, value=0.5)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smprop.proportions_ztest(1, 0, value=0.5)
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportions_ztest([-1, 3], [10, 10])
+
+
+def test_proportions_chisquare_invalid_inputs_raises():
+    # a negative count previously returned a "significant" p-value (0.035)
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportions_chisquare(-1, 10, value=0.1)
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportions_chisquare(11, 10, value=0.5)
