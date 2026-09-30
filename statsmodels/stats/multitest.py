@@ -191,6 +191,8 @@ def multipletests(
             "p-values must be in the range [0, 1]; got "
             f"[{pvals.min()}, {pvals.max()}]"
         )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     alphaf = alpha  # Notation ?
 
     if not is_sorted:
@@ -406,6 +408,10 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     """
     pvals = np.asarray(pvals)
     assert pvals.ndim == 1, "pvals must be 1-dimensional, that is of shape (n,)"
+    # alpha == 1 is allowed here: fdrcorrection_twostage legitimately calls
+    # this with a capped stage-2 alpha of 1 (reject every p-value <= 1)
+    if not 0 < alpha <= 1:
+        raise ValueError(f"alpha must be in the range (0, 1], got {alpha}")
 
     if not is_sorted:
         pvals_sortind = np.argsort(pvals)
@@ -702,6 +708,8 @@ def fdrcorrection_twostage(
         pvals = np.take(pvals, pvals_sortind)
 
     method = string_like(method, "method", options=("bky", "bh"), lower=False)
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     ntests = len(pvals)
     if method == "bky":
         fact = 1.0 + alpha
@@ -726,7 +734,10 @@ def fdrcorrection_twostage(
         # while True:
         for it in range(maxiter):
             ntests0 = 1.0 * ntests - ri_old
-            alpha_star = alpha_prime * ntests / ntests0
+            # cap at 1 so the internal fdrcorrection call stays within its
+            # validated range; alpha_star >= 1 rejects every p-value <= 1,
+            # which is identical behavior
+            alpha_star = min(alpha_prime * ntests / ntests0, 1.0)
             alpha_stages.append(alpha_star)
             # print ntests0, alpha_star
             rej, pvalscorr = fdrcorrection(
