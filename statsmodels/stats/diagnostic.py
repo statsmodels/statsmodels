@@ -1403,6 +1403,12 @@ def het_goldfeldquandt(
         split = nobs // 2
     elif 0 < split < 1:
         split = int(nobs * split)
+    if not 0 < split < nobs:
+        # a negative or oversized split silently produced nan test results
+        # from empty subsample regressions
+        raise ValueError(
+            f"split must be between 0 and the number of observations ({nobs}), got {split}"
+        )
 
     if drop is None:
         start2 = split
