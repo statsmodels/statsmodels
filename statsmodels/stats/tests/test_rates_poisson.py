@@ -1635,3 +1635,24 @@ def test_confint_quantile_poisson_invalid_inputs_raises():
         smr.confint_quantile_poisson(5, 10, prob=0, method="exact-c")
     with pytest.raises(ValueError, match="alpha must be in the range"):
         smr.confint_quantile_poisson(5, 10, prob=0.5, method="exact-c", alpha=1.5)
+
+
+@pytest.mark.parametrize("count", [-5, np.array([1, -2])])
+def test_test_poisson_negative_count(count):
+    # negative counts used to flow through the arithmetic silently, e.g.
+    # returning a nan statistic from the wald path
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.test_poisson(count, 10, 0.3, method="wald")
+
+
+@pytest.mark.parametrize("nobs", [0, -10])
+def test_test_poisson_bad_exposure(nobs):
+    # a zero exposure used to leak a bare ZeroDivisionError and a negative
+    # exposure silently produced a nonsense statistic
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smr.test_poisson(5, nobs, 0.3, method="wald")
+
+
+def test_test_poisson_negative_value():
+    with pytest.raises(ValueError, match="value must be non-negative"):
+        smr.test_poisson(5, 10, -0.3, method="score")
