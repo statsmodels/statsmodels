@@ -713,3 +713,14 @@ def test_stratified_test_null_odds_small_pvalue():
 
     assert rslt.pvalue > 0
     assert_allclose(rslt.pvalue, expected, rtol=1e-12)
+
+
+def test_negative_counts_rejected():
+    # negative counts used to flow through every statistic silently,
+    # producing e.g. a negative odds ratio
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.Table2x2([[2, 2], [2, -1]])
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.SquareTable(np.asarray([[1, 2], [3, -0.5]]))
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.Table([[1, -2], [3, 4]])
