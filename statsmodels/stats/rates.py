@@ -145,6 +145,19 @@ def test_poisson(
     confint_poisson
     """
 
+    count = np.asarray(count)
+    nobs = np.asarray(nobs)
+    value = np.asarray(value)
+    # a negative count or exposure or a zero exposure used to flow through
+    # the arithmetic silently (nan statistics, nonsense rates) or crash with
+    # a bare ZeroDivisionError
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(value < 0):
+        raise ValueError("value must be non-negative")
+
     n = nobs  # short hand
     rate = count / n
 
