@@ -2074,6 +2074,9 @@ def levinson_durbin(s, nlags=10, isacov=False):
     nlags = int_like(nlags, "nlags")
     isacov = bool_like(isacov, "isacov")
 
+    if nlags < 0:
+        raise ValueError(f"nlags must be non-negative, got {nlags}")
+
     order = nlags
 
     if isacov:
