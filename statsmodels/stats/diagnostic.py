@@ -117,7 +117,17 @@ def _check_nested_results(results_x, results_z):
         raise TypeError("results_x must come from a linear regression model")
     if not isinstance(results_z, RegressionResultsWrapper):
         raise TypeError("results_z must come from a linear regression model")
-    if not np.allclose(results_x.model.endog, results_z.model.endog):
+    endog_x = results_x.model.endog
+    endog_z = results_z.model.endog
+    if endog_x.shape[0] != endog_z.shape[0]:
+        # the non-nested tests combine residuals from the two fits element
+        # by element; mismatched samples used to leak a bare numpy
+        # broadcast error instead of naming the problem
+        raise ValueError(
+            "the two models must be fit on the same number of observations; got "
+            f"{endog_x.shape[0]} and {endog_z.shape[0]}"
+        )
+    if not np.allclose(endog_x, endog_z):
         raise ValueError("endogenous variables in models are not the same")
 
     x = results_x.model.exog
