@@ -108,7 +108,8 @@ def multipletests(
     pvals : array_like, 1-d
         uncorrected p-values.   Must be 1-dimensional.
     alpha : float, optional
-        FWER, family-wise error rate, e.g., 0.1
+        FWER, family-wise error rate, e.g., 0.1. Must be in the range (0, 1),
+        in contrast to ``fdrcorrection`` which also accepts 1.
     method : str, optional
         Method used for testing and adjustment of pvalues. Can be either the
         full name or initial letters. Available methods are:
@@ -150,6 +151,12 @@ def multipletests(
         corrected alpha for Sidak method
     alphacBonf : float
         corrected alpha for Bonferroni method
+
+    Raises
+    ------
+    ValueError
+        If ``alpha`` is not in the range (0, 1) or if any of the p-values is
+        not in the range [0, 1].
 
     Notes
     -----
@@ -344,7 +351,10 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     pvals : array_like, 1d
         Set of p-values of the individual tests.
     alpha : float, optional
-        Family-wise error rate. Defaults to ``0.05``.
+        Family-wise error rate. Defaults to ``0.05``. Must be in the range
+        (0, 1]. The value 1, which rejects all hypotheses, is allowed because
+        ``fdrcorrection_twostage`` uses it for the later stages, in contrast to
+        ``multipletests`` which requires ``alpha < 1``.
     method : {'i', 'indep', 'p', 'poscorr', 'n', 'negcorr'}, optional
         Which method to use for FDR correction.
         ``{'i', 'indep', 'p', 'poscorr'}`` all refer to ``fdr_bh``
@@ -635,7 +645,7 @@ def fdrcorrection_twostage(
     pvals : array_like
         set of p-values of the individual tests.
     alpha : float, optional
-        error rate
+        error rate, must be in the range (0, 1)
     method : {'bky', 'bh'}, optional
         see Notes for details
 
@@ -671,7 +681,15 @@ def fdrcorrection_twostage(
     m0 : int
         ntest - rej, estimated number of true (not rejected) hypotheses
     alpha_stages : list of floats
-        A list of alphas that have been used at each stage
+        A list of alphas that have been used at each stage. The alphas of the
+        second and later stages are capped at 1, which rejects all hypotheses.
+
+    Raises
+    ------
+    ValueError
+        If ``alpha`` is not in the range (0, 1).
+    TypeError
+        If the removed keyword ``iter`` is not None.
 
     Notes
     -----
