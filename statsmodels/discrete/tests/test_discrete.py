@@ -4305,3 +4305,18 @@ def test_probit_extreme_observation_fit():
         assert_allclose(res.params, ref.x, rtol=1e-4)
         assert_allclose(res.llf, -ref.fun, rtol=1e-8)
         assert np.all(np.isfinite(res.bse))
+
+
+def test_binary_model_offset_length_mismatch():
+    # Logit/Probit used to leak a bare numpy broadcast error at fit time
+    # for a mismatched offset; CountModel already rejects it up front
+    rs = np.random.RandomState(12345)
+    endog = (rs.standard_normal(40) > 0).astype(int)
+    exog = np.column_stack([np.ones(40), rs.standard_normal((40, 2))])
+    with pytest.raises(ValueError, match="offset is not the same length as endog"):
+        Logit(endog, exog, offset=np.ones(10))
+    with pytest.raises(ValueError, match="offset is not the same length as endog"):
+        Probit(endog, exog, offset=np.ones(10))
+    # a correctly sized offset still fits
+    res = Logit(endog, exog, offset=np.zeros(40)).fit(disp=0)
+    assert res.params.shape == (3,)
