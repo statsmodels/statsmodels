@@ -481,3 +481,69 @@ strata_f = (False, True)
 )
 def test_r(fname, ties, entry_f, strata_f):
     TestPHReg.do1(fname, ties, entry_f, strata_f)
+
+
+@pytest.mark.parametrize("stratified", [False, True])
+def test_schoenfeld_residuals_efron_ties(stratified):
+    # GH 10288.  Reference values from R 4.6.1, survival 3.8.6:
+    #
+    # d <- data.frame(
+    #   time = c(1, 1, 2, 2, 3, 4, 4, 5, 6, 7, 8, 9),
+    #   status = c(1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1),
+    #   x = c(0.5, -1.2, 0.3, 1.1, -0.7, 0.8, -0.2, 1.5, -1.0, 0.4, 0.9, -0.3),
+    #   z = c(1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0),
+    #   g = c(0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1),
+    #   entry = c(0, 0, 0, 1.5, 0, 2.5, 0, 3.5, 0, 0, 5.5, 0))
+    # f <- coxph(Surv(time, status) ~ x, data = d, ties = "efron")
+    # coef(f); resid(f, "schoenfeld")
+    # f <- coxph(Surv(entry, time, status) ~ x + z + strata(g), data = d,
+    #            ties = "efron")
+    # coef(f); resid(f, "schoenfeld")
+    #
+    # R returns one row per event, ordered by stratum and then time.  The
+    # rows below are in data order, with NaN for the censored subjects.
+    time = np.array([1, 1, 2, 2, 3, 4, 4, 5, 6, 7, 8, 9.0])
+    status = np.array([1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1])
+    x = np.array([0.5, -1.2, 0.3, 1.1, -0.7, 0.8, -0.2, 1.5, -1.0, 0.4, 0.9, -0.3])
+    z = np.array([1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0.0])
+    nan = np.nan
+    if stratified:
+        exog = np.column_stack([x, z])
+        strata = np.array([0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1])
+        entry = np.array([0, 0, 0, 1.5, 0, 2.5, 0, 3.5, 0, 0, 5.5, 0])
+        mod = PHReg(time, exog, status, entry=entry, strata=strata, ties="efron")
+        params = [-0.69172174953, -0.01604387583]
+        resid = [
+            [0.91413479736, 0.5998424419],
+            [-0.78586520264, -0.4001575581],
+            [0.08207985669, -0.6617698174],
+            [nan, nan],
+            [-0.12815290248, 0.5793829822],
+            [0.66277336193, -0.6627733619],
+            [-0.33722663807, 0.3372266381],
+            [nan, nan],
+            [-0.64624439218, -0.2830406625],
+            [0.23850111936, 0.4912893378],
+            [nan, nan],
+            [0.0, 0.0],
+        ]
+    else:
+        mod = PHReg(time, x, status, ties="efron")
+        params = [-0.6346743889]
+        resid = [
+            [0.71763481291],
+            [-0.98236518709],
+            [0.39462580605],
+            [nan],
+            [-0.49199674188],
+            [0.90917493627],
+            [-0.09082506373],
+            [nan],
+            [-0.67754711138],
+            [0.22129854829],
+            [nan],
+            [0.0],
+        ]
+    res = mod.fit(disp=0)
+    assert_allclose(res.params, params, rtol=1e-6)
+    assert_allclose(res.schoenfeld_residuals, resid, rtol=1e-6, atol=1e-8)
