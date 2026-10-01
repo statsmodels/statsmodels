@@ -254,6 +254,20 @@ class TestQn:
         with pytest.raises(ValueError):
             scale.iqr(empty)
 
+    def test_qn_too_few_observations(self):
+        # Qn needs at least 2 observations, empty input is nan, see above
+        with pytest.raises(ValueError, match="at least 2 observations"):
+            scale.qn_scale(np.array([1.0]))
+        with pytest.raises(ValueError, match="at least 2 observations"):
+            scale.qn_scale(np.array([[1.0, 2.0, 3.0]]), axis=0)
+        with pytest.raises(ValueError, match="at least 2 observations"):
+            scale.qn_scale(np.array([[1.0], [2.0]]), axis=1)
+        # two observations are enough: c * |a[1] - a[0]|
+        assert_allclose(
+            scale.qn_scale(np.array([1.0, 3.0])),
+            2 * scale.ONE_OVER_SQRT2_GAUSSIAN_5_8,
+        )
+
 
 class TestQnAxes:
     @classmethod
