@@ -103,6 +103,13 @@ def arma_order_select_ic(
     """
     max_ar = int_like(max_ar, "max_ar")
     max_ma = int_like(max_ma, "max_ma")
+    if max_ar < 0 or max_ma < 0:
+        # a negative bound used to make one of the order ranges empty and
+        # leak a bare numpy error from the argmin over the empty grid
+        raise ValueError(
+            f"max_ar and max_ma must be non-negative, got max_ar={max_ar}, "
+            f"max_ma={max_ma}"
+        )
     trend = string_like(trend, "trend", options=("n", "c"))
     model_kw = dict_like(model_kw, "model_kw", optional=True)
     fit_kw = dict_like(fit_kw, "fit_kw", optional=True)
