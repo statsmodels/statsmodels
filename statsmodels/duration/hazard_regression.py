@@ -1199,6 +1199,11 @@ class PHReg(model.LikelihoodModel):
         Notes
         -----
         Used to calculate leverages and score residuals.
+
+        Tied failure times are handled as in the Breslow method, also if the
+        model uses ``ties="efron"``. The Schoenfeld residuals of a model
+        with ``ties="efron"`` are centered by averages that are adjusted for
+        the ties and not by these averages.
         """
         return self._covariate_averages(params)
 
@@ -1679,6 +1684,9 @@ class PHRegResults(base.LikelihoodModelResults):
         """
         The average covariate values within the at-risk set at each
         event time point, weighted by hazard
+
+        Tied failure times are handled as in the Breslow method, also if the
+        model uses ``ties="efron"``.
         """
         return self.model.weighted_covariate_averages(self.params)
 
