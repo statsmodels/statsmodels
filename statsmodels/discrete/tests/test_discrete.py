@@ -4325,3 +4325,18 @@ def test_use_t_honored_nonrobust():
     res_nb = NegativeBinomial(yb, X).fit(use_t=True)
     assert res_nb.cov_type == "nonrobust"
     assert res_nb.use_t is True
+
+
+def test_binary_model_offset_length_mismatch():
+    # Logit/Probit used to leak a bare numpy broadcast error at fit time
+    # for a mismatched offset; CountModel already rejects it up front
+    rs = np.random.RandomState(12345)
+    endog = (rs.standard_normal(40) > 0).astype(int)
+    exog = np.column_stack([np.ones(40), rs.standard_normal((40, 2))])
+    with pytest.raises(ValueError, match="offset is not the same length as endog"):
+        Logit(endog, exog, offset=np.ones(10))
+    with pytest.raises(ValueError, match="offset is not the same length as endog"):
+        Probit(endog, exog, offset=np.ones(10))
+    # a correctly sized offset still fits
+    res = Logit(endog, exog, offset=np.zeros(40)).fit(disp=0)
+    assert res.params.shape == (3,)

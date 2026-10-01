@@ -1615,6 +1615,12 @@ class TestKPSS:
         with pytest.raises(ValueError, match=msg):
             kpss(self.x, "c", nlags=nobs)
 
+    def test_kpss_fails_on_negative_nlags(self):
+        # a negative nlags used to flow straight into the lag computation and
+        # silently return a statistic computed with lags=-1
+        with pytest.raises(ValueError, match="non-negative"):
+            kpss(self.x, "c", nlags=-1)
+
     def test_kpss_autolags_does_not_assign_lags_equal_to_nobs(self):
         # Test that if *autolags* exceeds number of observations, we set
         # suitable lags
@@ -2238,6 +2244,14 @@ def test_levinson_durbin_nlags_too_long():
     # the boundary case, one autocovariance per lag, still works
     res = levinson_durbin(np.array([2.0, 1.0, 0.5, 0.25, 0.1]), 4, isacov=True)
     assert res.arcoefs.shape == (4,)
+
+
+def test_levinson_durbin_negative_nlags():
+    # a negative nlags used to leak a bare IndexError from the recursion
+    with pytest.raises(ValueError, match="non-negative"):
+        levinson_durbin(np.arange(10.0), nlags=-1)
+    with pytest.raises(ValueError, match="non-negative"):
+        levinson_durbin(np.array([2.0, 1.0, 0.5]), nlags=-1, isacov=True)
 
 
 @pytest.mark.parametrize("missing", ["conservative", "drop", "raise", "none"])
@@ -2916,3 +2930,14 @@ def test_stattools_fixed_arity_result_objects():
     assert res[0] == res.coint_t
     assert res[1] == res.pvalue
     assert res[2] is res.critical_values
+
+
+def test_arma_order_select_ic_negative_bounds():
+    # a negative max_ar or max_ma used to empty one of the order grids and
+    # leak a bare numpy error from the argmin over the empty sequence
+    rs = np.random.RandomState(12345)
+    y = rs.standard_normal(50)
+    with pytest.raises(ValueError, match="must be non-negative"):
+        arma_order_select_ic(y, max_ar=-1, max_ma=2)
+    with pytest.raises(ValueError, match="must be non-negative"):
+        arma_order_select_ic(y, max_ar=2, max_ma=-1)

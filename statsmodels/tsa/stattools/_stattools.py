@@ -2094,6 +2094,9 @@ def levinson_durbin(s, nlags=10, isacov=False):
     nlags = int_like(nlags, "nlags")
     isacov = bool_like(isacov, "isacov")
 
+    if nlags < 0:
+        raise ValueError(f"nlags must be non-negative, got {nlags}")
+
     order = nlags
 
     if isacov:
@@ -3236,6 +3239,8 @@ def kpss(
     else:
         nlags = int_like(nlags, "nlags", optional=False)
 
+        if nlags < 0:
+            raise ValueError(f"nlags must be non-negative, got {nlags}")
         if nlags >= nobs:
             raise ValueError(
                 f"lags ({nlags}) must be < number of observations ({nobs})"

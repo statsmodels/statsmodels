@@ -713,3 +713,12 @@ def test_stratified_test_null_odds_small_pvalue():
 
     assert rslt.pvalue > 0
     assert_allclose(rslt.pvalue, expected, rtol=1e-12)
+
+
+def test_stratified_negative_counts_rejected():
+    # companion to the base-Table check: StratifiedTable keeps its own
+    # constructor, and negative counts used to flow through every statistic
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.StratifiedTable(np.asarray([[[2, 2], [2, -1]], [[3, 1], [1, 3]]], dtype=float))
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.StratifiedTable([[[2, 2], [2, 2]], [[3, 1], [1, -2]]])
