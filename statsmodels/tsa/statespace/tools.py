@@ -1933,15 +1933,17 @@ def prepare_trend_spec(trend):
         the degree of the trend polynomial.
     """
     # Trend
-    if trend is None or trend == "n":
+    # Only compare strings to the named trends: `==` is elementwise on arrays
+    is_str = isinstance(trend, str)
+    if trend is None or (is_str and trend == "n"):
         polynomial_trend = np.ones(0)
-    elif trend == "c":
+    elif is_str and trend == "c":
         polynomial_trend = np.r_[1]
-    elif trend == "t":
+    elif is_str and trend == "t":
         polynomial_trend = np.r_[0, 1]
-    elif trend == "ct":
+    elif is_str and trend == "ct":
         polynomial_trend = np.r_[1, 1]
-    elif trend == "ctt":
+    elif is_str and trend == "ctt":
         # TODO deprecate ctt?
         polynomial_trend = np.r_[1, 1, 1]
     else:
