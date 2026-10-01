@@ -29,6 +29,10 @@ from scipy import stats
 from scipy.stats import nbinom
 
 import statsmodels.api as sm
+from statsmodels.discrete.count_model import (
+    ZeroInflatedNegativeBinomialP,
+    ZeroInflatedPoisson,
+)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 from statsmodels.discrete.discrete_model import (
     CountModel,
@@ -42,6 +46,7 @@ from statsmodels.discrete.discrete_model import (
     Poisson,
     Probit,
 )
+from statsmodels.discrete.truncated_model import TruncatedLFPoisson
 import statsmodels.formula.api as smf
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.sm_exceptions import (
@@ -4357,24 +4362,54 @@ def test_probit_extreme_observation_fit():
         assert np.all(np.isfinite(res.bse))
 
 
-def test_use_t_honored_nonrobust():
+@pytest.mark.parametrize(
+    "model_class",
+    [
+        Poisson,
+        NegativeBinomial,
+        NegativeBinomialP,
+        GeneralizedPoisson,
+        ZeroInflatedPoisson,
+        ZeroInflatedNegativeBinomialP,
+        TruncatedLFPoisson,
+    ],
+)
+def test_use_t_honored_nonrobust(model_class):
     # regression test for GH#10307: fit(use_t=True) was silently ignored
     # under the default (nonrobust) covariance, while robust cov_types
     # honored it. The requested Student-t inference must be preserved.
+    # Poisson was not affected.
     rng = np.random.default_rng(0)
-    n = 300
+    n = 400
     x = rng.standard_normal(n)
-    X = np.column_stack([np.ones(n), x])
+    exog = np.column_stack([np.ones(n), x])
+    mu = np.exp(0.5 + 0.3 * x)
+    # overdispersed counts with extra zeros, zeros are dropped for truncation
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    endog = np.where(rng.uniform(size=n) < 0.3, 0, endog)
+    if model_class is TruncatedLFPoisson:
+        exog, endog = exog[endog > 0], endog[endog > 0]
 
-    y = rng.poisson(np.exp(0.5 + 0.3 * x))
-    res_poi = Poisson(y, X).fit(use_t=True)
-    assert res_poi.cov_type == "nonrobust"
-    assert res_poi.use_t is True
+    res = model_class(endog, exog).fit(disp=0, use_t=True)
+    assert res.cov_type == "nonrobust"
+    assert res.use_t is True
+    tvalues = res.params / res.bse
+    assert_allclose(res.tvalues, tvalues)
+    assert_allclose(
+        res.pvalues, 2 * stats.t.sf(np.abs(tvalues), res.df_resid), rtol=1e-8
+    )
+    crit = stats.t.ppf(0.975, res.df_resid)
+    ci = np.column_stack([res.params - crit * res.bse, res.params + crit * res.bse])
+    assert_allclose(res.conf_int(), ci)
 
-    yb = rng.negative_binomial(2, 1 / (1 + np.exp(0.5 + 0.3 * x)))
-    res_nb = NegativeBinomial(yb, X).fit(use_t=True)
-    assert res_nb.cov_type == "nonrobust"
-    assert res_nb.use_t is True
+    # the default and an explicit use_t=False are still normal based
+    for kwds in [{}, {"use_t": False}]:
+        res_z = model_class(endog, exog).fit(disp=0, **kwds)
+        assert res_z.use_t is False
+        assert_allclose(res_z.params, res.params)
+        assert_allclose(
+            res_z.pvalues, 2 * stats.norm.sf(np.abs(res_z.tvalues)), rtol=1e-8
+        )
 
 
 def test_binary_model_offset_length_mismatch():
