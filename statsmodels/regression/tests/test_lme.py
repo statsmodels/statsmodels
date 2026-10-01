@@ -1395,8 +1395,8 @@ def test_get_fe_params_partial_singular_cov_re():
     for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
         cov_re = np.diag([v0, 2.0])
         fe_params, singular = model.get_fe_params(cov_re, np.array([]))
-        gold = _dense_gls(model, np.diag([max(v0, 1e-12), 2.0]))
-        assert_allclose(fe_params, gold, atol=1e-4)
+        gold = _dense_gls(model, cov_re)
+        assert_allclose(fe_params, gold, atol=1e-8)
         assert singular == (v0 < 1e-10)
 
 
@@ -1423,7 +1423,7 @@ def test_get_fe_params_correlated_singular_cov_re():
 
         fe_params, singular = model.get_fe_params(cov_re, np.array([]))
         gold = _dense_gls(model, cov_re)
-        assert_allclose(fe_params, gold, atol=1e-4)
+        assert_allclose(fe_params, gold, atol=1e-8)
 
 
 def _dense_gls_vc(model, cov_re, vcomp):
@@ -1499,10 +1499,8 @@ def test_get_fe_params_partial_singular_vcomp():
     for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
         vcomp = np.array([v0, 2.0])
         fe_params, singular = model.get_fe_params(np.empty((0, 0)), vcomp)
-        gold = _dense_gls_vc(
-            model, np.empty((0, 0)), np.array([max(v0, 1e-12), 2.0])
-        )
-        assert_allclose(fe_params, gold, atol=1e-4)
+        gold = _dense_gls_vc(model, np.empty((0, 0)), vcomp)
+        assert_allclose(fe_params, gold, atol=1e-8)
         assert singular == (v0 < 1e-10)
 
 
@@ -1528,11 +1526,42 @@ def test_get_fe_params_mixed_singular_cov_re_and_vcomp():
         cov_re = np.diag([v0, 2.0])
         vcomp = np.array([v0])
         fe_params, singular = model.get_fe_params(cov_re, vcomp)
-        gold = _dense_gls_vc(
-            model, np.diag([max(v0, 1e-12), 2.0]), np.array([max(v0, 1e-12)])
-        )
-        assert_allclose(fe_params, gold, atol=1e-4)
+        gold = _dense_gls_vc(model, cov_re, vcomp)
+        assert_allclose(fe_params, gold, atol=1e-8)
         assert singular == (v0 < 1e-10)
+
+
+@pytest.mark.parametrize("method", ["powell", "nm"])
+def test_fit_boundary_fixed_effects_equal_ols(method):
+    # GH 10239, code sample 2: the within-subject errors are negatively
+    # correlated, so that the ML estimate of the random intercept variance is
+    # at the boundary (0) and the fixed effects are the OLS estimates.
+    # method="lbfgs" ends at a random intercept variance that is exactly 0 and
+    # is not included, the fit raises LinAlgError('Singular matrix') for the
+    # Hessian.
+    rng = np.random.default_rng(12345)
+    n_subj, sd, c = 74, 28.0, 0.25
+    z = rng.standard_normal((n_subj, 3))
+    e = sd * (z - c * z.mean(axis=1, keepdims=True))
+    rows = []
+    for s in range(n_subj):
+        g = s % 2
+        for k, cond in enumerate(["c1", "c2", "c3"]):
+            mu = 10 + 5 * g + (20 + 25 * g) * (k == 1) + 8 * g * (k == 2)
+            rows.append(
+                {"subj": s, "grp": "B" if g else "A", "cond": cond, "y": mu + e[s, k]}
+            )
+    df = pd.DataFrame(rows)
+
+    ols = OLS.from_formula("y ~ grp * cond", df).fit()
+    model = MixedLM.from_formula("y ~ grp * cond", df, groups="subj")
+    with warnings.catch_warnings():
+        # the MLE is on the boundary of the parameter space
+        warnings.simplefilter("ignore")
+        res = model.fit(reml=False, method=method)
+    assert_allclose(res.params[ols.params.index], ols.params, rtol=1e-8)
+    assert_allclose(res.scale, ols.ssr / ols.nobs, rtol=1e-8)
+    assert res.cov_re.iloc[0, 0] < 1e-8
 
 
 def test_get_distribution():
