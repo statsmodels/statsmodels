@@ -129,6 +129,29 @@ def test_effectsize_2proportions_clip_default_zero_kwds():
     assert_allclose(var_eff, var_eff2, rtol=1e-13)
 
 
+@pytest.mark.parametrize("statistic", ["odds-ratio", "risk-ratio", "diff", "arcsin"])
+def test_effectsize_2proportions_zero_correction_per_study(statistic):
+    # GH#10290: the zero-cell continuity correction must be applied per study
+    # (gated by the per-study zero mask), so a study with no zero cell is
+    # unaffected by ``zero_correction`` and by whether *other* studies in the
+    # batch have a zero cell. On main the numerator correction was added to
+    # every study unconditionally, which changed the effect size/variance of
+    # non-zero-cell studies.
+    # study 0 has a zero cell (count2=0); study 1 has none.
+    count1, nobs1 = np.array([3.0, 9.0]), np.array([72.0, 45.0])
+    count2, nobs2 = np.array([0.0, 1.0]), np.array([68.0, 15.0])
+
+    eff_cc, var_cc = effectsize_2proportions(
+        count1, nobs1, count2, nobs2, statistic=statistic, zero_correction=0.5
+    )
+    # the non-zero-cell study must match its uncorrected single-study value
+    eff_ref, var_ref = effectsize_2proportions(
+        count1[1:], nobs1[1:], count2[1:], nobs2[1:], statistic=statistic
+    )
+    assert_allclose(eff_cc[1], eff_ref[0])
+    assert_allclose(var_cc[1], var_ref[0])
+
+
 class TestEffSmdMeta:
 
     @classmethod

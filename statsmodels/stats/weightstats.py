@@ -166,7 +166,14 @@ class DescrStatsW:
         var : float or ndarray
             variance with denominator ``sum_weights - ddof``
         """
-        return self.sumsquares / (self.sum_weights - ddof)
+        # Rescale the deviations before squaring, the sum of squares can
+        # overflow although the variance is representable. `initial` keeps an
+        # empty sample at the historical 0 / 0 -> nan result.
+        demeaned = self.demeaned
+        scale = np.max(np.abs(demeaned), axis=0, initial=0.0)
+        scale = np.where(scale == 0, 1.0, scale)
+        sumsquares = np.dot(((demeaned / scale) ** 2).T, self.weights)
+        return sumsquares / (self.sum_weights - ddof) * scale * scale
 
     def std_ddof(self, ddof=0):
         """
@@ -187,7 +194,7 @@ class DescrStatsW:
     @cache_readonly
     def var(self):
         """variance with default degrees of freedom correction"""
-        return self.sumsquares / (self.sum_weights - self.ddof)
+        return self.var_ddof(self.ddof)
 
     @cache_readonly
     def _var(self):
@@ -196,7 +203,7 @@ class DescrStatsW:
 
         used for statistical tests with controlled ddof
         """
-        return self.sumsquares / self.sum_weights
+        return self.var_ddof(0)
 
     @cache_readonly
     def std(self):
@@ -1029,7 +1036,16 @@ class CompareMeans:
         # this uses ``_var`` to use ddof=0 for formula
         d1 = self.d1
         d2 = self.d2
-        return np.sqrt(d1._var / (d1.nobs - 1) + d2._var / (d2.nobs - 1))
+        sem1 = d1._var / (d1.nobs - 1)
+        sem2 = d2._var / (d2.nobs - 1)
+        # normalize by the larger contribution so their sum cannot overflow
+        # although each variance is finite; a non positive or non finite
+        # scale falls back to the plain sum
+        scale = np.maximum(sem1, sem2)
+        scale = np.where((scale > 0) & np.isfinite(scale), scale, 1.0)
+        a = sem1 / scale
+        b = sem2 / scale
+        return np.sqrt(scale) * np.sqrt(a + b)
 
     @cache_readonly
     def std_meandiff_pooledvar(self):
@@ -1039,13 +1055,20 @@ class CompareMeans:
         d1 = self.d1
         d2 = self.d2
         # could make var_pooled into attribute
-        var_pooled = (
-            (d1.sumsquares + d2.sumsquares)
-            /
-            # (d1.nobs - d1.ddof + d2.nobs - d2.ddof))
-            (d1.nobs - 1 + d2.nobs - 1)
-        )
-        return np.sqrt(var_pooled * (1.0 / d1.nobs + 1.0 / d2.nobs))
+        nobs1, nobs2 = d1.nobs, d2.nobs
+        df_pooled = nobs1 + nobs2 - 2
+        # weight the variances instead of the sums of squares, the latter
+        # could overflow although the pooled variance is representable
+        var1 = (nobs1 / df_pooled) * d1._var
+        var2 = (nobs2 / df_pooled) * d2._var
+        # normalize by the larger contribution so their sum cannot overflow
+        # although each term is finite; a non positive or non finite scale
+        # falls back to the plain sum
+        scale = np.maximum(var1, var2)
+        scale = np.where((scale > 0) & np.isfinite(scale), scale, 1.0)
+        a = var1 / scale
+        b = var2 / scale
+        return np.sqrt(scale) * np.sqrt((a + b) * (1.0 / nobs1 + 1.0 / nobs2))
 
     def dof_satt(self):
         """degrees of freedom of Satterthwaite for unequal variance"""
@@ -1055,6 +1078,13 @@ class CompareMeans:
         # except I use  ``_var`` which has ddof=0
         sem1 = d1._var / (d1.nobs - 1)
         sem2 = d2._var / (d2.nobs - 1)
+        # normalize by the larger contribution so their sum cannot overflow
+        # although each variance is finite; the ratios below are unchanged
+        # by the rescaling
+        scale = np.maximum(sem1, sem2)
+        scale = np.where((scale > 0) & np.isfinite(scale), scale, 1.0)
+        sem1 = sem1 / scale
+        sem2 = sem2 / scale
         semsum = sem1 + sem2
         z1 = (sem1 / semsum) ** 2 / (d1.nobs - 1)
         z2 = (sem2 / semsum) ** 2 / (d2.nobs - 1)
