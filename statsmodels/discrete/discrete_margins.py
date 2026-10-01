@@ -484,7 +484,7 @@ def _margeff_cov_params_count(model, cov_margins, params, exog, count_ind, metho
         if dfdb.ndim >= 2:  # for overall
             dfdb = dfdb.mean(0) / 2
         if J > 1:
-            K = dfdb.shape[1] / (J - 1)
+            K = dfdb.shape[1] // (J - 1)
             cov_margins[i::K, :] = dfdb
         else:
             # dfdb could be too short if there are extra params, k_extra > 0

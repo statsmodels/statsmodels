@@ -724,3 +724,12 @@ def test_negative_counts_rejected():
         ctab.SquareTable(np.asarray([[1, 2], [3, -0.5]]))
     with pytest.raises(ValueError, match="non-negative"):
         ctab.Table([[1, -2], [3, 4]])
+
+
+def test_stratified_negative_counts_rejected():
+    # companion to the base-Table check: StratifiedTable keeps its own
+    # constructor, and negative counts used to flow through every statistic
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.StratifiedTable(np.asarray([[[2, 2], [2, -1]], [[3, 1], [1, 3]]], dtype=float))
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.StratifiedTable([[[2, 2], [2, 2]], [[3, 1], [1, -2]]])

@@ -3778,6 +3778,54 @@ def test_mnlogit_resid_response():
     assert_allclose(res_mnl.resid_response[:, 0], -res_logit.resid_response, rtol=1e-7)
 
 
+@pytest.mark.parametrize("kind", ["dummy", "count"])
+def test_mnlogit_margeff_dummy_count(kind):
+    # GH5488, get_margeff with dummy=True or count=True raised a ValueError
+    # in _derivative_predict whenever the number of exog columns K differed
+    # from the number of choices J
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rng = np.random.default_rng(5488)
+    nobs = 500
+    exog = sm.add_constant(
+        np.column_stack(
+            [
+                rng.normal(size=nobs),
+                rng.poisson(2, size=nobs),
+                rng.random(nobs) > 0.5,
+            ]
+        ).astype(float)
+    )
+    endog = rng.integers(0, 3, size=nobs)
+    mod = MNLogit(endog, exog)
+    res = mod.fit(disp=0)
+    assert mod.K != mod.J
+
+    col = 3 if kind == "dummy" else 2
+
+    def effect(params):
+        params = params.reshape(mod.K, mod.J - 1, order="F")
+        exog0, exog1 = exog.copy(), exog.copy()
+        if kind == "dummy":
+            exog0[:, col] = 0
+            exog1[:, col] = 1
+            step = 1
+        else:
+            exog0[:, col] -= 1
+            exog1[:, col] += 1
+            step = 2
+        diff = mod.predict(params, exog1) - mod.predict(params, exog0)
+        return (diff / step).mean(0)
+
+    marg = res.get_margeff(**{kind: True})
+    params = res.params.ravel(order="F")
+    jac = approx_fprime(params, effect, centered=True)
+    se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
+    # margeff excludes the constant column
+    assert_allclose(marg.margeff[col - 1], effect(params), rtol=1e-10)
+    assert_allclose(marg.margeff_se[col - 1], se, rtol=1e-6)
+
+
 def _fit_logit_for_summary():
     data = load_spector()
     data.exog = sm.add_constant(data.exog, prepend=False)
@@ -4257,3 +4305,18 @@ def test_probit_extreme_observation_fit():
         assert_allclose(res.params, ref.x, rtol=1e-4)
         assert_allclose(res.llf, -ref.fun, rtol=1e-8)
         assert np.all(np.isfinite(res.bse))
+
+
+def test_binary_model_offset_length_mismatch():
+    # Logit/Probit used to leak a bare numpy broadcast error at fit time
+    # for a mismatched offset; CountModel already rejects it up front
+    rs = np.random.RandomState(12345)
+    endog = (rs.standard_normal(40) > 0).astype(int)
+    exog = np.column_stack([np.ones(40), rs.standard_normal((40, 2))])
+    with pytest.raises(ValueError, match="offset is not the same length as endog"):
+        Logit(endog, exog, offset=np.ones(10))
+    with pytest.raises(ValueError, match="offset is not the same length as endog"):
+        Probit(endog, exog, offset=np.ones(10))
+    # a correctly sized offset still fits
+    res = Logit(endog, exog, offset=np.zeros(40)).fit(disp=0)
+    assert res.params.shape == (3,)

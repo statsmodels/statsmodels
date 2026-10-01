@@ -712,3 +712,19 @@ def test_multipletests_rejects_out_of_range_pvals():
     # NaN keeps the previous pass-through behavior
     res = multipletests(np.array([0.5, np.nan]), method="bonferroni")
     assert np.isnan(res[1][-1])
+
+
+def test_local_fdr_param_validation():
+    # a non-positive deg used to leak a bare numpy error from the density
+    # fit, and a degenerate nbins crashed inside numpy's histogram
+    rs = np.random.RandomState(12345)
+    zscores = rs.standard_normal(200)
+    with pytest.raises(ValueError, match="deg must be a positive integer"):
+        local_fdr(zscores, deg=-1)
+    with pytest.raises(ValueError, match="nbins must be a positive integer"):
+        local_fdr(zscores, nbins=-5)
+    with pytest.raises(ValueError, match="nbins must be a positive integer"):
+        local_fdr(zscores, nbins=1)
+    # the defaults still produce a full fdr curve
+    fdr = local_fdr(zscores)
+    assert fdr.shape == (200,)
