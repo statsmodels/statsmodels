@@ -2395,3 +2395,18 @@ def test_acorr_ljungbox_lags_exceed_nobs():
     # the boundary case, lag == nobs - 1, still works
     res = smsdia.acorr_ljungbox(x, lags=4)
     assert np.isfinite(res["lb_pvalue"].iloc[0])
+
+
+def test_goldfeldquandt_split_validation():
+    # a negative or oversized split used to silently return nan test results
+    # from empty subsample regressions
+    rs = np.random.RandomState(12345)
+    y = rs.standard_normal(60)
+    x = np.column_stack([np.ones(60), rs.standard_normal((60, 2))])
+    with pytest.raises(ValueError, match="split must be between 0 and"):
+        smsdia.het_goldfeldquandt(y, x, split=-1)
+    with pytest.raises(ValueError, match="split must be between 0 and"):
+        smsdia.het_goldfeldquandt(y, x, split=60)
+    # the fraction form and the default stay valid
+    smsdia.het_goldfeldquandt(y, x, split=0.5)
+    smsdia.het_goldfeldquandt(y, x)
