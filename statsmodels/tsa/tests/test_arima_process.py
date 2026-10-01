@@ -574,3 +574,14 @@ def test_ar2arma_approximates_higher_order_ar():
     true_irf = ArmaProcess(ar_true, [1.0]).impulse_response(leads=15)
     app_irf = ArmaProcess(ar_app, ma_app).impulse_response(leads=15)
     assert_allclose(app_irf, true_irf, atol=0.1)
+
+
+def test_arma_acovf_nobs_validation():
+    # a negative nobs used to return a silently truncated acovf on the
+    # innovations path and leak a bare numpy error on the white-noise path
+    with pytest.raises(ValueError, match="nobs must be a positive integer"):
+        arma_acovf([1.0, -0.5], [1.0], nobs=-1)
+    with pytest.raises(ValueError, match="nobs must be a positive integer"):
+        arma_acovf([1.0], [1.0], nobs=-1)
+    with pytest.raises(ValueError, match="nobs must be a positive integer"):
+        arma_acf([1.0, -0.5], [1.0], lags=0)
