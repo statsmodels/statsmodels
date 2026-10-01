@@ -1227,6 +1227,8 @@ class NegativeBinomial(Link):
     """
 
     def __init__(self, alpha=1.0):
+        if alpha <= 0:
+            raise ValueError(f"alpha must be positive, got {alpha}")
         self.alpha = alpha
 
     def _clean(self, x):
