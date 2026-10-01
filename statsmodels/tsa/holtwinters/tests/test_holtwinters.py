@@ -1679,6 +1679,31 @@ def test_error_boxcox():
         mod.fit(use_boxcox=False)
 
 
+@pytest.mark.parametrize("initialization_method", ["estimated", "heuristic"])
+def test_boxcox_log(initialization_method):
+    # GH 9135: use_boxcox="log" is documented but was rejected in __init__
+    res = ExponentialSmoothing(
+        aust,
+        trend="add",
+        seasonal="add",
+        seasonal_periods=4,
+        initialization_method=initialization_method,
+        use_boxcox="log",
+    ).fit()
+    assert res.params["use_boxcox"] == "log"
+    assert res.params["lamda"] == 0.0
+    # The log transform is the same as fitting the model to log(y)
+    res_log = ExponentialSmoothing(
+        np.log(aust),
+        trend="add",
+        seasonal="add",
+        seasonal_periods=4,
+        initialization_method=initialization_method,
+    ).fit()
+    assert_allclose(res.fittedvalues, np.exp(res_log.fittedvalues), rtol=1e-6)
+    assert_allclose(res.forecast(8), np.exp(res_log.forecast(8)), rtol=1e-6)
+
+
 def test_error_initialization(ses):
     with pytest.raises(ValueError, match="initialization is 'known' but initial_level"):
         ExponentialSmoothing(ses, initialization_method="known")
