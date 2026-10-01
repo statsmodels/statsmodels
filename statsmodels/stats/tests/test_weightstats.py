@@ -15,6 +15,8 @@ License: BSD (3-clause)
 
 """
 
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_almost_equal
 import pandas as pd
@@ -604,6 +606,10 @@ def test_var_extreme_scale_2d():
     assert_allclose(var, [np.ldexp(1.0, 1022), 1.0])
 
 
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM,
+    reason="Will not work on WASM due to exception handling differences"
+)
 @pytest.mark.parametrize("data", [np.array([]), np.zeros((0, 2))])
 def test_var_empty_input(data):
     # Empty input keeps the historical 0 / 0 -> nan result instead of raising.
