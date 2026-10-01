@@ -2214,10 +2214,10 @@ def test_diagnostics_pandas():
 @pytest.mark.parametrize("k_vars, skip", [(2, None), (5, None), (3, 20)])
 def test_harvey_collier_skip(k_vars, skip):
     # GH 8446, the t-test must use the recursive residuals from index skip
-    rs = np.random.RandomState(8446)
+    rng = np.random.default_rng(8446)
     nobs = 60
-    exog = add_constant(rs.standard_normal((nobs, k_vars - 1)))
-    endog = exog.sum(1) + rs.standard_normal(nobs)
+    exog = add_constant(rng.standard_normal((nobs, k_vars - 1)))
+    endog = exog.sum(1) + rng.standard_normal(nobs)
     res = OLS(endog, exog).fit()
     hc = smsdia.linear_harvey_collier(res, skip=skip)
 
@@ -2235,6 +2235,36 @@ def test_harvey_collier_skip(k_vars, skip):
     assert_allclose(hc.pvalue, expected.pvalue, rtol=1e-10)
     if hasattr(hc, "df"):
         assert hc.df == nobs - start - 1
+
+
+@pytest.mark.parametrize(
+    "k, stat, pvalue",
+    [
+        (2, 0.586754425722491, 0.56093192209442),
+        (3, 0.850420410993682, 0.400712322767811),
+        (4, 1.00449923572035, 0.32203254246206),
+        (5, 1.32123229253236, 0.195246914186222),
+        (6, 0.374761500404456, 0.710235559230007),
+    ],
+)
+def test_harvey_collier_lmtest(k, stat, pvalue):
+    # R 4.6.1, lmtest 0.9-40: harvtest(y ~ x1 + ... + x_{k-1}) with the
+    # deterministic data below. harvtest reports the absolute value of the
+    # statistic, the mean of the recursive residuals is negative for
+    # k = 2, ..., 5. The p-value is two-sided.
+    n = 40
+    i = np.arange(1, n + 1)
+    x = np.column_stack(
+        [np.sin(i), np.cos(2 * i), np.sin(3 * i + 1), np.cos(i / 2), np.sin(i / 3)]
+    )
+    y = 1 + x[:, 0] + 0.6 * x[:, 0] ** 2 + 0.5 * x[:, 1:].sum(1)
+    y = y + 0.3 * np.sin(5 * i + 0.5)
+    res = OLS(y, add_constant(x[:, : k - 1])).fit()
+    hc = smsdia.linear_harvey_collier(res)
+    assert_allclose(abs(hc[0]), stat, rtol=1e-9)
+    assert_allclose(hc[1], pvalue, rtol=1e-9)
+    if hasattr(hc, "df"):
+        assert hc.df == n - k - 1
 
 
 def test_diagnostics_hac():
