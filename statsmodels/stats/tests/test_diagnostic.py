@@ -2461,8 +2461,11 @@ def test_goldfeldquandt_split_validation():
     x = np.column_stack([np.ones(60), rs.standard_normal((60, 2))])
     with pytest.raises(ValueError, match="split must be between 0 and"):
         smsdia.het_goldfeldquandt(y, x, split=-1)
-    with pytest.raises(ValueError, match="split must be between 0 and"):
+    with pytest.raises(ValueError, match=r"\(60\), got 60$"):
         smsdia.het_goldfeldquandt(y, x, split=60)
+    # a fraction that is rounded to 0 reports the value that was given
+    with pytest.raises(ValueError, match=r"got 0.001, which is 0 observations"):
+        smsdia.het_goldfeldquandt(y, x, split=0.001)
     # the fraction form and the default stay valid
-    smsdia.het_goldfeldquandt(y, x, split=0.5)
-    smsdia.het_goldfeldquandt(y, x)
+    smsdia.het_goldfeldquandt(y, x, split=0.5, result_object=False)
+    smsdia.het_goldfeldquandt(y, x, result_object=False)
