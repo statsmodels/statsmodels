@@ -1835,7 +1835,10 @@ def score_test_proportions_2indep(
                 - tmp1 * tmp2 / (6 * tmp3**2)
                 + tmp0 / (2 * tmp3)
             )
-            p = np.sign(q) * np.sqrt((tmp2 / (3 * tmp3)) ** 2 - tmp1 / (3 * tmp3))
+            # np.sign(q) is 0 for q == 0, which happens for symmetric tables
+            p = np.copysign(1.0, q) * np.sqrt(
+                (tmp2 / (3 * tmp3)) ** 2 - tmp1 / (3 * tmp3)
+            )
             a = (np.pi + np.arccos(q / p**3)) / 3
 
             prop0 = 2 * p * np.cos(a) - tmp2 / (3 * tmp3)
@@ -2766,6 +2769,23 @@ def _score_confint_inversion(
         ub *= 2  # add more buffer
     if compare == "odds-ratio":
         param = rt0.odds_ratio
+
+    if compare == "diff":
+        # The starting values based on the Wald interval can be inside the
+        # score interval (too narrow) and outside of the parameter space
+        # (-1, 1). Move them towards the limit of the parameter space until the
+        # p-value is below alpha.
+        lb = max(lb, -0.99999)
+
+        def _expand(x, limit):
+            for _ in range(60):
+                if func(x) <= 0:
+                    return x
+                x = x + 0.5 * (limit - x)
+            return x
+
+        ub = _expand(ub, 0.99999)
+        lb = _expand(lb, -0.99999)
 
     # root finding for confint bounds
     upp = optimize.brentq(func, param, ub)
