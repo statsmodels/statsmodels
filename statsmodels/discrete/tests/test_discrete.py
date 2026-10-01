@@ -4307,6 +4307,26 @@ def test_probit_extreme_observation_fit():
         assert np.all(np.isfinite(res.bse))
 
 
+def test_use_t_honored_nonrobust():
+    # regression test for GH#10307: fit(use_t=True) was silently ignored
+    # under the default (nonrobust) covariance, while robust cov_types
+    # honored it. The requested Student-t inference must be preserved.
+    rng = np.random.default_rng(0)
+    n = 300
+    x = rng.standard_normal(n)
+    X = np.column_stack([np.ones(n), x])
+
+    y = rng.poisson(np.exp(0.5 + 0.3 * x))
+    res_poi = Poisson(y, X).fit(use_t=True)
+    assert res_poi.cov_type == "nonrobust"
+    assert res_poi.use_t is True
+
+    yb = rng.negative_binomial(2, 1 / (1 + np.exp(0.5 + 0.3 * x)))
+    res_nb = NegativeBinomial(yb, X).fit(use_t=True)
+    assert res_nb.cov_type == "nonrobust"
+    assert res_nb.use_t is True
+
+
 def test_binary_model_offset_length_mismatch():
     # Logit/Probit used to leak a bare numpy broadcast error at fit time
     # for a mismatched offset; CountModel already rejects it up front
