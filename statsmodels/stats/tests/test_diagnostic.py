@@ -2440,6 +2440,18 @@ def test_compare_cox_j_mismatched_nobs():
     with pytest.raises(ValueError, match="same number of observations"):
         smsdia.compare_j(res_full, res_short)
 
+    # a missing value in a variable of only one model drops an observation
+    # from that model only
+    data = pd.DataFrame({"y": y, "x1": x[:, 1], "x2": x[:, 2]})
+    data.loc[3, "x2"] = np.nan
+    res_x1 = OLS.from_formula("y ~ x1", data).fit()
+    res_x1_x2 = OLS.from_formula("y ~ x1 + x2", data).fit()
+    msg = "same number of observations; got 60 and 59.*missing values"
+    with pytest.raises(ValueError, match=msg):
+        smsdia.compare_cox(res_x1, res_x1_x2)
+    with pytest.raises(ValueError, match=msg):
+        smsdia.compare_j(res_x1, res_x1_x2)
+
 
 def test_goldfeldquandt_split_validation():
     # a negative or oversized split used to silently return nan test results

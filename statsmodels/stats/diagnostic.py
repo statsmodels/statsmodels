@@ -125,7 +125,9 @@ def _check_nested_results(results_x, results_z):
         # broadcast error instead of naming the problem
         raise ValueError(
             "the two models must be fit on the same number of observations; got "
-            f"{endog_x.shape[0]} and {endog_z.shape[0]}"
+            f"{endog_x.shape[0]} and {endog_z.shape[0]}. This happens, for "
+            "example, if missing values are dropped from the variables of only "
+            "one of the models."
         )
     if not np.allclose(endog_x, endog_z):
         raise ValueError("endogenous variables in models are not the same")
