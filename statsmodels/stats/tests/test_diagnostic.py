@@ -2397,6 +2397,20 @@ def test_acorr_ljungbox_lags_exceed_nobs():
     assert np.isfinite(res["lb_pvalue"].iloc[0])
 
 
+def test_compare_cox_j_mismatched_nobs():
+    # comparing models fit on different sample sizes used to leak a bare
+    # numpy broadcast error
+    rs = np.random.RandomState(12345)
+    y = rs.standard_normal(60)
+    x = np.column_stack([np.ones(60), rs.standard_normal((60, 2))])
+    res_full = OLS(y, x).fit()
+    res_short = OLS(y[:30], x[:30]).fit()
+    with pytest.raises(ValueError, match="same number of observations"):
+        smsdia.compare_cox(res_full, res_short)
+    with pytest.raises(ValueError, match="same number of observations"):
+        smsdia.compare_j(res_full, res_short)
+
+
 def test_goldfeldquandt_split_validation():
     # a negative or oversized split used to silently return nan test results
     # from empty subsample regressions
