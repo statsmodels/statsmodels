@@ -9,10 +9,12 @@ import pytest
 from scipy import stats
 
 from statsmodels.sandbox.stats.multicomp import (
+    MultiComparison,
     get_tukeyQcrit,
     tiecorrect,
     tukey_pvalues,
 )
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
 
 @pytest.mark.skipif(not SP_LT_116, reason="mvndst removed in SciPy 1.16")
@@ -44,3 +46,15 @@ def test_tiecorrect_matches_scipy():
         # Saved from SciPy's stats.tiecorrect before deprecation
         expected_result = 0.9761904761904762
     assert_almost_equal(tiecorrect(xranks), expected_result, decimal=8)
+
+
+def test_tukeyhsd_alpha_range():
+    # an out-of-range alpha used to flow into the reject decision silently
+    rs = np.random.RandomState(12345)
+    endog = rs.standard_normal(30)
+    groups = np.repeat(list("abc"), 10)
+    for alpha in (-0.5, 0, 1, 1.5):
+        with pytest.raises(ValueError, match="alpha must be in the range"):
+            MultiComparison(endog, groups).tukeyhsd(alpha=alpha)
+        with pytest.raises(ValueError, match="alpha must be in the range"):
+            pairwise_tukeyhsd(endog, groups, alpha=alpha)

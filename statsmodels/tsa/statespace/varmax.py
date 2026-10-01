@@ -349,7 +349,7 @@ class VARMAX(MLEModel):
         # A. Run a multivariate regression to get beta estimates
         endog = pd.DataFrame(self.endog.copy())
         endog = endog.interpolate()
-        endog = np.require(endog.bfill(), requirements="W")
+        endog = np.require(endog.bfill(), dtype=np.float64, requirements="W")
         exog = None
         if self.k_trend > 0 and self.k_exog > 0:
             exog = np.c_[self._trend_data, self.exog]

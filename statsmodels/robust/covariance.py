@@ -238,7 +238,7 @@ def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
     mask = d <= cutoff
     sample = x[mask]
     loc = sample.mean(0)
-    cov = np.cov(sample.T, ddof=ddof)
+    cov = np.atleast_2d(np.cov(sample.T, ddof=ddof))
     return cov, loc
 
 
@@ -1917,7 +1917,7 @@ class CovM:
         if start_shape is not None:
             shape_old = start_shape
         else:
-            shape_old = np.cov(self.data.T)
+            shape_old = np.atleast_2d(np.cov(self.data.T))
             scale = _det_root(shape_old)
             shape_old /= scale
             if start_scale is not None:
@@ -1987,8 +1987,11 @@ class CovDetMCDResult(NamedTuple):
         Determinants of the covariance of the evaluation subset for all
         starting sets. Only set on the non-reweighted (raw) result.
     idx_best : int or None
-        Index of the best starting set in `det_all`. Only set on the
-        non-reweighted (raw) result.
+        Index of the starting set with the smallest covariance
+        determinant. The selection is computed in log space and is
+        therefore unaffected by determinant overflow, so it equals
+        ``argmin(det_all)`` only while the determinants are finite and
+        positive. Only set on the non-reweighted (raw) result.
     tmean : ndarray or None
         Location estimate used to standardize the data before computing
         starting sets. Only set on the non-reweighted (raw) result.
@@ -2094,7 +2097,7 @@ class CovDetMCD:
             idx_sel = np.argpartition(d, h)[:h]
             x_sel = x[idx_sel]
             mean = x_sel.mean(0)
-            cov_new = np.cov(x_sel.T, ddof=1)
+            cov_new = np.atleast_2d(np.cov(x_sel.T, ddof=1))
 
             if ((cov - cov_new) ** 2).mean() < tol:
                 cov = cov_new
@@ -2149,11 +2152,14 @@ class CovDetMCD:
         if mean is None:
             mean = x_sel.mean(0)
         if cov is None:
-            cov = np.cov(x_sel.T, ddof=1)
+            cov = np.atleast_2d(np.cov(x_sel.T, ddof=1))
 
         # updated with c-step
         mean, cov, conv = self._cstep(x, mean, cov, h, maxiter=maxiter)
-        det = np.linalg.det(cov)
+        # det can overflow to inf; it is kept as the public det_subset, while
+        # starting-set ranking uses slogdet and does not depend on it
+        with np.errstate(over="ignore"):
+            det = np.linalg.det(cov)
 
         return mean, cov, det, conv
 
@@ -2237,9 +2243,15 @@ class CovDetMCD:
         fac_trunc = coef_normalize_cov_truncated(h / nobs, k_vars)
 
         res = {}
+        logdet_all = []
         for ii, ini in enumerate(starts):
             idx_sel, method = ini
             mean, cov, det, _ = self._fit_one(x, idx_sel, h, maxiter=maxiter_step)
+            # rank by log-determinant because det overflows to inf for
+            # moderately large k_vars; candidates with a zero or negative
+            # determinant (sign <= 0) are ranked last
+            sign, logdet = np.linalg.slogdet(cov)
+            logdet_all.append(logdet if sign > 0 else np.inf)
             res[ii] = CovDetMCDResult(
                 mean=mean,
                 cov=cov * fac_trunc,
@@ -2248,7 +2260,7 @@ class CovDetMCD:
             )
 
         det_all = np.array([i.det_subset for i in res.values()])
-        idx_best = np.argmin(det_all)
+        idx_best = np.argmin(logdet_all)
         best = res[idx_best]
         # mean = best.mean
         # cov = best.cov
@@ -2368,7 +2380,7 @@ class CovDetS:
         x_sel = self.data[idx]
 
         mean = x_sel.mean(0)
-        cov = np.cov(x_sel.T)
+        cov = np.atleast_2d(np.cov(x_sel.T))
 
         scale2 = _det_root(cov)
         shape = cov / scale2
