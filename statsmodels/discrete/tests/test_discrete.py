@@ -3826,6 +3826,56 @@ def test_mnlogit_margeff_dummy_count(kind):
     assert_allclose(marg.margeff_se[col - 1], se, rtol=1e-6)
 
 
+@pytest.mark.parametrize("k_choices", [3, 4])
+def test_mnlogit_margeff_dummy_and_count_together(k_choices):
+    # GH5488, dummy=True and count=True in the same call, with K = 5 columns
+    # different from the number of choices J and signal in the data, so that
+    # the marginal effects are not close to zero
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rng = np.random.default_rng(8442 + k_choices)
+    nobs = 1500
+    x = rng.normal(size=nobs)
+    count = rng.poisson(2, size=nobs)
+    dummy1 = rng.random(nobs) > 0.5
+    dummy2 = rng.random(nobs) > 0.7
+    exog = sm.add_constant(np.column_stack([x, count, dummy1, dummy2]).astype(float))
+    beta = rng.normal(scale=0.5, size=(exog.shape[1], k_choices - 1))
+    prob = np.exp(np.column_stack([np.zeros(nobs), exog @ beta]))
+    prob /= prob.sum(1, keepdims=True)
+    endog = (rng.random(nobs)[:, None] > prob.cumsum(1)).sum(1)
+    mod = MNLogit(endog, exog)
+    res = mod.fit(disp=0)
+    assert mod.K != mod.J
+
+    def effects(params):
+        params = params.reshape(mod.K, mod.J - 1, order="F")
+        out = []
+        for col, kind in [(2, "count"), (3, "dummy"), (4, "dummy")]:
+            exog0, exog1 = exog.copy(), exog.copy()
+            if kind == "dummy":
+                exog0[:, col] = 0
+                exog1[:, col] = 1
+                step = 1
+            else:
+                exog0[:, col] -= 1
+                exog1[:, col] += 1
+                step = 2
+            diff = mod.predict(params, exog1) - mod.predict(params, exog0)
+            out.append((diff / step).mean(0))
+        return np.concatenate(out)
+
+    marg = res.get_margeff(dummy=True, count=True)
+    params = res.params.ravel(order="F")
+    expected = effects(params)
+    jac = approx_fprime(params, effects, centered=True)
+    se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
+    # margeff excludes the constant column, rows 1 to 3 are count, dummy1, dummy2
+    assert_allclose(marg.margeff[1:4].ravel(), expected, rtol=1e-8)
+    assert_allclose(marg.margeff_se[1:4].ravel(), se, rtol=1e-5)
+    assert np.abs(expected).max() > 0.01
+
+
 def _fit_logit_for_summary():
     data = load_spector()
     data.exog = sm.add_constant(data.exog, prepend=False)
