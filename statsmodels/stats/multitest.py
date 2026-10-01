@@ -29,6 +29,7 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     float_like,
+    int_like,
     string_like,
 )
 
@@ -819,6 +820,15 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7, nbins=30, alph
 
     from statsmodels.genmod.generalized_linear_model import GLM, families
     from statsmodels.regression.linear_model import OLS
+
+    deg = int_like(deg, "deg", optional=False)
+    if deg < 1:
+        # a non-positive degree used to build an empty Vandermonde matrix
+        # and leak a bare numpy error from the density fit
+        raise ValueError(f"deg must be a positive integer, got {deg}")
+    nbins = int_like(nbins, "nbins", optional=False)
+    if nbins < 2:
+        raise ValueError(f"nbins must be a positive integer >= 2, got {nbins}")
 
     # Bins for Poisson modeling of the marginal Z-score density
     minz = min(zscores)

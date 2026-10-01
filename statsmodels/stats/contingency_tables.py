@@ -1011,6 +1011,12 @@ class StratifiedTable:
                 table = table.copy()
                 table[:, :, ix] += 0.5
 
+        if table.min() < 0:
+            raise ValueError(
+                "contingency table cell counts must be non-negative, got "
+                f"minimum {table.min()}"
+            )
+
         self.table = table
 
         self._cache = {}

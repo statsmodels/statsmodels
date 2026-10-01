@@ -534,8 +534,12 @@ def effectsize_2proportions(
     zmask = np.logical_or(zero_mask1, zero_mask2)
     n1 = nobs1 + (cc1 + cc2) * zmask
     n2 = nobs2 + (cc1 + cc2) * zmask
-    p1 = (count1 + cc1) / (n1)
-    p2 = (count2 + cc2) / (n2)
+    # GH#10290: apply the continuity correction per study (only where a cell is
+    # zero), gating the numerator with zmask to match the denominator above and
+    # the documented behavior. Without this, studies with no zero cell are
+    # spuriously altered and depend on whether other studies have zero cells.
+    p1 = (count1 + cc1 * zmask) / (n1)
+    p2 = (count2 + cc2 * zmask) / (n2)
 
     if zero_correction == "clip":
         p1 = np.clip(p1, *clip_bounds)

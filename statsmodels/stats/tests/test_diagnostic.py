@@ -431,6 +431,16 @@ class TestDiagnosticG:
         res = ARIMA(data, order=(1, 0, 0), trend="n").fit()
         smsdia.acorr_breusch_godfrey(res, nlags=1, result_object=False)
 
+    def test_acorr_breusch_godfrey_nlags_validation(self):
+        data = sunspots.load_pandas().data["SUNACTIVITY"].to_numpy()[:40]
+        res = OLS(data, np.ones(40)).fit()
+        # a negative nlags used to leak "negative dimensions are not allowed"
+        # from numpy, and nlags >= nobs used to fail deep inside f_test
+        with pytest.raises(ValueError, match="non-negative"):
+            smsdia.acorr_breusch_godfrey(res, nlags=-3)
+        with pytest.raises(ValueError, match="smaller than the number of observations"):
+            smsdia.acorr_breusch_godfrey(res, nlags=40)
+
     def test_acorr_ljung_box(self):
 
         # unit-test which may be useful later
@@ -1744,9 +1754,7 @@ def test_outlier_test():
     res2 = np.c_[rstudent, unadj_p, bonf_p]
     res = oi.outlier_test(ndarray_mod, method="b", labels=labels, order=True)
     np.testing.assert_almost_equal(res.values, res2, 7)
-    np.testing.assert_equal(
-        res.index.tolist(), sorted_labels
-    )  # pylint: disable-msg=E1103
+    np.testing.assert_equal(res.index.tolist(), sorted_labels)  # pylint: disable-msg=E1103
 
     data = pd.DataFrame(
         np.column_stack((endog, exog)),
@@ -2201,6 +2209,32 @@ def test_diagnostics_pandas():
     smsdia.recursive_olsresiduals(res)
     smsdia.recursive_olsresiduals(res, order_by=np.arange(y.shape[0] - 1, 0 - 1, -1))
     smsdia.spec_white(res.resid, x)
+
+
+@pytest.mark.parametrize("k_vars, skip", [(2, None), (5, None), (3, 20)])
+def test_harvey_collier_skip(k_vars, skip):
+    # GH 8446, the t-test must use the recursive residuals from index skip
+    rs = np.random.RandomState(8446)
+    nobs = 60
+    exog = add_constant(rs.standard_normal((nobs, k_vars - 1)))
+    endog = exog.sum(1) + rs.standard_normal(nobs)
+    res = OLS(endog, exog).fit()
+    hc = smsdia.linear_harvey_collier(res, skip=skip)
+
+    start = k_vars if skip is None else skip
+    rresid = []
+    for t in range(start, nobs):
+        x0 = exog[:t]
+        xtxi = np.linalg.inv(x0.T @ x0)
+        params = xtxi @ x0.T @ endog[:t]
+        err = endog[t] - exog[t] @ params
+        rresid.append(err / np.sqrt(1 + exog[t] @ xtxi @ exog[t]))
+    expected = stats.ttest_1samp(rresid, 0)
+
+    assert_allclose(hc.statistic, expected.statistic, rtol=1e-10)
+    assert_allclose(hc.pvalue, expected.pvalue, rtol=1e-10)
+    if hasattr(hc, "df"):
+        assert hc.df == nobs - start - 1
 
 
 def test_diagnostics_hac():

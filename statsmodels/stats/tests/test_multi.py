@@ -730,3 +730,19 @@ def test_multitest_alpha_range():
     with pytest.raises(ValueError, match=match):
         fdrcorrection(pvals, alpha=1.5)
     assert fdrcorrection(pvals, alpha=1.0)[0].all()
+
+
+def test_local_fdr_param_validation():
+    # a non-positive deg used to leak a bare numpy error from the density
+    # fit, and a degenerate nbins crashed inside numpy's histogram
+    rs = np.random.RandomState(12345)
+    zscores = rs.standard_normal(200)
+    with pytest.raises(ValueError, match="deg must be a positive integer"):
+        local_fdr(zscores, deg=-1)
+    with pytest.raises(ValueError, match="nbins must be a positive integer"):
+        local_fdr(zscores, nbins=-5)
+    with pytest.raises(ValueError, match="nbins must be a positive integer"):
+        local_fdr(zscores, nbins=1)
+    # the defaults still produce a full fdr curve
+    fdr = local_fdr(zscores)
+    assert fdr.shape == (200,)
