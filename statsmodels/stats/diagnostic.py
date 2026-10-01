@@ -1411,6 +1411,7 @@ def het_goldfeldquandt(
     x = np.asarray(x)
     y = np.asarray(y)  # **2
     nobs, nvars = x.shape
+    split_given = split
     if split is None:
         split = nobs // 2
     elif 0 < split < 1:
@@ -1418,8 +1419,13 @@ def het_goldfeldquandt(
     if not 0 < split < nobs:
         # a negative or oversized split silently produced nan test results
         # from empty subsample regressions
+        got = f"{split}"
+        if split_given is not None and split_given != split:
+            # a fraction that is rounded down to the number of observations
+            got = f"{split_given}, which is {split} observations"
         raise ValueError(
-            f"split must be between 0 and the number of observations ({nobs}), got {split}"
+            "split must be between 0 and the number of observations "
+            f"({nobs}), got {got}"
         )
 
     if drop is None:
