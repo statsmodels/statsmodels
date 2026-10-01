@@ -144,9 +144,11 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
     means = np.asarray(means)
     n_groups = means.shape[0]
 
-    if np.any(np.asarray(vars_) < 0):
+    vars_ = np.asarray(vars_)
+    nobs = np.asarray(nobs)
+    if np.any(vars_ < 0):
         raise ValueError("vars_ must be non-negative")
-    if np.any(np.asarray(nobs) <= 0):
+    if np.any(nobs <= 0):
         raise ValueError("nobs must be positive")
 
     if np.size(nobs) == 1:
@@ -158,7 +160,6 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
         if np.size(vars_) == 1:
             var_resid = vars_
         else:
-            vars_ = np.asarray(vars_)
             var_resid = ((nobs - 1) * vars_).sum() / (nobs_t - n_groups)
 
         vars_ = var_resid  # scalar, if broadcasting works
