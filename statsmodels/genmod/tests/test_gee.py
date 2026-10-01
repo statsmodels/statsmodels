@@ -2179,7 +2179,8 @@ def test_df_resid_rank_deficient():
     with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
         res = gee.GEE(endog, exog, groups=groups).fit()
     assert_equal(res.df_resid, nobs - 22)
-    assert res.scale > 0
+    resid = endog - res.fittedvalues
+    assert_allclose(res.scale, np.sum(resid**2) / res.df_resid, rtol=1e-10)
 
 
 def simple_qic_data(fam):
