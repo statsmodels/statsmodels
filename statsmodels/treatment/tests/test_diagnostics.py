@@ -1,5 +1,7 @@
-"""Numerical references use small samples with hand-calculated moments."""
+"""Numerical references use small samples with hand-calculated moments and
+the cataneo2 data with values computed in R."""
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -7,6 +9,7 @@ from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
+from statsmodels.discrete.discrete_model import Logit
 from statsmodels.regression.linear_model import OLS
 from statsmodels.treatment.treatment_effects import TreatmentEffect
 
@@ -122,6 +125,23 @@ def test_invalid_predictions(teff, prob):
         teff.overlap_summary()
 
 
+@pytest.mark.parametrize(
+    "prob",
+    [
+        [0.2, 0.5],
+        [0.2, np.nan, 0.5, 0.8],
+        [0.0, 0.2, 0.5, 0.8],
+        [0.1, 0.2, 0.5, 1.0],
+    ],
+)
+def test_balance_invalid_prob_select(teff, prob):
+    # prob_select is clipped to ps_bounds when the object is created, so the
+    # check only applies if it is replaced afterwards
+    teff.prob_select = np.array(prob)
+    with pytest.raises(ValueError, match="prob_select must"):
+        teff.balance_table()
+
+
 @pytest.mark.parametrize("method", ["overlap_summary", "balance_table"])
 def test_missing_selection(teff, method):
     del teff.results_select
@@ -146,3 +166,87 @@ def test_small_arm(teff):
 def test_invalid_target(teff):
     with pytest.raises(ValueError, match="effect_group"):
         teff.balance_table(effect_group="invalid")
+
+
+def test_balance_overlap_cataneo2():
+    # Reference values are from an independent implementation in base R (glm
+    # for the logit selection model, quantile type 7). Weights are target / p
+    # for treated and target / (1 - p) for control observations, weighted means
+    # are normalized within each group, and the SMD denominator is
+    # sqrt((var1 + var0) / 2) using the unweighted sample variances.
+    dta = pd.read_csv(Path(__file__).parent / "results" / "cataneo2.csv")
+    selection = Logit.from_formula(
+        "mbsmoke_ ~ prenatal1_ + mmarried_ + mage + mage2 + fbaby_ + medu", dta
+    ).fit(disp=0)
+    outcome = OLS.from_formula("bweight ~ prenatal1_ + mmarried_ + mage + fbaby_", dta)
+    teff = TreatmentEffect(
+        outcome,
+        np.asarray(dta["mbsmoke_"]),
+        results_select=selection,
+        ps_bounds=(0.01, 0.99),
+    )
+    names = ["prenatal1_", "mmarried_", "mage", "mage2", "fbaby_", "medu"]
+    smd = [
+        -0.324269538153,
+        -0.59530093948,
+        -0.300179004052,
+        -0.302827506567,
+        -0.166327056711,
+        -0.547435654237,
+    ]
+    smd_weighted = {
+        "all": [
+            -0.0217711648206,
+            -0.0112387377971,
+            -0.0484502157561,
+            -0.0418129673974,
+            -0.00221555011278,
+            -0.135652892311,
+        ],
+        1: [
+            0.0224737362479,
+            0.00884655455659,
+            0.00510003690033,
+            0.00290760648333,
+            0.0061773160841,
+            0.173838011345,
+        ],
+        0: [
+            -0.0313948715094,
+            -0.014517663803,
+            -0.060376982311,
+            -0.0516492711265,
+            -0.00378071350048,
+            -0.207127592846,
+        ],
+    }
+    for target, expected in smd_weighted.items():
+        table = teff.balance_table(effect_group=target)
+        assert list(table.index) == ["Intercept", *names]
+        assert table.loc["Intercept", ["smd", "smd_weighted"]].isna().all()
+        assert_allclose(table.loc[names, "smd"], smd, rtol=1e-6)
+        assert_allclose(table.loc[names, "smd_weighted"], expected, rtol=1e-6)
+
+    result = teff.overlap_summary()
+    assert list(result.index) == ["control", "treated"]
+    assert_allclose(
+        result[["min", "q25", "median", "q75", "max"]],
+        [
+            [
+                0.0135116686608,
+                0.098110186796,
+                0.136098783386,
+                0.214568822407,
+                0.80347726856,
+            ],
+            [
+                0.0401604332507,
+                0.150960738406,
+                0.232336371676,
+                0.36240587815,
+                0.802149388327,
+            ],
+        ],
+        rtol=1e-6,
+    )
+    assert_allclose(result[["nobs", "n_below", "n_above"]], [[3778, 0, 0], [864, 0, 0]])
