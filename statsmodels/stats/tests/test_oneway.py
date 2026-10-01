@@ -843,3 +843,13 @@ def test_confint_noncentrality_alternative():
     # than a NotImplementedError
     with pytest.raises(ValueError, match="alternative must be one of"):
         confint_noncentrality(f_stat, df, alternative="larger")
+
+
+def test_effectsize_oneway_invalid_inputs_raise():
+    means = np.array([1.0, 2.0, 3.0])
+    # negative group variances are invalid; previously they silently
+    # produced a meaningless negative effect size
+    with pytest.raises(ValueError, match="vars_ must be non-negative"):
+        effectsize_oneway(means, np.array([1.0, -2.0, 3.0]), np.array([10, 10, 10]))
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        effectsize_oneway(means, np.array([1.0, 2.0, 3.0]), np.array([10, -1, 10]))
