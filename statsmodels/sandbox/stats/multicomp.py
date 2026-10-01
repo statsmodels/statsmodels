@@ -74,7 +74,7 @@ from scipy import interpolate, stats
 from statsmodels.graphics import utils
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.sm_exceptions import ValueWarning
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import float_like, string_like
 
 try:
     # Studentized Range in SciPy 1.7+
@@ -1178,6 +1178,11 @@ class MultiComparison:
 
         .. versionadded:: 0.15.0
         """
+        alpha = float_like(alpha, "alpha", optional=False)
+        if not 0 < alpha < 1:
+            raise ValueError(
+                f"alpha must be in the range (0, 1), got {alpha}"
+            )
         self.groupstats = GroupsStats(
             np.column_stack([self.data, self.groupintlab]), useranks=False
         )

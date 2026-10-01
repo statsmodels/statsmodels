@@ -291,6 +291,32 @@ def test_covdetmcd():
     assert_allclose(shape, shape_r, rtol=1e-5)
 
 
+def test_covdetmcd_rank_by_logdet():
+    # GH-10295: det(cov) overflows to inf for every starting set, so
+    # np.argmin(det_all) silently picked the first start and the selected
+    # start changed with the scale of the data.
+    rng = np.random.default_rng(12345)
+    x = rng.standard_normal((100, 30)) * 5e5
+    h = 65
+
+    res = robcov.CovDetMCD(x).fit(h, maxiter_step=2, reweight=False)
+    res_scaled = robcov.CovDetMCD(x / 4.0).fit(h, maxiter_step=2, reweight=False)
+
+    # the starts of the unscaled data overflow to inf for every determinant
+    assert np.all(np.isinf(res.det_all))
+    # determinants of the scaled data are finite
+    assert np.all(np.isfinite(res_scaled.det_all))
+    # the overflowing fit selects the same start as the old determinant
+    # criterion evaluated on the finite, scaled determinants
+    assert res.idx_best == np.argmin(res_scaled.det_all)
+    # ranking by log-determinant is scale-equivariant ...
+    assert res.idx_best == res_scaled.idx_best
+    assert res.idx_best != 0
+    # ... and exactly preserves a power-of-two rescaling
+    assert_allclose(res.mean, 4.0 * res_scaled.mean)
+    assert_allclose(res.cov, 16.0 * res_scaled.cov)
+
+
 def test_covdetmm():
 
     # results from rrcov
@@ -324,6 +350,44 @@ def test_covdetmm():
 
     assert_allclose(res.mean, mean_dmm_r, rtol=1e-3)
     assert_allclose(res.cov, cov_dmm_r, rtol=1e-3, atol=1e-3)
+
+
+def test_covdet_one_column():
+    # GH-10300: np.cov returns a 0-d array for data with a single column,
+    # so the covariance shape was wrong in CovDetMCD, CovDetS, CovDetMM
+    # and in the no-start branch of CovM.
+    rng = np.random.default_rng(3)
+    x = rng.standard_normal((50, 1))
+    h = 26
+
+    for res in (
+        robcov.CovDetMCD(x).fit(h),
+        robcov.CovDetS(x).fit(),
+        robcov.CovDetMM(x).fit(),
+        robcov.CovM(x).fit(),
+    ):
+        cov = np.asarray(res.cov)
+        assert cov.shape == (1, 1)
+        assert np.all(np.isfinite(cov))
+        assert cov[0, 0] > 0
+
+    # Accuracy on a constructed dataset with an unambiguous optimum: a tight
+    # core of h points plus 24 far outliers. The C-steps converge to the core
+    # for any correct implementation, i.e. to the minimum-variance sliding
+    # window of the sorted data, which is the exact univariate MCD solution.
+    core = 10 + 0.01 * rng.standard_normal((h, 1))
+    outliers = np.concatenate([np.full((12, 1), -100.0), np.full((12, 1), 100.0)])
+    x2 = np.concatenate([core, outliers])
+    raw = robcov.CovDetMCD(x2).fit(h).results_raw
+
+    x2_sorted = np.sort(x2[:, 0])
+    windows = np.lib.stride_tricks.sliding_window_view(x2_sorted, h)
+    window_vars = windows.var(axis=1, ddof=1)
+    idx_min = np.argmin(window_vars)
+    assert_allclose(raw.det_subset, window_vars[idx_min], rtol=1e-12)
+    fac = robcov.coef_normalize_cov_truncated(h / x2.shape[0], 1)
+    assert_allclose(raw.cov, fac * window_vars[idx_min], rtol=1e-12)
+    assert_allclose(raw.mean[0], x2_sorted[idx_min : idx_min + h].mean(), rtol=1e-12)
 
 
 def test_det_root_does_not_overflow():

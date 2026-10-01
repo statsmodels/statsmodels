@@ -269,3 +269,13 @@ def test_cdflink_deriv2_numdiff():
     analytic = link.deriv2(p)
     numeric = link.deriv2_numdiff(p)
     assert_allclose(numeric, analytic, rtol=5e-6, atol=1e-6)
+
+
+def test_negative_binomial_link_invalid_alpha_raises():
+    # negative alpha silently produced inf link values and zero alpha
+    # raised ZeroDivisionError at call time; both are rejected up front now
+    with pytest.raises(ValueError, match="alpha must be positive"):
+        links.NegativeBinomial(alpha=-1)
+    with pytest.raises(ValueError, match="alpha must be positive"):
+        links.NegativeBinomial(alpha=0)
+    assert np.isfinite(negbinom(np.array([0.5, 0.9]))).all()

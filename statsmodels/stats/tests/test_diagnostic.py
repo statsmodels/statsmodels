@@ -2409,3 +2409,18 @@ def test_compare_cox_j_mismatched_nobs():
         smsdia.compare_cox(res_full, res_short)
     with pytest.raises(ValueError, match="same number of observations"):
         smsdia.compare_j(res_full, res_short)
+
+
+def test_goldfeldquandt_split_validation():
+    # a negative or oversized split used to silently return nan test results
+    # from empty subsample regressions
+    rs = np.random.RandomState(12345)
+    y = rs.standard_normal(60)
+    x = np.column_stack([np.ones(60), rs.standard_normal((60, 2))])
+    with pytest.raises(ValueError, match="split must be between 0 and"):
+        smsdia.het_goldfeldquandt(y, x, split=-1)
+    with pytest.raises(ValueError, match="split must be between 0 and"):
+        smsdia.het_goldfeldquandt(y, x, split=60)
+    # the fraction form and the default stay valid
+    smsdia.het_goldfeldquandt(y, x, split=0.5)
+    smsdia.het_goldfeldquandt(y, x)

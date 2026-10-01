@@ -127,6 +127,12 @@ class Table:
         self.table_orig = table
         self.table = np.asarray(table, dtype=np.float64)
 
+        if self.table.min() < 0:
+            raise ValueError(
+                "contingency table cell counts must be non-negative, got "
+                f"minimum {self.table.min()}"
+            )
+
         if shift_zeros and (self.table.min() == 0):
             self.table[self.table == 0] = 0.5
 

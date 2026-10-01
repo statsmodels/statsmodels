@@ -1200,6 +1200,13 @@ class PHReg(model.LikelihoodModel):
         -----
         Used to calculate leverages and score residuals.
         """
+        return self._covariate_averages(params)
+
+    def _covariate_averages(self, params, efron=False):
+        # Implements weighted_covariate_averages.  If efron is True, the
+        # average at a time with m tied failures is the mean over
+        # j = 0, ..., m - 1 of the averages in which the tied failures
+        # have their weights multiplied by 1 - j / m.
 
         surv = self.surv
 
@@ -1229,7 +1236,16 @@ class PHReg(model.LikelihoodModel):
                 xp0 += e_linpred[ix].sum()
                 xp1 += np.dot(e_linpred[ix], exog_s[ix, :])
 
-                average_s[i, :] = xp1 / xp0
+                if efron:
+                    ixf = uft_ix[i]
+                    xp0f = e_linpred[ixf].sum()
+                    xp1f = np.dot(e_linpred[ixf], exog_s[ixf, :])
+                    J = np.arange(len(ixf), dtype=np.float64) / len(ixf)
+                    numer = xp1 - np.outer(J, xp1f)
+                    denom = xp0 - np.outer(J, xp0f)
+                    average_s[i, :] = (numer / denom).mean(0)
+                else:
+                    average_s[i, :] = xp1 / xp0
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -1696,7 +1712,10 @@ class PHRegResults(base.LikelihoodModelResults):
         """
 
         surv = self.model.surv
-        w_avg = self.weighted_covariate_averages
+        if self.model.ties == "efron":
+            w_avg = self.model._covariate_averages(self.params, efron=True)
+        else:
+            w_avg = self.weighted_covariate_averages
 
         # Initialize at NaN since rows that belong to strata with no
         # events have undefined residuals.
