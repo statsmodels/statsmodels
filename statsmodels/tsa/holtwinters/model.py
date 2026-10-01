@@ -327,11 +327,14 @@ class ExponentialSmoothing(TimeSeriesModel):
             return self._y
         if self._use_boxcox is True:
             y, self._lambda = boxcox(self._y)
+        elif self._use_boxcox == "log":
+            self._lambda = 0.0
+            y = boxcox(self._y, 0.0)
         elif isinstance(self._use_boxcox, (int, float)):
             self._lambda = float(self._use_boxcox)
             y = boxcox(self._y, self._use_boxcox)
         else:
-            raise TypeError("use_boxcox must be True, False or a float.")
+            raise TypeError("use_boxcox must be True, False, 'log' or a float.")
         return y
 
     @contextlib.contextmanager
