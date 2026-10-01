@@ -1615,6 +1615,12 @@ class TestKPSS:
         with pytest.raises(ValueError, match=msg):
             kpss(self.x, "c", nlags=nobs)
 
+    def test_kpss_fails_on_negative_nlags(self):
+        # a negative nlags used to flow straight into the lag computation and
+        # silently return a statistic computed with lags=-1
+        with pytest.raises(ValueError, match="non-negative"):
+            kpss(self.x, "c", nlags=-1)
+
     def test_kpss_autolags_does_not_assign_lags_equal_to_nobs(self):
         # Test that if *autolags* exceeds number of observations, we set
         # suitable lags
