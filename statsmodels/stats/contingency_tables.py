@@ -104,6 +104,11 @@ class Table:
     table_orig : array_like
         The original table is cached as `table_orig`.
 
+    Raises
+    ------
+    ValueError
+        If any cell of the table is negative.
+
     See Also
     --------
     statsmodels.graphics.mosaicplot.mosaic
