@@ -31,6 +31,7 @@ could be loaded with webuse
 from statsmodels.compat.pandas import Substitution
 
 import numpy as np
+import pandas as pd
 from scipy.linalg import block_diag
 
 from statsmodels.regression.linear_model import WLS
@@ -856,6 +857,150 @@ class TreatmentEffect:
 
         self.exog_grouped = np.concatenate((mod0.exog, mod1.exog), axis=0)
         self.endog_grouped = np.concatenate((mod0.endog, mod1.endog), axis=0)
+
+    def _diagnostic_sample(self):
+        if not hasattr(self, "results_select"):
+            raise ValueError("diagnostics require results_select")
+        treatment = np.asarray(self.treatment)
+        if (treatment.shape != (self.nobs,)
+                or not np.isin(treatment, [0, 1]).all()):
+            raise ValueError("treatment must be a one-dimensional 0/1 array")
+        mask = treatment == 1
+        if not mask.any() or mask.all():
+            raise ValueError("diagnostics require both treatment groups")
+        return mask
+
+    def overlap_summary(self):
+        """
+        Summarize unclipped propensity scores by treatment group.
+
+        Returns
+        -------
+        DataFrame
+            Rows ``control`` and ``treated`` contain the observation count
+            (``nobs``), minimum, 25th percentile, median, 75th percentile,
+            maximum, and counts strictly below and above ``ps_bounds``
+            (``n_below`` and ``n_above``).
+
+        Notes
+        -----
+        Uses predictions from the selection model before clipping. Extreme
+        scores can indicate poor practical overlap; these summaries do not
+        establish the population overlap assumption. No observations are
+        dropped and no model is refitted.
+        """
+        mask = self._diagnostic_sample()
+        prob = np.asarray(self.results_select.predict(), dtype=float)
+        if (prob.shape != (self.nobs,) or not np.isfinite(prob).all()
+                or np.any((prob < 0) | (prob > 1))):
+            raise ValueError("selection predictions must be finite probabilities "
+                             "with one value per observation")
+        rows = []
+        for group in [~mask, mask]:
+            values = prob[group]
+            quantiles = np.quantile(values, [0, 0.25, 0.5, 0.75, 1])
+            rows.append(dict(zip(
+                ["min", "q25", "median", "q75", "max"], quantiles,
+                strict=True)))
+            rows[-1].update(
+                nobs=values.size,
+                n_below=int(np.sum(values < self.ps_bounds[0])),
+                n_above=int(np.sum(values > self.ps_bounds[1])),
+            )
+        return pd.DataFrame(rows, index=["control", "treated"])[
+            ["nobs", "min", "q25", "median", "q75", "max", "n_below",
+             "n_above"]]
+
+    def balance_table(self, exog=None, effect_group="all"):
+        """
+        Compare covariate means before and after inverse probability weighting.
+
+        Parameters
+        ----------
+        exog : array_like, optional
+            Two-dimensional finite numeric covariates in the original sample
+            order, with one row per observation. The default is the selection
+            model's design matrix. DataFrame column names are retained.
+            Categorical covariates must first be encoded numerically.
+        effect_group : {"all", 0, 1, "treated", "untreated", "control"}, optional
+            Weighting target: ``"all"`` for ATE, 1 or ``"treated"`` for ATET,
+            and 0, ``"untreated"`` or ``"control"`` for ATC.
+
+        Returns
+        -------
+        DataFrame
+            One row per covariate, with ``mean_control``, ``mean_treated``,
+            ``mean_control_weighted``, ``mean_treated_weighted``, ``smd`` and
+            ``smd_weighted``. Selection-model covariate names are used by
+            default; unnamed supplied columns are labelled x0, x1, etc.
+
+        Notes
+        -----
+        Weights use the clipped ``prob_select`` used by the estimators.
+        Means are normalized separately within each treatment group.
+        SMD is treated minus control mean divided by
+        ``sqrt((var_treated + var_control) / 2)``, using unweighted sample
+        variances (ddof=1). This same denominator is held fixed before and
+        after weighting, for all weighting targets. Binary columns use this
+        same numeric convention rather than population Bernoulli variances.
+        This follows the fixed-scale approach in [1]_, but does not adopt
+        its target-specific or binary-covariate defaults.
+
+        Columns with zero pooled variance, including intercepts, have NaN
+        SMDs. At least two observations are required in each treatment group.
+        These descriptive statistics do not certify absence of confounding.
+
+        References
+        ----------
+        .. [1] Greifer, N. cobalt: Frequently Asked Questions, "How are
+           standardized mean differences computed in cobalt?"
+           https://ngreifer.github.io/cobalt/articles/faq.html
+        """
+        mask = self._diagnostic_sample()
+        if min(mask.sum(), (~mask).sum()) < 2:
+            raise ValueError("balance requires at least two observations per group")
+        if exog is None:
+            exog = self.results_select.model.exog
+            names = self.results_select.model.exog_names
+        else:
+            names = getattr(exog, "columns", None)
+        exog = np.asarray(exog, dtype=float)
+        if (exog.ndim != 2 or exog.shape[0] != self.nobs
+                or exog.shape[1] == 0 or not np.isfinite(exog).all()):
+            raise ValueError("exog must be a finite nonempty two-dimensional "
+                             "array with one row per observation")
+        if names is None:
+            names = [f"x{i}" for i in range(exog.shape[1])]
+        prob = np.asarray(self.prob_select)
+        if (prob.shape != (self.nobs,) or not np.isfinite(prob).all()
+                or np.any((prob <= 0) | (prob >= 1))):
+            raise ValueError("prob_select must contain finite probabilities "
+                             "strictly between 0 and 1")
+        if effect_group == "all":
+            target = np.ones(self.nobs)
+        elif effect_group in [1, "treated"]:
+            target = prob
+        elif effect_group in [0, "untreated", "control"]:
+            target = 1 - prob
+        else:
+            raise ValueError("incorrect option for effect_group")
+        w0 = target[~mask] / (1 - prob[~mask])
+        w1 = target[mask] / prob[mask]
+        x0, x1 = exog[~mask], exog[mask]
+        mean0, mean1 = x0.mean(axis=0), x1.mean(axis=0)
+        weighted0 = np.average(x0, axis=0, weights=w0)
+        weighted1 = np.average(x1, axis=0, weights=w1)
+        scale = np.sqrt((x0.var(axis=0, ddof=1)
+                         + x1.var(axis=0, ddof=1)) / 2)
+        scale[(np.ptp(x0, axis=0) == 0) & (np.ptp(x1, axis=0) == 0)] = np.nan
+        return pd.DataFrame({
+            "mean_control": mean0,
+            "mean_treated": mean1,
+            "mean_control_weighted": weighted0,
+            "mean_treated_weighted": weighted1,
+            "smd": (mean1 - mean0) / scale,
+            "smd_weighted": (weighted1 - weighted0) / scale,
+        }, index=names)
 
     @classmethod
     def from_data(cls, endog, exog, treatment, model="ols", **kwds):
