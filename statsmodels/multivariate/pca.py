@@ -262,6 +262,9 @@ class PCA:
 
         # Check ncomp against maximum
         min_dim = min(self._nobs, self._nvar)
+        ncomp = int_like(ncomp, "ncomp", optional=True)
+        if ncomp is not None and ncomp < 1:
+            raise ValueError(f"ncomp must be a positive integer, got {ncomp}")
         self._ncomp = min_dim if ncomp is None else ncomp
         if self._ncomp > min_dim:
             import warnings
