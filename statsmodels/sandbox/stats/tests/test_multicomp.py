@@ -58,3 +58,12 @@ def test_tukeyhsd_alpha_range():
             MultiComparison(endog, groups).tukeyhsd(alpha=alpha)
         with pytest.raises(ValueError, match="alpha must be in the range"):
             pairwise_tukeyhsd(endog, groups, alpha=alpha)
+    # alphas inside the range are accepted, a smaller alpha gives wider
+    # confidence intervals
+    widths = []
+    for alpha in (0.01, np.float32(0.1), 0.5):
+        res = MultiComparison(endog, groups).tukeyhsd(alpha=alpha)
+        assert res.reject.shape == (3,)
+        widths.append(np.diff(res.confint, axis=1))
+    assert np.all(widths[0] > widths[1])
+    assert np.all(widths[1] > widths[2])
