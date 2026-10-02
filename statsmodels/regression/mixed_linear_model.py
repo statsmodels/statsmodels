@@ -1411,23 +1411,14 @@ class MixedLM(base.LikelihoodModel):
             return np.array([]), False
 
         sing = False
-        re_project = False
-        v_good = None
-        wi_good = None
-
-        if self.k_re == 0:
-            cov_re_inv = np.empty((0, 0))
-        else:
-            w, v = np.linalg.eigh(cov_re)
-            if w.min() < tol:
-                # Singular: drop the degenerate directions.
-                sing = True
-                re_project = True
-                ii = np.flatnonzero(w >= tol)
-                v_good = v[:, ii]
-                wi_good = w[ii]
-            else:
+        re_good = None
+        cov_re_inv = np.empty((0, 0))
+        if self.k_re > 0:
+            re_good = self._re_degenerate(cov_re, tol)
+            if re_good is None:
                 cov_re_inv = np.linalg.inv(cov_re)
+            else:
+                sing = True
 
         # Cache these quantities that do not change.
         if not hasattr(self, "_endex_li"):
@@ -1441,46 +1432,12 @@ class MixedLM(base.LikelihoodModel):
         xtxy = 0.0
         for group_ix, _group in enumerate(self.group_labels):
             vc_var = self._expand_vcomp(vcomp, group_ix)
-            vc_project = False
-            if vc_var.size > 0:
-                if vc_var.min() < tol:
-                    # Drop components with variance below tol.
-                    sing = True
-                    vc_project = True
-                    vc_ii = np.flatnonzero(vc_var >= tol)
-                    vc_vari = 1 / vc_var[vc_ii]
-                else:
-                    vc_vari = 1 / vc_var
-            else:
-                vc_vari = np.empty(0)
+            if vc_var.size > 0 and vc_var.min() < tol:
+                sing = True
             exog = self.exog_li[group_ix]
 
-            if re_project:
-                # Keep only the well-conditioned eigendirections.
-                ex_r_full = self._aex_r[group_ix]
-                re_cols = ex_r_full[:, : self.k_re]
-                vc_cols = ex_r_full[:, self.k_re :]
-                re_proj = np.dot(re_cols, v_good)
-                ex_r = np.concatenate((re_proj, vc_cols), axis=1)
-                ex2_r = np.dot(ex_r.T, ex_r)
-                cov_re_inv = np.diag(1 / wi_good)
-            else:
-                ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-
-            if vc_project:
-                # Keep only variance component columns with variance >= tol.
-                re_width = ex_r.shape[1] - vc_var.size
-                good = np.concatenate((np.arange(re_width), re_width + vc_ii))
-                ex_r = ex_r[:, good]
-                ex2_r = np.dot(ex_r.T, ex_r)
-
-            if ex_r.shape[1] == 0:
-                # No random effects left, so V is the identity and u is
-                # unchanged.
-                u = self._endex_li[group_ix]
-            else:
-                solver = _smw_solver(1.0, ex_r, ex2_r, cov_re_inv, vc_vari)
-                u = solver(self._endex_li[group_ix])
+            solver, _ = self._group_solver(group_ix, cov_re_inv, re_good, vc_var, tol=tol)
+            u = solver(self._endex_li[group_ix])
             xtxy += np.dot(exog.T, u)
 
         if sing:
@@ -1617,6 +1574,104 @@ class MixedLM(base.LikelihoodModel):
 
         return ex
 
+    def _re_degenerate(self, cov_re, tol=1e-10):
+        """
+        Eigendirections of the random effects covariance that are not degenerate
+
+        Parameters
+        ----------
+        cov_re : ndarray
+            The covariance matrix of the random effects.
+        tol : float, optional
+            Eigenvalues below `tol` are degenerate.
+
+        Returns
+        -------
+        tuple of ndarray or None
+            None if no eigenvalue of `cov_re` is below `tol`. Otherwise the
+            eigenvectors and the eigenvalues that are at least `tol`.
+        """
+        if self.k_re == 0:
+            return None
+        w, v = np.linalg.eigh(cov_re)
+        if w.min() >= tol:
+            return None
+        ii = np.flatnonzero(w >= tol)
+        return v[:, ii], w[ii]
+
+    def _group_solver(
+        self, group_ix, cov_re_inv, re_good, vc_var, logdet=None, tol=1e-10
+    ):
+        """
+        Solver for the covariance matrix of the observations of a group
+
+        The covariance matrix is ``V = I + Z B Z'``, where B is the block
+        diagonal covariance matrix of the random effects and the variance
+        components. Directions of the random effects covariance and variance
+        components with a variance below `tol` are dropped from B. This is the
+        limit of the solutions as these variances go to zero, and it is
+        defined if B is singular, where the inverse of B does not exist.
+
+        Parameters
+        ----------
+        group_ix : int
+            The index of the group.
+        cov_re_inv : ndarray
+            The inverse of the random effects covariance, it is only used if
+            `re_good` is None.
+        re_good : tuple of ndarray or None
+            The result of `_re_degenerate`.
+        vc_var : ndarray
+            The variance parameters of the variance components expanded for
+            the group.
+        logdet : float, optional
+            The log determinant of the random effects covariance without the
+            degenerate directions. If it is given, then the log determinant
+            of V is also returned.
+        tol : float, optional
+            The tolerance for degenerate variances.
+
+        Returns
+        -------
+        solver : callable
+            A function that given x returns ``V^{-1} x``.
+        logdet_v : float or None
+            The log determinant of V if `logdet` is given, else None.
+        """
+        ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
+        vc_good = vc_var >= tol
+        if re_good is None and vc_good.all():
+            qi = cov_re_inv
+            vc_vari = 1 / vc_var
+            ld_vc = np.sum(np.log(vc_var))
+        else:
+            k_re = self.k_re
+            if re_good is None:
+                re_cols = ex_r[:, :k_re]
+                qi = cov_re_inv
+            else:
+                re_cols = ex_r[:, :k_re] @ re_good[0]
+                qi = np.diag(1 / re_good[1])
+            ii = np.flatnonzero(vc_good)
+            vc_cols = ex_r[:, k_re:][:, ii]
+            if sparse.issparse(ex_r):
+                ex_r = sparse.hstack([sparse.csr_array(re_cols), vc_cols], format="csr")
+                ex2_r = ex_r.T @ ex_r
+            else:
+                ex_r = np.concatenate((re_cols, vc_cols), axis=1)
+                ex2_r = np.dot(ex_r.T, ex_r)
+            vc_vari = 1 / vc_var[ii]
+            ld_vc = np.sum(np.log(vc_var[ii]))
+
+        if ex_r.shape[1] == 0:
+            # No random effects left, so V is the identity.
+            return (lambda rhs: rhs), (None if logdet is None else 0.0)
+
+        solver = _smw_solver(1.0, ex_r, ex2_r, qi, vc_vari)
+        if logdet is None:
+            return solver, None
+        return solver, _smw_logdet(1.0, ex_r, ex2_r, qi, vc_vari, logdet + ld_vc)
+
     def loglike(self, params, profile_fe=True):
         """
         Evaluate the (profile) log-likelihood of the linear mixed
@@ -1643,6 +1698,12 @@ class MixedLM(base.LikelihoodModel):
         log-likelihood.  In addition, if `profile_fe` is true the
         fixed effects parameters are also profiled out.
 
+        A singular random effects covariance matrix, or a variance
+        component that is zero, is on the boundary of the parameter space.
+        The log-likelihood is continuous there. Directions with a variance
+        below 1e-10 are dropped from the covariance of the observations, which
+        is the limit as these variances go to zero.
+
         """
         if type(params) is not MixedLMParams:
             params = MixedLMParams.from_packed(
@@ -1660,6 +1721,7 @@ class MixedLM(base.LikelihoodModel):
         else:
             fe_params = params.fe_params
 
+        re_good = None
         if self.k_re > 0:
             try:
                 cov_re_inv = np.linalg.inv(cov_re)
@@ -1667,6 +1729,11 @@ class MixedLM(base.LikelihoodModel):
                 cov_re_inv = np.linalg.pinv(cov_re)
                 self._cov_sing += 1
             _, cov_re_logdet = np.linalg.slogdet(cov_re)
+            re_good = self._re_degenerate(cov_re)
+            if re_good is not None:
+                # The log determinant of the covariance without the degenerate
+                # directions, it is -inf if the covariance is singular.
+                cov_re_logdet = np.sum(np.log(re_good[1]))
         else:
             cov_re_inv = np.zeros((0, 0))
             cov_re_logdet = 0
@@ -1689,16 +1756,15 @@ class MixedLM(base.LikelihoodModel):
         for group_ix, group in enumerate(self.group_labels):
 
             vc_var = self._expand_vcomp(vcomp, group_ix)
-            cov_aug_logdet = cov_re_logdet + np.sum(np.log(vc_var))
 
             exog = self.exog_li[group_ix]
-            ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            solver = _smw_solver(1.0, ex_r, ex2_r, cov_re_inv, 1 / vc_var)
+            solver, ld = self._group_solver(
+                group_ix, cov_re_inv, re_good, vc_var, logdet=cov_re_logdet
+            )
 
             resid = resid_all[self.row_indices[group]]
 
             # Part 1 of the log likelihood (for both ML and REML)
-            ld = _smw_logdet(1.0, ex_r, ex2_r, cov_re_inv, 1 / vc_var, cov_aug_logdet)
             likeval -= ld / 2.0
 
             # Part 2 of the log likelihood (for both ML and REML)
@@ -1890,6 +1956,7 @@ class MixedLM(base.LikelihoodModel):
         except np.linalg.LinAlgError:
             cov_re_inv = np.linalg.pinv(cov_re)
             self._cov_sing += 1
+        re_good = self._re_degenerate(cov_re)
 
         score_fe = np.zeros(self.k_fe)
         score_re = np.zeros(self.k_re2)
@@ -1931,8 +1998,8 @@ class MixedLM(base.LikelihoodModel):
             vc_var = self._expand_vcomp(vcomp, group_ix)
 
             exog = self.exog_li[group_ix]
-            ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            solver = _smw_solver(1.0, ex_r, ex2_r, cov_re_inv, 1 / vc_var)
+            ex_r = self._aex_r[group_ix]
+            solver, _ = self._group_solver(group_ix, cov_re_inv, re_good, vc_var)
 
             # The residuals
             resid = self.endog_li[group_ix]
@@ -2067,8 +2134,10 @@ class MixedLM(base.LikelihoodModel):
         hess : 2d ndarray
             The Hessian matrix, evaluated at `params`.
         sing : bool
-            If True, the covariance matrix is singular and a
-            pseudo-inverse is returned.
+            If True, the random effects covariance matrix is singular or a
+            variance component is zero. The Hessian is the limit as these
+            variances go to zero, directions with a variance below 1e-10 are
+            dropped from the covariance of the observations.
 
         """
         if type(params) is not MixedLMParams:
@@ -2081,12 +2150,14 @@ class MixedLM(base.LikelihoodModel):
         cov_re = params.cov_re
         sing = False
 
+        re_good = None
         if self.k_re > 0:
             try:
                 cov_re_inv = np.linalg.inv(cov_re)
             except np.linalg.LinAlgError:
                 cov_re_inv = np.linalg.pinv(cov_re)
                 sing = True
+            re_good = self._re_degenerate(cov_re)
         else:
             cov_re_inv = np.empty((0, 0))
 
@@ -2111,16 +2182,12 @@ class MixedLM(base.LikelihoodModel):
         for group_ix, _group in enumerate(self.group_labels):
 
             vc_var = self._expand_vcomp(vcomp, group_ix)
-            vc_vari = np.zeros_like(vc_var)
-            ii = np.flatnonzero(vc_var >= 1e-10)
-            if len(ii) > 0:
-                vc_vari[ii] = 1 / vc_var[ii]
-            if len(ii) < len(vc_var):
+            if len(vc_var) > 0 and vc_var.min() < 1e-10:
                 sing = True
 
             exog = self.exog_li[group_ix]
-            ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            solver = _smw_solver(1.0, ex_r, ex2_r, cov_re_inv, vc_vari)
+            ex_r = self._aex_r[group_ix]
+            solver, _ = self._group_solver(group_ix, cov_re_inv, re_good, vc_var)
 
             # The residuals
             resid = self.endog_li[group_ix]
@@ -2245,12 +2312,20 @@ class MixedLM(base.LikelihoodModel):
         scale : float
             The estimated error variance.
 
+        Notes
+        -----
+        If the random effects covariance matrix is singular or a variance
+        component is zero, then directions with a variance below 1e-10 are
+        dropped from the covariance of the observations, which is the limit as
+        these variances go to zero.
+
         """
         try:
             cov_re_inv = np.linalg.inv(cov_re)
         except np.linalg.LinAlgError:
             cov_re_inv = np.linalg.pinv(cov_re)
             warnings.warn(_warn_cov_sing, SingularMatrixWarning, stacklevel=2)
+        re_good = self._re_degenerate(cov_re)
 
         qf = 0.0
         for group_ix, _group in enumerate(self.group_labels):
@@ -2258,9 +2333,8 @@ class MixedLM(base.LikelihoodModel):
             vc_var = self._expand_vcomp(vcomp, group_ix)
 
             exog = self.exog_li[group_ix]
-            ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
 
-            solver = _smw_solver(1.0, ex_r, ex2_r, cov_re_inv, 1 / vc_var)
+            solver, _ = self._group_solver(group_ix, cov_re_inv, re_good, vc_var)
 
             # The residuals
             resid = self.endog_li[group_ix]
