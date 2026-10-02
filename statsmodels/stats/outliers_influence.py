@@ -19,7 +19,10 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring_helpers import Appender
-from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.sm_exceptions import (
+    SingularMatrixWarning,
+    SpecificationWarning,
+)
 from statsmodels.tools.tools import maybe_unwrap_results
 from statsmodels.tools.validation import int_like
 
@@ -833,7 +836,7 @@ class OLSInfluence(_BaseInfluenceMixin):
     computed from the closed form updates, e.g. Belsley, Kuh and Welsch (1980),
     without auxiliary regressions, and are fast also for large data sets.
 
-    For other models, using the LOO measures is currently only recommended if
+    For other models, using the LOOO measures is currently only recommended if
     the data set is not too large. One possible approach for LOOO measures
     would be to identify possible problem observations with the _internal
     measures, and then run the leave-one-observation-out only with
@@ -1268,15 +1271,22 @@ class OLSInfluence(_BaseInfluenceMixin):
                 / one_minus_h
             )
             loop_idx = np.nonzero(~mask)[0]
+            # The remaining auxiliary regressions have a rank deficient exog
+            # by construction, so the warning is expected.
+            ignore_singular = True
         else:
             loop_idx = range(self.nobs)
+            ignore_singular = False
 
         for outidx in loop_idx:
             inidx = np.arange(self.nobs) != outidx
-            res_i = self.model_class(endog[inidx], exog[inidx]).fit()
-            params[outidx] = res_i.params
-            mse_resid[outidx] = res_i.mse_resid
-            det_cov_params[outidx] = np.linalg.det(res_i.cov_params())
+            with warnings.catch_warnings():
+                if ignore_singular:
+                    warnings.simplefilter("ignore", SingularMatrixWarning)
+                res_i = self.model_class(endog[inidx], exog[inidx]).fit()
+                params[outidx] = res_i.params
+                mse_resid[outidx] = res_i.mse_resid
+                det_cov_params[outidx] = np.linalg.det(res_i.cov_params())
 
         return {
             "params": params,
