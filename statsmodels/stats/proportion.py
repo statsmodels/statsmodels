@@ -1746,11 +1746,6 @@ def confint_proportions_paired(table, method="newcomb", alpha=0.05):
     """
     method = string_like(method, "method", options=("newcomb", "newcombe", "wald"))
     table = np.asarray(table, dtype=np.float64)
-    if table.ndim != 2:
-        raise ValueError(
-            "confint_proportions_paired requires a two-dimensional contingency "
-            f"table, but the input has shape {table.shape}."
-        )
     if table.shape != (2, 2):
         raise ValueError(
             "confint_proportions_paired requires a 2x2 contingency table, but "
