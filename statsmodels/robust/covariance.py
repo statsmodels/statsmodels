@@ -109,7 +109,7 @@ def _naive_ledoit_wolf_shrinkage(x, center):
     delta_ = emp_cov.copy()
     delta_.flat[:: n_features + 1] -= mu
     delta = (delta_**2).sum() / n_features
-    x2 = x**2
+    x2 = xdm**2
     beta_ = (
         1.0
         / (n_features * n_samples)
