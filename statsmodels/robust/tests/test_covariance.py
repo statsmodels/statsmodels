@@ -300,6 +300,7 @@ def test_naive_ledoit_wolf_shrinkage():
     # >>> x = np.sin(np.arange(1.0, 25.0)).reshape(6, 4) * [1.0, 2.0, 3.0, 4.0]
     # >>> cov_sk, s = ledoit_wolf(x, assume_centered=True)  # s = 0.1837
     # >>> cov_sk_wide, s = ledoit_wolf(x[:3], assume_centered=True)  # s = 0.3020
+    # >>> cov_sk_mean, s = ledoit_wolf(x)  # centered at the mean, s = 0.2150
     x = np.sin(np.arange(1.0, 25.0)).reshape(6, 4) * [1.0, 2.0, 3.0, 4.0]
     cov_sk = np.array(
         """
@@ -320,8 +321,22 @@ def test_naive_ledoit_wolf_shrinkage():
         float,
     ).reshape(4, 4)
 
+    cov_sk_mean = np.array(
+        """
+        1.3069045522207179  0.49941085732934765 -0.5800578609689707 -1.8345726475079638
+        0.49941085732934765 2.2721762731213047  0.8171635509777809 -1.6795400890559036
+       -0.5800578609689707  0.8171635509777809  3.9084387296080854  2.7813397937792352
+       -1.8345726475079638 -1.6795400890559036  2.7813397937792352  8.210170749503536
+        """.split(),
+        float,
+    ).reshape(4, 4)
+
     res = robcov._naive_ledoit_wolf_shrinkage(x, 0)
     assert_allclose(res.cov, cov_sk, rtol=1e-13)
+
+    # the shrinkage intensity uses the centered data
+    res = robcov._naive_ledoit_wolf_shrinkage(x, x.mean(0))
+    assert_allclose(res.cov, cov_sk_mean, rtol=1e-13)
 
     # fewer observations than variables, the second moment matrix is singular
     # and the shrinkage estimate is positive definite
