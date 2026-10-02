@@ -1397,6 +1397,14 @@ def het_goldfeldquandt(
     res_store : ResultsStore, optional
         Storage for the intermediate and final results that are calculated
 
+    Raises
+    ------
+    ValueError
+        If ``split`` is not between 0 and the number of observations, if
+        ``split + drop`` is not smaller than the number of observations, or if
+        a subsample does not have more observations than the rank of its
+        regressors.
+
     Notes
     -----
     The Null hypothesis is that the variance in the two sub-samples are the
@@ -1434,6 +1442,11 @@ def het_goldfeldquandt(
         start2 = split + int(nobs * drop)
     else:
         start2 = split + drop
+    if start2 >= nobs:
+        raise ValueError(
+            "split + drop must be smaller than the number of observations "
+            f"({nobs}), got {start2}"
+        )
 
     if idx is not None:
         xsortind = np.argsort(x[:, idx])
@@ -1455,6 +1468,15 @@ def het_goldfeldquandt(
         },
         removed_after="0.16",
     )
+    for name, x_sub in (("first", x[:split]), ("second", x[start2:])):
+        # the residual variance of a subsample needs more observations than
+        # the rank of its regressors, the test statistic is nan otherwise
+        rank = np.linalg.matrix_rank(x_sub)
+        if x_sub.shape[0] <= rank:
+            raise ValueError(
+                f"the {name} subsample has {x_sub.shape[0]} observations, "
+                f"which is not more than the rank of its regressors ({rank})"
+            )
     resols1 = OLS(y[:split], x[:split]).fit()
     resols2 = OLS(y[start2:], x[start2:]).fit()
     fval = resols2.mse_resid / resols1.mse_resid

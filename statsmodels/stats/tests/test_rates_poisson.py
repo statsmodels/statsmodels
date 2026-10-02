@@ -1517,6 +1517,54 @@ def test_poisson_2indep_nonpositive_exposure_raises(count1, exposure1, count2, e
         smr.test_poisson_2indep(count1, exposure1, count2, exposure2)
 
 
+@pytest.mark.parametrize(
+    "func, kwds",
+    [
+        (smr.etest_poisson_2indep, {"method": "score", "compare": "ratio"}),
+        (smr.etest_poisson_2indep, {"method": "wald", "compare": "diff"}),
+        (smr.confint_poisson_2indep, {"method": "score", "compare": "ratio"}),
+        (smr.confint_poisson_2indep, {"method": "wald-log", "compare": "ratio"}),
+        (smr.confint_poisson_2indep, {"method": "waldcc", "compare": "diff"}),
+        (smr.confint_poisson_2indep, {"method": "mover", "compare": "diff"}),
+    ],
+)
+@pytest.mark.parametrize(
+    "count1, exposure1, count2, exposure2, message",
+    [
+        (-5, 100, 3, 100, "count1 and count2 must be non-negative"),
+        (5, 100, -3, 100, "count1 and count2 must be non-negative"),
+        (5, -100, 3, 100, "exposure1 and exposure2 must be positive"),
+        (5, 100, 3, 0, "exposure1 and exposure2 must be positive"),
+    ],
+)
+def test_poisson_2indep_other_functions_invalid_inputs_raise(
+    func, kwds, count1, exposure1, count2, exposure2, message
+):
+    # etest_poisson_2indep and confint_poisson_2indep accepted the inputs that
+    # test_poisson_2indep rejects and returned nan, inf or meaningless values
+    with pytest.raises(ValueError, match=message):
+        func(count1, exposure1, count2, exposure2, **kwds)
+    # arrays are checked elementwise
+    with pytest.raises(ValueError, match=message):
+        func(
+            np.array([count1, 4]),
+            np.array([exposure1, 90]),
+            np.array([count2, 6]),
+            np.array([exposure2, 100]),
+            **kwds,
+        )
+
+
+@pytest.mark.parametrize("compare", ["ratio", "diff"])
+def test_poisson_2indep_other_functions_zero_counts_valid(compare):
+    # zero counts are valid, only negative counts and non-positive exposures
+    # are rejected
+    _, pvalue = smr.etest_poisson_2indep(0, 100, 3, 100, compare=compare)
+    assert 0 < pvalue < 1
+    low, upp = smr.confint_poisson_2indep(0, 100, 3, 100, compare=compare)
+    assert low < upp
+
+
 def test_power_2indep_invalid_method_var_raises():
     with pytest.raises(ValueError, match="method_var"):
         power_poisson_ratio_2indep(

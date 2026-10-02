@@ -799,6 +799,14 @@ class PoissonTest2indepResult(LimitedIterationMixin[float]):
     rates_cmle: tuple | None
 
 
+def _check_counts_exposures_2indep(y1, n1, y2, n2):
+    # counts and exposures of two independent samples
+    if np.any(y1 < 0) or np.any(y2 < 0):
+        raise ValueError("count1 and count2 must be non-negative")
+    if np.any(n1 <= 0) or np.any(n2 <= 0):
+        raise ValueError("exposure1 and exposure2 must be positive")
+
+
 def test_poisson_2indep(
     count1,
     exposure1,
@@ -894,6 +902,11 @@ def test_poisson_2indep(
         The two main attributes are test statistic `statistic` and p-value
         `pvalue`. See :class:`PoissonTest2indepResult` for the full list.
 
+    Raises
+    ------
+    ValueError
+        If a count is negative or an exposure is not positive.
+
     See Also
     --------
     tost_poisson_2indep
@@ -947,10 +960,7 @@ def test_poisson_2indep(
         np.asarray(count2),
         np.asarray(exposure2),
     )
-    if np.any(y1 < 0) or np.any(y2 < 0):
-        raise ValueError("count1 and count2 must be non-negative")
-    if np.any(n1 <= 0) or np.any(n2 <= 0):
-        raise ValueError("exposure1 and exposure2 must be positive")
+    _check_counts_exposures_2indep(y1, n1, y2, n2)
     d = n2 / n1
     rate1, rate2 = y1 / n1, y2 / n2
     rates_cmle = None
@@ -1213,6 +1223,11 @@ def etest_poisson_2indep(
     pvalue : float
         P-value of the e-test.
 
+    Raises
+    ------
+    ValueError
+        If a count is negative or an exposure is not positive.
+
     References
     ----------
     Gu, Ng, Tang, Schucany 2008: Testing the Ratio of Two Poisson Rates,
@@ -1240,6 +1255,7 @@ def etest_poisson_2indep(
         np.asarray(count2),
         np.asarray(exposure2),
     )
+    _check_counts_exposures_2indep(y1, n1, y2, n2)
     d = n2 / n1
 
     eps = 1e-20  # avoid zero division in stat_func
@@ -1723,6 +1739,11 @@ def confint_poisson_2indep(
     -------
     tuple (low, upp)
         Confidence limits.
+
+    Raises
+    ------
+    ValueError
+        If a count is negative or an exposure is not positive.
     """
 
     # shortcut names
@@ -1732,6 +1753,7 @@ def confint_poisson_2indep(
         np.asarray(count2),
         np.asarray(exposure2),
     )
+    _check_counts_exposures_2indep(y1, n1, y2, n2)
     rate1, rate2 = y1 / n1, y2 / n2
     alpha = alpha / 2  # two-sided only
 
