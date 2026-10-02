@@ -13,7 +13,10 @@ import pytest
 
 from statsmodels.discrete.discrete_model import Logit, Probit
 from statsmodels.regression.linear_model import OLS
-from statsmodels.treatment.treatment_effects import TreatmentEffect
+from statsmodels.treatment.treatment_effects import (
+    TreatmentEffect,
+    _aipw_pom_terms,
+)
 
 from .results import results_teffects as res_st
 
@@ -178,6 +181,17 @@ class TestTEffects:
         if effect_group == 0:
             pom_t, pom_c = pom_c, pom_t
         assert_allclose(res1, [pom_t - pom_c, pom_c, pom_t], rtol=1e-12)
+
+    @pytest.mark.parametrize("meth", ["aipw", "aipw_wls"])
+    def test_aipw_effect_group_invalid(self, meth):
+        with pytest.raises(ValueError, match="incorrect option"):
+            getattr(self.teff, meth)(effect_group="invalid")
+
+
+def test_aipw_pom_terms_invalid():
+    x = np.full(3, 0.5)
+    with pytest.raises(ValueError, match="incorrect option"):
+        _aipw_pom_terms(x, x, x, x, x, "treated")
 
 
 @pytest.mark.parametrize("meth", ["aipw", "aipw_wls"])
