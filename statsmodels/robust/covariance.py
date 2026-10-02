@@ -1727,7 +1727,7 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
             continue
         method = c.method
         mean, cov = _orthogonalize_det(z, c.cov, loc_func, scale_func)
-        d = mahalanobis(z, mean, cov)
+        d = mahalanobis(z - mean, cov)
         idx_sel = np.argpartition(d, h)[:h]
         idx_all.append((idx_sel, method))
 
