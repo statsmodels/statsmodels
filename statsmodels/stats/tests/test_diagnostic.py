@@ -31,6 +31,7 @@ from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
@@ -2412,6 +2413,68 @@ def test_het_goldfeldquandt_alternative_deprecated_alias(
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         smsdia.het_goldfeldquandt(y, x, alternative="bogus", result_object=True)
+
+
+@pytest.mark.parametrize(
+    "kwds, name",
+    [
+        ({"split": 1}, "first"),
+        ({"split": 3}, "first"),
+        ({"split": 57}, "second"),
+        ({"split": 59}, "second"),
+        ({"split": 30, "drop": 27}, "second"),
+        ({"split": 30, "drop": 0.45}, "second"),
+    ],
+)
+def test_het_goldfeldquandt_small_subsample(kwds, name):
+    # A subsample with at most as many observations as regressors has no
+    # residual degrees of freedom, the statistic and p-value were nan.
+    rng = np.random.default_rng(8446)
+    x = np.column_stack([np.ones(60), rng.standard_normal((60, 2))])
+    y = rng.standard_normal(60)
+    with pytest.raises(ValueError, match=f"the {name} subsample has"):
+        smsdia.het_goldfeldquandt(y, x, result_object=False, **kwds)
+
+
+@pytest.mark.parametrize("kwds", [{"split": 30, "drop": 30}, {"split": 30, "drop": 0.5}])
+def test_het_goldfeldquandt_empty_second_subsample(kwds):
+    # the error was a numpy "zero-size array" ValueError
+    rng = np.random.default_rng(8446)
+    x = np.column_stack([np.ones(60), rng.standard_normal((60, 2))])
+    y = rng.standard_normal(60)
+    with pytest.raises(ValueError, match=r"split \+ drop must be smaller"):
+        smsdia.het_goldfeldquandt(y, x, result_object=False, **kwds)
+
+
+@pytest.mark.parametrize("split", [4, 56])
+def test_het_goldfeldquandt_smallest_subsample(split):
+    # one residual degree of freedom in one of the subsamples is valid
+    rng = np.random.default_rng(8446)
+    x = np.column_stack([np.ones(60), rng.standard_normal((60, 2))])
+    y = rng.standard_normal(60)
+    fval, pval, _ = smsdia.het_goldfeldquandt(y, x, split=split, result_object=False)
+    res1 = OLS(y[:split], x[:split]).fit()
+    res2 = OLS(y[split:], x[split:]).fit()
+    assert_allclose(fval, (res2.ssr / res2.df_resid) / (res1.ssr / res1.df_resid))
+    assert_allclose(pval, stats.f.sf(fval, res1.df_resid, res2.df_resid))
+    assert np.isfinite(fval)
+
+
+def test_het_goldfeldquandt_rank_deficient_subsample():
+    # the residual degrees of freedom depend on the rank of the regressors in
+    # the subsample, the dummy is constant (zero) in the first 3 observations
+    rng = np.random.default_rng(8446)
+    dummy = np.r_[np.zeros(3), np.arange(57) % 2]
+    x = np.column_stack([np.ones(60), rng.standard_normal(60), dummy])
+    y = rng.standard_normal(60)
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        fval, pval, _ = smsdia.het_goldfeldquandt(y, x, split=3, result_object=False)
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res1 = OLS(y[:3], x[:3]).fit()
+    res2 = OLS(y[3:], x[3:]).fit()
+    assert res1.df_resid == 1
+    assert_allclose(fval, (res2.ssr / res2.df_resid) / (res1.ssr / res1.df_resid))
+    assert_allclose(pval, stats.f.sf(fval, res1.df_resid, res2.df_resid))
 
 
 def test_acorr_ljungbox_lags_exceed_nobs():
