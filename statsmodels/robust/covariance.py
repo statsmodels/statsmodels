@@ -105,6 +105,10 @@ def _naive_ledoit_wolf_shrinkage(x, center):
     n_samples, n_features = x.shape
     xdm = x - center
     emp_cov = xdm.T.dot(xdm) / n_samples
+    if n_features == 1:
+        # the shrinkage target is the empirical covariance, so that
+        # shrinkage = 0 / 0 and the result does not depend on the shrinkage
+        return NaiveLedoitWolfResult(cov=emp_cov, method="naive ledoit wolf")
     mu = np.trace(emp_cov) / n_features
     delta_ = emp_cov.copy()
     delta_.flat[:: n_features + 1] -= mu
@@ -693,7 +697,7 @@ def cov_ogk(
         n_trunc = nobs - sum(mask)
         sample = x[mask]
         loc = sample.mean(0)
-        cov = np.cov(sample.T, ddof=ddof)
+        cov = np.atleast_2d(np.cov(sample.T, ddof=ddof))
         # do we use empirical or theoretical frac, inlier/nobs or 1-beta?
         frac = beta  # n_inlier / nobs
         scale_factor = coef_normalize_cov_truncated(frac, k_vars)
@@ -911,6 +915,9 @@ def cov_tyler_regularized(
     If the shrinkage factor is None, then a plugin is used as described in
     Chen and Wiesel 2011. The required trace for a pilot scatter estimate is
     obtained by the covariance rescaled by MAD estimate for the variance.
+    The plugin is not defined for a single variable, the shrinkage factor is
+    set to zero in that case. The normalized scatter of a single variable is
+    always 1.
 
     References
     ----------
@@ -936,9 +943,14 @@ def cov_tyler_regularized(
         tr = np.trace(corr.dot(corr))
 
         n, k = nobs, k_vars
-        # Chen and Wiesel 2011 equation (13)
-        sf = k * k + (1 - 2.0 / k) * tr
-        sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
+        if k == 1:
+            # The plugin is 0 / 0 for a single variable. The normalized
+            # scatter is 1 for any shrinkage factor.
+            sf = 0.0
+        else:
+            # Chen and Wiesel 2011 equation (13)
+            sf = k * k + (1 - 2.0 / k) * tr
+            sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
     else:
         corr = None
@@ -1382,7 +1394,7 @@ def _cov_iter(
     nobs, k_vars = data.shape
 
     if cov_init is None:
-        cov_init = np.cov(data.T)
+        cov_init = np.atleast_2d(np.cov(data.T))
 
     converged = False
     cov = cov_old = cov_init
@@ -1502,7 +1514,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
         # `d <= cutoff` only for a clamped percentile, i.e. strictly below
         # nobs == 2 * k_vars + 4, so the boundary keeps the base behavior.
         xsp = xs[d <= cutoff] if first_frac > 1 and p == 100 else xs[d < cutoff]
-        c = np.cov(xsp.T)
+        c = np.atleast_2d(np.cov(xsp.T))
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
         c0 = CovStartingResult(
             cov=c * corr_factor,
@@ -1552,15 +1564,18 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 
     z_tanh = np.tanh(xs)
     c_th = CovStartingResult(
-        cov=np.corrcoef(z_tanh.T),  # not consistently scaled for cov
+        cov=np.atleast_2d(np.corrcoef(z_tanh.T)),  # not consistently scaled
         mean=center,  # TODO: do we add inverted mean z_tanh ?
         method="tanh",
     )
     cov_all.append(c_th)
 
-    x_spatial = xs / np.sqrt(np.sum(xs**2, axis=1))[:, None]
+    # the spatial sign of the zero vector is zero, a row of xs is zero for the
+    # median of a single variable if nobs is odd
+    norm = np.sqrt(np.sum(xs**2, axis=1))
+    x_spatial = xs / np.where(norm > 0, norm, 1)[:, None]
     c_th = CovStartingResult(
-        cov=np.cov(x_spatial.T),
+        cov=np.atleast_2d(np.cov(x_spatial.T)),
         mean=center,
         method="spatial",
     )
