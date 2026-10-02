@@ -1539,3 +1539,117 @@ def test_score_2indep_diff_symmetric_table():
         )
         assert np.isfinite(res.statistic)
         assert np.isfinite(res.pvalue)
+
+
+# Reference values for confint_proportions_paired computed in R 4.5 with
+# ratesci 1.1.0 (Newcombe method 10: MOVER on Wilson limits with the phi
+# correction) and PropCIs 0.3-0 (Wald). PropCIs defines the difference as
+# p2 - p1, so its limits are negated and swapped below.
+#
+#   library(ratesci); library(PropCIs)
+#   t <- c(n11, n12, n21, n22); n <- sum(t)
+#   diffpropci.Wald.mp(t[2], t[3], n, conf.level = level)$conf.int
+#   moverpairci(t, level = level, contrast = "RD", type = "wilson",
+#               corc = TRUE, cc = FALSE, precis = 12)$estimates[, c("lower", "upper")]
+#
+# Tables cover a positive and a negative phi, no discordant pairs, no
+# concordant pairs, a zero marginal (phi set to 0), a single zero discordant
+# cell, phi exactly 0, a large table, and degenerate single-cell tables.
+_PAIRED_TABLES = [
+    (10, 5, 2, 20),
+    (3, 12, 7, 3),
+    (10, 0, 0, 20),
+    (0, 5, 3, 0),
+    (0, 0, 4, 6),
+    (5, 3, 0, 2),
+    (1, 1, 1, 1),
+    (100, 20, 30, 850),
+    (2, 0, 0, 0),
+    (0, 3, 0, 0),
+]
+
+_PAIRED_WALD = {
+    0.05: [
+        (-0.0566130752, 0.2187752374),
+        (-0.1326169178, 0.5326169178),
+        (0.0, 0.0),
+        (-0.4209478039, 0.9209478039),
+        (-0.7036363149, -0.0963636851),
+        (0.0159742349, 0.5840257651),
+        (-0.6929519122, 0.6929519122),
+        (-0.0238451723, 0.0038451723),
+        (0.0, 0.0),
+        (1.0, 1.0),
+    ],
+    0.01: [
+        (-0.0998797149, 0.2620418770),
+        (-0.2371327283, 0.6371327283),
+        (0.0, 0.0),
+        (-0.6317748836, 1.1317748836),
+        (-0.7990457598, -0.0009542402),
+        (-0.0732731287, 0.6732731287),
+        (-0.9106931839, 0.9106931839),
+        (-0.0281956407, 0.0081956407),
+        (0.0, 0.0),
+        (1.0, 1.0),
+    ],
+}
+
+_PAIRED_NEWCOMB = {
+    0.05: [
+        (-0.0643926051, 0.2211160179),
+        (-0.1336023844, 0.4874632352),
+        (-0.0722182713, 0.0722182713),
+        (-0.3885152108, 0.7263114284),
+        (-0.6873262303, -0.0383858209),
+        (-0.0529530013, 0.5665478379),
+        (-0.4949196078, 0.4949196078),
+        (-0.0243592378, 0.0041365528),
+        (-0.6576197725, 0.6576197725),
+        (0.2059232825, 1.0),
+    ],
+    0.01: [
+        (-0.1066889470, 0.2599315957),
+        (-0.2266187694, 0.5539649645),
+        (-0.0983942957, 0.0983942957),
+        (-0.5250595443, 0.7983788652),
+        (-0.7518402591, 0.0828109031),
+        (-0.1427568201, 0.6162757033),
+        (-0.5585157773, 0.5585157773),
+        (-0.0291585105, 0.0087824399),
+        (-0.7683817083, 0.7683817083),
+        (0.0261275085, 1.0),
+    ],
+}
+
+
+@pytest.mark.parametrize("alpha", [0.05, 0.01])
+@pytest.mark.parametrize("idx", range(len(_PAIRED_TABLES)))
+@pytest.mark.parametrize("method", ["wald", "newcomb"])
+def test_confint_proportions_paired(method, idx, alpha):
+    n11, n12, n21, n22 = _PAIRED_TABLES[idx]
+    table = [[n11, n12], [n21, n22]]
+    expected = {"wald": _PAIRED_WALD, "newcomb": _PAIRED_NEWCOMB}[method][alpha][idx]
+    low, upp = smprop.confint_proportions_paired(table, method=method, alpha=alpha)
+    assert_allclose((low, upp), expected, atol=1e-9)
+    assert isinstance(low, float)
+    assert isinstance(upp, float)
+
+
+def test_confint_proportions_paired_default_method():
+    table = np.array([[10, 5], [2, 20]])
+    assert_allclose(
+        smprop.confint_proportions_paired(table),
+        smprop.confint_proportions_paired(table, method="newcomb"),
+    )
+
+
+def test_confint_proportions_paired_invalid_inputs_raises():
+    with pytest.raises(ValueError, match="shape"):
+        smprop.confint_proportions_paired([1, 2, 3, 4])
+    with pytest.raises(ValueError, match="non-negative"):
+        smprop.confint_proportions_paired([[1, -2], [3, 4]])
+    with pytest.raises(ValueError, match="at least one observation"):
+        smprop.confint_proportions_paired([[0, 0], [0, 0]])
+    with pytest.raises(ValueError, match="method not recognized"):
+        smprop.confint_proportions_paired([[1, 2], [3, 4]], method="score")
