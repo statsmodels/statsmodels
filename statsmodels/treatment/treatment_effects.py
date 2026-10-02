@@ -923,8 +923,8 @@ class TreatmentEffect:
             model's design matrix. DataFrame column names are retained.
             Categorical covariates must first be encoded numerically.
         effect_group : {"all", 0, 1, "treated", "untreated", "control"}, optional
-            Weighting target: ``"all"`` for ATE, 1 or ``"treated"`` for ATET,
-            and 0, ``"untreated"`` or ``"control"`` for ATC.
+            Weighting target: ``"all"`` (default) for ATE, 1 or ``"treated"``
+            for ATET, and 0, ``"untreated"`` or ``"control"`` for ATC.
 
         Returns
         -------
@@ -940,14 +940,17 @@ class TreatmentEffect:
         Means are normalized separately within each treatment group.
         SMD is treated minus control mean divided by
         ``sqrt((var_treated + var_control) / 2)``, using unweighted sample
-        variances (ddof=1). This same denominator is held fixed before and
-        after weighting, for all weighting targets. Binary columns use this
-        same numeric convention rather than population Bernoulli variances.
+        variances (ddof=1), the standardized difference of [2]_. This same
+        denominator is held fixed before and after weighting, for all
+        weighting targets, see [3]_. Binary columns use this same numeric
+        convention rather than population Bernoulli variances.
         This follows the fixed-scale approach in [1]_, but does not adopt
         its target-specific or binary-covariate defaults.
 
-        Columns with zero pooled variance, including intercepts, have NaN
-        SMDs. At least two observations are required in each treatment group.
+        Columns that are constant within both treatment groups, including
+        intercepts, have zero pooled variance and NaN SMDs, also if the means
+        of the two groups differ.
+        At least two observations are required in each treatment group.
         These descriptive statistics do not certify absence of confounding.
 
         References
@@ -955,6 +958,15 @@ class TreatmentEffect:
         .. [1] Greifer, N. cobalt: Frequently Asked Questions, "How are
            standardized mean differences computed in cobalt?"
            https://ngreifer.github.io/cobalt/articles/faq.html
+        .. [2] Austin, P. C. 2009. Balance diagnostics for comparing the
+           distribution of baseline covariates between treatment groups in
+           propensity-score matched samples. Statistics in Medicine 28 (25):
+           3083-3107.
+        .. [3] Austin, P. C., and E. A. Stuart. 2015. Moving towards best
+           practice when using inverse probability of treatment weighting
+           (IPTW) using the propensity score to estimate causal treatment
+           effects in observational studies. Statistics in Medicine 34 (28):
+           3661-3679.
         """
         mask = self._diagnostic_sample()
         if min(mask.sum(), (~mask).sum()) < 2:

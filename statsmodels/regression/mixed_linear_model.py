@@ -1399,6 +1399,13 @@ class MixedLM(base.LikelihoodModel):
         singular : bool
             True if the covariance is singular
 
+        Notes
+        -----
+        Directions of the random effects covariance matrix and variance
+        components with an eigenvalue or variance below `tol` are dropped from
+        the covariance of the observations. The estimates are then the limit of
+        the GLS estimates as these variances go to zero, for example the OLS
+        estimates if all variances are zero.
         """
         if self.k_fe == 0:
             return np.array([]), False
@@ -2304,7 +2311,8 @@ class MixedLM(base.LikelihoodModel):
         do_cg : bool, optional
             If False, the optimization is skipped and a results
             object at the given (or default) starting values is
-            returned.
+            returned. The attribute ``converged`` of the results is
+            False in this case.
         fe_pen : Penalty object, optional
             A penalty on the fixed effects
         cov_pen : CovariancePenalty object, optional

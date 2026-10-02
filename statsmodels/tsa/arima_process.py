@@ -564,18 +564,10 @@ def lpol_fima(d, n=20):
     ma : ndarray
         coefficients of lag polynomial
     """
-    # hide import inside function until we use this heavily
-    from scipy.special import gammaln
-
-    # The lag-zero coefficient is 1 for every d, but the gammaln formula is
-    # indeterminate there when d == 0 (inf - inf), so it is set directly and
-    # only the tail is evaluated.
-    ma = np.empty(n)
-    if n:
-        ma[0] = 1.0
-        j = np.arange(1, n)
-        ma[1:] = np.exp(gammaln(d + j) - gammaln(j + 1) - gammaln(d))
-    return ma
+    # psi_j = psi_{j-1} * (j - 1 + d) / j with psi_0 = 1, this is valid for all
+    # d, including d == 0 and d < 0 where the gamma function is negative
+    j = np.arange(1, n)
+    return np.r_[1.0, np.cumprod((j - 1 + d) / j)][:n]
 
 
 # moved from sandbox.tsa.try_fi
@@ -599,21 +591,13 @@ def lpol_fiar(d, n=20):
 
     Notes
     -----
-    first coefficient is 1, negative signs except for first term,
+    first coefficient is 1, for 0 < d < 1 the other coefficients are negative,
     ar(L)*x_t
     """
-    # hide import inside function until we use this heavily
-    from scipy.special import gammaln
-
-    # As in lpol_fima, the lag-zero coefficient is 1 for every d and the
-    # gammaln formula is indeterminate there when d == 0, so the tail only
-    # is evaluated.
-    ar = np.empty(n)
-    if n:
-        ar[0] = 1.0
-        j = np.arange(1, n)
-        ar[1:] = -np.exp(gammaln(-d + j) - gammaln(j + 1) - gammaln(-d))
-    return ar
+    # pi_j = pi_{j-1} * (j - 1 - d) / j with pi_0 = 1, this is valid for all d,
+    # including d == 0 and d < 0
+    j = np.arange(1, n)
+    return np.r_[1.0, np.cumprod((j - 1 - d) / j)][:n]
 
 
 # moved from sandbox.tsa.try_fi

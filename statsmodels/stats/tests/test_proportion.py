@@ -1509,3 +1509,60 @@ def test_confint_proportions_2indep_invalid_inputs_raises():
         smprop.confint_proportions_2indep(-1, 10, 3, 10)
     with pytest.raises(ValueError, match="nobs1 and nobs2 must be positive"):
         smprop.confint_proportions_2indep(1, 0, 3, 10)
+
+
+@pytest.mark.parametrize(
+    "counts, expected",
+    [
+        ((12, 16, 3, 11), (0.0890486619714, 0.739426279773)),
+        ((1, 20, 31, 36), (-0.912967201658, -0.591487082224)),
+        ((3, 20, 9, 25), (-0.443226028419, 0.0568197462183)),
+        ((3, 14, 11, 14), (-0.798498767391, -0.202009770047)),
+    ],
+)
+def test_confint_2indep_score_diff_bracket(counts, expected):
+    # The root finding bracket based on the Wald interval was too narrow (first
+    # and third table) or left the parameter space (second table). The last
+    # table is symmetric (p1 + p2 = 1), so that q == 0 exactly in the cubic
+    # equation of the Miettinen-Nurminen restricted MLE for some values of the
+    # difference.
+    # expected: independent implementation in R (restricted score equation
+    # solved by root finding, N / (N - 1) correction), the limits solve
+    # z**2 = qchisq(0.95, 1)
+    res = confint_proportions_2indep(*counts, method="score", compare="diff")
+    assert_allclose(res, expected, rtol=1e-7)
+
+
+@pytest.mark.parametrize(
+    "count1, nobs1, count0, nobs0, delta, prop0, stat",
+    [
+        (5, 20, 0, 20, 0.2, 1e-13, 0.551985054145214),
+        (0, 20, 5, 20, -0.2, 0.2000000000001, -0.551985054145214),
+        (20, 20, 3, 20, -0.5, 0.776720061523383, 9.75357596716112),
+        (7, 20, 20, 20, 0.05, 0.637268440065536, -4.62812543241672),
+        (0, 15, 0, 25, 0.2, 1e-13, -1.91213231759658),
+        (1, 30, 0, 12, -0.05, 0.0734479980138942, 1.02643721090643),
+    ],
+)
+def test_score_2indep_diff_boundary_tables(
+    count1, nobs1, count0, nobs0, delta, prop0, stat
+):
+    # tables with a zero or a full cell
+    # expected: independent implementation in R (restricted score equation
+    # solved by root finding or bounded optimization, N / (N - 1) correction)
+    res = score_test_proportions_2indep(
+        count1, nobs1, count0, nobs0, value=delta, compare="diff", correction=True
+    )
+    assert_allclose(res.prop2_null, prop0, atol=1e-8)
+    assert_allclose(res.statistic, stat, rtol=1e-8)
+
+
+def test_score_2indep_diff_symmetric_table():
+    # p1 + p2 = 1: q == 0 exactly in the cubic equation for these values of the
+    # difference, np.sign(q) = 0 returned nan
+    for value in [-0.86, -0.88, -0.8704853539268427]:
+        res = score_test_proportions_2indep(
+            3, 14, 11, 14, value=value, compare="diff", correction=True
+        )
+        assert np.isfinite(res.statistic)
+        assert np.isfinite(res.pvalue)

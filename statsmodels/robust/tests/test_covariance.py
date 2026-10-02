@@ -1,3 +1,5 @@
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 from pathlib import Path
 
 import numpy as np
@@ -336,11 +338,56 @@ def test_cov_starting_keeps_trimmed_starts():
 
 
 def test_mahalanobis_singular_cov():
-    # a rank-deficient starting covariance must not abort the candidate
+    # a rank-deficient starting covariance must not abort the candidate, the
+    # pseudo-inverse of the covariance is used
     rng = np.random.default_rng(10243)
     x = rng.standard_normal((40, 5))
+
+    # the pseudo-inverse of the zero matrix is zero
     d = robcov.mahalanobis(x, cov=np.zeros((5, 5)))
-    assert np.isfinite(d).all()
+    assert_allclose(d, 0, atol=1e-15)
+
+    # diagonal rank 3 covariance, only the first three coordinates count
+    d = robcov.mahalanobis(x, cov=np.diag([1.0, 1.0, 1.0, 0.0, 0.0]))
+    assert_allclose(d, (x[:, :3] ** 2).sum(1), rtol=1e-12)
+
+    # rank 3 covariance a a', the pseudo-inverse is a (a'a)^(-2) a'
+
+
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="Linear algebra for the pseudo-inverse is unreliable on WASM")
+def test_mahalanobis_singular_cov_additional():
+    rng = np.random.default_rng(10243)
+    x = rng.standard_normal((40, 5))
+    a = rng.standard_normal((5, 3))
+    # Linear algebra for the pseudo-inverse of a rank-deficient covariance
+    # is unreliable on WASM
+    pinv = a @ np.linalg.inv(a.T @ a) @ np.linalg.inv(a.T @ a) @ a.T
+    d = robcov.mahalanobis(x, cov=a @ a.T)
+    assert_allclose(d, np.einsum("ij,jk,ik->i", x, pinv, x), rtol=1e-8)
+
+    d_sqrt = robcov.mahalanobis(x, cov=a @ a.T, sqrt=True)
+    assert_allclose(d_sqrt, np.sqrt(d), rtol=1e-12)
+
+
+def test_mahalanobis_singular_cov_solve_without_error(monkeypatch):
+    # Some LAPACK libraries, for example on WASM, do not raise LinAlgError for
+    # a singular matrix but return non-finite values from solve
+    def solve(a, b):
+        return np.full(np.shape(b), np.nan)
+
+    monkeypatch.setattr(np.linalg, "solve", solve)
+    rng = np.random.default_rng(10243)
+    x = rng.standard_normal((40, 5))
+    d = robcov.mahalanobis(x, cov=np.diag([1.0, 1.0, 1.0, 0.0, 0.0]))
+    assert_allclose(d, (x[:, :3] ** 2).sum(1), rtol=1e-12)
+
+
+def test_mahalanobis_cov_not_square():
+    # the error for a cov that is not square is not replaced by the fallback
+    # for a singular matrix
+    x = np.ones((10, 5))
+    with pytest.raises(np.linalg.LinAlgError, match="square"):
+        robcov.mahalanobis(x, cov=np.ones((5, 4)))
 
 
 def test_cov_weighted_det_non_finite_determinant():

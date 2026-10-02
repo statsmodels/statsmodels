@@ -125,7 +125,9 @@ def _check_nested_results(results_x, results_z):
         # broadcast error instead of naming the problem
         raise ValueError(
             "the two models must be fit on the same number of observations; got "
-            f"{endog_x.shape[0]} and {endog_z.shape[0]}"
+            f"{endog_x.shape[0]} and {endog_z.shape[0]}. This happens, for "
+            "example, if missing values are dropped from the variables of only "
+            "one of the models."
         )
     if not np.allclose(endog_x, endog_z):
         raise ValueError("endogenous variables in models are not the same")
@@ -1409,6 +1411,7 @@ def het_goldfeldquandt(
     x = np.asarray(x)
     y = np.asarray(y)  # **2
     nobs, nvars = x.shape
+    split_given = split
     if split is None:
         split = nobs // 2
     elif 0 < split < 1:
@@ -1416,8 +1419,13 @@ def het_goldfeldquandt(
     if not 0 < split < nobs:
         # a negative or oversized split silently produced nan test results
         # from empty subsample regressions
+        got = f"{split}"
+        if split_given is not None and split_given != split:
+            # a fraction that is rounded down to the number of observations
+            got = f"{split_given}, which is {split} observations"
         raise ValueError(
-            f"split must be between 0 and the number of observations ({nobs}), got {split}"
+            "split must be between 0 and the number of observations "
+            f"({nobs}), got {got}"
         )
 
     if drop is None:

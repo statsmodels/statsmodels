@@ -279,3 +279,13 @@ def test_negative_binomial_link_invalid_alpha_raises():
     with pytest.raises(ValueError, match="alpha must be positive"):
         links.NegativeBinomial(alpha=0)
     assert np.isfinite(negbinom(np.array([0.5, 0.9]))).all()
+
+
+def test_negative_binomial_link_array_alpha():
+    # an array of alphas worked elementwise before alpha was validated
+    alpha = np.array([0.5, 1.0, 2.0])
+    mu = np.array([0.5, 2.0, 4.0])
+    link = links.NegativeBinomial(alpha=alpha)
+    assert_allclose(link(mu), np.log(mu / (mu + 1 / alpha)))
+    with pytest.raises(ValueError, match="alpha must be positive"):
+        links.NegativeBinomial(alpha=np.array([0.5, -1.0, 2.0]))

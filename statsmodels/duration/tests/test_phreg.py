@@ -547,3 +547,60 @@ def test_schoenfeld_residuals_efron_ties(stratified):
     res = mod.fit(disp=0)
     assert_allclose(res.params, params, rtol=1e-6)
     assert_allclose(res.schoenfeld_residuals, resid, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize("ties", ["efron", "breslow"])
+def test_schoenfeld_residuals_multiple_ties(ties):
+    # Tied failure times with 3 and 4 events, the ties in the test above have
+    # 2 events. Reference values from R 4.6.1, survival 3.8.6:
+    #
+    # d <- data.frame(
+    #   time = c(1, 2, 2, 2, 3, 4, 4, 4, 4, 5, 6, 7),
+    #   status = c(1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1),
+    #   x = c(0.5, -1.2, 0.3, 1.1, -0.7, 0.8, -0.2, 1.5, -1.0, 0.4, 0.9, -0.3),
+    #   z = c(1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0))
+    # f <- coxph(Surv(time, status) ~ x + z, data = d, ties = "efron")
+    # coef(f); resid(f, "schoenfeld")
+    #
+    # The rows of the residuals are in data order, with NaN for the censored
+    # subjects.
+    time = np.array([1, 2, 2, 2, 3, 4, 4, 4, 4, 5, 6, 7.0])
+    status = np.array([1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1])
+    x = np.array([0.5, -1.2, 0.3, 1.1, -0.7, 0.8, -0.2, 1.5, -1.0, 0.4, 0.9, -0.3])
+    z = np.array([1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0.0])
+    nan = np.nan
+    if ties == "efron":
+        params = [0.126134856833, -0.199405602022]
+        resid = [
+            [0.253142098917, 0.540858401508],
+            [-1.43787285568, -0.422328567227],
+            [0.0621271443206, -0.422328567227],
+            [0.862127144321, 0.577671432773],
+            [nan, nan],
+            [0.436516526926, -0.446470333377],
+            [-0.563483473074, 0.553529666623],
+            [1.13651652693, -0.446470333377],
+            [-1.36348347307, -0.446470333377],
+            [nan, nan],
+            [0.614410360416, 0.51200863368],
+            [0.0, 0.0],
+        ]
+    else:
+        params = [0.110602036159, -0.0669040880161]
+        resid = [
+            [0.255356192995, 0.508801050419],
+            [-1.42147107045, -0.445026923901],
+            [0.0785289295504, -0.445026923901],
+            [0.87852892955, 0.554973076099],
+            [nan, nan],
+            [0.432198849958, -0.414317906871],
+            [-0.567801150042, 0.585682093129],
+            [1.13219884996, -0.414317906871],
+            [-1.36780115004, -0.414317906871],
+            [nan, nan],
+            [0.580261618521, 0.483551348767],
+            [0.0, 0.0],
+        ]
+    res = PHReg(time, np.column_stack([x, z]), status, ties=ties).fit(disp=0)
+    assert_allclose(res.params, params, rtol=1e-6)
+    assert_allclose(res.schoenfeld_residuals, resid, rtol=1e-6, atol=1e-8)

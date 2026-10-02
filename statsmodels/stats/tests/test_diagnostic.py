@@ -2214,10 +2214,10 @@ def test_diagnostics_pandas():
 @pytest.mark.parametrize("k_vars, skip", [(2, None), (5, None), (3, 20)])
 def test_harvey_collier_skip(k_vars, skip):
     # GH 8446, the t-test must use the recursive residuals from index skip
-    rs = np.random.RandomState(8446)
+    rng = np.random.default_rng(8446)
     nobs = 60
-    exog = add_constant(rs.standard_normal((nobs, k_vars - 1)))
-    endog = exog.sum(1) + rs.standard_normal(nobs)
+    exog = add_constant(rng.standard_normal((nobs, k_vars - 1)))
+    endog = exog.sum(1) + rng.standard_normal(nobs)
     res = OLS(endog, exog).fit()
     hc = smsdia.linear_harvey_collier(res, skip=skip)
 
@@ -2235,6 +2235,36 @@ def test_harvey_collier_skip(k_vars, skip):
     assert_allclose(hc.pvalue, expected.pvalue, rtol=1e-10)
     if hasattr(hc, "df"):
         assert hc.df == nobs - start - 1
+
+
+@pytest.mark.parametrize(
+    "k, stat, pvalue",
+    [
+        (2, 0.586754425722491, 0.56093192209442),
+        (3, 0.850420410993682, 0.400712322767811),
+        (4, 1.00449923572035, 0.32203254246206),
+        (5, 1.32123229253236, 0.195246914186222),
+        (6, 0.374761500404456, 0.710235559230007),
+    ],
+)
+def test_harvey_collier_lmtest(k, stat, pvalue):
+    # R 4.6.1, lmtest 0.9-40: harvtest(y ~ x1 + ... + x_{k-1}) with the
+    # deterministic data below. harvtest reports the absolute value of the
+    # statistic, the mean of the recursive residuals is negative for
+    # k = 2, ..., 5. The p-value is two-sided.
+    n = 40
+    i = np.arange(1, n + 1)
+    x = np.column_stack(
+        [np.sin(i), np.cos(2 * i), np.sin(3 * i + 1), np.cos(i / 2), np.sin(i / 3)]
+    )
+    y = 1 + x[:, 0] + 0.6 * x[:, 0] ** 2 + 0.5 * x[:, 1:].sum(1)
+    y = y + 0.3 * np.sin(5 * i + 0.5)
+    res = OLS(y, add_constant(x[:, : k - 1])).fit()
+    hc = smsdia.linear_harvey_collier(res)
+    assert_allclose(abs(hc[0]), stat, rtol=1e-9)
+    assert_allclose(hc[1], pvalue, rtol=1e-9)
+    if hasattr(hc, "df"):
+        assert hc.df == n - k - 1
 
 
 def test_diagnostics_hac():
@@ -2410,6 +2440,18 @@ def test_compare_cox_j_mismatched_nobs():
     with pytest.raises(ValueError, match="same number of observations"):
         smsdia.compare_j(res_full, res_short)
 
+    # a missing value in a variable of only one model drops an observation
+    # from that model only
+    data = pd.DataFrame({"y": y, "x1": x[:, 1], "x2": x[:, 2]})
+    data.loc[3, "x2"] = np.nan
+    res_x1 = OLS.from_formula("y ~ x1", data).fit()
+    res_x1_x2 = OLS.from_formula("y ~ x1 + x2", data).fit()
+    msg = "same number of observations; got 60 and 59.*missing values"
+    with pytest.raises(ValueError, match=msg):
+        smsdia.compare_cox(res_x1, res_x1_x2)
+    with pytest.raises(ValueError, match=msg):
+        smsdia.compare_j(res_x1, res_x1_x2)
+
 
 def test_goldfeldquandt_split_validation():
     # a negative or oversized split used to silently return nan test results
@@ -2419,8 +2461,11 @@ def test_goldfeldquandt_split_validation():
     x = np.column_stack([np.ones(60), rs.standard_normal((60, 2))])
     with pytest.raises(ValueError, match="split must be between 0 and"):
         smsdia.het_goldfeldquandt(y, x, split=-1)
-    with pytest.raises(ValueError, match="split must be between 0 and"):
+    with pytest.raises(ValueError, match=r"\(60\), got 60$"):
         smsdia.het_goldfeldquandt(y, x, split=60)
+    # a fraction that is rounded to 0 reports the value that was given
+    with pytest.raises(ValueError, match=r"got 0.001, which is 0 observations"):
+        smsdia.het_goldfeldquandt(y, x, split=0.001)
     # the fraction form and the default stay valid
-    smsdia.het_goldfeldquandt(y, x, split=0.5)
-    smsdia.het_goldfeldquandt(y, x)
+    smsdia.het_goldfeldquandt(y, x, split=0.5, result_object=False)
+    smsdia.het_goldfeldquandt(y, x, result_object=False)

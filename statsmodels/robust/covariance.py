@@ -392,6 +392,11 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
     -------
     ndarray
         Mahalanobis distances or squared distance.
+
+    Notes
+    -----
+    If `cov` is singular, then the Moore-Penrose pseudo-inverse of `cov` is
+    used.
     """
     # another option would be to allow also cov^{-0.5) as keyword
     x = np.asarray(data)
@@ -399,11 +404,19 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
         # einsum might be a bit faster
         d = (x * cov_inv.dot(x.T).T).sum(1)
     elif cov is not None:
+        cov = np.asarray(cov)
         try:
-            d = (x * np.linalg.solve(cov, x.T).T).sum(1)
+            sol = np.linalg.solve(cov, x.T)
         except np.linalg.LinAlgError:
-            # a singular starting covariance must not abort the candidate
-            d = (x * np.linalg.pinv(cov).dot(x.T).T).sum(1)
+            if cov.ndim != 2 or cov.shape[0] != cov.shape[1]:
+                raise  # not a singular matrix
+            sol = None
+        if sol is None or not np.all(np.isfinite(sol)):
+            # A singular covariance, for example a starting covariance, must
+            # not abort the candidate. Some LAPACK libraries do not raise an
+            # error for a singular matrix but return non-finite values.
+            sol = np.linalg.pinv(cov).dot(x.T)
+        d = (x * sol.T).sum(1)
     else:
         raise ValueError("either cov or cov_inv needs to be given")
 
@@ -1099,6 +1112,13 @@ def cov_weighted(
         Weighted covariance.
     wmean : ndarray
         Weighted mean.
+
+    Raises
+    ------
+    numpy.linalg.LinAlgError
+        If ``weights_cov_denom="det"`` and the root of the determinant of the
+        weighted covariance is not finite and positive, for example if the
+        weighted covariance is singular.
 
     Notes
     -----
