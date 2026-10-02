@@ -21,6 +21,7 @@ from statsmodels.stats.outliers_influence import (
     MLEInfluence,
     variance_inflation_factor,
 )
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 cur_dir = Path(__file__).parent.resolve()
 
@@ -472,9 +473,9 @@ def test_olsinfluence_ols_xnoti_and_get_drop_vari():
         assert_allclose(params_j, expected_j)
 
 
-# dropping the observation with hat diagonal one gives a rank deficient exog
+# OLSInfluence should not warn about the rank deficient auxiliary regression
 @pytest.mark.filterwarnings(
-    "ignore::statsmodels.tools.sm_exceptions.SingularMatrixWarning"
+    "error::statsmodels.tools.sm_exceptions.SingularMatrixWarning"
 )
 @pytest.mark.parametrize("leverage_one", [False, True])
 def test_olsinfluence_looo_closed_form(leverage_one):
@@ -499,10 +500,14 @@ def test_olsinfluence_looo_closed_form(leverage_one):
     det_cov_params = np.empty(n)
     for i in range(n):
         mask = np.arange(n) != i
-        res_i = OLS(endog[mask], exog[mask]).fit()
-        params[i] = res_i.params
-        mse_resid[i] = res_i.mse_resid
-        det_cov_params[i] = np.linalg.det(res_i.cov_params())
+        with warnings.catch_warnings():
+            # dropping the observation with hat diagonal one gives a rank
+            # deficient exog
+            warnings.simplefilter("ignore", SingularMatrixWarning)
+            res_i = OLS(endog[mask], exog[mask]).fit()
+            params[i] = res_i.params
+            mse_resid[i] = res_i.mse_resid
+            det_cov_params[i] = np.linalg.det(res_i.cov_params())
 
     assert_allclose(infl.params_not_obsi, params, rtol=1e-10, atol=1e-12)
     assert_allclose(infl.sigma2_not_obsi, mse_resid, rtol=1e-10)
