@@ -1646,11 +1646,15 @@ def test_confint_proportions_paired_default_method(method):
 
 
 def test_confint_proportions_paired_invalid_inputs_raises():
-    with pytest.raises(ValueError, match="shape"):
+    with pytest.raises(ValueError, match="two-dimensional"):
         smprop.confint_proportions_paired([1, 2, 3, 4])
+    with pytest.raises(ValueError, match="2x2 contingency table"):
+        smprop.confint_proportions_paired([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     with pytest.raises(ValueError, match="non-negative"):
         smprop.confint_proportions_paired([[1, -2], [3, 4]])
     with pytest.raises(ValueError, match="at least one observation"):
         smprop.confint_proportions_paired([[0, 0], [0, 0]])
-    with pytest.raises(ValueError, match="method not recognized"):
+    with pytest.raises(ValueError, match="method must be one of"):
         smprop.confint_proportions_paired([[1, 2], [3, 4]], method="score")
+    with pytest.raises(TypeError, match="method must be a string"):
+        smprop.confint_proportions_paired([[1, 2], [3, 4]], method=10)
