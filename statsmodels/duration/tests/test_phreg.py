@@ -300,7 +300,9 @@ class TestPHReg:
         mod = PHReg(time, exog, status)
         rslt = mod.fit()
         mart_resid = rslt.martingale_residuals
-        assert_allclose(np.abs(mart_resid).sum(), 120.72475743348433)
+        # R: sum(abs(resid(coxph(Surv(time, status) ~ ., ties="breslow"), "martingale")))
+        assert_allclose(np.abs(mart_resid).sum(), 123.12721130671, rtol=1e-10)
+        assert_allclose(mart_resid.sum(), 0, atol=1e-10)
 
         w_avg = rslt.weighted_covariate_averages
         assert_allclose(
@@ -621,7 +623,7 @@ def _residual_model(case):
 
 @pytest.mark.parametrize("name", list(residual_results.results))
 def test_residuals_r(name):
-    # GH 10288. Score residuals, and the naive and the robust
+    # GH 10288. Score and martingale residuals, and the naive and the robust
     # covariance of the coefficients for the Breslow and Efron approximation
     # of ties, with strata, delayed entry, an offset and clusters. The
     # reference values are from R survival 3.8.6, see results_phreg_residuals.
@@ -632,7 +634,11 @@ def test_residuals_r(name):
     assert_allclose(res.params, case["coef"], rtol=1e-6)
 
     used = np.isfinite(res.score_residuals).all(1)
+    assert_equal(np.isfinite(res.martingale_residuals), used)
     assert_allclose(res.score_residuals[used], case["score"][used], rtol=1e-6, atol=1e-8)
+    assert_allclose(
+        res.martingale_residuals[used], case["martingale"][used], rtol=1e-6, atol=1e-8
+    )
     assert_allclose(res.cov_params(), case["var"], rtol=1e-6)
     if "var_naive" in case:
         assert_allclose(mod.fit(disp=0).cov_params(), case["var_naive"], rtol=1e-6)
@@ -645,6 +651,7 @@ def test_residuals_not_used_observation():
     mod, groups = _residual_model(case)
     res = mod.fit(groups=groups, disp=0)
     assert np.all(np.isnan(res.score_residuals[0]))
+    assert np.isnan(res.martingale_residuals[0])
     assert np.all(np.isfinite(res.score_residuals[1:]))
     assert np.all(np.isfinite(res.cov_params()))
 
@@ -652,10 +659,14 @@ def test_residuals_not_used_observation():
 @pytest.mark.parametrize("name", list(residual_results.results))
 def test_residuals_sums(name):
     # The score residuals add up to the score of the partial likelihood for
-    # all parameters.
+    # all parameters, and the martingale residuals of a stratum add up to zero.
     case = residual_results.results[name]
     mod, groups = _residual_model(case)
     res = mod.fit(groups=groups, disp=0)
     for params in (res.params, case["coef"] * 0.5 + 0.2):
         resid = mod.score_residuals(params)
         assert_allclose(np.nansum(resid, 0), mod.score(params), atol=1e-12)
+    d = residual_results.data[case["data"]]
+    strata = d[case["strata"]] if case["strata"] else np.zeros(len(d["time"]))
+    for g in np.unique(strata):
+        assert_allclose(np.nansum(res.martingale_residuals[strata == g]), 0, atol=1e-10)
