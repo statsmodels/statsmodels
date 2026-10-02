@@ -1056,3 +1056,21 @@ def test_descrstatsw_nonfinite_weights_raises(bad):
         ttest_ind(x, x + 1, weights=(w, np.ones(4)))
     with pytest.raises(ValueError, match="weights must be finite"):
         CompareMeans.from_data(x, x + 1, weights1=w)
+
+
+def test_descrstatsw_all_zero_weights_raises():
+    # The weights are a sample of no observations. The mean and variance were
+    # nan, quantile returned values and the degrees of freedom of ttest_mean
+    # were -1.
+    x = np.array([1.0, 2.0, 3.0, 5.0])
+    with pytest.raises(ValueError, match="at least one weight must be positive"):
+        DescrStatsW(x, weights=np.zeros(4))
+    with pytest.raises(ValueError, match="at least one weight must be positive"):
+        DescrStatsW(np.column_stack([x, x**2]), weights=[0, 0, 0, 0])
+    with pytest.raises(ValueError, match="at least one weight must be positive"):
+        ttest_ind(x, x + 1, weights=(np.zeros(4), np.ones(4)))
+    # one positive weight is valid, empty data keeps its nan results, see
+    # test_var_empty_input
+    d = DescrStatsW(x, weights=np.array([0.0, 0.0, 2.0, 0.0]))
+    assert_allclose(d.mean, 3.0)
+    assert_allclose(d.quantile([0.25, 0.75]), [3.0, 3.0])
