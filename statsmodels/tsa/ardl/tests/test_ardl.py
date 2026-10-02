@@ -8,6 +8,7 @@ import pytest
 
 from statsmodels.datasets import danish_data
 from statsmodels.iolib.summary import Summary
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.ardl.model import (
@@ -1047,3 +1048,23 @@ def test_ardl_uecm_summary_after_remove_data(model, lags, pandas):
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+@pytest.mark.parametrize("model", [ARDL, UECM])
+@pytest.mark.parametrize("trend", ["n", "c", "ct"])
+def test_ardl_uecm_rsquared(data, model, trend):
+    res = model(data.y, 3, data.x, 2, trend=trend).fit()
+    assert res.model.k_constant == int(trend != "n")
+    # OLS detects the constant in the design matrix itself
+    ols_res = OLS(res.model._y, res.model._x).fit()
+    assert_allclose(res.rsquared, ols_res.rsquared)
+    assert_allclose(res.ess, ols_res.ess)
+
+
+def test_ardl_k_constant_deterministic(data):
+    deterministic = DeterministicProcess(data.y.index, constant=True, order=1)
+    mod = ARDL(data.y, 2, data.x, 2, trend="n", deterministic=deterministic)
+    assert mod.k_constant == 1
+    res = mod.fit()
+    ols_res = OLS(mod._y, mod._x).fit()
+    assert_allclose(res.rsquared, ols_res.rsquared)
