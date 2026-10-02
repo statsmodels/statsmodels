@@ -1265,6 +1265,69 @@ class PHReg(model.LikelihoodModel):
 
         return score_resid
 
+    def _martingale_residuals(self, params):
+        """
+        Martingale residuals calculated at a given vector of parameters
+
+        Parameters
+        ----------
+        params : ndarray
+            The parameter vector at which the martingale residuals are
+            calculated.
+
+        Returns
+        -------
+        ndarray
+            The martingale residuals, one for each observation, with NaN for
+            observations that are not used.
+        """
+
+        surv = self.surv
+        efron = self.ties == "efron"
+
+        mart_resid = np.full(self.exog.shape[0], np.nan, dtype=np.float64)
+
+        # Loop over strata
+        for stx in range(surv.nstrat):
+
+            uft_ix = surv.ufailt_ix[stx]
+            exog_s = surv.exog_s[stx]
+            nuft = len(uft_ix)
+            strat_ix = surv.stratum_rows[stx]
+
+            linpred = np.dot(exog_s, params)
+            if surv.offset_s is not None:
+                linpred += surv.offset_s[stx]
+            linpred -= linpred.max()
+            e_linpred = np.exp(linpred)
+
+            first, last = self._risk_range(stx)
+            # cumulative hazard of each subject while it is at risk
+            cumhaz = np.zeros(exog_s.shape[0], dtype=np.float64)
+
+            for i in range(nuft):
+
+                at_risk = np.flatnonzero((first <= i) & (i <= last))
+                e_risk = e_linpred[at_risk]
+
+                ix = uft_ix[i]
+                xp0d = e_linpred[ix].sum()
+                # only the hazard is needed, not the averages of the covariates
+                h, _, hf, _, _ = _tie_terms(
+                    e_risk.sum(),
+                    np.zeros(1),
+                    xp0d,
+                    np.zeros(1),
+                    len(ix),
+                    efron,
+                )
+                cumhaz[at_risk] += h
+                cumhaz[ix] -= hf
+
+            mart_resid[strat_ix] = surv.status_s[stx] - e_linpred * cumhaz
+
+        return mart_resid
+
     def weighted_covariate_averages(self, params):
         """
         Returns the hazard-weighted average of covariate values for
@@ -1845,34 +1908,17 @@ class PHRegResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def martingale_residuals(self):
-        """The martingale residuals"""
+        """
+        The martingale residuals
 
-        surv = self.model.surv
-
-        # Initialize at NaN since rows that belong to strata with no
-        # events have undefined residuals.
-        mart_resid = np.nan * np.ones(len(self.model.endog), dtype=np.float64)
-
-        cumhaz_f_list = self.baseline_cumulative_hazard_function
-
-        # Loop over strata
-        for stx in range(surv.nstrat):
-
-            cumhaz_f = cumhaz_f_list[stx]
-
-            exog_s = surv.exog_s[stx]
-            time_s = surv.time_s[stx]
-
-            linpred = np.dot(exog_s, self.params)
-            if surv.offset_s is not None:
-                linpred += surv.offset_s[stx]
-            e_linpred = np.exp(linpred)
-
-            ii = surv.stratum_rows[stx]
-            chaz = cumhaz_f(time_s)
-            mart_resid[ii] = self.model.status[ii] - e_linpred * chaz
-
-        return mart_resid
+        The martingale residual of an observation is its event indicator
+        minus its cumulative hazard while it is at risk, using the Breslow or
+        Efron approximation for ties of the model. The residuals of a stratum
+        add up to 0 at the estimated parameters. Observations that are not
+        used, for example observations in a stratum without events, have NaN
+        residuals.
+        """
+        return self.model._martingale_residuals(self.params)
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
         """
