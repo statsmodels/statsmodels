@@ -174,6 +174,10 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
     f2 = np.dot(weights, (means - meanw_t) ** 2) / (nobs_t - ddof_between)
 
     if use_var.lower() == "bf":
+        if np.size(vars_) == 1:
+            # a scalar is the variance of all samples, the formulas below sum
+            # over the samples
+            vars_ = np.ones(n_groups) * vars_
         weights = nobs
         w_total = weights.sum()
         w_rel = weights / w_total
