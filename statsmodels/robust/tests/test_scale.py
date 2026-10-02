@@ -1,6 +1,7 @@
 """
 Test functions for models.robust.scale
 """
+import itertools
 from pathlib import Path
 
 import numpy as np
@@ -267,6 +268,51 @@ class TestQn:
             scale.qn_scale(np.array([1.0, 3.0])),
             2 * scale.ONE_OVER_SQRT2_GAUSSIAN_5_8,
         )
+
+
+    def test_qn_ties_exhaustive(self):
+        # all multisets of small samples from a small alphabet, which covers
+        # every pattern of ties of the differences
+        for n_values, n_max in [(3, 9), (4, 8), (5, 7)]:
+            for n in range(2, n_max + 1):
+                for values in itertools.combinations_with_replacement(
+                    range(n_values), n
+                ):
+                    x = np.array(values, dtype=float)
+                    assert_allclose(
+                        scale.qn_scale(x), scale._qn_naive(x), rtol=1e-12
+                    )
+
+    @pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+    def test_qn_nonfinite(self, bad):
+        # The result for NaN was a finite value in most cases, and for
+        # infinite values it was a wrong value or the RuntimeError of the
+        # guard of the candidate set of _qn.
+        rng = np.random.default_rng(8446)
+        for n in range(2, 30):
+            for position in (0, n // 2, n - 1):
+                x = rng.standard_normal(n)
+                x[position] = bad
+                assert np.isnan(scale.qn_scale(x))
+        x = np.array([-0.883, 0.405, -2.219, -0.481, np.inf, -1.118])
+        assert np.isnan(scale.qn_scale(x))
+        x = np.array([0.3, 0.54, np.nan, 0.47])
+        assert np.isnan(scale.qn_scale(x))
+        # two infinite values of the same sign
+        assert np.isnan(scale.qn_scale(np.array([np.inf, np.inf, 1.0, 2.0, 3.0])))
+
+    def test_qn_nonfinite_axis(self):
+        # only the columns with a value that is not finite are nan
+        rng = np.random.default_rng(8446)
+        x = rng.standard_normal((20, 4))
+        x[3, 1] = np.nan
+        x[7, 3] = np.inf
+        res = scale.qn_scale(x)
+        assert_equal(np.isnan(res), [False, True, False, True])
+        for j in (0, 2):
+            assert_allclose(res[j], scale._qn_naive(x[:, j]), rtol=1e-12)
+        res = scale.qn_scale(x.T, axis=1)
+        assert_equal(np.isnan(res), [False, True, False, True])
 
 
 class TestQnAxes:
