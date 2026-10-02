@@ -1730,9 +1730,18 @@ def confint_proportions_paired(table, method="newcomb", alpha=0.05):
     >>> confint_proportions_paired(table, method="wald")
     (-0.0566130751996..., 0.2187752373618...)
     """
-    table = np.asarray(table, dtype=float)
+    method = string_like(method, "method", options=("newcomb", "newcombe", "wald"))
+    table = np.asarray(table, dtype=np.float64)
+    if table.ndim != 2:
+        raise ValueError(
+            "confint_proportions_paired requires a two-dimensional contingency "
+            f"table, but the input has shape {table.shape}."
+        )
     if table.shape != (2, 2):
-        raise ValueError("table must have shape (2, 2)")
+        raise ValueError(
+            "confint_proportions_paired requires a 2x2 contingency table, but "
+            f"the input has shape {table.shape}."
+        )
     if np.any(table < 0):
         raise ValueError("table counts must be non-negative")
     n11, n12, n21, n22 = table.ravel()
@@ -1743,7 +1752,6 @@ def confint_proportions_paired(table, method="newcomb", alpha=0.05):
     p1 = (n11 + n12) / nobs
     p2 = (n11 + n21) / nobs
     diff = p1 - p2
-    method = method.lower()
 
     if method == "wald":
         z = stats.norm.isf(alpha / 2)
@@ -1751,7 +1759,7 @@ def confint_proportions_paired(table, method="newcomb", alpha=0.05):
         low = diff - half_width
         upp = diff + half_width
 
-    elif method.startswith("newcomb"):
+    else:
         l1, u1 = proportion_confint(n11 + n12, nobs, alpha=alpha, method="wilson")
         l2, u2 = proportion_confint(n11 + n21, nobs, alpha=alpha, method="wilson")
 
@@ -1774,9 +1782,6 @@ def confint_proportions_paired(table, method="newcomb", alpha=0.05):
         dl = u1 - p1
         du = p2 - l2
         upp = diff + np.sqrt(dl**2 - 2 * phi * dl * du + du**2)
-
-    else:
-        raise ValueError("method not recognized")
 
     return float(low), float(upp)
 
