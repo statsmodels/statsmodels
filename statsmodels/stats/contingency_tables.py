@@ -73,6 +73,30 @@ def _make_df_square(table):
     return table
 
 
+def _check_cell_counts(table):
+    """
+    Check that the cell counts of a contingency table are valid
+
+    Parameters
+    ----------
+    table : ndarray
+        The cell counts, with a float dtype.
+
+    Raises
+    ------
+    ValueError
+        If any cell count is not finite or is negative.
+    """
+    # NaN is not negative, so that it has to be checked first
+    if not np.isfinite(table).all():
+        raise ValueError("contingency table cell counts must be finite")
+    if table.min() < 0:
+        raise ValueError(
+            "contingency table cell counts must be non-negative, got "
+            f"minimum {table.min()}"
+        )
+
+
 class _Bunch:
 
     def __repr__(self):
@@ -107,7 +131,7 @@ class Table:
     Raises
     ------
     ValueError
-        If any cell of the table is negative.
+        If any cell of the table is negative or not finite.
 
     See Also
     --------
@@ -132,11 +156,7 @@ class Table:
         self.table_orig = table
         self.table = np.asarray(table, dtype=np.float64)
 
-        if self.table.min() < 0:
-            raise ValueError(
-                "contingency table cell counts must be non-negative, got "
-                f"minimum {self.table.min()}"
-            )
+        _check_cell_counts(self.table)
 
         if shift_zeros and (self.table.min() == 0):
             self.table[self.table == 0] = 0.5
@@ -994,6 +1014,12 @@ class StratifiedTable:
         If True and any cell count is zero, add 0.5 to all cells of the
         affected table(s).
 
+    Raises
+    ------
+    ValueError
+        If the tables are not 2x2 or if any cell count is negative or not
+        finite.
+
     Notes
     -----
     These results are based on a sampling model in which the units are
@@ -1022,11 +1048,7 @@ class StratifiedTable:
                 table = table.copy()
                 table[:, :, ix] += 0.5
 
-        if table.min() < 0:
-            raise ValueError(
-                "contingency table cell counts must be non-negative, got "
-                f"minimum {table.min()}"
-            )
+        _check_cell_counts(table)
 
         self.table = table
 
@@ -1397,6 +1419,13 @@ def mcnemar(table, exact=True, correction=True):
         * pvalue : float
             p-value of the null hypothesis of equal marginal distributions.
 
+    Raises
+    ------
+    ValueError
+        If the table is not a 2x2 table, if any cell count is negative or not
+        finite, or if ``exact`` is True and the off-diagonal counts do not
+        add up to an integer.
+
     Notes
     -----
     This is a special case of Cochran's Q test, and of the homogeneity
@@ -1418,6 +1447,7 @@ def mcnemar(table, exact=True, correction=True):
             "SquareTable.symmetry (Bowker's test of symmetry), which "
             "generalizes McNemar's test to k x k tables."
         )
+    _check_cell_counts(table)
     n1, n2 = table[0, 1], table[1, 0]
 
     if exact:
