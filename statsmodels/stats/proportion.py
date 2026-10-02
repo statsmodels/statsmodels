@@ -1673,12 +1673,14 @@ def confint_proportions_paired(table, method="newcomb", alpha=0.05):
         are the discordant counts. The first marginal proportion is
         ``p1 = (n11 + n12) / n`` and the second is ``p2 = (n11 + n21) / n``,
         where ``n`` is the total count.
-    method : {"newcomb", "wald"}, optional
+    method : {"newcomb", "newcombe", "wald"}, optional
         Method for computing the confidence interval.
 
         - "newcomb" : Newcombe's method 10, which combines the Wilson score
           intervals of the two marginal proportions with a correction for the
-          correlation between them. This is the default.
+          correlation between them. This is the default. The spelling
+          "newcombe" is accepted as an alias; "newcomb" matches the method
+          name in :func:`confint_proportions_2indep`.
         - "wald" : simple asymptotic (Wald) interval without continuity
           correction, Newcombe's method 1. It degenerates to a zero-width
           interval when there are no discordant pairs.

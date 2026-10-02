@@ -1636,11 +1636,12 @@ def test_confint_proportions_paired(method, idx, alpha):
     assert isinstance(upp, float)
 
 
-def test_confint_proportions_paired_default_method():
+@pytest.mark.parametrize("method", ["newcomb", "newcombe", "Newcombe"])
+def test_confint_proportions_paired_default_method(method):
     table = np.array([[10, 5], [2, 20]])
     assert_allclose(
         smprop.confint_proportions_paired(table),
-        smprop.confint_proportions_paired(table, method="newcomb"),
+        smprop.confint_proportions_paired(table, method=method),
     )
 
 
