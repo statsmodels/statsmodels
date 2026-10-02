@@ -369,6 +369,42 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
 # # GK and OGK ###
 
 
+def _is_singular(cov):
+    """
+    Check if a covariance matrix is numerically singular
+
+    Parameters
+    ----------
+    cov : ndarray
+        Square covariance matrix.
+
+    Returns
+    -------
+    bool
+        True if a variable has a variance of zero, or if the rank of the
+        correlation matrix is below its dimension. The rank is computed with
+        the default tolerance of `numpy.linalg.matrix_rank`.
+
+    Notes
+    -----
+    LAPACK only reports a singular matrix if a pivot of the LU factorization
+    is exactly zero. A matrix that is singular but has rounding errors, for
+    example the covariance of fewer observations than variables, can have
+    pivots that are not exactly zero, depending on the platform, and
+    ``numpy.linalg.solve`` returns huge values without an error.
+
+    The rank is that of the correlation matrix so that it does not depend on
+    the scales of the variables. The rank of the covariance matrix itself is
+    too low if the ratio of the variances is above about 1e15, even if the
+    correlation matrix is well conditioned.
+    """
+    var = np.diag(cov)
+    if not np.all(var > 0):
+        return True
+    sd = np.sqrt(var)
+    return bool(np.linalg.matrix_rank(cov / np.outer(sd, sd)) < len(cov))
+
+
 def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
     """
     Mahalanobis distance squared
@@ -395,8 +431,10 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
 
     Notes
     -----
-    If `cov` is singular, then the Moore-Penrose pseudo-inverse of `cov` is
-    used.
+    If `cov` is numerically singular, then the Moore-Penrose pseudo-inverse of
+    `cov` is used. This is the case if a variable has a variance of zero, or
+    if the rank of the correlation matrix is below its dimension, using the
+    default tolerance of `numpy.linalg.matrix_rank`.
     """
     # another option would be to allow also cov^{-0.5) as keyword
     x = np.asarray(data)
@@ -405,17 +443,13 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
         d = (x * cov_inv.dot(x.T).T).sum(1)
     elif cov is not None:
         cov = np.asarray(cov)
-        try:
-            sol = np.linalg.solve(cov, x.T)
-        except np.linalg.LinAlgError:
-            if cov.ndim != 2 or cov.shape[0] != cov.shape[1]:
-                raise  # not a singular matrix
-            sol = None
-        if sol is None or not np.all(np.isfinite(sol)):
+        if cov.ndim == 2 and cov.shape[0] == cov.shape[1] and _is_singular(cov):
             # A singular covariance, for example a starting covariance, must
-            # not abort the candidate. Some LAPACK libraries do not raise an
-            # error for a singular matrix but return non-finite values.
+            # not abort the candidate.
             sol = np.linalg.pinv(cov).dot(x.T)
+        else:
+            # raises LinAlgError if cov is not square
+            sol = np.linalg.solve(cov, x.T)
         d = (x * sol.T).sum(1)
     else:
         raise ValueError("either cov or cov_inv needs to be given")

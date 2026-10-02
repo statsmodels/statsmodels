@@ -1,4 +1,3 @@
-from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 from pathlib import Path
 
@@ -351,10 +350,7 @@ def test_mahalanobis_singular_cov():
     d = robcov.mahalanobis(x, cov=np.diag([1.0, 1.0, 1.0, 0.0, 0.0]))
     assert_allclose(d, (x[:, :3] ** 2).sum(1), rtol=1e-12)
 
-    # rank 3 covariance a a', the pseudo-inverse is a (a'a)^(-2) a'
 
-
-@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="Linear algebra for the pseudo-inverse is unreliable on WASM")
 def test_mahalanobis_singular_cov_additional():
     rng = np.random.default_rng(10243)
     x = rng.standard_normal((40, 5))
@@ -369,17 +365,59 @@ def test_mahalanobis_singular_cov_additional():
     assert_allclose(d_sqrt, np.sqrt(d), rtol=1e-12)
 
 
-def test_mahalanobis_singular_cov_solve_without_error(monkeypatch):
-    # Some LAPACK libraries, for example on WASM, do not raise LinAlgError for
-    # a singular matrix but return non-finite values from solve
-    def solve(a, b):
-        return np.full(np.shape(b), np.nan)
+@pytest.mark.parametrize("seed", range(5))
+def test_mahalanobis_numerically_singular_cov(seed):
+    # GH-10247: A rank deficient covariance with rounding errors does not have
+    # an exactly zero pivot in the LU factorization on some platforms (macOS,
+    # WASM), where numpy.linalg.solve returns huge values without an error. The
+    # rotation of the rank 3 covariance a a' by an orthogonal matrix has these
+    # rounding errors on all platforms. The pseudo-inverse of b b' is
+    # b (b'b)^(-2) b' if b has full column rank.
+    rng = np.random.default_rng(10243 + seed)
+    x = rng.standard_normal((40, 5))
+    q, _ = np.linalg.qr(rng.standard_normal((5, 5)))
+    b = q @ rng.standard_normal((5, 3))
+    cov = b @ b.T
+    cov = (cov + cov.T) / 2
+    pinv = b @ np.linalg.inv(b.T @ b) @ np.linalg.inv(b.T @ b) @ b.T
+    d = robcov.mahalanobis(x, cov=cov)
+    assert_allclose(d, np.einsum("ij,jk,ik->i", x, pinv, x), rtol=1e-8)
+    assert np.all(d >= 0)
 
-    monkeypatch.setattr(np.linalg, "solve", solve)
+
+def test_mahalanobis_ill_conditioned_cov():
+    # a covariance that is ill-conditioned but not singular to working precision
+    # does not use the pseudo-inverse, the distance is the one of the inverse
     rng = np.random.default_rng(10243)
     x = rng.standard_normal((40, 5))
-    d = robcov.mahalanobis(x, cov=np.diag([1.0, 1.0, 1.0, 0.0, 0.0]))
-    assert_allclose(d, (x[:, :3] ** 2).sum(1), rtol=1e-12)
+    q, _ = np.linalg.qr(rng.standard_normal((5, 5)))
+    evals = np.array([1.0, 1e-3, 1e-5, 1e-8, 1e-10])
+    cov = (q * evals) @ q.T
+    d = robcov.mahalanobis(x, cov=(cov + cov.T) / 2)
+    assert_allclose(d, ((x @ q) ** 2 / evals).sum(1), rtol=1e-4)
+
+
+@pytest.mark.parametrize("span", [1e8, 1e16, 1e24])
+def test_mahalanobis_badly_scaled_cov(span):
+    # The covariance of variables with a ratio of variances above 1e15 has a
+    # numerical rank below its dimension but it is not singular, the
+    # pseudo-inverse would drop the variables with a small variance.
+    # The distance does not depend on the scales, z' corr^(-1) z.
+    rng = np.random.default_rng(10243)
+    corr = np.array(
+        [
+            [1.0, 0.5, 0.2, 0.1],
+            [0.5, 1.0, 0.3, 0.2],
+            [0.2, 0.3, 1.0, 0.4],
+            [0.1, 0.2, 0.4, 1.0],
+        ]
+    )
+    z = rng.standard_normal((50, 4)) @ np.linalg.cholesky(corr).T
+    expected = np.einsum("ij,jk,ik->i", z, np.linalg.inv(corr), z)
+
+    sd = np.geomspace(span**0.25, span**-0.25, 4)
+    cov = sd[:, None] * corr * sd
+    assert_allclose(robcov.mahalanobis(z * sd, cov=cov), expected, rtol=1e-8)
 
 
 def test_mahalanobis_cov_not_square():
