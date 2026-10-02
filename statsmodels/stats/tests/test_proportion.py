@@ -1568,9 +1568,9 @@ def test_score_2indep_diff_symmetric_table():
         assert np.isfinite(res.pvalue)
 
 
-# Reference values for confint_proportions_paired computed in R 4.5 with
+# Reference values for confint_proportions_paired computed in R 4.5.1 with
 # ratesci 1.1.0 (Newcombe method 10: MOVER on Wilson limits with the phi
-# correction) and PropCIs 0.3-0 (Wald). PropCIs defines the difference as
+# correction) and PropCIs 0.3.0 (Wald). PropCIs defines the difference as
 # p2 - p1, so its limits are negated and swapped below.
 #
 #   library(ratesci); library(PropCIs)
