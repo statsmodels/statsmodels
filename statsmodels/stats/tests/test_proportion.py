@@ -1502,6 +1502,48 @@ def test_proportions_chisquare_pairscontrol_alternative():
         smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="larger")
 
 
+def test_proportions_ztest_nonfinite_and_value_domain_raises():
+    # NaN/inf inputs used to slip past the sign checks and come back as NaN
+    # p-values; an out-of-range null proportion used to produce silently
+    # wrong p-values
+    with pytest.raises(ValueError, match="count must be finite"):
+        smprop.proportions_ztest(np.nan, 10, value=0.5)
+    with pytest.raises(ValueError, match="nobs must be finite"):
+        smprop.proportions_ztest(1, np.inf, value=0.5)
+    with pytest.raises(ValueError, match=r"value must be finite and in \[0\.0, 1\.0\] for a 1-sample"):
+        smprop.proportions_ztest(3, 10, value=1.5)
+    with pytest.raises(ValueError, match=r"value must be finite and in \[-1\.0, 1\.0\] for a 2-sample"):
+        smprop.proportions_ztest([3, 5], [10, 10], value=2.0)
+
+
+def test_proportions_chisquare_nonfinite_and_value_domain_raises():
+    with pytest.raises(ValueError, match="count must be finite"):
+        smprop.proportions_chisquare(np.nan, 10, value=0.5)
+    with pytest.raises(ValueError, match=r"value must be finite and in \[0, 1\], got 1\.5"):
+        smprop.proportions_chisquare(3, 10, value=1.5)
+
+
+def test_proportions_ztest_invalid_inputs_raises():
+    # impossible counts previously returned (nan, nan) or silently wrong
+    # p-values (a negative count in a 2-sample test gave z=-2.98, p=0.0029)
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportions_ztest(-1, 10, value=0.1)
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportions_ztest(11, 10, value=0.5)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smprop.proportions_ztest(1, 0, value=0.5)
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportions_ztest([-1, 3], [10, 10])
+
+
+def test_proportions_chisquare_invalid_inputs_raises():
+    # a negative count previously returned a "significant" p-value (0.035)
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportions_chisquare(-1, 10, value=0.1)
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportions_chisquare(11, 10, value=0.5)
+
+
 def test_confint_proportions_2indep_invalid_inputs_raises():
     # negative counts and non-positive nobs previously returned (nan, nan)
     # or divided by zero instead of raising
