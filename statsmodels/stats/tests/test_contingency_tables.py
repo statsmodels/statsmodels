@@ -785,3 +785,20 @@ def test_mcnemar_negative_counts_rejected(exact):
     for table in ([[5, -1], [2, 6]], [[5, 1], [-2, 6]], [[-5, 1], [2, 6]]):
         with pytest.raises(ValueError, match="non-negative"):
             ctab.mcnemar(np.asarray(table), exact=exact)
+
+
+def test_table2x2_confint_invalid_alpha_raises():
+    # alpha outside (0, 1) previously returned (inf, 0.0) silently
+    t2 = ctab.Table2x2(np.array([[10.0, 5.0], [8.0, 12.0]]))
+    for confint in (
+        t2.oddsratio_confint,
+        t2.log_oddsratio_confint,
+        t2.riskratio_confint,
+        t2.log_riskratio_confint,
+    ):
+        with pytest.raises(ValueError, match="alpha must be in the range"):
+            confint(alpha=2)
+        with pytest.raises(ValueError, match="alpha must be in the range"):
+            confint(alpha=0)
+    lo, hi = t2.oddsratio_confint()
+    assert np.isfinite([lo, hi]).all() and 0 < lo < hi
