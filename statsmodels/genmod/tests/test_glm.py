@@ -3559,3 +3559,16 @@ def test_derivative_predict_matches_numerical_derivative():
     # exog=None must default to the estimation exog and agree with the
     # lower-level helper margins/score computations use internally
     assert_allclose(analytic, mod._deriv_mean_dparams(res.params), rtol=1e-12)
+
+
+def test_glm_fit_invalid_scale_raises():
+    # a negative scale previously produced nan standard errors silently
+    rng = np.random.RandomState(0)
+    y = rng.poisson(2.0, size=50).astype(float)
+    X = sm.add_constant(np.arange(50.0))
+    with pytest.raises(ValueError, match="scale must be positive"):
+        sm.GLM(y, X, family=sm.families.Poisson()).fit(scale=-1.0)
+    with pytest.raises(ValueError, match="scale must be positive"):
+        sm.GLM(y, X, family=sm.families.Poisson()).fit(scale=0)
+    res = sm.GLM(y, X, family=sm.families.Poisson()).fit(scale=1.0)
+    assert np.isfinite(res.bse).all()
