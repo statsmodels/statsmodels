@@ -22,6 +22,7 @@ from numpy.testing import (
     assert_equal,
 )
 import pytest
+from scipy import integrate, stats
 
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
@@ -1132,3 +1133,124 @@ def test_alternative_deprecated_alias(power_func):
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         power_func("bogus")
+
+
+def _ttest_power_het_integral(diff, nobs, alpha, s0, s1, df, alternative):
+    # Conditional on V=v, T1 > c iff
+    # Z > (c*s0*sqrt(v/df) - diff*sqrt(nobs))/s1. Integrate this normal
+    # probability against chi-square(df), without any noncentral-t routines.
+    tail_alpha = alpha / 2 if alternative == "two-sided" else alpha
+    lower = stats.t.ppf(tail_alpha, df)
+    upper = stats.t.isf(tail_alpha, df)
+
+    def integrand(v):
+        scale = s0 * np.sqrt(v / df)
+        shift = diff * np.sqrt(nobs)
+        probability = 0.0
+        if alternative != "smaller":
+            probability += stats.norm.sf((upper * scale - shift) / s1)
+        if alternative != "larger":
+            probability += stats.norm.cdf((lower * scale - shift) / s1)
+        return probability * stats.chi2.pdf(v, df)
+
+    result, error = integrate.quad(integrand, 0, np.inf, epsabs=1e-11, epsrel=1e-11)
+    assert error < 1e-10
+    return result
+
+
+@pytest.mark.parametrize("alternative", ["larger", "smaller", "two-sided"])
+@pytest.mark.parametrize("scales", [(1.0, 2.0), (2.0, 1.0)])
+@pytest.mark.parametrize(
+    "diff,nobs,alpha,df",
+    [(0.3, 10, 0.05, 9), (-0.2, 30, 0.1, 12.5), (0.0, 50, 0.01, 49)],
+)
+def test_ttest_power_het_integral(alternative, scales, diff, nobs, alpha, df):
+    s0, s1 = scales
+    expected = _ttest_power_het_integral(diff, nobs, alpha, s0, s1, df, alternative)
+    actual = smp.ttest_power_het(diff, nobs, alpha, s0, s1, alternative, df=df)
+    assert_allclose(actual, expected, rtol=1e-8, atol=1e-10)
+
+
+@pytest.mark.parametrize("alternative", ["larger", "smaller", "two-sided"])
+@pytest.mark.parametrize("diff", [-0.3, 0.0, 0.3])
+@pytest.mark.parametrize("df", [None, 12.5])
+def test_ttest_power_het_equal_scales(alternative, diff, df):
+    expected = smp.ttest_power(diff / 2, 30, 0.05, df=df, alternative=alternative)
+    for s1 in (None, 2.0):
+        actual = smp.ttest_power_het(diff, 30, 0.05, 2, s1, alternative, df=df)
+        assert_allclose(actual, expected, rtol=1e-13, atol=1e-15)
+
+
+@pytest.mark.parametrize("alternative", ["larger", "smaller", "two-sided"])
+@pytest.mark.parametrize("scales", [(1.0, 2.0), (2.0, 1.0)])
+def test_ttest_power_het_normal_limit(alternative, scales):
+    s0, s1 = scales
+    diff = np.array([-0.3, 0, 0.3])
+    expected = smp.normal_power_het(diff, 30, 0.05, s0, s1, alternative)
+    actual = smp.ttest_power_het(diff, 30, 0.05, s0, s1, alternative, df=1e7)
+    # Allow for finite-df corrections at fixed noncentrality.
+    assert_allclose(actual, expected, rtol=0, atol=1e-7)
+
+
+@pytest.mark.parametrize("alternative", ["larger", "smaller", "two-sided"])
+def test_ttest_power_het_broadcast_and_scale(alternative):
+    diff = np.array([[-0.2], [0.3]])
+    nobs = np.array([10, 30, 50])
+    alpha = np.array([0.01, 0.05, 0.1])
+    s0, s1 = np.array([1, 2, 1]), np.array([2, 1, 1])
+    actual = smp.ttest_power_het(diff, nobs, alpha, s0, s1, alternative)
+    expected = np.array(
+        [
+            [
+                _ttest_power_het_integral(d, n, a, x, y, n - 1, alternative)
+                for n, a, x, y in zip(nobs, alpha, s0, s1, strict=True)
+            ]
+            for d in diff[:, 0]
+        ]
+    )
+    # SciPy 1.14's CDFLIB nctdtr differs from quadrature by up to 8e-10
+    # in the small one-sided probabilities here, including on CPython.
+    assert_allclose(actual, expected, rtol=1e-8, atol=1e-9)
+    explicit = smp.ttest_power_het(diff, nobs, alpha, s0, s1, alternative, df=nobs - 1)
+    assert_array_equal(actual, explicit)
+    scaled = smp.ttest_power_het(7 * diff, nobs, alpha, 7 * s0, 7 * s1, alternative)
+    assert_allclose(actual, scaled, rtol=1e-12, atol=1e-15)
+
+
+def test_ttest_power_het_symmetry():
+    diff = np.array([0.1, 0.3, 0.5])
+    for s0, s1 in [(1, 2), (2, 1)]:
+        upper = smp.ttest_power_het(diff, 20, 0.05, s0, s1, "larger")
+        lower = smp.ttest_power_het(-diff, 20, 0.05, s0, s1, "smaller")
+        assert_allclose(upper, lower, rtol=1e-6, atol=1e-10)
+        positive = smp.ttest_power_het(diff, 20, 0.05, s0, s1)
+        negative = smp.ttest_power_het(-diff, 20, 0.05, s0, s1)
+        assert_allclose(positive, negative, rtol=1e-6, atol=1e-10)
+
+
+@pytest.mark.parametrize("name", ["nobs", "df", "std_null", "std_alternative"])
+@pytest.mark.parametrize("value", [0, -1, np.inf])
+def test_ttest_power_het_invalid_scale_or_df(name, value):
+    kwds = dict(diff=0.3, nobs=20, alpha=0.05)
+    kwds[name] = value
+    with pytest.raises(ValueError, match=f"{name} must be positive and finite"):
+        smp.ttest_power_het(**kwds)
+
+
+def test_ttest_power_het_invalid_alpha_or_alternative():
+    for alpha in (0, 1, -0.1, 1.1):
+        with pytest.raises(ValueError, match="alpha must be between"):
+            smp.ttest_power_het(0.3, 20, alpha)
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        smp.ttest_power_het(0.3, 20, 0.05, alternative="bogus")
+
+
+@pytest.mark.parametrize(
+    "name", ["diff", "nobs", "alpha", "std_null", "std_alternative", "df"]
+)
+def test_ttest_power_het_nan(name):
+    kwds = dict(diff=0.3, nobs=20, alpha=0.05, std_null=1, std_alternative=2, df=19)
+    expected = smp.ttest_power_het(**kwds)
+    kwds[name] = [kwds[name], np.nan]
+    actual = smp.ttest_power_het(**kwds)
+    assert_allclose(actual, [expected, np.nan])
