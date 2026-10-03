@@ -1027,6 +1027,9 @@ def acf(
     acf = avf[: nlags + 1] / avf[0]
 
     confint = None
+    if alpha is not None and not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alpha is not None:
         if bartlett_confint:
             varacf = np.ones_like(acf) / nobs
@@ -1491,6 +1494,9 @@ def pacf(
         acv = acovf(x, adjusted=False, fft=False)
         ret = levinson_durbin(acv, nlags=nlags, isacov=True).pacf
     confint = None
+    if alpha is not None and not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alpha is not None:
         varacf = 1.0 / len(x)  # for all lags >=1
         interval = stats.norm.ppf(1.0 - alpha / 2.0) * np.sqrt(varacf)
@@ -1676,6 +1682,9 @@ def ccf(
     ret = ret[:nlags]
 
     confint = None
+    if alpha is not None and not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(len(x))
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
@@ -2009,6 +2018,9 @@ def pccf(
         ret = _pccf_yw(x, y, nlags, adjusted=adjusted)
 
     confint = None
+    if alpha is not None and not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(nobs)
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
