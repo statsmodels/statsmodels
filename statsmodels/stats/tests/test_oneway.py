@@ -843,3 +843,15 @@ def test_confint_noncentrality_alternative():
     # than a NotImplementedError
     with pytest.raises(ValueError, match="alternative must be one of"):
         confint_noncentrality(f_stat, df, alternative="larger")
+
+
+def test_confint_noncentrality_invalid_alpha_raises():
+    # alpha outside (0, 1) previously returned nan upper bounds silently
+    # (e.g. [1957.5, nan] for alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smo.confint_noncentrality(3.0, (3, 57), alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smo.confint_noncentrality(3.0, (3, 57), alpha=0)
+    # confint_effectsize_oneway delegates and is covered transitively
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smo.confint_effectsize_oneway(2.0, (3, 57), alpha=2)
