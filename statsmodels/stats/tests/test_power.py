@@ -1132,3 +1132,18 @@ def test_alternative_deprecated_alias(power_func):
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         power_func("bogus")
+
+
+def test_ttest_ind_power_ratio_zero_is_one_sample():
+    # the docstring documents ratio=0 for a one-sample test, but it used to
+    # crash with a bare ZeroDivisionError; negative ratios were also accepted
+    # silently (treated like the one-sample case by the sign check)
+    from statsmodels.stats.power import TTestIndPower, TTestPower
+
+    ind = TTestIndPower()
+    one = TTestPower()
+    p_zero = ind.power(effect_size=0.5, nobs1=50, ratio=0, alpha=0.05)
+    p_one = one.power(effect_size=0.5, nobs=50, alpha=0.05)
+    assert_allclose(p_zero, p_one)
+    with pytest.raises(ValueError, match="non-negative"):
+        ind.power(effect_size=0.5, nobs1=50, ratio=-1, alpha=0.05)
