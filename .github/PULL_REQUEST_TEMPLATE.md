@@ -6,12 +6,23 @@
 
 #### AI Disclosure
 
+<!--
+REQUIRED. Do not delete or rewrite this section. The "AI Policy Disclosure Check"
+CI job fails until exactly one of the two boxes below is ticked ([x]).
+
+This applies to every pull request, including pull requests opened by an AI agent,
+opened with `gh pr create --body ...` (which does not use this template), or where
+you replace the text above with your own description. In those cases, copy this whole
+section, unchanged, into your description.
+
+Keep this in sync with the copy in .github/workflows/ai-policy-check.yml.
+-->
+
 Contributions must comply with the statsmodels [AI Policy](https://www.statsmodels.org/devel/dev/ai-policy.html).
 
-If using AI tools, edit the second option to explain which tool was selected and
-how the tool's output was used.
-
-Please complete **one** of the following:
+Tick **exactly one** of the following. If AI tools were used, replace the `<...>`
+placeholders in the second option with the tool name(s) and how the tool's output was
+used.
 
 - [ ] No AI tools were used to develop this pull request.
 - [ ] AI tools were used.

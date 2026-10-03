@@ -477,3 +477,16 @@ class TestStattools:
         kurtosis = robust_kurtosis(self.kurtosis_x, dg=(delta, gamma), excess=False)
         q = np.percentile(x, [delta, 100.0 - delta, gamma, 100.0 - gamma])
         assert_almost_equal(kurtosis[3], (q[1] - q[0]) / (q[3] - q[2]))
+
+
+def test_omni_normtest_axis_validation():
+    # an out-of-range axis used to leak a bare IndexError from the shape
+    # lookup instead of naming the problem
+    rs = np.random.RandomState(12345)
+    data = rs.standard_normal((40, 2))
+    with pytest.raises(ValueError, match="out of bounds"):
+        omni_normtest(data, axis=99)
+    # negative indexing stays valid, and the 1-d default path is unchanged
+    omni_normtest(data, axis=-1)
+    res = omni_normtest(rs.standard_normal(40))
+    assert np.ndim(res[0]) == 0

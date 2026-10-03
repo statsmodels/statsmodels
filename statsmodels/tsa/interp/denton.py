@@ -92,11 +92,11 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     Parameters
     ----------
     indicator : array_like
-        A low-frequency indicator series.  It is assumed that there are no
+        A high-frequency indicator series.  It is assumed that there are no
         pre-sample indicators.  I.e., the first indicators line up with
         the first benchmark.
     benchmark : array_like
-        The higher frequency benchmark.  A 1d or 2d data series in columns.
+        The low-frequency benchmark.  A 1d or 2d data series in columns.
         If 2d, then M series are assumed.
     freq : {"aq", "qm", "other"}, optional
         The frequency to use in the conversion.
@@ -187,7 +187,14 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
             raise ValueError('k must be supplied with freq="other"')
 
     n = k*m  # number of indicator series with a benchmark for back-series
-    # if k*m != n, then we are going to extrapolate q observations
+    if n > N:
+        raise ValueError(
+            f"indicator has {N} observation(s), but benchmarking {m} "
+            f"aggregate(s) at freq={freq!r} requires at least {n}; the "
+            "benchmark series covers more high-frequency periods than the "
+            "indicator provides"
+        )
+    # if N > k*m, then we are going to extrapolate q observations
     if n < N:
         q = N - n
     else:
