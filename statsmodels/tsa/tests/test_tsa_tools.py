@@ -646,6 +646,12 @@ class TestDetrend:
         assert_array_almost_equal(tools.detrend(data, order=1), np.zeros_like(data))
         assert_array_almost_equal(tools.detrend(data, order=0), [-2, -1, 0, 1, 2])
 
+    def test_detrend_negative_order(self):
+        # a negative order used to build an empty vander matrix and silently
+        # return the input unchanged
+        with pytest.raises(ValueError, match="non-negative"):
+            tools.detrend(self.data_1d, order=-1)
+
     def test_detrend_2d(self):
         data = self.data_2d
         assert_array_almost_equal(

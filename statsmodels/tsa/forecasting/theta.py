@@ -157,6 +157,8 @@ class ThetaModel:
         else:
             self.endog_orig = endog
         self._period = int_like(period, "period", optional=True)
+        if self._period is not None and self._period < 2:
+            raise ValueError(f"period must be >= 2, got {self._period}")
         self._deseasonalize = bool_like(deseasonalize, "deseasonalize")
         self._use_test = (
             bool_like(use_test, "use_test") and self._deseasonalize

@@ -555,6 +555,14 @@ Status: experimental, API might change, added in 0.12
    ScoreTestProportionsResult
    _score_confint_inversion
 
+Statistics for two paired samples
+Status: experimental, API might change
+
+.. autosummary::
+   :toctree: generated
+
+   confint_proportions_paired
+
 
 Rates
 -----
