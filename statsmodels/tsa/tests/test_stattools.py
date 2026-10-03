@@ -2973,4 +2973,16 @@ def test_confint_alpha_out_of_range(func):
             func(x, nlags=5, alpha=0)
     # a valid alpha still returns the interval
     res = acf(x, nlags=5, alpha=0.05)
-    assert len(res) == 2 and np.isfinite(res[1]).all()
+    assert len(res) == 2
+    assert np.isfinite(res[1]).all()
+
+
+def test_arma_order_select_ic_negative_bounds():
+    # a negative max_ar or max_ma used to empty one of the order grids and
+    # leak a bare numpy error from the argmin over the empty sequence
+    rs = np.random.RandomState(12345)
+    y = rs.standard_normal(50)
+    with pytest.raises(ValueError, match="must be non-negative"):
+        arma_order_select_ic(y, max_ar=-1, max_ma=2)
+    with pytest.raises(ValueError, match="must be non-negative"):
+        arma_order_select_ic(y, max_ar=2, max_ma=-1)
