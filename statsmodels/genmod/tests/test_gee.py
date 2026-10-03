@@ -31,7 +31,10 @@ from statsmodels.genmod import cov_struct, families
 import statsmodels.genmod.generalized_estimating_equations as gee
 from statsmodels.iolib.summary import Summary
 import statsmodels.regression.linear_model as lm
-from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.sm_exceptions import (
+    SingularMatrixWarning,
+    SpecificationWarning,
+)
 
 
 def load_data(fname, icept=True):
@@ -2143,6 +2146,41 @@ def test_missing():
     res2 = mod2.fit()
 
     assert_almost_equal(res.params.values, res2.params.values)
+
+
+def test_df_resid_rank_deficient():
+    # GH1928, the degrees of freedom are based on the rank of exog. GLM gives
+    # the reference degrees of freedom; the scale is checked against GEE's own
+    # residuals, since GLM's fit of a singular design differs on Pyodide.
+    from statsmodels.genmod.generalized_linear_model import GLM
+
+    rs = np.random.RandomState(4)
+    nobs = 40
+    x1 = rs.normal(size=nobs)
+    endog = rs.normal(size=nobs)
+    groups = np.repeat(np.arange(8), 5)
+
+    # the third column is a multiple of the second, so the rank is 2
+    exog = np.column_stack((np.ones(nobs), x1, 2 * x1))
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res = gee.GEE(endog, exog, groups=groups).fit()
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res_glm = GLM(endog, exog).fit()
+    assert_equal(res.df_model, res_glm.df_model)
+    assert_equal(res.df_resid, res_glm.df_resid)
+    resid = endog - res.fittedvalues
+    assert_allclose(res.scale, np.sum(resid**2) / res.df_resid, rtol=1e-10)
+
+    # more columns than observations, exog has rank 22 and the scale
+    # estimate divides by df_resid
+    exog = rs.normal(size=(nobs, 22))
+    exog[:, 0] = 1
+    exog = np.column_stack((exog, exog[:, 1:]))
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res = gee.GEE(endog, exog, groups=groups).fit()
+    assert_equal(res.df_resid, nobs - 22)
+    resid = endog - res.fittedvalues
+    assert_allclose(res.scale, np.sum(resid**2) / res.df_resid, rtol=1e-10)
 
 
 def simple_qic_data(fam):

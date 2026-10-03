@@ -117,7 +117,19 @@ def _check_nested_results(results_x, results_z):
         raise TypeError("results_x must come from a linear regression model")
     if not isinstance(results_z, RegressionResultsWrapper):
         raise TypeError("results_z must come from a linear regression model")
-    if not np.allclose(results_x.model.endog, results_z.model.endog):
+    endog_x = results_x.model.endog
+    endog_z = results_z.model.endog
+    if endog_x.shape[0] != endog_z.shape[0]:
+        # the non-nested tests combine residuals from the two fits element
+        # by element; mismatched samples used to leak a bare numpy
+        # broadcast error instead of naming the problem
+        raise ValueError(
+            "the two models must be fit on the same number of observations; got "
+            f"{endog_x.shape[0]} and {endog_z.shape[0]}. This happens, for "
+            "example, if missing values are dropped from the variables of only "
+            "one of the models."
+        )
+    if not np.allclose(endog_x, endog_z):
         raise ValueError("endogenous variables in models are not the same")
 
     x = results_x.model.exog
@@ -1090,6 +1102,13 @@ def acorr_breusch_godfrey(
     nobs = x.shape[0]
     if nlags is None:
         nlags = min(10, nobs // 5)
+    if nlags < 0:
+        raise ValueError(f"nlags must be non-negative, got {nlags}")
+    if nlags >= nobs:
+        raise ValueError(
+            "nlags must be smaller than the number of observations "
+            f"({nobs}), got {nlags}"
+        )
 
     x = np.concatenate((np.zeros(nlags), x))
 
@@ -1378,6 +1397,14 @@ def het_goldfeldquandt(
     res_store : ResultsStore, optional
         Storage for the intermediate and final results that are calculated
 
+    Raises
+    ------
+    ValueError
+        If ``split`` is not between 0 and the number of observations, if
+        ``split + drop`` is not smaller than the number of observations, or if
+        a subsample does not have more observations than the rank of its
+        regressors.
+
     Notes
     -----
     The Null hypothesis is that the variance in the two sub-samples are the
@@ -1392,10 +1419,22 @@ def het_goldfeldquandt(
     x = np.asarray(x)
     y = np.asarray(y)  # **2
     nobs, nvars = x.shape
+    split_given = split
     if split is None:
         split = nobs // 2
     elif 0 < split < 1:
         split = int(nobs * split)
+    if not 0 < split < nobs:
+        # a negative or oversized split silently produced nan test results
+        # from empty subsample regressions
+        got = f"{split}"
+        if split_given is not None and split_given != split:
+            # a fraction that is rounded down to the number of observations
+            got = f"{split_given}, which is {split} observations"
+        raise ValueError(
+            "split must be between 0 and the number of observations "
+            f"({nobs}), got {got}"
+        )
 
     if drop is None:
         start2 = split
@@ -1403,6 +1442,11 @@ def het_goldfeldquandt(
         start2 = split + int(nobs * drop)
     else:
         start2 = split + drop
+    if start2 >= nobs:
+        raise ValueError(
+            "split + drop must be smaller than the number of observations "
+            f"({nobs}), got {start2}"
+        )
 
     if idx is not None:
         xsortind = np.argsort(x[:, idx])
@@ -1424,6 +1468,15 @@ def het_goldfeldquandt(
         },
         removed_after="0.16",
     )
+    for name, x_sub in (("first", x[:split]), ("second", x[start2:])):
+        # the residual variance of a subsample needs more observations than
+        # the rank of its regressors, the test statistic is nan otherwise
+        rank = np.linalg.matrix_rank(x_sub)
+        if x_sub.shape[0] <= rank:
+            raise ValueError(
+                f"the {name} subsample has {x_sub.shape[0]} observations, "
+                f"which is not more than the rank of its regressors ({rank})"
+            )
     resols1 = OLS(y[:split], x[:split]).fit()
     resols2 = OLS(y[start2:], x[start2:]).fit()
     fval = resols2.mse_resid / resols1.mse_resid
@@ -1636,9 +1689,12 @@ def linear_harvey_collier(res, order_by=None, skip=None):
     # I think this has different ddof than
     # B.H. Baltagi, Econometrics, 2011, chapter 8
     # but it matches Gretl and R:lmtest, pvalue at decimal=13
+    if skip is None:
+        skip = res.model.exog.shape[1]
     rr = recursive_olsresiduals(res, skip=skip, alpha=0.95, order_by=order_by)
-
-    return stats.ttest_1samp(rr[3][3:], 0)
+    # recursive residuals start at index skip, earlier entries are nan or
+    # the in-sample residual of the initial OLS fit
+    return stats.ttest_1samp(rr[3][skip:], 0)
 
 
 @deprecate_kwarg("center", None)

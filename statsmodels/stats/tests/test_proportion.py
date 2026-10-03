@@ -889,10 +889,12 @@ def test_confint_2indep():
         count1, nobs1, count2, nobs2, method="agresti-caffo", compare="diff", alpha=0.05
     )
     assert_allclose(ci, [0.012, 0.322], atol=0.005)
+    # the published MN values agree with the interval without the N / (N - 1)
+    # variance factor, see #10269
     ci = confint_proportions_2indep(
-        count1, nobs1, count2, nobs2, compare="diff", method="score", correction=True
+        count1, nobs1, count2, nobs2, compare="diff", method="score", correction=False
     )
-    assert_allclose(ci, [0.028, 0.343], rtol=0.03)
+    assert_allclose(ci, [0.028, 0.340], atol=0.005)
 
     # ratio
     ci = confint_proportions_2indep(
@@ -934,6 +936,31 @@ def test_confint_2indep():
     assert_allclose(ci, [1.246622, 56.461576], rtol=0.01)
 
 
+@pytest.mark.parametrize("value", [-0.3, -0.1, 0.05, 0.2, 0.4])
+@pytest.mark.parametrize(
+    "count1, nobs1, count2, nobs2",
+    [(7, 34, 1, 34), (15, 40, 12, 60), (3, 20, 9, 25)],
+)
+def test_score_2indep_diff_constrained_mle(count1, nobs1, count2, nobs2, value):
+    # #10269: prop1_null and prop2_null are the MLE under p1 - p2 = value,
+    # so they must satisfy the constraint and zero the score of the
+    # restricted loglikelihood
+    res = score_test_proportions_2indep(
+        count1, nobs1, count2, nobs2, value=value, compare="diff"
+    )
+    p1, p2 = res.prop1_null, res.prop2_null
+    assert 0 < p1 < 1
+    assert 0 < p2 < 1
+    assert_allclose(p1 - p2, value, atol=1e-12)
+    score = (
+        count1 / p1
+        - (nobs1 - count1) / (1 - p1)
+        + count2 / p2
+        - (nobs2 - count2) / (1 - p2)
+    )
+    assert_allclose(score, 0, atol=1e-8)
+
+
 def test_confint_2indep_propcis():
     # unit tests compared to R package PropCis
     # alpha = 0.05
@@ -946,7 +973,7 @@ def test_confint_2indep_propcis():
     ci1 = confint_proportions_2indep(
         count1, nobs1, count2, nobs2, compare="diff", method="score", correction=True
     )
-    assert_allclose(ci1, ci, atol=0.002)  # lower agreement (iterative)
+    assert_allclose(ci1, ci, atol=1e-6)
     # > wald2ci(7, 34, 1, 34, 0.95, adjust="AC")
     ci = 0.01161167, 0.32172166
     ci1 = confint_proportions_2indep(
@@ -1498,3 +1525,188 @@ def test_proportions_chisquare_allpairs_invalid_inputs_raises():
         smprop.proportions_chisquare_pairscontrol(
             np.array([11, 3, 5]), np.array([10.0, 10.0, 10.0])
         )
+
+
+def test_confint_proportions_2indep_invalid_inputs_raises():
+    # negative counts and non-positive nobs previously returned (nan, nan)
+    # or divided by zero instead of raising
+    with pytest.raises(ValueError, match="count1 and count2 must be non-negative"):
+        smprop.confint_proportions_2indep(-1, 10, 3, 10)
+    with pytest.raises(ValueError, match="nobs1 and nobs2 must be positive"):
+        smprop.confint_proportions_2indep(1, 0, 3, 10)
+
+
+@pytest.mark.parametrize(
+    "counts, expected",
+    [
+        ((12, 16, 3, 11), (0.0890486619714, 0.739426279773)),
+        ((1, 20, 31, 36), (-0.912967201658, -0.591487082224)),
+        ((3, 20, 9, 25), (-0.443226028419, 0.0568197462183)),
+        ((3, 14, 11, 14), (-0.798498767391, -0.202009770047)),
+    ],
+)
+def test_confint_2indep_score_diff_bracket(counts, expected):
+    # The root finding bracket based on the Wald interval was too narrow (first
+    # and third table) or left the parameter space (second table). The last
+    # table is symmetric (p1 + p2 = 1), so that q == 0 exactly in the cubic
+    # equation of the Miettinen-Nurminen restricted MLE for some values of the
+    # difference.
+    # expected: independent implementation in R (restricted score equation
+    # solved by root finding, N / (N - 1) correction), the limits solve
+    # z**2 = qchisq(0.95, 1)
+    res = confint_proportions_2indep(*counts, method="score", compare="diff")
+    assert_allclose(res, expected, rtol=1e-7)
+
+
+@pytest.mark.parametrize(
+    "count1, nobs1, count0, nobs0, delta, prop0, stat",
+    [
+        (5, 20, 0, 20, 0.2, 1e-13, 0.551985054145214),
+        (0, 20, 5, 20, -0.2, 0.2000000000001, -0.551985054145214),
+        (20, 20, 3, 20, -0.5, 0.776720061523383, 9.75357596716112),
+        (7, 20, 20, 20, 0.05, 0.637268440065536, -4.62812543241672),
+        (0, 15, 0, 25, 0.2, 1e-13, -1.91213231759658),
+        (1, 30, 0, 12, -0.05, 0.0734479980138942, 1.02643721090643),
+    ],
+)
+def test_score_2indep_diff_boundary_tables(
+    count1, nobs1, count0, nobs0, delta, prop0, stat
+):
+    # tables with a zero or a full cell
+    # expected: independent implementation in R (restricted score equation
+    # solved by root finding or bounded optimization, N / (N - 1) correction)
+    res = score_test_proportions_2indep(
+        count1, nobs1, count0, nobs0, value=delta, compare="diff", correction=True
+    )
+    assert_allclose(res.prop2_null, prop0, atol=1e-8)
+    assert_allclose(res.statistic, stat, rtol=1e-8)
+
+
+def test_score_2indep_diff_symmetric_table():
+    # p1 + p2 = 1: q == 0 exactly in the cubic equation for these values of the
+    # difference, np.sign(q) = 0 returned nan
+    for value in [-0.86, -0.88, -0.8704853539268427]:
+        res = score_test_proportions_2indep(
+            3, 14, 11, 14, value=value, compare="diff", correction=True
+        )
+        assert np.isfinite(res.statistic)
+        assert np.isfinite(res.pvalue)
+
+
+# Reference values for confint_proportions_paired computed in R 4.5.1 with
+# ratesci 1.1.0 (Newcombe method 10: MOVER on Wilson limits with the phi
+# correction) and PropCIs 0.3.0 (Wald). PropCIs defines the difference as
+# p2 - p1, so its limits are negated and swapped below.
+#
+#   library(ratesci); library(PropCIs)
+#   t <- c(n11, n12, n21, n22); n <- sum(t)
+#   diffpropci.Wald.mp(t[2], t[3], n, conf.level = level)$conf.int
+#   moverpairci(t, level = level, contrast = "RD", type = "wilson",
+#               corc = TRUE, cc = FALSE, precis = 12)$estimates[, c("lower", "upper")]
+#
+# Tables cover a positive and a negative phi, no discordant pairs, no
+# concordant pairs, a zero marginal (phi set to 0), a single zero discordant
+# cell, phi exactly 0, a large table, and degenerate single-cell tables.
+_PAIRED_TABLES = [
+    (10, 5, 2, 20),
+    (3, 12, 7, 3),
+    (10, 0, 0, 20),
+    (0, 5, 3, 0),
+    (0, 0, 4, 6),
+    (5, 3, 0, 2),
+    (1, 1, 1, 1),
+    (100, 20, 30, 850),
+    (2, 0, 0, 0),
+    (0, 3, 0, 0),
+]
+
+_PAIRED_WALD = {
+    0.05: [
+        (-0.0566130752, 0.2187752374),
+        (-0.1326169178, 0.5326169178),
+        (0.0, 0.0),
+        (-0.4209478039, 0.9209478039),
+        (-0.7036363149, -0.0963636851),
+        (0.0159742349, 0.5840257651),
+        (-0.6929519122, 0.6929519122),
+        (-0.0238451723, 0.0038451723),
+        (0.0, 0.0),
+        (1.0, 1.0),
+    ],
+    0.01: [
+        (-0.0998797149, 0.2620418770),
+        (-0.2371327283, 0.6371327283),
+        (0.0, 0.0),
+        (-0.6317748836, 1.1317748836),
+        (-0.7990457598, -0.0009542402),
+        (-0.0732731287, 0.6732731287),
+        (-0.9106931839, 0.9106931839),
+        (-0.0281956407, 0.0081956407),
+        (0.0, 0.0),
+        (1.0, 1.0),
+    ],
+}
+
+_PAIRED_NEWCOMB = {
+    0.05: [
+        (-0.0643926051, 0.2211160179),
+        (-0.1336023844, 0.4874632352),
+        (-0.0722182713, 0.0722182713),
+        (-0.3885152108, 0.7263114284),
+        (-0.6873262303, -0.0383858209),
+        (-0.0529530013, 0.5665478379),
+        (-0.4949196078, 0.4949196078),
+        (-0.0243592378, 0.0041365528),
+        (-0.6576197725, 0.6576197725),
+        (0.2059232825, 1.0),
+    ],
+    0.01: [
+        (-0.1066889470, 0.2599315957),
+        (-0.2266187694, 0.5539649645),
+        (-0.0983942957, 0.0983942957),
+        (-0.5250595443, 0.7983788652),
+        (-0.7518402591, 0.0828109031),
+        (-0.1427568201, 0.6162757033),
+        (-0.5585157773, 0.5585157773),
+        (-0.0291585105, 0.0087824399),
+        (-0.7683817083, 0.7683817083),
+        (0.0261275085, 1.0),
+    ],
+}
+
+
+@pytest.mark.parametrize("alpha", [0.05, 0.01])
+@pytest.mark.parametrize("idx", range(len(_PAIRED_TABLES)))
+@pytest.mark.parametrize("method", ["wald", "newcomb"])
+def test_confint_proportions_paired(method, idx, alpha):
+    n11, n12, n21, n22 = _PAIRED_TABLES[idx]
+    table = [[n11, n12], [n21, n22]]
+    expected = {"wald": _PAIRED_WALD, "newcomb": _PAIRED_NEWCOMB}[method][alpha][idx]
+    low, upp = smprop.confint_proportions_paired(table, method=method, alpha=alpha)
+    assert_allclose((low, upp), expected, atol=1e-9)
+    assert isinstance(low, float)
+    assert isinstance(upp, float)
+
+
+@pytest.mark.parametrize("method", ["newcomb", "newcombe", "Newcombe"])
+def test_confint_proportions_paired_default_method(method):
+    table = np.array([[10, 5], [2, 20]])
+    assert_allclose(
+        smprop.confint_proportions_paired(table),
+        smprop.confint_proportions_paired(table, method=method),
+    )
+
+
+def test_confint_proportions_paired_invalid_inputs_raises():
+    with pytest.raises(ValueError, match="2x2 contingency table"):
+        smprop.confint_proportions_paired([1, 2, 3, 4])
+    with pytest.raises(ValueError, match="2x2 contingency table"):
+        smprop.confint_proportions_paired([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    with pytest.raises(ValueError, match="non-negative"):
+        smprop.confint_proportions_paired([[1, -2], [3, 4]])
+    with pytest.raises(ValueError, match="at least one observation"):
+        smprop.confint_proportions_paired([[0, 0], [0, 0]])
+    with pytest.raises(ValueError, match="method must be one of"):
+        smprop.confint_proportions_paired([[1, 2], [3, 4]], method="score")
+    with pytest.raises(TypeError, match="method must be a string"):
+        smprop.confint_proportions_paired([[1, 2], [3, 4]], method=10)
