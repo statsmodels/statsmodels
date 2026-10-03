@@ -505,7 +505,11 @@ class DescrStatsW:
             test
 
         """
-
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         t1, pv1, df1 = self.ttest_mean(low, alternative="larger")
         t2, pv2, df2 = self.ttest_mean(upp, alternative="smaller")
         return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
@@ -608,7 +612,11 @@ class DescrStatsW:
             test statistic and p-value for upper threshold test
 
         """
-
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         t1, pv1 = self.ztest_mean(low, alternative="larger")
         t2, pv2 = self.ztest_mean(upp, alternative="smaller")
         return np.maximum(pv1, pv2), (t1, pv1), (t2, pv2)
@@ -1329,6 +1337,11 @@ class CompareMeans:
         t2, pv2 : tuple of floats
             test statistic and pvalue for upper threshold test
         """
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         tt1 = self.ttest_ind(alternative="larger", usevar=usevar, value=low)
         tt2 = self.ttest_ind(alternative="smaller", usevar=usevar, value=upp)
         # TODO: remove tuple return, use same as for function tost_ind
@@ -1356,6 +1369,11 @@ class CompareMeans:
         t2, pv2 : tuple of floats
             test statistic and pvalue for upper threshold test
         """
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         tt1 = self.ztest_ind(alternative="larger", usevar=usevar, value=low)
         tt2 = self.ztest_ind(alternative="smaller", usevar=usevar, value=upp)
         # TODO: remove tuple return, use same as for function tost_ind
@@ -1556,7 +1574,11 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
         test statistic, pvalue and degrees of freedom for upper threshold test
 
     """
-
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        # bounds may be vectorized per endpoint, so compare elementwise
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     if transform:
         if transform is np.log:
             # avoid hstack in special case
@@ -1783,6 +1805,11 @@ def ztost(x1, low, upp, x2=None, usevar="pooled", ddof=1.0):
     checked only for 1 sample case
 
     """
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        # bounds may be vectorized per endpoint, so compare elementwise
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     tt1 = ztest(
         x1, x2, alternative="larger", usevar=usevar, value=low, ddof=ddof
     )
