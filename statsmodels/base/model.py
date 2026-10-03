@@ -2428,6 +2428,9 @@ class LikelihoodModelResults(Results):
         """
         bse = self.bse
 
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
         if self.use_t:
             dist = stats.t
             df_resid = getattr(self, "df_resid_inference", self.df_resid)
