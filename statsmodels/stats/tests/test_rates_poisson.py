@@ -1656,3 +1656,21 @@ def test_test_poisson_bad_exposure(nobs):
 def test_test_poisson_negative_value():
     with pytest.raises(ValueError, match="value must be non-negative"):
         smr.test_poisson(5, 10, -0.3, method="score")
+
+
+@pytest.mark.parametrize(
+    "fn, kwargs",
+    [
+        (smr.power_poisson_ratio_2indep, {}),
+        (smr.power_poisson_diff_2indep, {}),
+        (smr.power_negbin_ratio_2indep, {"dispersion": 0.5}),
+        (smr.power_equivalence_poisson_2indep, {"low": 0.5, "upp": 2}),
+        (smr.power_equivalence_neginb_2indep, {"low": 0.5, "upp": 2, "dispersion": 0.5}),
+    ],
+)
+def test_power_functions_invalid_inputs_raises(fn, kwargs):
+    # impossible nobs1 and alpha previously returned nan power silently
+    with pytest.raises(ValueError, match="nobs1 must be positive"):
+        fn(2, 1, -5, **kwargs)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        fn(2, 1, 20, alpha=2, **kwargs)
