@@ -588,6 +588,8 @@ def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
     probs1 = np.asarray(probs1, float)
     probs0 = probs0 / probs0.sum(axis)
     probs1 = probs1 / probs1.sum(axis)
+    if np.any(probs0 < 0) or np.any(probs1 < 0):
+        raise ValueError("probs0 and probs1 must be non-negative")
 
     d2 = ((probs1 - probs0)**2 / probs0).sum(axis)
 
