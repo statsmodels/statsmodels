@@ -2855,3 +2855,24 @@ def test_stattools_fixed_arity_result_objects():
     assert res[0] == res.coint_t
     assert res[1] == res.pvalue
     assert res[2] is res.critical_values
+
+
+@pytest.mark.parametrize("func", [acf, pacf, ccf, pccf])
+def test_confint_alpha_out_of_range(func):
+    # alpha outside (0, 1) previously returned inf/-inf bounds silently
+    rng = np.random.RandomState(1234)
+    x = rng.normal(size=50)
+    y = rng.normal(size=50)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        if func in (ccf, pccf):
+            func(x, y, nlags=5, alpha=2)
+        else:
+            func(x, nlags=5, alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        if func in (ccf, pccf):
+            func(x, y, nlags=5, alpha=0)
+        else:
+            func(x, nlags=5, alpha=0)
+    # a valid alpha still returns the interval
+    res = acf(x, nlags=5, alpha=0.05)
+    assert len(res) == 2 and np.isfinite(res[1]).all()
