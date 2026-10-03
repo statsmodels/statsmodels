@@ -322,6 +322,13 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
        https://doi.org/10.1080/03610920802255856.
 
     """
+    if np.any(np.asarray(count) < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(np.asarray(exposure) <= 0):
+        raise ValueError("exposure must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     n = exposure  # short hand
     rate = count / exposure
 
@@ -503,6 +510,15 @@ def tolerance_int_poisson(
        Poisson and Binomial Variables.” Journal of Quality Technology 13 (2):
        100-110. https://doi.org/10.1080/00224065.1981.11980998.
     """
+    if np.any(np.asarray(count) < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(np.asarray(exposure) <= 0):
+        raise ValueError("exposure must be positive")
+    if not 0 < prob < 1:
+        raise ValueError(f"prob must be in the range (0, 1), got {prob}")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     alternative = string_like(
         alternative, "alternative", options=("two-sided", "larger", "smaller"),
         lower=False,
@@ -586,6 +602,15 @@ def confint_quantile_poisson(
     Hahn, Gerald J, and William Q Meeker. 2010. Statistical Intervals: A Guide
     for Practitioners.
     """
+    if np.any(np.asarray(count) < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(np.asarray(exposure) <= 0):
+        raise ValueError("exposure must be positive")
+    if not 0 < prob < 1:
+        raise ValueError(f"prob must be in the range (0, 1), got {prob}")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     alternative = string_like(
         alternative, "alternative", options=("two-sided", "larger", "smaller"),
         lower=False,
@@ -799,6 +824,14 @@ class PoissonTest2indepResult(LimitedIterationMixin[float]):
     rates_cmle: tuple | None
 
 
+def _check_counts_exposures_2indep(y1, n1, y2, n2):
+    # counts and exposures of two independent samples
+    if np.any(y1 < 0) or np.any(y2 < 0):
+        raise ValueError("count1 and count2 must be non-negative")
+    if np.any(n1 <= 0) or np.any(n2 <= 0):
+        raise ValueError("exposure1 and exposure2 must be positive")
+
+
 def test_poisson_2indep(
     count1,
     exposure1,
@@ -894,6 +927,11 @@ def test_poisson_2indep(
         The two main attributes are test statistic `statistic` and p-value
         `pvalue`. See :class:`PoissonTest2indepResult` for the full list.
 
+    Raises
+    ------
+    ValueError
+        If a count is negative or an exposure is not positive.
+
     See Also
     --------
     tost_poisson_2indep
@@ -947,6 +985,7 @@ def test_poisson_2indep(
         np.asarray(count2),
         np.asarray(exposure2),
     )
+    _check_counts_exposures_2indep(y1, n1, y2, n2)
     d = n2 / n1
     rate1, rate2 = y1 / n1, y2 / n2
     rates_cmle = None
@@ -1209,6 +1248,11 @@ def etest_poisson_2indep(
     pvalue : float
         P-value of the e-test.
 
+    Raises
+    ------
+    ValueError
+        If a count is negative or an exposure is not positive.
+
     References
     ----------
     Gu, Ng, Tang, Schucany 2008: Testing the Ratio of Two Poisson Rates,
@@ -1236,6 +1280,7 @@ def etest_poisson_2indep(
         np.asarray(count2),
         np.asarray(exposure2),
     )
+    _check_counts_exposures_2indep(y1, n1, y2, n2)
     d = n2 / n1
 
     eps = 1e-20  # avoid zero division in stat_func
@@ -1719,6 +1764,11 @@ def confint_poisson_2indep(
     -------
     tuple (low, upp)
         Confidence limits.
+
+    Raises
+    ------
+    ValueError
+        If a count is negative or an exposure is not positive.
     """
 
     # shortcut names
@@ -1728,6 +1778,7 @@ def confint_poisson_2indep(
         np.asarray(count2),
         np.asarray(exposure2),
     )
+    _check_counts_exposures_2indep(y1, n1, y2, n2)
     rate1, rate2 = y1 / n1, y2 / n2
     alpha = alpha / 2  # two-sided only
 

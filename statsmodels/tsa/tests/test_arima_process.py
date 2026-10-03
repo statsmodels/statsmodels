@@ -1,6 +1,7 @@
 from statsmodels.compat.pandas import QUARTER_END
 
 import datetime as dt
+import warnings
 
 import numpy as np
 from numpy.testing import (
@@ -183,6 +184,44 @@ def test_fi():
     n = 100
     mafromar = arma_impulse_response(lpol_fiar(0.4, n=n), [1], n)
     assert_array_almost_equal(mafromar, lpol_fima(0.4, n=n), 13)
+
+
+def test_fi_d_zero():
+    # d == 0 is the identity operator: (1-L)^0 == 1, so the lag polynomial is
+    # 1 followed by zeros.  The gammaln formula is indeterminate at lag zero
+    # when d == 0 (inf - inf) and used to produce a NaN coefficient in
+    # lpol_fima and a RuntimeWarning in both helpers.
+    n = 10
+    expected = np.r_[1.0, np.zeros(n - 1)]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        assert_array_almost_equal(lpol_fima(0.0, n=n), expected, 14)
+        assert_array_almost_equal(lpol_fiar(0.0, n=n), expected, 14)
+        # n == 1 only has the lag-zero coefficient
+        assert_array_almost_equal(lpol_fima(0.0, n=1), [1.0], 14)
+        assert_array_almost_equal(lpol_fiar(0.0, n=1), [1.0], 14)
+        # nonzero d is unaffected; the lag-zero coefficient is still exactly 1
+        assert lpol_fima(0.4, n=n)[0] == 1.0
+        assert lpol_fiar(-0.3, n=n)[0] == 1.0
+
+
+@pytest.mark.parametrize("d", [-0.45, -0.25, -1e-8, 0.0, 1e-8, 0.3, 0.45])
+def test_fi_leading_terms(d):
+    # (1 - L)^(-d) = 1 + d L + d (d + 1) / 2 L^2 + d (d + 1) (d + 2) / 6 L^3 + ...
+    # (1 - L)^d = 1 - d L + d (d - 1) / 2 L^2 - d (d - 1) (d - 2) / 6 L^3 + ...
+    # the signs of the coefficients for negative d are the reverse of the signs
+    # for positive d
+    ma = [1, d, d * (d + 1) / 2, d * (d + 1) * (d + 2) / 6]
+    ar = [1, -d, d * (d - 1) / 2, -d * (d - 1) * (d - 2) / 6]
+    assert_allclose(lpol_fima(d, n=4), ma, rtol=1e-8, atol=1e-15)
+    assert_allclose(lpol_fiar(d, n=4), ar, rtol=1e-8, atol=1e-15)
+
+
+@pytest.mark.parametrize("func", [lpol_fima, lpol_fiar])
+@pytest.mark.parametrize("d", [-0.3, 0.0, 0.3])
+def test_fi_short(func, d):
+    assert func(d, n=0).shape == (0,)
+    assert_allclose(func(d, n=1), [1.0])
 
 
 def test_arma_impulse_response():
@@ -554,3 +593,14 @@ def test_ar2arma_approximates_higher_order_ar():
     true_irf = ArmaProcess(ar_true, [1.0]).impulse_response(leads=15)
     app_irf = ArmaProcess(ar_app, ma_app).impulse_response(leads=15)
     assert_allclose(app_irf, true_irf, atol=0.1)
+
+
+def test_arma_acovf_nobs_validation():
+    # a negative nobs used to return a silently truncated acovf on the
+    # innovations path and leak a bare numpy error on the white-noise path
+    with pytest.raises(ValueError, match="nobs must be a positive integer"):
+        arma_acovf([1.0, -0.5], [1.0], nobs=-1)
+    with pytest.raises(ValueError, match="nobs must be a positive integer"):
+        arma_acovf([1.0], [1.0], nobs=-1)
+    with pytest.raises(ValueError, match="nobs must be a positive integer"):
+        arma_acf([1.0, -0.5], [1.0], lags=0)
