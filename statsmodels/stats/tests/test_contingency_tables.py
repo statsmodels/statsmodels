@@ -801,4 +801,5 @@ def test_table2x2_confint_invalid_alpha_raises():
         with pytest.raises(ValueError, match="alpha must be in the range"):
             confint(alpha=0)
     lo, hi = t2.oddsratio_confint()
-    assert np.isfinite([lo, hi]).all() and 0 < lo < hi
+    assert np.isfinite([lo, hi]).all()
+    assert 0 < lo < hi
