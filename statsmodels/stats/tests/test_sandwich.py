@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 import pandas as pd
+import pytest
 
 from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.sandwich_covariance as sw
@@ -125,3 +126,15 @@ def test_cov_hc0_to_hc3_match_results_attributes():
     assert_allclose(sw.cov_hc1(res), res.cov_HC1)
     assert_allclose(sw.cov_hc2(res), res.cov_HC2)
     assert_allclose(sw.cov_hc3(res), res.cov_HC3)
+
+
+def test_cov_hac_negative_nlags():
+    # a negative nlags used to leak a bare IndexError from the kernel loop
+    rs = np.random.RandomState(12345)
+    endog = rs.standard_normal(60)
+    exog = np.column_stack([np.ones(60), rs.standard_normal((60, 2))])
+    res = OLS(endog, exog).fit()
+    with pytest.raises(ValueError, match="non-negative"):
+        sw.cov_hac(res, nlags=-1)
+    # nlags=0 (White) stays valid
+    assert sw.cov_hac(res, nlags=0).shape == (3, 3)

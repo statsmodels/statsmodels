@@ -713,3 +713,66 @@ def test_stratified_test_null_odds_small_pvalue():
 
     assert rslt.pvalue > 0
     assert_allclose(rslt.pvalue, expected, rtol=1e-12)
+
+
+def test_negative_counts_rejected():
+    # negative counts used to flow through every statistic silently,
+    # producing e.g. a negative odds ratio
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.Table2x2([[2, 2], [2, -1]])
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.SquareTable(np.asarray([[1, 2], [3, -0.5]]))
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.Table([[1, -2], [3, 4]])
+
+
+def test_stratified_negative_counts_rejected():
+    # companion to the base-Table check: StratifiedTable keeps its own
+    # constructor, and negative counts used to flow through every statistic
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.StratifiedTable(np.asarray([[[2, 2], [2, -1]], [[3, 1], [1, 3]]], dtype=float))
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.StratifiedTable([[[2, 2], [2, 2]], [[3, 1], [1, -2]]])
+
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+def test_nonfinite_counts_rejected(bad):
+    # NaN is not negative and inf passed the check for negative counts, so that
+    # every statistic was nan or inf without an error
+    table = np.array([[2.0, 2.0], [2.0, bad]])
+    for cls in (ctab.Table, ctab.SquareTable, ctab.Table2x2):
+        with pytest.raises(ValueError, match="must be finite"):
+            cls(table)
+        with pytest.raises(ValueError, match="must be finite"):
+            cls(table, shift_zeros=False)
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.Table(pd.DataFrame(table))
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.Table([[1, 2, 3], [4, bad, 6]])
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.StratifiedTable([table, [[3, 1], [1, 3]]])
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.StratifiedTable(np.stack([table, [[3.0, 1], [1, 3]]], axis=2))
+
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize("position", [(0, 0), (0, 1), (1, 0), (1, 1)])
+@pytest.mark.parametrize("exact", [True, False])
+def test_mcnemar_nonfinite_counts_rejected(bad, position, exact):
+    # for exact=True this was an obscure error of int() for NaN and inf, and
+    # for a diagonal cell the invalid count was not used
+    table = np.array([[5.0, 3.0], [2.0, 6.0]])
+    table[position] = bad
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.mcnemar(table, exact=exact)
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.mcnemar(pd.DataFrame(table), exact=exact)
+
+
+@pytest.mark.parametrize("exact", [True, False])
+def test_mcnemar_negative_counts_rejected(exact):
+    # the counts were used without a check, the statistic for a negative
+    # off-diagonal count is meaningless
+    for table in ([[5, -1], [2, 6]], [[5, 1], [-2, 6]], [[-5, 1], [2, 6]]):
+        with pytest.raises(ValueError, match="non-negative"):
+            ctab.mcnemar(np.asarray(table), exact=exact)
