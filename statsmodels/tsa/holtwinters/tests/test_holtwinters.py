@@ -504,7 +504,8 @@ class TestHoltWinters:
         assert_almost_equal(fit5.params["smoothing_trend"], 0.00, 2)
         assert_almost_equal(fit5.params["damping_trend"], 0.98, 2)
         assert_almost_equal(fit5.params["initial_level"], 258.95, 1)
-        assert_almost_equal(fit5.params["initial_trend"], 1.04, 2)
+        # b0 itself; b0 ** phi / phi (about 1.04) was reported previously
+        assert_almost_equal(fit5.params["initial_trend"], 1.02, 2)
         assert_almost_equal(fit5.sse, 6082.00, 0)  # 6100.11
         assert isinstance(fit5.summary().as_text(), str)
 
@@ -1678,6 +1679,31 @@ def test_error_boxcox():
         mod.fit(use_boxcox=False)
 
 
+@pytest.mark.parametrize("initialization_method", ["estimated", "heuristic"])
+def test_boxcox_log(initialization_method):
+    # GH 9135: use_boxcox="log" is documented but was rejected in __init__
+    res = ExponentialSmoothing(
+        aust,
+        trend="add",
+        seasonal="add",
+        seasonal_periods=4,
+        initialization_method=initialization_method,
+        use_boxcox="log",
+    ).fit()
+    assert res.params["use_boxcox"] == "log"
+    assert res.params["lamda"] == 0.0
+    # The log transform is the same as fitting the model to log(y)
+    res_log = ExponentialSmoothing(
+        np.log(aust),
+        trend="add",
+        seasonal="add",
+        seasonal_periods=4,
+        initialization_method=initialization_method,
+    ).fit()
+    assert_allclose(res.fittedvalues, np.exp(res_log.fittedvalues), rtol=1e-6)
+    assert_allclose(res.forecast(8), np.exp(res_log.forecast(8)), rtol=1e-6)
+
+
 def test_error_initialization(ses):
     with pytest.raises(ValueError, match="initialization is 'known' but initial_level"):
         ExponentialSmoothing(ses, initialization_method="known")
@@ -2245,3 +2271,41 @@ def test_seasonal_forecast_uses_final_season(trend, seasonal):
     ets_res = ets.smooth([ets_params[name] for name in ets.param_names])
     assert_allclose(res.fittedvalues, ets_res.fittedvalues, rtol=1e-10)
     assert_allclose(fcast, ets_res.forecast(h), rtol=1e-10)
+
+
+@pytest.mark.parametrize("trend", ["add", "mul"])
+@pytest.mark.parametrize("seasonal", SEASONALS)
+def test_damped_initial_trend_round_trip(trend, seasonal):
+    # The reported initial_trend must be the b0 used in the recursions, so
+    # refitting with every reported parameter held fixed reproduces the fit.
+    # For a multiplicative trend the damped value is b0 ** phi, not phi * b0.
+    res = ExponentialSmoothing(
+        housing_data,
+        trend=trend,
+        damped_trend=True,
+        seasonal=seasonal,
+        initialization_method="estimated",
+    ).fit()
+    params = res.params
+    refit = ExponentialSmoothing(
+        housing_data,
+        trend=trend,
+        damped_trend=True,
+        seasonal=seasonal,
+        initialization_method="known",
+        initial_level=params["initial_level"],
+        initial_trend=params["initial_trend"],
+        initial_seasonal=params["initial_seasons"] if seasonal else None,
+    ).fit(
+        smoothing_level=params["smoothing_level"],
+        smoothing_trend=params["smoothing_trend"],
+        smoothing_seasonal=params["smoothing_seasonal"],
+        damping_trend=params["damping_trend"],
+        optimized=False,
+    )
+    assert_allclose(refit.fittedvalues, res.fittedvalues, rtol=1e-8)
+    assert_allclose(refit.forecast(12), res.forecast(12), rtol=1e-8)
+    assert_allclose(
+        res.params_formatted.loc["initial_trend", "param"],
+        params["initial_trend"],
+    )

@@ -726,12 +726,20 @@ class VAR(TimeSeriesModel):
         trend = string_like(
             trend, "trend", options=("c", "ct", "ctt", "n"), lower=False
         )
+        if maxlags is not None:
+            if maxlags < 0:
+                raise ValueError(f"maxlags must be non-negative, got {maxlags}")
+            if maxlags >= self.n_totobs:
+                raise ValueError(
+                    "maxlags must be smaller than the number of observations "
+                    f"({self.n_totobs}), got {maxlags}"
+                )
 
         if ic is not None:
             selections = self.select_order(maxlags=maxlags)
             if not hasattr(selections, ic):
                 raise ValueError(
-                    f"{ic} not recognized, must be among {sorted(selections)}"
+                    f"{ic} not recognized, must be among {sorted(selections.ics)}"
                 )
             lags = getattr(selections, ic)
             if verbose:

@@ -10,7 +10,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.tools.sm_exceptions import ValueWarning
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, int_like
 
 
 def durbin_watson(resids, axis=0):
@@ -74,6 +74,13 @@ def omni_normtest(resids, axis=0):
     # TODO: change to exception in summary branch and catch in summary()
     #   behavior changed between scipy 0.9 and 0.10
     resids = np.asarray(resids)
+    axis = int_like(axis, "axis", optional=False)
+    if axis >= resids.ndim or axis < -resids.ndim:
+        # an out-of-range axis used to leak a bare IndexError from the
+        # shape lookup instead of naming the problem
+        raise ValueError(
+            f"axis {axis} is out of bounds for array of dimension {resids.ndim}"
+        )
     n = resids.shape[axis]
     if n < 8:
         from warnings import warn
