@@ -1601,3 +1601,37 @@ def test_etest_poisson_2indep_alternative_deprecated_alias(alias, canonical):
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         etest_poisson_2indep(60, 51477.5, 30, 54308.7, alternative="bogus")
+
+
+@pytest.mark.parametrize("method", ["wald", "score", "exact-c", "sqrt"])
+def test_confint_poisson_invalid_inputs_raises(method):
+    # negative counts and exposures previously returned nan bounds, and
+    # out-of-range alpha silently produced lower > upper intervals
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.confint_poisson(-1, 10, method=method)
+    with pytest.raises(ValueError, match="exposure must be positive"):
+        smr.confint_poisson(5, 0, method=method)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smr.confint_poisson(5, 10, method=method, alpha=1.5)
+
+
+def test_tolerance_int_poisson_invalid_inputs_raises():
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.tolerance_int_poisson(-1, 10, prob=0.9, method="wald")
+    with pytest.raises(ValueError, match="exposure must be positive"):
+        smr.tolerance_int_poisson(5, 0, prob=0.9, method="wald")
+    with pytest.raises(ValueError, match="prob must be in the range"):
+        smr.tolerance_int_poisson(5, 10, prob=1.5, method="wald")
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smr.tolerance_int_poisson(5, 10, prob=0.9, method="wald", alpha=2)
+
+
+def test_confint_quantile_poisson_invalid_inputs_raises():
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.confint_quantile_poisson(-1, 10, prob=0.5, method="exact-c")
+    with pytest.raises(ValueError, match="exposure must be positive"):
+        smr.confint_quantile_poisson(5, 0, prob=0.5, method="exact-c")
+    with pytest.raises(ValueError, match="prob must be in the range"):
+        smr.confint_quantile_poisson(5, 10, prob=0, method="exact-c")
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smr.confint_quantile_poisson(5, 10, prob=0.5, method="exact-c", alpha=1.5)
