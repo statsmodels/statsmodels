@@ -1502,6 +1502,21 @@ def test_proportions_chisquare_pairscontrol_alternative():
         smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="larger")
 
 
+def test_binom_tost_invalid_interval_raises():
+    # an inverted equivalence interval previously returned p-values without
+    # any error
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low < upp"):
+        smprop.binom_tost(5, 100, 0.6, 0.3)
+    p = smprop.binom_tost(5, 100, 0.1, 0.3)
+    assert np.isfinite(p).all()
+
+
+def test_proportions_ztost_invalid_interval_raises():
+    # an inverted equivalence interval previously returned p-value 1.0
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low < upp"):
+        smprop.proportions_ztost(5, 100, 0.6, 0.3)
+
+
 def test_confint_proportions_2indep_invalid_inputs_raises():
     # negative counts and non-positive nobs previously returned (nan, nan)
     # or divided by zero instead of raising
