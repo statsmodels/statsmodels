@@ -10,7 +10,7 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import int_like, string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.coint_tables import c_sja, c_sjt
 from statsmodels.tsa.tsatools import duplication_matrix, lagmat, vec
@@ -75,6 +75,9 @@ def select_order(
     """
     ic = defaultdict(list)
     deterministic = string_like(deterministic, "deterministic")
+    maxlags = int_like(maxlags, "maxlags", optional=False)
+    if maxlags < 0:
+        raise ValueError(f"maxlags must be non-negative, got {maxlags}")
     for p in range(1, maxlags + 2):  # +2 because k_ar_VECM == k_ar_VAR - 1
         exogs = []
         if "co" in deterministic or "ci" in deterministic:

@@ -109,7 +109,7 @@ def _naive_ledoit_wolf_shrinkage(x, center):
     delta_ = emp_cov.copy()
     delta_.flat[:: n_features + 1] -= mu
     delta = (delta_**2).sum() / n_features
-    x2 = x**2
+    x2 = xdm**2
     beta_ = (
         1.0
         / (n_features * n_samples)
@@ -118,7 +118,10 @@ def _naive_ledoit_wolf_shrinkage(x, center):
 
     beta = min(beta_, delta)
     shrinkage = beta / delta
-    return NaiveLedoitWolfResult(cov=shrinkage * emp_cov, method="naive ledoit wolf")
+    # shrink towards the scaled identity matrix, mu * I
+    cov = (1.0 - shrinkage) * emp_cov
+    cov.flat[:: n_features + 1] += shrinkage * mu
+    return NaiveLedoitWolfResult(cov=cov, method="naive ledoit wolf")
 
 
 def coef_normalize_cov_truncated(frac, k_vars):
@@ -238,7 +241,7 @@ def _reweight(x, loc, cov, trim_frac=0.975, ddof=1):
     mask = d <= cutoff
     sample = x[mask]
     loc = sample.mean(0)
-    cov = np.cov(sample.T, ddof=ddof)
+    cov = np.atleast_2d(np.cov(sample.T, ddof=ddof))
     return cov, loc
 
 
@@ -369,6 +372,42 @@ def _outlier_gy(d, distr=None, k_endog=1, trim_prob=0.975):
 # # GK and OGK ###
 
 
+def _is_singular(cov):
+    """
+    Check if a covariance matrix is numerically singular
+
+    Parameters
+    ----------
+    cov : ndarray
+        Square covariance matrix.
+
+    Returns
+    -------
+    bool
+        True if a variable has a variance of zero, or if the rank of the
+        correlation matrix is below its dimension. The rank is computed with
+        the default tolerance of `numpy.linalg.matrix_rank`.
+
+    Notes
+    -----
+    LAPACK only reports a singular matrix if a pivot of the LU factorization
+    is exactly zero. A matrix that is singular but has rounding errors, for
+    example the covariance of fewer observations than variables, can have
+    pivots that are not exactly zero, depending on the platform, and
+    ``numpy.linalg.solve`` returns huge values without an error.
+
+    The rank is that of the correlation matrix so that it does not depend on
+    the scales of the variables. The rank of the covariance matrix itself is
+    too low if the ratio of the variances is above about 1e15, even if the
+    correlation matrix is well conditioned.
+    """
+    var = np.diag(cov)
+    if not np.all(var > 0):
+        return True
+    sd = np.sqrt(var)
+    return bool(np.linalg.matrix_rank(cov / np.outer(sd, sd)) < len(cov))
+
+
 def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
     """
     Mahalanobis distance squared
@@ -392,6 +431,13 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
     -------
     ndarray
         Mahalanobis distances or squared distance.
+
+    Notes
+    -----
+    If `cov` is numerically singular, then the Moore-Penrose pseudo-inverse of
+    `cov` is used. This is the case if a variable has a variance of zero, or
+    if the rank of the correlation matrix is below its dimension, using the
+    default tolerance of `numpy.linalg.matrix_rank`.
     """
     # another option would be to allow also cov^{-0.5) as keyword
     x = np.asarray(data)
@@ -399,7 +445,15 @@ def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):
         # einsum might be a bit faster
         d = (x * cov_inv.dot(x.T).T).sum(1)
     elif cov is not None:
-        d = (x * np.linalg.solve(cov, x.T).T).sum(1)
+        cov = np.asarray(cov)
+        if cov.ndim == 2 and cov.shape[0] == cov.shape[1] and _is_singular(cov):
+            # A singular covariance, for example a starting covariance, must
+            # not abort the candidate.
+            sol = np.linalg.pinv(cov).dot(x.T)
+        else:
+            # raises LinAlgError if cov is not square
+            sol = np.linalg.solve(cov, x.T)
+        d = (x * sol.T).sum(1)
     else:
         raise ValueError("either cov or cov_inv needs to be given")
 
@@ -1096,6 +1150,13 @@ def cov_weighted(
     wmean : ndarray
         Weighted mean.
 
+    Raises
+    ------
+    numpy.linalg.LinAlgError
+        If ``weights_cov_denom="det"`` and the root of the determinant of the
+        weighted covariance is not finite and positive, for example if the
+        weighted covariance is singular.
+
     Notes
     -----
     The extra options are available to cover the general M-estimator
@@ -1138,7 +1199,14 @@ def cov_weighted(
             wsum_cov = weights_cov.sum()
         wcov /= wsum_cov - ddof  # * np.sum(weights_cov**2) / wsum_cov)
     elif weights_cov_denom == "det":
-        wcov /= _det_root(wcov)
+        scale = _det_root(wcov)
+        if not np.isfinite(scale) or scale <= 0:
+            # a singular or indefinite scatter cannot be normalized
+            raise np.linalg.LinAlgError(
+                "weighted covariance determinant must be positive and finite,"
+                f" got root {scale!r}"
+            )
+        wcov /= scale
     elif weights_cov_denom == 1:
         pass
     else:
@@ -1423,10 +1491,17 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 
     cov_all = []
     d = mahalanobis(xs, cov=None, cov_inv=np.eye(k_vars))
-    percentiles = [(k_vars + 2) / nobs * 100 * 2, 25, 50, 85]
+    # Clamp the first cutoff to a valid percentile; np.percentile rejects
+    # values above 100. A clamped cutoff uses the full sample; this only
+    # happens when nobs < 2 * k_vars + 4.
+    first_frac = (k_vars + 2) / nobs * 2
+    first_percentile = min((k_vars + 2) / nobs * 100 * 2, 100)
+    percentiles = [first_percentile, 25, 50, 85]
     cutoffs = np.percentile(d, percentiles)
     for p, cutoff in zip(percentiles, cutoffs, strict=True):
-        xsp = xs[d < cutoff]
+        # `d <= cutoff` only for a clamped percentile, i.e. strictly below
+        # nobs == 2 * k_vars + 4, so the boundary keeps the base behavior.
+        xsp = xs[d <= cutoff] if first_frac > 1 and p == 100 else xs[d < cutoff]
         c = np.cov(xsp.T)
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
         c0 = CovStartingResult(
@@ -1899,7 +1974,7 @@ class CovM:
         if start_shape is not None:
             shape_old = start_shape
         else:
-            shape_old = np.cov(self.data.T)
+            shape_old = np.atleast_2d(np.cov(self.data.T))
             scale = _det_root(shape_old)
             shape_old /= scale
             if start_scale is not None:
@@ -1969,8 +2044,11 @@ class CovDetMCDResult(NamedTuple):
         Determinants of the covariance of the evaluation subset for all
         starting sets. Only set on the non-reweighted (raw) result.
     idx_best : int or None
-        Index of the best starting set in `det_all`. Only set on the
-        non-reweighted (raw) result.
+        Index of the starting set with the smallest covariance
+        determinant. The selection is computed in log space and is
+        therefore unaffected by determinant overflow, so it equals
+        ``argmin(det_all)`` only while the determinants are finite and
+        positive. Only set on the non-reweighted (raw) result.
     tmean : ndarray or None
         Location estimate used to standardize the data before computing
         starting sets. Only set on the non-reweighted (raw) result.
@@ -2076,7 +2154,7 @@ class CovDetMCD:
             idx_sel = np.argpartition(d, h)[:h]
             x_sel = x[idx_sel]
             mean = x_sel.mean(0)
-            cov_new = np.cov(x_sel.T, ddof=1)
+            cov_new = np.atleast_2d(np.cov(x_sel.T, ddof=1))
 
             if ((cov - cov_new) ** 2).mean() < tol:
                 cov = cov_new
@@ -2131,11 +2209,14 @@ class CovDetMCD:
         if mean is None:
             mean = x_sel.mean(0)
         if cov is None:
-            cov = np.cov(x_sel.T, ddof=1)
+            cov = np.atleast_2d(np.cov(x_sel.T, ddof=1))
 
         # updated with c-step
         mean, cov, conv = self._cstep(x, mean, cov, h, maxiter=maxiter)
-        det = np.linalg.det(cov)
+        # det can overflow to inf; it is kept as the public det_subset, while
+        # starting-set ranking uses slogdet and does not depend on it
+        with np.errstate(over="ignore"):
+            det = np.linalg.det(cov)
 
         return mean, cov, det, conv
 
@@ -2219,9 +2300,15 @@ class CovDetMCD:
         fac_trunc = coef_normalize_cov_truncated(h / nobs, k_vars)
 
         res = {}
+        logdet_all = []
         for ii, ini in enumerate(starts):
             idx_sel, method = ini
             mean, cov, det, _ = self._fit_one(x, idx_sel, h, maxiter=maxiter_step)
+            # rank by log-determinant because det overflows to inf for
+            # moderately large k_vars; candidates with a zero or negative
+            # determinant (sign <= 0) are ranked last
+            sign, logdet = np.linalg.slogdet(cov)
+            logdet_all.append(logdet if sign > 0 else np.inf)
             res[ii] = CovDetMCDResult(
                 mean=mean,
                 cov=cov * fac_trunc,
@@ -2230,7 +2317,7 @@ class CovDetMCD:
             )
 
         det_all = np.array([i.det_subset for i in res.values()])
-        idx_best = np.argmin(det_all)
+        idx_best = np.argmin(logdet_all)
         best = res[idx_best]
         # mean = best.mean
         # cov = best.cov
@@ -2350,7 +2437,7 @@ class CovDetS:
         x_sel = self.data[idx]
 
         mean = x_sel.mean(0)
-        cov = np.cov(x_sel.T)
+        cov = np.atleast_2d(np.cov(x_sel.T))
 
         scale2 = _det_root(cov)
         shape = cov / scale2

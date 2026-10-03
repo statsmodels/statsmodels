@@ -191,3 +191,13 @@ def test_plot_predict(close_figures):
     in_sample_lines = [ln for ln in fig_hist.axes[0].get_lines()
                        if len(ln.get_ydata()) == len(y)]
     assert len(in_sample_lines) >= 1
+
+
+def test_theta_invalid_period_raises():
+    # periods below 2 previously slipped past validation: negative periods
+    # passed the seasonality test silently and were treated as non-seasonal
+    y = np.arange(1.0, 25.0)
+    with pytest.raises(ValueError, match="period must be >= 2"):
+        ThetaModel(y, period=-3)
+    with pytest.raises(ValueError, match="period must be >= 2"):
+        ThetaModel(y, period=1)

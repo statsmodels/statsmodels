@@ -1732,3 +1732,15 @@ def test_plot_forecast_and_plot_data(close_figures):
     res_dated = VECM(dated, k_ar_diff=1, coint_rank=1, deterministic="ci").fit()
     fig_dated = res_dated.plot_data()
     assert len(fig_dated.axes) == endog.shape[1]
+
+
+def test_select_order_negative_maxlags():
+    # a negative maxlags used to produce an empty criteria dict and crash
+    # with a bare KeyError('aic')
+    rs = np.random.RandomState(12345)
+    data = rs.standard_normal((60, 2))
+    with pytest.raises(ValueError, match="non-negative"):
+        select_order(data, maxlags=-2)
+    # maxlags=0 (a single comparison) remains valid
+    res = select_order(data, maxlags=0)
+    assert res.aic in (0, 1)
