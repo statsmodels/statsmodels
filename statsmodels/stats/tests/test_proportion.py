@@ -1514,7 +1514,8 @@ def test_samplesize_confint_proportion_invalid_inputs_raises():
     with pytest.raises(ValueError, match="proportion must be in the range"):
         smprop.samplesize_confint_proportion(1.5, 0.1)
     n = smprop.samplesize_confint_proportion(0.5, 0.1)
-    assert np.isfinite(n) and n > 0
+    assert np.isfinite(n)
+    assert n > 0
 
 
 def test_confint_proportions_2indep_invalid_inputs_raises():
