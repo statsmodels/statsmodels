@@ -1086,6 +1086,13 @@ def _table_proportion(count, nobs):
     recent scipy has more elaborate contingency table functions
     """
     count = np.asarray(count)
+    nobs = np.asarray(nobs)
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count > nobs):
+        raise ValueError("count must not exceed nobs")
     dt = np.promote_types(count.dtype, np.float64)
     count = np.asarray(count, dtype=dt)
     table = np.column_stack((count, nobs - count))
@@ -2646,6 +2653,11 @@ def samplesize_proportions_2indep_onetail(
         deprecated={"2s": "two-sided"},
         removed_after="0.16",
     )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not 0 < power < 1:
+        raise ValueError(f"power must be in the range (0, 1), got {power}")
+
     if alternative == "two-sided":
         alpha = alpha / 2
 
