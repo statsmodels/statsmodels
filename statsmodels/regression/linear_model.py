@@ -1663,11 +1663,12 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
     # TODO: Require??
     x = np.array(x, dtype=np.float64)
     order = int_like(order, "order", optional=False)
-    if order < 1:
-        # order 0 used to return empty arrays and a negative order leaked a
-        # bare IndexError from the autocovariance loop
-        raise ValueError(f"order must be a positive integer, got {order}")
-    if order >= x.shape[0]:
+    if order < 0:
+        # a negative order used to leak a bare IndexError from the
+        # autocovariance loop; order 0 stays valid — it yields empty AR
+        # parameters (AR(0) is white noise) as the empty loop below produces
+        raise ValueError(f"order must be a non-negative integer, got {order}")
+    if order >= x.shape[0] or x.shape[0] == 0:
         raise ValueError(
             "order must be smaller than the number of observations "
             f"({x.shape[0]}), got {order}"
