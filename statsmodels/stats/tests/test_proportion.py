@@ -1502,6 +1502,22 @@ def test_proportions_chisquare_pairscontrol_alternative():
         smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="larger")
 
 
+def test_samplesize_confint_proportion_invalid_inputs_raises():
+    # alpha outside (0, 1) and negative half_length previously returned inf
+    # or a positive sample size for an impossible request
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.samplesize_confint_proportion(0.5, 0.1, alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.samplesize_confint_proportion(0.5, 0.1, alpha=0)
+    with pytest.raises(ValueError, match="half_length must be positive"):
+        smprop.samplesize_confint_proportion(0.5, -0.1)
+    with pytest.raises(ValueError, match="proportion must be in the range"):
+        smprop.samplesize_confint_proportion(1.5, 0.1)
+    n = smprop.samplesize_confint_proportion(0.5, 0.1)
+    assert np.isfinite(n)
+    assert n > 0
+
+
 def test_confint_proportions_2indep_invalid_inputs_raises():
     # negative counts and non-positive nobs previously returned (nan, nan)
     # or divided by zero instead of raising
