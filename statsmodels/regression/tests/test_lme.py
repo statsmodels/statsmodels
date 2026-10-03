@@ -18,9 +18,11 @@ from scipy import sparse
 
 from statsmodels.base import _penalties as penalties
 from statsmodels.iolib.summary2 import Summary
+from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.mixed_linear_model import (
     MixedLM,
     MixedLMParams,
+    VCSpec,
     _smw_logdet,
     _smw_solver,
 )
@@ -1335,6 +1337,233 @@ def test_singular():
     mdf.summary()
 
 
+def _dense_gls(model, cov_re):
+    # Reference GLS fit: build V = I + Z cov_re Z' densely and solve
+    # directly, without any eigendecomposition tricks.
+    n = int(model.nobs)
+    vdense = np.eye(n)
+    row = 0
+    for zg in model.exog_re_li:
+        ng = zg.shape[0]
+        vdense[row:row + ng, row:row + ng] += zg @ cov_re @ zg.T
+        row += ng
+    vinv = np.linalg.inv(vdense)
+    exog, endog = model.exog, model.endog
+    return np.linalg.solve(exog.T @ vinv @ exog, exog.T @ vinv @ endog)
+
+
+def test_get_fe_params_singular_cov_re_matches_ols():
+    # GH 10239: as cov_re -> 0, the fixed effects should approach OLS.
+    # They used to jump to a within-group fit that zeroed the
+    # between-group coefficient.
+    rng = np.random.default_rng(0)
+    n_groups, n_per_group = 30, 3
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)  # constant within each group
+    within = np.tile(np.arange(n_per_group, dtype=float), n_groups)
+    exog = np.column_stack([np.ones(n), between, within])
+    endog = (10.0 + 5.0 * between + 2.0 * within
+             + rng.standard_normal(n))
+
+    model = MixedLM(endog, exog, groups)
+    ols_params = OLS(endog, exog).fit().params
+
+    for v in [1e-9, 1e-10, 9.9e-11, 1e-12, 0.0]:
+        fe_params, singular = model.get_fe_params(np.array([[v]]), np.array([]))
+        assert_allclose(fe_params, ols_params, atol=1e-8)
+        assert singular == (v < 1e-10)
+
+
+def test_get_fe_params_partial_singular_cov_re():
+    # GH 10239: the bug also occurs when only one of two eigendirections
+    # of cov_re collapses.
+    rng = np.random.default_rng(1)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re)
+
+    # Only the intercept variance goes below tol; the slope variance
+    # stays at 2.0.
+    for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
+        cov_re = np.diag([v0, 2.0])
+        fe_params, singular = model.get_fe_params(cov_re, np.array([]))
+        gold = _dense_gls(model, cov_re)
+        assert_allclose(fe_params, gold, atol=1e-8)
+        assert singular == (v0 < 1e-10)
+
+
+def test_get_fe_params_correlated_singular_cov_re():
+    # GH 10239: a correlated, nearly singular cov_re used to feed huge
+    # values into the Woodbury solver and raise LinAlgError.
+    rng = np.random.default_rng(1)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re)
+
+    a = np.random.default_rng(1).standard_normal((2, 1)) * np.sqrt(2.0)
+    cov_re_good = a @ a.T
+    for noise_scale in [1e-6, 1e-8, 1e-11, 1e-15]:
+        noise = np.random.default_rng(2).standard_normal((2, 2)) * noise_scale
+        cov_re = cov_re_good + noise @ noise.T
+
+        fe_params, singular = model.get_fe_params(cov_re, np.array([]))
+        gold = _dense_gls(model, cov_re)
+        assert_allclose(fe_params, gold, atol=1e-8)
+
+
+def _dense_gls_vc(model, cov_re, vcomp):
+    # Same as _dense_gls, but V also includes the variance components.
+    n = int(model.nobs)
+    vdense = np.eye(n)
+    row = 0
+    for group_ix, _ in enumerate(model.group_labels):
+        ng = model.exog_li[group_ix].shape[0]
+        block = np.zeros((ng, ng))
+        if model.k_re > 0:
+            zg = model.exog_re_li[group_ix]
+            block += zg @ cov_re @ zg.T
+        for j in range(len(model.exog_vc.names)):
+            mat = np.asarray(model.exog_vc.mats[j][group_ix])
+            block += vcomp[j] * (mat @ mat.T)
+        vdense[row:row + ng, row:row + ng] += block
+        row += ng
+    vinv = np.linalg.inv(vdense)
+    exog, endog = model.exog, model.endog
+    return np.linalg.solve(exog.T @ vinv @ exog, exog.T @ vinv @ endog)
+
+
+def test_get_fe_params_singular_vcomp_matches_ols():
+    # GH 10239: same as the cov_re test above, but with a single variance
+    # component collapsing to zero.
+    rng = np.random.default_rng(0)
+    n_groups, n_per_group = 30, 3
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)  # constant within each group
+    within = np.tile(np.arange(n_per_group, dtype=float), n_groups)
+    exog = np.column_stack([np.ones(n), between, within])
+    endog = (10.0 + 5.0 * between + 2.0 * within
+             + rng.standard_normal(n))
+
+    vc_mats = [np.ones((n_per_group, 1)) for _ in range(n_groups)]
+    vc_colnames = [["vc0"] for _ in range(n_groups)]
+    exog_vc = VCSpec(["vc0"], [vc_colnames], [vc_mats])
+
+    model = MixedLM(endog, exog, groups, exog_vc=exog_vc)
+    ols_params = OLS(endog, exog).fit().params
+
+    for v in [1e-9, 1e-10, 9.9e-11, 1e-12, 0.0]:
+        fe_params, singular = model.get_fe_params(np.empty((0, 0)), np.array([v]))
+        assert_allclose(fe_params, ols_params, atol=1e-8)
+        assert singular == (v < 1e-10)
+
+
+def test_get_fe_params_partial_singular_vcomp():
+    # GH 10239: the bug also occurs when only one of two variance
+    # components collapses.
+    rng = np.random.default_rng(1)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+
+    vc0_mats = [np.ones((n_per_group, 1)) for _ in range(n_groups)]
+    vc1_mats = [x[groups == g][:, None] for g in range(n_groups)]
+    exog_vc = VCSpec(
+        ["vc0", "vc1"],
+        [[["vc0"] for _ in range(n_groups)], [["vc1"] for _ in range(n_groups)]],
+        [vc0_mats, vc1_mats],
+    )
+
+    model = MixedLM(endog, exog, groups, exog_vc=exog_vc)
+
+    # Only vc0 goes below tol; vc1 stays at 2.0.
+    for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
+        vcomp = np.array([v0, 2.0])
+        fe_params, singular = model.get_fe_params(np.empty((0, 0)), vcomp)
+        gold = _dense_gls_vc(model, np.empty((0, 0)), vcomp)
+        assert_allclose(fe_params, gold, atol=1e-8)
+        assert singular == (v0 < 1e-10)
+
+
+def test_get_fe_params_mixed_singular_cov_re_and_vcomp():
+    # GH 10239: cov_re and a variance component collapse together, so
+    # both the re_project and vc_project paths run in the same call.
+    rng = np.random.default_rng(2)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+
+    vc_mats = [np.ones((n_per_group, 1)) for _ in range(n_groups)]
+    exog_vc = VCSpec(["vc0"], [[["vc0"] for _ in range(n_groups)]], [vc_mats])
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re, exog_vc=exog_vc)
+
+    for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
+        cov_re = np.diag([v0, 2.0])
+        vcomp = np.array([v0])
+        fe_params, singular = model.get_fe_params(cov_re, vcomp)
+        gold = _dense_gls_vc(model, cov_re, vcomp)
+        assert_allclose(fe_params, gold, atol=1e-8)
+        assert singular == (v0 < 1e-10)
+
+
+@pytest.mark.parametrize("method", ["powell", "nm"])
+def test_fit_boundary_fixed_effects_equal_ols(method):
+    # GH 10239, code sample 2: the within-subject errors are negatively
+    # correlated, so that the ML estimate of the random intercept variance is
+    # at the boundary (0) and the fixed effects are the OLS estimates.
+    # method="lbfgs" ends at a random intercept variance that is exactly 0 and
+    # is not included, the fit raises LinAlgError('Singular matrix') for the
+    # Hessian.
+    rng = np.random.default_rng(12345)
+    n_subj, sd, c = 74, 28.0, 0.25
+    z = rng.standard_normal((n_subj, 3))
+    e = sd * (z - c * z.mean(axis=1, keepdims=True))
+    rows = []
+    for s in range(n_subj):
+        g = s % 2
+        for k, cond in enumerate(["c1", "c2", "c3"]):
+            mu = 10 + 5 * g + (20 + 25 * g) * (k == 1) + 8 * g * (k == 2)
+            rows.append(
+                {"subj": s, "grp": "B" if g else "A", "cond": cond, "y": mu + e[s, k]}
+            )
+    df = pd.DataFrame(rows)
+
+    ols = OLS.from_formula("y ~ grp * cond", df).fit()
+    model = MixedLM.from_formula("y ~ grp * cond", df, groups="subj")
+    with warnings.catch_warnings():
+        # the MLE is on the boundary of the parameter space
+        warnings.simplefilter("ignore")
+        res = model.fit(reml=False, method=method)
+    assert_allclose(res.params[ols.params.index], ols.params, rtol=1e-8)
+    assert_allclose(res.scale, ols.ssr / ols.nobs, rtol=1e-8)
+    assert res.cov_re.iloc[0, 0] < 1e-8
+
+
 def test_get_distribution():
 
     rs = np.random.RandomState(234)
@@ -1564,3 +1793,22 @@ def test_profile_re_likelihood_peaks_at_mle():
     assert_allclose(mle_row[0], res.cov_re[0, 0], rtol=1e-6)
     assert_allclose(mle_row[1], res.llf, rtol=1e-6)
     assert np.all(likev[:, 1] <= mle_row[1] + 1e-6)
+
+
+def test_fit_do_cg_false():
+    # GH#7980 - do_cg=False skips optimization and returns results at the
+    # starting values instead of raising
+    rs = np.random.RandomState(789)
+    groups = np.repeat(np.arange(20), 10)
+    x = rs.normal(size=200)
+    y = 1 + x + rs.normal(size=20)[groups] + rs.normal(size=200)
+    model = MixedLM(y, np.column_stack((np.ones(200), x)), groups=groups)
+    result = model.fit()
+
+    result0 = model.fit(start_params=result.params_object, do_cg=False)
+    assert_allclose(result0.params, result.params, rtol=1e-5)
+    assert_allclose(result0.llf, result.llf, rtol=1e-8)
+    assert not result0.converged
+
+    result0 = model.fit(do_cg=False)
+    assert_allclose(result0.cov_re_unscaled, np.eye(1))

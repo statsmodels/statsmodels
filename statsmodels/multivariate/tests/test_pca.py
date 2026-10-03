@@ -478,3 +478,20 @@ def test_gls_warning():
     with pytest.warns(EstimationWarning, match="Many series are being down weighted"):
         factors = PCA(data, ncomp=2, gls=True).factors
     assert factors.shape == (data.shape[0], 2)
+
+
+def test_pca_ncomp_validation():
+    # a non-positive ncomp used to slice silently, e.g. returning 4 factors
+    # for ncomp=-1 on a 30x5 dataset
+    rs = np.random.RandomState(12345)
+    data = rs.standard_normal((30, 5))
+    with pytest.raises(ValueError, match="ncomp must be a positive integer"):
+        PCA(data, ncomp=-1)
+    with pytest.raises(ValueError, match="ncomp must be a positive integer"):
+        PCA(data, ncomp=0)
+    with pytest.raises(TypeError, match="ncomp"):
+        PCA(data, ncomp=2.5)
+    # the over-maximum warning-and-clamp path is unchanged
+    with pytest.warns(ValueWarning):
+        res = PCA(data, ncomp=99)
+    assert res.factors.shape == (30, 5)

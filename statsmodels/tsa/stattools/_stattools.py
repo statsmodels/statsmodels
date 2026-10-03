@@ -566,6 +566,8 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
         xo = x
 
     n = len(x)
+    if nlag is not None and nlag < 0:
+        raise ValueError(f"nlag must be non-negative, got {nlag}")
     lag_len = nlag
     if nlag is None:
         lag_len = n - 1
@@ -1008,6 +1010,13 @@ def acf(
         nobs = int(np.sum(~np.isnan(x)))
         if nobs == 0:
             raise ValueError("All observations are missing after dropping.")
+    if nlags < 0:
+        raise ValueError(f"nlags must be non-negative, got {nlags}")
+    if nlags >= nobs:
+        raise ValueError(
+            "nlags must be smaller than the number of observations "
+            f"({nobs}), got {nlags}"
+        )
 
     avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
     acf = avf[: nlags + 1] / avf[0]
@@ -1453,6 +1462,8 @@ def pacf(
     nobs = x.shape[0]
     if nlags is None:
         nlags = min(int(10 * np.log10(nobs)), nobs // 2 - 1)
+    if nlags < 0:
+        raise ValueError(f"nlags must be non-negative, got {nlags}")
     nlags = max(nlags, 1)
     if nlags > x.shape[0] // 2:
         raise ValueError(
@@ -1651,6 +1662,15 @@ def ccf(
     adjusted = bool_like(adjusted, "adjusted")
     fft = bool_like(fft, "fft", optional=False)
     result_object = bool_like(result_object, "result_object", optional=True)
+    nlags = int_like(nlags, "nlags", optional=True)
+    if nlags is not None:
+        if nlags < 0:
+            raise ValueError(f"nlags must be non-negative, got {nlags}")
+        if nlags > len(x):
+            raise ValueError(
+                "nlags must be smaller than the number of observations in x "
+                f"({len(x)}), got {nlags}"
+            )
 
     cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
     ret = cvf / (np.std(x) * np.std(y))
@@ -2085,6 +2105,9 @@ def levinson_durbin(s, nlags=10, isacov=False):
     s = array_like(s, "s")
     nlags = int_like(nlags, "nlags")
     isacov = bool_like(isacov, "isacov")
+
+    if nlags < 0:
+        raise ValueError(f"nlags must be non-negative, got {nlags}")
 
     order = nlags
 
@@ -3187,6 +3210,11 @@ def kpss(
     store = bool_like(store, "store")
     result_object = bool_like(result_object, "result_object", optional=True)
 
+    if not np.isfinite(x).all():
+        # without this, a NaN crashed deep inside the lag computation with
+        # "cannot convert float NaN to integer"
+        raise MissingDataError("`x` must contain only finite values, NaNs or infs found.")
+
     nobs = x.shape[0]
     hypo = regression
 
@@ -3223,6 +3251,8 @@ def kpss(
     else:
         nlags = int_like(nlags, "nlags", optional=False)
 
+        if nlags < 0:
+            raise ValueError(f"nlags must be non-negative, got {nlags}")
         if nlags >= nobs:
             raise ValueError(
                 f"lags ({nlags}) must be < number of observations ({nobs})"
