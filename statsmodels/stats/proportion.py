@@ -684,6 +684,10 @@ def proportion_effectsize(prop1, prop2, method="normal"):
     """
     if method != "normal":
         raise ValueError('only "normal" is implemented')
+    if np.any(np.asarray(prop1) < 0) or np.any(np.asarray(prop1) > 1):
+        raise ValueError("prop1 must be in the range [0, 1]")
+    if np.any(np.asarray(prop2) < 0) or np.any(np.asarray(prop2) > 1):
+        raise ValueError("prop2 must be in the range [0, 1]")
 
     es = 2 * (np.arcsin(np.sqrt(prop1)) - np.arcsin(np.sqrt(prop2)))
     return es
