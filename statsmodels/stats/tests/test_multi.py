@@ -714,6 +714,24 @@ def test_multipletests_rejects_out_of_range_pvals():
     assert np.isnan(res[1][-1])
 
 
+def test_multitest_alpha_range():
+    # an out-of-range alpha silently flipped the reject decisions
+    match = "alpha must be in the range"
+    pvals = np.array([0.1, 0.2])
+    for alpha in (-0.5, 0, 1, 1.5):
+        with pytest.raises(ValueError, match=match):
+            multipletests(pvals, alpha=alpha)
+        with pytest.raises(ValueError, match=match):
+            fdrcorrection_twostage(pvals, alpha=alpha)
+    # fdrcorrection itself also accepts alpha == 1 (reject every p-value);
+    # fdrcorrection_twostage relies on that for its capped stage-2 alpha
+    with pytest.raises(ValueError, match=match):
+        fdrcorrection(pvals, alpha=-0.5)
+    with pytest.raises(ValueError, match=match):
+        fdrcorrection(pvals, alpha=1.5)
+    assert fdrcorrection(pvals, alpha=1.0)[0].all()
+
+
 def test_local_fdr_param_validation():
     # a non-positive deg used to leak a bare numpy error from the density
     # fit, and a degenerate nbins crashed inside numpy's histogram
