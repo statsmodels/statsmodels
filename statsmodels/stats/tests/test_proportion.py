@@ -1685,3 +1685,13 @@ def test_confint_proportions_paired_invalid_inputs_raises():
         smprop.confint_proportions_paired([[1, 2], [3, 4]], method="score")
     with pytest.raises(TypeError, match="method must be a string"):
         smprop.confint_proportions_paired([[1, 2], [3, 4]], method=10)
+
+
+def test_proportions_ztest_invalid_prop_var_raises():
+    # a prop_var outside (0, 1) previously returned (nan, nan) silently
+    with pytest.raises(ValueError, match="prop_var must be in the range"):
+        smprop.proportions_ztest(3, 10, value=0.3, prop_var=-0.5)
+    with pytest.raises(ValueError, match="prop_var must be in the range"):
+        smprop.proportions_ztest(3, 10, value=0.3, prop_var=1.5)
+    stat, pval = smprop.proportions_ztest(3, 10, value=0.3, prop_var=0.5)
+    assert np.isfinite([stat, pval]).all()
