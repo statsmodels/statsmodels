@@ -1982,3 +1982,18 @@ def test_binom_tost_helpers_nobs_raises(func, args):
     # arrays of nobs keep working
     res = func(*args, np.array([100, 200]), *extra)
     assert np.shape(res[0] if isinstance(res, tuple) else res)[0] == 2
+
+
+def test_samplesize_confint_proportion_invalid_inputs_raises():
+    # alpha outside (0, 1) and negative half_length previously returned inf
+    # or a positive sample size for an impossible request
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.samplesize_confint_proportion(0.5, 0.1, alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.samplesize_confint_proportion(0.5, 0.1, alpha=0)
+    with pytest.raises(ValueError, match="half_length must be positive"):
+        smprop.samplesize_confint_proportion(0.5, -0.1)
+    with pytest.raises(ValueError, match="proportion must be in the range"):
+        smprop.samplesize_confint_proportion(1.5, 0.1)
+    n = smprop.samplesize_confint_proportion(0.5, 0.1)
+    assert np.isfinite(n) and n > 0
