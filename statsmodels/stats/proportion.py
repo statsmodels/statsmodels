@@ -1232,6 +1232,10 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
 
     nobs_fact = np.sum(1.0 / nobs)
     if prop_var:
+        if not 0 < prop_var < 1:
+            raise ValueError(
+                f"prop_var must be in the range (0, 1), got {prop_var}"
+            )
         p_pooled = prop_var
     var_ = p_pooled * (1 - p_pooled) * nobs_fact
     std_diff = np.sqrt(var_)
