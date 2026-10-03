@@ -178,3 +178,15 @@ def test_chisquare_effectsize():
     # compare
     # res_nc = chisquare_effectsize(pr1, pr3, cohen=False)
     # 0.0036681143072077533
+
+
+def test_chisquare_power_invalid_inputs_raises():
+    # impossible inputs previously returned nan power silently
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        chisquare_power(0.3, -5, 5, alpha=0.1)
+    with pytest.raises(ValueError, match="n_bins must be at least 1"):
+        chisquare_power(0.3, 50, 0, alpha=0.1)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        chisquare_power(0.3, 50, 5, alpha=2)
+    p = chisquare_power(0.3, 50, 5, alpha=0.1)
+    assert np.isfinite(p) and 0 < p < 1
