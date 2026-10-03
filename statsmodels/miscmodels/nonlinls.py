@@ -150,6 +150,7 @@ class NonlinearLS(Model):  # or subclass a model
                 raise ValueError("correlated errors are not handled yet")
         else:
             self.weights = None
+            self.sigma = None
 
     def predict(self, exog, params=None):
         """
