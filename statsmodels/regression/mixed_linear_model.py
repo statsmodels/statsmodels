@@ -1399,6 +1399,13 @@ class MixedLM(base.LikelihoodModel):
         singular : bool
             True if the covariance is singular
 
+        Notes
+        -----
+        Directions of the random effects covariance matrix and variance
+        components with an eigenvalue or variance below `tol` are dropped from
+        the covariance of the observations. The estimates are then the limit of
+        the GLS estimates as these variances go to zero, for example the OLS
+        estimates if all variances are zero.
         """
         if self.k_fe == 0:
             return np.array([]), False
@@ -2304,7 +2311,8 @@ class MixedLM(base.LikelihoodModel):
         do_cg : bool, optional
             If False, the optimization is skipped and a results
             object at the given (or default) starting values is
-            returned.
+            returned. The attribute ``converged`` of the results is
+            False in this case.
         fe_pen : Penalty object, optional
             A penalty on the fixed effects
         cov_pen : CovariancePenalty object, optional
@@ -2434,12 +2442,16 @@ class MixedLM(base.LikelihoodModel):
             if hist is not None:
                 hist.append(rslt.mle_retvals)
 
-        converged = rslt.mle_retvals["converged"]
-        if not converged:
-            gn = self.score(rslt.params)
-            gn = np.sqrt(np.sum(gn**2))
-            msg = f"Gradient optimization failed, |grad| = {gn:f}"
-            warnings.warn(msg, ConvergenceWarning, stacklevel=2)
+            converged = rslt.mle_retvals["converged"]
+            if not converged:
+                gn = self.score(rslt.params)
+                gn = np.sqrt(np.sum(gn**2))
+                msg = f"Gradient optimization failed, |grad| = {gn:f}"
+                warnings.warn(msg, ConvergenceWarning, stacklevel=2)
+        else:
+            # No optimization, use the starting values as the estimates
+            params = params.get_packed(use_sqrt=self.use_sqrt, has_fe=False)
+            converged = False
 
         # Convert to the final parameterization (i.e., undo the square
         # root transform of the covariance matrix, and the profiling

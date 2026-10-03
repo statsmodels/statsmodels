@@ -65,12 +65,19 @@ class DescrStatsW:
     data : array_like, 1-D or 2-D
         dataset
     weights : array_like, optional
-        weights for each observation, with same length as zero axis of data
+        weights for each observation, with same length as zero axis of data.
+        The weights must be finite and non-negative, and at least one weight
+        must be positive.
     ddof : int or float, optional
         default ddof=0, degrees of freedom correction used for second moments,
         var, std, cov, corrcoef.
         However, statistical tests are independent of `ddof`, based on the
         standard formulas.
+
+    Raises
+    ------
+    ValueError
+        If any weight is not finite or is negative, or if all weights are zero.
 
     Examples
     --------
@@ -119,6 +126,14 @@ class DescrStatsW:
             # TODO: why squeeze?
             if len(self.weights.shape) > 1 and len(self.weights) > 1:
                 self.weights = self.weights.squeeze()
+        # NaN is not negative, so that it has to be checked first
+        if not np.isfinite(self.weights).all():
+            raise ValueError("weights must be finite")
+        if np.any(self.weights < 0):
+            raise ValueError("weights must be non-negative")
+        # empty data keeps its nan results
+        if self.weights.size > 0 and not np.any(self.weights > 0):
+            raise ValueError("at least one weight must be positive")
         self.ddof = ddof
 
     @cache_readonly

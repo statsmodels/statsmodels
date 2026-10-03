@@ -1591,6 +1591,10 @@ class LikelihoodModelResults(Results):
                 "description": "Standard Errors assume that the covariance matrix "
                 "of the errors is correctly specified."
             }
+            # Honor an explicitly requested Student-t inference under the
+            # default (nonrobust) covariance, consistent with robust types.
+            if use_t is not None:
+                self.use_t = use_t
         else:
             # TODO: we should not need use_t in get_robustcov_results
             get_robustcov_results(

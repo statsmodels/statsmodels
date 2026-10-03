@@ -1,3 +1,4 @@
+
 from pathlib import Path
 
 import numpy as np
@@ -291,6 +292,247 @@ def test_covdetmcd():
     assert_allclose(shape, shape_r, rtol=1e-5)
 
 
+def test_naive_ledoit_wolf_shrinkage():
+    # GH-10368: the shrinkage target mu * I was missing, so that the result
+    # was s * S instead of (1 - s) * S + s * mu * I.
+    # Reference values from scikit-learn 1.9.1
+    # >>> from sklearn.covariance import ledoit_wolf
+    # >>> x = np.sin(np.arange(1.0, 25.0)).reshape(6, 4) * [1.0, 2.0, 3.0, 4.0]
+    # >>> cov_sk, s = ledoit_wolf(x, assume_centered=True)  # s = 0.1837
+    # >>> cov_sk_wide, s = ledoit_wolf(x[:3], assume_centered=True)  # s = 0.3020
+    # >>> cov_sk_mean, s = ledoit_wolf(x)  # centered at the mean, s = 0.2150
+    x = np.sin(np.arange(1.0, 25.0)).reshape(6, 4) * [1.0, 2.0, 3.0, 4.0]
+    cov_sk = np.array(
+        """
+        1.2191580449982553  0.5277798166688882 -0.6131189647120341 -1.9389452077521723
+        0.5277798166688882  2.2240825250612843  0.8390380551559709 -1.7800250513761013
+       -0.6131189647120341  0.8390380551559709  3.9289838866958187  2.9315807039718345
+       -1.9389452077521723 -1.7800250513761013  2.9315807039718345  8.513514012094985
+        """.split(),
+        float,
+    ).reshape(4, 4)
+    cov_sk_wide = np.array(
+        """
+        1.6537393783557195  0.37641044115167954 -0.6445260481866113 -1.6814579757095078
+        0.37641044115167954 2.3531447364553637  0.6823312099602171 -1.2521386039850808
+       -0.6445260481866113  0.6823312099602171  4.275095455868162   3.014773802129567
+       -1.6814579757095078 -1.2521386039850808  3.014773802129567   8.083503772853819
+        """.split(),
+        float,
+    ).reshape(4, 4)
+
+    cov_sk_mean = np.array(
+        """
+        1.3069045522207179  0.49941085732934765 -0.5800578609689707 -1.8345726475079638
+        0.49941085732934765 2.2721762731213047  0.8171635509777809 -1.6795400890559036
+       -0.5800578609689707  0.8171635509777809  3.9084387296080854  2.7813397937792352
+       -1.8345726475079638 -1.6795400890559036  2.7813397937792352  8.210170749503536
+        """.split(),
+        float,
+    ).reshape(4, 4)
+
+    res = robcov._naive_ledoit_wolf_shrinkage(x, 0)
+    assert_allclose(res.cov, cov_sk, rtol=1e-13)
+
+    # the shrinkage intensity uses the centered data
+    res = robcov._naive_ledoit_wolf_shrinkage(x, x.mean(0))
+    assert_allclose(res.cov, cov_sk_mean, rtol=1e-13)
+
+    # fewer observations than variables, the second moment matrix is singular
+    # and the shrinkage estimate is positive definite
+    res = robcov._naive_ledoit_wolf_shrinkage(x[:3], 0)
+    assert_allclose(res.cov, cov_sk_wide, rtol=1e-13)
+    assert np.linalg.eigvalsh(res.cov).min() > 0.1
+
+
+def test_cov_starting_small_nobs():
+    # the first deterministic starting percentile is
+    # 200 * (k_vars + 2) / nobs, which is above 100 when
+    # nobs < 2 * k_vars + 4, so np.percentile raised a ValueError.
+    # The first starting subset should then fall back to the full sample.
+    rng = np.random.default_rng(10241)
+    x = rng.standard_normal((60, 30))
+    k_vars = x.shape[1]
+
+    starts = robcov._cov_starting(x)
+    assert_allclose(starts[0].mean, x.mean(axis=0))
+    assert_allclose(starts[0].cov, np.cov(x.T))
+    assert np.linalg.matrix_rank(starts[0].cov) == k_vars
+
+    # with standardization, the full-sample start is rotated back to the
+    # covariance of the original data
+    starts_std = robcov._cov_starting(x, standardize=True, retransform=True)
+    assert_allclose(starts_std[0], np.cov(x.T))
+
+    # the estimators that use the starting sets should not raise
+    for res in (
+        robcov.CovDetMCD(x).fit(45),
+        robcov.CovDetS(x).fit(),
+        robcov.CovDetMM(x).fit(),
+    ):
+        assert res.cov.shape == (30, 30)
+        assert np.isfinite(res.cov).all()
+        assert np.linalg.eigvalsh(res.cov).min() > 0
+
+
+def test_cov_starting_keeps_trimmed_starts():
+    # starts must not be dropped when a trim retains at most k_vars
+    # observations; that happens at sizes where the estimator already
+    # worked on main, e.g. n=100, k=30 has 25 observations in the
+    # 25% trim. All four percentile trims contribute four starts each,
+    # plus six global starts.
+    rng = np.random.default_rng(10242)
+    starts = robcov._cov_starting(rng.standard_normal((100, 30)))
+    assert len(starts) == 22
+    # rank-deficient trimmed starts are retained and used for ranking
+    ranks = [np.linalg.matrix_rank(start.cov) for start in starts]
+    assert min(ranks) < 30
+
+
+def test_mahalanobis_singular_cov():
+    # a rank-deficient starting covariance must not abort the candidate, the
+    # pseudo-inverse of the covariance is used
+    rng = np.random.default_rng(10243)
+    x = rng.standard_normal((40, 5))
+
+    # the pseudo-inverse of the zero matrix is zero
+    d = robcov.mahalanobis(x, cov=np.zeros((5, 5)))
+    assert_allclose(d, 0, atol=1e-15)
+
+    # diagonal rank 3 covariance, only the first three coordinates count
+    d = robcov.mahalanobis(x, cov=np.diag([1.0, 1.0, 1.0, 0.0, 0.0]))
+    assert_allclose(d, (x[:, :3] ** 2).sum(1), rtol=1e-12)
+
+
+def test_mahalanobis_singular_cov_additional():
+    rng = np.random.default_rng(10243)
+    x = rng.standard_normal((40, 5))
+    a = rng.standard_normal((5, 3))
+    # Linear algebra for the pseudo-inverse of a rank-deficient covariance
+    # is unreliable on WASM
+    pinv = a @ np.linalg.inv(a.T @ a) @ np.linalg.inv(a.T @ a) @ a.T
+    d = robcov.mahalanobis(x, cov=a @ a.T)
+    assert_allclose(d, np.einsum("ij,jk,ik->i", x, pinv, x), rtol=1e-8)
+
+    d_sqrt = robcov.mahalanobis(x, cov=a @ a.T, sqrt=True)
+    assert_allclose(d_sqrt, np.sqrt(d), rtol=1e-12)
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_mahalanobis_numerically_singular_cov(seed):
+    # GH-10247: A rank deficient covariance with rounding errors does not have
+    # an exactly zero pivot in the LU factorization on some platforms (macOS,
+    # WASM), where numpy.linalg.solve returns huge values without an error. The
+    # rotation of the rank 3 covariance a a' by an orthogonal matrix has these
+    # rounding errors on all platforms. The pseudo-inverse of b b' is
+    # b (b'b)^(-2) b' if b has full column rank.
+    rng = np.random.default_rng(10243 + seed)
+    x = rng.standard_normal((40, 5))
+    q, _ = np.linalg.qr(rng.standard_normal((5, 5)))
+    b = q @ rng.standard_normal((5, 3))
+    cov = b @ b.T
+    cov = (cov + cov.T) / 2
+    pinv = b @ np.linalg.inv(b.T @ b) @ np.linalg.inv(b.T @ b) @ b.T
+    d = robcov.mahalanobis(x, cov=cov)
+    assert_allclose(d, np.einsum("ij,jk,ik->i", x, pinv, x), rtol=1e-8)
+    assert np.all(d >= 0)
+
+
+def test_mahalanobis_ill_conditioned_cov():
+    # a covariance that is ill-conditioned but not singular to working precision
+    # does not use the pseudo-inverse, the distance is the one of the inverse
+    rng = np.random.default_rng(10243)
+    x = rng.standard_normal((40, 5))
+    q, _ = np.linalg.qr(rng.standard_normal((5, 5)))
+    evals = np.array([1.0, 1e-3, 1e-5, 1e-8, 1e-10])
+    cov = (q * evals) @ q.T
+    d = robcov.mahalanobis(x, cov=(cov + cov.T) / 2)
+    assert_allclose(d, ((x @ q) ** 2 / evals).sum(1), rtol=1e-4)
+
+
+@pytest.mark.parametrize("span", [1e8, 1e16, 1e24])
+def test_mahalanobis_badly_scaled_cov(span):
+    # The covariance of variables with a ratio of variances above 1e15 has a
+    # numerical rank below its dimension but it is not singular, the
+    # pseudo-inverse would drop the variables with a small variance.
+    # The distance does not depend on the scales, z' corr^(-1) z.
+    rng = np.random.default_rng(10243)
+    corr = np.array(
+        [
+            [1.0, 0.5, 0.2, 0.1],
+            [0.5, 1.0, 0.3, 0.2],
+            [0.2, 0.3, 1.0, 0.4],
+            [0.1, 0.2, 0.4, 1.0],
+        ]
+    )
+    z = rng.standard_normal((50, 4)) @ np.linalg.cholesky(corr).T
+    expected = np.einsum("ij,jk,ik->i", z, np.linalg.inv(corr), z)
+
+    sd = np.geomspace(span**0.25, span**-0.25, 4)
+    cov = sd[:, None] * corr * sd
+    assert_allclose(robcov.mahalanobis(z * sd, cov=cov), expected, rtol=1e-8)
+
+
+def test_mahalanobis_cov_not_square():
+    # the error for a cov that is not square is not replaced by the fallback
+    # for a singular matrix
+    x = np.ones((10, 5))
+    with pytest.raises(np.linalg.LinAlgError, match="square"):
+        robcov.mahalanobis(x, cov=np.ones((5, 4)))
+
+
+def test_cov_weighted_det_non_finite_determinant():
+    # a determinant that overflows plain det is normalized via slogdet
+    # (GH-10287): det(wcov) == 1 instead of a LinAlgError
+    x = np.eye(6) * 1e30
+    cov, _ = robcov.cov_weighted(
+        x, np.ones(6), center=np.zeros(6), weights_cov_denom="det"
+    )
+    assert np.isfinite(cov).all()
+    assert_allclose(np.linalg.det(cov), 1.0, rtol=1e-6)
+
+    # a singular cross product has det == 0 and must raise as well
+    x = np.diag([1.0, 0.0])
+    with pytest.raises(np.linalg.LinAlgError, match="must be positive and finite"):
+        robcov.cov_weighted(
+            x, np.ones(2), center=np.zeros(2), weights_cov_denom="det"
+        )
+
+    # a finite determinant is normalized as before: for diag(2, 3) the
+    # cross product is diag(4, 9) with det 36, so det ** (1 / 2) is 6
+    x = np.diag([2.0, 3.0])
+    cov, _ = robcov.cov_weighted(
+        x, np.ones(2), center=np.zeros(2), weights_cov_denom="det"
+    )
+    assert_allclose(cov, np.diag([4 / 6, 9 / 6]), rtol=1e-15)
+
+
+def test_covdetmcd_rank_by_logdet():
+    # GH-10295: det(cov) overflows to inf for every starting set, so
+    # np.argmin(det_all) silently picked the first start and the selected
+    # start changed with the scale of the data.
+    rng = np.random.default_rng(12345)
+    x = rng.standard_normal((100, 30)) * 5e5
+    h = 65
+
+    res = robcov.CovDetMCD(x).fit(h, maxiter_step=2, reweight=False)
+    res_scaled = robcov.CovDetMCD(x / 4.0).fit(h, maxiter_step=2, reweight=False)
+
+    # the starts of the unscaled data overflow to inf for every determinant
+    assert np.all(np.isinf(res.det_all))
+    # determinants of the scaled data are finite
+    assert np.all(np.isfinite(res_scaled.det_all))
+    # the overflowing fit selects the same start as the old determinant
+    # criterion evaluated on the finite, scaled determinants
+    assert res.idx_best == np.argmin(res_scaled.det_all)
+    # ranking by log-determinant is scale-equivariant ...
+    assert res.idx_best == res_scaled.idx_best
+    assert res.idx_best != 0
+    # ... and exactly preserves a power-of-two rescaling
+    assert_allclose(res.mean, 4.0 * res_scaled.mean)
+    assert_allclose(res.cov, 16.0 * res_scaled.cov)
+
+
 def test_covdetmm():
 
     # results from rrcov
@@ -324,6 +566,44 @@ def test_covdetmm():
 
     assert_allclose(res.mean, mean_dmm_r, rtol=1e-3)
     assert_allclose(res.cov, cov_dmm_r, rtol=1e-3, atol=1e-3)
+
+
+def test_covdet_one_column():
+    # GH-10300: np.cov returns a 0-d array for data with a single column,
+    # so the covariance shape was wrong in CovDetMCD, CovDetS, CovDetMM
+    # and in the no-start branch of CovM.
+    rng = np.random.default_rng(3)
+    x = rng.standard_normal((50, 1))
+    h = 26
+
+    for res in (
+        robcov.CovDetMCD(x).fit(h),
+        robcov.CovDetS(x).fit(),
+        robcov.CovDetMM(x).fit(),
+        robcov.CovM(x).fit(),
+    ):
+        cov = np.asarray(res.cov)
+        assert cov.shape == (1, 1)
+        assert np.all(np.isfinite(cov))
+        assert cov[0, 0] > 0
+
+    # Accuracy on a constructed dataset with an unambiguous optimum: a tight
+    # core of h points plus 24 far outliers. The C-steps converge to the core
+    # for any correct implementation, i.e. to the minimum-variance sliding
+    # window of the sorted data, which is the exact univariate MCD solution.
+    core = 10 + 0.01 * rng.standard_normal((h, 1))
+    outliers = np.concatenate([np.full((12, 1), -100.0), np.full((12, 1), 100.0)])
+    x2 = np.concatenate([core, outliers])
+    raw = robcov.CovDetMCD(x2).fit(h).results_raw
+
+    x2_sorted = np.sort(x2[:, 0])
+    windows = np.lib.stride_tricks.sliding_window_view(x2_sorted, h)
+    window_vars = windows.var(axis=1, ddof=1)
+    idx_min = np.argmin(window_vars)
+    assert_allclose(raw.det_subset, window_vars[idx_min], rtol=1e-12)
+    fac = robcov.coef_normalize_cov_truncated(h / x2.shape[0], 1)
+    assert_allclose(raw.cov, fac * window_vars[idx_min], rtol=1e-12)
+    assert_allclose(raw.mean[0], x2_sorted[idx_min : idx_min + h].mean(), rtol=1e-12)
 
 
 def test_det_root_does_not_overflow():
