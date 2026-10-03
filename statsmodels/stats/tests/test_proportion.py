@@ -1761,3 +1761,11 @@ def test_proportion_effectsize_invalid_inputs_raises():
     assert np.isfinite(smprop.proportion_effectsize(0.5, 0.4))
 
 
+def test_confint_proportions_2indep_invalid_alpha_raises():
+    # alpha outside (0, 1) previously returned (nan, nan) silently
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.confint_proportions_2indep(3, 10, 5, 10, alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.confint_proportions_2indep(3, 10, 5, 10, alpha=0)
+    lo, hi = smprop.confint_proportions_2indep(3, 10, 5, 10)
+    assert np.isfinite([lo, hi]).all()

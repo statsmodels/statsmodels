@@ -1596,6 +1596,8 @@ def confint_proportions_2indep(
         raise ValueError("count1 and count2 must be non-negative")
     if np.any(np.asarray(nobs1) <= 0) or np.any(np.asarray(nobs2) <= 0):
         raise ValueError("nobs1 and nobs2 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     method_default = {
         "diff": "newcomb",
