@@ -1186,6 +1186,12 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
     if nobs.size == 1:
         nobs = nobs * np.ones_like(count)
 
+    if not np.all(np.isfinite(count)):
+        # NaN and inf pass the sign comparisons below and come back as NaN
+        # p-values
+        raise ValueError("count must be finite")
+    if not np.all(np.isfinite(nobs)):
+        raise ValueError("nobs must be finite")
     if np.any(count < 0):
         raise ValueError("count must be non-negative")
     if np.any(nobs <= 0):
@@ -1199,6 +1205,17 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
         if k_sample == 1:
             raise ValueError("value must be provided for a 1-sample test")
         value = 0
+    else:
+        value_arr = np.asarray(value)
+        # 1-sample: value is a proportion; 2-sample: a difference of
+        # proportions. Non-finite or out-of-range values used to produce
+        # silently wrong p-values.
+        lo, hi = (0.0, 1.0) if k_sample == 1 else (-1.0, 1.0)
+        if not np.all(np.isfinite(value_arr)) or np.any(value_arr < lo) or np.any(value_arr > hi):
+            raise ValueError(
+                f"value must be finite and in [{lo}, {hi}] for a "
+                f"{k_sample}-sample test, got {value!r}"
+            )
     if k_sample == 1:
         diff = prop - value
     elif k_sample == 2:
@@ -1323,12 +1340,26 @@ def proportions_chisquare(count, nobs, value=None):
     """
     count = np.asarray(count)
     nobs = np.atleast_1d(nobs)
+    if not np.all(np.isfinite(count)):
+        raise ValueError("count must be finite")
+    if not np.all(np.isfinite(nobs)):
+        raise ValueError("nobs must be finite")
     if np.any(count < 0):
         raise ValueError("count must be non-negative")
     if np.any(nobs <= 0):
         raise ValueError("nobs must be positive")
     if np.any(count > nobs):
         raise ValueError("count must not exceed nobs")
+    if value is not None:
+        value_arr = np.asarray(value)
+        # value scales the expected counts, so non-finite or out-of-range
+        # values used to produce silently wrong chi-square statistics
+        if (
+            not np.all(np.isfinite(value_arr))
+            or np.any(value_arr < 0)
+            or np.any(value_arr > 1)
+        ):
+            raise ValueError(f"value must be finite and in [0, 1], got {value!r}")
     table, expected, n_rows = _table_proportion(count, nobs)
     if value is not None:
         expected = np.column_stack((nobs * value, nobs * (1 - value)))

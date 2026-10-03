@@ -1475,6 +1475,7 @@ def test_proportions_chisquare_pairscontrol_alternative():
         smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="larger")
 
 
+
 def test_confint_proportions_2indep_invalid_inputs_raises():
     # negative counts and non-positive nobs previously returned (nan, nan)
     # or divided by zero instead of raising
@@ -1658,6 +1659,28 @@ def test_confint_proportions_paired_invalid_inputs_raises():
         smprop.confint_proportions_paired([[1, 2], [3, 4]], method="score")
     with pytest.raises(TypeError, match="method must be a string"):
         smprop.confint_proportions_paired([[1, 2], [3, 4]], method=10)
+
+
+
+def test_proportions_ztest_nonfinite_and_value_domain_raises():
+    # NaN/inf inputs used to slip past the sign checks and come back as NaN
+    # p-values; an out-of-range null proportion used to produce silently
+    # wrong p-values
+    with pytest.raises(ValueError, match="count must be finite"):
+        smprop.proportions_ztest(np.nan, 10, value=0.5)
+    with pytest.raises(ValueError, match="nobs must be finite"):
+        smprop.proportions_ztest(1, np.inf, value=0.5)
+    with pytest.raises(ValueError, match=r"value must be finite and in \[0\.0, 1\.0\] for a 1-sample"):
+        smprop.proportions_ztest(3, 10, value=1.5)
+    with pytest.raises(ValueError, match=r"value must be finite and in \[-1\.0, 1\.0\] for a 2-sample"):
+        smprop.proportions_ztest([3, 5], [10, 10], value=2.0)
+
+
+def test_proportions_chisquare_nonfinite_and_value_domain_raises():
+    with pytest.raises(ValueError, match="count must be finite"):
+        smprop.proportions_chisquare(np.nan, 10, value=0.5)
+    with pytest.raises(ValueError, match=r"value must be finite and in \[0, 1\], got 1\.5"):
+        smprop.proportions_chisquare(3, 10, value=1.5)
 
 
 def test_proportions_ztest_invalid_inputs_raises():
