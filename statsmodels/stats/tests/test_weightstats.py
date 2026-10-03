@@ -1030,6 +1030,17 @@ def test_ztost_ind_matches_two_one_sided_ztests():
         assert_allclose(pvalue, max(tt1_expected[1], tt2_expected[1]))
 
 
+def test_zconfint_alpha_out_of_range():
+    # alpha outside (0, 1) previously returned (inf, -inf) silently
+    x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        zconfint(x, alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        zconfint(x, alpha=0)
+    lo, hi = zconfint(x, alpha=0.05)
+    assert np.isfinite([lo, hi]).all()
+
+
 def test_descrstatsw_negative_weights_raises():
     # negative observation weights are invalid; previously they were silently
     # accepted and propagated nan into the summary statistics
