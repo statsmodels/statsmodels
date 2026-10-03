@@ -49,6 +49,16 @@ def test_default_trend():
     assert_equal(mod.exog, None)
 
 
+def test_trend_array():
+    # GH 9145, a polynomial trend given as an ndarray raised ValueError
+    endog = dta["infl"].iloc[:50]
+
+    mod = ARIMA(endog, trend=np.array([0, 1, 1]))
+    desired = ARIMA(endog, trend=[0, 1, 1])
+    assert_equal(mod._spec_arima.trend_terms, desired._spec_arima.trend_terms)
+    assert_allclose(mod.exog, desired.exog)
+
+
 def test_invalid():
     # Tests that invalid options raise errors
     # (note that this is only invalid options specific to `ARIMA`, and not

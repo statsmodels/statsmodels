@@ -293,6 +293,8 @@ def detrend(x, order=1, axis=0):
         raise NotImplementedError("x.ndim > 2 is not implemented until it is needed")
 
     nobs = x.shape[0]
+    if order < 0:
+        raise ValueError(f"order must be non-negative, got {order}")
     if order == 0:
         # Special case demean
         resid = x - x.mean(axis=0)
