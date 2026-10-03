@@ -1399,26 +1399,33 @@ class MixedLM(base.LikelihoodModel):
         singular : bool
             True if the covariance is singular
 
+        Notes
+        -----
+        Directions of the random effects covariance matrix and variance
+        components with an eigenvalue or variance below `tol` are dropped from
+        the covariance of the observations. The estimates are then the limit of
+        the GLS estimates as these variances go to zero, for example the OLS
+        estimates if all variances are zero.
         """
         if self.k_fe == 0:
             return np.array([]), False
 
         sing = False
+        re_project = False
+        v_good = None
+        wi_good = None
 
         if self.k_re == 0:
             cov_re_inv = np.empty((0, 0))
         else:
             w, v = np.linalg.eigh(cov_re)
             if w.min() < tol:
-                # Singular, use pseudo-inverse
+                # Singular: drop the degenerate directions.
                 sing = True
+                re_project = True
                 ii = np.flatnonzero(w >= tol)
-                if len(ii) == 0:
-                    cov_re_inv = np.zeros_like(cov_re)
-                else:
-                    vi = v[:, ii]
-                    wi = w[ii]
-                    cov_re_inv = np.dot(vi / wi, vi.T)
+                v_good = v[:, ii]
+                wi_good = w[ii]
             else:
                 cov_re_inv = np.linalg.inv(cov_re)
 
@@ -1434,21 +1441,46 @@ class MixedLM(base.LikelihoodModel):
         xtxy = 0.0
         for group_ix, _group in enumerate(self.group_labels):
             vc_var = self._expand_vcomp(vcomp, group_ix)
+            vc_project = False
             if vc_var.size > 0:
                 if vc_var.min() < tol:
-                    # Pseudo-inverse
+                    # Drop components with variance below tol.
                     sing = True
-                    ii = np.flatnonzero(vc_var >= tol)
-                    vc_vari = np.zeros_like(vc_var)
-                    vc_vari[ii] = 1 / vc_var[ii]
+                    vc_project = True
+                    vc_ii = np.flatnonzero(vc_var >= tol)
+                    vc_vari = 1 / vc_var[vc_ii]
                 else:
                     vc_vari = 1 / vc_var
             else:
                 vc_vari = np.empty(0)
             exog = self.exog_li[group_ix]
-            ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
-            solver = _smw_solver(1.0, ex_r, ex2_r, cov_re_inv, vc_vari)
-            u = solver(self._endex_li[group_ix])
+
+            if re_project:
+                # Keep only the well-conditioned eigendirections.
+                ex_r_full = self._aex_r[group_ix]
+                re_cols = ex_r_full[:, : self.k_re]
+                vc_cols = ex_r_full[:, self.k_re :]
+                re_proj = np.dot(re_cols, v_good)
+                ex_r = np.concatenate((re_proj, vc_cols), axis=1)
+                ex2_r = np.dot(ex_r.T, ex_r)
+                cov_re_inv = np.diag(1 / wi_good)
+            else:
+                ex_r, ex2_r = self._aex_r[group_ix], self._aex_r2[group_ix]
+
+            if vc_project:
+                # Keep only variance component columns with variance >= tol.
+                re_width = ex_r.shape[1] - vc_var.size
+                good = np.concatenate((np.arange(re_width), re_width + vc_ii))
+                ex_r = ex_r[:, good]
+                ex2_r = np.dot(ex_r.T, ex_r)
+
+            if ex_r.shape[1] == 0:
+                # No random effects left, so V is the identity and u is
+                # unchanged.
+                u = self._endex_li[group_ix]
+            else:
+                solver = _smw_solver(1.0, ex_r, ex2_r, cov_re_inv, vc_vari)
+                u = solver(self._endex_li[group_ix])
             xtxy += np.dot(exog.T, u)
 
         if sing:
@@ -2279,7 +2311,8 @@ class MixedLM(base.LikelihoodModel):
         do_cg : bool, optional
             If False, the optimization is skipped and a results
             object at the given (or default) starting values is
-            returned.
+            returned. The attribute ``converged`` of the results is
+            False in this case.
         fe_pen : Penalty object, optional
             A penalty on the fixed effects
         cov_pen : CovariancePenalty object, optional
@@ -2409,12 +2442,16 @@ class MixedLM(base.LikelihoodModel):
             if hist is not None:
                 hist.append(rslt.mle_retvals)
 
-        converged = rslt.mle_retvals["converged"]
-        if not converged:
-            gn = self.score(rslt.params)
-            gn = np.sqrt(np.sum(gn**2))
-            msg = f"Gradient optimization failed, |grad| = {gn:f}"
-            warnings.warn(msg, ConvergenceWarning, stacklevel=2)
+            converged = rslt.mle_retvals["converged"]
+            if not converged:
+                gn = self.score(rslt.params)
+                gn = np.sqrt(np.sum(gn**2))
+                msg = f"Gradient optimization failed, |grad| = {gn:f}"
+                warnings.warn(msg, ConvergenceWarning, stacklevel=2)
+        else:
+            # No optimization, use the starting values as the estimates
+            params = params.get_packed(use_sqrt=self.use_sqrt, has_fe=False)
+            converged = False
 
         # Convert to the final parameterization (i.e., undo the square
         # root transform of the covariance matrix, and the profiling

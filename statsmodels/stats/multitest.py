@@ -29,6 +29,7 @@ from statsmodels.tools.validation import (
     array_like,
     bool_like,
     float_like,
+    int_like,
     string_like,
 )
 
@@ -107,7 +108,8 @@ def multipletests(
     pvals : array_like, 1-d
         uncorrected p-values.   Must be 1-dimensional.
     alpha : float, optional
-        FWER, family-wise error rate, e.g., 0.1
+        FWER, family-wise error rate, e.g., 0.1. Must be in the range (0, 1),
+        in contrast to ``fdrcorrection`` which also accepts 1.
     method : str, optional
         Method used for testing and adjustment of pvalues. Can be either the
         full name or initial letters. Available methods are:
@@ -150,6 +152,12 @@ def multipletests(
     alphacBonf : float
         corrected alpha for Bonferroni method
 
+    Raises
+    ------
+    ValueError
+        If ``alpha`` is not in the range (0, 1) or if any of the p-values is
+        not in the range [0, 1].
+
     Notes
     -----
     There may be API changes for this function in the future.
@@ -191,6 +199,8 @@ def multipletests(
             "p-values must be in the range [0, 1]; got "
             f"[{pvals.min()}, {pvals.max()}]"
         )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     alphaf = alpha  # Notation ?
 
     if not is_sorted:
@@ -341,7 +351,10 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     pvals : array_like, 1d
         Set of p-values of the individual tests.
     alpha : float, optional
-        Family-wise error rate. Defaults to ``0.05``.
+        Family-wise error rate. Defaults to ``0.05``. Must be in the range
+        (0, 1]. The value 1, which rejects all hypotheses, is allowed because
+        ``fdrcorrection_twostage`` uses it for the later stages, in contrast to
+        ``multipletests`` which requires ``alpha < 1``.
     method : {'i', 'indep', 'p', 'poscorr', 'n', 'negcorr'}, optional
         Which method to use for FDR correction.
         ``{'i', 'indep', 'p', 'poscorr'}`` all refer to ``fdr_bh``
@@ -406,6 +419,10 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     """
     pvals = np.asarray(pvals)
     assert pvals.ndim == 1, "pvals must be 1-dimensional, that is of shape (n,)"
+    # alpha == 1 is allowed here: fdrcorrection_twostage legitimately calls
+    # this with a capped stage-2 alpha of 1 (reject every p-value <= 1)
+    if not 0 < alpha <= 1:
+        raise ValueError(f"alpha must be in the range (0, 1], got {alpha}")
 
     if not is_sorted:
         pvals_sortind = np.argsort(pvals)
@@ -628,7 +645,7 @@ def fdrcorrection_twostage(
     pvals : array_like
         set of p-values of the individual tests.
     alpha : float, optional
-        error rate
+        error rate, must be in the range (0, 1)
     method : {'bky', 'bh'}, optional
         see Notes for details
 
@@ -664,7 +681,15 @@ def fdrcorrection_twostage(
     m0 : int
         ntest - rej, estimated number of true (not rejected) hypotheses
     alpha_stages : list of floats
-        A list of alphas that have been used at each stage
+        A list of alphas that have been used at each stage. The alphas of the
+        second and later stages are capped at 1, which rejects all hypotheses.
+
+    Raises
+    ------
+    ValueError
+        If ``alpha`` is not in the range (0, 1).
+    TypeError
+        If the removed keyword ``iter`` is not None.
 
     Notes
     -----
@@ -702,6 +727,8 @@ def fdrcorrection_twostage(
         pvals = np.take(pvals, pvals_sortind)
 
     method = string_like(method, "method", options=("bky", "bh"), lower=False)
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     ntests = len(pvals)
     if method == "bky":
         fact = 1.0 + alpha
@@ -726,7 +753,10 @@ def fdrcorrection_twostage(
         # while True:
         for it in range(maxiter):
             ntests0 = 1.0 * ntests - ri_old
-            alpha_star = alpha_prime * ntests / ntests0
+            # cap at 1 so the internal fdrcorrection call stays within its
+            # validated range; alpha_star >= 1 rejects every p-value <= 1,
+            # which is identical behavior
+            alpha_star = min(alpha_prime * ntests / ntests0, 1.0)
             alpha_stages.append(alpha_star)
             # print ntests0, alpha_star
             rej, pvalscorr = fdrcorrection(
@@ -808,6 +838,15 @@ def local_fdr(zscores, null_proportion=1.0, null_pdf=None, deg=7, nbins=30, alph
 
     from statsmodels.genmod.generalized_linear_model import GLM, families
     from statsmodels.regression.linear_model import OLS
+
+    deg = int_like(deg, "deg", optional=False)
+    if deg < 1:
+        # a non-positive degree used to build an empty Vandermonde matrix
+        # and leak a bare numpy error from the density fit
+        raise ValueError(f"deg must be a positive integer, got {deg}")
+    nbins = int_like(nbins, "nbins", optional=False)
+    if nbins < 2:
+        raise ValueError(f"nbins must be a positive integer >= 2, got {nbins}")
 
     # Bins for Poisson modeling of the marginal Z-score density
     minz = min(zscores)

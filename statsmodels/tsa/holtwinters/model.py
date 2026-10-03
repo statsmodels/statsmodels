@@ -327,11 +327,14 @@ class ExponentialSmoothing(TimeSeriesModel):
             return self._y
         if self._use_boxcox is True:
             y, self._lambda = boxcox(self._y)
+        elif self._use_boxcox == "log":
+            self._lambda = 0.0
+            y = boxcox(self._y, 0.0)
         elif isinstance(self._use_boxcox, (int, float)):
             self._lambda = float(self._use_boxcox)
             y = boxcox(self._y, self._use_boxcox)
         else:
-            raise TypeError("use_boxcox must be True, False or a float.")
+            raise TypeError("use_boxcox must be True, False, 'log' or a float.")
         return y
 
     @contextlib.contextmanager
@@ -1257,6 +1260,8 @@ class ExponentialSmoothing(TimeSeriesModel):
         s = np.zeros((self.nobs + h + m + 1,))
         lvls[0] = initial_level
         b[0] = initial_trend
+        # b[0] is overwritten with its damped value below, so keep b0
+        initial_b = b[0]
         s[:m] = initial_seasons
         phi_h = (
             np.cumsum(np.repeat(phi, h + 1) ** np.arange(1, h + 1 + 1))
@@ -1354,7 +1359,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             "smoothing_seasonal": gamma,
             "damping_trend": phi if damped else np.nan,
             "initial_level": lvls[0],
-            "initial_trend": b[0] / phi if phi > 0 else 0,
+            "initial_trend": initial_b,
             "initial_seasons": s[:m],
             "use_boxcox": use_boxcox,
             "lamda": lamda,
@@ -1374,7 +1379,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         ]
         idx += [f"initial_seasons.{i}" for i in range(m)]
 
-        formatted = [alpha, beta, gamma, lvls[0], b[0], phi]
+        formatted = [alpha, beta, gamma, lvls[0], initial_b, phi]
         formatted += s[:m].tolist()
         formatted = [np.nan if v is None else v for v in formatted]
         formatted = np.array(formatted)
