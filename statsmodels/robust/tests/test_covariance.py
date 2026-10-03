@@ -292,6 +292,59 @@ def test_covdetmcd():
     assert_allclose(shape, shape_r, rtol=1e-5)
 
 
+def test_naive_ledoit_wolf_shrinkage():
+    # GH-10368: the shrinkage target mu * I was missing, so that the result
+    # was s * S instead of (1 - s) * S + s * mu * I.
+    # Reference values from scikit-learn 1.9.1
+    # >>> from sklearn.covariance import ledoit_wolf
+    # >>> x = np.sin(np.arange(1.0, 25.0)).reshape(6, 4) * [1.0, 2.0, 3.0, 4.0]
+    # >>> cov_sk, s = ledoit_wolf(x, assume_centered=True)  # s = 0.1837
+    # >>> cov_sk_wide, s = ledoit_wolf(x[:3], assume_centered=True)  # s = 0.3020
+    # >>> cov_sk_mean, s = ledoit_wolf(x)  # centered at the mean, s = 0.2150
+    x = np.sin(np.arange(1.0, 25.0)).reshape(6, 4) * [1.0, 2.0, 3.0, 4.0]
+    cov_sk = np.array(
+        """
+        1.2191580449982553  0.5277798166688882 -0.6131189647120341 -1.9389452077521723
+        0.5277798166688882  2.2240825250612843  0.8390380551559709 -1.7800250513761013
+       -0.6131189647120341  0.8390380551559709  3.9289838866958187  2.9315807039718345
+       -1.9389452077521723 -1.7800250513761013  2.9315807039718345  8.513514012094985
+        """.split(),
+        float,
+    ).reshape(4, 4)
+    cov_sk_wide = np.array(
+        """
+        1.6537393783557195  0.37641044115167954 -0.6445260481866113 -1.6814579757095078
+        0.37641044115167954 2.3531447364553637  0.6823312099602171 -1.2521386039850808
+       -0.6445260481866113  0.6823312099602171  4.275095455868162   3.014773802129567
+       -1.6814579757095078 -1.2521386039850808  3.014773802129567   8.083503772853819
+        """.split(),
+        float,
+    ).reshape(4, 4)
+
+    cov_sk_mean = np.array(
+        """
+        1.3069045522207179  0.49941085732934765 -0.5800578609689707 -1.8345726475079638
+        0.49941085732934765 2.2721762731213047  0.8171635509777809 -1.6795400890559036
+       -0.5800578609689707  0.8171635509777809  3.9084387296080854  2.7813397937792352
+       -1.8345726475079638 -1.6795400890559036  2.7813397937792352  8.210170749503536
+        """.split(),
+        float,
+    ).reshape(4, 4)
+
+    res = robcov._naive_ledoit_wolf_shrinkage(x, 0)
+    assert_allclose(res.cov, cov_sk, rtol=1e-13)
+
+    # the shrinkage intensity uses the centered data
+    res = robcov._naive_ledoit_wolf_shrinkage(x, x.mean(0))
+    assert_allclose(res.cov, cov_sk_mean, rtol=1e-13)
+
+    # fewer observations than variables, the second moment matrix is singular
+    # and the shrinkage estimate is positive definite
+    res = robcov._naive_ledoit_wolf_shrinkage(x[:3], 0)
+    assert_allclose(res.cov, cov_sk_wide, rtol=1e-13)
+    assert np.linalg.eigvalsh(res.cov).min() > 0.1
+
+
 def test_cov_starting_small_nobs():
     # the first deterministic starting percentile is
     # 200 * (k_vars + 2) / nobs, which is above 100 when

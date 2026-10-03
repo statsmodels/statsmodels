@@ -109,7 +109,7 @@ def _naive_ledoit_wolf_shrinkage(x, center):
     delta_ = emp_cov.copy()
     delta_.flat[:: n_features + 1] -= mu
     delta = (delta_**2).sum() / n_features
-    x2 = x**2
+    x2 = xdm**2
     beta_ = (
         1.0
         / (n_features * n_samples)
@@ -118,7 +118,10 @@ def _naive_ledoit_wolf_shrinkage(x, center):
 
     beta = min(beta_, delta)
     shrinkage = beta / delta
-    return NaiveLedoitWolfResult(cov=shrinkage * emp_cov, method="naive ledoit wolf")
+    # shrink towards the scaled identity matrix, mu * I
+    cov = (1.0 - shrinkage) * emp_cov
+    cov.flat[:: n_features + 1] += shrinkage * mu
+    return NaiveLedoitWolfResult(cov=cov, method="naive ledoit wolf")
 
 
 def coef_normalize_cov_truncated(frac, k_vars):
