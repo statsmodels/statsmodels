@@ -2021,15 +2021,16 @@ def test_conf_int_el_matches_own_critical_value_and_shrinks():
 
 
 def test_yule_walker_order_validation():
-    # a negative order used to leak a bare IndexError, order 0 returned
-    # empty arrays, and an oversized order silently produced all-NaN results
+    # a negative order used to leak a bare IndexError and an oversized order
+    # silently produced all-NaN results; order 0 stays valid (AR(0) = white
+    # noise) and returns empty AR parameters
     rs = np.random.RandomState(12345)
     x = rs.standard_normal(30)
-    with pytest.raises(ValueError, match="order must be a positive integer"):
+    with pytest.raises(ValueError, match="order must be a non-negative integer"):
         yule_walker(x, order=-1)
-    with pytest.raises(ValueError, match="order must be a positive integer"):
-        yule_walker(x, order=0)
     with pytest.raises(ValueError, match="smaller than the number of observations"):
         yule_walker(x, order=30)
+    rho0, sigma0 = yule_walker(x, order=0)
+    assert rho0.shape == (0,)
     rho, sigma = yule_walker(x, order=4)
     assert rho.shape == (4,)
