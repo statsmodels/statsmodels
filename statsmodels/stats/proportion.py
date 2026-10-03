@@ -183,6 +183,14 @@ def proportion_confint(
     is_pandas = isinstance(count, (pd.Series, pd.DataFrame))
     count_a = array_like(count, "count", optional=False, mindim=None)
     nobs_a = array_like(nobs, "nobs", optional=False, mindim=None)
+    if np.any(count_a < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs_a <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count_a > nobs_a):
+        raise ValueError("count must not exceed nobs")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     def _check(x: np.ndarray, name: str) -> np.ndarray:
         if np.issubdtype(x.dtype, np.integer):
@@ -909,6 +917,12 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
 
     if np.any(prop > 1.0) or np.any(prop < 0.0):
         raise ValueError("p must be in range [0,1]")
+    if np.any(np.asarray(count) < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(np.asarray(nobs) <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(np.asarray(count) > np.asarray(nobs)):
+        raise ValueError("count must not exceed nobs")
     alternative = string_like(
         alternative,
         "alternative",
