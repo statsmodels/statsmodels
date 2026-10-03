@@ -1074,3 +1074,14 @@ def test_descrstatsw_all_zero_weights_raises():
     d = DescrStatsW(x, weights=np.array([0.0, 0.0, 2.0, 0.0]))
     assert_allclose(d.mean, 3.0)
     assert_allclose(d.quantile([0.25, 0.75]), [3.0, 3.0])
+
+
+def test_zconfint_alpha_out_of_range():
+    # alpha outside (0, 1) previously returned (inf, -inf) silently
+    x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        zconfint(x, alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        zconfint(x, alpha=0)
+    lo, hi = zconfint(x, alpha=0.05)
+    assert np.isfinite([lo, hi]).all()
