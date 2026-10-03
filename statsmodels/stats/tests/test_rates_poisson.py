@@ -1525,3 +1525,21 @@ def test_etest_poisson_2indep_alternative_deprecated_alias(alias, canonical):
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         etest_poisson_2indep(60, 51477.5, 30, 54308.7, alternative="bogus")
+
+
+@pytest.mark.parametrize(
+    "fn, kwargs",
+    [
+        (smr.power_poisson_ratio_2indep, {}),
+        (smr.power_poisson_diff_2indep, {}),
+        (smr.power_negbin_ratio_2indep, {"dispersion": 0.5}),
+        (smr.power_equivalence_poisson_2indep, {"low": 0.5, "upp": 2}),
+        (smr.power_equivalence_neginb_2indep, {"low": 0.5, "upp": 2, "dispersion": 0.5}),
+    ],
+)
+def test_power_functions_invalid_inputs_raises(fn, kwargs):
+    # impossible nobs1 and alpha previously returned nan power silently
+    with pytest.raises(ValueError, match="nobs1 must be positive"):
+        fn(2, 1, -5, **kwargs)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        fn(2, 1, 20, alpha=2, **kwargs)
