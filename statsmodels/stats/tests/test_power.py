@@ -1153,4 +1153,5 @@ def test_power_class_invalid_inputs_raises(cls, kwargs):
         with pytest.raises(ValueError, match="df_num and df_denom must be positive"):
             cls().power(effect_size=0.3, df_num=3, df_denom=0, alpha=0.05)
     p = cls().power(alpha=0.05, **kwargs)
-    assert np.isfinite(p) and 0 < p < 1
+    assert np.isfinite(p)
+    assert 0 < p < 1
