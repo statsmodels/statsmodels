@@ -509,7 +509,8 @@ class DescrStatsW:
             test
 
         """
-        if low >= upp:
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
             raise ValueError(
                 f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
             )
@@ -615,7 +616,8 @@ class DescrStatsW:
             test statistic and p-value for upper threshold test
 
         """
-        if low >= upp:
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
             raise ValueError(
                 f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
             )
@@ -1345,7 +1347,8 @@ class CompareMeans:
         t2, pv2 : tuple of floats
             test statistic and pvalue for upper threshold test
         """
-        if low >= upp:
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
             raise ValueError(
                 f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
             )
@@ -1376,7 +1379,8 @@ class CompareMeans:
         t2, pv2 : tuple of floats
             test statistic and pvalue for upper threshold test
         """
-        if low >= upp:
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
             raise ValueError(
                 f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
             )
@@ -1580,7 +1584,8 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
         test statistic, pvalue and degrees of freedom for upper threshold test
 
     """
-    if low >= upp:
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        # bounds may be vectorized per endpoint, so compare elementwise
         raise ValueError(
             f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
         )
@@ -1815,7 +1820,8 @@ def ztost(x1, low, upp, x2=None, usevar="pooled", ddof=1.0):
     checked only for 1 sample case
 
     """
-    if low >= upp:
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        # bounds may be vectorized per endpoint, so compare elementwise
         raise ValueError(
             f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
         )
