@@ -1087,6 +1087,10 @@ def acorr_breusch_godfrey(
     BG adds lags of residual to exog in the design matrix for the auxiliary
     regression with residuals as endog. See [1]_, section 12.7.1.
 
+    For ``AutoReg`` and ``ARDL`` results, the design matrix used in estimation,
+    which includes the lagged endogenous and exogenous variables and the
+    deterministic terms, is used as exog in the auxiliary regression.
+
     References
     ----------
     .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
@@ -1098,7 +1102,16 @@ def acorr_breusch_godfrey(
         raise ValueError(
             "Model resid must be a 1d array. Cannot be used on multivariate models."
         )
-    exog_old = res.model.exog
+    from statsmodels.tsa.ar_model import AutoReg
+
+    if isinstance(res.model, AutoReg):
+        # model.exog only holds the user exog, so use the full regressor
+        # matrix including lags and deterministic terms
+        exog_old = res.model._x
+        k_constant = res.model.k_constant
+    else:
+        exog_old = res.model.exog
+        k_constant = res.k_constant
     nobs = x.shape[0]
     if nlags is None:
         nlags = min(10, nobs // 5)
@@ -1114,7 +1127,7 @@ def acorr_breusch_godfrey(
 
     xdall = lagmat(x[:, None], nlags, trim="both")
     nobs = xdall.shape[0]
-    if not bool(res.k_constant):
+    if not bool(k_constant):
         xdall = np.c_[np.ones((nobs, 1)), xdall]
     xshort = x[-nobs:]
     if exog_old is None:
