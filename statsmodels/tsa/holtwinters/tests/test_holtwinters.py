@@ -2309,3 +2309,27 @@ def test_damped_initial_trend_round_trip(trend, seasonal):
         res.params_formatted.loc["initial_trend", "param"],
         params["initial_trend"],
     )
+
+
+def test_fit_invalid_smoothing_parameters_raises():
+    # smoothing parameters outside (0, 1] were previously silently accepted:
+    # alpha=1.5 extrapolated without error and alpha=-0.5 blew up the level
+    # recursion to ~1.9e10
+    y = np.arange(1.0, 25.0)
+    with pytest.raises(ValueError, match="smoothing_level must be in \[0, 1\]"):
+        ExponentialSmoothing(y).fit(smoothing_level=1.5, optimized=False)
+    with pytest.raises(ValueError, match="smoothing_level must be in \[0, 1\]"):
+        ExponentialSmoothing(y).fit(smoothing_level=-0.5, optimized=False)
+    with pytest.raises(ValueError, match="smoothing_trend must be in \[0, 1\]"):
+        ExponentialSmoothing(y, trend="add").fit(smoothing_trend=2.0, optimized=False)
+    with pytest.raises(ValueError, match="smoothing_seasonal must be in \[0, 1\]"):
+        ExponentialSmoothing(y, seasonal_periods=4, trend="add", seasonal="add").fit(
+            smoothing_seasonal=1.5, optimized=False
+        )
+    with pytest.raises(ValueError, match="damping_trend must be in \[0, 1\]"):
+        ExponentialSmoothing(y, trend="add", damped_trend=True).fit(
+            damping_trend=1.2, optimized=False
+        )
+    # alpha=1 (naive forecast) remains valid
+    res = ExponentialSmoothing(y).fit(smoothing_level=1.0, optimized=False)
+    assert_allclose(res.forecast(1)[0], y[-1])
