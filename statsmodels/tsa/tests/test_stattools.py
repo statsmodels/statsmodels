@@ -2950,7 +2950,8 @@ def test_confint_alpha_out_of_range(func):
             func(x, nlags=5, alpha=0)
     # a valid alpha still returns the interval
     res = acf(x, nlags=5, alpha=0.05)
-    assert len(res) == 2 and np.isfinite(res[1]).all()
+    assert len(res) == 2
+    assert np.isfinite(res[1]).all()
 
 
 def test_arma_order_select_ic_negative_bounds():
