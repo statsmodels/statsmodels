@@ -189,4 +189,5 @@ def test_chisquare_power_invalid_inputs_raises():
     with pytest.raises(ValueError, match="alpha must be in the range"):
         chisquare_power(0.3, 50, 5, alpha=2)
     p = chisquare_power(0.3, 50, 5, alpha=0.1)
-    assert np.isfinite(p) and 0 < p < 1
+    assert np.isfinite(p)
+    assert 0 < p < 1
