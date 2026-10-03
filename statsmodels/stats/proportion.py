@@ -636,6 +636,13 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05, method="n
     this is mainly to store the formula.
     possible application: number of replications in bootstrap samples
     """
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if half_length <= 0:
+        raise ValueError(f"half_length must be positive, got {half_length}")
+    if np.any(np.asarray(proportion) < 0) or np.any(np.asarray(proportion) > 1):
+        raise ValueError("proportion must be in the range [0, 1]")
+
     q_ = proportion
     if method == "normal":
         n = q_ * (1 - q_) / (half_length / stats.norm.isf(alpha / 2.0)) ** 2
