@@ -920,6 +920,18 @@ def test_power_solver():
             )
 
 
+def test_solve_power_alpha_search_leaves_unit_interval():
+    # The first root finder did not converge for this problem, and the
+    # fallback fsolve evaluates the power at alpha < 0. The check of alpha then
+    # raised, and the solve failed although the problem has a solution.
+    es, nobs, alpha = 0.1, 1000, 0.01
+    power = smp.TTestPower().power(es, nobs, alpha)
+    solved = smp.TTestPower().solve_power(
+        effect_size=es, nobs=nobs, alpha=None, power=power
+    )
+    assert_allclose(solved, alpha, rtol=1e-6)
+
+
 def test_solve_power_no_solution_returns_nan():
     # GH#9378: when the power equation has no solution the root finder
     # cannot converge. Previously solve_power still returned the last value

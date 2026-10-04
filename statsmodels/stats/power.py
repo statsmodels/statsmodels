@@ -653,12 +653,20 @@ class Power:
             # try backup
             # TODO: check more cases to make this robust
             if not np.isnan(start_value):
-                val, infodict, ier, msg = optimize.fsolve(
-                    func, start_value, full_output=True
-                )  # scalar
-                # val = optimize.newton(func, start_value) # scalar
-                fval = infodict["fvec"]
-                fit_res.append(infodict)
+                try:
+                    val, infodict, ier, msg = optimize.fsolve(
+                        func, start_value, full_output=True
+                    )  # scalar
+                except ValueError:
+                    # fsolve left the range of valid arguments of the power
+                    # function, for example alpha outside (0, 1)
+                    ier = -1
+                    fval = 1
+                    fit_res.append([None])
+                else:
+                    # val = optimize.newton(func, start_value) # scalar
+                    fval = infodict["fvec"]
+                    fit_res.append(infodict)
             else:
                 ier = -1
                 fval = 1
