@@ -95,6 +95,8 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     d = effect_size
     if df is None:
         df = nobs - 1
@@ -163,6 +165,8 @@ def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     d = effect_size
 
@@ -226,6 +230,8 @@ def normal_power_het(
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     d = diff
     if std_alternative is None:
@@ -335,6 +341,8 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     df_num = k_groups - 1
     df_denom = nobs - k_groups
     crit = stats.f.isf(alpha, df_num, df_denom)
@@ -387,6 +395,8 @@ def ftest_power(effect_size, df2, df1, alpha, ncc=1):
     models, with df_num (df1) as number of constraints and d_denom (df2) as
     df_resid.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     df_num, df_denom = df1, df2
     nc = effect_size**2 * (df_denom + df_num + ncc)
     crit = stats.f.isf(alpha, df_num, df_denom)
@@ -449,6 +459,8 @@ def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
     models, with df_num (df1) as number of constraints and d_denom (df2) as
     df_resid.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     nc = effect_size * (df_denom + df_num + ncc)
     crit = stats.f.isf(alpha, df_num, df_denom)

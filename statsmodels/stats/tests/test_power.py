@@ -1171,3 +1171,59 @@ def test_power_class_invalid_inputs_raises(cls, kwargs):
     p = cls().power(alpha=0.05, **kwargs)
     assert np.isfinite(p)
     assert 0 < p < 1
+
+
+POWER_ALPHA = [
+    (smp.TTestPower().power, {"effect_size": 0.3, "nobs": 50}),
+    (smp.TTestIndPower().power, {"effect_size": 0.3, "nobs1": 50}),
+    (smp.NormalIndPower().power, {"effect_size": 0.3, "nobs1": 50}),
+    (smp.FTestPower().power, {"effect_size": 0.3, "df_num": 3, "df_denom": 57}),
+    (smp.FTestPowerF2().power, {"effect_size": 0.3, "df_num": 3, "df_denom": 57}),
+    (smp.FTestAnovaPower().power, {"effect_size": 0.3, "nobs": 60, "k_groups": 3}),
+    (smp.ttest_power, {"effect_size": 0.3, "nobs": 50}),
+    (smp.normal_power, {"effect_size": 0.3, "nobs": 50}),
+    (smp.normal_power_het, {"diff": 0.3, "nobs": 50}),
+    (smp.ftest_power, {"effect_size": 0.3, "df2": 57, "df1": 3}),
+    (smp.ftest_power_f2, {"effect_size": 0.3, "df_num": 3, "df_denom": 57}),
+    (smp.ftest_anova_power, {"effect_size": 0.3, "nobs": 60}),
+]
+POWER_ALPHA_IDS = [
+    "TTestPower", "TTestIndPower", "NormalIndPower", "FTestPower", "FTestPowerF2",
+    "FTestAnovaPower", "ttest_power", "normal_power", "normal_power_het",
+    "ftest_power", "ftest_power_f2", "ftest_anova_power",
+]
+
+
+@pytest.mark.parametrize("func, kwargs", POWER_ALPHA, ids=POWER_ALPHA_IDS)
+def test_power_alpha_range(func, kwargs):
+    # alpha outside (0, 1) was only checked by four of the classes: 0 and 1
+    # gave a power of 0 and 1, alpha above 1 a power above 1 and a negative
+    # alpha nan
+    for alpha in [0, 1, 1.5, -0.1, np.nan, [0.05, 1.5], [np.nan, 0.05]]:
+        with pytest.raises(ValueError, match="alpha must be in the range"):
+            func(alpha=alpha, **kwargs)
+    power = func(alpha=np.array([0.01, 0.05, 0.1]), **kwargs)
+    assert power.shape == (3,)
+    assert np.all(np.diff(power) > 0)
+    assert_allclose(power[1], func(alpha=0.05, **kwargs), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "cls, kwargs",
+    [
+        (smp.TTestPower, {"effect_size": 0.5, "nobs": 30, "power": 0.8}),
+        (smp.TTestIndPower, {"effect_size": 0.5, "nobs1": 30, "power": 0.8}),
+        (smp.NormalIndPower, {"effect_size": 0.5, "nobs1": 30, "power": 0.8}),
+        (smp.FTestPower, {"effect_size": 0.3, "df_num": 3, "df_denom": 57, "power": 0.5}),
+        (smp.FTestPowerF2, {"effect_size": 0.1, "df_num": 3, "df_denom": 57, "power": 0.5}),
+        (smp.FTestAnovaPower, {"effect_size": 0.25, "nobs": 60, "power": 0.8}),
+    ],
+)
+def test_solve_power_for_alpha(cls, kwargs):
+    # solving for alpha evaluates the power function while searching, and
+    # the check of alpha must not stand in the way
+    alpha = cls().solve_power(alpha=None, **kwargs)
+    assert 0 < alpha < 1
+    kwds = dict(kwargs)
+    power = kwds.pop("power")
+    assert_allclose(cls().power(alpha=alpha, **kwds), power, rtol=1e-5)
