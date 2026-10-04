@@ -1085,3 +1085,15 @@ def test_zconfint_alpha_out_of_range():
         zconfint(x, alpha=0)
     lo, hi = zconfint(x, alpha=0.05)
     assert np.isfinite([lo, hi]).all()
+
+
+def test_ztest_zconfint_negative_ddof_raises():
+    # a negative ddof previously inflated the denominator (nobs - ddof) and
+    # silently shrank the estimated variance
+    x1 = np.array([1.0, 2.0, 3.0, 4.0])
+    x2 = np.array([2.0, 3.0, 4.0, 5.0])
+    with pytest.raises(ValueError, match="ddof must be non-negative"):
+        ztest(x1, x2, ddof=-5)
+    with pytest.raises(ValueError, match="ddof must be non-negative"):
+        zconfint(x1, x2, ddof=-5)
+    assert np.isfinite(ztest(x1, x2)[1])
