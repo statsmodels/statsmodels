@@ -1666,13 +1666,10 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
     if order < 0:
         # a negative order used to leak a bare IndexError from the
         # autocovariance loop; order 0 stays valid — it yields empty AR
-        # parameters (AR(0) is white noise) as the empty loop below produces
+        # parameters (AR(0) is white noise) as the empty loop below produces.
+        # Orders >= nobs keep main's behavior (degenerate but long-standing),
+        # pinned by test_pacf_1_obs and test_invalid_xfail.
         raise ValueError(f"order must be a non-negative integer, got {order}")
-    if order >= x.shape[0] or x.shape[0] == 0:
-        raise ValueError(
-            "order must be smaller than the number of observations "
-            f"({x.shape[0]}), got {order}"
-        )
     if demean:
         if not x.flags.writeable:
             x = np.require(x, requirements="W")

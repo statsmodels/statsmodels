@@ -2021,15 +2021,14 @@ def test_conf_int_el_matches_own_critical_value_and_shrinks():
 
 
 def test_yule_walker_order_validation():
-    # a negative order used to leak a bare IndexError and an oversized order
-    # silently produced all-NaN results; order 0 stays valid (AR(0) = white
-    # noise) and returns empty AR parameters
+    # a negative order used to leak a bare IndexError from the
+    # autocovariance loop; order 0 stays valid (AR(0) = white noise) and
+    # returns empty AR parameters. Orders >= nobs keep main's degenerate
+    # behavior (pinned by test_pacf_1_obs / test_invalid_xfail upstream).
     rs = np.random.RandomState(12345)
     x = rs.standard_normal(30)
     with pytest.raises(ValueError, match="order must be a non-negative integer"):
         yule_walker(x, order=-1)
-    with pytest.raises(ValueError, match="smaller than the number of observations"):
-        yule_walker(x, order=30)
     rho0, sigma0 = yule_walker(x, order=0)
     assert rho0.shape == (0,)
     rho, sigma = yule_walker(x, order=4)
