@@ -1740,5 +1740,23 @@ def test_power_ratio_negative_dispersion_raises():
     # default dispersion keeps working
     p = power_poisson_ratio_2indep(
         0.1, 0.15, nobs1=100, value=1.0, return_results=False
+
+
+def test_power_equivalence_poisson_invalid_interval_raises():
+    # an inverted equivalence interval previously returned a negative
+    # "power" without an error
+    args = (0.1, 0.15, 100)
+    kwds = dict(nobs_ratio=1, exposure=1, alpha=0.05)
+
+    with pytest.raises(ValueError, match="low <= upp"):
+        power_equivalence_poisson_2indep(*args, low=0.3, upp=0.1, **kwds)
+    with pytest.raises(ValueError, match="low <= upp"):
+        power_equivalence_neginb_2indep(
+            *args, low=0.3, upp=0.1, dispersion=0.01, **kwds
+        )
+
+    # low == upp remains a valid point null
+    p = power_equivalence_poisson_2indep(
+        *args, low=0.2, upp=0.2, return_results=False, **kwds
     )
     assert np.isfinite(p)

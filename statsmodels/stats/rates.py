@@ -2244,6 +2244,11 @@ def power_equivalence_poisson_2indep(
         raise ValueError("nobs1 must be positive")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if low > upp:
+        raise ValueError(
+            f"the equivalence interval must satisfy low <= upp, "
+            f"got low={low}, upp={upp}"
+        )
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
@@ -2879,6 +2884,11 @@ def power_equivalence_neginb_2indep(
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     if dispersion < 0:
         raise ValueError(f"dispersion must be non-negative, got {dispersion}")
+    if low > upp:
+        raise ValueError(
+            f"the equivalence interval must satisfy low <= upp, "
+            f"got low={low}, upp={upp}"
+        )
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
