@@ -1676,6 +1676,27 @@ def test_confint_quantile_poisson_invalid_inputs_raises():
         smr.confint_quantile_poisson(5, 10, prob=0.5, method="exact-c", alpha=1.5)
 
 
+def test_power_ratio_negative_dispersion_raises():
+    # negative dispersion made the standard errors NaN and power NaN
+    # without an error
+    with pytest.raises(ValueError, match="dispersion must be non-negative"):
+        power_poisson_ratio_2indep(0.1, 0.15, nobs1=100, dispersion=-1.0)
+    with pytest.raises(ValueError, match="dispersion must be non-negative"):
+        power_negbin_ratio_2indep(0.1, 0.15, nobs1=100, dispersion=-0.01)
+
+    # dispersion = 0 is the documented Poisson limiting case and stays valid
+    p = power_negbin_ratio_2indep(
+        0.1, 0.15, nobs1=100, value=1.0, dispersion=0.0, return_results=False
+    )
+    assert np.isfinite(p)
+
+    # default dispersion keeps working
+    p = power_poisson_ratio_2indep(
+        0.1, 0.15, nobs1=100, value=1.0, return_results=False
+    )
+    assert np.isfinite(p)
+
+
 def test_power_equivalence_poisson_invalid_interval_raises():
     # an inverted equivalence interval previously returned a negative
     # "power" without an error
