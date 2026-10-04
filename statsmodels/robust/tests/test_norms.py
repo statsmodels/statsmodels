@@ -113,3 +113,31 @@ def test_norms_consistent(case):
     if norm.redescending == "soft":
         # we don't have info where argmax psi is, use simple values for x
         assert norm.psi(100) < norm.psi(2)
+
+
+@pytest.mark.parametrize("norm_factory, kwargs", [
+    (norms.HuberT, {"t": 0}),
+    (norms.HuberT, {"t": -1.0}),
+    (norms.AndrewWave, {"a": 0}),
+    (norms.AndrewWave, {"a": -2.0}),
+    (norms.TukeyBiweight, {"c": 0}),
+    (norms.TukeyBiweight, {"c": -4.685}),
+    (norms.Hampel, {"a": 0.0, "b": 4.0, "c": 8.0}),
+    (norms.Hampel, {"a": 2.0, "b": 1.0, "c": 8.0}),
+    (norms.Hampel, {"a": 2.0, "b": 4.0, "c": 4.0}),
+])
+def test_norms_invalid_tuning_params_raise(norm_factory, kwargs):
+    # zero/negative or unordered tuning constants previously constructed
+    # degenerate norms whose psi is identically zero or NaN
+    with pytest.raises(ValueError):
+        norm_factory(**kwargs)
+
+
+def test_norms_valid_tuning_params():
+    # defaults and custom values remain constructible
+    for norm in [norms.HuberT(), norms.HuberT(t=1.5),
+                 norms.AndrewWave(), norms.AndrewWave(a=1.5),
+                 norms.TukeyBiweight(), norms.TukeyBiweight(c=5.0),
+                 norms.Hampel(), norms.Hampel(a=1.5, b=3.5, c=7.0)]:
+        x = np.array([-2.0, -0.5, 0.5, 2.0])
+        assert np.isfinite(norm.psi(x)).all()
