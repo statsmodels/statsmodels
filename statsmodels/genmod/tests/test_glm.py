@@ -3572,3 +3572,21 @@ def test_glm_fit_invalid_scale_raises():
         sm.GLM(y, X, family=sm.families.Poisson()).fit(scale=0)
     res = sm.GLM(y, X, family=sm.families.Poisson()).fit(scale=1.0)
     assert np.isfinite(res.bse).all()
+
+
+def test_glm_predict_nonpositive_exposure_raises():
+    # predict used to take log() of the exposure directly, so negative
+    # values silently produced NaN predictions while fit rejects them
+    rng = np.random.RandomState(987234)
+    x = np.column_stack([np.ones(60), rng.randn(60)])
+    y = rng.poisson(2, size=60)
+    res = sm.GLM(y, x, family=sm.families.Poisson()).fit()
+
+    with pytest.raises(ValueError, match="exposure must be positive"):
+        res.predict(x, exposure=-np.ones(60))
+    with pytest.raises(ValueError, match="exposure must be positive"):
+        res.predict(x, exposure=np.zeros(60))
+
+    # positive exposure keeps working
+    pred = res.predict(x, exposure=np.full(60, 2.0))
+    assert np.all(np.isfinite(pred))
