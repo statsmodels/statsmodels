@@ -1796,3 +1796,22 @@ def test_confint_proportions_2indep_invalid_alpha_raises():
         smprop.confint_proportions_2indep(3, 10, 5, 10, alpha=0)
     lo, hi = smprop.confint_proportions_2indep(3, 10, 5, 10)
     assert np.isfinite([lo, hi]).all()
+
+
+def test_samplesize_proportions_2indep_invalid_bounds_raises():
+    # diff pushing prop1 outside [0, 1], or prop2 outside [0, 1], used to
+    # propagate into negative variances and a silent NaN sample size
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        samplesize_proportions_2indep_onetail(0.1, 1.5, 0.8)
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        samplesize_proportions_2indep_onetail(0.1, -0.2, 0.8)
+    with pytest.raises(ValueError, match="diff must keep prop1"):
+        samplesize_proportions_2indep_onetail(0.5, 0.8, 0.8)
+    with pytest.raises(ValueError, match="diff must keep prop1"):
+        samplesize_proportions_2indep_onetail(-0.5, 0.2, 0.8)
+
+    # boundary values remain valid (prop1 = prop2 + diff exactly at 0 or 1)
+    n = samplesize_proportions_2indep_onetail(0.5, 0.5, 0.8)
+    assert np.isfinite(n)
+    n = samplesize_proportions_2indep_onetail(-0.5, 0.5, 0.8)
+    assert np.isfinite(n)
