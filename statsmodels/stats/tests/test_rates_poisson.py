@@ -4,6 +4,7 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 import numpy as np
 from numpy import arange
 from numpy.testing import assert_allclose, assert_equal
+import pandas as pd
 import pytest
 from scipy import stats
 
@@ -1609,6 +1610,38 @@ def test_test_poisson_negative_count(count):
     # returning a nan statistic from the wald path
     with pytest.raises(ValueError, match="count must be non-negative"):
         smr.test_poisson(count, 10, 0.3, method="wald")
+
+
+@pytest.mark.parametrize("method", ["wald", "score", "exact-c"])
+def test_test_poisson_result_types(method):
+    # The arguments are validated as arrays but used as they are, so that the
+    # attributes of the result have the types of the arguments
+    res = smr.test_poisson(10, 2, 4.0, method=method)
+    assert res.nobs == 2
+    assert type(res.nobs) is int
+    assert type(res.rate) is float
+    assert_allclose(res.rate, 5.0, rtol=1e-14)
+
+    index = pd.Index(["a", "b", "c"], name="group")
+    count = pd.Series([10, 12, 9], index=index)
+    nobs = pd.Series([2.0, 3.0, 2.5], index=index)
+    res = smr.test_poisson(count, nobs, 4.0, method=method)
+    for attr in ["rate", "nobs"]:
+        assert isinstance(getattr(res, attr), pd.Series)
+        assert getattr(res, attr).index.equals(index)
+    assert_allclose(res.rate, [5.0, 4.0, 3.6], rtol=1e-14)
+    assert_allclose(res.nobs, [2.0, 3.0, 2.5], rtol=1e-14)
+
+    # the values do not depend on the container
+    res_arr = smr.test_poisson(
+        count.to_numpy(), nobs.to_numpy(), 4.0, method=method
+    )
+    assert_allclose(res.statistic, res_arr.statistic, rtol=1e-13)
+    assert_allclose(res.pvalue, res_arr.pvalue, rtol=1e-13)
+    res_list = smr.test_poisson([10, 12, 9], [2.0, 3.0, 2.5], 4.0, method=method)
+    assert_allclose(res_list.statistic, res_arr.statistic, rtol=1e-13)
+    assert_allclose(res_list.pvalue, res_arr.pvalue, rtol=1e-13)
+    assert_allclose(res_list.nobs, [2.0, 3.0, 2.5], rtol=1e-14)
 
 
 @pytest.mark.parametrize("nobs", [0, -10])
