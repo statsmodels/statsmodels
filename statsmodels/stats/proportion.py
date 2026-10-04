@@ -833,6 +833,12 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
     x_low, x_upp : float
         lower and upper bound of rejection region
     """
+    if low >= upp:
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     x_low = stats.binom.isf(alpha, nobs, low) + 1
     x_upp = stats.binom.ppf(alpha, nobs, upp) - 1
     return x_low, x_upp
@@ -955,6 +961,10 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
     power : float
         statistical power of the equivalence test.
     """
+    if p_alt is not None and (
+        np.any(np.asarray(p_alt) < 0) or np.any(np.asarray(p_alt) > 1)
+    ):
+        raise ValueError("p_alt must be in the range [0, 1]")
     if p_alt is None:
         p_alt = 0.5 * (low + upp)
     x_low, x_upp = binom_tost_reject_interval(low, upp, nobs, alpha=alpha)
@@ -1046,6 +1056,17 @@ def power_ztost_prop(
     SAS Manual: Chapter 68: The Power Procedure, Computational Resources
     PASS Chapter 110: Equivalence Tests for One Proportion.
     """
+    if low >= upp:
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if p_alt is not None and (
+        np.any(np.asarray(p_alt) < 0) or np.any(np.asarray(p_alt) > 1)
+    ):
+        raise ValueError("p_alt must be in the range [0, 1]")
+
     mean_low = low
     var_low = std_prop(low, nobs) ** 2
     mean_upp = upp
