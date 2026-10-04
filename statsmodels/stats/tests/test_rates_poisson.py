@@ -1674,3 +1674,13 @@ def test_confint_quantile_poisson_invalid_inputs_raises():
         smr.confint_quantile_poisson(5, 10, prob=0, method="exact-c")
     with pytest.raises(ValueError, match="alpha must be in the range"):
         smr.confint_quantile_poisson(5, 10, prob=0.5, method="exact-c", alpha=1.5)
+
+
+def test_poisson_tost_nonequivalence_invalid_interval_raises():
+    # inverted equivalence intervals previously returned results silently
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low <= upp"):
+        smr.tost_poisson_2indep(5, 100, 3, 100, low=2, upp=1)
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low <= upp"):
+        smr.nonequivalence_poisson_2indep(5, 100, 3, 100, low=2, upp=1)
+    res = smr.tost_poisson_2indep(5, 100, 3, 100, low=0.5, upp=2)
+    assert np.isfinite(res.pvalue)
