@@ -473,6 +473,8 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
         deprecated={"2s": "two-sided", "ts": "two-sided"},
         removed_after="0.16",
     )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     alpha1s = alpha / 2
     ci = ncfdtrinc(df1, df2, [1 - alpha1s, alpha1s], f_stat)
 

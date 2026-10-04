@@ -322,6 +322,13 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
        https://doi.org/10.1080/03610920802255856.
 
     """
+    if np.any(np.asarray(count) < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(np.asarray(exposure) <= 0):
+        raise ValueError("exposure must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     n = exposure  # short hand
     rate = count / exposure
 
@@ -503,6 +510,15 @@ def tolerance_int_poisson(
        Poisson and Binomial Variables.” Journal of Quality Technology 13 (2):
        100-110. https://doi.org/10.1080/00224065.1981.11980998.
     """
+    if np.any(np.asarray(count) < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(np.asarray(exposure) <= 0):
+        raise ValueError("exposure must be positive")
+    if not 0 < prob < 1:
+        raise ValueError(f"prob must be in the range (0, 1), got {prob}")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     alternative = string_like(
         alternative, "alternative", options=("two-sided", "larger", "smaller"),
         lower=False,
@@ -586,6 +602,15 @@ def confint_quantile_poisson(
     Hahn, Gerald J, and William Q Meeker. 2010. Statistical Intervals: A Guide
     for Practitioners.
     """
+    if np.any(np.asarray(count) < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(np.asarray(exposure) <= 0):
+        raise ValueError("exposure must be positive")
+    if not 0 < prob < 1:
+        raise ValueError(f"prob must be in the range (0, 1), got {prob}")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     alternative = string_like(
         alternative, "alternative", options=("two-sided", "larger", "smaller"),
         lower=False,
@@ -2026,6 +2051,10 @@ def power_poisson_ratio_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2194,6 +2223,10 @@ def power_equivalence_poisson_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
@@ -2472,6 +2505,10 @@ def power_poisson_diff_2indep(
     .. [2] PASS manual chapter 436
 
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2682,6 +2719,10 @@ def power_negbin_ratio_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2811,6 +2852,10 @@ def power_equivalence_neginb_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1

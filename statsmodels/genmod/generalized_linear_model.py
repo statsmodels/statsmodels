@@ -1261,6 +1261,8 @@ class GLM(base.LikelihoodModel):
                 raise type(exc)(
                     "scale must be a float if given and not a string."
                 ) from exc
+            if scale <= 0:
+                raise ValueError(f"scale must be positive, got {scale}")
         self.scaletype = scale
 
         if method.lower() == "irls":

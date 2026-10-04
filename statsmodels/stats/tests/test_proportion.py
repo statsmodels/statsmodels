@@ -1502,6 +1502,40 @@ def test_proportions_chisquare_pairscontrol_alternative():
         smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="larger")
 
 
+def test_samplesize_proportions_2indep_onetail_invalid_inputs_raises():
+    # alpha=2 previously returned a sample size of 0.0, power=2 returned nan
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.samplesize_proportions_2indep_onetail(0.1, 0.5, alpha=2, power=0.8)
+    with pytest.raises(ValueError, match="power must be in the range"):
+        smprop.samplesize_proportions_2indep_onetail(0.1, 0.5, alpha=0.05, power=2)
+
+
+def test_proportions_chisquare_allpairs_invalid_inputs_raises():
+    # count > nobs previously produced a "significant" corrected p-value
+    # instead of an error
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportions_chisquare_allpairs(
+            np.array([11, 3, 5]), np.array([10.0, 10.0, 10.0])
+        )
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportions_chisquare_allpairs(
+            np.array([-1, 3, 5]), np.array([10.0, 10.0, 10.0])
+        )
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportions_chisquare_pairscontrol(
+            np.array([11, 3, 5]), np.array([10.0, 10.0, 10.0])
+        )
+
+
+def test_proportion_effectsize_invalid_inputs_raises():
+    # out-of-range proportions previously returned nan without any error
+    with pytest.raises(ValueError, match="prop1 must be in the range"):
+        smprop.proportion_effectsize(-0.1, 0.2)
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        smprop.proportion_effectsize(0.2, 1.2)
+    assert np.isfinite(smprop.proportion_effectsize(0.5, 0.4))
+
+
 def test_confint_proportions_2indep_invalid_inputs_raises():
     # negative counts and non-positive nobs previously returned (nan, nan)
     # or divided by zero instead of raising
@@ -1695,3 +1729,13 @@ def test_proportions_ztest_invalid_prop_var_raises():
         smprop.proportions_ztest(3, 10, value=0.3, prop_var=1.5)
     stat, pval = smprop.proportions_ztest(3, 10, value=0.3, prop_var=0.5)
     assert np.isfinite([stat, pval]).all()
+
+
+def test_confint_proportions_2indep_invalid_alpha_raises():
+    # alpha outside (0, 1) previously returned (nan, nan) silently
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.confint_proportions_2indep(3, 10, 5, 10, alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.confint_proportions_2indep(3, 10, 5, 10, alpha=0)
+    lo, hi = smprop.confint_proportions_2indep(3, 10, 5, 10)
+    assert np.isfinite([lo, hi]).all()
