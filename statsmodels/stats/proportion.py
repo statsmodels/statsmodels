@@ -2785,6 +2785,14 @@ def power_proportions_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
+    if not 0 <= prop2 <= 1:
+        raise ValueError(f"prop2 must be in the range [0, 1], got {prop2}")
+    if not 0 <= prop2 + diff <= 1:
+        raise ValueError(
+            f"diff must keep prop1 = prop2 + diff inside [0, 1], got "
+            f"prop2={prop2}, diff={diff}"
+        )
+
     p_pooled, std_null, std_alt = _std_2prop_power(
         diff, prop2, ratio=ratio, alpha=alpha, value=value
     )

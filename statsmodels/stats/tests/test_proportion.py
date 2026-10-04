@@ -1796,3 +1796,20 @@ def test_confint_proportions_2indep_invalid_alpha_raises():
         smprop.confint_proportions_2indep(3, 10, 5, 10, alpha=0)
     lo, hi = smprop.confint_proportions_2indep(3, 10, 5, 10)
     assert np.isfinite([lo, hi]).all()
+
+
+def test_power_proportions_2indep_invalid_bounds_raises():
+    # out-of-range probabilities used to propagate into negative variances
+    # and a silent NaN power
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        power_proportions_2indep(0.1, 1.5, nobs1=100)
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        power_proportions_2indep(0.1, -0.2, nobs1=100)
+    with pytest.raises(ValueError, match="diff must keep prop1"):
+        power_proportions_2indep(0.7, 0.8, nobs1=100)
+    with pytest.raises(ValueError, match="diff must keep prop1"):
+        power_proportions_2indep(-2.0, 0.5, nobs1=100)
+
+    # boundary values stay valid
+    res = power_proportions_2indep(0.5, 0.5, nobs1=100)
+    assert np.isfinite(res.power)
