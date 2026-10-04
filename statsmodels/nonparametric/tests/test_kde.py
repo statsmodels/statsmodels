@@ -547,3 +547,16 @@ def test_kdensity_result_object_true(func):
     # The grid is computed regardless of retgrid, so it is reported rather
     # than None-filled.
     assert res.grid is not None
+
+
+def test_kde_univariate_negative_bw_raises():
+    # a negative bandwidth was previously accepted silently and produced
+    # negative densities from evaluate()
+    rng = np.random.RandomState(0)
+    x = rng.normal(size=50)
+    with pytest.raises(ValueError, match="bw must be positive"):
+        KDE(x).fit(bw=-0.5)
+    with pytest.raises(ValueError, match="bw must be positive"):
+        KDE(x).fit(bw=0)
+    dens = KDE(x).fit(bw=0.3).evaluate([0.0])
+    assert dens[0] > 0

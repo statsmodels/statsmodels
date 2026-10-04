@@ -145,6 +145,19 @@ def test_poisson(
     confint_poisson
     """
 
+    count = np.asarray(count)
+    nobs = np.asarray(nobs)
+    value = np.asarray(value)
+    # a negative count or exposure or a zero exposure used to flow through
+    # the arithmetic silently (nan statistics, nonsense rates) or crash with
+    # a bare ZeroDivisionError
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(value < 0):
+        raise ValueError("value must be non-negative")
+
     n = nobs  # short hand
     rate = count / n
 
@@ -1505,6 +1518,10 @@ def tost_poisson_2indep(
     test_poisson_2indep
     confint_poisson_2indep
     """
+    if low > upp:
+        raise ValueError(
+            f"the equivalence interval must satisfy low <= upp, got low={low}, upp={upp}"
+        )
 
     tt1 = test_poisson_2indep(
         count1,
@@ -1658,6 +1675,10 @@ def nonequivalence_poisson_2indep(
        Econometrics 7 (2): 21. https://doi.org/10.3390/econometrics7020021.
 
     """
+    if low > upp:
+        raise ValueError(
+            f"the equivalence interval must satisfy low <= upp, got low={low}, upp={upp}"
+        )
     tt1 = test_poisson_2indep(
         count1,
         exposure1,
@@ -2051,6 +2072,14 @@ def power_poisson_ratio_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if np.any(np.asarray(dispersion) < 0):
+        raise ValueError(
+            f"dispersion must be non-negative, got {dispersion}"
+        )
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2219,6 +2248,15 @@ def power_equivalence_poisson_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if low > upp:
+        raise ValueError(
+            f"the equivalence interval must satisfy low <= upp, "
+            f"got low={low}, upp={upp}"
+        )
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
@@ -2497,6 +2535,10 @@ def power_poisson_diff_2indep(
     .. [2] PASS manual chapter 436
 
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2707,6 +2749,14 @@ def power_negbin_ratio_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if np.any(np.asarray(dispersion) < 0):
+        raise ValueError(
+            f"dispersion must be non-negative, got {dispersion}"
+        )
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2836,6 +2886,17 @@ def power_equivalence_neginb_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if dispersion < 0:
+        raise ValueError(f"dispersion must be non-negative, got {dispersion}")
+    if low > upp:
+        raise ValueError(
+            f"the equivalence interval must satisfy low <= upp, "
+            f"got low={low}, upp={upp}"
+        )
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1

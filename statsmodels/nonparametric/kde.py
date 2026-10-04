@@ -171,6 +171,8 @@ class KDEUnivariate:
             self.bw_method = "user-given"
             if not callable(bw):
                 bw = float_like(bw, "bw")
+                if bw <= 0:
+                    raise ValueError(f"bw must be positive, got {bw}")
 
         endog = self.endog
 
