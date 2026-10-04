@@ -179,11 +179,12 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     ----------
     x : array_like
         An array or NumPy ndarray subclass. Can be either a 1d or 2d array with
-        observations in columns.
-    col : int, label, optional
+        variables in columns.
+    col : int or label, optional
         `col` can be an int of the zero-based column index, or the label of
         a column (e.g., a string) when `x` is a pandas DataFrame. If it's a
-        1d array `col` can be None.    lags : int, optional
+        1d array `col` can be None.
+    lags : int, optional
         The number of lags desired.
     drop : bool, optional
         Whether to keep the contemporaneous variable for the data.
@@ -199,7 +200,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     Notes
     -----
     Trims the array both forward and backward, so that the length of the
-    returned array is len(`X`) - lags. The lags are returned in increasing
+    returned array is len(`x`) - lags. The lags are returned in increasing
     order, i.e., t-1,t-2,...,t-lags
 
     Examples
