@@ -2506,6 +2506,57 @@ def test_adfuller_maxlag_too_large():
         adfuller(y, maxlag=51)
 
 
+def _adf_tstat_no_trend(x, lag):
+    # t-statistic of the lagged level in the ADF regression without
+    # deterministic terms, computed directly with lstsq
+    dx = np.diff(x)
+    endog = dx[lag:]
+    exog = np.column_stack(
+        [x[lag:-1]] + [dx[lag - j : len(dx) - j] for j in range(1, lag + 1)]
+    )
+    params, rss, _, _ = np.linalg.lstsq(exog, endog, rcond=None)
+    df_resid = exog.shape[0] - exog.shape[1]
+    scale = rss[0] / df_resid
+    bse = np.sqrt(scale * np.linalg.inv(exog.T @ exog)[0, 0])
+    return params[0] / bse
+
+
+@pytest.mark.parametrize("nobs", [12, 16, 20])
+@pytest.mark.parametrize("autolag", ["aic", "bic", "t-stat", None])
+def test_adfuller_no_trend_even_nobs(nobs, autolag):
+    # GH 9375: with regression="n" and an even nobs, the default maxlag
+    # gave an exactly fitted regression and a statistic of 0
+    rng = np.random.default_rng(9375)
+    x = rng.standard_normal(nobs).cumsum()
+    res = adfuller(x, regression="n", autolag=autolag, store=True, result_object=True)
+    assert res.resstore.maxlag == (nobs - 3) // 2
+    assert res.resstore.resols.df_resid >= 1
+    assert_allclose(res.statistic, _adf_tstat_no_trend(x, res.lags), rtol=1e-8)
+
+
+def test_adfuller_no_trend_even_nobs_maxlag_too_large():
+    rng = np.random.default_rng(9375)
+    y = rng.standard_normal(20)
+    with pytest.raises(ValueError, match="maxlag must be less than or equal to 8"):
+        adfuller(y, maxlag=9, regression="n")
+    res = adfuller(y, maxlag=8, regression="n", autolag=None, result_object=True)
+    assert_allclose(res.statistic, _adf_tstat_no_trend(y, 8), rtol=1e-8)
+
+
+def test_coint_short_even_sample():
+    # GH 9375: coint on 20 observations returned a statistic of 0 and a
+    # p-value of 0.9859 for any input
+    rng = np.random.default_rng(9375)
+    y0 = rng.standard_normal(20)
+    y1 = rng.standard_normal(20)
+    res = coint(y0, y1)
+    resid = OLS(y0, np.column_stack([y1, np.ones(20)])).fit().resid
+    adf = adfuller(resid, regression="n", store=True, result_object=True)
+    assert adf.resstore.resols.df_resid >= 1
+    assert_allclose(res.coint_t, _adf_tstat_no_trend(resid, adf.lags), rtol=1e-8)
+    assert res.coint_t != 0
+
+
 @pytest.fixture
 def adfuller_data():
     rs = np.random.RandomState(0)
