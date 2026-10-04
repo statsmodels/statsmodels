@@ -2890,6 +2890,8 @@ def power_equivalence_neginb_2indep(
         raise ValueError("nobs1 must be positive")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if dispersion < 0:
+        raise ValueError(f"dispersion must be non-negative, got {dispersion}")
     if low > upp:
         raise ValueError(
             f"the equivalence interval must satisfy low <= upp, "
