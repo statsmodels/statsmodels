@@ -1097,3 +1097,14 @@ def test_ztest_zconfint_negative_ddof_raises():
     with pytest.raises(ValueError, match="ddof must be non-negative"):
         zconfint(x1, x2, ddof=-5)
     assert np.isfinite(ztest(x1, x2)[1])
+
+
+def test_tconfint_alpha_out_of_range():
+    # alpha outside (0, 1) previously returned (inf, -inf) silently
+    x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        DescrStatsW(x).tconfint_mean(alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        DescrStatsW(x).tconfint_mean(alpha=0)
+    lo, hi = DescrStatsW(x).tconfint_mean()
+    assert np.isfinite([lo, hi]).all()

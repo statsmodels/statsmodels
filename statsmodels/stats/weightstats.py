@@ -748,6 +748,9 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
         deprecated=_ALTERNATIVE_ALIASES,
         removed_after="0.16",
     )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alternative == "two-sided":
         tcrit = stats.t.ppf(1 - alpha / 2.0, dof)
         lower = mean - tcrit * std_mean
