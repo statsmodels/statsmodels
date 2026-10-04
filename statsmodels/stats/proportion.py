@@ -1843,12 +1843,17 @@ def confint_proportions_paired(table, method="newcomb", alpha=0.05):
     (-0.0566130751996..., 0.2187752373618...)
     """
     method = string_like(method, "method", options=("newcomb", "newcombe", "wald"))
+    alpha = float_like(alpha, "alpha")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     table = np.asarray(table, dtype=np.float64)
     if table.shape != (2, 2):
         raise ValueError(
             "confint_proportions_paired requires a 2x2 contingency table, but "
             f"the input has shape {table.shape}."
         )
+    if not np.all(np.isfinite(table)):
+        raise ValueError("table counts must be finite")
     if np.any(table < 0):
         raise ValueError("table counts must be non-negative")
     n11, n12, n21, n22 = table.ravel()
