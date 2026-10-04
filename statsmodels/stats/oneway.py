@@ -144,6 +144,13 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
     means = np.asarray(means)
     n_groups = means.shape[0]
 
+    vars_ = np.asarray(vars_)
+    nobs = np.asarray(nobs)
+    if np.any(vars_ < 0):
+        raise ValueError("vars_ must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+
     if np.size(nobs) == 1:
         nobs = np.ones(n_groups) * nobs
 
@@ -153,7 +160,6 @@ def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
         if np.size(vars_) == 1:
             var_resid = vars_
         else:
-            vars_ = np.asarray(vars_)
             var_resid = ((nobs - 1) * vars_).sum() / (nobs_t - n_groups)
 
         vars_ = var_resid  # scalar, if broadcasting works
@@ -467,6 +473,8 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
         deprecated={"2s": "two-sided", "ts": "two-sided"},
         removed_after="0.16",
     )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     alpha1s = alpha / 2
     ci = ncfdtrinc(df1, df2, [1 - alpha1s, alpha1s], f_stat)
 
@@ -556,6 +564,8 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     df1, df2 = df
     if nobs is None:
         nobs = df1 + df2 + 1
+    if np.any(np.asarray(nobs) <= 0):
+        raise ValueError("nobs must be positive")
     ci_nc = confint_noncentrality(f_stat, df, alpha=alpha)
 
     ci_f2 = ci_nc / nobs
@@ -1001,6 +1011,10 @@ def equivalence_oneway_generic(
     https://doi.org/10.1080/19466315.2019.1654915.
 
     """
+    if equiv_margin <= 0:
+        raise ValueError(
+            f"equiv_margin must be positive, got {equiv_margin}"
+        )
     nobs_t = nobs.sum()
     nobs_mean = nobs_t / n_groups
 

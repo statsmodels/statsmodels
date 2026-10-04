@@ -1028,3 +1028,72 @@ def test_ztost_ind_matches_two_one_sided_ztests():
         assert_allclose(tt1, tt1_expected)
         assert_allclose(tt2, tt2_expected)
         assert_allclose(pvalue, max(tt1_expected[1], tt2_expected[1]))
+
+
+def test_zconfint_alpha_out_of_range():
+    # alpha outside (0, 1) previously returned (inf, -inf) silently
+    x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        zconfint(x, alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        zconfint(x, alpha=0)
+    lo, hi = zconfint(x, alpha=0.05)
+    assert np.isfinite([lo, hi]).all()
+
+
+def test_descrstatsw_negative_weights_raises():
+    # negative observation weights are invalid; previously they were silently
+    # accepted and propagated nan into the summary statistics
+    x = np.array([1.0, 2.0, 3.0])
+    with pytest.raises(ValueError, match="weights must be non-negative"):
+        DescrStatsW(x, weights=np.array([1.0, -2.0, 1.0]))
+    # zero weights remain allowed
+    d = DescrStatsW(x, weights=np.array([1.0, 0.0, 1.0]))
+    assert_allclose(d.mean, 2.0)
+
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+def test_descrstatsw_nonfinite_weights_raises(bad):
+    # NaN is not negative and inf passed the check for negative weights. The
+    # mean and variance were nan, but quantile returned values.
+    x = np.array([1.0, 2.0, 3.0, 5.0])
+    w = np.array([1.0, bad, 1.0, 2.0])
+    with pytest.raises(ValueError, match="weights must be finite"):
+        DescrStatsW(x, weights=w)
+    with pytest.raises(ValueError, match="weights must be finite"):
+        DescrStatsW(np.column_stack([x, x**2]), weights=pd.Series(w))
+    # also if the weights are passed through the functions of the module
+    with pytest.raises(ValueError, match="weights must be finite"):
+        ttest_ind(x, x + 1, weights=(w, np.ones(4)))
+    with pytest.raises(ValueError, match="weights must be finite"):
+        CompareMeans.from_data(x, x + 1, weights1=w)
+
+
+def test_descrstatsw_all_zero_weights_raises():
+    # The weights are a sample of no observations. The mean and variance were
+    # nan, quantile returned values and the degrees of freedom of ttest_mean
+    # were -1.
+    x = np.array([1.0, 2.0, 3.0, 5.0])
+    with pytest.raises(ValueError, match="at least one weight must be positive"):
+        DescrStatsW(x, weights=np.zeros(4))
+    with pytest.raises(ValueError, match="at least one weight must be positive"):
+        DescrStatsW(np.column_stack([x, x**2]), weights=[0, 0, 0, 0])
+    with pytest.raises(ValueError, match="at least one weight must be positive"):
+        ttest_ind(x, x + 1, weights=(np.zeros(4), np.ones(4)))
+    # one positive weight is valid, empty data keeps its nan results, see
+    # test_var_empty_input
+    d = DescrStatsW(x, weights=np.array([0.0, 0.0, 2.0, 0.0]))
+    assert_allclose(d.mean, 3.0)
+    assert_allclose(d.quantile([0.25, 0.75]), [3.0, 3.0])
+
+
+def test_ztest_zconfint_negative_ddof_raises():
+    # a negative ddof previously inflated the denominator (nobs - ddof) and
+    # silently shrank the estimated variance
+    x1 = np.array([1.0, 2.0, 3.0, 4.0])
+    x2 = np.array([2.0, 3.0, 4.0, 5.0])
+    with pytest.raises(ValueError, match="ddof must be non-negative"):
+        ztest(x1, x2, ddof=-5)
+    with pytest.raises(ValueError, match="ddof must be non-negative"):
+        zconfint(x1, x2, ddof=-5)
+    assert np.isfinite(ztest(x1, x2)[1])

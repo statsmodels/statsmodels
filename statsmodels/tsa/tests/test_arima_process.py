@@ -205,6 +205,25 @@ def test_fi_d_zero():
         assert lpol_fiar(-0.3, n=n)[0] == 1.0
 
 
+@pytest.mark.parametrize("d", [-0.45, -0.25, -1e-8, 0.0, 1e-8, 0.3, 0.45])
+def test_fi_leading_terms(d):
+    # (1 - L)^(-d) = 1 + d L + d (d + 1) / 2 L^2 + d (d + 1) (d + 2) / 6 L^3 + ...
+    # (1 - L)^d = 1 - d L + d (d - 1) / 2 L^2 - d (d - 1) (d - 2) / 6 L^3 + ...
+    # the signs of the coefficients for negative d are the reverse of the signs
+    # for positive d
+    ma = [1, d, d * (d + 1) / 2, d * (d + 1) * (d + 2) / 6]
+    ar = [1, -d, d * (d - 1) / 2, -d * (d - 1) * (d - 2) / 6]
+    assert_allclose(lpol_fima(d, n=4), ma, rtol=1e-8, atol=1e-15)
+    assert_allclose(lpol_fiar(d, n=4), ar, rtol=1e-8, atol=1e-15)
+
+
+@pytest.mark.parametrize("func", [lpol_fima, lpol_fiar])
+@pytest.mark.parametrize("d", [-0.3, 0.0, 0.3])
+def test_fi_short(func, d):
+    assert func(d, n=0).shape == (0,)
+    assert_allclose(func(d, n=1), [1.0])
+
+
 def test_arma_impulse_response():
     arrep = arma_impulse_response(armarep.ma, armarep.ar, leads=21)[1:]
     marep = arma_impulse_response(armarep.ar, armarep.ma, leads=21)[1:]
