@@ -3699,6 +3699,13 @@ class NegativeBinomial(CountModel):
         check_rank=True,
         **kwargs,
     ):
+        if "alpha" in kwargs:
+            raise TypeError(
+                "NegativeBinomial does not accept an alpha keyword: the "
+                "dispersion parameter is estimated jointly with the "
+                "regression coefficients. Passing alpha was previously "
+                "silently ignored."
+            )
         super().__init__(
             endog,
             exog,

@@ -1097,3 +1097,15 @@ def test_quantile_probs_out_of_range():
         DescrStatsW(x).quantile(np.array([0.5, 2.0]))
     q = DescrStatsW(x).quantile(np.array([0.25, 0.75]))
     assert np.isfinite(q).all()
+
+
+def test_ztest_zconfint_negative_ddof_raises():
+    # a negative ddof previously inflated the denominator (nobs - ddof) and
+    # silently shrank the estimated variance
+    x1 = np.array([1.0, 2.0, 3.0, 4.0])
+    x2 = np.array([2.0, 3.0, 4.0, 5.0])
+    with pytest.raises(ValueError, match="ddof must be non-negative"):
+        ztest(x1, x2, ddof=-5)
+    with pytest.raises(ValueError, match="ddof must be non-negative"):
+        zconfint(x1, x2, ddof=-5)
+    assert np.isfinite(ztest(x1, x2)[1])

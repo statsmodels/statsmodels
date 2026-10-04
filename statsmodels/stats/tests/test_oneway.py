@@ -885,3 +885,30 @@ def test_effectsize_oneway_list_inputs(use_var):
         effectsize_oneway(means, [1.0, -2.0, 3.0], nobs, use_var=use_var)
     with pytest.raises(ValueError, match="nobs must be positive"):
         effectsize_oneway(means, vars_, [10, -1, 10], use_var=use_var)
+
+
+def test_equivalence_oneway_nonpositive_margin_raises():
+    rs = np.random.RandomState(3654365799)
+    g = [rs.standard_normal(30), rs.standard_normal(30), rs.standard_normal(30)]
+
+    # a non-positive equivalence margin makes the null hypothesis
+    # degenerate (noncentrality clipped to 0) and previously returned a
+    # p-value identical to margin=0 without an error
+    with pytest.raises(ValueError, match="equiv_margin must be positive"):
+        equivalence_oneway(g, equiv_margin=-1.0)
+    with pytest.raises(ValueError, match="equiv_margin must be positive"):
+        equivalence_oneway(g, equiv_margin=0.0)
+
+    # valid margins keep working
+    res = equivalence_oneway(g, equiv_margin=0.5)
+    assert 0 <= res.pvalue <= 1
+
+
+def test_confint_effectsize_oneway_invalid_nobs_raises():
+    # a negative nobs previously produced a negative f2 bound silently
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smo.confint_effectsize_oneway(2.0, (3, 57), nobs=-5)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smo.confint_effectsize_oneway(2.0, (3, 57), nobs=0)
+    res = smo.confint_effectsize_oneway(2.0, (3, 57))
+    assert np.isfinite(res.f2).all()

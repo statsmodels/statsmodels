@@ -975,3 +975,17 @@ def test_conf_int_alpha_validation():
     with pytest.raises(ValueError, match="alpha must be in the range"):
         res.get_prediction(X).summary_frame(alpha=2)
     assert np.isfinite(res.conf_int()).all()
+
+
+def test_invalid_missing_option_raises():
+    # an unknown missing option was previously silently treated as 'none'
+    rng = np.random.RandomState(0)
+    x = rng.normal(size=30)
+    y = 0.5 * x + rng.normal(size=30)
+    X = sm.add_constant(x)
+    with pytest.raises(ValueError, match="missing must be one of"):
+        sm.OLS(y, X, missing="bogus")
+    with pytest.raises(ValueError, match="missing must be one of"):
+        sm.GLM(y, X, missing="bogus")
+    res = sm.OLS(y, X, missing="none").fit()
+    assert np.isfinite(res.params).all()

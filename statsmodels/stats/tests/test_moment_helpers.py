@@ -157,3 +157,20 @@ def test_moment_conversion_types(func_name):
 
     assert (isinstance(func((1.0, 1, 0, 3)), list) or
             isinstance(func(np.array([1.0, 1, 0, 3])), (tuple, np.ndarray)))
+
+
+def test_cov2corr_corr2cov_negative_scales_raise():
+    cov_bad = np.array([[1.0, 0.5], [0.5, -2.0]])
+    with pytest.raises(ValueError, match="diagonal of cov must be non-negative"):
+        cov2corr(cov_bad)
+
+    corr = np.array([[1.0, 0.5], [0.5, 1.0]])
+    with pytest.raises(ValueError, match="standard deviations must be non-negative"):
+        moment_helpers.corr2cov(corr, np.array([1.0, -2.0]))
+
+    # valid inputs unchanged
+    res = cov2corr(np.array([[4.0, 1.0], [1.0, 9.0]]), return_std=True)
+    assert_allclose(np.diag(res.corr), 1.0)
+    assert_allclose(res.std, [2.0, 3.0])
+    cov = moment_helpers.corr2cov(corr, np.array([1.0, 2.0]))
+    assert_allclose(cov, [[1.0, 1.0], [1.0, 4.0]])

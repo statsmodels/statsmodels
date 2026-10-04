@@ -1064,7 +1064,12 @@ class GLM(base.LikelihoodModel):
         elif exposure is None:
             exposure = 0.0
         else:
-            exposure = np.log(np.asarray(exposure))
+            exposure = np.asarray(exposure)
+            if np.any(exposure <= 0):
+                raise ValueError(
+                    "exposure must be positive, got non-positive values"
+                )
+            exposure = np.log(exposure)
 
         which = string_like(
             which, "which", options=("mean", "linear", "var_unscaled"), lower=False

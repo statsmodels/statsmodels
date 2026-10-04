@@ -55,6 +55,8 @@ def mad(a, c=GAUSSIAN_3_4, axis=0, center=np.median):
     """
     a = array_like(a, "a", mindim=None)
     c = float_like(c, "c")
+    if c <= 0:
+        raise ValueError(f"c must be positive, got {c}")
     if not a.size:
         center_val = 0.0
     elif callable(center):
@@ -104,6 +106,8 @@ def iqr(a, c=GAUSSIAN_IQR, axis=0):
     elif a.size == 0:
         return np.nan
     else:
+        if c <= 0:
+            raise ValueError(f"c must be positive, got {c}")
         quantiles = np.quantile(a, [0.25, 0.75], axis=axis)
         return np.squeeze(np.diff(quantiles, axis=0) / c)
 
