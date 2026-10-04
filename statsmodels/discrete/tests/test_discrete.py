@@ -4425,3 +4425,16 @@ def test_binary_model_offset_length_mismatch():
     # a correctly sized offset still fits
     res = Logit(endog, exog, offset=np.zeros(40)).fit(disp=0)
     assert res.params.shape == (3,)
+
+
+def test_negativebinomial_rejects_alpha_kwarg():
+    # alpha was swallowed by **kwargs and silently ignored even though the
+    # dispersion parameter is estimated, not fixed, for this model
+    y = np.random.RandomState(987234).poisson(2, size=50)
+    x = np.ones((50, 2))
+    with pytest.raises(TypeError, match="alpha"):
+        NegativeBinomial(y, x, loglike_method="nb1", alpha=0.5)
+
+    # the estimator itself keeps working
+    mod = NegativeBinomial(y, x, loglike_method="nb1")
+    assert mod.k_extra == 1

@@ -42,3 +42,18 @@ def test_reset_ramsey_degree_validation():
         reset_ramsey(res, degree=1)
     with pytest.raises(TypeError, match="degree"):
         reset_ramsey(res, degree=2.5)
+
+
+def test_variance_inflation_factor_invalid_exog_idx_raises():
+    # a negative exog_idx used Python wraparound and silently returned the
+    # VIF of the LAST column under the caller's intended label
+    rng = np.random.RandomState(987234)
+    exog = np.column_stack([np.ones(50), rng.randn(50, 3)])
+    with pytest.raises(ValueError, match="exog_idx must be in the range"):
+        variance_inflation_factor(exog, -1)
+    with pytest.raises(ValueError, match="exog_idx must be in the range"):
+        variance_inflation_factor(exog, 4)
+
+    # valid indices unchanged
+    vif0 = variance_inflation_factor(exog, 0)
+    assert np.isfinite(vif0)

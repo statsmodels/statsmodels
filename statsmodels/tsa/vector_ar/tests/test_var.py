@@ -1277,3 +1277,17 @@ def test_fit_invalid_maxlags_and_ic():
     # ValueError could be raised
     with pytest.raises(ValueError, match="not recognized"):
         VAR(endog).fit(maxlags=5, ic="bad")
+
+
+def test_whiteness_invalid_signif_raises():
+    # signif outside (0, 1) previously produced a meaningless crit value
+    # without any error
+    rs = np.random.RandomState(233078)
+    y = rs.standard_normal((200, 2))
+    res = VAR(y).fit(maxlags=1, ic=None)
+    with pytest.raises(ValueError, match="signif must be in the range"):
+        res.test_whiteness(nlags=5, signif=2)
+    with pytest.raises(ValueError, match="signif must be in the range"):
+        res.test_whiteness(nlags=5, signif=0)
+    pvalue = res.test_whiteness(nlags=5).pvalue
+    assert np.isfinite(pvalue)
