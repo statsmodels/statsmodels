@@ -1603,6 +1603,45 @@ def test_etest_poisson_2indep_alternative_deprecated_alias(alias, canonical):
         etest_poisson_2indep(60, 51477.5, 30, 54308.7, alternative="bogus")
 
 
+@pytest.mark.parametrize("count", [-5, np.array([1, -2])])
+def test_test_poisson_negative_count(count):
+    # negative counts used to flow through the arithmetic silently, e.g.
+    # returning a nan statistic from the wald path
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.test_poisson(count, 10, 0.3, method="wald")
+
+
+@pytest.mark.parametrize("nobs", [0, -10])
+def test_test_poisson_bad_exposure(nobs):
+    # a zero exposure used to leak a bare ZeroDivisionError and a negative
+    # exposure silently produced a nonsense statistic
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smr.test_poisson(5, nobs, 0.3, method="wald")
+
+
+def test_test_poisson_negative_value():
+    with pytest.raises(ValueError, match="value must be non-negative"):
+        smr.test_poisson(5, 10, -0.3, method="score")
+
+
+@pytest.mark.parametrize(
+    "fn, kwargs",
+    [
+        (smr.power_poisson_ratio_2indep, {}),
+        (smr.power_poisson_diff_2indep, {}),
+        (smr.power_negbin_ratio_2indep, {"dispersion": 0.5}),
+        (smr.power_equivalence_poisson_2indep, {"low": 0.5, "upp": 2}),
+        (smr.power_equivalence_neginb_2indep, {"low": 0.5, "upp": 2, "dispersion": 0.5}),
+    ],
+)
+def test_power_functions_invalid_inputs_raises(fn, kwargs):
+    # impossible nobs1 and alpha previously returned nan power silently
+    with pytest.raises(ValueError, match="nobs1 must be positive"):
+        fn(2, 1, -5, **kwargs)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        fn(2, 1, 20, alpha=2, **kwargs)
+
+
 @pytest.mark.parametrize("method", ["wald", "score", "exact-c", "sqrt"])
 def test_confint_poisson_invalid_inputs_raises(method):
     # negative counts and exposures previously returned nan bounds, and

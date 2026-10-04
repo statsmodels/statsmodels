@@ -101,6 +101,8 @@ class PredictionResults:
 
         """
         se = self.se_obs if obs else self.se_mean
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
         q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
         lower = self.predicted_mean - q * se

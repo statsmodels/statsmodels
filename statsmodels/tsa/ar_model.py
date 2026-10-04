@@ -329,6 +329,17 @@ class AutoReg(tsa_model.TimeSeriesModel):
             )
         return _lags, int(hold_back)
 
+    def _set_k_constant(self) -> None:
+        """Set k_constant using the trend and the regressors in _x"""
+        if "c" in self._trend:
+            self.k_constant = 1
+        elif self._x.shape[1]:
+            aug_x = np.hstack((self._x, np.ones((self._x.shape[0], 1))))
+            rank = np.linalg.matrix_rank(aug_x)
+            self.k_constant = int(rank == self._x.shape[1])
+        else:
+            self.k_constant = 0
+
     def _setup_regressors(self) -> None:
         maxlag = self._maxlag
         hold_back = self._hold_back
@@ -370,14 +381,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
                 "parameters."
             )
         self._y, self._x = y, x
-        if "c" in self._trend:
-            self.k_constant = 1
-        elif self._x.shape[1]:
-            aug_x = np.hstack((self._x, np.ones((x.shape[0], 1))))
-            rank = np.linalg.matrix_rank(aug_x)
-            self.k_constant = int(rank == self._x.shape[1])
-        else:
-            self.k_constant = 0
+        self._set_k_constant()
 
         self._exog_names = exog_names
 

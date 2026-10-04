@@ -845,6 +845,18 @@ def test_confint_noncentrality_alternative():
         confint_noncentrality(f_stat, df, alternative="larger")
 
 
+def test_confint_noncentrality_invalid_alpha_raises():
+    # alpha outside (0, 1) previously returned nan upper bounds silently
+    # (e.g. [1957.5, nan] for alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smo.confint_noncentrality(3.0, (3, 57), alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smo.confint_noncentrality(3.0, (3, 57), alpha=0)
+    # confint_effectsize_oneway delegates and is covered transitively
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smo.confint_effectsize_oneway(2.0, (3, 57), alpha=2)
+
+
 def test_effectsize_oneway_invalid_inputs_raise():
     means = np.array([1.0, 2.0, 3.0])
     # negative group variances are invalid; previously they silently
