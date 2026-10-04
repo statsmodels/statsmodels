@@ -641,3 +641,19 @@ def test_conf_int_samples():
     ci_custom = res.conf_int_samples(alpha=0.2, ci_func=lambda alpha, **kw: sentinel)
     assert ci_custom is sentinel
     assert res.ci_sample_distr == "ci_func"
+
+
+def test_combine_effects_invalid_inputs_raises():
+    # negative variances previously produced negative inverse-variance
+    # weights and a "mean effect" far outside the range of the effects
+    eff = np.array([0.1, 0.2, -0.3])
+    with pytest.raises(ValueError, match="variance estimates must be non-negative"):
+        combine_effects(eff, np.array([0.02, -0.01, 0.03]))
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        combine_effects(eff, np.array([0.02, 0.01, 0.03]), alpha=1.5)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        combine_effects(eff, np.array([0.02, 0.01, 0.03]), alpha=-0.1)
+
+    # sanity check: valid inputs unchanged
+    res = combine_effects(eff, np.array([0.02, 0.01, 0.03]))
+    assert np.isfinite(res.mean_effect_fe)
