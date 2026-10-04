@@ -961,7 +961,7 @@ def equivalence_oneway_generic(
         Number of groups in oneway comparison.
     nobs : ndarray
         Array of number of observations in groups.
-    equiv_margin : float
+    equiv_margin : float or array_like
         Equivalence margin in terms of effect size. Effect size can be chosen
         with `margin_type`. default is squared Cohen's f.
     df : tuple
@@ -1079,7 +1079,7 @@ def equivalence_oneway(
         The data can be provided as a tuple or list of arrays or in long
         format with outcome observations in ``data`` and group membership in
         ``groups``.
-    equiv_margin : float
+    equiv_margin : float or array_like
         Equivalence margin in terms of effect size. Effect size can be chosen
         with `margin_type`. default is squared Cohen's f.
     groups : ndarray or Series, optional

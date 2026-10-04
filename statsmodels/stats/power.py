@@ -848,7 +848,7 @@ class TTestPower(Power):
             effect size has to be positive.
         nobs : int or float
             sample size, number of observations.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         df : int or float, optional
@@ -1111,7 +1111,7 @@ class NormalIndPower(Power):
             i.e., ``nobs2 = nobs1 * ratio``
             ``ratio`` can be set to zero in order to get the power for a
             one sample test.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ratio : float, optional
@@ -1286,7 +1286,7 @@ class FTestPower(Power):
             Warning incorrect name
             numerator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ncc : int, optional
@@ -1460,7 +1460,7 @@ class FTestPowerF2(Power):
         df_denom : int or float
             Denominator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             Significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ncc : int, optional

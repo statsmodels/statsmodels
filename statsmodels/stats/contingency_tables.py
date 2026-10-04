@@ -814,7 +814,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float, optional
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
         method : {"normal"}, optional
@@ -837,7 +837,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float, optional
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
         method : {"normal"}, optional
@@ -906,7 +906,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float, optional
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
         method : {"normal"}, optional
@@ -929,7 +929,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float, optional
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
         method : {"normal"}, optional

@@ -266,7 +266,7 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
     method : str, optional
         Method to use for confidence interval.
         This is required, there is currently no default method.
-    alpha : float in (0, 1), optional
+    alpha : float or array_like in (0, 1), optional
         Significance level, nominal coverage of the confidence interval is
         1 - alpha.
     alternative : {"two-sided", "larger", "smaller"}, optional
@@ -479,7 +479,7 @@ def tolerance_int_poisson(
         Observed count, number of events.
     exposure : array_like
         Currently this is total exposure time of the count variable.
-    prob : float in (0, 1), optional
+    prob : float or array_like in (0, 1), optional
         Probability of poisson interval, often called "content".
         With known parameters, each tail would have at most probability
         ``1 - prob / 2`` in the two-sided interval.
@@ -489,7 +489,7 @@ def tolerance_int_poisson(
         Method to used for confidence interval of the estimate of the
         poisson rate, used in `confint_poisson`.
         This is required, there is currently no default method.
-    alpha : float in (0, 1), optional
+    alpha : float or array_like in (0, 1), optional
         Significance level for the confidence interval of the estimate of the
         Poisson rate. Nominal coverage of the confidence interval is
         1 - alpha.
@@ -580,7 +580,7 @@ def confint_quantile_poisson(
         Observed count, number of events.
     exposure : array_like
         Currently this is total exposure time of the count variable.
-    prob : float in (0, 1)
+    prob : float or array_like in (0, 1)
         Probability for the quantile, e.g., 0.95 to get the upper 95% quantile.
         With known mean mu, the quantile would be poisson.ppf(prob, mu).
     exposure_new : float, optional
@@ -589,7 +589,7 @@ def confint_quantile_poisson(
         Method to used for confidence interval of the estimate of the
         poisson rate, used in `confint_poisson`.
         This is required, there is currently no default method.
-    alpha : float in (0, 1), optional
+    alpha : float or array_like in (0, 1), optional
         Significance level for the confidence interval of the estimate of the
         Poisson rate. Nominal coverage of the confidence interval is
         1 - alpha.
@@ -1467,7 +1467,7 @@ def tost_poisson_2indep(
         Number of events in second sample.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    low, upp : float
+    low, upp : float or array_like
         Equivalence margin for the ratio or difference of Poisson rates.
     method : str, optional
         TOST uses ``test_poisson_2indep`` and has the same methods.
@@ -1633,7 +1633,7 @@ def nonequivalence_poisson_2indep(
         Number of events in second sample.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    low, upp : float
+    low, upp : float or array_like
         Equivalence margin for the ratio or difference of Poisson rates.
     method : str, optional
         TOST uses ``test_poisson_2indep`` and has the same methods.
@@ -2024,7 +2024,7 @@ def power_poisson_ratio_2indep(
     rate2 : float
         Poisson rate for the second sample, reference group, under the
         alternative hypothesis.
-    nobs1 : float or int
+    nobs1 : float or array_like
         Number of observations in sample 1.
     nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
@@ -2033,10 +2033,10 @@ def power_poisson_ratio_2indep(
         and nobs2 * exposure.
     value : float, optional
         Rate ratio, rate1 / rate2, under the null hypothesis.
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float, optional
+    dispersion : float or array_like, optional
         Dispersion coefficient for quasi-Poisson. Dispersion different from
         one can capture over or under dispersion relative to Poisson
         distribution.
@@ -2200,21 +2200,21 @@ def power_equivalence_poisson_2indep(
     rate2 : float
         Poisson rate for the second sample, reference group, under the
         alternative hypothesis.
-    nobs1 : float or int
+    nobs1 : float or array_like
         Number of observations in sample 1.
-    low : float
+    low : float or array_like
         Lower equivalence margin for the rate ratio, rate1 / rate2.
-    upp : float
+    upp : float or array_like
         Upper equivalence margin for the rate ratio, rate1 / rate2.
     nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float, optional
+    dispersion : float or array_like, optional
         Dispersion coefficient for quasi-Poisson. Dispersion different from
         one can capture over or under dispersion relative to Poisson
         distribution.
@@ -2495,11 +2495,11 @@ def power_poisson_diff_2indep(
     rate2 : float
         Poisson rate for the second sample, reference group, under the
         alternative hypothesis.
-    nobs1 : float or int
+    nobs1 : float or array_like
         Number of observations in sample 1.
     nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     value : float, optional
@@ -2699,7 +2699,7 @@ def power_negbin_ratio_2indep(
     rate2 : float
         Poisson rate for the second sample, reference group, under the
         alternative hypothesis.
-    nobs1 : float or int
+    nobs1 : float or array_like
         Number of observations in sample 1.
     nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
@@ -2708,10 +2708,10 @@ def power_negbin_ratio_2indep(
         and nobs2 * exposure.
     value : float, optional
         Rate ratio, rate1 / rate2, under the null hypothesis.
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float >= 0., optional
+    dispersion : float or array_like >= 0., optional
         Dispersion parameter for Negative Binomial distribution.
         The Poisson limiting case corresponds to ``dispersion=0``.
     alternative : {'two-sided', 'larger', 'smaller'}, optional
@@ -2838,21 +2838,21 @@ def power_equivalence_neginb_2indep(
     rate2 : float
         Poisson rate for the second sample, reference group, under the
         alternative hypothesis.
-    nobs1 : float or int
+    nobs1 : float or array_like
         Number of observations in sample 1.
-    low : float
+    low : float or array_like
         Lower equivalence margin for the rate ratio, rate1 / rate2.
-    upp : float
+    upp : float or array_like
         Upper equivalence margin for the rate ratio, rate1 / rate2.
     nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float >= 0., optional
+    dispersion : float or array_like >= 0., optional
         Dispersion parameter for Negative Binomial distribution.
         The Poisson limiting case corresponds to ``dispersion=0``.
     method_var : {"score", "alt", "ftotal"}, optional
