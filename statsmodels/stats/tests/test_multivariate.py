@@ -5,6 +5,7 @@ Author: Josef Perktold
 """
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 
 from statsmodels.stats import weightstats
 import statsmodels.stats.multivariate as smmv  # pytest cannot import test_xxx
@@ -316,3 +317,22 @@ def test_cov_oneway():
     assert_allclose(res.statistic_chi2, chi2, rtol=1e-10)
     assert_allclose(res.pvalue_chi2, p_chi2, rtol=1e-6)
     assert_equal(res.df_chi2, df)
+
+
+def test_confint_mvmean_alpha_out_of_range_raises():
+    # gh-style regression test: alpha outside (0, 1) previously produced
+    # inverted or NaN confidence limits without an error
+    mean = np.zeros(2)
+    cov = np.eye(2)
+    for alpha in (-0.1, 0.0, 1.0, 1.5):
+        with pytest.raises(ValueError, match="alpha must be in the range"):
+            confint_mvmean_fromstats(
+                mean, cov, 30, lin_transf=np.eye(2), alpha=alpha
+            )
+
+    # sanity check: valid alpha still works, low <= upp
+    low, upp, values = confint_mvmean_fromstats(
+        mean, cov, 30, lin_transf=np.eye(2, dtype=float), alpha=0.05
+    )
+    assert np.all(low <= values)
+    assert np.all(values <= upp)
