@@ -1796,3 +1796,20 @@ def test_confint_proportions_2indep_invalid_alpha_raises():
         smprop.confint_proportions_2indep(3, 10, 5, 10, alpha=0)
     lo, hi = smprop.confint_proportions_2indep(3, 10, 5, 10)
     assert np.isfinite([lo, hi]).all()
+
+
+def test_binom_tost_helpers_invalid_inputs_raises():
+    # inverted intervals previously returned a reversed rejection region
+    # (69, 22) or a negative power (-0.9999) silently
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low < upp"):
+        smprop.binom_tost_reject_interval(0.6, 0.3, 100)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.binom_tost_reject_interval(0.1, 0.3, 100, alpha=2)
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low < upp"):
+        smprop.power_binom_tost(0.6, 0.3, 100, p_alt=0.5)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.power_binom_tost(0.1, 0.3, 100, p_alt=0.5, alpha=2)
+    with pytest.raises(ValueError, match="p_alt must be in the range"):
+        smprop.power_binom_tost(0.1, 0.3, 100, p_alt=1.5)
+    power = smprop.power_binom_tost(0.1, 0.3, 100, p_alt=0.5)
+    assert np.isfinite(power)
