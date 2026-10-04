@@ -1291,3 +1291,20 @@ def test_whiteness_invalid_signif_raises():
         res.test_whiteness(nlags=5, signif=0)
     pvalue = res.test_whiteness(nlags=5).pvalue
     assert np.isfinite(pvalue)
+
+
+def test_var_negative_steps_and_periods_raise():
+    # negative sizes used to fail deep inside numpy with
+    # "negative dimensions are not allowed"
+    rng = np.random.RandomState(987234)
+    y = rng.normal(size=(60, 2))
+    res = VAR(y).fit(maxlags=2)
+
+    with pytest.raises(ValueError, match="steps must be non-negative"):
+        res.forecast(y[-2:], steps=-1)
+    with pytest.raises(ValueError, match="periods must be non-negative"):
+        res.irf(periods=-5)
+
+    # zero stays valid: an empty forecast / contemporaneous responses
+    assert res.forecast(y[-2:], steps=0).shape == (0, 2)
+    assert res.irf(periods=0).irfs.shape == (1, 2, 2)
