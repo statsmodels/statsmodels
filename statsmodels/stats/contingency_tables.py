@@ -822,7 +822,7 @@ class Table2x2(SquareTable):
             must be 'normal' which uses the normal approximation.
         """
         _ = string_like(method, "method", options=("normal",))
-        if not 0 < alpha < 1:
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         f = -stats.norm.ppf(alpha / 2)
         lor = self.log_oddsratio
@@ -914,7 +914,7 @@ class Table2x2(SquareTable):
             must be 'normal' which uses the normal approximation.
         """
         _ = string_like(method, "method", options=("normal",))
-        if not 0 < alpha < 1:
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         f = -stats.norm.ppf(alpha / 2)
         lrr = self.log_riskratio

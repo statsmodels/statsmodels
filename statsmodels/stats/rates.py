@@ -339,7 +339,7 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
         raise ValueError("count must be non-negative")
     if np.any(np.asarray(exposure) <= 0):
         raise ValueError("exposure must be positive")
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     n = exposure  # short hand
@@ -527,9 +527,9 @@ def tolerance_int_poisson(
         raise ValueError("count must be non-negative")
     if np.any(np.asarray(exposure) <= 0):
         raise ValueError("exposure must be positive")
-    if not 0 < prob < 1:
+    if not np.all(np.greater(prob, 0) & np.less(prob, 1)):
         raise ValueError(f"prob must be in the range (0, 1), got {prob}")
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     alternative = string_like(
@@ -619,9 +619,9 @@ def confint_quantile_poisson(
         raise ValueError("count must be non-negative")
     if np.any(np.asarray(exposure) <= 0):
         raise ValueError("exposure must be positive")
-    if not 0 < prob < 1:
+    if not np.all(np.greater(prob, 0) & np.less(prob, 1)):
         raise ValueError(f"prob must be in the range (0, 1), got {prob}")
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     alternative = string_like(
@@ -1518,7 +1518,7 @@ def tost_poisson_2indep(
     test_poisson_2indep
     confint_poisson_2indep
     """
-    if low > upp:
+    if not np.all(np.less_equal(low, upp)):
         raise ValueError(
             f"the equivalence interval must satisfy low <= upp, got low={low}, upp={upp}"
         )
@@ -1675,7 +1675,7 @@ def nonequivalence_poisson_2indep(
        Econometrics 7 (2): 21. https://doi.org/10.3390/econometrics7020021.
 
     """
-    if low > upp:
+    if not np.all(np.less_equal(low, upp)):
         raise ValueError(
             f"the equivalence interval must satisfy low <= upp, got low={low}, upp={upp}"
         )
@@ -2074,9 +2074,9 @@ def power_poisson_ratio_2indep(
     """
     if np.any(np.asarray(nobs1) <= 0):
         raise ValueError("nobs1 must be positive")
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
-    if np.any(np.asarray(dispersion) < 0):
+    if not np.all(np.greater_equal(dispersion, 0)):
         raise ValueError(
             f"dispersion must be non-negative, got {dispersion}"
         )
@@ -2250,9 +2250,9 @@ def power_equivalence_poisson_2indep(
     """
     if np.any(np.asarray(nobs1) <= 0):
         raise ValueError("nobs1 must be positive")
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
-    if low > upp:
+    if not np.all(np.less_equal(low, upp)):
         raise ValueError(
             f"the equivalence interval must satisfy low <= upp, "
             f"got low={low}, upp={upp}"
@@ -2537,7 +2537,7 @@ def power_poisson_diff_2indep(
     """
     if np.any(np.asarray(nobs1) <= 0):
         raise ValueError("nobs1 must be positive")
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
@@ -2751,9 +2751,9 @@ def power_negbin_ratio_2indep(
     """
     if np.any(np.asarray(nobs1) <= 0):
         raise ValueError("nobs1 must be positive")
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
-    if np.any(np.asarray(dispersion) < 0):
+    if not np.all(np.greater_equal(dispersion, 0)):
         raise ValueError(
             f"dispersion must be non-negative, got {dispersion}"
         )
@@ -2888,11 +2888,11 @@ def power_equivalence_neginb_2indep(
     """
     if np.any(np.asarray(nobs1) <= 0):
         raise ValueError("nobs1 must be positive")
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
-    if dispersion < 0:
+    if not np.all(np.greater_equal(dispersion, 0)):
         raise ValueError(f"dispersion must be non-negative, got {dispersion}")
-    if low > upp:
+    if not np.all(np.less_equal(low, upp)):
         raise ValueError(
             f"the equivalence interval must satisfy low <= upp, "
             f"got low={low}, upp={upp}"
