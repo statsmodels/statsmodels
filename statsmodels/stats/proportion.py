@@ -848,6 +848,8 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
         )
     if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater(nobs, 0)):
+        raise ValueError(f"nobs must be positive, got {nobs}")
     x_low = stats.binom.isf(alpha, nobs, low) + 1
     x_upp = stats.binom.ppf(alpha, nobs, upp) - 1
     return x_low, x_upp
@@ -1081,6 +1083,8 @@ def power_ztost_prop(
         )
     if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater(nobs, 0)):
+        raise ValueError(f"nobs must be positive, got {nobs}")
     if p_alt is not None and (
         np.any(np.asarray(p_alt) < 0) or np.any(np.asarray(p_alt) > 1)
     ):

@@ -1872,3 +1872,23 @@ def test_binom_tost_helpers_invalid_inputs_raises():
         smprop.power_binom_tost(0.1, 0.3, 100, p_alt=1.5)
     power = smprop.power_binom_tost(0.1, 0.3, 100, p_alt=0.5)
     assert np.isfinite(power)
+
+
+@pytest.mark.parametrize(
+    "func, args",
+    [
+        (smprop.binom_tost_reject_interval, (0.4, 0.6)),
+        (smprop.power_binom_tost, (0.4, 0.6)),
+        (smprop.power_ztost_prop, (0.4, 0.6)),
+    ],
+    ids=["binom_tost_reject_interval", "power_binom_tost", "power_ztost_prop"],
+)
+def test_binom_tost_helpers_nobs_raises(func, args):
+    # nobs <= 0 gave a "power" of -1 or nan without an error
+    extra = (0.5,) if func is smprop.power_ztost_prop else ()
+    for nobs in [0, -5, np.nan, [100, 0]]:
+        with pytest.raises(ValueError, match="nobs must be positive"):
+            func(*args, nobs, *extra)
+    # arrays of nobs keep working
+    res = func(*args, np.array([100, 200]), *extra)
+    assert np.shape(res[0] if isinstance(res, tuple) else res)[0] == 2
