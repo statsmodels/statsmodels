@@ -885,3 +885,20 @@ def test_confint_noncentrality_invalid_alpha_raises():
     # confint_effectsize_oneway delegates and is covered transitively
     with pytest.raises(ValueError, match="alpha must be in the range"):
         smo.confint_effectsize_oneway(2.0, (3, 57), alpha=2)
+
+
+def test_equivalence_oneway_nonpositive_margin_raises():
+    rs = np.random.RandomState(3654365799)
+    g = [rs.standard_normal(30), rs.standard_normal(30), rs.standard_normal(30)]
+
+    # a non-positive equivalence margin makes the null hypothesis
+    # degenerate (noncentrality clipped to 0) and previously returned a
+    # p-value identical to margin=0 without an error
+    with pytest.raises(ValueError, match="equiv_margin must be positive"):
+        equivalence_oneway(g, equiv_margin=-1.0)
+    with pytest.raises(ValueError, match="equiv_margin must be positive"):
+        equivalence_oneway(g, equiv_margin=0.0)
+
+    # valid margins keep working
+    res = equivalence_oneway(g, equiv_margin=0.5)
+    assert 0 <= res.pvalue <= 1
