@@ -2941,3 +2941,14 @@ def test_arma_order_select_ic_negative_bounds():
         arma_order_select_ic(y, max_ar=-1, max_ma=2)
     with pytest.raises(ValueError, match="must be non-negative"):
         arma_order_select_ic(y, max_ar=2, max_ma=-1)
+
+
+def test_q_stat_invalid_nobs():
+    # nobs <= len(x) previously divided by zero (nobs=-1) or returned a
+    # degenerate statistic without any error
+    with pytest.raises(ValueError, match="nobs must be larger"):
+        q_stat(np.array([0.5, 0.3]), nobs=-1)
+    with pytest.raises(ValueError, match="nobs must be larger"):
+        q_stat(np.array([0.5, 0.3]), nobs=2)
+    q, p = q_stat(np.array([0.5, 0.3]), nobs=50)
+    assert np.isfinite(q).all() and np.isfinite(p).all()
