@@ -1294,3 +1294,17 @@ def test_var_negative_steps_and_periods_raise():
     # zero stays valid: an empty forecast / contemporaneous responses
     assert res.forecast(y[-2:], steps=0).shape == (0, 2)
     assert res.irf(periods=0).irfs.shape == (1, 2, 2)
+
+
+def test_whiteness_invalid_signif_raises():
+    # signif outside (0, 1) previously produced a meaningless crit value
+    # without any error
+    rs = np.random.RandomState(233078)
+    y = rs.standard_normal((200, 2))
+    res = VAR(y).fit(maxlags=1, ic=None)
+    with pytest.raises(ValueError, match="signif must be in the range"):
+        res.test_whiteness(nlags=5, signif=2)
+    with pytest.raises(ValueError, match="signif must be in the range"):
+        res.test_whiteness(nlags=5, signif=0)
+    pvalue = res.test_whiteness(nlags=5).pvalue
+    assert np.isfinite(pvalue)

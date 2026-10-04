@@ -262,6 +262,8 @@ def confint_mvmean_fromstats(
     Hall.
 
     """
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     mean = np.asarray(mean)
     cov = np.asarray(cov)
     c = np.atleast_2d(lin_transf)

@@ -809,6 +809,11 @@ def q_stat(x, nobs):
     """
     x = array_like(x, "x")
     nobs = int_like(nobs, "nobs")
+    if nobs <= len(x):
+        raise ValueError(
+            f"nobs must be larger than the number of lags in x, got nobs={nobs}, "
+            f"len(x)={len(x)}"
+        )
 
     ret = (
         nobs * (nobs + 2) * np.cumsum((1.0 / (nobs - np.arange(1, len(x) + 1))) * x**2)
