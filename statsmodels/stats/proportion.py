@@ -796,6 +796,10 @@ def binom_tost(count, nobs, low, upp):
     pval_low, pval_upp : floats
         p-values of lower and upper one-sided tests
     """
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     # binom_test_stat only returns pval
     tt1 = binom_test(count, nobs, alternative="larger", prop=low)
     tt2 = binom_test(count, nobs, alternative="smaller", prop=upp)
@@ -1247,6 +1251,10 @@ def proportions_ztost(count, nobs, low, upp, prop_var="sample"):
     -----
     checked only for 1 sample case
     """
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     if prop_var == "limits":
         prop_var_low = low
         prop_var_upp = upp
