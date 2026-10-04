@@ -197,6 +197,15 @@ def test_chisquare_power_invalid_inputs_raises():
         chisquare_power(0.3, 50, 0, alpha=0.1)
     with pytest.raises(ValueError, match="alpha must be in the range"):
         chisquare_power(0.3, 50, 5, alpha=2)
+    # NaN is not in any of the valid ranges
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        chisquare_power(0.3, 50, 5, alpha=np.nan)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        chisquare_power(0.3, 50, 5, alpha=[0.05, np.nan])
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        chisquare_power(0.3, np.nan, 5, alpha=0.1)
+    with pytest.raises(ValueError, match="n_bins must be at least 1"):
+        chisquare_power(0.3, 50, np.nan, alpha=0.1)
     p = chisquare_power(0.3, 50, 5, alpha=0.1)
     assert np.isfinite(p)
     assert 0 < p < 1
