@@ -20,7 +20,7 @@ from scipy import optimize, stats
 from statsmodels.stats.base import AllPairsResults, LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tools.validation import array_like, int_like, string_like
+from statsmodels.tools.validation import array_like, float_like, int_like, string_like
 
 FLOAT_INFO = np.finfo(float)
 
@@ -409,7 +409,8 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
            small counts in a large number of cells," Journal of Statistical
            Software, Vol. 5, No. 6, 2000, pp. 1-24.
     """
-    if alpha <= 0 or alpha >= 1:
+    alpha = float_like(alpha, "alpha")
+    if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1), bounds excluded")
     counts = np.array(counts, dtype=float)
     if (counts < 0).any():
@@ -1267,6 +1268,7 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
 
     nobs_fact = np.sum(1.0 / nobs)
     if prop_var:
+        prop_var = float_like(prop_var, "prop_var")
         if not 0 < prop_var < 1:
             raise ValueError(
                 f"prop_var must be in the range (0, 1), got {prop_var}"
@@ -1620,6 +1622,7 @@ def confint_proportions_2indep(
         raise ValueError("count1 and count2 must be non-negative")
     if np.any(np.asarray(nobs1) <= 0) or np.any(np.asarray(nobs2) <= 0):
         raise ValueError("nobs1 and nobs2 must be positive")
+    alpha = float_like(alpha, "alpha")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
