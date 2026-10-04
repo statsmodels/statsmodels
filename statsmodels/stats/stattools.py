@@ -378,6 +378,17 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     alpha, beta = ab
     delta, gamma = dg
 
+    if not 0 < alpha < beta < 100:
+        raise ValueError(
+            f"ab must satisfy 0 < ab[0] < ab[1] < 100 for the tail "
+            f"percentile bands, got {ab}"
+        )
+    if not 0 < delta < gamma < 100:
+        raise ValueError(
+            f"dg must satisfy 0 < dg[0] < dg[1] < 100 for the interquantile "
+            f"bands, got {dg}"
+        )
+
     perc = (12.5, 25.0, 37.5, 62.5, 75.0, 87.5,
             delta, 100.0 - delta, gamma, 100.0 - gamma)
     e1, e2, e3, e5, e6, e7, fd, f1md, fg, f1mg = np.percentile(y, perc,

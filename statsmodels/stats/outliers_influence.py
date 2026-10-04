@@ -214,6 +214,11 @@ def variance_inflation_factor(exog, exog_idx, *, standardize=True):
     exog = np.asarray(exog, dtype=float)
     k_vars = exog.shape[1]
 
+    if not 0 <= exog_idx < k_vars:
+        raise ValueError(
+            f"exog_idx must be in the range [0, {k_vars}), got {exog_idx}"
+        )
+
     if standardize:
         stds = np.std(exog, axis=0)
         means = np.mean(exog, axis=0)
