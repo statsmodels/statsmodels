@@ -1108,3 +1108,15 @@ def test_tconfint_alpha_out_of_range():
         DescrStatsW(x).tconfint_mean(alpha=0)
     lo, hi = DescrStatsW(x).tconfint_mean()
     assert np.isfinite([lo, hi]).all()
+
+
+def test_quantile_probs_out_of_range():
+    # probs outside [0, 1] previously silently extrapolated quantiles
+    # beyond the data range
+    x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    with pytest.raises(ValueError, match="probs must be in the range"):
+        DescrStatsW(x).quantile(np.array([-0.1, 0.5]))
+    with pytest.raises(ValueError, match="probs must be in the range"):
+        DescrStatsW(x).quantile(np.array([0.5, 2.0]))
+    q = DescrStatsW(x).quantile(np.array([0.25, 0.75]))
+    assert np.isfinite(q).all()
