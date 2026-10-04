@@ -538,6 +538,14 @@ def effectsize_2proportions(
         np.asarray(v) if isinstance(v, (list, tuple)) else v
         for v in (count1, nobs1, count2, nobs2)
     )
+    if (np.any(np.asarray(count1) < 0)
+            or np.any(np.asarray(count1) > np.asarray(nobs1))
+            or np.any(np.asarray(count2) < 0)
+            or np.any(np.asarray(count2) > np.asarray(nobs2))):
+        raise ValueError(
+            "counts must be between 0 and the number of observations "
+            "(0 <= count <= nobs)"
+        )
     if zero_correction is None:
         cc1 = cc2 = 0
     elif zero_correction == "tac":

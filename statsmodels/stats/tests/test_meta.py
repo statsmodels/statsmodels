@@ -641,3 +641,22 @@ def test_conf_int_samples():
     ci_custom = res.conf_int_samples(alpha=0.2, ci_func=lambda alpha, **kw: sentinel)
     assert ci_custom is sentinel
     assert res.ci_sample_distr == "ci_func"
+
+
+def test_effectsize_2proportions_invalid_counts_raises():
+    # counts outside [0, nobs] previously produced proportions outside
+    # [0, 1] (e.g. a risk "difference" larger than 1) without an error
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(25, 20, 5, 30)
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(-5, 20, 5, 30)
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(10, 20, 35, 30)
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(10, 20, -1, 30)
+
+    # boundary values remain valid
+    eff, var_eff = effectsize_2proportions(0, 20, 20, 30)
+    assert np.isfinite(eff).all()
+    eff, var_eff = effectsize_2proportions(20, 20, 30, 30)
+    assert np.isfinite(eff).all()
