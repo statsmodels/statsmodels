@@ -1527,6 +1527,15 @@ def test_proportions_chisquare_allpairs_invalid_inputs_raises():
         )
 
 
+def test_proportion_effectsize_invalid_inputs_raises():
+    # out-of-range proportions previously returned nan without any error
+    with pytest.raises(ValueError, match="prop1 must be in the range"):
+        smprop.proportion_effectsize(-0.1, 0.2)
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        smprop.proportion_effectsize(0.2, 1.2)
+    assert np.isfinite(smprop.proportion_effectsize(0.5, 0.4))
+
+
 def test_confint_proportions_2indep_invalid_inputs_raises():
     # negative counts and non-positive nobs previously returned (nan, nan)
     # or divided by zero instead of raising
