@@ -1720,5 +1720,25 @@ def test_power_equivalence_neginb_negative_dispersion_raises():
     # dispersion = 0 is the documented Poisson limiting case and stays valid
     p = power_equivalence_neginb_2indep(
         0.1, 0.15, 100, low=0.1, upp=0.3, dispersion=0.0, return_results=False
+    assert np.isfinite(p)
+
+
+def test_power_ratio_negative_dispersion_raises():
+    # negative dispersion made the standard errors NaN and power NaN
+    # without an error
+    with pytest.raises(ValueError, match="dispersion must be non-negative"):
+        power_poisson_ratio_2indep(0.1, 0.15, nobs1=100, dispersion=-1.0)
+    with pytest.raises(ValueError, match="dispersion must be non-negative"):
+        power_negbin_ratio_2indep(0.1, 0.15, nobs1=100, dispersion=-0.01)
+
+    # dispersion = 0 is the documented Poisson limiting case and stays valid
+    p = power_negbin_ratio_2indep(
+        0.1, 0.15, nobs1=100, value=1.0, dispersion=0.0, return_results=False
+    )
+    assert np.isfinite(p)
+
+    # default dispersion keeps working
+    p = power_poisson_ratio_2indep(
+        0.1, 0.15, nobs1=100, value=1.0, return_results=False
     )
     assert np.isfinite(p)
