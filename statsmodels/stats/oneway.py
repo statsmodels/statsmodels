@@ -564,6 +564,8 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     df1, df2 = df
     if nobs is None:
         nobs = df1 + df2 + 1
+    if np.any(np.asarray(nobs) <= 0):
+        raise ValueError("nobs must be positive")
     ci_nc = confint_noncentrality(f_stat, df, alpha=alpha)
 
     ci_f2 = ci_nc / nobs

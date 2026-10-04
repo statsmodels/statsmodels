@@ -902,3 +902,13 @@ def test_equivalence_oneway_nonpositive_margin_raises():
     # valid margins keep working
     res = equivalence_oneway(g, equiv_margin=0.5)
     assert 0 <= res.pvalue <= 1
+
+
+def test_confint_effectsize_oneway_invalid_nobs_raises():
+    # a negative nobs previously produced a negative f2 bound silently
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smo.confint_effectsize_oneway(2.0, (3, 57), nobs=-5)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smo.confint_effectsize_oneway(2.0, (3, 57), nobs=0)
+    res = smo.confint_effectsize_oneway(2.0, (3, 57))
+    assert np.isfinite(res.f2).all()
