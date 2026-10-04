@@ -2405,7 +2405,9 @@ def _power_equivalence_het(
     # Here we compute the complement of the two tail probabilities
     p1 = norm.sf((np.sqrt(nobs) * es_low - crit * s0_low) / s1)
     p2 = norm.cdf((np.sqrt(nobs) * es_upp + crit * s0_upp) / s1)
-    pow_ = 1 - (p1 + p2)
+    # the two tail probabilities add up to more than one if the margins are
+    # too narrow for the sample size, and the power is zero then
+    pow_ = np.maximum(1 - (p1 + p2), 0)
     return pow_, p1, p2
 
 
