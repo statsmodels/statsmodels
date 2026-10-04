@@ -3215,6 +3215,10 @@ def kpss(
     if nobs != x.size:
         raise ValueError(f"x of shape {x.shape} not understood")
 
+    if x.max() == x.min():
+        # the residual variance is zero, so the statistic is undefined
+        raise ValueError("Invalid input, x is constant")
+
     if hypo == "ct":
         # p. 162 Kwiatkowski et al. (1992): y_t = beta * t + r_t + e_t,
         # where beta is the trend, r_t a random walk and e_t a stationary
