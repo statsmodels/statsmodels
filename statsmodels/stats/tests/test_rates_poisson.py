@@ -1674,3 +1674,23 @@ def test_confint_quantile_poisson_invalid_inputs_raises():
         smr.confint_quantile_poisson(5, 10, prob=0, method="exact-c")
     with pytest.raises(ValueError, match="alpha must be in the range"):
         smr.confint_quantile_poisson(5, 10, prob=0.5, method="exact-c", alpha=1.5)
+
+
+def test_power_equivalence_poisson_invalid_interval_raises():
+    # an inverted equivalence interval previously returned a negative
+    # "power" without an error
+    args = (0.1, 0.15, 100)
+    kwds = dict(nobs_ratio=1, exposure=1, alpha=0.05)
+
+    with pytest.raises(ValueError, match="low <= upp"):
+        power_equivalence_poisson_2indep(*args, low=0.3, upp=0.1, **kwds)
+    with pytest.raises(ValueError, match="low <= upp"):
+        power_equivalence_neginb_2indep(
+            *args, low=0.3, upp=0.1, dispersion=0.01, **kwds
+        )
+
+    # low == upp remains a valid point null
+    p = power_equivalence_poisson_2indep(
+        *args, low=0.2, upp=0.2, return_results=False, **kwds
+    )
+    assert np.isfinite(p)
