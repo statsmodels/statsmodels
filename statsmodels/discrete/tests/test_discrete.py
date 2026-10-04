@@ -4427,6 +4427,76 @@ def test_binary_model_offset_length_mismatch():
     assert res.params.shape == (3,)
 
 
+def _binary_offset_data():
+    rs = np.random.RandomState(8264)
+    nobs = 60
+    exog = np.column_stack([np.ones(nobs), rs.standard_normal((nobs, 2))])
+    endog = (rs.standard_normal(nobs) + exog[:, 1] > 0).astype(float)
+    offset = 0.1 * rs.standard_normal(nobs)
+    return endog, exog, offset
+
+
+@pytest.mark.parametrize("model", [Logit, Probit])
+def test_binary_model_offset_missing_drop(model):
+    # The missing value handling drops the same rows from endog, exog and
+    # offset, and the offset passed in has the length of the data before the
+    # rows were dropped. The length check compared the argument with the
+    # reduced endog and rejected such a model.
+    endog, exog, offset = _binary_offset_data()
+    nobs = endog.shape[0]
+    exog_nan = exog.copy()
+    exog_nan[[5, 17], 1] = np.nan
+    keep = np.ones(nobs, dtype=bool)
+    keep[[5, 17]] = False
+    expected = model(endog[keep], exog[keep], offset=offset[keep]).fit(disp=0)
+
+    mod = model(endog, exog_nan, offset=offset, missing="drop")
+    assert mod.endog.shape[0] == nobs - 2
+    assert mod.offset.shape[0] == nobs - 2
+    res = mod.fit(disp=0)
+    assert_allclose(res.params, expected.params, rtol=1e-8)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+
+    # the same with pandas objects
+    res_pd = model(
+        pd.Series(endog), pd.DataFrame(exog_nan), offset=pd.Series(offset), missing="drop"
+    ).fit(disp=0)
+    assert_allclose(res_pd.params.to_numpy(), expected.params, rtol=1e-8)
+
+    # a missing value in the offset itself drops the row
+    offset_nan = offset.copy()
+    offset_nan[[5, 17]] = np.nan
+    res_off = model(endog, exog, offset=offset_nan, missing="drop").fit(disp=0)
+    assert_allclose(res_off.params, expected.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("model", [Logit, Probit])
+def test_binary_model_offset_formula_missing(model):
+    # formula models drop rows with missing values by default
+    endog, exog, offset = _binary_offset_data()
+    df = pd.DataFrame({"y": endog, "a": exog[:, 1], "b": exog[:, 2]})
+    df.loc[[5, 17], "a"] = np.nan
+    res = model.from_formula("y ~ a + b", df, offset=offset).fit(disp=0)
+    keep = df.notna().all(axis=1).to_numpy()
+    assert res.nobs == keep.sum()
+    expected = model(endog[keep], exog[keep], offset=offset[keep]).fit(disp=0)
+    assert_allclose(res.params.to_numpy(), expected.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("model", [Logit, Probit])
+@pytest.mark.parametrize(
+    "offset",
+    [0.3, np.float64(0.3), 1, np.array(0.3)],
+    ids=["float", "np.float64", "int", "0-d array"],
+)
+def test_binary_model_scalar_offset(model, offset):
+    # a scalar offset broadcasts and was accepted before the length check
+    endog, exog, _ = _binary_offset_data()
+    res = model(endog, exog, offset=offset).fit(disp=0)
+    expected = model(endog, exog, offset=np.full(endog.shape[0], float(offset))).fit(disp=0)
+    assert_allclose(res.params, expected.params, rtol=1e-8)
+
+
 def test_negativebinomial_rejects_alpha_kwarg():
     # alpha was swallowed by **kwargs and silently ignored even though the
     # dispersion parameter is estimated, not fixed, for this model
