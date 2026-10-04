@@ -408,6 +408,11 @@ def cov2corr(cov, return_std=False, *, result_object: bool | None = None):
     """
     result_object = bool_like(result_object, "result_object", optional=True)
     cov = np.asanyarray(cov)
+    if np.any(np.diag(cov) < 0):
+        raise ValueError(
+            "diagonal of cov must be non-negative (variances), got "
+            "negative values"
+        )
     std_ = np.sqrt(np.diag(cov))
     corr = cov / np.outer(std_, std_)
     # Cov2CorrResult has exactly the same length and contents as the legacy
@@ -445,6 +450,10 @@ def corr2cov(corr, std):
     """
     corr = np.asanyarray(corr)
     std_ = np.asanyarray(std)
+    if np.any(std_ < 0):
+        raise ValueError(
+            "standard deviations must be non-negative, got negative values"
+        )
     cov = corr * np.outer(std_, std_)
     return cov
 

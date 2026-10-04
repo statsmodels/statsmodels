@@ -2423,6 +2423,8 @@ class VARResults(VARProcess):
             statistic += to_add
         statistic *= self.nobs**2 if adjusted else self.nobs
         df = self.neqs**2 * (nlags - self.k_ar)
+        if not 0 < signif < 1:
+            raise ValueError(f"signif must be in the range (0, 1), got {signif}")
         dist = stats.chi2(df)
         pvalue = dist.sf(statistic)
         crit_value = dist.ppf(1 - signif)

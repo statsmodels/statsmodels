@@ -1694,3 +1694,13 @@ def test_power_equivalence_poisson_invalid_interval_raises():
         *args, low=0.2, upp=0.2, return_results=False, **kwds
     )
     assert np.isfinite(p)
+
+
+def test_poisson_tost_nonequivalence_invalid_interval_raises():
+    # inverted equivalence intervals previously returned results silently
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low <= upp"):
+        smr.tost_poisson_2indep(5, 100, 3, 100, low=2, upp=1)
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low <= upp"):
+        smr.nonequivalence_poisson_2indep(5, 100, 3, 100, low=2, upp=1)
+    res = smr.tost_poisson_2indep(5, 100, 3, 100, low=0.5, upp=2)
+    assert np.isfinite(res.pvalue)
