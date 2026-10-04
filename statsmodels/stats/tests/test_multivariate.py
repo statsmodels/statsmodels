@@ -337,3 +337,22 @@ def test_cov_tests_positive_nobs_still_work():
     cov = np.eye(2)
     assert np.isfinite(smmv.test_cov_spherical(cov, nobs=50)[1])
     assert np.isfinite(smmv.test_cov_oneway([cov, cov], nobs_list=[50, 50])[1])
+
+
+def test_confint_mvmean_alpha_out_of_range_raises():
+    # gh-style regression test: alpha outside (0, 1) previously produced
+    # inverted or NaN confidence limits without an error
+    mean = np.zeros(2)
+    cov = np.eye(2)
+    for alpha in (-0.1, 0.0, 1.0, 1.5):
+        with pytest.raises(ValueError, match="alpha must be in the range"):
+            confint_mvmean_fromstats(
+                mean, cov, 30, lin_transf=np.eye(2), alpha=alpha
+            )
+
+    # sanity check: valid alpha still works, low <= upp
+    low, upp, values = confint_mvmean_fromstats(
+        mean, cov, 30, lin_transf=np.eye(2, dtype=float), alpha=0.05
+    )
+    assert np.all(low <= values)
+    assert np.all(values <= upp)

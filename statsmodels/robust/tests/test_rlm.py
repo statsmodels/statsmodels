@@ -13,7 +13,7 @@ import statsmodels.api as sm
 from statsmodels.iolib.summary import Summary
 from statsmodels.robust import norms
 from statsmodels.robust.robust_linear_model import RLM
-from statsmodels.robust.scale import HuberScale, mad
+from statsmodels.robust.scale import HuberScale, iqr, mad
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -541,3 +541,21 @@ def test_rlm_results_direct_construction_validates_cov():
 
     with pytest.raises(ValueError, match="cov"):
         RLMResults(mod, res.params, res.normalized_cov_params, res.scale, cov="H4")
+
+
+def test_mad_iqr_nonpositive_c_raises():
+    # c <= 0 previously returned a silently negative scale (mad) or
+    # negative spread (iqr) instead of a normalized scale estimate
+    x = np.array([-2.0, -0.5, 0.1, 0.4, 1.7])
+    with pytest.raises(ValueError, match="c must be positive"):
+        mad(x, c=-1.0)
+    with pytest.raises(ValueError, match="c must be positive"):
+        mad(x, c=0.0)
+    with pytest.raises(ValueError, match="c must be positive"):
+        iqr(x, c=-1.349)
+    with pytest.raises(ValueError, match="c must be positive"):
+        iqr(x, c=0.0)
+
+    # valid normalization constants unchanged
+    assert np.isfinite(mad(x)).all()
+    assert np.isfinite(iqr(x)).all()
