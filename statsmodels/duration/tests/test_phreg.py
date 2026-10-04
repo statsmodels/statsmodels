@@ -11,7 +11,11 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib.summary2 import Summary
 
 # All the R results
-from .results import survival_enet_r_results, survival_r_results
+from .results import (
+    results_phreg_residuals as residual_results,
+    survival_enet_r_results,
+    survival_r_results,
+)
 
 # TODO: Include some corner cases: data sets with empty strata, strata
 #      with no events, entry times after censoring times, etc.
@@ -296,7 +300,9 @@ class TestPHReg:
         mod = PHReg(time, exog, status)
         rslt = mod.fit()
         mart_resid = rslt.martingale_residuals
-        assert_allclose(np.abs(mart_resid).sum(), 120.72475743348433)
+        # R: sum(abs(resid(coxph(Surv(time, status) ~ ., ties="breslow"), "martingale")))
+        assert_allclose(np.abs(mart_resid).sum(), 123.12721130671, rtol=1e-10)
+        assert_allclose(mart_resid.sum(), 0, atol=1e-10)
 
         w_avg = rslt.weighted_covariate_averages
         assert_allclose(
@@ -481,3 +487,186 @@ strata_f = (False, True)
 )
 def test_r(fname, ties, entry_f, strata_f):
     TestPHReg.do1(fname, ties, entry_f, strata_f)
+
+
+@pytest.mark.parametrize("stratified", [False, True])
+def test_schoenfeld_residuals_efron_ties(stratified):
+    # GH 10288.  Reference values from R 4.6.1, survival 3.8.6:
+    #
+    # d <- data.frame(
+    #   time = c(1, 1, 2, 2, 3, 4, 4, 5, 6, 7, 8, 9),
+    #   status = c(1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1),
+    #   x = c(0.5, -1.2, 0.3, 1.1, -0.7, 0.8, -0.2, 1.5, -1.0, 0.4, 0.9, -0.3),
+    #   z = c(1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0),
+    #   g = c(0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1),
+    #   entry = c(0, 0, 0, 1.5, 0, 2.5, 0, 3.5, 0, 0, 5.5, 0))
+    # f <- coxph(Surv(time, status) ~ x, data = d, ties = "efron")
+    # coef(f); resid(f, "schoenfeld")
+    # f <- coxph(Surv(entry, time, status) ~ x + z + strata(g), data = d,
+    #            ties = "efron")
+    # coef(f); resid(f, "schoenfeld")
+    #
+    # R returns one row per event, ordered by stratum and then time.  The
+    # rows below are in data order, with NaN for the censored subjects.
+    time = np.array([1, 1, 2, 2, 3, 4, 4, 5, 6, 7, 8, 9.0])
+    status = np.array([1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1])
+    x = np.array([0.5, -1.2, 0.3, 1.1, -0.7, 0.8, -0.2, 1.5, -1.0, 0.4, 0.9, -0.3])
+    z = np.array([1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0.0])
+    nan = np.nan
+    if stratified:
+        exog = np.column_stack([x, z])
+        strata = np.array([0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1])
+        entry = np.array([0, 0, 0, 1.5, 0, 2.5, 0, 3.5, 0, 0, 5.5, 0])
+        mod = PHReg(time, exog, status, entry=entry, strata=strata, ties="efron")
+        params = [-0.69172174953, -0.01604387583]
+        resid = [
+            [0.91413479736, 0.5998424419],
+            [-0.78586520264, -0.4001575581],
+            [0.08207985669, -0.6617698174],
+            [nan, nan],
+            [-0.12815290248, 0.5793829822],
+            [0.66277336193, -0.6627733619],
+            [-0.33722663807, 0.3372266381],
+            [nan, nan],
+            [-0.64624439218, -0.2830406625],
+            [0.23850111936, 0.4912893378],
+            [nan, nan],
+            [0.0, 0.0],
+        ]
+    else:
+        mod = PHReg(time, x, status, ties="efron")
+        params = [-0.6346743889]
+        resid = [
+            [0.71763481291],
+            [-0.98236518709],
+            [0.39462580605],
+            [nan],
+            [-0.49199674188],
+            [0.90917493627],
+            [-0.09082506373],
+            [nan],
+            [-0.67754711138],
+            [0.22129854829],
+            [nan],
+            [0.0],
+        ]
+    res = mod.fit(disp=0)
+    assert_allclose(res.params, params, rtol=1e-6)
+    assert_allclose(res.schoenfeld_residuals, resid, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize("ties", ["efron", "breslow"])
+def test_schoenfeld_residuals_multiple_ties(ties):
+    # Tied failure times with 3 and 4 events, the ties in the test above have
+    # 2 events. Reference values from R 4.6.1, survival 3.8.6:
+    #
+    # d <- data.frame(
+    #   time = c(1, 2, 2, 2, 3, 4, 4, 4, 4, 5, 6, 7),
+    #   status = c(1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1),
+    #   x = c(0.5, -1.2, 0.3, 1.1, -0.7, 0.8, -0.2, 1.5, -1.0, 0.4, 0.9, -0.3),
+    #   z = c(1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0))
+    # f <- coxph(Surv(time, status) ~ x + z, data = d, ties = "efron")
+    # coef(f); resid(f, "schoenfeld")
+    #
+    # The rows of the residuals are in data order, with NaN for the censored
+    # subjects.
+    time = np.array([1, 2, 2, 2, 3, 4, 4, 4, 4, 5, 6, 7.0])
+    status = np.array([1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1])
+    x = np.array([0.5, -1.2, 0.3, 1.1, -0.7, 0.8, -0.2, 1.5, -1.0, 0.4, 0.9, -0.3])
+    z = np.array([1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0.0])
+    nan = np.nan
+    if ties == "efron":
+        params = [0.126134856833, -0.199405602022]
+        resid = [
+            [0.253142098917, 0.540858401508],
+            [-1.43787285568, -0.422328567227],
+            [0.0621271443206, -0.422328567227],
+            [0.862127144321, 0.577671432773],
+            [nan, nan],
+            [0.436516526926, -0.446470333377],
+            [-0.563483473074, 0.553529666623],
+            [1.13651652693, -0.446470333377],
+            [-1.36348347307, -0.446470333377],
+            [nan, nan],
+            [0.614410360416, 0.51200863368],
+            [0.0, 0.0],
+        ]
+    else:
+        params = [0.110602036159, -0.0669040880161]
+        resid = [
+            [0.255356192995, 0.508801050419],
+            [-1.42147107045, -0.445026923901],
+            [0.0785289295504, -0.445026923901],
+            [0.87852892955, 0.554973076099],
+            [nan, nan],
+            [0.432198849958, -0.414317906871],
+            [-0.567801150042, 0.585682093129],
+            [1.13219884996, -0.414317906871],
+            [-1.36780115004, -0.414317906871],
+            [nan, nan],
+            [0.580261618521, 0.483551348767],
+            [0.0, 0.0],
+        ]
+    res = PHReg(time, np.column_stack([x, z]), status, ties=ties).fit(disp=0)
+    assert_allclose(res.params, params, rtol=1e-6)
+    assert_allclose(res.schoenfeld_residuals, resid, rtol=1e-6, atol=1e-8)
+
+
+def _residual_model(case):
+    d = residual_results.data[case["data"]]
+    exog = np.column_stack([d[c] for c in case["exog"]])
+    kwds = {k: d[case[k]] for k in ("strata", "entry", "offset") if case[k]}
+    mod = PHReg(d["time"], exog, d["status"], ties=case["ties"], **kwds)
+    groups = d[case["groups"]] if case["groups"] else None
+    return mod, groups
+
+
+@pytest.mark.parametrize("name", list(residual_results.results))
+def test_residuals_r(name):
+    # GH 10288. Score and martingale residuals, and the naive and the robust
+    # covariance of the coefficients for the Breslow and Efron approximation
+    # of ties, with strata, delayed entry, an offset and clusters. The
+    # reference values are from R survival 3.8.6, see results_phreg_residuals.
+    # R has 0 for the residuals of observations that are not used, PHReg has NaN.
+    case = residual_results.results[name]
+    mod, groups = _residual_model(case)
+    res = mod.fit(groups=groups, disp=0)
+    assert_allclose(res.params, case["coef"], rtol=1e-6)
+
+    used = np.isfinite(res.score_residuals).all(1)
+    assert_equal(np.isfinite(res.martingale_residuals), used)
+    assert_allclose(res.score_residuals[used], case["score"][used], rtol=1e-6, atol=1e-8)
+    assert_allclose(
+        res.martingale_residuals[used], case["martingale"][used], rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(res.cov_params(), case["var"], rtol=1e-6)
+    if "var_naive" in case:
+        assert_allclose(mod.fit(disp=0).cov_params(), case["var_naive"], rtol=1e-6)
+
+
+def test_residuals_not_used_observation():
+    # an observation that is censored before the first event is not used, the
+    # residuals are NaN and it does not contribute to the robust covariance
+    case = residual_results.results["d4_efron_cluster"]
+    mod, groups = _residual_model(case)
+    res = mod.fit(groups=groups, disp=0)
+    assert np.all(np.isnan(res.score_residuals[0]))
+    assert np.isnan(res.martingale_residuals[0])
+    assert np.all(np.isfinite(res.score_residuals[1:]))
+    assert np.all(np.isfinite(res.cov_params()))
+
+
+@pytest.mark.parametrize("name", list(residual_results.results))
+def test_residuals_sums(name):
+    # The score residuals add up to the score of the partial likelihood for
+    # all parameters, and the martingale residuals of a stratum add up to zero.
+    case = residual_results.results[name]
+    mod, groups = _residual_model(case)
+    res = mod.fit(groups=groups, disp=0)
+    for params in (res.params, case["coef"] * 0.5 + 0.2):
+        resid = mod.score_residuals(params)
+        assert_allclose(np.nansum(resid, 0), mod.score(params), atol=1e-12)
+    d = residual_results.data[case["data"]]
+    strata = d[case["strata"]] if case["strata"] else np.zeros(len(d["time"]))
+    for g in np.unique(strata):
+        assert_allclose(np.nansum(res.martingale_residuals[strata == g]), 0, atol=1e-10)

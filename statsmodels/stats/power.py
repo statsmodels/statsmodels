@@ -859,6 +859,8 @@ class TTestPower(Power):
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
         """
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         # for debugging
         # print 'calling ttest power with', (effect_size, nobs, alpha, df, alternative)
         return ttest_power(effect_size, nobs, alpha, df=df, alternative=alternative)
@@ -1133,6 +1135,8 @@ class NormalIndPower(Power):
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
         """
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
         ddof = self.ddof  # for correlation, ddof=3
 
@@ -1312,6 +1316,10 @@ class FTestPower(Power):
         ftest_power with ncc=0 should also be correct for f_test in regression
         models, with df_num and d_denom as defined there. (not verified yet)
         """
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+        if np.any(np.asarray(df_num) <= 0) or np.any(np.asarray(df_denom) <= 0):
+            raise ValueError("df_num and df_denom must be positive")
 
         pow_ = ftest_power(effect_size, df_num, df_denom, alpha, ncc=ncc)
         # print effect_size, df_num, df_denom, alpha, pow_
@@ -1481,6 +1489,10 @@ class FTestPowerF2(Power):
         ftest_power with ncc=0 should also be correct for f_test in regression
         models, with df_num and d_denom as defined there. (not verified yet)
         """
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+        if np.any(np.asarray(df_num) <= 0) or np.any(np.asarray(df_denom) <= 0):
+            raise ValueError("df_num and df_denom must be positive")
 
         pow_ = ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=ncc)
         return pow_

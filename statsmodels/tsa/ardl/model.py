@@ -394,6 +394,7 @@ class ARDL(AutoReg):
         self._order = self._check_order(order)
         # 2. Construct Regressors
         self._y, self._x = self._construct_regressors(hold_back)
+        self._set_k_constant()
         # 3. Construct variable names
         self._endog_name, self._exog_names = self._construct_variable_names()
         self.data.param_names = self.data.xnames = self._exog_names
