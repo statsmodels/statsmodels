@@ -283,6 +283,8 @@ class HuberT(RobustNorm):
     redescending = "not"
 
     def __init__(self, t=1.345):
+        if t <= 0:
+            raise ValueError(f"t must be positive, got {t}")
         self.t = t
 
     def _set_tuning_param(self, c, inplace=False):
@@ -611,6 +613,8 @@ class AndrewWave(RobustNorm):
     redescending = "hard"
 
     def __init__(self, a=1.339):
+        if a <= 0:
+            raise ValueError(f"a must be positive, got {a}")
         self.a = a
 
     def _set_tuning_param(self, c, inplace=False):
@@ -971,6 +975,11 @@ class Hampel(RobustNorm):
     redescending = "hard"
 
     def __init__(self, a=2., b=4., c=8.):
+        if not 0 < a < b < c:
+            raise ValueError(
+                f"tuning constants must satisfy 0 < a < b < c, "
+                f"got a={a}, b={b}, c={c}"
+            )
         self.a = a
         self.b = b
         self.c = c
@@ -1222,6 +1231,8 @@ class TukeyBiweight(RobustNorm):
     redescending = "hard"
 
     def __init__(self, c=4.685):
+        if c <= 0:
+            raise ValueError(f"c must be positive, got {c}")
         self.c = c
 
     def __repr__(self):
