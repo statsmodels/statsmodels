@@ -657,3 +657,22 @@ def test_combine_effects_invalid_inputs_raises():
     # sanity check: valid inputs unchanged
     res = combine_effects(eff, np.array([0.02, 0.01, 0.03]))
     assert np.isfinite(res.mean_effect_fe)
+
+
+def test_effectsize_2proportions_invalid_counts_raises():
+    # counts outside [0, nobs] previously produced proportions outside
+    # [0, 1] (e.g. a risk "difference" larger than 1) without an error
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(25, 20, 5, 30)
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(-5, 20, 5, 30)
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(10, 20, 35, 30)
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(10, 20, -1, 30)
+
+    # boundary values remain valid
+    eff, var_eff = effectsize_2proportions(0, 20, 20, 30)
+    assert np.isfinite(eff).all()
+    eff, var_eff = effectsize_2proportions(20, 20, 30, 30)
+    assert np.isfinite(eff).all()
