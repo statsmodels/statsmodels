@@ -2951,4 +2951,6 @@ def test_q_stat_invalid_nobs():
     with pytest.raises(ValueError, match="nobs must be larger"):
         q_stat(np.array([0.5, 0.3]), nobs=2)
     q, p = q_stat(np.array([0.5, 0.3]), nobs=50)
-    assert np.isfinite(q).all() and np.isfinite(p).all()
+    assert np.isfinite(q).all()
+    assert np.isfinite(p).all()
+
