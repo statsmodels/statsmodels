@@ -821,11 +821,11 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
 
     Parameters
     ----------
-    low, upp : floats
+    low, upp : float or array_like
         lower and upper limit of equivalence region
-    nobs : int
+    nobs : int or array_like
         the number of trials or observations.
-    alpha : float, optional
+    alpha : float or array_like, optional
         Significance level of the test, default 0.05.
 
     Returns
@@ -946,14 +946,14 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
 
     Parameters
     ----------
-    low, upp : floats
+    low, upp : float or array_like
         lower and upper limit of equivalence region
-    nobs : int
+    nobs : int or array_like
         the number of trials or observations.
-    p_alt : float in (0, 1), optional
+    p_alt : float or array_like in (0, 1), optional
         proportion under the alternative. If p_alt is None, then the
         midpoint of the equivalence region, ``0.5 * (low + upp)``, is used.
-    alpha : float in (0, 1), optional
+    alpha : float or array_like in (0, 1), optional
         significance level of the test
 
     Returns
@@ -991,13 +991,13 @@ def power_ztost_prop(
 
     Parameters
     ----------
-    low, upp : floats
+    low, upp : float or array_like
         lower and upper limit of equivalence region
-    nobs : int
+    nobs : int or array_like
         number of observations
-    p_alt : float in (0,1)
+    p_alt : float or array_like in (0,1)
         proportion under the alternative
-    alpha : float in (0,1), optional
+    alpha : float or array_like in (0,1), optional
         significance level of the test
     dist : str in ['norm', 'binom'], optional
         This defines the distribution to evaluate the power of the test. The
@@ -2772,17 +2772,17 @@ def power_proportions_2indep(
 
     Parameters
     ----------
-    diff : float
+    diff : float or array_like
         difference between proportion 1 and 2 under the alternative
-    prop2 : float
+    prop2 : float or array_like
         proportion for the reference case, prop2, proportions for the
         first case will be computed using p2 and diff
         p1 = p2 + diff
-    nobs1 : float or int
+    nobs1 : float or array_like
         number of observations in sample 1
     ratio : float, optional
         sample size ratio, nobs2 = ratio * nobs1
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     value : float, optional
@@ -2858,17 +2858,17 @@ def samplesize_proportions_2indep_onetail(
 
     Parameters
     ----------
-    diff : float
+    diff : float or array_like
         Difference between proportion 1 and 2 under the alternative
-    prop2 : float
+    prop2 : float or array_like
         proportion for the reference case, prop2, proportions for the
         first case will be computing using p2 and diff
         p1 = p2 + diff
-    power : float
+    power : float or array_like
         Power for which sample size is computed.
     ratio : float, optional
         Sample size ratio, nobs2 = ratio * nobs1
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     value : float, optional
