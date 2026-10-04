@@ -490,3 +490,23 @@ def test_omni_normtest_axis_validation():
     omni_normtest(data, axis=-1)
     res = omni_normtest(rs.standard_normal(40))
     assert np.ndim(res[0]) == 0
+
+
+def test_robust_kurtosis_invalid_percentile_bands_raises():
+    rs = np.random.RandomState(937652345)
+    x = rs.standard_normal(200)
+
+    # reversed bands put the numerator quantiles inside the denominator
+    # band and silently return meaningless kurtosis values
+    with pytest.raises(ValueError, match="ab must satisfy"):
+        robust_kurtosis(x, ab=(50.0, 5.0))
+    with pytest.raises(ValueError, match="dg must satisfy"):
+        robust_kurtosis(x, dg=(25.0, 2.5))
+    with pytest.raises(ValueError, match="ab must satisfy"):
+        robust_kurtosis(x, ab=(-5.0, 50.0))
+    with pytest.raises(ValueError, match="dg must satisfy"):
+        robust_kurtosis(x, dg=(2.5, 125.0))
+
+    # defaults remain valid
+    kr1, kr2, kr3, kr4 = robust_kurtosis(x)
+    assert np.isfinite([kr1, kr2, kr3, kr4]).all()
