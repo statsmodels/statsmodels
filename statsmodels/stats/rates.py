@@ -2068,6 +2068,10 @@ def power_poisson_ratio_2indep(
         raise ValueError("nobs1 must be positive")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if np.any(np.asarray(dispersion) < 0):
+        raise ValueError(
+            f"dispersion must be non-negative, got {dispersion}"
+        )
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2736,6 +2740,10 @@ def power_negbin_ratio_2indep(
         raise ValueError("nobs1 must be positive")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if np.any(np.asarray(dispersion) < 0):
+        raise ValueError(
+            f"dispersion must be non-negative, got {dispersion}"
+        )
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
