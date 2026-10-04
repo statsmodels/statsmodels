@@ -5,6 +5,8 @@ import pytest
 
 import statsmodels.api as sm
 
+from statsmodels.nonparametric.kernel_density import KDEMultivariate
+
 nparam = sm.nonparametric
 
 
@@ -783,3 +785,16 @@ def test_all_kernels(kernel):
     density = sm.nonparametric.KDEUnivariate(data)
     density.fit(kernel="gau", fft=False)
     assert isinstance(density.evaluate(x_grid), np.ndarray)
+
+
+@pytest.mark.filterwarnings("ignore::FutureWarning")
+def test_kdemultivariate_invalid_bw_raises():
+    # negative entries previously produced negative densities, and unknown
+    # string methods silently fell back to cv_ls
+    data = np.tile(np.linspace(-2.0, 2.0, 50)[:, None], (1, 2))
+    with pytest.raises(ValueError, match="bw must be positive"):
+        KDEMultivariate(data, var_type="cc", bw=[-0.5, 0.5])
+    with pytest.raises(ValueError, match="bw must be one of"):
+        KDEMultivariate(data, var_type="cc", bw="bogus")
+    dens = KDEMultivariate(data, var_type="cc", bw=[0.5, 0.5]).pdf([0, 0])
+    assert dens > 0

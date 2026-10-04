@@ -231,8 +231,15 @@ class GenericKDE:
         if not isinstance(bw, str):
             self._bw_method = "user-specified"
             res = array_like(bw, "bw", ndim=1)
+            if np.any(res <= 0):
+                raise ValueError("bw must be positive")
         else:
             # The user specified a bandwidth selection method
+            if bw not in ("normal_reference", "cv_ml", "cv_ls"):
+                raise ValueError(
+                    f"bw must be one of 'normal_reference', 'cv_ml', or "
+                    f"'cv_ls', got {bw!r}"
+                )
             self._bw_method = bw
             # Workaround to avoid instance methods in __dict__
             if bw == "normal_reference":
