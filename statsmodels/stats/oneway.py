@@ -1011,6 +1011,10 @@ def equivalence_oneway_generic(
     https://doi.org/10.1080/19466315.2019.1654915.
 
     """
+    if equiv_margin <= 0:
+        raise ValueError(
+            f"equiv_margin must be positive, got {equiv_margin}"
+        )
     nobs_t = nobs.sum()
     nobs_mean = nobs_t / n_groups
 
