@@ -684,6 +684,10 @@ def proportion_effectsize(prop1, prop2, method="normal"):
     """
     if method != "normal":
         raise ValueError('only "normal" is implemented')
+    if np.any(np.asarray(prop1) < 0) or np.any(np.asarray(prop1) > 1):
+        raise ValueError("prop1 must be in the range [0, 1]")
+    if np.any(np.asarray(prop2) < 0) or np.any(np.asarray(prop2) > 1):
+        raise ValueError("prop2 must be in the range [0, 1]")
 
     es = 2 * (np.arcsin(np.sqrt(prop1)) - np.arcsin(np.sqrt(prop2)))
     return es
@@ -792,6 +796,10 @@ def binom_tost(count, nobs, low, upp):
     pval_low, pval_upp : floats
         p-values of lower and upper one-sided tests
     """
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     # binom_test_stat only returns pval
     tt1 = binom_test(count, nobs, alternative="larger", prop=low)
     tt2 = binom_test(count, nobs, alternative="smaller", prop=upp)
@@ -1086,6 +1094,13 @@ def _table_proportion(count, nobs):
     recent scipy has more elaborate contingency table functions
     """
     count = np.asarray(count)
+    nobs = np.asarray(nobs)
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count > nobs):
+        raise ValueError("count must not exceed nobs")
     dt = np.promote_types(count.dtype, np.float64)
     count = np.asarray(count, dtype=dt)
     table = np.column_stack((count, nobs - count))
@@ -1214,6 +1229,10 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
 
     nobs_fact = np.sum(1.0 / nobs)
     if prop_var:
+        if not 0 < prop_var < 1:
+            raise ValueError(
+                f"prop_var must be in the range (0, 1), got {prop_var}"
+            )
         p_pooled = prop_var
     var_ = p_pooled * (1 - p_pooled) * nobs_fact
     std_diff = np.sqrt(var_)
@@ -1256,6 +1275,10 @@ def proportions_ztost(count, nobs, low, upp, prop_var="sample"):
     -----
     checked only for 1 sample case
     """
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     if prop_var == "limits":
         prop_var_low = low
         prop_var_upp = upp
@@ -1559,6 +1582,8 @@ def confint_proportions_2indep(
         raise ValueError("count1 and count2 must be non-negative")
     if np.any(np.asarray(nobs1) <= 0) or np.any(np.asarray(nobs2) <= 0):
         raise ValueError("nobs1 and nobs2 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     method_default = {
         "diff": "newcomb",
@@ -1684,6 +1709,146 @@ def confint_proportions_2indep(
         raise ValueError("compare not recognized")
 
     return low, upp
+
+
+def confint_proportions_paired(table, method="newcomb", alpha=0.05):
+    """
+    Confidence interval for the difference of two paired proportions
+
+    This assumes that each of ``n`` units is classified twice as success or
+    failure, for example before and after a treatment, or by two raters, so
+    that the two proportions are correlated. The confidence interval is for
+    the difference ``p1 - p2`` of the two marginal proportions.
+
+    Parameters
+    ----------
+    table : array_like
+        2x2 contingency table of counts, ``[[n11, n12], [n21, n22]]``. Rows
+        correspond to the first classification and columns to the second,
+        with success in the first row and first column. ``n12`` and ``n21``
+        are the discordant counts. The first marginal proportion is
+        ``p1 = (n11 + n12) / n`` and the second is ``p2 = (n11 + n21) / n``,
+        where ``n`` is the total count.
+    method : {"newcomb", "newcombe", "wald"}, optional
+        Method for computing the confidence interval.
+
+        - "newcomb" : Newcombe's method 10, which combines the Wilson score
+          intervals of the two marginal proportions with a correction for the
+          correlation between them. This is the default. The spelling
+          "newcombe" is accepted as an alias; "newcomb" matches the method
+          name in :func:`confint_proportions_2indep`.
+        - "wald" : simple asymptotic (Wald) interval without continuity
+          correction, Newcombe's method 1. It degenerates to a zero-width
+          interval when there are no discordant pairs.
+
+    alpha : float, optional
+        Significance level for the confidence interval, default is 0.05.
+        The nominal coverage probability is 1 - alpha.
+
+    Returns
+    -------
+    low : float
+        Lower confidence limit for ``p1 - p2``.
+    upp : float
+        Upper confidence limit for ``p1 - p2``.
+
+    See Also
+    --------
+    confint_proportions_2indep : Confidence interval for two independent
+        proportions.
+    statsmodels.stats.contingency_tables.mcnemar : Hypothesis test for
+        marginal homogeneity of paired binary data.
+
+    Notes
+    -----
+    Newcombe's method 10 is the paired analogue of the hybrid score interval
+    recommended for independent proportions in [1]_. Let ``(l1, u1)`` and
+    ``(l2, u2)`` be the Wilson score limits of ``p1`` and ``p2``, and let
+    ``phi`` be the corrected phi coefficient of the table, which is zero if
+    any marginal count is zero. The limits are
+
+    ``p1 - p2 - sqrt((p1 - l1)**2 - 2 * phi * (p1 - l1) * (u2 - p2) + (u2 - p2)**2)``
+
+    and
+
+    ``p1 - p2 + sqrt((u1 - p1)**2 - 2 * phi * (u1 - p1) * (p2 - l2) + (p2 - l2)**2)``.
+
+    The interval always lies within ``[-1, 1]`` and has positive width even
+    when all pairs are concordant. The Wald interval is not bounded.
+
+    The results have been verified against the R packages ``ratesci``
+    (``moverpairci`` with Wilson base and the phi correction) and
+    ``PropCIs`` (``diffpropci.Wald.mp``).
+
+    References
+    ----------
+    .. [1] Newcombe, Robert G. 1998. "Improved Confidence Intervals for the
+       Difference between Binomial Proportions Based on Paired Data."
+       Statistics in Medicine 17 (22): 2635-50.
+       https://doi.org/10.1002/(SICI)1097-0258(19981130)17:22<2635::AID-
+       SIM954>3.0.CO;2-C.
+
+    Examples
+    --------
+    Of 37 patients, 15 respond to treatment A and 12 to treatment B, with 10
+    responding to both.
+
+    >>> from statsmodels.stats.proportion import confint_proportions_paired
+    >>> table = [[10, 5], [2, 20]]
+    >>> confint_proportions_paired(table)
+    (-0.0643926050711..., 0.2211160178958...)
+    >>> confint_proportions_paired(table, method="wald")
+    (-0.0566130751996..., 0.2187752373618...)
+    """
+    method = string_like(method, "method", options=("newcomb", "newcombe", "wald"))
+    table = np.asarray(table, dtype=np.float64)
+    if table.shape != (2, 2):
+        raise ValueError(
+            "confint_proportions_paired requires a 2x2 contingency table, but "
+            f"the input has shape {table.shape}."
+        )
+    if np.any(table < 0):
+        raise ValueError("table counts must be non-negative")
+    n11, n12, n21, n22 = table.ravel()
+    nobs = table.sum()
+    if nobs <= 0:
+        raise ValueError("table must contain at least one observation")
+
+    p1 = (n11 + n12) / nobs
+    p2 = (n11 + n21) / nobs
+    diff = p1 - p2
+
+    if method == "wald":
+        z = stats.norm.isf(alpha / 2)
+        half_width = z * np.sqrt(n12 + n21 - (n12 - n21) ** 2 / nobs) / nobs
+        low = diff - half_width
+        upp = diff + half_width
+
+    else:
+        l1, u1 = proportion_confint(n11 + n12, nobs, alpha=alpha, method="wilson")
+        l2, u2 = proportion_confint(n11 + n21, nobs, alpha=alpha, method="wilson")
+
+        # phi coefficient with Newcombe's n / 2 adjustment of a positive
+        # covariance term; the marginal product is zero when a marginal
+        # proportion is 0 or 1, in which case the correlation is undefined
+        # and Newcombe sets phi to zero.
+        marg_prod = (n11 + n12) * (n21 + n22) * (n11 + n21) * (n12 + n22)
+        if marg_prod == 0:
+            phi = 0.0
+        else:
+            cov = n11 * n22 - n12 * n21
+            if cov > 0:
+                cov = max(cov - nobs / 2, 0.0)
+            phi = cov / np.sqrt(marg_prod)
+
+        dl = p1 - l1
+        du = u2 - p2
+        low = diff - np.sqrt(dl**2 - 2 * phi * dl * du + du**2)
+        dl = u1 - p1
+        du = p2 - l2
+        upp = diff + np.sqrt(dl**2 - 2 * phi * dl * du + du**2)
+
+    return float(low), float(upp)
 
 
 def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True):
@@ -1866,7 +2031,10 @@ def score_test_proportions_2indep(
                 - tmp1 * tmp2 / (6 * tmp3**2)
                 + tmp0 / (2 * tmp3)
             )
-            p = np.sign(q) * np.sqrt((tmp2 / (3 * tmp3)) ** 2 - tmp1 / (3 * tmp3))
+            # np.sign(q) is 0 for q == 0, which happens for symmetric tables
+            p = np.copysign(1.0, q) * np.sqrt(
+                (tmp2 / (3 * tmp3)) ** 2 - tmp1 / (3 * tmp3)
+            )
             a = (np.pi + np.arccos(q / p**3)) / 3
 
             prop0 = 2 * p * np.cos(a) - tmp2 / (3 * tmp3)
@@ -2696,6 +2864,11 @@ def samplesize_proportions_2indep_onetail(
         deprecated={"2s": "two-sided"},
         removed_after="0.16",
     )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not 0 < power < 1:
+        raise ValueError(f"power must be in the range (0, 1), got {power}")
+
     if alternative == "two-sided":
         alpha = alpha / 2
 
@@ -2797,6 +2970,23 @@ def _score_confint_inversion(
         ub *= 2  # add more buffer
     if compare == "odds-ratio":
         param = rt0.odds_ratio
+
+    if compare == "diff":
+        # The starting values based on the Wald interval can be inside the
+        # score interval (too narrow) and outside of the parameter space
+        # (-1, 1). Move them towards the limit of the parameter space until the
+        # p-value is below alpha.
+        lb = max(lb, -0.99999)
+
+        def _expand(x, limit):
+            for _ in range(60):
+                if func(x) <= 0:
+                    return x
+                x = x + 0.5 * (limit - x)
+            return x
+
+        ub = _expand(ub, 0.99999)
+        lb = _expand(lb, -0.99999)
 
     # root finding for confint bounds
     upp = optimize.brentq(func, param, ub)

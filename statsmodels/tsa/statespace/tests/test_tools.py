@@ -946,3 +946,12 @@ def test_copy_index_vector():
     index = np.asfortranarray(index.astype(np.int32))
     tools.copy_index_vector(A, B, index, inplace=True)
     assert_equal(B, A)
+
+
+@pytest.mark.parametrize("trend", [[0, 1, 1], (1, 0, 1), [1]])
+def test_prepare_trend_spec_array(trend):
+    # GH 9145, a polynomial trend given as an ndarray raised ValueError
+    expected = tools.prepare_trend_spec(trend)
+    actual = tools.prepare_trend_spec(np.array(trend))
+    assert_equal(actual[0], expected[0])
+    assert_equal(actual[1], expected[1])

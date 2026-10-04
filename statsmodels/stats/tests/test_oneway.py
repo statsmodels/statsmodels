@@ -843,3 +843,45 @@ def test_confint_noncentrality_alternative():
     # than a NotImplementedError
     with pytest.raises(ValueError, match="alternative must be one of"):
         confint_noncentrality(f_stat, df, alternative="larger")
+
+
+def test_confint_noncentrality_invalid_alpha_raises():
+    # alpha outside (0, 1) previously returned nan upper bounds silently
+    # (e.g. [1957.5, nan] for alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smo.confint_noncentrality(3.0, (3, 57), alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smo.confint_noncentrality(3.0, (3, 57), alpha=0)
+    # confint_effectsize_oneway delegates and is covered transitively
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smo.confint_effectsize_oneway(2.0, (3, 57), alpha=2)
+
+
+def test_effectsize_oneway_invalid_inputs_raise():
+    means = np.array([1.0, 2.0, 3.0])
+    # negative group variances are invalid; previously they silently
+    # produced a meaningless negative effect size
+    with pytest.raises(ValueError, match="vars_ must be non-negative"):
+        effectsize_oneway(means, np.array([1.0, -2.0, 3.0]), np.array([10, 10, 10]))
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        effectsize_oneway(means, np.array([1.0, 2.0, 3.0]), np.array([10, -1, 10]))
+
+
+@pytest.mark.parametrize("use_var", ["equal", "unequal", "bf"])
+def test_effectsize_oneway_list_inputs(use_var):
+    # vars_ and nobs are converted to arrays like means
+    means = [1.0, 2.0, 3.0]
+    vars_ = [1.0, 2.0, 3.0]
+    nobs = [10, 12, 14]
+    expected = effectsize_oneway(
+        np.array(means), np.array(vars_), np.array(nobs), use_var=use_var
+    )
+    assert_allclose(effectsize_oneway(means, vars_, nobs, use_var=use_var), expected)
+    # balanced groups
+    expected = effectsize_oneway(np.array(means), np.array(vars_), 10, use_var=use_var)
+    assert_allclose(effectsize_oneway(means, vars_, [10], use_var=use_var), expected)
+
+    with pytest.raises(ValueError, match="vars_ must be non-negative"):
+        effectsize_oneway(means, [1.0, -2.0, 3.0], nobs, use_var=use_var)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        effectsize_oneway(means, vars_, [10, -1, 10], use_var=use_var)
