@@ -454,7 +454,7 @@ def test_cov_spherical(cov, nobs):
     StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
     Stata Press Publication.
     """
-    if nobs <= 0:
+    if not np.all(np.greater(nobs, 0)):
         raise ValueError(f"nobs must be positive, got {nobs}")
 
     # unchanged Stata formula, but denom is cov cancels, AFAICS
@@ -508,7 +508,7 @@ def test_cov_diagonal(cov, nobs):
     StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
     Stata Press Publication.
     """
-    if nobs <= 0:
+    if not np.all(np.greater(nobs, 0)):
         raise ValueError(f"nobs must be positive, got {nobs}")
     cov = np.asarray(cov)
     k = cov.shape[0]
@@ -593,7 +593,7 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
     Stata Press Publication.
     """
-    if nobs <= 0:
+    if not np.all(np.greater(nobs, 0)):
         raise ValueError(f"nobs must be positive, got {nobs}")
     cov = np.asarray(cov)
     cov_blocks = _get_blocks(cov, block_len)[0]

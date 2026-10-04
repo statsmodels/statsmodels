@@ -833,11 +833,11 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
     x_low, x_upp : float
         lower and upper bound of rejection region
     """
-    if low >= upp:
+    if not np.all(np.less(low, upp)):
         raise ValueError(
             f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
         )
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     x_low = stats.binom.isf(alpha, nobs, low) + 1
     x_upp = stats.binom.ppf(alpha, nobs, upp) - 1
@@ -1056,11 +1056,11 @@ def power_ztost_prop(
     SAS Manual: Chapter 68: The Power Procedure, Computational Resources
     PASS Chapter 110: Equivalence Tests for One Proportion.
     """
-    if low >= upp:
+    if not np.all(np.less(low, upp)):
         raise ValueError(
             f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
         )
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     if p_alt is not None and (
         np.any(np.asarray(p_alt) < 0) or np.any(np.asarray(p_alt) > 1)
@@ -2806,9 +2806,10 @@ def power_proportions_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    if not 0 <= prop2 <= 1:
+    if not np.all(np.greater_equal(prop2, 0) & np.less_equal(prop2, 1)):
         raise ValueError(f"prop2 must be in the range [0, 1], got {prop2}")
-    if not 0 <= prop2 + diff <= 1:
+    prop1 = np.add(prop2, diff)
+    if not np.all(np.greater_equal(prop1, 0) & np.less_equal(prop1, 1)):
         raise ValueError(
             f"diff must keep prop1 = prop2 + diff inside [0, 1], got "
             f"prop2={prop2}, diff={diff}"
@@ -2893,13 +2894,14 @@ def samplesize_proportions_2indep_onetail(
         deprecated={"2s": "two-sided"},
         removed_after="0.16",
     )
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
-    if not 0 < power < 1:
+    if not np.all(np.greater(power, 0) & np.less(power, 1)):
         raise ValueError(f"power must be in the range (0, 1), got {power}")
-    if not 0 <= prop2 <= 1:
+    if not np.all(np.greater_equal(prop2, 0) & np.less_equal(prop2, 1)):
         raise ValueError(f"prop2 must be in the range [0, 1], got {prop2}")
-    if not 0 <= prop2 + diff <= 1:
+    prop1 = np.add(prop2, diff)
+    if not np.all(np.greater_equal(prop1, 0) & np.less_equal(prop1, 1)):
         raise ValueError(
             f"diff must keep prop1 = prop2 + diff inside [0, 1], got "
             f"prop2={prop2}, diff={diff}"

@@ -1011,7 +1011,7 @@ def equivalence_oneway_generic(
     https://doi.org/10.1080/19466315.2019.1654915.
 
     """
-    if equiv_margin <= 0:
+    if not np.all(np.greater(equiv_margin, 0)):
         raise ValueError(
             f"equiv_margin must be positive, got {equiv_margin}"
         )
