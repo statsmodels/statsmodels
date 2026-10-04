@@ -2890,6 +2890,13 @@ def samplesize_proportions_2indep_onetail(
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     if not 0 < power < 1:
         raise ValueError(f"power must be in the range (0, 1), got {power}")
+    if not 0 <= prop2 <= 1:
+        raise ValueError(f"prop2 must be in the range [0, 1], got {prop2}")
+    if not 0 <= prop2 + diff <= 1:
+        raise ValueError(
+            f"diff must keep prop1 = prop2 + diff inside [0, 1], got "
+            f"prop2={prop2}, diff={diff}"
+        )
 
     if alternative == "two-sided":
         alpha = alpha / 2
