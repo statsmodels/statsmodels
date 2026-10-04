@@ -1933,28 +1933,35 @@ def prepare_trend_spec(trend):
         the degree of the trend polynomial.
     """
     # Trend
-    if trend is None or trend == "n":
+    polynomial_trend = None
+    if trend is None:
         polynomial_trend = np.ones(0)
-    elif trend == "c":
-        polynomial_trend = np.r_[1]
-    elif trend == "t":
-        polynomial_trend = np.r_[0, 1]
-    elif trend == "ct":
-        polynomial_trend = np.r_[1, 1]
-    elif trend == "ctt":
-        # TODO deprecate ctt?
-        polynomial_trend = np.r_[1, 1, 1]
+    elif isinstance(trend, str):
+        # Only compare strings to the named trends: `==` is elementwise on
+        # arrays
+        if trend == "n":
+            polynomial_trend = np.ones(0)
+        elif trend == "c":
+            polynomial_trend = np.r_[1]
+        elif trend == "t":
+            polynomial_trend = np.r_[0, 1]
+        elif trend == "ct":
+            polynomial_trend = np.r_[1, 1]
+        elif trend == "ctt":
+            # TODO deprecate ctt?
+            polynomial_trend = np.r_[1, 1, 1]
     else:
         trend = np.array(trend)
         if trend.ndim > 0:
             polynomial_trend = (trend > 0).astype(int)
-        else:
-            raise ValueError(
-                "Valid trend inputs are 'c' (constant), 't' (linear trend in "
-                "time), 'ct' (both), 'ctt' (both with trend squared) or an "
-                "interable defining a polynomial, e.g., [1, 1, 0, 1] is `a + "
-                f"b*t + ct**3`. Received {trend}"
-            )
+
+    if polynomial_trend is None:
+        raise ValueError(
+            "Valid trend inputs are 'c' (constant), 't' (linear trend in "
+            "time), 'ct' (both), 'ctt' (both with trend squared) or an "
+            "interable defining a polynomial, e.g., [1, 1, 0, 1] is `a + "
+            f"b*t + ct**3`. Received {trend}"
+        )
 
     # Note: k_trend is not the degree of the trend polynomial, because e.g.
     # k_trend = 1 corresponds to the degree zero polynomial (with only a

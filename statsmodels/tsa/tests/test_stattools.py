@@ -1592,6 +1592,20 @@ class TestKPSS:
             )
         assert_equal(res[2], 18)
 
+    def test_kpss_fails_on_nan(self):
+        # a NaN in the series used to crash deep inside the lag computation
+        # with "cannot convert float NaN to integer"; it must raise
+        # MissingDataError instead
+        x = np.arange(100.0)
+        x[50] = np.nan
+        with pytest.raises(MissingDataError, match="must contain only finite values"):
+            kpss(x)
+
+        x = np.arange(100.0)
+        x[-3] = -np.inf
+        with pytest.raises(MissingDataError, match="must contain only finite values"):
+            kpss(x)
+
     def test_kpss_fails_on_nobs_check(self):
         # Test that if lags exceeds number of observations KPSS raises a
         # clear error
@@ -1600,6 +1614,12 @@ class TestKPSS:
         msg = rf"lags \({nobs}\) must be < number of observations \({nobs}\)"
         with pytest.raises(ValueError, match=msg):
             kpss(self.x, "c", nlags=nobs)
+
+    def test_kpss_fails_on_negative_nlags(self):
+        # a negative nlags used to flow straight into the lag computation and
+        # silently return a statistic computed with lags=-1
+        with pytest.raises(ValueError, match="non-negative"):
+            kpss(self.x, "c", nlags=-1)
 
     def test_kpss_autolags_does_not_assign_lags_equal_to_nobs(self):
         # Test that if *autolags* exceeds number of observations, we set
@@ -1934,6 +1954,21 @@ def test_ccf_different_lengths():
     assert np.all(np.isfinite(result))
 
 
+def test_ccf_nlags_validation():
+    # nlags is used directly as a slice bound, so it must be an in-range int
+    rs = np.random.RandomState(11111)
+    x = rs.normal(size=100)
+    y = rs.normal(size=80)
+    with pytest.raises(ValueError, match="non-negative"):
+        ccf(x, y, nlags=-3)
+    with pytest.raises(ValueError, match="smaller than the number of observations"):
+        ccf(x, y, nlags=101)
+    with pytest.raises(TypeError, match="nlags"):
+        ccf(x, y, nlags=2.5)
+    # the default output length, len(x), remains a valid request
+    assert ccf(x, y, nlags=100).shape == (100,)
+
+
 @pytest.mark.smoke
 @pytest.mark.slow
 def test_arma_order_select_ic():
@@ -2211,6 +2246,14 @@ def test_levinson_durbin_nlags_too_long():
     assert res.arcoefs.shape == (4,)
 
 
+def test_levinson_durbin_negative_nlags():
+    # a negative nlags used to leak a bare IndexError from the recursion
+    with pytest.raises(ValueError, match="non-negative"):
+        levinson_durbin(np.arange(10.0), nlags=-1)
+    with pytest.raises(ValueError, match="non-negative"):
+        levinson_durbin(np.array([2.0, 1.0, 0.5]), nlags=-1, isacov=True)
+
+
 @pytest.mark.parametrize("missing", ["conservative", "drop", "raise", "none"])
 @pytest.mark.parametrize("fft", [False, True])
 @pytest.mark.parametrize("demean", [True, False])
@@ -2250,6 +2293,15 @@ def test_acovf_nlags_missing(acovf_data, adjusted, demean, fft, missing):
 def test_acovf_error(acovf_data):
     with pytest.raises(ValueError):
         acovf(acovf_data, nlag=250, fft=False)
+
+
+def test_acovf_negative_nlag(acovf_data):
+    # a negative nlag used to slice the full acovf from the wrong end (fft)
+    # or raise a bare numpy negative-dimension error (non-fft)
+    with pytest.raises(ValueError, match="non-negative"):
+        acovf(acovf_data, nlag=-2)
+    with pytest.raises(ValueError, match="non-negative"):
+        acovf(acovf_data, nlag=-2, fft=False)
 
 
 def test_pacf2acf_ar():
@@ -2610,11 +2662,34 @@ def test_acf_conservate_nanops():
     assert_allclose(result, expected, rtol=1e-4, atol=1e-4)
 
 
+def test_acf_nlags_validation():
+    # negative and out-of-range nlags used to slice avf silently
+    rs = np.random.RandomState(32738493)
+    e = rs.standard_normal(20)
+    with pytest.raises(ValueError, match="non-negative"):
+        acf(e, nlags=-4)
+    with pytest.raises(ValueError, match="smaller than the number of observations"):
+        acf(e, nlags=20)
+    # the largest valid lag is still allowed
+    assert acf(e, nlags=19).shape == (20,)
+
+
 def test_pacf_nlags_error():
     rs = np.random.RandomState(12487)
     e = rs.standard_normal(99)
     with pytest.raises(ValueError, match="Can only compute partial"):
         pacf(e, 50)
+
+
+def test_pacf_negative_nlags():
+    # negative nlags used to be clamped to 1 by max(nlags, 1) instead of
+    # raising, silently returning a single lag
+    rs = np.random.RandomState(12487)
+    e = rs.standard_normal(99)
+    with pytest.raises(ValueError, match="non-negative"):
+        pacf(e, -5)
+    # nlags=0 keeps its historical clamp to a single lag
+    assert pacf(e, 0).shape == (2,)
 
 
 def test_coint_auto_tstat():
@@ -2855,3 +2930,27 @@ def test_stattools_fixed_arity_result_objects():
     assert res[0] == res.coint_t
     assert res[1] == res.pvalue
     assert res[2] is res.critical_values
+
+
+def test_arma_order_select_ic_negative_bounds():
+    # a negative max_ar or max_ma used to empty one of the order grids and
+    # leak a bare numpy error from the argmin over the empty sequence
+    rs = np.random.RandomState(12345)
+    y = rs.standard_normal(50)
+    with pytest.raises(ValueError, match="must be non-negative"):
+        arma_order_select_ic(y, max_ar=-1, max_ma=2)
+    with pytest.raises(ValueError, match="must be non-negative"):
+        arma_order_select_ic(y, max_ar=2, max_ma=-1)
+
+
+def test_q_stat_invalid_nobs():
+    # nobs <= len(x) previously divided by zero (nobs=-1) or returned a
+    # degenerate statistic without any error
+    with pytest.raises(ValueError, match="nobs must be larger"):
+        q_stat(np.array([0.5, 0.3]), nobs=-1)
+    with pytest.raises(ValueError, match="nobs must be larger"):
+        q_stat(np.array([0.5, 0.3]), nobs=2)
+    q, p = q_stat(np.array([0.5, 0.3]), nobs=50)
+    assert np.isfinite(q).all()
+    assert np.isfinite(p).all()
+

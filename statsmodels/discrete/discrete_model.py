@@ -545,6 +545,10 @@ class BinaryModel(DiscreteModel):
             if not np.all((self.endog >= 0) & (self.endog <= 1)):
                 raise ValueError("endog must be in the unit interval.")
 
+        if offset is not None and np.asarray(offset).shape[0] != self.endog.shape[0]:
+            # mirrors the check CountModel already performs; a mismatched
+            # offset used to leak a bare numpy broadcast error at fit time
+            raise ValueError("offset is not the same length as endog")
         if offset is None:
             del self.offset
 
@@ -930,7 +934,7 @@ class MultinomialModel(BinaryModel):
         sum_eXB = (1 + eXB.sum(1))[:, None]
         J = int(self.J)
         K = int(self.K)
-        repeat_eXB = np.repeat(eXB, J, axis=1)
+        repeat_eXB = np.repeat(eXB, K, axis=1)
         X = np.tile(exog, J - 1)
         # this is the derivative wrt the base level
         F0 = -repeat_eXB * X / sum_eXB**2
@@ -3695,6 +3699,13 @@ class NegativeBinomial(CountModel):
         check_rank=True,
         **kwargs,
     ):
+        if "alpha" in kwargs:
+            raise TypeError(
+                "NegativeBinomial does not accept an alpha keyword: the "
+                "dispersion parameter is estimated jointly with the "
+                "regression coefficients. Passing alpha was previously "
+                "silently ignored."
+            )
         super().__init__(
             endog,
             exog,

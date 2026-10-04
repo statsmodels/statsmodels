@@ -129,6 +129,127 @@ def test_effectsize_2proportions_clip_default_zero_kwds():
     assert_allclose(var_eff, var_eff2, rtol=1e-13)
 
 
+@pytest.mark.parametrize("statistic", ["odds-ratio", "risk-ratio", "diff", "arcsin"])
+def test_effectsize_2proportions_zero_correction_per_study(statistic):
+    # GH#10290: the zero-cell continuity correction must be applied per study
+    # (gated by the per-study zero mask), so a study with no zero cell is
+    # unaffected by ``zero_correction`` and by whether *other* studies in the
+    # batch have a zero cell. On main the numerator correction was added to
+    # every study unconditionally, which changed the effect size/variance of
+    # non-zero-cell studies.
+    # study 0 has a zero cell (count2=0); study 1 has none.
+    count1, nobs1 = np.array([3.0, 9.0]), np.array([72.0, 45.0])
+    count2, nobs2 = np.array([0.0, 1.0]), np.array([68.0, 15.0])
+
+    eff_cc, var_cc = effectsize_2proportions(
+        count1, nobs1, count2, nobs2, statistic=statistic, zero_correction=0.5
+    )
+    # the non-zero-cell study must match its uncorrected single-study value
+    eff_ref, var_ref = effectsize_2proportions(
+        count1[1:], nobs1[1:], count2[1:], nobs2[1:], statistic=statistic
+    )
+    assert_allclose(eff_cc[1], eff_ref[0])
+    assert_allclose(var_cc[1], var_ref[0])
+
+
+@pytest.mark.parametrize("statistic", ["odds-ratio", "risk-ratio", "diff", "arcsin"])
+def test_effectsize_2proportions_zero_cell_study_value(statistic):
+    # study 0 has a zero cell: the correction 0.5 is added to all four cells of
+    # its table, i.e. to both counts and 1 to both sample sizes, study 1 has no
+    # zero cell
+    count1, nobs1 = np.array([3.0, 9.0]), np.array([72.0, 45.0])
+    count2, nobs2 = np.array([0.0, 1.0]), np.array([68.0, 15.0])
+    eff, var_eff = effectsize_2proportions(
+        count1, nobs1, count2, nobs2, statistic=statistic, zero_correction=0.5
+    )
+    eff_ref, var_ref = effectsize_2proportions(
+        count1[:1] + 0.5,
+        nobs1[:1] + 1,
+        count2[:1] + 0.5,
+        nobs2[:1] + 1,
+        statistic=statistic,
+    )
+    assert_allclose(eff[0], eff_ref[0])
+    assert_allclose(var_eff[0], var_ref[0])
+
+
+@pytest.mark.parametrize("statistic", ["odds-ratio", "risk-ratio", "diff", "arcsin"])
+@pytest.mark.parametrize("nobs1, nobs2", [(20, 60), (60, 20), (40, 40)])
+def test_effectsize_2proportions_tac_double_zero_study(statistic, nobs1, nobs2):
+    # treatment arm continuity correction, Sweeting et al 2004: the constants
+    # are proportional to the size of the sample and add up to one, so that a
+    # study without events in both samples has p1 == p2 and no effect, also for
+    # samples of different size
+    eff, _ = effectsize_2proportions(
+        np.array([0]),
+        np.array([nobs1]),
+        np.array([0]),
+        np.array([nobs2]),
+        statistic=statistic,
+        zero_correction="tac",
+    )
+    assert_allclose(eff, 0, atol=1e-12)
+
+
+def test_effectsize_2proportions_tac_closed_form():
+    # 0/20 vs 3/60: the constants 20 / 80 and 60 / 80 are added to both cells of
+    # the first and the second sample
+    p1 = 0.25 / 20.5
+    p2 = 3.75 / 61.5
+    eff, var_eff = effectsize_2proportions(
+        np.array([0]),
+        np.array([20]),
+        np.array([3]),
+        np.array([60]),
+        statistic="risk-ratio",
+        zero_correction="tac",
+    )
+    assert_allclose(eff, np.log(p1 / p2), rtol=1e-12)
+    assert_allclose(var_eff, (1 - p1) / p1 / 20.5 + (1 - p2) / p2 / 61.5, rtol=1e-12)
+
+
+@pytest.mark.parametrize("zero_correction", [0.5, "tac", "clip"])
+@pytest.mark.parametrize("convert", [list, tuple])
+def test_effectsize_2proportions_list_input(zero_correction, convert):
+    # lists and tuples give the same results as arrays, the zero cell mask was
+    # skipped for lists and zero_correction="tac" raised
+    args = ([0, 3, 5], [20, 40, 30], [1, 2, 0], [60, 40, 25])
+    res = effectsize_2proportions(
+        *(convert(a) for a in args),
+        statistic="risk-ratio",
+        zero_correction=zero_correction,
+    )
+    res_array = effectsize_2proportions(
+        *(np.array(a) for a in args),
+        statistic="risk-ratio",
+        zero_correction=zero_correction,
+    )
+    assert_allclose(res, res_array)
+    assert np.all(np.isfinite(res[0]))
+
+
+@pytest.mark.parametrize("zero_correction", [0.5, "tac", "clip"])
+def test_effectsize_2proportions_pandas_input(zero_correction):
+    # pandas input is not converted, the results are Series with the same index
+    index = ["a", "b", "c"]
+    args = ([0, 3, 5], [20, 40, 30], [1, 2, 0], [60, 40, 25])
+    eff, var_eff = effectsize_2proportions(
+        *(pd.Series(a, index=index) for a in args),
+        statistic="risk-ratio",
+        zero_correction=zero_correction,
+    )
+    eff_array, var_array = effectsize_2proportions(
+        *(np.array(a) for a in args),
+        statistic="risk-ratio",
+        zero_correction=zero_correction,
+    )
+    assert isinstance(eff, pd.Series)
+    assert isinstance(var_eff, pd.Series)
+    assert list(eff.index) == index
+    assert_allclose(eff.to_numpy(), eff_array)
+    assert_allclose(var_eff.to_numpy(), var_array)
+
+
 class TestEffSmdMeta:
 
     @classmethod
@@ -520,3 +641,38 @@ def test_conf_int_samples():
     ci_custom = res.conf_int_samples(alpha=0.2, ci_func=lambda alpha, **kw: sentinel)
     assert ci_custom is sentinel
     assert res.ci_sample_distr == "ci_func"
+
+
+def test_combine_effects_invalid_inputs_raises():
+    # negative variances previously produced negative inverse-variance
+    # weights and a "mean effect" far outside the range of the effects
+    eff = np.array([0.1, 0.2, -0.3])
+    with pytest.raises(ValueError, match="variance estimates must be non-negative"):
+        combine_effects(eff, np.array([0.02, -0.01, 0.03]))
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        combine_effects(eff, np.array([0.02, 0.01, 0.03]), alpha=1.5)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        combine_effects(eff, np.array([0.02, 0.01, 0.03]), alpha=-0.1)
+
+    # sanity check: valid inputs unchanged
+    res = combine_effects(eff, np.array([0.02, 0.01, 0.03]))
+    assert np.isfinite(res.mean_effect_fe)
+
+
+def test_effectsize_2proportions_invalid_counts_raises():
+    # counts outside [0, nobs] previously produced proportions outside
+    # [0, 1] (e.g. a risk "difference" larger than 1) without an error
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(25, 20, 5, 30)
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(-5, 20, 5, 30)
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(10, 20, 35, 30)
+    with pytest.raises(ValueError, match="counts must be between 0"):
+        effectsize_2proportions(10, 20, -1, 30)
+
+    # boundary values remain valid
+    eff, var_eff = effectsize_2proportions(0, 20, 20, 30)
+    assert np.isfinite(eff).all()
+    eff, var_eff = effectsize_2proportions(20, 20, 30, 30)
+    assert np.isfinite(eff).all()

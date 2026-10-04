@@ -463,8 +463,11 @@ def effectsize_2proportions(
 
         * float : if zero_correction is a single float, then it will be added
           to all count (cells) if the sample has any zeros.
-        * "tac" : treatment arm continuity correction see Ruecker et al 2009,
-          section 3.2
+        * "tac" : treatment arm continuity correction, see Sweeting et al 2004
+          and Ruecker et al 2009, section 3.2. The constants that are added to
+          the cells of each sample are proportional to the sample size and add
+          up to one, so that a study without events in both samples has no
+          effect.
         * "clip" : clip proportions without adding a value to all cells
           The clip bounds can be set with zero_kwds["clip_bounds"]
 
@@ -497,9 +500,23 @@ def effectsize_2proportions(
     log-odds-ratio and log-risk-ratio can be transformed back to ``odds-ratio`` and
     ``risk-ratio`` using ``exp`` function.
 
+    Lists and tuples are converted to arrays, arrays and pandas objects are used
+    as they are and the results have the same type.
+
     See Also
     --------
     statsmodels.stats.contingency_tables
+
+    References
+    ----------
+    Sweeting, Michael J., Alexander J. Sutton, and Paul C. Lambert. 2004. What
+        to Add to Nothing? Use and Avoidance of Continuity Corrections in
+        Meta-Analysis of Sparse Data. Statistics in Medicine 23 (9): 1351-75.
+
+    Ruecker, Gerta, Guido Schwarzer, James Carpenter, and Ingram Olkin. 2009.
+        Why Add Anything to Nothing? The Arcsine Difference as a Measure of
+        Treatment Effect in Meta-Analysis with Zero Cells. Statistics in
+        Medicine 28 (5): 721-38.
     """
 
     statistic = string_like(
@@ -515,14 +532,29 @@ def effectsize_2proportions(
         },
         removed_after="0.16",
     )
+    # lists and tuples are converted so that the zero cell masks below work
+    # elementwise, arrays and pandas objects are used as they are
+    count1, nobs1, count2, nobs2 = (
+        np.asarray(v) if isinstance(v, (list, tuple)) else v
+        for v in (count1, nobs1, count2, nobs2)
+    )
+    if (np.any(np.asarray(count1) < 0)
+            or np.any(np.asarray(count1) > np.asarray(nobs1))
+            or np.any(np.asarray(count2) < 0)
+            or np.any(np.asarray(count2) > np.asarray(nobs2))):
+        raise ValueError(
+            "counts must be between 0 and the number of observations "
+            "(0 <= count <= nobs)"
+        )
     if zero_correction is None:
         cc1 = cc2 = 0
     elif zero_correction == "tac":
-        # treatment arm continuity correction Ruecker et al 2009, section 3.2
-
+        # treatment arm continuity correction, Sweeting et al 2004 and
+        # Ruecker et al 2009, section 3.2: the constants added to the cells of
+        # each arm are proportional to the size of that arm and add up to one
         nobs_t = nobs1 + nobs2
-        cc1 = nobs2 / nobs_t
-        cc2 = nobs1 / nobs_t
+        cc1 = nobs1 / nobs_t
+        cc2 = nobs2 / nobs_t
     elif zero_correction == "clip":
         zero_kwds = {} if zero_kwds is None else zero_kwds
         clip_bounds = zero_kwds.get("clip_bounds", (1e-6, 1 - 1e-6))
@@ -532,10 +564,14 @@ def effectsize_2proportions(
     zero_mask1 = (count1 == 0) | (count1 == nobs1)
     zero_mask2 = (count2 == 0) | (count2 == nobs2)
     zmask = np.logical_or(zero_mask1, zero_mask2)
-    n1 = nobs1 + (cc1 + cc2) * zmask
-    n2 = nobs2 + (cc1 + cc2) * zmask
-    p1 = (count1 + cc1) / (n1)
-    p2 = (count2 + cc2) / (n2)
+    n1 = nobs1 + 2 * cc1 * zmask
+    n2 = nobs2 + 2 * cc2 * zmask
+    # GH#10290: apply the continuity correction per study (only where a cell is
+    # zero), gating the numerator with zmask to match the denominator above and
+    # the documented behavior. Without this, studies with no zero cell are
+    # spuriously altered and depend on whether other studies have zero cells.
+    p1 = (count1 + cc1 * zmask) / (n1)
+    p2 = (count2 + cc2 * zmask) / (n2)
 
     if zero_correction == "clip":
         p1 = np.clip(p1, *clip_bounds)
@@ -651,6 +687,12 @@ def combine_effects(
     k = len(effect)
     if row_names is None:
         row_names = list(range(k))
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if np.any(np.asarray(variance) < 0):
+        raise ValueError(
+            "variance estimates must be non-negative, got negative values"
+        )
     crit = stats.norm.isf(alpha / 2)
 
     # alias for initial version

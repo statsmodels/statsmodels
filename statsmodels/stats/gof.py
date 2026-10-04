@@ -536,6 +536,13 @@ def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
     statsmodels.stats.GofChisquarePower
 
     """
+    if np.any(np.asarray(nobs) <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(np.asarray(n_bins) < 1):
+        raise ValueError("n_bins must be at least 1")
+    if np.any(np.asarray(alpha) <= 0) or np.any(np.asarray(alpha) >= 1):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     crit = stats.chi2.isf(alpha, n_bins - 1 - ddof)
     power = stats.ncx2.sf(crit, n_bins - 1 - ddof, effect_size**2 * nobs)
     return power

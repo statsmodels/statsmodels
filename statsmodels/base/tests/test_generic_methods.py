@@ -953,3 +953,39 @@ class TestWaldAnovaRankDeficient:
         interaction_df = int(wa.table.iloc[-1]["df_constraint"])
         # With missing cells, the interaction rank is less than 4
         assert interaction_df < 4
+
+
+def test_conf_int_alpha_validation():
+    # alpha outside (0, 1) previously returned inf/-inf or reversed bounds
+    # silently from conf_int, t_test intervals, and prediction intervals
+    rng = np.random.RandomState(0)
+    x = rng.normal(size=60)
+    y = 0.5 * x + rng.normal(size=60)
+    X = sm.add_constant(x)
+    res = sm.OLS(y, X).fit()
+
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        res.conf_int(alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        res.conf_int(alpha=-1)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        res.t_test([0, 1]).conf_int(alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        res.get_prediction(X).conf_int(alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        res.get_prediction(X).summary_frame(alpha=2)
+    assert np.isfinite(res.conf_int()).all()
+
+
+def test_invalid_missing_option_raises():
+    # an unknown missing option was previously silently treated as 'none'
+    rng = np.random.RandomState(0)
+    x = rng.normal(size=30)
+    y = 0.5 * x + rng.normal(size=30)
+    X = sm.add_constant(x)
+    with pytest.raises(ValueError, match="missing must be one of"):
+        sm.OLS(y, X, missing="bogus")
+    with pytest.raises(ValueError, match="missing must be one of"):
+        sm.GLM(y, X, missing="bogus")
+    res = sm.OLS(y, X, missing="none").fit()
+    assert np.isfinite(res.params).all()

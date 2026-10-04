@@ -36,14 +36,14 @@ def mean_diff_plot(
     m2 : array_like
         A 1-d array.
     sd_limit : float, optional
-        The limit of agreements expressed in terms of the standard deviation of
+        The limits of agreement expressed in terms of the standard deviation of
         the differences. If `md` is the mean of the differences, and `sd` is
         the standard deviation of those differences, then the limits of
         agreement that will be plotted are md +/- sd_limit * sd.
-        The default of 1.96 will produce 95% confidence intervals for the means
-        of the differences. If sd_limit = 0, no limits will be plotted, and
-        the ylimit of the plot defaults to 3 standard deviations on either
-        side of the mean.
+        The default of 1.96 will produce approximate 95% limits of agreement
+        when the differences are approximately normally distributed. If
+        sd_limit = 0, no limits will be plotted, and the ylimit of the plot
+        defaults to 3 standard deviations on either side of the mean.
     ax : AxesSubplot, optional
         If `ax` is None, then a figure is created. If an axis instance is
         given, the mean difference plot is drawn on the axis.

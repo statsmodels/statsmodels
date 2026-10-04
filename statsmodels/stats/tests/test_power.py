@@ -1132,3 +1132,26 @@ def test_alternative_deprecated_alias(power_func):
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         power_func("bogus")
+
+
+@pytest.mark.parametrize(
+    "cls, kwargs",
+    [
+        (smp.TTestPower, {"effect_size": 0.3, "nobs": 50}),
+        (smp.NormalIndPower, {"effect_size": 0.3, "nobs1": 50}),
+        (smp.FTestPower, {"effect_size": 0.3, "df_num": 3, "df_denom": 57}),
+        (smp.FTestPowerF2, {"effect_size": 0.3, "df_num": 3, "df_denom": 57}),
+    ],
+)
+def test_power_class_invalid_inputs_raises(cls, kwargs):
+    # alpha outside (0, 1) previously returned power > 1 or nan silently
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        cls().power(alpha=2, **kwargs)
+    if cls in (smp.FTestPower, smp.FTestPowerF2):
+        with pytest.raises(ValueError, match="df_num and df_denom must be positive"):
+            cls().power(effect_size=0.3, df_num=-1, df_denom=57, alpha=0.05)
+        with pytest.raises(ValueError, match="df_num and df_denom must be positive"):
+            cls().power(effect_size=0.3, df_num=3, df_denom=0, alpha=0.05)
+    p = cls().power(alpha=0.05, **kwargs)
+    assert np.isfinite(p)
+    assert 0 < p < 1

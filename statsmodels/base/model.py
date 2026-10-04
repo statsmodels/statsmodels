@@ -1591,6 +1591,10 @@ class LikelihoodModelResults(Results):
                 "description": "Standard Errors assume that the covariance matrix "
                 "of the errors is correctly specified."
             }
+            # Honor an explicitly requested Student-t inference under the
+            # default (nonrobust) covariance, consistent with robust types.
+            if use_t is not None:
+                self.use_t = use_t
         else:
             # TODO: we should not need use_t in get_robustcov_results
             get_robustcov_results(
@@ -2427,6 +2431,9 @@ class LikelihoodModelResults(Results):
                [-3.12506664, -0.91539297]])
         """
         bse = self.bse
+
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
         if self.use_t:
             dist = stats.t

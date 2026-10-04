@@ -64,3 +64,17 @@ def test_denton_invalid_freq_raises():
     benchmark = np.array([50.0])
     with pytest.raises(ValueError, match="freq"):
         dentonm(indicator, benchmark, freq="not-a-freq")
+
+
+def test_denton_too_few_indicators():
+    # an indicator shorter than k * len(benchmark) used to crash deep in the
+    # linalg ("shapes (3,3) and (6,6) not aligned"); it must report the
+    # shortfall instead
+    with pytest.raises(ValueError, match="requires at least 6"):
+        dentonm([1.0, 2.0, 3.0], [10.0, 20.0], freq="qm")
+    with pytest.raises(ValueError, match="requires at least 8"):
+        dentonm([1.0], [10.0, 20.0], freq="aq")
+    # the boundary, exactly k * len(benchmark) observations, still works
+    res = dentonm(np.ones(6), [10.0, 20.0], freq="qm")
+    assert_allclose(res[:3].sum(axis=0), [10.0])
+    assert_allclose(res[3:].sum(axis=0), [20.0])
