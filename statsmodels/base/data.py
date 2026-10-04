@@ -686,6 +686,10 @@ def _make_exog_names(exog):
 
 def handle_missing(endog, exog=None, missing="none", **kwargs):
     klass = handle_data_class_factory(endog, exog)
+    if missing not in ("none", "drop", "raise"):
+        raise ValueError(
+            f"missing must be one of 'none', 'drop', or 'raise', got {missing!r}"
+        )
     if missing == "none":
         ret_dict = dict(endog=endog, exog=exog)
         ret_dict.update(kwargs)
@@ -733,6 +737,11 @@ def handle_data_class_factory(endog, exog):
 
 
 def handle_data(endog, exog, missing="none", hasconst=None, **kwargs):
+    if missing not in ("none", "drop", "raise"):
+        raise ValueError(
+            f"missing must be one of 'none', 'drop', or 'raise', got {missing!r}"
+        )
+
     # Convert Polars objects to pandas
     endog = data_util._to_pandas(endog)
     exog = data_util._to_pandas(exog)
