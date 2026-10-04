@@ -13,7 +13,7 @@ from scipy import stats
 
 from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.moment_helpers import cov2corr
-from statsmodels.tools.validation import array_like, int_like
+from statsmodels.tools.validation import array_like, float_like, int_like
 
 
 # shortcut function
@@ -262,8 +262,12 @@ def confint_mvmean_fromstats(
     Hall.
 
     """
+    alpha = float_like(alpha, "alpha")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    nobs = float_like(nobs, "nobs")
+    if not nobs > 0:
+        raise ValueError(f"nobs must be positive, got {nobs}")
     mean = np.asarray(mean)
     cov = np.asarray(cov)
     c = np.atleast_2d(lin_transf)

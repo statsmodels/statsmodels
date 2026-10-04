@@ -214,6 +214,7 @@ def variance_inflation_factor(exog, exog_idx, *, standardize=True):
     exog = np.asarray(exog, dtype=float)
     k_vars = exog.shape[1]
 
+    exog_idx = int_like(exog_idx, "exog_idx")
     if not 0 <= exog_idx < k_vars:
         raise ValueError(
             f"exog_idx must be in the range [0, {k_vars}), got {exog_idx}"

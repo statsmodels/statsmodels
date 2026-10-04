@@ -25,7 +25,7 @@ from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import OutputWarning
-from statsmodels.tools.validation import array_like, string_like
+from statsmodels.tools.validation import array_like, float_like, int_like, string_like
 from statsmodels.tsa.base.tsa_model import (
     TimeSeriesModel,
     TimeSeriesResultsWrapper,
@@ -251,6 +251,7 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
         raise ValueError(
             f"y must have at least order ({p}) observations. Got {y.shape[0]}."
         )
+    steps = int_like(steps, "steps")
     if steps < 0:
         raise ValueError(f"steps must be non-negative, got {steps}")
     # initial value
@@ -1244,6 +1245,7 @@ class VARProcess:
             raise ValueError(
                 "No exog in model, so no exog_future supported in forecast method."
             )
+        steps = int_like(steps, "steps")
         if steps < 0:
             raise ValueError(f"steps must be non-negative, got {steps}")
         if self.exog is not None and exog_future is None:
@@ -2075,6 +2077,7 @@ class VARResults(VARProcess):
         if var_order is not None:
             raise NotImplementedError("alternate variable order not implemented (yet)")
 
+        periods = int_like(periods, "periods")
         if periods < 0:
             raise ValueError(f"periods must be non-negative, got {periods}")
         return IRAnalysis(self, P=var_decomp, periods=periods)
@@ -2429,6 +2432,7 @@ class VARResults(VARProcess):
             statistic += to_add
         statistic *= self.nobs**2 if adjusted else self.nobs
         df = self.neqs**2 * (nlags - self.k_ar)
+        signif = float_like(signif, "signif")
         if not 0 < signif < 1:
             raise ValueError(f"signif must be in the range (0, 1), got {signif}")
         dist = stats.chi2(df)

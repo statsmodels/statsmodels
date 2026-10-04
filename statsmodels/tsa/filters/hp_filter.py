@@ -98,7 +98,7 @@ def hpfilter(x, lamb=1600):
     pw = PandasWrapper(x)
     x = array_like(x, "x", ndim=1)
     lamb = float_like(lamb, "lamb")
-    if lamb <= 0:
+    if not lamb > 0:
         # the smoothing penalty must be positive: lamb = 0 makes the trend
         # identical to the series and negative values solve a non-convex
         # system, so both silently degenerate

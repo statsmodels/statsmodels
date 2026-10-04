@@ -687,6 +687,7 @@ def combine_effects(
     k = len(effect)
     if row_names is None:
         row_names = list(range(k))
+    alpha = float_like(alpha, "alpha")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     if np.any(np.asarray(variance) < 0):
