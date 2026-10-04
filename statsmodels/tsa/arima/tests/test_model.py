@@ -59,6 +59,13 @@ def test_trend_array():
     assert_allclose(mod.exog, desired.exog)
 
 
+@pytest.mark.parametrize("trend", [np.array(["c", "t"]), [[1, 0], [0, 1]]])
+def test_trend_array_invalid(trend):
+    endog = dta["infl"].iloc[:50]
+    with pytest.raises(ValueError, match="Valid trend inputs are"):
+        ARIMA(endog, trend=trend)
+
+
 def test_invalid():
     # Tests that invalid options raise errors
     # (note that this is only invalid options specific to `ARIMA`, and not
