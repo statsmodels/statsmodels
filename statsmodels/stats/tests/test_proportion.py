@@ -1798,6 +1798,25 @@ def test_confint_proportions_2indep_invalid_alpha_raises():
     assert np.isfinite([lo, hi]).all()
 
 
+def test_samplesize_proportions_2indep_invalid_bounds_raises():
+    # diff pushing prop1 outside [0, 1], or prop2 outside [0, 1], used to
+    # propagate into negative variances and a silent NaN sample size
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        samplesize_proportions_2indep_onetail(0.1, 1.5, 0.8)
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        samplesize_proportions_2indep_onetail(0.1, -0.2, 0.8)
+    with pytest.raises(ValueError, match="diff must keep prop1"):
+        samplesize_proportions_2indep_onetail(0.5, 0.8, 0.8)
+    with pytest.raises(ValueError, match="diff must keep prop1"):
+        samplesize_proportions_2indep_onetail(-0.5, 0.2, 0.8)
+
+    # boundary values remain valid (prop1 = prop2 + diff exactly at 0 or 1)
+    n = samplesize_proportions_2indep_onetail(0.5, 0.5, 0.8)
+    assert np.isfinite(n)
+    n = samplesize_proportions_2indep_onetail(-0.5, 0.5, 0.8)
+    assert np.isfinite(n)
+
+
 def test_binom_tost_helpers_invalid_inputs_raises():
     # inverted intervals previously returned a reversed rejection region
     # (69, 22) or a negative power (-0.9999) silently
