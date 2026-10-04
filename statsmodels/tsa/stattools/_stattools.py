@@ -368,20 +368,23 @@ def adfuller(
     nobs = x.shape[0]
 
     ntrend = len(regression) if regression != "n" else 0
+    # The regression with maxlag lags has nobs - 1 - maxlag rows and
+    # 1 + ntrend + maxlag columns. The second bound keeps at least one
+    # residual degree of freedom; it is only binding when ntrend is 0 and
+    # nobs is even, where nobs // 2 - 1 lags would give an exact fit.
+    max_maxlag = min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
     if maxlag is None:
         # from Greene referencing Schwert 1989
         maxlag = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
-        # -1 for the diff
-        maxlag = min(nobs // 2 - ntrend - 1, maxlag)
+        maxlag = min(max_maxlag, maxlag)
         if maxlag < 0:
             raise ValueError(
                 "sample size is too short to use selected regression component"
             )
-    elif maxlag > nobs // 2 - ntrend - 1:
+    elif maxlag > max_maxlag:
         raise ValueError(
-            "maxlag must be less than (nobs/2 - 1 - ntrend) "
-            "where n trend is the number of included "
-            "deterministic regressors"
+            f"maxlag must be less than or equal to {max_maxlag} when nobs is "
+            f'{nobs} and regression is "{regression}"'
         )
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:, None], maxlag, trim="both", original="in")
