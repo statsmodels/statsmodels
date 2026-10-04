@@ -345,6 +345,23 @@ def test_naive_ledoit_wolf_shrinkage():
     assert np.linalg.eigvalsh(res.cov).min() > 0.1
 
 
+@pytest.mark.parametrize(
+    "x",
+    [
+        # x'x / 4 is the identity matrix
+        np.array([[1, 1, 1, 1], [1, -1, 1, -1], [1, 1, -1, -1], [1, -1, -1, 1]]),
+        np.array([[1.0], [2.0], [3.0]]),
+        np.zeros((5, 3)),
+    ],
+    ids=["identity", "one variable", "zero"],
+)
+def test_naive_ledoit_wolf_shrinkage_spherical(x):
+    # The empirical covariance is mu * I, so that delta is 0 and the
+    # shrinkage was 0 / 0 = nan. The estimate is the empirical covariance.
+    res = robcov._naive_ledoit_wolf_shrinkage(x, 0)
+    assert_allclose(res.cov, x.T.dot(x) / x.shape[0], rtol=1e-13)
+
+
 def test_cov_starting_small_nobs():
     # the first deterministic starting percentile is
     # 200 * (k_vars + 2) / nobs, which is above 100 when

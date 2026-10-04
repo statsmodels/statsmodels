@@ -117,7 +117,9 @@ def _naive_ledoit_wolf_shrinkage(x, center):
     )
 
     beta = min(beta_, delta)
-    shrinkage = beta / delta
+    # delta is 0 if the empirical covariance is mu * I, as it is for a single
+    # variable. It is the shrinkage target then, so the shrinkage is arbitrary.
+    shrinkage = 0.0 if delta == 0 else beta / delta
     # shrink towards the scaled identity matrix, mu * I
     cov = (1.0 - shrinkage) * emp_cov
     cov.flat[:: n_features + 1] += shrinkage * mu
