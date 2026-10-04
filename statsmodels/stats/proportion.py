@@ -684,6 +684,10 @@ def proportion_effectsize(prop1, prop2, method="normal"):
     """
     if method != "normal":
         raise ValueError('only "normal" is implemented')
+    if np.any(np.asarray(prop1) < 0) or np.any(np.asarray(prop1) > 1):
+        raise ValueError("prop1 must be in the range [0, 1]")
+    if np.any(np.asarray(prop2) < 0) or np.any(np.asarray(prop2) > 1):
+        raise ValueError("prop2 must be in the range [0, 1]")
 
     es = 2 * (np.arcsin(np.sqrt(prop1)) - np.arcsin(np.sqrt(prop2)))
     return es
@@ -1086,6 +1090,13 @@ def _table_proportion(count, nobs):
     recent scipy has more elaborate contingency table functions
     """
     count = np.asarray(count)
+    nobs = np.asarray(nobs)
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count > nobs):
+        raise ValueError("count must not exceed nobs")
     dt = np.promote_types(count.dtype, np.float64)
     count = np.asarray(count, dtype=dt)
     table = np.column_stack((count, nobs - count))
@@ -1190,6 +1201,10 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
 
     nobs_fact = np.sum(1.0 / nobs)
     if prop_var:
+        if not 0 < prop_var < 1:
+            raise ValueError(
+                f"prop_var must be in the range (0, 1), got {prop_var}"
+            )
         p_pooled = prop_var
     var_ = p_pooled * (1 - p_pooled) * nobs_fact
     std_diff = np.sqrt(var_)
@@ -1514,6 +1529,8 @@ def confint_proportions_2indep(
         raise ValueError("count1 and count2 must be non-negative")
     if np.any(np.asarray(nobs1) <= 0) or np.any(np.asarray(nobs2) <= 0):
         raise ValueError("nobs1 and nobs2 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     method_default = {
         "diff": "newcomb",
@@ -2794,6 +2811,11 @@ def samplesize_proportions_2indep_onetail(
         deprecated={"2s": "two-sided"},
         removed_after="0.16",
     )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not 0 < power < 1:
+        raise ValueError(f"power must be in the range (0, 1), got {power}")
+
     if alternative == "two-sided":
         alpha = alpha / 2
 
