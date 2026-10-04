@@ -538,6 +538,14 @@ def effectsize_2proportions(
         np.asarray(v) if isinstance(v, (list, tuple)) else v
         for v in (count1, nobs1, count2, nobs2)
     )
+    if (np.any(np.asarray(count1) < 0)
+            or np.any(np.asarray(count1) > np.asarray(nobs1))
+            or np.any(np.asarray(count2) < 0)
+            or np.any(np.asarray(count2) > np.asarray(nobs2))):
+        raise ValueError(
+            "counts must be between 0 and the number of observations "
+            "(0 <= count <= nobs)"
+        )
     if zero_correction is None:
         cc1 = cc2 = 0
     elif zero_correction == "tac":
@@ -679,6 +687,12 @@ def combine_effects(
     k = len(effect)
     if row_names is None:
         row_names = list(range(k))
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if np.any(np.asarray(variance) < 0):
+        raise ValueError(
+            "variance estimates must be non-negative, got negative values"
+        )
     crit = stats.norm.isf(alpha / 2)
 
     # alias for initial version
