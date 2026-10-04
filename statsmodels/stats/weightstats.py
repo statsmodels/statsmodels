@@ -906,6 +906,9 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
         deprecated=_ALTERNATIVE_ALIASES,
         removed_after="0.16",
     )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alternative == "two-sided":
         zcrit = stats.norm.ppf(1 - alpha / 2.0)
         lower = mean - zcrit * std_mean
@@ -1633,6 +1636,8 @@ def ztest(
     usevar = string_like(
         usevar, "usevar", options=("pooled", "unequal"), lower=False
     )
+    if ddof < 0:
+        raise ValueError(f"ddof must be non-negative, got {ddof}")
 
     x1 = np.asarray(x1)
     nobs1 = x1.shape[0]
@@ -1723,6 +1728,9 @@ def zconfint(
     # mostly duplicate code from ztest
 
     _ = string_like(usevar, "usevar", options=("pooled",), lower=False)
+    if ddof < 0:
+        raise ValueError(f"ddof must be non-negative, got {ddof}")
+
     x1 = np.asarray(x1)
     nobs1 = x1.shape[0]
     x1_mean = x1.mean(0)

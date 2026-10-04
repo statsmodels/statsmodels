@@ -262,6 +262,8 @@ def confint_mvmean_fromstats(
     Hall.
 
     """
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     mean = np.asarray(mean)
     cov = np.asarray(cov)
     c = np.atleast_2d(lin_transf)
@@ -452,6 +454,8 @@ def test_cov_spherical(cov, nobs):
     StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
     Stata Press Publication.
     """
+    if nobs <= 0:
+        raise ValueError(f"nobs must be positive, got {nobs}")
 
     # unchanged Stata formula, but denom is cov cancels, AFAICS
     # Bartlett 1954 correction factor in IIIc
@@ -504,6 +508,8 @@ def test_cov_diagonal(cov, nobs):
     StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
     Stata Press Publication.
     """
+    if nobs <= 0:
+        raise ValueError(f"nobs must be positive, got {nobs}")
     cov = np.asarray(cov)
     k = cov.shape[0]
     R = cov2corr(cov)
@@ -587,6 +593,8 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
     Stata Press Publication.
     """
+    if nobs <= 0:
+        raise ValueError(f"nobs must be positive, got {nobs}")
     cov = np.asarray(cov)
     cov_blocks = _get_blocks(cov, block_len)[0]
     k = cov.shape[0]
@@ -711,6 +719,10 @@ def test_cov_oneway(cov_list, nobs_list):
     StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
     Stata Press Publication.
     """
+    if np.any(np.asarray(nobs_list) <= 0):
+        raise ValueError(
+            f"nobs must be positive in all samples, got {nobs_list}"
+        )
     # Note stata uses nobs in cov, this uses nobs - 1
     cov_list = [np.asarray(cov) for cov in cov_list]
     m = len(cov_list)

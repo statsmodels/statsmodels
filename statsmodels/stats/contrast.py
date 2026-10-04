@@ -100,6 +100,9 @@ class ContrastResults:
             The array has the lower and the upper limit of the confidence
             interval in the columns.
         """
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
         if self.effect is not None:
             # confidence intervals
             q = self.dist.ppf(1 - alpha / 2.0, *self.dist_args)

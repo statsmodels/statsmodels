@@ -1603,6 +1603,45 @@ def test_etest_poisson_2indep_alternative_deprecated_alias(alias, canonical):
         etest_poisson_2indep(60, 51477.5, 30, 54308.7, alternative="bogus")
 
 
+@pytest.mark.parametrize("count", [-5, np.array([1, -2])])
+def test_test_poisson_negative_count(count):
+    # negative counts used to flow through the arithmetic silently, e.g.
+    # returning a nan statistic from the wald path
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.test_poisson(count, 10, 0.3, method="wald")
+
+
+@pytest.mark.parametrize("nobs", [0, -10])
+def test_test_poisson_bad_exposure(nobs):
+    # a zero exposure used to leak a bare ZeroDivisionError and a negative
+    # exposure silently produced a nonsense statistic
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smr.test_poisson(5, nobs, 0.3, method="wald")
+
+
+def test_test_poisson_negative_value():
+    with pytest.raises(ValueError, match="value must be non-negative"):
+        smr.test_poisson(5, 10, -0.3, method="score")
+
+
+@pytest.mark.parametrize(
+    "fn, kwargs",
+    [
+        (smr.power_poisson_ratio_2indep, {}),
+        (smr.power_poisson_diff_2indep, {}),
+        (smr.power_negbin_ratio_2indep, {"dispersion": 0.5}),
+        (smr.power_equivalence_poisson_2indep, {"low": 0.5, "upp": 2}),
+        (smr.power_equivalence_neginb_2indep, {"low": 0.5, "upp": 2, "dispersion": 0.5}),
+    ],
+)
+def test_power_functions_invalid_inputs_raises(fn, kwargs):
+    # impossible nobs1 and alpha previously returned nan power silently
+    with pytest.raises(ValueError, match="nobs1 must be positive"):
+        fn(2, 1, -5, **kwargs)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        fn(2, 1, 20, alpha=2, **kwargs)
+
+
 @pytest.mark.parametrize("method", ["wald", "score", "exact-c", "sqrt"])
 def test_confint_poisson_invalid_inputs_raises(method):
     # negative counts and exposures previously returned nan bounds, and
@@ -1635,3 +1674,68 @@ def test_confint_quantile_poisson_invalid_inputs_raises():
         smr.confint_quantile_poisson(5, 10, prob=0, method="exact-c")
     with pytest.raises(ValueError, match="alpha must be in the range"):
         smr.confint_quantile_poisson(5, 10, prob=0.5, method="exact-c", alpha=1.5)
+
+
+def test_power_equivalence_neginb_negative_dispersion_raises():
+    # a negative dispersion coefficient silently produced a negative power
+    with pytest.raises(ValueError, match="dispersion must be non-negative"):
+        power_equivalence_neginb_2indep(
+            0.1, 0.15, 100, low=0.1, upp=0.3, dispersion=-0.01
+        )
+
+    # dispersion = 0 is the documented Poisson limiting case and stays valid
+    p = power_equivalence_neginb_2indep(
+        0.1, 0.15, 100, low=0.1, upp=0.3, dispersion=0.0, return_results=False
+    )
+    assert np.isfinite(p)
+
+
+def test_power_ratio_negative_dispersion_raises():
+    # negative dispersion made the standard errors NaN and power NaN
+    # without an error
+    with pytest.raises(ValueError, match="dispersion must be non-negative"):
+        power_poisson_ratio_2indep(0.1, 0.15, nobs1=100, dispersion=-1.0)
+    with pytest.raises(ValueError, match="dispersion must be non-negative"):
+        power_negbin_ratio_2indep(0.1, 0.15, nobs1=100, dispersion=-0.01)
+
+    # dispersion = 0 is the documented Poisson limiting case and stays valid
+    p = power_negbin_ratio_2indep(
+        0.1, 0.15, nobs1=100, value=1.0, dispersion=0.0, return_results=False
+    )
+    assert np.isfinite(p)
+
+    # default dispersion keeps working
+    p = power_poisson_ratio_2indep(
+        0.1, 0.15, nobs1=100, value=1.0, return_results=False
+    )
+    assert np.isfinite(p)
+
+
+def test_power_equivalence_poisson_invalid_interval_raises():
+    # an inverted equivalence interval previously returned a negative
+    # "power" without an error
+    args = (0.1, 0.15, 100)
+    kwds = dict(nobs_ratio=1, exposure=1, alpha=0.05)
+
+    with pytest.raises(ValueError, match="low <= upp"):
+        power_equivalence_poisson_2indep(*args, low=0.3, upp=0.1, **kwds)
+    with pytest.raises(ValueError, match="low <= upp"):
+        power_equivalence_neginb_2indep(
+            *args, low=0.3, upp=0.1, dispersion=0.01, **kwds
+        )
+
+    # low == upp remains a valid point null
+    p = power_equivalence_poisson_2indep(
+        *args, low=0.2, upp=0.2, return_results=False, **kwds
+    )
+    assert np.isfinite(p)
+
+
+def test_poisson_tost_nonequivalence_invalid_interval_raises():
+    # inverted equivalence intervals previously returned results silently
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low <= upp"):
+        smr.tost_poisson_2indep(5, 100, 3, 100, low=2, upp=1)
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low <= upp"):
+        smr.nonequivalence_poisson_2indep(5, 100, 3, 100, low=2, upp=1)
+    res = smr.tost_poisson_2indep(5, 100, 3, 100, low=0.5, upp=2)
+    assert np.isfinite(res.pvalue)

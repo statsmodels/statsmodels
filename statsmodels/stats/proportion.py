@@ -691,6 +691,10 @@ def proportion_effectsize(prop1, prop2, method="normal"):
     """
     if method != "normal":
         raise ValueError('only "normal" is implemented')
+    if np.any(np.asarray(prop1) < 0) or np.any(np.asarray(prop1) > 1):
+        raise ValueError("prop1 must be in the range [0, 1]")
+    if np.any(np.asarray(prop2) < 0) or np.any(np.asarray(prop2) > 1):
+        raise ValueError("prop2 must be in the range [0, 1]")
 
     es = 2 * (np.arcsin(np.sqrt(prop1)) - np.arcsin(np.sqrt(prop2)))
     return es
@@ -799,6 +803,10 @@ def binom_tost(count, nobs, low, upp):
     pval_low, pval_upp : floats
         p-values of lower and upper one-sided tests
     """
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     # binom_test_stat only returns pval
     tt1 = binom_test(count, nobs, alternative="larger", prop=low)
     tt2 = binom_test(count, nobs, alternative="smaller", prop=upp)
@@ -832,6 +840,12 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
     x_low, x_upp : float
         lower and upper bound of rejection region
     """
+    if low >= upp:
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     x_low = stats.binom.isf(alpha, nobs, low) + 1
     x_upp = stats.binom.ppf(alpha, nobs, upp) - 1
     return x_low, x_upp
@@ -954,6 +968,10 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
     power : float
         statistical power of the equivalence test.
     """
+    if p_alt is not None and (
+        np.any(np.asarray(p_alt) < 0) or np.any(np.asarray(p_alt) > 1)
+    ):
+        raise ValueError("p_alt must be in the range [0, 1]")
     if p_alt is None:
         p_alt = 0.5 * (low + upp)
     x_low, x_upp = binom_tost_reject_interval(low, upp, nobs, alpha=alpha)
@@ -1045,6 +1063,17 @@ def power_ztost_prop(
     SAS Manual: Chapter 68: The Power Procedure, Computational Resources
     PASS Chapter 110: Equivalence Tests for One Proportion.
     """
+    if low >= upp:
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if p_alt is not None and (
+        np.any(np.asarray(p_alt) < 0) or np.any(np.asarray(p_alt) > 1)
+    ):
+        raise ValueError("p_alt must be in the range [0, 1]")
+
     mean_low = low
     var_low = std_prop(low, nobs) ** 2
     mean_upp = upp
@@ -1093,6 +1122,13 @@ def _table_proportion(count, nobs):
     recent scipy has more elaborate contingency table functions
     """
     count = np.asarray(count)
+    nobs = np.asarray(nobs)
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count > nobs):
+        raise ValueError("count must not exceed nobs")
     dt = np.promote_types(count.dtype, np.float64)
     count = np.asarray(count, dtype=dt)
     table = np.column_stack((count, nobs - count))
@@ -1179,12 +1215,36 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
     if nobs.size == 1:
         nobs = nobs * np.ones_like(count)
 
+    if not np.all(np.isfinite(count)):
+        # NaN and inf pass the sign comparisons below and come back as NaN
+        # p-values
+        raise ValueError("count must be finite")
+    if not np.all(np.isfinite(nobs)):
+        raise ValueError("nobs must be finite")
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count > nobs):
+        raise ValueError("count must not exceed nobs")
+
     prop = count * 1.0 / nobs
     k_sample = np.size(prop)
     if value is None:
         if k_sample == 1:
             raise ValueError("value must be provided for a 1-sample test")
         value = 0
+    else:
+        value_arr = np.asarray(value)
+        # 1-sample: value is a proportion; 2-sample: a difference of
+        # proportions. Non-finite or out-of-range values used to produce
+        # silently wrong p-values.
+        lo, hi = (0.0, 1.0) if k_sample == 1 else (-1.0, 1.0)
+        if not np.all(np.isfinite(value_arr)) or np.any(value_arr < lo) or np.any(value_arr > hi):
+            raise ValueError(
+                f"value must be finite and in [{lo}, {hi}] for a "
+                f"{k_sample}-sample test, got {value!r}"
+            )
     if k_sample == 1:
         diff = prop - value
     elif k_sample == 2:
@@ -1197,6 +1257,10 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
 
     nobs_fact = np.sum(1.0 / nobs)
     if prop_var:
+        if not 0 < prop_var < 1:
+            raise ValueError(
+                f"prop_var must be in the range (0, 1), got {prop_var}"
+            )
         p_pooled = prop_var
     var_ = p_pooled * (1 - p_pooled) * nobs_fact
     std_diff = np.sqrt(var_)
@@ -1239,6 +1303,10 @@ def proportions_ztost(count, nobs, low, upp, prop_var="sample"):
     -----
     checked only for 1 sample case
     """
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     if prop_var == "limits":
         prop_var_low = low
         prop_var_upp = upp
@@ -1307,7 +1375,28 @@ def proportions_chisquare(count, nobs, value=None):
     given and count and nobs are not scalar, then the null hypothesis is
     that all samples have the same proportion.
     """
+    count = np.asarray(count)
     nobs = np.atleast_1d(nobs)
+    if not np.all(np.isfinite(count)):
+        raise ValueError("count must be finite")
+    if not np.all(np.isfinite(nobs)):
+        raise ValueError("nobs must be finite")
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count > nobs):
+        raise ValueError("count must not exceed nobs")
+    if value is not None:
+        value_arr = np.asarray(value)
+        # value scales the expected counts, so non-finite or out-of-range
+        # values used to produce silently wrong chi-square statistics
+        if (
+            not np.all(np.isfinite(value_arr))
+            or np.any(value_arr < 0)
+            or np.any(value_arr > 1)
+        ):
+            raise ValueError(f"value must be finite and in [0, 1], got {value!r}")
     table, expected, n_rows = _table_proportion(count, nobs)
     if value is not None:
         expected = np.column_stack((nobs * value, nobs * (1 - value)))
@@ -1521,6 +1610,8 @@ def confint_proportions_2indep(
         raise ValueError("count1 and count2 must be non-negative")
     if np.any(np.asarray(nobs1) <= 0) or np.any(np.asarray(nobs2) <= 0):
         raise ValueError("nobs1 and nobs2 must be positive")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     method_default = {
         "diff": "newcomb",
@@ -2722,6 +2813,14 @@ def power_proportions_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
+    if not 0 <= prop2 <= 1:
+        raise ValueError(f"prop2 must be in the range [0, 1], got {prop2}")
+    if not 0 <= prop2 + diff <= 1:
+        raise ValueError(
+            f"diff must keep prop1 = prop2 + diff inside [0, 1], got "
+            f"prop2={prop2}, diff={diff}"
+        )
+
     p_pooled, std_null, std_alt = _std_2prop_power(
         diff, prop2, ratio=ratio, alpha=alpha, value=value
     )
@@ -2801,6 +2900,18 @@ def samplesize_proportions_2indep_onetail(
         deprecated={"2s": "two-sided"},
         removed_after="0.16",
     )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not 0 < power < 1:
+        raise ValueError(f"power must be in the range (0, 1), got {power}")
+    if not 0 <= prop2 <= 1:
+        raise ValueError(f"prop2 must be in the range [0, 1], got {prop2}")
+    if not 0 <= prop2 + diff <= 1:
+        raise ValueError(
+            f"diff must keep prop1 = prop2 + diff inside [0, 1], got "
+            f"prop2={prop2}, diff={diff}"
+        )
+
     if alternative == "two-sided":
         alpha = alpha / 2
 
