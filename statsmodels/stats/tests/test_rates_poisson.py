@@ -1731,6 +1731,21 @@ def test_power_equivalence_poisson_invalid_interval_raises():
     assert np.isfinite(p)
 
 
+def test_power_equivalence_dispersion_raises():
+    # power_equivalence_poisson_2indep had no check of dispersion, unlike the
+    # other three functions with this argument; a negative dispersion returned nan
+    args = (0.1, 0.1, 1000)
+    kwds = dict(low=0.8, upp=1.25, return_results=False)
+    for dispersion in [-1, -1e-9, np.nan, [1.0, -1.0]]:
+        with pytest.raises(ValueError, match="dispersion must be non-negative"):
+            power_equivalence_poisson_2indep(*args, dispersion=dispersion, **kwds)
+    p = power_equivalence_poisson_2indep(*args, dispersion=np.array([1.0, 1.5]), **kwds)
+    assert p.shape == (2,)
+    assert_allclose(
+        p[0], power_equivalence_poisson_2indep(*args, dispersion=1.0, **kwds), rtol=1e-12
+    )
+
+
 def test_poisson_tost_nonequivalence_invalid_interval_raises():
     # inverted equivalence intervals previously returned results silently
     with pytest.raises(ValueError, match="equivalence interval must satisfy low <= upp"):
