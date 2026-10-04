@@ -5,6 +5,7 @@ Author: Josef Perktold
 """
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 
 from statsmodels.stats import weightstats
 import statsmodels.stats.multivariate as smmv  # pytest cannot import test_xxx
@@ -316,3 +317,23 @@ def test_cov_oneway():
     assert_allclose(res.statistic_chi2, chi2, rtol=1e-10)
     assert_allclose(res.pvalue_chi2, p_chi2, rtol=1e-6)
     assert_equal(res.df_chi2, df)
+
+
+@pytest.mark.parametrize("nobs", [0, -2])
+def test_cov_tests_nonpositive_nobs_raise(nobs):
+    # non-positive sample sizes used to fall through to p-values of 1.0
+    cov = np.eye(2)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smmv.test_cov_spherical(cov, nobs=nobs)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smmv.test_cov_diagonal(cov, nobs=nobs)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smmv.test_cov_blockdiagonal(cov, nobs=nobs, block_len=[1, 1])
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smmv.test_cov_oneway([cov, cov], nobs_list=[nobs, 50])
+
+
+def test_cov_tests_positive_nobs_still_work():
+    cov = np.eye(2)
+    assert np.isfinite(smmv.test_cov_spherical(cov, nobs=50)[1])
+    assert np.isfinite(smmv.test_cov_oneway([cov, cov], nobs_list=[50, 50])[1])
