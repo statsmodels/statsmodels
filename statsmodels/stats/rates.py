@@ -2869,6 +2869,8 @@ def power_equivalence_neginb_2indep(
         raise ValueError("nobs1 must be positive")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if dispersion < 0:
+        raise ValueError(f"dispersion must be non-negative, got {dispersion}")
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1

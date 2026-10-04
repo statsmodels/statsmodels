@@ -1674,3 +1674,51 @@ def test_power_functions_invalid_inputs_raises(fn, kwargs):
         fn(2, 1, -5, **kwargs)
     with pytest.raises(ValueError, match="alpha must be in the range"):
         fn(2, 1, 20, alpha=2, **kwargs)
+
+
+@pytest.mark.parametrize("method", ["wald", "score", "exact-c", "sqrt"])
+def test_confint_poisson_invalid_inputs_raises(method):
+    # negative counts and exposures previously returned nan bounds, and
+    # out-of-range alpha silently produced lower > upper intervals
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.confint_poisson(-1, 10, method=method)
+    with pytest.raises(ValueError, match="exposure must be positive"):
+        smr.confint_poisson(5, 0, method=method)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smr.confint_poisson(5, 10, method=method, alpha=1.5)
+
+
+def test_tolerance_int_poisson_invalid_inputs_raises():
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.tolerance_int_poisson(-1, 10, prob=0.9, method="wald")
+    with pytest.raises(ValueError, match="exposure must be positive"):
+        smr.tolerance_int_poisson(5, 0, prob=0.9, method="wald")
+    with pytest.raises(ValueError, match="prob must be in the range"):
+        smr.tolerance_int_poisson(5, 10, prob=1.5, method="wald")
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smr.tolerance_int_poisson(5, 10, prob=0.9, method="wald", alpha=2)
+
+
+def test_confint_quantile_poisson_invalid_inputs_raises():
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.confint_quantile_poisson(-1, 10, prob=0.5, method="exact-c")
+    with pytest.raises(ValueError, match="exposure must be positive"):
+        smr.confint_quantile_poisson(5, 0, prob=0.5, method="exact-c")
+    with pytest.raises(ValueError, match="prob must be in the range"):
+        smr.confint_quantile_poisson(5, 10, prob=0, method="exact-c")
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smr.confint_quantile_poisson(5, 10, prob=0.5, method="exact-c", alpha=1.5)
+
+
+def test_power_equivalence_neginb_negative_dispersion_raises():
+    # a negative dispersion coefficient silently produced a negative power
+    with pytest.raises(ValueError, match="dispersion must be non-negative"):
+        power_equivalence_neginb_2indep(
+            0.1, 0.15, 100, low=0.1, upp=0.3, dispersion=-0.01
+        )
+
+    # dispersion = 0 is the documented Poisson limiting case and stays valid
+    p = power_equivalence_neginb_2indep(
+        0.1, 0.15, 100, low=0.1, upp=0.3, dispersion=0.0, return_results=False
+    )
+    assert np.isfinite(p)
