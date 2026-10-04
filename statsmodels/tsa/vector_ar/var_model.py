@@ -251,6 +251,8 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
         raise ValueError(
             f"y must have at least order ({p}) observations. Got {y.shape[0]}."
         )
+    if steps < 0:
+        raise ValueError(f"steps must be non-negative, got {steps}")
     # initial value
     forcs = np.zeros((steps, k))
     if exog is not None and trend_coefs is not None:
@@ -1242,6 +1244,8 @@ class VARProcess:
             raise ValueError(
                 "No exog in model, so no exog_future supported in forecast method."
             )
+        if steps < 0:
+            raise ValueError(f"steps must be non-negative, got {steps}")
         if self.exog is not None and exog_future is None:
             raise ValueError(
                 "Please provide an exog_future argument to the forecast method."
@@ -2071,6 +2075,8 @@ class VARResults(VARProcess):
         if var_order is not None:
             raise NotImplementedError("alternate variable order not implemented (yet)")
 
+        if periods < 0:
+            raise ValueError(f"periods must be non-negative, got {periods}")
         return IRAnalysis(self, P=var_decomp, periods=periods)
 
     def fevd(self, periods=10, var_decomp=None):
