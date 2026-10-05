@@ -1502,6 +1502,29 @@ def test_proportions_chisquare_pairscontrol_alternative():
         smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="larger")
 
 
+def test_proportion_confint_invalid_inputs_raises():
+    # negative counts and count > nobs previously returned (nan, nan);
+    # alpha outside (0, 1) silently produced reversed bounds
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportion_confint(-1, 10)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smprop.proportion_confint(1, 0)
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportion_confint(11, 10)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.proportion_confint(3, 10, alpha=1.5)
+
+
+def test_binom_test_invalid_inputs_raises():
+    # negative counts previously returned a nan p-value
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.binom_test(-1, 10, 0.5)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smprop.binom_test(1, 0, 0.5)
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.binom_test(11, 10, 0.5)
+
+
 def test_proportions_ztest_nonfinite_and_value_domain_raises():
     # NaN/inf inputs used to slip past the sign checks and come back as NaN
     # p-values; an out-of-range null proportion used to produce silently
