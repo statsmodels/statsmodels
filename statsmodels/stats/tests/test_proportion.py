@@ -1817,6 +1817,29 @@ def test_confint_proportions_paired_invalid_inputs_raises():
         smprop.confint_proportions_paired([[1, 2], [3, 4]], method=10)
 
 
+@pytest.mark.parametrize("method", ["newcomb", "wald"])
+@pytest.mark.parametrize("alpha", [0, 1, -0.1, 2, np.nan, np.inf])
+def test_confint_proportions_paired_invalid_alpha(method, alpha):
+    # these returned nan, inf or an interval of zero width
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.confint_proportions_paired(
+            [[10, 5], [2, 20]], method=method, alpha=alpha
+        )
+
+
+@pytest.mark.parametrize("alpha", [[0.05, 0.1], np.array([0.05, 0.1]), None, "a", True])
+def test_confint_proportions_paired_alpha_type(alpha):
+    with pytest.raises(TypeError, match="alpha"):
+        smprop.confint_proportions_paired([[10, 5], [2, 20]], alpha=alpha)
+
+
+@pytest.mark.parametrize("method", ["newcomb", "wald"])
+@pytest.mark.parametrize("bad", [np.nan, np.inf])
+def test_confint_proportions_paired_nonfinite_table(method, bad):
+    with pytest.raises(ValueError, match="must be finite"):
+        smprop.confint_proportions_paired([[10, bad], [2, 20]], method=method)
+
+
 def test_proportions_ztest_invalid_prop_var_raises():
     # a prop_var outside (0, 1) previously returned (nan, nan) silently
     with pytest.raises(ValueError, match="prop_var must be in the range"):
