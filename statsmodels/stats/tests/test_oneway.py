@@ -912,3 +912,21 @@ def test_confint_effectsize_oneway_invalid_nobs_raises():
         smo.confint_effectsize_oneway(2.0, (3, 57), nobs=0)
     res = smo.confint_effectsize_oneway(2.0, (3, 57))
     assert np.isfinite(res.f2).all()
+
+
+@pytest.mark.parametrize("use_var", ["unequal", "equal", "bf"])
+@pytest.mark.parametrize("nobs", [np.array([10, 12, 14, 9]), 11])
+def test_effectsize_oneway_scalar_vars(use_var, nobs):
+    # A scalar vars_ is the variance of all samples and use_var is ignored.
+    # "bf" divided by zero for a scalar. With the same variance in all samples
+    # the three effect sizes are the weighted sum of squares of the means
+    # divided by var * nobs_total.
+    means = np.array([1.0, 2.0, 4.0, 3.0])
+    var = 2.5
+    n = np.ones(4) * nobs
+    mean_w = (n * means).sum() / n.sum()
+    expected = (n * (means - mean_w) ** 2).sum() / (var * n.sum())
+    es = effectsize_oneway(means, var, nobs, use_var=use_var)
+    assert_allclose(es, expected, rtol=1e-12)
+    es_vector = effectsize_oneway(means, np.full(4, var), nobs, use_var=use_var)
+    assert_allclose(es_vector, expected, rtol=1e-12)
