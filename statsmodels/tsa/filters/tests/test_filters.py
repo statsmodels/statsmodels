@@ -1243,7 +1243,7 @@ def test_bkfilter_too_short_series():
 
 def test_cffilter_band_order():
     # an empty band used to pass silently and produce all-zero cycles
-    with pytest.raises(ValueError, match=r"low \(6\) must be less than high \(6\)"):
+    with pytest.raises(ValueError, match=r"low \(6\.0\) must be less than high \(6\.0\)"):
         cffilter(np.arange(50.0), low=6, high=6)
 
 

@@ -623,8 +623,12 @@ freqs = [
     "B",
     "D",
     "h",
+    "2h",
+    "min",
+    "5min",
+    "30s",
 ]
-expected = [1, 1, 4, 4, 4, 52, 52, 5, 7, 24]
+expected = [1, 1, 4, 4, 4, 52, 52, 5, 7, 24, 12, 1440, 288, 2880]
 freq_expected = [(f, e) for f, e in zip(freqs, expected, strict=True)]
 
 
@@ -633,6 +637,29 @@ def test_freq_to_period(freq_expected):
     freq, expected = freq_expected
     assert_equal(tools.freq_to_period(freq), expected)
     assert_equal(tools.freq_to_period(to_offset(freq)), expected)
+
+
+def test_freq_to_period_nondivisible_multiplier():
+    # A multiplier that does not divide a day evenly has no integer
+    # observations-per-day period (GH 9619)
+    with pytest.raises(ValueError, match="not understood"):
+        tools.freq_to_period("7min")
+
+
+@pytest.mark.parametrize("freq", ["0h", pd.offsets.Hour(-1)])
+def test_freq_to_period_nonpositive_multiplier(freq):
+    # A non-positive multiplier has no valid observations-per-day period
+    # (GH 9619)
+    with pytest.raises(ValueError, match="not understood"):
+        tools.freq_to_period(freq)
+
+
+@pytest.mark.parametrize("freq", ["ns", "us"])
+def test_freq_to_period_unsupported_offset(freq):
+    # Valid pandas offsets with rule codes "NS"/"US" have no
+    # observations-per-day mapping and fall through to ValueError (GH 9619)
+    with pytest.raises(ValueError, match="not understood"):
+        tools.freq_to_period(freq)
 
 
 class TestDetrend:

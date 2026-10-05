@@ -368,7 +368,7 @@ class RollingWLS:
             if i % reset == 0:
                 xpx, xpy, nobs = self._reset(i)
             else:
-                if not self._is_nan[i - w - 1] and i > w:
+                if i > w and not self._is_nan[i - w - 1]:
                     remove_x = wx[i - w - 1 : i - w]
                     xpx -= remove_x.T @ remove_x
                     xpy -= remove_x.T @ wy[i - w - 1 : i - w]

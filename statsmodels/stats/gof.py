@@ -500,14 +500,14 @@ def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
 
     Parameters
     ----------
-    effect_size : float
+    effect_size : float or array_like
         This is the deviation from the Null of the normalized chi_square
         statistic. This follows Cohen's definition (sqrt).
-    nobs : int or float
+    nobs : float or array_like
         number of observations
-    n_bins : int or float
+    n_bins : float or array_like
         number of bins, or points in the discrete distribution
-    alpha : float, optional
+    alpha : float or array_like, optional
         significance level of the test, default alpha=0.05
     ddof : int, optional
         degrees of freedom correction, default 0
@@ -586,6 +586,10 @@ def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
     """
     probs0 = np.asarray(probs0, float)
     probs1 = np.asarray(probs1, float)
+
+    if np.any(probs0 < 0) or np.any(probs1 < 0):
+        raise ValueError("probs0 and probs1 must be non-negative")
+
     probs0 = probs0 / probs0.sum(axis)
     probs1 = probs1 / probs1.sum(axis)
 

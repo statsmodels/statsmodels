@@ -10,7 +10,7 @@ import numpy as np
 from scipy import stats
 
 from statsmodels.tools.sm_exceptions import ValueWarning
-from statsmodels.tools.validation import array_like, int_like
+from statsmodels.tools.validation import array_like, float_like, int_like
 
 
 def durbin_watson(resids, axis=0):
@@ -375,8 +375,8 @@ def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
         y = y.ravel()
         axis = 0
 
-    alpha, beta = ab
-    delta, gamma = dg
+    alpha, beta = (float_like(v, "ab") for v in ab)
+    delta, gamma = (float_like(v, "dg") for v in dg)
 
     if not 0 < alpha < beta < 100:
         raise ValueError(
