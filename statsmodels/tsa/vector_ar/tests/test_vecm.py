@@ -4,6 +4,7 @@ from numpy.testing import (
     assert_array_equal,
 )
 import pytest
+from scipy import special
 
 import statsmodels.datasets.interest_inflation.data as e6
 from statsmodels.tools.testing import assert_equal
@@ -1744,3 +1745,46 @@ def test_select_order_negative_maxlags():
     # maxlags=0 (a single comparison) remains valid
     res = select_order(data, maxlags=0)
     assert res.aic in (0, 1)
+
+
+def _cointegrated_data(n, alpha, drift, c_coint, seed):
+    # Delta y_t = alpha (beta' y_{t-1} - c) + 0.4 Delta y_{t-1} + drift + e_t
+    # with beta = (1, -1)'
+    rng = np.random.default_rng(seed)
+    alpha = np.asarray(alpha)
+    burn = 200
+    y = np.zeros((n + burn, 2))
+    for t in range(2, n + burn):
+        z = y[t - 1, 0] - y[t - 1, 1] - c_coint
+        dy_prev = y[t - 1] - y[t - 2]
+        y[t] = y[t - 1] + alpha * z + 0.4 * dy_prev + drift + rng.standard_normal(2)
+    return y[burn:]
+
+
+@pytest.mark.parametrize(
+    "n, alpha, drift, c_coint, deterministic, names",
+    [
+        (1500, [-0.3, 0.2], [0.35, 0.3], 0.0, "co", ("alpha", "gamma", "det_coef")),
+        (1500, [-0.3, 0.2], [0.0, 0.0], 1.5, "ci", ("alpha", "gamma", "det_coef_coint")),
+        (200, [-0.03, 0.018], [0.0, 0.0], 0.0, "n", ("beta",)),
+    ],
+    ids=["det_coef", "det_coef_coint", "beta"],
+)
+def test_pvalues_large_tvalues(n, alpha, drift, c_coint, deterministic, names):
+    # 2 * (1 - norm.cdf(|t|)) is exactly 0 for |t| above 8.3 and the p-values
+    # of the significant parameters were reported as 0.0
+    y = _cointegrated_data(n, alpha, drift, c_coint, 20261004)
+    res = VECM(y, k_ar_diff=1, coint_rank=1, deterministic=deterministic).fit()
+    for name in names:
+        tvalues = np.abs(getattr(res, f"tvalues_{name}"))
+        pvalues = getattr(res, f"pvalues_{name}")
+        if name == "beta":
+            # the first coint_rank rows are normalized, not estimated
+            tvalues = tvalues[res.coint_rank :]
+            pvalues = pvalues[res.coint_rank :]
+        # the data have t-values in the range where the tail was lost
+        lost = (tvalues > 8.5) & (tvalues < 30)
+        assert np.any(lost)
+        # 2 * norm.sf(t) = erfc(t / sqrt(2))
+        assert_allclose(pvalues, special.erfc(tvalues / np.sqrt(2)), rtol=1e-10)
+        assert np.all(pvalues[lost] > 0)
