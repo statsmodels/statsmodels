@@ -1,6 +1,10 @@
+import ast
+from pathlib import Path
+
 from numpy.testing import assert_equal
 import pytest
 
+from statsmodels.tools import _decorators
 from statsmodels.tools._decorators import cache_readonly, deprecated_alias
 
 
@@ -81,3 +85,18 @@ def test_deprecated_alias(msg, remove_version, warning):
             assert "will be removed" not in message
     else:
         assert msg in message
+
+
+def test_stub_declares_public_names():
+    # The stub replaces the module for the type checkers, which report a name
+    # that it does not declare as missing from the module
+    stub = Path(_decorators.__file__).with_suffix(".pyi")
+    if not stub.exists():
+        pytest.skip("The stub is not installed")
+    declared = set()
+    for node in ast.parse(stub.read_text(encoding="utf-8")).body:
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
+            declared.add(node.name)
+        elif isinstance(node, ast.Assign):
+            declared.update(t.id for t in node.targets if isinstance(t, ast.Name))
+    assert set(_decorators.__all__) <= declared
