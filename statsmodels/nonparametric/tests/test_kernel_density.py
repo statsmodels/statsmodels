@@ -4,7 +4,6 @@ from numpy.testing import assert_allclose, assert_equal
 import pytest
 
 import statsmodels.api as sm
-
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
 
 nparam = sm.nonparametric
