@@ -1,10 +1,12 @@
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 from scipy import linalg
 
 from statsmodels.stats.covariance import (
     corr_normal_scores,
     corr_quadrant,
+    corr_rank,
     transform_corr_normal,
 )
 
@@ -65,3 +67,20 @@ def test_corr_qu_ns_REGRESSION():
     res_cnq = np.array([[1.0, 0.28, 0.12], [0.28, 1.0, 0.28], [0.12, 0.28, 1.00]])
     cnq = corr_quadrant(x)
     assert_allclose(cnq, res_cnq, atol=1e-4)
+
+
+@pytest.mark.parametrize("func", [corr_rank, corr_normal_scores, corr_quadrant])
+def test_corr_one_variable(func):
+    # The correlation matrix of a single variable is a 1x1 matrix. corr_rank
+    # and corr_normal_scores returned a scalar, the shape of np.corrcoef.
+    rng = np.random.default_rng(8446)
+    x = rng.standard_normal((40, 1))
+    corr = func(x)
+    assert corr.shape == (1, 1)
+    assert_allclose(corr, [[1.0]])
+    # two variables are unchanged
+    x2 = np.column_stack([x, x + rng.standard_normal((40, 1))])
+    corr2 = func(x2)
+    assert corr2.shape == (2, 2)
+    assert_allclose(np.diag(corr2), 1.0)
+    assert 0 < corr2[0, 1] < 1

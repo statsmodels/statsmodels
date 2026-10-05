@@ -232,7 +232,8 @@ def corr_rank(data):
     x = np.asarray(data)
     axisout = 0
     ar = np.apply_along_axis(stats.rankdata, axisout, x)
-    corr = np.corrcoef(ar, rowvar=False)
+    # corrcoef returns a scalar for a single variable
+    corr = np.atleast_2d(np.corrcoef(ar, rowvar=False))
     return corr
 
 
@@ -268,7 +269,8 @@ def corr_normal_scores(data):
     axisout = 0
     ar = np.apply_along_axis(stats.rankdata, axisout, x)
     ar = stats.norm.ppf(ar / (nobs + 1))
-    corr = np.corrcoef(ar, rowvar=axisout)
+    # corrcoef returns a scalar for a single variable
+    corr = np.atleast_2d(np.corrcoef(ar, rowvar=axisout))
     return corr
 
 

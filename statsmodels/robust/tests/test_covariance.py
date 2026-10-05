@@ -623,6 +623,106 @@ def test_covdet_one_column():
     assert_allclose(raw.mean[0], x2_sorted[idx_min : idx_min + h].mean(), rtol=1e-12)
 
 
+def test_cov_ogk_one_column():
+    # np.cov returns a 0-d array for a single column, so that the reweighted
+    # covariance of cov_ogk had shape ()
+    rng = np.random.default_rng(3)
+    x = 1 + 2 * rng.standard_normal((20000, 1))
+    res = robcov.cov_ogk(x)
+    assert res.cov.shape == (1, 1)
+    assert res.cov_raw.shape == (1, 1)
+    assert res.mean.shape == (1,)
+    # both are consistent for the variance at the normal distribution
+    assert_allclose(res.cov, [[4.0]], rtol=0.05)
+    assert_allclose(res.cov_raw, [[4.0]], rtol=0.05)
+    assert_allclose(res.mean, [1.0], atol=0.1)
+    # the reweighted covariance is the variance of the kept observations,
+    # rescaled for the truncation
+    kept = x[res.mask]
+    assert_allclose(res.cov, np.var(kept, ddof=1) * res.scale_factor, rtol=1e-12)
+    # without reweighting the result is the raw estimate
+    res0 = robcov.cov_ogk(x, reweight=None)
+    assert res0.cov.shape == (1, 1)
+    assert_allclose(res0.cov, res.cov_raw)
+
+
+def test_cov_tyler_regularized_one_column():
+    # The plugin for the shrinkage factor is 0 / 0 for a single variable, and
+    # the normalized scatter of a single variable is 1.
+    rng = np.random.default_rng(3)
+    x = rng.standard_normal((50, 1))
+    res = robcov.cov_tyler_regularized(x)
+    assert res.cov.shape == (1, 1)
+    assert_allclose(res.cov, [[1.0]])
+    assert res.shrinkage_factor == 0
+    res = robcov.cov_tyler_regularized(x, shrinkage_factor=0.1)
+    assert_allclose(res.cov, [[1.0]])
+    assert res.shrinkage_factor == 0.1
+
+
+def test_cov_iter_one_column():
+    rng = np.random.default_rng(3)
+    x = 1 + rng.standard_normal((50, 1))
+    res = robcov._cov_iter(x, robcov.weights_quantile, weights_args=(0.5,))
+    assert res.cov.shape == (1, 1)
+    # the default starting value is the sample variance
+    cov_init = np.var(x, ddof=1, axis=0)[None, :]
+    res2 = robcov._cov_iter(
+        x, robcov.weights_quantile, weights_args=(0.5,), cov_init=cov_init
+    )
+    assert_allclose(res.cov, res2.cov, rtol=1e-12)
+    assert_allclose(res.mean, res2.mean, rtol=1e-12)
+
+
+def test_naive_ledoit_wolf_one_column():
+    # the shrinkage target is the empirical covariance for a single variable,
+    # the shrinkage intensity was 0 / 0
+    rng = np.random.default_rng(3)
+    x = rng.standard_normal((50, 1))
+    res = robcov._naive_ledoit_wolf_shrinkage(x, 0)
+    assert_allclose(res.cov, [[np.mean(x**2)]], rtol=1e-12)
+
+
+@pytest.mark.parametrize("nobs", [50, 51])
+def test_cov_starting_one_column(nobs):
+    rng = np.random.default_rng(3)
+    x = 1 + 2 * rng.standard_normal((nobs, 1))
+    res = robcov._cov_starting(x)
+    for r in res:
+        cov = np.asarray(r.cov)
+        assert cov.shape == (1, 1)
+        assert np.all(np.isfinite(cov))
+        assert cov[0, 0] > 0
+
+    xs = x - np.median(x, axis=0)
+    # the first start is the covariance of the observations below the first
+    # percentile of the squared distances, rescaled for the truncation
+    p = min(3 / nobs * 200, 100)
+    d = xs[:, 0] ** 2
+    xsp = xs[d < np.percentile(d, p)]
+    expected = np.var(xsp, ddof=1) * robcov.coef_normalize_cov_truncated(p / 100, 1)
+    assert res[0].method == "pearson truncated"
+    assert_allclose(res[0].cov, [[expected]], rtol=1e-12)
+
+    # correlation matrices of a single variable are 1, the spatial sign of a
+    # single variable is the sign, which is 0 for the median if nobs is odd
+    tanh, spatial, spearman, normal_scores = res[-4:]
+    assert [r.method for r in res[-4:]] == [
+        "tanh",
+        "spatial",
+        "spearman",
+        "normal-scores",
+    ]
+    for r in (tanh, spearman, normal_scores):
+        assert_allclose(r.cov, [[1.0]])
+    assert_allclose(spatial.cov, [[np.var(np.sign(xs), ddof=1)]], rtol=1e-12)
+
+    # standardized and retransformed results have the same shape
+    for kwds in ({"standardize": True}, {"standardize": True, "retransform": True}):
+        for r in robcov._cov_starting(x, **kwds):
+            assert np.shape(getattr(r, "cov", r)) == (1, 1)
+
+
 def test_det_root_does_not_overflow():
     # det(10 * I_400) = 10**400 overflows to inf; its 400th root is 10.
     assert_allclose(robcov._det_root(10 * np.eye(400)), 10.0, rtol=1e-12)
