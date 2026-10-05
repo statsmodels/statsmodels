@@ -2183,6 +2183,34 @@ def test_df_resid_rank_deficient():
     assert_allclose(res.scale, np.sum(resid**2) / res.df_resid, rtol=1e-10)
 
 
+def test_df_resid_rank_unfitted():
+    # The degrees of freedom are set from the rank of exog when the model is
+    # created. They do not depend on the fit of a singular design, which is
+    # not the same on all platforms.
+    rng = np.random.default_rng(4)
+    nobs = 40
+    x1 = rng.normal(size=nobs)
+    endog = rng.normal(size=nobs)
+    groups = np.repeat(np.arange(8), 5)
+
+    # constant and two regressors
+    exog_full = np.column_stack((np.ones(nobs), x1, rng.normal(size=nobs)))
+    # the third column is a multiple of the second
+    exog_dup = np.column_stack((np.ones(nobs), x1, 2 * x1))
+    # more columns than observations, the rank is 22
+    exog_wide = rng.normal(size=(nobs, 22))
+    exog_wide[:, 0] = 1
+    exog_wide = np.column_stack((exog_wide, exog_wide[:, 1:]))
+    assert exog_wide.shape[1] > nobs
+
+    for exog, rank in [(exog_full, 3), (exog_dup, 2), (exog_wide, 22)]:
+        assert np.linalg.matrix_rank(exog) == rank
+        mod = gee.GEE(endog, exog, groups=groups)
+        assert mod.nobs == nobs
+        assert mod.df_model == rank - 1
+        assert mod.df_resid == nobs - rank
+
+
 def simple_qic_data(fam):
 
     y = np.r_[0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0]
