@@ -1539,6 +1539,22 @@ def test_proportions_ztest_nonfinite_and_value_domain_raises():
         smprop.proportions_ztest([3, 5], [10, 10], value=2.0)
 
 
+@pytest.mark.parametrize("count, nobs", [(15, 50), ([15], [50]), (15, [50])])
+def test_proportions_chisquare_one_sample(count, nobs):
+    # Without value a single sample has no null hypothesis. The statistic was
+    # 0 and the p-value nan.
+    with pytest.raises(ValueError, match="value must be provided"):
+        smprop.proportions_chisquare(count, nobs)
+
+    # With value the statistic is the square of the z statistic that uses the
+    # variance under the null hypothesis, (15 - 10)**2 / 10 + 5**2 / 40
+    chi2stat, pvalue, _ = smprop.proportions_chisquare(count, nobs, value=0.2)
+    assert_allclose(chi2stat, 3.125, rtol=1e-13)
+    zstat, pvalue_z = smprop.proportions_ztest(15, 50, value=0.2, prop_var=0.2)
+    assert_allclose(chi2stat, zstat**2, rtol=1e-13)
+    assert_allclose(pvalue, pvalue_z, rtol=1e-12)
+
+
 def test_proportions_chisquare_nonfinite_and_value_domain_raises():
     with pytest.raises(ValueError, match="count must be finite"):
         smprop.proportions_chisquare(np.nan, 10, value=0.5)

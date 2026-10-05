@@ -1365,6 +1365,7 @@ def proportions_chisquare(count, nobs, value=None):
         given, then all proportions are jointly tested against this value.
         If value is not given and count and nobs are not scalar, then the
         null hypothesis is that all samples have the same proportion.
+        value is required for a single sample.
 
     Returns
     -------
@@ -1415,6 +1416,10 @@ def proportions_chisquare(count, nobs, value=None):
         ):
             raise ValueError(f"value must be finite and in [0, 1], got {value!r}")
     table, expected, n_rows = _table_proportion(count, nobs)
+    if value is None and n_rows == 1:
+        # a single sample has no null hypothesis without value, the statistic
+        # would be 0 and the p-value nan
+        raise ValueError("value must be provided for a 1-sample test")
     if value is not None:
         expected = np.column_stack((nobs * value, nobs * (1 - value)))
         ddof = n_rows - 1
