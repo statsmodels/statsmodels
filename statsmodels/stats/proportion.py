@@ -20,7 +20,7 @@ from scipy import optimize, stats
 from statsmodels.stats.base import AllPairsResults, LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tools.validation import array_like, string_like
+from statsmodels.tools.validation import array_like, int_like, string_like
 
 FLOAT_INFO = np.finfo(float)
 
@@ -928,6 +928,16 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
     -----
     This uses scipy.stats.binom_test for the two-sided alternative.
     """
+    nobs = int_like(nobs, "nobs")
+    prop = float_like(prop, "prop")
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated={"2s": "two-sided", "l": "larger", "s": "smaller"},
+        removed_after="0.16",
+    )
 
     if np.any(prop > 1.0) or np.any(prop < 0.0):
         raise ValueError("p must be in range [0,1]")
@@ -937,14 +947,7 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
         raise ValueError("nobs must be positive")
     if np.any(np.asarray(count) > np.asarray(nobs)):
         raise ValueError("count must not exceed nobs")
-    alternative = string_like(
-        alternative,
-        "alternative",
-        options=("two-sided", "larger", "smaller"),
-        lower=False,
-        deprecated={"2s": "two-sided", "l": "larger", "s": "smaller"},
-        removed_after="0.16",
-    )
+
     if alternative == "two-sided":
         pval = stats.binomtest(count, n=nobs, p=prop).pvalue
     elif alternative == "larger":
