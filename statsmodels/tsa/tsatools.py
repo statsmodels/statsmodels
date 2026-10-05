@@ -989,10 +989,15 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
     Notes
     -----
     Annual maps to 1, quarterly maps to 4, monthly to 12, weekly to 52.
+    Sub-daily frequencies map to the number of observations per day scaled
+    by the multiplier, e.g. hourly to 24 and 5-minute to 288. The multiplier
+    is honored for sub-daily frequencies only; calendar frequencies keep
+    their standard period, e.g. "2W" still maps to 52.
     """
     if not isinstance(freq, offsets.BaseOffset):
         freq = to_offset(freq)  # go ahead and standardize
     assert isinstance(freq, offsets.BaseOffset)
+    n = getattr(freq, "n", 1)
     freq = freq.rule_code.upper()
 
     yearly_freqs = ("A-", "AS-", "Y-", "YS-", "YE-")
@@ -1008,10 +1013,11 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
         return 7
     elif freq == "B":
         return 5
-    elif freq == "H":
-        return 24
-    else:  # pragma : no cover
-        raise ValueError(
-            f"freq {freq} not understood. Please report if you "
-            "think this is in error."
-        )
+    elif freq in ("H", "T", "MIN", "S"):
+        base = {"H": 24, "T": 1440, "MIN": 1440, "S": 86400}[freq]
+        if n > 0 and base % n == 0:
+            return base // n
+    raise ValueError(
+        f"freq {freq} not understood. Please report if you "
+        "think this is in error."
+    )
