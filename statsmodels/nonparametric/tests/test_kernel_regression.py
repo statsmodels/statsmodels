@@ -6,7 +6,6 @@ import pytest
 from scipy import stats
 
 import statsmodels.api as sm
-
 from statsmodels.nonparametric.kernel_regression import KernelReg
 
 nparam = sm.nonparametric
