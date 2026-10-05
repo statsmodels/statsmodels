@@ -314,3 +314,148 @@ def test_expanding_window_larger_than_nobs():
     assert np.all(np.isnan(res.params[:1]))
     assert np.all(np.isfinite(res.params[1:]))
     assert_array_equal(res.nobs[1:], np.arange(2, n + 1))
+
+
+def test_get_resid_against_wls(weighted_data):
+    y, x, w = weighted_data
+    window = 100
+    res = RollingWLS(y, x, weights=w, window=window).fit()
+    resid = res.get_resid()
+    resid_oos = res.get_resid(out_of_sample=True)
+    if isinstance(y, pd.Series):
+        assert isinstance(resid, pd.Series)
+        assert resid.index.equals(y.index)
+    resid = np.asarray(resid)
+    resid_oos = np.asarray(resid_oos)
+    assert np.all(np.isnan(resid[: window - 1]))
+    assert np.all(np.isnan(resid_oos[:window]))
+    for i in range(window, y.shape[0] + 1):
+        _y = get_sub(y, i, window)
+        _x = get_sub(x, i, window)
+        _w = np.ones_like(_y) if w is None else get_sub(w, i, window)
+        wls = WLS(_y, _x, weights=_w, missing="drop").fit()
+        last_x = np.asarray(get_single(x, i - 1))
+        expected = get_single(y, i - 1) - last_x @ wls.params
+        assert_allclose(resid[i - 1], expected)
+        if i < y.shape[0]:
+            next_x = np.asarray(get_single(x, i))
+            expected = get_single(y, i) - next_x @ wls.params
+            assert_allclose(resid_oos[i], expected)
+
+
+def test_get_resid_expanding(basic_data):
+    y, x, _ = basic_data
+    res = RollingOLS(y, x, window=150, min_nobs=50, expanding=True).fit()
+    resid = np.asarray(res.get_resid())
+    params = np.asarray(res.params)
+    for i in (49, 50, 100, 149, 150, 249):
+        if np.any(np.isnan(params[i])):
+            assert np.isnan(resid[i])
+            continue
+        start = max(0, i + 1 - 150)
+        ols = WLS(
+            get_sub(y, i + 1, i + 1 - start),
+            get_sub(x, i + 1, i + 1 - start),
+            missing="drop",
+        ).fit()
+        expected = get_single(y, i) - np.asarray(get_single(x, i)) @ ols.params
+        assert_allclose(resid[i], expected)
+
+
+@pytest.mark.parametrize("weighted", [False, True])
+def test_get_resid_r(weighted):
+    # R 4.5.3, first 30 rows of macrodata, weights 1 / pop
+    # d <- read.csv("macro30.csv"); y <- d$realinv; x <- d$realgdp
+    # wt <- if (weighted) 1 / d$pop else rep(1, 30); w <- 20; n <- 30
+    # ins <- rep(NA, n); oos <- rep(NA, n)
+    # for (t in w:n) {
+    #   idx <- (t - w + 1):t
+    #   f <- lm(y[idx] ~ x[idx], weights = wt[idx])
+    #   ins[t] <- resid(f)[w]
+    #   if (t < n) oos[t + 1] <- y[t + 1] - sum(c(1, x[t + 1]) * coef(f))
+    # }
+    # format(ins[w:n], digits = 15); format(oos[(w + 1):n], digits = 15)
+    from statsmodels.datasets import macrodata
+
+    data = macrodata.load_pandas().data.iloc[:30]
+    y = data["realinv"].to_numpy()
+    x = tools.add_constant(data["realgdp"].to_numpy())
+    if weighted:
+        weights = 1 / data["pop"].to_numpy()
+        ins = [
+            3.502547513971217,
+            4.866898435252920,
+            -3.891154177769110,
+            -2.289164948737150,
+            -1.609271399899344,
+            16.111857522805064,
+            4.631445232096264,
+            3.445982316207549,
+            -7.770754990082807,
+            11.150628809861876,
+            0.501349720738392,
+        ]
+        oos = [
+            7.615610750216547,
+            -2.870326165827862,
+            -2.386145537590551,
+            -0.685636369204701,
+            23.427417096348336,
+            7.090939753941143,
+            5.832317934405410,
+            -12.181983310725343,
+            12.397314904706491,
+            -0.126742035725044,
+        ]
+    else:
+        weights = None
+        ins = [
+            3.407228809857275,
+            4.761188630243743,
+            -3.923839030286847,
+            -2.307282838576138,
+            -1.586919090261549,
+            16.131396492004882,
+            4.661023661953397,
+            3.493047646696471,
+            -7.746744190372824,
+            11.061156072834121,
+            0.395245579764173,
+        ]
+        oos = [
+            7.480292664902379,
+            -2.995532905775804,
+            -2.429986428834809,
+            -0.705514405558176,
+            23.444632445393950,
+            7.110521859563846,
+            5.864958655891257,
+            -12.126982086050816,
+            12.424791667555837,
+            -0.218668756771365,
+        ]
+    res = RollingWLS(y, x, window=20, weights=weights).fit()
+    resid = res.get_resid()
+    resid_oos = res.get_resid(out_of_sample=True)
+    assert np.all(np.isnan(resid[:19]))
+    assert np.all(np.isnan(resid_oos[:20]))
+    assert_allclose(resid[19:], ins, rtol=1e-8)
+    assert_allclose(resid_oos[20:], oos, rtol=1e-8)
+
+
+def test_get_resid_formula():
+    y, x, _ = gen_data(250, 2, False, pandas=True)
+    rs = np.random.RandomState(1234)
+    data = pd.concat([y, x], axis=1)
+    data["g"] = rs.choice(["a", "b", "c"], size=250)
+    res = RollingOLS.from_formula("y ~ x0 + C(g)", data=data, window=60).fit()
+    resid = res.get_resid()
+    assert isinstance(resid, pd.Series)
+    assert resid.index.equals(data.index)
+    exog = pd.get_dummies(data["g"], drop_first=True, dtype=float)
+    exog = tools.add_constant(pd.concat([data[["x0"]], exog], axis=1))
+    alt = RollingOLS(data["y"], exog, window=60).fit()
+    assert_allclose(resid, alt.get_resid())
+    assert_allclose(
+        res.get_resid(out_of_sample=True), alt.get_resid(out_of_sample=True)
+    )
