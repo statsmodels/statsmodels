@@ -1117,6 +1117,17 @@ def test_descrstatsw_all_zero_weights_raises():
     assert_allclose(d.quantile([0.25, 0.75]), [3.0, 3.0])
 
 
+def test_tconfint_alpha_out_of_range():
+    # alpha outside (0, 1) previously returned (inf, -inf) silently
+    x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        DescrStatsW(x).tconfint_mean(alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        DescrStatsW(x).tconfint_mean(alpha=0)
+    lo, hi = DescrStatsW(x).tconfint_mean()
+    assert np.isfinite([lo, hi]).all()
+
+
 def test_quantile_probs_out_of_range():
     # probs outside [0, 1] previously silently extrapolated quantiles
     # beyond the data range
