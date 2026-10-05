@@ -1247,6 +1247,29 @@ def test_varprocess_plot_acorr(bivariate_var_result, close_figures):
         assert_allclose(heights, expected[:, i, j])
 
 
+@pytest.mark.parametrize("trend", ["c", "ct"])
+def test_varprocess_simulate_var(bivariate_var_data, trend):
+    # GH 8926: a VARProcess built from coefs_exog with shape (neqs, k_exog)
+    # counted neqs deterministic terms and failed in simulate_var because
+    # only VARResults has endog_lagged
+    res = VAR(bivariate_var_data).fit(2, trend=trend)
+    process = VARProcess(res.coefs, res.coefs_exog, res.sigma_u)
+    assert process.k_trend == res.k_trend
+    assert process.k_exog == res.k_exog
+    assert_allclose(process.intercept, res.intercept)
+
+    if trend == "c":
+        sim = process.simulate_var(steps=50, rng=np.random.default_rng(0))
+        expected = res.simulate_var(steps=50, rng=np.random.default_rng(0))
+    else:
+        with pytest.raises(ValueError, match="offset is required"):
+            process.simulate_var(steps=50, rng=np.random.default_rng(0))
+        offset = res.endog_lagged[:, : res.k_exog] @ res.coefs_exog.T
+        sim = process.simulate_var(offset=offset, rng=np.random.default_rng(0))
+        expected = res.simulate_var(rng=np.random.default_rng(0))
+    assert_allclose(sim, expected)
+
+
 @pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_sample_acorr(bivariate_var_result, close_figures):
