@@ -1012,6 +1012,19 @@ class ExponentialSmoothing(TimeSeriesModel):
         beta = float_like(smoothing_trend, "smoothing_trend", True)
         gamma = float_like(smoothing_seasonal, "smoothing_seasonal", True)
         phi = float_like(damping_trend, "damping_trend", True)
+        for name, value in (
+            ("smoothing_level", alpha),
+            ("smoothing_trend", beta),
+            ("smoothing_seasonal", gamma),
+            ("damping_trend", phi),
+        ):
+            # nan is used as a placeholder for an unused component, and
+            # zero values (no updating / full damping) are valid, tested
+            # choices, so the admissible interval is [0, 1]
+            if value is None or np.isnan(value):
+                continue
+            if not 0 <= value <= 1:
+                raise ValueError(f"{name} must be in [0, 1], got {value}")
         start_params = array_like(start_params, "start_params", optional=True)
         minimize_kwargs = dict_like(minimize_kwargs, "minimize_kwargs", optional=True)
         minimize_kwargs = {} if minimize_kwargs is None else minimize_kwargs
