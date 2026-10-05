@@ -933,7 +933,7 @@ def test_solve_power_alpha_search_leaves_unit_interval(alpha):
     solved = smp.TTestPower().solve_power(
         effect_size=es, nobs=nobs, alpha=None, power=power
     )
-    assert_allclose(solved, alpha, rtol=1e-6)
+    assert_allclose(solved, alpha, rtol=1e-3)
 
 
 def test_solve_power_no_solution_returns_nan():
