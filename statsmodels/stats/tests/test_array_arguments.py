@@ -20,6 +20,7 @@ from statsmodels.stats.multivariate import (
     test_cov_diagonal as cov_diagonal,
     test_cov_spherical as cov_spherical,
 )
+from statsmodels.stats.nonparametric import rank_compare_2indep
 from statsmodels.stats.oneway import equivalence_oneway
 from statsmodels.stats.proportion import (
     binom_test,
@@ -41,11 +42,12 @@ from statsmodels.stats.rates import (
     tolerance_int_poisson,
     tost_poisson_2indep,
 )
-from statsmodels.stats.weightstats import zconfint, ztest
+from statsmodels.stats.weightstats import CompareMeans, DescrStatsW, zconfint, ztest
 
 NAN = np.nan
 _rs = np.random.default_rng(987654)
 X1 = _rs.standard_normal(40)
+X2 = _rs.standard_normal(25) + 0.3
 GROUPS = [_rs.standard_normal(30), _rs.standard_normal(30) + 0.1, _rs.standard_normal(30)]
 COV = np.eye(3) + 0.2
 TABLE = np.array([[10, 5], [4, 12]])
@@ -120,6 +122,11 @@ CASES = [
     ("log_riskratio_confint-alpha", lambda **kw: Table2x2(TABLE).log_riskratio_confint(**kw), dict(), "alpha", ALPHA, BAD_ALPHA, MATCH_ALPHA),
     ("riskratio_confint-alpha", lambda **kw: Table2x2(TABLE).riskratio_confint(**kw), dict(), "alpha", ALPHA, BAD_ALPHA, MATCH_ALPHA),
     ("zconfint-alpha", partial(zconfint, X1), dict(), "alpha", ALPHA, BAD_ALPHA, MATCH_ALPHA),
+    ("tconfint_mean-alpha", lambda **kw: DescrStatsW(X1).tconfint_mean(**kw), dict(), "alpha", ALPHA, BAD_ALPHA, MATCH_ALPHA),
+    ("tconfint_mean-alpha-larger", lambda **kw: DescrStatsW(X1).tconfint_mean(alternative="larger", **kw), dict(), "alpha", ALPHA, BAD_ALPHA, MATCH_ALPHA),
+    ("tconfint_mean-alpha-smaller", lambda **kw: DescrStatsW(X1).tconfint_mean(alternative="smaller", **kw), dict(), "alpha", ALPHA, BAD_ALPHA, MATCH_ALPHA),
+    ("tconfint_diff-alpha", lambda **kw: CompareMeans(DescrStatsW(X1), DescrStatsW(X2)).tconfint_diff(**kw), dict(), "alpha", ALPHA, BAD_ALPHA, MATCH_ALPHA),
+    ("rank_compare_2indep-conf_int-alpha", lambda **kw: rank_compare_2indep(X1, X2).conf_int(**kw), dict(), "alpha", ALPHA, BAD_ALPHA, MATCH_ALPHA),
     ("zconfint-ddof", partial(zconfint, X1), dict(), "ddof", (1.0, 0.0), ([1.0, -1.0], [1.0, NAN]), "ddof must be non-negative"),
     ("ztest-ddof", lambda **kw: ztest(X1, **kw)[1], dict(), "ddof", (1.0, 0.0), ([1.0, -1.0], [1.0, NAN]), "ddof must be non-negative"),
     ("equivalence_oneway-equiv_margin", _equiv_oneway, dict(), "equiv_margin", (0.5, 0.8), ([0.5, 0.0], [0.5, -1.0], [0.5, NAN]), "equiv_margin must be positive"),
