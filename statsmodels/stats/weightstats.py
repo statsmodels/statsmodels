@@ -906,7 +906,7 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
         deprecated=_ALTERNATIVE_ALIASES,
         removed_after="0.16",
     )
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     if alternative == "two-sided":
@@ -1611,7 +1611,7 @@ def ztest(
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. If ``unequal``, then the standard deviation of the sample is
         assumed to be different.
-    ddof : int or float, optional
+    ddof : float or array_like, optional
         Degrees of freedom use in the calculation of the variance of the mean
         estimate. In the case of comparing means this is one, however it can
         be adjusted for testing other statistics (proportion, correlation)
@@ -1636,7 +1636,7 @@ def ztest(
     usevar = string_like(
         usevar, "usevar", options=("pooled", "unequal"), lower=False
     )
-    if ddof < 0:
+    if not np.all(np.greater_equal(ddof, 0)):
         raise ValueError(f"ddof must be non-negative, got {ddof}")
 
     x1 = np.asarray(x1)
@@ -1689,7 +1689,7 @@ def zconfint(
         In the two sample case, value is the difference between mean of x1 and
         mean of x2 under the Null hypothesis. The test statistic is
         `x1_mean - x2_mean - value`.
-    alpha : float, optional
+    alpha : float or array_like, optional
         significance level for the confidence interval, coverage is
         ``1-alpha``
     alternative : {"two-sided", "larger", "smaller"}, optional
@@ -1705,7 +1705,7 @@ def zconfint(
         Currently, only 'pooled' is implemented.
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. see CompareMeans.ztest_ind for different options.
-    ddof : int or float, optional
+    ddof : float or array_like, optional
         Degrees of freedom use in the calculation of the variance of the mean
         estimate. In the case of comparing means this is one, however it can
         be adjusted for testing other statistics (proportion, correlation)
@@ -1728,7 +1728,7 @@ def zconfint(
     # mostly duplicate code from ztest
 
     _ = string_like(usevar, "usevar", options=("pooled",), lower=False)
-    if ddof < 0:
+    if not np.all(np.greater_equal(ddof, 0)):
         raise ValueError(f"ddof must be non-negative, got {ddof}")
 
     x1 = np.asarray(x1)

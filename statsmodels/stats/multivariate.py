@@ -431,7 +431,7 @@ def test_cov_spherical(cov, nobs):
     cov : array_like
         Covariance matrix of the data, estimated with denominator ``(N - 1)``,
         i.e., `ddof=1`.
-    nobs : int
+    nobs : int or array_like
         number of observations used in the estimation of the covariance
 
     Returns
@@ -454,7 +454,7 @@ def test_cov_spherical(cov, nobs):
     StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
     Stata Press Publication.
     """
-    if nobs <= 0:
+    if not np.all(np.greater(nobs, 0)):
         raise ValueError(f"nobs must be positive, got {nobs}")
 
     # unchanged Stata formula, but denom is cov cancels, AFAICS
@@ -489,7 +489,7 @@ def test_cov_diagonal(cov, nobs):
     cov : array_like
         Covariance matrix of the data, estimated with denominator ``(N - 1)``,
         i.e., `ddof=1`.
-    nobs : int
+    nobs : int or array_like
         number of observations used in the estimation of the covariance
 
     Returns
@@ -508,7 +508,7 @@ def test_cov_diagonal(cov, nobs):
     StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
     Stata Press Publication.
     """
-    if nobs <= 0:
+    if not np.all(np.greater(nobs, 0)):
         raise ValueError(f"nobs must be positive, got {nobs}")
     cov = np.asarray(cov)
     k = cov.shape[0]
@@ -572,7 +572,7 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     cov : array_like
         Covariance matrix of the data, estimated with denominator ``(N - 1)``,
         i.e., `ddof=1`.
-    nobs : int
+    nobs : int or array_like
         number of observations used in the estimation of the covariance
     block_len : list of int
         list of length of each square block
@@ -593,7 +593,7 @@ def test_cov_blockdiagonal(cov, nobs, block_len):
     StataCorp, L. P. Stata Multivariate Statistics: Reference Manual.
     Stata Press Publication.
     """
-    if nobs <= 0:
+    if not np.all(np.greater(nobs, 0)):
         raise ValueError(f"nobs must be positive, got {nobs}")
     cov = np.asarray(cov)
     cov_blocks = _get_blocks(cov, block_len)[0]
