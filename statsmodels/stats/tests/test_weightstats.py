@@ -1124,8 +1124,7 @@ def test_tconfint_alpha_out_of_range():
         DescrStatsW(x).tconfint_mean(alpha=2)
     with pytest.raises(ValueError, match="alpha must be in the range"):
         DescrStatsW(x).tconfint_mean(alpha=0)
-    lo, hi = DescrStatsW(x).tconfint_mean()
-    assert np.isfinite([lo, hi]).all()
+    assert np.isfinite(DescrStatsW(x).tconfint_mean()).all()
 
 
 def test_quantile_probs_out_of_range():
