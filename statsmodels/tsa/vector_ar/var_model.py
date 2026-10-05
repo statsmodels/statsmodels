@@ -919,7 +919,7 @@ class VARProcess:
     ----------
     coefs : ndarray (p x k x k)
         coefficients for lags of endog, part or params reshaped
-    coefs_exog : ndarray or None
+    coefs_exog : ndarray (k x k_exog) or (k,) or None
         parameters for trend and user provided exog
     sigma_u : ndarray (k x k)
         residual covariance
@@ -946,7 +946,8 @@ class VARProcess:
             _params_info = {}
         self.k_exog_user = _params_info.get("k_exog_user", 0)
         if self.coefs_exog is not None:
-            k_ex = self.coefs_exog.shape[0] if self.coefs_exog.ndim != 1 else 1
+            # coefs_exog has shape (neqs, k_exog), or (neqs,) for the intercept
+            k_ex = self.coefs_exog.shape[1] if self.coefs_exog.ndim != 1 else 1
             k_c = k_ex - self.k_exog_user
         else:
             k_c = 0
@@ -1048,6 +1049,11 @@ class VARProcess:
         steps_ = None
         if offset is None:
             if self.k_exog_user > 0 or self.k_trend > 1:
+                if getattr(self, "endog_lagged", None) is None:
+                    raise ValueError(
+                        "offset is required to simulate a VARProcess that "
+                        "includes a trend beyond the constant or exog"
+                    )
                 # if more than intercept
                 # endog_lagged contains all regressors, trend, exog_user
                 # and lagged endog, trimmed initial observations
