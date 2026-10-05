@@ -22,6 +22,7 @@ from statsmodels.stats.multivariate import (
 )
 from statsmodels.stats.oneway import equivalence_oneway
 from statsmodels.stats.proportion import (
+    binom_test,
     binom_tost_reject_interval,
     power_binom_tost,
     power_proportions_2indep,
@@ -98,6 +99,10 @@ CASES = [
     ("samplesize_proportions_2indep_onetail-prop2", samplesize_proportions_2indep_onetail, dict(diff=0.1, power=0.8), "prop2", (0.2, 0.3), ([0.2, 1.2], [0.2, -0.1], [0.2, NAN]), "prop2 must be in the range"),
     ("power_proportions_2indep-diff", partial(power_proportions_2indep, return_results=False), dict(prop2=0.2, nobs1=100), "diff", (0.1, 0.15), ([0.1, 0.9], [0.1, -0.3], [0.1, NAN]), "diff must keep"),
     ("power_proportions_2indep-prop2", partial(power_proportions_2indep, return_results=False), dict(diff=0.1, nobs1=100), "prop2", (0.2, 0.3), ([0.2, 1.2], [0.2, -0.1], [0.2, NAN]), "prop2 must be in the range"),
+    ("binom_test-prop", partial(binom_test, alternative="larger"), dict(count=3, nobs=10), "prop", (0.3, 0.5), ([0.3, 1.5], [0.3, -0.1], [0.3, NAN]), "p must be in range"),
+    ("binom_test-nobs", partial(binom_test, alternative="smaller"), dict(count=3, prop=0.5), "nobs", (10, 12), ([10, 0], [10, -4], [10, NAN]), "nobs must be positive"),
+    ("binom_test-count", partial(binom_test, alternative="larger"), dict(nobs=10, prop=0.5), "count", (3, 4), ([3, -1],), "count must be non-negative"),
+    ("binom_test-count-exceeds-nobs", partial(binom_test, alternative="smaller"), dict(nobs=10, prop=0.5), "count", (3, 4), ([3, 11],), "count must not exceed nobs"),
     ("binom_tost_reject_interval-alpha", binom_tost_reject_interval, dict(low=0.4, upp=0.6, nobs=100), "alpha", ALPHA, BAD_ALPHA, MATCH_ALPHA),
     ("binom_tost_reject_interval-low", binom_tost_reject_interval, dict(upp=0.6, nobs=100, alpha=0.05), "low", (0.4, 0.45), ([0.4, 0.7], [0.4, NAN]), "equivalence interval"),
     ("binom_tost_reject_interval-upp", binom_tost_reject_interval, dict(low=0.4, nobs=100, alpha=0.05), "upp", (0.6, 0.65), ([0.6, 0.3], [0.6, NAN]), "equivalence interval"),
