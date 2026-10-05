@@ -920,11 +920,15 @@ def test_power_solver():
             )
 
 
-def test_solve_power_alpha_search_leaves_unit_interval():
-    # The first root finder did not converge for this problem, and the
+@pytest.mark.parametrize("alpha", [0.05, 0.01])
+def test_solve_power_alpha_search_leaves_unit_interval(alpha):
+    # The first root finder does not converge for these problems, and the
     # fallback fsolve evaluates the power at alpha < 0. The check of alpha then
-    # raised, and the solve failed although the problem has a solution.
-    es, nobs, alpha = 0.1, 1000, 0.01
+    # raised, and the solve failed although the problem has a solution. The
+    # solution is exact to 1e-13 with scipy 1.15, 1.18 and the development
+    # version. (A problem like effect_size=0.1, nobs=1000, alpha=0.01 is only
+    # solved to a relative error of 1e-4 with scipy 1.15.)
+    es, nobs = 0.3, 300
     power = smp.TTestPower().power(es, nobs, alpha)
     solved = smp.TTestPower().solve_power(
         effect_size=es, nobs=nobs, alpha=None, power=power
