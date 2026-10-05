@@ -27,7 +27,7 @@ from statsmodels.regression.mixed_linear_model import (
     _smw_solver,
 )
 import statsmodels.tools.numdiff as nd
-from statsmodels.tools.sm_exceptions import SingularMatrixWarning
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, SingularMatrixWarning
 
 from .results import lme_r_results
 
@@ -1531,14 +1531,14 @@ def test_get_fe_params_mixed_singular_cov_re_and_vcomp():
         assert singular == (v0 < 1e-10)
 
 
-@pytest.mark.parametrize("method", ["powell", "nm"])
+@pytest.mark.parametrize("method", ["lbfgs", "powell", "nm"])
 def test_fit_boundary_fixed_effects_equal_ols(method):
     # GH 10239, code sample 2: the within-subject errors are negatively
     # correlated, so that the ML estimate of the random intercept variance is
     # at the boundary (0) and the fixed effects are the OLS estimates.
-    # method="lbfgs" ends at a random intercept variance that is exactly 0 and
-    # is not included, the fit raises LinAlgError('Singular matrix') for the
-    # Hessian.
+    # method="lbfgs" ends at a random intercept variance that is exactly 0. The
+    # log-likelihood was inf, the scale was wrong and the fit raised
+    # LinAlgError('Singular matrix') for the Hessian.
     rng = np.random.default_rng(12345)
     n_subj, sd, c = 74, 28.0, 0.25
     z = rng.standard_normal((n_subj, 3))
@@ -1562,6 +1562,11 @@ def test_fit_boundary_fixed_effects_equal_ols(method):
     assert_allclose(res.params[ols.params.index], ols.params, rtol=1e-8)
     assert_allclose(res.scale, ols.ssr / ols.nobs, rtol=1e-8)
     assert res.cov_re.iloc[0, 0] < 1e-8
+    # the likelihood of the boundary is the likelihood of OLS, and the
+    # covariance of the fixed effects is the OLS covariance for the ML scale
+    assert_allclose(res.llf, ols.llf, rtol=1e-10)
+    bse_ml = ols.bse * np.sqrt(ols.df_resid / ols.nobs)
+    assert_allclose(res.bse[ols.params.index], bse_ml, rtol=1e-6)
 
 
 def test_get_distribution():
@@ -1812,3 +1817,202 @@ def test_fit_do_cg_false():
 
     result0 = model.fit(do_cg=False)
     assert_allclose(result0.cov_re_unscaled, np.eye(1))
+
+
+def _dense_profile(model, fe_params, cov_re, vcomp, reml):
+    # Profile log-likelihood (scale profiled out), and the scale. V is built
+    # densely for each group as V = I + Z cov_re Z' + sum_j vcomp_j M_j M_j'.
+    # The inverse of cov_re is not needed, so that this is also defined for a
+    # singular cov_re. fe_params=None uses the GLS estimates.
+    xvx = np.zeros((model.k_fe, model.k_fe))
+    xvy = np.zeros(model.k_fe)
+    vinv, logdet = [], 0.0
+    for group_ix, _ in enumerate(model.group_labels):
+        ng = model.exog_li[group_ix].shape[0]
+        v = np.eye(ng)
+        if model.k_re > 0:
+            zg = model.exog_re_li[group_ix]
+            v += zg @ cov_re @ zg.T
+        for j in range(len(model.exog_vc.names)):
+            mat = np.asarray(model.exog_vc.mats[j][group_ix])
+            v += vcomp[j] * (mat @ mat.T)
+        vinv.append(np.linalg.inv(v))
+        logdet += np.linalg.slogdet(v)[1]
+        xg, yg = model.exog_li[group_ix], model.endog_li[group_ix]
+        xvx += xg.T @ vinv[-1] @ xg
+        xvy += xg.T @ vinv[-1] @ yg
+    if fe_params is None:
+        fe_params = np.linalg.solve(xvx, xvy)
+    qf = 0.0
+    for group_ix, _ in enumerate(model.group_labels):
+        resid = model.endog_li[group_ix] - model.exog_li[group_ix] @ fe_params
+        qf += resid @ vinv[group_ix] @ resid
+    n = model.n_totobs
+    nu = n - model.k_fe if reml else n
+    scale = qf / nu
+    ll = -logdet / 2 - nu * np.log(qf) / 2 - nu * np.log(2 * np.pi) / 2
+    ll += nu * np.log(nu) / 2 - nu / 2
+    if reml:
+        ll -= np.linalg.slogdet(xvx)[1] / 2
+    return ll, scale
+
+
+def _prepare(model, reml):
+    # fit without optimization to set the attributes that loglike uses, the
+    # starting values are not a maximum
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ConvergenceWarning)
+        model.fit(do_cg=False, reml=reml)
+
+
+def _singular_model(with_vc, use_sqrt=True):
+    rng = np.random.default_rng(3)
+    n_groups, n_per_group = 25, 5
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 2.0 + 1.5 * between + 0.5 * x + rng.standard_normal(n)
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+    exog_vc = None
+    if with_vc:
+        vc0 = [np.ones((n_per_group, 1)) for _ in range(n_groups)]
+        vc1 = [x[groups == g][:, None] for g in range(n_groups)]
+        exog_vc = VCSpec(
+            ["vc0", "vc1"],
+            [[["vc0"] for _ in range(n_groups)], [["vc1"] for _ in range(n_groups)]],
+            [vc0, vc1],
+        )
+    model = MixedLM(
+        endog, exog, groups, exog_re=exog_re, exog_vc=exog_vc, use_sqrt=use_sqrt
+    )
+    return model
+
+
+# cov_re and vcomp of the cases, the vcomp is only used with variance components
+_singular_cases = [
+    (np.diag([1.0, 2.0]), np.array([0.5, 1.5])),
+    (np.diag([0.0, 2.0]), np.array([0.5, 1.5])),
+    (np.diag([1e-12, 2.0]), np.array([0.0, 1.5])),
+    (np.zeros((2, 2)), np.array([0.0, 0.0])),
+    (0.8 * np.ones((2, 2)), np.array([0.5, 0.0])),
+]
+
+
+@pytest.mark.parametrize("reml", [True, False])
+@pytest.mark.parametrize("with_vc", [True, False])
+@pytest.mark.parametrize("cov_re, vcomp", _singular_cases)
+def test_loglike_scale_singular_cov_dense(cov_re, vcomp, with_vc, reml):
+    # A singular cov_re or a variance component of zero is on the boundary of
+    # the parameter space. The log-likelihood and the scale are continuous
+    # there, and the limit is the model without the degenerate directions. The
+    # log-likelihood was inf and the scale used the limit of an infinite
+    # variance, because the inverse of cov_re was replaced by the
+    # pseudo-inverse.
+    model = _singular_model(with_vc)
+    _prepare(model, reml)
+    vc = vcomp if with_vc else np.empty(0)
+    params = MixedLMParams.from_components(cov_re=cov_re, vcomp=vc)
+    ll, scale = _dense_profile(model, None, cov_re, vc, reml)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SingularMatrixWarning)
+        assert_allclose(model.loglike(params), ll, rtol=1e-12)
+        fe_params, _ = model.get_fe_params(cov_re, vc)
+        assert_allclose(model.get_scale(fe_params, cov_re, vc), scale, rtol=1e-12)
+
+
+@pytest.mark.parametrize("reml", [True, False])
+@pytest.mark.parametrize("with_vc", [True, False])
+@pytest.mark.parametrize("cov_re, vcomp", _singular_cases)
+def test_score_hessian_singular_cov_numdiff(cov_re, vcomp, with_vc, reml):
+    # The score and the Hessian at the boundary of the parameter space are the
+    # derivatives of the log-likelihood. The score was computed with the
+    # limit of an infinite variance and the Hessian of the fixed effects was
+    # singular if the variance of the random intercept is 0.
+    model = _singular_model(with_vc, use_sqrt=False)
+    _prepare(model, reml)
+    vc = vcomp if with_vc else np.empty(0)
+    k_re2, k_fe = model.k_re2, model.k_fe
+    rows, cols = np.tril_indices(model.k_re)
+
+    def unpack(theta):
+        c = np.zeros((model.k_re, model.k_re))
+        c[rows, cols] = theta[:k_re2]
+        c = c + np.tril(c, -1).T
+        return c, theta[k_re2:]
+
+    def ll_cov(theta):
+        c, v = unpack(theta)
+        return _dense_profile(model, None, c, v, reml)[0]
+
+    theta0 = np.concatenate((cov_re[rows, cols], vc))
+    h = 1e-5
+    fd = np.zeros(len(theta0))
+    for j in range(len(theta0)):
+        e = np.zeros(len(theta0))
+        e[j] = h
+        fd[j] = (ll_cov(theta0 + e) - ll_cov(theta0 - e)) / (2 * h)
+    params = MixedLMParams.from_components(cov_re=cov_re, vcomp=vc)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SingularMatrixWarning)
+        score = model.score(params)
+    assert_allclose(score, fd, rtol=1e-5, atol=1e-6)
+
+    # Hessian of the log-likelihood with the scale profiled out, with respect
+    # to the fixed effects and the covariance parameters
+    fe_params, _ = model.get_fe_params(cov_re, vc)
+
+    def ll_all(theta):
+        c, v = unpack(theta[k_fe:])
+        return _dense_profile(model, theta[:k_fe], c, v, reml)[0]
+
+    theta = np.concatenate((fe_params, theta0))
+    m = len(theta)
+    num_hess = np.zeros((m, m))
+    h = 1e-3
+    for i in range(m):
+        for j in range(i + 1):
+            ei, ej = np.zeros(m), np.zeros(m)
+            ei[i], ej[j] = h, h
+            f = [ll_all(theta + a * ei + b * ej) for a in (1, -1) for b in (1, -1)]
+            num_hess[i, j] = num_hess[j, i] = (f[0] - f[1] - f[2] + f[3]) / (4 * h * h)
+    params = MixedLMParams.from_components(
+        fe_params=fe_params, cov_re=cov_re, vcomp=vc
+    )
+    hess, _ = model.hessian(params)
+    assert_allclose(hess, num_hess, rtol=1e-4, atol=1e-3 * np.abs(hess).max())
+
+
+@pytest.mark.parametrize("reml", [True, False])
+@pytest.mark.parametrize("cov_re, vcomp", [(0.0, 0.5), (1.0, 0.0), (0.0, 0.0)])
+def test_singular_variance_sparse(cov_re, vcomp, reml):
+    # the degenerate directions are also dropped for sparse variance components
+    cur_dir = Path(__file__).resolve().parent
+    data = pd.read_csv(Path(cur_dir).joinpath("results", "pastes.csv"))
+    kwds = {
+        "groups": "batch",
+        "re_formula": "1",
+        "vc_formula": {"cask": "0 + cask"},
+        "data": data,
+    }
+    cov_re, vcomp = np.array([[cov_re]]), np.array([vcomp])
+    params = MixedLMParams.from_components(cov_re=cov_re, vcomp=vcomp)
+    out = []
+    for use_sparse in (False, True):
+        model = MixedLM.from_formula("strength ~ 1", use_sparse=use_sparse, **kwds)
+        if not use_sparse:
+            dense_model = model
+        _prepare(model, reml)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SingularMatrixWarning)
+            fe_params, _ = model.get_fe_params(cov_re, vcomp)
+            scale = model.get_scale(fe_params, cov_re, vcomp)
+            out.append((model.loglike(params), fe_params, scale))
+    assert_allclose(out[1][0], out[0][0], rtol=1e-10)
+    assert_allclose(out[1][1], out[0][1], rtol=1e-10)
+    assert_allclose(out[1][2], out[0][2], rtol=1e-10)
+
+    ll, scale = _dense_profile(dense_model, None, cov_re, vcomp, reml)
+    assert_allclose(out[0][0], ll, rtol=1e-10)
+    assert_allclose(out[0][2], scale, rtol=1e-10)
