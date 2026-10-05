@@ -202,11 +202,12 @@ def test_manova_demeaned():
     # raised numpy exception with empty arrays.
     # currently we have an option to skip the intercept test, but don't handle
     # empty arrays directly
+    rs = np.random.RandomState(987831)
     ng = 5
     loc = ["Basal", "Occ", "Max"] * ng
-    y1 = (np.random.randn(ng, 3) + [0, 0.5, 1]).ravel()
-    y2 = (np.random.randn(ng, 3) + [0.25, 0.75, 1]).ravel()
-    y3 = (np.random.randn(ng, 3) + [0.3, 0.6, 1]).ravel()
+    y1 = (rs.randn(ng, 3) + [0, 0.5, 1]).ravel()
+    y2 = (rs.randn(ng, 3) + [0.25, 0.75, 1]).ravel()
+    y3 = (rs.randn(ng, 3) + [0.3, 0.6, 1]).ravel()
     dta = pd.DataFrame(dict(Loc=loc, Basal=y1, Occ=y2, Max=y3))
     mod = MANOVA.from_formula("Basal + Occ + Max ~ C(Loc, Helmert)", data=dta)
     res1 = mod.mv_test()

@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import minimize_scalar
 
 from statsmodels.robust import mad
+from statsmodels.tools.validation import string_like
 
 
 class BoxCox:
@@ -17,10 +18,11 @@ class BoxCox:
         Parameters
         ----------
         x : array_like
-        lmbda : float
+            The data to transform.
+        lmbda : float or None, optional
             The lambda parameter for the Box-Cox transform. If None, a value
             will be estimated by means of the specified method.
-        method : {'guerrero', 'loglik'}
+        method : {'guerrero', 'loglik'}, optional
             The method to estimate the lambda parameter. Will only be used if
             lmbda is None, and defaults to 'guerrero', detailed in Guerrero
             (1993). 'loglik' maximizes the profile likelihood.
@@ -33,7 +35,7 @@ class BoxCox:
 
         Returns
         -------
-        y : array_like
+        y : ndarray
             The transformed series.
         lmbda : float
             The lmbda parameter used to transform the series.
@@ -41,14 +43,14 @@ class BoxCox:
         References
         ----------
         Guerrero, Victor M. 1993. "Time-series analysis supported by power
-        transformations". `Journal of Forecasting`. 12 (1): 37-48.
+        transformations". *Journal of Forecasting*. 12 (1): 37-48.
 
         Guerrero, Victor M. and Perera, Rafael. 2004. "Variance Stabilizing
-        Power Transformation for Time Series," `Journal of Modern Applied
-        Statistical Methods`. 3 (2): 357-369.
+        Power Transformation for Time Series," *Journal of Modern Applied
+        Statistical Methods*. 3 (2): 357-369.
 
         Box, G. E. P., and D. R. Cox. 1964. "An Analysis of Transformations".
-        `Journal of the Royal Statistical Society`. 26 (2): 211-252.
+        *Journal of the Royal Statistical Society*. 26 (2): 211-252.
         """
         x = np.asarray(x)
 
@@ -78,7 +80,7 @@ class BoxCox:
             The transformed series.
         lmbda : float
             The lambda parameter that was used to transform the series.
-        method : {'naive'}
+        method : {'naive'}, optional
             Indicates the method to be used in the untransformation. Defaults
             to 'naive', which reverses the transformation.
 
@@ -87,10 +89,10 @@ class BoxCox:
 
         Returns
         -------
-        y : array_like
+        y : ndarray
             The untransformed series.
         """
-        method = method.lower()
+        method = string_like(method, "method", options=("naive",))
         x = np.asarray(x)
 
         if method == "naive":
@@ -98,8 +100,6 @@ class BoxCox:
                 y = np.exp(x)
             else:
                 y = np.power(lmbda * x + 1, 1.0 / lmbda)
-        else:
-            raise ValueError(f"Method '{method}' not understood.")
 
         return y
 
@@ -112,10 +112,10 @@ class BoxCox:
         ----------
         x : array_like
             The untransformed data.
-        bounds : tuple
+        bounds : tuple, optional
             Numeric 2-tuple, that indicate the solution space for the lambda
             parameter. Default (-1, 2).
-        method : {'guerrero', 'loglik'}
+        method : {'guerrero', 'loglik'}, optional
             The method by which to estimate lambda. Defaults to 'guerrero', but
             the profile likelihood ('loglik') is also available.
         **kwargs
@@ -130,19 +130,17 @@ class BoxCox:
         lmbda : float
             The lambda parameter.
         """
-        method = method.lower()
+        method = string_like(method, "method", options=("guerrero", "loglik"))
 
         if len(bounds) != 2:
-            raise ValueError("Bounds of length {} not understood.".format(len(bounds)))
+            raise ValueError(f"Bounds of length {len(bounds)} not understood.")
         elif bounds[0] >= bounds[1]:
             raise ValueError("Lower bound exceeds upper bound.")
 
         if method == "guerrero":
             lmbda = self._guerrero_cv(x, bounds=bounds, **kwargs)
-        elif method == "loglik":
+        else:  # method == "loglik"
             lmbda = self._loglik_boxcox(x, bounds=bounds, **kwargs)
-        else:
-            raise ValueError(f"Method '{method}' not understood.")
 
         return lmbda
 
@@ -158,18 +156,24 @@ class BoxCox:
         Parameters
         ----------
         x : array_like
+            The untransformed data.
         bounds : tuple
             Numeric 2-tuple, that indicate the solution space for the lambda
             parameter.
-        window_length : int
+        window_length : int, optional
             Seasonality/grouping parameter. Default 4, as per Guerrero and
             Perera (2004). NOTE: this indicates the length of the individual
             groups, not the total number of groups!
-        scale : {'sd', 'mad'}
+        scale : {'sd', 'mad'}, optional
             The dispersion measure to be used. 'sd' indicates the sample
             standard deviation, but the more robust 'mad' is also available.
-        options : dict
+        options : dict, optional
             The options (as a dict) to be passed to the optimizer.
+
+        Returns
+        -------
+        float
+            The estimated lambda parameter.
         """
         options = {"maxiter": 25} if options is None else options
         nobs = len(x)
@@ -181,13 +185,11 @@ class BoxCox:
         )
         mean = np.mean(grouped_data, 1)
 
-        scale = scale.lower()
+        scale = string_like(scale, "scale", options=("sd", "mad"))
         if scale == "sd":
             dispersion = np.std(grouped_data, 1, ddof=1)
-        elif scale == "mad":
+        else:  # scale == "mad"
             dispersion = mad(grouped_data, axis=1)
-        else:
-            raise ValueError(f"Scale '{scale}' not understood.")
 
         def optim(lmbda):
             rat = np.divide(dispersion, np.power(mean, 1 - lmbda))  # eq 6, p 40
@@ -205,8 +207,17 @@ class BoxCox:
         Parameters
         ----------
         x : array_like
-        options : dict
+            The untransformed data.
+        bounds : tuple
+            Numeric 2-tuple, that indicate the solution space for the lambda
+            parameter.
+        options : dict, optional
             The options (as a dict) to be passed to the optimizer.
+
+        Returns
+        -------
+        float
+            The estimated lambda parameter.
         """
         options = {"maxiter": 25} if options is None else options
         sum_x = np.sum(np.log(x))

@@ -7,11 +7,11 @@ DECIMAL_3 is used because it seems that there is a loss of precision
 in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
+from statsmodels.compat.pandas import assert_index_equal
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 # pylint: disable-msg=E1101
-from statsmodels.compat.pandas import assert_index_equal
-
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -29,10 +29,16 @@ from scipy import stats
 from scipy.stats import nbinom
 
 import statsmodels.api as sm
+from statsmodels.discrete.count_model import (
+    ZeroInflatedNegativeBinomialP,
+    ZeroInflatedPoisson,
+)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 from statsmodels.discrete.discrete_model import (
     CountModel,
     GeneralizedPoisson,
+    L1CountResultsWrapper,
+    L1PoissonResultsWrapper,
     Logit,
     MNLogit,
     NegativeBinomial,
@@ -40,7 +46,9 @@ from statsmodels.discrete.discrete_model import (
     Poisson,
     Probit,
 )
+from statsmodels.discrete.truncated_model import TruncatedLFPoisson
 import statsmodels.formula.api as smf
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     PerfectSeparationError,
@@ -156,7 +164,7 @@ class CheckModelMixin:
         # GH#5224 check we get ValueError when passing invalid "method" arg
         model = self.res1.model
 
-        with pytest.raises(ValueError, match=r"is not supported, use either"):
+        with pytest.raises(ValueError, match=r"method"):
             model.fit_regularized(method="foo")
 
 
@@ -538,12 +546,12 @@ class TestProbitBasinhopping(CheckBinaryResults):
         res2 = Spector.probit
         cls.res2 = res2
         fit = Probit(data.endog, data.exog).fit
-        np.random.seed(1)
         cls.res1 = fit(
             method="basinhopping",
             disp=0,
             niter=5,
             minimizer={"method": "L-BFGS-B", "tol": 1e-8},
+            seed=0,
         )
 
 
@@ -1227,8 +1235,8 @@ class TestPoissonNewton(CheckModelResults):
         assert_almost_equal(self.res1.resid, self.res2.resid, 2)
 
     def test_predict_prob(self):
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.join(cur_dir, "results", "predict_prob_poisson.csv")
+        cur_dir = Path(__file__).resolve().parent
+        path = Path(cur_dir).joinpath("results", "predict_prob_poisson.csv")
         probs_res = np.loadtxt(path, delimiter=",")
 
         # just check the first 100 obs. vs R to save memory
@@ -2566,24 +2574,26 @@ class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
 
 
 def test_mnlogit_basinhopping():
+    rs = np.random.RandomState(332723491)
+
     def callb(*args):
         return 1
 
-    x = np.random.randint(0, 100, 1000)
-    y = np.random.randint(0, 3, 1000)
+    x = rs.randint(0, 100, 1000)
+    y = rs.randint(0, 3, 1000)
     model = MNLogit(y, sm.add_constant(x))
     # smoke tests for basinhopping and callback #8665
-    model.fit(method="basinhopping")
-    model.fit(method="basinhopping", callback=callb)
+    model.fit(method="basinhopping", seed=rs)
+    model.fit(method="basinhopping", callback=callb, seed=rs)
 
 
 def test_perfect_prediction():
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    iris_dir = os.path.join(cur_dir, "..", "..", "genmod", "tests", "results")
-    iris_dir = os.path.abspath(iris_dir)
-    iris = np.genfromtxt(
-        os.path.join(iris_dir, "iris.csv"), delimiter=",", skip_header=1
-    )
+    cur_dir = Path(__file__).resolve().parent
+    iris_dir = Path(cur_dir).joinpath("..", "..", "genmod", "tests", "results")
+    iris_dir = Path(iris_dir).resolve()
+    iris_df = pd.read_csv(Path(iris_dir).joinpath("iris.csv"))
+    iris = iris_df.values
+
     y = iris[:, -1]
     X = iris[:, :-1]
     X = X[y != 2]
@@ -2624,16 +2634,55 @@ def test_poisson_predict():
 def test_poisson_newton():
     # GH: 24, Newton does not work well sometimes
     nobs = 10000
-    np.random.seed(987689)
-    x = np.random.randn(nobs, 3)
+    rs = np.random.RandomState(987689)
+    x = rs.randn(nobs, 3)
     x = sm.add_constant(x, prepend=True)
-    y_count = np.random.poisson(np.exp(x.sum(1)))
+    y_count = rs.poisson(np.exp(x.sum(1)))
     mod = sm.Poisson(y_count, x)
     # this is not thread-safe
     with pytest.warns(ConvergenceWarning):
         res = mod.fit(start_params=-np.ones(4), method="newton", disp=0)
 
     assert_(not res.mle_retvals["converged"])
+
+
+def test_l1_regularized_respects_warning_filters():
+    # GH#9179: an internal preliminary fit (used only to compute start_params)
+    # forced ``simplefilter("always")``, which overrode the caller's warning
+    # filters. As a result a ConvergenceWarning raised while fitting with
+    # ``fit_regularized(method="l1", ...)`` could not be silenced.
+    rng = np.random.RandomState(0)
+    endog = rng.negative_binomial(1, 0.5, size=(100,))
+    exog = rng.normal(size=(100, 5))
+
+    # When the caller silences warnings, none must escape.
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("ignore")
+        NegativeBinomial(endog, exog).fit_regularized(
+            method="l1",
+            alpha=1e-12,
+            trim_mode="off",
+            method_kwargs={"warn_convergence": False},
+            qc_verbose=False,
+            disp=False,
+        )
+    convergence = [
+        w for w in caught if issubclass(w.category, ConvergenceWarning)
+    ]
+    assert convergence == []
+
+    # Sanity check that the warning is genuinely produced (so the assertion
+    # above is not passing trivially): with default filters the main fit still
+    # warns. The fix only stops the internal preliminary fit from overriding
+    # the caller's filters.
+    with pytest.warns(ConvergenceWarning):
+        NegativeBinomial(endog, exog).fit_regularized(
+            method="l1",
+            alpha=1e-12,
+            trim_mode="off",
+            qc_verbose=False,
+            disp=False,
+        )
 
 
 def test_issue_339():
@@ -2646,9 +2695,9 @@ def test_issue_339():
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
     # strip the header from the test
     smry = "\n".join(res1.summary().as_text().split("\n")[9:])
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    test_case_file = os.path.join(cur_dir, "results", "mn_logit_summary.txt")
-    with open(test_case_file, encoding="utf-8") as fd:
+    cur_dir = Path(__file__).resolve().parent
+    test_case_file = Path(cur_dir).joinpath("results", "mn_logit_summary.txt")
+    with Path(test_case_file).open(encoding="utf-8") as fd:
         test_case = fd.read()
     np.testing.assert_equal(smry, test_case[:-1])
     # smoke test for summary2
@@ -2665,6 +2714,24 @@ def test_issue_341():
     x = exog[0]
     np.testing.assert_equal(res1.predict(x).shape, (1, 7))
     np.testing.assert_equal(res1.predict(x[None]).shape, (1, 7))
+
+
+@pytest.mark.thread_unsafe(
+    "Rethrowing warning can lead to spurious fails with threading"
+)
+def test_issue_8943():
+    # full_output=0 left mle_retvals unset, so DiscreteResults.converged and
+    # summary() raised TypeError: 'NoneType' object is not subscriptable.
+    # fit now warns and forces full_output=True so the retvals always exist.
+    data = load_spector()
+    with pytest.warns(FutureWarning, match="full_output=False is deprecated"):
+        res0 = sm.Logit(data.endog, data.exog).fit(full_output=0, disp=0)
+    res1 = sm.Logit(data.endog, data.exog).fit(full_output=1, disp=0)
+    assert res0.converged is True
+    assert res1.converged is True
+    np.testing.assert_allclose(res0.params, res1.params, rtol=1e-6)
+    # summary() reads mle_retvals["converged"] directly, so it used to crash too
+    res0.summary()
 
 
 @pytest.mark.thread_unsafe(
@@ -2689,28 +2756,31 @@ def test_negative_binomial_default_alpha_param():
 
 
 def test_iscount():
-    X = np.random.random((50, 10))
-    X[:, 2] = np.random.randint(1, 10, size=50)
-    X[:, 6] = np.random.randint(1, 10, size=50)
-    X[:, 4] = np.random.randint(0, 2, size=50)
-    X[:, 1] = np.random.randint(-10, 10, size=50)  # not integers
+    rs = np.random.RandomState(3228931)
+    X = rs.random((50, 10))
+    X[:, 2] = rs.randint(1, 10, size=50)
+    X[:, 6] = rs.randint(1, 10, size=50)
+    X[:, 4] = rs.randint(0, 2, size=50)
+    X[:, 1] = rs.randint(-10, 10, size=50)  # not integers
     count_ind = _iscount(X)
     assert_equal(count_ind, [2, 6])
 
 
 def test_isdummy():
-    X = np.random.random((50, 10))
-    X[:, 2] = np.random.randint(1, 10, size=50)
-    X[:, 6] = np.random.randint(0, 2, size=50)
-    X[:, 4] = np.random.randint(0, 2, size=50)
-    X[:, 1] = np.random.randint(-10, 10, size=50)  # not integers
+    rs = np.random.RandomState(3228935)
+    X = rs.random((50, 10))
+    X[:, 2] = rs.randint(1, 10, size=50)
+    X[:, 6] = rs.randint(0, 2, size=50)
+    X[:, 4] = rs.randint(0, 2, size=50)
+    X[:, 1] = rs.randint(-10, 10, size=50)  # not integers
     count_ind = _isdummy(X)
     assert_equal(count_ind, [4, 6])
 
 
 def test_non_binary():
+    rs = np.random.RandomState(3228933)
     y = [1, 2, 1, 2, 1, 2]
-    X = np.random.randn(6, 2)
+    X = rs.randn(6, 2)
     with pytest.raises(ValueError):
         Logit(y, X)
     y = [0, 1, 0, 0, 1, 0.5]
@@ -2720,7 +2790,7 @@ def test_non_binary():
 
 def test_mnlogit_factor():
     dta = sm.datasets.anes96.load_pandas()
-    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG")))
+    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG", strict=True)))
     exog = sm.add_constant(dta.exog, prepend=True)
     mod = sm.MNLogit(dta.endog, exog)
     res = mod.fit(disp=0)
@@ -2745,7 +2815,7 @@ def test_mnlogit_factor():
 
 def test_mnlogit_factor_categorical():
     dta = sm.datasets.anes96.load_pandas()
-    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG")))
+    dta["endog"] = dta.endog.replace(dict(zip(range(7), "ABCDEFG", strict=True)))
     exog = sm.add_constant(dta.exog, prepend=True)
     mod = sm.MNLogit(dta.endog, exog)
     res = mod.fit(disp=0)
@@ -2757,11 +2827,12 @@ def test_mnlogit_factor_categorical():
 
 def test_formula_missing_exposure():
     # see 2083
+    rs = np.random.RandomState(473989724)
     d = {
         "Foo": [1, 2, 10, 149],
         "Bar": [1, 2, 3, np.nan],
         "constant": [1] * 4,
-        "exposure": np.random.uniform(size=4),
+        "exposure": rs.uniform(size=4),
         "x": [1, 3, 2, 1.5],
     }
     df = pd.DataFrame(d)
@@ -2771,7 +2842,7 @@ def test_formula_missing_exposure():
     assert_(type(mod1.exposure) is np.ndarray, msg="Exposure is not ndarray")
 
     # make sure this raises
-    exposure = pd.Series(np.random.uniform(size=5))
+    exposure = pd.Series(rs.uniform(size=5))
     df.loc[3, "Bar"] = 4  # nan not relevant for ValueError for shape mismatch
     with pytest.raises(ValueError):
         sm.Poisson(df.Foo, df[["constant", "Bar"]], exposure=exposure)
@@ -3004,13 +3075,17 @@ class TestGeneralizedPoisson_underdispersion:
     @classmethod
     def setup_class(cls):
         cls.expected_params = [1, -0.5, -0.05]
-        np.random.seed(1234)
+        rs = np.random.RandomState(1234)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
         mu_true = np.exp(exog.dot(cls.expected_params[:-1]))
         cls.endog = sm.distributions.genpoisson_p.rvs(
-            mu_true, cls.expected_params[-1], 1, size=len(mu_true)
+            mu_true,
+            cls.expected_params[-1],
+            1,
+            size=len(mu_true),
+            random_state=rs,
         )
         model_gp = sm.GeneralizedPoisson(cls.endog, exog, p=1)
         cls.res = model_gp.fit(
@@ -3327,7 +3402,7 @@ class TestNegativeBinomialPPredictProb:
 
     def test_predict_prob_p1(self):
         expected_params = [1, -0.5]
-        np.random.seed(1234)
+        rs = np.random.RandomState(1234)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
@@ -3335,7 +3410,7 @@ class TestNegativeBinomialPPredictProb:
         alpha = 0.05
         size = 1.0 / alpha * mu_true
         prob = size / (size + mu_true)
-        endog = nbinom.rvs(size, prob, size=len(mu_true))
+        endog = nbinom.rvs(size, prob, size=len(mu_true), random_state=rs)
 
         res = sm.NegativeBinomialP(endog, exog).fit(disp=0)
 
@@ -3353,7 +3428,7 @@ class TestNegativeBinomialPPredictProb:
 
     def test_predict_prob_p2(self):
         expected_params = [1, -0.5]
-        np.random.seed(1234)
+        rs = np.random.RandomState(1234)
         nobs = 200
         exog = np.ones((nobs, 2))
         exog[: nobs // 2, 1] = 2
@@ -3361,7 +3436,7 @@ class TestNegativeBinomialPPredictProb:
         alpha = 0.05
         size = 1.0 / alpha
         prob = size / (size + mu_true)
-        endog = nbinom.rvs(size, prob, size=len(mu_true))
+        endog = nbinom.rvs(size, prob, size=len(mu_true), random_state=rs)
 
         res = sm.NegativeBinomialP(endog, exog, p=2).fit(disp=0)
 
@@ -3495,11 +3570,12 @@ class TestGeneralizedPoissonNull(CheckNull):
 def test_null_options():
     # this is a "nice" case because we only check that options are used
     # correctly
+    rs = np.random.RandomState(332723492)
     nobs = 10
     exog = np.ones((20, 2))
     exog[: nobs // 2, 1] = 0
     mu = np.exp(exog.sum(1))
-    endog = np.random.poisson(mu)  # Note no size=nobs in np.random
+    endog = rs.poisson(mu)
     res = Poisson(endog, exog).fit(start_params=np.log([1, 1]), disp=0)
     llnull0 = res.llnull
     assert_(hasattr(res, "res_llnull") is False)
@@ -3533,8 +3609,8 @@ def test_null_options():
 def test_optim_kwds_prelim():
     # test that fit options for preliminary fit is correctly transmitted
 
-    cur_dir = os.path.dirname(os.path.abspath(__file__))
-    filepath = os.path.join(cur_dir, "results", "sm3533.csv")
+    cur_dir = Path(__file__).resolve().parent
+    filepath = Path(cur_dir).joinpath("results", "sm3533.csv")
     df = pd.read_csv(filepath)
 
     features = ["pp"]
@@ -3683,3 +3759,752 @@ def test_mlogit_t_test():
     wt = res1.wald_test("y1_logpopul, y2_logpopul", scalar=True)
     # regression test
     assert_allclose(wt.statistic, 5.68660562, rtol=1e-8)
+
+
+def test_mnlogit_resid_response():
+    # GH7096, resid_response raised ValueError because the base class
+    # subtracted the nobs x J predicted probabilities from the 1-dim endog
+    data = load_anes96()
+    exog = sm.add_constant(data.exog, prepend=False)
+    res = MNLogit(data.endog, exog).fit(method="newton", disp=0)
+
+    resid = res.resid_response
+    assert_equal(resid.shape, (res.model.endog.shape[0], res.model.J))
+    assert_allclose(resid, res.model.wendog - res.predict(), rtol=1e-13)
+    # each row is an indicator vector minus a probability vector
+    assert_allclose(resid.sum(1), np.zeros(res.model.endog.shape[0]), atol=1e-10)
+
+    # with two categories this reduces to the binary response residual
+    data = load_spector()
+    exog = sm.add_constant(data.exog, prepend=False)
+    res_mnl = MNLogit(data.endog, exog).fit(method="newton", disp=0)
+    res_logit = Logit(data.endog, exog).fit(method="newton", disp=0)
+    assert_allclose(res_mnl.resid_response[:, 1], res_logit.resid_response, rtol=1e-7)
+    assert_allclose(res_mnl.resid_response[:, 0], -res_logit.resid_response, rtol=1e-7)
+
+
+@pytest.mark.parametrize("kind", ["dummy", "count"])
+def test_mnlogit_margeff_dummy_count(kind):
+    # GH5488, get_margeff with dummy=True or count=True raised a ValueError
+    # in _derivative_predict whenever the number of exog columns K differed
+    # from the number of choices J
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rng = np.random.default_rng(5488)
+    nobs = 500
+    exog = sm.add_constant(
+        np.column_stack(
+            [
+                rng.normal(size=nobs),
+                rng.poisson(2, size=nobs),
+                rng.random(nobs) > 0.5,
+            ]
+        ).astype(float)
+    )
+    endog = rng.integers(0, 3, size=nobs)
+    mod = MNLogit(endog, exog)
+    res = mod.fit(disp=0)
+    assert mod.K != mod.J
+
+    col = 3 if kind == "dummy" else 2
+
+    def effect(params):
+        params = params.reshape(mod.K, mod.J - 1, order="F")
+        exog0, exog1 = exog.copy(), exog.copy()
+        if kind == "dummy":
+            exog0[:, col] = 0
+            exog1[:, col] = 1
+            step = 1
+        else:
+            exog0[:, col] -= 1
+            exog1[:, col] += 1
+            step = 2
+        diff = mod.predict(params, exog1) - mod.predict(params, exog0)
+        return (diff / step).mean(0)
+
+    marg = res.get_margeff(**{kind: True})
+    params = res.params.ravel(order="F")
+    jac = approx_fprime(params, effect, centered=True)
+    se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
+    # margeff excludes the constant column
+    assert_allclose(marg.margeff[col - 1], effect(params), rtol=1e-10)
+    assert_allclose(marg.margeff_se[col - 1], se, rtol=1e-6)
+
+
+@pytest.mark.parametrize("k_choices", [3, 4])
+def test_mnlogit_margeff_dummy_and_count_together(k_choices):
+    # GH5488, dummy=True and count=True in the same call, with K = 5 columns
+    # different from the number of choices J and signal in the data, so that
+    # the marginal effects are not close to zero
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rng = np.random.default_rng(8442 + k_choices)
+    nobs = 1500
+    x = rng.normal(size=nobs)
+    count = rng.poisson(2, size=nobs)
+    dummy1 = rng.random(nobs) > 0.5
+    dummy2 = rng.random(nobs) > 0.7
+    exog = sm.add_constant(np.column_stack([x, count, dummy1, dummy2]).astype(float))
+    beta = rng.normal(scale=0.5, size=(exog.shape[1], k_choices - 1))
+    prob = np.exp(np.column_stack([np.zeros(nobs), exog @ beta]))
+    prob /= prob.sum(1, keepdims=True)
+    endog = (rng.random(nobs)[:, None] > prob.cumsum(1)).sum(1)
+    mod = MNLogit(endog, exog)
+    res = mod.fit(disp=0)
+    assert mod.K != mod.J
+
+    def effects(params):
+        params = params.reshape(mod.K, mod.J - 1, order="F")
+        out = []
+        for col, kind in [(2, "count"), (3, "dummy"), (4, "dummy")]:
+            exog0, exog1 = exog.copy(), exog.copy()
+            if kind == "dummy":
+                exog0[:, col] = 0
+                exog1[:, col] = 1
+                step = 1
+            else:
+                exog0[:, col] -= 1
+                exog1[:, col] += 1
+                step = 2
+            diff = mod.predict(params, exog1) - mod.predict(params, exog0)
+            out.append((diff / step).mean(0))
+        return np.concatenate(out)
+
+    marg = res.get_margeff(dummy=True, count=True)
+    params = res.params.ravel(order="F")
+    expected = effects(params)
+    jac = approx_fprime(params, effects, centered=True)
+    se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
+    # margeff excludes the constant column, rows 1 to 3 are count, dummy1, dummy2
+    assert_allclose(marg.margeff[1:4].ravel(), expected, rtol=1e-8)
+    assert_allclose(marg.margeff_se[1:4].ravel(), se, rtol=1e-5)
+    assert np.abs(expected).max() > 0.01
+
+
+def _fit_logit_for_summary():
+    data = load_spector()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return Logit(data.endog, data.exog).fit(method="newton", disp=0)
+
+
+def _fit_probit_for_summary():
+    data = load_spector()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return Probit(data.endog, data.exog).fit(method="newton", disp=0)
+
+
+def _fit_poisson_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return Poisson(data.endog, exog).fit(method="newton", disp=0)
+
+
+def _fit_mnlogit_for_summary():
+    data = load_anes96()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return MNLogit(data.endog, exog).fit(method="newton", disp=0)
+
+
+def _fit_negative_binomial_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return NegativeBinomial(data.endog, exog, "nb2").fit(method="newton", disp=0)
+
+
+def _fit_negative_binomial_p_for_summary():
+    data = load_randhie()
+    exog = sm.add_constant(data.exog, prepend=False)
+    return NegativeBinomialP(data.endog, exog, p=2).fit(method="newton", disp=0)
+
+
+def _fit_generalized_poisson_for_summary():
+    data = load_randhie()
+    data.exog = sm.add_constant(data.exog, prepend=False)
+    return GeneralizedPoisson(data.endog, data.exog, p=2).fit(method="newton", disp=0)
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [
+        _fit_logit_for_summary,
+        _fit_probit_for_summary,
+        _fit_poisson_for_summary,
+        _fit_mnlogit_for_summary,
+        _fit_negative_binomial_for_summary,
+        _fit_negative_binomial_p_for_summary,
+        _fit_generalized_poisson_for_summary,
+    ],
+    ids=[
+        "Logit",
+        "Probit",
+        "Poisson",
+        "MNLogit",
+        "NegativeBinomial",
+        "NegativeBinomialP",
+        "GeneralizedPoisson",
+    ],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_binary_results_info_criteria():
+    # BinaryResults.info_criteria is exported but had no direct test
+    # coverage. With dk_params=0 it must reproduce the aic/bic attributes
+    # exactly, and dk_params must shift the parameter count by exactly that
+    # amount.
+    rng = np.random.default_rng(0)
+    n = 200
+    x = rng.normal(size=(n, 2))
+    exog = sm.add_constant(x)
+    p = 1 / (1 + np.exp(-(exog @ [0.2, 0.8, -0.5])))
+    endog = rng.binomial(1, p)
+
+    res = Logit(endog, exog).fit(disp=0)
+
+    assert_allclose(res.info_criteria("aic"), res.aic)
+    assert_allclose(res.info_criteria("bic"), res.bic)
+    assert_allclose(res.info_criteria("AIC"), res.aic)
+
+    assert_allclose(res.info_criteria("aic", dk_params=2), res.aic + 4)
+
+    nobs = res.df_model + res.df_resid + 1
+    k_params = res.df_model + 1 + 2
+    expected_bic = -2 * res.llf + k_params * np.log(nobs)
+    assert_allclose(res.info_criteria("bic", dk_params=2), expected_bic)
+
+    with pytest.raises(ValueError, match="crit"):
+        res.info_criteria("not-a-real-criterion")
+
+
+def test_im_ratio_nonrobust_and_robust():
+    rng = np.random.RandomState(74125)
+    n = 200
+    exog = sm.add_constant(rng.standard_normal((n, 2)))
+    endog = rng.poisson(np.exp(exog @ [0.2, 0.3, -0.1]))
+
+    res = sm.Poisson(endog, exog).fit(disp=0)
+    hess = res.model.hessian(res.params)
+    score_obs = res.model.score_obs(res.params)
+    cov_score = score_obs.T @ score_obs
+    expected = np.linalg.inv(-hess) @ cov_score
+    assert_allclose(res.im_ratio, expected, rtol=1e-10)
+
+    res_robust = sm.Poisson(endog, exog).fit(disp=0, cov_type="HC0")
+    expected_robust = res_robust.cov_params() @ (-hess)
+    assert_allclose(res_robust.im_ratio, expected_robust, rtol=1e-10)
+
+
+def test_generalized_poisson_score_p_var_prob_nonzero():
+    rng = np.random.RandomState(74123)
+    n = 300
+    exog = sm.add_constant(rng.standard_normal((n, 2)))
+    lin = exog @ [0.5, 0.2, -0.1]
+    endog = rng.poisson(np.exp(lin))
+
+    mod = GeneralizedPoisson(endog, exog, p=2)
+    res = mod.fit(disp=0)
+
+    # _score_p is d(loglike)/dp holding the fitted params fixed, where
+    # "p" here is the parameterization exponent (mod.parameterization =
+    # p_ctor - 1), not one of the fitted params. Check it against a
+    # central finite difference over models built with perturbed p.
+    eps = 1e-6
+    mod_hi = GeneralizedPoisson(endog, exog, p=2 + eps)
+    mod_lo = GeneralizedPoisson(endog, exog, p=2 - eps)
+    numeric = (mod_hi.loglike(res.params) - mod_lo.loglike(res.params)) / (2 * eps)
+    assert_allclose(mod._score_p(res.params), numeric, rtol=1e-4)
+
+    # _var and _prob_nonzero: GP2 closed forms (p=2 -> pm1 = 1 in the
+    # variance formula), cross-checked against direct evaluation.
+    mu = mod.predict(res.params)
+    alpha = res.params[-1]
+    expected_var = mu * (1 + alpha * mu) ** 2
+    assert_allclose(mod._var(mu, res.params), expected_var, rtol=1e-12)
+
+    expected_prob_nz = 1 - np.exp(-mu / (1 + alpha * mu))
+    assert_allclose(mod._prob_nonzero(mu, res.params), expected_prob_nz,
+                    rtol=1e-12)
+    # a genuine probability
+    assert np.all(mod._prob_nonzero(mu, res.params) > 0)
+    assert np.all(mod._prob_nonzero(mu, res.params) < 1)
+
+
+def test_poisson_cdf_pdf_match_scipy():
+    rng = np.random.RandomState(999)
+    n = 50
+    endog = rng.poisson(4, size=n)
+    exog = sm.add_constant(rng.standard_normal((n, 1)))
+    mod = sm.Poisson(endog, exog)
+
+    X = rng.standard_normal(n)
+    lam = np.exp(X)
+    assert_allclose(mod.cdf(X), stats.poisson.cdf(endog, lam), rtol=1e-12)
+    assert_allclose(mod.pdf(X), stats.poisson.pmf(endog, lam), rtol=1e-12)
+
+
+def test_count_model_fit_regularized_direct():
+    # CountModel.fit_regularized is never reached through any of its own
+    # subclasses: Poisson/GeneralizedPoisson/NegativeBinomial(P) each define
+    # their own fit_regularized override that explicitly calls
+    # super(CountModel, self).fit_regularized(...), deliberately skipping
+    # over CountModel's own version. Exercise CountModel.fit_regularized
+    # directly (unbound, called on a Poisson instance) to test it.
+    rng = np.random.default_rng(20230817)
+    nobs = 200
+    exog = np.column_stack(
+        (np.ones(nobs), rng.standard_normal(nobs), rng.standard_normal(nobs))
+    )
+    beta = np.array([0.3, 0.5, -0.4])
+    endog = rng.poisson(np.exp(exog @ beta))
+
+    mod = Poisson(endog, exog)
+    res_unreg = mod.fit(disp=0)
+
+    # alpha=0 (no penalty) should numerically recover the unregularized MLE
+    res_direct = CountModel.fit_regularized(
+        mod, alpha=0, disp=0, trim_mode="off"
+    )
+    assert isinstance(res_direct, L1CountResultsWrapper)
+    assert_allclose(res_direct.params, res_unreg.params, atol=5e-5, rtol=5e-5)
+
+    # CountModel.fit_regularized and Poisson's own fit_regularized override
+    # both delegate to the identical DiscreteModel.fit_regularized call, so
+    # with identical arguments they must return numerically identical
+    # parameters -- only the results-wrapper class differs.
+    res_poisson_reg = mod.fit_regularized(alpha=0, disp=0, trim_mode="off")
+    assert isinstance(res_poisson_reg, L1PoissonResultsWrapper)
+    assert_allclose(res_direct.params, res_poisson_reg.params, atol=0, rtol=0)
+
+    # A large L1 penalty shrinks parameters toward zero.
+    res_big = CountModel.fit_regularized(mod, alpha=25.0, disp=0)
+    assert np.all(np.abs(res_big.params) <= np.abs(res_unreg.params) + 1e-8)
+    assert np.any(np.abs(res_big.params) < np.abs(res_unreg.params) - 1e-3)
+
+
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="LinAlgError not raised on WASM")
+def test_cov_params_func_l1_raises_on_nonfinite_hessian():
+    # cov_params_func_l1's LinAlgError guard only ever caught a singular
+    # Hessian: np.linalg.inv does not raise on non-finite input, it
+    # silently returns an all-NaN matrix, so a NaN (or inf) Hessian used to
+    # produce a results object whose every standard error, z-value, p-value
+    # and confidence interval was NaN, with no error raised at all.
+    rng = np.random.default_rng(0)
+    nobs = 50
+    exog = np.column_stack([np.ones(nobs), rng.standard_normal(nobs)])
+    endog = rng.poisson(np.exp(0.5 + 0.3 * exog[:, 1]))
+    mod = Poisson(endog, exog)
+
+    class _NonFiniteHessianModel:
+        # Anything with a .hessian(params) is accepted by
+        # cov_params_func_l1 -- it never touches `self`, only the
+        # `likelihood_model` argument -- so a minimal stand-in is enough to
+        # exercise the guard directly and deterministically, rather than
+        # trying to coax a real optimizer into landing on a NaN Hessian.
+        def hessian(self, params):
+            H = -np.eye(len(params))
+            H[0, 1] = H[1, 0] = np.nan
+            return H
+
+    xopt = np.zeros(2)
+    retvals = {"trimmed": np.array([False, False])}
+    with pytest.raises(np.linalg.LinAlgError, match="non-finite"):
+        mod.cov_params_func_l1(_NonFiniteHessianModel(), xopt, retvals)
+
+    # The pre-existing singular-but-finite path is unaffected by the new
+    # check -- still reaches np.linalg.inv and still raises its own,
+    # differently-worded LinAlgError.
+    class _SingularHessianModel:
+        def hessian(self, params):
+            return -np.ones((len(params), len(params)))
+
+    with pytest.raises(np.linalg.LinAlgError, match="singular"):
+        mod.cov_params_func_l1(_SingularHessianModel(), xopt, retvals)
+
+
+def test_logit_family_is_binomial():
+    rng = np.random.RandomState(998)
+    n = 50
+    exog = sm.add_constant(rng.standard_normal((n, 1)))
+    endog = rng.binomial(1, 0.5, n)
+    mod = Logit(endog, exog)
+    assert isinstance(mod.family, sm.families.Binomial)
+
+
+class TestMNLogitScoreTest:
+    """Tests for MNLogit score_test with exog_extra (GH#9273).
+
+    The score_test variable addition test previously crashed because MNLogit
+    did not implement score_factor or hessian_factor. This test class verifies
+    that the fix works correctly.
+    """
+
+    @classmethod
+    def setup_class(cls):
+        np.random.seed(789)
+        n = 500
+        X = np.random.randn(n, 3)
+        X = sm.add_constant(X)
+        x_extra = np.random.randn(n, 2)
+        X_full = np.column_stack((X, x_extra))
+
+        # Generate y from the restricted model (no effect of extra vars)
+        beta = np.array([[0.5, -0.3], [0.2, 0.1], [-0.1, 0.4], [0.3, -0.2]])
+        linpred = X @ beta
+        pr = np.exp(np.column_stack((np.zeros(n), linpred)))
+        pr = pr / pr.sum(axis=1, keepdims=True)
+        y = np.array([np.random.choice(3, p=p) for p in pr])
+
+        cls.model_drop = sm.MNLogit(y, X)
+        cls.model_full = sm.MNLogit(y, X_full)
+        cls.exog_extra = x_extra
+        cls.nobs = n
+
+    def test_score_test_smoke(self):
+        """score_test with exog_extra should not crash (GH#9273)."""
+        res_drop = self.model_drop.fit(disp=0)
+        test_result = res_drop.score_test(exog_extra=self.exog_extra)
+        assert np.isfinite(test_result.statistic.item())
+        assert 0 <= test_result.pvalue.item() <= 1
+        # 2 extra columns * (J-1=2) equations = 4 constraints
+        assert test_result.k_constraint == 4
+
+    def test_score_test_df(self):
+        """k_constraints should equal k_extra * (J-1)."""
+        res_drop = self.model_drop.fit(disp=0)
+        # Single extra column
+        test_result = res_drop.score_test(exog_extra=self.exog_extra[:, :1])
+        assert test_result.k_constraint == 2
+        # Two extra columns
+        test_result = res_drop.score_test(exog_extra=self.exog_extra)
+        assert test_result.k_constraint == 4
+
+    def test_score_wald_equivalence(self):
+        """Score test should be close to Wald test from the full model."""
+        res_drop = self.model_drop.fit(disp=0)
+        res_full = self.model_full.fit(disp=0)
+
+        test_result = res_drop.score_test(exog_extra=self.exog_extra)
+        lm_stat, lm_pval = test_result
+
+        # Build restriction matrix for Wald test on full model
+        K_full = self.model_full.exog.shape[1]  # 6
+        n_eq = self.model_full.J - 1  # 2
+        k_extra = self.exog_extra.shape[1]  # 2
+        r_matrix = np.zeros((k_extra * n_eq, K_full * n_eq))
+        for eq in range(n_eq):
+            for k in range(k_extra):
+                row = eq * k_extra + k
+                col = eq * K_full + (K_full - k_extra + k)
+                r_matrix[row, col] = 1.0
+
+        wald = res_full.wald_test(r_matrix, scalar=True)
+        wald_stat = float(wald.statistic)
+
+        # Under correct specification, LM and Wald should be close
+        assert_allclose(lm_stat.item(), wald_stat, rtol=0.3)
+
+    def test_score_test_hc0(self):
+        """HC0 robust covariance should work for MNLogit score_test."""
+        res_drop = self.model_drop.fit(disp=0)
+        res = res_drop.score_test(exog_extra=self.exog_extra, cov_type="HC0")
+        assert np.isfinite(res.statistic.item())
+        assert 0 <= res.pvalue.item() <= 1
+        assert res.k_constraint == 4
+
+    def test_score_factor_consistency(self):
+        """score_factor should reproduce score_obs via Kronecker product."""
+        res = self.model_drop.fit(disp=0)
+        params = np.asarray(res.params).ravel("F")
+        model = res.model
+
+        sf = model.score_factor(params)
+        score_obs_from_factor = (
+            sf[:, :, None] * model.exog[:, None, :]
+        ).reshape(self.nobs, -1)
+        score_obs = model.score_obs(params)
+        assert_allclose(score_obs_from_factor, score_obs, rtol=1e-10)
+
+    def test_hessian_factor_consistency(self):
+        """hessian_factor should reproduce hessian via block structure."""
+        res = self.model_drop.fit(disp=0)
+        params = np.asarray(res.params).ravel("F")
+        model = res.model
+
+        hf = model.hessian_factor(params)
+        K = model.K
+        n_eq = model.J - 1
+        hessian_from_factor = np.empty((n_eq * K, n_eq * K))
+        for j in range(n_eq):
+            for ll in range(n_eq):
+                hessian_from_factor[j*K:(j+1)*K, ll*K:(ll+1)*K] = (
+                    (model.exog.T * hf[:, j, ll]) @ model.exog
+                )
+        hessian = model.hessian(params)
+        assert_allclose(hessian_from_factor, hessian, rtol=1e-10)
+
+    @pytest.mark.singleton_randomstate
+    def test_score_test_4_categories(self):
+        """score_test should work with J=4 categories."""
+        np.random.seed(456)
+        n = 300
+        X = np.random.randn(n, 2)
+        X = sm.add_constant(X)
+        y_probs = np.random.dirichlet([1, 1, 1, 1], size=n)
+        y = np.array([np.random.choice(4, p=p) for p in y_probs])
+
+        model = sm.MNLogit(y, X)
+        result = model.fit(disp=0)
+
+        exog_extra = np.random.randn(n, 1)
+        test_result = result.score_test(exog_extra=exog_extra)
+        assert np.isfinite(test_result.statistic.item())
+        assert 0 <= test_result.pvalue.item() <= 1
+        # 1 extra column * (J-1=3) equations = 3 constraints
+        assert test_result.k_constraint == 3
+
+
+def test_logit_loglikeobs_extreme_linpred():
+    # gh-3923: log(cdf(z)) overflowed in exp for large |z|, producing -inf
+    # loglikeobs values and RuntimeWarnings.  The logaddexp-based
+    # computation is stable and agrees with the stable reference.
+    from scipy.special import log_expit
+
+    n = 50
+    z = np.linspace(-1e4, 1e4, n)
+    X = np.column_stack([np.ones(n), z])
+    y = np.ones(n, dtype=int)  # integer endog exercises the asarray path
+    params = np.array([0.0, 1.0])
+
+    model = sm.Logit(y, X)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        loglikeobs = model.loglikeobs(params)
+        loglike = model.loglike(params)
+
+    assert np.all(np.isfinite(loglikeobs))
+    assert np.all(np.isfinite(loglike))
+    assert_allclose(loglikeobs, log_expit(z), rtol=1e-14)
+    assert_allclose(loglike, loglikeobs.sum(), rtol=1e-14)
+
+
+def test_probit_loglikeobs_extreme_linpred():
+    # log(clip(cdf(z), eps, 1)) was flat at log(eps) for z below about -8
+    # and log(cdf(z)) underflows to -inf below about -38.  The log_ndtr
+    # based computation is exact and agrees with the stable reference.
+    from scipy import stats
+
+    n = 50
+    z = np.linspace(-1e4, 1e4, n)
+    X = np.column_stack([np.ones(n), z])
+    y = np.ones(n, dtype=int)
+    params = np.array([0.0, 1.0])
+
+    model = sm.Probit(y, X)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        loglikeobs = model.loglikeobs(params)
+        loglike = model.loglike(params)
+        score_obs = model.score_obs(params)
+        hessian = model.hessian(params)
+
+    assert np.all(np.isfinite(loglikeobs))
+    assert np.all(np.isfinite(score_obs))
+    assert np.all(np.isfinite(hessian))
+    assert_allclose(loglikeobs, stats.norm.logcdf(z), rtol=1e-14)
+    assert_allclose(loglike, loglikeobs.sum(), rtol=1e-14)
+    # score factor is the inverse Mills ratio phi(z) / Phi(z)
+    mills = np.exp(stats.norm.logpdf(z) - stats.norm.logcdf(z))
+    assert_allclose(score_obs, mills[:, None] * X, rtol=1e-12)
+
+
+def test_probit_extreme_observation_fit():
+    # One extreme, misclassified observation drives q * XB to -60 at
+    # reasonable params.  The clipped loglike and score were far from the
+    # exact values there, the unclipped hessian was nan, and bfgs stopped
+    # at a spurious optimum with nan standard errors.
+    from scipy import optimize, stats
+
+    from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess
+
+    rng = np.random.default_rng(1)
+    n = 300
+    x = rng.standard_normal(n)
+    y = (1.5 * x + rng.standard_normal(n) > 0).astype(int)
+    x = np.append(x, 40.0)
+    y = np.append(y, 0)
+    X = np.column_stack([np.ones(n + 1), x])
+    q = 2 * y - 1
+    model = sm.Probit(y, X)
+
+    params = np.array([0.0, 1.5])
+    z = q * (X @ params)
+    assert z.min() < -50
+    assert_allclose(model.loglike(params), stats.norm.logcdf(z).sum(), rtol=1e-12)
+    mills = np.exp(stats.norm.logpdf(z) - stats.norm.logcdf(z))
+    assert_allclose(model.score(params), X.T @ (q * mills), rtol=1e-12)
+    assert_allclose(model.score(params), approx_fprime_cs(params, model.loglike), rtol=1e-8)
+    assert_allclose(model.hessian(params), approx_hess(params, model.loglike), rtol=1e-4)
+
+    # both optimizers agree with a direct minimization of the exact loglike
+    ref = optimize.minimize(
+        lambda b: -stats.norm.logcdf(q * (X @ b)).sum(), params, method="BFGS"
+    )
+    for method in ["newton", "bfgs"]:
+        res = model.fit(method=method, disp=0, maxiter=200)
+        assert res.mle_retvals["converged"]
+        assert_allclose(res.params, ref.x, rtol=1e-4)
+        assert_allclose(res.llf, -ref.fun, rtol=1e-8)
+        assert np.all(np.isfinite(res.bse))
+
+
+@pytest.mark.parametrize(
+    "model_class",
+    [
+        Poisson,
+        NegativeBinomial,
+        NegativeBinomialP,
+        GeneralizedPoisson,
+        ZeroInflatedPoisson,
+        ZeroInflatedNegativeBinomialP,
+        TruncatedLFPoisson,
+    ],
+)
+def test_use_t_honored_nonrobust(model_class):
+    # regression test for GH#10307: fit(use_t=True) was silently ignored
+    # under the default (nonrobust) covariance, while robust cov_types
+    # honored it. The requested Student-t inference must be preserved.
+    # Poisson was not affected.
+    rng = np.random.default_rng(0)
+    n = 400
+    x = rng.standard_normal(n)
+    exog = np.column_stack([np.ones(n), x])
+    mu = np.exp(0.5 + 0.3 * x)
+    # overdispersed counts with extra zeros, zeros are dropped for truncation
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    endog = np.where(rng.uniform(size=n) < 0.3, 0, endog)
+    if model_class is TruncatedLFPoisson:
+        exog, endog = exog[endog > 0], endog[endog > 0]
+
+    res = model_class(endog, exog).fit(disp=0, use_t=True)
+    assert res.cov_type == "nonrobust"
+    assert res.use_t is True
+    tvalues = res.params / res.bse
+    assert_allclose(res.tvalues, tvalues)
+    assert_allclose(
+        res.pvalues, 2 * stats.t.sf(np.abs(tvalues), res.df_resid), rtol=1e-8
+    )
+    crit = stats.t.ppf(0.975, res.df_resid)
+    ci = np.column_stack([res.params - crit * res.bse, res.params + crit * res.bse])
+    assert_allclose(res.conf_int(), ci)
+
+    # the default and an explicit use_t=False are still normal based
+    for kwds in [{}, {"use_t": False}]:
+        res_z = model_class(endog, exog).fit(disp=0, **kwds)
+        assert res_z.use_t is False
+        assert_allclose(res_z.params, res.params)
+        assert_allclose(
+            res_z.pvalues, 2 * stats.norm.sf(np.abs(res_z.tvalues)), rtol=1e-8
+        )
+
+
+def test_binary_model_offset_length_mismatch():
+    # Logit/Probit used to leak a bare numpy broadcast error at fit time
+    # for a mismatched offset; CountModel already rejects it up front
+    rs = np.random.RandomState(12345)
+    endog = (rs.standard_normal(40) > 0).astype(int)
+    exog = np.column_stack([np.ones(40), rs.standard_normal((40, 2))])
+    with pytest.raises(ValueError, match="offset is not the same length as endog"):
+        Logit(endog, exog, offset=np.ones(10))
+    with pytest.raises(ValueError, match="offset is not the same length as endog"):
+        Probit(endog, exog, offset=np.ones(10))
+    # a correctly sized offset still fits
+    res = Logit(endog, exog, offset=np.zeros(40)).fit(disp=0)
+    assert res.params.shape == (3,)
+
+
+def _binary_offset_data():
+    rs = np.random.RandomState(8264)
+    nobs = 60
+    exog = np.column_stack([np.ones(nobs), rs.standard_normal((nobs, 2))])
+    endog = (rs.standard_normal(nobs) + exog[:, 1] > 0).astype(float)
+    offset = 0.1 * rs.standard_normal(nobs)
+    return endog, exog, offset
+
+
+@pytest.mark.parametrize("model", [Logit, Probit])
+def test_binary_model_offset_missing_drop(model):
+    # The missing value handling drops the same rows from endog, exog and
+    # offset, and the offset passed in has the length of the data before the
+    # rows were dropped. The length check compared the argument with the
+    # reduced endog and rejected such a model.
+    endog, exog, offset = _binary_offset_data()
+    nobs = endog.shape[0]
+    exog_nan = exog.copy()
+    exog_nan[[5, 17], 1] = np.nan
+    keep = np.ones(nobs, dtype=bool)
+    keep[[5, 17]] = False
+    expected = model(endog[keep], exog[keep], offset=offset[keep]).fit(disp=0)
+
+    mod = model(endog, exog_nan, offset=offset, missing="drop")
+    assert mod.endog.shape[0] == nobs - 2
+    assert mod.offset.shape[0] == nobs - 2
+    res = mod.fit(disp=0)
+    assert_allclose(res.params, expected.params, rtol=1e-8)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+
+    # the same with pandas objects
+    res_pd = model(
+        pd.Series(endog), pd.DataFrame(exog_nan), offset=pd.Series(offset), missing="drop"
+    ).fit(disp=0)
+    assert_allclose(res_pd.params.to_numpy(), expected.params, rtol=1e-8)
+
+    # a missing value in the offset itself drops the row
+    offset_nan = offset.copy()
+    offset_nan[[5, 17]] = np.nan
+    res_off = model(endog, exog, offset=offset_nan, missing="drop").fit(disp=0)
+    assert_allclose(res_off.params, expected.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("model", [Logit, Probit])
+def test_binary_model_offset_formula_missing(model):
+    # formula models drop rows with missing values by default
+    endog, exog, offset = _binary_offset_data()
+    df = pd.DataFrame({"y": endog, "a": exog[:, 1], "b": exog[:, 2]})
+    df.loc[[5, 17], "a"] = np.nan
+    res = model.from_formula("y ~ a + b", df, offset=offset).fit(disp=0)
+    keep = df.notna().all(axis=1).to_numpy()
+    assert res.nobs == keep.sum()
+    expected = model(endog[keep], exog[keep], offset=offset[keep]).fit(disp=0)
+    assert_allclose(res.params.to_numpy(), expected.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("model", [Logit, Probit])
+@pytest.mark.parametrize(
+    "offset",
+    [0.3, np.float64(0.3), 1, np.array(0.3)],
+    ids=["float", "np.float64", "int", "0-d array"],
+)
+def test_binary_model_scalar_offset(model, offset):
+    # a scalar offset broadcasts and was accepted before the length check
+    endog, exog, _ = _binary_offset_data()
+    res = model(endog, exog, offset=offset).fit(disp=0)
+    expected = model(endog, exog, offset=np.full(endog.shape[0], float(offset))).fit(disp=0)
+    assert_allclose(res.params, expected.params, rtol=1e-8)
+
+
+def test_negativebinomial_rejects_alpha_kwarg():
+    # alpha was swallowed by **kwargs and silently ignored even though the
+    # dispersion parameter is estimated, not fixed, for this model
+    y = np.random.RandomState(987234).poisson(2, size=50)
+    x = np.ones((50, 2))
+    with pytest.raises(TypeError, match="alpha"):
+        NegativeBinomial(y, x, loglike_method="nb1", alpha=0.5)
+
+    # the estimator itself keeps working
+    mod = NegativeBinomial(y, x, loglike_method="nb1")
+    assert mod.k_extra == 1

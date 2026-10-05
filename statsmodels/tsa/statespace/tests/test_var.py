@@ -11,6 +11,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -20,12 +21,12 @@ from statsmodels.tsa.statespace import varmax
 
 from .results import results_var_R
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 results_var_R_output = pd.read_csv(
-    os.path.join(current_path, "results", "results_var_R_output.csv"))
+    Path(current_path).joinpath("results", "results_var_R_output.csv"))
 
 up2 = os.path.split(os.path.split(current_path)[0])[0]
-dta = pd.read_stata(os.path.join(up2, "tests", "results", "lutkepohl2.dta"))
+dta = pd.read_stata(Path(up2).joinpath("tests", "results", "lutkepohl2.dta"))
 dta.index = pd.PeriodIndex(dta.qtr, freq="Q")
 endog = dta[["dln_inv", "dln_inc", "dln_consump"]].loc["1960Q2":"1978"]
 

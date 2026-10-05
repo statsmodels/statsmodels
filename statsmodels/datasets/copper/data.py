@@ -1,4 +1,4 @@
-"""World Copper Prices 1951-1975 dataset."""
+"""World Copper Prices 1951-1975 dataset"""
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"
@@ -7,7 +7,7 @@ COPYRIGHT = """Used with express permission from the original author,
 who retains all rights."""
 TITLE = "World Copper Market 1951-1975 Dataset"
 SOURCE = """
-Jeff Gill's `Generalized Linear Models: A Unified Approach`
+Jeff Gill's *Generalized Linear Models: A Unified Approach*
 
 http://jgill.wustl.edu/research/books.html
 """
@@ -54,7 +54,8 @@ def load_pandas():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     data = _get_data()
     return du.process_pandas(data, endog_idx=0)
@@ -67,6 +68,7 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     return load_pandas()

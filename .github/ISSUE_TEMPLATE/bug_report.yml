@@ -1,0 +1,79 @@
+name: Bug report
+description: Report a bug to help us improve statsmodels
+title: "BUG: "
+labels: ["type-bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+
+        Before opening an issue, please:
+
+        - Search the [issue tracker](https://github.com/statsmodels/statsmodels/issues) to check whether this has already been reported.
+        - Confirm you can reproduce the bug using the latest released version of statsmodels, or a recent build of `main`.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: >
+        A clear and concise description of what the bug is. Explain **why** the current
+        behavior is a problem and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Code Sample, a copy-pastable example
+      description: >
+        A minimal, self-contained example that reproduces the issue. It should not rely
+        on external data, and should run as-is in a fresh Python/IPython session
+        (include all imports).
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Output
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Output
+      description: >
+        What actually happened. Please paste the full error message and traceback, if
+        there is one.
+      render: shell
+
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: >
+        Paste the output of
+        `import statsmodels.api as sm; sm.show_versions()` below.
+      render: shell
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: >
+            I have searched the [issue tracker](https://github.com/statsmodels/statsmodels/issues)
+            for a similar issue and did not find one.
+          required: true
+        - label: >
+            I have confirmed this bug exists on the
+            [latest released version](https://pypi.org/project/statsmodels/) of statsmodels,
+            or on the `main` branch.
+          required: true

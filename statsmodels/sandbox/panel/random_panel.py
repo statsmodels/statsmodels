@@ -14,7 +14,11 @@ Notes
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import numpy as np
+
+from statsmodels.tools.rng_qrng import check_random_state
 
 from . import correlation_structures as cs
 
@@ -44,9 +48,20 @@ class PanelSample:
         arguments for the corr_structure
     scale : float
         scale of noise, standard deviation of normal distribution
-    seed : None or int
-        If seed is given, then this is used to create the random numbers for
-        the sample.
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        Used to create the random numbers for the sample. If `rng` is
+        None, a new ``Generator`` is created using fresh entropy from
+        the operating system. If `rng` is an int, a new ``RandomState``
+        instance is created, seeded with `rng`; this integer-seeding
+        behavior is deprecated and will change to creating a
+        ``Generator`` in a future release. If `rng` is already a
+        ``Generator`` or ``RandomState`` instance, that instance is
+        used.
+    seed : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        .. deprecated:: 0.15
+
+           seed has been deprecated. In-line with SPEC-007, use
+           rng for passing a random number generator or seed.
 
     Notes
     -----
@@ -60,6 +75,7 @@ class PanelSample:
 
     """
 
+    @deprecate_kwarg("seed", "rng")
     def __init__(
         self,
         nobs,
@@ -70,7 +86,7 @@ class PanelSample:
         corr_structure=np.eye,
         corr_args=(),
         scale=1,
-        seed=None,
+        rng=None,
     ):
 
         nobs_i = nobs // n_groups
@@ -105,11 +121,9 @@ class PanelSample:
         self.y_true = None
         self.beta = None
 
-        if seed is None:
-            seed = np.random.randint(0, 999999)
-
-        self.seed = seed
-        self.random_state = np.random.RandomState(seed)
+        self.seed = rng
+        self.rng = rng
+        self.random_state = check_random_state(rng, deprecated=True, warn=False)
 
         # this makes overwriting difficult, move to method?
         self.std = scale * np.ones(nobs_i)

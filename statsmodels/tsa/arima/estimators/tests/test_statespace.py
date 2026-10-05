@@ -13,13 +13,14 @@ def test_basic():
     exog = np.arange(1, len(endog) + 1) * 1.0
 
     # Test default options (include_constant=True, concentrate_scale=False)
-    p, res = statespace(
+    _result = statespace(
         endog,
         exog=exog,
         order=(1, 0, 0),
         include_constant=True,
         concentrate_scale=False,
     )
+    p, res = _result.parameters, _result.other_results
 
     mod_ss = sarimax.SARIMAX(endog, exog=add_constant(exog), order=(1, 0, 0))
     res_ss = mod_ss.filter(p.params)
@@ -27,13 +28,14 @@ def test_basic():
     assert_allclose(res.statespace_results.llf, res_ss.llf)
 
     # Test include_constant=False
-    p, res = statespace(
+    _result = statespace(
         endog,
         exog=exog,
         order=(1, 0, 0),
         include_constant=False,
         concentrate_scale=False,
     )
+    p, res = _result.parameters, _result.other_results
 
     mod_ss = sarimax.SARIMAX(endog, exog=exog, order=(1, 0, 0))
     res_ss = mod_ss.filter(p.params)
@@ -41,9 +43,10 @@ def test_basic():
     assert_allclose(res.statespace_results.llf, res_ss.llf)
 
     # Test concentrate_scale=True
-    p, res = statespace(
+    _result = statespace(
         endog, exog=exog, order=(1, 0, 0), include_constant=True, concentrate_scale=True
     )
+    p, res = _result.parameters, _result.other_results
 
     mod_ss = sarimax.SARIMAX(
         endog, exog=add_constant(exog), order=(1, 0, 0), concentrate_scale=True
@@ -53,6 +56,7 @@ def test_basic():
     assert_allclose(res.statespace_results.llf, res_ss.llf)
 
 
+@pytest.mark.smoke
 def test_start_params():
     endog = lake.copy()
 

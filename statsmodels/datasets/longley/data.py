@@ -13,7 +13,7 @@ http://www.itl.nist.gov/div898/strd/lls/data/Longley.shtml
 ::
 
     Longley, J.W. (1967) "An Appraisal of Least Squares Programs for the
-        Electronic Comptuer from the Point of View of the User."  Journal of
+        Electronic Computer from the Point of View of the User."  Journal of
         the American Statistical Association.  62.319, 819-41.
 """
 
@@ -48,7 +48,8 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     return load_pandas()
 
@@ -60,7 +61,8 @@ def load_pandas():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     data = _get_data()
     return du.process_pandas(data, endog_idx=0)

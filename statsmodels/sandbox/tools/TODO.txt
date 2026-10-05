@@ -54,7 +54,7 @@
 
 * tests    -> needed
   - GLSAR: check, R's gls
-  - ARMA: check R for arma, e.g. dynamo, also look more closely at GARCH_UCSD (BSD) and offspring (license ?)
+  - ARMA: check R for arma, e.g., dynamo, also look more closely at GARCH_UCSD (BSD) and offspring (license ?)
 
 * other models in draft stage  -> requires cleaning
   - gaussian process   -> might fit in

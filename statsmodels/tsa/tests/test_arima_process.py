@@ -1,12 +1,14 @@
 from statsmodels.compat.pandas import QUARTER_END
 
 import datetime as dt
+import warnings
 
 import numpy as np
 from numpy.testing import (
     assert_allclose,
     assert_almost_equal,
     assert_array_almost_equal,
+    assert_array_equal,
     assert_equal,
 )
 import pandas as pd
@@ -16,14 +18,17 @@ from statsmodels.sandbox.tsa.fftarma import ArmaFft
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.arima_process import (
     ArmaProcess,
+    ar2arma,
     arma_acf,
     arma_acovf,
     arma_generate_sample,
     arma_impulse_response,
+    deconvolve,
     index2lpol,
     lpol2index,
     lpol_fiar,
     lpol_fima,
+    lpol_sdiff,
 )
 from statsmodels.tsa.tests.results import results_arma_acf
 from statsmodels.tsa.tests.results.results_process import armarep  # benchmarkdata
@@ -179,6 +184,44 @@ def test_fi():
     n = 100
     mafromar = arma_impulse_response(lpol_fiar(0.4, n=n), [1], n)
     assert_array_almost_equal(mafromar, lpol_fima(0.4, n=n), 13)
+
+
+def test_fi_d_zero():
+    # d == 0 is the identity operator: (1-L)^0 == 1, so the lag polynomial is
+    # 1 followed by zeros.  The gammaln formula is indeterminate at lag zero
+    # when d == 0 (inf - inf) and used to produce a NaN coefficient in
+    # lpol_fima and a RuntimeWarning in both helpers.
+    n = 10
+    expected = np.r_[1.0, np.zeros(n - 1)]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        assert_array_almost_equal(lpol_fima(0.0, n=n), expected, 14)
+        assert_array_almost_equal(lpol_fiar(0.0, n=n), expected, 14)
+        # n == 1 only has the lag-zero coefficient
+        assert_array_almost_equal(lpol_fima(0.0, n=1), [1.0], 14)
+        assert_array_almost_equal(lpol_fiar(0.0, n=1), [1.0], 14)
+        # nonzero d is unaffected; the lag-zero coefficient is still exactly 1
+        assert lpol_fima(0.4, n=n)[0] == 1.0
+        assert lpol_fiar(-0.3, n=n)[0] == 1.0
+
+
+@pytest.mark.parametrize("d", [-0.45, -0.25, -1e-8, 0.0, 1e-8, 0.3, 0.45])
+def test_fi_leading_terms(d):
+    # (1 - L)^(-d) = 1 + d L + d (d + 1) / 2 L^2 + d (d + 1) (d + 2) / 6 L^3 + ...
+    # (1 - L)^d = 1 - d L + d (d - 1) / 2 L^2 - d (d - 1) (d - 2) / 6 L^3 + ...
+    # the signs of the coefficients for negative d are the reverse of the signs
+    # for positive d
+    ma = [1, d, d * (d + 1) / 2, d * (d + 1) * (d + 2) / 6]
+    ar = [1, -d, d * (d - 1) / 2, -d * (d - 1) * (d - 2) / 6]
+    assert_allclose(lpol_fima(d, n=4), ma, rtol=1e-8, atol=1e-15)
+    assert_allclose(lpol_fiar(d, n=4), ar, rtol=1e-8, atol=1e-15)
+
+
+@pytest.mark.parametrize("func", [lpol_fima, lpol_fiar])
+@pytest.mark.parametrize("d", [-0.3, 0.0, 0.3])
+def test_fi_short(func, d):
+    assert func(d, n=0).shape == (0,)
+    assert_allclose(func(d, n=1), [1.0])
 
 
 def test_arma_impulse_response():
@@ -353,12 +396,12 @@ class TestArmaProcess:
         process1 = ArmaProcess.from_coeffs([0.9], [0.2])
         out = process1.__str__()
         print(out)
-        assert (out.find("AR: [1.0, -0.9]") != -1)
-        assert (out.find("MA: [1.0, 0.2]") != -1)
+        assert out.find("AR: [1.0, -0.9]") != -1
+        assert out.find("MA: [1.0, 0.2]") != -1
 
         out = process1.__repr__()
-        assert (out.find("nobs=100") != -1)
-        assert (out.find("at " + str(hex(id(process1)))) != -1)
+        assert out.find("nobs=100") != -1
+        assert out.find("at " + str(hex(id(process1)))) != -1
 
     def test_acf(self):
         process1 = ArmaProcess.from_coeffs([0.9])
@@ -367,7 +410,7 @@ class TestArmaProcess:
         assert_array_almost_equal(acf, expected)
 
         acf = process1.acf()
-        assert (acf.shape[0] == process1.nobs)
+        assert acf.shape[0] == process1.nobs
 
     def test_pacf(self):
         process1 = ArmaProcess.from_coeffs([0.9])
@@ -376,7 +419,7 @@ class TestArmaProcess:
         assert_array_almost_equal(pacf, expected)
 
         pacf = process1.pacf()
-        assert (pacf.shape[0] == process1.nobs)
+        assert pacf.shape[0] == process1.nobs
 
     def test_isstationary(self):
         process1 = ArmaProcess.from_coeffs([1.1])
@@ -461,7 +504,8 @@ def test_from_estimation(d, seasonal):
     ma = [0.4] if not seasonal else [0.4, 0, 0, 0.2, -0.08]
     ap = ArmaProcess.from_coeffs(ar, ma, 500)
     idx = pd.date_range(dt.datetime(1900, 1, 1), periods=500, freq=QUARTER_END)
-    data = ap.generate_sample(500)
+    rs = np.random.RandomState(12345111)
+    data = ap.generate_sample(500, distrvs=rs.standard_normal)
     if d == 1:
         data = np.cumsum(data)
     data = pd.Series(data, index=idx)
@@ -472,3 +516,91 @@ def test_from_estimation(d, seasonal):
     shape = (5,) if seasonal else (1,)
     assert ap_from.arcoefs.shape == shape
     assert ap_from.macoefs.shape == shape
+
+
+@pytest.mark.parametrize("s", [4, 12])
+def test_lpol_sdiff(s):
+    # (1 - L^s) has coefficient 1 at lag 0, -1 at lag s, and 0 elsewhere.
+    coeffs = lpol_sdiff(s)
+    expected = np.zeros(s + 1)
+    expected[0] = 1.0
+    expected[s] = -1.0
+    assert_array_equal(coeffs, expected)
+
+    # Applying the polynomial as a filter must reproduce a direct seasonal
+    # difference x_t - x_{t-s}, independently of how the coefficients were
+    # derived. np.convolve(coeffs, x, "full")[t] == sum_j coeffs[j] * x[t-j]
+    # by the definition of discrete convolution, with x implicitly
+    # zero-padded outside its bounds.
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal(30)
+    conv = np.convolve(coeffs, x, mode="full")
+    assert_allclose(conv[s : len(x)], x[s:] - x[:-s])
+
+
+def test_deconvolve_roundtrip():
+    # Polynomial division has an exact answer: if num == den * quot exactly,
+    # deconvolve must recover quot exactly with a zero remainder.
+    den = np.array([1.0, -0.5, 0.25])
+    quot_true = np.array([2.0, -1.0, 0.5, 3.0])
+    num = np.convolve(den, quot_true)
+    quot, rem = deconvolve(num, den)
+    assert_allclose(quot, quot_true, atol=1e-10)
+    assert_allclose(rem, np.zeros_like(num), atol=1e-10)
+
+
+def test_deconvolve_den_longer_than_num():
+    # When den is longer than num and n is not given, deconvolve reports
+    # the trivial "quotient is empty, remainder is the whole signal" result.
+    num = np.array([1.0, 2.0])
+    den = np.array([1.0, 2.0, 3.0, 4.0])
+    quot, rem = deconvolve(num, den)
+    assert len(quot) == 0
+    assert_array_equal(rem, num)
+
+
+def test_ar2arma_recovers_correctly_specified_ar():
+    # When the fitted ARMA(p, 1) nests the true AR(p-1) process exactly
+    # (trivial MA), ar2arma should recover it (near) exactly, and the
+    # ordinary impulse response of the approximation -- computed
+    # independently via ArmaProcess -- should match the true process's own
+    # impulse response closely.
+    n = 40
+    for ar_true, p in [([1.0, -0.8], 2), ([1.0, -0.5, 0.25], 3)]:
+        ar_des = np.zeros(n)
+        ar_des[: len(ar_true)] = ar_true
+        ar_app, ma_app, _ = ar2arma(ar_des, p=p, q=1, n=n)
+        assert_allclose(ar_app, ar_true, atol=1e-5)
+        assert_allclose(ma_app, [1.0], atol=1e-5)
+
+        true_irf = ArmaProcess(ar_true, [1.0]).impulse_response(leads=n)
+        app_irf = ArmaProcess(ar_app, ma_app).impulse_response(leads=n)
+        assert_allclose(app_irf, true_irf, atol=1e-4)
+
+
+def test_ar2arma_approximates_higher_order_ar():
+    # When under-parameterized (fitting an ARMA(1, 1) to an AR(3) process),
+    # ar2arma cannot recover the true process exactly, but the impulse
+    # response of the fit -- independently computed via ArmaProcess --
+    # should still closely track the true process's impulse response over a
+    # reasonable horizon.
+    n = 40
+    ar_true = [1.0, -0.6, 0.2, -0.1]
+    ar_des = np.zeros(n)
+    ar_des[: len(ar_true)] = ar_true
+    ar_app, ma_app, _ = ar2arma(ar_des, p=2, q=2, n=n)
+
+    true_irf = ArmaProcess(ar_true, [1.0]).impulse_response(leads=15)
+    app_irf = ArmaProcess(ar_app, ma_app).impulse_response(leads=15)
+    assert_allclose(app_irf, true_irf, atol=0.1)
+
+
+def test_arma_acovf_nobs_validation():
+    # a negative nobs used to return a silently truncated acovf on the
+    # innovations path and leak a bare numpy error on the white-noise path
+    with pytest.raises(ValueError, match="nobs must be a positive integer"):
+        arma_acovf([1.0, -0.5], [1.0], nobs=-1)
+    with pytest.raises(ValueError, match="nobs must be a positive integer"):
+        arma_acovf([1.0], [1.0], nobs=-1)
+    with pytest.raises(ValueError, match="nobs must be a positive integer"):
+        arma_acf([1.0, -0.5], [1.0], lags=0)

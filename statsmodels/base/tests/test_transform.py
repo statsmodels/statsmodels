@@ -70,7 +70,7 @@ class TestTransform:
     def test_guerrero_robust_scale(self):
         # The lambda is derived from a manual check of the values for the MAD.
         # Compare also the result for the standard deviation on R=4: 0.5076,
-        # i.e. almost the same value.
+        # i.e., almost the same value.
         lmbda = self.bc._est_lambda(self.x, scale="mad")
         assert_almost_equal(lmbda, 0.488621, 4)
 

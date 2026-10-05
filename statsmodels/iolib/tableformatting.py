@@ -1,6 +1,8 @@
 """
-Summary Table formating
-This is here to help keep the formating consistent across the different models
+Summary Table formatting
+
+This is here to help keep the formatting consistent across the different
+models.
 """
 import copy
 

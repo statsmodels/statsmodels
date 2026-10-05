@@ -18,13 +18,12 @@ jobs:
     matrix:
       # Windows keeps sentinel coverage for the oldest supported Python,
       # the newest supported Python, and free-threaded Python.
-      python39_win_compat:
-        python.version: '3.9'
+      python310_win_compat:
+        python.version: '3.10'
         python.architecture: 'x64'
       python313_win_latest:
         python.version: '3.13'
         python.architecture: 'x64'
-        lint: true
       python314t_win_latest:
         python.version: '3.14'
         python.architecture: 'x64-freethreaded'
@@ -53,12 +52,6 @@ jobs:
   - pwsh: |
       python -m pip install -vv --no-build-isolation --config-settings=editable-verbose=true --editable .
     displayName: 'Build Cython Extensions'
-
-  - pwsh: |
-      ruff check statsmodels
-      isort --check-only statsmodels
-    displayName: "Lint"
-    condition: eq(variables['lint'], 'true')
 
   - pwsh: |
       pytest statsmodels --skip-examples --skip-high-memory --junitxml=junit/test-results.xml -n 2 --durations=50

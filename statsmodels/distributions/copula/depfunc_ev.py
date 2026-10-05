@@ -15,11 +15,33 @@ from statsmodels.tools.numdiff import _approx_fprime_cs_scalar, approx_hess
 
 
 class PickandDependence:
+    """Base class for Pickands dependence functions for EV-copulas.
+
+    Subclasses implement ``evaluate`` (the dependence function itself) and
+    may override ``deriv`` and ``deriv2`` with closed-form derivatives;
+    otherwise these fall back to numerical differentiation.
+    """
 
     def __call__(self, *args, **kwargs):
         return self.evaluate(*args, **kwargs)
 
     def evaluate(self, t, *args):
+        """Evaluate the Pickands dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        *args
+            Shape parameters of the dependence function. The number and
+            meaning of these depends on the specific dependence function.
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
         raise NotImplementedError
 
     def deriv(self, t, *args):
@@ -61,6 +83,25 @@ class AsymLogistic(PickandDependence):
         return condth and conda1 and conda2
 
     def evaluate(self, t, a1, a2, theta):
+        """Evaluate the asymmetric logistic Pickands dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        a1 : float
+            Asymmetry parameter, restricted to [0, 1].
+        a2 : float
+            Asymmetry parameter, restricted to [0, 1].
+        theta : float
+            Dependence parameter, restricted to (0, 1].
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
 
         # if not np.all(_check_args(a1, a2, theta)):
         #    raise ValueError('invalid args')
@@ -107,6 +148,25 @@ class AsymNegLogistic(PickandDependence):
         return condth and conda1 and conda2
 
     def evaluate(self, t, a1, a2, theta):
+        """Evaluate the asymmetric negative logistic dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        a1 : float
+            Asymmetry parameter, restricted to (0, 1].
+        a2 : float
+            Asymmetry parameter, restricted to (0, 1].
+        theta : float
+            Dependence parameter, restricted to (0, inf).
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
         # if not np.all(self._check_args(a1, a2, theta)):
         #     raise ValueError('invalid args')
 
@@ -164,6 +224,25 @@ class AsymMixed(PickandDependence):
         return condth & cond1
 
     def evaluate(self, t, theta, k):
+        """Evaluate the asymmetric mixed Pickands dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        theta : float
+            Dependence parameter, restricted to theta > 0 (jointly with
+            `k`, see class restrictions).
+        k : float
+            Shape parameter, restricted jointly with `theta`, see class
+            restrictions.
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
         transf = 1 - (theta + k) * t + theta * t*t + k * t**3
         return transf
 
@@ -197,6 +276,26 @@ class AsymBiLogistic(PickandDependence):
         return cond1 | cond2
 
     def evaluate(self, t, beta, delta):
+        """Evaluate the bilogistic Pickands dependence function.
+
+        Not vectorized in `t` because of the numerical integration.
+
+        Parameters
+        ----------
+        t : float
+            Value in [0, 1] at which the dependence function is evaluated.
+        beta : float
+            Shape parameter, jointly restricted with `delta` to either
+            (0, 1) or (-inf, 0).
+        delta : float
+            Shape parameter, jointly restricted with `beta` to either
+            (0, 1) or (-inf, 0).
+
+        Returns
+        -------
+        float
+            Value of the Pickands dependence function at `t`.
+        """
         # if not np.all(_check_args(beta, delta)):
         #    raise ValueError('invalid args')
 
@@ -228,6 +327,21 @@ class HR(PickandDependence):
         return cond
 
     def evaluate(self, t, lamda):
+        """Evaluate the Huesler-Reiss Pickands dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        lamda : float
+            Dependence parameter, restricted to (0, inf).
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
         # if not np.all(self._check_args(lamda)):
         #    raise ValueError('invalid args')
 
@@ -311,6 +425,24 @@ class TEV(PickandDependence):
         return cond1 and cond2
 
     def evaluate(self, t, rho, df):
+        """Evaluate the t-EV Pickands dependence function.
+
+        Parameters
+        ----------
+        t : array_like
+            Value(s) in [0, 1] at which the dependence function is
+            evaluated.
+        rho : float
+            Correlation parameter, restricted to (-1, 1).
+        df : float
+            Degrees of freedom parameter (denoted ``x`` or ``chi`` in
+            some references), restricted to > 0.
+
+        Returns
+        -------
+        ndarray or float
+            Value(s) of the Pickands dependence function at `t`.
+        """
         x = df  # alias, Genest and Segers use chi, copual package uses df
         # if not np.all(self, _check_args(rho, x)):
         #    raise ValueError('invalid args')

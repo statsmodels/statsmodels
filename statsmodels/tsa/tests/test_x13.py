@@ -1,5 +1,6 @@
 from statsmodels.compat.pandas import MONTH_END
 
+from pathlib import Path
 import tempfile
 
 import numpy as np
@@ -64,7 +65,11 @@ def test_x13_arima_select_order(dataset, use_numpy):
         dataset = np.squeeze(np.asarray(dataset))
         start = index[0]
         if isinstance(index, pd.DatetimeIndex):
-            freq = index.inferred_freq
+            try:
+                with pd.option_context("future.infer_freq_returns_offset", True):
+                    freq = index.inferred_freq.freqstr
+            except (AttributeError, ImportError):
+                freq = index.inferred_freq
         elif isinstance(index, pd.PeriodIndex):
             start = start.to_timestamp()
             freq = index.freq
@@ -78,13 +83,14 @@ def test_x13_arima_select_order(dataset, use_numpy):
     assert isinstance(res.sorder, tuple)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_x13_arima_plot(dataset, close_figures):
     res = x13_arima_analysis(dataset)
     res.plot()
 
 
-def test_x13_arima_plot_no_pandas(dataset):
+def test_x13_arima_plot_no_pandas(dataset, close_figures):
     res = x13_arima_analysis(dataset)
     res.plot()
 
@@ -151,9 +157,10 @@ history {
     x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+    with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
         ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
+        ft.close()
 
         x13_arima_analysis(dataset, rawspec=ft.name)
 
@@ -193,9 +200,10 @@ history {
     x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+    with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
         ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
+        ft.close()
 
         x13_arima_analysis(dataset, rawspec=ft.name)
 
@@ -228,11 +236,17 @@ history {
     x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+    with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
         ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
+        ft.close()
 
         x13_arima_analysis(dataset, rawspec=ft.name)
+        try:
+            Path(ft.name).unlink()
+        except OSError:
+            # While it best ot unlink, not strictly required
+            pass
 
 
 def test_x13_arima_invalid_rawspec(dataset):
@@ -251,9 +265,10 @@ x11 {
         x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
-    with tempfile.NamedTemporaryFile(suffix=".spc") as ft:
+    with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
         ft.write(raw_spec_file.encode("utf8"))
         ft.seek(0)
+        ft.close()
 
         with pytest.raises(X13Error):
 

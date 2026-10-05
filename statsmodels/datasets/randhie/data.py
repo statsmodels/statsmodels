@@ -13,8 +13,8 @@ http://www.rand.org/health/projects/hie.html
 
 This data was used in::
 
-    Cameron, A.C. amd Trivedi, P.K. 2005.  `Microeconometrics: Methods
-        and Applications,` Cambridge: New York.
+    Cameron, A.C. and Trivedi, P.K. 2005.  *Microeconometrics: Methods
+        and Applications*, Cambridge: New York.
 
 And was obtained from: <http://cameron.econ.ucdavis.edu/mmabook/mmadata.html>
 
@@ -54,7 +54,8 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
 
     Notes
     -----
@@ -71,7 +72,8 @@ def load_pandas():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
 
     Notes
     -----

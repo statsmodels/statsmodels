@@ -56,9 +56,9 @@ class ResultsWrapper:
 
         Parameters
         ----------
-        fname : {str, handle}
+        fname : str or handle
             Either a filename or a valid file handle.
-        remove_data : bool
+        remove_data : bool, optional
             If False (default), then the instance is pickled without changes.
             If True, then all arrays with length nobs are set to None before
             pickling. See the remove_data method.
@@ -84,7 +84,7 @@ class ResultsWrapper:
 
         Parameters
         ----------
-        fname : {str, handle}
+        fname : str or handle
             A string filename or a file handle.
 
         Returns

@@ -1,8 +1,7 @@
 """
 Test Results for ordinal models from R MASS lib
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -49,8 +48,8 @@ from statsmodels.tools.testing import Holder
 #                        select=c("pared", "public","gpa")), type='prob'),7)
 
 data_store = Holder()
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-df = pd.read_csv(os.path.join(cur_dir, "ologit_ucla.csv"))
+cur_dir = Path(__file__).resolve().parent
+df = pd.read_csv(Path(cur_dir).joinpath("ologit_ucla.csv"))
 
 # df_unordered['apply'] is pd.Categorical with ordered = False
 df_unordered = df.copy()

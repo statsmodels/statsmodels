@@ -69,10 +69,3 @@ def test_pca_svd():
     pcares = pca(xf, keepdim=2)
     pcasvdres = pcasvd(xf, keepdim=2)
     check_pca_svd(pcares, pcasvdres)
-
-
-# print np.dot(factors[:,:3], evecs.T[:3,:])[:5]
-
-
-if __name__ == "__main__":
-    test_pca_svd()

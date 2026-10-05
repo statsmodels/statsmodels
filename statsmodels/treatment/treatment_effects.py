@@ -1,4 +1,5 @@
-"""Treatment effect estimators
+"""
+Treatment effect estimators
 
 follows largely Stata's teffects in Stata 13 manual
 
@@ -30,19 +31,41 @@ could be loaded with webuse
 from statsmodels.compat.pandas import Substitution
 
 import numpy as np
+import pandas as pd
 from scipy.linalg import block_diag
 
 from statsmodels.regression.linear_model import WLS
 from statsmodels.sandbox.regression.gmm import GMM
 from statsmodels.stats.contrast import ContrastResults
 from statsmodels.tools.docstring import indent
+from statsmodels.tools.validation import array_like
 
 
 def _mom_ate(params, endog, tind, prob, weighted=True):
-    """moment condition for average treatment effect
+    """
+    Moment condition for average treatment effect
 
     This does not include a moment condition for potential outcome mean (POM).
 
+    Parameters
+    ----------
+    params : ndarray
+        Parameter at which the moment condition is evaluated, the average
+        treatment effect.
+    endog : ndarray
+        Outcome variable.
+    tind : ndarray
+        Treatment indicator, 1 for treated and 0 for untreated observations.
+    prob : ndarray
+        Estimated propensity score, probability of treatment.
+    weighted : bool, optional
+        If True, weights are normalized so that each of the treated and
+        untreated weights average to one.
+
+    Returns
+    -------
+    ndarray
+        Moment condition, evaluated at each observation.
     """
     w1 = (tind / prob)
     w0 = (1. - tind) / (1. - prob)
@@ -56,9 +79,31 @@ def _mom_ate(params, endog, tind, prob, weighted=True):
 
 
 def _mom_atm(params, endog, tind, prob, weighted=True):
-    """moment conditions for average treatment means (POM)
+    """
+    Moment conditions for average treatment means (POM)
 
-    moment conditions are POM0 and POM1
+    Moment conditions are POM0 and POM1.
+
+    Parameters
+    ----------
+    params : ndarray
+        Parameters, POM0 and POM1, at which the moment conditions are
+        evaluated.
+    endog : ndarray
+        Outcome variable.
+    tind : ndarray
+        Treatment indicator, 1 for treated and 0 for untreated observations.
+    prob : ndarray
+        Estimated propensity score, probability of treatment.
+    weighted : bool, optional
+        If True, weights are normalized so that each of the treated and
+        untreated weights average to one.
+
+    Returns
+    -------
+    ndarray
+        Moment conditions, evaluated at each observation, 2 columns for
+        POM0 and POM1.
     """
     w1 = (tind / prob)
     w0 = (1. - tind) / (1. - prob)
@@ -71,10 +116,30 @@ def _mom_atm(params, endog, tind, prob, weighted=True):
 
 def _mom_ols(params, endog, tind, prob, weighted=True):
     """
-    moment condition for average treatment mean based on OLS dummy regression
+    Moment condition for average treatment mean based on OLS dummy regression
 
-    moment conditions are POM0 and POM1
+    Moment conditions are POM0 and POM1.
 
+    Parameters
+    ----------
+    params : ndarray
+        Parameters, POM0 and POM1, at which the moment conditions are
+        evaluated.
+    endog : ndarray
+        Outcome variable.
+    tind : ndarray
+        Treatment indicator, 1 for treated and 0 for untreated observations.
+    prob : ndarray
+        Estimated propensity score, probability of treatment.
+    weighted : bool, optional
+        Not used. Kept for signature compatibility with other moment
+        condition functions.
+
+    Returns
+    -------
+    ndarray
+        Moment conditions, evaluated at each observation, 2 columns for
+        POM0 and POM1.
     """
     w = tind / prob + (1-tind) / (1 - prob)
 
@@ -86,11 +151,30 @@ def _mom_ols(params, endog, tind, prob, weighted=True):
 
 def _mom_ols_te(tm, endog, tind, prob, weighted=True):
     """
-    moment condition for average treatment mean based on OLS dummy regression
+    Moment condition for average treatment mean based on OLS dummy regression
 
-    first moment is ATE
-    second moment is POM0  (control)
+    First moment is ATE, second moment is POM0 (control).
 
+    Parameters
+    ----------
+    tm : ndarray
+        Parameters, ATE and POM0, at which the moment conditions are
+        evaluated.
+    endog : ndarray
+        Outcome variable.
+    tind : ndarray
+        Treatment indicator, 1 for treated and 0 for untreated observations.
+    prob : ndarray
+        Estimated propensity score, probability of treatment.
+    weighted : bool, optional
+        Not used. Kept for signature compatibility with other moment
+        condition functions.
+
+    Returns
+    -------
+    ndarray
+        Moment conditions, evaluated at each observation, 2 columns for
+        ATE and POM0.
     """
     w = tind / prob + (1-tind) / (1 - prob)
 
@@ -101,6 +185,28 @@ def _mom_ols_te(tm, endog, tind, prob, weighted=True):
 
 
 def _mom_olsex(params, model=None, exog=None, scale=None):
+    """
+    Moment condition for OLS with an optionally external exog and scale
+
+    Parameters
+    ----------
+    params : ndarray
+        Parameters of the outcome model.
+    model : instance of a model class
+        Model with ``endog`` and, if `exog` is None, ``exog`` attributes,
+        and a ``predict`` method.
+    exog : ndarray, optional
+        Explanatory variables used to compute fitted values. If None, then
+        ``model.exog`` is used instead.
+    scale : float, optional
+        If provided, the residual based moment condition is divided by
+        this scale.
+
+    Returns
+    -------
+    ndarray
+        Moment condition, evaluated at each observation, weighted by exog.
+    """
     exog = exog if exog is not None else model.exog
     fitted = model.predict(params, exog)
     resid = model.endog - fitted
@@ -111,8 +217,33 @@ def _mom_olsex(params, model=None, exog=None, scale=None):
 
 
 def ate_ipw(endog, tind, prob, weighted=True, probt=None):
-    """average treatment effect based on basic inverse propensity weighting.
+    """
+    Average treatment effect based on basic inverse propensity weighting
 
+    Parameters
+    ----------
+    endog : ndarray
+        Outcome variable.
+    tind : ndarray
+        Treatment indicator, 1 for treated and 0 for untreated observations.
+    prob : ndarray
+        Estimated propensity score, probability of treatment.
+    weighted : bool, optional
+        If True, weights are normalized so that each of the treated and
+        untreated weights average to one.
+    probt : ndarray, optional
+        Additional weight, e.g., propensity score, used to target the effect
+        on a subgroup such as the treated or untreated population. If None,
+        the sample average treatment effect is computed.
+
+    Returns
+    -------
+    ate : float
+        Average treatment effect.
+    pom0 : float
+        Potential outcome mean for the untreated (control) group.
+    pom1 : float
+        Potential outcome mean for the treated group.
     """
     w1 = (tind / prob)
     w0 = (1. - tind) / (1. - prob)
@@ -130,15 +261,66 @@ def ate_ipw(endog, tind, prob, weighted=True, probt=None):
     return (endog * wdiff).mean(), (endog * w0).mean(), (endog * w1).mean()
 
 
+def _aipw_pom_terms(endog, tind, prob, fitted0, fitted1, effect_group):
+    """Observation terms of AIPW potential outcome means for a target group
+
+    Returns (tmean0, tmean1, sind) where sind is the indicator of the target
+    population. POM_t is sum(tmean_t) / sum(sind).
+    """
+    if effect_group == "all":
+        sind = np.ones_like(prob)
+        c0 = 1 / (1 - prob)
+        c1 = 1 / prob
+    elif effect_group == 1:
+        sind = tind
+        c0 = prob / (1 - prob)
+        c1 = 1.
+    elif effect_group == 0:
+        sind = 1 - tind
+        c0 = 1.
+        c1 = (1 - prob) / prob
+    else:
+        raise ValueError("incorrect option for effect_group")
+    tmean0 = sind * fitted0 + (1 - tind) * c0 * (endog - fitted0)
+    tmean1 = sind * fitted1 + tind * c1 * (endog - fitted1)
+    return tmean0, tmean1, sind
+
+
+def _standardize_effect_group(effect_group):
+    if effect_group in [1, "treated"]:
+        return 1
+    if effect_group in [0, "untreated", "control"]:
+        return 0
+    if effect_group == "all":
+        return "all"
+    raise ValueError("incorrect option for effect_group")
+
+
 class _TEGMMGeneric1(GMM):
-    """GMM class to get cov_params for treatment effects
+    """
+    GMM class to get cov_params for treatment effects
 
     This combines moment conditions for the selection/treatment model and the
     outcome model to get the standard errors for the treatment effect that
     takes the first step estimation of the treatment model into account.
 
-    this also matches standard errors of ATE and POM in Stata
+    This also matches standard errors of ATE and POM in Stata.
 
+    Parameters
+    ----------
+    endog : ndarray
+        Outcome variable, endog of the outcome model.
+    res_select : results instance
+        Results instance of the treatment or selection model.
+    mom_outcome : callable
+        Function that computes the moment conditions of the outcome model.
+    exclude_tmoms : bool, optional
+        If True, then the moment conditions of the treatment or selection
+        model are not included and `params` does not contain the
+        parameters of the selection model.
+    **kwargs
+        Additional keyword arguments that are attached to the instance,
+        e.g., `teff` and `effect_group` used by the subclasses.
     """
 
     def __init__(self, endog, res_select, mom_outcome, exclude_tmoms=False,
@@ -191,14 +373,23 @@ class _TEGMMGeneric1(GMM):
 
 
 class _TEGMM(GMM):
-    """GMM class to get cov_params for treatment effects
+    """
+    GMM class to get cov_params for treatment effects
 
     This combines moment conditions for the selection/treatment model and the
     outcome model to get the standard errors for the treatment effect that
     takes the first step estimation of the treatment model into account.
 
-    this also matches standard errors of ATE and POM in Stata
+    This also matches standard errors of ATE and POM in Stata.
 
+    Parameters
+    ----------
+    endog : ndarray
+        Outcome variable, endog of the outcome model.
+    res_select : results instance
+        Results instance of the treatment or selection model.
+    mom_outcome : callable
+        Function that computes the moment conditions of the outcome model.
     """
 
     def __init__(self, endog, res_select, mom_outcome):
@@ -224,9 +415,13 @@ class _TEGMM(GMM):
 
 
 class _IPWGMM(_TEGMMGeneric1):
-    """ GMM for aipw treatment effect and potential outcome
+    """
+    GMM for ipw treatment effect and potential outcome
 
-    uses unweighted outcome regression
+    Notes
+    -----
+    Uses a single, pooled outcome moment condition weighted by the inverse
+    probability weights.
     """
 
     def momcond(self, params):
@@ -241,7 +436,7 @@ class _IPWGMM(_TEGMMGeneric1):
         ps = params[2:]
 
         prob_sel = np.asarray(res_select.model.predict(ps))
-        prob_sel = np.clip(prob_sel, 0.01, 0.99)
+        prob_sel = np.clip(prob_sel, *ra.ps_bounds)
         prob = prob_sel
 
         if effect_group == "all":
@@ -271,9 +466,12 @@ class _IPWGMM(_TEGMMGeneric1):
 
 
 class _AIPWGMM(_TEGMMGeneric1):
-    """ GMM for aipw treatment effect and potential outcome
+    """
+    GMM for aipw treatment effect and potential outcome
 
-    uses unweighted outcome regression
+    Notes
+    -----
+    Uses unweighted outcome regression.
     """
 
     def momcond(self, params):
@@ -297,7 +495,7 @@ class _AIPWGMM(_TEGMMGeneric1):
         endog = ra.endog_grouped
 
         prob_sel = np.asarray(res_select.model.predict(ps))
-        prob_sel = np.clip(prob_sel, 0.01, 0.99)
+        prob_sel = np.clip(prob_sel, *ra.ps_bounds)
 
         prob0 = prob_sel[~treat_mask]
         prob1 = prob_sel[treat_mask]
@@ -315,15 +513,10 @@ class _AIPWGMM(_TEGMMGeneric1):
         # moments for target statistics, ATE and POM
         tind = ra.treatment
         tind = np.concatenate((tind[~treat_mask], tind[treat_mask]))
-        correct0 = (endog - fitted0) / (1 - prob) * (1 - tind)
-        correct1 = (endog - fitted1) / prob * tind
-
-        tmean0 = fitted0 + correct0
-        tmean1 = fitted1 + correct1
-        ate = tmean1 - tmean0
-
-        mm = ate - pm
-        mpom = tmean0 - ppom
+        tmean0, tmean1, sind = _aipw_pom_terms(
+            endog, tind, prob, fitted0, fitted1, self.effect_group)
+        mm = (tmean1 - tmean0 - sind * pm) / sind.mean()
+        mpom = (tmean0 - sind * ppom) / sind.mean()
         mm = np.column_stack((mm, mpom))
 
         # Note: res_select has original data order,
@@ -337,9 +530,12 @@ class _AIPWGMM(_TEGMMGeneric1):
 
 
 class _AIPWWLSGMM(_TEGMMGeneric1):
-    """ GMM for aipw-wls treatment effect and potential outcome
+    """
+    GMM for aipw-wls treatment effect and potential outcome
 
-    uses weighted outcome regression
+    Notes
+    -----
+    Uses weighted outcome regression.
     """
 
     def momcond(self, params):
@@ -355,7 +551,7 @@ class _AIPWWLSGMM(_TEGMMGeneric1):
         pm = params[0]  # ATE parameter
         p0 = params[1:k+1]
         p1 = params[k+1:2*k+1]
-        ps = params[-6:]
+        ps = params[-self.k_select:]
         mod0 = ra.results0.model
         mod1 = ra.results1.model
         # use reordered exog, endog so it matches sub models by group
@@ -365,7 +561,7 @@ class _AIPWWLSGMM(_TEGMMGeneric1):
         # todo: need weights in outcome models
         prob_sel = np.asarray(res_select.model.predict(ps))
 
-        prob_sel = np.clip(prob_sel, 0.001, 0.999)
+        prob_sel = np.clip(prob_sel, *ra.ps_bounds)
 
         prob0 = prob_sel[~treat_mask]
         prob1 = prob_sel[treat_mask]
@@ -389,15 +585,10 @@ class _AIPWWLSGMM(_TEGMMGeneric1):
         tind = ra.treatment
         tind = np.concatenate((tind[~treat_mask], tind[treat_mask]))
 
-        correct0 = (endog - fitted0) / (1 - prob) * (1 - tind)
-        correct1 = (endog - fitted1) / prob * tind
-
-        tmean0 = fitted0 + correct0
-        tmean1 = fitted1 + correct1
-        ate = tmean1 - tmean0
-
-        mm = ate - pm
-        mpom = tmean0 - ppom
+        tmean0, tmean1, sind = _aipw_pom_terms(
+            endog, tind, prob, fitted0, fitted1, self.effect_group)
+        mm = (tmean1 - tmean0 - sind * pm) / sind.mean()
+        mpom = (tmean0 - sind * ppom) / sind.mean()
         mm = np.column_stack((mm, mpom))
 
         # Note: res_select has original data order,
@@ -411,9 +602,12 @@ class _AIPWWLSGMM(_TEGMMGeneric1):
 
 
 class _RAGMM(_TEGMMGeneric1):
-    """GMM for regression adjustment treatment effect and potential outcome
+    """
+    GMM for regression adjustment treatment effect and potential outcome
 
-    uses unweighted outcome regression
+    Notes
+    -----
+    Uses unweighted outcome regression.
     """
 
     def momcond(self, params):
@@ -451,8 +645,7 @@ class _RAGMM(_TEGMMGeneric1):
 
 
 class _IPWRAGMM(_TEGMMGeneric1):
-    """ GMM for ipwra treatment effect and potential outcome
-    """
+    """GMM for ipwra treatment effect and potential outcome"""
 
     def momcond(self, params):
         ra = self.teff
@@ -467,7 +660,7 @@ class _IPWRAGMM(_TEGMMGeneric1):
         pm = params[0]  # ATE parameter
         p0 = params[1:k+1]
         p1 = params[k+1:2*k+1]
-        ps = params[-6:]
+        ps = params[-self.k_select:]
         mod0 = ra.results0.model
         mod1 = ra.results1.model
 
@@ -478,7 +671,7 @@ class _IPWRAGMM(_TEGMMGeneric1):
 
         # selection probability by group, propensity score
         prob_sel = np.asarray(res_select.model.predict(ps))
-        prob_sel = np.clip(prob_sel, 0.001, 0.999)
+        prob_sel = np.clip(prob_sel, *ra.ps_bounds)
         prob0 = prob_sel[~treat_mask]
         prob1 = prob_sel[treat_mask]
 
@@ -532,10 +725,14 @@ class TreatmentEffectResults(ContrastResults):
     Parameters
     ----------
     teff : instance of TreatmentEffect class
+        The treatment effect instance that produced the results.
     results_gmm : instance of GMMResults class
-    method : string
-        Method and estimator of treatment effect.
-    kwds: dict
+        The GMM results instance used to compute the treatment effect
+        parameters and their covariance.
+    method : {"IPW", "RA", "AIPW", "AIPW-WLS", "IPW-RA"}
+        Method and estimator of treatment effect, corresponding to the
+        ``TreatmentEffect`` method that produced the results.
+    **kwds
         Other keywords with additional information.
 
     Notes
@@ -566,7 +763,7 @@ class TreatmentEffectResults(ContrastResults):
 doc_params_returns = """\
 Parameters
 ----------
-return_results : bool
+return_results : bool, optional
     If True, then a results instance is returned.
     If False, just ATE, POM0 and POM1 are returned.
 effect_group : {"all", 0, 1}
@@ -576,30 +773,17 @@ effect_group : {"all", 0, 1}
     potential outcomes are returned
     If effect_group is 1 or "treated", then effects on treated are
     returned.
-    If effect_group is 0, "treated" or "control", then effects on
-    untreated, i.e. control group, are returned.
-disp : bool
+    If effect_group is 0, "untreated" or "control", then effects on
+    untreated, i.e., control group, are returned.
+disp : bool, optional
     Indicates whether the scipy optimizer should display the
     optimization results
 
 Returns
 -------
-TreatmentEffectsResults instance or tuple (ATE, POM0, POM1)
-"""
-
-doc_params_returns2 = """\
-Parameters
-----------
-return_results : bool
-    If True, then a results instance is returned.
-    If False, just ATE, POM0 and POM1 are returned.
-disp : bool
-    Indicates whether the scipy optimizer should display the
-    optimization results
-
-Returns
--------
-TreatmentEffectsResults instance or tuple (ATE, POM0, POM1)
+TreatmentEffectResults or tuple
+    Results instance if `return_results` is True, otherwise the tuple
+    (ATE, POM0, POM1).
 """
 
 
@@ -618,15 +802,20 @@ class TreatmentEffect:
     ----------
     model : instance of a model class
         The model class should contain endog and exog for the outcome model.
-    treatment : ndarray
+    treatment : array_like
         indicator array for observations with treatment (1) or without (0)
-    results_select : results instance
+    results_select : results instance, optional
         The results instance for the treatment or selection model.
-    _cov_type : "HC0"
-        Internal keyword. The keyword oes not affect GMMResults which always
+    _cov_type : str, optional
+        Internal keyword. The keyword does not affect GMMResults which always
         corresponds to HC0 standard errors.
-    kwds : keyword arguments
-        currently not used
+    ps_bounds : array_like of float, optional
+        Lower and upper bounds for clipping the propensity score, i.e. the
+        predicted probabilities of the selection model. The same bounds are
+        used for point estimates and for the GMM moment conditions of all
+        estimation methods. Default is (0.001, 0.999).
+    **kwds
+        Currently not used.
 
     Notes
     -----
@@ -641,16 +830,22 @@ class TreatmentEffect:
     """
 
     def __init__(self, model, treatment, results_select=None, _cov_type="HC0",
-                 **kwds):
+                 ps_bounds=(0.001, 0.999), **kwds):
         # Note _cov_type is only for preliminary estimators,
-        # cov in GMM alwasy corresponds to HC0
+        # cov in GMM always corresponds to HC0
         self.__dict__.update(kwds)  # currently not used
         self.treatment = np.asarray(treatment)
         self.treat_mask = treat_mask = (treatment == 1)
+        ps_bounds = array_like(ps_bounds, "ps_bounds", shape=(2,))
+        if not 0 < ps_bounds[0] < ps_bounds[1] < 1:
+            raise ValueError(
+                "ps_bounds values must satisfy 0 < lower < upper < 1"
+                )
+        self.ps_bounds = ps_bounds
 
         if results_select is not None:
             self.results_select = results_select
-            self.prob_select = results_select.predict()
+            self.prob_select = np.clip(results_select.predict(), *ps_bounds)
 
         self.model_pool = model
         endog = model.endog
@@ -671,21 +866,197 @@ class TreatmentEffect:
         self.exog_grouped = np.concatenate((mod0.exog, mod1.exog), axis=0)
         self.endog_grouped = np.concatenate((mod0.endog, mod1.endog), axis=0)
 
+    def _diagnostic_sample(self):
+        if not hasattr(self, "results_select"):
+            raise ValueError("diagnostics require results_select")
+        treatment = np.asarray(self.treatment)
+        if (treatment.shape != (self.nobs,)
+                or not np.isin(treatment, [0, 1]).all()):
+            raise ValueError("treatment must be a one-dimensional 0/1 array")
+        mask = treatment == 1
+        if not mask.any() or mask.all():
+            raise ValueError("diagnostics require both treatment groups")
+        return mask
+
+    def overlap_summary(self):
+        """
+        Summarize unclipped propensity scores by treatment group.
+
+        Returns
+        -------
+        DataFrame
+            Rows ``control`` and ``treated`` contain the observation count
+            (``nobs``), minimum, 25th percentile, median, 75th percentile,
+            maximum, and counts strictly below and above ``ps_bounds``
+            (``n_below`` and ``n_above``).
+
+        Notes
+        -----
+        Uses predictions from the selection model before clipping. Extreme
+        scores can indicate poor practical overlap; these summaries do not
+        establish the population overlap assumption. No observations are
+        dropped and no model is refitted.
+        """
+        mask = self._diagnostic_sample()
+        prob = np.asarray(self.results_select.predict(), dtype=float)
+        if (prob.shape != (self.nobs,) or not np.isfinite(prob).all()
+                or np.any((prob < 0) | (prob > 1))):
+            raise ValueError("selection predictions must be finite probabilities "
+                             "with one value per observation")
+        rows = []
+        for group in [~mask, mask]:
+            values = prob[group]
+            quantiles = np.quantile(values, [0, 0.25, 0.5, 0.75, 1])
+            rows.append(dict(zip(
+                ["min", "q25", "median", "q75", "max"], quantiles,
+                strict=True)))
+            rows[-1].update(
+                nobs=values.size,
+                n_below=int(np.sum(values < self.ps_bounds[0])),
+                n_above=int(np.sum(values > self.ps_bounds[1])),
+            )
+        return pd.DataFrame(rows, index=["control", "treated"])[
+            ["nobs", "min", "q25", "median", "q75", "max", "n_below",
+             "n_above"]]
+
+    def balance_table(self, exog=None, effect_group="all"):
+        """
+        Compare covariate means before and after inverse probability weighting.
+
+        Parameters
+        ----------
+        exog : array_like, optional
+            Two-dimensional finite numeric covariates in the original sample
+            order, with one row per observation. The default is the selection
+            model's design matrix. DataFrame column names are retained.
+            Categorical covariates must first be encoded numerically.
+        effect_group : {"all", 0, 1, "treated", "untreated", "control"}, optional
+            Weighting target: ``"all"`` (default) for ATE, 1 or ``"treated"``
+            for ATET, and 0, ``"untreated"`` or ``"control"`` for ATC.
+
+        Returns
+        -------
+        DataFrame
+            One row per covariate, with ``mean_control``, ``mean_treated``,
+            ``mean_control_weighted``, ``mean_treated_weighted``, ``smd`` and
+            ``smd_weighted``. Selection-model covariate names are used by
+            default; unnamed supplied columns are labelled x0, x1, etc.
+
+        Notes
+        -----
+        Weights use the clipped ``prob_select`` used by the estimators.
+        Means are normalized separately within each treatment group.
+        SMD is treated minus control mean divided by
+        ``sqrt((var_treated + var_control) / 2)``, using unweighted sample
+        variances (ddof=1), the standardized difference of [2]_. This same
+        denominator is held fixed before and after weighting, for all
+        weighting targets, see [3]_. Binary columns use this same numeric
+        convention rather than population Bernoulli variances.
+        This follows the fixed-scale approach in [1]_, but does not adopt
+        its target-specific or binary-covariate defaults.
+
+        Columns that are constant within both treatment groups, including
+        intercepts, have zero pooled variance and NaN SMDs, also if the means
+        of the two groups differ.
+        At least two observations are required in each treatment group.
+        These descriptive statistics do not certify absence of confounding.
+
+        References
+        ----------
+        .. [1] Greifer, N. cobalt: Frequently Asked Questions, "How are
+           standardized mean differences computed in cobalt?"
+           https://ngreifer.github.io/cobalt/articles/faq.html
+        .. [2] Austin, P. C. 2009. Balance diagnostics for comparing the
+           distribution of baseline covariates between treatment groups in
+           propensity-score matched samples. Statistics in Medicine 28 (25):
+           3083-3107.
+        .. [3] Austin, P. C., and E. A. Stuart. 2015. Moving towards best
+           practice when using inverse probability of treatment weighting
+           (IPTW) using the propensity score to estimate causal treatment
+           effects in observational studies. Statistics in Medicine 34 (28):
+           3661-3679.
+        """
+        mask = self._diagnostic_sample()
+        if min(mask.sum(), (~mask).sum()) < 2:
+            raise ValueError("balance requires at least two observations per group")
+        if exog is None:
+            exog = self.results_select.model.exog
+            names = self.results_select.model.exog_names
+        else:
+            names = getattr(exog, "columns", None)
+        exog = np.asarray(exog, dtype=float)
+        if (exog.ndim != 2 or exog.shape[0] != self.nobs
+                or exog.shape[1] == 0 or not np.isfinite(exog).all()):
+            raise ValueError("exog must be a finite nonempty two-dimensional "
+                             "array with one row per observation")
+        if names is None:
+            names = [f"x{i}" for i in range(exog.shape[1])]
+        prob = np.asarray(self.prob_select)
+        if (prob.shape != (self.nobs,) or not np.isfinite(prob).all()
+                or np.any((prob <= 0) | (prob >= 1))):
+            raise ValueError("prob_select must contain finite probabilities "
+                             "strictly between 0 and 1")
+        if effect_group == "all":
+            target = np.ones(self.nobs)
+        elif effect_group in [1, "treated"]:
+            target = prob
+        elif effect_group in [0, "untreated", "control"]:
+            target = 1 - prob
+        else:
+            raise ValueError("incorrect option for effect_group")
+        w0 = target[~mask] / (1 - prob[~mask])
+        w1 = target[mask] / prob[mask]
+        x0, x1 = exog[~mask], exog[mask]
+        mean0, mean1 = x0.mean(axis=0), x1.mean(axis=0)
+        weighted0 = np.average(x0, axis=0, weights=w0)
+        weighted1 = np.average(x1, axis=0, weights=w1)
+        scale = np.sqrt((x0.var(axis=0, ddof=1)
+                         + x1.var(axis=0, ddof=1)) / 2)
+        scale[(np.ptp(x0, axis=0) == 0) & (np.ptp(x1, axis=0) == 0)] = np.nan
+        return pd.DataFrame({
+            "mean_control": mean0,
+            "mean_treated": mean1,
+            "mean_control_weighted": weighted0,
+            "mean_treated_weighted": weighted1,
+            "smd": (mean1 - mean0) / scale,
+            "smd_weighted": (weighted1 - weighted0) / scale,
+        }, index=names)
+
     @classmethod
     def from_data(cls, endog, exog, treatment, model="ols", **kwds):
-        """create models from data
+        """
+        Create models from data
 
-        not yet implemented
+        Not yet implemented.
 
+        Parameters
+        ----------
+        endog : ndarray
+            Outcome variable for the outcome model.
+        exog : ndarray
+            Explanatory variables for the outcome model.
+        treatment : ndarray
+            Indicator array for observations with treatment (1) or
+            without (0).
+        model : str, optional
+            Name of the model class to use for the outcome model.
+        **kwds
+            Additional keyword arguments passed to model classes.
+
+        Returns
+        -------
+        TreatmentEffect
+            Instance of the treatment effect class created from the data.
         """
         raise NotImplementedError
 
     def ipw(self, return_results=True, effect_group="all", disp=False):
-        """Inverse Probability Weighted treatment effect estimation.
+        """
+        Inverse Probability Weighted treatment effect estimation
 
         Parameters
         ----------
-        return_results : bool
+        return_results : bool, optional
             If True, then a results instance is returned.
             If False, just ATE, POM0 and POM1 are returned.
         effect_group : {"all", 0, 1}
@@ -695,19 +1066,21 @@ class TreatmentEffect:
             potential outcomes are returned.
             If effect_group is 1 or "treated", then effects on treated are
             returned.
-            If effect_group is 0, "treated" or "control", then effects on
-            untreated, i.e. control group, are returned.
-        disp : bool
+            If effect_group is 0, "untreated" or "control", then effects on
+            untreated, i.e., control group, are returned.
+        disp : bool, optional
             Indicates whether the scipy optimizer should display the
             optimization results
 
         Returns
         -------
-        TreatmentEffectsResults instance or tuple (ATE, POM0, POM1)
+        TreatmentEffectResults or tuple
+            Results instance if `return_results` is True, otherwise the
+            tuple (ATE, POM0, POM1).
 
         See Also
         --------
-        TreatmentEffectsResults
+        TreatmentEffectResults
         """
         endog = self.model_pool.endog
         tind = self.treatment
@@ -753,11 +1126,11 @@ class TreatmentEffect:
     @Substitution(params_returns=indent(doc_params_returns, " " * 8))
     def ra(self, return_results=True, effect_group="all", disp=False):
         """
-        Regression Adjustment treatment effect estimation.
+        Regression Adjustment treatment effect estimation
         \n%(params_returns)s
         See Also
         --------
-        TreatmentEffectsResults
+        TreatmentEffectResults
         """
         # need indicator for reordered observations
         tind = np.zeros(len(self.treatment))
@@ -804,39 +1177,39 @@ class TreatmentEffect:
                               optim_args={"maxiter": 5000, "disp": disp},
                               maxiter=1,
                               )
-        res = TreatmentEffectResults(self, res_gmm, "IPW",
+        res = TreatmentEffectResults(self, res_gmm, "RA",
                                      start_params=start_params,
                                      effect_group=effect_group,
                                      )
         return res
 
-    @Substitution(params_returns=indent(doc_params_returns2, " " * 8))
-    def aipw(self, return_results=True, disp=False):
+    @Substitution(params_returns=indent(doc_params_returns, " " * 8))
+    def aipw(self, return_results=True, disp=False, *, effect_group="all"):
         """
         ATE and POM from double robust augmented inverse probability weighting
         \n%(params_returns)s
         See Also
         --------
-        TreatmentEffectsResults
-
+        TreatmentEffectResults
         """
-
-        nobs = self.nobs
+        effect_group = _standardize_effect_group(effect_group)
         prob = self.prob_select
         tind = self.treatment
+        endog = self.model_pool.endog
         exog = self.model_pool.exog  # in original order
-        correct0 = (self.results0.resid / (1 - prob[tind == 0])).sum() / nobs
-        correct1 = (self.results1.resid / (prob[tind == 1])).sum() / nobs
-        tmean0 = self.results0.predict(exog).mean() + correct0
-        tmean1 = self.results1.predict(exog).mean() + correct1
+        tmean0, tmean1, sind = _aipw_pom_terms(
+            endog, tind, prob, self.results0.predict(exog),
+            self.results1.predict(exog), effect_group)
+        tmean0 = tmean0.sum() / sind.sum()
+        tmean1 = tmean1.sum() / sind.sum()
         ate = tmean1 - tmean0
         if not return_results:
             return ate, tmean0, tmean1
 
-        endog = self.model_pool.endog
         p2_aipw = np.asarray([ate, tmean0])
 
-        mag_aipw1 = _AIPWGMM(endog, self.results_select, None, teff=self)
+        mag_aipw1 = _AIPWGMM(endog, self.results_select, None, teff=self,
+                             effect_group=effect_group)
         start_params = np.concatenate((
             p2_aipw,
             self.results0.params, self.results1.params,
@@ -848,27 +1221,25 @@ class TreatmentEffect:
             optim_args={"maxiter": 5000, "disp": disp},
             maxiter=1)
 
-        res = TreatmentEffectResults(self, res_gmm, "IPW",
+        res = TreatmentEffectResults(self, res_gmm, "AIPW",
                                      start_params=start_params,
-                                     effect_group="all",
+                                     effect_group=effect_group,
                                      )
         return res
 
-    @Substitution(params_returns=indent(doc_params_returns2, " " * 8))
-    def aipw_wls(self, return_results=True, disp=False):
+    @Substitution(params_returns=indent(doc_params_returns, " " * 8))
+    def aipw_wls(self, return_results=True, disp=False, *, effect_group="all"):
         """
         ATE and POM from double robust augmented inverse probability weighting.
 
         This uses weighted outcome regression, while `aipw` uses unweighted
         outcome regression.
-        Option for effect on treated or on untreated is not available.
         \n%(params_returns)s
         See Also
         --------
-        TreatmentEffectsResults
-
+        TreatmentEffectResults
         """
-        nobs = self.nobs
+        effect_group = _standardize_effect_group(effect_group)
         prob = self.prob_select
 
         endog = self.model_pool.endog
@@ -880,21 +1251,20 @@ class TreatmentEffect:
         mod1 = WLS(endog[treat_mask], exog[treat_mask],
                    weights=ww1[treat_mask])
         result1 = mod1.fit(cov_type="HC1")
-        mean1_ipw2 = result1.predict(exog).mean()
 
         ww0 = (1 - tind) / (1 - prob) * ((1 - tind) / (1 - prob) - 1)
         mod0 = WLS(endog[~treat_mask], exog[~treat_mask],
                    weights=ww0[~treat_mask])
         result0 = mod0.fit(cov_type="HC1")
-        mean0_ipw2 = result0.predict(exog).mean()
 
         self.results_ipwwls0 = result0
         self.results_ipwwls1 = result1
 
-        correct0 = (result0.resid / (1 - prob[tind == 0])).sum() / nobs
-        correct1 = (result1.resid / (prob[tind == 1])).sum() / nobs
-        tmean0 = mean0_ipw2 + correct0
-        tmean1 = mean1_ipw2 + correct1
+        tmean0, tmean1, sind = _aipw_pom_terms(
+            endog, tind, prob, result0.predict(exog), result1.predict(exog),
+            effect_group)
+        tmean0 = tmean0.sum() / sind.sum()
+        tmean1 = tmean1.sum() / sind.sum()
         ate = tmean1 - tmean0
 
         if not return_results:
@@ -904,7 +1274,7 @@ class TreatmentEffect:
 
         # GMM
         mod_gmm = _AIPWWLSGMM(endog, self.results_select, None,
-                              teff=self)
+                              teff=self, effect_group=effect_group)
         start_params = np.concatenate((
             p2_aipw_wls,
             result0.params,
@@ -916,22 +1286,21 @@ class TreatmentEffect:
             optim_method="nm",
             optim_args={"maxiter": 5000, "disp": disp},
             maxiter=1)
-        res = TreatmentEffectResults(self, res_gmm, "IPW",
+        res = TreatmentEffectResults(self, res_gmm, "AIPW-WLS",
                                      start_params=start_params,
-                                     effect_group="all",
+                                     effect_group=effect_group,
                                      )
         return res
 
     @Substitution(params_returns=indent(doc_params_returns, " " * 8))
     def ipw_ra(self, return_results=True, effect_group="all", disp=False):
         """
-        ATE and POM from inverse probability weighted regression adjustment.
+        ATE and POM from inverse probability weighted regression adjustment
 
         \n%(params_returns)s
         See Also
         --------
-        TreatmentEffectsResults
-
+        TreatmentEffectResults
         """
         treat_mask = self.treat_mask
         endog = self.model_pool.endog
@@ -989,7 +1358,7 @@ class TreatmentEffect:
             maxiter=1
             )
 
-        res = TreatmentEffectResults(self, res_gmm, "IPW",
+        res = TreatmentEffectResults(self, res_gmm, "IPW-RA",
                                      start_params=start_params,
                                      effect_group=effect_group,
                                      )

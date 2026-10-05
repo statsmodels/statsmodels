@@ -1,4 +1,5 @@
-"""Test values for multinomial_proportion_confint.
+"""
+Test values for multinomial_proportion_confint
 
 Author: Sébastien Lerique
 """

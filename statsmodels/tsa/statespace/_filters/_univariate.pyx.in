@@ -193,7 +193,7 @@ cdef void {{prefix}}forecast_error({{prefix}}KalmanFilter kfilter, {{prefix}}Sta
         {{cython_type}} beta = 0
         blas_int k_states = model._k_states
         blas_int _k_endog = model._k_endog
-    # Adjust for a VAR transition (i.e. design = [#, 0], where the zeros
+    # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
         k_states = model._k_posdef
@@ -227,7 +227,7 @@ cdef {{cython_type}} {{prefix}}forecast_error_cov({{prefix}}KalmanFilter kfilter
         blas_int _k_endog = model._k_endog
         blas_int kf_k_states = kfilter.k_states
 
-    # Adjust for a VAR transition (i.e. design = [#, 0], where the zeros
+    # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
         k_states = model._k_posdef
@@ -274,7 +274,7 @@ cdef void {{prefix}}temp_arrays({{prefix}}KalmanFilter kfilter, {{prefix}}States
         blas_int k_endog = kfilter.k_endog
         tmp_1 = 0
 
-    # Adjust for a VAR transition (i.e. design = [#, 0], where the zeros
+    # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
         k_states = model._k_posdef
@@ -323,7 +323,7 @@ cdef void {{prefix}}filtered_state_cov({{prefix}}KalmanFilter kfilter, {{prefix}
         blas_int k_states1 = model._k_states
         blas_int kf_k_states = kfilter.k_states
 
-    # Adjust for a VAR transition (i.e. design = [#, 0], where the zeros
+    # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
         k_states = model._k_posdef

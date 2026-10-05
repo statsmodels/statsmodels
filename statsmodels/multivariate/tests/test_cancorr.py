@@ -87,3 +87,13 @@ def test_cancorr():
     assert_almost_equal(r.stats.loc[0, "Pr > F"], 0.0635, decimal=4)
     assert_almost_equal(r.stats.loc[1, "Pr > F"], 0.9491, decimal=4)
     assert_almost_equal(r.stats.loc[2, "Pr > F"], 0.7748, decimal=4)
+
+    text = r.summary().as_text()
+    assert str(r) == text
+    assert "Cancorr results" in text
+    assert "Multivariate Statistics and F Approximations" in text
+    # every value from both underlying tables actually appears rendered
+    for df in (r.stats, r.stats_mv):
+        for col in df.columns:
+            for val in df[col]:
+                assert f"{val:.4f}" in text

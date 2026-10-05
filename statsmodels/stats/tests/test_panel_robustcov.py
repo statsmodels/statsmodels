@@ -71,3 +71,21 @@ def test_panel_robust_cov():
 
     rcov = sw.cov_nw_groupsum(res, 4, time)  # check default
     assert_almost_equal(rcov, res_stata.cov_dk4_stata, decimal=4)
+
+
+def test_cov_cluster_invalid_crv_type_raises():
+    import pytest
+
+    rs = np.random.RandomState(89012)
+    exog = add_constant(rs.standard_normal((60, 2)))
+    endog = exog @ [1.0, 0.5, -0.5] + rs.standard_normal(60)
+    res = OLS(endog, exog).fit()
+    group = np.repeat(np.arange(10), 6)
+
+    with pytest.raises(ValueError, match="crv_type"):
+        sw.cov_cluster(res, group, crv_type="not-a-crv-type")
+    with pytest.raises(NotImplementedError, match="Two-way clustering"):
+        sw.cov_cluster_2groups(res, group, group2=group, crv_type="not-a-crv-type")
+    # cov_cluster_2groups only supports "cluster", not "cluster-crv3"/"cluster-jk"
+    with pytest.raises(NotImplementedError, match="Two-way clustering"):
+        sw.cov_cluster_2groups(res, group, group2=group, crv_type="cluster-crv3")

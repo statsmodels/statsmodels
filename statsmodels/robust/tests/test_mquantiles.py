@@ -28,17 +28,17 @@ def std_func(x):
     return 0.1 * np.exp(2.5 + 0.75 * np.abs(x))
 
 
-class TestMQuantiles():
+class TestMQuantiles:
 
     @classmethod
     def setup_class(cls):
 
-        np.random.seed(654123)
+        rs = np.random.RandomState(654123)
 
         # generate an interesting dataset with heteroscedasticity
         nobs = 200
-        x = np.random.uniform(-4, 4, nobs)
-        y = mean_func(x) + std_func(x) * np.random.randn(nobs)
+        x = rs.uniform(-4, 4, nobs)
+        y = mean_func(x) + std_func(x) * rs.randn(nobs)
 
         cls.df = pd.DataFrame({"temp": x, "dens": y})
 

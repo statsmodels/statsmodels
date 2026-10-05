@@ -20,7 +20,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         The endogenous variable.
     k_regimes : int
         The number of regimes.
-    trend : {'n', 'c', 't', 'ct'}
+    trend : {'n', 'c', 't', 'ct'}, optional
         Whether or not to include a trend. To include an intercept, time trend,
         or both, set `trend='c'`, `trend='t'`, or `trend='ct'`. For no trend,
         set `trend='n'`. Default is an intercept.
@@ -35,15 +35,15 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         time-varying transition probabilities (TVTP). TVTP is only used if this
         variable is provided. If an intercept is desired, a column of ones must
         be explicitly included in this array.
-    switching_trend : bool or iterable, optional
+    switching_trend : bool or sequence of bool, optional
         If a boolean, sets whether or not all trend coefficients are
-        switching across regimes. If an iterable, should be of length equal
+        switching across regimes. If a sequence, should be of length equal
         to the number of trend variables, where each element is
         a boolean describing whether the corresponding coefficient is
         switching. Default is True.
-    switching_exog : bool or iterable, optional
+    switching_exog : bool or sequence of bool, optional
         If a boolean, sets whether or not all regression coefficients are
-        switching across regimes. If an iterable, should be of length equal
+        switching across regimes. If a sequence, should be of length equal
         to the number of exogenous variables, where each element is
         a boolean describing whether the corresponding coefficient is
         switching. Default is True.
@@ -51,6 +51,16 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         Whether or not there is regime-specific heteroskedasticity, i.e.
         whether or not the error term has a switching variance. Default is
         False.
+    dates : array_like, optional
+        An array-like object of datetime objects. If a pandas object is given
+        for endog or exog, it is assumed to have a DateIndex.
+    freq : str, optional
+        The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
+        'M', 'A', or 'Q'. This is optional if dates are given.
+    missing : str, optional
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none'.
 
     Notes
     -----
@@ -64,7 +74,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         y_t = a_{S_t} + x_t' \beta_{S_t} + \varepsilon_t \\
         \varepsilon_t \sim N(0, \sigma_{S_t}^2)
 
-    i.e. the model is a dynamic linear regression where the coefficients and
+    i.e., the model is a dynamic linear regression where the coefficients and
     the variance of the error term may be switching across regimes.
 
     The `trend` is accommodated by prepending columns to the `exog` array. Thus
@@ -125,11 +135,11 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         # Switching options
         if self.switching_trend is True or self.switching_trend is False:
             self.switching_trend = [self.switching_trend] * self.k_trend
-        elif not len(self.switching_trend) == self.k_trend:
+        elif len(self.switching_trend) != self.k_trend:
             raise ValueError("Invalid iterable passed to `switching_trend`.")
         if self.switching_exog is True or self.switching_exog is False:
             self.switching_exog = [self.switching_exog] * self.k_exog
-        elif not len(self.switching_exog) == self.k_exog:
+        elif len(self.switching_exog) != self.k_exog:
             raise ValueError("Invalid iterable passed to `switching_exog`.")
 
         self.switching_coeffs = (
@@ -151,7 +161,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
         Returns
         -------
-        predict : array_like
+        predict : ndarray
             Array of predictions conditional on current, and possibly past,
             regimes
         """
@@ -175,9 +185,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         return self.endog - predict
 
     def _conditional_loglikelihoods(self, params):
-        """
-        Compute loglikelihoods conditional on the current period's regime
-        """
+        """Compute loglikelihoods conditional on the current period's regime"""
 
         # Get residuals
         resid = self._resid(params)
@@ -228,9 +236,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         return result, params1
 
     def _em_exog(self, result, endog, exog, switching, tmp=None):
-        """
-        EM step for regression coefficients
-        """
+        """EM step for regression coefficients"""
         k_exog = exog.shape[1]
         coeffs = np.zeros((self.k_regimes, k_exog))
 
@@ -256,9 +262,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         return coeffs
 
     def _em_variance(self, result, endog, exog, betas, tmp=None):
-        """
-        EM step for variances
-        """
+        """EM step for variances"""
         k_exog = 0 if exog is None else exog.shape[1]
 
         if self.switching_variance:
@@ -290,10 +294,8 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     @property
     def start_params(self):
         """
-        (array) Starting parameters for maximum likelihood estimation.
+        Starting parameters for maximum likelihood estimation
 
-        Notes
-        -----
         These are not very sophisticated and / or good. We set equal transition
         probabilities and interpolate regression coefficients between zero and
         the OLS estimates, where the interpolation is based on the regime
@@ -329,10 +331,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
     @property
     def param_names(self):
-        """
-        (list of str) List of human readable parameter names (for parameters
-        actually included in the model).
-        """
+        """(list of str) List of human readable parameter names (for parameters actually included in the model)"""
         # Inherited parameters
         param_names = np.array(
             markov_switching.MarkovSwitching.param_names.fget(self),
@@ -342,14 +341,14 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         if np.any(self.switching_coeffs):
             for i in range(self.k_regimes):
                 param_names[self.parameters[i, "exog"]] = [
-                    "%s[%d]" % (exog_name, i) for exog_name in self.exog_names]
+                    f"{exog_name}[{i:d}]" for exog_name in self.exog_names]
         else:
             param_names[self.parameters["exog"]] = self.exog_names
 
         # Variances
         if self.switching_variance:
             for i in range(self.k_regimes):
-                param_names[self.parameters[i, "variance"]] = "sigma2[%d]" % i
+                param_names[self.parameters[i, "variance"]] = f"sigma2[{i:d}]"
         else:
             param_names[self.parameters["variance"]] = "sigma2"
 
@@ -368,7 +367,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
         Returns
         -------
-        constrained : array_like
+        constrained : ndarray
             Array of constrained parameters which may be used in likelihood
             evaluation.
         """
@@ -399,7 +398,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
         Returns
         -------
-        unconstrained : array_like
+        unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
         """
         # Inherited parameters
@@ -429,7 +428,7 @@ class MarkovRegressionResults(markov_switching.MarkovSwitchingResults):
         Fitted parameters
     filter_results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
-    cov_type : str
+    cov_type : str, optional
         The type of covariance matrix estimator to use. Can be one of 'approx',
         'opg', 'robust', or 'none'.
 

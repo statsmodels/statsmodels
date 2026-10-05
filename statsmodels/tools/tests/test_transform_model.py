@@ -5,9 +5,9 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 from scipy import stats
 
 from statsmodels.regression.linear_model import OLS
@@ -16,8 +16,8 @@ from statsmodels.tools.transform_model import StandardizeTransform
 
 def test_standardize1():
 
-    np.random.seed(123)
-    x = 1 + np.random.randn(5, 4)
+    rs = np.random.RandomState(123)
+    x = 1 + rs.randn(5, 4)
 
     transf = StandardizeTransform(x)
     xs1 = transf(x)
@@ -30,11 +30,10 @@ def test_standardize1():
 
     # check we use stored transformation
     xs4 = transf(2 * x)
-    assert_allclose(xs4, (2*x - transf.mean) / transf.scale,
-                    rtol=1e-13, atol=1e-20)
+    assert_allclose(xs4, (2 * x - transf.mean) / transf.scale, rtol=1e-13, atol=1e-20)
 
     # affine transform does not change standardized
-    x2 = 2 * x + np.random.randn(4)
+    x2 = 2 * x + rs.randn(4)
     transf2 = StandardizeTransform(x2)
     xs3 = transf2(x2)
     assert_allclose(xs3, xs1, rtol=1e-13, atol=1e-20)
@@ -49,16 +48,17 @@ def test_standardize1():
     assert_allclose(xs5[:, 1:], xs1, rtol=1e-13, atol=1e-20)
 
 
-def test_standardize_ols():
+@pytest.mark.parametrize("ddof", [1, 5])
+def test_standardize_ols(ddof):
 
-    np.random.seed(123)
+    rs = np.random.RandomState(123)
     nobs = 20
-    x = 1 + np.random.randn(nobs, 4)
+    x = 1 + rs.randn(nobs, 4)
     exog = np.column_stack((np.ones(nobs), x))
-    endog = exog.sum(1) + np.random.randn(nobs)
+    endog = exog.sum(1) + rs.randn(nobs)
 
     res2 = OLS(endog, exog).fit()
-    transf = StandardizeTransform(exog)
+    transf = StandardizeTransform(exog, ddof=ddof)
     exog_st = transf(exog)
     res1 = OLS(endog, exog_st).fit()
     params = transf.transform_params(res1.params)

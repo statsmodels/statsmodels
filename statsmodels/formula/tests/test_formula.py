@@ -54,6 +54,7 @@ class CheckFormulaOLS:
     def test_endog(self):
         npt.assert_equal(self.model.endog, self.data.endog)
 
+    @pytest.mark.thread_unsafe("fit method mutates the model object")
     @pytest.mark.smoke
     def test_summary(self):
         with warnings.catch_warnings():
@@ -298,7 +299,8 @@ def test_formula_environment():
 
 def test_formula_predict_series_exog():
     # GH-6509
-    x = np.random.standard_normal((1000, 2))
+    rs = np.random.RandomState(23829137)
+    x = rs.standard_normal((1000, 2))
     data_full = pd.DataFrame(x, columns=["y", "x"])
     data = data_full.iloc[:500]
     res = ols(formula="y ~ x", data=data).fit()

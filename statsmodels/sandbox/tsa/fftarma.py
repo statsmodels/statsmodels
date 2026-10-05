@@ -34,6 +34,8 @@ from numpy import fft
 # import scipy.fftpack as fft
 from scipy import signal
 
+from statsmodels.graphics.utils import _import_mpl
+
 # from try_var_convolve import maxabs
 from statsmodels.tsa.arima_process import ArmaProcess
 
@@ -369,7 +371,7 @@ class ArmaFft(ArmaProcess):
         spdr, wr = self.spdroots(w)
 
         if fig is None:
-            import matplotlib.pyplot as plt
+            plt = _import_mpl()
 
             fig = plt.figure()
         ax = fig.add_subplot(2, 2, 1)
@@ -461,7 +463,7 @@ if __name__ == "__main__":
     w = np.linspace(0, np.pi, nfreq)
     w2 = np.linspace(0, 2 * np.pi, nfreq)
 
-    import matplotlib.pyplot as plt
+    plt = _import_mpl()
 
     plt.close("all")
 

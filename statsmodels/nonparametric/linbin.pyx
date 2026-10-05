@@ -15,6 +15,12 @@ ctypedef np.int64_t INT
 def fast_linbin(np.ndarray[DOUBLE] X, double a, double b, int M, int trunc=1):
     """
     Linear Binning as described in Fan and Marron (1994)
+
+    Each observation in [a, b] is split linearly between the two grid points
+    of the equally spaced grid ``linspace(a, b, M)`` that enclose it, so that
+    the bin counts sum to the number of observations in [a, b]. Observations
+    outside [a, b] are dropped if ``trunc`` is nonzero and are otherwise
+    assigned to the nearest end point of the grid.
     """
     cdef:
         Py_ssize_t i, li_i
@@ -27,10 +33,20 @@ def fast_linbin(np.ndarray[DOUBLE] X, double a, double b, int M, int trunc=1):
 
 
     for i in range(nobs):
+        if not (a <= X[i] <= b):
+            # outside [a, b] (or nan): drop, or move to the nearest end point
+            if trunc == 0:
+                if X[i] < a:
+                    gcnts[0] = gcnts[0] + 1
+                elif X[i] > b:
+                    gcnts[M-1] = gcnts[M-1] + 1
+            continue
         li_i = li[i]
-        if li_i > 1 and li_i < M:
+        if li_i >= M - 1:
+            # X[i] == b, up to rounding in lxi; all of the weight belongs to
+            # the last grid point and gcnts[M] is out of bounds
+            gcnts[M-1] = gcnts[M-1] + 1
+        else:
             gcnts[li_i] = gcnts[li_i] + 1 - rem[i]
             gcnts[li_i+1] = gcnts[li_i+1] + rem[i]
-        if li_i > M and trunc == 0:
-            gcnts[M] = gcnts[M] + 1
     return gcnts

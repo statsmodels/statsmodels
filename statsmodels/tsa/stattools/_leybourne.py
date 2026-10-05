@@ -2,14 +2,13 @@ import numpy as np
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
+from statsmodels.tools.validation import string_like
 import statsmodels.tsa._leybourne
 from statsmodels.tsa.stattools._stattools import lagmat, pacf
 
 
 class LeybourneMcCabeStationarity:
-    """
-    Class wrapper for Leybourne-McCabe stationarity test
-    """
+    """Class wrapper for Leybourne-McCabe stationarity test"""
 
     def __init__(self):
         """
@@ -37,7 +36,7 @@ class LeybourneMcCabeStationarity:
         ----------
         stat : float
             The Leybourne-McCabe test statistic
-        model : {'c','ct'}
+        model : {'c', 'ct'}, optional
             The model used when computing the test statistic. 'c' is default.
 
         Returns
@@ -76,18 +75,18 @@ class LeybourneMcCabeStationarity:
             data series
         arlags : int
             AR(p) order
-        model : {'c','ct'}
+        model : {'c', 'ct'}
             Constant and trend order to include in regression
             * 'c'  : constant only
             * 'ct' : constant and trend
 
         Returns
         -------
-        arparams : int
+        arparams : ndarray
             AR(1) coefficient plus constant
-        theta : int
+        theta : float
             MA(1) coefficient
-        olsfit.resid : ndarray
+        resid : ndarray
             residuals from second-stage regression
         """
         endog = np.diff(x, axis=0)
@@ -113,9 +112,10 @@ class LeybourneMcCabeStationarity:
 
     def _autolag(self, x):
         """
-        Empirical method for Leybourne-McCabe auto AR lag detection.
+        Empirical method for Leybourne-McCabe auto AR lag detection
+
         Set number of AR lags equal to the first PACF falling within the
-        95% confidence interval. Maximum nuber of AR lags is limited to
+        95% confidence interval. Maximum number of AR lags is limited to
         the smaller of 10 or 1/2 series length. Minimum is zero lags.
 
         Parameters
@@ -146,21 +146,23 @@ class LeybourneMcCabeStationarity:
         ----------
         x : array_like
             data series
-        arlags : int
-            number of autoregressive terms to include, default=None
-        regression : {'c','ct'}
+        arlags : None or int, optional
+            Number of autoregressive terms to include. If None, the number
+            of lags is selected using the empirical autolag procedure.
+            Default is 1.
+        regression : {'c', 'ct'}, optional
             Constant and trend order to include in regression
 
             * 'c'  : constant only (default)
             * 'ct' : constant and trend
 
-        method : {'mle','ols'}
+        method : {'mle', 'ols'}, optional
             Method used to estimate ARIMA(p, 1, 1) filter model
 
-            * 'mle' : condition sum of squares maximum likelihood
-            * 'ols' : two-stage least squares (default)
+            * 'mle' : conditional sum of squares maximum likelihood (default)
+            * 'ols' : two-stage least squares
 
-        varest : {'var94','var99'}
+        varest : {'var94', 'var99'}, optional
             Method used for residual variance estimation
 
             * 'var94' : method used in original Leybourne-McCabe paper (1994)
@@ -185,7 +187,7 @@ class LeybourneMcCabeStationarity:
 
         Basic process is to create a filtered series which removes the AR(p)
         effects from the series under test followed by an auxiliary regression
-        similar to that of Kwiatkowski et. al. (1992). The AR(p) coefficients
+        similar to that of Kwiatkowski et al. (1992). The AR(p) coefficients
         are obtained by estimating an ARIMA(p, 1, 1) model. Two methods are
         provided for ARIMA estimation: MLE and two-stage least squares.
 
@@ -197,9 +199,9 @@ class LeybourneMcCabeStationarity:
 
         An empirical autolag procedure is provided. In this context, the number
         of lags is equal to the number of AR(p) terms used in the filtering
-        step. The number of AR(p) terms is set equal to the to the first PACF
-        falling within the 95% confidence interval. Maximum nuber of AR lags is
-        limited to 1/2 series length.
+        step. The number of AR(p) terms is set equal to the first PACF
+        falling within the 95% confidence interval. Maximum number of AR lags
+        is limited to 1/2 series length.
 
         References
         ----------
@@ -217,12 +219,13 @@ class LeybourneMcCabeStationarity:
         Schwert, G W. (1987). Effects of model specification on tests for unit
         roots in macroeconomic data. Journal of Monetary Economics, 20: 73-103.
         """
-        if regression not in ["c", "ct"]:
-            raise ValueError("LM: regression option '%s' not understood" % regression)
-        if method not in ["mle", "ols"]:
-            raise ValueError("LM: method option '%s' not understood" % method)
-        if varest not in ["var94", "var99"]:
-            raise ValueError("LM: varest option '%s' not understood" % varest)
+        regression = string_like(
+            regression, "regression", options=("c", "ct"), lower=False
+        )
+        method = string_like(method, "method", options=("mle", "ols"), lower=False)
+        varest = string_like(
+            varest, "varest", options=("var94", "var99"), lower=False
+        )
         x = np.asarray(x)
         if x.ndim > 2 or (x.ndim == 2 and x.shape[1] != 1):
             raise ValueError(
@@ -234,7 +237,7 @@ class LeybourneMcCabeStationarity:
             arlags = self._autolag(x)
         elif not isinstance(arlags, int) or arlags < 0 or arlags > int(len(x) / 2):
             raise ValueError(
-                "LM: arlags must be an integer in range [0..%s]" % str(int(len(x) / 2))
+                f"LM: arlags must be an integer in range [0..{int(len(x) / 2)!s}]"
             )
         # estimate the reduced ARIMA(p, 1, 1) model
         if method == "mle":

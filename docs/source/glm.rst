@@ -1,6 +1,6 @@
 .. currentmodule:: statsmodels.genmod.generalized_linear_model
 
-.. _glm:
+.. _glm_ref:
 
 Generalized Linear Models
 =========================

@@ -23,7 +23,28 @@ class CanCorr(Model):
         x1 = x * x_cancoef, x1' * x1 is identity matrix
         y1 = y * y_cancoef, y1' * y1 is identity matrix
 
-    and the correlation between x1 and y1 is maximized.
+    and the correlation between x1 and y1 is maximized. The implementation is
+    based on [1]_, [2]_, and [3]_.
+
+    Parameters
+    ----------
+    endog : array_like
+        The endogenous (left-hand-side) variables.
+    exog : array_like
+        The exogenous (right-hand-side) variables.
+    tolerance : float, optional
+        Eigenvalue tolerance, values smaller than which are considered 0.
+    missing : str, optional
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none'.
+    hasconst : None or bool
+        Indicates whether the RHS includes a user-supplied constant. If True,
+        a constant is assumed. If False, no constant is checked for. If
+        None, the code checks for a constant.
+    **kwargs
+        Extra arguments that are used to set model properties when using the
+        formula interface.
 
     Attributes
     ----------
@@ -40,27 +61,33 @@ class CanCorr(Model):
 
     References
     ----------
-    .. [*] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
-    .. [*] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
-    .. [*] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
+    .. [1] http://numerical.recipes/whp/notes/CanonCorrBySVD.pdf
+    .. [2] http://www.csun.edu/~ata20315/psy524/docs/Psy524%20Lecture%208%20CC.pdf
+    .. [3] http://www.mathematica-journal.com/2014/06/canonical-correlation-analysis/
     """
 
     def __init__(
         self, endog, exog, tolerance=1e-8, missing="none", hasconst=None, **kwargs
     ):
         super().__init__(endog, exog, missing=missing, hasconst=hasconst, **kwargs)
+        # Declared before `_fit` populates them, for a consistent attribute
+        # set even if an exception occurs during fitting.
+        self.cancorr = None
+        self.x_cancoef = None
+        self.y_cancoef = None
         self._fit(tolerance)
 
     def _fit(self, tolerance=1e-8):
-        """Fit the model
+        """
+        Fit the model
 
         A ValueError is raised if there are singular values smaller than the
         tolerance. The treatment of singular arrays might change in future.
 
         Parameters
         ----------
-        tolerance : float
-            eigenvalue tolerance, values smaller than which is considered 0
+        tolerance : float, optional
+            Eigenvalue tolerance, values smaller than which are considered 0.
         """
         nobs, k_yvar = self.endog.shape
         nobs, k_xvar = self.exog.shape
@@ -94,7 +121,9 @@ class CanCorr(Model):
         self.y_cancoef = vy_ds.dot(v.T[:, :k])
 
     def corr_test(self):
-        """Approximate F test
+        """
+        Approximate F test
+
         Perform multivariate statistical tests of the hypothesis that
         there is no canonical correlation between endog and exog.
         For each canonical correlation, testing its significance based on
@@ -102,7 +131,8 @@ class CanCorr(Model):
 
         Returns
         -------
-        CanCorrTestResults instance
+        CanCorrTestResults
+            Instance holding the canonical correlation test results.
         """
         nobs, k_yvar = self.endog.shape
         nobs, k_xvar = self.exog.shape
@@ -155,12 +185,19 @@ class CanCorrTestResults:
     """
     Canonical correlation results class
 
+    Parameters
+    ----------
+    stats : DataFrame
+        Contains statistical test results for each canonical correlation.
+    stats_mv : DataFrame
+        Contains the multivariate statistical test results.
+
     Attributes
     ----------
     stats : DataFrame
-        Contain statistical tests results for each canonical correlation
+        Contains statistical test results for each canonical correlation.
     stats_mv : DataFrame
-        Contain the multivariate statistical tests results
+        Contains the multivariate statistical test results.
     """
     def __init__(self, stats, stats_mv):
         self.stats = stats

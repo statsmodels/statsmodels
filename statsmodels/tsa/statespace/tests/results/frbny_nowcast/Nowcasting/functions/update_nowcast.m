@@ -475,10 +475,10 @@ function S = SKF(Y, A, C, Q, R, Z_0, V_0)
       %%% CALCULATING PRIOR DISTIBUTION----------------------------------
       
       % Use transition eqn to create prior estimate for factor
-      % i.e. Z = Z_t|t-1
+      % i.e., Z = Z_t|t-1
       Z   = A * Zu;
       
-      % Prior covariance matrix of Z (i.e. V = V_t|t-1)
+      % Prior covariance matrix of Z (i.e., V = V_t|t-1)
       %   Var(Z) = Var(A*Z + u_t) = Var(A*Z) + Var(\epsilon) = 
       %   A*Vu*A' + Q
       V   = A * Vu* A' + Q; 
@@ -524,7 +524,7 @@ function S = SKF(Y, A, C, Q, R, Z_0, V_0)
       S.Vm(:,:,t) = V;
 
       % Store covariance and state values for t (posteriors)
-      % i.e. Zu = Z_t|t   & Vu = V_t|t
+      % i.e., Zu = Z_t|t   & Vu = V_t|t
       S.ZmU(:,t+1)    = Zu;
       S.VmU(:,:,t+1)  = Vu;
   end 

@@ -1,4 +1,4 @@
-"""Smoking and lung cancer in eight cities in China."""
+"""Smoking and lung cancer in eight cities in China"""
 from statsmodels.datasets import utils as du
 
 __docformat__ = "restructuredtext"
@@ -35,7 +35,11 @@ def load_pandas():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``title`` attributes.
+
+    Notes
+    -----
+    The Dataset instance does not contain endog and exog attributes.
     """
     raw_data = du.load_csv(__file__, "china_smoking.csv")
     data = raw_data.set_index("Location")
@@ -51,6 +55,10 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``title`` attributes.
+
+    Notes
+    -----
+    The Dataset instance does not contain endog and exog attributes.
     """
     return load_pandas()

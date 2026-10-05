@@ -12,7 +12,6 @@ pandas-datareader
 simplegeneric
 seaborn
 numpydoc
-#  theano-pymc; os_name != "nt"  # disabled because it is not compatible with move recent Python version
 pymc; os_name != "nt"
 arviz; os_name != "nt"
 jinja2

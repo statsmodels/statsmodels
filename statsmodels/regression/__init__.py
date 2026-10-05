@@ -1,4 +1,4 @@
-"""Regression models and results."""
+"""Regression models and results"""
 
 from statsmodels.tools._test_runner import PytestTester
 

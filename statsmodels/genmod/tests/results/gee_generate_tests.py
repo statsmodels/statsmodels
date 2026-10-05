@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 from scipy.stats.distributions import norm
 
@@ -21,7 +23,7 @@ def generate_logistic():
 
     p = len(beta)
 
-    OUT = open("gee_logistic_1.csv", "w", encoding="utf-8")
+    OUT = Path("gee_logistic_1.csv").open("w", encoding="utf-8")
 
     for i in range(nclust):
 
@@ -37,8 +39,8 @@ def generate_logistic():
         y = 1*(u < pr)
 
         for j in range(n):
-            OUT.write("%d, %d," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:d},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()
 
@@ -62,7 +64,7 @@ def generate_linear():
 
     p = len(beta)
 
-    OUT = open("gee_linear_1.csv", "w", encoding="utf-8")
+    OUT = Path("gee_linear_1.csv").open("w", encoding="utf-8")
 
     for i in range(nclust):
 
@@ -76,8 +78,8 @@ def generate_linear():
         y = np.dot(x, beta) + np.random.normal(size=n)
 
         for j in range(n):
-            OUT.write("%d, %d," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:d},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()
 
@@ -102,7 +104,7 @@ def generate_nested_linear():
 
     p = len(beta)
 
-    OUT = open("gee_nested_linear_1.csv", "w", encoding="utf-8")
+    OUT = Path("gee_nested_linear_1.csv").open("w", encoding="utf-8")
 
     for i in range(nclust):
 
@@ -115,8 +117,8 @@ def generate_nested_linear():
         y += np.sqrt(v3)*np.random.normal(size=10)
 
         for j in range(10):
-            OUT.write("%d, %.3f," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:.3f},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()
 
@@ -130,7 +132,7 @@ def generate_ordinal():
 
     rz = 0.5
 
-    OUT = open("gee_ordinal_1.csv", "w", encoding="utf-8")
+    OUT = Path("gee_ordinal_1.csv").open("w", encoding="utf-8")
 
     for i in range(200):
 
@@ -150,8 +152,8 @@ def generate_ordinal():
         y = (u[:, None] > pr).sum(1)
 
         for j in range(n):
-            OUT.write("%d, %d," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:d},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()
 
@@ -165,7 +167,7 @@ def generate_nominal():
 
     rz = 0.5
 
-    OUT = open("gee_nominal_1.csv", "w", encoding="utf-8")
+    OUT = Path("gee_nominal_1.csv").open("w", encoding="utf-8")
 
     for i in range(200):
 
@@ -188,8 +190,8 @@ def generate_nominal():
         y = (u[:, None] > cpr).sum(1)
 
         for j in range(n):
-            OUT.write("%d, %d," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:d},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()
 
@@ -203,7 +205,7 @@ def generate_poisson():
 
     nclust = 100
 
-    OUT = open("gee_poisson_1.csv", "w", encoding="utf-8")
+    OUT = Path("gee_poisson_1.csv").open("w", encoding="utf-8")
 
     for i in range(nclust):
 
@@ -218,7 +220,7 @@ def generate_poisson():
         y = np.array(y)
 
         for j in range(n):
-            OUT.write("%d, %d," % (i, y[j]))
-            OUT.write(",".join(["%.3f" % b for b in x[j, :]]) + "\n")
+            OUT.write(f"{i:d}, {y[j]:d},")
+            OUT.write(",".join([f"{b:.3f}" for b in x[j, :]]) + "\n")
 
     OUT.close()

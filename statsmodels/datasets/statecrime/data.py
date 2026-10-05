@@ -44,7 +44,7 @@ NOTE = """::
         Percent of population that is one race - white only. From 2009 American
         Community Survey
     single
-        Calculated from 2009 1-year American Community Survey obtained obtained
+        Calculated from 2009 1-year American Community Survey obtained
         from Census. Variable is Male householder, no wife present, family
         household combined with Female householder, no husband present, family
         household, divided by the total number of Family households.
@@ -54,6 +54,15 @@ NOTE = """::
 
 
 def load_pandas():
+    """
+    Load the statecrime data and return a Dataset class instance.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
+    """
     data = _get_data()
     return du.process_pandas(data, endog_idx=2, exog_idx=[7, 4, 3, 5], index_idx=0)
 
@@ -65,7 +74,8 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     return load_pandas()
 

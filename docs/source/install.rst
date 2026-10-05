@@ -131,7 +131,7 @@ Dependencies
 The current minimum dependencies are:
 
 * `Python <https://www.python.org>`__ >= 3.9
-* `NumPy <https://www.scipy.org/>`__ >= 1.22.3
+* `NumPy <https://www.scipy.org/>`__ >= 1.23.5
 * `SciPy <https://www.scipy.org/>`__ >= 1.8
 * `Pandas <https://pandas.pydata.org/>`__ >= 1.4
 * `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.6

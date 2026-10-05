@@ -13,15 +13,15 @@ import numpy as np
 n = 300
 p = 5
 
-np.random.seed(83423)
+rs = np.random.RandomState(83423)
 
-exog = np.random.normal(size=(n, p))
-params = (-1.)**np.arange(p)
+exog = rs.normal(size=(n, p))
+params = (-1.0) ** np.arange(p)
 params[::3] = 0
 expval = np.dot(exog, params)
-endog = expval + np.random.normal(size=n)
+endog = expval + rs.normal(size=n)
 data = np.concatenate((endog[:, None], exog), axis=1)
-data = np.around(100*data)
+data = np.around(100 * data)
 
 fname = "lasso_data.csv"
 np.savetxt(fname, data, fmt="%.0f", delimiter=",")

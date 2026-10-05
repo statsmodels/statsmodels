@@ -32,9 +32,9 @@ if errorlevel 9009 (
 if "%1" == "html" (
     echo mkdir %BUILDDIR%\html\_static
     mkdir %BUILDDIR%\html\_static
-	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors --skip-existing
 	rem Black list notebooks from doc build here
-    python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors --skip-existing --execution-blacklist statespace_custom_models
+	echo python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors --skip-existing
+    python %TOOLSPATH%/%NOTEBOOKBUILD% --parallel --report-errors --skip-existing
     echo python %TOOLSPATH%/%DATASETBUILD%
     python %TOOLSPATH%/%DATASETBUILD%
 )

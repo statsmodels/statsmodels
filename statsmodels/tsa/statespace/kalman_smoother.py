@@ -6,9 +6,12 @@ License: Simplified-BSD
 """
 
 from types import SimpleNamespace
+import warnings
 
 import numpy as np
 
+from statsmodels.tools.sm_exceptions import OutputWarning
+from statsmodels.tools.validation import string_like
 from statsmodels.tsa.statespace import initialization, tools
 from statsmodels.tsa.statespace.kalman_filter import FilterResults, KalmanFilter
 from statsmodels.tsa.statespace.representation import OptionWrapper
@@ -37,11 +40,11 @@ SMOOTH_UNIVARIATE = 0x08
 class KalmanSmoother(KalmanFilter):
     r"""
     State space representation of a time series process, with Kalman filter
-    and smoother.
+    and smoother
 
     Parameters
     ----------
-    k_endog : {array_like, int}
+    k_endog : ndarray or int
         The observed time-series process :math:`y` if array like or the
         number of variables in the process if an integer.
     k_states : int
@@ -50,10 +53,13 @@ class KalmanSmoother(KalmanFilter):
         The dimension of a guaranteed positive definite covariance matrix
         describing the shocks in the measurement equation. Must be less than
         or equal to `k_states`. Default is `k_states`.
-    results_class : class, optional
+    results_class : type, optional
         Default results class to use to save filtering output. Default is
         `SmootherResults`. If specified, class must extend from
         `SmootherResults`.
+    kalman_smoother_classes : dict, optional
+        Dictionary with BLAS prefixes as keys and Cython Kalman smoother
+        classes as values. Default is `tools.prefix_kalman_smoother_map`.
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices, for Kalman filtering options, or for Kalman smoothing
@@ -83,21 +89,13 @@ class KalmanSmoother(KalmanFilter):
     ]
 
     smooth_conventional = OptionWrapper("smooth_method", SMOOTH_CONVENTIONAL)
-    """
-    (bool) Flag for conventional (Durbin and Koopman, 2012) Kalman smoothing.
-    """
+    """(bool) Flag for conventional (Durbin and Koopman, 2012) Kalman smoothing"""
     smooth_alternative = OptionWrapper("smooth_method", SMOOTH_ALTERNATIVE)
-    """
-    (bool) Flag for alternative (modified Bryson-Frazier) smoothing.
-    """
+    """(bool) Flag for alternative (modified Bryson-Frazier) smoothing"""
     smooth_classical = OptionWrapper("smooth_method", SMOOTH_CLASSICAL)
-    """
-    (bool) Flag for classical (see e.g. Anderson and Moore, 1979) smoothing.
-    """
+    """(bool) Flag for classical (see e.g., Anderson and Moore, 1979) smoothing"""
     smooth_univariate = OptionWrapper("smooth_method", SMOOTH_UNIVARIATE)
-    """
-    (bool) Flag for univariate smoothing (uses modified Bryson-Frazier timing).
-    """
+    """(bool) Flag for univariate smoothing (uses modified Bryson-Frazier timing)"""
 
     # Default smoother options
     smoother_output = SMOOTHER_ALL
@@ -331,7 +329,7 @@ class KalmanSmoother(KalmanFilter):
         >>> mod.smooth_method
         17
         >>> mod.set_smooth_method(filter_univariate=False,
-                                  filter_collapsed=True)
+        ...                       filter_collapsed=True)
         >>> mod.smooth_method
         33
         >>> mod.set_smooth_method(smooth_method=1)
@@ -383,10 +381,14 @@ class KalmanSmoother(KalmanFilter):
         Parameters
         ----------
         smoother_output : int, optional
-            Determines which Kalman smoother output calculate. Default is all
-            (including state, disturbances, and all covariances).
-        results : class or object, optional
-            If a class, then that class is instantiated and returned with the
+            Determines which Kalman smoother output to calculate. Default is
+            all (including state, disturbances, and all covariances).
+        smooth_method : int, optional
+            Determines which Kalman smoothing approach to use. Default is
+            the smoother method specified by `smooth_method` in the current
+            state space model.
+        results : type or object, optional
+            If a type, then that type is instantiated and returned with the
             result of both filtering and smoothing.
             If an object, then that object is updated with the smoothing data.
             If None, then a SmootherResults object is returned with both
@@ -396,6 +398,21 @@ class KalmanSmoother(KalmanFilter):
             is True.
         prefix : str
             The prefix of the datatype. Usually only used internally.
+        complex_step : bool, optional
+            Whether or not to compute the complex-step derivative. Default is
+            False.
+        update_representation : bool, optional
+            Whether or not to update the state space representation with the
+            current model's parameters. Default is True.
+        update_filter : bool, optional
+            Whether or not to update the filter results in the results object
+            with the output of the Kalman filter. Default is True.
+        update_smoother : bool, optional
+            Whether or not to update the smoother results in the results
+            object with the output of the Kalman smoother. Default is True.
+        **kwargs
+            Additional keyword arguments to pass to the Kalman filter. See
+            `KalmanFilter.filter` for more details.
 
         Returns
         -------
@@ -453,7 +470,7 @@ class SmootherResults(FilterResults):
         Datatype of representation matrices
     prefix : str
         BLAS prefix of representation matrices
-    shapes : dictionary of name:tuple
+    shapes : dict of str to tuple
         A dictionary recording the shapes of each of the representation
         matrices as tuples.
     endog : ndarray
@@ -472,21 +489,21 @@ class SmootherResults(FilterResults):
         The selection matrix, :math:`R`.
     state_cov : ndarray
         The covariance matrix for the state equation :math:`Q`.
-    missing : array of bool
+    missing : ndarray of bool
         An array of the same size as `endog`, filled with boolean values that
         are True if the corresponding entry in `endog` is NaN and False
         otherwise.
-    nmissing : array of int
+    nmissing : ndarray of int
         An array of size `nobs`, where the ith entry is the number (between 0
         and k_endog) of NaNs in the ith row of the `endog` array.
     time_invariant : bool
         Whether or not the representation matrices are time-invariant
     initialization : str
         Kalman filter initialization method.
-    initial_state : array_like
-        The state vector used to initialize the Kalamn filter.
-    initial_state_cov : array_like
-        The state covariance matrix used to initialize the Kalamn filter.
+    initial_state : ndarray
+        The state vector used to initialize the Kalman filter.
+    initial_state_cov : ndarray
+        The state covariance matrix used to initialize the Kalman filter.
     filter_method : int
         Bitmask representing the Kalman filtering method
     inversion_method : int
@@ -550,15 +567,18 @@ class SmootherResults(FilterResults):
     smoothed_state_cov : ndarray
         The smoothed state covariance matrices at each time period.
     smoothed_state_autocov : ndarray
-        The smoothed state lago-one autocovariance matrices at each time
+        The smoothed state lag-one autocovariance matrices at each time
         period: :math:`Cov(\alpha_{t+1}, \alpha_t)`.
     smoothed_measurement_disturbance : ndarray
-        The smoothed measurement at each time period.
+        The smoothed measurement disturbance at each time period.
     smoothed_state_disturbance : ndarray
-        The smoothed state at each time period.
+        The smoothed state disturbance at each time period.
     smoothed_measurement_disturbance_cov : ndarray
         The smoothed measurement disturbance covariance matrices at each time
-        period.
+        period. If a non-diagonal observation covariance was diagonalized as
+        :math:`H_t = C_t D_t C_t'` for the univariate filtering approach, then
+        these are the (diagonal) covariance matrices of
+        :math:`C_t^{-1} \varepsilon_t` rather than of :math:`\varepsilon_t`.
     smoothed_state_disturbance_cov : ndarray
         The smoothed state disturbance covariance matrices at each time period.
     """
@@ -604,6 +624,24 @@ class SmootherResults(FilterResults):
         self._smoothed_forecasts_error = None
         self._smoothed_forecasts_error_cov = None
 
+    def _diagonalized_obs_cov(self):
+        """
+        Whether a non-diagonal observation covariance matrix was diagonalized
+
+        The univariate filtering approach replaces a non-diagonal
+        :math:`H_t` by the diagonal :math:`D_t` of its LDL decomposition
+        :math:`H_t = C_t D_t C_t'`; the diffuse periods always use it.
+        """
+        if self.k_endog == 1:
+            return False
+        # univariate_filter also covers a per-period fallback, but it is only
+        # available if the filter results were updated
+        univariate = getattr(self, "univariate_filter", self.filter_univariate)
+        if not (self.nobs_diffuse > 0 or np.any(univariate)):
+            return False
+        offdiag = ~np.eye(self.k_endog, dtype=bool)
+        return bool(np.any(np.abs(self.obs_cov[offdiag, :]) > 1e-9))
+
     def update_smoother(self, smoother):
         """
         Update the smoother results
@@ -611,7 +649,8 @@ class SmootherResults(FilterResults):
         Parameters
         ----------
         smoother : KalmanSmoother
-            The model object from which to take the updated values.
+            The KalmanSmoother object from which to take the updated
+            smoothing values.
 
         Notes
         -----
@@ -683,6 +722,17 @@ class SmootherResults(FilterResults):
         self.innovations_transition = (
             np.array(smoother.innovations_transition, copy=True))
 
+        if self.smoother_disturbance_cov and self._diagonalized_obs_cov():
+            # H_t was replaced by D_t, and only the diagonal of the transformed
+            # covariance is available, so it cannot be transformed back
+            warnings.warn(
+                "The univariate filtering approach diagonalized the"
+                " observation covariance matrix, so"
+                " `smoothed_measurement_disturbance_cov` describes the"
+                " transformed disturbances C_t^{-1} eps_t rather than eps_t."
+                " `smoothed_measurement_disturbance` is unaffected.",
+                OutputWarning, stacklevel=2)
+
         # Diffuse objects
         self.scaled_smoothed_diffuse_estimator = None
         self.scaled_smoothed_diffuse1_estimator_cov = None
@@ -750,10 +800,10 @@ class SmootherResults(FilterResults):
             The number of period to shift forwards when computing the
             autocovariance. This has the opposite sign as `lag` from the
             `smoothed_state_autocovariance` method.
-        start : int, optional
+        start : int
             The start of the interval (inclusive) of autocovariances to compute
             and return.
-        end : int, optional
+        end : int
             The end of the interval (exclusive) autocovariances to compute and
             return. Note that since it is an exclusive endpoint, the returned
             autocovariances do not include the value at this index.
@@ -762,6 +812,11 @@ class SmootherResults(FilterResults):
             for handling out-of-sample autocovariance computations in
             time-varying state space models.
 
+        Returns
+        -------
+        acov : ndarray
+            Array of autocovariance matrices, shaped `(n, k_states, k_states)`
+            where `n = end - start`.
         """
         if extend_kwargs is None:
             extend_kwargs = {}
@@ -858,18 +913,18 @@ class SmootherResults(FilterResults):
             A specific period for which to compute and return the
             autocovariance. Cannot be used in combination with `start` or
             `end`. See the Returns section for details on how this
-            parameter affects what is what is returned.
+            parameter affects what is returned.
         start : int, optional
             The start of the interval (inclusive) of autocovariances to compute
             and return. Cannot be used in combination with the `t` argument.
             See the Returns section for details on how this parameter affects
-            what is what is returned. Default is 0.
+            what is returned. Default is 0.
         end : int, optional
             The end of the interval (exclusive) autocovariances to compute and
             return. Note that since it is an exclusive endpoint, the returned
             autocovariances do not include the value at this index. Cannot be
             used in combination with the `t` argument. See the Returns section
-            for details on how this parameter affects what is what is returned
+            for details on how this parameter affects what is returned
             and what the default value is.
         extend_kwargs : dict, optional
             Keyword arguments containing updated state space system matrices
@@ -900,7 +955,7 @@ class SmootherResults(FilterResults):
               0 or -1, and the model is either time-invariant or time-varying,
               then the returned array is shaped `(*, *, nobs)` and each
               entry [:, :, t] contains Cov(t, t+j). Moreover, all entries are
-              available (i.e. there are no NaNs).
+              available (i.e., there are no NaNs).
 
             - If the model is time-varying and `lag < -1` and `extend_kwargs`
               is not provided, then the returned array is shaped
@@ -912,7 +967,7 @@ class SmootherResults(FilterResults):
               usual.
 
             More generally, the dimension of the last axis will be
-            `start - end`.
+            `end - start`.
 
         Notes
         -----
@@ -930,7 +985,7 @@ class SmootherResults(FilterResults):
         assigned to the variable `acov`, we will have `acov[..., 0]` and
         `acov[..., 1]` as matrices filled with NaN values.
 
-        Based only on the "current" results object (i.e. the Kalman smoother
+        Based only on the "current" results object (i.e., the Kalman smoother
         applied to the sample), there is not enough information to compute
         Cov(t, t+j) for the last `lag - 1` observations of the sample. However,
         the values can be computed for these time points using the transition
@@ -1046,7 +1101,7 @@ class SmootherResults(FilterResults):
             acov = out.transpose(0, 2, 1)
 
         # Squeeze the last axis or else reshape to have the same axis
-        # definitions as e.g. smoothed_state_cov
+        # definitions as e.g., smoothed_state_cov
         if t is not None:
             acov = acov[0]
         else:
@@ -1083,15 +1138,15 @@ class SmootherResults(FilterResults):
             the value at this index. Cannot be used in combination with the `t`
             argument.
         revisions_details_start : bool or int, optional
-            The period at which to beging computing the detailed impacts of
+            The period at which to begin computing the detailed impacts of
             data revisions. Any revisions prior to this period will have their
             impacts grouped together. If a negative integer, interpreted as
             an offset from the end of the dataset. If set to True, detailed
             impacts are computed for all revisions, while if set to False, all
-            revisions are grouped together. Default is False. Note that for
+            revisions are grouped together. Default is True. Note that for
             large models, setting this to be near the beginning of the sample
             can cause this function to be slow.
-        design : array, optional
+        design : ndarray, optional
             Design matrix for the period `t` in time-varying models. If this
             model has a time-varying design matrix, and the argument `t` is out
             of this model's sample, then a new design matrix for period `t`
@@ -1138,19 +1193,19 @@ class SmootherResults(FilterResults):
               construct the news, y^u.
             - `revised`: revised observations of the periods that were revised
               and for which detailed impacts were computed
-            - `revised`: revised observations of the periods that were revised
+            - `revised_all`: revised observations of the periods that were
+              revised
             - `revised_prev`: previous observations of the periods that were
               revised and for which detailed impacts were computed
             - `revised_prev_all`: previous observations of the periods that
-              were revised and for which detailed impacts were computed
+              were revised
             - `prev_impacted_forecasts`: previous forecast of the periods of
               interest, E[y^i | previous].
             - `post_impacted_forecasts`: forecast of the periods of interest
               after taking into account both revisions and updates,
               E[y^i | post].
             - `revision_results`: results object that updates the `previous`
-              results to take into account data revisions.
-            - `revision_results`: results object associated with the revisions
+              results to take into account data revisions
             - `revision_impacts`: total impacts from all revisions (both
               grouped and detailed)
             - `revisions_ix`: list of `(t, i)` positions of revisions in endog
@@ -1165,7 +1220,7 @@ class SmootherResults(FilterResults):
 
         Notes
         -----
-        This method computes the effect of new data (e.g. from a new data
+        This method computes the effect of new data (e.g., from a new data
         release) on smoothed forecasts produced by a state space model, as
         described in [1]_. It also computes the effect of revised data on
         smoothed forecasts.
@@ -1220,7 +1275,7 @@ class SmootherResults(FilterResults):
             raise ValueError(error_ss % "different state space dimensions than"
                              " `previous`")
 
-        for key in self.model.shapes.keys():
+        for key in self.model.shapes:
             if key == "obs":
                 continue
             tv = getattr(self, key).shape[-1] > 1
@@ -1245,7 +1300,7 @@ class SmootherResults(FilterResults):
 
         # For time-varying case, figure out extension kwargs
         extend_kwargs = {}
-        for key in self.model.shapes.keys():
+        for key in self.model.shapes:
             if key == "obs":
                 continue
             mat = getattr(self, key)
@@ -1306,7 +1361,7 @@ class SmootherResults(FilterResults):
         # or not we are computing detailed impacts)
         if len(revisions_ix) > 0:
             # Indexes
-            revised_j, revised_p = zip(*revisions_ix)
+            revised_j, revised_p = zip(*revisions_ix, strict=True)
             compute_j = np.arange(revised_j[0], revised_j[-1] + 1)
 
             # Data from updated model
@@ -1337,7 +1392,7 @@ class SmootherResults(FilterResults):
 
             # Copy time-varying matrices (required by clone)
             clone_kwargs = {}
-            for key in self.model.shapes.keys():
+            for key in self.model.shapes:
                 if key == "obs":
                     continue
                 mat = getattr(self, key)
@@ -1384,7 +1439,7 @@ class SmootherResults(FilterResults):
 
                 # Multiplication gives: t, j, m, p * t, j, m, p, k
                 # Sum along axis=2 gives: t, j, p, k
-                # Transpose to: t, j, k, p (i.e. like t, j, m, p but with k
+                # Transpose to: t, j, k, p (i.e., like t, j, m, p but with k
                 # instead of m)
                 revision_weights = np.nansum(
                     smoothed_state_weights[..., None]
@@ -1405,7 +1460,7 @@ class SmootherResults(FilterResults):
                 # elements
                 revised_j, revised_p = zip(*[
                     s for s in revisions_ix
-                    if s[0] >= revisions_details_start])
+                    if s[0] >= revisions_details_start], strict=True)
                 ix_j = revised_j - revised_j[0]
                 # Shape is: t, k, j * p
                 # Note: have to transpose first so that the two advanced
@@ -1448,7 +1503,7 @@ class SmootherResults(FilterResults):
 
         # Need to also flatten the revisions items that contain all revisions
         if len(revisions_ix) > 0:
-            revised_j, revised_p = zip(*revisions_ix)
+            revised_j, revised_p = zip(*revisions_ix, strict=True)
             ix_j = revised_j - revised_j[0]
 
             revisions_all = revisions_all[ix_j, revised_p]
@@ -1458,7 +1513,7 @@ class SmootherResults(FilterResults):
         # Now handle updates
         if len(updates_ix) > 0:
             # Figure out which time points we need forecast errors for
-            update_t, update_k = zip(*updates_ix)
+            update_t, update_k = zip(*updates_ix, strict=True)
             update_start_t = np.min(update_t)
             update_end_t = np.max(update_t)
 
@@ -1590,14 +1645,36 @@ class SmootherResults(FilterResults):
         r"""
         Cov(\tilde \alpha_{t}, I) Var(I, I)^{-1}
 
-        where I is a vector of forecast errors associated with
-        `update_indices`.
+        where I is a vector of forecast errors associated with `updates_ix`.
 
         Parameters
         ----------
-        updates_ix : list
+        updates_ix : list of tuple
             List of indices `(t, i)`, where `t` denotes a zero-indexed time
             location and `i` denotes a zero-indexed endog variable.
+        t : int, optional
+            A specific period for which to compute the gain. Cannot be used
+            in combination with `start` or `end`.
+        start : int, optional
+            The start of the interval (inclusive) of gains to compute and
+            return. Cannot be used in combination with the `t` argument.
+            Default is `nobs - 1`.
+        end : int, optional
+            The end of the interval (exclusive) of gains to compute and
+            return. Cannot be used in combination with the `t` argument.
+            Default is `nobs`.
+        extend_kwargs : dict, optional
+            Keyword arguments containing updated state space system matrices
+            for handling out-of-sample computations in time-varying state
+            space models.
+
+        Returns
+        -------
+        gain : ndarray
+            Array of gain matrices. If the argument `t` is not provided, then
+            it is shaped `(end - start, k_states, len(updates_ix))`, while if
+            `t` is given then the first axis is dropped and the array is
+            shaped `(k_states, len(updates_ix))`.
         """
         # Handle `t`
         if t is not None and (start is not None or end is not None):
@@ -1767,7 +1844,7 @@ class SmootherResults(FilterResults):
 
         Returns
         -------
-        data_contributions : array
+        data_contributions : ndarray
             Contributions of observations to the decomposed object. If the
             smoothed state is being decomposed, then `data_contributions` are
             shaped `(nobs, k_states, nobs, k_endog)`, where the
@@ -1778,7 +1855,7 @@ class SmootherResults(FilterResults):
             `(t, k, j, p)`-th element is the contribution of the `p`-th
             observation at time `j` to the smoothed prediction of the `k`-th
             observation at time `t`.
-        obs_intercept_contributions : array
+        obs_intercept_contributions : ndarray
             Contributions of the observation intercept to the decomposed
             object. If the smoothed state is being decomposed, then
             `obs_intercept_contributions` are shaped
@@ -1789,7 +1866,7 @@ class SmootherResults(FilterResults):
             `(nobs, k_endog, nobs, k_endog)`, where the `(t, k, j, p)`-th
             element is the contribution of the `p`-th observation at time `j`
             to the smoothed prediction of the `k`-th observation at time `t`.
-        state_intercept_contributions : array
+        state_intercept_contributions : ndarray
             Contributions of the state intercept to the decomposed object. If
             the smoothed state is being decomposed, then
             `state_intercept_contributions` are shaped
@@ -1798,10 +1875,10 @@ class SmootherResults(FilterResults):
             time `j` to the `m`-th state at time `t`. If the smoothed signal
             is being decomposed, then `state_intercept_contributions` are
             shaped `(nobs, k_endog, nobs, k_endog)`, where the
-            `(t, k, j, l)`-th element is the contribution of the `p`-th
-            observation at time `j` to the smoothed prediction of the `k`-th
-            observation at time `t`.
-        prior_contributions : array
+            `(t, k, j, l)`-th element is the contribution of the `l`-th
+            state intercept at time `j` to the smoothed prediction of the
+            `k`-th observation at time `t`.
+        prior_contributions : ndarray
             Contributions of the prior to the decomposed object. If the
             smoothed state is being decomposed, then `prior_contributions` are
             shaped `(nobs, k_states, k_states)`, where the `(t, m, l)`-th
@@ -1818,9 +1895,12 @@ class SmootherResults(FilterResults):
         the smoothed signal is :math:`Z_t \alpha_t`, where :math:`Z_t` is the
         design matrix operative at time :math:`t`.
         """
-        if decomposition_of not in ["smoothed_state", "smoothed_signal"]:
-            raise ValueError('Invalid value for `decomposition_of`. Must be'
-                             ' one of "smoothed_state" or "smoothed_signal".')
+        decomposition_of = string_like(
+            decomposition_of,
+            "decomposition_of",
+            options=("smoothed_state", "smoothed_signal"),
+            lower=False,
+        )
 
         weights, state_intercept_weights, prior_weights = (
             tools._compute_smoothed_state_weights(
@@ -1842,14 +1922,14 @@ class SmootherResults(FilterResults):
         if decomposition_of == "smoothed_signal":
             # Multiplication gives: t, j, m, p * t, j, m, p, k
             # Sum along axis=2 gives: t, j, p, k
-            # Transpose to: t, j, k, p (i.e. like t, j, m, p but with k instead
+            # Transpose to: t, j, k, p (i.e., like t, j, m, p but with k instead
             # of m)
             weights = np.nansum(weights[..., None] * ZT[:, None, :, None, :],
                                 axis=2).transpose(0, 1, 3, 2)
 
             # Multiplication gives: t, j, m, l * t, j, m, l, k
             # Sum along axis=2 gives: t, j, l, k
-            # Transpose to: t, j, k, l (i.e. like t, j, m, p but with k instead
+            # Transpose to: t, j, k, l (i.e., like t, j, m, p but with k instead
             # of m and l instead of p)
             state_intercept_weights = np.nansum(
                 state_intercept_weights[..., None] * ZT[:, None, :, None, :],
@@ -1857,7 +1937,7 @@ class SmootherResults(FilterResults):
 
             # Multiplication gives: t, m, l * t, m, l, k = t, m, l, k
             # Sum along axis=1 gives: t, l, k
-            # Transpose to: t, k, l (i.e. like t, m, l but with k instead of m)
+            # Transpose to: t, k, l (i.e., like t, m, l but with k instead of m)
             prior_weights = np.nansum(
                 prior_weights[..., None] * ZT[:, :, None, :],
                 axis=1).transpose(0, 2, 1)

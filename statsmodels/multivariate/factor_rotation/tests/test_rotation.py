@@ -12,10 +12,22 @@ from statsmodels.multivariate.factor_rotation._gpa_rotation import (
     ff_target,
     oblimin_objective,
     orthomax_objective,
+    rotateA,
     vgQ_partial_target,
     vgQ_target,
 )
 from statsmodels.multivariate.factor_rotation._wrappers import rotate_factors
+
+
+def test_rotateA_invalid_rotation_method_raises():
+    import pytest
+
+    A = np.eye(3)
+    T = np.eye(3)
+    with pytest.raises(ValueError, match="rotation_method"):
+        rotateA(A, T, rotation_method="not-a-rotation-method")
+    with pytest.raises(ValueError, match="rotation_method"):
+        GPA(A, ff=lambda L: 0.0, rotation_method="not-a-rotation-method")
 
 
 class TestAnalyticRotation(unittest.TestCase):

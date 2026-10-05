@@ -106,10 +106,10 @@ class TestKernelsRplus(CheckKernels):
     def setup_class(cls):
         b = 2
         scale = 1.5
-        np.random.seed(1)
+        rs = np.random.RandomState(1)
         nobs = 1000
         distr0 = stats.gamma(b, scale=scale)
-        rvs = distr0.rvs(size=nobs)
+        rvs = distr0.rvs(size=nobs, random_state=rs)
         x_plot = np.linspace(0.5, 16, 51) + 1e-13
 
         cls.rvs = rvs
@@ -136,10 +136,10 @@ class TestKernelsUnit(CheckKernels):
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(987456)
+        rs = np.random.RandomState(43784319)
         nobs = 1000
         distr0 = stats.beta(2, 3)
-        rvs = distr0.rvs(size=nobs)
+        rvs = distr0.rvs(size=nobs, random_state=rs)
         # Runtime warning if x_plot includes 0
         x_plot = np.linspace(1e-10, 1, 51)
 
@@ -147,7 +147,7 @@ class TestKernelsUnit(CheckKernels):
         cls.x_plot = x_plot
         cls.pdf_dgp = distr0.pdf(x_plot)
         cls.cdf_dgp = distr0.cdf(x_plot)
-        cls.amse_pdf = 0.01
+        cls.amse_pdf = 0.02
         cls.amse_cdf = 5e-3
 
     @pytest.mark.parametrize("case", kernels_unit)

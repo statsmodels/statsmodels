@@ -14,6 +14,22 @@ The Datasets Package
 ``statsmodels`` provides data sets (i.e. data *and* meta-data) for use in
 examples, tutorials, model testing, etc.
 
+The Dataset Class
+-----------------
+
+Every loader below returns its data wrapped in a :class:`Dataset
+<statsmodels.datasets.utils.Dataset>` instance.
+
+.. currentmodule:: statsmodels.datasets.utils
+
+.. autosummary::
+   :toctree: ./
+   :template: class_no_members.rst
+
+   Dataset
+
+.. currentmodule:: statsmodels.datasets
+
 Using Datasets from Stata
 -------------------------
 

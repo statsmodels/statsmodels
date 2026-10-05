@@ -9,13 +9,13 @@ from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 def logdet_symm(m, check_symm=False):
     """
-    Return log(det(m)) asserting positive definiteness of m.
+    Return log(det(m)) asserting positive definiteness of m
 
     Parameters
     ----------
     m : array_like
         2d array that is positive-definite (and symmetric)
-    check_symm : bool
+    check_symm : bool, optional
         If True, check that `m` is symmetric before factorizing.
 
     Returns
@@ -35,7 +35,7 @@ def logdet_symm(m, check_symm=False):
 
 def stationary_solve(r, b):
     """
-    Solve a linear system for a Toeplitz correlation matrix.
+    Solve a linear system for a Toeplitz correlation matrix
 
     A Toeplitz correlation matrix represents the covariance of a
     stationary series with unit variance.
@@ -45,13 +45,14 @@ def stationary_solve(r, b):
     r : array_like
         A vector describing the coefficient matrix.  r[0] is the first
         band next to the diagonal, r[1] is the second band, etc.
-    b : array_like
-        The right-hand side for which we are solving, i.e. we solve
+    b : ndarray
+        The right-hand side for which we are solving, i.e., we solve
         Tx = b and return b, where T is the Toeplitz coefficient matrix.
 
     Returns
     -------
-    The solution to the linear system.
+    x : ndarray
+        The solution to the linear system.
 
     """
     db = r[0:1]
@@ -88,7 +89,7 @@ def transf_constraints(constraints):
     Parameters
     ----------
     constraints : ndarray, 2-D
-        restriction matrix with one constraints in rows
+        restriction matrix with one constraint per row
 
     Returns
     -------
@@ -98,7 +99,7 @@ def transf_constraints(constraints):
 
     Notes
     -----
-    This is currently and internal helper function for GAM.
+    This is currently an internal helper function for GAM.
     API not stable and will most likely change.
 
     The code for this function was taken from patsy spline handling, and
@@ -136,18 +137,18 @@ def matrix_sqrt(mat, inverse=False, full=False, nullspace=False, threshold=1e-15
         There is no checking for whether the matrix is symmetric.
         A warning is issued if some singular values are negative, i.e.
         below the negative of the threshold.
-    inverse : bool
+    inverse : bool, optional
         If False (default), then the matrix square root is returned.
         If inverse is True, then the matrix square root of the inverse
         matrix is returned.
-    full : bool
+    full : bool, optional
         If full is False (default, then the square root has reduce number
-        of rows if the matrix is singular, i.e. has singular values below
+        of rows if the matrix is singular, i.e., has singular values below
         the threshold.
-    nullspace : bool
+    nullspace : bool, optional
         If nullspace is true, then the matrix square root of the null space
         of the matrix is returned.
-    threshold : float
+    threshold : float, optional
         Singular values below the threshold are dropped.
 
     Returns

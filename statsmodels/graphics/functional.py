@@ -1,24 +1,19 @@
-"""Module for functional boxplots."""
+"""Module for functional boxplots"""
 
-from statsmodels.compat.numpy import NP_LT_123
+from statsmodels.compat.pandas import deprecate_kwarg
+
+import itertools
+from multiprocessing import Pool
 
 import numpy as np
+from scipy.optimize import brute, differential_evolution, fmin
 from scipy.special import comb
 
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
-
-try:
-    from scipy.optimize import brute, differential_evolution, fmin
-
-    have_de_optim = True
-except ImportError:
-    from scipy.optimize import brute, fmin
-
-    have_de_optim = False
-import itertools
-from multiprocessing import Pool
+from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import string_like
 
 from . import utils
 
@@ -26,7 +21,7 @@ __all__ = ["banddepth", "fboxplot", "hdrboxplot", "rainbowplot"]
 
 
 class HdrResults:
-    """Wrap results and pretty print them."""
+    """Wrap results and pretty print them"""
 
     def __init__(self, kwds):
         self.__dict__.update(kwds)
@@ -34,19 +29,12 @@ class HdrResults:
     def __repr__(self):
         msg = (
             "HDR boxplot summary:\n"
-            "-> median:\n{}\n"
-            "-> 50% HDR (max, min):\n{}\n"
-            "-> 90% HDR (max, min):\n{}\n"
-            "-> Extra quantiles (max, min):\n{}\n"
-            "-> Outliers:\n{}\n"
-            "-> Outliers indices:\n{}\n"
-        ).format(
-            self.median,
-            self.hdr_50,
-            self.hdr_90,
-            self.extra_quantiles,
-            self.outliers,
-            self.outliers_idx,
+            f"-> median:\n{self.median}\n"
+            f"-> 50% HDR (max, min):\n{self.hdr_50}\n"
+            f"-> 90% HDR (max, min):\n{self.hdr_90}\n"
+            f"-> Extra quantiles (max, min):\n{self.extra_quantiles}\n"
+            f"-> Outliers:\n{self.outliers}\n"
+            f"-> Outliers indices:\n{self.outliers_idx}\n"
         )
 
         return msg
@@ -54,7 +42,7 @@ class HdrResults:
 
 def _inverse_transform(pca, data):
     """
-    Inverse transform on PCA.
+    Inverse transform on PCA
 
     Use PCA's `project` method by temporary replacing its factors with
     `data`.
@@ -63,12 +51,10 @@ def _inverse_transform(pca, data):
     ----------
     pca : statsmodels Principal Component Analysis instance
         The PCA object to use.
-    data : sequence of ndarrays or 2-D ndarray
-        The vectors of functions to create a functional boxplot from.  If a
-        sequence of 1-D arrays, these should all be the same size.
-        The first axis is the function index, the second axis the one along
-        which the function is defined.  So ``data[0, :]`` is the first
-        functional curve.
+    data : ndarray
+        Points in the reduced (PCA factor) space to inverse transform back
+        to the original curve space.  Reshaped internally to
+        ``(-1, ncomp)`` before being assigned to `pca.factors`.
 
     Returns
     -------
@@ -83,14 +69,15 @@ def _inverse_transform(pca, data):
 
 
 def _curve_constrained(x, idx, sign, band, pca, ks_gaussian):
-    """Find out if the curve is within the band.
+    """
+    Find out if the curve is within the band
 
     The curve value at :attr:`idx` for a given PDF is only returned if
     within bounds defined by the band. Otherwise, 1E6 is returned.
 
     Parameters
     ----------
-    x : float
+    x : ndarray
         Curve in reduced space.
     idx : int
         Index value of the components to compute.
@@ -101,6 +88,7 @@ def _curve_constrained(x, idx, sign, band, pca, ks_gaussian):
     pca : statsmodels Principal Component Analysis instance
         The PCA object to use.
     ks_gaussian : KDEMultivariate instance
+        The kernel density estimate used to compute the PDF of the curve.
 
     Returns
     -------
@@ -118,14 +106,14 @@ def _curve_constrained(x, idx, sign, band, pca, ks_gaussian):
 
 def _min_max_band(args):
     """
-    Min and max values at `idx`.
+    Min and max values at `idx`
 
     Global optimization to find the extrema per component.
 
     Parameters
     ----------
-    args: list
-        It is a list of an idx and other arguments as a tuple:
+    args : tuple
+        It is a tuple of an idx and other arguments as a tuple:
             idx : int
                 Index value of the components to compute
         The tuple contains:
@@ -136,27 +124,35 @@ def _min_max_band(args):
             bounds : sequence
                 ``(min, max)`` pair for each components
             ks_gaussian : KDEMultivariate instance
+                The kernel density estimate used to compute the PDF of the
+                curve.
+            use_brute : bool
+                Use the brute force optimizer instead of the default
+                differential evolution to find the curves.
+            rng : int, numpy.random.Generator, or numpy.random.RandomState, optional
+                Value to pass to scipy.optimize.differential_evolution as
+                its `seed` argument.
 
     Returns
     -------
     band : tuple of float
         ``(max, min)`` curve values at `idx`
     """
-    idx, (band, pca, bounds, ks_gaussian, use_brute, seed) = args
-    if have_de_optim and not use_brute:
+    idx, (band, pca, bounds, ks_gaussian, use_brute, rng) = args
+    if not use_brute:
         max_ = differential_evolution(
             _curve_constrained,
             bounds=bounds,
             args=(idx, -1, band, pca, ks_gaussian),
             maxiter=7,
-            seed=seed,
+            seed=rng,
         ).x
         min_ = differential_evolution(
             _curve_constrained,
             bounds=bounds,
             args=(idx, 1, band, pca, ks_gaussian),
             maxiter=7,
-            seed=seed,
+            seed=rng,
         ).x
     else:
         max_ = brute(
@@ -180,6 +176,8 @@ def _min_max_band(args):
     return band
 
 
+@deprecate_kwarg("seed", "rng")
+@deprecate_kwarg("kernel_seed", "kernel_rng")
 def hdrboxplot(
     data,
     ncomp=2,
@@ -190,9 +188,9 @@ def hdrboxplot(
     labels=None,
     ax=None,
     use_brute=False,
-    seed=None,
+    rng=None,
     *,
-    kernel_seed=None,
+    kernel_rng=None,
 ):
     """
     High Density Region boxplot
@@ -206,7 +204,7 @@ def hdrboxplot(
         which the function is defined.  So ``data[0, :]`` is the first
         functional curve.
     ncomp : int, optional
-        Number of components to use.  If None, returns the as many as the
+        Number of components to use.  If None, returns as many as the
         smaller of the number of rows or columns in data.
     alpha : list of floats between 0 and 1, optional
         Extra quantile values to compute. Default is None
@@ -221,7 +219,7 @@ def hdrboxplot(
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
-    xdata : ndarray, optional
+    xdata : array_like, optional
         The independent variable for the data. If not given, it is assumed to
         be an array of integers 0..N-1 with N the length of the vectors in
         `data`.
@@ -231,21 +229,41 @@ def hdrboxplot(
     ax : AxesSubplot, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-    use_brute : bool
+    use_brute : bool, optional
         Use the brute force optimizer instead of the default differential
         evolution to find the curves. Default is False.
-    seed : {None, int, np.random.RandomState}
-        Seed value to pass to scipy.optimize.differential_evolution. Can be an
-        integer or RandomState instance. If None, then the default RandomState
-        provided by np.random is used.
-    kernel_seed : {int, Generator, RandomState}, optional
-        A seed to use for the kernel density. If None, will use the global RandomState.
+    rng : int, numpy.random.Generator, or numpy.random.RandomState, optional
+        Value to pass to scipy.optimize.differential_evolution as its `seed`
+        argument. If `rng` is None, a new ``Generator`` is created using
+        fresh entropy from the operating system. If `rng` is an int or
+        array of ints, a new ``Generator`` is created, seeded with `rng`.
+        If `rng` is already a ``Generator`` or ``RandomState`` instance,
+        that instance is used.
+    seed : int, numpy.random.Generator, or numpy.random.RandomState, optional
+        .. deprecated:: 0.15
+
+           seed has been deprecated. In-line with SPEC-007, use
+           rng for passing a random number generator or seed.
+    kernel_rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        A random number generator or seed to use for the kernel density
+        estimate. If `rng` is None, the legacy global (singleton)
+        ``RandomState`` provided by ``numpy.random`` is used; this
+        behavior is deprecated and will change to creating a new
+        ``Generator`` using fresh entropy from the operating system in a
+        future release. If `rng` is an int or array of ints, a new
+        ``Generator`` is created, seeded with `rng`. If `rng` is already a
+        ``Generator`` or ``RandomState`` instance, that instance is used.
 
         .. deprecated:: 0.15.0
 
             In release 0.17.0 or after January 2028, whichever comes sooner,
             using None will initialize a new numpy.random.default_rng using
             system entropy.
+    kernel_seed : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        .. deprecated:: 0.15
+
+           kernel_seed has been deprecated. In-line with SPEC-007, use
+           kernel_rng for passing a random number generator or seed.
 
     Returns
     -------
@@ -255,13 +273,15 @@ def hdrboxplot(
     hdr_res : HdrResults instance
         An `HdrResults` instance with the following attributes:
 
-         - 'median', array. Median curve.
-         - 'hdr_50', array. 50% quantile band. [sup, inf] curves
-         - 'hdr_90', list of array. 90% quantile band. [sup, inf]
+         - 'median', ndarray. Median curve.
+         - 'hdr_50', list of tuple of float. 50% quantile band. [sup, inf]
             curves.
-         - 'extra_quantiles', list of array. Extra quantile band.
+         - 'hdr_90', list of tuple of float. 90% quantile band. [sup, inf]
+            curves.
+         - 'extra_quantiles', list of tuple of float. Extra quantile band.
             [sup, inf] curves.
          - 'outliers', ndarray. Outlier curves.
+         - 'outliers_idx', ndarray. Indices of the outlier curves in `data`.
 
     See Also
     --------
@@ -310,8 +330,8 @@ def hdrboxplot(
 
     References
     ----------
-    [1] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots for
-        Functional Data", vol. 19, pp. 29-45, 2010.
+    .. [1] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots
+           for Functional Data", vol. 19, pp. 29-45, 2010.
 
     Examples
     --------
@@ -345,6 +365,8 @@ def hdrboxplot(
     """
     fig, ax = utils.create_mpl_ax(ax)
 
+    rng = check_random_state(rng)
+
     if labels is None:
         # For use with pandas, get the labels
         if hasattr(data, "index"):
@@ -363,7 +385,7 @@ def hdrboxplot(
 
     # Create gaussian kernel
     ks_gaussian = KDEMultivariate(
-        data_r, bw=bw, var_type="c" * data_r.shape[1], seed=kernel_seed
+        data_r, bw=bw, var_type="c" * data_r.shape[1], rng=kernel_rng
     )
 
     # Boundaries of the n-variate space
@@ -379,21 +401,15 @@ def hdrboxplot(
 
     n_quantiles = len(alpha)
     pdf_r = ks_gaussian.pdf(data_r).flatten()
-    if NP_LT_123:
-        pvalues = [
-            np.percentile(pdf_r, (1 - alpha[i]) * 100, interpolation="linear")
-            for i in range(n_quantiles)
-        ]
-    else:
-        pvalues = [
-            np.percentile(pdf_r, (1 - alpha[i]) * 100, method="midpoint")
-            for i in range(n_quantiles)
-        ]
+    pvalues = [
+        np.percentile(pdf_r, (1 - alpha[i]) * 100, method="midpoint")
+        for i in range(n_quantiles)
+    ]
 
     # Find mean, outliers curves
-    if have_de_optim and not use_brute:
+    if not use_brute:
         median = differential_evolution(
-            lambda x: -ks_gaussian.pdf(x), bounds=bounds, maxiter=5, seed=seed
+            lambda x: -ks_gaussian.pdf(x), bounds=bounds, maxiter=5, seed=rng
         ).x
     else:
         median = brute(lambda x: -ks_gaussian.pdf(x), ranges=bounds, finish=fmin)
@@ -404,9 +420,9 @@ def hdrboxplot(
 
     # Find HDR given some quantiles
 
-    def _band_quantiles(band, use_brute=use_brute, seed=seed):
+    def _band_quantiles(band, use_brute=use_brute, rng=rng):
         """
-        Find extreme curves for a quantile band.
+        Find extreme curves for a quantile band
 
         From the `band` of quantiles, the associated PDF extrema values
         are computed. If `min_alpha` is not provided (single quantile value),
@@ -421,14 +437,14 @@ def hdrboxplot(
         ----------
         band : array_like
             alpha values ``(max_alpha, min_alpha)`` ex: ``[0.9, 0.5]``
-        use_brute : bool
+        use_brute : bool, optional
             Use the brute force optimizer instead of the default differential
             evolution to find the curves. Default is False.
-        seed : {None, int, np.random.RandomState}
-            Seed value to pass to scipy.optimize.differential_evolution. Can
-            be an integer or RandomState instance. If None, then the default
-            RandomState provided by np.random is used.
-
+        rng : numpy.random.Generator or numpy.random.RandomState, optional
+            Already-normalized generator, passed to
+            scipy.optimize.differential_evolution as its `seed` argument.
+            Defaults to the `rng` resolved by the enclosing `hdrboxplot`
+            call.
 
         Returns
         -------
@@ -445,13 +461,13 @@ def hdrboxplot(
         pool = Pool()
         data = zip(
             range(dim),
-            itertools.repeat((band, pca, bounds, ks_gaussian, seed, use_brute)),
+            itertools.repeat((band, pca, bounds, ks_gaussian, use_brute, rng)),
         )
         band_quantiles = pool.map(_min_max_band, data)
         pool.terminate()
         pool.close()
 
-        band_quantiles = list(zip(*band_quantiles))
+        band_quantiles = list(zip(*band_quantiles, strict=True))
 
         return band_quantiles
 
@@ -460,15 +476,15 @@ def hdrboxplot(
         extra_quantiles = []
         for x in extra_alpha:
             extra_quantiles.extend(
-                list(_band_quantiles([x], use_brute=use_brute, seed=seed))
+                list(_band_quantiles([x], use_brute=use_brute, rng=rng))
             )
     else:
         extra_quantiles = []
 
     # Inverse transform from n-variate plot to dataset dataset's shape
     median = _inverse_transform(pca, median)[0]
-    hdr_90 = _band_quantiles([0.9, 0.5], use_brute=use_brute, seed=seed)
-    hdr_50 = _band_quantiles([0.5], use_brute=use_brute, seed=seed)
+    hdr_90 = _band_quantiles([0.9, 0.5], use_brute=use_brute, rng=rng)
+    hdr_50 = _band_quantiles([0.5], use_brute=use_brute, rng=rng)
 
     hdr_res = HdrResults(
         {
@@ -515,12 +531,12 @@ def hdrboxplot(
     # Proxy artist for fill_between legend entry
     # See https://matplotlib.org/1.3.1/users/legend_guide.html
     plt = _import_mpl()
-    for label, fill_between in zip(["50% HDR", "90% HDR"], fill_betweens):
+    for label, fill_between in zip(["50% HDR", "90% HDR"], fill_betweens, strict=True):
         p = plt.Rectangle((0, 0), 1, 1, fc=fill_between.get_facecolor()[0])
         handles.append(p)
         labels.append(label)
 
-    by_label = dict(zip(labels, handles))
+    by_label = dict(zip(labels, handles, strict=True))
     if len(outliers) != 0:
         by_label.pop("Median")
         by_label.pop("50% HDR")
@@ -542,7 +558,7 @@ def fboxplot(
     plot_opts=None,
 ):
     """
-    Plot functional boxplot.
+    Plot functional boxplot
 
     A functional boxplot is the analog of a boxplot for functional data.
     Functional data is any type of data that varies over a continuum, i.e.
@@ -560,7 +576,7 @@ def fboxplot(
         The first axis is the function index, the second axis the one along
         which the function is defined.  So ``data[0, :]`` is the first
         functional curve.
-    xdata : ndarray, optional
+    xdata : array_like, optional
         The independent variable for the data.  If not given, it is assumed to
         be an array of integers 0..N-1 with N the length of the vectors in
         `data`.
@@ -622,10 +638,10 @@ def fboxplot(
 
     References
     ----------
-    [1] Y. Sun and M.G. Genton, "Functional Boxplots", Journal of Computational
-        and Graphical Statistics, vol. 20, pp. 1-19, 2011.
-    [2] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots for
-        Functional Data", vol. 19, pp. 29-45, 2010.
+    .. [1] Y. Sun and M.G. Genton, "Functional Boxplots", Journal of
+           Computational and Graphical Statistics, vol. 20, pp. 1-19, 2011.
+    .. [2] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots
+           for Functional Data", vol. 19, pp. 29-45, 2010.
 
     Examples
     --------
@@ -671,8 +687,9 @@ def fboxplot(
 
     # Calculate band depth if required.
     if depth is None:
-        if method not in ["MBD", "BD2"]:
-            raise ValueError("Unknown value for parameter `method`.")
+        method = string_like(
+            method, "method", options=("MBD", "BD2"), lower=False
+        )
 
         depth = banddepth(data, method=method)
     elif depth.size != data.shape[0]:
@@ -748,7 +765,7 @@ def fboxplot(
 
 def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None, cmap=None):
     """
-    Create a rainbow plot for a set of curves.
+    Create a rainbow plot for a set of curves
 
     A rainbow plot contains line plots of all curves in the dataset, colored in
     order of functional depth.  The median curve is shown in black.
@@ -761,7 +778,7 @@ def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None, cmap=None):
         The first axis is the function index, the second axis the one along
         which the function is defined.  So ``data[0, :]`` is the first
         functional curve.
-    xdata : ndarray, optional
+    xdata : array_like, optional
         The independent variable for the data.  If not given, it is assumed to
         be an array of integers 0..N-1 with N the length of the vectors in
         `data`.
@@ -790,8 +807,8 @@ def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None, cmap=None):
 
     References
     ----------
-    [1] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots for
-        Functional Data", vol. 19, pp. 29-25, 2010.
+    .. [1] R.J. Hyndman and H.L. Shang, "Rainbow Plots, Bagplots, and Boxplots
+           for Functional Data", vol. 19, pp. 29-45, 2010.
 
     Examples
     --------
@@ -830,8 +847,9 @@ def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None, cmap=None):
 
     # Calculate band depth if required.
     if depth is None:
-        if method not in ["MBD", "BD2"]:
-            raise ValueError("Unknown value for parameter `method`.")
+        method = string_like(
+            method, "method", options=("MBD", "BD2"), lower=False
+        )
 
         depth = banddepth(data, method=method)
     elif depth.size != data.shape[0]:
@@ -853,7 +871,7 @@ def rainbowplot(data, xdata=None, depth=None, method="MBD", ax=None, cmap=None):
 
 def banddepth(data, method="MBD"):
     """
-    Calculate the band depth for a set of functional curves.
+    Calculate the band depth for a set of functional curves
 
     Band depth is an order statistic for functional data (see `fboxplot`), with
     a higher band depth indicating larger "centrality".  In analog to scalar
@@ -921,11 +939,10 @@ def banddepth(data, method="MBD"):
         up = n - rmat
         return ((np.sum(up * down, axis=1) / p) + n - 1) / comb(n, 2)
 
+    method = string_like(method, "method", options=("MBD", "BD2"), lower=False)
     if method == "BD2":
         depth = _fbd2()
-    elif method == "MBD":
+    else:  # method == "MBD"
         depth = _fmbd()
-    else:
-        raise ValueError("Unknown input value for parameter `method`.")
 
     return depth

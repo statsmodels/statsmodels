@@ -169,7 +169,7 @@ cdef class {{prefix}}KalmanFilter(object):
     For example, handling missing observations requires not only substituting
     `obs`, `design`, and `obs_cov` matrices, but the new matrices actually have
     different dimensions than the originals. This can be flexibly accommodated
-    simply by replacing e.g. the `obs` pointer to the substituted `obs` array
+    simply by replacing e.g., the `obs` pointer to the substituted `obs` array
     and replacing `k_endog` for that iteration. Then in the next iteration, when
     the `obs` vector may be missing different elements (or none at all), it can
     again be redefined.
@@ -178,10 +178,10 @@ cdef class {{prefix}}KalmanFilter(object):
     steps.
 
     `initialize_object_pointers` initializes pointers to current-iteration
-    objects (i.e. the state space arrays and filter output arrays).
+    objects (i.e., the state space arrays and filter output arrays).
 
     `initialize_function_pointers` initializes pointers to the appropriate
-    Kalman filtering routines (i.e. `forecast_conventional` or
+    Kalman filtering routines (i.e., `forecast_conventional` or
     `forecast_exact_initial`, etc.).
 
     `select_arrays` converts the base arrays into "selected" arrays using

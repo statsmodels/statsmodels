@@ -1,5 +1,5 @@
 """
-some measures for evaluation of prediction, tests and model selection
+Some measures for evaluation of prediction, tests and model selection
 
 Created on Tue Nov 08 15:23:20 2011
 Updated on Wed Jun 03 10:42:20 2020
@@ -13,6 +13,33 @@ import numpy as np
 from statsmodels.tools.validation import array_like
 
 
+def _nan_reduction_result(arr, axis):
+    """
+    Explicit nan with the shape a reduction of `arr` over `axis` would give
+
+    Used for empty inputs, where the underlying numpy reduction has no
+    identity element. Returns a scalar when the reduction collapses the
+    whole array, otherwise an array of nan with the remaining shape.
+
+    Parameters
+    ----------
+    arr : ndarray
+        The array whose reduced shape determines the shape of the result.
+    axis : None or int
+        The axis that would be reduced over.
+
+    Returns
+    -------
+    float or ndarray
+        ``nan`` if `axis` is None or `arr` is 1d, otherwise an array of
+        ``nan`` with the shape that reducing `arr` over `axis` would give.
+    """
+    if axis is None or arr.ndim <= 1:
+        return np.nan
+    axis = axis % arr.ndim
+    return np.full(arr.shape[:axis] + arr.shape[axis + 1 :], np.nan)
+
+
 def mse(x1, x2, axis=0):
     """
     Mean squared error
@@ -22,7 +49,7 @@ def mse(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -52,7 +79,7 @@ def rmse(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -83,10 +110,10 @@ def rmspe(y, y_hat, axis=0, zeros=np.nan):
       The actual value.
     y_hat : array_like
        The predicted value.
-    axis : int
+    axis : int, optional
        Axis along which the summary statistic is calculated
-    zeros : float
-       Value to assign to error where y is zero
+    zeros : float, optional
+       Value to assign to error where y is zero. Default is nan.
 
     Returns
     -------
@@ -114,7 +141,7 @@ def maxabs(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -131,7 +158,11 @@ def maxabs(x1, x2, axis=0):
     """
     x1 = np.asanyarray(x1)
     x2 = np.asanyarray(x2)
-    return np.max(np.abs(x1 - x2), axis=axis)
+    absdiff = np.abs(x1 - x2)
+    if absdiff.size == 0:
+        # np.max has no identity element for an empty input
+        return _nan_reduction_result(absdiff, axis)
+    return np.max(absdiff, axis=axis)
 
 
 def meanabs(x1, x2, axis=0):
@@ -143,7 +174,7 @@ def meanabs(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -172,7 +203,7 @@ def medianabs(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -201,7 +232,7 @@ def bias(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -230,7 +261,7 @@ def medianbias(x1, x2, axis=0):
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
@@ -252,17 +283,17 @@ def medianbias(x1, x2, axis=0):
 
 def vare(x1, x2, ddof=0, axis=0):
     """
-    Variance of error.
+    Variance of error
 
     Parameters
     ----------
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
-       axis along which the summary statistic is calculated
-    ddof : int
+    ddof : int, optional
        Delta degrees of freedom used in the variance calculation.
+    axis : int, optional
+       axis along which the summary statistic is calculated
 
     Returns
     -------
@@ -283,17 +314,17 @@ def vare(x1, x2, ddof=0, axis=0):
 
 def stde(x1, x2, ddof=0, axis=0):
     """
-    Standard deviation of error.
+    Standard deviation of error
 
     Parameters
     ----------
     x1, x2 : array_like
        The performance measure depends on the difference between these two
        arrays.
-    axis : int
-       axis along which the summary statistic is calculated
-    ddof : int
+    ddof : int, optional
        Delta degrees of freedom used in the standard deviation calculation.
+    axis : int, optional
+       axis along which the summary statistic is calculated
 
     Returns
     -------
@@ -322,12 +353,12 @@ def iqr(x1, x2, axis=0):
        One of the inputs into the IQR calculation.
     x2 : array_like
        The other input into the IQR calculation.
-    axis : {None, int}
+    axis : int, optional
        axis along which the summary statistic is calculated
 
     Returns
     -------
-    irq : {float, ndarray}
+    iqr : float or ndarray of float
        Interquartile range along given axis.
 
     Notes
@@ -335,14 +366,17 @@ def iqr(x1, x2, axis=0):
     If ``x1`` and ``x2`` have different shapes, then they must broadcast.
 
     """
-    x1 = array_like(x1, "x1", dtype=None, ndim=None)
-    x2 = array_like(x2, "x1", dtype=None, ndim=None)
+    x1 = array_like(x1, "x1", dtype=None, mindim=None)
+    x2 = array_like(x2, "x2", dtype=None, mindim=None)
     if axis is None:
         x1 = x1.ravel()
         x2 = x2.ravel()
         axis = 0
     xdiff = np.sort(x1 - x2, axis=axis)
     nobs = x1.shape[axis]
+    if nobs == 0:
+        # no observations to take quantiles of
+        return _nan_reduction_result(xdiff, axis)
     idx = np.round((nobs - 1) * np.array([0.25, 0.75])).astype(int)
     sl = [slice(None)] * xdiff.ndim
     sl[axis] = idx
@@ -361,7 +395,7 @@ def aic(llf, nobs, df_modelwc):
 
     Parameters
     ----------
-    llf : {float, array_like}
+    llf : float or array_like of float
         value of the loglikelihood
     nobs : int
         number of observations
@@ -387,7 +421,7 @@ def aicc(llf, nobs, df_modelwc):
 
     Parameters
     ----------
-    llf : {float, array_like}
+    llf : float or array_like of float
         value of the loglikelihood
     nobs : int
         number of observations
@@ -399,14 +433,14 @@ def aicc(llf, nobs, df_modelwc):
     aicc : float
         information criterion
 
-    References
-    ----------
-    https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
-
     Notes
     -----
     Returns +inf if the effective degrees of freedom, defined as
     ``nobs - df_modelwc - 1.0``, is <= 0.
+
+    References
+    ----------
+    https://en.wikipedia.org/wiki/Akaike_information_criterion#AICc
 
     """
     dof_eff = nobs - df_modelwc - 1.0
@@ -422,7 +456,7 @@ def bic(llf, nobs, df_modelwc):
 
     Parameters
     ----------
-    llf : {float, array_like}
+    llf : float or array_like of float
         value of the loglikelihood
     nobs : int
         number of observations
@@ -448,7 +482,7 @@ def hqic(llf, nobs, df_modelwc):
 
     Parameters
     ----------
-    llf : {float, array_like}
+    llf : float or array_like of float
         value of the loglikelihood
     nobs : int
         number of observations
@@ -473,7 +507,7 @@ def hqic(llf, nobs, df_modelwc):
 
 def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
     r"""
-    Akaike information criterion.
+    Akaike information criterion
 
     Parameters
     ----------
@@ -485,7 +519,7 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
-    islog : bool
+    islog : bool, optional
         If True, `sigma2` is already log-transformed.
 
     Returns
@@ -514,12 +548,7 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
     Note: In our definition we do not divide by n in the log-likelihood
     version.
 
-    TODO: Latex math
-
-    reference for example lecture notes by Herman Bierens
-
-    See Also
-    --------
+    See, for example, lecture notes by Herman Bierens.
 
     References
     ----------
@@ -533,7 +562,7 @@ def aic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
     """
-    Akaike information criterion (AIC) with small sample correction.
+    Akaike information criterion (AIC) with small sample correction
 
     Parameters
     ----------
@@ -545,7 +574,7 @@ def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
-    islog : bool
+    islog : bool, optional
         If True, `sigma2` is already log-transformed.
 
     Returns
@@ -571,7 +600,7 @@ def aicc_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
     """
-    Bayesian information criterion (BIC) or Schwarz criterion.
+    Bayesian information criterion (BIC) or Schwarz criterion
 
     Parameters
     ----------
@@ -583,7 +612,7 @@ def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
-    islog : bool
+    islog : bool, optional
         If True, `sigma2` is already log-transformed.
 
     Returns
@@ -609,7 +638,7 @@ def bic_sigma(sigma2, nobs, df_modelwc, islog=False):
 
 def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
     """
-    Hannan-Quinn information criterion (HQC).
+    Hannan-Quinn information criterion (HQC)
 
     Parameters
     ----------
@@ -621,7 +650,7 @@ def hqic_sigma(sigma2, nobs, df_modelwc, islog=False):
         number of observations
     df_modelwc : int
         number of parameters including constant
-    islog : bool
+    islog : bool, optional
         If True, `sigma2` is already log-transformed.
 
     Returns

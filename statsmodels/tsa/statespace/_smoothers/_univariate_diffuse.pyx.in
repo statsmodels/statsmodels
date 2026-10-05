@@ -92,7 +92,7 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate_diffuse({{prefix}}
         blas_int m_k_endog = model._k_endog
         blas_int m_k_states = model._k_states
         blas_int m_k_states2 = model._k_states2
-    # Adjust for a VAR transition (i.e. design = [#, 0], where the zeros
+    # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
         k_states = model._k_posdef
@@ -539,6 +539,7 @@ cdef int {{prefix}}smoothed_disturbances_univariate_diffuse({{prefix}}KalmanSmoo
         blas_int inc = 1
         blas_int kf_k_posdef = kfilter.k_posdef
         blas_int kf_k_states = kfilter.k_states
+        blas_int m_k_endog = model._k_endog
         blas_int m_k_posdef = model._k_posdef
         blas_int m_k_posdef2 = model._k_posdef2
         blas_int m_k_states = model._k_states
@@ -582,6 +583,13 @@ cdef int {{prefix}}smoothed_disturbances_univariate_diffuse({{prefix}}KalmanSmoo
             else:
                 smoother._smoothed_measurement_disturbance_cov[i + i*kfilter.k_endog] = obs_cov
 
+    if (smoother.smoother_output & SMOOTHER_DISTURBANCE
+            and model._diagonal_obs_cov == 0 and model._k_endog > 1):
+        # Undo the diagonalization: $\hat \varepsilon_t = C_t \hat \varepsilon_t^*$
+        blas.{{prefix}}trmv("L", "N", "U", &m_k_endog,
+                  &model.transform_cholesky[0, 0], &m_k_endog,
+                  smoother._smoothed_measurement_disturbance, &inc)
+
     # Smoothed state disturbance
     if smoother.smoother_output & SMOOTHER_DISTURBANCE:
         blas.{{prefix}}gemv("T", &m_k_states, &m_k_posdef,
@@ -612,8 +620,8 @@ cdef int {{prefix}}smoothed_state_autocov_univariate_diffuse({{prefix}}KalmanSmo
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
     # The below code was a test to see if the diffuse autocov could be
-    # relatively simply computed (i.e. which required certain terms to cancel
-    # out), but it appears that it cannot (i.e. it requires the computation of
+    # relatively simply computed (i.e., which required certain terms to cancel
+    # out), but it appears that it cannot (i.e., it requires the computation of
     # L2, which is nontrivial and not described by Durbin and Koopman).
     return 0
 

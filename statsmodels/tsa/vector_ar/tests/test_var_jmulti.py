@@ -20,27 +20,9 @@ data = {}
 results_ref = {}
 results_sm = {}
 
-debug_mode = False
-dont_test_se_t_p = False
 deterministic_terms_list = ["nc", "c", "ct"]
 seasonal_list = [0, 4]
 dt_s_list = [(det, s) for det in deterministic_terms_list for s in seasonal_list]
-all_tests = [
-    "coefs",
-    "det",
-    "Sigma_u",
-    "log_like",
-    "fc",
-    "causality",
-    "impulse-response",
-    "lag order",
-    "test normality",
-    "whiteness",
-    "exceptions",
-]
-to_test = (
-    all_tests  # ["coefs", "det", "Sigma_u", "log_like", "fc", "causality"]  # all_tests
-)
 
 
 def load_data(dataset, data_dict):
@@ -164,22 +146,13 @@ setup()
 
 
 def test_ols_coefs():
-    if debug_mode:
-        if "coefs" not in to_test:
-            return
-        print("\n\nESTIMATED PARAMETER MATRICES FOR LAGGED ENDOG", end="")
     for ds in datasets:
         for dt_s in dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt_s) + ": ", end="")
-
             # estimated parameter vector
             err_msg = build_err_msg(ds, dt_s, "PARAMETER MATRICES ENDOG")
             obtained = np.hstack(results_sm[ds][dt_s].coefs)
             desired = results_ref[ds][dt_s]["est"]["Lagged endogenous term"]
             assert_allclose(obtained, desired, rtol, atol, False, err_msg)
-            if debug_mode and dont_test_se_t_p:
-                continue
             # standard errors
             obt = results_sm[ds][dt_s].stderr_endog_lagged
             des = results_ref[ds][dt_s]["se"]["Lagged endogenous term"].T
@@ -195,15 +168,8 @@ def test_ols_coefs():
 
 
 def test_ols_det_terms():
-    if debug_mode:
-        if "det" not in to_test:
-            return
-        print("\n\nESTIMATED PARAMETERS FOR DETERMINISTIC TERMS", end="")
     for ds in datasets:
         for dt_s in dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt_s) + ": ", end="")
-
             err_msg = build_err_msg(ds, dt_s, "PARAMETER MATRICES EXOG")
             det_key_ref = "Deterministic term"
             # If there are no det. terms, just make sure we do not compute any:
@@ -220,8 +186,6 @@ def test_ols_det_terms():
                 desired, dt_s[0].startswith("c"), dt_s[1]
             )
             assert_allclose(obtained, desired, rtol, atol, False, err_msg)
-            if debug_mode and dont_test_se_t_p:
-                continue
             # standard errors
             obt = results_sm[ds][dt_s].stderr_dt
             des = results_ref[ds][dt_s]["se"][det_key_ref]
@@ -240,15 +204,8 @@ def test_ols_det_terms():
 
 
 def test_ols_sigma():
-    if debug_mode:
-        if "Sigma_u" not in to_test:
-            return
-        print("\n\nSIGMA_U", end="")
     for ds in datasets:
         for dt in dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             err_msg = build_err_msg(ds, dt, "Sigma_u")
             obtained = results_sm[ds][dt].sigma_u
             desired = results_ref[ds][dt]["est"]["Sigma_u"]
@@ -256,16 +213,8 @@ def test_ols_sigma():
 
 
 def test_log_like():
-    if debug_mode:
-        if "log_like" not in to_test:
-            return
-        else:
-            print("\n\nLOG LIKELIHOOD", end="")
     for ds in datasets:
         for dt in dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             err_msg = build_err_msg(ds, dt, "Log Likelihood")
             obtained = results_sm[ds][dt].llf
             desired = results_ref[ds][dt]["log_like"]
@@ -273,15 +222,8 @@ def test_log_like():
 
 
 def test_fc():
-    if debug_mode:
-        if "fc" not in to_test:
-            return
-        else:
-            print("\n\nFORECAST", end="")
     for ds in datasets:
         for dt in dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
             steps = 5  # parsed JMulTi output comprises 5 steps
             last_observations = results_sm[ds][dt].endog[-results_sm[ds][dt].k_ar :]
             seasons = dt[1]
@@ -309,9 +251,9 @@ def test_fc():
                 alpha=0.05,
                 exog_future=exog_future,
             )
-            obt = obtained[0]  # forecast
-            obt_l = obtained[1]  # lower bound
-            obt_u = obtained[2]  # upper bound
+            obt = obtained.point_forecast  # forecast
+            obt_l = obtained.forc_lower  # lower bound
+            obt_u = obtained.forc_upper  # upper bound
             des = results_ref[ds][dt]["fc"]["fc"]
             des_l = results_ref[ds][dt]["fc"]["lower"]
             des_u = results_ref[ds][dt]["fc"]["upper"]
@@ -321,16 +263,8 @@ def test_fc():
 
 
 def test_causality():  # test Granger- and instantaneous causality
-    if debug_mode:
-        if "causality" not in to_test:
-            return
-        else:
-            print("\n\nCAUSALITY", end="")
     for ds in datasets:
         for dt in dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             err_msg_g_p = build_err_msg(ds, dt, "GRANGER CAUS. - p-VALUE")
             err_msg_g_t = build_err_msg(ds, dt, "GRANGER CAUS. - TEST STAT.")
             err_msg_i_p = build_err_msg(ds, dt, "INSTANT. CAUS. - p-VALUE")
@@ -370,7 +304,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1 or len(caused_ind) == 1:
                     ci = causing_ind[0] if len(causing_ind) == 1 else causing_ind
@@ -406,7 +340,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     g_p_obt_single = granger_sm_single_ind.pvalue
@@ -442,7 +376,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(
@@ -476,7 +410,7 @@ def test_causality():  # test Granger- and instantaneous causality
                     + " - sequences of integers and ".upper()
                     + "strings as arguments do not yield the same result!".upper(),
                 )
-                # check if int (e.g. 0) as index and list of int ([0]) yield
+                # check if int (e.g., 0) as index and list of int ([0]) yield
                 # the same result:
                 if len(causing_ind) == 1:
                     inst_sm_single_ind = results_sm[ds][dt].test_inst_causality(
@@ -496,15 +430,8 @@ def test_causality():  # test Granger- and instantaneous causality
 
 
 def test_impulse_response():
-    if debug_mode:
-        if "impulse-response" not in to_test:
-            return
-        else:
-            print("\n\nIMPULSE-RESPONSE", end="")
     for ds in datasets:
         for dt in dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
             err_msg = build_err_msg(ds, dt, "IMULSE-RESPONSE")
             periods = 20
             obtained_all = results_sm[ds][dt].irf(periods=periods).irfs
@@ -515,15 +442,8 @@ def test_impulse_response():
 
 
 def test_lag_order_selection():
-    if debug_mode:
-        if "lag order" not in to_test:
-            return
-        else:
-            print("\n\nLAG ORDER SELECTION", end="")
     for ds in datasets:
         for dt in dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
             endog_tot = data[ds]
             exog = generate_exog_from_season(dt[1], len(endog_tot))
             model = VAR(endog_tot, exog)
@@ -537,16 +457,8 @@ def test_lag_order_selection():
 
 
 def test_normality():
-    if debug_mode:
-        if "test normality" not in to_test:
-            return
-        else:
-            print("\n\nTEST NON-NORMALITY", end="")
     for ds in datasets:
         for dt in dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             obtained = results_sm[ds][dt].test_normality(signif=0.05)
             err_msg = build_err_msg(ds, dt, "TEST NON-NORMALITY - STATISTIC")
             obt_statistic = obtained.test_statistic
@@ -562,15 +474,8 @@ def test_normality():
 
 
 def test_whiteness():
-    if debug_mode:
-        if "whiteness" not in to_test:
-            return
-        else:
-            print("\n\nTEST WHITENESS OF RESIDUALS", end="")
     for ds in datasets:
         for dt in dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
             lags = results_ref[ds][dt]["whiteness"]["tested order"]
 
             obtained = results_sm[ds][dt].test_whiteness(nlags=lags)
@@ -605,16 +510,8 @@ def test_whiteness():
 
 
 def test_exceptions():
-    if debug_mode:
-        if "exceptions" not in to_test:
-            return
-        else:
-            print("\n\nEXCEPTIONS\n", end="")
     for ds in datasets:
         for dt in dt_s_list:
-            if debug_mode:
-                print("\n" + dt_s_tup_to_string(dt) + ": ", end="")
-
             # instant causality:
             # 0<signif<1
             with pytest.raises(ValueError):

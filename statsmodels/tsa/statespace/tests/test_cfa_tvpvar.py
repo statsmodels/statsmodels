@@ -17,7 +17,7 @@ References
 Author: Chad Fulton
 License: BSD-3
 """
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -32,31 +32,31 @@ dta = datasets.macrodata.load_pandas().data
 dta.index = pd.period_range("1959Q1", "2009Q3", freq="Q")
 endog = np.log(dta[["realcons", "realgdp"]]).diff().iloc[1:13] * 400
 
-current_path = os.path.dirname(os.path.abspath(__file__))
-results_path = os.path.join(current_path, "results")
+current_path = Path(__file__).resolve().parent
+results_path = Path(current_path).joinpath("results")
 results = {
     "invP": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_invP.csv"), header=None),
+        Path(results_path).joinpath("cfa_tvpvar_invP.csv"), header=None),
     "posterior_mean": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_posterior_mean.csv"),
+        Path(results_path).joinpath("cfa_tvpvar_posterior_mean.csv"),
         header=None),
     "state_variates": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_state_variates.csv"),
+        Path(results_path).joinpath("cfa_tvpvar_state_variates.csv"),
         header=None),
     "beta": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_beta.csv"), header=None),
+        Path(results_path).joinpath("cfa_tvpvar_beta.csv"), header=None),
     "v10": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_v10.csv"), header=None),
+        Path(results_path).joinpath("cfa_tvpvar_v10.csv"), header=None),
     "S10": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_S10.csv"), header=None),
+        Path(results_path).joinpath("cfa_tvpvar_S10.csv"), header=None),
     "Omega_11": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_Omega_11.csv"), header=None),
+        Path(results_path).joinpath("cfa_tvpvar_Omega_11.csv"), header=None),
     "vi0": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_vi0.csv"), header=None),
+        Path(results_path).joinpath("cfa_tvpvar_vi0.csv"), header=None),
     "Si0": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_Si0.csv"), header=None),
+        Path(results_path).joinpath("cfa_tvpvar_Si0.csv"), header=None),
     "Omega_22": pd.read_csv(
-        os.path.join(results_path, "cfa_tvpvar_Omega_22.csv"), header=None)}
+        Path(results_path).joinpath("cfa_tvpvar_Omega_22.csv"), header=None)}
 
 
 class TVPVAR(mlemodel.MLEModel):
@@ -93,7 +93,7 @@ class TVPVAR(mlemodel.MLEModel):
         state_names = []
         for i in range(self.k_endog):
             endog_name = self.endog_names[i]
-            state_names += ["intercept.%s" % endog_name]
+            state_names += [f"intercept.{endog_name}"]
             state_names += [f"L1.{other_name}->{endog_name}"
                             for other_name in self.endog_names]
         return state_names

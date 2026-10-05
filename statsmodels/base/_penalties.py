@@ -14,8 +14,8 @@ the covariance matrix.
 All penalties are subtracted from the log-likelihood, so greater
 penalty values correspond to a greater degree of penalization.
 
-The penaties should be smooth so that they can be subtracted from log
-likelihood functions and optimized using standard methods (i.e. L1
+The penalties should be smooth so that they can be subtracted from log
+likelihood functions and optimized using standard methods (i.e., L1
 penalties do not belong here).
 """
 
@@ -28,7 +28,7 @@ class Penalty:
 
     Parameters
     ----------
-    weights : array_like
+    weights : array_like, optional
         A vector of weights that determines the weight of the penalty
         for each parameter.
 
@@ -52,8 +52,9 @@ class Penalty:
 
         Returns
         -------
-        A scalar penaty value; greater values imply greater
-        penalization.
+        float
+            A scalar penalty value; greater values imply greater
+            penalization.
         """
         raise NotImplementedError
 
@@ -64,17 +65,18 @@ class Penalty:
         Parameters
         ----------
         params : array_like
-            A vector of parameters
+            A vector of parameters.
 
         Returns
         -------
-        The gradient of the penalty with respect to each element in
-        `params`.
+        ndarray
+            The gradient of the penalty with respect to each element in
+            `params`.
         """
         raise NotImplementedError
 
     def _null_weights(self, params):
-        """work around for Null model
+        """Work around for Null model
 
         This will not be needed anymore when we can use `self._null_drop_keys`
         as in DiscreteModels.
@@ -198,23 +200,23 @@ class SCAD(Penalty):
     Parameters
     ----------
     tau : float
-        slope and threshold for linear segment
-    c : float
-        factor for second threshold which is c * tau
-    weights : None or array
-        weights for penalty of each parameter. If an entry is zero, then the
+        Slope and threshold for linear segment.
+    c : float, optional
+        Factor for second threshold which is c * tau.
+    weights : array_like, optional
+        Weights for penalty of each parameter. If an entry is zero, then the
         corresponding parameter will not be penalized.
 
     References
     ----------
     Buu, Anne, Norman J. Johnson, Runze Li, and Xianming Tan. "New variable
-    selection methods for zero‐inflated count data with applications to the
+    selection methods for zero-inflated count data with applications to the
     substance abuse field."
-    Statistics in medicine 30, no. 18 (2011): 2326-2340.
+    *Statistics in Medicine* 30, no. 18 (2011): 2326-2340.
 
     Fan, Jianqing, and Runze Li. "Variable selection via nonconcave penalized
     likelihood and its oracle properties."
-    Journal of the American statistical Association 96, no. 456 (2001):
+    *Journal of the American Statistical Association* 96, no. 456 (2001):
     1348-1360.
     """
 
@@ -295,13 +297,18 @@ class SCADSmoothed(SCAD):
     Parameters
     ----------
     tau : float
-        slope and threshold for linear segment
-    c : float
-        factor for second threshold
-    c0 : float
-        threshold for quadratically smoothed segment
-    restriction : None or array
-        linear constraints for
+        Slope and threshold for linear segment.
+    c : float, optional
+        Factor for second threshold.
+    c0 : float, optional
+        Threshold for quadratically smoothed segment.
+    weights : array_like, optional
+        Weights for penalty of each parameter. If an entry is zero, then the
+        corresponding parameter will not be penalized.
+    restriction : None or ndarray, optional
+        Linear transformation of the parameters. If it is not None, then
+        the penalty function is applied to each transformed parameter
+        independently.
 
     Notes
     -----
@@ -345,7 +352,7 @@ class SCADSmoothed(SCAD):
 
         # shift down so func(0) == 0
         value -= self.aq1
-        # change the segment corrsponding to quadratic approximation
+        # change the segment corresponding to quadratic approximation
         p_abs = np.atleast_1d(np.abs(params))
         mask = p_abs < self.c0
         p_abs_masked = p_abs[mask]
@@ -364,7 +371,7 @@ class SCADSmoothed(SCAD):
         value = super().deriv(params)
         self.weights = self_weights
 
-        # change the segment corrsponding to quadratic approximation
+        # change the segment corresponding to quadratic approximation
         p = np.atleast_1d(params)
         mask = np.abs(p) < self.c0
         value[mask] = 2 * self.aq2 * p[mask]
@@ -385,13 +392,13 @@ class SCADSmoothed(SCAD):
         value = super().deriv2(params)
         self.weights = self_weights
 
-        # change the segment corrsponding to quadratic approximation
+        # change the segment corresponding to quadratic approximation
         p = np.atleast_1d(params)
         mask = np.abs(p) < self.c0
         value[mask] = 2 * self.aq2
 
         if self.restriction is not None and np.size(params) > 1:
-            # note: super returns 1d array for diag, i.e. hessian_diag
+            # note: super returns 1d array for diag, i.e., hessian_diag
             # TODO: weights are missing
             return (self.restriction.T * (weights * value)).dot(self.restriction)
         else:
@@ -404,12 +411,12 @@ class ConstraintsPenalty:
 
     Parameters
     ----------
-    penalty: instance of penalty function
-        currently this requires an instance of a univariate, vectorized
-        penalty class
-    weights : None or ndarray
-        weights for adding penalties of transformed params
-    restriction : None or ndarray
+    penalty : instance of penalty function
+        Currently this requires an instance of a univariate, vectorized
+        penalty class.
+    weights : array_like, optional
+        Weights for adding penalties of transformed params.
+    restriction : None or array_like, optional
         If it is not None, then restriction defines a linear transformation
         of the parameters. The penalty function is applied to each transformed
         parameter independently.
@@ -436,17 +443,17 @@ class ConstraintsPenalty:
         self.restriction = restriction
 
     def func(self, params):
-        """evaluate penalty function at params
+        """Evaluate penalty function at params
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         params : ndarray
-            array of parameters at which derivative is evaluated
+            Array of parameters at which the penalty is evaluated.
 
         Returns
         -------
-        deriv2 : ndarray
-            value(s) of penalty function
+        value : ndarray
+            Value(s) of penalty function.
         """
         # TODO: `and np.size(params) > 1` is hack for llnull, need better solution
         # Is this still needed? it seems to work without
@@ -458,17 +465,17 @@ class ConstraintsPenalty:
         return (self.weights * value.T).T.sum(0)
 
     def deriv(self, params):
-        """first derivative of penalty function w.r.t. params
+        """First derivative of penalty function w.r.t. params
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         params : ndarray
-            array of parameters at which derivative is evaluated
+            Array of parameters at which the derivative is evaluated.
 
         Returns
         -------
-        deriv2 : ndarray
-            array of first partial derivatives
+        deriv : ndarray
+            Array of first partial derivatives.
         """
         if self.restriction is not None:
             params = self.restriction.dot(params)
@@ -483,17 +490,17 @@ class ConstraintsPenalty:
     grad = deriv
 
     def deriv2(self, params):
-        """second derivative of penalty function w.r.t. params
+        """Second derivative of penalty function w.r.t. params
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         params : ndarray
-            array of parameters at which derivative is evaluated
+            Array of parameters at which the derivative is evaluated.
 
         Returns
         -------
         deriv2 : ndarray, 2-D
-            second derivative matrix
+            Second derivative matrix.
         """
 
         if self.restriction is not None:
@@ -503,7 +510,7 @@ class ConstraintsPenalty:
 
         if self.restriction is not None:
             # note: univariate penalty returns 1d array for diag,
-            # i.e. hessian_diag
+            # i.e., hessian_diag
             v = self.restriction.T * value * self.weights
             value = v.dot(self.restriction)
         else:
@@ -513,7 +520,7 @@ class ConstraintsPenalty:
 
 
 class L2ConstraintsPenalty(ConstraintsPenalty):
-    """convenience class of ConstraintsPenalty with L2 penalization"""
+    """Convenience class of ConstraintsPenalty with L2 penalization"""
 
     def __init__(self, weights=None, restriction=None, sigma_prior=None):
 
@@ -526,6 +533,13 @@ class L2ConstraintsPenalty(ConstraintsPenalty):
 
 
 class CovariancePenalty:
+    """Base class for a penalty applied to a covariance matrix
+
+    Parameters
+    ----------
+    weight : float
+        The weight (scalar) applied to the penalty.
+    """
 
     def __init__(self, weight):
         # weight should be scalar
@@ -542,7 +556,8 @@ class CovariancePenalty:
 
         Returns
         -------
-        A scalar penalty value
+        float
+            A scalar penalty value.
         """
         raise NotImplementedError
 
@@ -557,9 +572,10 @@ class CovariancePenalty:
 
         Returns
         -------
-        A vector containing the gradient of the penalty
-        with respect to each element in the lower triangle
-        of `mat`.
+        ndarray
+            A vector containing the gradient of the penalty
+            with respect to each element in the lower triangle
+            of `mat`.
         """
         raise NotImplementedError
 
