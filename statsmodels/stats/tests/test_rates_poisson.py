@@ -1489,6 +1489,82 @@ def test_poisson_2indep_invalid_compare_raises():
         confint_poisson_2indep(5, 10, 8, 10, method="score", compare="not-a-compare")
 
 
+@pytest.mark.parametrize(
+    "count1, exposure1, count2, exposure2",
+    [
+        (-5, 100, 3, 100),
+        (5, 100, -3, 100),
+    ],
+)
+def test_poisson_2indep_negative_count_raises(count1, exposure1, count2, exposure2):
+    # negative event counts are impossible; previously they were silently
+    # accepted and produced nan test statistics
+    with pytest.raises(ValueError, match="count1 and count2 must be non-negative"):
+        smr.test_poisson_2indep(count1, exposure1, count2, exposure2)
+
+
+@pytest.mark.parametrize(
+    "count1, exposure1, count2, exposure2",
+    [
+        (5, -100, 3, 100),
+        (5, 100, 3, 0),
+    ],
+)
+def test_poisson_2indep_nonpositive_exposure_raises(count1, exposure1, count2, exposure2):
+    # exposures must be strictly positive; previously zero or negative
+    # exposures silently produced meaningless results
+    with pytest.raises(ValueError, match="exposure1 and exposure2 must be positive"):
+        smr.test_poisson_2indep(count1, exposure1, count2, exposure2)
+
+
+@pytest.mark.parametrize(
+    "func, kwds",
+    [
+        (smr.etest_poisson_2indep, {"method": "score", "compare": "ratio"}),
+        (smr.etest_poisson_2indep, {"method": "wald", "compare": "diff"}),
+        (smr.confint_poisson_2indep, {"method": "score", "compare": "ratio"}),
+        (smr.confint_poisson_2indep, {"method": "wald-log", "compare": "ratio"}),
+        (smr.confint_poisson_2indep, {"method": "waldcc", "compare": "diff"}),
+        (smr.confint_poisson_2indep, {"method": "mover", "compare": "diff"}),
+    ],
+)
+@pytest.mark.parametrize(
+    "count1, exposure1, count2, exposure2, message",
+    [
+        (-5, 100, 3, 100, "count1 and count2 must be non-negative"),
+        (5, 100, -3, 100, "count1 and count2 must be non-negative"),
+        (5, -100, 3, 100, "exposure1 and exposure2 must be positive"),
+        (5, 100, 3, 0, "exposure1 and exposure2 must be positive"),
+    ],
+)
+def test_poisson_2indep_other_functions_invalid_inputs_raise(
+    func, kwds, count1, exposure1, count2, exposure2, message
+):
+    # etest_poisson_2indep and confint_poisson_2indep accepted the inputs that
+    # test_poisson_2indep rejects and returned nan, inf or meaningless values
+    with pytest.raises(ValueError, match=message):
+        func(count1, exposure1, count2, exposure2, **kwds)
+    # arrays are checked elementwise
+    with pytest.raises(ValueError, match=message):
+        func(
+            np.array([count1, 4]),
+            np.array([exposure1, 90]),
+            np.array([count2, 6]),
+            np.array([exposure2, 100]),
+            **kwds,
+        )
+
+
+@pytest.mark.parametrize("compare", ["ratio", "diff"])
+def test_poisson_2indep_other_functions_zero_counts_valid(compare):
+    # zero counts are valid, only negative counts and non-positive exposures
+    # are rejected
+    _, pvalue = smr.etest_poisson_2indep(0, 100, 3, 100, compare=compare)
+    assert 0 < pvalue < 1
+    low, upp = smr.confint_poisson_2indep(0, 100, 3, 100, compare=compare)
+    assert low < upp
+
+
 def test_power_2indep_invalid_method_var_raises():
     with pytest.raises(ValueError, match="method_var"):
         power_poisson_ratio_2indep(
@@ -1525,3 +1601,141 @@ def test_etest_poisson_2indep_alternative_deprecated_alias(alias, canonical):
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         etest_poisson_2indep(60, 51477.5, 30, 54308.7, alternative="bogus")
+
+
+@pytest.mark.parametrize("count", [-5, np.array([1, -2])])
+def test_test_poisson_negative_count(count):
+    # negative counts used to flow through the arithmetic silently, e.g.
+    # returning a nan statistic from the wald path
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.test_poisson(count, 10, 0.3, method="wald")
+
+
+@pytest.mark.parametrize("nobs", [0, -10])
+def test_test_poisson_bad_exposure(nobs):
+    # a zero exposure used to leak a bare ZeroDivisionError and a negative
+    # exposure silently produced a nonsense statistic
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smr.test_poisson(5, nobs, 0.3, method="wald")
+
+
+def test_test_poisson_negative_value():
+    with pytest.raises(ValueError, match="value must be non-negative"):
+        smr.test_poisson(5, 10, -0.3, method="score")
+
+
+@pytest.mark.parametrize(
+    "fn, kwargs",
+    [
+        (smr.power_poisson_ratio_2indep, {}),
+        (smr.power_poisson_diff_2indep, {}),
+        (smr.power_negbin_ratio_2indep, {"dispersion": 0.5}),
+        (smr.power_equivalence_poisson_2indep, {"low": 0.5, "upp": 2}),
+        (smr.power_equivalence_neginb_2indep, {"low": 0.5, "upp": 2, "dispersion": 0.5}),
+    ],
+)
+def test_power_functions_invalid_inputs_raises(fn, kwargs):
+    # impossible nobs1 and alpha previously returned nan power silently
+    with pytest.raises(ValueError, match="nobs1 must be positive"):
+        fn(2, 1, -5, **kwargs)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        fn(2, 1, 20, alpha=2, **kwargs)
+
+
+@pytest.mark.parametrize("method", ["wald", "score", "exact-c", "sqrt"])
+def test_confint_poisson_invalid_inputs_raises(method):
+    # negative counts and exposures previously returned nan bounds, and
+    # out-of-range alpha silently produced lower > upper intervals
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.confint_poisson(-1, 10, method=method)
+    with pytest.raises(ValueError, match="exposure must be positive"):
+        smr.confint_poisson(5, 0, method=method)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smr.confint_poisson(5, 10, method=method, alpha=1.5)
+
+
+def test_tolerance_int_poisson_invalid_inputs_raises():
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.tolerance_int_poisson(-1, 10, prob=0.9, method="wald")
+    with pytest.raises(ValueError, match="exposure must be positive"):
+        smr.tolerance_int_poisson(5, 0, prob=0.9, method="wald")
+    with pytest.raises(ValueError, match="prob must be in the range"):
+        smr.tolerance_int_poisson(5, 10, prob=1.5, method="wald")
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smr.tolerance_int_poisson(5, 10, prob=0.9, method="wald", alpha=2)
+
+
+def test_confint_quantile_poisson_invalid_inputs_raises():
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smr.confint_quantile_poisson(-1, 10, prob=0.5, method="exact-c")
+    with pytest.raises(ValueError, match="exposure must be positive"):
+        smr.confint_quantile_poisson(5, 0, prob=0.5, method="exact-c")
+    with pytest.raises(ValueError, match="prob must be in the range"):
+        smr.confint_quantile_poisson(5, 10, prob=0, method="exact-c")
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smr.confint_quantile_poisson(5, 10, prob=0.5, method="exact-c", alpha=1.5)
+
+
+def test_power_equivalence_neginb_negative_dispersion_raises():
+    # a negative dispersion coefficient silently produced a negative power
+    with pytest.raises(ValueError, match="dispersion must be non-negative"):
+        power_equivalence_neginb_2indep(
+            0.1, 0.15, 100, low=0.1, upp=0.3, dispersion=-0.01
+        )
+
+    # dispersion = 0 is the documented Poisson limiting case and stays valid
+    p = power_equivalence_neginb_2indep(
+        0.1, 0.15, 100, low=0.1, upp=0.3, dispersion=0.0, return_results=False
+    )
+    assert np.isfinite(p)
+
+
+def test_power_ratio_negative_dispersion_raises():
+    # negative dispersion made the standard errors NaN and power NaN
+    # without an error
+    with pytest.raises(ValueError, match="dispersion must be non-negative"):
+        power_poisson_ratio_2indep(0.1, 0.15, nobs1=100, dispersion=-1.0)
+    with pytest.raises(ValueError, match="dispersion must be non-negative"):
+        power_negbin_ratio_2indep(0.1, 0.15, nobs1=100, dispersion=-0.01)
+
+    # dispersion = 0 is the documented Poisson limiting case and stays valid
+    p = power_negbin_ratio_2indep(
+        0.1, 0.15, nobs1=100, value=1.0, dispersion=0.0, return_results=False
+    )
+    assert np.isfinite(p)
+
+    # default dispersion keeps working
+    p = power_poisson_ratio_2indep(
+        0.1, 0.15, nobs1=100, value=1.0, return_results=False
+    )
+    assert np.isfinite(p)
+
+
+def test_power_equivalence_poisson_invalid_interval_raises():
+    # an inverted equivalence interval previously returned a negative
+    # "power" without an error
+    args = (0.1, 0.15, 100)
+    kwds = dict(nobs_ratio=1, exposure=1, alpha=0.05)
+
+    with pytest.raises(ValueError, match="low <= upp"):
+        power_equivalence_poisson_2indep(*args, low=0.3, upp=0.1, **kwds)
+    with pytest.raises(ValueError, match="low <= upp"):
+        power_equivalence_neginb_2indep(
+            *args, low=0.3, upp=0.1, dispersion=0.01, **kwds
+        )
+
+    # low == upp remains a valid point null
+    p = power_equivalence_poisson_2indep(
+        *args, low=0.2, upp=0.2, return_results=False, **kwds
+    )
+    assert np.isfinite(p)
+
+
+def test_poisson_tost_nonequivalence_invalid_interval_raises():
+    # inverted equivalence intervals previously returned results silently
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low <= upp"):
+        smr.tost_poisson_2indep(5, 100, 3, 100, low=2, upp=1)
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low <= upp"):
+        smr.nonequivalence_poisson_2indep(5, 100, 3, 100, low=2, upp=1)
+    res = smr.tost_poisson_2indep(5, 100, 3, 100, low=0.5, upp=2)
+    assert np.isfinite(res.pvalue)

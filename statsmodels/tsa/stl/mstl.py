@@ -125,7 +125,7 @@ class MSTL:
         self.periods, self.windows = self._process_periods_and_windows(periods, windows)
         self.iterate = iterate
         self._stl_kwargs = self._remove_overloaded_stl_kwargs(
-            stl_kwargs or {}
+            dict(stl_kwargs or {})
         )
 
     def fit(self):
@@ -150,9 +150,10 @@ class MSTL:
         else:
             y = self._y
 
-        # Get STL fit params
-        stl_inner_iter = self._stl_kwargs.pop("inner_iter", None)
-        stl_outer_iter = self._stl_kwargs.pop("outer_iter", None)
+        # Get STL fit params without consuming them, so fit can be rerun
+        stl_kwargs = dict(self._stl_kwargs)
+        stl_inner_iter = stl_kwargs.pop("inner_iter", None)
+        stl_outer_iter = stl_kwargs.pop("outer_iter", None)
 
         # Iterate over each seasonal component to extract seasonalities
         seasonal = np.zeros(shape=(num_seasons, self.nobs))
@@ -164,7 +165,7 @@ class MSTL:
                     endog=deseas,
                     period=self.periods[i],
                     seasonal=self.windows[i],
-                    **self._stl_kwargs,
+                    **stl_kwargs,
                 ).fit(inner_iter=stl_inner_iter, outer_iter=stl_outer_iter)
                 seasonal[i] = res.seasonal
                 deseas = deseas - seasonal[i]

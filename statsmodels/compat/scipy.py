@@ -1,6 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import numpy as np
 from packaging.version import Version, parse
 import scipy
+
+if TYPE_CHECKING:
+    from statsmodels.tools.typing import ArrayLike, NDArray
 
 SP_VERSION = parse(scipy.__version__)
 SP_LT_19 = SP_VERSION < Version("1.8.99")
@@ -12,6 +19,138 @@ SP_LT_116 = SP_VERSION < Version("1.15.99")
 SP_LT_118 = SP_VERSION < Version("1.17.99")
 SP_LT_2 = SP_VERSION < Version("1.99.99")
 BASINHOPPING_RNG = "seed" if SP_LT_115 else "rng"
+
+if SP_LT_2:
+    from scipy.stats.mstats import mquantiles as _sp_mquantiles
+
+
+def _mquantiles_numpy(
+    x: ArrayLike,
+    p: ArrayLike,
+    alphap: float = 0.4,
+    betap: float = 0.4,
+    axis: int | None = None,
+) -> NDArray | float:
+    """
+    Compute empirical quantiles using plotting positions with NumPy
+
+    Implementation of :func:`_mquantiles` used when SciPy >= 2. See
+    :func:`_mquantiles` for the description of the parameters and the
+    return value.
+
+    Parameters
+    ----------
+    x : array_like
+        Input data.
+    p : array_like
+        Probabilities at which to compute the quantiles.
+    alphap : float, optional
+        Plotting positions parameter.
+    betap : float, optional
+        Plotting positions parameter.
+    axis : int, optional
+        Axis along which to compute the quantiles.
+
+    Returns
+    -------
+    float or ndarray
+        The quantiles.
+    """
+    x = np.asarray(x)
+    if axis is None:
+        x = x.ravel()
+        axis = 0
+    n = x.shape[axis]
+    p = np.asarray(p, dtype=float)
+    # Position of the quantile in the sorted data, zero-indexed
+    pos = (n + 1 - alphap - betap) * p + alphap - 1
+    # Probability that np.quantile maps to pos using linear interpolation.
+    # When n == 1, every probability in [0, 1] returns the only observation.
+    p_adj = np.clip(pos / max(n - 1, 1), 0, 1)
+    return np.quantile(x, p_adj, method="linear", axis=axis)
+
+
+def _mquantiles(
+    x: ArrayLike,
+    p: ArrayLike,
+    alphap: float = 0.4,
+    betap: float = 0.4,
+    axis: int | None = None,
+) -> NDArray | float:
+    """
+    Compute empirical quantiles using plotting positions
+
+    Replacement for ``scipy.stats.mstats.mquantiles``, which is deprecated
+    as of SciPy 2, for data without masked values. Uses
+    ``scipy.stats.mstats.mquantiles`` when SciPy < 2 and an equivalent
+    implementation based on ``numpy.quantile`` otherwise. The shape of the
+    output is the same in both cases.
+
+    Parameters
+    ----------
+    x : array_like
+        Input data. Must contain at least one observation along `axis`.
+    p : array_like
+        Probabilities at which to compute the quantiles. Values must be in
+        [0, 1].
+    alphap : float, optional
+        Plotting positions parameter. The default is 0.4.
+    betap : float, optional
+        Plotting positions parameter. The default is 0.4.
+    axis : int, optional
+        Axis along which to compute the quantiles. If None (default), `x`
+        is flattened.
+
+    Returns
+    -------
+    float or ndarray
+        The quantiles. A float if `p` is a scalar and `axis` is None or `x`
+        is 1-dimensional. Otherwise an ndarray. If `p` is not a scalar, the
+        first dimension of the result corresponds to the elements of `p`
+        and the remaining dimensions are the dimensions of `x` excluding
+        `axis`.
+
+    Notes
+    -----
+    The sample quantile is located at the one-based position
+    ``h = n * p + alphap + p * (1 - alphap - betap)`` in the sorted data,
+    where ``n`` is the number of observations, and is computed by linear
+    interpolation between the order statistics adjacent to ``h``. Positions
+    outside of ``[1, n]`` are clipped so that the smallest and largest
+    observations are returned.
+
+    Common choices of (alphap, betap) are
+
+    * (0, 1) : Hyndman and Fan type 4, linear interpolation of the ECDF
+    * (0.5, 0.5) : Hyndman and Fan type 5, piecewise linear
+    * (0, 0) : Hyndman and Fan type 6, ``p(k) = k / (n + 1)``
+    * (1, 1) : Hyndman and Fan type 7, the default of ``numpy.quantile``
+    * (1/3, 1/3) : Hyndman and Fan type 8, approximately median-unbiased
+    * (3/8, 3/8) : Hyndman and Fan type 9, approximately unbiased if `x` is
+      normally distributed
+    * (0.4, 0.4) : approximately quantile unbiased (Cunnane)
+
+    Unlike ``scipy.stats.mstats.mquantiles``, this function does not
+    support masked arrays, does not accept a ``limit`` argument and always
+    returns an ndarray or a float, never a masked array. When `axis` is not
+    the first axis of a multidimensional `x` and `p` is not a scalar, the
+    quantiles are in the first dimension of the result, while
+    ``scipy.stats.mstats.mquantiles`` places them at the position of `axis`.
+
+    References
+    ----------
+    .. [1] Hyndman, R. J. and Fan, Y. (1996). "Sample quantiles in
+       statistical packages." The American Statistician, 50(4), 361-365.
+    """
+    if not SP_LT_2:
+        return _mquantiles_numpy(x, p, alphap=alphap, betap=betap, axis=axis)
+    x = np.asarray(x)
+    scalar_p = np.ndim(p) == 0
+    res = np.ma.getdata(_sp_mquantiles(x, p, alphap=alphap, betap=betap, axis=axis))
+    if axis is not None and x.ndim > 1:
+        # mquantiles places the quantiles at the position of axis
+        res = np.moveaxis(res, axis, 0)
+    return res[0] if scalar_p else res
 
 
 def _next_regular(target):

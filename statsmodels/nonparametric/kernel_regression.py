@@ -29,6 +29,7 @@ References
 """
 
 from statsmodels.compat.pandas import deprecate_kwarg
+from statsmodels.compat.scipy import _mquantiles
 
 # TODO: make default behavior efficient=True above a certain n_obs
 import copy
@@ -36,7 +37,8 @@ import warnings
 
 import numpy as np
 from scipy import optimize
-from scipy.stats.mstats import mquantiles
+
+from statsmodels.tools.validation import array_like
 
 from ._kernel_base import (
     EstimatorSettings,
@@ -160,7 +162,7 @@ class KernelReg(GenericKDE):
         self.rng = rng
         self._generator = initialize_generator(rng)
         if not isinstance(bw, str):
-            bw = np.asarray(bw)
+            bw = array_like(bw, "bw", ndim=1)
             if len(bw) != self.k_vars:
                 raise ValueError(
                     "bw must have the same dimension as the number of variables."
@@ -173,7 +175,7 @@ class KernelReg(GenericKDE):
     def _compute_reg_bw(self, bw):
         if not isinstance(bw, str):
             self._bw_method = "user-specified"
-            return np.asarray(bw)
+            return array_like(bw, "bw", ndim=1)
         else:
             # The user specified a bandwidth selection method e.g., 'cv_ls'
             self._bw_method = bw
@@ -1048,11 +1050,11 @@ class TestRegCoefC:
 
         self.t_dist = t_dist
         sig = "Not Significant"
-        if self.test_stat > mquantiles(t_dist, 0.9):
+        if self.test_stat > _mquantiles(t_dist, 0.9):
             sig = "*"
-        if self.test_stat > mquantiles(t_dist, 0.95):
+        if self.test_stat > _mquantiles(t_dist, 0.95):
             sig = "**"
-        if self.test_stat > mquantiles(t_dist, 0.99):
+        if self.test_stat > _mquantiles(t_dist, 0.99):
             sig = "***"
 
         return sig
@@ -1179,11 +1181,11 @@ class TestRegCoefD(TestRegCoefC):
             I_dist[j] = self._compute_test_stat(Y_boot, X)
 
         sig = "Not Significant"
-        if self.test_stat > mquantiles(I_dist, 0.9):
+        if self.test_stat > _mquantiles(I_dist, 0.9):
             sig = "*"
-        if self.test_stat > mquantiles(I_dist, 0.95):
+        if self.test_stat > _mquantiles(I_dist, 0.95):
             sig = "**"
-        if self.test_stat > mquantiles(I_dist, 0.99):
+        if self.test_stat > _mquantiles(I_dist, 0.99):
             sig = "***"
 
         return sig

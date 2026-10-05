@@ -477,3 +477,36 @@ class TestStattools:
         kurtosis = robust_kurtosis(self.kurtosis_x, dg=(delta, gamma), excess=False)
         q = np.percentile(x, [delta, 100.0 - delta, gamma, 100.0 - gamma])
         assert_almost_equal(kurtosis[3], (q[1] - q[0]) / (q[3] - q[2]))
+
+
+def test_omni_normtest_axis_validation():
+    # an out-of-range axis used to leak a bare IndexError from the shape
+    # lookup instead of naming the problem
+    rs = np.random.RandomState(12345)
+    data = rs.standard_normal((40, 2))
+    with pytest.raises(ValueError, match="out of bounds"):
+        omni_normtest(data, axis=99)
+    # negative indexing stays valid, and the 1-d default path is unchanged
+    omni_normtest(data, axis=-1)
+    res = omni_normtest(rs.standard_normal(40))
+    assert np.ndim(res[0]) == 0
+
+
+def test_robust_kurtosis_invalid_percentile_bands_raises():
+    rs = np.random.RandomState(937652345)
+    x = rs.standard_normal(200)
+
+    # reversed bands put the numerator quantiles inside the denominator
+    # band and silently return meaningless kurtosis values
+    with pytest.raises(ValueError, match="ab must satisfy"):
+        robust_kurtosis(x, ab=(50.0, 5.0))
+    with pytest.raises(ValueError, match="dg must satisfy"):
+        robust_kurtosis(x, dg=(25.0, 2.5))
+    with pytest.raises(ValueError, match="ab must satisfy"):
+        robust_kurtosis(x, ab=(-5.0, 50.0))
+    with pytest.raises(ValueError, match="dg must satisfy"):
+        robust_kurtosis(x, dg=(2.5, 125.0))
+
+    # defaults remain valid
+    kr1, kr2, kr3, kr4 = robust_kurtosis(x)
+    assert np.isfinite([kr1, kr2, kr3, kr4]).all()

@@ -180,10 +180,10 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     x : array_like
         An array or NumPy ndarray subclass. Can be either a 1d or 2d array with
         observations in columns.
-    col : int, optional
-        `col` can be an int of the zero-based column index. If it's a
-        1d array `col` can be None.
-    lags : int, optional
+    col : int, label, optional
+        `col` can be an int of the zero-based column index, or the label of
+        a column (e.g., a string) when `x` is a pandas DataFrame. If it's a
+        1d array `col` can be None.    lags : int, optional
         The number of lags desired.
     drop : bool, optional
         Whether to keep the contemporaneous variable for the data.
@@ -211,6 +211,18 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     """
     lags = int_like(lags, "lags")
     drop = bool_like(drop, "drop")
+    if col is not None and not isinstance(col, (int, np.integer)):
+        # Resolve a pandas column label to its position before the
+        # conversion below drops the labels; the docstring example passes a
+        # column name.
+        if not hasattr(x, "columns"):
+            raise TypeError(
+                "col can only be a label when x is a pandas DataFrame"
+            )
+        loc = x.columns.get_loc(col)
+        if not isinstance(loc, (int, np.integer)):
+            raise ValueError(f"col={col!r} does not uniquely identify a column")
+        col = int(loc)
     x = array_like(x, "x", ndim=2)
     if col is None:
         col = 0
@@ -281,6 +293,8 @@ def detrend(x, order=1, axis=0):
         raise NotImplementedError("x.ndim > 2 is not implemented until it is needed")
 
     nobs = x.shape[0]
+    if order < 0:
+        raise ValueError(f"order must be non-negative, got {order}")
     if order == 0:
         # Special case demean
         resid = x - x.mean(axis=0)
@@ -975,10 +989,15 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
     Notes
     -----
     Annual maps to 1, quarterly maps to 4, monthly to 12, weekly to 52.
+    Sub-daily frequencies map to the number of observations per day scaled
+    by the multiplier, e.g. hourly to 24 and 5-minute to 288. The multiplier
+    is honored for sub-daily frequencies only; calendar frequencies keep
+    their standard period, e.g. "2W" still maps to 52.
     """
     if not isinstance(freq, offsets.BaseOffset):
         freq = to_offset(freq)  # go ahead and standardize
     assert isinstance(freq, offsets.BaseOffset)
+    n = getattr(freq, "n", 1)
     freq = freq.rule_code.upper()
 
     yearly_freqs = ("A-", "AS-", "Y-", "YS-", "YE-")
@@ -994,10 +1013,11 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
         return 7
     elif freq == "B":
         return 5
-    elif freq == "H":
-        return 24
-    else:  # pragma : no cover
-        raise ValueError(
-            f"freq {freq} not understood. Please report if you "
-            "think this is in error."
-        )
+    elif freq in ("H", "T", "MIN", "S"):
+        base = {"H": 24, "T": 1440, "MIN": 1440, "S": 86400}[freq]
+        if n > 0 and base % n == 0:
+            return base // n
+    raise ValueError(
+        f"freq {freq} not understood. Please report if you "
+        "think this is in error."
+    )

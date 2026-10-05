@@ -653,12 +653,20 @@ class Power:
             # try backup
             # TODO: check more cases to make this robust
             if not np.isnan(start_value):
-                val, infodict, ier, msg = optimize.fsolve(
-                    func, start_value, full_output=True
-                )  # scalar
-                # val = optimize.newton(func, start_value) # scalar
-                fval = infodict["fvec"]
-                fit_res.append(infodict)
+                try:
+                    val, infodict, ier, msg = optimize.fsolve(
+                        func, start_value, full_output=True
+                    )  # scalar
+                except ValueError:
+                    # fsolve left the range of valid arguments of the power
+                    # function, for example alpha outside (0, 1)
+                    ier = -1
+                    fval = 1
+                    fit_res.append([None])
+                else:
+                    # val = optimize.newton(func, start_value) # scalar
+                    fval = infodict["fvec"]
+                    fit_res.append(infodict)
             else:
                 ier = -1
                 fval = 1
@@ -840,7 +848,7 @@ class TTestPower(Power):
             effect size has to be positive.
         nobs : int or float
             sample size, number of observations.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         df : int or float, optional
@@ -859,6 +867,8 @@ class TTestPower(Power):
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
         """
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         # for debugging
         # print 'calling ttest power with', (effect_size, nobs, alpha, df, alternative)
         return ttest_power(effect_size, nobs, alpha, df=df, alternative=alternative)
@@ -1101,7 +1111,7 @@ class NormalIndPower(Power):
             i.e., ``nobs2 = nobs1 * ratio``
             ``ratio`` can be set to zero in order to get the power for a
             one sample test.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ratio : float, optional
@@ -1120,6 +1130,8 @@ class NormalIndPower(Power):
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
         """
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
         ddof = self.ddof  # for correlation, ddof=3
 
@@ -1274,7 +1286,7 @@ class FTestPower(Power):
             Warning incorrect name
             numerator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ncc : int, optional
@@ -1299,6 +1311,10 @@ class FTestPower(Power):
         ftest_power with ncc=0 should also be correct for f_test in regression
         models, with df_num and d_denom as defined there. (not verified yet)
         """
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+        if np.any(np.asarray(df_num) <= 0) or np.any(np.asarray(df_denom) <= 0):
+            raise ValueError("df_num and df_denom must be positive")
 
         pow_ = ftest_power(effect_size, df_num, df_denom, alpha, ncc=ncc)
         # print effect_size, df_num, df_denom, alpha, pow_
@@ -1444,7 +1460,7 @@ class FTestPowerF2(Power):
         df_denom : int or float
             Denominator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             Significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ncc : int, optional
@@ -1468,6 +1484,10 @@ class FTestPowerF2(Power):
         ftest_power with ncc=0 should also be correct for f_test in regression
         models, with df_num and d_denom as defined there. (not verified yet)
         """
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+        if np.any(np.asarray(df_num) <= 0) or np.any(np.asarray(df_denom) <= 0):
+            raise ValueError("df_num and df_denom must be positive")
 
         pow_ = ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=ncc)
         return pow_

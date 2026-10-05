@@ -40,6 +40,21 @@ class TestCompanionMatrix:
         result = np.array([[1, 2, 5, 6], [3, 4, 7, 8], [1, 0, 0, 0], [0, 1, 0, 0]]).T
         assert_equal(tools.companion_matrix(polynomial), result)
 
+    def test_c0_identity_input_not_mutated_and_tuple_accepted(self):
+        # Passing C_0 = 1 (documented shorthand for an identity matrix) must not
+        # replace the scalar in the caller's list, and must also work when the
+        # polynomial is passed as a tuple.
+        c1 = -np.array([[1.0, 2.0], [3.0, 4.0]])
+        c2 = -np.array([[5.0, 6.0], [7.0, 8.0]])
+
+        poly_list = [1, c1, c2]
+        result_list = tools.companion_matrix(poly_list)
+        assert isinstance(poly_list[0], int)
+        assert poly_list[0] == 1
+
+        result_tuple = tools.companion_matrix((1, c1, c2))
+        assert_equal(result_tuple, result_list)
+
 
 class TestDiff:
 
@@ -931,3 +946,12 @@ def test_copy_index_vector():
     index = np.asfortranarray(index.astype(np.int32))
     tools.copy_index_vector(A, B, index, inplace=True)
     assert_equal(B, A)
+
+
+@pytest.mark.parametrize("trend", [[0, 1, 1], (1, 0, 1), [1]])
+def test_prepare_trend_spec_array(trend):
+    # GH 9145, a polynomial trend given as an ndarray raised ValueError
+    expected = tools.prepare_trend_spec(trend)
+    actual = tools.prepare_trend_spec(np.array(trend))
+    assert_equal(actual[0], expected[0])
+    assert_equal(actual[1], expected[1])

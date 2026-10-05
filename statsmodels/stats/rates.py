@@ -145,6 +145,19 @@ def test_poisson(
     confint_poisson
     """
 
+    count = np.asarray(count)
+    nobs = np.asarray(nobs)
+    value = np.asarray(value)
+    # a negative count or exposure or a zero exposure used to flow through
+    # the arithmetic silently (nan statistics, nonsense rates) or crash with
+    # a bare ZeroDivisionError
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(value < 0):
+        raise ValueError("value must be non-negative")
+
     n = nobs  # short hand
     rate = count / n
 
@@ -253,7 +266,7 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
     method : str, optional
         Method to use for confidence interval.
         This is required, there is currently no default method.
-    alpha : float in (0, 1), optional
+    alpha : float or array_like in (0, 1), optional
         Significance level, nominal coverage of the confidence interval is
         1 - alpha.
     alternative : {"two-sided", "larger", "smaller"}, optional
@@ -322,6 +335,13 @@ def confint_poisson(count, exposure, method=None, alpha=0.05, alternative="two-s
        https://doi.org/10.1080/03610920802255856.
 
     """
+    if np.any(np.asarray(count) < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(np.asarray(exposure) <= 0):
+        raise ValueError("exposure must be positive")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     n = exposure  # short hand
     rate = count / exposure
 
@@ -459,7 +479,7 @@ def tolerance_int_poisson(
         Observed count, number of events.
     exposure : array_like
         Currently this is total exposure time of the count variable.
-    prob : float in (0, 1), optional
+    prob : float or array_like in (0, 1), optional
         Probability of poisson interval, often called "content".
         With known parameters, each tail would have at most probability
         ``1 - prob / 2`` in the two-sided interval.
@@ -469,7 +489,7 @@ def tolerance_int_poisson(
         Method to used for confidence interval of the estimate of the
         poisson rate, used in `confint_poisson`.
         This is required, there is currently no default method.
-    alpha : float in (0, 1), optional
+    alpha : float or array_like in (0, 1), optional
         Significance level for the confidence interval of the estimate of the
         Poisson rate. Nominal coverage of the confidence interval is
         1 - alpha.
@@ -503,6 +523,15 @@ def tolerance_int_poisson(
        Poisson and Binomial Variables.” Journal of Quality Technology 13 (2):
        100-110. https://doi.org/10.1080/00224065.1981.11980998.
     """
+    if np.any(np.asarray(count) < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(np.asarray(exposure) <= 0):
+        raise ValueError("exposure must be positive")
+    if not np.all(np.greater(prob, 0) & np.less(prob, 1)):
+        raise ValueError(f"prob must be in the range (0, 1), got {prob}")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     alternative = string_like(
         alternative, "alternative", options=("two-sided", "larger", "smaller"),
         lower=False,
@@ -551,7 +580,7 @@ def confint_quantile_poisson(
         Observed count, number of events.
     exposure : array_like
         Currently this is total exposure time of the count variable.
-    prob : float in (0, 1)
+    prob : float or array_like in (0, 1)
         Probability for the quantile, e.g., 0.95 to get the upper 95% quantile.
         With known mean mu, the quantile would be poisson.ppf(prob, mu).
     exposure_new : float, optional
@@ -560,7 +589,7 @@ def confint_quantile_poisson(
         Method to used for confidence interval of the estimate of the
         poisson rate, used in `confint_poisson`.
         This is required, there is currently no default method.
-    alpha : float in (0, 1), optional
+    alpha : float or array_like in (0, 1), optional
         Significance level for the confidence interval of the estimate of the
         Poisson rate. Nominal coverage of the confidence interval is
         1 - alpha.
@@ -586,6 +615,15 @@ def confint_quantile_poisson(
     Hahn, Gerald J, and William Q Meeker. 2010. Statistical Intervals: A Guide
     for Practitioners.
     """
+    if np.any(np.asarray(count) < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(np.asarray(exposure) <= 0):
+        raise ValueError("exposure must be positive")
+    if not np.all(np.greater(prob, 0) & np.less(prob, 1)):
+        raise ValueError(f"prob must be in the range (0, 1), got {prob}")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     alternative = string_like(
         alternative, "alternative", options=("two-sided", "larger", "smaller"),
         lower=False,
@@ -799,6 +837,14 @@ class PoissonTest2indepResult(LimitedIterationMixin[float]):
     rates_cmle: tuple | None
 
 
+def _check_counts_exposures_2indep(y1, n1, y2, n2):
+    # counts and exposures of two independent samples
+    if np.any(y1 < 0) or np.any(y2 < 0):
+        raise ValueError("count1 and count2 must be non-negative")
+    if np.any(n1 <= 0) or np.any(n2 <= 0):
+        raise ValueError("exposure1 and exposure2 must be positive")
+
+
 def test_poisson_2indep(
     count1,
     exposure1,
@@ -894,6 +940,11 @@ def test_poisson_2indep(
         The two main attributes are test statistic `statistic` and p-value
         `pvalue`. See :class:`PoissonTest2indepResult` for the full list.
 
+    Raises
+    ------
+    ValueError
+        If a count is negative or an exposure is not positive.
+
     See Also
     --------
     tost_poisson_2indep
@@ -947,6 +998,7 @@ def test_poisson_2indep(
         np.asarray(count2),
         np.asarray(exposure2),
     )
+    _check_counts_exposures_2indep(y1, n1, y2, n2)
     d = n2 / n1
     rate1, rate2 = y1 / n1, y2 / n2
     rates_cmle = None
@@ -1209,6 +1261,11 @@ def etest_poisson_2indep(
     pvalue : float
         P-value of the e-test.
 
+    Raises
+    ------
+    ValueError
+        If a count is negative or an exposure is not positive.
+
     References
     ----------
     Gu, Ng, Tang, Schucany 2008: Testing the Ratio of Two Poisson Rates,
@@ -1236,6 +1293,7 @@ def etest_poisson_2indep(
         np.asarray(count2),
         np.asarray(exposure2),
     )
+    _check_counts_exposures_2indep(y1, n1, y2, n2)
     d = n2 / n1
 
     eps = 1e-20  # avoid zero division in stat_func
@@ -1409,7 +1467,7 @@ def tost_poisson_2indep(
         Number of events in second sample.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    low, upp : float
+    low, upp : float or array_like
         Equivalence margin for the ratio or difference of Poisson rates.
     method : str, optional
         TOST uses ``test_poisson_2indep`` and has the same methods.
@@ -1460,6 +1518,10 @@ def tost_poisson_2indep(
     test_poisson_2indep
     confint_poisson_2indep
     """
+    if not np.all(np.less_equal(low, upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low <= upp, got low={low}, upp={upp}"
+        )
 
     tt1 = test_poisson_2indep(
         count1,
@@ -1571,7 +1633,7 @@ def nonequivalence_poisson_2indep(
         Number of events in second sample.
     exposure2 : float
         Total exposure (time * subjects) in second sample.
-    low, upp : float
+    low, upp : float or array_like
         Equivalence margin for the ratio or difference of Poisson rates.
     method : str, optional
         TOST uses ``test_poisson_2indep`` and has the same methods.
@@ -1613,6 +1675,10 @@ def nonequivalence_poisson_2indep(
        Econometrics 7 (2): 21. https://doi.org/10.3390/econometrics7020021.
 
     """
+    if not np.all(np.less_equal(low, upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low <= upp, got low={low}, upp={upp}"
+        )
     tt1 = test_poisson_2indep(
         count1,
         exposure1,
@@ -1719,6 +1785,11 @@ def confint_poisson_2indep(
     -------
     tuple (low, upp)
         Confidence limits.
+
+    Raises
+    ------
+    ValueError
+        If a count is negative or an exposure is not positive.
     """
 
     # shortcut names
@@ -1728,6 +1799,7 @@ def confint_poisson_2indep(
         np.asarray(count2),
         np.asarray(exposure2),
     )
+    _check_counts_exposures_2indep(y1, n1, y2, n2)
     rate1, rate2 = y1 / n1, y2 / n2
     alpha = alpha / 2  # two-sided only
 
@@ -1952,7 +2024,7 @@ def power_poisson_ratio_2indep(
     rate2 : float
         Poisson rate for the second sample, reference group, under the
         alternative hypothesis.
-    nobs1 : float or int
+    nobs1 : float or array_like
         Number of observations in sample 1.
     nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
@@ -1961,10 +2033,10 @@ def power_poisson_ratio_2indep(
         and nobs2 * exposure.
     value : float, optional
         Rate ratio, rate1 / rate2, under the null hypothesis.
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float, optional
+    dispersion : float or array_like, optional
         Dispersion coefficient for quasi-Poisson. Dispersion different from
         one can capture over or under dispersion relative to Poisson
         distribution.
@@ -2000,6 +2072,14 @@ def power_poisson_ratio_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater_equal(dispersion, 0)):
+        raise ValueError(
+            f"dispersion must be non-negative, got {dispersion}"
+        )
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2120,21 +2200,21 @@ def power_equivalence_poisson_2indep(
     rate2 : float
         Poisson rate for the second sample, reference group, under the
         alternative hypothesis.
-    nobs1 : float or int
+    nobs1 : float or array_like
         Number of observations in sample 1.
-    low : float
+    low : float or array_like
         Lower equivalence margin for the rate ratio, rate1 / rate2.
-    upp : float
+    upp : float or array_like
         Upper equivalence margin for the rate ratio, rate1 / rate2.
     nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float, optional
+    dispersion : float or array_like, optional
         Dispersion coefficient for quasi-Poisson. Dispersion different from
         one can capture over or under dispersion relative to Poisson
         distribution.
@@ -2168,6 +2248,15 @@ def power_equivalence_poisson_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.less_equal(low, upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low <= upp, "
+            f"got low={low}, upp={upp}"
+        )
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
@@ -2406,11 +2495,11 @@ def power_poisson_diff_2indep(
     rate2 : float
         Poisson rate for the second sample, reference group, under the
         alternative hypothesis.
-    nobs1 : float or int
+    nobs1 : float or array_like
         Number of observations in sample 1.
     nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     value : float, optional
@@ -2446,6 +2535,10 @@ def power_poisson_diff_2indep(
     .. [2] PASS manual chapter 436
 
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2606,7 +2699,7 @@ def power_negbin_ratio_2indep(
     rate2 : float
         Poisson rate for the second sample, reference group, under the
         alternative hypothesis.
-    nobs1 : float or int
+    nobs1 : float or array_like
         Number of observations in sample 1.
     nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
@@ -2615,10 +2708,10 @@ def power_negbin_ratio_2indep(
         and nobs2 * exposure.
     value : float, optional
         Rate ratio, rate1 / rate2, under the null hypothesis.
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float >= 0., optional
+    dispersion : float or array_like >= 0., optional
         Dispersion parameter for Negative Binomial distribution.
         The Poisson limiting case corresponds to ``dispersion=0``.
     alternative : {'two-sided', 'larger', 'smaller'}, optional
@@ -2656,6 +2749,14 @@ def power_negbin_ratio_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater_equal(dispersion, 0)):
+        raise ValueError(
+            f"dispersion must be non-negative, got {dispersion}"
+        )
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2737,21 +2838,21 @@ def power_equivalence_neginb_2indep(
     rate2 : float
         Poisson rate for the second sample, reference group, under the
         alternative hypothesis.
-    nobs1 : float or int
+    nobs1 : float or array_like
         Number of observations in sample 1.
-    low : float
+    low : float or array_like
         Lower equivalence margin for the rate ratio, rate1 / rate2.
-    upp : float
+    upp : float or array_like
         Upper equivalence margin for the rate ratio, rate1 / rate2.
     nobs_ratio : float, optional
         Sample size ratio, nobs2 = nobs_ratio * nobs1.
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    dispersion : float >= 0., optional
+    dispersion : float or array_like >= 0., optional
         Dispersion parameter for Negative Binomial distribution.
         The Poisson limiting case corresponds to ``dispersion=0``.
     method_var : {"score", "alt", "ftotal"}, optional
@@ -2785,6 +2886,17 @@ def power_equivalence_neginb_2indep(
        376-87. https://doi.org/10.1002/sim.5947.
     .. [3] PASS documentation
     """
+    if np.any(np.asarray(nobs1) <= 0):
+        raise ValueError("nobs1 must be positive")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater_equal(dispersion, 0)):
+        raise ValueError(f"dispersion must be non-negative, got {dispersion}")
+    if not np.all(np.less_equal(low, upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low <= upp, "
+            f"got low={low}, upp={upp}"
+        )
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1

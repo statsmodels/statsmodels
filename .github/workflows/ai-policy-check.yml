@@ -6,6 +6,12 @@ on:
 
 permissions: {}
 
+# The comment is created if missing and updated otherwise; serialize runs for a PR so
+# that a burst of edits cannot race and post the comment twice.
+concurrency:
+  group: ai-policy-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   check-disclosure:
     name: Check AI disclosure in PR description
@@ -17,42 +23,114 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
-            const body = context.payload.pull_request.body || "";
+            const pr = context.payload.pull_request;
 
-            const noAiChecked = /-\s*\[[xX]\]\s*No AI tools were used/.test(body);
-            const aiUsedChecked = /-\s*\[[xX]\]\s*AI tools were used/.test(body);
-            const placeholderStillPresent = body.includes("<name(s)");
+            // Dependency-update PRs have nothing to disclose. Exempt by login rather
+            // than by the "Bot" account type: AI agents can also open PRs from bot
+            // accounts (e.g. Copilot), and those must still be checked.
+            const EXEMPT_AUTHORS = ["dependabot[bot]"];
+            if (EXEMPT_AUTHORS.includes(pr.user.login)) {
+              core.info(`Skipping the AI disclosure check for ${pr.user.login}.`);
+              return;
+            }
+
+            // Ignore HTML comments. They are invisible to reviewers, and the PR template
+            // keeps its instructions in one, so they must never count as an answer.
+            const body = (pr.body || "").replace(/<!--[\s\S]*?-->/g, "");
+
+            const noAiChecked = /\[[xX]\]\s*No AI tools were used/.test(body);
+            const aiUsedChecked = /\[[xX]\]\s*AI tools were used/.test(body);
+
+            // Text from the template that must not survive in a completed disclosure.
+            const PLACEHOLDERS = ["<name(s)", "<e.g. drafting"];
+            const placeholderStillPresent = PLACEHOLDERS.some((p) => body.includes(p));
+
+            // Work out what went wrong so that the comment can say so precisely.
+            let problem = null;
+            if (noAiChecked && aiUsedChecked) {
+              problem = "both";
+            } else if (!noAiChecked && !aiUsedChecked) {
+              if (/\[\s?\]\s*(No AI tools were used|AI tools were used)/.test(body)) {
+                problem = "unchecked";
+              } else if (/Tools?(\(s\))?\s*:|Used for\s*:/i.test(body)) {
+                problem = "boxes-removed";
+              } else if (/\bAI\b|\bLLM\b|Claude|Copilot|ChatGPT|Codex|Gemini/i.test(body)) {
+                problem = "reworded";
+              } else {
+                problem = "missing";
+              }
+            } else if (aiUsedChecked && placeholderStillPresent) {
+              problem = "placeholder";
+            }
 
             const COMMENT_MARKER = "<!-- ai-policy-check -->";
-            const { owner, repo } = context.repo;
-            const issue_number = context.payload.pull_request.number;
+            const POLICY = "https://www.statsmodels.org/devel/dev/ai-policy.html";
+
+            const PROBLEMS = {
+              missing:
+                "The PR description has no **AI Disclosure** section. If you replaced the " +
+                "pull request template with your own description, please add the section below.",
+              "boxes-removed":
+                "The PR description names AI tool(s) but the two **AI Disclosure** checkboxes " +
+                "were removed. Please restore them so the disclosure can be read " +
+                "unambiguously, using the section below.",
+              reworded:
+                "The PR description mentions AI, but not in the required form: the " +
+                "checkbox options from the **AI Disclosure** section were reworded or " +
+                "replaced. The check needs the exact options from the PR template, so " +
+                "please use the section below.",
+              unchecked:
+                "Neither box in the **AI Disclosure** section is ticked. Please tick the " +
+                "one that applies.",
+              both:
+                "Both boxes in the **AI Disclosure** section are ticked. Please tick only " +
+                "the one that applies.",
+              placeholder:
+                "The **AI Disclosure** section says AI tools were used, but the placeholder " +
+                "text (`<name(s)...>` or `<e.g. ...>`) has not been replaced. Please name " +
+                "the tool(s) used and how they were used.",
+            };
+
+            // Keep in sync with the AI Disclosure section of
+            // .github/PULL_REQUEST_TEMPLATE.md.
+            const SECTION = [
+              "#### AI Disclosure",
+              "",
+              `Contributions must comply with the statsmodels [AI Policy](${POLICY}).`,
+              "",
+              "- [ ] No AI tools were used to develop this pull request.",
+              "- [ ] AI tools were used.",
+              "      Tool(s): `<name(s), e.g. Copilot, Claude, ChatGPT>`.",
+              "      Used for: `<e.g. drafting an implementation, writing tests, debugging, editing docstrings>`.",
+              "      I have personally read, understood, and can explain every line of this diff, and",
+              "      have verified the statistical/numerical correctness of the change.",
+            ].join("\n");
 
             let message = null;
-            if (!noAiChecked && !aiUsedChecked) {
+            if (problem) {
               message = [
                 COMMENT_MARKER,
-                "Thanks for the pull request! The **AI Disclosure** checklist item in the PR " +
-                  "description hasn't been completed yet.",
+                "Thanks for the pull request! " + PROBLEMS[problem],
                 "",
-                "Per the [AI Policy](https://www.statsmodels.org/devel/dev/ai-policy.html), please " +
-                  "edit the PR description and check the box that applies: either \"No AI tools were " +
-                  "used\" or \"AI tools were used\" (naming the tool(s) and how they were used).",
-              ].join("\n");
-            } else if (aiUsedChecked && placeholderStillPresent) {
-              message = [
-                COMMENT_MARKER,
-                "The **AI Disclosure** section is checked as \"AI tools were used\", but the " +
-                  "placeholder text (tool name / usage) in the PR description hasn't been filled in.",
+                `Per the [AI Policy](${POLICY}), every pull request must state whether AI ` +
+                  "tools were used. Please edit the PR description so it includes the " +
+                  "section below, tick **exactly one** box, and, if AI tools were used, " +
+                  "replace the placeholders with the tool name(s) and how they were used.",
                 "",
-                "Per the [AI Policy](https://www.statsmodels.org/devel/dev/ai-policy.html), please " +
-                  "edit the PR description to name the tool(s) used and how they were used.",
+                "````markdown",
+                SECTION,
+                "````",
+                "",
+                "This check re-runs automatically when the description is edited.",
               ].join("\n");
             }
 
-            const comments = await github.rest.issues.listComments({
+            const { owner, repo } = context.repo;
+            const issue_number = pr.number;
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner, repo, issue_number, per_page: 100,
             });
-            const existing = comments.data.find(
+            const existing = comments.find(
               (c) => c.user.type === "Bot" && c.body.includes(COMMENT_MARKER)
             );
 

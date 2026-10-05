@@ -21,6 +21,7 @@ from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import maybe_unwrap_results
+from statsmodels.tools.validation import int_like
 
 # outliers test convenience wrapper
 
@@ -145,6 +146,11 @@ def reset_ramsey(res, degree=5):
     ----------
     https://en.wikipedia.org/wiki/Ramsey_RESET_test
     """
+    degree = int_like(degree, "degree", optional=False)
+    if degree < 2:
+        # the test covers powers 2..degree, so anything below 2 has no terms
+        # and used to leak a bare numpy error from the empty vander matrix
+        raise ValueError(f"degree must be an integer >= 2, got {degree}")
     order = degree + 1
     k_vars = res.model.exog.shape[1]
     # vander without constant and x, and drop constant
@@ -207,6 +213,12 @@ def variance_inflation_factor(exog, exog_idx, *, standardize=True):
     """
     exog = np.asarray(exog, dtype=float)
     k_vars = exog.shape[1]
+
+    exog_idx = int_like(exog_idx, "exog_idx")
+    if not 0 <= exog_idx < k_vars:
+        raise ValueError(
+            f"exog_idx must be in the range [0, {k_vars}), got {exog_idx}"
+        )
 
     if standardize:
         stds = np.std(exog, axis=0)

@@ -713,6 +713,18 @@ class TestLM:
         LMstat2 = LMstat_OLS[0]
         assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
+    def test_LM_cluster_nodemean(self):
+        # GH-10284, LM = (sum_i s_i)' (sum_g S_g S_g')^-1 (sum_i s_i)
+        resid = self.res1_restricted.wresid
+        groups = np.repeat(np.arange(20), 5)
+        scores = self.x * resid[:, None]
+        group_sums = np.array([scores[groups == g].sum(0) for g in range(20)])
+        total = scores.sum(0)
+        LMstat = total @ np.linalg.solve(group_sums.T @ group_sums, total)
+        res_full = self.res1_full.get_robustcov_results("cluster", groups=groups)
+        LMstat_OLS = res_full.compare_lm_test(self.res1_restricted, demean=False)
+        assert_almost_equal(LMstat, LMstat_OLS[0], DECIMAL_7)
+
     def test_LM_nonnested(self):
         with pytest.raises(ValueError):
             self.res2_restricted.compare_lm_test(self.res2_full)
@@ -1561,6 +1573,24 @@ def test_ridge():
     assert_allclose(fv1, fv2)
 
 
+def test_ridge_pandas():
+    # GH 4724, L1_wt=0 uses the ridge code path, results were not wrapped
+    n = 100
+    p = 5
+    rs = np.random.RandomState(3132)
+    xmat = pd.DataFrame(rs.normal(size=(n, p)), columns=list("abcde"))
+    yvec = pd.Series(xmat.sum(axis=1) + rs.normal(size=n), name="y")
+
+    model = OLS(yvec, xmat)
+    result_ridge = model.fit_regularized(alpha=1.0, L1_wt=0)
+    result_enet = model.fit_regularized(alpha=1.0, L1_wt=1e-10)
+    assert isinstance(result_ridge.params, pd.Series)
+    assert isinstance(result_ridge.fittedvalues, pd.Series)
+    pd.testing.assert_index_equal(result_ridge.params.index, xmat.columns)
+    pd.testing.assert_index_equal(result_ridge.fittedvalues.index, xmat.index)
+    pd.testing.assert_series_equal(result_ridge.params, result_enet.params)
+
+
 def test_regularized_refit():
     n = 100
     p = 5
@@ -2101,3 +2131,17 @@ class TestBetaCoefficients:
         with pytest.raises(ValueError, match="zero variance"):
             res_zero_y.get_beta_coefficients()
 
+
+def test_yule_walker_order_validation():
+    # a negative order used to leak a bare IndexError from the
+    # autocovariance loop; order 0 stays valid (AR(0) = white noise) and
+    # returns empty AR parameters. Orders >= nobs keep main's degenerate
+    # behavior (pinned by test_pacf_1_obs / test_invalid_xfail upstream).
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(30)
+    with pytest.raises(ValueError, match="order must be a non-negative integer"):
+        yule_walker(x, order=-1)
+    rho0, sigma0 = yule_walker(x, order=0)
+    assert rho0.shape == (0,)
+    rho, sigma = yule_walker(x, order=4)
+    assert rho.shape == (4,)

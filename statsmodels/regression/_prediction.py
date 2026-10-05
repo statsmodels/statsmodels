@@ -11,6 +11,7 @@ import pandas as pd
 from scipy import stats
 
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.tools.validation import float_like
 
 
 # this is similar to ContrastResults after t_test, copied and adjusted
@@ -101,6 +102,9 @@ class PredictionResults:
 
         """
         se = self.se_obs if obs else self.se_mean
+        alpha = float_like(alpha, "alpha")
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
         q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
         lower = self.predicted_mean - q * se
@@ -198,7 +202,7 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     if weights is not None:
         weights = np.asarray(weights)
         if (weights.size > 1 and
-                (weights.ndim != 1 or weights.shape[0] == exog.shape[1])):
+                (weights.ndim != 1 or weights.shape[0] != exog.shape[0])):
             raise ValueError("weights has wrong shape")
 
     if pred_kwds is None:

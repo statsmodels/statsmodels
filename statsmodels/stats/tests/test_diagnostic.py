@@ -31,8 +31,10 @@ from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 import statsmodels.stats.sandwich_covariance as sw
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tsa.ar_model import AutoReg
+from statsmodels.tsa.ardl import ARDL
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import acf
 
@@ -430,6 +432,16 @@ class TestDiagnosticG:
         data = sunspots.load_pandas().data["SUNACTIVITY"]
         res = ARIMA(data, order=(1, 0, 0), trend="n").fit()
         smsdia.acorr_breusch_godfrey(res, nlags=1, result_object=False)
+
+    def test_acorr_breusch_godfrey_nlags_validation(self):
+        data = sunspots.load_pandas().data["SUNACTIVITY"].to_numpy()[:40]
+        res = OLS(data, np.ones(40)).fit()
+        # a negative nlags used to leak "negative dimensions are not allowed"
+        # from numpy, and nlags >= nobs used to fail deep inside f_test
+        with pytest.raises(ValueError, match="non-negative"):
+            smsdia.acorr_breusch_godfrey(res, nlags=-3)
+        with pytest.raises(ValueError, match="smaller than the number of observations"):
+            smsdia.acorr_breusch_godfrey(res, nlags=40)
 
     def test_acorr_ljung_box(self):
 
@@ -1744,9 +1756,7 @@ def test_outlier_test():
     res2 = np.c_[rstudent, unadj_p, bonf_p]
     res = oi.outlier_test(ndarray_mod, method="b", labels=labels, order=True)
     np.testing.assert_almost_equal(res.values, res2, 7)
-    np.testing.assert_equal(
-        res.index.tolist(), sorted_labels
-    )  # pylint: disable-msg=E1103
+    np.testing.assert_equal(res.index.tolist(), sorted_labels)  # pylint: disable-msg=E1103
 
     data = pd.DataFrame(
         np.column_stack((endog, exog)),
@@ -2203,6 +2213,62 @@ def test_diagnostics_pandas():
     smsdia.spec_white(res.resid, x)
 
 
+@pytest.mark.parametrize("k_vars, skip", [(2, None), (5, None), (3, 20)])
+def test_harvey_collier_skip(k_vars, skip):
+    # GH 8446, the t-test must use the recursive residuals from index skip
+    rng = np.random.default_rng(8446)
+    nobs = 60
+    exog = add_constant(rng.standard_normal((nobs, k_vars - 1)))
+    endog = exog.sum(1) + rng.standard_normal(nobs)
+    res = OLS(endog, exog).fit()
+    hc = smsdia.linear_harvey_collier(res, skip=skip)
+
+    start = k_vars if skip is None else skip
+    rresid = []
+    for t in range(start, nobs):
+        x0 = exog[:t]
+        xtxi = np.linalg.inv(x0.T @ x0)
+        params = xtxi @ x0.T @ endog[:t]
+        err = endog[t] - exog[t] @ params
+        rresid.append(err / np.sqrt(1 + exog[t] @ xtxi @ exog[t]))
+    expected = stats.ttest_1samp(rresid, 0)
+
+    assert_allclose(hc.statistic, expected.statistic, rtol=1e-10)
+    assert_allclose(hc.pvalue, expected.pvalue, rtol=1e-10)
+    if hasattr(hc, "df"):
+        assert hc.df == nobs - start - 1
+
+
+@pytest.mark.parametrize(
+    "k, stat, pvalue",
+    [
+        (2, 0.586754425722491, 0.56093192209442),
+        (3, 0.850420410993682, 0.400712322767811),
+        (4, 1.00449923572035, 0.32203254246206),
+        (5, 1.32123229253236, 0.195246914186222),
+        (6, 0.374761500404456, 0.710235559230007),
+    ],
+)
+def test_harvey_collier_lmtest(k, stat, pvalue):
+    # R 4.6.1, lmtest 0.9-40: harvtest(y ~ x1 + ... + x_{k-1}) with the
+    # deterministic data below. harvtest reports the absolute value of the
+    # statistic, the mean of the recursive residuals is negative for
+    # k = 2, ..., 5. The p-value is two-sided.
+    n = 40
+    i = np.arange(1, n + 1)
+    x = np.column_stack(
+        [np.sin(i), np.cos(2 * i), np.sin(3 * i + 1), np.cos(i / 2), np.sin(i / 3)]
+    )
+    y = 1 + x[:, 0] + 0.6 * x[:, 0] ** 2 + 0.5 * x[:, 1:].sum(1)
+    y = y + 0.3 * np.sin(5 * i + 0.5)
+    res = OLS(y, add_constant(x[:, : k - 1])).fit()
+    hc = smsdia.linear_harvey_collier(res)
+    assert_allclose(abs(hc[0]), stat, rtol=1e-9)
+    assert_allclose(hc[1], pvalue, rtol=1e-9)
+    if hasattr(hc, "df"):
+        assert hc.df == n - k - 1
+
+
 def test_diagnostics_hac():
     rs = np.random.RandomState(38342091)
     x = rs.randn(100)
@@ -2348,3 +2414,179 @@ def test_het_goldfeldquandt_alternative_deprecated_alias(
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         smsdia.het_goldfeldquandt(y, x, alternative="bogus", result_object=True)
+
+
+@pytest.mark.parametrize(
+    "kwds, name",
+    [
+        ({"split": 1}, "first"),
+        ({"split": 3}, "first"),
+        ({"split": 57}, "second"),
+        ({"split": 59}, "second"),
+        ({"split": 30, "drop": 27}, "second"),
+        ({"split": 30, "drop": 0.45}, "second"),
+    ],
+)
+def test_het_goldfeldquandt_small_subsample(kwds, name):
+    # A subsample with at most as many observations as regressors has no
+    # residual degrees of freedom, the statistic and p-value were nan.
+    rng = np.random.default_rng(8446)
+    x = np.column_stack([np.ones(60), rng.standard_normal((60, 2))])
+    y = rng.standard_normal(60)
+    with pytest.raises(ValueError, match=f"the {name} subsample has"):
+        smsdia.het_goldfeldquandt(y, x, result_object=False, **kwds)
+
+
+@pytest.mark.parametrize("kwds", [{"split": 30, "drop": 30}, {"split": 30, "drop": 0.5}])
+def test_het_goldfeldquandt_empty_second_subsample(kwds):
+    # the error was a numpy "zero-size array" ValueError
+    rng = np.random.default_rng(8446)
+    x = np.column_stack([np.ones(60), rng.standard_normal((60, 2))])
+    y = rng.standard_normal(60)
+    with pytest.raises(ValueError, match=r"split \+ drop must be smaller"):
+        smsdia.het_goldfeldquandt(y, x, result_object=False, **kwds)
+
+
+@pytest.mark.parametrize("split", [4, 56])
+def test_het_goldfeldquandt_smallest_subsample(split):
+    # one residual degree of freedom in one of the subsamples is valid
+    rng = np.random.default_rng(8446)
+    x = np.column_stack([np.ones(60), rng.standard_normal((60, 2))])
+    y = rng.standard_normal(60)
+    fval, pval, _ = smsdia.het_goldfeldquandt(y, x, split=split, result_object=False)
+    res1 = OLS(y[:split], x[:split]).fit()
+    res2 = OLS(y[split:], x[split:]).fit()
+    assert_allclose(fval, (res2.ssr / res2.df_resid) / (res1.ssr / res1.df_resid))
+    assert_allclose(pval, stats.f.sf(fval, res1.df_resid, res2.df_resid))
+    assert np.isfinite(fval)
+
+
+def test_het_goldfeldquandt_rank_deficient_subsample():
+    # the residual degrees of freedom depend on the rank of the regressors in
+    # the subsample, the dummy is constant (zero) in the first 3 observations
+    rng = np.random.default_rng(8446)
+    dummy = np.r_[np.zeros(3), np.arange(57) % 2]
+    x = np.column_stack([np.ones(60), rng.standard_normal(60), dummy])
+    y = rng.standard_normal(60)
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        fval, pval, _ = smsdia.het_goldfeldquandt(y, x, split=3, result_object=False)
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res1 = OLS(y[:3], x[:3]).fit()
+    res2 = OLS(y[3:], x[3:]).fit()
+    assert res1.df_resid == 1
+    assert_allclose(fval, (res2.ssr / res2.df_resid) / (res1.ssr / res1.df_resid))
+    assert_allclose(pval, stats.f.sf(fval, res1.df_resid, res2.df_resid))
+
+
+def test_acorr_ljungbox_lags_exceed_nobs():
+    # requesting a lag at or beyond the sample size used to crash inside
+    # acf with a broadcast error
+    x = np.arange(5.0)
+    with pytest.raises(ValueError, match=r"maximum lag \(20\)"):
+        smsdia.acorr_ljungbox(x, lags=[20])
+    with pytest.raises(ValueError, match=r"maximum lag \(5\)"):
+        smsdia.acorr_ljungbox(x, lags=5)
+    # the boundary case, lag == nobs - 1, still works
+    res = smsdia.acorr_ljungbox(x, lags=4)
+    assert np.isfinite(res["lb_pvalue"].iloc[0])
+
+
+def test_compare_cox_j_mismatched_nobs():
+    # comparing models fit on different sample sizes used to leak a bare
+    # numpy broadcast error
+    rs = np.random.RandomState(12345)
+    y = rs.standard_normal(60)
+    x = np.column_stack([np.ones(60), rs.standard_normal((60, 2))])
+    res_full = OLS(y, x).fit()
+    res_short = OLS(y[:30], x[:30]).fit()
+    with pytest.raises(ValueError, match="same number of observations"):
+        smsdia.compare_cox(res_full, res_short)
+    with pytest.raises(ValueError, match="same number of observations"):
+        smsdia.compare_j(res_full, res_short)
+
+    # a missing value in a variable of only one model drops an observation
+    # from that model only
+    data = pd.DataFrame({"y": y, "x1": x[:, 1], "x2": x[:, 2]})
+    data.loc[3, "x2"] = np.nan
+    res_x1 = OLS.from_formula("y ~ x1", data).fit()
+    res_x1_x2 = OLS.from_formula("y ~ x1 + x2", data).fit()
+    msg = "same number of observations; got 60 and 59.*missing values"
+    with pytest.raises(ValueError, match=msg):
+        smsdia.compare_cox(res_x1, res_x1_x2)
+    with pytest.raises(ValueError, match=msg):
+        smsdia.compare_j(res_x1, res_x1_x2)
+
+
+def test_goldfeldquandt_split_validation():
+    # a negative or oversized split used to silently return nan test results
+    # from empty subsample regressions
+    rs = np.random.RandomState(12345)
+    y = rs.standard_normal(60)
+    x = np.column_stack([np.ones(60), rs.standard_normal((60, 2))])
+    with pytest.raises(ValueError, match="split must be between 0 and"):
+        smsdia.het_goldfeldquandt(y, x, split=-1)
+    with pytest.raises(ValueError, match=r"\(60\), got 60$"):
+        smsdia.het_goldfeldquandt(y, x, split=60)
+    # a fraction that is rounded to 0 reports the value that was given
+    with pytest.raises(ValueError, match=r"got 0.001, which is 0 observations"):
+        smsdia.het_goldfeldquandt(y, x, split=0.001)
+    # the fraction form and the default stay valid
+    smsdia.het_goldfeldquandt(y, x, split=0.5, result_object=False)
+    smsdia.het_goldfeldquandt(y, x, result_object=False)
+
+
+# R 4.5.3, lmtest 0.9.40, with infl and realint from macrodata in macro.csv
+# library(lmtest)
+# d <- read.csv("macro.csv")
+# L <- function(v, k) c(rep(NA, k), head(v, -k))
+# y <- d$infl; x <- d$realint
+# df <- data.frame(y=y, y1=L(y,1), y2=L(y,2), x=x, x1=L(x,1), x2=L(x,2))[-(1:2),]
+# fm <- lm(y ~ y1 + y2, data=df)
+# fm <- lm(y ~ y1 + y2 + x, data=df)
+# fm <- lm(y ~ y1 + y2 + x + x1 + x2, data=df)
+# fm <- lm(y ~ x + x1 + x2, data=df)
+# c(bgtest(fm, order=4)[c("statistic", "p.value")],
+#   bgtest(fm, order=4, type="F")[c("statistic", "p.value")])
+@pytest.mark.parametrize(
+    "model, kwargs, r_values",
+    [
+        (
+            AutoReg,
+            {"lags": 2},
+            [18.3926662584388, 0.0010340160604162, 4.88504100715236, 0.00089502087431],
+        ),
+        (
+            AutoReg,
+            {"lags": 2, "exog": True},
+            [151.425270595411, 1.00759773393592e-31, 147.378904413188, 1.590989e-57],
+        ),
+        (
+            ARDL,
+            {"lags": 2, "exog": True, "order": 2},
+            [22.1339505394649, 0.000188482976583515, 5.90886946654817, 0.00016691999],
+        ),
+        # gh-9090
+        (
+            ARDL,
+            {"lags": 0, "exog": True, "order": 2, "causal": False},
+            [182.32820946617, 2.35773057553784e-38, 471.156533745566, 2.281101e-98],
+        ),
+        # Without a constant in the model, a constant is added to the auxiliary
+        # regression, which bgtest does not do, so only compare with OLS
+        (AutoReg, {"lags": 2, "trend": "n"}, None),
+    ],
+)
+def test_acorr_breusch_godfrey_autoreg(model, kwargs, r_values):
+    data = macrodata.load_pandas().data
+    kwargs = dict(kwargs)
+    if kwargs.pop("exog", False):
+        kwargs["exog"] = data[["realint"]]
+    res = model(data["infl"], **kwargs).fit()
+    bg = smsdia.acorr_breusch_godfrey(res, nlags=4, result_object=True)
+    if r_values is not None:
+        assert_allclose(bg[:4], r_values, rtol=1e-6)
+    # The auxiliary regression must include the lags and deterministic terms,
+    # so the test matches the test of the OLS fit on the same design matrix
+    res_ols = OLS(res.model._y, res.model._x).fit()
+    expected = smsdia.acorr_breusch_godfrey(res_ols, nlags=4, result_object=True)
+    assert_allclose(bg[:4], expected[:4], rtol=1e-10)

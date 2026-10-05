@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import float_like, string_like
 
 
 # this is similar to ContrastResults after t_test, partially copied, adjusted
@@ -101,6 +101,9 @@ class PredictionResultsBase:
         """internal function to avoid code duplication"""
         if dist_args is None:
             dist_args = ()
+        alpha = float_like(alpha, "alpha")
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
         q = self.dist.ppf(1 - alpha / 2.0, *dist_args)
         lower = center - q * se
@@ -201,6 +204,9 @@ class PredictionResultsMonotonic(PredictionResultsBase):
         """internal function to avoid code duplication"""
         if dist_args is None:
             dist_args = ()
+        alpha = float_like(alpha, "alpha")
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
         q = self.dist.ppf(1 - alpha / 2.0, *dist_args)
         lower = center - q * se
@@ -350,6 +356,10 @@ class PredictionResultsMean(PredictionResultsBase):
         method = string_like(
             method, "method", options=("endpoint", "delta"), lower=False
         )
+        alpha = float_like(alpha, "alpha")
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
         tmp = np.linspace(0, 1, 6)
         is_linear = (self.link.inverse(tmp) == tmp).all()
         if method == "endpoint" and not is_linear:

@@ -95,6 +95,64 @@ _predict_transform_docstring = """
         through the formula before forming the prediction."""
 
 
+def _tie_terms(xp0, xp1, xp0d, xp1d, ndeath, efron):
+    """
+    Terms of the Breslow or Efron approximation at one failure time
+
+    With ties the Efron approximation uses ``ndeath`` steps j = 0, ..., ndeath
+    - 1 in which the subjects that fail at the time have the weight 1 - f_j
+    in the risk set, with f_j = j / ndeath. The increment of the cumulative
+    hazard in step j is ``1 / denom_j`` and the average of the covariates is
+    ``xbar_j``. The Breslow approximation has one step with f = 0 and the
+    hazard ``ndeath / denom``.
+
+    Parameters
+    ----------
+    xp0 : float
+        Sum of the hazard multipliers of the subjects in the risk set.
+    xp1 : ndarray
+        Sum of the hazard multipliers times the covariates of the subjects
+        in the risk set.
+    xp0d : float
+        Sum of the hazard multipliers of the subjects that fail at the time.
+    xp1d : ndarray
+        Sum of the hazard multipliers times the covariates of the subjects
+        that fail at the time.
+    ndeath : int
+        The number of subjects that fail at the time.
+    efron : bool
+        If True, the Efron approximation is used, otherwise the Breslow
+        approximation.
+
+    Returns
+    -------
+    h : float
+        The increment of the cumulative hazard, summed over the steps.
+    hx : ndarray
+        The increment of the cumulative hazard times the average of the
+        covariates in the step, summed over the steps.
+    hf : float
+        The increment of the cumulative hazard times f, summed over the
+        steps. This is 0 for the Breslow approximation.
+    hxf : ndarray
+        The increment of the cumulative hazard times f and times the average
+        of the covariates in the step, summed over the steps. This is 0 for
+        the Breslow approximation.
+    xbar : ndarray
+        The average of the covariates, averaged over the steps.
+    """
+    if not efron:
+        xbar = xp1 / xp0
+        h = ndeath / xp0
+        return h, h * xbar, 0.0, np.zeros_like(xbar), xbar
+
+    f = np.arange(ndeath, dtype=np.float64) / ndeath
+    denom = xp0 - f * xp0d
+    xbar_j = (xp1[None, :] - np.outer(f, xp1d)) / denom[:, None]
+    haz = 1.0 / denom
+    return haz.sum(), haz @ xbar_j, (f * haz).sum(), (f * haz) @ xbar_j, xbar_j.mean(0)
+
+
 class PHSurvivalTime:
 
     def __init__(self, time, status, exog, strata=None, entry=None, offset=None):
@@ -1073,6 +1131,9 @@ class PHReg(model.LikelihoodModel):
         hess = self.hessian(params)
 
         score_obs = self.score_residuals(params)
+        # observations that are not used have NaN residuals and do not
+        # contribute to the score
+        score_obs = np.where(np.isnan(score_obs), 0.0, score_obs)
 
         # Collapse
         grads = {}
@@ -1090,6 +1151,35 @@ class PHReg(model.LikelihoodModel):
         cmat = np.dot(hess_inv, np.dot(mat, hess_inv))
 
         return cmat
+
+    def _risk_range(self, stx):
+        """
+        First and last failure time at which each subject is at risk
+
+        Parameters
+        ----------
+        stx : int
+            The index of the stratum.
+
+        Returns
+        -------
+        first : ndarray
+            The index of the first unique failure time at which each subject of
+            the stratum is at risk.
+        last : ndarray
+            The index of the last unique failure time at which each subject of
+            the stratum is at risk. A subject is not at risk at any failure time
+            if ``first > last``.
+        """
+        surv = self.surv
+        nobs = surv.exog_s[stx].shape[0]
+        first = np.zeros(nobs, dtype=np.intp)
+        last = np.zeros(nobs, dtype=np.intp)
+        for k, ix in enumerate(surv.risk_exit[stx]):
+            first[ix] = k
+        for k, ix in enumerate(surv.risk_enter[stx]):
+            last[ix] = k
+        return first, last
 
     def score_residuals(self, params):
         """
@@ -1110,18 +1200,20 @@ class PHReg(model.LikelihoodModel):
 
         Notes
         -----
-        Observations in a stratum with no observed events have undefined
-        score residuals, and contain NaN in the returned matrix.
+        The score residuals use the approximation for tied failure times of
+        the model, Breslow or Efron. Their sum over the observations is the
+        score of the partial likelihood.
+
+        Observations that are not used, for example observations in a
+        stratum with no observed events, have undefined score residuals, and
+        contain NaN in the returned matrix. The score residuals of used
+        observations that are not at risk at any failure time are 0.
         """
 
         surv = self.surv
+        efron = self.ties == "efron"
 
-        score_resid = np.zeros(self.exog.shape, dtype=np.float64)
-
-        # Use to set undefined values to NaN.
-        mask = np.zeros(self.exog.shape[0], dtype=np.int32)
-
-        w_avg = self.weighted_covariate_averages(params)
+        score_resid = np.full(self.exog.shape, np.nan, dtype=np.float64)
 
         # Loop over strata
         for stx in range(surv.nstrat):
@@ -1131,7 +1223,77 @@ class PHReg(model.LikelihoodModel):
             nuft = len(uft_ix)
             strat_ix = surv.stratum_rows[stx]
 
-            xp0 = 0.0
+            linpred = np.dot(exog_s, params)
+            if surv.offset_s is not None:
+                linpred += surv.offset_s[stx]
+            linpred -= linpred.max()
+            e_linpred = np.exp(linpred)
+
+            first, last = self._risk_range(stx)
+            resid_s = np.zeros(exog_s.shape, dtype=np.float64)
+
+            # Loop over the unique failure times.
+            for i in range(nuft):
+
+                at_risk = np.flatnonzero((first <= i) & (i <= last))
+                e_risk = e_linpred[at_risk]
+                x_risk = exog_s[at_risk, :]
+
+                ix = uft_ix[i]
+                xp0d = e_linpred[ix].sum()
+                xp1d = np.dot(e_linpred[ix], exog_s[ix, :])
+                h, hx, hf, hxf, xbar = _tie_terms(
+                    e_risk.sum(),
+                    np.dot(e_risk, x_risk),
+                    xp0d,
+                    xp1d,
+                    len(ix),
+                    efron,
+                )
+
+                # The compensator of the subjects at risk, the subjects that
+                # fail have the weight 1 - f in the steps of the Efron
+                # approximation.
+                comp = -e_risk[:, None] * (x_risk * h - hx)
+                dead = np.isin(at_risk, ix)
+                comp[dead, :] += (x_risk[dead, :] - xbar) + e_risk[dead, None] * (
+                    x_risk[dead, :] * hf - hxf
+                )
+                resid_s[at_risk, :] += comp
+
+            score_resid[strat_ix, :] = resid_s
+
+        return score_resid
+
+    def _martingale_residuals(self, params):
+        """
+        Martingale residuals calculated at a given vector of parameters
+
+        Parameters
+        ----------
+        params : ndarray
+            The parameter vector at which the martingale residuals are
+            calculated.
+
+        Returns
+        -------
+        ndarray
+            The martingale residuals, one for each observation, with NaN for
+            observations that are not used.
+        """
+
+        surv = self.surv
+        efron = self.ties == "efron"
+
+        mart_resid = np.full(self.exog.shape[0], np.nan, dtype=np.float64)
+
+        # Loop over strata
+        for stx in range(surv.nstrat):
+
+            uft_ix = surv.ufailt_ix[stx]
+            exog_s = surv.exog_s[stx]
+            nuft = len(uft_ix)
+            strat_ix = surv.stratum_rows[stx]
 
             linpred = np.dot(exog_s, params)
             if surv.offset_s is not None:
@@ -1139,44 +1301,32 @@ class PHReg(model.LikelihoodModel):
             linpred -= linpred.max()
             e_linpred = np.exp(linpred)
 
-            at_risk_ix = set()
+            first, last = self._risk_range(stx)
+            # cumulative hazard of each subject while it is at risk
+            cumhaz = np.zeros(exog_s.shape[0], dtype=np.float64)
 
-            # Iterate backward through the unique failure times.
-            for i in range(nuft)[::-1]:
+            for i in range(nuft):
 
-                # Update for new cases entering the risk set.
-                ix = surv.risk_enter[stx][i]
-                at_risk_ix |= set(ix)
-                xp0 += e_linpred[ix].sum()
+                at_risk = np.flatnonzero((first <= i) & (i <= last))
+                e_risk = e_linpred[at_risk]
 
-                atr_ix = list(at_risk_ix)
-                leverage = exog_s[atr_ix, :] - w_avg[stx][i, :]
+                ix = uft_ix[i]
+                xp0d = e_linpred[ix].sum()
+                # only the hazard is needed, not the averages of the covariates
+                h, _, hf, _, _ = _tie_terms(
+                    e_risk.sum(),
+                    np.zeros(1),
+                    xp0d,
+                    np.zeros(1),
+                    len(ix),
+                    efron,
+                )
+                cumhaz[at_risk] += h
+                cumhaz[ix] -= hf
 
-                # Event indicators
-                d = np.zeros(exog_s.shape[0])
-                d[uft_ix[i]] = 1
+            mart_resid[strat_ix] = surv.status_s[stx] - e_linpred * cumhaz
 
-                # The increment in the cumulative hazard
-                dchaz = len(uft_ix[i]) / xp0
-
-                # Piece of the martingale residual
-                mrp = d[atr_ix] - e_linpred[atr_ix] * dchaz
-
-                # Update the score residuals
-                ii = strat_ix[atr_ix]
-                score_resid[ii, :] += leverage * mrp[:, None]
-                mask[ii] = 1
-
-                # Update for cases leaving the risk set.
-                ix = surv.risk_exit[stx][i]
-                at_risk_ix -= set(ix)
-                xp0 -= e_linpred[ix].sum()
-
-        jj = np.flatnonzero(mask == 0)
-        if len(jj) > 0:
-            score_resid[jj, :] = np.nan
-
-        return score_resid
+        return mart_resid
 
     def weighted_covariate_averages(self, params):
         """
@@ -1198,8 +1348,20 @@ class PHReg(model.LikelihoodModel):
 
         Notes
         -----
-        Used to calculate leverages and score residuals.
+        Used to calculate the Schoenfeld residuals of the Breslow method.
+
+        Tied failure times are handled as in the Breslow method, also if the
+        model uses ``ties="efron"``. The Schoenfeld and the score residuals
+        of a model with ``ties="efron"`` use averages that are adjusted for
+        the ties and not these averages.
         """
+        return self._covariate_averages(params)
+
+    def _covariate_averages(self, params, efron=False):
+        # Implements weighted_covariate_averages.  If efron is True, the
+        # average at a time with m tied failures is the mean over
+        # j = 0, ..., m - 1 of the averages in which the tied failures
+        # have their weights multiplied by 1 - j / m.
 
         surv = self.surv
 
@@ -1229,7 +1391,16 @@ class PHReg(model.LikelihoodModel):
                 xp0 += e_linpred[ix].sum()
                 xp1 += np.dot(e_linpred[ix], exog_s[ix, :])
 
-                average_s[i, :] = xp1 / xp0
+                if efron:
+                    ixf = uft_ix[i]
+                    xp0f = e_linpred[ixf].sum()
+                    xp1f = np.dot(e_linpred[ixf], exog_s[ixf, :])
+                    J = np.arange(len(ixf), dtype=np.float64) / len(ixf)
+                    numer = xp1 - np.outer(J, xp1f)
+                    denom = xp0 - np.outer(J, xp0f)
+                    average_s[i, :] = (numer / denom).mean(0)
+                else:
+                    average_s[i, :] = xp1 / xp0
 
                 # Update for cases leaving the risk set.
                 ix = surv.risk_exit[stx][i]
@@ -1663,12 +1834,20 @@ class PHRegResults(base.LikelihoodModelResults):
         """
         The average covariate values within the at-risk set at each
         event time point, weighted by hazard
+
+        Tied failure times are handled as in the Breslow method, also if the
+        model uses ``ties="efron"``.
         """
         return self.model.weighted_covariate_averages(self.params)
 
     @cache_readonly
     def score_residuals(self):
-        """A matrix containing the score residuals"""
+        """
+        A matrix containing the score residuals
+
+        The score residuals use the Breslow or Efron approximation of the
+        model for tied failure times.
+        """
         return self.model.score_residuals(self.params)
 
     @cache_readonly
@@ -1696,7 +1875,10 @@ class PHRegResults(base.LikelihoodModelResults):
         """
 
         surv = self.model.surv
-        w_avg = self.weighted_covariate_averages
+        if self.model.ties == "efron":
+            w_avg = self.model._covariate_averages(self.params, efron=True)
+        else:
+            w_avg = self.weighted_covariate_averages
 
         # Initialize at NaN since rows that belong to strata with no
         # events have undefined residuals.
@@ -1726,34 +1908,17 @@ class PHRegResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def martingale_residuals(self):
-        """The martingale residuals"""
+        """
+        The martingale residuals
 
-        surv = self.model.surv
-
-        # Initialize at NaN since rows that belong to strata with no
-        # events have undefined residuals.
-        mart_resid = np.nan * np.ones(len(self.model.endog), dtype=np.float64)
-
-        cumhaz_f_list = self.baseline_cumulative_hazard_function
-
-        # Loop over strata
-        for stx in range(surv.nstrat):
-
-            cumhaz_f = cumhaz_f_list[stx]
-
-            exog_s = surv.exog_s[stx]
-            time_s = surv.time_s[stx]
-
-            linpred = np.dot(exog_s, self.params)
-            if surv.offset_s is not None:
-                linpred += surv.offset_s[stx]
-            e_linpred = np.exp(linpred)
-
-            ii = surv.stratum_rows[stx]
-            chaz = cumhaz_f(time_s)
-            mart_resid[ii] = self.model.status[ii] - e_linpred * chaz
-
-        return mart_resid
+        The martingale residual of an observation is its event indicator
+        minus its cumulative hazard while it is at risk, using the Breslow or
+        Efron approximation for ties of the model. The residuals of a stratum
+        add up to 0 at the estimated parameters. Observations that are not
+        used, for example observations in a stratum without events, have NaN
+        residuals.
+        """
+        return self.model._martingale_residuals(self.params)
 
     def summary(self, yname=None, xname=None, title=None, alpha=0.05):
         """

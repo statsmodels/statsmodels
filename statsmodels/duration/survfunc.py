@@ -742,7 +742,8 @@ def survdiff(time, status, group, weight_type=None, strata=None,
             var += var1
 
     chisq = obs.dot(np.linalg.solve(var, obs))  # (O - E).T * V^(-1) * (O - E)
-    pvalue = 1 - chi2.cdf(chisq, len(gr)-1)
+    # 1 - chi2.cdf(chisq, df) loses the upper tail to cancellation
+    pvalue = chi2.sf(chisq, len(gr)-1)
 
     return chisq, pvalue
 

@@ -394,6 +394,7 @@ class ARDL(AutoReg):
         self._order = self._check_order(order)
         # 2. Construct Regressors
         self._y, self._x = self._construct_regressors(hold_back)
+        self._set_k_constant()
         # 3. Construct variable names
         self._endog_name, self._exog_names = self._construct_variable_names()
         self.data.param_names = self.data.xnames = self._exog_names
@@ -1214,6 +1215,8 @@ class ARDLResults(AutoRegResults):
                 period=existing.period,
                 missing="none",
             )
+            if isinstance(existing, UECM):
+                mod = UECM.from_ardl(mod)
         except Exception as exc:
             error = (
                 "An exception occurred during the creation of the cloned "
@@ -1231,7 +1234,7 @@ class ARDLResults(AutoRegResults):
             "Parameters and standard errors were estimated using a different "
             "dataset and then applied to this dataset"
         )
-        res = ARDLResults(
+        res = mod._results_class(
             mod,
             self.params,
             self.cov_params_default,
@@ -1240,7 +1243,7 @@ class ARDLResults(AutoRegResults):
         )
         res._summary_text = summary_text
 
-        return ARDLResultsWrapper(res)
+        return mod._results_wrapper(res)
 
     def _lag_repr(self) -> np.ndarray:
         """Returns poly repr of an AR, (1 -phi1 L -phi2 L^2-...)"""
@@ -2332,7 +2335,8 @@ class UECMResults(ARDLResults):
         """P-values of normalized cointegrating relationship"""
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            pvalues = 2 * (1 - stats.norm.cdf(np.abs(self.ci_tvalues)))
+            # 2 * (1 - stats.norm.cdf(|t|)) loses the upper tail
+            pvalues = 2 * stats.norm.sf(np.abs(self.ci_tvalues))
         return self._ci_wrap(pvalues, "ci_pvalues")
 
     def ci_conf_int(self, alpha: float = 0.05) -> Float64Array | pd.DataFrame:
@@ -2628,7 +2632,8 @@ def _pss_pvalue(stat: float, k: int, case: int, i1: bool) -> float:
     log_stat = np.log(stat)
     p = small_p if stat > threshold else large_p
     x = [log_stat**i for i in range(len(p))]
-    return 1 - stats.norm.cdf(x @ np.array(p))
+    # 1 - stats.norm.cdf(...) loses the upper tail to cancellation
+    return stats.norm.sf(x @ np.array(p))
 
 
 def _pss_simulate(

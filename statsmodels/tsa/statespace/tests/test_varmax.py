@@ -1415,3 +1415,16 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
     res.remove_data()
     assert isinstance(res.summary(), statsmodels.iolib.summary.Summary)
+
+
+@pytest.mark.parametrize("trend, k_exog", [("c", 0), ("n", 1), ("ct", 1)])
+def test_integer_endog(trend, k_exog):
+    # GH 9014: start_params failed with integer endog when the model has
+    # a trend or exog
+    endog = np.diff(results_varmax.lutkepohl_data, axis=0)[:, :2]
+    assert endog.dtype.kind == "i"
+    exog = np.arange(1, endog.shape[0] + 1) % 4 if k_exog else None
+
+    mod_int = varmax.VARMAX(endog, order=(1, 0), trend=trend, exog=exog)
+    mod_float = varmax.VARMAX(endog.astype(float), order=(1, 0), trend=trend, exog=exog)
+    assert_allclose(mod_int.start_params, mod_float.start_params)

@@ -110,7 +110,10 @@ class RecursiveLS(MLEModel):
                 # Pandas >= 2 can use endog.iloc[:, 1:] = self._q_matrix.T
                 endog.iloc[:, 1:] = np.tile(self._q_matrix.T, (nobs, 1))
             else:
-                endog[:, 1:] = self._q_matrix[:, 0]
+                endog = np.concatenate(
+                    [np.asarray(endog).reshape(nobs, -1), constraint_endog], axis=1
+                )
+                endog[:, 1:] = np.tile(self._q_matrix.T, (nobs, 1))
 
         # Handle coefficient initialization
         kwargs.setdefault("initialization", "diffuse")

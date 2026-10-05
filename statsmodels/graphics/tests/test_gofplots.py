@@ -635,8 +635,11 @@ class TestPlottingPosition:
 
     def do_test(self, alpha, beta):
         smpp = gofplots.plotting_pos(self.N, a=alpha, b=beta)
-        sppp = stats.mstats.plotting_positions(self.data, alpha=alpha, beta=beta)
-
+        # Code below replaces the call to the deprecated plotting_positions function
+        # stats.mstats.plotting_positions(self.data, alpha=alpha, beta=beta)
+        n = len(self.data)
+        i = np.arange(1, n + 1)
+        sppp = (i - alpha) / (n + 1 - alpha - beta)
         nptest.assert_array_almost_equal(smpp, sppp, decimal=5)
 
     @pytest.mark.thread_unsafe(reason="Uses matplotlib")

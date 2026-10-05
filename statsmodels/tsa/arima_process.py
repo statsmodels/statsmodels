@@ -26,7 +26,7 @@ from scipy import linalg, optimize, signal
 
 from statsmodels.tools.docstring import Docstring, remove_parameters
 from statsmodels.tools.docstring_helpers import Appender
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, int_like
 
 if NP_LT_2:
     ComplexWarning = np.ComplexWarning
@@ -162,6 +162,10 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
     """
     if dtype is None:
         dtype = np.common_type(np.array(ar), np.array(ma), np.array(sigma2))
+
+    nobs = int_like(nobs, "nobs", optional=False)
+    if nobs < 1:
+        raise ValueError(f"nobs must be a positive integer, got {nobs}")
 
     p = len(ar) - 1
     q = len(ma) - 1
@@ -560,11 +564,10 @@ def lpol_fima(d, n=20):
     ma : ndarray
         coefficients of lag polynomial
     """
-    # hide import inside function until we use this heavily
-    from scipy.special import gammaln
-
-    j = np.arange(n)
-    return np.exp(gammaln(d + j) - gammaln(j + 1) - gammaln(d))
+    # psi_j = psi_{j-1} * (j - 1 + d) / j with psi_0 = 1, this is valid for all
+    # d, including d == 0 and d < 0 where the gamma function is negative
+    j = np.arange(1, n)
+    return np.r_[1.0, np.cumprod((j - 1 + d) / j)][:n]
 
 
 # moved from sandbox.tsa.try_fi
@@ -588,16 +591,13 @@ def lpol_fiar(d, n=20):
 
     Notes
     -----
-    first coefficient is 1, negative signs except for first term,
+    first coefficient is 1, for 0 < d < 1 the other coefficients are negative,
     ar(L)*x_t
     """
-    # hide import inside function until we use this heavily
-    from scipy.special import gammaln
-
-    j = np.arange(n)
-    ar = -np.exp(gammaln(-d + j) - gammaln(j + 1) - gammaln(-d))
-    ar[0] = 1
-    return ar
+    # pi_j = pi_{j-1} * (j - 1 - d) / j with pi_0 = 1, this is valid for all d,
+    # including d == 0 and d < 0
+    j = np.arange(1, n)
+    return np.r_[1.0, np.cumprod((j - 1 - d) / j)][:n]
 
 
 # moved from sandbox.tsa.try_fi

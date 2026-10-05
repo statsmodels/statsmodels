@@ -377,7 +377,7 @@ class Description:
         if np.any(self._percentiles >= 100) or np.any(self._percentiles <= 0):
             raise ValueError("percentiles must be strictly between 0 and 100")
         self._alpha = float_like(alpha, "alpha")
-        if not 0 < alpha < 1:
+        if not 0 < self._alpha < 1:
             raise ValueError("alpha must be strictly between 0 and 1")
         self._use_t = bool_like(use_t, "use_t")
 

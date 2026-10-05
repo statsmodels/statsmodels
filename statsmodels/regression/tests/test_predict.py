@@ -179,6 +179,19 @@ class TestWLSPrediction:
         res_df = pred_res3b.summary_frame()
         assert_equal(res_df.index.values, [0, 1])
 
+    def test_weights_shape(self):
+        # GH-10283: number of rows equal to number of params raised
+        res_wls = self.res_wls
+        k_params = len(res_wls.params)
+        exog = res_wls.model.exog[:k_params]
+        weights = res_wls.model.weights[:k_params]
+        pred = res_wls.get_prediction(exog, weights=weights)
+        pred_full = res_wls.get_prediction()
+        assert_allclose(pred.se_obs, pred_full.se_obs[:k_params], rtol=1e-13)
+
+        with pytest.raises(ValueError, match="weights has wrong shape"):
+            res_wls.get_prediction(exog[:1], weights=weights)
+
     def test_glm(self):
         # prelimnimary, getting started with basic test for GLM.get_prediction
         from statsmodels.genmod.generalized_linear_model import GLM

@@ -356,7 +356,10 @@ class TestVARResults(CheckIRF, CheckFEVD):
             # Smoke test
             self.model.fit(maxlags=10, ic=ic, verbose=True)
 
-        with pytest.raises(TypeError):
+        # an unknown ic raises a ValueError naming the valid options; it used
+        # to crash with a TypeError from sorting a non-iterable before the
+        # error message could be produced
+        with pytest.raises(ValueError, match="foo not recognized"):
             self.model.fit(ic="foo")
 
     def test_nobs(self):
@@ -1260,3 +1263,48 @@ def test_plot_sample_acorr(bivariate_var_result, close_figures):
         i, j = divmod(idx, k)
         heights = np.array([seg[1, 1] for seg in ax.collections[0].get_segments()])
         assert_allclose(heights, expected[:, i, j])
+
+
+def test_fit_invalid_maxlags_and_ic():
+    rs = np.random.RandomState(12345)
+    endog = rs.standard_normal((100, 2))
+
+    with pytest.raises(ValueError, match="non-negative"):
+        VAR(endog).fit(maxlags=-1)
+    with pytest.raises(ValueError, match="smaller than the number of observations"):
+        VAR(endog).fit(maxlags=105)
+    # reporting the unknown ic used to crash with a TypeError before the
+    # ValueError could be raised
+    with pytest.raises(ValueError, match="not recognized"):
+        VAR(endog).fit(maxlags=5, ic="bad")
+
+
+def test_var_negative_steps_and_periods_raise():
+    # negative sizes used to fail deep inside numpy with
+    # "negative dimensions are not allowed"
+    rng = np.random.RandomState(987234)
+    y = rng.normal(size=(60, 2))
+    res = VAR(y).fit(maxlags=2)
+
+    with pytest.raises(ValueError, match="steps must be non-negative"):
+        res.forecast(y[-2:], steps=-1)
+    with pytest.raises(ValueError, match="periods must be non-negative"):
+        res.irf(periods=-5)
+
+    # zero stays valid: an empty forecast / contemporaneous responses
+    assert res.forecast(y[-2:], steps=0).shape == (0, 2)
+    assert res.irf(periods=0).irfs.shape == (1, 2, 2)
+
+
+def test_whiteness_invalid_signif_raises():
+    # signif outside (0, 1) previously produced a meaningless crit value
+    # without any error
+    rs = np.random.RandomState(233078)
+    y = rs.standard_normal((200, 2))
+    res = VAR(y).fit(maxlags=1, ic=None)
+    with pytest.raises(ValueError, match="signif must be in the range"):
+        res.test_whiteness(nlags=5, signif=2)
+    with pytest.raises(ValueError, match="signif must be in the range"):
+        res.test_whiteness(nlags=5, signif=0)
+    pvalue = res.test_whiteness(nlags=5).pvalue
+    assert np.isfinite(pvalue)

@@ -702,3 +702,47 @@ def test_multipletests_empty(method):
     # the corrected alphas are undefined when there is nothing to correct
     assert np.isnan(alphac_sidak)
     assert np.isnan(alphac_bonf)
+
+
+def test_multipletests_rejects_out_of_range_pvals():
+    # out-of-range p-values used to pass through and produce out-of-range
+    # adjusted p-values (a negative one under Bonferroni)
+    with pytest.raises(ValueError, match=r"range \[0, 1\]; got \[-0.1, 1.5\]"):
+        multipletests(np.array([1.5, -0.1]), method="bonferroni")
+    # NaN keeps the previous pass-through behavior
+    res = multipletests(np.array([0.5, np.nan]), method="bonferroni")
+    assert np.isnan(res[1][-1])
+
+
+def test_multitest_alpha_range():
+    # an out-of-range alpha silently flipped the reject decisions
+    match = "alpha must be in the range"
+    pvals = np.array([0.1, 0.2])
+    for alpha in (-0.5, 0, 1, 1.5):
+        with pytest.raises(ValueError, match=match):
+            multipletests(pvals, alpha=alpha)
+        with pytest.raises(ValueError, match=match):
+            fdrcorrection_twostage(pvals, alpha=alpha)
+    # fdrcorrection itself also accepts alpha == 1 (reject every p-value);
+    # fdrcorrection_twostage relies on that for its capped stage-2 alpha
+    with pytest.raises(ValueError, match=match):
+        fdrcorrection(pvals, alpha=-0.5)
+    with pytest.raises(ValueError, match=match):
+        fdrcorrection(pvals, alpha=1.5)
+    assert fdrcorrection(pvals, alpha=1.0)[0].all()
+
+
+def test_local_fdr_param_validation():
+    # a non-positive deg used to leak a bare numpy error from the density
+    # fit, and a degenerate nbins crashed inside numpy's histogram
+    rs = np.random.RandomState(12345)
+    zscores = rs.standard_normal(200)
+    with pytest.raises(ValueError, match="deg must be a positive integer"):
+        local_fdr(zscores, deg=-1)
+    with pytest.raises(ValueError, match="nbins must be a positive integer"):
+        local_fdr(zscores, nbins=-5)
+    with pytest.raises(ValueError, match="nbins must be a positive integer"):
+        local_fdr(zscores, nbins=1)
+    # the defaults still produce a full fdr curve
+    fdr = local_fdr(zscores)
+    assert fdr.shape == (200,)

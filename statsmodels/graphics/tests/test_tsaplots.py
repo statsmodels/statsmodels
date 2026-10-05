@@ -363,6 +363,19 @@ def test_plot_month(close_figures):
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
+def test_seasonal_plot_sorts_within_season(close_figures):
+    # each season must be plotted in index order, not in input order
+    index = pd.PeriodIndex(["2020Q1", "2022Q1", "2021Q1"], freq="Q")
+    series = pd.Series([1.0, 3.0, 2.0], index=index)
+
+    fig = seasonal_plot(series.groupby(lambda x: x.quarter), ["Q1"])
+
+    plotted = fig.axes[0].lines[0].get_ydata()
+    assert_equal(plotted, [1.0, 2.0, 3.0])
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
 def test_plot_quarter(close_figures):
     dta = macrodata.load_pandas().data
     dates = lmap(

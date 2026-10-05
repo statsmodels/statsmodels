@@ -1592,6 +1592,20 @@ class TestKPSS:
             )
         assert_equal(res[2], 18)
 
+    def test_kpss_fails_on_nan(self):
+        # a NaN in the series used to crash deep inside the lag computation
+        # with "cannot convert float NaN to integer"; it must raise
+        # MissingDataError instead
+        x = np.arange(100.0)
+        x[50] = np.nan
+        with pytest.raises(MissingDataError, match="must contain only finite values"):
+            kpss(x)
+
+        x = np.arange(100.0)
+        x[-3] = -np.inf
+        with pytest.raises(MissingDataError, match="must contain only finite values"):
+            kpss(x)
+
     def test_kpss_fails_on_nobs_check(self):
         # Test that if lags exceeds number of observations KPSS raises a
         # clear error
@@ -1600,6 +1614,12 @@ class TestKPSS:
         msg = rf"lags \({nobs}\) must be < number of observations \({nobs}\)"
         with pytest.raises(ValueError, match=msg):
             kpss(self.x, "c", nlags=nobs)
+
+    def test_kpss_fails_on_negative_nlags(self):
+        # a negative nlags used to flow straight into the lag computation and
+        # silently return a statistic computed with lags=-1
+        with pytest.raises(ValueError, match="non-negative"):
+            kpss(self.x, "c", nlags=-1)
 
     def test_kpss_autolags_does_not_assign_lags_equal_to_nobs(self):
         # Test that if *autolags* exceeds number of observations, we set
@@ -1934,6 +1954,21 @@ def test_ccf_different_lengths():
     assert np.all(np.isfinite(result))
 
 
+def test_ccf_nlags_validation():
+    # nlags is used directly as a slice bound, so it must be an in-range int
+    rs = np.random.RandomState(11111)
+    x = rs.normal(size=100)
+    y = rs.normal(size=80)
+    with pytest.raises(ValueError, match="non-negative"):
+        ccf(x, y, nlags=-3)
+    with pytest.raises(ValueError, match="smaller than the number of observations"):
+        ccf(x, y, nlags=101)
+    with pytest.raises(TypeError, match="nlags"):
+        ccf(x, y, nlags=2.5)
+    # the default output length, len(x), remains a valid request
+    assert ccf(x, y, nlags=100).shape == (100,)
+
+
 @pytest.mark.smoke
 @pytest.mark.slow
 def test_arma_order_select_ic():
@@ -2198,6 +2233,27 @@ def test_levinson_durbin_acov():
     assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
 
 
+def test_levinson_durbin_nlags_too_long():
+    # requesting more lags than the supplied autocovariances cover used to
+    # raise a bare IndexError from the recursion; it should report the
+    # mismatch instead
+    with pytest.raises(ValueError, match="nlags=5"):
+        levinson_durbin(np.array([2.0, 1.0, 0.5, 0.25, 0.1]), 5, isacov=True)
+    with pytest.raises(ValueError, match="nlags=5"):
+        levinson_durbin(np.array([1.0, 2.0, 3.0, 4.0]), 5, isacov=False)
+    # the boundary case, one autocovariance per lag, still works
+    res = levinson_durbin(np.array([2.0, 1.0, 0.5, 0.25, 0.1]), 4, isacov=True)
+    assert res.arcoefs.shape == (4,)
+
+
+def test_levinson_durbin_negative_nlags():
+    # a negative nlags used to leak a bare IndexError from the recursion
+    with pytest.raises(ValueError, match="non-negative"):
+        levinson_durbin(np.arange(10.0), nlags=-1)
+    with pytest.raises(ValueError, match="non-negative"):
+        levinson_durbin(np.array([2.0, 1.0, 0.5]), nlags=-1, isacov=True)
+
+
 @pytest.mark.parametrize("missing", ["conservative", "drop", "raise", "none"])
 @pytest.mark.parametrize("fft", [False, True])
 @pytest.mark.parametrize("demean", [True, False])
@@ -2237,6 +2293,15 @@ def test_acovf_nlags_missing(acovf_data, adjusted, demean, fft, missing):
 def test_acovf_error(acovf_data):
     with pytest.raises(ValueError):
         acovf(acovf_data, nlag=250, fft=False)
+
+
+def test_acovf_negative_nlag(acovf_data):
+    # a negative nlag used to slice the full acovf from the wrong end (fft)
+    # or raise a bare numpy negative-dimension error (non-fft)
+    with pytest.raises(ValueError, match="non-negative"):
+        acovf(acovf_data, nlag=-2)
+    with pytest.raises(ValueError, match="non-negative"):
+        acovf(acovf_data, nlag=-2, fft=False)
 
 
 def test_pacf2acf_ar():
@@ -2441,6 +2506,57 @@ def test_adfuller_maxlag_too_large():
         adfuller(y, maxlag=51)
 
 
+def _adf_tstat_no_trend(x, lag):
+    # t-statistic of the lagged level in the ADF regression without
+    # deterministic terms, computed directly with lstsq
+    dx = np.diff(x)
+    endog = dx[lag:]
+    exog = np.column_stack(
+        [x[lag:-1]] + [dx[lag - j : len(dx) - j] for j in range(1, lag + 1)]
+    )
+    params, rss, _, _ = np.linalg.lstsq(exog, endog, rcond=None)
+    df_resid = exog.shape[0] - exog.shape[1]
+    scale = rss[0] / df_resid
+    bse = np.sqrt(scale * np.linalg.inv(exog.T @ exog)[0, 0])
+    return params[0] / bse
+
+
+@pytest.mark.parametrize("nobs", [12, 16, 20])
+@pytest.mark.parametrize("autolag", ["aic", "bic", "t-stat", None])
+def test_adfuller_no_trend_even_nobs(nobs, autolag):
+    # GH 9375: with regression="n" and an even nobs, the default maxlag
+    # gave an exactly fitted regression and a statistic of 0
+    rng = np.random.default_rng(9375)
+    x = rng.standard_normal(nobs).cumsum()
+    res = adfuller(x, regression="n", autolag=autolag, store=True, result_object=True)
+    assert res.resstore.maxlag == (nobs - 3) // 2
+    assert res.resstore.resols.df_resid >= 1
+    assert_allclose(res.statistic, _adf_tstat_no_trend(x, res.lags), rtol=1e-8)
+
+
+def test_adfuller_no_trend_even_nobs_maxlag_too_large():
+    rng = np.random.default_rng(9375)
+    y = rng.standard_normal(20)
+    with pytest.raises(ValueError, match="maxlag must be less than or equal to 8"):
+        adfuller(y, maxlag=9, regression="n")
+    res = adfuller(y, maxlag=8, regression="n", autolag=None, result_object=True)
+    assert_allclose(res.statistic, _adf_tstat_no_trend(y, 8), rtol=1e-8)
+
+
+def test_coint_short_even_sample():
+    # GH 9375: coint on 20 observations returned a statistic of 0 and a
+    # p-value of 0.9859 for any input
+    rng = np.random.default_rng(9375)
+    y0 = rng.standard_normal(20)
+    y1 = rng.standard_normal(20)
+    res = coint(y0, y1)
+    resid = OLS(y0, np.column_stack([y1, np.ones(20)])).fit().resid
+    adf = adfuller(resid, regression="n", store=True, result_object=True)
+    assert adf.resstore.resols.df_resid >= 1
+    assert_allclose(res.coint_t, _adf_tstat_no_trend(resid, adf.lags), rtol=1e-8)
+    assert res.coint_t != 0
+
+
 @pytest.fixture
 def adfuller_data():
     rs = np.random.RandomState(0)
@@ -2597,11 +2713,34 @@ def test_acf_conservate_nanops():
     assert_allclose(result, expected, rtol=1e-4, atol=1e-4)
 
 
+def test_acf_nlags_validation():
+    # negative and out-of-range nlags used to slice avf silently
+    rs = np.random.RandomState(32738493)
+    e = rs.standard_normal(20)
+    with pytest.raises(ValueError, match="non-negative"):
+        acf(e, nlags=-4)
+    with pytest.raises(ValueError, match="smaller than the number of observations"):
+        acf(e, nlags=20)
+    # the largest valid lag is still allowed
+    assert acf(e, nlags=19).shape == (20,)
+
+
 def test_pacf_nlags_error():
     rs = np.random.RandomState(12487)
     e = rs.standard_normal(99)
     with pytest.raises(ValueError, match="Can only compute partial"):
         pacf(e, 50)
+
+
+def test_pacf_negative_nlags():
+    # negative nlags used to be clamped to 1 by max(nlags, 1) instead of
+    # raising, silently returning a single lag
+    rs = np.random.RandomState(12487)
+    e = rs.standard_normal(99)
+    with pytest.raises(ValueError, match="non-negative"):
+        pacf(e, -5)
+    # nlags=0 keeps its historical clamp to a single lag
+    assert pacf(e, 0).shape == (2,)
 
 
 def test_coint_auto_tstat():
@@ -2842,3 +2981,49 @@ def test_stattools_fixed_arity_result_objects():
     assert res[0] == res.coint_t
     assert res[1] == res.pvalue
     assert res[2] is res.critical_values
+
+
+@pytest.mark.parametrize("func", [acf, pacf, ccf, pccf])
+def test_confint_alpha_out_of_range(func):
+    # alpha outside (0, 1) previously returned inf/-inf bounds silently
+    rng = np.random.RandomState(1234)
+    x = rng.normal(size=50)
+    y = rng.normal(size=50)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        if func in (ccf, pccf):
+            func(x, y, nlags=5, alpha=2)
+        else:
+            func(x, nlags=5, alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        if func in (ccf, pccf):
+            func(x, y, nlags=5, alpha=0)
+        else:
+            func(x, nlags=5, alpha=0)
+    # a valid alpha still returns the interval
+    res = acf(x, nlags=5, alpha=0.05)
+    assert len(res) == 2
+    assert np.isfinite(res[1]).all()
+
+
+def test_arma_order_select_ic_negative_bounds():
+    # a negative max_ar or max_ma used to empty one of the order grids and
+    # leak a bare numpy error from the argmin over the empty sequence
+    rs = np.random.RandomState(12345)
+    y = rs.standard_normal(50)
+    with pytest.raises(ValueError, match="must be non-negative"):
+        arma_order_select_ic(y, max_ar=-1, max_ma=2)
+    with pytest.raises(ValueError, match="must be non-negative"):
+        arma_order_select_ic(y, max_ar=2, max_ma=-1)
+
+
+def test_q_stat_invalid_nobs():
+    # nobs <= len(x) previously divided by zero (nobs=-1) or returned a
+    # degenerate statistic without any error
+    with pytest.raises(ValueError, match="nobs must be larger"):
+        q_stat(np.array([0.5, 0.3]), nobs=-1)
+    with pytest.raises(ValueError, match="nobs must be larger"):
+        q_stat(np.array([0.5, 0.3]), nobs=2)
+    q, p = q_stat(np.array([0.5, 0.3]), nobs=50)
+    assert np.isfinite(q).all()
+    assert np.isfinite(p).all()
+

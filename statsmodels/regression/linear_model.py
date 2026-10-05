@@ -58,7 +58,7 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import pinv_extended
-from statsmodels.tools.validation import bool_like, float_like, string_like
+from statsmodels.tools.validation import bool_like, float_like, int_like, string_like
 
 from . import _prediction as pred
 
@@ -1346,9 +1346,13 @@ class OLS(WLS):
             r = np.linalg.solve(vtav, q)
             params = np.dot(v, r)
 
-        from statsmodels.base.elastic_net import RegularizedResults
+        from statsmodels.base.elastic_net import (
+            RegularizedResults,
+            RegularizedResultsWrapper,
+        )
 
-        return RegularizedResults(self, params)
+        results = RegularizedResults(self, params)
+        return RegularizedResultsWrapper(results)
 
 
 class GLSAR(GLS):
@@ -1661,6 +1665,14 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
 
     # TODO: Require??
     x = np.array(x, dtype=np.float64)
+    order = int_like(order, "order", optional=False)
+    if order < 0:
+        # a negative order used to leak a bare IndexError from the
+        # autocovariance loop; order 0 stays valid — it yields empty AR
+        # parameters (AR(0) is white noise) as the empty loop below produces.
+        # Orders >= nobs keep main's behavior (degenerate but long-standing),
+        # pinned by test_pacf_1_obs and test_invalid_xfail.
+        raise ValueError(f"order must be a non-negative integer, got {order}")
     if demean:
         if not x.flags.writeable:
             x = np.require(x, requirements="W")
@@ -2551,7 +2563,7 @@ class RegressionResults(base.LikelihoodModelResults):
             # cluster robust standard errors
             groups = self.cov_kwds["groups"]
             # TODO: Might need demean option in S_crosssection by group?
-            s_inv = inv(sw.S_crosssection(scores, groups))
+            s_inv = inv(sw.S_crosssection(scores, groups) / n)
         else:
             raise ValueError(
                 "Only nonrobust, HC, HAC and cluster are " + "currently connected"
@@ -3781,7 +3793,8 @@ class OLSResults(RegressionResults):
                 b0_vals=b0_vals,
                 stochastic_exog=stochastic_exog,
             )
-            pval = 1 - stats.chi2.cdf(llr, len(param_nums))
+            # 1 - stats.chi2.cdf(llr, df) loses the upper tail
+            pval = stats.chi2.sf(llr, len(param_nums))
             weights = opt_fun_inst.new_weights if return_weights else None
         else:
             x0 = np.delete(params, param_nums)
@@ -3811,7 +3824,8 @@ class OLSResults(RegressionResults):
                     args=args,
                 )[1]
 
-            pval = 1 - stats.chi2.cdf(llr, len(param_nums))
+            # 1 - stats.chi2.cdf(llr, df) loses the upper tail
+            pval = stats.chi2.sf(llr, len(param_nums))
             if ret_params:
                 weights = opt_fun_inst.new_weights
                 nuisance_params = opt_fun_inst.new_params

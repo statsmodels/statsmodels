@@ -168,9 +168,10 @@ class PCA:
 
     .. math::
 
-        \\Omega^{-\\frac{1}{2}} X
+        X \\Omega^{\\frac{1}{2}}
 
-    where :math:`\\Omega` is a diagonal matrix composed of the weights. For
+    where :math:`\\Omega` is a diagonal matrix composed of the weights,
+    so that each column of X is scaled by the square root of its weight. For
     example, when using the GLS version of PCA, the elements of :math:`\\Omega`
     will be the inverse of the variances of the residuals from
 
@@ -261,6 +262,9 @@ class PCA:
 
         # Check ncomp against maximum
         min_dim = min(self._nobs, self._nvar)
+        ncomp = int_like(ncomp, "ncomp", optional=True)
+        if ncomp is not None and ncomp < 1:
+            raise ValueError(f"ncomp must be a positive integer, got {ncomp}")
         self._ncomp = min_dim if ncomp is None else ncomp
         if self._ncomp > min_dim:
             import warnings
@@ -460,7 +464,7 @@ estimates are based on only {eff_series} (effective) series."""
             data = adj_data - self._mu
         else:
             data = adj_data
-        return data / np.sqrt(self.weights)
+        return data * np.sqrt(self.weights)
 
     def _compute_eig(self):
         """
@@ -696,7 +700,7 @@ estimates are based on only {eff_series} (effective) series."""
 
         projection = factors[:, :ncomp].dot(coeff[:ncomp, :])
         if transform or unweight:
-            projection *= np.sqrt(self.weights)
+            projection /= np.sqrt(self.weights)
         if transform:
             # Remove the weights, which do not depend on transformation
             if self._standardize:

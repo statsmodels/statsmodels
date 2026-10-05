@@ -108,7 +108,7 @@ import numpy as np
 
 from statsmodels.stats.moment_helpers import se_cov
 from statsmodels.tools.grouputils import combine_indices, group_sums
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import int_like, string_like
 
 __all__ = [
     "cov_cluster",
@@ -603,6 +603,11 @@ def S_hac_simple(x, nlags=None, weights_func=weights_bartlett):
     if x.ndim == 1:
         x = x[:, None]
     n_periods = x.shape[0]
+    nlags = int_like(nlags, "nlags", optional=True)
+    if nlags is not None and nlags < 0:
+        # a negative nlags used to build an empty weights array and leak a
+        # bare IndexError from the kernel loop
+        raise ValueError(f"nlags must be non-negative, got {nlags}")
     if nlags is None:
         nlags = int(np.floor(4 * (n_periods / 100.0) ** (2.0 / 9.0)))
     weights = weights_func(nlags)

@@ -171,6 +171,13 @@ def to_table(data, bins=None):
     """
 
     data = np.asarray(data)
+    if data.ndim != 2:
+        # without the 2-d check a 1-d table crashed with a bare
+        # "not enough values to unpack" from the shape assignment
+        raise ValueError(
+            f"data must be a 2-d array of subjects by raters, got a "
+            f"{data.ndim}-d array"
+        )
     n_rows, n_cols = data.shape
     if bins is None:
         # I could add int conversion (reverse_index) to np.unique
@@ -248,7 +255,14 @@ def fleiss_kappa(table, method="fleiss"):
     https://doi.org/10.1007/s11634-010-0073-4.
     """
 
-    table = 1.0 * np.asarray(table)   # avoid integer division
+    table = 1.0 * np.asarray(table)
+    if table.ndim != 2:
+        # without the 2-d check a 1-d table crashed with a bare
+        # "not enough values to unpack" from the shape assignment
+        raise ValueError(
+            f"table must be a 2-d array of subjects by categories, got a "
+            f"{table.ndim}-d array"
+        )
     n_sub, n_cat = table.shape
     n_total = table.sum()
     n_rater = table.sum(1)
@@ -346,6 +360,12 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     SAS Manual
     '''
     table = np.asarray(table, float)  # avoid integer division
+    if table.ndim != 2 or table.shape[0] != table.shape[1]:
+        # without this a 1-d table crashed with a raw AxisError from the
+        # diag/axis-1 operations below
+        raise ValueError(
+            f"table must be a square 2-d array, got shape {table.shape}"
+        )
     agree = np.diag(table).sum()
     nobs = table.sum()
     probs = table / nobs

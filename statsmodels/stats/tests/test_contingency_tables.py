@@ -658,3 +658,139 @@ class Test2x2_1(Check2x2Mixin):
         ]
         cls.summary_string = "\n".join(ss)
         cls.initialize()
+
+
+@pytest.mark.parametrize(
+    "table, shift_zeros",
+    [
+        ([[40, 1], [1, 40]], False),
+        ([[30, 1], [1, 30]], False),
+    ],
+)
+def test_nominal_association_small_pvalue(table, shift_zeros):
+    """p-value must not be lost to cancellation in the far upper tail.
+
+    GH#10274. The p-value was formed as ``1 - chi2.cdf(...)``. At a large
+    statistic the CDF rounds to exactly 1.0 and the subtraction cancels the
+    whole tail, returning 0.0 for a probability that is representable.
+    """
+    from scipy import stats
+
+    rslt = ctab.Table(np.asarray(table, dtype=float),
+                      shift_zeros=shift_zeros).test_nominal_association()
+
+    expected = stats.chi2.sf(rslt.statistic, rslt.df)
+
+    assert rslt.pvalue > 0
+    assert_allclose(rslt.pvalue, expected, rtol=1e-12)
+
+
+def test_homogeneity_small_pvalue():
+    """Stuart-Maxwell p-value must survive the far upper tail. GH#10274."""
+    from scipy import stats
+
+    table = np.asarray(
+        [[18, 36, 36], [1, 18, 36], [1, 1, 18]], dtype=float
+    )
+    rslt = ctab.SquareTable(table, shift_zeros=False).homogeneity()
+
+    expected = stats.chi2.sf(rslt.statistic, rslt.df)
+
+    assert rslt.pvalue > 0
+    assert_allclose(rslt.pvalue, expected, rtol=1e-12)
+
+
+def test_stratified_test_null_odds_small_pvalue():
+    """StratifiedTable.test_null_odds p-value must not cancel. GH#10274."""
+    from scipy import stats
+
+    table = np.asarray(
+        [[[60, 60], [1, 1]], [[1, 1], [60, 60]]], dtype=float
+    )
+    rslt = ctab.StratifiedTable(table).test_null_odds()
+
+    expected = stats.chi2.sf(rslt.statistic, 1)
+
+    assert rslt.pvalue > 0
+    assert_allclose(rslt.pvalue, expected, rtol=1e-12)
+
+
+def test_negative_counts_rejected():
+    # negative counts used to flow through every statistic silently,
+    # producing e.g. a negative odds ratio
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.Table2x2([[2, 2], [2, -1]])
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.SquareTable(np.asarray([[1, 2], [3, -0.5]]))
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.Table([[1, -2], [3, 4]])
+
+
+def test_stratified_negative_counts_rejected():
+    # companion to the base-Table check: StratifiedTable keeps its own
+    # constructor, and negative counts used to flow through every statistic
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.StratifiedTable(np.asarray([[[2, 2], [2, -1]], [[3, 1], [1, 3]]], dtype=float))
+    with pytest.raises(ValueError, match="non-negative"):
+        ctab.StratifiedTable([[[2, 2], [2, 2]], [[3, 1], [1, -2]]])
+
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+def test_nonfinite_counts_rejected(bad):
+    # NaN is not negative and inf passed the check for negative counts, so that
+    # every statistic was nan or inf without an error
+    table = np.array([[2.0, 2.0], [2.0, bad]])
+    for cls in (ctab.Table, ctab.SquareTable, ctab.Table2x2):
+        with pytest.raises(ValueError, match="must be finite"):
+            cls(table)
+        with pytest.raises(ValueError, match="must be finite"):
+            cls(table, shift_zeros=False)
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.Table(pd.DataFrame(table))
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.Table([[1, 2, 3], [4, bad, 6]])
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.StratifiedTable([table, [[3, 1], [1, 3]]])
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.StratifiedTable(np.stack([table, [[3.0, 1], [1, 3]]], axis=2))
+
+
+@pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize("position", [(0, 0), (0, 1), (1, 0), (1, 1)])
+@pytest.mark.parametrize("exact", [True, False])
+def test_mcnemar_nonfinite_counts_rejected(bad, position, exact):
+    # for exact=True this was an obscure error of int() for NaN and inf, and
+    # for a diagonal cell the invalid count was not used
+    table = np.array([[5.0, 3.0], [2.0, 6.0]])
+    table[position] = bad
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.mcnemar(table, exact=exact)
+    with pytest.raises(ValueError, match="must be finite"):
+        ctab.mcnemar(pd.DataFrame(table), exact=exact)
+
+
+@pytest.mark.parametrize("exact", [True, False])
+def test_mcnemar_negative_counts_rejected(exact):
+    # the counts were used without a check, the statistic for a negative
+    # off-diagonal count is meaningless
+    for table in ([[5, -1], [2, 6]], [[5, 1], [-2, 6]], [[-5, 1], [2, 6]]):
+        with pytest.raises(ValueError, match="non-negative"):
+            ctab.mcnemar(np.asarray(table), exact=exact)
+
+
+def test_table2x2_confint_invalid_alpha_raises():
+    # alpha outside (0, 1) previously returned (inf, 0.0) silently
+    t2 = ctab.Table2x2(np.array([[10.0, 5.0], [8.0, 12.0]]))
+    for confint in (
+        t2.oddsratio_confint,
+        t2.log_oddsratio_confint,
+        t2.riskratio_confint,
+        t2.log_riskratio_confint,
+    ):
+        with pytest.raises(ValueError, match="alpha must be in the range"):
+            confint(alpha=2)
+        with pytest.raises(ValueError, match="alpha must be in the range"):
+            confint(alpha=0)
+    lo, hi = t2.oddsratio_confint()
+    assert np.isfinite([lo, hi]).all()
+    assert 0 < lo < hi

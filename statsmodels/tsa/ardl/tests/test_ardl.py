@@ -8,6 +8,7 @@ import pytest
 
 from statsmodels.datasets import danish_data
 from statsmodels.iolib.summary import Summary
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.ardl.model import (
@@ -723,6 +724,32 @@ def test_apply_wrong_number_of_exog_columns_raises():
         res.apply(endog=y.iloc[:50], exog=x.iloc[:50, :2])
 
 
+@pytest.mark.parametrize("causal", [True, False])
+def test_uecm_apply_append_keep_uecm(causal):
+    # UECMResults inherits ARDLResults.apply, which rebuilt the model as an
+    # ARDL and paired it with the UECM parameters
+    y = dane_data.lrm
+    x = dane_data[["lry", "ibo", "ide"]]
+    res = UECM(y.iloc[:45], 3, x.iloc[:45], 2, trend="c", causal=causal).fit()
+
+    fresh = UECM(y.iloc[:50], 3, x.iloc[:50], 2, trend="c", causal=causal)
+    expected = fresh.predict(res.params)
+
+    applied = res.apply(endog=y.iloc[:50], exog=x.iloc[:50])
+    assert isinstance(applied.model, UECM)
+    assert list(applied.params.index) == list(res.params.index)
+    assert_allclose(applied.model._x, fresh._x)
+    assert_allclose(applied.predict(), expected)
+
+    appended = res.append(endog=y.iloc[45:50], exog=x.iloc[45:50])
+    assert isinstance(appended.model, UECM)
+    assert_allclose(appended.predict(), expected)
+
+    refit = res.apply(endog=y.iloc[:50], exog=x.iloc[:50], refit=True)
+    assert isinstance(refit.model, UECM)
+    assert_allclose(refit.params, fresh.fit().params)
+
+
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.smoke
@@ -1021,3 +1048,23 @@ def test_ardl_uecm_summary_after_remove_data(model, lags, pandas):
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+@pytest.mark.parametrize("model", [ARDL, UECM])
+@pytest.mark.parametrize("trend", ["n", "c", "ct"])
+def test_ardl_uecm_rsquared(data, model, trend):
+    res = model(data.y, 3, data.x, 2, trend=trend).fit()
+    assert res.model.k_constant == int(trend != "n")
+    # OLS detects the constant in the design matrix itself
+    ols_res = OLS(res.model._y, res.model._x).fit()
+    assert_allclose(res.rsquared, ols_res.rsquared)
+    assert_allclose(res.ess, ols_res.ess)
+
+
+def test_ardl_k_constant_deterministic(data):
+    deterministic = DeterministicProcess(data.y.index, constant=True, order=1)
+    mod = ARDL(data.y, 2, data.x, 2, trend="n", deterministic=deterministic)
+    assert mod.k_constant == 1
+    res = mod.fit()
+    ols_res = OLS(mod._y, mod._x).fit()
+    assert_allclose(res.rsquared, ols_res.rsquared)

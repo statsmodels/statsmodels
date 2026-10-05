@@ -920,6 +920,22 @@ def test_power_solver():
             )
 
 
+@pytest.mark.parametrize("alpha", [0.05, 0.01])
+def test_solve_power_alpha_search_leaves_unit_interval(alpha):
+    # The first root finder does not converge for these problems, and the
+    # fallback fsolve evaluates the power at alpha < 0. The check of alpha then
+    # raised, and the solve failed although the problem has a solution. The
+    # solution is exact to 1e-13 with scipy 1.15, 1.18 and the development
+    # version. (A problem like effect_size=0.1, nobs=1000, alpha=0.01 is only
+    # solved to a relative error of 1e-4 with scipy 1.15.)
+    es, nobs = 0.3, 300
+    power = smp.TTestPower().power(es, nobs, alpha)
+    solved = smp.TTestPower().solve_power(
+        effect_size=es, nobs=nobs, alpha=None, power=power
+    )
+    assert_allclose(solved, alpha, rtol=1e-3)
+
+
 def test_solve_power_no_solution_returns_nan():
     # GH#9378: when the power equation has no solution the root finder
     # cannot converge. Previously solve_power still returned the last value
@@ -1132,3 +1148,26 @@ def test_alternative_deprecated_alias(power_func):
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         power_func("bogus")
+
+
+@pytest.mark.parametrize(
+    "cls, kwargs",
+    [
+        (smp.TTestPower, {"effect_size": 0.3, "nobs": 50}),
+        (smp.NormalIndPower, {"effect_size": 0.3, "nobs1": 50}),
+        (smp.FTestPower, {"effect_size": 0.3, "df_num": 3, "df_denom": 57}),
+        (smp.FTestPowerF2, {"effect_size": 0.3, "df_num": 3, "df_denom": 57}),
+    ],
+)
+def test_power_class_invalid_inputs_raises(cls, kwargs):
+    # alpha outside (0, 1) previously returned power > 1 or nan silently
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        cls().power(alpha=2, **kwargs)
+    if cls in (smp.FTestPower, smp.FTestPowerF2):
+        with pytest.raises(ValueError, match="df_num and df_denom must be positive"):
+            cls().power(effect_size=0.3, df_num=-1, df_denom=57, alpha=0.05)
+        with pytest.raises(ValueError, match="df_num and df_denom must be positive"):
+            cls().power(effect_size=0.3, df_num=3, df_denom=0, alpha=0.05)
+    p = cls().power(alpha=0.05, **kwargs)
+    assert np.isfinite(p)
+    assert 0 < p < 1

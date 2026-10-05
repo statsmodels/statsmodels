@@ -47,7 +47,7 @@ def savetxt(fname, X, names=None, fmt="%.18e", delimiter=" "):
     flags:
         ``-`` : left justify
 
-        ``+`` : Forces to preceed result with + or -.
+        ``+`` : Forces to precede result with + or -.
 
         ``0`` : Left pad the number with zeros instead of space (see width).
 

@@ -29,6 +29,10 @@ from scipy import stats
 from scipy.stats import nbinom
 
 import statsmodels.api as sm
+from statsmodels.discrete.count_model import (
+    ZeroInflatedNegativeBinomialP,
+    ZeroInflatedPoisson,
+)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 from statsmodels.discrete.discrete_model import (
     CountModel,
@@ -42,6 +46,7 @@ from statsmodels.discrete.discrete_model import (
     Poisson,
     Probit,
 )
+from statsmodels.discrete.truncated_model import TruncatedLFPoisson
 import statsmodels.formula.api as smf
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.sm_exceptions import (
@@ -3778,6 +3783,104 @@ def test_mnlogit_resid_response():
     assert_allclose(res_mnl.resid_response[:, 0], -res_logit.resid_response, rtol=1e-7)
 
 
+@pytest.mark.parametrize("kind", ["dummy", "count"])
+def test_mnlogit_margeff_dummy_count(kind):
+    # GH5488, get_margeff with dummy=True or count=True raised a ValueError
+    # in _derivative_predict whenever the number of exog columns K differed
+    # from the number of choices J
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rng = np.random.default_rng(5488)
+    nobs = 500
+    exog = sm.add_constant(
+        np.column_stack(
+            [
+                rng.normal(size=nobs),
+                rng.poisson(2, size=nobs),
+                rng.random(nobs) > 0.5,
+            ]
+        ).astype(float)
+    )
+    endog = rng.integers(0, 3, size=nobs)
+    mod = MNLogit(endog, exog)
+    res = mod.fit(disp=0)
+    assert mod.K != mod.J
+
+    col = 3 if kind == "dummy" else 2
+
+    def effect(params):
+        params = params.reshape(mod.K, mod.J - 1, order="F")
+        exog0, exog1 = exog.copy(), exog.copy()
+        if kind == "dummy":
+            exog0[:, col] = 0
+            exog1[:, col] = 1
+            step = 1
+        else:
+            exog0[:, col] -= 1
+            exog1[:, col] += 1
+            step = 2
+        diff = mod.predict(params, exog1) - mod.predict(params, exog0)
+        return (diff / step).mean(0)
+
+    marg = res.get_margeff(**{kind: True})
+    params = res.params.ravel(order="F")
+    jac = approx_fprime(params, effect, centered=True)
+    se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
+    # margeff excludes the constant column
+    assert_allclose(marg.margeff[col - 1], effect(params), rtol=1e-10)
+    assert_allclose(marg.margeff_se[col - 1], se, rtol=1e-6)
+
+
+@pytest.mark.parametrize("k_choices", [3, 4])
+def test_mnlogit_margeff_dummy_and_count_together(k_choices):
+    # GH5488, dummy=True and count=True in the same call, with K = 5 columns
+    # different from the number of choices J and signal in the data, so that
+    # the marginal effects are not close to zero
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rng = np.random.default_rng(8442 + k_choices)
+    nobs = 1500
+    x = rng.normal(size=nobs)
+    count = rng.poisson(2, size=nobs)
+    dummy1 = rng.random(nobs) > 0.5
+    dummy2 = rng.random(nobs) > 0.7
+    exog = sm.add_constant(np.column_stack([x, count, dummy1, dummy2]).astype(float))
+    beta = rng.normal(scale=0.5, size=(exog.shape[1], k_choices - 1))
+    prob = np.exp(np.column_stack([np.zeros(nobs), exog @ beta]))
+    prob /= prob.sum(1, keepdims=True)
+    endog = (rng.random(nobs)[:, None] > prob.cumsum(1)).sum(1)
+    mod = MNLogit(endog, exog)
+    res = mod.fit(disp=0)
+    assert mod.K != mod.J
+
+    def effects(params):
+        params = params.reshape(mod.K, mod.J - 1, order="F")
+        out = []
+        for col, kind in [(2, "count"), (3, "dummy"), (4, "dummy")]:
+            exog0, exog1 = exog.copy(), exog.copy()
+            if kind == "dummy":
+                exog0[:, col] = 0
+                exog1[:, col] = 1
+                step = 1
+            else:
+                exog0[:, col] -= 1
+                exog1[:, col] += 1
+                step = 2
+            diff = mod.predict(params, exog1) - mod.predict(params, exog0)
+            out.append((diff / step).mean(0))
+        return np.concatenate(out)
+
+    marg = res.get_margeff(dummy=True, count=True)
+    params = res.params.ravel(order="F")
+    expected = effects(params)
+    jac = approx_fprime(params, effects, centered=True)
+    se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
+    # margeff excludes the constant column, rows 1 to 3 are count, dummy1, dummy2
+    assert_allclose(marg.margeff[1:4].ravel(), expected, rtol=1e-8)
+    assert_allclose(marg.margeff_se[1:4].ravel(), se, rtol=1e-5)
+    assert np.abs(expected).max() > 0.01
+
+
 def _fit_logit_for_summary():
     data = load_spector()
     data.exog = sm.add_constant(data.exog, prepend=False)
@@ -4257,3 +4360,151 @@ def test_probit_extreme_observation_fit():
         assert_allclose(res.params, ref.x, rtol=1e-4)
         assert_allclose(res.llf, -ref.fun, rtol=1e-8)
         assert np.all(np.isfinite(res.bse))
+
+
+@pytest.mark.parametrize(
+    "model_class",
+    [
+        Poisson,
+        NegativeBinomial,
+        NegativeBinomialP,
+        GeneralizedPoisson,
+        ZeroInflatedPoisson,
+        ZeroInflatedNegativeBinomialP,
+        TruncatedLFPoisson,
+    ],
+)
+def test_use_t_honored_nonrobust(model_class):
+    # regression test for GH#10307: fit(use_t=True) was silently ignored
+    # under the default (nonrobust) covariance, while robust cov_types
+    # honored it. The requested Student-t inference must be preserved.
+    # Poisson was not affected.
+    rng = np.random.default_rng(0)
+    n = 400
+    x = rng.standard_normal(n)
+    exog = np.column_stack([np.ones(n), x])
+    mu = np.exp(0.5 + 0.3 * x)
+    # overdispersed counts with extra zeros, zeros are dropped for truncation
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    endog = np.where(rng.uniform(size=n) < 0.3, 0, endog)
+    if model_class is TruncatedLFPoisson:
+        exog, endog = exog[endog > 0], endog[endog > 0]
+
+    res = model_class(endog, exog).fit(disp=0, use_t=True)
+    assert res.cov_type == "nonrobust"
+    assert res.use_t is True
+    tvalues = res.params / res.bse
+    assert_allclose(res.tvalues, tvalues)
+    assert_allclose(
+        res.pvalues, 2 * stats.t.sf(np.abs(tvalues), res.df_resid), rtol=1e-8
+    )
+    crit = stats.t.ppf(0.975, res.df_resid)
+    ci = np.column_stack([res.params - crit * res.bse, res.params + crit * res.bse])
+    assert_allclose(res.conf_int(), ci)
+
+    # the default and an explicit use_t=False are still normal based
+    for kwds in [{}, {"use_t": False}]:
+        res_z = model_class(endog, exog).fit(disp=0, **kwds)
+        assert res_z.use_t is False
+        assert_allclose(res_z.params, res.params)
+        assert_allclose(
+            res_z.pvalues, 2 * stats.norm.sf(np.abs(res_z.tvalues)), rtol=1e-8
+        )
+
+
+def test_binary_model_offset_length_mismatch():
+    # Logit/Probit used to leak a bare numpy broadcast error at fit time
+    # for a mismatched offset; CountModel already rejects it up front
+    rs = np.random.RandomState(12345)
+    endog = (rs.standard_normal(40) > 0).astype(int)
+    exog = np.column_stack([np.ones(40), rs.standard_normal((40, 2))])
+    with pytest.raises(ValueError, match="offset is not the same length as endog"):
+        Logit(endog, exog, offset=np.ones(10))
+    with pytest.raises(ValueError, match="offset is not the same length as endog"):
+        Probit(endog, exog, offset=np.ones(10))
+    # a correctly sized offset still fits
+    res = Logit(endog, exog, offset=np.zeros(40)).fit(disp=0)
+    assert res.params.shape == (3,)
+
+
+def _binary_offset_data():
+    rs = np.random.RandomState(8264)
+    nobs = 60
+    exog = np.column_stack([np.ones(nobs), rs.standard_normal((nobs, 2))])
+    endog = (rs.standard_normal(nobs) + exog[:, 1] > 0).astype(float)
+    offset = 0.1 * rs.standard_normal(nobs)
+    return endog, exog, offset
+
+
+@pytest.mark.parametrize("model", [Logit, Probit])
+def test_binary_model_offset_missing_drop(model):
+    # The missing value handling drops the same rows from endog, exog and
+    # offset, and the offset passed in has the length of the data before the
+    # rows were dropped. The length check compared the argument with the
+    # reduced endog and rejected such a model.
+    endog, exog, offset = _binary_offset_data()
+    nobs = endog.shape[0]
+    exog_nan = exog.copy()
+    exog_nan[[5, 17], 1] = np.nan
+    keep = np.ones(nobs, dtype=bool)
+    keep[[5, 17]] = False
+    expected = model(endog[keep], exog[keep], offset=offset[keep]).fit(disp=0)
+
+    mod = model(endog, exog_nan, offset=offset, missing="drop")
+    assert mod.endog.shape[0] == nobs - 2
+    assert mod.offset.shape[0] == nobs - 2
+    res = mod.fit(disp=0)
+    assert_allclose(res.params, expected.params, rtol=1e-8)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+
+    # the same with pandas objects
+    res_pd = model(
+        pd.Series(endog), pd.DataFrame(exog_nan), offset=pd.Series(offset), missing="drop"
+    ).fit(disp=0)
+    assert_allclose(res_pd.params.to_numpy(), expected.params, rtol=1e-8)
+
+    # a missing value in the offset itself drops the row
+    offset_nan = offset.copy()
+    offset_nan[[5, 17]] = np.nan
+    res_off = model(endog, exog, offset=offset_nan, missing="drop").fit(disp=0)
+    assert_allclose(res_off.params, expected.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("model", [Logit, Probit])
+def test_binary_model_offset_formula_missing(model):
+    # formula models drop rows with missing values by default
+    endog, exog, offset = _binary_offset_data()
+    df = pd.DataFrame({"y": endog, "a": exog[:, 1], "b": exog[:, 2]})
+    df.loc[[5, 17], "a"] = np.nan
+    res = model.from_formula("y ~ a + b", df, offset=offset).fit(disp=0)
+    keep = df.notna().all(axis=1).to_numpy()
+    assert res.nobs == keep.sum()
+    expected = model(endog[keep], exog[keep], offset=offset[keep]).fit(disp=0)
+    assert_allclose(res.params.to_numpy(), expected.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("model", [Logit, Probit])
+@pytest.mark.parametrize(
+    "offset",
+    [0.3, np.float64(0.3), 1, np.array(0.3)],
+    ids=["float", "np.float64", "int", "0-d array"],
+)
+def test_binary_model_scalar_offset(model, offset):
+    # a scalar offset broadcasts and was accepted before the length check
+    endog, exog, _ = _binary_offset_data()
+    res = model(endog, exog, offset=offset).fit(disp=0)
+    expected = model(endog, exog, offset=np.full(endog.shape[0], float(offset))).fit(disp=0)
+    assert_allclose(res.params, expected.params, rtol=1e-8)
+
+
+def test_negativebinomial_rejects_alpha_kwarg():
+    # alpha was swallowed by **kwargs and silently ignored even though the
+    # dispersion parameter is estimated, not fixed, for this model
+    y = np.random.RandomState(987234).poisson(2, size=50)
+    x = np.ones((50, 2))
+    with pytest.raises(TypeError, match="alpha"):
+        NegativeBinomial(y, x, loglike_method="nb1", alpha=0.5)
+
+    # the estimator itself keeps working
+    mod = NegativeBinomial(y, x, loglike_method="nb1")
+    assert mod.k_extra == 1

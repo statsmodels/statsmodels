@@ -65,12 +65,19 @@ class DescrStatsW:
     data : array_like, 1-D or 2-D
         dataset
     weights : array_like, optional
-        weights for each observation, with same length as zero axis of data
+        weights for each observation, with same length as zero axis of data.
+        The weights must be finite and non-negative, and at least one weight
+        must be positive.
     ddof : int or float, optional
         default ddof=0, degrees of freedom correction used for second moments,
         var, std, cov, corrcoef.
         However, statistical tests are independent of `ddof`, based on the
         standard formulas.
+
+    Raises
+    ------
+    ValueError
+        If any weight is not finite or is negative, or if all weights are zero.
 
     Examples
     --------
@@ -119,6 +126,14 @@ class DescrStatsW:
             # TODO: why squeeze?
             if len(self.weights.shape) > 1 and len(self.weights) > 1:
                 self.weights = self.weights.squeeze()
+        # NaN is not negative, so that it has to be checked first
+        if not np.isfinite(self.weights).all():
+            raise ValueError("weights must be finite")
+        if np.any(self.weights < 0):
+            raise ValueError("weights must be non-negative")
+        # empty data keeps its nan results
+        if self.weights.size > 0 and not np.any(self.weights > 0):
+            raise ValueError("at least one weight must be positive")
         self.ddof = ddof
 
     @cache_readonly
@@ -166,7 +181,14 @@ class DescrStatsW:
         var : float or ndarray
             variance with denominator ``sum_weights - ddof``
         """
-        return self.sumsquares / (self.sum_weights - ddof)
+        # Rescale the deviations before squaring, the sum of squares can
+        # overflow although the variance is representable. `initial` keeps an
+        # empty sample at the historical 0 / 0 -> nan result.
+        demeaned = self.demeaned
+        scale = np.max(np.abs(demeaned), axis=0, initial=0.0)
+        scale = np.where(scale == 0, 1.0, scale)
+        sumsquares = np.dot(((demeaned / scale) ** 2).T, self.weights)
+        return sumsquares / (self.sum_weights - ddof) * scale * scale
 
     def std_ddof(self, ddof=0):
         """
@@ -187,7 +209,7 @@ class DescrStatsW:
     @cache_readonly
     def var(self):
         """variance with default degrees of freedom correction"""
-        return self.sumsquares / (self.sum_weights - self.ddof)
+        return self.var_ddof(self.ddof)
 
     @cache_readonly
     def _var(self):
@@ -196,7 +218,7 @@ class DescrStatsW:
 
         used for statistical tests with controlled ddof
         """
-        return self.sumsquares / self.sum_weights
+        return self.var_ddof(0)
 
     @cache_readonly
     def std(self):
@@ -283,6 +305,10 @@ class DescrStatsW:
         import pandas as pd
 
         probs = np.asarray(probs)
+        if np.any(probs < 0) or np.any(probs > 1):
+            # the docstring requires [0, 1]; out-of-range values previously
+            # silently extrapolated beyond the data range
+            raise ValueError("probs must be in the range [0, 1]")
         probs = np.atleast_1d(probs)
 
         if self.data.ndim == 1:
@@ -483,7 +509,11 @@ class DescrStatsW:
             test
 
         """
-
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         t1, pv1, df1 = self.ttest_mean(low, alternative="larger")
         t2, pv2, df2 = self.ttest_mean(upp, alternative="smaller")
         return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
@@ -586,7 +616,11 @@ class DescrStatsW:
             test statistic and p-value for upper threshold test
 
         """
-
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         t1, pv1 = self.ztest_mean(low, alternative="larger")
         t2, pv2 = self.ztest_mean(upp, alternative="smaller")
         return np.maximum(pv1, pv2), (t1, pv1), (t2, pv2)
@@ -884,6 +918,9 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
         deprecated=_ALTERNATIVE_ALIASES,
         removed_after="0.16",
     )
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alternative == "two-sided":
         zcrit = stats.norm.ppf(1 - alpha / 2.0)
         lower = mean - zcrit * std_mean
@@ -1029,7 +1066,16 @@ class CompareMeans:
         # this uses ``_var`` to use ddof=0 for formula
         d1 = self.d1
         d2 = self.d2
-        return np.sqrt(d1._var / (d1.nobs - 1) + d2._var / (d2.nobs - 1))
+        sem1 = d1._var / (d1.nobs - 1)
+        sem2 = d2._var / (d2.nobs - 1)
+        # normalize by the larger contribution so their sum cannot overflow
+        # although each variance is finite; a non positive or non finite
+        # scale falls back to the plain sum
+        scale = np.maximum(sem1, sem2)
+        scale = np.where((scale > 0) & np.isfinite(scale), scale, 1.0)
+        a = sem1 / scale
+        b = sem2 / scale
+        return np.sqrt(scale) * np.sqrt(a + b)
 
     @cache_readonly
     def std_meandiff_pooledvar(self):
@@ -1039,13 +1085,20 @@ class CompareMeans:
         d1 = self.d1
         d2 = self.d2
         # could make var_pooled into attribute
-        var_pooled = (
-            (d1.sumsquares + d2.sumsquares)
-            /
-            # (d1.nobs - d1.ddof + d2.nobs - d2.ddof))
-            (d1.nobs - 1 + d2.nobs - 1)
-        )
-        return np.sqrt(var_pooled * (1.0 / d1.nobs + 1.0 / d2.nobs))
+        nobs1, nobs2 = d1.nobs, d2.nobs
+        df_pooled = nobs1 + nobs2 - 2
+        # weight the variances instead of the sums of squares, the latter
+        # could overflow although the pooled variance is representable
+        var1 = (nobs1 / df_pooled) * d1._var
+        var2 = (nobs2 / df_pooled) * d2._var
+        # normalize by the larger contribution so their sum cannot overflow
+        # although each term is finite; a non positive or non finite scale
+        # falls back to the plain sum
+        scale = np.maximum(var1, var2)
+        scale = np.where((scale > 0) & np.isfinite(scale), scale, 1.0)
+        a = var1 / scale
+        b = var2 / scale
+        return np.sqrt(scale) * np.sqrt((a + b) * (1.0 / nobs1 + 1.0 / nobs2))
 
     def dof_satt(self):
         """degrees of freedom of Satterthwaite for unequal variance"""
@@ -1055,6 +1108,13 @@ class CompareMeans:
         # except I use  ``_var`` which has ddof=0
         sem1 = d1._var / (d1.nobs - 1)
         sem2 = d2._var / (d2.nobs - 1)
+        # normalize by the larger contribution so their sum cannot overflow
+        # although each variance is finite; the ratios below are unchanged
+        # by the rescaling
+        scale = np.maximum(sem1, sem2)
+        scale = np.where((scale > 0) & np.isfinite(scale), scale, 1.0)
+        sem1 = sem1 / scale
+        sem2 = sem2 / scale
         semsum = sem1 + sem2
         z1 = (sem1 / semsum) ** 2 / (d1.nobs - 1)
         z2 = (sem2 / semsum) ** 2 / (d2.nobs - 1)
@@ -1284,6 +1344,11 @@ class CompareMeans:
         t2, pv2 : tuple of floats
             test statistic and pvalue for upper threshold test
         """
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         tt1 = self.ttest_ind(alternative="larger", usevar=usevar, value=low)
         tt2 = self.ttest_ind(alternative="smaller", usevar=usevar, value=upp)
         # TODO: remove tuple return, use same as for function tost_ind
@@ -1311,6 +1376,11 @@ class CompareMeans:
         t2, pv2 : tuple of floats
             test statistic and pvalue for upper threshold test
         """
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         tt1 = self.ztest_ind(alternative="larger", usevar=usevar, value=low)
         tt2 = self.ztest_ind(alternative="smaller", usevar=usevar, value=upp)
         # TODO: remove tuple return, use same as for function tost_ind
@@ -1511,7 +1581,11 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
         test statistic, pvalue and degrees of freedom for upper threshold test
 
     """
-
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        # bounds may be vectorized per endpoint, so compare elementwise
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     if transform:
         if transform is np.log:
             # avoid hstack in special case
@@ -1563,7 +1637,7 @@ def ztest(
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. If ``unequal``, then the standard deviation of the sample is
         assumed to be different.
-    ddof : int or float, optional
+    ddof : float or array_like, optional
         Degrees of freedom use in the calculation of the variance of the mean
         estimate. In the case of comparing means this is one, however it can
         be adjusted for testing other statistics (proportion, correlation)
@@ -1588,6 +1662,8 @@ def ztest(
     usevar = string_like(
         usevar, "usevar", options=("pooled", "unequal"), lower=False
     )
+    if not np.all(np.greater_equal(ddof, 0)):
+        raise ValueError(f"ddof must be non-negative, got {ddof}")
 
     x1 = np.asarray(x1)
     nobs1 = x1.shape[0]
@@ -1639,7 +1715,7 @@ def zconfint(
         In the two sample case, value is the difference between mean of x1 and
         mean of x2 under the Null hypothesis. The test statistic is
         `x1_mean - x2_mean - value`.
-    alpha : float, optional
+    alpha : float or array_like, optional
         significance level for the confidence interval, coverage is
         ``1-alpha``
     alternative : {"two-sided", "larger", "smaller"}, optional
@@ -1655,7 +1731,7 @@ def zconfint(
         Currently, only 'pooled' is implemented.
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. see CompareMeans.ztest_ind for different options.
-    ddof : int or float, optional
+    ddof : float or array_like, optional
         Degrees of freedom use in the calculation of the variance of the mean
         estimate. In the case of comparing means this is one, however it can
         be adjusted for testing other statistics (proportion, correlation)
@@ -1678,6 +1754,9 @@ def zconfint(
     # mostly duplicate code from ztest
 
     _ = string_like(usevar, "usevar", options=("pooled",), lower=False)
+    if not np.all(np.greater_equal(ddof, 0)):
+        raise ValueError(f"ddof must be non-negative, got {ddof}")
+
     x1 = np.asarray(x1)
     nobs1 = x1.shape[0]
     x1_mean = x1.mean(0)
@@ -1738,6 +1817,11 @@ def ztost(x1, low, upp, x2=None, usevar="pooled", ddof=1.0):
     checked only for 1 sample case
 
     """
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        # bounds may be vectorized per endpoint, so compare elementwise
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     tt1 = ztest(
         x1, x2, alternative="larger", usevar=usevar, value=low, ddof=ddof
     )

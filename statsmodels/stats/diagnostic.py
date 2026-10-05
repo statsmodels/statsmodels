@@ -117,7 +117,19 @@ def _check_nested_results(results_x, results_z):
         raise TypeError("results_x must come from a linear regression model")
     if not isinstance(results_z, RegressionResultsWrapper):
         raise TypeError("results_z must come from a linear regression model")
-    if not np.allclose(results_x.model.endog, results_z.model.endog):
+    endog_x = results_x.model.endog
+    endog_z = results_z.model.endog
+    if endog_x.shape[0] != endog_z.shape[0]:
+        # the non-nested tests combine residuals from the two fits element
+        # by element; mismatched samples used to leak a bare numpy
+        # broadcast error instead of naming the problem
+        raise ValueError(
+            "the two models must be fit on the same number of observations; got "
+            f"{endog_x.shape[0]} and {endog_z.shape[0]}. This happens, for "
+            "example, if missing values are dropped from the variables of only "
+            "one of the models."
+        )
+    if not np.allclose(endog_x, endog_z):
         raise ValueError("endogenous variables in models are not the same")
 
     x = results_x.model.exog
@@ -647,12 +659,12 @@ def acorr_ljungbox(
 
         * lb_stat - The Ljung-Box test statistic.
         * lb_pvalue - The p-value based on chi-square distribution. The
-          p-value is computed as 1 - chi2.cdf(lb_stat, dof) where dof is
+          p-value is computed as chi2.sf(lb_stat, dof) where dof is
           lag - model_df. If lag - model_df <= 0, then NaN is returned for
           the pvalue.
         * bp_stat - The Box-Pierce test statistic.
         * bp_pvalue - The p-value based for Box-Pierce test on chi-square
-          distribution. The p-value is computed as 1 - chi2.cdf(bp_stat, dof)
+          distribution. The p-value is computed as chi2.sf(bp_stat, dof)
           where dof is lag - model_df. If lag - model_df <= 0, then NaN is
           returned for the pvalue.
 
@@ -749,6 +761,13 @@ def acorr_ljungbox(
         lags = np.arange(1, lags + 1)
     lags = array_like(lags, "lags", dtype="int")
     maxlag = lags.max()
+    if maxlag >= nobs:
+        # an autocorrelation at lag >= nobs is undefined; requesting one
+        # used to crash inside acf with a broadcast error
+        raise ValueError(
+            f"The maximum lag ({maxlag}) must be smaller than the number "
+            f"of observations ({nobs})"
+        )
 
     # normalize by nobs not (nobs-nlags)
     # SS: unbiased=False is default now
@@ -1068,6 +1087,10 @@ def acorr_breusch_godfrey(
     BG adds lags of residual to exog in the design matrix for the auxiliary
     regression with residuals as endog. See [1]_, section 12.7.1.
 
+    For ``AutoReg`` and ``ARDL`` results, the design matrix used in estimation,
+    which includes the lagged endogenous and exogenous variables and the
+    deterministic terms, is used as exog in the auxiliary regression.
+
     References
     ----------
     .. [1] Greene, W. H. Econometric Analysis. New Jersey. Prentice Hall;
@@ -1079,16 +1102,32 @@ def acorr_breusch_godfrey(
         raise ValueError(
             "Model resid must be a 1d array. Cannot be used on multivariate models."
         )
-    exog_old = res.model.exog
+    from statsmodels.tsa.ar_model import AutoReg
+
+    if isinstance(res.model, AutoReg):
+        # model.exog only holds the user exog, so use the full regressor
+        # matrix including lags and deterministic terms
+        exog_old = res.model._x
+        k_constant = res.model.k_constant
+    else:
+        exog_old = res.model.exog
+        k_constant = res.k_constant
     nobs = x.shape[0]
     if nlags is None:
         nlags = min(10, nobs // 5)
+    if nlags < 0:
+        raise ValueError(f"nlags must be non-negative, got {nlags}")
+    if nlags >= nobs:
+        raise ValueError(
+            "nlags must be smaller than the number of observations "
+            f"({nobs}), got {nlags}"
+        )
 
     x = np.concatenate((np.zeros(nlags), x))
 
     xdall = lagmat(x[:, None], nlags, trim="both")
     nobs = xdall.shape[0]
-    if not bool(res.k_constant):
+    if not bool(k_constant):
         xdall = np.c_[np.ones((nobs, 1)), xdall]
     xshort = x[-nobs:]
     if exog_old is None:
@@ -1371,6 +1410,14 @@ def het_goldfeldquandt(
     res_store : ResultsStore, optional
         Storage for the intermediate and final results that are calculated
 
+    Raises
+    ------
+    ValueError
+        If ``split`` is not between 0 and the number of observations, if
+        ``split + drop`` is not smaller than the number of observations, or if
+        a subsample does not have more observations than the rank of its
+        regressors.
+
     Notes
     -----
     The Null hypothesis is that the variance in the two sub-samples are the
@@ -1385,10 +1432,22 @@ def het_goldfeldquandt(
     x = np.asarray(x)
     y = np.asarray(y)  # **2
     nobs, nvars = x.shape
+    split_given = split
     if split is None:
         split = nobs // 2
     elif 0 < split < 1:
         split = int(nobs * split)
+    if not 0 < split < nobs:
+        # a negative or oversized split silently produced nan test results
+        # from empty subsample regressions
+        got = f"{split}"
+        if split_given is not None and split_given != split:
+            # a fraction that is rounded down to the number of observations
+            got = f"{split_given}, which is {split} observations"
+        raise ValueError(
+            "split must be between 0 and the number of observations "
+            f"({nobs}), got {got}"
+        )
 
     if drop is None:
         start2 = split
@@ -1396,6 +1455,11 @@ def het_goldfeldquandt(
         start2 = split + int(nobs * drop)
     else:
         start2 = split + drop
+    if start2 >= nobs:
+        raise ValueError(
+            "split + drop must be smaller than the number of observations "
+            f"({nobs}), got {start2}"
+        )
 
     if idx is not None:
         xsortind = np.argsort(x[:, idx])
@@ -1417,6 +1481,15 @@ def het_goldfeldquandt(
         },
         removed_after="0.16",
     )
+    for name, x_sub in (("first", x[:split]), ("second", x[start2:])):
+        # the residual variance of a subsample needs more observations than
+        # the rank of its regressors, the test statistic is nan otherwise
+        rank = np.linalg.matrix_rank(x_sub)
+        if x_sub.shape[0] <= rank:
+            raise ValueError(
+                f"the {name} subsample has {x_sub.shape[0]} observations, "
+                f"which is not more than the rank of its regressors ({rank})"
+            )
     resols1 = OLS(y[:split], x[:split]).fit()
     resols2 = OLS(y[start2:], x[start2:]).fit()
     fval = resols2.mse_resid / resols1.mse_resid
@@ -1629,9 +1702,12 @@ def linear_harvey_collier(res, order_by=None, skip=None):
     # I think this has different ddof than
     # B.H. Baltagi, Econometrics, 2011, chapter 8
     # but it matches Gretl and R:lmtest, pvalue at decimal=13
+    if skip is None:
+        skip = res.model.exog.shape[1]
     rr = recursive_olsresiduals(res, skip=skip, alpha=0.95, order_by=order_by)
-
-    return stats.ttest_1samp(rr[3][3:], 0)
+    # recursive residuals start at index skip, earlier entries are nan or
+    # the in-sample residual of the initial OLS fit
+    return stats.ttest_1samp(rr[3][skip:], 0)
 
 
 @deprecate_kwarg("center", None)

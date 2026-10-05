@@ -217,10 +217,18 @@ class TestPCA:
         assert_equal(x, pc_gls.data)
         assert_equal(x, pc.data)
 
+        # Checking against manual (2 steps) GLS calculation
+        pc_gls_manual = PCA(x * np.sqrt(weights), ncomp=1, standardize=False, demean=False)
+        assert_allclose(x * np.sqrt(weights), pc_gls.transformed_data)
+        assert_allclose(np.abs(pc_gls_manual.factors), np.abs(pc_gls.factors))
+        assert_allclose(np.abs(pc_gls_manual.loadings), np.abs(pc_gls.loadings))
+
         pc_weights = PCA(x, ncomp=1, standardize=False, demean=False, weights=weights)
 
         assert_allclose(weights, pc_weights.weights)
+        assert_allclose(pc_gls.transformed_data, pc_weights.transformed_data)
         assert_allclose(np.abs(pc_weights.factors), np.abs(pc_gls.factors))
+        assert_allclose(pc_gls.loadings, pc_weights.loadings)
 
     @pytest.mark.slow
     def test_wide(self):
@@ -470,3 +478,20 @@ def test_gls_warning():
     with pytest.warns(EstimationWarning, match="Many series are being down weighted"):
         factors = PCA(data, ncomp=2, gls=True).factors
     assert factors.shape == (data.shape[0], 2)
+
+
+def test_pca_ncomp_validation():
+    # a non-positive ncomp used to slice silently, e.g. returning 4 factors
+    # for ncomp=-1 on a 30x5 dataset
+    rs = np.random.RandomState(12345)
+    data = rs.standard_normal((30, 5))
+    with pytest.raises(ValueError, match="ncomp must be a positive integer"):
+        PCA(data, ncomp=-1)
+    with pytest.raises(ValueError, match="ncomp must be a positive integer"):
+        PCA(data, ncomp=0)
+    with pytest.raises(TypeError, match="ncomp"):
+        PCA(data, ncomp=2.5)
+    # the over-maximum warning-and-clamp path is unchanged
+    with pytest.warns(ValueWarning):
+        res = PCA(data, ncomp=99)
+    assert res.factors.shape == (30, 5)

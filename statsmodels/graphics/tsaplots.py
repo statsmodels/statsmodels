@@ -880,7 +880,7 @@ def seasonal_plot(grouped_x, xticklabels, ylabel=None, ax=None):
     ticks = []
     for _, df in grouped_x:
         df = df.copy()  # or sort balks for series. may be better way
-        df.sort_index()
+        df = df.sort_index()
         nobs = len(df)
         x_plot = np.arange(start, start + nobs)
         ticks.append(x_plot.mean())

@@ -220,3 +220,23 @@ def check_distribution_rvs(distfn, args, alpha, rvs):
     if pval < alpha:
         D, pval = stats.kstest(distfn.rvs, distfn.cdf, args=args, N=1000)
         assert pval > alpha, f"D = {D}; pval = {pval}; alpha = {alpha}; args = {args}"
+
+
+def test_ndarray_cumulants_match_list_and_are_not_mutated():
+    # _compute_coefs_pdf used to scale an np.asarray view of the cumulants in
+    # place: after the j=1 step the caller's variance had been overwritten with
+    # 1.0, so every higher cumulant was scaled by the wrong factor and the
+    # resulting pdf/cdf were nonsense (and differed from the list-input path).
+    cum = [12.0, 24.0, 96.0, 576.0]  # chi2(12): mean, variance, 3rd/4th cumulants
+    from statsmodels.distributions.edgeworth import ExpandedNormal
+
+    x = np.linspace(2.0, 10.0, 5)
+
+    en_list = ExpandedNormal(cum)
+    cum_arr = np.array(cum, dtype=float)
+    en_arr = ExpandedNormal(cum_arr)
+
+    assert_equal(cum_arr, np.array(cum), err_msg="caller's cumulant array was mutated")
+    assert en_arr.pdf(x).shape == en_list.pdf(x).shape
+    npt.assert_allclose(en_arr.pdf(x), en_list.pdf(x), rtol=1e-10)
+    npt.assert_allclose(en_arr.cdf(x), en_list.cdf(x), rtol=1e-10)

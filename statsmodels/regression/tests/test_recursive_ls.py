@@ -556,3 +556,22 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def test_constraints_numpy_endog():
+    # The numpy branch of the constraint setup used to write the constraint
+    # columns into the original endog array without ever appending them:
+    # a 1-d endog crashed with IndexError, and a (nobs, 1) endog silently
+    # dropped the constraints entirely (the constraint rows never entered the
+    # state space representation).
+    endog = np.asarray(dta["infl"])
+    exog = np.asarray(add_constant(dta[["m1", "unemp"]]))
+
+    mod = RecursiveLS(endog, exog, constraints="x1 + x2 = 1")
+    assert mod.ssm.k_endog == 2  # infl + one column for the constraint
+
+    res = mod.fit()
+    # The constraint is imposed and the estimates match the pandas-input
+    # results from test_constraints_stata (params: const, m1, unemp)
+    desired = [-0.7001083844336, -0.0018477514060, 1.0018477514060]
+    assert_allclose(res.params, desired)

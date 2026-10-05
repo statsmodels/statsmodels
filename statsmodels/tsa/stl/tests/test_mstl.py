@@ -108,6 +108,18 @@ def test_stl_kwargs_smoke(data):
     mod.fit()
 
 
+def test_stl_kwargs_not_consumed(data):
+    # inner_iter and outer_iter were popped from the model's kwargs on the
+    # first fit, so a second fit silently used the STL defaults
+    stl_kwargs = {"inner_iter": 1, "outer_iter": 0, "period": 12}
+    mod = MSTL(endog=data, periods=(24, 24 * 7), stl_kwargs=stl_kwargs)
+    res1 = mod.fit()
+    res2 = mod.fit()
+    assert stl_kwargs == {"inner_iter": 1, "outer_iter": 0, "period": 12}
+    assert_allclose(res2.trend, res1.trend)
+    assert_allclose(res2.seasonal, res1.seasonal)
+
+
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot(data, data_pd, close_figures):

@@ -172,6 +172,33 @@ class TestLagmat:
         lag_data2 = tools.add_lag(data, self.cpi_loc, 3, insert=True)
         assert_equal(lag_data2, results)
 
+    def test_add_lag_pandas_str_col(self):
+        # the docstring example passes a column label; it used to crash with
+        # "'<' not supported between instances of 'str' and 'int'"
+        lag_data = tools.add_lag(self.macro_df, "realgdp", 3)
+        expected = tools.add_lag(self.macro_df, self.realgdp_loc, 3)
+        assert_equal(np.asarray(lag_data), np.asarray(expected))
+
+        lag_data = tools.add_lag(self.macro_df, "realgdp", 3, drop=True)
+        expected = tools.add_lag(self.macro_df, self.realgdp_loc, 3, drop=True)
+        assert_equal(np.asarray(lag_data), np.asarray(expected))
+
+    def test_add_lag_str_col_errors(self):
+        with pytest.raises(KeyError, match="nope"):
+            tools.add_lag(self.macro_df, "nope", 3)
+        with pytest.raises(TypeError, match="pandas"):
+            tools.add_lag(np.ones((5, 2)), "realgdp", 3)
+
+    def test_add_lag_pandas_nonstr_label(self):
+        # any non-int-like col is resolved as a label, not only strings
+        df = self.macro_df.rename(columns={"realgdp": ("realgdp", "level")})
+        label = ("realgdp", "level")
+        loc = list(df.columns).index(label)
+
+        lag_data = tools.add_lag(df, label, 3)
+        expected = tools.add_lag(df, loc, 3)
+        assert_equal(np.asarray(lag_data), np.asarray(expected))
+
     def test_add_lag_ndarray(self):
         data = self.macro_df.values
         nddata = data.astype(float)
@@ -596,8 +623,12 @@ freqs = [
     "B",
     "D",
     "h",
+    "2h",
+    "min",
+    "5min",
+    "30s",
 ]
-expected = [1, 1, 4, 4, 4, 52, 52, 5, 7, 24]
+expected = [1, 1, 4, 4, 4, 52, 52, 5, 7, 24, 12, 1440, 288, 2880]
 freq_expected = [(f, e) for f, e in zip(freqs, expected, strict=True)]
 
 
@@ -606,6 +637,29 @@ def test_freq_to_period(freq_expected):
     freq, expected = freq_expected
     assert_equal(tools.freq_to_period(freq), expected)
     assert_equal(tools.freq_to_period(to_offset(freq)), expected)
+
+
+def test_freq_to_period_nondivisible_multiplier():
+    # A multiplier that does not divide a day evenly has no integer
+    # observations-per-day period (GH 9619)
+    with pytest.raises(ValueError, match="not understood"):
+        tools.freq_to_period("7min")
+
+
+@pytest.mark.parametrize("freq", ["0h", pd.offsets.Hour(-1)])
+def test_freq_to_period_nonpositive_multiplier(freq):
+    # A non-positive multiplier has no valid observations-per-day period
+    # (GH 9619)
+    with pytest.raises(ValueError, match="not understood"):
+        tools.freq_to_period(freq)
+
+
+@pytest.mark.parametrize("freq", ["ns", "us"])
+def test_freq_to_period_unsupported_offset(freq):
+    # Valid pandas offsets with rule codes "NS"/"US" have no
+    # observations-per-day mapping and fall through to ValueError (GH 9619)
+    with pytest.raises(ValueError, match="not understood"):
+        tools.freq_to_period(freq)
 
 
 class TestDetrend:
@@ -618,6 +672,12 @@ class TestDetrend:
         data = self.data_1d
         assert_array_almost_equal(tools.detrend(data, order=1), np.zeros_like(data))
         assert_array_almost_equal(tools.detrend(data, order=0), [-2, -1, 0, 1, 2])
+
+    def test_detrend_negative_order(self):
+        # a negative order used to build an empty vander matrix and silently
+        # return the input unchanged
+        with pytest.raises(ValueError, match="non-negative"):
+            tools.detrend(self.data_1d, order=-1)
 
     def test_detrend_2d(self):
         data = self.data_2d

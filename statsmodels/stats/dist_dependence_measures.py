@@ -288,7 +288,8 @@ def _asymptotic_pvalue(stats):
 
     """
     test_statistic = np.sqrt(stats.test_statistic / stats.S)
-    pval = (1 - norm.cdf(test_statistic)) * 2
+    # (1 - norm.cdf(t)) * 2 loses the upper tail to cancellation
+    pval = 2 * norm.sf(test_statistic)
 
     return test_statistic, pval
 

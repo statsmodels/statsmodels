@@ -55,6 +55,8 @@ def mad(a, c=GAUSSIAN_3_4, axis=0, center=np.median):
     """
     a = array_like(a, "a", mindim=None)
     c = float_like(c, "c")
+    if not c > 0:
+        raise ValueError(f"c must be positive, got {c}")
     if not a.size:
         center_val = 0.0
     elif callable(center):
@@ -104,8 +106,20 @@ def iqr(a, c=GAUSSIAN_IQR, axis=0):
     elif a.size == 0:
         return np.nan
     else:
+        if not c > 0:
+            raise ValueError(f"c must be positive, got {c}")
         quantiles = np.quantile(a, [0.25, 0.75], axis=axis)
         return np.squeeze(np.diff(quantiles, axis=0) / c)
+
+
+def _qn_finite(a, c):
+    # _qn needs finite values. The order of the differences is not defined for
+    # NaN and the counts of the algorithm are wrong for infinite values, the
+    # result was a finite value for NaN in most cases, and a wrong value or a
+    # RuntimeError for infinite values.
+    if not np.isfinite(a).all():
+        return np.nan
+    return _qn(a, c)
 
 
 def qn_scale(a, c=ONE_OVER_SQRT2_GAUSSIAN_5_8, axis=0):
@@ -134,6 +148,12 @@ def qn_scale(a, c=ONE_OVER_SQRT2_GAUSSIAN_5_8, axis=0):
     -------
     float or ndarray
         The Qn robust estimator of scale.
+
+    Notes
+    -----
+    The estimator is not defined if the data contains a value that is not
+    finite, and the result is NaN for the data along the axis with such a
+    value.
     """
     a = array_like(a, "a", mindim=None, dtype=np.float64, contiguous=True, order="C")
     c = float_like(c, "c")
@@ -142,7 +162,7 @@ def qn_scale(a, c=ONE_OVER_SQRT2_GAUSSIAN_5_8, axis=0):
     elif a.size == 0:
         return np.nan
     else:
-        out = np.apply_along_axis(_qn, axis=axis, arr=a, c=c)
+        out = np.apply_along_axis(_qn_finite, axis=axis, arr=a, c=c)
         if out.ndim == 0:
             return float(out)
         return out
