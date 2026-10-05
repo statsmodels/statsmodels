@@ -2252,6 +2252,8 @@ def power_equivalence_poisson_2indep(
         raise ValueError("nobs1 must be positive")
     if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater_equal(dispersion, 0)):
+        raise ValueError(f"dispersion must be non-negative, got {dispersion}")
     if not np.all(np.less_equal(low, upp)):
         raise ValueError(
             f"the equivalence interval must satisfy low <= upp, "
@@ -2403,7 +2405,9 @@ def _power_equivalence_het(
     # Here we compute the complement of the two tail probabilities
     p1 = norm.sf((np.sqrt(nobs) * es_low - crit * s0_low) / s1)
     p2 = norm.cdf((np.sqrt(nobs) * es_upp + crit * s0_upp) / s1)
-    pow_ = 1 - (p1 + p2)
+    # the two tail probabilities add up to more than one if the margins are
+    # too narrow for the sample size, and the power is zero then
+    pow_ = np.maximum(1 - (p1 + p2), 0)
     return pow_, p1, p2
 
 

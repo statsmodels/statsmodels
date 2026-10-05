@@ -2257,11 +2257,15 @@ def test_levinson_durbin_nlags_too_long():
 
 
 def test_levinson_durbin_negative_nlags():
-    # a negative nlags used to leak a bare IndexError from the recursion
-    with pytest.raises(ValueError, match="non-negative"):
-        levinson_durbin(np.arange(10.0), nlags=-1)
-    with pytest.raises(ValueError, match="non-negative"):
-        levinson_durbin(np.array([2.0, 1.0, 0.5]), nlags=-1, isacov=True)
+    # a negative nlags used to leak a bare IndexError from the recursion, and
+    # so does nlags=0, the recursion needs at least one lag
+    for nlags in (-1, 0):
+        with pytest.raises(ValueError, match="nlags must be positive"):
+            levinson_durbin(np.arange(10.0), nlags=nlags)
+        with pytest.raises(ValueError, match="nlags must be positive"):
+            levinson_durbin(np.array([2.0, 1.0, 0.5]), nlags=nlags, isacov=True)
+    res = levinson_durbin(np.array([2.0, 1.0, 0.5]), nlags=1, isacov=True)
+    assert res.arcoefs.shape == (1,)
 
 
 @pytest.mark.parametrize("missing", ["conservative", "drop", "raise", "none"])

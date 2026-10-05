@@ -1731,6 +1731,43 @@ def test_power_equivalence_poisson_invalid_interval_raises():
     assert np.isfinite(p)
 
 
+def test_power_equivalence_dispersion_raises():
+    # power_equivalence_poisson_2indep had no check of dispersion, unlike the
+    # other three functions with this argument; a negative dispersion returned nan
+    args = (0.1, 0.1, 1000)
+    kwds = dict(low=0.8, upp=1.25, return_results=False)
+    for dispersion in [-1, -1e-9, np.nan, [1.0, -1.0]]:
+        with pytest.raises(ValueError, match="dispersion must be non-negative"):
+            power_equivalence_poisson_2indep(*args, dispersion=dispersion, **kwds)
+    p = power_equivalence_poisson_2indep(*args, dispersion=np.array([1.0, 1.5]), **kwds)
+    assert p.shape == (2,)
+    assert_allclose(
+        p[0], power_equivalence_poisson_2indep(*args, dispersion=1.0, **kwds), rtol=1e-12
+    )
+
+
+@pytest.mark.parametrize("nobs1", [10, 50, 1000])
+def test_power_equivalence_not_negative(nobs1):
+    # The two tail probabilities add up to more than one if the equivalence
+    # margins are too narrow for the sample size, which gave a negative power.
+    # The power is zero then.
+    args = (0.1, 0.1, nobs1)
+    for low, upp in [(0.8, 1.25), (0.9, 1.1), (0.99, 1.01)]:
+        p1 = power_equivalence_poisson_2indep(
+            *args, low=low, upp=upp, return_results=False
+        )
+        p2 = power_equivalence_neginb_2indep(
+            *args, low=low, upp=upp, dispersion=0.5, return_results=False
+        )
+        assert 0 <= p1 <= 1
+        assert 0 <= p2 <= 1
+    # wide margins and a large sample have a power that is not zero
+    p = power_equivalence_poisson_2indep(
+        0.1, 0.1, 10000, low=0.8, upp=1.25, return_results=False
+    )
+    assert 0.5 < p < 1
+
+
 def test_poisson_tost_nonequivalence_invalid_interval_raises():
     # inverted equivalence intervals previously returned results silently
     with pytest.raises(ValueError, match="equivalence interval must satisfy low <= upp"):
