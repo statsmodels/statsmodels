@@ -528,7 +528,8 @@ def test_covdetmcd_rank_by_logdet():
     # GH-10295: det(cov) overflows to inf for every starting set, so
     # np.argmin(det_all) silently picked the first start and the selected
     # start changed with the scale of the data.
-    rng = np.random.default_rng(12345)
+    # The seed is chosen so that the best start is not the first one.
+    rng = np.random.default_rng(11)
     x = rng.standard_normal((100, 30)) * 5e5
     h = 65
 
@@ -851,3 +852,66 @@ def test_get_detcov_startidx_invalid_methods_cov_raises():
     z = rs.standard_normal((50, 3))
     with pytest.raises(ValueError, match="methods_cov"):
         robcov._get_detcov_startidx(z, 30, methods_cov="not-all")
+
+
+def _detmcd_data():
+    # deterministic data without random numbers, 5 outliers in 40 observations
+    n = 40
+    i = np.arange(1, n + 1)
+    x1 = np.sin(i) + 0.5 * np.cos(3 * i)
+    x2 = np.cos(2 * i) + 0.3 * np.sin(5 * i)
+    x3 = np.sin(3 * i + 1) + 0.2 * i / n
+    x4 = np.cos(i / 2) + 0.4 * np.sin(7 * i)
+    x2 = x2 + 0.6 * x1
+    x3 = x3 + 0.4 * x1 - 0.3 * x2
+    x = np.column_stack([x1, x2, x3, x4])
+    x[[2, 10, 18, 26, 34]] += np.array([4, -3, 3.5, -4])
+    return x
+
+
+def test_get_detcov_startidx_r_deterministic_mcd():
+    # The starting sets of the deterministic MCD of Hubert, Rousseeuw and
+    # Verdonck (2012) for the tanh and the Spearman starting correlation, 1-based
+    # indices from the function initset in r6pack of R robustbase 0.99.7 (the
+    # h observations with the smallest distance after the orthogonalization,
+    # standardization with median and Qn without the finite sample correction):
+    #
+    # z <- sweep(x, 2, apply(x, 2, median))
+    # z <- sweep(z, 2, apply(z, 2, function(v) Qn(v, finite.corr = FALSE)), "/")
+    # P <- eigen(cor(tanh(z)), symmetric = TRUE)$vectors   # or cor(z, method="spearman")
+    # initset(z, scalefn, P, h)
+    #
+    # The distance used the wrong arguments of mahalanobis, mean was passed as
+    # cov and cov as cov_inv.
+    r_sets = {
+        "tanh": [4, 6, 7, 8, 9, 10, 12, 15, 16, 20, 21, 22, 23, 25, 26, 28, 29, 31,
+                 32, 33, 34, 40],
+        "spearman": [4, 6, 7, 8, 9, 10, 12, 14, 15, 16, 20, 21, 22, 23, 25, 26, 28,
+                     29, 31, 32, 33, 34],
+    }
+    x = _detmcd_data()
+    starts = robcov._get_detcov_startidx(
+        x, 22, options_start={"loc_func": robcov.median, "scale_func": robscale.qn_scale}
+    )
+    methods = [method for _, method in starts]
+    for method, expected in r_sets.items():
+        idx = starts[methods.index(method)][0]
+        assert_equal(np.sort(idx) + 1, expected)
+
+
+def test_get_detcov_startidx_ranks_by_mahalanobis_distance():
+    # every starting set contains the h observations with the smallest squared
+    # distance (z - mean)' cov^{-1} (z - mean) of its orthogonalized estimate
+    x = _detmcd_data()
+    h = 22
+    z = (x - robcov.median(x)) / robcov.mad(x)
+    starts = robcov._get_detcov_startidx(x, h)
+    covs = robcov._cov_starting(z, standardize=False, quantile=0.5)
+    covs = [c for c in covs if hasattr(c, "method")]
+    assert len(starts) == len(covs)
+    for (idx, method), c in zip(starts, covs, strict=True):
+        assert method == c.method
+        mean, cov = robcov._orthogonalize_det(z, c.cov, robcov.median, robcov.mad)
+        resid = z - mean
+        d = np.einsum("ij,ij->i", resid, np.linalg.solve(cov, resid.T).T)
+        assert_equal(np.sort(idx), np.sort(np.argsort(d)[:h]))
