@@ -1606,6 +1606,16 @@ class TestKPSS:
         with pytest.raises(MissingDataError, match="must contain only finite values"):
             kpss(x)
 
+    @pytest.mark.parametrize("regression", ["c", "ct"])
+    @pytest.mark.parametrize("nlags", ["auto", "legacy", 5])
+    def test_kpss_fails_on_constant(self, regression, nlags):
+        # a constant series has zero residual variance, which used to crash
+        # the automatic lag selection with "cannot convert float NaN to
+        # integer" or return a NaN or meaningless statistic
+        # GH8224
+        with pytest.raises(ValueError, match="x is constant"):
+            kpss(np.ones(100), regression, nlags=nlags)
+
     def test_kpss_fails_on_nobs_check(self):
         # Test that if lags exceeds number of observations KPSS raises a
         # clear error
