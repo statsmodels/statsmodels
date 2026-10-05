@@ -545,10 +545,13 @@ class BinaryModel(DiscreteModel):
             if not np.all((self.endog >= 0) & (self.endog <= 1)):
                 raise ValueError("endog must be in the unit interval.")
 
-        if offset is not None and np.asarray(offset).shape[0] != self.endog.shape[0]:
-            # mirrors the check CountModel already performs; a mismatched
-            # offset used to leak a bare numpy broadcast error at fit time
-            raise ValueError("offset is not the same length as endog")
+        if offset is not None:
+            # Compare the offset stored by the model, not the argument: the
+            # missing value handling has dropped the same rows from endog,
+            # exog and offset. A scalar offset broadcasts and is valid.
+            offset_ = np.asarray(self.offset)
+            if offset_.ndim > 0 and offset_.shape[0] != self.endog.shape[0]:
+                raise ValueError("offset is not the same length as endog")
         if offset is None:
             del self.offset
 

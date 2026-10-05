@@ -20,7 +20,7 @@ from scipy import optimize, stats
 from statsmodels.stats.base import AllPairsResults, LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tools.validation import array_like, int_like, string_like
+from statsmodels.tools.validation import array_like, float_like, int_like, string_like
 
 FLOAT_INFO = np.finfo(float)
 
@@ -409,7 +409,8 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
            small counts in a large number of cells," Journal of Statistical
            Software, Vol. 5, No. 6, 2000, pp. 1-24.
     """
-    if alpha <= 0 or alpha >= 1:
+    alpha = float_like(alpha, "alpha")
+    if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1), bounds excluded")
     counts = np.array(counts, dtype=float)
     if (counts < 0).any():
@@ -829,11 +830,11 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
 
     Parameters
     ----------
-    low, upp : floats
+    low, upp : float or array_like
         lower and upper limit of equivalence region
-    nobs : int
+    nobs : int or array_like
         the number of trials or observations.
-    alpha : float, optional
+    alpha : float or array_like, optional
         Significance level of the test, default 0.05.
 
     Returns
@@ -841,11 +842,11 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
     x_low, x_upp : float
         lower and upper bound of rejection region
     """
-    if low >= upp:
+    if not np.all(np.less(low, upp)):
         raise ValueError(
             f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
         )
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     x_low = stats.binom.isf(alpha, nobs, low) + 1
     x_upp = stats.binom.ppf(alpha, nobs, upp) - 1
@@ -963,14 +964,14 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
 
     Parameters
     ----------
-    low, upp : floats
+    low, upp : float or array_like
         lower and upper limit of equivalence region
-    nobs : int
+    nobs : int or array_like
         the number of trials or observations.
-    p_alt : float in (0, 1), optional
+    p_alt : float or array_like in (0, 1), optional
         proportion under the alternative. If p_alt is None, then the
         midpoint of the equivalence region, ``0.5 * (low + upp)``, is used.
-    alpha : float in (0, 1), optional
+    alpha : float or array_like in (0, 1), optional
         significance level of the test
 
     Returns
@@ -1008,13 +1009,13 @@ def power_ztost_prop(
 
     Parameters
     ----------
-    low, upp : floats
+    low, upp : float or array_like
         lower and upper limit of equivalence region
-    nobs : int
+    nobs : int or array_like
         number of observations
-    p_alt : float in (0,1)
+    p_alt : float or array_like in (0,1)
         proportion under the alternative
-    alpha : float in (0,1), optional
+    alpha : float or array_like in (0,1), optional
         significance level of the test
     dist : str in ['norm', 'binom'], optional
         This defines the distribution to evaluate the power of the test. The
@@ -1073,11 +1074,11 @@ def power_ztost_prop(
     SAS Manual: Chapter 68: The Power Procedure, Computational Resources
     PASS Chapter 110: Equivalence Tests for One Proportion.
     """
-    if low >= upp:
+    if not np.all(np.less(low, upp)):
         raise ValueError(
             f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
         )
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     if p_alt is not None and (
         np.any(np.asarray(p_alt) < 0) or np.any(np.asarray(p_alt) > 1)
@@ -1267,6 +1268,7 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
 
     nobs_fact = np.sum(1.0 / nobs)
     if prop_var:
+        prop_var = float_like(prop_var, "prop_var")
         if not 0 < prop_var < 1:
             raise ValueError(
                 f"prop_var must be in the range (0, 1), got {prop_var}"
@@ -1620,6 +1622,7 @@ def confint_proportions_2indep(
         raise ValueError("count1 and count2 must be non-negative")
     if np.any(np.asarray(nobs1) <= 0) or np.any(np.asarray(nobs2) <= 0):
         raise ValueError("nobs1 and nobs2 must be positive")
+    alpha = float_like(alpha, "alpha")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
@@ -2789,17 +2792,17 @@ def power_proportions_2indep(
 
     Parameters
     ----------
-    diff : float
+    diff : float or array_like
         difference between proportion 1 and 2 under the alternative
-    prop2 : float
+    prop2 : float or array_like
         proportion for the reference case, prop2, proportions for the
         first case will be computed using p2 and diff
         p1 = p2 + diff
-    nobs1 : float or int
+    nobs1 : float or array_like
         number of observations in sample 1
     ratio : float, optional
         sample size ratio, nobs2 = ratio * nobs1
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     value : float, optional
@@ -2823,9 +2826,10 @@ def power_proportions_2indep(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
-    if not 0 <= prop2 <= 1:
+    if not np.all(np.greater_equal(prop2, 0) & np.less_equal(prop2, 1)):
         raise ValueError(f"prop2 must be in the range [0, 1], got {prop2}")
-    if not 0 <= prop2 + diff <= 1:
+    prop1 = np.add(prop2, diff)
+    if not np.all(np.greater_equal(prop1, 0) & np.less_equal(prop1, 1)):
         raise ValueError(
             f"diff must keep prop1 = prop2 + diff inside [0, 1], got "
             f"prop2={prop2}, diff={diff}"
@@ -2874,17 +2878,17 @@ def samplesize_proportions_2indep_onetail(
 
     Parameters
     ----------
-    diff : float
+    diff : float or array_like
         Difference between proportion 1 and 2 under the alternative
-    prop2 : float
+    prop2 : float or array_like
         proportion for the reference case, prop2, proportions for the
         first case will be computing using p2 and diff
         p1 = p2 + diff
-    power : float
+    power : float or array_like
         Power for which sample size is computed.
     ratio : float, optional
         Sample size ratio, nobs2 = ratio * nobs1
-    alpha : float in interval (0,1), optional
+    alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
     value : float, optional
@@ -2910,13 +2914,14 @@ def samplesize_proportions_2indep_onetail(
         deprecated={"2s": "two-sided"},
         removed_after="0.16",
     )
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
-    if not 0 < power < 1:
+    if not np.all(np.greater(power, 0) & np.less(power, 1)):
         raise ValueError(f"power must be in the range (0, 1), got {power}")
-    if not 0 <= prop2 <= 1:
+    if not np.all(np.greater_equal(prop2, 0) & np.less_equal(prop2, 1)):
         raise ValueError(f"prop2 must be in the range [0, 1], got {prop2}")
-    if not 0 <= prop2 + diff <= 1:
+    prop1 = np.add(prop2, diff)
+    if not np.all(np.greater_equal(prop1, 0) & np.less_equal(prop1, 1)):
         raise ValueError(
             f"diff must keep prop1 = prop2 + diff inside [0, 1], got "
             f"prop2={prop2}, diff={diff}"

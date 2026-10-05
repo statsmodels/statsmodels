@@ -305,6 +305,10 @@ class DescrStatsW:
         import pandas as pd
 
         probs = np.asarray(probs)
+        if np.any(probs < 0) or np.any(probs > 1):
+            # the docstring requires [0, 1]; out-of-range values previously
+            # silently extrapolated beyond the data range
+            raise ValueError("probs must be in the range [0, 1]")
         probs = np.atleast_1d(probs)
 
         if self.data.ndim == 1:
@@ -505,7 +509,11 @@ class DescrStatsW:
             test
 
         """
-
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         t1, pv1, df1 = self.ttest_mean(low, alternative="larger")
         t2, pv2, df2 = self.ttest_mean(upp, alternative="smaller")
         return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
@@ -608,7 +616,11 @@ class DescrStatsW:
             test statistic and p-value for upper threshold test
 
         """
-
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         t1, pv1 = self.ztest_mean(low, alternative="larger")
         t2, pv2 = self.ztest_mean(upp, alternative="smaller")
         return np.maximum(pv1, pv2), (t1, pv1), (t2, pv2)
@@ -748,6 +760,9 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
         deprecated=_ALTERNATIVE_ALIASES,
         removed_after="0.16",
     )
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alternative == "two-sided":
         tcrit = stats.t.ppf(1 - alpha / 2.0, dof)
         lower = mean - tcrit * std_mean
@@ -906,7 +921,7 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
         deprecated=_ALTERNATIVE_ALIASES,
         removed_after="0.16",
     )
-    if not 0 < alpha < 1:
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     if alternative == "two-sided":
@@ -1332,6 +1347,11 @@ class CompareMeans:
         t2, pv2 : tuple of floats
             test statistic and pvalue for upper threshold test
         """
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         tt1 = self.ttest_ind(alternative="larger", usevar=usevar, value=low)
         tt2 = self.ttest_ind(alternative="smaller", usevar=usevar, value=upp)
         # TODO: remove tuple return, use same as for function tost_ind
@@ -1359,6 +1379,11 @@ class CompareMeans:
         t2, pv2 : tuple of floats
             test statistic and pvalue for upper threshold test
         """
+        if np.any(np.asarray(low) >= np.asarray(upp)):
+            # bounds may be vectorized per endpoint, so compare elementwise
+            raise ValueError(
+                f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+            )
         tt1 = self.ztest_ind(alternative="larger", usevar=usevar, value=low)
         tt2 = self.ztest_ind(alternative="smaller", usevar=usevar, value=upp)
         # TODO: remove tuple return, use same as for function tost_ind
@@ -1559,7 +1584,11 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
         test statistic, pvalue and degrees of freedom for upper threshold test
 
     """
-
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        # bounds may be vectorized per endpoint, so compare elementwise
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     if transform:
         if transform is np.log:
             # avoid hstack in special case
@@ -1611,7 +1640,7 @@ def ztest(
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. If ``unequal``, then the standard deviation of the sample is
         assumed to be different.
-    ddof : int or float, optional
+    ddof : float or array_like, optional
         Degrees of freedom use in the calculation of the variance of the mean
         estimate. In the case of comparing means this is one, however it can
         be adjusted for testing other statistics (proportion, correlation)
@@ -1636,7 +1665,7 @@ def ztest(
     usevar = string_like(
         usevar, "usevar", options=("pooled", "unequal"), lower=False
     )
-    if ddof < 0:
+    if not np.all(np.greater_equal(ddof, 0)):
         raise ValueError(f"ddof must be non-negative, got {ddof}")
 
     x1 = np.asarray(x1)
@@ -1689,7 +1718,7 @@ def zconfint(
         In the two sample case, value is the difference between mean of x1 and
         mean of x2 under the Null hypothesis. The test statistic is
         `x1_mean - x2_mean - value`.
-    alpha : float, optional
+    alpha : float or array_like, optional
         significance level for the confidence interval, coverage is
         ``1-alpha``
     alternative : {"two-sided", "larger", "smaller"}, optional
@@ -1705,7 +1734,7 @@ def zconfint(
         Currently, only 'pooled' is implemented.
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. see CompareMeans.ztest_ind for different options.
-    ddof : int or float, optional
+    ddof : float or array_like, optional
         Degrees of freedom use in the calculation of the variance of the mean
         estimate. In the case of comparing means this is one, however it can
         be adjusted for testing other statistics (proportion, correlation)
@@ -1728,7 +1757,7 @@ def zconfint(
     # mostly duplicate code from ztest
 
     _ = string_like(usevar, "usevar", options=("pooled",), lower=False)
-    if ddof < 0:
+    if not np.all(np.greater_equal(ddof, 0)):
         raise ValueError(f"ddof must be non-negative, got {ddof}")
 
     x1 = np.asarray(x1)
@@ -1791,6 +1820,11 @@ def ztost(x1, low, upp, x2=None, usevar="pooled", ddof=1.0):
     checked only for 1 sample case
 
     """
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        # bounds may be vectorized per endpoint, so compare elementwise
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     tt1 = ztest(
         x1, x2, alternative="larger", usevar=usevar, value=low, ddof=ddof
     )

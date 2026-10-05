@@ -57,7 +57,7 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import pinv_extended
-from statsmodels.tools.validation import bool_like, float_like, string_like
+from statsmodels.tools.validation import bool_like, float_like, int_like, string_like
 
 from . import _prediction as pred
 
@@ -1662,6 +1662,14 @@ def yule_walker(x, order=1, method="adjusted", df=None, inv=False, demean=True, 
 
     # TODO: Require??
     x = np.array(x, dtype=np.float64)
+    order = int_like(order, "order", optional=False)
+    if order < 0:
+        # a negative order used to leak a bare IndexError from the
+        # autocovariance loop; order 0 stays valid — it yields empty AR
+        # parameters (AR(0) is white noise) as the empty loop below produces.
+        # Orders >= nobs keep main's behavior (degenerate but long-standing),
+        # pinned by test_pacf_1_obs and test_invalid_xfail.
+        raise ValueError(f"order must be a non-negative integer, got {order}")
     if demean:
         if not x.flags.writeable:
             x = np.require(x, requirements="W")

@@ -300,3 +300,17 @@ def test_expanding(basic_data):
     assert np.all(np.isnan(params[:49]))
     first = np.where(np.cumsum(np.all(np.isfinite(xa), axis=1)) >= 50)[0][0]
     assert np.all(np.isfinite(params[first:]))
+
+
+def test_expanding_window_larger_than_nobs():
+    # GH 9287: expanding with window > nobs must not raise IndexError
+    rs = np.random.RandomState(987499302)
+    n, w = 10, 20
+    x = tools.add_constant(rs.standard_normal((n, 1)))
+    y = rs.standard_normal(n)
+    mod = RollingOLS(y, x, window=w, min_nobs=2, expanding=True)
+    res = mod.fit()
+    assert res.params.shape == (n, x.shape[1])
+    assert np.all(np.isnan(res.params[:1]))
+    assert np.all(np.isfinite(res.params[1:]))
+    assert_array_equal(res.nobs[1:], np.arange(2, n + 1))

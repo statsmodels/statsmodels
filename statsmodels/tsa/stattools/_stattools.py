@@ -368,20 +368,23 @@ def adfuller(
     nobs = x.shape[0]
 
     ntrend = len(regression) if regression != "n" else 0
+    # The regression with maxlag lags has nobs - 1 - maxlag rows and
+    # 1 + ntrend + maxlag columns. The second bound keeps at least one
+    # residual degree of freedom; it is only binding when ntrend is 0 and
+    # nobs is even, where nobs // 2 - 1 lags would give an exact fit.
+    max_maxlag = min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
     if maxlag is None:
         # from Greene referencing Schwert 1989
         maxlag = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
-        # -1 for the diff
-        maxlag = min(nobs // 2 - ntrend - 1, maxlag)
+        maxlag = min(max_maxlag, maxlag)
         if maxlag < 0:
             raise ValueError(
                 "sample size is too short to use selected regression component"
             )
-    elif maxlag > nobs // 2 - ntrend - 1:
+    elif maxlag > max_maxlag:
         raise ValueError(
-            "maxlag must be less than (nobs/2 - 1 - ntrend) "
-            "where n trend is the number of included "
-            "deterministic regressors"
+            f"maxlag must be less than or equal to {max_maxlag} when nobs is "
+            f'{nobs} and regression is "{regression}"'
         )
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:, None], maxlag, trim="both", original="in")
@@ -1027,6 +1030,9 @@ def acf(
     acf = avf[: nlags + 1] / avf[0]
 
     confint = None
+    if alpha is not None and not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alpha is not None:
         if bartlett_confint:
             varacf = np.ones_like(acf) / nobs
@@ -1491,6 +1497,9 @@ def pacf(
         acv = acovf(x, adjusted=False, fft=False)
         ret = levinson_durbin(acv, nlags=nlags, isacov=True).pacf
     confint = None
+    if alpha is not None and not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alpha is not None:
         varacf = 1.0 / len(x)  # for all lags >=1
         interval = stats.norm.ppf(1.0 - alpha / 2.0) * np.sqrt(varacf)
@@ -1676,6 +1685,9 @@ def ccf(
     ret = ret[:nlags]
 
     confint = None
+    if alpha is not None and not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(len(x))
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
@@ -2009,6 +2021,9 @@ def pccf(
         ret = _pccf_yw(x, y, nlags, adjusted=adjusted)
 
     confint = None
+    if alpha is not None and not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(nobs)
         confint = ret.reshape(-1, 1) + interval * np.array([-1, 1])
@@ -3214,6 +3229,10 @@ def kpss(
     # if m is not one, n != m * n
     if nobs != x.size:
         raise ValueError(f"x of shape {x.shape} not understood")
+
+    if x.max() == x.min():
+        # the residual variance is zero, so the statistic is undefined
+        raise ValueError("Invalid input, x is constant")
 
     if hypo == "ct":
         # p. 162 Kwiatkowski et al. (1992): y_t = beta * t + r_t + e_t,
