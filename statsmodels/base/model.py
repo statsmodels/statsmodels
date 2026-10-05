@@ -33,7 +33,7 @@ from statsmodels.tools.sm_exceptions import (
     ValueWarning,
 )
 from statsmodels.tools.tools import nan_dot, recipr
-from statsmodels.tools.validation import bool_like
+from statsmodels.tools.validation import bool_like, float_like
 
 ERROR_INIT_KWARGS = False
 
@@ -2432,6 +2432,7 @@ class LikelihoodModelResults(Results):
         """
         bse = self.bse
 
+        alpha = float_like(alpha, "alpha")
         if not 0 < alpha < 1:
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 

@@ -19,7 +19,7 @@ from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.power import ncf_cdf, ncf_ppf
 from statsmodels.stats.robust_compare import TrimmedMean, scale_transform
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import float_like, string_like
 
 
 def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
@@ -473,6 +473,7 @@ def confint_noncentrality(f_stat, df, alpha=0.05, alternative="two-sided"):
         deprecated={"2s": "two-sided", "ts": "two-sided"},
         removed_after="0.16",
     )
+    alpha = float_like(alpha, "alpha")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     alpha1s = alpha / 2
@@ -564,7 +565,8 @@ def confint_effectsize_oneway(f_stat, df, alpha=0.05, nobs=None):
     df1, df2 = df
     if nobs is None:
         nobs = df1 + df2 + 1
-    if np.any(np.asarray(nobs) <= 0):
+    nobs = float_like(nobs, "nobs")
+    if not nobs > 0:
         raise ValueError("nobs must be positive")
     ci_nc = confint_noncentrality(f_stat, df, alpha=alpha)
 
@@ -961,7 +963,7 @@ def equivalence_oneway_generic(
         Number of groups in oneway comparison.
     nobs : ndarray
         Array of number of observations in groups.
-    equiv_margin : float
+    equiv_margin : float or array_like
         Equivalence margin in terms of effect size. Effect size can be chosen
         with `margin_type`. default is squared Cohen's f.
     df : tuple
@@ -1011,7 +1013,7 @@ def equivalence_oneway_generic(
     https://doi.org/10.1080/19466315.2019.1654915.
 
     """
-    if equiv_margin <= 0:
+    if not np.all(np.greater(equiv_margin, 0)):
         raise ValueError(
             f"equiv_margin must be positive, got {equiv_margin}"
         )
@@ -1079,7 +1081,7 @@ def equivalence_oneway(
         The data can be provided as a tuple or list of arrays or in long
         format with outcome observations in ``data`` and group membership in
         ``groups``.
-    equiv_margin : float
+    equiv_margin : float or array_like
         Equivalence margin in terms of effect size. Effect size can be chosen
         with `margin_type`. default is squared Cohen's f.
     groups : ndarray or Series, optional

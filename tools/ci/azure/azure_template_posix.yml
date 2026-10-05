@@ -22,11 +22,11 @@ jobs:
         # Linux carries the Python/dependency compatibility grid. Other
         # platforms keep sentinel jobs for OS-specific coverage.
         python_314t_parallel:
-          python.version: '3.14'
+          python.version: '3.15'
           python.architecture: 'x64-freethreaded'
           parallel: true
         python_314t_latest:
-          python.version: '3.14'
+          python.version: '3.15'
           python.architecture: 'x64-freethreaded'
           PANDAS_VERSION: 3
           coverage: true
@@ -64,8 +64,8 @@ jobs:
           SM_TEST_COPY_ON_WRITE: 1
           coverage: true
           test.x13: true
-        python_313_pre:
-          python.version: '3.13'
+        python_314_pre:
+          python.version: '3.14'
           python.architecture: 'x64'
           pip.pre: true
         python_313_formulaic_no_patsy:
