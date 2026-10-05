@@ -305,6 +305,10 @@ class DescrStatsW:
         import pandas as pd
 
         probs = np.asarray(probs)
+        if np.any(probs < 0) or np.any(probs > 1):
+            # the docstring requires [0, 1]; out-of-range values previously
+            # silently extrapolated beyond the data range
+            raise ValueError("probs must be in the range [0, 1]")
         probs = np.atleast_1d(probs)
 
         if self.data.ndim == 1:
