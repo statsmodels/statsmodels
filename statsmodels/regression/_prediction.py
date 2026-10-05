@@ -11,6 +11,7 @@ import pandas as pd
 from scipy import stats
 
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.tools.validation import float_like
 
 
 # this is similar to ContrastResults after t_test, copied and adjusted
@@ -101,6 +102,7 @@ class PredictionResults:
 
         """
         se = self.se_obs if obs else self.se_mean
+        alpha = float_like(alpha, "alpha")
         if not 0 < alpha < 1:
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
