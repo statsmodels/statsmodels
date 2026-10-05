@@ -34,6 +34,7 @@ import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tsa.ar_model import AutoReg
+from statsmodels.tsa.ardl import ARDL
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import acf
 
@@ -2532,3 +2533,60 @@ def test_goldfeldquandt_split_validation():
     # the fraction form and the default stay valid
     smsdia.het_goldfeldquandt(y, x, split=0.5, result_object=False)
     smsdia.het_goldfeldquandt(y, x, result_object=False)
+
+
+# R 4.5.3, lmtest 0.9.40, with infl and realint from macrodata in macro.csv
+# library(lmtest)
+# d <- read.csv("macro.csv")
+# L <- function(v, k) c(rep(NA, k), head(v, -k))
+# y <- d$infl; x <- d$realint
+# df <- data.frame(y=y, y1=L(y,1), y2=L(y,2), x=x, x1=L(x,1), x2=L(x,2))[-(1:2),]
+# fm <- lm(y ~ y1 + y2, data=df)
+# fm <- lm(y ~ y1 + y2 + x, data=df)
+# fm <- lm(y ~ y1 + y2 + x + x1 + x2, data=df)
+# fm <- lm(y ~ x + x1 + x2, data=df)
+# c(bgtest(fm, order=4)[c("statistic", "p.value")],
+#   bgtest(fm, order=4, type="F")[c("statistic", "p.value")])
+@pytest.mark.parametrize(
+    "model, kwargs, r_values",
+    [
+        (
+            AutoReg,
+            {"lags": 2},
+            [18.3926662584388, 0.0010340160604162, 4.88504100715236, 0.00089502087431],
+        ),
+        (
+            AutoReg,
+            {"lags": 2, "exog": True},
+            [151.425270595411, 1.00759773393592e-31, 147.378904413188, 1.590989e-57],
+        ),
+        (
+            ARDL,
+            {"lags": 2, "exog": True, "order": 2},
+            [22.1339505394649, 0.000188482976583515, 5.90886946654817, 0.00016691999],
+        ),
+        # gh-9090
+        (
+            ARDL,
+            {"lags": 0, "exog": True, "order": 2, "causal": False},
+            [182.32820946617, 2.35773057553784e-38, 471.156533745566, 2.281101e-98],
+        ),
+        # Without a constant in the model, a constant is added to the auxiliary
+        # regression, which bgtest does not do, so only compare with OLS
+        (AutoReg, {"lags": 2, "trend": "n"}, None),
+    ],
+)
+def test_acorr_breusch_godfrey_autoreg(model, kwargs, r_values):
+    data = macrodata.load_pandas().data
+    kwargs = dict(kwargs)
+    if kwargs.pop("exog", False):
+        kwargs["exog"] = data[["realint"]]
+    res = model(data["infl"], **kwargs).fit()
+    bg = smsdia.acorr_breusch_godfrey(res, nlags=4, result_object=True)
+    if r_values is not None:
+        assert_allclose(bg[:4], r_values, rtol=1e-6)
+    # The auxiliary regression must include the lags and deterministic terms,
+    # so the test matches the test of the OLS fit on the same design matrix
+    res_ols = OLS(res.model._y, res.model._x).fit()
+    expected = smsdia.acorr_breusch_godfrey(res_ols, nlags=4, result_object=True)
+    assert_allclose(bg[:4], expected[:4], rtol=1e-10)
