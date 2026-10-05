@@ -1952,14 +1952,19 @@ def prepare_trend_spec(trend):
             polynomial_trend = np.r_[1, 1, 1]
     else:
         trend = np.array(trend)
-        if trend.ndim > 0:
+        # only a one-dimensional array of numbers is a polynomial
+        if (
+            trend.ndim == 1
+            and trend.dtype.kind in "biuf"
+            and np.all(np.isfinite(trend))
+        ):
             polynomial_trend = (trend > 0).astype(int)
 
     if polynomial_trend is None:
         raise ValueError(
             "Valid trend inputs are 'c' (constant), 't' (linear trend in "
             "time), 'ct' (both), 'ctt' (both with trend squared) or an "
-            "interable defining a polynomial, e.g., [1, 1, 0, 1] is `a + "
+            "iterable of numbers defining a polynomial, e.g., [1, 1, 0, 1] is `a + "
             f"b*t + ct**3`. Received {trend}"
         )
 
