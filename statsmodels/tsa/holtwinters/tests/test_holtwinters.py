@@ -2278,17 +2278,17 @@ def test_fit_invalid_smoothing_parameters_raises():
     # alpha=1.5 extrapolated without error and alpha=-0.5 blew up the level
     # recursion to ~1.9e10
     y = np.arange(1.0, 25.0)
-    with pytest.raises(ValueError, match="smoothing_level must be in \[0, 1\]"):
+    with pytest.raises(ValueError, match=r"smoothing_level must be in \[0, 1\]"):
         ExponentialSmoothing(y).fit(smoothing_level=1.5, optimized=False)
-    with pytest.raises(ValueError, match="smoothing_level must be in \[0, 1\]"):
+    with pytest.raises(ValueError, match=r"smoothing_level must be in \[0, 1\]"):
         ExponentialSmoothing(y).fit(smoothing_level=-0.5, optimized=False)
-    with pytest.raises(ValueError, match="smoothing_trend must be in \[0, 1\]"):
+    with pytest.raises(ValueError, match=r"smoothing_trend must be in \[0, 1\]"):
         ExponentialSmoothing(y, trend="add").fit(smoothing_trend=2.0, optimized=False)
-    with pytest.raises(ValueError, match="smoothing_seasonal must be in \[0, 1\]"):
+    with pytest.raises(ValueError, match=r"smoothing_seasonal must be in \[0, 1\]"):
         ExponentialSmoothing(y, seasonal_periods=4, trend="add", seasonal="add").fit(
             smoothing_seasonal=1.5, optimized=False
         )
-    with pytest.raises(ValueError, match="damping_trend must be in \[0, 1\]"):
+    with pytest.raises(ValueError, match=r"damping_trend must be in \[0, 1\]"):
         ExponentialSmoothing(y, trend="add", damped_trend=True).fit(
             damping_trend=1.2, optimized=False
         )
