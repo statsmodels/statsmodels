@@ -20,7 +20,7 @@ from scipy import optimize, stats
 from statsmodels.stats.base import AllPairsResults, LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tools.validation import array_like, float_like, int_like, string_like
+from statsmodels.tools.validation import array_like, float_like, string_like
 
 FLOAT_INFO = np.finfo(float)
 
@@ -793,16 +793,16 @@ def binom_tost(count, nobs, low, upp):
     ----------
     count : {int, array_like}
         the number of successes in nobs trials.
-    nobs : int
+    nobs : int or array_like
         the number of trials or observations.
-    low, upp : floats
+    low, upp : float or array_like
         lower and upper limit of equivalence region
 
     Returns
     -------
-    pvalue : float
+    pvalue : float or ndarray
         p-value of equivalence test
-    pval_low, pval_upp : floats
+    pval_low, pval_upp : float or ndarray
         p-values of lower and upper one-sided tests
     """
     if np.any(np.asarray(low) >= np.asarray(upp)):
@@ -911,9 +911,9 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
     ----------
     count : {int, array_like}
         the number of successes in nobs trials.
-    nobs : int
+    nobs : int or array_like
         the number of trials or observations.
-    prop : float, optional
+    prop : float or array_like, optional
         The probability of success under the null hypothesis,
         `0 <= prop <= 1`. The default value is `prop = 0.5`
     alternative : {'two-sided', 'smaller', 'larger'}, optional
@@ -922,15 +922,16 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
 
     Returns
     -------
-    p-value : float
+    p-value : float or ndarray
         The p-value of the hypothesis test
 
     Notes
     -----
     This uses scipy.stats.binom_test for the two-sided alternative.
+
+    The one-sided alternatives broadcast over `count`, `nobs` and `prop`,
+    which is used by `binom_tost` and `test_poisson_2indep`.
     """
-    nobs = int_like(nobs, "nobs")
-    prop = float_like(prop, "prop")
     alternative = string_like(
         alternative,
         "alternative",
@@ -940,13 +941,13 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
         removed_after="0.16",
     )
 
-    if np.any(prop > 1.0) or np.any(prop < 0.0):
+    if not np.all(np.greater_equal(prop, 0) & np.less_equal(prop, 1)):
         raise ValueError("p must be in range [0,1]")
-    if np.any(np.asarray(count) < 0):
+    if np.any(np.less(count, 0)):
         raise ValueError("count must be non-negative")
-    if np.any(np.asarray(nobs) <= 0):
+    if not np.all(np.greater(nobs, 0)):
         raise ValueError("nobs must be positive")
-    if np.any(np.asarray(count) > np.asarray(nobs)):
+    if np.any(np.greater(count, nobs)):
         raise ValueError("count must not exceed nobs")
 
     if alternative == "two-sided":
