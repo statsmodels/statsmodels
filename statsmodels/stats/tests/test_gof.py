@@ -180,6 +180,15 @@ def test_chisquare_effectsize():
     # 0.0036681143072077533
 
 
+def test_chisquare_effectsize_negative_probs_raises():
+    # negative probability entries previously returned nan silently
+    with pytest.raises(ValueError, match="probs0 and probs1 must be non-negative"):
+        chisquare_effectsize(np.array([-0.1, 0.6]), np.array([0.5, 0.5]))
+    es = chisquare_effectsize(np.array([0.3, 0.7]), np.array([0.5, 0.5]))
+    assert np.isfinite(es)
+    assert es >= 0
+
+
 def test_chisquare_power_invalid_inputs_raises():
     # impossible inputs previously returned nan power silently
     with pytest.raises(ValueError, match="nobs must be positive"):
