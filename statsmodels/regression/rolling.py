@@ -201,7 +201,8 @@ class RollingWLS:
         self._is_nan[:] = nans
         has_nan = np.cumsum(nans)
         w = self._window
-        has_nan[w - 1 :] = has_nan[w - 1 :] - has_nan[: -(w - 1)]
+        # Number of missing values in the window ending at each observation
+        has_nan[w:] = has_nan[w:] - has_nan[:-w]
         if self._expanding:
             has_nan[: self._min_nobs] = False
         else:
@@ -367,11 +368,16 @@ class RollingWLS:
         if not (self._has_nan[first - 1] and self._skip_missing):
             self._fit_single(first, xpx, xpy, nobs, store, params_only, method)
         wx, wy = self._wx, self._wy
+        skipped = False
         for i in range(first + 1, self._x.shape[0] + 1):
             if self._has_nan[i - 1] and self._skip_missing:
+                skipped = True
                 continue
-            if i % reset == 0:
+            if i % reset == 0 or skipped:
+                # Recompute after skipped windows since xpx and xpy were not
+                # updated while skipping
                 xpx, xpy, nobs = self._reset(i)
+                skipped = False
             else:
                 if i > w and not self._is_nan[i - w - 1]:
                     remove_x = wx[i - w - 1 : i - w]
