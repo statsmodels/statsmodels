@@ -314,3 +314,48 @@ def test_expanding_window_larger_than_nobs():
     assert np.all(np.isnan(res.params[:1]))
     assert np.all(np.isfinite(res.params[1:]))
     assert_array_equal(res.nobs[1:], np.arange(2, n + 1))
+
+
+def test_has_nan_first_obs_in_window():
+    # A window is missing if its first observation is missing
+    y, x, _ = gen_data(30, 2, True)
+    y = y.copy()
+    y[10] = np.nan
+    mod = RollingOLS(y, x, window=5, missing="skip")
+    expected = np.zeros(30, dtype=bool)
+    expected[10:15] = True
+    assert_array_equal(mod._has_nan, expected)
+
+
+@pytest.mark.parametrize("weighted", [False, True])
+@pytest.mark.parametrize("expanding", [False, True])
+@pytest.mark.parametrize("window", [5, 20])
+def test_skip_against_wls(window, expanding, weighted):
+    # Windows after skipped windows must use the observations in the window
+    y, x, w = gen_data(150, 2, True, weights=weighted)
+    y = y.copy()
+    x = x.copy()
+    y[[30, 31, 90]] = np.nan
+    x[60, 1] = np.nan
+    mod = RollingWLS(
+        y,
+        x,
+        window=window,
+        weights=w,
+        min_nobs=5,
+        missing="skip",
+        expanding=expanding,
+    )
+    params = np.asarray(mod.fit().params)
+    w = np.ones_like(y) if w is None else w
+    n_valid = 0
+    for t in range(4 if expanding else window - 1, 150):
+        start = max(t - window + 1, 0)
+        loc = slice(start, t + 1)
+        if np.any(np.isnan(y[loc])) or np.any(np.isnan(x[loc])):
+            assert np.all(np.isnan(params[t]))
+            continue
+        wls = WLS(y[loc], x[loc], weights=w[loc]).fit()
+        assert_allclose(params[t], wls.params)
+        n_valid += 1
+    assert n_valid > 50
