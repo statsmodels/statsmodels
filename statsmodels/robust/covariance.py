@@ -48,6 +48,26 @@ def median(x):
     return np.median(x, axis=0)
 
 
+def _check_standardizing_scale(scale):
+    """
+    Raise if any coordinate of the columnwise standardizing scale is zero.
+
+    A zero MAD (or other scale) for a column means more than half of the
+    observations share one value in that column, so they lie on a hyperplane.
+    Dividing by that scale produces non-finite standardized data and leads to
+    uninformative LinAlgError or empty-subset failures downstream.
+    """
+    zeros = np.flatnonzero(np.asarray(scale) == 0)
+    if zeros.size == 0:
+        return
+    cols = ", ".join(str(int(i)) for i in zeros)
+    raise ValueError(
+        f"standardizing scale is zero for column(s) {cols}; "
+        "more than half of the observations share one value and lie "
+        "on a hyperplane"
+    )
+
+
 def _det_root(cov):
     """
     k-th root of the determinant of a square matrix without overflow.
@@ -1497,6 +1517,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
         center = np.median(data, axis=0)
         xs = x - center
         std = mad0(data)
+        _check_standardizing_scale(std)
         xs /= std
     else:
         center = np.median(data, axis=0)
@@ -2309,6 +2330,7 @@ class CovDetMCD:
 
         m = mean_func(x)
         s = scale_func(x)
+        _check_standardizing_scale(s)
         z = (x - m) / s
         # get initial mean, cov of standardized data, we only need ranking
         # of obs
@@ -2555,6 +2577,7 @@ class CovDetS:
 
         m = mean_func(x)
         s = scale_func(x)
+        _check_standardizing_scale(s)
         z = (x - m) / s
         # get initial mean, cov of standardized data, we only need ranking
         # of obs
