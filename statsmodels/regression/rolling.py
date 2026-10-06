@@ -643,7 +643,7 @@ class RollingRegressionResults:
 
         Returns
         -------
-        {ndarray, Series}
+        residuals : ndarray or Series
             The residuals y[t] - x[t] @ params with one value for each
             observation. A Series is returned if the model was created
             using pandas inputs.

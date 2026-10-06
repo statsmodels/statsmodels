@@ -459,3 +459,39 @@ def test_get_resid_formula():
     assert_allclose(
         res.get_resid(out_of_sample=True), alt.get_resid(out_of_sample=True)
     )
+
+
+@pytest.mark.parametrize("pandas", [False, True])
+@pytest.mark.parametrize("out_of_sample", [False, True])
+def test_get_resid_missing_skip(pandas, out_of_sample):
+    y, x, _ = gen_data(100, 2, True, pandas=pandas)
+    y = y.copy()
+    x = x.copy()
+    if pandas:
+        y.iloc[[30, 70]] = np.nan
+        x.iloc[50, 1] = np.nan
+    else:
+        y[[30, 70]] = np.nan
+        x[50, 1] = np.nan
+    window = 20
+    res = RollingOLS(y, x, window=window, missing="skip").fit()
+    resid = res.get_resid(out_of_sample=out_of_sample)
+    assert resid.shape == (100,)
+    if pandas:
+        assert isinstance(resid, pd.Series)
+        assert resid.index.equals(y.index)
+    resid = np.asarray(resid)
+    ya = np.asarray(y)
+    xa = np.asarray(x)
+    params = np.asarray(res.params)
+    if out_of_sample:
+        # residual at t uses the parameters of the window ending at t - 1
+        params = np.vstack((np.full((1, 3), np.nan), params[:-1]))
+    skipped = np.any(np.isnan(params), axis=1)
+    missing = np.isnan(ya) | np.any(np.isnan(xa), axis=1)
+    expected_nan = skipped | missing
+    assert_array_equal(np.isnan(resid), expected_nan)
+    assert 0 < expected_nan.sum() < 100
+    valid = ~expected_nan
+    expected = ya[valid] - np.sum(xa[valid] * params[valid], axis=1)
+    assert_allclose(resid[valid], expected)
