@@ -915,3 +915,34 @@ def test_get_detcov_startidx_ranks_by_mahalanobis_distance():
         resid = z - mean
         d = np.einsum("ij,ij->i", resid, np.linalg.solve(cov, resid.T).T)
         assert_equal(np.sort(idx), np.sort(np.argsort(d)[:h]))
+
+
+@pytest.mark.parametrize(
+    "cov_class, fit_kw",
+    [
+        (robcov.CovDetMCD, {"h": 51}),
+        (robcov.CovDetS, {}),
+        (robcov.CovDetMM, {}),
+    ],
+)
+def test_covdet_zero_standardizing_scale_raises(cov_class, fit_kw):
+    # GH-10437 suggestion 1: a binary column with more than half zeros has
+    # MAD == 0; raise a clear ValueError instead of LinAlgError / empty fit.
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    x[:, 2] = (rng.random(100) < 0.3).astype(float)
+    assert (x[:, 2] == 0).sum() > 50
+    assert_allclose(robcov.mad(x)[2], 0.0)
+
+    with pytest.raises(ValueError, match="standardizing scale is zero"):
+        cov_class(x).fit(**fit_kw)
+
+
+def test_cov_starting_zero_mad_raises():
+    # GH-10437: _cov_starting(standardize=True) also divides by mad0
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    x[:, 2] = (rng.random(100) < 0.3).astype(float)
+    with pytest.raises(ValueError, match="standardizing scale is zero"):
+        robcov._cov_starting(x, standardize=True)
+
