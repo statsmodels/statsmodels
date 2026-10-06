@@ -27,7 +27,12 @@ from statsmodels.regression.linear_model import (
     RegressionResults,
 )
 from statsmodels.tools.docstring_helpers import Appender, Substitution
-from statsmodels.tools.validation import array_like, int_like, string_like
+from statsmodels.tools.validation import (
+    array_like,
+    bool_like,
+    int_like,
+    string_like,
+)
 
 
 def strip4(line):
@@ -621,6 +626,49 @@ class RollingRegressionResults:
     @Appender(get_cached_doc(RegressionResults.mse_total))
     def mse_total(self):
         return self._wrap(call_cached_func(RegressionResults.mse_total, self))
+
+    def get_resid(self, out_of_sample=False):
+        """
+        Compute the rolling residuals
+
+        Parameters
+        ----------
+        out_of_sample : bool, optional
+            If False (default), the residual for observation t uses the
+            parameters estimated from the window that ends at observation t,
+            so that observation t is included in the estimation. If True, the
+            residual for observation t uses the parameters estimated from the
+            window that ends at observation t-1, which is the one-step ahead
+            prediction error.
+
+        Returns
+        -------
+        residuals : ndarray or Series
+            The residuals y[t] - x[t] @ params with one value for each
+            observation. A Series is returned if the model was created
+            using pandas inputs.
+
+        See Also
+        --------
+        statsmodels.regression.linear_model.RegressionResults.resid
+            Residuals of a single regression.
+
+        Notes
+        -----
+        Only one residual is computed for each window so that the residuals
+        of every observation in every window do not need to be stored. The
+        residuals are computed using the unweighted data, as in ``WLS``.
+
+        The residual is nan when the parameters are not available, e.g., for
+        the observations before the first window has min_nobs observations,
+        or when the observation is missing.
+        """
+        out_of_sample = bool_like(out_of_sample, "out_of_sample")
+        params = self._params
+        if out_of_sample:
+            params = np.vstack((np.full((1, params.shape[1]), np.nan), params[:-1]))
+        resid = self.model._y - np.sum(self.model._x * params, axis=1)
+        return self._wrap(resid)
 
     @cache_readonly
     def _cov_params(self):
