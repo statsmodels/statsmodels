@@ -524,3 +524,34 @@ def test_olsinfluence_looo_closed_form(leverage_one):
     assert_allclose(infl.resid_studentized_external, resid_ext, rtol=1e-10)
     cov_ratio = det_cov_params / np.linalg.det(res.cov_params())
     assert_allclose(infl.cov_ratio, cov_ratio, rtol=1e-10)
+
+
+def test_olsinfluence_looo_loop_matches_closed_form():
+    # A model class other than OLS takes the leave-one-observation-out
+    # regression loop; it must agree with the closed form used for OLS.
+    from statsmodels.stats.outliers_influence import OLSInfluence
+
+    class LoopOLS(OLS):
+        pass
+
+    rng = np.random.default_rng(10367)
+    n = 30
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(n)
+    infl_closed = OLSInfluence(OLS(endog, exog).fit())
+    infl_loop = OLSInfluence(LoopOLS(endog, exog).fit())
+    assert infl_loop.model_class is LoopOLS
+
+    assert_allclose(
+        infl_loop.params_not_obsi, infl_closed.params_not_obsi, rtol=1e-10
+    )
+    assert_allclose(
+        infl_loop.sigma2_not_obsi, infl_closed.sigma2_not_obsi, rtol=1e-10
+    )
+    assert_allclose(
+        infl_loop.det_cov_params_not_obsi,
+        infl_closed.det_cov_params_not_obsi,
+        rtol=1e-10,
+    )
+    assert_allclose(infl_loop.dfbetas, infl_closed.dfbetas, rtol=1e-10)
+    assert_allclose(infl_loop.cov_ratio, infl_closed.cov_ratio, rtol=1e-10)
