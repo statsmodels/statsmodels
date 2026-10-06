@@ -19,7 +19,10 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring_helpers import Appender
-from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.sm_exceptions import (
+    SingularMatrixWarning,
+    SpecificationWarning,
+)
 from statsmodels.tools.tools import maybe_unwrap_results
 from statsmodels.tools.validation import int_like
 
@@ -835,11 +838,16 @@ class OLSInfluence(_BaseInfluenceMixin):
     slower (mainly results with `_external` postfix in the name).
     For the auxiliary LOOO regression, only the required results are stored.
 
-    Using the LOO measures is currently only recommended if the data set
-    is not too large. One possible approach for LOOO measures would be to
-    identify possible problem observations with the _internal measures, and
-    then run the leave-one-observation-out only with observations that are
-    possible outliers. (However, this is not yet available in an automated way.)
+    If the model is OLS and exog has full rank, then the LOOO results are
+    computed from the closed form updates, e.g. Belsley, Kuh and Welsch (1980),
+    without auxiliary regressions, and are fast also for large data sets.
+
+    For other models, using the LOOO measures is currently only recommended if
+    the data set is not too large. One possible approach for LOOO measures
+    would be to identify possible problem observations with the _internal
+    measures, and then run the leave-one-observation-out only with
+    observations that are possible outliers. (However, this is not yet
+    available in an automated way.)
 
     This should be extended to general least squares.
 
@@ -1229,15 +1237,14 @@ class OLSInfluence(_BaseInfluenceMixin):
         all results will be attached.
         currently only 'params', 'mse_resid', 'det_cov_params' are stored
 
-        regresses endog on exog dropping one observation at a time
+        For OLS with a full rank exog, the results are computed with the
+        closed form leave-one-observation-out updates and no auxiliary
+        regressions are estimated, except for observations with a hat
+        matrix diagonal of (numerically) one. For other models, endog is
+        regressed on exog dropping one observation at a time.
 
-        this uses a nobs loop, only attributes of the OLS instance are stored.
+        Only attributes of the auxiliary OLS instances are stored.
         """
-        from statsmodels.sandbox.tools.cross_val import LeaveOneOut
-
-        def get_det_cov_params(res):
-            return np.linalg.det(res.cov_params())
-
         endog = self.results.model.endog
         exog = self.results.model.exog
 
@@ -1245,12 +1252,47 @@ class OLSInfluence(_BaseInfluenceMixin):
         mse_resid = np.zeros(endog.shape, dtype=float)
         det_cov_params = np.zeros(endog.shape, dtype=float)
 
-        cv_iter = LeaveOneOut(self.nobs)
-        for inidx, outidx in cv_iter:
-            res_i = self.model_class(endog[inidx], exog[inidx]).fit()
-            params[outidx] = res_i.params
-            mse_resid[outidx] = res_i.mse_resid
-            det_cov_params[outidx] = get_det_cov_params(res_i)
+        if self.model_class is OLS and self.results.model.rank == self.k_vars:
+            # Closed form, see e.g. Belsley, Kuh and Welsch (1980), ch. 2.
+            # Dropping observation i with hat diagonal h_i and residual e_i
+            # changes the parameters by (X'X)^{-1} x_i e_i / (1 - h_i)
+            # and the residual sum of squares by e_i**2 / (1 - h_i).
+            # Column i of pinv(X) is (X'X)^{-1} x_i.
+            hii = self.hat_matrix_diag
+            # If h_i is one, then dropping observation i reduces the rank of
+            # exog and the auxiliary regression is still needed.
+            mask = 1 - hii > np.sqrt(np.finfo(float).eps)
+            resid = np.asarray(self.results.resid)[mask]
+            one_minus_h = 1 - hii[mask]
+            resid_press = resid / one_minus_h
+            dfbeta = self.results.model.pinv_wexog.T[mask] * resid_press[:, None]
+            params[mask] = self.results.params - dfbeta
+            ssr = np.dot(self.results.resid, self.results.resid)
+            df_resid = self.nobs - 1 - self.k_vars
+            mse_resid[mask] = (ssr - resid * resid_press) / df_resid
+            # det(X_(i)'X_(i)) = det(X'X) (1 - h_i)
+            det_cov_params[mask] = (
+                mse_resid[mask] ** self.k_vars
+                * np.linalg.det(self.results.normalized_cov_params)
+                / one_minus_h
+            )
+            loop_idx = np.nonzero(~mask)[0]
+            # The remaining auxiliary regressions have a rank deficient exog
+            # by construction, so the warning is expected.
+            ignore_singular = True
+        else:
+            loop_idx = range(self.nobs)
+            ignore_singular = False
+
+        for outidx in loop_idx:
+            inidx = np.arange(self.nobs) != outidx
+            with warnings.catch_warnings():
+                if ignore_singular:
+                    warnings.simplefilter("ignore", SingularMatrixWarning)
+                res_i = self.model_class(endog[inidx], exog[inidx]).fit()
+                params[outidx] = res_i.params
+                mse_resid[outidx] = res_i.mse_resid
+                det_cov_params[outidx] = np.linalg.det(res_i.cov_params())
 
         return {
             "params": params,

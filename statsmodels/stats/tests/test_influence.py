@@ -21,6 +21,7 @@ from statsmodels.stats.outliers_influence import (
     MLEInfluence,
     variance_inflation_factor,
 )
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 
 cur_dir = Path(__file__).parent.resolve()
 
@@ -470,3 +471,87 @@ def test_olsinfluence_ols_xnoti_and_get_drop_vari():
         mask_j = np.arange(infl.k_vars) != j
         expected_j = OLS(endog, exog[:, mask_j]).fit().params
         assert_allclose(params_j, expected_j)
+
+
+# OLSInfluence should not warn about the rank deficient auxiliary regression
+@pytest.mark.filterwarnings(
+    "error::statsmodels.tools.sm_exceptions.SingularMatrixWarning"
+)
+@pytest.mark.parametrize("leverage_one", [False, True])
+def test_olsinfluence_looo_closed_form(leverage_one):
+    # GH#9009: for OLS, the LOOO results use closed form updates.
+    # Compare with explicit leave-one-observation-out regressions.
+    from statsmodels.stats.outliers_influence import OLSInfluence
+
+    rng = np.random.default_rng(9009)
+    n = 40
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    exog[:2, 2] *= 20  # a few high leverage observations
+    if leverage_one:
+        # dummy for a single observation, hat diagonal is one, dropping it
+        # makes exog rank deficient
+        exog = np.column_stack([exog, np.eye(n)[:, 5]])
+    endog = exog @ np.linspace(1, -1, exog.shape[1]) + rng.standard_normal(n)
+    res = OLS(endog, exog).fit()
+    infl = OLSInfluence(res)
+
+    params = np.empty(exog.shape)
+    mse_resid = np.empty(n)
+    det_cov_params = np.empty(n)
+    for i in range(n):
+        mask = np.arange(n) != i
+        with warnings.catch_warnings():
+            # dropping the observation with hat diagonal one gives a rank
+            # deficient exog
+            warnings.simplefilter("ignore", SingularMatrixWarning)
+            res_i = OLS(endog[mask], exog[mask]).fit()
+            params[i] = res_i.params
+            mse_resid[i] = res_i.mse_resid
+            det_cov_params[i] = np.linalg.det(res_i.cov_params())
+
+    assert_allclose(infl.params_not_obsi, params, rtol=1e-10, atol=1e-12)
+    assert_allclose(infl.sigma2_not_obsi, mse_resid, rtol=1e-10)
+    assert_allclose(infl.det_cov_params_not_obsi, det_cov_params, rtol=1e-10)
+    assert_allclose(infl.dfbeta, res.params - params, rtol=1e-10, atol=1e-12)
+    dfbetas = (res.params - params) / np.sqrt(
+        mse_resid[:, None] * np.diag(res.normalized_cov_params)
+    )
+    assert_allclose(infl.dfbetas, dfbetas, rtol=1e-10, atol=1e-12)
+    resid_ext = res.resid / np.sqrt(mse_resid * (1 - infl.hat_matrix_diag))
+    if leverage_one:
+        # resid and 1 - hii are both zero up to rounding for observation 5
+        resid_ext[5] = infl.resid_studentized_external[5]
+    assert_allclose(infl.resid_studentized_external, resid_ext, rtol=1e-10)
+    cov_ratio = det_cov_params / np.linalg.det(res.cov_params())
+    assert_allclose(infl.cov_ratio, cov_ratio, rtol=1e-10)
+
+
+def test_olsinfluence_looo_loop_matches_closed_form():
+    # A model class other than OLS takes the leave-one-observation-out
+    # regression loop; it must agree with the closed form used for OLS.
+    from statsmodels.stats.outliers_influence import OLSInfluence
+
+    class LoopOLS(OLS):
+        pass
+
+    rng = np.random.default_rng(10367)
+    n = 30
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(n)
+    infl_closed = OLSInfluence(OLS(endog, exog).fit())
+    infl_loop = OLSInfluence(LoopOLS(endog, exog).fit())
+    assert infl_loop.model_class is LoopOLS
+
+    assert_allclose(
+        infl_loop.params_not_obsi, infl_closed.params_not_obsi, rtol=1e-10
+    )
+    assert_allclose(
+        infl_loop.sigma2_not_obsi, infl_closed.sigma2_not_obsi, rtol=1e-10
+    )
+    assert_allclose(
+        infl_loop.det_cov_params_not_obsi,
+        infl_closed.det_cov_params_not_obsi,
+        rtol=1e-10,
+    )
+    assert_allclose(infl_loop.dfbetas, infl_closed.dfbetas, rtol=1e-10)
+    assert_allclose(infl_loop.cov_ratio, infl_closed.cov_ratio, rtol=1e-10)
