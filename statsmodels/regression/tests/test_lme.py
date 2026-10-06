@@ -2016,3 +2016,40 @@ def test_singular_variance_sparse(cov_re, vcomp, reml):
     ll, scale = _dense_profile(dense_model, None, cov_re, vcomp, reml)
     assert_allclose(out[0][0], ll, rtol=1e-10)
     assert_allclose(out[0][2], scale, rtol=1e-10)
+
+
+@pytest.mark.parametrize("alpha", [0.0, 1.0, 40.0])
+def test_fit_regularized_pandas(alpha):
+    # GH 8902: fit_regularized used the pandas output of the unpenalized fit
+    # and failed for models created from pandas data or formulas
+    rng = np.random.default_rng(8902)
+    exog = rng.standard_normal((200, 3))
+    groups = np.repeat(np.arange(50), 4)
+    endog = (
+        exog[:, 0]
+        - exog[:, 2]
+        + np.repeat(rng.standard_normal(50), 4)
+        + rng.standard_normal(200)
+    )
+    data = pd.DataFrame(exog, columns=["x0", "x1", "x2"])
+    data["y"] = endog
+    data["g"] = groups
+
+    res = MixedLM(endog, exog, groups).fit_regularized(alpha=alpha)
+    model = MixedLM.from_formula("y ~ 0 + x0 + x1 + x2", data, groups="g")
+    res_pd = model.fit_regularized(alpha=alpha)
+
+    assert isinstance(res_pd.fe_params, pd.Series)
+    assert list(res_pd.fe_params.index) == ["x0", "x1", "x2"]
+    assert isinstance(res_pd.cov_re, pd.DataFrame)
+    assert_allclose(np.asarray(res_pd.fe_params), res.fe_params)
+    assert_allclose(np.asarray(res_pd.params), res.params)
+    assert_allclose(np.asarray(res_pd.bse), res.bse)
+    assert_allclose(np.asarray(res_pd.cov_re), res.cov_re)
+    assert_allclose(res_pd.scale, res.scale)
+    if alpha == 40.0:
+        # x1 is set to zero by the penalty and has no standard error
+        assert res_pd.fe_params["x1"] == 0.0
+        assert np.isnan(res_pd.bse["x1"])
+    summ = res_pd.summary()
+    assert "x1" in summ.as_text()

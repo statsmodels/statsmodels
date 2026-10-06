@@ -1288,7 +1288,9 @@ class MixedLM(base.LikelihoodModel):
             alpha = alpha * np.ones(self.k_fe, dtype=np.float64)
 
         # Fit the unpenalized model to get the dependence structure.
-        mdf = self.fit(**fit_kwargs)
+        # Use the unwrapped results so that the estimates are arrays and
+        # not pandas objects when the model has pandas data.
+        mdf = self.fit(**fit_kwargs)._results
         fe_params = mdf.fe_params
         cov_re = mdf.cov_re
         vcomp = mdf.vcomp
