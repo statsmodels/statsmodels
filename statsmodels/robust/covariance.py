@@ -410,9 +410,11 @@ def _is_singular(cov):
     Returns
     -------
     bool
-        True if a variable has a variance of zero, or if the rank of the
-        correlation matrix is below its dimension. The rank is computed with
-        the default tolerance of `numpy.linalg.matrix_rank`.
+        True if a variable has a variance of zero, if the rank of the
+        correlation matrix is below its dimension (default
+        `numpy.linalg.matrix_rank` tolerance), or if the ratio of the
+        smallest to largest singular value of the correlation matrix is
+        below ``1e-8``.
 
     Notes
     -----
@@ -426,12 +428,26 @@ def _is_singular(cov):
     the scales of the variables. The rank of the covariance matrix itself is
     too low if the ratio of the variances is above about 1e15, even if the
     correlation matrix is well conditioned.
+
+    Platform floating-point / BLAS differences can leave a near-exact-fit
+    correlation with a residual singular value above NumPy's default
+    ``matrix_rank`` cutoff while still being tiny relative to the leading
+    singular value (e.g. Pyodide vs native Linux). Treating a relative
+    singular-value ratio below ``1e-8`` as singular catches those cases.
+    Healthy CovDet correlation matrices typically have min/max singular
+    value ratios of order 0.1 or larger, so the cutoff has large margin.
     """
     var = np.diag(cov)
     if not np.all(var > 0):
         return True
     sd = np.sqrt(var)
-    return bool(np.linalg.matrix_rank(cov / np.outer(sd, sd)) < len(cov))
+    corr = cov / np.outer(sd, sd)
+    if np.linalg.matrix_rank(corr) < len(cov):
+        return True
+    # Near-singular under platform FP: residual singular value can exceed
+    # matrix_rank's default tol while remaining tiny vs the leading one.
+    svals = np.linalg.svd(corr, compute_uv=False)
+    return bool(svals.min() / svals.max() < 1e-8)
 
 
 def mahalanobis(data, cov=None, cov_inv=None, sqrt=False):

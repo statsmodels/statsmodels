@@ -949,11 +949,13 @@ def test_cov_starting_zero_mad_raises():
 @pytest.mark.parametrize("reweight", [True, False])
 def test_covdet_mcd_tilted_plane_exact_fit_raises(reweight):
     # GH-10437 suggestion 2: more than h observations on a tilted plane
-    # (no column has MAD == 0). Best raw MCD cov is singular; raise before
-    # reweight so default reweight=True cannot hide the exact-fit case.
+    # (no column has MAD == 0). Put ALL rows on the plane so every C-step
+    # subset is singular and CI is not sensitive to platform FP around a
+    # near-exact-fit residual (Pyodide). Raise before reweight so default
+    # reweight=True cannot hide the exact-fit case.
     rng = np.random.default_rng(0)
     x = rng.standard_normal((100, 3))
-    x[:69, 2] = x[:69, 0] + x[:69, 1]
+    x[:, 2] = x[:, 0] + x[:, 1]
     assert (robcov.mad(x) > 0).all()
 
     with pytest.raises(ValueError, match="lie on a hyperplane"):
