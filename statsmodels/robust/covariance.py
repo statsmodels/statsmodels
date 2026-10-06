@@ -2376,6 +2376,15 @@ class CovDetMCD:
             det_all=det_all, idx_best=idx_best, tmean=m, tscale=s
         )
 
+        # Exact-fit / singular C-step (GH-10437 suggestion 2): more than h
+        # observations lie on a hyperplane, but no column has zero MAD so the
+        # standardizing-scale guard does not fire. Raising before reweight
+        # avoids returning a misleading non-singular final covariance.
+        if _is_singular(best.cov):
+            raise ValueError(
+                "more than h of the observations lie on a hyperplane"
+            )
+
         if reweight:
             cov, mean = _reweight(x, best.mean, best.cov, trim_frac=trim_frac, ddof=1)
             fac_trunc = coef_normalize_cov_truncated(trim_frac, k_vars)
