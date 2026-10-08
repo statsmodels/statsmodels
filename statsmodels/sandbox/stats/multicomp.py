@@ -69,7 +69,7 @@ from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
-from scipy import interpolate, stats
+from scipy import integrate, interpolate, optimize, stats
 
 from statsmodels.graphics import utils
 from statsmodels.iolib.table import SimpleTable
@@ -185,6 +185,114 @@ def get_tukey_pvalue(k, df, q):
 
     """
     return studentized_range.sf(q, k, df)
+
+
+def _smm_sf(q, k, df):
+    r"""
+    Survival function of the studentized maximum modulus distribution
+
+    Parameters
+    ----------
+    q : array_like
+        Quantiles.
+    k : int
+        Number of variables.
+    df : array_like
+        Degrees of freedom of the denominator. Can be non-integer or inf.
+
+    Returns
+    -------
+    ndarray
+        The probability that the studentized maximum modulus is larger
+        than q.
+
+    Notes
+    -----
+    The studentized maximum modulus is the maximum of the absolute values of
+    k independent standard normal random variables divided by
+    :math:`\sqrt{\chi^2_{df} / df}`, where the chi-square random variable is
+    independent of the normal random variables. This is the maximum absolute
+    value of a multivariate t random variable with uncorrelated components.
+
+    The survival function is computed by integrating over the distribution
+    of the denominator,
+
+    .. math::
+
+        P(M > q) = \int_0^1 1 - (1 - 2 \Phi(-q s(u)))^k du
+
+    where :math:`s(u) = \sqrt{F^{-1}(u) / df}` and :math:`F` is the
+    cdf of the chi-square distribution with df degrees of freedom.
+
+    References
+    ----------
+    .. [*] Stoline, M. R., and Ury, H. K. (1979). Tables of the Studentized
+       Maximum Modulus Distribution and an Application to Multiple
+       Comparisons among Means. Technometrics, 21(1), 87-93.
+    """
+
+    def _sf(q, df):
+        if np.isnan(q) or np.isnan(df):
+            return np.nan
+        if q <= 0:
+            return 1.0
+
+        def tail(s):
+            return -np.expm1(k * np.log1p(-2 * stats.norm.sf(q * s)))
+
+        if np.isinf(df):
+            return tail(1.0)
+
+        def integrand(u):
+            return tail(np.sqrt(stats.chi2.ppf(u, df) / df))
+
+        return integrate.quad(integrand, 0, 1, epsabs=0, epsrel=1e-11, limit=200)[0]
+
+    q, df = np.broadcast_arrays(np.asarray(q, dtype=float), np.asarray(df, dtype=float))
+    out = [_sf(qi, dfi) for qi, dfi in zip(q.ravel(), df.ravel(), strict=True)]
+    return np.array(out).reshape(q.shape)
+
+
+def _smm_ppf(prob, k, df):
+    """
+    Quantile function of the studentized maximum modulus distribution
+
+    Parameters
+    ----------
+    prob : float
+        Probability, 1 - alpha.
+    k : int
+        Number of variables.
+    df : array_like
+        Degrees of freedom of the denominator. Can be non-integer or inf.
+
+    Returns
+    -------
+    ndarray
+        The quantiles of the distribution.
+
+    See Also
+    --------
+    _smm_sf
+        Survival function of the studentized maximum modulus distribution.
+    """
+    alpha = 1 - prob
+
+    def _ppf(df):
+        if np.isnan(df):
+            return np.nan
+        # bounds from k = 1 and from the Bonferroni inequality
+        lower = stats.t.isf(alpha / 2, df)
+        if k == 1:
+            return lower
+        upper = stats.t.isf(alpha / (2 * k), df)
+        return optimize.brentq(
+            lambda q: _smm_sf(q, k, df) - alpha, lower, upper, xtol=1e-12
+        )
+
+    df = np.asarray(df, dtype=float)
+    out = [_ppf(dfi) for dfi in df.ravel()]
+    return np.array(out).reshape(df.shape)
 
 
 def Tukeythreegene(first, second, third):
@@ -1243,6 +1351,104 @@ class MultiComparison:
             group_c=self.groupsunique[res[0][0]],
         )
 
+    def dunnett_t3(self, alpha=0.05):
+        """
+        Dunnett's T3 test to compare means of all pairs of groups
+
+        Pairwise comparisons that do not assume equal variances across
+        groups. Each pair is compared with Welch's t statistic using
+        Satterthwaite's degrees of freedom for that pair. The p-values and
+        the simultaneous confidence intervals are based on the studentized
+        maximum modulus distribution for the number of pairwise
+        comparisons.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Value of the family-wise error rate.
+
+        Returns
+        -------
+        results : TukeyHSDResults
+            A results class containing the mean differences, adjusted
+            p-values, simultaneous confidence intervals and reject
+            decisions. ``q_crit`` contains the critical value of the
+            studentized maximum modulus distribution for each pair, on
+            the scale of the t statistic.
+
+        See Also
+        --------
+        tukeyhsd
+            Tukey HSD and Games-Howell pairwise comparisons.
+
+        Notes
+        -----
+        Dunnett's T3 is recommended for small samples with unequal
+        variances, where Games-Howell can be liberal.
+
+        The critical values are computed using the degrees of freedom of
+        each pair without rounding.
+
+        References
+        ----------
+        .. [*] Dunnett, C. W. (1980). Pairwise Multiple Comparisons in the
+           Unequal Variance Case. Journal of the American Statistical
+           Association, 75(372), 796-800.
+        """
+        alpha = float_like(alpha, "alpha", optional=False)
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+        self.groupstats = GroupsStats(
+            np.column_stack([self.data, self.groupintlab]), useranks=False
+        )
+        gmeans = self.groupstats.groupmean
+        gnobs = self.groupstats.groupnobs
+        var_ = self.groupstats.groupvarwithin()
+
+        res = _dunnett_t3(gmeans, gnobs, var_, alpha=alpha)
+        idx1, idx2 = res["pair_indices"]
+        resarr = np.array(
+            lzip(
+                self.groupsunique[idx1],
+                self.groupsunique[idx2],
+                np.round(res["meandiffs"], 4),
+                np.round(res["pvalues"], 4),
+                np.round(res["confint"][:, 0], 4),
+                np.round(res["confint"][:, 1], 4),
+                res["reject"],
+            ),
+            dtype=[
+                ("group1", object),
+                ("group2", object),
+                ("meandiff", float),
+                ("p-adj", float),
+                ("lower", float),
+                ("upper", float),
+                ("reject", np.bool_),
+            ],
+        )
+        results_table = SimpleTable(resarr, headers=resarr.dtype.names)
+        results_table.title = (
+            "Multiple Comparison of Means - Dunnett T3, " + f"FWER={alpha:4.2f}"
+        )
+
+        return TukeyHSDResults(
+            self,
+            results_table,
+            res["q_crit"],
+            reject=res["reject"],
+            meandiffs=res["meandiffs"],
+            std_pairs=res["std_pairs"],
+            confint=res["confint"],
+            df_total=res["df_pairs"],
+            reject2=res["reject"],
+            variance=var_,
+            pvalues=res["pvalues"],
+            alpha=alpha,
+            group_t=self.groupsunique[idx2],
+            group_c=self.groupsunique[idx1],
+        )
+
 
 def rankdata(x):
     """rankdata, equivalent to scipy.stats.rankdata
@@ -1555,6 +1761,65 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
         reject2,
         pvalues,
     )
+
+
+def _dunnett_t3(mean_all, nobs_all, var_all, alpha=0.05):
+    """
+    Dunnett's T3 simultaneous comparison of all pairs of means
+
+    Parameters
+    ----------
+    mean_all : array_like
+        The sample mean of each group.
+    nobs_all : array_like
+        The number of observations of each group.
+    var_all : array_like
+        The sample variance of each group, using ddof=1.
+    alpha : float, optional
+        The family-wise error rate.
+
+    Returns
+    -------
+    dict
+        Dictionary with the pair indices, the mean differences, their
+        standard errors, the Welch degrees of freedom, the t statistics,
+        the adjusted p-values, the critical values, the simultaneous
+        confidence intervals and the reject decisions.
+    """
+    mean_all = np.asarray(mean_all, dtype=float)
+    nobs_all = np.asarray(nobs_all, dtype=float)
+    var_all = np.asarray(var_all, dtype=float)
+    n_means = len(mean_all)
+
+    # pairs where both variances are zero have undefined statistics, nan
+    with np.errstate(invalid="ignore", divide="ignore"):
+        var_pairs, df_pairs = varcorrection_pairs_unequal(
+            var_all, nobs_all, nobs_all - 1
+        )
+        idx1, idx2 = np.triu_indices(n_means, 1)
+        meandiffs = (mean_all - mean_all[:, None])[idx1, idx2]
+        std_pairs = np.sqrt(var_pairs[idx1, idx2])
+        df_pairs = df_pairs[idx1, idx2]
+        tvalues = meandiffs / std_pairs
+    n_pairs = len(idx1)
+
+    pvalues = _smm_sf(np.abs(tvalues), n_pairs, df_pairs)
+    q_crit = _smm_ppf(1 - alpha, n_pairs, df_pairs)
+    crit_int = std_pairs * q_crit
+    confint = np.column_stack((meandiffs - crit_int, meandiffs + crit_int))
+    reject = np.abs(tvalues) > q_crit
+
+    return {
+        "pair_indices": (idx1, idx2),
+        "meandiffs": meandiffs,
+        "std_pairs": std_pairs,
+        "df_pairs": df_pairs,
+        "tvalues": tvalues,
+        "pvalues": pvalues,
+        "q_crit": q_crit,
+        "confint": confint,
+        "reject": reject,
+    }
 
 
 def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
