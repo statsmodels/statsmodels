@@ -793,6 +793,22 @@ class MixedLM(base.LikelihoodModel):
         ):
             exog_re = exog_re[:, None]
 
+        nobs_orig = len(endog)
+        if missing == "drop":
+            # The upstream missing data handling drops rows and columns of 2d
+            # arrays, which is not correct for exog_re, so drop rows here
+            endog, exog, groups, exog_re = _drop_missing_rows(
+                endog, exog, groups, exog_re
+            )
+            missing = "none"
+        if self.k_vc > 0 and len(endog) != nobs_orig:
+            # exog_vc is split by groups and cannot be aligned after dropping
+            raise ValueError(
+                "missing='drop' cannot be used with exog_vc when observations "
+                "are dropped. Drop the missing values before creating the "
+                "model or use from_formula."
+            )
+
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
         super().__init__(
@@ -3291,6 +3307,27 @@ class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
     _methods = {}
     _upstream_methods = base.LikelihoodResultsWrapper._wrap_methods
     _wrap_methods = base.wrap.union_dicts(_methods, _upstream_methods)
+
+
+def _drop_missing_rows(*arrays):
+    """Drop the rows that have a missing value in any of the arrays"""
+    nobs = len(arrays[0])
+    missing = np.zeros(nobs, dtype=bool)
+    for arr in arrays:
+        if arr is not None:
+            missing |= pd.isna(np.asarray(arr)).reshape(nobs, -1).any(axis=1)
+    if not missing.any():
+        return arrays
+    keep = ~missing
+    out = []
+    for arr in arrays:
+        if arr is None:
+            out.append(None)
+        elif isinstance(arr, (pd.Series, pd.DataFrame)):
+            out.append(arr.iloc[keep])
+        else:
+            out.append(np.asarray(arr)[keep])
+    return out
 
 
 def _handle_missing(data, groups, formula, re_formula, vc_formula):
