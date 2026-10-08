@@ -1901,7 +1901,7 @@ def test_summary_after_remove_data(fit_func):
 @pytest.mark.parametrize("n_columns", [1, 2])
 @pytest.mark.parametrize("at_fit", [False, True])
 def test_ols_hessian_numerical_derivative(scale, use_offset, n_columns, at_fit):
-    x = add_constant(np.arange(-2.0, 3.0))[:, :n_columns]
+    x = add_constant(np.arange(-1.0, 4.0))[:, :n_columns]
     y = np.array([1.0, -1.5, 3.0, -0.5, 3.0])
     offset = np.array([0.1, 0.3, -0.2, 0.4, 0.2]) if use_offset else 0.0
     model = OLS(y, x, **({"offset": offset} if use_offset else {}))
@@ -1924,6 +1924,22 @@ def test_ols_hessian_at_fit():
                     atol=1e-12)
     assert_allclose(result.model.hessian(result.params, scale=ml_scale),
                     -np.linalg.inv(covariance), atol=1e-12)
+
+
+def test_ols_regularized_profile_scale():
+    x = np.array([-1.0, -1.0, 1.0, 1.0])
+    y = 0.3 * x + np.array([-1.0, 1.0, -1.0, 1.0])
+    alpha = 0.02
+    # The objective, up to a constant, is
+    # log(1 + (params - 0.3)**2) / 2 + alpha * abs(params).
+    # Its unique minimum is positive and solves
+    # (params - 0.3) / (1 + (params - 0.3)**2) + alpha = 0.
+    expected = 0.3 - 2 * alpha / (1 + np.sqrt(1 - 4 * alpha**2))
+    result = OLS(y, x).fit_regularized(
+        alpha=alpha, L1_wt=1, profile_scale=True, cnvrg_tol=1e-12
+    )
+    assert result.converged
+    assert_allclose(result.params, [expected], rtol=1e-10, atol=1e-12)
 
 
 def test_hessian_factor_gls_wls_matches_numerical_hessian():
