@@ -715,7 +715,7 @@ def acorr_ljungbox(
         maxlag = nobs - 1
 
         # Compute sum of squared autocorrelations
-        sacf = acf(x, nlags=maxlag, fft=False)
+        sacf = acf(x, nlags=maxlag, fft=True)
 
         if not boxpierce:
             q_sacf = (
@@ -771,7 +771,7 @@ def acorr_ljungbox(
 
     # normalize by nobs not (nobs-nlags)
     # SS: unbiased=False is default now
-    sacf = acf(x, nlags=maxlag, fft=False)
+    sacf = acf(x, nlags=maxlag, fft=True)
     sacf2 = sacf[1 : maxlag + 1] ** 2 / (nobs - np.arange(1, maxlag + 1))
     qljungbox = nobs * (nobs + 2) * np.cumsum(sacf2)[lags - 1]
     adj_lags = lags - model_df
