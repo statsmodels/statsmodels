@@ -1171,7 +1171,7 @@ class OLS(WLS):
             ssr = self._wendog_xprod - 2 * np.dot(self._wexog_x_wendog.T, params)
             ssr += np.dot(params, xtxb)
             ssrp = -2 * self._wexog_x_wendog + 2 * xtxb
-            hm = self._wexog_xprod / ssr - np.outer(ssrp, ssrp) / ssr**2
+            hm = 2 * self._wexog_xprod / ssr - np.outer(ssrp, ssrp) / ssr**2
             return -self.nobs * hm / 2
         else:
             return -self._wexog_xprod / scale
