@@ -946,3 +946,29 @@ def test_cov_starting_zero_mad_raises():
     with pytest.raises(ValueError, match="standardizing scale is zero"):
         robcov._cov_starting(x, standardize=True)
 
+@pytest.mark.parametrize("reweight", [True, False])
+def test_covdet_mcd_tilted_plane_exact_fit_raises(reweight):
+    # GH-10437 suggestion 2: more than h observations on a tilted plane
+    # (no column has MAD == 0). Put ALL rows on the plane so every C-step
+    # subset is singular and CI is not sensitive to platform FP around a
+    # near-exact-fit residual (Pyodide). Raise before reweight so default
+    # reweight=True cannot hide the exact-fit case.
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    x[:, 2] = x[:, 0] + x[:, 1]
+    assert (robcov.mad(x) > 0).all()
+
+    with pytest.raises(ValueError, match="lie on a hyperplane"):
+        robcov.CovDetMCD(x).fit(h=51, reweight=reweight)
+
+
+def test_covdet_mcd_healthy_data_still_fits():
+    # Sanity: ordinary full-rank Gaussian data still returns a non-singular
+    # covariance after the exact-fit guard.
+    rng = np.random.default_rng(1)
+    x = rng.standard_normal((100, 3))
+    res = robcov.CovDetMCD(x).fit(h=51)
+    assert np.isfinite(np.linalg.det(res.cov))
+    assert np.linalg.det(res.cov) > 0
+    assert not robcov._is_singular(res.cov)
+
