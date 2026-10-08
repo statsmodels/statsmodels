@@ -611,6 +611,8 @@ Commonly used attributes include:
   :py:meth:`mse <mlemodel.MLEResults.mse>`, and
   :py:meth:`mae <mlemodel.MLEResults.mae>` - sum of squared errors,
   mean square error, and mean absolute error
+- :py:meth:`get_rsquared <mlemodel.MLEResults.get_rsquared>` - compute
+  Harvey-style R-squared measures using an explicit baseline model
 - Information criteria, including: :py:meth:`aic <mlemodel.MLEResults.aic>`,
   :py:meth:`aicc <mlemodel.MLEResults.aicc>`,
   :py:meth:`bic <mlemodel.MLEResults.bic>`, and
