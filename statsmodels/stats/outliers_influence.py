@@ -15,7 +15,7 @@ import warnings
 import numpy as np
 
 from statsmodels.graphics._regressionplots_doc import _plot_influence_doc
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import OLS, WLS
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.docstring_helpers import Appender
@@ -828,7 +828,7 @@ class OLSInfluence(_BaseInfluenceMixin):
     Parameters
     ----------
     results : RegressionResults
-        currently assumes the results are from an OLS regression
+        Results of an OLS or WLS regression.
 
     Notes
     -----
@@ -849,6 +849,13 @@ class OLSInfluence(_BaseInfluenceMixin):
     observations that are possible outliers. (However, this is not yet
     available in an automated way.)
 
+    For WLS, the hat matrix, the studentized residuals, Cook's distance,
+    dffits and the LOOO measures are those of OLS on the whitened data,
+    ``sqrt(w) * endog`` and ``sqrt(w) * exog``, so a LOOO regression is a WLS
+    without observation i. This matches R's ``influence.measures`` for
+    ``lm(..., weights=w)``. ``resid_press`` and ``influence`` stay on the
+    scale of endog.
+
     This should be extended to general least squares.
 
     The leave-one-variable-out (LOVO) auxiliary regression are currently not
@@ -863,6 +870,19 @@ class OLSInfluence(_BaseInfluenceMixin):
         self.exog = results.model.exog
         self.resid = results.resid
         self.model_class = results.model.__class__
+        model = self.results.model
+        if isinstance(model, WLS):
+            # WLS, and OLS as its unit weight case, is OLS on the whitened
+            # data, see the class notes.
+            self._wendog = model.wendog
+            self._wexog = model.wexog
+            self._wresid = np.asarray(self.results.wresid)
+            self._looo_class = OLS
+        else:
+            self._wendog = model.endog
+            self._wexog = model.exog
+            self._wresid = np.asarray(self.results.resid)
+            self._looo_class = self.model_class
 
         # self.sigma_est = np.sqrt(results.mse_resid)
         self.scale = results.mse_resid
@@ -877,7 +897,7 @@ class OLSInfluence(_BaseInfluenceMixin):
     def hat_matrix_diag(self):
         """Diagonal of the hat_matrix for OLS"""
         # TODO: temporarily calculated here, this should go to model class
-        return (self.exog * self.results.model.pinv_wexog.T).sum(1)
+        return (self._wexog * self.results.model.pinv_wexog.T).sum(1)
 
     @cache_readonly
     def resid_press(self):
@@ -978,7 +998,7 @@ class OLSInfluence(_BaseInfluenceMixin):
             # can be replace by different estimators of sigma
             sigma = np.sqrt(sigma2_est)
 
-        return self.resid / sigma / np.sqrt(1 - hii)
+        return self._wresid / sigma / np.sqrt(1 - hii)
 
     # same computation as GLMInfluence
     @cache_readonly
@@ -1237,7 +1257,7 @@ class OLSInfluence(_BaseInfluenceMixin):
         all results will be attached.
         currently only 'params', 'mse_resid', 'det_cov_params' are stored
 
-        For OLS with a full rank exog, the results are computed with the
+        For OLS and WLS with a full rank exog, the results are computed with the
         closed form leave-one-observation-out updates and no auxiliary
         regressions are estimated, except for observations with a hat
         matrix diagonal of (numerically) one. For other models, endog is
@@ -1245,14 +1265,14 @@ class OLSInfluence(_BaseInfluenceMixin):
 
         Only attributes of the auxiliary OLS instances are stored.
         """
-        endog = self.results.model.endog
-        exog = self.results.model.exog
+        endog = self._wendog
+        exog = self._wexog
 
         params = np.zeros(exog.shape, dtype=float)
         mse_resid = np.zeros(endog.shape, dtype=float)
         det_cov_params = np.zeros(endog.shape, dtype=float)
 
-        if self.model_class is OLS and self.results.model.rank == self.k_vars:
+        if self.model_class in (OLS, WLS) and self.results.model.rank == self.k_vars:
             # Closed form, see e.g. Belsley, Kuh and Welsch (1980), ch. 2.
             # Dropping observation i with hat diagonal h_i and residual e_i
             # changes the parameters by (X'X)^{-1} x_i e_i / (1 - h_i)
@@ -1262,12 +1282,12 @@ class OLSInfluence(_BaseInfluenceMixin):
             # If h_i is one, then dropping observation i reduces the rank of
             # exog and the auxiliary regression is still needed.
             mask = 1 - hii > np.sqrt(np.finfo(float).eps)
-            resid = np.asarray(self.results.resid)[mask]
+            resid = self._wresid[mask]
             one_minus_h = 1 - hii[mask]
             resid_press = resid / one_minus_h
             dfbeta = self.results.model.pinv_wexog.T[mask] * resid_press[:, None]
             params[mask] = self.results.params - dfbeta
-            ssr = np.dot(self.results.resid, self.results.resid)
+            ssr = np.dot(self._wresid, self._wresid)
             df_resid = self.nobs - 1 - self.k_vars
             mse_resid[mask] = (ssr - resid * resid_press) / df_resid
             # det(X_(i)'X_(i)) = det(X'X) (1 - h_i)
@@ -1289,7 +1309,7 @@ class OLSInfluence(_BaseInfluenceMixin):
             with warnings.catch_warnings():
                 if ignore_singular:
                     warnings.simplefilter("ignore", SingularMatrixWarning)
-                res_i = self.model_class(endog[inidx], exog[inidx]).fit()
+                res_i = self._looo_class(endog[inidx], exog[inidx]).fit()
                 params[outidx] = res_i.params
                 mse_resid[outidx] = res_i.mse_resid
                 det_cov_params[outidx] = np.linalg.det(res_i.cov_params())
