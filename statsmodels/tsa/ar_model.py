@@ -6,7 +6,6 @@ from statsmodels.compat.pandas import (
 )
 
 from collections.abc import Iterable, Sequence
-import datetime
 import datetime as dt
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
@@ -752,8 +751,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
         params: ArrayLike,
         exog: ArrayLike2D,
         exog_oos: ArrayLike2D,
-        start: int | str | datetime.datetime | pd.Timestamp | None,
-        end: int | str | datetime.datetime | pd.Timestamp | None,
+        start: int | str | dt.datetime | pd.Timestamp | None,
+        end: int | str | dt.datetime | pd.Timestamp | None,
     ) -> tuple[
         np.ndarray,
         np.ndarray | pd.DataFrame | None,
@@ -799,8 +798,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
     def predict(
         self,
         params: ArrayLike,
-        start: int | str | datetime.datetime | pd.Timestamp | None = None,
-        end: int | str | datetime.datetime | pd.Timestamp | None = None,
+        start: int | str | dt.datetime | pd.Timestamp | None = None,
+        end: int | str | dt.datetime | pd.Timestamp | None = None,
         dynamic: bool | int = False,
         exog: ArrayLike2D | None = None,
         exog_oos: ArrayLike2D | None = None,
