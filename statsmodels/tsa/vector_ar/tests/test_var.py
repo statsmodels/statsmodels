@@ -666,15 +666,15 @@ def test_get_trendorder():
 
 def test_var_constant():
     # see 2043
-    import datetime
+    import datetime as dt
 
     from pandas import DataFrame, DatetimeIndex
 
     series = np.array([[2.0, 2.0], [1, 2.0], [1, 2.0], [1, 2.0], [1.0, 2.0]])
     data = DataFrame(series)
 
-    d = datetime.datetime.now()
-    delta = datetime.timedelta(days=1)
+    d = dt.datetime.now()
+    delta = dt.timedelta(days=1)
     index = []
     for _ in range(data.shape[0]):
         index.append(d)
