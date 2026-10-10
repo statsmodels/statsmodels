@@ -7,8 +7,6 @@ from __future__ import annotations
 
 from statsmodels.compat.python import lmap
 
-from functools import reduce
-
 import numpy as np
 from pandas import DataFrame, MultiIndex, Series, isnull
 
@@ -44,14 +42,10 @@ def _nan_rows(*arrs):
     if len(arrs) == 1:
         arrs += ([[False]],)
 
-    def _nan_row_maybe_two_inputs(x, y):
-        # check for dtype bc dataframe has dtypes
-        x_is_boolean_array = hasattr(x, "dtype") and x.dtype == bool and x
-        return np.logical_or(
-            _asarray_2d_null_rows(x), (x_is_boolean_array | _asarray_2d_null_rows(y))
-        )
-
-    return reduce(_nan_row_maybe_two_inputs, arrs).squeeze()
+    nan_rows = _asarray_2d_null_rows(arrs[0])
+    for arr in arrs[1:]:
+        nan_rows = nan_rows | _asarray_2d_null_rows(arr)
+    return nan_rows.squeeze()
 
 
 class ModelData:
@@ -299,7 +293,7 @@ class ModelData:
         else:
             nan_mask = _nan_rows(*combined)
             if combined_2d:
-                nan_mask = _nan_rows(*(nan_mask[:, None],) + combined_2d)
+                nan_mask = nan_mask | _nan_rows(*combined_2d)
 
         if not np.any(nan_mask):  # no missing do not do anything
             combined = dict(zip(combined_names, combined, strict=True))
