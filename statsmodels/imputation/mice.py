@@ -1352,7 +1352,7 @@ class MICE:
         cov_within = 0.0
         scale_list = []
         for results in self.results_list:
-            results_uw = results._results
+            results_uw = getattr(results, "_results", results)
             params_list.append(results_uw.params)
             cov_within += results_uw.cov_params()
             scale_list.append(results.scale)
