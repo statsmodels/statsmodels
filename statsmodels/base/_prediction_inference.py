@@ -507,6 +507,8 @@ def get_prediction_glm(
     """
 
     # prepare exog and row_labels, based on base Results.predict
+    # without exog, predict must use the model's offset and exposure
+    use_model_exog = exog is None
     exog, row_labels = _get_exog_predict(
         self,
         exog=exog,
@@ -517,7 +519,9 @@ def get_prediction_glm(
     if pred_kwds is None:
         pred_kwds = {}
 
-    predicted_mean = self.model.predict(self.params, exog, **pred_kwds)
+    predicted_mean = self.model.predict(
+        self.params, None if use_model_exog else exog, **pred_kwds
+    )
 
     covb = self.cov_params()
 
@@ -533,7 +537,10 @@ def get_prediction_glm(
     dist = ["norm", "t"][self.use_t]
     if linpred is None:
         linpred = self.get_prediction_linear(
-            exog=exog, transform=transform, row_labels=row_labels, pred_kwds=pred_kwds
+            exog=None if use_model_exog else exog,
+            transform=transform,
+            row_labels=row_labels,
+            pred_kwds=pred_kwds,
         )
 
     return PredictionResultsMean(
@@ -585,6 +592,8 @@ def get_prediction_linear(
     """
 
     # prepare exog and row_labels, based on base Results.predict
+    # without exog, predict must use the model's offset and exposure
+    use_model_exog = exog is None
     exog, row_labels = _get_exog_predict(
         self,
         exog=exog,
@@ -606,7 +615,9 @@ def get_prediction_linear(
     var_pred = (exog * np.dot(covb, exog.T).T).sum(1)
     pred_kwds_linear = pred_kwds.copy()
     pred_kwds_linear["which"] = "linear"
-    predicted = self.model.predict(self.params, exog, **pred_kwds_linear)
+    predicted = self.model.predict(
+        self.params, None if use_model_exog else exog, **pred_kwds_linear
+    )
 
     dist = ["norm", "t"][self.use_t]
     res = PredictionResultsBase(
@@ -661,6 +672,8 @@ def get_prediction_monotonic(
     """
 
     # prepare exog and row_labels, based on base Results.predict
+    # without exog, predict must use the model's offset and exposure
+    use_model_exog = exog is None
     exog, row_labels = _get_exog_predict(
         self,
         exog=exog,
@@ -681,9 +694,10 @@ def get_prediction_monotonic(
     linpred_var = (exog * np.dot(covb, exog.T).T).sum(1)
     pred_kwds_linear = pred_kwds.copy()
     pred_kwds_linear["which"] = "linear"
-    linpred = self.model.predict(self.params, exog, **pred_kwds_linear)
+    predict_exog = None if use_model_exog else exog
+    linpred = self.model.predict(self.params, predict_exog, **pred_kwds_linear)
 
-    predicted = self.model.predict(self.params, exog, **pred_kwds)
+    predicted = self.model.predict(self.params, predict_exog, **pred_kwds)
     link_deriv = func_deriv(linpred)
     var_pred = link_deriv**2 * linpred_var
 
@@ -755,6 +769,8 @@ def get_prediction_delta(
     """
 
     # prepare exog and row_labels, based on base Results.predict
+    # without exog, predict must use the model's offset and exposure
+    use_model_exog = exog is None
     exog, row_labels = _get_exog_predict(
         self,
         exog=exog,
@@ -766,7 +782,9 @@ def get_prediction_delta(
 
     def f_pred(p):
         """Prediction function as function of params"""
-        pred = self.model.predict(p, exog, which=which, **pred_kwds)
+        pred = self.model.predict(
+            p, None if use_model_exog else exog, which=which, **pred_kwds
+        )
         if average:
             # using `.T` which should work if aggweights is 1-dim
             pred = (pred.T * agg_weights.T).mean(-1).T
