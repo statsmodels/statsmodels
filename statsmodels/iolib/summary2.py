@@ -1,7 +1,7 @@
 from statsmodels.compat.pandas import FUTURE_STACK
 from statsmodels.compat.python import lzip
 
-import datetime
+import datetime as dt
 from functools import reduce
 import re
 import textwrap
@@ -360,7 +360,7 @@ def summary_model(results):
     """
 
     def time_now(*args, **kwds):
-        now = datetime.datetime.now()
+        now = dt.datetime.now()
         return now.strftime("%Y-%m-%d %H:%M")
 
     info = {}
