@@ -3594,16 +3594,23 @@ def test_glm_predict_nonpositive_exposure_raises():
 
 @pytest.mark.parametrize(
     "fit_model",
-    ["glm_offset", "glm_exposure", "poisson_offset", "poisson_exposure", "nb_offset"],
+    [
+        "glm_offset",
+        "glm_exposure",
+        "poisson_offset",
+        "poisson_exposure",
+        "nb_offset",
+        "zip_offset",
+    ],
 )
 def test_get_prediction_default_uses_model_offset(fit_model):
     # Without exog, get_prediction() must use the offset or exposure stored on
-    # the model, the same as predict() and fittedvalues do.
-    rs = np.random.RandomState(4321)
+    # the model, the same as predict() does.
+    rng = np.random.default_rng(4321)
     nobs = 200
-    x = sm.add_constant(rs.normal(size=(nobs, 2)))
-    expo = np.exp(rs.normal(scale=0.5, size=nobs))
-    y = rs.poisson(expo * np.exp(0.3 + 0.2 * x[:, 1]))
+    x = sm.add_constant(rng.normal(size=(nobs, 2)))
+    expo = np.exp(rng.normal(scale=0.5, size=nobs))
+    y = rng.poisson(expo * np.exp(0.3 + 0.2 * x[:, 1]))
     off = np.log(expo)
 
     if fit_model == "glm_offset":
@@ -3618,8 +3625,11 @@ def test_get_prediction_default_uses_model_offset(fit_model):
     elif fit_model == "poisson_exposure":
         res = sm.Poisson(y, x, exposure=expo).fit(disp=0)
         explicit = {"exposure": expo}
-    else:
+    elif fit_model == "nb_offset":
         res = sm.NegativeBinomial(y, x, offset=off).fit(disp=0)
+        explicit = {"offset": off}
+    else:
+        res = sm.ZeroInflatedPoisson(y, x, offset=off).fit(disp=0, maxiter=200)
         explicit = {"offset": off}
 
     # GLM results use predicted_mean and se_mean, count models use predicted
@@ -3634,3 +3644,8 @@ def test_get_prediction_default_uses_model_offset(fit_model):
     # offset or exposure together with exog.
     expected = res.get_prediction(exog=x, **explicit)
     assert_allclose(getattr(pred, se_name), getattr(expected, se_name), rtol=1e-10)
+
+    if not hasattr(pred, "predicted_mean"):
+        # The linear predictor must include the offset or exposure too.
+        linpred = res.get_prediction(which="linear")
+        assert_allclose(linpred.predicted, res.predict(which="linear"), rtol=1e-10)

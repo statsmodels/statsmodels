@@ -537,10 +537,7 @@ def get_prediction_glm(
     dist = ["norm", "t"][self.use_t]
     if linpred is None:
         linpred = self.get_prediction_linear(
-            exog=None if use_model_exog else exog,
-            transform=transform,
-            row_labels=row_labels,
-            pred_kwds=pred_kwds,
+            exog=exog, transform=transform, row_labels=row_labels, pred_kwds=pred_kwds
         )
 
     return PredictionResultsMean(
