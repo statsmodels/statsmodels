@@ -1853,6 +1853,24 @@ def test_ljungbox_auto_lag_threshold_excludes_lag_zero():
     assert smsdia.acorr_ljungbox(data, auto_lag=True).shape[0] == 1
 
 
+def test_ljungbox_rejects_lag_zero():
+    # Lag 0 indexed the cumulative sum at -1, so it silently returned the
+    # statistic for the largest lag. An empty lag list failed with a reduction
+    # error instead of a message about the lags.
+    data = np.random.RandomState(7).standard_normal(50)
+    for lags in (0, [0], [0, 1], [0, 2], []):
+        with pytest.raises(ValueError, match="lags must be positive"):
+            smsdia.acorr_ljungbox(data, lags=lags)
+
+    # Valid lags give the same values as each lag computed on its own.
+    both = smsdia.acorr_ljungbox(data, lags=[1, 2])
+    lag1 = smsdia.acorr_ljungbox(data, lags=[1])
+    lag2 = smsdia.acorr_ljungbox(data, lags=[2])
+    assert both.shape[0] == 2
+    assert_allclose(both["lb_stat"].to_numpy()[0], lag1["lb_stat"].to_numpy()[0])
+    assert_allclose(both["lb_stat"].to_numpy()[1], lag2["lb_stat"].to_numpy()[0])
+
+
 def test_ljungbox_errors_warnings():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
     with pytest.raises(ValueError, match="model_df must"):
