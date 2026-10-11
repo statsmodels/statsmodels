@@ -172,6 +172,19 @@ def test_innovations_mle():
     assert_allclose(res.params, desired_p.params, atol=1e-5)
 
 
+def test_innovations_mle_start_params_not_implemented():
+    # Starting parameters are not supported by innovations_mle yet. The error
+    # should say so, not raise a TypeError from the estimator.
+    endog = dta["infl"].iloc[:100]
+    mod = ARIMA(endog, order=(1, 0, 0), trend="n")
+    with pytest.raises(NotImplementedError, match="innovations_mle"):
+        mod.fit(method="innovations_mle", start_params=[0.5, 1.0])
+
+    # The statespace method still accepts starting parameters.
+    res = mod.fit(method="statespace", start_params=[0.5, 1.0])
+    assert res.params.shape == (2,)
+
+
 def test_statespace():
     # Test for basic use of Yule-Walker estimation
     endog = dta["infl"].iloc[:100]
