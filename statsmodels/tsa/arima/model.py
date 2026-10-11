@@ -370,8 +370,8 @@ class ARIMA(sarimax.SARIMAX):
                                  ' parameters, but `start_params` argument was'
                                  ' given.')
             if method == "innovations_mle":
-                # Exogenous and trend parameters are estimated by GLS here, so
-                # starting parameters are not used yet.
+                # ARIMA.fit does not pass starting parameters through for
+                # innovations_mle yet (see #8091).
                 raise NotImplementedError(
                     'Starting parameters are not supported with'
                     ' method="innovations_mle" yet. Use method="statespace" to'
