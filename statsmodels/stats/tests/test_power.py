@@ -1069,6 +1069,32 @@ def test_solve_power_impossible_one_sided_raises():
     assert res < 0
 
 
+def test_solve_power_invalid_alternative_raises():
+    # GH#9378: an invalid ``alternative`` (e.g. the "one-sided" spelling
+    # that appears in some documentation) should raise an informative
+    # ``ValueError`` up front. Previously the ``string_like`` validation only
+    # ran inside ``ttest_power`` during root finding, where the resulting
+    # ``ValueError`` was swallowed and ``solve_power`` returned ``nan`` with a
+    # confusing ``ConvergenceWarning``.
+    match = "alternative must be one of"
+    for cls, none_kw in [
+        (smp.TTestPower, {"nobs": None}),
+        (smp.TTestIndPower, {"nobs1": None}),
+    ]:
+        for bad in ["one-sided", "one_sided", "1-sided"]:
+            with pytest.raises(ValueError, match=match):
+                cls().solve_power(
+                    effect_size=0.5, alpha=0.05, power=0.8,
+                    alternative=bad, **none_kw,
+                )
+
+    # valid spellings still work (and are case-insensitive)
+    res = smp.TTestPower().solve_power(
+        effect_size=0.5, nobs=None, alpha=0.05, power=0.8, alternative="Larger"
+    )
+    assert np.isfinite(res)
+
+
 # TODO: can something useful be made from this?
 @pytest.mark.xfail(reason="Known failure on modern SciPy >= 0.10", strict=True)
 def test_power_solver_warn():

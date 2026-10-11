@@ -950,6 +950,16 @@ class TTestPower(Power):
         where this fails.
 
         """
+        # Validate `alternative` up front so an invalid value raises a clear
+        # error instead of being swallowed by the root finder (GH#9378).
+        # Otherwise e.g. ``alternative="one-sided"`` returns ``nan`` with a
+        # confusing ``ConvergenceWarning``.
+        alternative = string_like(
+            alternative,
+            "alternative",
+            options=("two-sided", "larger", "smaller"),
+        )
+
         # for debugging
         # print 'calling ttest solve with', (effect_size, nobs, alpha, power, alternative)
         return super().solve_power(
@@ -1077,6 +1087,14 @@ class TTestIndPower(Power):
         where this fails.
 
         """
+        # Validate `alternative` up front so an invalid value raises a clear
+        # error instead of being swallowed by the root finder (GH#9378).
+        alternative = string_like(
+            alternative,
+            "alternative",
+            options=("two-sided", "larger", "smaller"),
+        )
+
         return super().solve_power(
             effect_size=effect_size,
             nobs1=nobs1,
