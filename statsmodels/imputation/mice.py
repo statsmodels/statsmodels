@@ -123,6 +123,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.graphics import utils as gutils
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.tools import maybe_unwrap_results
 
 _mice_data_example_1 = """
     >>> imp = mice.MICEData(data)
@@ -1352,7 +1353,7 @@ class MICE:
         cov_within = 0.0
         scale_list = []
         for results in self.results_list:
-            results_uw = getattr(results, "_results", results)
+            results_uw = maybe_unwrap_results(results)
             params_list.append(results_uw.params)
             cov_within += results_uw.cov_params()
             scale_list.append(results.scale)
