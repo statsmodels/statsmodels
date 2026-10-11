@@ -1858,7 +1858,7 @@ def test_ljungbox_rejects_lag_zero():
     # statistic for the largest lag. An empty lag list failed with a reduction
     # error instead of a message about the lags.
     data = np.random.RandomState(7).standard_normal(50)
-    for lags in (0, [0], [0, 1], [0, 2], []):
+    for lags in (0, [0], [0, 1], [0, 2], [-1, 2], []):
         with pytest.raises(ValueError, match="lags must be positive"):
             smsdia.acorr_ljungbox(data, lags=lags)
 
