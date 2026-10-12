@@ -184,7 +184,11 @@ class _ConditionalModel(base.LikelihoodModel):
             maxiter=maxiter,
             full_output=full_output,
             disp=disp,
+            fargs=fargs,
+            callback=callback,
+            retall=retall,
             skip_hessian=skip_hessian,
+            **kwargs,
         )
 
         if skip_hessian:
@@ -193,6 +197,8 @@ class _ConditionalModel(base.LikelihoodModel):
             cov_params = rslt.cov_params()
 
         crslt = ConditionalResults(self, rslt.params, cov_params, 1)
+        crslt.mle_retvals = rslt.mle_retvals
+        crslt.mle_settings = rslt.mle_settings
         crslt.method = method
         crslt.nobs = self.nobs
         crslt.n_groups = self._n_groups
@@ -765,7 +771,11 @@ class ConditionalMNLogit(_ConditionalModel):
             maxiter=maxiter,
             full_output=full_output,
             disp=disp,
+            fargs=fargs,
+            callback=callback,
+            retall=retall,
             skip_hessian=skip_hessian,
+            **kwargs,
         )
 
         rslt.params = rslt.params.reshape((self.exog.shape[1], -1))

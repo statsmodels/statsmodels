@@ -692,6 +692,9 @@ New Features and Enhancements
 Notable Bug Fixes
 ====================
 
+- Conditional regression ``fit`` methods now forward optimizer keyword
+  arguments, ``fargs``, ``callback``, and ``retall``. Conditional logit and
+  Poisson results retain ``mle_retvals`` and ``mle_settings``. :issue:`8849`
 - Fix a typo in the ``InfeasibleTestError`` exception string. :pr:`8878`
 - Correct diagnostics for changes in pandas. :pr:`8887`
 - MNLogit Wald tests: fix ``ravel``, string ``cov_names``. :pr:`8907`
