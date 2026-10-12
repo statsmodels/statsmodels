@@ -2539,6 +2539,20 @@ class CheckMNLogitBaseZero(CheckModelResults):
         super().test_distr()
 
 
+def test_mnlogit_names_attribute():
+    # GH#8995: MNLogit documents a ``names`` dict mapping the column number
+    # in ``wendog`` to the corresponding endogenous variable name.
+    exog = np.arange(16.0).reshape(8, 2)
+    endog = np.array(["a", "b", "c", "a", "b", "c", "a", "b"])
+    model = MNLogit(endog, exog)
+    assert_equal(model.names, {0: "a", 1: "b", 2: "c"})
+
+    # integer-valued endog yields string representations of the categories
+    endog_int = np.array([1, 2, 3, 1, 2, 3, 1, 2])
+    model_int = MNLogit(endog_int, exog)
+    assert_equal(model_int.names, {0: "1", 1: "2", 2: "3"})
+
+
 class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
     @classmethod
     def setup_class(cls):
