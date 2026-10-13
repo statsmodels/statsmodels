@@ -15,7 +15,8 @@ Instructions for installing from PyPI, source or a development version are also 
 Python Support
 --------------
 
-statsmodels supports Python 3.10, 3.11, 3.12, 3.13, and 3.14.
+statsmodels supports Python 3.10, 3.11, 3.12, 3.13, 3.14, and 3.15, as well
+as the free-threaded builds of Python 3.14 (3.14t) and 3.15 (3.15t).
 
 Anaconda
 --------
@@ -53,6 +54,12 @@ have git installed:
 .. code-block:: bash
 
     git clone https://github.com/statsmodels/statsmodels.git
+
+You can also clone over SSH if you have an SSH key set up with GitHub:
+
+.. code-block:: bash
+
+    git clone git@github.com:statsmodels/statsmodels.git
 
 If you want to keep up to date with the source on github just periodically do:
 
