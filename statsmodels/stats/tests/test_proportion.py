@@ -1527,6 +1527,20 @@ def test_binom_test_reject_interval_alternative():
         smprop.binom_test_reject_interval(0.3, 10, alternative="bogus")
 
 
+def test_binom_test_reject_interval_vectorized():
+    # gh-9238: the ``int()`` cast on the result broke vectorized calls
+    # (``int(ndarray)`` raises ``TypeError``).
+    x_low, x_upp = smprop.binom_test_reject_interval([0.3, 0.5], 10)
+    assert isinstance(x_low, np.ndarray)
+    assert isinstance(x_upp, np.ndarray)
+    assert x_low.shape == (2,)
+    assert x_upp.shape == (2,)
+    # scalar bounds stay finite floats (no int coercion)
+    low, upp = smprop.binom_test_reject_interval(0.5, 10)
+    assert np.issubdtype(type(low), np.floating)
+    assert np.issubdtype(type(upp), np.floating)
+
+
 def test_samplesize_proportions_2indep_onetail_alternative():
     with pytest.warns(FutureWarning, match="is a deprecated alias"):
         nobs_alias = samplesize_proportions_2indep_onetail(
