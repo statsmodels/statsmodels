@@ -1419,28 +1419,29 @@ class DunnResult:
 
     Parameters
     ----------
-    statistic : pd.DataFrame
+    statistic : DataFrame
         Matrix of pairwise z-test statistics.
-    pvalues : pd.DataFrame
+    pvalues : DataFrame
         Matrix of unadjusted p-values.
-    pvalues_adjusted : pd.DataFrame
+    pvalues_adjusted : DataFrame
         Matrix of multiple-testing-adjusted p-values.
-    reject : pd.DataFrame
+    reject : DataFrame
         Boolean matrix indicating whether the null hypothesis is rejected
         at the specified significance level `alpha`.
-    mean_ranks : pd.Series
+    mean_ranks : Series
         Mean rank for each group in the pooled sample.
     group_names : list of str
         Names of the groups.
-    comparison_table : pd.DataFrame
+    comparison_table : DataFrame
         Table containing pairwise comparisons with columns:
         ['group1', 'group2', 'z_stat', 'p_value', 'p_value_adj', 'reject'].
-    alpha : float
-        Significance level used for rejection.
-    p_adjust : str or None
-        Multiple testing correction method applied.
-    alternative : str
+    alpha : float, optional
+        Significance level used for rejection. Default is 0.05.
+    p_adjust : str, optional
+        Multiple testing correction method applied. Default is 'holm'.
+    alternative : str, optional
         Alternative hypothesis used ('two-sided', 'larger', 'smaller').
+        Default is 'two-sided'.
     """
 
     def __init__(
@@ -1470,12 +1471,22 @@ class DunnResult:
     def summary_frame(self):
         """
         Return the pairwise comparison results as a pandas DataFrame.
+
+        Returns
+        -------
+        DataFrame
+            Table of pairwise comparisons and test results.
         """
         return self.comparison_table.copy()
 
     def summary(self):
         """
         Return a formatted summary table of Dunn's pairwise comparisons.
+
+        Returns
+        -------
+        SimpleTable
+            Formatted summary table.
         """
         from copy import deepcopy
 
@@ -1547,29 +1558,32 @@ def dunn_test(
     *samples : array_like or sequence of array_like
         Input sample data. May be passed as:
         - Separate arguments: `dunn_test(sample1, sample2, sample3)`
-        - A sequence/list of samples: `dunn_test([sample1, sample2, sample3])`
+        - A sequence or list of samples: `dunn_test([sample1, sample2, sample3])`
         - A dictionary of samples: `dunn_test({'G1': sample1, 'G2': sample2})`
-        - A single 1D data array when `groups` is also provided:
-          `dunn_test(data, groups=group_labels)`
+        - A 2D numpy ndarray: `dunn_test(arr2d)` where each column is treated
+          as a separate group.
         - A pandas DataFrame: `dunn_test(df)` where each column is treated
           as a separate group.
+        - A single 1D data array when `groups` is also provided:
+          `dunn_test(data, groups=group_labels)`.
     groups : array_like, optional
         Group indicators corresponding to observations in `samples[0]`.
         Must be the same length as the data array.
-    p_adjust : str or None, default 'holm'
-        Method for multiple testing correction:
+    p_adjust : str, optional
+        Method for multiple testing correction. Any method supported by
+        `statsmodels.stats.multitest.multipletests` may be used:
         - 'holm' : Holm step-down procedure (default)
         - 'bonferroni' : one-step Bonferroni correction
         - 'fdr_bh' : Benjamini/Hochberg false discovery rate
         - 'sidak' : Sidak correction
-        - None or 'none' : no adjustment (raw p-values reported)
-    alternative : {'two-sided', 'larger', 'smaller'}, default 'two-sided'
+        - None or 'none' : no adjustment (raw p-values reported).
+    alternative : {"two-sided", "larger", "smaller"}, optional
         The alternative hypothesis:
-        - 'two-sided': tests whether group i differs from group j
+        - 'two-sided': tests whether group i differs from group j (default)
         - 'larger': tests whether group i has larger ranks than group j
-        - 'smaller': tests whether group i has smaller ranks than group j
-    alpha : float, default 0.05
-        Significance level for hypothesis rejection.
+        - 'smaller': tests whether group i has smaller ranks than group j.
+    alpha : float, optional
+        Significance level for hypothesis rejection. Default is 0.05.
 
     Returns
     -------
@@ -1581,19 +1595,45 @@ def dunn_test(
         - `reject`: boolean matrix of hypothesis rejections
         - `mean_ranks`: mean rank per group
         - `summary()`: SimpleTable summary of comparisons
-        - `summary_frame()`: pandas DataFrame representation
+        - `summary_frame()`: pandas DataFrame representation.
+
+    Notes
+    -----
+    Dunn's test computes the z-statistic for comparing groups $i$ and $j$:
+
+    .. math::
+
+        z_{ij} = \frac{\bar{R}_i - \bar{R}_j}{\sigma_{ij}}
+
+    where $\bar{R}_i$ is the average rank of group $i$ computed from the
+    pooled sample of all $k$ groups. The standard error uses the pooled
+    variance estimate across all $k$ groups with tie adjustment:
+
+    .. math::
+
+        \sigma_{ij} = \sqrt{ \left( \frac{N(N + 1)}{12} -
+        \frac{\sum_{m} (t_m^3 - t_m)}{12(N - 1)} \right)
+        \left( \frac{1}{n_i} + \frac{1}{n_j} \right) }
+
+    where $N$ is the total number of observations, $n_i$ is the sample size
+    of group $i$, and $t_m$ is the number of observations tied at the $m$-th
+    rank. This formulation strictly implements the standard pooled variance
+    from Dunn (1964).
 
     References
     ----------
     .. [1] Dunn, O. J. (1964). "Multiple comparisons using rank sums."
            Technometrics, 6(3), 241-252.
     .. [2] Glantz, S. A. (2012). "Primer of Biostatistics." 7th ed.
+           McGraw-Hill Medical.
     """
-    valid_alts = ("two-sided", "larger", "smaller")
-    if alternative not in valid_alts:
-        raise ValueError(
-            f"alternative must be one of {valid_alts}, got '{alternative}'"
-        )
+    alternative = string_like(
+        alternative, "alternative", options=("two-sided", "larger", "smaller")
+    )
+    if p_adjust is not None:
+        p_adjust = string_like(p_adjust, "p_adjust", optional=True, lower=True)
+        if p_adjust in ("none", ""):
+            p_adjust = None
 
     # Parse inputs
     if groups is not None:
@@ -1602,10 +1642,22 @@ def dunn_test(
                 "When `groups` is provided, pass a single 1D data array as "
                 "the first argument."
             )
+        if pd.isna(groups).any():
+            raise ValueError(
+                "NaN or null values found in `groups`. "
+                "dunn_test requires non-null group indicators."
+            )
         data = np.asarray(samples[0])
         grp = np.asarray(groups)
+        if data.ndim != 1 or grp.ndim != 1:
+            raise ValueError("`data` and `groups` must both be 1-dimensional.")
         if len(data) != len(grp):
             raise ValueError("`data` and `groups` must have the same length.")
+        if pd.isna(data).any():
+            raise ValueError(
+                "NaN or missing values found in input data. "
+                "dunn_test requires complete observations without NaNs."
+            )
         # Find unique groups preserving order
         unique_groups = []
         for g in grp:
@@ -1619,8 +1671,11 @@ def dunn_test(
             group_names = [str(k) for k in arg.keys()]
             group_samples = [np.asarray(v) for v in arg.values()]
         elif isinstance(arg, pd.DataFrame):
-            group_names = list(arg.columns)
-            group_samples = [arg[col].dropna().values for col in arg.columns]
+            group_names = [str(col) for col in arg.columns]
+            group_samples = [np.asarray(arg[col].values) for col in arg.columns]
+        elif isinstance(arg, np.ndarray) and arg.ndim == 2:
+            group_names = [f"col_{j}" for j in range(arg.shape[1])]
+            group_samples = [arg[:, j] for j in range(arg.shape[1])]
         elif isinstance(arg, (list, tuple)):
             if len(arg) > 0 and all(hasattr(item, "__len__") for item in arg):
                 group_samples = [np.asarray(s) for s in arg]
@@ -1640,10 +1695,16 @@ def dunn_test(
         raise ValueError("dunn_test requires at least 2 groups for comparisons.")
 
     for i, s in enumerate(group_samples):
-        if np.asarray(s).size == 0:
+        arr = np.asarray(s)
+        if arr.size == 0:
             raise ValueError(
                 f"Group '{group_names[i]}' has 0 observations; all groups "
                 "must have at least one observation."
+            )
+        if pd.isna(arr).any():
+            raise ValueError(
+                f"NaN or missing values found in group '{group_names[i]}'. "
+                "dunn_test does not support missing values; please remove NaNs."
             )
 
     nobs = [len(s) for s in group_samples]
@@ -1751,4 +1812,5 @@ def dunn_test(
         p_adjust=p_adjust,
         alternative=alternative,
     )
+
 
