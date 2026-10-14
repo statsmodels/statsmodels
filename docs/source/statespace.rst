@@ -237,7 +237,7 @@ For an example of the use of this model, see the `VARMAX example notebook <examp
    print(res_var1.summary())
 
    # Construct impulse responses
-   irfs = res_ll.impulse_responses(steps=10)
+   irfs = res_var1.impulse_responses(steps=10)
 
 Dynamic Factor Models
 ^^^^^^^^^^^^^^^^^^^^^
@@ -268,7 +268,7 @@ For an example of the `DynamicFactorMQ` class, see the very brief code snippet b
    endog = pd.read_csv('your/dataset/here.csv')
 
    # Create a dynamic factor model
-   mod_dfm = sm.tsa.DynamicFactorMQ(endog, k_factors=1, factor_order=2)
+   mod_dfm = sm.tsa.DynamicFactorMQ(endog, factors=1, factor_orders=2)
    # Note that mod_dfm is an instance of the DynamicFactorMQ class
 
    # Fit the model via maximum likelihood, using the EM algorithm
@@ -276,11 +276,11 @@ For an example of the `DynamicFactorMQ` class, see the very brief code snippet b
    # Note that res_dfm is an instance of the DynamicFactorMQResults class
 
    # Show the summary of results
-   print(res_ll.summary())
+   print(res_dfm.summary())
 
    # Show a plot of the r^2 values from regressions of
    # individual estimated factors on endogenous variables.
-   fig_dfm = res_ll.plot_coefficients_of_determination()
+   fig_dfm = res_dfm.plot_coefficients_of_determination()
 
 
 The `DynamicFactor` class is suitable for models with a smaller number of
