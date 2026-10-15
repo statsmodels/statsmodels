@@ -4,6 +4,7 @@ import numpy as np
 from numpy import hstack, vstack
 from numpy.linalg import inv, svd
 import scipy
+import scipy.linalg
 import scipy.stats
 
 from statsmodels.iolib.summary import Summary
@@ -631,6 +632,9 @@ def coint_johansen(endog, det_order, k_ar_diff):
     ----------
     .. [1] Lütkepohl, H. 2005. New Introduction to Multiple Time Series
         Analysis. Springer.
+    .. [2] Doornik, J. A. and O'Brien, R. J. 2002. Numerically stable
+        cointegration analysis. Computational Statistics & Data Analysis,
+        40(1), 185-193.
     """
     import warnings
 
@@ -655,12 +659,6 @@ def coint_johansen(endog, det_order, k_ar_diff):
             return y
         return OLS(y, np.vander(np.linspace(-1, 1, len(y)), order + 1)).fit().resid
 
-    def resid(y, x):
-        if x.size == 0:
-            return y
-        r = y - np.dot(x, np.dot(np.linalg.pinv(x), y))
-        return r
-
     endog = np.asarray(endog)
     nobs, neqs = endog.shape
 
@@ -679,29 +677,30 @@ def coint_johansen(endog, det_order, k_ar_diff):
     dx = dx[k_ar_diff:]
 
     dx = detrend(dx, f)
-    r0t = resid(dx, z)
     # GH 5731, [:-0] does not work, need [:t-0]
     lx = endog[: (endog.shape[0] - k_ar_diff)]
     lx = lx[1:]
-    dx = detrend(lx, f)
-    rkt = resid(dx, z)  # level on lagged diffs
-    # Level covariance after filtering k_ar_diff
-    skk = np.dot(rkt.T, rkt) / rkt.shape[0]
-    # Covariacne between filtered and unfiltered
-    sk0 = np.dot(rkt.T, r0t) / rkt.shape[0]
-    s00 = np.dot(r0t.T, r0t) / r0t.shape[0]
-    sig = np.dot(sk0, np.dot(inv(s00), sk0.T))
-    tmp = inv(skk)
-    au, du = np.linalg.eig(np.dot(tmp, sig))  # au is eval, du is evec
-
-    temp = inv(np.linalg.cholesky(np.dot(du.T, np.dot(skk, du))))
-    dt = np.dot(du, temp)
-
-    # JP: the next part can be done much  easier
-    auind = np.argsort(au)
-    aind = np.flipud(auind)
-    a = au[aind]
-    d = dt[:, aind]
+    lx = detrend(lx, f)
+    # Doornik and O'Brien (2002), Algorithm 3: the thin QR of the lagged
+    # differences, the levels and the differences partials out the lagged
+    # differences, and the SVD of R10 R00^{-1} gives the eigenvalues and the
+    # eigenvectors normalized to d' Skk d = I.
+    k = z.shape[1]
+    r = np.linalg.qr(np.column_stack((z, lx, dx)), mode="r")
+    r11 = r[k : k + neqs, k : k + neqs]
+    resids = np.column_stack((lx, dx)) - z @ scipy.linalg.solve_triangular(
+        r[:k, :k], r[:k, k:]
+    )
+    rkt = resids[:, :neqs]  # level on lagged diffs
+    r0t = resids[:, neqs:]
+    u, s, _ = svd(
+        scipy.linalg.solve_triangular(
+            r[k + neqs :, k + neqs :], r[k : k + neqs, k + neqs :].T, trans="T"
+        ).T
+    )
+    a = s**2 / (1 + s**2)
+    d = np.sqrt(rkt.shape[0]) * scipy.linalg.solve_triangular(r11, u)
+    aind = np.arange(neqs)
     # Normalize by first non-zero element of d, usually [0, 0]
     # GH 5517
     non_zero_d = d.flat != 0
