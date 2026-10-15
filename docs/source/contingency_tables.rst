@@ -258,10 +258,12 @@ procedure tests whether the data are consistent with a common odds
 ratio.  It appears below as the `Test of constant OR`.  The
 Mantel-Haenszel procedure tests whether this common odds ratio is
 equal to one.  It appears below as the `Test of OR=1`.  It is also
-possible to estimate the common odds and risk ratios and obtain
-confidence intervals for them.  The ``summary`` method displays all of
-these results.  Individual results can be obtained from the class
-methods and attributes.
+possible to estimate the common odds ratio, common risk ratio, and
+common risk difference, all accompanied with corresponding confidence
+intervals.  The `Test of risk_diff=0` provides a Mantel-Haenszel test
+of the null hypothesis that the common risk difference is 0.  The
+``summary`` method displays all of these results.  Individual results
+can be obtained from the class methods and attributes.
 
 .. ipython:: python
 

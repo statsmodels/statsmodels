@@ -384,42 +384,103 @@ class CheckStratifiedMixin:
         cls.rslt_pandas = ctab.StratifiedTable(tables_pandas)
 
     def test_oddsratio_pooled(self):
+        if not hasattr(self, "oddsratio_pooled"):
+            return
         assert_allclose(
             self.rslt.oddsratio_pooled, self.oddsratio_pooled, rtol=1e-4, atol=1e-4
         )
 
     def test_logodds_pooled(self):
+        if not hasattr(self, "logodds_pooled"):
+            return
         assert_allclose(
             self.rslt.logodds_pooled, self.logodds_pooled, rtol=1e-4, atol=1e-4
         )
 
     def test_null_odds(self):
-        rslt = self.rslt.test_null_odds(correction=True)
+        if not hasattr(self, "mh_stat"):
+            return
+        correction = getattr(self, "mh_correction", True)
+        rslt = self.rslt.test_null_odds(correction=correction)
         assert_allclose(rslt.statistic, self.mh_stat, rtol=1e-4, atol=1e-5)
         assert_allclose(rslt.pvalue, self.mh_pvalue, rtol=1e-4, atol=1e-4)
 
     def test_oddsratio_pooled_confint(self):
+        if not hasattr(self, "or_lcb"):
+            return
         lcb, ucb = self.rslt.oddsratio_pooled_confint()
         assert_allclose(lcb, self.or_lcb, rtol=1e-4, atol=1e-4)
         assert_allclose(ucb, self.or_ucb, rtol=1e-4, atol=1e-4)
 
     def test_logodds_pooled_confint(self):
+        if not hasattr(self, "or_lcb"):
+            return
         lcb, ucb = self.rslt.logodds_pooled_confint()
         assert_allclose(lcb, np.log(self.or_lcb), rtol=1e-4, atol=1e-4)
         assert_allclose(ucb, np.log(self.or_ucb), rtol=1e-4, atol=1e-4)
 
     def test_equal_odds(self):
-
         if not hasattr(self, "or_homog"):
             return
-
         rslt = self.rslt.test_equal_odds(adjust=False)
         assert_allclose(rslt.statistic, self.or_homog, rtol=1e-4, atol=1e-4)
         assert_allclose(rslt.pvalue, self.or_homog_p, rtol=1e-4, atol=1e-4)
 
+    def test_equal_odds_adj(self):
+        if not hasattr(self, "or_homog_adj"):
+            return
         rslt = self.rslt.test_equal_odds(adjust=True)
         assert_allclose(rslt.statistic, self.or_homog_adj, rtol=1e-4, atol=1e-4)
         assert_allclose(rslt.pvalue, self.or_homog_adj_p, rtol=1e-4, atol=1e-4)
+
+    def test_riskratio_pooled(self):
+        if not hasattr(self, "riskratio_pooled"):
+            return
+        assert_allclose(
+            self.rslt.riskratio_pooled, self.riskratio_pooled, rtol=1e-4, atol=1e-4
+        )
+
+    def test_logriskratio_pooled(self):
+        if not hasattr(self, "logriskratio_pooled"):
+            return
+        assert_allclose(
+            self.rslt.logriskratio_pooled, self.logriskratio_pooled, rtol=1e-4, atol=1e-4
+        )
+
+    def test_riskratio_pooled_confint(self):
+        if not hasattr(self, "rr_lcb"):
+            return
+        lcb, ucb = self.rslt.riskratio_pooled_confint()
+        assert_allclose(lcb, self.rr_lcb, rtol=1e-4, atol=1e-4)
+        assert_allclose(ucb, self.rr_ucb, rtol=1e-4, atol=1e-4)
+
+    def test_logriskratio_pooled_confint(self):
+        if not hasattr(self, "rr_lcb"):
+            return
+        lcb, ucb = self.rslt.logriskratio_pooled_confint()
+        assert_allclose(lcb, np.log(self.rr_lcb), rtol=1e-4, atol=1e-4)
+        assert_allclose(ucb, np.log(self.rr_ucb), rtol=1e-4, atol=1e-4)
+
+    def test_riskdiff_pooled(self):
+        if not hasattr(self, "riskdiff_pooled"):
+            return
+        assert_allclose(
+            self.rslt.riskdiff_pooled, self.riskdiff_pooled, rtol=1e-4, atol=1e-4
+        )
+
+    def test_riskdiff_pooled_confint(self):
+        if not hasattr(self, "rd_lcb"):
+            return
+        lcb, ucb = self.rslt.riskdiff_pooled_confint()
+        assert_allclose(lcb, self.rd_lcb, rtol=1e-4, atol=1e-4)
+        assert_allclose(ucb, self.rd_ucb, rtol=1e-4, atol=1e-4)
+
+    def test_null_riskdiff_pooled(self):
+        if not hasattr(self, "rd_stat"):
+            return
+        rslt = self.rslt.test_riskdiff_pooled()
+        assert_allclose(rslt.statistic, self.rd_stat, rtol=1e-4, atol=1e-4)
+        assert_allclose(rslt.pvalue, self.rd_pvalue, rtol=1e-4, atol=1e-4)
 
     def test_pandas(self):
         self.rslt_pandas.summary().as_text()
@@ -566,6 +627,103 @@ class TestStratified3(CheckStratifiedMixin):
         # Breslow Day test with Tarone adjustment
         cls.or_homog_adj = 18.83297
         cls.or_homog_adj_p = 0.002064786
+
+class TestStratified4(CheckStratifiedMixin):
+    """
+    The data were taken from:
+    "Base SAS Procedures Guide: Statistical Procedures. The FREQ Procedure"
+    "Example 3.7 Cochran-Mantel-Haenszel Statistics"
+    https://documentation.sas.com/doc/pl/pgmsascdc/9.4_3.5/procstat/procstat_freq_examples07.htm
+
+    Reference values were calculated independently using R's metafor::rma.mh
+    and agree with the corresponding results reported by SAS, where applicable.
+    See: "results/StratifiedTable_tests_4-5.R" for details.
+    """
+
+    @classmethod
+    def setup_class(cls):
+        tables = [
+            np.array([[16, 11], [5, 20]]),
+            np.array([[12, 16], [7, 19]]),
+        ]
+
+        cls.initialize(tables)
+
+        cls.oddsratio_pooled = 3.313168
+        cls.logodds_pooled = 1.197905
+        cls.or_lcb = 1.445613
+        cls.or_ucb = 7.593375
+
+        # SAS reports the Mantel-Haenszel statistic without continuity correction.
+        # The reference value was obtained with metafor::rma.mh(..., correct=FALSE).
+        cls.mh_correction = False
+        cls.mh_stat = 8.305169
+        cls.mh_pvalue = 0.003953
+
+        # Breslow Day test with Tarone adjustment
+        cls.or_homog_adj = 1.490537
+        cls.or_homog_adj_p = 0.222133
+
+        cls.riskratio_pooled = 2.163597
+        cls.logriskratio_pooled = 0.771772
+        cls.rr_lcb = 1.233568
+        cls.rr_ucb = 3.794806
+
+        cls.risk_diff = 0.27376
+        cls.risk_diff_se = 0.090439
+        cls.rd_lcb = 0.096503
+        cls.rd_ucb = 0.451017
+        cls.rd_stat = 3.027014
+        cls.rd_pvalue = 0.00247
+
+
+class TestStratified5(CheckStratifiedMixin):
+    """
+    The data were taken from:
+    Allison, P. (2018), "SAS/STAT 14.3 Round-Up: Modern Methods for the Modern Statistician".
+    https://support.sas.com/resources/papers/proceedings18/1844-2018.pdf
+
+    Reference values were calculated independently using R's metafor::rma.mh
+    and agree with the corresponding results reported by SAS, where applicable.
+    See: "results/StratifiedTable_tests_4-5.R" for details.
+    """
+
+    @classmethod
+    def setup_class(cls):
+        tables = [None] * 4
+        tables[0] = np.array([[185, 33], [189, 26]])
+        tables[1] = np.array([[169, 49], [165, 57]])
+        tables[2] = np.array([[156, 48], [104, 58]])
+        tables[3] = np.array([[130, 80], [123, 118]])
+
+        cls.initialize(tables)
+
+        cls.oddsratio_pooled = 1.344385
+        cls.logodds_pooled = 0.295936
+        cls.or_lcb = 1.078573
+        cls.or_ucb = 1.675705
+
+        # SAS reports the Mantel-Haenszel statistic without continuity correction.
+        # The reference value was obtained with metafor::rma.mh(..., correct=FALSE).
+        cls.mh_correction = False
+        cls.mh_stat = 6.967744
+        cls.mh_pvalue = 0.008299
+
+        # Breslow Day test with Tarone adjustment
+        cls.or_homog_adj = 6.494707
+        cls.or_homog_adj_p = 0.089871
+
+        cls.riskratio_pooled = 1.080438
+        cls.logriskratio_pooled = 0.077367
+        cls.rr_lcb = 1.019767
+        cls.rr_ucb = 1.144719
+
+        cls.risk_diff = 0.055852
+        cls.risk_diff_se = 0.021181
+        cls.rd_lcb = 0.014338
+        cls.rd_ucb = 0.097366
+        cls.rd_stat = 2.636904
+        cls.rd_pvalue = 0.008367
 
 
 class Check2x2Mixin:
