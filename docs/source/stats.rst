@@ -275,6 +275,8 @@ Non-Parametric Tests
    rankdata_2samp
    jonckheere_terpstra
    JonckheereTerpstraResult
+   dunn_test
+   DunnResult
 
 
 Descriptive Statistics
