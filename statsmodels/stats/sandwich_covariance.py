@@ -327,14 +327,30 @@ def _get_sandwich_arrays(results, cov_type=""):
     hessian_inv : ndarray
         The inverse Hessian, or an equivalent normalized covariance, used
         as the bread of the sandwich.
+    df_resid : float
+        The residual degrees of freedom used in the small sample correction
+        factor. This is ``results.df_resid``, if the results instance defines
+        it, but at most ``nobs - k_params``, where ``k_params`` is the number
+        of moment conditions in ``xu``. Reducing ``df_resid``, e.g. to
+        account for absorbed fixed effects, therefore increases the
+        correction, GH 9253, while models with additional parameters, e.g.
+        the dispersion parameter of ``NegativeBinomial``, keep the
+        ``nobs - k_params`` based correction. For the tuple form the default
+        ``nobs - k_params`` is used.
     """
 
+    df_resid = None
     if isinstance(results, tuple):
         # assume we have jac and hessian_inv
         jac, hessian_inv = results
         xu = jac = np.asarray(jac)
         hessian_inv = np.asarray(hessian_inv)
     elif hasattr(results, "model"):
+        # df_resid is used in the small sample correction factor and can be
+        # changed by users, e.g. if fixed effects that are not included in
+        # the regression have been absorbed, GH 9253. It is not defined for
+        # all results instances.
+        df_resid = getattr(results, "df_resid", None)
         if hasattr(results, "_results"):
             # remove wrapper
             results = results._results
@@ -362,7 +378,19 @@ def _get_sandwich_arrays(results, cov_type=""):
         raise ValueError("need either tuple of (jac, hessian_inv) or results"
                          "instance")
 
-    return xu, hessian_inv
+    if df_resid is None:
+        # no user adjustable df_resid, use the number of moment conditions
+        # in xu as number of parameters
+        df_resid = xu.shape[0] - xu.shape[1]
+    else:
+        # results.df_resid is larger than nobs - k_params for models with
+        # additional parameters, e.g. the dispersion parameter of
+        # NegativeBinomial, or for rank deficient designs. In those cases the
+        # number of moment conditions in xu is the relevant number of
+        # parameters for the exactly identified sandwich.
+        df_resid = min(df_resid, xu.shape[0] - xu.shape[1])
+
+    return xu, hessian_inv, df_resid
 
 
 def _HCCM1(results, scale):
@@ -764,13 +792,13 @@ def cov_cluster(results, group, use_correction=True, crv_type="cluster"):
     )
     # TODO: currently used version of groupsums requires 2d resid
 
-    xu, hessian_inv = _get_sandwich_arrays(results, cov_type="clu")
+    xu, hessian_inv, df_resid = _get_sandwich_arrays(results, cov_type="clu")
 
     if not hasattr(group, "dtype") or group.dtype != np.dtype("int"):
         clusters, group = np.unique(group, return_inverse=True)
     else:
         clusters = np.unique(group)
-    nobs, k_params = xu.shape
+    nobs = xu.shape[0]
     n_groups = len(clusters)  # replace with stored group attributes if available
 
     if crv_type == "cluster":
@@ -780,7 +808,7 @@ def cov_cluster(results, group, use_correction=True, crv_type="cluster"):
 
         if use_correction:
             cov_c *= (
-                n_groups / (n_groups - 1.0) * ((nobs - 1.0) / float(nobs - k_params))
+                n_groups / (n_groups - 1.0) * ((nobs - 1.0) / float(df_resid))
             )
     else:
         if n_groups < 2:
@@ -925,14 +953,14 @@ def cov_white_simple(results, use_correction=True):
         with small sample corrections
 
     """
-    xu, hessian_inv = _get_sandwich_arrays(results)
+    xu, hessian_inv, df_resid = _get_sandwich_arrays(results)
     sigma = S_white_simple(xu)
 
     cov_w = _HCCM2(hessian_inv, sigma)  # add bread to sandwich
 
     if use_correction:
-        nobs, k_params = xu.shape
-        cov_w *= nobs / float(nobs - k_params)
+        nobs = xu.shape[0]
+        cov_w *= nobs / float(df_resid)
 
     return cov_w
 
@@ -973,14 +1001,14 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
     options might change when other kernels besides Bartlett are available.
 
     """
-    xu, hessian_inv = _get_sandwich_arrays(results)
+    xu, hessian_inv, df_resid = _get_sandwich_arrays(results)
     sigma = S_hac_simple(xu, nlags=nlags, weights_func=weights_func)
 
     cov_hac = _HCCM2(hessian_inv, sigma)
 
     if use_correction:
-        nobs, k_params = xu.shape
-        cov_hac *= nobs / float(nobs - k_params)
+        nobs = xu.shape[0]
+        cov_hac *= nobs / float(df_resid)
 
     return cov_hac
 
@@ -1119,18 +1147,18 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     else:
         weights = weights_func(nlags)
 
-    xu, hessian_inv = _get_sandwich_arrays(results)
+    xu, hessian_inv, df_resid = _get_sandwich_arrays(results)
 
     S_hac = S_nw_panel(xu, weights, groupidx)
     cov_hac = _HCCM2(hessian_inv, S_hac)
     if use_correction:
-        nobs, k_params = xu.shape
+        nobs = xu.shape[0]
         if use_correction == "hac":
-            cov_hac *= nobs / float(nobs - k_params)
+            cov_hac *= nobs / float(df_resid)
         elif use_correction in ["c", "clu", "cluster"]:
             n_groups = len(groupidx)
             cov_hac *= n_groups / (n_groups - 1.)
-            cov_hac *= ((nobs-1.) / float(nobs - k_params))
+            cov_hac *= ((nobs-1.) / float(df_resid))
 
     return cov_hac
 
@@ -1201,18 +1229,18 @@ def cov_nw_groupsum(
 
     """
 
-    xu, hessian_inv = _get_sandwich_arrays(results)
+    xu, hessian_inv, df_resid = _get_sandwich_arrays(results)
 
     # S_hac = S_nw_panel(xw, weights, groupidx)
     S_hac = S_hac_groupsum(xu, time, nlags=nlags, weights_func=weights_func)
     cov_hac = _HCCM2(hessian_inv, S_hac)
     if use_correction:
-        nobs, k_params = xu.shape
+        nobs = xu.shape[0]
         if use_correction == "hac":
-            cov_hac *= nobs / float(nobs - k_params)
+            cov_hac *= nobs / float(df_resid)
         elif use_correction in ["c", "cluster"]:
             n_groups = len(np.unique(time))
             cov_hac *= n_groups / (n_groups - 1.)
-            cov_hac *= ((nobs-1.) / float(nobs - k_params))
+            cov_hac *= ((nobs-1.) / float(df_resid))
 
     return cov_hac
