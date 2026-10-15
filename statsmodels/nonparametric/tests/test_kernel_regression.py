@@ -6,6 +6,7 @@ import pytest
 from scipy import stats
 
 import statsmodels.api as sm
+from statsmodels.nonparametric.kernel_regression import KernelReg
 
 nparam = sm.nonparametric
 
@@ -875,3 +876,17 @@ def test_aic_hurvich_matches_hand_computed_trace():
     aic_expected = np.log(sigma) + frac
 
     npt.assert_allclose(aic, aic_expected, rtol=1e-8)
+
+
+@pytest.mark.filterwarnings("ignore::FutureWarning")
+def test_kernelreg_invalid_bw_raises():
+    # an unknown string method previously silently fell back to 'aic',
+    # producing an absurd bandwidth (~9.7e6)
+    y = np.linspace(-1.0, 1.0, 50)
+    x = np.linspace(-2.0, 2.0, 50)[:, None]
+    with pytest.raises(ValueError, match="bw must be one of"):
+        KernelReg(y, x, "c", bw="bogus")
+    with pytest.raises(ValueError, match="bw must be positive"):
+        KernelReg(y, x, "c", bw=[-0.5])
+    mean, mfx = KernelReg(y, x, "c", bw=[0.5]).fit()
+    assert np.isfinite(mean).all()

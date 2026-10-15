@@ -175,9 +175,14 @@ class KernelReg(GenericKDE):
     def _compute_reg_bw(self, bw):
         if not isinstance(bw, str):
             self._bw_method = "user-specified"
-            return array_like(bw, "bw", ndim=1)
+            bw = array_like(bw, "bw", ndim=1)
+            if np.any(bw <= 0):
+                raise ValueError("bw must be positive")
+            return bw
         else:
             # The user specified a bandwidth selection method e.g., 'cv_ls'
+            if bw not in ("cv_ls", "aic"):
+                raise ValueError(f"bw must be one of 'cv_ls' or 'aic', got {bw!r}")
             self._bw_method = bw
             # Workaround to avoid instance methods in __dict__
             if bw == "cv_ls":
