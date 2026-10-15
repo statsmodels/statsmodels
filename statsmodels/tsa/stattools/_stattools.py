@@ -3438,7 +3438,8 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     Range unit-root test for stationarity
 
     Computes the Range Unit-Root (RUR) test for the null
-    hypothesis that x is stationary.
+    hypothesis that x has a unit root, i.e. is not stationary. The null is
+    rejected for small values of the statistic.
 
     Parameters
     ----------
@@ -3559,10 +3560,12 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
 The test statistic is outside of the range of p-values available in the
 look-up table. The actual p-value is {direction} than the p-value returned.
 """
+    # the null is rejected for small statistics, so a statistic below the
+    # table has a smaller p-value than reported and one above it a larger one
     direction = ""
-    if p_value == pvals[-1]:
+    if rur_stat < inter_crit[0, 0]:
         direction = "smaller"
-    elif p_value == pvals[0]:
+    elif rur_stat >= inter_crit[0, -1]:
         direction = "larger"
 
     if direction:

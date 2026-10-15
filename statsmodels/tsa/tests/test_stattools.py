@@ -1848,6 +1848,23 @@ class TestRUR:
         assert res.resstore is not None
         assert res.resstore.nobs == len(self.x)
 
+    def test_interpolation_warning_direction(self):
+        # statistic below the table: the actual p-value is smaller
+        with pytest.warns(InterpolationWarning, match="smaller than"):
+            range_unit_root_test(np.zeros(250), result_object=True)
+        # statistic above the table: the actual p-value is larger
+        with pytest.warns(InterpolationWarning, match="larger than"):
+            range_unit_root_test(np.arange(250.0), result_object=True)
+
+    def test_no_warning_inside_table(self):
+        # 47 new extremes in 250 observations is between the 0.90 and 0.95
+        # critical values, so the p-value is inside the table
+        x = np.r_[np.arange(48.0), np.full(202, 20.5)]
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = range_unit_root_test(x, result_object=True)
+        assert res.pvalue == 0.95
+
 
 def test_pandasacovf():
     s = Series(lrange(1, 11))
