@@ -261,6 +261,88 @@ def normal_power_het(
     return pow_
 
 
+def ttest_power_het(
+    diff,
+    nobs,
+    alpha,
+    std_null=1.0,
+    std_alternative=None,
+    alternative="two-sided",
+    *,
+    df=None,
+):
+    """Calculate power under a provisional heterogeneous-scale t model.
+
+    Parameters
+    ----------
+    diff : array_like
+        Alternative mean minus null mean.
+    nobs : array_like
+        Positive sample size, used in the noncentrality parameter.
+    alpha : array_like
+        Significance level in the open interval (0, 1).
+    std_null : array_like, optional
+        Positive null scale before division by sqrt(nobs). Default is 1.
+    std_alternative : array_like, optional
+        Positive alternative scale before division by sqrt(nobs). If None,
+        use std_null.
+    alternative : {"two-sided", "larger", "smaller"}, optional
+        Rejection tails. Default is "two-sided".
+    df : array_like, optional
+        Positive, finite degrees of freedom shared by the null and
+        alternative distributions. If None, use nobs - 1.
+
+    Returns
+    -------
+    power : float or ndarray
+        Rejection probability under the assumed alternative distribution.
+        Numeric inputs broadcast; NaNs propagate elementwise.
+
+    Notes
+    -----
+    Assume T0 ~ t(df) and T1 ~ (std_alternative / std_null) * t(df, nc),
+    where nc = diff * sqrt(nobs) / std_alternative and t(df, nc) is
+    noncentral t. Equivalently, under the alternative,
+    T1 = (diff * sqrt(nobs) + std_alternative * Z)
+    / (std_null * sqrt(V / df)), with independent Z ~ N(0, 1) and
+    V ~ chi-square(df). This assumption does not establish power for a
+    conventional one-sample or Welch t-test with unequal variances.
+    """
+    if std_alternative is None:
+        std_alternative = std_null
+    diff, nobs, alpha, std_null, std_alternative = map(
+        np.asarray, (diff, nobs, alpha, std_null, std_alternative)
+    )
+    if df is None:
+        df = nobs - 1
+    df = np.asarray(df)
+    for name, value in (
+        ("nobs", nobs),
+        ("df", df),
+        ("std_null", std_null),
+        ("std_alternative", std_alternative),
+    ):
+        if np.any((value <= 0) | np.isinf(value)):
+            raise ValueError(f"{name} must be positive and finite")
+    if np.any((alpha <= 0) | (alpha >= 1)):
+        raise ValueError("alpha must be between 0 and 1")
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
+    alpha_ = alpha / 2 if alternative == "two-sided" else alpha
+    ratio = std_null / std_alternative
+    nc = diff * np.sqrt(nobs) / std_alternative
+    power = 0.0
+    if alternative in ("two-sided", "larger"):
+        power = nct_sf(ratio * stats.t.isf(alpha_, df), df, nc)
+    if alternative in ("two-sided", "smaller"):
+        power = power + nct_cdf(ratio * stats.t.ppf(alpha_, df), df, nc)
+    return power
+
+
 def normal_sample_size_one_tail(diff, power, alpha, std_null=1.0, std_alternative=None):
     """
     Explicit sample size computation if only one tail is relevant
