@@ -7,9 +7,10 @@
 # must be done.
 
 import numpy as np
+import pytest
 
 from statsmodels.datasets.ccard.data import load_pandas
-from statsmodels.stats.oaxaca import OaxacaBlinder
+from statsmodels.stats.oaxaca import OaxacaBlinder, OaxacaResults
 from statsmodels.tools.tools import add_constant
 
 pandas_df = load_pandas()
@@ -287,15 +288,14 @@ class TestPooledModel:
 
 
 def test_oaxaca_results_summary(capsys):
-    # OaxacaResults.summary() prints a formatted table but had no test
-    # coverage. Check its output against the same Stata-verified values
+    # Check the returned summary against the same Stata-verified values
     # test_oaxaca_results checks the underlying params/std against above.
     rs = np.random.RandomState(0)
     model = OaxacaBlinder(endog, exog, 3, rng=rs)
 
     three_fold = model.three_fold()
-    three_fold.summary()
-    out = capsys.readouterr().out
+    out = three_fold.summary()
+    assert capsys.readouterr().out == ""
     assert "Oaxaca-Blinder Three-fold Effects" in out
     endow, coef, inter, gap = three_fold.params
     assert f"Endowment Effect: {endow:.5f}" in out
@@ -305,18 +305,95 @@ def test_oaxaca_results_summary(capsys):
     assert "Standard Error" not in out
 
     three_fold_std = model.three_fold(True)
-    three_fold_std.summary()
-    out_std = capsys.readouterr().out
+    out_std = three_fold_std.summary()
+    assert capsys.readouterr().out == ""
     endow_var, coef_var, inter_var = three_fold_std.std
     assert f"Endowment Standard Error: {endow_var:.5f}" in out_std
     assert f"Coefficient Standard Error: {coef_var:.5f}" in out_std
     assert f"Interaction Standard Error: {inter_var:.5f}" in out_std
 
     two_fold = model.two_fold()
-    two_fold.summary()
-    out_two = capsys.readouterr().out
+    out_two = two_fold.summary()
+    assert capsys.readouterr().out == ""
     assert "Oaxaca-Blinder Two-fold Effects" in out_two
     unexp, exp, gap2 = two_fold.params
     assert f"Unexplained Effect: {unexp:.5f}" in out_two
     assert f"Explained Effect: {exp:.5f}" in out_two
     assert f"Gap: {gap2:.5f}" in out_two
+
+    two_fold_std = model.two_fold(True)
+    out_two_std = two_fold_std.summary()
+    assert capsys.readouterr().out == ""
+    unexp_std, exp_std = two_fold_std.std
+    assert f"Unexplained Standard Error: {unexp_std:.5f}" in out_two_std
+    assert f"Explained Standard Error: {exp_std:.5f}" in out_two_std
+
+
+@pytest.mark.parametrize(
+    "model_type, params, std, expected",
+    [
+        (
+            2,
+            (1.234567, -2.345678, 0.0),
+            None,
+            (
+                "Oaxaca-Blinder Two-fold Effects\n"
+                "Unexplained Effect: 1.23457\n"
+                "Explained Effect: -2.34568\n"
+                "Gap: 0.00000"
+            ),
+        ),
+        (
+            2,
+            (1.234567, -2.345678, 0.0),
+            (0.123456, 0.234567),
+            (
+                "Oaxaca-Blinder Two-fold Effects\n"
+                "Unexplained Effect: 1.23457\n"
+                "Unexplained Standard Error: 0.12346\n"
+                "Explained Effect: -2.34568\n"
+                "Explained Standard Error: 0.23457\n"
+                "Gap: 0.00000"
+            ),
+        ),
+        (
+            3,
+            (1.234567, -2.345678, 3.456789, 0.0),
+            None,
+            (
+                "Oaxaca-Blinder Three-fold Effects\n"
+                "Endowment Effect: 1.23457\n"
+                "Coefficient Effect: -2.34568\n"
+                "Interaction Effect: 3.45679\n"
+                "Gap: 0.00000"
+            ),
+        ),
+        (
+            3,
+            (1.234567, -2.345678, 3.456789, 0.0),
+            (0.123456, 0.234567, 0.345678),
+            (
+                "Oaxaca-Blinder Three-fold Effects\n"
+                "Endowment Effect: 1.23457\n"
+                "Endowment Standard Error: 0.12346\n"
+                "Coefficient Effect: -2.34568\n"
+                "Coefficient Standard Error: 0.23457\n"
+                "Interaction Effect: 3.45679\n"
+                "Interaction Standard Error: 0.34568\n"
+                "Gap: 0.00000"
+            ),
+        ),
+    ],
+    ids=["two-fold", "two-fold-std", "three-fold", "three-fold-std"],
+)
+def test_oaxaca_summary_returns_text(model_type, params, std, expected, capsys):
+    # Literal values isolate the display contract from estimation accuracy.
+    result = OaxacaResults(params, model_type, std_val=std)
+
+    summary = result.summary()
+
+    assert isinstance(summary, str)
+    assert summary == expected
+    assert capsys.readouterr().out == ""
+    assert result.params == params
+    assert result.std == std
