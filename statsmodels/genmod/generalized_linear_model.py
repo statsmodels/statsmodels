@@ -1573,15 +1573,16 @@ class GLM(base.LikelihoodModel):
         The elastic_net method uses the following keyword arguments:
 
         maxiter : int
-            Maximum number of iterations
+            Maximum number of iterations (default 50).
         L1_wt  : float
             Must be in [0, 1].  The L1 penalty has weight L1_wt and the
-            L2 penalty has weight 1 - L1_wt.
+            L2 penalty has weight 1 - L1_wt (default 1).
         cnvrg_tol : float
             Convergence threshold for maximum parameter change after
-            one sweep through all coefficients.
+            one sweep through all coefficients (default 1e-10).
         zero_tol : float
-            Coefficients below this threshold are treated as zero.
+            Coefficients below this threshold are treated as zero
+            (default 1e-10).
 
         The l1_slsqp method uses the following keyword arguments:
 
