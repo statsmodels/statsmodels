@@ -4219,6 +4219,22 @@ def test_probit_loglikeobs_extreme_linpred():
     assert_allclose(score_obs, mills[:, None] * X, rtol=1e-12)
 
 
+def test_mnlogit_formula_categorical_endog():
+    # GH#9475: MNLogit.from_formula rejected a string endog because patsy
+    # dummy-codes it into a multi-column array, which the generic
+    # non-numeric-endog guard rejected even though MultinomialModel
+    # dummifies 1-d labels itself and produced identical results.
+    rng = np.random.default_rng(0)
+    n = 60
+    data = pd.DataFrame({"y": rng.choice(["a", "b", "c"], n), "x": rng.normal(size=n)})
+    res = MNLogit.from_formula("y ~ x", data).fit(disp=0)
+    assert res.model.J == 3
+
+    exog = np.column_stack([np.ones(n), data["x"].to_numpy()])
+    expected = MNLogit(np.asarray(data["y"]), exog).fit(disp=0)
+    assert_allclose(np.asarray(res.params), np.asarray(expected.params), rtol=1e-8)
+
+
 def test_probit_extreme_observation_fit():
     # One extreme, misclassified observation drives q * XB to -60 at
     # reasonable params.  The clipped loglike and score were far from the
