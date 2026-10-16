@@ -767,6 +767,11 @@ def cov_cluster(results, group, use_correction=True, crv_type="cluster"):
         clusters = np.unique(group)
     nobs, k_params = xu.shape
     n_groups = len(clusters)  # replace with stored group attributes if available
+    if n_groups < 2:
+        raise ValueError(
+            f"crv_type={crv_type!r} requires at least 2 clusters, "
+            f"found {n_groups}."
+        )
 
     if crv_type == "cluster":
 
@@ -778,11 +783,6 @@ def cov_cluster(results, group, use_correction=True, crv_type="cluster"):
                 n_groups / (n_groups - 1.0) * ((nobs - 1.0) / float(nobs - k_params))
             )
     else:
-        if n_groups < 2:
-            raise ValueError(
-                f"crv_type={crv_type!r} requires at least 2 clusters, "
-                f"found {n_groups}."
-            )
         if crv_type == "cluster-crv3":
             center = "estimate"
         # cluster-jk
