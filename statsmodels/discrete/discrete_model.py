@@ -3337,6 +3337,12 @@ class MNLogit(MultinomialModel):
     See developer notes for further information on `MNLogit` internals.
     """
 
+    # A non-numeric endog is dummy-coded by patsy into the full 0/1 design
+    # that MultinomialModel._handle_data produces for 1-d labels anyway, so
+    # the multi-column endog guard of FromFormula.from_formula must not
+    # reject it. See #9475.
+    _formula_max_endog = None
+
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         super().__init__(endog, exog, check_rank=check_rank, **kwargs)
 
