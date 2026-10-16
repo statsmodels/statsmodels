@@ -2035,6 +2035,11 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95, order_by=None)
     the inverse of the X'X matrix and does not require matrix inversion during
     updating. looks efficient but no timing
 
+    The recursion starts from the inverse of the initial window crossprod
+    (plus Ridge weight ``lamda``), falling back to its pseudo-inverse when
+    that matrix is rank deficient, e.g. due to duplicated rows in the
+    initial window.
+
     Confidence interval in Greene and Brown, Durbin and Evans is the same as
     in Ploberger after a little bit of algebra.
 
@@ -2070,15 +2075,19 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95, order_by=None)
     rvarraw = np.nan * np.zeros(nobs)
 
     x0 = x[:skip]
-    if np.linalg.matrix_rank(x0) < x0.shape[1]:
-        err_msg = """\
-"The initial regressor matrix, x[:skip], issingular. You must use a value of
-skip large enough to ensure that the first OLS estimator is well-defined.
-"""
-        raise ValueError(err_msg)
     y0 = y[:skip]
     # add Ridge to start (not in jplv)
-    xtxi = np.linalg.inv(np.dot(x0.T, x0) + lamda * np.eye(nvars))
+    xtx0 = np.dot(x0.T, x0) + lamda * np.eye(nvars)
+    if np.linalg.matrix_rank(xtx0) < nvars:
+        # Rank-deficient initial window, e.g. because with skip = nvars a
+        # single duplicated row (discrete or discretized regressors)
+        # already loses rank. OLS itself estimates with pinv in this case,
+        # and pinv is also the lamda -> 0 limit of the Ridge start that is
+        # already allowed, so continue from the pseudo-inverse instead of
+        # requiring a larger skip. See #8446.
+        xtxi = np.linalg.pinv(xtx0)
+    else:
+        xtxi = np.linalg.inv(xtx0)
     xty = np.dot(x0.T, y0)  # xi * y   # np.dot(xi, y)
     beta = np.dot(xtxi, xty)
     rparams[skip - 1] = beta

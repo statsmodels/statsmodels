@@ -2110,13 +2110,75 @@ def test_rainbow_exception():
         smsdia.linear_rainbow(res, use_distance=True, order_by=["x0"])
 
 
+def _recursive_residuals_reference(y, x, skip):
+    """
+    Reference transcription of the recursion in recursive_olsresiduals.
+
+    Starts from the pseudo-inverse of the initial-window crossprod (the
+    minimum-norm least-squares estimate of the initial window, i.e. what
+    ``OLS`` itself computes when exog is rank deficient), then applies the
+    same rank-one updates. See #8446.
+    """
+    nobs, nvars = x.shape
+    xtxi = np.linalg.pinv(x[:skip].T @ x[:skip])
+    beta = xtxi @ (x[:skip].T @ y[:skip])
+    rparams = np.full((nobs, nvars), np.nan)
+    rresid = np.full(nobs, np.nan)
+    rvarraw = np.full(nobs, np.nan)
+    rresid[skip - 1] = y[skip - 1] - x[skip - 1] @ beta
+    rvarraw[skip - 1] = 1 + x[skip - 1] @ xtxi @ x[skip - 1]
+    rparams[skip - 1] = beta
+    for i in range(skip, nobs):
+        xi = x[i : i + 1]
+        residi = y[i] - xi @ beta
+        tmp = xtxi @ xi.T
+        ft = 1 + xi @ tmp
+        xtxi = xtxi - tmp @ tmp.T / ft
+        beta = beta + (tmp * residi / ft).ravel()
+        rresid[i] = np.squeeze(residi)
+        rvarraw[i] = np.squeeze(ft)
+        rparams[i] = beta
+    rresid_scaled = rresid / np.sqrt(rvarraw)
+    sigma2 = rresid_scaled[skip:].var(ddof=1)
+    return rresid, rparams, rresid_scaled, rresid_scaled / np.sqrt(sigma2)
+
+
 def test_small_skip():
+    # GH#8446: a rank-deficient initial window used to raise ValueError.
+    # With skip = nvars a single duplicated row (e.g. discrete regressors)
+    # already loses rank even though OLS itself fits the model fine, so the
+    # recursion now starts from the pseudo-inverse of the initial crossprod.
     rs = np.random.RandomState(38342094)
     y = rs.standard_normal(10)
     x = rs.standard_normal((10, 3))
     x[:3] = x[:1]
-    with pytest.raises(ValueError, match="The initial regressor matrix,"):
-        smsdia.recursive_olsresiduals(OLS(y, x).fit())
+
+    res = OLS(y, x).fit()
+    rresid, rparams, _, rresid_std, rresid_scaled, _, _ = smsdia.recursive_olsresiduals(
+        res
+    )
+
+    skip = 3
+    assert np.isnan(rresid[: skip - 1]).all()
+    ref_resid, ref_params, ref_scaled, ref_std = _recursive_residuals_reference(
+        y, x, skip
+    )
+    assert_allclose(rresid, ref_resid, rtol=1e-13, atol=1e-13)
+    assert_allclose(rparams, ref_params, rtol=1e-13, atol=1e-13)
+    assert_allclose(rresid_scaled, ref_scaled, rtol=1e-13, atol=1e-13)
+    assert_allclose(rresid_std, ref_std, rtol=1e-13, atol=1e-13)
+    assert np.isfinite(rresid[skip - 1 :]).all()
+    assert np.isfinite(rparams[skip - 1 :]).all()
+
+    # the initial estimate is the minimum-norm least-squares fit of the
+    # initial window, matching what OLS.fit() computes for rank-deficient exog
+    beta0_ref = np.linalg.pinv(x[:skip]) @ y[:skip]
+    assert_allclose(rparams[skip - 1], beta0_ref, rtol=1e-12, atol=1e-12)
+
+    # linear_harvey_collier works on such samples and t-tests the
+    # standardized recursive residuals from ``skip`` onward
+    hc = smsdia.linear_harvey_collier(res)
+    assert_allclose(hc, stats.ttest_1samp(ref_std[skip:], 0), rtol=1e-12, atol=1e-12)
 
 
 # R code used in testing
