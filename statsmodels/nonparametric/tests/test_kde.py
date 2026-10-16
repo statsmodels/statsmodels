@@ -511,6 +511,37 @@ def test_entropy_infinite_domain_kernel():
     assert np.isfinite(kde.entropy)
 
 
+@pytest.mark.parametrize("kernel", ["epa", "tri", "uni"])
+def test_evaluate_outside_support(kernel):
+    # GH 7195: for bounded-support kernels, evaluate() returned nan when an
+    # evaluation point had no observation inside the kernel's support, and
+    # a scalar nan for the *whole* array of points in that case instead of
+    # per-point estimates. The density is zero where the kernel contributes
+    # nothing, not nan.
+    rng = np.random.RandomState(9876)
+    x = rng.normal(size=100)
+    dens = KDE(x).fit(kernel=kernel, bw="silverman", fft=False)
+    h = dens.kernel.h
+
+    outside = x.min() - 2.0 * h  # beyond the support of every observation
+    inside = x.min() - 0.5 * h  # closest observation is within its support
+
+    d_out = dens.evaluate(outside)
+    assert not np.isnan(d_out).any()
+    assert d_out[0] == 0.0
+
+    pts = np.array([outside, inside, x.mean()])
+    vals = dens.evaluate(pts)
+    assert vals.shape == (3,)
+    assert not np.isnan(vals).any()
+    assert vals[0] == 0.0
+    assert vals[2] > 0.0
+    # vectorized evaluation must match point-by-point evaluation, which
+    # already worked for individual in-support points
+    loop_vals = np.array([dens.evaluate(pt)[0] for pt in pts])
+    npt.assert_allclose(vals, loop_vals)
+
+
 @pytest.mark.parametrize("func", [kdensity, kdensityfft])
 def test_kdensity_result_object_default(func):
     # retgrid=True (the default) yields a KDEResult with the same length and
