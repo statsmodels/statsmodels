@@ -291,6 +291,23 @@ def test_min_nobs(basic_data):
     assert np.all(res.nobs[res.nobs != 0] >= min_nobs)
 
 
+@pytest.mark.parametrize("model", [RollingOLS, RollingWLS])
+def test_window_larger_than_nobs(model):
+    # window > nobs has no valid window for the non-expanding recursion and
+    # used to fail with an IndexError from inside fit; require a clean
+    # ValueError at construction. The expanding=True path is covered by
+    # test_expanding_window_larger_than_nobs.
+    rs = np.random.RandomState(2948739)
+    n, w = 10, 20
+    x = tools.add_constant(rs.standard_normal((n, 1)))
+    y = rs.standard_normal(n)
+    kwargs = {"window": w, "min_nobs": 2}
+    if model is RollingWLS:
+        kwargs["weights"] = np.ones(n)
+    with pytest.raises(ValueError, match="window must be less than or equal"):
+        model(y, x, **kwargs)
+
+
 def test_expanding(basic_data):
     y, x, w = basic_data
     xa = np.asarray(x)
