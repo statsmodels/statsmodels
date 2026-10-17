@@ -3532,14 +3532,17 @@ def test_loglike_mu_matches_loglike():
 
 
 def test_information_is_expected_hessian():
+    # information() follows the base class contract and returns
+    # -1 * Hessian, i.e. the positive definite Fisher information (#7826)
     rs = np.random.RandomState(1)
     n = 150
     exog = sm.add_constant(rs.standard_normal((n, 2)))
     endog = rs.poisson(np.exp(exog @ [0.1, 0.3, -0.2]))
     mod = GLM(endog, exog, family=sm.families.Poisson())
     res = mod.fit()
-    assert_allclose(mod.information(res.params),
-                    mod.hessian(res.params, observed=False), rtol=1e-12)
+    info = mod.information(res.params)
+    assert_allclose(info, -mod.hessian(res.params, observed=False), rtol=1e-12)
+    assert np.all(np.linalg.eigvalsh(info) > 0)
 
 
 def test_derivative_predict_matches_numerical_derivative():
