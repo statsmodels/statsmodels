@@ -662,9 +662,12 @@ class GLM(base.LikelihoodModel):
     def information(self, params, scale=None):
         """
         Fisher information matrix.
+
+        Returns -1 * Hessian of the log-likelihood evaluated at params,
+        i.e. the expected information matrix, which is positive definite.
         """
         scale = float_like(scale, "scale", optional=True)
-        return self.hessian(params, scale=scale, observed=False)
+        return -self.hessian(params, scale=scale, observed=False)
 
     def _derivative_exog(
         self,
