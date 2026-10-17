@@ -555,3 +555,48 @@ def test_mice_data_iterable():
     datasets = list(itertools.islice(it, 3))
     assert len(datasets) == 3
     assert all(isinstance(d, pd.DataFrame) for d in datasets)
+
+
+def test_micedata_preserves_index():
+    # gh-6532: MICEData silently reset the user's index to 0..n-1, so
+    # imputed values could no longer be related back to the original
+    # data (all-missing rows were also dropped, which stays, but the
+    # surviving rows must keep their original labels).
+    gen = np.random.RandomState(45902)
+    df = pd.DataFrame(gen.normal(size=(25, 3)), index=range(100, 125))
+    df.columns = ["x1", "x2", "x3"]
+    df.iloc[[2, 7, 13], 1] = np.nan
+    df.iloc[5, 2] = np.nan
+
+    mid = mice.MICEData(df, rng=np.random.RandomState(0))
+    assert_equal(mid.data.index.values, np.arange(100, 125))
+
+    mid.update_all(2)
+    assert not mid.data.isna().any().any()
+    assert_equal(mid.data.index.values, np.arange(100, 125))
+
+    # an all-missing row is still dropped, but the other labels survive
+    df.iloc[9, :] = np.nan
+    mid2 = mice.MICEData(df, rng=np.random.RandomState(0))
+    assert mid2.data.shape[0] == 24
+    expected = np.array([x for x in range(100, 125) if x != 109])
+    assert_equal(mid2.data.index.values, expected)
+
+    # the user's frame is never modified in place
+    assert df.isna().any().any()
+
+
+def test_micedata_duplicate_index():
+    # the initial imputation must not rely on unique index labels
+    # (gh-6532: the index is no longer reset, so duplicates survive)
+    gen = np.random.RandomState(777)
+    df = pd.DataFrame(gen.normal(size=(20, 3)))
+    df.columns = ["a", "b", "c"]
+    df.index = [i // 2 for i in range(20)]
+    df.iloc[3, 1] = np.nan
+    df.iloc[10, 2] = np.nan
+
+    mid = mice.MICEData(df, rng=np.random.RandomState(0))
+    mid.update_all(1)
+    assert_equal(len(mid.data), 20)
+    assert not mid.data.isna().any().any()
