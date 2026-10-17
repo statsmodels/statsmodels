@@ -609,3 +609,96 @@ def test_predict_which():
 
     with pytest.raises(ValueError, match="which"):
         res.predict(which="not-a-real-option")
+
+
+class TestBrantTest:
+
+    @classmethod
+    def setup_class(cls):
+        data = ds.df
+        cls.mod = OrderedModel(
+            data["apply"], data[["pared", "public", "gpa"]], distr="logit"
+        )
+        cls.res = cls.mod.fit(method="bfgs", disp=False)
+
+    def test_brant_basic(self):
+        # Reference values from R brant package and Stata ologit, brant
+        # Omnibus: chi2 = 4.3443, df = 3, p = 0.2266
+        # pared: chi2 = 0.1323, df = 1, p = 0.7160
+        # public: chi2 = 3.4433, df = 1, p = 0.0635
+        # gpa: chi2 = 0.1791, df = 1, p = 0.6721
+        from statsmodels.discrete.diagnostic import brant_test
+
+        br = brant_test(self.res)
+        expected_chi2 = [4.344259, 0.132341, 3.443346, 0.179122]
+        expected_p = [0.226610, 0.716017, 0.063507, 0.672129]
+        expected_df = [3, 1, 1, 1]
+
+        assert_allclose(br.statistic.values, expected_chi2, rtol=1e-4)
+        assert_allclose(br.pvalues.values, expected_p, rtol=1e-4)
+        assert_equal(br.df.values, expected_df)
+        assert list(br.statistic.index) == ["Omnibus", "pared", "public", "gpa"]
+
+        # Also test res.brant_test() method
+        br_method = self.res.brant_test()
+        assert_allclose(br_method.statistic.values, br.statistic.values)
+
+        # Check scalar attributes
+        assert_allclose(br.chi2_omnibus, 4.344259, rtol=1e-4)
+        assert_allclose(br.pvalue_omnibus, 0.226610, rtol=1e-4)
+        assert br.df_omnibus == 3
+
+    def test_brant_by_var_false(self):
+        br = self.res.brant_test(by_var=False)
+        assert_allclose(br.statistic.values, [4.344259], rtol=1e-4)
+        assert_allclose(br.pvalues.values, [0.226610], rtol=1e-4)
+        assert_equal(br.df.values, [3])
+        assert list(br.statistic.index) == ["Omnibus"]
+
+    def test_brant_numpy(self):
+        data = ds.df
+        mod_np = OrderedModel(
+            data["apply"].values.codes,
+            np.asarray(data[["pared", "public", "gpa"]], float),
+            distr="logit",
+        )
+        res_np = mod_np.fit(method="bfgs", disp=False)
+        br = res_np.brant_test()
+        expected_chi2 = [4.344259, 0.132341, 3.443346, 0.179122]
+        assert_allclose(br.statistic.values, expected_chi2, rtol=1e-4)
+        assert list(br.statistic.index) == ["Omnibus", "x1", "x2", "x3"]
+
+    def test_brant_summary(self):
+        br = self.res.brant_test()
+        frame = br.summary_frame()
+        assert list(frame.columns) == ["chi2", "df", "p_value"]
+        assert list(frame.index) == ["Omnibus", "pared", "public", "gpa"]
+
+        table = br.summary()
+        text = str(table)
+        assert "Brant Test" in text
+        assert "Omnibus" in text
+        assert "pared" in text
+        assert "public" in text
+        assert "gpa" in text
+        assert "0.2266" in text or "0.227" in text
+
+    def test_brant_invalid_distr(self):
+        data = ds.df
+        mod_probit = OrderedModel(
+            data["apply"], data[["pared", "public", "gpa"]], distr="probit"
+        )
+        res_probit = mod_probit.fit(method="bfgs", disp=False)
+        with pytest.raises(ValueError, match="only valid for OrderedModel with distr='logit'"):
+            res_probit.brant_test()
+
+    def test_brant_few_categories(self):
+        from statsmodels.discrete._diagnostics_ordered import brant_test
+        y_bin = (ds.df["apply"].values.codes > 0).astype(int)
+        mod_bin = OrderedModel(
+            y_bin, np.asarray(ds.df[["pared", "public", "gpa"]], float), distr="logit"
+        )
+        res_bin = mod_bin.fit(method="bfgs", disp=False)
+        with pytest.raises(ValueError, match="at least 3 categories"):
+            brant_test(res_bin)
+
