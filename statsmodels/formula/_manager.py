@@ -999,6 +999,29 @@ class FormulaManager:
         else:
             return tuple(model_spec.encoder_state[factor][1]["categories"])
 
+    def is_categorical(self, spec_or_frame):
+        """
+        Check whether all factors in a model specification are categorical.
+
+        Parameters
+        ----------
+        spec_or_frame : DataFrame, ModelSpec, or DesignInfo
+            The DataFrame with a model specification attached, or the model
+            specification itself.
+
+        Returns
+        -------
+        bool
+            True if the specification has at least one factor and every factor
+            is categorical.
+        """
+        spec = self._ensure_spec(spec_or_frame)
+        if self._using_patsy:
+            kinds = [info.type for info in spec.factor_infos.values()]
+        else:
+            kinds = [kind.value for kind, _ in spec.encoder_state.values()]
+        return bool(kinds) and all(kind == "categorical" for kind in kinds)
+
     def get_contrast_matrix(self, term, factor, model_spec):
         """
         Get the contrast matrix for a term and factor.
