@@ -743,7 +743,7 @@ class DiscreteMargins:
             "z",
             "Pr(>|z|)",
             "Conf. Int. Low",
-            "Cont. Int. Hi.",
+            "Conf. Int. Hi.",
         ]
         ind = self.results.model.exog.var(0) != 0  # True if not a constant
         exog_names = self.results.model.exog_names
