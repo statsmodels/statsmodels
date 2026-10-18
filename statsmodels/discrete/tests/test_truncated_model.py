@@ -7,8 +7,10 @@ from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pytest
 
 from statsmodels import datasets
+from statsmodels.discrete.discrete_model import GeneralizedPoisson, NegativeBinomialP
 from statsmodels.discrete.truncated_model import (
     HurdleCountModel,
+    TruncatedLFGeneralizedPoisson,
     TruncatedLFNegativeBinomialP,
     TruncatedLFPoisson,
 )
@@ -977,3 +979,75 @@ def test_fit_regularized_converged_reports_joint_fit_too():
     assert isinstance(converged[2], (bool, np.bool_))
 
 
+@pytest.fixture
+def count_data_exposure():
+    rng = np.random.default_rng(8842)
+    nobs = 500
+    exog = add_constant(rng.normal(size=nobs))
+    # include exposure < 1 so that a doubly logged exposure would be invalid
+    exposure = rng.uniform(0.5, 2.0, size=nobs)
+    mu = exposure * np.exp(0.5 + 0.3 * exog[:, 1])
+    # overdispersed counts, zeros are dropped by the truncated models
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    return endog, exog, exposure
+
+
+@pytest.mark.parametrize(
+    "model_class",
+    [TruncatedLFPoisson, TruncatedLFNegativeBinomialP, TruncatedLFGeneralizedPoisson],
+)
+def test_truncated_exposure_matches_offset(model_class, count_data_exposure):
+    # GH-8842
+    endog, exog, exposure = count_data_exposure
+    mod_offset = model_class(endog, exog, offset=np.log(exposure))
+    mod_exposure = model_class(endog, exog, exposure=exposure)
+
+    params = np.array([0.5, 0.3, 0.5])[: mod_offset.exog.shape[1] + mod_offset.k_extra]
+    llf = mod_exposure.loglike(params)
+    assert np.isfinite(llf)
+    assert_allclose(llf, mod_offset.loglike(params), rtol=1e-12)
+    assert_allclose(
+        mod_exposure.score(params), mod_offset.score(params), rtol=1e-10
+    )
+
+    with warnings.catch_warnings():
+        # generalized Poisson can overflow at trial values and bfgs may not
+        # fully converge, the fits only need to agree with each other
+        warnings.simplefilter("ignore", RuntimeWarning)
+        warnings.simplefilter("ignore", ConvergenceWarning)
+        res_offset = mod_offset.fit(maxiter=300, disp=0)
+        res_exposure = mod_exposure.fit(maxiter=300, disp=0)
+    assert_allclose(res_exposure.params, res_offset.params, rtol=1e-6)
+    assert_allclose(res_exposure.llf, res_offset.llf, rtol=1e-10)
+    assert_allclose(res_exposure.bse, res_offset.bse, rtol=1e-5)
+
+
+def test_truncated_poisson_exposure_loglike(count_data_exposure):
+    # GH-8842, compare with the zero-truncated Poisson log-likelihood
+    from scipy import stats
+
+    endog, exog, exposure = count_data_exposure
+    params = np.array([0.5, 0.3])
+    mod = TruncatedLFPoisson(endog, exog, exposure=exposure)
+
+    mask = endog > 0
+    mu = exposure[mask] * np.exp(exog[mask] @ params)
+    llf = stats.poisson.logpmf(endog[mask], mu) - np.log(-np.expm1(-mu))
+    assert_allclose(mod.loglikeobs(params), llf, rtol=1e-12)
+
+
+@pytest.mark.parametrize("model_class", [NegativeBinomialP, GeneralizedPoisson])
+@pytest.mark.parametrize("which", ["mean", "linear", "var", "prob"])
+def test_predict_array_exposure(model_class, which, count_data_exposure):
+    endog, exog, exposure = count_data_exposure
+    params = np.array([0.5, 0.3, 0.5])
+    kwds = {"y_values": np.arange(5)} if which == "prob" else {}
+
+    mod = model_class(endog, exog)
+    pred = mod.predict(params, exposure=exposure, which=which, **kwds)
+    expected = mod.predict(params, offset=np.log(exposure), which=which, **kwds)
+    assert_allclose(pred, expected, rtol=1e-12)
+
+    # model exposure is used by default
+    mod_exposure = model_class(endog, exog, exposure=exposure)
+    assert_allclose(mod_exposure.predict(params, which=which, **kwds), expected)
