@@ -3590,3 +3590,51 @@ def test_glm_predict_nonpositive_exposure_raises():
     # positive exposure keeps working
     pred = res.predict(x, exposure=np.full(60, 2.0))
     assert np.all(np.isfinite(pred))
+
+
+@pytest.mark.parametrize(
+    "to_response",
+    [
+        lambda y: y.astype(bool),
+        lambda y: np.where(y == 1, "yes", "no"),
+        lambda y: pd.Categorical(np.where(y == 1, "b", "a"), categories=["a", "b"]),
+        lambda y: pd.Categorical(np.where(y == 1, "a", "b"), categories=["b", "a"]),
+    ],
+    ids=["bool", "str", "categorical", "categorical-reordered"],
+)
+def test_glm_formula_two_level_categorical_endog(to_response):
+    # GH 10501: a two-level categorical response is expanded to one indicator
+    # column per level, which GLM read as (successes, failures), so the first
+    # level was modeled as the success and every coefficient flipped sign.
+    # As in R's glm, the first level is the failure and the second the success.
+    y = np.array([0, 0, 1, 0, 1, 1, 0, 1])
+    data = pd.DataFrame({"x": np.arange(8.0), "y": y, "z": to_response(y)})
+    family = sm.families.Binomial()
+    expected = GLM.from_formula("y ~ x", data, family=family).fit()
+    res = GLM.from_formula("z ~ x", data, family=family).fit()
+    assert_allclose(res.params.values, expected.params.values, rtol=1e-10)
+    assert_allclose(res.bse.values, expected.bse.values, rtol=1e-10)
+
+
+def test_glm_formula_two_level_categorical_endog_missing():
+    y = np.array([0, 0, 1, 0, 1, 1, 0, 1, 1, 0])
+    data = pd.DataFrame(
+        {"x": np.arange(10.0), "y": y, "z": np.where(y == 1, "yes", "no")}
+    )
+    data.loc[2, "z"] = None
+    family = sm.families.Binomial()
+    res = GLM.from_formula("z ~ x", data, family=family, missing="drop").fit()
+    expected = GLM.from_formula("y ~ x", data.drop(index=2), family=family).fit()
+    assert res.nobs == 9
+    assert res.model.endog_names == "z[yes]"
+    assert_allclose(res.params.values, expected.params.values, rtol=1e-10)
+
+
+def test_glm_formula_two_column_numeric_endog():
+    # A numeric two-column response still means (successes, failures)
+    counts = np.column_stack([[3, 1, 4, 1, 5, 2], [2, 4, 1, 3, 1, 3]])
+    x = np.arange(6.0)
+    family = sm.families.Binomial()
+    res = GLM.from_formula("counts ~ x", {"x": x}, family=family).fit()
+    expected = GLM(counts, add_constant(x), family=family).fit()
+    assert_allclose(res.params.values, expected.params, rtol=1e-10)
