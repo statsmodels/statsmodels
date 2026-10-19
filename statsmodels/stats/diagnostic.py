@@ -760,6 +760,12 @@ def acorr_ljungbox(
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
     lags = array_like(lags, "lags", dtype="int")
+    if lags.size == 0 or lags.min() < 1:
+        # lag 0 used to index the cumulative sum at -1 and silently returned
+        # the statistic for the largest lag
+        raise ValueError(
+            f"lags must be positive integers, got {lags.tolist()} (nobs={nobs})"
+        )
     maxlag = lags.max()
     if maxlag >= nobs:
         # an autocorrelation at lag >= nobs is undefined; requesting one
