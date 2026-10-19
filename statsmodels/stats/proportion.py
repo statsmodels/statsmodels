@@ -875,7 +875,7 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
 
     Returns
     -------
-    x_low, x_upp : int
+    x_low, x_upp : float
         lower and upper bound of rejection region
     """
     alternative = string_like(
@@ -898,7 +898,12 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
     else:
         x_upp = nobs
 
-    return int(x_low), int(x_upp)
+    # Do not cast to ``int``: ``scipy.stats.binom.ppf``/``isf`` return
+    # floats (and may return ``nan``), and the bounds are used as-is for
+    # vectorized calls (e.g. ``power_binom_tost``).  Casting breaks both the
+    # ``nan`` case (``int(nan)`` raises) and the vectorized case
+    # (``int(ndarray)`` raises ``TypeError``).
+    return x_low, x_upp
 
 
 def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
