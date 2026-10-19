@@ -569,8 +569,10 @@ def test_power_binom_tost():
     res_power = np.array(
         [0.0, 0.0, 0.0, 0.0889, 0.2356, 0.3517, 0.4457, 0.6154, 0.6674, 0.7708]
     )
-    # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
-    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+    assert_almost_equal(power, res_power, decimal=4)
+
+    # the rejection region (27, 23) is empty, so the power is zero
+    assert_equal(smprop.power_binom_tost(0.4, 0.6, 50, p_alt=0.5), 0)
 
 
 def test_power_ztost_prop():
