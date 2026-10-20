@@ -1,5 +1,7 @@
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
+from itertools import combinations
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import pytest
@@ -454,6 +456,40 @@ def test_banddepth_BD2():
 
     # ax.legend()
     # plt.close(fig)
+
+
+@pytest.mark.parametrize(
+    "curves, expected",
+    [
+        ([[3, 1, 0], [1, 2, 1], [2, 3, 2], [0, 0, 3]], [0.5] * 4),
+        ([[0, 0], [0, 0], [0, 0]], [1] * 3),
+        ([[0, 1], [0, 1], [1, 0]], [1, 1, 2 / 3]),
+        ([[0, 0], [-1, 0], [1, 0], [0, 1]], [1, 0.5, 0.5, 0.5]),
+    ],
+)
+def test_banddepth_BD2_crossings_and_ties(curves, expected):
+    curves = np.asarray(curves)
+    assert_equal(banddepth(curves, method="BD2"), expected)
+    order = np.arange(len(curves))[::-1]
+    assert_equal(banddepth(curves[order], method="BD2"), np.asarray(expected)[order])
+    assert_equal(banddepth(curves[:, ::-1], method="BD2"), expected)
+
+
+@pytest.mark.parametrize("shape", [(2, 1), (4, 3), (12, 17), (8, 65), (6, 129)])
+@pytest.mark.parametrize("ties", [False, True])
+def test_banddepth_BD2_pairwise_reference(shape, ties):
+    rng = np.random.default_rng(7105)
+    curves = rng.integers(-2, 3, size=shape) if ties else rng.normal(size=shape)
+    original = curves.copy()
+    # Apply the band containment definition directly, without ranking curves.
+    counts = np.zeros(len(curves))
+    pairs = list(combinations(curves, 2))
+    for first, second in pairs:
+        lower = np.minimum(first, second)
+        upper = np.maximum(first, second)
+        counts += np.all((curves >= lower) & (curves <= upper), axis=1)
+    assert_equal(banddepth(curves, method="BD2"), counts / len(pairs))
+    assert_equal(curves, original)
 
 
 def test_banddepth_MBD(close_figures):
