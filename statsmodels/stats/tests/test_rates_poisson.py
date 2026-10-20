@@ -1809,3 +1809,60 @@ def test_poisson_tost_nonequivalence_invalid_interval_raises():
         smr.nonequivalence_poisson_2indep(5, 100, 3, 100, low=2, upp=1)
     res = smr.tost_poisson_2indep(5, 100, 3, 100, low=0.5, upp=2)
     assert np.isfinite(res.pvalue)
+
+def test_power_poisson_ratio_default_value_nonzero():
+    # The default value=0 is the null rate ratio of the *difference* test, but
+    # value here is the null *ratio*. With 0, log(rate1 / rate2) - log(value)
+    # is inf, the effect size is infinite and the power was always exactly
+    # 0 or 1, whatever the rates and the sample size are.  The default is the
+    # null ratio of equal rates, value=1.  (gh-10511)
+
+    # one-sided, equal rates: the null case has power equal to the size alpha
+    pow_default = power_poisson_ratio_2indep(
+        1, 1, 100, exposure=1, alternative="larger", return_results=False
+    )
+    assert_allclose(pow_default, 0.05, atol=1e-7)
+
+    # the default is value=1: the explicit value gives identical power
+    pow_value = power_poisson_ratio_2indep(
+        1, 1, 100, exposure=1, value=1, alternative="larger", return_results=False
+    )
+    assert_allclose(pow_default, pow_value, rtol=1e-13)
+
+    # with the infinite effect size of the old default this was exactly 1
+    pow_ = power_poisson_ratio_2indep(
+        2, 1, 100, exposure=1, alternative="larger", return_results=False
+    )
+    assert_allclose(pow_, 0.99997, atol=1e-4)
+    assert pow_ < 1
+
+    # regression value, the Poisson limiting case of the negative binomial
+    # example in test_power_negbin above (R MKmisc power_NegativeBinomial with
+    # mu1=0.5, mu2=0.3, n1=100, n2=50, duration=2 and no overdispersion), using
+    # the score version of the variance with the null value in it
+    pow_default = power_poisson_ratio_2indep(
+        0.5,
+        0.3,
+        100,
+        nobs_ratio=0.5,
+        exposure=2,
+        dispersion=1,
+        alternative="larger",
+        method_var="score",
+        return_results=False,
+    )
+    assert_allclose(pow_default, 0.8373964, atol=1e-6)
+
+    pow_value = power_poisson_ratio_2indep(
+        0.5,
+        0.3,
+        100,
+        nobs_ratio=0.5,
+        exposure=2,
+        value=1,
+        dispersion=1,
+        alternative="larger",
+        method_var="score",
+        return_results=False,
+    )
+    assert_allclose(pow_default, pow_value, rtol=1e-13)
