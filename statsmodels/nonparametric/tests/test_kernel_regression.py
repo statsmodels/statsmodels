@@ -876,8 +876,6 @@ def test_aic_hurvich_matches_hand_computed_trace():
     aic_expected = np.log(sigma) + frac
 
     npt.assert_allclose(aic, aic_expected, rtol=1e-8)
-
-
 @pytest.mark.filterwarnings("ignore::FutureWarning")
 def test_kernelreg_invalid_bw_raises():
     # an unknown string method previously silently fell back to 'aic',
@@ -886,7 +884,47 @@ def test_kernelreg_invalid_bw_raises():
     x = np.linspace(-2.0, 2.0, 50)[:, None]
     with pytest.raises(ValueError, match="bw must be one of"):
         KernelReg(y, x, "c", bw="bogus")
-    with pytest.raises(ValueError, match="bw must be positive"):
-        KernelReg(y, x, "c", bw=[-0.5])
-    mean, mfx = KernelReg(y, x, "c", bw=[0.5]).fit()
+    # negative and nan bandwidths were accepted and produced a nan fit
+    x2 = np.column_stack((x, x))
+    for bad_bw in ([0.5, -0.5], [0.5, np.nan], [-0.5, np.nan]):
+        with pytest.raises(ValueError, match="bw must be non-negative"):
+            KernelReg(y, x2, "cc", bw=bad_bw)
+    mean, mfx = KernelReg(y, x, "c", bw=[0.5], rng=12345).fit()
     assert np.isfinite(mean).all()
+
+
+@pytest.mark.filterwarnings("ignore::FutureWarning")
+def test_kernelreg_zero_bw_for_discrete_variable():
+    # zero is a valid bandwidth for a discrete variable, the kernel is an
+    # indicator of an exact match on the variable, so zero must not raise
+    rng = np.random.default_rng(12345)
+    y = rng.standard_normal(50)
+    x = np.column_stack((np.arange(50) % 2, rng.standard_normal(50)))
+    model = KernelReg(y, x, "uc", bw=[0.0, 0.5], rng=12345)
+    assert model.bw[0] == 0.0
+    mean, mfx = model.fit()
+    assert np.isfinite(mean).all()
+
+
+@pytest.mark.filterwarnings("ignore::FutureWarning")
+def test_kernelreg_normal_reference_bw():
+    # 'normal_reference' is the rule of thumb bandwidth of the continuous
+    # variables, the same expression that supplies the starting values of
+    # 'cv_ls' and 'aic'
+    y = np.linspace(-1.0, 1.0, 200)
+    x = np.linspace(-2.0, 2.0, 200)[:, None]
+    model = KernelReg(y, x, "c", bw="normal_reference", rng=12345)
+    expected = 1.06 * np.std(x, axis=0) * 200 ** (-1.0 / (4 + 1))
+    npt.assert_allclose(model.bw, expected, rtol=1e-12)
+    mean, mfx = model.fit()
+    assert np.isfinite(mean).all()
+
+    # the discrete variable is not scaled and its bandwidth stays a starting
+    # value of the numerical selection methods, no bandwidth is returned in
+    # its place
+    x2 = np.column_stack((x[:, 0], np.arange(200) % 3))
+    model2 = KernelReg(y, x2, "cu", bw="normal_reference", rng=12345)
+    assert model2.bw.shape == (1,)
+    npt.assert_allclose(
+        model2.bw, 1.06 * np.std(x2[:, 0], axis=0) * 200 ** (-1.0 / (4 + 2)), rtol=1e-12
+    )
