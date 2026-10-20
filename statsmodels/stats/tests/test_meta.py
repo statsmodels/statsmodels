@@ -659,6 +659,32 @@ def test_combine_effects_invalid_inputs_raises():
     assert np.isfinite(res.mean_effect_fe)
 
 
+def test_combine_effects_dl_tau2_truncated():
+    # GH regression test: the DerSimonian-Laird one-step tau^2 estimate was
+    # not truncated at zero. With these (nearly homogeneous) studies the
+    # raw estimate is (q - df) / c = -0.0561, which gave
+    # mean_effect_re = 0.4000, outside the range of the effects
+    # [0.28, 0.32], and a negative var_eff_w_re / NaN sd for other inputs.
+    # The published DL estimator and R metafor truncate tau^2 at 0, as does
+    # the Paule-Mandel path in this module (_fit_tau_iter_mm).
+    eff = np.array([0.30, 0.32, 0.28, 0.31])
+    var = np.array([0.04, 0.09, 0.05, 0.06])
+
+    res = combine_effects(eff, var, method_re="dl")
+    assert_allclose(res.tau2, 0, atol=1e-13)
+    # with tau2 = 0 the random effects results coincide with fixed effects
+    assert_allclose(res.mean_effect_re, res.mean_effect_fe, rtol=1e-13)
+    assert_allclose(res.sd_eff_w_re, res.sd_eff_w_fe, rtol=1e-13)
+    # the combined estimate is a weighted mean of the study effects
+    assert eff.min() <= res.mean_effect_re <= eff.max()
+    assert np.isfinite(res.sd_eff_w_re)
+    assert np.isfinite(res.sd_eff_w_re_hksj)
+
+    # the one-step method-of-moment estimate truncates as well
+    tau2_mm = _fit_tau_mm(eff, var, 1 / var)
+    assert_allclose(tau2_mm, 0, atol=1e-13)
+
+
 def test_effectsize_2proportions_invalid_counts_raises():
     # counts outside [0, nobs] previously produced proportions outside
     # [0, 1] (e.g. a risk "difference" larger than 1) without an error

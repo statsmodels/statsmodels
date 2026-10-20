@@ -724,7 +724,8 @@ def combine_effects(
         tau2, _ = _fit_tau_iterative(eff, var_eff, **kwds)
     else:  # method in ["chi2", "dl"]
         c = w_total_fe - (weights_fe**2).sum() / w_total_fe
-        tau2 = (q - df) / c
+        # DerSimonian-Laird estimate is truncated at zero
+        tau2 = np.maximum(0, (q - df) / c)
 
     weights_re = 1 / (var_eff + tau2)  # no  bias_correction ?
     w_total_re = weights_re.sum(0)
@@ -826,8 +827,8 @@ def _fit_tau_mm(eff, var_eff, weights):
     w_t = w.sum()
     expect = w.dot(var_eff) - (w**2).dot(var_eff) / w_t
     denom = w_t - (w**2).sum() / w_t
-    # moment estimate from estimating equation
-    tau2 = (q_w - expect) / denom
+    # moment estimate from estimating equation, truncated at zero
+    tau2 = np.maximum(0, (q_w - expect) / denom)
 
     return tau2
 
