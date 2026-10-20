@@ -3190,3 +3190,19 @@ def test_model_latex_names_matches_model_names_structure():
     assert latex_names["ma"] == [r"$\theta_1$"]
     assert names["variance"] == ["sigma2"]
     assert latex_names["variance"] == [r"$\sigma_\zeta^2$"]
+
+
+def test_start_params_0d_endog():
+    # GH 9237: with fewer observations than differencing terms, endog can
+    # have a single element at the start_params stage, and the previous
+    # bare endog.squeeze() turned it into a 0-dimensional array which
+    # cannot be indexed in _conditional_sum_squares
+    endog = np.array([111., 222., 333.])
+    mod = sarimax.SARIMAX(endog, order=(1, 2, 1))
+    start_params = mod.start_params
+    assert np.all(np.isfinite(start_params))
+
+    # Also covers the case with a single observation and no differencing
+    mod = sarimax.SARIMAX(np.array([111.]), order=(1, 0, 1))
+    start_params = mod.start_params
+    assert np.all(np.isfinite(start_params))
