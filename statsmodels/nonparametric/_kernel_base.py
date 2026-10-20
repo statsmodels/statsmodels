@@ -441,14 +441,23 @@ class GenericKDE:
 
         where ``n`` is the number of observations and ``q`` is the number of
         variables.
+
+        The rule of thumb is defined for continuous variables, so the
+        bandwidths of the discrete variables are passed through
+        :meth:`_set_bw_bounds` to keep them inside the range in which the
+        discrete kernels are defined.  Otherwise the bandwidth of a discrete
+        variable scales with its arbitrary numeric codes and the density
+        estimate is no longer valid.
         """
         X = np.std(self.data, axis=0)
-        return 1.06 * X * self.nobs ** (-1.0 / (4 + self.data.shape[1]))
+        bw = 1.06 * X * self.nobs ** (-1.0 / (4 + self.data.shape[1]))
+        return self._set_bw_bounds(bw)
 
     def _set_bw_bounds(self, bw):
         """
         Sets bandwidth lower bound to effectively zero (1e-10), and for
-        discrete values upper bound to 1
+        discrete values upper bound to the largest value the kernel is
+        defined for
 
         Parameters
         ----------
@@ -459,11 +468,30 @@ class GenericKDE:
         -------
         ndarray
             The bounded bandwidth values.
+
+        Notes
+        -----
+        The bandwidth of an unordered variable is the smoothing probability of
+        the Aitchison-Aitken kernel and is only a valid density estimator for
+        ``0 <= bw <= (levels - 1) / levels``.  The upper end is the fully
+        smoothed, uniform kernel, while a larger value would put less weight on
+        the observed levels than on the unobserved ones.  The bandwidth of an
+        ordered variable enters the Wang-Ryzin kernel as ``1 - bw`` and is
+        bounded by 1.
         """
         bw[bw < 0] = 1e-10
         _, ix_ord, ix_unord = _get_type_pos(self.data_type)
         bw[ix_ord] = np.minimum(bw[ix_ord], 1.0)
-        bw[ix_unord] = np.minimum(bw[ix_unord], 1.0)
+        # ``KernelReg`` stores the endog in the first column of ``self.data``
+        # while ``data_type`` only describes the exog variables, so the columns
+        # of the variables can start after leading columns of ``self.data``.
+        offset = self.data.shape[1] - len(self.data_type)
+        for i in range(len(self.data_type)):
+            if not ix_unord[i]:
+                continue
+            levels = np.unique(self.data[:, i + offset]).size
+            if levels > 1:
+                bw[i] = np.minimum(bw[i], (levels - 1) / levels)
 
         return bw
 
