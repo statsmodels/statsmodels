@@ -113,31 +113,96 @@ def test_norms_consistent(case):
     if norm.redescending == "soft":
         # we don't have info where argmax psi is, use simple values for x
         assert norm.psi(100) < norm.psi(2)
-
-
-@pytest.mark.parametrize("norm_factory, kwargs", [
-    (norms.HuberT, {"t": 0}),
-    (norms.HuberT, {"t": -1.0}),
-    (norms.AndrewWave, {"a": 0}),
-    (norms.AndrewWave, {"a": -2.0}),
-    (norms.TukeyBiweight, {"c": 0}),
-    (norms.TukeyBiweight, {"c": -4.685}),
-    (norms.Hampel, {"a": 0.0, "b": 4.0, "c": 8.0}),
-    (norms.Hampel, {"a": 2.0, "b": 1.0, "c": 8.0}),
-    (norms.Hampel, {"a": 2.0, "b": 4.0, "c": 4.0}),
-])
+@pytest.mark.parametrize(
+    "norm_factory, kwargs",
+    [
+        (norms.HuberT, {"t": 0}),
+        (norms.HuberT, {"t": -1.0}),
+        (norms.HuberT, {"t": np.nan}),
+        (norms.HuberT, {"t": [1.0, -2.0]}),
+        (norms.AndrewWave, {"a": 0}),
+        (norms.AndrewWave, {"a": -2.0}),
+        (norms.AndrewWave, {"a": np.nan}),
+        (norms.TukeyBiweight, {"c": 0}),
+        (norms.TukeyBiweight, {"c": -4.685}),
+        (norms.TukeyBiweight, {"c": np.nan}),
+        (norms.Hampel, {"a": 0.0, "b": 4.0, "c": 8.0}),
+        (norms.Hampel, {"a": -2.0, "b": 4.0, "c": 8.0}),
+        (norms.Hampel, {"a": 2.0, "b": 1.0, "c": 8.0}),
+        (norms.Hampel, {"a": 2.0, "b": 4.0, "c": 3.0}),
+        (norms.Hampel, {"a": np.nan, "b": 4.0, "c": 8.0}),
+        (norms.Hampel, {"a": 2.0, "b": np.nan, "c": 8.0}),
+        (norms.Hampel, {"a": 2.0, "b": 4.0, "c": np.nan}),
+    ],
+)
 def test_norms_invalid_tuning_params_raise(norm_factory, kwargs):
-    # zero/negative or unordered tuning constants previously constructed
-    # degenerate norms whose psi is identically zero or NaN
+    # zero, negative, nan or unordered tuning constants previously constructed
+    # degenerate norms whose psi is identically zero or nan
     with pytest.raises(ValueError):
         norm_factory(**kwargs)
 
 
 def test_norms_valid_tuning_params():
     # defaults and custom values remain constructible
-    for norm in [norms.HuberT(), norms.HuberT(t=1.5),
-                 norms.AndrewWave(), norms.AndrewWave(a=1.5),
-                 norms.TukeyBiweight(), norms.TukeyBiweight(c=5.0),
-                 norms.Hampel(), norms.Hampel(a=1.5, b=3.5, c=7.0)]:
-        x = np.array([-2.0, -0.5, 0.5, 2.0])
+    x = np.array([-2.0, -0.5, 0.5, 2.0])
+    for norm in [
+        norms.HuberT(),
+        norms.HuberT(t=1.5),
+        norms.AndrewWave(),
+        norms.AndrewWave(a=1.5),
+        norms.TukeyBiweight(),
+        norms.TukeyBiweight(c=5.0),
+        norms.Hampel(),
+        norms.Hampel(a=1.5, b=3.5, c=7.0),
+    ]:
         assert np.isfinite(norm.psi(x)).all()
+    # equal neighbouring constants are an allowed limit case of Hampel
+    for norm in [norms.Hampel(a=2.0, b=2.0, c=8.0), norms.Hampel(b=8.0, c=8.0)]:
+        assert np.isfinite(norm.psi(x)).all()
+
+
+@pytest.mark.parametrize(
+    "norm_factory, name",
+    [
+        (norms.HuberT, "t"),
+        (norms.AndrewWave, "a"),
+        (norms.TukeyBiweight, "c"),
+    ],
+)
+def test_norms_array_tuning_params_validated(norm_factory, name):
+    # an array valued tuning constant is checked element-wise instead of
+    # raising "The truth value of an array with more than one element is
+    # ambiguous" from the check itself
+    x = np.array([-2.0, -0.5, 0.5, 2.0])
+    norm = norm_factory(**{name: np.array([1.5, 2.0, 1.5, 2.0])})
+    assert np.isfinite(norm.psi(x)).all()
+    # one invalid element is rejected, the others do not mask it
+    for bad in ([1.5, -2.0], [np.nan, 2.0], [1.5, np.nan]):
+        with pytest.raises(ValueError, match=f"{name} must be positive"):
+            norm_factory(**{name: np.array(bad)})
+
+
+@pytest.mark.parametrize(
+    "norm_factory, name",
+    [
+        (norms.HuberT, "t"),
+        (norms.AndrewWave, "a"),
+        (norms.TukeyBiweight, "c"),
+    ],
+)
+def test_norms_array_tuning_params_match_elementwise(norm_factory, name):
+    # a vector valued tuning constant gives the element-wise results of the
+    # same calls with scalars, for every method of the norm
+    values = np.array([1.5, 2.5, 1.5, 2.5])
+    norm = norm_factory(**{name: values})
+    x = np.array([-2.0, -0.5, 0.5, 2.0])
+    for method in ["rho", "psi", "psi_deriv", "weights"]:
+        combined = getattr(norm, method)(x)
+        scalar = np.array(
+            [
+                getattr(norm_factory(**{name: value}), method)(z)
+                for value, z in zip(values, x, strict=True)
+            ]
+        )
+        assert_allclose(combined, scalar, rtol=1e-13)
+
