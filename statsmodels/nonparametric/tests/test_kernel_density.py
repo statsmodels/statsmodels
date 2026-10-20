@@ -717,6 +717,65 @@ class TestKDEMultivariateConditional(KDETestBase):
         npt.assert_equal(dens.bw, bw_user)
 
 
+def test_normal_reference_bw_of_unordered_variable_in_range():
+    # GH 3790: the normal reference rule of thumb is defined for continuous
+    # variables, so applying it to an unordered variable makes the bandwidth
+    # scale with the arbitrary numeric codes.  The bandwidth of an unordered
+    # variable is the smoothing probability of the Aitchison-Aitken kernel
+    # (see kernels.aitchison_aitken), for which the estimate is a probability
+    # density only if 0 <= bw <= (levels - 1) / levels.  Larger values put
+    # less weight on the observed levels than on the unobserved ones, which
+    # made the density negative for codes on a large scale.
+    codes = 1000 * np.array([0, 0, 0, 0, 1])
+    dens = nparam.KDEMultivariate(data=codes, var_type="u", rng=0)
+    # two levels, so the largest valid bandwidth is 1 / 2
+    npt.assert_allclose(dens.bw, [0.5])
+    pdf = dens.pdf([0, 1000])
+    assert np.all(np.isfinite(pdf))
+    assert np.all(pdf >= 0)
+    # the bandwidth is at its bound, so the kernel is the uniform one
+    npt.assert_allclose(pdf, [0.5, 0.5])
+    npt.assert_allclose(pdf.sum(), 1.0)
+
+    # codes that give a bandwidth inside the valid range are unchanged
+    dens_small = nparam.KDEMultivariate(data=[0, 0, 0, 0, 1], var_type="u", rng=0)
+    npt.assert_allclose(dens_small.bw, [0.30730658])
+    npt.assert_allclose(dens_small.pdf([0, 1]), [0.61561605, 0.38438395], rtol=1e-6)
+
+
+def test_normal_reference_bw_of_unordered_variable_mixed_data():
+    # The bound is applied to the unordered variables only, the continuous
+    # bandwidth is still the normal reference rule of thumb.
+    codes = 1000 * np.array([0, 0, 0, 0, 1])
+    cont = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+    dens = nparam.KDEMultivariate(
+        data=np.column_stack((codes, cont)), var_type="uc", rng=0
+    )
+    npt.assert_allclose(dens.bw[0], 0.5)
+    npt.assert_allclose(dens.bw[1], 1.06 * np.std(cont) * 5 ** (-1.0 / (4 + 2)))
+    pdf = dens.pdf([[0, 0.1], [1000, 0.5]])
+    assert np.all(np.isfinite(pdf))
+    assert np.all(pdf > 0)
+
+
+def test_normal_reference_bw_of_unordered_dependent_variable():
+    # KDEMultivariateConditional selects its bandwidths with the same rule
+    codes = 1000 * np.array([0, 0, 0, 0, 1])
+    cont = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+    dens = nparam.KDEMultivariateConditional(
+        endog=codes,
+        exog=cont,
+        dep_type="u",
+        indep_type="c",
+        bw="normal_reference",
+        rng=0,
+    )
+    npt.assert_allclose(dens.bw[0], 0.5)
+    pdf = dens.pdf(endog_predict=[0, 1000], exog_predict=[0.1, 0.5])
+    assert np.all(np.isfinite(pdf))
+    assert np.all(pdf > 0)
+
+
 def test_conditional_imse_matches_hand_computed_cv():
     # KDEMultivariateConditional.imse implements the leave-one-out CV(h)
     # objective documented in its docstring; recompute it from scratch with
