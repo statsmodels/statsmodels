@@ -2,6 +2,7 @@
 
 from statsmodels.compat.pandas import deprecate_kwarg
 
+from collections import Counter
 import itertools
 from multiprocessing import Pool
 
@@ -909,7 +910,10 @@ def banddepth(data, method="MBD"):
     The method 'MBD' is similar to 'BD2', but checks the fraction of the curve
     falling within the bands.  It therefore generates very few ties.
 
-    The algorithm uses the efficient implementation proposed in [3]_.
+    The method 'MBD' uses the rank-based implementation proposed in [3]_.
+    The method 'BD2' retains each curve's above/below comparisons at all
+    sampled points, so that containment is checked against the same pair of
+    curves throughout. Points on a band's boundary count as contained.
 
     References
     ----------
@@ -924,17 +928,44 @@ def banddepth(data, method="MBD"):
            of Statistics Research, vol. 1, pp. 68-74, 2012.
     """
     n, p = data.shape
-    rv = np.argsort(data, axis=0)
-    rmat = np.argsort(rv, axis=0) + 1
 
     # band depth
     def _fbd2():
-        down = np.min(rmat, axis=1) - 1
-        up = n - np.max(rmat, axis=1)
-        return (up * down + n - 1) / comb(n, 2)
+        depth = np.empty(n)
+        full = (1 << p) - 1
+        for i, curve in enumerate(data):
+            above = np.packbits(data > curve, axis=1, bitorder="little")
+            below = np.packbits(data < curve, axis=1, bitorder="little")
+            counts = Counter(
+                (int.from_bytes(a, "little"), int.from_bytes(b, "little"))
+                for a, b in zip(above, below, strict=True)
+            )
+            # Any band with an endpoint identical to the target contains it.
+            equal = counts.pop((0, 0))
+            total = equal * (n - equal) + equal * (equal - 1) // 2
+
+            # Without ties, only complementary comparison patterns can enclose
+            # the target. Each pair is counted from both endpoints.
+            strict = {s: c for s, c in counts.items() if s[0] | s[1] == full}
+            total += sum(c * strict.get((b, a), 0) for (a, b), c in strict.items()) // 2
+
+            # With ties, neither endpoint may be on the same strict side of
+            # the target at any sampled point.
+            tied = [(a, b, c) for (a, b), c in counts.items() if a | b != full]
+            for j, (a, b, count) in enumerate(tied):
+                total += count * sum(
+                    c for (x, y), c in strict.items() if not (a & x or b & y)
+                )
+                total += count * sum(
+                    c for x, y, c in tied[j + 1 :] if not (a & x or b & y)
+                )
+            depth[i] = total
+        return depth / comb(n, 2)
 
     # modified band depth
     def _fmbd():
+        rv = np.argsort(data, axis=0)
+        rmat = np.argsort(rv, axis=0) + 1
         down = rmat - 1
         up = n - rmat
         return ((np.sum(up * down, axis=1) / p) + n - 1) / comb(n, 2)
