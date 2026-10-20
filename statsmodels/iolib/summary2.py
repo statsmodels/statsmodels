@@ -469,62 +469,151 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     return data
 
 
-# Vertical summary instance for multiple models
-def _col_params(result, float_format="%.4f", stars=True, include_r2=False):
+def _resolve_parentheses(parentheses):
     """
-    Stack coefficients and standard errors in single column
+    Resolve parentheses parameter to (stat_col_index, footnote_label).
+    """
+    if parentheses is None or parentheses is False:
+        return None, None
+    paren_key = str(parentheses).lower()
+    if paren_key in ("se", "std_err", "stderr", "bse"):
+        return 1, "Standard errors in parentheses."
+    elif paren_key in ("t", "t_stat", "t_value", "tvalues", "t-stat", "t-statistic"):
+        return 2, "t-statistics in parentheses."
+    elif paren_key in ("z", "z_stat", "z_value", "z-stat", "z-statistic"):
+        return 2, "z-statistics in parentheses."
+    elif paren_key in ("stat", "statistic"):
+        return 2, "Test statistics in parentheses."
+    elif paren_key in ("p", "p_val", "p_value", "pvalues", "p-value", "proba"):
+        return 3, "p-values in parentheses."
+    else:
+        raise ValueError(
+            f"Unknown parentheses option: {parentheses!r}. "
+            "Valid options are: 'se', 't', 'z', 'stat', 'p', None, or False."
+        )
+
+
+def _parse_float_format(float_format):
+    """
+    Parse float_format into a dictionary with formats for 'coeff',
+    'parentheses', and 'r2'.
+    """
+    if isinstance(float_format, str):
+        return {
+            "coeff": float_format,
+            "parentheses": float_format,
+            "r2": float_format,
+            "default": float_format,
+        }
+    elif isinstance(float_format, dict):
+        fmt_default = float_format.get("default", "%.4f")
+        fmt_coeff = (
+            float_format.get("coeff")
+            or float_format.get("coefficient")
+            or float_format.get("params")
+            or fmt_default
+        )
+        fmt_paren = (
+            float_format.get("parentheses")
+            or float_format.get("se")
+            or float_format.get("stat")
+            or float_format.get("bse")
+            or float_format.get("t")
+            or float_format.get("z")
+            or float_format.get("p")
+            or fmt_coeff
+        )
+        fmt_r2 = (
+            float_format.get("r2")
+            or float_format.get("rsquared")
+            or float_format.get("R-squared")
+            or fmt_coeff
+        )
+        return {
+            "coeff": fmt_coeff,
+            "parentheses": fmt_paren,
+            "r2": fmt_r2,
+            "default": fmt_default,
+        }
+    else:
+        raise TypeError("float_format must be a str or dict")
+
+
+# Vertical summary instance for multiple models
+def _col_params(result, float_format="%.4f", stars=True, include_r2=False,
+                include_adj_r2=None, parentheses="se"):
+    """
+    Stack coefficients and standard errors (or other statistics) in single column
 
     Parameters
     ----------
     result : Model results instance
         The result instance to summarize.
-    float_format : str, optional
-        Formatting to apply to coefficients and standard errors.
+    float_format : str or dict, optional
+        Formatting to apply to coefficients, parentheses, and R-squared.
     stars : bool, optional
         If True, append significance stars to the coefficients.
     include_r2 : bool, optional
-        If True, include R-squared and adjusted R-squared in the column.
+        If True, include R-squared in the column.
+    include_adj_r2 : bool or None, optional
+        If True, include adjusted R-squared. If None, follows include_r2.
+    parentheses : {'se', 't', 'z', 'stat', 'p', None, False}, optional
+        Statistic to display in parentheses beneath coefficients.
 
     Returns
     -------
     DataFrame
-        Single-column DataFrame with coefficients and standard errors
-        stacked into a single index.
+        Single-column DataFrame with coefficients and statistics stacked into
+        a single index.
     """
+    fmts = _parse_float_format(float_format)
+    stat_idx, _ = _resolve_parentheses(parentheses)
 
     # Extract parameters
     res = summary_params(result)
-    # Format float
-    for col in res.columns[:2]:
-        res[col] = res[col].apply(lambda x: float_format % x)
-    # Std.Errors in parentheses
-    res.iloc[:, 1] = "(" + res.iloc[:, 1] + ")"
-    # Significance stars
+
+    star_idx_10 = res.iloc[:, 3] < .1
+    star_idx_05 = res.iloc[:, 3] < .05
+    star_idx_01 = res.iloc[:, 3] < .01
+
+    formatted_coef = res.iloc[:, 0].apply(lambda x: fmts["coeff"] % x)
     if stars:
-        idx = res.iloc[:, 3] < .1
-        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + "*"
-        idx = res.iloc[:, 3] < .05
-        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + "*"
-        idx = res.iloc[:, 3] < .01
-        res.loc[idx, res.columns[0]] = res.loc[idx, res.columns[0]] + "*"
-    # Stack Coefs and Std.Errors
-    res = res.iloc[:, :2]
-    res = res.stack(**FUTURE_STACK)
+        formatted_coef.loc[star_idx_10] = formatted_coef.loc[star_idx_10] + "*"
+        formatted_coef.loc[star_idx_05] = formatted_coef.loc[star_idx_05] + "*"
+        formatted_coef.loc[star_idx_01] = formatted_coef.loc[star_idx_01] + "*"
+
+    if stat_idx is not None:
+        formatted_stat = res.iloc[:, stat_idx].apply(lambda x: fmts["parentheses"] % x)
+        formatted_stat = "(" + formatted_stat + ")"
+        col_data = {
+            res.columns[0]: formatted_coef,
+            res.columns[stat_idx]: formatted_stat,
+        }
+    else:
+        col_data = {
+            res.columns[0]: formatted_coef,
+        }
+
+    res_df = pd.DataFrame(col_data, index=res.index)
+    res_stacked = res_df.stack(**FUTURE_STACK)
 
     # Add R-squared
+    r2_dict = {}
     if include_r2:
-        rsquared = getattr(result, "rsquared", np.nan)
-        rsquared_adj = getattr(result, "rsquared_adj", np.nan)
-        r2 = pd.Series({("R-squared", ""): rsquared,
-                        ("R-squared Adj.", ""): rsquared_adj})
+        r2_dict[("R-squared", "")] = getattr(result, "rsquared", np.nan)
+    add_adj = include_adj_r2 if include_adj_r2 is not None else include_r2
+    if add_adj:
+        r2_dict[("R-squared Adj.", "")] = getattr(result, "rsquared_adj", np.nan)
 
+    if r2_dict:
+        r2 = pd.Series(r2_dict)
         if r2.notna().any():
-            r2 = r2.apply(lambda x: float_format % x)
-            res = pd.concat([res, r2], axis=0)
+            r2 = r2.apply(lambda x: fmts["r2"] % x if pd.notna(x) else "")
+            res_stacked = pd.concat([res_stacked, r2], axis=0)
 
-    res = pd.DataFrame(res)
-    res.columns = [str(result.model.endog_names)]
-    return res
+    res_out = pd.DataFrame(res_stacked)
+    res_out.columns = [str(result.model.endog_names)]
+    return res_out
 
 
 def _col_info(result, info_dict=None):
@@ -595,7 +684,8 @@ def _make_unique(list_of_names):
 def summary_col(results, float_format="%.4f", model_names=(), stars=False,
                 info_dict=None, regressor_order=(), drop_omitted=False,
                 include_r2=True, fixed_effects=None, fe_present="Yes",
-                fe_absent=""):
+                fe_absent="", include_adj_r2=None, include_n=False,
+                parentheses="se"):
     """
     Summarize multiple results instances side-by-side (coefs and SEs)
 
@@ -603,9 +693,13 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
     ----------
     results : statsmodels results instance or list of result instances
         The results to summarize side-by-side.
-    float_format : str, optional
-        float format for coefficients and standard errors
-        Default : '%.4f'
+    float_format : str or dict, optional
+        Float format for coefficients, statistics, and model metrics.
+        If a string, it is used for all float values (default: '%.4f').
+        If a dict, individual formats can be provided with keys 'coeff'
+        (or 'coefficient'), 'parentheses' (or 'se', 't', 'p', 'stat'),
+        'r2' (or 'rsquared'), and 'N' (e.g. {'coeff': '%.3f',
+        'parentheses': '%.2f', 'N': '%d'}).
     model_names : list of str, optional
         Must have same length as the number of results. If the names are not
         unique, a roman number will be appended to all model names
@@ -628,7 +722,7 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
         False, regressors not specified will be appended to end of the list.
         If True, only regressors in regressor_order will be included.
     include_r2 : bool, optional
-        Includes R2 and adjusted R2 in the summary table.
+        Includes R2 in the summary table. Default is True.
     fixed_effects : list of str, optional
         List of categorical variables for which to indicate presence of
         fixed effects.
@@ -637,19 +731,36 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
     fe_absent : str, optional
         String to indicate the absence of fixed effects. Default is empty
         string.
+    include_adj_r2 : bool or None, optional
+        Includes adjusted R2 in the summary table. If None (default),
+        follows the value of include_r2.
+    include_n : bool, optional
+        Includes the number of observations (N) in the summary table.
+        Default is False.
+    parentheses : {'se', 't', 'z', 'stat', 'p', None, False}, optional
+        Statistic to display in parentheses beneath coefficients.
+        - 'se' (default) : standard errors
+        - 't' : t-statistics
+        - 'z' : z-statistics
+        - 'stat' : test statistics
+        - 'p' : p-values
+        - None or False : do not display parenthetical statistics
 
     Returns
     -------
     Summary
         Summary instance containing a single table with the coefficients
-        and standard errors of all results, side-by-side.
+        and statistics of all results, side-by-side.
     """
 
     if not isinstance(results, list):
         results = [results]
 
+    stat_idx, paren_label = _resolve_parentheses(parentheses)
+
     cols = [_col_params(x, stars=stars, float_format=float_format,
-                        include_r2=include_r2) for x in results]
+                        include_r2=include_r2, include_adj_r2=include_adj_r2,
+                        parentheses=parentheses) for x in results]
 
     # Unique column names (pandas has problems merging otherwise)
     if model_names:
@@ -679,7 +790,8 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
     if regressor_order:
         varnames = summ.index.get_level_values(0).tolist()
         vc = pd.Series(varnames).value_counts()
-        varnames = vc.loc[vc == 2].index.tolist()
+        expected_count = 2 if stat_idx is not None else 1
+        varnames = vc.loc[vc == expected_count].index.tolist()
         ordered = [x for x in regressor_order if x in varnames]
         unordered = [x for x in varnames if x not in regressor_order]
         new_order = ordered + unordered
@@ -691,15 +803,19 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
                 new_order.remove(uo)
         summ = summ.reindex(new_order, level=0)
 
-    idx = []
-    index = summ.index.get_level_values(0)
-    for i in range(0, index.shape[0], 2):
-        idx.append(index[i])
-        if (i + 1) < index.shape[0] and (index[i] == index[i + 1]):
-            idx.append("")
-        else:
-            idx.append(index[i + 1])
-    summ.index = idx
+    if stat_idx is not None:
+        idx = []
+        index = summ.index.get_level_values(0)
+        for i in range(0, index.shape[0], 2):
+            idx.append(index[i])
+            if (i + 1) < index.shape[0]:
+                if index[i] == index[i + 1]:
+                    idx.append("")
+                else:
+                    idx.append(index[i + 1])
+        summ.index = idx
+    else:
+        summ.index = summ.index.get_level_values(0)
 
     # add fixed effects info.  The fixed-effects indicator rows belong
     # with the parameters and are placed before the other model info
@@ -714,10 +830,38 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
                     else fe_absent
                 )
 
+    # Build user info dict incorporating include_n if requested
+    user_info = None
+    if include_n:
+        n_fmt = (
+            float_format.get("N", "%d")
+            if isinstance(float_format, dict)
+            else "%d"
+        )
+
+        def _get_n(res):
+            nobs = getattr(res, "nobs", None)
+            if nobs is None:
+                return ""
+            try:
+                return n_fmt % int(nobs)
+            except (ValueError, TypeError):
+                return str(nobs)
+
+        user_info = {"N": _get_n}
+        if info_dict:
+            for k, v in info_dict.items():
+                if k == "N":
+                    user_info["N"] = v
+                else:
+                    user_info[k] = v
+    elif info_dict:
+        user_info = info_dict
+
     # add infos about the models.
-    if info_dict:
-        cols = [_col_info(x, info_dict.get(x.model.__class__.__name__,
-                                           info_dict)) for x in results]
+    if user_info:
+        cols = [_col_info(x, user_info.get(x.model.__class__.__name__,
+                                           user_info)) for x in results]
     elif not fixed_effects:
         cols = [_col_info(x, getattr(x, "default_model_infos", None)) for x in
                 results]
@@ -762,16 +906,20 @@ def summary_col(results, float_format="%.4f", model_names=(), stars=False,
     if fixed_effects:
         index_series = pd.Series(summ.index, index=summ.index)
         skip_flag = index_series.apply(
-            lambda x: any((f"C({fe})" in x) for fe in fixed_effects)
+            lambda x: any((f"C({fe})" in str(x)) for fe in fixed_effects)
             )
-        skip_next_flag = skip_flag.shift(fill_value=False)
-        final_skip = skip_flag | skip_next_flag
+        if stat_idx is not None:
+            skip_next_flag = skip_flag.shift(fill_value=False)
+            final_skip = skip_flag | skip_next_flag
+        else:
+            final_skip = skip_flag
         summ = summ[~final_skip]
 
     smry = Summary()
     smry._merge_latex = True
     smry.add_df(summ, header=True, align="l")
-    smry.add_text("Standard errors in parentheses.")
+    if paren_label:
+        smry.add_text(paren_label)
     if stars:
         smry.add_text("* p<.1, ** p<.05, ***p<.01")
 
