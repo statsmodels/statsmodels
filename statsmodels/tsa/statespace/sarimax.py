@@ -966,7 +966,7 @@ class SARIMAX(MLEModel):
             exog = self.exog.copy() if self.exog is not None else None
         # Squeeze only the last axis: with nobs == 1 a bare squeeze() would
         # turn endog into a 0-dimensional array, which cannot be indexed.
-        endog = np.atleast_1d(endog)
+        endog = np.atleast_1d(np.squeeze(endog))
 
         # Although the Kalman filter can deal with missing values in endog,
         # conditional sum of squares cannot
