@@ -596,6 +596,34 @@ class TestGlmBinomial(CheckModelResultsMixin):
         with pytest.raises(ValueError, match="array with multiple columns"):
             sm.GLM.from_formula("y ~ x1 + x2", data, family=sm.families.Binomial())
 
+    def test_bool_endog_formula(self):
+        # GH 10501: bool endog in formula shouldn't flip parameter signs
+        rng = np.random.default_rng(10501)
+        x = rng.normal(size=200)
+        prob = 1 / (1 + np.exp(-(0.2 + 0.8 * x)))
+        y_bool = rng.uniform(size=200) < prob
+        data = pd.DataFrame({"y": y_bool, "x": x})
+
+        res_formula = sm.GLM.from_formula(
+            "y ~ x", data, family=sm.families.Binomial()
+        ).fit()
+        res_direct = sm.GLM(
+            y_bool.astype(int), add_constant(x), family=sm.families.Binomial()
+        ).fit()
+
+        assert_allclose(res_formula.params, res_direct.params, rtol=1e-10)
+        assert res_formula.params["x"] > 0
+
+        # Also test boolean expression on LHS
+        data["val"] = x
+        res_expr = sm.GLM.from_formula(
+            "(val > 0) ~ x", data, family=sm.families.Binomial()
+        ).fit()
+        res_expr_direct = sm.GLM(
+            (x > 0).astype(int), add_constant(x), family=sm.families.Binomial()
+        ).fit()
+        assert_allclose(res_expr.params, res_expr_direct.params, rtol=1e-10)
+
     def test_get_distribution_binom_count(self):
         # test for binomial counts with n_trials > 1
         res1 = self.res1
