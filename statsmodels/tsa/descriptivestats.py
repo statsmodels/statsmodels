@@ -9,6 +9,8 @@ License: BSD(3clause)
 
 import warnings
 
+import numpy as np
+
 from statsmodels.graphics.utils import _import_mpl
 
 from . import stattools as stt
@@ -159,9 +161,25 @@ class TsaDescriptive:
         -------
         ndarray
             The periodogram values.
+
+        Notes
+        -----
+        The periodogram is evaluated at the natural frequencies
+        :math:`\\omega_k = 2 \\pi k / n`, :math:`k = 0, \\ldots, n - 1`,
+
+        .. math:: I(\\omega_k) = \\frac{1}{n}
+            \\left| \\sum_{t = 0}^{n - 1} x_t e^{-2 \\pi i k t / n}
+            \\right|^2
+
+        The value at the zero frequency is set to zero. Frequencies are not
+        returned.
         """
-        # does not return frequencies
-        return stt.periodogram(self.data)
+        # the natural frequencies of the discrete Fourier transform are the
+        # only ones computed, and the zero frequency term is set to 0
+        x = np.asarray(self.data)
+        pergr = 1.0 / len(x) * np.abs(np.fft.fft(x)) ** 2
+        pergr[0] = 0.0
+        return pergr
 
     # copied from fftarma.py
     def plot4(self, fig=None, nobs=100, nacf=20, nfreq=100):
