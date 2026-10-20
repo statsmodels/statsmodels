@@ -995,9 +995,23 @@ class Binomial(Family):
                 "or a paired response variable."
             )
         elif endog.ndim > 1 and endog.shape[1] > 1:
-            y = endog[:, 0]
+            col_names = None
+            if hasattr(endog, "columns"):
+                col_names = list(endog.columns)
+            elif hasattr(endog, "design_info"):
+                col_names = list(endog.design_info.column_names)
+            if col_names and len(col_names) == 2:
+                c0 = str(col_names[0]).strip()
+                c1 = str(col_names[1]).strip()
+                if (c0.endswith("[False]") and c1.endswith("[True]")) or (
+                    c0.lower() == "false" and c1.lower() == "true"
+                ):
+                    y = np.asarray(endog)[:, 1]
+                    self.n = np.asarray(endog).sum(1)
+                    return y * 1.0 / self.n, self.n
+            y = np.asarray(endog)[:, 0]
             # overwrite self.freq_weights for deviance below
-            self.n = endog.sum(1)
+            self.n = np.asarray(endog).sum(1)
             return y * 1.0 / self.n, self.n
         else:
             return endog, np.ones(endog.shape[0])
