@@ -994,7 +994,6 @@ class TTestIndPower(Power):
             raise ValueError(f"ratio must be non-negative, got {ratio}")
         if ratio == 0:
             # one-sample test, no second sample contributes
-            nobs2 = 0
             if df is None:
                 df = nobs1 - 1
             nobs = nobs1
