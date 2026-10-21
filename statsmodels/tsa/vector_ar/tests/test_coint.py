@@ -489,3 +489,14 @@ def test_johansen_result_aliases_and_rkt_meth():
     assert res.max_eig_stat_crit_vals is res.cvm
     assert res.meth == "johansen"
     assert res.rkt.shape == res.r0t.shape
+
+
+def test_coint_johansen_real_eigenvalues():
+    # np.linalg.eig of the non-symmetric moment matrix product returned complex
+    # eigenvalues for this random walk, cast to real with a ComplexWarning
+    data = np.cumsum(np.random.default_rng(0).standard_normal((1000, 2)), axis=0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = coint_johansen(data, 0, 2)
+    assert np.isrealobj(res.eig)
+    assert np.all((res.eig >= 0) & (res.eig < 1))
