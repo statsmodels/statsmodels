@@ -3,6 +3,8 @@ Tests that models give the same results for integer, boolean and pandas
 nullable inputs as for the same values stored as float.
 """
 
+from statsmodels.compat.pandas import PD_LT_2_2_0
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
@@ -24,6 +26,10 @@ GROUPS = np.repeat(np.arange(20), 5)
 MISSING = [3, 40]
 # the estimates are equal up to the rounding of the linear algebra
 TOL = {"rtol": 1e-6, "atol": 1e-8}
+# pandas nullable arrays are converted to object arrays before pandas 2.2
+NULLABLE = pytest.mark.skipif(
+    PD_LT_2_2_0, reason="nullable dtypes require pandas 2.2 or later"
+)
 
 
 def _data():
@@ -85,7 +91,9 @@ def _convert(values, dtype):
     return pd.DataFrame(values).astype(dtype)
 
 
-@pytest.mark.parametrize("dtype", ["int64", "int32", "Int64"])
+@pytest.mark.parametrize(
+    "dtype", ["int64", "int32", pytest.param("Int64", marks=NULLABLE)]
+)
 @pytest.mark.parametrize("model", list(MODELS))
 def test_integer_inputs(model, dtype):
     kind, fit = MODELS[model]
@@ -107,6 +115,7 @@ def test_bool_dummy_exog(model):
     assert_allclose(np.asarray(res.params), np.asarray(expected.params), **TOL)
 
 
+@NULLABLE
 @pytest.mark.parametrize("dtype", ["Int64", "Float64"])
 @pytest.mark.parametrize("model", list(MODELS))
 def test_nullable_with_missing(model, dtype):
@@ -124,7 +133,7 @@ def test_nullable_with_missing(model, dtype):
     assert_allclose(np.asarray(res.params), np.asarray(expected.params), **TOL)
 
 
-@pytest.mark.parametrize("dtype", [bool, "boolean"])
+@pytest.mark.parametrize("dtype", [bool, pytest.param("boolean", marks=NULLABLE)])
 @pytest.mark.parametrize("model", ["GLM-Binomial", "Logit"])
 def test_boolean_endog(model, dtype):
     _, fit = MODELS[model]
@@ -140,7 +149,9 @@ TS_MODELS = {
 }
 
 
-@pytest.mark.parametrize("dtype", ["int64", "int32", "Int64"])
+@pytest.mark.parametrize(
+    "dtype", ["int64", "int32", pytest.param("Int64", marks=NULLABLE)]
+)
 @pytest.mark.parametrize("model", list(TS_MODELS))
 def test_integer_time_series(model, dtype):
     rng = np.random.default_rng(5445)
