@@ -72,6 +72,8 @@ from statsmodels.tsa.stattools import (
     range_unit_root_test,
     zivot_andrews,
 )
+from statsmodels.tsa.stattools._stattools import _adf_autolag, _autolag
+from statsmodels.tsa.tsatools import add_trend, lagmat
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -2569,6 +2571,169 @@ def test_coint_short_even_sample():
     assert adf.resstore.resols.df_resid >= 1
     assert_allclose(res.coint_t, _adf_tstat_no_trend(resid, adf.lags), rtol=1e-8)
     assert res.coint_t != 0
+
+
+def _adf_autolag_ols(x, maxlag, regression, method):
+    # lag search with one OLS fit per lag length, using the design matrix
+    # that adfuller builds for _autolag
+    xdiff = np.diff(x)
+    xdall = lagmat(xdiff[:, None], maxlag, trim="both", original="in")
+    nobs = xdall.shape[0]
+    xdall[:, 0] = x[-nobs - 1 : -1]
+    endog = xdiff[-nobs:]
+    exog = xdall if regression == "n" else add_trend(xdall, regression, prepend=True)
+    startlag = exog.shape[1] - xdall.shape[1] + 1
+    icbest, bestlag = _autolag(OLS, endog, exog, startlag, maxlag, method)
+    return icbest, bestlag - startlag
+
+
+def _adf_autolag_series(kind, nobs, rng):
+    e = rng.standard_normal(nobs)
+    if kind == "random_walk":
+        return np.cumsum(e)
+    elif kind == "ar":
+        x = np.zeros(nobs)
+        for t in range(3, nobs):
+            x[t] = 0.5 * x[t - 1] + 0.2 * x[t - 2] - 0.3 * x[t - 3] + e[t]
+        return x
+    elif kind == "integrated_ma":
+        return np.cumsum(e + 0.8 * np.r_[0.0, e[:-1]])
+    elif kind == "trend":
+        return 5.0 + 0.05 * np.arange(nobs) + np.cumsum(e)
+    elif kind == "integer_steps":
+        return np.cumsum(rng.integers(-1, 2, nobs)).astype(float)
+    elif kind == "mostly_constant":
+        x = np.zeros(nobs)
+        x[nobs // 2 :] = np.cumsum(e[nobs // 2 :])
+        return x
+    else:  # kind == "heavy_tails"
+        return np.cumsum(rng.standard_t(1.5, nobs))
+
+
+@pytest.mark.parametrize("regression", ["n", "c", "ct", "ctt"])
+@pytest.mark.parametrize("method", ["aic", "bic", "t-stat"])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "random_walk",
+        "ar",
+        "integrated_ma",
+        "trend",
+        "integer_steps",
+        "mostly_constant",
+        "heavy_tails",
+    ],
+)
+def test_adf_autolag_qr_matches_ols(regression, method, kind):
+    # GH 1849: the lag search from a single QR decomposition gives the same
+    # lag and criterion as fitting one OLS model per lag length
+    rng = np.random.default_rng(1849)
+    # The t-values of the OLS fits lose some precision when the trend
+    # columns are badly scaled ("ctt"), and an exactly zero t-value is only
+    # zero up to rounding
+    rtol, atol = (1e-8, 1e-12) if method == "t-stat" else (1e-10, 0)
+    for nobs in [12, 25, 300]:
+        x = _adf_autolag_series(kind, nobs, rng)
+        ntrend = len(regression) if regression != "n" else 0
+        max_maxlag = min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
+        default = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
+        for maxlag in {0, 1, min(default, max_maxlag), min(max_maxlag, 25)}:
+            icbest, bestlag = _adf_autolag(x, maxlag, regression, method)
+            expected = _adf_autolag_ols(x, maxlag, regression, method)
+            assert bestlag == expected[1]
+            assert_allclose(icbest, expected[0], rtol=rtol, atol=atol)
+
+
+def test_adf_autolag_qr_blocks():
+    # more observations than one block of rows
+    rng = np.random.default_rng(1849)
+    x = np.cumsum(rng.standard_normal(20000))
+    x[1:] += 0.3 * np.diff(x)
+    for method in ["aic", "bic", "t-stat"]:
+        icbest, bestlag = _adf_autolag(x, 6, "ct", method)
+        expected = _adf_autolag_ols(x, 6, "ct", method)
+        assert bestlag == expected[1]
+        assert_allclose(icbest, expected[0], rtol=1e-10)
+
+
+@pytest.mark.parametrize("method", ["aic", "bic", "t-stat"])
+def test_adf_autolag_qr_scaled(method):
+    # the criteria change only by a constant and the t-statistics not at all
+    # when the data are scaled, so the selected lag is the same
+    rng = np.random.default_rng(1849)
+    x = _adf_autolag_series("ar", 300, rng)
+    icbest, bestlag = _adf_autolag(x, 12, "c", method)
+    icbest_scaled, bestlag_scaled = _adf_autolag(1e8 * x, 12, "c", method)
+    assert bestlag_scaled == bestlag
+    if method == "t-stat":
+        assert_allclose(icbest_scaled, icbest, rtol=1e-12)
+
+
+def _adf_autolag_singular_series(kind):
+    t = np.arange(120.0)
+    if kind == "periodic":
+        # lagged differences are exactly collinear
+        return np.cumsum(np.tile([1.0, -1.0, 2.0], 40))
+    elif kind == "geometric":
+        return 0.5 ** (t / 10)
+    elif kind == "exact_fit":
+        # full rank regressors with zero residuals
+        x = np.zeros(30)
+        for i in range(1, 30):
+            x[i] = 1.0 + 0.5 * x[i - 1]
+        return x
+    else:  # kind == "nonfinite"
+        x = np.cumsum(np.ones(30))
+        x[20] = np.nan
+        return x
+
+
+@pytest.mark.parametrize("kind", ["periodic", "geometric", "exact_fit", "nonfinite"])
+def test_adf_autolag_qr_singular(kind):
+    # the QR lag search declines singular or exactly fitted regressions
+    x = _adf_autolag_singular_series(kind)
+    assert _adf_autolag(x, 2, "c", "aic") is None
+
+
+@pytest.mark.parametrize("kind", ["periodic", "geometric", "exact_fit"])
+@pytest.mark.parametrize("method", ["aic", "bic", "t-stat"])
+def test_adfuller_autolag_singular_uses_ols(kind, method):
+    # adfuller falls back to fitting one OLS model per lag length
+    x = _adf_autolag_singular_series(kind)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SingularMatrixWarning)
+        res = adfuller(x, maxlag=2, autolag=method, result_object=True)
+        res_ols = adfuller(
+            x, maxlag=2, autolag=method, regresults=True, result_object=True
+        )
+    assert res.lags == res_ols.lags
+    assert_equal(res.icbest, res_ols.icbest)
+    assert_equal(res.statistic, res_ols.statistic)
+
+
+@pytest.mark.parametrize("regression", ["n", "c", "ct", "ctt"])
+@pytest.mark.parametrize("autolag", ["AIC", "BIC", "t-stat"])
+def test_adfuller_autolag_regresults_consistent(regression, autolag):
+    # regresults=True keeps the OLS results of every lag length, the
+    # default uses the QR lag search
+    rng = np.random.default_rng(1849)
+    x = _adf_autolag_series("ar", 500, rng)
+    res = adfuller(
+        x, regression=regression, autolag=autolag, store=True, result_object=True
+    )
+    res_ols = adfuller(
+        x,
+        regression=regression,
+        autolag=autolag,
+        regresults=True,
+        result_object=True,
+    )
+    assert res.lags == res_ols.lags
+    assert res.nobs == res_ols.nobs
+    assert_allclose(res.icbest, res_ols.icbest, rtol=1e-10)
+    assert_allclose(res.statistic, res_ols.statistic, rtol=1e-12)
+    assert not hasattr(res.resstore, "autolag_results")
+    assert len(res_ols.resstore.autolag_results) == res_ols.resstore.maxlag + 1
 
 
 @pytest.fixture
