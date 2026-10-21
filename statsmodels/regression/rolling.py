@@ -40,6 +40,27 @@ from statsmodels.tools.validation import (
 _BATCH_SIZE = 2**18
 
 
+def _batched_inverse(a):
+    """
+    Inverse of a stack of square matrices
+
+    Returns the inverses and a flag that is False for singular matrices,
+    whose inverse is set to nan.
+    """
+    try:
+        return np.linalg.inv(a), np.ones(a.shape[0], dtype=bool)
+    except np.linalg.LinAlgError:
+        ainv = np.full_like(a, np.nan)
+        ok = np.zeros(a.shape[0], dtype=bool)
+        for i in range(a.shape[0]):
+            try:
+                ainv[i] = np.linalg.inv(a[i])
+                ok[i] = True
+            except np.linalg.LinAlgError:
+                pass
+        return ainv, ok
+
+
 def strip4(line):
     if line.startswith(" "):
         return line[4:]
@@ -336,45 +357,54 @@ class RollingWLS:
 
         Window inner products are updated by adding and removing one
         observation at a time, and are recomputed directly from the window's
-        data every min(reset, window) windows, so that rounding errors cannot
-        accumulate beyond one window. Returns the windows that were estimated.
+        data at least once every min(reset, window) windows, so that rounding
+        errors cannot accumulate beyond one window. Returns the windows that
+        were estimated.
         """
         k = z.shape[1] - 1
         w = self._window
         zv = sliding_window_view(z, w, axis=0)
+        n_direct = max(1, _BATCH_SIZE // ((k + 1) * w))
+        size = max(1, _BATCH_SIZE // (k + 1) ** 2)
         block = min(reset, w)
-        size = block * max(1, _BATCH_SIZE // ((k + 1) ** 2 * block))
+        if block > size:
+            # Recompute at the start of some batches and carry the inner
+            # products across the others
+            block = size * (block // size)
+        else:
+            size = block * (size // block)
+        lo, hi = wins[0], wins[-1] + 1
         fitted = []
-        for start in range(wins[0], wins[-1] + 1, size):
-            stop = min(start + size, wins[-1] + 1)
-            sel = wins[(wins >= start) & (wins < stop)]
-            if sel.shape[0] == 0:
-                continue
-            n_block = -(-(stop - start) // block)
-            zpz = np.zeros((n_block * block, k + 1, k + 1))
+        zpz = None
+        for start in range(lo, hi, size):
+            stop = min(start + size, hi)
+            restart = (start - lo) % block == 0
             # Moving from window i - 1 to window i adds row i + w - 1 of z
             # and removes row i - 1
-            add = z[start + w : stop + w - 1]
-            rem = z[start : stop - 1]
-            zpz[1 : stop - start] = (
+            d0 = int(restart)
+            add = z[start + w - 1 + d0 : stop + w - 1]
+            rem = z[start - 1 + d0 : stop - 1]
+            last = None if zpz is None else zpz[-1]
+            zpz = np.empty((stop - start, k + 1, k + 1))
+            zpz[d0:] = (
                 add[:, :, None] * add[:, None, :] - rem[:, :, None] * rem[:, None, :]
             )
-            zb = zv[start:stop:block]
-            zpz[::block] = zb @ zb.transpose(0, 2, 1)
-            zpz = np.cumsum(zpz.reshape(n_block, block, k + 1, k + 1), axis=1)
-            zpz = zpz.reshape(-1, k + 1, k + 1)[sel - start]
-            xpx = zpz[:, :k, :k]
-            xpy = zpz[:, :k, k:]
-            ok = np.ones(sel.shape[0], dtype=bool)
-            try:
-                xpxi = np.linalg.inv(xpx)
-            except np.linalg.LinAlgError:
-                xpxi = np.full_like(xpx, np.nan)
-                for j in range(sel.shape[0]):
-                    try:
-                        xpxi[j] = np.linalg.inv(xpx[j])
-                    except np.linalg.LinAlgError:
-                        ok[j] = False
+            if restart:
+                loc = np.arange(0, stop - start, block)
+                for j in range(0, loc.shape[0], n_direct):
+                    zb = zv[start + loc[j : j + n_direct]]
+                    zpz[loc[j : j + n_direct]] = zb @ zb.transpose(0, 2, 1)
+            else:
+                # Continue from the last window of the previous batch
+                zpz[0] += last
+            n_full = (stop - start) // block
+            head = zpz[: n_full * block].reshape(n_full, block, k + 1, k + 1)
+            np.cumsum(head, axis=1, out=head)
+            np.cumsum(zpz[n_full * block :], axis=0, out=zpz[n_full * block :])
+            sel = wins[(wins >= start) & (wins < stop)]
+            xpx = zpz[sel - start, :k, :k]
+            xpy = zpz[sel - start, :k, k:]
+            xpxi, ok = _batched_inverse(xpx)
             sel = sel[ok]
             store.params[sel] = (xpxi[ok] @ xpy[ok])[..., 0]
             if not params_only:
@@ -388,8 +418,8 @@ class RollingWLS:
 
         Each window is decomposed as [wx, wy] = QR using Householder
         reflections, the method used by least squares solvers. Windows whose
-        condition number is within a factor of 100 of the point where lstsq or
-        pinv would truncate singular values are estimated one at a time using
+        condition number is within a factor of 10 of the point where lstsq
+        would truncate singular values are estimated one at a time using
         _fit_single. Returns the windows that were estimated in batches.
         """
         k = z.shape[1] - 1
@@ -403,22 +433,13 @@ class RollingWLS:
             sel = wins[start : start + size]
             r = np.linalg.qr(zv[sel].transpose(0, 2, 1), mode="r")
             rx = r[:, :k, :k]
-            ok = np.ones(sel.shape[0], dtype=bool)
-            try:
-                rxi = np.linalg.inv(rx)
-            except np.linalg.LinAlgError:
-                rxi = np.full_like(rx, np.nan)
-                for j in range(sel.shape[0]):
-                    try:
-                        rxi[j] = np.linalg.inv(rx[j])
-                    except np.linalg.LinAlgError:
-                        ok[j] = False
+            rxi, ok = _batched_inverse(rx)
             # Frobenius-norm condition number, an upper bound for the 2-norm
             # condition number used by lstsq and pinv
             with np.errstate(over="ignore", invalid="ignore"):
                 cond = np.sqrt(np.sum(rx**2, axis=(1, 2)))
                 cond *= np.sqrt(np.sum(rxi**2, axis=(1, 2)))
-                ok &= cond * eps * np.maximum(nobs[sel], k) < 0.01
+                ok &= cond * eps * np.maximum(nobs[sel], k) < 0.1
             single.append(sel[~ok])
             sel = sel[ok]
             rxi = rxi[ok]
@@ -487,9 +508,7 @@ class RollingWLS:
         w = self._window
         xpx, xpy, nobs = self._reset(first)
         if not (self._has_nan[first - 1] and self._skip_missing):
-            self._fit_single(
-                first, xpx, xpy, nobs, store, params_only, method, robust
-            )
+            self._fit_single(first, xpx, xpy, nobs, store, params_only, method, robust)
         wx, wy = self._wx, self._wy
         skipped = False
         for i in range(first + 1, self._x.shape[0] + 1):
