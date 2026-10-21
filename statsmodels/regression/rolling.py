@@ -411,15 +411,19 @@ class RollingWLS:
 
         Each window is decomposed as [wx, wy] = QR using Householder
         reflections, the method used by least squares solvers. Windows whose
-        condition number is within a factor of 10 of the point where lstsq
-        would truncate singular values are estimated one at a time using
-        _fit_single. Returns the windows that were estimated in batches.
+        condition number is within a factor of 2 of the point where lstsq or
+        pinv would truncate singular values are estimated one at a time using
+        _fit_single, so that they are handled exactly as before. Returns the windows that were estimated in batches.
         """
         k = z.shape[1] - 1
         w = self._window
         zv = sliding_window_view(z, w, axis=0)
         size = max(1, _BATCH_SIZE // ((k + 1) * w))
-        eps = np.finfo(np.double).eps
+        # Relative singular value cutoffs used by lstsq and pinv
+        if method == "lstsq":
+            rcond = np.finfo(np.double).eps * np.maximum(nobs, k)
+        else:
+            rcond = np.full(nobs.shape, 1e-15)
         fitted = []
         single = []
         for start in range(0, wins.shape[0], size):
@@ -428,11 +432,11 @@ class RollingWLS:
             rx = r[:, :k, :k]
             rxi, ok = _batched_inverse(rx)
             # Frobenius-norm condition number, an upper bound for the 2-norm
-            # condition number used by lstsq and pinv
+            # condition number that lstsq and pinv compare with 1 / rcond
             with np.errstate(over="ignore", invalid="ignore"):
                 cond = np.sqrt(np.sum(rx**2, axis=(1, 2)))
                 cond *= np.sqrt(np.sum(rxi**2, axis=(1, 2)))
-                ok &= cond * eps * np.maximum(nobs[sel], k) < 0.1
+                ok &= cond * rcond[sel] < 0.5
             single.append(sel[~ok])
             sel = sel[ok]
             rxi = rxi[ok]
