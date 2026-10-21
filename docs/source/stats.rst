@@ -337,7 +337,9 @@ correction based on fdr in `fdrcorrection` and based on local fdr in
 `tukeyhsd` performs simultaneous testing for the comparison of (independent) means.
 These three functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
-to one way ANOVA, but still in development
+to one way ANOVA, but still in development.
+`MultiComparison.dunnett_t3` performs Dunnett's T3 test for the pairwise comparison of
+means when the variances differ across groups.
 
 .. module:: statsmodels.sandbox.stats.multicomp
    :synopsis: Experimental methods for controlling size while performing multiple comparisons
