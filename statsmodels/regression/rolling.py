@@ -330,9 +330,6 @@ class RollingWLS:
             Array with columns [wx, wy] and window - 1 rows of zeros prepended
             so that every window has ``window`` rows. Missing observations are
             set to 0 so that they do not contribute to any window.
-        aux : ndarray
-            Array with columns [y, weights, log(weights)] padded and
-            zero-filled in the same way.
         nobs : ndarray
             Number of non-missing observations in the window ending at each
             observation.
@@ -343,13 +340,9 @@ class RollingWLS:
         z = np.zeros((pad + nobs, k + 1))
         z[pad:, :k] = np.where(valid[:, None], self._wx, 0.0)
         z[pad:, k] = np.where(valid, self._wy, 0.0)
-        aux = np.zeros((pad + nobs, 3))
-        aux[pad:, 0] = np.where(valid, self._y, 0.0)
-        aux[pad:, 1] = np.where(valid, self._weights, 0.0)
-        aux[pad:][valid, 2] = np.log(self._weights[valid])
         count = np.zeros(pad + nobs + 1, dtype=int)
         np.cumsum(valid, out=count[pad + 1 :])
-        return z, aux, count[self._window :] - count[:nobs]
+        return z, count[self._window :] - count[:nobs]
 
     def _batched_inv(self, z, wins, reset, params_only, store):
         """
@@ -452,10 +445,17 @@ class RollingWLS:
             self._fit_single(i + 1, xpx, xpy, n, store, params_only, method, robust)
         return np.concatenate(fitted)
 
-    def _batched_statistics(self, z, aux, wins, nobs, robust, store):
+    def _batched_statistics(self, z, wins, nobs, robust, store):
         """Residual-based statistics for the windows in wins"""
         k = z.shape[1] - 1
         w = self._window
+        # y, weights and log(weights), padded and zero-filled like z
+        pad = w - 1
+        valid = ~self._is_nan
+        aux = np.zeros((pad + self._x.shape[0], 3))
+        aux[pad:, 0] = np.where(valid, self._y, 0.0)
+        aux[pad:, 1] = np.where(valid, self._weights, 0.0)
+        aux[pad:][valid, 2] = np.log(self._weights[valid])
         zv = sliding_window_view(z, w, axis=0)
         av = sliding_window_view(aux, w, axis=0)
         size = max(1, _BATCH_SIZE // ((k + 1) * w))
@@ -486,7 +486,7 @@ class RollingWLS:
 
     def _fit_batched(self, first, method, reset, params_only, robust, store):
         """Estimate all windows using batched linear algebra"""
-        z, aux, nobs = self._batched_data()
+        z, nobs = self._batched_data()
         wins = np.arange(first - 1, self._x.shape[0])
         keep = nobs[wins] >= self._min_nobs
         if self._skip_missing:
@@ -501,7 +501,7 @@ class RollingWLS:
                 z, wins, nobs, method, params_only, robust, store
             )
         if not params_only:
-            self._batched_statistics(z, aux, fitted, nobs, robust, store)
+            self._batched_statistics(z, fitted, nobs, robust, store)
 
     def _fit_loop(self, first, method, reset, params_only, robust, store):
         """Estimate one window at a time using rank-one updates"""
