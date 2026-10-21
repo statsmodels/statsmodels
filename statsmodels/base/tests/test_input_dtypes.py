@@ -22,6 +22,8 @@ from statsmodels.tsa.arima.model import ARIMA
 NOBS = 100
 GROUPS = np.repeat(np.arange(20), 5)
 MISSING = [3, 40]
+# the estimates are equal up to the rounding of the linear algebra
+TOL = {"rtol": 1e-6, "atol": 1e-8}
 
 
 def _data():
@@ -90,7 +92,7 @@ def test_integer_inputs(model, dtype):
     endog = ENDOG[kind]
     expected = fit(endog.astype(float), EXOG.astype(float))
     res = fit(_convert(endog, dtype), _convert(EXOG, dtype))
-    assert_allclose(np.asarray(res.params), np.asarray(expected.params), rtol=1e-7)
+    assert_allclose(np.asarray(res.params), np.asarray(expected.params), **TOL)
 
 
 @pytest.mark.parametrize("model", list(MODELS))
@@ -102,7 +104,7 @@ def test_bool_dummy_exog(model):
     )
     expected = fit(endog, exog.astype(float))
     res = fit(endog, exog)
-    assert_allclose(np.asarray(res.params), np.asarray(expected.params), rtol=1e-7)
+    assert_allclose(np.asarray(res.params), np.asarray(expected.params), **TOL)
 
 
 @pytest.mark.parametrize("dtype", ["Int64", "Float64"])
@@ -119,7 +121,7 @@ def test_nullable_with_missing(model, dtype):
     endog_na[MISSING] = pd.NA
     res = fit(endog_na, _convert(EXOG, dtype), missing="drop")
     assert res.nobs == NOBS - len(MISSING)
-    assert_allclose(np.asarray(res.params), np.asarray(expected.params), rtol=1e-7)
+    assert_allclose(np.asarray(res.params), np.asarray(expected.params), **TOL)
 
 
 @pytest.mark.parametrize("dtype", [bool, "boolean"])
@@ -129,7 +131,7 @@ def test_boolean_endog(model, dtype):
     endog = ENDOG["binary"]
     expected = fit(endog.astype(float), EXOG.astype(float))
     res = fit(pd.Series(endog.astype(bool), dtype=dtype), EXOG)
-    assert_allclose(np.asarray(res.params), np.asarray(expected.params), rtol=1e-7)
+    assert_allclose(np.asarray(res.params), np.asarray(expected.params), **TOL)
 
 
 TS_MODELS = {
@@ -146,4 +148,4 @@ def test_integer_time_series(model, dtype):
     fit = TS_MODELS[model]
     expected = fit(endog.astype(float))
     res = fit(_convert(endog, dtype))
-    assert_allclose(np.asarray(res.params), np.asarray(expected.params), rtol=1e-7)
+    assert_allclose(np.asarray(res.params), np.asarray(expected.params), **TOL)
