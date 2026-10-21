@@ -401,7 +401,7 @@ class RollingWLS:
             head = zpz[: n_full * block].reshape(n_full, block, k + 1, k + 1)
             np.cumsum(head, axis=1, out=head)
             np.cumsum(zpz[n_full * block :], axis=0, out=zpz[n_full * block :])
-            sel = wins[(wins >= start) & (wins < stop)]
+            sel = wins[slice(*np.searchsorted(wins, [start, stop]))]
             xpx = zpz[sel - start, :k, :k]
             xpy = zpz[sel - start, :k, k:]
             xpxi, ok = _batched_inverse(xpx)
