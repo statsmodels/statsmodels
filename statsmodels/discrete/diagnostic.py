@@ -18,9 +18,26 @@ from statsmodels.discrete._diagnostics_count import (
     test_poisson_zeroinflation_jh,
     test_poisson_zeros,
 )
+from statsmodels.discrete._diagnostics_ordered import (
+    BrantResults,
+    brant_test,
+)
 from statsmodels.stats.diagnostic_gen import test_chisquare_binning
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.sm_exceptions import ModelWarning
+
+__all__ = [
+    "BrantResults",
+    "CountDiagnostic",
+    "brant_test",
+    "plot_probs",
+    "test_chisquare_binning",
+    "test_chisquare_prob",
+    "test_poisson_dispersion",
+    "test_poisson_zeroinflation_broek",
+    "test_poisson_zeroinflation_jh",
+    "test_poisson_zeros",
+]
 
 
 class CountDiagnostic:
