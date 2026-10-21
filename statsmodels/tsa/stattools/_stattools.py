@@ -246,18 +246,20 @@ def _adf_autolag(x, maxlag, regression, method):
 
     if not np.all(np.isfinite(r)):
         return None
-    # OLS counts the rank using a tolerance of k * eps relative to the
-    # largest singular value. The singular values of a subset of columns
-    # are bounded by those of all columns, so if this check passes with a
-    # margin, OLS finds all candidate regressions to have full rank.
+    # OLS treats singular values below ncols * eps times the largest one as
+    # zero. A subset of the columns has a smallest singular value at least
+    # as large, and a largest one at most as large, as all columns, so if
+    # this check passes OLS finds every candidate regression to have full
+    # rank. The factor 10 is a margin for rounding.
     sv = np.linalg.svd(r[:k, :k], compute_uv=False)
     if sv[-1] <= 10 * k * np.finfo(float).eps * sv[0]:
         return None
     qy = r[:k, k]
+    # ssr_tail[j] is the sum of squares of qy[j:]
     ssr_tail = np.append(np.cumsum(qy[::-1] ** 2)[::-1], 0.0)
     ssr = r[k, k] ** 2 + ssr_tail[startlag:]
-    if not ssr[-1] > 1e-10 * ssr_tail[0]:
-        # Perfect fit, the residuals are dominated by rounding
+    if not ssr[-1] > 1e-10 * (r[k, k] ** 2 + ssr_tail[0]):
+        # (Almost) perfect fit, the residuals are dominated by rounding
         return None
 
     ncols = np.arange(startlag, k + 1)
