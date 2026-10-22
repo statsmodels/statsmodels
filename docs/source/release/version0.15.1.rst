@@ -312,6 +312,9 @@ Generalized linear models and discrete models
   ``mle_retvals`` and ``mle_settings``. A ``cov_type`` other than
   ``"nonrobust"`` was ignored and now raises a ``NotImplementedError``.
   :issue:`8849`, :pr:`10630`
+- GEE's autoregressive dependence update correctly brackets interior minima
+  when the fitted correlation is high, instead of raising an error while
+  searching for the right bracket. :issue:`8122`
 
 Mixed models and imputation
 ---------------------------
