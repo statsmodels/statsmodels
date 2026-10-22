@@ -1,3 +1,5 @@
+from itertools import combinations
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
@@ -10,6 +12,82 @@ from statsmodels.discrete.conditional_models import (
 )
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import approx_fprime
+
+
+@pytest.mark.parametrize("method", ["loglike", "score"])
+@pytest.mark.parametrize("n_success", [1, 2, 1499])
+@pytest.mark.parametrize("use_offset", [False, True])
+def test_logit_large_group(method, n_success, use_offset):
+    nobs = 1500
+    exog = np.linspace(-1, 1, nobs)[:, None]
+    endog = np.zeros(nobs)
+    endog[:n_success] = 1
+    params = np.array([0.2])
+    offset = np.linspace(-0.3, 0.3, nobs) if use_offset else np.zeros(nobs)
+    model = ConditionalLogit(endog, exog, groups=np.zeros(nobs), offset=offset)
+
+    # The one-success, two-success and one-failure cases have closed forms.
+    # For two successes, sum_{i<j} w_i*w_j = ((sum w)**2 - sum w**2) / 2.
+    linear = exog @ params + offset
+    weights = np.exp(linear)
+    if n_success == 1:
+        denom = weights.sum()
+        mean_sum = weights @ exog / denom
+    elif n_success == 2:
+        denom = (weights.sum() ** 2 - (weights**2).sum()) / 2
+        mean_sum = (weights.sum() * (weights @ exog) - weights**2 @ exog) / denom
+    else:
+        inv_weights = 1 / weights
+        denom = np.exp(linear.sum()) * inv_weights.sum()
+        mean_sum = exog.sum(axis=0) - inv_weights @ exog / inv_weights.sum()
+    if method == "loglike":
+        expected = endog @ linear - np.log(denom)
+    else:
+        expected = endog @ exog - mean_sum
+    assert_allclose(getattr(model, method)(params), expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("n_success", [1, 2, 4, 5])
+@pytest.mark.parametrize("use_offset", [False, True])
+def test_logit_enumerated_likelihood(n_success, use_offset):
+    exog = np.column_stack((np.linspace(-1, 1, 6), [0, 1, -1, 0.5, 2, -0.5]))
+    endog = np.zeros(6)
+    endog[:n_success] = 1
+    params = np.array([0.2, -0.3])
+    offset = np.linspace(-0.4, 0.2, 6) if use_offset else np.zeros(6)
+    model = ConditionalLogit(endog, exog, groups=np.zeros(6), offset=offset)
+
+    # Enumerating every possible success subset is independent of the dynamic
+    # program. Its weighted covariate mean and covariance give score/Hessian.
+    subsets = np.array(list(combinations(range(6), n_success)))
+    subset_exog = exog[subsets].sum(axis=1)
+    linear = exog @ params + offset
+    weights = np.exp(linear[subsets].sum(axis=1))
+    mean_exog = weights @ subset_exog / weights.sum()
+    expected_score = endog @ exog - mean_exog
+    expected_hess = (
+        np.outer(mean_exog, mean_exog)
+        - (subset_exog.T * weights) @ subset_exog / weights.sum()
+    )
+    expected_ll = endog @ linear - np.log(weights.sum())
+    assert_allclose(model.loglike(params), expected_ll, rtol=1e-13)
+    assert_allclose(model.score(params), expected_score, rtol=1e-13, atol=1e-14)
+
+    for j in range(len(params)):
+        complex_params = params.astype(complex)
+        complex_params[j] += 1e-20j
+        assert_allclose(
+            model.loglike(complex_params).imag / 1e-20,
+            expected_score[j],
+            rtol=1e-12,
+            atol=1e-13,
+        )
+        assert_allclose(
+            model.score(complex_params).imag / 1e-20,
+            expected_hess[:, j],
+            rtol=1e-12,
+            atol=1e-13,
+        )
 
 
 def test_logit_1d():
