@@ -64,10 +64,8 @@ def test_gof_binning_discrete_bernoulli():
 
 
 def test_gof_chisquare_discrete_bernoulli():
-    # gof_chisquare_discrete duplicates gof_binning_discrete's binning
-    # internally (see the module docstring/comments) and then calls
-    # scipy.stats.chisquare on the result; check its output against doing
-    # exactly that using the independently-verified binning above.
+    # Check the test against scipy.stats.chisquare with the
+    # independently verified Bernoulli binning above.
     rng = np.random.default_rng(12345)
     p = 0.3
     n = 500
@@ -89,6 +87,85 @@ def test_gof_chisquare_discrete_bernoulli():
     assert "bernoulli test" in outstr
     assert str(arg) in outstr
     assert str(pval) in outstr
+
+
+@pytest.mark.parametrize("loc", [-4000, 0, 4000])
+def test_gof_discrete_large_poisson(loc):
+    # The support must not be truncated at -1000 or 1000 (GH-4359).
+    rng = np.random.default_rng(24)
+    sample = stats.poisson.rvs(2000, size=2000, random_state=rng) + loc
+    arg = (2000, loc)
+    freq, expfreq, edges = gof_binning_discrete(sample, stats.poisson, arg)
+
+    assert len(freq) == 19
+    assert freq.sum() == len(sample)
+    assert_allclose(expfreq.sum(), len(sample))
+    # Independent probabilities from SciPy, including the unbounded upper tail.
+    expected = len(sample) * np.diff(stats.poisson.cdf(edges, *arg))
+    assert_allclose(expfreq, expected)
+    assert np.all(expfreq > 5)
+    reference = stats.chisquare(freq, expected)
+    chis, pval, passed, _ = gof_chisquare_discrete(
+        stats.poisson, arg, sample, 0.05, "large Poisson"
+    )
+    assert np.isfinite(pval)
+    assert_allclose([chis, pval], reference)
+    assert passed == (reference.pvalue > 0.05)
+
+    # R 4.5.2 reference, scanning CDF values independently of the PPF search:
+    # np.savetxt("sample.csv", sample - loc, fmt="%d")
+    # x <- scan("sample.csv")
+    # last <- 0; cuts <- c()
+    # for (k in 0:5000) {
+    #     current <- ppois(k, 2000)
+    #     if (current - last >= 1/20 - 1e-14) {
+    #         cuts <- c(cuts, k); last <- current
+    #         if (current > 1 - 1/20) break
+    #     }
+    # }
+    # breaks <- c(0, cuts + 0.5, Inf)
+    # observed <- table(cut(x, breaks, right=FALSE, include.lowest=TRUE))
+    # chisq.test(observed, p=diff(ppois(breaks, 2000)))
+    assert_allclose([chis, pval], [20.3236798472953, 0.314894584643616], rtol=1e-11)
+    reference_cuts = [
+        1927, 1943, 1954, 1963, 1971, 1978, 1985, 1991, 1997,
+        2003, 2009, 2015, 2022, 2029, 2037, 2046, 2058, 2076,
+    ]
+    assert_equal(np.floor(edges[1:-1]) - loc, reference_cuts)
+
+
+@pytest.mark.parametrize("low", [-2020, 0, 2000])
+@pytest.mark.parametrize("nsupp", [1, 4, 20])
+def test_gof_binning_discrete_randint(low, nsupp):
+    # Each of the 20 integers has probability 1/20. These expected bins
+    # and counts follow directly, without using the binning implementation.
+    counts = 5 * np.arange(1, 21)
+    sample = np.repeat(np.arange(low, low + 20), counts)
+    freq, expfreq, edges = gof_binning_discrete(
+        sample, stats.randint, (low, low + 20), nsupp=nsupp
+    )
+    assert_equal(freq, counts.reshape(nsupp, 20 // nsupp).sum(axis=1))
+    assert_allclose(expfreq, np.full(nsupp, len(sample) / nsupp))
+    expected_edges = np.r_[low, low - 1 + np.arange(1, nsupp + 1) * (20 // nsupp)]
+    expected_edges = expected_edges.astype(float)
+    expected_edges[1:] += 1e-8
+    assert_allclose(edges, expected_edges)
+
+
+@pytest.mark.parametrize("loc", [-2000, 0, 2000])
+def test_gof_binning_discrete_unbounded_support(loc):
+    sample = np.repeat([-10000, -2, -1, 0, 1, 2, 10000], [1, 10, 10, 10, 10, 10, 1])
+    sample = sample + loc
+    freq, expfreq, edges = gof_binning_discrete(sample, stats.dlaplace, (1, loc))
+    # For a=1, CDF(-3) < .05 < CDF(-2), and CDF(2) > .95.
+    # Interior atoms each exceed .05, so no other grouping is necessary.
+    assert_equal(freq, [11, 10, 10, 10, 10, 1])
+    expected_edges = np.r_[-np.inf, np.arange(-2, 3) + loc + 1e-8, np.inf]
+    assert_allclose(edges, expected_edges)
+    expected = len(sample) * np.diff(stats.dlaplace.cdf(expected_edges, 1, loc))
+    assert_allclose(expfreq, expected)
+    assert freq.sum() == len(sample)
+    assert_allclose(expfreq.sum(), len(sample))
 
 
 def test_chisquare_power():
