@@ -993,13 +993,20 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
     Sub-daily frequencies map to the number of observations per day scaled
     by the multiplier, e.g. hourly to 24 and 5-minute to 288. The multiplier
     is honored for sub-daily frequencies only; calendar frequencies keep
-    their standard period, e.g. "2W" still maps to 52.
+    their standard period, e.g. "2W" still maps to 52. Business
+    month/quarter/year frequencies (e.g. "BME", "BQS", "BYE") map to the
+    same period as their calendar counterparts.
     """
     if not isinstance(freq, offsets.BaseOffset):
         freq = to_offset(freq)  # go ahead and standardize
     assert isinstance(freq, offsets.BaseOffset)
     n = getattr(freq, "n", 1)
     freq = freq.rule_code.upper()
+    # Business month/quarter/year rules (BME, BQS, BYE, CBMS, ...) share
+    # the seasonal period of their calendar counterparts, so reduce them
+    # to the corresponding calendar rule (ME, QS, YE, MS) before mapping.
+    if freq.startswith(("CBM", "BM", "BQ", "BY")):
+        freq = freq.lstrip("BC")
 
     yearly_freqs = ("A-", "AS-", "Y-", "YS-", "YE-")
     if freq in ("A", "Y") or freq.startswith(yearly_freqs):
