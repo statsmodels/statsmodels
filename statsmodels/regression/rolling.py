@@ -183,6 +183,11 @@ class RollingWLS:
             )
 
         self._expanding = expanding
+        if not expanding and self._window > nobs:
+            raise ValueError(
+                "window must be less than or equal to the number of "
+                "observations when expanding is False"
+            )
 
         self._is_nan = np.zeros_like(self._y, dtype=bool)
         self._has_nan = self._find_nans()
