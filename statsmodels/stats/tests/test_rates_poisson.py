@@ -114,6 +114,16 @@ def test_rate_poisson_r():
     assert_allclose(ci[1], ci2[1], rtol=1e-5)
 
 
+@pytest.mark.parametrize("nobs", [1, 2.5, 400])
+@pytest.mark.parametrize("alpha", [0.01, 0.05, 0.1])
+def test_confint_poisson_midp_zero_count(nobs, alpha):
+    # with count = 0 the two-sided mid-p p-value is exp(-nobs * rate), so the
+    # lower limit is 0 and the upper limit is -log(alpha) / nobs
+    ci = confint_poisson(0, nobs, alpha=alpha, method="midp-c")
+    assert_equal(ci[0], 0)
+    assert_allclose(ci[1], -np.log(alpha) / nobs, rtol=1e-6)
+
+
 cases_tolint = [
     ("wald", 15, 1, 1, (3, 32), (3, np.inf), (0, 31)),
     ("score", 15, 1, 1, (4, 35), (4, np.inf), (0, 33)),
