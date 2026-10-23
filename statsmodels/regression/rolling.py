@@ -57,6 +57,7 @@ def _batched_inverse(a):
                 ainv[i] = np.linalg.inv(a[i])
                 ok[i] = True
             except np.linalg.LinAlgError:
+                # Singular window: its inverse stays nan and ok[i] False
                 pass
         return ainv, ok
 
