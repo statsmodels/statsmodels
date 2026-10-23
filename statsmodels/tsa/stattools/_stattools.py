@@ -1412,7 +1412,9 @@ def _pacf_ols_qr(x, nlags, efficient):
     Parameters
     ----------
     x : ndarray
-        The data series, 1d. Demeaned by the caller if efficient is False.
+        The data series, 1d, demeaned by the caller. When efficient is
+        True, the regressions include a constant, so demeaning does not
+        change them but improves their conditioning.
     nlags : int
         The largest lag, at most nobs // 2.
     efficient : bool
@@ -1592,7 +1594,10 @@ def pacf_ols(
         x = x - np.mean(x)
     pacf = None
     if (x.ndim == 1 or x.shape[1:] == (1,)) and 0 < nlags:
-        pacf = _pacf_ols_qr(x.reshape(-1), nlags, efficient)
+        xd = x.reshape(-1)
+        if efficient:
+            xd = xd - xd.mean()
+        pacf = _pacf_ols_qr(xd, nlags, efficient)
     if pacf is not None:
         if adjusted:
             pacf *= nobs / (nobs - np.arange(nlags + 1))

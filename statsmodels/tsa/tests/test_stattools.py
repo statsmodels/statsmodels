@@ -3106,6 +3106,18 @@ def test_pacf_qr_blocks():
         assert_allclose(pacf_yw(x, 30, method), expected, rtol=0, atol=1e-13)
 
 
+def test_pacf_ols_large_mean():
+    # The efficient regressions include a constant, so the PACF does not
+    # depend on the mean. lstsq on the raw data loses precision when the
+    # mean is large relative to the variation, the QR uses demeaned data.
+    rng = np.random.default_rng(10526)
+    x = _pacf_series("ar", 400, rng)
+    for level in [0.0, 1e4, 1e8, 1e12]:
+        y = x + level
+        expected = _pacf_ols_loop(y - y.mean(), 10, True, False)
+        assert_allclose(pacf_ols(y, 10), expected, rtol=0, atol=1e-12)
+
+
 def test_pacf_2d_input():
     rng = np.random.default_rng(10526)
     x = _pacf_series("ar", 200, rng)
@@ -3150,8 +3162,7 @@ def test_pacf_yw_levinson_not_positive_definite(kind):
 def test_pacf_ols_qr_singular(kind, efficient):
     # close to singular regressions are fitted one by one
     x = _pacf_singular_series(kind)
-    xd = x if efficient else x - x.mean()
-    assert _pacf_ols_qr(xd, 20, efficient) is None
+    assert _pacf_ols_qr(x - x.mean(), 20, efficient) is None
     expected = _pacf_ols_loop(x, 20, efficient, False)
     assert_allclose(pacf_ols(x, 20, efficient=efficient), expected, rtol=1e-15)
 
