@@ -25,6 +25,7 @@ sampled.  In general the observed units are independent and
 identically distributed.
 """
 
+from math import fsum
 from typing import NamedTuple
 import warnings
 
@@ -999,6 +1000,72 @@ class Table2x2(SquareTable):
         return tab
 
 
+def _breslow_day_statistic(table, odds, adjust):
+    """Stable finite-OR calculation, or None to retain the legacy path."""
+    if table.shape[2] == 0 or not (np.isfinite(odds) and odds > 0):
+        return None
+    observed = table.reshape(4, -1)
+    a, b, c, d = observed
+
+    # Fit each cell directly: subtracting large fitted cells can erase a
+    # small cell. All four quadratics share this nonnegative discriminant.
+    # Unsupported overflow/underflow falls back to the unchanged method.
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore",
+                     under="ignore"):
+        row, col = a + b, a + c
+        row2, col2 = c + d, b + d
+        margins = np.array([row, col, row2, col2])
+        if not (np.all(np.isfinite(margins)) and np.all(margins > 0)):
+            return None
+        root = np.sqrt((d - a + odds * (b - c)) ** 2
+                       + 4 * odds * col * col2)
+        quadratic = np.array([1 - odds, odds - 1, odds - 1, 1 - odds])[:, None]
+        linear = np.array([
+            d - a + odds * (row + col),
+            odds * (c - b) + row + col2,
+            odds * (b - c) + row2 + col,
+            a - d + odds * (row2 + col2),
+        ])
+        product = np.array([odds * row * col, row * col2,
+                            row2 * col, odds * row2 * col2])
+        positive = linear >= 0
+        roots = np.broadcast_to(root, linear.shape)
+        quadratic = np.broadcast_to(quadratic, linear.shape)
+        fitted = np.empty_like(linear)
+        # Rationalization includes the linear odds == 1 case. The other
+        # branch cannot have zero quadratic coefficient for positive odds.
+        fitted[positive] = 2 * product[positive] / (
+            linear[positive] + roots[positive]
+        )
+        fitted[~positive] = (-linear[~positive] + roots[~positive]) / (
+            2 * quadratic[~positive]
+        )
+        if not (np.all(np.isfinite(fitted)) and np.all(fitted > 0)):
+            return None
+        try:
+            inverse_variance = np.array([fsum(1 / cells) for cells in fitted.T])
+        except OverflowError:
+            return None
+        variance = 1 / inverse_variance
+        if not (np.all(np.isfinite(variance)) and np.all(variance > 0)):
+            return None
+
+        # Fixed margins give residual signs (+, -, -, +). Select the
+        # smallest subtraction scale, not necessarily the first cell.
+        corner = np.argmin(np.maximum(observed, fitted), axis=0)
+        residual = (observed - fitted) * np.array([1, -1, -1, 1])[:, None]
+        delta = residual[corner, np.arange(table.shape[2])]
+        try:
+            if adjust:
+                # Algebraically identical to Tarone's subtraction, without
+                # subtracting two large, nearly equal sums of squares.
+                delta = delta - (fsum(delta) / fsum(variance)) * variance
+            statistic = np.float64(fsum(delta * delta / variance))
+        except OverflowError:
+            return None
+        return statistic if np.isfinite(statistic) else None
+
+
 class StratifiedTable:
     """
     Analyses for a collection of 2x2 contingency tables
@@ -1296,30 +1363,33 @@ class StratifiedTable:
         table = self.table
 
         r = self.oddsratio_pooled
-        a = 1 - r
-        b = r * (self._apb + self._apc) + self._dma
-        c = -r * self._apb * self._apc
+        statistic = _breslow_day_statistic(table, r, adjust)
+        if statistic is None:
+            # Preserve existing behavior outside the finite computable domain.
+            a = 1 - r
+            b = r * (self._apb + self._apc) + self._dma
+            c = -r * self._apb * self._apc
 
-        # Expected value of first cell
-        dr = np.sqrt(b**2 - 4 * a * c)
-        e11 = (-b + dr) / (2 * a)
+            # Expected value of first cell
+            dr = np.sqrt(b**2 - 4 * a * c)
+            e11 = (-b + dr) / (2 * a)
 
-        # Variance of the first cell
-        v11 = (
-            1 / e11
-            + 1 / (self._apc - e11)
-            + 1 / (self._apb - e11)
-            + 1 / (self._dma + e11)
-        )
-        v11 = 1 / v11
+            # Variance of the first cell
+            v11 = (
+                1 / e11
+                + 1 / (self._apc - e11)
+                + 1 / (self._apb - e11)
+                + 1 / (self._dma + e11)
+            )
+            v11 = 1 / v11
 
-        statistic = np.sum((table[0, 0, :] - e11) ** 2 / v11)
+            statistic = np.sum((table[0, 0, :] - e11) ** 2 / v11)
 
-        if adjust:
-            adj = table[0, 0, :].sum() - e11.sum()
-            adj = adj**2
-            adj /= np.sum(v11)
-            statistic -= adj
+            if adjust:
+                adj = table[0, 0, :].sum() - e11.sum()
+                adj = adj**2
+                adj /= np.sum(v11)
+                statistic -= adj
 
         # 1 - stats.chi2.cdf(statistic, df) loses the upper tail
         pvalue = stats.chi2.sf(statistic, table.shape[2] - 1)
