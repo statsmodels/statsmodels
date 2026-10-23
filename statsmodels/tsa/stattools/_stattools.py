@@ -1260,7 +1260,7 @@ def pacf_yw(
     method: Literal["adjusted", "mle"] = "adjusted",
 ) -> np.ndarray:
     """
-    Partial autocorrelation estimated with non-recursive yule_walker
+    Partial autocorrelation estimated with Yule-Walker
 
     Parameters
     ----------
@@ -1440,9 +1440,11 @@ def _pacf_ols_qr(x, nlags, efficient):
     regression, so the k-lag regression is the regression on the first
     2k + 1 columns of ``[1, d_0, lag 1, d_1, lag 2, ..., d_{nlags - 1},
     lag nlags]`` using all observations, with d_t the indicator of
-    observation t. The observations nlags, ..., nobs - 1 are not affected
-    by the indicators and are first reduced to a triangular factor, which
-    is then stacked with the first nlags observations.
+    observation t. The lags before the start of the sample are set to zero,
+    and only enter regressions that remove those observations. The
+    observations nlags, ..., nobs - 1 are not affected by the indicators.
+    They are first reduced to a triangular factor, which is then stacked
+    with the first nlags observations.
 
     The rows are processed in blocks, and the triangular factor is updated
     block by block so the full lagged regressor matrix is never formed.
@@ -1476,11 +1478,11 @@ def _pacf_ols_qr(x, nlags, efficient):
     eps = np.finfo(float).eps
     if not efficient:
         # lstsq treats singular values below max(nrows, ncols) * eps times
-        # the largest one as zero. A subset of the columns has a smallest
-        # singular value at least as large, and a largest one at most as
-        # large, as all columns, so if this check passes, lstsq finds every
-        # regression to have full rank. The factor 10 is a margin for
-        # rounding.
+        # the largest one as zero, and max(nrows, ncols) <= nobs. A subset
+        # of the columns has a smallest singular value at least as large,
+        # and a largest one at most as large, as all columns, so if this
+        # check passes, lstsq finds every regression to have full rank. The
+        # factor 10 is a margin for rounding.
         sv = np.linalg.svd(r[:k, :k], compute_uv=False)
         if sv[-1] <= 10 * nobs * eps * sv[0]:
             return None
@@ -1493,10 +1495,12 @@ def _pacf_ols_qr(x, nlags, efficient):
     head[:, 0] = 1.0
     for t in range(1, nlags):
         head[t, 1 : t + 1] = x[t - 1 :: -1]
-    # The columns of the k-lag regression over observations k, ..., nobs - 1
-    # are a subset of the columns of [r; head] for a subset of its rows. Its
-    # smallest singular value is at least as large as that of r[:k, :k],
-    # and its largest one at most as large as that of [r; head].
+    # The regressors of the k-lag regression are a submatrix of
+    # [r[:k, :k]; head], so their largest singular value is at most that of
+    # [r[:k, :k]; head]. They are the first k + 1 columns of observations
+    # k, ..., nobs - 1, which include the observations of r, so their
+    # smallest singular value is at least that of r[:k, :k]. As above, if
+    # this check passes, lstsq finds every regression to have full rank.
     sv_min = np.linalg.svd(r[:k, :k], compute_uv=False)[-1]
     sv_max = np.linalg.norm(np.vstack([r[:k, :k], head]), 2)
     if sv_min <= 10 * nobs * eps * sv_max:
