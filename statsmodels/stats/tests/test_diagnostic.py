@@ -2652,3 +2652,156 @@ def test_acorr_breusch_godfrey_autoreg(model, kwargs, r_values):
     res_ols = OLS(res.model._y, res.model._x).fit()
     expected = smsdia.acorr_breusch_godfrey(res_ols, nlags=4, result_object=True)
     assert_allclose(bg[:4], expected[:4], rtol=1e-10)
+
+
+@pytest.fixture(scope="module")
+def vuong_models():
+    # Reference values are from R package pscl 1.5.9, function vuong, using
+    # the first 600 observations of the RAND health insurance data
+    # (statsmodels.datasets.randhie). R code:
+    #
+    # library(pscl); library(MASS)
+    # d <- read.csv("randhie.csv")[1:600, ]
+    # d$any <- as.integer(d$mdvis > 0)
+    # f <- mdvis ~ lncoins + idp + lpi + fmde + physlm + disea +
+    #      hlthg + hlthf + hlthp
+    # fm_pois <- glm(f, data = d, family = poisson)
+    # fm_nb   <- glm.nb(f, data = d)
+    # fm_zip  <- zeroinfl(f | 1, data = d, dist = "poisson")
+    # g <- any ~ lncoins + idp + lpi + fmde + physlm + disea +
+    #      hlthg + hlthf + hlthp
+    # fm_logit  <- glm(g, data = d, family = binomial(link = "logit"))
+    # fm_probit <- glm(g, data = d, family = binomial(link = "probit"))
+    # vuong(fm_nb, fm_zip); vuong(fm_pois, fm_zip)
+    # vuong(fm_logit, fm_probit)
+    #
+    # R reports one-sided p-values for the preferred model, which is half of
+    # the two-sided p-value.
+    from statsmodels.datasets import randhie
+    from statsmodels.discrete.count_model import ZeroInflatedPoisson
+    from statsmodels.discrete.discrete_model import (
+        Logit,
+        NegativeBinomial,
+        Poisson,
+        Probit,
+    )
+
+    df = randhie.load_pandas().data.iloc[:600]
+    exog = add_constant(df.drop(columns="mdvis"), prepend=True)
+    endog = df["mdvis"]
+    any_visit = (endog > 0).astype(float)
+    res = Bunch()
+    res.pois = Poisson(endog, exog).fit(disp=False, maxiter=200)
+    res.nb = NegativeBinomial(endog, exog).fit(disp=False, method="bfgs", maxiter=2000)
+    res.zip = ZeroInflatedPoisson(endog, exog, exog_infl=np.ones((len(endog), 1))).fit(
+        disp=False, maxiter=500, method="bfgs"
+    )
+    res.logit = Logit(any_visit, exog).fit(
+        disp=False, method="bfgs", maxiter=5000, gtol=1e-8
+    )
+    res.probit = Probit(any_visit, exog).fit(
+        disp=False, method="bfgs", maxiter=5000, gtol=1e-8
+    )
+    return res
+
+
+@pytest.mark.parametrize(
+    "first, second, correction, statistic, pvalue_one_sided",
+    [
+        ("nb", "zip", "none", 5.39914240647, 3.348010402e-08),
+        # Both models have 11 parameters in statsmodels, including the
+        # dispersion parameter alpha, so the corrections have no effect.
+        # R's vuong does not count the dispersion parameter of glm.nb, so
+        # R's corrected values for this pair are not comparable.
+        ("nb", "zip", "aic", 5.39914240647, 3.348010402e-08),
+        ("nb", "zip", "bic", 5.39914240647, 3.348010402e-08),
+        ("pois", "zip", "none", -5.80352801939, 3.246694792e-09),
+        ("pois", "zip", "aic", -5.77880320452, 3.761693164e-09),
+        ("pois", "zip", "bic", -5.72444656867, 5.188572992e-09),
+        ("logit", "probit", "none", 1.33866944779, 0.09033915332),
+        ("logit", "probit", "aic", 1.33866944779, 0.09033915332),
+        ("logit", "probit", "bic", 1.33866944779, 0.09033915332),
+    ],
+)
+def test_compare_vuong_r(
+    vuong_models, first, second, correction, statistic, pvalue_one_sided
+):
+    res = smsdia.compare_vuong(
+        vuong_models[first], vuong_models[second], correction=correction
+    )
+    assert isinstance(res, smsdia.VuongTestResult)
+    stat, pval = res
+    assert_allclose(stat, statistic, rtol=1e-4)
+    assert_allclose(pval, 2 * pvalue_one_sided, rtol=1e-3)
+
+    # one-sided alternatives, R reports the p-value of the preferred model
+    larger = smsdia.compare_vuong(
+        vuong_models[first],
+        vuong_models[second],
+        correction=correction,
+        alternative="larger",
+    )
+    smaller = smsdia.compare_vuong(
+        vuong_models[first],
+        vuong_models[second],
+        correction=correction,
+        alternative="smaller",
+    )
+    preferred = larger if statistic > 0 else smaller
+    assert_allclose(preferred.pvalue, pvalue_one_sided, rtol=1e-3)
+    assert_allclose(larger.pvalue + smaller.pvalue, 1, rtol=1e-12)
+
+
+def test_compare_vuong_swap(vuong_models):
+    res12 = smsdia.compare_vuong(
+        vuong_models["nb"], vuong_models["zip"], correction="bic"
+    )
+    res21 = smsdia.compare_vuong(
+        vuong_models["zip"], vuong_models["nb"], correction="bic"
+    )
+    assert_allclose(res12.statistic, -res21.statistic, rtol=1e-12)
+    assert_allclose(res12.pvalue, res21.pvalue, rtol=1e-12)
+
+
+def test_compare_vuong_identical(vuong_models):
+    res = smsdia.compare_vuong(vuong_models["logit"], vuong_models["logit"])
+    assert np.isnan(res.statistic)
+    assert np.isnan(res.pvalue)
+
+
+def test_compare_vuong_errors(vuong_models):
+    pois, logit = vuong_models["pois"], vuong_models["logit"]
+    with pytest.raises(ValueError, match="same dependent variable"):
+        smsdia.compare_vuong(pois, logit)
+    with pytest.raises(ValueError, match="correction"):
+        smsdia.compare_vuong(pois, pois, correction="hqic")
+    with pytest.raises(ValueError, match="alternative"):
+        smsdia.compare_vuong(pois, pois, alternative="greater")
+
+    # OLS does not provide the log-likelihood of each observation
+    rs = np.random.RandomState(0)
+    x = add_constant(rs.standard_normal((30, 2)))
+    y = x.sum(1) + rs.standard_normal(30)
+    res_ols = OLS(y, x).fit()
+    with pytest.raises(ValueError, match="loglikeobs"):
+        smsdia.compare_vuong(res_ols, res_ols)
+
+    # different number of observations
+    from statsmodels.discrete.discrete_model import Poisson
+
+    cnt = rs.poisson(3, size=30)
+    res_a = Poisson(cnt, x).fit(disp=False)
+    res_b = Poisson(cnt[:20], x[:20]).fit(disp=False)
+    with pytest.raises(ValueError, match="number of observations"):
+        smsdia.compare_vuong(res_a, res_b)
+
+
+def test_compare_vuong_inconsistent_llf(vuong_models):
+    class FakeResults:
+        def __init__(self, res):
+            self.model = res.model
+            self.params = res.params
+            self.llf = res.llf + 10
+
+    with pytest.raises(ValueError, match="does not add up"):
+        smsdia.compare_vuong(FakeResults(vuong_models["logit"]), vuong_models["probit"])
