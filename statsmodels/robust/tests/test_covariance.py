@@ -962,6 +962,28 @@ def test_covdet_mcd_tilted_plane_exact_fit_raises(reweight):
         robcov.CovDetMCD(x).fit(h=51, reweight=reweight)
 
 
+@pytest.mark.parametrize("m_on", [55, 60, 70, 80])
+@pytest.mark.parametrize("seed", range(3))
+def test_covdet_mcd_partial_tilted_plane_exact_fit_raises(m_on, seed):
+    # More than h observations lie on a tilted plane, but not every row does.
+    rng = np.random.default_rng(seed)
+    x = rng.standard_normal((100, 3))
+    x[:m_on, 2] = x[:m_on, 0] + x[:m_on, 1]
+
+    with pytest.raises(ValueError, match="lie on a hyperplane"):
+        robcov.CovDetMCD(x).fit(h=52)
+
+
+def test_covdet_mcd_full_rank_polynomial_data_still_fits():
+    rng = np.random.default_rng(0)
+    t = rng.uniform(0, 1, 200)
+    x = np.column_stack([t**j for j in range(1, 6)])
+    assert np.linalg.matrix_rank(x) == 5
+
+    res = robcov.CovDetMCD(x).fit(h=(len(x) + x.shape[1] + 1) // 2)
+    assert np.isfinite(np.linalg.det(res.cov))
+
+
 def test_covdet_mcd_healthy_data_still_fits():
     # Sanity: ordinary full-rank Gaussian data still returns a non-singular
     # covariance after the exact-fit guard.
