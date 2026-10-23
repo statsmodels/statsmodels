@@ -16,6 +16,7 @@ from statsmodels.compat.pandas import (
 from typing import NamedTuple
 
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 from pandas import DataFrame, MultiIndex, Series
 from scipy import stats
 
@@ -33,6 +34,32 @@ from statsmodels.tools.validation import (
     int_like,
     string_like,
 )
+
+# Target number of float64 values in each work array of the batched fit.
+# Windows are processed in groups so that memory use does not grow with nobs.
+_BATCH_SIZE = 2**18
+
+
+def _batched_inverse(a):
+    """
+    Inverse of a stack of square matrices
+
+    Returns the inverses and a flag that is False for singular matrices,
+    whose inverse is set to nan.
+    """
+    try:
+        return np.linalg.inv(a), np.ones(a.shape[0], dtype=bool)
+    except np.linalg.LinAlgError:
+        ainv = np.full_like(a, np.nan)
+        ok = np.zeros(a.shape[0], dtype=bool)
+        for i in range(a.shape[0]):
+            try:
+                ainv[i] = np.linalg.inv(a[i])
+                ok[i] = True
+            except np.linalg.LinAlgError:
+                # Singular window: its inverse stays nan and ok[i] False
+                pass
+        return ainv, ok
 
 
 def strip4(line):
@@ -234,7 +261,9 @@ class RollingWLS:
             weights = weights[not_missing]
         return y, wy, wx, weights, not_missing
 
-    def _fit_single(self, idx, wxpwx, wxpwy, nobs, store, params_only, method):
+    def _fit_single(
+        self, idx, wxpwx, wxpwy, nobs, store, params_only, method, robust=True
+    ):
         if nobs < self._min_nobs:
             return
         try:
@@ -258,8 +287,9 @@ class RollingWLS:
         y, wy, wx, weights, _ = self._get_data(idx)
 
         wresid, ssr, llf = self._loglike(params, wy, wx, weights, nobs)
-        wxwresid = wx * wresid[:, None]
-        wxepwxe = wxwresid.T @ wxwresid
+        if robust:
+            wxwresid = wx * wresid[:, None]
+            store.xeex[idx - 1] = wxwresid.T @ wxwresid
         tot_params = wx.shape[1]
         s2 = ssr / (nobs - tot_params)
 
@@ -270,7 +300,6 @@ class RollingWLS:
         store.nobs[idx - 1] = nobs
         store.s2[idx - 1] = s2
         store.xpxi[idx - 1] = wxpwxi
-        store.xeex[idx - 1] = wxepwxe
         store.centered_tss[idx - 1] = centered_tss
         store.uncentered_tss[idx - 1] = uncentered_tss
 
@@ -297,6 +326,231 @@ class RollingWLS:
         xpy = wx.T @ wy
         return xpx, xpy, nobs
 
+    def _batched_data(self):
+        """
+        Zero-filled data used by the batched fit
+
+        Returns
+        -------
+        z : ndarray
+            Array with columns [wx, wy] and window - 1 rows of zeros prepended
+            so that every window has ``window`` rows. Missing observations are
+            set to 0 so that they do not contribute to any window.
+        nobs : ndarray
+            Number of non-missing observations in the window ending at each
+            observation.
+        """
+        nobs, k = self._x.shape
+        pad = self._window - 1
+        valid = ~self._is_nan
+        z = np.zeros((pad + nobs, k + 1))
+        z[pad:, :k] = np.where(valid[:, None], self._wx, 0.0)
+        z[pad:, k] = np.where(valid, self._wy, 0.0)
+        count = np.zeros(pad + nobs + 1, dtype=int)
+        np.cumsum(valid, out=count[pad + 1 :])
+        return z, count[self._window :] - count[:nobs]
+
+    def _batched_inv(self, z, wins, reset, params_only, store):
+        """
+        Batched estimation using window inner products and matrix inversion
+
+        Window inner products are updated by adding and removing one
+        observation at a time, and are recomputed directly from the window's
+        data at least once every min(reset, window) windows, so that rounding
+        errors cannot accumulate beyond one window. Returns the windows that
+        were estimated.
+        """
+        k = z.shape[1] - 1
+        w = self._window
+        zv = sliding_window_view(z, w, axis=0)
+        n_direct = max(1, _BATCH_SIZE // ((k + 1) * w))
+        size = max(1, _BATCH_SIZE // (k + 1) ** 2)
+        block = min(reset, w)
+        if block > size:
+            # Recompute at the start of some batches and carry the inner
+            # products across the others
+            block = size * (block // size)
+        else:
+            size = block * (size // block)
+        lo, hi = wins[0], wins[-1] + 1
+        fitted = []
+        zpz = None
+        for start in range(lo, hi, size):
+            stop = min(start + size, hi)
+            restart = (start - lo) % block == 0
+            # Moving from window i - 1 to window i adds row i + w - 1 of z
+            # and removes row i - 1
+            d0 = int(restart)
+            add = z[start + w - 1 + d0 : stop + w - 1]
+            rem = z[start - 1 + d0 : stop - 1]
+            last = None if zpz is None else zpz[-1]
+            zpz = np.empty((stop - start, k + 1, k + 1))
+            zpz[d0:] = (
+                add[:, :, None] * add[:, None, :] - rem[:, :, None] * rem[:, None, :]
+            )
+            if restart:
+                loc = np.arange(0, stop - start, block)
+                for j in range(0, loc.shape[0], n_direct):
+                    zb = zv[start + loc[j : j + n_direct]]
+                    zpz[loc[j : j + n_direct]] = zb @ zb.transpose(0, 2, 1)
+            else:
+                # Continue from the last window of the previous batch
+                zpz[0] += last
+            n_full = (stop - start) // block
+            head = zpz[: n_full * block].reshape(n_full, block, k + 1, k + 1)
+            np.cumsum(head, axis=1, out=head)
+            np.cumsum(zpz[n_full * block :], axis=0, out=zpz[n_full * block :])
+            sel = wins[slice(*np.searchsorted(wins, [start, stop]))]
+            xpx = zpz[sel - start, :k, :k]
+            xpy = zpz[sel - start, :k, k:]
+            xpxi, ok = _batched_inverse(xpx)
+            sel = sel[ok]
+            store.params[sel] = (xpxi[ok] @ xpy[ok])[..., 0]
+            if not params_only:
+                store.xpxi[sel] = xpxi[ok]
+            fitted.append(sel)
+        return np.concatenate(fitted)
+
+    def _batched_lstsq(self, z, wins, nobs, method, params_only, robust, store):
+        """
+        Batched estimation using the QR decomposition of each window
+
+        Each window is decomposed as [wx, wy] = QR using Householder
+        reflections, the method used by least squares solvers. Windows whose
+        condition number is within a factor of 2 of the point where lstsq or
+        pinv would truncate singular values are estimated one at a time using
+        _fit_single, so that they are handled exactly as before. Returns the windows that were estimated in batches.
+        """
+        k = z.shape[1] - 1
+        w = self._window
+        zv = sliding_window_view(z, w, axis=0)
+        size = max(1, _BATCH_SIZE // ((k + 1) * w))
+        # Relative singular value cutoffs used by lstsq and pinv
+        if method == "lstsq":
+            rcond = np.finfo(np.double).eps * np.maximum(nobs, k)
+        else:
+            rcond = np.full(nobs.shape, 1e-15)
+        fitted = []
+        single = []
+        for start in range(0, wins.shape[0], size):
+            sel = wins[start : start + size]
+            r = np.linalg.qr(zv[sel].transpose(0, 2, 1), mode="r")
+            rx = r[:, :k, :k]
+            rxi, ok = _batched_inverse(rx)
+            # Frobenius-norm condition number, an upper bound for the 2-norm
+            # condition number that lstsq and pinv compare with 1 / rcond
+            with np.errstate(over="ignore", invalid="ignore"):
+                cond = np.sqrt(np.sum(rx**2, axis=(1, 2)))
+                cond *= np.sqrt(np.sum(rxi**2, axis=(1, 2)))
+                ok &= cond * rcond[sel] < 0.5
+            single.append(sel[~ok])
+            sel = sel[ok]
+            rxi = rxi[ok]
+            store.params[sel] = (rxi @ r[ok, :k, k:])[..., 0]
+            if not params_only:
+                store.xpxi[sel] = rxi @ rxi.transpose(0, 2, 1)
+            fitted.append(sel)
+        for i in np.concatenate(single):
+            xpx, xpy, n = self._reset(i + 1)
+            self._fit_single(i + 1, xpx, xpy, n, store, params_only, method, robust)
+        return np.concatenate(fitted)
+
+    def _batched_statistics(self, z, wins, nobs, robust, store):
+        """Residual-based statistics for the windows in wins"""
+        k = z.shape[1] - 1
+        w = self._window
+        # y, weights and log(weights), padded and zero-filled like z
+        pad = w - 1
+        valid = ~self._is_nan
+        aux = np.zeros((pad + self._x.shape[0], 3))
+        aux[pad:, 0] = np.where(valid, self._y, 0.0)
+        aux[pad:, 1] = np.where(valid, self._weights, 0.0)
+        aux[pad:][valid, 2] = np.log(self._weights[valid])
+        zv = sliding_window_view(z, w, axis=0)
+        av = sliding_window_view(aux, w, axis=0)
+        size = max(1, _BATCH_SIZE // ((k + 1) * w))
+        for start in range(0, wins.shape[0], size):
+            sel = wins[start : start + size]
+            zw = zv[sel]
+            wx = zw[:, :k]
+            wy = zw[:, k]
+            y, weights, log_weights = av[sel].transpose(1, 0, 2)
+            wresid = wy - (store.params[sel, None, :] @ wx)[:, 0]
+            ssr = np.sum(wresid**2, axis=1)
+            n = nobs[sel]
+            nobs2 = n / 2.0
+            llf = -np.log(ssr) * nobs2  # concentrated likelihood
+            llf -= (1 + np.log(np.pi / nobs2)) * nobs2  # with constant
+            llf += 0.5 * np.sum(log_weights, axis=1)
+            mean = np.sum(weights * y, axis=1) / np.sum(weights, axis=1)
+            centered_tss = np.sum(weights * (y - mean[:, None]) ** 2, axis=1)
+            store.ssr[sel] = ssr
+            store.llf[sel] = llf
+            store.nobs[sel] = n
+            store.s2[sel] = ssr / (n - k)
+            store.centered_tss[sel] = centered_tss
+            store.uncentered_tss[sel] = np.sum(wy**2, axis=1)
+            if robust:
+                wxwresid = wx * wresid[:, None, :]
+                store.xeex[sel] = wxwresid @ wxwresid.transpose(0, 2, 1)
+
+    def _fit_batched(self, first, method, reset, params_only, robust, store):
+        """Estimate all windows using batched linear algebra"""
+        z, nobs = self._batched_data()
+        wins = np.arange(first - 1, self._x.shape[0])
+        keep = nobs[wins] >= self._min_nobs
+        if self._skip_missing:
+            keep &= ~self._has_nan[wins]
+        wins = wins[keep]
+        if wins.shape[0] == 0:
+            return
+        if method == "inv":
+            fitted = self._batched_inv(z, wins, reset, params_only, store)
+        else:
+            fitted = self._batched_lstsq(
+                z, wins, nobs, method, params_only, robust, store
+            )
+        if not params_only:
+            self._batched_statistics(z, fitted, nobs, robust, store)
+
+    def _fit_loop(self, first, method, reset, params_only, robust, store):
+        """Estimate one window at a time using rank-one updates"""
+        w = self._window
+        xpx, xpy, nobs = self._reset(first)
+        if not (self._has_nan[first - 1] and self._skip_missing):
+            self._fit_single(first, xpx, xpy, nobs, store, params_only, method, robust)
+        wx, wy = self._wx, self._wy
+        skipped = False
+        for i in range(first + 1, self._x.shape[0] + 1):
+            if self._has_nan[i - 1] and self._skip_missing:
+                skipped = True
+                continue
+            if i % reset == 0 or skipped:
+                # Recompute after skipped windows since xpx and xpy were not
+                # updated while skipping
+                xpx, xpy, nobs = self._reset(i)
+                skipped = False
+            else:
+                if i > w and not self._is_nan[i - w - 1]:
+                    remove_x = wx[i - w - 1 : i - w]
+                    xpx -= remove_x.T @ remove_x
+                    xpy -= remove_x.T @ wy[i - w - 1 : i - w]
+                    nobs -= 1
+                if not self._is_nan[i - 1]:
+                    add_x = wx[i - 1 : i]
+                    xpx += add_x.T @ add_x
+                    xpy += add_x.T @ wy[i - 1 : i]
+                    nobs += 1
+
+            self._fit_single(i, xpx, xpy, nobs, store, params_only, method, robust)
+
+    def _use_batched(self, first, method):
+        """Flag indicating whether the batched fit can be used"""
+        nobs, k = self._x.shape
+        # Leave a window longer than the sample to the loop, and require a
+        # window with more rows than columns in [wx, wy] for the QR
+        return first <= nobs and (method == "inv" or self._window > k)
+
     def fit(
         self,
         method="inv",
@@ -317,8 +571,13 @@ class RollingWLS:
             * 'inv' - use moving windows inner-products and matrix inversion.
               This method is the fastest, but may be less accurate than the
               other methods.
-            * 'lstsq' - Use numpy.linalg.lstsq
-            * 'pinv' - Use numpy.linalg.pinv. This method matches the default
+            * 'lstsq' - Use the QR decomposition of each window, computed in
+              batches, which has the same accuracy as numpy.linalg.lstsq.
+              Windows that are close to rank deficient are estimated using
+              numpy.linalg.lstsq.
+            * 'pinv' - Use the QR decomposition of each window, computed in
+              batches. Windows that are close to rank deficient are estimated
+              using numpy.linalg.pinv. This method matches the default
               estimator in non-moving regression estimators.
         cov_type : {'nonrobust', 'HCCM', 'HC0'}, optional
             Covariance estimator:
@@ -329,8 +588,10 @@ class RollingWLS:
             Unused
         reset : int, optional
             Interval to recompute the moving window inner products used to
-            estimate the model parameters. Smaller values improve accuracy,
-            although in practice this setting is not required to be set.
+            estimate the model parameters when method is 'inv'. Smaller values
+            improve accuracy, although in practice this setting is not required
+            to be set. The inner products are always recomputed at least once
+            every ``window`` observations.
         use_t : bool, optional
             Flag indicating to use the Student's t distribution when computing
             p-values.
@@ -343,6 +604,14 @@ class RollingWLS:
         RollingRegressionResults
             Estimation results where all pre-sample values are nan-filled.
 
+        Notes
+        -----
+        The windows are estimated in batches using stacked linear algebra
+        routines. The batches are sized so that the temporary arrays have a
+        few MB, and so memory use does not depend on the number of
+        observations beyond the arrays that hold the results. The
+        heteroskedasticity-robust middle term ``X'diag(e**2)X`` is only
+        computed when cov_type is 'HCCM' or 'HC0'.
         """
         method = string_like(
             method, "method", options=("inv", "lstsq", "pinv")
@@ -367,35 +636,12 @@ class RollingWLS:
             centered_tss=np.full(nobs, np.nan),
             uncentered_tss=np.full(nobs, np.nan),
         )
-        w = self._window
-        first = self._min_nobs if self._expanding else w
-        xpx, xpy, nobs = self._reset(first)
-        if not (self._has_nan[first - 1] and self._skip_missing):
-            self._fit_single(first, xpx, xpy, nobs, store, params_only, method)
-        wx, wy = self._wx, self._wy
-        skipped = False
-        for i in range(first + 1, self._x.shape[0] + 1):
-            if self._has_nan[i - 1] and self._skip_missing:
-                skipped = True
-                continue
-            if i % reset == 0 or skipped:
-                # Recompute after skipped windows since xpx and xpy were not
-                # updated while skipping
-                xpx, xpy, nobs = self._reset(i)
-                skipped = False
-            else:
-                if i > w and not self._is_nan[i - w - 1]:
-                    remove_x = wx[i - w - 1 : i - w]
-                    xpx -= remove_x.T @ remove_x
-                    xpy -= remove_x.T @ wy[i - w - 1 : i - w]
-                    nobs -= 1
-                if not self._is_nan[i - 1]:
-                    add_x = wx[i - 1 : i]
-                    xpx += add_x.T @ add_x
-                    xpy += add_x.T @ wy[i - 1 : i]
-                    nobs += 1
-
-            self._fit_single(i, xpx, xpy, nobs, store, params_only, method)
+        first = self._min_nobs if self._expanding else self._window
+        robust = cov_type != "nonrobust"
+        if self._use_batched(first, method):
+            self._fit_batched(first, method, reset, params_only, robust, store)
+        else:
+            self._fit_loop(first, method, reset, params_only, robust, store)
 
         return RollingRegressionResults(
             self, store, self.k_constant, use_t, cov_type

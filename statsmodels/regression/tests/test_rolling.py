@@ -557,3 +557,174 @@ def test_get_resid_missing_skip(pandas, out_of_sample):
     valid = ~expected_nan
     expected = ya[valid] - np.sum(xa[valid] * params[valid], axis=1)
     assert_allclose(resid[valid], expected)
+
+
+def fit_loop(mod, **kwargs):
+    # Estimate one window at a time using the rank-one update loop
+    mod._use_batched = lambda first, method: False
+    try:
+        return mod.fit(**kwargs)
+    finally:
+        del mod._use_batched
+
+
+def assert_results_equal(res, expected, rtol=1e-10, robust=False):
+    assert_array_equal(np.isnan(res.params), np.isnan(expected.params))
+    assert_allclose(res.params, expected.params, rtol=rtol)
+    assert_array_equal(res.nobs, expected.nobs)
+    for attr in (
+        "bse",
+        "ssr",
+        "llf",
+        "centered_tss",
+        "uncentered_tss",
+        "rsquared",
+        "fvalue",
+    ):
+        assert_allclose(getattr(res, attr), getattr(expected, attr), rtol=rtol)
+    assert_allclose(res.cov_params(), expected.cov_params(), rtol=rtol, atol=1e-14)
+    if not robust:
+        assert np.all(np.isnan(res._xepxe))
+
+
+def batched_data(weighted, missing):
+    rs = np.random.default_rng(84171)
+    n = 300
+    x = np.column_stack([np.ones(n), rs.standard_normal((n, 2))])
+    y = x @ np.array([1.0, 2.0, -1.0]) + rs.standard_normal(n)
+    w = rs.chisquare(5, n) / 5 if weighted else None
+    if missing:
+        y[[5, 40, 41, 150]] = np.nan
+        x[[100, 220], 1] = np.nan
+    return y, x, w
+
+
+@pytest.mark.parametrize("method", ["inv", "lstsq", "pinv"])
+@pytest.mark.parametrize("cov_type", ["nonrobust", "HC0"])
+@pytest.mark.parametrize("weighted", [False, True])
+@pytest.mark.parametrize("expanding", [False, True])
+@pytest.mark.parametrize("missing", ["none", "drop", "skip"])
+def test_batched_against_loop(method, cov_type, weighted, expanding, missing):
+    y, x, w = batched_data(weighted, missing != "none")
+    mod = RollingWLS(
+        y,
+        x,
+        window=40,
+        weights=w,
+        min_nobs=10,
+        expanding=expanding,
+        missing="drop" if missing == "none" else missing,
+    )
+    res = mod.fit(method=method, cov_type=cov_type)
+    expected = fit_loop(mod, method=method, cov_type=cov_type, reset=1)
+    assert np.isfinite(res.params[-1]).all()
+    assert_results_equal(res, expected, robust=cov_type != "nonrobust")
+    res_params = mod.fit(method=method, params_only=True)
+    assert_allclose(res_params.params, expected.params, rtol=1e-10)
+    assert np.all(np.isnan(res_params._xpxi))
+    assert_array_equal(res_params.nobs, 0)
+
+
+@pytest.mark.thread_unsafe(reason="modifies a module constant")
+@pytest.mark.parametrize("method", ["inv", "lstsq"])
+@pytest.mark.parametrize("reset", [None, 7])
+def test_batched_small_batches(monkeypatch, method, reset):
+    # Many batches, a partial last batch, batches without any window and,
+    # when reset is None, inner products carried across batches
+    from statsmodels.regression import rolling
+
+    y, x, w = batched_data(True, False)
+    y[160:200] = np.nan
+    mod = RollingWLS(y, x, window=25, weights=w, missing="skip")
+    expected = mod.fit(method=method, cov_type="HC0", reset=reset)
+    monkeypatch.setattr(rolling, "_BATCH_SIZE", 160)
+    res = mod.fit(method=method, cov_type="HC0", reset=reset)
+    assert_results_equal(res, expected, robust=True)
+    assert np.all(np.isnan(res.params[160:224]))
+    assert np.all(np.isfinite(res.params[224:]))
+
+
+def test_batched_no_valid_window():
+    y, x, _ = batched_data(False, False)
+    y[::10] = np.nan
+    res = RollingOLS(y, x, window=20, missing="skip").fit()
+    assert np.all(np.isnan(res.params))
+    assert_array_equal(res.nobs, 0)
+
+
+@pytest.mark.parametrize("method", ["inv", "lstsq", "pinv"])
+@pytest.mark.parametrize("params_only", [True, False])
+def test_batched_singular_windows(method, params_only):
+    # An event dummy makes the windows that do not contain the event singular
+    rs = np.random.default_rng(2410)
+    n, window = 120, 20
+    x = np.column_stack([np.ones(n), rs.standard_normal(n), np.zeros(n)])
+    x[60, 2] = 1.0
+    y = x @ np.array([1.0, 2.0, 3.0]) + rs.standard_normal(n)
+    mod = RollingOLS(y, x, window=window)
+    res = mod.fit(method=method, params_only=params_only)
+    expected = fit_loop(mod, method=method, params_only=params_only, reset=1)
+    assert_array_equal(np.isnan(res.params), np.isnan(expected.params))
+    assert_allclose(res.params, expected.params, rtol=1e-10, atol=1e-12)
+    contains_event = np.zeros(n, dtype=bool)
+    contains_event[60 : 60 + window] = True
+    assert np.all(np.isfinite(res.params[contains_event]))
+    if not params_only:
+        assert_allclose(res.bse, expected.bse, rtol=1e-10)
+        assert_allclose(res.ssr, expected.ssr, rtol=1e-10)
+    if method == "inv" or not params_only:
+        # inv fails for the singular windows, as in the loop
+        assert np.all(np.isnan(res.params[window - 1 : 60]))
+    else:
+        # lstsq and pinv give the minimum norm solution
+        assert np.all(np.isfinite(res.params[window - 1 :]))
+        assert_allclose(res.params[window - 1 : 60, 2], 0.0, atol=1e-12)
+
+
+@pytest.mark.parametrize("weighted", [False, True])
+def test_batched_large_offset(weighted):
+    # x + 1e4 is ill-conditioned. The exact estimates are a linear
+    # transformation of the estimates from the well-conditioned design.
+    rs = np.random.default_rng(97531)
+    n, window, offset = 2000, 60, 1e4
+    z = rs.standard_normal((n, 2))
+    x0 = np.column_stack([np.ones(n), z])
+    x = np.column_stack([np.ones(n), z + offset])
+    y = x0 @ np.array([1.0, 2.0, -1.0]) + 0.1 * rs.standard_normal(n)
+    w = rs.chisquare(5, n) / 5 if weighted else None
+    ref = RollingWLS(y, x0, window=window, weights=w).fit(method="lstsq")
+    ref_params = np.asarray(ref.params).copy()
+    ref_params[:, 0] -= offset * ref_params[:, 1:].sum(1)
+    valid = slice(window - 1, None)
+
+    def max_rel_err(res):
+        params = np.asarray(res.params)[valid]
+        diff = np.abs(params - ref_params[valid])
+        return np.max(diff / np.abs(ref_params[valid]))
+
+    mod = RollingWLS(y, x, window=window, weights=w)
+    for method in ("lstsq", "pinv"):
+        res = mod.fit(method=method)
+        assert max_rel_err(res) < 1e-7
+        assert_allclose(res.ssr, ref.ssr, rtol=1e-6)
+        loop = fit_loop(mod, method=method)
+        assert max_rel_err(res) <= 10 * max_rel_err(loop)
+    # The normal equations lose about twice as many digits
+    res = mod.fit(method="inv")
+    assert max_rel_err(res) < 1e-2
+    loop = fit_loop(mod, method="inv")
+    assert max_rel_err(res) <= 10 * max_rel_err(loop)
+
+
+@pytest.mark.parametrize("method", ["inv", "lstsq"])
+@pytest.mark.parametrize("expanding", [False, True])
+def test_batched_full_sample_window(method, expanding):
+    # window=None uses the full sample, and with expanding=True gives
+    # recursive estimates
+    y, x, w = batched_data(True, True)
+    mod = RollingWLS(y, x, weights=w, min_nobs=5, expanding=expanding)
+    res = mod.fit(method=method, cov_type="HC0")
+    expected = fit_loop(mod, method=method, cov_type="HC0")
+    assert_results_equal(res, expected, rtol=1e-9, robust=True)
+    assert np.isfinite(res.params[-1]).all()
+    assert np.isfinite(res.params[5]).all() == expanding
