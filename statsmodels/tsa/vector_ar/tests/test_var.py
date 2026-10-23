@@ -1459,3 +1459,12 @@ def test_select_order_qr_fallback():
     assert var_model._var_order_ics(y_const, None, 6, "c", 0) is None
     with pytest.raises(ValueError, match="constant"):
         VAR(y_const).select_order(6, trend="c")
+
+    # Too few observations for many exog columns, the largest model has no
+    # residual degrees of freedom
+    y_short = y[:30, :2]
+    exog_many = rng.standard_normal((30, 20))
+    assert var_model._var_order_ics(y_short, exog_many, 3, "c", 0) is None
+    res = VAR(y_short, exog=exog_many).select_order(3, trend="c")
+    expected = _select_order_loop(VAR(y_short, exog=exog_many), 3, "c")
+    _assert_lag_orders_equal(res, expected, rtol=0)
