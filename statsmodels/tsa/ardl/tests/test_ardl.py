@@ -11,6 +11,7 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.ar_model import AutoReg
+from statsmodels.tsa.ardl import model as ardl_model
 from statsmodels.tsa.ardl.model import (
     ARDL,
     UECM,
@@ -1068,3 +1069,103 @@ def test_ardl_k_constant_deterministic(data):
     res = mod.fit()
     ols_res = OLS(mod._y, mod._x).fit()
     assert_allclose(res.rsquared, ols_res.rsquared)
+
+
+def _select_order_loop(*args, **kwargs):
+    # The previous implementation: fit each model separately
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(ardl_model, "_ardl_select_ssr", lambda *a: None)
+        return ardl_select_order(*args, **kwargs)
+
+
+def _select_order_qr(*args, use_qr=True, **kwargs):
+    # ardl_select_order, checking whether all models come from one QR
+    calls = []
+    orig = ardl_model._ardl_select_ssr
+
+    def select_ssr(*a):
+        calls.append(orig(*a))
+        return calls[-1]
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(ardl_model, "_ardl_select_ssr", select_ssr)
+        res = ardl_select_order(*args, **kwargs)
+    assert len(calls) == 1
+    assert (calls[0] is not None) == use_qr
+    return res
+
+
+def _assert_select_order_equal(res, expected, rtol):
+    for ic in ("aic", "bic", "hqic"):
+        actual = getattr(res, ic)
+        desired = getattr(expected, ic)
+        assert_allclose(actual.index, desired.index, rtol=rtol)
+        assert list(actual) == list(desired)
+    assert res.model.ardl_order == expected.model.ardl_order
+    assert res.ar_lags == expected.ar_lags
+    assert res.dl_lags == expected.dl_lags
+
+
+def test_ardl_select_order_qr(
+    data, maxlag, maxorder, trend, causal, fixed, seasonal, hold_back
+):
+    # one QR gives the same criteria as fitting each model separately
+    y, x, z, maxorder, period = _convert_to_numpy(
+        data, fixed, maxorder, seasonal, False
+    )
+    args = (y, maxlag, x, maxorder, trend)
+    kwargs = dict(
+        fixed=fixed,
+        causal=causal,
+        hold_back=hold_back,
+        period=period,
+        seasonal=seasonal,
+        glob=seasonal,
+    )
+    res = _select_order_qr(*args, **kwargs)
+    expected = _select_order_loop(*args, **kwargs)
+    _assert_select_order_equal(res, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
+@pytest.mark.parametrize("ic", ["aic", "bic", "hqic"])
+def test_ardl_select_order_qr_simulated(trend, ic):
+    rng = np.random.default_rng(10545)
+    nobs = 2000
+    x = np.cumsum(rng.standard_normal((nobs, 2)), axis=0)
+    e = rng.standard_normal(nobs)
+    y = np.zeros(nobs)
+    for t in range(2, nobs):
+        y[t] = 0.5 * y[t - 1] - 0.2 * y[t - 2] + 0.3 * x[t - 1, 0] + e[t]
+    args = (y, 6, x, {0: 4, 1: 3}, trend)
+    res = _select_order_qr(*args, ic=ic)
+    expected = _select_order_loop(*args, ic=ic)
+    _assert_select_order_equal(res, expected, rtol=1e-10)
+    assert res.model.ardl_order[:2] == (2, 1)
+    res = _select_order_qr(*args, ic=ic, glob=True, hold_back=6)
+    expected = _select_order_loop(*args, ic=ic, glob=True, hold_back=6)
+    _assert_select_order_equal(res, expected, rtol=1e-10)
+
+
+def test_ardl_select_order_qr_fallback(data):
+    # Singular regressors and exact fits are fitted model by model
+    # A constant in fixed and in the trend
+    fixed = np.ones((data.y.shape[0], 1))
+    always = np.ones((data.y.shape[0], 2))
+    select = [np.asarray(data.x)]
+    y = np.asarray(data.y)
+    assert ardl_model._ardl_select_ssr(y, always, select, False) is None
+    res = _select_order_qr(data.y, 2, data.x, 2, "c", fixed=fixed, use_qr=False)
+    expected = _select_order_loop(data.y, 2, data.x, 2, "c", fixed=fixed)
+    _assert_select_order_equal(res, expected, rtol=0)
+
+    # An exact fit
+    y = 1.0 + 0.5 * data.x["lry"] - 0.2 * data.x["ibo"].shift(1).fillna(0.0)
+    res = _select_order_qr(y, 2, data.x, 2, "c", use_qr=False)
+    expected = _select_order_loop(y, 2, data.x, 2, "c")
+    _assert_select_order_equal(res, expected, rtol=0)
+
+    y = data.y.copy()
+    y.iloc[20] = np.nan
+    with pytest.raises(np.linalg.LinAlgError):
+        ardl_select_order(y, 2, data.x, 2, "c")
