@@ -35,6 +35,7 @@ from statsmodels.tools.validation import (
 )
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_algo, innovations_filter
+from statsmodels.tsa._lagselect import nested_lag_ols
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
 from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
@@ -208,16 +209,9 @@ def _adf_autolag(x, maxlag, regression, method):
     Gives the same result as ``_autolag`` with OLS on the regressors
     ``X = [trend, level, lag 1, ..., lag maxlag]`` that ``adfuller`` builds.
     All candidate regressions use the first ``j`` columns of ``X`` and the
-    same sample. If ``[X, y] = QR`` with ``X`` of shape ``(nobs, k)``, then
-    the regression on the first ``j`` columns has
-
-    * ``ssr_j = R[k, k] ** 2 + sum(R[j:k, k] ** 2)``
-    * ``|t_j| = |R[j - 1, k]| / sqrt(ssr_j / (nobs - j))`` for the
-      coefficient of its last column,
-
-    so one factorization gives the criteria of all lag lengths. The rows are
-    processed in blocks, and the triangular factor is updated block by block
-    so the full lagged regressor matrix is never formed.
+    same sample, so ``nested_lag_ols`` gives the criteria of all lag
+    lengths from one QR decomposition without forming the lagged regressor
+    matrix.
     """
     xdiff = np.diff(x)
     nobs = xdiff.shape[0] - maxlag
@@ -227,52 +221,28 @@ def _adf_autolag(x, maxlag, regression, method):
     # Row t of windows is xdiff[t + maxlag], xdiff[t + maxlag - 1], ...,
     # xdiff[t], i.e., the dependent variable followed by its maxlag lags
     windows = np.lib.stride_tricks.sliding_window_view(xdiff, maxlag + 1)[:, ::-1]
-    # Blocks of about 1MB keep the data in cache
-    block_rows = max(4 * (k + 1), 2**17 // (k + 1))
-    r = np.empty((0, k + 1))
-    for start in range(0, nobs, block_rows):
-        stop = min(start + block_rows, nobs)
-        block = np.empty((r.shape[0] + stop - start, k + 1))
-        block[: r.shape[0]] = r
-        rows = block[r.shape[0] :]
-        if ntrend:
-            trend = np.arange(start + 1, stop + 1, dtype=float)
-            for power in range(ntrend):
-                rows[:, power] = trend**power
-        rows[:, ntrend] = x[maxlag + start : maxlag + stop]
-        rows[:, startlag:k] = windows[start:stop, 1:]
-        rows[:, k] = windows[start:stop, 0]
-        r = np.linalg.qr(block, mode="r")
-
-    if not np.all(np.isfinite(r)):
-        return None
+    exog = np.empty((nobs, startlag))
+    exog[:, :ntrend] = np.vander(np.arange(1.0, nobs + 1), ntrend, increasing=True)
+    exog[:, ntrend] = x[maxlag:-1]
     # OLS treats singular values below ncols * eps times the largest one as
-    # zero. A subset of the columns has a smallest singular value at least
-    # as large, and a largest one at most as large, as all columns, so if
-    # this check passes OLS finds every candidate regression to have full
-    # rank. The factor 10 is a margin for rounding.
-    sv = np.linalg.svd(r[:k, :k], compute_uv=False)
-    if sv[-1] <= 10 * k * np.finfo(float).eps * sv[0]:
-        return None
-    qy = r[:k, k]
-    # ssr_tail[j] is the sum of squares of qy[j:]
-    ssr_tail = np.append(np.cumsum(qy[::-1] ** 2)[::-1], 0.0)
-    ssr = r[k, k] ** 2 + ssr_tail[startlag:]
-    if not ssr[-1] > 1e-10 * (r[k, k] ** 2 + ssr_tail[0]):
-        # (Almost) perfect fit, the residuals are dominated by rounding
+    # zero
+    res = nested_lag_ols(
+        windows[:, 0], windows[:, 1:], exog, rcond=k * np.finfo(float).eps
+    )
+    if res is None:
         return None
 
-    ncols = np.arange(startlag, k + 1)
     if method == "t-stat":
-        crit = np.abs(qy[startlag - 1 :]) / np.sqrt(ssr / (nobs - ncols))
+        crit = np.abs(res.tvalues_last)
         # stop = stats.norm.ppf(.95)
         significant = np.flatnonzero(crit >= 1.6448536269514722)
         bestlag = significant[-1] if significant.size else 0
     else:
+        ssr = res.ssr
         nobs2 = nobs / 2.0
         llf = -nobs2 * np.log(2 * np.pi) - nobs2 * np.log(ssr / nobs) - nobs2
         penalty = 2.0 if method == "aic" else np.log(nobs)
-        crit = -2 * llf + penalty * ncols
+        crit = -2 * llf + penalty * res.df_model
         bestlag = np.argmin(crit)
     return crit[bestlag], int(bestlag)
 
