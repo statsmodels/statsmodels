@@ -1515,8 +1515,6 @@ def _pacf_ols_qr(x, nlags, efficient):
     stacked[k + 1 :, -1] = x[:nlags]
     stacked[k + 1 + np.arange(nlags), lag_cols - 1] = 1.0
     r = np.linalg.qr(stacked, mode="r")
-    if not np.all(np.isfinite(r)):
-        return None
     return np.concatenate([[1.0], r[lag_cols, -1] / r[lag_cols, lag_cols]])
 
 
