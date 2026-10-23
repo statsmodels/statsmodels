@@ -299,12 +299,15 @@ class KDEUnivariate:
             limits = kern.domain
             scale = 1
         else:
-            # 无界核先平移并按带宽缩放积分变量 避免积分器漏掉偏移或极窄的密度
+            # Center and scale the integration variable so quadrature can find
+            # shifted or narrow densities for unbounded kernels.
             endog = endog - endog.mean()
             scale = kern.h
-            # 按带宽单元合并密集样本的切点 同时保留分离峰附近的积分区间
+            # Group dense observations into bandwidth-sized cells to limit
+            # breakpoints while preserving intervals near separated modes.
             cells = np.unique(np.floor(endog / scale))
-            # 八个带宽覆盖高斯核几乎全部质量 这些点仅引导积分 不截断无限尾部
+            # Eight bandwidths contain nearly all Gaussian mass. These
+            # breakpoints guide quadrature without truncating infinite tails.
             points = np.unique(cells[:, None] + [-8, -1, 0, 1, 2, 9])
             limits = np.r_[-np.inf, points, np.inf]
         return -scale * sum(
