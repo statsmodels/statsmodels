@@ -289,12 +289,12 @@ the long run effects as follows:
 Forecast Error Variance Decomposition (FEVD)
 --------------------------------------------
 
-Forecast errors of component j on k in an i-step ahead forecast can be
+Forecast errors of component j on k in an h-step ahead forecast can be
 decomposed using the orthogonalized impulse responses :math:`\Theta_i`:
 
 .. math::
 
-    \omega_{jk, i} = \sum_{i=0}^{h-1} (e_j^\prime \Theta_i e_k)^2 / \mathrm{MSE}_j(h)
+    \omega_{jk, h} = \sum_{i=0}^{h-1} (e_j^\prime \Theta_i e_k)^2 / \mathrm{MSE}_j(h)
 
     \mathrm{MSE}_j(h) = \sum_{i=0}^{h-1} e_j^\prime \Phi_i \Sigma_u \Phi_i^\prime e_j
 
