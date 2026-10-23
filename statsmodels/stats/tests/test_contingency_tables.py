@@ -968,7 +968,11 @@ def test_equal_odds_unrepresentable_fitted_legacy(adjust, exponent):
         expected = ["overflow encountered in multiply",
                     "overflow encountered in square",
                     "invalid value encountered in multiply"]
-    assert [str(warning.message) for warning in caught] == expected
+    messages = [str(warning.message) for warning in caught]
+    if exponent == 510 and adjust:
+        # NumPy 1.23 calls scalar division "double_scalars".
+        messages[-1] = messages[-1].replace("double_scalars", "scalar divide")
+    assert messages == expected
     assert all(warning.category is RuntimeWarning for warning in caught)
     assert np.isnan(result.statistic)
     assert np.isnan(result.pvalue)
