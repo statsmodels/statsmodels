@@ -1,5 +1,7 @@
 """Tests for rolling regression models."""
 
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 from io import BytesIO
 from itertools import product
 import warnings
@@ -655,6 +657,8 @@ def test_batched_no_valid_window():
 @pytest.mark.parametrize("method", ["inv", "lstsq", "pinv"])
 @pytest.mark.parametrize("params_only", [True, False])
 def test_batched_singular_windows(method, params_only):
+    if PYTHON_IMPL_WASM and not params_only and method != "inv":
+        pytest.skip("LinAlgError not raised on WASM")
     # An event dummy makes the windows that do not contain the event singular
     rs = np.random.default_rng(2410)
     n, window = 120, 20
