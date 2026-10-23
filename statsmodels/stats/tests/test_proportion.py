@@ -1264,6 +1264,41 @@ def test_score_confint_koopman_nam():
     assert_allclose(resp.confint, ci_old, atol=3)
 
 
+@pytest.mark.parametrize(
+    "count1, nobs1, count2, nobs2, ci_expected",
+    [
+        (7, 10, 10, 10, (0.38986150248208756, 1.0437094711118755)),
+        (10, 10, 7, 10, (0.958121036244503, 2.5650134564028813)),
+        (0, 10, 10, 10, (0.0, 0.2879339412820121)),
+        (15, 20, 20, 20, (0.5284369902899365, 0.9223731531332053)),
+        (10, 10, 0, 10, (3.473018830456555, np.inf)),
+    ],
+)
+def test_confint_2indep_ratio_score_count_equal_nobs(
+    count1, nobs1, count2, nobs2, ci_expected
+):
+    # The closed form of Koopman/Nam does not apply if a count is equal to
+    # nobs. Expected values are from maximizing the likelihood under the
+    # ratio constraint numerically and inverting the score statistic.
+    ci = confint_proportions_2indep(
+        count1, nobs1, count2, nobs2, compare="ratio", method="score"
+    )
+    assert all(np.isrealobj(limit) for limit in ci)
+    assert_allclose(ci, ci_expected, rtol=1e-6)
+    for limit in ci:
+        if 0 < limit < np.inf:
+            pv = smprop.test_proportions_2indep(
+                count1,
+                nobs1,
+                count2,
+                nobs2,
+                value=limit,
+                compare="ratio",
+                method="score",
+            ).pvalue
+            assert_allclose(pv, 0.05, rtol=1e-6)
+
+
 def test_power_2indep():
     # test against R
     pow_ = power_proportions_2indep(-0.25, 0.75, 76.70692)
