@@ -557,6 +557,8 @@ def _var_order_ics(endog, exog, maxlags, trend, p_min):
     k_exog_user = 0 if exog is None else exog.shape[1]
     k_det = k_trend + k_exog_user
     k = k_det + neqs * maxlags
+    # The residual covariance of the largest model is singular unless it has
+    # at least neqs residual degrees of freedom
     if k == 0 or nobs < k + neqs:
         return None
 
@@ -593,11 +595,12 @@ def _var_order_ics(endog, exog, maxlags, trend, p_min):
     if not np.all(np.isfinite(r)):
         return None
     # lstsq treats singular values below 1e-15 times the largest one as zero.
-    # Shifting the trend aside, the regressors of every lag order are a
-    # subset of the columns of Z, which has a smallest singular value at
-    # most as large, and a largest one at least as large, so if this check
-    # passes lstsq finds every lag order to have full rank. The factor 10 * k
-    # is a margin for rounding.
+    # The regressors of every lag order are a subset of the columns of Z,
+    # which has a smallest singular value at most as large, and a largest one
+    # at least as large, so if this check passes lstsq finds every lag order
+    # to have full rank. The time trend of a smaller order is shifted by at
+    # most maxlags, which barely changes the singular values. The factor
+    # 10 * k is a margin for this and for rounding.
     sv = np.linalg.svd(r[:k, :k], compute_uv=False)
     if sv[-1] <= 10 * k * np.finfo(float).eps * sv[0]:
         return None
