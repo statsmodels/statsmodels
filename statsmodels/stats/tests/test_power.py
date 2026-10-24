@@ -22,6 +22,7 @@ from numpy.testing import (
     assert_equal,
 )
 import pytest
+from scipy import stats
 
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
@@ -34,7 +35,6 @@ except ImportError:
 
 
 class CheckPowerMixin:
-
     def test_power(self):
         # test against R results
         kwds = copy.copy(self.kwds)
@@ -147,7 +147,6 @@ class CheckPowerMixin:
 
 
 class TestTTPowerOneS1(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
 
@@ -202,7 +201,6 @@ class TestTTPowerOneS2(CheckPowerMixin):
 
 
 class TestTTPowerOneS3(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
 
@@ -229,7 +227,6 @@ class TestTTPowerOneS3(CheckPowerMixin):
 
 
 class TestTTPowerOneS4(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
 
@@ -312,7 +309,6 @@ class TestTTPowerOneS6(CheckPowerMixin):
 
 
 class TestTTPowerTwoS1(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
 
@@ -340,7 +336,6 @@ class TestTTPowerTwoS1(CheckPowerMixin):
 
 
 class TestTTPowerTwoS2(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
 
@@ -368,7 +363,6 @@ class TestTTPowerTwoS2(CheckPowerMixin):
 
 
 class TestTTPowerTwoS3(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
 
@@ -514,7 +508,6 @@ def test_normal_power_explicit():
 
 
 class TestNormalIndPower1(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
         # > example from above
@@ -541,7 +534,6 @@ class TestNormalIndPower1(CheckPowerMixin):
 
 
 class TestNormalIndPower2(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
         res2 = Holder()
@@ -571,7 +563,6 @@ class TestNormalIndPower2(CheckPowerMixin):
 
 
 class TestNormalIndPower_onesamp1(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
         # forcing one-sample by using ratio=0
@@ -631,7 +622,6 @@ class TestNormalIndPower_onesamp2(CheckPowerMixin):
 
 
 class TestChisquarePower(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
         # one example from test_gof, results_power
@@ -743,7 +733,6 @@ def test_ftest_power():
 
 # class based version of two above test for Ftest
 class TestFtestAnovaPower(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
         res2 = Holder()
@@ -781,7 +770,6 @@ class TestFtestAnovaPower(CheckPowerMixin):
 
 
 class TestFtestPower(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
         res2 = Holder()
@@ -824,7 +812,6 @@ class TestFtestPower(CheckPowerMixin):
 
 
 class TestFtestPowerF2(CheckPowerMixin):
-
     @classmethod
     def setup_class(cls):
         res2 = Holder()
@@ -1040,7 +1027,10 @@ def test_solve_power_impossible_one_sided_raises():
     )
     assert_almost_equal(res, 26.1375, decimal=3)
     res = tt.solve_power(
-        effect_size=-0.5, nobs=None, alpha=0.05, power=0.8,
+        effect_size=-0.5,
+        nobs=None,
+        alpha=0.05,
+        power=0.8,
         alternative="smaller",
     )
     assert_almost_equal(res, 26.1375, decimal=3)
@@ -1048,29 +1038,35 @@ def test_solve_power_impossible_one_sided_raises():
     # a wrong-signed effect size with target power below alpha can have a
     # valid solution and is not intercepted
     res = tt.solve_power(
-        effect_size=0.5, nobs=None, alpha=0.05, power=0.01,
+        effect_size=0.5,
+        nobs=None,
+        alpha=0.05,
+        power=0.01,
         alternative="smaller",
     )
-    roundtrip = tt.power(
-        effect_size=0.5, nobs=res, alpha=0.05, alternative="smaller"
-    )
+    roundtrip = tt.power(effect_size=0.5, nobs=res, alpha=0.05, alternative="smaller")
     assert_almost_equal(roundtrip, 0.01, decimal=6)
 
     # solving for other parameters is not affected by the sign check
     res = tt.solve_power(
-        effect_size=0.5, nobs=25, alpha=None, power=0.8,
+        effect_size=0.5,
+        nobs=25,
+        alpha=None,
+        power=0.8,
         alternative="smaller",
     )
     assert np.isfinite(res)
     res = tt.solve_power(
-        effect_size=None, nobs=25, alpha=0.05, power=0.8,
+        effect_size=None,
+        nobs=25,
+        alpha=0.05,
+        power=0.8,
         alternative="smaller",
     )
     assert res < 0
 
 
 # TODO: can something useful be made from this?
-@pytest.mark.xfail(reason="Known failure on modern SciPy >= 0.10", strict=True)
 def test_power_solver_warn():
     # messing up the solver to trigger warning
     # I wrote this with scipy 0.9,
@@ -1134,7 +1130,9 @@ def test_normal_sample_size_one_tail():
     [
         lambda alternative: smp.ttest_power(0.5, 20, 0.05, alternative=alternative),
         lambda alternative: smp.normal_power(0.5, 20, 0.05, alternative=alternative),
-        lambda alternative: smp.normal_power_het(0.5, 20, 0.05, alternative=alternative),
+        lambda alternative: smp.normal_power_het(
+            0.5, 20, 0.05, alternative=alternative
+        ),
     ],
     ids=["ttest_power", "normal_power", "normal_power_het"],
 )
@@ -1188,9 +1186,18 @@ POWER_ALPHA = [
     (smp.ftest_anova_power, {"effect_size": 0.3, "nobs": 60}),
 ]
 POWER_ALPHA_IDS = [
-    "TTestPower", "TTestIndPower", "NormalIndPower", "FTestPower", "FTestPowerF2",
-    "FTestAnovaPower", "ttest_power", "normal_power", "normal_power_het",
-    "ftest_power", "ftest_power_f2", "ftest_anova_power",
+    "TTestPower",
+    "TTestIndPower",
+    "NormalIndPower",
+    "FTestPower",
+    "FTestPowerF2",
+    "FTestAnovaPower",
+    "ttest_power",
+    "normal_power",
+    "normal_power_het",
+    "ftest_power",
+    "ftest_power_f2",
+    "ftest_anova_power",
 ]
 
 
@@ -1214,8 +1221,14 @@ def test_power_alpha_range(func, kwargs):
         (smp.TTestPower, {"effect_size": 0.5, "nobs": 30, "power": 0.8}),
         (smp.TTestIndPower, {"effect_size": 0.5, "nobs1": 30, "power": 0.8}),
         (smp.NormalIndPower, {"effect_size": 0.5, "nobs1": 30, "power": 0.8}),
-        (smp.FTestPower, {"effect_size": 0.3, "df_num": 3, "df_denom": 57, "power": 0.5}),
-        (smp.FTestPowerF2, {"effect_size": 0.1, "df_num": 3, "df_denom": 57, "power": 0.5}),
+        (
+            smp.FTestPower,
+            {"effect_size": 0.3, "df_num": 3, "df_denom": 57, "power": 0.5},
+        ),
+        (
+            smp.FTestPowerF2,
+            {"effect_size": 0.1, "df_num": 3, "df_denom": 57, "power": 0.5},
+        ),
         (smp.FTestAnovaPower, {"effect_size": 0.25, "nobs": 60, "power": 0.8}),
     ],
 )
@@ -1227,3 +1240,57 @@ def test_solve_power_for_alpha(cls, kwargs):
     kwds = dict(kwargs)
     power = kwds.pop("power")
     assert_allclose(cls().power(alpha=alpha, **kwds), power, rtol=1e-5)
+
+
+def test_ttest_power_far_tail_not_nan():
+    # special.nctdtr can return nan far in the tails (scipy gh-25470);
+    # the power of an ordinary test must not become nan
+    pow_ = smp.TTestPower().power(0.3, 1000, 0.05)
+    assert np.isfinite(pow_)
+    assert_allclose(pow_, 1, atol=1e-10)
+    pow_ = smp.TTestIndPower().power(-0.5, 1237, 0.05, alternative="smaller")
+    assert_allclose(pow_, 1, atol=1e-10)
+
+
+@pytest.mark.parametrize("nobs1", [685, 1237, 1833])
+def test_solve_effect_size_smaller(nobs1):
+    # by symmetry the 'smaller' solution is minus the 'larger' solution
+    p = smp.TTestIndPower()
+    kwds = {"nobs1": nobs1, "alpha": 0.05, "power": 0.8}
+    es_larger = p.solve_power(alternative="larger", **kwds)
+    es_smaller = p.solve_power(alternative="smaller", **kwds)
+    assert_allclose(es_smaller, -es_larger, rtol=1e-5)
+
+
+def test_solve_power_rejects_jump_as_root():
+    # a power function that is nan on part of the bracket must not produce
+    # a "converged" root at the nan boundary
+    class NanPower(smp.TTestIndPower):
+        def power(
+            self, effect_size, nobs1, alpha, ratio=1, df=None, alternative="two-sided"
+        ):
+            if effect_size > 0.4:
+                return np.nan
+            return super().power(
+                effect_size, nobs1, alpha, ratio=ratio, df=df, alternative=alternative
+            )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        es = NanPower().solve_power(
+            nobs1=1237, alpha=0.05, power=0.8, alternative="smaller"
+        )
+    true = -smp.TTestIndPower().solve_power(
+        nobs1=1237, alpha=0.05, power=0.8, alternative="larger"
+    )
+    assert np.isnan(es) or abs(es - true) < 1e-5
+
+
+@pytest.mark.parametrize("x", [1.96, [-1.96, 1.96]])
+def test_nct_cdf_tail_fallback_scalar_and_array(x):
+    # Ordinary finite tail entries continue to agree with SciPy.
+    assert_allclose(
+        smp.nct_cdf(x, 999, 0.3 * np.sqrt(1000)),
+        stats.nct.cdf(x, 999, 0.3 * np.sqrt(1000)),
+        atol=1e-12,
+    )

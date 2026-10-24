@@ -48,11 +48,19 @@ _ALTERNATIVE_ALIASES = {"2s": "two-sided"}
 
 
 def nct_cdf(x, df, nc):
-    return special.nctdtr(df, nc, x)
+    res = special.nctdtr(df, nc, x)
+    # CDFLIB can return nan in one tail; use noncentral-t reflection
+    # for those entries without changing already finite CDF values.
+    if np.any(np.isnan(res)):
+        reflected = 1 - special.nctdtr(df, -np.asarray(nc), -np.asarray(x))
+        res = np.where(np.isnan(res), reflected, res)
+        if res.ndim == 0:
+            res = res[()]
+    return res
 
 
 def nct_sf(x, df, nc):
-    return 1 - special.nctdtr(df, nc, x)
+    return 1 - nct_cdf(x, df, nc)
 
 
 def ncf_cdf(x, dfn, dfd, nc):
@@ -599,11 +607,7 @@ class Power:
             "smaller",
         ):
             effect_size = kwds["effect_size"]
-            wrong_sign = (
-                effect_size < 0
-                if alternative == "larger"
-                else effect_size > 0
-            )
+            wrong_sign = effect_size < 0 if alternative == "larger" else effect_size > 0
             if wrong_sign and kwds["power"] >= kwds["alpha"]:
                 raise ValueError(
                     f"No solution exists for {key}: with alternative="
@@ -659,7 +663,7 @@ class Power:
             fit_res.append(None)
 
         success = None
-        if (not failed) and res.converged:
+        if (not failed) and res.converged and np.abs(func(val)) < 1e-4:
             success = 1
         else:
             # try backup
@@ -691,7 +695,10 @@ class Power:
                 val, r = optimize.brentq(
                     func, 1e-8, 1 - 1e-8, full_output=True
                 )  # scalar
-                success = 1 if r.converged else 0
+                # brentq also "converges" to a jump of func, e.g. to the
+                # boundary where power returns nan (mapped to inf above),
+                # so require that val actually solves the power equation
+                success = 1 if (r.converged and np.abs(func(val)) < 1e-4) else 0
                 fit_res.append(r)
             else:
                 success = 0
