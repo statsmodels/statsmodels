@@ -136,13 +136,15 @@ def tricube(h, Xi, x):
         The bandwidth used to estimate the value of the kernel function.
     Xi : float or ndarray
         The value of the training set.
-    x : float
-        The value at which the kernel density is being estimated.
+    x : float or ndarray
+        The value at which the kernel density is being estimated. If an
+        ndarray, it must be broadcastable with `Xi`.
 
     Returns
     -------
     kernel_value : float or ndarray
-        The value of the kernel function at each point in `Xi`.
+        The value of the kernel function at each point in `Xi`. A scalar if
+        `Xi` and `x` are both scalars, otherwise an ndarray.
 
     Notes
     -----
