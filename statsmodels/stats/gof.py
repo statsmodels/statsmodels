@@ -18,8 +18,6 @@ changes
 2013-02-25 : add chisquare_power, effectsize and "value"
 
 '''
-from statsmodels.compat.python import lrange
-
 from typing import NamedTuple
 
 import numpy as np
@@ -193,8 +191,8 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
     Parameters
     ----------
     distfn : distribution instance
-        Discrete distribution function to be tested; needs ``a``, ``b`` and
-        ``cdf`` attributes/methods.
+        Discrete distribution function to be tested; needs ``support``,
+        ``ppf`` and ``cdf`` methods.
     arg : sequence
         parameters of distribution
     rvs : array_like
@@ -225,50 +223,8 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
         test results
     """
 
-    # define parameters for test
-    #    n=2000
-
-    n = len(rvs)
-    nsupp = 20
-    wsupp = 1.0 / nsupp
-
-    #    distfn = getattr(stats, distname)
-    #    np.random.seed(9765456)
-    #    rvs = distfn.rvs(size=n,*arg)
-
-    # construct intervals with minimum mass 1/nsupp
-    # intervalls are left-half-open as in a cdf difference
-
-    distsupport = lrange(max(distfn.a, -1000), min(distfn.b, 1000) + 1)
-    last = 0
-    distsupp = [max(distfn.a, -1000)]
-    distmass = []
-    for ii in distsupport:
-        current = distfn.cdf(ii, *arg)
-        if current - last >= wsupp - 1e-14:
-            distsupp.append(ii)
-            distmass.append(current - last)
-            last = current
-            if current > (1 - wsupp):
-                break
-    if distsupp[-1] < distfn.b:
-        distsupp.append(distfn.b)
-        distmass.append(1 - last)
-    distsupp = np.array(distsupp)
-    distmass = np.array(distmass)
-
-    # convert intervals to right-half-open as required by histogram
-
-    histsupp = distsupp + 1e-8
-    histsupp[0] = distfn.a
-
-    # find sample frequencies and perform chisquare test
-    # TODO: move to compatibility.py
-
-    freq, hsupp = np.histogram(rvs, histsupp)
-    # cdfs = distfn.cdf(distsupp,*arg)
-
-    (chis, pval) = stats.chisquare(np.array(freq), n * distmass)
+    freq, expfreq, _ = gof_binning_discrete(rvs, distfn, arg)
+    chis, pval = stats.chisquare(freq, expfreq)
 
     return (
         chis,
@@ -276,9 +232,6 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
         (pval > alpha),
         f"chisquare - test for {msg} at arg = {arg!s} with pval = {pval!s}",
     )
-
-
-# copy/paste, remove code duplication when it works
 
 
 def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
@@ -290,8 +243,8 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     rvs : array_like
         sample data
     distfn : distribution instance
-        Discrete distribution function to be tested; needs ``a``, ``b`` and
-        ``cdf`` attributes/methods.
+        Discrete distribution function to be tested; needs ``support``,
+        ``ppf`` and ``cdf`` methods.
     arg : sequence
         parameters of distribution
     nsupp : int, optional
@@ -335,29 +288,28 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
 #    np.random.seed(9765456)
 #    rvs = distfn.rvs(size=n,*arg)
 
-    # construct intervals with minimum mass 1/nsupp
-    # intervalls are left-half-open as in a cdf difference
-    distsupport = lrange(max(distfn.a, -1000), min(distfn.b, 1000) + 1)
+    # Construct intervals with minimum mass 1/nsupp, apart from the tail.
+    # Use quantiles rather than scanning a fixed range of integers.
+    lower, upper = distfn.support(*arg)
     last = 0
-    distsupp = [max(distfn.a, -1000)]
+    distsupp = [lower]
     distmass = []
-    for ii in distsupport:
+    while last < 1 - wsupp:
+        # Retain the tolerance used for comparing the bin mass to 1/nsupp.
+        ii = distfn.ppf(last + wsupp - 1e-14, *arg)
         current = distfn.cdf(ii, *arg)
-        if current - last >= wsupp-1e-14:
-            distsupp.append(ii)
-            distmass.append(current - last)
-            last = current
-            if current > (1-wsupp):
-                break
-    if distsupp[-1] < distfn.b:
-        distsupp.append(distfn.b)
+        distsupp.append(ii)
+        distmass.append(current - last)
+        last = current
+    if distsupp[-1] < upper:
+        distsupp.append(upper)
         distmass.append(1-last)
     distsupp = np.array(distsupp)
     distmass = np.array(distmass)
 
     # convert intervals to right-half-open as required by histogram
     histsupp = distsupp+1e-8
-    histsupp[0] = distfn.a
+    histsupp[0] = lower
 
     # find sample frequencies and perform chisquare test
     freq, hsupp = np.histogram(rvs, histsupp)
