@@ -252,10 +252,12 @@ Time series analysis
 - ``range_unit_root_test`` documents the correct null hypothesis, a unit
   root, which is rejected for small statistics. The ``InterpolationWarning``
   reports the correct direction: it is raised if the statistic is outside the
-  range of the tabulated critical values. :issue:`8978`, :pr:`10475`
+  range of the tabulated critical values, which is 1% to 95%; it was also
+  raised for statistics between the 90% and 95% critical values.
+  :issue:`8978`, :pr:`10475`, :pr:`10568`
 - :meth:`~statsmodels.tsa.arima_process.ArmaProcess.arma2ma` and ``arma2ar``
   raised an ``AttributeError`` if ``lags`` is not given. They default to
-  ``nobs`` coefficients. :issue:`4464`, :pr:`10466`
+  ``nobs`` coefficients. :issue:`4464`, :pr:`10466`, :pr:`10569`
 - ``acorr_ljungbox`` with ``auto_lag=True`` selected the wrong lag. The
   threshold used the lag-0 autocorrelation, which is always 1, so that the
   penalized criterion was never used, and the index of the maximum was
@@ -438,9 +440,10 @@ Robust and multivariate statistics
   Values outside (0, 0.5] now raise a ``ValueError``, and small values in
   higher dimension no longer fail. :pr:`10468`, :pr:`10564`
 - ``CovDetMCD`` raises a ``ValueError`` if the covariance of the selected
-  subset is singular, for example if at least ``h`` observations lie on a
-  hyperplane. Before, the fit returned a result with a singular covariance.
-  :issue:`10437`, :pr:`10464`
+  subset is numerically singular, for example if at least ``h`` observations
+  lie on a hyperplane, or if ``h`` is not larger than the number of variables.
+  Before, the fit returned a result with a singular covariance.
+  :issue:`10437`, :pr:`10464`, :pr:`10570`
 - The Ledoit-Wolf starting estimate of the deterministic estimators omitted
   the shrinkage target, and divided by zero for a single variable.
   :issue:`10368`, :pr:`10378`, :pr:`10452`
