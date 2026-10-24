@@ -28,8 +28,9 @@ leverage = influence.hat_matrix_diag
 cooks_distance = influence.cooks_distance
 ```
 
-`cooks_distance` is a pair containing distances and associated reference
-quantities. `influence.summary_frame()` provides a tabular summary for OLS
+`cooks_distance` is a pair `(distance, p-value)`: the Cook's distances and
+the p-values from an F reference distribution for each distance.
+`influence.summary_frame()` provides a tabular summary for OLS
 influence measures. Other result classes can expose different influence APIs;
 check the fitted result class rather than assuming OLS methods transfer.
 
@@ -57,24 +58,47 @@ bp_lm, bp_lm_pvalue, bp_f, bp_f_pvalue = het_breuschpagan(
 white_lm, white_lm_pvalue, white_f, white_f_pvalue = het_white(
     results.resid, results.model.exog
 )
-ljung_box = acorr_ljungbox(results.resid, lags=[1, 4], return_df=True)
+ljung_box = acorr_ljungbox(results.resid, lags=[1, 4])
 ```
 
 `durbin_watson` returns a statistic; `het_breuschpagan` and `het_white`
-return tuples of statistics and p-values; `acorr_ljungbox` returns a
-DataFrame with columns such as `lb_stat` and `lb_pvalue` by default. These
-tests depend on the supplied residuals, regressors, lag choices, and
+return tuples of statistics and p-values; `acorr_ljungbox` always returns a
+DataFrame with columns `lb_stat` and `lb_pvalue`. `het_breuschpagan` and
+`het_white` use the supplied regressors in an auxiliary regression and assume
+that they include a constant, as `results.model.exog` does when the model has
+one. `durbin_watson` and `acorr_ljungbox` are only meaningful when the
+observations are in time order. If the residuals come from a model that
+includes lagged dependent variables or estimated ARMA terms, set `model_df` in
+`acorr_ljungbox` to the number of estimated parameters that use up degrees of
+freedom. These tests depend on the supplied residuals, regressors, lag choices, and
 assumptions. A significant result is a prompt to investigate, not a complete
 diagnosis; a nonsignificant result does not prove the assumption.
 
 Several diagnostic functions can return named result objects when requested.
-For example, `acorr_lm`, `het_arch`, and `acorr_breusch_godfrey` accept
-`result_object=True` and return an `LMTestResult` with fields `lm`, `lmpval`,
-`fval`, `fpval`, and `res_store`. `het_goldfeldquandt` can return a
+`acorr_lm`, `het_arch`, `acorr_breusch_godfrey`, and `het_goldfeldquandt` still
+return a plain tuple by default and emit a `FutureWarning` when
+`result_object` is not given, so pass `result_object=True` explicitly:
+
+```python
+from statsmodels.stats.diagnostic import (
+    acorr_breusch_godfrey,
+    het_arch,
+    het_goldfeldquandt,
+)
+
+bg = acorr_breusch_godfrey(results, nlags=2, result_object=True)
+arch = het_arch(results.resid, result_object=True)
+gq = het_goldfeldquandt(
+    results.model.endog, results.model.exog, result_object=True
+)
+```
+
+`acorr_lm`, `het_arch`, and `acorr_breusch_godfrey` then return an
+`LMTestResult` with fields `lm`, `lmpval`, `fval`, `fpval`, and `res_store`
+(for example `bg.lmpval`). `het_goldfeldquandt` returns a
 `GoldfeldQuandtResult` with fields `fval`, `pval`, `ordering`, and `res_store`.
-Use these named fields when available rather than depending on positional
-tuple conventions, and check each function's current docstring for its default
-return mode.
+Use these named fields rather than positional tuple conventions, and check each
+function's current docstring for its default return mode.
 
 Variance inflation factor is computed one design column at a time:
 
@@ -108,9 +132,12 @@ ols_hac = sm.OLS(y, X).fit(
 
 ```python
 glm_robust = sm.GLM(y, X, family=sm.families.Poisson()).fit(
-    cov_type="HC3", cov_kwds={}, use_t=False
+    cov_type="HC0", cov_kwds={}, use_t=False
 )
 ```
+
+For GLM, `HC1` through `HC3` are not implemented and fall back to `HC0` with a
+`SpecificationWarning`, so request `HC0` explicitly.
 
 The available covariance types and keywords vary by result/model class.
 Check that class's `fit` documentation before using cluster, HAC, panel, or
