@@ -22,7 +22,7 @@ are available:
 Release Statistics
 ------------------
 
-- **Pull requests merged**: 255
+- **Pull requests merged**: 259
 - **Time span**: 2026-08-27 through 2026-10-24
 
 Breaking Changes and Deprecations
@@ -249,6 +249,13 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
+- ``range_unit_root_test`` documents the correct null hypothesis, a unit
+  root, which is rejected for small statistics. The ``InterpolationWarning``
+  reports the correct direction: it is raised if the statistic is outside the
+  range of the tabulated critical values. :issue:`8978`, :pr:`10475`
+- :meth:`~statsmodels.tsa.arima_process.ArmaProcess.arma2ma` and ``arma2ar``
+  raised an ``AttributeError`` if ``lags`` is not given. They default to
+  ``nobs`` coefficients. :issue:`4464`, :pr:`10466`
 - ``acorr_ljungbox`` with ``auto_lag=True`` selected the wrong lag. The
   threshold used the lag-0 autocorrelation, which is always 1, so that the
   penalized criterion was never used, and the index of the maximum was
@@ -430,6 +437,10 @@ Robust and multivariate statistics
   always used 0.5 for the tuning constant of the first-stage S-estimator.
   Values outside (0, 0.5] now raise a ``ValueError``, and small values in
   higher dimension no longer fail. :pr:`10468`, :pr:`10564`
+- ``CovDetMCD`` raises a ``ValueError`` if the covariance of the selected
+  subset is singular, for example if at least ``h`` observations lie on a
+  hyperplane. Before, the fit returned a result with a singular covariance.
+  :issue:`10437`, :pr:`10464`
 - The Ledoit-Wolf starting estimate of the deterministic estimators omitted
   the shrinkage target, and divided by zero for a single variable.
   :issue:`10368`, :pr:`10378`, :pr:`10452`
