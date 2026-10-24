@@ -2000,6 +2000,32 @@ class PowerRatioResult(PowerResult):
     std_null: float
 
 
+def _check_null_ratio(value):
+    """
+    Check the rate ratio under the null of the power functions for ratios
+
+    Parameters
+    ----------
+    value : float or array_like
+        Rate ratio, rate1 / rate2, under the null hypothesis.
+
+    Returns
+    -------
+    ndarray
+        The rate ratio as an array of float.
+
+    Raises
+    ------
+    ValueError
+        If any element of ``value`` is not positive and finite. The power is
+        based on the log of the rate ratio.
+    """
+    value_arr = np.asarray(value, dtype=float)
+    if not np.all((value_arr > 0) & np.isfinite(value_arr)):
+        raise ValueError(f"value must be positive and finite, got {value}")
+    return value_arr
+
+
 def power_poisson_ratio_2indep(
     rate1,
     rate2,
@@ -2034,15 +2060,17 @@ def power_poisson_ratio_2indep(
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    value : float, optional
+    value : float or array_like, optional
         Rate ratio, rate1 / rate2, under the null hypothesis. The default of
         1 is the null hypothesis that both rates are equal. The value must be
-        positive because the test is based on the log of the rate ratio.
+        positive and finite because the test is based on the log of the rate
+        ratio.
 
         .. versionchanged:: 0.15.1
 
             The default was changed from 0 to 1. A rate ratio of 0 made
-            the power 0, 1 or nan with a divide by zero warning.
+            the power 0, 1 or nan with a divide by zero warning. Values that
+            are not positive and finite now raise a ``ValueError``.
     alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
@@ -2074,8 +2102,9 @@ def power_poisson_ratio_2indep(
     Raises
     ------
     ValueError
-        If ``nobs1`` or ``value`` is not positive, ``alpha`` is not in the
-        interval (0, 1), or ``dispersion`` is negative.
+        If ``nobs1`` is not positive, ``value`` is not positive and finite,
+        ``alpha`` is not in the interval (0, 1), or ``dispersion`` is
+        negative.
 
     References
     ----------
@@ -2096,8 +2125,7 @@ def power_poisson_ratio_2indep(
         raise ValueError(
             f"dispersion must be non-negative, got {dispersion}"
         )
-    if not np.all(np.greater(value, 0)):
-        raise ValueError(f"value must be positive, got {value}")
+    value = _check_null_ratio(value)
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2728,8 +2756,16 @@ def power_negbin_ratio_2indep(
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    value : float, optional
-        Rate ratio, rate1 / rate2, under the null hypothesis.
+    value : float or array_like, optional
+        Rate ratio, rate1 / rate2, under the null hypothesis. The value must
+        be positive and finite because the test is based on the log of the
+        rate ratio.
+
+        .. versionchanged:: 0.16.0
+
+            Values that are not positive and finite now raise a
+            ``ValueError``. A rate ratio of 0 previously gave a divide by zero
+            warning and a power of 1 or ``nan``.
     alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
@@ -2760,6 +2796,13 @@ def power_negbin_ratio_2indep(
         ``assert_allclose``), while also exposing `std_null`, `std_alt`
         and other attributes.
 
+    Raises
+    ------
+    ValueError
+        If ``nobs1`` is not positive, ``value`` is not positive and finite,
+        ``alpha`` is not in the interval (0, 1), or ``dispersion`` is
+        negative.
+
     References
     ----------
     .. [1] Zhu, Haiyuan. 2017. “Sample Size Calculation for Comparing Two
@@ -2779,6 +2822,7 @@ def power_negbin_ratio_2indep(
         raise ValueError(
             f"dispersion must be non-negative, got {dispersion}"
         )
+    value = _check_null_ratio(value)
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 

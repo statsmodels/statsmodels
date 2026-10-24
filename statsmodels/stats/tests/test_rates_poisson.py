@@ -1,8 +1,6 @@
 # we cannot import test_poisson_2indep directly, pytest treats that as test
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
-import warnings
-
 import numpy as np
 from numpy import arange
 from numpy.testing import assert_allclose, assert_equal
@@ -1915,16 +1913,15 @@ def test_power_poisson_ratio_2indep_default_value():
     assert_allclose(res.power, expected, rtol=1e-12)
 
 
+# the old default of 0 raised a divide by zero warning in log(value)
+@pytest.mark.filterwarnings("error:divide by zero:RuntimeWarning")
 @pytest.mark.parametrize("alternative", ["smaller", "larger", "two-sided"])
 @pytest.mark.parametrize("method_var", ["alt", "score"])
 def test_power_poisson_ratio_2indep_default_value_alternatives(
     alternative, method_var
 ):
     kwds = {"alternative": alternative, "method_var": method_var}
-    with warnings.catch_warnings():
-        # the old default of 0 raised a divide by zero warning in log(value)
-        warnings.simplefilter("error")
-        power = power_poisson_ratio_2indep(1.0, 2.0, 10, **kwds).power
+    power = power_poisson_ratio_2indep(1.0, 2.0, 10, **kwds).power
     assert 0 < power < 1
     explicit = power_poisson_ratio_2indep(1.0, 2.0, 10, value=1, **kwds).power
     assert_allclose(power, explicit, rtol=1e-12)
@@ -1933,7 +1930,27 @@ def test_power_poisson_ratio_2indep_default_value_alternatives(
     assert_allclose(size, 0.05, rtol=1e-10)
 
 
-@pytest.mark.parametrize("value", [0, -1, np.nan])
-def test_power_poisson_ratio_2indep_value_invalid(value):
-    with pytest.raises(ValueError, match="value must be positive"):
-        power_poisson_ratio_2indep(1.0, 2.0, 10, value=value)
+@pytest.mark.parametrize("value", [0, -1, np.inf, -np.inf, np.nan, [1.0, 0.0]])
+@pytest.mark.parametrize("method_var", ["alt", "score"])
+@pytest.mark.parametrize(
+    "func",
+    [power_poisson_ratio_2indep, power_negbin_ratio_2indep],
+)
+def test_power_ratio_2indep_value_invalid(func, method_var, value):
+    # the power is based on log(value), which must be positive and finite
+    with pytest.raises(ValueError, match="value must be positive and finite"):
+        func(1.0, 2.0, 10, value=value, method_var=method_var)
+
+
+@pytest.mark.parametrize("method_var", ["alt", "score"])
+@pytest.mark.parametrize(
+    "func",
+    [power_poisson_ratio_2indep, power_negbin_ratio_2indep],
+)
+def test_power_ratio_2indep_value_array_like(func, method_var):
+    values = [0.8, 1.0, 1.5]
+    kwds = {"method_var": method_var, "return_results": False}
+    expected = [func(1.0, 2.0, 10, value=v, **kwds) for v in values]
+    for value in [values, np.array(values), pd.Series(values)]:
+        power = func(1.0, 2.0, 10, value=value, **kwds)
+        assert_allclose(power, expected, rtol=1e-12)
