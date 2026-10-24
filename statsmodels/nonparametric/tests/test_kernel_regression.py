@@ -670,21 +670,25 @@ class TestKernelReg(KernelRegressionTestBase):
                 bw="cv_ls",
                 ckertype="tricube",
             )
+        # R's np package has no tricube kernel, so these are statsmodels
+        # results. Updated in GH#10541, when the kernel stopped returning its
+        # peak value outside [-1, 1]; the means agree with a direct local
+        # linear WLS fit with product tricube weights at this bandwidth
         # Bandwidth
         sm_bw = model.bw
-        R_bw = [0.581663, 0.5652]
+        res_bw = [1.095908, 1.112216]
         # Conditional Mean
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         sm_mfx = sm_mfx[0:5]
-        R_mean = [30.926714, 36.994604, 44.438358, 40.680598, 35.961593]
+        res_mean = [31.237709, 37.283983, 43.742738, 40.854785, 36.581391]
         # R-Squared
         sm_R2 = model.r_squared()
-        R_R2 = 0.934825
+        res_R2 = 0.949078
 
-        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
-        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
-        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        npt.assert_allclose(sm_bw, res_bw, atol=1e-2)
+        npt.assert_allclose(sm_mean, res_mean, atol=1e-2)
+        npt.assert_allclose(sm_R2, res_R2, atol=1e-2)
 
     def test_censored_user_specified_kernel(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
@@ -697,21 +701,22 @@ class TestKernelReg(KernelRegressionTestBase):
                 censor_val=0,
                 ckertype="tricube",
             )
+        # statsmodels results, see test_user_specified_kernel (GH#10541)
         # Bandwidth
         sm_bw = model.bw
-        R_bw = [0.581663, 0.5652]
+        res_bw = [1.095908, 1.112216]
         # Conditional Mean
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         sm_mfx = sm_mfx[0:5]
-        R_mean = [29.205526, 29.538008, 31.667581, 31.978866, 30.926714]
+        res_mean = [28.982763, 29.242381, 30.927732, 31.341278, 31.237709]
         # R-Squared
         sm_R2 = model.r_squared()
-        R_R2 = 0.934825
+        res_R2 = 0.949078
 
-        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
-        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
-        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        npt.assert_allclose(sm_bw, res_bw, atol=1e-2)
+        npt.assert_allclose(sm_mean, res_mean, atol=1e-2)
+        npt.assert_allclose(sm_R2, res_R2, atol=1e-2)
 
     def test_efficient_user_specificed_bw(self):
 
