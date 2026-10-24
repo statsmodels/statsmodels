@@ -25,6 +25,55 @@ def _cabs(x):
     return sign * x
 
 
+def _check_positive(c, name):
+    """
+    Check that a tuning constant is positive
+
+    Array valued tuning constants are allowed, so every element is checked.
+    The `not c > 0` form also rejects a ``nan``, which would otherwise
+    propagate into all the results of the norm.
+
+    Parameters
+    ----------
+    c : float or array_like
+        The tuning constant to check.
+    name : str
+        Name of the constant, used in the error message.
+
+    Returns
+    -------
+    None
+    """
+    if np.any(~(np.asarray(c) > 0)):
+        raise ValueError(f"{name} must be positive, got {c}")
+
+
+def _check_positive_ordered(a, b, c):
+    """
+    Check the ordering of the three tuning constants of `Hampel`
+
+    Ties are allowed, and every constant has to be positive. The `not <`
+    form also rejects a ``nan``.
+
+    Parameters
+    ----------
+    a, b, c : float or array_like
+        The tuning constants of :class:`Hampel`.
+
+    Returns
+    -------
+    None
+    """
+    ok = np.all(np.asarray(a) > 0)
+    ok = ok and np.all(np.asarray(a) <= np.asarray(b))
+    ok = ok and np.all(np.asarray(b) <= np.asarray(c))
+    if not ok:
+        raise ValueError(
+            f"tuning constants must satisfy 0 < a <= b <= c, "
+            f"got a={a}, b={b}, c={c}"
+        )
+
+
 class RobustNorm:
     """
     The parent class for the norms used for robust regression
@@ -283,6 +332,7 @@ class HuberT(RobustNorm):
     redescending = "not"
 
     def __init__(self, t=1.345):
+        _check_positive(t, "t")
         self.t = t
 
     def _set_tuning_param(self, c, inplace=False):
@@ -611,6 +661,7 @@ class AndrewWave(RobustNorm):
     redescending = "hard"
 
     def __init__(self, a=1.339):
+        _check_positive(a, "a")
         self.a = a
 
     def _set_tuning_param(self, c, inplace=False):
@@ -971,6 +1022,7 @@ class Hampel(RobustNorm):
     redescending = "hard"
 
     def __init__(self, a=2., b=4., c=8.):
+        _check_positive_ordered(a, b, c)
         self.a = a
         self.b = b
         self.c = c
@@ -1222,6 +1274,7 @@ class TukeyBiweight(RobustNorm):
     redescending = "hard"
 
     def __init__(self, c=4.685):
+        _check_positive(c, "c")
         self.c = c
 
     def __repr__(self):
