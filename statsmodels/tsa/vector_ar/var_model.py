@@ -508,6 +508,141 @@ def test_normality(results, signif=0.05):
     )
 
 
+def _var_order_ics(endog, exog, maxlags, trend, p_min):
+    """
+    Information criteria of all VAR lag orders from a single QR decomposition
+
+    Parameters
+    ----------
+    endog : ndarray
+        The endogenous variables, of shape (n_totobs, neqs).
+    exog : ndarray or None
+        The exogenous variables, of shape (n_totobs, k_exog_user).
+    maxlags : int
+        The largest lag order considered.
+    trend : {"n", "c", "ct", "ctt"}
+        The deterministic terms.
+    p_min : int
+        The smallest lag order considered.
+
+    Returns
+    -------
+    dict[str, ndarray] or None
+        The arrays of "aic", "bic", "hqic" and "fpe" for lag orders
+        ``p_min, ..., maxlags``. None if the regressors are close to singular,
+        a lag column is constant, a residual covariance is close to singular,
+        or any value is not finite. ``VAR.select_order`` then estimates each
+        lag order separately.
+
+    Notes
+    -----
+    Gives the same result as estimating ``VAR(p)`` for each ``p`` on the
+    sample used by the largest model, which is what ``VAR.select_order``
+    does. The regressors of order ``p`` are the first
+    ``c_p = k_det + neqs * p`` columns of ``Z = [trend, exog, lag 1, ...,
+    lag maxlags]``. The time trend of a smaller order is shifted, which does
+    not change the space spanned with the constant. If ``[Z, Y] = QR`` with
+    ``Z`` of shape ``(nobs, k)``, the residual cross product of order ``p``
+    is ``R[c_p:, k:].T @ R[c_p:, k:]`` and ``sigma_u_mle`` is this divided
+    by ``nobs``, so one factorization gives the criteria of all lag orders.
+    The rows are processed in blocks, and the triangular factor is updated
+    block by block so the full lagged regressor matrix is never formed.
+    """
+    endog = np.asarray(endog, dtype=float)
+    n_totobs, neqs = endog.shape
+    nobs = n_totobs - maxlags
+    k_trend = util.get_trendorder(trend)
+    if exog is not None:
+        exog = np.asarray(exog, dtype=float)
+    k_exog_user = 0 if exog is None else exog.shape[1]
+    k_det = k_trend + k_exog_user
+    k = k_det + neqs * maxlags
+    # The residual covariance of the largest model is singular unless it has
+    # at least neqs residual degrees of freedom
+    if k == 0 or nobs < k + neqs:
+        return None
+
+    if "c" in trend and maxlags:
+        # add_trend refuses to add a constant to a constant lag column. All
+        # lag columns of a variable contain endog[maxlags - 1 : nobs], so
+        # none of them is constant if this part is not.
+        if np.any(np.ptp(endog[maxlags - 1 : nobs], axis=0) == 0):
+            return None
+
+    # Blocks of about 1MB keep the data in cache
+    ncols = k + neqs
+    block_rows = max(4 * ncols, 2**17 // ncols)
+    r = np.empty((0, ncols))
+    for start in range(0, nobs, block_rows):
+        stop = min(start + block_rows, nobs)
+        block = np.empty((r.shape[0] + stop - start, ncols))
+        block[: r.shape[0]] = r
+        rows = block[r.shape[0] :]
+        if k_trend:
+            # Same deterministic terms as VAR(maxlags), see _estimate_var
+            trend_vals = np.arange(maxlags + start + 1, maxlags + stop + 1, dtype=float)
+            for power in range(k_trend):
+                rows[:, power] = trend_vals**power
+        if k_exog_user:
+            rows[:, k_trend:k_det] = exog[maxlags + start : maxlags + stop]
+        for lag in range(1, maxlags + 1):
+            col = k_det + neqs * (lag - 1)
+            first = maxlags - lag + start
+            rows[:, col : col + neqs] = endog[first : first + stop - start]
+        rows[:, k:] = endog[maxlags + start : maxlags + stop]
+        r = np.linalg.qr(block, mode="r")
+
+    if not np.all(np.isfinite(r)):
+        return None
+    # lstsq treats singular values below 1e-15 times the largest one as zero.
+    # The regressors of every lag order are a subset of the columns of Z,
+    # which has a smallest singular value at most as large, and a largest one
+    # at least as large, so if this check passes lstsq finds every lag order
+    # to have full rank. The time trend of a smaller order is shifted by at
+    # most maxlags, which barely changes the singular values. The factor
+    # 10 * k is a margin for this and for rounding.
+    sv = np.linalg.svd(r[:k, :k], compute_uv=False)
+    if sv[-1] <= 10 * k * np.finfo(float).eps * sv[0]:
+        return None
+    r_resid = r[k:, k:]
+    # |r_resid[i, i]| is the residual norm of equation i in the largest model
+    # after also partialling out the preceding equations. A tiny value means
+    # an (almost) perfect fit or (almost) collinear residuals, and the
+    # residual covariance is dominated by rounding.
+    ynorm = np.sqrt(np.sum(r[:, k:] ** 2, 0))
+    if not np.all(np.abs(np.diag(r_resid)) > 1e-5 * ynorm):
+        return None
+
+    # Residual cross products, sse[p] for p = 0, ..., maxlags
+    qy = r[k_det:k, k:].reshape(maxlags, neqs, neqs)
+    lag_sse = np.einsum("lij,lik->ljk", qy, qy)
+    sse = np.empty((maxlags + 1, neqs, neqs))
+    sse[maxlags] = r_resid.T @ r_resid
+    if maxlags:
+        sse[:maxlags] = sse[maxlags] + np.cumsum(lag_sse[::-1], axis=0)[::-1]
+    sse = sse[p_min:]
+    try:
+        chol = np.linalg.cholesky(sse / nobs)
+    except np.linalg.LinAlgError:
+        return None
+    ld = 2 * np.sum(np.log(np.diagonal(chol, axis1=1, axis2=2)), axis=1)
+
+    # Same expressions as VARResults.info_criteria, Lütkepohl pp. 146-150
+    lag_order = np.arange(p_min, maxlags + 1)
+    free_params = lag_order * neqs**2 + neqs * k_det
+    df_model = neqs * lag_order + k_det
+    df_resid = nobs - df_model
+    ics = {
+        "aic": ld + (2.0 / nobs) * free_params,
+        "bic": ld + (np.log(nobs) / nobs) * free_params,
+        "hqic": ld + (2.0 * np.log(np.log(nobs)) / nobs) * free_params,
+        "fpe": ((nobs + df_model) / df_resid) ** neqs * np.exp(ld),
+    }
+    if not all(np.all(np.isfinite(v)) for v in ics.values()):
+        return None
+    return ics
+
+
 class LagOrderResults:
     """
     Results class for choosing a model's lag order
@@ -893,13 +1028,21 @@ class VAR(TimeSeriesModel):
 
         ics = defaultdict(list)
         p_min = 0 if self.exog is not None or trend != "n" else 1
-        for p in range(p_min, maxlags + 1):
-            # exclude some periods to same amount of data used for each lag
-            # order
-            result = self._estimate_var(p, offset=maxlags - p, trend=trend)
+        fast_ics = None
+        if trend in ("n", "c", "ct", "ctt"):
+            fast_ics = _var_order_ics(self.endog, self.exog, maxlags, trend, p_min)
+        if fast_ics is not None:
+            self.k_trend = util.get_trendorder(trend)
+            for k, v in fast_ics.items():
+                ics[k].extend(v)
+        else:
+            for p in range(p_min, maxlags + 1):
+                # exclude some periods to same amount of data used for each
+                # lag order
+                result = self._estimate_var(p, offset=maxlags - p, trend=trend)
 
-            for k, v in result.info_criteria.items():
-                ics[k].append(v)
+                for k, v in result.info_criteria.items():
+                    ics[k].append(v)
 
         selected_orders = {k: np.array(v).argmin() + p_min for k, v in ics.items()}
 
