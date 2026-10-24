@@ -144,8 +144,11 @@ Notation:
   variance.  There is also a single estimated variance parameter
   :math:`\tau_j^2` for each variance component.  For a single group,
   the marginal covariance matrix of endog given exog is
-  :math:`scale*I + Z * cov_{re} * Z'`, where :math:`Z` is the design
-  matrix for the random effects in one group.
+  :math:`scale*I + Z * cov_{re} * Z' + \sum_j \tau_j^2 Q_j Q_j'`, where
+  :math:`Z` is the design matrix for the random effects and :math:`Q_j`
+  is the design matrix for the :math:`j^\rm{th}` variance component in
+  one group.  The last term is absent if the model has no variance
+  components.
 
 References
 ^^^^^^^^^^
