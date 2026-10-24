@@ -15,7 +15,7 @@ import pytest
 
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import GLS, OLS, WLS
 from statsmodels.stats.outliers_influence import (
     GLMInfluence,
     MLEInfluence,
@@ -555,3 +555,88 @@ def test_olsinfluence_looo_loop_matches_closed_form():
     )
     assert_allclose(infl_loop.dfbetas, infl_closed.dfbetas, rtol=1e-10)
     assert_allclose(infl_loop.cov_ratio, infl_closed.cov_ratio, rtol=1e-10)
+
+
+@pytest.mark.parametrize("model_type", ["WLS", "WLS subclass"])
+def test_olsinfluence_wls_matches_weighted_looo(model_type):
+    # GH#9067: OLSInfluence on WLS results refit the leave-one-observation-out
+    # regressions without weights and used an unweighted hat matrix, so
+    # dfbeta, cooks_distance and the studentized residuals were wrong.
+    # Compare with explicit weighted leave-one-observation-out regressions.
+    # The WLS subclass takes the regression loop instead of the closed form.
+    from statsmodels.stats.outliers_influence import OLSInfluence
+
+    class LoopWLS(WLS):
+        pass
+
+    model_class = WLS if model_type == "WLS" else LoopWLS
+    rng = np.random.default_rng(9067)
+    n, k_vars = 50, 3
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    exog[:2, 2] *= 10  # a few high leverage observations
+    weights = rng.uniform(0.2, 5, n)
+    endog = exog @ [1.0, 2.0, -1.0] + rng.standard_normal(n) / np.sqrt(weights)
+    res = model_class(endog, exog, weights=weights).fit()
+    infl = OLSInfluence(res)
+
+    params = np.empty(exog.shape)
+    mse_resid = np.empty(n)
+    det_cov_params = np.empty(n)
+    for i in range(n):
+        mask = np.arange(n) != i
+        res_i = WLS(endog[mask], exog[mask], weights=weights[mask]).fit()
+        params[i] = res_i.params
+        mse_resid[i] = res_i.mse_resid
+        det_cov_params[i] = np.linalg.det(res_i.cov_params())
+
+    sqrt_w = np.sqrt(weights)
+    wexog = exog * sqrt_w[:, None]
+    xtwx_inv = np.linalg.inv(wexog.T @ wexog)
+    hat = np.einsum("ij,jk,ik->i", wexog, xtwx_inv, wexog)
+    assert_allclose(infl.hat_matrix_diag, hat, rtol=1e-10)
+
+    assert_allclose(infl.params_not_obsi, params, rtol=1e-10, atol=1e-12)
+    assert_allclose(infl.sigma2_not_obsi, mse_resid, rtol=1e-10)
+    assert_allclose(infl.det_cov_params_not_obsi, det_cov_params, rtol=1e-10)
+    dfbeta = res.params - params
+    assert_allclose(infl.dfbeta, dfbeta, rtol=1e-10, atol=1e-12)
+    cov_ratio = det_cov_params / np.linalg.det(res.cov_params())
+    assert_allclose(infl.cov_ratio, cov_ratio, rtol=1e-10)
+
+    # Cook's distance from its definition with the weighted cross product
+    cooks = np.einsum("ij,jk,ik->i", dfbeta, np.linalg.inv(xtwx_inv), dfbeta)
+    cooks /= k_vars * res.mse_resid
+    assert_allclose(infl.cooks_distance[0], cooks, rtol=1e-10)
+
+    wresid = res.resid * sqrt_w
+    resid_int = wresid / np.sqrt(res.mse_resid * (1 - hat))
+    assert_allclose(infl.resid_studentized_internal, resid_int, rtol=1e-10)
+    resid_ext = wresid / np.sqrt(mse_resid * (1 - hat))
+    assert_allclose(infl.resid_studentized_external, resid_ext, rtol=1e-10)
+
+    # PRESS residuals stay on the scale of endog: the prediction error of
+    # the leave-one-observation-out fit.
+    resid_press = endog - np.einsum("ij,ij->i", exog, params)
+    assert_allclose(infl.resid_press, resid_press, rtol=1e-10)
+
+
+def test_olsinfluence_gls_without_sigma_matches_ols():
+    # Models other than OLS and WLS keep endog and exog unwhitened and take the
+    # regression loop. GLS without sigma is OLS, so all measures must agree.
+    from statsmodels.stats.outliers_influence import OLSInfluence
+
+    rng = np.random.default_rng(90670)
+    n = 30
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(n)
+    infl_gls = OLSInfluence(GLS(endog, exog).fit())
+    infl_ols = OLSInfluence(OLS(endog, exog).fit())
+
+    assert_allclose(infl_gls.hat_matrix_diag, infl_ols.hat_matrix_diag, rtol=1e-10)
+    assert_allclose(infl_gls.dfbeta, infl_ols.dfbeta, rtol=1e-10, atol=1e-12)
+    assert_allclose(
+        infl_gls.resid_studentized_external,
+        infl_ols.resid_studentized_external,
+        rtol=1e-10,
+    )
+    assert_allclose(infl_gls.cooks_distance[0], infl_ols.cooks_distance[0], rtol=1e-10)
