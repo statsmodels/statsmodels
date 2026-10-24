@@ -2006,7 +2006,7 @@ def power_poisson_ratio_2indep(
     nobs1,
     nobs_ratio=1,
     exposure=1,
-    value=0,
+    value=1,
     alpha=0.05,
     dispersion=1,
     alternative="smaller",
