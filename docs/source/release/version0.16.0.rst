@@ -37,3 +37,12 @@ Breaking Changes and Deprecations
   the function always returns a ``DataFrame``. Passing it now raises a
   ``FutureWarning``, and it will be removed in statsmodels 0.17.0.
   :issue:`8968`
+- The ``linear`` argument of ``predict`` in
+  :class:`~statsmodels.genmod.bayes_mixed_glm.BinomialBayesMixedGLM`,
+  :class:`~statsmodels.genmod.bayes_mixed_glm.PoissonBayesMixedGLM` and
+  :class:`~statsmodels.genmod.bayes_mixed_glm.BayesMixedGLMResults` is
+  deprecated in favor of ``which``, matching
+  :meth:`~statsmodels.genmod.generalized_linear_model.GLM.predict`. Use
+  ``which="linear"`` instead of ``linear=True`` and ``which="mean"`` instead
+  of ``linear=False``. Passing ``linear`` now raises a ``FutureWarning``, and
+  it will be removed in statsmodels 0.17.0. :issue:`8562`

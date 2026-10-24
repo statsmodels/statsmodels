@@ -2,6 +2,7 @@
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
+import pytest
 from scipy import sparse
 from scipy.optimize import approx_fprime
 
@@ -123,12 +124,12 @@ def test_simple_logit_map():
     )
 
     # Test the predict method
-    for linear in False, True:
+    for which in "mean", "linear":
         for exog in None, exog_fe:
-            pr1 = rslt.predict(linear=linear, exog=exog)
-            pr2 = glmm.predict(rslt.params, linear=linear, exog=exog)
+            pr1 = rslt.predict(which=which, exog=exog)
+            pr2 = glmm.predict(rslt.params, which=which, exog=exog)
             assert_allclose(pr1, pr2)
-            if not linear:
+            if which == "mean":
                 assert_equal(pr1.min() >= 0, True)
                 assert_equal(pr1.max() <= 1, True)
 
@@ -150,16 +151,16 @@ def test_simple_poisson_map():
     assert_allclose(rslt1.params, rslt2.params, atol=1e-4)
 
     # Test the predict method
-    for linear in False, True:
+    for which in "mean", "linear":
         for exog in None, exog_fe:
-            pr1 = rslt1.predict(linear=linear, exog=exog)
-            pr2 = rslt2.predict(linear=linear, exog=exog)
-            pr3 = glmm1.predict(rslt1.params, linear=linear, exog=exog)
-            pr4 = glmm2.predict(rslt2.params, linear=linear, exog=exog)
+            pr1 = rslt1.predict(which=which, exog=exog)
+            pr2 = rslt2.predict(which=which, exog=exog)
+            pr3 = glmm1.predict(rslt1.params, which=which, exog=exog)
+            pr4 = glmm2.predict(rslt2.params, which=which, exog=exog)
             assert_allclose(pr1, pr2, rtol=7e-5)
             assert_allclose(pr2, pr3, rtol=7e-5)
             assert_allclose(pr3, pr4, rtol=7e-5)
-            if not linear:
+            if which == "mean":
                 assert_equal(pr1.min() >= 0, True)
                 assert_equal(pr2.min() >= 0, True)
                 assert_equal(pr3.min() >= 0, True)
@@ -170,6 +171,44 @@ def test_simple_poisson_map():
         p = len(rslt.params)
         assert_equal(cp.shape, np.r_[p, p])
         np.linalg.cholesky(cp)
+
+
+@pytest.mark.parametrize("linear, which", [(False, "mean"), (True, "linear")])
+def test_predict_linear_deprecated(linear, which):
+    y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
+    glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
+    rslt = glmm.fit_map(rng=np.random.default_rng(327342))
+
+    expected = glmm.predict(rslt.params, which=which)
+    if which == "linear":
+        assert_allclose(expected, exog_fe @ rslt.params[: exog_fe.shape[1]])
+    else:
+        assert_allclose(
+            expected, 1 / (1 + np.exp(-exog_fe @ rslt.params[: exog_fe.shape[1]]))
+        )
+
+    with pytest.warns(FutureWarning, match="linear keyword is deprecated"):
+        pr1 = glmm.predict(rslt.params, linear=linear)
+    with pytest.warns(FutureWarning, match="linear keyword is deprecated"):
+        pr2 = glmm.predict(rslt.params, None, linear)
+    with pytest.warns(FutureWarning, match="linear keyword is deprecated"):
+        pr3 = rslt.predict(linear=linear)
+    with pytest.warns(FutureWarning, match="linear keyword is deprecated"):
+        pr4 = rslt.predict(None, linear)
+    for pr in pr1, pr2, pr3, pr4:
+        assert_allclose(pr, expected)
+
+
+def test_predict_which_invalid():
+    y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
+    glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
+    rslt = glmm.fit_map(rng=np.random.default_rng(0))
+
+    with pytest.raises(ValueError, match="which"):
+        rslt.predict(which="var_unscaled")
+    with pytest.raises(ValueError, match="cannot both be set"):
+        with pytest.warns(FutureWarning):
+            rslt.predict(linear=True, which="linear")
 
 
 def test_crossed_logit_map():

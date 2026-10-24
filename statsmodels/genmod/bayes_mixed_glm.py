@@ -60,6 +60,7 @@ from statsmodels.genmod import families
 from statsmodels.iolib import summary2
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.validation import string_like
 
 # Gauss-Legendre weights
 glw = [
@@ -187,6 +188,25 @@ _poisson_example = """
                     'y ~ year_cen', random, data)
     >>> result = model.fit_vb()
 """
+
+
+def _check_which(which, linear):
+    """
+    Validate ``which`` and translate the deprecated ``linear`` keyword.
+    """
+    which = string_like(which, "which", options=("mean", "linear"))
+    if linear is not None:
+        warnings.warn(
+            "The linear keyword is deprecated and will be removed in "
+            "statsmodels 0.17.0. Use which='linear' instead of linear=True "
+            "and which='mean' instead of linear=False.",
+            FutureWarning,
+            stacklevel=3,
+        )
+        if which != "mean":
+            raise ValueError("linear and which cannot both be set")
+        which = "linear" if linear else "mean"
+    return which
 
 
 class _BayesMixedGLM(base.Model):
@@ -540,7 +560,7 @@ class _BayesMixedGLM(base.Model):
 
         return BayesMixedGLMResults(self, params, cov, optim_retvals=r)
 
-    def predict(self, params, exog=None, linear=False):
+    def predict(self, params, exog=None, linear=None, which="mean"):
         """
         Return the fitted mean structure.
 
@@ -556,10 +576,25 @@ class _BayesMixedGLM(base.Model):
             If True, return the linear predictor without passing through the
             link function.
 
+            .. deprecated:: 0.16.0
+
+                Use ``which="linear"`` instead of ``linear=True`` and
+                ``which="mean"`` instead of ``linear=False``. ``linear`` will
+                be removed in statsmodels 0.17.0.
+        which : {"mean", "linear"}, optional
+            Statistic to predict. Default is "mean".
+
+            - "mean" returns the linear predictor transformed using the
+              link function.
+            - "linear" returns the linear predictor without passing through
+              the link function.
+
         Returns
         -------
-        A 1-dimensional array of predicted values
+        ndarray
+            A 1-dimensional array of predicted values.
         """
+        which = _check_which(which, linear)
 
         if exog is None:
             exog = self.exog
@@ -567,7 +602,7 @@ class _BayesMixedGLM(base.Model):
         q = exog.shape[1]
         pr = np.dot(exog, params[0:q])
 
-        if not linear:
+        if which == "mean":
             pr = self.family.link.inverse(pr)
 
         return pr
@@ -1060,7 +1095,7 @@ class BayesMixedGLMResults:
 
         return x
 
-    def predict(self, exog=None, linear=False):
+    def predict(self, exog=None, linear=None, which="mean"):
         """
         Return predicted values for the mean structure.
 
@@ -1073,12 +1108,27 @@ class BayesMixedGLMResults:
             If True, returns the linear predictor, otherwise
             transform the linear predictor using the link function.
 
+            .. deprecated:: 0.16.0
+
+                Use ``which="linear"`` instead of ``linear=True`` and
+                ``which="mean"`` instead of ``linear=False``. ``linear`` will
+                be removed in statsmodels 0.17.0.
+        which : {"mean", "linear"}, optional
+            Statistic to predict. Default is "mean".
+
+            - "mean" returns the linear predictor transformed using the
+              link function.
+            - "linear" returns the linear predictor without passing through
+              the link function.
+
         Returns
         -------
-        A one-dimensional array of fitted values.
+        ndarray
+            A one-dimensional array of fitted values.
         """
+        which = _check_which(which, linear)
 
-        return self.model.predict(self.params, exog, linear)
+        return self.model.predict(self.params, exog, which=which)
 
 
 class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
