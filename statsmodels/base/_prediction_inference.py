@@ -477,7 +477,15 @@ def get_prediction_glm(
     Parameters
     ----------
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If None, then the
+        model's exog together with the offset and exposure stored in
+        the model are used, as in ``predict``. If exog is given, then
+        the stored offset and exposure are not used unless they are
+        passed explicitly.
+
+        .. versionchanged:: 0.15.1
+
+           Without exog, the stored offset and exposure are now used.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit
@@ -561,7 +569,15 @@ def get_prediction_linear(
     Parameters
     ----------
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If None, then the
+        model's exog together with the offset and exposure stored in
+        the model are used, as in ``predict``. If exog is given, then
+        the stored offset and exposure are not used unless they are
+        passed explicitly.
+
+        .. versionchanged:: 0.15.1
+
+           Without exog, the stored offset and exposure are now used.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit
@@ -638,7 +654,15 @@ def get_prediction_monotonic(
     Parameters
     ----------
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If None, then the
+        model's exog together with the offset and exposure stored in
+        the model are used, as in ``predict``. If exog is given, then
+        the stored offset and exposure are not used unless they are
+        passed explicitly.
+
+        .. versionchanged:: 0.15.1
+
+           Without exog, the stored offset and exposure are now used.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit
@@ -729,7 +753,15 @@ def get_prediction_delta(
     Parameters
     ----------
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If None, then the
+        model's exog together with the offset and exposure stored in
+        the model are used, as in ``predict``. If exog is given, then
+        the stored offset and exposure are not used unless they are
+        passed explicitly.
+
+        .. versionchanged:: 0.15.1
+
+           Without exog, the stored offset and exposure are now used.
     which : str, optional
         The statistic that is prediction. Which statistics are available
         depends on the model.predict method.
@@ -809,7 +841,15 @@ def get_prediction(
     Parameters
     ----------
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If None, then the
+        model's exog together with the offset and exposure stored in
+        the model are used, as in ``predict``. If exog is given, then
+        the stored offset and exposure are not used unless they are
+        passed explicitly.
+
+        .. versionchanged:: 0.15.1
+
+           Without exog, the stored offset and exposure are now used.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit
