@@ -1707,10 +1707,23 @@ def confint_proportions_2indep(
             upp = np.exp(np.log(ratio_) + d_log)
 
         elif method == "score":
-            res = _confint_riskratio_koopman(
-                count1, nobs1, count2, nobs2, alpha=alpha, correction=correction
-            )
-            low, upp = res.confint
+            if (count1 == nobs1) != (count2 == nobs2):
+                # The closed form of Koopman/Nam picks the wrong roots of the
+                # cubic, or complex ones, if one count is equal to nobs.
+                low, upp = _score_confint_inversion(
+                    count1,
+                    nobs1,
+                    count2,
+                    nobs2,
+                    compare="ratio",
+                    alpha=alpha,
+                    correction=correction,
+                )
+            else:
+                res = _confint_riskratio_koopman(
+                    count1, nobs1, count2, nobs2, alpha=alpha, correction=correction
+                )
+                low, upp = res.confint
 
         else:
             raise ValueError("method not recognized")
@@ -3004,12 +3017,14 @@ def _score_confint_inversion(
         )
         return r.pvalue - alpha
 
+    # only used for the estimate, value=None uses the default null of compare,
+    # a ratio of 0 is not valid in the constrained estimate
     rt0 = test_proportions_2indep(
         count1,
         nobs1,
         count2,
         nobs2,
-        value=0,
+        value=None,
         compare=compare,
         method="score",
         correction=correction,
@@ -3019,7 +3034,8 @@ def _score_confint_inversion(
     # use default method to get starting values
     # this will not work if score confint becomes default
     # maybe use "wald" as alias that works for all compare statistics
-    use_method = {"diff": "wald", "ratio": "log", "odds-ratio": "logit"}
+    # the log interval for the ratio is not defined if a count is 0
+    use_method = {"diff": "wald", "ratio": "log-adjusted", "odds-ratio": "logit"}
     rci0 = confint_proportions_2indep(
         count1,
         nobs1,
@@ -3039,7 +3055,9 @@ def _score_confint_inversion(
         #     rootfinding is for the `diff` and not for a probability.
         ub = min(ub, 0.99999)
     elif compare == "ratio":
-        param = rt0.ratio
+        # The estimate is 0 or inf if a count is 0, use the center of the
+        # starting interval on the log scale instead.
+        param = np.sqrt(rci0[0] * rci0[1])
         ub *= 2  # add more buffer
     if compare == "odds-ratio":
         param = rt0.odds_ratio
@@ -3060,6 +3078,27 @@ def _score_confint_inversion(
 
         ub = _expand(ub, 0.99999)
         lb = _expand(lb, -0.99999)
+
+    elif compare == "ratio":
+        # Move the starting values outwards until the p-value is below alpha.
+        def _expand_ratio(x, factor):
+            for _ in range(60):
+                if func(x) <= 0:
+                    return x
+                x = x * factor
+            return x
+
+        # The p-value stays above alpha towards 0 if count1 is 0, and towards
+        # inf if count2 is 0, then the confint limit is 0 or inf.
+        if count2 == 0:
+            upp = np.inf
+        else:
+            upp = optimize.brentq(func, param, _expand_ratio(ub, 2))
+        if count1 == 0:
+            low = 0.0
+        else:
+            low = optimize.brentq(func, _expand_ratio(lb, 0.5), param)
+        return low, upp
 
     # root finding for confint bounds
     upp = optimize.brentq(func, param, ub)
