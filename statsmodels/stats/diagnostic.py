@@ -611,7 +611,7 @@ def acorr_ljungbox(
     boxpierce=False,
     model_df=0,
     period=None,
-    return_df=True,
+    return_df=None,
     auto_lag=False,
 ):
     """
@@ -644,10 +644,13 @@ def acorr_ljungbox(
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
         then the default rule is used to set the number of lags. When set, must
         be >= 2.
-    return_df : bool, default True
-        Flag indicating whether to return the results as a DataFrame. This
-        parameter is retained for backward compatibility; a DataFrame is
-        always returned.
+    return_df : bool, optional
+        Unused. A DataFrame is always returned.
+
+        .. deprecated:: 0.16.0
+
+            ``return_df`` has no effect and will be removed in statsmodels
+            0.17.0. Passing any value issues a ``FutureWarning``.
     auto_lag : bool, default False
         Flag indicating whether to automatically determine the optimal lag
         length based on threshold of maximum correlation value.
@@ -696,13 +699,21 @@ def acorr_ljungbox(
     >>> import statsmodels.api as sm
     >>> data = sm.datasets.sunspots.load_pandas().data
     >>> res = sm.tsa.ARMA(data["SUNACTIVITY"], (1,1)).fit(disp=-1)
-    >>> sm.stats.acorr_ljungbox(res.resid, lags=[10], return_df=True)
+    >>> sm.stats.acorr_ljungbox(res.resid, lags=[10])
            lb_stat     lb_pvalue
     10  214.106992  1.827374e-40
     """
     # Avoid cyclic import
     from statsmodels.tsa.stattools._stattools import acf
 
+    if return_df is not None:
+        warnings.warn(
+            "return_df is unused and will be removed in statsmodels 0.17.0. "
+            "acorr_ljungbox always returns a DataFrame. Remove the return_df "
+            "argument to silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
     x = array_like(x, "x")
     period = int_like(period, "period", optional=True)
     model_df = int_like(model_df, "model_df", optional=False)
