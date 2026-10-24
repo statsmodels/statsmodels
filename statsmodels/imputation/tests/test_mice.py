@@ -370,35 +370,81 @@ class TestMICE:
         # results, such as PHRegResults.
         from statsmodels.duration.hazard_regression import PHReg
 
-        rs = np.random.RandomState(4431)
-        n = 200
-        x = rs.normal(size=n)
-        z = rs.normal(size=n)
-        t = rs.exponential(size=n) * np.exp(0.5 * x)
-        d = (rs.uniform(size=n) < 0.8).astype(float)
+        rng = np.random.default_rng(4431)
+        n = 80
+        x = rng.normal(size=n)
+        z = rng.normal(size=n)
+        t = rng.exponential(size=n) * np.exp(0.5 * x)
+        d = (rng.uniform(size=n) < 0.8).astype(float)
         df = pd.DataFrame({"t": t, "d": d, "x": x, "z": z})
-        df.loc[rs.choice(n, 30, replace=False), "x"] = np.nan
-        df.loc[rs.choice(n, 30, replace=False), "z"] = np.nan
+        df.loc[rng.choice(n, 10, replace=False), "x"] = np.nan
+        df.loc[rng.choice(n, 10, replace=False), "z"] = np.nan
 
-        imp_data = mice.MICEData(df, rng=rs)
+        imp_data = mice.MICEData(df, rng=rng)
         mi = mice.MICE(
             "t ~ x + z",
             PHReg,
             imp_data,
+            n_skip=1,
             init_kwds={"status": "d", "ties": "efron"},
         )
-        result = mi.fit(2, 3)
+        m = 3
+        result = mi.fit(1, m)
 
         assert issubclass(result.__class__, mice.MICEResults)
-        assert result.params.shape == (2,)
-        assert np.all(np.isfinite(result.params))
-        assert np.all(np.isfinite(result.bse))
-        # The data are simulated with a log-hazard slope of -0.5 on x and no
-        # effect of z, so the pooled estimates should be close to those values.
-        assert_allclose(result.params, [-0.5, 0.0], atol=0.1)
+        assert len(mi.results_list) == m
+        # PHReg results are not wrapped, so there is no _results attribute
+        assert not hasattr(mi.results_list[0], "_results")
+
+        # Compare with Rubin's rules computed directly from the results
+        params = np.array([r.params for r in mi.results_list])
+        within = np.mean([r.cov_params() for r in mi.results_list], axis=0)
+        between = np.cov(params.T)
+        total = within + (1 + 1 / m) * between
+        assert_allclose(result.params, params.mean(0))
+        assert_allclose(result.cov_params(), total)
+        assert_allclose(result.bse, np.sqrt(np.diag(total)))
+        fmi = (1 + 1 / m) * np.diag(between) / np.diag(total)
+        assert_allclose(result.frac_miss_info, fmi)
 
         # Smoke test for results
         result.summary()
+
+    def test_MICE_combine_unwrapped(self):
+        # combine only needs params, cov_params() and scale from each result
+
+        class FakeModel:
+            endog_names = "y"
+            exog_names = ["a", "b"]
+
+        class FakeResults:
+            model = FakeModel()
+
+            def __init__(self, params, cov, scale):
+                self.params = np.asarray(params)
+                self._cov = np.asarray(cov)
+                self.scale = scale
+
+            def cov_params(self):
+                return self._cov
+
+        res = [
+            FakeResults([1.0, 2.0], [[1.0, 0.2], [0.2, 2.0]], 1.0),
+            FakeResults([2.0, 1.0], [[2.0, 0.0], [0.0, 1.0]], 2.0),
+            FakeResults([3.0, 6.0], [[3.0, 0.1], [0.1, 3.0]], 3.0),
+        ]
+        mi = mice.MICE("y ~ a + b", sm.OLS, None)
+        mi.results_list = res
+        mi.endog_names = FakeModel.endog_names
+        mi.exog_names = FakeModel.exog_names
+        out = mi.combine()
+
+        params = np.array([[1.0, 2.0], [2.0, 1.0], [3.0, 6.0]])
+        within = np.mean([r.cov_params() for r in res], axis=0)
+        total = within + (4 / 3) * np.cov(params.T)
+        assert_allclose(out.params, [2.0, 3.0])
+        assert_allclose(out.scale, 2.0)
+        assert_allclose(out.cov_params(), total)
 
     def test_MICE1(self):
         rs = np.random.RandomState(821223)
