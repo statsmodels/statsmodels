@@ -1929,12 +1929,11 @@ def test_ljungbox_return_df_deprecated(return_df):
     pd.testing.assert_frame_equal(res, expected)
 
 
+@pytest.mark.filterwarnings("error:return_df is unused:FutureWarning")
 def test_ljungbox_return_df_not_passed_no_warning():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        smsdia.acorr_ljungbox(data, lags=10)
-        smsdia.acorr_ljungbox(data, lags=10, return_df=None)
+    smsdia.acorr_ljungbox(data, lags=10)
+    smsdia.acorr_ljungbox(data, lags=10, return_df=None)
 
 
 def test_ljungbox_period():
