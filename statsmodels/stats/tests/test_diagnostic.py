@@ -1853,15 +1853,41 @@ def test_ljungbox_auto_lag_threshold_excludes_lag_zero():
     assert smsdia.acorr_ljungbox(data, auto_lag=True).shape[0] == 1
 
 
-def test_ljungbox_rejects_lag_zero():
+@pytest.mark.parametrize(
+    "lags, msg",
+    [
+        (0, r"got 0 \(nobs=50\)"),
+        (-3, r"got -3 \(nobs=50\)"),
+        ([0], r"got a smallest lag of 0 \(nobs=50\)"),
+        ([0, 1], r"got a smallest lag of 0 \(nobs=50\)"),
+        ([0, 2], r"got a smallest lag of 0 \(nobs=50\)"),
+        ([-1, 2], r"got a smallest lag of -1 \(nobs=50\)"),
+        ([-1, -2], r"got a smallest lag of -2 \(nobs=50\)"),
+        ([], r"got an empty lags \(nobs=50\)"),
+    ],
+)
+def test_ljungbox_rejects_lag_zero(lags, msg):
     # Lag 0 indexed the cumulative sum at -1, so it silently returned the
     # statistic for the largest lag. An empty lag list failed with a reduction
     # error instead of a message about the lags.
-    data = np.random.RandomState(7).standard_normal(50)
-    for lags in (0, [0], [0, 1], [0, 2], [-1, 2], []):
-        with pytest.raises(ValueError, match="lags must be positive"):
-            smsdia.acorr_ljungbox(data, lags=lags)
+    data = np.random.default_rng(7).standard_normal(50)
+    with pytest.raises(ValueError, match="lags must be positive integers, " + msg):
+        smsdia.acorr_ljungbox(data, lags=lags)
 
+
+@pytest.mark.parametrize("period", [None, 4])
+def test_ljungbox_default_lags_short_series(period):
+    # nobs // 5 is 0, so the default number of lags is empty
+    data = np.random.default_rng(7).standard_normal(3)
+    with pytest.raises(ValueError, match="default number of lags is below 1"):
+        smsdia.acorr_ljungbox(data, period=period)
+    # explicit lags still work
+    res = smsdia.acorr_ljungbox(data, lags=[1])
+    assert res.shape[0] == 1
+
+
+def test_ljungbox_valid_lags_match_single_lag():
+    data = np.random.default_rng(7).standard_normal(50)
     # Valid lags give the same values as each lag computed on its own.
     both = smsdia.acorr_ljungbox(data, lags=[1, 2])
     lag1 = smsdia.acorr_ljungbox(data, lags=[1])
