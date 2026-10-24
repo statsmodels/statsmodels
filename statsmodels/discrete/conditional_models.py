@@ -359,27 +359,19 @@ class ConditionalLogit(_ConditionalModel):
 
         exb = np.exp(np.dot(self._exog_grp[grp], params) + ofs)
 
-        # In the recursions, f may be called multiple times with the
-        # same arguments, so we memoize the results.
-        memo = {}
+        nobs = len(exb)
+        n1 = int(self._n1[grp])
+        denom = np.zeros(n1 + 1, dtype=exb.dtype)
+        denom[0] = 1
+        for t, value in enumerate(exb, 1):
+            # 只更新仍可能达到最终成功数的状态 避免计算无关的大组合数
+            lower = max(1, n1 - nobs + t)
+            upper = min(t, n1)
+            # D(t, k) = D(t-1, k) + value * D(t-1, k-1).
+            # The right-hand side is evaluated before updating the slice.
+            denom[lower : upper + 1] += value * denom[lower - 1 : upper]
 
-        def f(t, k):
-            if t < k:
-                return 0
-            if k == 0:
-                return 1
-
-            try:
-                return memo[(t, k)]
-            except KeyError:
-                pass
-
-            v = f(t - 1, k) + f(t - 1, k - 1) * exb[t - 1]
-            memo[(t, k)] = v
-
-            return v
-
-        return f(self._groupsize[grp], self._n1[grp])
+        return denom[n1]
 
     def _denom_grad(self, grp, params, ofs=None):
 
@@ -389,33 +381,22 @@ class ConditionalLogit(_ConditionalModel):
         ex = self._exog_grp[grp]
         exb = np.exp(np.dot(ex, params) + ofs)
 
-        # s may be called multiple times in the recursions with the
-        # same arguments, so memoize the results.
-        memo = {}
+        nobs = len(exb)
+        n1 = int(self._n1[grp])
+        denom = np.zeros(n1 + 1, dtype=exb.dtype)
+        grad = np.zeros((n1 + 1, self.k_params), dtype=exb.dtype)
+        denom[0] = 1
+        for t, value in enumerate(exb, 1):
+            lower = max(1, n1 - nobs + t)
+            upper = min(t, n1)
+            # 梯度先更新 乘积法则需要上一轮的分母和梯度
+            grad[lower : upper + 1] += value * (
+                grad[lower - 1 : upper]
+                + denom[lower - 1 : upper, None] * ex[t - 1]
+            )
+            denom[lower : upper + 1] += value * denom[lower - 1 : upper]
 
-        def s(t, k):
-
-            if t < k:
-                return 0, np.zeros(self.k_params)
-            if k == 0:
-                return 1, 0
-
-            try:
-                return memo[(t, k)]
-            except KeyError:
-                pass
-
-            h = exb[t - 1]
-            a, b = s(t - 1, k)
-            c, e = s(t - 1, k - 1)
-            d = c * h * ex[t - 1, :]
-
-            u, v = a + c * h, b + d + e * h
-            memo[(t, k)] = (u, v)
-
-            return u, v
-
-        return s(self._groupsize[grp], self._n1[grp])
+        return denom[n1], grad[n1]
 
     def loglike_grp(self, grp, params):
 
