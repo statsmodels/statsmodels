@@ -751,8 +751,9 @@ def test_covdets_breakdown_point(bp, c1):
     x = rng.standard_normal((200, 3))
     x[:30] += 6
 
-    # c1 is the biweight tuning parameter of a univariate S-estimator with
-    # the given breakdown point, to three decimals from tukeybiweight_bp in
+    # c1 is the biweight tuning parameter of a univariate S-estimator, i.e.
+    # for k_vars=1 while the data used in the main fit below has 3 columns.
+    # The values are to three decimals from tukeybiweight_bp in
     # statsmodels/robust/_tables.py.
     mod1 = robcov.CovDetS(x[:, :1], breakdown_point=bp)
     assert_allclose(mod1.norm.c, c1, atol=1e-3)
@@ -768,6 +769,100 @@ def test_covdets_breakdown_point(bp, c1):
     # the second stage of CovDetMM keeps the scale of the first stage
     res_mm = robcov.CovDetMM(x, breakdown_point=bp).fit()
     assert_allclose(res_mm.scale, res.scale, rtol=1e-12)
+
+
+# Reference values from R package rrcov 1.7.7, with
+# library(rrcov); rrcov:::.csolve.bw.S(bdp, p)$cc
+# for p = 1, ..., 5, the keys are bdp.
+tuning_s_rrcov = {
+    0.5: [1.54764497988, 2.66080339285, 3.45288165132, 4.09656216395, 4.6520233426],
+    0.25: [2.93701455396, 4.42744315897, 5.52807407121, 6.44260983164, 7.24226823826],
+}
+
+
+@pytest.mark.parametrize("bp", [0.5, 0.25])
+@pytest.mark.parametrize("k_vars", [1, 2, 3, 4, 5])
+def test_covdets_tuning_param_rrcov(bp, k_vars):
+    x = np.random.default_rng(0).standard_normal((20, k_vars))
+    c = tuning_s_rrcov[bp][k_vars - 1]
+    assert_allclose(robcov.CovDetS(x, breakdown_point=bp).norm.c, c, rtol=1e-7)
+
+
+def test_covdets_rrcov():
+    # Compare with rrcov 1.7.7 CovSest, which is the DetS estimator of Hubert
+    # et al. (2015). The data has 10 percent outliers. With a larger fraction
+    # of outliers close to the breakdown point, the deterministic starts can
+    # converge to a different local optimum than the random starts of R.
+    # R code for the reference values, x is the data generated below:
+    #   library(rrcov)
+    #   fit <- CovSest(x, bdp=0.25, method="sdet")
+    #   getCenter(fit); getCov(fit); fit@crit
+    # location, covariance and scale for bdp=0.25 and for bdp=0.5
+    rng = np.random.default_rng(20261024)
+    x = rng.standard_normal((100, 3)) @ np.array(
+        [[2.0, 0, 0], [-1.5, 1.2, 0], [0.5, 0.4, 1.0]]
+    ).T
+    x[:10] += 8
+
+    mean = {
+        0.25: [-0.00524687063576, 0.04258769820358, -0.13057640408221],
+        0.5: [-0.161509713747, 0.146100688979, -0.165867731046],
+    }
+    cov = {
+        0.25: [
+            [6.83295247961, -4.60742865320, 2.07626921067],
+            [-4.60742865320, 5.20520866750, -0.78744812934],
+            [2.07626921067, -0.78744812934, 1.99580246834],
+        ],
+        0.5: [
+            [4.333301973950, -2.971087338866, 1.342943692525],
+            [-2.971087338866, 3.763362024027, -0.381964279551],
+            [1.342943692525, -0.381964279551, 1.615986624137],
+        ],
+    }
+    scale = {0.25: 1.60362742953, 0.5: 1.405747332}
+    for bp in (0.25, 0.5):
+        res = robcov.CovDetS(x, breakdown_point=bp).fit()
+        assert_allclose(res.mean, mean[bp], rtol=1e-4, atol=1e-4)
+        assert_allclose(res.cov, cov[bp], rtol=1e-4, atol=1e-4)
+        assert_allclose(res.scale, scale[bp], rtol=1e-4)
+
+
+@pytest.mark.parametrize("bp", [0.6, 1, 0, 0.0, -0.1, np.nan, np.inf])
+@pytest.mark.parametrize("cov_class", [robcov.CovDetS, robcov.CovDetMM])
+def test_covdet_breakdown_point_invalid(cov_class, bp):
+    x = np.random.default_rng(0).standard_normal((30, 3))
+    with pytest.raises(ValueError, match=r"breakdown_point must be in \(0, 0.5\]"):
+        cov_class(x, breakdown_point=bp)
+
+
+def test_covdet_breakdown_point_not_float():
+    x = np.random.default_rng(0).standard_normal((30, 3))
+    with pytest.raises(TypeError, match="breakdown_point"):
+        robcov.CovDetS(x, breakdown_point="0.25")
+
+
+@pytest.mark.parametrize("cov_class", [robcov.CovDetS, robcov.CovDetMM])
+def test_covdet_breakdown_point_small_high_dim(cov_class):
+    # The default limits of the root finding in tuning_s_cov have no solution
+    # for a small breakdown point and 20 variables, c is above 30.
+    # The fit is not called because it is slow with 20 variables.
+    x = np.random.default_rng(0).standard_normal((100, 20))
+    mod = cov_class(x, breakdown_point=0.05)
+    if cov_class is robcov.CovDetS:
+        # R: rrcov:::.csolve.bw.S(0.05, 20)$cc
+        assert_allclose(mod.norm.c, 34.3181640288, rtol=1e-8)
+
+
+def test_covdet_breakdown_point_no_solution(monkeypatch):
+    def raise_no_root(*args, **kwds):
+        raise ValueError("f(a) and f(b) must have different signs")
+
+    monkeypatch.setattr(robcov.rtools, "tuning_s_cov", raise_no_root)
+    x = np.random.default_rng(0).standard_normal((30, 3))
+    msg = r"breakdown_point=0.25 and k_vars=3"
+    with pytest.raises(ValueError, match=msg):
+        robcov.CovDetS(x, breakdown_point=0.25)
 
 
 def test_cov_tyler_regularized_n_iter():
