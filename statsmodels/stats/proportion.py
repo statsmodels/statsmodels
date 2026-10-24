@@ -992,7 +992,9 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
     power = stats.binom.cdf(x_upp, nobs, p_alt) - stats.binom.cdf(
         x_low - 1, nobs, p_alt
     )
-    return power
+    # the rejection region is empty if x_low > x_upp, then the difference of
+    # the cdfs is negative and the power is zero
+    return np.maximum(power, 0)
 
 
 def power_ztost_prop(

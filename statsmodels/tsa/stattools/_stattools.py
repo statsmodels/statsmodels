@@ -144,14 +144,23 @@ def _autolag(
 
     method = string_like(method, "method", options=("aic", "bic", "t-stat"))
     results = {}
+    # Keep only the criterion of each fit unless the results are requested,
+    # since every results instance holds several nobs-sized arrays
+    crit = {}
     for lag in range(startlag, startlag + maxlag + 1):
         mod_instance = mod(endog, exog[:, :lag], *modargs)
-        results[lag] = mod_instance.fit()
+        res = mod_instance.fit()
+        if method == "aic":
+            crit[lag] = res.aic
+        elif method == "bic":
+            crit[lag] = res.bic
+        else:
+            crit[lag] = np.abs(res.tvalues[-1])
+        if regresults:
+            results[lag] = res
 
-    if method == "aic":
-        icbest, bestlag = min((v.aic, k) for k, v in results.items())
-    elif method == "bic":
-        icbest, bestlag = min((v.bic, k) for k, v in results.items())
+    if method in ("aic", "bic"):
+        icbest, bestlag = min((v, k) for k, v in crit.items())
     else:  # method == "t-stat"
         # stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
@@ -159,7 +168,7 @@ def _autolag(
         bestlag = startlag + maxlag
         icbest = 0.0
         for lag in range(startlag + maxlag, startlag - 1, -1):
-            icbest = np.abs(results[lag].tvalues[-1])
+            icbest = crit[lag]
             bestlag = lag
             if np.abs(icbest) >= stop:
                 # Break for first lag with a significant t-stat
@@ -169,6 +178,103 @@ def _autolag(
         return icbest, bestlag
     else:
         return icbest, bestlag, results
+
+
+def _adf_autolag(x, maxlag, regression, method):
+    """
+    Select the lag length of the ADF regression from a single QR decomposition
+
+    Parameters
+    ----------
+    x : ndarray
+        The data series, 1d.
+    maxlag : int
+        The largest number of lagged differences considered.
+    regression : {"c", "ct", "ctt", "n"}
+        Constant and trend order included in the regression.
+    method : {"aic", "bic", "t-stat"}
+        The lag length selection criterion.
+
+    Returns
+    -------
+    tuple[float, int] or None
+        The best criterion value (the absolute t-statistic of the last lag
+        for "t-stat") and the selected number of lagged differences. None
+        if the regressors are close to singular or the largest regression
+        fits almost perfectly. ``_autolag`` is used in these cases.
+
+    Notes
+    -----
+    Gives the same result as ``_autolag`` with OLS on the regressors
+    ``X = [trend, level, lag 1, ..., lag maxlag]`` that ``adfuller`` builds.
+    All candidate regressions use the first ``j`` columns of ``X`` and the
+    same sample. If ``[X, y] = QR`` with ``X`` of shape ``(nobs, k)``, then
+    the regression on the first ``j`` columns has
+
+    * ``ssr_j = R[k, k] ** 2 + sum(R[j:k, k] ** 2)``
+    * ``|t_j| = |R[j - 1, k]| / sqrt(ssr_j / (nobs - j))`` for the
+      coefficient of its last column,
+
+    so one factorization gives the criteria of all lag lengths. The rows are
+    processed in blocks, and the triangular factor is updated block by block
+    so the full lagged regressor matrix is never formed.
+    """
+    xdiff = np.diff(x)
+    nobs = xdiff.shape[0] - maxlag
+    ntrend = len(regression) if regression != "n" else 0
+    startlag = ntrend + 1
+    k = startlag + maxlag
+    # Row t of windows is xdiff[t + maxlag], xdiff[t + maxlag - 1], ...,
+    # xdiff[t], i.e., the dependent variable followed by its maxlag lags
+    windows = np.lib.stride_tricks.sliding_window_view(xdiff, maxlag + 1)[:, ::-1]
+    # Blocks of about 1MB keep the data in cache
+    block_rows = max(4 * (k + 1), 2**17 // (k + 1))
+    r = np.empty((0, k + 1))
+    for start in range(0, nobs, block_rows):
+        stop = min(start + block_rows, nobs)
+        block = np.empty((r.shape[0] + stop - start, k + 1))
+        block[: r.shape[0]] = r
+        rows = block[r.shape[0] :]
+        if ntrend:
+            trend = np.arange(start + 1, stop + 1, dtype=float)
+            for power in range(ntrend):
+                rows[:, power] = trend**power
+        rows[:, ntrend] = x[maxlag + start : maxlag + stop]
+        rows[:, startlag:k] = windows[start:stop, 1:]
+        rows[:, k] = windows[start:stop, 0]
+        r = np.linalg.qr(block, mode="r")
+
+    if not np.all(np.isfinite(r)):
+        return None
+    # OLS treats singular values below ncols * eps times the largest one as
+    # zero. A subset of the columns has a smallest singular value at least
+    # as large, and a largest one at most as large, as all columns, so if
+    # this check passes OLS finds every candidate regression to have full
+    # rank. The factor 10 is a margin for rounding.
+    sv = np.linalg.svd(r[:k, :k], compute_uv=False)
+    if sv[-1] <= 10 * k * np.finfo(float).eps * sv[0]:
+        return None
+    qy = r[:k, k]
+    # ssr_tail[j] is the sum of squares of qy[j:]
+    ssr_tail = np.append(np.cumsum(qy[::-1] ** 2)[::-1], 0.0)
+    ssr = r[k, k] ** 2 + ssr_tail[startlag:]
+    if not ssr[-1] > 1e-10 * (r[k, k] ** 2 + ssr_tail[0]):
+        # (Almost) perfect fit, the residuals are dominated by rounding
+        return None
+
+    ncols = np.arange(startlag, k + 1)
+    if method == "t-stat":
+        crit = np.abs(qy[startlag - 1 :]) / np.sqrt(ssr / (nobs - ncols))
+        # stop = stats.norm.ppf(.95)
+        significant = np.flatnonzero(crit >= 1.6448536269514722)
+        bestlag = significant[-1] if significant.size else 0
+    else:
+        nobs2 = nobs / 2.0
+        llf = -nobs2 * np.log(2 * np.pi) - nobs2 * np.log(ssr / nobs) - nobs2
+        penalty = 2.0 if method == "aic" else np.log(nobs)
+        crit = -2 * llf + penalty * ncols
+        bestlag = np.argmin(crit)
+    return crit[bestlag], int(bestlag)
 
 
 @dataclass(frozen=True, slots=True, repr=False)
@@ -387,50 +493,58 @@ def adfuller(
             f'{nobs} and regression is "{regression}"'
         )
     xdiff = np.diff(x)
-    xdall = lagmat(xdiff[:, None], maxlag, trim="both", original="in")
-    nobs = xdall.shape[0]
-
-    xdall[:, 0] = x[-nobs - 1 : -1]  # replace 0 xdiff with level of x
-    xdshort = xdiff[-nobs:]
 
     if store:
         resstore = ResultsStore()
     if autolag:
-        if regression != "n":
-            fullRHS = add_trend(xdall, regression, prepend=True)
-        else:
-            fullRHS = xdall
-        startlag = fullRHS.shape[1] - xdall.shape[1] + 1
-        # 1 for level
         # search for lag length with smallest information criteria
         # Note: use the same number of observations to have comparable IC
         # aic and bic: smaller is better
-
+        lag_search = None
         if not regresults:
-            icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag, maxlag, autolag)
+            # All lag lengths from one QR decomposition, without forming the
+            # lagged regressor matrix
+            lag_search = _adf_autolag(x, maxlag, regression, autolag)
+        if lag_search is not None:
+            icbest, bestlag = lag_search
         else:
-            icbest, bestlag, alres = _autolag(
-                OLS,
-                xdshort,
-                fullRHS,
-                startlag,
-                maxlag,
-                autolag,
-                regresults=regresults,
-            )
-            resstore.autolag_results = alres
+            xdall = lagmat(xdiff[:, None], maxlag, trim="both", original="in")
+            nobs = xdall.shape[0]
+            xdall[:, 0] = x[-nobs - 1 : -1]  # replace 0 xdiff with level of x
+            xdshort = xdiff[-nobs:]
+            if regression != "n":
+                fullRHS = add_trend(xdall, regression, prepend=True)
+            else:
+                fullRHS = xdall
+            startlag = fullRHS.shape[1] - xdall.shape[1] + 1
+            # 1 for level
+            if not regresults:
+                icbest, bestlag = _autolag(
+                    OLS, xdshort, fullRHS, startlag, maxlag, autolag
+                )
+            else:
+                icbest, bestlag, alres = _autolag(
+                    OLS,
+                    xdshort,
+                    fullRHS,
+                    startlag,
+                    maxlag,
+                    autolag,
+                    regresults=regresults,
+                )
+                resstore.autolag_results = alres
 
-        bestlag -= startlag  # convert to lag not column index
-
-        # rerun ols with best autolag
-        xdall = lagmat(xdiff[:, None], bestlag, trim="both", original="in")
-        nobs = xdall.shape[0]
-        xdall[:, 0] = x[-nobs - 1 : -1]  # replace 0 xdiff with level of x
-        xdshort = xdiff[-nobs:]
+            bestlag -= startlag  # convert to lag not column index
         usedlag = bestlag
     else:
         usedlag = maxlag
         icbest = None
+
+    # run ols with the selected or fixed lag on the full available sample
+    xdall = lagmat(xdiff[:, None], usedlag, trim="both", original="in")
+    nobs = xdall.shape[0]
+    xdall[:, 0] = x[-nobs - 1 : -1]  # replace 0 xdiff with level of x
+    xdshort = xdiff[-nobs:]
     if regression != "n":
         resols = OLS(xdshort, add_trend(xdall[:, : usedlag + 1], regression)).fit()
     else:

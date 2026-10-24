@@ -1900,3 +1900,21 @@ def test_power_equivalence_negbin_poisson_limit(
         rate1, rate2, nobs1, 0.8, 1.25, nobs_ratio=nobs_ratio, dispersion=0
     )
     assert_allclose(pow_nb, pow_p, rtol=1e-13)
+
+
+def test_power_poisson_ratio_2indep_default_value():
+    # the default null rate ratio is 1, a ratio of 0 made log(value) infinite
+    rate1, rate2, nobs1 = 1.0, 2.0, 10
+    res = power_poisson_ratio_2indep(rate1, rate2, nobs1)
+    # Wald test of log(rate1 / rate2) = 0 with the variance under the
+    # alternative, method_var="alt"
+    sd = np.sqrt((1 / rate1 + 1 / rate2) / nobs1)
+    expected = stats.norm.cdf((-np.log(rate1 / rate2) - stats.norm.ppf(0.95) * sd) / sd)
+    assert_allclose(res.power, expected, rtol=1e-12)
+    # method_var="score" divides by value, the old default gave nan
+    kwds = {"alternative": "two-sided", "method_var": "score"}
+    power = power_poisson_ratio_2indep(rate1, rate2, nobs1, **kwds).power
+    assert np.isfinite(power)
+    assert_allclose(
+        power, power_poisson_ratio_2indep(rate1, rate2, nobs1, value=1, **kwds).power
+    )

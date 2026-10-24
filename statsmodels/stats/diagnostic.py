@@ -611,7 +611,7 @@ def acorr_ljungbox(
     boxpierce=False,
     model_df=0,
     period=None,
-    return_df=True,
+    return_df=None,
     auto_lag=False,
 ):
     """
@@ -644,10 +644,13 @@ def acorr_ljungbox(
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
         then the default rule is used to set the number of lags. When set, must
         be >= 2.
-    return_df : bool, default True
-        Flag indicating whether to return the results as a DataFrame. This
-        parameter is retained for backward compatibility; a DataFrame is
-        always returned.
+    return_df : bool, optional
+        Unused. A DataFrame is always returned.
+
+        .. deprecated:: 0.16.0
+
+            ``return_df`` has no effect and will be removed in statsmodels
+            0.17.0. Passing any value issues a ``FutureWarning``.
     auto_lag : bool, default False
         Flag indicating whether to automatically determine the optimal lag
         length based on threshold of maximum correlation value.
@@ -696,13 +699,21 @@ def acorr_ljungbox(
     >>> import statsmodels.api as sm
     >>> data = sm.datasets.sunspots.load_pandas().data
     >>> res = sm.tsa.ARMA(data["SUNACTIVITY"], (1,1)).fit(disp=-1)
-    >>> sm.stats.acorr_ljungbox(res.resid, lags=[10], return_df=True)
+    >>> sm.stats.acorr_ljungbox(res.resid, lags=[10])
            lb_stat     lb_pvalue
     10  214.106992  1.827374e-40
     """
     # Avoid cyclic import
     from statsmodels.tsa.stattools._stattools import acf
 
+    if return_df is not None:
+        warnings.warn(
+            "return_df is unused and will be removed in statsmodels 0.17.0. "
+            "acorr_ljungbox always returns a DataFrame. Remove the return_df "
+            "argument to silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
     x = array_like(x, "x")
     period = int_like(period, "period", optional=True)
     model_df = int_like(model_df, "model_df", optional=False)
@@ -2035,6 +2046,11 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95, order_by=None)
     the inverse of the X'X matrix and does not require matrix inversion during
     updating. looks efficient but no timing
 
+    The recursion starts from the inverse of the initial window crossprod
+    (plus Ridge weight ``lamda``), falling back to its pseudo-inverse when
+    that matrix is rank deficient, e.g. due to duplicated rows in the
+    initial window.
+
     Confidence interval in Greene and Brown, Durbin and Evans is the same as
     in Ploberger after a little bit of algebra.
 
@@ -2070,15 +2086,19 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95, order_by=None)
     rvarraw = np.nan * np.zeros(nobs)
 
     x0 = x[:skip]
-    if np.linalg.matrix_rank(x0) < x0.shape[1]:
-        err_msg = """\
-"The initial regressor matrix, x[:skip], issingular. You must use a value of
-skip large enough to ensure that the first OLS estimator is well-defined.
-"""
-        raise ValueError(err_msg)
     y0 = y[:skip]
     # add Ridge to start (not in jplv)
-    xtxi = np.linalg.inv(np.dot(x0.T, x0) + lamda * np.eye(nvars))
+    xtx0 = np.dot(x0.T, x0) + lamda * np.eye(nvars)
+    if np.linalg.matrix_rank(xtx0) < nvars:
+        # Rank-deficient initial window, e.g. because with skip = nvars a
+        # single duplicated row (discrete or discretized regressors)
+        # already loses rank. OLS itself estimates with pinv in this case,
+        # and pinv is also the lamda -> 0 limit of the Ridge start that is
+        # already allowed, so continue from the pseudo-inverse instead of
+        # requiring a larger skip. See #8446.
+        xtxi = np.linalg.pinv(xtx0)
+    else:
+        xtxi = np.linalg.inv(xtx0)
     xty = np.dot(x0.T, y0)  # xi * y   # np.dot(xi, y)
     beta = np.dot(xtxi, xty)
     rparams[skip - 1] = beta
