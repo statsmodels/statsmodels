@@ -2124,6 +2124,15 @@ class CovDetMCD:
 
     Notes
     -----
+    If the covariance of the selected subset of ``h`` observations is
+    numerically singular, for example in an exact fit where at least ``h``
+    observations lie on a hyperplane, then :meth:`fit` raises a ValueError.
+
+    .. versionchanged:: 0.15.1
+
+       Exact-fit data raise a ValueError. Before, the fit returned a result
+       with a singular covariance.
+
     Reproducibility: this uses deterministic starting sets and there is no
     randomness in the estimator. However, this will not be reproducible
     across statsmodels versions when the methods for starting sets or
@@ -2195,7 +2204,9 @@ class CovDetMCD:
             cov_new = np.atleast_2d(np.cov(x_sel.T, ddof=1))
             if _is_singular(cov_new):
                 raise ValueError(
-                    "more than h of the observations lie on a hyperplane"
+                    "the covariance of the h-subset is singular: at least h "
+                    "of the observations lie on a hyperplane (or the data are "
+                    "numerically rank deficient)"
                 )
 
             if ((cov - cov_new) ** 2).mean() < tol:
@@ -2314,6 +2325,15 @@ class CovDetMCD:
             Named tuple with `mean`, `cov`, `method` and extra attributes
             depending on `reweight`. See :class:`CovDetMCDResult` for
             details.
+
+        Raises
+        ------
+        ValueError
+            If ``h`` is not larger than the number of variables.
+        ValueError
+            If the covariance of the selected h-subset is numerically
+            singular, for example if at least ``h`` observations lie on a
+            hyperplane.
         """
 
         x = self.data
@@ -2321,6 +2341,11 @@ class CovDetMCD:
 
         if h is None:
             h = (nobs + k_vars + 1) // 2  # check with literature
+        if h < k_vars + 1:
+            raise ValueError(
+                f"h must be larger than the number of variables, got h={h} "
+                f"with {k_vars} variables"
+            )
         if mean_func is None:
             def mean_func(x):
                 return np.median(x, axis=0)

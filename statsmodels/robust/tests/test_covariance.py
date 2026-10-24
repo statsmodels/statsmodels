@@ -973,9 +973,11 @@ def test_cov_starting_zero_mad_raises():
     with pytest.raises(ValueError, match="standardizing scale is zero"):
         robcov._cov_starting(x, standardize=True)
 
+
 @pytest.mark.parametrize("reweight", [True, False])
 def test_covdet_mcd_tilted_plane_exact_fit_raises(reweight):
-    # GH-10437 suggestion 2: more than h observations on a tilted plane
+    # https://github.com/statsmodels/statsmodels/issues/10437 (suggestion 2):
+    # more than h observations on a tilted plane
     # (no column has MAD == 0). Put ALL rows on the plane so every C-step
     # subset is singular and CI is not sensitive to platform FP around a
     # near-exact-fit residual (Pyodide). Raise before reweight so default
@@ -985,20 +987,60 @@ def test_covdet_mcd_tilted_plane_exact_fit_raises(reweight):
     x[:, 2] = x[:, 0] + x[:, 1]
     assert (robcov.mad(x) > 0).all()
 
-    with pytest.raises(ValueError, match="lie on a hyperplane"):
+    msg = "covariance of the h-subset is singular: at least h .* hyperplane"
+    with pytest.raises(ValueError, match=msg):
         robcov.CovDetMCD(x).fit(h=51, reweight=reweight)
 
 
 @pytest.mark.parametrize("m_on", [55, 60, 70, 80])
 @pytest.mark.parametrize("seed", range(3))
 def test_covdet_mcd_partial_tilted_plane_exact_fit_raises(m_on, seed):
-    # More than h observations lie on a tilted plane, but not every row does.
+    # At least h observations lie on a tilted plane, but not every row does.
+    # R reference (robustbase 0.99.7): with x the matrix generated below,
+    # covMcd(x, alpha=0.5, nsamp="deterministic") stops with the error
+    # "More than h of the observations lie on a hyperplane." for all cases
+    # (h = 52 is the R default for n=100, p=3).
     rng = np.random.default_rng(seed)
     x = rng.standard_normal((100, 3))
     x[:m_on, 2] = x[:m_on, 0] + x[:m_on, 1]
 
     with pytest.raises(ValueError, match="lie on a hyperplane"):
         robcov.CovDetMCD(x).fit(h=52)
+
+
+@pytest.mark.parametrize("m_on, raises", [(50, False), (51, True), (52, True)])
+def test_covdet_mcd_exact_fit_boundary(m_on, raises):
+    # The guard triggers if at least h observations lie on the plane, so h - 1
+    # observations on the plane still fit.
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    x[:m_on, 2] = x[:m_on, 0] + x[:m_on, 1]
+
+    mod = robcov.CovDetMCD(x)
+    if raises:
+        with pytest.raises(ValueError, match="lie on a hyperplane"):
+            mod.fit(h=51, reweight=False)
+    else:
+        res = mod.fit(h=51, reweight=False)
+        assert not robcov._is_singular(res.cov)
+
+
+@pytest.mark.parametrize("h", [1, 2, 3])
+def test_covdet_mcd_h_too_small_raises(h):
+    # h must be larger than the number of variables, here k_vars = 3
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+
+    msg = "h must be larger than the number of variables"
+    with pytest.raises(ValueError, match=msg):
+        robcov.CovDetMCD(x).fit(h=h)
+
+
+def test_covdet_mcd_h_minimum_is_k_vars_plus_one():
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    res = robcov.CovDetMCD(x).fit(h=4, reweight=False)
+    assert res.cov.shape == (3, 3)
 
 
 def test_covdet_mcd_full_rank_polynomial_data_still_fits():
@@ -1020,4 +1062,3 @@ def test_covdet_mcd_healthy_data_still_fits():
     assert np.isfinite(np.linalg.det(res.cov))
     assert np.linalg.det(res.cov) > 0
     assert not robcov._is_singular(res.cov)
-
