@@ -2288,9 +2288,9 @@ def power_equivalence_poisson_2indep(
     if method_var == "alt":
         v0_low = v0_upp = v1
     else:  # method_var == "score"
-        v0_low = dispersion / exposure * (1 + low * nobs_ratio) ** 2
+        v0_low = dispersion / exposure * (low + nobs_ratio) ** 2
         v0_low /= low * nobs_ratio * (rate1 + (nobs_ratio * rate2))
-        v0_upp = dispersion / exposure * (1 + upp * nobs_ratio) ** 2
+        v0_upp = dispersion / exposure * (upp + nobs_ratio) ** 2
         v0_upp /= upp * nobs_ratio * (rate1 + (nobs_ratio * rate2))
 
     es_low = np.log(rate1 / rate2) - np.log(low)
@@ -2302,7 +2302,7 @@ def power_equivalence_poisson_2indep(
     pow_ = _power_equivalence_het(
         es_low,
         es_upp,
-        nobs2,
+        nobs1,
         alpha=alpha,
         std_null_low=std_null_low,
         std_null_upp=std_null_upp,
@@ -2923,7 +2923,7 @@ def power_equivalence_neginb_2indep(
 
     nobs2 = nobs_ratio * nobs1
 
-    v1 = (1 / rate2 + 1 / (nobs_ratio * rate1)) / exposure + (
+    v1 = (1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure + (
         1 + nobs_ratio
     ) / nobs_ratio * dispersion
     method_var = string_like(
