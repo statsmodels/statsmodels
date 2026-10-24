@@ -209,6 +209,22 @@ class Model:
 
         tmp = handle_formula_data(data, None, formula, depth=eval_env, missing=missing)
         (endog, exog), missing_idx, model_spec = tmp
+        if endog.ndim > 1 and endog.shape[1] == 2:
+            col_names = None
+            if hasattr(endog, "columns"):
+                col_names = list(endog.columns)
+            elif hasattr(endog, "design_info"):
+                col_names = list(endog.design_info.column_names)
+            if col_names and len(col_names) == 2:
+                c0 = str(col_names[0]).strip()
+                c1 = str(col_names[1]).strip()
+                if c0.endswith("[False]") and c1.endswith("[True]"):
+                    endog_name = c0[:-7]
+                    if hasattr(endog, "iloc"):
+                        endog = endog.iloc[:, 1]
+                        endog.name = endog_name
+                    else:
+                        endog = endog[:, 1]
         max_endog = cls._formula_max_endog
         if max_endog is not None and endog.ndim > 1 and endog.shape[1] > max_endog:
             raise ValueError(
