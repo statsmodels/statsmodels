@@ -584,13 +584,10 @@ class _BayesMixedGLM(base.Model):
         which : {"mean", "linear"}, optional
             Statistic to predict. Default is "mean".
 
-            - "mean" returns the inverse link function applied to the
-              fixed effects linear predictor, evaluated at the parameter
-              values in ``params``. This is the mean of endog given ``exog``
-              with all random effects set to zero. Because the link is
-              nonlinear, it is neither the marginal mean E(y | x) averaged
-              over the random effects nor a posterior predictive mean.
-            - "linear" returns the fixed effects linear predictor.
+            - "mean" returns the linear predictor transformed using the
+              link function.
+            - "linear" returns the linear predictor without passing through
+              the link function.
 
         Returns
         -------
@@ -1119,13 +1116,10 @@ class BayesMixedGLMResults:
         which : {"mean", "linear"}, optional
             Statistic to predict. Default is "mean".
 
-            - "mean" returns the inverse link function applied to the
-              fixed effects linear predictor, evaluated at the parameter
-              values in ``params``. This is the mean of endog given ``exog``
-              with all random effects set to zero. Because the link is
-              nonlinear, it is neither the marginal mean E(y | x) averaged
-              over the random effects nor a posterior predictive mean.
-            - "linear" returns the fixed effects linear predictor.
+            - "mean" returns the linear predictor transformed using the
+              link function.
+            - "linear" returns the linear predictor without passing through
+              the link function.
 
         Returns
         -------
