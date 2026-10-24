@@ -1866,6 +1866,16 @@ def test_ljungbox_errors_warnings():
     assert isinstance(ret, pd.DataFrame)
 
 
+@pytest.mark.parametrize("return_df", [True, False])
+def test_ljungbox_return_df_deprecated(return_df):
+    data = sunspots.load_pandas().data["SUNACTIVITY"]
+    expected = smsdia.acorr_ljungbox(data, lags=10)
+    with pytest.warns(FutureWarning, match="return_df is unused"):
+        res = smsdia.acorr_ljungbox(data, lags=10, return_df=return_df)
+    assert isinstance(res, pd.DataFrame)
+    pd.testing.assert_frame_equal(res, expected)
+
+
 def test_ljungbox_period():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
     ar_res = AutoReg(data, 4).fit()
