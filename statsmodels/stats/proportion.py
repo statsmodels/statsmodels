@@ -971,7 +971,7 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
         lower and upper limit of equivalence region
     nobs : int or array_like
         the number of trials or observations.
-    p_alt : float or array_like in (0, 1), optional
+    p_alt : float or array_like in [0, 1], optional
         proportion under the alternative. If p_alt is None, then the
         midpoint of the equivalence region, ``0.5 * (low + upp)``, is used.
     alpha : float or array_like in (0, 1), optional
@@ -985,8 +985,8 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
     Raises
     ------
     ValueError
-        If ``p_alt`` is not in [0, 1], or if the arguments of
-        :func:`binom_tost_reject_interval` are not valid.
+        If ``p_alt`` is not in [0, 1] (this includes NaN values), or if the
+        arguments of :func:`binom_tost_reject_interval` are not valid.
 
     See Also
     --------
