@@ -292,8 +292,9 @@ Forecast Error Variance Decomposition (FEVD)
 The forecast error variance decomposition gives the share of the h-step ahead
 forecast error variance of variable j that is due to the orthogonalized shock
 to variable k. It is computed from the orthogonalized impulse responses
-:math:`\Theta_i = \Phi_i P`, where :math:`P` is the Cholesky factor of
-:math:`\Sigma_u` and :math:`e_j` is the j-th unit vector:
+:math:`\Theta_i = \Phi_i P`, where :math:`P` is, by default, the Cholesky factor
+of :math:`\Sigma_u` (any :math:`P` with :math:`\Sigma_u = P P^\prime` can be
+passed instead) and :math:`e_j` is the j-th unit vector:
 
 .. math::
 
