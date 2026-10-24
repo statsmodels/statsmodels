@@ -19,6 +19,8 @@ from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.arima_process import (
     ArmaProcess,
     ar2arma,
+    arma2ar,
+    arma2ma,
     arma_acf,
     arma_acovf,
     arma_generate_sample,
@@ -420,6 +422,23 @@ class TestArmaProcess:
 
         pacf = process1.pacf()
         assert pacf.shape[0] == process1.nobs
+
+    def test_arma2ma_arma2ar_default_lags(self):
+        # GH 4464
+        process1 = ArmaProcess.from_coeffs([0.9], [0.2])
+        ma_rep = process1.arma2ma()
+        assert ma_rep.shape[0] == process1.nobs
+        assert_array_almost_equal(
+            ma_rep, arma2ma(process1.ar, process1.ma, lags=process1.nobs)
+        )
+        assert_array_almost_equal(process1.arma2ma(10), ma_rep[:10])
+
+        ar_rep = process1.arma2ar()
+        assert ar_rep.shape[0] == process1.nobs
+        assert_array_almost_equal(
+            ar_rep, arma2ar(process1.ar, process1.ma, lags=process1.nobs)
+        )
+        assert_array_almost_equal(process1.arma2ar(10), ar_rep[:10])
 
     def test_isstationary(self):
         process1 = ArmaProcess.from_coeffs([1.1])

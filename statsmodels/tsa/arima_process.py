@@ -938,12 +938,12 @@ class ArmaProcess:
 
     @Appender(remove_parameters(arma2ma.__doc__, ["ar", "ma"]))
     def arma2ma(self, lags=None):
-        lags = lags or self.lags
+        lags = lags or self.nobs
         return arma2ma(self.ar, self.ma, lags=lags)
 
     @Appender(remove_parameters(arma2ar.__doc__, ["ar", "ma"]))
     def arma2ar(self, lags=None):
-        lags = lags or self.lags
+        lags = lags or self.nobs
         return arma2ar(self.ar, self.ma, lags=lags)
 
     @property
