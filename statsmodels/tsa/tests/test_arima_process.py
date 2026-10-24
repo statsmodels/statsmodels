@@ -425,20 +425,38 @@ class TestArmaProcess:
 
     def test_arma2ma_arma2ar_default_lags(self):
         # GH 4464
-        process1 = ArmaProcess.from_coeffs([0.9], [0.2])
-        ma_rep = process1.arma2ma()
-        assert ma_rep.shape[0] == process1.nobs
-        assert_array_almost_equal(
-            ma_rep, arma2ma(process1.ar, process1.ma, lags=process1.nobs)
-        )
-        assert_array_almost_equal(process1.arma2ma(10), ma_rep[:10])
+        # Reference values for phi=0.9, theta=0.2 (R 4.6.1, stats::ARMAtoMA):
+        #   c(1, ARMAtoMA(ar = 0.9, ma = 0.2, lag.max = 3))
+        #       -> 1, 1.1, 0.99, 0.891
+        #   c(1, ARMAtoMA(ar = -0.2, ma = -0.9, lag.max = 3))
+        #       -> 1, -1.1, 0.22, -0.044
+        # They are the expansions of (1 + 0.2L) / (1 - 0.9L) and
+        # (1 - 0.9L) / (1 + 0.2L)
+        ma_expected = [1, 1.1, 0.99, 0.891]
+        ar_expected = [1, -1.1, 0.22, -0.044]
 
+        process1 = ArmaProcess.from_coeffs([0.9], [0.2])
+        assert process1.nobs == 100
+        ma_rep = process1.arma2ma()
+        assert ma_rep.shape == (100,)
+        assert_allclose(ma_rep[:4], ma_expected, rtol=1e-12)
+        assert_allclose(process1.arma2ma(10), ma_rep[:10])
         ar_rep = process1.arma2ar()
-        assert ar_rep.shape[0] == process1.nobs
-        assert_array_almost_equal(
-            ar_rep, arma2ar(process1.ar, process1.ma, lags=process1.nobs)
-        )
-        assert_array_almost_equal(process1.arma2ar(10), ar_rep[:10])
+        assert ar_rep.shape == (100,)
+        assert_allclose(ar_rep[:4], ar_expected, rtol=1e-12)
+        assert_allclose(process1.arma2ar(10), ar_rep[:10])
+
+        # The default is nobs, not the default of the module level functions
+        process2 = ArmaProcess.from_coeffs([0.9], [0.2], nobs=37)
+        assert process2.nobs == 37
+        ma_rep = process2.arma2ma()
+        assert ma_rep.shape == (37,)
+        assert_allclose(ma_rep[:4], ma_expected, rtol=1e-12)
+        assert_allclose(ma_rep, arma2ma(process2.ar, process2.ma, lags=37))
+        ar_rep = process2.arma2ar()
+        assert ar_rep.shape == (37,)
+        assert_allclose(ar_rep[:4], ar_expected, rtol=1e-12)
+        assert_allclose(ar_rep, arma2ar(process2.ar, process2.ma, lags=37))
 
     def test_isstationary(self):
         process1 = ArmaProcess.from_coeffs([1.1])
