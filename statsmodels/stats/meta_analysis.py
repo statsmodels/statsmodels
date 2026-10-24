@@ -680,7 +680,7 @@ def combine_effects(
     estimate ("iterated" or "pm"). If the estimate is truncated, then the
     random effects results are equal to the fixed effects results.
 
-    .. versionchanged:: 0.16.0
+    .. versionchanged:: 0.15.1
 
         The DerSimonian and Laird estimate of ``tau2`` is truncated at zero.
         Previously a negative ``tau2`` was used, which could produce a random
@@ -692,7 +692,7 @@ def combine_effects(
     ``h2`` at 1 and ``i2`` at 0, which are the values when ``tau2`` is zero.
     ``i2`` is a fraction and not a percent.
 
-    .. versionchanged:: 0.16.0
+    .. versionchanged:: 0.15.1
 
         ``h2`` is at least 1 and ``i2`` is at least 0. Previously ``h2`` was
         below 1 and ``i2`` was negative (or ``-inf`` if ``q`` is zero) if ``q``

@@ -2258,7 +2258,7 @@ def power_equivalence_poisson_2indep(
         Sample size ratio, nobs2 = nobs_ratio * nobs1. All values must be
         positive and finite.
 
-        .. versionchanged:: 0.16.0
+        .. versionchanged:: 0.15.1
 
             A nobs_ratio that is not positive and finite raises a
             ``ValueError``. Previously it returned nan or an arbitrary power.
@@ -2293,7 +2293,7 @@ def power_equivalence_poisson_2indep(
 
     Notes
     -----
-    .. versionchanged:: 0.16.0
+    .. versionchanged:: 0.15.1
 
         The power is changed if ``nobs_ratio`` is not equal to 1. The variances
         of the test statistic used the wrong sample size and, for
@@ -2916,7 +2916,7 @@ def power_equivalence_neginb_2indep(
         Sample size ratio, nobs2 = nobs_ratio * nobs1. All values must be
         positive and finite.
 
-        .. versionchanged:: 0.16.0
+        .. versionchanged:: 0.15.1
 
             A nobs_ratio that is not positive and finite raises a
             ``ValueError``. Previously it returned nan or raised a
@@ -2952,7 +2952,7 @@ def power_equivalence_neginb_2indep(
 
     Notes
     -----
-    .. versionchanged:: 0.16.0
+    .. versionchanged:: 0.15.1
 
         The power is changed if ``nobs_ratio`` is not equal to 1. The variances
         of the test statistic used the wrong sample size and, for

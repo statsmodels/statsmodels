@@ -589,7 +589,7 @@ class _BayesMixedGLM(base.Model):
             - "linear" returns the linear predictor, ``exog @ params[:k_exog]``,
               without passing through the link function.
 
-            .. versionadded:: 0.16.0
+            .. versionadded:: 0.15.1
 
         Returns
         -------
@@ -1135,7 +1135,7 @@ class BayesMixedGLMResults:
             - "linear" returns the linear predictor, ``exog @ params[:k_exog]``,
               without passing through the link function.
 
-            .. versionadded:: 0.16.0
+            .. versionadded:: 0.15.1
 
         Returns
         -------

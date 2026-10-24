@@ -224,7 +224,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
     dropped. The last bin can have a very small expected count, which makes
     the chisquare approximation of the p-value unreliable.
 
-    .. versionchanged:: 0.16.0
+    .. versionchanged:: 0.15.1
 
        The support of the distribution is taken from ``distfn.support(*arg)``
        instead of a fixed window of integers from -1000 to 1000. The bins
@@ -369,7 +369,7 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     methods assume that the support is integer valued and that loc is an
     integer.
 
-    .. versionchanged:: 0.16.0
+    .. versionchanged:: 0.15.1
 
        The support of the distribution is taken from ``distfn.support(*arg)``
        instead of a fixed window of integers from -1000 to 1000. The bins
