@@ -60,7 +60,8 @@ def test_gof_binning_discrete_bernoulli():
     assert_equal(freq, np.array([(rvs == 0).sum(), (rvs == 1).sum()]))
     assert_allclose(expfreq, n * np.array([1 - p, p]))
     assert freq.sum() == n
-    assert_allclose(histsupp, np.array([0.0, 1e-8, 1 + 1e-8]))
+    expected_supp = [0.0, np.nextafter(0.0, 1.0), np.nextafter(1.0, 2.0)]
+    assert_equal(histsupp, expected_supp)
 
 
 def test_gof_chisquare_discrete_bernoulli():
@@ -112,7 +113,9 @@ def test_gof_discrete_large_poisson(loc):
     assert_allclose([chis, pval], reference)
     assert passed == (reference.pvalue > 0.05)
 
-    # R 4.5.2 reference, scanning CDF values independently of the PPF search:
+    # The ppf based binning is checked against the cdf scan rule of the previous
+    # implementation (an internal equivalence check, not an external standard),
+    # reproduced in R 4.5.2 by scanning CDF values independently of the PPF search:
     # np.savetxt("sample.csv", sample - loc, fmt="%d")
     # x <- scan("sample.csv")
     # last <- 0; cuts <- c()
@@ -148,8 +151,8 @@ def test_gof_binning_discrete_randint(low, nsupp):
     assert_allclose(expfreq, np.full(nsupp, len(sample) / nsupp))
     expected_edges = np.r_[low, low - 1 + np.arange(1, nsupp + 1) * (20 // nsupp)]
     expected_edges = expected_edges.astype(float)
-    expected_edges[1:] += 1e-8
-    assert_allclose(edges, expected_edges)
+    expected_edges[1:] = np.nextafter(expected_edges[1:], np.inf)
+    assert_equal(edges, expected_edges)
 
 
 @pytest.mark.parametrize("loc", [-2000, 0, 2000])
@@ -160,12 +163,153 @@ def test_gof_binning_discrete_unbounded_support(loc):
     # For a=1, CDF(-3) < .05 < CDF(-2), and CDF(2) > .95.
     # Interior atoms each exceed .05, so no other grouping is necessary.
     assert_equal(freq, [11, 10, 10, 10, 10, 1])
-    expected_edges = np.r_[-np.inf, np.arange(-2, 3) + loc + 1e-8, np.inf]
-    assert_allclose(edges, expected_edges)
+    expected_edges = np.r_[
+        -np.inf, np.nextafter(np.arange(-2, 3) + loc, np.inf), np.inf
+    ]
+    assert_equal(edges, expected_edges)
     expected = len(sample) * np.diff(stats.dlaplace.cdf(expected_edges, 1, loc))
     assert_allclose(expfreq, expected)
     assert freq.sum() == len(sample)
     assert_allclose(expfreq.sum(), len(sample))
+
+
+def _cdf_scan_cuts(distfn, arg, ks, nsupp=20):
+    # Brute force version of the binning rule by scanning the cdf in order.
+    cdf = distfn.cdf(ks, *arg)
+    wsupp = 1.0 / nsupp
+    last = 0.0
+    cuts = []
+    for k, current in zip(ks, cdf, strict=True):
+        if current - last >= wsupp - 1e-14:
+            cuts.append(k)
+            last = current
+            if last >= 1 - wsupp:
+                break
+    return np.array(cuts)
+
+
+class NoPpf:
+    """Wrap a distribution so that ``ppf`` fails like SciPy's generic ppf."""
+
+    def __init__(self, dist):
+        self.dist = dist
+
+    def support(self, *arg):
+        return self.dist.support(*arg)
+
+    def cdf(self, x, *arg):
+        return self.dist.cdf(x, *arg)
+
+    def ppf(self, q, *arg):
+        raise RuntimeError("updating stopped, endless loop")
+
+
+@pytest.mark.parametrize("mu", [1e9, 1e10])
+def test_gof_binning_discrete_large_mean_edges(mu):
+    # Adding a fixed epsilon to an edge is lost in floating point for values
+    # of this size, and an observation equal to an edge moved to the next bin.
+    sd = np.sqrt(mu)
+    ks = np.arange(np.floor(mu - 3 * sd), np.ceil(mu + 3 * sd))
+    cuts = _cdf_scan_cuts(stats.poisson, (mu,), ks)
+    assert len(cuts) > 10
+    # exactly on the edges and next to them
+    sample = np.sort(np.r_[cuts, cuts + 1, cuts[:5] - 1, mu])
+
+    freq, expfreq, edges = gof_binning_discrete(sample, stats.poisson, (mu,))
+
+    assert_equal(np.floor(edges[1:-1]), cuts)
+    # bin i holds cuts[i - 1] < x <= cuts[i]
+    expected = np.bincount(np.searchsorted(cuts, sample), minlength=len(cuts) + 1)
+    assert_equal(freq, expected)
+    assert freq.sum() == len(sample)
+    assert_allclose(expfreq.sum(), len(sample))
+
+
+def test_gof_binning_discrete_outside_support():
+    # Observations outside the support are dropped, and the largest value in
+    # the support is counted.
+    sample = np.array([-3, 0, 1, 2, 3, 19, 20, 21, 25])
+    freq, expfreq, edges = gof_binning_discrete(sample, stats.randint, (0, 20))
+    assert freq.sum() == 5
+    assert freq[0] == 1
+    assert freq[-1] == 1
+    assert_allclose(expfreq.sum(), len(sample))
+
+
+@pytest.mark.parametrize("nsupp", [0, -1, -20])
+def test_gof_binning_discrete_nsupp_invalid(nsupp):
+    sample = np.arange(10)
+    with pytest.raises(ValueError, match="nsupp"):
+        gof_binning_discrete(sample, stats.randint, (0, 10), nsupp=nsupp)
+    with pytest.raises(TypeError, match="nsupp"):
+        gof_binning_discrete(sample, stats.randint, (0, 10), nsupp=nsupp + 0.5)
+
+
+@pytest.mark.parametrize(
+    "dist, arg",
+    [
+        (stats.poisson, (50.5, 3)),
+        (stats.poisson, (3, 0)),
+        (stats.nbinom, (5, 0.2)),
+        (stats.dlaplace, (0.3, -7)),
+        (stats.randint, (-5, 40)),
+        (stats.bernoulli, (0.3,)),
+        (stats.skellam, (30.5, 20.25)),
+    ],
+)
+def test_gof_binning_discrete_cdf_fallback(dist, arg):
+    # Without a working ppf the bins use the cdf and are identical.
+    rng = np.random.default_rng(7654321)
+    sample = dist.rvs(*arg, size=400, random_state=rng)
+    expected = gof_binning_discrete(sample, dist, arg)
+    result = gof_binning_discrete(sample, NoPpf(dist), arg)
+    for res, exp in zip(result, expected, strict=True):
+        assert_allclose(res, exp, rtol=1e-13)
+    assert_equal(result[0], expected[0])
+    assert_equal(result[2], expected[2])
+
+
+@pytest.mark.parametrize("nsupp", [4, 20])
+@pytest.mark.parametrize("loc", [-300, 0, 150])
+def test_gof_binning_discrete_cdf_fallback_cdf_scan(loc, nsupp):
+    # The fallback agrees with a brute force scan of the cdf.
+    mu = 80.5
+    ks = np.arange(0, 400) + loc
+    cuts = _cdf_scan_cuts(stats.poisson, (mu, loc), ks, nsupp=nsupp)
+    sample = np.arange(loc, loc + 150)
+    freq, expfreq, edges = gof_binning_discrete(
+        sample, NoPpf(stats.poisson), (mu, loc), nsupp=nsupp
+    )
+    assert_equal(np.floor(edges[1:-1]), cuts)
+    expected = np.bincount(np.searchsorted(cuts, sample), minlength=len(cuts) + 1)
+    assert_equal(freq, expected)
+
+
+@pytest.mark.parametrize(
+    "arg",
+    [(449.79, 396.15), (339.91, 435.17)],
+)
+def test_gof_binning_discrete_skellam_generic_ppf(arg):
+    # SciPy's generic ppf of skellam can raise RuntimeError for large
+    # parameters, which previously made the binning fail.
+    rng = np.random.default_rng(6)
+    sample = stats.skellam.rvs(*arg, size=500, random_state=rng)
+    freq, expfreq, edges = gof_binning_discrete(sample, stats.skellam, arg)
+
+    assert freq.sum() == len(sample)
+    assert_allclose(expfreq.sum(), len(sample))
+    cuts = np.floor(edges[1:-1])
+    cdf = stats.skellam.cdf(cuts, *arg)
+    previous = np.r_[0.0, cdf[:-1]]
+    # each bin holds at least 1/20 of the mass, and not any fewer integers
+    assert np.all(cdf - previous >= 0.05 - 1e-12)
+    assert np.all(stats.skellam.cdf(cuts - 1, *arg) - previous < 0.05)
+    expected = len(sample) * np.diff(stats.skellam.cdf(edges, *arg))
+    assert_allclose(expfreq, expected, rtol=1e-8, atol=1e-8)
+    chis, pval, _, _ = gof_chisquare_discrete(
+        stats.skellam, arg, sample, 0.05, "skellam"
+    )
+    assert_allclose([chis, pval], stats.chisquare(freq, expfreq))
 
 
 def test_chisquare_power():
