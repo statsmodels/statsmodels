@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from statsmodels.compat.scipy import _mquantiles
 
+from itertools import pairwise
 from typing import NamedTuple
 import warnings
 
@@ -271,24 +272,48 @@ class KDEUnivariate:
         """
         Returns the differential entropy evaluated at the support
 
-        Note: Will not work if fit has not been called. 1e-12 is added
-        to each probability to ensure that log(0) is not called.
+        Returns
+        -------
+        float
+            The estimated differential entropy.
+
+        Notes
+        -----
+        Will not work if fit has not been called. 1e-12 is added to each
+        density value to ensure that log(0) is not called. For unbounded
+        kernels, integration is centered on the sample and scaled by the
+        bandwidth so that quadrature can locate shifted or narrow densities.
+        Integration intervals near the observations also locate separated
+        kernel components. Both infinite tails are retained.
         """
         _checkisfit(self)
 
         def entr(x, s):
-            pdf = kern.density(s, x)
+            pdf = kern.density(s, scale * x)
             return np.squeeze(pdf * np.log(pdf + 1e-12))
 
         kern = self.kernel
+        endog = self.endog
 
         if kern.domain is not None:
-            a, b = kern.domain
+            limits = kern.domain
+            scale = 1
         else:
-            a, b = -np.inf, np.inf
-        endog = self.endog
-        # TODO: below could run into integr problems, cf. stats.dist._entropy
-        return -integrate.quad(entr, a, b, args=(endog,))[0]
+            # Center and scale the integration variable so quadrature can find
+            # shifted or narrow densities for unbounded kernels.
+            endog = endog - endog.mean()
+            scale = kern.h
+            # Group dense observations into bandwidth-sized cells to limit
+            # breakpoints while preserving intervals near separated modes.
+            cells = np.unique(np.floor(endog / scale))
+            # Eight bandwidths contain nearly all Gaussian mass. These
+            # breakpoints guide quadrature without truncating infinite tails.
+            points = np.unique(cells[:, None] + [-8, -1, 0, 1, 2, 9])
+            limits = np.r_[-np.inf, points, np.inf]
+        return -scale * sum(
+            integrate.quad(entr, a, b, args=(endog,))[0]
+            for a, b in pairwise(limits)
+        )
 
     @cache_readonly
     def icdf(self):
