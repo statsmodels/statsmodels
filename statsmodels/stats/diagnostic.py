@@ -698,10 +698,10 @@ def acorr_ljungbox(
     --------
     >>> import statsmodels.api as sm
     >>> data = sm.datasets.sunspots.load_pandas().data
-    >>> res = sm.tsa.ARMA(data["SUNACTIVITY"], (1,1)).fit(disp=-1)
+    >>> res = sm.tsa.ARIMA(data["SUNACTIVITY"], order=(1, 0, 1)).fit()
     >>> sm.stats.acorr_ljungbox(res.resid, lags=[10])
            lb_stat     lb_pvalue
-    10  214.106992  1.827374e-40
+    10  214.108691  1.825879e-40
     """
     # Avoid cyclic import
     from statsmodels.tsa.stattools._stattools import acf

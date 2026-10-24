@@ -1870,10 +1870,20 @@ def test_ljungbox_errors_warnings():
 def test_ljungbox_return_df_deprecated(return_df):
     data = sunspots.load_pandas().data["SUNACTIVITY"]
     expected = smsdia.acorr_ljungbox(data, lags=10)
-    with pytest.warns(FutureWarning, match="return_df is unused"):
+    with pytest.warns(FutureWarning, match="return_df is unused") as record:
         res = smsdia.acorr_ljungbox(data, lags=10, return_df=return_df)
+    # the warning points at the caller
+    assert record[0].filename == __file__
     assert isinstance(res, pd.DataFrame)
     pd.testing.assert_frame_equal(res, expected)
+
+
+def test_ljungbox_return_df_not_passed_no_warning():
+    data = sunspots.load_pandas().data["SUNACTIVITY"]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        smsdia.acorr_ljungbox(data, lags=10)
+        smsdia.acorr_ljungbox(data, lags=10, return_df=None)
 
 
 def test_ljungbox_period():

@@ -289,8 +289,11 @@ the long run effects as follows:
 Forecast Error Variance Decomposition (FEVD)
 --------------------------------------------
 
-Forecast errors of component j on k in an h-step ahead forecast can be
-decomposed using the orthogonalized impulse responses :math:`\Theta_i`:
+The forecast error variance decomposition gives the share of the h-step ahead
+forecast error variance of variable j that is due to the orthogonalized shock
+to variable k. It is computed from the orthogonalized impulse responses
+:math:`\Theta_i = \Phi_i P`, where :math:`P` is the Cholesky factor of
+:math:`\Sigma_u` and :math:`e_j` is the j-th unit vector:
 
 .. math::
 
@@ -304,6 +307,10 @@ These are computed via the `fevd` function up through a total number of steps ah
 
    fevd = results.fevd(5)
    fevd.summary()
+
+The ``decomp`` attribute of the returned object is a 3-dimensional array
+indexed ``[j, h - 1, k]``, that is by variable, by horizon (the first step
+ahead is stored at position 0) and by shock.
 
 They can also be visualized through the returned :class:`FEVD` object:
 
