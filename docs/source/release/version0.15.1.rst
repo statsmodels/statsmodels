@@ -44,7 +44,9 @@ Deprecations
   :meth:`~statsmodels.genmod.generalized_linear_model.GLM.predict`. Use
   ``which="linear"`` instead of ``linear=True`` and ``which="mean"`` instead
   of ``linear=False``. Passing ``linear`` now raises a ``FutureWarning``, and
-  it will be removed in statsmodels 0.17.0. :issue:`8562`, :pr:`10554`
+  it will be removed in statsmodels 0.17.0. The value of ``which`` is case
+  sensitive and ``exog`` can be a list. :issue:`8562`, :pr:`10554`,
+  :pr:`10555`
 
 Behavior changes
 ----------------
@@ -64,8 +66,9 @@ Behavior changes
 - ``acorr_ljungbox`` raises a ``ValueError`` if a requested lag is smaller
   than 1. A lag of 0 silently returned the statistic of the largest lag. Lags
   that are not smaller than the number of observations also raise a
-  ``ValueError`` now instead of failing with an array broadcasting error.
-  :pr:`10481`, :pr:`10311`
+  ``ValueError`` now instead of failing with an array broadcasting error. The
+  error messages name the lag that was passed. :pr:`10481`, :pr:`10311`,
+  :pr:`10561`
 - With ``missing="drop"``, a ``MissingDataError`` is raised if all
   observations are dropped because of missing values. An unknown value of
   ``missing`` raises a ``ValueError``. :issue:`4417`, :pr:`10535`,
@@ -85,8 +88,9 @@ New functions and methods
 
 - Add :func:`~statsmodels.stats.diagnostic.compare_vuong`, the Vuong test for
   non-nested likelihood models, and its result class ``VuongTestResult``. The
-  test supports AIC and BIC corrections and one-sided alternatives.
-  :issue:`3897`, :pr:`10502`
+  test supports AIC and BIC corrections and one-sided alternatives. The
+  function is available from ``statsmodels.stats.api``. :issue:`3897`,
+  :pr:`10502`, :pr:`10560`
 - Add :func:`~statsmodels.stats.proportion.confint_proportions_paired` for the
   confidence interval of the difference of two paired proportions, using
   Newcombe's method 10 (the default) or the Wald interval. :issue:`10374`,
@@ -104,7 +108,7 @@ New functions and methods
   after inverse probability weighting. :issue:`10234`, :pr:`10235`
 - ``MNLogit`` has the documented ``names`` attribute that maps the column
   number of ``wendog`` to the name of the category of the endogenous variable.
-  :issue:`8995`, :pr:`10486`
+  :issue:`8995`, :pr:`10486`, :pr:`10558`
 - ``DynamicFactorMQ.fit_em(full_output=True)`` includes a ``converged`` entry
   in the EM return values, which distinguishes a converged fit from a fit that
   stopped at ``maxiter`` or was reverted. :issue:`10157`, :pr:`10214`
@@ -146,12 +150,15 @@ Regression and linear models
 
 - ``OLS.hessian(params, scale=None)``, the Hessian of the profile
   (concentrated) log-likelihood, was missing a factor of 2 in the term that
-  involves ``X'X``. :issue:`9469`, :pr:`10473`
+  involves ``X'X``. The results of ``OLS.fit_regularized`` with
+  ``profile_scale=True`` change because they use this Hessian.
+  :issue:`9469`, :pr:`10473`, :pr:`10556`
 - ``OLSInfluence`` for the results of a ``WLS`` model used the unweighted
   design matrix and residuals for the hat matrix, the studentized residuals,
   Cook's distance, ``dffits`` and the leave-one-observation-out measures.
   These are now computed from the whitened data, which matches R's
-  ``influence.measures`` for ``lm(..., weights=w)``. :pr:`10476`
+  ``influence.measures`` for ``lm(..., weights=w)``. The weights are treated as
+  precision weights. :issue:`9067`, :pr:`10476`, :pr:`10563`
 - ``compare_lm_test`` with ``cov_type="cluster"`` returned a Lagrange
   multiplier statistic that was too small by a factor of ``nobs``.
   :issue:`10284`, :pr:`10286`
@@ -160,7 +167,12 @@ Regression and linear models
   parameters, and did not check the length of ``weights`` against the number
   of rows otherwise. :issue:`10283`, :pr:`10285`
 - ``get_prediction()`` called without ``exog`` now uses the offset and
-  exposure of the model, as ``predict`` does. :pr:`10484`
+  exposure of the model, as ``predict`` does, for GLM, GLMGam, the discrete
+  count models and the binary models (Logit and Probit). Before, the offset
+  and the exposure were ignored, so that the predicted mean, the standard
+  errors, the intervals and the influence measures derived from them were
+  wrong. ``get_prediction(offset=c)`` keeps the exposure of the model and
+  ``get_prediction(exposure=c)`` keeps its offset. :pr:`10484`, :pr:`10562`
 - ``fit(use_t=True)`` was ignored with ``cov_type="nonrobust"`` (the default)
   in the discrete models, which used the normal and chi-square distributions.
   :issue:`10307`, :pr:`10327`
@@ -231,7 +243,8 @@ Mixed models and imputation
   from a formula: ``summary`` raised a ``KeyError`` and, with pandas 3,
   ``fit_regularized`` itself failed. :issue:`8902`, :pr:`10465`
 - ``MICE.combine`` failed for results of models that do not have a
-  ``_results`` attribute. :pr:`10479`
+  ``_results`` attribute, for example those of ``PHReg``. :issue:`9136`,
+  :pr:`10479`, :pr:`10557`
 
 Time series analysis
 --------------------
@@ -324,7 +337,11 @@ Statistics and tests
   ``quantile``. :pr:`10355`, :pr:`10371`
 - The DerSimonian-Laird estimate of the between-study variance in
   ``combine_effects`` (``method_re="dl"`` or ``"chi2"``) is truncated at zero.
-  A negative variance was used before. :issue:`10520`, :pr:`10522`
+  A negative variance was used before, which could give a random effects mean
+  outside the range of the effects. The ``h2`` and ``i2`` attributes of the
+  results are at least 1 and 0, as in R's ``metafor``. They were below 1 and
+  negative if ``q < k - 1``. ``combine_effects`` accepts lists and tuples.
+  :issue:`10520`, :pr:`10522`, :pr:`10555`
 - ``effectsize_2proportions`` applied the zero-cell continuity correction to
   all studies if any study had a zero cell. It is now applied only to the
   studies with a zero cell. With ``zero_correction="tac"``, the constants of
@@ -341,7 +358,11 @@ Statistics and tests
   parameter space. :issue:`10269`, :pr:`10270`, :pr:`10366`
 - ``power_equivalence_poisson_2indep`` and
   ``power_equivalence_neginb_2indep`` returned wrong results if ``nobs_ratio``
-  is not 1. :issue:`10519`, :pr:`10521`
+  is not 1. The ``ftotal`` null variance of
+  ``power_equivalence_neginb_2indep`` and ``power_negbin_ratio_2indep`` is
+  equal to the score variance if ``dispersion=0``. A ``nobs_ratio`` that is not
+  positive and finite raises a ``ValueError`` in the two equivalence
+  functions. :issue:`10519`, :pr:`10521`, :pr:`10555`
 - ``effectsize_oneway`` with a scalar ``vars_`` and ``use_var="bf"`` returned
   an infinite effect size. :pr:`10455`
 - The default ``value`` of
@@ -357,7 +378,10 @@ Statistics and tests
   :pr:`10451`
 - ``gof_chisquare_discrete`` and ``gof_binning_discrete`` no longer restrict
   the support of the distribution to the range -1000 to 1000. The bins are
-  chosen using the quantile function. :issue:`4359`, :pr:`10529`
+  chosen using the quantile function. The bins work for distributions for
+  which the ``ppf`` of SciPy fails to converge, such as ``skellam`` with large
+  parameters, and for edges of about 1e9 and larger. ``nsupp`` below 1 raises
+  a ``ValueError``. :issue:`4359`, :pr:`10529`, :pr:`10555`
 - ``rmspe`` truncated the percentage errors for integer input. :issue:`10509`,
   :pr:`10510`
 - ``cov_cluster`` raised a ``ZeroDivisionError`` for a single cluster. It now
@@ -402,8 +426,10 @@ Robust and multivariate statistics
   ``CovDetMM`` were ranked with a wrong Mahalanobis distance, because
   ``mahalanobis`` was called with the mean in place of the covariance. The
   estimates can change slightly. :pr:`10457`
-- ``CovDetS`` ignored its ``breakdown_point`` argument and always used 0.5.
-  :pr:`10468`
+- ``CovDetS`` and ``CovDetMM`` ignored their ``breakdown_point`` argument and
+  always used 0.5 for the tuning constant of the first-stage S-estimator.
+  Values outside (0, 0.5] now raise a ``ValueError``, and small values in
+  higher dimension no longer fail. :pr:`10468`, :pr:`10564`
 - The Ledoit-Wolf starting estimate of the deterministic estimators omitted
   the shrinkage target, and divided by zero for a single variable.
   :issue:`10368`, :pr:`10378`, :pr:`10452`
