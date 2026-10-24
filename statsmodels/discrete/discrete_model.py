@@ -3327,6 +3327,9 @@ class MNLogit(MultinomialModel):
         ynames = MultinomialResults._maybe_convert_ynames_int(ynames)
         # use range below to ensure sortedness
         ynames = [ynames[key] for key in range(int(self.J))]
+        # Documented ``names`` attribute: maps the column number in ``wendog``
+        # to the corresponding endogenous variable name (see GH#8995).
+        self.names = dict(zip(range(int(self.J)), ynames))
         idx = MultiIndex.from_product(
             (ynames[1:], self.data.xnames), names=(yname, None)
         )
