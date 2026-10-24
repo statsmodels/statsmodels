@@ -365,6 +365,41 @@ class TestMICE:
         # Smoke test for results
         result.summary()
 
+    def test_MICE_PHReg(self):
+        # MICE.combine must pool results from models that do not wrap their
+        # results, such as PHRegResults.
+        from statsmodels.duration.hazard_regression import PHReg
+
+        rs = np.random.RandomState(4431)
+        n = 200
+        x = rs.normal(size=n)
+        z = rs.normal(size=n)
+        t = rs.exponential(size=n) * np.exp(0.5 * x)
+        d = (rs.uniform(size=n) < 0.8).astype(float)
+        df = pd.DataFrame({"t": t, "d": d, "x": x, "z": z})
+        df.loc[rs.choice(n, 30, replace=False), "x"] = np.nan
+        df.loc[rs.choice(n, 30, replace=False), "z"] = np.nan
+
+        imp_data = mice.MICEData(df, rng=rs)
+        mi = mice.MICE(
+            "t ~ x + z",
+            PHReg,
+            imp_data,
+            init_kwds={"status": "d", "ties": "efron"},
+        )
+        result = mi.fit(2, 3)
+
+        assert issubclass(result.__class__, mice.MICEResults)
+        assert result.params.shape == (2,)
+        assert np.all(np.isfinite(result.params))
+        assert np.all(np.isfinite(result.bse))
+        # The data are simulated with a log-hazard slope of -0.5 on x and no
+        # effect of z, so the pooled estimates should be close to those values.
+        assert_allclose(result.params, [-0.5, 0.0], atol=0.1)
+
+        # Smoke test for results
+        result.summary()
+
     def test_MICE1(self):
         rs = np.random.RandomState(821223)
         df = gendat()
