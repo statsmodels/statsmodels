@@ -2193,6 +2193,10 @@ class CovDetMCD:
             x_sel = x[idx_sel]
             mean = x_sel.mean(0)
             cov_new = np.atleast_2d(np.cov(x_sel.T, ddof=1))
+            if _is_singular(cov_new):
+                raise ValueError(
+                    "more than h of the observations lie on a hyperplane"
+                )
 
             if ((cov - cov_new) ** 2).mean() < tol:
                 cov = cov_new
