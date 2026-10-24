@@ -210,9 +210,12 @@ class MICEData:
         self.rng = check_random_state(rng)
         self.regularized = {}
 
-        # Drop observations where all variables are missing.  This
-        # also has the effect of copying the data frame.
-        self.data = data.dropna(how="all").reset_index(drop=True)
+        # Drop observations where all variables are missing.  ``copy()``
+        # ensures we never modify the user's frame in place (see the
+        # ``self.data.iloc[...] = ...`` writes below).  The original index
+        # is preserved so imputed values can be related back to the input
+        # (#6532).
+        self.data = data.dropna(how="all").copy().copy()
 
         self.history_callback = history_callback
         self.history = []
@@ -320,8 +323,12 @@ class MICEData:
         for col in self.data.columns:
             di = self.data[col] - self.data[col].mean()
             di = np.abs(di)
-            ix = di.idxmin()
-            imp_values[col] = self.data[col].loc[ix]
+            # Positional selection: the original index is preserved and
+            # may contain duplicate labels, which idxmin/loc would trip
+            # over.  nanargmin returns the first occurrence of the
+            # minimum, exactly like idxmin would on a unique index.
+            ix = int(np.nanargmin(di.to_numpy()))
+            imp_values[col] = self.data[col].iloc[ix]
         self.data = self.data.fillna(imp_values)
 
     def _split_indices(self, vec):
