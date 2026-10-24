@@ -5,6 +5,7 @@ Created on Mon Dec 09 21:29:20 2013
 Author: Josef Perktold
 """
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
@@ -19,6 +20,7 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.tools._testing as smt
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import add_constant
 
 # get data and results as module global for now, TODO: move to class
@@ -143,7 +145,7 @@ class TestPoissonHC1Generic(CheckCountRobustMixin):
         from statsmodels.base.covtype import get_robustcov_results
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')
-        get_robustcov_results(cls.res1._results, "HC1", use_self=True)
+        get_robustcov_results(cls.res1._results, "HC0", use_self=True)
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1, sub_kparams=False)
@@ -205,7 +207,7 @@ class TestPoissonHC1Fit(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_hc1
         mod = smd.Poisson(endog, exog)
-        cls.res1 = mod.fit(disp=False, cov_type="HC1")
+        cls.res1 = mod.fit(disp=False, cov_type="HC0")
 
         cls.bse_rob = cls.res1.bse
 
@@ -218,7 +220,7 @@ class TestPoissonHC1FitExposure(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_exposure_hc1
         mod = smd.Poisson(endog, exog, exposure=exposure)
-        cls.res1 = mod.fit(disp=False, cov_type="HC1")
+        cls.res1 = mod.fit(disp=False, cov_type="HC0")
 
         cls.bse_rob = cls.res1.bse
 
@@ -303,7 +305,7 @@ class TestGLMPoissonHC1Generic(CheckCountRobustMixin):
         cls.res1 = mod.fit()
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')
-        get_robustcov_results(cls.res1._results, "HC1", use_self=True)
+        get_robustcov_results(cls.res1._results, "HC0", use_self=True)
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1, sub_kparams=False)
@@ -341,7 +343,7 @@ class TestGLMPoissonHC1Fit(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_hc1
         mod = GLM(endog, exog, family=families.Poisson())
-        cls.res1 = mod.fit(cov_type="HC1")
+        cls.res1 = mod.fit(cov_type="HC0")
 
         cls.bse_rob = cls.res1.bse
 
@@ -819,3 +821,56 @@ class TestGLMGaussHACGroupsum(CheckDiscreteGLM):
     def test_kwd(self):
         # test corrected keyword name
         assert_allclose(self.res1b.bse, self.res1.bse, rtol=1e-12)
+
+
+def _hc_models():
+    endog_bin = (endog > 0).astype(float)
+    return {
+        "poisson": lambda: smd.Poisson(endog, exog),
+        "logit": lambda: smd.Logit(endog_bin, exog),
+        "glm-poisson": lambda: GLM(endog, exog, family=families.Poisson()),
+        "glm-gaussian": lambda: GLM(endog, exog, family=families.Gaussian()),
+    }
+
+
+def _fit(mod, cov_type):
+    if isinstance(mod, GLM):
+        return mod.fit(cov_type=cov_type)
+    return mod.fit(disp=False, cov_type=cov_type)
+
+
+@pytest.mark.parametrize("cov_type", ["HC1", "HC2", "HC3", "hc3"])
+@pytest.mark.parametrize("model", ["poisson", "logit", "glm-poisson", "glm-gaussian"])
+def test_hcx_fallback_warns_and_labels_hc0(model, cov_type):
+    # GH#7798 HC1-HC3 are not implemented outside of linear regression
+    # models, the HC0 sandwich is used instead. Warn and report it as HC0.
+    mod = _hc_models()[model]()
+    res_hc0 = _fit(mod, "HC0")
+
+    with pytest.warns(SpecificationWarning, match="HC0"):
+        res = _fit(mod, cov_type)
+
+    assert_equal(res.cov_type, "HC0")
+    assert_("(HC0)" in res.cov_kwds["description"])
+    assert_("HC0" in str(res.summary()))
+    assert_allclose(res.bse, res_hc0.bse, rtol=1e-12)
+
+
+@pytest.mark.parametrize("model", ["poisson", "logit", "glm-poisson", "glm-gaussian"])
+def test_hc0_does_not_warn(model):
+    mod = _hc_models()[model]()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SpecificationWarning)
+        res = _fit(mod, "HC0")
+    assert_equal(res.cov_type, "HC0")
+
+
+@pytest.mark.parametrize("cov_type", ["HC1", "HC2", "HC3"])
+def test_ols_hcx_unchanged(cov_type):
+    # linear regression implements HC1-HC3, no fallback
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SpecificationWarning)
+        res = OLS(endog, exog).fit(cov_type=cov_type)
+    res_hc0 = OLS(endog, exog).fit(cov_type="HC0")
+    assert_equal(res.cov_type, cov_type)
+    assert_(np.all(res.bse > res_hc0.bse))
