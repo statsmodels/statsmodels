@@ -955,7 +955,7 @@ class Autoregressive(CovStruct):
 
         # Center bracket point
         b_ctr, f_ctr = 0.5, fitfunc(0.5)
-        while f_ctr > f_lft:
+        while f_ctr >= f_lft:
             b_ctr /= 2
             f_ctr = fitfunc(b_ctr)
             if b_ctr < 1e-8:
@@ -964,7 +964,10 @@ class Autoregressive(CovStruct):
 
         # Right bracket point
         b_rgt, f_rgt = 0.75, fitfunc(0.75)
-        while f_rgt < f_ctr:
+        while f_rgt <= f_ctr:
+            # 只有更低的右端点才能成为新中心 相等时保留中心继续右扩展
+            if f_rgt < f_ctr:
+                b_lft, b_ctr, f_ctr = b_ctr, b_rgt, f_rgt
             b_rgt = b_rgt + (1.0 - b_rgt) / 2
             f_rgt = fitfunc(b_rgt)
             if b_rgt > 1.0 - 1e-6:
