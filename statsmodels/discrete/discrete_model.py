@@ -257,6 +257,10 @@ class DiscreteModel(base.LikelihoodModel):
         """
         Fit the model using maximum likelihood.
 
+        ``cov_type`` "HC1", "HC2" and "HC3" are not implemented for discrete
+        models. They fall back to "HC0" with a ``SpecificationWarning``, see
+        ``get_robustcov_results``.
+
         The rest of the docstring is from
         statsmodels.base.model.LikelihoodModel.fit
         """
@@ -4767,6 +4771,8 @@ class NegativeBinomialP(CountModel):
             The transformation is ignored if ``method`` is "newton" or "ncg".
         cov_type : str, optional
             Covariance estimator to use when computing parameter covariance.
+            "HC1", "HC2" and "HC3" are not implemented and fall back to "HC0"
+            with a ``SpecificationWarning``.
         cov_kwds : dict, optional
             Additional keywords for the selected covariance estimator.
         use_t : bool, optional
