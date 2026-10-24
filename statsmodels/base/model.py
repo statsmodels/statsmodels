@@ -217,6 +217,16 @@ class Model:
                 "the variable converted to endog is non-numeric"
                 " (e.g., bool or str)."
             )
+        if (
+            max_endog == 2
+            and endog.ndim == 2
+            and endog.shape[1] == 2
+            and mgr.is_categorical(endog)
+        ):
+            # A two-level categorical response is expanded to one indicator
+            # column per level, which would be read as (successes, failures).
+            # Model the second level as the success, as R's glm does.
+            endog = endog.iloc[:, 1]
         if drop_cols is not None and len(drop_cols) > 0:
             cols = [x for x in exog.columns if x not in drop_cols]
             if len(cols) < len(exog.columns):
