@@ -1194,13 +1194,73 @@ def acf(
     return acf, qstat_vals, pvalue
 
 
+def _pacf_yw_levinson(x, nlags, adjusted):
+    """
+    Partial autocorrelations of the Yule-Walker estimator by Levinson-Durbin
+
+    Parameters
+    ----------
+    x : ndarray
+        The data series, 1d.
+    nlags : int
+        The largest lag, smaller than the number of observations.
+    adjusted : bool
+        Use the denominator nobs - k for the autocovariance at lag k if
+        True, nobs if False.
+
+    Returns
+    -------
+    ndarray
+        The partial autocorrelations for lags 0, 1, ..., m with m <= nlags.
+        m < nlags if the Toeplitz matrix of the autocovariances at lags
+        0, ..., m is not positive definite or the autocovariances are not
+        finite. Lags above m are left to ``yule_walker``.
+
+    Notes
+    -----
+    The autocovariances are computed exactly as ``yule_walker`` computes
+    them. The PACF at lag k is the last coefficient of the AR(k) Yule-Walker
+    solution, which is the k-th reflection coefficient of the Levinson-Durbin
+    recursion, so all lags are found in O(nlags ** 2) operations from a
+    single autocovariance sequence. The recursion stops at the first leading
+    Toeplitz matrix that is not positive definite, where it is no longer
+    known to be stable.
+    """
+    nobs = x.shape[0]
+    pacf = np.empty(nlags + 1)
+    pacf[0] = 1.0
+    # Invalid values produce non-finite autocovariances, and yule_walker
+    # then repeats the calculation and its warnings
+    with np.errstate(all="ignore"):
+        x = x - x.mean()
+        acov = np.empty(nlags + 1)
+        acov[0] = (x**2).sum() / nobs
+        for k in range(1, nlags + 1):
+            acov[k] = (x[:-k] * x[k:]).sum() / (nobs - k * adjusted)
+    if not np.all(np.isfinite(acov)):
+        return pacf[:1]
+    # phi[:k - 1] holds the coefficients of the AR(k - 1) model, and sigma
+    # its innovation variance
+    phi = np.empty(nlags)
+    sigma = acov[0]
+    for k in range(1, nlags + 1):
+        if not sigma > 0:
+            return pacf[:k]
+        refl = (acov[k] - phi[: k - 1] @ acov[k - 1 : 0 : -1]) / sigma
+        phi[: k - 1] -= refl * phi[: k - 1][::-1]
+        phi[k - 1] = refl
+        sigma *= 1.0 - refl * refl
+        pacf[k] = refl
+    return pacf
+
+
 def pacf_yw(
     x: ArrayLike1D,
     nlags: int | None = None,
     method: Literal["adjusted", "mle"] = "adjusted",
 ) -> np.ndarray:
     """
-    Partial autocorrelation estimated with non-recursive yule_walker
+    Partial autocorrelation estimated with Yule-Walker
 
     Parameters
     ----------
@@ -1228,8 +1288,12 @@ def pacf_yw(
 
     Notes
     -----
-    This solves yule_walker for each desired lag and contains
-    currently duplicate calculations.
+    The value at lag k is the last coefficient of the AR(k) model estimated
+    by ``yule_walker``. All lags are computed from one autocovariance
+    sequence using the Levinson-Durbin recursion. ``yule_walker`` is used
+    for the lags where the recursion is not known to be stable, which are
+    those where the Toeplitz matrix of the autocovariances is not positive
+    definite.
     """
     x = array_like(x, "x")
     nlags = int_like(nlags, "nlags", optional=True)
@@ -1237,16 +1301,19 @@ def pacf_yw(
     if nlags is None:
         nlags = max(min(int(10 * np.log10(nobs)), nobs - 1), 1)
     method = string_like(method, "method", options=("adjusted", "mle"))
-    pacf = [1.0]
+    if (x.ndim == 1 or x.shape[1:] == (1,)) and 0 < nlags < nobs:
+        pacf = _pacf_yw_levinson(x.reshape(-1), nlags, method == "adjusted")
+    else:
+        pacf = np.ones(1)
+    if pacf.shape[0] > nlags:
+        return pacf
     with warnings.catch_warnings():
         warnings.simplefilter("once", ValueWarning)
-        pacf.extend(
-            [
-                yule_walker(x, k, method=method, result_object=False)[0][-1]
-                for k in range(1, nlags + 1)
-            ]
-        )
-    return np.array(pacf)
+        rest = [
+            yule_walker(x, k, method=method, result_object=False)[0][-1]
+            for k in range(pacf.shape[0], nlags + 1)
+        ]
+    return np.concatenate([pacf, rest])
 
 
 class PacfBurgResult(NamedTuple):
@@ -1338,6 +1405,121 @@ def pacf_burg(
     return PacfBurgResult(pacf, sigma2)
 
 
+def _pacf_ols_qr(x, nlags, efficient):
+    """
+    Partial autocorrelations of the OLS estimator from a single QR
+
+    Parameters
+    ----------
+    x : ndarray
+        The data series, 1d, demeaned by the caller. When efficient is
+        True, the regressions include a constant, so demeaning does not
+        change them but improves their conditioning.
+    nlags : int
+        The largest lag, at most nobs // 2.
+    efficient : bool
+        If True, the k-lag regression includes a constant and uses the
+        observations k, ..., nobs - 1. If False, it has no constant and
+        uses the observations nlags, ..., nobs - 1.
+
+    Returns
+    -------
+    ndarray or None
+        The partial autocorrelations for lags 0, 1, ..., nlags. None if a
+        regression is close to singular or the data are not finite, where
+        ``pacf_ols`` solves the regressions one by one.
+
+    Notes
+    -----
+    Gives the same result as the least squares fit of each regression in
+    ``pacf_ols``. If ``[X, y] = QR``, then the last coefficient of the
+    regression of y on the first j columns of X is ``R[j - 1, -1] /
+    R[j - 1, j - 1]``. When efficient is False, all regressions share the
+    sample and use the first k columns of ``[lag 1, ..., lag nlags]``.
+
+    When efficient is True, the samples differ. A regressor that is one at
+    observation t and zero elsewhere removes that observation from a
+    regression, so the k-lag regression is the regression on the first
+    2k + 1 columns of ``[1, d_0, lag 1, d_1, lag 2, ..., d_{nlags - 1},
+    lag nlags]`` using all observations, with d_t the indicator of
+    observation t. The lags before the start of the sample are set to zero,
+    and only enter regressions that remove those observations. The
+    observations nlags, ..., nobs - 1 are not affected by the indicators.
+    They are first reduced to a triangular factor, which is then stacked
+    with the first nlags observations.
+
+    The rows are processed in blocks, and the triangular factor is updated
+    block by block so the full lagged regressor matrix is never formed.
+    """
+    nobs = x.shape[0]
+    const = int(efficient)
+    k = const + nlags
+    # Row t of windows is x[t + nlags], x[t + nlags - 1], ..., x[t], i.e.,
+    # the dependent variable followed by its nlags lags
+    windows = np.lib.stride_tricks.sliding_window_view(x, nlags + 1)[:, ::-1]
+    ntail = nobs - nlags
+    # Blocks of about 1MB keep the data in cache
+    block_rows = max(4 * (k + 1), 2**17 // (k + 1))
+    r = np.empty((0, k + 1))
+    for start in range(0, ntail, block_rows):
+        stop = min(start + block_rows, ntail)
+        block = np.empty((r.shape[0] + stop - start, k + 1))
+        block[: r.shape[0]] = r
+        rows = block[r.shape[0] :]
+        if const:
+            rows[:, 0] = 1.0
+        rows[:, const:k] = windows[start:stop, 1:]
+        rows[:, k] = windows[start:stop, 0]
+        r = np.linalg.qr(block, mode="r")
+    if not np.all(np.isfinite(r)):
+        return None
+    if r.shape[0] < k + 1:
+        # Fewer observations than columns, pad with zero rows
+        r = np.vstack([r, np.zeros((k + 1 - r.shape[0], k + 1))])
+
+    eps = np.finfo(float).eps
+    if not efficient:
+        # lstsq treats singular values below max(nrows, ncols) * eps times
+        # the largest one as zero, and max(nrows, ncols) <= nobs. A subset
+        # of the columns has a smallest singular value at least as large,
+        # and a largest one at most as large, as all columns, so if this
+        # check passes, lstsq finds every regression to have full rank. The
+        # factor 10 is a margin for rounding.
+        sv = np.linalg.svd(r[:k, :k], compute_uv=False)
+        if sv[-1] <= 10 * nobs * eps * sv[0]:
+            return None
+        diag = np.diag(r)[:k]
+        return np.concatenate([[1.0], r[:k, k] / diag])
+
+    # The first nlags observations, with zeros for the lags before the
+    # start of the sample, as in lagmat
+    head = np.zeros((nlags, k))
+    head[:, 0] = 1.0
+    for t in range(1, nlags):
+        head[t, 1 : t + 1] = x[t - 1 :: -1]
+    # The regressors of the k-lag regression are a submatrix of
+    # [r[:k, :k]; head], so their largest singular value is at most that of
+    # [r[:k, :k]; head]. They are the first k + 1 columns of observations
+    # k, ..., nobs - 1, which include the observations of r, so their
+    # smallest singular value is at least that of r[:k, :k]. As above, if
+    # this check passes, lstsq finds every regression to have full rank.
+    sv_min = np.linalg.svd(r[:k, :k], compute_uv=False)[-1]
+    sv_max = np.linalg.norm(np.vstack([r[:k, :k], head]), 2)
+    if sv_min <= 10 * nobs * eps * sv_max:
+        return None
+    lag_cols = 2 * np.arange(1, nlags + 1)
+    stacked = np.zeros((k + 1 + nlags, 2 * nlags + 2))
+    stacked[: k + 1, 0] = r[:, 0]
+    stacked[: k + 1, lag_cols] = r[:, 1:k]
+    stacked[: k + 1, -1] = r[:, k]
+    stacked[k + 1 :, 0] = 1.0
+    stacked[k + 1 :, lag_cols] = head[:, 1:]
+    stacked[k + 1 :, -1] = x[:nlags]
+    stacked[k + 1 + np.arange(nlags), lag_cols - 1] = 1.0
+    r = np.linalg.qr(stacked, mode="r")
+    return np.concatenate([[1.0], r[lag_cols, -1] / r[lag_cols, lag_cols]])
+
+
 def pacf_ols(
     x: ArrayLike1D,
     nlags: int | None = None,
@@ -1378,8 +1560,10 @@ def pacf_ols(
 
     Notes
     -----
-    This solves a separate OLS estimation for each desired lag using method in
-    [1]_. Setting efficient to True has two effects. First, it uses
+    This estimates a separate OLS regression for each desired lag using
+    method in [1]_. The regressions share their regressors, so all of them
+    are computed from a single QR decomposition. Setting efficient to True
+    has two effects. First, it uses
     `nobs - lag` observations of estimate each pacf.  Second, it re-estimates
     the mean in each regression. If efficient is False, then the data are first
     demeaned, and then `nobs - maxlag` observations are used to estimate each
@@ -1406,6 +1590,18 @@ def pacf_ols(
         nlags = max(min(int(10 * np.log10(nobs)), nobs // 2), 1)
     if nlags > nobs // 2:
         raise ValueError(f"nlags must be smaller than nobs // 2 ({nobs // 2})")
+    if not efficient:
+        x = x - np.mean(x)
+    pacf = None
+    if (x.ndim == 1 or x.shape[1:] == (1,)) and 0 < nlags:
+        xd = x.reshape(-1)
+        if efficient:
+            xd = xd - xd.mean()
+        pacf = _pacf_ols_qr(xd, nlags, efficient)
+    if pacf is not None:
+        if adjusted:
+            pacf *= nobs / (nobs - np.arange(nlags + 1))
+        return pacf
     pacf = np.empty(nlags + 1)
     pacf[0] = 1.0
     if efficient:
@@ -1416,7 +1612,6 @@ def pacf_ols(
             params = np.linalg.lstsq(xlags[k:, : k + 1], x0[k:], rcond=None)[0]
             pacf[k] = np.squeeze(params[-1])
     else:
-        x = x - np.mean(x)
         # Create a single set of lags for multivariate OLS
         _lagmat_result = lagmat(x, nlags, original="sep", trim="both")
         xlags, x0 = _lagmat_result.lags, _lagmat_result.leads
