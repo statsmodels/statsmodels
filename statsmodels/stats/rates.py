@@ -2006,7 +2006,7 @@ def power_poisson_ratio_2indep(
     nobs1,
     nobs_ratio=1,
     exposure=1,
-    value=0,
+    value=1,
     alpha=0.05,
     dispersion=1,
     alternative="smaller",
@@ -2035,7 +2035,10 @@ def power_poisson_ratio_2indep(
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
     value : float, optional
-        Rate ratio, rate1 / rate2, under the null hypothesis.
+        Rate ratio, rate1 / rate2, under the null hypothesis. The default
+        value 1 corresponds to the null hypothesis that both rates are equal.
+        The value has to be positive, otherwise the power cannot be computed.
+        (default is 1)
     alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
