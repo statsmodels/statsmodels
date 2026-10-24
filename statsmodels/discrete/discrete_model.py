@@ -1941,11 +1941,22 @@ class GeneralizedPoisson(CountModel):
     both give a variance-to-mean ratio of 2.25. In VGAM's ``dgenpois1``, this
     ratio is the ``dispind`` parameter, not :math:`\alpha` itself [1]_.
 
+    The generalized Poisson distribution was introduced by Consul and Jain
+    [2]_. Regression models based on it are discussed in [3]_ and [4]_.
+
     References
     ----------
     .. [1] VGAM, "Generalized Poisson Distribution (GP-1 and GP-2
        Parameterizations of the Mean)".
        https://search.r-project.org/CRAN/refmans/VGAM/html/genpois1UC.html
+    .. [2] Consul, P. C., and G. C. Jain. 1973. "A Generalization of the
+       Poisson Distribution." Technometrics 15 (4): 791-799.
+    .. [3] Famoye, F. 1993. "Restricted Generalized Poisson Regression
+       Model." Communications in Statistics - Theory and Methods 22 (5):
+       1335-1354.
+    .. [4] Zamani, H., and N. Ismail. 2012. "Functional Form for the
+       Generalized Poisson Regression Model." Communications in Statistics -
+       Theory and Methods 41 (20): 3666-3675.
     """.format(
         params=base._model_params_doc,
         extra_params="""
