@@ -1151,15 +1151,28 @@ class OLS(WLS):
         ----------
         params : array_like
             The parameter vector at which the Hessian is computed.
-        scale : None or float
-            If None, return the profile (concentrated) log likelihood
-            (profiled over the scale parameter), else return the
-            log-likelihood using the given scale value.
+        scale : float, optional
+            If None, return the Hessian of the profile (concentrated)
+            log-likelihood (profiled over the scale parameter), else
+            return the Hessian of the log-likelihood using the given
+            scale value.
 
         Returns
         -------
         ndarray
             The Hessian matrix.
+
+        Notes
+        -----
+        With ``scale=None`` the Hessian of the profile log-likelihood
+        is ``-n / 2 * (2 X'X / SSR - g g' / SSR**2)``, where ``SSR`` is the
+        sum of squared residuals and ``g`` is its gradient with respect to
+        ``params``.
+
+        .. versionchanged:: 0.15.1
+
+           The Hessian with ``scale=None`` was corrected. The first term
+           was previously too small by a factor of 2.
 
         """
         if not hasattr(self, "_wexog_xprod"):
