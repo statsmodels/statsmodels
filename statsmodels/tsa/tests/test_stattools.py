@@ -3204,11 +3204,18 @@ def test_pacf_ols_qr_singular(kind, efficient):
 
 
 def test_pacf_nonfinite():
+    # Data that are not finite are left to the per-lag fits
     x = np.cumsum(np.ones(30))
     x[20] = np.nan
     assert _pacf_yw_levinson(x, 5, True).shape[0] == 1
-    assert np.all(np.isnan(pacf_yw(x, 5)[1:]))
     assert _pacf_ols_qr(x, 5, True) is None
+
+
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="No fp exception support in WASM")
+def test_pacf_nonfinite_per_lag_fits():
+    x = np.cumsum(np.ones(30))
+    x[20] = np.nan
+    assert np.all(np.isnan(pacf_yw(x, 5)[1:]))
     with pytest.raises(np.linalg.LinAlgError):
         pacf_ols(x, 5)
 
