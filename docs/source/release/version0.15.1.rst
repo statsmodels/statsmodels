@@ -348,7 +348,7 @@ Time series analysis
   ``PeriodIndex`` the "Sample" line of the results summary shows integer
   positions, e.g. ``0 - 19``, and ``model.data.dates`` is ``None``, as for a
   ``DatetimeIndex`` without a frequency. :issue:`6247`, :issue:`8950`,
-  :pr:`10572`, :pr:`NNNN`
+  :pr:`10572`, :pr:`10581`
 - The asymptotic critical values and p-values of
   :meth:`~statsmodels.tsa.ardl.UECMResults.bounds_test` are looked up with the
   number of regressors, excluding the dependent variable, as in Pesaran, Shin
