@@ -24,7 +24,7 @@ import warnings
 import numpy as np
 from scipy import linalg, optimize, signal
 
-from statsmodels.tools.docstring import Docstring, remove_parameters
+from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import array_like, int_like
 
@@ -402,7 +402,7 @@ def arma2ma(ar, ma, lags=100):
 
     Notes
     -----
-    Equivalent to ``arma_impulse_response(ar, ma, leads=100)``
+    Equivalent to ``arma_impulse_response(ar, ma, leads=lags)``
     """
     return arma_impulse_response(ar, ma, leads=lags)
 
@@ -427,7 +427,7 @@ def arma2ar(ar, ma, lags=100):
 
     Notes
     -----
-    Equivalent to ``arma_impulse_response(ma, ar, leads=100)``
+    Equivalent to ``arma_impulse_response(ma, ar, leads=lags)``
     """
     return arma_impulse_response(ma, ar, leads=lags)
 
@@ -668,6 +668,39 @@ def deconvolve(num, den, n=None):
             num = np.concatenate((num, np.zeros(len(num_approx) - len(num))))
         rem = num - num_approx
     return quot, rem
+
+
+def _arma_lags_method_doc(func):
+    """
+    Build the ArmaProcess method docstring of arma2ma and arma2ar
+
+    Parameters
+    ----------
+    func : callable
+        The module level function, arma2ma or arma2ar.
+
+    Returns
+    -------
+    str
+        The docstring of func without ar and ma, where the description of
+        lags states the default value and the behavior change.
+    """
+    if func.__doc__ is None:
+        return None
+    ds = Docstring(func.__doc__)
+    ds.remove_parameters(["ar", "ma"])
+    lags_desc = [
+        (
+            "The number of coefficients to calculate. If not given, the "
+            "``nobs`` attribute of the process is used."
+        ),
+        "",
+        ".. versionchanged:: 0.15.1",
+        "",
+        "    Omitting ``lags`` no longer raises an ``AttributeError``.",
+    ]
+    ds.replace_block("Parameters", [Parameter("lags", "int, optional", lags_desc)])
+    return str(ds)
 
 
 _generate_sample_doc = Docstring(arma_generate_sample.__doc__)
@@ -936,12 +969,12 @@ class ArmaProcess:
         leads = leads or self.nobs
         return arma_impulse_response(self.ar, self.ma, leads=leads)
 
-    @Appender(remove_parameters(arma2ma.__doc__, ["ar", "ma"]))
+    @Appender(_arma_lags_method_doc(arma2ma))
     def arma2ma(self, lags=None):
         lags = lags or self.nobs
         return arma2ma(self.ar, self.ma, lags=lags)
 
-    @Appender(remove_parameters(arma2ar.__doc__, ["ar", "ma"]))
+    @Appender(_arma_lags_method_doc(arma2ar))
     def arma2ar(self, lags=None):
         lags = lags or self.nobs
         return arma2ar(self.ar, self.ma, lags=lags)

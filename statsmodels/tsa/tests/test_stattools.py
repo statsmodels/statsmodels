@@ -1772,10 +1772,12 @@ class TestRUR:
         The test statistic is outside of the range of p-values available in the
         look-up table. The actual p-value is {direction} than the p-value returned.
         """
+        # the null is rejected for small statistics: below the table the actual
+        # p-value is smaller than reported, above it larger
         direction = ""
-        if p_value == pvals[-1]:
+        if rur_stat < inter_crit[0, 0]:
             direction = "smaller"
-        elif p_value == pvals[0]:
+        elif rur_stat >= inter_crit[0, -1]:
             direction = "larger"
 
         if direction:
@@ -1852,11 +1854,28 @@ class TestRUR:
 
     def test_interpolation_warning_direction(self):
         # statistic below the table: the actual p-value is smaller
-        with pytest.warns(InterpolationWarning, match="smaller than"):
-            range_unit_root_test(np.zeros(250), result_object=True)
+        msg = "The actual p-value is smaller than the p-value returned"
+        with pytest.warns(InterpolationWarning, match=msg) as record:
+            res = range_unit_root_test(np.zeros(250), result_object=True)
+        assert len(record) == 1
+        assert res.statistic == 0.0
+        assert res.pvalue == 0.01
         # statistic above the table: the actual p-value is larger
-        with pytest.warns(InterpolationWarning, match="larger than"):
-            range_unit_root_test(np.arange(250.0), result_object=True)
+        msg = "The actual p-value is larger than the p-value returned"
+        with pytest.warns(InterpolationWarning, match=msg) as record:
+            res = range_unit_root_test(np.arange(250.0), result_object=True)
+        assert len(record) == 1
+        assert res.pvalue == 0.95
+
+    def test_no_warning_lower_edge(self):
+        # 20 new extremes in 250 observations: 20 / sqrt(250) = 1.265 is between
+        # the 5% (1.2242) and 10% (1.3632) critical values, so the p-value is
+        # 0.10 and inside the table
+        x = np.r_[np.arange(21.0), np.full(229, 10.0)]
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = range_unit_root_test(x, result_object=True)
+        assert res.pvalue == 0.10
 
     def test_no_warning_inside_table(self):
         # 47 new extremes in 250 observations is between the 0.90 and 0.95

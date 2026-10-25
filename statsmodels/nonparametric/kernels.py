@@ -149,7 +149,7 @@ def tricube(h, Xi, x):
     The kernel is :math:`(70 / 81) (1 - |u|^3)^3` with :math:`u = (Xi - x) / h`
     if :math:`|u| \le 1` and 0 otherwise.
 
-    .. versionchanged:: 0.16.0
+    .. versionchanged:: 0.15.1
 
         The kernel is 0 outside of its support. Previously it returned the
         peak value 70 / 81 for points with :math:`|u| > 1`. Scalar `Xi` and

@@ -3514,10 +3514,12 @@ class RURResult(LimitedIterationMixin[float]):
     statistic : float
         The RUR test statistic.
     pvalue : float
-        The p-value of the test. The p-value is interpolated from Table 1
-        in Aparicio et al. (2006), and a boundary point is returned if the
-        test statistic is outside the table of critical values, that is,
-        if the p-value is outside the interval (0.01, 0.1).
+        The p-value of the test. The p-value is the smallest probability
+        level in Table 1 of Aparicio et al. (2006) whose critical value is
+        larger than the statistic. The boundary value 0.01 is returned if the
+        statistic is below the 1% critical value, and 0.95 if it is at or
+        above the 95% critical value, that is, if the actual p-value is
+        outside the interval (0.01, 0.95).
     critical_values : dict[str, float]
         The critical values at 10%, 5%, 2.5% and 1%. Based on Aparicio et
         al. (2006).
@@ -3590,11 +3592,12 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     statistic : float
         The RUR test statistic.
     pvalue : float
-        The p-value of the test. The p-value is interpolated from
-        Table 1 in Aparicio et al. (2006), and a boundary point
-        is returned if the test statistic is outside the table of
-        critical values, that is, if the p-value is outside the
-        interval (0.01, 0.1).
+        The p-value of the test. The p-value is the smallest probability
+        level in Table 1 of Aparicio et al. (2006) whose critical value is
+        larger than the statistic. The boundary value 0.01 is returned if the
+        statistic is below the 1% critical value, and 0.95 if it is at or
+        above the 95% critical value, that is, if the actual p-value is
+        outside the interval (0.01, 0.95).
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Aparicio et al. (2006).
@@ -3603,10 +3606,24 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
 
     Notes
     -----
-    The p-values are interpolated from
-    Table 1 of Aparicio et al. (2006). If the computed statistic is
-    outside the table of critical values, then a warning message is
-    generated.
+    The critical values are interpolated in the number of observations from
+    Table 1 of Aparicio et al. (2006). The p-value is the smallest tabulated
+    probability level whose critical value is larger than the statistic. If
+    the computed statistic is below the 1% critical value or at or above the
+    95% critical value, then an ``InterpolationWarning`` is issued. In the
+    first case the actual p-value is smaller than the reported 0.01 and in
+    the second it is larger than the reported 0.95.
+
+    .. versionchanged:: 0.15.1
+
+       The null hypothesis is documented correctly: the null is that `x` has
+       a unit root, and it is rejected for small values of the statistic. The
+       ``InterpolationWarning`` previously reported the opposite direction,
+       and was raised when the p-value was 0.95 or 0.01 rather than when the
+       statistic was outside of the tabulated critical values. It is now
+       raised when the statistic is below the 1% critical value (the actual
+       p-value is smaller) or at or above the 95% critical value (the actual
+       p-value is larger).
 
     Missing values are not handled.
 
