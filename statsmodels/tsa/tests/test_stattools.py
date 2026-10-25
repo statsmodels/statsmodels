@@ -18,7 +18,7 @@ from scipy import stats
 from scipy.interpolate import interp1d
 
 from statsmodels.datasets import macrodata, modechoice, nile, randhie, sunspots
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
     InfeasibleTestError,
@@ -26,6 +26,7 @@ from statsmodels.tools.sm_exceptions import (
     MissingDataError,
     SingularMatrixWarning,
 )
+from statsmodels.tools.tools import add_constant
 
 # Remove imports when range unit root test gets an R implementation
 from statsmodels.tools.validation import array_like, bool_like
@@ -72,7 +73,12 @@ from statsmodels.tsa.stattools import (
     range_unit_root_test,
     zivot_andrews,
 )
-from statsmodels.tsa.stattools._stattools import _adf_autolag, _autolag
+from statsmodels.tsa.stattools._stattools import (
+    _adf_autolag,
+    _autolag,
+    _pacf_ols_qr,
+    _pacf_yw_levinson,
+)
 from statsmodels.tsa.tsatools import add_trend, lagmat
 
 DECIMAL_8 = 8
@@ -3026,6 +3032,192 @@ def test_pacf_1_obs():
     with pytest.raises(ValueError):
         pacf_ols(y)
     pacf_yw(y)
+
+
+def _pacf_yw_loop(x, nlags, method):
+    # pacf_yw with one yule_walker fit per lag
+    pacf = [1.0]
+    for k in range(1, nlags + 1):
+        pacf.append(yule_walker(x, k, method=method, result_object=False)[0][-1])
+    return np.array(pacf)
+
+
+def _pacf_ols_loop(x, nlags, efficient, adjusted):
+    # pacf_ols with one least squares fit per lag
+    nobs = x.shape[0]
+    pacf = np.empty(nlags + 1)
+    pacf[0] = 1.0
+    if efficient:
+        res = lagmat(x, nlags, original="sep")
+        xlags, x0 = add_constant(res.lags), res.leads
+        for k in range(1, nlags + 1):
+            params = np.linalg.lstsq(xlags[k:, : k + 1], x0[k:], rcond=None)[0]
+            pacf[k] = np.squeeze(params[-1])
+    else:
+        x = x - np.mean(x)
+        res = lagmat(x, nlags, original="sep", trim="both")
+        xlags, x0 = res.lags, res.leads
+        for k in range(1, nlags + 1):
+            params = np.linalg.lstsq(xlags[:, :k], x0, rcond=None)[0]
+            pacf[k] = np.squeeze(params[-1])
+    if adjusted:
+        pacf *= nobs / (nobs - np.arange(nlags + 1))
+    return pacf
+
+
+def _pacf_series(kind, nobs, rng):
+    e = rng.standard_normal(nobs)
+    if kind == "white_noise":
+        return e
+    elif kind == "ar":
+        x = np.zeros(nobs)
+        for t in range(3, nobs):
+            x[t] = 0.6 * x[t - 1] - 0.3 * x[t - 2] + 0.2 * x[t - 3] + e[t]
+        return x
+    elif kind == "near_unit_root":
+        x = np.zeros(nobs)
+        for t in range(1, nobs):
+            x[t] = 0.999 * x[t - 1] + e[t]
+        return x
+    elif kind == "random_walk":
+        return 100.0 + np.cumsum(e)
+    elif kind == "mostly_constant":
+        x = np.full(nobs, 3.0)
+        x[nobs // 2 :] += 1e-3 * np.cumsum(e[nobs // 2 :])
+        return x
+    else:  # kind == "heavy_tails"
+        return rng.standard_t(1.5, nobs)
+
+
+PACF_SERIES = [
+    "white_noise",
+    "ar",
+    "near_unit_root",
+    "random_walk",
+    "mostly_constant",
+    "heavy_tails",
+]
+
+
+@pytest.mark.parametrize("method", ["adjusted", "mle"])
+@pytest.mark.parametrize("kind", PACF_SERIES)
+def test_pacf_yw_levinson_matches_yule_walker(method, kind):
+    # Levinson-Durbin gives the same values as one yule_walker fit per lag
+    rng = np.random.default_rng(10526)
+    for nobs in [5, 12, 25, 300]:
+        x = _pacf_series(kind, nobs, rng)
+        for nlags in {1, 2, nobs // 2 - 1, min(nobs - 1, 40)} - {0}:
+            expected = _pacf_yw_loop(x, nlags, method)
+            assert_allclose(pacf_yw(x, nlags, method), expected, rtol=0, atol=1e-12)
+
+
+@pytest.mark.parametrize("efficient", [True, False])
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("kind", PACF_SERIES)
+def test_pacf_ols_qr_matches_lstsq(efficient, adjusted, kind):
+    # one QR gives the same values as one least squares fit per lag
+    rng = np.random.default_rng(10526)
+    # With half of the sample constant, the regressions with the most lags
+    # are close to singular, and both methods lose precision
+    rtol = 1e-7 if kind == "mostly_constant" else 1e-10
+    for nobs in [5, 12, 25, 300]:
+        x = _pacf_series(kind, nobs, rng)
+        for nlags in {1, 2, nobs // 2 - 1, nobs // 2, min(nobs // 2, 40)} - {0}:
+            expected = _pacf_ols_loop(x, nlags, efficient, adjusted)
+            res = pacf_ols(x, nlags, efficient=efficient, adjusted=adjusted)
+            assert_allclose(res, expected, rtol=rtol, atol=1e-12)
+
+
+def test_pacf_qr_blocks():
+    # more observations than one block of rows
+    rng = np.random.default_rng(10526)
+    x = _pacf_series("ar", 20000, rng)
+    for efficient in [True, False]:
+        assert _pacf_ols_qr(x - x.mean(), 30, efficient) is not None
+        res = pacf_ols(x, 30, efficient=efficient)
+        expected = _pacf_ols_loop(x, 30, efficient, False)
+        assert_allclose(res, expected, rtol=0, atol=1e-13)
+    for method in ["adjusted", "mle"]:
+        expected = _pacf_yw_loop(x, 30, method)
+        assert_allclose(pacf_yw(x, 30, method), expected, rtol=0, atol=1e-13)
+
+
+def test_pacf_ols_large_mean():
+    # The efficient regressions include a constant, so the PACF does not
+    # depend on the mean. lstsq on the raw data loses precision when the
+    # mean is large relative to the variation, the QR uses demeaned data.
+    rng = np.random.default_rng(10526)
+    x = _pacf_series("ar", 400, rng)
+    for level in [0.0, 1e4, 1e8, 1e12]:
+        y = x + level
+        expected = _pacf_ols_loop(y - y.mean(), 10, True, False)
+        assert_allclose(pacf_ols(y, 10), expected, rtol=0, atol=1e-12)
+
+
+def test_pacf_2d_input():
+    rng = np.random.default_rng(10526)
+    x = _pacf_series("ar", 200, rng)
+    assert_allclose(pacf_yw(x[:, None], 10), pacf_yw(x, 10), rtol=1e-15)
+    assert_allclose(pacf_ols(x[:, None], 10), pacf_ols(x, 10), rtol=1e-15)
+
+
+def _pacf_singular_series(kind):
+    t = np.arange(60.0)
+    if kind == "constant":
+        return np.ones(60)
+    elif kind == "alternating":
+        return (-1.0) ** t
+    elif kind == "periodic":
+        return np.tile([1.0, -1.0, 2.0], 20)
+    elif kind == "sine":
+        return np.sin(0.3 * t)
+    else:  # kind == "trend"
+        return t
+
+
+@pytest.mark.parametrize(
+    "kind", ["constant", "alternating", "periodic", "sine", "trend"]
+)
+def test_pacf_yw_levinson_not_positive_definite(kind):
+    # the recursion stops where the Toeplitz matrix is not positive definite
+    # and yule_walker is used for the remaining lags
+    x = _pacf_singular_series(kind)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SingularMatrixWarning)
+        for method in ["adjusted", "mle"]:
+            expected = _pacf_yw_loop(x, 20, method)
+            assert_allclose(pacf_yw(x, 20, method), expected, rtol=0, atol=1e-13)
+    if kind != "trend":
+        assert _pacf_yw_levinson(x, 20, True).shape[0] < 21
+
+
+@pytest.mark.parametrize(
+    "kind", ["constant", "alternating", "periodic", "sine", "trend"]
+)
+@pytest.mark.parametrize("efficient", [True, False])
+def test_pacf_ols_qr_singular(kind, efficient):
+    # close to singular regressions are fitted one by one
+    x = _pacf_singular_series(kind)
+    assert _pacf_ols_qr(x - x.mean(), 20, efficient) is None
+    expected = _pacf_ols_loop(x, 20, efficient, False)
+    assert_allclose(pacf_ols(x, 20, efficient=efficient), expected, rtol=1e-15)
+
+
+def test_pacf_nonfinite():
+    # Data that are not finite are left to the per-lag fits
+    x = np.cumsum(np.ones(30))
+    x[20] = np.nan
+    assert _pacf_yw_levinson(x, 5, True).shape[0] == 1
+    assert _pacf_ols_qr(x, 5, True) is None
+
+
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="No fp exception support in WASM")
+def test_pacf_nonfinite_per_lag_fits():
+    x = np.cumsum(np.ones(30))
+    x[20] = np.nan
+    assert np.all(np.isnan(pacf_yw(x, 5)[1:]))
+    with pytest.raises(np.linalg.LinAlgError):
+        pacf_ols(x, 5)
 
 
 def test_zivot_andrews_change_data():
