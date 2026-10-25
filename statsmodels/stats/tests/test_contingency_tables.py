@@ -1,7 +1,6 @@
 """
 Tests for contingency table analyses.
 """
-
 from pathlib import Path
 import warnings
 
@@ -166,6 +165,7 @@ def test_resids():
 def test_ordinal_association():
 
     for k, table in enumerate(tables):
+
         row_scores = 1 + np.arange(table.shape[0])
         col_scores = 1 + np.arange(table.shape[1])
 
@@ -374,6 +374,7 @@ def test_cochrans_q_return_object_deprecated():
 
 
 class CheckStratifiedMixin:
+
     @classmethod
     def initialize(cls, tables, use_arr=False):
         tables1 = tables if not use_arr else np.dstack(tables)
@@ -626,6 +627,7 @@ class Check2x2Mixin:
 
 
 class Test2x2_1(Check2x2Mixin):
+
     @classmethod
     def setup_class(cls):
         data = np.zeros((8, 2))
@@ -674,9 +676,8 @@ def test_nominal_association_small_pvalue(table, shift_zeros):
     """
     from scipy import stats
 
-    rslt = ctab.Table(
-        np.asarray(table, dtype=float), shift_zeros=shift_zeros
-    ).test_nominal_association()
+    rslt = ctab.Table(np.asarray(table, dtype=float),
+                      shift_zeros=shift_zeros).test_nominal_association()
 
     expected = stats.chi2.sf(rslt.statistic, rslt.df)
 
@@ -688,7 +689,9 @@ def test_homogeneity_small_pvalue():
     """Stuart-Maxwell p-value must survive the far upper tail. GH#10274."""
     from scipy import stats
 
-    table = np.asarray([[18, 36, 36], [1, 18, 36], [1, 1, 18]], dtype=float)
+    table = np.asarray(
+        [[18, 36, 36], [1, 18, 36], [1, 1, 18]], dtype=float
+    )
     rslt = ctab.SquareTable(table, shift_zeros=False).homogeneity()
 
     expected = stats.chi2.sf(rslt.statistic, rslt.df)
@@ -701,7 +704,9 @@ def test_stratified_test_null_odds_small_pvalue():
     """StratifiedTable.test_null_odds p-value must not cancel. GH#10274."""
     from scipy import stats
 
-    table = np.asarray([[[60, 60], [1, 1]], [[1, 1], [60, 60]]], dtype=float)
+    table = np.asarray(
+        [[[60, 60], [1, 1]], [[1, 1], [60, 60]]], dtype=float
+    )
     rslt = ctab.StratifiedTable(table).test_null_odds()
 
     expected = stats.chi2.sf(rslt.statistic, 1)
@@ -725,9 +730,7 @@ def test_stratified_negative_counts_rejected():
     # companion to the base-Table check: StratifiedTable keeps its own
     # constructor, and negative counts used to flow through every statistic
     with pytest.raises(ValueError, match="non-negative"):
-        ctab.StratifiedTable(
-            np.asarray([[[2, 2], [2, -1]], [[3, 1], [1, 3]]], dtype=float)
-        )
+        ctab.StratifiedTable(np.asarray([[[2, 2], [2, -1]], [[3, 1], [1, 3]]], dtype=float))
     with pytest.raises(ValueError, match="non-negative"):
         ctab.StratifiedTable([[[2, 2], [2, 2]], [[3, 1], [1, -2]]])
 
