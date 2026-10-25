@@ -8,6 +8,7 @@ License: BSD-3
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_array_less
+import pandas as pd
 import pytest
 from scipy import stats
 
@@ -345,12 +346,12 @@ def test_batch_loop_invalid_batch_size(kind):
 
 @pytest.mark.parametrize("kind", ["pdf", "cdf"])
 def test_batch_loop_non_integer_batch_size(kind):
-    # batch_size is documented as int; numeric values that were accepted before
-    # must keep working instead of raising inside the block loop
+    # numeric values that are not Python ints were accepted before and must
+    # keep working instead of raising inside the block loop
     sample = _asym_data("beta", 5000)
     x = np.array([0.2, 0.5, 0.8])
     expected = _asym_estimate(kind, x, sample, 0.05, "beta", batch_size=10)
-    for batch_size in (10.0, np.float64(10.0), np.int64(10), True, float("inf")):
+    for batch_size in (10.0, np.float64(10.0), np.int64(10), float("inf")):
         result = _asym_estimate(
             kind, x, sample, 0.05, "beta", batch_size=batch_size
         )
@@ -394,7 +395,6 @@ def test_callable_kernel_receives_scalar_x(kind):
 def test_callable_kernel_receives_sample_container(kind):
     # The batched path used to materialize the sample before calling the
     # kernel; a callable that relies on the caller's container must still see it.
-    import pandas as pd
 
     def series_kernel(x, sample, bw):
         assert isinstance(sample, pd.Series)
@@ -411,8 +411,6 @@ def test_callable_kernel_receives_sample_container(kind):
 
 @pytest.mark.parametrize("kind", ["pdf", "cdf"])
 def test_series_sample_matches_array(kind):
-    import pandas as pd
-
     estimate = getattr(kern, f"{kind}_kernel_asym")
     sample = np.random.default_rng(3).beta(2, 5, size=5000)
     x = np.array([0.2, 0.5, 0.8])
@@ -436,26 +434,56 @@ def test_series_sample_matches_array(kind):
         pytest.param(10.0, "ok", id="float"),
         pytest.param(np.float64(10.0), "ok", id="numpy-float"),
         pytest.param(np.int64(10), "ok", id="numpy-int"),
-        pytest.param(True, "ok", id="bool"),
         pytest.param(float("inf"), "ok", id="inf"),
         pytest.param(float("nan"), "ValueError", id="nan"),
+        pytest.param(True, "TypeError", id="bool"),
+        pytest.param(None, "TypeError", id="none"),
         pytest.param("10", "TypeError", id="string"),
     ],
 )
-def test_batch_size_budget_semantics(batch_size, outcome):
-    # batch_size is documented as int; the effective budget is batch_size*1000
+@pytest.mark.parametrize("kind", ["pdf", "cdf"])
+def test_batch_size_budget_semantics(kind, batch_size, outcome):
+    # the effective budget is batch_size * 1000 elements; it can be any number
+    # and must allow at least one element
     sample = np.linspace(0.02, 0.98, 5000)
     x = np.array([0.2, 0.5, 0.8])
     if outcome == "ok":
-        expected = kern.pdf_kernel_asym(x, sample, 0.05, "beta", batch_size=10)
-        result = kern.pdf_kernel_asym(x, sample, 0.05, "beta", batch_size=batch_size)
+        expected = _asym_estimate(kind, x, sample, 0.05, "beta", batch_size=10)
+        result = _asym_estimate(
+            kind, x, sample, 0.05, "beta", batch_size=batch_size
+        )
         assert_allclose(result, expected, rtol=1e-12)
-    elif outcome == "ValueError":
-        with pytest.raises(ValueError):
-            kern.pdf_kernel_asym(x, sample, 0.05, "beta", batch_size=batch_size)
     else:
-        with pytest.raises(TypeError):
-            kern.pdf_kernel_asym(x, sample, 0.05, "beta", batch_size=batch_size)
+        error = {"ValueError": ValueError, "TypeError": TypeError}[outcome]
+        with pytest.raises(error, match="batch_size"):
+            _asym_estimate(kind, x, sample, 0.05, "beta", batch_size=batch_size)
+
+
+@pytest.mark.parametrize("kind", ["pdf", "cdf"])
+@pytest.mark.parametrize("kernel", ["beta", "beta2", "gamma", "gamma2"])
+@pytest.mark.parametrize("batch_size", [10, 0.01], ids=["whole", "batched"])
+def test_one_element_x_containers(kind, kernel, batch_size):
+    # A single-element x in any container returns a scalar. A one-element
+    # Series used to fail in the kernels that branch on x, if not batched.
+    sample = _asym_data(kernel, 100)
+    bw = 0.1
+    x0 = 0.3 if kernel.startswith("beta") else 1.5
+    expected = _asym_estimate(kind, x0, sample, bw, kernel)
+    for x in ([x0], (x0,), np.array([x0]), pd.Series([x0])):
+        result = _asym_estimate(
+            kind, x, sample, bw, kernel, batch_size=batch_size
+        )
+        assert np.ndim(result) == 0
+        assert_allclose(result, expected, rtol=1e-12)
+
+    # two elements are not reduced to a scalar
+    x2 = pd.Series([x0, 1.1 * x0], index=[3, 7])
+    expected = np.array(
+        [_asym_estimate(kind, v, sample, bw, kernel) for v in x2]
+    )
+    result = _asym_estimate(kind, x2, sample, bw, kernel, batch_size=batch_size)
+    assert result.shape == (2,)
+    assert_allclose(result, expected, rtol=1e-12)
 
 
 @pytest.mark.parametrize("kind", ["pdf", "cdf"])
