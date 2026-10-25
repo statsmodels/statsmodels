@@ -1906,7 +1906,10 @@ def test_ols_hessian_numerical_derivative(scale, use_offset, n_columns, at_fit):
     offset = np.array([0.1, 0.3, -0.2, 0.4, 0.2]) if use_offset else 0.0
     model = OLS(y, x, **({"offset": offset} if use_offset else {}))
     # Fitting y - offset avoids relying on OLS.fit's treatment of offset.
-    params = OLS(y - offset, x).fit().params if at_fit else np.array([0.7, 0.2])[:n_columns]
+    if at_fit:
+        params = OLS(y - offset, x).fit().params
+    else:
+        params = np.array([0.7, 0.2])[:n_columns]
     numeric_hessian = approx_hess(params, lambda p: model.loglike(p, scale=scale))
     assert_allclose(model.hessian(params, scale=scale), numeric_hessian,
                     rtol=1e-5, atol=1e-6)
