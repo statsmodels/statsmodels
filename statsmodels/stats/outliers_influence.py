@@ -823,7 +823,14 @@ class MLEInfluence(_BaseInfluenceMixin):
 
 class OLSInfluence(_BaseInfluenceMixin):
     """
-    Class to calculate outlier and influence measures for OLS result
+    Class to calculate outlier and influence measures for OLS and WLS results
+
+    .. versionchanged:: 0.15.1
+
+       The weights of WLS results are used. Previously the weights were
+       ignored, so that the hat matrix diagonal, the studentized residuals,
+       Cook's distance, dffits, dfbeta, dfbetas and the covariance ratio
+       were incorrect for WLS results.
 
     Parameters
     ----------
@@ -838,11 +845,13 @@ class OLSInfluence(_BaseInfluenceMixin):
     slower (mainly results with `_external` postfix in the name).
     For the auxiliary LOOO regression, only the required results are stored.
 
-    If the model is OLS and exog has full rank, then the LOOO results are
-    computed from the closed form updates, e.g. Belsley, Kuh and Welsch (1980),
-    without auxiliary regressions, and are fast also for large data sets.
+    If the model is OLS or WLS and exog has full rank, then the LOOO results
+    are computed from the closed form updates, e.g. Belsley, Kuh and Welsch
+    (1980), without auxiliary regressions, and are fast also for large data
+    sets.
 
-    For other models, using the LOOO measures is currently only recommended if
+    For other models, such as subclasses of OLS or WLS, or if exog does not
+    have full rank, using the LOOO measures is currently only recommended if
     the data set is not too large. One possible approach for LOOO measures
     would be to identify possible problem observations with the _internal
     measures, and then run the leave-one-observation-out only with
@@ -852,11 +861,36 @@ class OLSInfluence(_BaseInfluenceMixin):
     For WLS, the hat matrix, the studentized residuals, Cook's distance,
     dffits and the LOOO measures are those of OLS on the whitened data,
     ``sqrt(w) * endog`` and ``sqrt(w) * exog``, so a LOOO regression is a WLS
-    without observation i. This matches R's ``influence.measures`` for
-    ``lm(..., weights=w)``. ``resid_press`` and ``influence`` stay on the
-    scale of endog.
+    without observation i. For positive weights, this matches R's
+    ``influence.measures`` for ``lm(..., weights=w)``. ``resid_press`` and
+    ``influence`` stay on the scale of endog, and so does ``ess_press``, which
+    is the unweighted sum of squares of the PRESS residuals.
 
-    This should be extended to general least squares.
+    The weights of WLS are treated as precision weights, i.e. as inverse
+    variances of the errors, and not as frequency weights. As in
+    ``WLS.mse_resid``, the estimate of the error variance and the residual
+    degrees of freedom use the number of rows of the data and not the sum of the
+    weights.
+
+    ``WLS.df_resid`` counts observations with a weight of zero, whereas R drops
+    those cases. The hat matrix diagonal and the dfbeta of the other
+    observations are the same as in R. For observations with a zero weight, the
+    hat matrix diagonal, Cook's distance, dfbeta and the studentized residuals
+    are zero, but ``cov_ratio`` is not one. Measures that depend on the
+    estimate of the error variance and the residual degrees of freedom differ
+    from R. If there are ``n_pos`` observations with positive weights and ``k``
+    is the number of parameters, then Cook's distance is larger than in R by
+    the factor
+    ``(nobs - k) / (n_pos - k)`` and the internally studentized residuals are
+    larger by the square root of that factor. The other measures, i.e. the
+    externally studentized residuals, dffits, dfbetas and ``cov_ratio``, differ
+    by similar amounts. They are the same as in R if the WLS model is estimated
+    with only the observations that have positive weights.
+
+    Only OLS and WLS are supported. Results of other models, for example GLS
+    with a non-trivial ``sigma`` or GLSAR, are not whitened and the measures
+    are incorrect, without an error or warning. GLS without ``sigma`` is the
+    same as OLS.
 
     The leave-one-variable-out (LOVO) auxiliary regression are currently not
     used.
