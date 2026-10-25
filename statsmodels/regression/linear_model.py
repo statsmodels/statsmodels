@@ -242,6 +242,12 @@ class RegressionModel(base.LikelihoodModel):
     Intended for subclassing.
     """
 
+    # Class-level defaults for the attributes read by the results classes.
+    # Models unpickled from releases that did not set these in __init__ (and
+    # subclasses that skip RegressionModel.__init__) fall back to these.
+    weights: Float64Array | None = None
+    sigma: Float64Array | None = None
+
     def __init__(self, endog, exog, **kwargs):
         # set via kwargs by WLS/GLS in _handle_data, None otherwise
         self.weights: Float64Array | None = None
@@ -1036,6 +1042,13 @@ class OLS(WLS):
     <F test: F=array([[159.63031026]]), p=1.2607168903696672e-20,
      df_denom=43, df_num=2>
     """
+
+    # Class-level defaults, see RegressionModel. These keep models unpickled from
+    # earlier releases, which never had these instance attributes, working.
+    offset: Float64Array | None = None
+    _wendog_xprod: float | None = None
+    _wexog_xprod: Float64Array | None = None
+    _wexog_x_wendog: Float64Array | None = None
 
     def __init__(self, endog, exog=None, missing="none", hasconst=None, **kwargs):
         if "weights" in kwargs:

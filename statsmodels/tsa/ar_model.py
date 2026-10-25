@@ -2159,14 +2159,11 @@ def ar_select_order(
         return InformationCriteria(aic, bic, hqic)
 
     def ic_no_data():
-        """Fake mod and results to handle no regressor case"""
-        mod = SimpleNamespace(
-            nobs=y.shape[0], endog=y, exog=np.empty((y.shape[0], 0)), offset=None
-        )
-        llf = OLS.loglike(mod, np.empty(0))
-        res = SimpleNamespace(
-            resid=y, nobs=y.shape[0], llf=llf, df_model=0, k_constant=0
-        )
+        """Fake results to handle no regressor case"""
+        # compute_ics only reads nobs, df_model and resid (llf is recomputed
+        # from the residuals), and the residual is y when there are no
+        # regressors, so there is no need for a stand-in for OLS.loglike.
+        res = SimpleNamespace(resid=y, nobs=y.shape[0], df_model=0)
 
         return compute_ics(res)
 
