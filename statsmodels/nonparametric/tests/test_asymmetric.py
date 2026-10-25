@@ -533,3 +533,41 @@ def test_batch_loop_two_column_weights(kind):
     )
     assert result.shape == (3, 2)
     assert_allclose(result, values @ weights, rtol=1e-12)
+
+
+@pytest.mark.parametrize("kind", ["pdf", "cdf"])
+@pytest.mark.parametrize("weighted", [False, True], ids=["unweighted", "weights"])
+# 100 elements per kernel array split the evaluation points only, 10 elements
+# split the sample into several blocks as well
+@pytest.mark.parametrize("batch_size", [0.1, 0.01], ids=["split-x", "split-sample"])
+@pytest.mark.parametrize("kernel", sorted(kern.kernel_dict_pdf))
+def test_batch_loop_per_point_reference(kind, kernel, batch_size, weighted):
+    # Independent reference: one call of the kernel function for each point
+    # with scalar x, summed in extended precision, without any batching.
+    kernel_func = getattr(kern, f"kernel_dict_{kind}")[kernel]
+    bw = 0.05 if kernel.startswith("beta") else dict(kernels_rplus)[kernel]
+    nobs = 30
+    sample = _asym_data(kernel, nobs, seed=17)
+    if kernel.startswith("beta"):
+        # includes points inside the boundary region x < 2 * bw
+        x = np.array([0.02, 0.08, 0.3, 0.5, 0.7, 0.93, 0.99])
+    else:
+        x = np.array([0.05, 0.2, 0.5, 1.0, 2.0, 4.0, 6.0])
+
+    rng = np.random.default_rng(23)
+    weights = rng.uniform(0.5, 1.5, size=nobs) / nobs if weighted else None
+    w = weights if weighted else np.full(nobs, 1 / nobs)
+    w = w.astype(np.longdouble)
+
+    expected = np.array(
+        [
+            np.sum(np.asarray(kernel_func(xi, sample, bw), np.longdouble) * w)
+            for xi in x
+        ],
+        dtype=float,
+    )
+    result = _asym_estimate(
+        kind, x, sample, bw, kernel, weights=weights, batch_size=batch_size
+    )
+    assert result.shape == x.shape
+    assert_allclose(result, expected, rtol=1e-12)
