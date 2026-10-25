@@ -2539,18 +2539,40 @@ class CheckMNLogitBaseZero(CheckModelResults):
         super().test_distr()
 
 
-def test_mnlogit_names_attribute():
+def _mnlogit_names_endog(kind):
+    rng = np.random.default_rng(8995)
+    # Every category is guaranteed to appear: three full repeats, then shuffle
+    codes = rng.permutation(np.tile(np.arange(3), 8))
+    if kind == "categorical":
+        # Categories deliberately not in alphabetical order
+        cats = ["train", "car", "bus"]
+        return pd.Series(pd.Categorical.from_codes(codes, categories=cats))
+    elif kind == "string":
+        return np.array(["a", "b", "c"])[codes]
+    return np.array([1, 2, 3])[codes]
+
+
+@pytest.mark.parametrize(
+    "kind, expected",
+    [
+        ("categorical", {0: "train", 1: "car", 2: "bus"}),
+        ("string", {0: "a", 1: "b", 2: "c"}),
+        # numeric endog gives the string representation of the categories
+        ("numeric", {0: "1", 1: "2", 2: "3"}),
+    ],
+)
+def test_mnlogit_names_attribute(kind, expected):
     # GH#8995: MNLogit documents a ``names`` dict mapping the column number
     # in ``wendog`` to the corresponding endogenous variable name.
-    exog = np.arange(16.0).reshape(8, 2)
-    endog = np.array(["a", "b", "c", "a", "b", "c", "a", "b"])
+    rng = np.random.default_rng(10486)
+    endog = _mnlogit_names_endog(kind)
+    exog = rng.standard_normal((endog.shape[0], 2))
     model = MNLogit(endog, exog)
-    assert_equal(model.names, {0: "a", 1: "b", 2: "c"})
-
-    # integer-valued endog yields string representations of the categories
-    endog_int = np.array([1, 2, 3, 1, 2, 3, 1, 2])
-    model_int = MNLogit(endog_int, exog)
-    assert_equal(model_int.names, {0: "1", 1: "2", 2: "3"})
+    assert model.names == expected
+    # names[j] labels column j of wendog
+    labels = np.asarray(endog).astype(str)
+    for j, name in model.names.items():
+        assert_equal(model.wendog[:, j], (labels == name).astype(float))
 
 
 class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
