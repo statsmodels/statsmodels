@@ -1235,8 +1235,8 @@ def test_nonconsecutive_periodindex(index):
     ],
 )
 def test_consecutive_periodindex(index):
-    # Consecutive periods, including those with a frequency multiplier (for
-    # which pandas' `PeriodIndex.is_full` returns False), are supported
+    # Consecutive periods, including those with a frequency multiplier, are
+    # supported
     endog = pd.Series(np.zeros(len(index)), index=index)
 
     with warnings.catch_warnings():
