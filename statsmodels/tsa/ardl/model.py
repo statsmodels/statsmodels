@@ -2642,6 +2642,18 @@ class UECMResults(ARDLResults):
         is an F-type test statistic which is the standard quadratic form test
         statistic divided by the number of restrictions.
 
+        The asymptotic critical values and p-values are those of Pesaran, Shin
+        and Smith (2001) for :math:`k` long-run regressors. :math:`k` is the
+        number of variables in ``exog`` that are included in the model, and
+        does not count the dependent variable, fixed regressors or deterministic
+        terms. A variable in ``exog`` that is excluded from the model by
+        setting its order to ``None`` is not counted.
+
+        .. versionchanged:: 0.15.1
+
+           The asymptotic critical values and p-values were previously looked
+           up with :math:`k` one too large, which made the p-values too small.
+
         References
         ----------
         .. [*] Pesaran, M. H., Shin, Y., & Smith, R. J. (2001). Bounds testing
