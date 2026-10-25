@@ -984,6 +984,47 @@ def test_bounds_test_simulate_order():
     assert (bounds_result_sim.pvalue > bounds_result.pvalue).all()
 
 
+# Pesaran, Shin & Smith (2001), Table CI(iii), Case III, at the 10%, 5% and 1%
+# levels, indexed by k, the number of regressors excluding the dependent
+# variable. The statsmodels tables were simulated independently, so they
+# differ from the published values by up to about 0.07.
+PSS_CASE_3 = {
+    1: ([4.04, 4.94, 6.84], [4.78, 5.73, 7.84]),
+    2: ([3.17, 3.79, 5.15], [4.14, 4.85, 6.36]),
+    3: ([2.72, 3.23, 4.29], [3.77, 4.35, 5.61]),
+    10: ([1.83, 2.06, 2.54], [2.94, 3.24, 3.86]),
+}
+
+
+@pytest.mark.parametrize("k", sorted(PSS_CASE_3))
+def test_bounds_test_crit_vals_pss(k):
+    # GH-10546: the tables were indexed by the number of variables including y
+    rng = np.random.default_rng(10546)
+    data = np.cumsum(rng.standard_normal((200, k + 1)), axis=0)
+    y = pd.Series(data[:, 0], name="y")
+    x = pd.DataFrame(data[:, 1:], columns=[f"x{i}" for i in range(k)])
+    res = UECM(y, 1, x, 1, trend="c").fit()
+    bounds_result = res.bounds_test(case=3)
+    crit_vals = bounds_result.critical_values.loc[[90.0, 95.0, 99.0]]
+    lower, upper = PSS_CASE_3[k]
+    assert_allclose(crit_vals["lower"], lower, atol=0.1)
+    assert_allclose(crit_vals["upper"], upper, atol=0.1)
+
+
+def test_bounds_test_pvalue_matches_simulation():
+    # GH-10546: with one regressor, the asymptotic p-values were those for two
+    rng = np.random.default_rng(0)
+    nobs = 500
+    x = np.cumsum(rng.standard_normal(nobs))
+    y = np.zeros(nobs)
+    for t in range(1, nobs):
+        y[t] = y[t - 1] - 0.05 * (y[t - 1] - 0.5 * x[t - 1]) + rng.standard_normal()
+    res = UECM(pd.Series(y), 1, pd.DataFrame({"x": x}), 1, trend="c").fit()
+    bounds_result = res.bounds_test(case=3)
+    bounds_result_sim = res.bounds_test(case=3, asymptotic=False, nsim=20_000, rng=0)
+    assert_allclose(bounds_result.pvalue, bounds_result_sim.pvalue, atol=0.003)
+
+
 def test_resids_ardl_uecm():
     ardl_mod = ARDL(
         dane_data.lrm,
