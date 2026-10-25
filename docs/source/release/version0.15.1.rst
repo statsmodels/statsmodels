@@ -141,6 +141,15 @@ Performance
   faster for long series. :pr:`10470`
 - ``robust.scale.qn_scale`` is about 5 times faster for large samples.
   :pr:`10244`
+- Lag order selection fits the nested sequence of models from a single
+  blocked QR decomposition, shared by a new private helper. This applies to
+  ``adfuller`` with ``autolag``, ``VAR.select_order``, ``pacf_ols``,
+  ``pacf_yw`` (Levinson-Durbin) and ``ardl_select_order``. ``VAR.select_order``
+  is 12 to 43 times faster, ``pacf_ols`` about 90 times faster for long series,
+  and ``ardl_select_order`` evaluates thousands of candidate models in a
+  fraction of a second instead of seconds. ``pacf_ols`` with
+  ``efficient=True`` demeans the series first, which is more accurate when the
+  mean is large relative to the variation. :issue:`2276`, :pr:`10571`
 
 Bug Fixes
 =========
