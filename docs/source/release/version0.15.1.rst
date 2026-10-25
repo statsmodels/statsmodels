@@ -337,7 +337,7 @@ Time series analysis
   so that it did not depend on them. They are now included as controls, and
   the statistic matches R's ``ARDL::bounds_f_test``. A model that uses
   ``deterministic`` raises a ``NotImplementedError`` instead of ignoring the
-  process. :pr:`NNNN`
+  process. :pr:`10579`
 
 Statistics and tests
 --------------------
