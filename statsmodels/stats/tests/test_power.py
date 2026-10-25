@@ -1190,7 +1190,8 @@ def test_ttest_ind_power_ratio_zero_r(effect_size, nobs1, alpha, alternative, po
     res = smp.TTestIndPower().power(
         effect_size, nobs1, alpha, ratio=0, alternative=alternative
     )
-    assert_allclose(res, power_r, rtol=1e-9)
+    # the noncentral t distribution of SciPy on WASM is accurate to about 1e-8
+    assert_allclose(res, power_r, rtol=1e-7)
 
 
 def test_ttest_ind_power_ratio_zero_is_not_the_limit():
@@ -1250,7 +1251,9 @@ def test_ttest_ind_power_ratio_array(alternative):
     res = ind.power(0.5, 50, 0.05, ratio=RATIOS, **kwds)
     assert isinstance(res, np.ndarray)
     assert res.shape == (3,)
-    assert_allclose(res, POWER_RATIO_R[alternative], rtol=1e-6, atol=1e-10)
+    # the noncentral t distribution of SciPy on WASM is accurate to about 1e-8
+    # (absolute), which matters for the tiny powers of the other alternative
+    assert_allclose(res, POWER_RATIO_R[alternative], rtol=1e-6, atol=1e-8)
     # same as the scalar calls
     expected = [ind.power(0.5, 50, 0.05, ratio=r, **kwds) for r in RATIOS]
     assert_allclose(res, expected, rtol=1e-12)
@@ -1267,7 +1270,8 @@ def test_ttest_ind_power_ratio_array_positive():
     ratios = np.array([0.5, 1.0, 2.0])
     res = ind.power(0.5, 50, 0.05, ratio=ratios)
     # R 4.6.1, pwr 1.3-0: pwr.t2n.test(n1 = 50, n2 = c(25, 50, 100), d = 0.5)
-    assert_allclose(res, [0.521721300128, 0.696893405534, 0.818063361118], rtol=1e-10)
+    # the noncentral t distribution of SciPy on WASM is accurate to about 1e-8
+    assert_allclose(res, [0.521721300128, 0.696893405534, 0.818063361118], rtol=1e-7)
     assert_array_equal(res, [ind.power(0.5, 50, 0.05, ratio=r) for r in ratios])
 
 
