@@ -464,6 +464,12 @@ Statistics and tests
   instead of a negative value if the rejection region of the exact test is
   empty. ``low`` and ``upp`` also accept list-like input, and a NaN ``p_alt``
   raises a ``ValueError``. :issue:`10507`, :pr:`10508`, :pr:`10580`
+- ``TTestIndPower.power`` and ``TTestIndPower.solve_power`` accept ``ratio=0``,
+  which gives the power of the one-sample t-test with ``nobs1`` observations;
+  it raised a ``ZeroDivisionError`` or gave the size of the test for NumPy
+  scalars. ``ratio`` can be array_like, and a negative or NaN ``ratio`` raises
+  a ``ValueError``; ``solve_power`` returned ``nan`` with a convergence warning
+  for a negative ``ratio``. :pr:`10349`, :pr:`NNNN`
 - ``proportions_chisquare`` raises a ``ValueError`` for a single sample
   without ``value``. The statistic was 0 and the p-value ``nan``.
   :pr:`10451`
