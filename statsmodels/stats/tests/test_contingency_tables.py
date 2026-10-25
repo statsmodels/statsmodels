@@ -821,3 +821,79 @@ def test_null_odds_correction_no_overshoot():
         (abs(delta) - 0.5) ** 2 / denom,
         rtol=1e-12,
     )
+
+
+# Reference values from R 4.6.1, stats::mantelhaen.test(x, correct=TRUE) and
+# correct=FALSE, where x is an array of dim c(2, 2, K) with
+# x[, , k] <- matrix(c(a, c, b, d), 2, 2), i.e. the stratum [[a, b], [c, d]].
+# The single stratum was padded in R with a stratum [[0, 0], [1, 1]] that
+# contributes nothing to either sum.
+# Columns: strata, sum(a - E(a)), corrected statistic and p-value,
+# uncorrected statistic and p-value
+mh_r_reference = [
+    # |sum(a - E(a))| < 0.5: R does not apply the correction
+    (
+        [[[4, 3], [3, 1]], [[5, 0], [5, 2]]],
+        0.378787878787879,
+        (0.131651008973333, 0.716726320820142),
+        (0.131651008973333, 0.716726320820142),
+    ),
+    # |sum(a - E(a))| > 0.5
+    (
+        [[[10, 10], [10, 10]], [[12, 8], [9, 11]]],
+        1.5,
+        (0.195244055068836, 0.658587409353435),
+        (0.439299123904881, 0.507460932504393),
+    ),
+    # |sum(a - E(a))| = 0.5 exactly, the correction removes everything
+    (
+        [[[3, 0], [3, 0]], [[4, 0], [3, 1]]],
+        0.5,
+        (0.0, 1.0),
+        (1.0, 0.317310507862914),
+    ),
+    # Each stratum has |a - E(a)| = 0.4 but the sum is 0.8
+    (
+        [[[1, 0], [2, 2]], [[4, 11], [2, 8]]],
+        0.8,
+        (0.0652173913043478, 0.798431964808643),
+        (0.463768115942029, 0.495868184540851),
+    ),
+    # A single stratum
+    (
+        [[[98, 1], [1, 1]]],
+        0.960396039603964,
+        (5.51538108356299, 0.0188499660989098),
+        (24.0001020304052, 9.63305959467338e-07),
+    ),
+]
+
+
+@pytest.mark.parametrize("tables, delta, corrected, uncorrected", mh_r_reference)
+def test_null_odds_correction_r(tables, delta, corrected, uncorrected):
+    st = ctab.StratifiedTable([np.asarray(t, dtype=float) for t in tables])
+    actual = np.sum(st.table[0, 0, :] - st._apb * st._apc / st._n)
+    assert_allclose(actual, delta, rtol=1e-10)
+
+    for correction, expected in ((True, corrected), (False, uncorrected)):
+        res = st.test_null_odds(correction=correction)
+        assert_allclose(res.statistic, expected[0], rtol=1e-10, atol=1e-14)
+        assert_allclose(res.pvalue, expected[1], rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "tables",
+    [
+        [[[2, 0], [0, 0]]],
+        [[[2, 0], [0, 0]], [[3, 0], [0, 0]]],
+    ],
+)
+@pytest.mark.parametrize("correction", [True, False])
+def test_null_odds_zero_variance(tables, correction):
+    # The statistic is 0 / 0; R's mantelhaen.test returns NaN as well. With
+    # the correction the statistic used to be inf and the p-value 0.
+    st = ctab.StratifiedTable([np.asarray(t, dtype=float) for t in tables])
+    with pytest.warns(RuntimeWarning, match="invalid value"):
+        res = st.test_null_odds(correction=correction)
+    assert np.isnan(res.statistic)
+    assert np.isnan(res.pvalue)
