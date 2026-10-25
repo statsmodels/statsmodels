@@ -469,7 +469,7 @@ Statistics and tests
   it raised a ``ZeroDivisionError`` or gave the size of the test for NumPy
   scalars. ``ratio`` can be array_like, and a negative or NaN ``ratio`` raises
   a ``ValueError``; ``solve_power`` returned ``nan`` with a convergence warning
-  for a negative ``ratio``. :pr:`10349`, :pr:`NNNN`
+  for a negative ``ratio``. :pr:`10349`, :pr:`10584`
 - ``proportions_chisquare`` raises a ``ValueError`` for a single sample
   without ``value``. The statistic was 0 and the p-value ``nan``.
   :pr:`10451`
