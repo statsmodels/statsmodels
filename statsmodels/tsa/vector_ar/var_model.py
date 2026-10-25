@@ -528,7 +528,7 @@ def _var_order_ics(endog, exog, maxlags, trend, p_min):
 
     Returns
     -------
-    dict[str, ndarray] or None
+    dict of str to ndarray or None
         The arrays of "aic", "bic", "hqic" and "fpe" for lag orders
         ``p_min, ..., maxlags``. None if the regressors are close to singular,
         a lag column is constant, a residual covariance is close to singular,
