@@ -26,7 +26,14 @@ from pandas.testing import assert_frame_equal
 import pytest
 from scipy import stats
 
-from statsmodels.datasets import macrodata, sunspots
+from statsmodels.datasets import macrodata, randhie, sunspots
+from statsmodels.discrete.count_model import ZeroInflatedPoisson
+from statsmodels.discrete.discrete_model import (
+    Logit,
+    NegativeBinomial,
+    Poisson,
+    Probit,
+)
 from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
@@ -2741,16 +2748,7 @@ def vuong_models():
     #
     # R reports one-sided p-values for the preferred model, which is half of
     # the two-sided p-value.
-    from statsmodels.datasets import randhie
-    from statsmodels.discrete.count_model import ZeroInflatedPoisson
-    from statsmodels.discrete.discrete_model import (
-        Logit,
-        NegativeBinomial,
-        Poisson,
-        Probit,
-    )
-
-    df = randhie.load_pandas().data.iloc[:600]
+    df =randhie.load_pandas().data.iloc[:600]
     exog = add_constant(df.drop(columns="mdvis"), prepend=True)
     endog = df["mdvis"]
     any_visit = (endog > 0).astype(float)
@@ -2816,6 +2814,25 @@ def test_compare_vuong_r(
     assert_allclose(larger.pvalue + smaller.pvalue, 1, rtol=1e-12)
 
 
+@pytest.mark.parametrize(
+    "first, second, positive",
+    [("nb", "zip", True), ("pois", "zip", False)],
+)
+def test_compare_vuong_alternative(vuong_models, first, second, positive):
+    res1, res2 = vuong_models[first], vuong_models[second]
+    two_sided = smsdia.compare_vuong(res1, res2)
+    larger = smsdia.compare_vuong(res1, res2, alternative="larger")
+    smaller = smsdia.compare_vuong(res1, res2, alternative="smaller")
+    assert (two_sided.statistic > 0) == positive
+    assert_allclose(larger.statistic, two_sided.statistic, rtol=1e-12)
+    assert_allclose(smaller.statistic, two_sided.statistic, rtol=1e-12)
+    assert_allclose(larger.pvalue, stats.norm.sf(two_sided.statistic), rtol=1e-12)
+    assert_allclose(smaller.pvalue, stats.norm.cdf(two_sided.statistic), rtol=1e-12)
+    assert_allclose(
+        two_sided.pvalue, 2 * stats.norm.sf(abs(two_sided.statistic)), rtol=1e-12
+    )
+
+
 def test_compare_vuong_swap(vuong_models):
     res12 = smsdia.compare_vuong(
         vuong_models["nb"], vuong_models["zip"], correction="bic"
@@ -2843,17 +2860,15 @@ def test_compare_vuong_errors(vuong_models):
         smsdia.compare_vuong(pois, pois, alternative="greater")
 
     # OLS does not provide the log-likelihood of each observation
-    rs = np.random.RandomState(0)
-    x = add_constant(rs.standard_normal((30, 2)))
-    y = x.sum(1) + rs.standard_normal(30)
+    rng = np.random.default_rng(0)
+    x = add_constant(rng.standard_normal((30, 2)))
+    y = x.sum(1) + rng.standard_normal(30)
     res_ols = OLS(y, x).fit()
     with pytest.raises(ValueError, match="loglikeobs"):
         smsdia.compare_vuong(res_ols, res_ols)
 
     # different number of observations
-    from statsmodels.discrete.discrete_model import Poisson
-
-    cnt = rs.poisson(3, size=30)
+    cnt = rng.poisson(3, size=30)
     res_a = Poisson(cnt, x).fit(disp=False)
     res_b = Poisson(cnt[:20], x[:20]).fit(disp=False)
     with pytest.raises(ValueError, match="number of observations"):

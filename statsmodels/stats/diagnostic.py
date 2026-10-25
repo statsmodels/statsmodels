@@ -363,12 +363,7 @@ class VuongTestResult(NamedTuple):
     """
     Result of :func:`compare_vuong`.
 
-    Parameters
-    ----------
-    statistic : float
-        Vuong z-statistic. Positive values favor the first model.
-    pvalue : float
-        P-value for the chosen alternative.
+    .. versionadded:: 0.15.1
     """
 
     statistic: float
@@ -397,6 +392,8 @@ def compare_vuong(results1, results2, correction="none", alternative="two-sided"
     r"""
     Vuong test for non-nested likelihood models.
 
+    .. versionadded:: 0.15.1
+
     Parameters
     ----------
     results1 : Results
@@ -406,14 +403,15 @@ def compare_vuong(results1, results2, correction="none", alternative="two-sided"
     results2 : Results
         Results instance of the second model, estimated on the same
         observations and with the same dependent variable as the first model.
-    correction : {"none", "aic", "bic"}, default "none"
+    correction : {"none", "aic", "bic"}, optional
         Correction for the number of estimated parameters of the two models.
         "aic" is the Akaike and "bic" is the Schwarz type correction of the
-        log-likelihood ratio.
-    alternative : {"two-sided", "larger", "smaller"}, default "two-sided"
+        log-likelihood ratio. The default is "none", which applies no
+        correction.
+    alternative : {"two-sided", "larger", "smaller"}, optional
         Alternative hypothesis. "larger" tests whether the first model is
         closer to the true distribution than the second model, "smaller"
-        tests the opposite direction.
+        tests the opposite direction. The default is "two-sided".
 
     Returns
     -------
@@ -441,24 +439,44 @@ def compare_vuong(results1, results2, correction="none", alternative="two-sided"
     which is asymptotically standard normal under the null hypothesis [1]_.
     Vuong's original definition of :math:`\hat{\omega}^2` divides by :math:`n`
     instead of :math:`n - 1`. The difference is asymptotically negligible and
-    the version here is the one used by R package pscl and by Stata.
-    The corrected versions replace the log-likelihood ratio
-    :math:`\sum_i m_i` in the numerator by
+    the version here is the one used by the ``vuong`` function of the R
+    package pscl. The ``vuongtest`` function of the R package nonnest2 divides
+    by :math:`n`, so that its statistic is larger than the one here by the
+    factor :math:`\sqrt{n / (n - 1)}`.
+
+    The corrected versions are the Schwarz and Akaike type corrections of
+    Section 6 of [1]_, see also [2]_ for their use in practice. They replace
+    the log-likelihood ratio :math:`\sum_i m_i` in the numerator by
     :math:`\sum_i m_i - (k_1 - k_2)` for "aic" and
-    :math:`\sum_i m_i - (k_1 - k_2) \log(n) / 2` for "bic" [2]_, where
+    :math:`\sum_i m_i - (k_1 - k_2) \log(n) / 2` for "bic", where
     :math:`k_1` and :math:`k_2` are the number of estimated parameters
-    ``len(results.params)``.
+    ``len(results.params)``. This counts every estimated parameter, including
+    the dispersion parameter of a negative binomial model. The ``vuong``
+    function of pscl does not count the dispersion parameter of a negative
+    binomial model, so that the corrected statistics differ from the pscl
+    values if a negative binomial model is involved.
+
+    The uncorrected statistic and the corrected statistics for models with the
+    same parameter counts, for example Poisson against zero-inflated Poisson
+    or Logit against Probit, agree with the results of ``vuong`` in pscl.
+    pscl reports the one-sided p-value in the direction of the preferred
+    model.
 
     The test is only valid for non-nested (or overlapping but not nested)
     models, and it assumes that both models are not equivalent, so that
     :math:`\omega^2 > 0`. Statsmodels does not check whether the models are
-    nested. Using the test for nested models, for example Poisson against
-    negative binomial, or for zero-inflation, should be done with care, see
-    [3]_.
+    nested. Vuong's preliminary test of the null hypothesis
+    :math:`\omega^2 = 0`, which is needed for nested or overlapping models,
+    is not performed. Using the test for nested models, for example Poisson
+    against negative binomial, or for zero-inflation, should be done with
+    care, see [3]_.
 
-    The results are the same as the ``vuong`` function of the R package
-    pscl, which reports one-sided p-values in the direction of the preferred
-    model.
+    If the log-likelihood contributions of the two models are exactly equal,
+    so that the estimated :math:`\hat{\omega}` is exactly zero, the statistic
+    is not defined and both the statistic and the p-value of the result are
+    NaN. No warning is issued. Models that are only numerically almost
+    identical, for example the same model estimated with different
+    optimizers, produce a finite statistic that is meaningless.
 
     References
     ----------
@@ -475,12 +493,18 @@ def compare_vuong(results1, results2, correction="none", alternative="two-sided"
     Compare a Logit and a Probit model for the same binary outcome.
 
     >>> import statsmodels.api as sm
-    >>> from statsmodels.stats.diagnostic import compare_vuong
+    >>> from statsmodels.stats.api import compare_vuong
     >>> data = sm.datasets.spector.load()
     >>> exog = sm.add_constant(data.exog)
     >>> res_logit = sm.Logit(data.endog, exog).fit(disp=False)
     >>> res_probit = sm.Probit(data.endog, exog).fit(disp=False)
     >>> result = compare_vuong(res_logit, res_probit, correction="aic")
+    >>> statistic, pvalue = result
+    >>> print(f"statistic={statistic:.4f}, pvalue={pvalue:.4f}")
+    statistic=-0.4972, pvalue=0.6190
+
+    The statistic is small and the p-value is large, so the test does not
+    distinguish between the two models.
     """
     correction = string_like(correction, "correction", options=("none", "aic", "bic"))
     alternative = string_like(
