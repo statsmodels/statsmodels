@@ -326,6 +326,17 @@ Time series analysis
   than required by the benchmark and the frequency. The descriptions of
   ``indicator`` and ``benchmark`` in the docstring, low and high frequency,
   were swapped. :pr:`10303`
+- Time series models ignore a ``PeriodIndex`` whose periods are not
+  consecutive, i.e. one with gaps or repeated periods, and issue a
+  ``ValueWarning``, as they already did for a ``DatetimeIndex`` without a
+  frequency. Before, such an index was used, and forecasts were labelled with
+  dates from inside the sample. Forecasting now raises an error unless an
+  ``index`` is passed. Data with gaps that follow a calendar rule, such as
+  trading days, can use a ``DatetimeIndex`` with a matching frequency (e.g.
+  ``"B"`` or a ``CustomBusinessDay``); data with missing observations can be
+  reindexed to consecutive periods. Consecutive periods with a frequency
+  multiplier, such as ``"2Q"``, are still supported. :issue:`6247`,
+  :issue:`8950`, :pr:`10572`
 - The asymptotic critical values and p-values of
   :meth:`~statsmodels.tsa.ardl.UECMResults.bounds_test` are looked up with the
   number of regressors, excluding the dependent variable, as in Pesaran, Shin
