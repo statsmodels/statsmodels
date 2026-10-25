@@ -786,7 +786,7 @@ def acorr_ljungbox(
     x : array_like
         The data series. The data is demeaned before the test statistic is
         computed.
-    lags : {int, array_like}, default None
+    lags : int or array_like of int, optional
         If lags is an integer then this is taken to be the largest lag
         that is included, the test result is reported for all smaller lag
         length. If lags is a list or array, then all lags are included up to
@@ -794,6 +794,16 @@ def acorr_ljungbox(
         the list are reported. If lags is None, then the default maxlag is
         min(10, nobs // 5). The default number of lags changes if period
         is set.
+
+        All lags must be integers >= 1 and the largest lag must be smaller
+        than nobs, the number of observations. An empty sequence is not
+        allowed.
+
+        .. versionchanged:: 0.15.1
+
+            A ``ValueError`` is raised if lags is empty or contains a value
+            below 1. Previously lag 0 and negative lags silently reported the
+            statistic of another lag or failed with an unrelated error.
     boxpierce : bool, default False
         If true, then additional to the results of the Ljung-Box test also the
         Box-Pierce test results are returned.
@@ -834,6 +844,13 @@ def acorr_ljungbox(
           distribution. The p-value is computed as chi2.sf(bp_stat, dof)
           where dof is lag - model_df. If lag - model_df <= 0, then NaN is
           returned for the pvalue.
+
+    Raises
+    ------
+    ValueError
+        If lags is empty or contains a value below 1, if the largest lag is
+        not smaller than nobs, or if the default number of lags (used when
+        lags is None) is below 1 because the series is too short.
 
     See Also
     --------
@@ -927,19 +944,37 @@ def acorr_ljungbox(
         lags = max(1, lags)  # optimal lag has to be at least 1
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
-    elif period is not None:
-        lags = np.arange(1, min(nobs // 5, 2 * period) + 1, dtype=int)
-    elif lags is None:
-        lags = np.arange(1, min(nobs // 5, 10) + 1, dtype=int)
+    elif period is not None or lags is None:
+        if period is not None:
+            default_maxlag = min(nobs // 5, 2 * period)
+        else:
+            default_maxlag = min(nobs // 5, 10)
+        if default_maxlag < 1:
+            raise ValueError(
+                "lags must be positive integers, but the default number of "
+                f"lags is below 1 for nobs={nobs}. Set lags explicitly to a "
+                "value smaller than nobs or use a longer series."
+            )
+        lags = np.arange(1, default_maxlag + 1, dtype=int)
     elif not isinstance(lags, Iterable):
         lags = int_like(lags, "lags")
+        if lags < 1:
+            # validate before building the range, which would be empty
+            raise ValueError(
+                f"lags must be positive integers, got {lags} (nobs={nobs})"
+            )
         lags = np.arange(1, lags + 1)
     lags = array_like(lags, "lags", dtype="int")
-    if lags.size == 0 or lags.min() < 1:
+    if lags.size == 0:
+        raise ValueError(
+            f"lags must be positive integers, got an empty lags (nobs={nobs})"
+        )
+    if lags.min() < 1:
         # lag 0 used to index the cumulative sum at -1 and silently returned
         # the statistic for the largest lag
         raise ValueError(
-            f"lags must be positive integers, got {lags.tolist()} (nobs={nobs})"
+            "lags must be positive integers, got a smallest lag of "
+            f"{lags.min()} (nobs={nobs})"
         )
     maxlag = lags.max()
     if maxlag >= nobs:
