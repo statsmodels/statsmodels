@@ -2751,7 +2751,7 @@ def _pss_pvalue(stat: float, k: int, case: int, i1: bool) -> float:
 
 def _pss_simulate(
     stat: float,
-    k: int,
+    nvar: int,
     case: Literal[1, 2, 3, 4, 5],
     nobs: int,
     nsim: int,
@@ -2761,6 +2761,8 @@ def _pss_simulate(
     # only needed when a bounds test is actually run
     from statsmodels.tsa.ardl import pss_critical_values
 
+    # nvar counts all variables, y and the nvar - 1 regressors, unlike the
+    # k of the PSS tables, which counts only the regressors
     rs: np.random.RandomState | np.random.Generator = check_random_state(rng)
 
     def _vectorized_ols_resid(rhs, lhs):
@@ -2770,30 +2772,30 @@ def _pss_simulate(
         b = np.linalg.solve(xpx, xpy)
         return np.squeeze(lhs - np.matmul(rhs, b))
 
-    block_size = 100_000_000 // (8 * nobs * k)
+    block_size = 100_000_000 // (8 * nobs * nvar)
     remaining = nsim
     loc = 0
     f_upper = np.empty(nsim)
     f_lower = np.empty(nsim)
     while remaining > 0:
         to_do = min(remaining, block_size)
-        e = rs.standard_normal((to_do, nobs + 1, k))
+        e = rs.standard_normal((to_do, nobs + 1, nvar))
 
         y = np.cumsum(e[:, :, :1], axis=1)
         x_upper = np.cumsum(e[:, :, 1:], axis=1)
         x_lower = e[:, :, 1:]
         lhs = np.diff(y, axis=1)
         if case in (2, 3):
-            rhs = np.empty((to_do, nobs, k + 1))
+            rhs = np.empty((to_do, nobs, nvar + 1))
             rhs[:, :, -1] = 1
         elif case in (4, 5):
-            rhs = np.empty((to_do, nobs, k + 2))
+            rhs = np.empty((to_do, nobs, nvar + 2))
             rhs[:, :, -2] = np.arange(nobs, dtype=float)
             rhs[:, :, -1] = 1
         else:
-            rhs = np.empty((to_do, nobs, k))
+            rhs = np.empty((to_do, nobs, nvar))
         rhs[:, :, :1] = y[:, :-1]
-        rhs[:, :, 1:k] = x_upper[:, :-1]
+        rhs[:, :, 1:nvar] = x_upper[:, :-1]
 
         u = _vectorized_ols_resid(rhs, lhs)
         df = rhs.shape[1] - rhs.shape[2]
@@ -2815,7 +2817,7 @@ def _pss_simulate(
         f_upper[loc : loc + to_do] = f
 
         # Lower
-        rhs[:, :, 1:k] = x_lower[:, :-1]
+        rhs[:, :, 1:nvar] = x_lower[:, :-1]
         u = _vectorized_ols_resid(rhs, lhs)
         s2 = (u**2).sum(1) / df
 
