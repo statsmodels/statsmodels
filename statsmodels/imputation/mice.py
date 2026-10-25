@@ -1217,7 +1217,14 @@ class MICE:
         formula is for the 'analysis model'.
     model_class : statsmodels model
         The model to be fit to the imputed data sets.  This model
-        class is for the 'analysis model'.
+        class is for the 'analysis model'.  The results returned by its
+        ``fit`` method, wrapped or not, must provide ``params``,
+        ``cov_params()`` and ``scale``.
+
+        .. versionchanged:: 0.15.1
+
+           Results without a ``_results`` attribute, for example those of
+           ``PHReg``, are accepted.
     data : MICEData instance
         MICEData object containing the data set for which
         missing values will be imputed
