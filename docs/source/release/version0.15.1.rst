@@ -355,6 +355,12 @@ Time series analysis
   and Smith (2001). They were those for one regressor too many, so the
   p-values were too small. Models with 10 regressors use the tables instead of
   simulation. :issue:`10546`, :pr:`10574`
+- The statistic of :meth:`~statsmodels.tsa.ardl.UECMResults.bounds_test` was
+  computed without the fixed regressors and the seasonal terms of the model,
+  so that it did not depend on them. They are now included as controls, and
+  the statistic matches R's ``ARDL::bounds_f_test``. A model that uses
+  ``deterministic`` raises a ``NotImplementedError`` instead of ignoring the
+  process. :pr:`10579`
 
 Statistics and tests
 --------------------
