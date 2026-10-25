@@ -2481,8 +2481,8 @@ class UECMResults(ARDLResults):
             Flag indicating whether to use asymptotic critical values which
             were computed by simulation (True, default) or to simulate a
             sample-size specific set of critical values. Tables are only
-            available for up to 10 components in the cointegrating
-            relationship, so if more variables are included then simulation
+            available for up to 10 regressors, excluding the dependent
+            variable, so if more regressors are included then simulation
             is always used. The simulation computes the test statistic under
             an assumption that the residuals are homoskedastic.
         nsim : int, optional
@@ -2588,7 +2588,8 @@ class UECMResults(ARDLResults):
         vcv = r @ cov @ r.T
         coef = r @ res.params
         stat = coef.T @ np.linalg.inv(vcv) @ coef / r.shape[0]
-        k = nvar
+        # The tables are indexed by the number of regressors, excluding y
+        k = nvar - 1
         if asymptotic and k <= 10:
             cv = pss_critical_values.crit_vals
             key = (k, case)
@@ -2608,7 +2609,7 @@ class UECMResults(ARDLResults):
         else:
             nobs = res.resid.shape[0]
             crit_vals, p_values = _pss_simulate(
-                stat, k, case, nobs=nobs, nsim=nsim, rng=rng
+                stat, nvar, case, nobs=nobs, nsim=nsim, rng=rng
             )
 
         return BoundsTestResult(
