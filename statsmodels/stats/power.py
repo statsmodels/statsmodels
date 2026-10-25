@@ -968,6 +968,24 @@ class TTestPower(Power):
         )
 
 
+def _validate_ratio(ratio):
+    """
+    Check that ``ratio`` of ``TTestIndPower`` is non-negative and not NaN.
+
+    Parameters
+    ----------
+    ratio : float or array_like
+        Ratio of the number of observations in sample 2 relative to sample 1.
+
+    Raises
+    ------
+    ValueError
+        If any element of ``ratio`` is negative or NaN.
+    """
+    if not np.all(np.greater_equal(ratio, 0)):
+        raise ValueError(f"ratio must be non-negative and not NaN, got {ratio}")
+
+
 class TTestIndPower(Power):
     """
     Statistical Power calculations for t-test for two independent sample
@@ -1014,17 +1032,29 @@ class TTestIndPower(Power):
 
         """
 
-        if ratio < 0:
-            # the docstring documents ratio=0 for a one-sample test; negative
-            # ratios have no sample-size interpretation and used to crash
-            # with a bare ZeroDivisionError
-            raise ValueError(f"ratio must be non-negative, got {ratio}")
-        if ratio == 0:
-            # one-sample test, no second sample contributes
+        # negative ratios have no sample-size interpretation and used to
+        # crash with a bare ZeroDivisionError or return nan
+        _validate_ratio(ratio)
+        if isinstance(ratio, (list, tuple)):
+            ratio = np.asarray(ratio, dtype=float)
+
+        is_one_sample = np.equal(ratio, 0)
+        if np.any(is_one_sample):
+            # ratio == 0 is the convention for the one-sample t-test with nobs1
+            # observations (see the docstring), applied elementwise. It is not
+            # the limit of ratio -> 0, where nobs2 -> 0 and the power -> alpha.
+            # asarray, so that division by zero gives inf instead of an
+            # exception for Python scalars
+            nobs2 = np.asarray(nobs1 * ratio, dtype=float)
+            with np.errstate(divide="ignore"):
+                nobs = np.where(
+                    is_one_sample, nobs1, 1.0 / (1.0 / nobs1 + 1.0 / nobs2)
+                )
             if df is None:
-                df = nobs1 - 1
-            nobs = nobs1
-            return ttest_power(effect_size, nobs, alpha, df=df, alternative=alternative)
+                df = np.where(is_one_sample, nobs1 - 1, nobs1 - 1 + nobs2 - 1)
+            res = ttest_power(effect_size, nobs, alpha, df=df, alternative=alternative)
+            # return a scalar for scalar input
+            return res[()] if isinstance(res, np.ndarray) else res
 
         nobs2 = nobs1 * ratio
         # pooled variance
@@ -1096,6 +1126,10 @@ class TTestIndPower(Power):
         where this fails.
 
         """
+        if ratio is not None:
+            # validate before the root finding, which swallows ValueError and
+            # returns nan with a ConvergenceWarning instead
+            _validate_ratio(ratio)
         return super().solve_power(
             effect_size=effect_size,
             nobs1=nobs1,
