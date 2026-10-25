@@ -811,7 +811,7 @@ def acorr_ljungbox(
     return_df : bool, optional
         Unused. A DataFrame is always returned.
 
-        .. deprecated:: 0.16.0
+        .. deprecated:: 0.15.1
 
             ``return_df`` has no effect and will be removed in statsmodels
             0.17.0. Passing any value issues a ``FutureWarning``.

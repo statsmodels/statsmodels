@@ -1000,7 +1000,7 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
     empty, for example if the equivalence region is narrow relative to the
     sample size. In this case the power is zero.
 
-    .. versionchanged:: 0.16.0
+    .. versionchanged:: 0.15.1
 
         The power is zero if the rejection region is empty. Previously a
         negative value was returned.
