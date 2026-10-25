@@ -7,6 +7,7 @@ from statsmodels.compat.python import lrange
 from statsmodels.compat.scipy import SP_LT_116
 
 from pathlib import Path
+import pickle
 import warnings
 
 import numpy as np
@@ -26,6 +27,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import (
     GLS,
+    GLSAR,
     OLS,
     WLS,
     CompareLRTestResult,
@@ -1853,6 +1855,58 @@ def test_ols_offset_and_score_cache():
     assert mod._wexog_xprod is not None
     mod.initialize()
     assert mod._wexog_xprod is None
+
+
+def _make_old_pickle_models():
+    rng = np.random.default_rng(20261025)
+    nobs = 40
+    exog = add_constant(rng.standard_normal((nobs, 2)))
+    endog = exog @ [1.0, 0.5, -0.3] + rng.standard_normal(nobs)
+    weights = rng.uniform(0.5, 2.0, nobs)
+    sigma = 0.4 ** np.abs(np.subtract.outer(np.arange(nobs), np.arange(nobs)))
+    return {
+        "OLS": lambda: OLS(endog, exog),
+        "WLS": lambda: WLS(endog, exog, weights=weights),
+        "GLS": lambda: GLS(endog, exog, sigma=sigma),
+        "GLSAR": lambda: GLSAR(endog, exog, rho=1),
+    }
+
+
+@pytest.mark.parametrize("name", ["OLS", "WLS", "GLS", "GLSAR"])
+@pytest.mark.parametrize("pickle_results", [True, False])
+def test_unpickle_without_default_attributes(name, pickle_results):
+    # GH#9880 releases before the attributes were initialized in __init__ did
+    # not store them, and unpickling never goes through __init__. Mimic these
+    # pickles by dropping the attributes that were not set at the time.
+    make = _make_old_pickle_models()[name]
+    new_attrs = [
+        "weights", "sigma", "offset", "_wendog_xprod", "_wexog_xprod",
+        "_wexog_x_wendog",
+    ]
+    mod = make()
+    res = mod.fit()
+    for attr in new_attrs:
+        # only drop attributes that are unset, WLS needs its weights
+        if attr in vars(mod) and vars(mod)[attr] is None:
+            del vars(mod)[attr]
+    assert any(attr not in vars(mod) for attr in new_attrs)
+
+    obj = pickle.loads(pickle.dumps(res if pickle_results else mod))
+    old_res = obj if pickle_results else obj.fit()
+    old_mod = old_res.model
+
+    expected = make().fit()
+    params = expected.params
+    for attr in ["rsquared", "rsquared_adj", "fvalue", "f_pvalue",
+                 "centered_tss", "llf", "aic", "bic"]:
+        assert_allclose(getattr(old_res, attr), getattr(expected, attr))
+    assert old_res.summary().as_text() == expected.summary().as_text()
+
+    exp_mod = expected.model
+    assert_allclose(old_mod.loglike(params), exp_mod.loglike(params))
+    if name == "OLS":
+        assert_allclose(old_mod.score(params), exp_mod.score(params))
+        assert_allclose(old_mod.hessian(params), exp_mod.hessian(params))
 
 
 def test_ols_wls_fixed_scale():
