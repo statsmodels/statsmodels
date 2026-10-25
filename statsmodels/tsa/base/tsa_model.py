@@ -499,9 +499,10 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         If Pandas objects, endog / exog may have any type of index. If it is
         a NumericIndex with values 0, 1, ..., nobs-1 or if it is (coercible to)
-        a DatetimeIndex or PeriodIndex *with an associated frequency*, then it
-        is called a "supported" index. Otherwise it is called an "unsupported"
-        index.
+        a monotonic DatetimeIndex or PeriodIndex *with an associated
+        frequency*, then it is called a "supported" index. A PeriodIndex must
+        additionally consist of consecutive periods, i.e. without gaps or
+        repeated periods. Otherwise it is called an "unsupported" index.
 
         Supported indexes are standardized (i.e., a list of date strings is
         converted to a DatetimeIndex) and the result is put in `self._index`.
@@ -661,6 +662,18 @@ class TimeSeriesModel(base.LikelihoodModel):
             is_monotonic = index.is_monotonic_increasing
         else:
             is_monotonic = None
+        # A PeriodIndex always has a frequency, even if it has gaps or
+        # repeated periods, so check that its periods are consecutive.
+        # A non-monotonic index is skipped here since it is already rejected,
+        # with its own warning, through `is_monotonic`.
+        has_nonconsecutive_periods = (
+            isinstance(index, PeriodIndex)
+            and is_monotonic
+            and len(index) > 0
+            and not index.equals(
+                period_range(start=index[0], periods=len(index), freq=index.freq)
+            )
+        )
 
         # Issue warnings for unsupported indexes
         if has_index and not (date_index or range_index or is_increment):
@@ -687,11 +700,30 @@ class TimeSeriesModel(base.LikelihoodModel):
                 ValueWarning,
                 stacklevel=2,
             )
+        if has_nonconsecutive_periods:
+            warnings.warn(
+                "A Period index has been provided, but its periods are not"
+                " consecutive (it has gaps or repeated periods) and so will be"
+                " ignored when e.g. forecasting. If the gaps follow a calendar"
+                " rule (e.g. trading days), use a DatetimeIndex with a matching"
+                " frequency, such as 'B' or a CustomBusinessDay. If the gaps"
+                " are missing observations, reindex the data to consecutive"
+                " periods, e.g. with `data.reindex(pd.period_range(start, end,"
+                " freq=freq))`; this introduces missing values, which are"
+                " only supported by some models (e.g. state space models).",
+                ValueWarning,
+                stacklevel=2,
+            )
 
         # Construct the internal index
         index_generated = False
         valid_index = (
-            (date_index and has_freq and is_monotonic)
+            (
+                date_index
+                and has_freq
+                and is_monotonic
+                and not has_nonconsecutive_periods
+            )
             or (int_index and is_increment)
             or range_index
         )

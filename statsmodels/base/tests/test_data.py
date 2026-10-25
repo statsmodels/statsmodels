@@ -1004,3 +1004,31 @@ def test_missing_drop_bool_endog(pandas, missing_exog):
     res_cc = Logit(endog_cc.astype(float), exog_cc).fit(disp=0)
     assert_allclose(np.asarray(res.params), res_cc.params, rtol=1e-10)
     assert_equal(res.nobs, keep.sum())
+
+
+@pytest.mark.parametrize("pandas", [False, True])
+def test_nan_rows_single_row(pandas):
+    # GH 4417: the mask for a single row was squeezed to a scalar
+    endog = np.array([1.0])
+    exog = np.array([[np.nan]])
+    if pandas:
+        index = pd.DatetimeIndex(["2017-01-01"])
+        endog = pd.Series(endog, index=index)
+        exog = pd.DataFrame(exog, index=index)
+    nan_rows = sm_data._nan_rows(endog, exog)
+    assert nan_rows.shape == (1,)
+    assert_equal(nan_rows, [True])
+
+
+@pytest.mark.parametrize("pandas", [False, True])
+@pytest.mark.parametrize("nobs", [1, 3])
+def test_missing_drop_all_rows(pandas, nobs):
+    # GH 4417: dropping every row gave a KeyError or a zero-size reduction
+    endog = np.full(nobs, np.nan)
+    exog = np.column_stack([np.ones(nobs), np.arange(nobs, dtype=float)])
+    if pandas:
+        index = pd.date_range("2017-01-01", periods=nobs, freq="YS")
+        endog = pd.Series(endog, index=index)
+        exog = pd.DataFrame(exog, index=index, columns=["const", "x"])
+    with pytest.raises(MissingDataError, match="All observations"):
+        OLS(endog, exog, missing="drop")

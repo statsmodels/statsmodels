@@ -1,20 +1,17 @@
 #!/usr/bin/env bash
 
 if [[ ${USE_CONDA} == "true" ]]; then
-  conda config --add channels defaults
-  conda tos accept
-  conda config --set always_yes true
-  conda update --all --quiet
-  conda tos accept
-  conda create -n statsmodels-test python=${PYTHON_VERSION} -y
-  conda init
-  echo ${PATH}
-  source activate statsmodels-test
+  # Miniforge (conda-forge only) is installed by the pipeline and the env's
+  # bin directory is on PATH, so no activation is needed.
+  mamba create -n statsmodels-test python=${PYTHON_VERSION} -y
   echo ${PATH}
   which python
-  conda config --add channels conda-forge
-  conda tos accept
-  CMD="conda install -c conda-forge numpy"
+  # Fail here rather than silently using a different Python
+  if [[ "$(which python)" != */envs/statsmodels-test/bin/python ]]; then
+    echo "python is not from the statsmodels-test environment"
+    exit 1
+  fi
+  CMD="mamba install -n statsmodels-test -y -c conda-forge numpy"
 else
   CMD="python -m pip install numpy"
 fi

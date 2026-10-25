@@ -1752,7 +1752,7 @@ def test_glm_irls_method():
     assert_equal(res2.mle_settings["wls_method"], "pinv")
     assert_equal(res3.mle_settings["wls_method"], "qr")
 
-    assert_(hasattr(res2.results_wls.model, "pinv_wexog"))
+    assert res2.results_wls.model.pinv_wexog is not None
 
     # fit_gradient currently does not attach mle_settings
     assert_equal(res_g1.method, "bfgs")
@@ -3590,3 +3590,170 @@ def test_glm_predict_nonpositive_exposure_raises():
     # positive exposure keeps working
     pred = res.predict(x, exposure=np.full(60, 2.0))
     assert np.all(np.isfinite(pred))
+
+
+def _offset_model_case(name, rng):
+    """Fit a model that stores an offset or exposure, return result and kwds"""
+    nobs = 200
+    x = sm.add_constant(rng.normal(size=(nobs, 2)))
+    expo = np.exp(rng.normal(scale=0.5, size=nobs))
+    off = np.log(expo)
+    mean = expo * np.exp(0.3 + 0.2 * x[:, 1])
+    y = rng.poisson(mean)
+    # Binary response with an offset that matters, success probability in (0, 1)
+    off_bin = rng.normal(scale=0.7, size=nobs)
+    prob = 1 / (1 + np.exp(-(0.2 + 0.5 * x[:, 1] + off_bin)))
+    y_bin = (rng.uniform(size=nobs) < prob).astype(int)
+
+    poisson = sm.families.Poisson()
+    if name == "glm_offset":
+        res = GLM(y, x, family=poisson, offset=off).fit()
+        explicit = {"offset": off}
+    elif name == "glm_exposure":
+        res = GLM(y, x, family=poisson, exposure=expo).fit()
+        explicit = {"exposure": expo}
+    elif name == "poisson_offset":
+        res = sm.Poisson(y, x, offset=off).fit(disp=0)
+        explicit = {"offset": off}
+    elif name == "poisson_exposure":
+        res = sm.Poisson(y, x, exposure=expo).fit(disp=0)
+        explicit = {"exposure": expo}
+    elif name == "nb_offset":
+        res = sm.NegativeBinomial(y, x, offset=off).fit(disp=0)
+        explicit = {"offset": off}
+    elif name == "zip_offset":
+        res = sm.ZeroInflatedPoisson(y, x, offset=off).fit(disp=0, maxiter=200)
+        explicit = {"offset": off}
+    elif name == "logit_offset":
+        res = sm.Logit(y_bin, x, offset=off_bin).fit(disp=0)
+        explicit = {"offset": off_bin}
+    else:
+        res = sm.Probit(y_bin, x, offset=off_bin).fit(disp=0)
+        explicit = {"offset": off_bin}
+    return res, x, explicit
+
+
+@pytest.mark.parametrize(
+    "fit_model",
+    [
+        "glm_offset",
+        "glm_exposure",
+        "poisson_offset",
+        "poisson_exposure",
+        "nb_offset",
+        "zip_offset",
+        "logit_offset",
+        "probit_offset",
+    ],
+)
+def test_get_prediction_default_uses_model_offset(fit_model):
+    # Without exog, get_prediction() must use the offset or exposure stored on
+    # the model, the same as predict() does.
+    rng = np.random.default_rng(4321)
+    res, x, explicit = _offset_model_case(fit_model, rng)
+
+    # GLM results use predicted_mean and se_mean, count models use predicted
+    # and se.
+    pred = res.get_prediction()
+    if hasattr(pred, "predicted_mean"):
+        mean_name, se_name = "predicted_mean", "se_mean"
+    else:
+        mean_name, se_name = "predicted", "se"
+    assert_allclose(getattr(pred, mean_name), res.predict(), rtol=1e-10)
+    # Standard errors must match the explicit call that passes the same
+    # offset or exposure together with exog.
+    expected = res.get_prediction(exog=x, **explicit)
+    assert_allclose(getattr(pred, se_name), getattr(expected, se_name), rtol=1e-10)
+
+    if not hasattr(pred, "predicted_mean"):
+        # The linear predictor must include the offset or exposure too.
+        linpred = res.get_prediction(which="linear")
+        assert_allclose(linpred.predicted, res.predict(which="linear"), rtol=1e-10)
+
+    # The default call and the explicit exog call agree for the mean with the
+    # generic code path too, and averaging uses the stored offset as well.
+    pred_mean = res.get_prediction(which="mean")
+    assert_allclose(pred_mean.predicted, res.predict(), rtol=1e-10)
+    pred_avg = res.get_prediction(which="mean", average=True)
+    assert_allclose(pred_avg.predicted, res.predict().mean(), rtol=1e-10)
+    expected_avg = res.get_prediction(exog=x, which="mean", average=True, **explicit)
+    assert_allclose(pred_avg.se, expected_avg.se, rtol=1e-10)
+
+
+@pytest.mark.parametrize("fit_model", ["glm_offset", "glm_exposure"])
+def test_get_prediction_default_offset_conf_int(fit_model):
+    # Independent check of the interval, the offset enters the linear
+    # predictor and the log link is applied to the endpoints.
+    rng = np.random.default_rng(4321)
+    res, x, explicit = _offset_model_case(fit_model, rng)
+    if "offset" in explicit:
+        offset = explicit["offset"]
+    else:
+        offset = np.log(explicit["exposure"])
+
+    linpred = x @ np.asarray(res.params) + offset
+    se_linpred = np.sqrt(np.sum((x @ np.asarray(res.cov_params())) * x, axis=1))
+    zcrit = stats.norm.ppf(0.975)
+    lower = np.exp(linpred - zcrit * se_linpred)
+    upper = np.exp(linpred + zcrit * se_linpred)
+
+    sf = res.get_prediction().summary_frame()
+    assert_allclose(sf["mean"], np.exp(linpred), rtol=1e-10)
+    assert_allclose(sf["mean_ci_lower"], lower, rtol=1e-10)
+    assert_allclose(sf["mean_ci_upper"], upper, rtol=1e-10)
+
+    sf = res.get_prediction(which="mean").summary_frame()
+    assert_allclose(sf["predicted"], np.exp(linpred), rtol=1e-10)
+    assert_allclose(sf["ci_lower"], lower, rtol=1e-10)
+    assert_allclose(sf["ci_upper"], upper, rtol=1e-10)
+
+
+def test_get_prediction_one_of_offset_exposure_keeps_other():
+    # Without exog, passing only one of offset and exposure keeps the other one
+    # stored in the model, which is the same as in predict.
+    rng = np.random.default_rng(987)
+    nobs = 100
+    x = sm.add_constant(rng.normal(size=(nobs, 1)))
+    expo = np.exp(rng.normal(scale=0.5, size=nobs))
+    off = rng.normal(scale=0.3, size=nobs)
+    y = rng.poisson(expo * np.exp(0.3 + 0.2 * x[:, 1] + off))
+    res = GLM(
+        y, x, family=sm.families.Poisson(), offset=off, exposure=expo
+    ).fit()
+    new_off = np.full(nobs, 0.4)
+    new_expo = np.full(nobs, 2.5)
+
+    for kwds, linpred in [
+        ({"offset": new_off}, x @ res.params + new_off + np.log(expo)),
+        ({"exposure": new_expo}, x @ res.params + off + np.log(new_expo)),
+    ]:
+        pred = res.get_prediction(which="mean", **kwds)
+        assert_allclose(pred.predicted, np.exp(linpred), rtol=1e-10)
+        assert_allclose(pred.predicted, res.predict(**kwds), rtol=1e-10)
+        # explicit exog does not use the stored values unless passed
+        pred_x = res.get_prediction(exog=x, which="mean", **kwds)
+        assert_allclose(pred_x.predicted, res.predict(exog=x, **kwds), rtol=1e-10)
+
+
+def test_get_prediction_default_offset_formula_pandas():
+    rng = np.random.default_rng(2468)
+    nobs = 100
+    index = pd.Index([f"obs{i}" for i in range(nobs)])
+    data = pd.DataFrame(
+        {"x": rng.normal(size=nobs), "off": rng.normal(scale=0.5, size=nobs)},
+        index=index,
+    )
+    data["y"] = rng.poisson(np.exp(0.3 + 0.2 * data["x"] + data["off"]))
+    res = sm.GLM.from_formula(
+        "y ~ x", data, family=sm.families.Poisson(), offset=data["off"]
+    ).fit()
+
+    pred = res.get_prediction()
+    sf = pred.summary_frame()
+    assert sf.index.equals(index)
+    assert_allclose(sf["mean"], res.predict(), rtol=1e-10)
+    assert_allclose(sf["mean"], np.exp(res.model.exog @ res.params + data["off"]))
+
+    sf = res.get_prediction(which="mean").summary_frame()
+    assert sf.index.equals(index)
+    assert_allclose(sf["predicted"], res.predict(), rtol=1e-10)

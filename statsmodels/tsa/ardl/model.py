@@ -30,6 +30,7 @@ from statsmodels.tools.validation import (
     int_like,
     string_like,
 )
+from statsmodels.tsa._lagselect import nested_lag_ols
 from statsmodels.tsa.ar_model import (
     AROrderSelectionResults,
     AutoReg,
@@ -1504,6 +1505,89 @@ class ARDLOrderSelectionResults(AROrderSelectionResults):
         return self._model.dl_lags
 
 
+def _ardl_select_ssr(y, always, select, glob):
+    """
+    Sum of squared residuals of all candidate ARDL models from one QR
+
+    Parameters
+    ----------
+    y : ndarray
+        The dependent variable, (nobs,).
+    always : ndarray
+        The regressors included in every model, (nobs, k_always).
+    select : list[ndarray]
+        The blocks of lags of the endogenous and exogenous variables. A
+        model includes the first columns of each block, or any subset of
+        all columns if glob is True.
+    glob : bool
+        Whether all subsets of the columns of the blocks are considered.
+
+    Returns
+    -------
+    tuple[ndarray, ndarray] or None
+        The sums of squared residuals of the models and their numbers of
+        regressors from the blocks. If glob is False, the model that
+        includes the first ``i_j`` columns of block ``j`` is at
+        ``[i_0, i_1, ...]``. If glob is True, the models are in the order of
+        ``combinations(range(ncols), i) for i in range(ncols)``. None if
+        the regressors are close to singular, the largest model fits
+        (almost) perfectly, or the data are not finite.
+
+    Notes
+    -----
+    If ``[always, X, y] = QR`` with ``X`` the columns of all blocks, then
+    the regression of ``y`` on ``always`` and any subset of the columns of
+    ``X`` has the same residual sum of squares as the regression of the
+    last column of ``B = R[k_always:, k_always:]`` on the same columns of
+    ``B``. So one QR of the data reduces every model to a problem with
+    ``ncols + 1`` rows. If glob is False, the models that differ only in
+    the number of columns of the last block form a nested sequence, which
+    ``nested_lag_ols`` solves from a single QR of these rows.
+    """
+    nobs = y.shape[0]
+    widths = [block.shape[1] for block in select]
+    x = np.column_stack(select) if sum(widths) else np.empty((nobs, 0))
+    # lstsq treats singular values below max(nrows, ncols) * eps times the
+    # largest one as zero, and nobs >= ncols
+    res = nested_lag_ols(y, x, always, rcond=nobs * np.finfo(float).eps)
+    if res is None:
+        return None
+    # The regressors of every model are a subset of the columns that passed
+    # the rank check above, so the rows of the factor need no further checks
+    k_always = always.shape[1]
+    b = res.r[k_always:, k_always:]
+    rhs = b[:, -1]
+    if glob:
+        ssr = []
+        nreg = []
+        ncols = x.shape[1]
+        for i in range(ncols):
+            perms = list(combinations(range(ncols), i))
+            perms = np.array(perms, dtype=int).reshape(len(perms), i)
+            # Batches of models with i regressors each
+            for start in range(0, perms.shape[0], 1024):
+                cols = perms[start : start + 1024]
+                design = np.empty((cols.shape[0], b.shape[0], i + 1))
+                design[:, :, :i] = np.moveaxis(b[:, cols], 1, 0)
+                design[:, :, i] = rhs
+                r = np.linalg.qr(design, mode="r")
+                ssr.append(r[:, i, i] ** 2)
+            nreg.append(np.full(perms.shape[0], i))
+        if not ssr:
+            return np.empty(0), np.empty(0, dtype=int)
+        return np.concatenate(ssr), np.concatenate(nreg)
+
+    offsets = np.cumsum([0] + widths)
+    last = b[:, offsets[-2] : offsets[-1]]
+    ssr = np.empty([w + 1 for w in widths])
+    for prefix in product(*[range(w + 1) for w in widths[:-1]]):
+        cols = [offsets[j] + np.arange(i) for j, i in enumerate(prefix)]
+        cols = np.concatenate([np.empty(0, dtype=int)] + cols)
+        nested = nested_lag_ols(rhs, last, b[:, cols], rcond=None, check_fit=False)
+        ssr[prefix] = nested.ssr
+    return ssr, np.indices(ssr.shape).sum(0)
+
+
 def ardl_select_order(
     endog: ArrayLike1D | ArrayLike2D,
     maxlag: int,
@@ -1596,23 +1680,25 @@ def ardl_select_order(
     orig_hold_back = int_like(hold_back, "hold_back", optional=True)
     ic = string_like(ic, "ic", options=("aic", "bic", "hqic"))
 
+    def ics_from_ssr(ssr, nobs, df_model):
+        sigma2 = 1.0 / nobs * ssr
+        llf = -nobs * (np.log(2 * np.pi * sigma2) + 1) / 2
+        res = SimpleNamespace(nobs=nobs, df_model=df_model, sigma2=sigma2, llf=llf)
+
+        aic = call_cached_func(ARDLResults.aic, res)
+        bic = call_cached_func(ARDLResults.bic, res)
+        hqic = call_cached_func(ARDLResults.hqic, res)
+
+        return aic, bic, hqic
+
     def compute_ics(y, x, df):
         if x.shape[1]:
             resid = y - x @ np.linalg.lstsq(x, y, rcond=None)[0]
         else:
             resid = y
         nobs = resid.shape[0]
-        sigma2 = 1.0 / nobs * sumofsq(resid)
-        llf = -nobs * (np.log(2 * np.pi * sigma2) + 1) / 2
-        res = SimpleNamespace(
-            nobs=nobs, df_model=df + x.shape[1], sigma2=sigma2, llf=llf
-        )
-
-        aic = call_cached_func(ARDLResults.aic, res)
-        bic = call_cached_func(ARDLResults.bic, res)
-        hqic = call_cached_func(ARDLResults.hqic, res)
-
-        return InformationCriteria(aic, bic, hqic)
+        ics = ics_from_ssr(sumofsq(resid), nobs, df + x.shape[1])
+        return InformationCriteria(*ics)
 
     base = ARDL(
         endog,
@@ -1643,7 +1729,14 @@ def ardl_select_order(
         iter_orders.append(list(range(block.shape[1] + 1)))
         var_names.append(var)
     y = base._y
-    if always.shape[1]:
+    always_df = always.shape[1]
+    # All models from one QR decomposition, see _ardl_select_ssr
+    fast_ics = None
+    fast = _ardl_select_ssr(y, always, select, glob)
+    if fast is not None:
+        ssr, nreg = fast
+        fast_ics = ics_from_ssr(ssr, y.shape[0], always_df + nreg)
+    elif always.shape[1]:
         pinv_always = np.linalg.pinv(always)
         for i in range(len(select)):
             x = select[i]
@@ -1675,7 +1768,6 @@ def ardl_select_order(
                 d[key] = tuple(d[key])
         return (y_lags,) + tuple((k, v) for k, v in d.items())
 
-    always_df = always.shape[1]
     ics = {}
     if glob:
         ar_lags = base.ar_lags if base.ar_lags is not None else []
@@ -1684,13 +1776,17 @@ def ardl_select_order(
             keys += [(k, i) for i in v]
         x = np.column_stack(list(select))
         all_columns = list(range(x.shape[1]))
+        loc = 0
         for i in range(x.shape[1]):
             for perm in combinations(all_columns, i):
                 key = perm_to_tuple(keys, perm)
-                ics[key] = compute_ics(y, x[:, perm], always_df)
+                if fast_ics is not None:
+                    ics[key] = InformationCriteria(*(v[loc] for v in fast_ics))
+                    loc += 1
+                else:
+                    ics[key] = compute_ics(y, x[:, perm], always_df)
     else:
         for io in product(*iter_orders):
-            x = np.column_stack([a[:, : io[i]] for i, a in enumerate(select)])
             key = [io[0] or None]
             for j, val in enumerate(io[1:]):
                 var = var_names[j]
@@ -1699,7 +1795,11 @@ def ardl_select_order(
                 else:
                     key.append((var, val - 1 if val - 1 >= 0 else None))
             key = tuple(key)
-            ics[key] = compute_ics(y, x, always_df)
+            if fast_ics is not None:
+                ics[key] = InformationCriteria(*(v[io] for v in fast_ics))
+            else:
+                x = np.column_stack([a[:, : io[i]] for i, a in enumerate(select)])
+                ics[key] = compute_ics(y, x, always_df)
     lowest = np.inf
     for key, value in ics.items():
         val = getattr(value, ic)
@@ -2481,8 +2581,8 @@ class UECMResults(ARDLResults):
             Flag indicating whether to use asymptotic critical values which
             were computed by simulation (True, default) or to simulate a
             sample-size specific set of critical values. Tables are only
-            available for up to 10 components in the cointegrating
-            relationship, so if more variables are included then simulation
+            available for up to 10 regressors, excluding the dependent
+            variable, so if more regressors are included then simulation
             is always used. The simulation computes the test statistic under
             an assumption that the residuals are homoskedastic.
         nsim : int, optional
@@ -2588,7 +2688,8 @@ class UECMResults(ARDLResults):
         vcv = r @ cov @ r.T
         coef = r @ res.params
         stat = coef.T @ np.linalg.inv(vcv) @ coef / r.shape[0]
-        k = nvar
+        # The tables are indexed by the number of regressors, excluding y
+        k = nvar - 1
         if asymptotic and k <= 10:
             cv = pss_critical_values.crit_vals
             key = (k, case)
@@ -2608,7 +2709,7 @@ class UECMResults(ARDLResults):
         else:
             nobs = res.resid.shape[0]
             crit_vals, p_values = _pss_simulate(
-                stat, k, case, nobs=nobs, nsim=nsim, rng=rng
+                stat, nvar, case, nobs=nobs, nsim=nsim, rng=rng
             )
 
         return BoundsTestResult(

@@ -1204,6 +1204,8 @@ class GLM(base.LikelihoodModel):
             `dev` is the deviance divided by df_resid
         cov_type : str, optional
             The type of parameter estimate covariance matrix to compute.
+            "HC1", "HC2" and "HC3" are not implemented for GLM and fall back
+            to "HC0" with a ``SpecificationWarning``.
         cov_kwds : dict-like, optional
             Extra arguments for calculating the covariance of the parameter
             estimates.
@@ -1537,13 +1539,15 @@ class GLM(base.LikelihoodModel):
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
-            penalty weight for each coefficient.
+            penalty weight for each coefficient.  The default is 0, which
+            applies no penalty and gives the unpenalized maximum likelihood
+            estimate.
         start_params : array_like, optional
             Starting values for `params`.
         refit : bool, optional
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
-            refitted model is not regularized.
+            refitted model is not regularized.  The default is False.
         opt_method : str, optional
             The method used for numerical optimization.
         **kwargs
@@ -1570,39 +1574,44 @@ class GLM(base.LikelihoodModel):
         Post-estimation results are based on the same data used to
         select variables, hence may be subject to overfitting biases.
 
-        The elastic_net method uses the following keyword arguments:
+        The elastic_net method uses the following keyword arguments.  The
+        defaults given below apply to the coordinate descent algorithm that
+        is used when L1_wt is not 0.  If L1_wt is 0, the ridge problem is
+        solved using `opt_method` instead, and `maxiter`, `cnvrg_tol`,
+        `zero_tol` and `refit` are ignored.
 
-        maxiter : int
-            Maximum number of iterations
-        L1_wt  : float
+        maxiter : int, optional
+            Maximum number of iterations (default 50).
+        L1_wt : float, optional
             Must be in [0, 1].  The L1 penalty has weight L1_wt and the
-            L2 penalty has weight 1 - L1_wt.
-        cnvrg_tol : float
+            L2 penalty has weight 1 - L1_wt (default 1).
+        cnvrg_tol : float, optional
             Convergence threshold for maximum parameter change after
-            one sweep through all coefficients.
-        zero_tol : float
-            Coefficients below this threshold are treated as zero.
+            one sweep through all coefficients (default 1e-10).
+        zero_tol : float, optional
+            Coefficients below this threshold are treated as zero
+            (default 1e-10).
 
         The l1_slsqp method uses the following keyword arguments:
 
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations (default 1000).
-        trim_mode : {'auto', 'size', 'off'}
+        trim_mode : {'auto', 'size', 'off'}, optional
             If not 'off', trim (set to zero) parameters that would have
             been zero if the solver reached the theoretical minimum.
             If 'auto', trim params using the theoretical optimality
             conditions.  If 'size', trim params if they have very small
             absolute value.
-        size_trim_tol : float
+        size_trim_tol : float, optional
             Tolerance used when trim_mode is 'size'.
-        auto_trim_tol : float
+        auto_trim_tol : float, optional
             Tolerance used when trim_mode is 'auto'.
-        qc_tol : float
+        qc_tol : float, optional
             Print warning and do not allow auto trim when the
             optimality conditions are violated by this much.
-        qc_verbose : bool
+        qc_verbose : bool, optional
             If True, print out a full QC report upon failure.
-        acc : float
+        acc : float, optional
             Requested accuracy as used by slsqp (default 1e-10).
         """
 
@@ -2280,7 +2289,15 @@ class GLMResults(base.LikelihoodModelResults):
         Parameters
         ----------
         exog : array_like, optional
-            The values for which you want to predict.
+            The values for which you want to predict. If None, then the
+            model's exog together with the offset and exposure stored in
+            the model are used, as in ``predict``. If exog is given, then
+            the stored offset and exposure are not used unless they are
+            passed explicitly.
+
+            .. versionchanged:: 0.15.1
+
+               Without exog, the stored offset and exposure are now used.
         exposure : array_like, optional
             Exposure time values, only can be used with the log link
             function.
