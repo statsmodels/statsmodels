@@ -166,6 +166,13 @@ Performance
   fraction of a second instead of seconds. ``pacf_ols`` with
   ``efficient=True`` demeans the series first, which is more accurate when the
   mean is large relative to the variation. :issue:`2276`, :pr:`10571`
+- ``zivot_andrews`` computes the regressions of all candidate break periods
+  from one QR decomposition of the regressors that do not depend on the
+  break, using the same private helper, instead of fitting one regression per
+  period. The cost grows linearly instead of quadratically with the number of
+  observations, so the test is about 100 times faster for 2,000 observations
+  and about 1,000 times faster for 20,000. The statistics are more accurate
+  when the regressors are close to collinear.
 
 Bug Fixes
 =========
