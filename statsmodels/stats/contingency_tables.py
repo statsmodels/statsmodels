@@ -1130,7 +1130,19 @@ class StratifiedTable:
         ----------
         correction : bool, optional
             If True, use the continuity correction when calculating the
-            test statistic.
+            test statistic. As in R's ``mantelhaen.test``, the correction of
+            0.5 is applied only if ``|sum(a - E(a))| >= 0.5``, where the sum
+            is over the strata and ``E(a)`` is the expected count of the
+            upper left cell under the null hypothesis. Otherwise the
+            statistic is not corrected.
+
+            .. versionchanged:: 0.15.1
+
+               The correction is no longer applied if ``|sum(a - E(a))|`` is
+               smaller than 0.5. Previously ``min(0.5, |sum(a - E(a))|)`` was
+               subtracted, which changed the statistic and p-value in this
+               case. If the variance is zero, the statistic and p-value
+               are now nan instead of inf and 0 when the correction is used.
 
         Returns
         -------
