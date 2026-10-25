@@ -123,6 +123,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.graphics import utils as gutils
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.tools import maybe_unwrap_results
 
 _mice_data_example_1 = """
     >>> imp = mice.MICEData(data)
@@ -1216,7 +1217,14 @@ class MICE:
         formula is for the 'analysis model'.
     model_class : statsmodels model
         The model to be fit to the imputed data sets.  This model
-        class is for the 'analysis model'.
+        class is for the 'analysis model'.  The results returned by its
+        ``fit`` method, wrapped or not, must provide ``params``,
+        ``cov_params()`` and ``scale``.
+
+        .. versionchanged:: 0.15.1
+
+           Results without a ``_results`` attribute, for example those of
+           ``PHReg``, are accepted.
     data : MICEData instance
         MICEData object containing the data set for which
         missing values will be imputed
@@ -1352,7 +1360,7 @@ class MICE:
         cov_within = 0.0
         scale_list = []
         for results in self.results_list:
-            results_uw = results._results
+            results_uw = maybe_unwrap_results(results)
             params_list.append(results_uw.params)
             cov_within += results_uw.cov_params()
             scale_list.append(results.scale)

@@ -477,7 +477,15 @@ def get_prediction_glm(
     Parameters
     ----------
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If None, then the
+        model's exog together with the offset and exposure stored in
+        the model are used, as in ``predict``. If exog is given, then
+        the stored offset and exposure are not used unless they are
+        passed explicitly.
+
+        .. versionchanged:: 0.15.1
+
+           Without exog, the stored offset and exposure are now used.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit
@@ -507,6 +515,8 @@ def get_prediction_glm(
     """
 
     # prepare exog and row_labels, based on base Results.predict
+    # without exog, predict must use the model's offset and exposure
+    use_model_exog = exog is None
     exog, row_labels = _get_exog_predict(
         self,
         exog=exog,
@@ -517,7 +527,9 @@ def get_prediction_glm(
     if pred_kwds is None:
         pred_kwds = {}
 
-    predicted_mean = self.model.predict(self.params, exog, **pred_kwds)
+    predicted_mean = self.model.predict(
+        self.params, None if use_model_exog else exog, **pred_kwds
+    )
 
     covb = self.cov_params()
 
@@ -557,7 +569,15 @@ def get_prediction_linear(
     Parameters
     ----------
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If None, then the
+        model's exog together with the offset and exposure stored in
+        the model are used, as in ``predict``. If exog is given, then
+        the stored offset and exposure are not used unless they are
+        passed explicitly.
+
+        .. versionchanged:: 0.15.1
+
+           Without exog, the stored offset and exposure are now used.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit
@@ -585,6 +605,8 @@ def get_prediction_linear(
     """
 
     # prepare exog and row_labels, based on base Results.predict
+    # without exog, predict must use the model's offset and exposure
+    use_model_exog = exog is None
     exog, row_labels = _get_exog_predict(
         self,
         exog=exog,
@@ -606,7 +628,9 @@ def get_prediction_linear(
     var_pred = (exog * np.dot(covb, exog.T).T).sum(1)
     pred_kwds_linear = pred_kwds.copy()
     pred_kwds_linear["which"] = "linear"
-    predicted = self.model.predict(self.params, exog, **pred_kwds_linear)
+    predicted = self.model.predict(
+        self.params, None if use_model_exog else exog, **pred_kwds_linear
+    )
 
     dist = ["norm", "t"][self.use_t]
     res = PredictionResultsBase(
@@ -630,7 +654,15 @@ def get_prediction_monotonic(
     Parameters
     ----------
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If None, then the
+        model's exog together with the offset and exposure stored in
+        the model are used, as in ``predict``. If exog is given, then
+        the stored offset and exposure are not used unless they are
+        passed explicitly.
+
+        .. versionchanged:: 0.15.1
+
+           Without exog, the stored offset and exposure are now used.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit
@@ -661,6 +693,8 @@ def get_prediction_monotonic(
     """
 
     # prepare exog and row_labels, based on base Results.predict
+    # without exog, predict must use the model's offset and exposure
+    use_model_exog = exog is None
     exog, row_labels = _get_exog_predict(
         self,
         exog=exog,
@@ -681,9 +715,10 @@ def get_prediction_monotonic(
     linpred_var = (exog * np.dot(covb, exog.T).T).sum(1)
     pred_kwds_linear = pred_kwds.copy()
     pred_kwds_linear["which"] = "linear"
-    linpred = self.model.predict(self.params, exog, **pred_kwds_linear)
+    predict_exog = None if use_model_exog else exog
+    linpred = self.model.predict(self.params, predict_exog, **pred_kwds_linear)
 
-    predicted = self.model.predict(self.params, exog, **pred_kwds)
+    predicted = self.model.predict(self.params, predict_exog, **pred_kwds)
     link_deriv = func_deriv(linpred)
     var_pred = link_deriv**2 * linpred_var
 
@@ -718,7 +753,15 @@ def get_prediction_delta(
     Parameters
     ----------
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If None, then the
+        model's exog together with the offset and exposure stored in
+        the model are used, as in ``predict``. If exog is given, then
+        the stored offset and exposure are not used unless they are
+        passed explicitly.
+
+        .. versionchanged:: 0.15.1
+
+           Without exog, the stored offset and exposure are now used.
     which : str, optional
         The statistic that is prediction. Which statistics are available
         depends on the model.predict method.
@@ -755,6 +798,8 @@ def get_prediction_delta(
     """
 
     # prepare exog and row_labels, based on base Results.predict
+    # without exog, predict must use the model's offset and exposure
+    use_model_exog = exog is None
     exog, row_labels = _get_exog_predict(
         self,
         exog=exog,
@@ -766,7 +811,9 @@ def get_prediction_delta(
 
     def f_pred(p):
         """Prediction function as function of params"""
-        pred = self.model.predict(p, exog, which=which, **pred_kwds)
+        pred = self.model.predict(
+            p, None if use_model_exog else exog, which=which, **pred_kwds
+        )
         if average:
             # using `.T` which should work if aggweights is 1-dim
             pred = (pred.T * agg_weights.T).mean(-1).T
@@ -794,7 +841,15 @@ def get_prediction(
     Parameters
     ----------
     exog : array_like, optional
-        The values for which you want to predict.
+        The values for which you want to predict. If None, then the
+        model's exog together with the offset and exposure stored in
+        the model are used, as in ``predict``. If exog is given, then
+        the stored offset and exposure are not used unless they are
+        passed explicitly.
+
+        .. versionchanged:: 0.15.1
+
+           Without exog, the stored offset and exposure are now used.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit

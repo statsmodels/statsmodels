@@ -86,9 +86,11 @@ class KernelReg(GenericKDE):
     bw : str or array_like, optional
         Either a user-specified bandwidth or the method for bandwidth
         selection. If a string, valid values are 'cv_ls' (least-squares
-        cross-validation) and 'aic' (AIC Hurvich bandwidth estimation).
-        Default is 'cv_ls'. User specified bandwidth must have as many
-        entries as the number of variables.
+        cross-validation), 'aic' (AIC Hurvich bandwidth estimation) and
+        'normal_reference' (normal reference rule of thumb). Default is
+        'cv_ls'. User specified bandwidth must have as many entries as the
+        number of variables and must be non-negative, zero is allowed for
+        discrete variables.
     ckertype : str, optional
         The kernel used for the continuous variables.
     okertype : str, optional
@@ -175,23 +177,37 @@ class KernelReg(GenericKDE):
     def _compute_reg_bw(self, bw):
         if not isinstance(bw, str):
             self._bw_method = "user-specified"
-            return array_like(bw, "bw", ndim=1)
+            bw = array_like(bw, "bw", ndim=1)
+            if not np.all(bw >= 0):
+                raise ValueError("bw must be non-negative")
+            return bw
         else:
             # The user specified a bandwidth selection method e.g., 'cv_ls'
+            if bw not in ("cv_ls", "aic", "normal_reference"):
+                raise ValueError(
+                    f"bw must be one of 'cv_ls', 'aic' or 'normal_reference', "
+                    f"got {bw!r}"
+                )
             self._bw_method = bw
+            X = np.std(self.exog, axis=0)
+            h0 = 1.06 * X * self.nobs ** (-1.0 / (4 + self.k_vars))
+            if bw == "normal_reference":
+                # the rule of thumb is only defined for continuous variables,
+                # the bandwidths of the discrete ones are not used by the
+                # kernels and stay at the starting value
+                ix_cont, _, _ = _get_type_pos(self.var_type)
+                return h0[ix_cont]
             # Workaround to avoid instance methods in __dict__
             if bw == "cv_ls":
                 res = self.cv_loo
             else:  # bw == 'aic'
                 res = self.aic_hurvich
-            X = np.std(self.exog, axis=0)
-            h0 = 1.06 * X * self.nobs ** (-1.0 / (4 + np.size(self.exog, axis=1)))
-
             func = self.est[self.reg_type]
             bw_estimated = optimize.fmin(
                 res, x0=h0, args=(func,), maxiter=1e3, maxfun=1e3, disp=0
             )
             return bw_estimated
+
 
     def _est_loc_linear(self, bw, endog, exog, data_predict):
         """

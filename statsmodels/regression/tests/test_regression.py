@@ -1808,6 +1808,53 @@ def test_slim_summary():
     assert slim_summ.tables[1].as_text() == summ.tables[1].as_text()
 
 
+@pytest.mark.parametrize("method", ["pinv", "qr"])
+def test_fit_attributes_reset_on_initialize(method):
+    # GH#9880
+    data = longley.load()
+    exog = add_constant(np.asarray(data.exog), prepend=False)
+    endog = np.asarray(data.endog)
+    rs = np.random.RandomState(12345)
+    w1, w2 = rs.uniform(0.5, 2.0, size=(2, endog.shape[0]))
+    fit_attrs = [
+        "pinv_wexog", "normalized_cov_params", "rank",
+        "wexog_singular_values", "effects",
+    ]
+
+    mod = WLS(endog, exog, weights=w1)
+    assert all(getattr(mod, attr) is None for attr in fit_attrs)
+    mod.fit(method=method)
+    assert mod.pinv_wexog is not None
+    assert mod.normalized_cov_params is not None
+    assert (mod.effects is None) == (method == "pinv")
+
+    mod.weights = w2
+    mod.initialize()
+    assert all(getattr(mod, attr) is None for attr in fit_attrs)
+    res = mod.fit(method=method)
+    expected = WLS(endog, exog, weights=w2).fit(method=method)
+    assert_allclose(res.params, expected.params)
+    assert_allclose(res.bse, expected.bse)
+
+
+def test_ols_offset_and_score_cache():
+    # GH#9880
+    data = longley.load()
+    exog = add_constant(np.asarray(data.exog), prepend=False)
+    endog = np.asarray(data.endog)
+
+    assert OLS(endog, exog).offset is None
+    offset = np.ones_like(endog)
+    mod = OLS(endog, exog, offset=offset)
+    assert_allclose(mod.offset, offset)
+
+    assert mod._wexog_xprod is None
+    mod.score(np.zeros(exog.shape[1]))
+    assert mod._wexog_xprod is not None
+    mod.initialize()
+    assert mod._wexog_xprod is None
+
+
 def test_ols_wls_fixed_scale():
     rs = np.random.RandomState(3293829)
     X = add_constant(rs.uniform(size=(50, 2)))
@@ -1894,6 +1941,55 @@ def test_summary_after_remove_data(fit_func):
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+@pytest.mark.parametrize("scale", [None, 3.5])
+@pytest.mark.parametrize("use_offset", [False, True])
+@pytest.mark.parametrize("n_columns", [1, 2])
+@pytest.mark.parametrize("at_fit", [False, True])
+def test_ols_hessian_numerical_derivative(scale, use_offset, n_columns, at_fit):
+    x = add_constant(np.arange(-1.0, 4.0))[:, :n_columns]
+    y = np.array([1.0, -1.5, 3.0, -0.5, 3.0])
+    offset = np.array([0.1, 0.3, -0.2, 0.4, 0.2]) if use_offset else 0.0
+    model = OLS(y, x, **({"offset": offset} if use_offset else {}))
+    # Fitting y - offset avoids relying on OLS.fit's treatment of offset.
+    if at_fit:
+        params = OLS(y - offset, x).fit().params
+    else:
+        params = np.array([0.7, 0.2])[:n_columns]
+    numeric_hessian = approx_hess(params, lambda p: model.loglike(p, scale=scale))
+    assert_allclose(model.hessian(params, scale=scale), numeric_hessian,
+                    rtol=1e-5, atol=1e-6)
+
+
+def test_ols_hessian_at_fit():
+    x = add_constant(np.arange(-2.0, 3.0))
+    y = np.array([1.0, -1.5, 3.0, -0.5, 3.0])
+    result = OLS(y, x).fit()
+    # At the optimum the profile likelihood curvature is the negative
+    # inverse covariance using the ML variance SSR / n (not SSR / df_resid).
+    ml_scale = result.ssr / result.nobs
+    covariance = result.normalized_cov_params * ml_scale
+    assert_allclose(result.model.hessian(result.params), -np.linalg.inv(covariance),
+                    atol=1e-12)
+    assert_allclose(result.model.hessian(result.params, scale=ml_scale),
+                    -np.linalg.inv(covariance), atol=1e-12)
+
+
+def test_ols_regularized_profile_scale():
+    x = np.array([-1.0, -1.0, 1.0, 1.0])
+    y = 0.3 * x + np.array([-1.0, 1.0, -1.0, 1.0])
+    alpha = 0.02
+    # The objective, up to a constant, is
+    # log(1 + (params - 0.3)**2) / 2 + alpha * abs(params).
+    # Its unique minimum is positive and solves
+    # (params - 0.3) / (1 + (params - 0.3)**2) + alpha = 0.
+    expected = 0.3 - 2 * alpha / (1 + np.sqrt(1 - 4 * alpha**2))
+    result = OLS(y, x).fit_regularized(
+        alpha=alpha, L1_wt=1, profile_scale=True, cnvrg_tol=1e-12
+    )
+    assert result.converged
+    assert_allclose(result.params, [expected], rtol=1e-10, atol=1e-12)
 
 
 def test_hessian_factor_gls_wls_matches_numerical_hessian():
