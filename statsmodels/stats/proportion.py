@@ -979,20 +979,43 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
 
     Returns
     -------
-    power : float
+    power : float or ndarray
         statistical power of the equivalence test.
+
+    Raises
+    ------
+    ValueError
+        If ``p_alt`` is not in [0, 1], or if the arguments of
+        :func:`binom_tost_reject_interval` are not valid.
+
+    See Also
+    --------
+    binom_tost_reject_interval
+        Rejection region of the exact equivalence test.
+
+    Notes
+    -----
+    The power is the probability of the rejection region of the exact
+    equivalence test under the alternative. The rejection region can be
+    empty, for example if the equivalence region is narrow relative to the
+    sample size. In this case the power is zero.
+
+    .. versionchanged:: 0.15.1
+
+        The power is zero if the rejection region is empty. Previously a
+        negative value was returned.
     """
-    if p_alt is not None and (
-        np.any(np.asarray(p_alt) < 0) or np.any(np.asarray(p_alt) > 1)
-    ):
-        raise ValueError("p_alt must be in the range [0, 1]")
     if p_alt is None:
-        p_alt = 0.5 * (low + upp)
+        p_alt = 0.5 * (np.asarray(low) + np.asarray(upp))
+    elif not np.all(np.greater_equal(p_alt, 0) & np.less_equal(p_alt, 1)):
+        raise ValueError("p_alt must be in the range [0, 1]")
     x_low, x_upp = binom_tost_reject_interval(low, upp, nobs, alpha=alpha)
     power = stats.binom.cdf(x_upp, nobs, p_alt) - stats.binom.cdf(
         x_low - 1, nobs, p_alt
     )
-    return power
+    # the rejection region is empty if x_low > x_upp, then the difference of
+    # the cdfs is negative and the power is zero
+    return np.maximum(power, 0)
 
 
 def power_ztost_prop(

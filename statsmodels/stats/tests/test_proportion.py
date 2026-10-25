@@ -16,6 +16,7 @@ from numpy.testing import (
 )
 import pandas as pd
 import pytest
+from scipy import stats
 
 import statsmodels.stats.proportion as smprop
 from statsmodels.stats.proportion import (
@@ -569,8 +570,58 @@ def test_power_binom_tost():
     res_power = np.array(
         [0.0, 0.0, 0.0, 0.0889, 0.2356, 0.3517, 0.4457, 0.6154, 0.6674, 0.7708]
     )
-    # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
-    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+    assert_almost_equal(power, res_power, decimal=4)
+
+    # the rejection region (27, 23) is empty, so the power is zero
+    assert_equal(smprop.power_binom_tost(0.4, 0.6, 50, p_alt=0.5), 0)
+
+
+@pytest.mark.parametrize(
+    "nobs, low, upp, alpha",
+    [
+        (1, 0.4, 0.6, 0.05),  # empty rejection region
+        (20, 0.4, 0.6, 0.05),  # empty
+        (50, 0.4, 0.6, 0.05),  # empty
+        (100, 0.4, 0.6, 0.05),
+        (200, 0.4, 0.6, 0.05),
+        (30, 0.3, 0.7, 0.05),
+        (10, 0.2, 0.8, 0.10),
+        (500, 0.5, 0.7, 0.05),
+    ],
+)
+def test_power_binom_tost_exact(nobs, low, upp, alpha):
+    # The exact power is the probability of the counts at which both one-sided
+    # exact tests reject. This covers empty and non-empty rejection regions.
+    p_alt = np.array([0.35, 0.5, 0.55, 0.7])
+    x = np.arange(nobs + 1)
+    reject = smprop.binom_tost(x, nobs, low, upp)[0] <= alpha
+    expected = [stats.binom.pmf(x[reject], nobs, p).sum() for p in p_alt]
+    power = smprop.power_binom_tost(low, upp, nobs, p_alt=p_alt, alpha=alpha)
+    assert_allclose(power, expected, atol=1e-12)
+    assert np.all(power >= 0)
+
+
+def test_power_binom_tost_empty_region_array_inputs():
+    # array_like p_alt with an empty rejection region
+    power = smprop.power_binom_tost(0.4, 0.6, 20, p_alt=[0.4, 0.5, 0.9])
+    assert_equal(power, np.zeros(3))
+    # a single observation can never reject
+    assert_equal(smprop.power_binom_tost(0.4, 0.6, 1), 0)
+    # array_like equivalence limits with the default p_alt
+    power = smprop.power_binom_tost([0.4, 0.3], [0.6, 0.7], 100)
+    assert_allclose(
+        power,
+        [
+            smprop.power_binom_tost(0.4, 0.6, 100),
+            smprop.power_binom_tost(0.3, 0.7, 100),
+        ],
+    )
+
+
+@pytest.mark.parametrize("p_alt", [-0.1, 1.1, np.nan])
+def test_power_binom_tost_p_alt_invalid(p_alt):
+    with pytest.raises(ValueError, match="p_alt must be in the range"):
+        smprop.power_binom_tost(0.4, 0.6, 50, p_alt=p_alt)
 
 
 def test_power_ztost_prop():

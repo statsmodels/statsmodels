@@ -2006,7 +2006,7 @@ def power_poisson_ratio_2indep(
     nobs1,
     nobs_ratio=1,
     exposure=1,
-    value=0,
+    value=1,
     alpha=0.05,
     dispersion=1,
     alternative="smaller",
@@ -2035,7 +2035,14 @@ def power_poisson_ratio_2indep(
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
     value : float, optional
-        Rate ratio, rate1 / rate2, under the null hypothesis.
+        Rate ratio, rate1 / rate2, under the null hypothesis. The default of
+        1 is the null hypothesis that both rates are equal. The value must be
+        positive because the test is based on the log of the rate ratio.
+
+        .. versionchanged:: 0.15.1
+
+            The default was changed from 0 to 1. A rate ratio of 0 made
+            the power 0, 1 or nan with a divide by zero warning.
     alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
@@ -2064,6 +2071,12 @@ def power_poisson_ratio_2indep(
         the scalar power in numeric comparisons (e.g., ``assert_allclose``),
         while also exposing `std_null`, `std_alt` and other attributes.
 
+    Raises
+    ------
+    ValueError
+        If ``nobs1`` or ``value`` is not positive, ``alpha`` is not in the
+        interval (0, 1), or ``dispersion`` is negative.
+
     References
     ----------
     .. [1] Zhu, Haiyuan. 2017. “Sample Size Calculation for Comparing Two
@@ -2083,6 +2096,8 @@ def power_poisson_ratio_2indep(
         raise ValueError(
             f"dispersion must be non-negative, got {dispersion}"
         )
+    if not np.all(np.greater(value, 0)):
+        raise ValueError(f"value must be positive, got {value}")
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2273,9 +2288,9 @@ def power_equivalence_poisson_2indep(
     if method_var == "alt":
         v0_low = v0_upp = v1
     else:  # method_var == "score"
-        v0_low = dispersion / exposure * (1 + low * nobs_ratio) ** 2
+        v0_low = dispersion / exposure * (low + nobs_ratio) ** 2
         v0_low /= low * nobs_ratio * (rate1 + (nobs_ratio * rate2))
-        v0_upp = dispersion / exposure * (1 + upp * nobs_ratio) ** 2
+        v0_upp = dispersion / exposure * (upp + nobs_ratio) ** 2
         v0_upp /= upp * nobs_ratio * (rate1 + (nobs_ratio * rate2))
 
     es_low = np.log(rate1 / rate2) - np.log(low)
@@ -2287,7 +2302,7 @@ def power_equivalence_poisson_2indep(
     pow_ = _power_equivalence_het(
         es_low,
         es_upp,
-        nobs2,
+        nobs1,
         alpha=alpha,
         std_null_low=std_null_low,
         std_null_upp=std_null_upp,
@@ -2908,7 +2923,7 @@ def power_equivalence_neginb_2indep(
 
     nobs2 = nobs_ratio * nobs1
 
-    v1 = (1 / rate2 + 1 / (nobs_ratio * rate1)) / exposure + (
+    v1 = (1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure + (
         1 + nobs_ratio
     ) / nobs_ratio * dispersion
     method_var = string_like(

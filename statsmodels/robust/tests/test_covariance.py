@@ -743,6 +743,33 @@ def test_covdet_large_k_det_normalization(cov_class):
     assert np.all(np.isfinite(res.cov))
 
 
+@pytest.mark.parametrize("bp, c1", [(0.5, 1.547), (0.25, 2.937)])
+def test_covdets_breakdown_point(bp, c1):
+    # breakdown_point was ignored in CovDetS, and so in the first stage of
+    # CovDetMM, the tuning parameter was always the one for 0.5.
+    rng = np.random.default_rng(12345)
+    x = rng.standard_normal((200, 3))
+    x[:30] += 6
+
+    # c1 is the biweight tuning parameter of a univariate S-estimator with
+    # the given breakdown point, to three decimals from tukeybiweight_bp in
+    # statsmodels/robust/_tables.py.
+    mod1 = robcov.CovDetS(x[:, :1], breakdown_point=bp)
+    assert_allclose(mod1.norm.c, c1, atol=1e-3)
+
+    mod = robcov.CovDetS(x, breakdown_point=bp)
+    res = mod.fit()
+    assert res.converged
+    # An S-estimator solves mean(rho(d)) = breakdown_point * max(rho), and the
+    # maximum of the biweight rho is c**2 / 6.
+    d = robcov.mahalanobis(x - res.mean, res.cov, sqrt=True)
+    assert_allclose(mod.norm.rho(d).mean() / (mod.norm.c**2 / 6), bp, rtol=1e-4)
+
+    # the second stage of CovDetMM keeps the scale of the first stage
+    res_mm = robcov.CovDetMM(x, breakdown_point=bp).fit()
+    assert_allclose(res_mm.scale, res.scale, rtol=1e-12)
+
+
 def test_cov_tyler_regularized_n_iter():
     # GH: n_iter was accumulated as `n_iter += i` inside `for i in
     # range(maxiter)`, giving a triangular-number count instead of the
@@ -945,4 +972,52 @@ def test_cov_starting_zero_mad_raises():
     x[:, 2] = (rng.random(100) < 0.3).astype(float)
     with pytest.raises(ValueError, match="standardizing scale is zero"):
         robcov._cov_starting(x, standardize=True)
+
+@pytest.mark.parametrize("reweight", [True, False])
+def test_covdet_mcd_tilted_plane_exact_fit_raises(reweight):
+    # GH-10437 suggestion 2: more than h observations on a tilted plane
+    # (no column has MAD == 0). Put ALL rows on the plane so every C-step
+    # subset is singular and CI is not sensitive to platform FP around a
+    # near-exact-fit residual (Pyodide). Raise before reweight so default
+    # reweight=True cannot hide the exact-fit case.
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    x[:, 2] = x[:, 0] + x[:, 1]
+    assert (robcov.mad(x) > 0).all()
+
+    with pytest.raises(ValueError, match="lie on a hyperplane"):
+        robcov.CovDetMCD(x).fit(h=51, reweight=reweight)
+
+
+@pytest.mark.parametrize("m_on", [55, 60, 70, 80])
+@pytest.mark.parametrize("seed", range(3))
+def test_covdet_mcd_partial_tilted_plane_exact_fit_raises(m_on, seed):
+    # More than h observations lie on a tilted plane, but not every row does.
+    rng = np.random.default_rng(seed)
+    x = rng.standard_normal((100, 3))
+    x[:m_on, 2] = x[:m_on, 0] + x[:m_on, 1]
+
+    with pytest.raises(ValueError, match="lie on a hyperplane"):
+        robcov.CovDetMCD(x).fit(h=52)
+
+
+def test_covdet_mcd_full_rank_polynomial_data_still_fits():
+    rng = np.random.default_rng(0)
+    t = rng.uniform(0, 1, 200)
+    x = np.column_stack([t**j for j in range(1, 6)])
+    assert np.linalg.matrix_rank(x) == 5
+
+    res = robcov.CovDetMCD(x).fit(h=(len(x) + x.shape[1] + 1) // 2)
+    assert np.isfinite(np.linalg.det(res.cov))
+
+
+def test_covdet_mcd_healthy_data_still_fits():
+    # Sanity: ordinary full-rank Gaussian data still returns a non-singular
+    # covariance after the exact-fit guard.
+    rng = np.random.default_rng(1)
+    x = rng.standard_normal((100, 3))
+    res = robcov.CovDetMCD(x).fit(h=51)
+    assert np.isfinite(np.linalg.det(res.cov))
+    assert np.linalg.det(res.cov) > 0
+    assert not robcov._is_singular(res.cov)
 

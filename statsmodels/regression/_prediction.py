@@ -170,6 +170,8 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     """
     # prepare exog and row_labels, based on base Results.predict
+    # without exog, predict must use the model's offset and exposure
+    use_model_exog = exog is None
     if transform and hasattr(self.model, "formula") and exog is not None:
         if isinstance(exog, pd.Series):
             # GH-6509
@@ -193,10 +195,12 @@ def get_prediction(self, exog=None, transform=True, weights=None,
     else:
         exog = self.model.exog
         if weights is None:
+            # GLMResults.get_prediction shares this helper, and GLM only
+            # defines ``weights`` (the IRLS working weights) after an IRLS fit.
             weights = getattr(self.model, "weights", None)
 
         if row_labels is None:
-            row_labels = getattr(self.model.data, "row_labels", None)
+            row_labels = self.model.data.row_labels
 
     # need to handle other arrays, TODO: is delegating to model possible ?
     if weights is not None:
@@ -207,7 +211,8 @@ def get_prediction(self, exog=None, transform=True, weights=None,
 
     if pred_kwds is None:
         pred_kwds = {}
-    predicted_mean = self.model.predict(self.params, exog, **pred_kwds)
+    predicted_mean = self.model.predict(
+        self.params, None if use_model_exog else exog, **pred_kwds)
 
     covb = self.cov_params()
     var_pred_mean = (exog * np.dot(covb, exog.T).T).sum(1)

@@ -1752,7 +1752,7 @@ def test_glm_irls_method():
     assert_equal(res2.mle_settings["wls_method"], "pinv")
     assert_equal(res3.mle_settings["wls_method"], "qr")
 
-    assert_(hasattr(res2.results_wls.model, "pinv_wexog"))
+    assert res2.results_wls.model.pinv_wexog is not None
 
     # fit_gradient currently does not attach mle_settings
     assert_equal(res_g1.method, "bfgs")
@@ -3590,3 +3590,62 @@ def test_glm_predict_nonpositive_exposure_raises():
     # positive exposure keeps working
     pred = res.predict(x, exposure=np.full(60, 2.0))
     assert np.all(np.isfinite(pred))
+
+
+@pytest.mark.parametrize(
+    "fit_model",
+    [
+        "glm_offset",
+        "glm_exposure",
+        "poisson_offset",
+        "poisson_exposure",
+        "nb_offset",
+        "zip_offset",
+    ],
+)
+def test_get_prediction_default_uses_model_offset(fit_model):
+    # Without exog, get_prediction() must use the offset or exposure stored on
+    # the model, the same as predict() does.
+    rng = np.random.default_rng(4321)
+    nobs = 200
+    x = sm.add_constant(rng.normal(size=(nobs, 2)))
+    expo = np.exp(rng.normal(scale=0.5, size=nobs))
+    y = rng.poisson(expo * np.exp(0.3 + 0.2 * x[:, 1]))
+    off = np.log(expo)
+
+    if fit_model == "glm_offset":
+        res = GLM(y, x, family=sm.families.Poisson(), offset=off).fit()
+        explicit = {"offset": off}
+    elif fit_model == "glm_exposure":
+        res = GLM(y, x, family=sm.families.Poisson(), exposure=expo).fit()
+        explicit = {"exposure": expo}
+    elif fit_model == "poisson_offset":
+        res = sm.Poisson(y, x, offset=off).fit(disp=0)
+        explicit = {"offset": off}
+    elif fit_model == "poisson_exposure":
+        res = sm.Poisson(y, x, exposure=expo).fit(disp=0)
+        explicit = {"exposure": expo}
+    elif fit_model == "nb_offset":
+        res = sm.NegativeBinomial(y, x, offset=off).fit(disp=0)
+        explicit = {"offset": off}
+    else:
+        res = sm.ZeroInflatedPoisson(y, x, offset=off).fit(disp=0, maxiter=200)
+        explicit = {"offset": off}
+
+    # GLM results use predicted_mean and se_mean, count models use predicted
+    # and se.
+    pred = res.get_prediction()
+    if hasattr(pred, "predicted_mean"):
+        mean_name, se_name = "predicted_mean", "se_mean"
+    else:
+        mean_name, se_name = "predicted", "se"
+    assert_allclose(getattr(pred, mean_name), res.predict(), rtol=1e-10)
+    # Standard errors must match the explicit call that passes the same
+    # offset or exposure together with exog.
+    expected = res.get_prediction(exog=x, **explicit)
+    assert_allclose(getattr(pred, se_name), getattr(expected, se_name), rtol=1e-10)
+
+    if not hasattr(pred, "predicted_mean"):
+        # The linear predictor must include the offset or exposure too.
+        linpred = res.get_prediction(which="linear")
+        assert_allclose(linpred.predicted, res.predict(which="linear"), rtol=1e-10)

@@ -1909,7 +1909,7 @@ class Poisson(CountModel):
 
 
 class GeneralizedPoisson(CountModel):
-    __doc__ = """
+    __doc__ = r"""
     Generalized Poisson Model
 
     {params}
@@ -1921,6 +1921,27 @@ class GeneralizedPoisson(CountModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
+
+    Notes
+    -----
+    The final element of the parameter vector is the dispersion parameter
+    :math:`\alpha`. For conditional mean :math:`\mu`, the conditional variance
+    is :math:`\mu (1 + \alpha \mu^{{p-1}})^2`. Thus GP-1 (``p=1``) has variance
+    :math:`\mu (1 + \alpha)^2`, while GP-2 (``p=2``) has variance
+    :math:`\mu (1 + \alpha \mu)^2`.
+
+    For GP-1, :math:`\alpha` is not the :math:`\lambda` used in the alternative
+    variance expression :math:`\mu / (1 - \lambda)^2`. For nonnegative
+    dispersion, the conversion is :math:`\lambda = \alpha / (1 + \alpha)`.
+    For example, :math:`\alpha = 0.5` corresponds to :math:`\lambda = 1/3`;
+    both give a variance-to-mean ratio of 2.25. In VGAM's ``dgenpois1``, this
+    ratio is the ``dispind`` parameter, not :math:`\alpha` itself [1]_.
+
+    References
+    ----------
+    .. [1] VGAM, "Generalized Poisson Distribution (GP-1 and GP-2
+       Parameterizations of the Mean)".
+       https://search.r-project.org/CRAN/refmans/VGAM/html/genpois1UC.html
     """.format(
         params=base._model_params_doc,
         extra_params="""
@@ -3283,9 +3304,13 @@ class MNLogit(MultinomialModel):
     K : float
         The actual number of parameters for the exogenous design.  Includes
         the constant if the design has one.
-    names : dict
-        A dictionary mapping the column number in `wendog` to the variables
-        in `endog`.
+    names : dict of int to str
+        A dictionary mapping the column number in `wendog` to the string
+        label of the corresponding category in `endog`. The first entry
+        (column 0) is the reference (base) category. The labels are always
+        strings, even when `endog` is numeric.
+
+        .. versionadded:: 0.15.1
     wendog : ndarray
         An n x j array where j is the number of unique categories in `endog`.
         Each column of j is a dummy variable indicating the category of
@@ -3306,6 +3331,9 @@ class MNLogit(MultinomialModel):
         ynames = MultinomialResults._maybe_convert_ynames_int(ynames)
         # use range below to ensure sortedness
         ynames = [ynames[key] for key in range(int(self.J))]
+        # Documented ``names`` attribute: maps the column number in ``wendog``
+        # to the corresponding endogenous variable name (see GH#8995).
+        self.names = dict(zip(range(int(self.J)), ynames, strict=True))
         idx = MultiIndex.from_product(
             (ynames[1:], self.data.xnames), names=(yname, None)
         )
