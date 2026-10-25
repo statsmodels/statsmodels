@@ -77,6 +77,7 @@ from statsmodels.tsa.stattools import (
     zivot_andrews,
 )
 from statsmodels.tsa.stattools._stattools import (
+    ZivotAndrewsUnitRoot,
     _adf_autolag,
     _autolag,
     _pacf_ols_qr,
@@ -3250,6 +3251,216 @@ def test_zivot_andrews_change_data():
     zivot_andrews(df["variable1"])
     zivot_andrews(df["variable1"], regression="c")
     pd.testing.assert_frame_equal(df, df_original)
+
+
+class _ZivotAndrewsLoop(ZivotAndrewsUnitRoot):
+    # fits the regressions one break period at a time
+    def _break_tvalues(self, *args):
+        return None
+
+
+ZA_DATASETS = ["rgnp", "gnpdef", "stkprc", "rgnpq"]
+
+
+def _za_series(kind, nobs, rng):
+    if kind in ZA_DATASETS:
+        path = Path(CURR_DIR).joinpath("results", f"{kind}.csv")
+        return np.asarray(pd.read_csv(path), dtype=float).ravel()
+    e = rng.standard_normal(nobs)
+    t = np.arange(nobs)
+    if kind == "random_walk":
+        return np.cumsum(e)
+    elif kind == "white_noise":
+        return e
+    elif kind == "level_break":
+        return np.cumsum(e) + 0.3 * t + 8.0 * (t >= nobs // 2)
+    elif kind == "trend_break":
+        return 0.1 * t + 0.4 * np.maximum(t - nobs // 3, 0) + np.cumsum(e)
+    elif kind == "near_trend":
+        # the lagged level is almost collinear with the trend
+        return 1.0 + 0.5 * t + 1e-3 * e
+    else:  # kind == "ar"
+        x = np.zeros(nobs)
+        for i in range(1, nobs):
+            x[i] = 0.8 * x[i - 1] + e[i]
+        return 50.0 + x
+
+
+def _za_break_tvalues(x, lags, regression, trim, step=1):
+    # the t-values of the lagged level from ZivotAndrewsUnitRoot._break_tvalues
+    # and from one OLS fit per break period, with the regressors of the loop
+    # in ZivotAndrewsUnitRoot.run
+    za = ZivotAndrewsUnitRoot()
+    nobs = x.shape[0]
+    cols = 5 if regression == "ct" else 4
+    const = 1 / np.sqrt(nobs)
+    trend = np.arange(1.0, nobs + 2) * np.sqrt(3) / nobs ** (3 / 2)
+    endog, exog = za._format_regression_data(x, nobs, const, trend, cols, lags)
+    trimcnt = int(nobs * trim)
+    periods = np.arange(trimcnt + 1, nobs - trimcnt + 1, step)
+    args = (regression, periods, nobs, const, trend, cols, lags)
+    tvalues = za._break_tvalues(endog[lags:], exog, *args)
+    if tvalues is None:
+        return None, None
+    expected = []
+    for bp in periods:
+        exog = za._update_regression_exog(
+            exog, regression, bp, nobs, const, trend, cols, lags
+        )
+        res = OLS(endog[lags:], exog).fit()
+        expected.append(res.tvalues[cols - 1])
+    return tvalues, np.array(expected)
+
+
+ZA_SERIES = ZA_DATASETS + [
+    "random_walk",
+    "white_noise",
+    "level_break",
+    "trend_break",
+    "ar",
+]
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+@pytest.mark.parametrize("kind", ZA_SERIES)
+def test_za_break_tvalues_matches_ols(regression, kind):
+    # the t-statistics of all break periods from one QR decomposition are
+    # the same as from one OLS fit per period
+    rng = np.random.default_rng(10583)
+    x = _za_series(kind, 250, rng)
+    for lags, trim in [(0, 0.15), (2, 1 / 3), (5, 0.15)]:
+        tvalues, expected = _za_break_tvalues(x, lags, regression, trim)
+        assert_allclose(tvalues, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_za_break_tvalues_blocks(regression):
+    # more observations than one block of rows of the QR decomposition
+    rng = np.random.default_rng(10583)
+    x = _za_series("trend_break", 20000, rng)
+    tvalues, expected = _za_break_tvalues(x, 4, regression, 0.15, step=499)
+    assert_allclose(tvalues, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_za_break_tvalues_near_collinear(regression):
+    # The level is almost a linear trend. The cross product inverse of the
+    # per-period loop loses about 5 digits here, and picks a different break
+    # period for "t". The QR decomposition does not lose them.
+    rng = np.random.default_rng(10583)
+    x = _za_series("near_trend", 300, rng)
+    tvalues, expected = _za_break_tvalues(x, 2, regression, 0.15)
+    assert_allclose(tvalues, expected, rtol=1e-8)
+    assert np.argmin(tvalues) == np.argmin(expected)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+@pytest.mark.parametrize("autolag", ["AIC", "BIC", "t-stat", None])
+@pytest.mark.parametrize("kind", ZA_SERIES)
+def test_zivot_andrews_matches_loop(regression, autolag, kind):
+    # same statistic, p-value, critical values, lags and break period as
+    # fitting the regressions one break period at a time
+    rng = np.random.default_rng(10583)
+    x = _za_series(kind, 200, rng)
+    configs = [(0.15, 4), (1 / 3, 4)]
+    if kind not in ZA_DATASETS:
+        # The datasets are too short for the default number of lags
+        configs += [(0.05, 4), (0.15, None), (1 / 3, None)]
+    for trim, maxlag in configs:
+        kwargs = dict(trim=trim, maxlag=maxlag, regression=regression)
+        res = zivot_andrews(x, autolag=autolag, **kwargs)
+        expected = _ZivotAndrewsLoop()(x, autolag=autolag, **kwargs)
+        assert_allclose(res[0], expected[0], rtol=1e-9)
+        assert_allclose(res[1], expected[1], rtol=1e-8, atol=1e-12)
+        assert res[2] == expected[2]
+        assert res[3] == expected[3]
+        assert res[4] == expected[4]
+
+
+def _za_singular_series(kind):
+    if kind == "periodic":
+        # lagged differences are exactly collinear
+        return np.cumsum(np.tile([1.0, -1.0, 2.0], 40))
+    elif kind == "linear":
+        return np.arange(100.0)
+    else:  # kind == "geometric"
+        return 0.5 ** (np.arange(120.0) / 10)
+
+
+@pytest.mark.parametrize("kind", ["periodic", "linear", "geometric"])
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_singular(kind, regression):
+    # singular regressors are left to the per-period loop, which raises
+    x = _za_singular_series(kind)
+    tvalues, _ = _za_break_tvalues(x, 3, regression, 0.15, step=10)
+    assert tvalues is None
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SingularMatrixWarning)
+        with pytest.raises(ValueError, match="not full rank"):
+            zivot_andrews(x, maxlag=3, regression=regression, autolag=None)
+
+
+def _za_outcome(za, x, **kwargs):
+    with warnings.catch_warnings(), np.errstate(all="ignore"):
+        warnings.simplefilter("ignore")
+        try:
+            return za(x, **kwargs)
+        except (ValueError, np.linalg.LinAlgError) as exc:
+            return type(exc)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_dummies_wrap_around(regression):
+    # With trim=0, or more lags than trimmed observations, the dummies of the
+    # first or last periods are zero or wrap around the start of the sample.
+    # The per-period loop is used.
+    rng = np.random.default_rng(10583)
+    x = _za_series("random_walk", 100, rng)
+    for trim, lags in [(0.0, 0), (0.05, 8)]:
+        tvalues, _ = _za_break_tvalues(x, lags, regression, trim)
+        assert tvalues is None
+        kwargs = dict(trim=trim, maxlag=lags, regression=regression, autolag=None)
+        res = _za_outcome(zivot_andrews, x, **kwargs)
+        expected = _za_outcome(_ZivotAndrewsLoop(), x, **kwargs)
+        assert_equal(res, expected)
+
+
+@pytest.mark.parametrize("regression, lags", [("c", 5), ("t", 4), ("t", 3), ("ct", 4)])
+def test_zivot_andrews_dummy_collinear(regression, lags):
+    # The dummies of the first period are collinear with the constant and
+    # the trend. The per-period loop is used.
+    rng = np.random.default_rng(10583)
+    x = _za_series("random_walk", 100, rng)
+    tvalues, _ = _za_break_tvalues(x, lags, regression, 0.05)
+    assert tvalues is None
+    kwargs = dict(trim=0.05, maxlag=lags, regression=regression, autolag=None)
+    res = _za_outcome(zivot_andrews, x, **kwargs)
+    expected = _za_outcome(_ZivotAndrewsLoop(), x, **kwargs)
+    assert_equal(res, expected)
+
+
+@pytest.mark.parametrize("regression", ["c", "ct"])
+def test_zivot_andrews_level_collinear(regression):
+    # A trend with a level shift is in the span of the regressors of the
+    # true break period. The per-period loop is used.
+    t = np.arange(100.0)
+    x = t + 5.0 * (t >= 50)
+    tvalues, _ = _za_break_tvalues(x, 1, regression, 0.15)
+    assert tvalues is None
+    kwargs = dict(maxlag=1, regression=regression, autolag=None)
+    res = _za_outcome(zivot_andrews, x, **kwargs)
+    expected = _za_outcome(_ZivotAndrewsLoop(), x, **kwargs)
+    assert_equal(res, expected)
+
+
+def test_zivot_andrews_nonfinite():
+    # data that are not finite are left to the per-period loop, which raises
+    x = np.cumsum(np.ones(100))
+    x[50] = np.nan
+    tvalues, _ = _za_break_tvalues(x, 2, "c", 0.15)
+    assert tvalues is None
+    with pytest.raises(MissingDataError):
+        zivot_andrews(x, maxlag=2, autolag=None)
 
 
 class TestLeybourneMcCabe:
