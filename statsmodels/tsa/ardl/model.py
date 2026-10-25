@@ -2542,6 +2542,23 @@ class UECMResults(ARDLResults):
         is an F-type test statistic which is the standard quadratic form test
         statistic divided by the number of restrictions.
 
+        The fixed regressors and the seasonal terms of the model are included
+        in the regression as additional controls. They are not part of the
+        tested restriction, and the critical values do not depend on them. The
+        constant and trend are always those implied by ``case``, and the
+        ``trend`` of the model is ignored. A model constructed using
+        ``deterministic`` is not supported since the process cannot be
+        combined with the deterministic terms of ``case`` without ambiguity,
+        and a ``NotImplementedError`` is raised. Use ``trend``, ``seasonal`` and
+        ``fixed`` to specify the deterministic terms instead.
+
+        .. versionchanged:: 0.15.1
+
+           The fixed regressors and the seasonal terms of the model are
+           included in the test. They were previously omitted. A model
+           constructed using ``deterministic`` raises a ``NotImplementedError``
+           rather than ignoring the process.
+
         References
         ----------
         .. [*] Pesaran, M. H., Shin, Y., & Smith, R. J. (2001). Bounds testing
@@ -2553,6 +2570,14 @@ class UECMResults(ARDLResults):
         from statsmodels.tsa.ardl import pss_critical_values
 
         model = self.model
+        if model.deterministic is not None:
+            raise NotImplementedError(
+                "bounds_test is not available if the model was constructed using "
+                "deterministic. The deterministic terms of the test are set by "
+                "case and cannot be combined with a user-supplied "
+                "DeterministicProcess without ambiguity. Use trend, seasonal and "
+                "fixed to specify the deterministic terms."
+            )
         trend: Literal["n", "c", "ct"]
         if case == 1:
             trend = "n"
@@ -2568,20 +2593,23 @@ class UECMResults(ARDLResults):
             order=order,
             causal=model.causal,
             trend=trend,
+            fixed=model.fixed,
+            seasonal=model.seasonal,
+            period=model.period,
         )
         res = uecm.fit(cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
         cov = res.cov_params()
         nvar = len(res.model.ardl_order)
-        if case == 1:
-            rest = np.arange(nvar)
+        # The constant and trend, when included, are the first deterministic
+        # columns. They are followed by the seasonal terms and then by the levels
+        ndet = res.model._blocks["deterministic"].shape[1]
+        levels = np.arange(ndet, ndet + nvar)
+        if case in (1, 3, 5):
+            rest = levels
         elif case == 2:
-            rest = np.arange(nvar + 1)
-        elif case == 3:
-            rest = np.arange(1, nvar + 1)
+            rest = np.r_[0, levels]
         elif case == 4:
-            rest = np.arange(1, nvar + 2)
-        elif case == 5:
-            rest = np.arange(2, nvar + 2)
+            rest = np.r_[1, levels]
         r = np.zeros((rest.shape[0], cov.shape[1]))
         for i, loc in enumerate(rest):
             r[i, loc] = 1
