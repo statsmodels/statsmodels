@@ -65,7 +65,7 @@ Behavior changes
   results report ``cov_type="HC0"``. The warning is attributed to the calling
   code, and its message gives a ``scaling_factor`` that matches the
   heteroskedasticity robust covariance of Stata.
-  :issue:`7798`, :pr:`10523`, :pr:`NNNN`
+  :issue:`7798`, :pr:`10523`, :pr:`10580`
 - ``acorr_ljungbox`` raises a ``ValueError`` if a requested lag is smaller
   than 1. A lag of 0 silently returned the statistic of the largest lag. Lags
   that are not smaller than the number of observations also raise a
@@ -390,11 +390,11 @@ Statistics and tests
   :func:`~statsmodels.stats.rates.power_negbin_ratio_2indep` has the same
   check; ``value=0`` gave a divide by zero warning, and ``value=inf`` was
   accepted by both functions. :issue:`10511`, :pr:`10512`, :pr:`10550`,
-  :pr:`NNNN`
+  :pr:`10580`
 - :func:`~statsmodels.stats.proportion.power_binom_tost` returns a power of 0
   instead of a negative value if the rejection region of the exact test is
   empty. ``low`` and ``upp`` also accept list-like input, and a NaN ``p_alt``
-  raises a ``ValueError``. :issue:`10507`, :pr:`10508`, :pr:`NNNN`
+  raises a ``ValueError``. :issue:`10507`, :pr:`10508`, :pr:`10580`
 - ``proportions_chisquare`` raises a ``ValueError`` for a single sample
   without ``value``. The statistic was 0 and the p-value ``nan``.
   :pr:`10451`
