@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 from scipy import sparse
 from scipy.optimize import approx_fprime
+from scipy.special import expit
 
 from statsmodels.genmod.bayes_mixed_glm import (
     BayesMixedGLMResults,
@@ -173,42 +174,86 @@ def test_simple_poisson_map():
         np.linalg.cholesky(cp)
 
 
-@pytest.mark.parametrize("linear, which", [(False, "mean"), (True, "linear")])
-def test_predict_linear_deprecated(linear, which):
-    y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
-    glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
-    rslt = glmm.fit_map(rng=np.random.default_rng(327342))
-
-    expected = glmm.predict(rslt.params, which=which)
-    if which == "linear":
-        assert_allclose(expected, exog_fe @ rslt.params[: exog_fe.shape[1]])
+@pytest.fixture(scope="module", params=["binomial", "poisson"])
+def family_data(request):
+    if request.param == "binomial":
+        cls = BinomialBayesMixedGLM
+        y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
+        inv_link = expit
     else:
-        assert_allclose(
-            expected, 1 / (1 + np.exp(-exog_fe @ rslt.params[: exog_fe.shape[1]]))
-        )
-
-    with pytest.warns(FutureWarning, match="linear keyword is deprecated"):
-        pr1 = glmm.predict(rslt.params, linear=linear)
-    with pytest.warns(FutureWarning, match="linear keyword is deprecated"):
-        pr2 = glmm.predict(rslt.params, None, linear)
-    with pytest.warns(FutureWarning, match="linear keyword is deprecated"):
-        pr3 = rslt.predict(linear=linear)
-    with pytest.warns(FutureWarning, match="linear keyword is deprecated"):
-        pr4 = rslt.predict(None, linear)
-    for pr in pr1, pr2, pr3, pr4:
-        assert_allclose(pr, expected)
+        cls = PoissonBayesMixedGLM
+        y, exog_fe, exog_vc, ident = gen_simple_poisson(10, 10, 0.2)
+        inv_link = np.exp
+    return cls(y, exog_fe, exog_vc, ident, vcp_p=0.5), exog_fe, inv_link
 
 
-def test_predict_which_invalid():
-    y, exog_fe, exog_vc, ident = gen_simple_logit(10, 10, 2)
-    glmm = BinomialBayesMixedGLM(y, exog_fe, exog_vc, ident, vcp_p=0.5)
-    rslt = glmm.fit_map(rng=np.random.default_rng(0))
+@pytest.fixture(scope="module", params=["fit_map", "fit_vb"])
+def fitted(request, family_data):
+    glmm, exog_fe, inv_link = family_data
+    rslt = getattr(glmm, request.param)(rng=np.random.default_rng(327342))
+    return glmm, rslt, exog_fe, inv_link
+
+
+@pytest.mark.parametrize("which", ["mean", "linear"])
+def test_predict_which(fitted, which):
+    glmm, rslt, exog_fe, inv_link = fitted
+    expected = exog_fe @ rslt.fe_mean
+    if which == "mean":
+        expected = inv_link(expected)
+
+    assert_allclose(rslt.predict(which=which), expected)
+    assert_allclose(glmm.predict(rslt.params, which=which), expected)
+    assert_allclose(rslt.predict(exog_fe[:5], which=which), expected[:5])
+    # exog can be anything that is array_like
+    assert_allclose(rslt.predict(exog_fe[:5].tolist(), which=which), expected[:5])
+    assert_allclose(
+        rslt.predict(pd.DataFrame(exog_fe[:5]), which=which), expected[:5]
+    )
+
+
+_predict_forms = {
+    "model_kwarg": lambda glmm, rslt, linear: glmm.predict(rslt.params, linear=linear),
+    "model_positional": lambda glmm, rslt, linear: glmm.predict(
+        rslt.params, None, linear
+    ),
+    "results_kwarg": lambda glmm, rslt, linear: rslt.predict(linear=linear),
+    "results_positional": lambda glmm, rslt, linear: rslt.predict(None, linear),
+}
+
+
+@pytest.mark.parametrize("form", list(_predict_forms))
+@pytest.mark.parametrize("linear, which", [(False, "mean"), (True, "linear")])
+def test_predict_linear_deprecated(fitted, linear, which, form):
+    glmm, rslt, exog_fe, inv_link = fitted
+    expected = exog_fe @ rslt.fe_mean
+    if which == "mean":
+        expected = inv_link(expected)
+
+    with pytest.warns(FutureWarning, match="linear keyword is deprecated"):
+        pr = _predict_forms[form](glmm, rslt, linear)
+    assert_allclose(pr, expected)
+
+
+def test_predict_which_invalid(fitted):
+    glmm, rslt, exog_fe, inv_link = fitted
 
     with pytest.raises(ValueError, match="which"):
         rslt.predict(which="var_unscaled")
+    # which is case sensitive, as in GLM.predict
+    with pytest.raises(ValueError, match="which must be one of"):
+        rslt.predict(which="Mean")
+    with pytest.raises(ValueError, match="which must be one of"):
+        glmm.predict(rslt.params, which="LINEAR")
     with pytest.raises(ValueError, match="cannot both be set"):
         with pytest.warns(FutureWarning):
             rslt.predict(linear=True, which="linear")
+
+
+def test_predict_exog_ndim(fitted):
+    glmm, rslt, exog_fe, inv_link = fitted
+
+    with pytest.raises(ValueError, match="exog must be a two-dimensional"):
+        rslt.predict(exog_fe[0])
 
 
 def test_crossed_logit_map():

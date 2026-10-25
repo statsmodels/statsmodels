@@ -67,9 +67,10 @@ class CombineResults:
         self.sd_eff_w_fe_hksj = np.sqrt(self.var_hksj_fe)
         self.sd_eff_w_re_hksj = np.sqrt(self.var_hksj_re)
 
-        # explained variance measures
-        self.h2 = self.q / (self.k - 1)
-        self.i2 = 1 - 1 / self.h2
+        # explained variance measures, h2 is at least 1 and i2 at least 0
+        # (GH#10520), in line with tau2 being truncated at zero
+        self.h2 = np.maximum(1, self.q / (self.k - 1))
+        self.i2 = np.maximum(0, 1 - 1 / self.h2)
 
         # memoize ci_samples
         self.cache_ci = {}
@@ -615,8 +616,8 @@ def combine_effects(
     """
     Combining effect sizes for effect sizes using meta-analysis
 
-    This currently does not use np.asarray, all computations are possible in
-    pandas.
+    Lists and tuples are converted to arrays, arrays and pandas objects are
+    used as they are.
 
     Parameters
     ----------
@@ -674,6 +675,29 @@ def combine_effects(
     The results instance includes both, fixed scale and estimated scale
     versions of standard errors and confidence intervals.
 
+    The DerSimonian and Laird one-step estimate of the random effects variance
+    ``tau2`` ("chi2" or "dl") is truncated at zero, as is the Paule and Mandel
+    estimate ("iterated" or "pm"). If the estimate is truncated, then the
+    random effects results are equal to the fixed effects results.
+
+    .. versionchanged:: 0.15.1
+
+        The DerSimonian and Laird estimate of ``tau2`` is truncated at zero.
+        Previously a negative ``tau2`` was used, which could produce a random
+        effects mean outside the range of the effects.
+
+    The attributes ``h2`` and ``i2`` of the results are ``q / (k - 1)`` and
+    ``1 - 1 / h2``, where ``q`` is the test statistic of the homogeneity test
+    and ``k`` is the number of studies. They are floored at their lower bounds,
+    ``h2`` at 1 and ``i2`` at 0, which are the values when ``tau2`` is zero.
+    ``i2`` is a fraction and not a percent.
+
+    .. versionchanged:: 0.15.1
+
+        ``h2`` is at least 1 and ``i2`` is at least 0. Previously ``h2`` was
+        below 1 and ``i2`` was negative (or ``-inf`` if ``q`` is zero) if ``q``
+        is smaller than ``k - 1``.
+
     References
     ----------
     Borenstein, Michael. 2009. Introduction to Meta-Analysis.
@@ -684,6 +708,11 @@ def combine_effects(
         Boca Raton: CRC Press/Taylor & Francis Group.
     """
 
+    # lists and tuples are converted so that the computations below work, arrays
+    # and pandas objects are used as they are
+    effect, variance = (
+        np.asarray(v) if isinstance(v, (list, tuple)) else v for v in (effect, variance)
+    )
     k = len(effect)
     if row_names is None:
         row_names = list(range(k))
@@ -704,7 +733,7 @@ def combine_effects(
     # fixed effects computation
 
     weights_fe = 1 / var_eff  # no bias correction ?
-    w_total_fe = weights_fe.sum(0)
+    w_total_fe = weights_fe.sum(axis=0)
     weights_rel_fe = weights_fe / w_total_fe
 
     eff_w_fe = weights_rel_fe * eff
@@ -714,7 +743,7 @@ def combine_effects(
 
     # random effects computation
 
-    q = (weights_fe * eff**2).sum(0)
+    q = (weights_fe * eff**2).sum(axis=0)
     q -= (weights_fe * eff).sum() ** 2 / w_total_fe
     df = k - 1
     method = string_like(
@@ -728,8 +757,8 @@ def combine_effects(
         tau2 = np.maximum(0, (q - df) / c)
 
     weights_re = 1 / (var_eff + tau2)  # no  bias_correction ?
-    w_total_re = weights_re.sum(0)
-    weights_rel_re = weights_re / weights_re.sum(0)
+    w_total_re = weights_re.sum(axis=0)
+    weights_rel_re = weights_re / weights_re.sum(axis=0)
 
     eff_w_re = weights_rel_re * eff
     mean_effect_re = eff_w_re.sum()

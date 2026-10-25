@@ -659,9 +659,10 @@ def test_combine_effects_invalid_inputs_raises():
     assert np.isfinite(res.mean_effect_fe)
 
 
-def test_combine_effects_dl_tau2_truncated():
-    # GH regression test: the DerSimonian-Laird one-step tau^2 estimate was
-    # not truncated at zero. With these (nearly homogeneous) studies the
+@pytest.mark.parametrize("method_re", ["dl", "chi2"])
+def test_combine_effects_dl_tau2_truncated(method_re):
+    # GH#10520 regression test: the DerSimonian-Laird one-step tau^2 estimate
+    # was not truncated at zero. With these (nearly homogeneous) studies the
     # raw estimate is (q - df) / c = -0.0561, which gave
     # mean_effect_re = 0.4000, outside the range of the effects
     # [0.28, 0.32], and a negative var_eff_w_re / NaN sd for other inputs.
@@ -670,19 +671,160 @@ def test_combine_effects_dl_tau2_truncated():
     eff = np.array([0.30, 0.32, 0.28, 0.31])
     var = np.array([0.04, 0.09, 0.05, 0.06])
 
-    res = combine_effects(eff, var, method_re="dl")
-    assert_allclose(res.tau2, 0, atol=1e-13)
+    res = combine_effects(eff, var, method_re=method_re)
+    assert res.tau2 == 0
     # with tau2 = 0 the random effects results coincide with fixed effects
     assert_allclose(res.mean_effect_re, res.mean_effect_fe, rtol=1e-13)
     assert_allclose(res.sd_eff_w_re, res.sd_eff_w_fe, rtol=1e-13)
+    assert_allclose(res.weights_rel_re, res.weights_rel_fe, rtol=1e-13)
     # the combined estimate is a weighted mean of the study effects
     assert eff.min() <= res.mean_effect_re <= eff.max()
     assert np.isfinite(res.sd_eff_w_re)
     assert np.isfinite(res.sd_eff_w_re_hksj)
 
-    # the one-step method-of-moment estimate truncates as well
-    tau2_mm = _fit_tau_mm(eff, var, 1 / var)
-    assert_allclose(tau2_mm, 0, atol=1e-13)
+    # the one-step method-of-moment estimate truncates as well, also with
+    # uniform weights, for which the raw estimate was -0.0597
+    assert _fit_tau_mm(eff, var, 1 / var) == 0
+    assert _fit_tau_mm(eff, var, np.ones(len(eff)) / len(eff)) == 0
+    tau2_iter, converged = _fit_tau_iter_mm(eff, var)
+    assert tau2_iter == 0
+    assert converged
+
+
+@pytest.mark.parametrize("method_re", ["dl", "chi2"])
+@pytest.mark.parametrize("case", ["ex_trunc", "ex_het6"])
+def test_combine_effects_dl_metafor(method_re, case):
+    # R metafor 5.2.1, see results_meta for the R calls. ex_trunc is the data
+    # of GH#10520 with truncated tau2, I2 = 0 and H2 = 1 in metafor.
+    # ex_het6 has a positive tau2 as a check that those results do not change.
+    res_dl = getattr(results_meta, f"{case}_dl")
+    res_dls = getattr(results_meta, f"{case}_dl_hksj")
+    res_fe = getattr(results_meta, f"{case}_fe")
+    if case == "ex_trunc":
+        eff = np.array([0.30, 0.32, 0.28, 0.31])
+        var = np.array([0.04, 0.09, 0.05, 0.06])
+    else:
+        eff = np.array([0.1, 0.5, 0.9, 0.3, 1.2, -0.2])
+        var = np.array([0.02, 0.05, 0.03, 0.04, 0.06, 0.02])
+
+    res = combine_effects(eff, var, method_re=method_re)
+    assert_allclose(res.tau2, res_dl.tau2, rtol=1e-12, atol=1e-15)
+    assert_allclose(res.mean_effect_re, res_dl.b, rtol=1e-13)
+    assert_allclose(res.sd_eff_w_re, res_dl.se, rtol=1e-12)
+    ci = res.conf_int(use_t=False)  # fe, re, fe_wls, re_wls
+    assert_allclose(ci[1], [res_dl.ci_lb, res_dl.ci_ub], rtol=1e-12)
+    assert_allclose(res.mean_effect_fe, res_fe.b, rtol=1e-13)
+    assert_allclose(res.sd_eff_w_fe, res_fe.se, rtol=1e-12)
+    assert_allclose(ci[0], [res_fe.ci_lb, res_fe.ci_ub], rtol=1e-12)
+
+    # metafor uses the t distribution with the HKSJ adjustment
+    assert_allclose(np.sqrt(res.var_hksj_re), res_dls.se, rtol=1e-12)
+    ci = res.conf_int(use_t=True)
+    # the quantile of the t distribution of some SciPy versions differs from R
+    # by about 2e-9 (relative)
+    assert_allclose(ci[3], [res_dls.ci_lb, res_dls.ci_ub], rtol=1e-7)
+
+    assert_allclose(res.q, res_dl.QE, rtol=1e-12)
+    assert_allclose(res.test_homogeneity().pvalue, res_dl.QEp, rtol=1e-10)
+    # I2 is in percent in metafor
+    assert_allclose(res.i2, res_dl.I2 / 100, rtol=1e-12, atol=1e-15)
+    assert_allclose(res.h2, res_dl.H2, rtol=1e-12)
+
+
+@pytest.mark.parametrize("method_re", ["dl", "chi2", "pm", "iterated"])
+def test_combine_effects_h2_i2_floor(method_re):
+    # GH#10520: h2 = q / (k - 1) is below 1 and i2 = 1 - 1 / h2 is negative if
+    # q < k - 1. They are floored at 1 and 0, the values for tau2 = 0.
+    eff = np.array([0.30, 0.32, 0.28, 0.31])
+    var = np.array([0.04, 0.09, 0.05, 0.06])
+    res = combine_effects(eff, var, method_re=method_re)
+    assert res.q < len(eff) - 1
+    assert res.h2 == 1
+    assert res.i2 == 0
+    assert res.tau2 == 0
+
+    # q == 0, all effects identical: i2 was -inf with a divide by zero warning.
+    # q is exactly zero in floating point for these values.
+    eff0 = np.full(3, 0.5)
+    var0 = np.array([0.25, 0.5, 1.0])
+    res0 = combine_effects(eff0, var0, method_re=method_re)
+    assert res0.q == 0
+    assert res0.h2 == 1
+    assert res0.i2 == 0
+    assert res0.tau2 == 0
+    assert_allclose(res0.mean_effect_re, 0.5, rtol=1e-14)
+
+    # q > k - 1 is not changed
+    eff = np.array([0.1, 0.5, 0.9, 0.3, 1.2, -0.2])
+    var = np.array([0.02, 0.05, 0.03, 0.04, 0.06, 0.02])
+    res = combine_effects(eff, var, method_re=method_re)
+    assert res.q > len(eff) - 1
+    assert_allclose(res.h2, res.q / (len(eff) - 1), rtol=1e-14)
+    assert_allclose(res.i2, 1 - (len(eff) - 1) / res.q, rtol=1e-14)
+
+
+@pytest.mark.parametrize("dist", [0.9, 1.0, 1.1])
+def test_combine_effects_dl_q_df_boundary(dist):
+    # Two studies with effects 0 and dist and variance 0.5 each have
+    # q = dist**2 and df = 1. The DL weights are constant and c = 2, so that
+    # tau2 = (q - df) / c if q > df. tau2 and i2 are zero at the boundary
+    # q == df and below.
+    eff = np.array([0.0, dist])
+    var = np.array([0.5, 0.5])
+    q = dist**2
+    tau2 = max(0, (q - 1) / 2)
+    h2 = max(1, q)
+
+    for method_re in ["dl", "chi2"]:
+        res = combine_effects(eff, var, method_re=method_re)
+        assert_allclose(res.q, q, rtol=1e-14)
+        assert_allclose(res.tau2, tau2, rtol=1e-12, atol=0)
+        assert_allclose(res.h2, h2, rtol=1e-14)
+        assert_allclose(res.i2, 1 - 1 / h2, rtol=1e-12, atol=0)
+        # equal weights, the mean is the average of the effects
+        assert_allclose(res.mean_effect_re, dist / 2, rtol=1e-14)
+        assert_allclose(res.sd_eff_w_re, np.sqrt((0.5 + tau2) / 2), rtol=1e-12)
+        if dist <= 1:
+            assert res.tau2 == 0
+            assert res.i2 == 0
+
+    # uniform and inverse variance weights coincide here
+    for weights in [np.ones(2), 1 / var, np.ones(2) / 2]:
+        tau2_mm = _fit_tau_mm(eff, var, weights)
+        assert_allclose(tau2_mm, tau2, rtol=1e-12, atol=0)
+        if dist <= 1:
+            assert tau2_mm == 0
+
+
+@pytest.mark.parametrize("convert", [list, tuple])
+def test_combine_effects_list_input(convert):
+    # lists and tuples are array_like, they failed with a TypeError
+    eff = [0.30, 0.32, 0.28, 0.31]
+    var = [0.04, 0.09, 0.05, 0.06]
+    res_arr = combine_effects(np.array(eff), np.array(var), method_re="dl")
+    res = combine_effects(effect=convert(eff), variance=convert(var), method_re="dl")
+    assert_allclose(res.mean_effect_re, res_arr.mean_effect_re, rtol=1e-14)
+    assert_allclose(res.sd_eff_w_re, res_arr.sd_eff_w_re, rtol=1e-14)
+    assert_allclose(res.q, res_arr.q, rtol=1e-14)
+    assert_allclose(res.summary_array()[0], res_arr.summary_array()[0], rtol=1e-14)
+
+    with pytest.raises(ValueError, match="variance estimates must be non-negative"):
+        combine_effects(convert(eff), convert([0.04, -0.09, 0.05, 0.06]))
+
+
+def test_combine_effects_series_input():
+    # pandas input is used as it is
+    eff = np.array([0.1, 0.5, 0.9, 0.3, 1.2, -0.2])
+    var = np.array([0.02, 0.05, 0.03, 0.04, 0.06, 0.02])
+    names = list("abcdef")
+    res_arr = combine_effects(eff, var, method_re="dl")
+    res = combine_effects(
+        pd.Series(eff, index=names), pd.Series(var, index=names), method_re="dl"
+    )
+    assert isinstance(res.eff, pd.Series)
+    assert_allclose(res.tau2, res_arr.tau2, rtol=1e-14)
+    assert_allclose(res.mean_effect_re, res_arr.mean_effect_re, rtol=1e-14)
+    assert_allclose(res.sd_eff_w_re, res_arr.sd_eff_w_re, rtol=1e-14)
 
 
 def test_effectsize_2proportions_invalid_counts_raises():
