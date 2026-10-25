@@ -3304,9 +3304,13 @@ class MNLogit(MultinomialModel):
     K : float
         The actual number of parameters for the exogenous design.  Includes
         the constant if the design has one.
-    names : dict
-        A dictionary mapping the column number in `wendog` to the variables
-        in `endog`.
+    names : dict of int to str
+        A dictionary mapping the column number in `wendog` to the string
+        label of the corresponding category in `endog`. The first entry
+        (column 0) is the reference (base) category. The labels are always
+        strings, even when `endog` is numeric.
+
+        .. versionadded:: 0.15.1
     wendog : ndarray
         An n x j array where j is the number of unique categories in `endog`.
         Each column of j is a dummy variable indicating the category of
@@ -3327,6 +3331,9 @@ class MNLogit(MultinomialModel):
         ynames = MultinomialResults._maybe_convert_ynames_int(ynames)
         # use range below to ensure sortedness
         ynames = [ynames[key] for key in range(int(self.J))]
+        # Documented ``names`` attribute: maps the column number in ``wendog``
+        # to the corresponding endogenous variable name (see GH#8995).
+        self.names = dict(zip(range(int(self.J)), ynames, strict=True))
         idx = MultiIndex.from_product(
             (ynames[1:], self.data.xnames), names=(yname, None)
         )

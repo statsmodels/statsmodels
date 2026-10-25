@@ -2039,7 +2039,7 @@ def power_poisson_ratio_2indep(
         1 is the null hypothesis that both rates are equal. The value must be
         positive because the test is based on the log of the rate ratio.
 
-        .. versionchanged:: 0.16.0
+        .. versionchanged:: 0.15.1
 
             The default was changed from 0 to 1. A rate ratio of 0 made
             the power 0, 1 or nan with a divide by zero warning.

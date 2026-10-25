@@ -576,7 +576,7 @@ class _BayesMixedGLM(base.Model):
             If True, return the linear predictor without passing through the
             link function.
 
-            .. deprecated:: 0.16.0
+            .. deprecated:: 0.15.1
 
                 Use ``which="linear"`` instead of ``linear=True`` and
                 ``which="mean"`` instead of ``linear=False``. ``linear`` will
@@ -1122,7 +1122,7 @@ class BayesMixedGLMResults:
             If True, returns the linear predictor, otherwise
             transform the linear predictor using the link function.
 
-            .. deprecated:: 0.16.0
+            .. deprecated:: 0.15.1
 
                 Use ``which="linear"`` instead of ``linear=True`` and
                 ``which="mean"`` instead of ``linear=False``. ``linear`` will

@@ -59,12 +59,14 @@ __all__ = [
     "LMTestResult",
     "NonNestedTestResult",
     "PesaranTimmermannResult",
+    "VuongTestResult",
     "acorr_breusch_godfrey",
     "acorr_ljungbox",
     "acorr_lm",
     "anderson_statistic",
     "compare_cox",
     "compare_j",
+    "compare_vuong",
     "het_arch",
     "het_breuschpagan",
     "het_goldfeldquandt",
@@ -357,6 +359,168 @@ def compare_j(results_x, results_z, store=False, *, result_object: bool | None =
     return tstat, pval
 
 
+class VuongTestResult(NamedTuple):
+    """
+    Result of :func:`compare_vuong`.
+
+    Parameters
+    ----------
+    statistic : float
+        Vuong z-statistic. Positive values favor the first model.
+    pvalue : float
+        P-value for the chosen alternative.
+    """
+
+    statistic: float
+    pvalue: float
+
+
+def _vuong_loglike_obs(results, name):
+    """Return the per-observation log-likelihood of a results instance."""
+    model = results.model
+    if not hasattr(model, "loglikeobs"):
+        raise ValueError(
+            f"The model of {name} does not provide the log-likelihood of "
+            "each observation (loglikeobs), which is needed for the Vuong "
+            "test."
+        )
+    llobs = np.asarray(model.loglikeobs(np.asarray(results.params)), dtype=float)
+    if not np.allclose(llobs.sum(), results.llf, rtol=1e-6):
+        raise ValueError(
+            f"The observation-wise log-likelihood of {name} does not add up "
+            "to its log-likelihood value llf."
+        )
+    return llobs
+
+
+def compare_vuong(results1, results2, correction="none", alternative="two-sided"):
+    r"""
+    Vuong test for non-nested likelihood models.
+
+    Parameters
+    ----------
+    results1 : Results
+        Results instance of the first model. The model needs to provide
+        the log-likelihood of each observation (``loglikeobs``), for example
+        Logit, Probit, Poisson, NegativeBinomial or ZeroInflatedPoisson.
+    results2 : Results
+        Results instance of the second model, estimated on the same
+        observations and with the same dependent variable as the first model.
+    correction : {"none", "aic", "bic"}, default "none"
+        Correction for the number of estimated parameters of the two models.
+        "aic" is the Akaike and "bic" is the Schwarz type correction of the
+        log-likelihood ratio.
+    alternative : {"two-sided", "larger", "smaller"}, default "two-sided"
+        Alternative hypothesis. "larger" tests whether the first model is
+        closer to the true distribution than the second model, "smaller"
+        tests the opposite direction.
+
+    Returns
+    -------
+    VuongTestResult
+        A NamedTuple with fields:
+
+        statistic : float
+            Vuong z-statistic. Positive values favor the first model.
+        pvalue : float
+            P-value for the chosen alternative.
+
+    Notes
+    -----
+    The null hypothesis is that both models are equally close to the true
+    data generating process, measured by the Kullback-Leibler divergence.
+    With :math:`m_i = \log f_1(y_i | x_i) - \log f_2(y_i | x_i)` the
+    difference of the log-likelihood contributions of observation
+    :math:`i`, the statistic is
+
+    .. math::
+
+       V = \frac{\sqrt{n}\,\bar{m}}{\hat{\omega}}, \qquad
+       \hat{\omega}^2 = \frac{1}{n - 1}\sum_{i=1}^n (m_i - \bar{m})^2 ,
+
+    which is asymptotically standard normal under the null hypothesis [1]_.
+    Vuong's original definition of :math:`\hat{\omega}^2` divides by :math:`n`
+    instead of :math:`n - 1`. The difference is asymptotically negligible and
+    the version here is the one used by R package pscl and by Stata.
+    The corrected versions replace the log-likelihood ratio
+    :math:`\sum_i m_i` in the numerator by
+    :math:`\sum_i m_i - (k_1 - k_2)` for "aic" and
+    :math:`\sum_i m_i - (k_1 - k_2) \log(n) / 2` for "bic" [2]_, where
+    :math:`k_1` and :math:`k_2` are the number of estimated parameters
+    ``len(results.params)``.
+
+    The test is only valid for non-nested (or overlapping but not nested)
+    models, and it assumes that both models are not equivalent, so that
+    :math:`\omega^2 > 0`. Statsmodels does not check whether the models are
+    nested. Using the test for nested models, for example Poisson against
+    negative binomial, or for zero-inflation, should be done with care, see
+    [3]_.
+
+    The results are the same as the ``vuong`` function of the R package
+    pscl, which reports one-sided p-values in the direction of the preferred
+    model.
+
+    References
+    ----------
+    .. [1] Vuong, Quang H. 1989. "Likelihood Ratio Tests for Model Selection
+       and Non-Nested Hypotheses." Econometrica 57 (2): 307-333.
+    .. [2] Desmarais, Bruce A., and Jeffrey J. Harden. 2013. "Testing for
+       Zero Inflation in Count Models: Bias Correction for the Vuong Test."
+       The Stata Journal 13 (4): 810-835.
+    .. [3] Wilson, Paul. 2015. "The Misuse of the Vuong Test for Non-Nested
+       Models to Test for Zero-Inflation." Economics Letters 127: 51-53.
+
+    Examples
+    --------
+    Compare a Logit and a Probit model for the same binary outcome.
+
+    >>> import statsmodels.api as sm
+    >>> from statsmodels.stats.diagnostic import compare_vuong
+    >>> data = sm.datasets.spector.load()
+    >>> exog = sm.add_constant(data.exog)
+    >>> res_logit = sm.Logit(data.endog, exog).fit(disp=False)
+    >>> res_probit = sm.Probit(data.endog, exog).fit(disp=False)
+    >>> result = compare_vuong(res_logit, res_probit, correction="aic")
+    """
+    correction = string_like(correction, "correction", options=("none", "aic", "bic"))
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+    )
+    llobs1 = _vuong_loglike_obs(results1, "results1")
+    llobs2 = _vuong_loglike_obs(results2, "results2")
+    if llobs1.shape != llobs2.shape:
+        raise ValueError(
+            "The two models must be estimated with the same number of observations."
+        )
+    if not np.array_equal(
+        np.asarray(results1.model.endog), np.asarray(results2.model.endog)
+    ):
+        raise ValueError("The two models must have the same dependent variable.")
+    nobs = llobs1.shape[0]
+    diff = llobs1 - llobs2
+    omega = np.std(diff, ddof=1)
+    if omega == 0:
+        return VuongTestResult(np.nan, np.nan)
+
+    lr = diff.sum()
+    k_diff = np.size(results1.params) - np.size(results2.params)
+    if correction == "aic":
+        lr = lr - k_diff
+    elif correction == "bic":
+        lr = lr - k_diff * np.log(nobs) / 2
+    statistic = lr / (np.sqrt(nobs) * omega)
+
+    if alternative == "two-sided":
+        pvalue = 2 * stats.norm.sf(np.abs(statistic))
+    elif alternative == "larger":
+        pvalue = stats.norm.sf(statistic)
+    else:
+        pvalue = stats.norm.cdf(statistic)
+    return VuongTestResult(statistic, pvalue)
+
+
 class PesaranTimmermannResult(NamedTuple):
     """
     Result of :func:`pesaran_timmermann`.
@@ -647,7 +811,7 @@ def acorr_ljungbox(
     return_df : bool, optional
         Unused. A DataFrame is always returned.
 
-        .. deprecated:: 0.16.0
+        .. deprecated:: 0.15.1
 
             ``return_df`` has no effect and will be removed in statsmodels
             0.17.0. Passing any value issues a ``FutureWarning``.
@@ -771,6 +935,12 @@ def acorr_ljungbox(
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
     lags = array_like(lags, "lags", dtype="int")
+    if lags.size == 0 or lags.min() < 1:
+        # lag 0 used to index the cumulative sum at -1 and silently returned
+        # the statistic for the largest lag
+        raise ValueError(
+            f"lags must be positive integers, got {lags.tolist()} (nobs={nobs})"
+        )
     maxlag = lags.max()
     if maxlag >= nobs:
         # an autocorrelation at lag >= nobs is undefined; requesting one

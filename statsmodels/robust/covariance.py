@@ -2193,6 +2193,10 @@ class CovDetMCD:
             x_sel = x[idx_sel]
             mean = x_sel.mean(0)
             cov_new = np.atleast_2d(np.cov(x_sel.T, ddof=1))
+            if _is_singular(cov_new):
+                raise ValueError(
+                    "more than h of the observations lie on a hyperplane"
+                )
 
             if ((cov - cov_new) ** 2).mean() < tol:
                 cov = cov_new
@@ -2437,7 +2441,7 @@ class CovDetS:
         # self.scale_bias = scale_bias
         if norm is None:
             norm = rnorms.TukeyBiweight()
-            c = rtools.tuning_s_cov(norm, k_vars, breakdown_point=0.5)
+            c = rtools.tuning_s_cov(norm, k_vars, breakdown_point=breakdown_point)
             norm._set_tuning_param(c, inplace=True)
             self.scale_bias = rtools.scale_bias_cov_biw(c, k_vars)[0]
         else:
