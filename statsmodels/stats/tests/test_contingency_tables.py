@@ -1,6 +1,9 @@
 """
 Tests for contingency table analyses.
 """
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
+from contextlib import nullcontext
 from pathlib import Path
 import warnings
 
@@ -893,7 +896,12 @@ def test_null_odds_zero_variance(tables, correction):
     # The statistic is 0 / 0; R's mantelhaen.test returns NaN as well. With
     # the correction the statistic used to be inf and the p-value 0.
     st = ctab.StratifiedTable([np.asarray(t, dtype=float) for t in tables])
-    with pytest.warns(RuntimeWarning, match="invalid value"):
+    # There are no floating point exceptions, and so no warning, in WASM
+    if PYTHON_IMPL_WASM:
+        warns = nullcontext()
+    else:
+        warns = pytest.warns(RuntimeWarning, match="invalid value")
+    with warns:
         res = st.test_null_odds(correction=correction)
     assert np.isnan(res.statistic)
     assert np.isnan(res.pvalue)
