@@ -1909,6 +1909,57 @@ def test_unpickle_without_default_attributes(name, pickle_results):
         assert_allclose(old_mod.hessian(params), exp_mod.hessian(params))
 
 
+def test_iterative_fit_repeated_call_glsar():
+    # GH#9880 repeated calls start from the current rho. Without a
+    # convergence stop, 2 + 2 iterations are the same as 3 iterations.
+    rng = np.random.default_rng(3293829)
+    nobs = 80
+    exog = add_constant(rng.standard_normal((nobs, 2)))
+    u = np.zeros(nobs)
+    e = rng.standard_normal(nobs)
+    for i in range(1, nobs):
+        u[i] = 0.6 * u[i - 1] + e[i]
+    endog = exog @ [1.0, 0.5, -0.3] + u
+
+    mod = GLSAR(endog, exog, rho=1)
+    res_a = mod.iterative_fit(2, rtol=0)
+    res_b = mod.iterative_fit(2, rtol=0)
+    expected = GLSAR(endog, exog, rho=1).iterative_fit(3, rtol=0)
+    assert not np.allclose(res_a.params, res_b.params, rtol=1e-10, atol=0)
+    assert_allclose(res_b.params, expected.params)
+    assert_allclose(res_b.bse, expected.bse)
+    assert_allclose(mod.pinv_wexog, np.linalg.pinv(mod.wexog))
+
+
+def test_iterative_fit_repeated_call_glshet():
+    # GH#9880 repeated calls start from the current weights, so 2 + 2
+    # iterations are the same as 3 iterations on a fresh model.
+    from statsmodels.regression.feasible_gls import GLSHet
+
+    rng = np.random.default_rng(12345)
+    nobs = 200
+    x = rng.uniform(0.5, 3, nobs)
+    exog = add_constant(x)
+    exog_var = add_constant(x**2)
+    endog = exog @ [1.0, 2.0] + np.sqrt(0.2 + x**2) * rng.standard_normal(nobs)
+
+    def make():
+        with pytest.warns(FutureWarning, match="GLSHet is deprecated"):
+            return GLSHet(endog, exog, exog_var=exog_var)
+
+    mod = make()
+    res_a = mod.iterative_fit(2)
+    res_b = mod.iterative_fit(2)
+    expected = make().iterative_fit(3)
+    assert not np.allclose(res_a.params, res_b.params, rtol=1e-10, atol=0)
+    assert_allclose(res_b.params, expected.params)
+    assert_allclose(res_b.bse, expected.bse)
+    assert_allclose(mod.pinv_wexog, np.linalg.pinv(mod.wexog))
+    # a single iteration is WLS with the given (unit) weights
+    res_wls = WLS(endog, exog, weights=np.ones(nobs)).fit()
+    assert_allclose(make().iterative_fit(1).params, res_wls.params)
+
+
 def test_ols_wls_fixed_scale():
     rs = np.random.RandomState(3293829)
     X = add_constant(rs.uniform(size=(50, 2)))
