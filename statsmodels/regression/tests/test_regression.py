@@ -1872,6 +1872,18 @@ def _make_old_pickle_models():
     }
 
 
+def _summary_cells(res):
+    """Cells of the tables of summary, without the date and time of the call"""
+    rows = []
+    for table in res.summary().tables:
+        for row in table.data:
+            cells = [str(cell) for cell in row]
+            if cells[0].strip() in ("Date:", "Time:"):
+                cells[1] = ""
+            rows.append(cells)
+    return rows
+
+
 @pytest.mark.parametrize("name", ["OLS", "WLS", "GLS", "GLSAR"])
 @pytest.mark.parametrize("pickle_results", [True, False])
 def test_unpickle_without_default_attributes(name, pickle_results):
@@ -1900,7 +1912,9 @@ def test_unpickle_without_default_attributes(name, pickle_results):
     for attr in ["rsquared", "rsquared_adj", "fvalue", "f_pvalue",
                  "centered_tss", "llf", "aic", "bic"]:
         assert_allclose(getattr(old_res, attr), getattr(expected, attr))
-    assert old_res.summary().as_text() == expected.summary().as_text()
+    # The header of the summary holds the date and time of the call, and the
+    # two models are created at different times, so compare all other cells.
+    assert _summary_cells(old_res) == _summary_cells(expected)
 
     exp_mod = expected.model
     assert_allclose(old_mod.loglike(params), exp_mod.loglike(params))
