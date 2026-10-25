@@ -2561,9 +2561,11 @@ class UECMResults(ARDLResults):
         else:
             trend = "ct"
         order = {key: max(val) for key, val in model._order.items()}
+        # ar_lags is None when the model has no lagged differences of endog
+        ar_lags = model.ar_lags
         uecm = UECM(
             model.data.endog,
-            max(model.ar_lags),
+            0 if ar_lags is None else max(ar_lags),
             model.data.orig_exog,
             order=order,
             causal=model.causal,
