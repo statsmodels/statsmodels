@@ -147,7 +147,7 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
       ``scaling_factor=nobs / (nobs - 1.)`` reproduces the robust standard
       errors of Stata for Poisson and GLM.
 
-      .. versionchanged:: 0.16.0
+      .. versionchanged:: 0.15.1
 
          Requesting HC1, HC2 or HC3 in a model without these options now
          issues a ``SpecificationWarning`` and reports ``cov_type`` 'HC0'.

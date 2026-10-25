@@ -2761,7 +2761,7 @@ def power_negbin_ratio_2indep(
         be positive and finite because the test is based on the log of the
         rate ratio.
 
-        .. versionchanged:: 0.16.0
+        .. versionchanged:: 0.15.1
 
             Values that are not positive and finite now raise a
             ``ValueError``. A rate ratio of 0 previously gave a divide by zero
