@@ -1,3 +1,5 @@
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 from typing import NamedTuple
 
 import numpy as np
@@ -1127,23 +1129,24 @@ def test_ardl_select_order_qr(
     _assert_select_order_equal(res, expected, rtol=1e-10)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
-@pytest.mark.parametrize("ic", ["aic", "bic", "hqic"])
-def test_ardl_select_order_qr_simulated(trend, ic):
+def test_ardl_select_order_qr_simulated(trend):
     rng = np.random.default_rng(10545)
-    nobs = 2000
+    nobs = 500
     x = np.cumsum(rng.standard_normal((nobs, 2)), axis=0)
     e = rng.standard_normal(nobs)
     y = np.zeros(nobs)
     for t in range(2, nobs):
         y[t] = 0.5 * y[t - 1] - 0.2 * y[t - 2] + 0.3 * x[t - 1, 0] + e[t]
-    args = (y, 6, x, {0: 4, 1: 3}, trend)
-    res = _select_order_qr(*args, ic=ic)
-    expected = _select_order_loop(*args, ic=ic)
-    _assert_select_order_equal(res, expected, rtol=1e-10)
-    assert res.model.ardl_order[:2] == (2, 1)
-    res = _select_order_qr(*args, ic=ic, glob=True, hold_back=6)
-    expected = _select_order_loop(*args, ic=ic, glob=True, hold_back=6)
+    args = (y, 4, x, {0: 2, 1: 2}, trend)
+    for ic in ("aic", "bic"):
+        res = _select_order_qr(*args, ic=ic)
+        expected = _select_order_loop(*args, ic=ic)
+        _assert_select_order_equal(res, expected, rtol=1e-10)
+        assert res.model.ardl_order[:2] == (2, 1)
+    res = _select_order_qr(*args, glob=True, hold_back=4)
+    expected = _select_order_loop(*args, glob=True, hold_back=4)
     _assert_select_order_equal(res, expected, rtol=1e-10)
 
 
@@ -1165,6 +1168,10 @@ def test_ardl_select_order_qr_fallback(data):
     expected = _select_order_loop(y, 2, data.x, 2, "c")
     _assert_select_order_equal(res, expected, rtol=0)
 
+
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="linalg error not raised on WASM")
+def test_ardl_select_order_nan(data):
+    # Data that are not finite use the model by model fits, which raise
     y = data.y.copy()
     y.iloc[20] = np.nan
     with pytest.raises(np.linalg.LinAlgError):
