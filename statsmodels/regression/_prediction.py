@@ -144,6 +144,14 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         using a formula, the columns are matched by position and not by name,
         so a DataFrame must have its columns in the same order as the exog
         used to fit the model.
+        If None, then the model's exog together with the offset and exposure
+        stored in the model are used, as in ``predict``. If exog is given,
+        then the stored offset and exposure are not used unless they are
+        passed explicitly in ``pred_kwds``.
+
+        .. versionchanged:: 0.15.1
+
+           Without exog, the stored offset and exposure are now used.
     transform : bool, optional
         If the model was fit via a formula, do you want to pass
         exog through the formula. Default is True. E.g., if you fit
