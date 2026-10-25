@@ -378,7 +378,7 @@ Statistics and tests
   of R does. Before, ``min(0.5, |sum(a - E(a))|)`` was subtracted, which
   changed the statistic when the deviation is below 0.5. The statistic and the
   p-value of a table with zero variance are ``nan``, they were ``inf`` and 0.
-  :pr:`10551`, :pr:`NNNN`
+  :pr:`10551`, :pr:`10583`
 - The DerSimonian-Laird estimate of the between-study variance in
   ``combine_effects`` (``method_re="dl"`` or ``"chi2"``) is truncated at zero.
   A negative variance was used before, which could give a random effects mean
