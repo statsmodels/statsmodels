@@ -2720,6 +2720,19 @@ class FEVD:
         responses. Defaults to the Cholesky decomposition of Sigma_u.
     periods : int, optional
         Number of periods to compute the FEVD for.
+
+    Attributes
+    ----------
+    decomp : ndarray
+        The forecast error variance decomposition, with shape
+        (neqs, periods, neqs). ``decomp[j, h - 1, k]`` is the share of the
+        h-step ahead forecast error variance of variable j that is due to
+        the orthogonalized shock to variable k, so the first step ahead is
+        stored at position 0. The shares sum to one over the last axis.
+    neqs : int
+        Number of endogenous variables.
+    names : list of str
+        Names of the endogenous variables.
     """
 
     def __init__(self, model, P=None, periods=None):

@@ -62,7 +62,10 @@ Behavior changes
   implemented for linear regression models. For other models, for example GLM
   and the discrete models, HC0 was used silently while the results reported
   the requested ``cov_type``. Now a ``SpecificationWarning`` is issued and the
-  results report ``cov_type="HC0"``. :issue:`7798`, :pr:`10523`
+  results report ``cov_type="HC0"``. The warning is attributed to the calling
+  code, and its message gives a ``scaling_factor`` that matches the
+  heteroskedasticity robust covariance of Stata.
+  :issue:`7798`, :pr:`10523`, :pr:`10580`
 - ``acorr_ljungbox`` raises a ``ValueError`` if a requested lag is smaller
   than 1. A lag of 0 silently returned the statistic of the largest lag. Lags
   that are not smaller than the number of observations also raise a
@@ -403,11 +406,15 @@ Statistics and tests
 - The default ``value`` of
   :func:`~statsmodels.stats.rates.power_poisson_ratio_2indep` is now 1, the
   null hypothesis of equal rates. The previous default of 0 gave a power of 0,
-  1 or ``nan``. The value must now be positive. :issue:`10511`, :pr:`10512`,
-  :pr:`10550`
+  1 or ``nan``. The value must now be positive and finite.
+  :func:`~statsmodels.stats.rates.power_negbin_ratio_2indep` has the same
+  check; ``value=0`` gave a divide by zero warning, and ``value=inf`` was
+  accepted by both functions. :issue:`10511`, :pr:`10512`, :pr:`10550`,
+  :pr:`10580`
 - :func:`~statsmodels.stats.proportion.power_binom_tost` returns a power of 0
   instead of a negative value if the rejection region of the exact test is
-  empty. :issue:`10507`, :pr:`10508`
+  empty. ``low`` and ``upp`` also accept list-like input, and a NaN ``p_alt``
+  raises a ``ValueError``. :issue:`10507`, :pr:`10508`, :pr:`10580`
 - ``proportions_chisquare`` raises a ``ValueError`` for a single sample
   without ``value``. The statistic was 0 and the p-value ``nan``.
   :pr:`10451`

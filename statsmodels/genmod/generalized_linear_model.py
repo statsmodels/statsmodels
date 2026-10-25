@@ -1204,6 +1204,8 @@ class GLM(base.LikelihoodModel):
             `dev` is the deviance divided by df_resid
         cov_type : str, optional
             The type of parameter estimate covariance matrix to compute.
+            "HC1", "HC2" and "HC3" are not implemented for GLM and fall back
+            to "HC0" with a ``SpecificationWarning``.
         cov_kwds : dict-like, optional
             Extra arguments for calculating the covariance of the parameter
             estimates.

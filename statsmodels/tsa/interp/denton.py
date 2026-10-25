@@ -17,7 +17,7 @@ from statsmodels.tools.validation import string_like
 #    benchmark : array_like
 #        The low-frequency benchmark.  A 1d or 2d data series in columns.
 #        If 2d, then M series are assumed.
-#    freq : str {"aq","qm", "other"}
+#    freq : {"aq", "qm", "other"}, optional
 #        "aq" - Benchmarking an annual series to quarterly.
 #        "qm" - Benchmarking a quarterly series to monthly.
 #        "other" - Custom stride.  A kwarg, k, must be supplied.

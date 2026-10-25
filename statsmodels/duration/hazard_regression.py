@@ -376,11 +376,14 @@ class PHReg(model.LikelihoodModel):
     not identified using the partial likelihood approach.
 
     `endog`, `event`, `strata`, `entry`, and the first dimension
-    of `exog` all must have the same length
+    of `exog` all must have the same length.
 
     The inclusive entry boundary differs from the ``(start, stop]``
     convention used by R's ``survival::Surv`` counting-process response.
     Results can differ when an entry time coincides with a failure time.
+    To reproduce the R results in that case, add to the affected `entry`
+    values an amount that is smaller than the smallest gap between distinct
+    observed times.
     """
 
     def __init__(

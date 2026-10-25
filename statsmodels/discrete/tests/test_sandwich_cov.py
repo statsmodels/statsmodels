@@ -134,6 +134,10 @@ class TestPoissonCluGeneric(CheckCountRobustMixin):
         cls.corr_fact = cls.get_correction_factor(cls.res1)
 
 
+# The HC1 test classes below keep their name to stay traceable to the Stata
+# results (results_poisson_hc1). HC1 is not implemented for Poisson and GLM, so
+# the tests request HC0 and reproduce Stata's HC1 with the explicit
+# correction factor in corr_fact, which is applied to the bse in test_basic.
 class TestPoissonHC1Generic(CheckCountRobustMixin):
 
     @classmethod
@@ -145,6 +149,7 @@ class TestPoissonHC1Generic(CheckCountRobustMixin):
         from statsmodels.base.covtype import get_robustcov_results
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        # HC0 plus correction factor (cls.corr_fact below) matches Stata's HC1
         get_robustcov_results(cls.res1._results, "HC0", use_self=True)
         cls.bse_rob = cls.res1.bse
 
@@ -207,6 +212,7 @@ class TestPoissonHC1Fit(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_hc1
         mod = smd.Poisson(endog, exog)
+        # HC0 plus correction factor (cls.corr_fact below) matches Stata's HC1
         cls.res1 = mod.fit(disp=False, cov_type="HC0")
 
         cls.bse_rob = cls.res1.bse
@@ -220,6 +226,7 @@ class TestPoissonHC1FitExposure(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_exposure_hc1
         mod = smd.Poisson(endog, exog, exposure=exposure)
+        # HC0 plus correction factor (cls.corr_fact below) matches Stata's HC1
         cls.res1 = mod.fit(disp=False, cov_type="HC0")
 
         cls.bse_rob = cls.res1.bse
@@ -305,6 +312,7 @@ class TestGLMPoissonHC1Generic(CheckCountRobustMixin):
         cls.res1 = mod.fit()
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')
+        # HC0 plus correction factor (cls.corr_fact below) matches Stata's HC1
         get_robustcov_results(cls.res1._results, "HC0", use_self=True)
         cls.bse_rob = cls.res1.bse
 
@@ -343,6 +351,7 @@ class TestGLMPoissonHC1Fit(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_hc1
         mod = GLM(endog, exog, family=families.Poisson())
+        # HC0 plus correction factor (cls.corr_fact below) matches Stata's HC1
         cls.res1 = mod.fit(cov_type="HC0")
 
         cls.bse_rob = cls.res1.bse
@@ -851,8 +860,8 @@ def test_hcx_fallback_warns_and_labels_hc0(model, cov_type):
         res = _fit(mod, cov_type)
 
     assert_equal(res.cov_type, "HC0")
-    assert_("(HC0)" in res.cov_kwds["description"])
-    assert_("HC0" in str(res.summary()))
+    assert "(HC0)" in res.cov_kwds["description"]
+    assert "HC0" in str(res.summary())
     assert_allclose(res.bse, res_hc0.bse, rtol=1e-12)
 
 
@@ -873,4 +882,42 @@ def test_ols_hcx_unchanged(cov_type):
         res = OLS(endog, exog).fit(cov_type=cov_type)
     res_hc0 = OLS(endog, exog).fit(cov_type="HC0")
     assert_equal(res.cov_type, cov_type)
-    assert_(np.all(res.bse > res_hc0.bse))
+    assert np.all(res.bse > res_hc0.bse)
+
+
+@pytest.mark.parametrize("model", ["logit", "glm-poisson"])
+def test_hcx_fallback_warning_points_to_caller(model):
+    # The warning should be attributed to the user's call, not to statsmodels
+    mod = _hc_models()[model]()
+    with pytest.warns(SpecificationWarning) as record:
+        _fit(mod, "HC2")
+    assert len(record) == 1
+    assert record[0].filename == __file__
+
+    res = _fit(mod, "HC0")
+    with pytest.warns(SpecificationWarning) as record:
+        get_robustcov_results(res._results, "HC2", use_self=True)
+    assert len(record) == 1
+    assert record[0].filename == __file__
+
+
+def test_hcx_fallback_message():
+    mod = _hc_models()["poisson"]()
+    with pytest.warns(SpecificationWarning, match="was requested") as record:
+        _fit(mod, "HC1")
+    msg = str(record[0].message)
+    assert "Poisson" in msg
+    assert "..." not in msg
+
+
+@pytest.mark.parametrize("model", ["poisson", "glm-poisson"])
+def test_hc0_scaling_factor_matches_stata_hc1(model):
+    # the example in the fallback warning reproduces Stata's robust se
+    mod = _hc_models()[model]()
+    nobs = mod.exog.shape[0]
+    kwds = {"scaling_factor": nobs / (nobs - 1.0)}
+    if isinstance(mod, GLM):
+        res = mod.fit(cov_type="HC0", cov_kwds=kwds)
+    else:
+        res = mod.fit(disp=False, cov_type="HC0", cov_kwds=kwds)
+    assert_allclose(res.bse, results_st.results_poisson_hc1.bse, rtol=6e-5)
