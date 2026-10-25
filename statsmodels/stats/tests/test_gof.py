@@ -210,8 +210,14 @@ def test_gof_binning_discrete_large_mean_edges(mu):
     # of this size, and an observation equal to an edge moved to the next bin.
     sd = np.sqrt(mu)
     ks = np.arange(np.floor(mu - 3 * sd), np.ceil(mu + 3 * sd))
-    cuts = _cdf_scan_cuts(stats.poisson, (mu,), ks)
-    assert len(cuts) > 10
+    scan = _cdf_scan_cuts(stats.poisson, (mu,), ks)
+    assert len(scan) > 10
+    _, _, edges0 = gof_binning_discrete(np.array([mu]), stats.poisson, (mu,))
+    cuts = np.floor(edges0[1:-1])
+    # The accuracy of the ppf of SciPy for the Poisson distribution at means
+    # this large depends on the SciPy version (it was off by up to 7 for a mean
+    # of 1e9), so the edges agree with the scan of the cdf up to this accuracy.
+    assert_allclose(cuts, scan, rtol=1e-7)
     # exactly on the edges and next to them
     sample = np.sort(np.r_[cuts, cuts + 1, cuts[:5] - 1, mu])
 

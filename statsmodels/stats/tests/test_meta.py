@@ -720,7 +720,9 @@ def test_combine_effects_dl_metafor(method_re, case):
     # metafor uses the t distribution with the HKSJ adjustment
     assert_allclose(np.sqrt(res.var_hksj_re), res_dls.se, rtol=1e-12)
     ci = res.conf_int(use_t=True)
-    assert_allclose(ci[3], [res_dls.ci_lb, res_dls.ci_ub], rtol=1e-12)
+    # the quantile of the t distribution of some SciPy versions differs from R
+    # by about 2e-9 (relative)
+    assert_allclose(ci[3], [res_dls.ci_lb, res_dls.ci_ub], rtol=1e-7)
 
     assert_allclose(res.q, res_dl.QE, rtol=1e-12)
     assert_allclose(res.test_homogeneity().pvalue, res_dl.QEp, rtol=1e-10)
