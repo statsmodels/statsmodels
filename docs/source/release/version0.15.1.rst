@@ -511,7 +511,7 @@ Nonparametric
   elements, because the sample is split as well as the evaluation points.
   ``batch_size`` must be a number with ``batch_size * 1000 >= 1``, and a
   one-element ``x``, including a ``Series``, returns a scalar. :pr:`10577`,
-  :pr:`NNNN`
+  :pr:`10582`
 - A scalar user-specified bandwidth is accepted by ``KDEMultivariate``,
   ``KDEMultivariateConditional``, ``KernelReg`` and ``KernelCensoredReg``.
   :issue:`4747`, :pr:`10272`
