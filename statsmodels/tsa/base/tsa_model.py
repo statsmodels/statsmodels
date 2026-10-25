@@ -663,10 +663,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         else:
             is_monotonic = None
         # A PeriodIndex always has a frequency, even if it has gaps or
-        # repeated periods, so check that its periods are consecutive. pandas'
-        # `PeriodIndex.is_full` is not used: it is wrong for frequencies with
-        # a multiplier (e.g. "2Q"), treats repeated periods as full, and is
-        # deprecated as of pandas 3.1 (pandas-dev/pandas#65163).
+        # repeated periods, so check that its periods are consecutive.
         # A non-monotonic index is skipped here since it is already rejected,
         # with its own warning, through `is_monotonic`.
         has_nonconsecutive_periods = (
