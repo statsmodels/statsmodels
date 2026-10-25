@@ -504,6 +504,14 @@ Nonparametric
   :class:`~statsmodels.nonparametric.kernel_regression.KernelCensoredReg`
   that use ``ckertype="tricube"`` change. Scalar arguments are accepted.
   :issue:`10541`, :pr:`10547`, :pr:`10550`
+- ``pdf_kernel_asym`` and ``cdf_kernel_asym`` no longer raise
+  ``ZeroDivisionError`` (array ``x``) or ``TypeError`` (scalar ``x``) when the
+  sample has more than ``batch_size * 1000`` observations (10 000 with the
+  default). Intermediate kernel arrays never exceed ``batch_size * 1000``
+  elements, because the sample is split as well as the evaluation points.
+  ``batch_size`` must be a number with ``batch_size * 1000 >= 1``, and a
+  one-element ``x``, including a ``Series``, returns a scalar. :pr:`10577`,
+  :pr:`NNNN`
 - A scalar user-specified bandwidth is accepted by ``KDEMultivariate``,
   ``KDEMultivariateConditional``, ``KernelReg`` and ``KernelCensoredReg``.
   :issue:`4747`, :pr:`10272`
