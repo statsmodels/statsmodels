@@ -82,20 +82,33 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         If weights is not None, then kernel for sample points are weighted
         by it. No weights corresponds to uniform weighting of each component
         with 1 / nobs, where nobs is the size of `sample`.
-    batch_size : int, optional
+    batch_size : float, optional
         If x is an 1-dim array, then points can be evaluated in vectorized
         form. To limit the amount of memory, a loop works in batches.
         Evaluation points and sample points are split so that the
         intermediate kernel arrays have at most ``batch_size * 1000``
-        elements.  A value that yields a budget below one element raises
-        ``ValueError``.
+        elements. The value does not need to be an integer.
 
         Default is to have at most 10000 elements in intermediate arrays.
+
+        .. versionchanged:: 0.15.1
+
+           ``batch_size`` bounds the size of the intermediate kernel arrays
+           on both axes, the evaluation points and the sample. Previously a
+           sample with more than ``batch_size * 1000`` observations raised an
+           error. A single-element ``x`` now always returns a scalar.
 
     Returns
     -------
     pdf : float or ndarray
-        Estimate of pdf at points x. ``pdf`` has the same size or shape as x.
+        Estimate of pdf at points x. A float is returned if ``x`` is a scalar
+        or has a single element, otherwise an ndarray with one entry for each
+        element of ``x``.
+
+    Raises
+    ------
+    ValueError
+        If ``batch_size * 1000`` is smaller than 1 or is nan.
     """
 
     if callable(kernel_type):
@@ -149,20 +162,33 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         If weights is not None, then kernel for sample points are weighted
         by it. No weights corresponds to uniform weighting of each component
         with 1 / nobs, where nobs is the size of `sample`.
-    batch_size : int, optional
+    batch_size : float, optional
         If x is an 1-dim array, then points can be evaluated in vectorized
         form. To limit the amount of memory, a loop works in batches.
         Evaluation points and sample points are split so that the
         intermediate kernel arrays have at most ``batch_size * 1000``
-        elements.  A value that yields a budget below one element raises
-        ``ValueError``.
+        elements. The value does not need to be an integer.
 
         Default is to have at most 10000 elements in intermediate arrays.
+
+        .. versionchanged:: 0.15.1
+
+           ``batch_size`` bounds the size of the intermediate kernel arrays
+           on both axes, the evaluation points and the sample. Previously a
+           sample with more than ``batch_size * 1000`` observations raised an
+           error. A single-element ``x`` now always returns a scalar.
 
     Returns
     -------
     cdf : float or ndarray
-        Estimate of cdf at points x. ``cdf`` has the same size or shape as x.
+        Estimate of cdf at points x. A float is returned if ``x`` is a scalar
+        or has a single element, otherwise an ndarray with one entry for each
+        element of ``x``.
+
+    Raises
+    ------
+    ValueError
+        If ``batch_size * 1000`` is smaller than 1 or is nan.
     """
 
     if callable(kernel_type):
