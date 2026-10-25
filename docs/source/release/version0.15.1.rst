@@ -256,7 +256,7 @@ Time series analysis
   raised for statistics between the 90% and 95% critical values.
   :issue:`8978`, :pr:`10475`, :pr:`10568`
 - ``UECMResults.bounds_test`` raised a ``TypeError`` for a model without lagged
-  differences of the dependent variable (``lags=0``). :pr:`NNNN`
+  differences of the dependent variable (``lags=0``). :pr:`10578`
 - :meth:`~statsmodels.tsa.arima_process.ArmaProcess.arma2ma` and ``arma2ar``
   raised an ``AttributeError`` if ``lags`` is not given. They default to
   ``nobs`` coefficients. :issue:`4464`, :pr:`10466`, :pr:`10569`
