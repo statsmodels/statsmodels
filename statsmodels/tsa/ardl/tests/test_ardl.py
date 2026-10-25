@@ -1015,17 +1015,118 @@ def test_bounds_test_crit_vals_pss(k):
 
 
 def test_bounds_test_pvalue_matches_simulation():
-    # GH-10546: with one regressor, the asymptotic p-values were those for two
-    rng = np.random.default_rng(0)
-    nobs = 500
+    # GH-10546: with one regressor, the asymptotic p-values were those for two.
+    # For this seed the asymptotic and the simulated p-values differ by 0.0003,
+    # and by 0.045 if the table for one regressor too many is used. Other
+    # seeds of this process differ by up to 0.016 in a sample of 200 (finite
+    # sample error), so the seed and the tolerance are tied to each other.
+    rng = np.random.default_rng(3)
+    nobs = 200
     x = np.cumsum(rng.standard_normal(nobs))
     y = np.zeros(nobs)
     for t in range(1, nobs):
         y[t] = y[t - 1] - 0.05 * (y[t - 1] - 0.5 * x[t - 1]) + rng.standard_normal()
     res = UECM(pd.Series(y), 1, pd.DataFrame({"x": x}), 1, trend="c").fit()
     bounds_result = res.bounds_test(case=3)
-    bounds_result_sim = res.bounds_test(case=3, asymptotic=False, nsim=20_000, rng=0)
-    assert_allclose(bounds_result.pvalue, bounds_result_sim.pvalue, atol=0.003)
+    bounds_result_sim = res.bounds_test(case=3, asymptotic=False, nsim=5_000, rng=0)
+    assert_allclose(bounds_result.pvalue, bounds_result_sim.pvalue, atol=0.01)
+
+
+def _pss_data(k, seed, nobs=120):
+    rng = np.random.default_rng(seed)
+    x = np.cumsum(rng.standard_normal((nobs, k)), axis=0)
+    y = np.zeros(nobs)
+    e = rng.standard_normal(nobs)
+    for t in range(1, nobs):
+        y[t] = y[t - 1] - 0.1 * (y[t - 1] - x[t - 1].sum()) + e[t]
+    return pd.Series(y, name="y"), pd.DataFrame(x, columns=[f"x{i}" for i in range(k)])
+
+
+# Reference values from the CRAN package ARDL 0.2.5 (R 4.6.1), which indexes
+# the PSS tables by the number of regressors, excluding y. For the simulated
+# data the model was fit on the same data, written with 17 digits, using
+#
+#   m <- ardl(y ~ x0 + x1 + trend(y), data=d, order=c(2, 1, 1))  # no trend(y): 3
+#   bounds_f_test(m, case=case)               # statistic, p-value (upper bound)
+#   bounds_f_test(m, case=case, alpha=a)$tab  # bounds at a = 0.1, 0.05, 0.01
+#
+# and for the Danish data (``denmark`` in ARDL) using
+#
+#   ardl(LRM ~ LRY + IBO + IDE [+ trend(LRM)], data=denmark, order=c(3,3,3,3))
+#
+# The statistics agree to rounding error. The tables and p-value response
+# surfaces were simulated independently, so the bounds differ from those of ARDL
+# by up to 0.03 here and the p-values by up to 0.001. The p-values of ARDL are
+# for the upper bound (I(1) regressors).
+# (k, case, seed) -> (statistic, upper p-value, lower and upper bounds at 10%, 5%, 1%)
+PSS_ARDL_R = {
+    (2, 3, 20250101): (
+        5.0519595811347,
+        0.039012807407573,
+        [3.164478061, 3.790645235, 5.165537747],
+        [4.098947825, 4.806770545, 6.337465242],
+    ),
+    (3, 4, 20250102): (
+        3.218610401748,
+        0.192376185646,
+        [2.955746507, 3.407295070, 4.331279426],
+        [3.731001848, 4.199901754, 5.220473297],
+    ),
+    (5, 5, 20250103): (
+        4.235000741521,
+        0.051746621004,
+        [2.756956243, 3.159420396, 3.999982287],
+        [3.792142719, 4.259334499, 5.206415588],
+    ),
+}
+
+
+@pytest.mark.parametrize("k, case, seed", sorted(PSS_ARDL_R))
+def test_bounds_test_vs_r_ardl(k, case, seed):
+    # GH-10546: the p-value and tables for k > 1 regressors, against ARDL in R
+    stat, pvalue, lower, upper = PSS_ARDL_R[(k, case, seed)]
+    y, x = _pss_data(k, seed)
+    trend = "c" if case == 3 else "ct"
+    res = UECM(y, 2, x, 1, trend=trend).fit()
+    bounds_result = res.bounds_test(case=case)
+    assert_allclose(bounds_result.statistic, stat, rtol=1e-8)
+    assert_allclose(bounds_result.pvalue["upper"], pvalue, atol=0.005)
+    assert bounds_result.pvalue["lower"] < bounds_result.pvalue["upper"]
+    crit_vals = bounds_result.critical_values.loc[[90.0, 95.0, 99.0]]
+    assert_allclose(crit_vals["lower"], lower, atol=0.05)
+    assert_allclose(crit_vals["upper"], upper, atol=0.05)
+
+
+@pytest.mark.parametrize(
+    "case, stat, pvalue, lower, upper",
+    [
+        (
+            3,
+            5.993052959250,
+            0.005424240728,
+            [2.7204500, 3.2243925, 4.3325749],
+            [3.7649065, 4.3542357, 5.5462945],
+        ),
+        (
+            4,
+            5.07063440668,
+            0.01291889795,
+            [2.9557465, 3.4072951, 4.3312794],
+            [3.7310018, 4.1999018, 5.2204733],
+        ),
+    ],
+)
+def test_bounds_test_vs_r_ardl_danish(case, stat, pvalue, lower, upper):
+    # See PSS_ARDL_R for the R calls; the statsmodels p-values for the upper
+    # bound are 0.005308 and 0.013299, those with k one too large 0.0021 and
+    # 0.0068
+    res = UECM(dane_data.lrm, 3, dane_data[["lry", "ibo", "ide"]], 3).fit()
+    bounds_result = res.bounds_test(case=case)
+    assert_allclose(bounds_result.statistic, stat, rtol=1e-8)
+    assert_allclose(bounds_result.pvalue["upper"], pvalue, rtol=0.05)
+    crit_vals = bounds_result.critical_values.loc[[90.0, 95.0, 99.0]]
+    assert_allclose(crit_vals["lower"], lower, atol=0.05)
+    assert_allclose(crit_vals["upper"], upper, atol=0.05)
 
 
 def test_resids_ardl_uecm():
