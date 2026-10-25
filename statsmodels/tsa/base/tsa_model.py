@@ -667,12 +667,16 @@ class TimeSeriesModel(base.LikelihoodModel):
         # `PeriodIndex.is_full` is not used: it is wrong for frequencies with
         # a multiplier (e.g. "2Q"), treats repeated periods as full, and is
         # deprecated as of pandas 3.1 (pandas-dev/pandas#65163).
-        if isinstance(index, PeriodIndex) and is_monotonic and len(index) > 0:
-            is_consecutive = index.equals(
+        # A non-monotonic index is skipped here since it is already rejected,
+        # with its own warning, through `is_monotonic`.
+        has_nonconsecutive_periods = (
+            isinstance(index, PeriodIndex)
+            and is_monotonic
+            and len(index) > 0
+            and not index.equals(
                 period_range(start=index[0], periods=len(index), freq=index.freq)
             )
-        else:
-            is_consecutive = True
+        )
 
         # Issue warnings for unsupported indexes
         if has_index and not (date_index or range_index or is_increment):
@@ -699,7 +703,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                 ValueWarning,
                 stacklevel=2,
             )
-        if not is_consecutive:
+        if has_nonconsecutive_periods:
             warnings.warn(
                 "A Period index has been provided, but its periods are not"
                 " consecutive (it has gaps or repeated periods) and so will be"
@@ -717,7 +721,12 @@ class TimeSeriesModel(base.LikelihoodModel):
         # Construct the internal index
         index_generated = False
         valid_index = (
-            (date_index and has_freq and is_monotonic and is_consecutive)
+            (
+                date_index
+                and has_freq
+                and is_monotonic
+                and not has_nonconsecutive_periods
+            )
             or (int_index and is_increment)
             or range_index
         )
