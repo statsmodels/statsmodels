@@ -1515,7 +1515,7 @@ def _ardl_select_ssr(y, always, select, glob):
         The dependent variable, (nobs,).
     always : ndarray
         The regressors included in every model, (nobs, k_always).
-    select : list[ndarray]
+    select : list of ndarray
         The blocks of lags of the endogenous and exogenous variables. A
         model includes the first columns of each block, or any subset of
         all columns if glob is True.
@@ -1524,7 +1524,7 @@ def _ardl_select_ssr(y, always, select, glob):
 
     Returns
     -------
-    tuple[ndarray, ndarray] or None
+    tuple of ndarray or None
         The sums of squared residuals of the models and their numbers of
         regressors from the blocks. If glob is False, the model that
         includes the first ``i_j`` columns of block ``j`` is at
@@ -1873,9 +1873,12 @@ class UECM(ARDL):
     ----------
     endog : array_like
         A 1-d endogenous response variable. The dependent variable.
-    lags : int, sequence of int or None
-        The number of lags of the endogenous variable to include in the
-        model. Must be at least 1.
+    lags : int or None
+        The number of lags p of the endogenous variable in the equivalent
+        ARDL, so that the model contains p - 1 lagged differences of the
+        endogenous variable. The lagged level of the endogenous variable is
+        always included, so that ``None`` and 0 are equivalent to 1, and do
+        not include any lagged differences.
     exog : array_like, optional
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
@@ -2654,6 +2657,23 @@ class UECMResults(ARDLResults):
            The asymptotic critical values and p-values were previously looked
            up with :math:`k` one too large, which made the p-values too small.
 
+        The fixed regressors and the seasonal terms of the model are included
+        in the regression as additional controls. They are not part of the
+        tested restriction, and the critical values do not depend on them. The
+        constant and trend are always those implied by ``case``, and the
+        ``trend`` of the model is ignored. A model constructed using
+        ``deterministic`` is not supported since the process cannot be
+        combined with the deterministic terms of ``case`` without ambiguity,
+        and a ``NotImplementedError`` is raised. Use ``trend``, ``seasonal`` and
+        ``fixed`` to specify the deterministic terms instead.
+
+        .. versionchanged:: 0.15.1
+
+           The fixed regressors and the seasonal terms of the model are
+           included in the test. They were previously omitted. A model
+           constructed using ``deterministic`` raises a ``NotImplementedError``
+           rather than ignoring the process.
+
         References
         ----------
         .. [*] Pesaran, M. H., Shin, Y., & Smith, R. J. (2001). Bounds testing
@@ -2665,6 +2685,14 @@ class UECMResults(ARDLResults):
         from statsmodels.tsa.ardl import pss_critical_values
 
         model = self.model
+        if model.deterministic is not None:
+            raise NotImplementedError(
+                "bounds_test is not available if the model was constructed using "
+                "deterministic. The deterministic terms of the test are set by "
+                "case and cannot be combined with a user-supplied "
+                "DeterministicProcess without ambiguity. Use trend, seasonal and "
+                "fixed to specify the deterministic terms."
+            )
         trend: Literal["n", "c", "ct"]
         if case == 1:
             trend = "n"
@@ -2673,27 +2701,32 @@ class UECMResults(ARDLResults):
         else:
             trend = "ct"
         order = {key: max(val) for key, val in model._order.items()}
+        # ar_lags is None when the model has no lagged differences of endog
+        ar_lags = model.ar_lags
         uecm = UECM(
             model.data.endog,
-            max(model.ar_lags),
+            0 if ar_lags is None else max(ar_lags),
             model.data.orig_exog,
             order=order,
             causal=model.causal,
             trend=trend,
+            fixed=model.fixed,
+            seasonal=model.seasonal,
+            period=model.period,
         )
         res = uecm.fit(cov_type=cov_type, cov_kwds=cov_kwds, use_t=use_t)
         cov = res.cov_params()
         nvar = len(res.model.ardl_order)
-        if case == 1:
-            rest = np.arange(nvar)
+        # The constant and trend, when included, are the first deterministic
+        # columns. They are followed by the seasonal terms and then by the levels
+        ndet = res.model._blocks["deterministic"].shape[1]
+        levels = np.arange(ndet, ndet + nvar)
+        if case in (1, 3, 5):
+            rest = levels
         elif case == 2:
-            rest = np.arange(nvar + 1)
-        elif case == 3:
-            rest = np.arange(1, nvar + 1)
+            rest = np.r_[0, levels]
         elif case == 4:
-            rest = np.arange(1, nvar + 2)
-        elif case == 5:
-            rest = np.arange(2, nvar + 2)
+            rest = np.r_[1, levels]
         r = np.zeros((rest.shape[0], cov.shape[1]))
         for i, loc in enumerate(rest):
             r[i, loc] = 1

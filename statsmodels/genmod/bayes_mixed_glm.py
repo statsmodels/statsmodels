@@ -60,7 +60,7 @@ from statsmodels.genmod import families
 from statsmodels.iolib import summary2
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import array_like, string_like
 
 # Gauss-Legendre weights
 glw = [
@@ -194,7 +194,7 @@ def _check_which(which, linear):
     """
     Validate ``which`` and translate the deprecated ``linear`` keyword.
     """
-    which = string_like(which, "which", options=("mean", "linear"))
+    which = string_like(which, "which", options=("mean", "linear"), lower=False)
     if linear is not None:
         warnings.warn(
             "The linear keyword is deprecated and will be removed in "
@@ -584,20 +584,34 @@ class _BayesMixedGLM(base.Model):
         which : {"mean", "linear"}, optional
             Statistic to predict. Default is "mean".
 
-            - "mean" returns the linear predictor transformed using the
-              link function.
-            - "linear" returns the linear predictor without passing through
-              the link function.
+            - "mean" returns the inverse link function applied to the linear
+              predictor, ``exog @ params[:k_exog]``.
+            - "linear" returns the linear predictor, ``exog @ params[:k_exog]``,
+              without passing through the link function.
+
+            .. versionadded:: 0.15.1
 
         Returns
         -------
         ndarray
             A 1-dimensional array of predicted values.
+
+        Notes
+        -----
+        Only the fixed effects part of ``params`` is used. "mean" is therefore
+        the conditional mean given that all random effects are zero, which is
+        not the marginal mean, E(y | x), of a mixed model with a non-identity
+        link. Use ``params`` from ``fit_map`` (posterior mode) or from
+        ``fit_vb`` (variational posterior mean).
         """
         which = _check_which(which, linear)
 
         if exog is None:
             exog = self.exog
+        else:
+            exog = array_like(exog, "exog")
+            if exog.ndim != 2:
+                raise ValueError("exog must be a two-dimensional array")
 
         q = exog.shape[1]
         pr = np.dot(exog, params[0:q])
@@ -1116,15 +1130,26 @@ class BayesMixedGLMResults:
         which : {"mean", "linear"}, optional
             Statistic to predict. Default is "mean".
 
-            - "mean" returns the linear predictor transformed using the
-              link function.
-            - "linear" returns the linear predictor without passing through
-              the link function.
+            - "mean" returns the inverse link function applied to the linear
+              predictor, ``exog @ params[:k_exog]``.
+            - "linear" returns the linear predictor, ``exog @ params[:k_exog]``,
+              without passing through the link function.
+
+            .. versionadded:: 0.15.1
 
         Returns
         -------
         ndarray
             A one-dimensional array of fitted values.
+
+        Notes
+        -----
+        Only the fixed effects part of the parameters is used, ``fe_mean``.
+        "mean" is therefore the conditional mean given that all random effects
+        are zero, which is not the marginal mean, E(y | x), of a mixed model
+        with a non-identity link. The fixed effects are the posterior mode if
+        the model was fit using ``fit_map`` and the variational posterior mean
+        if it was fit using ``fit_vb``.
         """
         which = _check_which(which, linear)
 

@@ -15,7 +15,7 @@ from scipy import optimize, stats
 from statsmodels.stats._inference_tools import _mover_confint
 from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import array_like, string_like
 
 # shorthand
 norm = stats.norm
@@ -2222,6 +2222,36 @@ class PowerEquivalenceResult(PowerResult):
     std_null_upp: float
 
 
+def _check_nobs_ratio(nobs_ratio):
+    """
+    Convert nobs_ratio to float or ndarray and check that it is valid
+
+    Parameters
+    ----------
+    nobs_ratio : float or array_like
+        Sample size ratio, nobs2 = nobs_ratio * nobs1.
+
+    Returns
+    -------
+    float or ndarray
+        The sample size ratio, a float if the input is a scalar.
+
+    Raises
+    ------
+    ValueError
+        If any element of nobs_ratio is not positive and finite, or if
+        nobs_ratio cannot be converted to float.
+    """
+    nobs_ratio = array_like(nobs_ratio, "nobs_ratio", dtype=np.double, mindim=0)
+    if not np.all(np.isfinite(nobs_ratio) & (nobs_ratio > 0)):
+        raise ValueError(
+            f"nobs_ratio must be positive and finite, got {nobs_ratio}"
+        )
+    if nobs_ratio.ndim == 0:
+        return float(nobs_ratio)
+    return nobs_ratio
+
+
 def power_equivalence_poisson_2indep(
     rate1,
     rate2,
@@ -2252,8 +2282,14 @@ def power_equivalence_poisson_2indep(
         Lower equivalence margin for the rate ratio, rate1 / rate2.
     upp : float or array_like
         Upper equivalence margin for the rate ratio, rate1 / rate2.
-    nobs_ratio : float, optional
-        Sample size ratio, nobs2 = nobs_ratio * nobs1.
+    nobs_ratio : float or array_like, optional
+        Sample size ratio, nobs2 = nobs_ratio * nobs1. All values must be
+        positive and finite.
+
+        .. versionchanged:: 0.15.1
+
+            A nobs_ratio that is not positive and finite raises a
+            ``ValueError``. Previously it returned nan or an arbitrary power.
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
@@ -2283,6 +2319,15 @@ def power_equivalence_poisson_2indep(
         ``assert_allclose``), while also exposing `std_null_low`,
         `std_null_upp`, `std_alt` and other attributes.
 
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+        The power is changed if ``nobs_ratio`` is not equal to 1. The variances
+        of the test statistic used the wrong sample size and, for
+        ``method_var="score"``, the wrong sample size ratio. Results for
+        ``nobs_ratio=1`` are unchanged.
+
     References
     ----------
     .. [1] Zhu, Haiyuan. 2017. “Sample Size Calculation for Comparing Two
@@ -2305,6 +2350,7 @@ def power_equivalence_poisson_2indep(
             f"the equivalence interval must satisfy low <= upp, "
             f"got low={low}, upp={upp}"
         )
+    nobs_ratio = _check_nobs_ratio(nobs_ratio)
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
@@ -2838,7 +2884,7 @@ def power_negbin_ratio_2indep(
     if method_var == "alt":
         v0 = v1
     elif method_var == "ftotal":
-        v0 = (1 + value * nobs_ratio) ** 2 / (
+        v0 = (value + nobs_ratio) ** 2 / (
             exposure * nobs_ratio * value * (rate1 + nobs_ratio * rate2)
         )
         v0 += (1 + nobs_ratio) / nobs_ratio * dispersion
@@ -2910,8 +2956,15 @@ def power_equivalence_neginb_2indep(
         Lower equivalence margin for the rate ratio, rate1 / rate2.
     upp : float or array_like
         Upper equivalence margin for the rate ratio, rate1 / rate2.
-    nobs_ratio : float, optional
-        Sample size ratio, nobs2 = nobs_ratio * nobs1.
+    nobs_ratio : float or array_like, optional
+        Sample size ratio, nobs2 = nobs_ratio * nobs1. All values must be
+        positive and finite.
+
+        .. versionchanged:: 0.15.1
+
+            A nobs_ratio that is not positive and finite raises a
+            ``ValueError``. Previously it returned nan or raised a
+            ``ZeroDivisionError``.
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
@@ -2934,12 +2987,23 @@ def power_equivalence_neginb_2indep(
     Returns
     -------
     PowerEquivalenceResult or float
-        If return_results is False, then only the power is returned as a
-        float. If return_results is True (default), then a
+        If return_results is False (default), then only the power is returned
+        as a float. If return_results is True, then a
         :class:`PowerEquivalenceResult` result object is returned; it behaves
         like the scalar power in numeric comparisons (e.g.
         ``assert_allclose``), while also exposing `std_null_low`,
         `std_null_upp`, `std_alt` and other attributes.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+        The power is changed if ``nobs_ratio`` is not equal to 1. The variances
+        of the test statistic used the wrong sample size and, for
+        ``method_var="alt"``, the rates of the two samples were interchanged.
+        For ``method_var="ftotal"`` the variance under the null hypothesis
+        used the wrong sample size ratio; with ``dispersion=0`` it is now equal
+        to ``method_var="score"``. Results for ``nobs_ratio=1`` are unchanged.
 
     References
     ----------
@@ -2963,6 +3027,7 @@ def power_equivalence_neginb_2indep(
             f"the equivalence interval must satisfy low <= upp, "
             f"got low={low}, upp={upp}"
         )
+    nobs_ratio = _check_nobs_ratio(nobs_ratio)
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
@@ -2976,11 +3041,11 @@ def power_equivalence_neginb_2indep(
     if method_var == "alt":
         v0_low = v0_upp = v1
     elif method_var == "ftotal":
-        v0_low = (1 + low * nobs_ratio) ** 2 / (
+        v0_low = (low + nobs_ratio) ** 2 / (
             exposure * nobs_ratio * low * (rate1 + nobs_ratio * rate2)
         )
         v0_low += (1 + nobs_ratio) / nobs_ratio * dispersion
-        v0_upp = (1 + upp * nobs_ratio) ** 2 / (
+        v0_upp = (upp + nobs_ratio) ** 2 / (
             exposure * nobs_ratio * upp * (rate1 + nobs_ratio * rate2)
         )
         v0_upp += (1 + nobs_ratio) / nobs_ratio * dispersion

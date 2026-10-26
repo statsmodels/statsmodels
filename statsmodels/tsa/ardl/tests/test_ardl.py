@@ -20,7 +20,7 @@ from statsmodels.tsa.ardl.model import (
     ARDLResults,
     ardl_select_order,
 )
-from statsmodels.tsa.deterministic import DeterministicProcess
+from statsmodels.tsa.deterministic import DeterministicProcess, Seasonality
 
 dane_data = danish_data.load_pandas().data
 
@@ -987,6 +987,218 @@ def test_bounds_test_simulate_order():
     assert (bounds_result_sim.pvalue > bounds_result.pvalue).all()
 
 
+def _bounds_fixed_data(nobs=140):
+    # Cointegrated y and x1, x2 with a stationary effect of z1, z2, z3 and of
+    # quarterly seasonal dummies. The same data was used with the R reference
+    rng = np.random.default_rng(10575)
+    e = rng.standard_normal((nobs, 4))
+    x1 = np.cumsum(e[:, 0]) + 0.05 * np.arange(nobs)
+    x2 = np.cumsum(e[:, 1])
+    z1 = rng.standard_normal(nobs)
+    z2 = 0.5 * np.r_[0.0, e[:-1, 2]] + e[:, 2]
+    z3 = rng.uniform(-1.0, 1.0, nobs)
+    pos = np.arange(nobs) % 4
+    y = np.zeros(nobs)
+    for t in range(1, nobs):
+        y[t] = (
+            y[t - 1]
+            - 0.1 * (y[t - 1] - 0.4 * x1[t - 1] + 0.3 * x2[t - 1] - 0.5)
+            + 0.6 * z1[t]
+            + 0.4 * z2[t]
+            - 0.5 * z3[t]
+            + 0.5 * (pos[t] == 2)
+            - 0.4 * (pos[t] == 3)
+            + 0.3 * (x1[t] - x1[t - 1])
+            + e[t, 3]
+        )
+    index = pd.period_range("1980Q1", periods=nobs, freq="Q")
+    return pd.DataFrame(
+        {"y": y, "x1": x1, "x2": x2, "z1": z1, "z2": z2, "z3": z3}, index=index
+    )
+
+
+# Reference values from R, ARDL 0.2.5 (CRAN), with the data of _bounds_fixed_data
+# written to csv with 17 digits. For each specification, the F statistic and
+# the p-value of the I(1) bound for cases 1 to 5 of
+#
+#   uecm(y ~ x1 + x2 [- 1 | + trend(y)] | <fixed>, data, order=<order>)
+#   bounds_f_test(<model>, case=<case>)
+#
+# The cases 1, 4 and 5 add "- 1" (case 1) or "+ trend(y)" (cases 4 and 5) to
+# the formula. For the seasonal specifications, <fixed> are the explicit
+# quarterly dummies s1, s2, s3 (s0, s1, s2, s3 for case 1, which has no
+# constant), where s_i = 1 if the (zero based) position of the observation
+# modulo 4 is i. R uses the bounds tables of Kripfganz and Schneider, so the
+# p-values only agree with statsmodels to about 0.003.
+BOUNDS_FIXED_REF = {
+    "none": (
+        [
+            3.540334722642,
+            2.640859741313,
+            3.496908717074,
+            2.733365220736,
+            3.640491073069,
+        ],
+        [0.065191, 0.221479, 0.174347, 0.376394, 0.306278],
+    ),
+    "z1": (
+        [
+            2.194698978773,
+            1.648222586499,
+            2.165738388022,
+            2.086999059559,
+            2.778353197338,
+        ],
+        [0.265632, 0.589421, 0.492546, 0.620963, 0.525298],
+    ),
+    "z123": (
+        [
+            3.011727218399,
+            2.519489127349,
+            3.350264734258,
+            2.584100689190,
+            3.361605910168,
+        ],
+        [0.117480, 0.254961, 0.198853, 0.428388, 0.371219],
+    ),
+    "z123_b": (
+        [
+            2.269351154249,
+            1.897824603936,
+            2.508557632225,
+            1.912166292452,
+            2.463065676919,
+        ],
+        [0.247656, 0.478230, 0.391478, 0.694087, 0.616822],
+    ),
+    "seasonal": (
+        [
+            3.425337586493,
+            2.576102370312,
+            3.425337586493,
+            2.681794340056,
+            3.572929058717,
+        ],
+        [0.074224, 0.239045, 0.186010, 0.393332, 0.321163],
+    ),
+    "seasonal_z1": (
+        [
+            2.124326580262,
+            1.595698339355,
+            2.124326580262,
+            2.053107281405,
+            2.735146441131,
+        ],
+        [0.284319, 0.613221, 0.505307, 0.635354, 0.537445],
+    ),
+}
+# name: (lags of y, order of x1 and x2, fixed columns, seasonal)
+BOUNDS_FIXED_SPECS = {
+    "none": (2, {"x1": 2, "x2": 1}, [], False),
+    "z1": (2, {"x1": 2, "x2": 1}, ["z1"], False),
+    "z123": (2, {"x1": 2, "x2": 1}, ["z1", "z2", "z3"], False),
+    "z123_b": (3, {"x1": 1, "x2": 2}, ["z1", "z2", "z3"], False),
+    "seasonal": (2, {"x1": 2, "x2": 1}, [], True),
+    "seasonal_z1": (2, {"x1": 2, "x2": 1}, ["z1"], True),
+}
+BOUNDS_CASE_TREND = {1: "n", 2: "c", 3: "c", 4: "ct", 5: "ct"}
+
+
+@pytest.mark.parametrize("case", [1, 2, 3, 4, 5])
+@pytest.mark.parametrize("spec", sorted(BOUNDS_FIXED_SPECS))
+def test_bounds_test_fixed_seasonal_r(spec, case):
+    # The fixed regressors and the seasonal terms were omitted from the model
+    # used to compute the statistic
+    data = _bounds_fixed_data()
+    lags, order, fixed, seasonal = BOUNDS_FIXED_SPECS[spec]
+    mod = UECM(
+        data["y"],
+        lags,
+        data[["x1", "x2"]],
+        order,
+        trend=BOUNDS_CASE_TREND[case],
+        fixed=data[fixed] if fixed else None,
+        seasonal=seasonal,
+    )
+    result = mod.fit().bounds_test(case)
+    stat, pvalue = BOUNDS_FIXED_REF[spec]
+    assert_allclose(result.statistic, stat[case - 1], rtol=1e-8)
+    assert_allclose(result.pvalue["upper"], pvalue[case - 1], atol=0.005)
+
+
+@pytest.mark.parametrize("case", [3, 5])
+def test_bounds_test_fixed_seasonal_numpy(case):
+    data = _bounds_fixed_data()
+    kwargs = {"trend": BOUNDS_CASE_TREND[case]}
+    expected = UECM(
+        data["y"],
+        2,
+        data[["x1", "x2"]],
+        {"x1": 2, "x2": 1},
+        fixed=data[["z1", "z2"]],
+        seasonal=True,
+        **kwargs,
+    ).fit()
+    mod = UECM(
+        np.asarray(data["y"]),
+        2,
+        np.asarray(data[["x1", "x2"]]),
+        {0: 2, 1: 1},
+        fixed=np.asarray(data[["z1", "z2"]]),
+        seasonal=True,
+        period=4,
+        **kwargs,
+    )
+    result = mod.fit().bounds_test(case)
+    result_pd = expected.bounds_test(case)
+    assert_allclose(result.statistic, result_pd.statistic, rtol=1e-10)
+    assert_allclose(result.pvalue, result_pd.pvalue, rtol=1e-10)
+
+
+@pytest.mark.parametrize("seasonal", [False, True])
+@pytest.mark.parametrize("use_fixed", [False, True])
+@pytest.mark.parametrize("causal", [False, True])
+def test_bounds_test_matches_levels_wald(causal, use_fixed, seasonal):
+    # If the trend of the model is the one of the case, the statistic is the F
+    # statistic that the coefficients on the levels of the model are all 0
+    data = _bounds_fixed_data()
+    mod = UECM(
+        data["y"],
+        2,
+        data[["x1", "x2"]],
+        {"x1": 2, "x2": 1},
+        trend="c",
+        fixed=data[["z1", "z2"]] if use_fixed else None,
+        causal=causal,
+        seasonal=seasonal,
+    )
+    res = mod.fit()
+    ndet = mod._blocks["deterministic"].shape[1]
+    nlvl = mod._blocks["levels"].shape[1]
+    loc = np.arange(ndet, ndet + nlvl)
+    params = np.asarray(res.params)[loc]
+    cov = np.asarray(res.cov_params())[np.ix_(loc, loc)]
+    expected = params @ np.linalg.solve(cov, params) / nlvl
+    assert_allclose(res.bounds_test(3).statistic, expected, rtol=1e-10)
+
+
+def test_bounds_test_deterministic_not_implemented():
+    data = _bounds_fixed_data()
+    det = DeterministicProcess(
+        data.index, constant=True, additional_terms=[Seasonality(4)]
+    )
+    mod = UECM(
+        data["y"],
+        2,
+        data[["x1", "x2"]],
+        {"x1": 2, "x2": 1},
+        trend="n",
+        deterministic=det,
+    )
+    with pytest.raises(NotImplementedError, match="deterministic"):
+        mod.fit().bounds_test(3)
+
+
 # Pesaran, Shin & Smith (2001), Table CI(iii), Case III, at the 10%, 5% and 1%
 # levels, indexed by k, the number of regressors excluding the dependent
 # variable. The statsmodels tables were simulated independently, so they
@@ -1127,6 +1339,141 @@ def test_bounds_test_vs_r_ardl_danish(case, stat, pvalue, lower, upper):
     crit_vals = bounds_result.critical_values.loc[[90.0, 95.0, 99.0]]
     assert_allclose(crit_vals["lower"], lower, atol=0.05)
     assert_allclose(crit_vals["upper"], upper, atol=0.05)
+
+
+# Reference values for UECMs without lagged differences of the dependent
+# variable, which the UECM defines as lags in (None, 0, 1). They were computed
+# with the CRAN package ARDL 0.2.5 (R 4.6.1) on the Danish data (lrm, lry, ibo,
+# ide), where ``bounds_f_test`` is applied to
+#
+#   m <- uecm(lrm ~ lry + ibo + ide, data = ts(danish), order = c(p, q1, q2, q3))
+#   bounds_f_test(m, case = case, pvalue = TRUE, exact = FALSE)
+#
+# using ``- 1`` in the formula for case 1 and ``+ trend(lrm)`` for cases 4 and
+# 5. R's ``order`` is (p, q1, q2, q3) so that lags=p and order={"lry": q1, ...}
+# in statsmodels, except that p=1 in R has no lagged differences, which is
+# lags in (None, 0, 1) in statsmodels. R only reports the p-value for the
+# upper (I(1)) bound, and interpolates it linearly in a table of simulated
+# critical values, so only the statistic is compared tightly.
+UECM_BOUNDS_ORDERS = {
+    "A": {"lry": 1, "ibo": 1, "ide": 1},
+    "B": {"lry": 1, "ibo": 3, "ide": 2},
+    "C": {"lry": 1, "ibo": 1, "ide": 1},
+    "D": {"lry": 2, "ibo": 1, "ide": 3},
+}
+# (statistic, p-value of upper bound) by case
+UECM_BOUNDS_R = {
+    "A": {
+        1: (1.9432957566916351, 0.36287272254480135),
+        2: (4.8144488803156964, 0.0070907355695709181),
+        3: (5.4869229704429063, 0.010819220971760888),
+        4: (4.6924170205040081, 0.023467875999393494),
+        5: (5.7387913709648135, 0.021112138280176964),
+    },
+    "B": {
+        1: (1.4481839378587602, 0.56059763874767199),
+        2: (6.7011928959160612, 0.00074591538238529703),
+        3: (7.8113641520124864, 0.0008499446520620936),
+        4: (6.6096462743357502, 0.0009660310080628051),
+        5: (8.2106581226912301, 0.0009121472341234244),
+    },
+    "C": {
+        1: (2.866152280082872, 0.12805153309903969),
+        2: (7.6795561299124016, 0.00041522066012287438),
+        3: (8.8358479889672736, 0.00058703744889628494),
+        4: (7.7725330968737918, 0.00047398337170748313),
+        5: (9.3931953005845052, 0.00053002856715460072),
+    },
+    "D": {
+        1: (3.0274938465848855, 0.10468737489476289),
+        2: (6.4510893339483442, 0.00083045241841425536),
+        3: (7.2358881879706587, 0.00099762563124191576),
+        4: (6.1225320160599539, 0.0022308094015068124),
+        5: (7.4450742068913236, 0.0020834410519250278),
+    },
+}
+
+
+@pytest.mark.parametrize("case", [1, 2, 3, 4, 5])
+@pytest.mark.parametrize(
+    "spec, lags",
+    [
+        ("A", 0),
+        ("A", None),
+        ("A", 1),
+        ("B", 0),
+        ("B", None),
+        ("B", 1),
+        ("C", 2),
+        ("D", 2),
+    ],
+)
+def test_bounds_test_matches_r(spec, lags, case):
+    trend = {1: "n", 2: "c", 3: "c", 4: "ct", 5: "ct"}[case]
+    res = UECM(
+        dane_data.lrm,
+        lags,
+        dane_data[["lry", "ibo", "ide"]],
+        UECM_BOUNDS_ORDERS[spec],
+        trend=trend,
+    ).fit()
+    stat, pvalue = UECM_BOUNDS_R[spec][case]
+    bounds_result = res.bounds_test(case)
+    assert_allclose(bounds_result.statistic, stat, rtol=1e-8)
+    assert_allclose(bounds_result.pvalue["upper"], pvalue, atol=5e-3)
+    assert bounds_result.pvalue["lower"] < bounds_result.pvalue["upper"]
+
+
+@pytest.mark.parametrize("lags", [0, None])
+@pytest.mark.parametrize("causal", [True, False])
+@pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
+@pytest.mark.parametrize("case", [1, 2, 3, 4, 5])
+def test_bounds_test_no_lagged_dendog(lags, causal, trend, case):
+    # The UECM always includes the lagged level of the dependent variable, so
+    # that lags=0 and lags=None are the same model as lags=1
+    kwargs = {
+        "exog": dane_data[["lry", "ibo", "ide"]],
+        "order": {"lry": 1, "ibo": 2, "ide": 1},
+        "causal": causal,
+        "trend": trend,
+    }
+    expected = UECM(dane_data.lrm, 1, **kwargs).fit().bounds_test(case)
+    res = UECM(dane_data.lrm, lags, **kwargs).fit()
+    assert res.model.ar_lags is None
+    bounds_result = res.bounds_test(case)
+    assert_allclose(bounds_result.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(bounds_result.pvalue, expected.pvalue, rtol=1e-12)
+    assert_allclose(bounds_result.critical_values, expected.critical_values)
+
+
+@pytest.mark.parametrize("lags", [0, 2])
+@pytest.mark.parametrize("case, trend", [(1, "n"), (3, "c"), (5, "ct")])
+def test_bounds_test_matches_wald_test(lags, case, trend):
+    # The rebuilt model must have the lag structure of the original model, so
+    # that for the matching trend the bounds statistic is the F statistic of
+    # the test that all level terms are 0
+    res = UECM(
+        dane_data.lrm,
+        lags,
+        dane_data[["lry", "ibo", "ide"]],
+        {"lry": 1, "ibo": 3, "ide": 2},
+        trend=trend,
+    ).fit()
+    levels = [n for n in res.params.index if n.endswith(".L1") and n[:2] != "D."]
+    assert len(levels) == 4
+    wald = res.wald_test(", ".join(f"{name} = 0" for name in levels), use_f=True)
+    bounds_result = res.bounds_test(case)
+    assert_allclose(bounds_result.statistic, np.squeeze(wald.statistic), rtol=1e-10)
+
+
+def test_bounds_test_from_ardl_no_lagged_dendog():
+    exog = dane_data[["lry", "ibo", "ide"]]
+    ardl = ARDL(dane_data.lrm, 0, exog, 2)
+    res = UECM.from_ardl(ardl).fit()
+    expected = UECM(dane_data.lrm, 0, exog, 2).fit()
+    assert_allclose(
+        res.bounds_test(3).statistic, expected.bounds_test(3).statistic, rtol=1e-12
+    )
 
 
 def test_resids_ardl_uecm():

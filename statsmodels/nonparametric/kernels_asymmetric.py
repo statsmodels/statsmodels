@@ -84,11 +84,11 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         with 1 / nobs, where nobs is the size of `sample`.
     batch_size : int, optional
         If x is an 1-dim array, then points can be evaluated in vectorized
-        form. To limit the amount of memory, a loop can work in batches.
-        The number of batches is determined so that the intermediate array
-        sizes are limited by
-
-        ``np.size(batch) * len(sample) < batch_size * 1000``.
+        form. To limit the amount of memory, a loop works in batches.
+        Evaluation points and sample points are split so that the
+        intermediate kernel arrays have at most ``batch_size * 1000``
+        elements.  A value that yields a budget below one element raises
+        ``ValueError``.
 
         Default is to have at most 10000 elements in intermediate arrays.
 
@@ -103,12 +103,18 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
     else:
         kfunc = kernel_dict_pdf[kernel_type]
 
-    batch_size = batch_size * 1000
+    max_elements = batch_size * 1000
+    if max_elements < 1:
+        raise ValueError("batch_size * 1000 must be at least 1")
 
-    if np.size(x) * len(sample) < batch_size:
+    if np.size(x) * len(sample) < max_elements:
         # no batch-loop
         if np.size(x) > 1:
             x = np.asarray(x)[:, None]
+        elif isinstance(x, (list, tuple)):
+            # one-element list or tuple: an array is needed for the
+            # arithmetic inside the kernel
+            x = np.asarray(x)
 
         pdfi = kfunc(x, sample, bw)
         if weights is None:
@@ -116,15 +122,8 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         else:
             pdf = pdfi @ weights
     else:
-        # batch, designed for 1-d x
-        if weights is None:
-            weights = np.ones(len(sample)) / len(sample)
-
-        k = batch_size // len(sample)
-        n = len(x) // k
-        x_split = np.array_split(x, n)
-        pdf = np.concatenate(
-            [(kfunc(xi[:, None], sample, bw) @ weights) for xi in x_split]
+        pdf = _kernel_asym_batch(
+            kfunc, np.atleast_1d(x), sample, bw, weights, max_elements
         )
 
     return pdf
@@ -152,11 +151,11 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         with 1 / nobs, where nobs is the size of `sample`.
     batch_size : int, optional
         If x is an 1-dim array, then points can be evaluated in vectorized
-        form. To limit the amount of memory, a loop can work in batches.
-        The number of batches is determined so that the intermediate array
-        sizes are limited by
-
-        ``np.size(batch) * len(sample) < batch_size * 1000``.
+        form. To limit the amount of memory, a loop works in batches.
+        Evaluation points and sample points are split so that the
+        intermediate kernel arrays have at most ``batch_size * 1000``
+        elements.  A value that yields a budget below one element raises
+        ``ValueError``.
 
         Default is to have at most 10000 elements in intermediate arrays.
 
@@ -171,12 +170,18 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
     else:
         kfunc = kernel_dict_cdf[kernel_type]
 
-    batch_size = batch_size * 1000
+    max_elements = batch_size * 1000
+    if max_elements < 1:
+        raise ValueError("batch_size * 1000 must be at least 1")
 
-    if np.size(x) * len(sample) < batch_size:
+    if np.size(x) * len(sample) < max_elements:
         # no batch-loop
         if np.size(x) > 1:
             x = np.asarray(x)[:, None]
+        elif isinstance(x, (list, tuple)):
+            # one-element list or tuple: an array is needed for the
+            # arithmetic inside the kernel
+            x = np.asarray(x)
 
         cdfi = kfunc(x, sample, bw)
         if weights is None:
@@ -184,18 +189,86 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         else:
             cdf = cdfi @ weights
     else:
-        # batch, designed for 1-d x
-        if weights is None:
-            weights = np.ones(len(sample)) / len(sample)
-
-        k = batch_size // len(sample)
-        n = len(x) // k
-        x_split = np.array_split(x, n)
-        cdf = np.concatenate(
-            [(kfunc(xi[:, None], sample, bw) @ weights) for xi in x_split]
+        cdf = _kernel_asym_batch(
+            kfunc, np.atleast_1d(x), sample, bw, weights, max_elements
         )
 
     return cdf
+
+
+def _kernel_asym_batch(kfunc, x, sample, bw, weights, max_elements):
+    """Evaluate the weighted kernel sum in blocks of bounded size.
+
+    Evaluation points and sample points are split so that each call of
+    ``kfunc`` handles at most ``max_elements`` elements.  If the sample alone
+    exceeds that budget, one evaluation point is combined with a sample block
+    of at most ``max_elements`` points.
+
+    Parameters
+    ----------
+    kfunc : callable
+        Kernel function returning an array with one row per evaluation point
+        and one column per sample point.
+    x : ndarray
+        Array of evaluation points, typically 1-dim.
+    sample : array_like
+        1-dim sample from which the kernel estimate is computed.
+    bw : float
+        Bandwidth parameter.
+    weights : None or array_like
+        If None, the kernel values are averaged over the sample.  Otherwise
+        they are summed with these weights, without normalizing them.
+    max_elements : int or float
+        Upper bound for the number of elements of the intermediate kernel
+        arrays, that is ``batch_size * 1000``.
+
+    Returns
+    -------
+    float or ndarray
+        Estimate at the points in `x`.  A scalar is returned if `x` has a
+        single element and at most one dimension.
+    """
+    nobs = len(sample)
+
+    # Evaluation points that can be combined with the full sample.  A
+    # non-integer ``batch_size`` was accepted before, so cast for ``range``.
+    max_x = max(1, int(max_elements // nobs))
+    # Sample points that can be combined with ``max_x`` evaluation points.
+    max_obs = max(1, int(max_elements // max_x))
+
+    # The sample only has to be materialized when it is split.  Otherwise the
+    # kernel receives the caller's object (Series, list, ...) unchanged.
+    sample_array = np.asarray(sample) if nobs > max_obs else None
+
+    if weights is not None:
+        weights = np.asarray(weights)
+        if weights.ndim == 0 or weights.shape[0] != nobs:
+            raise ValueError("weights must have one entry per sample point")
+
+    estimates = []
+    for start in range(0, len(x), max_x):
+        x_block = x[start : start + max_x]
+        chunk_sums = []
+        for obs_start in range(0, nobs, max_obs):
+            obs_stop = obs_start + max_obs
+            if sample_array is None:
+                sample_chunk = sample
+            else:
+                sample_chunk = sample_array[obs_start:obs_stop]
+            kernel = kfunc(x_block[:, None], sample_chunk, bw)
+            if weights is None:
+                chunk_sums.append(kernel.sum(-1))
+            else:
+                chunk_sums.append(kernel @ weights[obs_start:obs_stop])
+        block = np.sum(chunk_sums, axis=0)
+        if weights is None:
+            block = block / nobs
+        estimates.append(block)
+
+    estimate = np.concatenate(estimates)
+    if np.size(x) == 1 and x.ndim <= 1:
+        estimate = estimate[0]
+    return estimate
 
 
 def kernel_pdf_beta(x, sample, bw):
