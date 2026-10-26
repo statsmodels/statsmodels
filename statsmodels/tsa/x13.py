@@ -586,8 +586,7 @@ def x13_arima_analysis(
             rawspec_text = rawspec
         else:
             try:
-                with Path(rawspec).open() as f:
-                    rawspec_text = f.read()
+                rawspec_text = _open_and_read(rawspec)
             except Exception as os_err:
                 raise ValueError(
                     "rawspec argument provided but not valid path or spec string"

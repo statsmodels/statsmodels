@@ -7,6 +7,7 @@ from statsmodels.compat.python import lrange
 from statsmodels.compat.scipy import SP_LT_116
 
 from pathlib import Path
+import pickle
 import warnings
 
 import numpy as np
@@ -26,6 +27,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import (
     GLS,
+    GLSAR,
     OLS,
     WLS,
     CompareLRTestResult,
@@ -1853,6 +1855,123 @@ def test_ols_offset_and_score_cache():
     assert mod._wexog_xprod is not None
     mod.initialize()
     assert mod._wexog_xprod is None
+
+
+def _make_old_pickle_models():
+    rng = np.random.default_rng(20261025)
+    nobs = 40
+    exog = add_constant(rng.standard_normal((nobs, 2)))
+    endog = exog @ [1.0, 0.5, -0.3] + rng.standard_normal(nobs)
+    weights = rng.uniform(0.5, 2.0, nobs)
+    sigma = 0.4 ** np.abs(np.subtract.outer(np.arange(nobs), np.arange(nobs)))
+    return {
+        "OLS": lambda: OLS(endog, exog),
+        "WLS": lambda: WLS(endog, exog, weights=weights),
+        "GLS": lambda: GLS(endog, exog, sigma=sigma),
+        "GLSAR": lambda: GLSAR(endog, exog, rho=1),
+    }
+
+
+def _summary_cells(res):
+    """Cells of the tables of summary, without the date and time of the call"""
+    rows = []
+    for table in res.summary().tables:
+        for row in table.data:
+            cells = [str(cell) for cell in row]
+            if cells[0].strip() in ("Date:", "Time:"):
+                cells[1] = ""
+            rows.append(cells)
+    return rows
+
+
+@pytest.mark.parametrize("name", ["OLS", "WLS", "GLS", "GLSAR"])
+@pytest.mark.parametrize("pickle_results", [True, False])
+def test_unpickle_without_default_attributes(name, pickle_results):
+    # GH#9880 releases before the attributes were initialized in __init__ did
+    # not store them, and unpickling never goes through __init__. Mimic these
+    # pickles by dropping the attributes that were not set at the time.
+    make = _make_old_pickle_models()[name]
+    new_attrs = [
+        "weights", "sigma", "offset", "_wendog_xprod", "_wexog_xprod",
+        "_wexog_x_wendog",
+    ]
+    mod = make()
+    res = mod.fit()
+    for attr in new_attrs:
+        # only drop attributes that are unset, WLS needs its weights
+        if attr in vars(mod) and vars(mod)[attr] is None:
+            del vars(mod)[attr]
+    assert any(attr not in vars(mod) for attr in new_attrs)
+
+    obj = pickle.loads(pickle.dumps(res if pickle_results else mod))
+    old_res = obj if pickle_results else obj.fit()
+    old_mod = old_res.model
+
+    expected = make().fit()
+    params = expected.params
+    for attr in ["rsquared", "rsquared_adj", "fvalue", "f_pvalue",
+                 "centered_tss", "llf", "aic", "bic"]:
+        assert_allclose(getattr(old_res, attr), getattr(expected, attr))
+    # The header of the summary holds the date and time of the call, and the
+    # two models are created at different times, so compare all other cells.
+    assert _summary_cells(old_res) == _summary_cells(expected)
+
+    exp_mod = expected.model
+    assert_allclose(old_mod.loglike(params), exp_mod.loglike(params))
+    if name == "OLS":
+        assert_allclose(old_mod.score(params), exp_mod.score(params))
+        assert_allclose(old_mod.hessian(params), exp_mod.hessian(params))
+
+
+def test_iterative_fit_repeated_call_glsar():
+    # GH#9880 repeated calls start from the current rho. Without a
+    # convergence stop, 2 + 2 iterations are the same as 3 iterations.
+    rng = np.random.default_rng(3293829)
+    nobs = 80
+    exog = add_constant(rng.standard_normal((nobs, 2)))
+    u = np.zeros(nobs)
+    e = rng.standard_normal(nobs)
+    for i in range(1, nobs):
+        u[i] = 0.6 * u[i - 1] + e[i]
+    endog = exog @ [1.0, 0.5, -0.3] + u
+
+    mod = GLSAR(endog, exog, rho=1)
+    res_a = mod.iterative_fit(2, rtol=0)
+    res_b = mod.iterative_fit(2, rtol=0)
+    expected = GLSAR(endog, exog, rho=1).iterative_fit(3, rtol=0)
+    assert not np.allclose(res_a.params, res_b.params, rtol=1e-10, atol=0)
+    assert_allclose(res_b.params, expected.params)
+    assert_allclose(res_b.bse, expected.bse)
+    assert_allclose(mod.pinv_wexog, np.linalg.pinv(mod.wexog))
+
+
+def test_iterative_fit_repeated_call_glshet():
+    # GH#9880 repeated calls start from the current weights, so 2 + 2
+    # iterations are the same as 3 iterations on a fresh model.
+    from statsmodels.regression.feasible_gls import GLSHet
+
+    rng = np.random.default_rng(12345)
+    nobs = 200
+    x = rng.uniform(0.5, 3, nobs)
+    exog = add_constant(x)
+    exog_var = add_constant(x**2)
+    endog = exog @ [1.0, 2.0] + np.sqrt(0.2 + x**2) * rng.standard_normal(nobs)
+
+    def make():
+        with pytest.warns(FutureWarning, match="GLSHet is deprecated"):
+            return GLSHet(endog, exog, exog_var=exog_var)
+
+    mod = make()
+    res_a = mod.iterative_fit(2)
+    res_b = mod.iterative_fit(2)
+    expected = make().iterative_fit(3)
+    assert not np.allclose(res_a.params, res_b.params, rtol=1e-10, atol=0)
+    assert_allclose(res_b.params, expected.params)
+    assert_allclose(res_b.bse, expected.bse)
+    assert_allclose(mod.pinv_wexog, np.linalg.pinv(mod.wexog))
+    # a single iteration is WLS with the given (unit) weights
+    res_wls = WLS(endog, exog, weights=np.ones(nobs)).fit()
+    assert_allclose(make().iterative_fit(1).params, res_wls.params)
 
 
 def test_ols_wls_fixed_scale():

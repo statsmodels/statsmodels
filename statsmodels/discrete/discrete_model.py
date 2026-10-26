@@ -31,7 +31,7 @@ __all__ = [
 import warnings
 
 import numpy as np
-from pandas import MultiIndex, get_dummies
+from pandas import DataFrame, Index, MultiIndex, get_dummies
 from scipy import special, stats
 from scipy.special import digamma, gammaln, loggamma, polygamma
 from scipy.stats import nbinom
@@ -3342,6 +3342,13 @@ class MNLogit(MultinomialModel):
 
         # Override cov_names since multivariate model
         yname = self.endog_names
+        # the endog categories in the column order of wendog, kept before
+        # they are converted to strings below
+        categories = Index([self._ynames_map[key] for key in range(int(self.J))])
+        if categories.dtype.kind == "f" and np.all(categories % 1 == 0):
+            # integer valued, e.g., from a formula
+            categories = categories.astype(int)
+        self._endog_categories = categories
         ynames = self._ynames_map
         ynames = MultinomialResults._maybe_convert_ynames_int(ynames)
         # use range below to ensure sortedness
@@ -6197,6 +6204,14 @@ class MultinomialResults(DiscreteResults):
     def conf_int(self, alpha=0.05):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha)
         return confint.transpose(2, 0, 1)
+
+    @Appender(base.Results.predict.__doc__)
+    def predict(self, exog=None, transform=True, *args, **kwargs):
+        pred = super().predict(exog, transform, *args, **kwargs)
+        if isinstance(pred, DataFrame):
+            # label the columns with the endog categories, see GH 4804
+            pred.columns = self.model._endog_categories
+        return pred
 
     def get_prediction(self):
         """Not implemented for Multinomial"""
