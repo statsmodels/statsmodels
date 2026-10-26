@@ -3,7 +3,7 @@ Author: Samuel Scherrer
 """
 
 from statsmodels.compat.pandas import QUARTER_END
-from statsmodels.compat.platform import PLATFORM_32, PLATFORM_LINUX32, PLATFORM_WIN
+from statsmodels.compat.platform import PLATFORM_32, PLATFORM_LINUX32
 
 from itertools import product
 import json
@@ -481,7 +481,10 @@ def test_fit_vs_R(setup_model):
     model_class, model_args, model_kwargs, params, results_R = setup_model
     model = model_class(*model_args, **model_kwargs)
 
-    if PLATFORM_WIN and model.short_name == "AAdA":
+    # The fit of the damped additive trend and additive seasonal model has a
+    # local optimum that the default starting values lead to on some platforms
+    # and BLAS kernels, so start from the parameters estimated by R.
+    if model.short_name == "AAdA":
         start = params
     else:
         start = None

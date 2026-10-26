@@ -21,11 +21,13 @@ class NestedLagOLSResults(NamedTuple):
     Order ``p`` refers to the regression on ``exog`` and the first ``p``
     lag blocks, ``p = 0, 1, ..., len(lags)``.
 
-    Parameters
+    Attributes
     ----------
     r : ndarray
         The upper triangular factor of the regressors of the largest model
-        and the dependent variables, including any indicator columns.
+        and the dependent variables, including any indicator columns. If
+        ``exog`` has a constant column, the lags and the dependent variables
+        are shifted by constants, see ``nested_lag_ols``.
     nobs : ndarray
         The number of observations used by each order.
     df_model : ndarray
@@ -51,6 +53,30 @@ class NestedLagOLSResults(NamedTuple):
 
 
 def _as_blocks(lags, nobs):
+    """
+    Split the lags into blocks that enter the regressions together
+
+    Parameters
+    ----------
+    lags : ndarray or list of array_like
+        An ndarray of shape (nobs, nlags), where each column is a block, or
+        a list of blocks of shape (nobs,) or (nobs, k_j).
+    nobs : int
+        The number of observations.
+
+    Returns
+    -------
+    blocks : list of ndarray
+        The arrays that hold the columns of the blocks, in order. For an
+        ndarray, this is ``[lags]``.
+    widths : ndarray
+        The number of columns of each block, all ones for an ndarray.
+
+    Raises
+    ------
+    ValueError
+        If a block does not have nobs rows or has no columns.
+    """
     if isinstance(lags, np.ndarray):
         if lags.ndim != 2 or lags.shape[0] != nobs:
             raise ValueError("lags must have shape (nobs, nlags)")
@@ -74,15 +100,15 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
 
     Parameters
     ----------
-    endog : ndarray
+    endog : array_like
         The dependent variable, (nobs,), or variables, (nobs, neqs).
-    lags : ndarray or list[ndarray]
+    lags : ndarray or list of array_like
         The lag blocks in the order in which they enter the regressions. If
         an ndarray of shape (nobs, nlags), each column is one block. If a
         list, each block has shape (nobs, k_j). Order p uses the first p
         blocks. The blocks are copied in groups of rows, so views of the data
         avoid forming the full matrix of lags.
-    exog : ndarray, optional
+    exog : array_like, optional
         Regressors included in every order, of shape (nobs, k_exog).
     rcond : float or None
         The relative cutoff for small singular values of the least squares
@@ -100,7 +126,9 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
     check_fit : bool, optional
         If True (default), return None if the largest model fits (almost)
         perfectly, or its residuals are (almost) collinear, so that the
-        sum of squared residuals is dominated by rounding.
+        sum of squared residuals is dominated by rounding. The residuals are
+        compared with the dependent variables after the centering described
+        in the Notes.
 
     Returns
     -------
@@ -108,6 +136,15 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
         The fits of orders 0, 1, ..., len(lags). None if the data are not
         finite or a check fails. The caller should then fit each order
         separately.
+
+    Raises
+    ------
+    ValueError
+        If ``exog`` is not 2-d with ``nobs`` rows, ``lags`` is a 2-d array
+        without ``nobs`` rows or not 2-d, a block in a list ``lags`` is not
+        1-d or 2-d with ``nobs`` rows and at least one column, or ``start``
+        is not a nondecreasing sequence of ``len(lags) + 1`` integers that
+        begins with 0 and ends at most at ``nobs``.
 
     Notes
     -----
@@ -141,6 +178,27 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
     singular value, and taking a submatrix does not increase the largest,
     so the smallest singular value of ``X[start[-1]:]`` and the largest of
     ``X`` bound those of every order.
+
+    The rounding errors of the QR decomposition are proportional to the norm
+    of each column. If ``exog`` has a constant column, which is then in every
+    order, subtracting a constant from any other column changes none of the
+    fits except the coefficient of the constant, because it adds a multiple
+    of the constant column. The lags and the dependent variables are
+    therefore centered before the decomposition (using the observations from
+    ``start[-1]`` on), so a large level relative to the variation does not
+    reduce the accuracy or trigger the fit check. The rank check is applied
+    to the original columns, as the solver that is replaced sees them. The
+    coefficient of the constant of order 0 is corrected for the shift. The
+    factor ``r`` belongs to the centered data.
+
+    Designs that are nearly collinear are still accepted if the rank check
+    passes, which is the case up to a condition number of about ``1e12``
+    for the cutoffs of the callers. The results are then as accurate as
+    those of ``numpy.linalg.lstsq`` compared with high-precision arithmetic,
+    but they differ from fits order by order by about ``1e-8`` to ``1e-5``
+    (relative) for a condition number of about ``1e9`` to ``1e12``, which can
+    reorder models with almost identical criteria. Beyond about ``1e12`` the
+    rank check returns None.
     """
     endog = np.asarray(endog)
     univariate = endog.ndim == 1
@@ -173,6 +231,25 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
             )
     nhead = int(start[-1])
 
+    # If exog has a constant column, subtracting a constant from the lags and
+    # the dependent variables changes none of the fits, see Notes. It removes
+    # the level of the data, which dominates the rounding errors of the QR.
+    offset = np.zeros(ncols)
+    const_col = None
+    if k_exog and nobs - nhead >= 2:
+        is_const = np.all(exog == exog[0], axis=0) & (exog[0] != 0)
+        if is_const.any():
+            const_col = int(np.argmax(is_const))
+            col = k_exog
+            for block in blocks:
+                width = block.shape[1]
+                offset[col : col + width] = block[nhead:].mean(0, dtype=float)
+                col += width
+            offset[k:] = endog[nhead:].mean(0, dtype=float)
+            if not np.all(np.isfinite(offset)):
+                offset[:] = 0.0
+                const_col = None
+
     def fill(rows, first, last):
         rows[:, :k_exog] = exog[first:last]
         col = k_exog
@@ -180,6 +257,8 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
             rows[:, col : col + block.shape[1]] = block[first:last]
             col += block.shape[1]
         rows[:, k:] = endog[first:last]
+        if const_col is not None:
+            rows[:, k_exog:] -= offset[k_exog:]
 
     # Blocks of about 1MB keep the data in cache
     block_rows = max(4 * ncols, 2**17 // ncols)
@@ -199,15 +278,28 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
         return None
 
     if rcond is not None and k:
-        sv = np.linalg.svd(r[:k, :k], compute_uv=False)
+        x_r, x_head = r[:k, :k], head[:, :k]
+        if const_col is not None:
+            # The solver that the results replace sees the original columns,
+            # which are the shifted ones plus a multiple of the constant
+            shift = offset[:k] / exog[0, const_col]
+            x_r = x_r + np.outer(x_r[:, const_col], shift)
+            x_head = x_head + np.outer(x_head[:, const_col], shift)
+            if not (np.all(np.isfinite(x_r)) and np.all(np.isfinite(x_head))):
+                return None
+        sv = np.linalg.svd(x_r, compute_uv=False)
         sv_max = sv[0]
         if nhead:
-            sv_max = np.linalg.norm(np.vstack([r[:k, :k], head[:, :k]]), 2)
+            # The largest singular value of the stacked rows. The largest
+            # eigenvalue of the cross product is accurate relative to itself,
+            # and its calculation is faster than a second SVD.
+            gram = x_r.T @ x_r + x_head.T @ x_head
+            sv_max = np.sqrt(np.linalg.eigvalsh(gram)[-1])
         # The factor 10 is a margin for rounding
         if not sv[-1] > 10 * rcond * sv_max:
             return None
-    # The residual norm of each equation in the largest model, relative to
-    # the norm of the dependent variable over its sample
+    # The norm of the dependent variable of each equation over its sample,
+    # which the residual norm of the largest model is compared with
     ynorm = np.sqrt(np.sum(r[:, k:] ** 2, 0))
 
     cum_widths = np.concatenate([[0], np.cumsum(widths)])
@@ -261,6 +353,12 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
     with np.errstate(divide="ignore", invalid="ignore"):
         scale = np.sqrt(ssr_diag / (nobs_order - df_model)[:, None])
         tvalues_last[has_reg] = np.sign(diag) * qy[last] / scale[has_reg]
+        if const_col == k_exog - 1:
+            # The last regressor of order 0 is the constant, which is the
+            # only coefficient that depends on the shift of the dependent
+            # variable. The t-value is params * |diag| / scale.
+            params_last[0] += offset[k:] / exog[0, const_col]
+            tvalues_last[0] = params_last[0] * np.abs(diag[0]) / scale[0]
     if univariate:
         params_last = params_last[:, 0]
         tvalues_last = tvalues_last[:, 0]

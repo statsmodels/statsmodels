@@ -35,7 +35,7 @@ import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
 import statsmodels.robust.tools as rtools
 from statsmodels.stats.covariance import corr_normal_scores, corr_rank
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import float_like, string_like
 
 from .scale import mad
 
@@ -2420,9 +2420,60 @@ class CovDetMCD:
             return best
 
 
+def _tuning_s_biweight(k_vars, breakdown_point):
+    """
+    Validate breakdown point and compute biweight tuning parameter for S
+
+    Parameters
+    ----------
+    k_vars : int
+        Number of variables in the multivariate data.
+    breakdown_point : float
+        Breakdown point of the S-estimator. Needs to be in (0, 0.5].
+
+    Returns
+    -------
+    float
+        Tuning parameter of the Tukey biweight norm for which the expected
+        rho at the multivariate normal distribution is ``breakdown_point``
+        times the maximum of rho.
+
+    Raises
+    ------
+    ValueError
+        If ``breakdown_point`` is not in (0, 0.5] or if the tuning parameter
+        cannot be found for the combination of ``breakdown_point`` and
+        ``k_vars``.
+    """
+    bp = float_like(breakdown_point, "breakdown_point")
+    if not 0 < bp <= 0.5:
+        raise ValueError(f"breakdown_point must be in (0, 0.5], got {bp}.")
+    # The tuning parameter increases when the breakdown point decreases and
+    # it is approximately sqrt(3 * k_vars / breakdown_point) for a small
+    # breakdown point. The default upper limit of tuning_s_cov is too small
+    # for a small breakdown point in higher dimension.
+    upper = max(30.0, 2 * np.sqrt(3 * k_vars / bp))
+    try:
+        return rtools.tuning_s_cov(
+            rnorms.TukeyBiweight(), k_vars, breakdown_point=bp, limits=(0.5, upper)
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "Cannot find the tuning parameter of the S-estimator for "
+            f"breakdown_point={bp} and k_vars={k_vars}. Use a larger "
+            "breakdown_point or fewer variables."
+        ) from exc
+
+
 class CovDetS:
     """
     S-estimator for mean and covariance with deterministic starts
+
+    .. versionchanged:: 0.15.1
+
+       The ``breakdown_point`` argument is now used to compute the tuning
+       parameter of the S-estimator. Before, the tuning parameter for a
+       breakdown point of 0.5 was always used.
 
     Parameters
     ----------
@@ -2433,8 +2484,18 @@ class CovDetS:
         If None, then TukeyBiweight norm is used.
         (Currently no other norms are supported for calling the initial
         S-estimator)
-    breakdown_point : float in (0, 0.5], optional
-        Breakdown point for first stage S-estimator.
+    breakdown_point : float, optional
+        Breakdown point for first stage S-estimator. Must be in the interval
+        (0, 0.5]. The tuning parameter of the norm is chosen such that the
+        expected rho under the multivariate normal model equals
+        ``breakdown_point`` times the maximum of rho.
+
+    Raises
+    ------
+    ValueError
+        If ``breakdown_point`` is not in (0, 0.5], or if the tuning parameter
+        cannot be computed for the combination of ``breakdown_point`` and the
+        number of variables.
 
     Notes
     -----
@@ -2466,7 +2527,7 @@ class CovDetS:
         # self.scale_bias = scale_bias
         if norm is None:
             norm = rnorms.TukeyBiweight()
-            c = rtools.tuning_s_cov(norm, k_vars, breakdown_point=breakdown_point)
+            c = _tuning_s_biweight(k_vars, breakdown_point)
             norm._set_tuning_param(c, inplace=True)
             self.scale_bias = rtools.scale_bias_cov_biw(c, k_vars)[0]
         else:
@@ -2658,6 +2719,12 @@ class CovDetMM:
     efficiency. For other cases, the user has to provide the norm instance
     with desired tuning parameter.
 
+    .. versionchanged:: 0.15.1
+
+       The ``breakdown_point`` argument is now used to compute the tuning
+       parameter of the first stage S-estimator. Before, the tuning parameter
+       for a breakdown point of 0.5 was always used.
+
     Parameters
     ----------
     data : array_like
@@ -2670,10 +2737,20 @@ class CovDetMM:
         If ``norm`` is an instance of TukeyBiweight, then it will be used in
         the second stage M-estimation. The ``efficiency`` argument is ignored
         and the tuning parameter of the user provided instance is not changed.
-    breakdown_point : float in (0, 0.5], optional
-        Breakdown point for first stage S-estimator.
+    breakdown_point : float, optional
+        Breakdown point for first stage S-estimator. Must be in the interval
+        (0, 0.5]. The tuning parameter of the norm of the first stage is
+        chosen such that the expected rho under the multivariate normal model
+        equals ``breakdown_point`` times the maximum of rho.
     efficiency : float, optional
         Asymptotic efficiency of second stage M estimator.
+
+    Raises
+    ------
+    ValueError
+        If ``breakdown_point`` is not in (0, 0.5], or if the tuning parameter
+        of the first stage cannot be computed for the combination of
+        ``breakdown_point`` and the number of variables.
 
     Notes
     -----
@@ -2713,6 +2790,8 @@ class CovDetMM:
         self.nobs, k_vars = self.data.shape
         self.k_vars = k_vars
         self.breakdown_point = breakdown_point
+        # fail early, the first stage is only created in fit
+        _tuning_s_biweight(k_vars, breakdown_point)
 
         # self.scale_bias = scale_bias
         if norm is None:

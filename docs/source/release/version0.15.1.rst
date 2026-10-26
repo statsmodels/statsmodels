@@ -267,6 +267,8 @@ Time series analysis
   range of the tabulated critical values, which is 1% to 95%; it was also
   raised for statistics between the 90% and 95% critical values.
   :issue:`8978`, :pr:`10475`, :pr:`10568`
+- ``UECMResults.bounds_test`` raised a ``TypeError`` for a model without lagged
+  differences of the dependent variable (``lags=0``). :pr:`10578`
 - :meth:`~statsmodels.tsa.arima_process.ArmaProcess.arma2ma` and ``arma2ar``
   raised an ``AttributeError`` if ``lags`` is not given. They default to
   ``nobs`` coefficients. :issue:`4464`, :pr:`10466`, :pr:`10569`
@@ -347,14 +349,23 @@ Time series analysis
   trading days, can use a ``DatetimeIndex`` with a matching frequency (e.g.
   ``"B"`` or a ``CustomBusinessDay``); data with missing observations can be
   reindexed to consecutive periods. Consecutive periods with a frequency
-  multiplier, such as ``"2Q"``, are still supported. :issue:`6247`,
-  :issue:`8950`, :pr:`10572`
+  multiplier, such as ``"2Q"``, are still supported. For an ignored
+  ``PeriodIndex`` the "Sample" line of the results summary shows integer
+  positions, e.g. ``0 - 19``, and ``model.data.dates`` is ``None``, as for a
+  ``DatetimeIndex`` without a frequency. :issue:`6247`, :issue:`8950`,
+  :pr:`10572`, :pr:`10581`
 - The asymptotic critical values and p-values of
   :meth:`~statsmodels.tsa.ardl.UECMResults.bounds_test` are looked up with the
   number of regressors, excluding the dependent variable, as in Pesaran, Shin
   and Smith (2001). They were those for one regressor too many, so the
   p-values were too small. Models with 10 regressors use the tables instead of
   simulation. :issue:`10546`, :pr:`10574`
+- The statistic of :meth:`~statsmodels.tsa.ardl.UECMResults.bounds_test` was
+  computed without the fixed regressors and the seasonal terms of the model,
+  so that it did not depend on them. They are now included as controls, and
+  the statistic matches R's ``ARDL::bounds_f_test``. A model that uses
+  ``deterministic`` raises a ``NotImplementedError`` instead of ignoring the
+  process. :pr:`10579`
 
 Statistics and tests
 --------------------

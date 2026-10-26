@@ -16,7 +16,8 @@ transformed using pss_process.py.
 
 The format of the keys are (k, case, I1) where
 
-* k is the number of x variables included in the model (0 is an ADF)
+* k is the number of x variables included in the model, which excludes the
+  dependent variable y. Tables are available for k = 1, 2, ..., 10
 * case is 1, 2, 3, 4 or 5 and corresponds to the PSS paper
 * I1 is True if X contains I1 variables and False if X is stationary
 

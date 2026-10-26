@@ -43,6 +43,7 @@ import numpy as np
 from packaging.version import Version, parse
 
 __all__ = [
+    "NP_LT_1_24",
     "NP_LT_2",
     "NP_LT_24",
     "inplace_reshape",
@@ -50,6 +51,7 @@ __all__ = [
     "np_new_unique",
 ]
 
+NP_LT_1_24 = parse(np.__version__) < Version("1.23.99")
 NP_LT_2 = parse(np.__version__) < Version("1.99.99")
 NP_LT_24 = parse(np.__version__) < Version("2.3.99")
 
