@@ -4,6 +4,8 @@ Created on Thu Aug 30 21:51:08 2012
 Author: Josef Perktold
 
 """
+from statsmodels.compat.numpy import NP_LT_2
+
 from pathlib import Path
 import warnings
 
@@ -13,11 +15,21 @@ import pandas as pd
 import pytest
 
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
 current_path = Path(__file__).resolve().parent
 dta_path = Path(current_path).joinpath("Matlab_results", "test_coint.csv")
 dta = pd.read_csv(dta_path, header=None, delimiter=r"\s+").values
+
+ComplexWarning = np.ComplexWarning if NP_LT_2 else np.exceptions.ComplexWarning
+
+
+def _coint_johansen(*args, **kwargs):
+    # The eigenvalues of the Johansen problem can have rounding noise in the
+    # imaginary part, which depends on the platform and LAPACK
+    with warns_or_none(ComplexWarning, match="Casting complex values to real"):
+        return coint_johansen(*args, **kwargs)
 
 
 class CheckCointJoh:
@@ -45,7 +57,7 @@ class TestCointJoh12(CheckCointJoh):
 
     @classmethod
     def setup_class(cls):
-        cls.res = coint_johansen(dta, 1, 2)
+        cls.res = _coint_johansen(dta, 1, 2)
         cls.nobs_r = 173 - 1 - 2
 
         cls.res1_m = np.array(
@@ -219,7 +231,7 @@ class TestCointJoh09(CheckCointJoh):
 
     @classmethod
     def setup_class(cls):
-        cls.res = coint_johansen(dta, 0, 9)
+        cls.res = _coint_johansen(dta, 0, 9)
         cls.nobs_r = 173 - 1 - 9
         # fprintf(1, '%18.16g, ', r1)
         cls.res1_m = np.array(
@@ -301,7 +313,7 @@ class TestCointJohMin18(CheckCointJoh):
 
     @classmethod
     def setup_class(cls):
-        cls.res = coint_johansen(dta, -1, 8)
+        cls.res = _coint_johansen(dta, -1, 8)
         cls.nobs_r = 173 - 1 - 8
 
         cls.res1_m = np.array(
@@ -384,7 +396,7 @@ class TestCointJoh25(CheckCointJoh):
     def setup_class(cls):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=HypothesisTestWarning)
-            cls.res = coint_johansen(dta, 2, 5)
+            cls.res = _coint_johansen(dta, 2, 5)
         cls.nobs_r = 173 - 1 - 5
 
         # Note: critical values not available if trend>1
@@ -473,7 +485,7 @@ def test_coint_johansen_0lag():
     e1 = rs.normal(0, 1, 1000)
     y = x + 5 + e1
     data = pd.concat([x, y], axis=1)
-    result = coint_johansen(data, det_order=-1, k_ar_diff=0)
+    result = _coint_johansen(data, det_order=-1, k_ar_diff=0)
     assert result.eig.shape == (2,)
 
 
@@ -481,7 +493,7 @@ def test_johansen_result_aliases_and_rkt_meth():
     # trace_stat/max_eig_stat/*_crit_vals are documented aliases for
     # lr1/lr2/cvt/cvm; rkt and meth have no alias and were never touched
     # by any existing test.
-    res = coint_johansen(dta, 1, 2)
+    res = _coint_johansen(dta, 1, 2)
 
     assert res.trace_stat is res.lr1
     assert res.max_eig_stat is res.lr2

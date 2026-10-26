@@ -11,12 +11,20 @@ from numpy.testing import assert_allclose, assert_almost_equal
 import pytest
 
 import statsmodels.datasets.macrodata
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
 from statsmodels.tsa.vector_ar.svar_model import SVAR
 
 DECIMAL_6 = 6
 DECIMAL_5 = 5
 DECIMAL_4 = 4
+
+
+def _may_not_converge():
+    # The ML fits of the simulated replications may stop short of convergence,
+    # which depends on the platform
+    return warns_or_none(ConvergenceWarning, match="Maximum Likelihood optimization")
 
 
 class TestSVAR:
@@ -69,7 +77,7 @@ class TestSVAR:
         # mostly SMOKE, API test
         # this only checks that the methods work and produce the same result
         res1 = self.res1
-        with pytest.warns(FutureWarning):
+        with pytest.warns(FutureWarning), _may_not_converge():
             errband1 = res1.sirf_errband_mc(
                 orth=False,
                 repl=50,
@@ -82,7 +90,7 @@ class TestSVAR:
         assert isinstance(errband1, ErrorBand)
 
         irf = res1.irf()
-        with pytest.warns(FutureWarning):
+        with pytest.warns(FutureWarning), _may_not_converge():
             errband2 = irf.errband_mc(
                 orth=False, svar=True, repl=50, signif=0.05, rng=987123, burn=100
             )
@@ -111,18 +119,18 @@ class TestSVAR:
         # degenerate (identical) replications the resulting error band
         # collapses to lower == upper.
         warn_cm = pytest.warns(FutureWarning) if isinstance(rng, int) else nullcontext()
-        with warn_cm:
+        with warn_cm, _may_not_converge():
             errband = self.res1.sirf_errband_mc(
                 orth=False, repl=5, steps=3, signif=0.5, rng=rng, burn=10, cum=False
             )
         assert not np.allclose(errband.lower, errband.upper)
 
     def test_sirf_errband_mc_reproducible_with_int_seed(self):
-        with pytest.warns(FutureWarning):
+        with pytest.warns(FutureWarning), _may_not_converge():
             errband1 = self.res1.sirf_errband_mc(
                 orth=False, repl=5, steps=3, signif=0.5, rng=0, burn=10, cum=False
             )
-        with pytest.warns(FutureWarning):
+        with pytest.warns(FutureWarning), _may_not_converge():
             errband2 = self.res1.sirf_errband_mc(
                 orth=False, repl=5, steps=3, signif=0.5, rng=0, burn=10, cum=False
             )

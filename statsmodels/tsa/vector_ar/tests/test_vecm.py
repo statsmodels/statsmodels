@@ -1,3 +1,5 @@
+from statsmodels.compat.numpy import NP_LT_2
+
 import numpy as np
 from numpy.testing import (
     assert_allclose,
@@ -7,7 +9,7 @@ import pytest
 from scipy import special
 
 import statsmodels.datasets.interest_inflation.data as e6
-from statsmodels.tools.testing import assert_equal
+from statsmodels.tools.testing import assert_equal, warns_or_none
 from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import (
     dt_s_tup_to_string,
     load_results_jmulti,
@@ -22,6 +24,15 @@ from statsmodels.tsa.vector_ar.vecm import (
 )
 
 pytestmark = pytest.mark.filterwarnings("ignore:in the future np.array_split")
+
+ComplexWarning = np.ComplexWarning if NP_LT_2 else np.exceptions.ComplexWarning
+
+
+def _select_coint_rank(*args, **kwargs):
+    # The eigenvalues of the Johansen problem can have rounding noise in the
+    # imaginary part, which depends on the platform and LAPACK
+    with warns_or_none(ComplexWarning, match="Casting complex values to real"):
+        return select_coint_rank(*args, **kwargs)
 
 
 class DataSet:
@@ -1580,7 +1591,7 @@ def test_select_coint_rank():  # This is only a smoke test.
     endog = data[datasets[0]]
     neqs = endog.shape[1]
 
-    trace_result = select_coint_rank(endog, 0, 3, method="trace")
+    trace_result = _select_coint_rank(endog, 0, 3, method="trace")
     rank = trace_result.rank
     r_1 = trace_result.r_1
     test_stats = trace_result.test_stats
@@ -1592,7 +1603,7 @@ def test_select_coint_rank():  # This is only a smoke test.
     if rank < neqs:
         assert (test_stats[rank] < crit_vals[rank])
 
-    maxeig_result = select_coint_rank(endog, 0, 3, method="maxeig", signif=0.1)
+    maxeig_result = _select_coint_rank(endog, 0, 3, method="maxeig", signif=0.1)
     rank = maxeig_result.rank
     r_1 = maxeig_result.r_1
     test_stats = maxeig_result.test_stats
@@ -1612,7 +1623,7 @@ def test_coint_rank_results_summary():
     # validated numerically in test_select_coint_rank above.
     endog = data[datasets[0]]
 
-    trace_result = select_coint_rank(endog, 0, 3, method="trace", signif=0.05)
+    trace_result = _select_coint_rank(endog, 0, 3, method="trace", signif=0.05)
     table = trace_result.summary()
     text = str(table)
     assert "trace" in text.lower()
@@ -1622,7 +1633,7 @@ def test_coint_rank_results_summary():
     for i in range(num_tests + 1):
         assert f"{trace_result.test_stats[i]:#0.4g}" in text
 
-    maxeig_result = select_coint_rank(
+    maxeig_result = _select_coint_rank(
         endog, 0, 3, method="maxeig", signif=0.1
     )
     text_maxeig = str(maxeig_result.summary())
