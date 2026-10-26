@@ -99,7 +99,6 @@ def _check_cell_counts(table):
 
 
 class _Bunch:
-
     def __repr__(self):
         return "<bunch containing results, print to see contents>"
 
@@ -1207,7 +1206,9 @@ class StratifiedTable:
 
         statistic = np.sum(self.table[0, 0, :] - self._apb * self._apc / self._n)
         statistic = np.abs(statistic)
-        if correction:
+        # The continuity correction must not overshoot zero; as in R's
+        # mantelhaen.test it is only applied if |sum(a - E(a))| >= 0.5
+        if correction and statistic >= 0.5:
             statistic -= 0.5
         statistic = statistic**2
         denom = self._apb * self._apc * self._bpd * self._cpd

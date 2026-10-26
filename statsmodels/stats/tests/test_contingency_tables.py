@@ -169,7 +169,6 @@ def test_resids():
 def test_ordinal_association():
 
     for k, table in enumerate(tables):
-
         row_scores = 1 + np.arange(table.shape[0])
         col_scores = 1 + np.arange(table.shape[1])
 
@@ -378,7 +377,6 @@ def test_cochrans_q_return_object_deprecated():
 
 
 class CheckStratifiedMixin:
-
     @classmethod
     def initialize(cls, tables, use_arr=False):
         tables1 = tables if not use_arr else np.dstack(tables)
@@ -729,7 +727,6 @@ class Check2x2Mixin:
 
 
 class Test2x2_1(Check2x2Mixin):
-
     @classmethod
     def setup_class(cls):
         data = np.zeros((8, 2))
@@ -778,8 +775,9 @@ def test_nominal_association_small_pvalue(table, shift_zeros):
     """
     from scipy import stats
 
-    rslt = ctab.Table(np.asarray(table, dtype=float),
-                      shift_zeros=shift_zeros).test_nominal_association()
+    rslt = ctab.Table(
+        np.asarray(table, dtype=float), shift_zeros=shift_zeros
+    ).test_nominal_association()
 
     expected = stats.chi2.sf(rslt.statistic, rslt.df)
 
@@ -791,9 +789,7 @@ def test_homogeneity_small_pvalue():
     """Stuart-Maxwell p-value must survive the far upper tail. GH#10274."""
     from scipy import stats
 
-    table = np.asarray(
-        [[18, 36, 36], [1, 18, 36], [1, 1, 18]], dtype=float
-    )
+    table = np.asarray([[18, 36, 36], [1, 18, 36], [1, 1, 18]], dtype=float)
     rslt = ctab.SquareTable(table, shift_zeros=False).homogeneity()
 
     expected = stats.chi2.sf(rslt.statistic, rslt.df)
@@ -806,9 +802,7 @@ def test_stratified_test_null_odds_small_pvalue():
     """StratifiedTable.test_null_odds p-value must not cancel. GH#10274."""
     from scipy import stats
 
-    table = np.asarray(
-        [[[60, 60], [1, 1]], [[1, 1], [60, 60]]], dtype=float
-    )
+    table = np.asarray([[[60, 60], [1, 1]], [[1, 1], [60, 60]]], dtype=float)
     rslt = ctab.StratifiedTable(table).test_null_odds()
 
     expected = stats.chi2.sf(rslt.statistic, 1)
@@ -832,7 +826,9 @@ def test_stratified_negative_counts_rejected():
     # companion to the base-Table check: StratifiedTable keeps its own
     # constructor, and negative counts used to flow through every statistic
     with pytest.raises(ValueError, match="non-negative"):
-        ctab.StratifiedTable(np.asarray([[[2, 2], [2, -1]], [[3, 1], [1, 3]]], dtype=float))
+        ctab.StratifiedTable(
+            np.asarray([[[2, 2], [2, -1]], [[3, 1], [1, 3]]], dtype=float)
+        )
     with pytest.raises(ValueError, match="non-negative"):
         ctab.StratifiedTable([[[2, 2], [2, 2]], [[3, 1], [1, -2]]])
 
@@ -1044,3 +1040,30 @@ def test_equal_odds_statistic_sum_overflow_legacy(adjust):
     assert all(warning.category is RuntimeWarning for warning in caught)
     assert_equal(result.statistic, np.inf)
     assert_equal(result.pvalue, 0.0)
+
+
+def test_null_odds_correction_no_overshoot():
+    # The continuity correction is only applied if |sum(a - E(a))| >= 0.5,
+    # as in R's mantelhaen.test; otherwise it would enlarge the statistic.
+    # Single rare event: sum(a - E(a)) = -0.01, R: X2 = 0.0101, p = 0.92
+    st = ctab.StratifiedTable([np.array([[0, 1], [1, 98]])])
+    r0 = st.test_null_odds(correction=False)
+    r1 = st.test_null_odds(correction=True)
+    assert_allclose(r0.statistic, 0.0001 / 0.0099, rtol=1e-10)
+    assert_allclose(r1.statistic, r0.statistic, rtol=1e-12)
+    assert r1.pvalue > 0.9
+    # sum(a - E(a)) = 0 exactly: statistic is 0 with or without correction
+    tables = [np.array([[3, 2], [2, 3]]), np.array([[2, 3], [3, 2]])]
+    r1 = ctab.StratifiedTable(tables).test_null_odds(correction=True)
+    assert_allclose(r1.statistic, 0, atol=1e-14)
+    assert_allclose(r1.pvalue, 1, atol=1e-14)
+    # |sum(a - E(a))| >= 0.5: correction applied as before
+    tables = [np.array([[10, 5], [5, 10]]), np.array([[8, 4], [6, 9]])]
+    st = ctab.StratifiedTable(tables)
+    delta = np.sum(st.table[0, 0, :] - st._apb * st._apc / st._n)
+    denom = np.sum(st._apb * st._apc * st._bpd * st._cpd / (st._n**2 * (st._n - 1)))
+    assert_allclose(
+        st.test_null_odds(correction=True).statistic,
+        (abs(delta) - 0.5) ** 2 / denom,
+        rtol=1e-12,
+    )

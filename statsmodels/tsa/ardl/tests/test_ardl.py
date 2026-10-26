@@ -1,3 +1,5 @@
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 from typing import NamedTuple
 
 import numpy as np
@@ -11,13 +13,14 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.ar_model import AutoReg
+from statsmodels.tsa.ardl import model as ardl_model
 from statsmodels.tsa.ardl.model import (
     ARDL,
     UECM,
     ARDLResults,
     ardl_select_order,
 )
-from statsmodels.tsa.deterministic import DeterministicProcess
+from statsmodels.tsa.deterministic import DeterministicProcess, Seasonality
 
 dane_data = danish_data.load_pandas().data
 
@@ -984,6 +987,259 @@ def test_bounds_test_simulate_order():
     assert (bounds_result_sim.pvalue > bounds_result.pvalue).all()
 
 
+def _bounds_fixed_data(nobs=140):
+    # Cointegrated y and x1, x2 with a stationary effect of z1, z2, z3 and of
+    # quarterly seasonal dummies. The same data was used with the R reference
+    rng = np.random.default_rng(10575)
+    e = rng.standard_normal((nobs, 4))
+    x1 = np.cumsum(e[:, 0]) + 0.05 * np.arange(nobs)
+    x2 = np.cumsum(e[:, 1])
+    z1 = rng.standard_normal(nobs)
+    z2 = 0.5 * np.r_[0.0, e[:-1, 2]] + e[:, 2]
+    z3 = rng.uniform(-1.0, 1.0, nobs)
+    pos = np.arange(nobs) % 4
+    y = np.zeros(nobs)
+    for t in range(1, nobs):
+        y[t] = (
+            y[t - 1]
+            - 0.1 * (y[t - 1] - 0.4 * x1[t - 1] + 0.3 * x2[t - 1] - 0.5)
+            + 0.6 * z1[t]
+            + 0.4 * z2[t]
+            - 0.5 * z3[t]
+            + 0.5 * (pos[t] == 2)
+            - 0.4 * (pos[t] == 3)
+            + 0.3 * (x1[t] - x1[t - 1])
+            + e[t, 3]
+        )
+    index = pd.period_range("1980Q1", periods=nobs, freq="Q")
+    return pd.DataFrame(
+        {"y": y, "x1": x1, "x2": x2, "z1": z1, "z2": z2, "z3": z3}, index=index
+    )
+
+
+# Reference values from R, ARDL 0.2.5 (CRAN), with the data of _bounds_fixed_data
+# written to csv with 17 digits. For each specification, the F statistic and
+# the p-value of the I(1) bound for cases 1 to 5 of
+#
+#   uecm(y ~ x1 + x2 [- 1 | + trend(y)] | <fixed>, data, order=<order>)
+#   bounds_f_test(<model>, case=<case>)
+#
+# The cases 1, 4 and 5 add "- 1" (case 1) or "+ trend(y)" (cases 4 and 5) to
+# the formula. For the seasonal specifications, <fixed> are the explicit
+# quarterly dummies s1, s2, s3 (s0, s1, s2, s3 for case 1, which has no
+# constant), where s_i = 1 if the (zero based) position of the observation
+# modulo 4 is i. R uses the bounds tables of Kripfganz and Schneider, so the
+# p-values only agree with statsmodels to about 0.003.
+BOUNDS_FIXED_REF = {
+    "none": (
+        [
+            3.540334722642,
+            2.640859741313,
+            3.496908717074,
+            2.733365220736,
+            3.640491073069,
+        ],
+        [0.065191, 0.221479, 0.174347, 0.376394, 0.306278],
+    ),
+    "z1": (
+        [
+            2.194698978773,
+            1.648222586499,
+            2.165738388022,
+            2.086999059559,
+            2.778353197338,
+        ],
+        [0.265632, 0.589421, 0.492546, 0.620963, 0.525298],
+    ),
+    "z123": (
+        [
+            3.011727218399,
+            2.519489127349,
+            3.350264734258,
+            2.584100689190,
+            3.361605910168,
+        ],
+        [0.117480, 0.254961, 0.198853, 0.428388, 0.371219],
+    ),
+    "z123_b": (
+        [
+            2.269351154249,
+            1.897824603936,
+            2.508557632225,
+            1.912166292452,
+            2.463065676919,
+        ],
+        [0.247656, 0.478230, 0.391478, 0.694087, 0.616822],
+    ),
+    "seasonal": (
+        [
+            3.425337586493,
+            2.576102370312,
+            3.425337586493,
+            2.681794340056,
+            3.572929058717,
+        ],
+        [0.074224, 0.239045, 0.186010, 0.393332, 0.321163],
+    ),
+    "seasonal_z1": (
+        [
+            2.124326580262,
+            1.595698339355,
+            2.124326580262,
+            2.053107281405,
+            2.735146441131,
+        ],
+        [0.284319, 0.613221, 0.505307, 0.635354, 0.537445],
+    ),
+}
+# name: (lags of y, order of x1 and x2, fixed columns, seasonal)
+BOUNDS_FIXED_SPECS = {
+    "none": (2, {"x1": 2, "x2": 1}, [], False),
+    "z1": (2, {"x1": 2, "x2": 1}, ["z1"], False),
+    "z123": (2, {"x1": 2, "x2": 1}, ["z1", "z2", "z3"], False),
+    "z123_b": (3, {"x1": 1, "x2": 2}, ["z1", "z2", "z3"], False),
+    "seasonal": (2, {"x1": 2, "x2": 1}, [], True),
+    "seasonal_z1": (2, {"x1": 2, "x2": 1}, ["z1"], True),
+}
+BOUNDS_CASE_TREND = {1: "n", 2: "c", 3: "c", 4: "ct", 5: "ct"}
+
+
+@pytest.mark.parametrize("case", [1, 2, 3, 4, 5])
+@pytest.mark.parametrize("spec", sorted(BOUNDS_FIXED_SPECS))
+def test_bounds_test_fixed_seasonal_r(spec, case):
+    # The fixed regressors and the seasonal terms were omitted from the model
+    # used to compute the statistic
+    data = _bounds_fixed_data()
+    lags, order, fixed, seasonal = BOUNDS_FIXED_SPECS[spec]
+    mod = UECM(
+        data["y"],
+        lags,
+        data[["x1", "x2"]],
+        order,
+        trend=BOUNDS_CASE_TREND[case],
+        fixed=data[fixed] if fixed else None,
+        seasonal=seasonal,
+    )
+    result = mod.fit().bounds_test(case)
+    stat, pvalue = BOUNDS_FIXED_REF[spec]
+    assert_allclose(result.statistic, stat[case - 1], rtol=1e-8)
+    assert_allclose(result.pvalue["upper"], pvalue[case - 1], atol=0.005)
+
+
+@pytest.mark.parametrize("case", [3, 5])
+def test_bounds_test_fixed_seasonal_numpy(case):
+    data = _bounds_fixed_data()
+    kwargs = {"trend": BOUNDS_CASE_TREND[case]}
+    expected = UECM(
+        data["y"],
+        2,
+        data[["x1", "x2"]],
+        {"x1": 2, "x2": 1},
+        fixed=data[["z1", "z2"]],
+        seasonal=True,
+        **kwargs,
+    ).fit()
+    mod = UECM(
+        np.asarray(data["y"]),
+        2,
+        np.asarray(data[["x1", "x2"]]),
+        {0: 2, 1: 1},
+        fixed=np.asarray(data[["z1", "z2"]]),
+        seasonal=True,
+        period=4,
+        **kwargs,
+    )
+    result = mod.fit().bounds_test(case)
+    result_pd = expected.bounds_test(case)
+    assert_allclose(result.statistic, result_pd.statistic, rtol=1e-10)
+    assert_allclose(result.pvalue, result_pd.pvalue, rtol=1e-10)
+
+
+@pytest.mark.parametrize("seasonal", [False, True])
+@pytest.mark.parametrize("use_fixed", [False, True])
+@pytest.mark.parametrize("causal", [False, True])
+def test_bounds_test_matches_levels_wald(causal, use_fixed, seasonal):
+    # If the trend of the model is the one of the case, the statistic is the F
+    # statistic that the coefficients on the levels of the model are all 0
+    data = _bounds_fixed_data()
+    mod = UECM(
+        data["y"],
+        2,
+        data[["x1", "x2"]],
+        {"x1": 2, "x2": 1},
+        trend="c",
+        fixed=data[["z1", "z2"]] if use_fixed else None,
+        causal=causal,
+        seasonal=seasonal,
+    )
+    res = mod.fit()
+    ndet = mod._blocks["deterministic"].shape[1]
+    nlvl = mod._blocks["levels"].shape[1]
+    loc = np.arange(ndet, ndet + nlvl)
+    params = np.asarray(res.params)[loc]
+    cov = np.asarray(res.cov_params())[np.ix_(loc, loc)]
+    expected = params @ np.linalg.solve(cov, params) / nlvl
+    assert_allclose(res.bounds_test(3).statistic, expected, rtol=1e-10)
+
+
+def test_bounds_test_deterministic_not_implemented():
+    data = _bounds_fixed_data()
+    det = DeterministicProcess(
+        data.index, constant=True, additional_terms=[Seasonality(4)]
+    )
+    mod = UECM(
+        data["y"],
+        2,
+        data[["x1", "x2"]],
+        {"x1": 2, "x2": 1},
+        trend="n",
+        deterministic=det,
+    )
+    with pytest.raises(NotImplementedError, match="deterministic"):
+        mod.fit().bounds_test(3)
+
+
+# Pesaran, Shin & Smith (2001), Table CI(iii), Case III, at the 10%, 5% and 1%
+# levels, indexed by k, the number of regressors excluding the dependent
+# variable. The statsmodels tables were simulated independently, so they
+# differ from the published values by up to about 0.07.
+PSS_CASE_3 = {
+    1: ([4.04, 4.94, 6.84], [4.78, 5.73, 7.84]),
+    2: ([3.17, 3.79, 5.15], [4.14, 4.85, 6.36]),
+    3: ([2.72, 3.23, 4.29], [3.77, 4.35, 5.61]),
+    10: ([1.83, 2.06, 2.54], [2.94, 3.24, 3.86]),
+}
+
+
+@pytest.mark.parametrize("k", sorted(PSS_CASE_3))
+def test_bounds_test_crit_vals_pss(k):
+    # GH-10546: the tables were indexed by the number of variables including y
+    rng = np.random.default_rng(10546)
+    data = np.cumsum(rng.standard_normal((200, k + 1)), axis=0)
+    y = pd.Series(data[:, 0], name="y")
+    x = pd.DataFrame(data[:, 1:], columns=[f"x{i}" for i in range(k)])
+    res = UECM(y, 1, x, 1, trend="c").fit()
+    bounds_result = res.bounds_test(case=3)
+    crit_vals = bounds_result.critical_values.loc[[90.0, 95.0, 99.0]]
+    lower, upper = PSS_CASE_3[k]
+    assert_allclose(crit_vals["lower"], lower, atol=0.1)
+    assert_allclose(crit_vals["upper"], upper, atol=0.1)
+
+
+def test_bounds_test_pvalue_matches_simulation():
+    # GH-10546: with one regressor, the asymptotic p-values were those for two
+    rng = np.random.default_rng(0)
+    nobs = 500
+    x = np.cumsum(rng.standard_normal(nobs))
+    y = np.zeros(nobs)
+    for t in range(1, nobs):
+        y[t] = y[t - 1] - 0.05 * (y[t - 1] - 0.5 * x[t - 1]) + rng.standard_normal()
+    res = UECM(pd.Series(y), 1, pd.DataFrame({"x": x}), 1, trend="c").fit()
+    bounds_result = res.bounds_test(case=3)
+    bounds_result_sim = res.bounds_test(case=3, asymptotic=False, nsim=20_000, rng=0)
+    assert_allclose(bounds_result.pvalue, bounds_result_sim.pvalue, atol=0.003)
+
+
 def test_resids_ardl_uecm():
     ardl_mod = ARDL(
         dane_data.lrm,
@@ -1068,3 +1324,108 @@ def test_ardl_k_constant_deterministic(data):
     res = mod.fit()
     ols_res = OLS(mod._y, mod._x).fit()
     assert_allclose(res.rsquared, ols_res.rsquared)
+
+
+def _select_order_loop(*args, **kwargs):
+    # The previous implementation: fit each model separately
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(ardl_model, "_ardl_select_ssr", lambda *a: None)
+        return ardl_select_order(*args, **kwargs)
+
+
+def _select_order_qr(*args, use_qr=True, **kwargs):
+    # ardl_select_order, checking whether all models come from one QR
+    calls = []
+    orig = ardl_model._ardl_select_ssr
+
+    def select_ssr(*a):
+        calls.append(orig(*a))
+        return calls[-1]
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(ardl_model, "_ardl_select_ssr", select_ssr)
+        res = ardl_select_order(*args, **kwargs)
+    assert len(calls) == 1
+    assert (calls[0] is not None) == use_qr
+    return res
+
+
+def _assert_select_order_equal(res, expected, rtol):
+    for ic in ("aic", "bic", "hqic"):
+        actual = getattr(res, ic)
+        desired = getattr(expected, ic)
+        assert_allclose(actual.index, desired.index, rtol=rtol)
+        assert list(actual) == list(desired)
+    assert res.model.ardl_order == expected.model.ardl_order
+    assert res.ar_lags == expected.ar_lags
+    assert res.dl_lags == expected.dl_lags
+
+
+def test_ardl_select_order_qr(
+    data, maxlag, maxorder, trend, causal, fixed, seasonal, hold_back
+):
+    # one QR gives the same criteria as fitting each model separately
+    y, x, z, maxorder, period = _convert_to_numpy(
+        data, fixed, maxorder, seasonal, False
+    )
+    args = (y, maxlag, x, maxorder, trend)
+    kwargs = dict(
+        fixed=fixed,
+        causal=causal,
+        hold_back=hold_back,
+        period=period,
+        seasonal=seasonal,
+        glob=seasonal,
+    )
+    res = _select_order_qr(*args, **kwargs)
+    expected = _select_order_loop(*args, **kwargs)
+    _assert_select_order_equal(res, expected, rtol=1e-10)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
+def test_ardl_select_order_qr_simulated(trend):
+    rng = np.random.default_rng(10545)
+    nobs = 500
+    x = np.cumsum(rng.standard_normal((nobs, 2)), axis=0)
+    e = rng.standard_normal(nobs)
+    y = np.zeros(nobs)
+    for t in range(2, nobs):
+        y[t] = 0.5 * y[t - 1] - 0.2 * y[t - 2] + 0.3 * x[t - 1, 0] + e[t]
+    args = (y, 4, x, {0: 2, 1: 2}, trend)
+    for ic in ("aic", "bic"):
+        res = _select_order_qr(*args, ic=ic)
+        expected = _select_order_loop(*args, ic=ic)
+        _assert_select_order_equal(res, expected, rtol=1e-10)
+        assert res.model.ardl_order[:2] == (2, 1)
+    res = _select_order_qr(*args, glob=True, hold_back=4)
+    expected = _select_order_loop(*args, glob=True, hold_back=4)
+    _assert_select_order_equal(res, expected, rtol=1e-10)
+
+
+def test_ardl_select_order_qr_fallback(data):
+    # Singular regressors and exact fits are fitted model by model
+    # A constant in fixed and in the trend
+    fixed = np.ones((data.y.shape[0], 1))
+    always = np.ones((data.y.shape[0], 2))
+    select = [np.asarray(data.x)]
+    y = np.asarray(data.y)
+    assert ardl_model._ardl_select_ssr(y, always, select, False) is None
+    res = _select_order_qr(data.y, 2, data.x, 2, "c", fixed=fixed, use_qr=False)
+    expected = _select_order_loop(data.y, 2, data.x, 2, "c", fixed=fixed)
+    _assert_select_order_equal(res, expected, rtol=0)
+
+    # An exact fit
+    y = 1.0 + 0.5 * data.x["lry"] - 0.2 * data.x["ibo"].shift(1).fillna(0.0)
+    res = _select_order_qr(y, 2, data.x, 2, "c", use_qr=False)
+    expected = _select_order_loop(y, 2, data.x, 2, "c")
+    _assert_select_order_equal(res, expected, rtol=0)
+
+
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="linalg error not raised on WASM")
+def test_ardl_select_order_nan(data):
+    # Data that are not finite use the model by model fits, which raise
+    y = data.y.copy()
+    y.iloc[20] = np.nan
+    with pytest.raises(np.linalg.LinAlgError):
+        ardl_select_order(y, 2, data.x, 2, "c")

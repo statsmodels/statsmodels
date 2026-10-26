@@ -98,11 +98,16 @@ jobs:
     displayName: 'Use Python $(python.version) $(python.architecture)'
 
   - bash: |
-      echo "##vso[task.prependpath]$CONDA/bin"
-      echo "##vso[task.prependpath]$CONDA/envs/statsmodels-test"
-      echo "##vso[task.prependpath]$CONDA/envs/statsmodels-test/condabin"
-      echo "##vso[task.prependpath]$CONDA/envs/statsmodels-test/bin"
-    displayName: 'Add conda and env to PATH'
+      # Use Miniforge rather than the Miniconda on the hosted image, which
+      # newer images (Ubuntu 26.04) no longer provide.
+      curl -fsSL -o miniforge.sh \
+        "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh"
+      bash miniforge.sh -b -p "${HOME}/miniforge3"
+      rm miniforge.sh
+      "${HOME}/miniforge3/bin/mamba" --version
+      echo "##vso[task.prependpath]${HOME}/miniforge3/bin"
+      echo "##vso[task.prependpath]${HOME}/miniforge3/envs/statsmodels-test/bin"
+    displayName: 'Install Miniforge and add it and the env to PATH'
     condition: eq(variables['use.conda'], 'true')
 
   - script: |
@@ -141,9 +146,7 @@ jobs:
     displayName: 'List Configuration (PyPI)'
     condition: ne(variables['use.conda'], 'true')
 
-  - script: |
-      source activate statsmodels-test
-      conda list
+  - script: mamba list -n statsmodels-test
     displayName: 'List Configuration (conda)'
     condition: eq(variables['use.conda'], 'true')
 

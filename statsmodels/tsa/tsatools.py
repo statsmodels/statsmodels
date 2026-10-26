@@ -1005,7 +1005,8 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
     # Business month/quarter/year rules (BME, BQS, BYE, CBMS, ...) share
     # the seasonal period of their calendar counterparts, so reduce them
     # to the corresponding calendar rule (ME, QS, YE, MS) before mapping.
-    if freq.startswith(("CBM", "BM", "BQ", "BY")):
+    # pandas < 2.2 spells the business year rules BA and BAS.
+    if freq.startswith(("CBM", "BM", "BQ", "BY", "BA")):
         freq = freq.lstrip("BC")
 
     yearly_freqs = ("A-", "AS-", "Y-", "YS-", "YE-")
