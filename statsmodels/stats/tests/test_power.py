@@ -9,6 +9,7 @@ Created on Sat Mar 09 08:44:49 2013
 Author: Josef Perktold
 """
 
+from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
 
 import copy
@@ -1297,6 +1298,14 @@ def test_ttest_ind_power_ratio_series():
     ratios = pd.Series(RATIOS, index=list("abc"))
     res = ind.power(0.5, 50, 0.05, ratio=ratios)
     assert_allclose(res, POWER_RATIO_R["two-sided"], rtol=1e-6)
+
+
+@pytest.mark.skipif(
+    PD_LT_2, reason="pandas 1.x cannot apply a SciPy ufunc to a Series and an array"
+)
+def test_ttest_ind_power_ratio_series_result():
+    ind = smp.TTestIndPower()
+    ratios = pd.Series(RATIOS, index=list("abc"))
     # without a zero the Series input keeps working as before, with a Series
     # as result
     res = ind.power(0.5, 50, 0.05, ratio=ratios.iloc[1:])
