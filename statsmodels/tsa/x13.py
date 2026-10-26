@@ -490,9 +490,9 @@ def x13_arima_analysis(
     rawspec : str or Path, optional
         As this wrapper does not provide all the available parameter
         options, users can provide a full spec file instead.
-        If valid Path, will read in contents of file, otherwise string will
-        be treated as a valid spec file. Other parameters for the spec file
-        will be IGNORED.
+        If valid Path, will read in contents of file, which must be encoded as
+        UTF-8, otherwise string will be treated as a valid spec file. Other
+        parameters for the spec file will be IGNORED.
         Series data and required output formats (`x11{save=(d11 d12 d13)}`)
         are spliced into spec file before it is passed to x12/x13. Spec
         file must not contain `series{data=()}` or `series{file="" format=""}`
@@ -590,6 +590,11 @@ def x13_arima_analysis(
         else:
             try:
                 rawspec_text = _open_and_read(rawspec)
+            except UnicodeDecodeError as decode_err:
+                raise ValueError(
+                    f"The rawspec file {rawspec} could not be decoded. Spec "
+                    "files must be encoded as UTF-8."
+                ) from decode_err
             except Exception as os_err:
                 raise ValueError(
                     "rawspec argument provided but not valid path or spec string"

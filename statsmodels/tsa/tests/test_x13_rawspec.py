@@ -120,3 +120,14 @@ def test_rawspec_file_utf8_bom(no_x12, tmp_path):
 
     assert "\ufeff" not in spec
     assert 'title="bom"' in spec
+
+
+def test_rawspec_file_not_utf8(no_x12, tmp_path):
+    specfile = tmp_path / "latin1.spc"
+    specfile.write_bytes((SPEC_TEMPLATE % NON_ASCII_TITLE).encode("latin-1"))
+
+    with pytest.raises(ValueError, match="UTF-8") as exc_info:
+        x13.x13_arima_analysis(_monthly_endog(), rawspec=str(specfile), speconly=True)
+
+    assert isinstance(exc_info.value.__cause__, UnicodeDecodeError)
+    assert str(specfile) in str(exc_info.value)
