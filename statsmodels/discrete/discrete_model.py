@@ -3345,8 +3345,13 @@ class MNLogit(MultinomialModel):
         # the endog categories in the column order of wendog, kept before
         # they are converted to strings below
         categories = Index([self._ynames_map[key] for key in range(int(self.J))])
-        if categories.dtype.kind == "f" and np.all(categories % 1 == 0):
-            # integer valued, e.g., from a formula
+        if (
+            categories.dtype.kind == "f"
+            and np.all(categories % 1 == 0)
+            and np.all(np.abs(categories) < 2**53)
+        ):
+            # integer valued, e.g., from a formula. Larger values cannot be
+            # represented exactly as int64 and stay floats.
             categories = categories.astype(int)
         self._endog_categories = categories
         ynames = self._ynames_map
@@ -6208,9 +6213,10 @@ class MultinomialResults(DiscreteResults):
     @Appender(base.Results.predict.__doc__)
     def predict(self, exog=None, transform=True, *args, **kwargs):
         pred = super().predict(exog, transform, *args, **kwargs)
-        if isinstance(pred, DataFrame):
+        categories = getattr(self.model, "_endog_categories", None)
+        if isinstance(pred, DataFrame) and categories is not None:
             # label the columns with the endog categories, see GH 4804
-            pred.columns = self.model._endog_categories
+            pred.columns = categories
         return pred
 
     def get_prediction(self):
