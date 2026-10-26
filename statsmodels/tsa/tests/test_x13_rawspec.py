@@ -84,7 +84,9 @@ def test_rawspec_file_utf8_in_non_utf8_locale(tmp_path):
         check=False,
     )
     assert res.returncode == 0, res.stderr
-    spec = json.loads(res.stdout)
+    # An editable install rebuilds statsmodels when it is imported and prints
+    # the progress of the build before the result, which is the last line.
+    spec = json.loads(res.stdout.strip().splitlines()[-1])
     assert f'title="{NON_ASCII_TITLE}"' in spec
 
 
