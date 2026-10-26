@@ -411,16 +411,18 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         # Ser random_state here to improve reproducibility
         random_state = np.random.RandomState(1)
         seed = {"seed": random_state}
-        res_bh = model.fit(
-            start_params=start_params,
-            method="basinhopping",
-            niter=500,
-            stepsize=0.1,
-            niter_success=None,
-            disp=False,
-            interval=1,
-            **seed,
-        )
+        # converged is False for basinhopping, the parameters agree
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+            res_bh = model.fit(
+                start_params=start_params,
+                method="basinhopping",
+                niter=500,
+                stepsize=0.1,
+                niter_success=None,
+                disp=False,
+                interval=1,
+                **seed,
+            )
 
         assert_allclose(res_bh.params, self.res2.params, atol=1e-4, rtol=1e-4)
         assert_allclose(res_bh.bse, self.res2.bse, atol=1e-3, rtol=0.6)

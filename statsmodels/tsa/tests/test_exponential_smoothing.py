@@ -976,7 +976,6 @@ def test_prediction_results_slow_AAN(oildata, close_figures):
     plt.plot(summary_sim["pi_upper"], ":", label="sim upper")
     plt.plot(summary_exact["pi_upper"], ".-", label="exact upper")
     # plt.legend()
-    plt.show()
 
     # check if prediction intervals are equal
     assert_allclose(

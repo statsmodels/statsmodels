@@ -1,6 +1,7 @@
 """
 Test VAR Model
 """
+from statsmodels.compat.numpy import NP_LT_2
 from statsmodels.compat.pandas import (
     QUARTER_END,
     _infer_freq_returns_offset,
@@ -21,6 +22,7 @@ import pytest
 from statsmodels.datasets import macrodata
 import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.base.datetools import dates_from_str
 from statsmodels.tsa.stattools import acovf
 from statsmodels.tsa.vector_ar import util, var_model
@@ -1083,13 +1085,18 @@ def test_irf_err_bands():
     irf = results.irf()
     # Smoke tests only
     rs = np.random.RandomState(2389711)
-    for res in (
-        irf.err_band_sz1(rng=rs),
-        irf.err_band_sz2(rng=rs),
-        irf.err_band_sz3(rng=rs),
-        irf.errband_mc(rng=rs),
-        irf.cum_errband_mc(rng=rs),
-    ):
+    # the eigenvalue decomposition of a covariance matrix can have an imaginary
+    # part from rounding, which depends on the LAPACK build
+    complex_warning = np.ComplexWarning if NP_LT_2 else np.exceptions.ComplexWarning
+    with warns_or_none(complex_warning, match="Casting complex values to real"):
+        bands = (
+            irf.err_band_sz1(rng=rs),
+            irf.err_band_sz2(rng=rs),
+            irf.err_band_sz3(rng=rs),
+            irf.errband_mc(rng=rs),
+            irf.cum_errband_mc(rng=rs),
+        )
+    for res in bands:
         assert isinstance(res, ErrorBand)
         assert res[0] is res.lower
         assert res[1] is res.upper
