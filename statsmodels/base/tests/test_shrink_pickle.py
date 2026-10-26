@@ -209,10 +209,11 @@ class TestRemoveDataPickleNegativeBinomial(RemoveDataPickle):
         # fit for each test, because results will be changed by test
         data = sm.datasets.randhie.load()
         mod = sm.NegativeBinomial(data.endog, data.exog)
-        self.results = mod.fit(disp=0)
+        # default maxiter=35 does not converge
+        self.results = mod.fit(maxiter=100, disp=0)
         self.model_class = sm.NegativeBinomial
         self.model_args = (data.endog, data.exog)
-        self.fit_kwargs = dict(disp=0)
+        self.fit_kwargs = dict(maxiter=100, disp=0)
 
 
 class TestRemoveDataPickleLogit(RemoveDataPickle):
