@@ -9,6 +9,7 @@ import pytest
 
 from statsmodels.regression.dimred import CORE, PHD, SAVE, SlicedInverseReg
 from statsmodels.tools.numdiff import approx_fprime
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 
 def test_poisson():
@@ -210,7 +211,12 @@ def test_covreduce():
 
         assert_allclose(g, gn, 1e-5, 1e-5)
 
-        rslt = cr.fit()
+        if dim < 3:
+            rslt = cr.fit()
+        else:
+            # dim 3 is larger than the 2 dimensional truth, no convergence
+            with pytest.warns(ConvergenceWarning, match="CovReduce optimization did"):
+                rslt = cr.fit()
         proj = rslt.params
         assert_equal(proj.shape[0], p)
         assert_equal(proj.shape[1], dim)
