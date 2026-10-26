@@ -21,11 +21,12 @@ from numpy.testing import (
     assert_array_equal,
     assert_equal,
 )
+import pandas as pd
 import pytest
 
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
-from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, HypothesisTestWarning
 
 try:
     import matplotlib.pyplot as plt
@@ -898,8 +899,8 @@ def test_power_solver():
     # I let this case fail, could be fixed for some statistical tests
     # (we should not get here in the first place)
     # effect size is negative, but last stage brentq uses [1e-8, 1-1e-8]
-    with pytest.raises(ValueError):
-        nip.solve_power(
+    with pytest.warns(ConvergenceWarning):
+        es = nip.solve_power(
             None,
             nobs1=1600,
             alpha=0.01,
@@ -907,6 +908,7 @@ def test_power_solver():
             ratio=1,
             alternative="larger",
         )
+    assert np.isnan(es)
 
     with pytest.warns(HypothesisTestWarning):
         with pytest.raises(ValueError):
@@ -1249,8 +1251,30 @@ def test_ttest_power_far_tail_not_nan():
     pow_ = smp.TTestPower().power(0.3, 1000, 0.05)
     assert np.isfinite(pow_)
     assert_allclose(pow_, 1, atol=1e-10)
-    pow_ = smp.TTestIndPower().power(-0.5, 1237, 0.05, alternative="smaller")
+    # R 4.6.1, pwr 1.3-0, pwr.t.test(n=1237, d=0.5, type="two.sample")$power
+    pow_ = smp.TTestIndPower().power(0.5, 1237, 0.05)
     assert_allclose(pow_, 1, atol=1e-10)
+
+
+def test_ttest_power_small_alpha_not_nan():
+    # both the cdf and its reflection were nan in the lower tail for alpha from
+    # about 1e-12 to 1e-5 in this example (previously 536 of 2998 alphas)
+    alpha = np.logspace(-12, -0.001, 2998)
+    power = np.array([smp.TTestPower().power(1.0, 50, a) for a in alpha])
+    assert np.all(np.isfinite(power))
+    assert np.all(np.diff(power) > -1e-12)
+    # R 4.6.1, pwr 1.3-0
+    # pwr.t.test(n=50, d=1, sig.level=alpha, type="one.sample")$power
+    alpha = [1e-12, 1e-10, 1e-8, 1e-6, 1e-5]
+    expected = [
+        0.0405096719210527,
+        0.204604203411695,
+        0.573291656181119,
+        0.905732544135957,
+        0.973852570784929,
+    ]
+    power = [smp.TTestPower().power(1.0, 50, a) for a in alpha]
+    assert_allclose(power, expected, rtol=1e-9)
 
 
 @pytest.mark.parametrize("nobs1", [685, 1237, 1833])
@@ -1263,28 +1287,72 @@ def test_solve_effect_size_smaller(nobs1):
     assert_allclose(es_smaller, -es_larger, rtol=1e-5)
 
 
+class _NanPower(smp.TTestIndPower):
+    """Power function that is nan for effect sizes above ``nan_above``"""
+
+    nan_above = 0.4
+
+    def power(
+        self, effect_size, nobs1, alpha, ratio=1, df=None, alternative="two-sided"
+    ):
+        if effect_size > self.nan_above:
+            return np.nan
+        return super().power(
+            effect_size, nobs1, alpha, ratio=ratio, df=df, alternative=alternative
+        )
+
+
 def test_solve_power_rejects_jump_as_root():
     # a power function that is nan on part of the bracket must not produce
     # a "converged" root at the nan boundary
-    class NanPower(smp.TTestIndPower):
-        def power(
-            self, effect_size, nobs1, alpha, ratio=1, df=None, alternative="two-sided"
-        ):
-            if effect_size > 0.4:
-                return np.nan
-            return super().power(
-                effect_size, nobs1, alpha, ratio=ratio, df=df, alternative=alternative
-            )
+    kwds = {"nobs1": 1237, "alpha": 0.05, "power": 0.8, "alternative": "smaller"}
+    with pytest.warns(ConvergenceWarning):
+        es = _NanPower().solve_power(**kwds)
+    assert np.isnan(es)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        es = NanPower().solve_power(
-            nobs1=1237, alpha=0.05, power=0.8, alternative="smaller"
-        )
-    true = -smp.TTestIndPower().solve_power(
-        nobs1=1237, alpha=0.05, power=0.8, alternative="larger"
+
+def test_solve_power_nan_region_with_root():
+    # same as above, but the nan region leaves the root of the equation
+    # R 4.6.1, pwr 1.3-0, solution for 'larger'
+    # pwr.t.test(n=1237, power=0.8, sig.level=0.05, d=NULL, type="two.sample",
+    #            alternative="greater")$d = 0.100007522036773
+    class NanPowerFar(_NanPower):
+        nan_above = 2.0
+
+    kwds = {"nobs1": 1237, "alpha": 0.05, "power": 0.8, "alternative": "smaller"}
+    es = NanPowerFar().solve_power(**kwds)
+    assert_allclose(es, -0.100007522036773, atol=1e-5)
+
+
+@pytest.mark.parametrize(
+    "effect_size, nobs, expected",
+    [
+        (1.0, 50, 1.55870183959859e-07),
+        (0.5, 200, 3.23943954424975e-09),
+    ],
+)
+def test_solve_power_alpha_small_root(effect_size, nobs, expected):
+    # the roots are far below the default x tolerance of brentq
+    # R 4.6.1, pwr 1.3-0, uniroot (tol=1e-14) on log(sig.level) of
+    # pwr.t.test(n=nobs, d=effect_size, sig.level=exp(log_alpha),
+    #            type="one.sample")$power - 0.8
+    alpha = smp.TTestPower().solve_power(
+        effect_size=effect_size, nobs=nobs, power=0.8, alpha=None
     )
-    assert np.isnan(es) or abs(es - true) < 1e-5
+    assert_allclose(alpha, expected, rtol=1e-3)
+
+
+def test_solve_power_alpha_no_root_nan():
+    # The power of the 'smaller' test for a positive effect size stays below
+    # 0.5 in the whole search range of alpha, so there is no solution.
+    # R 4.6.1, pwr 1.3-0, pwr.t.test(n=1500, d=0.2, sig.level=0.999999,
+    #                                type="one.sample", alternative="less")
+    # has power 0.0015
+    with pytest.warns(ConvergenceWarning):
+        alpha = smp.TTestPower().solve_power(
+            effect_size=0.2, nobs=1500, power=0.5, alpha=None, alternative="smaller"
+        )
+    assert np.isnan(alpha)
 
 
 @pytest.mark.parametrize(
@@ -1299,6 +1367,44 @@ def test_nct_cdf_tail_fallback_scalar_and_array(x, expected):
     # Fixed references from conditional-normal / chi-squared integration
     # (60 and 85 decimal digits) avoid platform-dependent SciPy NaNs.
     # The absolute tolerance covers cancellation in the reflected tail.
-    assert_allclose(
-        smp.nct_cdf(x, 999, 0.3 * np.sqrt(1000)), expected, atol=1e-12
-    )
+    assert_allclose(smp.nct_cdf(x, 999, 0.3 * np.sqrt(1000)), expected, atol=1e-12)
+
+
+def test_nct_cdf_sf_far_tail_limit():
+    # CDFLIB returns nan for the cdf and for its reflection here. The exact
+    # probabilities (mpmath integration over the chi-squared density at 50
+    # digits) are 8.6e-35 and 2.3e-38; R's pt() is only accurate to about
+    # 1e-13 in this tail, pt(-9.52, 49, ncp=sqrt(50)) = 6.7e-14.
+    nc = np.sqrt(50)
+    assert_allclose(smp.nct_cdf(-7.75, 49, nc), 0, atol=1e-12)
+    assert_allclose(smp.nct_cdf(-9.52, 49, nc), 0, atol=1e-12)
+    assert_allclose(smp.nct_cdf(9.52, 49, -nc), 1, atol=1e-12)
+    assert_allclose(smp.nct_sf(9.52, 49, -nc), 0, atol=1e-12)
+    assert_allclose(smp.nct_sf(-9.52, 49, nc), 1, atol=1e-12)
+    # an array with nan and finite entries, the finite entries are unchanged;
+    # exact cdf(5; 49, sqrt(50)) = 0.030847613410683136
+    res = smp.nct_cdf(np.array([-9.52, 5.0]), 49, nc)
+    assert_allclose(res, [0, 0.030847613410683136], atol=1e-12)
+    # invalid arguments stay nan
+    assert np.isnan(smp.nct_cdf(np.nan, 49, nc))
+    assert np.isnan(smp.nct_cdf(-9.52, -1, nc))
+
+
+def test_nct_cdf_sf_keep_pandas_type():
+    nc = np.sqrt(50)
+    x = pd.Series([-9.52, 5.0], index=["a", "b"])
+    for func in (smp.nct_cdf, smp.nct_sf):
+        # with and without nan from CDFLIB in the input
+        for xs in (x, x.iloc[1:]):
+            res = func(xs, 49, nc)
+            assert isinstance(res, pd.Series)
+            assert_array_equal(res.index, xs.index)
+    assert_allclose(smp.nct_cdf(x, 49, nc), [0, 0.030847613410683136], atol=1e-12)
+
+
+def test_nct_sf_upper_tail_relative_accuracy():
+    # exact value from mpmath (50 digits) as the integral over the
+    # chi-squared density of Phi(nc - x * sqrt(v / df)); 1 - cdf loses all but
+    # about 6 digits here
+    nc = 0.2 * np.sqrt(30)
+    assert_allclose(smp.nct_sf(12.0, 29, nc), 7.6017385833974256e-11, rtol=1e-10)

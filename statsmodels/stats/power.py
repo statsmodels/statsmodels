@@ -46,21 +46,93 @@ from statsmodels.tools.validation import string_like
 # the documented spelling.
 _ALTERNATIVE_ALIASES = {"2s": "two-sided"}
 
+# Largest absolute value of the power equation, ``power(x) - target``, at which
+# ``Power.solve_power`` accepts a root. It must exceed the roughly 1e-5
+# accuracy of the CDFLIB functions in scipy.special, which are used to compute
+# the power, or valid roots are rejected.
+_POWER_ROOT_TOL = 1e-4
+
 
 def nct_cdf(x, df, nc):
+    """
+    Cumulative distribution function of the noncentral t distribution
+
+    Parameters
+    ----------
+    x : array_like
+        Quantiles.
+    df : array_like
+        Degrees of freedom.
+    nc : array_like
+        Noncentrality parameter.
+
+    Returns
+    -------
+    cdf : float or ndarray
+        The cdf at ``x``, with the type of the input if it is a pandas Series.
+
+    Notes
+    -----
+    This uses ``scipy.special.nctdtr``. Its absolute accuracy is about 1e-15
+    and it can return nan far in the tail opposite to the sign of ``nc``. The
+    reflection ``cdf(x; nc) = 1 - cdf(-x; -nc)`` is tried for those values. If
+    that is nan too, then the probability is below the resolution of the
+    function and 0 (``x < 0 < nc``) or 1 (``nc < 0 < x``) is returned.
+    Values in the tails are therefore not accurate in a relative sense.
+    """
     res = special.nctdtr(df, nc, x)
-    # CDFLIB can return nan in one tail; use noncentral-t reflection
-    # for those entries without changing already finite CDF values.
-    if np.any(np.isnan(res)):
-        reflected = 1 - special.nctdtr(df, -np.asarray(nc), -np.asarray(x))
-        res = np.where(np.isnan(res), reflected, res)
-        if res.ndim == 0:
-            res = res[()]
+    nan = np.asarray(np.isnan(res))
+    if not nan.any():
+        return res
+    # CDFLIB can return nan far in the tail opposite to the sign of ``nc``.
+    # Retry with the reflection cdf(x; nc) = 1 - cdf(-x; -nc), which leaves
+    # already finite values unchanged.
+    x_, df_, nc_ = np.broadcast_arrays(
+        np.asarray(x, dtype=float),
+        np.asarray(df, dtype=float),
+        np.asarray(nc, dtype=float),
+    )
+    alt = 1 - special.nctdtr(df_, -nc_, -x_)
+    # If the reflection is nan too, the probability is below the resolution
+    # of CDFLIB (absolute error of about 1e-15; the exact values in all such
+    # cases we checked are smaller than 1e-17), so use the limit 0 or 1.
+    # Invalid arguments stay nan.
+    valid = np.isfinite(x_) & np.isfinite(nc_) & (df_ > 0)
+    alt = np.where(np.isnan(alt) & valid & (x_ < 0) & (nc_ > 0), 0.0, alt)
+    alt = np.where(np.isnan(alt) & valid & (x_ > 0) & (nc_ < 0), 1.0, alt)
+    if np.ndim(res) == 0:
+        return np.asarray(np.where(nan, alt, res))[()]
+    # assign in place to keep the type of the input, e.g. a pandas Series
+    res[nan] = alt[nan]
     return res
 
 
 def nct_sf(x, df, nc):
-    return 1 - nct_cdf(x, df, nc)
+    """
+    Survival function of the noncentral t distribution
+
+    Parameters
+    ----------
+    x : array_like
+        Quantiles.
+    df : array_like
+        Degrees of freedom.
+    nc : array_like
+        Noncentrality parameter.
+
+    Returns
+    -------
+    sf : float or ndarray
+        The survival function at ``x``, with the type of the input if it is a
+        pandas Series.
+
+    Notes
+    -----
+    This is ``nct_cdf(-x, df, -nc)``, which keeps the relative accuracy in the
+    upper tail, where ``1 - nct_cdf(x, df, nc)`` cancels most digits. See
+    `nct_cdf` for the handling of nan in the far tail.
+    """
+    return nct_cdf(np.negative(x), df, np.negative(nc))
 
 
 def ncf_cdf(x, dfn, dfd, nc):
@@ -520,7 +592,12 @@ class Power:
         for key in ["ratio"]:
             self.start_bqexp[key] = {"low": 1e-8, "start_upp": 2}
         for key in ["alpha"]:
-            self.start_bqexp[key] = {"low": 1e-12, "upp": 1 - 1e-12}
+            self.start_bqexp[key] = {
+                "low": 1e-12,
+                "upp": 1 - 1e-12,
+                # roots can be far below the default xtol of 1e-5 of brentq_expanding
+                "xtol": 1e-18,
+            }
 
     def power(self, *args, **kwds):
         raise NotImplementedError
@@ -562,6 +639,10 @@ class Power:
             The first element is the success indicator, one if successful.
             The remaining elements contain the return information of the up to
             three solvers that have been tried.
+
+        If no solver finds a value that solves the power equation, for example
+        because the equation has no solution, a ``ConvergenceWarning`` is
+        issued and ``nan`` is returned.
 
         """
         # TODO: maybe use explicit kwds,
@@ -667,7 +748,7 @@ class Power:
             fit_res.append(None)
 
         success = None
-        if (not failed) and res.converged and np.abs(func(val)) < 1e-4:
+        if (not failed) and res.converged and np.abs(func(val)) < _POWER_ROOT_TOL:
             success = 1
         else:
             # try backup
@@ -692,18 +773,26 @@ class Power:
                 fval = 1
                 fit_res.append([None])
 
-            if ier == 1 and np.abs(fval) < 1e-4:
+            if ier == 1 and np.abs(fval) < _POWER_ROOT_TOL:
                 success = 1
             # print infodict
             elif key in ["alpha", "power", "effect_size"]:
-                val, r = optimize.brentq(
-                    func, 1e-8, 1 - 1e-8, full_output=True
-                )  # scalar
-                # brentq also "converges" to a jump of func, e.g. to the
-                # boundary where power returns nan (mapped to inf above),
-                # so require that val actually solves the power equation
-                success = 1 if (r.converged and np.abs(func(val)) < 1e-4) else 0
-                fit_res.append(r)
+                try:
+                    val, r = optimize.brentq(
+                        func, 1e-8, 1 - 1e-8, full_output=True
+                    )  # scalar
+                except ValueError:
+                    # func has the same sign at both bounds, so the bracket
+                    # contains no root, or an even number of them
+                    success = 0
+                    fit_res.append(None)
+                else:
+                    # brentq also "converges" to a jump of func, e.g. to the
+                    # boundary where power returns nan (mapped to inf above),
+                    # so require that val actually solves the power equation
+                    solved = r.converged and np.abs(func(val)) < _POWER_ROOT_TOL
+                    success = 1 if solved else 0
+                    fit_res.append(r)
             else:
                 success = 0
 
@@ -957,8 +1046,9 @@ class TTestPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         # for debugging
@@ -1096,8 +1186,9 @@ class TTestIndPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         return super().solve_power(
@@ -1240,8 +1331,9 @@ class NormalIndPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         return super().solve_power(
@@ -1422,8 +1514,9 @@ class FTestPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         if kwargs:
@@ -1585,8 +1678,9 @@ class FTestPowerF2(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
 
@@ -1682,8 +1776,9 @@ class FTestAnovaPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         # update start values for root finding
@@ -1812,8 +1907,9 @@ class GofChisquarePower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         return super().solve_power(
@@ -1928,8 +2024,9 @@ class _GofChisquareIndPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         return super().solve_power(
