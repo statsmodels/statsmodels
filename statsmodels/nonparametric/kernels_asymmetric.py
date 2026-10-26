@@ -45,6 +45,8 @@ License: BSD-3
 import numpy as np
 from scipy import special, stats
 
+from statsmodels.tools.validation import float_like
+
 doc_params = """\
 Parameters
     ----------
@@ -82,20 +84,35 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         If weights is not None, then kernel for sample points are weighted
         by it. No weights corresponds to uniform weighting of each component
         with 1 / nobs, where nobs is the size of `sample`.
-    batch_size : int, optional
+    batch_size : float, optional
         If x is an 1-dim array, then points can be evaluated in vectorized
         form. To limit the amount of memory, a loop works in batches.
         Evaluation points and sample points are split so that the
         intermediate kernel arrays have at most ``batch_size * 1000``
-        elements.  A value that yields a budget below one element raises
-        ``ValueError``.
+        elements. The value does not need to be an integer.
 
         Default is to have at most 10000 elements in intermediate arrays.
+
+        .. versionchanged:: 0.15.1
+
+           ``batch_size`` bounds the size of the intermediate kernel arrays
+           on both axes, the evaluation points and the sample. Previously a
+           sample with more than ``batch_size * 1000`` observations raised an
+           error. A single-element ``x`` now always returns a scalar.
 
     Returns
     -------
     pdf : float or ndarray
-        Estimate of pdf at points x. ``pdf`` has the same size or shape as x.
+        Estimate of pdf at points x. A float is returned if ``x`` is a scalar
+        or has a single element, otherwise an ndarray with one entry for each
+        element of ``x``.
+
+    Raises
+    ------
+    TypeError
+        If ``batch_size`` is not a number, for example None, a str or a bool.
+    ValueError
+        If ``batch_size * 1000`` is smaller than 1 or is nan.
     """
 
     if callable(kernel_type):
@@ -103,17 +120,16 @@ def pdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
     else:
         kfunc = kernel_dict_pdf[kernel_type]
 
-    max_elements = batch_size * 1000
-    if max_elements < 1:
-        raise ValueError("batch_size * 1000 must be at least 1")
+    max_elements = _check_batch_size(batch_size)
 
     if np.size(x) * len(sample) < max_elements:
         # no batch-loop
         if np.size(x) > 1:
             x = np.asarray(x)[:, None]
-        elif isinstance(x, (list, tuple)):
-            # one-element list or tuple: an array is needed for the
-            # arithmetic inside the kernel
+        elif np.ndim(x) > 0:
+            # one-element list, tuple, Series or array: an array is needed
+            # for the arithmetic inside the kernel. Scalars and 0-dim arrays
+            # are passed on unchanged.
             x = np.asarray(x)
 
         pdfi = kfunc(x, sample, bw)
@@ -149,20 +165,35 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         If weights is not None, then kernel for sample points are weighted
         by it. No weights corresponds to uniform weighting of each component
         with 1 / nobs, where nobs is the size of `sample`.
-    batch_size : int, optional
+    batch_size : float, optional
         If x is an 1-dim array, then points can be evaluated in vectorized
         form. To limit the amount of memory, a loop works in batches.
         Evaluation points and sample points are split so that the
         intermediate kernel arrays have at most ``batch_size * 1000``
-        elements.  A value that yields a budget below one element raises
-        ``ValueError``.
+        elements. The value does not need to be an integer.
 
         Default is to have at most 10000 elements in intermediate arrays.
+
+        .. versionchanged:: 0.15.1
+
+           ``batch_size`` bounds the size of the intermediate kernel arrays
+           on both axes, the evaluation points and the sample. Previously a
+           sample with more than ``batch_size * 1000`` observations raised an
+           error. A single-element ``x`` now always returns a scalar.
 
     Returns
     -------
     cdf : float or ndarray
-        Estimate of cdf at points x. ``cdf`` has the same size or shape as x.
+        Estimate of cdf at points x. A float is returned if ``x`` is a scalar
+        or has a single element, otherwise an ndarray with one entry for each
+        element of ``x``.
+
+    Raises
+    ------
+    TypeError
+        If ``batch_size`` is not a number, for example None, a str or a bool.
+    ValueError
+        If ``batch_size * 1000`` is smaller than 1 or is nan.
     """
 
     if callable(kernel_type):
@@ -170,17 +201,16 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
     else:
         kfunc = kernel_dict_cdf[kernel_type]
 
-    max_elements = batch_size * 1000
-    if max_elements < 1:
-        raise ValueError("batch_size * 1000 must be at least 1")
+    max_elements = _check_batch_size(batch_size)
 
     if np.size(x) * len(sample) < max_elements:
         # no batch-loop
         if np.size(x) > 1:
             x = np.asarray(x)[:, None]
-        elif isinstance(x, (list, tuple)):
-            # one-element list or tuple: an array is needed for the
-            # arithmetic inside the kernel
+        elif np.ndim(x) > 0:
+            # one-element list, tuple, Series or array: an array is needed
+            # for the arithmetic inside the kernel. Scalars and 0-dim arrays
+            # are passed on unchanged.
             x = np.asarray(x)
 
         cdfi = kfunc(x, sample, bw)
@@ -194,6 +224,37 @@ def cdf_kernel_asym(x, sample, bw, kernel_type, weights=None, batch_size=10):
         )
 
     return cdf
+
+
+def _check_batch_size(batch_size):
+    """Return the maximum number of elements of an intermediate kernel array.
+
+    Parameters
+    ----------
+    batch_size : float
+        Batch size in units of 1000 elements.
+
+    Returns
+    -------
+    float
+        ``batch_size * 1000``, which is at least 1.
+
+    Raises
+    ------
+    TypeError
+        If `batch_size` is not float_like, for example None, a str or a bool.
+    ValueError
+        If ``batch_size * 1000`` is smaller than 1 or is nan.
+    """
+    batch_size = float_like(batch_size, "batch_size")
+    max_elements = batch_size * 1000
+    # written so that nan fails the check
+    if not max_elements >= 1:
+        raise ValueError(
+            "batch_size * 1000 must be at least 1, the maximum number of "
+            f"elements in an intermediate array. Got batch_size={batch_size}."
+        )
+    return max_elements
 
 
 def _kernel_asym_batch(kfunc, x, sample, bw, weights, max_elements):
