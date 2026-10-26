@@ -1259,7 +1259,9 @@ class Results:
         is_pandas = _is_using_pandas(exog, None)
         exog_index = None
         if is_pandas:
-            if exog.ndim == 2 or self.params.size == 1:
+            if exog.ndim == 2 or (
+                self.model.exog is not None and self.model.exog.shape[1] == 1
+            ):
                 exog_index = exog.index
             else:
                 exog_index = [exog.index.name]
