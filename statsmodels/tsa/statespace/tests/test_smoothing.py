@@ -12,6 +12,7 @@ MATLAB (ssm toolbox)
 Author: Chad Fulton
 License: Simplified-BSD
 """
+import contextlib
 from pathlib import Path
 
 import numpy as np
@@ -20,6 +21,7 @@ import pandas as pd
 import pytest
 
 from statsmodels import datasets
+from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tsa.statespace import mlemodel, sarimax, varmax
 from statsmodels.tsa.statespace.kalman_filter import FILTER_UNIVARIATE
 from statsmodels.tsa.statespace.kalman_smoother import (
@@ -1072,6 +1074,15 @@ class TestVARAutocovariancesUnivariateSmoothing(TestVARAutocovariances):
         assert_equal(self.model.ssm._kalman_smoother._smooth_method, SMOOTH_UNIVARIATE)
 
 
+def expect_diagonalized(expected):
+    # The univariate filter diagonalizes the non-diagonal obs_cov of TVSS
+    if expected:
+        return pytest.warns(
+            OutputWarning, match="The univariate filtering approach diagonalized"
+        )
+    return contextlib.nullcontext()
+
+
 class TVSSWithLags(TVSS):
     def __init__(self, endog):
         # TVSS has 2 states, here we will add in 3 lags of those
@@ -1114,7 +1125,8 @@ def get_acov_model(
     else:
         mod = TVSSWithLags(endog)
         mod.ssm.filter_univariate = filter_univariate
-        res = mod.smooth([], return_ssm=return_ssm)
+        with expect_diagonalized(filter_univariate):
+            res = mod.smooth([], return_ssm=return_ssm)
 
     return mod, res
 
@@ -1195,7 +1207,8 @@ def test_smoothed_state_autocovariances_forwards(missing, filter_univariate, tvp
         mod, _ = get_acov_model(missing, filter_univariate, tvp)
         for name in names:
             mod[name] = mod_oos[name, ..., :-3]
-        res = mod.ssm.smooth()
+        with expect_diagonalized(filter_univariate):
+            res = mod.ssm.smooth()
 
     extend_kwargs1 = {}
     extend_kwargs2 = {}
@@ -1230,22 +1243,25 @@ def test_smoothed_state_autocovariances_forwards(missing, filter_univariate, tvp
     assert_allclose(acov1[:-1, :2, :2], desired_acov1[1:])
     assert_allclose(acov1[-2:, :2, :2], oos_cov[-5:-3, 2:4, :2])
 
-    acov2 = res.smoothed_state_autocovariance(
-        -2, extend_kwargs=extend_kwargs1
-    ).transpose(2, 0, 1)
+    with expect_diagonalized(tvp and filter_univariate):
+        acov2 = res.smoothed_state_autocovariance(
+            -2, extend_kwargs=extend_kwargs1
+        ).transpose(2, 0, 1)
     assert_allclose(acov2[:-2, :2, :2], desired_acov2[2:])
     assert_allclose(acov2[-2:, :2, :2], oos_cov[-4:-2, 4:6, :2])
 
-    acov3 = res.smoothed_state_autocovariance(
-        -3, extend_kwargs=extend_kwargs2
-    ).transpose(2, 0, 1)
+    with expect_diagonalized(tvp and filter_univariate):
+        acov3 = res.smoothed_state_autocovariance(
+            -3, extend_kwargs=extend_kwargs2
+        ).transpose(2, 0, 1)
     assert_allclose(acov3[:-3, :2, :2], desired_acov3[3:], atol=1e-10, rtol=1e-6)
     assert_allclose(acov3[-3:, :2, :2], oos_cov[-4:-1, 6:8, :2], atol=1e-10, rtol=1e-6)
 
     # Test for specific autocovariances
-    acov1 = res.smoothed_state_autocovariance(
-        -1, t=mod.nobs, extend_kwargs=extend_kwargs1
-    )
+    with expect_diagonalized(tvp and filter_univariate):
+        acov1 = res.smoothed_state_autocovariance(
+            -1, t=mod.nobs, extend_kwargs=extend_kwargs1
+        )
     assert_allclose(acov1[:2, :2], oos_cov[-3, 2:4, :2], atol=1e-10, rtol=1e-6)
     acov1 = res.smoothed_state_autocovariance(-1, t=0)
     assert_allclose(acov1[:2, :2], desired_acov1[0 + 1], atol=1e-10, rtol=1e-6)
@@ -1254,13 +1270,15 @@ def test_smoothed_state_autocovariances_forwards(missing, filter_univariate, tvp
         acov1[:, :2, :2], desired_acov1[8 + 1 : 9 + 1], atol=1e-10, rtol=1e-6
     )
 
-    acov2 = res.smoothed_state_autocovariance(
-        -2, t=mod.nobs, extend_kwargs=extend_kwargs2
-    )
+    with expect_diagonalized(tvp and filter_univariate):
+        acov2 = res.smoothed_state_autocovariance(
+            -2, t=mod.nobs, extend_kwargs=extend_kwargs2
+        )
     assert_allclose(acov2[:2, :2], oos_cov[-2, 4:6, :2], atol=1e-10, rtol=1e-6)
-    acov2 = res.smoothed_state_autocovariance(
-        -2, t=mod.nobs - 1, extend_kwargs=extend_kwargs1
-    )
+    with expect_diagonalized(tvp and filter_univariate):
+        acov2 = res.smoothed_state_autocovariance(
+            -2, t=mod.nobs - 1, extend_kwargs=extend_kwargs1
+        )
     assert_allclose(acov2[:2, :2], oos_cov[-3, 4:6, :2], atol=1e-10, rtol=1e-6)
     acov2 = res.smoothed_state_autocovariance(-2, t=0)
     assert_allclose(acov2[:2, :2], desired_acov2[0 + 2], atol=1e-10, rtol=1e-6)
@@ -1298,7 +1316,8 @@ def test_smoothed_state_autocovariances_forwards_oos(missing, filter_univariate,
         mod, _ = get_acov_model(missing, filter_univariate, tvp)
         for name in names:
             mod[name] = mod_oos[name, ..., :-5]
-        res = mod.ssm.smooth()
+        with expect_diagonalized(filter_univariate):
+            res = mod.ssm.smooth()
 
     assert_allclose(res_oos.llf, res.llf)
 
@@ -1325,9 +1344,10 @@ def test_smoothed_state_autocovariances_forwards_oos(missing, filter_univariate,
     # a model that has state space matrices defined up to mod_oos.nobs. Since
     # mod_oos.nobs = mod.nobs + 5, we need to pass in 5 additional time points,
     # and that is what extend_kwargs, above, does.
-    acov1 = res.smoothed_state_autocovariance(
-        -1, end=mod_oos.nobs, extend_kwargs=extend_kwargs
-    ).transpose(2, 0, 1)
+    with expect_diagonalized(tvp and filter_univariate):
+        acov1 = res.smoothed_state_autocovariance(
+            -1, end=mod_oos.nobs, extend_kwargs=extend_kwargs
+        ).transpose(2, 0, 1)
     assert_equal(acov1.shape, (mod_oos.nobs, mod.k_states, mod.k_states))
     assert_allclose(acov1[:, :2, :2], desired_acov1[1:], rtol=1e-6)
 
@@ -1339,18 +1359,20 @@ def test_smoothed_state_autocovariances_forwards_oos(missing, filter_univariate,
     # will have values for Cov(0, 2), Cov(1, 3), ...,
     # Cov(mod_oos.nobs - 1, mod_oos.nobs + 1), and that is a set of
     # mod_oos.nobs - 1 matrices.
-    acov2 = res.smoothed_state_autocovariance(
-        -2, end=mod_oos.nobs - 1, extend_kwargs=extend_kwargs
-    ).transpose(2, 0, 1)
+    with expect_diagonalized(tvp and filter_univariate):
+        acov2 = res.smoothed_state_autocovariance(
+            -2, end=mod_oos.nobs - 1, extend_kwargs=extend_kwargs
+        ).transpose(2, 0, 1)
     assert_equal(acov2.shape, (mod_oos.nobs - 1, mod.k_states, mod.k_states))
     assert_allclose(acov2[:, :2, :2], desired_acov2[2:], rtol=1e-6)
 
     # Note: now we can compute up to Cov(mod_oos.nobs - 2, mod_oos.nobs + 1)
     # using a model that has state space matrices defined up to mod_oos.nobs.
     # We still need to pass in 5 additional time points for the extend kwargs.
-    acov3 = res.smoothed_state_autocovariance(
-        -3, end=mod_oos.nobs - 2, extend_kwargs=extend_kwargs
-    ).transpose(2, 0, 1)
+    with expect_diagonalized(tvp and filter_univariate):
+        acov3 = res.smoothed_state_autocovariance(
+            -3, end=mod_oos.nobs - 2, extend_kwargs=extend_kwargs
+        ).transpose(2, 0, 1)
     assert_equal(acov3.shape, (mod_oos.nobs - 2, mod.k_states, mod.k_states))
     assert_allclose(acov3[:, :2, :2], desired_acov3[3:], rtol=1e-6)
 
@@ -1383,7 +1405,8 @@ def test_smoothed_state_autocovariances_backwards_oos(missing, filter_univariate
         mod, _ = get_acov_model(missing, filter_univariate, tvp)
         for name in names:
             mod[name] = mod_oos[name, ..., :-5]
-        res = mod.ssm.smooth()
+        with expect_diagonalized(filter_univariate):
+            res = mod.ssm.smooth()
 
     assert_allclose(res_oos.llf, res.llf)
 
@@ -1411,9 +1434,10 @@ def test_smoothed_state_autocovariances_backwards_oos(missing, filter_univariate
     # a model that has state space matrices defined up to mod_oos.nobs. Since
     # mod_oos.nobs = mod.nobs + 5, we need to pass in 5 additional time points,
     # and that is what extend_kwargs, above, does.
-    acov1 = res.smoothed_state_autocovariance(
-        1, end=end, extend_kwargs=extend_kwargs
-    ).transpose(2, 0, 1)
+    with expect_diagonalized(tvp and filter_univariate):
+        acov1 = res.smoothed_state_autocovariance(
+            1, end=end, extend_kwargs=extend_kwargs
+        ).transpose(2, 0, 1)
     assert_equal(acov1.shape, (mod_oos.nobs + 1, mod.k_states, mod.k_states))
     assert_allclose(acov1[1:, :2, :2], desired_acov1[1:])
     # We cannot compute Cov(1, 0), so this is always NaNs
@@ -1422,9 +1446,10 @@ def test_smoothed_state_autocovariances_backwards_oos(missing, filter_univariate
     # Note: we can compute up to Cov(mod_oos.nobs + 1, mod_oos.nobs - 1) using
     # a model that has state space matrices defined up to mod_oos.nobs, which
     # is why we don't need to change `end` here relative to the lag=1 case
-    acov2 = res.smoothed_state_autocovariance(
-        2, end=end, extend_kwargs=extend_kwargs
-    ).transpose(2, 0, 1)
+    with expect_diagonalized(tvp and filter_univariate):
+        acov2 = res.smoothed_state_autocovariance(
+            2, end=end, extend_kwargs=extend_kwargs
+        ).transpose(2, 0, 1)
     assert_allclose(acov2[2:, :2, :2], desired_acov2[2:])
     # We cannot compute Cov(1, -1) or Cov(2, 0), so this is always NaNs
     assert_equal(acov2[:2], np.nan)
@@ -1433,9 +1458,10 @@ def test_smoothed_state_autocovariances_backwards_oos(missing, filter_univariate
     # a model that has state space matrices defined up to mod_oos.nobs, which
     # is why we don't need to change `end` here relative to the lag=1 or lag=2
     # cases
-    acov3 = res.smoothed_state_autocovariance(
-        3, end=end, extend_kwargs=extend_kwargs
-    ).transpose(2, 0, 1)
+    with expect_diagonalized(tvp and filter_univariate):
+        acov3 = res.smoothed_state_autocovariance(
+            3, end=end, extend_kwargs=extend_kwargs
+        ).transpose(2, 0, 1)
     assert_allclose(acov3[3:, :2, :2], desired_acov3[3:])
     # We cannot compute Cov(1, -2), Cov(2, -1), or Cov(3, 0), so this is always
     # NaNs
@@ -1491,8 +1517,12 @@ def test_news_basic(missing, filter_univariate, tvp):
     # Test the news computation at the start, middle, and end of the sample, as
     # well as out-of-sample.
     for t in [0, 1, 150, mod.nobs - 1, mod.nobs, mod.nobs + 1, mod.nobs + 9]:
+        # Only the news more than one period out of sample extends the model
+        # of `res` and smooths it again
+        oos = tvp and filter_univariate and t > mod.nobs
         # Test with a time argument
-        out = res2.news(res, t=t)
+        with expect_diagonalized(oos):
+            out = res2.news(res, t=t)
         desired = res2.smoothed_forecasts[..., t] - res3.smoothed_forecasts[..., t]
         # The "news" about the t=0 smoothed forecast from new data at
         # observation t=202 is almost identically zero, so we need to set an
@@ -1502,7 +1532,8 @@ def test_news_basic(missing, filter_univariate, tvp):
         assert_equal(out.revision_impacts, None)
 
         # Test with start/end arguments
-        out = res2.news(res, start=t, end=t + 1)
+        with expect_diagonalized(oos):
+            out = res2.news(res, start=t, end=t + 1)
         assert_allclose(out.update_impacts, desired[None, ...], atol=1e-14)
 
 
@@ -1528,7 +1559,8 @@ def test_news_revisions(missing, filter_univariate, tvp):
     # well as out-of-sample.
     nobs = mod.nobs - 10
     for t in [0, 1, 150, nobs - 1, nobs, nobs + 1, nobs + 9]:
-        out = res2.news(res, t=t)
+        with expect_diagonalized(tvp and filter_univariate):
+            out = res2.news(res, t=t)
 
         # Test for the news
         desired = (
