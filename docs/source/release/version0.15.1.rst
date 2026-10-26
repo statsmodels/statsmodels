@@ -405,9 +405,11 @@ Statistics and tests
 
 - ``statsmodels.stats.power`` validates that a root returned by a solver
   attains the requested power. Failed solutions now return ``NaN`` with a
-  ``ConvergenceWarning`` instead of returning a misleading finite result.
-  Noncentral-t CDF calculations retry a reflected tail when CDFLIB returns
-  ``NaN``, preserving already finite values. This can turn previously missing
+  ``ConvergenceWarning`` instead of returning a misleading finite result or
+  raising an error, also when solving for ``alpha``, which now finds
+  significance levels far below 1e-5. Noncentral-t CDF calculations retry a
+  reflected tail when CDFLIB returns ``NaN`` and use the limit 0 or 1 if that
+  fails too, preserving already finite values. This can turn previously missing
   t-test powers into finite results; it does not guarantee relative accuracy
   in extremely small tails. :pr:`10552`
 - The p-values of several tests were computed as one minus the cdf, which
