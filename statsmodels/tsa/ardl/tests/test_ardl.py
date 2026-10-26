@@ -1,3 +1,4 @@
+from statsmodels.compat.numpy import NP_LT_1_24
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 from typing import NamedTuple
@@ -1663,5 +1664,7 @@ def test_ardl_select_order_nan(data):
     # Data that are not finite use the model by model fits, which raise
     y = data.y.copy()
     y.iloc[20] = np.nan
-    with pytest.raises(np.linalg.LinAlgError):
+    # NumPy 1.23 raises a SystemError instead of the LinAlgError
+    error = SystemError if NP_LT_1_24 else np.linalg.LinAlgError
+    with pytest.raises(error):
         ardl_select_order(y, 2, data.x, 2, "c")

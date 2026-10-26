@@ -1,3 +1,4 @@
+from statsmodels.compat.numpy import NP_LT_1_24
 from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lrange
@@ -3216,7 +3217,9 @@ def test_pacf_nonfinite_per_lag_fits():
     x = np.cumsum(np.ones(30))
     x[20] = np.nan
     assert np.all(np.isnan(pacf_yw(x, 5)[1:]))
-    with pytest.raises(np.linalg.LinAlgError):
+    # NumPy 1.23 raises a SystemError instead of the LinAlgError
+    error = SystemError if NP_LT_1_24 else np.linalg.LinAlgError
+    with pytest.raises(error):
         pacf_ols(x, 5)
 
 
