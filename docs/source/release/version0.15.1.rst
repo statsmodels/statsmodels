@@ -612,6 +612,11 @@ Counts, sample sizes, weights and probabilities
   ``samplesize_proportions_2indep_onetail`` have to keep both proportions in
   [0, 1], and the probabilities of ``chisquare_effectsize`` have to be
   non-negative. :pr:`10383`, :pr:`10431`, :pr:`10425`, :pr:`10395`
+- ``samplesize_confint_proportion`` checks its arguments: ``alpha`` has to be
+  in (0, 1), ``half_length`` positive and ``proportion`` in [0, 1]. Invalid
+  values, including nan in arrays, raise a ``ValueError``. They returned
+  ``inf``, ``nan``, the sample size of ``abs(half_length)`` or a negative
+  sample size. Lists are accepted. :pr:`10381`
 - The dispersion of the Poisson and negative binomial power functions in
   ``statsmodels.stats.rates`` has to be non-negative. ``alpha`` of the
   ``NegativeBinomial`` link in ``statsmodels.genmod.families.links`` has to
