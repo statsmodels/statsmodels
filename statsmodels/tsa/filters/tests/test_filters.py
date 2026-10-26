@@ -648,7 +648,9 @@ def test_hpfilter_one_sided_r(lamb):
     expected = read_csv(path)[f"lamb_{lamb}"]
     dta = macrodata.load_pandas().data["realgdp"].values
     res = hpfilter(dta, lamb, one_sided=True)
-    assert_allclose(res.trend, expected, rtol=1e-8)
+    # The largest relative difference is 3e-11 (lamb=129600), which is the
+    # accuracy of the dense solve in R, so rtol has a headroom of about 30
+    assert_allclose(res.trend, expected, rtol=1e-9)
     assert_allclose(res.cycle, dta - res.trend)
     # the first two observations are fit exactly
     assert_equal(res.trend[:2], dta[:2])

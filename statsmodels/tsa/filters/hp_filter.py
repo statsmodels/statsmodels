@@ -168,9 +168,13 @@ def _hpfilter_one_sided(x, lamb):
     # to leave x unchanged
     kfilter.bind(np.array(x)[:, None])
     kfilter["design"] = np.array([[1.0, 0.0]])
-    kfilter["obs_cov"] = np.array([[1.0]])
+    # The filtered state under an exactly diffuse prior only depends on the ratio
+    # of the two variances. Scaling them as (lamb, 1) instead of (1, 1 / lamb)
+    # gives the same trend but avoids the loss of precision of a tiny state
+    # variance when lamb is large.
+    kfilter["obs_cov"] = np.array([[lamb]])
     kfilter["transition"] = np.array([[2.0, -1.0], [1.0, 0.0]])
     kfilter["selection"] = np.array([[1.0], [0.0]])
-    kfilter["state_cov"] = np.array([[1.0 / lamb]])
+    kfilter["state_cov"] = np.array([[1.0]])
     kfilter.initialize_diffuse()
     return np.array(kfilter.filter().filtered_state[0])
