@@ -11,6 +11,7 @@ Author: Josef Perktold
 
 from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 import copy
 import warnings
@@ -28,6 +29,11 @@ import pytest
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, HypothesisTestWarning
+
+# The noncentral t distribution of SciPy on WASM is accurate to about 1e-6
+# (relative), which is far from the 1e-12 of the other platforms
+NCT_RTOL = 1e-5 if PYTHON_IMPL_WASM else 1e-7
+POWER_RTOL = 1e-6 if PYTHON_IMPL_WASM else 1e-9
 
 try:
     import matplotlib.pyplot as plt
@@ -1444,7 +1450,7 @@ def test_ttest_power_small_alpha_not_nan():
         0.973852570784929,
     ]
     power = [smp.TTestPower().power(1.0, 50, a) for a in alpha]
-    assert_allclose(power, expected, rtol=1e-9)
+    assert_allclose(power, expected, rtol=POWER_RTOL)
 
 
 @pytest.mark.parametrize("nobs1", [685, 1237, 1833])
@@ -1554,7 +1560,7 @@ def test_nct_cdf_sf_far_tail_limit():
     # an array with nan and finite entries, the finite entries are unchanged;
     # exact cdf(5; 49, sqrt(50)) = 0.030847613410683136
     res = smp.nct_cdf(np.array([-9.52, 5.0]), 49, nc)
-    assert_allclose(res, [0, 0.030847613410683136], atol=1e-12)
+    assert_allclose(res, [0, 0.030847613410683136], rtol=NCT_RTOL, atol=1e-12)
     # invalid arguments stay nan
     assert np.isnan(smp.nct_cdf(np.nan, 49, nc))
     assert np.isnan(smp.nct_cdf(-9.52, -1, nc))
@@ -1569,9 +1575,15 @@ def test_nct_cdf_sf_keep_pandas_type():
             res = func(xs, 49, nc)
             assert isinstance(res, pd.Series)
             assert_array_equal(res.index, xs.index)
-    assert_allclose(smp.nct_cdf(x, 49, nc), [0, 0.030847613410683136], atol=1e-12)
+    assert_allclose(
+        smp.nct_cdf(x, 49, nc), [0, 0.030847613410683136], rtol=NCT_RTOL, atol=1e-12
+    )
 
 
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM,
+    reason="The noncentral t distribution of SciPy on WASM returns 0 here",
+)
 def test_nct_sf_upper_tail_relative_accuracy():
     # exact value from mpmath (50 digits) as the integral over the
     # chi-squared density of Phi(nc - x * sqrt(v / df)); 1 - cdf loses all but
