@@ -15,6 +15,7 @@ import pandas as pd
 import pytest
 from scipy.signal import lfilter
 
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.statespace import (
     dynamic_factor,
     dynamic_factor_mq,
@@ -273,8 +274,16 @@ def test_em_nonstationary():
         r' switched to diffuse for the following:  \["factor block:'
         r' \(\'global\',\)"\], and fitting was restarted.'
     )
+    # maxiter=2 stops the EM algorithm before it converges, and the GLM for the
+    # starting values of the 5 quarterly observations has no residual degrees
+    # of freedom
+    msg_em = "EM reached maximum number of iterations"
     with pytest.warns(UserWarning, match=msg):
-        mod.fit(maxiter=2, em_initialization=False)
+        with (
+            pytest.warns(ConvergenceWarning, match=msg_em),
+            pytest.warns(RuntimeWarning, match="divide by zero encountered"),
+        ):
+            mod.fit(maxiter=2, em_initialization=False)
 
 
 def gen_k_factor1(

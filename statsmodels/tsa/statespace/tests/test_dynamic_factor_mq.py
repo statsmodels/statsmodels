@@ -2968,7 +2968,9 @@ def test_filter_reproduces_model_loglike():
 
     mod = dynamic_factor_mq.DynamicFactorMQ(
         endog, factors=1, factor_orders=1, idiosyncratic_ar1=False)
-    res = mod.fit(maxiter=5, disp=False)
+    # maxiter=5 stops the EM algorithm before it converges
+    with pytest.warns(ConvergenceWarning, match="EM reached maximum number"):
+        res = mod.fit(maxiter=5, disp=False)
 
     filt = mod.filter(res.params)
     assert_allclose(filt.llf, mod.loglike(res.params), rtol=1e-8)
