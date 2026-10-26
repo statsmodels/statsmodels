@@ -968,6 +968,24 @@ class TTestPower(Power):
         )
 
 
+def _validate_ratio(ratio):
+    """
+    Check that ``ratio`` of ``TTestIndPower`` is non-negative and not NaN.
+
+    Parameters
+    ----------
+    ratio : float or array_like
+        Ratio of the number of observations in sample 2 relative to sample 1.
+
+    Raises
+    ------
+    ValueError
+        If any element of ``ratio`` is negative or NaN.
+    """
+    if not np.all(np.greater_equal(ratio, 0)):
+        raise ValueError(f"ratio must be non-negative and not NaN, got {ratio}")
+
+
 class TTestIndPower(Power):
     """
     Statistical Power calculations for t-test for two independent sample
@@ -994,12 +1012,21 @@ class TTestIndPower(Power):
         alpha : float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ratio : float, optional
+        ratio : float or array_like, optional
             ratio of the number of observations in sample 2 relative to
-            sample 1. see description of nobs1
+            sample 1. see description of nobs1. ``ratio`` must be
+            non-negative and not NaN.
+            ``ratio`` can be set to zero in order to get the power of the
+            one sample t-test with ``nobs1`` observations, in which case the
+            default degrees of freedom are ``df = nobs1 - 1``. This is a
+            convention and not the limit of ``ratio`` going to zero: a ratio
+            close to zero, e.g. ``1e-9``, means that sample 2 has almost no
+            observations and the power is close to alpha, while ``ratio=0``
+            returns the one sample power.
         df : int or float, optional
             degrees of freedom. By default this is None, and the df from the
             ttest with pooled variance is used, ``df = (nobs1 - 1 + nobs2 - 1)``
+            or ``df = nobs1 - 1`` if ``ratio=0``.
         alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
@@ -1007,24 +1034,55 @@ class TTestIndPower(Power):
 
         Returns
         -------
-        power : float
+        power : float or ndarray
             Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
+            The result is a float for scalar arguments and an array if
+            ``ratio`` or another argument is array_like.
+
+        Raises
+        ------
+        ValueError
+            If any element of ``ratio`` is negative or NaN.
+
+        Notes
+        -----
+        If ``ratio`` is an array_like, then the one sample convention for
+        ``ratio=0`` is applied to the elements that are zero.
+
+        .. versionchanged:: 0.15.1
+
+           ``ratio=0`` returns the power of the one sample t-test, it used to
+           raise a ``ZeroDivisionError`` or to return alpha with a
+           ``RuntimeWarning``. A negative or NaN ``ratio`` raises a
+           ``ValueError``.
 
         """
 
-        if ratio < 0:
-            # the docstring documents ratio=0 for a one-sample test; negative
-            # ratios have no sample-size interpretation and used to crash
-            # with a bare ZeroDivisionError
-            raise ValueError(f"ratio must be non-negative, got {ratio}")
-        if ratio == 0:
-            # one-sample test, no second sample contributes
+        # negative ratios have no sample-size interpretation and used to
+        # crash with a bare ZeroDivisionError or return nan
+        _validate_ratio(ratio)
+        if isinstance(ratio, (list, tuple)):
+            ratio = np.asarray(ratio, dtype=float)
+
+        is_one_sample = np.equal(ratio, 0)
+        if np.any(is_one_sample):
+            # ratio == 0 is the convention for the one-sample t-test with nobs1
+            # observations (see the docstring), applied elementwise. It is not
+            # the limit of ratio -> 0, where nobs2 -> 0 and the power -> alpha.
+            # asarray, so that division by zero gives inf instead of an
+            # exception for Python scalars
+            nobs2 = np.asarray(nobs1 * ratio, dtype=float)
+            with np.errstate(divide="ignore"):
+                nobs = np.where(
+                    is_one_sample, nobs1, 1.0 / (1.0 / nobs1 + 1.0 / nobs2)
+                )
             if df is None:
-                df = nobs1 - 1
-            nobs = nobs1
-            return ttest_power(effect_size, nobs, alpha, df=df, alternative=alternative)
+                df = np.where(is_one_sample, nobs1 - 1, nobs1 - 1 + nobs2 - 1)
+            res = ttest_power(effect_size, nobs, alpha, df=df, alternative=alternative)
+            # return a scalar for scalar input
+            return res[()] if isinstance(res, np.ndarray) else res
 
         nobs2 = nobs1 * ratio
         # pooled variance
@@ -1071,7 +1129,13 @@ class TTestIndPower(Power):
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
         ratio : None or float, optional
             ratio of the number of observations in sample 2 relative to
-            sample 1. see description of nobs1
+            sample 1. see description of nobs1. ``ratio`` must be
+            non-negative and not NaN.
+            ``ratio`` can be set to zero in order to get the power of the
+            one sample t-test with ``nobs1`` observations (``df = nobs1 - 1``).
+            This is a convention and not the limit of ``ratio`` going to
+            zero: a ratio close to zero, e.g. ``1e-9``, means that sample 2
+            has almost no observations and the power is close to alpha.
             The default for ratio is 1; to solve for ratio given the other
             arguments it has to be explicitly set to None.
         alternative : {'two-sided', 'larger', 'smaller'}, optional
@@ -1085,6 +1149,10 @@ class TTestIndPower(Power):
             The value of the parameter that was set to None in the call. The
             value solves the power equation given the remaining parameters.
 
+        Raises
+        ------
+        ValueError
+            If ``ratio`` is negative or NaN.
 
         Notes
         -----
@@ -1095,7 +1163,18 @@ class TTestIndPower(Power):
         ``brentq`` with fixed bounds is used. However, there can still be cases
         where this fails.
 
+        .. versionchanged:: 0.15.1
+
+           ``ratio=0`` solves the power equation of the one sample t-test, it
+           used to raise a ``ZeroDivisionError`` or to give wrong results. A
+           negative or NaN ``ratio`` raises a ``ValueError``, it used to
+           return nan with a ``ConvergenceWarning``.
+
         """
+        if ratio is not None:
+            # validate before the root finding, which swallows ValueError and
+            # returns nan with a ConvergenceWarning instead
+            _validate_ratio(ratio)
         return super().solve_power(
             effect_size=effect_size,
             nobs1=nobs1,

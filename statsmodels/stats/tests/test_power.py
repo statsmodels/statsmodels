@@ -9,6 +9,7 @@ Created on Sat Mar 09 08:44:49 2013
 Author: Josef Perktold
 """
 
+from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
 
 import copy
@@ -21,6 +22,7 @@ from numpy.testing import (
     assert_array_equal,
     assert_equal,
 )
+import pandas as pd
 import pytest
 
 import statsmodels.stats.power as smp
@@ -1147,19 +1149,188 @@ def test_alternative_deprecated_alias(power_func):
         power_func("bogus")
 
 
-def test_ttest_ind_power_ratio_zero_is_one_sample():
-    # the docstring documents ratio=0 for a one-sample test, but it used to
-    # crash with a bare ZeroDivisionError; negative ratios were also accepted
-    # silently (treated like the one-sample case by the sign check)
-    from statsmodels.stats.power import TTestIndPower, TTestPower
+@pytest.mark.parametrize("alternative", ["two-sided", "larger", "smaller"])
+@pytest.mark.parametrize("nobs", [5, 20, 50.5, 200])
+def test_ttest_ind_power_ratio_zero_is_one_sample(alternative, nobs):
+    # ratio=0 is the convention for a one-sample t-test with nobs1
+    # observations; it used to raise a ZeroDivisionError for Python scalars and
+    # to return alpha with a RuntimeWarning for numpy scalars
+    ind = smp.TTestIndPower()
+    one = smp.TTestPower()
+    effect_size = -0.5 if alternative == "smaller" else 0.5
+    p_zero = ind.power(effect_size, nobs, 0.05, ratio=0, alternative=alternative)
+    p_one = one.power(effect_size, nobs, 0.05, alternative=alternative)
+    assert_allclose(p_zero, p_one, rtol=1e-12)
+    assert np.ndim(p_zero) == 0
+    # df is honored, and defaults to nobs1 - 1
+    p_df = ind.power(
+        effect_size, nobs, 0.05, ratio=0, df=nobs - 1, alternative=alternative
+    )
+    assert_allclose(p_df, p_zero, rtol=1e-12)
+    p_df = ind.power(effect_size, nobs, 0.05, ratio=0, df=7, alternative=alternative)
+    expected = smp.ttest_power(effect_size, nobs, 0.05, df=7, alternative=alternative)
+    assert_allclose(p_df, expected, rtol=1e-12)
+    assert not np.isclose(p_df, p_zero, rtol=1e-6)
 
-    ind = TTestIndPower()
-    one = TTestPower()
-    p_zero = ind.power(effect_size=0.5, nobs1=50, ratio=0, alpha=0.05)
-    p_one = one.power(effect_size=0.5, nobs=50, alpha=0.05)
-    assert_allclose(p_zero, p_one)
-    with pytest.raises(ValueError, match="non-negative"):
-        ind.power(effect_size=0.5, nobs1=50, ratio=-1, alpha=0.05)
+
+@pytest.mark.parametrize(
+    "effect_size, nobs1, alpha, alternative, power_r",
+    [
+        (0.5, 50, 0.05, "two-sided", 0.933897581262),
+        (0.2, 5, 0.05, "two-sided", 0.0642695740480347),
+        (0.2, 5, 0.01, "two-sided", 0.0135358237849607),
+        (0.5, 20, 0.05, "larger", 0.6951493382),
+        (0.5, 50.5, 0.05, "two-sided", 0.9361781095),
+    ],
+)
+def test_ttest_ind_power_ratio_zero_r(effect_size, nobs1, alpha, alternative, power_r):
+    # R 4.6.1, package pwr 1.3-0:
+    # pwr.t.test(n = nobs1, d = effect_size, sig.level = alpha,
+    #            type = "one.sample", alternative = c("two.sided", "greater"))$power
+    # R has no equivalent of ratio=0 in the two-sample functions
+    res = smp.TTestIndPower().power(
+        effect_size, nobs1, alpha, ratio=0, alternative=alternative
+    )
+    # the noncentral t distribution of SciPy on WASM is accurate to about 1e-8
+    assert_allclose(res, power_r, rtol=1e-7)
+
+
+def test_ttest_ind_power_ratio_zero_is_not_the_limit():
+    # ratio=0 is a convention: for ratio -> 0 the second sample vanishes and
+    # the power goes to alpha, it does not go to the one-sample power
+    ind = smp.TTestIndPower()
+    assert_allclose(ind.power(0.5, 50, 0.05, ratio=1e-9), 0.05, atol=1e-6)
+    assert ind.power(0.5, 50, 0.05, ratio=0) > 0.9
+
+
+@pytest.mark.parametrize("alternative", ["two-sided", "larger", "smaller"])
+def test_ttest_ind_solve_power_ratio_zero(alternative):
+    ind = smp.TTestIndPower()
+    one = smp.TTestPower()
+    sign = -1 if alternative == "smaller" else 1
+    kwds = {"ratio": 0, "alternative": alternative}
+
+    nobs1 = ind.solve_power(sign * 0.5, None, 0.05, 0.8, **kwds)
+    nobs = one.solve_power(sign * 0.5, None, 0.05, 0.8, alternative=alternative)
+    assert_allclose(nobs1, nobs, rtol=1e-5)
+    assert_allclose(ind.power(sign * 0.5, nobs1, 0.05, **kwds), 0.8, rtol=1e-5)
+
+    effect_size = ind.solve_power(None, 30, 0.05, 0.8, **kwds)
+    expected = one.solve_power(None, 30, 0.05, 0.8, alternative=alternative)
+    assert_allclose(effect_size, expected, rtol=1e-5)
+    assert_allclose(ind.power(effect_size, 30, 0.05, **kwds), 0.8, rtol=1e-5)
+
+    alpha = ind.solve_power(sign * 0.5, 30, None, 0.8, **kwds)
+    expected = one.solve_power(sign * 0.5, 30, None, 0.8, alternative=alternative)
+    assert_allclose(alpha, expected, rtol=1e-5)
+    assert_allclose(ind.power(sign * 0.5, 30, alpha, **kwds), 0.8, rtol=1e-5)
+
+    # solving for the power does not depend on the root finding
+    power = ind.solve_power(sign * 0.5, 30, 0.05, None, **kwds)
+    assert_allclose(power, ind.power(sign * 0.5, 30, 0.05, **kwds), rtol=1e-12)
+
+
+# R 4.6.1, package pwr 1.3-0, effect size 0.5, nobs1 = 50, alpha = 0.05; the
+# first element is for ratio = 0, the others for ratio = 0.5 and 1:
+# pwr.t.test(n = 50, d = 0.5, sig.level = 0.05, type = "one.sample",
+#            alternative = alt)$power
+# pwr.t2n.test(n1 = 50, n2 = c(25, 50), d = 0.5, sig.level = 0.05,
+#              alternative = alt)$power
+# with alt in c("two.sided", "greater", "less")
+POWER_RATIO_R = {
+    "two-sided": [0.933897581262, 0.521721300128, 0.696893405534],
+    "larger": [0.967206745826, 0.647066651831, 0.798936164150],
+    "smaller": [1.42685133153e-07, 1.22510474520e-04, 1.83145096917e-05],
+}
+RATIOS = np.array([0.0, 0.5, 1.0])
+
+
+@pytest.mark.parametrize("alternative", ["two-sided", "larger", "smaller"])
+def test_ttest_ind_power_ratio_array(alternative):
+    ind = smp.TTestIndPower()
+    kwds = {"alternative": alternative}
+    res = ind.power(0.5, 50, 0.05, ratio=RATIOS, **kwds)
+    assert isinstance(res, np.ndarray)
+    assert res.shape == (3,)
+    # the noncentral t distribution of SciPy on WASM is accurate to about 1e-8
+    # (absolute), which matters for the tiny powers of the other alternative
+    assert_allclose(res, POWER_RATIO_R[alternative], rtol=1e-6, atol=1e-8)
+    # same as the scalar calls
+    expected = [ind.power(0.5, 50, 0.05, ratio=r, **kwds) for r in RATIOS]
+    assert_allclose(res, expected, rtol=1e-12)
+    # a list works too, and df is applied to all elements
+    assert_allclose(ind.power(0.5, 50, 0.05, ratio=list(RATIOS), **kwds), res)
+    res_df = ind.power(0.5, 50, 0.05, ratio=RATIOS, df=30, **kwds)
+    expected = [ind.power(0.5, 50, 0.05, ratio=r, df=30, **kwds) for r in RATIOS]
+    assert_allclose(res_df, expected, rtol=1e-12)
+
+
+def test_ttest_ind_power_ratio_array_positive():
+    # array ratio without zero works as before the ratio=0 support
+    ind = smp.TTestIndPower()
+    ratios = np.array([0.5, 1.0, 2.0])
+    res = ind.power(0.5, 50, 0.05, ratio=ratios)
+    # R 4.6.1, pwr 1.3-0: pwr.t2n.test(n1 = 50, n2 = c(25, 50, 100), d = 0.5)
+    # the noncentral t distribution of SciPy on WASM is accurate to about 1e-8
+    assert_allclose(res, [0.521721300128, 0.696893405534, 0.818063361118], rtol=1e-7)
+    assert_array_equal(res, [ind.power(0.5, 50, 0.05, ratio=r) for r in ratios])
+
+
+def test_ttest_ind_power_ratio_broadcast():
+    ind = smp.TTestIndPower()
+    ratios = np.array([0.0, 1.0, 2.0])
+    effect_size = np.array([[0.2], [0.5]])
+    res = ind.power(effect_size, 50, 0.05, ratio=ratios)
+    assert res.shape == (2, 3)
+    for i, es in enumerate([0.2, 0.5]):
+        expected = [ind.power(es, 50, 0.05, ratio=r) for r in ratios]
+        assert_allclose(res[i], expected, rtol=1e-12)
+
+    nobs1 = np.array([20, 50, 100])
+    res = ind.power(0.5, nobs1, 0.05, ratio=ratios)
+    assert res.shape == (3,)
+    expected = [ind.power(0.5, n, 0.05, ratio=r) for n, r in zip(nobs1, ratios, strict=True)]
+    assert_allclose(res, expected, rtol=1e-12)
+
+
+def test_ttest_ind_power_ratio_series():
+    ind = smp.TTestIndPower()
+    ratios = pd.Series(RATIOS, index=list("abc"))
+    res = ind.power(0.5, 50, 0.05, ratio=ratios)
+    assert_allclose(res, POWER_RATIO_R["two-sided"], rtol=1e-6)
+
+
+@pytest.mark.skipif(
+    PD_LT_2, reason="pandas 1.x cannot apply a SciPy ufunc to a Series and an array"
+)
+def test_ttest_ind_power_ratio_series_result():
+    ind = smp.TTestIndPower()
+    ratios = pd.Series(RATIOS, index=list("abc"))
+    # without a zero the Series input keeps working as before, with a Series
+    # as result
+    res = ind.power(0.5, 50, 0.05, ratio=ratios.iloc[1:])
+    assert isinstance(res, pd.Series)
+    assert_allclose(res.to_numpy(), POWER_RATIO_R["two-sided"][1:], rtol=1e-6)
+    assert list(res.index) == ["b", "c"]
+
+
+@pytest.mark.parametrize("bad", [-1, -1e-10, np.nan, [0.5, -1.0], [1.0, np.nan]])
+def test_ttest_ind_ratio_invalid(bad):
+    ind = smp.TTestIndPower()
+    with pytest.raises(ValueError, match="ratio must be non-negative"):
+        ind.power(0.5, 50, 0.05, ratio=bad)
+    with pytest.raises(ValueError, match="ratio must be non-negative"):
+        ind.power(0.5, 50, 0.05, ratio=np.asarray(bad))
+    # solve_power validates before the root finding, which would swallow the
+    # error and return nan with a ConvergenceWarning
+    for args in [
+        (0.5, None, 0.05, 0.8),
+        (None, 50, 0.05, 0.8),
+        (0.5, 50, None, 0.8),
+        (0.5, 50, 0.05, None),
+    ]:
+        with pytest.raises(ValueError, match="ratio must be non-negative"):
+            ind.solve_power(*args, ratio=bad)
 
 
 @pytest.mark.parametrize(
