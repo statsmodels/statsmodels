@@ -6129,7 +6129,9 @@ _predict_params = Docstring(base.Results.predict.__doc__).extract_parameters(
     ["exog", "transform", "*args", "**kwargs"], indent=8
 )
 # The Notes of the base class are not part of the docstring of predict below
-_predict_params = _predict_params.replace(" see Notes below.", "")
+if _predict_params is not None:
+    # None if the docstrings are stripped, python -OO
+    _predict_params = _predict_params.replace(" see Notes below.", "")
 
 
 class MultinomialResults(DiscreteResults):
