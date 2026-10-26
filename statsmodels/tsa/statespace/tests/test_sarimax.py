@@ -7,6 +7,7 @@ License: Simplified-BSD
 from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_WIN
 
+import contextlib
 from pathlib import Path
 import warnings
 
@@ -18,7 +19,12 @@ import pytest
 import statsmodels.iolib.summary
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools import add_constant
-from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    EstimationWarning,
+    ValueWarning,
+)
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.statespace import sarimax, tools
 
@@ -2989,9 +2995,14 @@ def test_simple_differencing_strindex():
     values = np.log(realgdp_results["value"]).values
     index = pd.Index(range(len(values))).map(str)
     endog = pd.Series(values, index=index)
-    match = "An unsupported index was provided" if PD_LT_2 else "Could not infer forma"
-    err = ValueWarning if PD_LT_2 else UserWarning
-    with pytest.warns(err, match=match):
+    # statsmodels warns for the unsupported index with all versions of pandas
+    unsupported = "An unsupported index was provided"
+    if PD_LT_2:
+        pandas_warns = contextlib.nullcontext()
+    else:
+        # pandas 2 also warns that it cannot infer the format of the date strings
+        pandas_warns = pytest.warns(UserWarning, match="Could not infer forma")
+    with pytest.warns(ValueWarning, match=unsupported), pandas_warns:
         mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)
 
     assert_(mod._index.equals(pd.RangeIndex(start=0, stop=len(values) - 1)))
@@ -3048,7 +3059,11 @@ def test_plot_too_few_obs(close_figures):
     mod = sarimax.SARIMAX(
         rs.normal(size=10), order=(10, 0, 0), enforce_stationarity=False
     )
-    with pytest.warns(UserWarning, match="Too few"):
+    # The information matrix divides by nobs - loglikelihood_burn, which is 0
+    with (
+        pytest.warns(UserWarning, match="Too few"),
+        pytest.warns(RuntimeWarning, match="invalid value encountered"),
+    ):
         results = mod.fit()
     with pytest.raises(ValueError, match="Length of endogenous"):
         results.plot_diagnostics(figsize=(15, 5))
@@ -3060,7 +3075,12 @@ def test_plot_too_few_obs(close_figures):
         enforce_stationarity=False,
         enforce_invertibility=False,
     )
-    with pytest.warns(UserWarning, match="Too few"):
+    # The variance of the empty differenced data is not defined
+    with (
+        pytest.warns(UserWarning, match="Too few"),
+        pytest.warns(RuntimeWarning, match="Degrees of freedom <= 0"),
+        pytest.warns(RuntimeWarning, match="invalid value encountered"),
+    ):
         results = mod.fit()
     with pytest.raises(ValueError, match="Length of endogenous"):
         results.plot_diagnostics(figsize=(30, 15))
@@ -3071,9 +3091,11 @@ def test_sarimax_starting_values_few_obsevations():
     rs = np.random.RandomState(758217)
     y = rs.standard_normal(17)
 
-    sarimax_model = sarimax.SARIMAX(
-        endog=y, order=(1, 1, 1), seasonal_order=(0, 1, 0, 12), trend="n"
-    ).fit(disp=False)
+    # The conditional sum of squares estimate of the AR parameter is not stationary
+    with pytest.warns(EstimationWarning, match="Non-stationary starting"):
+        sarimax_model = sarimax.SARIMAX(
+            endog=y, order=(1, 1, 1), seasonal_order=(0, 1, 0, 12), trend="n"
+        ).fit(disp=False)
 
     assert np.all(np.isfinite(sarimax_model.predict(start=len(y), end=len(y) + 11)))
 
@@ -3102,7 +3124,15 @@ def test_sarimax_starting_values_few_obsevations_long_ma():
         2939.6,
     ]
 
-    sarimax_model = sarimax.SARIMAX(endog=y, order=(0, 1, 5), trend="n").fit(disp=False)
+    # The conditional sum of squares estimates of the MA parameters are not
+    # invertible (ill-conditioned with so few observations)
+    with pytest.warns(EstimationWarning, match="Non-invertible starting MA"):
+        # The optimizer started from zeros may fail to converge, depending on the
+        # platform
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optimization"):
+            sarimax_model = sarimax.SARIMAX(endog=y, order=(0, 1, 5), trend="n").fit(
+                disp=False
+            )
 
     assert np.all(np.isfinite(sarimax_model.predict(start=len(y), end=len(y) + 11)))
 
@@ -3199,10 +3229,13 @@ def test_start_params_0d_endog():
     # cannot be indexed in _conditional_sum_squares
     endog = np.array([111., 222., 333.])
     mod = sarimax.SARIMAX(endog, order=(1, 2, 1))
-    start_params = mod.start_params
+    # There are too few observations to estimate the starting parameters
+    with pytest.warns(EstimationWarning, match="Too few observations"):
+        start_params = mod.start_params
     assert np.all(np.isfinite(start_params))
 
     # Also covers the case with a single observation and no differencing
     mod = sarimax.SARIMAX(np.array([111.]), order=(1, 0, 1))
-    start_params = mod.start_params
+    with pytest.warns(EstimationWarning, match="Too few observations"):
+        start_params = mod.start_params
     assert np.all(np.isfinite(start_params))
