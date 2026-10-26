@@ -32,8 +32,8 @@ def hpfilter(x, lamb=1600, one_sided=False):
         depends on the observations up to and including t. The default is the
         usual two-sided filter. The first two observations are fit exactly,
         so the trend is equal to x and the cycle is 0, and the first
-        non-trivial value of the cycle is at t=2. x must not contain NaN or
-        inf values.
+        non-trivial value of the cycle is at t=2. x must not be empty and must
+        not contain NaN or inf values.
 
         .. versionadded:: 0.15.1
 
@@ -46,6 +46,14 @@ def hpfilter(x, lamb=1600, one_sided=False):
             The estimated cycle in the data given lamb.
         trend : ndarray or Series
             The estimated trend in the data given lamb.
+
+    Raises
+    ------
+    TypeError
+        If one_sided is not a bool.
+    ValueError
+        If lamb is not positive. If one_sided is True and x is empty or
+        contains NaN or inf.
 
     See Also
     --------
@@ -85,7 +93,12 @@ def hpfilter(x, lamb=1600, one_sided=False):
     The trend is the filtered state of the Kalman filter with an exact diffuse
     initialization. The one-sided trend at time t is identical to the last
     value of the two-sided trend computed from x[:t+1] (Stock and Watson,
-    1999).
+    1999). Because the initialization is exactly diffuse, the first
+    observations differ slightly (by up to about 1e-3 for the real GDP series
+    in the statsmodels tests, which has a level of about 3000) from
+    implementations that approximate it with a large finite variance, for
+    example ``hp1`` in the R package hpfilter, which uses a prior variance of
+    1e5.
 
     See the notebook `Time Series Filters
     <../examples/notebooks/generated/tsa_filters.html>`__ for an overview.
@@ -132,6 +145,8 @@ def hpfilter(x, lamb=1600, one_sided=False):
         raise ValueError(f"lamb must be a positive number, got {lamb}")
     one_sided = bool_like(one_sided, "one_sided", strict=True)
     if one_sided:
+        if x.shape[0] == 0:
+            raise ValueError("x must not be empty when one_sided is True")
         if not np.all(np.isfinite(x)):
             raise ValueError("x must not contain NaN or inf when one_sided is True")
         trend = _hpfilter_one_sided(x, lamb)
@@ -168,9 +183,13 @@ def _hpfilter_one_sided(x, lamb):
     # to leave x unchanged
     kfilter.bind(np.array(x)[:, None])
     kfilter["design"] = np.array([[1.0, 0.0]])
-    kfilter["obs_cov"] = np.array([[1.0]])
+    # The filtered state under an exactly diffuse prior only depends on the ratio
+    # of the two variances. Scaling them as (lamb, 1) instead of (1, 1 / lamb)
+    # gives the same trend but avoids the loss of precision of a tiny state
+    # variance when lamb is large.
+    kfilter["obs_cov"] = np.array([[lamb]])
     kfilter["transition"] = np.array([[2.0, -1.0], [1.0, 0.0]])
     kfilter["selection"] = np.array([[1.0], [0.0]])
-    kfilter["state_cov"] = np.array([[1.0 / lamb]])
+    kfilter["state_cov"] = np.array([[1.0]])
     kfilter.initialize_diffuse()
     return np.array(kfilter.filter().filtered_state[0])
