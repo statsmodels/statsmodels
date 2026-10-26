@@ -294,7 +294,7 @@ Time series analysis
   exist. A derivative free optimizer, such as ``method="powell"``, can try
   parameters that are transformed to the boundary of the stationary region.
   The fit of the dynamic factor model in the example notebook failed with this
-  error on some platforms.
+  error on some platforms. :pr:`10611`
 - ``range_unit_root_test`` documents the correct null hypothesis, a unit
   root, which is rejected for small statistics. The ``InterpolationWarning``
   reports the correct direction: it is raised if the statistic is outside the
