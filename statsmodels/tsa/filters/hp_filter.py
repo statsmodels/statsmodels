@@ -30,7 +30,12 @@ def hpfilter(x, lamb=1600, one_sided=False):
     one_sided : bool, optional
         If True, use the one-sided HP filter where the trend at time t only
         depends on the observations up to and including t. The default is the
-        usual two-sided filter.
+        usual two-sided filter. The first two observations are fit exactly,
+        so the trend is equal to x and the cycle is 0, and the first
+        non-trivial value of the cycle is at t=2. x must not contain NaN or
+        inf values.
+
+        .. versionadded:: 0.15.1
 
     Returns
     -------
@@ -125,8 +130,10 @@ def hpfilter(x, lamb=1600, one_sided=False):
         # identical to the series and negative values solve a non-convex
         # system, so both silently degenerate
         raise ValueError(f"lamb must be a positive number, got {lamb}")
-    one_sided = bool_like(one_sided, "one_sided")
+    one_sided = bool_like(one_sided, "one_sided", strict=True)
     if one_sided:
+        if not np.all(np.isfinite(x)):
+            raise ValueError("x must not contain NaN or inf when one_sided is True")
         trend = _hpfilter_one_sided(x, lamb)
         cycle = x - trend
         return CycleTrendResult(
@@ -164,4 +171,4 @@ def _hpfilter_one_sided(x, lamb):
     kfilter["selection"] = np.array([[1.0], [0.0]])
     kfilter["state_cov"] = np.array([[1.0 / lamb]])
     kfilter.initialize_diffuse()
-    return kfilter.filter().filtered_state[0]
+    return np.array(kfilter.filter().filtered_state[0])

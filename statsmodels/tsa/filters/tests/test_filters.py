@@ -643,15 +643,17 @@ def test_hpfilter_lamb_validation():
 
 @pytest.mark.parametrize("lamb", [6.25, 1600, 129600])
 def test_hpfilter_one_sided_r(lamb):
-    # Results from R package hpfilter, see results/hpfilter_one_sided.R
+    # Results from base R, see results/hpfilter_one_sided.R
     path = CURR_DIR / "results" / "hpfilter_one_sided.csv"
     expected = read_csv(path)[f"lamb_{lamb}"]
     dta = macrodata.load_pandas().data["realgdp"].values
     res = hpfilter(dta, lamb, one_sided=True)
-    # R uses an approximate diffuse initialization, which differs in the
-    # first observations
-    assert_allclose(res.trend, expected, rtol=1e-6)
+    assert_allclose(res.trend, expected, rtol=1e-8)
     assert_allclose(res.cycle, dta - res.trend)
+    # the first two observations are fit exactly
+    assert_equal(res.trend[:2], dta[:2])
+    assert_equal(res.cycle[:2], 0.0)
+    assert res.trend.flags.c_contiguous
 
 
 @pytest.mark.parametrize("lamb", [6.25, 1600, 129600])
@@ -676,6 +678,20 @@ def test_hpfilter_one_sided_pandas():
     assert_index_equal(res.trend.index, dta.index)
     assert_equal(res.trend.name, "realgdp_trend")
     assert_equal(res.cycle.name, "realgdp_cycle")
+
+
+@pytest.mark.parametrize("value", [np.nan, np.inf])
+def test_hpfilter_one_sided_nonfinite(value):
+    dta = macrodata.load_pandas().data["realgdp"].values.copy()
+    dta[10] = value
+    with pytest.raises(ValueError, match="x must not contain NaN or inf"):
+        hpfilter(dta, one_sided=True)
+
+
+@pytest.mark.parametrize("one_sided", ["no", None, 1])
+def test_hpfilter_one_sided_bool(one_sided):
+    with pytest.raises(TypeError, match="one_sided"):
+        hpfilter(np.arange(50.0), one_sided=one_sided)
 
 
 def test_hpfilter_returns_cycletrendresult():

@@ -124,6 +124,11 @@ New functions and methods
   :pr:`10401`, :pr:`10528`, :pr:`10542`
 - ``statsmodels.tsa.tsatools.add_lag`` accepts the label of a column of a
   pandas ``DataFrame`` as ``col``. :pr:`10302`
+- Add the ``one_sided`` argument to
+  :func:`~statsmodels.tsa.filters.hp_filter.hpfilter`. With
+  ``one_sided=True``, the trend at time t only depends on the observations up
+  to and including t. It is computed with the Kalman filter of the state space
+  form of the HP filter. :issue:`6947`, :pr:`10588`
 
 Performance
 -----------
