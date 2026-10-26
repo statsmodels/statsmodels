@@ -1361,6 +1361,23 @@ class StratifiedTable:
                 The p-value for the test.
         """
 
+        Notes
+        -----
+        The statistic is computed from the fitted cell counts of each stratum
+        given the pooled (Mantel-Haenszel) odds ratio.
+
+        If a stratum has a row or column total of zero, the statistic and the
+        p-value are NaN.
+
+        .. versionchanged:: 0.15.1
+
+           The test can be computed if the pooled odds ratio is exactly 1,
+           where it was NaN before. The fitted counts are computed in a way
+           that avoids a loss of precision if the pooled odds ratio is close
+           to 1 or some fitted counts are small. Results can differ from
+           those of earlier versions by a relative amount of about 1e-12, and
+           by more for tables where the earlier calculation lost precision.
+
         table = self.table
 
         r = self.oddsratio_pooled
