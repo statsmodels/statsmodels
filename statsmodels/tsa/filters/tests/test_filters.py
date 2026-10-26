@@ -684,6 +684,29 @@ def test_hpfilter_one_sided_pandas():
     assert_equal(res.cycle.name, "realgdp_cycle")
 
 
+@pytest.mark.parametrize("nobs", [1, 2, 3, 4])
+def test_hpfilter_one_sided_short(nobs):
+    # The first two observations are fit exactly. Starting at nobs=3, the last
+    # value is the last value of the two-sided trend. The two-sided filter
+    # itself needs at least 3 observations.
+    dta = macrodata.load_pandas().data["realgdp"].values[:nobs]
+    res = hpfilter(dta, one_sided=True)
+    assert res.trend.shape == (nobs,)
+    assert_equal(res.trend[:2], dta[:2])
+    assert_equal(res.cycle[:2], 0.0)
+    assert_allclose(res.cycle, dta - res.trend)
+    if nobs >= 3:
+        assert_allclose(res.trend[-1], hpfilter(dta).trend[-1], rtol=1e-10)
+    # list input
+    res_list = hpfilter(list(dta), one_sided=True)
+    assert_equal(res_list.trend, res.trend)
+
+
+def test_hpfilter_one_sided_empty():
+    with pytest.raises(ValueError, match="x must not be empty"):
+        hpfilter(np.empty(0), one_sided=True)
+
+
 @pytest.mark.parametrize("value", [np.nan, np.inf])
 def test_hpfilter_one_sided_nonfinite(value):
     dta = macrodata.load_pandas().data["realgdp"].values.copy()
