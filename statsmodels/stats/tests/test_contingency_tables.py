@@ -1,6 +1,9 @@
 """
 Tests for contingency table analyses.
 """
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
+from contextlib import nullcontext
 from math import erfc, sqrt
 from pathlib import Path
 import warnings
@@ -900,7 +903,12 @@ def test_equal_odds_reciprocal_overflow_legacy(adjust):
     # This unsupported scaling must retain the old NaN/warning behavior,
     # rather than introducing an OverflowError from accurate accumulation.
     tables = [[[1e-308, 1e-308], [1, 1]], [[1e-308, 1e-308], [1, 1]]]
-    with pytest.warns(RuntimeWarning, match="invalid value encountered in divide"):
+    # WASM has no floating-point exception support; keep the numerical checks.
+    warning_context = (
+        nullcontext() if PYTHON_IMPL_WASM else
+        pytest.warns(RuntimeWarning, match="invalid value encountered in divide")
+    )
+    with warning_context:
         result = ctab.StratifiedTable(tables).test_equal_odds(adjust=adjust)
     assert np.isnan(result.statistic)
     assert np.isnan(result.pvalue)
@@ -908,7 +916,10 @@ def test_equal_odds_reciprocal_overflow_legacy(adjust):
 
 @pytest.mark.parametrize("adjust", [False, True])
 def test_equal_odds_overflow_preserves_legacy_warnings(adjust):
-    with pytest.warns(RuntimeWarning):
+    warning_context = (
+        nullcontext() if PYTHON_IMPL_WASM else pytest.warns(RuntimeWarning)
+    )
+    with warning_context:
         table = ctab.StratifiedTable(np.full((2, 2, 2), 1e308))
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
@@ -916,7 +927,8 @@ def test_equal_odds_overflow_preserves_legacy_warnings(adjust):
     expected = ["invalid value encountered in divide"] * 2
     if adjust:
         expected.append("overflow encountered in reduce")
-    assert [str(warning.message) for warning in caught] == expected
+    if not PYTHON_IMPL_WASM:
+        assert [str(warning.message) for warning in caught] == expected
     assert all(warning.category is RuntimeWarning for warning in caught)
     assert np.isnan(result.statistic)
     assert np.isnan(result.pvalue)
@@ -969,10 +981,11 @@ def test_equal_odds_unrepresentable_fitted_legacy(adjust, exponent):
                     "overflow encountered in square",
                     "invalid value encountered in multiply"]
     messages = [str(warning.message) for warning in caught]
-    if exponent == 510 and adjust:
-        # NumPy 1.23 calls scalar division "double_scalars".
-        messages[-1] = messages[-1].replace("double_scalars", "scalar divide")
-    assert messages == expected
+    if not PYTHON_IMPL_WASM:
+        if exponent == 510 and adjust:
+            # NumPy 1.23 calls scalar division "double_scalars".
+            messages[-1] = messages[-1].replace("double_scalars", "scalar divide")
+        assert messages == expected
     assert all(warning.category is RuntimeWarning for warning in caught)
     assert np.isnan(result.statistic)
     assert np.isnan(result.pvalue)
@@ -994,9 +1007,10 @@ def test_equal_odds_unrepresentable_reciprocal_legacy(adjust):
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         result = table.test_equal_odds(adjust=adjust)
-    assert [str(warning.message) for warning in caught] == [
-        "invalid value encountered in divide"
-    ]
+    if not PYTHON_IMPL_WASM:
+        assert [str(warning.message) for warning in caught] == [
+            "invalid value encountered in divide"
+        ]
     assert all(warning.category is RuntimeWarning for warning in caught)
     assert np.isnan(result.statistic)
     assert np.isnan(result.pvalue)
@@ -1023,9 +1037,10 @@ def test_equal_odds_statistic_sum_overflow_legacy(adjust):
         result = table.test_equal_odds(adjust=adjust)
     # The legacy root subtraction rounds e11 to zero in the first two
     # strata, making v11=0 and Q=inf. The Tarone correction is finite.
-    assert [str(warning.message) for warning in caught] == [
-        "divide by zero encountered in divide"
-    ] * 2
+    if not PYTHON_IMPL_WASM:
+        assert [str(warning.message) for warning in caught] == [
+            "divide by zero encountered in divide"
+        ] * 2
     assert all(warning.category is RuntimeWarning for warning in caught)
     assert_equal(result.statistic, np.inf)
     assert_equal(result.pvalue, 0.0)
