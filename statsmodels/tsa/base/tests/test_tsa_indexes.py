@@ -20,6 +20,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.base import tsa_model
 
 nobs = 5
@@ -280,7 +281,10 @@ def test_instantiation_valid():
         # Since only supported indexes are valid `dates` arguments, everything
         # else is invalid here
         for ix, _ in supported_increment_indexes + unsupported_indexes:
-            with pytest.raises(ValueError):
+            # pandas >= 2 warns that it cannot infer the format of strings
+            with pytest.raises(ValueError), warns_or_none(
+                UserWarning, match="Could not infer format"
+            ):
                 tsa_model.TimeSeriesModel(endog, dates=ix)
 
     # Test pandas (Series, DataFrame); with index (no dates/freq argument)
@@ -517,7 +521,10 @@ def test_prediction_increment_unsupported():
     # a. Generated from unsupported index
     endog = dta[2].copy()
     endog.index = unsupported_indexes[-2][0]
-    mod = tsa_model.TimeSeriesModel(endog)
+    with pytest.warns(ValueWarning, match="An unsupported index was provided"):
+        # pandas >= 2 warns that it cannot infer the format of strings
+        with warns_or_none(UserWarning, match="Could not infer format"):
+            mod = tsa_model.TimeSeriesModel(endog)
 
     # Tests three common use cases: basic prediction, negative indexes, and
     # out-of-sample indexes.
