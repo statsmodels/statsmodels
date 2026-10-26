@@ -72,6 +72,14 @@ Behavior changes
   ``ValueError`` now instead of failing with an array broadcasting error. The
   error messages name the lag that was passed. :pr:`10481`, :pr:`10311`,
   :pr:`10561`
+- The ``DataFrame`` returned by ``predict`` of the results of ``MNLogit``, when
+  ``exog`` is a ``DataFrame`` or the model was fit with a formula, has the
+  categories of ``endog`` as columns, in the order of ``wendog`` with the
+  reference category first, instead of 0, 1, ..., J - 1. The categories keep
+  their type, so ``model.names`` and the labels in ``summary`` are strings but
+  the columns of ``predict`` are, for example, integers for integer ``endog``.
+  Predictions for an array ``exog`` are still arrays. :issue:`4804`,
+  :pr:`10587`
 - With ``missing="drop"``, a ``MissingDataError`` is raised if all
   observations are dropped because of missing values. An unknown value of
   ``missing`` raises a ``ValueError``. :issue:`4417`, :pr:`10535`,
