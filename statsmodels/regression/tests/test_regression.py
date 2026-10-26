@@ -36,8 +36,9 @@ from statsmodels.regression.linear_model import (
     burg,
     yule_walker,
 )
+from statsmodels.regression.quantile_regression import QuantReg
 from statsmodels.tools.numdiff import approx_hess
-from statsmodels.tools.sm_exceptions import SingularMatrixWarning
+from statsmodels.tools.sm_exceptions import MissingDataError, SingularMatrixWarning
 from statsmodels.tools.tools import add_constant
 
 DECIMAL_4 = 4
@@ -2248,3 +2249,125 @@ def test_yule_walker_order_validation():
     assert rho0.shape == (0,)
     rho, sigma = yule_walker(x, order=4)
     assert rho.shape == (4,)
+
+
+def _finite_check_data(use_pandas, nobs=100):
+    rng = np.random.default_rng(20180823)
+    endog = rng.standard_normal(nobs)
+    exog = rng.standard_normal((nobs, 2))
+    if use_pandas:
+        return pd.Series(endog), pd.DataFrame(exog)
+    return endog, exog
+
+
+def _set_value(arr, idx, value):
+    if isinstance(arr, (pd.Series, pd.DataFrame)):
+        arr.iloc[idx] = value
+    else:
+        arr[idx] = value
+
+
+@pytest.mark.parametrize("model", [OLS, WLS, GLS, GLSAR, QuantReg])
+@pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize("use_pandas", [True, False])
+@pytest.mark.parametrize("name", ["endog", "exog"])
+@pytest.mark.parametrize("hasconst", [None, False, True])
+def test_nonfinite_data_raises(model, bad_value, use_pandas, name, hasconst):
+    endog, exog = _finite_check_data(use_pandas)
+    data = {"endog": endog, "exog": exog}
+    _set_value(data[name], 50 if name == "endog" else (3, 1), bad_value)
+    with pytest.raises(MissingDataError, match=f"{name} contains inf or nans"):
+        model(data["endog"], data["exog"], hasconst=hasconst)
+
+
+@pytest.mark.parametrize("model", [OLS, WLS, GLS, GLSAR])
+@pytest.mark.parametrize("name", ["endog", "exog"])
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_nonfinite_data_missing_drop(model, name, use_pandas):
+    # nan is removed by missing="drop", inf is not
+    endog, exog = _finite_check_data(use_pandas)
+    data = {"endog": endog, "exog": exog}
+    _set_value(data[name], 50 if name == "endog" else (3, 1), np.nan)
+    res = model(data["endog"], data["exog"], missing="drop").fit()
+    assert res.model.exog.shape[0] == 99
+    assert np.all(np.isfinite(np.asarray(res.params)))
+
+    endog, exog = _finite_check_data(use_pandas)
+    data = {"endog": endog, "exog": exog}
+    _set_value(data[name], 50 if name == "endog" else (3, 1), np.inf)
+    with pytest.raises(MissingDataError, match=f"{name} contains inf or nans"):
+        model(data["endog"], data["exog"], missing="drop")
+
+
+@pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_nonfinite_weights_raises(bad_value, use_pandas):
+    endog, exog = _finite_check_data(use_pandas)
+    weights = np.ones(100)
+    weights[-2:] = bad_value
+    if use_pandas:
+        weights = pd.Series(weights)
+    with pytest.raises(MissingDataError, match="weights contains inf or nans"):
+        WLS(endog, exog, weights=weights)
+    # also for a scalar
+    with pytest.raises(MissingDataError, match="weights contains inf or nans"):
+        WLS(endog, exog, weights=bad_value)
+
+
+# sqrt(sigma) is computed for the Cholesky factor before the check of sigma
+@pytest.mark.filterwarnings("ignore:invalid value encountered in sqrt:RuntimeWarning")
+@pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_nonfinite_sigma_raises(bad_value, use_pandas):
+    endog, exog = _finite_check_data(use_pandas)
+    sigma = np.ones(100)
+    sigma[-2:] = bad_value
+    if use_pandas:
+        sigma = pd.Series(sigma)
+    with pytest.raises(MissingDataError, match="sigma contains inf or nans"):
+        GLS(endog, exog, sigma=sigma)
+    with pytest.raises(MissingDataError, match="sigma contains inf or nans"):
+        GLS(endog, exog, sigma=bad_value)
+
+
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_nonfinite_weights_sigma_missing_drop(use_pandas):
+    endog, exog = _finite_check_data(use_pandas)
+    weights = np.ones(100)
+    weights[-2:] = np.nan
+    if use_pandas:
+        weights = pd.Series(weights)
+    res = WLS(endog, exog, weights=weights, missing="drop").fit()
+    assert res.nobs == 98
+    assert np.all(np.isfinite(np.asarray(res.params)))
+
+    sigma = np.ones(100)
+    sigma[-2:] = np.nan
+    if use_pandas:
+        sigma = pd.Series(sigma)
+    res = GLS(endog, exog, sigma=sigma, missing="drop").fit()
+    assert res.nobs == 98
+    assert np.all(np.isfinite(np.asarray(res.params)))
+
+
+def test_nonfinite_formula():
+    data = pd.DataFrame(
+        {"y": np.linspace(0, 1, 20) ** 2, "x": np.linspace(0, 1, 20)}
+    )
+    data.loc[4, "y"] = np.inf
+    with pytest.raises(MissingDataError, match="endog contains inf or nans"):
+        OLS.from_formula("y ~ x", data)
+    data.loc[4, "y"] = np.nan
+    res = OLS.from_formula("y ~ x", data).fit()
+    assert res.nobs == 19
+
+
+def test_finite_data_unchanged():
+    # large but finite values and the default options are not affected
+    endog, exog = _finite_check_data(False)
+    res = OLS(1e150 * endog, exog).fit()
+    assert np.all(np.isfinite(res.params))
+    res = WLS(endog, exog, weights=np.linspace(1e-10, 1e10, 100)).fit()
+    assert np.all(np.isfinite(res.params))
+    res = GLS(endog, exog, sigma=np.linspace(1e-10, 1e10, 100)).fit()
+    assert np.all(np.isfinite(res.params))
