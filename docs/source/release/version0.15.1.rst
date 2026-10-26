@@ -370,6 +370,12 @@ Time series analysis
   the statistic matches R's ``ARDL::bounds_f_test``. A model that uses
   ``deterministic`` raises a ``NotImplementedError`` instead of ignoring the
   process. :pr:`10579`
+- ``x13_arima_analysis`` reads a ``rawspec`` file as UTF-8 independent of the
+  locale. Before, the file was decoded with the locale encoding, so that text
+  with non-ASCII characters was garbled or failed, for example on Windows.
+  A UTF-8 byte order mark is ignored, a file that is not valid UTF-8 raises a
+  ``ValueError`` that says so, and ``rawspec`` accepts a ``pathlib.Path`` as
+  documented. :pr:`10585`
 
 Statistics and tests
 --------------------
