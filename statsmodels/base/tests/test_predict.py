@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 from scipy.special import expit
 
-from statsmodels.discrete.discrete_model import NegativeBinomial
+from statsmodels.discrete.discrete_model import MNLogit, NegativeBinomial
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.miscmodels.ordinal_model import OrderedModel
 from statsmodels.regression.linear_model import OLS
@@ -54,10 +54,55 @@ def test_predict_series_extra_params(model_class, nobs):
     assert_allclose(pred, expected, rtol=1e-13)
 
 
+@pytest.mark.parametrize("nobs", [1, 3])
+def test_predict_series_mnlogit(nobs):
+    # One exog column and two sets of parameters, so params.size is 2, and the
+    # prediction is a DataFrame with one column for each category
+    rng = np.random.default_rng(76452)
+    x = pd.Series(rng.normal(size=300), name="x")
+    eta = np.column_stack([np.zeros(300), 0.8 * x, -0.6 * x])
+    prob = np.exp(eta)
+    prob /= prob.sum(axis=1, keepdims=True)
+    y = (rng.uniform(size=(300, 1)) > np.cumsum(prob, axis=1)).sum(axis=1)
+    res = MNLogit(y, x).fit(disp=False)
+    assert np.asarray(res.params).shape == (1, 2)
+
+    exog = pd.Series(
+        [-0.4, 0.1, 0.7], index=pd.Index([13, 8, 2], name="case"), name="x"
+    ).iloc[:nobs]
+    # The first category is the reference category
+    eta = np.column_stack(
+        [np.zeros(nobs), exog.to_numpy()[:, None] * np.asarray(res.params)]
+    )
+    expected = np.exp(eta)
+    expected /= expected.sum(axis=1, keepdims=True)
+
+    pred = res.predict(exog)
+    pdt.assert_index_equal(pred.index, exog.index)
+    assert_allclose(pred, expected, rtol=1e-12)
+
+
+def test_predict_series_is_one_row_with_two_exog():
+    # A Series is a single observation if the model has more than one exog
+    # column, which is the case that the condition on exog.shape[1] preserves
+    rng = np.random.default_rng(76452)
+    exog = pd.DataFrame(rng.normal(size=(50, 2)), columns=["x1", "x2"])
+    y = 0.5 * exog["x1"] - exog["x2"] + rng.normal(size=50)
+    res = OLS(y, exog).fit()
+    row = pd.Series([0.3, -0.2], index=["x1", "x2"], name="obs")
+    pred = res.predict(row)
+    assert np.asarray(pred).shape == (1,)
+    expected = 0.3 * res.params["x1"] - 0.2 * res.params["x2"]
+    assert_allclose(np.asarray(pred), [expected], rtol=1e-12)
+
+
 @pytest.mark.parametrize("formula", ["y ~ x", "y ~ x - 1"])
 @pytest.mark.parametrize("nobs", [1, 3])
 @pytest.mark.parametrize("persist", [False, True])
 def test_formula_series_after_remove_data(formula, nobs, persist):
+    # These cases pass without the change of the condition on exog.shape[1]:
+    # for formula models the index is set again later. They protect the
+    # guard for a model without exog, which is what remove_data leaves.
     data = pd.DataFrame(
         {"x": [-2., -1., 0., 1., 2., 3.], "y": [-3., -0.8, 1.1, 2.7, 5.2, 6.8]}
     )
