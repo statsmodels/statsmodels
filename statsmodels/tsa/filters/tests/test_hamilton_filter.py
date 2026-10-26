@@ -203,7 +203,9 @@ def test_minimum_length_works(h, p):
     # There are p+1 regressors, so require at least p+1 observations
     # Requires at least 2 * p + h observations
     x = RNG.standard_normal(2 * p + h)
-    cycle = hamilton_filter(x, h=h, p=p).cycle
+    # The fit has no residual degrees of freedom, so the scale is 0 / 0
+    with pytest.warns(RuntimeWarning, match="divide by zero encountered"):
+        cycle = hamilton_filter(x, h=h, p=p).cycle
     # Minimum number of non-nan values is the same as the number of regressors
     assert np.sum(np.isfinite(cycle)) == (p + 1), np.sum(np.isfinite(cycle))
     with pytest.raises(ValueError, match="x must have at least 2p \\+ h"):
