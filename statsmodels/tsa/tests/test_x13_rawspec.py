@@ -5,6 +5,8 @@ exercise the spec-building path (``speconly=True`` returns before the binary is
 called), so they live here and run everywhere.
 """
 
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
 import json
 import os
 from pathlib import Path
@@ -52,6 +54,7 @@ def no_x12(monkeypatch):
     monkeypatch.setattr(x13, "_check_x12", lambda x12path=None: "x12dummy")
 
 
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="Emscripten does not support processes")
 def test_rawspec_file_utf8_in_non_utf8_locale(tmp_path):
     # Python 3.10-3.14 decode text files with the locale encoding unless told
     # otherwise: cp1252 on Windows, ASCII for LC_ALL=C on Linux and macOS when
