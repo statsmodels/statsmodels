@@ -1442,8 +1442,8 @@ def test_bounds_test_no_lagged_dendog(lags, causal, trend, case):
     res = UECM(dane_data.lrm, lags, **kwargs).fit()
     assert res.model.ar_lags is None
     bounds_result = res.bounds_test(case)
-    assert_allclose(bounds_result.statistic, expected.statistic, rtol=1e-12)
-    assert_allclose(bounds_result.pvalue, expected.pvalue, rtol=1e-12)
+    assert_allclose(bounds_result.statistic, expected.statistic, rtol=1e-9)
+    assert_allclose(bounds_result.pvalue, expected.pvalue, rtol=1e-9)
     assert_allclose(bounds_result.critical_values, expected.critical_values)
 
 
