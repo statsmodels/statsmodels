@@ -183,6 +183,14 @@ Regression and linear models
   wrong shape" if the number of rows of ``exog`` was equal to the number of
   parameters, and did not check the length of ``weights`` against the number
   of rows otherwise. :issue:`10283`, :pr:`10285`
+- ``OLS``, ``WLS``, ``GLS``, ``GLSAR`` and ``QuantReg`` raise a
+  ``MissingDataError`` when ``endog``, ``exog``, ``weights`` or ``sigma``
+  contain ``inf`` or ``nan`` after missing values are handled, so that
+  ``missing="drop"`` still removes ``nan`` but not ``inf``. Before, only
+  ``nan`` and ``inf`` in ``exog`` were detected, and only if ``hasconst`` was
+  not ``False``. ``-inf`` in ``exog``, and non-finite values of the other
+  arrays, raised a ``LinAlgError`` in ``fit`` or gave parameters that are all
+  ``nan``. :issue:`1642`, :issue:`3468`, :pr:`4969`
 - ``get_prediction()`` called without ``exog`` now uses the offset and
   exposure of the model, as ``predict`` does, for GLM, GLMGam, the discrete
   count models and the binary models (Logit and Probit). Before, the offset
