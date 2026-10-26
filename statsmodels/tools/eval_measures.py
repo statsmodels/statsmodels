@@ -126,7 +126,8 @@ def rmspe(y, y_hat, axis=0, zeros=np.nan):
     error = y - y_hat
     loc = y != 0
     loc = loc.ravel()
-    percentage_error = np.full_like(error, zeros)
+    # an integer error would truncate the percentage errors and cannot hold nan
+    percentage_error = np.full_like(error, zeros, dtype=np.result_type(error, 1.0))
     percentage_error.flat[loc] = error.flat[loc] / y.flat[loc]
     mspe = np.nanmean(percentage_error ** 2, axis=axis) * 100
     return np.sqrt(mspe)

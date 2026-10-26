@@ -7,6 +7,7 @@ from statsmodels.compat.python import lrange
 from statsmodels.compat.scipy import SP_LT_116
 
 from pathlib import Path
+import pickle
 import warnings
 
 import numpy as np
@@ -26,6 +27,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import (
     GLS,
+    GLSAR,
     OLS,
     WLS,
     CompareLRTestResult,
@@ -1808,6 +1810,170 @@ def test_slim_summary():
     assert slim_summ.tables[1].as_text() == summ.tables[1].as_text()
 
 
+@pytest.mark.parametrize("method", ["pinv", "qr"])
+def test_fit_attributes_reset_on_initialize(method):
+    # GH#9880
+    data = longley.load()
+    exog = add_constant(np.asarray(data.exog), prepend=False)
+    endog = np.asarray(data.endog)
+    rs = np.random.RandomState(12345)
+    w1, w2 = rs.uniform(0.5, 2.0, size=(2, endog.shape[0]))
+    fit_attrs = [
+        "pinv_wexog", "normalized_cov_params", "rank",
+        "wexog_singular_values", "effects",
+    ]
+
+    mod = WLS(endog, exog, weights=w1)
+    assert all(getattr(mod, attr) is None for attr in fit_attrs)
+    mod.fit(method=method)
+    assert mod.pinv_wexog is not None
+    assert mod.normalized_cov_params is not None
+    assert (mod.effects is None) == (method == "pinv")
+
+    mod.weights = w2
+    mod.initialize()
+    assert all(getattr(mod, attr) is None for attr in fit_attrs)
+    res = mod.fit(method=method)
+    expected = WLS(endog, exog, weights=w2).fit(method=method)
+    assert_allclose(res.params, expected.params)
+    assert_allclose(res.bse, expected.bse)
+
+
+def test_ols_offset_and_score_cache():
+    # GH#9880
+    data = longley.load()
+    exog = add_constant(np.asarray(data.exog), prepend=False)
+    endog = np.asarray(data.endog)
+
+    assert OLS(endog, exog).offset is None
+    offset = np.ones_like(endog)
+    mod = OLS(endog, exog, offset=offset)
+    assert_allclose(mod.offset, offset)
+
+    assert mod._wexog_xprod is None
+    mod.score(np.zeros(exog.shape[1]))
+    assert mod._wexog_xprod is not None
+    mod.initialize()
+    assert mod._wexog_xprod is None
+
+
+def _make_old_pickle_models():
+    rng = np.random.default_rng(20261025)
+    nobs = 40
+    exog = add_constant(rng.standard_normal((nobs, 2)))
+    endog = exog @ [1.0, 0.5, -0.3] + rng.standard_normal(nobs)
+    weights = rng.uniform(0.5, 2.0, nobs)
+    sigma = 0.4 ** np.abs(np.subtract.outer(np.arange(nobs), np.arange(nobs)))
+    return {
+        "OLS": lambda: OLS(endog, exog),
+        "WLS": lambda: WLS(endog, exog, weights=weights),
+        "GLS": lambda: GLS(endog, exog, sigma=sigma),
+        "GLSAR": lambda: GLSAR(endog, exog, rho=1),
+    }
+
+
+def _summary_cells(res):
+    """Cells of the tables of summary, without the date and time of the call"""
+    rows = []
+    for table in res.summary().tables:
+        for row in table.data:
+            cells = [str(cell) for cell in row]
+            if cells[0].strip() in ("Date:", "Time:"):
+                cells[1] = ""
+            rows.append(cells)
+    return rows
+
+
+@pytest.mark.parametrize("name", ["OLS", "WLS", "GLS", "GLSAR"])
+@pytest.mark.parametrize("pickle_results", [True, False])
+def test_unpickle_without_default_attributes(name, pickle_results):
+    # GH#9880 releases before the attributes were initialized in __init__ did
+    # not store them, and unpickling never goes through __init__. Mimic these
+    # pickles by dropping the attributes that were not set at the time.
+    make = _make_old_pickle_models()[name]
+    new_attrs = [
+        "weights", "sigma", "offset", "_wendog_xprod", "_wexog_xprod",
+        "_wexog_x_wendog",
+    ]
+    mod = make()
+    res = mod.fit()
+    for attr in new_attrs:
+        # only drop attributes that are unset, WLS needs its weights
+        if attr in vars(mod) and vars(mod)[attr] is None:
+            del vars(mod)[attr]
+    assert any(attr not in vars(mod) for attr in new_attrs)
+
+    obj = pickle.loads(pickle.dumps(res if pickle_results else mod))
+    old_res = obj if pickle_results else obj.fit()
+    old_mod = old_res.model
+
+    expected = make().fit()
+    params = expected.params
+    for attr in ["rsquared", "rsquared_adj", "fvalue", "f_pvalue",
+                 "centered_tss", "llf", "aic", "bic"]:
+        assert_allclose(getattr(old_res, attr), getattr(expected, attr))
+    # The header of the summary holds the date and time of the call, and the
+    # two models are created at different times, so compare all other cells.
+    assert _summary_cells(old_res) == _summary_cells(expected)
+
+    exp_mod = expected.model
+    assert_allclose(old_mod.loglike(params), exp_mod.loglike(params))
+    if name == "OLS":
+        assert_allclose(old_mod.score(params), exp_mod.score(params))
+        assert_allclose(old_mod.hessian(params), exp_mod.hessian(params))
+
+
+def test_iterative_fit_repeated_call_glsar():
+    # GH#9880 repeated calls start from the current rho. Without a
+    # convergence stop, 2 + 2 iterations are the same as 3 iterations.
+    rng = np.random.default_rng(3293829)
+    nobs = 80
+    exog = add_constant(rng.standard_normal((nobs, 2)))
+    u = np.zeros(nobs)
+    e = rng.standard_normal(nobs)
+    for i in range(1, nobs):
+        u[i] = 0.6 * u[i - 1] + e[i]
+    endog = exog @ [1.0, 0.5, -0.3] + u
+
+    mod = GLSAR(endog, exog, rho=1)
+    res_a = mod.iterative_fit(2, rtol=0)
+    res_b = mod.iterative_fit(2, rtol=0)
+    expected = GLSAR(endog, exog, rho=1).iterative_fit(3, rtol=0)
+    assert not np.allclose(res_a.params, res_b.params, rtol=1e-10, atol=0)
+    assert_allclose(res_b.params, expected.params)
+    assert_allclose(res_b.bse, expected.bse)
+    assert_allclose(mod.pinv_wexog, np.linalg.pinv(mod.wexog))
+
+
+def test_iterative_fit_repeated_call_glshet():
+    # GH#9880 repeated calls start from the current weights, so 2 + 2
+    # iterations are the same as 3 iterations on a fresh model.
+    from statsmodels.regression.feasible_gls import GLSHet
+
+    rng = np.random.default_rng(12345)
+    nobs = 200
+    x = rng.uniform(0.5, 3, nobs)
+    exog = add_constant(x)
+    exog_var = add_constant(x**2)
+    endog = exog @ [1.0, 2.0] + np.sqrt(0.2 + x**2) * rng.standard_normal(nobs)
+
+    def make():
+        with pytest.warns(FutureWarning, match="GLSHet is deprecated"):
+            return GLSHet(endog, exog, exog_var=exog_var)
+
+    mod = make()
+    res_a = mod.iterative_fit(2)
+    res_b = mod.iterative_fit(2)
+    expected = make().iterative_fit(3)
+    assert not np.allclose(res_a.params, res_b.params, rtol=1e-10, atol=0)
+    assert_allclose(res_b.params, expected.params)
+    assert_allclose(res_b.bse, expected.bse)
+    assert_allclose(mod.pinv_wexog, np.linalg.pinv(mod.wexog))
+    # a single iteration is WLS with the given (unit) weights
+    res_wls = WLS(endog, exog, weights=np.ones(nobs)).fit()
+    assert_allclose(make().iterative_fit(1).params, res_wls.params)
+
+
 def test_ols_wls_fixed_scale():
     rs = np.random.RandomState(3293829)
     X = add_constant(rs.uniform(size=(50, 2)))
@@ -1894,6 +2060,55 @@ def test_summary_after_remove_data(fit_func):
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+@pytest.mark.parametrize("scale", [None, 3.5])
+@pytest.mark.parametrize("use_offset", [False, True])
+@pytest.mark.parametrize("n_columns", [1, 2])
+@pytest.mark.parametrize("at_fit", [False, True])
+def test_ols_hessian_numerical_derivative(scale, use_offset, n_columns, at_fit):
+    x = add_constant(np.arange(-1.0, 4.0))[:, :n_columns]
+    y = np.array([1.0, -1.5, 3.0, -0.5, 3.0])
+    offset = np.array([0.1, 0.3, -0.2, 0.4, 0.2]) if use_offset else 0.0
+    model = OLS(y, x, **({"offset": offset} if use_offset else {}))
+    # Fitting y - offset avoids relying on OLS.fit's treatment of offset.
+    if at_fit:
+        params = OLS(y - offset, x).fit().params
+    else:
+        params = np.array([0.7, 0.2])[:n_columns]
+    numeric_hessian = approx_hess(params, lambda p: model.loglike(p, scale=scale))
+    assert_allclose(model.hessian(params, scale=scale), numeric_hessian,
+                    rtol=1e-5, atol=1e-6)
+
+
+def test_ols_hessian_at_fit():
+    x = add_constant(np.arange(-2.0, 3.0))
+    y = np.array([1.0, -1.5, 3.0, -0.5, 3.0])
+    result = OLS(y, x).fit()
+    # At the optimum the profile likelihood curvature is the negative
+    # inverse covariance using the ML variance SSR / n (not SSR / df_resid).
+    ml_scale = result.ssr / result.nobs
+    covariance = result.normalized_cov_params * ml_scale
+    assert_allclose(result.model.hessian(result.params), -np.linalg.inv(covariance),
+                    atol=1e-12)
+    assert_allclose(result.model.hessian(result.params, scale=ml_scale),
+                    -np.linalg.inv(covariance), atol=1e-12)
+
+
+def test_ols_regularized_profile_scale():
+    x = np.array([-1.0, -1.0, 1.0, 1.0])
+    y = 0.3 * x + np.array([-1.0, 1.0, -1.0, 1.0])
+    alpha = 0.02
+    # The objective, up to a constant, is
+    # log(1 + (params - 0.3)**2) / 2 + alpha * abs(params).
+    # Its unique minimum is positive and solves
+    # (params - 0.3) / (1 + (params - 0.3)**2) + alpha = 0.
+    expected = 0.3 - 2 * alpha / (1 + np.sqrt(1 - 4 * alpha**2))
+    result = OLS(y, x).fit_regularized(
+        alpha=alpha, L1_wt=1, profile_scale=True, cnvrg_tol=1e-12
+    )
+    assert result.converged
+    assert_allclose(result.params, [expected], rtol=1e-10, atol=1e-12)
 
 
 def test_hessian_factor_gls_wls_matches_numerical_hessian():

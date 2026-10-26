@@ -62,6 +62,18 @@ def test_eval_measures():
     expected = np.sqrt(np.nanmean(err**2, 0) * 100)
     assert_almost_equal(rmspe(x, y, zeros=0), expected)
 
+    # integer input must not truncate the percentage errors
+    y_int, y_hat_int = np.array([2, 4]), np.array([1, 3])
+    expected = np.sqrt(np.mean(np.array([1 / 2, 1 / 4]) ** 2) * 100)
+    assert_almost_equal(rmspe(y_int, y_hat_int), expected)
+    assert_almost_equal(rmspe(y_int, y_hat_int), rmspe(y_int * 1.0, y_hat_int))
+    # a zero in integer y uses ``zeros``, nan could not be stored in an int array
+    y_int = np.array([0, 4])
+    assert_almost_equal(rmspe(y_int, y_hat_int), np.sqrt((1 / 4) ** 2 * 100))
+    assert_almost_equal(
+        rmspe(y_int, y_hat_int, zeros=0), np.sqrt(np.mean([0, (1 / 4) ** 2]) * 100)
+    )
+
     assert_equal(maxabs(x, y), np.array([14.0, 15.0, 16.0, 17.0, 18.0]))
     assert_equal(maxabs(x, y, axis=1), np.array([3.0, 8.0, 13.0, 18.0]))
 

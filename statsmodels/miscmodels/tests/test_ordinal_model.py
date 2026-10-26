@@ -546,8 +546,8 @@ class TestLogitBinary:
         for attr in attributes:
             assert_allclose(getattr(resp, attr), getattr(res_logit, attr), rtol=1e-4)
 
-        resp = modp.fit(method="bfgs", disp=False, cov_type="hc1")
-        res_logit = mod_logit.fit(method="bfgs", disp=False, cov_type="hc1")
+        resp = modp.fit(method="bfgs", disp=False, cov_type="hc0")
+        res_logit = mod_logit.fit(method="bfgs", disp=False, cov_type="hc0")
         for attr in attributes:
             assert_allclose(getattr(resp, attr), getattr(res_logit, attr), rtol=1e-4)
 
