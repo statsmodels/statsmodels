@@ -15,10 +15,11 @@ import pytest
 
 from statsmodels.genmod import families
 from statsmodels.genmod.generalized_linear_model import GLM
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import GLS, OLS, WLS
 from statsmodels.stats.outliers_influence import (
     GLMInfluence,
     MLEInfluence,
+    OLSInfluence,
     variance_inflation_factor,
 )
 from statsmodels.tools.sm_exceptions import SingularMatrixWarning
@@ -414,8 +415,6 @@ def test_vif_instability():
 
 
 def test_olsinfluence_closed_form_measures():
-    from statsmodels.stats.outliers_influence import OLSInfluence
-
     rs = np.random.RandomState(20260821)
     n = 60
     exog = np.column_stack([np.ones(n), rs.standard_normal((n, 2))])
@@ -432,8 +431,6 @@ def test_olsinfluence_closed_form_measures():
 
 
 def test_olsinfluence_ols_xnoti_and_get_drop_vari():
-    from statsmodels.stats.outliers_influence import OLSInfluence
-
     rs = np.random.RandomState(20260822)
     n = 50
     exog = np.column_stack([np.ones(n), rs.standard_normal((n, 3))])
@@ -481,8 +478,6 @@ def test_olsinfluence_ols_xnoti_and_get_drop_vari():
 def test_olsinfluence_looo_closed_form(leverage_one):
     # GH#9009: for OLS, the LOOO results use closed form updates.
     # Compare with explicit leave-one-observation-out regressions.
-    from statsmodels.stats.outliers_influence import OLSInfluence
-
     rng = np.random.default_rng(9009)
     n = 40
     exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
@@ -529,8 +524,6 @@ def test_olsinfluence_looo_closed_form(leverage_one):
 def test_olsinfluence_looo_loop_matches_closed_form():
     # A model class other than OLS takes the leave-one-observation-out
     # regression loop; it must agree with the closed form used for OLS.
-    from statsmodels.stats.outliers_influence import OLSInfluence
-
     class LoopOLS(OLS):
         pass
 
@@ -555,3 +548,321 @@ def test_olsinfluence_looo_loop_matches_closed_form():
     )
     assert_allclose(infl_loop.dfbetas, infl_closed.dfbetas, rtol=1e-10)
     assert_allclose(infl_loop.cov_ratio, infl_closed.cov_ratio, rtol=1e-10)
+
+
+@pytest.mark.parametrize("model_type", ["WLS", "WLS subclass"])
+def test_olsinfluence_wls_matches_weighted_looo(model_type):
+    # GH#9067: OLSInfluence on WLS results refit the leave-one-observation-out
+    # regressions without weights and used an unweighted hat matrix, so
+    # dfbeta, cooks_distance and the studentized residuals were wrong.
+    # Compare with explicit weighted leave-one-observation-out regressions.
+    # The WLS subclass takes the regression loop instead of the closed form.
+    class LoopWLS(WLS):
+        pass
+
+    model_class = WLS if model_type == "WLS" else LoopWLS
+    rng = np.random.default_rng(9067)
+    n, k_vars = 50, 3
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    exog[:2, 2] *= 10  # a few high leverage observations
+    weights = rng.uniform(0.2, 5, n)
+    endog = exog @ [1.0, 2.0, -1.0] + rng.standard_normal(n) / np.sqrt(weights)
+    res = model_class(endog, exog, weights=weights).fit()
+    infl = OLSInfluence(res)
+
+    params = np.empty(exog.shape)
+    mse_resid = np.empty(n)
+    det_cov_params = np.empty(n)
+    for i in range(n):
+        mask = np.arange(n) != i
+        res_i = WLS(endog[mask], exog[mask], weights=weights[mask]).fit()
+        params[i] = res_i.params
+        mse_resid[i] = res_i.mse_resid
+        det_cov_params[i] = np.linalg.det(res_i.cov_params())
+
+    sqrt_w = np.sqrt(weights)
+    wexog = exog * sqrt_w[:, None]
+    xtwx_inv = np.linalg.inv(wexog.T @ wexog)
+    hat = np.einsum("ij,jk,ik->i", wexog, xtwx_inv, wexog)
+    assert_allclose(infl.hat_matrix_diag, hat, rtol=1e-10)
+
+    assert_allclose(infl.params_not_obsi, params, rtol=1e-10, atol=1e-12)
+    assert_allclose(infl.sigma2_not_obsi, mse_resid, rtol=1e-10)
+    assert_allclose(infl.det_cov_params_not_obsi, det_cov_params, rtol=1e-10)
+    dfbeta = res.params - params
+    assert_allclose(infl.dfbeta, dfbeta, rtol=1e-10, atol=1e-12)
+    cov_ratio = det_cov_params / np.linalg.det(res.cov_params())
+    assert_allclose(infl.cov_ratio, cov_ratio, rtol=1e-10)
+
+    # Cook's distance from its definition with the weighted cross product
+    cooks = np.einsum("ij,jk,ik->i", dfbeta, np.linalg.inv(xtwx_inv), dfbeta)
+    cooks /= k_vars * res.mse_resid
+    assert_allclose(infl.cooks_distance[0], cooks, rtol=1e-10)
+
+    wresid = res.resid * sqrt_w
+    resid_int = wresid / np.sqrt(res.mse_resid * (1 - hat))
+    assert_allclose(infl.resid_studentized_internal, resid_int, rtol=1e-10)
+    resid_ext = wresid / np.sqrt(mse_resid * (1 - hat))
+    assert_allclose(infl.resid_studentized_external, resid_ext, rtol=1e-10)
+
+    # PRESS residuals stay on the scale of endog: the prediction error of
+    # the leave-one-observation-out fit.
+    resid_press = endog - np.einsum("ij,ij->i", exog, params)
+    assert_allclose(infl.resid_press, resid_press, rtol=1e-10)
+
+
+def test_olsinfluence_gls_without_sigma_matches_ols():
+    # Models other than OLS and WLS keep endog and exog unwhitened and take the
+    # regression loop. GLS without sigma is OLS, so all measures must agree.
+    rng = np.random.default_rng(90670)
+    n = 30
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(n)
+    infl_gls = OLSInfluence(GLS(endog, exog).fit())
+    infl_ols = OLSInfluence(OLS(endog, exog).fit())
+
+    assert_allclose(infl_gls.hat_matrix_diag, infl_ols.hat_matrix_diag, rtol=1e-10)
+    assert_allclose(infl_gls.dfbeta, infl_ols.dfbeta, rtol=1e-10, atol=1e-12)
+    assert_allclose(
+        infl_gls.resid_studentized_external,
+        infl_ols.resid_studentized_external,
+        rtol=1e-10,
+    )
+    assert_allclose(infl_gls.cooks_distance[0], infl_ols.cooks_distance[0], rtol=1e-10)
+
+
+def test_olsinfluence_wls_r_influence_measures():
+    # GH#9067: Reference values from R 4.6.1 (stats, base R).
+    #   y <- c(2.1, 3.9, 6.2, 7.8, 10.1, 12.2, 13.8, 16.5)
+    #   x1 <- 1:8
+    #   x2 <- c(1, 0, 1, 0, 1, 0, 0, 1)
+    #   w <- c(1, 2, 0.5, 1, 3, 1, 0.25, 2)
+    #   fit <- lm(y ~ x1 + x2, weights = w)
+    #   hatvalues(fit); rstandard(fit); rstudent(fit); cooks.distance(fit)
+    #   dffits(fit); covratio(fit); dfbeta(fit); dfbetas(fit)
+    # cooks.distance, dffits and covratio are identical to the columns of
+    # influence.measures(fit)$infmat. The values are printed with 15 digits.
+    y = np.array([2.1, 3.9, 6.2, 7.8, 10.1, 12.2, 13.8, 16.5])
+    x1 = np.arange(1.0, 9.0)
+    x2 = np.array([1.0, 0, 1, 0, 1, 0, 0, 1])
+    weights = np.array([1.0, 2, 0.5, 1, 3, 1, 0.25, 2])
+    exog = np.column_stack([np.ones(8), x1, x2])
+
+    # fmt: off
+    hat = [
+        0.500818926296633, 0.587625113739763, 0.123566878980892,
+        0.237033666969973, 0.462966333030027, 0.341128298453139,
+        0.113375796178344, 0.633484986351228,
+    ]
+    rstandard = [
+        0.786053746421487, 0.657706054624384, 0.375104442479753,
+        -1.01528011893883, -1.62812210912733, 0.9172300591081,
+        -0.966429023119503, 1.47503314381012,
+    ]
+    rstudent = [
+        0.751000331903412, 0.615497410810194, 0.34032628788785,
+        -1.01921086041045, -2.12449284531458, 0.89955982581948,
+        -0.958551551257641, 1.75540815948704,
+    ]
+    cooks = [
+        0.206635935679727, 0.205471014136662, 0.00661251174830449,
+        0.106746874989939, 0.761729176106538, 0.145195178797201,
+        0.039810665732168, 1.25350727920438,
+    ]
+    dffits = [
+        0.752231368698551, 0.734734275237678, 0.127787138346727,
+        -0.568088990886466, -1.97255545541674, 0.647274500367194,
+        -0.34277240991915, 2.30781180875216,
+    ]
+    covratio = [
+        2.63399270087544, 3.61028467846914, 2.04560362400882,
+        1.28063586685915, 0.377214773394677, 1.70564445917374,
+        1.18464262309972, 0.960395746774834,
+    ]
+    # columns are const, x1, x2
+    dfbeta = [
+        [0.0611321464480507, -0.0164959760256645, 0.0542678078404213],
+        [0.0931801035523767, -0.00881970852102587, -0.0477246827132434],
+        [0.00807213746111685, -0.00217819582284106, 0.0108909791142053],
+        [-0.0440238673093067, -0.00122027777189976, 0.0503129912106363],
+        [-0.00783122206226107, 0.0021131869056895, -0.108145447526462],
+        [0.0129035560946731, 0.00925332806223374, -0.0605937853384931],
+        [0.000928325646094153, -0.00603411669961197, 0.0301705834980598],
+        [-0.129725488459762, 0.0350052905367612, 0.0434087863571919],
+    ]
+    dfbetas = [
+        [0.460086768752802, -0.626121722962813, 0.444764380975708],
+        [0.686909924840982, -0.327900056075996, -0.383122161429812],
+        [0.0576917947881697, -0.0785114643733512, 0.0847637277882975],
+        [-0.348135702275125, -0.0486664568917755, 0.433269514459581],
+        [-0.0804970657845683, 0.10954664412348, -1.21053228073044],
+        [0.0996881184615388, 0.360530989434074, -0.509776358670679],
+        [0.00725317358218219, -0.237767276679144, 0.256701882690098],
+        [-1.21614080482432, 1.65501863517206, 0.443153120178539],
+    ]
+    # fmt: on
+
+    infl = OLSInfluence(WLS(y, exog, weights=weights).fit())
+    rtol = 1e-8
+    assert_allclose(infl.hat_matrix_diag, hat, rtol=rtol)
+    assert_allclose(infl.resid_studentized_internal, rstandard, rtol=rtol)
+    assert_allclose(infl.resid_studentized_external, rstudent, rtol=rtol)
+    assert_allclose(infl.cooks_distance[0], cooks, rtol=rtol)
+    assert_allclose(infl.dffits[0], dffits, rtol=rtol)
+    assert_allclose(infl.cov_ratio, covratio, rtol=rtol)
+    assert_allclose(infl.dfbeta, dfbeta, rtol=rtol)
+    assert_allclose(infl.dfbetas, dfbetas, rtol=rtol)
+
+
+def _wls_leave_one_out(endog, exog, weights):
+    # explicit leave-one-observation-out WLS regressions
+    n = len(endog)
+    params = np.empty(exog.shape)
+    mse_resid = np.empty(n)
+    det_cov_params = np.empty(n)
+    for i in range(n):
+        mask = np.arange(n) != i
+        with warnings.catch_warnings():
+            # dropping an observation can make exog rank deficient
+            warnings.simplefilter("ignore", SingularMatrixWarning)
+            res_i = WLS(endog[mask], exog[mask], weights=weights[mask]).fit()
+            params[i] = res_i.params
+            mse_resid[i] = res_i.mse_resid
+            det_cov_params[i] = np.linalg.det(res_i.cov_params())
+    return params, mse_resid, det_cov_params
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        # exog is rank deficient, so the model fit and each auxiliary
+        # regression warn, as for OLS
+        pytest.param(
+            "rank_deficient",
+            marks=pytest.mark.filterwarnings(
+                "ignore::statsmodels.tools.sm_exceptions.SingularMatrixWarning"
+            ),
+        ),
+        # OLSInfluence should not warn about the rank deficient auxiliary
+        # regression
+        pytest.param(
+            "leverage_one",
+            marks=pytest.mark.filterwarnings(
+                "error::statsmodels.tools.sm_exceptions.SingularMatrixWarning"
+            ),
+        ),
+    ],
+)
+def test_olsinfluence_wls_looo_rank_deficient(case):
+    # GH#9067: Weighted regressions without the closed form. If exog is rank
+    # deficient, then all observations take the regression loop. If a
+    # hat diagonal is one, then only that observation takes the loop.
+    rng = np.random.default_rng(90671)
+    n = 40
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    exog[:2, 2] *= 10  # a few high leverage observations
+    weights = rng.uniform(0.2, 5, n)
+    if case == "rank_deficient":
+        exog = np.column_stack([exog, exog[:, 1] + exog[:, 2]])
+    else:
+        # dummy for a single observation, hat diagonal is one, dropping it
+        # makes exog rank deficient
+        exog = np.column_stack([exog, np.eye(n)[:, 5]])
+    k_vars = exog.shape[1]
+    endog = exog @ np.linspace(1, -1, k_vars) + rng.standard_normal(n) / np.sqrt(
+        weights
+    )
+    res = WLS(endog, exog, weights=weights).fit()
+    infl = OLSInfluence(res)
+
+    sqrt_w = np.sqrt(weights)
+    wexog = exog * sqrt_w[:, None]
+    hat = np.einsum("ij,ji->i", wexog, np.linalg.pinv(wexog))
+    assert_allclose(infl.hat_matrix_diag, hat, rtol=1e-10, atol=1e-12)
+    if case == "rank_deficient":
+        assert res.model.rank == k_vars - 1
+    else:
+        assert_allclose(infl.hat_matrix_diag[5], 1, atol=1e-10)
+
+    params, mse_resid, det_cov_params = _wls_leave_one_out(endog, exog, weights)
+    assert_allclose(infl.params_not_obsi, params, rtol=1e-10, atol=1e-12)
+    assert_allclose(infl.sigma2_not_obsi, mse_resid, rtol=1e-10)
+    assert_allclose(infl.dfbeta, res.params - params, rtol=1e-10, atol=1e-12)
+
+    # observation 5 has a hat diagonal of one in the leverage_one case and its
+    # residual and 1 - hii are both zero up to rounding
+    keep = np.ones(n, dtype=bool)
+    if case == "leverage_one":
+        keep[5] = False
+    wresid = (res.resid * sqrt_w)[keep]
+    resid_int = wresid / np.sqrt(res.mse_resid * (1 - hat[keep]))
+    assert_allclose(infl.resid_studentized_internal[keep], resid_int, rtol=1e-10)
+    resid_ext = wresid / np.sqrt(mse_resid[keep] * (1 - hat[keep]))
+    assert_allclose(infl.resid_studentized_external[keep], resid_ext, rtol=1e-10)
+    # PRESS residuals stay on the scale of endog
+    resid_press = endog - np.einsum("ij,ij->i", exog, params)
+    assert_allclose(infl.resid_press[keep], resid_press[keep], rtol=1e-8)
+
+    if case == "leverage_one":
+        # full rank exog, the covariance ratio and Cook's distance are defined
+        assert res.model.rank == k_vars
+        assert_allclose(
+            infl.det_cov_params_not_obsi,
+            det_cov_params,
+            rtol=1e-10,
+            atol=1e-12 * np.abs(det_cov_params).max(),
+        )
+        cov_ratio = det_cov_params / np.linalg.det(res.cov_params())
+        assert_allclose(
+            infl.cov_ratio, cov_ratio, rtol=1e-10, atol=1e-12 * cov_ratio.max()
+        )
+        xtwx = wexog.T @ wexog
+        dfbeta = res.params - params
+        cooks = np.einsum("ij,jk,ik->i", dfbeta, xtwx, dfbeta)
+        cooks /= k_vars * res.mse_resid
+        assert_allclose(infl.cooks_distance[0][keep], cooks[keep], rtol=1e-8)
+
+
+def test_olsinfluence_wls_zero_weights():
+    # GH#9067: WLS.df_resid counts observations with weight zero, R drops them
+    rng = np.random.default_rng(90672)
+    n, k_vars = 30, 3
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    weights = rng.uniform(0.3, 3, n)
+    zero = [3, 16]
+    weights[zero] = 0
+    endog = exog @ [1.0, 0.5, -0.5] + rng.standard_normal(n)
+    pos = weights > 0
+
+    res = WLS(endog, exog, weights=weights).fit()
+    infl = OLSInfluence(res)
+    res_pos = WLS(endog[pos], exog[pos], weights=weights[pos]).fit()
+    infl_pos = OLSInfluence(res_pos)
+
+    # df_resid counts the observations with weight zero, not as in R
+    assert res.df_resid == n - k_vars
+    assert res_pos.df_resid == n - len(zero) - k_vars
+    factor = res.df_resid / res_pos.df_resid
+    assert factor > 1
+
+    # observations with weight zero have no influence on the fit
+    for name in ["hat_matrix_diag", "resid_studentized_internal", "dfbeta"]:
+        assert_allclose(getattr(infl, name)[zero], 0, atol=1e-12)
+    assert_allclose(infl.resid_studentized_external[zero], 0, atol=1e-12)
+    assert_allclose(infl.cooks_distance[0][zero], 0, atol=1e-12)
+    assert_allclose(infl.dffits[0][zero], 0, atol=1e-12)
+    assert_allclose(infl.dfbetas[zero], 0, atol=1e-12)
+
+    # hat and dfbeta are the same as WLS without the observations
+    assert_allclose(infl.hat_matrix_diag[pos], infl_pos.hat_matrix_diag, rtol=1e-10)
+    assert_allclose(infl.dfbeta[pos], infl_pos.dfbeta, rtol=1e-10)
+    # measures that depend on the residual degrees of freedom differ as in the
+    # class docstring, R corresponds to the fit without the observations
+    assert_allclose(
+        infl.cooks_distance[0][pos], infl_pos.cooks_distance[0] * factor, rtol=1e-10
+    )
+    assert_allclose(
+        infl.resid_studentized_internal[pos],
+        infl_pos.resid_studentized_internal * np.sqrt(factor),
+        rtol=1e-10,
+    )

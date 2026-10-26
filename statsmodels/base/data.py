@@ -45,7 +45,8 @@ def _nan_rows(*arrs):
     nan_rows = _asarray_2d_null_rows(arrs[0])
     for arr in arrs[1:]:
         nan_rows = nan_rows | _asarray_2d_null_rows(arr)
-    return nan_rows.squeeze()
+    # atleast_1d so that a single row still gives a mask, not a scalar
+    return np.atleast_1d(nan_rows.squeeze())
 
 
 class ModelData:
@@ -313,6 +314,10 @@ class ModelData:
             raise MissingDataError("NaNs were encountered in the data")
 
         elif missing == "drop":
+            if np.all(nan_mask):
+                raise MissingDataError(
+                    "All observations were dropped because of missing values"
+                )
             nan_mask = ~nan_mask
 
             def drop_nans(x):

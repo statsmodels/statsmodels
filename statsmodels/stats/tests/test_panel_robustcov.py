@@ -89,3 +89,25 @@ def test_cov_cluster_invalid_crv_type_raises():
     # cov_cluster_2groups only supports "cluster", not "cluster-crv3"/"cluster-jk"
     with pytest.raises(NotImplementedError, match="Two-way clustering"):
         sw.cov_cluster_2groups(res, group, group2=group, crv_type="cluster-crv3")
+
+
+def test_cov_cluster_single_cluster_raises():
+    # a single cluster makes the small-sample correction divide by zero and
+    # leaves the covariance undefined; every crv_type now raises the same
+    # ValueError that only crv_type="cluster-crv3"/"cluster-jk" used to
+    import pytest
+
+    rs = np.random.RandomState(89013)
+    exog = add_constant(rs.standard_normal((30, 2)))
+    endog = exog @ [1.0, 0.5, -0.5] + rs.standard_normal(30)
+    res = OLS(endog, exog).fit()
+    group = np.ones(30, dtype=int)
+
+    for kwargs in (
+        {},
+        {"use_correction": False},
+        {"crv_type": "cluster-crv3"},
+        {"crv_type": "cluster-jk"},
+    ):
+        with pytest.raises(ValueError, match="at least 2 clusters"):
+            sw.cov_cluster(res, group, **kwargs)

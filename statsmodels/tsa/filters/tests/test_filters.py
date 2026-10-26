@@ -1,10 +1,12 @@
 from statsmodels.compat.pandas import (
     QUARTER_END,
     assert_frame_equal,
+    assert_index_equal,
     make_dataframe,
 )
 
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 from numpy import array, column_stack
@@ -13,7 +15,7 @@ from numpy.testing import (
     assert_almost_equal,
     assert_equal,
 )
-from pandas import DataFrame, concat, date_range
+from pandas import DataFrame, concat, date_range, read_csv
 import pytest
 
 from statsmodels.datasets import macrodata
@@ -29,6 +31,8 @@ from statsmodels.tsa.filters.filtertools import (
     recursive_filter,
 )
 from statsmodels.tsa.filters.hp_filter import hpfilter
+
+CURR_DIR = Path(__file__).resolve().parent
 
 
 def test_bking1d():
@@ -635,6 +639,61 @@ def test_hpfilter_lamb_validation():
         hpfilter(np.arange(50.0), lamb=0)
     with pytest.raises(ValueError, match="lamb must be a positive number"):
         hpfilter(np.arange(50.0), lamb=-1600)
+
+
+@pytest.mark.parametrize("lamb", [6.25, 1600, 129600])
+def test_hpfilter_one_sided_r(lamb):
+    # Results from base R, see results/hpfilter_one_sided.R
+    path = CURR_DIR / "results" / "hpfilter_one_sided.csv"
+    expected = read_csv(path)[f"lamb_{lamb}"]
+    dta = macrodata.load_pandas().data["realgdp"].values
+    res = hpfilter(dta, lamb, one_sided=True)
+    assert_allclose(res.trend, expected, rtol=1e-8)
+    assert_allclose(res.cycle, dta - res.trend)
+    # the first two observations are fit exactly
+    assert_equal(res.trend[:2], dta[:2])
+    assert_equal(res.cycle[:2], 0.0)
+    assert res.trend.flags.c_contiguous
+    # the input is not modified
+    assert dta.shape == (203,)
+
+
+@pytest.mark.parametrize("lamb", [6.25, 1600, 129600])
+def test_hpfilter_one_sided_last_value(lamb):
+    # the one-sided trend at t is the last value of the two-sided trend
+    # using the data up to t
+    dta = macrodata.load_pandas().data["realgdp"].values[:60]
+    res = hpfilter(dta, lamb, one_sided=True)
+    expected = [dta[0]] + [
+        hpfilter(dta[: t + 1], lamb).trend[-1] for t in range(1, dta.shape[0])
+    ]
+    assert_allclose(res.trend, expected, rtol=1e-10)
+
+
+def test_hpfilter_one_sided_pandas():
+    dta = macrodata.load_pandas().data
+    dta.index = date_range(start="1959-01-01", end="2009-10-01", freq=QUARTER_END)
+    res = hpfilter(dta["realgdp"], one_sided=True)
+    res_np = hpfilter(dta["realgdp"].values, one_sided=True)
+    assert_equal(res.trend.values, res_np.trend)
+    assert_equal(res.cycle.values, res_np.cycle)
+    assert_index_equal(res.trend.index, dta.index)
+    assert_equal(res.trend.name, "realgdp_trend")
+    assert_equal(res.cycle.name, "realgdp_cycle")
+
+
+@pytest.mark.parametrize("value", [np.nan, np.inf])
+def test_hpfilter_one_sided_nonfinite(value):
+    dta = macrodata.load_pandas().data["realgdp"].values.copy()
+    dta[10] = value
+    with pytest.raises(ValueError, match="x must not contain NaN or inf"):
+        hpfilter(dta, one_sided=True)
+
+
+@pytest.mark.parametrize("one_sided", ["no", None, 1])
+def test_hpfilter_one_sided_bool(one_sided):
+    with pytest.raises(TypeError, match="one_sided"):
+        hpfilter(np.arange(50.0), one_sided=one_sided)
 
 
 def test_hpfilter_returns_cycletrendresult():

@@ -2053,3 +2053,72 @@ def test_fit_regularized_pandas(alpha):
         assert np.isnan(res_pd.bse["x1"])
     summ = res_pd.summary()
     assert "x1" in summ.as_text()
+
+
+def _missing_data(pandas):
+    rng = np.random.default_rng(7978)
+    n_groups, n_per_group = 20, 6
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    exog = np.column_stack([np.ones(n), rng.standard_normal(n)])
+    exog_re = np.column_stack([np.ones(n), rng.standard_normal(n)])
+    re = rng.standard_normal((n_groups, 2))[groups]
+    endog = exog[:, 1] + np.sum(exog_re * re, axis=1) + rng.standard_normal(n)
+    endog[[3, 50]] = np.nan
+    exog[17, 1] = np.nan
+    exog_re[90, 1] = np.nan
+    if pandas:
+        endog = pd.Series(endog, name="y")
+        exog = pd.DataFrame(exog, columns=["const", "x"])
+        exog_re = pd.DataFrame(exog_re, columns=["re0", "re1"])
+        groups = pd.Series(groups, name="g")
+    keep = ~(
+        np.isnan(np.asarray(endog))
+        | np.isnan(np.asarray(exog)).any(1)
+        | np.isnan(np.asarray(exog_re)).any(1)
+    )
+    return endog, exog, exog_re, groups, keep
+
+
+@pytest.mark.parametrize("pandas", [False, True])
+@pytest.mark.parametrize("use_exog_re", [False, True])
+def test_missing_drop(pandas, use_exog_re):
+    # GH 7978: missing="drop" did not drop the rows of groups and exog_re
+    endog, exog, exog_re, groups, keep = _missing_data(pandas)
+    if not use_exog_re:
+        exog_re = None
+        keep = ~(np.isnan(np.asarray(endog)) | np.isnan(np.asarray(exog)).any(1))
+
+    def subset(x):
+        if x is None:
+            return None
+        return x[keep] if isinstance(x, np.ndarray) else x.loc[keep]
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re, missing="drop")
+    model_cc = MixedLM(subset(endog), subset(exog), subset(groups), subset(exog_re))
+    assert_equal(model.nobs, keep.sum())
+    assert_equal(model.n_groups, model_cc.n_groups)
+    assert_equal(model.exog_re.shape, model_cc.exog_re.shape)
+
+    res = model.fit()
+    res_cc = model_cc.fit()
+    assert_allclose(res.params, res_cc.params, rtol=1e-8)
+    assert_allclose(res.bse, res_cc.bse, rtol=1e-6)
+    assert_allclose(res.llf, res_cc.llf, rtol=1e-10)
+    if pandas:
+        assert_equal(list(res.params.index), list(res_cc.params.index))
+
+
+def test_missing_drop_exog_vc():
+    # exog_vc is split by groups and cannot be used with dropped rows
+    endog, exog, _, groups, _ = _missing_data(False)
+    vc_mats = [np.ones((6, 1)) for _ in range(20)]
+    vc_colnames = [["vc0"] for _ in range(20)]
+    exog_vc = VCSpec(["vc0"], [vc_colnames], [vc_mats])
+    with pytest.raises(ValueError, match="exog_vc"):
+        MixedLM(endog, exog, groups, exog_vc=exog_vc, missing="drop")
+    # without missing values, missing="drop" does not drop anything
+    endog = np.nan_to_num(endog)
+    exog = np.nan_to_num(exog)
+    model = MixedLM(endog, exog, groups, exog_vc=exog_vc, missing="drop")
+    assert_equal(model.nobs, 120)

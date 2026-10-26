@@ -2539,6 +2539,76 @@ class CheckMNLogitBaseZero(CheckModelResults):
         super().test_distr()
 
 
+def _mnlogit_names_endog(kind):
+    rng = np.random.default_rng(8995)
+    # Every category is guaranteed to appear: three full repeats, then shuffle
+    codes = rng.permutation(np.tile(np.arange(3), 8))
+    if kind == "categorical":
+        # Categories deliberately not in alphabetical order
+        cats = ["train", "car", "bus"]
+        return pd.Series(pd.Categorical.from_codes(codes, categories=cats))
+    elif kind == "string":
+        return np.array(["a", "b", "c"])[codes]
+    return np.array([1, 2, 3])[codes]
+
+
+@pytest.mark.parametrize(
+    "kind, expected",
+    [
+        ("categorical", {0: "train", 1: "car", 2: "bus"}),
+        ("string", {0: "a", 1: "b", 2: "c"}),
+        # numeric endog gives the string representation of the categories
+        ("numeric", {0: "1", 1: "2", 2: "3"}),
+    ],
+)
+def test_mnlogit_names_attribute(kind, expected):
+    # GH#8995: MNLogit documents a ``names`` dict mapping the column number
+    # in ``wendog`` to the corresponding endogenous variable name.
+    rng = np.random.default_rng(10486)
+    endog = _mnlogit_names_endog(kind)
+    exog = rng.standard_normal((endog.shape[0], 2))
+    model = MNLogit(endog, exog)
+    assert model.names == expected
+    # names[j] labels column j of wendog
+    labels = np.asarray(endog).astype(str)
+    for j, name in model.names.items():
+        assert_equal(model.wendog[:, j], (labels == name).astype(float))
+
+
+@pytest.mark.parametrize(
+    "kind, expected",
+    [
+        ("categorical", ["train", "car", "bus"]),
+        ("string", ["a", "b", "c"]),
+        ("numeric", [1, 2, 3]),
+    ],
+)
+@pytest.mark.parametrize("which", ["mean", "linear", "var"])
+def test_mnlogit_predict_columns(kind, expected, which):
+    # GH 4804: the columns of the prediction are the endog categories
+    rng = np.random.default_rng(4804)
+    endog = _mnlogit_names_endog(kind)
+    exog = pd.DataFrame(rng.standard_normal((endog.shape[0], 2)))
+    res = MNLogit(endog, exog).fit(disp=0)
+    pred = res.predict(exog.iloc[:5], which=which)
+    assert pred.columns.tolist() == expected
+    assert_index_equal(pred.index, exog.index[:5])
+    expected_values = res.model.predict(
+        np.asarray(res.params), np.asarray(exog.iloc[:5]), which=which
+    )
+    assert_allclose(pred, expected_values)
+
+
+def test_mnlogit_predict_columns_formula():
+    # GH 4804
+    rng = np.random.default_rng(4804)
+    df = pd.DataFrame({"y": np.tile([-1, 0, 1], 10), "x": rng.standard_normal(30)})
+    res = smf.mnlogit("y ~ x", data=df).fit(disp=0)
+    pred = res.predict(df.iloc[:5])
+    assert pred.columns.tolist() == [-1, 0, 1]
+    assert pred.columns.dtype.kind == "i"
+
+
 class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
     @classmethod
     def setup_class(cls):

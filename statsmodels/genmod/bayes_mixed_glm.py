@@ -60,6 +60,7 @@ from statsmodels.genmod import families
 from statsmodels.iolib import summary2
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.validation import array_like, string_like
 
 # Gauss-Legendre weights
 glw = [
@@ -187,6 +188,25 @@ _poisson_example = """
                     'y ~ year_cen', random, data)
     >>> result = model.fit_vb()
 """
+
+
+def _check_which(which, linear):
+    """
+    Validate ``which`` and translate the deprecated ``linear`` keyword.
+    """
+    which = string_like(which, "which", options=("mean", "linear"), lower=False)
+    if linear is not None:
+        warnings.warn(
+            "The linear keyword is deprecated and will be removed in "
+            "statsmodels 0.17.0. Use which='linear' instead of linear=True "
+            "and which='mean' instead of linear=False.",
+            FutureWarning,
+            stacklevel=3,
+        )
+        if which != "mean":
+            raise ValueError("linear and which cannot both be set")
+        which = "linear" if linear else "mean"
+    return which
 
 
 class _BayesMixedGLM(base.Model):
@@ -540,7 +560,7 @@ class _BayesMixedGLM(base.Model):
 
         return BayesMixedGLMResults(self, params, cov, optim_retvals=r)
 
-    def predict(self, params, exog=None, linear=False):
+    def predict(self, params, exog=None, linear=None, which="mean"):
         """
         Return the fitted mean structure.
 
@@ -556,18 +576,47 @@ class _BayesMixedGLM(base.Model):
             If True, return the linear predictor without passing through the
             link function.
 
+            .. deprecated:: 0.15.1
+
+                Use ``which="linear"`` instead of ``linear=True`` and
+                ``which="mean"`` instead of ``linear=False``. ``linear`` will
+                be removed in statsmodels 0.17.0.
+        which : {"mean", "linear"}, optional
+            Statistic to predict. Default is "mean".
+
+            - "mean" returns the inverse link function applied to the linear
+              predictor, ``exog @ params[:k_exog]``.
+            - "linear" returns the linear predictor, ``exog @ params[:k_exog]``,
+              without passing through the link function.
+
+            .. versionadded:: 0.15.1
+
         Returns
         -------
-        A 1-dimensional array of predicted values
+        ndarray
+            A 1-dimensional array of predicted values.
+
+        Notes
+        -----
+        Only the fixed effects part of ``params`` is used. "mean" is therefore
+        the conditional mean given that all random effects are zero, which is
+        not the marginal mean, E(y | x), of a mixed model with a non-identity
+        link. Use ``params`` from ``fit_map`` (posterior mode) or from
+        ``fit_vb`` (variational posterior mean).
         """
+        which = _check_which(which, linear)
 
         if exog is None:
             exog = self.exog
+        else:
+            exog = array_like(exog, "exog")
+            if exog.ndim != 2:
+                raise ValueError("exog must be a two-dimensional array")
 
         q = exog.shape[1]
         pr = np.dot(exog, params[0:q])
 
-        if not linear:
+        if which == "mean":
             pr = self.family.link.inverse(pr)
 
         return pr
@@ -1060,7 +1109,7 @@ class BayesMixedGLMResults:
 
         return x
 
-    def predict(self, exog=None, linear=False):
+    def predict(self, exog=None, linear=None, which="mean"):
         """
         Return predicted values for the mean structure.
 
@@ -1073,12 +1122,38 @@ class BayesMixedGLMResults:
             If True, returns the linear predictor, otherwise
             transform the linear predictor using the link function.
 
+            .. deprecated:: 0.15.1
+
+                Use ``which="linear"`` instead of ``linear=True`` and
+                ``which="mean"`` instead of ``linear=False``. ``linear`` will
+                be removed in statsmodels 0.17.0.
+        which : {"mean", "linear"}, optional
+            Statistic to predict. Default is "mean".
+
+            - "mean" returns the inverse link function applied to the linear
+              predictor, ``exog @ params[:k_exog]``.
+            - "linear" returns the linear predictor, ``exog @ params[:k_exog]``,
+              without passing through the link function.
+
+            .. versionadded:: 0.15.1
+
         Returns
         -------
-        A one-dimensional array of fitted values.
-        """
+        ndarray
+            A one-dimensional array of fitted values.
 
-        return self.model.predict(self.params, exog, linear)
+        Notes
+        -----
+        Only the fixed effects part of the parameters is used, ``fe_mean``.
+        "mean" is therefore the conditional mean given that all random effects
+        are zero, which is not the marginal mean, E(y | x), of a mixed model
+        with a non-identity link. The fixed effects are the posterior mode if
+        the model was fit using ``fit_map`` and the variational posterior mean
+        if it was fit using ``fit_vb``.
+        """
+        which = _check_which(which, linear)
+
+        return self.model.predict(self.params, exog, which=which)
 
 
 class BinomialBayesMixedGLM(_VariationalBayesMixedGLM, _BayesMixedGLM):
