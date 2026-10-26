@@ -607,7 +607,11 @@ class Power:
             "smaller",
         ):
             effect_size = kwds["effect_size"]
-            wrong_sign = effect_size < 0 if alternative == "larger" else effect_size > 0
+            wrong_sign = (
+                effect_size < 0
+                if alternative == "larger"
+                else effect_size > 0
+            )
             if wrong_sign and kwds["power"] >= kwds["alpha"]:
                 raise ValueError(
                     f"No solution exists for {key}: with alternative="
