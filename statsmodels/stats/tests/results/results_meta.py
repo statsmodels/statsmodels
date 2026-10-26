@@ -227,6 +227,127 @@ exk1_fe_hksj.I2 = 67.744403741711
 exk1_fe_hksj.H2 = 3.10023721772938
 
 
+"""
+Random effects results with truncated and non-truncated DerSimonian-Laird tau2,
+computed with R metafor 5.2.1 (R 4.6.1). I2 is in percent in metafor.
+
+ex_trunc: data from GH#10520, the DL estimate of tau2 is negative before
+truncation (Q < k - 1), so metafor truncates tau2 at zero and reports I2 = 0
+and H2 = 1.
+
+> library(metafor)
+> y <- c(0.30, 0.32, 0.28, 0.31)
+> v <- c(0.04, 0.09, 0.05, 0.06)
+> res <- rma(yi=y, vi=v, method="DL", control=list(tol=1e-9))
+> res_hksj <- rma(yi=y, vi=v, method="DL", test="knha", control=list(tol=1e-9))
+> res_fe <- rma(yi=y, vi=v, method="FE", control=list(tol=1e-9))
+
+ex_het6: heterogeneous data with six studies, tau2 is positive.
+
+> y <- c(0.1, 0.5, 0.9, 0.3, 1.2, -0.2)
+> v <- c(0.02, 0.05, 0.03, 0.04, 0.06, 0.02)
+> res <- rma(yi=y, vi=v, method="DL", control=list(tol=1e-9))
+> res_hksj <- rma(yi=y, vi=v, method="DL", test="knha", control=list(tol=1e-9))
+> res_fe <- rma(yi=y, vi=v, method="FE", control=list(tol=1e-9))
+
+The values are res$beta (b, beta), res$se, res$zval, res$pval, res$ci.lb,
+res$ci.ub, res$vb, res$tau2, res$k, res$QE, res$QEp, res$I2 and res$H2.
+"""
+
+ex_trunc_dl = Holder()
+ex_trunc_dl.b = 0.299847328244275
+ex_trunc_dl.beta = 0.299847328244275
+ex_trunc_dl.se = 0.117219699774685
+ex_trunc_dl.zval = 2.55799433730534
+ex_trunc_dl.pval = 0.0105277806585048
+ex_trunc_dl.ci_lb = 0.0701009384072952
+ex_trunc_dl.ci_ub = 0.529593718081254
+ex_trunc_dl.vb = 0.0137404580152672
+ex_trunc_dl.tau2 = 0
+ex_trunc_dl.k = 4
+ex_trunc_dl.QE = 0.0141094147582697
+ex_trunc_dl.QEp = 0.999556141280558
+ex_trunc_dl.I2 = 0
+ex_trunc_dl.H2 = 1
+
+
+ex_trunc_dl_hksj = Holder()
+ex_trunc_dl_hksj.b = 0.299847328244275
+ex_trunc_dl_hksj.beta = 0.299847328244275
+ex_trunc_dl_hksj.se = 0.00803886022406153
+ex_trunc_dl_hksj.zval = 37.2997315398999
+ex_trunc_dl_hksj.pval = 4.23868364280877e-05
+ex_trunc_dl_hksj.ci_lb = 0.274264087225518
+ex_trunc_dl_hksj.ci_ub = 0.325430569263032
+ex_trunc_dl_hksj.vb = 6.46232737019986e-05
+ex_trunc_dl_hksj.tau2 = 0
+ex_trunc_dl_hksj.k = 4
+ex_trunc_dl_hksj.QE = 0.0141094147582697
+ex_trunc_dl_hksj.QEp = 0.999556141280558
+ex_trunc_dl_hksj.I2 = 0
+ex_trunc_dl_hksj.H2 = 1
+
+
+ex_trunc_fe = Holder()
+ex_trunc_fe.b = 0.299847328244275
+ex_trunc_fe.beta = 0.299847328244275
+ex_trunc_fe.se = 0.117219699774685
+ex_trunc_fe.ci_lb = 0.0701009384072952
+ex_trunc_fe.ci_ub = 0.529593718081254
+ex_trunc_fe.vb = 0.0137404580152672
+ex_trunc_fe.tau2 = 0
+ex_trunc_fe.k = 4
+ex_trunc_fe.QE = 0.0141094147582697
+ex_trunc_fe.QEp = 0.999556141280558
+
+
+ex_het6_dl = Holder()
+ex_het6_dl.b = 0.447162534860818
+ex_het6_dl.beta = 0.447162534860818
+ex_het6_dl.se = 0.209510916454647
+ex_het6_dl.zval = 2.1343161608365
+ex_het6_dl.pval = 0.0328169092565566
+ex_het6_dl.ci_lb = 0.0365286842417307
+ex_het6_dl.ci_ub = 0.857796385479906
+ex_het6_dl.vb = 0.0438948241136659
+ex_het6_dl.tau2 = 0.227531760435572
+ex_het6_dl.k = 6
+ex_het6_dl.QE = 40.7179487179487
+ex_het6_dl.QEp = 1.06978337016814e-07
+ex_het6_dl.I2 = 87.72040302267
+ex_het6_dl.H2 = 8.14358974358975
+
+
+ex_het6_dl_hksj = Holder()
+ex_het6_dl_hksj.b = 0.447162534860818
+ex_het6_dl_hksj.beta = 0.447162534860818
+ex_het6_dl_hksj.se = 0.210290539192247
+ex_het6_dl_hksj.zval = 2.12640348243162
+ex_het6_dl_hksj.pval = 0.0867985740290505
+ex_het6_dl_hksj.ci_lb = -0.0934065053929395
+ex_het6_dl_hksj.ci_ub = 0.987731575114576
+ex_het6_dl_hksj.vb = 0.0442221108737662
+ex_het6_dl_hksj.tau2 = 0.227531760435572
+ex_het6_dl_hksj.k = 6
+ex_het6_dl_hksj.QE = 40.7179487179487
+ex_het6_dl_hksj.QEp = 1.06978337016814e-07
+ex_het6_dl_hksj.I2 = 87.72040302267
+ex_het6_dl_hksj.H2 = 8.14358974358975
+
+
+ex_het6_fe = Holder()
+ex_het6_fe.b = 0.32051282051282
+ex_het6_fe.beta = 0.32051282051282
+ex_het6_fe.se = 0.0716114874039433
+ex_het6_fe.ci_lb = 0.180156884321748
+ex_het6_fe.ci_ub = 0.460868756703893
+ex_het6_fe.vb = 0.00512820512820513
+ex_het6_fe.tau2 = 0
+ex_het6_fe.k = 6
+ex_het6_fe.QE = 40.7179487179487
+ex_het6_fe.QEp = 1.06978337016814e-07
+
+
 # effect size for proportions, metafor `escalc` function
 
 # > library(metafor)

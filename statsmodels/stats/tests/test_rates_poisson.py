@@ -1811,6 +1811,328 @@ def test_poisson_tost_nonequivalence_invalid_interval_raises():
     assert np.isfinite(res.pvalue)
 
 
+@pytest.mark.parametrize(
+    "kwds, power_ref",
+    [
+        (dict(rate1=1.0, rate2=1.0, nobs1=100, low=0.8, upp=1.25,
+              nobs_ratio=2, method_var="alt"), 0.14057474528496827),
+        (dict(rate1=1.0, rate2=1.0, nobs1=100, low=0.8, upp=1.25,
+              nobs_ratio=2, method_var="score"), 0.1322713225152679),
+        (dict(rate1=1.2, rate2=1.0, nobs1=150, low=0.8, upp=1.25,
+              nobs_ratio=1.5, exposure=2.0, dispersion=1.2,
+              method_var="alt"), 0.13165128176061502),
+        (dict(rate1=1.2, rate2=1.0, nobs1=150, low=0.8, upp=1.25,
+              nobs_ratio=1.5, exposure=2.0, dispersion=1.2,
+              method_var="score"), 0.13232477481604865),
+        (dict(rate1=0.9, rate2=1.0, nobs1=200, low=0.7, upp=1.4,
+              nobs_ratio=0.5, method_var="alt"), 0.6154941088614008),
+        (dict(rate1=0.9, rate2=1.0, nobs1=200, low=0.7, upp=1.4,
+              nobs_ratio=0.5, method_var="score"), 0.6215982882422717),
+    ],
+)
+def test_power_equivalence_poisson_nobs_ratio(kwds, power_ref):
+    # GH regression test (gh-10519): the power was computed with nobs2 instead
+    # of nobs1, and the score variance used (1 + margin * nobs_ratio)^2
+    # instead of (margin + nobs_ratio)^2; both are invisible at
+    # nobs_ratio = 1.
+    # Reference values are from an independent closed-form implementation of
+    # the normal-approximation TOST power for the log rate ratio
+    # (Zhu 2017), scaled per nobs1, with the constrained-CMLE null variance
+    # of power_poisson_ratio_2indep for method_var="score":
+    #     v1 = dispersion / exposure * (1 / rate1 + 1 / (nobs_ratio * rate2))
+    #     v0 = dispersion / exposure * (margin + nobs_ratio)**2
+    #          / (margin * nobs_ratio * (rate1 + nobs_ratio * rate2))
+    #     p1 = norm.sf((sqrt(nobs1) * es_low - crit * sqrt(v0_low)) / sqrt(v1))
+    #     p2 = norm.cdf((sqrt(nobs1) * es_upp + crit * sqrt(v0_upp)) / sqrt(v1))
+    #     power = max(1 - p1 - p2, 0)
+    # The first case was cross-checked against a Monte Carlo simulation of
+    # Poisson counts (N=50000, seed 1234, power 0.142, MC se 0.002); the
+    # closed form is exact for the large-sample normal approximation.
+    pow_ = power_equivalence_poisson_2indep(**kwds)
+    assert_allclose(pow_, power_ref, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "kwds, power_ref",
+    [
+        (dict(rate1=1.1, rate2=1.0, nobs1=100, low=0.8, upp=1.25,
+              nobs_ratio=2, dispersion=0.1, method_var="alt"),
+         0.08469265870933862),
+        (dict(rate1=1.15, rate2=1.0, nobs1=150, low=0.8, upp=1.25,
+              nobs_ratio=2, dispersion=0.05, method_var="alt"),
+         0.19322399350958452),
+        (dict(rate1=1.1, rate2=1.0, nobs1=200, low=0.8, upp=1.25,
+              nobs_ratio=1.5, dispersion=0.2, method_var="alt"),
+         0.315074494076511),
+    ],
+)
+def test_power_equivalence_negbin_nobs_ratio(kwds, power_ref):
+    # GH regression test (gh-10519): the alternative variance had rate1 and
+    # rate2 swapped relative to the per-nobs1 scaling used by
+    # power_negbin_ratio_2indep, invisible when rate1 == rate2 or
+    # nobs_ratio == 1.
+    # Reference values are from an independent closed-form implementation
+    # (Zhu and Lakkis 2014), alternative variance of the log rate ratio per
+    # nobs1 by the delta method:
+    #     v1 = (1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure
+    #          + (1 + nobs_ratio) / nobs_ratio * dispersion
+    # The first case was cross-checked against a Monte Carlo simulation of
+    # negative binomial counts (variance mu * (1 + dispersion * mu) per
+    # observation, N=200000, seed 777, oracle standard error, power 0.082,
+    # MC se 0.001); at 4 times the sample size the MC matches the closed
+    # form to within 2 MC standard errors.
+    pow_ = power_equivalence_neginb_2indep(**kwds)
+    assert_allclose(pow_, power_ref, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "rate1, rate2, nobs1, nobs_ratio",
+    [(1.2, 1.0, 80, 2), (0.9, 1.1, 120, 0.5), (1.0, 1.0, 100, 3)],
+)
+@pytest.mark.parametrize(
+    "method_var, method_var_poisson",
+    [("alt", "alt"), ("score", "score"), ("ftotal", "score")],
+)
+def test_power_equivalence_negbin_poisson_limit(
+    rate1, rate2, nobs1, nobs_ratio, method_var, method_var_poisson
+):
+    # the negative binomial equivalence power with dispersion=0 must agree
+    # with the Poisson equivalence power with dispersion=1. The ftotal
+    # variance of the negative binomial is equal to the score variance of the
+    # Poisson in the limit, there is no ftotal option for the Poisson.
+    pow_p = power_equivalence_poisson_2indep(
+        rate1,
+        rate2,
+        nobs1,
+        0.8,
+        1.25,
+        nobs_ratio=nobs_ratio,
+        method_var=method_var_poisson,
+    )
+    pow_nb = power_equivalence_neginb_2indep(
+        rate1,
+        rate2,
+        nobs1,
+        0.8,
+        1.25,
+        nobs_ratio=nobs_ratio,
+        dispersion=0,
+        method_var=method_var,
+    )
+    assert_allclose(pow_nb, pow_p, rtol=1e-13)
+
+
+def _tost_power_exact(
+    rate1, rate2, nobs1, low, upp, nobs_ratio, method, alpha=0.05
+):
+    # Exact power of tost_poisson_2indep by enumeration of the joint
+    # distribution of the two Poisson counts, each tail truncated at 1e-12.
+    mean1 = nobs1 * rate1
+    mean2 = nobs1 * nobs_ratio * rate2
+    ranges = [
+        np.arange(
+            int(stats.poisson.ppf(1e-12, mean)),
+            int(stats.poisson.isf(1e-12, mean)) + 1,
+        )
+        for mean in (mean1, mean2)
+    ]
+    count1, count2 = np.meshgrid(*ranges, indexing="ij")
+    prob = stats.poisson.pmf(count1, mean1) * stats.poisson.pmf(count2, mean2)
+    res = smr.tost_poisson_2indep(
+        count1,
+        nobs1,
+        count2,
+        nobs1 * nobs_ratio,
+        low,
+        upp,
+        method=method,
+    )
+    return np.sum(prob[np.asarray(res.pvalue) < alpha])
+
+
+@pytest.mark.parametrize(
+    "rate1, rate2, nobs1, nobs_ratio, low, upp",
+    [
+        (1.1, 1.0, 100, 2, 0.7, 1 / 0.7),
+        (1.1, 1.0, 100, 4, 0.7, 1 / 0.7),
+        (1.0, 1.2, 100, 4, 0.7, 1 / 0.7),
+        (0.9, 1.0, 80, 0.5, 0.6, 1 / 0.6),
+        (2.0, 1.5, 60, 4, 0.6, 1 / 0.6),
+    ],
+)
+def test_power_equivalence_nobs_ratio_enumeration(
+    rate1, rate2, nobs1, nobs_ratio, low, upp
+):
+    # gh-10519: independent check of the normal approximation of the power
+    # against the exact rejection probability of the Poisson TOST for
+    # nobs_ratio != 1. The expected value is the sum of the probabilities of
+    # all pairs of counts for which tost_poisson_2indep rejects at the 5%
+    # level. The score variance corresponds to the "score-log" test, the
+    # alternative variance to the Wald test for the log ratio, "wald-log".
+    args = (rate1, rate2, nobs1, low, upp)
+    # the tolerances are for the error of the normal approximation
+    exact_score = _tost_power_exact(*args, nobs_ratio, "score-log")
+    exact_wald = _tost_power_exact(*args, nobs_ratio, "wald-log")
+    assert 0.3 < exact_score < 0.9
+
+    for func, kwds in [
+        (power_equivalence_poisson_2indep, {}),
+        (power_equivalence_neginb_2indep, {"dispersion": 0}),
+    ]:
+        power_alt = func(*args, nobs_ratio=nobs_ratio, method_var="alt", **kwds)
+        power_score = func(
+            *args, nobs_ratio=nobs_ratio, method_var="score", **kwds
+        )
+        assert_allclose(power_alt, exact_wald, atol=0.02)
+        assert_allclose(power_score, exact_score, atol=0.01)
+
+    # ftotal in the limit of dispersion zero is the score variance
+    power_ftotal = power_equivalence_neginb_2indep(
+        *args,
+        nobs_ratio=nobs_ratio,
+        dispersion=0,
+        method_var="ftotal",
+    )
+    assert_allclose(power_ftotal, exact_score, atol=0.01)
+
+
+def test_power_equivalence_ftotal_poisson_limit_nobs_ratio():
+    # gh-10519: the ftotal null variance used (1 + margin * nobs_ratio)^2
+    # instead of (margin + nobs_ratio)^2, so that it differed from the score
+    # variance at dispersion=0. The error is invisible if rate1 == rate2 or
+    # nobs_ratio == 1, because the errors at the lower and upper margin
+    # cancel or because the two expressions are equal.
+    kwds = dict(
+        rate1=1.1, rate2=1.0, nobs1=400, low=0.8, upp=1.25, nobs_ratio=4
+    )
+    power_score = power_equivalence_neginb_2indep(
+        **kwds, dispersion=0, method_var="score"
+    )
+    power_ftotal = power_equivalence_neginb_2indep(
+        **kwds, dispersion=0, method_var="ftotal"
+    )
+    # 0.78415 is the score variance power, the exact power of the TOST with
+    # the "score-log" test is 0.7874 and the ftotal power was 0.7121.
+    assert_allclose(power_score, 0.7841466147889693, rtol=1e-10)
+    assert_allclose(power_ftotal, power_score, rtol=1e-12)
+    # for small dispersion, ftotal and score are approximations to the same
+    # variance
+    for dispersion in [0.01, 0.05]:
+        p_score, p_ftotal = (
+            power_equivalence_neginb_2indep(
+                **kwds, dispersion=dispersion, method_var=method_var
+            )
+            for method_var in ["score", "ftotal"]
+        )
+        assert_allclose(p_ftotal, p_score, atol=0.005)
+
+    # one sided test of the ratio function, which has the same ftotal variance
+    ratio_kwds = dict(
+        rate1=1.1,
+        rate2=1.0,
+        nobs1=400,
+        nobs_ratio=4,
+        value=0.9,
+        dispersion=0,
+        alternative="larger",
+        return_results=True,
+    )
+    res_score = power_negbin_ratio_2indep(method_var="score", **ratio_kwds)
+    res_ftotal = power_negbin_ratio_2indep(method_var="ftotal", **ratio_kwds)
+    assert_allclose(res_ftotal.std_null, res_score.std_null, rtol=1e-12)
+    assert_allclose(res_ftotal.power, res_score.power, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "func, kwds",
+    [
+        (power_equivalence_poisson_2indep, {}),
+        (power_equivalence_neginb_2indep, {"dispersion": 0.5}),
+    ],
+)
+@pytest.mark.parametrize("nobs_ratio", [0, -1, np.inf, -np.inf, np.nan])
+def test_power_equivalence_nobs_ratio_invalid(func, kwds, nobs_ratio):
+    # gh-10519: nobs_ratio of 0 or -1 returned nan, 0 raised a
+    # ZeroDivisionError in the negative binomial function
+    with pytest.raises(ValueError, match="nobs_ratio must be positive and finite"):
+        func(1.1, 1.0, 100, 0.8, 1.25, nobs_ratio=nobs_ratio, **kwds)
+
+
+@pytest.mark.parametrize(
+    "func, kwds",
+    [
+        (power_equivalence_poisson_2indep, {}),
+        (power_equivalence_neginb_2indep, {"dispersion": 0.5}),
+    ],
+)
+@pytest.mark.parametrize("bad", [0, -1, np.inf, np.nan])
+def test_power_equivalence_nobs_ratio_invalid_array(func, kwds, bad):
+    # an invalid element in an array or list raises
+    for nobs_ratio in [[1.0, bad], np.array([bad, 2.0, 1.0])]:
+        with pytest.raises(
+            ValueError, match="nobs_ratio must be positive and finite"
+        ):
+            func(1.1, 1.0, 100, 0.8, 1.25, nobs_ratio=nobs_ratio, **kwds)
+
+
+@pytest.mark.parametrize(
+    "func, kwds",
+    [
+        (power_equivalence_poisson_2indep, {}),
+        (power_equivalence_neginb_2indep, {"dispersion": 0.5}),
+    ],
+)
+def test_power_equivalence_nobs_ratio_not_numeric(func, kwds):
+    with pytest.raises(ValueError, match="could not convert string to float"):
+        func(1.1, 1.0, 100, 0.8, 1.25, nobs_ratio="abc", **kwds)
+
+
+@pytest.mark.parametrize(
+    "func, kwds",
+    [
+        (power_equivalence_poisson_2indep, {}),
+        (power_equivalence_neginb_2indep, {"dispersion": 0.5}),
+    ],
+)
+@pytest.mark.parametrize("method_var", ["alt", "score"])
+def test_power_equivalence_nobs_ratio_array(func, kwds, method_var):
+    # array_like nobs_ratio broadcasts with nobs1 and the rates
+    kwds = dict(kwds, method_var=method_var)
+    nobs_ratio = [0.5, 2.0, 4.0]
+    nobs1 = np.array([60, 100, 150])
+    args = (1.1, 1.0, nobs1, 0.8, 1.25)
+    expected = [
+        func(1.1, 1.0, n1, 0.8, 1.25, nobs_ratio=nr, **kwds)
+        for n1, nr in zip(nobs1, nobs_ratio, strict=True)
+    ]
+    for ratio in [nobs_ratio, np.array(nobs_ratio)]:
+        pow_ = func(*args, nobs_ratio=ratio, **kwds)
+        assert_allclose(pow_, expected, rtol=1e-12)
+    # broadcasting nobs_ratio against the rates
+    rate1 = np.array([1.0, 1.1, 1.2])
+    expected = [
+        func(r1, 1.0, 100, 0.8, 1.25, nobs_ratio=nr, **kwds)
+        for r1, nr in zip(rate1, nobs_ratio, strict=True)
+    ]
+    pow_ = func(rate1, 1.0, 100, 0.8, 1.25, nobs_ratio=nobs_ratio, **kwds)
+    assert_allclose(pow_, expected, rtol=1e-12)
+    res = func(*args, nobs_ratio=nobs_ratio, return_results=True, **kwds)
+    assert_allclose(res.nobs_2, nobs1 * np.array(nobs_ratio))
+
+
+@pytest.mark.parametrize(
+    "func", [power_equivalence_poisson_2indep, power_equivalence_neginb_2indep]
+)
+def test_power_equivalence_nobs_ratio_types(func):
+    args = (1.1, 1.0, 100, 0.8, 1.25)
+    expected = func(*args, nobs_ratio=2.0)
+    for nobs_ratio in [2, np.int64(2), np.float64(2.0), np.array(2.0)]:
+        assert_allclose(func(*args, nobs_ratio=nobs_ratio), expected, rtol=1e-14)
+    res = func(*args, nobs_ratio=2, return_results=True)
+    assert res.nobs_ratio == 2
+    assert_allclose(res.nobs_2, 200)
+
+
 def test_power_poisson_ratio_2indep_default_value():
     # the default null rate ratio is 1, a ratio of 0 made log(value) infinite
     rate1, rate2, nobs1 = 1.0, 2.0, 10
@@ -1820,10 +2142,46 @@ def test_power_poisson_ratio_2indep_default_value():
     sd = np.sqrt((1 / rate1 + 1 / rate2) / nobs1)
     expected = stats.norm.cdf((-np.log(rate1 / rate2) - stats.norm.ppf(0.95) * sd) / sd)
     assert_allclose(res.power, expected, rtol=1e-12)
-    # method_var="score" divides by value, the old default gave nan
-    kwds = {"alternative": "two-sided", "method_var": "score"}
-    power = power_poisson_ratio_2indep(rate1, rate2, nobs1, **kwds).power
-    assert np.isfinite(power)
-    assert_allclose(
-        power, power_poisson_ratio_2indep(rate1, rate2, nobs1, value=1, **kwds).power
-    )
+
+
+# the old default of 0 raised a divide by zero warning in log(value)
+@pytest.mark.filterwarnings("error:divide by zero:RuntimeWarning")
+@pytest.mark.parametrize("alternative", ["smaller", "larger", "two-sided"])
+@pytest.mark.parametrize("method_var", ["alt", "score"])
+def test_power_poisson_ratio_2indep_default_value_alternatives(
+    alternative, method_var
+):
+    kwds = {"alternative": alternative, "method_var": method_var}
+    power = power_poisson_ratio_2indep(1.0, 2.0, 10, **kwds).power
+    assert 0 < power < 1
+    explicit = power_poisson_ratio_2indep(1.0, 2.0, 10, value=1, **kwds).power
+    assert_allclose(power, explicit, rtol=1e-12)
+    # without an effect, rate1 == rate2, the power is the size of the test
+    size = power_poisson_ratio_2indep(1.0, 1.0, 100, **kwds).power
+    assert_allclose(size, 0.05, rtol=1e-10)
+
+
+@pytest.mark.parametrize("value", [0, -1, np.inf, -np.inf, np.nan, [1.0, 0.0]])
+@pytest.mark.parametrize("method_var", ["alt", "score"])
+@pytest.mark.parametrize(
+    "func",
+    [power_poisson_ratio_2indep, power_negbin_ratio_2indep],
+)
+def test_power_ratio_2indep_value_invalid(func, method_var, value):
+    # the power is based on log(value), which must be positive and finite
+    with pytest.raises(ValueError, match="value must be positive and finite"):
+        func(1.0, 2.0, 10, value=value, method_var=method_var)
+
+
+@pytest.mark.parametrize("method_var", ["alt", "score"])
+@pytest.mark.parametrize(
+    "func",
+    [power_poisson_ratio_2indep, power_negbin_ratio_2indep],
+)
+def test_power_ratio_2indep_value_array_like(func, method_var):
+    values = [0.8, 1.0, 1.5]
+    kwds = {"method_var": method_var, "return_results": False}
+    expected = [func(1.0, 2.0, 10, value=v, **kwds) for v in values]
+    for value in [values, np.array(values), pd.Series(values)]:
+        power = func(1.0, 2.0, 10, value=value, **kwds)
+        assert_allclose(power, expected, rtol=1e-12)

@@ -157,7 +157,9 @@ Specification test
    compare_cox
    compare_encompassing
    compare_j
+   compare_vuong
    NonNestedTestResult
+   VuongTestResult
    spec_white
    linear_harvey_collier
    linear_lm

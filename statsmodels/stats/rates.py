@@ -15,7 +15,7 @@ from scipy import optimize, stats
 from statsmodels.stats._inference_tools import _mover_confint
 from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import array_like, string_like
 
 # shorthand
 norm = stats.norm
@@ -2000,6 +2000,32 @@ class PowerRatioResult(PowerResult):
     std_null: float
 
 
+def _check_null_ratio(value):
+    """
+    Check the rate ratio under the null of the power functions for ratios
+
+    Parameters
+    ----------
+    value : float or array_like
+        Rate ratio, rate1 / rate2, under the null hypothesis.
+
+    Returns
+    -------
+    ndarray
+        The rate ratio as an array of float.
+
+    Raises
+    ------
+    ValueError
+        If any element of ``value`` is not positive and finite. The power is
+        based on the log of the rate ratio.
+    """
+    value_arr = np.asarray(value, dtype=float)
+    if not np.all((value_arr > 0) & np.isfinite(value_arr)):
+        raise ValueError(f"value must be positive and finite, got {value}")
+    return value_arr
+
+
 def power_poisson_ratio_2indep(
     rate1,
     rate2,
@@ -2034,8 +2060,17 @@ def power_poisson_ratio_2indep(
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    value : float, optional
-        Rate ratio, rate1 / rate2, under the null hypothesis.
+    value : float or array_like, optional
+        Rate ratio, rate1 / rate2, under the null hypothesis. The default of
+        1 is the null hypothesis that both rates are equal. The value must be
+        positive and finite because the test is based on the log of the rate
+        ratio.
+
+        .. versionchanged:: 0.15.1
+
+            The default was changed from 0 to 1. A rate ratio of 0 made
+            the power 0, 1 or nan with a divide by zero warning. Values that
+            are not positive and finite now raise a ``ValueError``.
     alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
@@ -2064,6 +2099,13 @@ def power_poisson_ratio_2indep(
         the scalar power in numeric comparisons (e.g., ``assert_allclose``),
         while also exposing `std_null`, `std_alt` and other attributes.
 
+    Raises
+    ------
+    ValueError
+        If ``nobs1`` is not positive, ``value`` is not positive and finite,
+        ``alpha`` is not in the interval (0, 1), or ``dispersion`` is
+        negative.
+
     References
     ----------
     .. [1] Zhu, Haiyuan. 2017. “Sample Size Calculation for Comparing Two
@@ -2083,6 +2125,7 @@ def power_poisson_ratio_2indep(
         raise ValueError(
             f"dispersion must be non-negative, got {dispersion}"
         )
+    value = _check_null_ratio(value)
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2179,6 +2222,36 @@ class PowerEquivalenceResult(PowerResult):
     std_null_upp: float
 
 
+def _check_nobs_ratio(nobs_ratio):
+    """
+    Convert nobs_ratio to float or ndarray and check that it is valid
+
+    Parameters
+    ----------
+    nobs_ratio : float or array_like
+        Sample size ratio, nobs2 = nobs_ratio * nobs1.
+
+    Returns
+    -------
+    float or ndarray
+        The sample size ratio, a float if the input is a scalar.
+
+    Raises
+    ------
+    ValueError
+        If any element of nobs_ratio is not positive and finite, or if
+        nobs_ratio cannot be converted to float.
+    """
+    nobs_ratio = array_like(nobs_ratio, "nobs_ratio", dtype=np.double, mindim=0)
+    if not np.all(np.isfinite(nobs_ratio) & (nobs_ratio > 0)):
+        raise ValueError(
+            f"nobs_ratio must be positive and finite, got {nobs_ratio}"
+        )
+    if nobs_ratio.ndim == 0:
+        return float(nobs_ratio)
+    return nobs_ratio
+
+
 def power_equivalence_poisson_2indep(
     rate1,
     rate2,
@@ -2209,8 +2282,14 @@ def power_equivalence_poisson_2indep(
         Lower equivalence margin for the rate ratio, rate1 / rate2.
     upp : float or array_like
         Upper equivalence margin for the rate ratio, rate1 / rate2.
-    nobs_ratio : float, optional
-        Sample size ratio, nobs2 = nobs_ratio * nobs1.
+    nobs_ratio : float or array_like, optional
+        Sample size ratio, nobs2 = nobs_ratio * nobs1. All values must be
+        positive and finite.
+
+        .. versionchanged:: 0.15.1
+
+            A nobs_ratio that is not positive and finite raises a
+            ``ValueError``. Previously it returned nan or an arbitrary power.
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
@@ -2240,6 +2319,15 @@ def power_equivalence_poisson_2indep(
         ``assert_allclose``), while also exposing `std_null_low`,
         `std_null_upp`, `std_alt` and other attributes.
 
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+        The power is changed if ``nobs_ratio`` is not equal to 1. The variances
+        of the test statistic used the wrong sample size and, for
+        ``method_var="score"``, the wrong sample size ratio. Results for
+        ``nobs_ratio=1`` are unchanged.
+
     References
     ----------
     .. [1] Zhu, Haiyuan. 2017. “Sample Size Calculation for Comparing Two
@@ -2262,6 +2350,7 @@ def power_equivalence_poisson_2indep(
             f"the equivalence interval must satisfy low <= upp, "
             f"got low={low}, upp={upp}"
         )
+    nobs_ratio = _check_nobs_ratio(nobs_ratio)
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
@@ -2273,9 +2362,9 @@ def power_equivalence_poisson_2indep(
     if method_var == "alt":
         v0_low = v0_upp = v1
     else:  # method_var == "score"
-        v0_low = dispersion / exposure * (1 + low * nobs_ratio) ** 2
+        v0_low = dispersion / exposure * (low + nobs_ratio) ** 2
         v0_low /= low * nobs_ratio * (rate1 + (nobs_ratio * rate2))
-        v0_upp = dispersion / exposure * (1 + upp * nobs_ratio) ** 2
+        v0_upp = dispersion / exposure * (upp + nobs_ratio) ** 2
         v0_upp /= upp * nobs_ratio * (rate1 + (nobs_ratio * rate2))
 
     es_low = np.log(rate1 / rate2) - np.log(low)
@@ -2287,7 +2376,7 @@ def power_equivalence_poisson_2indep(
     pow_ = _power_equivalence_het(
         es_low,
         es_upp,
-        nobs2,
+        nobs1,
         alpha=alpha,
         std_null_low=std_null_low,
         std_null_upp=std_null_upp,
@@ -2713,8 +2802,16 @@ def power_negbin_ratio_2indep(
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
-    value : float, optional
-        Rate ratio, rate1 / rate2, under the null hypothesis.
+    value : float or array_like, optional
+        Rate ratio, rate1 / rate2, under the null hypothesis. The value must
+        be positive and finite because the test is based on the log of the
+        rate ratio.
+
+        .. versionchanged:: 0.15.1
+
+            Values that are not positive and finite now raise a
+            ``ValueError``. A rate ratio of 0 previously gave a divide by zero
+            warning and a power of 1 or ``nan``.
     alpha : float or array_like in interval (0,1), optional
         Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
@@ -2745,6 +2842,13 @@ def power_negbin_ratio_2indep(
         ``assert_allclose``), while also exposing `std_null`, `std_alt`
         and other attributes.
 
+    Raises
+    ------
+    ValueError
+        If ``nobs1`` is not positive, ``value`` is not positive and finite,
+        ``alpha`` is not in the interval (0, 1), or ``dispersion`` is
+        negative.
+
     References
     ----------
     .. [1] Zhu, Haiyuan. 2017. “Sample Size Calculation for Comparing Two
@@ -2764,6 +2868,7 @@ def power_negbin_ratio_2indep(
         raise ValueError(
             f"dispersion must be non-negative, got {dispersion}"
         )
+    value = _check_null_ratio(value)
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
 
@@ -2779,7 +2884,7 @@ def power_negbin_ratio_2indep(
     if method_var == "alt":
         v0 = v1
     elif method_var == "ftotal":
-        v0 = (1 + value * nobs_ratio) ** 2 / (
+        v0 = (value + nobs_ratio) ** 2 / (
             exposure * nobs_ratio * value * (rate1 + nobs_ratio * rate2)
         )
         v0 += (1 + nobs_ratio) / nobs_ratio * dispersion
@@ -2851,8 +2956,15 @@ def power_equivalence_neginb_2indep(
         Lower equivalence margin for the rate ratio, rate1 / rate2.
     upp : float or array_like
         Upper equivalence margin for the rate ratio, rate1 / rate2.
-    nobs_ratio : float, optional
-        Sample size ratio, nobs2 = nobs_ratio * nobs1.
+    nobs_ratio : float or array_like, optional
+        Sample size ratio, nobs2 = nobs_ratio * nobs1. All values must be
+        positive and finite.
+
+        .. versionchanged:: 0.15.1
+
+            A nobs_ratio that is not positive and finite raises a
+            ``ValueError``. Previously it returned nan or raised a
+            ``ZeroDivisionError``.
     exposure : float, optional
         Exposure for each observation. Total exposure is nobs1 * exposure
         and nobs2 * exposure.
@@ -2875,12 +2987,23 @@ def power_equivalence_neginb_2indep(
     Returns
     -------
     PowerEquivalenceResult or float
-        If return_results is False, then only the power is returned as a
-        float. If return_results is True (default), then a
+        If return_results is False (default), then only the power is returned
+        as a float. If return_results is True, then a
         :class:`PowerEquivalenceResult` result object is returned; it behaves
         like the scalar power in numeric comparisons (e.g.
         ``assert_allclose``), while also exposing `std_null_low`,
         `std_null_upp`, `std_alt` and other attributes.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+        The power is changed if ``nobs_ratio`` is not equal to 1. The variances
+        of the test statistic used the wrong sample size and, for
+        ``method_var="alt"``, the rates of the two samples were interchanged.
+        For ``method_var="ftotal"`` the variance under the null hypothesis
+        used the wrong sample size ratio; with ``dispersion=0`` it is now equal
+        to ``method_var="score"``. Results for ``nobs_ratio=1`` are unchanged.
 
     References
     ----------
@@ -2904,11 +3027,12 @@ def power_equivalence_neginb_2indep(
             f"the equivalence interval must satisfy low <= upp, "
             f"got low={low}, upp={upp}"
         )
+    nobs_ratio = _check_nobs_ratio(nobs_ratio)
     rate1, rate2, nobs1 = np.asarray(rate1), np.asarray(rate2), np.asarray(nobs1)
 
     nobs2 = nobs_ratio * nobs1
 
-    v1 = (1 / rate2 + 1 / (nobs_ratio * rate1)) / exposure + (
+    v1 = (1 / rate1 + 1 / (nobs_ratio * rate2)) / exposure + (
         1 + nobs_ratio
     ) / nobs_ratio * dispersion
     method_var = string_like(
@@ -2917,11 +3041,11 @@ def power_equivalence_neginb_2indep(
     if method_var == "alt":
         v0_low = v0_upp = v1
     elif method_var == "ftotal":
-        v0_low = (1 + low * nobs_ratio) ** 2 / (
+        v0_low = (low + nobs_ratio) ** 2 / (
             exposure * nobs_ratio * low * (rate1 + nobs_ratio * rate2)
         )
         v0_low += (1 + nobs_ratio) / nobs_ratio * dispersion
-        v0_upp = (1 + upp * nobs_ratio) ** 2 / (
+        v0_upp = (upp + nobs_ratio) ** 2 / (
             exposure * nobs_ratio * upp * (rate1 + nobs_ratio * rate2)
         )
         v0_upp += (1 + nobs_ratio) / nobs_ratio * dispersion

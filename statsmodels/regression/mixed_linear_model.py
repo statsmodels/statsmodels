@@ -89,8 +89,10 @@ Notation:
 * `cov_re` is the random effects covariance matrix (referred to above
   as Psi) and `scale` is the (scalar) error variance.  For a single
   group, the marginal covariance matrix of endog given exog is scale*I
-  + Z * cov_re * Z', where Z is the design matrix for the random
-  effects in one group.
+  + Z * cov_re * Z' + sum_j vcomp[j] * Q_j * Q_j', where Z is the
+  design matrix for the random effects and Q_j is the design matrix of
+  the j-th variance component in one group.  The last term is absent if
+  the model has no variance components.
 
 * `vcomp` is a vector of variance parameters.  The length of `vcomp`
   is determined by the number of keys in either the `exog_vc` argument
@@ -104,14 +106,16 @@ all three parameterizations, but the variance parameters differ.  The
 parameterizations are:
 
 * The "user parameterization" in which cov(endog) = scale*I + Z *
-  cov_re * Z', as described above.  This is the main parameterization
-  visible to the user.
+  cov_re * Z' + sum_j vcomp[j] * Q_j * Q_j', as described above.  This
+  is the main parameterization visible to the user.
 
 * The "profile parameterization" in which cov(endog) = I +
-  Z * cov_re1 * Z'.  This is the parameterization of the profile
-  likelihood that is maximized to produce parameter estimates.
-  (see Lindstrom and Bates for details).  The "user" cov_re is
-  equal to the "profile" cov_re1 times the scale.
+  Z * cov_re1 * Z' + sum_j vcomp1[j] * Q_j * Q_j'.  This is the
+  parameterization of the profile likelihood that is maximized to
+  produce parameter estimates (see Lindstrom and Bates for details).
+  The "user" cov_re and vcomp are equal to the "profile" cov_re1 and
+  vcomp1 times the scale.  The variance component terms are absent if
+  the model has no variance components.
 
 * The "square root parameterization" in which we work with the Cholesky
   factor of cov_re1 instead of cov_re directly.  This is hidden from the

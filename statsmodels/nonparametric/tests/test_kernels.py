@@ -188,3 +188,16 @@ def test_tricube_function_zero_outside_support():
     # the support scales with the bandwidth, |Xi - x| / h = 0.75 here
     res = tricube(4.0, np.array([-100.0, -3.0, 3.0, 100.0]), 0.0)
     assert_allclose(res, [0, 0.1669853116259163, 0.1669853116259163, 0], rtol=1e-10)
+
+
+def test_tricube_function_scalar_and_nan():
+    # GH#10541 scalar Xi and x raised because u was modified in place
+    expected = kernels.Tricube()(np.array([0.5]))[0]
+    assert_allclose(tricube(1.0, 0.5, 0.0), expected, rtol=1e-10)
+    assert_allclose(tricube(2.0, 1.0, 0.0), expected, rtol=1e-10)
+    assert tricube(1.0, 3.0, 0.0) == 0
+
+    # missing values are propagated and not mapped to a kernel value
+    res = tricube(1.0, np.array([np.nan, 0.0]), 0.0)
+    assert np.isnan(res[0])
+    assert_allclose(res[1], 70.0 / 81, rtol=1e-12)

@@ -127,22 +127,35 @@ def gaussian(h, Xi, x):
 
 
 def tricube(h, Xi, x):
-    """
+    r"""
     Tricube Kernel for continuous variables
 
     Parameters
     ----------
     h : float
         The bandwidth used to estimate the value of the kernel function.
-    Xi : ndarray
+    Xi : float or ndarray
         The value of the training set.
-    x : float
-        The value at which the kernel density is being estimated.
+    x : float or ndarray
+        The value at which the kernel density is being estimated. If an
+        ndarray, it must be broadcastable with `Xi`.
 
     Returns
     -------
-    kernel_value : ndarray
-        The value of the kernel function at each point in `Xi`.
+    kernel_value : float or ndarray
+        The value of the kernel function at each point in `Xi`. A scalar if
+        `Xi` and `x` are both scalars, otherwise an ndarray.
+
+    Notes
+    -----
+    The kernel is :math:`(70 / 81) (1 - |u|^3)^3` with :math:`u = (Xi - x) / h`
+    if :math:`|u| \le 1` and 0 otherwise.
+
+    .. versionchanged:: 0.15.1
+
+        The kernel is 0 outside of its support. Previously it returned the
+        peak value 70 / 81 for points with :math:`|u| > 1`. Scalar `Xi` and
+        `x` are now supported.
     """
     # GH#10541 clamp |u| to 1 so points outside the support evaluate to 0,
     # zeroing u instead returned the peak value 70 / 81
