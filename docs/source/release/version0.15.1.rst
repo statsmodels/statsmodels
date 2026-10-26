@@ -445,6 +445,10 @@ Statistics and tests
 - ``proportions_chisquare`` raises a ``ValueError`` for a single sample
   without ``value``. The statistic was 0 and the p-value ``nan``.
   :pr:`10451`
+- ``StratifiedTable.test_equal_odds`` (Breslow-Day and Tarone tests) returned
+  ``nan`` or an inaccurate statistic when the pooled odds ratio is one or very
+  close to one, and for tables with small fitted cells. The statistic is now
+  computed accurately in these cases. :pr:`10540`
 - ``gof_chisquare_discrete`` and ``gof_binning_discrete`` no longer restrict
   the support of the distribution to the range -1000 to 1000. The bins are
   chosen using the quantile function. The bins work for distributions for

@@ -692,8 +692,6 @@ New Features and Enhancements
 Notable Bug Fixes
 ====================
 
-- Stabilize ``StratifiedTable.test_equal_odds`` when the pooled odds ratio is
-  one or close to one, including tables with small fitted cells.
 - Fix a typo in the ``InfeasibleTestError`` exception string. :pr:`8878`
 - Correct diagnostics for changes in pandas. :pr:`8887`
 - MNLogit Wald tests: fix ``ravel``, string ``cov_names``. :pr:`8907`

@@ -572,6 +572,20 @@ class TestStratified3(CheckStratifiedMixin):
         cls.or_homog_adj_p = 0.002064786
 
 
+# R reference for the tests with a pooled (Mantel-Haenszel) odds ratio of 1.
+# DescTools 0.99.60 (R 4.6.1), a, b, c, d being the cells of each 2x2 table
+# [[a, b], [c, d]] and K the number of tables:
+#     x <- array(0, c(2, 2, K))
+#     for (k in 1:K) x[, , k] <- matrix(c(a[k], c[k], b[k], d[k]), 2, 2)
+#     BreslowDayTest(x, correct=FALSE); BreslowDayTest(x, correct=TRUE)
+# mantelhaen.test(x)$estimate is exactly 1 in all cases and the statistics
+# with and without correct (Tarone) are identical:
+#     (10, 20, 20, 10), (20, 10, 10, 20):
+#         13.333333333333334, p 0.000260729632855283
+#     (20, 10, 5, 15), (10, 20, 15, 5):
+#         16.666666666666668, p 4.45570906040249e-05
+#     (20, 10, 5, 15), (10, 20, 15, 5), (30, 12, 8, 25), (12, 30, 25, 8):
+#         49.589575905365379, p 9.7701846613063e-11 (3 df)
 @pytest.mark.parametrize("adjust", [False, True])
 @pytest.mark.parametrize("as_array", [False, True])
 def test_equal_odds_unit_pooled_or(adjust, as_array):
@@ -585,6 +599,35 @@ def test_equal_odds_unit_pooled_or(adjust, as_array):
     assert_allclose(result.statistic, 40 / 3, rtol=1e-13)
     # For one degree of freedom, chi2 survival is erfc(sqrt(x / 2)).
     assert_allclose(result.pvalue, erfc(sqrt(20 / 3)), rtol=1e-13)
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+@pytest.mark.parametrize(
+    "tables, expected, pvalue",
+    [
+        (
+            [[[20, 10], [5, 15]], [[10, 20], [15, 5]]],
+            16.666666666666668,
+            4.45570906040249e-05,
+        ),
+        (
+            [
+                [[20, 10], [5, 15]],
+                [[10, 20], [15, 5]],
+                [[30, 12], [8, 25]],
+                [[12, 30], [25, 8]],
+            ],
+            49.589575905365379,
+            9.7701846613063e-11,
+        ),
+    ],
+)
+def test_equal_odds_unit_pooled_or_r(adjust, tables, expected, pvalue):
+    # DescTools::BreslowDayTest, see the R reference above
+    result = ctab.StratifiedTable(tables).test_equal_odds(adjust=adjust)
+    assert_allclose(result.statistic, expected, rtol=1e-13)
+    # R computes the p-value as 1 - pchisq, which loses digits for small values
+    assert_allclose(result.pvalue, pvalue, rtol=1e-6)
 
 
 @pytest.mark.parametrize("adjust", [False, True])
@@ -638,17 +681,16 @@ def test_equal_odds_small_cells(adjust, transform):
 
 @pytest.mark.parametrize("adjust", [False, True])
 def test_equal_odds_near_homogeneous_absolute_tolerance(adjust):
-    # Counts near 1e15 limit recoverable residual precision. This is an
-    # absolute-error assertion, deliberately not a relative-accuracy claim.
+    # Counts near 1e15 limit recoverable residual precision. The statistic is
+    # of order 1e-17 with a large relative error, so this only checks that it
+    # is finite and tiny, not that it is accurate.
     tables = [[[3 * k * 10**14, 6 * k * 10**14],
                [k * 10**14, 2 * k * 10**14]]
               for k in [1, 2, 3] * 3]
     tables[-1][0][1] += 1
-    expected = 3.8580246913580224e-17
     result = ctab.StratifiedTable(tables).test_equal_odds(adjust=adjust)
     assert np.isfinite(result.statistic)
-    assert result.statistic >= 0
-    assert_allclose(result.statistic, expected, atol=5e-17, rtol=0)
+    assert 0 <= result.statistic < 1e-15
     assert_allclose(result.pvalue, 1, atol=1e-14, rtol=0)
 
 
