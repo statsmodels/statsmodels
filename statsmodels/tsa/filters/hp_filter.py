@@ -164,7 +164,9 @@ def _hpfilter_one_sided(x, lamb):
     One-sided HP trend from the Kalman filter of the state space form
     """
     kfilter = KalmanFilter(k_endog=1, k_states=2, k_posdef=1)
-    kfilter.bind(x)
+    # bind reshapes 1-d input in place with older NumPy, so pass a 2-d copy
+    # to leave x unchanged
+    kfilter.bind(np.array(x)[:, None])
     kfilter["design"] = np.array([[1.0, 0.0]])
     kfilter["obs_cov"] = np.array([[1.0]])
     kfilter["transition"] = np.array([[2.0, -1.0], [1.0, 0.0]])

@@ -654,6 +654,8 @@ def test_hpfilter_one_sided_r(lamb):
     assert_equal(res.trend[:2], dta[:2])
     assert_equal(res.cycle[:2], 0.0)
     assert res.trend.flags.c_contiguous
+    # the input is not modified
+    assert dta.shape == (203,)
 
 
 @pytest.mark.parametrize("lamb", [6.25, 1600, 129600])
