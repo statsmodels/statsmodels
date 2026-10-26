@@ -217,6 +217,10 @@ Regression and linear models
 Generalized linear models and discrete models
 ---------------------------------------------
 
+- ``predict`` preserves the observation index of a pandas Series for models
+  with one predictor and additional parameters, such as ``NegativeBinomial``
+  and ``OrderedModel``. Previously, multiple observations raised an index
+  length error and a single observation received an incorrect label.
 - ``GEE`` used the number of columns of ``exog`` for ``df_model``,
   ``df_resid`` and the default ``ddof_scale``. These are now based on the rank
   of ``exog`` as in the other models, so that a singular design can no longer
