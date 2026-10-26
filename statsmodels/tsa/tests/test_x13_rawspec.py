@@ -83,3 +83,28 @@ def test_rawspec_file_utf8_in_non_utf8_locale(tmp_path):
     assert res.returncode == 0, res.stderr
     spec = json.loads(res.stdout)
     assert f'title="{NON_ASCII_TITLE}"' in spec
+
+
+def test_rawspec_invalid_path(no_x12, tmp_path):
+    missing = tmp_path / "missing.spc"
+
+    with pytest.raises(ValueError, match="not valid path or spec string"):
+        x13.x13_arima_analysis(_monthly_endog(), rawspec=str(missing), speconly=True)
+
+
+def test_rawspec_path_object(no_x12, tmp_path):
+    specfile = tmp_path / "custom.spc"
+    specfile.write_bytes((SPEC_TEMPLATE % NON_ASCII_TITLE).encode("utf-8"))
+
+    spec = x13.x13_arima_analysis(_monthly_endog(), rawspec=specfile, speconly=True)
+    expected = x13.x13_arima_analysis(
+        _monthly_endog(), rawspec=str(specfile), speconly=True
+    )
+
+    assert f'title="{NON_ASCII_TITLE}"' in spec
+    assert spec == expected
+
+    with pytest.raises(ValueError, match="not valid path or spec string"):
+        x13.x13_arima_analysis(
+            _monthly_endog(), rawspec=tmp_path / "missing.spc", speconly=True
+        )

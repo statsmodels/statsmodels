@@ -582,6 +582,8 @@ def x13_arima_analysis(
 
         rawspec_text = None
 
+        # rawspec is documented as str or Path
+        rawspec = os.fspath(rawspec)
         if "{" in rawspec:
             rawspec_text = rawspec
         else:
