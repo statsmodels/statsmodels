@@ -22,6 +22,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.nonparametric.smoothers_lowess import lowess
+from statsmodels.tools.testing import warns_or_none
 
 # Number of decimals to test equality with.
 # The default is 7.
@@ -225,7 +226,9 @@ class TestLowess:
         rs = np.random.RandomState(8437972)
         x = [0] + [1] * 100 + [2] * 100 + [3]
         y = x + rs.normal(size=len(x)) * 1e-8
-        result = lowess(y, x, frac=50 / len(x), it=1)
+        # 0/0 in the weights of the degenerate local fits, floating point dependent
+        with warns_or_none(RuntimeWarning, match="invalid value encountered in divide"):
+            result = lowess(y, x, frac=50 / len(x), it=1)
         # fit values should be approximately averages of values at
         # a particular fit, which in this case are just equal to x
         assert_almost_equal(result[1:-1, 1], x[1:-1], decimal=7)
