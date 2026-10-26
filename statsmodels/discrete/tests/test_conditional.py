@@ -51,9 +51,11 @@ def test_logit_formula():
     groups = np.repeat([0, 1], 50)
     exog = np.linspace(-2, 2, len(groups))
 
-    error = np.linspace(-1, 1, len(groups))  # Needed for within-group variance
-    logit_link = 1 / (1 + np.exp(exog + groups)) + error
-    endog = (logit_link > 0.5).astype(int)
+    # Random endog with within-group variance, a deterministic threshold on exog
+    # is perfectly separated and one group has no variation
+    rng = np.random.default_rng(123)
+    prob = 1 / (1 + np.exp(-(0.5 * exog + groups - 0.5)))
+    endog = rng.binomial(1, prob)
 
     data = pd.DataFrame({"exog": exog, "groups": groups, "endog": endog})
 
