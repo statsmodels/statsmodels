@@ -1515,7 +1515,7 @@ def _ardl_select_ssr(y, always, select, glob):
         The dependent variable, (nobs,).
     always : ndarray
         The regressors included in every model, (nobs, k_always).
-    select : list[ndarray]
+    select : list of ndarray
         The blocks of lags of the endogenous and exogenous variables. A
         model includes the first columns of each block, or any subset of
         all columns if glob is True.
@@ -1524,7 +1524,7 @@ def _ardl_select_ssr(y, always, select, glob):
 
     Returns
     -------
-    tuple[ndarray, ndarray] or None
+    tuple of ndarray or None
         The sums of squared residuals of the models and their numbers of
         regressors from the blocks. If glob is False, the model that
         includes the first ``i_j`` columns of block ``j`` is at

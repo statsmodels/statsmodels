@@ -349,8 +349,11 @@ Time series analysis
   trading days, can use a ``DatetimeIndex`` with a matching frequency (e.g.
   ``"B"`` or a ``CustomBusinessDay``); data with missing observations can be
   reindexed to consecutive periods. Consecutive periods with a frequency
-  multiplier, such as ``"2Q"``, are still supported. :issue:`6247`,
-  :issue:`8950`, :pr:`10572`
+  multiplier, such as ``"2Q"``, are still supported. For an ignored
+  ``PeriodIndex`` the "Sample" line of the results summary shows integer
+  positions, e.g. ``0 - 19``, and ``model.data.dates`` is ``None``, as for a
+  ``DatetimeIndex`` without a frequency. :issue:`6247`, :issue:`8950`,
+  :pr:`10572`, :pr:`10581`
 - The asymptotic critical values and p-values of
   :meth:`~statsmodels.tsa.ardl.UECMResults.bounds_test` are looked up with the
   number of regressors, excluding the dependent variable, as in Pesaran, Shin

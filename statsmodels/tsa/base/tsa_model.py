@@ -504,6 +504,11 @@ class TimeSeriesModel(base.LikelihoodModel):
         additionally consist of consecutive periods, i.e. without gaps or
         repeated periods. Otherwise it is called an "unsupported" index.
 
+        Passing a PeriodIndex that is not consecutive as `dates` issues a
+        warning and the index is ignored, whereas passing a DatetimeIndex as
+        `dates` raises an exception if it has no frequency and none can be
+        inferred.
+
         Supported indexes are standardized (i.e., a list of date strings is
         converted to a DatetimeIndex) and the result is put in `self._index`.
 
@@ -670,9 +675,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             isinstance(index, PeriodIndex)
             and is_monotonic
             and len(index) > 0
-            and not index.equals(
-                period_range(start=index[0], periods=len(index), freq=index.freq)
-            )
+            and not np.all(np.diff(index.asi8) == index.freq.n)
         )
 
         # Issue warnings for unsupported indexes
@@ -704,13 +707,10 @@ class TimeSeriesModel(base.LikelihoodModel):
             warnings.warn(
                 "A Period index has been provided, but its periods are not"
                 " consecutive (it has gaps or repeated periods) and so will be"
-                " ignored when e.g. forecasting. If the gaps follow a calendar"
-                " rule (e.g. trading days), use a DatetimeIndex with a matching"
-                " frequency, such as 'B' or a CustomBusinessDay. If the gaps"
-                " are missing observations, reindex the data to consecutive"
-                " periods, e.g. with `data.reindex(pd.period_range(start, end,"
-                " freq=freq))`; this introduces missing values, which are"
-                " only supported by some models (e.g. state space models).",
+                " ignored. Forecasting will fail unless an index is given. Use"
+                " a DatetimeIndex with a frequency (e.g. 'B' or a"
+                " CustomBusinessDay) if the gaps follow a calendar rule, or"
+                " reindex the data to consecutive periods.",
                 ValueWarning,
                 stacklevel=2,
             )
