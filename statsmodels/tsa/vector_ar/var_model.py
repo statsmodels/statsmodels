@@ -26,6 +26,7 @@ from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.validation import array_like, float_like, int_like, string_like
+from statsmodels.tsa._lagselect import nested_lag_ols
 from statsmodels.tsa.base.tsa_model import (
     TimeSeriesModel,
     TimeSeriesResultsWrapper,
@@ -508,6 +509,99 @@ def test_normality(results, signif=0.05):
     )
 
 
+def _var_order_ics(endog, exog, maxlags, trend, p_min):
+    """
+    Information criteria of all VAR lag orders from a single QR decomposition
+
+    Parameters
+    ----------
+    endog : ndarray
+        The endogenous variables, of shape (n_totobs, neqs).
+    exog : ndarray or None
+        The exogenous variables, of shape (n_totobs, k_exog_user).
+    maxlags : int
+        The largest lag order considered.
+    trend : {"n", "c", "ct", "ctt"}
+        The deterministic terms.
+    p_min : int
+        The smallest lag order considered.
+
+    Returns
+    -------
+    dict of str to ndarray or None
+        The arrays of "aic", "bic", "hqic" and "fpe" for lag orders
+        ``p_min, ..., maxlags``. None if the regressors are close to singular,
+        a lag column is constant, a residual covariance is close to singular,
+        or any value is not finite. ``VAR.select_order`` then estimates each
+        lag order separately.
+
+    Notes
+    -----
+    Gives the same result as estimating ``VAR(p)`` for each ``p`` on the
+    sample used by the largest model, which is what ``VAR.select_order``
+    does. The regressors of order ``p`` are the first
+    ``k_det + neqs * p`` columns of ``Z = [trend, exog, lag 1, ...,
+    lag maxlags]``, so ``nested_lag_ols`` gives the residual cross products,
+    and ``sigma_u_mle``, of all lag orders. The time trend of a smaller
+    order is shifted, which does not change the space spanned with the
+    constant.
+    """
+    endog = np.asarray(endog, dtype=float)
+    n_totobs, neqs = endog.shape
+    nobs = n_totobs - maxlags
+    k_trend = util.get_trendorder(trend)
+    if exog is not None:
+        exog = np.asarray(exog, dtype=float)
+    k_exog_user = 0 if exog is None else exog.shape[1]
+    k_det = k_trend + k_exog_user
+    k = k_det + neqs * maxlags
+    if k == 0:
+        return None
+
+    if "c" in trend and maxlags:
+        # add_trend refuses to add a constant to a constant lag column. All
+        # lag columns of a variable contain endog[maxlags - 1 : nobs], so
+        # none of them is constant if this part is not.
+        if np.any(np.ptp(endog[maxlags - 1 : nobs], axis=0) == 0):
+            return None
+
+    # Same deterministic terms as VAR(maxlags), see _estimate_var
+    det = np.empty((nobs, k_det))
+    trend_vals = np.arange(maxlags + 1.0, n_totobs + 1)
+    det[:, :k_trend] = np.vander(trend_vals, k_trend, increasing=True)
+    if k_exog_user:
+        det[:, k_trend:] = exog[maxlags:]
+    lags = [endog[maxlags - lag : n_totobs - lag] for lag in range(1, maxlags + 1)]
+    # lstsq treats singular values below 1e-15 times the largest one as zero.
+    # The time trend of a smaller order is shifted by at most maxlags, which
+    # barely changes the singular values. The cutoff k * eps is a margin for
+    # this.
+    res = nested_lag_ols(endog[maxlags:], lags, det, rcond=k * np.finfo(float).eps)
+    if res is None:
+        return None
+    sse = res.ssr[p_min:]
+    try:
+        chol = np.linalg.cholesky(sse / nobs)
+    except np.linalg.LinAlgError:
+        return None
+    ld = 2 * np.sum(np.log(np.diagonal(chol, axis1=1, axis2=2)), axis=1)
+
+    # Same expressions as VARResults.info_criteria, Lütkepohl pp. 146-150
+    lag_order = np.arange(p_min, maxlags + 1)
+    free_params = lag_order * neqs**2 + neqs * k_det
+    df_model = neqs * lag_order + k_det
+    df_resid = nobs - df_model
+    ics = {
+        "aic": ld + (2.0 / nobs) * free_params,
+        "bic": ld + (np.log(nobs) / nobs) * free_params,
+        "hqic": ld + (2.0 * np.log(np.log(nobs)) / nobs) * free_params,
+        "fpe": ((nobs + df_model) / df_resid) ** neqs * np.exp(ld),
+    }
+    if not all(np.all(np.isfinite(v)) for v in ics.values()):
+        return None
+    return ics
+
+
 class LagOrderResults:
     """
     Results class for choosing a model's lag order
@@ -893,13 +987,21 @@ class VAR(TimeSeriesModel):
 
         ics = defaultdict(list)
         p_min = 0 if self.exog is not None or trend != "n" else 1
-        for p in range(p_min, maxlags + 1):
-            # exclude some periods to same amount of data used for each lag
-            # order
-            result = self._estimate_var(p, offset=maxlags - p, trend=trend)
+        fast_ics = None
+        if trend in ("n", "c", "ct", "ctt"):
+            fast_ics = _var_order_ics(self.endog, self.exog, maxlags, trend, p_min)
+        if fast_ics is not None:
+            self.k_trend = util.get_trendorder(trend)
+            for k, v in fast_ics.items():
+                ics[k].extend(v)
+        else:
+            for p in range(p_min, maxlags + 1):
+                # exclude some periods to same amount of data used for each
+                # lag order
+                result = self._estimate_var(p, offset=maxlags - p, trend=trend)
 
-            for k, v in result.info_criteria.items():
-                ics[k].append(v)
+                for k, v in result.info_criteria.items():
+                    ics[k].append(v)
 
         selected_orders = {k: np.array(v).argmin() + p_min for k, v in ics.items()}
 
@@ -2618,6 +2720,19 @@ class FEVD:
         responses. Defaults to the Cholesky decomposition of Sigma_u.
     periods : int, optional
         Number of periods to compute the FEVD for.
+
+    Attributes
+    ----------
+    decomp : ndarray
+        The forecast error variance decomposition, with shape
+        (neqs, periods, neqs). ``decomp[j, h - 1, k]`` is the share of the
+        h-step ahead forecast error variance of variable j that is due to
+        the orthogonalized shock to variable k, so the first step ahead is
+        stored at position 0. The shares sum to one over the last axis.
+    neqs : int
+        Number of endogenous variables.
+    names : list of str
+        Names of the endogenous variables.
     """
 
     def __init__(self, model, P=None, periods=None):

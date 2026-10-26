@@ -1259,7 +1259,9 @@ class Results:
         is_pandas = _is_using_pandas(exog, None)
         exog_index = None
         if is_pandas:
-            if exog.ndim == 2 or self.params.size == 1:
+            if exog.ndim == 2 or (
+                self.model.exog is not None and self.model.exog.shape[1] == 1
+            ):
                 exog_index = exog.index
             else:
                 exog_index = [exog.index.name]
@@ -3024,7 +3026,15 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         Parameters
         ----------
         exog : array_like, optional
-            The values for which you want to predict.
+            The values for which you want to predict. If None, then the
+            model's exog together with the offset and exposure stored in
+            the model are used, as in ``predict``. If exog is given, then
+            the stored offset and exposure are not used unless they are
+            passed explicitly.
+
+            .. versionchanged:: 0.15.1
+
+               Without exog, the stored offset and exposure are now used.
         which : str, optional
             Which statistic is to be predicted. Default is "mean".
             The available statistics and options depend on the model.
