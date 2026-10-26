@@ -1041,11 +1041,9 @@ def _breslow_day_statistic(table, odds, adjust):
         )
         if not (np.all(np.isfinite(fitted)) and np.all(fitted > 0)):
             return None
-        try:
-            inverse_variance = np.array([fsum(1 / cells) for cells in fitted.T])
-        except OverflowError:
-            return None
-        variance = 1 / inverse_variance
+        # All four terms are positive, so the plain sum is accurate to a few
+        # ulp. Only the sums over strata, which can cancel, use fsum.
+        variance = 1 / np.sum(1 / fitted, axis=0)
         if not (np.all(np.isfinite(variance)) and np.all(variance > 0)):
             return None
 
@@ -1058,8 +1056,11 @@ def _breslow_day_statistic(table, odds, adjust):
             if adjust:
                 # Algebraically identical to Tarone's subtraction, without
                 # subtracting two large, nearly equal sums of squares.
-                delta = delta - (fsum(delta) / fsum(variance)) * variance
-            statistic = np.float64(fsum(delta * delta / variance))
+                delta = delta - (
+                    fsum(delta.tolist()) / fsum(variance.tolist())
+                ) * variance
+            # tolist is faster than iterating over the array in fsum
+            statistic = np.float64(fsum((delta * delta / variance).tolist()))
         except OverflowError:
             return None
         return statistic if np.isfinite(statistic) else None
@@ -1359,7 +1360,6 @@ class StratifiedTable:
                 The chi^2 test statistic.
             * pvalue : float
                 The p-value for the test.
-        """
 
         Notes
         -----
@@ -1377,6 +1377,7 @@ class StratifiedTable:
            to 1 or some fitted counts are small. Results can differ from
            those of earlier versions by a relative amount of about 1e-12, and
            by more for tables where the earlier calculation lost precision.
+        """
 
         table = self.table
 
