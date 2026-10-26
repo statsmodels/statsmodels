@@ -25,7 +25,10 @@ from statsmodels.stats.correlation_tools import (
     cov_nearest,
     cov_nearest_factor_homog,
 )
-from statsmodels.tools.testing import Holder
+from statsmodels.tools.sm_exceptions import IterationLimitWarning
+from statsmodels.tools.testing import Holder, warns_or_none
+
+ITER_LIMIT = r"\s*Maximum iteration reached"
 
 
 def norm_f(x, y):
@@ -188,8 +191,8 @@ def test_cov_nearest_min_diag(method):
 
     # default behavior is unchanged: a zero on the diagonal still yields nan
     mat = np.array([[2.0, 0.0], [0.0, 0.0]])
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    # the zero diagonal element gives a 0 / 0 in the conversion to correlation
+    with pytest.warns(RuntimeWarning, match="invalid value encountered in divide"):
         res_default = cov_nearest(mat, method=method)
     assert np.isnan(res_default).any()
 
@@ -204,8 +207,7 @@ def test_cov_nearest_min_diag(method):
 
     # a negative diagonal element is also corrected
     neg = np.array([[2.0, 0.0], [0.0, -1e-8]])
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
+    with pytest.warns(SpecificationWarning):
         res_neg = cov_nearest(neg, method=method, min_diag=1e-8)
     assert not np.isnan(res_neg).any()
     assert np.diag(res_neg).min() >= 1e-8 - 1e-20
@@ -223,7 +225,9 @@ class CheckCorrPSDMixin:
     def test_nearest(self):
         x = self.x
         res_r = self.res
-        y = corr_nearest(x, threshold=1e-7, n_fact=100)
+        # whether an eigenvalue is clipped at the threshold depends on rounding
+        with warns_or_none(IterationLimitWarning, match=ITER_LIMIT):
+            y = corr_nearest(x, threshold=1e-7, n_fact=100)
         # print np.max(np.abs(x - y))
         assert_almost_equal(y, res_r.mat, decimal=3)
         d = norm_f(x, y)
@@ -250,8 +254,7 @@ class CheckCorrPSDMixin:
     def test_cov_nearest(self):
         x = self.x
         res_r = self.res
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+        with warns_or_none(IterationLimitWarning, match=ITER_LIMIT):
             y = cov_nearest(x, method="nearest", threshold=1e-7)
         # print np.max(np.abs(x - y))
         assert_almost_equal(y, res_r.mat, decimal=2)
@@ -309,7 +312,9 @@ class TestCovPSD:
     def test_cov_nearest(self):
         x = self.x
         res_r = self.res
-        y = cov_nearest(x, method="nearest")
+        # whether an eigenvalue is clipped at the threshold depends on rounding
+        with warns_or_none(IterationLimitWarning, match=ITER_LIMIT):
+            y = cov_nearest(x, method="nearest")
         # print np.max(np.abs(x - y))
         assert_almost_equal(y, res_r.mat, decimal=3)
         d = norm_f(x, y)
@@ -374,7 +379,9 @@ class TestCorrPSD1(CheckCorrPSDMixin):
 def test_corrpsd_threshold(threshold):
     x = np.array([[1, -0.9, -0.9], [-0.9, 1, -0.9], [-0.9, -0.9, 1]])
 
-    y = corr_nearest(x, n_fact=100, threshold=threshold)
+    # whether an eigenvalue is clipped at the threshold depends on rounding
+    with warns_or_none(IterationLimitWarning, match=ITER_LIMIT):
+        y = corr_nearest(x, n_fact=100, threshold=threshold)
     evals = np.linalg.eigvalsh(y)
     assert_allclose(evals[0], threshold, rtol=1e-6, atol=1e-15)
 
@@ -382,7 +389,8 @@ def test_corrpsd_threshold(threshold):
     evals = np.linalg.eigvalsh(y)
     assert_allclose(evals[0], threshold, rtol=0.25, atol=1e-15)
 
-    y = cov_nearest(x, method="nearest", n_fact=100, threshold=threshold)
+    with warns_or_none(IterationLimitWarning, match=ITER_LIMIT):
+        y = cov_nearest(x, method="nearest", n_fact=100, threshold=threshold)
     evals = np.linalg.eigvalsh(y)
     assert_allclose(evals[0], threshold, rtol=1e-6, atol=1e-15)
 

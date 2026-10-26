@@ -3,7 +3,7 @@ Tests for contingency table analyses.
 """
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 from math import erfc, sqrt
 from pathlib import Path
 import warnings
@@ -377,7 +377,23 @@ def test_cochrans_q_return_object_deprecated():
         assert_equal(res, expected)
 
 
+@contextmanager
+def expect_breslow_day_warnings(expected):
+    # The Breslow-Day statistic of a table with zero cells divides by zero.
+    if not expected:
+        yield
+        return
+    with (
+        pytest.warns(RuntimeWarning, match="divide by zero encountered in divide"),
+        pytest.warns(RuntimeWarning, match="invalid value encountered in add"),
+        pytest.warns(RuntimeWarning, match="invalid value encountered in divide"),
+    ):
+        yield
+
+
 class CheckStratifiedMixin:
+    # True if the tables have zero cells so that summary() warns
+    zero_cells = False
 
     @classmethod
     def initialize(cls, tables, use_arr=False):
@@ -426,13 +442,15 @@ class CheckStratifiedMixin:
         assert_allclose(rslt.pvalue, self.or_homog_adj_p, rtol=1e-4, atol=1e-4)
 
     def test_pandas(self):
-        self.rslt_pandas.summary().as_text()
-        self.rslt.summary().as_text()
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
-            assert_equal(
-                self.rslt.summary().as_text(), self.rslt_pandas.summary().as_text()
-            )
+        with expect_breslow_day_warnings(self.zero_cells):
+            self.rslt_pandas.summary().as_text()
+        with expect_breslow_day_warnings(self.zero_cells):
+            self.rslt.summary().as_text()
+        with expect_breslow_day_warnings(self.zero_cells):
+            text = self.rslt.summary().as_text()
+        with expect_breslow_day_warnings(self.zero_cells):
+            text_pandas = self.rslt_pandas.summary().as_text()
+        assert_equal(text, text_pandas)
 
     def test_from_data(self):
 
@@ -463,6 +481,8 @@ class TestStratified1(CheckStratifiedMixin):
                    dim=c(2, 2, 5))
     rslt = mantelhaen.test(data)
     """
+
+    zero_cells = True
 
     @classmethod
     def setup_class(cls):
