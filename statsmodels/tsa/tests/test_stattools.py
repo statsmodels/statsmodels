@@ -22,11 +22,13 @@ from statsmodels.datasets import macrodata, modechoice, nile, randhie, sunspots
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
+    ConvergenceWarning,
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
     SingularMatrixWarning,
 )
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tools.tools import add_constant
 
 # Remove imports when range unit root test gets an R implementation
@@ -1124,7 +1126,9 @@ class TestBreakvarHeteroskedasticityTest:
                 np.nan,
             ]
         )
-        _result = breakvar_heteroskedasticity_test(input_residuals)
+        # The third column has too few early observations on purpose
+        with pytest.warns(UserWarning, match="Early subset of data for variable 2"):
+            _result = breakvar_heteroskedasticity_test(input_residuals)
         actual_statistic, actual_pvalue = _result.statistic, _result.pvalue
 
         assert_equal(actual_statistic, expected_statistic)
@@ -1824,13 +1828,17 @@ class TestRUR:
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):
             rur_stat, _, _ = range_unit_root_test(self.x, result_object=False)
-        simple_rur_stat, _, _ = self.simple_rur(self.x)
+        # The reference implementation warns for the same out of table statistic
+        with pytest.warns(InterpolationWarning, match="The test statistic is"):
+            simple_rur_stat, _, _ = self.simple_rur(self.x)
         assert_almost_equal(rur_stat, simple_rur_stat, DECIMAL_3)
 
     def test_pval(self):
         with pytest.warns(InterpolationWarning):
             _, pval, _ = range_unit_root_test(self.x, result_object=False)
-        _, simple_pval, _ = self.simple_rur(self.x)
+        # The reference implementation warns for the same out of table statistic
+        with pytest.warns(InterpolationWarning, match="The test statistic is"):
+            _, simple_pval, _ = self.simple_rur(self.x)
         assert_equal(pval, simple_pval)
 
     def test_store(self):
@@ -3032,7 +3040,10 @@ def test_pacf_1_obs():
         pacf_burg(y)
     with pytest.raises(ValueError):
         pacf_ols(y)
-    pacf_yw(y)
+    # One observation gives 0 / 0 in the autocovariance and a singular matrix
+    with pytest.warns(RuntimeWarning, match="invalid value encountered"):
+        with pytest.warns(SingularMatrixWarning, match="Matrix is singular"):
+            pacf_yw(y)
 
 
 def _pacf_yw_loop(x, nlags, method):
@@ -3274,9 +3285,12 @@ class TestLeybourneMcCabe:
     def test_dbaa_results(self):
         mdl_file = Path(self.run_dir).joinpath("DBAA.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
-        res = leybourne(mdl, method="mle")
+        # The default ML fit may stop short of convergence on some platforms
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood"):
+            res = leybourne(mdl, method="mle")
         assert_allclose(res[0:3], [0.096534, 0.602535, 2], rtol=1e-4, atol=1e-4)
-        res = leybourne(mdl, regression="ct", method="mle")
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood"):
+            res = leybourne(mdl, regression="ct", method="mle")
         assert_allclose(res[0:3], [0.047924, 0.601817, 2], rtol=1e-4, atol=1e-4)
 
     def test_dsp500_results(self):
@@ -3339,7 +3353,9 @@ def test_acovf_all_missing():
     ):
         acovf(x, missing="drop")
 
-    assert np.all(np.isnan(acovf(x, missing="conservative")))
+    # Without observations the mean and the autocovariances are 0 / 0
+    with pytest.warns(RuntimeWarning, match="invalid value encountered"):
+        assert np.all(np.isnan(acovf(x, missing="conservative")))
 
 
 def test_stattools_fixed_arity_result_objects():
@@ -3410,7 +3426,7 @@ def test_confint_alpha_out_of_range(func):
         else:
             func(x, nlags=5, alpha=0)
     # a valid alpha still returns the interval
-    res = acf(x, nlags=5, alpha=0.05)
+    res = acf(x, nlags=5, alpha=0.05, result_object=False)
     assert len(res) == 2
     assert np.isfinite(res[1]).all()
 
