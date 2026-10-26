@@ -16,6 +16,7 @@ import pytest
 import scipy.stats
 
 from statsmodels.iolib.summary import Summary
+from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa.exponential_smoothing.initialization import (
@@ -734,11 +735,13 @@ def test_hessian(austourists_model_fit):
     fit = model_class(*model_args, **model_kwargs).fit(disp=False)
 
     fit.model.hessian(fit.params)
-    fit.model.hessian(
-        fit.params,
-        approx_complex_step=False,
-        approx_centered=True,
-    )
+    # The finite difference hessian always warns about its approximation error
+    with pytest.warns(PrecisionWarning, match="Calculation of the Hessian"):
+        fit.model.hessian(
+            fit.params,
+            approx_complex_step=False,
+            approx_centered=True,
+        )
 
 
 def test_diagnostics_invalid_method_raises(austourists_model_fit):

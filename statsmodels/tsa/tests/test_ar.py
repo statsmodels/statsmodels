@@ -427,7 +427,7 @@ def test_autoreg_predict_smoke(ar_data):
     assert isinstance(summary, Summary)
     exog_oos = None
     if ar_data.exog is not None:
-        exog_oos = np.empty((1, ar_data.exog.shape[1]))
+        exog_oos = np.zeros((1, ar_data.exog.shape[1]))
     mod.predict(res.params, 0, 250, exog_oos=exog_oos)
     if ar_data.lags == 0 and ar_data.exog is None:
         mod.predict(res.params, 0, 350, exog_oos=exog_oos)
@@ -1387,4 +1387,6 @@ def test_no_obs_for_adjustment():
     x = rs.standard_normal(7)
     mod = AutoReg(x, lags=3, trend="c")
     with pytest.warns(EstimationWarning, match="The adjusted number of observations"):
-        mod.fit()
+        # The scale divides by the zero residual degrees of freedom
+        with pytest.warns(RuntimeWarning, match="divide by zero encountered"):
+            mod.fit()
