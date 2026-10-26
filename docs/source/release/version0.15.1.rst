@@ -388,6 +388,12 @@ Statistics and tests
 - ``DescrStatsW`` rejects weights that are negative or not finite with a
   ``ValueError``. Non-finite weights gave ``nan`` or ignored the weight in
   ``quantile``. :pr:`10355`, :pr:`10371`
+- ``StratifiedTable.test_null_odds(correction=True)`` applies the continuity
+  correction of 0.5 only if ``|sum(a - E(a))| >= 0.5``, as ``mantelhaen.test``
+  of R does. Before, ``min(0.5, |sum(a - E(a))|)`` was subtracted, which
+  changed the statistic when the deviation is below 0.5. The statistic and the
+  p-value of a table with zero variance are ``nan``, they were ``inf`` and 0.
+  :pr:`10551`, :pr:`10583`
 - The DerSimonian-Laird estimate of the between-study variance in
   ``combine_effects`` (``method_re="dl"`` or ``"chi2"``) is truncated at zero.
   A negative variance was used before, which could give a random effects mean
