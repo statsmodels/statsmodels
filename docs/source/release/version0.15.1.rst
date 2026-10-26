@@ -690,6 +690,18 @@ Intervals, tuning parameters and shapes
   ``cohens_kappa`` and ``to_table`` check the shape of their input.
   :pr:`10342`, :pr:`10369`, :pr:`10351`, :pr:`10314`, :pr:`10315`,
   :pr:`10316`
+- The tuning constants of the robust norms in ``statsmodels.robust.norms`` are
+  validated. ``t`` of ``HuberT``, ``a`` of ``RamsayE`` and ``AndrewWave``,
+  ``c`` of ``TrimmedMean``, ``TukeyBiweight``, ``TukeyQuartic`` and
+  ``StudentT``, and ``df`` of ``StudentT`` have to be positive, ``k`` of
+  ``TukeyQuartic`` has to be a positive even integer, ``q`` of
+  ``MQuantileNorm`` has to be in (0, 1), and the constants of ``Hampel`` have
+  to be scalars with ``0 < a <= b <= c``. Zero, negative and ``nan`` values
+  used to create norms with an all-zero or ``nan`` ``psi``, and array valued
+  constants of ``Hampel`` failed in every method. The check applies to the
+  constructor and to ``_set_tuning_param``, attributes that are assigned later
+  are not checked. Arguments of the wrong type, for example ``None``, a string
+  or a complex number, raise a ``TypeError``. :pr:`10418`
 
 Time series
 -----------
