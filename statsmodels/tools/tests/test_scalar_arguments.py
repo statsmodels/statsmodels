@@ -7,6 +7,8 @@ a TypeError that names the argument, and a value that is not in the valid range
 is a ValueError. NaN is not in any range, which the comparison of the form
 ``x <= 0`` does not catch.
 """
+from contextlib import nullcontext
+
 import numpy as np
 import pytest
 
@@ -113,9 +115,18 @@ def _bad_types(name, good):
 
 @pytest.mark.parametrize("name, func, good", [c[:3] for c in FLOAT_CASES], ids=FLOAT_IDS)
 def test_float_argument_is_a_scalar(name, func, good):
-    func(good)
-    func(np.float32(good))
-    func(np.float64(good))
+    def call(value):
+        if name.startswith("confint_effectsize_oneway"):
+            # the lower confidence limit of f2 is zero, which divides by zero
+            ctx = pytest.warns(RuntimeWarning, match="divide by zero encountered")
+        else:
+            ctx = nullcontext()
+        with ctx:
+            func(value)
+
+    call(good)
+    call(np.float32(good))
+    call(np.float64(good))
     for bad in _bad_types(name, good):
         with pytest.raises(TypeError):
             func(bad)

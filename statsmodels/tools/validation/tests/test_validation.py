@@ -30,7 +30,8 @@ def gen_data(dim, use_pandas):
         if use_pandas:
             out = pd.Series(out)
     elif dim == 2:
-        out = np.empty((20, 10))
+        # zeros, since uninitialized memory can overflow in dot
+        out = np.zeros((20, 10))
         if use_pandas:
             out = pd.DataFrame(out)
     else:
