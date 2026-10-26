@@ -22,7 +22,6 @@ from numpy.testing import (
     assert_equal,
 )
 import pytest
-from scipy import stats
 
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
@@ -1301,11 +1300,18 @@ def test_solve_power_rejects_jump_as_root():
     assert np.isnan(es) or abs(es - true) < 1e-5
 
 
-@pytest.mark.parametrize("x", [1.96, [-1.96, 1.96]])
-def test_nct_cdf_tail_fallback_scalar_and_array(x):
-    # Ordinary finite tail entries continue to agree with SciPy.
+@pytest.mark.parametrize(
+    "x, expected",
+    [
+        (-1.96, 1.391293061255217e-30),
+        (1.96, 2.737100334771259e-14),
+        ([-1.96, 1.96], [1.391293061255217e-30, 2.737100334771259e-14]),
+    ],
+)
+def test_nct_cdf_tail_fallback_scalar_and_array(x, expected):
+    # Fixed references from conditional-normal / chi-squared integration
+    # (60 and 85 decimal digits) avoid platform-dependent SciPy NaNs.
+    # The absolute tolerance covers cancellation in the reflected tail.
     assert_allclose(
-        smp.nct_cdf(x, 999, 0.3 * np.sqrt(1000)),
-        stats.nct.cdf(x, 999, 0.3 * np.sqrt(1000)),
-        atol=1e-12,
+        smp.nct_cdf(x, 999, 0.3 * np.sqrt(1000)), expected, atol=1e-12
     )
