@@ -253,8 +253,9 @@ def _convert_out_to_series(x, dates, name):
 
 
 def _open_and_read(fname):
-    # opens a file, reads it, and make sure it's closed
-    with Path(fname).open(encoding="utf-8") as fin:
+    # opens a file, reads it, and make sure it's closed. Files are UTF-8; a byte
+    # order mark, which some Windows editors add to spec files, is dropped.
+    with Path(fname).open(encoding="utf-8-sig") as fin:
         fout = fin.read()
     return fout
 

@@ -108,3 +108,15 @@ def test_rawspec_path_object(no_x12, tmp_path):
         x13.x13_arima_analysis(
             _monthly_endog(), rawspec=tmp_path / "missing.spc", speconly=True
         )
+
+
+def test_rawspec_file_utf8_bom(no_x12, tmp_path):
+    specfile = tmp_path / "bom.spc"
+    specfile.write_bytes(b"\xef\xbb\xbf" + (SPEC_TEMPLATE % "bom").encode("utf-8"))
+
+    spec = x13.x13_arima_analysis(
+        _monthly_endog(), rawspec=str(specfile), speconly=True
+    )
+
+    assert "\ufeff" not in spec
+    assert 'title="bom"' in spec
