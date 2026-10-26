@@ -172,7 +172,7 @@ Performance
   period. The cost grows linearly instead of quadratically with the number of
   observations, so the test is about 100 times faster for 2,000 observations
   and about 1,000 times faster for 20,000. The statistics are more accurate
-  when the regressors are close to collinear. :issue:`10601`
+  when the regressors are close to collinear. :issue:`10601`, :pr:`10602`
 
 Bug Fixes
 =========
