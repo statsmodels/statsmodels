@@ -6,6 +6,7 @@ import numpy.testing as npt
 import pandas as pd
 import pytest
 from scipy import stats
+from scipy.integrate import IntegrationWarning
 
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric import bandwidths
@@ -17,6 +18,7 @@ from statsmodels.nonparametric.kde import (
 )
 from statsmodels.nonparametric.linbin import fast_linbin
 from statsmodels.sandbox.nonparametric import kernels
+from statsmodels.tools.testing import warns_or_none
 
 # get results from Stata
 
@@ -500,7 +502,9 @@ def test_entropy_finite_domain_kernel(kernel):
     # the KDE instead of the kernel, which has no such attribute. GH#9917
     kde = KDE(Xi).fit(kernel=kernel, fft=False, bw="silverman")
 
-    entropy = kde.entropy
+    # quad hits the subdivision limit at the kinks of the kernel, scipy dependent
+    with warns_or_none(IntegrationWarning, match="The maximum number of subdivisions"):
+        entropy = kde.entropy
 
     assert np.isfinite(entropy)
 
