@@ -387,6 +387,13 @@ Time series analysis
 Statistics and tests
 --------------------
 
+- ``statsmodels.stats.power`` validates that a root returned by a solver
+  attains the requested power. Failed solutions now return ``NaN`` with a
+  ``ConvergenceWarning`` instead of returning a misleading finite result.
+  Noncentral-t CDF calculations retry a reflected tail when CDFLIB returns
+  ``NaN``, preserving already finite values. This can turn previously missing
+  t-test powers into finite results; it does not guarantee relative accuracy
+  in extremely small tails. :pr:`10552`
 - The p-values of several tests were computed as one minus the cdf, which
   gives 0 or loses digits for large statistics. They now use the survival
   function. This affects ``survdiff``, the empirical likelihood ``ANOVA`` and
