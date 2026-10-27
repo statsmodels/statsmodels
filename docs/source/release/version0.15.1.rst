@@ -174,7 +174,7 @@ Performance
   times faster for 5,000. The statistics are more accurate when the
   regressors are close to collinear, so for such series the statistic can
   change in the later digits. The new values agree with R (urca) and with
-  high-precision arithmetic. :issue:`10601`, :pr:`10602`
+  high-precision arithmetic. :issue:`10601`, :pr:`10602`, :pr:`10624`
 
 Bug Fixes
 =========
