@@ -971,6 +971,26 @@ class TestPinvRankMatchesFit:
         assert res.model.rank == expected_rank
         assert res.df_resid == n - expected_rank
 
+    def test_float32_collinear_rank_follows_estimator(self):
+        # PINV_RCOND is 1e-15 for every dtype, but matrix_rank uses the
+        # precision of the data.  A float32 linear combination leaves a
+        # direction near 1e-8 of the largest singular value, which
+        # pinv_extended inverts and matrix_rank drops.  The warning must stay
+        # and rank and df must describe the fit that was computed.
+        n = 40
+        rng = np.random.RandomState(1)
+        base = rng.standard_normal((n, 3)).astype(np.float32)
+        exog = np.column_stack([base, 2 * base[:, 0] - 3 * base[:, 1]])
+        endog = rng.standard_normal(n).astype(np.float32)
+        sv = np.linalg.svd(exog, compute_uv=False)
+        assert 1e-15 < sv[-1] / sv[0] <= 4 * np.finfo(np.float32).eps
+        assert np.linalg.matrix_rank(exog) == 3
+        with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
+            res = OLS(endog, exog).fit()
+
+        assert res.model.rank == 4
+        assert res.df_resid == n - 4
+
     def test_results_df_is_a_snapshot(self):
         # A results instance keeps the df of the fit that created it; a later
         # fit may change the model, but not the earlier results.
