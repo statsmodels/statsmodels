@@ -25,6 +25,46 @@ def _get_covariance(model, robust):
         raise ValueError(f"robust options {robust} not understood")
 
 
+def _check_full_rank(model, typ):
+    """
+    Raise if the design matrix of a fitted linear model is rank deficient
+
+    Parameters
+    ----------
+    model : fitted linear model results instance
+        A fitted linear model
+    typ : {"I", "II", "III"}
+        The type of Anova table, used in the error message.
+
+    Raises
+    ------
+    ValueError
+        If the rank of the weighted design matrix used to fit `model` is
+        smaller than the number of its columns.
+
+    Notes
+    -----
+    The degrees of freedom and the sums of squares of the terms assume that
+    every column of the design matrix is identified. In a rank-deficient
+    design a redundant term is assigned arbitrary values, for example a
+    duplicate of another column, an empty cell of an interaction or a level
+    that only appears in observations with zero weight. The rank is the one
+    that the model used to compute the residual degrees of freedom.
+    """
+    ols_model = model.model
+    rank = ols_model.rank
+    if rank is None:
+        rank = np.linalg.matrix_rank(ols_model.wexog)
+    k_vars = ols_model.exog.shape[1]
+    if rank < k_vars:
+        raise ValueError(
+            f"Type {typ} ANOVA requires a full-rank design matrix, but the "
+            f"design matrix has {k_vars} columns and rank {rank}. Remove "
+            "redundant terms, empty cells and unused factor levels before "
+            "fitting the model."
+        )
+
+
 # NOTE: these need to take into account weights !
 
 
@@ -144,8 +184,7 @@ def anova1_lm_single(
     terms that precede it in the model. Consequently, the results depend
     on the order of the terms when the design is unbalanced.
     """
-    if np.linalg.matrix_rank(exog) < exog.shape[1]:
-        raise ValueError("Type I ANOVA requires a full-rank design matrix.")
+    _check_full_rank(model, "I")
 
     mgr = FormulaManager()
     effects = getattr(model, "effects", None)
@@ -221,6 +260,8 @@ def anova2_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     absent or are not of primary interest.
 
     """
+    _check_full_rank(model, "II")
+
     mgr = FormulaManager()
     terms_info = model_spec.terms[:]  # copy
     terms_info = mgr.remove_intercept(terms_info)
@@ -303,6 +344,8 @@ def anova3_lm_single(model, model_spec, n_rows, test, pr_test, robust):
     difficult to interpret and may depend on the contrast coding used for
     categorical factors.
     """
+    _check_full_rank(model, "III")
+
     mgr = FormulaManager()
     n_rows += mgr.has_intercept(model_spec)
     terms_info = model_spec.terms
@@ -399,14 +442,26 @@ def anova_lm(*args, **kwargs):
     Raises
     ------
     ValueError
-        If Type I ANOVA is requested for a single model with a rank-deficient
-        design matrix. Remove redundant columns or unused factor levels
-        before fitting the model.
+        If a single model with a rank-deficient design matrix is passed, for
+        any type of Anova table. Remove redundant columns, empty cells and
+        unused factor levels before fitting the model.
 
     Notes
     -----
     Model statistics are given in the order of args. Models must have been fit
     using the formula api.
+
+    The tables of a single model assume that the design matrix has full
+    column rank. This fails if a term duplicates or is a linear combination of
+    other terms, if a factor level or a cell of an interaction has no
+    observations, or if there are more columns than observations. A model
+    with a redundant term has the same fitted values as the model without it,
+    but the redundant term would be assigned an arbitrary sum of squares,
+    degrees of freedom and p-value, so the model is rejected. A factor ``B``
+    that is nested in a factor ``A`` can be used in the formula ``A/B`` if the
+    same labels of ``B`` are used within every level of ``A``. If each level
+    of ``A`` has its own labels of ``B``, the cells that combine a label of
+    ``B`` with the other levels of ``A`` are empty.
 
     **Type I**: Sequential sums of squares. Each term is tested after the
     terms that precede it in the model. Consequently, the results depend
