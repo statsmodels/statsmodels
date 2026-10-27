@@ -59,24 +59,26 @@ def test_warns_or_none():
     with warns_or_none(RuntimeWarning):
         pass
     with warns_or_none(RuntimeWarning, match="platform"):
-        warnings.warn("platform dependent", RuntimeWarning)
+        warnings.warn("platform dependent", RuntimeWarning, stacklevel=2)
     # a subclass and one of several categories are allowed
     with warns_or_none((FutureWarning, UserWarning)):
-        warnings.warn("subclass", ConvergenceWarning)
-        warnings.warn("future", FutureWarning)
+        warnings.warn("subclass", ConvergenceWarning, stacklevel=2)
+        warnings.warn("future", FutureWarning, stacklevel=2)
 
 
 def test_warns_or_none_other_warning():
     # warnings that are not allowed are emitted when the block ends
     with pytest.warns(UserWarning, match="other category"):
         with warns_or_none(RuntimeWarning):
-            warnings.warn("other category", UserWarning)
-    with pytest.warns(RuntimeWarning, match="other message"):
+            warnings.warn("other category", UserWarning, stacklevel=2)
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
         with warns_or_none(RuntimeWarning, match="platform"):
-            warnings.warn("platform dependent", RuntimeWarning)
-            warnings.warn("other message", RuntimeWarning)
+            warnings.warn("platform dependent", RuntimeWarning, stacklevel=2)
+            warnings.warn("other message", RuntimeWarning, stacklevel=2)
+    assert [str(w.message) for w in record] == ["other message"]
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         with pytest.raises(UserWarning, match="not allowed"):
             with warns_or_none(RuntimeWarning):
-                warnings.warn("not allowed", UserWarning)
+                warnings.warn("not allowed", UserWarning, stacklevel=2)
