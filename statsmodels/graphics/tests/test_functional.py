@@ -25,13 +25,6 @@ labels = data.raw_data[:, 0].astype(int)
 data = data.raw_data[:, 1:]
 
 
-def multiprocess_warning():
-    # Pool() forks the process. Python 3.12 and later warn about this when the
-    # process is multi-threaded, which depends on the platform (Windows and
-    # macOS spawn) and on the threads of BLAS and of pytest-xdist.
-    return warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is")
-
-
 @pytest.mark.skipif(
     PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM"
 )
@@ -40,7 +33,8 @@ def multiprocess_warning():
 @pytest.mark.matplotlib
 def test_hdr_basic(close_figures):
     try:
-        with multiprocess_warning():
+        # Pool() forks, which warns when the process is threaded (platform dependent)
+        with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
             _, hdr = hdrboxplot(
                 data, labels=labels, rng=12345, kernel_rng=1234567
             )
@@ -197,7 +191,8 @@ def test_hdr_basic(close_figures):
 @pytest.mark.matplotlib
 def test_hdr_basic_brute(close_figures):
     try:
-        with multiprocess_warning():
+        # Pool() forks, which warns when the process is threaded (platform dependent)
+        with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
             _, hdr = hdrboxplot(
                 data, ncomp=2, labels=labels, use_brute=True, kernel_rng=1234567
             )
@@ -233,7 +228,8 @@ def test_hdr_plot(close_figures):
     ax = fig.add_subplot(111)
 
     try:
-        with multiprocess_warning():
+        # Pool() forks, which warns when the process is threaded (platform dependent)
+        with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
             hdrboxplot(
                 data,
                 labels=labels.tolist(),
@@ -260,7 +256,8 @@ def test_hdr_plot(close_figures):
 @pytest.mark.matplotlib
 def test_hdr_alpha(close_figures):
     try:
-        with multiprocess_warning():
+        # Pool() forks, which warns when the process is threaded (platform dependent)
+        with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
             _, hdr = hdrboxplot(data, alpha=[0.7], rng=12345, kernel_rng=1234567)
 
         extra_quant_t = np.vstack(
@@ -308,7 +305,8 @@ def test_hdr_alpha(close_figures):
 @pytest.mark.matplotlib
 def test_hdr_multiple_alpha(close_figures):
     try:
-        with multiprocess_warning():
+        # Pool() forks, which warns when the process is threaded (platform dependent)
+        with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
             _, hdr = hdrboxplot(
                 data, alpha=[0.4, 0.92], rng=12345, kernel_rng=1234567
             )
@@ -384,7 +382,8 @@ def test_hdr_multiple_alpha(close_figures):
 @pytest.mark.matplotlib
 def test_hdr_threshold(close_figures):
     try:
-        with multiprocess_warning():
+        # Pool() forks, which warns when the process is threaded (platform dependent)
+        with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
             _, hdr = hdrboxplot(
                 data, alpha=[0.8], threshold=0.93, rng=12345, kernel_rng=1234567
             )
@@ -403,7 +402,8 @@ def test_hdr_threshold(close_figures):
 @pytest.mark.matplotlib
 def test_hdr_bw(close_figures):
     try:
-        with multiprocess_warning():
+        # Pool() forks, which warns when the process is threaded (platform dependent)
+        with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
             _, hdr = hdrboxplot(data, bw="cv_ml", rng=12345, kernel_rng=1234567)
 
         median_t = [
@@ -433,7 +433,8 @@ def test_hdr_bw(close_figures):
 @pytest.mark.matplotlib
 def test_hdr_ncomp(close_figures):
     try:
-        with multiprocess_warning():
+        # Pool() forks, which warns when the process is threaded (platform dependent)
+        with warns_or_none(DeprecationWarning, match=r"This process \(pid=\d+\) is"):
             _, hdr = hdrboxplot(data, ncomp=3, rng=12345, kernel_rng=1234567)
         median_t = [
             24.33,

@@ -1,7 +1,7 @@
 """
 Test VAR Model
 """
-from statsmodels.compat.numpy import NP_LT_2
+from statsmodels.compat.numpy import ComplexWarning
 from statsmodels.compat.pandas import (
     QUARTER_END,
     _infer_freq_returns_offset,
@@ -1087,8 +1087,7 @@ def test_irf_err_bands():
     rs = np.random.RandomState(2389711)
     # the eigenvalue decomposition of a covariance matrix can have an imaginary
     # part from rounding, which depends on the LAPACK build
-    complex_warning = np.ComplexWarning if NP_LT_2 else np.exceptions.ComplexWarning
-    with warns_or_none(complex_warning, match="Casting complex values to real"):
+    with warns_or_none(ComplexWarning, match="Casting complex values to real"):
         bands = (
             irf.err_band_sz1(rng=rs),
             irf.err_band_sz2(rng=rs),
