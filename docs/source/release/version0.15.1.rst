@@ -238,6 +238,10 @@ Regression and linear models
 Generalized linear models and discrete models
 ---------------------------------------------
 
+- ``score_test`` with a one-dimensional ``exog_extra`` for the discrete
+  models and the ``GLM`` result method raised an ``IndexError`` in 0.15.0. A
+  one-dimensional ``exog_extra`` is a single additional variable, as before.
+  :pr:`10609`
 - ``predict`` preserves the observation index of a pandas Series for models
   with one predictor and additional parameters, such as ``NegativeBinomial``,
   ``GeneralizedPoisson``, ``ZeroInflatedPoisson``, ``BetaModel``,
