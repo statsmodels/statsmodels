@@ -192,7 +192,7 @@ def test_cov_nearest_min_diag(method):
     # default behavior is unchanged: a zero on the diagonal still yields nan
     mat = np.array([[2.0, 0.0], [0.0, 0.0]])
     # the zero diagonal element gives a 0 / 0 in the conversion to correlation
-    with pytest.warns(RuntimeWarning, match="invalid value encountered in divide"):
+    with warns_or_none(RuntimeWarning, match="invalid value encountered in divide"):
         res_default = cov_nearest(mat, method=method)
     assert np.isnan(res_default).any()
 

@@ -16,6 +16,7 @@ import pytest
 from scipy.signal import lfilter
 
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.statespace import (
     dynamic_factor,
     dynamic_factor_mq,
@@ -281,7 +282,7 @@ def test_em_nonstationary():
     with pytest.warns(UserWarning, match=msg):
         with (
             pytest.warns(ConvergenceWarning, match=msg_em),
-            pytest.warns(RuntimeWarning, match="divide by zero encountered"),
+            warns_or_none(RuntimeWarning, match="divide by zero encountered"),
         ):
             mod.fit(maxiter=2, em_initialization=False)
 

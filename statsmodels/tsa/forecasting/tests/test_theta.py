@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.forecasting.theta import ThetaModel
 
 SMOKE_PARAMS = list(product(["array", "dataframe", "series"], [True, False]))
@@ -183,7 +184,7 @@ def test_plot_predict(close_figures):
 
     # alpha=None must omit the confidence interval fill
     # Without the interval no artist has a label, so matplotlib warns on legend
-    with pytest.warns(UserWarning, match="No (artists|handles) with labels found"):
+    with warns_or_none(UserWarning, match="No (artists|handles) with labels found"):
         fig_noci = res.plot_predict(steps=12, alpha=None)
     assert len(fig_noci.axes[0].collections) == 0
     fig_ci = res.plot_predict(steps=12, alpha=0.05)

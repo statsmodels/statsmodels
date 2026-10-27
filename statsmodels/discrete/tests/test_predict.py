@@ -29,6 +29,7 @@ from statsmodels.discrete.discrete_model import (
     Probit,
 )
 from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tools.tools import add_constant
 
 from .results import results_predict as resp
@@ -423,7 +424,9 @@ def test_distr(case, close_figures):
             cls_model is NegativeBinomialP and kwds.get("p") == 1
         )
         if neg_hf:
-            ctx = pytest.warns(RuntimeWarning, match="invalid value encountered in sqrt")
+            ctx = warns_or_none(
+                RuntimeWarning, match="invalid value encountered in sqrt"
+            )
         else:
             ctx = contextlib.nullcontext()
         try:

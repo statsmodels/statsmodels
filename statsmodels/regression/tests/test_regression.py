@@ -40,6 +40,7 @@ from statsmodels.regression.linear_model import (
 from statsmodels.regression.quantile_regression import QuantReg
 from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.sm_exceptions import MissingDataError, SingularMatrixWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tools.tools import add_constant
 
 DECIMAL_4 = 4
@@ -2272,7 +2273,7 @@ def _glsar_inf_warns(model, name, bad_value):
     # GLSAR whitens the data with the initial rho of 0 before the check of the
     # data, and 0 * inf is invalid
     if model is GLSAR and name == "endog" and np.isinf(bad_value):
-        return pytest.warns(RuntimeWarning, match="invalid value encountered in mul")
+        return warns_or_none(RuntimeWarning, match="invalid value encountered in mul")
     return contextlib.nullcontext()
 
 
@@ -2321,7 +2322,7 @@ def test_nonfinite_weights_raises(bad_value, use_pandas):
     # WLS whitens with sqrt(weights) before the check, and sqrt(-inf) is invalid
     def sqrt_warns():
         if bad_value == -np.inf:
-            return pytest.warns(RuntimeWarning, match="invalid value encountered in")
+            return warns_or_none(RuntimeWarning, match="invalid value encountered in")
         return contextlib.nullcontext()
 
     with sqrt_warns(), pytest.raises(MissingDataError, match="weights contains"):

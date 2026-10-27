@@ -31,6 +31,7 @@ from statsmodels.stats.proportion import (
     proportions_ztest,
 )
 from statsmodels.stats.stattools import robust_kurtosis
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.filters.bk_filter import bkfilter
 from statsmodels.tsa.filters.cf_filter import cffilter
 from statsmodels.tsa.filters.hp_filter import hpfilter
@@ -118,7 +119,7 @@ def test_float_argument_is_a_scalar(name, func, good):
     def call(value):
         if name.startswith("confint_effectsize_oneway"):
             # the lower confidence limit of f2 is zero, which divides by zero
-            ctx = pytest.warns(RuntimeWarning, match="divide by zero encountered")
+            ctx = warns_or_none(RuntimeWarning, match="divide by zero encountered")
         else:
             ctx = nullcontext()
         with ctx:

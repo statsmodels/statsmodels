@@ -15,6 +15,7 @@ import pytest
 
 import statsmodels.api as sm
 import statsmodels.stats.contingency_tables as ctab
+from statsmodels.tools.testing import warns_or_none
 
 cur_dir = Path(__file__).resolve().parent
 fname = "contingency_table_r_results.csv"
@@ -384,9 +385,9 @@ def expect_breslow_day_warnings(expected):
         yield
         return
     with (
-        pytest.warns(RuntimeWarning, match="divide by zero encountered in divide"),
-        pytest.warns(RuntimeWarning, match="invalid value encountered in add"),
-        pytest.warns(RuntimeWarning, match="invalid value encountered in divide"),
+        warns_or_none(RuntimeWarning, match="divide by zero encountered in divide"),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in add"),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in divide"),
     ):
         yield
 

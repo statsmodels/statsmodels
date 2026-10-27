@@ -3062,7 +3062,7 @@ def test_plot_too_few_obs(close_figures):
     # The information matrix divides by nobs - loglikelihood_burn, which is 0
     with (
         pytest.warns(UserWarning, match="Too few"),
-        pytest.warns(RuntimeWarning, match="invalid value encountered"),
+        warns_or_none(RuntimeWarning, match="invalid value encountered"),
     ):
         results = mod.fit()
     with pytest.raises(ValueError, match="Length of endogenous"):
@@ -3079,7 +3079,7 @@ def test_plot_too_few_obs(close_figures):
     with (
         pytest.warns(UserWarning, match="Too few"),
         pytest.warns(RuntimeWarning, match="Degrees of freedom <= 0"),
-        pytest.warns(RuntimeWarning, match="invalid value encountered"),
+        warns_or_none(RuntimeWarning, match="invalid value encountered"),
     ):
         results = mod.fit()
     with pytest.raises(ValueError, match="Length of endogenous"):

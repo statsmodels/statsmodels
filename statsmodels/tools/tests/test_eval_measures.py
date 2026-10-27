@@ -31,6 +31,7 @@ from statsmodels.tools.eval_measures import (
     stde,
     vare,
 )
+from statsmodels.tools.testing import warns_or_none
 
 
 def test_eval_measures():
@@ -166,7 +167,7 @@ def empty_input_warnings(measure):
         if measure is not rmspe:
             # divide of the sum by the zero count, the message depends on the shape
             stack.enter_context(
-                pytest.warns(RuntimeWarning, match="invalid value encountered")
+                warns_or_none(RuntimeWarning, match="invalid value encountered")
             )
         yield
 

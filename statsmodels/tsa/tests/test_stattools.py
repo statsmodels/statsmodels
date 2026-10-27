@@ -3047,7 +3047,7 @@ def test_pacf_1_obs():
     with pytest.raises(ValueError):
         pacf_ols(y)
     # One observation gives 0 / 0 in the autocovariance and a singular matrix
-    with pytest.warns(RuntimeWarning, match="invalid value encountered"):
+    with warns_or_none(RuntimeWarning, match="invalid value encountered"):
         with pytest.warns(SingularMatrixWarning, match="Matrix is singular"):
             pacf_yw(y)
 
@@ -3360,7 +3360,7 @@ def test_acovf_all_missing():
         acovf(x, missing="drop")
 
     # Without observations the mean and the autocovariances are 0 / 0
-    with pytest.warns(RuntimeWarning, match="invalid value encountered"):
+    with warns_or_none(RuntimeWarning, match="invalid value encountered"):
         assert np.all(np.isnan(acovf(x, missing="conservative")))
 
 

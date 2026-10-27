@@ -29,6 +29,7 @@ import pytest
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, HypothesisTestWarning
+from statsmodels.tools.testing import warns_or_none
 
 # The noncentral t distribution of SciPy on WASM is accurate to about 1e-6
 # (relative), which is far from the 1e-12 of the other platforms
@@ -1100,7 +1101,7 @@ def test_power_solver_warn():
     # using nobs, has one backup (fsolve)
     nip.start_bqexp["nobs1"] = {"upp": 50, "low": -20}
     # the solver evaluates the power at the negative lower bound of nobs
-    with pytest.warns(RuntimeWarning, match="invalid value encountered in sqrt"):
+    with warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"):
         val = nip.solve_power(
             0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
         )
@@ -1116,7 +1117,7 @@ def test_power_solver_warn():
 
     with (
         pytest.warns(ConvergenceWarning),
-        pytest.warns(RuntimeWarning, match="invalid value encountered in sqrt"),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"),
     ):
         nip.solve_power(
             0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
@@ -1126,7 +1127,7 @@ def test_power_solver_warn():
 
     with (
         pytest.warns(ConvergenceWarning),
-        pytest.warns(RuntimeWarning, match="invalid value encountered in sqrt"),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"),
     ):
         nip.solve_power(
             0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"

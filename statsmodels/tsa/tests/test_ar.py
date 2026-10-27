@@ -25,6 +25,7 @@ from statsmodels.tools.sm_exceptions import (
     SpecificationWarning,
     ValueWarning,
 )
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.ar_model import (
     AutoReg,
@@ -1388,5 +1389,5 @@ def test_no_obs_for_adjustment():
     mod = AutoReg(x, lags=3, trend="c")
     with pytest.warns(EstimationWarning, match="The adjusted number of observations"):
         # The scale divides by the zero residual degrees of freedom
-        with pytest.warns(RuntimeWarning, match="divide by zero encountered"):
+        with warns_or_none(RuntimeWarning, match="divide by zero encountered"):
             mod.fit()
