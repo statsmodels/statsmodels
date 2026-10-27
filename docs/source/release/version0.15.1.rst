@@ -146,7 +146,8 @@ New functions and methods
   one eigenvalue decomposition. It is about 90 times faster than
   ``variance_inflation_factor`` called for each column for 20 variables and
   1000 observations, about 300 times faster for 60 variables, and returns a
-  ``Series`` for a ``DataFrame``. :issue:`1669`, :pr:`2380`, :pr:`7711`
+  ``Series`` for a ``DataFrame``. :issue:`1669`, :pr:`2380`, :pr:`7711`,
+  :pr:`10623`
 
 Performance
 -----------
