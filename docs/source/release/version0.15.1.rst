@@ -72,6 +72,14 @@ Behavior changes
   ``ValueError`` now instead of failing with an array broadcasting error. The
   error messages name the lag that was passed. :pr:`10481`, :pr:`10311`,
   :pr:`10561`
+- The ``DataFrame`` returned by ``predict`` of the results of ``MNLogit``, when
+  ``exog`` is a ``DataFrame`` or the model was fit with a formula, has the
+  categories of ``endog`` as columns, in the order of ``wendog`` with the
+  reference category first, instead of 0, 1, ..., J - 1. The categories keep
+  their type, so ``model.names`` and the labels in ``summary`` are strings but
+  the columns of ``predict`` are, for example, integers for integer ``endog``.
+  Predictions for an array ``exog`` are still arrays. :issue:`4804`,
+  :pr:`10587`
 - With ``missing="drop"``, a ``MissingDataError`` is raised if all
   observations are dropped because of missing values. An unknown value of
   ``missing`` raises a ``ValueError``. :issue:`4417`, :pr:`10535`,
@@ -183,6 +191,14 @@ Regression and linear models
   wrong shape" if the number of rows of ``exog`` was equal to the number of
   parameters, and did not check the length of ``weights`` against the number
   of rows otherwise. :issue:`10283`, :pr:`10285`
+- ``OLS``, ``WLS``, ``GLS``, ``GLSAR`` and ``QuantReg`` raise a
+  ``MissingDataError`` when ``endog``, ``exog``, ``weights`` or ``sigma``
+  contain ``inf`` or ``nan`` after missing values are handled, so that
+  ``missing="drop"`` still removes ``nan`` but not ``inf``. Before, only
+  ``nan`` and ``inf`` in ``exog`` were detected, and only if ``hasconst`` was
+  not ``False``. ``-inf`` in ``exog``, and non-finite values of the other
+  arrays, raised a ``LinAlgError`` in ``fit`` or gave parameters that are all
+  ``nan``. :issue:`1642`, :issue:`3468`, :pr:`4969`
 - ``get_prediction()`` called without ``exog`` now uses the offset and
   exposure of the model, as ``predict`` does, for GLM, GLMGam, the discrete
   count models and the binary models (Logit and Probit). Before, the offset
@@ -237,6 +253,10 @@ Generalized linear models and discrete models
   and for a canonical link if the deviance increases, as ``glm.fit`` in R
   halves a step that diverges, where it raised "NaN, inf or invalid value
   detected in weights" before. :issue:`5394`
+- ``score_test`` with a one-dimensional ``exog_extra`` for the discrete
+  models and the ``GLM`` result method raised an ``IndexError`` in 0.15.0. A
+  one-dimensional ``exog_extra`` is a single additional variable, as before.
+  :pr:`10609`
 - ``predict`` preserves the observation index of a pandas Series for models
   with one predictor and additional parameters, such as ``NegativeBinomial``,
   ``GeneralizedPoisson``, ``ZeroInflatedPoisson``, ``BetaModel``,
@@ -287,6 +307,13 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
+- ``MLEModel.loglike`` returns ``-inf`` instead of raising a ``LinAlgError``
+  if the states are initialized as stationary and the transition matrix has a
+  unit root, so that the stationary covariance of the initial state does not
+  exist. A derivative free optimizer, such as ``method="powell"``, can try
+  parameters that are transformed to the boundary of the stationary region.
+  The fit of the dynamic factor model in the example notebook failed with this
+  error on some platforms. :pr:`10611`
 - ``range_unit_root_test`` documents the correct null hypothesis, a unit
   root, which is rejected for small statistics. The ``InterpolationWarning``
   reports the correct direction: it is raised if the statistic is outside the
@@ -404,9 +431,11 @@ Statistics and tests
 
 - ``statsmodels.stats.power`` validates that a root returned by a solver
   attains the requested power. Failed solutions now return ``NaN`` with a
-  ``ConvergenceWarning`` instead of returning a misleading finite result.
-  Noncentral-t CDF calculations retry a reflected tail when CDFLIB returns
-  ``NaN``, preserving already finite values. This can turn previously missing
+  ``ConvergenceWarning`` instead of returning a misleading finite result or
+  raising an error, also when solving for ``alpha``, which now finds
+  significance levels far below 1e-5. Noncentral-t CDF calculations retry a
+  reflected tail when CDFLIB returns ``NaN`` and use the limit 0 or 1 if that
+  fails too, preserving already finite values. This can turn previously missing
   t-test powers into finite results; it does not guarantee relative accuracy
   in extremely small tails. :pr:`10552`
 - The p-values of several tests were computed as one minus the cdf, which
@@ -471,6 +500,12 @@ Statistics and tests
   instead of a negative value if the rejection region of the exact test is
   empty. ``low`` and ``upp`` also accept list-like input, and a NaN ``p_alt``
   raises a ``ValueError``. :issue:`10507`, :pr:`10508`, :pr:`10580`
+- ``TTestIndPower.power`` and ``TTestIndPower.solve_power`` accept ``ratio=0``,
+  which gives the power of the one-sample t-test with ``nobs1`` observations;
+  it raised a ``ZeroDivisionError`` or gave the size of the test for NumPy
+  scalars. ``ratio`` can be array_like, and a negative or NaN ``ratio`` raises
+  a ``ValueError``; ``solve_power`` returned ``nan`` with a convergence warning
+  for a negative ``ratio``. :pr:`10349`, :pr:`10584`
 - ``proportions_chisquare`` raises a ``ValueError`` for a single sample
   without ``value``. The statistic was 0 and the p-value ``nan``.
   :pr:`10451`

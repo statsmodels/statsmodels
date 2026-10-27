@@ -417,3 +417,23 @@ def test_invalid():
     init = Initialization(2, "stationary")
     with pytest.raises(ValueError):
         init()
+
+
+def test_uses_stationary():
+    assert Initialization(2, "stationary")._uses_stationary()
+    assert not Initialization(2, "diffuse")._uses_stationary()
+    assert not Initialization(2, "known", constant=[0, 0])._uses_stationary()
+    assert not Initialization(2)._uses_stationary()
+
+    init = Initialization(3)
+    init.set(0, "diffuse")
+    assert not init._uses_stationary()
+    init.set((1, 2), "stationary")
+    assert init._uses_stationary()
+
+    nested = Initialization(3)
+    nested.set((0, 1), init_inner := Initialization(2))
+    init_inner.set(0, "known", constant=[0.0])
+    init_inner.set(1, "stationary")
+    nested.set(2, "diffuse")
+    assert nested._uses_stationary()

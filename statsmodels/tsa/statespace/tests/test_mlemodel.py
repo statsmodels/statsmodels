@@ -22,6 +22,7 @@ import pytest
 from statsmodels.datasets import nile
 from statsmodels.iolib.summary import Summary
 from statsmodels.tsa.statespace import (
+    dynamic_factor,
     kalman_filter,
     kalman_smoother,
     sarimax,
@@ -1428,3 +1429,27 @@ def test_set_inversion_method_and_initialization_property():
     mod.initialization = new_init
     assert mod.ssm.initialization is new_init
     assert mod.initialization is new_init
+
+
+@pytest.mark.parametrize("scale", [1e9, 1e12])
+@pytest.mark.parametrize("sign", [1, -1])
+def test_loglike_unconstrained_stationary_boundary(scale, sign):
+    # A line search of a derivative free optimizer can try unconstrained
+    # parameters that the transformation maps to unit roots. The stationary
+    # covariance of the initial state does not exist then, and the Lyapunov
+    # equation is singular. This made the fit of the dynamic factor model of
+    # the example notebook fail with a LinAlgError on some platforms.
+    rng = np.random.default_rng(78240)
+    endog = rng.standard_normal((100, 4))
+    mod = dynamic_factor.DynamicFactor(
+        endog, k_factors=1, factor_order=2, error_order=2
+    )
+    params = np.full(mod.k_params, sign * scale)
+    assert mod.loglike(params, transformed=False) == -np.inf
+    # the filter itself still raises, and the error is a LinAlgError as before
+    with pytest.raises(np.linalg.LinAlgError, match="LU decomposition"):
+        mod.ssm.loglike()
+
+    # other initializations do not use the stationary covariance
+    mod.ssm.initialize_approximate_diffuse()
+    assert np.isfinite(mod.loglike(params, transformed=False))

@@ -9,7 +9,7 @@ from statsmodels.compat.numpy import inplace_reshape
 import numpy as np
 
 from . import tools
-from .initialization import Initialization
+from .initialization import Initialization, _StationaryInitializationError
 from .tools import find_best_blas_type, validate_matrix_shape, validate_vector_shape
 
 
@@ -1154,9 +1154,14 @@ class Representation:
         if isinstance(self.initialization, Initialization):
             if not self.initialization.initialized:
                 raise RuntimeError("Initialization is incomplete.")
-            self._statespaces[prefix].initialize(
-                self.initialization, complex_step=complex_step
-            )
+            try:
+                self._statespaces[prefix].initialize(
+                    self.initialization, complex_step=complex_step
+                )
+            except np.linalg.LinAlgError as exc:
+                if not self.initialization._uses_stationary():
+                    raise
+                raise _StationaryInitializationError(str(exc)) from exc
         else:
             raise RuntimeError("Statespace model not initialized.")
 
