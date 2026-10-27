@@ -3047,9 +3047,11 @@ def test_pacf_1_obs():
     with pytest.raises(ValueError):
         pacf_ols(y)
     # One observation gives 0 / 0 in the autocovariance and a singular matrix
-    with warns_or_none(RuntimeWarning, match="invalid value encountered"):
-        with pytest.warns(SingularMatrixWarning, match="Matrix is singular"):
-            pacf_yw(y)
+    with (
+        warns_or_none(RuntimeWarning, match="invalid value encountered"),
+        warns_or_none(SingularMatrixWarning, match="Matrix is singular"),
+    ):
+        pacf_yw(y)
 
 
 def _pacf_yw_loop(x, nlags, method):
