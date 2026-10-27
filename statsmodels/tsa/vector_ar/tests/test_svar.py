@@ -122,11 +122,28 @@ class TestSVAR:
         # collapses to lower == upper.
         warn_cm = pytest.warns(FutureWarning) if isinstance(rng, int) else nullcontext()
         # the ML fits of the replications may not converge, depending on the platform
-        with warn_cm, warns_or_none(ConvergenceWarning, match="Maximum Likelihood"):
+        with (
+            warn_cm,
+            warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"),
+        ):
             errband = self.res1.sirf_errband_mc(
                 orth=False, repl=5, steps=3, signif=0.5, rng=rng, burn=10, cum=False
             )
         assert not np.allclose(errband.lower, errband.upper)
+
+    def test_sirf_errband_mc_one_convergence_warning(self, monkeypatch):
+        # The fit of each replication warned if it did not converge, which
+        # gave one warning per replication.
+        fit = SVAR.fit
+
+        def fit_one_iteration(self, **kwds):
+            return fit(self, maxiter=1, **kwds)
+
+        monkeypatch.setattr(SVAR, "fit", fit_one_iteration)
+        rng = np.random.default_rng(0)
+        with pytest.warns(ConvergenceWarning, match="5 of 5 Monte Carlo") as record:
+            self.res1.sirf_errband_mc(repl=5, steps=3, rng=rng, burn=10)
+        assert len(record) == 1
 
     def test_sirf_errband_mc_reproducible_with_int_seed(self):
         # the ML fits of the replications may not converge, depending on the platform

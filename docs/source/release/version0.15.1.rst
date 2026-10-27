@@ -425,6 +425,10 @@ Time series analysis
   freedom. :pr:`10613`
 - ``ThetaModelResults.plot_predict`` with ``alpha=None`` no longer adds a
   legend without labels, which warned. :pr:`10613`
+- ``SVAR.sirf_errband_mc`` and ``IRAnalysis.errband_mc`` with ``svar=True``
+  show one ``ConvergenceWarning`` with the number of replications whose
+  maximum likelihood fit did not converge, instead of one warning for each of
+  them. :pr:`10613`
 
 Statistics and tests
 --------------------
