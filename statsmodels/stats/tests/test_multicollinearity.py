@@ -75,6 +75,14 @@ class TestVifReference:
         assert_equal(res.index.to_numpy(), ["disp", "hp", "wt", "drat", "qsec"])
         assert_allclose(res.to_numpy(), res_r.mtcars_vif, rtol=1e-9)
 
+    def test_variance_inflation_factor(self, mtcars_exog):
+        # The existing function for one variable agrees with R, with and
+        # without a constant in the design matrix.
+        x = mtcars_exog.to_numpy()
+        for exog, first in [(x, 0), (add_constant(x), 1)]:
+            res = [variance_inflation_factor(exog, k + first) for k in range(5)]
+            assert_allclose(res, res_r.mtcars_vif, rtol=1e-9)
+
     def test_formula_design(self, longley_exog):
         # The design matrix of a formula model has a constant, which is
         # skipped. The result is the same for both formula engines.
