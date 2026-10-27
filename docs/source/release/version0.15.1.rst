@@ -170,9 +170,11 @@ Performance
   from one QR decomposition of the regressors that do not depend on the
   break, using the same private helper, instead of fitting one regression per
   period. The cost grows linearly instead of quadratically with the number of
-  observations, so the test is about 100 times faster for 2,000 observations
-  and about 1,000 times faster for 20,000. The statistics are more accurate
-  when the regressors are close to collinear. :issue:`10601`, :pr:`10602`
+  observations, so the test is about 25 to 65 times faster for 2,000
+  observations and 50 to 140 times faster for 5,000. The statistics are more
+  accurate when the regressors are close to collinear, so for such series
+  the statistic can change in the later digits. The new values agree with R
+  (urca) and with high-precision arithmetic. :issue:`10601`, :pr:`10602`
 
 Bug Fixes
 =========

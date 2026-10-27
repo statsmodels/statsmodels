@@ -4261,19 +4261,23 @@ class ZivotAndrewsUnitRoot:
         fixed[:, 2:] = exog[:, cols:]
         level = exog[:, cols - 1 : cols]
         # Ill-conditioned problems are left to the per-period loop. The cross
-        # product inverse of _quick_ols loses about cond(exog)**2 * eps.
+        # product inverse of _quick_ols loses about cond(exog)**2 * eps, so
+        # the cutoff is sqrt(eps) rather than the k * eps of the other
+        # callers. The same constant bounds the cancellation in S and G
+        # below (the Schur diagonal, the pivot, the level and the ssr), so
+        # the accepted designs give t-values good to about 1e-8 rather than
+        # 1e-12.
         tol = np.sqrt(np.finfo(float).eps)
         res = nested_lag_ols(endog, level, fixed, rcond=tol)
         if res is None:
             return None
         r = res.r
 
-        # As fixed has a constant column, nested_lag_ols centers the level
-        # and endog, and r belongs to the centered columns (see its Notes).
-        # The cross products below must use the same columns. Centering only
-        # adds multiples of the constant, which changes no t-statistic.
-        data = np.column_stack([fixed, level, endog])
-        data[:, k_fixed:] -= data[:, k_fixed:].mean(0)
+        # r belongs to the data after nested_lag_ols subtracts res.offset (the
+        # means of the level and endog, as fixed has a constant column), so
+        # the cross products below use the same columns. The shift adds
+        # multiples of the constant, which changes no t-statistic.
+        data = np.column_stack([fixed, level, endog]) - res.offset
         # tail[f] is the sum of the rows f, f + 1, ... of data, the cross
         # product with the level shift. The sum of tail[f:] is the cross
         # product with the trend shift.

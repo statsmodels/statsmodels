@@ -3336,12 +3336,30 @@ def test_za_break_tvalues_matches_ols(regression, kind):
 @pytest.mark.parametrize("regression", ["c", "t", "ct"])
 def test_za_break_tvalues_blocks(regression):
     # more observations than one block of rows of the QR decomposition. The
-    # cross products sum 20,000 rows, which loses about 2e-10 (relative)
-    # against exact rational arithmetic, while OLS loses about 4e-13.
+    # cumulative sums of the cross products round over 20,000 rows, which
+    # changes the t-values by up to about 1e-9 (relative).
     rng = np.random.default_rng(10583)
     x = _za_series("trend_break", 20000, rng)
     tvalues, expected = _za_break_tvalues(x, 4, regression, 0.15, step=499)
-    assert_allclose(tvalues, expected, rtol=1e-9)
+    assert_allclose(tvalues, expected, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "name, regression, lags, statistic, bpidx",
+    [
+        ("gnpdef", "ct", 8, -4.29645992991322, 41),
+        ("stkprc", "ct", 5, -4.4188005626248, 65),
+        ("rgnpq", "t", 5, -3.15090901781973, 89),
+        ("rgnpq", "ct", 8, -4.51449473135603, 71),
+    ],
+)
+def test_zivot_andrews_r_reference(name, regression, lags, statistic, bpidx):
+    # urca 1.3.4, ur.za(x, model, lag). The break point of R is bpidx + 1 for
+    # "c" and "ct" and bpidx for "t". The minimum is inside the default trim.
+    x = _za_series(name, None, None)
+    res = zivot_andrews(x, maxlag=lags, regression=regression, autolag=None)
+    assert_allclose(res[0], statistic, rtol=1e-10)
+    assert res[4] == bpidx
 
 
 @pytest.mark.parametrize("regression", ["c", "t", "ct"])
