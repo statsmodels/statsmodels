@@ -23,7 +23,6 @@ from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
     ConvergenceWarning,
-    EstimationWarning,
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
@@ -2045,10 +2044,7 @@ def test_arma_order_select_ic():
     nobs = 250
     rs = np.random.RandomState(2014)
     y = arma_generate_sample(arparams, maparams, nobs, distrvs=rs.standard_normal)
-    # the starting values of some of the models are not invertible, which depends
-    # on the rounding of the estimate of the starting values
-    with warns_or_none(EstimationWarning, match="Non-invertible starting MA"):
-        res = arma_order_select_ic(y, ic=["aic", "bic"], trend="n")
+    res = arma_order_select_ic(y, ic=["aic", "bic"], trend="n")
     # regression tests in case we change algorithm to minic in sas
     aic_x = np.array(
         [
@@ -2081,17 +2077,15 @@ def test_arma_order_select_ic():
 
     index = pd.date_range("2000-1-1", freq=MONTH_END, periods=len(y))
     y_series = pd.Series(y, index=index)
-    with warns_or_none(EstimationWarning, match="Non-invertible starting MA"):
-        res_pd = arma_order_select_ic(
-            y_series, max_ar=2, max_ma=1, ic=["aic", "bic"], trend="n"
-        )
+    res_pd = arma_order_select_ic(
+        y_series, max_ar=2, max_ma=1, ic=["aic", "bic"], trend="n"
+    )
     assert_almost_equal(res_pd.aic.values, aic.values[:3, :2], 5)
     assert_almost_equal(res_pd.bic.values, bic.values[:3, :2], 5)
     assert_equal(res_pd.aic_min_order, (2, 1))
     assert_equal(res_pd.bic_min_order, (1, 1))
 
-    with warns_or_none(EstimationWarning, match="Non-invertible starting MA"):
-        res = arma_order_select_ic(y, ic="aic", trend="n")
+    res = arma_order_select_ic(y, ic="aic", trend="n")
     assert_almost_equal(res.aic.values, aic.values, 5)
     assert res.aic.index.equals(aic.index)
     assert res.aic.columns.equals(aic.columns)
