@@ -12,6 +12,7 @@ import warnings
 
 import numpy as np
 from numpy.testing import (
+    assert_allclose,
     assert_array_almost_equal,
     assert_array_equal,
     assert_equal,
@@ -23,6 +24,7 @@ import pytest
 from statsmodels import regression
 from statsmodels.datasets import macrodata
 from statsmodels.tsa import stattools
+from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.tests.results import savedrvs
 from statsmodels.tsa.tests.results.datamlw_tls import (
     mlacf,
@@ -623,8 +625,12 @@ freqs = [
     "B",
     "D",
     "h",
+    "2h",
+    "min",
+    "5min",
+    "30s",
 ]
-expected = [1, 1, 4, 4, 4, 52, 52, 5, 7, 24]
+expected = [1, 1, 4, 4, 4, 52, 52, 5, 7, 24, 12, 1440, 288, 2880]
 freq_expected = [(f, e) for f, e in zip(freqs, expected, strict=True)]
 
 
@@ -633,6 +639,77 @@ def test_freq_to_period(freq_expected):
     freq, expected = freq_expected
     assert_equal(tools.freq_to_period(freq), expected)
     assert_equal(tools.freq_to_period(to_offset(freq)), expected)
+
+
+BUSINESS_MONTH_END = "BM" if PD_LT_2_2_0 else "BME"
+BUSINESS_QUARTER_END = "BQ" if PD_LT_2_2_0 else "BQE"
+BUSINESS_YEAR_END = "BA" if PD_LT_2_2_0 else "BYE"
+CUSTOM_BUSINESS_MONTH_END = "CBM" if PD_LT_2_2_0 else "CBME"
+
+business_freqs = [
+    BUSINESS_MONTH_END,
+    "BMS",
+    f"2{BUSINESS_MONTH_END}",
+    CUSTOM_BUSINESS_MONTH_END,
+    "CBMS",
+    BUSINESS_QUARTER_END,
+    f"{BUSINESS_QUARTER_END}-APR",
+    "BQS",
+    BUSINESS_YEAR_END,
+    "BYS",
+]
+business_expected = [12, 12, 12, 12, 12, 4, 4, 4, 1, 1]
+business_freq_expected = [
+    (f, e) for f, e in zip(business_freqs, business_expected, strict=True)
+]
+
+
+@pytest.mark.parametrize("freq_expected", business_freq_expected)
+def test_freq_to_period_business(freq_expected):
+    # Business month/quarter/year frequencies have the same seasonal
+    # period as their calendar counterparts (GH 10525)
+    freq, expected = freq_expected
+    assert_equal(tools.freq_to_period(freq), expected)
+    assert_equal(tools.freq_to_period(to_offset(freq)), expected)
+
+
+def test_freq_to_period_business_seasonal_decompose():
+    # A business month-end series is decomposed with period 12 without
+    # an explicit period (GH 10525)
+    idx = pd.date_range("2000-01-31", periods=48, freq=BUSINESS_MONTH_END)
+    y = pd.Series(
+        np.sin(np.arange(48) * 2 * np.pi / 12) + np.arange(48) / 10,
+        index=idx,
+    )
+    res = seasonal_decompose(y)
+    assert_allclose(
+        res.seasonal.iloc[:12].to_numpy(),
+        res.seasonal.iloc[12:24].to_numpy(),
+        rtol=1e-10,
+    )
+
+
+def test_freq_to_period_nondivisible_multiplier():
+    # A multiplier that does not divide a day evenly has no integer
+    # observations-per-day period (GH 9619)
+    with pytest.raises(ValueError, match="not understood"):
+        tools.freq_to_period("7min")
+
+
+@pytest.mark.parametrize("freq", ["0h", pd.offsets.Hour(-1)])
+def test_freq_to_period_nonpositive_multiplier(freq):
+    # A non-positive multiplier has no valid observations-per-day period
+    # (GH 9619)
+    with pytest.raises(ValueError, match="not understood"):
+        tools.freq_to_period(freq)
+
+
+@pytest.mark.parametrize("freq", ["ns", "us"])
+def test_freq_to_period_unsupported_offset(freq):
+    # Valid pandas offsets with rule codes "NS"/"US" have no
+    # observations-per-day mapping and fall through to ValueError (GH 9619)
+    with pytest.raises(ValueError, match="not understood"):
+        tools.freq_to_period(freq)
 
 
 class TestDetrend:

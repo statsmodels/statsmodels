@@ -345,6 +345,23 @@ def test_naive_ledoit_wolf_shrinkage():
     assert np.linalg.eigvalsh(res.cov).min() > 0.1
 
 
+@pytest.mark.parametrize(
+    "x",
+    [
+        # x'x / 4 is the identity matrix
+        np.array([[1, 1, 1, 1], [1, -1, 1, -1], [1, 1, -1, -1], [1, -1, -1, 1]]),
+        np.array([[1.0], [2.0], [3.0]]),
+        np.zeros((5, 3)),
+    ],
+    ids=["identity", "one variable", "zero"],
+)
+def test_naive_ledoit_wolf_shrinkage_spherical(x):
+    # The empirical covariance is mu * I, so that delta is 0 and the
+    # shrinkage was 0 / 0 = nan. The estimate is the empirical covariance.
+    res = robcov._naive_ledoit_wolf_shrinkage(x, 0)
+    assert_allclose(res.cov, x.T.dot(x) / x.shape[0], rtol=1e-13)
+
+
 def test_cov_starting_small_nobs():
     # the first deterministic starting percentile is
     # 200 * (k_vars + 2) / nobs, which is above 100 when
@@ -511,7 +528,8 @@ def test_covdetmcd_rank_by_logdet():
     # GH-10295: det(cov) overflows to inf for every starting set, so
     # np.argmin(det_all) silently picked the first start and the selected
     # start changed with the scale of the data.
-    rng = np.random.default_rng(12345)
+    # The seed is chosen so that the best start is not the first one.
+    rng = np.random.default_rng(11)
     x = rng.standard_normal((100, 30)) * 5e5
     h = 65
 
@@ -606,6 +624,106 @@ def test_covdet_one_column():
     assert_allclose(raw.mean[0], x2_sorted[idx_min : idx_min + h].mean(), rtol=1e-12)
 
 
+def test_cov_ogk_one_column():
+    # np.cov returns a 0-d array for a single column, so that the reweighted
+    # covariance of cov_ogk had shape ()
+    rng = np.random.default_rng(3)
+    x = 1 + 2 * rng.standard_normal((20000, 1))
+    res = robcov.cov_ogk(x)
+    assert res.cov.shape == (1, 1)
+    assert res.cov_raw.shape == (1, 1)
+    assert res.mean.shape == (1,)
+    # both are consistent for the variance at the normal distribution
+    assert_allclose(res.cov, [[4.0]], rtol=0.05)
+    assert_allclose(res.cov_raw, [[4.0]], rtol=0.05)
+    assert_allclose(res.mean, [1.0], atol=0.1)
+    # the reweighted covariance is the variance of the kept observations,
+    # rescaled for the truncation
+    kept = x[res.mask]
+    assert_allclose(res.cov, np.var(kept, ddof=1) * res.scale_factor, rtol=1e-12)
+    # without reweighting the result is the raw estimate
+    res0 = robcov.cov_ogk(x, reweight=None)
+    assert res0.cov.shape == (1, 1)
+    assert_allclose(res0.cov, res.cov_raw)
+
+
+def test_cov_tyler_regularized_one_column():
+    # The plugin for the shrinkage factor is 0 / 0 for a single variable, and
+    # the normalized scatter of a single variable is 1.
+    rng = np.random.default_rng(3)
+    x = rng.standard_normal((50, 1))
+    res = robcov.cov_tyler_regularized(x)
+    assert res.cov.shape == (1, 1)
+    assert_allclose(res.cov, [[1.0]])
+    assert res.shrinkage_factor == 0
+    res = robcov.cov_tyler_regularized(x, shrinkage_factor=0.1)
+    assert_allclose(res.cov, [[1.0]])
+    assert res.shrinkage_factor == 0.1
+
+
+def test_cov_iter_one_column():
+    rng = np.random.default_rng(3)
+    x = 1 + rng.standard_normal((50, 1))
+    res = robcov._cov_iter(x, robcov.weights_quantile, weights_args=(0.5,))
+    assert res.cov.shape == (1, 1)
+    # the default starting value is the sample variance
+    cov_init = np.var(x, ddof=1, axis=0)[None, :]
+    res2 = robcov._cov_iter(
+        x, robcov.weights_quantile, weights_args=(0.5,), cov_init=cov_init
+    )
+    assert_allclose(res.cov, res2.cov, rtol=1e-12)
+    assert_allclose(res.mean, res2.mean, rtol=1e-12)
+
+
+def test_naive_ledoit_wolf_one_column():
+    # the shrinkage target is the empirical covariance for a single variable,
+    # the shrinkage intensity was 0 / 0
+    rng = np.random.default_rng(3)
+    x = rng.standard_normal((50, 1))
+    res = robcov._naive_ledoit_wolf_shrinkage(x, 0)
+    assert_allclose(res.cov, [[np.mean(x**2)]], rtol=1e-12)
+
+
+@pytest.mark.parametrize("nobs", [50, 51])
+def test_cov_starting_one_column(nobs):
+    rng = np.random.default_rng(3)
+    x = 1 + 2 * rng.standard_normal((nobs, 1))
+    res = robcov._cov_starting(x)
+    for r in res:
+        cov = np.asarray(r.cov)
+        assert cov.shape == (1, 1)
+        assert np.all(np.isfinite(cov))
+        assert cov[0, 0] > 0
+
+    xs = x - np.median(x, axis=0)
+    # the first start is the covariance of the observations below the first
+    # percentile of the squared distances, rescaled for the truncation
+    p = min(3 / nobs * 200, 100)
+    d = xs[:, 0] ** 2
+    xsp = xs[d < np.percentile(d, p)]
+    expected = np.var(xsp, ddof=1) * robcov.coef_normalize_cov_truncated(p / 100, 1)
+    assert res[0].method == "pearson truncated"
+    assert_allclose(res[0].cov, [[expected]], rtol=1e-12)
+
+    # correlation matrices of a single variable are 1, the spatial sign of a
+    # single variable is the sign, which is 0 for the median if nobs is odd
+    tanh, spatial, spearman, normal_scores = res[-4:]
+    assert [r.method for r in res[-4:]] == [
+        "tanh",
+        "spatial",
+        "spearman",
+        "normal-scores",
+    ]
+    for r in (tanh, spearman, normal_scores):
+        assert_allclose(r.cov, [[1.0]])
+    assert_allclose(spatial.cov, [[np.var(np.sign(xs), ddof=1)]], rtol=1e-12)
+
+    # standardized and retransformed results have the same shape
+    for kwds in ({"standardize": True}, {"standardize": True, "retransform": True}):
+        for r in robcov._cov_starting(x, **kwds):
+            assert np.shape(getattr(r, "cov", r)) == (1, 1)
+
+
 def test_det_root_does_not_overflow():
     # det(10 * I_400) = 10**400 overflows to inf; its 400th root is 10.
     assert_allclose(robcov._det_root(10 * np.eye(400)), 10.0, rtol=1e-12)
@@ -623,6 +741,128 @@ def test_covdet_large_k_det_normalization(cov_class):
     x = np.random.default_rng(0).standard_normal((400, 149))
     res = cov_class(x).fit()
     assert np.all(np.isfinite(res.cov))
+
+
+@pytest.mark.parametrize("bp, c1", [(0.5, 1.547), (0.25, 2.937)])
+def test_covdets_breakdown_point(bp, c1):
+    # breakdown_point was ignored in CovDetS, and so in the first stage of
+    # CovDetMM, the tuning parameter was always the one for 0.5.
+    rng = np.random.default_rng(12345)
+    x = rng.standard_normal((200, 3))
+    x[:30] += 6
+
+    # c1 is the biweight tuning parameter of a univariate S-estimator, i.e.
+    # for k_vars=1 while the data used in the main fit below has 3 columns.
+    # The values are to three decimals from tukeybiweight_bp in
+    # statsmodels/robust/_tables.py.
+    mod1 = robcov.CovDetS(x[:, :1], breakdown_point=bp)
+    assert_allclose(mod1.norm.c, c1, atol=1e-3)
+
+    mod = robcov.CovDetS(x, breakdown_point=bp)
+    res = mod.fit()
+    assert res.converged
+    # An S-estimator solves mean(rho(d)) = breakdown_point * max(rho), and the
+    # maximum of the biweight rho is c**2 / 6.
+    d = robcov.mahalanobis(x - res.mean, res.cov, sqrt=True)
+    assert_allclose(mod.norm.rho(d).mean() / (mod.norm.c**2 / 6), bp, rtol=1e-4)
+
+    # the second stage of CovDetMM keeps the scale of the first stage
+    res_mm = robcov.CovDetMM(x, breakdown_point=bp).fit()
+    assert_allclose(res_mm.scale, res.scale, rtol=1e-12)
+
+
+# Reference values from R package rrcov 1.7.7, with
+# library(rrcov); rrcov:::.csolve.bw.S(bdp, p)$cc
+# for p = 1, ..., 5, the keys are bdp.
+tuning_s_rrcov = {
+    0.5: [1.54764497988, 2.66080339285, 3.45288165132, 4.09656216395, 4.6520233426],
+    0.25: [2.93701455396, 4.42744315897, 5.52807407121, 6.44260983164, 7.24226823826],
+}
+
+
+@pytest.mark.parametrize("bp", [0.5, 0.25])
+@pytest.mark.parametrize("k_vars", [1, 2, 3, 4, 5])
+def test_covdets_tuning_param_rrcov(bp, k_vars):
+    x = np.random.default_rng(0).standard_normal((20, k_vars))
+    c = tuning_s_rrcov[bp][k_vars - 1]
+    assert_allclose(robcov.CovDetS(x, breakdown_point=bp).norm.c, c, rtol=1e-7)
+
+
+def test_covdets_rrcov():
+    # Compare with rrcov 1.7.7 CovSest, which is the DetS estimator of Hubert
+    # et al. (2015). The data has 10 percent outliers. With a larger fraction
+    # of outliers close to the breakdown point, the deterministic starts can
+    # converge to a different local optimum than the random starts of R.
+    # R code for the reference values, x is the data generated below:
+    #   library(rrcov)
+    #   fit <- CovSest(x, bdp=0.25, method="sdet")
+    #   getCenter(fit); getCov(fit); fit@crit
+    # location, covariance and scale for bdp=0.25 and for bdp=0.5
+    rng = np.random.default_rng(20261024)
+    x = rng.standard_normal((100, 3)) @ np.array(
+        [[2.0, 0, 0], [-1.5, 1.2, 0], [0.5, 0.4, 1.0]]
+    ).T
+    x[:10] += 8
+
+    mean = {
+        0.25: [-0.00524687063576, 0.04258769820358, -0.13057640408221],
+        0.5: [-0.161509713747, 0.146100688979, -0.165867731046],
+    }
+    cov = {
+        0.25: [
+            [6.83295247961, -4.60742865320, 2.07626921067],
+            [-4.60742865320, 5.20520866750, -0.78744812934],
+            [2.07626921067, -0.78744812934, 1.99580246834],
+        ],
+        0.5: [
+            [4.333301973950, -2.971087338866, 1.342943692525],
+            [-2.971087338866, 3.763362024027, -0.381964279551],
+            [1.342943692525, -0.381964279551, 1.615986624137],
+        ],
+    }
+    scale = {0.25: 1.60362742953, 0.5: 1.405747332}
+    for bp in (0.25, 0.5):
+        res = robcov.CovDetS(x, breakdown_point=bp).fit()
+        assert_allclose(res.mean, mean[bp], rtol=1e-4, atol=1e-4)
+        assert_allclose(res.cov, cov[bp], rtol=1e-4, atol=1e-4)
+        assert_allclose(res.scale, scale[bp], rtol=1e-4)
+
+
+@pytest.mark.parametrize("bp", [0.6, 1, 0, 0.0, -0.1, np.nan, np.inf])
+@pytest.mark.parametrize("cov_class", [robcov.CovDetS, robcov.CovDetMM])
+def test_covdet_breakdown_point_invalid(cov_class, bp):
+    x = np.random.default_rng(0).standard_normal((30, 3))
+    with pytest.raises(ValueError, match=r"breakdown_point must be in \(0, 0.5\]"):
+        cov_class(x, breakdown_point=bp)
+
+
+def test_covdet_breakdown_point_not_float():
+    x = np.random.default_rng(0).standard_normal((30, 3))
+    with pytest.raises(TypeError, match="breakdown_point"):
+        robcov.CovDetS(x, breakdown_point="0.25")
+
+
+@pytest.mark.parametrize("cov_class", [robcov.CovDetS, robcov.CovDetMM])
+def test_covdet_breakdown_point_small_high_dim(cov_class):
+    # The default limits of the root finding in tuning_s_cov have no solution
+    # for a small breakdown point and 20 variables, c is above 30.
+    # The fit is not called because it is slow with 20 variables.
+    x = np.random.default_rng(0).standard_normal((100, 20))
+    mod = cov_class(x, breakdown_point=0.05)
+    if cov_class is robcov.CovDetS:
+        # R: rrcov:::.csolve.bw.S(0.05, 20)$cc
+        assert_allclose(mod.norm.c, 34.3181640288, rtol=1e-8)
+
+
+def test_covdet_breakdown_point_no_solution(monkeypatch):
+    def raise_no_root(*args, **kwds):
+        raise ValueError("f(a) and f(b) must have different signs")
+
+    monkeypatch.setattr(robcov.rtools, "tuning_s_cov", raise_no_root)
+    x = np.random.default_rng(0).standard_normal((30, 3))
+    msg = r"breakdown_point=0.25 and k_vars=3"
+    with pytest.raises(ValueError, match=msg):
+        robcov.CovDetS(x, breakdown_point=0.25)
 
 
 def test_cov_tyler_regularized_n_iter():
@@ -734,3 +974,186 @@ def test_get_detcov_startidx_invalid_methods_cov_raises():
     z = rs.standard_normal((50, 3))
     with pytest.raises(ValueError, match="methods_cov"):
         robcov._get_detcov_startidx(z, 30, methods_cov="not-all")
+
+
+def _detmcd_data():
+    # deterministic data without random numbers, 5 outliers in 40 observations
+    n = 40
+    i = np.arange(1, n + 1)
+    x1 = np.sin(i) + 0.5 * np.cos(3 * i)
+    x2 = np.cos(2 * i) + 0.3 * np.sin(5 * i)
+    x3 = np.sin(3 * i + 1) + 0.2 * i / n
+    x4 = np.cos(i / 2) + 0.4 * np.sin(7 * i)
+    x2 = x2 + 0.6 * x1
+    x3 = x3 + 0.4 * x1 - 0.3 * x2
+    x = np.column_stack([x1, x2, x3, x4])
+    x[[2, 10, 18, 26, 34]] += np.array([4, -3, 3.5, -4])
+    return x
+
+
+def test_get_detcov_startidx_r_deterministic_mcd():
+    # The starting sets of the deterministic MCD of Hubert, Rousseeuw and
+    # Verdonck (2012) for the tanh and the Spearman starting correlation, 1-based
+    # indices from the function initset in r6pack of R robustbase 0.99.7 (the
+    # h observations with the smallest distance after the orthogonalization,
+    # standardization with median and Qn without the finite sample correction):
+    #
+    # z <- sweep(x, 2, apply(x, 2, median))
+    # z <- sweep(z, 2, apply(z, 2, function(v) Qn(v, finite.corr = FALSE)), "/")
+    # P <- eigen(cor(tanh(z)), symmetric = TRUE)$vectors   # or cor(z, method="spearman")
+    # initset(z, scalefn, P, h)
+    #
+    # The distance used the wrong arguments of mahalanobis, mean was passed as
+    # cov and cov as cov_inv.
+    r_sets = {
+        "tanh": [4, 6, 7, 8, 9, 10, 12, 15, 16, 20, 21, 22, 23, 25, 26, 28, 29, 31,
+                 32, 33, 34, 40],
+        "spearman": [4, 6, 7, 8, 9, 10, 12, 14, 15, 16, 20, 21, 22, 23, 25, 26, 28,
+                     29, 31, 32, 33, 34],
+    }
+    x = _detmcd_data()
+    starts = robcov._get_detcov_startidx(
+        x, 22, options_start={"loc_func": robcov.median, "scale_func": robscale.qn_scale}
+    )
+    methods = [method for _, method in starts]
+    for method, expected in r_sets.items():
+        idx = starts[methods.index(method)][0]
+        assert_equal(np.sort(idx) + 1, expected)
+
+
+def test_get_detcov_startidx_ranks_by_mahalanobis_distance():
+    # every starting set contains the h observations with the smallest squared
+    # distance (z - mean)' cov^{-1} (z - mean) of its orthogonalized estimate
+    x = _detmcd_data()
+    h = 22
+    z = (x - robcov.median(x)) / robcov.mad(x)
+    starts = robcov._get_detcov_startidx(x, h)
+    covs = robcov._cov_starting(z, standardize=False, quantile=0.5)
+    covs = [c for c in covs if hasattr(c, "method")]
+    assert len(starts) == len(covs)
+    for (idx, method), c in zip(starts, covs, strict=True):
+        assert method == c.method
+        mean, cov = robcov._orthogonalize_det(z, c.cov, robcov.median, robcov.mad)
+        resid = z - mean
+        d = np.einsum("ij,ij->i", resid, np.linalg.solve(cov, resid.T).T)
+        assert_equal(np.sort(idx), np.sort(np.argsort(d)[:h]))
+
+
+@pytest.mark.parametrize(
+    "cov_class, fit_kw",
+    [
+        (robcov.CovDetMCD, {"h": 51}),
+        (robcov.CovDetS, {}),
+        (robcov.CovDetMM, {}),
+    ],
+)
+def test_covdet_zero_standardizing_scale_raises(cov_class, fit_kw):
+    # GH-10437 suggestion 1: a binary column with more than half zeros has
+    # MAD == 0; raise a clear ValueError instead of LinAlgError / empty fit.
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    x[:, 2] = (rng.random(100) < 0.3).astype(float)
+    assert (x[:, 2] == 0).sum() > 50
+    assert_allclose(robcov.mad(x)[2], 0.0)
+
+    with pytest.raises(ValueError, match="standardizing scale is zero"):
+        cov_class(x).fit(**fit_kw)
+
+
+def test_cov_starting_zero_mad_raises():
+    # GH-10437: _cov_starting(standardize=True) also divides by mad0
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    x[:, 2] = (rng.random(100) < 0.3).astype(float)
+    with pytest.raises(ValueError, match="standardizing scale is zero"):
+        robcov._cov_starting(x, standardize=True)
+
+
+@pytest.mark.parametrize("reweight", [True, False])
+def test_covdet_mcd_tilted_plane_exact_fit_raises(reweight):
+    # https://github.com/statsmodels/statsmodels/issues/10437 (suggestion 2):
+    # more than h observations on a tilted plane
+    # (no column has MAD == 0). Put ALL rows on the plane so every C-step
+    # subset is singular and CI is not sensitive to platform FP around a
+    # near-exact-fit residual (Pyodide). Raise before reweight so default
+    # reweight=True cannot hide the exact-fit case.
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    x[:, 2] = x[:, 0] + x[:, 1]
+    assert (robcov.mad(x) > 0).all()
+
+    msg = "covariance of the h-subset is singular: at least h .* hyperplane"
+    with pytest.raises(ValueError, match=msg):
+        robcov.CovDetMCD(x).fit(h=51, reweight=reweight)
+
+
+@pytest.mark.parametrize("m_on", [55, 60, 70, 80])
+@pytest.mark.parametrize("seed", range(3))
+def test_covdet_mcd_partial_tilted_plane_exact_fit_raises(m_on, seed):
+    # At least h observations lie on a tilted plane, but not every row does.
+    # R reference (robustbase 0.99.7): with x the matrix generated below,
+    # covMcd(x, alpha=0.5, nsamp="deterministic") stops with the error
+    # "More than h of the observations lie on a hyperplane." for all cases
+    # (h = 52 is the R default for n=100, p=3).
+    rng = np.random.default_rng(seed)
+    x = rng.standard_normal((100, 3))
+    x[:m_on, 2] = x[:m_on, 0] + x[:m_on, 1]
+
+    with pytest.raises(ValueError, match="lie on a hyperplane"):
+        robcov.CovDetMCD(x).fit(h=52)
+
+
+@pytest.mark.parametrize("m_on, raises", [(50, False), (51, True), (52, True)])
+def test_covdet_mcd_exact_fit_boundary(m_on, raises):
+    # The guard triggers if at least h observations lie on the plane, so h - 1
+    # observations on the plane still fit.
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    x[:m_on, 2] = x[:m_on, 0] + x[:m_on, 1]
+
+    mod = robcov.CovDetMCD(x)
+    if raises:
+        with pytest.raises(ValueError, match="lie on a hyperplane"):
+            mod.fit(h=51, reweight=False)
+    else:
+        res = mod.fit(h=51, reweight=False)
+        assert not robcov._is_singular(res.cov)
+
+
+@pytest.mark.parametrize("h", [1, 2, 3])
+def test_covdet_mcd_h_too_small_raises(h):
+    # h must be larger than the number of variables, here k_vars = 3
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+
+    msg = "h must be larger than the number of variables"
+    with pytest.raises(ValueError, match=msg):
+        robcov.CovDetMCD(x).fit(h=h)
+
+
+def test_covdet_mcd_h_minimum_is_k_vars_plus_one():
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    res = robcov.CovDetMCD(x).fit(h=4, reweight=False)
+    assert res.cov.shape == (3, 3)
+
+
+def test_covdet_mcd_full_rank_polynomial_data_still_fits():
+    rng = np.random.default_rng(0)
+    t = rng.uniform(0, 1, 200)
+    x = np.column_stack([t**j for j in range(1, 6)])
+    assert np.linalg.matrix_rank(x) == 5
+
+    res = robcov.CovDetMCD(x).fit(h=(len(x) + x.shape[1] + 1) // 2)
+    assert np.isfinite(np.linalg.det(res.cov))
+
+
+def test_covdet_mcd_healthy_data_still_fits():
+    # Sanity: ordinary full-rank Gaussian data still returns a non-singular
+    # covariance after the exact-fit guard.
+    rng = np.random.default_rng(1)
+    x = rng.standard_normal((100, 3))
+    res = robcov.CovDetMCD(x).fit(h=51)
+    assert np.isfinite(np.linalg.det(res.cov))
+    assert np.linalg.det(res.cov) > 0
+    assert not robcov._is_singular(res.cov)

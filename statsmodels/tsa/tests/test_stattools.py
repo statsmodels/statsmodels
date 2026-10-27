@@ -1,3 +1,4 @@
+from statsmodels.compat.numpy import NP_LT_1_24
 from statsmodels.compat.pandas import MONTH_END, YEAR_END, assert_index_equal
 from statsmodels.compat.platform import PLATFORM_WIN
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lrange
@@ -18,14 +19,17 @@ from scipy import stats
 from scipy.interpolate import interp1d
 
 from statsmodels.datasets import macrodata, modechoice, nile, randhie, sunspots
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
+    ConvergenceWarning,
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
     SingularMatrixWarning,
 )
+from statsmodels.tools.testing import warns_or_none
+from statsmodels.tools.tools import add_constant
 
 # Remove imports when range unit root test gets an R implementation
 from statsmodels.tools.validation import array_like, bool_like
@@ -72,6 +76,13 @@ from statsmodels.tsa.stattools import (
     range_unit_root_test,
     zivot_andrews,
 )
+from statsmodels.tsa.stattools._stattools import (
+    _adf_autolag,
+    _autolag,
+    _pacf_ols_qr,
+    _pacf_yw_levinson,
+)
+from statsmodels.tsa.tsatools import add_trend, lagmat
 
 DECIMAL_8 = 8
 DECIMAL_6 = 6
@@ -1115,7 +1126,9 @@ class TestBreakvarHeteroskedasticityTest:
                 np.nan,
             ]
         )
-        _result = breakvar_heteroskedasticity_test(input_residuals)
+        # The third column has too few early observations on purpose
+        with pytest.warns(UserWarning, match="Early subset of data for variable 2"):
+            _result = breakvar_heteroskedasticity_test(input_residuals)
         actual_statistic, actual_pvalue = _result.statistic, _result.pvalue
 
         assert_equal(actual_statistic, expected_statistic)
@@ -1606,6 +1619,16 @@ class TestKPSS:
         with pytest.raises(MissingDataError, match="must contain only finite values"):
             kpss(x)
 
+    @pytest.mark.parametrize("regression", ["c", "ct"])
+    @pytest.mark.parametrize("nlags", ["auto", "legacy", 5])
+    def test_kpss_fails_on_constant(self, regression, nlags):
+        # a constant series has zero residual variance, which used to crash
+        # the automatic lag selection with "cannot convert float NaN to
+        # integer" or return a NaN or meaningless statistic
+        # GH8224
+        with pytest.raises(ValueError, match="x is constant"):
+            kpss(np.ones(100), regression, nlags=nlags)
+
     def test_kpss_fails_on_nobs_check(self):
         # Test that if lags exceeds number of observations KPSS raises a
         # clear error
@@ -1760,10 +1783,12 @@ class TestRUR:
         The test statistic is outside of the range of p-values available in the
         look-up table. The actual p-value is {direction} than the p-value returned.
         """
+        # the null is rejected for small statistics: below the table the actual
+        # p-value is smaller than reported, above it larger
         direction = ""
-        if p_value == pvals[-1]:
+        if rur_stat < inter_crit[0, 0]:
             direction = "smaller"
-        elif p_value == pvals[0]:
+        elif rur_stat >= inter_crit[0, -1]:
             direction = "larger"
 
         if direction:
@@ -1803,13 +1828,17 @@ class TestRUR:
     def test_teststat(self):
         with pytest.warns(InterpolationWarning):
             rur_stat, _, _ = range_unit_root_test(self.x, result_object=False)
-        simple_rur_stat, _, _ = self.simple_rur(self.x)
+        # The reference implementation warns for the same out of table statistic
+        with pytest.warns(InterpolationWarning, match="The test statistic is"):
+            simple_rur_stat, _, _ = self.simple_rur(self.x)
         assert_almost_equal(rur_stat, simple_rur_stat, DECIMAL_3)
 
     def test_pval(self):
         with pytest.warns(InterpolationWarning):
             _, pval, _ = range_unit_root_test(self.x, result_object=False)
-        _, simple_pval, _ = self.simple_rur(self.x)
+        # The reference implementation warns for the same out of table statistic
+        with pytest.warns(InterpolationWarning, match="The test statistic is"):
+            _, simple_pval, _ = self.simple_rur(self.x)
         assert_equal(pval, simple_pval)
 
     def test_store(self):
@@ -1837,6 +1866,40 @@ class TestRUR:
         assert isinstance(res, RURResult)
         assert res.resstore is not None
         assert res.resstore.nobs == len(self.x)
+
+    def test_interpolation_warning_direction(self):
+        # statistic below the table: the actual p-value is smaller
+        msg = "The actual p-value is smaller than the p-value returned"
+        with pytest.warns(InterpolationWarning, match=msg) as record:
+            res = range_unit_root_test(np.zeros(250), result_object=True)
+        assert len(record) == 1
+        assert res.statistic == 0.0
+        assert res.pvalue == 0.01
+        # statistic above the table: the actual p-value is larger
+        msg = "The actual p-value is larger than the p-value returned"
+        with pytest.warns(InterpolationWarning, match=msg) as record:
+            res = range_unit_root_test(np.arange(250.0), result_object=True)
+        assert len(record) == 1
+        assert res.pvalue == 0.95
+
+    def test_no_warning_lower_edge(self):
+        # 20 new extremes in 250 observations: 20 / sqrt(250) = 1.265 is between
+        # the 5% (1.2242) and 10% (1.3632) critical values, so the p-value is
+        # 0.10 and inside the table
+        x = np.r_[np.arange(21.0), np.full(229, 10.0)]
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = range_unit_root_test(x, result_object=True)
+        assert res.pvalue == 0.10
+
+    def test_no_warning_inside_table(self):
+        # 47 new extremes in 250 observations is between the 0.90 and 0.95
+        # critical values, so the p-value is inside the table
+        x = np.r_[np.arange(48.0), np.full(202, 20.5)]
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            res = range_unit_root_test(x, result_object=True)
+        assert res.pvalue == 0.95
 
 
 def test_pandasacovf():
@@ -2247,11 +2310,15 @@ def test_levinson_durbin_nlags_too_long():
 
 
 def test_levinson_durbin_negative_nlags():
-    # a negative nlags used to leak a bare IndexError from the recursion
-    with pytest.raises(ValueError, match="non-negative"):
-        levinson_durbin(np.arange(10.0), nlags=-1)
-    with pytest.raises(ValueError, match="non-negative"):
-        levinson_durbin(np.array([2.0, 1.0, 0.5]), nlags=-1, isacov=True)
+    # a negative nlags used to leak a bare IndexError from the recursion, and
+    # so does nlags=0, the recursion needs at least one lag
+    for nlags in (-1, 0):
+        with pytest.raises(ValueError, match="nlags must be positive"):
+            levinson_durbin(np.arange(10.0), nlags=nlags)
+        with pytest.raises(ValueError, match="nlags must be positive"):
+            levinson_durbin(np.array([2.0, 1.0, 0.5]), nlags=nlags, isacov=True)
+    res = levinson_durbin(np.array([2.0, 1.0, 0.5]), nlags=1, isacov=True)
+    assert res.arcoefs.shape == (1,)
 
 
 @pytest.mark.parametrize("missing", ["conservative", "drop", "raise", "none"])
@@ -2504,6 +2571,220 @@ def test_adfuller_maxlag_too_large():
     y = rs.standard_normal(100)
     with pytest.raises(ValueError, match="maxlag must be less than"):
         adfuller(y, maxlag=51)
+
+
+def _adf_tstat_no_trend(x, lag):
+    # t-statistic of the lagged level in the ADF regression without
+    # deterministic terms, computed directly with lstsq
+    dx = np.diff(x)
+    endog = dx[lag:]
+    exog = np.column_stack(
+        [x[lag:-1]] + [dx[lag - j : len(dx) - j] for j in range(1, lag + 1)]
+    )
+    params, rss, _, _ = np.linalg.lstsq(exog, endog, rcond=None)
+    df_resid = exog.shape[0] - exog.shape[1]
+    scale = rss[0] / df_resid
+    bse = np.sqrt(scale * np.linalg.inv(exog.T @ exog)[0, 0])
+    return params[0] / bse
+
+
+@pytest.mark.parametrize("nobs", [12, 16, 20])
+@pytest.mark.parametrize("autolag", ["aic", "bic", "t-stat", None])
+def test_adfuller_no_trend_even_nobs(nobs, autolag):
+    # GH 9375: with regression="n" and an even nobs, the default maxlag
+    # gave an exactly fitted regression and a statistic of 0
+    rng = np.random.default_rng(9375)
+    x = rng.standard_normal(nobs).cumsum()
+    res = adfuller(x, regression="n", autolag=autolag, store=True, result_object=True)
+    assert res.resstore.maxlag == (nobs - 3) // 2
+    assert res.resstore.resols.df_resid >= 1
+    assert_allclose(res.statistic, _adf_tstat_no_trend(x, res.lags), rtol=1e-8)
+
+
+def test_adfuller_no_trend_even_nobs_maxlag_too_large():
+    rng = np.random.default_rng(9375)
+    y = rng.standard_normal(20)
+    with pytest.raises(ValueError, match="maxlag must be less than or equal to 8"):
+        adfuller(y, maxlag=9, regression="n")
+    res = adfuller(y, maxlag=8, regression="n", autolag=None, result_object=True)
+    assert_allclose(res.statistic, _adf_tstat_no_trend(y, 8), rtol=1e-8)
+
+
+def test_coint_short_even_sample():
+    # GH 9375: coint on 20 observations returned a statistic of 0 and a
+    # p-value of 0.9859 for any input
+    rng = np.random.default_rng(9375)
+    y0 = rng.standard_normal(20)
+    y1 = rng.standard_normal(20)
+    res = coint(y0, y1)
+    resid = OLS(y0, np.column_stack([y1, np.ones(20)])).fit().resid
+    adf = adfuller(resid, regression="n", store=True, result_object=True)
+    assert adf.resstore.resols.df_resid >= 1
+    assert_allclose(res.coint_t, _adf_tstat_no_trend(resid, adf.lags), rtol=1e-8)
+    assert res.coint_t != 0
+
+
+def _adf_autolag_ols(x, maxlag, regression, method):
+    # lag search with one OLS fit per lag length, using the design matrix
+    # that adfuller builds for _autolag
+    xdiff = np.diff(x)
+    xdall = lagmat(xdiff[:, None], maxlag, trim="both", original="in")
+    nobs = xdall.shape[0]
+    xdall[:, 0] = x[-nobs - 1 : -1]
+    endog = xdiff[-nobs:]
+    exog = xdall if regression == "n" else add_trend(xdall, regression, prepend=True)
+    startlag = exog.shape[1] - xdall.shape[1] + 1
+    icbest, bestlag = _autolag(OLS, endog, exog, startlag, maxlag, method)
+    return icbest, bestlag - startlag
+
+
+def _adf_autolag_series(kind, nobs, rng):
+    e = rng.standard_normal(nobs)
+    if kind == "random_walk":
+        return np.cumsum(e)
+    elif kind == "ar":
+        x = np.zeros(nobs)
+        for t in range(3, nobs):
+            x[t] = 0.5 * x[t - 1] + 0.2 * x[t - 2] - 0.3 * x[t - 3] + e[t]
+        return x
+    elif kind == "integrated_ma":
+        return np.cumsum(e + 0.8 * np.r_[0.0, e[:-1]])
+    elif kind == "trend":
+        return 5.0 + 0.05 * np.arange(nobs) + np.cumsum(e)
+    elif kind == "integer_steps":
+        return np.cumsum(rng.integers(-1, 2, nobs)).astype(float)
+    elif kind == "mostly_constant":
+        x = np.zeros(nobs)
+        x[nobs // 2 :] = np.cumsum(e[nobs // 2 :])
+        return x
+    else:  # kind == "heavy_tails"
+        return np.cumsum(rng.standard_t(1.5, nobs))
+
+
+@pytest.mark.parametrize("regression", ["n", "c", "ct", "ctt"])
+@pytest.mark.parametrize("method", ["aic", "bic", "t-stat"])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "random_walk",
+        "ar",
+        "integrated_ma",
+        "trend",
+        "integer_steps",
+        "mostly_constant",
+        "heavy_tails",
+    ],
+)
+def test_adf_autolag_qr_matches_ols(regression, method, kind):
+    # GH 1849: the lag search from a single QR decomposition gives the same
+    # lag and criterion as fitting one OLS model per lag length
+    rng = np.random.default_rng(1849)
+    # The t-values of the OLS fits lose some precision when the trend
+    # columns are badly scaled ("ctt"), and an exactly zero t-value is only
+    # zero up to rounding
+    rtol, atol = (1e-8, 1e-12) if method == "t-stat" else (1e-10, 0)
+    for nobs in [12, 25, 300]:
+        x = _adf_autolag_series(kind, nobs, rng)
+        ntrend = len(regression) if regression != "n" else 0
+        max_maxlag = min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
+        default = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
+        for maxlag in {0, 1, min(default, max_maxlag), min(max_maxlag, 25)}:
+            icbest, bestlag = _adf_autolag(x, maxlag, regression, method)
+            expected = _adf_autolag_ols(x, maxlag, regression, method)
+            assert bestlag == expected[1]
+            assert_allclose(icbest, expected[0], rtol=rtol, atol=atol)
+
+
+def test_adf_autolag_qr_blocks():
+    # more observations than one block of rows
+    rng = np.random.default_rng(1849)
+    x = np.cumsum(rng.standard_normal(20000))
+    x[1:] += 0.3 * np.diff(x)
+    for method in ["aic", "bic", "t-stat"]:
+        icbest, bestlag = _adf_autolag(x, 6, "ct", method)
+        expected = _adf_autolag_ols(x, 6, "ct", method)
+        assert bestlag == expected[1]
+        assert_allclose(icbest, expected[0], rtol=1e-10)
+
+
+@pytest.mark.parametrize("method", ["aic", "bic", "t-stat"])
+def test_adf_autolag_qr_scaled(method):
+    # the criteria change only by a constant and the t-statistics not at all
+    # when the data are scaled, so the selected lag is the same
+    rng = np.random.default_rng(1849)
+    x = _adf_autolag_series("ar", 300, rng)
+    icbest, bestlag = _adf_autolag(x, 12, "c", method)
+    icbest_scaled, bestlag_scaled = _adf_autolag(1e8 * x, 12, "c", method)
+    assert bestlag_scaled == bestlag
+    if method == "t-stat":
+        assert_allclose(icbest_scaled, icbest, rtol=1e-12)
+
+
+def _adf_autolag_singular_series(kind):
+    t = np.arange(120.0)
+    if kind == "periodic":
+        # lagged differences are exactly collinear
+        return np.cumsum(np.tile([1.0, -1.0, 2.0], 40))
+    elif kind == "geometric":
+        return 0.5 ** (t / 10)
+    elif kind == "exact_fit":
+        # full rank regressors with zero residuals
+        x = np.zeros(30)
+        for i in range(1, 30):
+            x[i] = 1.0 + 0.5 * x[i - 1]
+        return x
+    else:  # kind == "nonfinite"
+        x = np.cumsum(np.ones(30))
+        x[20] = np.nan
+        return x
+
+
+@pytest.mark.parametrize("kind", ["periodic", "geometric", "exact_fit", "nonfinite"])
+def test_adf_autolag_qr_singular(kind):
+    # the QR lag search declines singular or exactly fitted regressions
+    x = _adf_autolag_singular_series(kind)
+    assert _adf_autolag(x, 2, "c", "aic") is None
+
+
+@pytest.mark.parametrize("kind", ["periodic", "geometric", "exact_fit"])
+@pytest.mark.parametrize("method", ["aic", "bic", "t-stat"])
+def test_adfuller_autolag_singular_uses_ols(kind, method):
+    # adfuller falls back to fitting one OLS model per lag length
+    x = _adf_autolag_singular_series(kind)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SingularMatrixWarning)
+        res = adfuller(x, maxlag=2, autolag=method, result_object=True)
+        res_ols = adfuller(
+            x, maxlag=2, autolag=method, regresults=True, result_object=True
+        )
+    assert res.lags == res_ols.lags
+    assert_equal(res.icbest, res_ols.icbest)
+    assert_equal(res.statistic, res_ols.statistic)
+
+
+@pytest.mark.parametrize("regression", ["n", "c", "ct", "ctt"])
+@pytest.mark.parametrize("autolag", ["AIC", "BIC", "t-stat"])
+def test_adfuller_autolag_regresults_consistent(regression, autolag):
+    # regresults=True keeps the OLS results of every lag length, the
+    # default uses the QR lag search
+    rng = np.random.default_rng(1849)
+    x = _adf_autolag_series("ar", 500, rng)
+    res = adfuller(
+        x, regression=regression, autolag=autolag, store=True, result_object=True
+    )
+    res_ols = adfuller(
+        x,
+        regression=regression,
+        autolag=autolag,
+        regresults=True,
+        result_object=True,
+    )
+    assert res.lags == res_ols.lags
+    assert res.nobs == res_ols.nobs
+    assert_allclose(res.icbest, res_ols.icbest, rtol=1e-10)
+    assert_allclose(res.statistic, res_ols.statistic, rtol=1e-12)
+    assert not hasattr(res.resstore, "autolag_results")
+    assert len(res_ols.resstore.autolag_results) == res_ols.resstore.maxlag + 1
 
 
 @pytest.fixture
@@ -2759,7 +3040,200 @@ def test_pacf_1_obs():
         pacf_burg(y)
     with pytest.raises(ValueError):
         pacf_ols(y)
-    pacf_yw(y)
+    # One observation gives 0 / 0 in the autocovariance and a singular matrix
+    with (
+        warns_or_none(RuntimeWarning, match="invalid value encountered"),
+        warns_or_none(SingularMatrixWarning, match="Matrix is singular"),
+    ):
+        pacf_yw(y)
+
+
+def _pacf_yw_loop(x, nlags, method):
+    # pacf_yw with one yule_walker fit per lag
+    pacf = [1.0]
+    for k in range(1, nlags + 1):
+        pacf.append(yule_walker(x, k, method=method, result_object=False)[0][-1])
+    return np.array(pacf)
+
+
+def _pacf_ols_loop(x, nlags, efficient, adjusted):
+    # pacf_ols with one least squares fit per lag
+    nobs = x.shape[0]
+    pacf = np.empty(nlags + 1)
+    pacf[0] = 1.0
+    if efficient:
+        res = lagmat(x, nlags, original="sep")
+        xlags, x0 = add_constant(res.lags), res.leads
+        for k in range(1, nlags + 1):
+            params = np.linalg.lstsq(xlags[k:, : k + 1], x0[k:], rcond=None)[0]
+            pacf[k] = np.squeeze(params[-1])
+    else:
+        x = x - np.mean(x)
+        res = lagmat(x, nlags, original="sep", trim="both")
+        xlags, x0 = res.lags, res.leads
+        for k in range(1, nlags + 1):
+            params = np.linalg.lstsq(xlags[:, :k], x0, rcond=None)[0]
+            pacf[k] = np.squeeze(params[-1])
+    if adjusted:
+        pacf *= nobs / (nobs - np.arange(nlags + 1))
+    return pacf
+
+
+def _pacf_series(kind, nobs, rng):
+    e = rng.standard_normal(nobs)
+    if kind == "white_noise":
+        return e
+    elif kind == "ar":
+        x = np.zeros(nobs)
+        for t in range(3, nobs):
+            x[t] = 0.6 * x[t - 1] - 0.3 * x[t - 2] + 0.2 * x[t - 3] + e[t]
+        return x
+    elif kind == "near_unit_root":
+        x = np.zeros(nobs)
+        for t in range(1, nobs):
+            x[t] = 0.999 * x[t - 1] + e[t]
+        return x
+    elif kind == "random_walk":
+        return 100.0 + np.cumsum(e)
+    elif kind == "mostly_constant":
+        x = np.full(nobs, 3.0)
+        x[nobs // 2 :] += 1e-3 * np.cumsum(e[nobs // 2 :])
+        return x
+    else:  # kind == "heavy_tails"
+        return rng.standard_t(1.5, nobs)
+
+
+PACF_SERIES = [
+    "white_noise",
+    "ar",
+    "near_unit_root",
+    "random_walk",
+    "mostly_constant",
+    "heavy_tails",
+]
+
+
+@pytest.mark.parametrize("method", ["adjusted", "mle"])
+@pytest.mark.parametrize("kind", PACF_SERIES)
+def test_pacf_yw_levinson_matches_yule_walker(method, kind):
+    # Levinson-Durbin gives the same values as one yule_walker fit per lag
+    rng = np.random.default_rng(10526)
+    for nobs in [5, 12, 25, 300]:
+        x = _pacf_series(kind, nobs, rng)
+        for nlags in {1, 2, nobs // 2 - 1, min(nobs - 1, 40)} - {0}:
+            expected = _pacf_yw_loop(x, nlags, method)
+            assert_allclose(pacf_yw(x, nlags, method), expected, rtol=0, atol=1e-12)
+
+
+@pytest.mark.parametrize("efficient", [True, False])
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("kind", PACF_SERIES)
+def test_pacf_ols_qr_matches_lstsq(efficient, adjusted, kind):
+    # one QR gives the same values as one least squares fit per lag
+    rng = np.random.default_rng(10526)
+    # With half of the sample constant, the regressions with the most lags
+    # are close to singular, and both methods lose precision
+    rtol = 1e-7 if kind == "mostly_constant" else 1e-10
+    for nobs in [5, 12, 25, 300]:
+        x = _pacf_series(kind, nobs, rng)
+        for nlags in {1, 2, nobs // 2 - 1, nobs // 2, min(nobs // 2, 40)} - {0}:
+            expected = _pacf_ols_loop(x, nlags, efficient, adjusted)
+            res = pacf_ols(x, nlags, efficient=efficient, adjusted=adjusted)
+            assert_allclose(res, expected, rtol=rtol, atol=1e-12)
+
+
+def test_pacf_qr_blocks():
+    # more observations than one block of rows
+    rng = np.random.default_rng(10526)
+    x = _pacf_series("ar", 20000, rng)
+    for efficient in [True, False]:
+        assert _pacf_ols_qr(x - x.mean(), 30, efficient) is not None
+        res = pacf_ols(x, 30, efficient=efficient)
+        expected = _pacf_ols_loop(x, 30, efficient, False)
+        assert_allclose(res, expected, rtol=0, atol=1e-13)
+    for method in ["adjusted", "mle"]:
+        expected = _pacf_yw_loop(x, 30, method)
+        assert_allclose(pacf_yw(x, 30, method), expected, rtol=0, atol=1e-13)
+
+
+def test_pacf_ols_large_mean():
+    # The efficient regressions include a constant, so the PACF does not
+    # depend on the mean. lstsq on the raw data loses precision when the
+    # mean is large relative to the variation, the QR uses demeaned data.
+    rng = np.random.default_rng(10526)
+    x = _pacf_series("ar", 400, rng)
+    for level in [0.0, 1e4, 1e8, 1e12]:
+        y = x + level
+        expected = _pacf_ols_loop(y - y.mean(), 10, True, False)
+        assert_allclose(pacf_ols(y, 10), expected, rtol=0, atol=1e-12)
+
+
+def test_pacf_2d_input():
+    rng = np.random.default_rng(10526)
+    x = _pacf_series("ar", 200, rng)
+    assert_allclose(pacf_yw(x[:, None], 10), pacf_yw(x, 10), rtol=1e-15)
+    assert_allclose(pacf_ols(x[:, None], 10), pacf_ols(x, 10), rtol=1e-15)
+
+
+def _pacf_singular_series(kind):
+    t = np.arange(60.0)
+    if kind == "constant":
+        return np.ones(60)
+    elif kind == "alternating":
+        return (-1.0) ** t
+    elif kind == "periodic":
+        return np.tile([1.0, -1.0, 2.0], 20)
+    elif kind == "sine":
+        return np.sin(0.3 * t)
+    else:  # kind == "trend"
+        return t
+
+
+@pytest.mark.parametrize(
+    "kind", ["constant", "alternating", "periodic", "sine", "trend"]
+)
+def test_pacf_yw_levinson_not_positive_definite(kind):
+    # the recursion stops where the Toeplitz matrix is not positive definite
+    # and yule_walker is used for the remaining lags
+    x = _pacf_singular_series(kind)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SingularMatrixWarning)
+        for method in ["adjusted", "mle"]:
+            expected = _pacf_yw_loop(x, 20, method)
+            assert_allclose(pacf_yw(x, 20, method), expected, rtol=0, atol=1e-13)
+    if kind != "trend":
+        assert _pacf_yw_levinson(x, 20, True).shape[0] < 21
+
+
+@pytest.mark.parametrize(
+    "kind", ["constant", "alternating", "periodic", "sine", "trend"]
+)
+@pytest.mark.parametrize("efficient", [True, False])
+def test_pacf_ols_qr_singular(kind, efficient):
+    # close to singular regressions are fitted one by one
+    x = _pacf_singular_series(kind)
+    assert _pacf_ols_qr(x - x.mean(), 20, efficient) is None
+    expected = _pacf_ols_loop(x, 20, efficient, False)
+    assert_allclose(pacf_ols(x, 20, efficient=efficient), expected, rtol=1e-15)
+
+
+def test_pacf_nonfinite():
+    # Data that are not finite are left to the per-lag fits
+    x = np.cumsum(np.ones(30))
+    x[20] = np.nan
+    assert _pacf_yw_levinson(x, 5, True).shape[0] == 1
+    assert _pacf_ols_qr(x, 5, True) is None
+
+
+@pytest.mark.skipif(PYTHON_IMPL_WASM, reason="No fp exception support in WASM")
+def test_pacf_nonfinite_per_lag_fits():
+    x = np.cumsum(np.ones(30))
+    x[20] = np.nan
+    assert np.all(np.isnan(pacf_yw(x, 5)[1:]))
+    # NumPy 1.23 raises a SystemError instead of the LinAlgError
+    error = SystemError if NP_LT_1_24 else np.linalg.LinAlgError
+    with pytest.raises(error):
+        pacf_ols(x, 5)
 
 
 def test_zivot_andrews_change_data():
@@ -2813,9 +3287,12 @@ class TestLeybourneMcCabe:
     def test_dbaa_results(self):
         mdl_file = Path(self.run_dir).joinpath("DBAA.csv")
         mdl = np.asarray(pd.read_csv(mdl_file))
-        res = leybourne(mdl, method="mle")
+        # The default ML fit may stop short of convergence on some platforms
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood"):
+            res = leybourne(mdl, method="mle")
         assert_allclose(res[0:3], [0.096534, 0.602535, 2], rtol=1e-4, atol=1e-4)
-        res = leybourne(mdl, regression="ct", method="mle")
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood"):
+            res = leybourne(mdl, regression="ct", method="mle")
         assert_allclose(res[0:3], [0.047924, 0.601817, 2], rtol=1e-4, atol=1e-4)
 
     def test_dsp500_results(self):
@@ -2878,7 +3355,9 @@ def test_acovf_all_missing():
     ):
         acovf(x, missing="drop")
 
-    assert np.all(np.isnan(acovf(x, missing="conservative")))
+    # Without observations the mean and the autocovariances are 0 / 0
+    with warns_or_none(RuntimeWarning, match="invalid value encountered"):
+        assert np.all(np.isnan(acovf(x, missing="conservative")))
 
 
 def test_stattools_fixed_arity_result_objects():
@@ -2930,6 +3409,28 @@ def test_stattools_fixed_arity_result_objects():
     assert res[0] == res.coint_t
     assert res[1] == res.pvalue
     assert res[2] is res.critical_values
+
+
+@pytest.mark.parametrize("func", [acf, pacf, ccf, pccf])
+def test_confint_alpha_out_of_range(func):
+    # alpha outside (0, 1) previously returned inf/-inf bounds silently
+    rng = np.random.RandomState(1234)
+    x = rng.normal(size=50)
+    y = rng.normal(size=50)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        if func in (ccf, pccf):
+            func(x, y, nlags=5, alpha=2)
+        else:
+            func(x, nlags=5, alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        if func in (ccf, pccf):
+            func(x, y, nlags=5, alpha=0)
+        else:
+            func(x, nlags=5, alpha=0)
+    # a valid alpha still returns the interval
+    res = acf(x, nlags=5, alpha=0.05, result_object=False)
+    assert len(res) == 2
+    assert np.isfinite(res[1]).all()
 
 
 def test_arma_order_select_ic_negative_bounds():

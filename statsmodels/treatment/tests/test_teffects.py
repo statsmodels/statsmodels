@@ -223,3 +223,55 @@ def test_select_params_not_six(meth):
     res0 = getattr(teff, meth)(return_results=True)
     assert_allclose(res1, res0.effect, rtol=1e-12)
     assert_allclose(res0.start_params, res0.results_gmm.params, rtol=1e-12)
+
+
+@pytest.mark.parametrize("meth", ["ipw", "aipw", "aipw_wls", "ipw_ra"])
+@pytest.mark.parametrize("effect_group", ["all", 1, 0])
+def test_ps_bounds_gmm(meth, effect_group):
+    # The moment conditions of the GMM have to clip the propensity score at
+    # the same bounds as the point estimates. The estimates solve the exactly
+    # identified moment conditions, so the GMM stays at them if it does.
+    bounds = (0.1, 0.3)
+    prob = res_probit.predict()
+    # more than 40% of the propensity scores are clipped
+    assert np.mean((prob < bounds[0]) | (prob > bounds[1])) > 0.4
+    formula_outcome = "bweight ~ prenatal1_ + mmarried_ + mage + fbaby_"
+    mod = OLS.from_formula(formula_outcome, dta_cat)
+    tind = np.asarray(dta_cat["mbsmoke_"])
+    teff = TreatmentEffect(mod, tind, results_select=res_probit,
+                           ps_bounds=bounds)
+    assert_allclose(teff.prob_select, np.clip(prob, *bounds), rtol=1e-12)
+
+    point = getattr(teff, meth)(return_results=False,
+                                effect_group=effect_group)
+    res = getattr(teff, meth)(return_results=True, effect_group=effect_group)
+    assert_allclose(res.effect, point, rtol=1e-12)
+    assert_allclose(res.start_params, res.results_gmm.params, rtol=1e-12)
+
+    # the bounds change the estimate
+    teff_default = TreatmentEffect(mod, tind, results_select=res_probit)
+    point_default = getattr(teff_default, meth)(
+        return_results=False, effect_group=effect_group)
+    assert abs(point[0] - point_default[0]) > 0.5
+
+
+@pytest.mark.parametrize(
+    "bounds",
+    [(0, 0.5), (0.5, 1), (0.6, 0.4), (0.3, 0.3), (-0.1, 0.9), (0.1, 1.5),
+     (np.nan, 0.9), (0.1, np.nan)],
+)
+def test_ps_bounds_invalid(bounds):
+    formula_outcome = "bweight ~ prenatal1_ + mmarried_ + mage + fbaby_"
+    mod = OLS.from_formula(formula_outcome, dta_cat)
+    tind = np.asarray(dta_cat["mbsmoke_"])
+    with pytest.raises(ValueError, match="ps_bounds values must satisfy"):
+        TreatmentEffect(mod, tind, results_select=res_probit, ps_bounds=bounds)
+
+
+@pytest.mark.parametrize("bounds", [(0.1,), (0.1, 0.5, 0.9), 0.5])
+def test_ps_bounds_shape(bounds):
+    formula_outcome = "bweight ~ prenatal1_ + mmarried_ + mage + fbaby_"
+    mod = OLS.from_formula(formula_outcome, dta_cat)
+    tind = np.asarray(dta_cat["mbsmoke_"])
+    with pytest.raises(ValueError, match="ps_bounds"):
+        TreatmentEffect(mod, tind, results_select=res_probit, ps_bounds=bounds)

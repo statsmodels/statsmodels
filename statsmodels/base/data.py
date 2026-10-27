@@ -7,8 +7,6 @@ from __future__ import annotations
 
 from statsmodels.compat.python import lmap
 
-from functools import reduce
-
 import numpy as np
 from pandas import DataFrame, MultiIndex, Series, isnull
 
@@ -44,14 +42,11 @@ def _nan_rows(*arrs):
     if len(arrs) == 1:
         arrs += ([[False]],)
 
-    def _nan_row_maybe_two_inputs(x, y):
-        # check for dtype bc dataframe has dtypes
-        x_is_boolean_array = hasattr(x, "dtype") and x.dtype == bool and x
-        return np.logical_or(
-            _asarray_2d_null_rows(x), (x_is_boolean_array | _asarray_2d_null_rows(y))
-        )
-
-    return reduce(_nan_row_maybe_two_inputs, arrs).squeeze()
+    nan_rows = _asarray_2d_null_rows(arrs[0])
+    for arr in arrs[1:]:
+        nan_rows = nan_rows | _asarray_2d_null_rows(arr)
+    # atleast_1d so that a single row still gives a mask, not a scalar
+    return np.atleast_1d(nan_rows.squeeze())
 
 
 class ModelData:
@@ -135,9 +130,10 @@ class ModelData:
             # detect where the constant is
             check_implicit = False
             exog_max = np.max(self.exog, axis=0)
-            if not np.isfinite(exog_max).all():
-                raise MissingDataError("exog contains inf or nans")
             exog_min = np.min(self.exog, axis=0)
+            # nan propagates in the max and min, -inf is only found by the min
+            if not (np.isfinite(exog_max).all() and np.isfinite(exog_min).all()):
+                raise MissingDataError("exog contains inf or nans")
             const_idx = np.where(exog_max == exog_min)[0].squeeze()
             self.k_constant = const_idx.size
 
@@ -299,7 +295,7 @@ class ModelData:
         else:
             nan_mask = _nan_rows(*combined)
             if combined_2d:
-                nan_mask = _nan_rows(*(nan_mask[:, None],) + combined_2d)
+                nan_mask = nan_mask | _nan_rows(*combined_2d)
 
         if not np.any(nan_mask):  # no missing do not do anything
             combined = dict(zip(combined_names, combined, strict=True))
@@ -319,6 +315,10 @@ class ModelData:
             raise MissingDataError("NaNs were encountered in the data")
 
         elif missing == "drop":
+            if np.all(nan_mask):
+                raise MissingDataError(
+                    "All observations were dropped because of missing values"
+                )
             nan_mask = ~nan_mask
 
             def drop_nans(x):

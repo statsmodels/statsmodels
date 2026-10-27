@@ -955,3 +955,24 @@ def test_prepare_trend_spec_array(trend):
     actual = tools.prepare_trend_spec(np.array(trend))
     assert_equal(actual[0], expected[0])
     assert_equal(actual[1], expected[1])
+
+
+@pytest.mark.parametrize(
+    "trend",
+    [
+        np.array(["c", "t"]),
+        ["c", "t"],
+        np.array([b"c", b"t"]),
+        [None, 1],
+        [[1, 0], [0, 1]],
+        [np.nan, 1],
+        [np.inf, 1],
+        np.array([1j, 1]),
+    ],
+    ids=["str array", "str list", "bytes", "None", "2d", "nan", "inf", "complex"],
+)
+def test_prepare_trend_spec_invalid_array(trend):
+    # a trend that is not a one-dimensional array of numbers used to raise a
+    # UFuncTypeError, or to be accepted and give a trend with the wrong terms
+    with pytest.raises(ValueError, match="Valid trend inputs are"):
+        tools.prepare_trend_spec(trend)

@@ -26,7 +26,14 @@ from pandas.testing import assert_frame_equal
 import pytest
 from scipy import stats
 
-from statsmodels.datasets import macrodata, sunspots
+from statsmodels.datasets import macrodata, randhie, sunspots
+from statsmodels.discrete.count_model import ZeroInflatedPoisson
+from statsmodels.discrete.discrete_model import (
+    Logit,
+    NegativeBinomial,
+    Poisson,
+    Probit,
+)
 from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
@@ -34,6 +41,7 @@ import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.sm_exceptions import SingularMatrixWarning
 from statsmodels.tools.tools import Bunch, add_constant
 from statsmodels.tsa.ar_model import AutoReg
+from statsmodels.tsa.ardl import ARDL
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import acf
 
@@ -1852,6 +1860,50 @@ def test_ljungbox_auto_lag_threshold_excludes_lag_zero():
     assert smsdia.acorr_ljungbox(data, auto_lag=True).shape[0] == 1
 
 
+@pytest.mark.parametrize(
+    "lags, msg",
+    [
+        (0, r"got 0 \(nobs=50\)"),
+        (-3, r"got -3 \(nobs=50\)"),
+        ([0], r"got a smallest lag of 0 \(nobs=50\)"),
+        ([0, 1], r"got a smallest lag of 0 \(nobs=50\)"),
+        ([0, 2], r"got a smallest lag of 0 \(nobs=50\)"),
+        ([-1, 2], r"got a smallest lag of -1 \(nobs=50\)"),
+        ([-1, -2], r"got a smallest lag of -2 \(nobs=50\)"),
+        ([], r"got an empty lags \(nobs=50\)"),
+    ],
+)
+def test_ljungbox_rejects_lag_zero(lags, msg):
+    # Lag 0 indexed the cumulative sum at -1, so it silently returned the
+    # statistic for the largest lag. An empty lag list failed with a reduction
+    # error instead of a message about the lags.
+    data = np.random.default_rng(7).standard_normal(50)
+    with pytest.raises(ValueError, match="lags must be positive integers, " + msg):
+        smsdia.acorr_ljungbox(data, lags=lags)
+
+
+@pytest.mark.parametrize("period", [None, 4])
+def test_ljungbox_default_lags_short_series(period):
+    # nobs // 5 is 0, so the default number of lags is empty
+    data = np.random.default_rng(7).standard_normal(3)
+    with pytest.raises(ValueError, match="default number of lags is below 1"):
+        smsdia.acorr_ljungbox(data, period=period)
+    # explicit lags still work
+    res = smsdia.acorr_ljungbox(data, lags=[1])
+    assert res.shape[0] == 1
+
+
+def test_ljungbox_valid_lags_match_single_lag():
+    data = np.random.default_rng(7).standard_normal(50)
+    # Valid lags give the same values as each lag computed on its own.
+    both = smsdia.acorr_ljungbox(data, lags=[1, 2])
+    lag1 = smsdia.acorr_ljungbox(data, lags=[1])
+    lag2 = smsdia.acorr_ljungbox(data, lags=[2])
+    assert both.shape[0] == 2
+    assert_allclose(both["lb_stat"].to_numpy()[0], lag1["lb_stat"].to_numpy()[0])
+    assert_allclose(both["lb_stat"].to_numpy()[1], lag2["lb_stat"].to_numpy()[0])
+
+
 def test_ljungbox_errors_warnings():
     data = sunspots.load_pandas().data["SUNACTIVITY"]
     with pytest.raises(ValueError, match="model_df must"):
@@ -1863,6 +1915,25 @@ def test_ljungbox_errors_warnings():
     smsdia.acorr_ljungbox(data)
     ret = smsdia.acorr_ljungbox(data, lags=10)
     assert isinstance(ret, pd.DataFrame)
+
+
+@pytest.mark.parametrize("return_df", [True, False])
+def test_ljungbox_return_df_deprecated(return_df):
+    data = sunspots.load_pandas().data["SUNACTIVITY"]
+    expected = smsdia.acorr_ljungbox(data, lags=10)
+    with pytest.warns(FutureWarning, match="return_df is unused") as record:
+        res = smsdia.acorr_ljungbox(data, lags=10, return_df=return_df)
+    # the warning points at the caller
+    assert record[0].filename == __file__
+    assert isinstance(res, pd.DataFrame)
+    pd.testing.assert_frame_equal(res, expected)
+
+
+@pytest.mark.filterwarnings("error:return_df is unused:FutureWarning")
+def test_ljungbox_return_df_not_passed_no_warning():
+    data = sunspots.load_pandas().data["SUNACTIVITY"]
+    smsdia.acorr_ljungbox(data, lags=10)
+    smsdia.acorr_ljungbox(data, lags=10, return_df=None)
 
 
 def test_ljungbox_period():
@@ -2109,13 +2180,75 @@ def test_rainbow_exception():
         smsdia.linear_rainbow(res, use_distance=True, order_by=["x0"])
 
 
+def _recursive_residuals_reference(y, x, skip):
+    """
+    Reference transcription of the recursion in recursive_olsresiduals.
+
+    Starts from the pseudo-inverse of the initial-window crossprod (the
+    minimum-norm least-squares estimate of the initial window, i.e. what
+    ``OLS`` itself computes when exog is rank deficient), then applies the
+    same rank-one updates. See #8446.
+    """
+    nobs, nvars = x.shape
+    xtxi = np.linalg.pinv(x[:skip].T @ x[:skip])
+    beta = xtxi @ (x[:skip].T @ y[:skip])
+    rparams = np.full((nobs, nvars), np.nan)
+    rresid = np.full(nobs, np.nan)
+    rvarraw = np.full(nobs, np.nan)
+    rresid[skip - 1] = y[skip - 1] - x[skip - 1] @ beta
+    rvarraw[skip - 1] = 1 + x[skip - 1] @ xtxi @ x[skip - 1]
+    rparams[skip - 1] = beta
+    for i in range(skip, nobs):
+        xi = x[i : i + 1]
+        residi = y[i] - xi @ beta
+        tmp = xtxi @ xi.T
+        ft = 1 + xi @ tmp
+        xtxi = xtxi - tmp @ tmp.T / ft
+        beta = beta + (tmp * residi / ft).ravel()
+        rresid[i] = np.squeeze(residi)
+        rvarraw[i] = np.squeeze(ft)
+        rparams[i] = beta
+    rresid_scaled = rresid / np.sqrt(rvarraw)
+    sigma2 = rresid_scaled[skip:].var(ddof=1)
+    return rresid, rparams, rresid_scaled, rresid_scaled / np.sqrt(sigma2)
+
+
 def test_small_skip():
+    # GH#8446: a rank-deficient initial window used to raise ValueError.
+    # With skip = nvars a single duplicated row (e.g. discrete regressors)
+    # already loses rank even though OLS itself fits the model fine, so the
+    # recursion now starts from the pseudo-inverse of the initial crossprod.
     rs = np.random.RandomState(38342094)
     y = rs.standard_normal(10)
     x = rs.standard_normal((10, 3))
     x[:3] = x[:1]
-    with pytest.raises(ValueError, match="The initial regressor matrix,"):
-        smsdia.recursive_olsresiduals(OLS(y, x).fit())
+
+    res = OLS(y, x).fit()
+    rresid, rparams, _, rresid_std, rresid_scaled, _, _ = smsdia.recursive_olsresiduals(
+        res
+    )
+
+    skip = 3
+    assert np.isnan(rresid[: skip - 1]).all()
+    ref_resid, ref_params, ref_scaled, ref_std = _recursive_residuals_reference(
+        y, x, skip
+    )
+    assert_allclose(rresid, ref_resid, rtol=1e-13, atol=1e-13)
+    assert_allclose(rparams, ref_params, rtol=1e-13, atol=1e-13)
+    assert_allclose(rresid_scaled, ref_scaled, rtol=1e-13, atol=1e-13)
+    assert_allclose(rresid_std, ref_std, rtol=1e-13, atol=1e-13)
+    assert np.isfinite(rresid[skip - 1 :]).all()
+    assert np.isfinite(rparams[skip - 1 :]).all()
+
+    # the initial estimate is the minimum-norm least-squares fit of the
+    # initial window, matching what OLS.fit() computes for rank-deficient exog
+    beta0_ref = np.linalg.pinv(x[:skip]) @ y[:skip]
+    assert_allclose(rparams[skip - 1], beta0_ref, rtol=1e-12, atol=1e-12)
+
+    # linear_harvey_collier works on such samples and t-tests the
+    # standardized recursive residuals from ``skip`` onward
+    hc = smsdia.linear_harvey_collier(res)
+    assert_allclose(hc, stats.ttest_1samp(ref_std[skip:], 0), rtol=1e-12, atol=1e-12)
 
 
 # R code used in testing
@@ -2532,3 +2665,221 @@ def test_goldfeldquandt_split_validation():
     # the fraction form and the default stay valid
     smsdia.het_goldfeldquandt(y, x, split=0.5, result_object=False)
     smsdia.het_goldfeldquandt(y, x, result_object=False)
+
+
+# R 4.5.3, lmtest 0.9.40, with infl and realint from macrodata in macro.csv
+# library(lmtest)
+# d <- read.csv("macro.csv")
+# L <- function(v, k) c(rep(NA, k), head(v, -k))
+# y <- d$infl; x <- d$realint
+# df <- data.frame(y=y, y1=L(y,1), y2=L(y,2), x=x, x1=L(x,1), x2=L(x,2))[-(1:2),]
+# fm <- lm(y ~ y1 + y2, data=df)
+# fm <- lm(y ~ y1 + y2 + x, data=df)
+# fm <- lm(y ~ y1 + y2 + x + x1 + x2, data=df)
+# fm <- lm(y ~ x + x1 + x2, data=df)
+# c(bgtest(fm, order=4)[c("statistic", "p.value")],
+#   bgtest(fm, order=4, type="F")[c("statistic", "p.value")])
+@pytest.mark.parametrize(
+    "model, kwargs, r_values",
+    [
+        (
+            AutoReg,
+            {"lags": 2},
+            [18.3926662584388, 0.0010340160604162, 4.88504100715236, 0.00089502087431],
+        ),
+        (
+            AutoReg,
+            {"lags": 2, "exog": True},
+            [151.425270595411, 1.00759773393592e-31, 147.378904413188, 1.590989e-57],
+        ),
+        (
+            ARDL,
+            {"lags": 2, "exog": True, "order": 2},
+            [22.1339505394649, 0.000188482976583515, 5.90886946654817, 0.00016691999],
+        ),
+        # gh-9090
+        (
+            ARDL,
+            {"lags": 0, "exog": True, "order": 2, "causal": False},
+            [182.32820946617, 2.35773057553784e-38, 471.156533745566, 2.281101e-98],
+        ),
+        # Without a constant in the model, a constant is added to the auxiliary
+        # regression, which bgtest does not do, so only compare with OLS
+        (AutoReg, {"lags": 2, "trend": "n"}, None),
+    ],
+)
+def test_acorr_breusch_godfrey_autoreg(model, kwargs, r_values):
+    data = macrodata.load_pandas().data
+    kwargs = dict(kwargs)
+    if kwargs.pop("exog", False):
+        kwargs["exog"] = data[["realint"]]
+    res = model(data["infl"], **kwargs).fit()
+    bg = smsdia.acorr_breusch_godfrey(res, nlags=4, result_object=True)
+    if r_values is not None:
+        assert_allclose(bg[:4], r_values, rtol=1e-6)
+    # The auxiliary regression must include the lags and deterministic terms,
+    # so the test matches the test of the OLS fit on the same design matrix
+    res_ols = OLS(res.model._y, res.model._x).fit()
+    expected = smsdia.acorr_breusch_godfrey(res_ols, nlags=4, result_object=True)
+    assert_allclose(bg[:4], expected[:4], rtol=1e-10)
+
+
+@pytest.fixture(scope="module")
+def vuong_models():
+    # Reference values are from R package pscl 1.5.9, function vuong, using
+    # the first 600 observations of the RAND health insurance data
+    # (statsmodels.datasets.randhie). R code:
+    #
+    # library(pscl); library(MASS)
+    # d <- read.csv("randhie.csv")[1:600, ]
+    # d$any <- as.integer(d$mdvis > 0)
+    # f <- mdvis ~ lncoins + idp + lpi + fmde + physlm + disea +
+    #      hlthg + hlthf + hlthp
+    # fm_pois <- glm(f, data = d, family = poisson)
+    # fm_nb   <- glm.nb(f, data = d)
+    # fm_zip  <- zeroinfl(f | 1, data = d, dist = "poisson")
+    # g <- any ~ lncoins + idp + lpi + fmde + physlm + disea +
+    #      hlthg + hlthf + hlthp
+    # fm_logit  <- glm(g, data = d, family = binomial(link = "logit"))
+    # fm_probit <- glm(g, data = d, family = binomial(link = "probit"))
+    # vuong(fm_nb, fm_zip); vuong(fm_pois, fm_zip)
+    # vuong(fm_logit, fm_probit)
+    #
+    # R reports one-sided p-values for the preferred model, which is half of
+    # the two-sided p-value.
+    df =randhie.load_pandas().data.iloc[:600]
+    exog = add_constant(df.drop(columns="mdvis"), prepend=True)
+    endog = df["mdvis"]
+    any_visit = (endog > 0).astype(float)
+    res = Bunch()
+    res.pois = Poisson(endog, exog).fit(disp=False, maxiter=200)
+    res.nb = NegativeBinomial(endog, exog).fit(disp=False, method="bfgs", maxiter=2000)
+    res.zip = ZeroInflatedPoisson(endog, exog, exog_infl=np.ones((len(endog), 1))).fit(
+        disp=False, maxiter=500, method="bfgs"
+    )
+    res.logit = Logit(any_visit, exog).fit(
+        disp=False, method="bfgs", maxiter=5000, gtol=1e-8
+    )
+    res.probit = Probit(any_visit, exog).fit(
+        disp=False, method="bfgs", maxiter=5000, gtol=1e-8
+    )
+    return res
+
+
+@pytest.mark.parametrize(
+    "first, second, correction, statistic, pvalue_one_sided",
+    [
+        ("nb", "zip", "none", 5.39914240647, 3.348010402e-08),
+        # Both models have 11 parameters in statsmodels, including the
+        # dispersion parameter alpha, so the corrections have no effect.
+        # R's vuong does not count the dispersion parameter of glm.nb, so
+        # R's corrected values for this pair are not comparable.
+        ("nb", "zip", "aic", 5.39914240647, 3.348010402e-08),
+        ("nb", "zip", "bic", 5.39914240647, 3.348010402e-08),
+        ("pois", "zip", "none", -5.80352801939, 3.246694792e-09),
+        ("pois", "zip", "aic", -5.77880320452, 3.761693164e-09),
+        ("pois", "zip", "bic", -5.72444656867, 5.188572992e-09),
+        ("logit", "probit", "none", 1.33866944779, 0.09033915332),
+        ("logit", "probit", "aic", 1.33866944779, 0.09033915332),
+        ("logit", "probit", "bic", 1.33866944779, 0.09033915332),
+    ],
+)
+def test_compare_vuong_r(
+    vuong_models, first, second, correction, statistic, pvalue_one_sided
+):
+    res = smsdia.compare_vuong(
+        vuong_models[first], vuong_models[second], correction=correction
+    )
+    assert isinstance(res, smsdia.VuongTestResult)
+    stat, pval = res
+    assert_allclose(stat, statistic, rtol=1e-4)
+    assert_allclose(pval, 2 * pvalue_one_sided, rtol=1e-3)
+
+    # one-sided alternatives, R reports the p-value of the preferred model
+    larger = smsdia.compare_vuong(
+        vuong_models[first],
+        vuong_models[second],
+        correction=correction,
+        alternative="larger",
+    )
+    smaller = smsdia.compare_vuong(
+        vuong_models[first],
+        vuong_models[second],
+        correction=correction,
+        alternative="smaller",
+    )
+    preferred = larger if statistic > 0 else smaller
+    assert_allclose(preferred.pvalue, pvalue_one_sided, rtol=1e-3)
+    assert_allclose(larger.pvalue + smaller.pvalue, 1, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "first, second, positive",
+    [("nb", "zip", True), ("pois", "zip", False)],
+)
+def test_compare_vuong_alternative(vuong_models, first, second, positive):
+    res1, res2 = vuong_models[first], vuong_models[second]
+    two_sided = smsdia.compare_vuong(res1, res2)
+    larger = smsdia.compare_vuong(res1, res2, alternative="larger")
+    smaller = smsdia.compare_vuong(res1, res2, alternative="smaller")
+    assert (two_sided.statistic > 0) == positive
+    assert_allclose(larger.statistic, two_sided.statistic, rtol=1e-12)
+    assert_allclose(smaller.statistic, two_sided.statistic, rtol=1e-12)
+    assert_allclose(larger.pvalue, stats.norm.sf(two_sided.statistic), rtol=1e-12)
+    assert_allclose(smaller.pvalue, stats.norm.cdf(two_sided.statistic), rtol=1e-12)
+    assert_allclose(
+        two_sided.pvalue, 2 * stats.norm.sf(abs(two_sided.statistic)), rtol=1e-12
+    )
+
+
+def test_compare_vuong_swap(vuong_models):
+    res12 = smsdia.compare_vuong(
+        vuong_models["nb"], vuong_models["zip"], correction="bic"
+    )
+    res21 = smsdia.compare_vuong(
+        vuong_models["zip"], vuong_models["nb"], correction="bic"
+    )
+    assert_allclose(res12.statistic, -res21.statistic, rtol=1e-12)
+    assert_allclose(res12.pvalue, res21.pvalue, rtol=1e-12)
+
+
+def test_compare_vuong_identical(vuong_models):
+    res = smsdia.compare_vuong(vuong_models["logit"], vuong_models["logit"])
+    assert np.isnan(res.statistic)
+    assert np.isnan(res.pvalue)
+
+
+def test_compare_vuong_errors(vuong_models):
+    pois, logit = vuong_models["pois"], vuong_models["logit"]
+    with pytest.raises(ValueError, match="same dependent variable"):
+        smsdia.compare_vuong(pois, logit)
+    with pytest.raises(ValueError, match="correction"):
+        smsdia.compare_vuong(pois, pois, correction="hqic")
+    with pytest.raises(ValueError, match="alternative"):
+        smsdia.compare_vuong(pois, pois, alternative="greater")
+
+    # OLS does not provide the log-likelihood of each observation
+    rng = np.random.default_rng(0)
+    x = add_constant(rng.standard_normal((30, 2)))
+    y = x.sum(1) + rng.standard_normal(30)
+    res_ols = OLS(y, x).fit()
+    with pytest.raises(ValueError, match="loglikeobs"):
+        smsdia.compare_vuong(res_ols, res_ols)
+
+    # different number of observations
+    cnt = rng.poisson(3, size=30)
+    res_a = Poisson(cnt, x).fit(disp=False)
+    res_b = Poisson(cnt[:20], x[:20]).fit(disp=False)
+    with pytest.raises(ValueError, match="number of observations"):
+        smsdia.compare_vuong(res_a, res_b)
+
+
+def test_compare_vuong_inconsistent_llf(vuong_models):
+    class FakeResults:
+        def __init__(self, res):
+            self.model = res.model
+            self.params = res.params
+            self.llf = res.llf + 10
+
+    with pytest.raises(ValueError, match="does not add up"):
+        smsdia.compare_vuong(FakeResults(vuong_models["logit"]), vuong_models["probit"])

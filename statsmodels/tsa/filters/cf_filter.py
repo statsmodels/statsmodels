@@ -1,6 +1,6 @@
 import numpy as np
 
-from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tools.validation import PandasWrapper, array_like, float_like
 from statsmodels.tsa.filters.filtertools import CycleTrendResult
 
 # the data is sampled quarterly, so cut-off frequency of 18
@@ -79,7 +79,9 @@ def cffilter(x, low=6, high=32, drift=True):
     """
     # TODO: cythonize/vectorize loop?, add ability for symmetric filter,
     #      and estimates of theta other than random walk.
-    if low < 2:
+    low = float_like(low, "low")
+    high = float_like(high, "high")
+    if not low >= 2:
         raise ValueError("low must be >= 2")
     if not low < high:
         raise ValueError(

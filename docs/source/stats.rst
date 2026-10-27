@@ -157,7 +157,9 @@ Specification test
    compare_cox
    compare_encompassing
    compare_j
+   compare_vuong
    NonNestedTestResult
+   VuongTestResult
    spec_white
    linear_harvey_collier
    linear_lm
@@ -865,6 +867,13 @@ This function attempts to port the functionality of the oaxaca command in STATA 
    :synopsis: Oaxaca-Blinder Decomposition
 
 .. currentmodule:: statsmodels.stats.oaxaca
+
+The decomposition results' :meth:`OaxacaResults.summary` method returns a
+formatted string, which can be assigned to a variable or written to a file.
+It no longer prints to standard output. Code that relied on this printing
+behavior should use ``print(result.summary())`` to display the summary.
+The returned text preserves the effect order and five-decimal formatting
+and has no trailing newline; explicit ``print`` adds the newline as before.
 
 .. autosummary::
    :toctree: generated/

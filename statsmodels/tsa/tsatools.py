@@ -179,11 +179,12 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     ----------
     x : array_like
         An array or NumPy ndarray subclass. Can be either a 1d or 2d array with
-        observations in columns.
-    col : int, label, optional
+        variables in columns.
+    col : int or label, optional
         `col` can be an int of the zero-based column index, or the label of
         a column (e.g., a string) when `x` is a pandas DataFrame. If it's a
-        1d array `col` can be None.    lags : int, optional
+        1d array `col` can be None.
+    lags : int, optional
         The number of lags desired.
     drop : bool, optional
         Whether to keep the contemporaneous variable for the data.
@@ -199,7 +200,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     Notes
     -----
     Trims the array both forward and backward, so that the length of the
-    returned array is len(`X`) - lags. The lags are returned in increasing
+    returned array is len(`x`) - lags. The lags are returned in increasing
     order, i.e., t-1,t-2,...,t-lags
 
     Examples
@@ -989,11 +990,24 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
     Notes
     -----
     Annual maps to 1, quarterly maps to 4, monthly to 12, weekly to 52.
+    Sub-daily frequencies map to the number of observations per day scaled
+    by the multiplier, e.g. hourly to 24 and 5-minute to 288. The multiplier
+    is honored for sub-daily frequencies only; calendar frequencies keep
+    their standard period, e.g. "2W" still maps to 52. Business
+    month/quarter/year frequencies (e.g. "BME", "BQS", "BYE") map to the
+    same period as their calendar counterparts.
     """
     if not isinstance(freq, offsets.BaseOffset):
         freq = to_offset(freq)  # go ahead and standardize
     assert isinstance(freq, offsets.BaseOffset)
+    n = getattr(freq, "n", 1)
     freq = freq.rule_code.upper()
+    # Business month/quarter/year rules (BME, BQS, BYE, CBMS, ...) share
+    # the seasonal period of their calendar counterparts, so reduce them
+    # to the corresponding calendar rule (ME, QS, YE, MS) before mapping.
+    # pandas < 2.2 spells the business year rules BA and BAS.
+    if freq.startswith(("CBM", "BM", "BQ", "BY", "BA")):
+        freq = freq.lstrip("BC")
 
     yearly_freqs = ("A-", "AS-", "Y-", "YS-", "YE-")
     if freq in ("A", "Y") or freq.startswith(yearly_freqs):
@@ -1008,10 +1022,11 @@ def freq_to_period(freq: str | offsets.DateOffset) -> int:
         return 7
     elif freq == "B":
         return 5
-    elif freq == "H":
-        return 24
-    else:  # pragma : no cover
-        raise ValueError(
-            f"freq {freq} not understood. Please report if you "
-            "think this is in error."
-        )
+    elif freq in ("H", "T", "MIN", "S"):
+        base = {"H": 24, "T": 1440, "MIN": 1440, "S": 86400}[freq]
+        if n > 0 and base % n == 0:
+            return base // n
+    raise ValueError(
+        f"freq {freq} not understood. Please report if you "
+        "think this is in error."
+    )

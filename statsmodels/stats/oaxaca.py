@@ -105,21 +105,20 @@ class OaxacaBlinder:
     --------
     >>> import numpy as np
     >>> import statsmodels.api as sm
-    >>> data = sm.datasets.ccards.load()
+    >>> data = sm.datasets.ccard.load_pandas()
 
-    '3' is the column of which we want to explain or which indicates
-    the two groups. In this case, it is if you rent.
+    The 'OWNRENT' column indicates the two groups: homeowners and renters.
 
-    >>> model = sm.OaxacaBlinder(data.endog, data.exog, 3, hasconst = False)
-    >>> model.two_fold().summary()
+    >>> model = sm.stats.OaxacaBlinder(data.endog, data.exog, "OWNRENT", hasconst=False)
+    >>> print(model.two_fold().summary())
     Oaxaca-Blinder Two-fold Effects
     Unexplained Effect: 27.94091
     Explained Effect: 130.80954
     Gap: 158.75044
 
-    >>> model.three_fold().summary()
+    >>> print(model.three_fold().summary())
     Oaxaca-Blinder Three-fold Effects
-    Endowments Effect: 321.74824
+    Endowment Effect: 321.74824
     Coefficient Effect: 75.45371
     Interaction Effect: -238.45151
     Gap: 158.75044
@@ -575,36 +574,44 @@ class OaxacaResults:
         self.model_type = model_type
 
     def summary(self):
-        """Print a summary table with the Oaxaca-Blinder effects"""
+        """Return a summary of the Oaxaca-Blinder effects.
+
+        Returns
+        -------
+        str
+            The effects and, if available, their standard errors, formatted
+            to five decimal places. The text has no trailing newline.
+
+        Notes
+        -----
+        This method returns text without printing it. Use
+        ``print(result.summary())`` to display the summary.
+        """
         if self.model_type == 2:
             if self.std is None:
-                print(dedent(f"""\
+                return dedent(f"""\
                 Oaxaca-Blinder Two-fold Effects
                 Unexplained Effect: {self.params[0]:.5f}
                 Explained Effect: {self.params[1]:.5f}
-                Gap: {self.params[2]:.5f}"""))
+                Gap: {self.params[2]:.5f}""")
             else:
-                print(
-                    dedent(
-                        f"""\
+                return dedent(f"""\
                 Oaxaca-Blinder Two-fold Effects
                 Unexplained Effect: {self.params[0]:.5f}
                 Unexplained Standard Error: {self.std[0]:.5f}
                 Explained Effect: {self.params[1]:.5f}
                 Explained Standard Error: {self.std[1]:.5f}
-                Gap: {self.params[2]:.5f}"""
-                    )
-                )
+                Gap: {self.params[2]:.5f}""")
         if self.model_type == 3:
             if self.std is None:
-                print(dedent(f"""\
+                return dedent(f"""\
                 Oaxaca-Blinder Three-fold Effects
                 Endowment Effect: {self.params[0]:.5f}
                 Coefficient Effect: {self.params[1]:.5f}
                 Interaction Effect: {self.params[2]:.5f}
-                Gap: {self.params[3]:.5f}"""))
+                Gap: {self.params[3]:.5f}""")
             else:
-                print(dedent(f"""\
+                return dedent(f"""\
                 Oaxaca-Blinder Three-fold Effects
                 Endowment Effect: {self.params[0]:.5f}
                 Endowment Standard Error: {self.std[0]:.5f}
@@ -612,4 +619,4 @@ class OaxacaResults:
                 Coefficient Standard Error: {self.std[1]:.5f}
                 Interaction Effect: {self.params[2]:.5f}
                 Interaction Standard Error: {self.std[2]:.5f}
-                Gap: {self.params[3]:.5f}"""))
+                Gap: {self.params[3]:.5f}""")

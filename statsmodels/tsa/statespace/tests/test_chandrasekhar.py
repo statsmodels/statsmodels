@@ -5,11 +5,14 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import contextlib
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
+from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tsa.statespace import sarimax, varmax
 from statsmodels.tsa.statespace.kalman_filter import (
     MEMORY_CONSERVE,
@@ -155,8 +158,17 @@ def check_multivariate_chandrasekhar(filter_univariate=False,
         res_chand = mod_chand.filter(params)
         res_orig = mod_orig.filter(params)
     else:
-        res_chand = mod_chand.smooth(params)
-        res_orig = mod_orig.smooth(params)
+        # The univariate filter diagonalizes a non-diagonal obs_cov
+        if filter_univariate and gen_obs_cov:
+            ctx = pytest.warns(
+                OutputWarning, match="The univariate filtering approach diagonalized"
+            )
+        else:
+            ctx = contextlib.nullcontext()
+        with ctx:
+            res_chand = mod_chand.smooth(params)
+        with ctx:
+            res_orig = mod_orig.smooth(params)
 
     check_output(res_chand, res_orig, memory_conserve=memory_conserve)
 

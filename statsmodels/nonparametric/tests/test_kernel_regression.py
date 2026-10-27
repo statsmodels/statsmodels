@@ -6,6 +6,8 @@ import pytest
 from scipy import stats
 
 import statsmodels.api as sm
+from statsmodels.nonparametric.kernel_regression import KernelReg
+from statsmodels.tools.testing import warns_or_none
 
 nparam = sm.nonparametric
 
@@ -286,13 +288,15 @@ class TestKernelReg(KernelRegressionTestBase):
 
     def test_continuousdata_lc_cvls(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
-            model = nparam.KernelReg(
-                endog=[self.y],
-                exog=[self.c1, self.c2],
-                reg_type="lc",
-                var_type="cc",
-                bw="cv_ls",
-            )
+            # cv_ls can visit bandwidths where the kernel weights underflow to 0
+            with warns_or_none(RuntimeWarning, match="invalid value encountered in"):
+                model = nparam.KernelReg(
+                    endog=[self.y],
+                    exog=[self.c1, self.c2],
+                    reg_type="lc",
+                    var_type="cc",
+                    bw="cv_ls",
+                )
         # Bandwidth
         sm_bw = model.bw
         R_bw = [0.6163835, 0.1649656]
@@ -669,21 +673,25 @@ class TestKernelReg(KernelRegressionTestBase):
                 bw="cv_ls",
                 ckertype="tricube",
             )
+        # R's np package has no tricube kernel, so these are statsmodels
+        # results. Updated in GH#10541, when the kernel stopped returning its
+        # peak value outside [-1, 1]; the means agree with a direct local
+        # linear WLS fit with product tricube weights at this bandwidth
         # Bandwidth
         sm_bw = model.bw
-        R_bw = [0.581663, 0.5652]
+        res_bw = [1.095908, 1.112216]
         # Conditional Mean
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         sm_mfx = sm_mfx[0:5]
-        R_mean = [30.926714, 36.994604, 44.438358, 40.680598, 35.961593]
+        res_mean = [31.237709, 37.283983, 43.742738, 40.854785, 36.581391]
         # R-Squared
         sm_R2 = model.r_squared()
-        R_R2 = 0.934825
+        res_R2 = 0.949078
 
-        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
-        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
-        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        npt.assert_allclose(sm_bw, res_bw, atol=1e-2)
+        npt.assert_allclose(sm_mean, res_mean, atol=1e-2)
+        npt.assert_allclose(sm_R2, res_R2, atol=1e-2)
 
     def test_censored_user_specified_kernel(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
@@ -696,21 +704,22 @@ class TestKernelReg(KernelRegressionTestBase):
                 censor_val=0,
                 ckertype="tricube",
             )
+        # statsmodels results, see test_user_specified_kernel (GH#10541)
         # Bandwidth
         sm_bw = model.bw
-        R_bw = [0.581663, 0.5652]
+        res_bw = [1.095908, 1.112216]
         # Conditional Mean
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         sm_mfx = sm_mfx[0:5]
-        R_mean = [29.205526, 29.538008, 31.667581, 31.978866, 30.926714]
+        res_mean = [28.982763, 29.242381, 30.927732, 31.341278, 31.237709]
         # R-Squared
         sm_R2 = model.r_squared()
-        R_R2 = 0.934825
+        res_R2 = 0.949078
 
-        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
-        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
-        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        npt.assert_allclose(sm_bw, res_bw, atol=1e-2)
+        npt.assert_allclose(sm_mean, res_mean, atol=1e-2)
+        npt.assert_allclose(sm_R2, res_R2, atol=1e-2)
 
     def test_efficient_user_specificed_bw(self):
 
@@ -875,3 +884,55 @@ def test_aic_hurvich_matches_hand_computed_trace():
     aic_expected = np.log(sigma) + frac
 
     npt.assert_allclose(aic, aic_expected, rtol=1e-8)
+@pytest.mark.filterwarnings("ignore::FutureWarning")
+def test_kernelreg_invalid_bw_raises():
+    # an unknown string method previously silently fell back to 'aic',
+    # producing an absurd bandwidth (~9.7e6)
+    y = np.linspace(-1.0, 1.0, 50)
+    x = np.linspace(-2.0, 2.0, 50)[:, None]
+    with pytest.raises(ValueError, match="bw must be one of"):
+        KernelReg(y, x, "c", bw="bogus")
+    # negative and nan bandwidths were accepted and produced a nan fit
+    x2 = np.column_stack((x, x))
+    for bad_bw in ([0.5, -0.5], [0.5, np.nan], [-0.5, np.nan]):
+        with pytest.raises(ValueError, match="bw must be non-negative"):
+            KernelReg(y, x2, "cc", bw=bad_bw)
+    mean, mfx = KernelReg(y, x, "c", bw=[0.5], rng=12345).fit()
+    assert np.isfinite(mean).all()
+
+
+@pytest.mark.filterwarnings("ignore::FutureWarning")
+def test_kernelreg_zero_bw_for_discrete_variable():
+    # zero is a valid bandwidth for a discrete variable, the kernel is an
+    # indicator of an exact match on the variable, so zero must not raise
+    rng = np.random.default_rng(12345)
+    y = rng.standard_normal(50)
+    x = np.column_stack((np.arange(50) % 2, rng.standard_normal(50)))
+    model = KernelReg(y, x, "uc", bw=[0.0, 0.5], rng=12345)
+    assert model.bw[0] == 0.0
+    mean, mfx = model.fit()
+    assert np.isfinite(mean).all()
+
+
+@pytest.mark.filterwarnings("ignore::FutureWarning")
+def test_kernelreg_normal_reference_bw():
+    # 'normal_reference' is the rule of thumb bandwidth of the continuous
+    # variables, the same expression that supplies the starting values of
+    # 'cv_ls' and 'aic'
+    y = np.linspace(-1.0, 1.0, 200)
+    x = np.linspace(-2.0, 2.0, 200)[:, None]
+    model = KernelReg(y, x, "c", bw="normal_reference", rng=12345)
+    expected = 1.06 * np.std(x, axis=0) * 200 ** (-1.0 / (4 + 1))
+    npt.assert_allclose(model.bw, expected, rtol=1e-12)
+    mean, mfx = model.fit()
+    assert np.isfinite(mean).all()
+
+    # the discrete variable is not scaled and its bandwidth stays a starting
+    # value of the numerical selection methods, no bandwidth is returned in
+    # its place
+    x2 = np.column_stack((x[:, 0], np.arange(200) % 3))
+    model2 = KernelReg(y, x2, "cu", bw="normal_reference", rng=12345)
+    assert model2.bw.shape == (1,)
+    npt.assert_allclose(
+        model2.bw, 1.06 * np.std(x2[:, 0], axis=0) * 200 ** (-1.0 / (4 + 2)), rtol=1e-12
+    )

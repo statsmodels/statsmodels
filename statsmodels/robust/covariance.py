@@ -35,7 +35,7 @@ import statsmodels.robust.norms as rnorms
 import statsmodels.robust.scale as rscale
 import statsmodels.robust.tools as rtools
 from statsmodels.stats.covariance import corr_normal_scores, corr_rank
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import float_like, string_like
 
 from .scale import mad
 
@@ -46,6 +46,26 @@ def mad0(x):
 
 def median(x):
     return np.median(x, axis=0)
+
+
+def _check_standardizing_scale(scale):
+    """
+    Raise if any coordinate of the columnwise standardizing scale is zero.
+
+    A zero MAD (or other scale) for a column means more than half of the
+    observations share one value in that column, so they lie on a hyperplane.
+    Dividing by that scale produces non-finite standardized data and leads to
+    uninformative LinAlgError or empty-subset failures downstream.
+    """
+    zeros = np.flatnonzero(np.asarray(scale) == 0)
+    if zeros.size == 0:
+        return
+    cols = ", ".join(str(int(i)) for i in zeros)
+    raise ValueError(
+        f"standardizing scale is zero for column(s) {cols}; "
+        "more than half of the observations share one value and lie "
+        "on a hyperplane"
+    )
 
 
 def _det_root(cov):
@@ -105,6 +125,10 @@ def _naive_ledoit_wolf_shrinkage(x, center):
     n_samples, n_features = x.shape
     xdm = x - center
     emp_cov = xdm.T.dot(xdm) / n_samples
+    if n_features == 1:
+        # the shrinkage target is the empirical covariance, so that
+        # shrinkage = 0 / 0 and the result does not depend on the shrinkage
+        return NaiveLedoitWolfResult(cov=emp_cov, method="naive ledoit wolf")
     mu = np.trace(emp_cov) / n_features
     delta_ = emp_cov.copy()
     delta_.flat[:: n_features + 1] -= mu
@@ -117,7 +141,9 @@ def _naive_ledoit_wolf_shrinkage(x, center):
     )
 
     beta = min(beta_, delta)
-    shrinkage = beta / delta
+    # delta is 0 if the empirical covariance is mu * I, as it is for a single
+    # variable. It is the shrinkage target then, so the shrinkage is arbitrary.
+    shrinkage = 0.0 if delta == 0 else beta / delta
     # shrink towards the scaled identity matrix, mu * I
     cov = (1.0 - shrinkage) * emp_cov
     cov.flat[:: n_features + 1] += shrinkage * mu
@@ -693,7 +719,7 @@ def cov_ogk(
         n_trunc = nobs - sum(mask)
         sample = x[mask]
         loc = sample.mean(0)
-        cov = np.cov(sample.T, ddof=ddof)
+        cov = np.atleast_2d(np.cov(sample.T, ddof=ddof))
         # do we use empirical or theoretical frac, inlier/nobs or 1-beta?
         frac = beta  # n_inlier / nobs
         scale_factor = coef_normalize_cov_truncated(frac, k_vars)
@@ -911,6 +937,9 @@ def cov_tyler_regularized(
     If the shrinkage factor is None, then a plugin is used as described in
     Chen and Wiesel 2011. The required trace for a pilot scatter estimate is
     obtained by the covariance rescaled by MAD estimate for the variance.
+    The plugin is not defined for a single variable, the shrinkage factor is
+    set to zero in that case. The normalized scatter of a single variable is
+    always 1.
 
     References
     ----------
@@ -936,9 +965,14 @@ def cov_tyler_regularized(
         tr = np.trace(corr.dot(corr))
 
         n, k = nobs, k_vars
-        # Chen and Wiesel 2011 equation (13)
-        sf = k * k + (1 - 2.0 / k) * tr
-        sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
+        if k == 1:
+            # The plugin is 0 / 0 for a single variable. The normalized
+            # scatter is 1 for any shrinkage factor.
+            sf = 0.0
+        else:
+            # Chen and Wiesel 2011 equation (13)
+            sf = k * k + (1 - 2.0 / k) * tr
+            sf /= (k * k - n * k - 2 * n) + (n + 1 + 2.0 * (n - 1.0) / k) * tr
         shrinkage_factor = sf
     else:
         corr = None
@@ -1382,7 +1416,7 @@ def _cov_iter(
     nobs, k_vars = data.shape
 
     if cov_init is None:
-        cov_init = np.cov(data.T)
+        cov_init = np.atleast_2d(np.cov(data.T))
 
     converged = False
     cov = cov_old = cov_init
@@ -1483,6 +1517,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
         center = np.median(data, axis=0)
         xs = x - center
         std = mad0(data)
+        _check_standardizing_scale(std)
         xs /= std
     else:
         center = np.median(data, axis=0)
@@ -1502,7 +1537,7 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
         # `d <= cutoff` only for a clamped percentile, i.e. strictly below
         # nobs == 2 * k_vars + 4, so the boundary keeps the base behavior.
         xsp = xs[d <= cutoff] if first_frac > 1 and p == 100 else xs[d < cutoff]
-        c = np.cov(xsp.T)
+        c = np.atleast_2d(np.cov(xsp.T))
         corr_factor = coef_normalize_cov_truncated(p / 100, k_vars)
         c0 = CovStartingResult(
             cov=c * corr_factor,
@@ -1552,15 +1587,18 @@ def _cov_starting(data, standardize=False, quantile=0.5, retransform=False):
 
     z_tanh = np.tanh(xs)
     c_th = CovStartingResult(
-        cov=np.corrcoef(z_tanh.T),  # not consistently scaled for cov
+        cov=np.atleast_2d(np.corrcoef(z_tanh.T)),  # not consistently scaled
         mean=center,  # TODO: do we add inverted mean z_tanh ?
         method="tanh",
     )
     cov_all.append(c_th)
 
-    x_spatial = xs / np.sqrt(np.sum(xs**2, axis=1))[:, None]
+    # the spatial sign of the zero vector is zero, a row of xs is zero for the
+    # median of a single variable if nobs is odd
+    norm = np.sqrt(np.sum(xs**2, axis=1))
+    x_spatial = xs / np.where(norm > 0, norm, 1)[:, None]
     c_th = CovStartingResult(
-        cov=np.cov(x_spatial.T),
+        cov=np.atleast_2d(np.cov(x_spatial.T)),
         mean=center,
         method="spatial",
     )
@@ -1727,7 +1765,7 @@ def _get_detcov_startidx(z, h, options_start=None, methods_cov="all"):
             continue
         method = c.method
         mean, cov = _orthogonalize_det(z, c.cov, loc_func, scale_func)
-        d = mahalanobis(z, mean, cov)
+        d = mahalanobis(z - mean, cov)
         idx_sel = np.argpartition(d, h)[:h]
         idx_all.append((idx_sel, method))
 
@@ -2086,6 +2124,15 @@ class CovDetMCD:
 
     Notes
     -----
+    If the covariance of the selected subset of ``h`` observations is
+    numerically singular, for example in an exact fit where at least ``h``
+    observations lie on a hyperplane, then :meth:`fit` raises a ValueError.
+
+    .. versionchanged:: 0.15.1
+
+       Exact-fit data raise a ValueError. Before, the fit returned a result
+       with a singular covariance.
+
     Reproducibility: this uses deterministic starting sets and there is no
     randomness in the estimator. However, this will not be reproducible
     across statsmodels versions when the methods for starting sets or
@@ -2155,6 +2202,12 @@ class CovDetMCD:
             x_sel = x[idx_sel]
             mean = x_sel.mean(0)
             cov_new = np.atleast_2d(np.cov(x_sel.T, ddof=1))
+            if _is_singular(cov_new):
+                raise ValueError(
+                    "the covariance of the h-subset is singular: at least h "
+                    "of the observations lie on a hyperplane (or the data are "
+                    "numerically rank deficient)"
+                )
 
             if ((cov - cov_new) ** 2).mean() < tol:
                 cov = cov_new
@@ -2272,6 +2325,15 @@ class CovDetMCD:
             Named tuple with `mean`, `cov`, `method` and extra attributes
             depending on `reweight`. See :class:`CovDetMCDResult` for
             details.
+
+        Raises
+        ------
+        ValueError
+            If ``h`` is not larger than the number of variables.
+        ValueError
+            If the covariance of the selected h-subset is numerically
+            singular, for example if at least ``h`` observations lie on a
+            hyperplane.
         """
 
         x = self.data
@@ -2279,6 +2341,11 @@ class CovDetMCD:
 
         if h is None:
             h = (nobs + k_vars + 1) // 2  # check with literature
+        if h < k_vars + 1:
+            raise ValueError(
+                f"h must be larger than the number of variables, got h={h} "
+                f"with {k_vars} variables"
+            )
         if mean_func is None:
             def mean_func(x):
                 return np.median(x, axis=0)
@@ -2292,6 +2359,7 @@ class CovDetMCD:
 
         m = mean_func(x)
         s = scale_func(x)
+        _check_standardizing_scale(s)
         z = (x - m) / s
         # get initial mean, cov of standardized data, we only need ranking
         # of obs
@@ -2352,9 +2420,60 @@ class CovDetMCD:
             return best
 
 
+def _tuning_s_biweight(k_vars, breakdown_point):
+    """
+    Validate breakdown point and compute biweight tuning parameter for S
+
+    Parameters
+    ----------
+    k_vars : int
+        Number of variables in the multivariate data.
+    breakdown_point : float
+        Breakdown point of the S-estimator. Needs to be in (0, 0.5].
+
+    Returns
+    -------
+    float
+        Tuning parameter of the Tukey biweight norm for which the expected
+        rho at the multivariate normal distribution is ``breakdown_point``
+        times the maximum of rho.
+
+    Raises
+    ------
+    ValueError
+        If ``breakdown_point`` is not in (0, 0.5] or if the tuning parameter
+        cannot be found for the combination of ``breakdown_point`` and
+        ``k_vars``.
+    """
+    bp = float_like(breakdown_point, "breakdown_point")
+    if not 0 < bp <= 0.5:
+        raise ValueError(f"breakdown_point must be in (0, 0.5], got {bp}.")
+    # The tuning parameter increases when the breakdown point decreases and
+    # it is approximately sqrt(3 * k_vars / breakdown_point) for a small
+    # breakdown point. The default upper limit of tuning_s_cov is too small
+    # for a small breakdown point in higher dimension.
+    upper = max(30.0, 2 * np.sqrt(3 * k_vars / bp))
+    try:
+        return rtools.tuning_s_cov(
+            rnorms.TukeyBiweight(), k_vars, breakdown_point=bp, limits=(0.5, upper)
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "Cannot find the tuning parameter of the S-estimator for "
+            f"breakdown_point={bp} and k_vars={k_vars}. Use a larger "
+            "breakdown_point or fewer variables."
+        ) from exc
+
+
 class CovDetS:
     """
     S-estimator for mean and covariance with deterministic starts
+
+    .. versionchanged:: 0.15.1
+
+       The ``breakdown_point`` argument is now used to compute the tuning
+       parameter of the S-estimator. Before, the tuning parameter for a
+       breakdown point of 0.5 was always used.
 
     Parameters
     ----------
@@ -2365,8 +2484,18 @@ class CovDetS:
         If None, then TukeyBiweight norm is used.
         (Currently no other norms are supported for calling the initial
         S-estimator)
-    breakdown_point : float in (0, 0.5], optional
-        Breakdown point for first stage S-estimator.
+    breakdown_point : float, optional
+        Breakdown point for first stage S-estimator. Must be in the interval
+        (0, 0.5]. The tuning parameter of the norm is chosen such that the
+        expected rho under the multivariate normal model equals
+        ``breakdown_point`` times the maximum of rho.
+
+    Raises
+    ------
+    ValueError
+        If ``breakdown_point`` is not in (0, 0.5], or if the tuning parameter
+        cannot be computed for the combination of ``breakdown_point`` and the
+        number of variables.
 
     Notes
     -----
@@ -2398,7 +2527,7 @@ class CovDetS:
         # self.scale_bias = scale_bias
         if norm is None:
             norm = rnorms.TukeyBiweight()
-            c = rtools.tuning_s_cov(norm, k_vars, breakdown_point=0.5)
+            c = _tuning_s_biweight(k_vars, breakdown_point)
             norm._set_tuning_param(c, inplace=True)
             self.scale_bias = rtools.scale_bias_cov_biw(c, k_vars)[0]
         else:
@@ -2538,6 +2667,7 @@ class CovDetS:
 
         m = mean_func(x)
         s = scale_func(x)
+        _check_standardizing_scale(s)
         z = (x - m) / s
         # get initial mean, cov of standardized data, we only need ranking
         # of obs
@@ -2589,6 +2719,12 @@ class CovDetMM:
     efficiency. For other cases, the user has to provide the norm instance
     with desired tuning parameter.
 
+    .. versionchanged:: 0.15.1
+
+       The ``breakdown_point`` argument is now used to compute the tuning
+       parameter of the first stage S-estimator. Before, the tuning parameter
+       for a breakdown point of 0.5 was always used.
+
     Parameters
     ----------
     data : array_like
@@ -2601,10 +2737,20 @@ class CovDetMM:
         If ``norm`` is an instance of TukeyBiweight, then it will be used in
         the second stage M-estimation. The ``efficiency`` argument is ignored
         and the tuning parameter of the user provided instance is not changed.
-    breakdown_point : float in (0, 0.5], optional
-        Breakdown point for first stage S-estimator.
+    breakdown_point : float, optional
+        Breakdown point for first stage S-estimator. Must be in the interval
+        (0, 0.5]. The tuning parameter of the norm of the first stage is
+        chosen such that the expected rho under the multivariate normal model
+        equals ``breakdown_point`` times the maximum of rho.
     efficiency : float, optional
         Asymptotic efficiency of second stage M estimator.
+
+    Raises
+    ------
+    ValueError
+        If ``breakdown_point`` is not in (0, 0.5], or if the tuning parameter
+        of the first stage cannot be computed for the combination of
+        ``breakdown_point`` and the number of variables.
 
     Notes
     -----
@@ -2644,6 +2790,8 @@ class CovDetMM:
         self.nobs, k_vars = self.data.shape
         self.k_vars = k_vars
         self.breakdown_point = breakdown_point
+        # fail early, the first stage is only created in fit
+        _tuning_s_biweight(k_vars, breakdown_point)
 
         # self.scale_bias = scale_bias
         if norm is None:

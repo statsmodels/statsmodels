@@ -6,7 +6,6 @@ from statsmodels.compat.pandas import (
 )
 
 from collections.abc import Iterable, Sequence
-import datetime
 import datetime as dt
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
@@ -752,8 +751,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
         params: ArrayLike,
         exog: ArrayLike2D,
         exog_oos: ArrayLike2D,
-        start: int | str | datetime.datetime | pd.Timestamp | None,
-        end: int | str | datetime.datetime | pd.Timestamp | None,
+        start: int | str | dt.datetime | pd.Timestamp | None,
+        end: int | str | dt.datetime | pd.Timestamp | None,
     ) -> tuple[
         np.ndarray,
         np.ndarray | pd.DataFrame | None,
@@ -799,8 +798,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
     def predict(
         self,
         params: ArrayLike,
-        start: int | str | datetime.datetime | pd.Timestamp | None = None,
-        end: int | str | datetime.datetime | pd.Timestamp | None = None,
+        start: int | str | dt.datetime | pd.Timestamp | None = None,
+        end: int | str | dt.datetime | pd.Timestamp | None = None,
         dynamic: bool | int = False,
         exog: ArrayLike2D | None = None,
         exog_oos: ArrayLike2D | None = None,
@@ -2160,12 +2159,11 @@ def ar_select_order(
         return InformationCriteria(aic, bic, hqic)
 
     def ic_no_data():
-        """Fake mod and results to handle no regressor case"""
-        mod = SimpleNamespace(nobs=y.shape[0], endog=y, exog=np.empty((y.shape[0], 0)))
-        llf = OLS.loglike(mod, np.empty(0))
-        res = SimpleNamespace(
-            resid=y, nobs=y.shape[0], llf=llf, df_model=0, k_constant=0
-        )
+        """Fake results to handle no regressor case"""
+        # compute_ics only reads nobs, df_model and resid (llf is recomputed
+        # from the residuals), and the residual is y when there are no
+        # regressors, so there is no need for a stand-in for OLS.loglike.
+        res = SimpleNamespace(resid=y, nobs=y.shape[0], df_model=0)
 
         return compute_ics(res)
 

@@ -7,7 +7,7 @@ from scipy.stats import f as fdist, t as student_t
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tools.tools import clean0, fullrank
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import float_like, string_like
 
 
 # TODO: should this be public if it's just a container?
@@ -100,6 +100,7 @@ class ContrastResults:
             The array has the lower and the upper limit of the confidence
             interval in the columns.
         """
+        alpha = float_like(alpha, "alpha")
         if not 0 < alpha < 1:
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 

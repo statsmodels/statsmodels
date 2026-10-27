@@ -31,7 +31,7 @@ __all__ = [
 import warnings
 
 import numpy as np
-from pandas import MultiIndex, get_dummies
+from pandas import DataFrame, Index, MultiIndex, get_dummies
 from scipy import special, stats
 from scipy.special import digamma, gammaln, loggamma, polygamma
 from scipy.stats import nbinom
@@ -256,6 +256,10 @@ class DiscreteModel(base.LikelihoodModel):
     ):
         """
         Fit the model using maximum likelihood.
+
+        ``cov_type`` "HC1", "HC2" and "HC3" are not implemented for discrete
+        models. They fall back to "HC0" with a ``SpecificationWarning``, see
+        ``get_robustcov_results``.
 
         The rest of the docstring is from
         statsmodels.base.model.LikelihoodModel.fit
@@ -545,10 +549,13 @@ class BinaryModel(DiscreteModel):
             if not np.all((self.endog >= 0) & (self.endog <= 1)):
                 raise ValueError("endog must be in the unit interval.")
 
-        if offset is not None and np.asarray(offset).shape[0] != self.endog.shape[0]:
-            # mirrors the check CountModel already performs; a mismatched
-            # offset used to leak a bare numpy broadcast error at fit time
-            raise ValueError("offset is not the same length as endog")
+        if offset is not None:
+            # Compare the offset stored by the model, not the argument: the
+            # missing value handling has dropped the same rows from endog,
+            # exog and offset. A scalar offset broadcasts and is valid.
+            offset_ = np.asarray(self.offset)
+            if offset_.ndim > 0 and offset_.shape[0] != self.endog.shape[0]:
+                raise ValueError("offset is not the same length as endog")
         if offset is None:
             del self.offset
 
@@ -1906,7 +1913,7 @@ class Poisson(CountModel):
 
 
 class GeneralizedPoisson(CountModel):
-    __doc__ = """
+    __doc__ = r"""
     Generalized Poisson Model
 
     {params}
@@ -1918,6 +1925,38 @@ class GeneralizedPoisson(CountModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
+
+    Notes
+    -----
+    The final element of the parameter vector is the dispersion parameter
+    :math:`\alpha`. For conditional mean :math:`\mu`, the conditional variance
+    is :math:`\mu (1 + \alpha \mu^{{p-1}})^2`. Thus GP-1 (``p=1``) has variance
+    :math:`\mu (1 + \alpha)^2`, while GP-2 (``p=2``) has variance
+    :math:`\mu (1 + \alpha \mu)^2`.
+
+    For GP-1, :math:`\alpha` is not the :math:`\lambda` used in the alternative
+    variance expression :math:`\mu / (1 - \lambda)^2`. For nonnegative
+    dispersion, the conversion is :math:`\lambda = \alpha / (1 + \alpha)`.
+    For example, :math:`\alpha = 0.5` corresponds to :math:`\lambda = 1/3`;
+    both give a variance-to-mean ratio of 2.25. In VGAM's ``dgenpois1``, this
+    ratio is the ``dispind`` parameter, not :math:`\alpha` itself [1]_.
+
+    The generalized Poisson distribution was introduced by Consul and Jain
+    [2]_. Regression models based on it are discussed in [3]_ and [4]_.
+
+    References
+    ----------
+    .. [1] VGAM, "Generalized Poisson Distribution (GP-1 and GP-2
+       Parameterizations of the Mean)".
+       https://search.r-project.org/CRAN/refmans/VGAM/html/genpois1UC.html
+    .. [2] Consul, P. C., and G. C. Jain. 1973. "A Generalization of the
+       Poisson Distribution." Technometrics 15 (4): 791-799.
+    .. [3] Famoye, F. 1993. "Restricted Generalized Poisson Regression
+       Model." Communications in Statistics - Theory and Methods 22 (5):
+       1335-1354.
+    .. [4] Zamani, H., and N. Ismail. 2012. "Functional Form for the
+       Generalized Poisson Regression Model." Communications in Statistics -
+       Theory and Methods 41 (20): 3666-3675.
     """.format(
         params=base._model_params_doc,
         extra_params="""
@@ -3280,9 +3319,13 @@ class MNLogit(MultinomialModel):
     K : float
         The actual number of parameters for the exogenous design.  Includes
         the constant if the design has one.
-    names : dict
-        A dictionary mapping the column number in `wendog` to the variables
-        in `endog`.
+    names : dict of int to str
+        A dictionary mapping the column number in `wendog` to the string
+        label of the corresponding category in `endog`. The first entry
+        (column 0) is the reference (base) category. The labels are always
+        strings, even when `endog` is numeric.
+
+        .. versionadded:: 0.15.1
     wendog : ndarray
         An n x j array where j is the number of unique categories in `endog`.
         Each column of j is a dummy variable indicating the category of
@@ -3299,10 +3342,25 @@ class MNLogit(MultinomialModel):
 
         # Override cov_names since multivariate model
         yname = self.endog_names
+        # the endog categories in the column order of wendog, kept before
+        # they are converted to strings below
+        categories = Index([self._ynames_map[key] for key in range(int(self.J))])
+        if (
+            categories.dtype.kind == "f"
+            and np.all(categories % 1 == 0)
+            and np.all(np.abs(categories) < 2**53)
+        ):
+            # integer valued, e.g., from a formula. Larger values cannot be
+            # represented exactly as int64 and stay floats.
+            categories = categories.astype(int)
+        self._endog_categories = categories
         ynames = self._ynames_map
         ynames = MultinomialResults._maybe_convert_ynames_int(ynames)
         # use range below to ensure sortedness
         ynames = [ynames[key] for key in range(int(self.J))]
+        # Documented ``names`` attribute: maps the column number in ``wendog``
+        # to the corresponding endogenous variable name (see GH#8995).
+        self.names = dict(enumerate(ynames))
         idx = MultiIndex.from_product(
             (ynames[1:], self.data.xnames), names=(yname, None)
         )
@@ -4736,6 +4794,8 @@ class NegativeBinomialP(CountModel):
             The transformation is ignored if ``method`` is "newton" or "ncg".
         cov_type : str, optional
             Covariance estimator to use when computing parameter covariance.
+            "HC1", "HC2" and "HC3" are not implemented and fall back to "HC0"
+            with a ``SpecificationWarning``.
         cov_kwds : dict, optional
             Additional keywords for the selected covariance estimator.
         use_t : bool, optional
@@ -5287,7 +5347,15 @@ class DiscreteResults(base.LikelihoodModelResults):
         Parameters
         ----------
         exog : array_like, optional
-            The values for which you want to predict.
+            The values for which you want to predict. If None, then the
+            model's exog together with the offset and exposure stored in
+            the model are used, as in ``predict``. If exog is given, then
+            the stored offset and exposure are not used unless they are
+            passed explicitly.
+
+            .. versionchanged:: 0.15.1
+
+               Without exog, the stored offset and exposure are now used.
         transform : bool, optional
             If the model was fit via a formula, do you want to pass
             exog through the formula. Default is True. E.g., if you fit
@@ -6057,6 +6125,15 @@ class L1BinaryResults(BinaryResults):
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
 
 
+_predict_params = Docstring(base.Results.predict.__doc__).extract_parameters(
+    ["exog", "transform", "*args", "**kwargs"], indent=8
+)
+# The Notes of the base class are not part of the docstring of predict below
+if _predict_params is not None:
+    # None if the docstrings are stripped, python -OO
+    _predict_params = _predict_params.replace(" see Notes below.", "")
+
+
 class MultinomialResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description": "A results class for multinomial data",
@@ -6141,6 +6218,50 @@ class MultinomialResults(DiscreteResults):
     def conf_int(self, alpha=0.05):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha)
         return confint.transpose(2, 0, 1)
+
+    @Substitution(predict_params=_predict_params)
+    def predict(self, exog=None, transform=True, *args, **kwargs):
+        """
+        Predict the outcome probabilities, or other quantities, for exog
+
+        Calls ``self.model.predict`` with ``self.params`` as the first argument.
+
+        Parameters
+        ----------
+%(predict_params)s
+
+        Returns
+        -------
+        ndarray or DataFrame
+            An ndarray of shape (nobs, J) is returned if ``exog`` is not
+            given or is not a pandas object. If ``exog`` is a DataFrame, or
+            if the model was fit using a formula and ``exog`` is a DataFrame
+            or a dict, a DataFrame with the row index of ``exog`` is
+            returned. The columns of the DataFrame are the categories of the
+            endogenous variable in the order of the columns of ``wendog`` and
+            of ``names``, so that the first column is the reference category.
+
+        Notes
+        -----
+        The columns of the returned DataFrame are the categories as they are
+        in ``endog``, for example integers, floats, booleans or strings, and
+        not their string representation. This differs from ``names``, which
+        are always strings. Integer valued floats are converted to integers
+        if they can be represented exactly. The levels of a factor in R, and
+        so the labels of the columns of the predicted probabilities of
+        ``nnet::multinom``, are always strings.
+
+        .. versionchanged:: 0.15.1
+
+           The columns of the returned DataFrame are the categories of
+           ``endog``. In previous versions they were 0, 1, ..., J - 1.
+        """
+        pred = super().predict(exog, transform, *args, **kwargs)
+        categories = getattr(self.model, "_endog_categories", None)
+        if isinstance(pred, DataFrame) and categories is not None:
+            # label the columns with the endog categories, see GH 4804
+            pred.columns = categories
+        return pred
 
     def get_prediction(self):
         """Not implemented for Multinomial"""

@@ -17,6 +17,8 @@ from statsmodels.discrete.discrete_model import Logit, Poisson, Probit
 from statsmodels.genmod.families import family
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.sandbox.regression.penalized import TheilGLS
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.testing import warns_or_none
 
 
 class PoissonPenalized(PenalizedMixin, Poisson):
@@ -653,9 +655,11 @@ class TestPenalizedGLMBinomCountOracleHC(CheckPenalizedBinomCount):
         )
         mod.pen_weight *= 1  # lower than in other cases
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(
-            cov_type=cov_type, method="bfgs", max_start_irls=0, maxiter=100, disp=0
-        )
+        # bfgs convergence of the nonconvex SCAD case is not stable, see TODO
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood"):
+            cls.res1 = mod.fit(
+                cov_type=cov_type, method="bfgs", max_start_irls=0, maxiter=100, disp=0
+            )
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 
@@ -679,14 +683,16 @@ class TestPenalizedGLMBinomCountOracleHC2(CheckPenalizedBinomCount):
         )
         mod.pen_weight *= 1  # lower than in other cases
         mod.penal.tau = 0.05
-        cls.res1 = mod.fit(
-            cov_type=cov_type,
-            method="bfgs",
-            max_start_irls=0,
-            maxiter=100,
-            disp=0,
-            trim=0.001,
-        )
+        # bfgs convergence of the nonconvex SCAD case is not stable, see TODO
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood"):
+            cls.res1 = mod.fit(
+                cov_type=cov_type,
+                method="bfgs",
+                max_start_irls=0,
+                maxiter=100,
+                disp=0,
+                trim=0.001,
+            )
 
         cls.exog_index = slice(None, cls.k_nonzero, None)
 

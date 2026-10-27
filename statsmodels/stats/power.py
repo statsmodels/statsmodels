@@ -46,13 +46,93 @@ from statsmodels.tools.validation import string_like
 # the documented spelling.
 _ALTERNATIVE_ALIASES = {"2s": "two-sided"}
 
+# Largest absolute value of the power equation, ``power(x) - target``, at which
+# ``Power.solve_power`` accepts a root. It must exceed the roughly 1e-5
+# accuracy of the CDFLIB functions in scipy.special, which are used to compute
+# the power, or valid roots are rejected.
+_POWER_ROOT_TOL = 1e-4
+
 
 def nct_cdf(x, df, nc):
-    return special.nctdtr(df, nc, x)
+    """
+    Cumulative distribution function of the noncentral t distribution
+
+    Parameters
+    ----------
+    x : array_like
+        Quantiles.
+    df : array_like
+        Degrees of freedom.
+    nc : array_like
+        Noncentrality parameter.
+
+    Returns
+    -------
+    cdf : float or ndarray
+        The cdf at ``x``, with the type of the input if it is a pandas Series.
+
+    Notes
+    -----
+    This uses ``scipy.special.nctdtr``. Its absolute accuracy is about 1e-15
+    and it can return nan far in the tail opposite to the sign of ``nc``. The
+    reflection ``cdf(x; nc) = 1 - cdf(-x; -nc)`` is tried for those values. If
+    that is nan too, then the probability is below the resolution of the
+    function and 0 (``x < 0 < nc``) or 1 (``nc < 0 < x``) is returned.
+    Values in the tails are therefore not accurate in a relative sense.
+    """
+    res = special.nctdtr(df, nc, x)
+    nan = np.asarray(np.isnan(res))
+    if not nan.any():
+        return res
+    # CDFLIB can return nan far in the tail opposite to the sign of ``nc``.
+    # Retry with the reflection cdf(x; nc) = 1 - cdf(-x; -nc), which leaves
+    # already finite values unchanged.
+    x_, df_, nc_ = np.broadcast_arrays(
+        np.asarray(x, dtype=float),
+        np.asarray(df, dtype=float),
+        np.asarray(nc, dtype=float),
+    )
+    alt = 1 - special.nctdtr(df_, -nc_, -x_)
+    # If the reflection is nan too, the probability is below the resolution
+    # of CDFLIB (absolute error of about 1e-15; the exact values in all such
+    # cases we checked are smaller than 1e-17), so use the limit 0 or 1.
+    # Invalid arguments stay nan.
+    valid = np.isfinite(x_) & np.isfinite(nc_) & (df_ > 0)
+    alt = np.where(np.isnan(alt) & valid & (x_ < 0) & (nc_ > 0), 0.0, alt)
+    alt = np.where(np.isnan(alt) & valid & (x_ > 0) & (nc_ < 0), 1.0, alt)
+    if np.ndim(res) == 0:
+        return np.asarray(np.where(nan, alt, res))[()]
+    # assign in place to keep the type of the input, e.g. a pandas Series
+    res[nan] = alt[nan]
+    return res
 
 
 def nct_sf(x, df, nc):
-    return 1 - special.nctdtr(df, nc, x)
+    """
+    Survival function of the noncentral t distribution
+
+    Parameters
+    ----------
+    x : array_like
+        Quantiles.
+    df : array_like
+        Degrees of freedom.
+    nc : array_like
+        Noncentrality parameter.
+
+    Returns
+    -------
+    sf : float or ndarray
+        The survival function at ``x``, with the type of the input if it is a
+        pandas Series.
+
+    Notes
+    -----
+    This is ``nct_cdf(-x, df, -nc)``, which keeps the relative accuracy in the
+    upper tail, where ``1 - nct_cdf(x, df, nc)`` cancels most digits. See
+    `nct_cdf` for the handling of nan in the far tail.
+    """
+    return nct_cdf(np.negative(x), df, np.negative(nc))
 
 
 def ncf_cdf(x, dfn, dfd, nc):
@@ -95,6 +175,8 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     d = effect_size
     if df is None:
         df = nobs - 1
@@ -163,6 +245,8 @@ def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     d = effect_size
 
@@ -226,6 +310,8 @@ def normal_power_het(
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     d = diff
     if std_alternative is None:
@@ -417,6 +503,8 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     df_num = k_groups - 1
     df_denom = nobs - k_groups
     crit = stats.f.isf(alpha, df_num, df_denom)
@@ -469,6 +557,8 @@ def ftest_power(effect_size, df2, df1, alpha, ncc=1):
     models, with df_num (df1) as number of constraints and d_denom (df2) as
     df_resid.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     df_num, df_denom = df1, df2
     nc = effect_size**2 * (df_denom + df_num + ncc)
     crit = stats.f.isf(alpha, df_num, df_denom)
@@ -531,6 +621,8 @@ def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
     models, with df_num (df1) as number of constraints and d_denom (df2) as
     df_resid.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     nc = effect_size * (df_denom + df_num + ncc)
     crit = stats.f.isf(alpha, df_num, df_denom)
@@ -582,7 +674,12 @@ class Power:
         for key in ["ratio"]:
             self.start_bqexp[key] = {"low": 1e-8, "start_upp": 2}
         for key in ["alpha"]:
-            self.start_bqexp[key] = {"low": 1e-12, "upp": 1 - 1e-12}
+            self.start_bqexp[key] = {
+                "low": 1e-12,
+                "upp": 1 - 1e-12,
+                # roots can be far below the default xtol of 1e-5 of brentq_expanding
+                "xtol": 1e-18,
+            }
 
     def power(self, *args, **kwds):
         raise NotImplementedError
@@ -624,6 +721,10 @@ class Power:
             The first element is the success indicator, one if successful.
             The remaining elements contain the return information of the up to
             three solvers that have been tried.
+
+        If no solver finds a value that solves the power equation, for example
+        because the equation has no solution, a ``ConvergenceWarning`` is
+        issued and ``nan`` is returned.
 
         """
         # TODO: maybe use explicit kwds,
@@ -729,32 +830,51 @@ class Power:
             fit_res.append(None)
 
         success = None
-        if (not failed) and res.converged:
+        if (not failed) and res.converged and np.abs(func(val)) < _POWER_ROOT_TOL:
             success = 1
         else:
             # try backup
             # TODO: check more cases to make this robust
             if not np.isnan(start_value):
-                val, infodict, ier, msg = optimize.fsolve(
-                    func, start_value, full_output=True
-                )  # scalar
-                # val = optimize.newton(func, start_value) # scalar
-                fval = infodict["fvec"]
-                fit_res.append(infodict)
+                try:
+                    val, infodict, ier, msg = optimize.fsolve(
+                        func, start_value, full_output=True
+                    )  # scalar
+                except ValueError:
+                    # fsolve left the range of valid arguments of the power
+                    # function, for example alpha outside (0, 1)
+                    ier = -1
+                    fval = 1
+                    fit_res.append([None])
+                else:
+                    # val = optimize.newton(func, start_value) # scalar
+                    fval = infodict["fvec"]
+                    fit_res.append(infodict)
             else:
                 ier = -1
                 fval = 1
                 fit_res.append([None])
 
-            if ier == 1 and np.abs(fval) < 1e-4:
+            if ier == 1 and np.abs(fval) < _POWER_ROOT_TOL:
                 success = 1
             # print infodict
             elif key in ["alpha", "power", "effect_size"]:
-                val, r = optimize.brentq(
-                    func, 1e-8, 1 - 1e-8, full_output=True
-                )  # scalar
-                success = 1 if r.converged else 0
-                fit_res.append(r)
+                try:
+                    val, r = optimize.brentq(
+                        func, 1e-8, 1 - 1e-8, full_output=True
+                    )  # scalar
+                except ValueError:
+                    # func has the same sign at both bounds, so the bracket
+                    # contains no root, or an even number of them
+                    success = 0
+                    fit_res.append(None)
+                else:
+                    # brentq also "converges" to a jump of func, e.g. to the
+                    # boundary where power returns nan (mapped to inf above),
+                    # so require that val actually solves the power equation
+                    solved = r.converged and np.abs(func(val)) < _POWER_ROOT_TOL
+                    success = 1 if solved else 0
+                    fit_res.append(r)
             else:
                 success = 0
 
@@ -922,7 +1042,7 @@ class TTestPower(Power):
             effect size has to be positive.
         nobs : int or float
             sample size, number of observations.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         df : int or float, optional
@@ -941,7 +1061,7 @@ class TTestPower(Power):
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
         """
-        if not 0 < alpha < 1:
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         # for debugging
         # print 'calling ttest power with', (effect_size, nobs, alpha, df, alternative)
@@ -1008,8 +1128,9 @@ class TTestPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         # for debugging
@@ -1021,6 +1142,24 @@ class TTestPower(Power):
             power=power,
             alternative=alternative,
         )
+
+
+def _validate_ratio(ratio):
+    """
+    Check that ``ratio`` of ``TTestIndPower`` is non-negative and not NaN.
+
+    Parameters
+    ----------
+    ratio : float or array_like
+        Ratio of the number of observations in sample 2 relative to sample 1.
+
+    Raises
+    ------
+    ValueError
+        If any element of ``ratio`` is negative or NaN.
+    """
+    if not np.all(np.greater_equal(ratio, 0)):
+        raise ValueError(f"ratio must be non-negative and not NaN, got {ratio}")
 
 
 class TTestIndPower(Power):
@@ -1049,12 +1188,21 @@ class TTestIndPower(Power):
         alpha : float in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ratio : float, optional
+        ratio : float or array_like, optional
             ratio of the number of observations in sample 2 relative to
-            sample 1. see description of nobs1
+            sample 1. see description of nobs1. ``ratio`` must be
+            non-negative and not NaN.
+            ``ratio`` can be set to zero in order to get the power of the
+            one sample t-test with ``nobs1`` observations, in which case the
+            default degrees of freedom are ``df = nobs1 - 1``. This is a
+            convention and not the limit of ``ratio`` going to zero: a ratio
+            close to zero, e.g. ``1e-9``, means that sample 2 has almost no
+            observations and the power is close to alpha, while ``ratio=0``
+            returns the one sample power.
         df : int or float, optional
             degrees of freedom. By default this is None, and the df from the
             ttest with pooled variance is used, ``df = (nobs1 - 1 + nobs2 - 1)``
+            or ``df = nobs1 - 1`` if ``ratio=0``.
         alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
@@ -1062,12 +1210,55 @@ class TTestIndPower(Power):
 
         Returns
         -------
-        power : float
+        power : float or ndarray
             Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
+            The result is a float for scalar arguments and an array if
+            ``ratio`` or another argument is array_like.
+
+        Raises
+        ------
+        ValueError
+            If any element of ``ratio`` is negative or NaN.
+
+        Notes
+        -----
+        If ``ratio`` is an array_like, then the one sample convention for
+        ``ratio=0`` is applied to the elements that are zero.
+
+        .. versionchanged:: 0.15.1
+
+           ``ratio=0`` returns the power of the one sample t-test, it used to
+           raise a ``ZeroDivisionError`` or to return alpha with a
+           ``RuntimeWarning``. A negative or NaN ``ratio`` raises a
+           ``ValueError``.
 
         """
+
+        # negative ratios have no sample-size interpretation and used to
+        # crash with a bare ZeroDivisionError or return nan
+        _validate_ratio(ratio)
+        if isinstance(ratio, (list, tuple)):
+            ratio = np.asarray(ratio, dtype=float)
+
+        is_one_sample = np.equal(ratio, 0)
+        if np.any(is_one_sample):
+            # ratio == 0 is the convention for the one-sample t-test with nobs1
+            # observations (see the docstring), applied elementwise. It is not
+            # the limit of ratio -> 0, where nobs2 -> 0 and the power -> alpha.
+            # asarray, so that division by zero gives inf instead of an
+            # exception for Python scalars
+            nobs2 = np.asarray(nobs1 * ratio, dtype=float)
+            with np.errstate(divide="ignore"):
+                nobs = np.where(
+                    is_one_sample, nobs1, 1.0 / (1.0 / nobs1 + 1.0 / nobs2)
+                )
+            if df is None:
+                df = np.where(is_one_sample, nobs1 - 1, nobs1 - 1 + nobs2 - 1)
+            res = ttest_power(effect_size, nobs, alpha, df=df, alternative=alternative)
+            # return a scalar for scalar input
+            return res[()] if isinstance(res, np.ndarray) else res
 
         nobs2 = nobs1 * ratio
         # pooled variance
@@ -1114,7 +1305,13 @@ class TTestIndPower(Power):
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
         ratio : None or float, optional
             ratio of the number of observations in sample 2 relative to
-            sample 1. see description of nobs1
+            sample 1. see description of nobs1. ``ratio`` must be
+            non-negative and not NaN.
+            ``ratio`` can be set to zero in order to get the power of the
+            one sample t-test with ``nobs1`` observations (``df = nobs1 - 1``).
+            This is a convention and not the limit of ``ratio`` going to
+            zero: a ratio close to zero, e.g. ``1e-9``, means that sample 2
+            has almost no observations and the power is close to alpha.
             The default for ratio is 1; to solve for ratio given the other
             arguments it has to be explicitly set to None.
         alternative : {'two-sided', 'larger', 'smaller'}, optional
@@ -1128,6 +1325,10 @@ class TTestIndPower(Power):
             The value of the parameter that was set to None in the call. The
             value solves the power equation given the remaining parameters.
 
+        Raises
+        ------
+        ValueError
+            If ``ratio`` is negative or NaN.
 
         Notes
         -----
@@ -1135,10 +1336,22 @@ class TTestIndPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
+
+        .. versionchanged:: 0.15.1
+
+           ``ratio=0`` solves the power equation of the one sample t-test, it
+           used to raise a ``ZeroDivisionError`` or to give wrong results. A
+           negative or NaN ``ratio`` raises a ``ValueError``, it used to
+           return nan with a ``ConvergenceWarning``.
 
         """
+        if ratio is not None:
+            # validate before the root finding, which swallows ValueError and
+            # returns nan with a ConvergenceWarning instead
+            _validate_ratio(ratio)
         return super().solve_power(
             effect_size=effect_size,
             nobs1=nobs1,
@@ -1185,7 +1398,7 @@ class NormalIndPower(Power):
             i.e., ``nobs2 = nobs1 * ratio``
             ``ratio`` can be set to zero in order to get the power for a
             one sample test.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ratio : float, optional
@@ -1204,7 +1417,7 @@ class NormalIndPower(Power):
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
         """
-        if not 0 < alpha < 1:
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
         ddof = self.ddof  # for correlation, ddof=3
@@ -1279,8 +1492,9 @@ class NormalIndPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         return super().solve_power(
@@ -1360,7 +1574,7 @@ class FTestPower(Power):
             Warning incorrect name
             numerator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ncc : int, optional
@@ -1385,7 +1599,7 @@ class FTestPower(Power):
         ftest_power with ncc=0 should also be correct for f_test in regression
         models, with df_num and d_denom as defined there. (not verified yet)
         """
-        if not 0 < alpha < 1:
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         if np.any(np.asarray(df_num) <= 0) or np.any(np.asarray(df_denom) <= 0):
             raise ValueError("df_num and df_denom must be positive")
@@ -1461,8 +1675,9 @@ class FTestPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         if kwargs:
@@ -1534,7 +1749,7 @@ class FTestPowerF2(Power):
         df_denom : int or float
             Denominator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
+        alpha : float or array_like in interval (0,1)
             Significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         ncc : int, optional
@@ -1558,7 +1773,7 @@ class FTestPowerF2(Power):
         ftest_power with ncc=0 should also be correct for f_test in regression
         models, with df_num and d_denom as defined there. (not verified yet)
         """
-        if not 0 < alpha < 1:
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         if np.any(np.asarray(df_num) <= 0) or np.any(np.asarray(df_denom) <= 0):
             raise ValueError("df_num and df_denom must be positive")
@@ -1624,8 +1839,9 @@ class FTestPowerF2(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
 
@@ -1721,8 +1937,9 @@ class FTestAnovaPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         # update start values for root finding
@@ -1851,8 +2068,9 @@ class GofChisquarePower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         return super().solve_power(
@@ -1967,8 +2185,9 @@ class _GofChisquareIndPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         return super().solve_power(

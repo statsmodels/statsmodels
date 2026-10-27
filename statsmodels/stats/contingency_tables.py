@@ -25,6 +25,7 @@ sampled.  In general the observed units are independent and
 identically distributed.
 """
 
+from math import fsum
 from typing import NamedTuple
 import warnings
 
@@ -814,7 +815,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float, optional
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
         method : {"normal"}, optional
@@ -822,7 +823,7 @@ class Table2x2(SquareTable):
             must be 'normal' which uses the normal approximation.
         """
         _ = string_like(method, "method", options=("normal",))
-        if not 0 < alpha < 1:
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         f = -stats.norm.ppf(alpha / 2)
         lor = self.log_oddsratio
@@ -837,7 +838,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float, optional
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
         method : {"normal"}, optional
@@ -906,7 +907,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float, optional
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
         method : {"normal"}, optional
@@ -914,7 +915,7 @@ class Table2x2(SquareTable):
             must be 'normal' which uses the normal approximation.
         """
         _ = string_like(method, "method", options=("normal",))
-        if not 0 < alpha < 1:
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         f = -stats.norm.ppf(alpha / 2)
         lrr = self.log_riskratio
@@ -929,7 +930,7 @@ class Table2x2(SquareTable):
 
         Parameters
         ----------
-        alpha : float, optional
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
         method : {"normal"}, optional
@@ -997,6 +998,73 @@ class Table2x2(SquareTable):
             data, headers, stubs, data_aligns="r", table_dec_above=""
         )
         return tab
+
+
+def _breslow_day_statistic(table, odds, adjust):
+    """Stable finite-OR calculation, or None to retain the legacy path."""
+    if table.shape[2] == 0 or not (np.isfinite(odds) and odds > 0):
+        return None
+    observed = table.reshape(4, -1)
+    a, b, c, d = observed
+
+    # Fit each cell directly: subtracting large fitted cells can erase a
+    # small cell. All four quadratics share this nonnegative discriminant.
+    # Unsupported overflow/underflow falls back to the unchanged method.
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore",
+                     under="ignore"):
+        row, col = a + b, a + c
+        row2, col2 = c + d, b + d
+        margins = np.array([row, col, row2, col2])
+        if not (np.all(np.isfinite(margins)) and np.all(margins > 0)):
+            return None
+        root = np.sqrt((d - a + odds * (b - c)) ** 2
+                       + 4 * odds * col * col2)
+        quadratic = np.array([1 - odds, odds - 1, odds - 1, 1 - odds])[:, None]
+        linear = np.array([
+            d - a + odds * (row + col),
+            odds * (c - b) + row + col2,
+            odds * (b - c) + row2 + col,
+            a - d + odds * (row2 + col2),
+        ])
+        product = np.array([odds * row * col, row * col2,
+                            row2 * col, odds * row2 * col2])
+        positive = linear >= 0
+        roots = np.broadcast_to(root, linear.shape)
+        quadratic = np.broadcast_to(quadratic, linear.shape)
+        fitted = np.empty_like(linear)
+        # Rationalization includes the linear odds == 1 case. The other
+        # branch cannot have zero quadratic coefficient for positive odds.
+        fitted[positive] = 2 * product[positive] / (
+            linear[positive] + roots[positive]
+        )
+        fitted[~positive] = (-linear[~positive] + roots[~positive]) / (
+            2 * quadratic[~positive]
+        )
+        if not (np.all(np.isfinite(fitted)) and np.all(fitted > 0)):
+            return None
+        # All four terms are positive, so the plain sum is accurate to a few
+        # ulp. Only the sums over strata, which can cancel, use fsum.
+        variance = 1 / np.sum(1 / fitted, axis=0)
+        if not (np.all(np.isfinite(variance)) and np.all(variance > 0)):
+            return None
+
+        # Fixed margins give residual signs (+, -, -, +). Select the
+        # smallest subtraction scale, not necessarily the first cell.
+        corner = np.argmin(np.maximum(observed, fitted), axis=0)
+        residual = (observed - fitted) * np.array([1, -1, -1, 1])[:, None]
+        delta = residual[corner, np.arange(table.shape[2])]
+        try:
+            if adjust:
+                # Algebraically identical to Tarone's subtraction, without
+                # subtracting two large, nearly equal sums of squares.
+                delta = delta - (
+                    fsum(delta.tolist()) / fsum(variance.tolist())
+                ) * variance
+            # tolist is faster than iterating over the array in fsum
+            statistic = np.float64(fsum((delta * delta / variance).tolist()))
+        except OverflowError:
+            return None
+        return statistic if np.isfinite(statistic) else None
 
 
 class StratifiedTable:
@@ -1130,7 +1198,19 @@ class StratifiedTable:
         ----------
         correction : bool, optional
             If True, use the continuity correction when calculating the
-            test statistic.
+            test statistic. As in R's ``mantelhaen.test``, the correction of
+            0.5 is applied only if ``|sum(a - E(a))| >= 0.5``, where the sum
+            is over the strata and ``E(a)`` is the expected count of the
+            upper left cell under the null hypothesis. Otherwise the
+            statistic is not corrected.
+
+            .. versionchanged:: 0.15.1
+
+               The correction is no longer applied if ``|sum(a - E(a))|`` is
+               smaller than 0.5. Previously ``min(0.5, |sum(a - E(a))|)`` was
+               subtracted, which changed the statistic and p-value in this
+               case. If the variance is zero, the statistic and p-value
+               are now nan instead of inf and 0 when the correction is used.
 
         Returns
         -------
@@ -1140,7 +1220,9 @@ class StratifiedTable:
 
         statistic = np.sum(self.table[0, 0, :] - self._apb * self._apc / self._n)
         statistic = np.abs(statistic)
-        if correction:
+        # The continuity correction must not overshoot zero; as in R's
+        # mantelhaen.test it is only applied if |sum(a - E(a))| >= 0.5
+        if correction and statistic >= 0.5:
             statistic -= 0.5
         statistic = statistic**2
         denom = self._apb * self._apc * self._bpd * self._cpd
@@ -1291,35 +1373,55 @@ class StratifiedTable:
                 The chi^2 test statistic.
             * pvalue : float
                 The p-value for the test.
+
+        Notes
+        -----
+        The statistic is computed from the fitted cell counts of each stratum
+        given the pooled (Mantel-Haenszel) odds ratio.
+
+        If a stratum has a row or column total of zero, the statistic and the
+        p-value are NaN.
+
+        .. versionchanged:: 0.15.1
+
+           The test can be computed if the pooled odds ratio is exactly 1,
+           where it was NaN before. The fitted counts are computed in a way
+           that avoids a loss of precision if the pooled odds ratio is close
+           to 1 or some fitted counts are small. Results can differ from
+           those of earlier versions by a relative amount of about 1e-12, and
+           by more for tables where the earlier calculation lost precision.
         """
 
         table = self.table
 
         r = self.oddsratio_pooled
-        a = 1 - r
-        b = r * (self._apb + self._apc) + self._dma
-        c = -r * self._apb * self._apc
+        statistic = _breslow_day_statistic(table, r, adjust)
+        if statistic is None:
+            # Preserve existing behavior outside the finite computable domain.
+            a = 1 - r
+            b = r * (self._apb + self._apc) + self._dma
+            c = -r * self._apb * self._apc
 
-        # Expected value of first cell
-        dr = np.sqrt(b**2 - 4 * a * c)
-        e11 = (-b + dr) / (2 * a)
+            # Expected value of first cell
+            dr = np.sqrt(b**2 - 4 * a * c)
+            e11 = (-b + dr) / (2 * a)
 
-        # Variance of the first cell
-        v11 = (
-            1 / e11
-            + 1 / (self._apc - e11)
-            + 1 / (self._apb - e11)
-            + 1 / (self._dma + e11)
-        )
-        v11 = 1 / v11
+            # Variance of the first cell
+            v11 = (
+                1 / e11
+                + 1 / (self._apc - e11)
+                + 1 / (self._apb - e11)
+                + 1 / (self._dma + e11)
+            )
+            v11 = 1 / v11
 
-        statistic = np.sum((table[0, 0, :] - e11) ** 2 / v11)
+            statistic = np.sum((table[0, 0, :] - e11) ** 2 / v11)
 
-        if adjust:
-            adj = table[0, 0, :].sum() - e11.sum()
-            adj = adj**2
-            adj /= np.sum(v11)
-            statistic -= adj
+            if adjust:
+                adj = table[0, 0, :].sum() - e11.sum()
+                adj = adj**2
+                adj /= np.sum(v11)
+                statistic -= adj
 
         # 1 - stats.chi2.cdf(statistic, df) loses the upper tail
         pvalue = stats.chi2.sf(statistic, table.shape[2] - 1)

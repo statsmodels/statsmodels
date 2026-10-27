@@ -1,7 +1,7 @@
 """Tools for working with dates"""
 from statsmodels.compat.python import lmap, lrange, lzip
 
-import datetime
+import datetime as dt
 import re
 
 import numpy as np
@@ -106,7 +106,7 @@ def date_parser(timestr, parserinfo=None, **kwargs):
     else:
         return to_datetime(timestr, **kwargs)
 
-    return datetime.datetime(year, month, day)
+    return dt.datetime(year, month, day)
 
 
 def date_range_str(start, end=None, length=None):

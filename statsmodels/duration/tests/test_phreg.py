@@ -9,6 +9,7 @@ import pytest
 from statsmodels.duration.hazard_regression import PHReg
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib.summary2 import Summary
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 # All the R results
 from .results import (
@@ -216,7 +217,8 @@ class TestPHReg:
 
         # Works with "0 +" on RHS but issues warning
         fml = "time ~ 0 + exog1 + np.log(exog2) + exog1*exog2"
-        model1 = PHReg.from_formula(fml, df, status=status)
+        with pytest.warns(SpecificationWarning, match="PHReg formulas should not"):
+            model1 = PHReg.from_formula(fml, df, status=status)
         result1 = model1.fit()
 
         mgr = FormulaManager()

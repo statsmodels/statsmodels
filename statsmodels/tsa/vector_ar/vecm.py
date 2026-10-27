@@ -693,6 +693,9 @@ def coint_johansen(endog, det_order, k_ar_diff):
     sig = np.dot(sk0, np.dot(inv(s00), sk0.T))
     tmp = inv(skk)
     au, du = np.linalg.eig(np.dot(tmp, sig))  # au is eval, du is evec
+    # NumPy 2.5 and later return complex arrays even for real eigenvalues
+    au = np.real_if_close(au)
+    du = np.real_if_close(du)
 
     temp = inv(np.linalg.cholesky(np.dot(du.T, np.dot(skk, du))))
     dt = np.dot(du, temp)
@@ -1640,30 +1643,30 @@ class VECMResults:
     # p-values:
     @cache_readonly
     def pvalues_alpha(self):
-        return (1 - scipy.stats.norm.cdf(abs(self.tvalues_alpha))) * 2
+        return 2 * scipy.stats.norm.sf(abs(self.tvalues_alpha))
 
     @cache_readonly
     def pvalues_beta(self):
         first_rows = np.zeros((self.coint_rank, self.coint_rank))
         tval_last = self.tvalues_beta[self.coint_rank :]
-        last_rows = (1 - scipy.stats.norm.cdf(abs(tval_last))) * 2  # student-t
+        last_rows = 2 * scipy.stats.norm.sf(abs(tval_last))  # student-t
         return vstack((first_rows, last_rows))
 
     @cache_readonly
     def pvalues_det_coef_coint(self):
         if self.det_coef_coint.size == 0:
             return self.det_coef_coint  # 0-size array
-        return (1 - scipy.stats.norm.cdf(abs(self.tvalues_det_coef_coint))) * 2
+        return 2 * scipy.stats.norm.sf(abs(self.tvalues_det_coef_coint))
 
     @cache_readonly
     def pvalues_gamma(self):
-        return (1 - scipy.stats.norm.cdf(abs(self.tvalues_gamma))) * 2
+        return 2 * scipy.stats.norm.sf(abs(self.tvalues_gamma))
 
     @cache_readonly
     def pvalues_det_coef(self):
         if self.det_coef.size == 0:
             return self.det_coef  # 0-size array
-        return (1 - scipy.stats.norm.cdf(abs(self.tvalues_det_coef))) * 2
+        return 2 * scipy.stats.norm.sf(abs(self.tvalues_det_coef))
 
     # confidence intervals
     def _make_conf_int(self, est, stderr, alpha):

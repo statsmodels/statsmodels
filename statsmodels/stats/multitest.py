@@ -199,6 +199,7 @@ def multipletests(
             "p-values must be in the range [0, 1]; got "
             f"[{pvals.min()}, {pvals.max()}]"
         )
+    alpha = float_like(alpha, "alpha")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     alphaf = alpha  # Notation ?
@@ -421,6 +422,7 @@ def fdrcorrection(pvals, alpha=0.05, method="indep", is_sorted=False):
     assert pvals.ndim == 1, "pvals must be 1-dimensional, that is of shape (n,)"
     # alpha == 1 is allowed here: fdrcorrection_twostage legitimately calls
     # this with a capped stage-2 alpha of 1 (reject every p-value <= 1)
+    alpha = float_like(alpha, "alpha")
     if not 0 < alpha <= 1:
         raise ValueError(f"alpha must be in the range (0, 1], got {alpha}")
 
@@ -727,6 +729,7 @@ def fdrcorrection_twostage(
         pvals = np.take(pvals, pvals_sortind)
 
     method = string_like(method, "method", options=("bky", "bh"), lower=False)
+    alpha = float_like(alpha, "alpha")
     if not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     ntests = len(pvals)

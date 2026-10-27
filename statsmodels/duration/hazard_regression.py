@@ -177,7 +177,8 @@ class PHSurvivalTime:
             observations are in a single stratum.
         entry : ndarray, optional
             Entry (left truncation) times.  The observation is not
-            part of the risk set for times before the entry time.  If
+            part of the risk set for times before the entry time, but
+            is included at the entry time itself.  If
             None, the entry time is treated as being zero, which
             gives no left truncation.  The entry time must be less
             than or equal to `time`.
@@ -355,7 +356,9 @@ class PHReg(model.LikelihoodModel):
         that the observation was right censored. If None, defaults
         to status=1 for all cases.
     entry : array_like, optional
-        The entry times, if left truncation occurs
+        The entry times, if left truncation occurs. An observation is in
+        the risk set at its entry time, including when that time equals a
+        failure time. The at-risk interval is ``[entry, endog]``.
     strata : array_like, optional
         Stratum labels.  If None, all observations are taken to be
         in a single stratum.
@@ -373,7 +376,14 @@ class PHReg(model.LikelihoodModel):
     not identified using the partial likelihood approach.
 
     `endog`, `event`, `strata`, `entry`, and the first dimension
-    of `exog` all must have the same length
+    of `exog` all must have the same length.
+
+    The inclusive entry boundary differs from the ``(start, stop]``
+    convention used by R's ``survival::Surv`` counting-process response.
+    Results can differ when an entry time coincides with a failure time.
+    To reproduce the R results in that case, add to the affected `entry`
+    values an amount that is smaller than the smallest gap between distinct
+    observed times.
     """
 
     def __init__(
@@ -462,7 +472,9 @@ class PHReg(model.LikelihoodModel):
             that the observation was right censored. If None, defaults
             to status=1 for all cases.
         entry : array_like, optional
-            The entry times, if left truncation occurs
+            The entry times, if left truncation occurs. An observation is in
+            the risk set at its entry time, including when that time equals a
+            failure time. The at-risk interval is ``[entry, endog]``.
         strata : array_like, optional
             Stratum labels.  If None, all observations are taken to be
             in a single stratum.

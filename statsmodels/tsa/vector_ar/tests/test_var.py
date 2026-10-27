@@ -23,7 +23,7 @@ import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tsa.base.datetools import dates_from_str
 from statsmodels.tsa.stattools import acovf
-from statsmodels.tsa.vector_ar import util
+from statsmodels.tsa.vector_ar import util, var_model
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     ErrorBand,
     ForecastInterval,
@@ -666,15 +666,15 @@ def test_get_trendorder():
 
 def test_var_constant():
     # see 2043
-    import datetime
+    import datetime as dt
 
     from pandas import DataFrame, DatetimeIndex
 
     series = np.array([[2.0, 2.0], [1, 2.0], [1, 2.0], [1, 2.0], [1.0, 2.0]])
     data = DataFrame(series)
 
-    d = datetime.datetime.now()
-    delta = datetime.timedelta(days=1)
+    d = dt.datetime.now()
+    delta = dt.timedelta(days=1)
     index = []
     for _ in range(data.shape[0]):
         index.append(d)
@@ -1074,6 +1074,15 @@ def test_irf_resim_reproducible_with_int_seed():
     assert_allclose(sim1, sim2)
 
 
+def test_eigval_decomp_real():
+    # NumPy 2.5 and later return complex arrays from eig for real eigenvalues
+    cov = np.array([[2.0, 0.5], [0.5, 1.0]])
+    W, eigva, k = util.eigval_decomp(cov)
+    assert not np.iscomplexobj(W)
+    assert not np.iscomplexobj(eigva)
+    assert eigva[k] == eigva.max()
+
+
 @pytest.mark.slow
 def test_irf_err_bands():
     # smoke tests
@@ -1247,6 +1256,29 @@ def test_varprocess_plot_acorr(bivariate_var_result, close_figures):
         assert_allclose(heights, expected[:, i, j])
 
 
+@pytest.mark.parametrize("trend", ["c", "ct"])
+def test_varprocess_simulate_var(bivariate_var_data, trend):
+    # GH 8926: a VARProcess built from coefs_exog with shape (neqs, k_exog)
+    # counted neqs deterministic terms and failed in simulate_var because
+    # only VARResults has endog_lagged
+    res = VAR(bivariate_var_data).fit(2, trend=trend)
+    process = VARProcess(res.coefs, res.coefs_exog, res.sigma_u)
+    assert process.k_trend == res.k_trend
+    assert process.k_exog == res.k_exog
+    assert_allclose(process.intercept, res.intercept)
+
+    if trend == "c":
+        sim = process.simulate_var(steps=50, rng=np.random.default_rng(0))
+        expected = res.simulate_var(steps=50, rng=np.random.default_rng(0))
+    else:
+        with pytest.raises(ValueError, match="offset is required"):
+            process.simulate_var(steps=50, rng=np.random.default_rng(0))
+        offset = res.endog_lagged[:, : res.k_exog] @ res.coefs_exog.T
+        sim = process.simulate_var(offset=offset, rng=np.random.default_rng(0))
+        expected = res.simulate_var(rng=np.random.default_rng(0))
+    assert_allclose(sim, expected)
+
+
 @pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_sample_acorr(bivariate_var_result, close_figures):
@@ -1308,3 +1340,140 @@ def test_whiteness_invalid_signif_raises():
         res.test_whiteness(nlags=5, signif=0)
     pvalue = res.test_whiteness(nlags=5).pvalue
     assert np.isfinite(pvalue)
+
+
+def _select_order_data(kind, nobs=300, neqs=3, seed=0):
+    rng = np.random.default_rng(seed)
+    eps = rng.standard_normal((nobs, neqs))
+    if kind == "random_walk":
+        return np.cumsum(eps, axis=0)
+    y = np.zeros((nobs, neqs))
+    a1 = 0.4 * np.eye(neqs) + 0.1 * rng.standard_normal((neqs, neqs))
+    a2 = -0.2 * np.eye(neqs)
+    for t in range(2, nobs):
+        y[t] = a1 @ y[t - 1] + a2 @ y[t - 2] + eps[t]
+    if kind == "scaled":
+        y *= np.logspace(-3, 3, neqs)
+    return y
+
+
+def _select_order_loop(model, maxlags, trend):
+    # The previous implementation: estimate each lag order separately
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(var_model, "_var_order_ics", lambda *args: None)
+        return model.select_order(maxlags, trend=trend)
+
+
+def _assert_lag_orders_equal(res, expected, rtol, atol=0.0):
+    assert list(res.ics) == list(expected.ics)
+    for key in expected.ics:
+        assert_allclose(res.ics[key], expected.ics[key], rtol=rtol, atol=atol)
+    assert res.selected_orders == expected.selected_orders
+
+
+@pytest.mark.parametrize("kind", ["stationary", "random_walk", "scaled"])
+@pytest.mark.parametrize("use_exog", [False, True])
+@pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
+def test_select_order_qr(kind, use_exog, trend):
+    y = _select_order_data(kind)
+    exog = None
+    if use_exog:
+        exog = np.random.default_rng(1).standard_normal((y.shape[0], 2))
+    model = VAR(y, exog=exog)
+    p_min = 0 if use_exog or trend != "n" else 1
+    assert var_model._var_order_ics(y, exog, 8, trend, p_min) is not None
+    res = model.select_order(8, trend=trend)
+    expected = _select_order_loop(VAR(y, exog=exog), 8, trend)
+    _assert_lag_orders_equal(res, expected, rtol=1e-10)
+    assert model.k_trend == util.get_trendorder(trend)
+
+
+@pytest.mark.parametrize("maxlags", [0, 1])
+@pytest.mark.parametrize("use_exog", [False, True])
+def test_select_order_qr_small_maxlags(maxlags, use_exog):
+    y = _select_order_data("stationary")
+    exog = None
+    if use_exog:
+        exog = np.random.default_rng(1).standard_normal((y.shape[0], 1))
+    res = VAR(y, exog=exog).select_order(maxlags, trend="c")
+    expected = _select_order_loop(VAR(y, exog=exog), maxlags, "c")
+    _assert_lag_orders_equal(res, expected, rtol=1e-10)
+
+
+def test_select_order_qr_badly_scaled():
+    # Columns scaled from 1e-6 to 1e6. The ICs of the rescaled data differ
+    # by the constant log-determinant of the scaling. QR is invariant to
+    # the column scaling, the separate lstsq fits only agree to about 1e-6
+    rng = np.random.default_rng(2)
+    unit = rng.standard_normal((500, 4))
+    scale = np.logspace(-6, 6, 4)
+    y = unit * scale
+    assert var_model._var_order_ics(y, None, 6, "c", 0) is not None
+    res = VAR(y).select_order(6, trend="c")
+    expected = _select_order_loop(VAR(unit), 6, "c")
+    shift = 2 * np.sum(np.log(scale))
+    for key in ("aic", "bic", "hqic"):
+        assert_allclose(
+            np.array(res.ics[key]) - shift, expected.ics[key], rtol=1e-10, atol=1e-12
+        )
+    fpe = np.array(res.ics["fpe"]) / np.prod(scale**2)
+    assert_allclose(fpe, expected.ics["fpe"], rtol=1e-10)
+    assert res.selected_orders == expected.selected_orders
+    loop = _select_order_loop(VAR(y), 6, "c")
+    assert res.selected_orders == loop.selected_orders
+
+
+@pytest.mark.parametrize("trend", ["n", "c", "ctt"])
+def test_select_order_qr_near_collinear(trend):
+    # The third series is the sum of the first two plus small noise, so the
+    # lagged regressors are ill-conditioned. Both computations lose about
+    # the same number of digits.
+    rng = np.random.default_rng(3)
+    y = np.cumsum(rng.standard_normal((300, 3)), axis=0)
+    y[:, 2] = y[:, 0] + y[:, 1] + 1e-3 * rng.standard_normal(300)
+    p_min = int(trend == "n")
+    assert var_model._var_order_ics(y, None, 8, trend, p_min) is not None
+    res = VAR(y).select_order(8, trend=trend)
+    expected = _select_order_loop(VAR(y), 8, trend)
+    _assert_lag_orders_equal(res, expected, rtol=1e-6)
+
+
+def test_select_order_qr_fallback():
+    rng = np.random.default_rng(4)
+    y = np.cumsum(rng.standard_normal((200, 3)), axis=0)
+
+    # Constant in exog and trend: singular regressors
+    exog = np.column_stack([np.ones(200), rng.standard_normal(200)])
+    assert var_model._var_order_ics(y, exog, 6, "c", 0) is None
+    res = VAR(y, exog=exog).select_order(6, trend="c")
+    expected = _select_order_loop(VAR(y, exog=exog), 6, "c")
+    _assert_lag_orders_equal(res, expected, rtol=0)
+
+    # Almost perfect fit of the third series
+    y_fit = y.copy()
+    y_fit[:, 2] = y[:, 0] + y[:, 1] + 1e-6 * rng.standard_normal(200)
+    assert var_model._var_order_ics(y_fit, None, 6, "c", 0) is None
+    res = VAR(y_fit).select_order(6, trend="c")
+    expected = _select_order_loop(VAR(y_fit), 6, "c")
+    _assert_lag_orders_equal(res, expected, rtol=0)
+
+    # Non-finite data
+    y_nan = y.copy()
+    y_nan[100, 0] = np.nan
+    assert var_model._var_order_ics(y_nan, None, 6, "c", 0) is None
+
+    # A constant series with a constant term raises as before
+    y_const = y.copy()
+    y_const[:, 1] = 1.0
+    assert var_model._var_order_ics(y_const, None, 6, "c", 0) is None
+    with pytest.raises(ValueError, match="constant"):
+        VAR(y_const).select_order(6, trend="c")
+
+    # Too few observations for many exog columns, the largest model has no
+    # residual degrees of freedom
+    y_short = y[:30, :2]
+    exog_many = rng.standard_normal((30, 20))
+    assert var_model._var_order_ics(y_short, exog_many, 3, "c", 0) is None
+    res = VAR(y_short, exog=exog_many).select_order(3, trend="c")
+    expected = _select_order_loop(VAR(y_short, exog=exog_many), 3, "c")
+    _assert_lag_orders_equal(res, expected, rtol=0)

@@ -377,7 +377,7 @@ class Description:
         if np.any(self._percentiles >= 100) or np.any(self._percentiles <= 0):
             raise ValueError("percentiles must be strictly between 0 and 100")
         self._alpha = float_like(alpha, "alpha")
-        if not 0 < alpha < 1:
+        if not 0 < self._alpha < 1:
             raise ValueError("alpha must be strictly between 0 and 1")
         self._use_t = bool_like(use_t, "use_t")
 
@@ -432,6 +432,9 @@ class Description:
                 ser.dtype if isinstance(ser.dtype, np.dtype) else ser.dtype.numpy_dtype
             )
             ser_no_missing = ser.dropna().to_numpy(dtype=dtype)
+            if ser_no_missing.size == 0:
+                # SciPy warns that there is no sample
+                return np.nan, 0
             kwargs = {} if SP_LT_19 else {"keepdims": True}
             mode_res = stats.mode(ser_no_missing, **kwargs)
             # Changes in SciPy 1.10

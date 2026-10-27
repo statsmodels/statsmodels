@@ -4,6 +4,8 @@ Created on Tue Nov 08 22:28:48 2011
 @author: josef
 """
 
+from contextlib import ExitStack, contextmanager
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import pytest
@@ -29,6 +31,7 @@ from statsmodels.tools.eval_measures import (
     stde,
     vare,
 )
+from statsmodels.tools.testing import warns_or_none
 
 
 def test_eval_measures():
@@ -61,6 +64,18 @@ def test_eval_measures():
     err[np.where(np.isnan(err))] = 0.0
     expected = np.sqrt(np.nanmean(err**2, 0) * 100)
     assert_almost_equal(rmspe(x, y, zeros=0), expected)
+
+    # integer input must not truncate the percentage errors
+    y_int, y_hat_int = np.array([2, 4]), np.array([1, 3])
+    expected = np.sqrt(np.mean(np.array([1 / 2, 1 / 4]) ** 2) * 100)
+    assert_almost_equal(rmspe(y_int, y_hat_int), expected)
+    assert_almost_equal(rmspe(y_int, y_hat_int), rmspe(y_int * 1.0, y_hat_int))
+    # a zero in integer y uses ``zeros``, nan could not be stored in an int array
+    y_int = np.array([0, 4])
+    assert_almost_equal(rmspe(y_int, y_hat_int), np.sqrt((1 / 4) ** 2 * 100))
+    assert_almost_equal(
+        rmspe(y_int, y_hat_int, zeros=0), np.sqrt(np.mean([0, (1 / 4) ** 2]) * 100)
+    )
 
     assert_equal(maxabs(x, y), np.array([14.0, 15.0, 16.0, 17.0, 18.0]))
     assert_equal(maxabs(x, y, axis=1), np.array([3.0, 8.0, 13.0, 18.0]))
@@ -140,6 +155,23 @@ def test_iqr_axis():
     assert any(ax_0 != ax_1)
 
 
+@contextmanager
+def empty_input_warnings(measure):
+    # numpy warns for the mean or the variance of an empty array
+    if measure in (iqr, maxabs):
+        yield
+        return
+    first = "Degrees of freedom <= 0" if measure is vare else "Mean of empty slice"
+    with ExitStack() as stack:
+        stack.enter_context(pytest.warns(RuntimeWarning, match=first))
+        if measure is not rmspe:
+            # divide of the sum by the zero count, the message depends on the shape
+            stack.enter_context(
+                warns_or_none(RuntimeWarning, match="invalid value encountered")
+            )
+        yield
+
+
 @pytest.mark.parametrize(
     "measure",
     [bias, iqr, maxabs, meanabs, medianabs, medianbias, mse, rmse, rmspe, vare],
@@ -150,7 +182,9 @@ def test_measures_empty_input(measure):
     # while every other measure here returned nan.
     empty = np.empty(0)
 
-    assert np.isnan(measure(empty, empty))
+    with empty_input_warnings(measure):
+        res = measure(empty, empty)
+    assert np.isnan(res)
 
 
 @pytest.mark.parametrize(
@@ -162,7 +196,9 @@ def test_measures_empty_input_keeps_axis_shape(measure):
     # (0, 3) input reduces to three nans rather than a scalar
     empty = np.empty((0, 3))
 
-    assert_equal(measure(empty, empty), np.full(3, np.nan))
+    with empty_input_warnings(measure):
+        res = measure(empty, empty)
+    assert_equal(res, np.full(3, np.nan))
 
 
 def test_stde():

@@ -59,6 +59,13 @@ def test_trend_array():
     assert_allclose(mod.exog, desired.exog)
 
 
+@pytest.mark.parametrize("trend", [np.array(["c", "t"]), [[1, 0], [0, 1]]])
+def test_trend_array_invalid(trend):
+    endog = dta["infl"].iloc[:50]
+    with pytest.raises(ValueError, match="Valid trend inputs are"):
+        ARIMA(endog, trend=trend)
+
+
 def test_invalid():
     # Tests that invalid options raise errors
     # (note that this is only invalid options specific to `ARIMA`, and not
@@ -163,6 +170,21 @@ def test_innovations_mle():
     res = mod.fit(method="innovations_mle")
     # Note: atol is required only due to precision issues on Windows
     assert_allclose(res.params, desired_p.params, atol=1e-5)
+
+
+@pytest.mark.parametrize("trend", ["n", "c"])
+def test_innovations_mle_start_params_not_implemented(trend):
+    # ARIMA.fit does not pass starting parameters through for innovations_mle.
+    # The error should say so, not raise a TypeError from the estimator.
+    endog = dta["infl"].iloc[:100]
+    mod = ARIMA(endog, order=(1, 0, 0), trend=trend)
+    with pytest.raises(NotImplementedError, match="innovations_mle"):
+        mod.fit(method="innovations_mle", start_params=[0.5, 1.0])
+
+    if trend == "n":
+        # The statespace method still accepts starting parameters.
+        res = mod.fit(method="statespace", start_params=[0.5, 1.0])
+        assert res.params.shape == (2,)
 
 
 def test_statespace():

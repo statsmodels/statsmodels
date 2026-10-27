@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import fftconvolve
 
-from statsmodels.tools.validation import PandasWrapper, array_like
+from statsmodels.tools.validation import PandasWrapper, array_like, float_like, int_like
 
 
 def bkfilter(x, low=6, high=32, K=12):
@@ -84,6 +84,9 @@ def bkfilter(x, low=6, high=32, K=12):
     # Lancosz Sigma Factors np.sinc(2*j/(2.*K+1))
     pw = PandasWrapper(x)
     x = array_like(x, "x", maxdim=2)
+    low = float_like(low, "low")
+    high = float_like(high, "high")
+    K = int_like(K, "K")
     if not 0 < low < high:
         raise ValueError(
             f"the period band must satisfy 0 < low < high, got low={low} and "

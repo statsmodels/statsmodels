@@ -213,10 +213,7 @@ for m in methods:
 
 # ## Treatment effect on the treated
 #
-# Treatment effects on subgroups are not available for `aipw` and `aipw-
-# wls`.
-#
-# `effect_group` choses the group for which treatement effect and
+# `effect_group` chooses the group for which treatment effect and
 # potential outcomes are computed
 # Options are
 # "all" for sample average treatment effect,
@@ -228,8 +225,6 @@ for m in methods:
 
 
 for m in methods:
-    if m.startswith("aipw"):
-        continue
     res = getattr(teff, m)(effect_group=1)
     print("\n", m)
     print(res.summary_frame())
@@ -242,9 +237,6 @@ for m in methods:
 
 
 for m in methods:
-    if m.startswith("aipw"):
-        # not available
-        continue
     res = getattr(teff, m)(effect_group=0)
     print("\n", m)
     print(res.summary_frame())
