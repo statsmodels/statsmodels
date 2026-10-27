@@ -847,6 +847,123 @@ class TestWLS_CornerCases:
         assert_allclose(result.fittedvalues, y)
 
 
+def _design_with_singular_values(n, singular_values, seed=0):
+    """Orthonormal design with prescribed singular values.
+
+    The first left singular vector is the constant vector, so the first column
+    is a constant column and the column space contains the constant exactly.
+    """
+    p = len(singular_values)
+    q0 = np.ones(n) / np.sqrt(n)
+    rng = np.random.RandomState(seed)
+    a = rng.standard_normal((n, p - 1))
+    a -= np.outer(q0, q0 @ a)
+    q, _ = np.linalg.qr(a)
+    return np.column_stack([q0, q]) * np.asarray(singular_values)
+
+
+class TestPinvRankMatchesFit:
+    """fit(method="pinv") must count the directions pinv_extended kept."""
+
+    @staticmethod
+    def _case(singular_values, n):
+        exog = _design_with_singular_values(n, singular_values)
+        sv = np.linalg.svd(exog, compute_uv=False)
+        endog = np.arange(n, dtype=float)
+        return exog, endog, sv
+
+    def test_rank_and_df_use_pinv_cutoff(self):
+        n = 12
+        exog, endog, sv = self._case([1.0, 6.6e-16], n)
+        # Guard the regime this test is about: pinv_extended drops the last
+        # direction while NumPy's matrix_rank(np.diag(sv)) would keep it.
+        assert 2 * np.finfo(float).eps < sv[-1] / sv[0] <= 1e-15
+        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+            res = OLS(endog, exog).fit()
+
+        assert res.model.rank == 1
+        assert res.df_model == 0
+        assert res.df_resid == n - 1
+        # The estimator really is the rank-one projection, so the degrees of
+        # freedom must describe that projection, not the design matrix.
+        q0 = np.ones(n) / np.sqrt(n)
+        assert_allclose(res.fittedvalues, q0 * (q0 @ endog))
+
+    def test_df_not_cached_from_earlier_rank(self):
+        # No truncation here (3e-15 > 1e-15 and 2 * eps < 3e-15) and no
+        # warning, but matrix_rank(exog) is 1 because 3e-15 < 20 * eps.
+        # Reading df_resid before the fit therefore caches the wrong df.
+        n = 20
+        exog, endog, sv = self._case([1.0, 3e-15], n)
+        assert sv[-1] / sv[0] > 1e-15
+        mod = OLS(endog, exog)
+        assert mod.df_resid == n - 1
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", SingularMatrixWarning)
+            res = mod.fit()
+
+        assert mod.rank == 2
+        assert mod.df_model == mod.rank - mod.k_constant
+        assert mod.df_resid == n - mod.rank
+        assert res.df_resid == n - res.model.rank
+
+    def test_rank_not_undercounted_for_many_columns(self):
+        # p >= 5: 20 * eps > 1e-15, so matrix_rank(np.diag(sv)) would drop a
+        # direction that pinv_extended inverted. The warning must stay, but
+        # the rank must describe the estimator.
+        n, p = 30, 20
+        exog, endog, sv = self._case([1.0] * (p - 1) + [2.1e-15], n)
+        assert 1e-15 < sv[-1] / sv[0] <= p * np.finfo(float).eps
+        with pytest.warns(SingularMatrixWarning, match="rank-deficient") as rec:
+            res = OLS(endog, exog).fit()
+
+        assert res.model.rank == p
+        assert res.df_resid == n - p
+        # the old wording claimed the parameters were not uniquely determined;
+        # that is false here because pinv inverted every direction
+        assert "not uniquely determined" not in str(rec[0].message)
+
+    def test_df_refreshed_when_method_changes(self):
+        # pinv keeps all 20 directions; qr reports 19 because matrix_rank(R)
+        # uses 20 * eps. The second fit must refresh the degrees of freedom.
+        n, p = 30, 20
+        exog, endog, sv = self._case([1.0] * (p - 1) + [2.1e-15], n)
+        assert 1e-15 < sv[-1] / sv[0] <= p * np.finfo(float).eps
+        mod = OLS(endog, exog)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SingularMatrixWarning)
+            mod.fit()
+            assert mod.rank == p
+            assert mod.df_resid == n - p
+            res_qr = mod.fit(method="qr")
+
+        assert mod.rank == p - 1
+        assert mod.df_resid == n - (p - 1)
+        assert res_qr.df_resid == n - (p - 1)
+
+    def test_zero_rank_design(self):
+        exog = np.zeros((10, 2))
+        endog = np.arange(10, dtype=float)
+        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+            res = OLS(endog, exog).fit()
+
+        assert res.model.rank == 0
+        assert res.model.k_constant == 0
+        assert res.df_model == 0
+        assert res.df_resid == 10
+
+    def test_well_conditioned_design_unchanged(self):
+        rng = np.random.RandomState(1234)
+        exog = rng.standard_normal((50, 3))
+        endog = rng.standard_normal(50)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", SingularMatrixWarning)
+            res = OLS(endog, exog).fit()
+
+        assert res.model.rank == 3
+        assert res.df_resid == 47
+
+
 class TestWLSExogWeights(CheckRegressionResults):
     # Test WLS with Greene's credit card data
     # reg avgexp age income incomesq ownrent [aw=1/incomesq]

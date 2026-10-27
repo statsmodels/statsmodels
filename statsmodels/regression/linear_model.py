@@ -236,6 +236,12 @@ def _get_sigma(sigma, nobs):
     return sigma, cholsigmainv
 
 
+# Relative cutoff used by ``pinv_extended`` in ``fit(method="pinv")``.
+# Singular directions at or below ``_PINV_RCOND * max(s)`` are dropped, so they
+# are not estimated and must not be counted as parameters of the fit.
+_PINV_RCOND = 1e-15
+
+
 class RegressionModel(base.LikelihoodModel):
     """
     Base class for linear regression models. Should not be directly called.
@@ -403,6 +409,15 @@ class RegressionModel(base.LikelihoodModel):
         The fit method uses the pseudoinverse of the design/exogenous variables
         to solve the least squares minimization.
 
+        With ``method="pinv"``, singular values at or below ``1e-15`` times the
+        largest singular value are treated as zero.  The model rank counts only
+        the directions that were retained, so ``df_resid`` is the residual
+        degrees of freedom of the fit that was actually computed.
+        ``df_model`` keeps the usual ``rank - k_constant`` definition; if the
+        retained subspace does not contain the constant, R-squared and F have
+        no nested interpretation.  A ``SingularMatrixWarning`` is raised when
+        directions are dropped or when the design matrix is numerically rank
+        deficient.
         """
         # NOTE: pinv_wexog, normalized_cov_params, wexog_singular_values and
         # rank are recomputed from self.wexog on every call (rather than
@@ -411,18 +426,34 @@ class RegressionModel(base.LikelihoodModel):
         # which `method` a previous fit() call happened to use.
         method = string_like(method, "method", options=("pinv", "qr"), lower=False)
         if method == "pinv":
-            pinv_wexog, singular_values = pinv_extended(self.wexog)
+            pinv_wexog, singular_values = pinv_extended(self.wexog, rcond=_PINV_RCOND)
             self.pinv_wexog = pinv_wexog
             self.normalized_cov_params = np.dot(
                 pinv_wexog, np.transpose(pinv_wexog)
             )
             self.wexog_singular_values = singular_values
-            self.rank = np.linalg.matrix_rank(np.diag(singular_values))
+            # Rank of the estimator: the number of directions pinv_extended
+            # inverted.  Using any other convention here decouples df_resid
+            # from the estimator that produced the coefficients.
+            cutoff = _PINV_RCOND * np.max(singular_values)
+            self.rank = int(np.count_nonzero(singular_values > cutoff))
+            # Numerical rank of the design under NumPy's matrix_rank tolerance.
+            # It differs from the rank of the estimator when the two cutoffs
+            # straddle a singular value (len(s)*eps compared with _PINV_RCOND),
+            # so both are checked before deciding that the design is deficient.
+            design_rank = np.linalg.matrix_rank(np.diag(singular_values))
+            n_columns = self.wexog.shape[1]
 
-            if self.rank < self.wexog.shape[1]:
+            # Two independent triggers: the estimator dropped a direction, or
+            # the design is numerically rank deficient under the matrix_rank
+            # tolerance used here before. The second keeps every design that
+            # warned before warning, including fits where pinv inverted every
+            # direction but the smallest one is still numerically meaningless.
+            if self.rank < n_columns or design_rank < n_columns:
                 warnings.warn(
-                    "The design matrix is rank-deficient. "
-                    "The model parameters are not uniquely determined.",
+                    "The design matrix is rank-deficient or the pseudoinverse "
+                    "dropped one or more singular directions. Coefficients, "
+                    "standard errors and test statistics may be unreliable.",
                     SingularMatrixWarning,
                     stacklevel=2,
                 )
@@ -440,10 +471,14 @@ class RegressionModel(base.LikelihoodModel):
             self.effects = effects = np.dot(Q.T, self.wendog)
             beta = np.linalg.solve(R, effects)
 
-        if self._df_model is None:
-            self._df_model = float(self.rank - self.k_constant)
-        if self._df_resid is None:
-            self.df_resid = self.nobs - self.rank
+        # Degrees of freedom follow the rank of the fit that was just computed.
+        # Caching them from an earlier fit (or from an attribute access before
+        # the first fit) can pair one method's rank with another's df_resid.
+        # df_resid is the residual df of the truncated estimator.  df_model
+        # keeps the usual rank - k_constant convention; it is only the number
+        # of non-constant fitted directions when the constant is retained.
+        self._df_model = float(self.rank - self.k_constant)
+        self.df_resid = self.nobs - self.rank
 
         if isinstance(self, OLS):
             lfit = OLSResults(
