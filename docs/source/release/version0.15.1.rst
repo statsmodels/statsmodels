@@ -70,6 +70,14 @@ Behavior changes
   ``ValueError`` now instead of failing with an array broadcasting error. The
   error messages name the lag that was passed. :pr:`10481`, :pr:`10311`,
   :pr:`10561`
+- The ``DataFrame`` returned by ``predict`` of the results of ``MNLogit``, when
+  ``exog`` is a ``DataFrame`` or the model was fit with a formula, has the
+  categories of ``endog`` as columns, in the order of ``wendog`` with the
+  reference category first, instead of 0, 1, ..., J - 1. The categories keep
+  their type, so ``model.names`` and the labels in ``summary`` are strings but
+  the columns of ``predict`` are, for example, integers for integer ``endog``.
+  Predictions for an array ``exog`` are still arrays. :issue:`4804`,
+  :pr:`10587`
 - With ``missing="drop"``, a ``MissingDataError`` is raised if all
   observations are dropped because of missing values. An unknown value of
   ``missing`` raises a ``ValueError``. :issue:`4417`, :pr:`10535`,
@@ -179,6 +187,14 @@ Regression and linear models
   wrong shape" if the number of rows of ``exog`` was equal to the number of
   parameters, and did not check the length of ``weights`` against the number
   of rows otherwise. :issue:`10283`, :pr:`10285`
+- ``OLS``, ``WLS``, ``GLS``, ``GLSAR`` and ``QuantReg`` raise a
+  ``MissingDataError`` when ``endog``, ``exog``, ``weights`` or ``sigma``
+  contain ``inf`` or ``nan`` after missing values are handled, so that
+  ``missing="drop"`` still removes ``nan`` but not ``inf``. Before, only
+  ``nan`` and ``inf`` in ``exog`` were detected, and only if ``hasconst`` was
+  not ``False``. ``-inf`` in ``exog``, and non-finite values of the other
+  arrays, raised a ``LinAlgError`` in ``fit`` or gave parameters that are all
+  ``nan``. :issue:`1642`, :issue:`3468`, :pr:`4969`
 - ``get_prediction()`` called without ``exog`` now uses the offset and
   exposure of the model, as ``predict`` does, for GLM, GLMGam, the discrete
   count models and the binary models (Logit and Probit). Before, the offset
@@ -218,6 +234,10 @@ Regression and linear models
 Generalized linear models and discrete models
 ---------------------------------------------
 
+- ``score_test`` with a one-dimensional ``exog_extra`` for the discrete
+  models and the ``GLM`` result method raised an ``IndexError`` in 0.15.0. A
+  one-dimensional ``exog_extra`` is a single additional variable, as before.
+  :pr:`10609`
 - ``predict`` preserves the observation index of a pandas Series for models
   with one predictor and additional parameters, such as ``NegativeBinomial``,
   ``GeneralizedPoisson``, ``ZeroInflatedPoisson``, ``BetaModel``,
@@ -268,6 +288,13 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
+- ``MLEModel.loglike`` returns ``-inf`` instead of raising a ``LinAlgError``
+  if the states are initialized as stationary and the transition matrix has a
+  unit root, so that the stationary covariance of the initial state does not
+  exist. A derivative free optimizer, such as ``method="powell"``, can try
+  parameters that are transformed to the boundary of the stationary region.
+  The fit of the dynamic factor model in the example notebook failed with this
+  error on some platforms. :pr:`10611`
 - ``range_unit_root_test`` documents the correct null hypothesis, a unit
   root, which is rejected for small statistics. The ``InterpolationWarning``
   reports the correct direction: it is raised if the statistic is outside the
@@ -379,10 +406,38 @@ Time series analysis
   A UTF-8 byte order mark is ignored, a file that is not valid UTF-8 raises a
   ``ValueError`` that says so, and ``rawspec`` accepts a ``pathlib.Path`` as
   documented. :pr:`10585`
+- ``coint_johansen``, ``select_coint_rank`` and the error bands of the
+  impulse responses of a ``VAR`` returned complex eigenvalues and eigenvectors
+  with NumPy 2.5 and later, which ``np.linalg.eig`` returns as complex arrays
+  even if all the eigenvalues are real, and ``coint_johansen`` warned with a
+  ``ComplexWarning``. The results are real again. :pr:`10613`
+- ``smoothed_state_autocovariance`` does not warn that the univariate filter
+  diagonalized the observation covariance when it extends the model beyond
+  the sample, since it does not use the disturbance covariances. :pr:`10613`
+- ``arma_order_select_ic`` no longer warns about the starting values of the
+  candidate models that fall back to zeros. :pr:`10613`
+- ``hamilton_filter`` and the starting values of ``DynamicFactorMQ`` no longer
+  warn about the unused scale of a regression without residual degrees of
+  freedom. :pr:`10613`
+- ``ThetaModelResults.plot_predict`` with ``alpha=None`` no longer adds a
+  legend without labels, which warned. :pr:`10613`
+- ``SVAR.sirf_errband_mc`` and ``IRAnalysis.errband_mc`` with ``svar=True``
+  show one ``ConvergenceWarning`` with the number of replications whose
+  maximum likelihood fit did not converge, instead of one warning for each of
+  them. :pr:`10613`
 
 Statistics and tests
 --------------------
 
+- ``statsmodels.stats.power`` validates that a root returned by a solver
+  attains the requested power. Failed solutions now return ``NaN`` with a
+  ``ConvergenceWarning`` instead of returning a misleading finite result or
+  raising an error, also when solving for ``alpha``, which now finds
+  significance levels far below 1e-5. Noncentral-t CDF calculations retry a
+  reflected tail when CDFLIB returns ``NaN`` and use the limit 0 or 1 if that
+  fails too, preserving already finite values. This can turn previously missing
+  t-test powers into finite results; it does not guarantee relative accuracy
+  in extremely small tails. :pr:`10552`
 - The p-values of several tests were computed as one minus the cdf, which
   gives 0 or loses digits for large statistics. They now use the survival
   function. This affects ``survdiff``, the empirical likelihood ``ANOVA`` and
@@ -445,6 +500,12 @@ Statistics and tests
   instead of a negative value if the rejection region of the exact test is
   empty. ``low`` and ``upp`` also accept list-like input, and a NaN ``p_alt``
   raises a ``ValueError``. :issue:`10507`, :pr:`10508`, :pr:`10580`
+- ``TTestIndPower.power`` and ``TTestIndPower.solve_power`` accept ``ratio=0``,
+  which gives the power of the one-sample t-test with ``nobs1`` observations;
+  it raised a ``ZeroDivisionError`` or gave the size of the test for NumPy
+  scalars. ``ratio`` can be array_like, and a negative or NaN ``ratio`` raises
+  a ``ValueError``; ``solve_power`` returned ``nan`` with a convergence warning
+  for a negative ``ratio``. :pr:`10349`, :pr:`10584`
 - ``proportions_chisquare`` raises a ``ValueError`` for a single sample
   without ``value``. The statistic was 0 and the p-value ``nan``.
   :pr:`10451`
@@ -467,6 +528,8 @@ Statistics and tests
   rows and before the model info rows. :issue:`9282`, :pr:`10218`
 - ``corr_rank`` and ``corr_normal_scores`` return a 1 by 1 matrix for a single
   variable instead of a scalar. :pr:`10456`
+- ``Description`` no longer calls ``scipy.stats.mode`` for a column without
+  observations, which warns in SciPy 1.14 and later. :pr:`10613`
 
 Treatment effects
 -----------------
@@ -528,6 +591,10 @@ Robust and multivariate statistics
 - ``PCA`` with ``gls=True`` applied the weights inverted: the data were
   divided by the square root of the weights instead of multiplied by it.
   :issue:`10256`, :pr:`10258`
+- ``Factor`` with ``method="ml"`` and ``PHD`` returned complex loadings and
+  directions with NumPy 2.5 and later, which ``np.linalg.eig`` returns as
+  complex arrays even if all the eigenvalues are real. The results are real
+  again. :pr:`10613`
 
 Nonparametric
 -------------
@@ -575,6 +642,10 @@ Duration models
   have a score residual of 0 (they were added to the risk set of the preceding
   failure time before). Observations that are not used no longer produce a
   ``nan`` robust covariance. :issue:`10288`, :pr:`10363`, :pr:`10377`
+- ``SurvfuncRight`` with ``exog`` and integer times stored an arbitrary
+  integer instead of ``nan`` in ``surv_prob_se``, ``n_risk`` and ``n_events``,
+  and warned about casting ``nan`` to an integer. They are ``nan`` as floats.
+  :pr:`10613`
 
 Other
 -----

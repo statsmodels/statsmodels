@@ -20,6 +20,8 @@ from statsmodels.compat.platform import (
 from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
+import contextlib
+
 import numpy as np
 from numpy.testing import (
     assert_,
@@ -37,6 +39,7 @@ import statsmodels.tools._testing as smt
 from statsmodels.tools.sm_exceptions import (
     HessianInversionWarning,
     SingularMatrixWarning,
+    ValueWarning,
 )
 
 
@@ -928,7 +931,9 @@ class TestWaldAnovaRankDeficient:
     def test_df_rank_adjusted(self):
         # The interaction term has 4 columns but only 1 is non-redundant
         res = self.res
-        wa = res.wald_test_terms(scalar=True)
+        # The rank deficient interaction term warns
+        with pytest.warns(ValueWarning, match="covariance of constraints"):
+            wa = res.wald_test_terms(scalar=True)
 
         # Check each term's df matches what wald_test returns
         mgr = FormulaManager()
@@ -938,7 +943,13 @@ class TestWaldAnovaRankDeficient:
         for i, term in enumerate(model_spec.terms):
             cols = mgr.get_slice(model_spec, term)
             constraint = identity[cols]
-            wt = res.wald_test(constraint, scalar=True)
+            # Only the last term, the rank deficient interaction, warns
+            if i == len(model_spec.terms) - 1:
+                ctx = pytest.warns(ValueWarning, match="covariance of constraints")
+            else:
+                ctx = contextlib.nullcontext()
+            with ctx:
+                wt = res.wald_test(constraint, scalar=True)
             expected_df = int(wt.df_num)
             reported_df = int(wa.table.iloc[i]["df_constraint"])
             assert_equal(
@@ -949,7 +960,9 @@ class TestWaldAnovaRankDeficient:
     def test_interaction_df_less_than_nominal(self):
         # The interaction has 4 constraint rows but rank < 4
         res = self.res
-        wa = res.wald_test_terms(scalar=True)
+        # The rank deficient interaction term warns
+        with pytest.warns(ValueWarning, match="covariance of constraints"):
+            wa = res.wald_test_terms(scalar=True)
         interaction_df = int(wa.table.iloc[-1]["df_constraint"])
         # With missing cells, the interaction rank is less than 4
         assert interaction_df < 4

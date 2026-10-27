@@ -15,11 +15,8 @@ All of the models can handle missing data. For performance reasons, the default 
    missing_idx = np.array([False] * len(data.endog))
    missing_idx[[4, 10, 15]] = True
    data.endog[missing_idx] = np.nan
-   ols_model = sm.OLS(data.endog, data.exog)
-   ols_fit = ols_model.fit()
-   print(ols_fit.params)
 
-This silently fails and all of the model parameters are NaN, which is probably not what you expected. If you are not sure whether or not you have missing data you can use `missing = 'raise'`. This will raise a `MissingDataError` during model instantiation if missing data is present so that you know something was wrong in your input data.
+The linear regression models, such as ``OLS``, ``WLS`` and ``GLS``, check the data and raise a `MissingDataError` if ``endog``, ``exog``, ``weights`` or ``sigma`` contain NaN or infinite values, so fitting one of them to this data with the default setting fails. Other models do not check the data. They can fail with an error that does not mention the missing values, or silently return model parameters that are all NaN, which is probably not what you expected. If you are not sure whether or not you have missing data you can use `missing = 'raise'`. This will raise a `MissingDataError` during model instantiation if missing data is present so that you know something was wrong in your input data.
 
 .. ipython:: python
    :okexcept:

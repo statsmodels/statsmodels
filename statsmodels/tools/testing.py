@@ -4,6 +4,10 @@ assert functions from numpy and pandas testing
 """
 from statsmodels.compat.pandas import testing as pdt
 
+import contextlib
+import re
+import warnings
+
 import numpy.testing as npt
 import pandas as pd
 
@@ -99,3 +103,41 @@ def assert_equal(actual, desired, err_msg="", verbose=True, **kwds):
         pdt.assert_frame_equal(actual, desired, **kwds)
     else:
         npt.assert_equal(actual, desired, err_msg=err_msg, verbose=verbose)
+
+
+@contextlib.contextmanager
+def warns_or_none(category, match=None):
+    """
+    Allow, but do not require, a warning in a test
+
+    Use this for a warning of another package that depends on the platform or
+    on the version of the package, so that the test cannot expect it with
+    ``pytest.warns``, which fails if the warning is not emitted.
+
+    Parameters
+    ----------
+    category : type of Warning or tuple of type of Warning
+        The category of the warning that is allowed. Subclasses are allowed.
+    match : str, optional
+        A regular expression that has to match the start of the message of
+        the allowed warning, as in ``pytest.warns``. All messages are allowed
+        if None.
+
+    Notes
+    -----
+    A warning that is not allowed is emitted again when the block ends, so
+    that the warning filters of the test run apply to it, for example if the
+    filters turn it into an error or ``pytest.warns`` expects it around this
+    block.
+    """
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        yield
+    for w in record:
+        allowed = issubclass(w.category, category) and (
+            match is None or re.match(match, str(w.message))
+        )
+        if not allowed:
+            warnings.warn_explicit(
+                w.message, w.category, w.filename, w.lineno, source=w.source
+            )

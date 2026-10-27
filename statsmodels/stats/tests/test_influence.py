@@ -23,6 +23,12 @@ from statsmodels.stats.outliers_influence import (
     variance_inflation_factor,
 )
 from statsmodels.tools.sm_exceptions import SingularMatrixWarning
+from statsmodels.tools.testing import warns_or_none
+
+# numpy warnings for sqrt(1 - hii) if the hat diagonal is one up to rounding
+HII_ONE_WARNING = (
+    r"(divide by zero encountered in divide|invalid value encountered in sqrt)"
+)
 
 cur_dir = Path(__file__).parent.resolve()
 
@@ -512,11 +518,14 @@ def test_olsinfluence_looo_closed_form(leverage_one):
         mse_resid[:, None] * np.diag(res.normalized_cov_params)
     )
     assert_allclose(infl.dfbetas, dfbetas, rtol=1e-10, atol=1e-12)
-    resid_ext = res.resid / np.sqrt(mse_resid * (1 - infl.hat_matrix_diag))
-    if leverage_one:
-        # resid and 1 - hii are both zero up to rounding for observation 5
-        resid_ext[5] = infl.resid_studentized_external[5]
-    assert_allclose(infl.resid_studentized_external, resid_ext, rtol=1e-10)
+    # 1 - hii is zero or rounding noise for observation 5, the warning depends
+    # on the rounding
+    with warns_or_none(RuntimeWarning, match=HII_ONE_WARNING):
+        resid_ext = res.resid / np.sqrt(mse_resid * (1 - infl.hat_matrix_diag))
+        if leverage_one:
+            # resid and 1 - hii are both zero up to rounding for observation 5
+            resid_ext[5] = infl.resid_studentized_external[5]
+        assert_allclose(infl.resid_studentized_external, resid_ext, rtol=1e-10)
     cov_ratio = det_cov_params / np.linalg.det(res.cov_params())
     assert_allclose(infl.cov_ratio, cov_ratio, rtol=1e-10)
 
@@ -796,9 +805,13 @@ def test_olsinfluence_wls_looo_rank_deficient(case):
         keep[5] = False
     wresid = (res.resid * sqrt_w)[keep]
     resid_int = wresid / np.sqrt(res.mse_resid * (1 - hat[keep]))
-    assert_allclose(infl.resid_studentized_internal[keep], resid_int, rtol=1e-10)
+    # 1 - hii is zero or rounding noise for observation 5, the warning depends
+    # on the rounding
+    with warns_or_none(RuntimeWarning, match=HII_ONE_WARNING):
+        assert_allclose(infl.resid_studentized_internal[keep], resid_int, rtol=1e-10)
     resid_ext = wresid / np.sqrt(mse_resid[keep] * (1 - hat[keep]))
-    assert_allclose(infl.resid_studentized_external[keep], resid_ext, rtol=1e-10)
+    with warns_or_none(RuntimeWarning, match=HII_ONE_WARNING):
+        assert_allclose(infl.resid_studentized_external[keep], resid_ext, rtol=1e-10)
     # PRESS residuals stay on the scale of endog
     resid_press = endog - np.einsum("ij,ij->i", exog, params)
     assert_allclose(infl.resid_press[keep], resid_press[keep], rtol=1e-8)

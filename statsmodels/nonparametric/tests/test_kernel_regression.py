@@ -7,6 +7,7 @@ from scipy import stats
 
 import statsmodels.api as sm
 from statsmodels.nonparametric.kernel_regression import KernelReg
+from statsmodels.tools.testing import warns_or_none
 
 nparam = sm.nonparametric
 
@@ -287,13 +288,15 @@ class TestKernelReg(KernelRegressionTestBase):
 
     def test_continuousdata_lc_cvls(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
-            model = nparam.KernelReg(
-                endog=[self.y],
-                exog=[self.c1, self.c2],
-                reg_type="lc",
-                var_type="cc",
-                bw="cv_ls",
-            )
+            # cv_ls can visit bandwidths where the kernel weights underflow to 0
+            with warns_or_none(RuntimeWarning, match="invalid value encountered in"):
+                model = nparam.KernelReg(
+                    endog=[self.y],
+                    exog=[self.c1, self.c2],
+                    reg_type="lc",
+                    var_type="cc",
+                    bw="cv_ls",
+                )
         # Bandwidth
         sm_bw = model.bw
         R_bw = [0.6163835, 0.1649656]

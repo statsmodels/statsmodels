@@ -26,8 +26,11 @@ NON_ASCII_TITLE = "café naïve Á"
 SPEC_TEMPLATE = 'series{title="%s"}\n'
 
 # Run in a fresh interpreter whose locale encoding is not UTF-8. The code is
-# ASCII only and the result is written as JSON with escaped characters, so
-# nothing in the child depends on the locale except the read under test.
+# ASCII only and the result is written to a file as JSON with escaped
+# characters, so nothing in the child depends on the locale except the read
+# under test. The result is not written to stdout, because an editable install
+# rebuilds statsmodels when it is imported and prints the progress of the
+# build, with paths that need not be ASCII.
 CHILD_CODE = """
 import json
 import sys
@@ -41,7 +44,8 @@ endog = pd.Series(
     range(24), index=pd.period_range("2000-01", periods=24, freq="M")
 )
 spec = x13.x13_arima_analysis(endog, rawspec=sys.argv[1], speconly=True)
-sys.stdout.write(json.dumps(spec))
+with open(sys.argv[2], "w", encoding="ascii") as fh:
+    fh.write(json.dumps(spec))
 """
 
 
@@ -72,19 +76,21 @@ def test_rawspec_file_utf8_in_non_utf8_locale(tmp_path):
         [root] + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else [])
     )
 
-    # A relative name keeps the argument ASCII whatever the temp directory is.
+    # Relative names keep the arguments ASCII whatever the temp directory is.
+    result = tmp_path / "spec.json"
     res = subprocess.run(
-        [sys.executable, "-c", CHILD_CODE, specfile.name],
+        [sys.executable, "-c", CHILD_CODE, specfile.name, result.name],
         cwd=tmp_path,
         env=env,
         capture_output=True,
         text=True,
-        encoding="ascii",
-        timeout=120,
+        encoding="utf-8",
+        errors="replace",
+        timeout=300,
         check=False,
     )
-    assert res.returncode == 0, res.stderr
-    spec = json.loads(res.stdout)
+    assert res.returncode == 0, res.stdout + res.stderr
+    spec = json.loads(result.read_text(encoding="ascii"))
     assert f'title="{NON_ASCII_TITLE}"' in spec
 
 
