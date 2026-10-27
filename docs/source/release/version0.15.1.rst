@@ -94,7 +94,7 @@ Behavior changes
   squares, degrees of freedom and p-values to the redundant terms. The
   weighted design matrix is checked, so a factor level that only appears in
   observations with zero weight is also rejected. :issue:`5398`,
-  :issue:`8506`, :pr:`10340`
+  :issue:`8506`, :pr:`10340`, :pr:`10622`
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
