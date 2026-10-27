@@ -11,7 +11,6 @@ from statsmodels.duration.survfunc import (
     plot_survfunc,
     survdiff,
 )
-from statsmodels.tools.testing import warns_or_none
 
 try:
     import matplotlib.pyplot as plt
@@ -585,11 +584,11 @@ def test_kernel_survfunc3():
     x = rs.normal(size=(n, 3))
     time = rs.randint(0, 10, size=n)
     status = rs.randint(0, 2, size=n)
-    # np.full_like(nan) of the integer survival times casts nan to int in numpy >= 1.24
-    with warns_or_none(RuntimeWarning, match="invalid value encountered in cast"):
-        SurvfuncRight(time, status, exog=x, bw_factor=10000)
-    with warns_or_none(RuntimeWarning, match="invalid value encountered in cast"):
-        SurvfuncRight(time, status, exog=x, bw_factor=np.r_[10000, 10000])
+    sf = SurvfuncRight(time, status, exog=x, bw_factor=10000)
+    # the standard errors and the risk set are not available, and not an integer
+    for attr in ("surv_prob_se", "n_risk", "n_events"):
+        assert np.isnan(getattr(sf, attr)).all()
+    SurvfuncRight(time, status, exog=x, bw_factor=np.r_[10000, 10000])
 
 
 def test_kernel_cumincidence1():
