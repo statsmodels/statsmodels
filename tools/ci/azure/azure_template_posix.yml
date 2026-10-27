@@ -51,6 +51,9 @@ jobs:
   - script: |
       nproc
       free -m
+      df -h . /tmp
+      cat /proc/cpuinfo | grep -m1 'model name'
+      uname -a
       python -c "import sys, sysconfig; print(sys.version); print('GIL enabled:', sys._is_gil_enabled()); print('Py_GIL_DISABLED', sysconfig.get_config_var('Py_GIL_DISABLED'))"
     displayName: 'Machine and interpreter'
 
@@ -62,9 +65,24 @@ jobs:
       # faulthandler_timeout dumps the stack of every thread when one test runs
       # for more than 5 minutes, and timeout stops pytest cleanly (SIGINT, then
       # SIGKILL) before the job limit so that the log is not lost.
+      # Once a minute: memory, swap, load and the largest processes. If the runner
+      # freezes (Azure reported that the agent did not answer the cancellation
+      # request), the last lines show whether it ran out of memory.
+      (
+        while true; do
+          echo "[monitor] $(date -u +%H:%M:%S) $(free -m | awk 'NR==2{printf "used=%sMB avail=%sMB", $3, $7} NR==3{printf " swap=%sMB", $3}') load=$(cut -d' ' -f1-3 /proc/loadavg)"
+          ps -eo rss=,pid=,args= --sort=-rss | head -3 | cut -c1-110 | sed 's/^/[monitor]   /'
+          sleep 60
+        done
+      ) &
+      MONITOR_PID=$!
+      trap 'kill ${MONITOR_PID} 2>/dev/null' EXIT
       CMD="pytest -m \"${PYTEST_PATTERN}\" --skip-examples --junitxml=junit/test-results.xml -v -rfE --durations=500 --durations-min=0.5 -o faulthandler_timeout=300 ${COVERAGE_OPTS} statsmodels"
       echo timeout --signal=INT --kill-after=120 10200 ${CMD}
       eval timeout --signal=INT --kill-after=120 10200 ${CMD}
+      PYTEST_EXIT=$?
+      kill ${MONITOR_PID}
+      exit ${PYTEST_EXIT}
     displayName: 'Run tests (editable)'
     timeoutInMinutes: 190
     condition: ne(variables['test.install'], 'true')
