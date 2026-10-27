@@ -684,8 +684,8 @@ class ThetaModelResults:
                 alpha=0.5,
                 label=label,
             )
-
-        ax.legend(loc="best", frameon=False)
+            # The confidence interval is the only artist with a label
+            ax.legend(loc="best", frameon=False)
         fig.tight_layout(pad=1.0)
 
         return fig
