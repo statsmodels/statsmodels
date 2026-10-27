@@ -338,13 +338,18 @@ def vif_ridge(data, pen_factors, *, is_moment=False, has_constant="raise"):
     Examples
     --------
     The ridge penalization removes most of the collinearity of the Longley
-    data. The row with a penalization factor of zero contains the VIF
-    without penalization.
+    data. The penalization factors are added to the diagonal of the
+    correlation matrix, so they are on the scale of standardized variables.
+    The columns are standardized first to make this explicit, the result is
+    the same as for the original data, which `vif_ridge` standardizes
+    through the correlation matrix. The row with a penalization factor of
+    zero contains the VIF without penalization.
 
     >>> import statsmodels.api as sm
     >>> from statsmodels.stats.api import vif_ridge
     >>> exog = sm.datasets.longley.load_pandas().exog
-    >>> vif_ridge(exog, [0, 0.01, 0.1]).round(1)
+    >>> exog_std = (exog - exog.mean()) / exog.std()
+    >>> vif_ridge(exog_std, [0, 0.01, 0.1]).round(1)
           GNPDEFL     GNP  UNEMP  ARMED    POP   YEAR
     0.00    135.5  1788.5   33.6    3.6  399.2  759.0
     0.01     17.2     3.5    2.7    2.1   13.8   10.0
