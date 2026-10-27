@@ -14,6 +14,7 @@ import pytest
 from statsmodels import tools
 from statsmodels.regression.linear_model import WLS
 from statsmodels.regression.rolling import RollingOLS, RollingWLS
+from statsmodels.tools.testing import warns_or_none
 
 
 def gen_data(nobs, nvar, const, pandas=False, missing=0.0, weights=False):
@@ -328,7 +329,9 @@ def test_expanding_window_larger_than_nobs():
     x = tools.add_constant(rs.standard_normal((n, 1)))
     y = rs.standard_normal(n)
     mod = RollingOLS(y, x, window=w, min_nobs=2, expanding=True)
-    res = mod.fit()
+    # ssr / (nobs - k) with nobs == k, 0 / 0 or x / 0 depending on rounding of ssr
+    with warns_or_none(RuntimeWarning, match="divide by zero|invalid value"):
+        res = mod.fit()
     assert res.params.shape == (n, x.shape[1])
     assert np.all(np.isnan(res.params[:1]))
     assert np.all(np.isfinite(res.params[1:]))

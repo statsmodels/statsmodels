@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pytest
@@ -5,6 +7,32 @@ import pytest
 from statsmodels.tsa._lagselect import nested_lag_ols
 
 EPS = np.finfo(float).eps
+
+
+def _exact_ols(x, y):
+    # Least squares in exact rational arithmetic. Returns the sum of squared
+    # residuals and the last coefficient as Fractions.
+    nobs, k = x.shape
+    x = [[Fraction(v) for v in row] for row in x]
+    y = [Fraction(v) for v in y]
+    xtx = [
+        [sum(x[t][i] * x[t][j] for t in range(nobs)) for j in range(k)]
+        for i in range(k)
+    ]
+    xty = [sum(x[t][i] * y[t] for t in range(nobs)) for i in range(k)]
+    # Gauss-Jordan elimination of [X'X, X'y]
+    aug = [xtx[i] + [xty[i]] for i in range(k)]
+    for i in range(k):
+        pivot = next(r for r in range(i, k) if aug[r][i] != 0)
+        aug[i], aug[pivot] = aug[pivot], aug[i]
+        aug[i] = [v / aug[i][i] for v in aug[i]]
+        for r in range(k):
+            if r != i:
+                factor = aug[r][i]
+                aug[r] = [a - factor * b for a, b in zip(aug[r], aug[i], strict=True)]
+    beta = [aug[i][k] for i in range(k)]
+    ssr = sum(v * v for v in y) - sum(b * c for b, c in zip(xty, beta, strict=True))
+    return ssr, beta[-1]
 
 
 def _ols_loop(endog, blocks, exog, start=None):
@@ -120,11 +148,12 @@ def test_start(neqs, nobs):
     assert_allclose(res.tvalues_last, tvalues, rtol=1e-8)
     assert_equal(res.nobs, nobs - start)
     assert_equal(res.df_model, 1 + np.cumsum([0, 1, 2, 1, 1, 3, 1]))
-    # The values of a lag block before its sample do not matter
+    # The values of a lag block before its sample do not matter. The large
+    # values limit the accuracy, which is relative to their size.
     for j, block in enumerate(blocks):
         block[: start[j + 1]] = 1e6 * rng.standard_normal(block[: start[j + 1]].shape)
     res2 = nested_lag_ols(y, blocks, exog, rcond=nobs * EPS, start=start)
-    assert_allclose(res2.ssr, ssr, rtol=1e-10)
+    assert_allclose(res2.ssr, ssr, rtol=1e-8)
 
 
 def test_triangular_rows():
@@ -211,3 +240,84 @@ def test_exceptions():
     for start in ([0, 1], [1, 1, 1], [0, 2, 1], [0, 1, 11]):
         with pytest.raises(ValueError, match="start must"):
             nested_lag_ols(y, x, rcond=None, start=start)
+
+
+@pytest.mark.parametrize("seed", [0, 1])
+def test_ill_conditioned_exact(seed):
+    # Compare with exact rational arithmetic on a design with a condition
+    # number of about 1e8 to 1e9. The errors are about 1e-9 (ssr) and 1e-7
+    # (coefficient), as for lstsq, so the tolerances are not tight.
+    rng = np.random.default_rng(seed)
+    nobs = 40
+    z = rng.standard_normal((nobs, 3))
+    x = np.column_stack(
+        [
+            z[:, 0],
+            z[:, 0] + 1e-8 * z[:, 1],
+            z[:, 2],
+            z[:, 0] - z[:, 2] + 3e-8 * rng.standard_normal(nobs),
+        ]
+    )
+    exog = np.ones((nobs, 1))
+    y = x @ [1.0, -0.5, 2.0, 0.3] + rng.standard_normal(nobs)
+    assert 1e8 < np.linalg.cond(np.column_stack([exog, x])) < 1e10
+    res = nested_lag_ols(y, x, exog, rcond=nobs * EPS)
+    assert res is not None
+    for p in range(x.shape[1] + 1):
+        ssr, last = _exact_ols(np.column_stack([exog, x[:, :p]]), y)
+        assert_allclose(res.ssr[p], float(ssr), rtol=1e-7)
+        assert_allclose(res.params_last[p], float(last), rtol=1e-6)
+
+
+@pytest.mark.parametrize("const_last", [True, False])
+@pytest.mark.parametrize("neqs", [1, 2])
+@pytest.mark.parametrize("level", [0.0, 1e3, 1e5])
+def test_level(level, neqs, const_last):
+    # A large level of the data is removed before the decomposition if exog
+    # has a constant. The results are accurate to rounding of the data in
+    # exact arithmetic, much better than lstsq.
+    rng = np.random.default_rng(8)
+    nobs = 40
+    x = rng.standard_normal((nobs, 3)) + level
+    y = rng.standard_normal((nobs, neqs)) + 0.5 * x[:, [0]] + level
+    extra = rng.standard_normal((nobs, 1))
+    ones = np.ones((nobs, 1))
+    exog = np.column_stack([extra, ones] if const_last else [ones, extra])
+    endog = y if neqs > 1 else y[:, 0]
+    res = nested_lag_ols(endog, x, exog, rcond=nobs * EPS)
+    assert res is not None
+    for j in range(neqs):
+        for p in range(4):
+            ssr, last = _exact_ols(np.column_stack([exog, x[:, :p]]), y[:, j])
+            expected_ssr = res.ssr[p] if neqs == 1 else res.ssr[p, j, j]
+            expected_last = res.params_last[p] if neqs == 1 else res.params_last[p, j]
+            assert_allclose(expected_ssr, float(ssr), rtol=1e-12)
+            assert_allclose(expected_last, float(last), rtol=1e-10)
+    # The t-values, including that of the constant of order 0, are found
+    # from the shifted data
+    blocks = [x[:, [j]] for j in range(3)]
+    _, _, tvalues = _ols_loop(endog, blocks, exog)
+    assert_allclose(res.tvalues_last, tvalues, rtol=1e-5)
+
+
+def test_level_declines():
+    # The checks apply to the data with the level. A large level does not
+    # hide an exact fit or collinear regressors.
+    rng = np.random.default_rng(9)
+    nobs = 100
+    level = 1e4
+    x = rng.standard_normal((nobs, 3)) + level
+    exog = np.ones((nobs, 1))
+    y = level + x @ [1.0, -2.0, 0.5] + 1e-7 * rng.standard_normal(nobs)
+    assert nested_lag_ols(y, x, exog, rcond=nobs * EPS) is None
+    y = level + x @ [1.0, -2.0, 0.5] + rng.standard_normal(nobs)
+    assert nested_lag_ols(y, x, exog, rcond=nobs * EPS) is not None
+    # collinear with the constant, as the level is much larger than the
+    # variation
+    x_const = x.copy()
+    x_const[:, 2] = level + 1e-10 * rng.standard_normal(nobs)
+    assert nested_lag_ols(y, x_const, exog, rcond=nobs * EPS) is None
+    # the cutoff for the original columns
+    x_big = x - level + 1e9
+    assert nested_lag_ols(y, x_big, exog, rcond=nobs * EPS) is None
+    assert nested_lag_ols(y, x_big, exog, rcond=1e-20) is not None

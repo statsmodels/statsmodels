@@ -130,9 +130,10 @@ class ModelData:
             # detect where the constant is
             check_implicit = False
             exog_max = np.max(self.exog, axis=0)
-            if not np.isfinite(exog_max).all():
-                raise MissingDataError("exog contains inf or nans")
             exog_min = np.min(self.exog, axis=0)
+            # nan propagates in the max and min, -inf is only found by the min
+            if not (np.isfinite(exog_max).all() and np.isfinite(exog_min).all()):
+                raise MissingDataError("exog contains inf or nans")
             const_idx = np.where(exog_max == exog_min)[0].squeeze()
             self.k_constant = const_idx.size
 

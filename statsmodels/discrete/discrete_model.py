@@ -31,7 +31,7 @@ __all__ = [
 import warnings
 
 import numpy as np
-from pandas import MultiIndex, get_dummies
+from pandas import DataFrame, Index, MultiIndex, get_dummies
 from scipy import special, stats
 from scipy.special import digamma, gammaln, loggamma, polygamma
 from scipy.stats import nbinom
@@ -3342,6 +3342,18 @@ class MNLogit(MultinomialModel):
 
         # Override cov_names since multivariate model
         yname = self.endog_names
+        # the endog categories in the column order of wendog, kept before
+        # they are converted to strings below
+        categories = Index([self._ynames_map[key] for key in range(int(self.J))])
+        if (
+            categories.dtype.kind == "f"
+            and np.all(categories % 1 == 0)
+            and np.all(np.abs(categories) < 2**53)
+        ):
+            # integer valued, e.g., from a formula. Larger values cannot be
+            # represented exactly as int64 and stay floats.
+            categories = categories.astype(int)
+        self._endog_categories = categories
         ynames = self._ynames_map
         ynames = MultinomialResults._maybe_convert_ynames_int(ynames)
         # use range below to ensure sortedness
@@ -6113,6 +6125,15 @@ class L1BinaryResults(BinaryResults):
         self.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
 
 
+_predict_params = Docstring(base.Results.predict.__doc__).extract_parameters(
+    ["exog", "transform", "*args", "**kwargs"], indent=8
+)
+# The Notes of the base class are not part of the docstring of predict below
+if _predict_params is not None:
+    # None if the docstrings are stripped, python -OO
+    _predict_params = _predict_params.replace(" see Notes below.", "")
+
+
 class MultinomialResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description": "A results class for multinomial data",
@@ -6197,6 +6218,50 @@ class MultinomialResults(DiscreteResults):
     def conf_int(self, alpha=0.05):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha)
         return confint.transpose(2, 0, 1)
+
+    @Substitution(predict_params=_predict_params)
+    def predict(self, exog=None, transform=True, *args, **kwargs):
+        """
+        Predict the outcome probabilities, or other quantities, for exog
+
+        Calls ``self.model.predict`` with ``self.params`` as the first argument.
+
+        Parameters
+        ----------
+%(predict_params)s
+
+        Returns
+        -------
+        ndarray or DataFrame
+            An ndarray of shape (nobs, J) is returned if ``exog`` is not
+            given or is not a pandas object. If ``exog`` is a DataFrame, or
+            if the model was fit using a formula and ``exog`` is a DataFrame
+            or a dict, a DataFrame with the row index of ``exog`` is
+            returned. The columns of the DataFrame are the categories of the
+            endogenous variable in the order of the columns of ``wendog`` and
+            of ``names``, so that the first column is the reference category.
+
+        Notes
+        -----
+        The columns of the returned DataFrame are the categories as they are
+        in ``endog``, for example integers, floats, booleans or strings, and
+        not their string representation. This differs from ``names``, which
+        are always strings. Integer valued floats are converted to integers
+        if they can be represented exactly. The levels of a factor in R, and
+        so the labels of the columns of the predicted probabilities of
+        ``nnet::multinom``, are always strings.
+
+        .. versionchanged:: 0.15.1
+
+           The columns of the returned DataFrame are the categories of
+           ``endog``. In previous versions they were 0, 1, ..., J - 1.
+        """
+        pred = super().predict(exog, transform, *args, **kwargs)
+        categories = getattr(self.model, "_endog_categories", None)
+        if isinstance(pred, DataFrame) and categories is not None:
+            # label the columns with the endog categories, see GH 4804
+            pred.columns = categories
+        return pred
 
     def get_prediction(self):
         """Not implemented for Multinomial"""

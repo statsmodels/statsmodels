@@ -1,6 +1,10 @@
 """
 Tests for contingency table analyses.
 """
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+
+from contextlib import contextmanager, nullcontext
+from math import erfc, sqrt
 from pathlib import Path
 import warnings
 
@@ -11,6 +15,7 @@ import pytest
 
 import statsmodels.api as sm
 import statsmodels.stats.contingency_tables as ctab
+from statsmodels.tools.testing import warns_or_none
 
 cur_dir = Path(__file__).resolve().parent
 fname = "contingency_table_r_results.csv"
@@ -373,7 +378,23 @@ def test_cochrans_q_return_object_deprecated():
         assert_equal(res, expected)
 
 
+@contextmanager
+def expect_breslow_day_warnings(expected):
+    # The Breslow-Day statistic of a table with zero cells divides by zero.
+    if not expected:
+        yield
+        return
+    with (
+        warns_or_none(RuntimeWarning, match="divide by zero encountered in divide"),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in add"),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in divide"),
+    ):
+        yield
+
+
 class CheckStratifiedMixin:
+    # True if the tables have zero cells so that summary() warns
+    zero_cells = False
 
     @classmethod
     def initialize(cls, tables, use_arr=False):
@@ -422,13 +443,15 @@ class CheckStratifiedMixin:
         assert_allclose(rslt.pvalue, self.or_homog_adj_p, rtol=1e-4, atol=1e-4)
 
     def test_pandas(self):
-        self.rslt_pandas.summary().as_text()
-        self.rslt.summary().as_text()
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
-            assert_equal(
-                self.rslt.summary().as_text(), self.rslt_pandas.summary().as_text()
-            )
+        with expect_breslow_day_warnings(self.zero_cells):
+            self.rslt_pandas.summary().as_text()
+        with expect_breslow_day_warnings(self.zero_cells):
+            self.rslt.summary().as_text()
+        with expect_breslow_day_warnings(self.zero_cells):
+            text = self.rslt.summary().as_text()
+        with expect_breslow_day_warnings(self.zero_cells):
+            text_pandas = self.rslt_pandas.summary().as_text()
+        assert_equal(text, text_pandas)
 
     def test_from_data(self):
 
@@ -459,6 +482,8 @@ class TestStratified1(CheckStratifiedMixin):
                    dim=c(2, 2, 5))
     rslt = mantelhaen.test(data)
     """
+
+    zero_cells = True
 
     @classmethod
     def setup_class(cls):
@@ -566,6 +591,146 @@ class TestStratified3(CheckStratifiedMixin):
         # Breslow Day test with Tarone adjustment
         cls.or_homog_adj = 18.83297
         cls.or_homog_adj_p = 0.002064786
+
+
+# R reference for the tests with a pooled (Mantel-Haenszel) odds ratio of 1.
+# DescTools 0.99.60 (R 4.6.1), a, b, c, d being the cells of each 2x2 table
+# [[a, b], [c, d]] and K the number of tables:
+#     x <- array(0, c(2, 2, K))
+#     for (k in 1:K) x[, , k] <- matrix(c(a[k], c[k], b[k], d[k]), 2, 2)
+#     BreslowDayTest(x, correct=FALSE); BreslowDayTest(x, correct=TRUE)
+# mantelhaen.test(x)$estimate is exactly 1 in all cases and the statistics
+# with and without correct (Tarone) are identical:
+#     (10, 20, 20, 10), (20, 10, 10, 20):
+#         13.333333333333334, p 0.000260729632855283
+#     (20, 10, 5, 15), (10, 20, 15, 5):
+#         16.666666666666668, p 4.45570906040249e-05
+#     (20, 10, 5, 15), (10, 20, 15, 5), (30, 12, 8, 25), (12, 30, 25, 8):
+#         49.589575905365379, p 9.7701846613063e-11 (3 df)
+@pytest.mark.parametrize("adjust", [False, True])
+@pytest.mark.parametrize("as_array", [False, True])
+def test_equal_odds_unit_pooled_or(adjust, as_array):
+    # With common OR=1, all fitted counts are 15. The Breslow-Day
+    # asymptotic variance is 1 / (4 / 15), so chi2 = 2 * 25 / (15 / 4).
+    # The Tarone correction is zero because the deviations sum to zero.
+    tables = [[[10, 20], [20, 10]], [[20, 10], [10, 20]]]
+    if as_array:
+        tables = np.dstack(tables)
+    result = ctab.StratifiedTable(tables).test_equal_odds(adjust=adjust)
+    assert_allclose(result.statistic, 40 / 3, rtol=1e-13)
+    # For one degree of freedom, chi2 survival is erfc(sqrt(x / 2)).
+    assert_allclose(result.pvalue, erfc(sqrt(20 / 3)), rtol=1e-13)
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+@pytest.mark.parametrize(
+    "tables, expected, pvalue",
+    [
+        (
+            [[[20, 10], [5, 15]], [[10, 20], [15, 5]]],
+            16.666666666666668,
+            4.45570906040249e-05,
+        ),
+        (
+            [
+                [[20, 10], [5, 15]],
+                [[10, 20], [15, 5]],
+                [[30, 12], [8, 25]],
+                [[12, 30], [25, 8]],
+            ],
+            49.589575905365379,
+            9.7701846613063e-11,
+        ),
+    ],
+)
+def test_equal_odds_unit_pooled_or_r(adjust, tables, expected, pvalue):
+    # DescTools::BreslowDayTest, see the R reference above
+    result = ctab.StratifiedTable(tables).test_equal_odds(adjust=adjust)
+    assert_allclose(result.statistic, expected, rtol=1e-13)
+    # R computes the p-value as 1 - pchisq, which loses digits for small values
+    assert_allclose(result.pvalue, pvalue, rtol=1e-6)
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+@pytest.mark.parametrize("delta", [-1, 1])
+def test_equal_odds_near_unit_pooled_or(adjust, delta):
+    # Identical strata have fitted counts equal to the observed counts,
+    # giving statistic=0 and pvalue=1, even with an OR very close to 1.
+    n = 10**8
+    table = [[n, n], [n, n + delta]]
+    result = ctab.StratifiedTable([table, table]).test_equal_odds(adjust=adjust)
+    assert_allclose(result.statistic, 0, atol=1e-18)
+    assert_allclose(result.pvalue, 1, rtol=1e-10)
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+def test_equal_odds_mixed_margins(adjust):
+    # Independent 80-digit Decimal bisection of the monotone cell-odds
+    # equation e * (N-R-C+e) / ((R-e)*(C-e)) = OR_MH gives these values.
+    # This case exercises both signs of the quadratic's linear term.
+    tables = [[[100, 100], [100, 1]], [[1, 40], [50, 100]]]
+    expected = 1.3064617383935995 if adjust else 1.3503676201849462
+    result = ctab.StratifiedTable(tables).test_equal_odds(adjust=adjust)
+    assert_allclose(result.statistic, expected, rtol=1e-12)
+    assert_allclose(result.pvalue, erfc(sqrt(expected / 2)), rtol=1e-12)
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+@pytest.mark.parametrize("transform", range(8))
+def test_equal_odds_small_cells(adjust, transform):
+    # Independent 120-digit Decimal monotone cell-odds bisection.
+    # Tiny fitted off-diagonal cells must not be obtained by subtracting
+    # two approximately 1e14 diagonal counts. Symmetries preserve Q.
+    tables = np.dstack([
+        [[17592186044416, 4], [3, 35184372088832]],
+        [[35184372088832, 7], [5, 105553116266496]],
+    ])
+    if transform & 1:
+        tables = tables[::-1, :, :]
+    if transform & 2:
+        tables = tables[:, ::-1, :]
+    if transform & 4:
+        tables = tables.transpose(1, 0, 2)[:, :, ::-1]
+    expected = 0.5555352755861875 if adjust else 0.5647268822325966
+    result = ctab.StratifiedTable(tables).test_equal_odds(adjust=adjust)
+    assert_allclose(result.statistic, expected, rtol=2e-13, atol=0)
+    assert_allclose(result.pvalue, erfc(sqrt(expected / 2)), rtol=2e-13)
+    assert isinstance(result.statistic, np.float64)
+    assert isinstance(result.pvalue, np.float64)
+    assert set(vars(result)) == {"statistic", "pvalue"}
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+def test_equal_odds_near_homogeneous_absolute_tolerance(adjust):
+    # Counts near 1e15 limit recoverable residual precision. The statistic is
+    # of order 1e-17 with a large relative error, so this only checks that it
+    # is finite and tiny, not that it is accurate.
+    tables = [[[3 * k * 10**14, 6 * k * 10**14],
+               [k * 10**14, 2 * k * 10**14]]
+              for k in [1, 2, 3] * 3]
+    tables[-1][0][1] += 1
+    result = ctab.StratifiedTable(tables).test_equal_odds(adjust=adjust)
+    assert np.isfinite(result.statistic)
+    assert 0 <= result.statistic < 1e-15
+    assert_allclose(result.pvalue, 1, atol=1e-14, rtol=0)
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+@pytest.mark.parametrize("shift_zeros", [False, True])
+def test_equal_odds_observed_zeros(adjust, shift_zeros):
+    # Positive margins and finite positive common OR, even without shifting.
+    # Independent 120-digit monotone cell-odds bisection, before/after shift.
+    tables = [[[0, 7], [5, 20]], [[11, 3], [9, 4]], [[6, 8], [5, 7]]]
+    expected = {False: {False: 2.000284881564185, True: 2.000214395536559}, True: {False: 1.251899415048697, True: 1.2518903428029755}}[shift_zeros][adjust]
+    st = ctab.StratifiedTable(tables, shift_zeros=shift_zeros)
+    result = st.test_equal_odds(adjust=adjust)
+    assert_allclose(result.statistic, expected, rtol=2e-13)
+    # Chi-square(2) survival is exp(-Q/2), independently of scipy's path.
+    assert_allclose(result.pvalue, np.exp(-expected / 2), rtol=2e-13)
+    shifted = np.dstack(tables).astype(float)
+    if shift_zeros:
+        shifted[:, :, 0] += 0.5
+    assert_equal(st.table, shifted)
 
 
 class Check2x2Mixin:
@@ -794,3 +959,259 @@ def test_table2x2_confint_invalid_alpha_raises():
     lo, hi = t2.oddsratio_confint()
     assert np.isfinite([lo, hi]).all()
     assert 0 < lo < hi
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+def test_equal_odds_reciprocal_overflow_legacy(adjust):
+    # This unsupported scaling must retain the old NaN/warning behavior,
+    # rather than introducing an OverflowError from accurate accumulation.
+    tables = [[[1e-308, 1e-308], [1, 1]], [[1e-308, 1e-308], [1, 1]]]
+    # WASM has no floating-point exception support; keep the numerical checks.
+    warning_context = (
+        nullcontext() if PYTHON_IMPL_WASM else
+        pytest.warns(RuntimeWarning, match="invalid value encountered in divide")
+    )
+    with warning_context:
+        result = ctab.StratifiedTable(tables).test_equal_odds(adjust=adjust)
+    assert np.isnan(result.statistic)
+    assert np.isnan(result.pvalue)
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+def test_equal_odds_overflow_preserves_legacy_warnings(adjust):
+    warning_context = (
+        nullcontext() if PYTHON_IMPL_WASM else pytest.warns(RuntimeWarning)
+    )
+    with warning_context:
+        table = ctab.StratifiedTable(np.full((2, 2, 2), 1e308))
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = table.test_equal_odds(adjust=adjust)
+    expected = ["invalid value encountered in divide"] * 2
+    if adjust:
+        expected.append("overflow encountered in reduce")
+    if not PYTHON_IMPL_WASM:
+        assert [str(warning.message) for warning in caught] == expected
+    assert all(warning.category is RuntimeWarning for warning in caught)
+    assert np.isnan(result.statistic)
+    assert np.isnan(result.pvalue)
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+def test_breslow_day_empty_fallback(adjust):
+    # The internal helper must leave empty inputs to the existing public
+    # validation, not reshape/reduce them or divide by an empty variance sum.
+    assert ctab._breslow_day_statistic(np.empty((2, 2, 0)), 1.0, adjust) is None
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+def test_breslow_day_margin_overflow_fallback(adjust):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        result = ctab._breslow_day_statistic(
+            np.full((2, 2, 2), 1e308), 1.0, adjust
+        )
+    assert result is None
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+@pytest.mark.parametrize("exponent", [510, 511])
+def test_equal_odds_unrepresentable_fitted_legacy(adjust, exponent):
+    # The true fitted counts equal the observations, but the discriminant
+    # overflows. At exponent 510 the helper computes zero fitted cells;
+    # at 511 its numerator also overflows, giving inf / inf. Both must
+    # fall back silently rather than broaden the supported scaling range.
+    table = ctab.StratifiedTable(np.full((2, 2, 2), 2.0**exponent))
+    assert table.oddsratio_pooled == 1.0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert ctab._breslow_day_statistic(
+            table.table, table.oddsratio_pooled, adjust
+        ) is None
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = table.test_equal_odds(adjust=adjust)
+    if exponent == 510:
+        # Legacy e11=inf and v11=inf leave inf / inf in the statistic.
+        expected = ["overflow encountered in square",
+                    "divide by zero encountered in divide",
+                    "invalid value encountered in divide"]
+        if adjust:
+            expected.append("invalid value encountered in scalar divide")
+    else:
+        # Legacy c=-inf, b**2=inf, and (1-OR)*c = 0*(-inf) is NaN.
+        expected = ["overflow encountered in multiply",
+                    "overflow encountered in square",
+                    "invalid value encountered in multiply"]
+    messages = [str(warning.message) for warning in caught]
+    if not PYTHON_IMPL_WASM:
+        if exponent == 510 and adjust:
+            # NumPy 1.23 calls scalar division "double_scalars".
+            messages[-1] = messages[-1].replace("double_scalars", "scalar divide")
+        assert messages == expected
+    assert all(warning.category is RuntimeWarning for warning in caught)
+    assert np.isnan(result.statistic)
+    assert np.isnan(result.pvalue)
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+def test_equal_odds_unrepresentable_reciprocal_legacy(adjust):
+    # With OR=1, the fitted first row is 2**-1030. Its reciprocal is
+    # already infinite, so fsum returns inf (does not raise OverflowError)
+    # and the variance becomes zero. Legacy 0 / 0 for e11 stays NaN.
+    tables = [[[2.0**-1030, 2.0**-1030], [1, 1]]] * 2
+    table = ctab.StratifiedTable(tables)
+    assert table.oddsratio_pooled == 1.0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert ctab._breslow_day_statistic(
+            table.table, table.oddsratio_pooled, adjust
+        ) is None
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = table.test_equal_odds(adjust=adjust)
+    if not PYTHON_IMPL_WASM:
+        assert [str(warning.message) for warning in caught] == [
+            "invalid value encountered in divide"
+        ]
+    assert all(warning.category is RuntimeWarning for warning in caught)
+    assert np.isnan(result.statistic)
+    assert np.isnan(result.pvalue)
+
+
+@pytest.mark.parametrize("adjust", [False, True])
+def test_equal_odds_statistic_sum_overflow_legacy(adjust):
+    # Exact binary scales give pooled OR=2**-512. In each of the first
+    # two strata, fitted a and variance round to 2**-1023 and delta to 1.
+    # Each chi-square term is finite (2**1023), but their sum overflows
+    # math.fsum, with or without Tarone centering. No arithmetic is mocked.
+    scale = 2.0**511
+    tables = [[[1, 0], [0, scale]]] * 2
+    tables += [[[0, scale], [scale, 0]]] * 8
+    table = ctab.StratifiedTable(tables)
+    assert table.oddsratio_pooled == 2.0**-512
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert ctab._breslow_day_statistic(
+            table.table, table.oddsratio_pooled, adjust
+        ) is None
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = table.test_equal_odds(adjust=adjust)
+    # The legacy root subtraction rounds e11 to zero in the first two
+    # strata, making v11=0 and Q=inf. The Tarone correction is finite.
+    if not PYTHON_IMPL_WASM:
+        assert [str(warning.message) for warning in caught] == [
+            "divide by zero encountered in divide"
+        ] * 2
+    assert all(warning.category is RuntimeWarning for warning in caught)
+    assert_equal(result.statistic, np.inf)
+    assert_equal(result.pvalue, 0.0)
+
+
+def test_null_odds_correction_no_overshoot():
+    # The continuity correction is only applied if |sum(a - E(a))| >= 0.5,
+    # as in R's mantelhaen.test; otherwise it would enlarge the statistic.
+    # Single rare event: sum(a - E(a)) = -0.01, R: X2 = 0.0101, p = 0.92
+    st = ctab.StratifiedTable([np.array([[0, 1], [1, 98]])])
+    r0 = st.test_null_odds(correction=False)
+    r1 = st.test_null_odds(correction=True)
+    assert_allclose(r0.statistic, 0.0001 / 0.0099, rtol=1e-10)
+    assert_allclose(r1.statistic, r0.statistic, rtol=1e-12)
+    assert r1.pvalue > 0.9
+    # sum(a - E(a)) = 0 exactly: statistic is 0 with or without correction
+    tables = [np.array([[3, 2], [2, 3]]), np.array([[2, 3], [3, 2]])]
+    r1 = ctab.StratifiedTable(tables).test_null_odds(correction=True)
+    assert_allclose(r1.statistic, 0, atol=1e-14)
+    assert_allclose(r1.pvalue, 1, atol=1e-14)
+    # |sum(a - E(a))| >= 0.5: correction applied as before
+    tables = [np.array([[10, 5], [5, 10]]), np.array([[8, 4], [6, 9]])]
+    st = ctab.StratifiedTable(tables)
+    delta = np.sum(st.table[0, 0, :] - st._apb * st._apc / st._n)
+    denom = np.sum(st._apb * st._apc * st._bpd * st._cpd / (st._n**2 * (st._n - 1)))
+    assert_allclose(
+        st.test_null_odds(correction=True).statistic,
+        (abs(delta) - 0.5) ** 2 / denom,
+        rtol=1e-12,
+    )
+
+
+# Reference values from R 4.6.1, stats::mantelhaen.test(x, correct=TRUE) and
+# correct=FALSE, where x is an array of dim c(2, 2, K) with
+# x[, , k] <- matrix(c(a, c, b, d), 2, 2), i.e. the stratum [[a, b], [c, d]].
+# The single stratum was padded in R with a stratum [[0, 0], [1, 1]] that
+# contributes nothing to either sum.
+# Columns: strata, sum(a - E(a)), corrected statistic and p-value,
+# uncorrected statistic and p-value
+mh_r_reference = [
+    # |sum(a - E(a))| < 0.5: R does not apply the correction
+    (
+        [[[4, 3], [3, 1]], [[5, 0], [5, 2]]],
+        0.378787878787879,
+        (0.131651008973333, 0.716726320820142),
+        (0.131651008973333, 0.716726320820142),
+    ),
+    # |sum(a - E(a))| > 0.5
+    (
+        [[[10, 10], [10, 10]], [[12, 8], [9, 11]]],
+        1.5,
+        (0.195244055068836, 0.658587409353435),
+        (0.439299123904881, 0.507460932504393),
+    ),
+    # |sum(a - E(a))| = 0.5 exactly, the correction removes everything
+    (
+        [[[3, 0], [3, 0]], [[4, 0], [3, 1]]],
+        0.5,
+        (0.0, 1.0),
+        (1.0, 0.317310507862914),
+    ),
+    # Each stratum has |a - E(a)| = 0.4 but the sum is 0.8
+    (
+        [[[1, 0], [2, 2]], [[4, 11], [2, 8]]],
+        0.8,
+        (0.0652173913043478, 0.798431964808643),
+        (0.463768115942029, 0.495868184540851),
+    ),
+    # A single stratum
+    (
+        [[[98, 1], [1, 1]]],
+        0.960396039603964,
+        (5.51538108356299, 0.0188499660989098),
+        (24.0001020304052, 9.63305959467338e-07),
+    ),
+]
+
+
+@pytest.mark.parametrize("tables, delta, corrected, uncorrected", mh_r_reference)
+def test_null_odds_correction_r(tables, delta, corrected, uncorrected):
+    st = ctab.StratifiedTable([np.asarray(t, dtype=float) for t in tables])
+    actual = np.sum(st.table[0, 0, :] - st._apb * st._apc / st._n)
+    assert_allclose(actual, delta, rtol=1e-10)
+
+    for correction, expected in ((True, corrected), (False, uncorrected)):
+        res = st.test_null_odds(correction=correction)
+        assert_allclose(res.statistic, expected[0], rtol=1e-10, atol=1e-14)
+        assert_allclose(res.pvalue, expected[1], rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "tables",
+    [
+        [[[2, 0], [0, 0]]],
+        [[[2, 0], [0, 0]], [[3, 0], [0, 0]]],
+    ],
+)
+@pytest.mark.parametrize("correction", [True, False])
+def test_null_odds_zero_variance(tables, correction):
+    # The statistic is 0 / 0; R's mantelhaen.test returns NaN as well. With
+    # the correction the statistic used to be inf and the p-value 0.
+    st = ctab.StratifiedTable([np.asarray(t, dtype=float) for t in tables])
+    # There are no floating point exceptions, and so no warning, in WASM
+    if PYTHON_IMPL_WASM:
+        warns = nullcontext()
+    else:
+        warns = pytest.warns(RuntimeWarning, match="invalid value")
+    with warns:
+        res = st.test_null_odds(correction=correction)
+    assert np.isnan(res.statistic)
+    assert np.isnan(res.pvalue)

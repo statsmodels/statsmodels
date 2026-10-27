@@ -624,30 +624,79 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05, method="n
 
     Parameters
     ----------
-    proportion : float in (0, 1)
-        proportion or quantile
-    half_length : float in (0, 1)
-        desired half length of the confidence interval
-    alpha : float in (0, 1), optional
-        significance level, default 0.05,
-        coverage of the two-sided interval is (approximately) ``1 - alpha``
-    method : str in ['normal'], optional
-        method to use for confidence interval,
-        currently only normal approximation
+    proportion : float or array_like in [0, 1]
+        Proportion or quantile. All values have to be in the closed interval
+        [0, 1].
+    half_length : float or array_like, positive
+        Desired half length of the confidence interval. All values have to
+        be positive.
+    alpha : float or array_like in (0, 1), optional
+        Significance level, default 0.05. Coverage of the two-sided interval
+        is (approximately) ``1 - alpha``. All values have to be in the open
+        interval (0, 1).
+    method : {"normal"}, optional
+        Method to use for the confidence interval. Currently only the normal
+        approximation is available.
 
     Returns
     -------
-    n : float
-        sample size to get the desired half length of the confidence interval
+    n : float, ndarray, Series or DataFrame
+        Sample size to get the desired half length of the confidence
+        interval. The sample size is not rounded to an integer, and it is 0
+        if ``proportion`` is 0 or 1. The result is a float if all arguments
+        are scalars, and an ndarray if the arguments are array_like. It is a
+        pandas Series or DataFrame if ``proportion`` or ``half_length`` is
+        one, in which case the result has the index of that argument.
+
+    Raises
+    ------
+    ValueError
+        If a value of ``alpha`` is not in (0, 1), a value of ``half_length``
+        is not positive, or a value of ``proportion`` is not in [0, 1]. The
+        check also rejects nan. NumPy raises a ``ValueError`` if an argument,
+        for example a string, cannot be converted to float.
+    TypeError
+        If ``proportion``, ``half_length`` or ``alpha`` is None.
+    NotImplementedError
+        If ``method`` is not "normal".
 
     Notes
     -----
-    this is mainly to store the formula.
-    possible application: number of replications in bootstrap samples
+    This is mainly to store the formula. For the normal approximation the
+    sample size is ``proportion * (1 - proportion) / (half_length / z) ** 2``,
+    where ``z`` is the ``1 - alpha / 2`` quantile of the standard normal
+    distribution.
+
+    A possible application is the number of replications in bootstrap
+    samples.
+
+    .. versionchanged:: 0.15.1
+
+       Values of ``alpha``, ``half_length`` and ``proportion`` that are out of
+       range or nan raise a ``ValueError``. Previously the function returned
+       ``inf``, ``nan`` or a meaningless, possibly negative, sample size.
+       Lists are accepted for the three arguments.
     """
-    q_ = proportion
+    # array_like converts lists and raises a TypeError for None
+    proportion_a = array_like(proportion, "proportion", mindim=None)
+    half_length_a = array_like(half_length, "half_length", mindim=None)
+    alpha_a = array_like(alpha, "alpha", mindim=None)
+    # the np.all form is vector safe and rejects nan
+    if not np.all(np.greater(alpha_a, 0) & np.less(alpha_a, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater(half_length_a, 0)):
+        raise ValueError(f"half_length must be positive, got {half_length}")
+    if not np.all(np.greater_equal(proportion_a, 0) & np.less_equal(proportion_a, 1)):
+        raise ValueError(f"proportion must be in the range [0, 1], got {proportion}")
+
+    # keep pandas objects in the computation so that the result is a pandas
+    # object with the index of the input
+    pandas_types = (pd.Series, pd.DataFrame)
+    q_ = proportion if isinstance(proportion, pandas_types) else proportion_a
+    if isinstance(half_length, pandas_types):
+        half_length_a = half_length
     if method == "normal":
-        n = q_ * (1 - q_) / (half_length / stats.norm.isf(alpha / 2.0)) ** 2
+        n = q_ * (1 - q_) / (half_length_a / stats.norm.isf(alpha_a / 2.0)) ** 2
     else:
         raise NotImplementedError('only "normal" is available')
 

@@ -72,6 +72,14 @@ Behavior changes
   ``ValueError`` now instead of failing with an array broadcasting error. The
   error messages name the lag that was passed. :pr:`10481`, :pr:`10311`,
   :pr:`10561`
+- The ``DataFrame`` returned by ``predict`` of the results of ``MNLogit``, when
+  ``exog`` is a ``DataFrame`` or the model was fit with a formula, has the
+  categories of ``endog`` as columns, in the order of ``wendog`` with the
+  reference category first, instead of 0, 1, ..., J - 1. The categories keep
+  their type, so ``model.names`` and the labels in ``summary`` are strings but
+  the columns of ``predict`` are, for example, integers for integer ``endog``.
+  Predictions for an array ``exog`` are still arrays. :issue:`4804`,
+  :pr:`10587`
 - With ``missing="drop"``, a ``MissingDataError`` is raised if all
   observations are dropped because of missing values. An unknown value of
   ``missing`` raises a ``ValueError``. :issue:`4417`, :pr:`10535`,
@@ -123,6 +131,11 @@ New functions and methods
   :pr:`10401`, :pr:`10528`, :pr:`10542`
 - ``statsmodels.tsa.tsatools.add_lag`` accepts the label of a column of a
   pandas ``DataFrame`` as ``col``. :pr:`10302`
+- Add the ``one_sided`` argument to
+  :func:`~statsmodels.tsa.filters.hp_filter.hpfilter`. With
+  ``one_sided=True``, the trend at time t only depends on the observations up
+  to and including t. It is computed with the Kalman filter of the state space
+  form of the HP filter. :issue:`6947`, :pr:`10588`
 
 Performance
 -----------
@@ -176,6 +189,14 @@ Regression and linear models
   wrong shape" if the number of rows of ``exog`` was equal to the number of
   parameters, and did not check the length of ``weights`` against the number
   of rows otherwise. :issue:`10283`, :pr:`10285`
+- ``OLS``, ``WLS``, ``GLS``, ``GLSAR`` and ``QuantReg`` raise a
+  ``MissingDataError`` when ``endog``, ``exog``, ``weights`` or ``sigma``
+  contain ``inf`` or ``nan`` after missing values are handled, so that
+  ``missing="drop"`` still removes ``nan`` but not ``inf``. Before, only
+  ``nan`` and ``inf`` in ``exog`` were detected, and only if ``hasconst`` was
+  not ``False``. ``-inf`` in ``exog``, and non-finite values of the other
+  arrays, raised a ``LinAlgError`` in ``fit`` or gave parameters that are all
+  ``nan``. :issue:`1642`, :issue:`3468`, :pr:`4969`
 - ``get_prediction()`` called without ``exog`` now uses the offset and
   exposure of the model, as ``predict`` does, for GLM, GLMGam, the discrete
   count models and the binary models (Logit and Probit). Before, the offset
@@ -215,6 +236,16 @@ Regression and linear models
 Generalized linear models and discrete models
 ---------------------------------------------
 
+- ``score_test`` with a one-dimensional ``exog_extra`` for the discrete
+  models and the ``GLM`` result method raised an ``IndexError`` in 0.15.0. A
+  one-dimensional ``exog_extra`` is a single additional variable, as before.
+  :pr:`10609`
+- ``predict`` preserves the observation index of a pandas Series for models
+  with one predictor and additional parameters, such as ``NegativeBinomial``,
+  ``GeneralizedPoisson``, ``ZeroInflatedPoisson``, ``BetaModel``,
+  ``OrderedModel`` and ``MNLogit``. Previously, multiple observations raised
+  an index length error and a single observation received an incorrect label.
+  :pr:`10590`
 - ``GEE`` used the number of columns of ``exog`` for ``df_model``,
   ``df_resid`` and the default ``ddof_scale``. These are now based on the rank
   of ``exog`` as in the other models, so that a singular design can no longer
@@ -262,12 +293,21 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
+- ``MLEModel.loglike`` returns ``-inf`` instead of raising a ``LinAlgError``
+  if the states are initialized as stationary and the transition matrix has a
+  unit root, so that the stationary covariance of the initial state does not
+  exist. A derivative free optimizer, such as ``method="powell"``, can try
+  parameters that are transformed to the boundary of the stationary region.
+  The fit of the dynamic factor model in the example notebook failed with this
+  error on some platforms. :pr:`10611`
 - ``range_unit_root_test`` documents the correct null hypothesis, a unit
   root, which is rejected for small statistics. The ``InterpolationWarning``
   reports the correct direction: it is raised if the statistic is outside the
   range of the tabulated critical values, which is 1% to 95%; it was also
   raised for statistics between the 90% and 95% critical values.
   :issue:`8978`, :pr:`10475`, :pr:`10568`
+- ``UECMResults.bounds_test`` raised a ``TypeError`` for a model without lagged
+  differences of the dependent variable (``lags=0``). :pr:`10578`
 - :meth:`~statsmodels.tsa.arima_process.ArmaProcess.arma2ma` and ``arma2ar``
   raised an ``AttributeError`` if ``lags`` is not given. They default to
   ``nobs`` coefficients. :issue:`4464`, :pr:`10466`, :pr:`10569`
@@ -348,18 +388,61 @@ Time series analysis
   trading days, can use a ``DatetimeIndex`` with a matching frequency (e.g.
   ``"B"`` or a ``CustomBusinessDay``); data with missing observations can be
   reindexed to consecutive periods. Consecutive periods with a frequency
-  multiplier, such as ``"2Q"``, are still supported. :issue:`6247`,
-  :issue:`8950`, :pr:`10572`
+  multiplier, such as ``"2Q"``, are still supported. For an ignored
+  ``PeriodIndex`` the "Sample" line of the results summary shows integer
+  positions, e.g. ``0 - 19``, and ``model.data.dates`` is ``None``, as for a
+  ``DatetimeIndex`` without a frequency. :issue:`6247`, :issue:`8950`,
+  :pr:`10572`, :pr:`10581`
 - The asymptotic critical values and p-values of
   :meth:`~statsmodels.tsa.ardl.UECMResults.bounds_test` are looked up with the
   number of regressors, excluding the dependent variable, as in Pesaran, Shin
   and Smith (2001). They were those for one regressor too many, so the
   p-values were too small. Models with 10 regressors use the tables instead of
   simulation. :issue:`10546`, :pr:`10574`
+- The statistic of :meth:`~statsmodels.tsa.ardl.UECMResults.bounds_test` was
+  computed without the fixed regressors and the seasonal terms of the model,
+  so that it did not depend on them. They are now included as controls, and
+  the statistic matches R's ``ARDL::bounds_f_test``. A model that uses
+  ``deterministic`` raises a ``NotImplementedError`` instead of ignoring the
+  process. :pr:`10579`
+- ``x13_arima_analysis`` reads a ``rawspec`` file as UTF-8 independent of the
+  locale. Before, the file was decoded with the locale encoding, so that text
+  with non-ASCII characters was garbled or failed, for example on Windows.
+  A UTF-8 byte order mark is ignored, a file that is not valid UTF-8 raises a
+  ``ValueError`` that says so, and ``rawspec`` accepts a ``pathlib.Path`` as
+  documented. :pr:`10585`
+- ``coint_johansen``, ``select_coint_rank`` and the error bands of the
+  impulse responses of a ``VAR`` returned complex eigenvalues and eigenvectors
+  with NumPy 2.5 and later, which ``np.linalg.eig`` returns as complex arrays
+  even if all the eigenvalues are real, and ``coint_johansen`` warned with a
+  ``ComplexWarning``. The results are real again. :pr:`10613`
+- ``smoothed_state_autocovariance`` does not warn that the univariate filter
+  diagonalized the observation covariance when it extends the model beyond
+  the sample, since it does not use the disturbance covariances. :pr:`10613`
+- ``arma_order_select_ic`` no longer warns about the starting values of the
+  candidate models that fall back to zeros. :pr:`10613`
+- ``hamilton_filter`` and the starting values of ``DynamicFactorMQ`` no longer
+  warn about the unused scale of a regression without residual degrees of
+  freedom. :pr:`10613`
+- ``ThetaModelResults.plot_predict`` with ``alpha=None`` no longer adds a
+  legend without labels, which warned. :pr:`10613`
+- ``SVAR.sirf_errband_mc`` and ``IRAnalysis.errband_mc`` with ``svar=True``
+  show one ``ConvergenceWarning`` with the number of replications whose
+  maximum likelihood fit did not converge, instead of one warning for each of
+  them. :pr:`10613`
 
 Statistics and tests
 --------------------
 
+- ``statsmodels.stats.power`` validates that a root returned by a solver
+  attains the requested power. Failed solutions now return ``NaN`` with a
+  ``ConvergenceWarning`` instead of returning a misleading finite result or
+  raising an error, also when solving for ``alpha``, which now finds
+  significance levels far below 1e-5. Noncentral-t CDF calculations retry a
+  reflected tail when CDFLIB returns ``NaN`` and use the limit 0 or 1 if that
+  fails too, preserving already finite values. This can turn previously missing
+  t-test powers into finite results; it does not guarantee relative accuracy
+  in extremely small tails. :pr:`10552`
 - The p-values of several tests were computed as one minus the cdf, which
   gives 0 or loses digits for large statistics. They now use the survival
   function. This affects ``survdiff``, the empirical likelihood ``ANOVA`` and
@@ -374,6 +457,12 @@ Statistics and tests
 - ``DescrStatsW`` rejects weights that are negative or not finite with a
   ``ValueError``. Non-finite weights gave ``nan`` or ignored the weight in
   ``quantile``. :pr:`10355`, :pr:`10371`
+- ``StratifiedTable.test_null_odds(correction=True)`` applies the continuity
+  correction of 0.5 only if ``|sum(a - E(a))| >= 0.5``, as ``mantelhaen.test``
+  of R does. Before, ``min(0.5, |sum(a - E(a))|)`` was subtracted, which
+  changed the statistic when the deviation is below 0.5. The statistic and the
+  p-value of a table with zero variance are ``nan``, they were ``inf`` and 0.
+  :pr:`10551`, :pr:`10583`
 - The DerSimonian-Laird estimate of the between-study variance in
   ``combine_effects`` (``method_re="dl"`` or ``"chi2"``) is truncated at zero.
   A negative variance was used before, which could give a random effects mean
@@ -416,9 +505,19 @@ Statistics and tests
   instead of a negative value if the rejection region of the exact test is
   empty. ``low`` and ``upp`` also accept list-like input, and a NaN ``p_alt``
   raises a ``ValueError``. :issue:`10507`, :pr:`10508`, :pr:`10580`
+- ``TTestIndPower.power`` and ``TTestIndPower.solve_power`` accept ``ratio=0``,
+  which gives the power of the one-sample t-test with ``nobs1`` observations;
+  it raised a ``ZeroDivisionError`` or gave the size of the test for NumPy
+  scalars. ``ratio`` can be array_like, and a negative or NaN ``ratio`` raises
+  a ``ValueError``; ``solve_power`` returned ``nan`` with a convergence warning
+  for a negative ``ratio``. :pr:`10349`, :pr:`10584`
 - ``proportions_chisquare`` raises a ``ValueError`` for a single sample
   without ``value``. The statistic was 0 and the p-value ``nan``.
   :pr:`10451`
+- ``StratifiedTable.test_equal_odds`` (Breslow-Day and Tarone tests) returned
+  ``nan`` or an inaccurate statistic when the pooled odds ratio is one or very
+  close to one, and for tables with small fitted cells. The statistic is now
+  computed accurately in these cases. :pr:`10540`
 - ``gof_chisquare_discrete`` and ``gof_binning_discrete`` no longer restrict
   the support of the distribution to the range -1000 to 1000. The bins are
   chosen using the quantile function. The bins work for distributions for
@@ -434,7 +533,9 @@ Statistics and tests
   rows and before the model info rows. :issue:`9282`, :pr:`10218`
 - ``corr_rank`` and ``corr_normal_scores`` return a 1 by 1 matrix for a single
   variable instead of a scalar. :pr:`10456`
-  
+- ``Description`` no longer calls ``scipy.stats.mode`` for a column without
+  observations, which warns in SciPy 1.14 and later. :pr:`10613`
+
 Treatment effects
 -----------------
 
@@ -495,6 +596,10 @@ Robust and multivariate statistics
 - ``PCA`` with ``gls=True`` applied the weights inverted: the data were
   divided by the square root of the weights instead of multiplied by it.
   :issue:`10256`, :pr:`10258`
+- ``Factor`` with ``method="ml"`` and ``PHD`` returned complex loadings and
+  directions with NumPy 2.5 and later, which ``np.linalg.eig`` returns as
+  complex arrays even if all the eigenvalues are real. The results are real
+  again. :pr:`10613`
 
 Nonparametric
 -------------
@@ -505,6 +610,14 @@ Nonparametric
   :class:`~statsmodels.nonparametric.kernel_regression.KernelCensoredReg`
   that use ``ckertype="tricube"`` change. Scalar arguments are accepted.
   :issue:`10541`, :pr:`10547`, :pr:`10550`
+- ``pdf_kernel_asym`` and ``cdf_kernel_asym`` no longer raise
+  ``ZeroDivisionError`` (array ``x``) or ``TypeError`` (scalar ``x``) when the
+  sample has more than ``batch_size * 1000`` observations (10 000 with the
+  default). Intermediate kernel arrays never exceed ``batch_size * 1000``
+  elements, because the sample is split as well as the evaluation points.
+  ``batch_size`` must be a number with ``batch_size * 1000 >= 1``, and a
+  one-element ``x``, including a ``Series``, returns a scalar. :pr:`10577`,
+  :pr:`10582`
 - A scalar user-specified bandwidth is accepted by ``KDEMultivariate``,
   ``KDEMultivariateConditional``, ``KernelReg`` and ``KernelCensoredReg``.
   :issue:`4747`, :pr:`10272`
@@ -531,6 +644,10 @@ Duration models
   have a score residual of 0 (they were added to the risk set of the preceding
   failure time before). Observations that are not used no longer produce a
   ``nan`` robust covariance. :issue:`10288`, :pr:`10363`, :pr:`10377`
+- ``SurvfuncRight`` with ``exog`` and integer times stored an arbitrary
+  integer instead of ``nan`` in ``surv_prob_se``, ``n_risk`` and ``n_events``,
+  and warned about casting ``nan`` to an integer. They are ``nan`` as floats.
+  :pr:`10613`
 
 Other
 -----
@@ -598,6 +715,11 @@ Counts, sample sizes, weights and probabilities
   ``samplesize_proportions_2indep_onetail`` have to keep both proportions in
   [0, 1], and the probabilities of ``chisquare_effectsize`` have to be
   non-negative. :pr:`10383`, :pr:`10431`, :pr:`10425`, :pr:`10395`
+- ``samplesize_confint_proportion`` checks its arguments: ``alpha`` has to be
+  in (0, 1), ``half_length`` positive and ``proportion`` in [0, 1]. Invalid
+  values, including nan in arrays, raise a ``ValueError``. They returned
+  ``inf``, ``nan``, the sample size of ``abs(half_length)`` or a negative
+  sample size. Lists are accepted. :pr:`10381`
 - The dispersion of the Poisson and negative binomial power functions in
   ``statsmodels.stats.rates`` has to be non-negative. ``alpha`` of the
   ``NegativeBinomial`` link in ``statsmodels.genmod.families.links`` has to
@@ -647,6 +769,18 @@ Intervals, tuning parameters and shapes
   ``cohens_kappa`` and ``to_table`` check the shape of their input.
   :pr:`10342`, :pr:`10369`, :pr:`10351`, :pr:`10314`, :pr:`10315`,
   :pr:`10316`
+- The tuning constants of the robust norms in ``statsmodels.robust.norms`` are
+  validated. ``t`` of ``HuberT``, ``a`` of ``RamsayE`` and ``AndrewWave``,
+  ``c`` of ``TrimmedMean``, ``TukeyBiweight``, ``TukeyQuartic`` and
+  ``StudentT``, and ``df`` of ``StudentT`` have to be positive, ``k`` of
+  ``TukeyQuartic`` has to be a positive even integer, ``q`` of
+  ``MQuantileNorm`` has to be in (0, 1), and the constants of ``Hampel`` have
+  to be scalars with ``0 < a <= b <= c``. Zero, negative and ``nan`` values
+  used to create norms with an all-zero or ``nan`` ``psi``, and array valued
+  constants of ``Hampel`` failed in every method. The check applies to the
+  constructor and to ``_set_tuning_param``, attributes that are assigned later
+  are not checked. Arguments of the wrong type, for example ``None``, a string
+  or a complex number, raise a ``TypeError``. :pr:`10418`
 
 Time series
 -----------

@@ -64,8 +64,8 @@ jobs:
           python.version: '3.14'
           python.architecture: 'x64'
           pip.pre: true
-        python_314_no_formulaic:
-          python.version: '3.14'
+        python_315_no_formulaic:
+          python.version: '3.15'
           python.architecture: 'x64'
           PIP_UNINSTALL: "formulaic"
         python_314t_parallel:

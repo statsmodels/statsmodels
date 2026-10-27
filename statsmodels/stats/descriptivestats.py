@@ -432,6 +432,9 @@ class Description:
                 ser.dtype if isinstance(ser.dtype, np.dtype) else ser.dtype.numpy_dtype
             )
             ser_no_missing = ser.dropna().to_numpy(dtype=dtype)
+            if ser_no_missing.size == 0:
+                # SciPy warns that there is no sample
+                return np.nan, 0
             kwargs = {} if SP_LT_19 else {"keepdims": True}
             mode_res = stats.mode(ser_no_missing, **kwargs)
             # Changes in SciPy 1.10

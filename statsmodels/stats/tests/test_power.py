@@ -9,10 +9,12 @@ Created on Sat Mar 09 08:44:49 2013
 Author: Josef Perktold
 """
 
+from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
+from statsmodels.compat.python import PYTHON_IMPL_WASM
+from statsmodels.compat.scipy import SP_LT_115
 
 import copy
-import warnings
 
 import numpy as np
 from numpy.testing import (
@@ -21,11 +23,18 @@ from numpy.testing import (
     assert_array_equal,
     assert_equal,
 )
+import pandas as pd
 import pytest
 
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
-from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, HypothesisTestWarning
+from statsmodels.tools.testing import warns_or_none
+
+# The noncentral t distribution of SciPy on WASM is accurate to about 1e-6
+# (relative), which is far from the 1e-12 of the other platforms
+NCT_RTOL = 1e-5 if (PYTHON_IMPL_WASM or SP_LT_115) else 1e-7
+POWER_RTOL = 1e-6 if (PYTHON_IMPL_WASM or SP_LT_115) else 1e-9
 
 try:
     import matplotlib.pyplot as plt
@@ -898,8 +907,8 @@ def test_power_solver():
     # I let this case fail, could be fixed for some statistical tests
     # (we should not get here in the first place)
     # effect size is negative, but last stage brentq uses [1e-8, 1-1e-8]
-    with pytest.raises(ValueError):
-        nip.solve_power(
+    with pytest.warns(ConvergenceWarning):
+        es = nip.solve_power(
             None,
             nobs1=1600,
             alpha=0.01,
@@ -907,6 +916,7 @@ def test_power_solver():
             ratio=1,
             alternative="larger",
         )
+    assert np.isnan(es)
 
     with pytest.warns(HypothesisTestWarning):
         with pytest.raises(ValueError):
@@ -1040,7 +1050,10 @@ def test_solve_power_impossible_one_sided_raises():
     )
     assert_almost_equal(res, 26.1375, decimal=3)
     res = tt.solve_power(
-        effect_size=-0.5, nobs=None, alpha=0.05, power=0.8,
+        effect_size=-0.5,
+        nobs=None,
+        alpha=0.05,
+        power=0.8,
         alternative="smaller",
     )
     assert_almost_equal(res, 26.1375, decimal=3)
@@ -1048,29 +1061,35 @@ def test_solve_power_impossible_one_sided_raises():
     # a wrong-signed effect size with target power below alpha can have a
     # valid solution and is not intercepted
     res = tt.solve_power(
-        effect_size=0.5, nobs=None, alpha=0.05, power=0.01,
+        effect_size=0.5,
+        nobs=None,
+        alpha=0.05,
+        power=0.01,
         alternative="smaller",
     )
-    roundtrip = tt.power(
-        effect_size=0.5, nobs=res, alpha=0.05, alternative="smaller"
-    )
+    roundtrip = tt.power(effect_size=0.5, nobs=res, alpha=0.05, alternative="smaller")
     assert_almost_equal(roundtrip, 0.01, decimal=6)
 
     # solving for other parameters is not affected by the sign check
     res = tt.solve_power(
-        effect_size=0.5, nobs=25, alpha=None, power=0.8,
+        effect_size=0.5,
+        nobs=25,
+        alpha=None,
+        power=0.8,
         alternative="smaller",
     )
     assert np.isfinite(res)
     res = tt.solve_power(
-        effect_size=None, nobs=25, alpha=0.05, power=0.8,
+        effect_size=None,
+        nobs=25,
+        alpha=0.05,
+        power=0.8,
         alternative="smaller",
     )
     assert res < 0
 
 
 # TODO: can something useful be made from this?
-@pytest.mark.xfail(reason="Known failure on modern SciPy >= 0.10", strict=True)
 def test_power_solver_warn():
     # messing up the solver to trigger warning
     # I wrote this with scipy 0.9,
@@ -1081,9 +1100,11 @@ def test_power_solver_warn():
     nip = smp.NormalIndPower()
     # using nobs, has one backup (fsolve)
     nip.start_bqexp["nobs1"] = {"upp": 50, "low": -20}
-    val = nip.solve_power(
-        0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
-    )
+    # the solver evaluates the power at the negative lower bound of nobs
+    with warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"):
+        val = nip.solve_power(
+            0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
+        )
 
     assert_almost_equal(val, 1600, decimal=4)
     assert_equal(nip.cache_fit_res[0], 1)
@@ -1094,20 +1115,25 @@ def test_power_solver_warn():
 
     from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
-    with pytest.warns(ConvergenceWarning):
+    with (
+        pytest.warns(ConvergenceWarning),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"),
+    ):
         nip.solve_power(
             0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
         )
     # this converges with scipy 0.11  ???
     # nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative='larger')
 
-    with warnings.catch_warnings():  # python >= 2.6
-        warnings.simplefilter("ignore")
+    with (
+        pytest.warns(ConvergenceWarning),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"),
+    ):
         nip.solve_power(
             0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
         )
-        assert_equal(nip.cache_fit_res[0], 0)
-        assert_equal(len(nip.cache_fit_res), 3)
+    assert_equal(nip.cache_fit_res[0], 0)
+    assert_equal(len(nip.cache_fit_res), 3)
 
 
 def test_normal_sample_size_one_tail():
@@ -1134,7 +1160,9 @@ def test_normal_sample_size_one_tail():
     [
         lambda alternative: smp.ttest_power(0.5, 20, 0.05, alternative=alternative),
         lambda alternative: smp.normal_power(0.5, 20, 0.05, alternative=alternative),
-        lambda alternative: smp.normal_power_het(0.5, 20, 0.05, alternative=alternative),
+        lambda alternative: smp.normal_power_het(
+            0.5, 20, 0.05, alternative=alternative
+        ),
     ],
     ids=["ttest_power", "normal_power", "normal_power_het"],
 )
@@ -1148,6 +1176,192 @@ def test_alternative_deprecated_alias(power_func):
 
     with pytest.raises(ValueError, match="alternative must be one of"):
         power_func("bogus")
+
+
+@pytest.mark.parametrize("alternative", ["two-sided", "larger", "smaller"])
+@pytest.mark.parametrize("nobs", [5, 20, 50.5, 200])
+def test_ttest_ind_power_ratio_zero_is_one_sample(alternative, nobs):
+    # ratio=0 is the convention for a one-sample t-test with nobs1
+    # observations; it used to raise a ZeroDivisionError for Python scalars and
+    # to return alpha with a RuntimeWarning for numpy scalars
+    ind = smp.TTestIndPower()
+    one = smp.TTestPower()
+    effect_size = -0.5 if alternative == "smaller" else 0.5
+    p_zero = ind.power(effect_size, nobs, 0.05, ratio=0, alternative=alternative)
+    p_one = one.power(effect_size, nobs, 0.05, alternative=alternative)
+    assert_allclose(p_zero, p_one, rtol=1e-12)
+    assert np.ndim(p_zero) == 0
+    # df is honored, and defaults to nobs1 - 1
+    p_df = ind.power(
+        effect_size, nobs, 0.05, ratio=0, df=nobs - 1, alternative=alternative
+    )
+    assert_allclose(p_df, p_zero, rtol=1e-12)
+    p_df = ind.power(effect_size, nobs, 0.05, ratio=0, df=7, alternative=alternative)
+    expected = smp.ttest_power(effect_size, nobs, 0.05, df=7, alternative=alternative)
+    assert_allclose(p_df, expected, rtol=1e-12)
+    assert not np.isclose(p_df, p_zero, rtol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "effect_size, nobs1, alpha, alternative, power_r",
+    [
+        (0.5, 50, 0.05, "two-sided", 0.933897581262),
+        (0.2, 5, 0.05, "two-sided", 0.0642695740480347),
+        (0.2, 5, 0.01, "two-sided", 0.0135358237849607),
+        (0.5, 20, 0.05, "larger", 0.6951493382),
+        (0.5, 50.5, 0.05, "two-sided", 0.9361781095),
+    ],
+)
+def test_ttest_ind_power_ratio_zero_r(effect_size, nobs1, alpha, alternative, power_r):
+    # R 4.6.1, package pwr 1.3-0:
+    # pwr.t.test(n = nobs1, d = effect_size, sig.level = alpha,
+    #            type = "one.sample", alternative = c("two.sided", "greater"))$power
+    # R has no equivalent of ratio=0 in the two-sample functions
+    res = smp.TTestIndPower().power(
+        effect_size, nobs1, alpha, ratio=0, alternative=alternative
+    )
+    # the noncentral t distribution of SciPy on WASM is accurate to about 1e-8
+    assert_allclose(res, power_r, rtol=1e-7)
+
+
+def test_ttest_ind_power_ratio_zero_is_not_the_limit():
+    # ratio=0 is a convention: for ratio -> 0 the second sample vanishes and
+    # the power goes to alpha, it does not go to the one-sample power
+    ind = smp.TTestIndPower()
+    assert_allclose(ind.power(0.5, 50, 0.05, ratio=1e-9), 0.05, atol=1e-6)
+    assert ind.power(0.5, 50, 0.05, ratio=0) > 0.9
+
+
+@pytest.mark.parametrize("alternative", ["two-sided", "larger", "smaller"])
+def test_ttest_ind_solve_power_ratio_zero(alternative):
+    ind = smp.TTestIndPower()
+    one = smp.TTestPower()
+    sign = -1 if alternative == "smaller" else 1
+    kwds = {"ratio": 0, "alternative": alternative}
+
+    nobs1 = ind.solve_power(sign * 0.5, None, 0.05, 0.8, **kwds)
+    nobs = one.solve_power(sign * 0.5, None, 0.05, 0.8, alternative=alternative)
+    assert_allclose(nobs1, nobs, rtol=1e-5)
+    assert_allclose(ind.power(sign * 0.5, nobs1, 0.05, **kwds), 0.8, rtol=1e-5)
+
+    effect_size = ind.solve_power(None, 30, 0.05, 0.8, **kwds)
+    expected = one.solve_power(None, 30, 0.05, 0.8, alternative=alternative)
+    assert_allclose(effect_size, expected, rtol=1e-5)
+    assert_allclose(ind.power(effect_size, 30, 0.05, **kwds), 0.8, rtol=1e-5)
+
+    alpha = ind.solve_power(sign * 0.5, 30, None, 0.8, **kwds)
+    expected = one.solve_power(sign * 0.5, 30, None, 0.8, alternative=alternative)
+    assert_allclose(alpha, expected, rtol=1e-5)
+    assert_allclose(ind.power(sign * 0.5, 30, alpha, **kwds), 0.8, rtol=1e-5)
+
+    # solving for the power does not depend on the root finding
+    power = ind.solve_power(sign * 0.5, 30, 0.05, None, **kwds)
+    assert_allclose(power, ind.power(sign * 0.5, 30, 0.05, **kwds), rtol=1e-12)
+
+
+# R 4.6.1, package pwr 1.3-0, effect size 0.5, nobs1 = 50, alpha = 0.05; the
+# first element is for ratio = 0, the others for ratio = 0.5 and 1:
+# pwr.t.test(n = 50, d = 0.5, sig.level = 0.05, type = "one.sample",
+#            alternative = alt)$power
+# pwr.t2n.test(n1 = 50, n2 = c(25, 50), d = 0.5, sig.level = 0.05,
+#              alternative = alt)$power
+# with alt in c("two.sided", "greater", "less")
+POWER_RATIO_R = {
+    "two-sided": [0.933897581262, 0.521721300128, 0.696893405534],
+    "larger": [0.967206745826, 0.647066651831, 0.798936164150],
+    "smaller": [1.42685133153e-07, 1.22510474520e-04, 1.83145096917e-05],
+}
+RATIOS = np.array([0.0, 0.5, 1.0])
+
+
+@pytest.mark.parametrize("alternative", ["two-sided", "larger", "smaller"])
+def test_ttest_ind_power_ratio_array(alternative):
+    ind = smp.TTestIndPower()
+    kwds = {"alternative": alternative}
+    res = ind.power(0.5, 50, 0.05, ratio=RATIOS, **kwds)
+    assert isinstance(res, np.ndarray)
+    assert res.shape == (3,)
+    # the noncentral t distribution of SciPy on WASM is accurate to about 1e-8
+    # (absolute), which matters for the tiny powers of the other alternative
+    assert_allclose(res, POWER_RATIO_R[alternative], rtol=1e-6, atol=1e-8)
+    # same as the scalar calls
+    expected = [ind.power(0.5, 50, 0.05, ratio=r, **kwds) for r in RATIOS]
+    assert_allclose(res, expected, rtol=1e-12)
+    # a list works too, and df is applied to all elements
+    assert_allclose(ind.power(0.5, 50, 0.05, ratio=list(RATIOS), **kwds), res)
+    res_df = ind.power(0.5, 50, 0.05, ratio=RATIOS, df=30, **kwds)
+    expected = [ind.power(0.5, 50, 0.05, ratio=r, df=30, **kwds) for r in RATIOS]
+    assert_allclose(res_df, expected, rtol=1e-12)
+
+
+def test_ttest_ind_power_ratio_array_positive():
+    # array ratio without zero works as before the ratio=0 support
+    ind = smp.TTestIndPower()
+    ratios = np.array([0.5, 1.0, 2.0])
+    res = ind.power(0.5, 50, 0.05, ratio=ratios)
+    # R 4.6.1, pwr 1.3-0: pwr.t2n.test(n1 = 50, n2 = c(25, 50, 100), d = 0.5)
+    # the noncentral t distribution of SciPy on WASM is accurate to about 1e-8
+    assert_allclose(res, [0.521721300128, 0.696893405534, 0.818063361118], rtol=1e-7)
+    assert_array_equal(res, [ind.power(0.5, 50, 0.05, ratio=r) for r in ratios])
+
+
+def test_ttest_ind_power_ratio_broadcast():
+    ind = smp.TTestIndPower()
+    ratios = np.array([0.0, 1.0, 2.0])
+    effect_size = np.array([[0.2], [0.5]])
+    res = ind.power(effect_size, 50, 0.05, ratio=ratios)
+    assert res.shape == (2, 3)
+    for i, es in enumerate([0.2, 0.5]):
+        expected = [ind.power(es, 50, 0.05, ratio=r) for r in ratios]
+        assert_allclose(res[i], expected, rtol=1e-12)
+
+    nobs1 = np.array([20, 50, 100])
+    res = ind.power(0.5, nobs1, 0.05, ratio=ratios)
+    assert res.shape == (3,)
+    expected = [
+        ind.power(0.5, n, 0.05, ratio=r) for n, r in zip(nobs1, ratios, strict=True)
+    ]
+    assert_allclose(res, expected, rtol=1e-12)
+
+
+def test_ttest_ind_power_ratio_series():
+    ind = smp.TTestIndPower()
+    ratios = pd.Series(RATIOS, index=list("abc"))
+    res = ind.power(0.5, 50, 0.05, ratio=ratios)
+    assert_allclose(res, POWER_RATIO_R["two-sided"], rtol=1e-6)
+
+
+@pytest.mark.skipif(
+    PD_LT_2, reason="pandas 1.x cannot apply a SciPy ufunc to a Series and an array"
+)
+def test_ttest_ind_power_ratio_series_result():
+    ind = smp.TTestIndPower()
+    ratios = pd.Series(RATIOS, index=list("abc"))
+    # without a zero the Series input keeps working as before, with a Series
+    # as result
+    res = ind.power(0.5, 50, 0.05, ratio=ratios.iloc[1:])
+    assert isinstance(res, pd.Series)
+    assert_allclose(res.to_numpy(), POWER_RATIO_R["two-sided"][1:], rtol=1e-6)
+    assert list(res.index) == ["b", "c"]
+
+
+@pytest.mark.parametrize("bad", [-1, -1e-10, np.nan, [0.5, -1.0], [1.0, np.nan]])
+def test_ttest_ind_ratio_invalid(bad):
+    ind = smp.TTestIndPower()
+    with pytest.raises(ValueError, match="ratio must be non-negative"):
+        ind.power(0.5, 50, 0.05, ratio=bad)
+    with pytest.raises(ValueError, match="ratio must be non-negative"):
+        ind.power(0.5, 50, 0.05, ratio=np.asarray(bad))
+    # solve_power validates before the root finding, which would swallow the
+    # error and return nan with a ConvergenceWarning
+    for args in [
+        (0.5, None, 0.05, 0.8),
+        (None, 50, 0.05, 0.8),
+        (0.5, 50, None, 0.8),
+        (0.5, 50, 0.05, None),
+    ]:
+        with pytest.raises(ValueError, match="ratio must be non-negative"):
+            ind.solve_power(*args, ratio=bad)
 
 
 @pytest.mark.parametrize(
@@ -1188,9 +1402,18 @@ POWER_ALPHA = [
     (smp.ftest_anova_power, {"effect_size": 0.3, "nobs": 60}),
 ]
 POWER_ALPHA_IDS = [
-    "TTestPower", "TTestIndPower", "NormalIndPower", "FTestPower", "FTestPowerF2",
-    "FTestAnovaPower", "ttest_power", "normal_power", "normal_power_het",
-    "ftest_power", "ftest_power_f2", "ftest_anova_power",
+    "TTestPower",
+    "TTestIndPower",
+    "NormalIndPower",
+    "FTestPower",
+    "FTestPowerF2",
+    "FTestAnovaPower",
+    "ttest_power",
+    "normal_power",
+    "normal_power_het",
+    "ftest_power",
+    "ftest_power_f2",
+    "ftest_anova_power",
 ]
 
 
@@ -1214,8 +1437,14 @@ def test_power_alpha_range(func, kwargs):
         (smp.TTestPower, {"effect_size": 0.5, "nobs": 30, "power": 0.8}),
         (smp.TTestIndPower, {"effect_size": 0.5, "nobs1": 30, "power": 0.8}),
         (smp.NormalIndPower, {"effect_size": 0.5, "nobs1": 30, "power": 0.8}),
-        (smp.FTestPower, {"effect_size": 0.3, "df_num": 3, "df_denom": 57, "power": 0.5}),
-        (smp.FTestPowerF2, {"effect_size": 0.1, "df_num": 3, "df_denom": 57, "power": 0.5}),
+        (
+            smp.FTestPower,
+            {"effect_size": 0.3, "df_num": 3, "df_denom": 57, "power": 0.5},
+        ),
+        (
+            smp.FTestPowerF2,
+            {"effect_size": 0.1, "df_num": 3, "df_denom": 57, "power": 0.5},
+        ),
         (smp.FTestAnovaPower, {"effect_size": 0.25, "nobs": 60, "power": 0.8}),
     ],
 )
@@ -1227,3 +1456,173 @@ def test_solve_power_for_alpha(cls, kwargs):
     kwds = dict(kwargs)
     power = kwds.pop("power")
     assert_allclose(cls().power(alpha=alpha, **kwds), power, rtol=1e-5)
+
+
+def test_ttest_power_far_tail_not_nan():
+    # special.nctdtr can return nan far in the tails (scipy gh-25470);
+    # the power of an ordinary test must not become nan
+    pow_ = smp.TTestPower().power(0.3, 1000, 0.05)
+    assert np.isfinite(pow_)
+    assert_allclose(pow_, 1, atol=1e-10)
+    # R 4.6.1, pwr 1.3-0, pwr.t.test(n=1237, d=0.5, type="two.sample")$power
+    pow_ = smp.TTestIndPower().power(0.5, 1237, 0.05)
+    assert_allclose(pow_, 1, atol=1e-10)
+
+
+def test_ttest_power_small_alpha_not_nan():
+    # both the cdf and its reflection were nan in the lower tail for alpha from
+    # about 1e-12 to 1e-5 in this example (previously 536 of 2998 alphas)
+    alpha = np.logspace(-12, -0.001, 2998)
+    power = np.array([smp.TTestPower().power(1.0, 50, a) for a in alpha])
+    assert np.all(np.isfinite(power))
+    assert np.all(np.diff(power) > -1e-12)
+    # R 4.6.1, pwr 1.3-0
+    # pwr.t.test(n=50, d=1, sig.level=alpha, type="one.sample")$power
+    alpha = [1e-12, 1e-10, 1e-8, 1e-6, 1e-5]
+    expected = [
+        0.0405096719210527,
+        0.204604203411695,
+        0.573291656181119,
+        0.905732544135957,
+        0.973852570784929,
+    ]
+    power = [smp.TTestPower().power(1.0, 50, a) for a in alpha]
+    assert_allclose(power, expected, rtol=POWER_RTOL)
+
+
+@pytest.mark.parametrize("nobs1", [685, 1237, 1833])
+def test_solve_effect_size_smaller(nobs1):
+    # by symmetry the 'smaller' solution is minus the 'larger' solution
+    p = smp.TTestIndPower()
+    kwds = {"nobs1": nobs1, "alpha": 0.05, "power": 0.8}
+    es_larger = p.solve_power(alternative="larger", **kwds)
+    es_smaller = p.solve_power(alternative="smaller", **kwds)
+    assert_allclose(es_smaller, -es_larger, rtol=1e-5)
+
+
+class _NanPower(smp.TTestIndPower):
+    """Power function that is nan for effect sizes above ``nan_above``"""
+
+    nan_above = 0.4
+
+    def power(
+        self, effect_size, nobs1, alpha, ratio=1, df=None, alternative="two-sided"
+    ):
+        if effect_size > self.nan_above:
+            return np.nan
+        return super().power(
+            effect_size, nobs1, alpha, ratio=ratio, df=df, alternative=alternative
+        )
+
+
+def test_solve_power_rejects_jump_as_root():
+    # a power function that is nan on part of the bracket must not produce
+    # a "converged" root at the nan boundary
+    kwds = {"nobs1": 1237, "alpha": 0.05, "power": 0.8, "alternative": "smaller"}
+    with pytest.warns(ConvergenceWarning):
+        es = _NanPower().solve_power(**kwds)
+    assert np.isnan(es)
+
+
+def test_solve_power_nan_region_with_root():
+    # same as above, but the nan region leaves the root of the equation
+    # R 4.6.1, pwr 1.3-0, solution for 'larger'
+    # pwr.t.test(n=1237, power=0.8, sig.level=0.05, d=NULL, type="two.sample",
+    #            alternative="greater")$d = 0.100007522036773
+    class NanPowerFar(_NanPower):
+        nan_above = 2.0
+
+    kwds = {"nobs1": 1237, "alpha": 0.05, "power": 0.8, "alternative": "smaller"}
+    es = NanPowerFar().solve_power(**kwds)
+    assert_allclose(es, -0.100007522036773, atol=1e-5)
+
+
+@pytest.mark.parametrize(
+    "effect_size, nobs, expected",
+    [
+        (1.0, 50, 1.55870183959859e-07),
+        (0.5, 200, 3.23943954424975e-09),
+    ],
+)
+def test_solve_power_alpha_small_root(effect_size, nobs, expected):
+    # the roots are far below the default x tolerance of brentq
+    # R 4.6.1, pwr 1.3-0, uniroot (tol=1e-14) on log(sig.level) of
+    # pwr.t.test(n=nobs, d=effect_size, sig.level=exp(log_alpha),
+    #            type="one.sample")$power - 0.8
+    alpha = smp.TTestPower().solve_power(
+        effect_size=effect_size, nobs=nobs, power=0.8, alpha=None
+    )
+    assert_allclose(alpha, expected, rtol=1e-3)
+
+
+def test_solve_power_alpha_no_root_nan():
+    # The power of the 'smaller' test for a positive effect size stays below
+    # 0.5 in the whole search range of alpha, so there is no solution.
+    # R 4.6.1, pwr 1.3-0, pwr.t.test(n=1500, d=0.2, sig.level=0.999999,
+    #                                type="one.sample", alternative="less")
+    # has power 0.0015
+    with pytest.warns(ConvergenceWarning):
+        alpha = smp.TTestPower().solve_power(
+            effect_size=0.2, nobs=1500, power=0.5, alpha=None, alternative="smaller"
+        )
+    assert np.isnan(alpha)
+
+
+@pytest.mark.parametrize(
+    "x, expected",
+    [
+        (-1.96, 1.391293061255217e-30),
+        (1.96, 2.737100334771259e-14),
+        ([-1.96, 1.96], [1.391293061255217e-30, 2.737100334771259e-14]),
+    ],
+)
+def test_nct_cdf_tail_fallback_scalar_and_array(x, expected):
+    # Fixed references from conditional-normal / chi-squared integration
+    # (60 and 85 decimal digits) avoid platform-dependent SciPy NaNs.
+    # The absolute tolerance covers cancellation in the reflected tail.
+    assert_allclose(smp.nct_cdf(x, 999, 0.3 * np.sqrt(1000)), expected, atol=1e-12)
+
+
+def test_nct_cdf_sf_far_tail_limit():
+    # CDFLIB returns nan for the cdf and for its reflection here. The exact
+    # probabilities (mpmath integration over the chi-squared density at 50
+    # digits) are 8.6e-35 and 2.3e-38; R's pt() is only accurate to about
+    # 1e-13 in this tail, pt(-9.52, 49, ncp=sqrt(50)) = 6.7e-14.
+    nc = np.sqrt(50)
+    assert_allclose(smp.nct_cdf(-7.75, 49, nc), 0, atol=1e-12)
+    assert_allclose(smp.nct_cdf(-9.52, 49, nc), 0, atol=1e-12)
+    assert_allclose(smp.nct_cdf(9.52, 49, -nc), 1, atol=1e-12)
+    assert_allclose(smp.nct_sf(9.52, 49, -nc), 0, atol=1e-12)
+    assert_allclose(smp.nct_sf(-9.52, 49, nc), 1, atol=1e-12)
+    # an array with nan and finite entries, the finite entries are unchanged;
+    # exact cdf(5; 49, sqrt(50)) = 0.030847613410683136
+    res = smp.nct_cdf(np.array([-9.52, 5.0]), 49, nc)
+    assert_allclose(res, [0, 0.030847613410683136], rtol=NCT_RTOL, atol=1e-12)
+    # invalid arguments stay nan
+    assert np.isnan(smp.nct_cdf(np.nan, 49, nc))
+    assert np.isnan(smp.nct_cdf(-9.52, -1, nc))
+
+
+def test_nct_cdf_sf_keep_pandas_type():
+    nc = np.sqrt(50)
+    x = pd.Series([-9.52, 5.0], index=["a", "b"])
+    for func in (smp.nct_cdf, smp.nct_sf):
+        # with and without nan from CDFLIB in the input
+        for xs in (x, x.iloc[1:]):
+            res = func(xs, 49, nc)
+            assert isinstance(res, pd.Series)
+            assert_array_equal(res.index, xs.index)
+    assert_allclose(
+        smp.nct_cdf(x, 49, nc), [0, 0.030847613410683136], rtol=NCT_RTOL, atol=1e-12
+    )
+
+
+def test_nct_sf_upper_tail_relative_accuracy():
+    # exact value from mpmath (50 digits) as the integral over the
+    # chi-squared density of Phi(nc - x * sqrt(v / df)); 1 - cdf loses all but
+    # about 6 digits here
+    nc = 0.2 * np.sqrt(30)
+    atol = 1e-10 if PYTHON_IMPL_WASM or SP_LT_115 else 0
+    assert_allclose(
+        smp.nct_sf(12.0, 29, nc), 7.6017385833974256e-11, rtol=1e-10, atol=atol
+    )

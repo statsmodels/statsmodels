@@ -1074,6 +1074,15 @@ def test_irf_resim_reproducible_with_int_seed():
     assert_allclose(sim1, sim2)
 
 
+def test_eigval_decomp_real():
+    # NumPy 2.5 and later return complex arrays from eig for real eigenvalues
+    cov = np.array([[2.0, 0.5], [0.5, 1.0]])
+    W, eigva, k = util.eigval_decomp(cov)
+    assert not np.iscomplexobj(W)
+    assert not np.iscomplexobj(eigva)
+    assert eigva[k] == eigva.max()
+
+
 @pytest.mark.slow
 def test_irf_err_bands():
     # smoke tests

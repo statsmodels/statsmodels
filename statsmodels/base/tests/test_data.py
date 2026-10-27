@@ -963,12 +963,12 @@ def test_raise_nonfinite_exog():
     # random numbers for y
     y = np.array([-0.6, -0.1, 0.0, -0.7, -0.5, 0.5, 0.1, -0.8, -2.0, 1.1])
 
-    x[1, 1] = np.inf
-    with pytest.raises(MissingDataError):
-        OLS(y, x)
-    x[1, 1] = np.nan
-    with pytest.raises(MissingDataError):
-        OLS(y, x)
+    # -inf is only found by the column minimum, and raised a LinAlgError in the
+    # rank computation of the implicit constant check
+    for bad_value in [np.inf, -np.inf, np.nan]:
+        x[1, 1] = bad_value
+        with pytest.raises(MissingDataError, match="exog contains inf or nans"):
+            OLS(y, x)
 
 
 def test_nan_rows_bool_first():

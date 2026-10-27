@@ -53,6 +53,7 @@ from statsmodels.tools._decorators import cache_readonly, cache_writable
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     InvalidTestWarning,
+    MissingDataError,
     SingularMatrixWarning,
     ValueWarning,
 )
@@ -242,12 +243,34 @@ class RegressionModel(base.LikelihoodModel):
     Intended for subclassing.
     """
 
+    # Class-level defaults for the attributes read by the results classes.
+    # Models unpickled from releases that did not set these in __init__ (and
+    # subclasses that skip RegressionModel.__init__) fall back to these.
+    weights: Float64Array | None = None
+    sigma: Float64Array | None = None
+
     def __init__(self, endog, exog, **kwargs):
         # set via kwargs by WLS/GLS in _handle_data, None otherwise
         self.weights: Float64Array | None = None
         self.sigma: Float64Array | None = None
         super().__init__(endog, exog, **kwargs)
         self._data_attr.extend(["pinv_wexog", "wendog", "wexog", "weights"])
+        self._check_finite()
+
+    def _check_finite(self):
+        """
+        Raise a MissingDataError if the data contain inf or nan
+
+        The check is made on the data that the model uses, so that rows with
+        nan that were removed by ``missing="drop"`` are not checked. inf is
+        never removed. Without the check a non-finite value does not raise
+        until the model is fit, where it raises a LinAlgError or returns
+        parameters that are all nan.
+        """
+        for name in ("endog", "exog", "weights", "sigma"):
+            value = getattr(self, name, None)
+            if value is not None and not np.isfinite(value).all():
+                raise MissingDataError(f"{name} contains inf or nans")
 
     def initialize(self):
         """Initialize model components"""
@@ -564,6 +587,12 @@ class GLS(RegressionModel):
     If sigma is a function of the data making one of the regressors
     a constant, then the current postestimation statistics will not be correct.
 
+    .. versionchanged:: 0.15.1
+
+       A ``MissingDataError`` is raised if ``endog``, ``exog`` or ``sigma`` contain inf or nan after
+       missing values are handled. Before, ``-inf`` in exog, and inf or nan in
+       the other arrays, were not detected until the model was fit.
+
     Examples
     --------
     >>> import statsmodels.api as sm
@@ -814,6 +843,12 @@ class WLS(RegressionModel):
     statistics such as fvalue and mse_model might not be correct, as the
     package does not yet support no-constant regression.
 
+    .. versionchanged:: 0.15.1
+
+       A ``MissingDataError`` is raised if ``endog``, ``exog`` or ``weights`` contain inf or nan after
+       missing values are handled. Before, ``-inf`` in exog, and inf or nan in
+       the other arrays, were not detected until the model was fit.
+
     Examples
     --------
     >>> import statsmodels.api as sm
@@ -1004,6 +1039,12 @@ class OLS(WLS):
     -----
     No constant is added by the model unless you are using formulas.
 
+    .. versionchanged:: 0.15.1
+
+       A ``MissingDataError`` is raised if ``endog`` or ``exog`` contain inf or nan after
+       missing values are handled. Before, ``-inf`` in exog, and inf or nan in
+       the other arrays, were not detected until the model was fit.
+
     Examples
     --------
     >>> import statsmodels.api as sm
@@ -1036,6 +1077,13 @@ class OLS(WLS):
     <F test: F=array([[159.63031026]]), p=1.2607168903696672e-20,
      df_denom=43, df_num=2>
     """
+
+    # Class-level defaults, see RegressionModel. These keep models unpickled from
+    # earlier releases, which never had these instance attributes, working.
+    offset: Float64Array | None = None
+    _wendog_xprod: float | None = None
+    _wexog_xprod: Float64Array | None = None
+    _wexog_x_wendog: Float64Array | None = None
 
     def __init__(self, endog, exog=None, missing="none", hasconst=None, **kwargs):
         if "weights" in kwargs:
@@ -1407,6 +1455,12 @@ class GLSAR(GLS):
     GLSAR is considered to be experimental.
     The linear autoregressive process of order p--AR(p)--is defined as:
     TODO
+
+    .. versionchanged:: 0.15.1
+
+       A ``MissingDataError`` is raised if ``endog`` or ``exog`` contain inf or nan after
+       missing values are handled. Before, ``-inf`` in exog, and inf or nan in
+       the other arrays, were not detected until the model was fit.
 
     Examples
     --------

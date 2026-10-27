@@ -198,9 +198,10 @@ def _adf_autolag(x, maxlag, regression, method):
 
     Returns
     -------
-    tuple[float, int] or None
-        The best criterion value (the absolute t-statistic of the last lag
-        for "t-stat") and the selected number of lagged differences. None
+    tuple or None
+        The best criterion value, a float (the absolute t-statistic of the
+        last lag for "t-stat"), and the selected number of lagged
+        differences, an int. None
         if the regressors are close to singular or the largest regression
         fits almost perfectly. ``_autolag`` is used in these cases.
 
