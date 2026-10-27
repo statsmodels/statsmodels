@@ -2162,9 +2162,9 @@ def test_df_resid_rank_deficient():
 
     # the third column is a multiple of the second, so the rank is 2
     exog = np.column_stack((np.ones(nobs), x1, 2 * x1))
-    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+    with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
         res = gee.GEE(endog, exog, groups=groups).fit()
-    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+    with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
         res_glm = GLM(endog, exog).fit()
     assert_equal(res.df_model, res_glm.df_model)
     assert_equal(res.df_resid, res_glm.df_resid)
@@ -2176,7 +2176,7 @@ def test_df_resid_rank_deficient():
     exog = rs.normal(size=(nobs, 22))
     exog[:, 0] = 1
     exog = np.column_stack((exog, exog[:, 1:]))
-    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+    with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
         res = gee.GEE(endog, exog, groups=groups).fit()
     assert_equal(res.df_resid, nobs - 22)
     resid = endog - res.fittedvalues

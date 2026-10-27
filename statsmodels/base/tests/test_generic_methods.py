@@ -921,7 +921,7 @@ class TestWaldAnovaRankDeficient:
             "tech0": tech0,
         })
         mod = ols("y ~ C(fertilizer) * C(tech0)", data)
-        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
             # Intentionally singular, _fit_collinear doesn't even work
             self.res = mod._fit_collinear()
 

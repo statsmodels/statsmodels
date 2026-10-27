@@ -98,8 +98,9 @@ Behavior changes
   now raised whenever a direction is dropped; when ``min(nobs, n_columns)``
   is at most four the two tolerances differ and the truncation could
   previously be silent even though the coefficients and covariance came from
-  the reduced fit.  The warning text covers both a truncated fit and a design
-  that is only numerically rank deficient.
+  the reduced fit.  The message is now "The exog matrix is singular to
+  numerical precision." and covers both a truncated fit and a design that is
+  only numerically rank deficient.
   :issue:`9258`
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted

@@ -20,7 +20,7 @@ import pytest
 
 from statsmodels.datasets import longley
 from statsmodels.tools import tools
-from statsmodels.tools.tools import pinv_extended
+from statsmodels.tools.tools import PINV_RCOND, pinv_extended
 
 
 @pytest.fixture(scope="module")
@@ -169,6 +169,16 @@ class TestTools:
         sm_inv, sing_vals = pinv_extended(X)
         assert_almost_equal(np_inv, sm_inv)
         assert_almost_equal(np_sing_vals, sing_vals)
+
+    def test_extendedpinv_rcond_default(self):
+        import inspect
+
+        default = inspect.signature(pinv_extended).parameters["rcond"].default
+        assert default == PINV_RCOND
+        X = np.array([[1.0, 0.0], [2.0, 0.0], [3.0, 0.0]], dtype=np.float32)
+        sm_inv, sing_vals = pinv_extended(X)
+        assert sm_inv.dtype == np.float32
+        assert sing_vals.dtype == np.float32
 
     def test_fullrank(self):
         import warnings

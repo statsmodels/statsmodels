@@ -185,7 +185,13 @@ def isestimable(c, d):
     return True
 
 
-def pinv_extended(x, rcond=1e-15):
+# Default relative cutoff used by ``pinv_extended``.  Singular values at or
+# below ``PINV_RCOND * max(s)`` are treated as zero.  The cutoff is relative
+# to the largest singular value and is not scaled by the precision of ``x``.
+PINV_RCOND = 1e-15
+
+
+def pinv_extended(x, rcond=PINV_RCOND):
     """
     Return the pinv of an array x as well as the singular values used in computation
 
@@ -195,7 +201,7 @@ def pinv_extended(x, rcond=1e-15):
         The array to invert, 2d.
     rcond : float, optional
         Singular values below ``rcond * max(singular values)`` are
-        treated as zero.
+        treated as zero.  Defaults to ``PINV_RCOND``.
 
     Returns
     -------
