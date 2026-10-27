@@ -5,34 +5,9 @@ import pandas as pd
 from pandas import read_csv
 import pytest
 
-from statsmodels.formula.api import ols
+from statsmodels.formula.api import ols, wls
 from statsmodels.stats.anova import anova_lm
 from statsmodels.tools.sm_exceptions import SingularMatrixWarning
-
-
-@pytest.mark.parametrize("typ", [1, "I"])
-@pytest.mark.parametrize("formula", ["y ~ x + duplicate", "y ~ x + zero"])
-def test_type1_rank_deficient(typ, formula):
-    data = pd.DataFrame(
-        {
-            "y": [0, 1, 0, -1] * 3,
-            "x": np.arange(12),
-            "duplicate": np.arange(12),
-            "zero": np.zeros(12),
-        }
-    )
-    with pytest.warns(SingularMatrixWarning):
-        model = ols(formula, data=data).fit()
-    with pytest.raises(ValueError, match="Type I ANOVA requires a full-rank"):
-        anova_lm(model, typ=typ)
-
-
-def test_type1_more_columns_than_observations():
-    data = pd.DataFrame({"y": [1.0, 2.0, 4.0], "x": [0.0, 1.0, 2.0]})
-    with pytest.warns(SingularMatrixWarning):
-        model = ols("y ~ x + I(x**2) + I(x**3)", data=data).fit()
-    with pytest.raises(ValueError, match="Type I ANOVA requires a full-rank"):
-        anova_lm(model)
 
 kidney_table = StringIO("""Days      Duration Weight ID
     0.0      1      1      1
@@ -510,3 +485,154 @@ def test_anova_lm_model_order_correct():
 
     result = anova_lm(model_small, model_large)
     assert not np.isnan(result["Pr(>F)"].iloc[-1])
+
+
+ANOVA_TYPES = [
+    (1, "I"),
+    ("I", "I"),
+    (2, "II"),
+    ("II", "II"),
+    (3, "III"),
+    ("III", "III"),
+]
+
+
+def fit_rank_deficient(model_func, formula, data, **kwargs):
+    with pytest.warns(SingularMatrixWarning):
+        return model_func(formula, data=data, **kwargs).fit()
+
+
+def nested_data(label_within):
+    # Factor B has nB levels in each of the nA levels of factor A. The labels
+    # of B are reused in every level of A if label_within is True and are
+    # unique to the level of A that contains them otherwise.
+    nA, nB, nobs = 3, 4, 5
+    a = [f"A{i}" for i in range(nA) for _ in range(nB * nobs)]
+    if label_within:
+        b = [f"B{j}" for _ in range(nA) for j in range(nB) for _ in range(nobs)]
+    else:
+        b = [f"B{i}{j}" for i in range(nA) for j in range(nB) for _ in range(nobs)]
+    rng = np.random.default_rng(8506)
+    data = pd.DataFrame({"A": a, "B": b, "y": rng.standard_normal(len(a))})
+    return data.astype({"A": "category", "B": "category"})
+
+
+@pytest.mark.parametrize("robust", [None, "hc3"])
+@pytest.mark.parametrize("typ, label", ANOVA_TYPES)
+@pytest.mark.parametrize("formula", ["y ~ x + duplicate", "y ~ x + zero"])
+def test_rank_deficient(formula, typ, label, robust):
+    # The duplicate or the zero column would be assigned an arbitrary sum of
+    # squares, for Type I because the effects of the QR decomposition are
+    # mapped back to the terms, and for Type II and III because the
+    # hypothesis on the redundant column is not testable.
+    data = pd.DataFrame(
+        {
+            "y": [0, 1, 0, -1] * 3,
+            "x": np.arange(12),
+            "duplicate": np.arange(12),
+            "zero": np.zeros(12),
+        }
+    )
+    res = fit_rank_deficient(ols, formula, data)
+    msg = f"Type {label} ANOVA requires a full-rank design matrix.*3 columns and rank 2"
+    with pytest.raises(ValueError, match=msg):
+        anova_lm(res, typ=typ, robust=robust)
+
+
+@pytest.mark.parametrize("typ, label", ANOVA_TYPES)
+def test_more_columns_than_observations(typ, label):
+    data = pd.DataFrame({"y": [1.0, 2.0, 4.0], "x": [0.0, 1.0, 2.0]})
+    res = fit_rank_deficient(ols, "y ~ x + I(x**2) + I(x**3)", data)
+    with pytest.raises(ValueError, match=f"Type {label} ANOVA requires a full-rank"):
+        anova_lm(res, typ=typ)
+
+
+@pytest.mark.parametrize("typ, label", ANOVA_TYPES)
+@pytest.mark.parametrize("formula", ["y ~ C(a) * C(b)", "y ~ C(a):C(b)"])
+def test_empty_cell(formula, typ, label):
+    # No observation in the cell (a="u", b="q"), so one interaction column is
+    # identically zero. This used to give a negative sum of squares for Type
+    # II and too many degrees of freedom for the interaction.
+    rng = np.random.default_rng(5398)
+    cells = [("u", "p"), ("v", "p"), ("v", "q"), ("w", "p"), ("w", "q")]
+    data = pd.DataFrame(
+        {
+            "a": [a for a, _ in cells for _ in range(4)],
+            "b": [b for _, b in cells for _ in range(4)],
+            "y": rng.standard_normal(20),
+        }
+    )
+    res = fit_rank_deficient(ols, formula, data)
+    with pytest.raises(ValueError, match=f"Type {label} ANOVA requires a full-rank"):
+        anova_lm(res, typ=typ)
+
+
+@pytest.mark.parametrize("typ, label", ANOVA_TYPES)
+def test_nested_factor_crossed_with_unique_labels(typ, label):
+    # GH 8506. If the labels of B are unique to a level of A, A + A:B contains
+    # the interactions of B with the levels of A that do not contain it.
+    data = nested_data(label_within=False)
+    res = fit_rank_deficient(ols, "y ~ A + A:B", data)
+    assert res.model.exog.shape[1] == 36
+    with pytest.raises(ValueError, match=f"Type {label} ANOVA requires a full-rank"):
+        anova_lm(res, typ=typ)
+
+
+@pytest.mark.parametrize("typ", [1, 2, 3])
+def test_nested_factor_labeled_within(typ):
+    # Reusing the labels of B in every level of A gives a full-rank design.
+    data = nested_data(label_within=True)
+    res = ols("y ~ A/B", data=data).fit()
+    table = anova_lm(res, typ=typ)
+    assert table.loc["Residual", "df"] == 48
+    # The sum of squares of the last term is the same for all types and
+    # is the reduction in the residual sum of squares from adding A:B to A.
+    ssr_a = ols("y ~ A", data=data).fit().ssr
+    ssr_nested = ols("y ~ A + A:B", data=data).fit().ssr
+    assert table.loc["A:B", "df"] == 9
+    np.testing.assert_allclose(table.loc["A:B", "sum_sq"], ssr_a - ssr_nested)
+    if typ in (1, 2):
+        # A is not adjusted for A:B
+        ssr_const = ols("y ~ 1", data=data).fit().ssr
+        assert table.loc["A", "df"] == 2
+        np.testing.assert_allclose(table.loc["A", "sum_sq"], ssr_const - ssr_a)
+
+
+@pytest.mark.parametrize("typ, label", ANOVA_TYPES)
+def test_zero_weights_rank_deficient(typ, label):
+    # The design matrix has full column rank, but all of the observations of
+    # level "u" have zero weight, so the weighted design matrix does not.
+    rng = np.random.default_rng(10340)
+    data = pd.DataFrame(
+        {
+            "a": np.repeat(["u", "v", "w"], 8),
+            "b": np.tile(["p", "q"], 12),
+            "y": rng.standard_normal(24),
+        }
+    )
+    weights = np.where(data["a"] == "u", 0.0, 1.0)
+    res = fit_rank_deficient(wls, "y ~ C(a) + C(b)", data, weights=weights)
+    assert np.linalg.matrix_rank(res.model.exog) == res.model.exog.shape[1]
+    with pytest.raises(ValueError, match=f"Type {label} ANOVA requires a full-rank"):
+        anova_lm(res, typ=typ)
+
+
+@pytest.mark.parametrize("typ", [1, "I", 2, "II", 3, "III"])
+def test_full_rank_control(typ):
+    # Dropping the redundant column leaves the fit unchanged and the table
+    # of the model without it is available.
+    data = pd.DataFrame(
+        {
+            "y": [0, 1, 0, -1] * 3,
+            "x": np.arange(12),
+            "duplicate": np.arange(12),
+        }
+    )
+    res = ols("y ~ x", data=data).fit()
+    table = anova_lm(res, typ=typ)
+    pvalue = "PR(>F)"
+    np.testing.assert_allclose(table.loc["x", pvalue], res.pvalues["x"])
+    np.testing.assert_allclose(table.loc["Residual", "sum_sq"], res.ssr)
+    assert table.loc["Residual", "df"] == res.df_resid
+    redundant = fit_rank_deficient(ols, "y ~ x + duplicate", data)
+    np.testing.assert_allclose(redundant.fittedvalues, res.fittedvalues, atol=1e-12)
