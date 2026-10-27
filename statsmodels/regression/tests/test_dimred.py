@@ -66,6 +66,8 @@ def test_poisson():
         # Check that the estimated direction aligns with the true
         # direction
         params = np.asarray(rslt.params)
+        # NumPy 2.5 and later return complex arrays from eig for real eigenvalues
+        assert not np.iscomplexobj(params)
         q = np.dot(params[:, 0], b)
         q /= np.sqrt(np.sum(params[:, 0] ** 2))
         q /= np.sqrt(np.sum(b**2))

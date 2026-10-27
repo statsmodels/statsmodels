@@ -366,3 +366,12 @@ def test_factor_scoring():
     # check provided endog
     f_ols2 = res.factor_scoring(method="ols", endog=res.model.endog)
     assert_allclose(f_ols2, f_ols, rtol=1e-13)
+
+
+def test_ml_loadings_are_real():
+    # NumPy 2.5 and later return complex arrays from eig for real eigenvalues
+    rng = np.random.default_rng(0)
+    load = rng.standard_normal((6, 2))
+    x = rng.standard_normal((500, 2)) @ load.T + rng.standard_normal((500, 6))
+    res = Factor(x, 2, method="ml").fit()
+    assert not np.iscomplexobj(res.loadings)

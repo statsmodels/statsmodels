@@ -15,7 +15,6 @@ import pandas as pd
 import pytest
 
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
 current_path = Path(__file__).resolve().parent
@@ -48,9 +47,7 @@ class TestCointJoh12(CheckCointJoh):
 
     @classmethod
     def setup_class(cls):
-        # imaginary rounding noise in the eigenvalues depends on the LAPACK
-        with warns_or_none(ComplexWarning, match="Casting complex values to real"):
-            cls.res = coint_johansen(dta, 1, 2)
+        cls.res = coint_johansen(dta, 1, 2)
         cls.nobs_r = 173 - 1 - 2
 
         cls.res1_m = np.array(
@@ -224,9 +221,7 @@ class TestCointJoh09(CheckCointJoh):
 
     @classmethod
     def setup_class(cls):
-        # imaginary rounding noise in the eigenvalues depends on the LAPACK
-        with warns_or_none(ComplexWarning, match="Casting complex values to real"):
-            cls.res = coint_johansen(dta, 0, 9)
+        cls.res = coint_johansen(dta, 0, 9)
         cls.nobs_r = 173 - 1 - 9
         # fprintf(1, '%18.16g, ', r1)
         cls.res1_m = np.array(
@@ -308,9 +303,7 @@ class TestCointJohMin18(CheckCointJoh):
 
     @classmethod
     def setup_class(cls):
-        # imaginary rounding noise in the eigenvalues depends on the LAPACK
-        with warns_or_none(ComplexWarning, match="Casting complex values to real"):
-            cls.res = coint_johansen(dta, -1, 8)
+        cls.res = coint_johansen(dta, -1, 8)
         cls.nobs_r = 173 - 1 - 8
 
         cls.res1_m = np.array(
@@ -393,9 +386,7 @@ class TestCointJoh25(CheckCointJoh):
     def setup_class(cls):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=HypothesisTestWarning)
-            # imaginary rounding noise in the eigenvalues depends on the LAPACK
-            with warns_or_none(ComplexWarning, match="Casting complex values to real"):
-                cls.res = coint_johansen(dta, 2, 5)
+            cls.res = coint_johansen(dta, 2, 5)
         cls.nobs_r = 173 - 1 - 5
 
         # Note: critical values not available if trend>1
@@ -484,9 +475,7 @@ def test_coint_johansen_0lag():
     e1 = rs.normal(0, 1, 1000)
     y = x + 5 + e1
     data = pd.concat([x, y], axis=1)
-    # imaginary rounding noise in the eigenvalues depends on the LAPACK
-    with warns_or_none(ComplexWarning, match="Casting complex values to real"):
-        result = coint_johansen(data, det_order=-1, k_ar_diff=0)
+    result = coint_johansen(data, det_order=-1, k_ar_diff=0)
     assert result.eig.shape == (2,)
 
 
@@ -494,9 +483,7 @@ def test_johansen_result_aliases_and_rkt_meth():
     # trace_stat/max_eig_stat/*_crit_vals are documented aliases for
     # lr1/lr2/cvt/cvm; rkt and meth have no alias and were never touched
     # by any existing test.
-    # imaginary rounding noise in the eigenvalues depends on the LAPACK
-    with warns_or_none(ComplexWarning, match="Casting complex values to real"):
-        res = coint_johansen(dta, 1, 2)
+    res = coint_johansen(dta, 1, 2)
 
     assert res.trace_stat is res.lr1
     assert res.max_eig_stat is res.lr2
@@ -504,3 +491,12 @@ def test_johansen_result_aliases_and_rkt_meth():
     assert res.max_eig_stat_crit_vals is res.cvm
     assert res.meth == "johansen"
     assert res.rkt.shape == res.r0t.shape
+
+
+def test_johansen_real_eigenvalues():
+    # NumPy 2.5 and later return complex arrays from eig for real eigenvalues
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ComplexWarning)
+        res = coint_johansen(dta, 1, 2)
+    assert not np.iscomplexobj(res.eig)
+    assert not np.iscomplexobj(res.evec)

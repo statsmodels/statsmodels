@@ -693,6 +693,9 @@ def coint_johansen(endog, det_order, k_ar_diff):
     sig = np.dot(sk0, np.dot(inv(s00), sk0.T))
     tmp = inv(skk)
     au, du = np.linalg.eig(np.dot(tmp, sig))  # au is eval, du is evec
+    # NumPy 2.5 and later return complex arrays even for real eigenvalues
+    au = np.real_if_close(au)
+    du = np.real_if_close(du)
 
     temp = inv(np.linalg.cholesky(np.dot(du.T, np.dot(skk, du))))
     dt = np.dot(du, temp)
