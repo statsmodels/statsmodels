@@ -3330,6 +3330,7 @@ def test_za_break_tvalues_matches_ols(regression, kind):
     x = _za_series(kind, 250, rng)
     for lags, trim in [(0, 0.15), (2, 1 / 3), (5, 0.15)]:
         tvalues, expected = _za_break_tvalues(x, lags, regression, trim)
+        assert tvalues is not None, "the QR decomposition was not used"
         assert_allclose(tvalues, expected, rtol=1e-10)
 
 
@@ -3341,6 +3342,7 @@ def test_za_break_tvalues_blocks(regression):
     rng = np.random.default_rng(10583)
     x = _za_series("trend_break", 20000, rng)
     tvalues, expected = _za_break_tvalues(x, 4, regression, 0.15, step=499)
+    assert tvalues is not None, "the QR decomposition was not used"
     assert_allclose(tvalues, expected, rtol=1e-8)
 
 
@@ -3370,6 +3372,7 @@ def test_za_break_tvalues_near_collinear(regression):
     rng = np.random.default_rng(10583)
     x = _za_series("near_trend", 300, rng)
     tvalues, expected = _za_break_tvalues(x, 2, regression, 0.15)
+    assert tvalues is not None, "the QR decomposition was not used"
     assert_allclose(tvalues, expected, rtol=1e-8)
     assert np.argmin(tvalues) == np.argmin(expected)
 
