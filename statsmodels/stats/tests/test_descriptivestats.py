@@ -10,16 +10,14 @@ from statsmodels.stats.descriptivestats import (
     describe,
     sign_test,
 )
-from statsmodels.tools.testing import warns_or_none
 
-pytestmark = pytest.mark.filterwarnings(
-    "ignore::DeprecationWarning:statsmodels.stats.descriptivestats"
-)
-
-
-# scipy.stats.mode warns for an empty sample only in scipy >= 1.14 and only if
-# pandas applies it to an empty column
-SMALL_SAMPLE = r"One or more sample arguments is too small"
+pytestmark = [
+    pytest.mark.filterwarnings(
+        "ignore::DeprecationWarning:statsmodels.stats.descriptivestats"
+    ),
+    # scipy.stats.mode warns for an empty column in SciPy 1.14 and later
+    pytest.mark.filterwarnings("error:One or more sample arguments is too small"),
+]
 
 
 @pytest.fixture
@@ -111,9 +109,8 @@ def test_description_basic(df):
     assert "Descriptive" in str(res)
 
     # the frame is computed when it is first used
-    with warns_or_none(RuntimeWarning, match=SMALL_SAMPLE):
-        res = Description(df.b)
-        assert isinstance(res.frame, pd.DataFrame)
+    res = Description(df.b)
+    assert isinstance(res.frame, pd.DataFrame)
     assert isinstance(res.numeric, pd.DataFrame)
     assert isinstance(res.categorical, pd.DataFrame)
     assert isinstance(res.summary(), SimpleTable)
@@ -186,9 +183,8 @@ def test_categorical_ntop_freq_length():
     # ValueError ("Length of values (5) does not match length of index") for
     # any ntop != 5.
     s = pd.Series(list("aabbccddee")).astype("category")  # 5 distinct values
-    with warns_or_none(RuntimeWarning, match=SMALL_SAMPLE):
-        res = Description(pd.DataFrame({"x": s}), ntop=3)
-        assert "freq_1" in res.frame.index
+    res = Description(pd.DataFrame({"x": s}), ntop=3)
+    assert "freq_1" in res.frame.index
     for i in range(1, 4):
         assert f"freq_{i}" in res.frame.index
     # frequencies are relative; each of the 5 categories occurs 2/10 of the time
@@ -225,18 +221,16 @@ def test_empty_columns(df):
     df_orig = df.copy()
     df = df_orig.copy()
     df["c"] = np.nan
-    with warns_or_none(RuntimeWarning, match=SMALL_SAMPLE):
-        res = Description(df)
-        dropped = res.frame.c.dropna()
+    res = Description(df)
+    dropped = res.frame.c.dropna()
     assert dropped.shape[0] == 2
     assert "missing" in dropped
     assert "nobs" in dropped
 
     df = df_orig.copy()
     df["c"] = np.nan
-    with warns_or_none(RuntimeWarning, match=SMALL_SAMPLE):
-        res = Description(df.c)
-        dropped = res.frame.dropna()
+    res = Description(df.c)
+    dropped = res.frame.dropna()
     assert dropped.shape[0] == 2
 
 
