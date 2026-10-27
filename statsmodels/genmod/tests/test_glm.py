@@ -1,6 +1,7 @@
 """
 Test functions for models.GLM
 """
+import contextlib
 import copy
 from pathlib import Path
 import re
@@ -3023,19 +3024,24 @@ class TestRegularized:
         # iteration count from scipy, unlike elastic_net's zero-indexed
         # sweep counter, so the two need different bookkeeping to both
         # respect maxiter.
+        from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
         endog, exog = self._load_enet_data("binomial")
 
         model = GLM(endog, exog, family=sm.families.Binomial())
-        result = model.fit_regularized(
-            method="l1_slsqp", alpha=0.1, maxiter=1, refit=True
-        )
+        # maxiter=1 forces the non-convergence
+        with pytest.warns(ConvergenceWarning, match="Regularized fitting did not"):
+            result = model.fit_regularized(
+                method="l1_slsqp", alpha=0.1, maxiter=1, refit=True
+            )
         assert result.fit_history["iteration"] <= 1
 
         model = GLM(endog, exog, family=sm.families.Binomial())
-        result = model.fit_regularized(
-            method="elastic_net", L1_wt=1.0, alpha=0.1, maxiter=1,
-            refit=True,
-        )
+        with pytest.warns(ConvergenceWarning, match="Regularized fitting did not"):
+            result = model.fit_regularized(
+                method="elastic_net", L1_wt=1.0, alpha=0.1, maxiter=1,
+                refit=True,
+            )
         assert result.fit_history["iteration"] <= 1
 
     def test_regularized_elastic_net_method_alias(self):
@@ -3392,7 +3398,7 @@ def test_names():
     """
     y = pd.Series([0, 1], name="endog_not_default")
     x = pd.DataFrame({"a": [1, 1], "b": [1, 0]})
-    exposure = pd.Series([0, 0], name="exposure_not_default")
+    exposure = pd.Series([1, 1], name="exposure_not_default")
     freq_weights = pd.Series([0, 0], name="freq_weights_not_default")
     offset = pd.Series([0, 0], name="offset_not_default")
     var_weights = pd.Series([0, 0], name="var_weights_not_default")
@@ -3430,7 +3436,7 @@ def test_names_default():
             [1, 0],
         ]
     )
-    exposure = np.array([0, 0])
+    exposure = np.array([1, 1])
     freq_weights = np.array([0, 0])
     offset = np.array([0, 0])
     var_weights = np.array([0, 0])
@@ -3652,9 +3658,16 @@ def test_get_prediction_default_uses_model_offset(fit_model):
     rng = np.random.default_rng(4321)
     res, x, explicit = _offset_model_case(fit_model, rng)
 
+    # NegativeBinomial has no link, get_prediction warns that it uses the log link
+    def ctx():
+        if fit_model == "nb_offset":
+            return pytest.warns(UserWarning, match="using default log-link")
+        return contextlib.nullcontext()
+
     # GLM results use predicted_mean and se_mean, count models use predicted
     # and se.
-    pred = res.get_prediction()
+    with ctx():
+        pred = res.get_prediction()
     if hasattr(pred, "predicted_mean"):
         mean_name, se_name = "predicted_mean", "se_mean"
     else:
@@ -3662,7 +3675,8 @@ def test_get_prediction_default_uses_model_offset(fit_model):
     assert_allclose(getattr(pred, mean_name), res.predict(), rtol=1e-10)
     # Standard errors must match the explicit call that passes the same
     # offset or exposure together with exog.
-    expected = res.get_prediction(exog=x, **explicit)
+    with ctx():
+        expected = res.get_prediction(exog=x, **explicit)
     assert_allclose(getattr(pred, se_name), getattr(expected, se_name), rtol=1e-10)
 
     if not hasattr(pred, "predicted_mean"):
@@ -3672,7 +3686,8 @@ def test_get_prediction_default_uses_model_offset(fit_model):
 
     # The default call and the explicit exog call agree for the mean with the
     # generic code path too, and averaging uses the stored offset as well.
-    pred_mean = res.get_prediction(which="mean")
+    with ctx():
+        pred_mean = res.get_prediction(which="mean")
     assert_allclose(pred_mean.predicted, res.predict(), rtol=1e-10)
     pred_avg = res.get_prediction(which="mean", average=True)
     assert_allclose(pred_avg.predicted, res.predict().mean(), rtol=1e-10)

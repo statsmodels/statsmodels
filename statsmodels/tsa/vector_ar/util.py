@@ -465,6 +465,9 @@ def eigval_decomp(sym_array):
     """
     # check if symmetric, do not include shock period
     eigva, W = linalg.eig(sym_array, left=True, right=False)
+    # NumPy 2.5 and later return complex arrays even for real eigenvalues
+    eigva = np.real_if_close(eigva)
+    W = np.real_if_close(W)
     k = np.argmax(eigva)
     return W, eigva, k
 

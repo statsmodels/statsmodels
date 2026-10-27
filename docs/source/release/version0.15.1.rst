@@ -410,6 +410,25 @@ Time series analysis
   A UTF-8 byte order mark is ignored, a file that is not valid UTF-8 raises a
   ``ValueError`` that says so, and ``rawspec`` accepts a ``pathlib.Path`` as
   documented. :pr:`10585`
+- ``coint_johansen``, ``select_coint_rank`` and the error bands of the
+  impulse responses of a ``VAR`` returned complex eigenvalues and eigenvectors
+  with NumPy 2.5 and later, which ``np.linalg.eig`` returns as complex arrays
+  even if all the eigenvalues are real, and ``coint_johansen`` warned with a
+  ``ComplexWarning``. The results are real again. :pr:`10613`
+- ``smoothed_state_autocovariance`` does not warn that the univariate filter
+  diagonalized the observation covariance when it extends the model beyond
+  the sample, since it does not use the disturbance covariances. :pr:`10613`
+- ``arma_order_select_ic`` no longer warns about the starting values of the
+  candidate models that fall back to zeros. :pr:`10613`
+- ``hamilton_filter`` and the starting values of ``DynamicFactorMQ`` no longer
+  warn about the unused scale of a regression without residual degrees of
+  freedom. :pr:`10613`
+- ``ThetaModelResults.plot_predict`` with ``alpha=None`` no longer adds a
+  legend without labels, which warned. :pr:`10613`
+- ``SVAR.sirf_errband_mc`` and ``IRAnalysis.errband_mc`` with ``svar=True``
+  show one ``ConvergenceWarning`` with the number of replications whose
+  maximum likelihood fit did not converge, instead of one warning for each of
+  them. :pr:`10613`
 
 Statistics and tests
 --------------------
@@ -513,6 +532,8 @@ Statistics and tests
   rows and before the model info rows. :issue:`9282`, :pr:`10218`
 - ``corr_rank`` and ``corr_normal_scores`` return a 1 by 1 matrix for a single
   variable instead of a scalar. :pr:`10456`
+- ``Description`` no longer calls ``scipy.stats.mode`` for a column without
+  observations, which warns in SciPy 1.14 and later. :pr:`10613`
 
 Treatment effects
 -----------------
@@ -574,6 +595,10 @@ Robust and multivariate statistics
 - ``PCA`` with ``gls=True`` applied the weights inverted: the data were
   divided by the square root of the weights instead of multiplied by it.
   :issue:`10256`, :pr:`10258`
+- ``Factor`` with ``method="ml"`` and ``PHD`` returned complex loadings and
+  directions with NumPy 2.5 and later, which ``np.linalg.eig`` returns as
+  complex arrays even if all the eigenvalues are real. The results are real
+  again. :pr:`10613`
 
 Nonparametric
 -------------
@@ -617,6 +642,10 @@ Duration models
   have a score residual of 0 (they were added to the risk set of the preceding
   failure time before). Observations that are not used no longer produce a
   ``nan`` robust covariance. :issue:`10288`, :pr:`10363`, :pr:`10377`
+- ``SurvfuncRight`` with ``exog`` and integer times stored an arbitrary
+  integer instead of ``nan`` in ``surv_prob_se``, ``n_risk`` and ``n_events``,
+  and warned about casting ``nan`` to an integer. They are ``nan`` as floats.
+  :pr:`10613`
 
 Other
 -----

@@ -28,6 +28,7 @@ from statsmodels.regression.mixed_linear_model import (
 )
 import statsmodels.tools.numdiff as nd
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, SingularMatrixWarning
+from statsmodels.tools.testing import warns_or_none
 
 from .results import lme_r_results
 
@@ -1332,8 +1333,14 @@ def test_singular():
     df["class"] = pd.Series([i % 3 for i in df.index], index=df.index)
 
     md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
-    with pytest.warns(SingularMatrixWarning, match=r"effects"):
-        mdf = md.fit()
+    # The optimizer retries and the boundary warning for the singular fit are
+    # optimizer dependent
+    with warns_or_none(
+        ConvergenceWarning,
+        match="Maximum Likelihood|Retrying MixedLM|The MLE may be on the boundary",
+    ):
+        with pytest.warns(SingularMatrixWarning, match=r"effects"):
+            mdf = md.fit()
     mdf.summary()
 
 
@@ -1649,7 +1656,8 @@ def test_fit_unsupported_kwargs_ignored():
     n = 100
     groups = np.repeat(np.arange(10), 10)
     x = rs.normal(size=n)
-    y = x + rs.normal(size=n)
+    # a group effect keeps the random effects variance off the boundary
+    y = x + rs.normal(size=n) + rs.normal(size=10)[groups]
     df = pd.DataFrame({"y": y, "x": x, "g": groups})
 
     model = MixedLM.from_formula("y ~ x", groups="g", data=df)
@@ -1668,7 +1676,8 @@ def test_fit_unsupported_kwargs_warns():
     n = 50
     groups = np.repeat(np.arange(5), 10)
     x = rs.normal(size=n)
-    y = x + rs.normal(size=n)
+    # a group effect keeps the random effects variance off the boundary
+    y = x + rs.normal(size=n) + rs.normal(size=5)[groups]
     df = pd.DataFrame({"y": y, "x": x, "g": groups})
 
     model = MixedLM.from_formula("y ~ x", groups="g", data=df)

@@ -166,7 +166,9 @@ def _single_hamilton_filter(x: np.ndarray, h: int, p: int):
     """
     t = x.shape[0]
     lags = list(range(h, h + p))
-    res = AutoReg(x, lags=lags, trend="c").fit(use_t=True)
+    # The scale is 0 / 0 if the regression is exactly determined, and not used
+    with np.errstate(divide="ignore", invalid="ignore"):
+        res = AutoReg(x, lags=lags, trend="c").fit(use_t=True)
 
     fitted = res.fittedvalues  # trend values at t+h
     resid = res.resid  # cycle values at t+h

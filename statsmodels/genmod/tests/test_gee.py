@@ -441,7 +441,7 @@ class TestGEE:
             kwargs = {}
             kwargs["groups"] = np.zeros(p[2])
             if k1:
-                kwargs["exposure"] = np.zeros(18)
+                kwargs["exposure"] = np.ones(18)
             if k2:
                 kwargs["time"] = np.zeros(18)
             with pytest.raises(ValueError):

@@ -15,7 +15,6 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.compat.scipy import SP_LT_115
 
 import copy
-import warnings
 
 import numpy as np
 from numpy.testing import (
@@ -30,6 +29,7 @@ import pytest
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, HypothesisTestWarning
+from statsmodels.tools.testing import warns_or_none
 
 # The noncentral t distribution of SciPy on WASM is accurate to about 1e-6
 # (relative), which is far from the 1e-12 of the other platforms
@@ -1100,9 +1100,11 @@ def test_power_solver_warn():
     nip = smp.NormalIndPower()
     # using nobs, has one backup (fsolve)
     nip.start_bqexp["nobs1"] = {"upp": 50, "low": -20}
-    val = nip.solve_power(
-        0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
-    )
+    # the solver evaluates the power at the negative lower bound of nobs
+    with warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"):
+        val = nip.solve_power(
+            0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
+        )
 
     assert_almost_equal(val, 1600, decimal=4)
     assert_equal(nip.cache_fit_res[0], 1)
@@ -1113,20 +1115,25 @@ def test_power_solver_warn():
 
     from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
-    with pytest.warns(ConvergenceWarning):
+    with (
+        pytest.warns(ConvergenceWarning),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"),
+    ):
         nip.solve_power(
             0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
         )
     # this converges with scipy 0.11  ???
     # nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative='larger')
 
-    with warnings.catch_warnings():  # python >= 2.6
-        warnings.simplefilter("ignore")
+    with (
+        pytest.warns(ConvergenceWarning),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"),
+    ):
         nip.solve_power(
             0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
         )
-        assert_equal(nip.cache_fit_res[0], 0)
-        assert_equal(len(nip.cache_fit_res), 3)
+    assert_equal(nip.cache_fit_res[0], 0)
+    assert_equal(len(nip.cache_fit_res), 3)
 
 
 def test_normal_sample_size_one_tail():
