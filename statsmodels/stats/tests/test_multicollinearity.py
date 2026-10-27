@@ -1,309 +1,357 @@
-# -*- coding: utf-8 -*-
 """
+Tests for statsmodels.stats.multicollinearity
+
 Created on Thu Apr 30 06:46:13 2015
 
 Author: Josef Perktold
 License: BSD-3
 """
 
-import warnings
-
 import numpy as np
-from numpy.testing import (
-    assert_allclose,
-    assert_almost_equal,
-    assert_array_less,
-    assert_equal,
-)
+from numpy.testing import assert_allclose, assert_array_less, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.datasets import longley
 from statsmodels.regression.linear_model import OLS
-from statsmodels.stats.multicollinearity import (
-    MultiCollinearity,
-    MultiCollinearitySequential,
-    collinear_index,
-    vif,
-    vif_ridge,
-    vif_selection,
-)
-import statsmodels.stats.outliers_influence as smoi
+from statsmodels.stats.api import collinear_index, vif, vif_ridge
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+from statsmodels.tools.tools import add_constant
+
+from .results import results_multicollinearity as res_r
 
 
-def assert_allclose_large(x, y, rtol=1e-6, atol=0, ltol=1e12):
+def get_data(nobs=100, k_vars=4, seed=987536):
+    rng = np.random.default_rng(seed)
+    rho = np.linspace(0.5, 0.9, k_vars)
+    x = rng.standard_normal((nobs, k_vars)) * (1 - rho)
+    return x + rho * rng.standard_normal((nobs, 1))
+
+
+def vif_by_ols(x, constant=True):
+    """VIF from the sum of squares of the auxiliary regressions
+
+    The VIF is the ratio of the total sum of squares to the residual sum of
+    squares, which is accurate also for large VIF. The total sum of squares
+    is centered if there is a constant in the regression.
     """
-    assert x and y are allclose or x and y are larger than ltol
-    """
-    x = np.atleast_1d(x)
-    y = np.atleast_1d(y)
-    mask = (y > ltol) & (x > ltol)
-    assert_allclose(x[~mask], y[~mask], rtol=rtol, atol=atol)
+    result = []
+    for k in range(x.shape[1]):
+        y = x[:, k]
+        exog = np.delete(x, k, axis=1)
+        if constant:
+            exog = add_constant(exog)
+            tss = ((y - y.mean()) ** 2).sum()
+        else:
+            tss = (y**2).sum()
+        result.append(tss / OLS(y, exog).fit().ssr)
+    return np.array(result)
 
 
-def _get_data(nobs=100, k_vars=4):
-    np.random.seed(987536)
-    rho_coeff = np.linspace(0.5, 0.9, k_vars - 1)
-    x = np.random.randn(nobs, k_vars - 1) * (1 - rho_coeff)
-    x += rho_coeff * np.random.randn(nobs, 1)
-    return x
+@pytest.fixture(scope="module")
+def longley_exog():
+    return longley.load_pandas().exog
 
 
-class CheckMuLtiCollinear(object):
+@pytest.fixture(scope="module")
+def mtcars_exog():
+    return pd.DataFrame(res_r.mtcars)
+
+
+class TestVifReference:
+    def test_longley(self, longley_exog):
+        res = vif(longley_exog)
+        assert isinstance(res, pd.Series)
+        assert_equal(res.index.to_numpy(), longley_exog.columns.to_numpy())
+        assert_allclose(res.to_numpy(), res_r.longley_vif, rtol=1e-9)
+        assert_allclose(vif(longley_exog.to_numpy()), res_r.longley_vif, rtol=1e-9)
+
+    def test_longley_subset(self, longley_exog):
+        res = vif(longley_exog[["GNP", "UNEMP", "ARMED", "POP"]])
+        assert_allclose(res.to_numpy(), res_r.longley4_vif, rtol=1e-9)
+
+    def test_mtcars(self, mtcars_exog):
+        res = vif(mtcars_exog)
+        assert_equal(res.index.to_numpy(), ["disp", "hp", "wt", "drat", "qsec"])
+        assert_allclose(res.to_numpy(), res_r.mtcars_vif, rtol=1e-9)
+
+    def test_formula_design(self, longley_exog):
+        # The design matrix of a formula model has a constant, which is
+        # skipped. The result is the same for both formula engines.
+        import statsmodels.formula.api as smf
+
+        data = longley.load_pandas().data
+        mod = smf.ols("TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR", data)
+        res = vif(mod.data.orig_exog, has_constant="skip")
+        assert np.isnan(res.iloc[0])
+        assert_equal(res.index.to_numpy()[1:], longley_exog.columns.to_numpy())
+        assert_allclose(res.to_numpy()[1:], res_r.longley_vif, rtol=1e-9)
+
+
+class TestVifOLS:
     @classmethod
-    def get_data(cls):
-        nobs, k_vars = 100, 4
-        cls.x = x = _get_data(nobs=nobs, k_vars=k_vars)
-        cls.xs = (x - x.mean(0)) / x.std(0)
-        cls.xf = np.column_stack((np.ones(nobs), x))
-        cls.check_pandas = False
+    def setup_class(cls):
+        cls.x = get_data(nobs=100, k_vars=5)
 
-    def test_sequential(self):
-        xf = self.xf
+    def test_ols(self):
+        res = vif(self.x)
+        assert res.shape == (5,)
+        assert_array_less(1, res)
+        assert_allclose(res, vif_by_ols(self.x), rtol=1e-10)
+
+    def test_outliers_influence(self):
+        # The existing function needs the constant for the uncentered case
+        res = vif(self.x)
+        xc = add_constant(self.x)
+        res_oi = [variance_inflation_factor(xc, k) for k in range(1, 6)]
+        assert_allclose(res, res_oi, rtol=1e-10)
+        res_oi = [variance_inflation_factor(self.x, k) for k in range(5)]
+        assert_allclose(res, res_oi, rtol=1e-10)
+
+    def test_constant_column(self):
+        xc = add_constant(self.x)
+        with pytest.raises(ValueError, match="constant columns at positions"):
+            vif(xc)
+        res = vif(xc, has_constant="skip")
+        assert np.isnan(res[0])
+        assert_allclose(res[1:], vif(self.x), rtol=1e-13)
+
+    def test_constant_pandas(self):
+        df = pd.DataFrame(self.x, columns=list("abcde"))
+        df.insert(2, "one", 1.0)
+        df["two"] = 2.0
+        with pytest.raises(ValueError, match="constant columns"):
+            vif(df)
+        res = vif(df, has_constant="skip")
+        assert_equal(res.index.to_numpy(), list(df.columns))
+        assert_equal(np.isnan(res.to_numpy()), df.columns.isin(["one", "two"]))
+        assert_allclose(res.dropna().to_numpy(), vif(self.x), rtol=1e-13)
+
+    def test_all_constant(self):
+        res = vif(np.ones((10, 3)), has_constant="skip")
+        assert np.isnan(res).all()
+        assert vif(np.column_stack((np.ones(10), self.x[:10, 0])), has_constant="skip")[
+            1
+        ] == pytest.approx(1.0)
+
+    def test_invalid_has_constant(self):
+        with pytest.raises(ValueError, match="has_constant"):
+            vif(self.x, has_constant="drop")
+
+    def test_single_variable(self):
+        assert_allclose(vif(self.x[:, 0]), [1.0])
+        assert_allclose(vif(self.x[:, :1]), [1.0])
+
+    def test_orthogonal(self):
+        x = np.array([[1.0, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]])
+        assert_allclose(vif(x), np.ones(3), rtol=1e-14)
+
+    def test_integer_and_list(self):
+        x = np.array([[1, 2, 0], [2, 1, 1], [3, 5, 0], [4, 3, 1], [5, 9, 1]])
+        res = vif(x)
+        assert_allclose(res, vif(x.astype(float)), rtol=1e-14)
+        assert_allclose(res, vif(x.tolist()), rtol=1e-14)
+        assert_allclose(res, vif(pd.DataFrame(x).astype(float)), rtol=1e-14)
+
+    def test_bool_dummies(self):
+        dummies = pd.DataFrame(
+            np.arange(100)[:, None] % 4 == np.arange(1, 4), columns=["d1", "d2", "d3"]
+        )
+        df = pd.concat(
+            [pd.DataFrame(self.x[:, :2], columns=["a", "b"]), dummies], axis=1
+        )
+        res = vif(df)
+        assert_allclose(
+            res.to_numpy(), vif_by_ols(df.to_numpy(dtype=float)), rtol=1e-10
+        )
+
+    def test_float32(self):
+        x32 = self.x.astype(np.float32)
+        res = vif(x32)
+        assert res.dtype == np.float64
+        # data are converted to float64
+        assert_allclose(res, vif(x32.astype(np.float64)), rtol=1e-14)
+        # the precision of the data is limited
+        assert_allclose(res, vif(self.x), rtol=1e-5)
+        res_pd = vif(pd.DataFrame(x32))
+        assert_allclose(res_pd.to_numpy(), res, rtol=1e-14)
+
+    def test_float32_collinear(self):
+        x = self.x.astype(np.float32)
+        x = np.column_stack((x, x[:, 0] + x[:, 1]))
+        assert x.dtype == np.float32
+        # float32 rounding error in the sum, the columns are not exactly collinear
+        assert_array_less(1e10, vif(x)[[0, 1, 5]])
+        assert_array_less(vif(x)[2:5], 1e3)
+
+    def test_invalid_data(self):
+        x = self.x.copy()
+        x[3, 1] = np.nan
+        with pytest.raises(ValueError, match="missing or infinite"):
+            vif(x)
+        x[3, 1] = np.inf
+        with pytest.raises(ValueError, match="missing or infinite"):
+            vif(x)
+        with pytest.raises(ValueError, match="ndim"):
+            vif(np.ones((3, 3, 3)))
+
+
+class TestVifSingular:
+    @classmethod
+    def setup_class(cls):
+        cls.x = get_data(nobs=100, k_vars=4)
+
+    def test_exact_collinear(self):
         x = self.x
-        ols_results = [
-            OLS(xf[:, k], xf[:, :k]).fit() for k in range(1, xf.shape[1])
-        ]
-        rsquared0 = np.array([res.rsquared for res in ols_results])
-        vif0 = 1.0 / np.maximum((1.0 - rsquared0), 1e-20)
+        xs = np.column_stack((x, x[:, 1] + 2 * x[:, 3]))
+        res = vif(xs)
+        assert_equal(np.isinf(res), [False, True, False, True, True])
+        # the other variables are not affected by the additional column
+        assert_allclose(res[[0, 2]], vif_by_ols(x)[[0, 2]], rtol=1e-10)
+        idx_collinear, idx_keep = collinear_index(xs)
+        assert_equal(idx_collinear, [4])
+        assert_equal(idx_keep, [0, 1, 2, 3])
+        assert_array_less(vif(xs[:, idx_keep]), 1e3)
 
-        mcoll = MultiCollinearitySequential(self.x)
+    def test_duplicate_column(self):
+        res = vif(np.column_stack((self.x, self.x[:, 0])))
+        assert_equal(np.isinf(res), [True, False, False, False, True])
 
+    def test_multiple_relations(self):
+        x = self.x
+        xs = np.column_stack((x, x[:, 0] - x[:, 1], x[:, 2] + x[:, 3]))
+        res = vif(xs)
+        assert np.isinf(res).all()
+
+    def test_small_weight(self):
+        # The tiny component of a total is still determined by the total
+        # and the large component.
+        rng = np.random.default_rng(87245)
+        big = 1e6 * rng.standard_normal(200)
+        small = rng.standard_normal(200)
+        other = rng.standard_normal(200)
+        res = vif(np.column_stack((big, small, big + small, other)))
+        assert_equal(np.isinf(res), [True, True, True, False])
+        assert_allclose(res[3], 1.0, rtol=0.1)
+
+    def test_nearly_collinear(self):
+        rng = np.random.default_rng(87245)
+        x = self.x
+        noise = 1e-4 * rng.standard_normal(x.shape[0])
+        xs = np.column_stack((x, x[:, 1] + 2 * x[:, 3] + noise))
+        res = vif(xs)
+        assert_array_less(1e6, res[[1, 3, 4]])
+        assert np.isfinite(res).all()
+        assert_allclose(res, vif_by_ols(xs), rtol=1e-6)
+        # not detected as exactly collinear
+        assert_equal(collinear_index(xs)[0], [])
+
+    @pytest.mark.parametrize("scale", [1e-3, 1e-5])
+    def test_nearly_collinear_separate(self, scale):
+        # An almost collinear pair does not affect the other variables if
+        # there is also an exact relation
+        rng = np.random.default_rng(87245)
+        x = rng.standard_normal((200, 8))
+        x = np.column_stack(
+            (x, x[:, 0] + x[:, 1], x[:, 4] + scale * rng.standard_normal(200))
+        )
+        res = vif(x)
+        assert_array_less(res[[2, 3, 5, 6, 7]], 2)
+        assert np.isinf(res[[0, 1, 8]]).all()
+        assert_array_less(0.1 / scale**2, res[[4, 9]])
+        assert np.isfinite(res[[4, 9]]).all()
+
+    def test_dummy_trap(self, longley_exog):
+        # A full set of dummy variables is an implicit constant. It is
+        # collinear with the constant that is added by the VIF regressions.
+        group = longley_exog["YEAR"].to_numpy().astype(int) % 4
+        dummies = pd.get_dummies(group, prefix="d", dtype=float)
+        df = pd.concat([longley_exog[["GNP", "ARMED"]], dummies], axis=1)
+        res = vif(df)
+        assert_equal(res.index.to_numpy(), ["GNP", "ARMED", "d_0", "d_1", "d_2", "d_3"])
+        assert_equal(np.isinf(res.to_numpy()), [False, False, True, True, True, True])
+        # dropping one dummy variable removes the collinearity
+        res2 = vif(df.drop(columns="d_3"))
+        assert np.isfinite(res2).all()
         assert_allclose(
-            mcoll.rsquared_partial, rsquared0, rtol=1e-12, atol=1e-15
-        )
-        # infs could be just large values because of floating point imprecision
-        # assert_allclose(mcoll.vif, vif0, rtol=1e-13)
-        # mask_inf = np.isinf(vif0) & ~np.isinf(mcoll.vif)
-        # assert_allclose(mcoll.vif[~mask_inf], vif0[~mask_inf], rtol=1e-13)
-        # assert_array_less(1e30, mcoll.vif[mask_inf])
-        assert_allclose_large(mcoll.vif, vif0, rtol=1e-13, ltol=1e-14)
-
-        if not (1.0 - rsquared0 == 0).any():
-            # The following requires nonsingular matrix because of Cholesky
-            # check moment matrix as input
-            x_dm = x - x.mean(0)  # standardize doesn't demean
-            mcoll2 = MultiCollinearitySequential(
-                None, moment_matrix=x_dm.T.dot(x_dm)
-            )
-            assert_allclose(
-                mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13
-            )
-            assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
-
-            # check correlation matrix as input
-            mcoll2 = MultiCollinearitySequential(
-                None, np.corrcoef(x, rowvar=False), standardize=False
-            )
-            assert_allclose(
-                mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13
-            )
-            assert_allclose(mcoll2.vif, mcoll.vif, rtol=1e-13)
-
-        # Note we need a constant since x is not demeaned
-        collinear_columns, keep_columns = collinear_index(xf)
-        not_coll = [
-            i for i in range(xf.shape[1]) if i not in collinear_columns
-        ]
-        assert_equal(not_coll, keep_columns)
-        # I haven't checked what the equvalent threshold is exactly
-        # subtracting 1 from index to ignore constant column
-        assert_equal(collinear_columns - 1, np.nonzero(mcoll.vif > 1e14)[0])
-
-        if self.check_pandas:
-            collinear_columns, keep_columns = collinear_index(self.xf_pd)
-            # keep = ['const', 'var0', 'var1', 'var2']
-            assert list(self.xf_pd.columns[not_coll]) == keep_columns
-
-    def test_multicoll(self):
-        xf = np.asarray(self.xf)  # convert from pandas DataFrame, for OLS only
-        k_vars = self.xf.shape[1]
-        ols_results = []
-
-        for k in range(1, k_vars):
-            idx_k = list(range(k_vars))
-            del idx_k[k]
-            ols_results.append(OLS(xf[:, k], xf[:, idx_k]).fit())
-
-        rsquared0 = np.array([res.rsquared for res in ols_results])
-        vif0 = 1.0 / np.maximum((1.0 - rsquared0), 1e-20)
-        # for checking singular cases with pdb in pytest
-        # if ((1. - rsquared0)<1e-14).any():
-        #     raise
-
-        mcoll = MultiCollinearity(self.x)
-
-        assert_allclose(mcoll.rsquared_partial, rsquared0, rtol=1e-13)
-        assert_allclose_large(mcoll.vif, vif0, rtol=1e-12, ltol=1e12)
-        assert_allclose(mcoll.tss, np.ones(self.x.shape[1]))
-        rss = np.array([1 - res.rsquared for res in ols_results])
-        assert_allclose(mcoll.rss, rss, atol=1e-10)
-        alt_vif = mcoll.get_vif(ridge_factor=0)
-        if mcoll.vif.max() < 1e10:
-            # Only test nonsingular
-            assert_allclose(mcoll.vif, alt_vif)
-
-        if mcoll.eigenvalues.min() > 1e-14:
-            # TODO: check what to do in singular case
-            xf0 = self.xf[:, :-2]
-            xf1 = self.xf[:, -2:]
-            # TODO: use projection helper function
-            resid = xf1 - xf0.dot(np.linalg.pinv(xf0).dot(xf1))
-            corrp1 = np.corrcoef(resid, rowvar=0)[0, 1]
-            assert_allclose(mcoll.corr_partial[-1, -2], corrp1, rtol=1e-13)
-
-        vif1_ = vif(self.x)
-        vif1 = np.asarray(vif1_)  # check values if pandas.Series
-        # TODO: why does mcoll.vif have infs but vif1 doesn't?
-        assert_allclose_large(vif1, mcoll.vif, rtol=1e-12, ltol=1e12)
-        assert_allclose_large(vif1, vif0, rtol=1e-12, ltol=1e12)
-
-        if self.check_pandas:
-            assert_equal(vif1_.index.values, self.names)
-
-        # check moment matrix as input
-        x_dm = self.x - self.x.mean(0)  # standardize doesn't demean
-        mcoll2 = MultiCollinearity(None, moment_matrix=x_dm.T.dot(x_dm))
-        assert_allclose(
-            mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13
-        )
-        # the following has floating point noise, mcoll.vif has inf
-        assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e12)
-
-        # compare with outlier influence function
-        x_dm_arr = np.asarray(x_dm)  # smoi vif does not work with pandas
-        vif_oi = np.array(
-            [
-                smoi.variance_inflation_factor(x_dm_arr, ii)
-                for ii in range(x_dm_arr.shape[1])
-            ]
-        )
-        assert_allclose_large(mcoll2.vif, vif_oi, rtol=1e-12, ltol=1e12)
-
-        # check correlation matrix as input
-        corr = np.corrcoef(self.x, rowvar=False)
-        mcoll2 = MultiCollinearity(None, corr, standardize=False)
-        assert_allclose(
-            mcoll2.rsquared_partial, mcoll.rsquared_partial, rtol=1e-13
-        )
-        assert_allclose_large(mcoll2.vif, mcoll.vif, rtol=1e-13, ltol=1e12)
-
-        corr = np.corrcoef(self.x, rowvar=False)
-        vif1 = vif(None, moment_matrix=corr)
-        assert_allclose_large(vif1, mcoll.vif, rtol=1e-12, ltol=1e12)
-
-        evals = np.linalg.svd(corr, compute_uv=False)
-        assert_allclose(mcoll2.eigenvalues, evals, rtol=1e-13, atol=1e-14)
-        # we shouldn't have tiny negative eigenvalues, those are set to zero
-        assert_equal(mcoll2.eigenvalues[mcoll2.eigenvalues < 0], np.array([]))
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            condn = mcoll2.condition_number
-        assert_allclose_large(
-            evals[0] / evals[-1], condn ** 2, rtol=1e-12, ltol=1e12
+            res2.to_numpy(), vif_by_ols(df.drop(columns="d_3").to_numpy()), rtol=1e-10
         )
 
-        # test if standardize is false, equivalence with constant column
-        mcoll_ns = MultiCollinearity(xf, standardize=False)
-        vif_nc = mcoll_ns.vif[1:] * xf.var(0)[1:]
-        # inf in vif_nc but not in mcoll_ns.vif
-        assert_allclose_large(mcoll.vif, vif_nc, rtol=1e-12, ltol=1e12)
-        vif_nc2 = vif(xf, standardize=False)[1:] * xf.var(0)[1:]
-        assert_allclose_large(mcoll.vif, vif_nc2, rtol=1e-12, ltol=1e12)
+    def test_moment_matrix_singular(self):
+        xs = np.column_stack((self.x, self.x[:, 1] + self.x[:, 2]))
+        res = vif(np.cov(xs, rowvar=False), is_moment=True)
+        assert_allclose(res, vif(xs), rtol=1e-12)
+        assert_equal(np.isinf(res), [False, True, True, False, True])
 
 
-class TestMultiCollinearNonSingular(CheckMuLtiCollinear):
-    # Example: with non-singular continuous data
+class TestVifMoment:
     @classmethod
     def setup_class(cls):
-        cls.get_data()
+        cls.x = get_data(nobs=100, k_vars=5)
+        cls.expected = vif(cls.x)
+
+    def test_cov_corr(self):
+        x = self.x
+        assert_allclose(vif(np.cov(x, rowvar=False), is_moment=True), self.expected)
+        corr = np.corrcoef(x, rowvar=False)
+        assert_allclose(vif(corr, is_moment=True), self.expected, rtol=1e-12)
+        # covariance of rescaled data
+        cov = np.cov(x * [1, 10, 1e3, 1e-3, 5], rowvar=False)
+        assert_allclose(vif(cov, is_moment=True), self.expected, rtol=1e-12)
+        # centered cross-products
+        xd = x - x.mean(0)
+        assert_allclose(vif(xd.T @ xd, is_moment=True), self.expected, rtol=1e-12)
+
+    def test_pandas(self):
+        df = pd.DataFrame(self.x, columns=list("abcde"))
+        res = vif(df.cov(), is_moment=True)
+        assert isinstance(res, pd.Series)
+        assert_equal(res.index.to_numpy(), list("abcde"))
+        assert_allclose(res.to_numpy(), self.expected, rtol=1e-12)
+        res = vif(df.corr().to_numpy(), is_moment=True)
+        assert isinstance(res, np.ndarray)
+
+    def test_uncentered(self):
+        # The cross-product matrix without centering corresponds to the
+        # regressions without a constant
+        x = self.x + 1
+        res = vif(x.T @ x, is_moment=True)
+        assert_allclose(res, vif_by_ols(x, constant=False), rtol=1e-10)
+        assert_array_less(vif(x), res)
+
+    def test_constant(self):
+        cov = np.cov(np.column_stack((self.x, np.ones(100))), rowvar=False)
+        assert_equal(cov[-1], np.zeros(6))
+        with pytest.raises(ValueError, match="constant columns"):
+            vif(cov, is_moment=True)
+        res = vif(cov, is_moment=True, has_constant="skip")
+        assert np.isnan(res[-1])
+        assert_allclose(res[:-1], self.expected, rtol=1e-12)
+
+    def test_invalid(self):
+        cov = np.cov(self.x, rowvar=False)
+        with pytest.raises(ValueError, match="square"):
+            vif(self.x, is_moment=True)
+        asym = cov.copy()
+        asym[0, 1] += 0.1
+        with pytest.raises(ValueError, match="symmetric"):
+            vif(asym, is_moment=True)
+        indefinite = np.array([[1.0, 2.0], [2.0, 1.0]])
+        with pytest.raises(ValueError, match="positive semi-definite"):
+            vif(indefinite, is_moment=True)
+        negative = np.diag([1.0, -1.0, 2.0])
+        with pytest.raises(ValueError, match="negative diagonal"):
+            vif(negative, is_moment=True)
+        with pytest.raises(ValueError, match="missing or infinite"):
+            vif(np.full((2, 2), np.nan), is_moment=True)
 
 
-class TestMultiCollinearSingular1(CheckMuLtiCollinear):
-    # Example: with singular continuous data
-    @classmethod
-    def setup_class(cls):
-        cls.get_data()
-        x = np.column_stack((cls.x[:, -2:].sum(1), cls.x))
-
-        cls.x = x
-        cls.xs = (x - x.mean(0)) / x.std(0)
-        cls.xf = np.column_stack((np.ones(x.shape[0]), x))
-
-
-class TestMultiCollinearSingular2(CheckMuLtiCollinear):
-    # Example: with singular dummy variables
-    @classmethod
-    def setup_class(cls):
-        cls.get_data()
-        nobs = cls.x.shape[0]
-        xd = np.tile(np.arange(5), nobs // 5)[:, None] == np.arange(5)
-        x = np.column_stack((cls.x, xd))
-
-        cls.x = x
-        cls.xs = (x - x.mean(0)) / x.std(0)
-        cls.xf = np.column_stack((np.ones(x.shape[0]), x))
-
-
-class TestMultiCollinearPandas(CheckMuLtiCollinear):
-    # Example: with singular continuous data
-    @classmethod
-    def setup_class(cls):
-        cls.get_data()
-        import pandas
-
-        cls.names = ["var%d" % i for i in range(cls.x.shape[1])]
-        cls.x = pandas.DataFrame(cls.x, columns=cls.names)
-        cls.xf_pd = pandas.DataFrame(cls.xf, columns=["const"] + cls.names)
-        cls.check_pandas = True
-
-
-@pytest.mark.parametrize("use_pandas", [False, True])
-def test_vif_selection(use_pandas):
-    x = _get_data(nobs=100, k_vars=15)
-    if use_pandas:
-        x = pd.DataFrame(x)
-    idx, _ = vif_selection(x)
-    assert_equal(idx, np.arange(10, dtype=int))
-    x_sel = x.iloc[:, idx] if use_pandas else x[:, idx]
-    assert_array_less(vif(x_sel), 10)
-
-    x_rev = x[[c for c in x.columns[::-1]]] if use_pandas else x[:, ::-1]
-    idx, _ = vif_selection(x_rev)
-    expected = np.arange(4, 14, dtype=int)
-    if use_pandas:
-        expected = list(x_rev.columns[expected])
-    assert_equal(idx, expected)
-    idx = x.shape[1] - np.array(idx) - 1
-    x_sel = x_rev.iloc[:, idx] if use_pandas else x[:, idx]
-    assert_array_less(vif(x_sel), 10)
-
-    threshold = 5
-    idx, _ = vif_selection(x_rev, threshold=threshold)
-    expected = np.arange(7, 14, dtype=int)
-    if use_pandas:
-        expected = list(x_rev.columns[expected])
-    assert_equal(idx, expected)
-    idx = x.shape[1] - np.array(idx) - 1
-    x_sel = x_rev.iloc[:, idx] if use_pandas else x[:, idx]
-    assert_array_less(vif(x_sel), threshold)
-
-
-def test_vif_selection_equiv():
-    x = _get_data(nobs=100, k_vars=15)
-    idx, _ = vif_selection(x)
-    moments = np.corrcoef(x, rowvar=False)
-    idx_moment, _ = vif_selection(None, moment_matrix=moments)
-    assert_equal(idx, idx_moment)
-    xs = (x - x.mean(0)) / (x.std(0) * np.sqrt(x.shape[0]))
-    idx_std, _ = vif_selection(xs, standardize=False)
-    assert_equal(idx, idx_std)
-
-
-@pytest.mark.parametrize("is_corr", [True, False])
-def test_vif_ridge(is_corr):
-
-    dta = np.array(
-        """
+# fmt: off
+# Output of the ridge regression in SAS PROC REG with the OUTVIF option, as
+# included in the original pull request. The data are the French import
+# data, YEAR IMPORT DOPROD STOCK CONSUM.
+RIDGE_DATA = np.array(
+    """
     49 15.9 149.3 4.2 108.1
     50 16.4 161.2 4.1 114.8
     51 19 171.5 3.1 123.2
@@ -322,13 +370,12 @@ def test_vif_ridge(is_corr):
     64 49 323.4 7 223.8
     65 50.3 336.8 1.2 232
     66 56.6 353.9 4.5 242.9""".split(),
-        float,
-    ).reshape(-1, 5)
+    float,
+).reshape(-1, 5)
 
-    # Obs    _RIDGE_     DOPROD     STOCK      CONSUM
-
-    results_vif = np.array(
-        """
+# Obs    _RIDGE_     DOPROD     STOCK      CONSUM
+RIDGE_VIF = np.array(
+    """
       2     0.000     185.997    1.01891    186.110
       5     0.001      98.981    1.00845     99.041
       8     0.003      41.779    0.99890     41.804
@@ -363,42 +410,203 @@ def test_vif_ridge(is_corr):
      95     0.800       0.130    0.30859      0.130
      98     0.900       0.121    0.27695      0.121
     101     1.000       0.113    0.24994      0.112""".split(),
-        float,
-    ).reshape(
-        -1, 5
-    )  # noqa
-
-    import pandas as pd
-
-    columns = "YEAR IMPORT DOPROD STOCK CONSUM".lower().split()
-    example = pd.DataFrame(dta, columns=columns)
-
-    x = example["doprod stock consum".split()].values
-    y = example["import"].values
-
-    x = x[:11]
-    y = y[:11]
-    if is_corr:
-        xxs = np.corrcoef(x, rowvar=0)
-    else:
-        xxs = x
-
-    pen_factors = results_vif[:, 1]
-    res_vif = vif_ridge(xxs, pen_factors, is_corr=is_corr)
-
-    assert_almost_equal(res_vif, results_vif[:, 2:], decimal=3)
-
-    from statsmodels.tools.tools import add_constant
-
-    exog = add_constant(x)
-
-    xxi = np.linalg.inv(exog.T.dot(exog))
-    vif_ols = (np.diag(xxi) * exog.var(0) * len(x))[1:]
-    assert_allclose(res_vif[0], vif_ols, rtol=2e-12)
+    float,
+).reshape(-1, 5)
+# fmt: on
 
 
-def test_constant_exception():
-    with pytest.raises(ValueError):
-        MultiCollinearity(np.ones((100, 1)))
-    with pytest.raises(ValueError):
-        vif_selection(np.ones((100, 1)))
+class TestVifRidge:
+    @classmethod
+    def setup_class(cls):
+        # the first 11 observations and the variables DOPROD STOCK CONSUM
+        cls.x = RIDGE_DATA[:11, 2:]
+        cls.pen_factors = RIDGE_VIF[:, 1]
+
+    @pytest.mark.parametrize("is_moment", [True, False])
+    def test_sas(self, is_moment):
+        data = np.corrcoef(self.x, rowvar=False) if is_moment else self.x
+        res = vif_ridge(data, self.pen_factors, is_moment=is_moment)
+        assert res.shape == (RIDGE_VIF.shape[0], 3)
+        assert_allclose(res, RIDGE_VIF[:, 2:], atol=1.01e-3)
+
+    def test_unpenalized(self):
+        res = vif_ridge(self.x, self.pen_factors)
+        assert_allclose(res[0], vif(self.x), rtol=1e-10)
+        # compare with the OLS estimate of the regression with a constant
+        exog = add_constant(self.x)
+        xxi = np.linalg.inv(exog.T @ exog)
+        vif_ols = (np.diag(xxi) * exog.var(0) * len(self.x))[1:]
+        assert_allclose(res[0], vif_ols, rtol=2e-12)
+
+    def test_formula(self):
+        corr = np.corrcoef(self.x, rowvar=False)
+        pen_factors = [0.01, 0.5, 2.0]
+        expected = []
+        for k in pen_factors:
+            inv = np.linalg.inv(corr + k * np.eye(3))
+            expected.append(np.diag(inv @ corr @ inv))
+        res = vif_ridge(self.x, pen_factors)
+        assert_allclose(res, expected, rtol=1e-12)
+        # a scalar is a single penalization factor
+        assert_allclose(vif_ridge(self.x, 0.5), np.asarray(expected)[[1]], rtol=1e-12)
+
+    def test_pandas(self):
+        df = pd.DataFrame(self.x, columns=["doprod", "stock", "consum"])
+        res = vif_ridge(df, self.pen_factors)
+        assert isinstance(res, pd.DataFrame)
+        assert_equal(res.columns.to_numpy(), ["doprod", "stock", "consum"])
+        assert_allclose(res.index.to_numpy(), self.pen_factors)
+        assert_allclose(res.to_numpy(), vif_ridge(self.x, self.pen_factors))
+
+    def test_constant(self):
+        xc = add_constant(self.x)
+        with pytest.raises(ValueError, match="constant columns"):
+            vif_ridge(xc, self.pen_factors)
+        res = vif_ridge(xc, self.pen_factors, has_constant="skip")
+        assert np.isnan(res[:, 0]).all()
+        assert_allclose(res[:, 1:], vif_ridge(self.x, self.pen_factors))
+
+    def test_singular(self):
+        x = np.column_stack((self.x, self.x[:, 0] + self.x[:, 1]))
+        pen_factors = [0, 1e-3, 0.1]
+        res = vif_ridge(x, pen_factors)
+        assert_equal(np.isinf(res[0]), [True, True, False, True])
+        assert np.isfinite(res[1:]).all()
+        # the penalization makes the variance finite and smaller
+        assert_array_less(res[2], res[1])
+
+    def test_invalid(self):
+        with pytest.raises(ValueError, match="non-negative"):
+            vif_ridge(self.x, [0.1, -0.1])
+        with pytest.raises(ValueError, match="non-negative"):
+            vif_ridge(self.x, [0.1, np.nan])
+        indefinite = np.array([[1.0, 2.0], [2.0, 1.0]])
+        with pytest.raises(ValueError, match="positive semi-definite"):
+            vif_ridge(indefinite, [0.1], is_moment=True)
+
+    def test_all_constant(self):
+        res = vif_ridge(np.ones((5, 2)), [0, 0.1], has_constant="skip")
+        assert res.shape == (2, 2)
+        assert np.isnan(res).all()
+
+
+class TestCollinearIndex:
+    @classmethod
+    def setup_class(cls):
+        cls.x = get_data(nobs=100, k_vars=4)
+
+    def test_not_collinear(self):
+        idx_collinear, idx_keep = collinear_index(self.x)
+        assert idx_collinear.shape == (0,)
+        assert_equal(idx_keep, np.arange(4))
+        assert idx_keep.dtype.kind == "i"
+
+    def test_sequential(self):
+        x = self.x
+        # x2 depends on x0 and x1, x3 depends on x0, x1 and x2.
+        xs = np.column_stack(
+            (x[:, 0], x[:, 1], x[:, 0] - x[:, 1], x[:, 2], x[:, 0] + x[:, 3])
+        )
+        idx_collinear, idx_keep = collinear_index(xs)
+        assert_equal(idx_collinear, [2])
+        assert_equal(idx_keep, [0, 1, 3, 4])
+        # A collinear column does not affect the columns after it
+        xs = np.column_stack((x, x[:, 2] + x[:, 3], x[:, 1] - x[:, 2] + 3 * x[:, 3]))
+        idx_collinear, idx_keep = collinear_index(xs)
+        assert_equal(idx_collinear, [4, 5])
+        # reversed order: x2 = (x2 + x3) - x3 and x1 are in the span of
+        # the preceding columns
+        idx_collinear, idx_keep = collinear_index(xs[:, ::-1])
+        assert_equal(idx_collinear, [3, 4])
+        assert_equal(idx_keep, [0, 1, 2, 5])
+
+    def test_constant_first(self):
+        xc = add_constant(self.x)
+        assert_equal(collinear_index(xc)[0], [])
+        # a full set of dummy variables is a constant
+        dummies = np.tile(np.eye(3), (34, 1))[:100]
+        xd = np.column_stack((np.ones(100), dummies, self.x))
+        idx_collinear, idx_keep = collinear_index(xd)
+        assert_equal(idx_collinear, [3])
+        assert_equal(idx_keep, [0, 1, 2, 4, 5, 6, 7])
+        # the columns are not demeaned, so there is no collinearity without
+        # the constant column
+        assert_equal(collinear_index(xd[:, 1:])[0], [])
+
+    def test_zero_column(self):
+        xs = np.column_stack((self.x[:, 0], np.zeros(100), self.x[:, 1]))
+        assert_equal(collinear_index(xs)[0], [1])
+        xs = np.column_stack((np.zeros(100), self.x[:, :2]))
+        assert_equal(collinear_index(xs)[0], [0])
+
+    def test_pandas(self):
+        df = pd.DataFrame(self.x, columns=list("abcd"))
+        df["e"] = df["a"] + df["b"]
+        idx_collinear, idx_keep = collinear_index(df)
+        assert isinstance(idx_collinear, pd.Index)
+        assert_equal(idx_collinear.to_numpy(), ["e"])
+        assert_equal(idx_keep.to_numpy(), list("abcd"))
+        # in a different order
+        df = df[["e", "a", "b", "c", "d"]]
+        idx_collinear, idx_keep = collinear_index(df)
+        assert_equal(idx_collinear.to_numpy(), ["b"])
+        assert_equal(idx_keep.to_numpy(), ["e", "a", "c", "d"])
+
+    def test_tol(self):
+        rng = np.random.default_rng(87245)
+        x = self.x
+        xs = np.column_stack((x, x[:, 1] + x[:, 2] + 1e-6 * rng.standard_normal(100)))
+        assert_equal(collinear_index(xs)[0], [])
+        assert_equal(collinear_index(xs, tol=1e-4)[0], [4])
+        assert_equal(collinear_index(xs, tol=1e-4)[1], [0, 1, 2, 3])
+
+    def test_scale(self):
+        # the relative tolerance does not depend on the scale of the columns
+        xs = np.column_stack((self.x[:, 0], 1e8 * self.x[:, 1], 1e-8 * self.x[:, 2]))
+        assert_equal(collinear_index(xs)[0], [])
+        xs = np.column_stack((xs, xs[:, 0] + 1e-8 * xs[:, 1]))
+        assert_equal(collinear_index(xs)[0], [3])
+
+    def test_more_columns_than_observations(self):
+        rng = np.random.default_rng(87245)
+        x = rng.standard_normal((5, 8))
+        idx_collinear, idx_keep = collinear_index(x)
+        assert_equal(idx_collinear, [5, 6, 7])
+        assert_equal(idx_keep, np.arange(5))
+
+    def test_float32_and_int(self):
+        xs = np.column_stack((self.x, self.x[:, 0] + self.x[:, 1]))
+        # integer valued data are exact in float32
+        xf = np.round(10 * xs[:, :2]).astype(np.float32)
+        xf = np.column_stack((xf, xf[:, 0] - 2 * xf[:, 1]))
+        assert_equal(collinear_index(xf)[0], [2])
+        # the precision of float32 limits the collinearity of other data
+        assert_equal(collinear_index(xs.astype(np.float32))[0], [])
+        xi = np.array([[1, 0, 1], [0, 1, 1], [1, 1, 2], [2, 1, 3]])
+        assert_equal(collinear_index(xi)[0], [2])
+
+    def test_invalid(self):
+        x = self.x.copy()
+        x[0, 0] = np.nan
+        with pytest.raises(ValueError, match="missing or infinite"):
+            collinear_index(x)
+
+    @pytest.mark.parametrize(
+        "design, expected",
+        [("alias_sum", res_r.alias_sum), ("alias_dummies", res_r.alias_dummies)],
+    )
+    def test_r_alias(self, longley_exog, design, expected):
+        # The aliased columns of the lm in R
+        const = np.ones(len(longley_exog))
+        gnp = longley_exog["GNP"].to_numpy()
+        unemp = longley_exog["UNEMP"].to_numpy()
+        armed = longley_exog["ARMED"].to_numpy()
+        if design == "alias_sum":
+            pop = longley_exog["POP"].to_numpy()
+            x = np.column_stack((const, gnp, unemp, gnp + unemp, armed, pop))
+        else:
+            group = longley_exog["YEAR"].to_numpy() % 4
+            dummies = group[:, None] == np.arange(4)
+            x = np.column_stack((const, gnp, dummies, armed))
+        idx_collinear, _ = collinear_index(x)
+        assert_equal(idx_collinear, expected)

@@ -1,5 +1,8 @@
-# -*- coding: utf-8 -*-
-""" Measures and Diagnostics for Multicollinearity in data
+"""
+Measures and diagnostics for multicollinearity of explanatory variables
+
+The functions work on a data matrix of explanatory variables or on a
+covariance or correlation matrix.
 
 Created on Tue Apr 28 15:09:45 2015
 
@@ -11,567 +14,452 @@ import numpy as np
 import pandas as pd
 
 from statsmodels.stats.moment_helpers import cov2corr
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.validation import array_like, string_like
+
+_EPS = np.finfo(float).eps
 
 
-class MultiCollinearityBase:
+def _corr_nonconstant(data, is_moment, has_constant):
     """
-    Base class for multicollinearity measures
-    """
-
-    def __init__(
-        self, data, moment_matrix=None, standardize=True, ridge_factor=1e-14
-    ):
-
-        if isinstance(data, pd.DataFrame):
-            self.columns = data.columns
-        else:
-            self.columns = None
-        self.ridge_factor = ridge_factor
-
-        # TODO: use pandas corrcoef below to have nan handling ?
-        if moment_matrix is not None:
-            xm = np.asarray(moment_matrix)
-            if standardize:
-                # check if we have correlation matrix,
-                # we cannot demean but we can scale
-                # (We could demean if const is included in uncentred moment
-                #  matrix)
-                if (np.diag(xm) != 1).any():
-                    xstd = np.sqrt(np.diag(xm))
-                    xm = xm / np.outer(xstd, xstd)
-
-            self._init_moment(xm)
-        else:
-            x = np.asarray(data)
-            if standardize:
-                if np.any(np.ptp(x, axis=0) == 0):
-                    # TODO: change this? detect from xcorr, drop constant ?
-                    raise ValueError(
-                        "If standardize is true, then data should"
-                        " not include a constant"
-                    )
-                x = (x - x.mean(0)) / x.std(0)
-
-            self._init_data(x)
-
-    def _init_moment(self, data):
-        raise NotImplementedError("Subclasses must implement")
-
-    def _init_data(self, data):
-        raise NotImplementedError("Subclasses must implement")
-
-
-class MultiCollinearity(MultiCollinearityBase):
-    """
-    Multicollinearity measures for an array of variables
-
-    This treats all variables in a symmetric way, analysing each variable
-    compared to all others.
-
-    Parameters
-    ----------
-    data : {array_like, None}
-        data with observations in rows and variables in columns. This is
-        ignored if moment_matrix is not None.
-    moment_matrix : {None, ndarray}
-        Optional moment or correlation matrix to be used for the analysis.
-        If it is provided then data is ignored. Default is None.
-    standardize : bool, default True
-        If true and data are provided, then the data will be standardized to
-        mean zero and standard deviation equal to one, which is equivalent to
-        using the correlation matrix.
-        Inflation factor can be calculated for data that is scaled but not
-        demeaned. See Notes.
-
-    Notes
-    -----
-    The default treatment assumes that there is no constant in the data array
-    or in the moment matrix. However, VIF is defined under the assumption of a
-    constant in the corresponding regression. Use `standardize=False` if
-    demeaning is not desired.
-
-    The only case I know so far is if we have a categorical factor in the
-    design matrix but no constant, that is the constant is implicit in the
-    full dummy set. Using VIF with demeaned data will show that the dummy set
-    is perfectly collinear (up to floating point precision).
-
-    This class does not return pandas object if data is a pandas object.
-
-    **Singular and near-singular cases**
-
-    The computations are based on the matrix inverse of the moment matrix.
-    This might fail or be numerically unstable in singular or near singular
-    cases. `vif` uses a ridge_factor to make the moment matrix invertible
-    which converts infinite vif to numerically very large but finite vif.
-
-    Partial correlation, `corr_partial` is not well defined for some singular
-    cases and might return nans or raise an exception in the matrix inverse.
-
-    **Status**
-    Good test coverage, maybe small future changes in API.
-    The explicit handling of singular cases and of cases with implicit
-    constant is incomplete and the behavior in those cases will likely change.
-
-    See Also
-    --------
-    statsmodels.stats.multicollinearity.MultiCollinearitySequential
-        Sequential treatment of multicollinearity diagnostics
-
-    .. todo:: Consider separate demean option form standardize
-    """
-
-    def __init__(
-        self, data, moment_matrix=None, standardize=True, ridge_factor=1e-14
-    ):
-        super(MultiCollinearity, self).__init__(
-            data,
-            moment_matrix=moment_matrix,
-            standardize=standardize,
-            ridge_factor=ridge_factor,
-        )
-
-        self.k_vars = self.mom.shape[1]
-
-    def _init_moment(self, xm):
-        self.mom = xm
-
-    def _init_data(self, x):
-        xm = x.T @ x / x.shape[0]
-        self.mom = xm
-
-    @cache_readonly
-    def mom_inv(self):
-        """
-        Inverse of the moment matrix
-
-        Cached, behavior in (near) singular cases comes from numpy.linalg.inv
-        """
-        return np.linalg.inv(self.mom)
-
-    def get_vif(self, ridge_factor=None):
-        """
-        Variance inflation factor based on moment or correlation matrix.
-
-        Parameters
-        ----------
-        ridge_factor : float
-            A ridge factor is added to the moment matrix before inverting it.
-            This can be used to avoid problems with singular moment matrices.
-            By the default the ridge factor of the instance is used, but can
-            be overridden here.
-
-        Returns
-        -------
-        ndarray
-            Variance inflation factor
-        """
-        if ridge_factor is None:
-            ridge_factor = self.ridge_factor
-
-        if ridge_factor == 0:
-            mmi = self.mom_inv
-        else:
-            ridge = self.ridge_factor * np.eye(self.k_vars)
-            mmi = np.linalg.inv(self.mom + ridge)
-
-        # np.diag returns read only array, need copy
-        vif_ = np.diag(mmi).copy()
-        return vif_
-
-    @cache_readonly
-    def vif(self):
-        """
-        Variance inflation factor based on moment or correlation matrix.
-
-        cached attribute, uses the ridge_factor in the attribute
-        """
-        vif_ = self.get_vif()
-        # It is possible that singular matrix has slightly negative eigenvalues
-        # and large negative instead of positive vif
-        mask = vif_ < 1e-13
-        vif_[mask] = np.inf
-        return vif_
-
-    @property
-    def tss(self):
-        """
-        Total mean sum of squares in partial regression
-
-        Notes
-        -----
-        Ones for standardized data
-        """
-        return np.diag(self.mom)
-
-    @property
-    def rss(self):
-        """
-        Residual mean sum of squares in partial regression
-
-        This is the residual mean squared error without degrees of freedom
-        correction for the partial regression when standardized data are used.
-        """
-        return 1 / np.diag(self.mom_inv)
-
-    @property
-    def rsquared_partial(self):
-        """
-        Partial correlation of one variable with all others
-
-        This corresponds to :math:`R^2` in a linear regression of one
-        variable on all others, including a constant if standardize is
-        true, i.e., data was demeaned.
-        """
-        # direct computation, but vif is cached so we use that
-        # r2p = 1 - self.rss / self.tss
-        r2p = 1.0 - 1.0 / self.vif
-        return r2p
-
-    @property
-    def corr_partial(self):
-        """
-        Partial correlation matrix
-
-        Pairwise partial correlation of two variables conditional on remaining
-        variables.
-
-        Warning: This uses the matrix inverse of the moment matrix, which can
-        produce nans or raise exceptions in singular or near-singular cases.
-        """
-        c = cov2corr(self.mom_inv)
-        # only off diagonal elements should be negated
-        np.fill_diagonal(c, -np.diag(c))
-        return -c
-
-    @cache_readonly
-    def eigenvalues(self):
-        """
-        Eigenvalue of the correlation matrix
-
-        Notes
-        -----
-        Small negative eigenvalues indicating a singular matrix are set
-        to zero.
-        """
-        # TODO: Determine appropriate scale to use based on data
-        evals = np.sort(np.linalg.eigvalsh(self.mom))[::-1]
-        # set small negative eigenvalues to zero
-        mask = (evals > -1e-14) & (evals < 0)
-        evals[mask] = 0
-        return evals
-
-    @cache_readonly
-    def condition_number(self):
-        """
-        Normalized condition number of data matrix.
-
-        Calculated as ratio of largest to smallest eigenvalue of the
-        correlation matrix.
-        """
-        eigvals = self.eigenvalues
-        return np.sqrt(eigvals[0] / eigvals[-1])
-
-
-class MultiCollinearitySequential(MultiCollinearity):
-    """
-    Multicollinearity measures for ordered sequence of variables
-
-    This takes the order of columns as relevant and calculates statistics for
-    a column based on information in all previous columns.
+    Correlation matrix of the columns of data that are not constant
 
     Parameters
     ----------
     data : array_like
-        data with observations in rows and variables in columns. This is
-        ignored if moment_matrix is not None. Data can be of smaller than full
-        rank.
-    moment_matrix : None or ndarray
-        Optional moment or correlation matrix to be used for the analysis.
-        If it is provided then data is ignored.
-        The moment_matrix needs to be nonsingular because Cholesky
-        decomposition is used.
-    standardize : bool, default True
-        If true and data are provided, then the data will be standardized to
-        mean zero and standard deviation equal to one, which is equivalent to
-        using the correlation matrix. Inflation factor can be calculated
-        for data that is scaled but not demeaned.
-
-    Notes
-    -----\n%(notes)
-
-    See Also
-    --------
-    statsmodels.stats.multicollinearity.MultiCollinear
-        Symmetric treatment of multicollinearity diagnostics
-    """
-
-    def __init__(self, data, moment_matrix=None, standardize=True):
-        super(MultiCollinearitySequential, self).__init__(
-            data, moment_matrix=moment_matrix, standardize=standardize
-        )
-
-        self.k_vars = self.triu.shape[1]  # innocent override of super
-        self.triu2 = self.triu ** 2
-
-    def _init_moment(self, xm):
-        self.mom = xm
-        self.triu = np.linalg.cholesky(xm).T
-
-    def _init_data(self, x):
-        self.triu = triu = np.linalg.qr(x, mode="r")
-        self.mom = triu.T.dot(triu)
-
-    @cache_readonly
-    def vif(self):
-        """Variance inflation factor."""
-        return self.tss / self.rss
-
-    @property
-    def tss(self):
-        """Total mean sum of squares in sequence of regression"""
-        return self.triu2.sum(0)
-
-    @property
-    def rss(self):
-        """Residual mean sum of squares in sequence of regression"""
-        return np.diag(self.triu2)
-
-    @property
-    def rsquared_partial(self):
-        """
-        Partial correlation of one variable with all previous variables
-
-        This corresponds to R^2 in a linear regression of one variable on all
-        other variables that are before in the sequence, including a constant
-        if standarize is true.
-        """
-        return 1 - self.rss / self.tss
-
-
-def vif(data, standardize=True, moment_matrix=None, ridge_factor=1e-14):
-    """
-    Variance inflation factor
-
-    The standard interpretation requires standardize is true, or that the data
-    is already standardized or that a given moment_matrix is a correlation
-    matrix.
-
-    Parameters
-    ----------
-    data : array_like
-        data with observations in rows and variables in columns. This is
-        ignored if moment_matrix is not None. Data can be of smaller than full
-        rank.
-    moment_matrix : None or ndarray
-        Optional moment or correlation matrix to be used for the analysis.
-        If it is providedthen data is ignored.
-        The moment_matrix needs to be nonsingular for the matrix inverse. A
-        small nonzero ridge factor can be used to get vif for singular
-        matrices. vif for collinear variables will be very large instead of
-        infinite.
-    standardize : bool, default True
-        If true and data are provided, then the data will be standardized to
-        mean zero and standard deviation equal to one, which is equivalent to
-        using the correlation matrix. TODO: This might be replaced by separate
-        demean option. Variance inflation factor can be calculated for data
-        that is scaled but not demeaned. See Notes in class MultiCollinear
-
-    Return
-    ------
-    vif : {ndarray, Series}
-        Variance inflation factor. This will be a pandas Series if the data
-        is a pandas DataFrame.
-    """
-
-    mc = MultiCollinearity(
-        data,
-        moment_matrix=moment_matrix,
-        standardize=standardize,
-        ridge_factor=ridge_factor,
-    )
-    vif_ = mc.vif
-    if isinstance(data, pd.DataFrame):
-        vif_ = pd.Series(vif_, index=data.columns)
-    return vif_
-
-
-def vif_selection(data, threshold=10, standardize=True, moment_matrix=None):
-    """
-    Recursively drop variables if VIF is above threshold
-
-    default threshold is just a number, maybe don't use a default
-
-    Notes
-    -----
-    This avoids a loop to calculate the vif at a given set of variables, but
-    has one matrix inverse at each set.
-
-    TODO: replace inv by sweep algorithm,
-    question: how do we start sweep in backwards selection?
-
-    Note: This function tries to remove the last variable in case of ties in
-    vif. However, which variable of those that have theoretically equal vif
-    may be random because of floating point imprecision.
-
-    Parameters
-    ----------
-    data : array_like
-        data with observations in rows and variables in columns. This is
-        ignored if moment_matrix is not None. Data can be of smaller than full
-        rank.
-    moment_matrix : None or ndarray
-        Optional moment or correlation matrix to be used for the analysis.
-        If it is provided then data is ignored.
-    standardize : bool, default True
-        If true and data are provided, then the data will be standardized to
-        mean zero and standard deviation equal to one, which is equivalent to
-        using the correlation matrix.
-
-        TODO: This might be replaced by separate demean option. Variance
-        inflation factor can be calculated for data that is scaled but not
-        demeaned.
-        See Notes in class MultiCollinear
-
-    Return
-    ------
-    keep : ndarray or DataFrame columns
-        Indices or column names that are still included after dropping
-        variables
-    results : None
-        currently not used, place holder for additional results
-
-    """
-
-    # TODO: use pandas corrcoef below to have nan handling ?
-    if moment_matrix is not None:
-        xm = np.array(moment_matrix, copy=True)
-    else:
-        x = np.asarray(data)
-        if standardize:
-            if np.any(np.ptp(x, axis=0) == 0):
-                # TODO: change this? detect from xcorr, drop constant ?
-                raise ValueError(
-                    "If standardize is true, then data should "
-                    + "not include a constant"
-                )
-            xm = np.corrcoef(x, rowvar=0)
-        else:
-            xm = np.dot(x.T, x)
-
-    k_vars = xm.shape[1]
-    # set up for recursive, itearative dropping of variables
-    # we reverse data sequence to drop later variables in case of ties for max
-    xidx = list(range(k_vars))[::-1]
-    xc_remain = xm[::-1, ::-1]
-    dropped = []
-    for _ in range(k_vars):
-        vif = np.abs(np.diag(np.linalg.inv(xc_remain)))
-        max_idx = np.argmax(vif)
-        # print('dropping', max_idx, vif[max_idx], xidx[max_idx])
-        if vif[max_idx] <= threshold:
-            break
-        else:
-            # keep = np.ones(len(xidx), bool)
-            # keep[max_idx] = False
-            keep = list(range(len(xidx)))
-            keep.pop(max_idx)
-            keep = np.asarray(keep)
-            dropped.append(xidx.pop(max_idx))
-            xc_remain = xc_remain[keep[:, None], keep]
-
-    # None in return is placeholder for more results
-    if isinstance(data, pd.DataFrame):
-        return list(data.columns[xidx[::-1]]), None
-    return xidx[::-1], None
-
-
-def vif_ridge(corr_x, pen_factors, is_corr=True):
-    """
-    Variance inflation factor for Ridge regression
-
-    Assumes penalization is on standardized variables
-    data should not include a constant
-
-    Parameters
-    ----------
-    corr_x : array_like
-        correlation matrix if is_corr=True or original data if is_corr is False
-    pen_factors : iterable
-        iterable of Ridge penalization factors
-    is_corr : bool
-        Boolean to indicate how corr_x is interpreted, see corr_x
+        Data matrix or, if `is_moment` is True, covariance or correlation
+        matrix.
+    is_moment : bool
+        Indicates whether `data` is a moment matrix.
+    has_constant : {"raise", "skip"}
+        How to treat constant columns.
 
     Returns
     -------
-    vif : ndarray
-        variance inflation factors for parameters in columns and ridge
-        penalization factors in rows
-
-    Notes
-    -----
-    Could be optimized for repeated calculations for different pen_factors.
+    corr : ndarray
+        Correlation matrix of the columns that are not constant.
+    is_const : ndarray of bool
+        Indicator for the constant columns of `data`, one element for each
+        column.
     """
-    corr_x = np.asarray(corr_x)
-    if not is_corr:
-        corr = np.corrcoef(corr_x, rowvar=0, bias=True)
+    has_constant = string_like(has_constant, "has_constant", options=("raise", "skip"))
+    x = array_like(data, "data", ndim=2)
+    if not np.isfinite(x).all():
+        raise ValueError("data must not contain missing or infinite values")
+
+    if is_moment:
+        if x.shape[0] != x.shape[1]:
+            raise ValueError("a moment matrix must be square")
+        if np.abs(x - x.T).max() > 1e-8 * np.abs(x).max():
+            raise ValueError("a moment matrix must be symmetric")
+        is_const = np.diag(x) == 0
+        if (np.diag(x) < 0).any():
+            raise ValueError(
+                "a moment matrix must not have a negative diagonal element"
+            )
     else:
-        corr = corr_x
+        is_const = np.ptp(x, axis=0) == 0
 
-    eye = np.eye(corr.shape[1])
-    res = []
-    for k in pen_factors:
-        minv = np.linalg.inv(corr + k * eye)
-        vif = minv.dot(corr).dot(minv)
-        res.append(np.diag(vif))
-    return np.asarray(res)
+    if is_const.any() and has_constant == "raise":
+        raise ValueError(
+            "data has constant columns at positions "
+            f"{np.nonzero(is_const)[0].tolist()}. VIF is defined for a "
+            "regression that includes a constant, remove the constant "
+            "columns or use has_constant='skip'."
+        )
+
+    keep = ~is_const
+    if is_moment:
+        corr = cov2corr(x[np.ix_(keep, keep)])
+    else:
+        z = x[:, keep] - x[:, keep].mean(0)
+        z /= np.sqrt((z**2).mean(0))
+        corr = z.T @ z / z.shape[0]
+    return corr, is_const
 
 
-def collinear_index(data, atol=1e-14, rtol=1e-13):
+def _eigh_corr(corr):
     """
-    Find sequential index of perfectly collinear columns
+    Eigenvalue decomposition of a correlation matrix
 
-    This function uses QR decomposition to detect columns that are perfectly
-    collinear with earlier columns.
+    Raises a ValueError if the matrix is not positive semi-definite.
+    """
+    if corr.shape[0] == 0:
+        return np.empty(0), np.empty((0, 0))
+    evals, evecs = np.linalg.eigh(corr)
+    if evals[0] < -np.sqrt(_EPS):
+        raise ValueError("the moment matrix is not positive semi-definite")
+    return evals, evecs
 
-    Warning: This function does not include a constant, data is treated as a
-    design matrix. If a constant is part of the design, then it is recommended
-    to put it in the first column with for example `add_constant`.
+
+def _inv_diag(evals, evecs):
+    """
+    Diagonal of the inverse of a correlation matrix
+
+    Variables that are exactly collinear with other variables have an
+    infinite value, as is the case if the matrix is numerically singular.
 
     Parameters
     ----------
-    data : array_like, 2-D
-        data is assumed to have observations in rows and variables in columns.
-    atol, rtol : float
-        Absolute and relative tolerance for the residual sum of squares of the
-        sequential regression. `rtol` is relative to the variance of the
-        variable.
+    evals : ndarray
+        Eigenvalues in ascending order.
+    evecs : ndarray
+        Eigenvectors in the columns.
+    """
+    k_vars = evals.shape[0]
+    if k_vars < 2:
+        return np.ones(k_vars)
+
+    # numerical rank, using the same type of tolerance as matrix_rank
+    singular = evals <= evals[-1] * k_vars * _EPS
+    evecs2 = evecs**2
+    res = (evecs2[:, ~singular] / evals[~singular]).sum(1)
+    if singular.any():
+        # A variable is collinear with the others if it has a nonzero
+        # weight in the null space. All other variables have a finite VIF
+        # that is given by the pseudo inverse. The weight of the other
+        # variables in the numerical null space is not exactly zero. It is
+        # of the order of the squared relative error of the eigenvectors,
+        # plus a term that is proportional to the size of the numerically
+        # zero eigenvalues, which are not exactly zero.
+        gap = evals[~singular].min()
+        spill = np.abs(evals[singular]).max()
+        threshold = (10 * _EPS * evals[-1] / gap) ** 2 + spill / gap
+        res[evecs2[:, singular].sum(1) > threshold] = np.inf
+    # VIF is larger than one by definition, remove floating point noise
+    return np.maximum(res, 1.0)
+
+
+def vif(data, *, is_moment=False, has_constant="raise"):
+    r"""
+    Variance inflation factors of all variables
+
+    The variance inflation factor, VIF, of a variable is :math:`1 / (1 -
+    R^2)`, where :math:`R^2` is the coefficient of determination of the
+    regression of the variable on all other variables and a constant. It
+    measures by how much the variance of the estimate of the coefficient of
+    the variable is inflated by the correlation with the other variables.
+
+    Parameters
+    ----------
+    data : array_like
+        The explanatory variables with observations in rows and variables in
+        columns. The data should not include a constant, see `has_constant`.
+        If `is_moment` is True, then this is a square covariance or
+        correlation matrix of the variables.
+    is_moment : bool, optional
+        If True, then `data` is a symmetric, positive semi-definite moment
+        matrix of the variables instead of the observations. Only the
+        correlations are used, so the matrix can be a covariance or a
+        correlation matrix. The default is False.
+    has_constant : {"raise", "skip"}, optional
+        How to treat constant columns, which have zero variance. If "raise",
+        the default, then a ValueError is raised. If "skip", then the
+        constant columns are ignored and the corresponding elements of the
+        result are NaN. The other variables are not affected because the
+        regressions always include a constant.
 
     Returns
     -------
-    idx_collinear : array of int or string
-        Index of columns that are collinear with preceding columns.
-        If data has a `columns` attribute, then the names of columns are
-        returned.
-    idx_keep : array of int or string
-        Index of columns that are not collinear with preceding columns.
-        If data has a `columns` attribute, then the names of columns are
-        returned.
+    ndarray or Series
+        The variance inflation factors, one for each column of `data`. This
+        is a pandas Series with the column labels as index if `data` is a
+        pandas DataFrame. The VIF of a variable that is a linear combination
+        of other variables is infinite.
+
+    Raises
+    ------
+    ValueError
+        If `data` contains missing or infinite values, if `data` has
+        constant columns and `has_constant` is "raise", or if `is_moment` is
+        True and `data` is not a valid moment matrix.
 
     See Also
     --------
-    MutliCollinearitySequential : class with more sequential results
-    """
-    x = np.asarray(data)
-    tol = atol + rtol * x.var(0)
-    r = np.linalg.qr(x, mode="r")
-    mask = np.abs(r.diagonal()) < np.sqrt(tol)
-    idx_collinear = np.where(mask)[0]
-    idx_keep = np.where(~mask)[0]
+    statsmodels.stats.outliers_influence.variance_inflation_factor
+        VIF of a single variable, estimated by OLS.
+    vif_ridge
+        VIF of the parameter estimates of ridge regression.
+    collinear_index
+        Columns that are perfectly collinear with preceding columns.
 
+    Notes
+    -----
+    The VIF of all variables are the diagonal elements of the inverse of the
+    correlation matrix of the variables. This needs one matrix decomposition
+    instead of one regression for each variable, which is much faster than
+    calling
+    :func:`~statsmodels.stats.outliers_influence.variance_inflation_factor`
+    for each column. Up to numerical precision, the results are the same as
+    those of that function with its default ``standardize=True``. The latter
+    limits the VIF to :math:`10^{15}` and warns if the design matrix is
+    ill-conditioned, while this function returns ``inf`` for variables that
+    are collinear with other variables.
+
+    **Constants**
+
+    The VIF requires a constant in the regressions. The variables are
+    demeaned, which is equivalent to including a constant, and the constant
+    column of a design matrix, for example ``res.model.exog``, has to be
+    removed or skipped. A set of dummy variables that sums to one is an
+    implicit constant. If the design matrix does not include another
+    constant, then it has to be dropped, because the dummy variables are
+    perfectly collinear after demeaning and their VIF is infinite.
+
+    If `is_moment` is True and the moment matrix is not centered, for
+    example the cross-product matrix ``x.T @ x``, then the VIF are those of
+    regressions without a constant.
+
+    **Singular and nearly singular data**
+
+    The computation uses the eigenvalues of the correlation matrix. The VIF
+    is infinite for variables that are numerically perfectly collinear with
+    other variables, i.e. if the correlation matrix is singular up to
+    floating point precision. A variable that is not part of such a linear
+    relationship has a finite VIF. VIFs above about :math:`10^{12}` should be
+    read as indicating that the variable is collinear because they are
+    affected by floating point noise. Floating point precision of the data
+    matters: a linear combination of single precision (float32) variables
+    is collinear only up to the precision of the single precision data, and
+    is not detected as perfectly collinear.
+
+    References
+    ----------
+    .. [1] Belsley, D. A., E. Kuh, and R. E. Welsch. 1980. Regression
+       Diagnostics: Identifying Influential Data and Sources of
+       Collinearity. Wiley.
+
+    Examples
+    --------
+    The VIF of the explanatory variables of the Longley data, which are
+    highly collinear.
+
+    >>> import statsmodels.api as sm
+    >>> from statsmodels.stats.api import vif
+    >>> exog = sm.datasets.longley.load_pandas().exog
+    >>> vif(exog).round(1)
+    GNPDEFL     135.5
+    GNP        1788.5
+    UNEMP        33.6
+    ARMED         3.6
+    POP         399.2
+    YEAR        759.0
+    dtype: float64
+
+    The design matrix of a model that is estimated with a formula has a
+    constant, which is skipped.
+
+    >>> import statsmodels.formula.api as smf
+    >>> mod = smf.ols("TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR",
+    ...               data=sm.datasets.longley.load_pandas().data)
+    >>> vif(mod.data.orig_exog, has_constant="skip").round(1)
+    Intercept       NaN
+    GNPDEFL       135.5
+    GNP          1788.5
+    UNEMP          33.6
+    ARMED           3.6
+    POP           399.2
+    YEAR          759.0
+    dtype: float64
+    """
+    corr, is_const = _corr_nonconstant(data, is_moment, has_constant)
+    res = np.full(is_const.shape[0], np.nan)
+    res[~is_const] = _inv_diag(*_eigh_corr(corr))
     if isinstance(data, pd.DataFrame):
-        names = data.columns
-        collinear = [names[idx] for idx in idx_collinear]
-        keep = [names[idx] for idx in idx_keep]
-        return collinear, keep
+        res = pd.Series(res, index=data.columns)
+    return res
+
+
+def vif_ridge(data, pen_factors, *, is_moment=False, has_constant="raise"):
+    r"""
+    Variance inflation factors for ridge regression
+
+    The penalization is on the standardized variables, so the VIF depend on
+    the correlation matrix of the variables. The ridge factors are added to
+    the diagonal of the correlation matrix.
+
+    Parameters
+    ----------
+    data : array_like
+        The explanatory variables with observations in rows and variables in
+        columns. The data should not include a constant, see `has_constant`.
+        If `is_moment` is True, then this is a square covariance or
+        correlation matrix of the variables.
+    pen_factors : array_like
+        One-dimensional array of non-negative ridge penalization factors.
+    is_moment : bool, optional
+        If True, then `data` is a symmetric, positive semi-definite moment
+        matrix of the variables instead of the observations. The default is
+        False.
+    has_constant : {"raise", "skip"}, optional
+        How to treat constant columns, which have zero variance. If "raise",
+        the default, then a ValueError is raised. If "skip", then the
+        constant columns are ignored and the corresponding elements of the
+        result are NaN.
+
+    Returns
+    -------
+    ndarray or DataFrame
+        The variance inflation factors with the penalization factors in rows
+        and the variables in columns. This is a pandas DataFrame with the
+        penalization factors as index and the column labels of `data` as
+        columns if `data` is a pandas DataFrame.
+
+    Raises
+    ------
+    ValueError
+        If `data` contains missing or infinite values, if `data` has
+        constant columns and `has_constant` is "raise", if a penalization
+        factor is negative, or if `is_moment` is True and `data` is not a
+        valid moment matrix.
+
+    See Also
+    --------
+    vif : VIF of regression without penalization.
+
+    Notes
+    -----
+    With the correlation matrix :math:`R` and the penalization factor
+    :math:`k`, the VIF of ridge regression are the diagonal elements of
+    :math:`(R + k I)^{-1} R (R + k I)^{-1}`. The result for :math:`k=0` is
+    the same as that of :func:`vif`. The correlation matrix is singular if
+    some variables are exactly collinear, in which case the penalization
+    factors have to be positive. A factor of zero is handled as in
+    :func:`vif`.
+
+    All penalization factors are computed with one eigenvalue decomposition
+    of the correlation matrix.
+
+    References
+    ----------
+    .. [1] Marquardt, D. W. 1970. Generalized inverses, ridge regression,
+       biased linear estimation, and nonlinear estimation. Technometrics
+       12 (3): 591-612.
+
+    Examples
+    --------
+    The ridge penalization removes most of the collinearity of the Longley
+    data. The row with a penalization factor of zero contains the VIF
+    without penalization.
+
+    >>> import statsmodels.api as sm
+    >>> from statsmodels.stats.api import vif_ridge
+    >>> exog = sm.datasets.longley.load_pandas().exog
+    >>> vif_ridge(exog, [0, 0.01, 0.1]).round(1)
+          GNPDEFL     GNP  UNEMP  ARMED    POP   YEAR
+    0.00    135.5  1788.5   33.6    3.6  399.2  759.0
+    0.01     17.2     3.5    2.7    2.1   13.8   10.0
+    0.10      0.8     0.3    1.5    1.2    0.6    0.2
+    """
+    corr, is_const = _corr_nonconstant(data, is_moment, has_constant)
+    pen = array_like(pen_factors, "pen_factors", ndim=1)
+    if not np.isfinite(pen).all() or (pen < 0).any():
+        raise ValueError("pen_factors must be finite and non-negative")
+
+    evals, evecs = _eigh_corr(corr)
+    evals_pos = np.maximum(evals, 0)
+    # diagonal of V diag(w / (w + k)^2) V' for all penalization factors k
+    with np.errstate(divide="ignore", invalid="ignore"):
+        scale = evals_pos[:, None] / (evals_pos[:, None] + pen) ** 2
+    vif_pen = ((evecs**2) @ scale).T
+    zero = pen == 0
+    if zero.any():
+        vif_pen[zero] = _inv_diag(evals, evecs)
+
+    res = np.full((pen.shape[0], is_const.shape[0]), np.nan)
+    res[:, ~is_const] = vif_pen
+    if isinstance(data, pd.DataFrame):
+        res = pd.DataFrame(res, index=pen, columns=data.columns)
+    return res
+
+
+def collinear_index(data, tol=None):
+    """
+    Find the columns that are perfectly collinear with preceding columns
+
+    The columns are processed in sequence. A column is collinear if it is in
+    the space spanned by the preceding columns that are not collinear.
+
+    Parameters
+    ----------
+    data : array_like
+        The design matrix with observations in rows and variables in
+        columns. The matrix is not demeaned and the columns are not
+        standardized. If a constant is part of the design, then it should be
+        in the first column, for example by using
+        :func:`~statsmodels.tools.tools.add_constant`.
+    tol : float, optional
+        A column is collinear if the norm of its residuals in the regression
+        on the preceding columns is less than or equal to `tol` times the
+        norm of the column. The default is ``max(nobs, k_vars)`` times the
+        machine epsilon, which is the default of
+        :func:`numpy.linalg.matrix_rank`.
+
+    Returns
+    -------
+    idx_collinear : ndarray or Index
+        Position of the columns that are collinear with preceding columns.
+        This is an Index with the column labels if `data` is a pandas
+        DataFrame.
+    idx_keep : ndarray or Index
+        Position of the columns that are not collinear with preceding
+        columns. This is an Index with the column labels if `data` is a
+        pandas DataFrame.
+
+    See Also
+    --------
+    vif : VIF for all columns, which is infinite for collinear columns.
+
+    Notes
+    -----
+    Removing the collinear columns, i.e. selecting `idx_keep`, gives a
+    design matrix of full column rank. Which of the columns that are part of
+    a collinear relationship is flagged depends on the order of the columns,
+    only the last column of each relationship is flagged.
+
+    The residuals are computed with Gram-Schmidt orthogonalization of the
+    columns with reorthogonalization. A column that is flagged does not
+    contribute to the orthogonal basis for the columns that follow it.
+
+    Examples
+    --------
+    A constant and a full set of dummy variables are collinear.
+
+    >>> import numpy as np
+    >>> from statsmodels.stats.api import collinear_index
+    >>> dummies = np.tile(np.eye(3), (4, 1))
+    >>> x = np.column_stack((np.ones(12), dummies))
+    >>> idx_collinear, idx_keep = collinear_index(x)
+    >>> idx_collinear
+    array([3])
+    >>> idx_keep
+    array([0, 1, 2])
+    """
+    x = array_like(data, "data", ndim=2)
+    if not np.isfinite(x).all():
+        raise ValueError("data must not contain missing or infinite values")
+    nobs, k_vars = x.shape
+    if tol is None:
+        tol = max(nobs, k_vars) * _EPS
+
+    norm = np.linalg.norm(x, axis=0)
+    basis = np.empty((nobs, k_vars))
+    n_basis = 0
+    is_collinear = np.zeros(k_vars, dtype=bool)
+    for j in range(k_vars):
+        resid = x[:, j]
+        for _ in range(2):
+            # two passes of classical Gram-Schmidt for orthogonality
+            b = basis[:, :n_basis]
+            resid = resid - b @ (b.T @ resid)
+        resid_norm = np.linalg.norm(resid)
+        if resid_norm <= tol * norm[j]:
+            is_collinear[j] = True
+        else:
+            basis[:, n_basis] = resid / resid_norm
+            n_basis += 1
+
+    idx_collinear = np.nonzero(is_collinear)[0]
+    idx_keep = np.nonzero(~is_collinear)[0]
+    if isinstance(data, pd.DataFrame):
+        return data.columns[idx_collinear], data.columns[idx_keep]
     return idx_collinear, idx_keep
