@@ -12,7 +12,7 @@ Author: Josef Perktold
 from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
 from statsmodels.compat.python import PYTHON_IMPL_WASM
-from statsmodels.compat.scipy import SP_LT_110
+from statsmodels.compat.scipy import SP_LT_115
 
 import copy
 import warnings
@@ -33,8 +33,8 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning, HypothesisTestWa
 
 # The noncentral t distribution of SciPy on WASM is accurate to about 1e-6
 # (relative), which is far from the 1e-12 of the other platforms
-NCT_RTOL = 1e-5 if (PYTHON_IMPL_WASM or SP_LT_110) else 1e-7
-POWER_RTOL = 1e-6 if (PYTHON_IMPL_WASM or SP_LT_110) else 1e-9
+NCT_RTOL = 1e-5 if (PYTHON_IMPL_WASM or SP_LT_115) else 1e-7
+POWER_RTOL = 1e-6 if (PYTHON_IMPL_WASM or SP_LT_115) else 1e-9
 
 try:
     import matplotlib.pyplot as plt
@@ -1615,7 +1615,7 @@ def test_nct_sf_upper_tail_relative_accuracy():
     # chi-squared density of Phi(nc - x * sqrt(v / df)); 1 - cdf loses all but
     # about 6 digits here
     nc = 0.2 * np.sqrt(30)
-    atol = 1e-10 if PYTHON_IMPL_WASM or SP_LT_110 else 0
+    atol = 1e-10 if PYTHON_IMPL_WASM or SP_LT_115 else 0
     assert_allclose(
         smp.nct_sf(12.0, 29, nc), 7.6017385833974256e-11, rtol=1e-10, atol=atol
     )
