@@ -72,6 +72,9 @@ jobs:
         while true; do
           echo "[monitor] $(date -u +%H:%M:%S) $(free -m | awk 'NR==2{printf "used=%sMB avail=%sMB", $3, $7} NR==3{printf " swap=%sMB", $3}') load=$(cut -d' ' -f1-3 /proc/loadavg)"
           ps -eo rss=,pid=,args= --sort=-rss | head -3 | cut -c1-110 | sed 's/^/[monitor]   /'
+          # multiprocessing workers: futex_do_wait for both workers of a pool for
+          # many minutes means they wait for a lock that nobody holds
+          ps -eo pid=,ppid=,stat=,wchan:22=,etime=,args= | grep -E "forkserver import main|multiprocessing" | grep -v grep | cut -c1-120 | sed 's/^/[monitor]   mp /'
           sleep 60
         done
       ) &
