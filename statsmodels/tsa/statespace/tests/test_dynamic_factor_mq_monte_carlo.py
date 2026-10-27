@@ -16,7 +16,6 @@ import pytest
 from scipy.signal import lfilter
 
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
-from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.statespace import (
     dynamic_factor,
     dynamic_factor_mq,
@@ -253,6 +252,7 @@ def gen_k_factor1_nonstationary(
     return endog_M, endog_Q, factor
 
 
+@pytest.mark.filterwarnings("error::RuntimeWarning")
 def test_em_nonstationary():
     # Test that when the EM algorithm estimates non-stationary parameters, that
     # it warns the user and switches to a diffuse initialization.
@@ -275,15 +275,10 @@ def test_em_nonstationary():
         r' switched to diffuse for the following:  \["factor block:'
         r' \(\'global\',\)"\], and fitting was restarted.'
     )
-    # maxiter=2 stops the EM algorithm before it converges, and the GLM for the
-    # starting values of the 5 quarterly observations has no residual degrees
-    # of freedom
+    # maxiter=2 stops the EM algorithm before it converges
     msg_em = "EM reached maximum number of iterations"
     with pytest.warns(UserWarning, match=msg):
-        with (
-            pytest.warns(ConvergenceWarning, match=msg_em),
-            warns_or_none(RuntimeWarning, match="divide by zero encountered"),
-        ):
+        with pytest.warns(ConvergenceWarning, match=msg_em):
             mod.fit(maxiter=2, em_initialization=False)
 
 
