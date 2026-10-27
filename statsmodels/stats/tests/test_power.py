@@ -12,6 +12,7 @@ Author: Josef Perktold
 from statsmodels.compat.pandas import PD_LT_2
 from statsmodels.compat.platform import PLATFORM_OSX, PLATFORM_WIN
 from statsmodels.compat.python import PYTHON_IMPL_WASM
+from statsmodels.compat.scipy import SP_LT_110
 
 import copy
 import warnings
@@ -32,8 +33,8 @@ from statsmodels.tools.sm_exceptions import ConvergenceWarning, HypothesisTestWa
 
 # The noncentral t distribution of SciPy on WASM is accurate to about 1e-6
 # (relative), which is far from the 1e-12 of the other platforms
-NCT_RTOL = 1e-5 if PYTHON_IMPL_WASM else 1e-7
-POWER_RTOL = 1e-6 if PYTHON_IMPL_WASM else 1e-9
+NCT_RTOL = 1e-5 if (PYTHON_IMPL_WASM or SP_LT_110) else 1e-7
+POWER_RTOL = 1e-6 if (PYTHON_IMPL_WASM or SP_LT_110) else 1e-9
 
 try:
     import matplotlib.pyplot as plt
@@ -1049,7 +1050,10 @@ def test_solve_power_impossible_one_sided_raises():
     )
     assert_almost_equal(res, 26.1375, decimal=3)
     res = tt.solve_power(
-        effect_size=-0.5, nobs=None, alpha=0.05, power=0.8,
+        effect_size=-0.5,
+        nobs=None,
+        alpha=0.05,
+        power=0.8,
         alternative="smaller",
     )
     assert_almost_equal(res, 26.1375, decimal=3)
@@ -1057,22 +1061,29 @@ def test_solve_power_impossible_one_sided_raises():
     # a wrong-signed effect size with target power below alpha can have a
     # valid solution and is not intercepted
     res = tt.solve_power(
-        effect_size=0.5, nobs=None, alpha=0.05, power=0.01,
+        effect_size=0.5,
+        nobs=None,
+        alpha=0.05,
+        power=0.01,
         alternative="smaller",
     )
-    roundtrip = tt.power(
-        effect_size=0.5, nobs=res, alpha=0.05, alternative="smaller"
-    )
+    roundtrip = tt.power(effect_size=0.5, nobs=res, alpha=0.05, alternative="smaller")
     assert_almost_equal(roundtrip, 0.01, decimal=6)
 
     # solving for other parameters is not affected by the sign check
     res = tt.solve_power(
-        effect_size=0.5, nobs=25, alpha=None, power=0.8,
+        effect_size=0.5,
+        nobs=25,
+        alpha=None,
+        power=0.8,
         alternative="smaller",
     )
     assert np.isfinite(res)
     res = tt.solve_power(
-        effect_size=None, nobs=25, alpha=0.05, power=0.8,
+        effect_size=None,
+        nobs=25,
+        alpha=0.05,
+        power=0.8,
         alternative="smaller",
     )
     assert res < 0
@@ -1142,7 +1153,9 @@ def test_normal_sample_size_one_tail():
     [
         lambda alternative: smp.ttest_power(0.5, 20, 0.05, alternative=alternative),
         lambda alternative: smp.normal_power(0.5, 20, 0.05, alternative=alternative),
-        lambda alternative: smp.normal_power_het(0.5, 20, 0.05, alternative=alternative),
+        lambda alternative: smp.normal_power_het(
+            0.5, 20, 0.05, alternative=alternative
+        ),
     ],
     ids=["ttest_power", "normal_power", "normal_power_het"],
 )
@@ -1298,7 +1311,9 @@ def test_ttest_ind_power_ratio_broadcast():
     nobs1 = np.array([20, 50, 100])
     res = ind.power(0.5, nobs1, 0.05, ratio=ratios)
     assert res.shape == (3,)
-    expected = [ind.power(0.5, n, 0.05, ratio=r) for n, r in zip(nobs1, ratios, strict=True)]
+    expected = [
+        ind.power(0.5, n, 0.05, ratio=r) for n, r in zip(nobs1, ratios, strict=True)
+    ]
     assert_allclose(res, expected, rtol=1e-12)
 
 
@@ -1380,9 +1395,18 @@ POWER_ALPHA = [
     (smp.ftest_anova_power, {"effect_size": 0.3, "nobs": 60}),
 ]
 POWER_ALPHA_IDS = [
-    "TTestPower", "TTestIndPower", "NormalIndPower", "FTestPower", "FTestPowerF2",
-    "FTestAnovaPower", "ttest_power", "normal_power", "normal_power_het",
-    "ftest_power", "ftest_power_f2", "ftest_anova_power",
+    "TTestPower",
+    "TTestIndPower",
+    "NormalIndPower",
+    "FTestPower",
+    "FTestPowerF2",
+    "FTestAnovaPower",
+    "ttest_power",
+    "normal_power",
+    "normal_power_het",
+    "ftest_power",
+    "ftest_power_f2",
+    "ftest_anova_power",
 ]
 
 
@@ -1406,8 +1430,14 @@ def test_power_alpha_range(func, kwargs):
         (smp.TTestPower, {"effect_size": 0.5, "nobs": 30, "power": 0.8}),
         (smp.TTestIndPower, {"effect_size": 0.5, "nobs1": 30, "power": 0.8}),
         (smp.NormalIndPower, {"effect_size": 0.5, "nobs1": 30, "power": 0.8}),
-        (smp.FTestPower, {"effect_size": 0.3, "df_num": 3, "df_denom": 57, "power": 0.5}),
-        (smp.FTestPowerF2, {"effect_size": 0.1, "df_num": 3, "df_denom": 57, "power": 0.5}),
+        (
+            smp.FTestPower,
+            {"effect_size": 0.3, "df_num": 3, "df_denom": 57, "power": 0.5},
+        ),
+        (
+            smp.FTestPowerF2,
+            {"effect_size": 0.1, "df_num": 3, "df_denom": 57, "power": 0.5},
+        ),
         (smp.FTestAnovaPower, {"effect_size": 0.25, "nobs": 60, "power": 0.8}),
     ],
 )
@@ -1580,13 +1610,12 @@ def test_nct_cdf_sf_keep_pandas_type():
     )
 
 
-@pytest.mark.skipif(
-    PYTHON_IMPL_WASM,
-    reason="The noncentral t distribution of SciPy on WASM returns 0 here",
-)
 def test_nct_sf_upper_tail_relative_accuracy():
     # exact value from mpmath (50 digits) as the integral over the
     # chi-squared density of Phi(nc - x * sqrt(v / df)); 1 - cdf loses all but
     # about 6 digits here
     nc = 0.2 * np.sqrt(30)
-    assert_allclose(smp.nct_sf(12.0, 29, nc), 7.6017385833974256e-11, rtol=1e-10)
+    atol = 1e-10 if PYTHON_IMPL_WASM or SP_LT_110 else 0
+    assert_allclose(
+        smp.nct_sf(12.0, 29, nc), 7.6017385833974256e-11, rtol=1e-10, atol=atol
+    )
