@@ -743,6 +743,128 @@ def test_covdet_large_k_det_normalization(cov_class):
     assert np.all(np.isfinite(res.cov))
 
 
+@pytest.mark.parametrize("bp, c1", [(0.5, 1.547), (0.25, 2.937)])
+def test_covdets_breakdown_point(bp, c1):
+    # breakdown_point was ignored in CovDetS, and so in the first stage of
+    # CovDetMM, the tuning parameter was always the one for 0.5.
+    rng = np.random.default_rng(12345)
+    x = rng.standard_normal((200, 3))
+    x[:30] += 6
+
+    # c1 is the biweight tuning parameter of a univariate S-estimator, i.e.
+    # for k_vars=1 while the data used in the main fit below has 3 columns.
+    # The values are to three decimals from tukeybiweight_bp in
+    # statsmodels/robust/_tables.py.
+    mod1 = robcov.CovDetS(x[:, :1], breakdown_point=bp)
+    assert_allclose(mod1.norm.c, c1, atol=1e-3)
+
+    mod = robcov.CovDetS(x, breakdown_point=bp)
+    res = mod.fit()
+    assert res.converged
+    # An S-estimator solves mean(rho(d)) = breakdown_point * max(rho), and the
+    # maximum of the biweight rho is c**2 / 6.
+    d = robcov.mahalanobis(x - res.mean, res.cov, sqrt=True)
+    assert_allclose(mod.norm.rho(d).mean() / (mod.norm.c**2 / 6), bp, rtol=1e-4)
+
+    # the second stage of CovDetMM keeps the scale of the first stage
+    res_mm = robcov.CovDetMM(x, breakdown_point=bp).fit()
+    assert_allclose(res_mm.scale, res.scale, rtol=1e-12)
+
+
+# Reference values from R package rrcov 1.7.7, with
+# library(rrcov); rrcov:::.csolve.bw.S(bdp, p)$cc
+# for p = 1, ..., 5, the keys are bdp.
+tuning_s_rrcov = {
+    0.5: [1.54764497988, 2.66080339285, 3.45288165132, 4.09656216395, 4.6520233426],
+    0.25: [2.93701455396, 4.42744315897, 5.52807407121, 6.44260983164, 7.24226823826],
+}
+
+
+@pytest.mark.parametrize("bp", [0.5, 0.25])
+@pytest.mark.parametrize("k_vars", [1, 2, 3, 4, 5])
+def test_covdets_tuning_param_rrcov(bp, k_vars):
+    x = np.random.default_rng(0).standard_normal((20, k_vars))
+    c = tuning_s_rrcov[bp][k_vars - 1]
+    assert_allclose(robcov.CovDetS(x, breakdown_point=bp).norm.c, c, rtol=1e-7)
+
+
+def test_covdets_rrcov():
+    # Compare with rrcov 1.7.7 CovSest, which is the DetS estimator of Hubert
+    # et al. (2015). The data has 10 percent outliers. With a larger fraction
+    # of outliers close to the breakdown point, the deterministic starts can
+    # converge to a different local optimum than the random starts of R.
+    # R code for the reference values, x is the data generated below:
+    #   library(rrcov)
+    #   fit <- CovSest(x, bdp=0.25, method="sdet")
+    #   getCenter(fit); getCov(fit); fit@crit
+    # location, covariance and scale for bdp=0.25 and for bdp=0.5
+    rng = np.random.default_rng(20261024)
+    x = rng.standard_normal((100, 3)) @ np.array(
+        [[2.0, 0, 0], [-1.5, 1.2, 0], [0.5, 0.4, 1.0]]
+    ).T
+    x[:10] += 8
+
+    mean = {
+        0.25: [-0.00524687063576, 0.04258769820358, -0.13057640408221],
+        0.5: [-0.161509713747, 0.146100688979, -0.165867731046],
+    }
+    cov = {
+        0.25: [
+            [6.83295247961, -4.60742865320, 2.07626921067],
+            [-4.60742865320, 5.20520866750, -0.78744812934],
+            [2.07626921067, -0.78744812934, 1.99580246834],
+        ],
+        0.5: [
+            [4.333301973950, -2.971087338866, 1.342943692525],
+            [-2.971087338866, 3.763362024027, -0.381964279551],
+            [1.342943692525, -0.381964279551, 1.615986624137],
+        ],
+    }
+    scale = {0.25: 1.60362742953, 0.5: 1.405747332}
+    for bp in (0.25, 0.5):
+        res = robcov.CovDetS(x, breakdown_point=bp).fit()
+        assert_allclose(res.mean, mean[bp], rtol=1e-4, atol=1e-4)
+        assert_allclose(res.cov, cov[bp], rtol=1e-4, atol=1e-4)
+        assert_allclose(res.scale, scale[bp], rtol=1e-4)
+
+
+@pytest.mark.parametrize("bp", [0.6, 1, 0, 0.0, -0.1, np.nan, np.inf])
+@pytest.mark.parametrize("cov_class", [robcov.CovDetS, robcov.CovDetMM])
+def test_covdet_breakdown_point_invalid(cov_class, bp):
+    x = np.random.default_rng(0).standard_normal((30, 3))
+    with pytest.raises(ValueError, match=r"breakdown_point must be in \(0, 0.5\]"):
+        cov_class(x, breakdown_point=bp)
+
+
+def test_covdet_breakdown_point_not_float():
+    x = np.random.default_rng(0).standard_normal((30, 3))
+    with pytest.raises(TypeError, match="breakdown_point"):
+        robcov.CovDetS(x, breakdown_point="0.25")
+
+
+@pytest.mark.parametrize("cov_class", [robcov.CovDetS, robcov.CovDetMM])
+def test_covdet_breakdown_point_small_high_dim(cov_class):
+    # The default limits of the root finding in tuning_s_cov have no solution
+    # for a small breakdown point and 20 variables, c is above 30.
+    # The fit is not called because it is slow with 20 variables.
+    x = np.random.default_rng(0).standard_normal((100, 20))
+    mod = cov_class(x, breakdown_point=0.05)
+    if cov_class is robcov.CovDetS:
+        # R: rrcov:::.csolve.bw.S(0.05, 20)$cc
+        assert_allclose(mod.norm.c, 34.3181640288, rtol=1e-8)
+
+
+def test_covdet_breakdown_point_no_solution(monkeypatch):
+    def raise_no_root(*args, **kwds):
+        raise ValueError("f(a) and f(b) must have different signs")
+
+    monkeypatch.setattr(robcov.rtools, "tuning_s_cov", raise_no_root)
+    x = np.random.default_rng(0).standard_normal((30, 3))
+    msg = r"breakdown_point=0.25 and k_vars=3"
+    with pytest.raises(ValueError, match=msg):
+        robcov.CovDetS(x, breakdown_point=0.25)
+
+
 def test_cov_tyler_regularized_n_iter():
     # GH: n_iter was accumulated as `n_iter += i` inside `for i in
     # range(maxiter)`, giving a triangular-number count instead of the
@@ -946,3 +1068,92 @@ def test_cov_starting_zero_mad_raises():
     with pytest.raises(ValueError, match="standardizing scale is zero"):
         robcov._cov_starting(x, standardize=True)
 
+
+@pytest.mark.parametrize("reweight", [True, False])
+def test_covdet_mcd_tilted_plane_exact_fit_raises(reweight):
+    # https://github.com/statsmodels/statsmodels/issues/10437 (suggestion 2):
+    # more than h observations on a tilted plane
+    # (no column has MAD == 0). Put ALL rows on the plane so every C-step
+    # subset is singular and CI is not sensitive to platform FP around a
+    # near-exact-fit residual (Pyodide). Raise before reweight so default
+    # reweight=True cannot hide the exact-fit case.
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    x[:, 2] = x[:, 0] + x[:, 1]
+    assert (robcov.mad(x) > 0).all()
+
+    msg = "covariance of the h-subset is singular: at least h .* hyperplane"
+    with pytest.raises(ValueError, match=msg):
+        robcov.CovDetMCD(x).fit(h=51, reweight=reweight)
+
+
+@pytest.mark.parametrize("m_on", [55, 60, 70, 80])
+@pytest.mark.parametrize("seed", range(3))
+def test_covdet_mcd_partial_tilted_plane_exact_fit_raises(m_on, seed):
+    # At least h observations lie on a tilted plane, but not every row does.
+    # R reference (robustbase 0.99.7): with x the matrix generated below,
+    # covMcd(x, alpha=0.5, nsamp="deterministic") stops with the error
+    # "More than h of the observations lie on a hyperplane." for all cases
+    # (h = 52 is the R default for n=100, p=3).
+    rng = np.random.default_rng(seed)
+    x = rng.standard_normal((100, 3))
+    x[:m_on, 2] = x[:m_on, 0] + x[:m_on, 1]
+
+    with pytest.raises(ValueError, match="lie on a hyperplane"):
+        robcov.CovDetMCD(x).fit(h=52)
+
+
+@pytest.mark.parametrize("m_on, raises", [(50, False), (51, True), (52, True)])
+def test_covdet_mcd_exact_fit_boundary(m_on, raises):
+    # The guard triggers if at least h observations lie on the plane, so h - 1
+    # observations on the plane still fit.
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    x[:m_on, 2] = x[:m_on, 0] + x[:m_on, 1]
+
+    mod = robcov.CovDetMCD(x)
+    if raises:
+        with pytest.raises(ValueError, match="lie on a hyperplane"):
+            mod.fit(h=51, reweight=False)
+    else:
+        res = mod.fit(h=51, reweight=False)
+        assert not robcov._is_singular(res.cov)
+
+
+@pytest.mark.parametrize("h", [1, 2, 3])
+def test_covdet_mcd_h_too_small_raises(h):
+    # h must be larger than the number of variables, here k_vars = 3
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+
+    msg = "h must be larger than the number of variables"
+    with pytest.raises(ValueError, match=msg):
+        robcov.CovDetMCD(x).fit(h=h)
+
+
+def test_covdet_mcd_h_minimum_is_k_vars_plus_one():
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal((100, 3))
+    res = robcov.CovDetMCD(x).fit(h=4, reweight=False)
+    assert res.cov.shape == (3, 3)
+
+
+def test_covdet_mcd_full_rank_polynomial_data_still_fits():
+    rng = np.random.default_rng(0)
+    t = rng.uniform(0, 1, 200)
+    x = np.column_stack([t**j for j in range(1, 6)])
+    assert np.linalg.matrix_rank(x) == 5
+
+    res = robcov.CovDetMCD(x).fit(h=(len(x) + x.shape[1] + 1) // 2)
+    assert np.isfinite(np.linalg.det(res.cov))
+
+
+def test_covdet_mcd_healthy_data_still_fits():
+    # Sanity: ordinary full-rank Gaussian data still returns a non-singular
+    # covariance after the exact-fit guard.
+    rng = np.random.default_rng(1)
+    x = rng.standard_normal((100, 3))
+    res = robcov.CovDetMCD(x).fit(h=51)
+    assert np.isfinite(np.linalg.det(res.cov))
+    assert np.linalg.det(res.cov) > 0
+    assert not robcov._is_singular(res.cov)

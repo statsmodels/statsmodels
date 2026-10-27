@@ -5,12 +5,15 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import contextlib
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
 from statsmodels import datasets
+from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tsa.statespace import dynamic_factor_mq, sarimax, varmax
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 
@@ -288,7 +291,15 @@ def test_smoothed_decomposition_TVSS(univariate):
     mod.ssm.initialize_known(prior_mean, prior_cov)
     if univariate:
         mod.ssm.filter_univariate = True
-    res = mod.smooth([])
+    # The univariate filter diagonalizes the non-diagonal obs_cov of TVSS
+    if univariate:
+        ctx = pytest.warns(
+            OutputWarning, match="The univariate filtering approach diagonalized"
+        )
+    else:
+        ctx = contextlib.nullcontext()
+    with ctx:
+        res = mod.smooth([])
 
     # Check smoothed state
 

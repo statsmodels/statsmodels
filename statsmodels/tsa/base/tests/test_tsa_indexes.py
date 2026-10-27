@@ -20,6 +20,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.base import tsa_model
 
 nobs = 5
@@ -280,7 +281,10 @@ def test_instantiation_valid():
         # Since only supported indexes are valid `dates` arguments, everything
         # else is invalid here
         for ix, _ in supported_increment_indexes + unsupported_indexes:
-            with pytest.raises(ValueError):
+            # pandas >= 2 warns that it cannot infer the format of strings
+            with pytest.raises(ValueError), warns_or_none(
+                UserWarning, match="Could not infer format"
+            ):
                 tsa_model.TimeSeriesModel(endog, dates=ix)
 
     # Test pandas (Series, DataFrame); with index (no dates/freq argument)
@@ -517,7 +521,10 @@ def test_prediction_increment_unsupported():
     # a. Generated from unsupported index
     endog = dta[2].copy()
     endog.index = unsupported_indexes[-2][0]
-    mod = tsa_model.TimeSeriesModel(endog)
+    with pytest.warns(ValueWarning, match="An unsupported index was provided"):
+        # pandas >= 2 warns that it cannot infer the format of strings
+        with warns_or_none(UserWarning, match="Could not infer format"):
+            mod = tsa_model.TimeSeriesModel(endog)
 
     # Tests three common use cases: basic prediction, negative indexes, and
     # out-of-sample indexes.
@@ -1170,6 +1177,29 @@ def test_custom_index():
         )
 
 
+# pandas 3.1 deprecates Period with a business day frequency
+B_PERIOD_DEPRECATION = pytest.mark.filterwarnings(
+    "ignore:Period with BDay freq is deprecated:FutureWarning",
+    r"ignore:PeriodDtype\[B\] is deprecated:FutureWarning",
+)
+HOUR = "H" if PD_LT_2_2_0 else "h"
+# Starts on a Monday, so that business day periods skip a weekend in the sample
+PERIOD_START = "2000-01-03"
+PERIOD_FREQS = [
+    "Y",
+    "Q",
+    "M",
+    "W",
+    "D",
+    HOUR,
+    "2Q",
+    "3D",
+    "2W",
+    pytest.param("B", marks=B_PERIOD_DEPRECATION),
+    pytest.param("2B", marks=B_PERIOD_DEPRECATION),
+]
+
+
 def test_nonmonotonic_periodindex():
     # Create a nonmonotonic period index
     tmp = pd.period_range(start="2000", end="2002", freq="Y")
@@ -1185,11 +1215,130 @@ def test_nonmonotonic_periodindex():
         tsa_model.TimeSeriesModel(endog)
 
 
-def test_nonfull_periodindex():
-    index = pd.PeriodIndex(["2000-01", "2000-03"], freq="M")
+@pytest.mark.parametrize("order", ["descending", "unsorted"])
+def test_nonmonotonic_periodindex_single_warning(order):
+    # A non-monotonic index only gets the "not monotonic" warning, not the one
+    # for non-consecutive periods
+    index = pd.period_range(start="2000-01", periods=6, freq="M")
+    index = index[::-1] if order == "descending" else index.take([1, 0, 2, 3, 5, 4])
     endog = pd.Series(np.zeros(len(index)), index=index)
 
-    tsa_model.TimeSeriesModel(endog)
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        mod = tsa_model.TimeSeriesModel(endog)
+    messages = [str(w.message) for w in record if w.category is ValueWarning]
+    assert len(messages) == 1
+    assert "not monotonic" in messages[0]
+    assert "consecutive" not in messages[0]
+    assert mod._index_generated
+
+
+@pytest.mark.parametrize("freq", PERIOD_FREQS)
+@pytest.mark.parametrize("case", ["gap", "repeat", "gap_len2", "repeat_len2"])
+def test_nonconsecutive_periodindex(freq, case):
+    # See GH#6247, GH#8950
+    base = pd.period_range(start=PERIOD_START, periods=8, freq=freq)
+    index = {
+        "gap": base.delete(3),
+        "repeat": base[[0, 1, 2, 2, 3, 4]],
+        "gap_len2": base[[0, 2]],
+        "repeat_len2": base[[0, 0]],
+    }[case]
+    endog = pd.Series(np.zeros(len(index)), index=index)
+
+    message = (
+        "A Period index has been provided, but its periods are not"
+        r" consecutive \(it has gaps or repeated periods\) and so will be"
+        " ignored. Forecasting will fail unless an index is given."
+    )
+    with pytest.warns(ValueWarning, match=message):
+        mod = tsa_model.TimeSeriesModel(endog)
+    assert mod._index_generated
+    assert not mod._index_dates
+    assert mod._index.equals(pd.RangeIndex(len(index)))
+    assert mod.data.dates is None
+
+    # In-sample prediction keeps the original labels
+    start, end, out_of_sample, prediction_index = mod._get_prediction_index(
+        1, len(index) - 1
+    )
+    assert prediction_index.equals(index[1:])
+
+    # Forecasting must not silently produce labels from inside the sample
+    with pytest.raises(ValueError, match="No supported index is available"):
+        mod._get_prediction_index(len(index), len(index) + 2)
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        # Daily periods that skip weekends (GH#8950)
+        pd.bdate_range("2023-07-03", periods=10).to_period("D"),
+        # Gap in a frequency with a multiplier
+        pd.PeriodIndex(["2000Q1", "2000Q3", "2001Q3"], freq="2Q"),
+    ],
+)
+def test_nonconsecutive_periodindex_literal(index):
+    # See GH#6247, GH#8950
+    endog = pd.Series(np.zeros(len(index)), index=index)
+
+    with pytest.warns(ValueWarning, match="its periods are not consecutive"):
+        mod = tsa_model.TimeSeriesModel(endog)
+    assert mod._index_generated
+    assert mod._index.equals(pd.RangeIndex(len(index)))
+
+
+@pytest.mark.parametrize("nobs", [1, 2, 5])
+@pytest.mark.parametrize("freq", PERIOD_FREQS)
+def test_consecutive_periodindex(freq, nobs):
+    # Consecutive periods, including those with a frequency multiplier and
+    # those that skip weekends (B), are supported
+    index = pd.period_range(start=PERIOD_START, periods=nobs, freq=freq)
+    endog = pd.Series(np.zeros(len(index)), index=index)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ValueWarning)
+        mod = tsa_model.TimeSeriesModel(endog)
+    assert not mod._index_generated
+    assert mod._index.equals(index)
+
+    _, _, out_of_sample, prediction_index = mod._get_prediction_index(
+        nobs, nobs + 1
+    )
+    assert out_of_sample == 2
+    expected = pd.period_range(start=index[-1] + 1, periods=2, freq=index.freq)
+    assert prediction_index.equals(expected)
+
+
+@pytest.mark.parametrize(
+    "freq, expected",
+    [
+        # Thursday 2023-07-06 and Friday 2023-07-07, then the weekend is skipped
+        ("B", ["2023-07-10", "2023-07-11"]),
+        # Additionally skip the 2023-07-10 holiday
+        (
+            pd.offsets.CustomBusinessDay(holidays=["2023-07-10"]),
+            ["2023-07-11", "2023-07-12"],
+        ),
+    ],
+)
+def test_business_day_index(freq, expected):
+    # Data with gaps that follow a calendar rule (e.g. trading days) are
+    # supported through a DatetimeIndex with a matching frequency, see GH#8950
+    index = pd.date_range(end="2023-07-07", periods=5, freq=freq)
+    endog = pd.Series(np.zeros(len(index)), index=index)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ValueWarning)
+        mod = tsa_model.TimeSeriesModel(endog)
+    assert not mod._index_generated
+
+    nobs = len(index)
+    _, _, out_of_sample, prediction_index = mod._get_prediction_index(
+        nobs, nobs + 1
+    )
+    assert out_of_sample == 2
+    assert prediction_index.equals(pd.DatetimeIndex(expected, freq=freq))
 
 
 def test_get_index_loc_quarterly():

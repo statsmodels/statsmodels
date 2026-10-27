@@ -584,7 +584,10 @@ def test_kernel_survfunc3():
     x = rs.normal(size=(n, 3))
     time = rs.randint(0, 10, size=n)
     status = rs.randint(0, 2, size=n)
-    SurvfuncRight(time, status, exog=x, bw_factor=10000)
+    sf = SurvfuncRight(time, status, exog=x, bw_factor=10000)
+    # the standard errors and the risk set are not available, and not an integer
+    for attr in ("surv_prob_se", "n_risk", "n_events"):
+        assert np.isnan(getattr(sf, attr)).all()
     SurvfuncRight(time, status, exog=x, bw_factor=np.r_[10000, 10000])
 
 

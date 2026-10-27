@@ -1,5 +1,6 @@
 from statsmodels.compat.scipy import SP_LT_116
 
+import contextlib
 import warnings
 
 import numpy as np
@@ -19,8 +20,11 @@ from statsmodels.distributions.discrete import (
 from statsmodels.iolib.summary import Summary
 from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
-from statsmodels.tools.testing import Holder
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    HessianInversionWarning,
+)
+from statsmodels.tools.testing import Holder, warns_or_none
 from statsmodels.tools.tools import add_constant
 
 from .results import (
@@ -34,6 +38,7 @@ from .test_discrete import (
     load_randhie,
 )
 
+QC_MATCH = "QC check did not pass|Could not trim params automatically"
 
 class CheckResults:
     def test_params(self):
@@ -452,7 +457,13 @@ class TestHurdlePoissonR:
         # TODO: which="var" raises AttributeError
         for which in ["mean", "mean-main", "prob-main", "prob-zero", "linear"]:
             p3a = res1.predict(ex5, which=which)
-            p3b = res1.get_prediction(ex5, which=which)
+            # the hurdle model has no link, the mean prediction uses the log link
+            if which == "mean":
+                ctx = pytest.warns(UserWarning, match="using default log-link")
+            else:
+                ctx = contextlib.nullcontext()
+            with ctx:
+                p3b = res1.get_prediction(ex5, which=which)
             assert_allclose(p3a, p3b.predicted, rtol=1e-10, atol=1e-10)
             assert p3b.summary_frame().shape == (k_ex, 4)
 
@@ -655,8 +666,10 @@ def test_truncated_poisson_dispersion_factor():
     # the NotImplementedError guard is checked before any computation, so
     # a single non-converged iteration is enough to exercise it
     mod_trunc5 = TruncatedLFPoisson(endog, exog, truncation=5)
-    res_trunc5 = mod_trunc5.fit(disp=0, start_params=res.params, maxiter=1,
-                                skip_hessian=True)
+    # maxiter=1 forces the non-convergence
+    with pytest.warns(ConvergenceWarning, match="Maximum Likelihood optim"):
+        res_trunc5 = mod_trunc5.fit(disp=0, start_params=res.params, maxiter=1,
+                                    skip_hessian=True)
     with pytest.raises(NotImplementedError, match="zero-truncation"):
         _ = res_trunc5._dispersion_factor
 
@@ -725,16 +738,18 @@ class TestRegularizedHurdleSimulated(CheckHurdlePredict, CheckHurdleL1Coherence)
         endog = np.argmin(cdf < u, axis=1)
 
         mod_hnb = HurdleCountModel(endog, exog, dist="negbin", zerodist="negbin")
-        cls.res1 = mod_hnb.fit_regularized(
-            # Non-zero starting parameters are required when fitting a negative
-            # binomial with regularization
-            start_params=np.ones(k_params),
-            method="l1",
-            # Regularization in the zero model must be weak for mean predictions
-            # to match analytically derived expected values
-            alpha=np.array([0.01, 0.01, 0, 1, 1, 0]),
-            maxiter=300
-        )
+        # the QC check of the SLSQP solution can fail, it depends on scipy
+        with warns_or_none(ConvergenceWarning, match=QC_MATCH):
+            cls.res1 = mod_hnb.fit_regularized(
+                # Non-zero starting parameters are required when fitting a
+                # negative binomial with regularization
+                start_params=np.ones(k_params),
+                method="l1",
+                # Regularization in the zero model must be weak for mean
+                # predictions to match analytically derived expected values
+                alpha=np.array([0.01, 0.01, 0, 1, 1, 0]),
+                maxiter=300
+            )
 
         df_model = 2
         df_null = k_params - df_model
@@ -799,17 +814,20 @@ class TestHurdleL1Compatibility(CheckL1Compatability):
         mod_reg = HurdleCountModel(
             rand_data.endog, rand_exog, dist="negbin", zerodist="poisson"
         )
-        cls.res_reg = mod_reg.fit_regularized(
-            # Non-zero starting parameters are required when fitting a negative
-            # binomial with regularization
-            start_params=np.ones(2 * cls.kvars + 1),
-            method="l1",
-            alpha=alpha,
-            disp=False,
-            acc=1e-10,
-            maxiter=2000,
-            trim_mode="auto",
-        )
+        # the SLSQP solver can evaluate the negbin log-likelihood at invalid
+        # values of alpha and large linear predictors
+        with warns_or_none(RuntimeWarning, match="(divide by zero|overflow)"):
+            cls.res_reg = mod_reg.fit_regularized(
+                # Non-zero starting parameters are required when fitting a
+                # negative binomial with regularization
+                start_params=np.ones(2 * cls.kvars + 1),
+                method="l1",
+                alpha=alpha,
+                disp=False,
+                acc=1e-10,
+                maxiter=2000,
+                trim_mode="auto",
+            )
         cls.k_extra1 = 0  # no extra parameter in poisson
         cls.k_extra2 = 1  # 1 extra parameter in nbp
 
@@ -930,14 +948,32 @@ def test_fit_accepts_start_params_split_across_components(dist, zerodist):
     rng = np.random.default_rng(0)
     nobs = 400
     exog = np.column_stack([np.ones(nobs), rng.standard_normal(nobs)])
-    endog = rng.poisson(np.exp(0.5 + 0.3 * exog[:, 1]))
+    # overdispersed counts, a negbin model fit to poisson data has alpha at
+    # the boundary
+    mu = np.exp(0.5 + 0.3 * exog[:, 1]) * rng.gamma(2, 0.5, nobs)
+    endog = rng.poisson(mu)
     endog[rng.random(nobs) < 0.1] = 0
 
+    def ctx():
+        if zerodist != "negbin":
+            return contextlib.nullcontext()
+        # alpha of the zero model is barely identified by the zero indicator,
+        # the optimizer can run into invalid values and a singular hessian
+        return warns_or_none(
+            (RuntimeWarning, ConvergenceWarning, HessianInversionWarning),
+            match=(
+                "Maximum Likelihood optim|Inverting hessian failed|"
+                "(divide by zero|invalid value|overflow) encountered"
+            ),
+        )
+
     mod = HurdleCountModel(endog, exog, dist=dist, zerodist=zerodist)
-    res_default = mod.fit(disp=0)
+    with ctx():
+        res_default = mod.fit(disp=0)
 
     mod2 = HurdleCountModel(endog, exog, dist=dist, zerodist=zerodist)
-    res_explicit = mod2.fit(start_params=res_default.params, disp=0)
+    with ctx():
+        res_explicit = mod2.fit(start_params=res_default.params, disp=0)
     assert_allclose(res_explicit.params, res_default.params, atol=1e-6, rtol=1e-6)
 
 
@@ -966,7 +1002,9 @@ def test_fit_regularized_converged_reports_joint_fit_too():
     endog[rng.random(nobs) < 0.1] = 0
 
     mod = HurdleCountModel(endog, exog)
-    res = mod.fit_regularized(alpha=0.01, disp=0)
+    # the QC check of the SLSQP solution can fail, it depends on scipy
+    with warns_or_none(ConvergenceWarning, match=QC_MATCH):
+        res = mod.fit_regularized(alpha=0.01, disp=0)
     converged = res.mle_retvals["converged"]
 
     # Previously always exactly 2 entries; a 3rd can only appear by keeping

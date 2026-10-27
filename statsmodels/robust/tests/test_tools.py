@@ -8,6 +8,7 @@ License: BSD-3
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
+from scipy.integrate import IntegrationWarning
 
 from statsmodels.robust.norms import (
     AndrewWave,
@@ -24,6 +25,7 @@ from statsmodels.robust.tools import (
     _var_normal_jump,
     tuning_s_estimator_mean,
 )
+from statsmodels.tools.testing import warns_or_none
 
 effs = [0.9, 0.95, 0.98, 0.99]
 
@@ -92,5 +94,7 @@ def test_tuning_smoke(case):
     norm = norm_cls(**norm_kwargs)
     # norm = Norm()
     if np.isfinite(norm.max_rho()):
-        res = tuning_s_estimator_mean(norm, breakdown=0.5)
+        # scipy quad can hit the subdivision limit for rho with kinks
+        with warns_or_none(IntegrationWarning, match="The maximum number of sub"):
+            res = tuning_s_estimator_mean(norm, breakdown=0.5)
         assert res is not None

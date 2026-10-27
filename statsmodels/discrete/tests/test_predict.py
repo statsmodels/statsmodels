@@ -5,6 +5,7 @@ Author: Josef Perktod
 License: BSD-3
 """
 
+import contextlib
 import copy
 import warnings
 
@@ -28,6 +29,7 @@ from statsmodels.discrete.discrete_model import (
     Probit,
 )
 from statsmodels.sandbox.regression.tests.test_gmm_poisson import DATA
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tools.tools import add_constant
 
 from .results import results_predict as resp
@@ -61,7 +63,13 @@ class CheckPredict:
 
         # test for which="mean"
         rdf = res2.results_margins_atmeans
-        pred = res1.get_prediction(ex, **self.pred_kwds_mean)
+        if type(res1.model) is NegativeBinomialP:
+            # NegativeBinomialP has no link, get_prediction uses the log link
+            ctx = pytest.warns(UserWarning, match="using default log-link")
+        else:
+            ctx = contextlib.nullcontext()
+        with ctx:
+            pred = res1.get_prediction(ex, **self.pred_kwds_mean)
         assert_allclose(pred.predicted, rdf["b"].iloc[0], rtol=1e-4)
         assert_allclose(pred.se, rdf["se"].iloc[0], rtol=1e-4, atol=1e-4)
         if isinstance(pred, PredictionResultsMonotonic):
@@ -249,6 +257,10 @@ class CheckExtras:
             "hat_matrix_diag",
             "resid_studentized",
         ]
+        # NegativeBinomialP and GeneralizedPoisson have no link, the scaled
+        # change uses get_prediction with the default log link (cached below)
+        with pytest.warns(UserWarning, match="using default log-link"):
+            influ.d_fittedvalues_scaled  # noqa: B018
         for attr in attrs:
             getattr(influ, attr)
 
@@ -407,8 +419,19 @@ def test_distr(case, close_figures):
 
         assert influ.resid.shape == (len(y2),)
 
+        # the hessian factor is negative for some observations in these models
+        neg_hf = cls_model is GeneralizedPoisson or (
+            cls_model is NegativeBinomialP and kwds.get("p") == 1
+        )
+        if neg_hf:
+            ctx = warns_or_none(
+                RuntimeWarning, match="invalid value encountered in sqrt"
+            )
+        else:
+            ctx = contextlib.nullcontext()
         try:
-            resid = influ.resid_score_factor()
+            with ctx:
+                resid = influ.resid_score_factor()
             assert resid.shape == (len(y2),)
         except AttributeError:
             # no score_factor in ZI models

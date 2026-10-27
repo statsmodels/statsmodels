@@ -369,6 +369,13 @@ class ARIMA(sarimax.SARIMAX):
                 raise ValueError(f'Estimation method "{method}" does not use starting'
                                  ' parameters, but `start_params` argument was'
                                  ' given.')
+            if method == "innovations_mle":
+                # ARIMA.fit does not pass starting parameters through for
+                # innovations_mle yet (see #8091).
+                raise NotImplementedError(
+                    'Starting parameters are not supported with'
+                    ' method="innovations_mle" yet. Use method="statespace" to'
+                    ' pass `start_params`.')
 
             method_kwargs["start_params"] = start_params
             method_kwargs["transformed"] = transformed

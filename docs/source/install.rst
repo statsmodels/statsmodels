@@ -15,7 +15,8 @@ Instructions for installing from PyPI, source or a development version are also 
 Python Support
 --------------
 
-statsmodels supports Python 3.9, 3.10, 3.11, 3.12, and 3.13.
+statsmodels supports Python 3.10, 3.11, 3.12, 3.13, 3.14, and 3.15, as well
+as the free-threaded builds of Python 3.14 (3.14t) and 3.15 (3.15t).
 
 Anaconda
 --------
@@ -52,7 +53,13 @@ have git installed:
 
 .. code-block:: bash
 
-    git clone git://github.com/statsmodels/statsmodels.git
+    git clone https://github.com/statsmodels/statsmodels.git
+
+You can also clone over SSH if you have an SSH key set up with GitHub:
+
+.. code-block:: bash
+
+    git clone git@github.com:statsmodels/statsmodels.git
 
 If you want to keep up to date with the source on github just periodically do:
 
@@ -130,11 +137,13 @@ Dependencies
 
 The current minimum dependencies are:
 
-* `Python <https://www.python.org>`__ >= 3.9
-* `NumPy <https://www.scipy.org/>`__ >= 1.23.5
+* `Python <https://www.python.org>`__ >= 3.10
+* `NumPy <https://numpy.org/>`__ >= 1.23.5
 * `SciPy <https://www.scipy.org/>`__ >= 1.8
 * `Pandas <https://pandas.pydata.org/>`__ >= 1.4
 * `Patsy <https://patsy.readthedocs.io/en/latest/>`__ >= 0.5.6
+* `packaging <https://packaging.pypa.io/>`__ >= 21.3
+* `formulaic <https://matthewwardrop.github.io/formulaic/>`__ >= 1.1.0
 
 Cython is required to build from a git checkout but not to run or install from PyPI:
 
@@ -143,8 +152,7 @@ Cython is required to build from a git checkout but not to run or install from P
 
 Given the long release cycle, statsmodels follows a loose time-based policy for
 dependencies: minimal dependencies are lagged about one and a half to two
-years. Our next planned update of minimum versions is expected in the first
-half of 2020.
+years.
 
 Optional Dependencies
 ---------------------

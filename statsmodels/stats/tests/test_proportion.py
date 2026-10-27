@@ -16,6 +16,7 @@ from numpy.testing import (
 )
 import pandas as pd
 import pytest
+from scipy import stats
 
 import statsmodels.stats.proportion as smprop
 from statsmodels.stats.proportion import (
@@ -569,8 +570,58 @@ def test_power_binom_tost():
     res_power = np.array(
         [0.0, 0.0, 0.0, 0.0889, 0.2356, 0.3517, 0.4457, 0.6154, 0.6674, 0.7708]
     )
-    # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
-    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+    assert_almost_equal(power, res_power, decimal=4)
+
+    # the rejection region (27, 23) is empty, so the power is zero
+    assert_equal(smprop.power_binom_tost(0.4, 0.6, 50, p_alt=0.5), 0)
+
+
+@pytest.mark.parametrize(
+    "nobs, low, upp, alpha",
+    [
+        (1, 0.4, 0.6, 0.05),  # empty rejection region
+        (20, 0.4, 0.6, 0.05),  # empty
+        (50, 0.4, 0.6, 0.05),  # empty
+        (100, 0.4, 0.6, 0.05),
+        (200, 0.4, 0.6, 0.05),
+        (30, 0.3, 0.7, 0.05),
+        (10, 0.2, 0.8, 0.10),
+        (500, 0.5, 0.7, 0.05),
+    ],
+)
+def test_power_binom_tost_exact(nobs, low, upp, alpha):
+    # The exact power is the probability of the counts at which both one-sided
+    # exact tests reject. This covers empty and non-empty rejection regions.
+    p_alt = np.array([0.35, 0.5, 0.55, 0.7])
+    x = np.arange(nobs + 1)
+    reject = smprop.binom_tost(x, nobs, low, upp)[0] <= alpha
+    expected = [stats.binom.pmf(x[reject], nobs, p).sum() for p in p_alt]
+    power = smprop.power_binom_tost(low, upp, nobs, p_alt=p_alt, alpha=alpha)
+    assert_allclose(power, expected, atol=1e-12)
+    assert np.all(power >= 0)
+
+
+def test_power_binom_tost_empty_region_array_inputs():
+    # array_like p_alt with an empty rejection region
+    power = smprop.power_binom_tost(0.4, 0.6, 20, p_alt=[0.4, 0.5, 0.9])
+    assert_equal(power, np.zeros(3))
+    # a single observation can never reject
+    assert_equal(smprop.power_binom_tost(0.4, 0.6, 1), 0)
+    # array_like equivalence limits with the default p_alt
+    power = smprop.power_binom_tost([0.4, 0.3], [0.6, 0.7], 100)
+    assert_allclose(
+        power,
+        [
+            smprop.power_binom_tost(0.4, 0.6, 100),
+            smprop.power_binom_tost(0.3, 0.7, 100),
+        ],
+    )
+
+
+@pytest.mark.parametrize("p_alt", [-0.1, 1.1, np.nan])
+def test_power_binom_tost_p_alt_invalid(p_alt):
+    with pytest.raises(ValueError, match="p_alt must be in the range"):
+        smprop.power_binom_tost(0.4, 0.6, 50, p_alt=p_alt)
 
 
 def test_power_ztost_prop():
@@ -1931,3 +1982,138 @@ def test_binom_tost_helpers_nobs_raises(func, args):
     # arrays of nobs keep working
     res = func(*args, np.array([100, 200]), *extra)
     assert np.shape(res[0] if isinstance(res, tuple) else res)[0] == 2
+
+
+@pytest.mark.parametrize(
+    "kwds, match",
+    [
+        # alpha outside of (0, 1) returned inf or nan
+        ({"alpha": 2}, "alpha must be in the range"),
+        ({"alpha": 0}, "alpha must be in the range"),
+        ({"alpha": 1}, "alpha must be in the range"),
+        ({"alpha": -0.1}, "alpha must be in the range"),
+        ({"alpha": np.nan}, "alpha must be in the range"),
+        ({"alpha": np.array([0.05, 1.5])}, "alpha must be in the range"),
+        ({"alpha": np.array([0.05, np.nan])}, "alpha must be in the range"),
+        ({"alpha": pd.Series([0.05, 0.0])}, "alpha must be in the range"),
+        ({"alpha": [0.05, 2]}, "alpha must be in the range"),
+        # a negative half_length returned a positive sample size
+        ({"half_length": -0.1}, "half_length must be positive"),
+        ({"half_length": 0}, "half_length must be positive"),
+        ({"half_length": np.nan}, "half_length must be positive"),
+        ({"half_length": np.array([0.1, -0.1])}, "half_length must be positive"),
+        ({"half_length": np.array([0.1, np.nan])}, "half_length must be positive"),
+        ({"half_length": pd.Series([0.1, 0.0])}, "half_length must be positive"),
+        ({"half_length": [0.1, 0]}, "half_length must be positive"),
+        # proportions outside of [0, 1] returned a negative sample size
+        ({"proportion": 1.5}, "proportion must be in the range"),
+        ({"proportion": -0.1}, "proportion must be in the range"),
+        ({"proportion": np.nan}, "proportion must be in the range"),
+        ({"proportion": np.array([0.5, 1.5])}, "proportion must be in the range"),
+        ({"proportion": np.array([-0.1, 0.5])}, "proportion must be in the range"),
+        ({"proportion": np.array([0.5, np.nan])}, "proportion must be in the range"),
+        ({"proportion": pd.Series([0.5, 1.2])}, "proportion must be in the range"),
+        ({"proportion": [0.5, -0.1]}, "proportion must be in the range"),
+    ],
+)
+def test_samplesize_confint_proportion_invalid_raises(kwds, match):
+    args = {"proportion": 0.5, "half_length": 0.1, "alpha": 0.05}
+    args.update(kwds)
+    with pytest.raises(ValueError, match=match):
+        smprop.samplesize_confint_proportion(**args)
+
+
+@pytest.mark.parametrize("arg", ["proportion", "half_length", "alpha"])
+def test_samplesize_confint_proportion_none_raises(arg):
+    args = {"proportion": 0.5, "half_length": 0.1, "alpha": 0.05, arg: None}
+    with pytest.raises(TypeError, match=f"{arg} must be array_like"):
+        smprop.samplesize_confint_proportion(**args)
+
+
+def test_samplesize_confint_proportion_method_raises():
+    with pytest.raises(NotImplementedError, match="only"):
+        smprop.samplesize_confint_proportion(0.5, 0.1, method="wilson")
+
+
+def test_samplesize_confint_proportion_closed_form():
+    n = smprop.samplesize_confint_proportion(0.5, 0.1)
+    assert isinstance(n, float)
+    assert_allclose(n, 96.03647051735317, rtol=1e-13)
+
+    # n = q * (1 - q) / (half_length / z) ** 2 with z the 1 - alpha / 2 quantile
+    for q, h, alpha in [(0.5, 0.1, 0.05), (0.2, 0.05, 0.1), (0.9, 0.03, 0.01)]:
+        expected = q * (1 - q) / (h / stats.norm.isf(alpha / 2)) ** 2
+        n = smprop.samplesize_confint_proportion(q, h, alpha=alpha)
+        assert_allclose(n, expected, rtol=1e-13)
+
+
+def test_samplesize_confint_proportion_r():
+    # Reference values from R 4.6.1, qnorm based formula of the normal
+    # approximation interval, element wise for the four parameter sets:
+    # p <- c(0.5, 0.2, 0.9, 0.35); h <- c(0.1, 0.05, 0.03, 0.02)
+    # a <- c(0.05, 0.1, 0.01, 0.2)
+    # print(p * (1 - p) / (h / qnorm(1 - a / 2))^2, digits = 17)
+    p = [0.5, 0.2, 0.9, 0.35]
+    h = [0.1, 0.05, 0.03, 0.02]
+    a = [0.05, 0.1, 0.01, 0.2]
+    expected = [
+        96.036470517353081,
+        173.154781062106338,
+        663.489660102120979,
+        934.100448616458380,
+    ]
+    res = smprop.samplesize_confint_proportion(np.array(p), np.array(h), np.array(a))
+    assert_allclose(res, expected, rtol=1e-13)
+    for pi, hi, ai, ei in zip(p, h, a, expected, strict=True):
+        res = smprop.samplesize_confint_proportion(pi, hi, alpha=ai)
+        assert_allclose(res, ei, rtol=1e-13)
+
+
+@pytest.mark.parametrize("proportion", [0, 1, 0.0, 1.0])
+def test_samplesize_confint_proportion_endpoints(proportion):
+    # the end points of the proportion are valid and need no observations
+    assert smprop.samplesize_confint_proportion(proportion, 0.1) == 0
+    res = smprop.samplesize_confint_proportion(np.array([proportion, 0.5]), 0.1)
+    assert_allclose(res, [0, 96.03647051735317], rtol=1e-13)
+
+
+@pytest.mark.parametrize("arg", ["proportion", "half_length", "alpha"])
+@pytest.mark.parametrize("kind", ["ndarray", "list", "tuple", "series"])
+def test_samplesize_confint_proportion_vectorized(arg, kind):
+    # arrays, lists and Series give the same as the scalar calls
+    values = {
+        "proportion": [0.2, 0.5, 0.0, 1.0],
+        "half_length": [0.05, 0.1, 0.2, 0.3],
+        "alpha": [0.01, 0.05, 0.1, 0.5],
+    }[arg]
+    container = {
+        "ndarray": np.array,
+        "list": list,
+        "tuple": tuple,
+        "series": lambda x: pd.Series(x, index=list("abcd")),
+    }[kind]
+    args = {"proportion": 0.4, "half_length": 0.1, "alpha": 0.05}
+    expected = np.array(
+        [smprop.samplesize_confint_proportion(**{**args, arg: v}) for v in values]
+    )
+
+    res = smprop.samplesize_confint_proportion(**{**args, arg: container(values)})
+    assert_allclose(np.asarray(res), expected, rtol=1e-13)
+    assert np.shape(res) == (4,)
+    # the result type is the same as before the input validation was added
+    if kind == "series" and arg != "alpha":
+        assert isinstance(res, pd.Series)
+        assert list(res.index) == list("abcd")
+    else:
+        assert isinstance(res, np.ndarray)
+
+
+def test_samplesize_confint_proportion_broadcast():
+    q = np.array([0.2, 0.5])
+    h = np.array([0.05, 0.1, 0.2])
+    res = smprop.samplesize_confint_proportion(q[:, None], h)
+    assert res.shape == (2, 3)
+    for i, qi in enumerate(q):
+        for j, hj in enumerate(h):
+            expected = smprop.samplesize_confint_proportion(qi, hj)
+            assert_allclose(res[i, j], expected, rtol=1e-13)
