@@ -3335,11 +3335,13 @@ def test_za_break_tvalues_matches_ols(regression, kind):
 
 @pytest.mark.parametrize("regression", ["c", "t", "ct"])
 def test_za_break_tvalues_blocks(regression):
-    # more observations than one block of rows of the QR decomposition
+    # more observations than one block of rows of the QR decomposition. The
+    # cross products sum 20,000 rows, which loses about 2e-10 (relative)
+    # against exact rational arithmetic, while OLS loses about 4e-13.
     rng = np.random.default_rng(10583)
     x = _za_series("trend_break", 20000, rng)
     tvalues, expected = _za_break_tvalues(x, 4, regression, 0.15, step=499)
-    assert_allclose(tvalues, expected, rtol=1e-10)
+    assert_allclose(tvalues, expected, rtol=1e-9)
 
 
 @pytest.mark.parametrize("regression", ["c", "t", "ct"])
