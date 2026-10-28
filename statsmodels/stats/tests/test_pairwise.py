@@ -21,9 +21,14 @@ import pandas as pd
 import pytest
 from scipy import stats
 
-from statsmodels.sandbox.stats.multicomp import _smm_ppf, _smm_sf
 from statsmodels.stats.libqsturng import qsturng
-from statsmodels.stats.multicomp import MultiComparison, pairwise_tukeyhsd, tukeyhsd
+from statsmodels.stats.multicomp import (
+    MultiComparison,
+    _smm_ppf,
+    _smm_sf,
+    pairwise_tukeyhsd,
+    tukeyhsd,
+)
 
 ss = """\
   43.9  1   1
@@ -790,16 +795,47 @@ def test_smm_sf_r(q, k, df, expected):
     assert_allclose(_smm_sf(q, k, df), expected, rtol=1e-9)
 
 
-def test_smm_sf_pmvt():
-    # R 4.5.3, mvtnorm 1.4.2, multivariate t with uncorrelated components
-    # pmvt(lower = rep(-q, k), upper = rep(q, k), df = df, corr = diag(k),
-    #      algorithm = GenzBretz(maxpts = 2e6, abseps = 1e-9, releps = 0))
-    q = np.array([2.5, 3.0, 2.0, 3.5, 4.2])
-    k = [3, 6, 1, 10, 15]
-    df = [10, 5, 7, 20, 3]
-    cdf = [0.9136858617, 0.8713328011, 0.9143806714, 0.9787528378, 0.8583708778]
-    for i in range(len(q)):
-        assert_allclose(1 - _smm_sf(q[i], k[i], df[i]), cdf[i], atol=1e-6)
+# R 4.5.3, psmm_sf as above, but the integral is split at
+# c(0, 1e-8, 1e-4, 0.01, 1 / q * c(0.1, 1, 3, 10), 0.5, 1, 2, 10, Inf)
+# for small df, many comparisons and far tails
+smm_sf_r_extreme = [
+    (0.5, 190, 1.05, 0.999999780360526),
+    (3, 45, 1.5, 0.528472790751412),
+    (10, 45, 3, 0.0213717061986633),
+    (30, 3, 8.3, 2.71702731787374e-09),
+    (2, 190, 50, 0.995802671507413),
+]
+
+
+@pytest.mark.parametrize("q, k, df, expected", smm_sf_r_extreme)
+def test_smm_sf_r_extreme(q, k, df, expected):
+    assert_allclose(_smm_sf(q, k, df), expected, rtol=1e-10)
+
+
+def test_smm_sf_vectorized():
+    q, k, df, expected = (np.array(col) for col in zip(*smm_sf_r, strict=True))
+    for k_ in (3, 21):
+        mask = k == k_
+        res = _smm_sf(q[mask].reshape(2, -1), k_, df[mask].reshape(2, -1))
+        assert res.shape == (2, mask.sum() // 2)
+        assert_allclose(res.ravel(), expected[mask], rtol=1e-9)
+
+
+# R 4.5.3, mvtnorm 1.4.2, multivariate t with uncorrelated components
+# pmvt(lower = rep(-q, k), upper = rep(q, k), df = df, corr = diag(k),
+#      algorithm = GenzBretz(maxpts = 2e6, abseps = 1e-9, releps = 0))
+smm_cdf_pmvt = [
+    (2.5, 3, 10, 0.9136858617),
+    (3.0, 6, 5, 0.8713328011),
+    (2.0, 1, 7, 0.9143806714),
+    (3.5, 10, 20, 0.9787528378),
+    (4.2, 15, 3, 0.8583708778),
+]
+
+
+@pytest.mark.parametrize("q, k, df, cdf", smm_cdf_pmvt)
+def test_smm_sf_pmvt(q, k, df, cdf):
+    assert_allclose(1 - _smm_sf(q, k, df), cdf, atol=1e-6)
 
 
 def test_smm_special_cases():
@@ -818,6 +854,13 @@ def test_smm_special_cases():
     qcrit = _smm_ppf(0.95, 6, df)
     assert_allclose(_smm_sf(qcrit, 6, df), 0.05, rtol=1e-8)
     assert_allclose(_smm_ppf(0.95, 1, df), stats.t.isf(0.025, df), rtol=1e-12)
+    # infinite df, quantile of the maximum of independent normal variables
+    expected = stats.norm.isf((1 - 0.95 ** (1 / 4)) / 2)
+    assert_allclose(_smm_ppf(0.95, 4, np.inf), expected, rtol=1e-12)
+    df_special = np.array([np.inf, np.nan, 1.05, 2.5])
+    qcrit = _smm_ppf(0.99, 190, df_special)
+    assert np.isnan(qcrit[1])
+    assert_allclose(_smm_sf(qcrit, 190, df_special), [0.01, np.nan, 0.01, 0.01], rtol=1e-8)
 
 
 class TestDunnettT3:
@@ -890,9 +933,53 @@ class TestDunnettT3:
         assert_equal(frame["group_c"].tolist(), [b"medical", b"medical", b"mental"])
         assert_allclose(frame["p-adj"], self.pvalues, rtol=1e-8)
 
-    def test_alpha_error(self):
+    @pytest.mark.parametrize("alpha", [1.5, 0.0, np.nan])
+    def test_alpha_error(self, alpha):
         with pytest.raises(ValueError, match="alpha"):
-            self.mc.dunnett_t3(alpha=1.5)
+            self.mc.dunnett_t3(alpha=alpha)
+
+    def test_alpha_type_error(self):
+        with pytest.raises(TypeError, match="alpha"):
+            self.mc.dunnett_t3(alpha="0.05")
+
+    @pytest.mark.parametrize("container", [list, pd.Series])
+    def test_input_types(self, container):
+        data = dta2.iloc[3:29]
+        endog = container(data["StressReduction"].to_numpy())
+        groups = container(data["Treatment"].to_numpy())
+        res = MultiComparison(endog, groups).dunnett_t3()
+        assert_allclose(res.pvalues, self.pvalues, rtol=1e-8)
+        assert_allclose(res.confint, self.confint[0.05], rtol=1e-8)
+
+
+def test_dunnett_t3_two_groups():
+    # with two groups the T3 test is the Welch t test, which is the same as
+    # the Games-Howell test
+    data = dta2.iloc[3:29]
+    data = data[data["Treatment"] != b"physical"]
+    mc = MultiComparison(data["StressReduction"], data["Treatment"])
+    res = mc.dunnett_t3(alpha=0.1)
+    res_gh = mc.tukeyhsd(alpha=0.1, use_var="unequal")
+    assert_allclose(res.pvalues, res_gh.pvalues, rtol=1e-8)
+    assert_allclose(res.confint, res_gh.confint, rtol=1e-8)
+    assert_equal(res.reject, res_gh.reject)
+
+
+def test_dunnett_t3_single_observation():
+    # the variance of a group with one observation is undefined
+    endog = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.5])
+    groups = np.array(["a"] * 4 + ["b"] * 4 + ["c"])
+    mc = MultiComparison(endog, groups)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = mc.dunnett_t3()
+    frame = res.summary_frame()
+    single = (frame["group_t"] == "c") | (frame["group_c"] == "c")
+    assert single.sum() == 2
+    assert np.isnan(res.pvalues[single]).all()
+    assert np.isnan(res.confint[single]).all()
+    assert not res.reject[single].any()
+    assert np.isfinite(res.pvalues[~single]).all()
 
 
 def test_dunnett_t3_zero_variance():
