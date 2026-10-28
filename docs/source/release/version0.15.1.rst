@@ -321,6 +321,12 @@ Mixed models and imputation
 - ``MICE.combine`` failed for results of models that do not have a
   ``_results`` attribute, for example those of ``PHReg``. :issue:`9136`,
   :pr:`10479`, :pr:`10557`
+- ``MICEData`` no longer resets the index of the data. ``MICEData.data``, and
+  so the data returned by ``next_sample`` and passed to ``history_callback``,
+  keeps the index of the input, which can contain duplicate labels, so that
+  imputed values can be matched to the rows of the input. Rows in which all
+  variables are missing are still dropped before imputation.
+  :issue:`6532`, :pr:`10499`, :pr:`10629`
 
 Time series analysis
 --------------------
