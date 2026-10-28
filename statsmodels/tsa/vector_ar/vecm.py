@@ -4,7 +4,6 @@ import numpy as np
 from numpy import hstack, vstack
 from numpy.linalg import inv, svd
 import scipy
-import scipy.linalg
 import scipy.stats
 
 from statsmodels.iolib.summary import Summary
@@ -628,6 +627,14 @@ def coint_johansen(endog, det_order, k_ar_diff):
     The implementation might change to make more use of the existing VECM
     framework.
 
+    The eigenvalues and eigenvectors are computed from a QR decomposition and
+    a singular value decomposition using the algorithm of [2]_, which avoids
+    forming the moment matrices. This requires one matrix with the lagged
+    differences, the levels and the differences of ``endog``, so the memory
+    use is larger than if only the moment matrices were stored. A
+    ``LinAlgError`` is raised if these columns are linearly dependent, for
+    example if ``endog`` contains a duplicated series.
+
     References
     ----------
     .. [1] Lütkepohl, H. 2005. New Introduction to Multiple Time Series
@@ -686,7 +693,22 @@ def coint_johansen(endog, det_order, k_ar_diff):
     # differences, and the SVD of R10 R00^{-1} gives the eigenvalues and the
     # eigenvectors normalized to d' Skk d = I.
     k = z.shape[1]
-    r = np.linalg.qr(np.column_stack((z, lx, dx)), mode="r")
+    if lx.shape[0] < k + 2 * neqs:
+        raise ValueError(
+            "endog has too few observations for the number of variables and "
+            "k_ar_diff; at least k_ar_diff * neqs + 2 * neqs + k_ar_diff + 1 "
+            "observations are required."
+        )
+    regressors = np.column_stack((z, lx, dx))
+    r = np.linalg.qr(regressors, mode="r")
+    # R_ii is the part of column i that is orthogonal to the columns before
+    # it, so a tiny relative value means that the columns are linearly
+    # dependent (for example duplicated or collinear series).
+    if np.any(np.abs(np.diag(r)) <= 1e-12 * np.linalg.norm(regressors, axis=0)):
+        raise np.linalg.LinAlgError(
+            "Singular matrix: the lagged differences, the levels and the "
+            "differences of endog are linearly dependent."
+        )
     r11 = r[k : k + neqs, k : k + neqs]
     resids = np.column_stack((lx, dx)) - z @ scipy.linalg.solve_triangular(
         r[:k, :k], r[:k, k:]
@@ -699,6 +721,8 @@ def coint_johansen(endog, det_order, k_ar_diff):
         ).T
     )
     a = s**2 / (1 + s**2)
+    # log(1 - a) without the cancellation for eigenvalues close to 1
+    log_1m_a = -np.log1p(s**2)
     d = np.sqrt(rkt.shape[0]) * scipy.linalg.solve_triangular(r11, u)
     aind = np.arange(neqs)
     # Normalize by first non-zero element of d, usually [0, 0]
@@ -712,12 +736,10 @@ def coint_johansen(endog, det_order, k_ar_diff):
     lr2 = np.zeros(neqs)
     cvm = np.zeros((neqs, 3))
     cvt = np.zeros((neqs, 3))
-    iota = np.ones(neqs)
     t, junk = rkt.shape
     for i in range(neqs):
-        tmp = np.log(iota - a)[i:]
-        lr1[i] = -t * np.sum(tmp, 0)
-        lr2[i] = -t * np.log(1 - a[i])
+        lr1[i] = -t * np.sum(log_1m_a[i:], 0)
+        lr2[i] = -t * log_1m_a[i]
         cvm[i, :] = c_sja(neqs - i, det_order)
         cvt[i, :] = c_sjt(neqs - i, det_order)
         aind[i] = i
