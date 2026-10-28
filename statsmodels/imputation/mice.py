@@ -216,7 +216,7 @@ class MICEData:
         # ``self.data.iloc[...] = ...`` writes below).  The original index
         # is preserved so imputed values can be related back to the input
         # (#6532).
-        self.data = data.dropna(how="all").copy().copy()
+        self.data = data.dropna(how="all").copy()
 
         self.history_callback = history_callback
         self.history = []
