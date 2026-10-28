@@ -90,17 +90,20 @@ Behavior changes
 - ``RegressionModel.fit(method="pinv")`` reports the rank of the estimator:
   the rank counts only the singular directions that ``pinv_extended``
   retained, instead of a rank computed from ``diag(singular_values)`` with a
-  different tolerance.  ``df_resid`` is the residual degrees of freedom of
-  that fit and ``df_model`` keeps the ``rank - k_constant`` convention.  The
-  degrees of freedom are also refreshed on every ``fit`` call rather than
-  cached, so a fit can no longer inherit the rank or df of an earlier fit or
-  of an attribute access made before fitting.  A ``SingularMatrixWarning`` is
-  now raised whenever a direction is dropped; when ``min(nobs, n_columns)``
-  is at most four the two tolerances differ and the truncation could
-  previously be silent even though the coefficients and covariance came from
-  the reduced fit.  The message is now "The exog matrix is singular to
-  numerical precision." and covers both a truncated fit and a design that is
-  only numerically rank deficient.
+  different tolerance.  The relative cutoff is ``1e-15`` for float64 and
+  scales with the machine precision of the data, so a float32 or complex64
+  fit drops the directions that are zero at that precision instead of
+  inverting them.  ``df_resid`` is the residual degrees of freedom of that
+  fit and ``df_model`` keeps the ``rank - k_constant`` convention.  A cached
+  degrees of freedom value is kept while it still matches the rank of the fit
+  and is refreshed when it changes, so a fit can no longer inherit the rank
+  or df of an earlier fit or of an attribute access made before fitting.  A
+  ``SingularMatrixWarning`` is now raised whenever a direction is dropped;
+  when ``min(nobs, n_columns)`` is at most four the two tolerances differ and
+  the truncation could previously be silent even though the coefficients and
+  covariance came from the reduced fit.  The message is now "The exog matrix
+  is singular to numerical precision." and covers both a truncated fit and a
+  design that is only numerically rank deficient.
   :issue:`9258`
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted

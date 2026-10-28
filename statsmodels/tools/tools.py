@@ -185,10 +185,26 @@ def isestimable(c, d):
     return True
 
 
-# Default relative cutoff used by ``pinv_extended``.  Singular values at or
-# below ``PINV_RCOND * max(s)`` are treated as zero.  The cutoff is relative
-# to the largest singular value and is not scaled by the precision of ``x``.
+# Reference relative cutoff for float64, used as the default by
+# ``pinv_extended``.  Singular values at or below ``PINV_RCOND * max(s)`` are
+# treated as zero.  The cutoff is relative to the largest singular value and
+# is about 4.5 * eps for float64; ``_pinv_rcond`` keeps the same multiple of
+# the machine precision for other dtypes.
 PINV_RCOND = 1e-15
+
+
+def _pinv_rcond(dtype):
+    """Return the pinv cutoff for a floating dtype.
+
+    ``PINV_RCOND`` is the float64 cutoff.  Scaling it by
+    ``eps(dtype) / eps(float64)`` keeps the same multiple of the machine
+    precision, so the cutoff remains meaningful for float32 and complex64
+    data.  Integer input is factorized in float64, as in ``numpy.linalg``.
+    """
+    dtype = np.dtype(dtype)
+    if not np.issubdtype(dtype, np.inexact):
+        dtype = np.dtype(np.float64)
+    return float(PINV_RCOND * np.finfo(dtype).eps / np.finfo(np.float64).eps)
 
 
 def pinv_extended(x, rcond=PINV_RCOND):

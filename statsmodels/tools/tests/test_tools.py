@@ -20,7 +20,7 @@ import pytest
 
 from statsmodels.datasets import longley
 from statsmodels.tools import tools
-from statsmodels.tools.tools import PINV_RCOND, pinv_extended
+from statsmodels.tools.tools import PINV_RCOND, _pinv_rcond, pinv_extended
 
 
 @pytest.fixture(scope="module")
@@ -179,6 +179,33 @@ class TestTools:
         sm_inv, sing_vals = pinv_extended(X)
         assert sm_inv.dtype == np.float32
         assert sing_vals.dtype == np.float32
+
+    def test_pinv_rcond_scales_with_dtype(self):
+        eps32 = np.finfo(np.float32).eps
+        eps64 = np.finfo(np.float64).eps
+        assert _pinv_rcond(np.float64) == PINV_RCOND
+        assert _pinv_rcond(np.dtype("float64")) == PINV_RCOND
+        assert _pinv_rcond(np.complex128) == PINV_RCOND
+        assert _pinv_rcond(np.float32) == PINV_RCOND * eps32 / eps64
+        assert _pinv_rcond(np.complex64) == PINV_RCOND * eps32 / eps64
+        # integer input is factorized in float64, as in numpy.linalg
+        assert _pinv_rcond(np.int64) == PINV_RCOND
+        assert _pinv_rcond(np.int32) == PINV_RCOND
+
+    def test_extendedpinv_default_is_float64_cutoff(self):
+        # pinv_extended keeps its historical default; only RegressionModel.fit
+        # derives the dtype-aware cutoff.  A float32 near-duplicate survives
+        # the default cutoff and is dropped by the dtype-aware one.
+        rng = np.random.RandomState(0)
+        base = rng.standard_normal((60, 4)).astype(np.float32)
+        col = base[:, 1] + np.float32(1e-7) * rng.standard_normal(60).astype(np.float32)
+        X = np.column_stack([base, col])
+        _, singular_values = pinv_extended(X)
+        ratio = singular_values[-1] / singular_values[0]
+        cutoff = _pinv_rcond(X.dtype)
+        assert PINV_RCOND < ratio < cutoff
+        assert np.count_nonzero(singular_values > PINV_RCOND * singular_values[0]) == 5
+        assert np.count_nonzero(singular_values > cutoff * singular_values[0]) == 4
 
     def test_fullrank(self):
         import warnings

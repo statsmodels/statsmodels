@@ -39,7 +39,7 @@ from statsmodels.regression.linear_model import (
 from statsmodels.regression.quantile_regression import QuantReg
 from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.sm_exceptions import MissingDataError, SingularMatrixWarning
-from statsmodels.tools.tools import PINV_RCOND, add_constant
+from statsmodels.tools.tools import _pinv_rcond, add_constant
 
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -942,6 +942,25 @@ class TestPinvRankMatchesFit:
         assert mod.df_resid == n - (p - 1)
         assert res_qr.df_resid == n - (p - 1)
 
+    def test_df_stable_when_refit_reports_same_rank(self):
+        # Keeping a cached df is observably safe when the refit reports the
+        # same rank: nothing changes between the two fits.
+        rng = np.random.RandomState(7)
+        exog = rng.standard_normal((40, 3))
+        endog = rng.standard_normal(40)
+        mod = OLS(endog, exog)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", SingularMatrixWarning)
+            res_pinv = mod.fit()
+            df_pinv = (mod.rank, mod.df_model, mod.df_resid)
+            res_qr = mod.fit(method="qr")
+
+        assert (mod.rank, mod.df_model, mod.df_resid) == df_pinv
+        assert (res_qr.df_model, res_qr.df_resid) == (
+            res_pinv.df_model,
+            res_pinv.df_resid,
+        )
+
     def test_zero_rank_design(self):
         exog = np.zeros((10, 2))
         endog = np.arange(10, dtype=float)
@@ -962,7 +981,7 @@ class TestPinvRankMatchesFit:
         exog = np.column_stack([x, np.zeros_like(x)]).astype(np.float32)
         endog = rng.standard_normal(n).astype(np.float32)
         sv = np.linalg.svd(exog, compute_uv=False)
-        expected_rank = int(np.count_nonzero(sv > PINV_RCOND * np.max(sv)))
+        expected_rank = int(np.count_nonzero(sv > _pinv_rcond(sv.dtype) * np.max(sv)))
         with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
             res = OLS(endog, exog).fit()
 
@@ -971,25 +990,52 @@ class TestPinvRankMatchesFit:
         assert res.model.rank == expected_rank
         assert res.df_resid == n - expected_rank
 
-    def test_float32_collinear_rank_follows_estimator(self):
-        # PINV_RCOND is 1e-15 for every dtype, but matrix_rank uses the
-        # precision of the data.  A float32 linear combination leaves a
-        # direction near 1e-8 of the largest singular value, which
-        # pinv_extended inverts and matrix_rank drops.  The warning must stay
-        # and rank and df must describe the fit that was computed.
-        n = 40
+    def test_float32_near_duplicate_matches_matrix_rank(self):
+        # The 60 x 5 float32 case from the review: a column near-duplicates
+        # another one.  The direction sits at about 5e-8 of the largest
+        # singular value, which is noise for float32 (eps ~ 1.2e-7).  With a
+        # dtype-aware cutoff the estimator drops it, so rank, matrix_rank and
+        # the fitted subspace all agree.  With the float64 cutoff the fit
+        # inverts the noise direction instead: the coefficients blow up while
+        # rank would claim one direction fewer.
+        n = 60
         rng = np.random.RandomState(1)
-        base = rng.standard_normal((n, 3)).astype(np.float32)
-        exog = np.column_stack([base, 2 * base[:, 0] - 3 * base[:, 1]])
+        base = rng.standard_normal((n, 4)).astype(np.float32)
+        col = base[:, 1] + np.float32(1e-7) * rng.standard_normal(n).astype(np.float32)
+        exog = np.column_stack([base, col])
         endog = rng.standard_normal(n).astype(np.float32)
         sv = np.linalg.svd(exog, compute_uv=False)
-        assert 1e-15 < sv[-1] / sv[0] <= 4 * np.finfo(np.float32).eps
-        assert np.linalg.matrix_rank(exog) == 3
+        ratio = sv[-1] / sv[0]
+        # Guard the regime: the float64 cutoff of 1e-15 keeps the direction,
+        # the dtype-aware cutoff drops it, and NumPy drops it as well.
+        assert 1e-15 < ratio < _pinv_rcond(sv.dtype)
+        assert np.linalg.matrix_rank(exog) == 4
         with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
             res = OLS(endog, exog).fit()
 
         assert res.model.rank == 4
         assert res.df_resid == n - 4
+        assert res.model.k_constant == 0
+        assert res.df_model == 4
+        # The fit used four directions, so the fitted values are the rank-four
+        # projection of endog, not a projection that includes the noise.
+        u = np.linalg.svd(exog, full_matrices=False)[0]
+        u4 = u[:, :4]
+        # float32 fitted values, so compare at float32 accuracy.
+        assert_allclose(res.fittedvalues, u4 @ (u4.T @ endog), rtol=1e-5, atol=1e-6)
+        assert np.all(np.abs(res.params) < 10)
+
+    def test_integer_exog_rank_uses_float64_cutoff(self):
+        # Integer exog is factorized in float64, so it keeps the float64
+        # cutoff and must not see a dtype-aware cutoff of its own.
+        x = np.arange(10, dtype=np.int64)
+        exog = np.column_stack([x, 2 * x, np.ones(10, dtype=np.int64)])
+        endog = np.arange(10, dtype=float)
+        with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
+            res = OLS(endog, exog).fit()
+
+        assert res.model.rank == 2
+        assert res.df_resid == 8
 
     def test_results_df_is_a_snapshot(self):
         # A results instance keeps the df of the fit that created it; a later
