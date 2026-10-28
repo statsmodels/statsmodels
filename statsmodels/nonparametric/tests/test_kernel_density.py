@@ -718,6 +718,57 @@ class TestKDEMultivariateConditional(KDETestBase):
         npt.assert_equal(dens.bw, bw_user)
 
 
+@pytest.mark.parametrize(
+    "dep_type, indep_type", [("c", "co"), ("c", "cu"), ("o", "c"), ("cu", "cou")]
+)
+def test_conditional_cdf_formula(dep_type, indep_type):
+    # GH 6076: cdf is sum(G * W) / sum(W) with the product kernel cdf G of
+    # endog and the product kernel W of exog
+    from statsmodels.nonparametric._kernel_base import gpke
+
+    rng = np.random.default_rng(6076)
+    nobs = 50
+    data = {
+        "c": rng.normal(size=nobs),
+        "o": rng.integers(0, 4, nobs),
+        "u": rng.integers(0, 3, nobs),
+    }
+    endog = np.column_stack([data[t] for t in dep_type])
+    exog = np.column_stack([data[t] + (t == "c") for t in indep_type])
+    bw = np.full(len(dep_type) + len(indep_type), 0.4)
+    dens = nparam.KDEMultivariateConditional(
+        endog=endog,
+        exog=exog,
+        dep_type=dep_type,
+        indep_type=indep_type,
+        bw=bw,
+        rng=0,
+    )
+    k_dep = len(dep_type)
+    expected = np.empty(nobs)
+    for i in range(nobs):
+        G = gpke(
+            bw[:k_dep],
+            data=endog,
+            data_predict=endog[i],
+            var_type=dep_type,
+            ckertype="gaussian_cdf",
+            ukertype="aitchisonaitken_cdf",
+            okertype="wangryzin_cdf",
+            tosum=False,
+        )
+        W = gpke(
+            bw[k_dep:],
+            data=exog,
+            data_predict=exog[i],
+            var_type=indep_type,
+            tosum=False,
+        )
+        mu_x = gpke(bw[k_dep:], data=exog, data_predict=exog[i], var_type=indep_type)
+        expected[i] = (G * W).sum() / mu_x
+    assert_allclose(dens.cdf(), expected, rtol=1e-12)
+
+
 def test_conditional_imse_matches_hand_computed_cv():
     # KDEMultivariateConditional.imse implements the leave-one-out CV(h)
     # objective documented in its docstring; recompute it from scratch with
