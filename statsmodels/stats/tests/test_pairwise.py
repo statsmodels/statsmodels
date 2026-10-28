@@ -21,14 +21,9 @@ import pandas as pd
 import pytest
 from scipy import stats
 
+from statsmodels.stats._dunnett_t3 import _smm_ppf, _smm_sf
 from statsmodels.stats.libqsturng import qsturng
-from statsmodels.stats.multicomp import (
-    MultiComparison,
-    _smm_ppf,
-    _smm_sf,
-    pairwise_tukeyhsd,
-    tukeyhsd,
-)
+from statsmodels.stats.multicomp import MultiComparison, pairwise_tukeyhsd, tukeyhsd
 
 ss = """\
   43.9  1   1

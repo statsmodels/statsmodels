@@ -73,6 +73,7 @@ from scipy import interpolate, stats
 
 from statsmodels.graphics import utils
 from statsmodels.iolib.table import SimpleTable
+from statsmodels.stats._dunnett_t3 import _dunnett_t3
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.validation import float_like, string_like
 
@@ -1289,8 +1290,6 @@ class MultiComparison:
            Unequal Variance Case. Journal of the American Statistical
            Association, 75(372), 796-800.
         """
-        from statsmodels.stats.multicomp import _dunnett_t3
-
         alpha = float_like(alpha, "alpha", optional=False)
         if not 0 < alpha < 1:
             raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
