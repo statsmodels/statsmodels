@@ -546,6 +546,12 @@ Statistics and tests
   scalars. ``ratio`` can be array_like, and a negative or NaN ``ratio`` raises
   a ``ValueError``; ``solve_power`` returned ``nan`` with a convergence warning
   for a negative ``ratio``. :pr:`10349`, :pr:`10584`
+- ``TTestPower.solve_power`` and ``TTestIndPower.solve_power`` raise a
+  ``ValueError`` for an invalid ``alternative``, for example ``"one-sided"``.
+  They returned ``nan`` with a ``ConvergenceWarning`` if solving for the
+  sample size. The spellings are case sensitive, as in ``power``, and the
+  deprecated alias ``"2s"`` continues to work with a ``FutureWarning``.
+  :issue:`9378`, :pr:`10483`, :pr:`10631`
 - ``proportions_chisquare`` raises a ``ValueError`` for a single sample
   without ``value``. The statistic was 0 and the p-value ``nan``.
   :pr:`10451`
