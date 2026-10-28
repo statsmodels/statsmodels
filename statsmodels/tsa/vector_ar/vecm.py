@@ -710,9 +710,12 @@ def coint_johansen(endog, det_order, k_ar_diff):
             "differences of endog are linearly dependent."
         )
     r11 = r[k : k + neqs, k : k + neqs]
-    resids = np.column_stack((lx, dx)) - z @ scipy.linalg.solve_triangular(
-        r[:k, :k], r[:k, k:]
-    )
+    resids = np.column_stack((lx, dx))
+    # Old SciPy versions raise for an empty system when k_ar_diff is 0
+    if k > 0:
+        resids = resids - z @ scipy.linalg.solve_triangular(
+            r[:k, :k], r[:k, k:]
+        )
     rkt = resids[:, :neqs]  # level on lagged diffs
     r0t = resids[:, neqs:]
     u, s, _ = svd(
