@@ -546,6 +546,63 @@ def test_evaluate_outside_support(kernel):
     npt.assert_allclose(vals, loop_vals)
 
 
+BOUNDED_KERNELS = ["epa", "tri", "uni", "biw", "triw", "tric", "cos", "cos2"]
+
+
+@pytest.mark.parametrize("weighted", [False, True])
+@pytest.mark.parametrize("kernel", BOUNDED_KERNELS)
+def test_evaluate_bounded_kernels(kernel, weighted):
+    # GH 7195: all kernels with a bounded support, with and without weights
+    rng = np.random.default_rng(9876)
+    x = rng.normal(size=50)
+    weights = rng.uniform(0.5, 2.0, size=50) if weighted else None
+    dens = KDE(x).fit(kernel=kernel, bw="silverman", fft=False, weights=weights)
+    h = dens.kernel.h
+    lo, hi = dens.kernel.domain
+
+    pts = np.array(
+        [
+            x.min() + lo * h - 2.0 * h,  # outside, left
+            x.min() + 0.5 * lo * h,  # inside the support of the smallest obs
+            x.mean(),
+            x.max() + hi * h + 2.0 * h,  # outside, right
+        ]
+    )
+    vals = dens.evaluate(pts)
+    assert vals.shape == (4,)
+    assert not np.isnan(vals).any()
+    assert vals[0] == 0.0
+    assert vals[3] == 0.0
+    assert vals[1] > 0.0
+    assert vals[2] > 0.0
+
+    # brute force sum of the kernel over the observations in the support
+    w = np.full(50, 1 / 50) if weights is None else weights / weights.sum()
+    u = (x[:, None] - pts[None, :]) / h
+    in_support = (u >= lo) & (u <= hi)
+    shape = dens.kernel(np.clip(u, lo, hi))
+    expected = (np.where(in_support, shape, 0.0) * w[:, None]).sum(axis=0) / h
+    npt.assert_allclose(vals, expected, rtol=1e-12)
+
+    # list input, and a length 1 array, keep one density per point
+    npt.assert_allclose(dens.evaluate(list(pts)), vals)
+    assert dens.evaluate(pts[:1]).shape == (1,)
+    assert dens.evaluate(float(pts[0])).shape == (1,)
+
+
+def test_kernel_density_list_weights():
+    # weights set directly on a sandbox kernel can be a list
+    x = np.array([-0.3, 0.1, 0.8])
+    pts = np.array([-5.0, 0.0, 0.5])
+    weights = [0.2, 0.3, 0.5]
+    kern = kernels.Epanechnikov(h=0.7)
+    kern.weights = np.array(weights)
+    expected = kern.density(x, pts)
+    kern.weights = weights
+    npt.assert_allclose(kern.density(x, pts), expected)
+    npt.assert_allclose(kern.density(x, 0.5), expected[2:])
+
+
 @pytest.mark.parametrize("func", [kdensity, kdensityfft])
 def test_kdensity_result_object_default(func):
     # retgrid=True (the default) yields a KDEResult with the same length and

@@ -219,7 +219,8 @@ class CustomKernel:
             if np.any(in_support):
                 kernel_vals[in_support] = self(u[in_support])
         if self.weights is not None:
-            return 1.0 / self.h * np.sum(kernel_vals * self.weights[:, None], axis=0)
+            weights = np.asarray(self.weights, dtype=float)
+            return 1.0 / self.h * np.sum(kernel_vals * weights[:, None], axis=0)
         return 1.0 / (self.h * n) * np.sum(kernel_vals, axis=0)
 
     def density_var(self, density, nobs):
