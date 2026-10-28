@@ -305,6 +305,13 @@ Generalized linear models and discrete models
 - ``MNLogit.get_margeff`` with ``dummy=True`` or ``count=True`` failed or
   returned an incorrect covariance if the number of regressors differs from
   the number of outcome categories. :issue:`5488`, :pr:`10298`
+- ``fit`` of ``ConditionalLogit``, ``ConditionalPoisson`` and
+  ``ConditionalMNLogit`` ignored the keyword arguments of the optimizer,
+  ``callback``, ``retall`` and ``warn_convergence``. They are now passed on,
+  and the results of ``ConditionalLogit`` and ``ConditionalPoisson`` have
+  ``mle_retvals`` and ``mle_settings``. A ``cov_type`` other than
+  ``"nonrobust"`` was ignored and now raises a ``NotImplementedError``.
+  :issue:`8849`, :pr:`10630`
 
 Mixed models and imputation
 ---------------------------
