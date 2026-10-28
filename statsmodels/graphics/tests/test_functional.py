@@ -4,6 +4,7 @@ from itertools import combinations
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
+import pandas as pd
 import pytest
 
 from statsmodels.datasets import elnino
@@ -486,6 +487,8 @@ def test_banddepth_BD2():
         ([[0, 0], [0, 0], [0, 0]], [1] * 3),
         ([[0, 1], [0, 1], [1, 0]], [1, 1, 2 / 3]),
         ([[0, 0], [-1, 0], [1, 0], [0, 1]], [1, 0.5, 0.5, 0.5]),
+        # The first two curves cross between the points, only the points count
+        ([[0, 2], [2, 0], [0.1, 0.1]], [2 / 3, 2 / 3, 1]),
     ],
 )
 def test_banddepth_BD2_crossings_and_ties(curves, expected):
@@ -496,7 +499,9 @@ def test_banddepth_BD2_crossings_and_ties(curves, expected):
     assert_equal(banddepth(curves[:, ::-1], method="BD2"), expected)
 
 
-@pytest.mark.parametrize("shape", [(2, 1), (4, 3), (12, 17), (8, 65), (6, 129)])
+@pytest.mark.parametrize(
+    "shape", [(2, 1), (4, 3), (25, 4), (12, 17), (8, 65), (6, 129)]
+)
 @pytest.mark.parametrize("ties", [False, True])
 def test_banddepth_BD2_pairwise_reference(shape, ties):
     rng = np.random.default_rng(7105)
@@ -511,6 +516,14 @@ def test_banddepth_BD2_pairwise_reference(shape, ties):
         counts += np.all((curves >= lower) & (curves <= upper), axis=1)
     assert_equal(banddepth(curves, method="BD2"), counts / len(pairs))
     assert_equal(curves, original)
+
+
+@pytest.mark.parametrize("method", ["BD2", "MBD"])
+@pytest.mark.parametrize("container", [pd.DataFrame, list])
+def test_banddepth_array_like(method, container):
+    curves = np.random.default_rng(7105).integers(-2, 3, size=(8, 5))
+    expected = banddepth(curves, method=method)
+    assert_equal(banddepth(container(curves), method=method), expected)
 
 
 def test_banddepth_MBD(close_figures):
