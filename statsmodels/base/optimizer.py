@@ -512,10 +512,10 @@ def _newton_step_halving(f, fargs, oldparams, step, fold, max_halvings=30):
                 if not finite_fold or fnew <= fold + tol:
                     return newparams, fnew, True
                 if first_finite is None:
-                    first_finite = (newparams, fnew)
+                    first_finite = (newparams, fnew, True)
             factor /= 2
     if first_finite is not None:
-        return (*first_finite, True)
+        return first_finite
     return oldparams, fold, False
 
 
