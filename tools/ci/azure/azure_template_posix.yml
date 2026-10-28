@@ -54,10 +54,15 @@ jobs:
           test.install: true
           TEST_SDIST: true
         python_313_copy_on_write:
-          # Middle of the supported Python versions, runs the full test suite
+          # Middle of the supported Python and dependency versions, runs the
+          # full test suite. pandas stays on 2.x, where copy-on-write is
+          # optional, since it is always on in pandas 3.
           PYTEST_PATTERN: '(not slow or slow) and not joblib'
           python.version: '3.13'
           python.architecture: 'x64'
+          NUMPY_VERSION: 2.2.6
+          PANDAS_VERSION: 2.3.3
+          SCIPY_VERSION: 1.15.3
           SM_TEST_COPY_ON_WRITE: 1
           coverage: true
           test.x13: true
