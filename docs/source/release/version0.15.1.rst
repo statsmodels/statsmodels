@@ -312,6 +312,13 @@ Generalized linear models and discrete models
   ``mle_retvals`` and ``mle_settings``. A ``cov_type`` other than
   ``"nonrobust"`` was ignored and now raises a ``NotImplementedError``.
   :issue:`8849`, :pr:`10630`
+- The estimation of the autocorrelation of
+  :class:`~statsmodels.genmod.cov_struct.Autoregressive` with ``grid=False``
+  raised a ``ValueError`` ("unable to find right bracket") if the estimate was
+  larger than about 0.75, and failed in ``scipy.optimize.brent`` if the
+  minimum was exactly at a point of the search. The estimate is now found for
+  values up to within about 1e-6 of one. A larger estimate still raises the
+  ``ValueError``. A zero estimate is a ``float``. :issue:`8122`, :pr:`10636`
 
 Mixed models and imputation
 ---------------------------
