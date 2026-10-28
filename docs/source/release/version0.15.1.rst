@@ -305,6 +305,13 @@ Generalized linear models and discrete models
 - ``MNLogit.get_margeff`` with ``dummy=True`` or ``count=True`` failed or
   returned an incorrect covariance if the number of regressors differs from
   the number of outcome categories. :issue:`5488`, :pr:`10298`
+- ``MNLogit.from_formula`` raised a ``ValueError`` if the response is a str,
+  bool or categorical variable. The response can now be a single categorical
+  variable, which is treated like the corresponding ``endog`` of the array
+  API, so that the categories label the equations. Any other response with
+  multiple columns still raises a ``ValueError``. ``Logit`` and ``Probit``
+  with such a response in a formula are not changed. :issue:`9475`,
+  :pr:`10639`
 - ``fit`` of ``ConditionalLogit``, ``ConditionalPoisson`` and
   ``ConditionalMNLogit`` ignored the keyword arguments of the optimizer,
   ``callback``, ``retall`` and ``warn_convergence``. They are now passed on,
