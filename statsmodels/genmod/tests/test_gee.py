@@ -2696,16 +2696,35 @@ def test_autoregressive_zero_boundary(rho):
     result = model.fit(scale=1.0)
     ar.update(result.params)
     assert ar.dep_params == 0
+    assert isinstance(ar.dep_params, float)
 
 
-def test_autoregressive_no_right_bracket():
-    # A minimum at one still has no strictly interior right bracket.
+@pytest.mark.parametrize("ratio", [1.0, 1.5])
+def test_autoregressive_no_right_bracket(ratio):
+    # A minimum at one, or above it, still has no interior right bracket. This
+    # pins the current behavior, which raises instead of using the boundary.
     ar = cov_struct.Autoregressive(grid=False)
     model = gee.GEE(
-        [1.0, 1.0, -1.0, -1.0],
+        [1.0, ratio, -1.0, -ratio],
         np.ones((4, 1)),
         groups=np.repeat([0, 1], 2),
         cov_struct=ar,
     )
     with pytest.raises(ValueError, match="unable to find right bracket"):
         model.fit(scale=1.0)
+
+
+def test_autoregressive_equal_objective():
+    # With a perfect fit all residuals are zero, so the objective is flat and
+    # there is no interior minimum.
+    ar = cov_struct.Autoregressive(grid=False)
+    model = gee.GEE(
+        [1.0, 2.0, 3.0, 5.0],
+        np.eye(4),
+        groups=np.repeat([0, 1], 2),
+        cov_struct=ar,
+        update_dep=False,
+    )
+    result = model.fit(scale=1.0, start_params=[1.0, 2.0, 3.0, 5.0])
+    ar.update(result.params)
+    assert ar.dep_params == 0.0
