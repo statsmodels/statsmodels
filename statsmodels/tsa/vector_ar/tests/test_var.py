@@ -817,6 +817,7 @@ class TestVARExtras:
             res0.simulate_var(rng=np.random.RandomState(987128))
             res0.simulate_var(rng=np.random.default_rng(987128))
 
+    @pytest.mark.slow
     @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_process_plotting(self, close_figures):

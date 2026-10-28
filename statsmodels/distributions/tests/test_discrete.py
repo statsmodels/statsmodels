@@ -420,6 +420,7 @@ class TestDiscretizedBurr12(CheckDiscretized):
 class TestDiscretizedGammaEx:
     # strike outbreaks example from Ch... 2012
 
+    @pytest.mark.slow
     def test_all(self):
         # expand frequencies to observations, (no freq_weights yet)
         freq = [46, 76, 24, 9, 1]

@@ -1934,6 +1934,7 @@ class TestGEEPoissonFormulaCovType(CheckConsistency):
         )
 
 
+@pytest.mark.slow
 class TestGEEOrdinalCovType(CheckConsistency):
 
     @classmethod
