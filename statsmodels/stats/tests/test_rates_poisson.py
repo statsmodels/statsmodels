@@ -124,6 +124,86 @@ def test_confint_poisson_midp_zero_count(nobs, alpha):
     assert_allclose(ci[1], -np.log(alpha) / nobs, rtol=1e-6)
 
 
+@pytest.mark.parametrize("nobs", [1e3, 1e6, 1e9])
+def test_confint_poisson_midp_zero_count_closed_form(nobs):
+    # the upper limit is the closed form, not the result of a numerical search
+    # with an absolute tolerance
+    ci = confint_poisson(0, nobs, alpha=0.05, method="midp-c")
+    assert_equal(ci[0], 0)
+    assert_allclose(ci[1], -np.log(0.05) / nobs, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "nobs, alpha, upp",
+    [
+        (1, 0.05, 2.995731417),
+        (1, 0.1, 2.302585452),
+        (1, 0.01, 4.605171048),
+        (1, 1e-4, 9.210329656),
+        (10, 0.05, 0.2995731417),
+        (100, 0.05, 0.02995731417),
+    ],
+)
+def test_confint_poisson_midp_zero_count_r(nobs, alpha, upp):
+    # R package exactci 1.4.5 (R 4.6.1), mid-p, central
+    # > library(exactci)
+    # > poisson.exact(0, 1, r=1, tsmethod="central", conf.level=0.95,
+    #                 midp=TRUE)$conf.int
+    # 0.000000000 2.995731417
+    # The root finder of exactci is accurate to about 1e-6, the closed form
+    # -log(alpha) / nobs is 2.99573227355399.
+    ci = confint_poisson(0, nobs, alpha=alpha, method="midp-c")
+    assert_equal(ci[0], 0)
+    assert_allclose(ci[1], upp, rtol=1e-5)
+
+
+def test_confint_poisson_midp_r():
+    # R package exactci 1.4.5 (R 4.6.1), mid-p, central, count above zero
+    # > poisson.exact(1, 1, r=1, tsmethod="central", conf.level=0.95,
+    #                 midp=TRUE)$conf.int
+    # 0.05002545907 4.93186435767
+    # > poisson.exact(5, 1, r=1, tsmethod="central", conf.level=0.95,
+    #                 midp=TRUE)$conf.int
+    # 1.83199243707 11.08241578906
+    # The limits are found by fmin with xtol=1e-8, hence the low precision.
+    ci = confint_poisson(1, 1, method="midp-c")
+    assert_allclose(ci, (0.05002545907, 4.93186435767), rtol=1e-3)
+    ci = confint_poisson(5, 1, method="midp-c")
+    assert_allclose(ci, (1.83199243707, 11.08241578906), rtol=1e-3)
+
+
+@pytest.mark.parametrize("count", [0, 2])
+def test_confint_poisson_midp_array_like(count):
+    # inputs with a single element are accepted, also if not scalars
+    ci = confint_poisson(count, 2.5, method="midp-c")
+    if count == 0:
+        assert_equal(ci[0], 0)
+    for count_, nobs_ in [
+        (pd.Series([count]), 2.5),
+        (pd.Series([count]), pd.Series([2.5])),
+        (np.array([count]), np.array([2.5])),
+        (np.array(count), np.array(2.5)),
+        (np.array([[count]]), 2.5),
+    ]:
+        assert_allclose(
+            confint_poisson(count_, nobs_, method="midp-c"), ci, rtol=1e-12
+        )
+
+
+@pytest.mark.parametrize(
+    "count, nobs",
+    [
+        (np.array([0, 1]), 1.0),
+        (0, np.array([1.0, 2.0])),
+        (np.array([0, 1]), np.array([1.0, 2.0])),
+        (pd.Series([0, 1]), pd.Series([1.0, 2.0])),
+    ],
+)
+def test_confint_poisson_midp_not_vectorized(count, nobs):
+    with pytest.raises(ValueError, match="not vectorized"):
+        confint_poisson(count, nobs, method="midp-c")
+
+
 cases_tolint = [
     ("wald", 15, 1, 1, (3, 32), (3, np.inf), (0, 31)),
     ("score", 15, 1, 1, (4, 35), (4, np.inf), (0, 33)),
