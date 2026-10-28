@@ -184,6 +184,15 @@ Performance
   fraction of a second instead of seconds. ``pacf_ols`` with
   ``efficient=True`` demeans the series first, which is more accurate when the
   mean is large relative to the variation. :issue:`2276`, :pr:`10571`
+- ``zivot_andrews`` computes the regressions of all candidate break periods
+  from one QR decomposition of the regressors that do not depend on the
+  break, using the same private helper, instead of fitting one regression per
+  period. The cost grows linearly instead of quadratically with the number of
+  observations, so the test is about 25 to 65 times faster for 2,000
+  observations and 50 to 140 times faster for 5,000. The statistics are more
+  accurate when the regressors are close to collinear, so for such series
+  the statistic can change in the later digits. The new values agree with R
+  (urca) and with high-precision arithmetic. :issue:`10601`, :pr:`10602`
 
 Bug Fixes
 =========
@@ -256,6 +265,10 @@ Regression and linear models
 Generalized linear models and discrete models
 ---------------------------------------------
 
+- ``score_test`` with a one-dimensional ``exog_extra`` for the discrete
+  models and the ``GLM`` result method raised an ``IndexError`` in 0.15.0. A
+  one-dimensional ``exog_extra`` is a single additional variable, as before.
+  :pr:`10609`
 - ``predict`` preserves the observation index of a pandas Series for models
   with one predictor and additional parameters, such as ``NegativeBinomial``,
   ``GeneralizedPoisson``, ``ZeroInflatedPoisson``, ``BetaModel``,
@@ -306,6 +319,13 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
+- ``MLEModel.loglike`` returns ``-inf`` instead of raising a ``LinAlgError``
+  if the states are initialized as stationary and the transition matrix has a
+  unit root, so that the stationary covariance of the initial state does not
+  exist. A derivative free optimizer, such as ``method="powell"``, can try
+  parameters that are transformed to the boundary of the stationary region.
+  The fit of the dynamic factor model in the example notebook failed with this
+  error on some platforms. :pr:`10611`
 - ``range_unit_root_test`` documents the correct null hypothesis, a unit
   root, which is rejected for small statistics. The ``InterpolationWarning``
   reports the correct direction: it is raised if the statistic is outside the
@@ -417,6 +437,25 @@ Time series analysis
   A UTF-8 byte order mark is ignored, a file that is not valid UTF-8 raises a
   ``ValueError`` that says so, and ``rawspec`` accepts a ``pathlib.Path`` as
   documented. :pr:`10585`
+- ``coint_johansen``, ``select_coint_rank`` and the error bands of the
+  impulse responses of a ``VAR`` returned complex eigenvalues and eigenvectors
+  with NumPy 2.5 and later, which ``np.linalg.eig`` returns as complex arrays
+  even if all the eigenvalues are real, and ``coint_johansen`` warned with a
+  ``ComplexWarning``. The results are real again. :pr:`10613`
+- ``smoothed_state_autocovariance`` does not warn that the univariate filter
+  diagonalized the observation covariance when it extends the model beyond
+  the sample, since it does not use the disturbance covariances. :pr:`10613`
+- ``arma_order_select_ic`` no longer warns about the starting values of the
+  candidate models that fall back to zeros. :pr:`10613`
+- ``hamilton_filter`` and the starting values of ``DynamicFactorMQ`` no longer
+  warn about the unused scale of a regression without residual degrees of
+  freedom. :pr:`10613`
+- ``ThetaModelResults.plot_predict`` with ``alpha=None`` no longer adds a
+  legend without labels, which warned. :pr:`10613`
+- ``SVAR.sirf_errband_mc`` and ``IRAnalysis.errband_mc`` with ``svar=True``
+  show one ``ConvergenceWarning`` with the number of replications whose
+  maximum likelihood fit did not converge, instead of one warning for each of
+  them. :pr:`10613`
 
 Statistics and tests
 --------------------
@@ -520,6 +559,8 @@ Statistics and tests
   rows and before the model info rows. :issue:`9282`, :pr:`10218`
 - ``corr_rank`` and ``corr_normal_scores`` return a 1 by 1 matrix for a single
   variable instead of a scalar. :pr:`10456`
+- ``Description`` no longer calls ``scipy.stats.mode`` for a column without
+  observations, which warns in SciPy 1.14 and later. :pr:`10613`
 
 Treatment effects
 -----------------
@@ -581,6 +622,10 @@ Robust and multivariate statistics
 - ``PCA`` with ``gls=True`` applied the weights inverted: the data were
   divided by the square root of the weights instead of multiplied by it.
   :issue:`10256`, :pr:`10258`
+- ``Factor`` with ``method="ml"`` and ``PHD`` returned complex loadings and
+  directions with NumPy 2.5 and later, which ``np.linalg.eig`` returns as
+  complex arrays even if all the eigenvalues are real. The results are real
+  again. :pr:`10613`
 
 Nonparametric
 -------------
@@ -624,6 +669,10 @@ Duration models
   have a score residual of 0 (they were added to the risk set of the preceding
   failure time before). Observations that are not used no longer produce a
   ``nan`` robust covariance. :issue:`10288`, :pr:`10363`, :pr:`10377`
+- ``SurvfuncRight`` with ``exog`` and integer times stored an arbitrary
+  integer instead of ``nan`` in ``surv_prob_se``, ``n_risk`` and ``n_events``,
+  and warned about casting ``nan`` to an integer. They are ``nan`` as floats.
+  :pr:`10613`
 
 Other
 -----

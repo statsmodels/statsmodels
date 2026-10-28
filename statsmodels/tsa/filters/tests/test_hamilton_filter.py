@@ -197,6 +197,7 @@ def test_raises_too_short():
         hamilton_filter(np.ones(5), h=8, p=4)
 
 
+@pytest.mark.filterwarnings("error::RuntimeWarning")
 @pytest.mark.parametrize("h", [3, 7])
 @pytest.mark.parametrize("p", [2, 5, 7, 11])
 def test_minimum_length_works(h, p):

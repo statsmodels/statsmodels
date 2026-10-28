@@ -305,7 +305,10 @@ class MultivariateMissingGeneralObsCov:
 
         # Univariate filtering, smoothing, and simulation smoothing
         cls.model.filter_univariate = True
-        cls.univariate_results = cls.model.smooth()
+        # The non-diagonal obs_cov is diagonalized by the univariate filter
+        msg = "The univariate filtering approach diagonalized"
+        with pytest.warns(OutputWarning, match=msg):
+            cls.univariate_results = cls.model.smooth()
         cls.univariate_sim = simulation_smoother(cls.model)
 
     def test_using_univariate(self):

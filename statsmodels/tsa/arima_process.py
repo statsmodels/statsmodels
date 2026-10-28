@@ -17,7 +17,7 @@ Judge, ... (1985): The Theory and Practice of Econometrics
 Author: josefpktd
 License: BSD
 """
-from statsmodels.compat.numpy import NP_LT_2
+from statsmodels.compat.numpy import ComplexWarning
 
 import warnings
 
@@ -27,11 +27,6 @@ from scipy import linalg, optimize, signal
 from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import array_like, int_like
-
-if NP_LT_2:
-    ComplexWarning = np.ComplexWarning
-else:
-    ComplexWarning = np.exceptions.ComplexWarning
 
 __all__ = [
     "arma2ar",

@@ -46,6 +46,7 @@ __all__ = [
     "NP_LT_1_24",
     "NP_LT_2",
     "NP_LT_24",
+    "ComplexWarning",
     "inplace_reshape",
     "np_matrix_rank",
     "np_new_unique",
@@ -54,6 +55,8 @@ __all__ = [
 NP_LT_1_24 = parse(np.__version__) < Version("1.23.99")
 NP_LT_2 = parse(np.__version__) < Version("1.99.99")
 NP_LT_24 = parse(np.__version__) < Version("2.3.99")
+
+ComplexWarning = np.ComplexWarning if NP_LT_2 else np.exceptions.ComplexWarning
 
 np_matrix_rank = np.linalg.matrix_rank
 np_new_unique = np.unique

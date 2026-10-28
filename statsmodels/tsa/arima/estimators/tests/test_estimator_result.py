@@ -1,5 +1,7 @@
 import numpy as np
+import pytest
 
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake
 from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.estimators.burg import burg
@@ -53,4 +55,7 @@ def test_statespace_returns_estimator_result():
 def test_gls_returns_estimator_result():
     endog = lake.copy()
     exog = np.ones_like(endog)
-    _check(gls(endog, exog, order=(1, 0, 0), max_iter=2))
+    # max_iter=2 stops the iterations before convergence on purpose
+    with pytest.warns(ConvergenceWarning, match="Feasible GLS failed to converge"):
+        res = gls(endog, exog, order=(1, 0, 0), max_iter=2)
+    _check(res)

@@ -4,6 +4,8 @@ Created on Thu Aug 30 21:51:08 2012
 Author: Josef Perktold
 
 """
+from statsmodels.compat.numpy import ComplexWarning
+
 from pathlib import Path
 import warnings
 
@@ -489,3 +491,12 @@ def test_johansen_result_aliases_and_rkt_meth():
     assert res.max_eig_stat_crit_vals is res.cvm
     assert res.meth == "johansen"
     assert res.rkt.shape == res.r0t.shape
+
+
+def test_johansen_real_eigenvalues():
+    # NumPy 2.5 and later return complex arrays from eig for real eigenvalues
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ComplexWarning)
+        res = coint_johansen(dta, 1, 2)
+    assert not np.iscomplexobj(res.eig)
+    assert not np.iscomplexobj(res.evec)

@@ -6,6 +6,7 @@ from statsmodels.compat.python import lrange
 # TODO: Test for LM
 from statsmodels.compat.scipy import SP_LT_116
 
+import contextlib
 from pathlib import Path
 import pickle
 import warnings
@@ -39,6 +40,7 @@ from statsmodels.regression.linear_model import (
 from statsmodels.regression.quantile_regression import QuantReg
 from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.sm_exceptions import MissingDataError, SingularMatrixWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tools.tools import _pinv_rcond, add_constant
 
 DECIMAL_4 = 4
@@ -2462,9 +2464,9 @@ def test_yule_walker_order_validation():
     x = rs.standard_normal(30)
     with pytest.raises(ValueError, match="order must be a non-negative integer"):
         yule_walker(x, order=-1)
-    rho0, sigma0 = yule_walker(x, order=0)
+    rho0, sigma0 = yule_walker(x, order=0, result_object=False)
     assert rho0.shape == (0,)
-    rho, sigma = yule_walker(x, order=4)
+    rho, sigma = yule_walker(x, order=4, result_object=False)
     assert rho.shape == (4,)
 
 
@@ -2484,6 +2486,14 @@ def _set_value(arr, idx, value):
         arr[idx] = value
 
 
+def _glsar_inf_warns(model, name, bad_value):
+    # GLSAR whitens the data with the initial rho of 0 before the check of the
+    # data, and 0 * inf is invalid
+    if model is GLSAR and name == "endog" and np.isinf(bad_value):
+        return warns_or_none(RuntimeWarning, match="invalid value encountered in mul")
+    return contextlib.nullcontext()
+
+
 @pytest.mark.parametrize("model", [OLS, WLS, GLS, GLSAR, QuantReg])
 @pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
 @pytest.mark.parametrize("use_pandas", [True, False])
@@ -2493,8 +2503,9 @@ def test_nonfinite_data_raises(model, bad_value, use_pandas, name, hasconst):
     endog, exog = _finite_check_data(use_pandas)
     data = {"endog": endog, "exog": exog}
     _set_value(data[name], 50 if name == "endog" else (3, 1), bad_value)
-    with pytest.raises(MissingDataError, match=f"{name} contains inf or nans"):
-        model(data["endog"], data["exog"], hasconst=hasconst)
+    with _glsar_inf_warns(model, name, bad_value):
+        with pytest.raises(MissingDataError, match=f"{name} contains inf or nans"):
+            model(data["endog"], data["exog"], hasconst=hasconst)
 
 
 @pytest.mark.parametrize("model", [OLS, WLS, GLS, GLSAR])
@@ -2512,8 +2523,9 @@ def test_nonfinite_data_missing_drop(model, name, use_pandas):
     endog, exog = _finite_check_data(use_pandas)
     data = {"endog": endog, "exog": exog}
     _set_value(data[name], 50 if name == "endog" else (3, 1), np.inf)
-    with pytest.raises(MissingDataError, match=f"{name} contains inf or nans"):
-        model(data["endog"], data["exog"], missing="drop")
+    with _glsar_inf_warns(model, name, np.inf):
+        with pytest.raises(MissingDataError, match=f"{name} contains inf or nans"):
+            model(data["endog"], data["exog"], missing="drop")
 
 
 @pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
@@ -2524,10 +2536,16 @@ def test_nonfinite_weights_raises(bad_value, use_pandas):
     weights[-2:] = bad_value
     if use_pandas:
         weights = pd.Series(weights)
-    with pytest.raises(MissingDataError, match="weights contains inf or nans"):
+    # WLS whitens with sqrt(weights) before the check, and sqrt(-inf) is invalid
+    def sqrt_warns():
+        if bad_value == -np.inf:
+            return warns_or_none(RuntimeWarning, match="invalid value encountered in")
+        return contextlib.nullcontext()
+
+    with sqrt_warns(), pytest.raises(MissingDataError, match="weights contains"):
         WLS(endog, exog, weights=weights)
     # also for a scalar
-    with pytest.raises(MissingDataError, match="weights contains inf or nans"):
+    with sqrt_warns(), pytest.raises(MissingDataError, match="weights contains"):
         WLS(endog, exog, weights=bad_value)
 
 

@@ -52,11 +52,15 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     PerfectSeparationError,
+    PerfectSeparationWarning,
     SpecificationWarning,
     ValueWarning,
 )
+from statsmodels.tools.testing import warns_or_none
 
 from .results.results_discrete import Anes, DiscreteL1, RandHIE, Spector
+
+QC_MATCH = "QC check did not pass|Could not trim params automatically"
 
 try:
     import cvxopt  # noqa:F401
@@ -829,14 +833,16 @@ class TestPoissonL1Compatability(CheckL1Compatability):
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars)
         alpha[: cls.m] = 0
-        cls.res_reg = sm.Poisson(rand_data.endog, rand_exog).fit_regularized(
-            method="l1",
-            alpha=alpha,
-            disp=False,
-            acc=1e-10,
-            maxiter=2000,
-            trim_mode="auto",
-        )
+        # the solver can evaluate exp of large linear predictors
+        with warns_or_none(RuntimeWarning, match="overflow encountered"):
+            cls.res_reg = sm.Poisson(rand_data.endog, rand_exog).fit_regularized(
+                method="l1",
+                alpha=alpha,
+                disp=False,
+                acc=1e-10,
+                maxiter=2000,
+                trim_mode="auto",
+            )
 
 
 class TestNegativeBinomialL1Compatability(CheckL1Compatability):
@@ -935,9 +941,11 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
         )
         # Actually drop the last columnand do an unregularized fit
         exog_no_PSI = data.exog[:, : cls.m]
-        cls.res_unreg = MNLogit(data.endog, exog_no_PSI).fit(
-            disp=0, gtol=1e-15, method="bfgs", maxiter=1000
-        )
+        # gtol=1e-15 is below what bfgs can reach
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+            cls.res_unreg = MNLogit(data.endog, exog_no_PSI).fit(
+                disp=0, gtol=1e-15, method="bfgs", maxiter=1000
+            )
 
     def test_t_test(self):
         m = self.m
@@ -1030,15 +1038,17 @@ class TestL1AlphaZeroLogit(CompareL11D):
         cls.res2 = Logit(data.endog, data.exog).fit(disp=0, tol=1e-15)
 
     def test_converged(self):
-        res = self.res1.model.fit_regularized(
-            method="l1",
-            alpha=0,
-            disp=0,
-            acc=1e-15,
-            maxiter=1,
-            trim_mode="auto",
-            auto_trim_tol=0.01,
-        )
+        # maxiter=1 forces the non-convergence
+        with pytest.warns(ConvergenceWarning, match="Maximum Likelihood optim"):
+            res = self.res1.model.fit_regularized(
+                method="l1",
+                alpha=0,
+                disp=0,
+                acc=1e-15,
+                maxiter=1,
+                trim_mode="auto",
+                auto_trim_tol=0.01,
+            )
 
         # see #2857
         assert_(res.mle_retvals["converged"] is False)
@@ -1078,9 +1088,11 @@ class TestL1AlphaZeroMNLogit(CompareL1):
             trim_mode="auto",
             auto_trim_tol=0.01,
         )
-        cls.res2 = MNLogit(data.endog, data.exog).fit(
-            disp=0, gtol=1e-15, method="bfgs", maxiter=1000
-        )
+        # gtol=1e-15 is below what bfgs can reach
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+            cls.res2 = MNLogit(data.endog, data.exog).fit(
+                disp=0, gtol=1e-15, method="bfgs", maxiter=1000
+            )
 
 
 class TestLogitNewton(CheckBinaryResults, CheckMargEff):
@@ -2801,7 +2813,9 @@ def test_mnlogit_basinhopping():
     model = MNLogit(y, sm.add_constant(x))
     # smoke tests for basinhopping and callback #8665
     model.fit(method="basinhopping", seed=rs)
-    model.fit(method="basinhopping", callback=callb, seed=rs)
+    # the callback returns True and stops basinhopping early
+    with pytest.warns(ConvergenceWarning, match="Maximum Likelihood optim"):
+        model.fit(method="basinhopping", callback=callb, seed=rs)
 
 
 def test_perfect_prediction():
@@ -2823,8 +2837,10 @@ def test_perfect_prediction():
     # turn off raise PerfectSeparationError
     mod.raise_on_perfect_prediction = False
     # this will raise if you set maxiter high enough with a singular matrix
-    with pytest.warns(ConvergenceWarning):
-        res = mod.fit(disp=False, maxiter=50)  # should not raise but does warn
+    # newton warns about the separation in each iteration
+    with pytest.warns(PerfectSeparationWarning, match="Perfect separation or"):
+        with pytest.warns(ConvergenceWarning):
+            res = mod.fit(disp=False, maxiter=50)  # should not raise but does warn
     assert_(not res.mle_retvals["converged"])
 
     # The following does not warn but message in summary()
@@ -3257,7 +3273,9 @@ class TestGeneralizedPoisson_p1:
         alpha = np.ones(len(self.res1.params))
         alpha[-2:] = 0
         # the first prints currently a warning, irrelevant here
-        res_reg1 = model.fit_regularized(alpha=alpha * 0.01, disp=0)
+        # the QC check of the SLSQP solution can fail, it depends on scipy
+        with warns_or_none(ConvergenceWarning, match=QC_MATCH):
+            res_reg1 = model.fit_regularized(alpha=alpha * 0.01, disp=0)
         res_reg2 = model.fit_regularized(alpha=alpha * 100, disp=0)
         res_reg3 = model.fit_regularized(alpha=alpha * 1000, disp=0)
 
@@ -3680,7 +3698,9 @@ class CheckNull:
         return endog, exog
 
     def test_llnull(self):
-        res = self.model.fit(start_params=self.start_params, disp=0)
+        # the fit can fail to converge for the models with a flat likelihood
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+            res = self.model.fit(start_params=self.start_params, disp=0)
         res._results._attach_nullmodel = True
         llf0 = res.llnull
         res_null0 = res.res_null
@@ -3711,9 +3731,11 @@ class TestNegativeBinomialNB1Null(CheckNull):
         endog, exog = cls._get_data()
         cls.model = NegativeBinomial(endog, exog, loglike_method="nb1")
         cls.model_null = NegativeBinomial(endog, exog[:, 0], loglike_method="nb1")
-        cls.res_null = cls.model_null.fit(
-            start_params=[8, 1000], method="bfgs", gtol=1e-08, maxiter=300, disp=0
-        )
+        # bfgs can fail to converge in the flat likelihood of the null model
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+            cls.res_null = cls.model_null.fit(
+                start_params=[8, 1000], method="bfgs", gtol=1e-08, maxiter=300, disp=0
+            )
         # for convergence with bfgs, I needed to round down alpha start_params
         cls.start_params = np.array([7.730452, 2.01633068e-02, 1763.0])
 
@@ -3758,9 +3780,11 @@ class TestNegativeBinomialNBP1Null(CheckNull):
         endog, exog = cls._get_data()
         cls.model = NegativeBinomialP(endog, exog, p=1.0)
         cls.model_null = NegativeBinomialP(endog, exog[:, 0], p=1)
-        cls.res_null = cls.model_null.fit(
-            start_params=[8, 1], method="bfgs", gtol=1e-06, maxiter=300, disp=0
-        )
+        # bfgs can fail to converge in the flat likelihood of the null model
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+            cls.res_null = cls.model_null.fit(
+                start_params=[8, 1], method="bfgs", gtol=1e-06, maxiter=300, disp=0
+            )
         cls.start_params = np.array([7.730452, 2.01633068e-02, 1763.0])
 
     def test_start_null(self):
@@ -3778,9 +3802,11 @@ class TestGeneralizedPoissonNull(CheckNull):
         endog, exog = cls._get_data()
         cls.model = GeneralizedPoisson(endog, exog, p=1.5)
         cls.model_null = GeneralizedPoisson(endog, exog[:, 0], p=1.5)
-        cls.res_null = cls.model_null.fit(
-            start_params=[8.4, 1], method="bfgs", gtol=1e-08, maxiter=300, disp=0
-        )
+        # bfgs can fail to converge in the flat likelihood of the null model
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+            cls.res_null = cls.model_null.fit(
+                start_params=[8.4, 1], method="bfgs", gtol=1e-08, maxiter=300, disp=0
+            )
         cls.start_params = np.array([6.91127148, 0.04501334, 0.88393736])
 
 
@@ -3920,7 +3946,7 @@ def test_unchanging_degrees_of_freedom():
 
 
 def test_mnlogit_float_name():
-    df = pd.DataFrame({"A": [0.0, 1.1, 0, 0, 1.1], "B": [0, 1, 0, 1, 1]})
+    df = pd.DataFrame({"A": [0.0, 1.1, 1.1, 0, 1.1], "B": [0, 1, 0, 1, 1]})
     with pytest.warns(
         SpecificationWarning, match="endog contains values are that not int-like"
     ):

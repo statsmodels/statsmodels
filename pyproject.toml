@@ -459,7 +459,6 @@ quote-style = "double"
 [tool.coverage.run]
 source = ["statsmodels"]
 branch = true
-plugins = ["Cython.Coverage"]
 omit = [
     # print_version is untestable
     "*/print_version.py",
