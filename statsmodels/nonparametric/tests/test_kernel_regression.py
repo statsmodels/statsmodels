@@ -936,3 +936,90 @@ def test_kernelreg_normal_reference_bw():
     npt.assert_allclose(
         model2.bw, 1.06 * np.std(x2[:, 0], axis=0) * 200 ** (-1.0 / (4 + 2)), rtol=1e-12
     )
+
+
+@pytest.mark.parametrize("scale", [1, 1000])
+def test_kernelreg_cv_ls_bw_of_unordered_variable_in_range(scale):
+    # GH 3790: The bandwidth of an unordered variable is the smoothing
+    # probability of the Aitchison-Aitken kernel, which is a valid kernel for
+    # bw <= (levels - 1) / levels.  The dependent variable is independent of
+    # the regressor, so the best bandwidth is the largest valid one.  The
+    # search was not bounded and the bandwidth was 1e13 for these codes.
+    rng = np.random.default_rng(3790)
+    y = rng.standard_normal(60)
+    x = scale * rng.integers(0, 3, 60)
+    model = KernelReg(y, x, "u", reg_type="ll", bw="cv_ls", rng=0)
+    npt.assert_allclose(model.bw, 2 / 3, rtol=1e-3)
+    mean, mfx = model.fit()
+    assert np.isfinite(mean).all()
+
+
+def test_kernelreg_cv_ls_bw_of_ordered_variable_below_one():
+    # The Wang-Ryzin kernel is zero for bw = 1.  A local linear fit of codes
+    # on a large scale ended with an unbounded bandwidth and failed with a
+    # LinAlgError.
+    rng = np.random.default_rng(3790)
+    x = 1000 * rng.integers(0, 6, 60)
+    y = x / 1000 + rng.standard_normal(60)
+    model = KernelReg(y, x, "o", reg_type="ll", bw="cv_ls", rng=0)
+    assert 0 < model.bw[0] < 1
+    mean, mfx = model.fit()
+    assert np.isfinite(mean).all()
+
+
+@pytest.mark.filterwarnings("ignore::FutureWarning")
+def test_kernelreg_aic_bw_of_unordered_variable_in_range():
+    # The search of the AIC evaluated the criterion at negative bandwidths,
+    # which are rejected as user-specified bandwidths
+    rng = np.random.default_rng(3790)
+    x = rng.integers(0, 3, 80)
+    y = (x == 1) + 0.5 * rng.standard_normal(80)
+    model = KernelReg(y, x, "u", reg_type="lc", bw="aic", rng=0)
+    assert 0 < model.bw[0] <= 2 / 3
+
+
+@pytest.mark.filterwarnings("ignore:invalid value encountered in divide")
+def test_kernelreg_efficient_cv_ls_bw_of_unordered_variable_in_range():
+    # The efficient estimation scales the bandwidths of sub samples up to the
+    # full sample
+    rng = np.random.default_rng(3790)
+    xc = rng.standard_normal(150)
+    xu = rng.integers(0, 3, 150)
+    y = np.sin(xc) + (xu == 1) + 0.3 * rng.standard_normal(150)
+    model = KernelReg(
+        y,
+        np.column_stack((xc, 1000 * xu)),
+        "cu",
+        reg_type="lc",
+        bw="cv_ls",
+        defaults=nparam.EstimatorSettings(efficient=True, n_sub=50, n_jobs=1),
+        rng=0,
+    )
+    assert model.bw[0] > 0
+    assert 0 < model.bw[1] <= 2 / 3
+
+
+@pytest.mark.parametrize(
+    "okertype, ukertype, upper",
+    [
+        ("wangryzin", "aitchisonaitken", [1 - 1e-10, 2 / 3]),
+        ("wangryzin_reg", "aitchison_aitken_reg", [1.0, 1.0]),
+    ],
+)
+def test_kernelreg_bw_bounds_of_discrete_kernels(okertype, ukertype, upper):
+    # The regression versions of the kernels are weights that are one for
+    # the same value, so a bandwidth of one is valid for them
+    rng = np.random.default_rng(3790)
+    x = np.column_stack((rng.integers(0, 4, 40), rng.integers(0, 3, 40)))
+    model = KernelReg(
+        rng.standard_normal(40),
+        x,
+        "ou",
+        bw=[0.5, 0.5],
+        okertype=okertype,
+        ukertype=ukertype,
+        rng=0,
+    )
+    lower, bound = model._get_bw_bounds()
+    npt.assert_allclose(lower, 1e-10)
+    npt.assert_allclose(bound, upper)

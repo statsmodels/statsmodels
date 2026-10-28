@@ -107,6 +107,20 @@ class KDEMultivariate(GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
+        The bandwidths that are selected by one of the methods are kept in
+        the range for which the kernels of the discrete variables are
+        defined.  The bandwidth of an unordered variable is at most
+        ``(levels - 1) / levels``, where ``levels`` is the number of distinct
+        values of the variable, and the bandwidth of an ordered variable is
+        less than 1.  A user-specified bandwidth is used as given.
+
+        .. versionchanged:: 0.15.1
+
+            The bandwidths of discrete variables that are selected by one of
+            the methods are bounded.  They can have been outside the range
+            of the kernels, so that the density estimate was not a
+            probability mass function.
+
     defaults : EstimatorSettings instance, optional
         The default values for (efficient) bandwidth estimation.
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
@@ -447,6 +461,20 @@ class KDEMultivariateConditional(GenericKDE):
             - normal_reference: normal reference rule of thumb (default)
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
+
+        The bandwidths that are selected by one of the methods are kept in
+        the range for which the kernels of the discrete variables are
+        defined.  The bandwidth of an unordered variable is at most
+        ``(levels - 1) / levels``, where ``levels`` is the number of distinct
+        values of the variable, and the bandwidth of an ordered variable is
+        less than 1.  A user-specified bandwidth is used as given.
+
+        .. versionchanged:: 0.15.1
+
+            The bandwidths of discrete variables that are selected by one of
+            the methods are bounded.  They can have been outside the range
+            of the kernels, so that the density estimate was not a
+            probability mass function.
 
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
