@@ -983,7 +983,10 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
         alpha = np.asarray(alpha) / 2
 
     if alternative in ["two-sided", "smaller"]:
-        x_low = stats.binom.ppf(alpha, nobs, value) - 1
+        x_low = stats.binom.ppf(alpha, nobs, value)
+        # Old SciPy versions return 0 instead of nobs for the degenerate
+        # distribution at value=1
+        x_low = np.where(np.equal(value, 1), nobs, x_low) - 1
     else:
         x_low = 0
     if alternative in ["two-sided", "larger"]:
