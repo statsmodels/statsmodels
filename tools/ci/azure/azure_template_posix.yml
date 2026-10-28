@@ -15,6 +15,9 @@ jobs:
   pool:
     vmImage: ${{ parameters.vmImage }}
   variables:
+    # Slow tests run in only three jobs, the oldest, a middle and the newest
+    # Python and dependency combination. They set PYTEST_PATTERN to select all
+    # tests. Every other job in the pipeline skips the slow tests.
     PYTEST_PATTERN: 'not slow and not joblib'
   strategy:
     matrix:
@@ -22,6 +25,8 @@ jobs:
         # Linux carries the Python/dependency compatibility grid. Other
         # platforms keep sentinel jobs for OS-specific coverage.
         python_310:
+          # Oldest Python and dependencies, runs the full test suite
+          PYTEST_PATTERN: '(not slow or slow) and not joblib'
           python.version: '3.10'
           python.architecture: 'x64'
           USE_MATPLOTLIB: false
@@ -49,6 +54,8 @@ jobs:
           test.install: true
           TEST_SDIST: true
         python_313_copy_on_write:
+          # Middle of the supported Python versions, runs the full test suite
+          PYTEST_PATTERN: '(not slow or slow) and not joblib'
           python.version: '3.13'
           python.architecture: 'x64'
           SM_TEST_COPY_ON_WRITE: 1
@@ -65,6 +72,8 @@ jobs:
           python.architecture: 'x64'
           pip.pre: true
         python_315_no_formulaic:
+          # Newest Python, runs the full test suite
+          PYTEST_PATTERN: '(not slow or slow) and not joblib'
           python.version: '3.15'
           python.architecture: 'x64'
           PIP_UNINSTALL: "formulaic"
@@ -77,7 +86,6 @@ jobs:
           python.architecture: 'x64-freethreaded'
           PANDAS_VERSION: 3
           coverage: true
-          PYTEST_PATTERN: '(not slow or slow) and not joblib'
       ${{ if eq(parameters.name, 'macOS') }}:
         # macOS keeps one editable install on an older Python and one package
         # install on the newest supported Python.
@@ -154,7 +162,7 @@ jobs:
       echo "Testing site packages"
       mkdir test_run_dir
       pushd test_run_dir
-      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples', '--dist', 'loadscope', '--durations=25'], exit=True)"
+      python -c "import statsmodels; statsmodels.test(['-n', 'auto', '--junitxml=../junit/test-results.xml', '--skip-examples', '--skip-slow', '--dist', 'loadscope', '--durations=25'], exit=True)"
       LAST_EXIT_CODE=$?
       echo "Status code: ${LAST_EXIT_CODE}"
       exit ${LAST_EXIT_CODE}
@@ -177,7 +185,7 @@ jobs:
       export PYTHON_GIL="0"
       # joblib creates difficult to debug exceptions during parallel runs
       python -m pip uninstall joblib -y
-      pytest statsmodels/nonparametric/tests/ --parallel-threads 4 --junitxml=junit/test-results.xml
+      pytest statsmodels/nonparametric/tests/ --skip-slow --parallel-threads 4 --junitxml=junit/test-results.xml
     displayName: 'Run tests (parallel)'
     condition: eq(variables['parallel'], 'true')
 
