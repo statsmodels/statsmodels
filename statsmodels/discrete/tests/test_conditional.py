@@ -113,6 +113,37 @@ def test_conditional_fit_warn_convergence(conditional_model, recwarn):
     assert not result.mle_retvals["converged"]
 
 
+def test_conditional_fit_settings(conditional_model, capsys):
+    start_params = _conditional_start_params(conditional_model)
+    result = conditional_model.fit(
+        start_params=start_params, method="bfgs", maxiter=50, disp=True
+    )
+
+    assert result.mle_settings["optimizer"] == "bfgs"
+    assert result.mle_settings["maxiter"] == 50
+    assert_allclose(result.mle_settings["start_params"], start_params)
+    assert result.mle_retvals["converged"]
+    assert "Optimization terminated successfully" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "fit_kwargs",
+    [
+        {"cov_type": "HC0"},
+        {"cov_type": "cluster", "cov_kwds": {"groups": np.repeat(np.arange(20), 3)}},
+    ],
+)
+def test_conditional_fit_robust_cov_type(conditional_model, fit_kwargs):
+    start_params = _conditional_start_params(conditional_model)
+    msg = "is not available for conditional models"
+    with pytest.raises(NotImplementedError, match=msg):
+        conditional_model.fit(start_params=start_params, **fit_kwargs)
+
+    # nonrobust is the only covariance type, passing it is allowed
+    result = conditional_model.fit(start_params=start_params, cov_type="nonrobust")
+    assert result.bse.shape == result.params.shape
+
+
 def test_logit_1d():
 
     y = np.r_[0, 1, 0, 1, 0, 1, 0, 1, 1, 1]
