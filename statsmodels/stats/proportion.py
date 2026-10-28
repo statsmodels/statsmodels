@@ -3243,7 +3243,7 @@ def _score_confint_inversion_ratio(
         return nobs1 / (nobs1 + c_z2), 1 + c_z2 / nobs2
 
     def func(log_ratio):
-        _, pvalue = score_test_proportions_2indep(
+        res = score_test_proportions_2indep(
             count1,
             nobs1,
             count2,
@@ -3251,9 +3251,8 @@ def _score_confint_inversion_ratio(
             value=np.exp(log_ratio),
             compare="ratio",
             correction=correction,
-            return_results=False,
         )
-        return pvalue - alpha
+        return res.pvalue - alpha
 
     def limit(log_inside, sign):
         # The p-value is above alpha at log_inside and goes to 0, so that it
