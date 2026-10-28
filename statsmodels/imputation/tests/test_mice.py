@@ -560,13 +560,15 @@ def test_mice_data_iterable():
 def test_micedata_preserves_index():
     # gh-6532: MICEData silently reset the user's index to 0..n-1, so
     # imputed values could no longer be related back to the original
-    # data (all-missing rows were also dropped, which stays, but the
-    # surviving rows must keep their original labels).
+    # data (all-missing rows are still dropped, but the surviving rows
+    # must keep their original labels).
     gen = np.random.RandomState(45902)
     df = pd.DataFrame(gen.normal(size=(25, 3)), index=range(100, 125))
     df.columns = ["x1", "x2", "x3"]
     df.iloc[[2, 7, 13], 1] = np.nan
     df.iloc[5, 2] = np.nan
+    df_orig = df.copy()
+    observed = df.notna()
 
     mid = mice.MICEData(df, rng=np.random.RandomState(0))
     assert_equal(mid.data.index.values, np.arange(100, 125))
@@ -574,16 +576,28 @@ def test_micedata_preserves_index():
     mid.update_all(2)
     assert not mid.data.isna().any().any()
     assert_equal(mid.data.index.values, np.arange(100, 125))
+    # observed values are untouched, and matched by label
+    assert list(mid.data.columns) == list(df.columns)
+    assert_allclose(mid.data.where(observed), df_orig)
+
+    # next_sample returns the data with the same index
+    sample = mid.next_sample()
+    assert_equal(sample.index.values, np.arange(100, 125))
+    assert_allclose(sample.where(observed), df_orig)
 
     # an all-missing row is still dropped, but the other labels survive
     df.iloc[9, :] = np.nan
+    df_orig = df.copy()
     mid2 = mice.MICEData(df, rng=np.random.RandomState(0))
     assert mid2.data.shape[0] == 24
     expected = np.array([x for x in range(100, 125) if x != 109])
     assert_equal(mid2.data.index.values, expected)
+    mid2.update_all(1)
+    assert_equal(mid2.data.index.values, expected)
+    assert not mid2.data.isna().any().any()
 
     # the user's frame is never modified in place
-    assert df.isna().any().any()
+    pd.testing.assert_frame_equal(df, df_orig)
 
 
 def test_micedata_duplicate_index():
@@ -595,8 +609,30 @@ def test_micedata_duplicate_index():
     df.index = [i // 2 for i in range(20)]
     df.iloc[3, 1] = np.nan
     df.iloc[10, 2] = np.nan
+    df_orig = df.copy()
+    observed = df.notna()
 
     mid = mice.MICEData(df, rng=np.random.RandomState(0))
     mid.update_all(1)
     assert_equal(len(mid.data), 20)
     assert not mid.data.isna().any().any()
+    assert_equal(mid.data.index.values, df_orig.index.values)
+    assert_allclose(mid.data.where(observed), df_orig)
+    pd.testing.assert_frame_equal(df, df_orig)
+
+
+def test_mice_keeps_index():
+    # MICE fits the analysis model to MICEData.data, which keeps the index
+    gen = np.random.RandomState(1234)
+    df = pd.DataFrame(gen.normal(size=(60, 3)), columns=["y", "x1", "x2"])
+    df["y"] = df["y"] + df["x1"]
+    df.iloc[[3, 10, 20], 1] = np.nan
+    df.iloc[[5, 30], 2] = np.nan
+    df.index = [i // 2 + 10 for i in range(60)]
+
+    mid = mice.MICEData(df, rng=np.random.RandomState(0))
+    imp = mice.MICE("y ~ x1 + x2", sm.OLS, mid)
+    result = imp.fit(2, 2)
+    assert result.params.shape[0] == 3
+    assert_equal(mid.data.index.values, df.index.values)
+    assert mid.data.index.has_duplicates
