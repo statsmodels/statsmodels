@@ -105,6 +105,14 @@ Behavior changes
   is singular to numerical precision." and covers both a truncated fit and a
   design that is only numerically rank deficient.
   :issue:`9258`
+- :func:`~statsmodels.stats.anova.anova_lm` raises a ``ValueError`` for a
+  single model with a rank-deficient design matrix, for example a duplicated
+  column, an empty cell of an interaction or more columns than observations.
+  The Type I, II and III tables of such a model assigned arbitrary sums of
+  squares, degrees of freedom and p-values to the redundant terms. The
+  weighted design matrix is checked, so a factor level that only appears in
+  observations with zero weight is also rejected. :issue:`5398`,
+  :issue:`8506`, :pr:`10340`, :pr:`10622`
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
@@ -155,6 +163,17 @@ New functions and methods
   ``one_sided=True``, the trend at time t only depends on the observations up
   to and including t. It is computed with the Kalman filter of the state space
   form of the HP filter. :issue:`6947`, :pr:`10588`
+- Add :func:`~statsmodels.stats.multicollinearity.vif`,
+  :func:`~statsmodels.stats.multicollinearity.vif_ridge` and
+  :func:`~statsmodels.stats.multicollinearity.collinear_index` for the
+  diagnosis of multicollinearity. They are available from
+  ``statsmodels.stats.api``. ``vif`` computes the variance inflation factors of
+  all columns of a data matrix, or of a covariance or correlation matrix, with
+  one eigenvalue decomposition. It is about 90 times faster than
+  ``variance_inflation_factor`` called for each column for 20 variables and
+  1000 observations, about 300 times faster for 60 variables, and returns a
+  ``Series`` for a ``DataFrame``. :issue:`1669`, :pr:`2380`, :pr:`7711`,
+  :pr:`10623`
 
 Performance
 -----------
@@ -186,13 +205,13 @@ Performance
   mean is large relative to the variation. :issue:`2276`, :pr:`10571`
 - ``zivot_andrews`` computes the regressions of all candidate break periods
   from one QR decomposition of the regressors that do not depend on the
-  break, using the same private helper, instead of fitting one regression per
-  period. The cost grows linearly instead of quadratically with the number of
-  observations, so the test is about 25 to 65 times faster for 2,000
-  observations and 50 to 140 times faster for 5,000. The statistics are more
-  accurate when the regressors are close to collinear, so for such series
-  the statistic can change in the later digits. The new values agree with R
-  (urca) and with high-precision arithmetic. :issue:`10601`, :pr:`10602`
+  break, instead of fitting one regression per period. The cost grows
+  linearly instead of quadratically with the number of observations, so the
+  test is about 25 to 65 times faster for 2,000 observations and 50 to 140
+  times faster for 5,000. The statistics are more accurate when the
+  regressors are close to collinear, so for such series the statistic can
+  change in the later digits. The new values agree with R (urca) and with
+  high-precision arithmetic. :issue:`10601`, :pr:`10602`, :pr:`10624`
 
 Bug Fixes
 =========

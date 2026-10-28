@@ -123,6 +123,21 @@ Outliers and Influence
    MLEInfluence
    variance_inflation_factor
 
+Multicollinearity
+~~~~~~~~~~~~~~~~~
+
+.. module:: statsmodels.stats.multicollinearity
+   :synopsis: Measures and diagnostics for multicollinearity
+
+.. currentmodule:: statsmodels.stats.multicollinearity
+
+.. autosummary::
+   :toctree: generated/
+
+   vif
+   vif_ridge
+   collinear_index
+
 Skewness
 ~~~~~~~~
 

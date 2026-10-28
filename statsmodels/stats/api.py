@@ -67,6 +67,7 @@ from .meta_analysis import (
     effectsize_2proportions,
     effectsize_smd,
 )
+from .multicollinearity import collinear_index, vif, vif_ridge
 from .multicomp import tukeyhsd
 from .multitest import (
     NullDistribution,
@@ -218,6 +219,7 @@ __all__ = [
     "chisquare_effectsize",
     "cochrans_q",
     "cohens_kappa",
+    "collinear_index",
     "combine_effects",
     "compare_cox",
     "compare_encompassing",
@@ -338,6 +340,8 @@ __all__ = [
     "ttost_ind",
     "ttost_paired",
     "tukeyhsd",
+    "vif",
+    "vif_ridge",
     "weights_bartlett",
     "weights_uniform",
     "wellek_to_f2",
