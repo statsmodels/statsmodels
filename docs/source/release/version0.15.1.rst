@@ -145,6 +145,17 @@ New functions and methods
   ``one_sided=True``, the trend at time t only depends on the observations up
   to and including t. It is computed with the Kalman filter of the state space
   form of the HP filter. :issue:`6947`, :pr:`10588`
+- Add :func:`~statsmodels.stats.multicollinearity.vif`,
+  :func:`~statsmodels.stats.multicollinearity.vif_ridge` and
+  :func:`~statsmodels.stats.multicollinearity.collinear_index` for the
+  diagnosis of multicollinearity. They are available from
+  ``statsmodels.stats.api``. ``vif`` computes the variance inflation factors of
+  all columns of a data matrix, or of a covariance or correlation matrix, with
+  one eigenvalue decomposition. It is about 90 times faster than
+  ``variance_inflation_factor`` called for each column for 20 variables and
+  1000 observations, about 300 times faster for 60 variables, and returns a
+  ``Series`` for a ``DataFrame``. :issue:`1669`, :pr:`2380`, :pr:`7711`,
+  :pr:`10623`
 
 Performance
 -----------
