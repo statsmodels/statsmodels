@@ -177,6 +177,18 @@ class MICEData:
     `history_callback` can be implemented to have side effects such as
     saving the current imputed data set to disk.
 
+    The index of `data` is kept: the imputed data set in the attribute
+    `data`, which is also what `next_sample`, iteration and
+    `history_callback` provide, is a copy of the input with the missing
+    values filled in and has the same index and column order, so imputed
+    values can be matched to the rows of the input by label.  The index can
+    be of any type and can contain duplicate labels.  The only change to the
+    rows is that rows in which all variables are missing are dropped before
+    imputation.  `MICEData.data` then has fewer rows than the input, and
+    their labels are missing from its index.  The input is not modified.
+    `MICE` fits its analysis model to `MICEData.data`, so the data of the
+    analysis model have this index.
+
     Examples
     --------
     Draw 20 imputations from a data set called `data` and save them in
