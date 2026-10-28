@@ -87,6 +87,14 @@ Behavior changes
 - The name of the column ``"Cont. Int. Hi."`` in the data frame returned by
   ``DiscreteMargins.summary_frame`` is corrected to ``"Conf. Int. Hi."``.
   :pr:`10506`
+- :func:`~statsmodels.stats.anova.anova_lm` raises a ``ValueError`` for a
+  single model with a rank-deficient design matrix, for example a duplicated
+  column, an empty cell of an interaction or more columns than observations.
+  The Type I, II and III tables of such a model assigned arbitrary sums of
+  squares, degrees of freedom and p-values to the redundant terms. The
+  weighted design matrix is checked, so a factor level that only appears in
+  observations with zero weight is also rejected. :issue:`5398`,
+  :issue:`8506`, :pr:`10340`, :pr:`10622`
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
