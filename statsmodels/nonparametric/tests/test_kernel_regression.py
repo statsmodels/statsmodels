@@ -487,6 +487,7 @@ class TestKernelReg(KernelRegressionTestBase):
         bw_expected = [0.3987821, 0.50933458]
         npt.assert_allclose(model.bw, bw_expected, rtol=1e-3)
 
+    @pytest.mark.slow
     def test_significance_continuous(self):
         nobs = 250
         rs = np.random.RandomState(12345)
