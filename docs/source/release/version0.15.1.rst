@@ -598,6 +598,11 @@ Statistics and tests
   variable instead of a scalar. :pr:`10456`
 - ``Description`` no longer calls ``scipy.stats.mode`` for a column without
   observations, which warns in SciPy 1.14 and later. :pr:`10613`
+- :func:`~statsmodels.stats.rates.confint_poisson` with ``method="midp-c"``
+  returned an interval of width zero at the upper limit for a count of 0. The
+  limits are now ``0`` and ``-log(alpha) / nobs``. The numerical inversion
+  checks that ``count`` and ``nobs`` have a single element, and raises a
+  ``ValueError`` otherwise. :issue:`10536`, :pr:`10537`, :pr:`10633`
 
 Treatment effects
 -----------------
