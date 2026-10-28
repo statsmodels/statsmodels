@@ -306,6 +306,10 @@ Regression and linear models
   :issue:`9018`, :pr:`10279`
 - ``RecursiveLS`` with constraints and a NumPy ``endog`` either raised an
   exception or silently dropped the constraints. :pr:`10282`
+- ``forecast``, ``get_forecast``, ``predict`` and ``get_prediction`` of the
+  ``RecursiveLS`` results accept the ``exog`` values of the new periods for
+  out-of-sample predictions. Before, they raised a ``ValueError`` unless a
+  3-dimensional ``design`` matrix was given. :issue:`9708`, :pr:`10651`
 - ``recursive_olsresiduals`` no longer raises if the initial window is rank
   deficient, for example because of a duplicated row. The recursion starts
   from the pseudo-inverse. :issue:`8446`, :pr:`10493`

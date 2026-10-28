@@ -548,6 +548,14 @@ class RecursiveLSResults(MLEResults):
                                       " dynamic prediction in models with"
                                       " constraints.")
 
+        # Out-of-sample predictions need the exog values of the new periods,
+        # which form the time-varying design matrix of the extension period
+        exog = kwargs.pop("exog", None)
+        if "design" not in kwargs:
+            exog = self.model._validate_out_of_sample_exog(exog, out_of_sample)
+            if exog is not None:
+                kwargs["design"] = np.ascontiguousarray(exog.T[None, :, :])
+
         # Perform the prediction
         # This is a (k_endog x npredictions) array; do not want to squeeze in
         # case of npredictions = 1

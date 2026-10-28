@@ -20,6 +20,7 @@ from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from statsmodels.tools.eval_measures import aic, bic
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 current_path = Path(__file__).resolve().parent
 
@@ -575,3 +576,59 @@ def test_constraints_numpy_endog():
     # results from test_constraints_stata (params: const, m1, unemp)
     desired = [-0.7001083844336, -0.0018477514060, 1.0018477514060]
     assert_allclose(res.params, desired)
+
+
+def _forecast_data():
+    rng = np.random.default_rng(9708)
+    nobs = 50
+    x = add_constant(rng.standard_normal((nobs + 3, 2)))
+    y = x @ [1.0, 2.0, 3.0] + rng.standard_normal(nobs + 3)
+    return y[:nobs], x[:nobs], x[nobs:]
+
+
+def test_forecast_exog():
+    # GH 9708: out-of-sample predictions use the exog of the new periods
+    y, x, x_new = _forecast_data()
+    res = RecursiveLS(y, x).fit()
+    # the forecast of the full sample estimates is the OLS prediction and
+    # its variance is the variance of a new observation
+    res_ols = OLS(y, x).fit()
+    pred_ols = res_ols.get_prediction(x_new).summary_frame()
+    se_obs = np.sqrt(pred_ols["mean_se"] ** 2 + res_ols.scale)
+
+    pred = res.get_forecast(3, exog=x_new)
+    assert_allclose(pred.predicted_mean, pred_ols["mean"])
+    assert_allclose(np.sqrt(pred.var_pred_mean), se_obs)
+    assert_allclose(res.forecast(3, exog=x_new), pred_ols["mean"])
+    assert_allclose(
+        res.predict(start=48, end=52, exog=x_new),
+        np.r_[res.fittedvalues[48:], pred_ols["mean"]],
+    )
+    # a design matrix for the new periods can still be given directly
+    design = x_new.T[None, :, :]
+    assert_allclose(res.forecast(3, design=design), pred_ols["mean"])
+
+
+def test_forecast_exog_pandas():
+    y, x, x_new = _forecast_data()
+    index = pd.date_range("2000-01-01", periods=y.shape[0], freq="MS")
+    columns = ["const", "x1", "x2"]
+    endog = pd.Series(y, index=index, name="y")
+    exog = pd.DataFrame(x, index=index, columns=columns)
+    res = RecursiveLS(endog, exog).fit()
+    forecast = res.forecast(3, exog=pd.DataFrame(x_new, columns=columns))
+    expected_index = pd.date_range("2004-03-01", periods=3, freq="MS")
+    pd.testing.assert_index_equal(forecast.index, expected_index)
+    assert_allclose(forecast, RecursiveLS(y, x).fit().forecast(3, exog=x_new))
+
+
+def test_forecast_exog_invalid():
+    y, x, x_new = _forecast_data()
+    res = RecursiveLS(y, x).fit()
+    with pytest.raises(ValueError, match="require additional exogenous"):
+        res.forecast(3)
+    with pytest.raises(ValueError, match="not of the appropriate shape"):
+        res.forecast(3, exog=x_new[:2])
+    with pytest.warns(ValueWarning, match="`exog` argument ignored"):
+        pred = res.get_prediction(end=49, exog=x_new)
+    assert_allclose(pred.predicted_mean, res.fittedvalues)
