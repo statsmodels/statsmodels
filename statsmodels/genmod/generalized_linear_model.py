@@ -662,9 +662,29 @@ class GLM(base.LikelihoodModel):
     def information(self, params, scale=None):
         """
         Fisher information matrix.
+
+        Returns -1 * Hessian of the log-likelihood evaluated at params,
+        i.e. the expected information matrix, which is positive definite.
+
+        Parameters
+        ----------
+        params : ndarray
+            Parameter at which the information is evaluated.
+        scale : float, optional
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        ndarray
+            The expected information matrix, ``X' W X / scale``. This is
+            ``-hessian(params, scale, observed=False)``. It differs from
+            ``-hessian(params, scale)``, which is the observed information
+            by default, unless the link is the canonical link of the family.
         """
         scale = float_like(scale, "scale", optional=True)
-        return self.hessian(params, scale=scale, observed=False)
+        return -self.hessian(params, scale=scale, observed=False)
 
     def _derivative_exog(
         self,
