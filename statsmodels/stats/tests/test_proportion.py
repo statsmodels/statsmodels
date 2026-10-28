@@ -1527,18 +1527,109 @@ def test_binom_test_reject_interval_alternative():
         smprop.binom_test_reject_interval(0.3, 10, alternative="bogus")
 
 
-def test_binom_test_reject_interval_vectorized():
+ALTERNATIVES_REJECT_INTERVAL = ["two-sided", "larger", "smaller"]
+
+
+@pytest.mark.parametrize("alternative", ALTERNATIVES_REJECT_INTERVAL)
+def test_binom_test_reject_interval_vectorized(alternative):
     # gh-9238: the ``int()`` cast on the result broke vectorized calls
     # (``int(ndarray)`` raises ``TypeError``).
-    x_low, x_upp = smprop.binom_test_reject_interval([0.3, 0.5], 10)
-    assert isinstance(x_low, np.ndarray)
-    assert isinstance(x_upp, np.ndarray)
-    assert x_low.shape == (2,)
-    assert x_upp.shape == (2,)
-    # scalar bounds stay finite floats (no int coercion)
-    low, upp = smprop.binom_test_reject_interval(0.5, 10)
-    assert np.issubdtype(type(low), np.floating)
-    assert np.issubdtype(type(upp), np.floating)
+    value = np.array([0.3, 0.5, 0.8])
+    nobs = np.array([10, 20, 35])
+    alpha = np.array([0.05, 0.1, 0.01])
+    res = smprop.binom_test_reject_interval(
+        value, nobs, alpha=alpha, alternative=alternative
+    )
+    expected = np.array(
+        [
+            smprop.binom_test_reject_interval(v, n, alpha=a, alternative=alternative)
+            for v, n, a in zip(value, nobs, alpha, strict=True)
+        ]
+    )
+    for x, exp in zip(res, expected.T, strict=True):
+        # the unused bound of a one-sided test has the shape of the input
+        assert isinstance(x, np.ndarray)
+        assert x.shape == (3,)
+        assert np.issubdtype(x.dtype, np.integer)
+        assert_equal(x, exp)
+
+    # list and Series input, and broadcasting with scalars
+    res_list = smprop.binom_test_reject_interval(
+        list(value), 20, alpha=0.1, alternative=alternative
+    )
+    res_series = smprop.binom_test_reject_interval(
+        pd.Series(value), 20, alpha=0.1, alternative=alternative
+    )
+    for x_list, x_series in zip(res_list, res_series, strict=True):
+        assert x_list.shape == (3,)
+        assert np.issubdtype(x_list.dtype, np.integer)
+        assert_equal(x_list, x_series)
+    res_nobs = smprop.binom_test_reject_interval(
+        0.5, nobs, alpha=0.1, alternative=alternative
+    )
+    for x in res_nobs:
+        assert x.shape == (3,)
+        assert np.issubdtype(x.dtype, np.integer)
+    assert_equal(
+        [x[1] for x in res_nobs],
+        smprop.binom_test_reject_interval(0.5, 20, 0.1, alternative),
+    )
+
+
+@pytest.mark.parametrize("alternative", ALTERNATIVES_REJECT_INTERVAL)
+def test_binom_test_reject_interval_region(alternative):
+    # the bounds are Python integers for scalar input, and the rejection
+    # region is the set of counts with a tail probability below alpha
+    for nobs in [1, 5, 20]:
+        for value in [0, 0.2, 0.5, 0.85, 1]:
+            for alpha in [0.01, 0.05, 0.2]:
+                x_low, x_upp = smprop.binom_test_reject_interval(
+                    value, nobs, alpha=alpha, alternative=alternative
+                )
+                assert type(x_low) is int
+                assert type(x_upp) is int
+
+                x = np.arange(nobs + 1)
+                alpha_tail = alpha / 2 if alternative == "two-sided" else alpha
+                if alternative == "larger":
+                    assert x_low == 0
+                else:
+                    cdf = stats.binom.cdf(x, nobs, value)
+                    assert_equal(x <= x_low, cdf < alpha_tail)
+                if alternative == "smaller":
+                    assert x_upp == nobs
+                else:
+                    sf = stats.binom.sf(x - 1, nobs, value)
+                    assert_equal(x >= x_upp, sf <= alpha_tail)
+
+
+@pytest.mark.parametrize("alternative", ALTERNATIVES_REJECT_INTERVAL)
+@pytest.mark.parametrize(
+    "kwds, match",
+    [
+        (dict(value=1.5), "value must be in the range"),
+        (dict(value=-0.1), "value must be in the range"),
+        (dict(value=np.nan), "value must be in the range"),
+        (dict(value=[0.3, 1.5]), "value must be in the range"),
+        (dict(nobs=0), "nobs must be positive"),
+        (dict(nobs=-5), "nobs must be positive"),
+        (dict(nobs=np.nan), "nobs must be positive"),
+        (dict(nobs=[10, 0]), "nobs must be positive"),
+        (dict(nobs=10.5), "nobs must be an integer"),
+        (dict(alpha=0), "alpha must be in the range"),
+        (dict(alpha=1), "alpha must be in the range"),
+        (dict(alpha=2), "alpha must be in the range"),
+        (dict(alpha=-1), "alpha must be in the range"),
+        (dict(alpha=np.nan), "alpha must be in the range"),
+        (dict(alpha=[0.05, np.nan]), "alpha must be in the range"),
+    ],
+)
+def test_binom_test_reject_interval_invalid(alternative, kwds, match):
+    # invalid arguments gave nan or a meaningless region
+    args = dict(value=0.3, nobs=10, alpha=0.05)
+    args.update(kwds)
+    with pytest.raises(ValueError, match=match):
+        smprop.binom_test_reject_interval(alternative=alternative, **args)
 
 
 def test_samplesize_proportions_2indep_onetail_alternative():

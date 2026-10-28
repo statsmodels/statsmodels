@@ -912,11 +912,11 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
 
     Parameters
     ----------
-    value : float
-        proportion under the Null hypothesis
-    nobs : int
+    value : float or array_like
+        proportion under the Null hypothesis, `0 <= value <= 1`.
+    nobs : int or array_like
         the number of trials or observations.
-    alpha : float, optional
+    alpha : float or array_like, optional
         Significance level of the test, default 0.05.
     alternative : {'two-sided', 'smaller', 'larger'}, optional
         alternative hypothesis, which can be two-sided or either one of the
@@ -924,8 +924,43 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
 
     Returns
     -------
-    x_low, x_upp : float
-        lower and upper bound of rejection region
+    x_low, x_upp : int or ndarray of int
+        lower and upper bound of rejection region. The bounds are integers,
+        and arrays with the shape that ``value``, ``nobs`` and ``alpha``
+        broadcast to if any of them is an array.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is not in [0, 1], ``alpha`` is not in (0, 1), or
+        ``nobs`` is not a positive integer. This includes NaN values.
+
+    See Also
+    --------
+    binom_test
+        Exact binomial test for one sample proportion.
+    binom_tost_reject_interval
+        Rejection region of the exact equivalence test.
+
+    Notes
+    -----
+    For the two-sided alternative, the null hypothesis is rejected if and only
+    if ``count <= x_low`` or ``count >= x_upp``. The region is equal-tailed,
+    the probability of each tail is at most ``alpha / 2`` under the null
+    hypothesis. It differs in general from the rejection region of the
+    two-sided test in :func:`binom_test`, which is based on the probabilities
+    of the outcomes, as in ``scipy.stats.binomtest``.
+
+    For the one-sided alternatives, the null hypothesis is rejected if and
+    only if ``count <= x_low`` for ``'smaller'`` and ``count >= x_upp`` for
+    ``'larger'``. The other bound is not used, it is ``nobs`` for
+    ``'smaller'`` and ``0`` for ``'larger'``, broadcast to the shape of the
+    result.
+
+    .. versionchanged:: 0.15.1
+
+        ``value``, ``nobs`` and ``alpha`` can be array_like. Invalid
+        arguments raise a ``ValueError``.
     """
     alternative = string_like(
         alternative,
@@ -935,8 +970,17 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
         deprecated={"2s": "two-sided"},
         removed_after="0.16",
     )
+    if not np.all(np.greater_equal(value, 0) & np.less_equal(value, 1)):
+        raise ValueError(f"value must be in the range [0, 1], got {value}")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater(nobs, 0)):
+        raise ValueError(f"nobs must be positive, got {nobs}")
+    if not np.all(np.equal(np.mod(nobs, 1), 0)):
+        raise ValueError(f"nobs must be an integer, got {nobs}")
+
     if alternative == "two-sided":
-        alpha = alpha / 2
+        alpha = np.asarray(alpha) / 2
 
     if alternative in ["two-sided", "smaller"]:
         x_low = stats.binom.ppf(alpha, nobs, value) - 1
@@ -947,11 +991,12 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
     else:
         x_upp = nobs
 
-    # Do not cast to ``int``: ``scipy.stats.binom.ppf``/``isf`` return
-    # floats (and may return ``nan``), and the bounds are used as-is for
-    # vectorized calls (e.g. ``power_binom_tost``).  Casting breaks both the
-    # ``nan`` case (``int(nan)`` raises) and the vectorized case
-    # (``int(ndarray)`` raises ``TypeError``).
+    # the arguments are valid, so the bounds are finite integers
+    shape = np.broadcast(value, nobs, alpha).shape
+    x_low = np.broadcast_to(x_low, shape).astype(np.int64)
+    x_upp = np.broadcast_to(x_upp, shape).astype(np.int64)
+    if shape == ():
+        return int(x_low), int(x_upp)
     return x_low, x_upp
 
 

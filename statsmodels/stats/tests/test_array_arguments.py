@@ -24,6 +24,7 @@ from statsmodels.stats.nonparametric import rank_compare_2indep
 from statsmodels.stats.oneway import equivalence_oneway
 from statsmodels.stats.proportion import (
     binom_test,
+    binom_test_reject_interval,
     binom_tost_reject_interval,
     power_binom_tost,
     power_proportions_2indep,
@@ -105,6 +106,9 @@ CASES = [
     ("binom_test-nobs", partial(binom_test, alternative="smaller"), dict(count=3, prop=0.5), "nobs", (10, 12), ([10, 0], [10, -4], [10, NAN]), "nobs must be positive"),
     ("binom_test-count", partial(binom_test, alternative="larger"), dict(nobs=10, prop=0.5), "count", (3, 4), ([3, -1],), "count must be non-negative"),
     ("binom_test-count-exceeds-nobs", partial(binom_test, alternative="smaller"), dict(nobs=10, prop=0.5), "count", (3, 4), ([3, 11],), "count must not exceed nobs"),
+    ("binom_test_reject_interval-alpha", binom_test_reject_interval, dict(value=0.4, nobs=100), "alpha", ALPHA, BAD_ALPHA, MATCH_ALPHA),
+    ("binom_test_reject_interval-value", binom_test_reject_interval, dict(nobs=100, alpha=0.05), "value", (0.3, 0.5), ([0.3, 1.5], [0.3, -0.1], [0.3, NAN]), "value must be in the range"),
+    ("binom_test_reject_interval-nobs", binom_test_reject_interval, dict(value=0.4, alpha=0.05), "nobs", (10, 12), ([10, 0], [10, -4], [10, NAN]), "nobs must be positive"),
     ("binom_tost_reject_interval-alpha", binom_tost_reject_interval, dict(low=0.4, upp=0.6, nobs=100), "alpha", ALPHA, BAD_ALPHA, MATCH_ALPHA),
     ("binom_tost_reject_interval-low", binom_tost_reject_interval, dict(upp=0.6, nobs=100, alpha=0.05), "low", (0.4, 0.45), ([0.4, 0.7], [0.4, NAN]), "equivalence interval"),
     ("binom_tost_reject_interval-upp", binom_tost_reject_interval, dict(low=0.4, nobs=100, alpha=0.05), "upp", (0.6, 0.65), ([0.6, 0.3], [0.6, NAN]), "equivalence interval"),
