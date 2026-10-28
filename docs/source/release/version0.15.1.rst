@@ -611,6 +611,14 @@ Statistics and tests
   score test also returned ``nan`` for symmetric tables. The root finding for
   the confidence interval of the difference could start outside of the
   parameter space. :issue:`10269`, :pr:`10270`, :pr:`10366`
+- The score confidence interval of the risk ratio
+  (``method="score"`` and ``compare="ratio"`` in
+  :func:`~statsmodels.stats.proportion.confint_proportions_2indep`) was wrong,
+  and sometimes complex, if a count is equal to ``nobs``, for example 10 of 10
+  events in one sample. The interval often did not contain the estimate. The
+  limits are now found by inverting the score test, with a bracket that also
+  works for ``alpha`` of 0.5 and larger. If both counts are equal to ``nobs``
+  the limits have a closed form. :issue:`10538`, :pr:`10539`, :pr:`10640`
 - ``power_equivalence_poisson_2indep`` and
   ``power_equivalence_neginb_2indep`` returned wrong results if ``nobs_ratio``
   is not 1. The ``ftotal`` null variance of
