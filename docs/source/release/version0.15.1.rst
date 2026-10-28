@@ -95,6 +95,15 @@ Behavior changes
   weighted design matrix is checked, so a factor level that only appears in
   observations with zero weight is also rejected. :issue:`5398`,
   :issue:`8506`, :pr:`10340`, :pr:`10622`
+- :meth:`~statsmodels.genmod.generalized_linear_model.GLM.information` returns
+  the positive definite expected (Fisher) information matrix ``X' W X / scale``
+  as documented for ``LikelihoodModel.information``. It previously returned the
+  negative of this matrix, which is the expected Hessian. This affects all
+  families and links, also ``GLMGam``. The result is the expected information
+  also for non-canonical links, where it differs from the observed information
+  ``-model.hessian(params)``. To get the old value, use
+  ``model.hessian(params, observed=False)``, or ``-model.information(params)``.
+  :issue:`7826`, :pr:`10498`, :pr:`10628`
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
