@@ -176,6 +176,11 @@ Performance
   faster for long series. :pr:`10470`
 - ``robust.scale.qn_scale`` is about 5 times faster for large samples.
   :pr:`10244`
+- ``KDEMultivariateConditional.cdf`` and ``KDEMultivariateConditional.imse``
+  evaluate the kernel of the exogenous variables only once for each
+  observation. The bandwidth selection with ``bw="cv_ls"`` is about 3 times
+  faster for continuous exogenous variables, and ``cdf`` about 1.5 times
+  faster. :issue:`6076`, :pr:`10626`
 - Lag order selection fits the nested sequence of models from a single
   blocked QR decomposition, shared by a new private helper. This applies to
   ``adfuller`` with ``autolag``, ``VAR.select_order``, ``pacf_ols``,
