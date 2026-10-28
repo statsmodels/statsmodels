@@ -1,3 +1,4 @@
+from itertools import pairwise
 from pathlib import Path
 import warnings
 
@@ -5,7 +6,7 @@ import numpy as np
 import numpy.testing as npt
 import pandas as pd
 import pytest
-from scipy import stats
+from scipy import integrate, stats
 from scipy.integrate import IntegrationWarning
 
 from statsmodels.distributions.mixture_rvs import mixture_rvs
@@ -601,6 +602,58 @@ def test_kernel_density_list_weights():
     kern.weights = weights
     npt.assert_allclose(kern.density(x, pts), expected)
     npt.assert_allclose(kern.density(x, 0.5), expected[2:])
+
+
+@pytest.mark.parametrize("weighted", [False, True])
+@pytest.mark.parametrize("location", [0.0, 100.0])
+@pytest.mark.parametrize("kernel", BOUNDED_KERNELS)
+def test_cdf_entropy_bounded_kernels(kernel, location, weighted):
+    # cdf and entropy integrate the density over the kernel domain in the units
+    # of the data, not of the kernel
+    rng = np.random.default_rng(1234)
+    nobs = 15
+    x = rng.normal(size=nobs) + location
+    weights = rng.uniform(0.5, 2.0, size=nobs) if weighted else None
+    w = np.full(nobs, 1 / nobs) if weights is None else weights / weights.sum()
+    dens = KDE(x).fit(
+        kernel=kernel, bw="silverman", fft=False, weights=weights, gridsize=64
+    )
+    kern = dens.kernel
+    h = kern.h
+    lo, hi = kern.domain
+
+    cdf = dens.cdf
+    assert np.all(np.isfinite(cdf))
+    assert np.all(np.diff(cdf) >= -1e-10)
+    npt.assert_allclose(cdf[0], 0.0, atol=1e-10)
+    npt.assert_allclose(cdf[-1], 1.0, atol=1e-6)
+    npt.assert_allclose(dens.sf, 1 - cdf)
+
+    # the cdf of the mixture of the integrated kernel shapes
+    def kernel_cdf(u):
+        u = min(max(u, lo), hi)
+        return integrate.quad(lambda t: kern(np.asarray(t)), lo, u)[0]
+
+    for j in range(0, 64, 9):
+        u = (dens.support[j] - x) / h
+        expected = np.dot(w, [kernel_cdf(ui) for ui in u])
+        npt.assert_allclose(cdf[j], expected, atol=1e-6)
+
+    # integrate smooth pieces between the kinks of the density
+    breaks = np.unique(np.r_[x + lo * h, x, x + hi * h])
+
+    def entr(t):
+        pdf = dens.evaluate(t)[0]
+        return pdf * np.log(pdf + 1e-12)
+
+    expected = -sum(
+        integrate.quad(entr, a, b)[0] for a, b in pairwise(breaks)
+    )
+    # quad hits the subdivision limit at the kinks of the kernel, scipy dependent
+    with warns_or_none(IntegrationWarning, match="The maximum number of subdivisions"):
+        entropy = dens.entropy
+    assert np.isfinite(entropy)
+    npt.assert_allclose(entropy, expected, rtol=1e-3)
 
 
 @pytest.mark.parametrize("func", [kdensity, kdensityfft])
