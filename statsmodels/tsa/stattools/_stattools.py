@@ -4342,7 +4342,8 @@ class ZivotAndrewsUnitRoot:
             calculation in range [0, 0.333] (default=0.15).
         maxlag : int, optional
             The maximum lag which is included in test, default is
-            12*(nobs/100)^{1/4} (Schwert, 1989).
+            12*(nobs/100)^{1/4} (Schwert, 1989). Use 0 for a test without
+            lagged differences.
         regression : {"c","t","ct"}, optional
             Constant and trend order to include in regression.
 
@@ -4412,6 +4413,8 @@ class ZivotAndrewsUnitRoot:
         )
         if trim < 0 or trim > (1.0 / 3.0):
             raise ValueError("trim value must be a float in range [0, 1/3)")
+        if maxlag is not None and maxlag < 0:
+            raise ValueError("maxlag must be a non-negative integer")
         nobs = x.shape[0]
         if autolag:
             adf_res = adfuller(
@@ -4422,7 +4425,7 @@ class ZivotAndrewsUnitRoot:
                 result_object=False,
             )
             baselags = adf_res[2]
-        elif maxlag:
+        elif maxlag is not None:
             baselags = maxlag
         else:
             baselags = int(12.0 * np.power(nobs / 100.0, 1 / 4.0))
