@@ -3353,6 +3353,19 @@ def test_za_break_tvalues_blocks(regression):
         ("stkprc", "ct", 5, -4.4188005626248, 65),
         ("rgnpq", "t", 5, -3.15090901781973, 89),
         ("rgnpq", "ct", 8, -4.51449473135603, 71),
+        # without lagged differences, maxlag=0
+        ("rgnp", "c", 0, -3.29267887535406, 20),
+        ("rgnp", "t", 0, -2.78828925514759, 24),
+        ("rgnp", "ct", 0, -3.46782210885675, 20),
+        ("gnpdef", "c", 0, -3.35278702063666, 37),
+        ("gnpdef", "t", 0, -2.00884754207356, 45),
+        ("gnpdef", "ct", 0, -3.49680587365043, 40),
+        ("stkprc", "c", 0, -3.98489915452376, 82),
+        ("stkprc", "t", 0, -3.86734171259623, 72),
+        ("stkprc", "ct", 0, -4.74799191482552, 59),
+        ("rgnpq", "c", 0, -2.81646348557215, 130),
+        ("rgnpq", "t", 0, -2.57626456915402, 85),
+        ("rgnpq", "ct", 0, -3.16574448254965, 67),
     ],
 )
 def test_zivot_andrews_r_reference(name, regression, lags, statistic, bpidx):
@@ -3360,8 +3373,32 @@ def test_zivot_andrews_r_reference(name, regression, lags, statistic, bpidx):
     # "c" and "ct" and bpidx for "t". The minimum is inside the default trim.
     x = _za_series(name, None, None)
     res = zivot_andrews(x, maxlag=lags, regression=regression, autolag=None)
+    assert res[3] == lags
     assert_allclose(res[0], statistic, rtol=1e-10)
     assert res[4] == bpidx
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_maxlag_zero(regression):
+    # maxlag=0 is a number of lags, and not the Schwert default
+    x = _za_series("rgnpq", None, None)
+    res = zivot_andrews(x, maxlag=0, regression=regression, autolag=None)
+    assert res[3] == 0
+    # the lag selection can only choose 0
+    expected = zivot_andrews(x, maxlag=0, regression=regression, autolag="AIC")
+    assert expected[3] == 0
+    assert_allclose(res[:2], expected[:2], rtol=1e-12)
+    assert res[2] == expected[2]
+    assert res[4] == expected[4]
+    default = zivot_andrews(x, regression=regression, autolag=None)
+    assert default[3] == int(12.0 * (x.shape[0] / 100.0) ** 0.25)
+
+
+@pytest.mark.parametrize("autolag", [None, "AIC"])
+def test_zivot_andrews_negative_maxlag(autolag):
+    x = _za_series("gnpdef", None, None)
+    with pytest.raises(ValueError, match="maxlag must be a non-negative integer"):
+        zivot_andrews(x, maxlag=-1, autolag=autolag)
 
 
 @pytest.mark.parametrize("regression", ["c", "t", "ct"])

@@ -338,6 +338,9 @@ Time series analysis
   range of the tabulated critical values, which is 1% to 95%; it was also
   raised for statistics between the 90% and 95% critical values.
   :issue:`8978`, :pr:`10475`, :pr:`10568`
+- ``zivot_andrews`` with ``maxlag=0`` and ``autolag=None`` used the default
+  number of lags, 12 * (nobs / 100) ** 0.25, instead of no lagged differences.
+  A negative ``maxlag`` raises a ``ValueError``. :pr:`10627`
 - ``UECMResults.bounds_test`` raised a ``TypeError`` for a model without lagged
   differences of the dependent variable (``lags=0``). :pr:`10578`
 - :meth:`~statsmodels.tsa.arima_process.ArmaProcess.arma2ma` and ``arma2ar``
