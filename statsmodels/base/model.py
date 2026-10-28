@@ -153,6 +153,29 @@ class Model:
         return data
 
     @classmethod
+    def _formula_categorical_endog(cls, endog, kwargs):
+        """
+        Convert a categorical response from a formula to the model's endog
+
+        Called by ``from_formula`` for models that accept two response columns
+        when the response is categorical. The default keeps the indicator
+        columns of the formula engine.
+
+        Parameters
+        ----------
+        endog : DataFrame
+            The indicator columns, one for each level of the response.
+        kwargs : dict
+            The keyword arguments that are passed to the model.
+
+        Returns
+        -------
+        DataFrame or Series
+            The response to use in the model.
+        """
+        return endog
+
+    @classmethod
     def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
         """
         Create a Model from a formula and dataframe
@@ -217,16 +240,10 @@ class Model:
                 "the variable converted to endog is non-numeric"
                 " (e.g., bool or str)."
             )
-        if (
-            max_endog == 2
-            and endog.ndim == 2
-            and endog.shape[1] == 2
-            and mgr.is_categorical(endog)
-        ):
-            # A two-level categorical response is expanded to one indicator
-            # column per level, which would be read as (successes, failures).
-            # Model the second level as the success, as R's glm does.
-            endog = endog.iloc[:, 1]
+        if max_endog == 2 and endog.ndim == 2 and mgr.is_categorical(endog):
+            # A categorical response is expanded to one indicator column per
+            # level, which would be read as (successes, failures).
+            endog = cls._formula_categorical_endog(endog, kwargs)
         if drop_cols is not None and len(drop_cols) > 0:
             cols = [x for x in exog.columns if x not in drop_cols]
             if len(cols) < len(exog.columns):
