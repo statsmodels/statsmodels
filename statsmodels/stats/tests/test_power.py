@@ -1089,30 +1089,52 @@ def test_solve_power_impossible_one_sided_raises():
     assert res < 0
 
 
-def test_solve_power_invalid_alternative_raises():
+_SOLVE_POWER_CASES = [
+    (smp.TTestPower, "nobs"),
+    (smp.TTestPower, "effect_size"),
+    (smp.TTestPower, "alpha"),
+    (smp.TTestPower, "power"),
+    (smp.TTestIndPower, "nobs1"),
+    (smp.TTestIndPower, "effect_size"),
+    (smp.TTestIndPower, "alpha"),
+    (smp.TTestIndPower, "power"),
+]
+
+
+def _solve_power_kwds(cls, solve_for):
+    nobs_kw = "nobs" if cls is smp.TTestPower else "nobs1"
+    kwds = {"effect_size": 0.5, nobs_kw: 30, "alpha": 0.05, "power": 0.8}
+    kwds[solve_for] = None
+    return kwds
+
+
+@pytest.mark.parametrize("cls, solve_for", _SOLVE_POWER_CASES)
+@pytest.mark.parametrize(
+    "bad", ["one-sided", "one_sided", "bogus", "Larger", "Two-Sided"]
+)
+def test_solve_power_invalid_alternative_raises(cls, solve_for, bad):
     # GH#9378: an invalid ``alternative`` (e.g. the "one-sided" spelling
     # that appears in some documentation) should raise an informative
     # ``ValueError`` up front. Previously the ``string_like`` validation only
     # ran inside ``ttest_power`` during root finding, where the resulting
     # ``ValueError`` was swallowed and ``solve_power`` returned ``nan`` with a
-    # confusing ``ConvergenceWarning``.
-    match = "alternative must be one of"
-    for cls, none_kw in [
-        (smp.TTestPower, {"nobs": None}),
-        (smp.TTestIndPower, {"nobs1": None}),
-    ]:
-        for bad in ["one-sided", "one_sided", "1-sided"]:
-            with pytest.raises(ValueError, match=match):
-                cls().solve_power(
-                    effect_size=0.5, alpha=0.05, power=0.8,
-                    alternative=bad, **none_kw,
-                )
+    # confusing ``ConvergenceWarning`` when solving for the sample size.
+    # The spellings are case sensitive, as in ``power`` and ``ttest_power``.
+    kwds = _solve_power_kwds(cls, solve_for)
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        cls().solve_power(alternative=bad, **kwds)
 
-    # valid spellings still work (and are case-insensitive)
-    res = smp.TTestPower().solve_power(
-        effect_size=0.5, nobs=None, alpha=0.05, power=0.8, alternative="Larger"
-    )
-    assert np.isfinite(res)
+
+@pytest.mark.parametrize("cls, solve_for", _SOLVE_POWER_CASES)
+def test_solve_power_alternative_deprecated_alias(cls, solve_for):
+    # the deprecated "2s" alias still works in solve_power, with a single
+    # FutureWarning, and gives the same result as "two-sided"
+    kwds = _solve_power_kwds(cls, solve_for)
+    expected = cls().solve_power(alternative="two-sided", **kwds)
+    with pytest.warns(FutureWarning, match="is a deprecated alias") as record:
+        res = cls().solve_power(alternative="2s", **kwds)
+    assert len([r for r in record if issubclass(r.category, FutureWarning)]) == 1
+    assert_allclose(res, expected, rtol=1e-12)
 
 
 # TODO: can something useful be made from this?

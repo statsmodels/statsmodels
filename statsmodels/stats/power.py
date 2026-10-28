@@ -1059,6 +1059,9 @@ class TTestPower(Power):
             alternative,
             "alternative",
             options=("two-sided", "larger", "smaller"),
+            lower=False,
+            deprecated=_ALTERNATIVE_ALIASES,
+            removed_after="0.16",
         )
 
         # for debugging
@@ -1286,6 +1289,9 @@ class TTestIndPower(Power):
             alternative,
             "alternative",
             options=("two-sided", "larger", "smaller"),
+            lower=False,
+            deprecated=_ALTERNATIVE_ALIASES,
+            removed_after="0.16",
         )
 
         return super().solve_power(
