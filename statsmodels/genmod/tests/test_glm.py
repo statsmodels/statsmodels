@@ -3537,18 +3537,85 @@ def test_loglike_mu_matches_loglike():
                     mod.loglike(res.params, scale=1.0), rtol=1e-12)
 
 
-def test_information_is_expected_hessian():
+@pytest.mark.parametrize(
+    "family, draw, canonical",
+    [
+        (sm.families.Poisson(), lambda rs, mu: rs.poisson(mu), True),
+        (
+            sm.families.Gamma(sm.families.links.Log()),
+            lambda rs, mu: rs.gamma(2, mu / 2),
+            False,
+        ),
+        (
+            sm.families.Binomial(sm.families.links.Probit()),
+            lambda rs, mu: rs.binomial(1, mu),
+            False,
+        ),
+    ],
+    ids=["poisson-log", "gamma-log", "binomial-probit"],
+)
+def test_information_is_expected_hessian(family, draw, canonical):
     # information() follows the base class contract and returns
     # -1 * Hessian, i.e. the positive definite Fisher information (#7826)
     rs = np.random.RandomState(1)
     n = 150
     exog = sm.add_constant(rs.standard_normal((n, 2)))
-    endog = rs.poisson(np.exp(exog @ [0.1, 0.3, -0.2]))
-    mod = GLM(endog, exog, family=sm.families.Poisson())
+    endog = draw(rs, family.link.inverse(exog @ [0.1, 0.3, -0.2]))
+    mod = GLM(endog, exog, family=family)
     res = mod.fit()
     info = mod.information(res.params)
     assert_allclose(info, -mod.hessian(res.params, observed=False), rtol=1e-12)
     assert np.all(np.linalg.eigvalsh(info) > 0)
+
+    # independent formula for the expected information X'WX / scale
+    mu = res.fittedvalues
+    w = 1 / (family.link.deriv(mu) ** 2 * family.variance(mu))
+    assert_allclose(info, (exog.T * w) @ exog / res.scale, rtol=1e-10)
+    # the observed information is the same only for the canonical link
+    observed = -mod.hessian(res.params)
+    if canonical:
+        assert_allclose(info, observed, rtol=1e-10)
+    else:
+        assert not np.allclose(info, observed, rtol=1e-3)
+
+
+def test_information_gamma_log_r():
+    # Reference values from R 4.6.1 (run on Windows):
+    # set.seed(10498); n <- 20
+    # x1 <- round(rnorm(n), 4); x2 <- round(rnorm(n), 4)
+    # mu <- exp(0.3 + 0.4 * x1 - 0.3 * x2)
+    # y <- round(rgamma(n, shape = 2, scale = mu / 2), 4)
+    # res <- glm(y ~ x1 + x2, family = Gamma(link = "log"),
+    #            control = glm.control(epsilon = 1e-14, maxit = 100))
+    # s <- summary(res)
+    # info <- solve(s$cov.unscaled) / s$dispersion  # same as solve(vcov(res))
+    x1 = [-0.5187, -1.0707, 0.3635, -1.297, 0.6649, 0.1877, -0.4882, 0.8527,
+          0.0199, 0.479, 0.4426, -0.5357, -0.0187, 0.2637, 0.2202, -0.6578,
+          1.0042, 0.7598, -0.6794, 0.2459]
+    x2 = [-0.3539, 1.2167, -0.4177, -0.7542, 0.3114, -0.2972, -0.0992, 0.2396,
+          0.3485, 2.2054, 1.1998, 0.8709, -0.1773, -1.3844, 1.047, -1.6466,
+          -0.0376, -0.6657, 1.887, 0.5321]
+    y = [1.2104, 0.1631, 4.1575, 0.946, 1.4853, 4.1807, 2.4526, 2.238, 1.6227,
+         2.4873, 0.5084, 1.3624, 1.3715, 1.3068, 0.4653, 0.9678, 2.208, 1.2399,
+         0.6384, 0.4924]
+    params_r = [0.432770407171019, 0.525183155183804, -0.201513605217730]
+    scale_r = 0.449283634493362
+    info_r = np.array([
+        [44.51530940483315, 0.52950960537049, 8.95781571153458],
+        [0.52950960537049, 17.90427251834129, 1.10445930344105],
+        [8.95781571153458, 1.10445930344105, 44.13389947390336],
+    ])
+    exog = sm.add_constant(np.column_stack([x1, x2]))
+    mod = GLM(y, exog, family=sm.families.Gamma(sm.families.links.Log()))
+    res = mod.fit()
+    assert_allclose(res.params, params_r, rtol=1e-6)
+    assert_allclose(res.scale, scale_r, rtol=1e-6)
+    assert_allclose(mod.information(res.params, scale=res.scale), info_r,
+                    rtol=1e-6)
+    assert_allclose(mod.information(res.params), info_r, rtol=1e-6)
+    assert_allclose(np.linalg.inv(info_r), res.cov_params(), rtol=1e-6)
+    # the observed information differs for the non-canonical log link
+    assert not np.allclose(-mod.hessian(res.params), info_r, rtol=1e-2)
 
 
 def test_derivative_predict_matches_numerical_derivative():
