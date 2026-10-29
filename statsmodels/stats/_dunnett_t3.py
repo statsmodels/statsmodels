@@ -97,7 +97,7 @@ def _smm_sf(q, k, df):
 
     Returns
     -------
-    ndarray
+    sf : ndarray
         The probability that the studentized maximum modulus is larger
         than q.
 
@@ -134,6 +134,8 @@ def _smm_sf(q, k, df):
     valid = ~(np.isnan(q) | np.isnan(df))
     out[valid & (q <= 0)] = 1.0
     positive = valid & (q > 0)
+    out[positive & np.isinf(q)] = 0.0
+    positive &= np.isfinite(q)
     inf_df = positive & np.isinf(df)
     out[inf_df] = _smm_tail(q[inf_df], k)
     finite = positive & np.isfinite(df)
@@ -157,7 +159,7 @@ def _smm_ppf(prob, k, df):
 
     Returns
     -------
-    ndarray
+    q : ndarray
         The quantiles of the distribution.
 
     See Also
@@ -184,22 +186,28 @@ def _smm_ppf(prob, k, df):
     lower, upper, df = lower[active], upper[active], df[active]
     finite = np.isfinite(df)
     q = upper.copy()
+    # positions of the elements that have not converged, only these are
+    # evaluated in the next iteration
+    todo = np.arange(q.size)
     for _ in range(100):
-        sf = _smm_tail(q, k)
-        density = _smm_tail_pdf(q, k)
-        if finite.any():
-            sf[finite], density[finite] = _smm_integrate(
-                q[finite], k, df[finite], pdf=True
+        q_todo = q[todo]
+        sf = _smm_tail(q_todo, k)
+        density = _smm_tail_pdf(q_todo, k)
+        fin = finite[todo]
+        if fin.any():
+            sf[fin], density[fin] = _smm_integrate(
+                q_todo[fin], k, df[todo][fin], pdf=True
             )
         diff = sf - alpha
-        lower = np.where(diff > 0, q, lower)
-        upper = np.where(diff > 0, upper, q)
-        q_new = q + diff / density
-        outside = ~((q_new > lower) & (q_new < upper))
-        q_new[outside] = (lower[outside] + upper[outside]) / 2
-        converged = np.abs(q_new - q) <= 1e-12 * q
-        q = q_new
-        if converged.all():
+        lo = np.where(diff > 0, q_todo, lower[todo])
+        up = np.where(diff > 0, upper[todo], q_todo)
+        lower[todo], upper[todo] = lo, up
+        q_new = q_todo + diff / density
+        outside = ~((q_new > lo) & (q_new < up))
+        q_new[outside] = (lo[outside] + up[outside]) / 2
+        q[todo] = q_new
+        todo = todo[np.abs(q_new - q_todo) > 1e-12 * q_todo]
+        if todo.size == 0:
             break
     out[active] = q
     return out.reshape(shape)

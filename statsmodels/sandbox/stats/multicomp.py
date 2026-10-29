@@ -812,6 +812,11 @@ class TukeyHSDResults:
         Figure
             handle to figure object containing interval plots
 
+        Raises
+        ------
+        NotImplementedError
+            If the results are from `MultiComparison.dunnett_t3`.
+
         Notes
         -----
         Multiple comparison tests are nice, but lack a good way to be
@@ -1296,7 +1301,7 @@ class MultiComparison:
 
         Notes
         -----
-        Dunnett's T3 is recommended for small samples with unequal
+        Dunnett's T3 [1]_ is recommended for small samples with unequal
         variances, where Games-Howell can be liberal.
 
         The Welch t statistics of the pairs are correlated. Dunnett's T3
@@ -1319,7 +1324,7 @@ class MultiComparison:
 
         References
         ----------
-        .. [*] Dunnett, C. W. (1980). Pairwise Multiple Comparisons in the
+        .. [1] Dunnett, C. W. (1980). Pairwise Multiple Comparisons in the
            Unequal Variance Case. Journal of the American Statistical
            Association, 75(372), 796-800.
         """
