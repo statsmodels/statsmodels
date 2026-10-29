@@ -300,6 +300,27 @@ def test_level(level, neqs, const_last):
     assert_allclose(res.tvalues_last, tvalues, rtol=1e-5)
 
 
+@pytest.mark.parametrize("with_const", [True, False])
+def test_offset(with_const):
+    # r is the factor of the data after subtracting offset, which is the
+    # mean of the lags and endog if exog has a constant and zero otherwise
+    rng = np.random.default_rng(10)
+    nobs = 50
+    x = rng.standard_normal((nobs, 3)) + 100.0
+    y = rng.standard_normal(nobs) + 0.5 * x[:, 0]
+    extra = rng.standard_normal((nobs, 1))
+    exog = np.column_stack([np.ones(nobs), extra]) if with_const else extra
+    res = nested_lag_ols(y, x, exog, rcond=nobs * EPS)
+    assert res is not None
+    data = np.column_stack([exog, x, y])
+    expected = np.zeros(data.shape[1])
+    if with_const:
+        expected[exog.shape[1] :] = data[:, exog.shape[1] :].mean(0)
+    assert_allclose(res.offset, expected, rtol=1e-14)
+    shifted = data - res.offset
+    assert_allclose(res.r.T @ res.r, shifted.T @ shifted, rtol=1e-10, atol=1e-9)
+
+
 def test_level_declines():
     # The checks apply to the data with the level. A large level does not
     # hide an exact fit or collinear regressors.

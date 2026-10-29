@@ -1051,6 +1051,19 @@ class TTestPower(Power):
         ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
+        # Validate `alternative` up front so an invalid value raises a clear
+        # error instead of being swallowed by the root finder (GH#9378).
+        # Otherwise e.g. ``alternative="one-sided"`` returns ``nan`` with a
+        # confusing ``ConvergenceWarning``.
+        alternative = string_like(
+            alternative,
+            "alternative",
+            options=("two-sided", "larger", "smaller"),
+            lower=False,
+            deprecated=_ALTERNATIVE_ALIASES,
+            removed_after="0.16",
+        )
+
         # for debugging
         # print 'calling ttest solve with', (effect_size, nobs, alpha, power, alternative)
         return super().solve_power(
@@ -1270,6 +1283,17 @@ class TTestIndPower(Power):
             # validate before the root finding, which swallows ValueError and
             # returns nan with a ConvergenceWarning instead
             _validate_ratio(ratio)
+        # Validate `alternative` up front so an invalid value raises a clear
+        # error instead of being swallowed by the root finder (GH#9378).
+        alternative = string_like(
+            alternative,
+            "alternative",
+            options=("two-sided", "larger", "smaller"),
+            lower=False,
+            deprecated=_ALTERNATIVE_ALIASES,
+            removed_after="0.16",
+        )
+
         return super().solve_power(
             effect_size=effect_size,
             nobs1=nobs1,

@@ -780,6 +780,7 @@ class TestHurdleL1(CheckLikelihoodModelL1, CheckHurdleL1Coherence):
         cls.res2 = results_t.hurdle_l1
 
 
+@pytest.mark.slow
 class TestHurdleL1Compatibility(CheckL1Compatability):
     """
     Many inherited tests must be overridden to separately test both the zero

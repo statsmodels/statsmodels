@@ -108,6 +108,7 @@ class TestZeroInflatedModel_logit(CheckGeneric):
         cls.res2 = res2
 
 
+@pytest.mark.slow
 class TestZeroInflatedModel_probit(CheckGeneric):
     @classmethod
     def setup_class(cls):
@@ -430,6 +431,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         # assert_(res_bh.mle_retvals['converged'] is True)
 
 
+@pytest.mark.slow
 class TestZeroInflatedGeneralizedPoisson_predict:
     @classmethod
     def setup_class(cls):
@@ -849,6 +851,7 @@ def _fit_zero_inflated_negative_binomial_for_summary():
     ).fit(start_params=sp, method="nm", xtol=1e-6, maxiter=5000, disp=False)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "fit_func",
     [

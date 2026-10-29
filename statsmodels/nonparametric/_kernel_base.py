@@ -441,14 +441,74 @@ class GenericKDE:
 
         where ``n`` is the number of observations and ``q`` is the number of
         variables.
+
+        The rule of thumb is defined for continuous variables, so the
+        bandwidths of the discrete variables are passed through
+        :meth:`_set_bw_bounds` to keep them inside the range in which the
+        discrete kernels are defined.  Otherwise the bandwidth of a discrete
+        variable scales with its arbitrary numeric codes and the density
+        estimate is no longer valid.
         """
         X = np.std(self.data, axis=0)
-        return 1.06 * X * self.nobs ** (-1.0 / (4 + self.data.shape[1]))
+        bw = 1.06 * X * self.nobs ** (-1.0 / (4 + self.data.shape[1]))
+        return self._set_bw_bounds(bw)
+
+    def _get_bw_bounds(self):
+        """
+        The range of bandwidths in which the kernels of the variables are defined
+
+        Returns
+        -------
+        lower : ndarray
+            The lower bound of the bandwidth of each variable, effectively
+            zero (1e-10).
+        upper : ndarray
+            The upper bound of the bandwidth of each variable, infinite for
+            continuous variables.
+
+        Notes
+        -----
+        The bandwidth of an unordered variable is the smoothing probability of
+        the Aitchison-Aitken kernel, which is a probability mass function
+        only for ``bw <= (levels - 1) / levels``.  This upper end is the fully
+        smoothed, uniform kernel, while a larger value puts less weight on an
+        observed level than on the unobserved ones.  The number of levels is
+        the number of distinct values in the data.  A variable with a single
+        level has no such bound and is bounded by 1.
+
+        The bandwidth of an ordered variable enters the Wang-Ryzin kernel as
+        ``1 - bw``, so the kernel is zero at ``bw = 1``.  The upper bound is
+        ``1 - 1e-10``.
+
+        The kernels of the regression estimators, ``aitchison_aitken_reg``
+        and ``wangryzin_reg``, are weights that are 1 for the same value and
+        less than 1 for other values.  Their upper bound is 1, for which the
+        variable has no effect.
+
+        The variables are in the last columns of ``data``, ``KernelReg``
+        puts the dependent variable in front of them.
+        """
+        _, ix_ord, ix_unord = _get_type_pos(self.data_type)
+        k_vars = len(self.data_type)
+        lower = np.full(k_vars, 1e-10)
+        upper = np.full(k_vars, np.inf)
+        okertype = getattr(self, "okertype", "wangryzin")
+        ukertype = getattr(self, "ukertype", "aitchisonaitken")
+        upper[ix_ord] = 1.0 if okertype.endswith("_reg") else 1.0 - 1e-10
+        upper[ix_unord] = 1.0
+        if not ukertype.endswith("_reg"):
+            data = self.data[:, -k_vars:]
+            for i in np.flatnonzero(ix_unord):
+                levels = np.unique(data[:, i]).size
+                if levels > 1:
+                    upper[i] = (levels - 1) / levels
+        return lower, upper
 
     def _set_bw_bounds(self, bw):
         """
         Sets bandwidth lower bound to effectively zero (1e-10), and for
-        discrete values upper bound to 1
+        discrete values upper bound to the largest value the kernel is
+        defined for
 
         Parameters
         ----------
@@ -459,13 +519,66 @@ class GenericKDE:
         -------
         ndarray
             The bounded bandwidth values.
+
+        See Also
+        --------
+        _get_bw_bounds : The range of the bandwidths.
         """
         bw[bw < 0] = 1e-10
-        _, ix_ord, ix_unord = _get_type_pos(self.data_type)
-        bw[ix_ord] = np.minimum(bw[ix_ord], 1.0)
-        bw[ix_unord] = np.minimum(bw[ix_unord], 1.0)
+        _, upper = self._get_bw_bounds()
+        return np.minimum(bw, upper)
 
-        return bw
+    def _minimize_bw(self, func, x0, args=(), xtol=1e-4):
+        """
+        Minimizes a cross-validation criterion inside the bandwidth bounds
+
+        Parameters
+        ----------
+        func : callable
+            The criterion, called as ``func(bw, *args)``.
+        x0 : ndarray
+            The starting value, it is moved inside the bounds if necessary.
+        args : tuple, optional
+            Extra arguments passed to `func`.
+        xtol : float, optional
+            Absolute error in the bandwidth that is acceptable for convergence.
+
+        Returns
+        -------
+        ndarray
+            The bandwidth that minimizes `func` inside the bounds.
+
+        Notes
+        -----
+        Clipping the minimizer of an unconstrained search does not give the
+        minimizer inside the bounds when there is more than one variable.  The
+        search is the Nelder-Mead algorithm of ``optimize.fmin`` applied to
+        the criterion at the bandwidth that is reflected at the bounds of
+        ``_get_bw_bounds``, which is the bandwidth itself if it is inside the
+        bounds.  The result is the one of ``fmin`` if the bounds do not bind.
+        Unlike clipping, the reflection keeps the criterion continuous at a
+        bound, so that the search does not stop there if the minimum is
+        close to the bound.
+        """
+        lower, upper = self._get_bw_bounds()
+        width = upper - lower
+
+        def reflect(bw):
+            # fold bw into [lower, upper], the upper end can be infinite
+            dist = np.abs(bw - lower)
+            period = np.where(np.isfinite(width), 2 * width, 1.0)
+            folded = np.mod(dist, period)
+            folded = np.where(folded > width, period - folded, folded)
+            return lower + np.where(np.isfinite(width), folded, dist)
+
+        res = optimize.minimize(
+            lambda bw, *args: func(reflect(bw), *args),
+            np.clip(x0, lower, upper),
+            args=args,
+            method="Nelder-Mead",
+            options={"xatol": xtol, "maxiter": 1e3, "maxfev": 1e3},
+        )
+        return reflect(res.x)
 
     def _cv_ml(self):
         r"""
@@ -498,17 +611,7 @@ class GenericKDE:
         """
         # the initial value for the optimization is the normal_reference
         h0 = self._normal_reference()
-        bw = optimize.fmin(
-            self.loo_likelihood,
-            x0=h0,
-            args=(np.log,),
-            maxiter=1e3,
-            maxfun=1e3,
-            disp=0,
-            xtol=1e-3,
-        )
-        bw = self._set_bw_bounds(bw)  # bound bw if necessary
-        return bw
+        return self._minimize_bw(self.loo_likelihood, h0, args=(np.log,), xtol=1e-3)
 
     def _cv_ls(self):
         r"""
@@ -534,9 +637,7 @@ class GenericKDE:
         (``KDEMultivariate``) kernel density estimation.
         """
         h0 = self._normal_reference()
-        bw = optimize.fmin(self.imse, x0=h0, maxiter=1e3, maxfun=1e3, disp=0, xtol=1e-3)
-        bw = self._set_bw_bounds(bw)  # bound bw if necessary
-        return bw
+        return self._minimize_bw(self.imse, h0, xtol=1e-3)
 
     def loo_likelihood(self):
         """

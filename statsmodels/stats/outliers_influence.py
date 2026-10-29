@@ -208,7 +208,9 @@ def variance_inflation_factor(exog, exog_idx, *, standardize=True):
 
     See Also
     --------
-    xxx : class for regression diagnostics  TODO: does not exist yet
+    statsmodels.stats.multicollinearity.vif
+        Variance inflation factors of all columns, which is much faster than
+        calling this function for each column.
 
     References
     ----------

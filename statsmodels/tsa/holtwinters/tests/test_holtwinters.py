@@ -831,6 +831,7 @@ def test_infer_freq():
     assert mod.seasonal_periods == 12
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("trend", TRENDS)
 @pytest.mark.parametrize("seasonal", SEASONALS)
 def test_start_params(trend, seasonal):

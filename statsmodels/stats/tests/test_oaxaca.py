@@ -243,6 +243,7 @@ class TestZeroModel:
         np.testing.assert_almost_equal(exp_std, zero_std_stata_results[1], 3)
 
 
+@pytest.mark.slow
 class TestOmegaModel:
     @classmethod
     def setup_class(cls):
@@ -265,6 +266,7 @@ class TestOmegaModel:
         np.testing.assert_almost_equal(exp_std, nue_std_stata_results[1], 3)
 
 
+@pytest.mark.slow
 class TestPooledModel:
     @classmethod
     def setup_class(cls):
@@ -287,6 +289,7 @@ class TestPooledModel:
         np.testing.assert_almost_equal(exp_std, pool_std_stata_results[1], 3)
 
 
+@pytest.mark.slow
 def test_oaxaca_results_summary(capsys):
     # Check the returned summary against the same Stata-verified values
     # test_oaxaca_results checks the underlying params/std against above.

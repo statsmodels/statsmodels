@@ -682,6 +682,23 @@ def _invert_test_confint(
         Lower and upper confidence limits.
     """
 
+    count = array_like(count, "count", dtype=np.double)
+    nobs = array_like(nobs, "nobs", dtype=np.double)
+    if count.size != 1 or nobs.size != 1:
+        raise ValueError(
+            "the numerical inversion is not vectorized, count and nobs must "
+            f"each have a single element, got sizes {count.size} and "
+            f"{nobs.size}"
+        )
+    count = count.item()
+    nobs = nobs.item()
+
+    if count == 0:
+        # The two-sided mid-p value is exp(-nobs * rate), which is 1 at rate 0.
+        # There is no lower root, the lower limit is 0, and the upper limit
+        # solves exp(-nobs * rate) = alpha.
+        return np.float64(0), np.float64(-np.log(alpha) / nobs)
+
     def func(r):
         v = (test_poisson(count, nobs, value=r, method=method)[1] - alpha) ** 2
         return v

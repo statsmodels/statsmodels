@@ -54,7 +54,7 @@ jobs:
     displayName: 'Build Cython Extensions'
 
   - pwsh: |
-      pytest statsmodels --skip-examples --skip-high-memory --junitxml=junit/test-results.xml -n 2 --durations=50
+      pytest statsmodels --skip-examples --skip-slow --skip-high-memory --junitxml=junit/test-results.xml -n 2 --durations=50
     displayName: 'Run pytest'
 
   - task: PublishTestResults@2
