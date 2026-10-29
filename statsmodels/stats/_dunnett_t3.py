@@ -22,6 +22,23 @@ def _smm_tail_pdf(z, k):
     return 2 * k * stats.norm.pdf(z) * power
 
 
+def _log_gamma_const(a):
+    # a * log(a) - a - gammaln(a), with Stirling's series for large a to avoid
+    # the cancellation of the terms
+    a = np.asarray(a, dtype=float)
+    small = a < 100
+    a_small = np.where(small, a, 1.0)
+    a_large = np.where(small, 100.0, a)
+    direct = a_small * np.log(a_small) - a_small - special.gammaln(a_small)
+    series = (
+        0.5 * np.log(a_large / (2 * np.pi))
+        - 1 / (12 * a_large)
+        + 1 / (360 * a_large**3)
+        - 1 / (1260 * a_large**5)
+    )
+    return np.where(small, direct, series)
+
+
 def _smm_integrate(q, k, df, pdf=False):
     """
     Survival function and density of the studentized maximum modulus
@@ -52,10 +69,10 @@ def _smm_integrate(q, k, df, pdf=False):
     half = np.diff(breaks, axis=1)[..., None] / 2
     x = breaks[:, :-1, None] + half * (1 + _SMM_NODES)
     weights = half * _SMM_WEIGHTS
-    # density of x, y = a * exp(2 * x) is gamma distributed with shape a
+    # density of x, y = a * exp(2 * x) is gamma distributed with shape a,
+    # log(dens) = log(2) + a * log(a) - a - gammaln(a) - a * (exp(2x) - 1 - 2x)
     a3 = a[:, None, None]
-    logy = np.log(a3) + 2 * x
-    dens = np.exp(np.log(2) - special.gammaln(a3) + a3 * logy - np.exp(logy))
+    dens = np.exp(np.log(2) + _log_gamma_const(a3) - a3 * (np.expm1(2 * x) - 2 * x))
     s = np.exp(x)
     qs = q[:, None, None] * s
     sf = (weights * dens * _smm_tail(qs, k)).sum(axis=(1, 2))
@@ -102,7 +119,7 @@ def _smm_sf(q, k, df):
 
     where :math:`f` is the density of s. The integral is computed for all
     values at once with a fixed Gauss-Legendre rule. The relative error is
-    smaller than 1e-10 for probabilities larger than 1e-20.
+    about 1e-9 or smaller for probabilities larger than 1e-20.
 
     References
     ----------

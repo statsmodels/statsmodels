@@ -849,6 +849,13 @@ def test_smm_special_cases():
     qcrit = _smm_ppf(0.95, 6, df)
     assert_allclose(_smm_sf(qcrit, 6, df), 0.05, rtol=1e-8)
     assert_allclose(_smm_ppf(0.95, 1, df), stats.t.isf(0.025, df), rtol=1e-12)
+    # for very large df the difference to the infinite df case is of order
+    # 1 / df
+    q_large = np.array([1.0, 2.5, 4.0])
+    for df_large in (1e10, 1e14):
+        assert_allclose(
+            _smm_sf(q_large, 6, df_large), _smm_sf(q_large, 6, np.inf), rtol=1e-8
+        )
     # infinite df, quantile of the maximum of independent normal variables
     expected = stats.norm.isf((1 - 0.95 ** (1 / 4)) / 2)
     assert_allclose(_smm_ppf(0.95, 4, np.inf), expected, rtol=1e-12)
@@ -913,7 +920,9 @@ class TestDunnettT3:
     def test_pmcmrplus(self):
         # R 4.5.3, PMCMRplus 1.9.12, set.seed(1); dunnettT3Test(x, g)
         # PMCMRplus rounds the degrees of freedom and pmvt has an absolute
-        # error of about 1e-3 with the default settings
+        # error of about 1e-3 with the default settings, so these are not
+        # accurate references. The p-values are compared with the exact
+        # p-values for the rounded degrees of freedom.
         pvalues = [0.000162464294426234, 0.244207785973616920, 0.149537580996924]
         res = self.mc.dunnett_t3()
         tvalues = res.meandiffs / res.std_pairs
@@ -960,6 +969,13 @@ def test_dunnett_t3_two_groups():
     assert_equal(res.reject, res_gh.reject)
 
 
+def test_dunnett_t3_plot_simultaneous():
+    data = dta2.iloc[3:29]
+    res = MultiComparison(data["StressReduction"], data["Treatment"]).dunnett_t3()
+    with pytest.raises(NotImplementedError, match="Dunnett's T3"):
+        res.plot_simultaneous()
+
+
 def test_dunnett_t3_single_observation():
     # the variance of a group with one observation is undefined
     endog = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.5])
@@ -975,6 +991,11 @@ def test_dunnett_t3_single_observation():
     assert np.isnan(res.confint[single]).all()
     assert not res.reject[single].any()
     assert np.isfinite(res.pvalues[~single]).all()
+    # the undefined pairs are kept in the number of comparisons
+    tvalue = res.meandiffs[~single] / res.std_pairs[~single]
+    df = res.df_total[~single]
+    assert_allclose(res.pvalues[~single], _smm_sf(np.abs(tvalue), 3, df), rtol=1e-12)
+    assert_allclose(res.q_crit[~single], _smm_ppf(0.95, 3, df), rtol=1e-12)
 
 
 def test_dunnett_t3_zero_variance():

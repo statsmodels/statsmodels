@@ -634,8 +634,10 @@ class TukeyHSDResults:
     std_pairs : ndarray
         Standard deviations of the pairwise mean differences.
     q_crit : float or ndarray
-        Critical value or values of the studentized range statistic at the
-        specified significance level.
+        Critical value or values at the specified significance level. This is
+        the studentized range statistic for Tukey HSD and Games-Howell, and
+        the studentized maximum modulus on the scale of the t statistic for
+        Dunnett's T3.
     halfwidths : ndarray
         Half widths of the simultaneous confidence intervals. This attribute
         is available after calling `plot_simultaneous`.
@@ -778,6 +780,9 @@ class TukeyHSDResults:
             self._multicomp.pairindices,
         )
 
+    # plot_simultaneous is not available for the results of dunnett_t3
+    _dunnett_t3 = False
+
     def plot_simultaneous(
         self, comparison_name=None, ax=None, figsize=(10, 6), xlabel=None, ylabel=None
     ):
@@ -854,6 +859,13 @@ class TukeyHSDResults:
         Optionally provide one of the group names to color code the plot to
         highlight group means different from comparison_name.
         """
+        if self._dunnett_t3:
+            raise NotImplementedError(
+                "plot_simultaneous is not available for Dunnett's T3 results. "
+                "The intervals of the plot are based on the studentized range "
+                "and do not match the T3 test. Use confint for the "
+                "simultaneous confidence intervals of the pairwise differences."
+            )
         fig, ax1 = utils.create_mpl_ax(ax)
         if figsize is not None:
             fig.set_size_inches(figsize)
@@ -1258,7 +1270,7 @@ class MultiComparison:
         Parameters
         ----------
         alpha : float, optional
-            Value of the family-wise error rate.
+            Value of the family-wise error rate. Default is 0.05.
 
         Returns
         -------
@@ -1267,7 +1279,15 @@ class MultiComparison:
             p-values, simultaneous confidence intervals and reject
             decisions. ``q_crit`` contains the critical value of the
             studentized maximum modulus distribution for each pair, on
-            the scale of the t statistic.
+            the scale of the t statistic. ``plot_simultaneous`` is not
+            available for these results.
+
+        Raises
+        ------
+        TypeError
+            If alpha is not a float.
+        ValueError
+            If alpha is not in the interval (0, 1).
 
         See Also
         --------
@@ -1279,8 +1299,21 @@ class MultiComparison:
         Dunnett's T3 is recommended for small samples with unequal
         variances, where Games-Howell can be liberal.
 
+        The Welch t statistics of the pairs are correlated. Dunnett's T3
+        approximates their joint distribution with the studentized maximum
+        modulus distribution, which has independent components, so the test
+        is conservative.
+
         The critical values are computed using the degrees of freedom of
-        each pair without rounding.
+        each pair without rounding. ``dunnettT3Test`` in the R package
+        PMCMRplus rounds the degrees of freedom to integers, so its p-values
+        differ, especially if the degrees of freedom are small.
+
+        Pairs with undefined statistics, for example the pairs of a group
+        with a single observation or of two groups with zero variance, have
+        nan p-values and confidence intervals. They are kept in the number
+        of comparisons of the studentized maximum modulus distribution,
+        which is conservative.
 
         .. versionadded:: 0.15.1
 
@@ -1329,7 +1362,7 @@ class MultiComparison:
             "Multiple Comparison of Means - Dunnett T3, " + f"FWER={alpha:4.2f}"
         )
 
-        return TukeyHSDResults(
+        results = TukeyHSDResults(
             self,
             results_table,
             res["q_crit"],
@@ -1345,6 +1378,8 @@ class MultiComparison:
             group_t=self.groupsunique[idx2],
             group_c=self.groupsunique[idx1],
         )
+        results._dunnett_t3 = True
+        return results
 
 
 def rankdata(x):
