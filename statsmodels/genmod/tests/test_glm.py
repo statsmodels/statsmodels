@@ -3842,3 +3842,163 @@ def test_get_prediction_default_offset_formula_pandas():
     sf = res.get_prediction(which="mean").summary_frame()
     assert sf.index.equals(index)
     assert_allclose(sf["predicted"], res.predict(), rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "to_response",
+    [
+        lambda y: y.astype(bool),
+        lambda y: np.where(y == 1, "yes", "no"),
+        lambda y: pd.Categorical(np.where(y == 1, "b", "a"), categories=["a", "b"]),
+        lambda y: pd.Categorical(np.where(y == 1, "a", "b"), categories=["b", "a"]),
+    ],
+    ids=["bool", "str", "categorical", "categorical-reordered"],
+)
+def test_glm_formula_two_level_categorical_endog(to_response):
+    # GH 10501: a two-level categorical response is expanded to one indicator
+    # column per level, which GLM read as (successes, failures), so the first
+    # level was modeled as the success and every coefficient flipped sign.
+    # As in R's glm, the first level is the failure and the second the success.
+    y = np.array([0, 0, 1, 0, 1, 1, 0, 1])
+    data = pd.DataFrame({"x": np.arange(8.0), "y": y, "z": to_response(y)})
+    family = sm.families.Binomial()
+    expected = GLM.from_formula("y ~ x", data, family=family).fit()
+    res = GLM.from_formula("z ~ x", data, family=family).fit()
+    assert_allclose(res.params.values, expected.params.values, rtol=1e-10)
+    assert_allclose(res.bse.values, expected.bse.values, rtol=1e-10)
+
+
+def test_glm_formula_two_level_categorical_endog_missing():
+    y = np.array([0, 0, 1, 0, 1, 1, 0, 1, 1, 0])
+    data = pd.DataFrame(
+        {"x": np.arange(10.0), "y": y, "z": np.where(y == 1, "yes", "no")}
+    )
+    data.loc[2, "z"] = None
+    family = sm.families.Binomial()
+    res = GLM.from_formula("z ~ x", data, family=family, missing="drop").fit()
+    expected = GLM.from_formula("y ~ x", data.drop(index=2), family=family).fit()
+    assert res.nobs == 9
+    assert res.model.endog_names == "z[yes]"
+    assert_allclose(res.params.values, expected.params.values, rtol=1e-10)
+
+
+def test_glm_formula_two_column_numeric_endog():
+    # A numeric two-column response still means (successes, failures)
+    counts = np.column_stack([[3, 1, 4, 1, 5, 2], [2, 4, 1, 3, 1, 3]])
+    x = np.arange(6.0)
+    family = sm.families.Binomial()
+    res = GLM.from_formula("counts ~ x", {"x": x}, family=family).fit()
+    expected = GLM(counts, add_constant(x), family=family).fit()
+    assert_allclose(res.params.values, expected.params, rtol=1e-10)
+
+
+@pytest.mark.parametrize("kind", ["str", "bool", "categorical"])
+def test_glm_formula_categorical_endog_r(kind):
+    # R 4.6.1, the first level of a factor is the failure and the second the
+    # success:
+    # x <- 0:9
+    # y <- c("no", "no", "yes", "no", "yes", "no", "yes", "yes", "yes", "yes")
+    # res <- glm(y ~ x, family = binomial, data = data.frame(x, y = factor(y)))
+    # coef(res); sqrt(diag(vcov(res))); logLik(res); deviance(res)
+    params = np.array([-2.26430269411485, 0.662208268672125])
+    bse = np.array([1.70376480979048, 0.400093718969837])
+    llf = -4.31012194802025
+    deviance = 8.62024389604051
+    yes = np.array([0, 0, 1, 0, 1, 0, 1, 1, 1, 1], dtype=bool)
+    if kind == "str":
+        y = np.where(yes, "yes", "no")
+    elif kind == "bool":
+        y = yes
+    else:
+        y = pd.Categorical(np.where(yes, "yes", "no"), categories=["no", "yes"])
+    data = pd.DataFrame({"x": np.arange(10.0), "y": y})
+    res = GLM.from_formula("y ~ x", data, family=sm.families.Binomial()).fit()
+    assert_allclose(res.params.values, params, rtol=1e-8)
+    assert_allclose(res.bse.values, bse, rtol=1e-6)
+    assert_allclose(res.llf, llf, rtol=1e-8)
+    assert_allclose(res.deviance, deviance, rtol=1e-8)
+
+
+def test_glm_formula_bool_endog_issue_10501():
+    data = pd.DataFrame({"x": [0, 1], "y": [0, 1], "y_bool": [False, True]})
+    family = sm.families.Binomial()
+    model_int = GLM.from_formula("y ~ x", data, family=family)
+    model_bool = GLM.from_formula("y_bool ~ x", data, family=family)
+    assert_allclose(model_bool.endog, model_int.endog)
+    # Perfect separation, the parameters are not finite but have the sign of
+    # the numeric response
+    with pytest.warns(PerfectSeparationWarning):
+        params_int = model_int.fit().params
+    with pytest.warns(PerfectSeparationWarning):
+        params_bool = model_bool.fit().params
+    assert np.all(np.sign(params_bool.values) == np.sign(params_int.values))
+    assert params_bool.iloc[1] > 0
+
+
+def test_glm_formula_categorical_endog_names():
+    data = pd.DataFrame({"x": np.arange(8.0), "z": list("aababbab")})
+    res = GLM.from_formula("z ~ x", data, family=sm.families.Binomial()).fit()
+    assert res.model.endog_names == "z[b]"
+    assert res.model.exog_names == ["Intercept", "x"]
+
+
+@pytest.mark.parametrize(
+    "family",
+    [None, sm.families.Gaussian(), sm.families.Poisson(), sm.families.Gamma()],
+    ids=["default", "gaussian", "poisson", "gamma"],
+)
+@pytest.mark.parametrize("response", ["z", "b", "C(y)"])
+def test_glm_formula_categorical_endog_other_family(family, response):
+    # Only the Binomial family can model the second level of a response
+    data = pd.DataFrame(
+        {
+            "x": np.arange(8.0),
+            "y": [0, 0, 1, 0, 1, 1, 0, 1],
+            "z": list("aababbab"),
+            "b": [False, False, True, False, True, True, False, True],
+        }
+    )
+    if response == "b" and FormulaManager().engine == "formulaic":
+        pytest.skip("formulaic codes a bool response as 0/1")
+    kwargs = {} if family is None else {"family": family}
+    with pytest.raises(ValueError, match="only be used with the Binomial family"):
+        GLM.from_formula(f"{response} ~ x", data, **kwargs)
+
+
+def test_glm_formula_categorical_endog_other_family_gee():
+    data = pd.DataFrame(
+        {
+            "x": np.arange(8.0),
+            "z": list("aababbab"),
+            "g": [0, 0, 1, 1, 2, 2, 3, 3],
+        }
+    )
+    with pytest.raises(ValueError, match="only be used with the Binomial family"):
+        sm.GEE.from_formula("z ~ x", "g", data)
+    with pytest.raises(ValueError, match="only be used with the Binomial family"):
+        sm.GEE.from_formula("z ~ x", "g", data, family=sm.families.Gaussian())
+    y = np.array([0, 0, 1, 0, 1, 1, 0, 1])
+    data["y"] = y
+    res = sm.GEE.from_formula("z ~ x", "g", data, family=sm.families.Binomial())
+    expected = sm.GEE.from_formula("y ~ x", "g", data, family=sm.families.Binomial())
+    assert_allclose(res.fit().params.values, expected.fit().params.values, rtol=1e-8)
+
+
+def test_glm_formula_categorical_endog_single_level():
+    # Only one level of the response is left in the data
+    data = pd.DataFrame({"x": np.arange(8.0), "z": list("aababbab")})
+    for family in [sm.families.Binomial(), sm.families.Gaussian()]:
+        with pytest.raises(ValueError, match="has a single level"):
+            GLM.from_formula("z ~ x", data, family=family, subset=data.z == "a")
+
+
+def test_glm_formula_categorical_endog_coded_levels():
+    # The order of the levels of C() sets the success
+    y = np.array([0, 0, 1, 0, 1, 1, 0, 1])
+    data = pd.DataFrame({"x": np.arange(8.0), "y": y})
+    family = sm.families.Binomial()
+    res = GLM.from_formula("y ~ x", data, family=family).fit()
+    res_c = GLM.from_formula("C(y, levels=[0, 1]) ~ x", data, family=family).fit()
+    res_rev = GLM.from_formula("C(y, levels=[1, 0]) ~ x", data, family=family).fit()
+    assert_allclose(res_c.params.values, res.params.values, rtol=1e-10)
+    assert_allclose(res_rev.params.values, -res.params.values, rtol=1e-8)

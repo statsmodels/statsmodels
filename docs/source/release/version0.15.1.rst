@@ -104,6 +104,15 @@ Behavior changes
   ``-model.hessian(params)``. To get the old value, use
   ``model.hessian(params, observed=False)``, or ``-model.information(params)``.
   :issue:`7826`, :pr:`10498`, :pr:`10628`
+- A two-level categorical response, such as a bool, str or ``Categorical``
+  column, in a formula for
+  :class:`~statsmodels.genmod.generalized_linear_model.GLM` with the
+  ``Binomial`` family now models the probability of the second level, as the
+  ``glm`` function of R does. The expanded indicator columns of both levels were
+  read as (successes, failures), so the first level was modeled and the signs
+  of all coefficients were reversed. ``endog_names`` shows the modeled level.
+  Other families, and a response with a single level in the data, raise a
+  ``ValueError``. :issue:`10501`, :pr:`10503`, :pr:`10635`
 - The bandwidths of discrete variables that are selected by
   :class:`~statsmodels.nonparametric.kernel_density.KDEMultivariate`,
   :class:`~statsmodels.nonparametric.kernel_density.KDEMultivariateConditional`
