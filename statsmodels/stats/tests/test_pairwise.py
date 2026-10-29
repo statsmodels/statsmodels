@@ -874,6 +874,15 @@ def test_smm_sf_infinite_quantile():
     assert_equal(res, [0.0, 0.0, 0.0, np.nan])
 
 
+def test_smm_ppf_vectorized():
+    # the quantile of an element does not depend on the other elements
+    df = np.array([1.5, 4.0, 12.7, 50.0, 1000.0, 1e6, np.inf])
+    res = _smm_ppf(0.95, 45, df)
+    expected = [_smm_ppf(0.95, 45, d) for d in df]
+    assert_allclose(res, expected, rtol=1e-12)
+    assert_allclose(_smm_sf(res, 45, df), 0.05, rtol=1e-8)
+
+
 class TestDunnettT3:
     # R 4.5.3, data are dta2.iloc[3:29], x is StressReduction, g Treatment
     # ni <- tapply(x, g, length); xi <- tapply(x, g, mean)
