@@ -107,6 +107,20 @@ class KDEMultivariate(GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
+        The bandwidths that are selected by one of the methods are kept in
+        the range for which the kernels of the discrete variables are
+        defined.  The bandwidth of an unordered variable is at most
+        ``(levels - 1) / levels``, where ``levels`` is the number of distinct
+        values of the variable, and the bandwidth of an ordered variable is
+        less than 1.  A user-specified bandwidth is used as given.
+
+        .. versionchanged:: 0.15.1
+
+            The bandwidths of discrete variables that are selected by one of
+            the methods are bounded.  They can have been outside the range
+            of the kernels, so that the density estimate was not a
+            probability mass function.
+
     defaults : EstimatorSettings instance, optional
         The default values for (efficient) bandwidth estimation.
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
@@ -448,6 +462,20 @@ class KDEMultivariateConditional(GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
+        The bandwidths that are selected by one of the methods are kept in
+        the range for which the kernels of the discrete variables are
+        defined.  The bandwidth of an unordered variable is at most
+        ``(levels - 1) / levels``, where ``levels`` is the number of distinct
+        values of the variable, and the bandwidth of an ordered variable is
+        less than 1.  A user-specified bandwidth is used as given.
+
+        .. versionchanged:: 0.15.1
+
+            The bandwidths of discrete variables that are selected by one of
+            the methods are bounded.  They can have been outside the range
+            of the kernels, so that the density estimate was not a
+            probability mass function.
+
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
     rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
@@ -683,16 +711,6 @@ class KDEMultivariateConditional(GenericKDE):
         N_data_predict = np.shape(exog_predict)[0]
         cdf_est = np.empty(N_data_predict)
         for i in range(N_data_predict):
-            mu_x = (
-                gpke(
-                    self.bw[self.k_dep :],
-                    data=self.exog,
-                    data_predict=exog_predict[i, :],
-                    var_type=self.indep_type,
-                )
-                / self.nobs
-            )
-            mu_x = np.squeeze(mu_x)
             cdf_endog = gpke(
                 self.bw[0 : self.k_dep],
                 data=self.endog,
@@ -712,7 +730,8 @@ class KDEMultivariateConditional(GenericKDE):
                 tosum=False,
             )
             S = (cdf_endog * cdf_exog).sum(axis=0)
-            cdf_est[i] = S / (self.nobs * mu_x)
+            # the sum of cdf_exog is nobs * mu_x, the estimate of f(x)
+            cdf_est[i] = S / cdf_exog.sum(axis=0)
 
         return cdf_est
 
@@ -772,22 +791,17 @@ class KDEMultivariateConditional(GenericKDE):
             Y = Z[:, : self.k_dep]
             Ye_L = np.kron(Y, expander)
             Ye_R = np.kron(expander, Y)
-            Xe_L = np.kron(X, expander)
-            Xe_R = np.kron(expander, X)
-            K_Xi_Xl = gpke(
+            K_X_Xl = gpke(
                 bw[self.k_dep :],
-                data=Xe_L,
+                data=X,
                 data_predict=self.exog[ii, :],
                 var_type=self.indep_type,
                 tosum=False,
             )
-            K_Xj_Xl = gpke(
-                bw[self.k_dep :],
-                data=Xe_R,
-                data_predict=self.exog[ii, :],
-                var_type=self.indep_type,
-                tosum=False,
-            )
+            # the kernel values of the expanded data kron(X, expander) and
+            # kron(expander, X) only repeat the values of the nobs - 1 rows
+            K_Xi_Xl = np.repeat(K_X_Xl, self.nobs - 1)
+            K_Xj_Xl = np.tile(K_X_Xl, self.nobs - 1)
             # NOTE: this is *not* a plain gpke call: Ye_R holds one
             # evaluation point per row of Ye_L (every (i, j) pair among the
             # leave-one-out observations), not a single shared evaluation

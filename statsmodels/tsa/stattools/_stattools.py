@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from scipy.interpolate import interp1d
+from scipy.linalg import solve_triangular
 from scipy.signal import correlate
 
 from statsmodels.regression.linear_model import OLS, yule_walker
@@ -4174,6 +4175,157 @@ class ZivotAndrewsUnitRoot:
             exog[(cutoff - 1) :, 2] = trend[0 : (nobs - period + 1)]
         return exog
 
+    def _break_tvalues(
+        self, endog, exog, regression, periods, nobs, const, trend, cols, lags
+    ):
+        """
+        t-statistics of the lagged level for all candidate break periods
+
+        Parameters
+        ----------
+        endog : ndarray
+            The dependent variable of the auxiliary regressions.
+        exog : ndarray
+            The regressor matrix from ``_format_regression_data``. Only the
+            lagged level and the lagged differences are used.
+        regression : {"c", "t", "ct"}
+            The trend order to include in the regression.
+        periods : ndarray
+            The candidate break periods, increasing integers.
+        nobs : int
+            The number of observations in series.
+        const : float
+            The normalized constant term value to use in exog.
+        trend : ndarray
+            The normalized trend values to use in exog.
+        cols : int
+            The number of non-lag columns in exog.
+        lags : int
+            The number of lagged difference terms included in exog.
+
+        Returns
+        -------
+        ndarray or None
+            The t-statistic of the lagged level in the regression of each
+            period. None if the data are not finite, the regressors of a
+            period are close to singular or a regression fits almost
+            perfectly. The regressions are then fit one period at a time.
+
+        Notes
+        -----
+        The regressors of every period are ``X = [const, trend, lagged
+        differences, lagged level]`` and the break dummies ``D``, which are
+        zero before the first affected row ``f``: the level shift
+        ``1(i >= f)`` ("c"), the trend shift ``(i - f + 1) 1(i >= f)`` ("t")
+        or both ("ct"). They span the same space as the dummies that
+        ``_update_regression_exog`` sets, so the t-statistic of the level is
+        the same.
+
+        ``nested_lag_ols`` gives ``[X, endog] = QR``. The cross products
+        ``[X, endog]' D`` are sums over the rows from ``f`` on, which reverse
+        cumulative sums give for all periods at once, and ``C = Q' D``
+        solves ``R' C = [X, endog]' D``. Let ``C_a`` and ``C_b`` be the rows
+        of ``C`` for the regressors other than the level and for
+        ``[level, endog]``, and ``R_b`` the corresponding block of ``R``. The
+        Schur complement ``S = D' D - C_a' C_a`` is the cross product of the
+        part of ``D`` orthogonal to the other regressors. By the
+        Frisch-Waugh-Lovell theorem, the cross product of the level and endog
+        after partialling out the other regressors and ``D`` is
+
+            G = R_b' R_b - W' S^{-1} W,  W = C_b' R_b,
+
+        and the t-statistic of the level follows from ``G``. This costs
+        O(nobs k^2) for ``k`` regressors, instead of O(nobs^2 k^2) for one
+        fit per period.
+        """
+        nreg = exog.shape[0]
+        nper = periods.shape[0]
+        k_fixed = lags + 2
+        ndummy = 2 if regression == "ct" else 1
+        # The first row of each regression where the dummies are not zero
+        first = periods - (lags + 1)
+        if regression == "t":
+            first = first - 1
+        if (
+            nper == 0
+            or nreg <= k_fixed + ndummy + 1
+            or first[0] < 0
+            or first[-1] >= nreg
+        ):
+            # No residual degrees of freedom, or a dummy that is zero or
+            # wraps around the start of the sample
+            return None
+        fixed = np.empty((nreg, k_fixed))
+        fixed[:, 0] = const
+        fixed[:, 1] = trend[(lags + 2) : (nobs + 1)]
+        fixed[:, 2:] = exog[:, cols:]
+        level = exog[:, cols - 1 : cols]
+        # Ill-conditioned problems are left to the per-period loop. The cross
+        # product inverse of _quick_ols loses about cond(exog)**2 * eps, so
+        # the cutoff is sqrt(eps) rather than the k * eps of the other
+        # callers. The same constant bounds the cancellation in S and G
+        # below (the Schur diagonal, the pivot, the level and the ssr), so
+        # the accepted designs give t-values good to about 1e-8 rather than
+        # 1e-12.
+        tol = np.sqrt(np.finfo(float).eps)
+        res = nested_lag_ols(endog, level, fixed, rcond=tol)
+        if res is None:
+            return None
+        r = res.r
+
+        # r belongs to the data after nested_lag_ols subtracts res.offset (the
+        # means of the level and endog, as fixed has a constant column), so
+        # the cross products below use the same columns. The shift adds
+        # multiples of the constant, which changes no t-statistic.
+        data = np.column_stack([fixed, level, endog]) - res.offset
+        # tail[f] is the sum of the rows f, f + 1, ... of data, the cross
+        # product with the level shift. The sum of tail[f:] is the cross
+        # product with the trend shift.
+        tail = np.cumsum(data[::-1], axis=0)[::-1]
+        length = (nreg - first).astype(float)
+        ncols = data.shape[1]
+        xd = np.empty((ncols, nper, ndummy))
+        dd = np.empty((nper, ndummy, ndummy))
+        if regression != "t":
+            xd[:, :, 0] = tail[first].T
+            dd[:, 0, 0] = length
+        if regression != "c":
+            xd[:, :, -1] = np.cumsum(tail[::-1], axis=0)[::-1][first].T
+            dd[:, -1, -1] = length * (length + 1) * (2 * length + 1) / 6
+        if regression == "ct":
+            dd[:, 0, 1] = dd[:, 1, 0] = length * (length + 1) / 2
+
+        c = solve_triangular(r, xd.reshape(ncols, -1), trans="T")
+        c = c.reshape(ncols, nper, ndummy).transpose(1, 0, 2)
+        c_a = c[:, :k_fixed]
+        s = dd - c_a.transpose(0, 2, 1) @ c_a
+        # The dummies must not be (almost) in the span of the regressors
+        # before them. The squared diagonal of chol(s) is s[0, 0] and
+        # s[1, 1] - s[0, 1] ** 2 / s[0, 0].
+        full_rank = s[:, 0, 0] > tol * dd[:, 0, 0]
+        if ndummy == 2:
+            with np.errstate(divide="ignore", invalid="ignore"):
+                pivot = s[:, 1, 1] - s[:, 0, 1] ** 2 / s[:, 0, 0]
+            full_rank &= pivot > tol * dd[:, 1, 1]
+        if not np.all(full_rank):
+            return None
+        chol = np.linalg.cholesky(s)
+        r_b = r[k_fixed:, k_fixed:]
+        v = np.linalg.solve(chol, c[:, k_fixed:].transpose(0, 2, 1) @ r_b)
+        g = r_b.T @ r_b - v.transpose(0, 2, 1) @ v
+        g_level = g[:, 0, 0]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            r_level_endog = g[:, 0, 1] / np.sqrt(g_level)
+        ssr = g[:, 1, 1] - r_level_endog**2
+        # Nor may the level, or endog (an almost perfect fit)
+        if not (
+            np.all(g_level > tol * r_b[0, 0] ** 2)
+            and np.all(ssr > tol * r_b[1, 1] ** 2)
+        ):
+            return None
+        df_resid = nreg - (k_fixed + ndummy + 1)
+        return r_level_endog / np.sqrt(ssr / df_resid)
+
     def run(self, x, trim=0.15, maxlag=None, regression="c", autolag="AIC"):
         """
         Zivot-Andrews structural-break unit-root test
@@ -4190,7 +4342,8 @@ class ZivotAndrewsUnitRoot:
             calculation in range [0, 0.333] (default=0.15).
         maxlag : int, optional
             The maximum lag which is included in test, default is
-            12*(nobs/100)^{1/4} (Schwert, 1989).
+            12*(nobs/100)^{1/4} (Schwert, 1989). Use 0 for a test without
+            lagged differences.
         regression : {"c","t","ct"}, optional
             Constant and trend order to include in regression.
 
@@ -4260,6 +4413,8 @@ class ZivotAndrewsUnitRoot:
         )
         if trim < 0 or trim > (1.0 / 3.0):
             raise ValueError("trim value must be a float in range [0, 1/3)")
+        if maxlag is not None and maxlag < 0:
+            raise ValueError("maxlag must be a non-negative integer")
         nobs = x.shape[0]
         if autolag:
             adf_res = adfuller(
@@ -4270,7 +4425,7 @@ class ZivotAndrewsUnitRoot:
                 result_object=False,
             )
             baselags = adf_res[2]
-        elif maxlag:
+        elif maxlag is not None:
             baselags = maxlag
         else:
             baselags = int(12.0 * np.power(nobs / 100.0, 1 / 4.0))
@@ -4289,31 +4444,47 @@ class ZivotAndrewsUnitRoot:
         endog, exog = self._format_regression_data(
             x, nobs, c_const, t_const, basecols, baselags
         )
-        # iterate through the time periods
         stats = np.full(end_period + 1, np.inf)
-        for bp in range(start_period + 1, end_period + 1):
-            # update intercept dummy / trend / trend dummy
-            exog = self._update_regression_exog(
-                exog,
-                regression,
-                bp,
-                nobs,
-                c_const,
-                t_const,
-                basecols,
-                baselags,
-            )
-            # check exog rank on first iteration
-            if bp == start_period + 1:
-                o = OLS(endog[baselags:], exog, hasconst=1).fit()
-                if o.df_model < exog.shape[1] - 1:
-                    raise ValueError(
-                        "ZA: auxiliary exog matrix is not full rank.\n"
-                        f"  cols (exc intercept) = {exog.shape[1] - 1}  rank = {o.df_model}"
-                    )
-                stats[bp] = o.tvalues[basecols - 1]
-            else:
-                stats[bp] = self._quick_ols(endog[baselags:], exog)[basecols - 1]
+        periods = np.arange(start_period + 1, end_period + 1)
+        tvalues = self._break_tvalues(
+            endog[baselags:],
+            exog,
+            regression,
+            periods,
+            nobs,
+            c_const,
+            t_const,
+            basecols,
+            baselags,
+        )
+        if tvalues is not None:
+            stats[periods] = tvalues
+        else:
+            # iterate through the time periods
+            for bp in range(start_period + 1, end_period + 1):
+                # update intercept dummy / trend / trend dummy
+                exog = self._update_regression_exog(
+                    exog,
+                    regression,
+                    bp,
+                    nobs,
+                    c_const,
+                    t_const,
+                    basecols,
+                    baselags,
+                )
+                # check exog rank on first iteration
+                if bp == start_period + 1:
+                    o = OLS(endog[baselags:], exog, hasconst=1).fit()
+                    if o.df_model < exog.shape[1] - 1:
+                        raise ValueError(
+                            "ZA: auxiliary exog matrix is not full rank.\n"
+                            f"  cols (exc intercept) = {exog.shape[1] - 1}"
+                            f"  rank = {o.df_model}"
+                        )
+                    stats[bp] = o.tvalues[basecols - 1]
+                else:
+                    stats[bp] = self._quick_ols(endog[baselags:], exog)[basecols - 1]
         # return best seen
         zastat = np.min(stats)
         bpidx = np.argmin(stats) - 1

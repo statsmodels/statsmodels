@@ -224,6 +224,16 @@ class GLM(base.LikelihoodModel):
     Endog and exog are references so that if the data they refer to are already
     arrays and these arrays are changed, endog and exog will change.
 
+    When the model is created with ``from_formula`` and the response is a
+    categorical variable with two levels, for example a bool or str column, the
+    ``Binomial`` family models the probability of the second level. The first
+    level is the failure and the second level is the success, as in the ``glm``
+    function of R. The levels of a bool column are ``False`` and ``True``, those
+    of a str column are sorted, and those of a pandas ``Categorical`` or of
+    ``C(y, levels=[...])`` are in the order of the categories or ``levels``.
+    ``endog_names`` shows the modeled level, for example ``"y[True]"``. Other
+    families raise a ``ValueError`` for a categorical response.
+
     statsmodels supports two separate definitions of weights: frequency weights
     and variance weights.
 
@@ -276,6 +286,25 @@ class GLM(base.LikelihoodModel):
     """
     # Maximum number of endogenous variables when using a formula
     _formula_max_endog = 2
+
+    @classmethod
+    def _formula_categorical_endog(cls, endog, kwargs):
+        name = endog.columns[0]
+        if endog.shape[1] == 1:
+            raise ValueError(
+                f"The categorical response {name} has a single level in the "
+                "data. A response with two levels is needed."
+            )
+        if not isinstance(kwargs.get("family"), families.Binomial):
+            raise ValueError(
+                "A categorical response, such as a bool or str column, can "
+                "only be used with the Binomial family, which models the "
+                "second level as the success. Use a numeric response for "
+                "other families."
+            )
+        # The first level is the failure and the second the success, as in
+        # the glm function of R.
+        return endog.iloc[:, 1]
 
     def __init__(
         self,
@@ -662,9 +691,29 @@ class GLM(base.LikelihoodModel):
     def information(self, params, scale=None):
         """
         Fisher information matrix.
+
+        Returns -1 * Hessian of the log-likelihood evaluated at params,
+        i.e. the expected information matrix, which is positive definite.
+
+        Parameters
+        ----------
+        params : ndarray
+            Parameter at which the information is evaluated.
+        scale : float, optional
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        ndarray
+            The expected information matrix, ``X' W X / scale``. This is
+            ``-hessian(params, scale, observed=False)``. It differs from
+            ``-hessian(params, scale)``, which is the observed information
+            by default, unless the link is the canonical link of the family.
         """
         scale = float_like(scale, "scale", optional=True)
-        return self.hessian(params, scale=scale, observed=False)
+        return -self.hessian(params, scale=scale, observed=False)
 
     def _derivative_exog(
         self,
