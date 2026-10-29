@@ -320,7 +320,7 @@ class TestKDEMultivariate(KDETestBase):
             dens_u = nparam.KDEMultivariate(
                 data=[self.c1, self.o, self.o2], var_type="coo", bw="cv_ls"
             )
-        npt.assert_allclose(dens_u.bw, [0.70949447, 0.08736727, 0.09220476], atol=1e-6)
+        npt.assert_allclose(dens_u.bw, [0.70949395, 0.08765272, 0.09211527], atol=1e-6)
 
         # Matches R to 3 decimals; results seem more stable than with R.
         # Can be checked with following code:
@@ -767,6 +767,193 @@ def test_conditional_cdf_formula(dep_type, indep_type):
         mu_x = gpke(bw[k_dep:], data=exog, data_predict=exog[i], var_type=indep_type)
         expected[i] = (G * W).sum() / mu_x
     assert_allclose(dens.cdf(), expected, rtol=1e-12)
+
+
+def test_normal_reference_bw_of_unordered_variable_in_range():
+    # GH 3790: the normal reference rule of thumb is defined for continuous
+    # variables, so applying it to an unordered variable makes the bandwidth
+    # scale with the arbitrary numeric codes.  The bandwidth of an unordered
+    # variable is the smoothing probability of the Aitchison-Aitken kernel
+    # (see kernels.aitchison_aitken), for which the estimate is a probability
+    # density only if 0 <= bw <= (levels - 1) / levels.  Larger values put
+    # less weight on the observed levels than on the unobserved ones, which
+    # made the density negative for codes on a large scale.
+    codes = 1000 * np.array([0, 0, 0, 0, 1])
+    dens = nparam.KDEMultivariate(data=codes, var_type="u", rng=0)
+    # two levels, so the largest valid bandwidth is 1 / 2
+    npt.assert_allclose(dens.bw, [0.5])
+    pdf = dens.pdf([0, 1000])
+    assert np.all(np.isfinite(pdf))
+    assert np.all(pdf >= 0)
+    # the bandwidth is at its bound, so the kernel is the uniform one
+    npt.assert_allclose(pdf, [0.5, 0.5])
+    npt.assert_allclose(pdf.sum(), 1.0)
+
+    # codes that give a bandwidth inside the valid range are unchanged
+    dens_small = nparam.KDEMultivariate(data=[0, 0, 0, 0, 1], var_type="u", rng=0)
+    npt.assert_allclose(dens_small.bw, [0.30730658])
+    npt.assert_allclose(dens_small.pdf([0, 1]), [0.61561605, 0.38438395], rtol=1e-6)
+
+
+def test_normal_reference_bw_of_unordered_variable_mixed_data():
+    # The bound is applied to the unordered variables only, the continuous
+    # bandwidth is still the normal reference rule of thumb.
+    codes = 1000 * np.array([0, 0, 0, 0, 1])
+    cont = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+    dens = nparam.KDEMultivariate(
+        data=np.column_stack((codes, cont)), var_type="uc", rng=0
+    )
+    npt.assert_allclose(dens.bw[0], 0.5)
+    npt.assert_allclose(dens.bw[1], 1.06 * np.std(cont) * 5 ** (-1.0 / (4 + 2)))
+    pdf = dens.pdf([[0, 0.1], [1000, 0.5]])
+    assert np.all(np.isfinite(pdf))
+    assert np.all(pdf > 0)
+
+
+def test_normal_reference_bw_of_unordered_dependent_variable():
+    # KDEMultivariateConditional selects its bandwidths with the same rule
+    codes = 1000 * np.array([0, 0, 0, 0, 1])
+    cont = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+    dens = nparam.KDEMultivariateConditional(
+        endog=codes,
+        exog=cont,
+        dep_type="u",
+        indep_type="c",
+        bw="normal_reference",
+        rng=0,
+    )
+    npt.assert_allclose(dens.bw[0], 0.5)
+    pdf = dens.pdf(endog_predict=[0, 1000], exog_predict=[0.1, 0.5])
+    assert np.all(np.isfinite(pdf))
+    assert np.all(pdf > 0)
+
+
+@pytest.mark.parametrize("scale", [1, 100])
+def test_normal_reference_bw_of_ordered_variable_below_one(scale):
+    # The Wang-Ryzin kernel contains the factor 1 - bw, so that the density
+    # is identically zero at bw = 1.  The rule of thumb 1.06 * std * nobs ** -0.2
+    # is 1.3 for these codes and larger for the scaled codes, so the bandwidth
+    # has to be bounded strictly below 1.
+    codes = np.repeat(np.arange(11), 10) * scale
+    dens = KDEMultivariate(data=codes, var_type="o", rng=0)
+    assert 0 < dens.bw[0] < 1
+    pdf = dens.pdf(np.unique(codes))
+    assert np.all(np.isfinite(pdf))
+    assert np.all(pdf > 0)
+
+
+@pytest.mark.parametrize("bw", ["cv_ml", "cv_ls"])
+@pytest.mark.parametrize(
+    "levels, r_bw", [(3, 0.66000057), (4, 0.74250011), (5, 0.79200058), (6, 0.8250008)]
+)
+def test_cv_bw_of_unordered_variable_at_bound(levels, r_bw, bw):
+    # The leave-one-out likelihood of balanced data increases with the
+    # bandwidth up to the fully smoothed, uniform kernel, which is the bound
+    # (levels - 1) / levels.  The cross-validation returned the invalid
+    # bandwidth 1 because the search was not bounded.
+    # Reference value of the cv_ml bandwidth, np 0.70.5 with R 4.6.1,
+    # np backs off by 1% from its bound:
+    #   library(np)
+    #   x <- factor(rep(0:(levels - 1), each = 20))
+    #   npudensbw(dat = data.frame(x = x), bwmethod = "cv.ml",
+    #             ukertype = "aitchisonaitken")$bw
+    x = np.repeat(np.arange(levels), 20)
+    bound = (levels - 1) / levels
+    dens = KDEMultivariate(data=x, var_type="u", bw=bw, rng=0)
+    assert 0.99 * bound < dens.bw[0] <= bound
+    if bw == "cv_ml":
+        assert_allclose(dens.bw, r_bw, rtol=0.02)
+
+
+def test_cv_ml_bw_of_ordered_variable_matches_r():
+    # The search started at the rule of thumb 1.31, outside of the kernel's
+    # range, and ended in the bandwidth 1, where the density is zero and the
+    # leave-one-out likelihood is infinite.
+    # Reference value, np 0.70.5 with R 4.6.1:
+    #   library(np)
+    #   x <- ordered(rep(0:10, each = 10), levels = 0:10)
+    #   npudensbw(dat = data.frame(x = x), bwmethod = "cv.ml",
+    #             okertype = "wangvanryzin")$bw
+    x = np.repeat(np.arange(11), 10)
+    dens = KDEMultivariate(data=x, var_type="o", bw="cv_ml", rng=0)
+    assert_allclose(dens.bw, 0.038873737, atol=1e-3)
+    assert np.isfinite(dens.loo_likelihood(dens.bw, np.log))
+
+
+def test_cv_ml_bw_is_constrained_optimum():
+    # With the unordered bandwidth at its bound (2 / 3), the best continuous
+    # bandwidth is not the one of the unconstrained search clipped to the
+    # bound: the leave-one-out log likelihood is 0.86 lower at that bandwidth.
+    rng = np.random.default_rng(26)
+    data = np.column_stack((rng.integers(0, 3, 40), rng.standard_normal(40)))
+    dens = KDEMultivariate(data=data, var_type="uc", bw="cv_ml", rng=0)
+    assert dens.bw[0] <= 2 / 3
+    grid = [
+        dens.loo_likelihood(np.array([u, c]), np.log)
+        for u in np.linspace(0.05, 2 / 3, 14)
+        for c in np.linspace(0.05, 1.0, 20)
+    ]
+    assert dens.loo_likelihood(dens.bw, np.log) < min(grid) + 1e-3
+
+
+@pytest.mark.parametrize("var_type, upper", [("u", 0.75), ("o", 1.0)])
+def test_efficient_normal_reference_bw_of_discrete_variable_in_range(var_type, upper):
+    # The codes are on a large scale, so the bandwidths of the sub samples,
+    # which the efficient estimation scales up to the full sample, are far
+    # outside of the range of the kernel if they are not bounded.
+    rng = np.random.default_rng(3790)
+    data = np.column_stack((rng.standard_normal(300), 1000 * rng.integers(0, 4, 300)))
+    dens = KDEMultivariate(
+        data=data,
+        var_type="c" + var_type,
+        defaults=nparam.EstimatorSettings(efficient=True, n_sub=50, n_jobs=1),
+        rng=0,
+    )
+    assert 0 < dens.bw[1] <= upper
+    if var_type == "o":
+        assert dens.bw[1] < 1
+    assert np.all(np.isfinite(dens.pdf(data[:5])))
+
+
+@pytest.mark.parametrize("bw", ["cv_ml", "cv_ls"])
+def test_efficient_cv_bw_of_unordered_variable_scales_bound(bw):
+    # The balanced sub samples of 60 observations have the bandwidth 3 / 4,
+    # the bound of 4 levels, and the full sample of 300 observations has the
+    # bandwidth 3 / 4 * (60 / 300) ** (2 / 4)
+    dens = KDEMultivariate(
+        data=np.tile(np.arange(4), 75),
+        var_type="u",
+        bw=bw,
+        defaults=nparam.EstimatorSettings(efficient=True, n_sub=60, n_jobs=1),
+        rng=0,
+    )
+    assert_allclose(dens.bw, 0.75 * (60 / 300) ** 0.5, rtol=1e-2)
+
+
+@pytest.mark.parametrize("bw", ["cv_ml", "cv_ls"])
+def test_cv_bw_of_unordered_dependent_variable_in_range(bw):
+    # KDEMultivariateConditional: the dependent variable is independent of
+    # the continuous one, so the best bandwidth of the unordered variable is
+    # the largest valid one.
+    rng = np.random.default_rng(3790)
+    endog = 1000 * np.repeat(np.arange(3), 20)
+    exog = rng.standard_normal(60)
+    dens = nparam.KDEMultivariateConditional(
+        endog=endog, exog=exog, dep_type="u", indep_type="c", bw=bw, rng=0
+    )
+    assert 0 < dens.bw[0] <= 2 / 3
+
+
+@pytest.mark.filterwarnings("ignore:divide by zero encountered in divide")
+@pytest.mark.parametrize("bw", ["normal_reference", "cv_ml", "cv_ls"])
+def test_bw_of_single_level_unordered_variable(bw):
+    # The upper bound (levels - 1) / levels is 0 for one level, there the
+    # bandwidth is bounded by 1 only
+    rng = np.random.default_rng(3790)
+    data = np.column_stack((np.zeros(30), rng.standard_normal(30)))
+    dens = KDEMultivariate(data=data, var_type="uc", bw=bw, rng=0)
+    assert np.all(np.isfinite(dens.bw))
+    assert 0 <= dens.bw[0] <= 1
 
 
 def test_conditional_imse_matches_hand_computed_cv():

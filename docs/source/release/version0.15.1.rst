@@ -104,6 +104,20 @@ Behavior changes
   ``-model.hessian(params)``. To get the old value, use
   ``model.hessian(params, observed=False)``, or ``-model.information(params)``.
   :issue:`7826`, :pr:`10498`, :pr:`10628`
+- The bandwidths of discrete variables that are selected by
+  :class:`~statsmodels.nonparametric.kernel_density.KDEMultivariate`,
+  :class:`~statsmodels.nonparametric.kernel_density.KDEMultivariateConditional`
+  and :class:`~statsmodels.nonparametric.kernel_regression.KernelReg`
+  (``bw="normal_reference"``, ``"cv_ml"``, ``"cv_ls"`` and ``"aic"``) are kept
+  in the range for which the kernels are defined: at most
+  ``(levels - 1) / levels`` for an unordered variable and less than 1 for an
+  ordered variable. The normal reference rule of thumb scaled with the numeric
+  codes of a discrete variable, so that the density was negative, and the
+  cross-validation returned bandwidths outside of the range. The
+  cross-validation searches the best bandwidths inside the range, also in
+  ``KernelReg`` where the bandwidths of discrete variables were not bounded.
+  The default bandwidth still depends on the numeric codes.
+  :issue:`3790`, :pr:`10515`, :pr:`10641`
 - :func:`~statsmodels.graphics.functional.banddepth` with ``method="BD2"``
   computed the pairs of curves that contain a curve from the ranks of the
   curve at each point. This is wrong if curves cross or have equal values,
