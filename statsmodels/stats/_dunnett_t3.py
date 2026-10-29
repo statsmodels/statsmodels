@@ -134,6 +134,8 @@ def _smm_sf(q, k, df):
     valid = ~(np.isnan(q) | np.isnan(df))
     out[valid & (q <= 0)] = 1.0
     positive = valid & (q > 0)
+    out[positive & np.isinf(q)] = 0.0
+    positive &= np.isfinite(q)
     inf_df = positive & np.isinf(df)
     out[inf_df] = _smm_tail(q[inf_df], k)
     finite = positive & np.isfinite(df)
