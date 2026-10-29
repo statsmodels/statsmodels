@@ -104,6 +104,15 @@ Behavior changes
   ``-model.hessian(params)``. To get the old value, use
   ``model.hessian(params, observed=False)``, or ``-model.information(params)``.
   :issue:`7826`, :pr:`10498`, :pr:`10628`
+- :func:`~statsmodels.graphics.functional.banddepth` with ``method="BD2"``
+  computed the pairs of curves that contain a curve from the ranks of the
+  curve at each point. This is wrong if curves cross or have equal values,
+  since the same two curves have to bound the curve at all points. The depth
+  now counts the pairs of curves that contain the curve at all sampled points,
+  with values equal to a bounding curve counted as inside, so the depth of
+  such data changes. Curves are not interpolated, so only the sampled values
+  matter. ``data`` can be any array_like, for example a ``DataFrame``.
+  :issue:`7105`, :pr:`10513`, :pr:`10638`
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
