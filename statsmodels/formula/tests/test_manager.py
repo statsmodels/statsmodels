@@ -512,6 +512,20 @@ def test_get_factor_categories(engine, data):
     assert cats == ("a", "b")
 
 
+def test_get_factors(engine, data):
+    mgr = FormulaManager(engine=engine)
+    fomula = "y ~ 1 + x + z + c"
+    _, rhs = mgr.get_matrices(fomula, data)
+    spec = mgr.get_model_spec(rhs)
+
+    factors = mgr.get_factors(spec)
+    names = [mgr.get_term_name(factor) for factor in factors]
+    assert sorted(names) == ["c", "x", "z"]
+    assert mgr.get_factors(rhs) == factors
+    factor = factors[names.index("c")]
+    assert mgr.get_factor_categories(factor, spec) == ("a", "b")
+
+
 def test_get_contrast_matrix(engine, data):
     mgr = FormulaManager(engine=engine)
     fomula = "y ~ 1 + x + z + c"

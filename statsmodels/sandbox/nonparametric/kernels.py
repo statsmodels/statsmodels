@@ -195,26 +195,33 @@ class CustomKernel:
     def density(self, xs, x):
         """Returns the kernel density estimate for point x based on x-values
         xs
+
+        ``x`` may be a scalar or an array of evaluation points, and the
+        estimate is computed separately for each of them. For a kernel with
+        a finite domain, the estimate is zero - not nan - at any point that
+        has no observation inside the kernel's support, since the kernel
+        contributes zero there.
         """
-        xs = np.asarray(xs)
-        n = len(xs)  # before in_domain?
+        xs = np.asarray(xs, dtype=float)
+        n = len(xs)  # before domain filter?
+        x = np.atleast_1d(np.asarray(x, dtype=float))
+        u = (xs[:, None] - x[None, :]) / self.h
+        if self.domain is None:
+            kernel_vals = self(u)
+        else:
+            # Only evaluate the shape function for scaled distances inside
+            # the domain, where it is defined; contributions outside the
+            # support are zero. Filtering data points once for all
+            # evaluation points (as in_domain does) is only valid for a
+            # single scalar x.
+            kernel_vals = np.zeros_like(u)
+            in_support = (u >= self.domain[0]) & (u <= self.domain[1])
+            if np.any(in_support):
+                kernel_vals[in_support] = self(u[in_support])
         if self.weights is not None:
-            xs, weights = self.in_domain(xs, self.weights, x)
-        else:
-            xs = self.in_domain(xs, xs, x)[0]
-        xs = np.asarray(xs)
-        # print 'len(xs)', len(xs), x
-        if xs.ndim == 1:
-            xs = xs[:, None]
-        if len(xs) > 0:
-            h = self.h
-            if self.weights is not None:
-                w = 1 / h * np.sum(self((xs - x) / h).T * weights, axis=1)
-            else:
-                w = 1.0 / (h * n) * np.sum(self((xs - x) / h), axis=0)
-            return w
-        else:
-            return np.nan
+            weights = np.asarray(self.weights, dtype=float)
+            return 1.0 / self.h * np.sum(kernel_vals * weights[:, None], axis=0)
+        return 1.0 / (self.h * n) * np.sum(kernel_vals, axis=0)
 
     def density_var(self, density, nobs):
         """approximate pointwise variance for kernel density

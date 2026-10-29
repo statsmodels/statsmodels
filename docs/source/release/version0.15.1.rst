@@ -113,9 +113,41 @@ Behavior changes
   of all coefficients were reversed. ``endog_names`` shows the modeled level.
   Other families, and a response with a single level in the data, raise a
   ``ValueError``. :issue:`10501`, :pr:`10503`, :pr:`10635`
+- The bandwidths of discrete variables that are selected by
+  :class:`~statsmodels.nonparametric.kernel_density.KDEMultivariate`,
+  :class:`~statsmodels.nonparametric.kernel_density.KDEMultivariateConditional`
+  and :class:`~statsmodels.nonparametric.kernel_regression.KernelReg`
+  (``bw="normal_reference"``, ``"cv_ml"``, ``"cv_ls"`` and ``"aic"``) are kept
+  in the range for which the kernels are defined: at most
+  ``(levels - 1) / levels`` for an unordered variable and less than 1 for an
+  ordered variable. The normal reference rule of thumb scaled with the numeric
+  codes of a discrete variable, so that the density was negative, and the
+  cross-validation returned bandwidths outside of the range. The
+  cross-validation searches the best bandwidths inside the range, also in
+  ``KernelReg`` where the bandwidths of discrete variables were not bounded.
+  The default bandwidth still depends on the numeric codes.
+  :issue:`3790`, :pr:`10515`, :pr:`10641`
+- :func:`~statsmodels.graphics.functional.banddepth` with ``method="BD2"``
+  computed the pairs of curves that contain a curve from the ranks of the
+  curve at each point. This is wrong if curves cross or have equal values,
+  since the same two curves have to bound the curve at all points. The depth
+  now counts the pairs of curves that contain the curve at all sampled points,
+  with values equal to a bounding curve counted as inside, so the depth of
+  such data changes. Curves are not interpolated, so only the sampled values
+  matter. ``data`` can be any array_like, for example a ``DataFrame``.
+  :issue:`7105`, :pr:`10513`, :pr:`10638`
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
+- ``KDEUnivariate.evaluate`` with a kernel of bounded support (``"epa"``,
+  ``"tri"``, ``"uni"``, ``"biw"``, ``"triw"``, ``"tric"``, ``"cos"`` and
+  ``"cos2"``) returns one density per point, which is 0.0 where no
+  observation is in the support of the kernel. It returned a scalar ``nan``
+  for the whole array of points if one of them was outside the support of all
+  observations. ``cdf`` and ``entropy``, and so ``sf`` and ``cumhazard``, of
+  these kernels returned ``nan`` for most data. They now integrate the density
+  over the support of the observations, in the units of the data, so that the
+  ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
 
 New Features and Enhancements
 =============================
@@ -314,6 +346,13 @@ Generalized linear models and discrete models
 - ``MNLogit.get_margeff`` with ``dummy=True`` or ``count=True`` failed or
   returned an incorrect covariance if the number of regressors differs from
   the number of outcome categories. :issue:`5488`, :pr:`10298`
+- ``MNLogit.from_formula`` raised a ``ValueError`` if the response is a str,
+  bool or categorical variable. The response can now be a single categorical
+  variable, which is treated like the corresponding ``endog`` of the array
+  API, so that the categories label the equations. Any other response with
+  multiple columns still raises a ``ValueError``. ``Logit`` and ``Probit``
+  with such a response in a formula are not changed. :issue:`9475`,
+  :pr:`10639`
 - ``fit`` of ``ConditionalLogit``, ``ConditionalPoisson`` and
   ``ConditionalMNLogit`` ignored the keyword arguments of the optimizer,
   ``callback``, ``retall`` and ``warn_convergence``. They are now passed on,
@@ -321,6 +360,13 @@ Generalized linear models and discrete models
   ``mle_retvals`` and ``mle_settings``. A ``cov_type`` other than
   ``"nonrobust"`` was ignored and now raises a ``NotImplementedError``.
   :issue:`8849`, :pr:`10630`
+- The estimation of the autocorrelation of
+  :class:`~statsmodels.genmod.cov_struct.Autoregressive` with ``grid=False``
+  raised a ``ValueError`` ("unable to find right bracket") if the estimate was
+  larger than about 0.75, and failed in ``scipy.optimize.brent`` if the
+  minimum was exactly at a point of the search. The estimate is now found for
+  values up to within about 1e-6 of one. A larger estimate still raises the
+  ``ValueError``. A zero estimate is a ``float``. :issue:`8122`, :pr:`10636`
 
 Mixed models and imputation
 ---------------------------
@@ -482,6 +528,16 @@ Time series analysis
   with NumPy 2.5 and later, which ``np.linalg.eig`` returns as complex arrays
   even if all the eigenvalues are real, and ``coint_johansen`` warned with a
   ``ComplexWarning``. The results are real again. :pr:`10613`
+- ``coint_johansen`` computes the eigenvalues and eigenvectors from a QR
+  decomposition and a singular value decomposition (Doornik and O'Brien,
+  2002) instead of ``np.linalg.eig`` of the product of the moment matrices.
+  The eigenvalues are real and in [0, 1), and the eigenvalues and statistics
+  are accurate for nearly cointegrated data, where the old code returned
+  eigenvalues larger than 1 or negative, or raised a ``LinAlgError``. It
+  raises a ``LinAlgError`` if the lagged differences, levels and differences
+  are linearly dependent, which also covers collinear columns that returned
+  meaningless numbers before, and a ``ValueError`` if there are fewer
+  observations than columns of the regression. :pr:`10471`, :pr:`10637`
 - ``smoothed_state_autocovariance`` does not warn that the univariate filter
   diagonalized the observation covariance when it extends the model beyond
   the sample, since it does not use the disturbance covariances. :pr:`10613`
@@ -571,6 +627,16 @@ Statistics and tests
   instead of a negative value if the rejection region of the exact test is
   empty. ``low`` and ``upp`` also accept list-like input, and a NaN ``p_alt``
   raises a ``ValueError``. :issue:`10507`, :pr:`10508`, :pr:`10580`
+- :func:`~statsmodels.stats.proportion.binom_test_reject_interval` accepts
+  array_like ``value``, ``nobs`` and ``alpha`` and returns integer bounds,
+  also for the unused bound of the one-sided alternatives, which is broadcast
+  to the shape of the result. Scalar input still returns Python integers.
+  ``value`` has to be in [0, 1], ``alpha`` in (0, 1) and ``nobs`` a positive
+  integer, otherwise a ``ValueError`` is raised. Array input raised a
+  ``TypeError``, and invalid values gave a ``ValueError`` about converting
+  ``nan`` to an integer or meaningless bounds. The docstring states that the
+  two-sided region is equal-tailed and not the region of ``binom_test``.
+  :issue:`9238`, :pr:`10488`, :pr:`10634`
 - ``TTestIndPower.power`` and ``TTestIndPower.solve_power`` accept ``ratio=0``,
   which gives the power of the one-sample t-test with ``nobs1`` observations;
   it raised a ``ZeroDivisionError`` or gave the size of the test for NumPy
@@ -607,6 +673,11 @@ Statistics and tests
   variable instead of a scalar. :pr:`10456`
 - ``Description`` no longer calls ``scipy.stats.mode`` for a column without
   observations, which warns in SciPy 1.14 and later. :pr:`10613`
+- :func:`~statsmodels.stats.rates.confint_poisson` with ``method="midp-c"``
+  returned an interval of width zero at the upper limit for a count of 0. The
+  limits are now ``0`` and ``-log(alpha) / nobs``. The numerical inversion
+  checks that ``count`` and ``nobs`` have a single element, and raises a
+  ``ValueError`` otherwise. :issue:`10536`, :pr:`10537`, :pr:`10633`
 
 Treatment effects
 -----------------

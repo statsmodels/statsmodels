@@ -13,7 +13,7 @@ from statsmodels.graphics.utils import _import_mpl
 from statsmodels.multivariate.pca import PCA
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import array_like, string_like
 
 from . import utils
 
@@ -881,7 +881,7 @@ def banddepth(data, method="MBD"):
 
     Parameters
     ----------
-    data : ndarray
+    data : array_like
         The vectors of functions to create a functional boxplot from.
         The first axis is the function index, the second axis the one along
         which the function is defined.  So ``data[0, :]`` is the first
@@ -909,7 +909,17 @@ def banddepth(data, method="MBD"):
     The method 'MBD' is similar to 'BD2', but checks the fraction of the curve
     falling within the bands.  It therefore generates very few ties.
 
-    The algorithm uses the efficient implementation proposed in [3]_.
+    The method 'MBD' uses the rank-based implementation proposed in [3]_. The
+    ranks at each point are not sufficient for 'BD2', since the same two curves
+    have to bound the curve at all points. The method 'BD2' therefore compares
+    each curve with all other curves at all sampled points. A value equal to a
+    value of a bounding curve counts as inside the band, so that a curve is
+    inside every band that has a curve equal to it as a boundary.
+
+    Both methods only use the values at the sampled points. The curves are not
+    interpolated, and curves that cross between two sampled points do not
+    change the depth. 'BD2' is slower than 'MBD', and its cost increases with
+    the number of points at which a curve is equal to other curves.
 
     References
     ----------
@@ -923,18 +933,65 @@ def banddepth(data, method="MBD"):
            million curves be ranked?", Journal for the Rapid Dissemination
            of Statistics Research, vol. 1, pp. 68-74, 2012.
     """
+    data = array_like(data, "data", dtype=np.double, ndim=2)
     n, p = data.shape
-    rv = np.argsort(data, axis=0)
-    rmat = np.argsort(rv, axis=0) + 1
+
+    def _row_keys(patterns):
+        # Pack boolean rows into bytes and view each row as a single item
+        packed = np.packbits(patterns, axis=1, bitorder="little")
+        return np.ascontiguousarray(packed).view(f"V{packed.shape[1]}").ravel()
 
     # band depth
     def _fbd2():
-        down = np.min(rmat, axis=1) - 1
-        up = n - np.max(rmat, axis=1)
-        return (up * down + n - 1) / comb(n, 2)
+        depth = np.empty(n)
+        for i, curve in enumerate(data):
+            above = data > curve
+            below = data < curve
+            neither = ~(above | below)
+            equal = neither.all(axis=1)
+            strict = ~neither.any(axis=1)
+            tied = ~(equal | strict)
+
+            # Any band with an endpoint identical to the target contains it.
+            n_equal = int(equal.sum())
+            total = n_equal * (n - n_equal) + n_equal * (n_equal - 1) // 2
+
+            # Curves strictly above or below the target at every point enclose
+            # it only in pairs with complementary comparison patterns.
+            keys = _row_keys(np.concatenate([above[strict], below[strict]]))
+            found, inverse = np.unique(keys, return_inverse=True)
+            counts = np.bincount(inverse[: strict.sum()], minlength=len(found))
+            # Each pair is counted from both of its curves.
+            total += int(counts[inverse[strict.sum() :]].sum()) // 2
+
+            # Curves equal to the target at some, but not all, points enclose
+            # it in a pair unless both are strictly on the same side of it at
+            # some point.
+            if tied.any():
+                sides = np.hstack([above, below])
+                _, first, weight = np.unique(
+                    _row_keys(sides[tied]), return_index=True, return_counts=True
+                )
+                patterns = sides[tied][first].astype(np.float32)
+                strict_sides = sides[strict].astype(np.float32)
+                step = max(1, 2**22 // max(len(strict_sides), len(patterns)))
+                tied_pairs = 0
+                for start in range(0, len(patterns), step):
+                    block = patterns[start : start + step]
+                    count = weight[start : start + step]
+                    disjoint = (block @ strict_sides.T) == 0
+                    total += int(count @ disjoint.sum(axis=1))
+                    disjoint = (block @ patterns.T) == 0
+                    tied_pairs += int(count @ (disjoint @ weight))
+                # Each pair is counted from both of its curves.
+                total += tied_pairs // 2
+            depth[i] = total
+        return depth / comb(n, 2)
 
     # modified band depth
     def _fmbd():
+        rv = np.argsort(data, axis=0)
+        rmat = np.argsort(rv, axis=0) + 1
         down = rmat - 1
         up = n - rmat
         return ((np.sum(up * down, axis=1) / p) + n - 1) / comb(n, 2)

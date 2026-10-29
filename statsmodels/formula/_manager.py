@@ -978,6 +978,28 @@ class FormulaManager:
         else:
             return str(spec.formula)
 
+    def get_factors(self, spec_or_frame):
+        """
+        Get the factors of a model specification or DataFrame.
+
+        Parameters
+        ----------
+        spec_or_frame : DataFrame, ModelSpec, or DesignInfo
+            The DataFrame with a model specification attached, or the model
+            specification itself.
+
+        Returns
+        -------
+        list
+            The factors, which can be passed to ``get_term_name`` and
+            ``get_factor_categories``.
+        """
+        spec = self._ensure_spec(spec_or_frame)
+        if self._using_patsy:
+            return list(spec.factor_infos)
+        else:
+            return list(spec.encoder_state)
+
     def get_factor_categories(self, factor, model_spec):
         """
         Get the list of categories for a factor.

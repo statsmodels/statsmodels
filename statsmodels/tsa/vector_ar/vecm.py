@@ -627,10 +627,21 @@ def coint_johansen(endog, det_order, k_ar_diff):
     The implementation might change to make more use of the existing VECM
     framework.
 
+    The eigenvalues and eigenvectors are computed from a QR decomposition and
+    a singular value decomposition using the algorithm of [2]_, which avoids
+    forming the moment matrices. This requires one matrix with the lagged
+    differences, the levels and the differences of ``endog``, so the memory
+    use is larger than if only the moment matrices were stored. A
+    ``LinAlgError`` is raised if these columns are linearly dependent, for
+    example if ``endog`` contains a duplicated series.
+
     References
     ----------
     .. [1] Lütkepohl, H. 2005. New Introduction to Multiple Time Series
         Analysis. Springer.
+    .. [2] Doornik, J. A. and O'Brien, R. J. 2002. Numerically stable
+        cointegration analysis. Computational Statistics & Data Analysis,
+        40(1), 185-193.
     """
     import warnings
 
@@ -655,12 +666,6 @@ def coint_johansen(endog, det_order, k_ar_diff):
             return y
         return OLS(y, np.vander(np.linspace(-1, 1, len(y)), order + 1)).fit().resid
 
-    def resid(y, x):
-        if x.size == 0:
-            return y
-        r = y - np.dot(x, np.dot(np.linalg.pinv(x), y))
-        return r
-
     endog = np.asarray(endog)
     nobs, neqs = endog.shape
 
@@ -679,32 +684,50 @@ def coint_johansen(endog, det_order, k_ar_diff):
     dx = dx[k_ar_diff:]
 
     dx = detrend(dx, f)
-    r0t = resid(dx, z)
     # GH 5731, [:-0] does not work, need [:t-0]
     lx = endog[: (endog.shape[0] - k_ar_diff)]
     lx = lx[1:]
-    dx = detrend(lx, f)
-    rkt = resid(dx, z)  # level on lagged diffs
-    # Level covariance after filtering k_ar_diff
-    skk = np.dot(rkt.T, rkt) / rkt.shape[0]
-    # Covariacne between filtered and unfiltered
-    sk0 = np.dot(rkt.T, r0t) / rkt.shape[0]
-    s00 = np.dot(r0t.T, r0t) / r0t.shape[0]
-    sig = np.dot(sk0, np.dot(inv(s00), sk0.T))
-    tmp = inv(skk)
-    au, du = np.linalg.eig(np.dot(tmp, sig))  # au is eval, du is evec
-    # NumPy 2.5 and later return complex arrays even for real eigenvalues
-    au = np.real_if_close(au)
-    du = np.real_if_close(du)
-
-    temp = inv(np.linalg.cholesky(np.dot(du.T, np.dot(skk, du))))
-    dt = np.dot(du, temp)
-
-    # JP: the next part can be done much  easier
-    auind = np.argsort(au)
-    aind = np.flipud(auind)
-    a = au[aind]
-    d = dt[:, aind]
+    lx = detrend(lx, f)
+    # Doornik and O'Brien (2002), Algorithm 3: the thin QR of the lagged
+    # differences, the levels and the differences partials out the lagged
+    # differences, and the SVD of R10 R00^{-1} gives the eigenvalues and the
+    # eigenvectors normalized to d' Skk d = I.
+    k = z.shape[1]
+    if lx.shape[0] < k + 2 * neqs:
+        raise ValueError(
+            "endog has too few observations for the number of variables and "
+            "k_ar_diff; at least k_ar_diff * neqs + 2 * neqs + k_ar_diff + 1 "
+            "observations are required."
+        )
+    regressors = np.column_stack((z, lx, dx))
+    r = np.linalg.qr(regressors, mode="r")
+    # R_ii is the part of column i that is orthogonal to the columns before
+    # it, so a tiny relative value means that the columns are linearly
+    # dependent (for example duplicated or collinear series).
+    if np.any(np.abs(np.diag(r)) <= 1e-12 * np.linalg.norm(regressors, axis=0)):
+        raise np.linalg.LinAlgError(
+            "Singular matrix: the lagged differences, the levels and the "
+            "differences of endog are linearly dependent."
+        )
+    r11 = r[k : k + neqs, k : k + neqs]
+    resids = np.column_stack((lx, dx))
+    # Old SciPy versions raise for an empty system when k_ar_diff is 0
+    if k > 0:
+        resids = resids - z @ scipy.linalg.solve_triangular(
+            r[:k, :k], r[:k, k:]
+        )
+    rkt = resids[:, :neqs]  # level on lagged diffs
+    r0t = resids[:, neqs:]
+    u, s, _ = svd(
+        scipy.linalg.solve_triangular(
+            r[k + neqs :, k + neqs :], r[k : k + neqs, k + neqs :].T, trans="T"
+        ).T
+    )
+    a = s**2 / (1 + s**2)
+    # log(1 - a) without the cancellation for eigenvalues close to 1
+    log_1m_a = -np.log1p(s**2)
+    d = np.sqrt(rkt.shape[0]) * scipy.linalg.solve_triangular(r11, u)
+    aind = np.arange(neqs)
     # Normalize by first non-zero element of d, usually [0, 0]
     # GH 5517
     non_zero_d = d.flat != 0
@@ -716,12 +739,10 @@ def coint_johansen(endog, det_order, k_ar_diff):
     lr2 = np.zeros(neqs)
     cvm = np.zeros((neqs, 3))
     cvt = np.zeros((neqs, 3))
-    iota = np.ones(neqs)
     t, junk = rkt.shape
     for i in range(neqs):
-        tmp = np.log(iota - a)[i:]
-        lr1[i] = -t * np.sum(tmp, 0)
-        lr2[i] = -t * np.log(1 - a[i])
+        lr1[i] = -t * np.sum(log_1m_a[i:], 0)
+        lr2[i] = -t * log_1m_a[i]
         cvm[i, :] = c_sja(neqs - i, det_order)
         cvt[i, :] = c_sjt(neqs - i, det_order)
         aind[i] = i
