@@ -130,6 +130,15 @@ Behavior changes
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
+- ``KDEUnivariate.evaluate`` with a kernel of bounded support (``"epa"``,
+  ``"tri"``, ``"uni"``, ``"biw"``, ``"triw"``, ``"tric"``, ``"cos"`` and
+  ``"cos2"``) returns one density per point, which is 0.0 where no
+  observation is in the support of the kernel. It returned a scalar ``nan``
+  for the whole array of points if one of them was outside the support of all
+  observations. ``cdf`` and ``entropy``, and so ``sf`` and ``cumhazard``, of
+  these kernels returned ``nan`` for most data. They now integrate the density
+  over the support of the observations, in the units of the data, so that the
+  ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
 
 New Features and Enhancements
 =============================
