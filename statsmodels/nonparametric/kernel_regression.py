@@ -36,7 +36,6 @@ import copy
 import warnings
 
 import numpy as np
-from scipy import optimize
 
 from statsmodels.tools.validation import array_like
 
@@ -90,7 +89,19 @@ class KernelReg(GenericKDE):
         'normal_reference' (normal reference rule of thumb). Default is
         'cv_ls'. User specified bandwidth must have as many entries as the
         number of variables and must be non-negative, zero is allowed for
-        discrete variables.
+        discrete variables.  The bandwidths that are selected by 'cv_ls' or
+        'aic' are kept in the range for which the kernels of the discrete
+        variables are defined.  With the default kernels, the bandwidth of an
+        unordered variable is at most ``(levels - 1) / levels``, where
+        ``levels`` is the number of distinct values of the variable, and the
+        bandwidth of an ordered variable is less than 1.
+
+        .. versionchanged:: 0.15.1
+
+            The bandwidths of discrete variables that are selected by
+            'cv_ls' or 'aic' are bounded.  They were not bounded before and
+            could be arbitrarily large.
+
     ckertype : str, optional
         The kernel used for the continuous variables.
     okertype : str, optional
@@ -203,10 +214,7 @@ class KernelReg(GenericKDE):
             else:  # bw == 'aic'
                 res = self.aic_hurvich
             func = self.est[self.reg_type]
-            bw_estimated = optimize.fmin(
-                res, x0=h0, args=(func,), maxiter=1e3, maxfun=1e3, disp=0
-            )
-            return bw_estimated
+            return self._minimize_bw(res, h0, args=(func,))
 
 
     def _est_loc_linear(self, bw, endog, exog, data_predict):

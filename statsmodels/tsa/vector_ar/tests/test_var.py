@@ -817,6 +817,7 @@ class TestVARExtras:
             res0.simulate_var(rng=np.random.RandomState(987128))
             res0.simulate_var(rng=np.random.default_rng(987128))
 
+    @pytest.mark.slow
     @pytest.mark.thread_unsafe(reason="uses matplotlib")
     @pytest.mark.matplotlib
     def test_process_plotting(self, close_figures):
@@ -1072,6 +1073,15 @@ def test_irf_resim_reproducible_with_int_seed():
     with pytest.warns(FutureWarning):
         sim2 = res.irf_resim(repl=5, steps=3, rng=0, burn=10)
     assert_allclose(sim1, sim2)
+
+
+def test_eigval_decomp_real():
+    # NumPy 2.5 and later return complex arrays from eig for real eigenvalues
+    cov = np.array([[2.0, 0.5], [0.5, 1.0]])
+    W, eigva, k = util.eigval_decomp(cov)
+    assert not np.iscomplexobj(W)
+    assert not np.iscomplexobj(eigva)
+    assert eigva[k] == eigva.max()
 
 
 @pytest.mark.slow

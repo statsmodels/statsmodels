@@ -229,9 +229,11 @@ class KDEUnivariate:
         _checkisfit(self)
         kern = self.kernel
         if kern.domain is None:  # TODO: test for grid point at domain bound
-            a, b = -np.inf, np.inf
+            a = -np.inf
         else:
-            a, b = kern.domain
+            # lowest point with a positive density, in the units of the data
+            a = self.endog.min() + kern.domain[0] * kern.h
+            a = min(a, self.support[0])
 
         def func(x, s):
             return np.squeeze(kern.density(s, x))
@@ -282,11 +284,14 @@ class KDEUnivariate:
 
         kern = self.kernel
 
+        endog = self.endog
         if kern.domain is not None:
-            a, b = kern.domain
+            # the density is positive only within the kernel domain around
+            # the observations, in the units of the data
+            a = endog.min() + kern.domain[0] * kern.h
+            b = endog.max() + kern.domain[1] * kern.h
         else:
             a, b = -np.inf, np.inf
-        endog = self.endog
         # TODO: below could run into integr problems, cf. stats.dist._entropy
         return -integrate.quad(entr, a, b, args=(endog,))[0]
 

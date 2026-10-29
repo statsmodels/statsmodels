@@ -31,7 +31,7 @@ __all__ = [
 import warnings
 
 import numpy as np
-from pandas import DataFrame, Index, MultiIndex, get_dummies
+from pandas import Categorical, DataFrame, Index, MultiIndex, Series, get_dummies
 from scipy import special, stats
 from scipy.special import digamma, gammaln, loggamma, polygamma
 from scipy.stats import nbinom
@@ -45,6 +45,7 @@ import statsmodels.base.model as base
 from statsmodels.base.model import LikelihoodModel
 import statsmodels.base.wrapper as wrap
 from statsmodels.distributions import genpoisson_p
+from statsmodels.formula._manager import FormulaManager
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools import data as data_tools, tools
 from statsmodels.tools._decorators import cache_readonly
@@ -164,6 +165,46 @@ def _pandas_to_dummies(endog):
     ynames = endog_dummies.columns.tolist()
 
     return endog_dummies, ynames, yname
+
+
+def _formula_endog_to_categorical(endog):
+    """
+    Convert the multi-column endog of a formula to a categorical Series
+
+    A categorical response in a formula, e.g., a str, bool or ``C(y)``, is
+    expanded by the formula engine to one indicator column per category.
+
+    Parameters
+    ----------
+    endog : DataFrame
+        The endog with more than one column that is created from a formula.
+
+    Returns
+    -------
+    Series
+        The categorical response, which is named using the term in the
+        formula and has the categories of the response as categories.
+
+    Raises
+    ------
+    ValueError
+        If the response is not a single categorical variable.
+    """
+    mgr = FormulaManager()
+    spec = mgr.get_model_spec(endog, optional=True)
+    factors = [] if spec is None else mgr.get_factors(spec)
+    if len(factors) != 1 or not mgr.is_categorical(spec):
+        raise ValueError(
+            "endog has evaluated to an array with multiple columns that has "
+            f"shape {endog.shape}. A formula for MNLogit can have multiple "
+            "columns in the response only if it is a single categorical "
+            "variable (e.g., bool or str)."
+        )
+    factor = factors[0]
+    categories = list(mgr.get_factor_categories(factor, spec))
+    codes = np.asarray(endog).argmax(axis=1)
+    values = Categorical.from_codes(codes, categories=categories)
+    return Series(values, index=endog.index, name=mgr.get_term_name(factor))
 
 
 def _validate_l1_method(method):
@@ -768,6 +809,12 @@ class MultinomialModel(BinaryModel):
             endog_dummies, ynames = _numpy_to_dummies(endog)
             yname = "y"
         elif data_tools._is_using_pandas(endog, None):
+            if (
+                kwargs.get("formula") is not None
+                and endog.ndim == 2
+                and endog.shape[1] > 1
+            ):
+                endog = _formula_endog_to_categorical(endog)
             endog_dummies, ynames, yname = _pandas_to_dummies(endog)
         else:
             endog = np.asarray(endog)
@@ -3335,7 +3382,18 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
+
+    If the model is created using ``from_formula``, the response can be a
+    single categorical variable, for example, a str, bool or ``C(y)``. It is
+    treated like the corresponding `endog`, so that the categories label the
+    equations. A response with more than one variable raises a ``ValueError``.
     """
+
+    # The formula engine dummy-codes a categorical response into one column
+    # per category. This is converted back to the labels in
+    # MultinomialModel._handle_data, which also rejects other multi-column
+    # responses, so the generic check of Model.from_formula is skipped.
+    _formula_max_endog = None
 
     def __init__(self, endog, exog, check_rank=True, **kwargs):
         super().__init__(endog, exog, check_rank=check_rank, **kwargs)

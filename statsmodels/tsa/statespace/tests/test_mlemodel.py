@@ -21,6 +21,7 @@ import pytest
 
 from statsmodels.datasets import nile
 from statsmodels.iolib.summary import Summary
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.statespace import (
     dynamic_factor,
     kalman_filter,
@@ -1297,7 +1298,9 @@ def test_integer_params():
         [1, 1, 1], order=(1, 0, 0), exog=[2, 2, 2], concentrate_scale=True
     )
     res = mod.filter([1, 0])
-    p = res.predict(end=5, dynamic=True, exog=[3, 3, 4])
+    # The out-of-sample periods are all missing, so the scale is 0 / 0
+    with warns_or_none(RuntimeWarning, match="invalid value encountered"):
+        p = res.predict(end=5, dynamic=True, exog=[3, 3, 4])
     assert_equal(p.dtype, np.float64)
 
 

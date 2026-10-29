@@ -15,7 +15,6 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 from statsmodels.compat.scipy import SP_LT_115
 
 import copy
-import warnings
 
 import numpy as np
 from numpy.testing import (
@@ -30,6 +29,7 @@ import pytest
 import statsmodels.stats.power as smp
 from statsmodels.stats.tests.test_weightstats import Holder
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, HypothesisTestWarning
+from statsmodels.tools.testing import warns_or_none
 
 # The noncentral t distribution of SciPy on WASM is accurate to about 1e-6
 # (relative), which is far from the 1e-12 of the other platforms
@@ -1089,6 +1089,54 @@ def test_solve_power_impossible_one_sided_raises():
     assert res < 0
 
 
+_SOLVE_POWER_CASES = [
+    (smp.TTestPower, "nobs"),
+    (smp.TTestPower, "effect_size"),
+    (smp.TTestPower, "alpha"),
+    (smp.TTestPower, "power"),
+    (smp.TTestIndPower, "nobs1"),
+    (smp.TTestIndPower, "effect_size"),
+    (smp.TTestIndPower, "alpha"),
+    (smp.TTestIndPower, "power"),
+]
+
+
+def _solve_power_kwds(cls, solve_for):
+    nobs_kw = "nobs" if cls is smp.TTestPower else "nobs1"
+    kwds = {"effect_size": 0.5, nobs_kw: 30, "alpha": 0.05, "power": 0.8}
+    kwds[solve_for] = None
+    return kwds
+
+
+@pytest.mark.parametrize("cls, solve_for", _SOLVE_POWER_CASES)
+@pytest.mark.parametrize(
+    "bad", ["one-sided", "one_sided", "bogus", "Larger", "Two-Sided"]
+)
+def test_solve_power_invalid_alternative_raises(cls, solve_for, bad):
+    # GH#9378: an invalid ``alternative`` (e.g. the "one-sided" spelling
+    # that appears in some documentation) should raise an informative
+    # ``ValueError`` up front. Previously the ``string_like`` validation only
+    # ran inside ``ttest_power`` during root finding, where the resulting
+    # ``ValueError`` was swallowed and ``solve_power`` returned ``nan`` with a
+    # confusing ``ConvergenceWarning`` when solving for the sample size.
+    # The spellings are case sensitive, as in ``power`` and ``ttest_power``.
+    kwds = _solve_power_kwds(cls, solve_for)
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        cls().solve_power(alternative=bad, **kwds)
+
+
+@pytest.mark.parametrize("cls, solve_for", _SOLVE_POWER_CASES)
+def test_solve_power_alternative_deprecated_alias(cls, solve_for):
+    # the deprecated "2s" alias still works in solve_power, with a single
+    # FutureWarning, and gives the same result as "two-sided"
+    kwds = _solve_power_kwds(cls, solve_for)
+    expected = cls().solve_power(alternative="two-sided", **kwds)
+    with pytest.warns(FutureWarning, match="is a deprecated alias") as record:
+        res = cls().solve_power(alternative="2s", **kwds)
+    assert len([r for r in record if issubclass(r.category, FutureWarning)]) == 1
+    assert_allclose(res, expected, rtol=1e-12)
+
+
 # TODO: can something useful be made from this?
 def test_power_solver_warn():
     # messing up the solver to trigger warning
@@ -1100,9 +1148,11 @@ def test_power_solver_warn():
     nip = smp.NormalIndPower()
     # using nobs, has one backup (fsolve)
     nip.start_bqexp["nobs1"] = {"upp": 50, "low": -20}
-    val = nip.solve_power(
-        0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
-    )
+    # the solver evaluates the power at the negative lower bound of nobs
+    with warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"):
+        val = nip.solve_power(
+            0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
+        )
 
     assert_almost_equal(val, 1600, decimal=4)
     assert_equal(nip.cache_fit_res[0], 1)
@@ -1113,20 +1163,25 @@ def test_power_solver_warn():
 
     from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
-    with pytest.warns(ConvergenceWarning):
+    with (
+        pytest.warns(ConvergenceWarning),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"),
+    ):
         nip.solve_power(
             0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
         )
     # this converges with scipy 0.11  ???
     # nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative='larger')
 
-    with warnings.catch_warnings():  # python >= 2.6
-        warnings.simplefilter("ignore")
+    with (
+        pytest.warns(ConvergenceWarning),
+        warns_or_none(RuntimeWarning, match="invalid value encountered in sqrt"),
+    ):
         nip.solve_power(
             0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative="larger"
         )
-        assert_equal(nip.cache_fit_res[0], 0)
-        assert_equal(len(nip.cache_fit_res), 3)
+    assert_equal(nip.cache_fit_res[0], 0)
+    assert_equal(len(nip.cache_fit_res), 3)
 
 
 def test_normal_sample_size_one_tail():

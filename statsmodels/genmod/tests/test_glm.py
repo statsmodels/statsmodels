@@ -1,6 +1,7 @@
 """
 Test functions for models.GLM
 """
+import contextlib
 import copy
 from pathlib import Path
 import re
@@ -3023,19 +3024,24 @@ class TestRegularized:
         # iteration count from scipy, unlike elastic_net's zero-indexed
         # sweep counter, so the two need different bookkeeping to both
         # respect maxiter.
+        from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
         endog, exog = self._load_enet_data("binomial")
 
         model = GLM(endog, exog, family=sm.families.Binomial())
-        result = model.fit_regularized(
-            method="l1_slsqp", alpha=0.1, maxiter=1, refit=True
-        )
+        # maxiter=1 forces the non-convergence
+        with pytest.warns(ConvergenceWarning, match="Regularized fitting did not"):
+            result = model.fit_regularized(
+                method="l1_slsqp", alpha=0.1, maxiter=1, refit=True
+            )
         assert result.fit_history["iteration"] <= 1
 
         model = GLM(endog, exog, family=sm.families.Binomial())
-        result = model.fit_regularized(
-            method="elastic_net", L1_wt=1.0, alpha=0.1, maxiter=1,
-            refit=True,
-        )
+        with pytest.warns(ConvergenceWarning, match="Regularized fitting did not"):
+            result = model.fit_regularized(
+                method="elastic_net", L1_wt=1.0, alpha=0.1, maxiter=1,
+                refit=True,
+            )
         assert result.fit_history["iteration"] <= 1
 
     def test_regularized_elastic_net_method_alias(self):
@@ -3392,7 +3398,7 @@ def test_names():
     """
     y = pd.Series([0, 1], name="endog_not_default")
     x = pd.DataFrame({"a": [1, 1], "b": [1, 0]})
-    exposure = pd.Series([0, 0], name="exposure_not_default")
+    exposure = pd.Series([1, 1], name="exposure_not_default")
     freq_weights = pd.Series([0, 0], name="freq_weights_not_default")
     offset = pd.Series([0, 0], name="offset_not_default")
     var_weights = pd.Series([0, 0], name="var_weights_not_default")
@@ -3430,7 +3436,7 @@ def test_names_default():
             [1, 0],
         ]
     )
-    exposure = np.array([0, 0])
+    exposure = np.array([1, 1])
     freq_weights = np.array([0, 0])
     offset = np.array([0, 0])
     var_weights = np.array([0, 0])
@@ -3531,15 +3537,85 @@ def test_loglike_mu_matches_loglike():
                     mod.loglike(res.params, scale=1.0), rtol=1e-12)
 
 
-def test_information_is_expected_hessian():
+@pytest.mark.parametrize(
+    "family, draw, canonical",
+    [
+        (sm.families.Poisson(), lambda rs, mu: rs.poisson(mu), True),
+        (
+            sm.families.Gamma(sm.families.links.Log()),
+            lambda rs, mu: rs.gamma(2, mu / 2),
+            False,
+        ),
+        (
+            sm.families.Binomial(sm.families.links.Probit()),
+            lambda rs, mu: rs.binomial(1, mu),
+            False,
+        ),
+    ],
+    ids=["poisson-log", "gamma-log", "binomial-probit"],
+)
+def test_information_is_expected_hessian(family, draw, canonical):
+    # information() follows the base class contract and returns
+    # -1 * Hessian, i.e. the positive definite Fisher information (#7826)
     rs = np.random.RandomState(1)
     n = 150
     exog = sm.add_constant(rs.standard_normal((n, 2)))
-    endog = rs.poisson(np.exp(exog @ [0.1, 0.3, -0.2]))
-    mod = GLM(endog, exog, family=sm.families.Poisson())
+    endog = draw(rs, family.link.inverse(exog @ [0.1, 0.3, -0.2]))
+    mod = GLM(endog, exog, family=family)
     res = mod.fit()
-    assert_allclose(mod.information(res.params),
-                    mod.hessian(res.params, observed=False), rtol=1e-12)
+    info = mod.information(res.params)
+    assert_allclose(info, -mod.hessian(res.params, observed=False), rtol=1e-12)
+    assert np.all(np.linalg.eigvalsh(info) > 0)
+
+    # independent formula for the expected information X'WX / scale
+    mu = res.fittedvalues
+    w = 1 / (family.link.deriv(mu) ** 2 * family.variance(mu))
+    assert_allclose(info, (exog.T * w) @ exog / res.scale, rtol=1e-10)
+    # the observed information is the same only for the canonical link
+    observed = -mod.hessian(res.params)
+    if canonical:
+        assert_allclose(info, observed, rtol=1e-10)
+    else:
+        assert not np.allclose(info, observed, rtol=1e-3)
+
+
+def test_information_gamma_log_r():
+    # Reference values from R 4.6.1 (run on Windows):
+    # set.seed(10498); n <- 20
+    # x1 <- round(rnorm(n), 4); x2 <- round(rnorm(n), 4)
+    # mu <- exp(0.3 + 0.4 * x1 - 0.3 * x2)
+    # y <- round(rgamma(n, shape = 2, scale = mu / 2), 4)
+    # res <- glm(y ~ x1 + x2, family = Gamma(link = "log"),
+    #            control = glm.control(epsilon = 1e-14, maxit = 100))
+    # s <- summary(res)
+    # info <- solve(s$cov.unscaled) / s$dispersion  # same as solve(vcov(res))
+    x1 = [-0.5187, -1.0707, 0.3635, -1.297, 0.6649, 0.1877, -0.4882, 0.8527,
+          0.0199, 0.479, 0.4426, -0.5357, -0.0187, 0.2637, 0.2202, -0.6578,
+          1.0042, 0.7598, -0.6794, 0.2459]
+    x2 = [-0.3539, 1.2167, -0.4177, -0.7542, 0.3114, -0.2972, -0.0992, 0.2396,
+          0.3485, 2.2054, 1.1998, 0.8709, -0.1773, -1.3844, 1.047, -1.6466,
+          -0.0376, -0.6657, 1.887, 0.5321]
+    y = [1.2104, 0.1631, 4.1575, 0.946, 1.4853, 4.1807, 2.4526, 2.238, 1.6227,
+         2.4873, 0.5084, 1.3624, 1.3715, 1.3068, 0.4653, 0.9678, 2.208, 1.2399,
+         0.6384, 0.4924]
+    params_r = [0.432770407171019, 0.525183155183804, -0.201513605217730]
+    scale_r = 0.449283634493362
+    info_r = np.array([
+        [44.51530940483315, 0.52950960537049, 8.95781571153458],
+        [0.52950960537049, 17.90427251834129, 1.10445930344105],
+        [8.95781571153458, 1.10445930344105, 44.13389947390336],
+    ])
+    exog = sm.add_constant(np.column_stack([x1, x2]))
+    mod = GLM(y, exog, family=sm.families.Gamma(sm.families.links.Log()))
+    res = mod.fit()
+    assert_allclose(res.params, params_r, rtol=1e-6)
+    assert_allclose(res.scale, scale_r, rtol=1e-6)
+    assert_allclose(mod.information(res.params, scale=res.scale), info_r,
+                    rtol=1e-6)
+    assert_allclose(mod.information(res.params), info_r, rtol=1e-6)
+    assert_allclose(np.linalg.inv(info_r), res.cov_params(), rtol=1e-6)
+    # the observed information differs for the non-canonical log link
+    assert not np.allclose(-mod.hessian(res.params), info_r, rtol=1e-2)
 
 
 def test_derivative_predict_matches_numerical_derivative():
@@ -3652,9 +3728,16 @@ def test_get_prediction_default_uses_model_offset(fit_model):
     rng = np.random.default_rng(4321)
     res, x, explicit = _offset_model_case(fit_model, rng)
 
+    # NegativeBinomial has no link, get_prediction warns that it uses the log link
+    def ctx():
+        if fit_model == "nb_offset":
+            return pytest.warns(UserWarning, match="using default log-link")
+        return contextlib.nullcontext()
+
     # GLM results use predicted_mean and se_mean, count models use predicted
     # and se.
-    pred = res.get_prediction()
+    with ctx():
+        pred = res.get_prediction()
     if hasattr(pred, "predicted_mean"):
         mean_name, se_name = "predicted_mean", "se_mean"
     else:
@@ -3662,7 +3745,8 @@ def test_get_prediction_default_uses_model_offset(fit_model):
     assert_allclose(getattr(pred, mean_name), res.predict(), rtol=1e-10)
     # Standard errors must match the explicit call that passes the same
     # offset or exposure together with exog.
-    expected = res.get_prediction(exog=x, **explicit)
+    with ctx():
+        expected = res.get_prediction(exog=x, **explicit)
     assert_allclose(getattr(pred, se_name), getattr(expected, se_name), rtol=1e-10)
 
     if not hasattr(pred, "predicted_mean"):
@@ -3672,7 +3756,8 @@ def test_get_prediction_default_uses_model_offset(fit_model):
 
     # The default call and the explicit exog call agree for the mean with the
     # generic code path too, and averaging uses the stored offset as well.
-    pred_mean = res.get_prediction(which="mean")
+    with ctx():
+        pred_mean = res.get_prediction(which="mean")
     assert_allclose(pred_mean.predicted, res.predict(), rtol=1e-10)
     pred_avg = res.get_prediction(which="mean", average=True)
     assert_allclose(pred_avg.predicted, res.predict().mean(), rtol=1e-10)
@@ -3791,3 +3876,163 @@ def test_irls_default_start_unchanged_large_exog():
     res = GLM(POISSON_LARGE_Y, exog, family=sm.families.Poisson()).fit()
     assert res.converged
     assert_allclose(res.params, POISSON_LARGE_PARAMS, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "to_response",
+    [
+        lambda y: y.astype(bool),
+        lambda y: np.where(y == 1, "yes", "no"),
+        lambda y: pd.Categorical(np.where(y == 1, "b", "a"), categories=["a", "b"]),
+        lambda y: pd.Categorical(np.where(y == 1, "a", "b"), categories=["b", "a"]),
+    ],
+    ids=["bool", "str", "categorical", "categorical-reordered"],
+)
+def test_glm_formula_two_level_categorical_endog(to_response):
+    # GH 10501: a two-level categorical response is expanded to one indicator
+    # column per level, which GLM read as (successes, failures), so the first
+    # level was modeled as the success and every coefficient flipped sign.
+    # As in R's glm, the first level is the failure and the second the success.
+    y = np.array([0, 0, 1, 0, 1, 1, 0, 1])
+    data = pd.DataFrame({"x": np.arange(8.0), "y": y, "z": to_response(y)})
+    family = sm.families.Binomial()
+    expected = GLM.from_formula("y ~ x", data, family=family).fit()
+    res = GLM.from_formula("z ~ x", data, family=family).fit()
+    assert_allclose(res.params.values, expected.params.values, rtol=1e-10)
+    assert_allclose(res.bse.values, expected.bse.values, rtol=1e-10)
+
+
+def test_glm_formula_two_level_categorical_endog_missing():
+    y = np.array([0, 0, 1, 0, 1, 1, 0, 1, 1, 0])
+    data = pd.DataFrame(
+        {"x": np.arange(10.0), "y": y, "z": np.where(y == 1, "yes", "no")}
+    )
+    data.loc[2, "z"] = None
+    family = sm.families.Binomial()
+    res = GLM.from_formula("z ~ x", data, family=family, missing="drop").fit()
+    expected = GLM.from_formula("y ~ x", data.drop(index=2), family=family).fit()
+    assert res.nobs == 9
+    assert res.model.endog_names == "z[yes]"
+    assert_allclose(res.params.values, expected.params.values, rtol=1e-10)
+
+
+def test_glm_formula_two_column_numeric_endog():
+    # A numeric two-column response still means (successes, failures)
+    counts = np.column_stack([[3, 1, 4, 1, 5, 2], [2, 4, 1, 3, 1, 3]])
+    x = np.arange(6.0)
+    family = sm.families.Binomial()
+    res = GLM.from_formula("counts ~ x", {"x": x}, family=family).fit()
+    expected = GLM(counts, add_constant(x), family=family).fit()
+    assert_allclose(res.params.values, expected.params, rtol=1e-10)
+
+
+@pytest.mark.parametrize("kind", ["str", "bool", "categorical"])
+def test_glm_formula_categorical_endog_r(kind):
+    # R 4.6.1, the first level of a factor is the failure and the second the
+    # success:
+    # x <- 0:9
+    # y <- c("no", "no", "yes", "no", "yes", "no", "yes", "yes", "yes", "yes")
+    # res <- glm(y ~ x, family = binomial, data = data.frame(x, y = factor(y)))
+    # coef(res); sqrt(diag(vcov(res))); logLik(res); deviance(res)
+    params = np.array([-2.26430269411485, 0.662208268672125])
+    bse = np.array([1.70376480979048, 0.400093718969837])
+    llf = -4.31012194802025
+    deviance = 8.62024389604051
+    yes = np.array([0, 0, 1, 0, 1, 0, 1, 1, 1, 1], dtype=bool)
+    if kind == "str":
+        y = np.where(yes, "yes", "no")
+    elif kind == "bool":
+        y = yes
+    else:
+        y = pd.Categorical(np.where(yes, "yes", "no"), categories=["no", "yes"])
+    data = pd.DataFrame({"x": np.arange(10.0), "y": y})
+    res = GLM.from_formula("y ~ x", data, family=sm.families.Binomial()).fit()
+    assert_allclose(res.params.values, params, rtol=1e-8)
+    assert_allclose(res.bse.values, bse, rtol=1e-6)
+    assert_allclose(res.llf, llf, rtol=1e-8)
+    assert_allclose(res.deviance, deviance, rtol=1e-8)
+
+
+def test_glm_formula_bool_endog_issue_10501():
+    data = pd.DataFrame({"x": [0, 1], "y": [0, 1], "y_bool": [False, True]})
+    family = sm.families.Binomial()
+    model_int = GLM.from_formula("y ~ x", data, family=family)
+    model_bool = GLM.from_formula("y_bool ~ x", data, family=family)
+    assert_allclose(model_bool.endog, model_int.endog)
+    # Perfect separation, the parameters are not finite but have the sign of
+    # the numeric response
+    with pytest.warns(PerfectSeparationWarning):
+        params_int = model_int.fit().params
+    with pytest.warns(PerfectSeparationWarning):
+        params_bool = model_bool.fit().params
+    assert np.all(np.sign(params_bool.values) == np.sign(params_int.values))
+    assert params_bool.iloc[1] > 0
+
+
+def test_glm_formula_categorical_endog_names():
+    data = pd.DataFrame({"x": np.arange(8.0), "z": list("aababbab")})
+    res = GLM.from_formula("z ~ x", data, family=sm.families.Binomial()).fit()
+    assert res.model.endog_names == "z[b]"
+    assert res.model.exog_names == ["Intercept", "x"]
+
+
+@pytest.mark.parametrize(
+    "family",
+    [None, sm.families.Gaussian(), sm.families.Poisson(), sm.families.Gamma()],
+    ids=["default", "gaussian", "poisson", "gamma"],
+)
+@pytest.mark.parametrize("response", ["z", "b", "C(y)"])
+def test_glm_formula_categorical_endog_other_family(family, response):
+    # Only the Binomial family can model the second level of a response
+    data = pd.DataFrame(
+        {
+            "x": np.arange(8.0),
+            "y": [0, 0, 1, 0, 1, 1, 0, 1],
+            "z": list("aababbab"),
+            "b": [False, False, True, False, True, True, False, True],
+        }
+    )
+    if response == "b" and FormulaManager().engine == "formulaic":
+        pytest.skip("formulaic codes a bool response as 0/1")
+    kwargs = {} if family is None else {"family": family}
+    with pytest.raises(ValueError, match="only be used with the Binomial family"):
+        GLM.from_formula(f"{response} ~ x", data, **kwargs)
+
+
+def test_glm_formula_categorical_endog_other_family_gee():
+    data = pd.DataFrame(
+        {
+            "x": np.arange(8.0),
+            "z": list("aababbab"),
+            "g": [0, 0, 1, 1, 2, 2, 3, 3],
+        }
+    )
+    with pytest.raises(ValueError, match="only be used with the Binomial family"):
+        sm.GEE.from_formula("z ~ x", "g", data)
+    with pytest.raises(ValueError, match="only be used with the Binomial family"):
+        sm.GEE.from_formula("z ~ x", "g", data, family=sm.families.Gaussian())
+    y = np.array([0, 0, 1, 0, 1, 1, 0, 1])
+    data["y"] = y
+    res = sm.GEE.from_formula("z ~ x", "g", data, family=sm.families.Binomial())
+    expected = sm.GEE.from_formula("y ~ x", "g", data, family=sm.families.Binomial())
+    assert_allclose(res.fit().params.values, expected.fit().params.values, rtol=1e-8)
+
+
+def test_glm_formula_categorical_endog_single_level():
+    # Only one level of the response is left in the data
+    data = pd.DataFrame({"x": np.arange(8.0), "z": list("aababbab")})
+    for family in [sm.families.Binomial(), sm.families.Gaussian()]:
+        with pytest.raises(ValueError, match="has a single level"):
+            GLM.from_formula("z ~ x", data, family=family, subset=data.z == "a")
+
+
+def test_glm_formula_categorical_endog_coded_levels():
+    # The order of the levels of C() sets the success
+    y = np.array([0, 0, 1, 0, 1, 1, 0, 1])
+    data = pd.DataFrame({"x": np.arange(8.0), "y": y})
+    family = sm.families.Binomial()
+    res = GLM.from_formula("y ~ x", data, family=family).fit()
+    res_c = GLM.from_formula("C(y, levels=[0, 1]) ~ x", data, family=family).fit()
+    res_rev = GLM.from_formula("C(y, levels=[1, 0]) ~ x", data, family=family).fit()
+    assert_allclose(res_c.params.values, res.params.values, rtol=1e-10)
+    assert_allclose(res_rev.params.values, -res.params.values, rtol=1e-8)

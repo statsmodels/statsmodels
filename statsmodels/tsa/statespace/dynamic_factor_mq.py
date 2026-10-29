@@ -1904,7 +1904,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             factor_ix = self._s.endog_factor_iloc[i]
             factor_exog = lagmat(factors[:, factor_ix], 4, original="in")
             mod_glm = GLM(self.endog[:, i], factor_exog, missing="drop")
-            res_glm = mod_glm.fit_constrained(self.loading_constraints(i))
+            # The scale is 0 / 0 without residual degrees of freedom, not used
+            with np.errstate(divide="ignore", invalid="ignore"):
+                res_glm = mod_glm.fit_constrained(self.loading_constraints(i))
             loadings += res_glm.params[:len(factor_ix)].tolist()
             resid.append(res_glm.resid_response)
         params[self._p["loadings"]] = loadings

@@ -1,10 +1,19 @@
+import contextlib
 from pathlib import Path
 
+import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
 from statsmodels.tsa.seasonal import MSTL
+
+
+def _expect_long_period_warning(periods, nobs):
+    # MSTL warns and drops the periods that are at least half the sample length
+    if np.max(periods) >= nobs / 2:
+        return pytest.warns(UserWarning, match="A period.s. is larger than half")
+    return contextlib.nullcontext()
 
 
 @pytest.fixture
@@ -51,7 +60,8 @@ def test_seasonal_is_datafame_when_input_pandas_and_multiple_periods(data_pd):
     indirect=["data"],
 )
 def test_number_of_seasonal_components(data, periods, windows, expected):
-    mod = MSTL(endog=data, periods=periods, windows=windows)
+    with _expect_long_period_warning(periods, len(data)):
+        mod = MSTL(endog=data, periods=periods, windows=windows)
     res = mod.fit()
     n_seasonal_components = (
         res.seasonal.shape[1] if res.seasonal.ndim > 1 else res.seasonal.ndim
@@ -160,6 +170,7 @@ def test_output_similar_to_R_implementation(data_pd, mstl_results):
     assert_allclose(res.resid, expected_resid)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "data, periods_ordered, windows_ordered, periods_not_ordered, "
     "windows_not_ordered",
@@ -183,9 +194,13 @@ def test_output_invariant_to_period_order(
     periods_not_ordered,
     windows_not_ordered,
 ):
-    mod1 = MSTL(endog=data, periods=periods_ordered, windows=windows_ordered)
+    with _expect_long_period_warning(periods_ordered, len(data)):
+        mod1 = MSTL(endog=data, periods=periods_ordered, windows=windows_ordered)
     res1 = mod1.fit()
-    mod2 = MSTL(endog=data, periods=periods_not_ordered, windows=windows_not_ordered)
+    with _expect_long_period_warning(periods_not_ordered, len(data)):
+        mod2 = MSTL(
+            endog=data, periods=periods_not_ordered, windows=windows_not_ordered
+        )
     res2 = mod2.fit()
 
     assert_equal(res1.observed, res2.observed)

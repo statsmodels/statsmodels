@@ -25,9 +25,8 @@ class NestedLagOLSResults(NamedTuple):
     ----------
     r : ndarray
         The upper triangular factor of the regressors of the largest model
-        and the dependent variables, including any indicator columns. If
-        ``exog`` has a constant column, the lags and the dependent variables
-        are shifted by constants, see ``nested_lag_ols``.
+        and the dependent variables, including any indicator columns, after
+        subtracting ``offset``.
     nobs : ndarray
         The number of observations used by each order.
     df_model : ndarray
@@ -42,6 +41,11 @@ class NestedLagOLSResults(NamedTuple):
     tvalues_last : ndarray
         The t-value(s) of the coefficient(s) of the last regressor of each
         order, using ``ssr / (nobs - df_model)`` as the residual variance.
+    offset : ndarray
+        The constants subtracted from the columns of ``[exog, lags, endog]``
+        before the decomposition, of shape (k + neqs,). Zero unless ``exog``
+        has a constant column, see ``nested_lag_ols``. A caller that combines
+        ``r`` with the data must subtract the same constants.
     """
 
     r: np.ndarray
@@ -50,6 +54,7 @@ class NestedLagOLSResults(NamedTuple):
     ssr: np.ndarray
     params_last: np.ndarray
     tvalues_last: np.ndarray
+    offset: np.ndarray
 
 
 def _as_blocks(lags, nobs):
@@ -189,7 +194,8 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
     reduce the accuracy or trigger the fit check. The rank check is applied
     to the original columns, as the solver that is replaced sees them. The
     coefficient of the constant of order 0 is corrected for the shift. The
-    factor ``r`` belongs to the centered data.
+    factor ``r`` belongs to the centered data, and ``offset`` holds the
+    means that were subtracted.
 
     Designs that are nearly collinear are still accepted if the rank check
     passes, which is the case up to a condition number of about ``1e12``
@@ -362,4 +368,6 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
     if univariate:
         params_last = params_last[:, 0]
         tvalues_last = tvalues_last[:, 0]
-    return NestedLagOLSResults(r, nobs_order, df_model, ssr, params_last, tvalues_last)
+    return NestedLagOLSResults(
+        r, nobs_order, df_model, ssr, params_last, tvalues_last, offset
+    )

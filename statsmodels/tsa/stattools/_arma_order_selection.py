@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 from numpy.linalg import LinAlgError
 import pandas as pd
 
+from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.validation import (
     array_like,
@@ -19,9 +22,14 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
     from statsmodels.tsa.arima.model import ARIMA
 
     try:
-        return ARIMA(y, order=order, **model_kw, trend=trend).fit(
-            start_params=start_params, **fit_kw
-        )
+        with warnings.catch_warnings():
+            # A candidate model that falls back to zeros as starting values
+            warnings.filterwarnings(
+                "ignore", message="Non-invertible starting MA", category=EstimationWarning
+            )
+            return ARIMA(y, order=order, **model_kw, trend=trend).fit(
+                start_params=start_params, **fit_kw
+            )
     except LinAlgError:
         # SVD convergence failure on badly misspecified models
         return None

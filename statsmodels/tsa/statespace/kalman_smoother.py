@@ -847,6 +847,9 @@ class SmootherResults(FilterResults):
             mod = self.model.extend(endog, start=self.nobs, **extend_kwargs)
             mod.initialize_known(self.predicted_state[..., self.nobs],
                                  self.predicted_state_cov[..., self.nobs])
+            # The disturbance covariances are not used, and computing them
+            # warns if the observation covariance was diagonalized
+            mod.smoother_disturbance_cov = False
             res = mod.smooth()
 
             if shift != 0:

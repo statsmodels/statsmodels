@@ -430,9 +430,9 @@ class SurvfuncRight:
             x = _kernel_survfunc(time, status, exog, kfunc, freq_weights)
             self.surv_prob = x[0]
             self.surv_times = x[1]
-            self.surv_prob_se = np.full_like(x[1], np.nan)
-            self.n_risk = np.full_like(x[1], np.nan)
-            self.n_events = np.full_like(x[1], np.nan)
+            self.surv_prob_se = np.full(x[1].shape, np.nan)
+            self.n_risk = np.full(x[1].shape, np.nan)
+            self.n_events = np.full(x[1].shape, np.nan)
 
             return
 
