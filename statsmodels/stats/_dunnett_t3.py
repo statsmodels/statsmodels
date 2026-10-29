@@ -97,7 +97,7 @@ def _smm_sf(q, k, df):
 
     Returns
     -------
-    ndarray
+    sf : ndarray
         The probability that the studentized maximum modulus is larger
         than q.
 
@@ -157,7 +157,7 @@ def _smm_ppf(prob, k, df):
 
     Returns
     -------
-    ndarray
+    q : ndarray
         The quantiles of the distribution.
 
     See Also

@@ -193,7 +193,8 @@ New functions and methods
 - Add ``MultiComparison.dunnett_t3`` for Dunnett's T3 test of all pairwise
   comparisons of means with unequal variances. The p-values and the
   simultaneous confidence intervals use the studentized maximum modulus
-  distribution with the Welch degrees of freedom of each pair.
+  distribution with the Welch degrees of freedom of each pair. The
+  ``plot_simultaneous`` method of the results raises ``NotImplementedError``.
   :issue:`9472`, :pr:`10469`
 - Add the ``one_sided`` argument to
   :func:`~statsmodels.tsa.filters.hp_filter.hpfilter`. With
