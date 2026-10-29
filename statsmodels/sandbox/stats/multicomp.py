@@ -73,6 +73,7 @@ from scipy import interpolate, stats
 
 from statsmodels.graphics import utils
 from statsmodels.iolib.table import SimpleTable
+from statsmodels.stats._dunnett_t3 import _dunnett_t3
 from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.validation import float_like, string_like
 
@@ -633,8 +634,10 @@ class TukeyHSDResults:
     std_pairs : ndarray
         Standard deviations of the pairwise mean differences.
     q_crit : float or ndarray
-        Critical value or values of the studentized range statistic at the
-        specified significance level.
+        Critical value or values at the specified significance level. This is
+        the studentized range statistic for Tukey HSD and Games-Howell, and
+        the studentized maximum modulus on the scale of the t statistic for
+        Dunnett's T3.
     halfwidths : ndarray
         Half widths of the simultaneous confidence intervals. This attribute
         is available after calling `plot_simultaneous`.
@@ -777,6 +780,9 @@ class TukeyHSDResults:
             self._multicomp.pairindices,
         )
 
+    # plot_simultaneous is not available for the results of dunnett_t3
+    _dunnett_t3 = False
+
     def plot_simultaneous(
         self, comparison_name=None, ax=None, figsize=(10, 6), xlabel=None, ylabel=None
     ):
@@ -853,6 +859,13 @@ class TukeyHSDResults:
         Optionally provide one of the group names to color code the plot to
         highlight group means different from comparison_name.
         """
+        if self._dunnett_t3:
+            raise NotImplementedError(
+                "plot_simultaneous is not available for Dunnett's T3 results. "
+                "The intervals of the plot are based on the studentized range "
+                "and do not match the T3 test. Use confint for the "
+                "simultaneous confidence intervals of the pairwise differences."
+            )
         fig, ax1 = utils.create_mpl_ax(ax)
         if figsize is not None:
             fig.set_size_inches(figsize)
@@ -1242,6 +1255,131 @@ class MultiComparison:
             group_t=self.groupsunique[res[0][1]],
             group_c=self.groupsunique[res[0][0]],
         )
+
+    def dunnett_t3(self, alpha=0.05):
+        """
+        Dunnett's T3 test to compare means of all pairs of groups
+
+        Pairwise comparisons that do not assume equal variances across
+        groups. Each pair is compared with Welch's t statistic using
+        Satterthwaite's degrees of freedom for that pair. The p-values and
+        the simultaneous confidence intervals are based on the studentized
+        maximum modulus distribution for the number of pairwise
+        comparisons.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Value of the family-wise error rate. Default is 0.05.
+
+        Returns
+        -------
+        results : TukeyHSDResults
+            A results class containing the mean differences, adjusted
+            p-values, simultaneous confidence intervals and reject
+            decisions. ``q_crit`` contains the critical value of the
+            studentized maximum modulus distribution for each pair, on
+            the scale of the t statistic. ``plot_simultaneous`` is not
+            available for these results.
+
+        Raises
+        ------
+        TypeError
+            If alpha is not a float.
+        ValueError
+            If alpha is not in the interval (0, 1).
+
+        See Also
+        --------
+        tukeyhsd
+            Tukey HSD and Games-Howell pairwise comparisons.
+
+        Notes
+        -----
+        Dunnett's T3 is recommended for small samples with unequal
+        variances, where Games-Howell can be liberal.
+
+        The Welch t statistics of the pairs are correlated. Dunnett's T3
+        approximates their joint distribution with the studentized maximum
+        modulus distribution, which has independent components, so the test
+        is conservative.
+
+        The critical values are computed using the degrees of freedom of
+        each pair without rounding. ``dunnettT3Test`` in the R package
+        PMCMRplus rounds the degrees of freedom to integers, so its p-values
+        differ, especially if the degrees of freedom are small.
+
+        Pairs with undefined statistics, for example the pairs of a group
+        with a single observation or of two groups with zero variance, have
+        nan p-values and confidence intervals. They are kept in the number
+        of comparisons of the studentized maximum modulus distribution,
+        which is conservative.
+
+        .. versionadded:: 0.15.1
+
+        References
+        ----------
+        .. [*] Dunnett, C. W. (1980). Pairwise Multiple Comparisons in the
+           Unequal Variance Case. Journal of the American Statistical
+           Association, 75(372), 796-800.
+        """
+        alpha = float_like(alpha, "alpha", optional=False)
+        if not 0 < alpha < 1:
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+        self.groupstats = GroupsStats(
+            np.column_stack([self.data, self.groupintlab]), useranks=False
+        )
+        gmeans = self.groupstats.groupmean
+        gnobs = self.groupstats.groupnobs
+        # the variance of a group with one observation is undefined, nan
+        with np.errstate(invalid="ignore", divide="ignore"):
+            var_ = self.groupstats.groupvarwithin()
+
+        res = _dunnett_t3(gmeans, gnobs, var_, alpha=alpha)
+        idx1, idx2 = res["pair_indices"]
+        resarr = np.array(
+            lzip(
+                self.groupsunique[idx1],
+                self.groupsunique[idx2],
+                np.round(res["meandiffs"], 4),
+                np.round(res["pvalues"], 4),
+                np.round(res["confint"][:, 0], 4),
+                np.round(res["confint"][:, 1], 4),
+                res["reject"],
+            ),
+            dtype=[
+                ("group1", object),
+                ("group2", object),
+                ("meandiff", float),
+                ("p-adj", float),
+                ("lower", float),
+                ("upper", float),
+                ("reject", np.bool_),
+            ],
+        )
+        results_table = SimpleTable(resarr, headers=resarr.dtype.names)
+        results_table.title = (
+            "Multiple Comparison of Means - Dunnett T3, " + f"FWER={alpha:4.2f}"
+        )
+
+        results = TukeyHSDResults(
+            self,
+            results_table,
+            res["q_crit"],
+            reject=res["reject"],
+            meandiffs=res["meandiffs"],
+            std_pairs=res["std_pairs"],
+            confint=res["confint"],
+            df_total=res["df_pairs"],
+            reject2=res["reject"],
+            variance=var_,
+            pvalues=res["pvalues"],
+            alpha=alpha,
+            group_t=self.groupsunique[idx2],
+            group_c=self.groupsunique[idx1],
+        )
+        results._dunnett_t3 = True
+        return results
 
 
 def rankdata(x):

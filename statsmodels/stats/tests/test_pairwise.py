@@ -19,7 +19,9 @@ from numpy.testing import (
 )
 import pandas as pd
 import pytest
+from scipy import stats
 
+from statsmodels.stats._dunnett_t3 import _smm_ppf, _smm_sf
 from statsmodels.stats.libqsturng import qsturng
 from statsmodels.stats.multicomp import MultiComparison, pairwise_tukeyhsd, tukeyhsd
 
@@ -749,3 +751,262 @@ def test_tukeyhsd_invalid_use_var_raises():
     mc = MultiComparison(cylinders_adj, cyl_labels)
     with pytest.raises(ValueError, match="use_var"):
         mc.tukeyhsd(use_var="not-a-use-var")
+
+
+# R 4.5.3, studentized maximum modulus survival function by integration
+# psmm_sf <- function(q, k, df) {
+#   tail <- function(s) -expm1(k * log1p(-2 * pnorm(q * s, lower.tail = FALSE)))
+#   f <- function(s) tail(s) * dchisq(df * s^2, df) * 2 * df * s
+#   integrate(f, 0, Inf, rel.tol = 1e-13, subdivisions = 1000L)$value
+# }
+# for (df in c(2, 5, 30, 300, 5000)) for (q in c(1.5, 4)) for (k in c(3, 21))
+#   cat(sprintf("%g %g %g %.15g\n", q, k, df, psmm_sf(q, k, df)))
+smm_sf_r = [
+    (1.5, 3, 2, 0.508810867799348),
+    (1.5, 21, 2, 0.846709245672448),
+    (4, 3, 2, 0.117766849906116),
+    (4, 21, 2, 0.261671024330229),
+    (1.5, 3, 5, 0.431129024650245),
+    (1.5, 21, 5, 0.878607390565468),
+    (4, 3, 5, 0.027143612822165),
+    (4, 21, 5, 0.104411622893358),
+    (1.5, 3, 30, 0.366070706664739),
+    (1.5, 21, 30, 0.931414448492557),
+    (4, 3, 30, 0.0011416160848127),
+    (4, 21, 30, 0.00776118838471536),
+    (1.5, 3, 300, 0.351377929932101),
+    (1.5, 21, 300, 0.948625408146656),
+    (4, 3, 300, 0.000239490720530816),
+    (4, 21, 300, 0.00167458420323826),
+    (1.5, 3, 5000, 0.349773087975445),
+    (1.5, 21, 5000, 0.950670939209224),
+    (4, 3, 5000, 0.000192758805816826),
+    (4, 21, 5000, 0.00134850917116419),
+]
+
+
+@pytest.mark.parametrize("q, k, df, expected", smm_sf_r)
+def test_smm_sf_r(q, k, df, expected):
+    assert_allclose(_smm_sf(q, k, df), expected, rtol=1e-9)
+
+
+# R 4.5.3, psmm_sf as above, but the integral is split at
+# c(0, 1e-8, 1e-4, 0.01, 1 / q * c(0.1, 1, 3, 10), 0.5, 1, 2, 10, Inf)
+# for small df, many comparisons and far tails
+smm_sf_r_extreme = [
+    (0.5, 190, 1.05, 0.999999780360526),
+    (3, 45, 1.5, 0.528472790751412),
+    (10, 45, 3, 0.0213717061986633),
+    (30, 3, 8.3, 2.71702731787374e-09),
+    (2, 190, 50, 0.995802671507413),
+]
+
+
+@pytest.mark.parametrize("q, k, df, expected", smm_sf_r_extreme)
+def test_smm_sf_r_extreme(q, k, df, expected):
+    assert_allclose(_smm_sf(q, k, df), expected, rtol=1e-10)
+
+
+def test_smm_sf_vectorized():
+    q, k, df, expected = (np.array(col) for col in zip(*smm_sf_r, strict=True))
+    for k_ in (3, 21):
+        mask = k == k_
+        res = _smm_sf(q[mask].reshape(2, -1), k_, df[mask].reshape(2, -1))
+        assert res.shape == (2, mask.sum() // 2)
+        assert_allclose(res.ravel(), expected[mask], rtol=1e-9)
+
+
+# R 4.5.3, mvtnorm 1.4.2, multivariate t with uncorrelated components
+# pmvt(lower = rep(-q, k), upper = rep(q, k), df = df, corr = diag(k),
+#      algorithm = GenzBretz(maxpts = 2e6, abseps = 1e-9, releps = 0))
+smm_cdf_pmvt = [
+    (2.5, 3, 10, 0.9136858617),
+    (3.0, 6, 5, 0.8713328011),
+    (2.0, 1, 7, 0.9143806714),
+    (3.5, 10, 20, 0.9787528378),
+    (4.2, 15, 3, 0.8583708778),
+]
+
+
+@pytest.mark.parametrize("q, k, df, cdf", smm_cdf_pmvt)
+def test_smm_sf_pmvt(q, k, df, cdf):
+    assert_allclose(1 - _smm_sf(q, k, df), cdf, atol=1e-6)
+
+
+def test_smm_special_cases():
+    q = np.array([0.5, 2.0, 5.0, 9.0])
+    df = np.array([3.0, 12.7, 40.0, 1000.0])
+    # one variable is the absolute value of a t random variable
+    assert_allclose(_smm_sf(q, 1, df), 2 * stats.t.sf(q, df), rtol=1e-9)
+    # infinite df, independent standard normal variables
+    expected = (1 - 2 * stats.norm.sf(q)) ** 4
+    assert_allclose(1 - _smm_sf(q, 4, np.inf), expected, rtol=1e-12)
+    # in the extreme tail the Bonferroni bound is tight
+    assert_allclose(_smm_sf(8.0, 21, 5000), 21 * 2 * stats.t.sf(8.0, 5000), rtol=1e-6)
+    assert_equal(_smm_sf(0.0, 3, 10), 1.0)
+    assert np.isnan(_smm_sf(np.nan, 3, 10))
+    # quantile function inverts the survival function
+    qcrit = _smm_ppf(0.95, 6, df)
+    assert_allclose(_smm_sf(qcrit, 6, df), 0.05, rtol=1e-8)
+    assert_allclose(_smm_ppf(0.95, 1, df), stats.t.isf(0.025, df), rtol=1e-12)
+    # for very large df the difference to the infinite df case is of order
+    # 1 / df
+    q_large = np.array([1.0, 2.5, 4.0])
+    for df_large in (1e10, 1e14):
+        assert_allclose(
+            _smm_sf(q_large, 6, df_large), _smm_sf(q_large, 6, np.inf), rtol=1e-8
+        )
+    # infinite df, quantile of the maximum of independent normal variables
+    expected = stats.norm.isf((1 - 0.95 ** (1 / 4)) / 2)
+    assert_allclose(_smm_ppf(0.95, 4, np.inf), expected, rtol=1e-12)
+    df_special = np.array([np.inf, np.nan, 1.05, 2.5])
+    qcrit = _smm_ppf(0.99, 190, df_special)
+    assert np.isnan(qcrit[1])
+    assert_allclose(_smm_sf(qcrit, 190, df_special), [0.01, np.nan, 0.01, 0.01], rtol=1e-8)
+
+
+class TestDunnettT3:
+    # R 4.5.3, data are dta2.iloc[3:29], x is StressReduction, g Treatment
+    # ni <- tapply(x, g, length); xi <- tapply(x, g, mean)
+    # s2i <- tapply(x, g, var); m <- 3
+    # for pairs (mental, medical), (physical, medical), (physical, mental)
+    #   A <- s2i[i] / ni[i] + s2i[j] / ni[j]
+    #   t <- (xi[i] - xi[j]) / sqrt(A)
+    #   df <- A^2 / (s2i[i]^2 / (ni[i]^2 * (ni[i] - 1))
+    #                + s2i[j]^2 / (ni[j]^2 * (ni[j] - 1)))
+    #   p <- psmm_sf(abs(t), m, df)
+    #   q <- uniroot(function(q) psmm_sf(q, m, df) - alpha, c(0.5, 50),
+    #                tol = 1e-13)$root
+    #   ci <- xi[i] - xi[j] + c(-1, 1) * q * sqrt(A)
+    meandiffs = [1.88888888888889, 0.888888888888889, -1]
+    tvalues = [5.55747210368222, 1.79334335864888, -2.10632849249823]
+    df = [13.9847203830091, 14.7647853847229, 13.0614653807399]
+    pvalues = [0.000210597265165326, 0.244853628908946, 0.149387917798748]
+    q_crit = {
+        0.05: [2.6914129859905, 2.67393276823228, 2.71506658039917],
+        0.01: [3.51700190538227, 3.48172827852556, 3.56505594289967],
+    }
+    confint = {
+        0.05: [
+            [0.974124048003703, 2.80365372977407],
+            [-0.436473103757241, 2.21425088153502],
+            [-2.28900434574616, 0.28900434574616],
+        ],
+        0.01: [
+            [0.693520617606698, 3.08425716017108],
+            [-0.836865170413678, 2.61464294819146],
+            [-2.69254508762368, 0.692545087623679],
+        ],
+    }
+
+    @classmethod
+    def setup_class(cls):
+        data = dta2.iloc[3:29]
+        cls.mc = MultiComparison(data["StressReduction"], data["Treatment"])
+
+    @pytest.mark.parametrize("alpha", [0.05, 0.01])
+    def test_r(self, alpha):
+        res = self.mc.dunnett_t3(alpha=alpha)
+        assert_allclose(res.meandiffs, self.meandiffs, rtol=1e-12)
+        assert_allclose(res.meandiffs / res.std_pairs, self.tvalues, rtol=1e-12)
+        assert_allclose(res.df_total, self.df, rtol=1e-12)
+        assert_allclose(res.pvalues, self.pvalues, rtol=1e-8)
+        assert_allclose(res.q_crit, self.q_crit[alpha], rtol=1e-8)
+        assert_allclose(res.confint, self.confint[alpha], rtol=1e-8)
+        assert_equal(res.reject, [True, False, False])
+        assert_equal(res.reject, res.pvalues < alpha)
+        assert_equal(res.alpha, alpha)
+
+    def test_pmcmrplus(self):
+        # R 4.5.3, PMCMRplus 1.9.12, set.seed(1); dunnettT3Test(x, g)
+        # PMCMRplus rounds the degrees of freedom and pmvt has an absolute
+        # error of about 1e-3 with the default settings, so these are not
+        # accurate references. The p-values are compared with the exact
+        # p-values for the rounded degrees of freedom.
+        pvalues = [0.000162464294426234, 0.244207785973616920, 0.149537580996924]
+        res = self.mc.dunnett_t3()
+        tvalues = res.meandiffs / res.std_pairs
+        pval_round = _smm_sf(np.abs(tvalues), 3, np.round(res.df_total))
+        assert_allclose(pval_round, pvalues, atol=1e-3)
+
+    def test_summary(self):
+        res = self.mc.dunnett_t3()
+        assert "Dunnett T3, FWER=0.05" in str(res.summary())
+        frame = res.summary_frame()
+        assert_equal(frame["group_t"].tolist(), [b"mental", b"physical", b"physical"])
+        assert_equal(frame["group_c"].tolist(), [b"medical", b"medical", b"mental"])
+        assert_allclose(frame["p-adj"], self.pvalues, rtol=1e-8)
+
+    @pytest.mark.parametrize("alpha", [1.5, 0.0, np.nan])
+    def test_alpha_error(self, alpha):
+        with pytest.raises(ValueError, match="alpha"):
+            self.mc.dunnett_t3(alpha=alpha)
+
+    def test_alpha_type_error(self):
+        with pytest.raises(TypeError, match="alpha"):
+            self.mc.dunnett_t3(alpha="0.05")
+
+    @pytest.mark.parametrize("container", [list, pd.Series])
+    def test_input_types(self, container):
+        data = dta2.iloc[3:29]
+        endog = container(data["StressReduction"].to_numpy())
+        groups = container(data["Treatment"].to_numpy())
+        res = MultiComparison(endog, groups).dunnett_t3()
+        assert_allclose(res.pvalues, self.pvalues, rtol=1e-8)
+        assert_allclose(res.confint, self.confint[0.05], rtol=1e-8)
+
+
+def test_dunnett_t3_two_groups():
+    # with two groups the T3 test is the Welch t test, which is the same as
+    # the Games-Howell test
+    data = dta2.iloc[3:29]
+    data = data[data["Treatment"] != b"physical"]
+    mc = MultiComparison(data["StressReduction"], data["Treatment"])
+    res = mc.dunnett_t3(alpha=0.1)
+    res_gh = mc.tukeyhsd(alpha=0.1, use_var="unequal")
+    assert_allclose(res.pvalues, res_gh.pvalues, rtol=1e-8)
+    assert_allclose(res.confint, res_gh.confint, rtol=1e-8)
+    assert_equal(res.reject, res_gh.reject)
+
+
+def test_dunnett_t3_plot_simultaneous():
+    data = dta2.iloc[3:29]
+    res = MultiComparison(data["StressReduction"], data["Treatment"]).dunnett_t3()
+    with pytest.raises(NotImplementedError, match="Dunnett's T3"):
+        res.plot_simultaneous()
+
+
+def test_dunnett_t3_single_observation():
+    # the variance of a group with one observation is undefined
+    endog = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.5])
+    groups = np.array(["a"] * 4 + ["b"] * 4 + ["c"])
+    mc = MultiComparison(endog, groups)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = mc.dunnett_t3()
+    frame = res.summary_frame()
+    single = (frame["group_t"] == "c") | (frame["group_c"] == "c")
+    assert single.sum() == 2
+    assert np.isnan(res.pvalues[single]).all()
+    assert np.isnan(res.confint[single]).all()
+    assert not res.reject[single].any()
+    assert np.isfinite(res.pvalues[~single]).all()
+    # the undefined pairs are kept in the number of comparisons
+    tvalue = res.meandiffs[~single] / res.std_pairs[~single]
+    df = res.df_total[~single]
+    assert_allclose(res.pvalues[~single], _smm_sf(np.abs(tvalue), 3, df), rtol=1e-12)
+    assert_allclose(res.q_crit[~single], _smm_ppf(0.95, 3, df), rtol=1e-12)
+
+
+def test_dunnett_t3_zero_variance():
+    # France and Sweden have zero variance, their comparison is undefined
+    mc = MultiComparison(cylinders.astype(float), cyl_labels)
+    res = mc.dunnett_t3()
+    frame = res.summary_frame()
+    undefined = (frame["group_c"] == "France") & (frame["group_t"] == "Sweden")
+    assert undefined.sum() == 1
+    assert np.isnan(res.pvalues[undefined]).all()
+    assert np.isnan(res.confint[undefined]).all()
+    assert not res.reject[undefined].any()
+    assert np.isfinite(res.pvalues[~undefined]).all()
+    assert np.isfinite(res.confint[~undefined]).all()
