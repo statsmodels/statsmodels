@@ -586,6 +586,16 @@ Statistics and tests
   instead of a negative value if the rejection region of the exact test is
   empty. ``low`` and ``upp`` also accept list-like input, and a NaN ``p_alt``
   raises a ``ValueError``. :issue:`10507`, :pr:`10508`, :pr:`10580`
+- :func:`~statsmodels.stats.proportion.binom_test_reject_interval` accepts
+  array_like ``value``, ``nobs`` and ``alpha`` and returns integer bounds,
+  also for the unused bound of the one-sided alternatives, which is broadcast
+  to the shape of the result. Scalar input still returns Python integers.
+  ``value`` has to be in [0, 1], ``alpha`` in (0, 1) and ``nobs`` a positive
+  integer, otherwise a ``ValueError`` is raised. Array input raised a
+  ``TypeError``, and invalid values gave a ``ValueError`` about converting
+  ``nan`` to an integer or meaningless bounds. The docstring states that the
+  two-sided region is equal-tailed and not the region of ``binom_test``.
+  :issue:`9238`, :pr:`10488`, :pr:`10634`
 - ``TTestIndPower.power`` and ``TTestIndPower.solve_power`` accept ``ratio=0``,
   which gives the power of the one-sample t-test with ``nobs1`` observations;
   it raised a ``ZeroDivisionError`` or gave the size of the test for NumPy
