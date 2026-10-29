@@ -362,6 +362,7 @@ def test_naive_ledoit_wolf_shrinkage_spherical(x):
     assert_allclose(res.cov, x.T.dot(x) / x.shape[0], rtol=1e-13)
 
 
+@pytest.mark.slow
 def test_cov_starting_small_nobs():
     # the first deterministic starting percentile is
     # 200 * (k_vars + 2) / nobs, which is above 100 when
@@ -734,6 +735,7 @@ def test_det_root_does_not_overflow():
     assert_equal(robcov._det_root(np.zeros((3, 3))), 0.0)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("cov_class", [robcov.CovDetS, robcov.CovDetMM])
 def test_covdet_large_k_det_normalization(cov_class):
     # GH-10257: normalizing to det(cov) = 1 overflowed for large k_vars and the

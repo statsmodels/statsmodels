@@ -604,6 +604,7 @@ class TestDynamicFactor_ar2_errors(CheckDynamicFactor):
         bse = results._cov_params_approx().diagonal()
         assert_allclose(bse, self.true["var_oim"], atol=1e-5)
 
+    @pytest.mark.slow
     def test_mle(self):
         with warnings.catch_warnings(record=True):
             # Depending on the system, this test can reach a greater precision,

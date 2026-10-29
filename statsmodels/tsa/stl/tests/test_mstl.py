@@ -170,6 +170,7 @@ def test_output_similar_to_R_implementation(data_pd, mstl_results):
     assert_allclose(res.resid, expected_resid)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "data, periods_ordered, windows_ordered, periods_not_ordered, "
     "windows_not_ordered",
