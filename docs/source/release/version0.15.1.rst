@@ -487,6 +487,16 @@ Time series analysis
   with NumPy 2.5 and later, which ``np.linalg.eig`` returns as complex arrays
   even if all the eigenvalues are real, and ``coint_johansen`` warned with a
   ``ComplexWarning``. The results are real again. :pr:`10613`
+- ``coint_johansen`` computes the eigenvalues and eigenvectors from a QR
+  decomposition and a singular value decomposition (Doornik and O'Brien,
+  2002) instead of ``np.linalg.eig`` of the product of the moment matrices.
+  The eigenvalues are real and in [0, 1), and the eigenvalues and statistics
+  are accurate for nearly cointegrated data, where the old code returned
+  eigenvalues larger than 1 or negative, or raised a ``LinAlgError``. It
+  raises a ``LinAlgError`` if the lagged differences, levels and differences
+  are linearly dependent, which also covers collinear columns that returned
+  meaningless numbers before, and a ``ValueError`` if there are fewer
+  observations than columns of the regression. :pr:`10471`, :pr:`10637`
 - ``smoothed_state_autocovariance`` does not warn that the univariate filter
   diagonalized the observation covariance when it extends the model beyond
   the sample, since it does not use the disturbance covariances. :pr:`10613`
