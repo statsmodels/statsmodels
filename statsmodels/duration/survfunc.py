@@ -497,13 +497,42 @@ class SurvfuncRight:
         Returns
         -------
         float
-            The estimated quantile.
+            The estimated quantile.  It is nan if the survival function
+            does not get below 1 - `p`.
+
+        Notes
+        -----
+        The quantile is the first event time at which the estimated
+        survival probability is less than 1 - `p`.  Values within an
+        absolute tolerance of ``sqrt(eps)``, about 1.5e-8, of 1 - `p` are
+        treated as equal to 1 - `p`.  If the estimated survival function
+        equals 1 - `p` at an event time, for example 1/2 at the sixth of
+        12 distinct uncensored event times for ``p=0.5``, that time is not
+        the quantile and the next event time is returned.  R
+        (``survival::quantile.survfit``) and SAS return the midpoint of the
+        two event times in this case.  For the uncensored times 1, ..., 12
+        and ``p=0.5`` the median is 7 here and 6.5 in R.  The result is
+        nan if the survival function never gets below 1 - `p`, for example
+        if all observations after the last time at which the curve is above
+        1 - `p` are censored.
+
+        .. versionchanged:: 0.15.1
+
+           Survival probabilities that equal 1 - `p` up to rounding error
+           are treated as equal.  Previously the result could depend on the
+           floating point rounding of the estimated survival probability.
         """
 
-        # SAS uses a strict inequality here.  The survival probabilities are
-        # computed as exp(cumsum(log(...))), so a value that is exactly 1 - p
-        # (e.g. a Kaplan-Meier value of 1/2) may be stored slightly below it;
-        # use a small tolerance so the result does not depend on rounding.
+        # The survival probabilities are computed as exp(cumsum(log(...))),
+        # so a value that is exactly 1 - p (e.g. a Kaplan-Meier value of 1/2)
+        # may be stored slightly below it.  The tolerance makes the strict
+        # inequality independent of that rounding; it is the default
+        # tolerance of R's quantile.survfit.  The rounding error is about
+        # 1e-15 (3e-15 for 1e5 observations) so the tolerance is much larger
+        # and could hide a genuine deficit smaller than it.  In exact
+        # arithmetic checks this occurred only with frequency weights that
+        # sum to 1e8 or more.  R and SAS return the midpoint of the two
+        # event times at an exact tie, here the next event time is used.
         tol = np.sqrt(np.finfo(float).eps)
         ii = np.flatnonzero(self.surv_prob < 1 - p - tol)
 
