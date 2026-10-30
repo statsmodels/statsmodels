@@ -659,7 +659,14 @@ class SurvfuncRight:
 
         transform = string_like(transform, "transform", options=("log", "arcsin"))
         s2 = self.surv_prob_se**2 / self.surv_prob**2
-        nn = self.n_risk
+        # Hall and Wellner (1980); Klein and Moeschberger (2003), eqs.
+        # 4.4.3-4.4.5: ``n`` is the total sample size, not the number at
+        # risk at each time point.
+        freq_weights = getattr(self, "freq_weights", None)
+        if freq_weights is not None:
+            nn = float(np.sum(freq_weights))
+        else:
+            nn = float(len(self.time))
         if transform == "log":
             denom = np.sqrt(nn) * np.log(self.surv_prob)
             theta = 1.3581 * (1 + nn * s2) / denom
