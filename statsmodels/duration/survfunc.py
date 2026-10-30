@@ -500,8 +500,12 @@ class SurvfuncRight:
             The estimated quantile.
         """
 
-        # SAS uses a strict inequality here.
-        ii = np.flatnonzero(self.surv_prob < 1 - p)
+        # SAS uses a strict inequality here.  The survival probabilities are
+        # computed as exp(cumsum(log(...))), so a value that is exactly 1 - p
+        # (e.g. a Kaplan-Meier value of 1/2) may be stored slightly below it;
+        # use a small tolerance so the result does not depend on rounding.
+        tol = np.sqrt(np.finfo(float).eps)
+        ii = np.flatnonzero(self.surv_prob < 1 - p - tol)
 
         if len(ii) == 0:
             return np.nan
