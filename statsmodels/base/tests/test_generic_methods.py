@@ -148,14 +148,14 @@ class CheckGenericMixinBase:
         # TODO: Can we choose a test case without this issue?
         # If not, should we be getting this warning for all
         # model subclasses?
-        # TODO: Investigate how to resolve unseen warnings for Pyodide
-        # Most likely coming from NumPy.linalg + lack of fp exceptions
-        # support under WASM
+        # TODO: Investigate remaining unseen warnings for Pyodide
+        # for model classes other than OLS.
         if isinstance(mod, sm.GLM) and not PYTHON_IMPL_WASM:
             warn_cls = HessianInversionWarning
         elif self.__class__.__name__ == "TestGenericOLSOneExog" and PYTHON_IMPL_WASM:
-            # Workaround for likely bug in WASM
-            warn_cls = None
+            # The duplicated columns are a rank-deficient design, and the
+            # pinv fit detects the dropped singular direction under WASM too.
+            warn_cls = SingularMatrixWarning
         elif isinstance(mod, (sm.WLS, sm.GLS, sm.RLM)):
             warn_cls = SingularMatrixWarning
         else:
@@ -924,7 +924,7 @@ class TestWaldAnovaRankDeficient:
             "tech0": tech0,
         })
         mod = ols("y ~ C(fertilizer) * C(tech0)", data)
-        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
             # Intentionally singular, _fit_collinear doesn't even work
             self.res = mod._fit_collinear()
 

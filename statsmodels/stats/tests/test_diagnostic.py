@@ -2600,9 +2600,9 @@ def test_het_goldfeldquandt_rank_deficient_subsample():
     dummy = np.r_[np.zeros(3), np.arange(57) % 2]
     x = np.column_stack([np.ones(60), rng.standard_normal(60), dummy])
     y = rng.standard_normal(60)
-    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+    with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
         fval, pval, _ = smsdia.het_goldfeldquandt(y, x, split=3, result_object=False)
-    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+    with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
         res1 = OLS(y[:3], x[:3]).fit()
     res2 = OLS(y[3:], x[3:]).fit()
     assert res1.df_resid == 1
