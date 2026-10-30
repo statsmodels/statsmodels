@@ -1,0 +1,60 @@
+import numpy as np
+import scipy.linalg as alg
+import scipy.stats as st
+
+def fitgmm(endog, exog, instrument, weights =None):
+
+        if weights is None:
+            weights = np.dot(inst.T,inst)
+
+        y, x, z = endog, exog, instrument
+        nobs= len(y)
+        nbinst= len(z.T)
+        nbcoef= len(x.T)
+        
+        ## computing coefficients
+        zTx = np.dot(z.T, x)
+        zTy = np.dot(z.T, y)
+        # normal equation, solved with pinv
+        part0 = zTx.T.dot(weights)
+        part1 = part0.dot(zTx)
+        part2 = part0.dot(zTy)
+        part3 = alg.pinv(part1)
+        coef = part3.dot(part2)
+        
+        ## computing variance - covariance matrix of moment conditions == Sn
+        resid = endog - x.dot(coef)
+        gn = np.dot(z.T,resid)*(1/nobs)
+        Sn= np.zeros((nbinst, nbinst))
+        for i in range(nbinst):
+            for j in range(nbinst):
+                Sn[i,j] = np.cov(np.hstack((z[:,i],z[:,j])), rowvar= False)       
+        
+        
+        ## computing var-cov matrix of coefficients
+        part4 = np.dot(np.dot(part0,Sn),part0.T)
+        varcoef= np.dot(np.dot(part3,part4),part3)
+        
+        ## extracting standard errors of coefficients
+        stdcoef = (np.diag(varcoef))**0.5
+        
+        residvar= np.dot(resid.T,resid)*(1/nobs)
+        residstd =  residvar**0.5
+                   
+        ## computing J-statistic and the associated p-value
+        j1= np.dot(gn.T,alg.inv(Sn))
+        Jstat= np.dot(j1, gn)
+        # degree of freedom of the related khi-square is given by ranks of instrument and exog matrices
+        d= np.linalg.matrix_rank(z) - np.linalg.matrix_rank(np.hstack(x, ))
+        p_val = 1 - st.chi2.cdf(Jstat, df=d)
+        
+        params = [coef, stdcoef, residstd, Jstat, p_val]
+        
+        return params
+
+def coef(params) : return params[0]
+def stdcoef(params) : return params[1]
+def residstd(params) : return params[2]
+def jstat(params) : return params[3]
+def pvalue(params) : return params[4]
+                   
