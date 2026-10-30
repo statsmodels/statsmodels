@@ -4,8 +4,9 @@
 Release 0.15.1
 ==============
 
+This release is under development. These notes describe changes since 0.15.0.
+
 Release summary
-===============
 
 Release 0.15.1 is a maintenance release of statsmodels 0.15. It collects the
 bug fixes, stricter checks of function arguments and smaller enhancements that
@@ -26,7 +27,6 @@ Release Statistics
 - **Time span**: 2026-08-27 through 2026-10-24
 
 Breaking Changes and Deprecations
-=================================
 
 Deprecations
 ------------
@@ -150,7 +150,6 @@ Behavior changes
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
 
 New Features and Enhancements
-=============================
 
 New functions and methods
 -------------------------
@@ -257,7 +256,6 @@ Performance
   high-precision arithmetic. :issue:`10601`, :pr:`10602`, :pr:`10624`
 
 Bug Fixes
-=========
 
 Regression and linear models
 ----------------------------
@@ -356,6 +354,9 @@ Generalized linear models and discrete models
 - ``MNLogit.get_margeff`` with ``dummy=True`` or ``count=True`` failed or
   returned an incorrect covariance if the number of regressors differs from
   the number of outcome categories. :issue:`5488`, :pr:`10298`
+- ConditionalLogit evaluates the conditional likelihood and its score without
+  recursion, allowing groups larger than Python's recursion limit.
+  :issue:`6668`
 - ``MNLogit.from_formula`` raised a ``ValueError`` if the response is a str,
   bool or categorical variable. The response can now be a single categorical
   variable, which is treated like the corresponding ``endog`` of the array
@@ -776,7 +777,8 @@ Nonparametric
   :issue:`4747`, :pr:`10272`
 - The bandwidth of ``KDEMultivariate`` and ``KernelReg`` is validated. A
   user-specified bandwidth has to be positive, or non-negative for
-  ``KernelReg`` where 0 is allowed for discrete variables, and an unknown
+  ``KernelReg`` where 0 is allowed for 
+  variables, and an unknown
   bandwidth method raises a ``ValueError``. In ``KernelReg``, any string other
   than ``"cv_ls"`` selected the AIC bandwidth, including ``"normal_reference"``
   which now uses the normal reference rule of thumb. :pr:`10412`
@@ -810,7 +812,6 @@ Other
   in. :pr:`10281`
 
 Stricter Input Validation
-=========================
 
 The following functions and methods now raise a ``ValueError`` for arguments
 that are outside of their valid range. Depending on the function, invalid
