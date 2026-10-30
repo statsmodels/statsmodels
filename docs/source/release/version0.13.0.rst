@@ -88,6 +88,12 @@ hypothesis test for stochastic equality in
 confidence intervals and equivalence testing (TOST) for the stochastically
 larger statistic, also known as Common Language effect size.
 
+Intervening Variable Analysis
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+:class:`~statsmodels.stats.intervening_variable.InterveningVariables` creates 
+confidence intervals for the indirect effect using Sobel's classical method 
+as well as bootstrapping techniques.
+
 Nonparametric
 -------------
 
