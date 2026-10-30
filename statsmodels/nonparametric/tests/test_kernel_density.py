@@ -4,6 +4,7 @@ from numpy.testing import assert_allclose, assert_equal
 import pytest
 
 import statsmodels.api as sm
+from statsmodels.nonparametric._kernel_base import gpke
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
 
 nparam = sm.nonparametric
@@ -724,17 +725,20 @@ class TestKDEMultivariateConditional(KDETestBase):
 def test_conditional_cdf_formula(dep_type, indep_type):
     # GH 6076: cdf is sum(G * W) / sum(W) with the product kernel cdf G of
     # endog and the product kernel W of exog
-    from statsmodels.nonparametric._kernel_base import gpke
-
     rng = np.random.default_rng(6076)
     nobs = 50
-    data = {
-        "c": rng.normal(size=nobs),
-        "o": rng.integers(0, 4, nobs),
-        "u": rng.integers(0, 3, nobs),
-    }
-    endog = np.column_stack([data[t] for t in dep_type])
-    exog = np.column_stack([data[t] + (t == "c") for t in indep_type])
+
+    def draw(var_type):
+        # a separate column for every variable
+        draws = {
+            "c": lambda: rng.normal(size=nobs),
+            "o": lambda: rng.integers(0, 4, nobs),
+            "u": lambda: rng.integers(0, 3, nobs),
+        }
+        return np.column_stack([draws[t]() for t in var_type])
+
+    endog = draw(dep_type)
+    exog = draw(indep_type)
     bw = np.full(len(dep_type) + len(indep_type), 0.4)
     dens = nparam.KDEMultivariateConditional(
         endog=endog,
@@ -1012,6 +1016,100 @@ def test_conditional_imse_matches_hand_computed_cv():
     CV /= n
 
     npt.assert_allclose(cv, CV, rtol=1e-8)
+
+
+def _elementary_kernel(var_type, h, a, b, levels, convolution=False):
+    # Kernel of a single variable at the scalar values a and b, written out
+    # from the definitions in statsmodels.nonparametric.kernels. `levels` are
+    # the values observed in the (leave-one-out) sample of the variable.
+    if var_type == "c":
+        scale = 4 if convolution else 2
+        return np.exp(-((a - b) ** 2) / (scale * h**2)) / np.sqrt(scale * np.pi)
+
+    def kernel(a, b):
+        if var_type == "o":
+            return 1 - h if a == b else 0.5 * (1 - h) * h ** abs(a - b)
+        return 1 - h if a == b else h / (len(levels) - 1)
+
+    if convolution:
+        return sum(kernel(a, x) * kernel(b, x) for x in levels)
+    return kernel(a, b)
+
+
+@pytest.mark.parametrize(
+    "dep_type, indep_type", [("c", "cc"), ("c", "cu"), ("o", "co"), ("cu", "cou")]
+)
+def test_conditional_imse_brute_force(dep_type, indep_type):
+    # GH 6076: imse evaluates the kernel of the exog once for each
+    # leave-one-out sample and expands it to all pairs (i, j); compare with
+    # explicit loops over the pairs for several and for discrete exog
+    rng = np.random.default_rng(10626)
+    nobs = 7
+    k_dep = len(dep_type)
+    var_type = dep_type + indep_type
+
+    def draw(var_type):
+        draws = {
+            "c": lambda: rng.normal(size=nobs),
+            "o": lambda: rng.integers(0, 3, nobs),
+            "u": lambda: rng.integers(0, 3, nobs),
+        }
+        return np.column_stack([draws[t]() for t in var_type])
+
+    endog = draw(dep_type)
+    exog = draw(indep_type)
+    data = np.column_stack([endog, exog])
+    # different bandwidths so that a mix-up of the variables changes the value
+    bw = np.array(
+        [0.5 + 0.1 * k if t == "c" else 0.1 + 0.05 * k for k, t in enumerate(var_type)]
+    )
+    dens = nparam.KDEMultivariateConditional(
+        endog=endog,
+        exog=exog,
+        dep_type=dep_type,
+        indep_type=indep_type,
+        bw=bw,
+        rng=0,
+    )
+
+    def product_kernel(cols, a, b, levels, convolution=False):
+        # product kernel over the variables `cols`, divided by the product of
+        # the bandwidths of the continuous variables
+        value = 1.0
+        for k in cols:
+            value *= _elementary_kernel(
+                var_type[k], bw[k], a[k], b[k], levels[k], convolution
+            )
+        return value / np.prod([bw[k] for k in cols if var_type[k] == "c"])
+
+    dep_cols = range(k_dep)
+    indep_cols = range(k_dep, len(var_type))
+    all_cols = range(len(var_type))
+    cv = 0.0
+    for ll in range(nobs):
+        others = [i for i in range(nobs) if i != ll]
+        levels = [np.unique(data[others, k]) for k in all_cols]
+        G = 0.0
+        for i in others:
+            for j in others:
+                G += (
+                    product_kernel(indep_cols, data[i], data[ll], levels)
+                    * product_kernel(indep_cols, data[j], data[ll], levels)
+                    * product_kernel(dep_cols, data[i], data[j], levels, True)
+                )
+        G /= nobs**2
+        m_x = (
+            sum(product_kernel(indep_cols, data[i], data[ll], levels) for i in others)
+            / nobs
+        )
+        f_x_y = (
+            sum(product_kernel(all_cols, data[i], data[ll], levels) for i in others)
+            / nobs
+        )
+        cv += G / m_x**2 - 2 * f_x_y / m_x
+    cv /= nobs
+
+    assert_allclose(dens.imse(bw), cv, rtol=1e-10)
 
 
 @pytest.mark.parametrize("kernel", ["biw", "cos", "epa", "gau", "tri", "triw", "uni"])
