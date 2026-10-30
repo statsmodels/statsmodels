@@ -1832,10 +1832,17 @@ def confint_proportions_2indep(
             upp = np.exp(np.log(ratio_) + d_log)
 
         elif method == "score":
-            res = _confint_riskratio_koopman(
-                count1, nobs1, count2, nobs2, alpha=alpha, correction=correction
-            )
-            low, upp = res.confint
+            if count1 == nobs1 or count2 == nobs2:
+                # The closed form of Koopman/Nam picks the wrong roots of the
+                # cubic, or complex ones, if a count is equal to nobs.
+                low, upp = _score_confint_inversion_ratio(
+                    count1, nobs1, count2, nobs2, alpha=alpha, correction=correction
+                )
+            else:
+                res = _confint_riskratio_koopman(
+                    count1, nobs1, count2, nobs2, alpha=alpha, correction=correction
+                )
+                low, upp = res.confint
 
         else:
             raise ValueError("method not recognized")
@@ -3189,6 +3196,96 @@ def _score_confint_inversion(
     # root finding for confint bounds
     upp = optimize.brentq(func, param, ub)
     low = optimize.brentq(func, lb, param)
+    return low, upp
+
+
+def _score_confint_inversion_ratio(
+    count1, nobs1, count2, nobs2, alpha=0.05, correction=True
+):
+    """
+    Compute score confidence interval of the risk ratio by inverting the test
+
+    This is used if a count is equal to nobs. Then the closed form of
+    Koopman/Nam in `_confint_riskratio_koopman` does not apply, because the
+    constrained estimate is on the boundary of the parameter space for
+    part of the range of the ratio.
+
+    Parameters
+    ----------
+    count1, nobs1 : int
+        Count and sample size for first sample.
+    count2, nobs2 : int
+        Count and sample size for the second sample.
+    alpha : float in interval (0,1), optional
+        Significance level, e.g., 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    correction : bool, optional
+        If correction is True (default), then the Miettinen and Nurminen
+        small sample correction to the variance nobs / (nobs - 1) is used.
+
+    Returns
+    -------
+    low : float
+        Lower confidence bound, it is 0 if count1 is 0.
+    upp : float
+        Upper confidence bound, it is inf if count2 is 0.
+    """
+    if count1 == nobs1 and count2 == nobs2:
+        # The estimate is ratio=1, where the score test is 0 / 0. For ratio > 1
+        # the constrained estimate is p1 = 1, p2 = 1 / ratio, and for ratio < 1
+        # it is p1 = ratio, p2 = 1. The squared score statistic is then
+        # (ratio - 1) * nobs2 / c and (1 - ratio) * nobs1 / (c * ratio), with
+        # c = nobs / (nobs - 1) if correction is True, else 1.
+        nobs = nobs1 + nobs2
+        c_z2 = stats.norm.isf(alpha / 2) ** 2
+        if correction:
+            c_z2 *= nobs / (nobs - 1)
+        return nobs1 / (nobs1 + c_z2), 1 + c_z2 / nobs2
+
+    def func(log_ratio):
+        res = score_test_proportions_2indep(
+            count1,
+            nobs1,
+            count2,
+            nobs2,
+            value=np.exp(log_ratio),
+            compare="ratio",
+            correction=correction,
+        )
+        return res.pvalue - alpha
+
+    def limit(log_inside, sign):
+        # The p-value is above alpha at log_inside and goes to 0, so that it
+        # is below alpha at some point in the direction sign. Expand the
+        # bracket until it contains the limit.
+        step = 1.0
+        for _ in range(9):
+            log_outside = log_inside + sign * step
+            if func(log_outside) < 0:
+                break
+            log_inside = log_outside
+            step *= 2
+        bracket = sorted((log_inside, log_outside))
+        return np.exp(optimize.brentq(func, *bracket))
+
+    if count1 > 0 and count2 > 0:
+        # The p-value is 1 at the estimate
+        log_inside = np.log(count1 / nobs1 * nobs2 / count2)
+    else:
+        # The estimate is 0 or inf. Start at the log-adjusted estimate and move
+        # to the side where the p-value goes to 1.
+        log_inside = np.log(
+            (count1 + 0.5) / (nobs1 + 0.5) * (nobs2 + 0.5) / (count2 + 0.5)
+        )
+        for step in 2.0 ** np.arange(9):
+            if func(log_inside) > 0:
+                break
+            log_inside += step if count2 == 0 else -step
+
+    # The p-value stays above alpha towards a ratio of 0 if count1 is 0, and
+    # towards a ratio of inf if count2 is 0. Then the limit is 0 or inf.
+    low = 0.0 if count1 == 0 else limit(log_inside, -1)
+    upp = np.inf if count2 == 0 else limit(log_inside, 1)
     return low, upp
 
 
