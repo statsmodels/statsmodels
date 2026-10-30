@@ -327,6 +327,21 @@ Regression and linear models
 Generalized linear models and discrete models
 ---------------------------------------------
 
+- The Newton optimizer (``method="newton"``) halves a step, up to 30 times, if
+  the step gives a log-likelihood that is not finite, or a lower one if the
+  step is a direction of ascent. Fits that started with values for which
+  ``exp`` overflows, for example ``Poisson`` with a large ``exog`` and zeros as
+  starting values, now converge instead of returning ``nan`` parameters. If no
+  step with a finite log-likelihood is found, the fit stops at the last
+  parameters, ``converged`` is ``False`` and a ``ConvergenceWarning`` is
+  issued. Before, the parameters were ``nan`` and ``converged`` was ``True``.
+  The keyword ``step_halving`` is ``"finite"`` to halve only a step that is not
+  finite, which is used for ``GLM`` with a link that is not canonical, and
+  ``False`` for the full Newton step. The IRLS fit of ``GLM`` halves a step
+  towards the last parameters if the deviance or the weights are not finite,
+  and for a canonical link if the deviance increases, as ``glm.fit`` in R
+  halves a step that diverges, where it raised "NaN, inf or invalid value
+  detected in weights" before. :issue:`5394`
 - ``score_test`` with a one-dimensional ``exog_extra`` for the discrete
   models and the ``GLM`` result method raised an ``IndexError`` in 0.15.0. A
   one-dimensional ``exog_extra`` is a single additional variable, as before.

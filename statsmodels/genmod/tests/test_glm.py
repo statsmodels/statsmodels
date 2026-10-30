@@ -3844,6 +3844,40 @@ def test_get_prediction_default_offset_formula_pandas():
     assert_allclose(sf["predicted"], res.predict(), rtol=1e-10)
 
 
+# Counts with a large exog, see also test_discrete. The reference is R 4.6.1,
+# glm(y ~ x, family=poisson()) with x = seq(50, 100, length.out=25)
+POISSON_LARGE_X = np.linspace(50, 100, 25)
+POISSON_LARGE_Y = np.array(
+    [1, 0, 1, 6, 6, 5, 6, 3, 12, 11, 8, 11, 10, 22, 19, 25, 43, 39, 51, 67, 66,
+     97, 107, 113, 165]
+)
+POISSON_LARGE_PARAMS = [-4.0750125697357502, 0.0912572389978606]
+POISSON_LARGE_BSE = [0.31088188217520529, 0.00341507856884331]
+POISSON_LARGE_LLF = -69.7106854448857
+
+
+@pytest.mark.parametrize("start", [np.zeros(2), np.array([1.0, 0.0])])
+def test_irls_step_halving_large_exog(start):
+    # The first IRLS step from these start params gives a linear predictor of
+    # several hundred and mu of inf. It raised "NaN, inf or invalid value
+    # detected in weights" before.
+    exog = add_constant(POISSON_LARGE_X)
+    mod = GLM(POISSON_LARGE_Y, exog, family=sm.families.Poisson())
+    res = mod.fit(start_params=start, maxiter=100)
+    assert res.converged
+    assert_allclose(res.params, POISSON_LARGE_PARAMS, rtol=1e-8)
+    assert_allclose(res.bse, POISSON_LARGE_BSE, rtol=1e-5)
+    assert_allclose(res.llf, POISSON_LARGE_LLF, rtol=1e-10)
+    assert np.all(np.isfinite(res.fit_history["deviance"][1:]))
+
+
+def test_irls_default_start_unchanged_large_exog():
+    exog = add_constant(POISSON_LARGE_X)
+    res = GLM(POISSON_LARGE_Y, exog, family=sm.families.Poisson()).fit()
+    assert res.converged
+    assert_allclose(res.params, POISSON_LARGE_PARAMS, rtol=1e-8)
+
+
 @pytest.mark.parametrize(
     "to_response",
     [
