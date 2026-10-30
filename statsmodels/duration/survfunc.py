@@ -509,8 +509,8 @@ class SurvfuncRight:
         equals 1 - `p` at an event time, for example 1/2 at the sixth of
         12 distinct uncensored event times for ``p=0.5``, that time is not
         the quantile and the next event time is returned.  R
-        (``survival::quantile.survfit``) and SAS return the midpoint of the
-        two event times in this case.  For the uncensored times 1, ..., 12
+        (``survival::quantile.survfit``) returns the midpoint of the two
+        event times in this case.  For the uncensored times 1, ..., 12
         and ``p=0.5`` the median is 7 here and 6.5 in R.  The result is
         nan if the survival function never gets below 1 - `p`, for example
         if all observations after the last time at which the curve is above
@@ -531,8 +531,8 @@ class SurvfuncRight:
         # 1e-15 (3e-15 for 1e5 observations) so the tolerance is much larger
         # and could hide a genuine deficit smaller than it.  In exact
         # arithmetic checks this occurred only with frequency weights that
-        # sum to 1e8 or more.  R and SAS return the midpoint of the two
-        # event times at an exact tie, here the next event time is used.
+        # sum to 1e8 or more.  R returns the midpoint of the two event times
+        # at an exact tie, here the next event time is used.
         tol = np.sqrt(np.finfo(float).eps)
         ii = np.flatnonzero(self.surv_prob < 1 - p - tol)
 

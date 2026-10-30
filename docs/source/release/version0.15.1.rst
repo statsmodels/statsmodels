@@ -803,8 +803,8 @@ Duration models
 - ``SurvfuncRight.quantile`` no longer depends on floating point rounding when
   the estimated survival probability equals ``1 - p``. For example, the median
   of the 12 distinct uncensored times 1, ..., 12 is 7 instead of 6. At such a
-  tie the next event time is returned, unlike R and SAS, which return the midpoint
-  of the two event times. :pr:`10648`
+  tie the next event time is returned, unlike R, which returns the midpoint of
+  the two event times. :pr:`10648`
 
 Other
 -----
