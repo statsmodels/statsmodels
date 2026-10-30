@@ -30,7 +30,7 @@ structure is within statsmodels.tsa is
 - stattools : empirical properties and tests, acf, pacf, granger-causality,
   adf unit root test, kpss test, bds test, ljung-box test and others.
 - ar_model : univariate autoregressive process, estimation with conditional
-  and exact maximum likelihood and conditional least-squares
+  maximum likelihood (OLS)
 - arima.model : univariate ARIMA process, estimation with alternative methods
 - statespace : Comprehensive statespace model specification and estimation. See
   the :ref:`statespace documentation <statespace>`.
@@ -151,7 +151,7 @@ Basic ARIMA model and results classes are as follows:
    arima.model.ARIMAResults
 
 This model allows estimating parameters by various methods (including
-conditional MLE via the Hannan-Rissanen method and full MLE via the Kalman
+the regression-based Hannan-Rissanen method and full MLE via the Kalman
 filter). It is a special case of the `SARIMAX` model, and it includes a large
 number of inherited features from the :ref:`state space <statespace>` models
 (including prediction / forecasting, residual diagnostics, simulation and
@@ -164,8 +164,8 @@ for an overview.
 
 The innovations algorithm provides a way to compute the likelihood, score, and
 related quantities for a given ARMA process without constructing a full state
-space representation; it is used internally by some of the Hannan-Rissanen and
-innovations-based ARMA parameter estimators.
+space representation; it is used internally by the GLS and innovations-based
+ARMA parameter estimators.
 
 .. currentmodule:: statsmodels.tsa.innovations
 
@@ -296,8 +296,9 @@ Error Correction Models (ECM)
 """""""""""""""""""""""""""""
 Error correction models are reparameterizations of ARDL models that
 regress the difference of the endogenous variable on the lagged levels
-of the endogenous variables and optional lagged differences of the
-exogenous variables.
+of the endogenous and exogenous variables, lagged differences of the
+endogenous variable, and differences of the exogenous variables and
+their lags.
 
 .. currentmodule:: statsmodels.tsa
 
