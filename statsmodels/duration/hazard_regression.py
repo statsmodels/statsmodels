@@ -399,6 +399,11 @@ class PHReg(model.LikelihoodModel):
         **kwargs,
     ):
 
+        # Unknown keywords would otherwise be swallowed silently, e.g.
+        # ``weights`` (not supported) or ``event`` (a typo for ``status``),
+        # see GH 7741
+        self._check_kwargs(kwargs)
+
         # Default is no censoring
         if status is None:
             status = np.ones(len(endog))
