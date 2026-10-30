@@ -113,8 +113,9 @@ def test_survdiff_basic():
 
 def test_simultaneous_cb():
 
-    # The exact numbers here are regression tests, but they are close
-    # to page 103 of Klein and Moeschberger.
+    # Reference values: Klein and Moeschberger (2003), eqs. 4.4.4-4.4.5,
+    # with n = 38 (total sample size) and h = 1.3581, computed
+    # independently with exact Kaplan-Meier/Greenwood sums in mpmath.
 
     df = bmt.loc[bmt["Group"] == "ALL", :]
     sf = SurvfuncRight(df["T"], df["Status"])
@@ -123,16 +124,30 @@ def test_simultaneous_cb():
 
     ti = sf.surv_times.tolist()
     ix = [ti.index(x) for x in (110, 122, 129, 172)]
-    assert_allclose(lcb1[ix], np.r_[0.43590582, 0.42115592, 0.4035897, 0.38785927])
-    assert_allclose(ucb1[ix], np.r_[0.93491636, 0.89776803, 0.87922239, 0.85894181])
+    assert_allclose(lcb1[ix], np.r_[0.4631510444, 0.4435539365, 0.4288155411, 0.4120798226])
+    assert_allclose(ucb1[ix], np.r_[0.9299736078, 0.8916180109, 0.8711562469, 0.8500641135])
 
-    assert_allclose(lcb2[ix], np.r_[0.52115708, 0.48079378, 0.45595321, 0.43341115])
-    assert_allclose(ucb2[ix], np.r_[0.96465636, 0.92745068, 0.90885428, 0.88796708])
+    assert_allclose(lcb2[ix], np.r_[0.5384788593, 0.4965766434, 0.47442075, 0.4517477403])
+    assert_allclose(ucb2[ix], np.r_[0.9579692632, 0.9190485398, 0.8979194877, 0.8760606392])
 
     with pytest.raises(ValueError, match="method"):
         sf.simultaneous_cb(method="not-a-method")
     with pytest.raises(ValueError, match="transform"):
         sf.simultaneous_cb(transform="not-a-transform")
+
+
+def test_simultaneous_cb_uses_total_sample_size():
+    # Hall-Wellner band: the factor n**(-1/2) * (1 + n * sigma_S**2(t)) uses
+    # the total sample size n.  Using the number at risk instead makes the
+    # band too wide early and too narrow in the tail (about 87% simultaneous
+    # coverage instead of 95% for n=100 uncensored exponential data).
+    df = bmt.loc[bmt["Group"] == "ALL", :]
+    sf = SurvfuncRight(df["T"], df["Status"])
+    ix = sf.surv_times.tolist().index(466)
+    lcb, ucb = sf.simultaneous_cb(transform="log")
+    assert_allclose([lcb[ix], ucb[ix]], [0.2404046938, 0.6655467336], rtol=1e-7)
+    lcb, ucb = sf.simultaneous_cb(transform="arcsin")
+    assert_allclose([lcb[ix], ucb[ix]], [0.2545953816, 0.6855519801], rtol=1e-7)
 
 
 def test_bmt():
