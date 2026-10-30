@@ -135,6 +135,22 @@ def test_simultaneous_cb():
         sf.simultaneous_cb(transform="not-a-transform")
 
 
+@pytest.mark.parametrize("n", [8, 10, 12, 18, 24])
+def test_quantile_exact_tie_does_not_depend_on_rounding(n):
+    # n uncensored distinct times 1..n: S(n/2) is exactly 1/2, so the first
+    # time with S(t) < 1/2 (strict, as documented) is n/2 + 1.  Before the
+    # fix, rounding of exp(cumsum(log(...))) returned n/2 for n = 12 and 18.
+    tm = np.arange(1, n + 1, dtype=float)
+    sf = SurvfuncRight(tm, np.ones(n))
+    assert sf.quantile(0.5) == n / 2 + 1
+    if n % 4 == 0:
+        assert sf.quantile(0.25) == n / 4 + 1
+        assert sf.quantile(0.75) == 3 * n / 4 + 1
+    # duplicating every subject leaves the curve unchanged
+    sf2 = SurvfuncRight(np.repeat(tm, 2), np.ones(2 * n))
+    assert sf2.quantile(0.5) == sf.quantile(0.5)
+
+
 def test_bmt():
     # All tests against SAS
     # Results taken from here:
