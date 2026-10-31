@@ -5,7 +5,6 @@ Release 0.15.1
 ==============
 
 Release summary
-===============
 
 Release 0.15.1 is a maintenance release of statsmodels 0.15. It collects the
 bug fixes, stricter checks of function arguments and smaller enhancements that
@@ -26,7 +25,6 @@ Release Statistics
 - **Time span**: 2026-08-27 through 2026-10-24
 
 Breaking Changes and Deprecations
-=================================
 
 Deprecations
 ------------
@@ -150,7 +148,6 @@ Behavior changes
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
 
 New Features and Enhancements
-=============================
 
 New functions and methods
 -------------------------
@@ -258,7 +255,6 @@ Performance
   high-precision arithmetic. :issue:`10601`, :pr:`10602`, :pr:`10624`
 
 Bug Fixes
-=========
 
 Regression and linear models
 ----------------------------
@@ -784,6 +780,10 @@ Nonparametric
 - ``fast_linbin``, used by ``KDEUnivariate.fit(fft=True)``, wrote outside of
   its array for some inputs and dropped observations at the upper end of the
   grid. :issue:`9556`, :pr:`10232`
+- KDEUnivariate centers and scales quadrature for unbounded-kernel entropy,
+  and uses intervals around the observations to locate shifted, narrow or
+  separated kernel components without truncating the infinite tails.
+  :issue:`1313`
 
 Duration models
 ---------------
@@ -815,7 +815,6 @@ Other
   in. :pr:`10281`
 
 Stricter Input Validation
-=========================
 
 The following functions and methods now raise a ``ValueError`` for arguments
 that are outside of their valid range. Depending on the function, invalid
