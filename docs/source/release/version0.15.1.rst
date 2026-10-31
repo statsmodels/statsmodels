@@ -801,6 +801,10 @@ Duration models
   integer instead of ``nan`` in ``surv_prob_se``, ``n_risk`` and ``n_events``,
   and warned about casting ``nan`` to an integer. They are ``nan`` as floats.
   :pr:`10613`
+- ``PHReg`` warns with a ``ValueWarning`` for unknown keyword arguments. Before, they
+  were ignored silently, for example ``weights``, which ``PHReg`` does not support,
+  and ``event``, which is the name of ``status`` in ``lifelines``. :issue:`7741`,
+  :pr:`10650`
 
 Other
 -----

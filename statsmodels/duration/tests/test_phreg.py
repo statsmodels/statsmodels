@@ -1,5 +1,6 @@
 import itertools
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
@@ -9,7 +10,7 @@ import pytest
 from statsmodels.duration.hazard_regression import PHReg
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib.summary2 import Summary
-from statsmodels.tools.sm_exceptions import SpecificationWarning
+from statsmodels.tools.sm_exceptions import SpecificationWarning, ValueWarning
 
 # All the R results
 from .results import (
@@ -674,8 +675,6 @@ def test_residuals_sums(name):
         assert_allclose(np.nansum(res.martingale_residuals[strata == g]), 0, atol=1e-10)
 
 
-
-
 @pytest.mark.parametrize(
     "kwds", [{"weights": "w"}, {"event": "status"}, {"tie": "efron"}, {"groups": "g"}]
 )
@@ -683,8 +682,6 @@ def test_unknown_init_kwargs_warn(kwds):
     # PHReg used to swallow unknown keywords silently, e.g. ``weights``
     # (not supported) or ``event`` (a typo for ``status``), and returned the
     # unweighted / uncensored fit without notice. Other models warn (GH 7741).
-    from statsmodels.tools.sm_exceptions import ValueWarning
-
     rng = np.random.default_rng(0)
     n = 20
     time = rng.exponential(size=n)
@@ -700,23 +697,43 @@ def test_unknown_init_kwargs_warn(kwds):
 
 
 def test_known_init_kwargs_no_warning():
-    import warnings
-
     rng = np.random.default_rng(1)
-    n = 20
+    n = 40
     df = pd.DataFrame(
         {
             "time": rng.exponential(size=n),
             "status": rng.integers(0, 2, n),
             "x": rng.normal(size=n),
+            "z": rng.normal(size=n),
             "s": rng.integers(0, 2, n),
             "e": np.zeros(n),
             "o": np.zeros(n),
         }
     )
     with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        PHReg(df.time, df[["x"]], status=df.status, entry=df.e, strata=df.s,
-              offset=df.o, ties="efron", missing="drop")
-        PHReg.from_formula("time ~ x", df, status="status", entry="e",
-                           strata="s", offset="o", ties="efron")
+        warnings.simplefilter("error", ValueWarning)
+        mod = PHReg(
+            df.time,
+            df[["x", "z"]],
+            status=df.status,
+            entry=df.e,
+            strata=df.s,
+            offset=df.o,
+            ties="efron",
+            missing="drop",
+        )
+        mod_f = PHReg.from_formula(
+            "time ~ x + z",
+            df,
+            status="status",
+            entry="e",
+            strata="s",
+            offset="o",
+            ties="efron",
+        )
+        # A keyword that leaks into the init keywords of a model that is
+        # re-created by statsmodels, e.g. from the formula interface or by
+        # fit_regularized with refit, would warn here.
+        for m in (mod, mod_f):
+            PHReg(m.endog, m.exog, **m._get_init_kwds())
+            m.fit_regularized(alpha=0.05, refit=True)
