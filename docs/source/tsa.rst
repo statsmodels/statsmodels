@@ -20,8 +20,10 @@ of ARMA or related processes. It also includes methods to work with autoregressi
 moving average lag-polynomials.
 Additionally, related statistical tests and some useful helper functions are available.
 
-Estimation is either done by exact or conditional Maximum Likelihood or conditional
-least-squares, either using Kalman Filter or direct filters.
+Estimation is either done by exact Maximum Likelihood (using the Kalman filter or the
+innovations algorithm), by conditional Maximum Likelihood or least-squares (using
+regressions, for example in AutoReg), or by other regression-based and moment-based
+estimators such as Hannan-Rissanen and Yule-Walker.
 
 Currently, functions and classes have to be imported from the corresponding module, but
 the main classes will be made available in the statsmodels.tsa namespace. The module
@@ -150,9 +152,15 @@ Basic ARIMA model and results classes are as follows:
    arima.model.ARIMA
    arima.model.ARIMAResults
 
-This model allows estimating parameters by various methods (including
-the regression-based Hannan-Rissanen method and full MLE via the Kalman
-filter). It is a special case of the `SARIMAX` model, and it includes a large
+This model allows estimating parameters by various methods, selected with the
+``method`` argument of ``fit``: full MLE via the Kalman filter
+(``"statespace"``, the default), full MLE via the innovations algorithm
+(``"innovations_mle"``), the regression-based Hannan-Rissanen method
+(``"hannan_rissanen"``), and the Yule-Walker (``"yule_walker"``), Burg
+(``"burg"``) and innovations algorithm (``"innovations"``) estimators. Not
+every method is available for every specification. Regression effects of
+exogenous variables are estimated by GLS unless ``method="statespace"``. It is
+a special case of the `SARIMAX` model, and it includes a large
 number of inherited features from the :ref:`state space <statespace>` models
 (including prediction / forecasting, residual diagnostics, simulation and
 impulse responses, etc.).
@@ -164,8 +172,8 @@ for an overview.
 
 The innovations algorithm provides a way to compute the likelihood, score, and
 related quantities for a given ARMA process without constructing a full state
-space representation; it is used internally by the GLS and innovations-based
-ARMA parameter estimators.
+space representation; it is used internally by the ``"innovations_mle"``
+estimator and by the GLS estimation of regression effects.
 
 .. currentmodule:: statsmodels.tsa.innovations
 
@@ -296,9 +304,9 @@ Error Correction Models (ECM)
 """""""""""""""""""""""""""""
 Error correction models are reparameterizations of ARDL models that
 regress the difference of the endogenous variable on the lagged levels
-of the endogenous and exogenous variables, lagged differences of the
-endogenous variable, and differences of the exogenous variables and
-their lags.
+of the endogenous and exogenous variables and, optionally, lagged
+differences of the endogenous variable and current and lagged differences
+of the exogenous variables.
 
 .. currentmodule:: statsmodels.tsa
 
