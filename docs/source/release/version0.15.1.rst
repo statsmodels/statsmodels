@@ -234,8 +234,9 @@ Performance
   :pr:`10244`
 - ``KDEMultivariateConditional.cdf`` and ``KDEMultivariateConditional.imse``
   evaluate the kernel of the exogenous variables only once for each
-  observation. The bandwidth selection with ``bw="cv_ls"`` is about 3 times
-  faster for continuous exogenous variables, and ``cdf`` about 1.5 times
+  observation. The bandwidth selection with ``bw="cv_ls"`` is about 2 times
+  faster with one continuous exogenous variable and about 3.5 to 4 times
+  faster with two exogenous variables, and ``cdf`` is about 1.5 to 2 times
   faster. :issue:`6076`, :pr:`10626`
 - Lag order selection fits the nested sequence of models from a single
   blocked QR decomposition, shared by a new private helper. This applies to
