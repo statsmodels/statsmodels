@@ -368,6 +368,12 @@ class PHReg(model.LikelihoodModel):
         Array of offset values
     missing : str, optional
         The method used to handle missing data
+    **kwargs
+        Extra arguments that are used to set model properties when using the
+        formula interface, for example ``hasconst``. Any other keyword
+        argument is not used by the model and raises a ``ValueWarning``.
+        Common mistakes are ``weights``, which ``PHReg`` does not support,
+        and ``event``, which is called ``status`` here.
 
     Notes
     -----
@@ -375,7 +381,7 @@ class PHReg(model.LikelihoodModel):
     explicit or implicit intercept.  The effect of an intercept is
     not identified using the partial likelihood approach.
 
-    `endog`, `event`, `strata`, `entry`, and the first dimension
+    `endog`, `status`, `strata`, `entry`, and the first dimension
     of `exog` all must have the same length.
 
     The inclusive entry boundary differs from the ``(start, stop]``

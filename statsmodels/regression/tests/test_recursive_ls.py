@@ -632,3 +632,113 @@ def test_forecast_exog_invalid():
     with pytest.warns(ValueWarning, match="`exog` argument ignored"):
         pred = res.get_prediction(end=49, exog=x_new)
     assert_allclose(pred.predicted_mean, res.fittedvalues)
+
+
+# Reference values from R 4.6.1 (package stats) for the data of
+# _forecast_data written to a csv file with columns y, x1, x2 (the 50 estimation
+# rows and the 3 rows of the new periods; x1 and x2 are the last two columns of
+# x, the first column of x is the constant):
+#   d <- read.csv("data.csv"); dd <- d[1:50, ]; nd <- d[51:53, ]
+#   fit <- lm(y ~ x1 + x2, data=dd)   # "y ~ 0 + x1 + x2", "y ~ 0 + x1"
+#   p <- predict(fit, newdata=nd, se.fit=TRUE)
+#   format(p$fit, digits=15)
+#   format(sqrt(p$se.fit^2 + summary(fit)$sigma^2), digits=15)
+# The second line is the standard deviation of a new observation. The Kalman
+# filter uses an approximate diffuse initialization, so the agreement is about
+# 1e-8.
+forecast_r = {
+    "const": {
+        "cols": [0, 1, 2],
+        "mean": [-0.418486122810356, 0.945663173385399, 4.837328570584427],
+        "sd": [0.889853423123584, 0.891741418421635, 0.909358765089120],
+    },
+    "noconst": {
+        "cols": [1, 2],
+        "mean": [-1.3849205127979054, -0.0513863794727698, 3.7159859203344836],
+        "sd": [1.34530632407474, 1.34741172717069, 1.37110212417822],
+    },
+    "one": {
+        "cols": [1],
+        "mean": [-1.60211517569945, 1.39783626407548, 3.86328128403707],
+        "sd": [3.17169632291307, 3.16864485013499, 3.23261716863293],
+    },
+}
+
+
+@pytest.mark.parametrize("case", ["const", "noconst", "one"])
+def test_forecast_exog_r(case):
+    y, x, x_new = _forecast_data()
+    ref = forecast_r[case]
+    cols = ref["cols"]
+    res = RecursiveLS(y, x[:, cols]).fit()
+    pred = res.get_forecast(3, exog=x_new[:, cols])
+    assert_allclose(pred.predicted_mean, ref["mean"], rtol=1e-6)
+    assert_allclose(np.sqrt(pred.var_pred_mean), ref["sd"], rtol=1e-6)
+    if len(cols) == 1:
+        # a 1-d exog is a column of one regressor
+        assert_allclose(res.forecast(3, exog=x_new[:, 1]), ref["mean"])
+        res_1d = RecursiveLS(y, x[:, 1]).fit()
+        assert_allclose(res_1d.forecast(3, exog=x_new[:, 1]), ref["mean"])
+
+
+def test_forecast_exog_dynamic():
+    y, x, x_new = _forecast_data()
+    x_all = np.vstack([x, x_new])
+    res = RecursiveLS(y, x).fit()
+    # Dynamic prediction from observation 45: the coefficients are then the
+    # OLS estimates of the first 45 observations
+    pred = res.predict(start=40, end=52, dynamic=5, exog=x_new)
+    params = OLS(y[:45], x[:45]).fit().params
+    assert_allclose(pred[:5], res.fittedvalues[40:45])
+    assert_allclose(pred[5:], x_all[45:] @ params)
+
+
+def test_forecast_exog_start_after_sample():
+    y, x, x_new = _forecast_data()
+    res = RecursiveLS(y, x).fit()
+    # exog has to cover all periods from the end of the sample
+    pred = res.predict(start=51, end=52, exog=x_new)
+    assert_allclose(pred, res.forecast(3, exog=x_new)[1:])
+    assert_allclose(pred, forecast_r["const"]["mean"][1:], rtol=1e-6)
+
+
+def test_forecast_exog_transposed():
+    y, x, x_new = _forecast_data()
+    res = RecursiveLS(y, x).fit()
+    # The layout of `design` (k_exog x steps) is not accepted for `exog`
+    with pytest.raises(ValueError, match="transpose of `design`"):
+        res.forecast(2, exog=x_new[:2].T)
+    with pytest.raises(ValueError, match="transpose of `design`"):
+        res.forecast(2, exog=pd.DataFrame(x_new[:2].T))
+    # with one regressor the orientation does not matter
+    res_1 = RecursiveLS(y, x[:, 1]).fit()
+    assert_allclose(
+        res_1.forecast(3, exog=x_new[:, 1][None, :]),
+        res_1.forecast(3, exog=x_new[:, 1]),
+    )
+
+
+def test_forecast_exog_design_precedence():
+    y, x, x_new = _forecast_data()
+    res = RecursiveLS(y, x).fit()
+    design = x_new.T[None, :, :]
+    # exog is ignored without validation if a design matrix is given
+    forecast = res.forecast(3, design=design, exog=np.ones((7, 7)))
+    assert_allclose(forecast, res.forecast(3, exog=x_new))
+
+
+def test_forecast_exog_formula():
+    y, x, x_new = _forecast_data()
+    data = pd.DataFrame({"y": y, "x1": x[:, 1], "x2": x[:, 2]})
+    res = RecursiveLS.from_formula("y ~ x1 + x2", data).fit()
+    # no formula is evaluated for the new periods, so exog has to contain
+    # the intercept column
+    new = pd.DataFrame(x_new, columns=res.model.exog_names)
+    assert res.model.exog_names[0] == "Intercept"
+    assert_allclose(
+        res.forecast(3, exog=new),
+        forecast_r["const"]["mean"],
+        rtol=1e-6,
+    )
+    with pytest.raises(ValueError, match="not of the appropriate shape"):
+        res.forecast(3, exog=new[["x1", "x2"]])

@@ -61,6 +61,15 @@ class RecursiveLS(MLEModel):
     This model applies the Kalman filter to compute recursive estimates of the
     coefficients and recursive residuals.
 
+    Out-of-sample predictions and forecasts of the results (``forecast``,
+    ``predict``, ``get_forecast`` and ``get_prediction``) require the
+    regressors of the new periods through the ``exog`` argument, an array with
+    one row per period from the end of the sample to the last period
+    predicted and one column per regressor. This includes the constant if the
+    model has one. For a model created with ``from_formula`` no formula is
+    evaluated for the new periods, so ``exog`` must contain all columns of
+    ``model.exog_names``, including ``Intercept`` for a model with a constant.
+
     References
     ----------
     .. [*] Durbin, James, and Siem Jan Koopman. 2012.
@@ -526,10 +535,26 @@ class RecursiveLSResults(MLEResults):
         else:
             return self.uncentered_tss / (self.df_resid + self.df_model)
 
+    def _check_exog_orientation(self, exog, out_of_sample):
+        # `design` has shape (k_exog, steps) but `exog` is (steps, k_exog), and
+        # the shared validation would silently reshape a transposed array.
+        k_exog = self.model.k_exog
+        if exog is None or not out_of_sample or k_exog == 1:
+            return
+        shape = np.shape(exog)
+        # Only an array of exactly the transposed shape would be reshaped
+        # without an error
+        if shape == (k_exog, out_of_sample) and shape[1] != k_exog:
+            raise ValueError(
+                "`exog` must have one row per new period and one column per "
+                f"regressor, i.e. shape ({out_of_sample}, {k_exog}), got "
+                f"{shape}. Note that this is the transpose of `design`."
+            )
+
     @Appender(MLEResults.get_prediction.__doc__)
     def get_prediction(self, start=None, end=None, dynamic=False,
                        information_set="predicted", signal_only=False,
-                       index=None, **kwargs):
+                       index=None, exog=None, **kwargs):
         # Note: need to override this, because we currently do not support
         # dynamic prediction or forecasts when there are constraints.
         if start is None:
@@ -549,9 +574,10 @@ class RecursiveLSResults(MLEResults):
                                       " constraints.")
 
         # Out-of-sample predictions need the exog values of the new periods,
-        # which form the time-varying design matrix of the extension period
-        exog = kwargs.pop("exog", None)
+        # which form the time-varying design matrix of the extension period.
+        # An explicit `design` takes precedence and `exog` is then ignored.
         if "design" not in kwargs:
+            self._check_exog_orientation(exog, out_of_sample)
             exog = self.model._validate_out_of_sample_exog(exog, out_of_sample)
             if exog is not None:
                 kwargs["design"] = np.ascontiguousarray(exog.T[None, :, :])

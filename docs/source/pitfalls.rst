@@ -31,10 +31,10 @@ to fit a model using different fit function arguments.
 For example, this works without problem because we are not keeping the results
 instance for further use ::
 
-  mod = AR(endog)
+  mod = VAR(endog)
   aic = []
   for lag in range(1,11):
-      res = mod.fit(maxlag=lag)
+      res = mod.fit(maxlags=lag)
       aic.append(res.aic)
 
 

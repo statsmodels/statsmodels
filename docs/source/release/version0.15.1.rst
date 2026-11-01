@@ -234,8 +234,9 @@ Performance
   :pr:`10244`
 - ``KDEMultivariateConditional.cdf`` and ``KDEMultivariateConditional.imse``
   evaluate the kernel of the exogenous variables only once for each
-  observation. The bandwidth selection with ``bw="cv_ls"`` is about 3 times
-  faster for continuous exogenous variables, and ``cdf`` about 1.5 times
+  observation. The bandwidth selection with ``bw="cv_ls"`` is about 2 times
+  faster with one continuous exogenous variable and about 3.5 to 4 times
+  faster with two exogenous variables, and ``cdf`` is about 1.5 to 2 times
   faster. :issue:`6076`, :pr:`10626`
 - Lag order selection fits the nested sequence of models from a single
   blocked QR decomposition, shared by a new private helper. This applies to
@@ -805,6 +806,10 @@ Duration models
   of the 12 distinct uncensored times 1, ..., 12 is 7 instead of 6. At such a
   tie the next event time is returned, unlike R, which returns the midpoint of
   the two event times. :pr:`10648`
+- ``PHReg`` warns with a ``ValueWarning`` for unknown keyword arguments. Before, they
+  were ignored silently, for example ``weights``, which ``PHReg`` does not support,
+  and ``event``, which is the name of ``status`` in ``lifelines``. :issue:`7741`,
+  :pr:`10650`
 
 Other
 -----
