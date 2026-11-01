@@ -25,9 +25,10 @@ innovations algorithm), by conditional Maximum Likelihood or least-squares (usin
 regressions, for example in AutoReg), or by other regression-based and moment-based
 estimators such as Hannan-Rissanen and Yule-Walker.
 
-Currently, functions and classes have to be imported from the corresponding module, but
-the main classes will be made available in the statsmodels.tsa namespace. The module
-structure is within statsmodels.tsa is
+Most of the main classes and functions can be imported from ``statsmodels.tsa.api``,
+which is also available as ``sm.tsa`` after ``import statsmodels.api as sm``. Others
+have to be imported from the corresponding module. The module structure within
+statsmodels.tsa is
 
 - stattools : empirical properties and tests, acf, pacf, granger-causality,
   adf unit root test, kpss test, bds test, ljung-box test and others.
