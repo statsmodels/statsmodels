@@ -727,7 +727,7 @@ Understanding the Impact of Data Revisions
 
 Statespace model results expose a :meth:`~mlemodel.MLEResults.news` method that
 can be used to understand the impact of news (the unexpected component of new
-observations) and data revisions on the forecasts of variables of interest.
+observations) and data revisions on the estimates of variables of interest.
 
 .. autosummary::
    :toctree: generated/
