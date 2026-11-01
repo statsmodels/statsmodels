@@ -1315,6 +1315,30 @@ def test_score_confint_koopman_nam():
     assert_allclose(resp.confint, ci_old, atol=3)
 
 
+def test_score_confint_riskratio_boundary_count():
+    """A count equal to its sample size must not push the limit out of the parameter space.
+
+    The closed form for the Koopman/Nam interval assumes the constrained estimate is interior.
+    When one group has 100% events the cubic gets a double root at one, `np.roots` returns it
+    as a complex pair from rounding noise, and the resulting limit could be complex, exclude
+    the estimate, or both.
+    """
+    cases = [
+        ((7, 10, 10, 10), (0.389862, 1.043709)),
+        ((15, 20, 20, 20), (0.528437, 0.922373)),
+        ((10, 10, 7, 10), (0.958121, 2.565013)),
+    ]
+    for (c1, n1, c0, n0), expected in cases:
+        low, upp = smprop.confint_proportions_2indep(
+            c1, n1, c0, n0, compare="ratio", method="score"
+        )
+        assert not np.iscomplexobj(low)
+        assert not np.iscomplexobj(upp)
+        estimate = (c1 / n1) / (c0 / n0)
+        assert low < estimate < upp
+        assert_allclose([low, upp], expected, atol=1e-4)
+
+
 def test_power_2indep():
     # test against R
     pow_ = power_proportions_2indep(-0.25, 0.75, 76.70692)

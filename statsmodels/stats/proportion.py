@@ -3236,6 +3236,23 @@ def _confint_riskratio_koopman(
     a3 = 2 * n0 * n1 * x0 * x + n * x0 * x0 * x1 + n0 * n1 * x * z
     a4 = -n1 * x0 * x0 * x
 
+    # A count equal to its sample size puts the constrained estimate on the boundary of the
+    # parameter space, where the closed form does not apply: the cubic gets a double root at
+    # one, `np.roots` returns it as a complex pair from rounding noise, and the formula then
+    # gives a limit that can fall outside the parameter space and exclude the estimate.
+    # Inverting the score test numerically handles that boundary case.
+    if x0 == n0 or x1 == n1:
+        low, upp = _score_confint_inversion(
+            count1,
+            nobs1,
+            count2,
+            nobs2,
+            compare="ratio",
+            alpha=alpha,
+            correction=correction,
+        )
+        return KoopmanConfintResult(confint=np.array([low, upp]), p_roots=np.empty(0))
+
     p_roots_ = np.sort(np.roots([a1, a2, a3, a4]))
     p_roots = p_roots_[:2][::-1]
 
