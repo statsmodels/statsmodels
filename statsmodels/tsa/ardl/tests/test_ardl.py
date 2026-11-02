@@ -9,7 +9,7 @@ import pandas as pd
 from pandas.testing import assert_index_equal
 import pytest
 
-from statsmodels.datasets import danish_data
+from statsmodels.datasets import danish_data, longley
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.sm_exceptions import SpecificationWarning
@@ -488,6 +488,88 @@ def test_prediction_oos_no_new_data(data):
     res = ARDL(data.y, [3], data.x, [3]).fit()
     val = res.forecast(3)
     assert val.shape[0] == 3
+
+
+@pytest.mark.parametrize("index_type", ["numpy", "range", "date", "period"])
+@pytest.mark.parametrize("dynamic", [False, True, 1])
+@pytest.mark.parametrize("start", [8, 10])
+def test_prediction_oos_start(index_type, dynamic, start):
+    y = np.array([2, 7, 1, 3, -1, 5, 2, 4], dtype=float)
+    index = pd.RangeIndex(13)
+    if index_type == "date":
+        index = pd.date_range("2000-01-01", periods=13, freq="MS")
+    elif index_type == "period":
+        index = pd.period_range("2000-01", periods=13, freq="M")
+    if index_type != "numpy":
+        y = pd.Series(y, index=index[:8])
+    model = ARDL(y, 2)
+    # y[t] = 1 + 0.5*y[t-1] - 0.25*y[t-2], with final observations 2, 4.
+    expected = np.array([2.5, 1.25, 1, 1.1875, 1.34375])
+    end = 12
+    if index_type in ("date", "period"):
+        prediction = model.predict([1, 0.5, -0.25], index[start], index[end], dynamic)
+    else:
+        prediction = model.predict([1, 0.5, -0.25], start, end, dynamic)
+    assert_allclose(prediction, expected[start - 8 :])
+    if index_type != "numpy":
+        assert_index_equal(prediction.index, index[start : end + 1])
+    if index_type in ("date", "period"):
+        prediction = model.predict(
+            [1, 0.5, -0.25], index[start], index[end], dynamic=index[start + 1]
+        )
+        assert_allclose(prediction, expected[start - 8 :])
+        with pytest.raises(ValueError, match="Dynamic prediction cannot begin prior"):
+            model.predict(
+                [1, 0.5, -0.25], index[start], index[end], dynamic=index[start - 1]
+            )
+
+
+@pytest.mark.parametrize("causal", [False, True])
+def test_prediction_oos_start_exog_fixed(causal):
+    y = np.array([2, 7, 1, 3, -1, 5, 2, 4], dtype=float)
+    x = np.arange(13.0)[:, None]
+    fixed = (np.arange(13.0) % 3)[:, None]
+    model = ARDL(y, 2, x[:8], [int(causal)], fixed=fixed[:8], causal=causal)
+    # Scalar recurrence: y[t] = 1 + .5*y[t-1] - .25*y[t-2]
+    #                              + 2*x[t-causal] + 3*fixed[t].
+    expected = [2.0, 4.0]
+    for t in range(8, 13):
+        expected.append(
+            1 + 0.5 * expected[-1] - 0.25 * expected[-2]
+            + 2 * x[t - int(causal), 0] + 3 * fixed[t, 0]
+        )
+    prediction = model.predict(
+        [1, 0.5, -0.25, 2, 3], 10, 12, exog_oos=x[8:], fixed_oos=fixed[8:]
+    )
+    assert_allclose(prediction, expected[4:])
+
+
+def test_prediction_oos_start_longley():
+    data = longley.load_pandas()
+    x = data.exog[["GNPDEFL", "GNP"]]
+    res = ARDL(
+        data.endog.iloc[:11], 2, x.iloc[:11], {"GNPDEFL": 1, "GNP": 2}
+    ).fit()
+    full = res.forecast(5, exog=x.iloc[11:])
+    prediction = res.predict(13, 13, exog_oos=x.iloc[11:])
+    assert_allclose(prediction, full.iloc[2:3])
+    assert_index_equal(prediction.index, full.index[2:3])
+
+
+@pytest.mark.parametrize("start", [8, 10])
+def test_get_prediction_oos_start(start, use_numpy):
+    y = np.array([2, 7, 1, 3, -1, 5, 2, 4], dtype=float)
+    index = pd.date_range("2000-01-01", periods=13, freq="MS")
+    if not use_numpy:
+        y = pd.Series(y, index=index[:8])
+    res = ARDL(y, 1).fit()
+    const, phi = res.params
+    prediction = res.get_prediction(start, 12)
+    horizons = np.arange(start - 7, 6)
+    expected_mean = const * (1 - phi**horizons) / (1 - phi) + phi**horizons * 4
+    expected_var = [res.sigma2 * sum(phi ** (2 * i) for i in range(h)) for h in horizons]
+    assert_allclose(prediction.predicted_mean, expected_mean)
+    assert_allclose(prediction.var_pred_mean, expected_var)
 
 
 def test_prediction_exceptions(data, fixed, use_numpy):

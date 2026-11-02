@@ -759,6 +759,9 @@ class ARDL(AutoReg):
         params, exog, exog_oos, start, end, num_oos = self._prepare_prediction(
             params, exog, exog_oos, start, end
         )
+        requested_start = start
+        # Compute intervening forecasts needed by the autoregressive lags.
+        start = min(start, self.data.endog.shape[0])
 
         def check_exog(arr, name, orig, exact):
             if isinstance(orig, pd.DataFrame):
@@ -838,8 +841,8 @@ class ARDL(AutoReg):
         if dynamic is False:
             dynamic_start = end + 1 - start
         else:
-            dynamic_step = self._parse_dynamic(dynamic, start)
-            dynamic_start = dynamic_step
+            dynamic_step = self._parse_dynamic(dynamic, requested_start)
+            dynamic_start = min(dynamic_step, end + 1 - start)
             if start < self._hold_back:
                 dynamic_start = max(dynamic_start, self._hold_back - start)
 
@@ -856,7 +859,7 @@ class ARDL(AutoReg):
                     val = self.endog[start + loc]
                 x[i, offset + j] = val
             fcasts[i] = x[i] @ params
-        return self._wrap_prediction(fcasts, start, end + 1 + num_oos, 0)
+        return self._wrap_prediction(fcasts, requested_start, end + 1 + num_oos, 0)
 
     @classmethod
     def from_formula(
@@ -1333,7 +1336,7 @@ class ARDLResults(AutoRegResults):
         if oos > 0:
             ar_params = self._lag_repr()
             ma = arma2ma(ar_params, np.ones(1), lags=oos)
-            mean_var[-oos:] = self.sigma2 * np.cumsum(ma**2)
+            mean_var[-oos:] = (self.sigma2 * np.cumsum(ma**2))[-mean_var.shape[0] :]
         if isinstance(mean, pd.Series):
             mean_var = pd.Series(mean_var, index=mean.index)
 

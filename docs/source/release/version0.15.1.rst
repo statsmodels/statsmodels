@@ -413,6 +413,9 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
+- ``ARDL.predict`` computes intervening forecasts when ``start`` is beyond
+  the first out-of-sample observation. ``ARDLResults.get_prediction`` aligns
+  forecast variances with the requested interval. :issue:`9699`
 - ``MLEModel.loglike`` returns ``-inf`` instead of raising a ``LinAlgError``
   if the states are initialized as stationary and the transition matrix has a
   unit root, so that the stationary covariance of the initial state does not
