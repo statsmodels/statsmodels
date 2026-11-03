@@ -437,7 +437,7 @@ Time series analysis
   end of the sample, the lags were ignored in the forecasts before it.
   ``AutoRegResults.get_prediction`` raised a ``ValueError`` if ``start`` was
   after the first out-of-sample observation. The forecasts between the end of
-  the sample and ``start`` are now computed first.
+  the sample and ``start`` are now computed first. :pr:`10666`
 - ``UECMResults.bounds_test`` raised a ``TypeError`` for a model without lagged
   differences of the dependent variable (``lags=0``). :pr:`10578`
 - :meth:`~statsmodels.tsa.arima_process.ArmaProcess.arma2ma` and ``arma2ar``
