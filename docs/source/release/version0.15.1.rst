@@ -418,7 +418,7 @@ Time series analysis
   terms, and raised an ``IndexError`` if ``dynamic`` was used. The forecasts
   between the end of the sample and ``start`` are now computed first.
   ``ARDLResults.get_prediction`` raised a ``ValueError`` for such a ``start``.
-  :issue:`9699`, :pr:`10664`
+  :issue:`9699`, :pr:`10664`, :pr:`10665`
 - ``MLEModel.loglike`` returns ``-inf`` instead of raising a ``LinAlgError``
   if the states are initialized as stationary and the transition matrix has a
   unit root, so that the stationary covariance of the initial state does not
