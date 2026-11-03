@@ -491,7 +491,7 @@ def test_prediction_oos_no_new_data(data):
 
 
 @pytest.mark.parametrize("index_type", ["numpy", "range", "date", "period"])
-@pytest.mark.parametrize("dynamic", [False, True, 1])
+@pytest.mark.parametrize("dynamic", [False, True, 1, 4, 10])
 @pytest.mark.parametrize("start", [8, 10])
 def test_prediction_oos_start(index_type, dynamic, start):
     y = np.array([2, 7, 1, 3, -1, 5, 2, 4], dtype=float)
