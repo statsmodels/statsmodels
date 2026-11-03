@@ -435,6 +435,12 @@ Time series analysis
 - ``zivot_andrews`` with ``maxlag=0`` and ``autolag=None`` used the default
   number of lags, 12 * (nobs / 100) ** 0.25, instead of no lagged differences.
   A negative ``maxlag`` raises a ``ValueError``. :pr:`10627`
+- ``AutoReg.predict`` with ``dynamic`` raised an ``IndexError`` if ``start``
+  was after the first out-of-sample observation. If ``dynamic`` was after the
+  end of the sample, the lags were ignored in the forecasts before it.
+  ``AutoRegResults.get_prediction`` raised a ``ValueError`` if ``start`` was
+  after the first out-of-sample observation. The forecasts between the end of
+  the sample and ``start`` are now computed first. :pr:`10666`
 - ``UECMResults.bounds_test`` raised a ``TypeError`` for a model without lagged
   differences of the dependent variable (``lags=0``). :pr:`10578`
 - :meth:`~statsmodels.tsa.arima_process.ArmaProcess.arma2ma` and ``arma2ar``
