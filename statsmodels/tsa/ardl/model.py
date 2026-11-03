@@ -716,6 +716,9 @@ class ARDL(AutoReg):
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
+            If `start` is after the first out-of-sample observation, the
+            forecasts in between are computed, since the later forecasts
+            depend on them, but they are not returned.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -733,6 +736,9 @@ class ARDL(AutoReg):
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
             location of `dynamic` which is then used to compute the offset.
+            Values after the end of the sample are never observed, so an
+            offset beyond the end of the sample is the same as an offset at
+            the first out-of-sample observation.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
@@ -1280,6 +1286,9 @@ class ARDLResults(AutoRegResults):
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
+            If `start` is after the first out-of-sample observation, the
+            forecasts in between are computed, since the later forecasts
+            depend on them, but they are not returned.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -1297,6 +1306,9 @@ class ARDLResults(AutoRegResults):
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
             location of `dynamic` which is then used to compute the offset.
+            Values after the end of the sample are never observed, so an
+            offset beyond the end of the sample is the same as an offset at
+            the first out-of-sample observation.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
