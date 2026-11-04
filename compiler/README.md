@@ -70,20 +70,37 @@ python -m causal_compiler.synthetic --rows 100000 --covariates 8 --ci-opt-comman
 Pop-Location
 ```
 
+For the Ryzen 7 PRO 8840U (Zen 4), compare against a Zen 4-specialized
+build by selecting `znver4`:
+
+```powershell
+Push-Location compiler/python
+$env:OPENBLAS_NUM_THREADS = "1"
+python -m causal_compiler.synthetic --rows 100000 --covariates 8 --repeats 11 --ci-opt-command 'wsl -d Ubuntu -- /home/mrdoc/statsmodels-ci-build/tools/ci-opt/ci-opt' --target-cpu znver4
+Pop-Location
+```
+
+IREE's LLVM loop and SLP vectorization options are enabled by default for
+compiled runs. Use `--no-loop-vectorization` and/or
+`--no-slp-vectorization` to isolate their effects. Compilation stays outside
+the timed iterations. `local-sync` measures the single-worker path, while
+`local-task` uses IREE's worker pool; record the selected target and device
+when comparing results.
+
 Compilation by both `ci-opt` and IREE occurs before timed benchmark iterations;
 neither compile time nor process startup/input-file loading is included in the
 IREE native benchmark's timed iterations. The benchmark validates formula,
 NumPy, and compiled outputs. The Python runtime call is reported separately as
 a diagnostic, not as the compiled-kernel comparison.
 
-On the initial implementation, the generated optimized LLVM for the
+On the initial implementation, generated optimized LLVM for the
 `linalg.generic` dispatch contained scalar `load double`, `fmul double`, and
-`fadd double` instructions, with no LLVM vector-body or vector-typed
-instructions. The loop loads each row's interaction values and coefficients as
-separate scalars, then performs scalar multiply/add operations. NumPy was
-linked to optimized OpenBLAS, which can use architecture-specific SIMD for its
-matrix-vector product. This is the concrete code-generation reason NumPy can
-beat the single-thread IREE kernel despite similar arithmetic counts.
+`fadd double` instructions. Enabling LLVM loop and SLP vectorization produces
+vector-typed instructions, confirming the CPU optimizer is no longer limited
+to scalar-only code generation. The inspected double-precision vector values
+were 2 lanes wide, however, so this is not yet evidence that the kernel fully
+uses Zen 4's wider vector registers. NumPy uses OpenBLAS GEMV with its own
+architecture-specific optimized implementation.
 
 The revised 100,000-row/8-interaction runs showed:
 
@@ -108,12 +125,32 @@ is around 1.2--1.5x slower than direct NumPy; the task-pool run is similar to
 one observed 16-thread NumPy result, but is not an equal thread-count
 comparison. These are exploratory timings, not a stable performance claim.
 
+An additional 100,000-row/8-interaction run used `threadpoolctl` to compare
+NumPy with one and 16 OpenBLAS threads, and tested IREE with and without LLVM
+vectorization on `host` and `znver4` targets. Direct NumPy GEMV measured about
+0.175 ms at one BLAS thread and 0.131 ms at 16 threads. With loop and SLP
+vectorization disabled, IREE `local-sync` was about 0.241 ms on both targets;
+enabling them reduced it to 0.184 ms on `host` and 0.189 ms on `znver4`.
+`local-task` changed from 0.118/0.119 ms to 0.114/0.114 ms, respectively. A
+subsequent full CLI run on `znver4` measured 0.185 ms for direct NumPy, 0.189
+ms for IREE `local-sync`, and 0.114 ms for IREE `local-task`. These results
+suggest vectorization helps the single-worker IREE path, while the task-pool
+kernel is competitive with this NumPy configuration. Worker counts are not
+matched, and the single-worker compiled path remains slightly slower than
+one-thread NumPy.
+The host-versus-Zen-4 difference is too small and variable to claim a benefit
+from the target override alone. In this environment, OpenBLAS reports its
+dispatch architecture as `SkylakeX`, so its results also should not be
+interpreted as a Zen-4-tuned NumPy baseline.
+
 The current lowerer uses row-parallel `linalg.generic`, avoiding the former
-repeated tensor insertion. Further compiler optimization should focus on
-vectorizing the row/interaction arithmetic, reducing runtime dispatch and
-allocation overhead, and comparing against both full-design GEMVs and direct
-NumPy GEMV. Matrix-size and FLOP figures are analytical estimates, not measured
-peak memory or hardware counters.
+repeated tensor insertion. The next optimization experiment should expose the
+feature reduction as a contiguous reduction rather than loading each
+interaction column separately, then inspect generated vector width and compare
+with NumPy at matched thread counts. Reduce dispatch/allocation overhead only
+after preserving the current native benchmark's separation of compilation,
+input setup, and timed execution. Matrix-size and FLOP figures are analytical
+estimates, not measured peak memory or hardware counters.
 
 ## Dataset requirements for the next milestone
 

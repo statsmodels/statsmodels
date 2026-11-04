@@ -83,10 +83,30 @@ def _median_latency(
     return float(np.median(samples))
 
 
+def _iree_cpu_codegen_args(
+    target_cpu: str,
+    loop_vectorization: bool = True,
+    slp_vectorization: bool = True,
+) -> list[str]:
+    extra_args = [
+        "--iree-input-demote-f64-to-f32=false",
+        "--iree-vm-target-extension-f64",
+        "--iree-vm-target-truncate-unsupported-floats=false",
+        f"--iree-llvmcpu-target-cpu={target_cpu}",
+    ]
+    if loop_vectorization:
+        extra_args.append("--iree-llvmcpu-loop-vectorization")
+    if slp_vectorization:
+        extra_args.append("--iree-llvmcpu-slp-vectorization")
+    return extra_args
+
+
 def _compile_iree_cpu_module(
     workflow: Workflow,
     ci_opt_command: list[str],
     target_cpu: str,
+    loop_vectorization: bool = True,
+    slp_vectorization: bool = True,
 ) -> bytes:
     try:
         from iree.compiler import compile_str
@@ -100,12 +120,9 @@ def _compile_iree_cpu_module(
     return compile_str(
         lowered_mlir,
         target_backends=["llvm-cpu"],
-        extra_args=[
-            "--iree-input-demote-f64-to-f32=false",
-            "--iree-vm-target-extension-f64",
-            "--iree-vm-target-truncate-unsupported-floats=false",
-            f"--iree-llvmcpu-target-cpu={target_cpu}",
-        ],
+        extra_args=_iree_cpu_codegen_args(
+            target_cpu, loop_vectorization, slp_vectorization
+        ),
     )
 
 
@@ -206,6 +223,8 @@ def _compile_iree_empty_output_module(
     n_interactions: int,
     n_coefficients: int,
     target_cpu: str,
+    loop_vectorization: bool = True,
+    slp_vectorization: bool = True,
 ) -> bytes:
     from iree.compiler import compile_str
 
@@ -221,12 +240,9 @@ def _compile_iree_empty_output_module(
     return compile_str(
         module,
         target_backends=["llvm-cpu"],
-        extra_args=[
-            "--iree-input-demote-f64-to-f32=false",
-            "--iree-vm-target-extension-f64",
-            "--iree-vm-target-truncate-unsupported-floats=false",
-            f"--iree-llvmcpu-target-cpu={target_cpu}",
-        ],
+        extra_args=_iree_cpu_codegen_args(
+            target_cpu, loop_vectorization, slp_vectorization
+        ),
     )
 
 
@@ -393,7 +409,23 @@ def main() -> None:
             "'wsl -d Ubuntu -- /path/to/ci-opt'"
         ),
     )
-    parser.add_argument("--target-cpu", default="host")
+    parser.add_argument(
+        "--target-cpu",
+        default="host",
+        help="LLVM CPU target, such as 'host' or AMD Zen 4's 'znver4'",
+    )
+    parser.add_argument(
+        "--loop-vectorization",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="enable LLVM loop vectorization for IREE CPU codegen",
+    )
+    parser.add_argument(
+        "--slp-vectorization",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="enable LLVM SLP vectorization for IREE CPU codegen",
+    )
     args = parser.parse_args()
 
     workflow = make_synthetic_workflow(
@@ -408,7 +440,11 @@ def main() -> None:
         if not ci_opt_command:
             parser.error("--ci-opt-command must not be empty")
         compiled_module = _compile_iree_cpu_module(
-            workflow, ci_opt_command, args.target_cpu
+            workflow,
+            ci_opt_command,
+            args.target_cpu,
+            args.loop_vectorization,
+            args.slp_vectorization,
         )
         compiled_operation = _load_iree_cpu_kernel(workflow, compiled_module)
     measurements = run_benchmark(
@@ -418,12 +454,20 @@ def main() -> None:
         compiled_operation=compiled_operation,
     )
     if compiled_module is not None:
+        print(
+            "IREE CPU codegen: "
+            f"target={args.target_cpu}, "
+            f"loop_vectorization={args.loop_vectorization}, "
+            f"slp_vectorization={args.slp_vectorization}"
+        )
         interaction_data, coefficients = workflow.mlir_inputs()
         empty_module = _compile_iree_empty_output_module(
             interaction_data.shape[0],
             interaction_data.shape[1],
             coefficients.size,
             args.target_cpu,
+            args.loop_vectorization,
+            args.slp_vectorization,
         )
         for device in ("local-sync", "local-task"):
             compiled_seconds = _benchmark_iree_cpu_module(
