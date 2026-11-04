@@ -1,12 +1,20 @@
 add_mlir_dialect_library(CausalDialect
   CausalDialect.cpp
+  CausalOps.cpp
+  ColumnProjection.cpp
+  LowerTreatmentEffect.cpp
 
   DEPENDS
   CausalDialectIncGen
   CausalOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithDialect
+  MLIRFuncDialect
   MLIRIR
+  MLIRLinalgDialect
+  MLIRPass
+  MLIRTensorDialect
 )
 
 target_include_directories(CausalDialect

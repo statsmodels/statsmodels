@@ -11,6 +11,7 @@ target_link_libraries(ci-opt
   MLIRFuncDialect
   MLIRLinalgDialect
   MLIRMlirOptMain
+  MLIRTensorDialect
 )
 
 mlir_check_all_link_libraries(ci-opt)
