@@ -69,19 +69,10 @@ def test_survfunc1():
     assert_allclose(df["num at risk"].values, sr.n_risk)
     assert_allclose(df["num events"].values, sr.n_events)
 
-    # quantile(p): first time where the survival curve drops below 1-p,
-    # i.e. the smallest t with P(T > t) < 1-p
-    for p in (0.1, 0.5, 0.9):
-        q = sr.quantile(p)
-        ii = np.flatnonzero(sr.surv_prob < 1 - p)
-        expected = np.nan if len(ii) == 0 else sr.surv_times[ii[0]]
-        if np.isnan(expected):
-            assert np.isnan(q)
-        else:
-            assert q == expected
-            # the survival probability at (just before) the quantile has
-            # indeed just dropped below 1-p
-            assert sr.surv_prob[sr.surv_times == q][0] < 1 - p
+    # quantile(p): first time where the survival curve drops below 1-p.
+    # The curve is 0.875, 0.7292, 0.5469, 0 at the times 1, 2, 3, 5.
+    for p, expected in {0.1: 1, 0.2: 2, 0.4: 3, 0.5: 5, 0.9: 5}.items():
+        assert sr.quantile(p) == expected
 
     # p beyond the lowest observed survival probability: no such time
     p_beyond = 1 - sr.surv_prob.min() + 0.01
@@ -149,6 +140,51 @@ def test_quantile_exact_tie_does_not_depend_on_rounding(n):
     # duplicating every subject leaves the curve unchanged
     sf2 = SurvfuncRight(np.repeat(tm, 2), np.ones(2 * n))
     assert sf2.quantile(0.5) == sf.quantile(0.5)
+
+
+# The expected values below are the first event time with S(t) < 1 - p,
+# computed with exact rational arithmetic (fractions.Fraction) for the
+# Kaplan-Meier product, and checked by hand as described in the comments.
+# The estimate is exactly 1 - p at the event time before the expected time.
+# In R, quantile(survfit(...), p, conf.int=FALSE) (survival 3.8-6) returns the
+# midpoint of the two times at an exact tie, which is not used here.
+tie_cases = {
+    # Events at 1, ..., 6 with 12, ..., 7 at risk: S(6) = 6/12 = 1/2.
+    # S(8) = 1/2 * 4/5 = 2/5.  S(3) = 9/12 = 3/4 and S(4) = 8/12.
+    "censored-p50": (
+        np.arange(1.0, 13.0),
+        [1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1],
+        None,
+        0.5,
+        8,
+    ),
+    "censored-p25": (
+        np.arange(1.0, 13.0),
+        [1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1],
+        None,
+        0.25,
+        4,
+    ),
+    # 8 at risk at time 1: S(1) = 7/8.  At time 2, 7 at risk with 3 events:
+    # S(2) = 7/8 * 4/7 = 1/2.  At time 3, 4 at risk: S(3) = 1/2 * 3/4 = 3/8.
+    "weighted": ([1.0, 2.0, 3.0, 4.0], [1, 1, 1, 1], [1, 3, 1, 3], 0.5, 3),
+    # S(t) = (10 - t) / 10 and 1 - p = 1/10 for p = 0.9
+    "decimal-p": (np.arange(1.0, 11.0), np.ones(10), None, 0.9, 10),
+    # S(1) = 1/2 and the single later observation is censored: the curve
+    # equals 1 - p but never gets below it.
+    "never-below": ([1.0, 2.0], [1, 0], None, 0.5, np.nan),
+}
+
+
+@pytest.mark.parametrize("case", list(tie_cases))
+def test_quantile_exact_tie_censoring_weights(case):
+    time, status, weights, p, expected = tie_cases[case]
+    sf = SurvfuncRight(time, status, freq_weights=weights)
+    q = sf.quantile(p)
+    if np.isnan(expected):
+        assert np.isnan(q)
+    else:
+        assert q == expected
 
 
 def test_bmt():

@@ -631,6 +631,12 @@ class AutoReg(tsa_model.TimeSeriesModel):
         """
         reg = []
         hold_back = self._hold_back
+        requested_start = start
+        # Forecasts for the observations between the end of the sample and
+        # start are needed by the lags, so the recursion begins no later than
+        # the first out-of-sample observation
+        start = min(start, self.endog.shape[0])
+        dynamic += requested_start - start
         adj = 0
         if start < hold_back:
             # Adjust start and dynamic
@@ -638,6 +644,8 @@ class AutoReg(tsa_model.TimeSeriesModel):
         start += adj
         # New offset shifts, but must remain non-negative
         dynamic = max(dynamic - adj, 0)
+        # Out-of-sample observations have no true values to use before dynamic
+        dynamic = min(dynamic, max(end + 1 - start, 0))
 
         if (start - hold_back) <= self.nobs:
             # _x is missing hold_back observations, which is why
@@ -668,7 +676,9 @@ class AutoReg(tsa_model.TimeSeriesModel):
                     val = self.endog[fcast_loc + start]
                 _reg[h, det_col_idx + j] = val
             forecasts[h] = np.squeeze(_reg[h : h + 1] @ params)
-        return self._wrap_prediction(forecasts, start, end + 1 + num_oos, adj)
+        return self._wrap_prediction(
+            forecasts, requested_start + adj, end + 1 + num_oos, adj
+        )
 
     def _static_oos_predict(
         self, params: ArrayLike, num_oos: int, exog_oos: ArrayLike2D
@@ -815,6 +825,9 @@ class AutoReg(tsa_model.TimeSeriesModel):
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
+            If `start` is after the first out-of-sample observation, the
+            forecasts in between are computed, since the later forecasts
+            depend on them, but they are not returned.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -832,6 +845,9 @@ class AutoReg(tsa_model.TimeSeriesModel):
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
             location of `dynamic` which is then used to compute the offset.
+            Values after the end of the sample are never observed, so an
+            offset beyond the end of the sample is the same as an offset at
+            the first out-of-sample observation.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
@@ -1425,6 +1441,9 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
+            If `start` is after the first out-of-sample observation, the
+            forecasts in between are computed, since the later forecasts
+            depend on them, but they are not returned.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -1442,6 +1461,9 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             values will be used instead. Datetime-like objects are not
             interpreted as offsets. They are instead used to find the index
             location of `dynamic` which is then used to compute the offset.
+            Values after the end of the sample are never observed, so an
+            offset beyond the end of the sample is the same as an offset at
+            the first out-of-sample observation.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created.
@@ -1467,7 +1489,8 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         if oos > 0:
             ar_params = self._lag_repr()
             ma = arma2ma(ar_params, np.ones(1), lags=oos)
-            mean_var[-oos:] = self.sigma2 * np.cumsum(ma**2)
+            # start can be after the first out-of-sample observation
+            mean_var[-oos:] = (self.sigma2 * np.cumsum(ma**2))[-mean_var.shape[0] :]
         if isinstance(mean, pd.Series):
             mean_var = pd.Series(mean_var, index=mean.index)
 

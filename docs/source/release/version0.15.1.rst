@@ -413,6 +413,12 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
+- ``ARDL.predict`` with a ``start`` after the first out-of-sample observation
+  returned wrong forecasts for a model with ``exog``, ``fixed`` or seasonal
+  terms, and raised an ``IndexError`` if ``dynamic`` was used. The forecasts
+  between the end of the sample and ``start`` are now computed first.
+  ``ARDLResults.get_prediction`` raised a ``ValueError`` for such a ``start``.
+  :issue:`9699`, :pr:`10664`, :pr:`10665`
 - ``MLEModel.loglike`` returns ``-inf`` instead of raising a ``LinAlgError``
   if the states are initialized as stationary and the transition matrix has a
   unit root, so that the stationary covariance of the initial state does not
@@ -429,6 +435,12 @@ Time series analysis
 - ``zivot_andrews`` with ``maxlag=0`` and ``autolag=None`` used the default
   number of lags, 12 * (nobs / 100) ** 0.25, instead of no lagged differences.
   A negative ``maxlag`` raises a ``ValueError``. :pr:`10627`
+- ``AutoReg.predict`` with ``dynamic`` raised an ``IndexError`` if ``start``
+  was after the first out-of-sample observation. If ``dynamic`` was after the
+  end of the sample, the lags were ignored in the forecasts before it.
+  ``AutoRegResults.get_prediction`` raised a ``ValueError`` if ``start`` was
+  after the first out-of-sample observation. The forecasts between the end of
+  the sample and ``start`` are now computed first. :pr:`10666`
 - ``UECMResults.bounds_test`` raised a ``TypeError`` for a model without lagged
   differences of the dependent variable (``lags=0``). :pr:`10578`
 - :meth:`~statsmodels.tsa.arima_process.ArmaProcess.arma2ma` and ``arma2ar``
@@ -534,6 +546,10 @@ Time series analysis
   A UTF-8 byte order mark is ignored, a file that is not valid UTF-8 raises a
   ``ValueError`` that says so, and ``rawspec`` accepts a ``pathlib.Path`` as
   documented. :pr:`10585`
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` remove the output files
+  written by X-12/X-13 from the temporary directory. Before, each call left
+  files such as ``.out``, ``.err``, ``.log``, ``.d11``, ``.d12`` and ``.d13``
+  behind. :issue:`8277`, :pr:`10674`
 - ``coint_johansen``, ``select_coint_rank`` and the error bands of the
   impulse responses of a ``VAR`` returned complex eigenvalues and eigenvectors
   with NumPy 2.5 and later, which ``np.linalg.eig`` returns as complex arrays
@@ -617,6 +633,14 @@ Statistics and tests
   score test also returned ``nan`` for symmetric tables. The root finding for
   the confidence interval of the difference could start outside of the
   parameter space. :issue:`10269`, :pr:`10270`, :pr:`10366`
+- The score confidence interval of the risk ratio
+  (``method="score"`` and ``compare="ratio"`` in
+  :func:`~statsmodels.stats.proportion.confint_proportions_2indep`) was wrong,
+  and sometimes complex, if a count is equal to ``nobs``, for example 10 of 10
+  events in one sample. The interval often did not contain the estimate. The
+  limits are now found by inverting the score test, with a bracket that also
+  works for ``alpha`` of 0.5 and larger. If both counts are equal to ``nobs``
+  the limits have a closed form. :issue:`10538`, :pr:`10539`, :pr:`10640`
 - ``power_equivalence_poisson_2indep`` and
   ``power_equivalence_neginb_2indep`` returned wrong results if ``nobs_ratio``
   is not 1. The ``ftotal`` null variance of
@@ -801,6 +825,11 @@ Duration models
   integer instead of ``nan`` in ``surv_prob_se``, ``n_risk`` and ``n_events``,
   and warned about casting ``nan`` to an integer. They are ``nan`` as floats.
   :pr:`10613`
+- ``SurvfuncRight.quantile`` no longer depends on floating point rounding when
+  the estimated survival probability equals ``1 - p``. For example, the median
+  of the 12 distinct uncensored times 1, ..., 12 is 7 instead of 6. At such a
+  tie the next event time is returned, unlike R, which returns the midpoint of
+  the two event times. :pr:`10648`
 - ``PHReg`` warns with a ``ValueWarning`` for unknown keyword arguments. Before, they
   were ignored silently, for example ``weights``, which ``PHReg`` does not support,
   and ``event``, which is the name of ``status`` in ``lifelines``. :issue:`7741`,

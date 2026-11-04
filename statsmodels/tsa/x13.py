@@ -672,23 +672,24 @@ def x13_arima_analysis(
                 }
 
         finally:
-            try:  # sometimes this gives a permission denied error?
-                #   not sure why. no process should have these open
-                Path(ftempin.name).unlink()
-                Path(ftempout.name).unlink()
-            except OSError:
-                if Path(ftempin.name).exists():
-                    warn(
-                        f"Failed to delete resource {ftempin.name}",
-                        IOWarning,
-                        stacklevel=2
-                    )
-                if Path(ftempout.name).exists():
-                    warn(
-                        f"Failed to delete resource {ftempout.name}",
-                        IOWarning,
-                        stacklevel=2
-                    )
+            # x12/x13 writes its output next to the output file, using the name
+            # of the output file followed by an extension
+            outpath = Path(ftempout.name)
+            for path in (
+                Path(ftempin.name),
+                outpath,
+                *outpath.parent.glob(outpath.name + ".*"),
+            ):
+                try:  # sometimes this gives a permission denied error?
+                    #   not sure why. no process should have these open
+                    path.unlink()
+                except OSError:
+                    if path.exists():
+                        warn(
+                            f"Failed to delete resource {path}",
+                            IOWarning,
+                            stacklevel=2
+                        )
 
     seasadj = _convert_out_to_series(seasadj, endog.index, "seasadj")
     trend = _convert_out_to_series(trend, endog.index, "trend")

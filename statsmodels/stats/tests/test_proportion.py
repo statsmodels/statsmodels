@@ -1315,6 +1315,189 @@ def test_score_confint_koopman_nam():
     assert_allclose(resp.confint, ci_old, atol=3)
 
 
+@pytest.mark.parametrize(
+    "count1, nobs1, count2, nobs2, ci_expected",
+    [
+        (7, 10, 10, 10, (0.38986150248208756, 1.0437094711118755)),
+        (10, 10, 7, 10, (0.958121036244503, 2.5650134564028813)),
+        (0, 10, 10, 10, (0.0, 0.2879339412820121)),
+        (15, 20, 20, 20, (0.5284369902899365, 0.9223731531332053)),
+        (10, 10, 0, 10, (3.473018830456555, np.inf)),
+    ],
+)
+def test_confint_2indep_ratio_score_count_equal_nobs(
+    count1, nobs1, count2, nobs2, ci_expected
+):
+    # The closed form of Koopman/Nam does not apply if a count is equal to
+    # nobs. Expected values are from maximizing the likelihood under the
+    # ratio constraint numerically and inverting the score statistic.
+    ci = confint_proportions_2indep(
+        count1, nobs1, count2, nobs2, compare="ratio", method="score"
+    )
+    assert all(np.isrealobj(limit) for limit in ci)
+    assert_allclose(ci, ci_expected, rtol=1e-6)
+    for limit in ci:
+        if 0 < limit < np.inf:
+            pv = smprop.test_proportions_2indep(
+                count1,
+                nobs1,
+                count2,
+                nobs2,
+                value=limit,
+                compare="ratio",
+                method="score",
+            ).pvalue
+            assert_allclose(pv, 0.05, rtol=1e-6)
+
+
+# Reference values for the score confint of the risk ratio computed in R 4.6.1
+# with ratesci 1.1.1:
+#
+#   library(ratesci)
+#   scoreci(x1, n1, x0, n0, contrast = "RR", distrib = "bin", skew = FALSE,
+#           bcf = correction, level = 1 - alpha, precis = 12)$estimates[
+#           1, c("lower", "upper")]
+#
+# bcf=TRUE is the small sample correction nobs / (nobs - 1), i.e.
+# correction=True, bcf=FALSE is correction=False. The tables have one or both
+# counts equal to nobs, or a count 0, and alpha is up to 0.9. PropCIs 0.3-0
+# riskscoreci(x1, n1, x0, n0, 1 - alpha) is the same as bcf=FALSE, but its root
+# finding is coarse. It is off in the 4th digit or worse for some tables, e.g.
+# for alpha=0.7 and the table (10, 10, 7, 10).
+# columns: count1, nobs1, count2, nobs2, alpha, correction, low, upp
+_RATIO_SCORE_RATESCI = [
+    (7, 10, 10, 10, 0.05, True, 0.389861502482, 1.04370947336),
+    (10, 10, 7, 10, 0.05, True, 0.958121034116, 2.56501345639),
+    (0, 10, 10, 10, 0.05, True, 0.0, 0.287933941282),
+    (10, 10, 0, 10, 0.05, True, 3.47301883043, np.inf),
+    (15, 20, 20, 20, 0.05, True, 0.52843699029, 0.922373152234),
+    (10, 10, 10, 10, 0.05, True, 0.712066058718, 1.40436408641),
+    (3, 3, 20, 20, 0.05, True, 0.42758976888, 1.20080352926),
+    (1, 1, 1, 1, 0.05, True, 0.115168661192, 8.68291764252),
+    (5, 20, 20, 20, 0.05, True, 0.110725309332, 0.47156300971),
+    (0, 10, 3, 10, 0.05, True, 0.0, 1.13539976451),
+    (5, 10, 3, 10, 0.05, True, 0.560506248595, 5.37193293573),
+    (7, 10, 10, 10, 0.05, False, 0.396778147461, 1.02652399977),
+    (10, 10, 7, 10, 0.05, False, 0.974161344727, 2.52030008807),
+    (0, 10, 10, 10, 0.05, False, 0.0, 0.277532799863),
+    (10, 10, 0, 10, 0.05, False, 3.6031777162, np.inf),
+    (15, 20, 20, 20, 0.05, False, 0.531299122381, 0.918063823396),
+    (10, 10, 10, 10, 0.05, False, 0.722467200137, 1.38414588201),
+    (3, 3, 20, 20, 0.05, False, 0.438502968245, 1.19207294097),
+    (1, 1, 1, 1, 0.05, False, 0.206549314377, 4.84145882102),
+    (5, 20, 20, 20, 0.05, False, 0.111861701408, 0.468700877619),
+    (0, 10, 3, 10, 0.05, False, 0.0, 1.08225979476),
+    (5, 10, 3, 10, 0.05, False, 0.575198047523, 5.22444041025),
+    (7, 10, 10, 10, 0.5, True, 0.59247080557, 0.789249362042),
+    (10, 10, 7, 10, 0.5, True, 1.26702668141, 1.68784687885),
+    (0, 10, 10, 10, 0.5, True, 0.0, 0.04569958097),
+    (10, 10, 0, 10, 0.5, True, 21.8820387074, np.inf),
+    (15, 20, 20, 20, 0.5, True, 0.678671606957, 0.809929298265),
+    (10, 10, 10, 10, 0.5, True, 0.95430041903, 1.04788804449),
+    (3, 3, 20, 20, 0.5, True, 0.863156505151, 1.02378076776),
+    (1, 1, 1, 1, 0.5, True, 0.523595066535, 1.90987284629),
+    (5, 20, 20, 20, 0.5, True, 0.190070701735, 0.321328393043),
+    (7, 10, 10, 10, 0.5, False, 0.595309250613, 0.78728513716),
+    (10, 10, 7, 10, 0.5, False, 1.27018783007, 1.67979919508),
+    (0, 10, 10, 10, 0.5, False, 0.0, 0.04351403057),
+    (10, 10, 0, 10, 0.5, False, 22.9810933757, np.inf),
+    (15, 20, 20, 20, 0.5, False, 0.679623979624, 0.809255564811),
+    (10, 10, 10, 10, 0.5, False, 0.95648596943, 1.04549364233),
+    (3, 3, 20, 20, 0.5, False, 0.868322780102, 1.02274682104),
+    (1, 1, 1, 1, 0.5, False, 0.687315255917, 1.45493642314),
+    (5, 20, 20, 20, 0.5, False, 0.190744435189, 0.320376020376),
+    (7, 10, 10, 10, 0.7, True, 0.639992792913, 0.753851958299),
+    (10, 10, 7, 10, 0.7, True, 1.32652039833, 1.56251759563),
+    (0, 10, 10, 10, 0.7, True, 0.0, 0.01538812197),
+    (10, 10, 0, 10, 0.7, True, 64.9851879913, np.inf),
+    (10, 10, 10, 10, 0.7, True, 0.98461187803, 1.01562861706),
+    (1, 1, 1, 1, 0.7, True, 0.771043478412, 1.29694372368),
+    (7, 10, 10, 10, 0.7, False, 0.641568549794, 0.752579461301),
+    (10, 10, 7, 10, 0.7, False, 1.32876334184, 1.55867989527),
+    (0, 10, 10, 10, 0.7, False, 0.0, 0.014629972261),
+    (10, 10, 0, 10, 0.7, False, 68.3528294414, np.inf),
+    (10, 10, 10, 10, 0.7, False, 0.985370027739, 1.01484718628),
+    (1, 1, 1, 1, 0.7, False, 0.870722246868, 1.14847186181),
+    (7, 10, 10, 10, 0.9, True, 0.68099754586, 0.718338682753),
+    (10, 10, 7, 10, 0.9, True, 1.39210100195, 1.46843407304),
+    (0, 10, 10, 10, 0.9, True, 0.0, 0.001659428467),
+    (10, 10, 0, 10, 0.9, True, 602.617111895, np.inf),
+    (10, 10, 10, 10, 0.9, True, 0.998340571533, 1.00166218677),
+    (7, 10, 10, 10, 0.9, False, 0.681486251872, 0.717883112986),
+    (10, 10, 7, 10, 0.9, False, 1.39298443146, 1.46738103264),
+    (0, 10, 10, 10, 0.9, False, 0.0, 0.001576587855),
+    (10, 10, 0, 10, 0.9, False, 634.281187823, np.inf),
+    (10, 10, 10, 10, 0.9, False, 0.998423412145, 1.00157907737),
+]
+
+
+@pytest.mark.parametrize(
+    "count1, nobs1, count2, nobs2, alpha, correction, low, upp",
+    _RATIO_SCORE_RATESCI,
+)
+def test_confint_2indep_ratio_score_ratesci(
+    count1, nobs1, count2, nobs2, alpha, correction, low, upp
+):
+    # includes alpha >= 0.5 and count1 == nobs1 and count2 == nobs2
+    ci = confint_proportions_2indep(
+        count1,
+        nobs1,
+        count2,
+        nobs2,
+        compare="ratio",
+        method="score",
+        alpha=alpha,
+        correction=correction,
+    )
+    assert all(np.isrealobj(limit) for limit in ci)
+    assert_allclose(ci, (low, upp), rtol=1e-6, atol=1e-9)
+
+
+@pytest.mark.parametrize("correction", [True, False])
+@pytest.mark.parametrize("alpha", [0.05, 0.5, 0.8])
+@pytest.mark.parametrize("nobs1, nobs2", [(1, 1), (2, 5), (6, 9)])
+def test_confint_2indep_ratio_score_all_tables(nobs1, nobs2, alpha, correction):
+    # All tables, including the tables with a count equal to nobs or 0. The
+    # limits are real, contain the estimate, and the p-value of the score test
+    # is alpha at the finite limits.
+    for count1 in range(nobs1 + 1):
+        for count2 in range(nobs2 + 1):
+            if count1 == 0 and count2 == 0:
+                # the ratio is not defined
+                continue
+            ci = confint_proportions_2indep(
+                count1,
+                nobs1,
+                count2,
+                nobs2,
+                compare="ratio",
+                method="score",
+                alpha=alpha,
+                correction=correction,
+            )
+            low, upp = ci
+            assert all(np.isrealobj(limit) for limit in ci)
+            ratio = np.inf if count2 == 0 else (count1 / nobs1) / (count2 / nobs2)
+            assert low <= ratio * (1 + 1e-12) + 1e-9
+            assert ratio <= upp * (1 + 1e-12)
+            for limit in ci:
+                if 1e-9 < limit < np.inf:
+                    _, pvalue = score_test_proportions_2indep(
+                        count1,
+                        nobs1,
+                        count2,
+                        nobs2,
+                        value=limit,
+                        compare="ratio",
+                        correction=correction,
+                        return_results=False,
+                    )
+                    assert_allclose(pvalue, alpha, rtol=1e-6)
+            # the limits are 0 and inf if the p-value does not go to 0
+            assert (low < 1e-9) == (count1 == 0)
+            assert (upp == np.inf) == (count2 == 0)
+
+
 def test_power_2indep():
     # test against R
     pow_ = power_proportions_2indep(-0.25, 0.75, 76.70692)
