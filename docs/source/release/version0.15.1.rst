@@ -256,6 +256,17 @@ Performance
   regressors are close to collinear, so for such series the statistic can
   change in the later digits. The new values agree with R (urca) and with
   high-precision arithmetic. :issue:`10601`, :pr:`10602`, :pr:`10624`
+- ``OLS``, ``WLS`` and ``GLS`` have the new fit option ``method="chol"``,
+  which solves the normal equations with a Cholesky factorization of the
+  k x k cross product matrix of the whitened regressors instead of computing
+  the pseudoinverse or the QR factorization of the n x k design matrix. For
+  3,000,000 observations and 10 regressors, ``fit`` takes 0.09 seconds and
+  allocates about 46 MB instead of 3.8 seconds and 690 MB with the default
+  ``method="pinv"``. The parameters are less precise if the regressors are
+  close to collinear; collinear regressors by the tolerance of R's ``lm``
+  fall back to the pseudoinverse with a ``SingularMatrixWarning``. The
+  pseudoinverse ``pinv_wexog`` is only computed when a covariance estimator
+  or an influence measure needs it. :issue:`9317`
 
 Bug Fixes
 =========
