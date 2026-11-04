@@ -2195,6 +2195,11 @@ class GLMResults(base.LikelihoodModelResults):
 
         McFadden's pseudo-R-squared: 1 - (llf / llnull)
 
+        If the model has ``freq_weights``, ``nobs`` in the Cox & Snell
+        pseudo-R-squared is the sum of the frequency weights, so that the
+        value is the same as for the data with each observation repeated
+        according to its frequency weight.
+
         Parameters
         ----------
         kind : {'cs', 'mcf'}, optional
@@ -2209,7 +2214,10 @@ class GLMResults(base.LikelihoodModelResults):
         if kind.startswith("mcf"):
             prsq = 1 - self.llf / self.llnull
         elif kind.startswith("cox") or kind in ["cs", "lr"]:
-            prsq = 1 - np.exp((self.llnull - self.llf) * (2 / self.nobs))
+            # llf and llnull are sums over the frequency weighted
+            # observations, so the number of observations is wnobs
+            nobs = self.model.wnobs
+            prsq = 1 - np.exp((self.llnull - self.llf) * (2 / nobs))
         else:
             raise ValueError("only McFadden and Cox-Snell are available")
         return prsq

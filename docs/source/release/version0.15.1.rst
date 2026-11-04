@@ -378,6 +378,10 @@ Generalized linear models and discrete models
   minimum was exactly at a point of the search. The estimate is now found for
   values up to within about 1e-6 of one. A larger estimate still raises the
   ``ValueError``. A zero estimate is a ``float``. :issue:`8122`, :pr:`10636`
+- The Cox-Snell ``GLMResults.pseudo_rsquared``, which is also shown in
+  ``summary``, used the number of rows instead of the sum of the
+  ``freq_weights``. With frequency weights the value was too large and differed
+  from the value for the data with each row repeated according to its weight.
 
 Mixed models and imputation
 ---------------------------

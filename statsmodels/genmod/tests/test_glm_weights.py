@@ -1003,3 +1003,38 @@ def test_poisson_residuals():
     assert_allclose(res_poi_e.resid_deviance, res_poi_w.resid_deviance)
     assert_allclose(res_poi_e.resid_anscombe, res_poi_w.resid_anscombe)
     assert_allclose(res_poi_e.resid_anscombe_unscaled, res_poi_w.resid_anscombe)
+
+
+@pytest.mark.parametrize(
+    "family",
+    [sm.families.Poisson(), sm.families.Binomial(), sm.families.Gaussian()],
+    ids=["poisson", "binomial", "gaussian"],
+)
+def test_pseudo_rsquared_freq_weights_vs_repeated(family):
+    # freq_weights must give the same pseudo R-squared as the data with
+    # each observation repeated according to its frequency weight.
+    # The Cox-Snell version used the number of rows instead of the sum
+    # of the frequency weights.
+    rng = np.random.default_rng(4321)
+    nobs = 50
+    exog = add_constant(rng.standard_normal((nobs, 2)))
+    lin_pred = exog @ np.array([0.2, 0.5, -0.3])
+    if isinstance(family, sm.families.Poisson):
+        endog = rng.poisson(np.exp(lin_pred))
+    elif isinstance(family, sm.families.Binomial):
+        endog = rng.binomial(1, 1 / (1 + np.exp(-lin_pred)))
+    else:
+        endog = lin_pred + rng.standard_normal(nobs)
+    fweights = rng.integers(1, 5, size=nobs)
+
+    res1 = GLM(endog, exog, family=family, freq_weights=fweights).fit()
+    res2 = GLM(
+        np.repeat(endog, fweights), np.repeat(exog, fweights, axis=0), family=family
+    ).fit()
+
+    for kind in ["cs", "mcf"]:
+        assert_allclose(
+            res1.pseudo_rsquared(kind=kind),
+            res2.pseudo_rsquared(kind=kind),
+            rtol=1e-8,
+        )
