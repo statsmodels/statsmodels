@@ -2275,3 +2275,33 @@ def test_power_ratio_2indep_value_array_like(func, method_var):
     for value in [values, np.array(values), pd.Series(values)]:
         power = func(1.0, 2.0, 10, value=value, **kwds)
         assert_allclose(power, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "count1, exposure1, count2, exposure2, expected",
+    [
+        # Fieller interval for the square root of the counts plus 0.5
+        # (Price and Bonett 2000), computed with mpmath at 30 digits
+        (30, 40, 7, 30, (1.47154318121965, 7.79924774711104)),
+        (41, 2969, 15, 1106, (0.572597458480372, 1.88405289435914)),
+        (30, 100, 30, 100, (0.601326646534805, 1.66298966753358)),
+    ],
+)
+def test_confint_poisson_2indep_sqrtcc(count1, exposure1, count2, exposure2, expected):
+    ci = confint_poisson_2indep(
+        count1, exposure1, count2, exposure2, method="sqrtcc", compare="ratio"
+    )
+    assert_allclose(ci, expected, rtol=1e-12)
+
+    # the interval is for the ratio of rates, so it scales with the exposures
+    ci_scaled = confint_poisson_2indep(
+        count1, 10 * exposure1, count2, exposure2, method="sqrtcc", compare="ratio"
+    )
+    assert_allclose(ci_scaled, np.asarray(ci) / 10, rtol=1e-12)
+
+    # at the limits the square root statistic equals the critical value
+    crit = stats.norm.isf(0.025)
+    for ratio in ci:
+        th = np.sqrt(ratio * exposure1 / exposure2)
+        stat = 2 * (np.sqrt(count1 + 0.5) - th * np.sqrt(count2 + 0.5))
+        assert_allclose(np.abs(stat) / np.sqrt(1 + th**2), crit, rtol=1e-12)

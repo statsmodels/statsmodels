@@ -1869,15 +1869,17 @@ def confint_poisson_2indep(
 
         elif method == "sqrtcc":
             # coded based on Price, Bonett 2000 equ (2.4)
+            # Fieller interval for sqrt(mu1 / mu2) of the expected counts,
+            # the bounds are then rescaled from counts to rates by n2 / n1
             crit = stats.norm.isf(alpha)
             center = np.sqrt((count1 + 0.5) * (count2 + 0.5))
-            std = 0.5 * np.sqrt(count1 + 0.5 + count2 + 0.5 - 0.25 * crit)
+            std = 0.5 * np.sqrt(count1 + 0.5 + count2 + 0.5 - 0.25 * crit**2)
             denom = count2 + 0.5 - 0.25 * crit**2
 
             low_sqrt = (center - crit * std) / denom
             upp_sqrt = (center + crit * std) / denom
 
-            ci = (low_sqrt**2, upp_sqrt**2)
+            ci = (low_sqrt**2 * n2 / n1, upp_sqrt**2 * n2 / n1)
 
         elif method == "mover":
             method_p = method_mover
