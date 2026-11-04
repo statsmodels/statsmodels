@@ -2079,20 +2079,33 @@ class GLMResults(base.LikelihoodModelResults):
         """
         return self.model.predict(self.params)
 
-    @cache_readonly
-    def null(self):
+    def _get_null_model_kwds(self):
         """
-        Fitted values of the null model
+        Design and keyword arguments for the constant-only null model
+
+        Returns the exog of the null model together with the
+        initialization keywords of the full model, adjusted for the
+        null model. Used everywhere a null model is constructed, so
+        that the adjustment stays in one place.
         """
-        endog = self._endog
         model = self.model
-        exog = np.ones((len(endog), 1))
+        exog = np.ones((len(self._endog), 1))
 
         kwargs = model._get_init_kwds().copy()
         kwargs.pop("family")
 
         for key in getattr(model, "_null_drop_keys", []):
             del kwargs[key]
+
+        return exog, kwargs
+
+    @cache_readonly
+    def null(self):
+        """
+        Fitted values of the null model
+        """
+        endog = self._endog
+        exog, kwargs = self._get_null_model_kwds()
         start_params = np.atleast_1d(self.family.link(endog.mean()))
         oe = self.model._offset_exposure
         if not (np.size(oe) == 1 and oe == 0):
@@ -2131,13 +2144,28 @@ class GLMResults(base.LikelihoodModelResults):
     def llnull(self):
         """
         Log-likelihood of the model fit with a constant as the only regressor
+
+        The scale is estimated from the null model in the same way as
+        the scale of the full model is estimated from the full model,
+        using the fitted values and the residual degrees of freedom of
+        the null model.
         """
+        exog, kwargs = self._get_null_model_kwds()
+
+        # estimate the scale of the null model, using the same
+        # scaletype as in the estimation of the full model
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DomainWarning)
+            null_model = GLM(self._endog, exog, family=self.family, **kwargs)
+        null_model.scaletype = self.model.scaletype
+        scale = null_model.estimate_scale(self.null)
+
         return self.family.loglike(
             self._endog,
             self.null,
             var_weights=self._var_weights,
             freq_weights=self._freq_weights,
-            scale=self.scale,
+            scale=scale,
         )
 
     def llf_scaled(self, scale=None):
