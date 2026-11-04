@@ -1335,7 +1335,7 @@ class VECMResults:
         number of columns of :math:`\\alpha` and :math:`\\beta`.
     llf : float
         The model's log-likelihood.
-    cov_params : ndarray (d x d)
+    cov_params_default : ndarray (d x d)
         Covariance matrix of the parameters. The number of rows and columns, d
         (used in the dimension specification of this argument),
         is equal to neqs * (neqs+num_det_coef_coint + neqs*(k_ar-1)+number of
@@ -1347,7 +1347,7 @@ class VECMResults:
         Covariance matrix of the parameters
         :math:`\\tilde{\\Pi}, \\tilde{\\Gamma}` where
         :math:`\\tilde{\\Pi} = \\tilde{\\alpha} \\tilde{\\beta'}`.
-        Equals `cov_params` without the rows and columns related to
+        Equals `cov_params_default` without the rows and columns related to
         deterministic terms. This matrix is defined as :math:`\\Sigma_{co}` on
         p. 287 in [1]_.
     stderr_params : ndarray (d)
