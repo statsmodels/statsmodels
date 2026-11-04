@@ -3325,6 +3325,56 @@ def test_output_exposure_null():
     assert np.abs(null_model_without_exposure.llf - model.llnull) > 1
 
 
+def test_glm_llnull_own_scale():
+    # GH 9025, llnull used the scale estimated for the full model
+    # instead of the scale of the null model for families with an
+    # estimated scale, e.g. Gaussian and Gamma
+    rng = np.random.default_rng(98764321)
+    nobs = 50
+    x = rng.uniform(0, 2, size=nobs)
+    exog = add_constant(x)
+    exog_null = np.ones((nobs, 1))
+
+    cases = [
+        (sm.families.Gaussian(), 1 + 2 * x + rng.normal(size=nobs)),
+        (
+            sm.families.Gamma(link=sm.families.links.Log()),
+            rng.gamma(2.0, scale=(1 + x) / 2),
+        ),
+    ]
+    for family, endog in cases:
+        res = GLM(endog, exog, family=family).fit()
+        res_null = GLM(endog, exog_null, family=family).fit()
+        # log-likelihood of the null model at its own estimated scale
+        llnull = family.loglike(
+            endog, res_null.fittedvalues, scale=res_null.scale
+        )
+        assert_allclose(res.llnull, llnull, rtol=1e-8)
+        # the fitted values of the null model are the same in both cases
+        assert_allclose(res.null, res_null.fittedvalues, rtol=1e-8)
+
+    # Gaussian case against the closed form: the scale of the null
+    # model is the unbiased sample variance of endog
+    endog = 1 + 2 * x + rng.normal(size=nobs)
+    res = GLM(endog, exog, family=sm.families.Gaussian()).fit()
+    scale_null = np.sum((endog - endog.mean()) ** 2) / (nobs - 1)
+    llnull = np.sum(
+        stats.norm.logpdf(endog, loc=endog.mean(), scale=np.sqrt(scale_null))
+    )
+    assert_allclose(res.llnull, llnull, rtol=1e-10)
+
+    # a fixed scale and a deviance based scale are also taken from the
+    # null model and not from the full model
+    res = GLM(endog, exog, family=sm.families.Gaussian()).fit(scale=2.0)
+    llnull = sm.families.Gaussian().loglike(endog, res.null, scale=2.0)
+    assert_allclose(res.llnull, llnull, rtol=1e-10)
+
+    res = GLM(endog, exog, family=sm.families.Gaussian()).fit(scale="dev")
+    scale_null = res.null_deviance / (nobs - 1)
+    llnull = sm.families.Gaussian().loglike(endog, res.null, scale=scale_null)
+    assert_allclose(res.llnull, llnull, rtol=1e-10)
+
+
 def test_qaic():
 
     # Example from documentation of R package MuMIn

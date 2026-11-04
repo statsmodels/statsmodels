@@ -2131,13 +2131,35 @@ class GLMResults(base.LikelihoodModelResults):
     def llnull(self):
         """
         Log-likelihood of the model fit with a constant as the only regressor
+
+        The scale is estimated from the null model in the same way as
+        the scale of the full model is estimated from the full model,
+        using the fitted values and the residual degrees of freedom of
+        the null model.
         """
+        model = self.model
+        exog = np.ones((len(self._endog), 1))
+
+        kwargs = model._get_init_kwds().copy()
+        kwargs.pop("family")
+
+        for key in getattr(model, "_null_drop_keys", []):
+            del kwargs[key]
+
+        # estimate the scale of the null model, using the same
+        # scaletype as in the estimation of the full model
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DomainWarning)
+            null_model = GLM(self._endog, exog, family=self.family, **kwargs)
+        null_model.scaletype = model.scaletype
+        scale = null_model.estimate_scale(self.null)
+
         return self.family.loglike(
             self._endog,
             self.null,
             var_weights=self._var_weights,
             freq_weights=self._freq_weights,
-            scale=self.scale,
+            scale=scale,
         )
 
     def llf_scaled(self, scale=None):

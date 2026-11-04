@@ -378,6 +378,13 @@ Generalized linear models and discrete models
   minimum was exactly at a point of the search. The estimate is now found for
   values up to within about 1e-6 of one. A larger estimate still raises the
   ``ValueError``. A zero estimate is a ``float``. :issue:`8122`, :pr:`10636`
+- ``GLMResults.llnull``, the log-likelihood of the constant-only null
+  model, used the scale estimated for the full model. It now uses the
+  scale of the null model, estimated in the same way as the scale of the
+  full model. This changes ``llnull`` and the pseudo R-squared for
+  families with an estimated scale, for example Gaussian and Gamma.
+  Families with a fixed scale of 1, for example Poisson and Binomial,
+  are not affected. :issue:`9025`
 
 Mixed models and imputation
 ---------------------------
