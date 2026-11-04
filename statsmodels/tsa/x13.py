@@ -515,6 +515,8 @@ def x13_arima_analysis(
     tempdir : str, optional
         The path to where temporary files are created by the function.
         If None, files are created in the default temporary file location.
+        The files, including those written by X-12/X-13, are removed again
+        when the function returns.
 
     Returns
     -------
@@ -796,6 +798,8 @@ def x13_arima_select_order(
     tempdir : str, optional
         The path to where temporary files are created by the function.
         If None, files are created in the default temporary file location.
+        The files, including those written by X-12/X-13, are removed again
+        when the function returns.
 
     Returns
     -------
