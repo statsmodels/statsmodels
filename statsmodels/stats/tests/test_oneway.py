@@ -33,6 +33,7 @@ from statsmodels.stats.oneway import (
 )
 import statsmodels.stats.power as smpwr
 from statsmodels.stats.robust_compare import scale_transform
+from statsmodels.tools.testing import warns_or_none
 
 
 def test_oneway_effectsize():
@@ -910,7 +911,9 @@ def test_confint_effectsize_oneway_invalid_nobs_raises():
         smo.confint_effectsize_oneway(2.0, (3, 57), nobs=-5)
     with pytest.raises(ValueError, match="nobs must be positive"):
         smo.confint_effectsize_oneway(2.0, (3, 57), nobs=0)
-    res = smo.confint_effectsize_oneway(2.0, (3, 57))
+    # the lower confidence limit of f2 is zero, which divides by zero
+    with warns_or_none(RuntimeWarning, match="divide by zero encountered"):
+        res = smo.confint_effectsize_oneway(2.0, (3, 57))
     assert np.isfinite(res.f2).all()
 
 

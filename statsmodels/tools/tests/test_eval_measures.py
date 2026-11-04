@@ -4,6 +4,8 @@ Created on Tue Nov 08 22:28:48 2011
 @author: josef
 """
 
+from contextlib import ExitStack, contextmanager
+
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 import pytest
@@ -29,6 +31,7 @@ from statsmodels.tools.eval_measures import (
     stde,
     vare,
 )
+from statsmodels.tools.testing import warns_or_none
 
 
 def test_eval_measures():
@@ -152,6 +155,23 @@ def test_iqr_axis():
     assert any(ax_0 != ax_1)
 
 
+@contextmanager
+def empty_input_warnings(measure):
+    # numpy warns for the mean or the variance of an empty array
+    if measure in (iqr, maxabs):
+        yield
+        return
+    first = "Degrees of freedom <= 0" if measure is vare else "Mean of empty slice"
+    with ExitStack() as stack:
+        stack.enter_context(pytest.warns(RuntimeWarning, match=first))
+        if measure is not rmspe:
+            # divide of the sum by the zero count, the message depends on the shape
+            stack.enter_context(
+                warns_or_none(RuntimeWarning, match="invalid value encountered")
+            )
+        yield
+
+
 @pytest.mark.parametrize(
     "measure",
     [bias, iqr, maxabs, meanabs, medianabs, medianbias, mse, rmse, rmspe, vare],
@@ -162,7 +182,9 @@ def test_measures_empty_input(measure):
     # while every other measure here returned nan.
     empty = np.empty(0)
 
-    assert np.isnan(measure(empty, empty))
+    with empty_input_warnings(measure):
+        res = measure(empty, empty)
+    assert np.isnan(res)
 
 
 @pytest.mark.parametrize(
@@ -174,7 +196,9 @@ def test_measures_empty_input_keeps_axis_shape(measure):
     # (0, 3) input reduces to three nans rather than a scalar
     empty = np.empty((0, 3))
 
-    assert_equal(measure(empty, empty), np.full(3, np.nan))
+    with empty_input_warnings(measure):
+        res = measure(empty, empty)
+    assert_equal(res, np.full(3, np.nan))
 
 
 def test_stde():

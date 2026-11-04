@@ -1,12 +1,16 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
 
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tools.testing import (
     Holder,
     MarginTableTestBunch,
     ParamsTableTestBunch,
     assert_equal,
+    warns_or_none,
 )
 
 
@@ -48,3 +52,33 @@ def test_assert_equal_index_forwards_kwds():
     with pytest.raises(AssertionError):
         assert_equal(left, right)
     assert_equal(left, right, check_names=False)
+
+
+def test_warns_or_none():
+    # no warning and the allowed warning pass
+    with warns_or_none(RuntimeWarning):
+        pass
+    with warns_or_none(RuntimeWarning, match="platform"):
+        warnings.warn("platform dependent", RuntimeWarning, stacklevel=2)
+    # a subclass and one of several categories are allowed
+    with warns_or_none((FutureWarning, UserWarning)):
+        warnings.warn("subclass", ConvergenceWarning, stacklevel=2)
+        warnings.warn("future", FutureWarning, stacklevel=2)
+
+
+def test_warns_or_none_other_warning():
+    # warnings that are not allowed are emitted when the block ends
+    with pytest.warns(UserWarning, match="other category"):
+        with warns_or_none(RuntimeWarning):
+            warnings.warn("other category", UserWarning, stacklevel=2)
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        with warns_or_none(RuntimeWarning, match="platform"):
+            warnings.warn("platform dependent", RuntimeWarning, stacklevel=2)
+            warnings.warn("other message", RuntimeWarning, stacklevel=2)
+    assert [str(w.message) for w in record] == ["other message"]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(UserWarning, match="not allowed"):
+            with warns_or_none(RuntimeWarning):
+                warnings.warn("not allowed", UserWarning, stacklevel=2)

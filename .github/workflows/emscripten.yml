@@ -30,7 +30,7 @@ jobs:
           fetch-tags: true
           persist-credentials: false
 
-      - uses: pypa/cibuildwheel@b3395e271a35f73dad77f21802abe9b986dfe299 #v4.3.1
+      - uses: pypa/cibuildwheel@f9b966cfadf4109556cadc5bb39ddb72d0ce664e #v4.3.5
         env:
           CIBW_PLATFORM: pyodide
           CIBW_BUILD: "cp313-*"

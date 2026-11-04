@@ -59,12 +59,14 @@ __all__ = [
     "LMTestResult",
     "NonNestedTestResult",
     "PesaranTimmermannResult",
+    "VuongTestResult",
     "acorr_breusch_godfrey",
     "acorr_ljungbox",
     "acorr_lm",
     "anderson_statistic",
     "compare_cox",
     "compare_j",
+    "compare_vuong",
     "het_arch",
     "het_breuschpagan",
     "het_goldfeldquandt",
@@ -357,6 +359,192 @@ def compare_j(results_x, results_z, store=False, *, result_object: bool | None =
     return tstat, pval
 
 
+class VuongTestResult(NamedTuple):
+    """
+    Result of :func:`compare_vuong`.
+
+    .. versionadded:: 0.15.1
+    """
+
+    statistic: float
+    pvalue: float
+
+
+def _vuong_loglike_obs(results, name):
+    """Return the per-observation log-likelihood of a results instance."""
+    model = results.model
+    if not hasattr(model, "loglikeobs"):
+        raise ValueError(
+            f"The model of {name} does not provide the log-likelihood of "
+            "each observation (loglikeobs), which is needed for the Vuong "
+            "test."
+        )
+    llobs = np.asarray(model.loglikeobs(np.asarray(results.params)), dtype=float)
+    if not np.allclose(llobs.sum(), results.llf, rtol=1e-6):
+        raise ValueError(
+            f"The observation-wise log-likelihood of {name} does not add up "
+            "to its log-likelihood value llf."
+        )
+    return llobs
+
+
+def compare_vuong(results1, results2, correction="none", alternative="two-sided"):
+    r"""
+    Vuong test for non-nested likelihood models.
+
+    .. versionadded:: 0.15.1
+
+    Parameters
+    ----------
+    results1 : Results
+        Results instance of the first model. The model needs to provide
+        the log-likelihood of each observation (``loglikeobs``), for example
+        Logit, Probit, Poisson, NegativeBinomial or ZeroInflatedPoisson.
+    results2 : Results
+        Results instance of the second model, estimated on the same
+        observations and with the same dependent variable as the first model.
+    correction : {"none", "aic", "bic"}, optional
+        Correction for the number of estimated parameters of the two models.
+        "aic" is the Akaike and "bic" is the Schwarz type correction of the
+        log-likelihood ratio. The default is "none", which applies no
+        correction.
+    alternative : {"two-sided", "larger", "smaller"}, optional
+        Alternative hypothesis. "larger" tests whether the first model is
+        closer to the true distribution than the second model, "smaller"
+        tests the opposite direction. The default is "two-sided".
+
+    Returns
+    -------
+    VuongTestResult
+        A NamedTuple with fields:
+
+        statistic : float
+            Vuong z-statistic. Positive values favor the first model.
+        pvalue : float
+            P-value for the chosen alternative.
+
+    Notes
+    -----
+    The null hypothesis is that both models are equally close to the true
+    data generating process, measured by the Kullback-Leibler divergence.
+    With :math:`m_i = \log f_1(y_i | x_i) - \log f_2(y_i | x_i)` the
+    difference of the log-likelihood contributions of observation
+    :math:`i`, the statistic is
+
+    .. math::
+
+       V = \frac{\sqrt{n}\,\bar{m}}{\hat{\omega}}, \qquad
+       \hat{\omega}^2 = \frac{1}{n - 1}\sum_{i=1}^n (m_i - \bar{m})^2 ,
+
+    which is asymptotically standard normal under the null hypothesis [1]_.
+    Vuong's original definition of :math:`\hat{\omega}^2` divides by :math:`n`
+    instead of :math:`n - 1`. The difference is asymptotically negligible and
+    the version here is the one used by the ``vuong`` function of the R
+    package pscl. The ``vuongtest`` function of the R package nonnest2 divides
+    by :math:`n`, so that its statistic is larger than the one here by the
+    factor :math:`\sqrt{n / (n - 1)}`.
+
+    The corrected versions are the Schwarz and Akaike type corrections of
+    Section 6 of [1]_, see also [2]_ for their use in practice. They replace
+    the log-likelihood ratio :math:`\sum_i m_i` in the numerator by
+    :math:`\sum_i m_i - (k_1 - k_2)` for "aic" and
+    :math:`\sum_i m_i - (k_1 - k_2) \log(n) / 2` for "bic", where
+    :math:`k_1` and :math:`k_2` are the number of estimated parameters
+    ``len(results.params)``. This counts every estimated parameter, including
+    the dispersion parameter of a negative binomial model. The ``vuong``
+    function of pscl does not count the dispersion parameter of a negative
+    binomial model, so that the corrected statistics differ from the pscl
+    values if a negative binomial model is involved.
+
+    The uncorrected statistic and the corrected statistics for models with the
+    same parameter counts, for example Poisson against zero-inflated Poisson
+    or Logit against Probit, agree with the results of ``vuong`` in pscl.
+    pscl reports the one-sided p-value in the direction of the preferred
+    model.
+
+    The test is only valid for non-nested (or overlapping but not nested)
+    models, and it assumes that both models are not equivalent, so that
+    :math:`\omega^2 > 0`. Statsmodels does not check whether the models are
+    nested. Vuong's preliminary test of the null hypothesis
+    :math:`\omega^2 = 0`, which is needed for nested or overlapping models,
+    is not performed. Using the test for nested models, for example Poisson
+    against negative binomial, or for zero-inflation, should be done with
+    care, see [3]_.
+
+    If the log-likelihood contributions of the two models are exactly equal,
+    so that the estimated :math:`\hat{\omega}` is exactly zero, the statistic
+    is not defined and both the statistic and the p-value of the result are
+    NaN. No warning is issued. Models that are only numerically almost
+    identical, for example the same model estimated with different
+    optimizers, produce a finite statistic that is meaningless.
+
+    References
+    ----------
+    .. [1] Vuong, Quang H. 1989. "Likelihood Ratio Tests for Model Selection
+       and Non-Nested Hypotheses." Econometrica 57 (2): 307-333.
+    .. [2] Desmarais, Bruce A., and Jeffrey J. Harden. 2013. "Testing for
+       Zero Inflation in Count Models: Bias Correction for the Vuong Test."
+       The Stata Journal 13 (4): 810-835.
+    .. [3] Wilson, Paul. 2015. "The Misuse of the Vuong Test for Non-Nested
+       Models to Test for Zero-Inflation." Economics Letters 127: 51-53.
+
+    Examples
+    --------
+    Compare a Logit and a Probit model for the same binary outcome.
+
+    >>> import statsmodels.api as sm
+    >>> from statsmodels.stats.api import compare_vuong
+    >>> data = sm.datasets.spector.load()
+    >>> exog = sm.add_constant(data.exog)
+    >>> res_logit = sm.Logit(data.endog, exog).fit(disp=False)
+    >>> res_probit = sm.Probit(data.endog, exog).fit(disp=False)
+    >>> result = compare_vuong(res_logit, res_probit, correction="aic")
+    >>> statistic, pvalue = result
+    >>> print(f"statistic={statistic:.4f}, pvalue={pvalue:.4f}")
+    statistic=-0.4972, pvalue=0.6190
+
+    The statistic is small and the p-value is large, so the test does not
+    distinguish between the two models.
+    """
+    correction = string_like(correction, "correction", options=("none", "aic", "bic"))
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+    )
+    llobs1 = _vuong_loglike_obs(results1, "results1")
+    llobs2 = _vuong_loglike_obs(results2, "results2")
+    if llobs1.shape != llobs2.shape:
+        raise ValueError(
+            "The two models must be estimated with the same number of observations."
+        )
+    if not np.array_equal(
+        np.asarray(results1.model.endog), np.asarray(results2.model.endog)
+    ):
+        raise ValueError("The two models must have the same dependent variable.")
+    nobs = llobs1.shape[0]
+    diff = llobs1 - llobs2
+    omega = np.std(diff, ddof=1)
+    if omega == 0:
+        return VuongTestResult(np.nan, np.nan)
+
+    lr = diff.sum()
+    k_diff = np.size(results1.params) - np.size(results2.params)
+    if correction == "aic":
+        lr = lr - k_diff
+    elif correction == "bic":
+        lr = lr - k_diff * np.log(nobs) / 2
+    statistic = lr / (np.sqrt(nobs) * omega)
+
+    if alternative == "two-sided":
+        pvalue = 2 * stats.norm.sf(np.abs(statistic))
+    elif alternative == "larger":
+        pvalue = stats.norm.sf(statistic)
+    else:
+        pvalue = stats.norm.cdf(statistic)
+    return VuongTestResult(statistic, pvalue)
+
+
 class PesaranTimmermannResult(NamedTuple):
     """
     Result of :func:`pesaran_timmermann`.
@@ -611,7 +799,7 @@ def acorr_ljungbox(
     boxpierce=False,
     model_df=0,
     period=None,
-    return_df=True,
+    return_df=None,
     auto_lag=False,
 ):
     """
@@ -622,7 +810,7 @@ def acorr_ljungbox(
     x : array_like
         The data series. The data is demeaned before the test statistic is
         computed.
-    lags : {int, array_like}, default None
+    lags : int or array_like of int, optional
         If lags is an integer then this is taken to be the largest lag
         that is included, the test result is reported for all smaller lag
         length. If lags is a list or array, then all lags are included up to
@@ -630,6 +818,16 @@ def acorr_ljungbox(
         the list are reported. If lags is None, then the default maxlag is
         min(10, nobs // 5). The default number of lags changes if period
         is set.
+
+        All lags must be integers >= 1 and the largest lag must be smaller
+        than nobs, the number of observations. An empty sequence is not
+        allowed.
+
+        .. versionchanged:: 0.15.1
+
+            A ``ValueError`` is raised if lags is empty or contains a value
+            below 1. Previously lag 0 and negative lags silently reported the
+            statistic of another lag or failed with an unrelated error.
     boxpierce : bool, default False
         If true, then additional to the results of the Ljung-Box test also the
         Box-Pierce test results are returned.
@@ -644,10 +842,13 @@ def acorr_ljungbox(
         for seasonal data which uses min(2*period, nobs // 5) if set. If None,
         then the default rule is used to set the number of lags. When set, must
         be >= 2.
-    return_df : bool, default True
-        Flag indicating whether to return the results as a DataFrame. This
-        parameter is retained for backward compatibility; a DataFrame is
-        always returned.
+    return_df : bool, optional
+        Unused. A DataFrame is always returned.
+
+        .. deprecated:: 0.15.1
+
+            ``return_df`` has no effect and will be removed in statsmodels
+            0.17.0. Passing any value issues a ``FutureWarning``.
     auto_lag : bool, default False
         Flag indicating whether to automatically determine the optimal lag
         length based on threshold of maximum correlation value.
@@ -667,6 +868,13 @@ def acorr_ljungbox(
           distribution. The p-value is computed as chi2.sf(bp_stat, dof)
           where dof is lag - model_df. If lag - model_df <= 0, then NaN is
           returned for the pvalue.
+
+    Raises
+    ------
+    ValueError
+        If lags is empty or contains a value below 1, if the largest lag is
+        not smaller than nobs, or if the default number of lags (used when
+        lags is None) is below 1 because the series is too short.
 
     See Also
     --------
@@ -695,14 +903,22 @@ def acorr_ljungbox(
     --------
     >>> import statsmodels.api as sm
     >>> data = sm.datasets.sunspots.load_pandas().data
-    >>> res = sm.tsa.ARMA(data["SUNACTIVITY"], (1,1)).fit(disp=-1)
-    >>> sm.stats.acorr_ljungbox(res.resid, lags=[10], return_df=True)
+    >>> res = sm.tsa.ARIMA(data["SUNACTIVITY"], order=(1, 0, 1)).fit()
+    >>> sm.stats.acorr_ljungbox(res.resid, lags=[10])
            lb_stat     lb_pvalue
-    10  214.106992  1.827374e-40
+    10  214.108691  1.825879e-40
     """
     # Avoid cyclic import
     from statsmodels.tsa.stattools._stattools import acf
 
+    if return_df is not None:
+        warnings.warn(
+            "return_df is unused and will be removed in statsmodels 0.17.0. "
+            "acorr_ljungbox always returns a DataFrame. Remove the return_df "
+            "argument to silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
     x = array_like(x, "x")
     period = int_like(period, "period", optional=True)
     model_df = int_like(model_df, "model_df", optional=False)
@@ -752,14 +968,38 @@ def acorr_ljungbox(
         lags = max(1, lags)  # optimal lag has to be at least 1
         lags = int_like(lags, "lags")
         lags = np.arange(1, lags + 1)
-    elif period is not None:
-        lags = np.arange(1, min(nobs // 5, 2 * period) + 1, dtype=int)
-    elif lags is None:
-        lags = np.arange(1, min(nobs // 5, 10) + 1, dtype=int)
+    elif period is not None or lags is None:
+        if period is not None:
+            default_maxlag = min(nobs // 5, 2 * period)
+        else:
+            default_maxlag = min(nobs // 5, 10)
+        if default_maxlag < 1:
+            raise ValueError(
+                "lags must be positive integers, but the default number of "
+                f"lags is below 1 for nobs={nobs}. Set lags explicitly to a "
+                "value smaller than nobs or use a longer series."
+            )
+        lags = np.arange(1, default_maxlag + 1, dtype=int)
     elif not isinstance(lags, Iterable):
         lags = int_like(lags, "lags")
+        if lags < 1:
+            # validate before building the range, which would be empty
+            raise ValueError(
+                f"lags must be positive integers, got {lags} (nobs={nobs})"
+            )
         lags = np.arange(1, lags + 1)
     lags = array_like(lags, "lags", dtype="int")
+    if lags.size == 0:
+        raise ValueError(
+            f"lags must be positive integers, got an empty lags (nobs={nobs})"
+        )
+    if lags.min() < 1:
+        # lag 0 used to index the cumulative sum at -1 and silently returned
+        # the statistic for the largest lag
+        raise ValueError(
+            "lags must be positive integers, got a smallest lag of "
+            f"{lags.min()} (nobs={nobs})"
+        )
     maxlag = lags.max()
     if maxlag >= nobs:
         # an autocorrelation at lag >= nobs is undefined; requesting one
@@ -2035,6 +2275,11 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95, order_by=None)
     the inverse of the X'X matrix and does not require matrix inversion during
     updating. looks efficient but no timing
 
+    The recursion starts from the inverse of the initial window crossprod
+    (plus Ridge weight ``lamda``), falling back to its pseudo-inverse when
+    that matrix is rank deficient, e.g. due to duplicated rows in the
+    initial window.
+
     Confidence interval in Greene and Brown, Durbin and Evans is the same as
     in Ploberger after a little bit of algebra.
 
@@ -2070,15 +2315,19 @@ def recursive_olsresiduals(res, skip=None, lamda=0.0, alpha=0.95, order_by=None)
     rvarraw = np.nan * np.zeros(nobs)
 
     x0 = x[:skip]
-    if np.linalg.matrix_rank(x0) < x0.shape[1]:
-        err_msg = """\
-"The initial regressor matrix, x[:skip], issingular. You must use a value of
-skip large enough to ensure that the first OLS estimator is well-defined.
-"""
-        raise ValueError(err_msg)
     y0 = y[:skip]
     # add Ridge to start (not in jplv)
-    xtxi = np.linalg.inv(np.dot(x0.T, x0) + lamda * np.eye(nvars))
+    xtx0 = np.dot(x0.T, x0) + lamda * np.eye(nvars)
+    if np.linalg.matrix_rank(xtx0) < nvars:
+        # Rank-deficient initial window, e.g. because with skip = nvars a
+        # single duplicated row (discrete or discretized regressors)
+        # already loses rank. OLS itself estimates with pinv in this case,
+        # and pinv is also the lamda -> 0 limit of the Ridge start that is
+        # already allowed, so continue from the pseudo-inverse instead of
+        # requiring a larger skip. See #8446.
+        xtxi = np.linalg.pinv(xtx0)
+    else:
+        xtxi = np.linalg.inv(xtx0)
     xty = np.dot(x0.T, y0)  # xi * y   # np.dot(xi, y)
     beta = np.dot(xtxi, xty)
     rparams[skip - 1] = beta

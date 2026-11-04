@@ -13,9 +13,16 @@ import pytest
 
 import statsmodels.api as sm
 from statsmodels.iolib.summary import Summary
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    HessianInversionWarning,
+)
+from statsmodels.tools.testing import warns_or_none
 
 from .results.results_discrete import RandHIE
 from .test_discrete import CheckModelMixin
+
+QC_MATCH = "QC check did not pass|Could not trim params automatically"
 
 
 class CheckGeneric(CheckModelMixin):
@@ -47,7 +54,11 @@ class CheckGeneric(CheckModelMixin):
 
         alpha = np.ones(len(self.res1.params))
         alpha[-2:] = 0
-        res_reg = model.fit_regularized(alpha=alpha * 0.01, disp=False, maxiter=500)
+        # the QC check of the SLSQP solution can fail, it depends on scipy
+        with warns_or_none(ConvergenceWarning, match=QC_MATCH):
+            res_reg = model.fit_regularized(
+                alpha=alpha * 0.01, disp=False, maxiter=500
+            )
 
         if self.__class__.__name__ == "TestZeroInflatedModel_probit" and not SP_LT_116:
             pytest.xfail(
@@ -97,6 +108,7 @@ class TestZeroInflatedModel_logit(CheckGeneric):
         cls.res2 = res2
 
 
+@pytest.mark.slow
 class TestZeroInflatedModel_probit(CheckGeneric):
     @classmethod
     def setup_class(cls):
@@ -400,16 +412,18 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         # Ser random_state here to improve reproducibility
         random_state = np.random.RandomState(1)
         seed = {"seed": random_state}
-        res_bh = model.fit(
-            start_params=start_params,
-            method="basinhopping",
-            niter=500,
-            stepsize=0.1,
-            niter_success=None,
-            disp=False,
-            interval=1,
-            **seed,
-        )
+        # converged is False for basinhopping, the parameters agree
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+            res_bh = model.fit(
+                start_params=start_params,
+                method="basinhopping",
+                niter=500,
+                stepsize=0.1,
+                niter_success=None,
+                disp=False,
+                interval=1,
+                **seed,
+            )
 
         assert_allclose(res_bh.params, self.res2.params, atol=1e-4, rtol=1e-4)
         assert_allclose(res_bh.bse, self.res2.bse, atol=1e-3, rtol=0.6)
@@ -417,6 +431,7 @@ class TestZeroInflatedGeneralizedPoisson(CheckGeneric):
         # assert_(res_bh.mle_retvals['converged'] is True)
 
 
+@pytest.mark.slow
 class TestZeroInflatedGeneralizedPoisson_predict:
     @classmethod
     def setup_class(cls):
@@ -519,7 +534,11 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
 
         alpha = np.ones(len(self.res1.params))
         alpha[-2:] = 0
-        res_reg = model.fit_regularized(alpha=alpha * 0.01, disp=False, maxiter=500)
+        # the QC check of the SLSQP solution can fail, it depends on scipy
+        with warns_or_none(ConvergenceWarning, match=QC_MATCH):
+            res_reg = model.fit_regularized(
+                alpha=alpha * 0.01, disp=False, maxiter=500
+            )
 
         assert_allclose(res_reg.params[2:], self.res1.params[2:], atol=1e-1, rtol=1e-1)
 
@@ -555,14 +574,16 @@ class TestZeroInflatedNegativeBinomialP(CheckGeneric):
         assert_(res_dog.mle_retvals["converged"] is True)
 
         rs = np.random.RandomState(328390219)
-        res_bh = model.fit(
-            start_params=start_params,
-            method="basinhopping",
-            maxiter=500,
-            niter_success=3,
-            disp=False,
-            seed=rs,
-        )
+        # converged is False when niter_success stops basinhopping early
+        with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+            res_bh = model.fit(
+                start_params=start_params,
+                method="basinhopping",
+                maxiter=500,
+                niter_success=3,
+                disp=False,
+                seed=rs,
+            )
 
         assert_allclose(res_bh.params, self.res2.params, atol=1e-4, rtol=3e-4)
         assert_allclose(res_bh.bse, self.res2.bse, atol=1e-3, rtol=1e-3)
@@ -757,9 +778,11 @@ class TestZeroInflatedNegativeBinomialP_predict2:
             ]
         )
         mod = sm.ZeroInflatedNegativeBinomialP(cls.endog, exog, exog_infl=exog, p=2)
-        res = mod.fit(
-            start_params=start_params, method="bfgs", maxiter=1000, disp=False
-        )
+        # the hessian at the bfgs solution is not invertible on some platforms
+        with warns_or_none(HessianInversionWarning, match="Inverting hessian failed"):
+            res = mod.fit(
+                start_params=start_params, method="bfgs", maxiter=1000, disp=False
+            )
         cls.res = res
 
     @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
@@ -778,7 +801,7 @@ class TestZeroInflatedNegativeBinomialP_predict2:
 class TestPandasOffset:
 
     def test_pd_offset_exposure(self):
-        endog = pd.DataFrame({"F": [0.0, 0.0, 0.0, 0.0, 1.0]})
+        endog = pd.DataFrame({"F": [0.0, 1.0, 0.0, 0.0, 1.0]})
         exog = pd.DataFrame(
             {"I": [1.0, 1.0, 1.0, 1.0, 1.0], "C": [0.0, 1.0, 0.0, 1.0, 0.0]}
         )
@@ -828,6 +851,7 @@ def _fit_zero_inflated_negative_binomial_for_summary():
     ).fit(start_params=sp, method="nm", xtol=1e-6, maxiter=5000, disp=False)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "fit_func",
     [

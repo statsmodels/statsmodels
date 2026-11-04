@@ -45,6 +45,9 @@ if the source `.pyx` file is newer than the compiled `.so` or `.dll` file.
 - `black` (line-length 88) is acceptable for auto-formatting, but not required.
   Only use `black` to format changes to files, or in new files. Do not use `black` to
   wholesale reformat existing files.
+- Comments must be in English. This covers code comments, test comments, and
+  docstrings. Do not leave comments in another language in the diff; translate
+  them or remove them.
 
 ## Docstrings & documentation
 
@@ -218,6 +221,13 @@ not reimplement it standalone:
 ## Git / commit conventions
 
 - **One branch, one feature.** Don't bundle unrelated changes.
+  - The exception is a large batch of very similar changes, which is accepted
+    in a single PR. For example, adding the same validation to one kind of
+    parameter across many functions, or applying the same fix at many call
+    sites. Describe the pattern once in the PR description, list the functions
+    that were changed, and keep the change uniform so it can be checked
+    mechanically. Each changed function still needs a test (parametrize over
+    the shared pattern where possible).
 - Commit subject line under ~80 chars; prefix with the informal type tag
   used throughout `git log` (see `docs/source/dev/maintainer_notes.rst`):
   - `ENH:` new feature

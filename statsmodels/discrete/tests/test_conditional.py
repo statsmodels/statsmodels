@@ -12,6 +12,138 @@ from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import approx_fprime
 
 
+@pytest.fixture(params=[ConditionalLogit, ConditionalPoisson, ConditionalMNLogit])
+def conditional_model(request):
+    rng = np.random.default_rng(8849)
+    groups = np.repeat(np.arange(20), 3)
+    endog = np.tile([0, 1, 2], 20)
+    if request.param is ConditionalLogit:
+        endog = (endog == 1).astype(int)
+    exog = rng.normal(size=(len(endog), 2))
+    return request.param(endog, exog, groups=groups)
+
+
+def _conditional_start_params(model):
+    k_params = model.exog.shape[1]
+    if isinstance(model, ConditionalMNLogit):
+        k_params *= model.k_cat - 1
+    return np.zeros(k_params)
+
+
+@pytest.mark.parametrize("method", ["bfgs", "nm"])
+def test_conditional_fit_callback_retall(conditional_model, method):
+    start_params = _conditional_start_params(conditional_model)
+    iterates = []
+
+    def callback(params):
+        iterates.append(params.copy())
+
+    result = conditional_model.fit(
+        start_params=start_params,
+        method=method,
+        maxiter=1000,
+        callback=callback,
+        retall=True,
+    )
+
+    assert iterates
+    assert_allclose(iterates[-1], np.asarray(result.params).ravel())
+    assert result.mle_retvals["converged"]
+    assert_allclose(result.mle_retvals["allvecs"][0], start_params)
+    assert_allclose(result.mle_retvals["allvecs"][-1], iterates[-1])
+    assert result.mle_settings["callback"] is callback
+    assert result.mle_settings["retall"] is True
+
+
+@pytest.mark.parametrize("method", ["bfgs", "lbfgs"])
+def test_conditional_fit_optimizer_kwargs(conditional_model, method):
+    start_params = _conditional_start_params(conditional_model) + 0.2
+    if method == "bfgs":
+        # A loose tolerance accepts the starting values without an iteration.
+        fit_kwargs = {"gtol": 1e3}
+        expected = start_params
+    else:
+        # Fix every coefficient at zero using the optimizer's box constraints.
+        fit_kwargs = {"bounds": [(0, 0)] * len(start_params)}
+        expected = np.zeros_like(start_params)
+
+    result = conditional_model.fit(
+        start_params=start_params, method=method, **fit_kwargs
+    )
+
+    assert_allclose(np.asarray(result.params).ravel(), expected, atol=1e-12)
+    for key, value in fit_kwargs.items():
+        assert result.mle_settings[key] == value
+
+
+def test_conditional_fit_fargs(conditional_model, monkeypatch):
+    start_params = _conditional_start_params(conditional_model)
+    reference = conditional_model.fit(start_params=start_params, skip_hessian=True)
+    loglike = conditional_model.loglike
+    score = conditional_model.score
+
+    # Translating the objective translates its maximizer by the same amount.
+    # The required argument ensures fargs reaches both likelihood and score.
+    def shifted_loglike(params, shift):
+        return loglike(params - shift)
+
+    def shifted_score(params, shift):
+        return score(params - shift)
+
+    monkeypatch.setattr(conditional_model, "loglike", shifted_loglike)
+    monkeypatch.setattr(conditional_model, "score", shifted_score)
+    shift = 0.25
+    result = conditional_model.fit(
+        start_params=start_params + shift, fargs=(shift,), skip_hessian=True
+    )
+
+    assert_allclose(result.params, reference.params + shift, atol=1e-10)
+    assert result.mle_settings["fargs"] == (shift,)
+    assert result.normalized_cov_params is None
+
+
+def test_conditional_fit_warn_convergence(conditional_model, recwarn):
+    result = conditional_model.fit(
+        start_params=_conditional_start_params(conditional_model),
+        maxiter=0,
+        warn_convergence=False,
+    )
+
+    assert not recwarn.list
+    assert not result.mle_retvals["converged"]
+
+
+def test_conditional_fit_settings(conditional_model, capsys):
+    start_params = _conditional_start_params(conditional_model)
+    result = conditional_model.fit(
+        start_params=start_params, method="bfgs", maxiter=50, disp=True
+    )
+
+    assert result.mle_settings["optimizer"] == "bfgs"
+    assert result.mle_settings["maxiter"] == 50
+    assert_allclose(result.mle_settings["start_params"], start_params)
+    assert result.mle_retvals["converged"]
+    assert "Optimization terminated successfully" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "fit_kwargs",
+    [
+        {"cov_type": "HC0"},
+        {"cov_type": "cluster", "cov_kwds": {"groups": np.repeat(np.arange(20), 3)}},
+    ],
+)
+def test_conditional_fit_robust_cov_type(conditional_model, fit_kwargs):
+    start_params = _conditional_start_params(conditional_model)
+    msg = "is not available for conditional models"
+    with pytest.raises(NotImplementedError, match=msg):
+        conditional_model.fit(start_params=start_params, **fit_kwargs)
+
+    # nonrobust is the only covariance type, passing it is allowed
+    result = conditional_model.fit(start_params=start_params, cov_type="nonrobust")
+    assert result.bse.shape == result.params.shape
+
+
 def test_logit_1d():
 
     y = np.r_[0, 1, 0, 1, 0, 1, 0, 1, 1, 1]
@@ -51,9 +183,11 @@ def test_logit_formula():
     groups = np.repeat([0, 1], 50)
     exog = np.linspace(-2, 2, len(groups))
 
-    error = np.linspace(-1, 1, len(groups))  # Needed for within-group variance
-    logit_link = 1 / (1 + np.exp(exog + groups)) + error
-    endog = (logit_link > 0.5).astype(int)
+    # Random endog with within-group variance, a deterministic threshold on exog
+    # is perfectly separated and one group has no variation
+    rng = np.random.default_rng(123)
+    prob = 1 / (1 + np.exp(-(0.5 * exog + groups - 0.5)))
+    endog = rng.binomial(1, prob)
 
     data = pd.DataFrame({"exog": exog, "groups": groups, "endog": endog})
 

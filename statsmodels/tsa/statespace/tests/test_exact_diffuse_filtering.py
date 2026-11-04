@@ -50,6 +50,7 @@ import pandas as pd
 import pytest
 
 from statsmodels import datasets
+from statsmodels.tools.sm_exceptions import ModelWarning, OutputWarning
 from statsmodels.tsa.statespace.dynamic_factor import DynamicFactor
 from statsmodels.tsa.statespace.initialization import Initialization
 from statsmodels.tsa.statespace.kalman_smoother import KalmanSmoother
@@ -985,7 +986,9 @@ def test_irrelevant_state():
     mod2 = UnobservedComponents(endog, "llevel", **spec)
     mod2.ssm.filter_univariate = True
     mod2.ssm.initialization = Initialization(mod2.k_states, "diffuse")
-    res2 = mod2.smooth([3.4, 7.2, 0.01, 0.01])
+    # The model has a loglikelihood burn and, here, an exact diffuse initialization
+    with pytest.warns(ModelWarning, match="Care should be used when applying"):
+        res2 = mod2.smooth([3.4, 7.2, 0.01, 0.01])
 
     # Check that e.g., the filtered state for the level is equal
     assert_allclose(res.filtered_state[0, 25:], res2.filtered_state[0, 25:], atol=1e-5)
@@ -999,10 +1002,15 @@ def test_nondiagonal_obs_cov():
     # the observation equation as we would if we were using the univariate
     # filter.
 
+    # The univariate filter diagonalizes the non-diagonal obs_cov of TVSS, both
+    # when it is used for the diffuse periods only and for all periods
+    msg = "The univariate filtering approach diagonalized"
     mod = TVSS(np.zeros((10, 2)))
-    res1 = mod.smooth([])
+    with pytest.warns(OutputWarning, match=msg):
+        res1 = mod.smooth([])
     mod.ssm.filter_univariate = True
-    res2 = mod.smooth([])
+    with pytest.warns(OutputWarning, match=msg):
+        res2 = mod.smooth([])
 
     atol = 0.002 if PLATFORM_WIN else 1e-5
     rtol = 0.002 if PLATFORM_WIN else 1e-4

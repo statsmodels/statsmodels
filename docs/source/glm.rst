@@ -92,8 +92,8 @@ Correspondence of mathematical variables to code:
   of :math:`Y`
 * :math:`g` is coded as ``link`` argument to the ``class Family``
 * :math:`\phi` is coded as ``scale``, the dispersion parameter of the EDM
-* :math:`w` is not yet supported (i.e. :math:`w=1`), in the future it might be
-  ``var_weights``
+* :math:`w` is coded as ``var_weights``; frequency weights, which count
+  repeated observations, can be given as ``freq_weights``
 * :math:`p` is coded as ``var_power`` for the power of the variance function
   :math:`v(\mu)` of the Tweedie distribution, see table
 * :math:`\alpha` is either

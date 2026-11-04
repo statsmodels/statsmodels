@@ -242,7 +242,7 @@ class TestGlmPoissonPwNr(CheckWeight):
             cpunish_data.exog,
             family=sm.families.Poisson(),
             freq_weights=fweights,
-        ).fit(cov_type="HC1")
+        ).fit(cov_type="HC0")
 
         cls.res2 = res_stata.results_poisson_pweight_nonrobust
 

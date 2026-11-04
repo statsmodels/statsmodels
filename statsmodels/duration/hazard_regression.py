@@ -177,7 +177,8 @@ class PHSurvivalTime:
             observations are in a single stratum.
         entry : ndarray, optional
             Entry (left truncation) times.  The observation is not
-            part of the risk set for times before the entry time.  If
+            part of the risk set for times before the entry time, but
+            is included at the entry time itself.  If
             None, the entry time is treated as being zero, which
             gives no left truncation.  The entry time must be less
             than or equal to `time`.
@@ -355,7 +356,9 @@ class PHReg(model.LikelihoodModel):
         that the observation was right censored. If None, defaults
         to status=1 for all cases.
     entry : array_like, optional
-        The entry times, if left truncation occurs
+        The entry times, if left truncation occurs. An observation is in
+        the risk set at its entry time, including when that time equals a
+        failure time. The at-risk interval is ``[entry, endog]``.
     strata : array_like, optional
         Stratum labels.  If None, all observations are taken to be
         in a single stratum.
@@ -365,6 +368,12 @@ class PHReg(model.LikelihoodModel):
         Array of offset values
     missing : str, optional
         The method used to handle missing data
+    **kwargs
+        Extra arguments that are used to set model properties when using the
+        formula interface, for example ``hasconst``. Any other keyword
+        argument is not used by the model and raises a ``ValueWarning``.
+        Common mistakes are ``weights``, which ``PHReg`` does not support,
+        and ``event``, which is called ``status`` here.
 
     Notes
     -----
@@ -372,8 +381,15 @@ class PHReg(model.LikelihoodModel):
     explicit or implicit intercept.  The effect of an intercept is
     not identified using the partial likelihood approach.
 
-    `endog`, `event`, `strata`, `entry`, and the first dimension
-    of `exog` all must have the same length
+    `endog`, `status`, `strata`, `entry`, and the first dimension
+    of `exog` all must have the same length.
+
+    The inclusive entry boundary differs from the ``(start, stop]``
+    convention used by R's ``survival::Surv`` counting-process response.
+    Results can differ when an entry time coincides with a failure time.
+    To reproduce the R results in that case, add to the affected `entry`
+    values an amount that is smaller than the smallest gap between distinct
+    observed times.
     """
 
     def __init__(
@@ -388,6 +404,11 @@ class PHReg(model.LikelihoodModel):
         missing="drop",
         **kwargs,
     ):
+
+        # Unknown keywords would otherwise be swallowed silently, e.g.
+        # ``weights`` (not supported) or ``event`` (a typo for ``status``),
+        # see GH 7741
+        self._check_kwargs(kwargs)
 
         # Default is no censoring
         if status is None:
@@ -462,7 +483,9 @@ class PHReg(model.LikelihoodModel):
             that the observation was right censored. If None, defaults
             to status=1 for all cases.
         entry : array_like, optional
-            The entry times, if left truncation occurs
+            The entry times, if left truncation occurs. An observation is in
+            the risk set at its entry time, including when that time equals a
+            failure time. The at-risk interval is ``[entry, endog]``.
         strata : array_like, optional
             Stratum labels.  If None, all observations are taken to be
             in a single stratum.

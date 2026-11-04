@@ -224,6 +224,16 @@ class GLM(base.LikelihoodModel):
     Endog and exog are references so that if the data they refer to are already
     arrays and these arrays are changed, endog and exog will change.
 
+    When the model is created with ``from_formula`` and the response is a
+    categorical variable with two levels, for example a bool or str column, the
+    ``Binomial`` family models the probability of the second level. The first
+    level is the failure and the second level is the success, as in the ``glm``
+    function of R. The levels of a bool column are ``False`` and ``True``, those
+    of a str column are sorted, and those of a pandas ``Categorical`` or of
+    ``C(y, levels=[...])`` are in the order of the categories or ``levels``.
+    ``endog_names`` shows the modeled level, for example ``"y[True]"``. Other
+    families raise a ``ValueError`` for a categorical response.
+
     statsmodels supports two separate definitions of weights: frequency weights
     and variance weights.
 
@@ -276,6 +286,25 @@ class GLM(base.LikelihoodModel):
     """
     # Maximum number of endogenous variables when using a formula
     _formula_max_endog = 2
+
+    @classmethod
+    def _formula_categorical_endog(cls, endog, kwargs):
+        name = endog.columns[0]
+        if endog.shape[1] == 1:
+            raise ValueError(
+                f"The categorical response {name} has a single level in the "
+                "data. A response with two levels is needed."
+            )
+        if not isinstance(kwargs.get("family"), families.Binomial):
+            raise ValueError(
+                "A categorical response, such as a bool or str column, can "
+                "only be used with the Binomial family, which models the "
+                "second level as the success. Use a numeric response for "
+                "other families."
+            )
+        # The first level is the failure and the second the success, as in
+        # the glm function of R.
+        return endog.iloc[:, 1]
 
     def __init__(
         self,
@@ -662,9 +691,29 @@ class GLM(base.LikelihoodModel):
     def information(self, params, scale=None):
         """
         Fisher information matrix.
+
+        Returns -1 * Hessian of the log-likelihood evaluated at params,
+        i.e. the expected information matrix, which is positive definite.
+
+        Parameters
+        ----------
+        params : ndarray
+            Parameter at which the information is evaluated.
+        scale : float, optional
+            If scale is None, then the default scale will be calculated.
+            Default scale is defined by `self.scaletype` and set in fit.
+            If scale is not None, then it is used as a fixed scale.
+
+        Returns
+        -------
+        ndarray
+            The expected information matrix, ``X' W X / scale``. This is
+            ``-hessian(params, scale, observed=False)``. It differs from
+            ``-hessian(params, scale)``, which is the observed information
+            by default, unless the link is the canonical link of the family.
         """
         scale = float_like(scale, "scale", optional=True)
-        return self.hessian(params, scale=scale, observed=False)
+        return -self.hessian(params, scale=scale, observed=False)
 
     def _derivative_exog(
         self,
@@ -1204,6 +1253,8 @@ class GLM(base.LikelihoodModel):
             `dev` is the deviance divided by df_resid
         cov_type : str, optional
             The type of parameter estimate covariance matrix to compute.
+            "HC1", "HC2" and "HC3" are not implemented for GLM and fall back
+            to "HC0" with a ``SpecificationWarning``.
         cov_kwds : dict-like, optional
             Extra arguments for calculating the covariance of the parameter
             estimates.
@@ -1537,13 +1588,15 @@ class GLM(base.LikelihoodModel):
             The penalty weight.  If a scalar, the same penalty weight
             applies to all variables in the model.  If a vector, it
             must have the same length as `params`, and contains a
-            penalty weight for each coefficient.
+            penalty weight for each coefficient.  The default is 0, which
+            applies no penalty and gives the unpenalized maximum likelihood
+            estimate.
         start_params : array_like, optional
             Starting values for `params`.
         refit : bool, optional
             If True, the model is refit using only the variables that
             have non-zero coefficients in the regularized fit.  The
-            refitted model is not regularized.
+            refitted model is not regularized.  The default is False.
         opt_method : str, optional
             The method used for numerical optimization.
         **kwargs
@@ -1570,39 +1623,44 @@ class GLM(base.LikelihoodModel):
         Post-estimation results are based on the same data used to
         select variables, hence may be subject to overfitting biases.
 
-        The elastic_net method uses the following keyword arguments:
+        The elastic_net method uses the following keyword arguments.  The
+        defaults given below apply to the coordinate descent algorithm that
+        is used when L1_wt is not 0.  If L1_wt is 0, the ridge problem is
+        solved using `opt_method` instead, and `maxiter`, `cnvrg_tol`,
+        `zero_tol` and `refit` are ignored.
 
-        maxiter : int
-            Maximum number of iterations
-        L1_wt  : float
+        maxiter : int, optional
+            Maximum number of iterations (default 50).
+        L1_wt : float, optional
             Must be in [0, 1].  The L1 penalty has weight L1_wt and the
-            L2 penalty has weight 1 - L1_wt.
-        cnvrg_tol : float
+            L2 penalty has weight 1 - L1_wt (default 1).
+        cnvrg_tol : float, optional
             Convergence threshold for maximum parameter change after
-            one sweep through all coefficients.
-        zero_tol : float
-            Coefficients below this threshold are treated as zero.
+            one sweep through all coefficients (default 1e-10).
+        zero_tol : float, optional
+            Coefficients below this threshold are treated as zero
+            (default 1e-10).
 
         The l1_slsqp method uses the following keyword arguments:
 
-        maxiter : int
+        maxiter : int, optional
             Maximum number of iterations (default 1000).
-        trim_mode : {'auto', 'size', 'off'}
+        trim_mode : {'auto', 'size', 'off'}, optional
             If not 'off', trim (set to zero) parameters that would have
             been zero if the solver reached the theoretical minimum.
             If 'auto', trim params using the theoretical optimality
             conditions.  If 'size', trim params if they have very small
             absolute value.
-        size_trim_tol : float
+        size_trim_tol : float, optional
             Tolerance used when trim_mode is 'size'.
-        auto_trim_tol : float
+        auto_trim_tol : float, optional
             Tolerance used when trim_mode is 'auto'.
-        qc_tol : float
+        qc_tol : float, optional
             Print warning and do not allow auto trim when the
             optimality conditions are violated by this much.
-        qc_verbose : bool
+        qc_verbose : bool, optional
             If True, print out a full QC report upon failure.
-        acc : float
+        acc : float, optional
             Requested accuracy as used by slsqp (default 1e-10).
         """
 
@@ -2280,7 +2338,15 @@ class GLMResults(base.LikelihoodModelResults):
         Parameters
         ----------
         exog : array_like, optional
-            The values for which you want to predict.
+            The values for which you want to predict. If None, then the
+            model's exog together with the offset and exposure stored in
+            the model are used, as in ``predict``. If exog is given, then
+            the stored offset and exposure are not used unless they are
+            passed explicitly.
+
+            .. versionchanged:: 0.15.1
+
+               Without exog, the stored offset and exposure are now used.
         exposure : array_like, optional
             Exposure time values, only can be used with the log link
             function.

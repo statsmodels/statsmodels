@@ -22,6 +22,21 @@ from statsmodels.tools.sm_exceptions import ModelWarning
 from statsmodels.tools.validation import string_like
 
 
+def _check_cov_type(kwargs):
+    """
+    Raise if a robust covariance type is requested.
+
+    The conditional likelihood is computed by group and there is no
+    observation level score, so only the nonrobust covariance is available.
+    """
+    cov_type = kwargs.get("cov_type", "nonrobust")
+    if cov_type != "nonrobust":
+        raise NotImplementedError(
+            f"cov_type={cov_type!r} is not available for conditional models, "
+            "only cov_type='nonrobust' is supported."
+        )
+
+
 class _ConditionalModel(base.LikelihoodModel):
 
     def __init__(self, endog, exog, missing="none", **kwargs):
@@ -158,7 +173,9 @@ class _ConditionalModel(base.LikelihoodModel):
         disp : bool, optional
             Set to True to print convergence messages.
         fargs : tuple, optional
-            Extra arguments passed to the likelihood function.
+            Extra arguments passed to the likelihood function, its score and
+            its Hessian. The conditional models do not take any, so this is
+            only useful in a subclass that overrides these methods.
         callback : callable, optional
             Called after each iteration, as callback(xk), where xk is
             the current parameter vector.
@@ -170,7 +187,16 @@ class _ConditionalModel(base.LikelihoodModel):
             Hessian is not calculated and the returned results have
             no covariance matrix.
         **kwargs
-            Additional keyword arguments used by the solver.
+            Additional keyword arguments used by the solver, see
+            `LikelihoodModel.fit`. This includes ``warn_convergence``.
+            Robust covariance estimators are not available, so ``cov_type``
+            must be "nonrobust" if it is passed.
+
+            .. versionchanged:: 0.15.1
+
+               ``fargs``, ``callback``, ``retall`` and the additional
+               keyword arguments are forwarded to the solver. They were
+               previously ignored.
 
         Returns
         -------
@@ -178,13 +204,18 @@ class _ConditionalModel(base.LikelihoodModel):
             The fitted model results.
         """
 
+        _check_cov_type(kwargs)
         rslt = super().fit(
             start_params=start_params,
             method=method,
             maxiter=maxiter,
             full_output=full_output,
             disp=disp,
+            fargs=fargs,
+            callback=callback,
+            retall=retall,
             skip_hessian=skip_hessian,
+            **kwargs,
         )
 
         if skip_hessian:
@@ -193,6 +224,8 @@ class _ConditionalModel(base.LikelihoodModel):
             cov_params = rslt.cov_params()
 
         crslt = ConditionalResults(self, rslt.params, cov_params, 1)
+        crslt.mle_retvals = rslt.mle_retvals
+        crslt.mle_settings = rslt.mle_settings
         crslt.method = method
         crslt.nobs = self.nobs
         crslt.n_groups = self._n_groups
@@ -697,7 +730,9 @@ class ConditionalMNLogit(_ConditionalModel):
         disp : bool, optional
             Set to True to print convergence messages.
         fargs : tuple, optional
-            Extra arguments passed to the likelihood function.
+            Extra arguments passed to the likelihood function, its score and
+            its Hessian. The conditional models do not take any, so this is
+            only useful in a subclass that overrides these methods.
         callback : callable, optional
             Called after each iteration, as callback(xk), where xk is
             the current parameter vector.
@@ -730,13 +765,24 @@ class ConditionalMNLogit(_ConditionalModel):
                ``numpy.random.seed()`` beforehand.
 
         **kwargs
-            Additional keyword arguments used by the solver.
+            Additional keyword arguments used by the solver, see
+            `LikelihoodModel.fit`. This includes ``warn_convergence``.
+            Robust covariance estimators are not available, so ``cov_type``
+            must be "nonrobust" if it is passed.
+
+            .. versionchanged:: 0.15.1
+
+               ``fargs``, ``callback``, ``retall`` and the additional
+               keyword arguments are forwarded to the solver. They were
+               previously ignored.
 
         Returns
         -------
         MultinomialResultsWrapper
             The fitted model results.
         """
+
+        _check_cov_type(kwargs)
 
         if start_params is None:
             q = self.exog.shape[1]
@@ -765,7 +811,11 @@ class ConditionalMNLogit(_ConditionalModel):
             maxiter=maxiter,
             full_output=full_output,
             disp=disp,
+            fargs=fargs,
+            callback=callback,
+            retall=retall,
             skip_hessian=skip_hessian,
+            **kwargs,
         )
 
         rslt.params = rslt.params.reshape((self.exog.shape[1], -1))

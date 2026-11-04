@@ -123,6 +123,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.graphics import utils as gutils
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.tools import maybe_unwrap_results
 
 _mice_data_example_1 = """
     >>> imp = mice.MICEData(data)
@@ -176,6 +177,18 @@ class MICEData:
     `history_callback` can be implemented to have side effects such as
     saving the current imputed data set to disk.
 
+    The index of `data` is kept: the imputed data set in the attribute
+    `data`, which is also what `next_sample`, iteration and
+    `history_callback` provide, is a copy of the input with the missing
+    values filled in and has the same index and column order, so imputed
+    values can be matched to the rows of the input by label.  The index can
+    be of any type and can contain duplicate labels.  The only change to the
+    rows is that rows in which all variables are missing are dropped before
+    imputation.  `MICEData.data` then has fewer rows than the input, and
+    their labels are missing from its index.  The input is not modified.
+    `MICE` fits its analysis model to `MICEData.data`, so the data of the
+    analysis model have this index.
+
     Examples
     --------
     Draw 20 imputations from a data set called `data` and save them in
@@ -210,9 +223,12 @@ class MICEData:
         self.rng = check_random_state(rng)
         self.regularized = {}
 
-        # Drop observations where all variables are missing.  This
-        # also has the effect of copying the data frame.
-        self.data = data.dropna(how="all").reset_index(drop=True)
+        # Drop observations where all variables are missing.  ``copy()``
+        # ensures we never modify the user's frame in place (see the
+        # ``self.data.iloc[...] = ...`` writes below).  The original index
+        # is preserved so imputed values can be related back to the input
+        # (#6532).
+        self.data = data.dropna(how="all").copy()
 
         self.history_callback = history_callback
         self.history = []
@@ -320,8 +336,12 @@ class MICEData:
         for col in self.data.columns:
             di = self.data[col] - self.data[col].mean()
             di = np.abs(di)
-            ix = di.idxmin()
-            imp_values[col] = self.data[col].loc[ix]
+            # Positional selection: the original index is preserved and
+            # may contain duplicate labels, which idxmin/loc would trip
+            # over.  nanargmin returns the first occurrence of the
+            # minimum, exactly like idxmin would on a unique index.
+            ix = int(np.nanargmin(di.to_numpy()))
+            imp_values[col] = self.data[col].iloc[ix]
         self.data = self.data.fillna(imp_values)
 
     def _split_indices(self, vec):
@@ -1216,7 +1236,14 @@ class MICE:
         formula is for the 'analysis model'.
     model_class : statsmodels model
         The model to be fit to the imputed data sets.  This model
-        class is for the 'analysis model'.
+        class is for the 'analysis model'.  The results returned by its
+        ``fit`` method, wrapped or not, must provide ``params``,
+        ``cov_params()`` and ``scale``.
+
+        .. versionchanged:: 0.15.1
+
+           Results without a ``_results`` attribute, for example those of
+           ``PHReg``, are accepted.
     data : MICEData instance
         MICEData object containing the data set for which
         missing values will be imputed
@@ -1352,7 +1379,7 @@ class MICE:
         cov_within = 0.0
         scale_list = []
         for results in self.results_list:
-            results_uw = results._results
+            results_uw = maybe_unwrap_results(results)
             params_list.append(results_uw.params)
             cov_within += results_uw.cov_params()
             scale_list.append(results.scale)

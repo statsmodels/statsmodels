@@ -14,6 +14,17 @@ from statsmodels.tools.sm_exceptions import SpecificationWarning
 from . import tools
 
 
+class _StationaryInitializationError(np.linalg.LinAlgError):
+    """
+    The stationary initialization could not be computed
+
+    The initial state covariance of a stationary component solves a discrete
+    Lyapunov equation, which is singular if the transition matrix has a unit
+    root. This is a subclass of LinAlgError, so existing code that catches
+    that error is not affected.
+    """
+
+
 class Initialization:
     r"""
     State space initialization
@@ -699,6 +710,12 @@ class Initialization:
         self.initialization_type = None
         self.constant[:] = 0
         self.stationary_cov[:] = 0
+
+    def _uses_stationary(self):
+        """Whether any of the states are initialized as stationary"""
+        if self.initialization_type == "stationary":
+            return True
+        return any(block._uses_stationary() for block in self.blocks.values())
 
     @property
     def initialized(self):

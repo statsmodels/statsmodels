@@ -11,9 +11,13 @@ from statsmodels.stats.descriptivestats import (
     sign_test,
 )
 
-pytestmark = pytest.mark.filterwarnings(
-    "ignore::DeprecationWarning:statsmodels.stats.descriptivestats"
-)
+pytestmark = [
+    pytest.mark.filterwarnings(
+        "ignore::DeprecationWarning:statsmodels.stats.descriptivestats"
+    ),
+    # scipy.stats.mode warns for an empty column in SciPy 1.14 and later
+    pytest.mark.filterwarnings("error:One or more sample arguments is too small"),
+]
 
 
 @pytest.fixture
@@ -104,6 +108,7 @@ def test_description_basic(df):
     assert isinstance(res.summary().as_text(), str)
     assert "Descriptive" in str(res)
 
+    # the frame is computed when it is first used
     res = Description(df.b)
     assert isinstance(res.frame, pd.DataFrame)
     assert isinstance(res.numeric, pd.DataFrame)
@@ -179,6 +184,7 @@ def test_categorical_ntop_freq_length():
     # any ntop != 5.
     s = pd.Series(list("aabbccddee")).astype("category")  # 5 distinct values
     res = Description(pd.DataFrame({"x": s}), ntop=3)
+    assert "freq_1" in res.frame.index
     for i in range(1, 4):
         assert f"freq_{i}" in res.frame.index
     # frequencies are relative; each of the 5 categories occurs 2/10 of the time

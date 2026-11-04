@@ -8,7 +8,12 @@ License: BSD-3
 
 from statsmodels.compat.python import lzip
 
+import sys
+import warnings
+
 import numpy as np
+
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 
 descriptions = {
     "HC0": "Standard Errors are heteroscedasticity robust (HC0)",
@@ -67,6 +72,29 @@ def normalize_cov_type(cov_type):
     return cov_type
 
 
+def _stacklevel_outside_statsmodels():
+    """
+    Stack level of the first caller that is not statsmodels library code
+
+    The result is meant for the ``stacklevel`` argument of ``warnings.warn`` in
+    the function that calls this helper, so that the warning is attributed to
+    user code and not to one of the many statsmodels frames between the user
+    and the warning. Modules in a ``tests`` package are treated as user code.
+    """
+    level = 1
+    frame = sys._getframe(1)  # the function that issues the warning
+    while frame.f_back is not None:
+        name = frame.f_globals.get("__name__", "")
+        in_library = (
+            name == "statsmodels" or name.startswith("statsmodels.")
+        ) and ".tests." not in name
+        if not in_library:
+            break
+        frame = frame.f_back
+        level += 1
+    return level
+
+
 def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
     """Create new results instance with robust covariance as default
 
@@ -109,6 +137,23 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
     - 'HC0', 'HC1', 'HC2', 'HC3': heteroscedasticity robust covariance
 
       - no keyword arguments
+
+      HC1, HC2 and HC3 are only available for results classes that
+      implement them, i.e. linear regression models. For other models,
+      e.g. GLM and discrete models, HC0 is used instead, a
+      ``SpecificationWarning`` is issued and ``cov_type`` is set to 'HC0'.
+      A small sample correction can be added to HC0 with the
+      ``scaling_factor`` keyword in ``cov_kwds``. For example,
+      ``scaling_factor=nobs / (nobs - 1.)`` reproduces the robust standard
+      errors of Stata for Poisson and GLM.
+
+      .. versionchanged:: 0.15.1
+
+         Requesting HC1, HC2 or HC3 in a model without these options now
+         issues a ``SpecificationWarning`` and reports ``cov_type`` 'HC0'.
+         Previously, the HC0 covariance was used silently while ``cov_type``
+         and the summary reported the requested type. The numerical results
+         are unchanged.
 
     - 'HAC': heteroskedasticity-autocorrelation robust covariance
 
@@ -313,13 +358,27 @@ def get_robustcov_results(self, cov_type="HC1", use_t=None, **kwds):
             raise ValueError(
                 "heteroscedasticity robust covariance does not use keywords"
             )
-        res.cov_kwds["description"] = descriptions[cov_type.upper()]
-
-        res.cov_params_default = getattr(self, "cov_" + cov_type.upper(), None)
+        hc_type = cov_type.upper()
+        res.cov_params_default = getattr(self, "cov_" + hc_type, None)
         if res.cov_params_default is None:
             # results classes that do not have cov_HCx attribute
+            # only HC0 is available, see GH#7798
+            if hc_type != "HC0":
+                warnings.warn(
+                    f"cov_type '{cov_type}' was requested for "
+                    f"{self.model.__class__.__name__}, but HC1, HC2 and HC3 are "
+                    "only implemented for linear regression models. Using 'HC0' "
+                    "instead. Use cov_type='HC0' with "
+                    "cov_kwds={'scaling_factor': nobs / (nobs - 1)} for a small "
+                    "sample correction like the one used by Stata.",
+                    SpecificationWarning,
+                    stacklevel=_stacklevel_outside_statsmodels(),
+                )
+                hc_type = "HC0"
+                res.cov_type = hc_type
 
             res.cov_params_default = sw.cov_white_simple(self, use_correction=False)
+        res.cov_kwds["description"] = descriptions[hc_type]
     elif cov_type.lower() == "hac":
         maxlags = kwds["maxlags"]  # required?, default in cov_hac_simple
         res.cov_kwds["maxlags"] = maxlags

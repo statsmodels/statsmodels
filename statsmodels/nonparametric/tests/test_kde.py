@@ -1,3 +1,4 @@
+from itertools import pairwise
 from pathlib import Path
 import warnings
 
@@ -5,7 +6,8 @@ import numpy as np
 import numpy.testing as npt
 import pandas as pd
 import pytest
-from scipy import stats
+from scipy import integrate, stats
+from scipy.integrate import IntegrationWarning
 
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric import bandwidths
@@ -17,6 +19,7 @@ from statsmodels.nonparametric.kde import (
 )
 from statsmodels.nonparametric.linbin import fast_linbin
 from statsmodels.sandbox.nonparametric import kernels
+from statsmodels.tools.testing import warns_or_none
 
 # get results from Stata
 
@@ -500,7 +503,9 @@ def test_entropy_finite_domain_kernel(kernel):
     # the KDE instead of the kernel, which has no such attribute. GH#9917
     kde = KDE(Xi).fit(kernel=kernel, fft=False, bw="silverman")
 
-    entropy = kde.entropy
+    # quad hits the subdivision limit at the kinks of the kernel, scipy dependent
+    with warns_or_none(IntegrationWarning, match="The maximum number of subdivisions"):
+        entropy = kde.entropy
 
     assert np.isfinite(entropy)
 
@@ -509,6 +514,146 @@ def test_entropy_infinite_domain_kernel():
     kde = KDE(Xi).fit(kernel="gau", fft=False, bw="silverman")
 
     assert np.isfinite(kde.entropy)
+
+
+@pytest.mark.parametrize("kernel", ["epa", "tri", "uni"])
+def test_evaluate_outside_support(kernel):
+    # GH 7195: for bounded-support kernels, evaluate() returned nan when an
+    # evaluation point had no observation inside the kernel's support, and
+    # a scalar nan for the *whole* array of points in that case instead of
+    # per-point estimates. The density is zero where the kernel contributes
+    # nothing, not nan.
+    rng = np.random.RandomState(9876)
+    x = rng.normal(size=100)
+    dens = KDE(x).fit(kernel=kernel, bw="silverman", fft=False)
+    h = dens.kernel.h
+
+    outside = x.min() - 2.0 * h  # beyond the support of every observation
+    inside = x.min() - 0.5 * h  # closest observation is within its support
+
+    d_out = dens.evaluate(outside)
+    assert not np.isnan(d_out).any()
+    assert d_out[0] == 0.0
+
+    pts = np.array([outside, inside, x.mean()])
+    vals = dens.evaluate(pts)
+    assert vals.shape == (3,)
+    assert not np.isnan(vals).any()
+    assert vals[0] == 0.0
+    assert vals[2] > 0.0
+    # vectorized evaluation must match point-by-point evaluation, which
+    # already worked for individual in-support points
+    loop_vals = np.array([dens.evaluate(pt)[0] for pt in pts])
+    npt.assert_allclose(vals, loop_vals)
+
+
+BOUNDED_KERNELS = ["epa", "tri", "uni", "biw", "triw", "tric", "cos", "cos2"]
+
+
+@pytest.mark.parametrize("weighted", [False, True])
+@pytest.mark.parametrize("kernel", BOUNDED_KERNELS)
+def test_evaluate_bounded_kernels(kernel, weighted):
+    # GH 7195: all kernels with a bounded support, with and without weights
+    rng = np.random.default_rng(9876)
+    x = rng.normal(size=50)
+    weights = rng.uniform(0.5, 2.0, size=50) if weighted else None
+    dens = KDE(x).fit(kernel=kernel, bw="silverman", fft=False, weights=weights)
+    h = dens.kernel.h
+    lo, hi = dens.kernel.domain
+
+    pts = np.array(
+        [
+            x.min() + lo * h - 2.0 * h,  # outside, left
+            x.min() + 0.5 * lo * h,  # inside the support of the smallest obs
+            x.mean(),
+            x.max() + hi * h + 2.0 * h,  # outside, right
+        ]
+    )
+    vals = dens.evaluate(pts)
+    assert vals.shape == (4,)
+    assert not np.isnan(vals).any()
+    assert vals[0] == 0.0
+    assert vals[3] == 0.0
+    assert vals[1] > 0.0
+    assert vals[2] > 0.0
+
+    # brute force sum of the kernel over the observations in the support
+    w = np.full(50, 1 / 50) if weights is None else weights / weights.sum()
+    u = (x[:, None] - pts[None, :]) / h
+    in_support = (u >= lo) & (u <= hi)
+    shape = dens.kernel(np.clip(u, lo, hi))
+    expected = (np.where(in_support, shape, 0.0) * w[:, None]).sum(axis=0) / h
+    npt.assert_allclose(vals, expected, rtol=1e-12)
+
+    # list input, and a length 1 array, keep one density per point
+    npt.assert_allclose(dens.evaluate(list(pts)), vals)
+    assert dens.evaluate(pts[:1]).shape == (1,)
+    assert dens.evaluate(float(pts[0])).shape == (1,)
+
+
+def test_kernel_density_list_weights():
+    # weights set directly on a sandbox kernel can be a list
+    x = np.array([-0.3, 0.1, 0.8])
+    pts = np.array([-5.0, 0.0, 0.5])
+    weights = [0.2, 0.3, 0.5]
+    kern = kernels.Epanechnikov(h=0.7)
+    kern.weights = np.array(weights)
+    expected = kern.density(x, pts)
+    kern.weights = weights
+    npt.assert_allclose(kern.density(x, pts), expected)
+    npt.assert_allclose(kern.density(x, 0.5), expected[2:])
+
+
+@pytest.mark.parametrize("weighted", [False, True])
+@pytest.mark.parametrize("location", [0.0, 100.0])
+@pytest.mark.parametrize("kernel", BOUNDED_KERNELS)
+def test_cdf_entropy_bounded_kernels(kernel, location, weighted):
+    # cdf and entropy integrate the density over the kernel domain in the units
+    # of the data, not of the kernel
+    rng = np.random.default_rng(1234)
+    nobs = 15
+    x = rng.normal(size=nobs) + location
+    weights = rng.uniform(0.5, 2.0, size=nobs) if weighted else None
+    w = np.full(nobs, 1 / nobs) if weights is None else weights / weights.sum()
+    dens = KDE(x).fit(
+        kernel=kernel, bw="silverman", fft=False, weights=weights, gridsize=64
+    )
+    kern = dens.kernel
+    h = kern.h
+    lo, hi = kern.domain
+
+    cdf = dens.cdf
+    assert np.all(np.isfinite(cdf))
+    assert np.all(np.diff(cdf) >= -1e-10)
+    npt.assert_allclose(cdf[0], 0.0, atol=1e-10)
+    npt.assert_allclose(cdf[-1], 1.0, atol=1e-6)
+    npt.assert_allclose(dens.sf, 1 - cdf)
+
+    # the cdf of the mixture of the integrated kernel shapes
+    def kernel_cdf(u):
+        u = min(max(u, lo), hi)
+        return integrate.quad(lambda t: kern(np.asarray(t)), lo, u)[0]
+
+    for j in range(0, 64, 9):
+        u = (dens.support[j] - x) / h
+        expected = np.dot(w, [kernel_cdf(ui) for ui in u])
+        npt.assert_allclose(cdf[j], expected, atol=1e-6)
+
+    # integrate smooth pieces between the kinks of the density
+    breaks = np.unique(np.r_[x + lo * h, x, x + hi * h])
+
+    def entr(t):
+        pdf = dens.evaluate(t)[0]
+        return pdf * np.log(pdf + 1e-12)
+
+    expected = -sum(
+        integrate.quad(entr, a, b)[0] for a, b in pairwise(breaks)
+    )
+    # quad hits the subdivision limit at the kinks of the kernel, scipy dependent
+    with warns_or_none(IntegrationWarning, match="The maximum number of subdivisions"):
+        entropy = dens.entropy
+    assert np.isfinite(entropy)
+    npt.assert_allclose(entropy, expected, rtol=1e-3)
 
 
 @pytest.mark.parametrize("func", [kdensity, kdensityfft])

@@ -35,7 +35,7 @@ import statsmodels.tsa.base.prediction as pred
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.stattools._stattools import breakvar_heteroskedasticity_test
 
-from .initialization import Initialization
+from .initialization import Initialization, _StationaryInitializationError
 from .kalman_filter import INVERT_UNIVARIATE, MEMORY_CONSERVE, SOLVE_LU
 from .kalman_smoother import SmootherResults
 from .news import NewsResults
@@ -1046,6 +1046,10 @@ class MLEModel(tsbase.TimeSeriesModel):
         [1]_ recommend maximizing the average likelihood to avoid scale issues;
         this is done automatically by the base Model fit method.
 
+        The loglikelihood is -inf if the states are initialized as stationary
+        and the transition matrix has a unit root, so that the stationary
+        covariance of the initial state does not exist.
+
         References
         ----------
         .. [1] Koopman, Siem Jan, Neil Shephard, and Jurgen A. Doornik. 1999.
@@ -1069,7 +1073,14 @@ class MLEModel(tsbase.TimeSeriesModel):
         if complex_step:
             kwargs["inversion_method"] = INVERT_UNIVARIATE | SOLVE_LU
 
-        loglike = self.ssm.loglike(complex_step=complex_step, **kwargs)
+        try:
+            loglike = self.ssm.loglike(complex_step=complex_step, **kwargs)
+        except _StationaryInitializationError:
+            # The transition matrix has a unit root, which can happen at the
+            # boundary of the stationary region, for example in the line
+            # search of a derivative free optimizer. The variance of the
+            # initial state is infinite there, and so the loglikelihood is -inf.
+            return -np.inf
 
         # Koopman, Shephard, and Doornik recommend maximizing the average
         # likelihood to avoid scale issues, but the averaging is done

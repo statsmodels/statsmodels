@@ -232,9 +232,12 @@ def test_ndarray_cumulants_match_list_and_are_not_mutated():
 
     x = np.linspace(2.0, 10.0, 5)
 
-    en_list = ExpandedNormal(cum)
+    # the Edgeworth pdf of chi2(12) has real zeros within 4 sigma
+    with pytest.warns(RuntimeWarning, match="PDF has zeros"):
+        en_list = ExpandedNormal(cum)
     cum_arr = np.array(cum, dtype=float)
-    en_arr = ExpandedNormal(cum_arr)
+    with pytest.warns(RuntimeWarning, match="PDF has zeros"):
+        en_arr = ExpandedNormal(cum_arr)
 
     assert_equal(cum_arr, np.array(cum), err_msg="caller's cumulant array was mutated")
     assert en_arr.pdf(x).shape == en_list.pdf(x).shape

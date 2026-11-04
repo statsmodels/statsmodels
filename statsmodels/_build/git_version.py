@@ -57,8 +57,19 @@ __version__ = version = '{version}'
 __version_tuple__ = version_tuple = {version_fields}
     """
 
-    with Path(filename).open("w") as f:
-        f.write(template)
+    # An editable install runs this script whenever a process imports
+    # statsmodels, so other processes can import the file while it is written.
+    # Leave an unchanged file alone, and replace a changed one in one step so
+    # that a reader never sees a truncated file.
+    path = Path(filename)
+    if path.exists() and path.read_text() == template:
+        return
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_text(template)
+        tmp.replace(path)
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

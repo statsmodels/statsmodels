@@ -4,22 +4,22 @@ from numpy.linalg import solve
 
 from statsmodels.tools.validation import string_like
 
-# def denton(indicator, benchmark, freq="aq", **kwarg):
+# def denton(indicator, benchmark, freq="aq", **kwargs):
 #    """
 #    Denton's method to convert low-frequency to high frequency data.
 #
 #    Parameters
 #    ----------
-#    benchmark : array_like
-#        The higher frequency benchmark.  A 1d or 2d data series in columns.
-#        If 2d, then M series are assumed.
-#    indicator
-#        A low-frequency indicator series.  It is assumed that there are no
+#    indicator : array_like
+#        A high-frequency indicator series.  It is assumed that there are no
 #        pre-sample indicators.  Ie., the first indicators line up with
 #        the first benchmark.
-#    freq : str {"aq","qm", "other"}
+#    benchmark : array_like
+#        The low-frequency benchmark.  A 1d or 2d data series in columns.
+#        If 2d, then M series are assumed.
+#    freq : {"aq", "qm", "other"}, optional
 #        "aq" - Benchmarking an annual series to quarterly.
-#        "mq" - Benchmarking a quarterly series to monthly.
+#        "qm" - Benchmarking a quarterly series to monthly.
 #        "other" - Custom stride.  A kwarg, k, must be supplied.
 #    kwargs :
 #        k : int

@@ -639,6 +639,8 @@ class Factor(Model):
 
         cm = np.dot(load.T, load / uniq[:, None]) / nobs
         _, f = np.linalg.eig(cm)
+        # NumPy 2.5 and later return complex arrays even for real eigenvalues
+        f = np.real_if_close(f)
         load = np.dot(load, f)
         return load
 

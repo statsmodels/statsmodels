@@ -1,5 +1,7 @@
 import numpy as np
 
+from statsmodels.tools.validation import array_like, float_like, int_like
+
 from . import _tables
 
 
@@ -23,6 +25,137 @@ def _cabs(x):
     """
     sign = (x.real >= 0) * 2 - 1
     return sign * x
+
+
+def _check_positive(value, name, scalar=False):
+    """
+    Check that a tuning constant is a positive real number
+
+    Array valued tuning constants are allowed unless `scalar` is True, and
+    every element has to be positive. ``nan`` is rejected, ``inf`` is
+    allowed.
+
+    Parameters
+    ----------
+    value : float or array_like
+        The tuning constant to check. It is not converted or modified.
+    name : str
+        Name of the constant, used in the error messages.
+    scalar : bool, optional
+        If True, then only a scalar is accepted.
+
+    Raises
+    ------
+    TypeError
+        If `value` is not a real number, or not an array of real numbers
+        (for example None, a string, a bool or a complex number), or if an
+        array is given and `scalar` is True.
+    ValueError
+        If `value` is not positive, or is nan, or is an empty array. The
+        message names the offending elements of an array.
+    """
+    if scalar or not (isinstance(value, np.ndarray) or np.ndim(value) > 0):
+        if not float_like(value, name, strict=True) > 0:
+            raise ValueError(f"{name} must be positive, got {value}")
+        return
+
+    arr = array_like(value, name, dtype=None)
+    if arr.dtype.kind not in "iuf":
+        raise TypeError(
+            f"{name} must be array_like of real numbers, got dtype {arr.dtype}"
+        )
+    if arr.size == 0:
+        raise ValueError(f"{name} must not be empty")
+    bad = ~(arr > 0)
+    if bad.any():
+        idx = np.argwhere(bad)
+        shown = ", ".join(
+            f"{name}[{', '.join(str(i) for i in ix)}]={arr[tuple(ix)]}"
+            for ix in idx[:5]
+        )
+        more = ", ..." if len(idx) > 5 else ""
+        raise ValueError(
+            f"{name} must be positive, got non-positive or nan elements: "
+            f"{shown}{more}"
+        )
+
+
+def _check_positive_even_int(value, name):
+    """
+    Check that a constant is a positive, even integer
+
+    Parameters
+    ----------
+    value : int
+        The constant to check. It is not converted or modified.
+    name : str
+        Name of the constant, used in the error messages.
+
+    Raises
+    ------
+    TypeError
+        If `value` is not integer valued, for example None, a string, a bool
+        or a non-integer float.
+    ValueError
+        If `value` is not positive or is odd.
+    """
+    k = int_like(value, name)
+    if k <= 0 or k % 2 != 0:
+        raise ValueError(f"{name} must be a positive even integer, got {value}")
+
+
+def _check_unit_interval(value, name):
+    """
+    Check that a scalar is strictly between zero and one
+
+    Parameters
+    ----------
+    value : float
+        The constant to check. It is not converted or modified.
+    name : str
+        Name of the constant, used in the error messages.
+
+    Raises
+    ------
+    TypeError
+        If `value` is not a real scalar, for example None, a string, a bool
+        or a complex number.
+    ValueError
+        If `value` is not in the open interval (0, 1), or is nan.
+    """
+    if not 0 < float_like(value, name, strict=True) < 1:
+        raise ValueError(f"{name} must be between 0 and 1, got {value}")
+
+
+def _check_hampel(a, b, c):
+    """
+    Check the tuning constants of `Hampel`
+
+    The constants have to be scalars with ``0 < a <= b <= c``. Ties are
+    allowed. ``inf`` is allowed.
+
+    Parameters
+    ----------
+    a, b, c : float
+        The tuning constants of :class:`Hampel`. They are not converted or
+        modified.
+
+    Raises
+    ------
+    TypeError
+        If a constant is not a real scalar, for example None, a string, a
+        bool, a complex number or an array.
+    ValueError
+        If the constants are not ordered or not positive, or one is nan.
+    """
+    a_ = float_like(a, "a", strict=True)
+    b_ = float_like(b, "b", strict=True)
+    c_ = float_like(c, "c", strict=True)
+    if not 0 < a_ <= b_ <= c_:
+        raise ValueError(
+            f"tuning constants must satisfy 0 < a <= b <= c, "
+            f"got a={a}, b={b}, c={c}"
+        )
 
 
 class RobustNorm:
@@ -270,19 +403,39 @@ class HuberT(RobustNorm):
 
     Parameters
     ----------
-    t : float, optional
-        The tuning constant for Huber's t function. The default value is
-        1.345.
+    t : float or array_like, optional
+        The tuning constant for Huber's t function. It has to be positive.
+        An array is used element-wise, broadcast with the argument of the
+        methods. The default value is 1.345.
+
+    Raises
+    ------
+    TypeError
+        If `t` is not a real number or an array of real numbers.
+    ValueError
+        If `t` or any element of `t` is not positive, or is nan.
 
     See Also
     --------
     statsmodels.robust.norms.RobustNorm
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The tuning constant is validated. Zero, negative and nan values raise
+       a ``ValueError`` instead of creating a degenerate norm.
+
+    The tuning constant is validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    ``norm.t = value``, is not validated.
     """
 
     continuous = 1
     redescending = "not"
 
     def __init__(self, t=1.345):
+        _check_positive(t, "t")
         self.t = t
 
     def _set_tuning_param(self, c, inplace=False):
@@ -308,6 +461,7 @@ class HuberT(RobustNorm):
         This needs to wipe cached attributes that depend on the parameter.
         """
         if inplace:
+            _check_positive(c, "t")
             self.t = c
             return self
         else:
@@ -451,18 +605,37 @@ class RamsayE(RobustNorm):
     Parameters
     ----------
     a : float, optional
-        The tuning constant for Ramsay's Ea function.  The default value is
-        0.3.
+        The tuning constant for Ramsay's Ea function. It has to be positive.
+        The default value is 0.3.
+
+    Raises
+    ------
+    TypeError
+        If `a` is not a real number.
+    ValueError
+        If `a` is not positive, or is nan.
 
     See Also
     --------
     statsmodels.robust.norms.RobustNorm
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The tuning constant is validated. Zero, negative and nan values raise
+       a ``ValueError`` instead of creating a degenerate norm.
+
+    The tuning constant is validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    ``norm.a = value``, is not validated.
     """
 
     continuous = 2
     redescending = "soft"
 
     def __init__(self, a=.3):
+        _check_positive(a, "a")
         self.a = a
 
     def _set_tuning_param(self, c, inplace=False):
@@ -489,6 +662,7 @@ class RamsayE(RobustNorm):
         """
         # todo : change default to inplace=False, when tools are fixed
         if inplace:
+            _check_positive(c, "a")
             self.a = c
             return self
         else:
@@ -598,19 +772,39 @@ class AndrewWave(RobustNorm):
 
     Parameters
     ----------
-    a : float, optional
-        The tuning constant for Andrew's Wave function.  The default value is
-        1.339.
+    a : float or array_like, optional
+        The tuning constant for Andrew's Wave function. It has to be
+        positive. An array is used element-wise, broadcast with the argument
+        of the methods. The default value is 1.339.
+
+    Raises
+    ------
+    TypeError
+        If `a` is not a real number or an array of real numbers.
+    ValueError
+        If `a` or any element of `a` is not positive, or is nan.
 
     See Also
     --------
     statsmodels.robust.norms.RobustNorm
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The tuning constant is validated. Zero, negative and nan values raise
+       a ``ValueError`` instead of creating a degenerate norm.
+
+    The tuning constant is validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    ``norm.a = value``, is not validated.
     """
 
     continuous = 1
     redescending = "hard"
 
     def __init__(self, a=1.339):
+        _check_positive(a, "a")
         self.a = a
 
     def _set_tuning_param(self, c, inplace=False):
@@ -636,6 +830,7 @@ class AndrewWave(RobustNorm):
         This needs to wipe cached attributes that depend on the parameter.
         """
         if inplace:
+            _check_positive(c, "a")
             self.a = c
             return self
         else:
@@ -786,18 +981,37 @@ class TrimmedMean(RobustNorm):
     Parameters
     ----------
     c : float, optional
-        The tuning constant for the trimmed mean function.  The default
-        value is 2.0.
+        The tuning constant for the trimmed mean function. It has to be
+        positive. The default value is 2.0.
+
+    Raises
+    ------
+    TypeError
+        If `c` is not a real number.
+    ValueError
+        If `c` is not positive, or is nan.
 
     See Also
     --------
     statsmodels.robust.norms.RobustNorm
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The tuning constant is validated. Zero, negative and nan values raise
+       a ``ValueError`` instead of creating a degenerate norm.
+
+    The tuning constant is validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    ``norm.c = value``, is not validated.
     """
 
     continuous = 0
     redescending = "hard"
 
     def __init__(self, c=2.):
+        _check_positive(c, "c")
         self.c = c
 
     def _set_tuning_param(self, c, inplace=False):
@@ -823,6 +1037,7 @@ class TrimmedMean(RobustNorm):
         This needs to wipe cached attributes that depend on the parameter.
         """
         if inplace:
+            _check_positive(c, "c")
             self.c = c
             return self
         else:
@@ -959,18 +1174,41 @@ class Hampel(RobustNorm):
     Parameters
     ----------
     a, b, c : float, optional
-        The tuning constants for Hampel's function.  The default values are
-        a, b, c = 2, 4, 8.
+        The tuning constants for Hampel's function. They have to be scalars
+        that satisfy ``0 < a <= b <= c``, equal values are allowed. The
+        default values are a, b, c = 2, 4, 8.
+
+    Raises
+    ------
+    TypeError
+        If `a`, `b` or `c` is not a real scalar. Arrays are not accepted.
+    ValueError
+        If the constants do not satisfy ``0 < a <= b <= c``, or if one of
+        them is nan.
 
     See Also
     --------
     statsmodels.robust.norms.RobustNorm
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The tuning constants are validated. Constants that are not positive
+       or not ordered, and nan values, raise a ``ValueError`` instead of
+       creating a degenerate norm. Array valued constants raise a
+       ``TypeError``, they never worked in the methods of the norm.
+
+    The tuning constants are validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    for example ``norm.c = value``, is not validated.
     """
 
     continuous = 1
     redescending = "hard"
 
     def __init__(self, a=2., b=4., c=8.):
+        _check_hampel(a, b, c)
         self.a = a
         self.b = b
         self.c = c
@@ -1000,6 +1238,8 @@ class Hampel(RobustNorm):
         --------
         This needs to wipe cached attributes that depend on the parameter.
         """
+        # check c first, so that the error refers to the value that was passed
+        _check_positive(c, "c", scalar=True)
         a = c / 4
         b = c / 2
         if inplace:
@@ -1209,19 +1449,37 @@ class TukeyBiweight(RobustNorm):
 
     Parameters
     ----------
-    c : float, optional
-        The tuning constant for Tukey's Biweight.  The default value is
-        c = 4.685.
+    c : float or array_like, optional
+        The tuning constant for Tukey's Biweight. It has to be positive. An
+        array is used element-wise, broadcast with the argument of the
+        methods. The default value is c = 4.685.
+
+    Raises
+    ------
+    TypeError
+        If `c` is not a real number or an array of real numbers.
+    ValueError
+        If `c` or any element of `c` is not positive, or is nan.
 
     Notes
     -----
     Tukey's biweight is sometimes called bisquare.
+
+    .. versionchanged:: 0.15.1
+
+       The tuning constant is validated. Zero, negative and nan values raise
+       a ``ValueError`` instead of creating a degenerate norm.
+
+    The tuning constant is validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    ``norm.c = value``, is not validated.
     """
 
     continuous = 2
     redescending = "hard"
 
     def __init__(self, c=4.685):
+        _check_positive(c, "c")
         self.c = c
 
     def __repr__(self):
@@ -1283,6 +1541,7 @@ class TukeyBiweight(RobustNorm):
         """
         # todo : change default to inplace=False, when tools are fixed
         if inplace:
+            _check_positive(c, "c")
             self.c = c
             return self
         else:
@@ -1419,16 +1678,38 @@ class TukeyQuartic(RobustNorm):
     Parameters
     ----------
     c : float, optional
-        The tuning constant for Tukey's Biweight.  The default value is
-        c = 3.61752.
+        The tuning constant for Tukey's Biweight. It has to be positive. The
+        default value is c = 3.61752.
     k : int, optional
         The power used in the inner term in place of the power 2 used by
-        Tukey's biweight.  The default value is 4.
+        Tukey's biweight. It has to be a positive, even integer, because
+        psi is an odd function only for even powers. The default value is 4.
+
+    Raises
+    ------
+    TypeError
+        If `c` is not a real number, or `k` is not an integer.
+    ValueError
+        If `c` is not positive or is nan, or if `k` is not positive and
+        even.
 
     Notes
     -----
     This is a variation of Tukey's biweight (bisquare) function where
     the weight function has power 4 instead of power 2 in the inner term.
+
+    The default value of `c` is only valid for ``k = 4``, it needs to be
+    changed for other powers.
+
+    .. versionchanged:: 0.15.1
+
+       The tuning constant `c` and the power `k` are validated. Invalid
+       values raise a ``TypeError`` or ``ValueError`` instead of creating a
+       degenerate norm.
+
+    The constants are validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    for example ``norm.c = value``, is not validated.
     """
 
     continuous = 2
@@ -1436,7 +1717,8 @@ class TukeyQuartic(RobustNorm):
 
     def __init__(self, c=3.61752, k=4):
         # TODO: c needs to be changed if k != 4
-        # also, I think implementation assumes k is even integer
+        _check_positive(c, "c")
+        _check_positive_even_int(k, "k")
         self.c = c
         self.k = k
 
@@ -1463,6 +1745,7 @@ class TukeyQuartic(RobustNorm):
         This needs to wipe cached attributes that depend on the parameter.
         """
         if inplace:
+            _check_positive(c, "c")
             self.c = c
             return self
         else:
@@ -1622,17 +1905,37 @@ class StudentT(RobustNorm):
     Parameters
     ----------
     c : float, optional
-        The tuning constant for the StudentT norm.  The default value is
-        2.3849.
+        The tuning constant for the StudentT norm. It has to be positive. The
+        default value is 2.3849.
     df : float, optional
         The degrees of freedom of the t distribution used to derive the
-        norm.  The default value is 4.
+        norm. It has to be positive. The default value is 4.
+
+    Raises
+    ------
+    TypeError
+        If `c` or `df` is not a real number.
+    ValueError
+        If `c` or `df` is not positive, or is nan.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The constants `c` and `df` are validated. Zero, negative and nan
+       values raise a ``ValueError`` instead of creating a degenerate norm.
+
+    The constants are validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    for example ``norm.c = value``, is not validated.
     """
 
     continuous = 2
     redescending = "soft"
 
     def __init__(self, c=2.3849, df=4):
+        _check_positive(c, "c")
+        _check_positive(df, "df", scalar=True)
         self.c = c
         self.df = df
 
@@ -1659,6 +1962,7 @@ class StudentT(RobustNorm):
         This needs to wipe cached attributes that depend on the parameter.
         """
         if inplace:
+            _check_positive(c, "c")
             self.c = c
             return self
         else:
@@ -1776,12 +2080,26 @@ class MQuantileNorm(RobustNorm):
     Parameters
     ----------
     q : float
-        M-quantile, must be between 0 and 1
+        M-quantile, must be between 0 and 1, excluding the end points.
     base_norm : RobustNorm instance
         Basic norm that is transformed into an asymmetric M-quantile norm
 
+    Raises
+    ------
+    TypeError
+        If `q` is not a real number.
+    ValueError
+        If `q` is not in the open interval (0, 1), or is nan.
+
     Notes
     -----
+    .. versionchanged:: 0.15.1
+
+       The M-quantile `q` is validated.
+
+    The constant `q` is validated when the norm is created. Plain attribute
+    assignment after construction, ``norm.q = value``, is not validated.
+
     This is mainly for base norms that are not redescending, like HuberT or
     LeastSquares. (See Jones for the relationship of M-quantiles to quantiles
     in the case of non-redescending Norms.) See [BianchiEtAl2015]_,
@@ -1812,6 +2130,7 @@ class MQuantileNorm(RobustNorm):
     continuous = 1
 
     def __init__(self, q, base_norm):
+        _check_unit_interval(q, "q")
         self.q = q
         self.base_norm = base_norm
 

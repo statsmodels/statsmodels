@@ -487,7 +487,8 @@ def test_omni_normtest_axis_validation():
     with pytest.raises(ValueError, match="out of bounds"):
         omni_normtest(data, axis=99)
     # negative indexing stays valid, and the 1-d default path is unchanged
-    omni_normtest(data, axis=-1)
+    # the last axis of data.T has 40 observations, enough for omni_normtest
+    omni_normtest(data.T, axis=-1)
     res = omni_normtest(rs.standard_normal(40))
     assert np.ndim(res[0]) == 0
 

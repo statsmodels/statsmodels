@@ -330,6 +330,9 @@ class PrincipalHessianDirections(_DimReductionRegression):
         cb = np.linalg.solve(cx, cm)
 
         a, b = np.linalg.eig(cb)
+        # NumPy 2.5 and later return complex arrays even for real eigenvalues
+        a = np.real_if_close(a)
+        b = np.real_if_close(b)
         jj = np.argsort(-np.abs(a))
         a = a[jj]
         params = b[:, jj]

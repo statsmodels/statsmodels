@@ -153,6 +153,29 @@ class Model:
         return data
 
     @classmethod
+    def _formula_categorical_endog(cls, endog, kwargs):
+        """
+        Convert a categorical response from a formula to the model's endog
+
+        Called by ``from_formula`` for models that accept two response columns
+        when the response is categorical. The default keeps the indicator
+        columns of the formula engine.
+
+        Parameters
+        ----------
+        endog : DataFrame
+            The indicator columns, one for each level of the response.
+        kwargs : dict
+            The keyword arguments that are passed to the model.
+
+        Returns
+        -------
+        DataFrame or Series
+            The response to use in the model.
+        """
+        return endog
+
+    @classmethod
     def from_formula(cls, formula, data, subset=None, drop_cols=None, *args, **kwargs):
         """
         Create a Model from a formula and dataframe
@@ -217,6 +240,10 @@ class Model:
                 "the variable converted to endog is non-numeric"
                 " (e.g., bool or str)."
             )
+        if max_endog == 2 and endog.ndim == 2 and mgr.is_categorical(endog):
+            # A categorical response is expanded to one indicator column per
+            # level, which would be read as (successes, failures).
+            endog = cls._formula_categorical_endog(endog, kwargs)
         if drop_cols is not None and len(drop_cols) > 0:
             cols = [x for x in exog.columns if x not in drop_cols]
             if len(cols) < len(exog.columns):
@@ -1259,7 +1286,9 @@ class Results:
         is_pandas = _is_using_pandas(exog, None)
         exog_index = None
         if is_pandas:
-            if exog.ndim == 2 or self.params.size == 1:
+            if exog.ndim == 2 or (
+                self.model.exog is not None and self.model.exog.shape[1] == 1
+            ):
                 exog_index = exog.index
             else:
                 exog_index = [exog.index.name]
@@ -3024,7 +3053,15 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         Parameters
         ----------
         exog : array_like, optional
-            The values for which you want to predict.
+            The values for which you want to predict. If None, then the
+            model's exog together with the offset and exposure stored in
+            the model are used, as in ``predict``. If exog is given, then
+            the stored offset and exposure are not used unless they are
+            passed explicitly.
+
+            .. versionchanged:: 0.15.1
+
+               Without exog, the stored offset and exposure are now used.
         which : str, optional
             Which statistic is to be predicted. Default is "mean".
             The available statistics and options depend on the model.

@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from scipy.interpolate import interp1d
+from scipy.linalg import solve_triangular
 from scipy.signal import correlate
 
 from statsmodels.regression.linear_model import OLS, yule_walker
@@ -35,6 +36,7 @@ from statsmodels.tools.validation import (
 )
 from statsmodels.tsa._bds import bds
 from statsmodels.tsa._innovations import innovations_algo, innovations_filter
+from statsmodels.tsa._lagselect import nested_lag_ols
 from statsmodels.tsa.adfvalues import mackinnoncrit, mackinnonp
 from statsmodels.tsa.tsatools import add_trend, lagmat, lagmat2ds
 
@@ -197,9 +199,10 @@ def _adf_autolag(x, maxlag, regression, method):
 
     Returns
     -------
-    tuple[float, int] or None
-        The best criterion value (the absolute t-statistic of the last lag
-        for "t-stat") and the selected number of lagged differences. None
+    tuple or None
+        The best criterion value, a float (the absolute t-statistic of the
+        last lag for "t-stat"), and the selected number of lagged
+        differences, an int. None
         if the regressors are close to singular or the largest regression
         fits almost perfectly. ``_autolag`` is used in these cases.
 
@@ -208,16 +211,9 @@ def _adf_autolag(x, maxlag, regression, method):
     Gives the same result as ``_autolag`` with OLS on the regressors
     ``X = [trend, level, lag 1, ..., lag maxlag]`` that ``adfuller`` builds.
     All candidate regressions use the first ``j`` columns of ``X`` and the
-    same sample. If ``[X, y] = QR`` with ``X`` of shape ``(nobs, k)``, then
-    the regression on the first ``j`` columns has
-
-    * ``ssr_j = R[k, k] ** 2 + sum(R[j:k, k] ** 2)``
-    * ``|t_j| = |R[j - 1, k]| / sqrt(ssr_j / (nobs - j))`` for the
-      coefficient of its last column,
-
-    so one factorization gives the criteria of all lag lengths. The rows are
-    processed in blocks, and the triangular factor is updated block by block
-    so the full lagged regressor matrix is never formed.
+    same sample, so ``nested_lag_ols`` gives the criteria of all lag
+    lengths from one QR decomposition without forming the lagged regressor
+    matrix.
     """
     xdiff = np.diff(x)
     nobs = xdiff.shape[0] - maxlag
@@ -227,52 +223,28 @@ def _adf_autolag(x, maxlag, regression, method):
     # Row t of windows is xdiff[t + maxlag], xdiff[t + maxlag - 1], ...,
     # xdiff[t], i.e., the dependent variable followed by its maxlag lags
     windows = np.lib.stride_tricks.sliding_window_view(xdiff, maxlag + 1)[:, ::-1]
-    # Blocks of about 1MB keep the data in cache
-    block_rows = max(4 * (k + 1), 2**17 // (k + 1))
-    r = np.empty((0, k + 1))
-    for start in range(0, nobs, block_rows):
-        stop = min(start + block_rows, nobs)
-        block = np.empty((r.shape[0] + stop - start, k + 1))
-        block[: r.shape[0]] = r
-        rows = block[r.shape[0] :]
-        if ntrend:
-            trend = np.arange(start + 1, stop + 1, dtype=float)
-            for power in range(ntrend):
-                rows[:, power] = trend**power
-        rows[:, ntrend] = x[maxlag + start : maxlag + stop]
-        rows[:, startlag:k] = windows[start:stop, 1:]
-        rows[:, k] = windows[start:stop, 0]
-        r = np.linalg.qr(block, mode="r")
-
-    if not np.all(np.isfinite(r)):
-        return None
+    exog = np.empty((nobs, startlag))
+    exog[:, :ntrend] = np.vander(np.arange(1.0, nobs + 1), ntrend, increasing=True)
+    exog[:, ntrend] = x[maxlag:-1]
     # OLS treats singular values below ncols * eps times the largest one as
-    # zero. A subset of the columns has a smallest singular value at least
-    # as large, and a largest one at most as large, as all columns, so if
-    # this check passes OLS finds every candidate regression to have full
-    # rank. The factor 10 is a margin for rounding.
-    sv = np.linalg.svd(r[:k, :k], compute_uv=False)
-    if sv[-1] <= 10 * k * np.finfo(float).eps * sv[0]:
-        return None
-    qy = r[:k, k]
-    # ssr_tail[j] is the sum of squares of qy[j:]
-    ssr_tail = np.append(np.cumsum(qy[::-1] ** 2)[::-1], 0.0)
-    ssr = r[k, k] ** 2 + ssr_tail[startlag:]
-    if not ssr[-1] > 1e-10 * (r[k, k] ** 2 + ssr_tail[0]):
-        # (Almost) perfect fit, the residuals are dominated by rounding
+    # zero
+    res = nested_lag_ols(
+        windows[:, 0], windows[:, 1:], exog, rcond=k * np.finfo(float).eps
+    )
+    if res is None:
         return None
 
-    ncols = np.arange(startlag, k + 1)
     if method == "t-stat":
-        crit = np.abs(qy[startlag - 1 :]) / np.sqrt(ssr / (nobs - ncols))
+        crit = np.abs(res.tvalues_last)
         # stop = stats.norm.ppf(.95)
         significant = np.flatnonzero(crit >= 1.6448536269514722)
         bestlag = significant[-1] if significant.size else 0
     else:
+        ssr = res.ssr
         nobs2 = nobs / 2.0
         llf = -nobs2 * np.log(2 * np.pi) - nobs2 * np.log(ssr / nobs) - nobs2
         penalty = 2.0 if method == "aic" else np.log(nobs)
-        crit = -2 * llf + penalty * ncols
+        crit = -2 * llf + penalty * res.df_model
         bestlag = np.argmin(crit)
     return crit[bestlag], int(bestlag)
 
@@ -1194,13 +1166,73 @@ def acf(
     return acf, qstat_vals, pvalue
 
 
+def _pacf_yw_levinson(x, nlags, adjusted):
+    """
+    Partial autocorrelations of the Yule-Walker estimator by Levinson-Durbin
+
+    Parameters
+    ----------
+    x : ndarray
+        The data series, 1d.
+    nlags : int
+        The largest lag, smaller than the number of observations.
+    adjusted : bool
+        Use the denominator nobs - k for the autocovariance at lag k if
+        True, nobs if False.
+
+    Returns
+    -------
+    ndarray
+        The partial autocorrelations for lags 0, 1, ..., m with m <= nlags.
+        m < nlags if the Toeplitz matrix of the autocovariances at lags
+        0, ..., m is not positive definite or the autocovariances are not
+        finite. Lags above m are left to ``yule_walker``.
+
+    Notes
+    -----
+    The autocovariances are computed exactly as ``yule_walker`` computes
+    them. The PACF at lag k is the last coefficient of the AR(k) Yule-Walker
+    solution, which is the k-th reflection coefficient of the Levinson-Durbin
+    recursion, so all lags are found in O(nlags ** 2) operations from a
+    single autocovariance sequence. The recursion stops at the first leading
+    Toeplitz matrix that is not positive definite, where it is no longer
+    known to be stable.
+    """
+    nobs = x.shape[0]
+    pacf = np.empty(nlags + 1)
+    pacf[0] = 1.0
+    # Invalid values produce non-finite autocovariances, and yule_walker
+    # then repeats the calculation and its warnings
+    with np.errstate(all="ignore"):
+        x = x - x.mean()
+        acov = np.empty(nlags + 1)
+        acov[0] = (x**2).sum() / nobs
+        for k in range(1, nlags + 1):
+            acov[k] = (x[:-k] * x[k:]).sum() / (nobs - k * adjusted)
+    if not np.all(np.isfinite(acov)):
+        return pacf[:1]
+    # phi[:k - 1] holds the coefficients of the AR(k - 1) model, and sigma
+    # its innovation variance
+    phi = np.empty(nlags)
+    sigma = acov[0]
+    for k in range(1, nlags + 1):
+        if not sigma > 0:
+            return pacf[:k]
+        refl = (acov[k] - phi[: k - 1] @ acov[k - 1 : 0 : -1]) / sigma
+        phi[: k - 1] -= refl * phi[: k - 1][::-1]
+        phi[k - 1] = refl
+        sigma *= 1.0 - refl * refl
+        pacf[k] = refl
+    return pacf
+
+
 def pacf_yw(
     x: ArrayLike1D,
     nlags: int | None = None,
     method: Literal["adjusted", "mle"] = "adjusted",
 ) -> np.ndarray:
     """
-    Partial autocorrelation estimated with non-recursive yule_walker
+    Partial autocorrelation estimated with Yule-Walker
 
     Parameters
     ----------
@@ -1228,8 +1260,12 @@ def pacf_yw(
 
     Notes
     -----
-    This solves yule_walker for each desired lag and contains
-    currently duplicate calculations.
+    The value at lag k is the last coefficient of the AR(k) model estimated
+    by ``yule_walker``. All lags are computed from one autocovariance
+    sequence using the Levinson-Durbin recursion. ``yule_walker`` is used
+    for the lags where the recursion is not known to be stable, which are
+    those where the Toeplitz matrix of the autocovariances is not positive
+    definite.
     """
     x = array_like(x, "x")
     nlags = int_like(nlags, "nlags", optional=True)
@@ -1237,16 +1273,19 @@ def pacf_yw(
     if nlags is None:
         nlags = max(min(int(10 * np.log10(nobs)), nobs - 1), 1)
     method = string_like(method, "method", options=("adjusted", "mle"))
-    pacf = [1.0]
+    if (x.ndim == 1 or x.shape[1:] == (1,)) and 0 < nlags < nobs:
+        pacf = _pacf_yw_levinson(x.reshape(-1), nlags, method == "adjusted")
+    else:
+        pacf = np.ones(1)
+    if pacf.shape[0] > nlags:
+        return pacf
     with warnings.catch_warnings():
         warnings.simplefilter("once", ValueWarning)
-        pacf.extend(
-            [
-                yule_walker(x, k, method=method, result_object=False)[0][-1]
-                for k in range(1, nlags + 1)
-            ]
-        )
-    return np.array(pacf)
+        rest = [
+            yule_walker(x, k, method=method, result_object=False)[0][-1]
+            for k in range(pacf.shape[0], nlags + 1)
+        ]
+    return np.concatenate([pacf, rest])
 
 
 class PacfBurgResult(NamedTuple):
@@ -1338,6 +1377,72 @@ def pacf_burg(
     return PacfBurgResult(pacf, sigma2)
 
 
+def _pacf_ols_qr(x, nlags, efficient):
+    """
+    Partial autocorrelations of the OLS estimator from a single QR
+
+    Parameters
+    ----------
+    x : ndarray
+        The data series, 1d, demeaned by the caller. When efficient is
+        True, the regressions include a constant, so demeaning does not
+        change them but improves their conditioning.
+    nlags : int
+        The largest lag, at most nobs // 2.
+    efficient : bool
+        If True, the k-lag regression includes a constant and uses the
+        observations k, ..., nobs - 1. If False, it has no constant and
+        uses the observations nlags, ..., nobs - 1.
+
+    Returns
+    -------
+    ndarray or None
+        The partial autocorrelations for lags 0, 1, ..., nlags. None if a
+        regression is close to singular or the data are not finite, where
+        ``pacf_ols`` solves the regressions one by one.
+
+    Notes
+    -----
+    Gives the same result as the least squares fit of each regression in
+    ``pacf_ols``. The k-lag regression uses the first k columns of
+    ``[lag 1, ..., lag nlags]``, and a constant if efficient is True, so
+    ``nested_lag_ols`` gives the last coefficient of every regression. When
+    efficient is True the samples differ, and the regressions use the
+    observations k, ..., nobs - 1 through its ``start`` argument. The lags
+    before the start of the sample are set to zero, as in lagmat, and do
+    not affect the results.
+    """
+    nobs = x.shape[0]
+    # lstsq treats singular values below max(nrows, ncols) * eps times the
+    # largest one as zero, and max(nrows, ncols) <= nobs
+    rcond = nobs * np.finfo(float).eps
+    if efficient:
+        # Row t of windows is x[t], x[t - 1], ..., x[t - nlags], with zeros
+        # before the start of the sample
+        padded = np.concatenate([np.zeros(nlags), x])
+        windows = np.lib.stride_tricks.sliding_window_view(padded, nlags + 1)
+        windows = windows[:, ::-1]
+        res = nested_lag_ols(
+            windows[:, 0],
+            windows[:, 1:],
+            np.ones((nobs, 1)),
+            rcond=rcond,
+            start=np.arange(nlags + 1),
+            check_fit=False,
+        )
+    else:
+        # Row t of windows is x[t + nlags], x[t + nlags - 1], ..., x[t]
+        windows = np.lib.stride_tricks.sliding_window_view(x, nlags + 1)[:, ::-1]
+        res = nested_lag_ols(
+            windows[:, 0], windows[:, 1:], rcond=rcond, check_fit=False
+        )
+    if res is None:
+        return None
+    pacf = res.params_last
+    pacf[0] = 1.0
+    return pacf
+
+
 def pacf_ols(
     x: ArrayLike1D,
     nlags: int | None = None,
@@ -1378,8 +1483,10 @@ def pacf_ols(
 
     Notes
     -----
-    This solves a separate OLS estimation for each desired lag using method in
-    [1]_. Setting efficient to True has two effects. First, it uses
+    This estimates a separate OLS regression for each desired lag using
+    method in [1]_. The regressions share their regressors, so all of them
+    are computed from a single QR decomposition. Setting efficient to True
+    has two effects. First, it uses
     `nobs - lag` observations of estimate each pacf.  Second, it re-estimates
     the mean in each regression. If efficient is False, then the data are first
     demeaned, and then `nobs - maxlag` observations are used to estimate each
@@ -1406,6 +1513,18 @@ def pacf_ols(
         nlags = max(min(int(10 * np.log10(nobs)), nobs // 2), 1)
     if nlags > nobs // 2:
         raise ValueError(f"nlags must be smaller than nobs // 2 ({nobs // 2})")
+    if not efficient:
+        x = x - np.mean(x)
+    pacf = None
+    if (x.ndim == 1 or x.shape[1:] == (1,)) and 0 < nlags:
+        xd = x.reshape(-1)
+        if efficient:
+            xd = xd - xd.mean()
+        pacf = _pacf_ols_qr(xd, nlags, efficient)
+    if pacf is not None:
+        if adjusted:
+            pacf *= nobs / (nobs - np.arange(nlags + 1))
+        return pacf
     pacf = np.empty(nlags + 1)
     pacf[0] = 1.0
     if efficient:
@@ -1416,7 +1535,6 @@ def pacf_ols(
             params = np.linalg.lstsq(xlags[k:, : k + 1], x0[k:], rcond=None)[0]
             pacf[k] = np.squeeze(params[-1])
     else:
-        x = x - np.mean(x)
         # Create a single set of lags for multivariate OLS
         _lagmat_result = lagmat(x, nlags, original="sep", trim="both")
         xlags, x0 = _lagmat_result.lags, _lagmat_result.leads
@@ -3514,10 +3632,12 @@ class RURResult(LimitedIterationMixin[float]):
     statistic : float
         The RUR test statistic.
     pvalue : float
-        The p-value of the test. The p-value is interpolated from Table 1
-        in Aparicio et al. (2006), and a boundary point is returned if the
-        test statistic is outside the table of critical values, that is,
-        if the p-value is outside the interval (0.01, 0.1).
+        The p-value of the test. The p-value is the smallest probability
+        level in Table 1 of Aparicio et al. (2006) whose critical value is
+        larger than the statistic. The boundary value 0.01 is returned if the
+        statistic is below the 1% critical value, and 0.95 if it is at or
+        above the 95% critical value, that is, if the actual p-value is
+        outside the interval (0.01, 0.95).
     critical_values : dict[str, float]
         The critical values at 10%, 5%, 2.5% and 1%. Based on Aparicio et
         al. (2006).
@@ -3552,7 +3672,8 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     Range unit-root test for stationarity
 
     Computes the Range Unit-Root (RUR) test for the null
-    hypothesis that x is stationary.
+    hypothesis that x has a unit root, i.e. is not stationary. The null is
+    rejected for small values of the statistic.
 
     Parameters
     ----------
@@ -3589,11 +3710,12 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     statistic : float
         The RUR test statistic.
     pvalue : float
-        The p-value of the test. The p-value is interpolated from
-        Table 1 in Aparicio et al. (2006), and a boundary point
-        is returned if the test statistic is outside the table of
-        critical values, that is, if the p-value is outside the
-        interval (0.01, 0.1).
+        The p-value of the test. The p-value is the smallest probability
+        level in Table 1 of Aparicio et al. (2006) whose critical value is
+        larger than the statistic. The boundary value 0.01 is returned if the
+        statistic is below the 1% critical value, and 0.95 if it is at or
+        above the 95% critical value, that is, if the actual p-value is
+        outside the interval (0.01, 0.95).
     crit : dict
         The critical values at 10%, 5%, 2.5% and 1%. Based on
         Aparicio et al. (2006).
@@ -3602,10 +3724,24 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
 
     Notes
     -----
-    The p-values are interpolated from
-    Table 1 of Aparicio et al. (2006). If the computed statistic is
-    outside the table of critical values, then a warning message is
-    generated.
+    The critical values are interpolated in the number of observations from
+    Table 1 of Aparicio et al. (2006). The p-value is the smallest tabulated
+    probability level whose critical value is larger than the statistic. If
+    the computed statistic is below the 1% critical value or at or above the
+    95% critical value, then an ``InterpolationWarning`` is issued. In the
+    first case the actual p-value is smaller than the reported 0.01 and in
+    the second it is larger than the reported 0.95.
+
+    .. versionchanged:: 0.15.1
+
+       The null hypothesis is documented correctly: the null is that `x` has
+       a unit root, and it is rejected for small values of the statistic. The
+       ``InterpolationWarning`` previously reported the opposite direction,
+       and was raised when the p-value was 0.95 or 0.01 rather than when the
+       statistic was outside of the tabulated critical values. It is now
+       raised when the statistic is below the 1% critical value (the actual
+       p-value is smaller) or at or above the 95% critical value (the actual
+       p-value is larger).
 
     Missing values are not handled.
 
@@ -3673,10 +3809,12 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
 The test statistic is outside of the range of p-values available in the
 look-up table. The actual p-value is {direction} than the p-value returned.
 """
+    # the null is rejected for small statistics, so a statistic below the
+    # table has a smaller p-value than reported and one above it a larger one
     direction = ""
-    if p_value == pvals[-1]:
+    if rur_stat < inter_crit[0, 0]:
         direction = "smaller"
-    elif p_value == pvals[0]:
+    elif rur_stat >= inter_crit[0, -1]:
         direction = "larger"
 
     if direction:
@@ -4037,6 +4175,157 @@ class ZivotAndrewsUnitRoot:
             exog[(cutoff - 1) :, 2] = trend[0 : (nobs - period + 1)]
         return exog
 
+    def _break_tvalues(
+        self, endog, exog, regression, periods, nobs, const, trend, cols, lags
+    ):
+        """
+        t-statistics of the lagged level for all candidate break periods
+
+        Parameters
+        ----------
+        endog : ndarray
+            The dependent variable of the auxiliary regressions.
+        exog : ndarray
+            The regressor matrix from ``_format_regression_data``. Only the
+            lagged level and the lagged differences are used.
+        regression : {"c", "t", "ct"}
+            The trend order to include in the regression.
+        periods : ndarray
+            The candidate break periods, increasing integers.
+        nobs : int
+            The number of observations in series.
+        const : float
+            The normalized constant term value to use in exog.
+        trend : ndarray
+            The normalized trend values to use in exog.
+        cols : int
+            The number of non-lag columns in exog.
+        lags : int
+            The number of lagged difference terms included in exog.
+
+        Returns
+        -------
+        ndarray or None
+            The t-statistic of the lagged level in the regression of each
+            period. None if the data are not finite, the regressors of a
+            period are close to singular or a regression fits almost
+            perfectly. The regressions are then fit one period at a time.
+
+        Notes
+        -----
+        The regressors of every period are ``X = [const, trend, lagged
+        differences, lagged level]`` and the break dummies ``D``, which are
+        zero before the first affected row ``f``: the level shift
+        ``1(i >= f)`` ("c"), the trend shift ``(i - f + 1) 1(i >= f)`` ("t")
+        or both ("ct"). They span the same space as the dummies that
+        ``_update_regression_exog`` sets, so the t-statistic of the level is
+        the same.
+
+        ``nested_lag_ols`` gives ``[X, endog] = QR``. The cross products
+        ``[X, endog]' D`` are sums over the rows from ``f`` on, which reverse
+        cumulative sums give for all periods at once, and ``C = Q' D``
+        solves ``R' C = [X, endog]' D``. Let ``C_a`` and ``C_b`` be the rows
+        of ``C`` for the regressors other than the level and for
+        ``[level, endog]``, and ``R_b`` the corresponding block of ``R``. The
+        Schur complement ``S = D' D - C_a' C_a`` is the cross product of the
+        part of ``D`` orthogonal to the other regressors. By the
+        Frisch-Waugh-Lovell theorem, the cross product of the level and endog
+        after partialling out the other regressors and ``D`` is
+
+            G = R_b' R_b - W' S^{-1} W,  W = C_b' R_b,
+
+        and the t-statistic of the level follows from ``G``. This costs
+        O(nobs k^2) for ``k`` regressors, instead of O(nobs^2 k^2) for one
+        fit per period.
+        """
+        nreg = exog.shape[0]
+        nper = periods.shape[0]
+        k_fixed = lags + 2
+        ndummy = 2 if regression == "ct" else 1
+        # The first row of each regression where the dummies are not zero
+        first = periods - (lags + 1)
+        if regression == "t":
+            first = first - 1
+        if (
+            nper == 0
+            or nreg <= k_fixed + ndummy + 1
+            or first[0] < 0
+            or first[-1] >= nreg
+        ):
+            # No residual degrees of freedom, or a dummy that is zero or
+            # wraps around the start of the sample
+            return None
+        fixed = np.empty((nreg, k_fixed))
+        fixed[:, 0] = const
+        fixed[:, 1] = trend[(lags + 2) : (nobs + 1)]
+        fixed[:, 2:] = exog[:, cols:]
+        level = exog[:, cols - 1 : cols]
+        # Ill-conditioned problems are left to the per-period loop. The cross
+        # product inverse of _quick_ols loses about cond(exog)**2 * eps, so
+        # the cutoff is sqrt(eps) rather than the k * eps of the other
+        # callers. The same constant bounds the cancellation in S and G
+        # below (the Schur diagonal, the pivot, the level and the ssr), so
+        # the accepted designs give t-values good to about 1e-8 rather than
+        # 1e-12.
+        tol = np.sqrt(np.finfo(float).eps)
+        res = nested_lag_ols(endog, level, fixed, rcond=tol)
+        if res is None:
+            return None
+        r = res.r
+
+        # r belongs to the data after nested_lag_ols subtracts res.offset (the
+        # means of the level and endog, as fixed has a constant column), so
+        # the cross products below use the same columns. The shift adds
+        # multiples of the constant, which changes no t-statistic.
+        data = np.column_stack([fixed, level, endog]) - res.offset
+        # tail[f] is the sum of the rows f, f + 1, ... of data, the cross
+        # product with the level shift. The sum of tail[f:] is the cross
+        # product with the trend shift.
+        tail = np.cumsum(data[::-1], axis=0)[::-1]
+        length = (nreg - first).astype(float)
+        ncols = data.shape[1]
+        xd = np.empty((ncols, nper, ndummy))
+        dd = np.empty((nper, ndummy, ndummy))
+        if regression != "t":
+            xd[:, :, 0] = tail[first].T
+            dd[:, 0, 0] = length
+        if regression != "c":
+            xd[:, :, -1] = np.cumsum(tail[::-1], axis=0)[::-1][first].T
+            dd[:, -1, -1] = length * (length + 1) * (2 * length + 1) / 6
+        if regression == "ct":
+            dd[:, 0, 1] = dd[:, 1, 0] = length * (length + 1) / 2
+
+        c = solve_triangular(r, xd.reshape(ncols, -1), trans="T")
+        c = c.reshape(ncols, nper, ndummy).transpose(1, 0, 2)
+        c_a = c[:, :k_fixed]
+        s = dd - c_a.transpose(0, 2, 1) @ c_a
+        # The dummies must not be (almost) in the span of the regressors
+        # before them. The squared diagonal of chol(s) is s[0, 0] and
+        # s[1, 1] - s[0, 1] ** 2 / s[0, 0].
+        full_rank = s[:, 0, 0] > tol * dd[:, 0, 0]
+        if ndummy == 2:
+            with np.errstate(divide="ignore", invalid="ignore"):
+                pivot = s[:, 1, 1] - s[:, 0, 1] ** 2 / s[:, 0, 0]
+            full_rank &= pivot > tol * dd[:, 1, 1]
+        if not np.all(full_rank):
+            return None
+        chol = np.linalg.cholesky(s)
+        r_b = r[k_fixed:, k_fixed:]
+        v = np.linalg.solve(chol, c[:, k_fixed:].transpose(0, 2, 1) @ r_b)
+        g = r_b.T @ r_b - v.transpose(0, 2, 1) @ v
+        g_level = g[:, 0, 0]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            r_level_endog = g[:, 0, 1] / np.sqrt(g_level)
+        ssr = g[:, 1, 1] - r_level_endog**2
+        # Nor may the level, or endog (an almost perfect fit)
+        if not (
+            np.all(g_level > tol * r_b[0, 0] ** 2)
+            and np.all(ssr > tol * r_b[1, 1] ** 2)
+        ):
+            return None
+        df_resid = nreg - (k_fixed + ndummy + 1)
+        return r_level_endog / np.sqrt(ssr / df_resid)
+
     def run(self, x, trim=0.15, maxlag=None, regression="c", autolag="AIC"):
         """
         Zivot-Andrews structural-break unit-root test
@@ -4053,7 +4342,8 @@ class ZivotAndrewsUnitRoot:
             calculation in range [0, 0.333] (default=0.15).
         maxlag : int, optional
             The maximum lag which is included in test, default is
-            12*(nobs/100)^{1/4} (Schwert, 1989).
+            12*(nobs/100)^{1/4} (Schwert, 1989). Use 0 for a test without
+            lagged differences.
         regression : {"c","t","ct"}, optional
             Constant and trend order to include in regression.
 
@@ -4123,6 +4413,8 @@ class ZivotAndrewsUnitRoot:
         )
         if trim < 0 or trim > (1.0 / 3.0):
             raise ValueError("trim value must be a float in range [0, 1/3)")
+        if maxlag is not None and maxlag < 0:
+            raise ValueError("maxlag must be a non-negative integer")
         nobs = x.shape[0]
         if autolag:
             adf_res = adfuller(
@@ -4133,7 +4425,7 @@ class ZivotAndrewsUnitRoot:
                 result_object=False,
             )
             baselags = adf_res[2]
-        elif maxlag:
+        elif maxlag is not None:
             baselags = maxlag
         else:
             baselags = int(12.0 * np.power(nobs / 100.0, 1 / 4.0))
@@ -4152,31 +4444,47 @@ class ZivotAndrewsUnitRoot:
         endog, exog = self._format_regression_data(
             x, nobs, c_const, t_const, basecols, baselags
         )
-        # iterate through the time periods
         stats = np.full(end_period + 1, np.inf)
-        for bp in range(start_period + 1, end_period + 1):
-            # update intercept dummy / trend / trend dummy
-            exog = self._update_regression_exog(
-                exog,
-                regression,
-                bp,
-                nobs,
-                c_const,
-                t_const,
-                basecols,
-                baselags,
-            )
-            # check exog rank on first iteration
-            if bp == start_period + 1:
-                o = OLS(endog[baselags:], exog, hasconst=1).fit()
-                if o.df_model < exog.shape[1] - 1:
-                    raise ValueError(
-                        "ZA: auxiliary exog matrix is not full rank.\n"
-                        f"  cols (exc intercept) = {exog.shape[1] - 1}  rank = {o.df_model}"
-                    )
-                stats[bp] = o.tvalues[basecols - 1]
-            else:
-                stats[bp] = self._quick_ols(endog[baselags:], exog)[basecols - 1]
+        periods = np.arange(start_period + 1, end_period + 1)
+        tvalues = self._break_tvalues(
+            endog[baselags:],
+            exog,
+            regression,
+            periods,
+            nobs,
+            c_const,
+            t_const,
+            basecols,
+            baselags,
+        )
+        if tvalues is not None:
+            stats[periods] = tvalues
+        else:
+            # iterate through the time periods
+            for bp in range(start_period + 1, end_period + 1):
+                # update intercept dummy / trend / trend dummy
+                exog = self._update_regression_exog(
+                    exog,
+                    regression,
+                    bp,
+                    nobs,
+                    c_const,
+                    t_const,
+                    basecols,
+                    baselags,
+                )
+                # check exog rank on first iteration
+                if bp == start_period + 1:
+                    o = OLS(endog[baselags:], exog, hasconst=1).fit()
+                    if o.df_model < exog.shape[1] - 1:
+                        raise ValueError(
+                            "ZA: auxiliary exog matrix is not full rank.\n"
+                            f"  cols (exc intercept) = {exog.shape[1] - 1}"
+                            f"  rank = {o.df_model}"
+                        )
+                    stats[bp] = o.tvalues[basecols - 1]
+                else:
+                    stats[bp] = self._quick_ols(endog[baselags:], exog)[basecols - 1]
         # return best seen
         zastat = np.min(stats)
         bpidx = np.argmin(stats) - 1

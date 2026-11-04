@@ -624,30 +624,79 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05, method="n
 
     Parameters
     ----------
-    proportion : float in (0, 1)
-        proportion or quantile
-    half_length : float in (0, 1)
-        desired half length of the confidence interval
-    alpha : float in (0, 1), optional
-        significance level, default 0.05,
-        coverage of the two-sided interval is (approximately) ``1 - alpha``
-    method : str in ['normal'], optional
-        method to use for confidence interval,
-        currently only normal approximation
+    proportion : float or array_like in [0, 1]
+        Proportion or quantile. All values have to be in the closed interval
+        [0, 1].
+    half_length : float or array_like, positive
+        Desired half length of the confidence interval. All values have to
+        be positive.
+    alpha : float or array_like in (0, 1), optional
+        Significance level, default 0.05. Coverage of the two-sided interval
+        is (approximately) ``1 - alpha``. All values have to be in the open
+        interval (0, 1).
+    method : {"normal"}, optional
+        Method to use for the confidence interval. Currently only the normal
+        approximation is available.
 
     Returns
     -------
-    n : float
-        sample size to get the desired half length of the confidence interval
+    n : float, ndarray, Series or DataFrame
+        Sample size to get the desired half length of the confidence
+        interval. The sample size is not rounded to an integer, and it is 0
+        if ``proportion`` is 0 or 1. The result is a float if all arguments
+        are scalars, and an ndarray if the arguments are array_like. It is a
+        pandas Series or DataFrame if ``proportion`` or ``half_length`` is
+        one, in which case the result has the index of that argument.
+
+    Raises
+    ------
+    ValueError
+        If a value of ``alpha`` is not in (0, 1), a value of ``half_length``
+        is not positive, or a value of ``proportion`` is not in [0, 1]. The
+        check also rejects nan. NumPy raises a ``ValueError`` if an argument,
+        for example a string, cannot be converted to float.
+    TypeError
+        If ``proportion``, ``half_length`` or ``alpha`` is None.
+    NotImplementedError
+        If ``method`` is not "normal".
 
     Notes
     -----
-    this is mainly to store the formula.
-    possible application: number of replications in bootstrap samples
+    This is mainly to store the formula. For the normal approximation the
+    sample size is ``proportion * (1 - proportion) / (half_length / z) ** 2``,
+    where ``z`` is the ``1 - alpha / 2`` quantile of the standard normal
+    distribution.
+
+    A possible application is the number of replications in bootstrap
+    samples.
+
+    .. versionchanged:: 0.15.1
+
+       Values of ``alpha``, ``half_length`` and ``proportion`` that are out of
+       range or nan raise a ``ValueError``. Previously the function returned
+       ``inf``, ``nan`` or a meaningless, possibly negative, sample size.
+       Lists are accepted for the three arguments.
     """
-    q_ = proportion
+    # array_like converts lists and raises a TypeError for None
+    proportion_a = array_like(proportion, "proportion", mindim=None)
+    half_length_a = array_like(half_length, "half_length", mindim=None)
+    alpha_a = array_like(alpha, "alpha", mindim=None)
+    # the np.all form is vector safe and rejects nan
+    if not np.all(np.greater(alpha_a, 0) & np.less(alpha_a, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater(half_length_a, 0)):
+        raise ValueError(f"half_length must be positive, got {half_length}")
+    if not np.all(np.greater_equal(proportion_a, 0) & np.less_equal(proportion_a, 1)):
+        raise ValueError(f"proportion must be in the range [0, 1], got {proportion}")
+
+    # keep pandas objects in the computation so that the result is a pandas
+    # object with the index of the input
+    pandas_types = (pd.Series, pd.DataFrame)
+    q_ = proportion if isinstance(proportion, pandas_types) else proportion_a
+    if isinstance(half_length, pandas_types):
+        half_length_a = half_length
     if method == "normal":
-        n = q_ * (1 - q_) / (half_length / stats.norm.isf(alpha / 2.0)) ** 2
+        n = q_ * (1 - q_) / (half_length_a / stats.norm.isf(alpha_a / 2.0)) ** 2
     else:
         raise NotImplementedError('only "normal" is available')
 
@@ -863,11 +912,11 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
 
     Parameters
     ----------
-    value : float
-        proportion under the Null hypothesis
-    nobs : int
+    value : float or array_like
+        proportion under the Null hypothesis, `0 <= value <= 1`.
+    nobs : int or array_like
         the number of trials or observations.
-    alpha : float, optional
+    alpha : float or array_like, optional
         Significance level of the test, default 0.05.
     alternative : {'two-sided', 'smaller', 'larger'}, optional
         alternative hypothesis, which can be two-sided or either one of the
@@ -875,8 +924,43 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
 
     Returns
     -------
-    x_low, x_upp : int
-        lower and upper bound of rejection region
+    x_low, x_upp : int or ndarray of int
+        lower and upper bound of rejection region. The bounds are integers,
+        and arrays with the shape that ``value``, ``nobs`` and ``alpha``
+        broadcast to if any of them is an array.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is not in [0, 1], ``alpha`` is not in (0, 1), or
+        ``nobs`` is not a positive integer. This includes NaN values.
+
+    See Also
+    --------
+    binom_test
+        Exact binomial test for one sample proportion.
+    binom_tost_reject_interval
+        Rejection region of the exact equivalence test.
+
+    Notes
+    -----
+    For the two-sided alternative, the null hypothesis is rejected if and only
+    if ``count <= x_low`` or ``count >= x_upp``. The region is equal-tailed,
+    the probability of each tail is at most ``alpha / 2`` under the null
+    hypothesis. It differs in general from the rejection region of the
+    two-sided test in :func:`binom_test`, which is based on the probabilities
+    of the outcomes, as in ``scipy.stats.binomtest``.
+
+    For the one-sided alternatives, the null hypothesis is rejected if and
+    only if ``count <= x_low`` for ``'smaller'`` and ``count >= x_upp`` for
+    ``'larger'``. The other bound is not used, it is ``nobs`` for
+    ``'smaller'`` and ``0`` for ``'larger'``, broadcast to the shape of the
+    result.
+
+    .. versionchanged:: 0.15.1
+
+        ``value``, ``nobs`` and ``alpha`` can be array_like. Invalid
+        arguments raise a ``ValueError``.
     """
     alternative = string_like(
         alternative,
@@ -886,11 +970,23 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
         deprecated={"2s": "two-sided"},
         removed_after="0.16",
     )
+    if not np.all(np.greater_equal(value, 0) & np.less_equal(value, 1)):
+        raise ValueError(f"value must be in the range [0, 1], got {value}")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater(nobs, 0)):
+        raise ValueError(f"nobs must be positive, got {nobs}")
+    if not np.all(np.equal(np.mod(nobs, 1), 0)):
+        raise ValueError(f"nobs must be an integer, got {nobs}")
+
     if alternative == "two-sided":
-        alpha = alpha / 2
+        alpha = np.asarray(alpha) / 2
 
     if alternative in ["two-sided", "smaller"]:
-        x_low = stats.binom.ppf(alpha, nobs, value) - 1
+        x_low = stats.binom.ppf(alpha, nobs, value)
+        # Old SciPy versions return 0 instead of nobs for the degenerate
+        # distribution at value=1
+        x_low = np.where(np.equal(value, 1), nobs, x_low) - 1
     else:
         x_low = 0
     if alternative in ["two-sided", "larger"]:
@@ -898,7 +994,13 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
     else:
         x_upp = nobs
 
-    return int(x_low), int(x_upp)
+    # the arguments are valid, so the bounds are finite integers
+    shape = np.broadcast(value, nobs, alpha).shape
+    x_low = np.broadcast_to(x_low, shape).astype(np.int64)
+    x_upp = np.broadcast_to(x_upp, shape).astype(np.int64)
+    if shape == ():
+        return int(x_low), int(x_upp)
+    return x_low, x_upp
 
 
 def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
@@ -971,7 +1073,7 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
         lower and upper limit of equivalence region
     nobs : int or array_like
         the number of trials or observations.
-    p_alt : float or array_like in (0, 1), optional
+    p_alt : float or array_like in [0, 1], optional
         proportion under the alternative. If p_alt is None, then the
         midpoint of the equivalence region, ``0.5 * (low + upp)``, is used.
     alpha : float or array_like in (0, 1), optional
@@ -979,20 +1081,43 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
 
     Returns
     -------
-    power : float
+    power : float or ndarray
         statistical power of the equivalence test.
+
+    Raises
+    ------
+    ValueError
+        If ``p_alt`` is not in [0, 1] (this includes NaN values), or if the
+        arguments of :func:`binom_tost_reject_interval` are not valid.
+
+    See Also
+    --------
+    binom_tost_reject_interval
+        Rejection region of the exact equivalence test.
+
+    Notes
+    -----
+    The power is the probability of the rejection region of the exact
+    equivalence test under the alternative. The rejection region can be
+    empty, for example if the equivalence region is narrow relative to the
+    sample size. In this case the power is zero.
+
+    .. versionchanged:: 0.15.1
+
+        The power is zero if the rejection region is empty. Previously a
+        negative value was returned.
     """
-    if p_alt is not None and (
-        np.any(np.asarray(p_alt) < 0) or np.any(np.asarray(p_alt) > 1)
-    ):
-        raise ValueError("p_alt must be in the range [0, 1]")
     if p_alt is None:
-        p_alt = 0.5 * (low + upp)
+        p_alt = 0.5 * (np.asarray(low) + np.asarray(upp))
+    elif not np.all(np.greater_equal(p_alt, 0) & np.less_equal(p_alt, 1)):
+        raise ValueError("p_alt must be in the range [0, 1]")
     x_low, x_upp = binom_tost_reject_interval(low, upp, nobs, alpha=alpha)
     power = stats.binom.cdf(x_upp, nobs, p_alt) - stats.binom.cdf(
         x_low - 1, nobs, p_alt
     )
-    return power
+    # the rejection region is empty if x_low > x_upp, then the difference of
+    # the cdfs is negative and the power is zero
+    return np.maximum(power, 0)
 
 
 def power_ztost_prop(

@@ -441,7 +441,7 @@ class TestGEE:
             kwargs = {}
             kwargs["groups"] = np.zeros(p[2])
             if k1:
-                kwargs["exposure"] = np.zeros(18)
+                kwargs["exposure"] = np.ones(18)
             if k2:
                 kwargs["time"] = np.zeros(18)
             with pytest.raises(ValueError):
@@ -1934,6 +1934,7 @@ class TestGEEPoissonFormulaCovType(CheckConsistency):
         )
 
 
+@pytest.mark.slow
 class TestGEEOrdinalCovType(CheckConsistency):
 
     @classmethod
@@ -2658,3 +2659,73 @@ def test_global_odds_ratio_summary():
     c = cov_struct.GlobalOddsRatio("ordinal")
     c.dep_params = 2.5
     assert c.summary() == "Global odds ratio: 2.500\n"
+
+
+@pytest.mark.parametrize("rho", [0.25, 0.3, 0.625, 0.8, 0.9, 0.99])
+@pytest.mark.parametrize("spacing", [0.5, 1, 2.5])
+def test_autoregressive_bracketing(rho, spacing):
+    # Symmetric pairs keep the fitted intercept at zero. Each pair contributes
+    # a constant times (rho**spacing - a**spacing)**2, minimized at a=rho.
+    ratio = rho**spacing
+    endog = np.array([1.0, ratio, -1.0, -ratio])
+    ar = cov_struct.Autoregressive(grid=False)
+    model = gee.GEE(
+        endog,
+        np.ones((4, 1)),
+        groups=np.repeat([0, 1], 2),
+        time=np.tile([0, spacing], 2),
+        cov_struct=ar,
+        family=families.Gaussian(),
+    )
+    result = model.fit(scale=1.0)
+    assert_allclose(result.params, [0], atol=1e-12)
+    assert_allclose(ar.dep_params, rho, rtol=1e-7, atol=1e-8)
+
+
+@pytest.mark.parametrize("rho", [0, -0.2])
+def test_autoregressive_zero_boundary(rho):
+    # Fit the mean under independence, then test the public covariance update.
+    # For a non-positive target ratio the constrained minimum is at zero.
+    ar = cov_struct.Autoregressive(grid=False)
+    model = gee.GEE(
+        [1.0, rho, -1.0, -rho],
+        np.ones((4, 1)),
+        groups=np.repeat([0, 1], 2),
+        cov_struct=ar,
+        update_dep=False,
+    )
+    result = model.fit(scale=1.0)
+    ar.update(result.params)
+    assert ar.dep_params == 0
+    assert isinstance(ar.dep_params, float)
+
+
+@pytest.mark.parametrize("ratio", [1.0, 1.5])
+def test_autoregressive_no_right_bracket(ratio):
+    # A minimum at one, or above it, still has no interior right bracket. This
+    # pins the current behavior, which raises instead of using the boundary.
+    ar = cov_struct.Autoregressive(grid=False)
+    model = gee.GEE(
+        [1.0, ratio, -1.0, -ratio],
+        np.ones((4, 1)),
+        groups=np.repeat([0, 1], 2),
+        cov_struct=ar,
+    )
+    with pytest.raises(ValueError, match="unable to find right bracket"):
+        model.fit(scale=1.0)
+
+
+def test_autoregressive_equal_objective():
+    # With a perfect fit all residuals are zero, so the objective is flat and
+    # there is no interior minimum.
+    ar = cov_struct.Autoregressive(grid=False)
+    model = gee.GEE(
+        [1.0, 2.0, 3.0, 5.0],
+        np.eye(4),
+        groups=np.repeat([0, 1], 2),
+        cov_struct=ar,
+        update_dep=False,
+    )
+    result = model.fit(scale=1.0, start_params=[1.0, 2.0, 3.0, 5.0])
+    ar.update(result.params)
+    assert ar.dep_params == 0.0

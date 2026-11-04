@@ -3,7 +3,7 @@ Author: Samuel Scherrer
 """
 
 from statsmodels.compat.pandas import QUARTER_END
-from statsmodels.compat.platform import PLATFORM_32, PLATFORM_LINUX32, PLATFORM_WIN
+from statsmodels.compat.platform import PLATFORM_32, PLATFORM_LINUX32
 
 from itertools import product
 import json
@@ -16,6 +16,7 @@ import pytest
 import scipy.stats
 
 from statsmodels.iolib.summary import Summary
+from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa.exponential_smoothing.initialization import (
@@ -481,7 +482,10 @@ def test_fit_vs_R(setup_model):
     model_class, model_args, model_kwargs, params, results_R = setup_model
     model = model_class(*model_args, **model_kwargs)
 
-    if PLATFORM_WIN and model.short_name == "AAdA":
+    # The fit of the damped additive trend and additive seasonal model has a
+    # local optimum that the default starting values lead to on some platforms
+    # and BLAS kernels, so start from the parameters estimated by R.
+    if model.short_name == "AAdA":
         start = params
     else:
         start = None
@@ -731,11 +735,13 @@ def test_hessian(austourists_model_fit):
     fit = model_class(*model_args, **model_kwargs).fit(disp=False)
 
     fit.model.hessian(fit.params)
-    fit.model.hessian(
-        fit.params,
-        approx_complex_step=False,
-        approx_centered=True,
-    )
+    # The finite difference hessian always warns about its approximation error
+    with pytest.warns(PrecisionWarning, match="Calculation of the Hessian"):
+        fit.model.hessian(
+            fit.params,
+            approx_complex_step=False,
+            approx_centered=True,
+        )
 
 
 def test_diagnostics_invalid_method_raises(austourists_model_fit):
@@ -970,7 +976,6 @@ def test_prediction_results_slow_AAN(oildata, close_figures):
     plt.plot(summary_sim["pi_upper"], ":", label="sim upper")
     plt.plot(summary_exact["pi_upper"], ".-", label="exact upper")
     # plt.legend()
-    plt.show()
 
     # check if prediction intervals are equal
     assert_allclose(

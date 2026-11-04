@@ -978,6 +978,28 @@ class FormulaManager:
         else:
             return str(spec.formula)
 
+    def get_factors(self, spec_or_frame):
+        """
+        Get the factors of a model specification or DataFrame.
+
+        Parameters
+        ----------
+        spec_or_frame : DataFrame, ModelSpec, or DesignInfo
+            The DataFrame with a model specification attached, or the model
+            specification itself.
+
+        Returns
+        -------
+        list
+            The factors, which can be passed to ``get_term_name`` and
+            ``get_factor_categories``.
+        """
+        spec = self._ensure_spec(spec_or_frame)
+        if self._using_patsy:
+            return list(spec.factor_infos)
+        else:
+            return list(spec.encoder_state)
+
     def get_factor_categories(self, factor, model_spec):
         """
         Get the list of categories for a factor.
@@ -998,6 +1020,29 @@ class FormulaManager:
             return model_spec.factor_infos[factor].categories
         else:
             return tuple(model_spec.encoder_state[factor][1]["categories"])
+
+    def is_categorical(self, spec_or_frame):
+        """
+        Check whether all factors in a model specification are categorical.
+
+        Parameters
+        ----------
+        spec_or_frame : DataFrame, ModelSpec, or DesignInfo
+            The DataFrame with a model specification attached, or the model
+            specification itself.
+
+        Returns
+        -------
+        bool
+            True if the specification has at least one factor and every factor
+            is categorical.
+        """
+        spec = self._ensure_spec(spec_or_frame)
+        if self._using_patsy:
+            kinds = [info.type for info in spec.factor_infos.values()]
+        else:
+            kinds = [kind.value for kind, _ in spec.encoder_state.values()]
+        return bool(kinds) and all(kind == "categorical" for kind in kinds)
 
     def get_contrast_matrix(self, term, factor, model_spec):
         """

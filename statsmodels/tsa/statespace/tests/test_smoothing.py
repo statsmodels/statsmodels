@@ -12,6 +12,7 @@ MATLAB (ssm toolbox)
 Author: Chad Fulton
 License: Simplified-BSD
 """
+import contextlib
 from pathlib import Path
 
 import numpy as np
@@ -20,6 +21,7 @@ import pandas as pd
 import pytest
 
 from statsmodels import datasets
+from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tsa.statespace import mlemodel, sarimax, varmax
 from statsmodels.tsa.statespace.kalman_filter import FILTER_UNIVARIATE
 from statsmodels.tsa.statespace.kalman_smoother import (
@@ -30,6 +32,12 @@ from statsmodels.tsa.statespace.kalman_smoother import (
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 
 current_path = Path(__file__).resolve().parent
+
+# The diagonalized observation covariance must be expected where it is emitted
+pytestmark = pytest.mark.filterwarnings(
+    "error:The univariate filtering approach diagonalized"
+    ":statsmodels.tools.sm_exceptions.OutputWarning"
+)
 
 
 class TestStatesAR3:
@@ -1072,6 +1080,15 @@ class TestVARAutocovariancesUnivariateSmoothing(TestVARAutocovariances):
         assert_equal(self.model.ssm._kalman_smoother._smooth_method, SMOOTH_UNIVARIATE)
 
 
+def expect_diagonalized(expected):
+    # The univariate filter diagonalizes the non-diagonal obs_cov of TVSS
+    if expected:
+        return pytest.warns(
+            OutputWarning, match="The univariate filtering approach diagonalized"
+        )
+    return contextlib.nullcontext()
+
+
 class TVSSWithLags(TVSS):
     def __init__(self, endog):
         # TVSS has 2 states, here we will add in 3 lags of those
@@ -1114,7 +1131,8 @@ def get_acov_model(
     else:
         mod = TVSSWithLags(endog)
         mod.ssm.filter_univariate = filter_univariate
-        res = mod.smooth([], return_ssm=return_ssm)
+        with expect_diagonalized(filter_univariate):
+            res = mod.smooth([], return_ssm=return_ssm)
 
     return mod, res
 
@@ -1195,7 +1213,8 @@ def test_smoothed_state_autocovariances_forwards(missing, filter_univariate, tvp
         mod, _ = get_acov_model(missing, filter_univariate, tvp)
         for name in names:
             mod[name] = mod_oos[name, ..., :-3]
-        res = mod.ssm.smooth()
+        with expect_diagonalized(filter_univariate):
+            res = mod.ssm.smooth()
 
     extend_kwargs1 = {}
     extend_kwargs2 = {}
@@ -1298,7 +1317,8 @@ def test_smoothed_state_autocovariances_forwards_oos(missing, filter_univariate,
         mod, _ = get_acov_model(missing, filter_univariate, tvp)
         for name in names:
             mod[name] = mod_oos[name, ..., :-5]
-        res = mod.ssm.smooth()
+        with expect_diagonalized(filter_univariate):
+            res = mod.ssm.smooth()
 
     assert_allclose(res_oos.llf, res.llf)
 
@@ -1383,7 +1403,8 @@ def test_smoothed_state_autocovariances_backwards_oos(missing, filter_univariate
         mod, _ = get_acov_model(missing, filter_univariate, tvp)
         for name in names:
             mod[name] = mod_oos[name, ..., :-5]
-        res = mod.ssm.smooth()
+        with expect_diagonalized(filter_univariate):
+            res = mod.ssm.smooth()
 
     assert_allclose(res_oos.llf, res.llf)
 
@@ -1528,7 +1549,8 @@ def test_news_revisions(missing, filter_univariate, tvp):
     # well as out-of-sample.
     nobs = mod.nobs - 10
     for t in [0, 1, 150, nobs - 1, nobs, nobs + 1, nobs + 9]:
-        out = res2.news(res, t=t)
+        with expect_diagonalized(tvp and filter_univariate):
+            out = res2.news(res, t=t)
 
         # Test for the news
         desired = (

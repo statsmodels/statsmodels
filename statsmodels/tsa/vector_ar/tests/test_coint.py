@@ -4,14 +4,17 @@ Created on Thu Aug 30 21:51:08 2012
 Author: Josef Perktold
 
 """
+from statsmodels.compat.numpy import ComplexWarning
+
 from pathlib import Path
 import warnings
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
 
+from statsmodels.datasets import danish_data
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
@@ -489,3 +492,166 @@ def test_johansen_result_aliases_and_rkt_meth():
     assert res.max_eig_stat_crit_vals is res.cvm
     assert res.meth == "johansen"
     assert res.rkt.shape == res.r0t.shape
+
+
+def test_johansen_real_eigenvalues():
+    # NumPy 2.5 and later return complex arrays from eig for real eigenvalues
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ComplexWarning)
+        res = coint_johansen(dta, 1, 2)
+    assert not np.iscomplexobj(res.eig)
+    assert not np.iscomplexobj(res.evec)
+
+
+def test_coint_johansen_real_eigenvalues():
+    # np.linalg.eig of the non-symmetric moment matrix product returned complex
+    # eigenvalues for this random walk, cast to real with a ComplexWarning
+    data = np.cumsum(np.random.default_rng(0).standard_normal((1000, 2)), axis=0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = coint_johansen(data, 0, 2)
+    assert np.isrealobj(res.eig)
+    assert np.all((res.eig >= 0) & (res.eig < 1))
+
+
+@pytest.mark.parametrize("k_ar_diff", [1, 2])
+def test_johansen_urca_danish(k_ar_diff):
+    # urca 1.3.4, R 4.6.1: ca.jo(y, ecdet="none", K=k_ar_diff + 1), see
+    # results/results_johansen_urca.R
+    # ca.jo's statistics are reversed here to run from rank 0 to rank 3
+    expected = {
+        1: (
+            [
+                0.44821425566893597,
+                0.17421468245810978,
+                0.11690133941344229,
+                0.01043602625491728,
+            ],
+            [
+                48.8037309574590878,
+                17.2901719813015191,
+                7.1448883768914024,
+                0.5560157618986894,
+            ],
+            [
+                31.5135589761575687,
+                10.1452836044101158,
+                6.5888726149927139,
+                0.5560157618986894,
+            ],
+        ),
+        2: (
+            [
+                0.4274996665409753,
+                0.2295183786296113,
+                0.1089666787762107,
+                0.0221312848345808,
+            ],
+            [
+                49.724206955473313,
+                20.721624978651171,
+                7.163172155529512,
+                1.163752513571682,
+            ],
+            [
+                29.002581976822139,
+                13.558452823121661,
+                5.999419641957831,
+                1.163752513571682,
+            ],
+        ),
+    }
+    eig, trace, max_eig = expected[k_ar_diff]
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = coint_johansen(y, 0, k_ar_diff)
+    assert_allclose(res.eig, eig, rtol=1e-8)
+    assert_allclose(res.lr1, trace, rtol=1e-8)
+    assert_allclose(res.lr2, max_eig, rtol=1e-8)
+
+
+def _near_cointegrated(noise):
+    rng = np.random.default_rng(20261028)
+    y1 = np.cumsum(rng.standard_normal(200))
+    y2 = np.cumsum(rng.standard_normal(200))
+    z = rng.standard_normal(200)
+    return np.column_stack((y1, y2, y1 - 0.5 * y2 + noise * z))
+
+
+@pytest.mark.parametrize(
+    "k_ar_diff, eig, trace, max_eig",
+    [
+        (
+            1,
+            [0.36540554504241405, 0.040365029653077172, 0.013235714614387145],
+            [100.84051516026646, 10.796225890590578, 2.638169292398739],
+            [90.044289269675878, 8.1580565981918388, 2.638169292398739],
+        ),
+        (
+            2,
+            [0.30057885169185051, 0.033658305112658369, 0.012847935629496819],
+            [79.720223857332741, 9.2922871037768755, 2.5474432817087609],
+            [70.427936753555865, 6.7448438220681147, 2.5474432817087609],
+        ),
+    ],
+)
+def test_johansen_near_cointegration(k_ar_diff, eig, trace, max_eig):
+    # Reference values are the squared canonical correlations between the
+    # residuals of the differences and of the levels, computed with mpmath
+    # using 60 digits for the data of _near_cointegrated(1e-6). The system is
+    # almost exactly cointegrated, which makes the moment matrices
+    # ill-conditioned: the eigenvalues of the moment matrix product are
+    # wrong (some are larger than 1 or negative) if they are computed with eig.
+    res = coint_johansen(_near_cointegrated(1e-6), 0, k_ar_diff)
+    assert_allclose(res.eig, eig, rtol=1e-6)
+    assert_allclose(res.lr1, trace, rtol=1e-6)
+    assert_allclose(res.lr2, max_eig, rtol=1e-6)
+
+
+def test_johansen_eigenvalue_near_one():
+    # The first eigenvalue differs from 1 by about 1e-18, so that
+    # 1 - eig rounds to 0 in double precision and the statistics must not be
+    # computed from log(1 - eig). Reference values from mpmath with 80 digits.
+    rng = np.random.default_rng(7)
+    y1 = np.resize([1.0, 0.5, -1.5], 100) + 1e-9 * rng.standard_normal(100)
+    y2 = np.cumsum(rng.standard_normal(100))
+    res = coint_johansen(np.column_stack((y1, y2)), -1, 1)
+    assert_allclose(res.eig, [1.0, 0.00035259704457330609], rtol=1e-6)
+    assert_allclose(res.lr1, [4062.8865249453624, 0.034560603709671807], rtol=1e-6)
+    assert_allclose(res.lr2, [4062.8519643416528, 0.034560603709671807], rtol=1e-6)
+
+
+def _singular_endog(case):
+    rng = np.random.default_rng(12345)
+    y = np.cumsum(rng.standard_normal((200, 2)), axis=0)
+    if case == "duplicated":
+        return np.column_stack((y, y[:, 0]))
+    elif case == "collinear":
+        return np.column_stack((y, y[:, 0] + y[:, 1]))
+    elif case == "scaled collinear":
+        return np.column_stack((y, 1e6 * y[:, 0] - 3 * y[:, 1]))
+    # Differences that repeat with period 2, so the lagged difference is
+    # proportional to the difference
+    return np.column_stack((np.cumsum(np.tile([1.0, -1.0], 100)), y[:, 0]))
+
+
+@pytest.mark.parametrize(
+    "case, det_order, k_ar_diff",
+    [
+        ("duplicated", 0, 1),
+        ("collinear", -1, 2),
+        ("scaled collinear", 0, 0),
+        ("periodic", 0, 1),
+    ],
+)
+def test_johansen_linearly_dependent(case, det_order, k_ar_diff):
+    with pytest.raises(np.linalg.LinAlgError, match="linearly dependent"):
+        coint_johansen(_singular_endog(case), det_order, k_ar_diff)
+
+
+@pytest.mark.parametrize(
+    "shape, det_order, k_ar_diff", [((6, 2), 0, 2), ((5, 3), -1, 0)]
+)
+def test_johansen_too_few_observations(shape, det_order, k_ar_diff):
+    endog = np.cumsum(np.random.default_rng(0).standard_normal(shape), axis=0)
+    with pytest.raises(ValueError, match="too few observations"):
+        coint_johansen(endog, det_order, k_ar_diff)

@@ -134,7 +134,14 @@ numpy.linalg.cond
     design preparation)
 
 Variance Inflation Factors
-  This is currently together with influence and outlier measures
+  :func:`~statsmodels.stats.multicollinearity.vif` computes the variance
+  inflation factors of all variables at once, and
+  :func:`~statsmodels.stats.multicollinearity.vif_ridge` those of ridge
+  regression. :func:`~statsmodels.stats.multicollinearity.collinear_index`
+  finds the columns that are perfectly collinear with preceding columns.
+  The VIF of a single variable is available in
+  :func:`~statsmodels.stats.outliers_influence.variance_inflation_factor`,
+  which is together with influence and outlier measures
   (with some links to other tests here: http://www.stata.com/help.cgi?vif)
 
 

@@ -1153,7 +1153,15 @@ class ZeroInflatedResults(CountResults):
         Parameters
         ----------
         exog : array_like, optional
-            The values for which you want to predict.
+            The values for which you want to predict. If None, then the
+            model's exog together with the offset and exposure stored in
+            the model are used, as in ``predict``. If exog is given, then
+            the stored offset and exposure are not used unless they are
+            passed explicitly.
+
+            .. versionchanged:: 0.15.1
+
+               Without exog, the stored offset and exposure are now used.
         exog_infl : array_like, optional
             Explanatory variables for the zero-inflation model.
         exposure : array_like, optional

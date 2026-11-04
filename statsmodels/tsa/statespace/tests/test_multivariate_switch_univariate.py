@@ -18,10 +18,14 @@ Time Series Analysis.
 Princeton, N.J.: Princeton University Press.
 """
 
+import contextlib
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
+from statsmodels.tools.sm_exceptions import OutputWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.statespace import (
     dynamic_factor,
     mlemodel,
@@ -30,6 +34,20 @@ from statsmodels.tsa.statespace import (
     varmax,
 )
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
+
+DIAGONALIZED = "The univariate filtering approach diagonalized"
+
+
+def expect_diagonalized(nondiagonal, required=True):
+    # The univariate filter diagonalizes a non-diagonal observation covariance,
+    # so smoothed_measurement_disturbance_cov changes meaning and it warns
+    if not nondiagonal:
+        return contextlib.nullcontext()
+    if required:
+        return pytest.warns(OutputWarning, match=DIAGONALIZED)
+    # The multivariate filter falls back to the univariate filter in some
+    # periods depending on a numerical test of singularity
+    return warns_or_none(OutputWarning, match=DIAGONALIZED)
 
 
 def get_model(univariate, missing=None, init=None):
@@ -151,10 +169,12 @@ def check_filter_output(mod, periods, atol=0):
         assert_allclose(actual, desired, atol=atol)
 
 
-def check_smoother_output(mod, periods, atol=1e-12):
+def check_smoother_output(mod, periods, atol=1e-12, nondiagonal=False):
+    # nondiagonal: the observation covariance is not diagonal
     if isinstance(mod, mlemodel.MLEModel):
         # Multivariate filter / smoother
-        res_mv = mod.ssm.smooth()
+        with expect_diagonalized(nondiagonal, required=False):
+            res_mv = mod.ssm.smooth()
 
         # Manually perform filtering / smoothing with a switch
         kfilter = mod.ssm._kalman_filter
@@ -168,11 +188,13 @@ def check_smoother_output(mod, periods, atol=1e-12):
         res_switch.update_filter(kfilter)
         mod.ssm._kalman_smoother.reset(True)
         smoother = mod.ssm._smooth()
-        res_switch.update_smoother(smoother)
+        with expect_diagonalized(nondiagonal):
+            res_switch.update_smoother(smoother)
 
         # Univariate filter / smoother
         mod.ssm.filter_univariate = True
-        res_uv = mod.ssm.smooth()
+        with expect_diagonalized(nondiagonal):
+            res_uv = mod.ssm.smooth()
     else:
         res_mv, res_switch, res_uv = mod
 
@@ -278,7 +300,7 @@ def test_smoother_output(univariate, missing, init, periods, option):
     # Tolerance is lower for approximate diffuse for one attribute in this case
     if missing == "init" and init == "approximate_diffuse":
         atol = 1e-6
-    check_smoother_output(mod, periods, atol=atol)
+    check_smoother_output(mod, periods, atol=atol, nondiagonal=not univariate)
 
 
 def test_invalid_options():
@@ -486,6 +508,9 @@ def test_time_varying_model():
         ]
     ).T
 
+    # TVSS has a non-diagonal obs_cov and an exact diffuse initialization, so
+    # smoothing warns about the diagonalized obs_cov in each of the models
+
     # The basic model switches to the univariate method at observation 3,
     # because the forecast error covariance matrix will have a singular
     # component corresponding to the first endog variable
@@ -493,7 +518,8 @@ def test_time_varying_model():
     mod_switch["design", ..., 3] = 0
     mod_switch["obs_cov", ..., 3] = 0
     mod_switch["obs_cov", 1, 1, 3] = 1.0
-    res_switch = mod_switch.ssm.smooth()
+    with expect_diagonalized(True):
+        res_switch = mod_switch.ssm.smooth()
     kfilter = mod_switch.ssm._kalman_filter
     uf_switch = np.array(kfilter.univariate_filter, copy=True)
 
@@ -503,7 +529,8 @@ def test_time_varying_model():
     mod_uv["obs_cov", ..., 3] = 0
     mod_uv["obs_cov", 1, 1, 3] = 1.0
     mod_uv.ssm.filter_univariate = True
-    res_uv = mod_uv.ssm.smooth()
+    with expect_diagonalized(True):
+        res_uv = mod_uv.ssm.smooth()
     kfilter = mod_uv.ssm._kalman_filter
     uf_uv = np.array(kfilter.univariate_filter, copy=True)
 
@@ -516,7 +543,8 @@ def test_time_varying_model():
     mod_mv["design", ..., 3] = 0
     mod_mv["obs_cov", ..., 3] = 0
     mod_mv["obs_cov", 1, 1, 3] = 1.0
-    res_mv = mod_mv.ssm.smooth()
+    with expect_diagonalized(True):
+        res_mv = mod_mv.ssm.smooth()
     kfilter = mod_mv.ssm._kalman_filter
     uf_mv = np.array(kfilter.univariate_filter, copy=True)
 

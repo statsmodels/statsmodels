@@ -504,7 +504,7 @@ def test_tost_asym():
     smws.ttost_paired(
         clinic[15:, 2:7],
         clinic[:15, 2:7],
-        [-1.0, -1.0, -1.5, -1.5, -1.5],
+        np.exp([-1.0, -1.0, -1.5, -1.5, -1.5]),
         0.6,
         transform=np.log,
     )

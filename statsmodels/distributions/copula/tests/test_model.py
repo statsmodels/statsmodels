@@ -88,7 +88,13 @@ class CheckEVfit1:
         mod.df_resid = len(mod.endog) - mod.nparams
         mod.df_model = mod.nparams - 0
         res = mod.fit(start_params=list(args) + [0.5, 1, -0.1, 1], method="bfgs")
-        res = mod.fit(method="newton", start_params=res.params)
+        # the first fit adds k_extra to the model, so the patched df are
+        # inconsistent with k_params in the refit
+        with (
+            pytest.warns(UserWarning, match=r"df_model \+ k_constant \+ k_extra"),
+            pytest.warns(UserWarning, match="df_resid differs from nobs"),
+        ):
+            res = mod.fit(method="newton", start_params=res.params)
 
         assert mod.nparams == self.k_copparams + k_marg
         assert res.nobs == len(mod.endog)

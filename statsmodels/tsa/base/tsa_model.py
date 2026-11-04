@@ -499,9 +499,15 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         If Pandas objects, endog / exog may have any type of index. If it is
         a NumericIndex with values 0, 1, ..., nobs-1 or if it is (coercible to)
-        a DatetimeIndex or PeriodIndex *with an associated frequency*, then it
-        is called a "supported" index. Otherwise it is called an "unsupported"
-        index.
+        a monotonic DatetimeIndex or PeriodIndex *with an associated
+        frequency*, then it is called a "supported" index. A PeriodIndex must
+        additionally consist of consecutive periods, i.e. without gaps or
+        repeated periods. Otherwise it is called an "unsupported" index.
+
+        Passing a PeriodIndex that is not consecutive as `dates` issues a
+        warning and the index is ignored, whereas passing a DatetimeIndex as
+        `dates` raises an exception if it has no frequency and none can be
+        inferred.
 
         Supported indexes are standardized (i.e., a list of date strings is
         converted to a DatetimeIndex) and the result is put in `self._index`.
@@ -661,6 +667,16 @@ class TimeSeriesModel(base.LikelihoodModel):
             is_monotonic = index.is_monotonic_increasing
         else:
             is_monotonic = None
+        # A PeriodIndex always has a frequency, even if it has gaps or
+        # repeated periods, so check that its periods are consecutive.
+        # A non-monotonic index is skipped here since it is already rejected,
+        # with its own warning, through `is_monotonic`.
+        has_nonconsecutive_periods = (
+            isinstance(index, PeriodIndex)
+            and is_monotonic
+            and len(index) > 0
+            and not np.all(np.diff(index.asi8) == index.freq.n)
+        )
 
         # Issue warnings for unsupported indexes
         if has_index and not (date_index or range_index or is_increment):
@@ -687,11 +703,27 @@ class TimeSeriesModel(base.LikelihoodModel):
                 ValueWarning,
                 stacklevel=2,
             )
+        if has_nonconsecutive_periods:
+            warnings.warn(
+                "A Period index has been provided, but its periods are not"
+                " consecutive (it has gaps or repeated periods) and so will be"
+                " ignored. Forecasting will fail unless an index is given. Use"
+                " a DatetimeIndex with a frequency (e.g. 'B' or a"
+                " CustomBusinessDay) if the gaps follow a calendar rule, or"
+                " reindex the data to consecutive periods.",
+                ValueWarning,
+                stacklevel=2,
+            )
 
         # Construct the internal index
         index_generated = False
         valid_index = (
-            (date_index and has_freq and is_monotonic)
+            (
+                date_index
+                and has_freq
+                and is_monotonic
+                and not has_nonconsecutive_periods
+            )
             or (int_index and is_increment)
             or range_index
         )

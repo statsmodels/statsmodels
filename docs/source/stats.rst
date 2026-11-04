@@ -123,6 +123,21 @@ Outliers and Influence
    MLEInfluence
    variance_inflation_factor
 
+Multicollinearity
+~~~~~~~~~~~~~~~~~
+
+.. module:: statsmodels.stats.multicollinearity
+   :synopsis: Measures and diagnostics for multicollinearity
+
+.. currentmodule:: statsmodels.stats.multicollinearity
+
+.. autosummary::
+   :toctree: generated/
+
+   vif
+   vif_ridge
+   collinear_index
+
 Skewness
 ~~~~~~~~
 
@@ -157,7 +172,9 @@ Specification test
    compare_cox
    compare_encompassing
    compare_j
+   compare_vuong
    NonNestedTestResult
+   VuongTestResult
    spec_white
    linear_harvey_collier
    linear_lm
@@ -320,7 +337,9 @@ correction based on fdr in `fdrcorrection` and based on local fdr in
 `tukeyhsd` performs simultaneous testing for the comparison of (independent) means.
 These three functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
-to one way ANOVA, but still in development
+to one way ANOVA, but still in development.
+`MultiComparison.dunnett_t3` performs Dunnett's T3 test for the pairwise comparison of
+means when the variances differ across groups.
 
 .. module:: statsmodels.sandbox.stats.multicomp
    :synopsis: Experimental methods for controlling size while performing multiple comparisons

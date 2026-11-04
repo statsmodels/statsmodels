@@ -45,7 +45,8 @@ def _nan_rows(*arrs):
     nan_rows = _asarray_2d_null_rows(arrs[0])
     for arr in arrs[1:]:
         nan_rows = nan_rows | _asarray_2d_null_rows(arr)
-    return nan_rows.squeeze()
+    # atleast_1d so that a single row still gives a mask, not a scalar
+    return np.atleast_1d(nan_rows.squeeze())
 
 
 class ModelData:
@@ -129,9 +130,10 @@ class ModelData:
             # detect where the constant is
             check_implicit = False
             exog_max = np.max(self.exog, axis=0)
-            if not np.isfinite(exog_max).all():
-                raise MissingDataError("exog contains inf or nans")
             exog_min = np.min(self.exog, axis=0)
+            # nan propagates in the max and min, -inf is only found by the min
+            if not (np.isfinite(exog_max).all() and np.isfinite(exog_min).all()):
+                raise MissingDataError("exog contains inf or nans")
             const_idx = np.where(exog_max == exog_min)[0].squeeze()
             self.k_constant = const_idx.size
 
@@ -313,6 +315,10 @@ class ModelData:
             raise MissingDataError("NaNs were encountered in the data")
 
         elif missing == "drop":
+            if np.all(nan_mask):
+                raise MissingDataError(
+                    "All observations were dropped because of missing values"
+                )
             nan_mask = ~nan_mask
 
             def drop_nans(x):

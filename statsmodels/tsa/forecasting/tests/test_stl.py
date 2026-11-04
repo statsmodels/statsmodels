@@ -6,6 +6,8 @@ import pandas as pd
 import pytest
 
 import statsmodels.datasets
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.base.prediction import PredictionResults
@@ -157,7 +159,9 @@ def test_get_prediction(sunspots):
     stlf_model = STLForecast(
         sunspots, model=ARIMA, model_kwargs={"order": (2, 2, 0)}, period=11
     )
-    stlf_res = stlf_model.fit()
+    # The default optimizer may stop short of convergence on some platforms
+    with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optimization"):
+        stlf_res = stlf_model.fit()
     pred = stlf_res.get_prediction()
     assert pred.predicted_mean.shape == (309,)
     assert pred.var_pred_mean.shape == (309,)

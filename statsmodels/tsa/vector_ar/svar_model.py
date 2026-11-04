@@ -8,12 +8,15 @@ Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
 
 from statsmodels.compat.pandas import deprecate_kwarg
 
+import warnings
+
 import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tools.validation import string_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import util
@@ -455,17 +458,16 @@ class SVAR(tsbase.TimeSeriesModel):
             kwargs = {"gtol": 1e-5}
         else:
             kwargs = {}
-        retvals = (
-            super()
-            .fit(
-                start_params=start_params,
-                method=solver,
-                maxiter=maxiter,
-                disp=False,
-                **kwargs,
-            )
-            .params
+        mlefit = super().fit(
+            start_params=start_params,
+            method=solver,
+            maxiter=maxiter,
+            disp=False,
+            **kwargs,
         )
+        # used by sirf_errband_mc to count the fits that did not converge
+        self.mle_retvals = mlefit.mle_retvals
+        retvals = mlefit.params
 
         if retvals.ndim > 1:
             retvals = retvals.ravel()
@@ -815,6 +817,13 @@ class SVARResults(SVARProcess, VARResults):
             A result object with fields ``lower`` and ``upper``, arrays of
             ma_rep Monte Carlo standard errors.
 
+        Warns
+        -----
+        ConvergenceWarning
+            One warning reports the number of replications for which the
+            maximum likelihood fit of the structural parameters did not
+            converge. The error bands include these replications.
+
         Notes
         -----
         Lütkepohl (2005) Appendix D
@@ -850,6 +859,7 @@ class SVARResults(SVARProcess, VARResults):
 
         opt_A = A[A_mask]
         opt_B = B[B_mask]
+        n_not_converged = 0
         for i in range(repl):
             # discard first hundred to correct for starting bias
             sim = util.varsim(coefs, intercept, sigma_u, rng=rng, steps=nobs + burn)
@@ -863,7 +873,15 @@ class SVARResults(SVARProcess, VARResults):
                 opt_A = mean_AB[:split]
                 opt_B = mean_AB[split:]
 
-            sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
+            # one warning below reports all the fits that did not converge
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message="Maximum Likelihood optimization failed",
+                    category=ConvergenceWarning,
+                )
+                sres = smod.fit(maxlags=k_ar, A_guess=opt_A, B_guess=opt_B)
+            n_not_converged += not smod.mle_retvals["converged"]
 
             if i < 10:
                 # save estimates for starting val if in first 10
@@ -871,6 +889,15 @@ class SVARResults(SVARProcess, VARResults):
                     np.append(sres.A[A_mask].tolist(), sres.B[B_mask].tolist())
                 )
             ma_coll[i] = agg(sres.svar_ma_rep(maxn=steps))
+
+        if n_not_converged:
+            warnings.warn(
+                "Maximum Likelihood optimization failed to converge in "
+                f"{n_not_converged} of {repl} Monte Carlo replications. The "
+                "error bands include these replications.",
+                ConvergenceWarning,
+                stacklevel=3,
+            )
 
         ma_sort = np.sort(ma_coll, axis=0)  # sort to get quantiles
         index = (

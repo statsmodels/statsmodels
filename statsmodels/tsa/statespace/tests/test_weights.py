@@ -7,17 +7,29 @@ License: Simplified-BSD
 
 from statsmodels.compat.platform import PLATFORM_WIN
 
+import contextlib
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
 from statsmodels import datasets
+from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tsa.statespace import sarimax, tools, varmax
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 
 dta = datasets.macrodata.load_pandas().data
 dta.index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")
+
+
+def expect_diagonalized(expected=True):
+    # The univariate filter diagonalizes the non-diagonal obs_cov of TVSS
+    if expected:
+        return pytest.warns(
+            OutputWarning, match="The univariate filtering approach diagonalized"
+        )
+    return contextlib.nullcontext()
 
 
 @pytest.mark.parametrize("use_exog", [False, True])
@@ -267,7 +279,10 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse):
         mod.ssm.initialize_known(prior_mean, prior_cov)
     if univariate:
         mod.ssm.filter_univariate = True
-    res = mod.smooth([])
+    # The exact diffuse initialization always uses the univariate filter
+    uses_univariate = univariate or diffuse > 0
+    with expect_diagonalized(uses_univariate):
+        res = mod.smooth([])
 
     # Compute the desiried weights
     n = mod.nobs
@@ -289,7 +304,8 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse):
                     tmp_mod.ssm.initialize_known(prior_mean, prior_cov)
                 if univariate:
                     tmp_mod.ssm.filter_univariate = True
-                tmp_res = tmp_mod.smooth([])
+                with expect_diagonalized(uses_univariate):
+                    tmp_res = tmp_mod.smooth([])
 
                 desired[:, j, :, i] = tmp_res.smoothed_state.T - res.smoothed_state.T
 
@@ -308,7 +324,8 @@ def test_smoothed_state_obs_weights_TVSS(univariate, diffuse):
                 tmp_mod["state_intercept"] = np.zeros((mod.k_states, mod.nobs))
                 tmp_mod["state_intercept", :, :] = si[:, None]
             tmp_mod["state_intercept", ell, j] += 1.0
-            tmp_res = tmp_mod.ssm.smooth()
+            with expect_diagonalized(uses_univariate):
+                tmp_res = tmp_mod.ssm.smooth()
 
             desired_state_intercept_weights[:, j, :, ell] = (
                 tmp_res.smoothed_state.T - res.smoothed_state.T
@@ -394,7 +411,8 @@ def test_smoothed_state_obs_weights_univariate_singular(singular, periods):
         mod["obs_cov", singular, singular, :periods] = 0
     mod["state_cov", :, :, :periods] = 0
     mod.ssm.filter_univariate = True
-    res = mod.smooth([])
+    with expect_diagonalized():
+        res = mod.smooth([])
 
     # Make sure we actually have singular covariance matrices in the periods
     # specified
@@ -420,7 +438,8 @@ def test_smoothed_state_obs_weights_univariate_singular(singular, periods):
                 tmp_mod = mod.clone(y)
                 tmp_mod.ssm.initialize_known([1.2, 0.8], np.eye(2) * 0)
                 tmp_mod.ssm.filter_univariate = True
-                tmp_res = tmp_mod.smooth([])
+                with expect_diagonalized():
+                    tmp_res = tmp_mod.smooth([])
 
                 desired[:, j, :, i] = tmp_res.smoothed_state.T - res.smoothed_state.T
 

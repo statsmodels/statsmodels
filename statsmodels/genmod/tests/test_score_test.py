@@ -23,6 +23,36 @@ def test_score_test_invalid_hypothesis_raises():
         score_test(None, hypothesis="not-a-hypothesis")
 
 
+@pytest.mark.parametrize("model_class", ["poisson", "glm"])
+def test_score_test_exog_extra_1d(model_class):
+    # a 1-dim exog_extra is one additional column, as in 2-dim with one column
+    rng = np.random.default_rng(982345)
+    nobs = 300
+    x = rng.standard_normal((nobs, 2))
+    exog = np.column_stack((np.ones(nobs), x[:, 0]))
+    extra = x[:, 1] ** 2
+    y = rng.poisson(np.exp(0.3 + 0.2 * exog[:, 1] + 0.1 * extra))
+    if model_class == "poisson":
+        res = Poisson(y, exog).fit(disp=False)
+    else:
+        res = GLM(y, exog, family=families.Poisson()).fit()
+
+    res_1d = score_test(res, exog_extra=extra)
+    res_2d = score_test(res, exog_extra=extra[:, None])
+    assert res_1d.k_constraint == 1
+    assert res_2d.k_constraint == 1
+    assert_allclose(res_1d.statistic, res_2d.statistic, rtol=1e-12)
+    assert_allclose(res_1d.pvalue, res_2d.pvalue, rtol=1e-12)
+    res_1d_hc = score_test(res, exog_extra=extra, cov_type="HC0")
+    res_2d_hc = score_test(res, exog_extra=extra[:, None], cov_type="HC0")
+    assert_allclose(res_1d_hc.statistic, res_2d_hc.statistic, rtol=1e-12)
+    assert_allclose(res_1d_hc.pvalue, res_2d_hc.pvalue, rtol=1e-12)
+    # the score test of the discrete models uses the same code
+    if model_class == "poisson":
+        res_method = res.score_test(exog_extra=extra)
+        assert_allclose(res_method.statistic, res_1d.statistic, rtol=1e-12)
+
+
 class CheckScoreTest:
 
     def test_wald_score(self):

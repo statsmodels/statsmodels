@@ -634,6 +634,7 @@ class TestGAMMPGBS(CheckGAMMixin):
         assert_allclose(predicted, res1.fittedvalues[2:4], rtol=1e-13)
         assert_allclose(predicted, res2.fitted_values[2:4], rtol=self.rtol_fitted)
 
+    @pytest.mark.slow
     def test_crossval(self):
         # includes some checks that penalization in the model is unchanged
         rs = np.random.RandomState(9832311)
@@ -762,6 +763,7 @@ class TestGAMMPGBSPoisson(CheckGAMMixin):
         assert_allclose(wtt.pvalues[:2], res2.pTerms_pv, rtol=1e-6)
         assert_equal(wtt.df_constraints[:2], res2.pTerms_df)
 
+    @pytest.mark.slow
     @pytest.mark.thread_unsafe("Some results classes are mutable that affect run")
     def test_select_alpha(self):
         res1 = self.res1

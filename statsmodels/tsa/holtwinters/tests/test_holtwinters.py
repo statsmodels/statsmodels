@@ -6,6 +6,7 @@ from statsmodels.compat.pandas import MONTH_END, infer_freq
 from statsmodels.compat.pytest import pytest_warns
 from statsmodels.compat.scipy import BASINHOPPING_RNG
 
+import contextlib
 import os
 from pathlib import Path
 import re
@@ -17,7 +18,8 @@ import pandas as pd
 import pytest
 import scipy.stats
 
-from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.sm_exceptions import EstimationWarning, ValueWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa.holtwinters import (
     PY_SMOOTHERS,
@@ -534,8 +536,10 @@ class TestHoltWinters:
         for key, param_value in params.items():
             assert_allclose(fit.params[key], param_value)
 
-        with mod.fix_params(params):
-            opt_fit = mod.fit(optimized=True)
+        # All parameters are fixed, so there is nothing to optimize
+        with pytest.warns(EstimationWarning, match="Model has no free parameters"):
+            with mod.fix_params(params):
+                opt_fit = mod.fit(optimized=True)
         assert_allclose(fit.sse, opt_fit.sse)
         assert_allclose(opt_fit.params["initial_trend"], params["initial_trend"])
         alt_params = {k: v for k, v in params.items() if "level" not in k}
@@ -827,6 +831,7 @@ def test_infer_freq():
     assert mod.seasonal_periods == 12
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("trend", TRENDS)
 @pytest.mark.parametrize("seasonal", SEASONALS)
 def test_start_params(trend, seasonal):
@@ -856,7 +861,8 @@ def test_no_params_to_optimize():
         initial_level=housing_data.iloc[0],
         initialization_method="known",
     )
-    mod.fit(smoothing_level=0.5)
+    with pytest.warns(EstimationWarning, match="Model has no free parameters"):
+        mod.fit(smoothing_level=0.5)
 
 
 def test_invalid_start_param_length():
@@ -1771,7 +1777,12 @@ def test_alternative_minimizers(method, ses):
         rs = np.random.RandomState(32321831)
         minimize_kwargs[BASINHOPPING_RNG] = rs
     mod = ExponentialSmoothing(ses, initialization_method="estimated")
-    res = mod.fit(method=method, start_params=sv, minimize_kwargs=minimize_kwargs)
+    ctx = contextlib.nullcontext()
+    if method == "trust-constr":
+        # scipy trust-constr may warn when the approximated gradient is flat
+        ctx = warns_or_none(UserWarning, match="delta_grad == 0.0")
+    with ctx:
+        res = mod.fit(method=method, start_params=sv, minimize_kwargs=minimize_kwargs)
     assert_allclose(res.params["smoothing_level"], 0.77232545, rtol=1e-3)
     assert_allclose(res.params["initial_level"], 11.00359693, rtol=1e-3)
     assert isinstance(res.summary().as_text(), str)
