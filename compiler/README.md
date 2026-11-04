@@ -36,40 +36,84 @@ Pop-Location
 
 ## Synthetic CPU experiment
 
-For the NumPy comparison only, from the repository root in PowerShell, run:
+The benchmark separates three costs:
+
+- The Statsmodels formula path, including pandas counterfactual-frame creation,
+  formula design construction, and prediction.
+- Kernel-only NumPy paths using preconstructed full-design matrices (two
+  matrix-vector products) or the compact interaction matrix (one product).
+  Inputs and model coefficients are prepared before timing.
+- The compiled MLIR path measured by `iree-benchmark-module`, with the module
+  already compiled and inputs loaded before its timed iterations. This native
+  harness excludes Python call and compilation overhead, but still includes
+  IREE dispatch/runtime costs and output allocation. It reports both IREE's
+  synchronous `local-sync` driver and worker-pool `local-task` driver.
+
+To run the NumPy-only measurements:
 
 ```powershell
 Push-Location compiler/python
+$env:OPENBLAS_NUM_THREADS = "1"
 python -m causal_compiler.synthetic --rows 100000 --covariates 8
 Pop-Location
 ```
 
-This creates seeded synthetic data, fits formula OLS once, verifies the direct
-contrast against two formula-based predictions, and reports median CPU latency,
-estimated operation counts, and dense feature-matrix sizes. Model fitting is
-excluded from timed sections. The reported matrix sizes are estimates, not
-measured peak memory.
-
-For execution of lowered MLIR through IREE's CPU backend, first build `ci-opt`
-in Ubuntu WSL and install the optional `iree-compiler` and `iree-runtime`
-Python packages. Then run:
+For IREE CPU execution, build `ci-opt` in Ubuntu WSL and install the optional
+`iree-compiler` and `iree-runtime` Python packages (the latter supplies
+`iree-benchmark-module`):
 
 ```powershell
 wsl -d Ubuntu -- bash -lc 'cmake -S /mnt/c/Users/mrdoc/OneDrive/Documents/Classes/CSE598/statsmodels_fork/statsmodels/compiler -B /home/mrdoc/statsmodels-ci-build -G Ninja -DMLIR_DIR=/usr/lib/llvm-18/lib/cmake/mlir && cmake --build /home/mrdoc/statsmodels-ci-build'
 Push-Location compiler/python
+$env:OPENBLAS_NUM_THREADS = "1"
 python -m causal_compiler.synthetic --rows 100000 --covariates 8 --ci-opt-command 'wsl -d Ubuntu -- /home/mrdoc/statsmodels-ci-build/tools/ci-opt/ci-opt' --target-cpu host
 Pop-Location
 ```
 
-The compiled path validates its output against Statsmodels and reports runtime
-latency separately. The current workflow specializes the emitted function to
-the selected row count. Results include Python/IREE dispatch and output
-handling; they are not a pure hardware-counter measurement of the kernel.
-`--target-cpu host` specializes to the CPU running IREE (the Ryzen in this
-setup). The lowerer now produces row-parallel `linalg.generic` instead of
-repeatedly inserting each row into a tensor. The older `scf.for` tensor-insert
-version took about 15.6 seconds for 100,000 rows in an initial probe, so it was
-replaced before the current benchmark path was validated.
+Compilation by both `ci-opt` and IREE occurs before timed benchmark iterations;
+neither compile time nor process startup/input-file loading is included in the
+IREE native benchmark's timed iterations. The benchmark validates formula,
+NumPy, and compiled outputs. The Python runtime call is reported separately as
+a diagnostic, not as the compiled-kernel comparison.
+
+On the initial implementation, the generated optimized LLVM for the
+`linalg.generic` dispatch contained scalar `load double`, `fmul double`, and
+`fadd double` instructions, with no LLVM vector-body or vector-typed
+instructions. The loop loads each row's interaction values and coefficients as
+separate scalars, then performs scalar multiply/add operations. NumPy was
+linked to optimized OpenBLAS, which can use architecture-specific SIMD for its
+matrix-vector product. This is the concrete code-generation reason NumPy can
+beat the single-thread IREE kernel despite similar arithmetic counts.
+
+The revised 100,000-row/8-interaction runs showed:
+
+- Statsmodels formula prediction, including DataFrame and design construction:
+  about 60--82 ms across runs.
+- Two full-design NumPy GEMVs with matrices prebuilt: about 1.5--2.2 ms.
+- One direct NumPy interaction GEMV: about 0.175--0.211 ms in the higher-sample
+  runs.
+- IREE `local-sync` native benchmark: about 0.259--0.270 ms, including IREE
+  dispatch and result allocation but excluding Python invocation and compile.
+- IREE `local-task` worker-pool benchmark: about 0.153--0.165 ms in observed
+  runs. This uses parallel CPU workers, unlike the one-thread BLAS comparison.
+- IREE empty-output invocation floor: about 0.008--0.009 ms in the same native
+  harness. Treat this as a dispatch/allocation baseline, not a value to subtract
+  exactly from kernel time.
+
+A separate Python-runtime no-op call cost roughly 0.9--1.1 ms, explaining why
+the prior Python-call benchmark looked much slower. That Python-call figure is
+now reported only as a diagnostic and should not be used as kernel latency.
+When comparing like-for-like single-worker compute, the current compiled path
+is around 1.2--1.5x slower than direct NumPy; the task-pool run is similar to
+one observed 16-thread NumPy result, but is not an equal thread-count
+comparison. These are exploratory timings, not a stable performance claim.
+
+The current lowerer uses row-parallel `linalg.generic`, avoiding the former
+repeated tensor insertion. Further compiler optimization should focus on
+vectorizing the row/interaction arithmetic, reducing runtime dispatch and
+allocation overhead, and comparing against both full-design GEMVs and direct
+NumPy GEMV. Matrix-size and FLOP figures are analytical estimates, not measured
+peak memory or hardware counters.
 
 ## Dataset requirements for the next milestone
 
