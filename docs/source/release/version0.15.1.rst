@@ -849,6 +849,13 @@ Other
 - ``ExpandedNormal`` no longer modifies the array of cumulants that is passed
   in. :pr:`10281`
 
+Documentation
+=============
+
+- Clarify that ``hessian_factor`` in ``OLS``, ``WLS`` and ``GLS``
+  returns unscaled least-squares weights and ignores its compatibility
+  arguments. Numerical behavior is unchanged. :issue:`8653`
+
 Stricter Input Validation
 =========================
 
