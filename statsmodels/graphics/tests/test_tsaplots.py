@@ -2,6 +2,7 @@ from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lmap
 
 import calendar
+from datetime import date
 from io import BytesIO
 import locale
 
@@ -339,24 +340,9 @@ def test_plot_month(close_figures):
             fig = month_plot(dta)
             labels = [_.get_text() for _ in fig.axes[0].get_xticklabels()]
             expected = [
-                "Jan",
-                "Feb",
-                ("Mär", "Mrz"),
-                "Apr",
-                "Mai",
-                "Jun",
-                "Jul",
-                "Aug",
-                "Sep",
-                "Okt",
-                "Nov",
-                "Dez",
+                date(2000, month, 1).strftime("%b") for month in range(1, 13)
             ]
-            for lbl, exp in zip(labels, expected, strict=True):
-                if isinstance(exp, tuple):
-                    assert lbl in exp
-                else:
-                    assert lbl == exp
+            assert_equal(labels, expected)
     except locale.Error:
         pytest.xfail(reason="Failure due to unsupported locale")
 
