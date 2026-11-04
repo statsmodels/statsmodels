@@ -713,6 +713,12 @@ Statistics and tests
   limits are now ``0`` and ``-log(alpha) / nobs``. The numerical inversion
   checks that ``count`` and ``nobs`` have a single element, and raises a
   ``ValueError`` otherwise. :issue:`10536`, :pr:`10537`, :pr:`10633`
+- ``confint_poisson_2indep`` with ``method="sqrtcc"`` and ``compare="ratio"``
+  ignored ``exposure1`` and ``exposure2`` and returned an interval for the ratio
+  of the counts instead of the ratio of the rates. It also used the critical
+  value instead of its square in the Fieller discriminant. The bounds are now
+  rescaled by ``exposure2 / exposure1`` and use the squared critical value, and
+  they agree with the other methods of the function. :pr:`10660`
 
 Treatment effects
 -----------------
