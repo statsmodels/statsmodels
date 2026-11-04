@@ -546,6 +546,10 @@ Time series analysis
   A UTF-8 byte order mark is ignored, a file that is not valid UTF-8 raises a
   ``ValueError`` that says so, and ``rawspec`` accepts a ``pathlib.Path`` as
   documented. :pr:`10585`
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` remove the output files
+  written by X-12/X-13 from the temporary directory. Before, each call left
+  files such as ``.out``, ``.err``, ``.log``, ``.d11``, ``.d12`` and ``.d13``
+  behind. :issue:`8277`, :pr:`10674`
 - ``coint_johansen``, ``select_coint_rank`` and the error bands of the
   impulse responses of a ``VAR`` returned complex eigenvalues and eigenvectors
   with NumPy 2.5 and later, which ``np.linalg.eig`` returns as complex arrays
