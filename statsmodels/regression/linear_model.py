@@ -716,35 +716,40 @@ class GLS(RegressionModel):
 
     def hessian_factor(self, params, scale=None, observed=True):
         """
-        Compute weights for calculating Hessian.
+        Compute unscaled weights for the least-squares cross-product.
 
         Parameters
         ----------
         params : ndarray
-            The parameter at which Hessian is evaluated.
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
 
         Returns
         -------
         ndarray
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`.
+            An array of ones if ``sigma`` is None, or inverse observation
+            variances for a scalar or one-dimensional ``sigma``.
 
         Raises
         ------
         NotImplementedError
-            If `sigma` is a full (non-diagonal) covariance matrix. A 1d
-            per-observation weight vector cannot represent the
-            off-diagonal correlation terms, so no choice of
-            `hessian_factor` can satisfy the reassembly formula above in
-            this case; `fit`, `predict`, and other core results are
-            unaffected; only this diagnostic is unavailable.
+            If `sigma` is two-dimensional. Per-observation weights are
+            only supported for scalar or one-dimensional variances;
+            `fit`, `predict`, and other core results are unaffected.
+
+        Notes
+        -----
+        The arguments are accepted for compatibility with other models.
+        For the standard GLS whitening, if ``weights`` is the returned
+        array, the weighted cross-product ``(exog.T * weights).dot(exog)``
+        equals ``wexog.T.dot(wexog)``. For a fixed positive Gaussian
+        error-variance scale ``s``, the log-likelihood Hessian is the
+        negative of this matrix divided by ``s``. This sign and scaling
+        are not applied here. These identities do not in general apply
+        to subclasses that override ``whiten``, such as ``GLSAR``.
 
         """
         if self.sigma is None or self.sigma.shape == ():
@@ -958,25 +963,30 @@ class WLS(RegressionModel):
 
     def hessian_factor(self, params, scale=None, observed=True):
         """
-        Compute the weights for calculating the Hessian.
+        Compute unscaled weights for the least-squares cross-product.
 
         Parameters
         ----------
         params : ndarray
-            The parameter at which Hessian is evaluated.
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
 
         Returns
         -------
         ndarray
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`.
+            The observation weights supplied to the model.
+
+        Notes
+        -----
+        The arguments are accepted for compatibility with other models.
+        If ``weights`` is the returned array, the weighted cross-product
+        ``(exog.T * weights).dot(exog)`` equals ``wexog.T.dot(wexog)``.
+        For a fixed positive Gaussian error-variance scale ``s``, the
+        log-likelihood Hessian is the negative of this matrix divided by
+        ``s``. This sign and scaling are not applied here.
 
         """
         return self.weights
@@ -1261,25 +1271,30 @@ class OLS(WLS):
 
     def hessian_factor(self, params, scale=None, observed=True):
         """
-        Calculate the weights for the Hessian.
+        Compute unscaled weights for the least-squares cross-product.
 
         Parameters
         ----------
         params : ndarray
-            The parameter at which Hessian is evaluated.
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
 
         Returns
         -------
         ndarray
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`.
+            An array of ones, with one entry per observation.
+
+        Notes
+        -----
+        The arguments are accepted for compatibility with other models.
+        If ``weights`` is the returned array, the weighted cross-product
+        ``(exog.T * weights).dot(exog)`` equals ``wexog.T.dot(wexog)``.
+        For a fixed positive Gaussian error-variance scale ``s``, the
+        log-likelihood Hessian is the negative of this matrix divided by
+        ``s``. This sign and scaling are not applied here.
 
         """
         return np.ones(self.exog.shape[0])

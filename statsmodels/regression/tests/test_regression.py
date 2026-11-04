@@ -2114,46 +2114,40 @@ def test_ols_regularized_profile_scale():
     assert_allclose(result.params, [expected], rtol=1e-10, atol=1e-12)
 
 
-def test_hessian_factor_gls_wls_matches_numerical_hessian():
-    # GLS.hessian_factor/WLS.hessian_factor had no test coverage. Neither
-    # class implements its own .hessian() (RegressionModel does not define
-    # one, so the inherited base LikelihoodModel.hessian raises
-    # NotImplementedError), so there is nothing to reassemble against
-    # directly the way OLS/BetaModel tests do.
-    #
-    # Instead, cross-check against a numerical Hessian of the fixed-scale
-    # Gaussian log-likelihood of the whitened residuals -- the quantity
-    # "scale is not None" in hessian_factor's own docstring refers to:
-    # ll(params; scale) = const - 0.5*nobs*log(scale) - ssr(params)/(2*scale)
-    # whose params-Hessian is the textbook -wexog.T@wexog/scale. Per the
-    # docstring, "The hessian is obtained by (exog.T*hessian_factor).dot
-    # (exog)" -- comparing against OLS's own working hessian(scale=...)
-    # branch confirms the missing piece is an extra -1/scale applied by the
-    # caller (OLS.hessian(params, scale=s) == -exog.T@exog/s, while
-    # OLS.hessian_factor unconditionally returns ones).
+@pytest.mark.parametrize("scale", [None, 0.83, 2.0])
+@pytest.mark.parametrize("observed", [True, False])
+def test_hessian_factor_unscaled(scale, observed):
+    # For fixed Gaussian error variance s, the coefficient Hessian is
+    # -wexog.T @ wexog / s. The factor supplies only the observation weights;
+    # scale and observed do not change them (GH#8653).
     rng = np.random.default_rng(348203)
     n, k = 40, 3
     exog = np.column_stack([np.ones(n), rng.standard_normal((n, k - 1))])
     beta = np.array([1.0, 0.5, -0.5])
     endog = exog @ beta + rng.standard_normal(n) * 0.5
     params = beta + 0.05 * rng.standard_normal(k)
-    scale = 0.83
+    fixed_scale = 0.83
 
     def numeric_hessian(mod):
         def ll_fixed_scale(p):
             resid = mod.wendog - mod.wexog.dot(p)
             ssr = np.sum(resid**2)
-            return -0.5 * n * np.log(2 * np.pi * scale) - 0.5 / scale * ssr
+            return (
+                -0.5 * n * np.log(2 * np.pi * fixed_scale)
+                - 0.5 / fixed_scale * ssr
+            )
 
         return approx_hess(params, ll_fixed_scale)
 
     def check(mod):
-        hf = mod.hessian_factor(params, scale=scale)
+        hf = mod.hessian_factor(params, scale=scale, observed=observed)
         assert hf.shape == (n,)
         reassembled = (mod.exog.T * hf).dot(mod.exog)
         assert_allclose(
-            -reassembled / scale, numeric_hessian(mod), rtol=1e-4, atol=1e-6
+            -reassembled / fixed_scale, numeric_hessian(mod), rtol=1e-4, atol=1e-6
         )
+
+    check(OLS(endog, exog))
 
     # WLS with heteroskedastic weights.
     weights = rng.uniform(0.5, 3.0, size=n)
@@ -2164,27 +2158,25 @@ def test_hessian_factor_gls_wls_matches_numerical_hessian():
     check(mod_nosigma)
     assert_allclose(mod_nosigma.hessian_factor(params), np.ones(n))
 
+    check(GLS(endog, exog, sigma=2.0))
+
     # GLS with a 1d (heteroskedastic diagonal) sigma.
     sigma = rng.uniform(0.3, 4.0, size=n)
     check(GLS(endog, exog, sigma=sigma))
 
 
-def test_hessian_factor_gls_full_sigma_raises():
-    # For a full (non-diagonal) sigma, hessian_factor can only return a 1d
-    # per-observation vector, so (exog.T*hessian_factor).dot(exog) can never
-    # reconstruct the true GLS Hessian -exog.T@sigma^-1@exog/scale when
-    # sigma^-1 has off-diagonal entries -- no diagonal reweighting of exog
-    # reproduces an off-diagonal quadratic form. This used to silently
-    # return the diagonal of cholsigmainv (a genuinely wrong Hessian, not
-    # just an unnormalized one -- see GH real-bugs.md); it now raises
-    # instead of returning a value nothing could use correctly. fit() uses
-    # the full cholsigmainv matrix, not hessian_factor, so it's unaffected.
+@pytest.mark.parametrize("diagonal", [True, False])
+def test_hessian_factor_gls_full_sigma_raises(diagonal):
+    # Per-observation factors are only implemented for scalar or 1d sigma.
+    # fit() itself also supports 2d sigma, including diagonal matrices.
     rng = np.random.default_rng(9284)
     n, k = 12, 2
     exog = np.column_stack([np.ones(n), rng.standard_normal((n, k - 1))])
     endog = exog.dot([1.0, -0.5]) + rng.standard_normal(n) * 0.5
     a = rng.standard_normal((n, n))
     sigma = a.dot(a.T) + n * np.eye(n)
+    if diagonal:
+        sigma = np.diag(np.diag(sigma))
 
     mod = GLS(endog, exog, sigma=sigma)
     with pytest.raises(NotImplementedError, match="hessian_factor"):
