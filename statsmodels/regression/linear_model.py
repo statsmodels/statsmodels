@@ -730,8 +730,9 @@ class GLS(RegressionModel):
         Returns
         -------
         ndarray
-            An array of ones if ``sigma`` is None, or inverse observation
-            variances for a scalar or one-dimensional ``sigma``.
+            An array of ones if ``sigma`` is None, otherwise ``1 / sigma``
+            for a scalar or one-dimensional ``sigma``. A scalar ``sigma`` is
+            the value for every observation.
 
         Raises
         ------
@@ -746,9 +747,11 @@ class GLS(RegressionModel):
         For the standard GLS whitening, if ``weights`` is the returned
         array, the weighted cross-product ``(exog.T * weights).dot(exog)``
         equals ``wexog.T.dot(wexog)``. For a fixed positive Gaussian
-        error-variance scale ``s``, the log-likelihood Hessian is the
-        negative of this matrix divided by ``s``. This sign and scaling
-        are not applied here. These identities do not in general apply
+        error-variance scale ``s``, the Hessian of the log-likelihood with
+        respect to the regression coefficients is the negative of this
+        matrix divided by ``s``. This sign and scaling are not applied
+        here, so the factor is not divided by the scale as the one of
+        ``GLM.hessian_factor`` is. These identities do not in general apply
         to subclasses that override ``whiten``, such as ``GLSAR``.
 
         """
@@ -977,7 +980,8 @@ class WLS(RegressionModel):
         Returns
         -------
         ndarray
-            The observation weights supplied to the model.
+            The observation weights supplied to the model. This is the
+            ``weights`` array of the model itself, not a copy.
 
         Notes
         -----
@@ -985,8 +989,10 @@ class WLS(RegressionModel):
         If ``weights`` is the returned array, the weighted cross-product
         ``(exog.T * weights).dot(exog)`` equals ``wexog.T.dot(wexog)``.
         For a fixed positive Gaussian error-variance scale ``s``, the
-        log-likelihood Hessian is the negative of this matrix divided by
-        ``s``. This sign and scaling are not applied here.
+        Hessian of the log-likelihood with respect to the regression
+        coefficients is the negative of this matrix divided by ``s``. This
+        sign and scaling are not applied here, so the factor is not divided
+        by the scale as the one of ``GLM.hessian_factor`` is.
 
         """
         return self.weights
@@ -1293,8 +1299,10 @@ class OLS(WLS):
         If ``weights`` is the returned array, the weighted cross-product
         ``(exog.T * weights).dot(exog)`` equals ``wexog.T.dot(wexog)``.
         For a fixed positive Gaussian error-variance scale ``s``, the
-        log-likelihood Hessian is the negative of this matrix divided by
-        ``s``. This sign and scaling are not applied here.
+        Hessian of the log-likelihood with respect to the regression
+        coefficients is the negative of this matrix divided by ``s``. This
+        sign and scaling are not applied here, so the factor is not divided
+        by the scale as the one of ``GLM.hessian_factor`` is.
 
         """
         return np.ones(self.exog.shape[0])
