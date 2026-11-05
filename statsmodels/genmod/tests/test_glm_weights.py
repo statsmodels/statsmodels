@@ -1007,14 +1007,20 @@ def test_poisson_residuals():
 
 @pytest.mark.parametrize(
     "family",
-    [sm.families.Poisson(), sm.families.Binomial(), sm.families.Gaussian()],
-    ids=["poisson", "binomial", "gaussian"],
+    [
+        sm.families.Poisson(),
+        sm.families.Binomial(),
+        sm.families.Gaussian(),
+        sm.families.Gamma(sm.families.links.Log()),
+    ],
+    ids=["poisson", "binomial", "gaussian", "gamma"],
 )
-def test_pseudo_rsquared_freq_weights_vs_repeated(family):
+@pytest.mark.parametrize("use_var_weights", [False, True])
+def test_pseudo_rsquared_freq_weights_vs_repeated(family, use_var_weights):
     # freq_weights must give the same pseudo R-squared as the data with
     # each observation repeated according to its frequency weight.
     # The Cox-Snell version used the number of rows instead of the sum
-    # of the frequency weights.
+    # of the frequency weights. var_weights do not change nobs.
     rng = np.random.default_rng(4321)
     nobs = 50
     exog = add_constant(rng.standard_normal((nobs, 2)))
@@ -1023,13 +1029,25 @@ def test_pseudo_rsquared_freq_weights_vs_repeated(family):
         endog = rng.poisson(np.exp(lin_pred))
     elif isinstance(family, sm.families.Binomial):
         endog = rng.binomial(1, 1 / (1 + np.exp(-lin_pred)))
+    elif isinstance(family, sm.families.Gamma):
+        endog = rng.gamma(2.0, np.exp(lin_pred) / 2.0)
     else:
         endog = lin_pred + rng.standard_normal(nobs)
-    fweights = rng.integers(1, 5, size=nobs)
+    # intp: np.repeat needs counts that safely cast to intp (int32 on wasm32)
+    fweights = rng.integers(1, 5, size=nobs).astype(np.intp)
+    if use_var_weights:
+        vweights = rng.uniform(0.5, 2.0, size=nobs)
+    else:
+        vweights = np.ones(nobs)
 
-    res1 = GLM(endog, exog, family=family, freq_weights=fweights).fit()
+    res1 = GLM(
+        endog, exog, family=family, freq_weights=fweights, var_weights=vweights
+    ).fit()
     res2 = GLM(
-        np.repeat(endog, fweights), np.repeat(exog, fweights, axis=0), family=family
+        np.repeat(endog, fweights),
+        np.repeat(exog, fweights, axis=0),
+        family=family,
+        var_weights=np.repeat(vweights, fweights),
     ).fit()
 
     for kind in ["cs", "mcf"]:
@@ -1038,3 +1056,27 @@ def test_pseudo_rsquared_freq_weights_vs_repeated(family):
             res2.pseudo_rsquared(kind=kind),
             rtol=1e-8,
         )
+    # the value of the definition, n is the sum of the freq_weights
+    expected = 1 - np.exp(2 * (res1.llnull - res1.llf) / fweights.sum())
+    assert_allclose(res1.pseudo_rsquared(kind="cs"), expected, rtol=1e-10)
+    assert_allclose(res1.pseudo_rsquared(kind="mcf"), 1 - res1.llf / res1.llnull)
+
+
+def test_pseudo_rsquared_freq_weights_r():
+    # Reference values from R 4.6.1:
+    #   fit1 <- glm(y ~ x, family = poisson, weights = w)
+    #   fit0 <- glm(y ~ 1, family = poisson, weights = w)
+    #   cs <- 1 - exp(2 * (logLik(fit0) - logLik(fit1)) / sum(w))
+    #   mcf <- 1 - logLik(fit1) / logLik(fit0)
+    # R has no function for the Cox-Snell value. It is the formula with
+    # n = sum(w) = 15, not the 8 rows (which would give 0.9195844697).
+    x = np.array([-1.2, -0.7, -0.3, 0.1, 0.4, 0.8, 1.1, 1.5])
+    y = np.array([0, 1, 1, 2, 1, 3, 4, 6])
+    w = np.array([1, 2, 3, 1, 2, 1, 3, 2])
+
+    res = GLM(y, add_constant(x), family=sm.families.Poisson(), freq_weights=w).fit()
+
+    assert_allclose(res.llf, -19.5785041855379, rtol=1e-8)
+    assert_allclose(res.llnull, -29.6606960201116, rtol=1e-8)
+    assert_allclose(res.pseudo_rsquared(kind="cs"), 0.739275828487562, rtol=1e-8)
+    assert_allclose(res.pseudo_rsquared(kind="mcf"), 0.339917574008966, rtol=1e-8)

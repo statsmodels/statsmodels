@@ -385,9 +385,8 @@ Generalized linear models and discrete models
   ``ValueError``. A zero estimate is a ``float``. :issue:`8122`, :pr:`10636`
 - The Cox-Snell ``GLMResults.pseudo_rsquared``, which is also shown in
   ``summary``, used the number of rows instead of the sum of the
-  ``freq_weights``. With frequency weights the value was too large and differed
-  from the value for the data with each row repeated according to its weight.
-  :pr:`10684`
+  ``freq_weights``. With frequency weights the value differed from the value
+  for the data with each row repeated according to its weight. :pr:`10684`
 
 Mixed models and imputation
 ---------------------------
