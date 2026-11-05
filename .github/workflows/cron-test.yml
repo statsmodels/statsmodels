@@ -40,7 +40,7 @@ jobs:
         env:
           CIBW_BUILD: ${{ matrix.python }}-*
           CIBW_BEFORE_BUILD: python -m pip install pip --upgrade
-          CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['--skip-slow','-n','auto','--skip-examples'])"
+          CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['--skip-slow','-n','auto','--skip-examples'], exit=True)"
           CIBW_TEST_REQUIRES: pytest pytest-xdist pytest-cov pytest-run-parallel pytest-randomly matplotlib numpy scipy pandas seaborn
           CIBW_SKIP: "pp* *-musllinux_* *-win32"
           CIBW_ARCHS_LINUX: "x86_64"
@@ -72,7 +72,7 @@ jobs:
         env:
           CIBW_BUILD: cp314-*
           CIBW_BEFORE_BUILD: python -m pip install pip --upgrade
-          CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['--skip-slow','--skip-examples'])"
+          CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['--skip-slow','--skip-examples'], exit=True)"
           CIBW_TEST_REQUIRES: pytest pytest-cov pytest-run-parallel pytest-randomly matplotlib numpy scipy pandas seaborn
           CIBW_SKIP: "pp* *-musllinux_* *-win32"
           CIBW_ARCHS_WINDOWS: "ARM64"
