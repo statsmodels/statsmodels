@@ -2129,6 +2129,9 @@ def test_hessian_factor_unscaled(scale, observed):
     fixed_scale = 0.83
 
     def numeric_hessian(mod):
+        # WLS and GLS have no log-likelihood or Hessian for a fixed scale, so
+        # this is the Gaussian log-likelihood of the whitened data, written
+        # out here, differentiated numerically.
         def ll_fixed_scale(p):
             resid = mod.wendog - mod.wexog.dot(p)
             ssr = np.sum(resid**2)
@@ -2148,6 +2151,16 @@ def test_hessian_factor_unscaled(scale, observed):
         )
 
     check(OLS(endog, exog))
+
+    # OLS does have a Hessian for a fixed scale, which ties the factor to
+    # the library code.
+    ols = OLS(endog, exog)
+    hf = ols.hessian_factor(params, scale=scale, observed=observed)
+    assert_allclose(
+        -(ols.exog.T * hf).dot(ols.exog) / fixed_scale,
+        ols.hessian(params, scale=fixed_scale),
+        rtol=1e-12,
+    )
 
     # WLS with heteroskedastic weights.
     weights = rng.uniform(0.5, 3.0, size=n)
