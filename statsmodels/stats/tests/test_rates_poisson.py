@@ -2278,30 +2278,80 @@ def test_power_ratio_2indep_value_array_like(func, method_var):
 
 
 @pytest.mark.parametrize(
-    "count1, exposure1, count2, exposure2, expected",
+    "count1, exposure1, count2, exposure2, alpha, expected",
     [
         # Fieller interval for the square root of the counts plus 0.5
-        # (Price and Bonett 2000), computed with mpmath at 30 digits
-        (30, 40, 7, 30, (1.47154318121965, 7.79924774711104)),
-        (41, 2969, 15, 1106, (0.572597458480372, 1.88405289435914)),
-        (30, 100, 30, 100, (0.601326646534805, 1.66298966753358)),
+        # (Price and Bonett 2000), computed with mpmath
+        (30, 40, 7, 30, 0.05, (1.47154318121965, 7.79924774711104)),
+        (41, 2969, 15, 1106, 0.05, (0.572597458480372, 1.88405289435914)),
+        (30, 100, 30, 100, 0.05, (0.601326646534805, 1.66298966753358)),
+        (30, 40, 7, 30, 0.1, (1.64315068905795, 6.53938273635582)),
+        (41, 2969, 15, 1106, 0.1, (0.624299391492279, 1.68582171890881)),
+        (30, 100, 30, 100, 0.01, (0.509107956357521, 1.96421994100157)),
     ],
 )
-def test_confint_poisson_2indep_sqrtcc(count1, exposure1, count2, exposure2, expected):
-    ci = confint_poisson_2indep(
-        count1, exposure1, count2, exposure2, method="sqrtcc", compare="ratio"
-    )
+def test_confint_poisson_2indep_sqrtcc(
+    count1, exposure1, count2, exposure2, alpha, expected
+):
+    kwds = {"method": "sqrtcc", "compare": "ratio", "alpha": alpha}
+    ci = confint_poisson_2indep(count1, exposure1, count2, exposure2, **kwds)
     assert_allclose(ci, expected, rtol=1e-12)
 
     # the interval is for the ratio of rates, so it scales with the exposures
     ci_scaled = confint_poisson_2indep(
-        count1, 10 * exposure1, count2, exposure2, method="sqrtcc", compare="ratio"
+        count1, 10 * exposure1, count2, exposure2, **kwds
     )
     assert_allclose(ci_scaled, np.asarray(ci) / 10, rtol=1e-12)
 
     # at the limits the square root statistic equals the critical value
-    crit = stats.norm.isf(0.025)
+    crit = stats.norm.isf(alpha / 2)
     for ratio in ci:
         th = np.sqrt(ratio * exposure1 / exposure2)
         stat = 2 * (np.sqrt(count1 + 0.5) - th * np.sqrt(count2 + 0.5))
         assert_allclose(np.abs(stat) / np.sqrt(1 + th**2), crit, rtol=1e-12)
+
+
+# Fieller set of th = sqrt(mu1 / mu2) >= 0 for small counts, computed with
+# mpmath at 40 digits from the roots of the quadratic. The exposures are 10 and
+# 10, so the interval for the ratio of the rates is the one for th**2.
+sqrtcc_small_counts = [
+    # count2 + 0.5 <= crit**2 / 4: the set is unbounded above
+    (5, 0, 0.05, (1.38437226171637, np.inf)),
+    (5, 1, 0.01, (0.431336745037868, np.inf)),
+    (2, 1, 0.01, (0.0463611940547854, np.inf)),
+    # count1 + 0.5 <= crit**2 / 4: the lower root is negative
+    (0, 3, 0.05, (0.0, 1.42479513204755)),
+    (0, 3, 0.01, (0.0, 3.19955094443433)),
+    # both: the set contains every th >= 0, with and without real roots
+    (0, 0, 0.05, (0.0, np.inf)),
+    (0, 0, 0.01, (0.0, np.inf)),
+    (1, 1, 0.01, (0.0, np.inf)),
+]
+
+
+@pytest.mark.filterwarnings("error")
+@pytest.mark.parametrize("count1, count2, alpha, expected", sqrtcc_small_counts)
+def test_confint_poisson_2indep_sqrtcc_small_counts(count1, count2, alpha, expected):
+    ci = confint_poisson_2indep(
+        count1, 10, count2, 10, method="sqrtcc", compare="ratio", alpha=alpha
+    )
+    assert_allclose(ci, expected, rtol=1e-12)
+
+
+@pytest.mark.filterwarnings("error")
+def test_confint_poisson_2indep_sqrtcc_array_like():
+    # lists and arrays give the same limits as one call for each element
+    count1, count2, alpha = [30, 5, 0, 0], [7, 0, 3, 0], 0.05
+    expected = np.array(
+        [
+            confint_poisson_2indep(
+                c1, 10, c2, 10, method="sqrtcc", compare="ratio", alpha=alpha
+            )
+            for c1, c2 in zip(count1, count2, strict=True)
+        ]
+    )
+    for counts in [(count1, count2), tuple(np.asarray(c) for c in (count1, count2))]:
+        ci = confint_poisson_2indep(
+            counts[0], 10, counts[1], 10, method="sqrtcc", compare="ratio", alpha=alpha
+        )
+        assert_allclose(np.column_stack(ci), expected, rtol=1e-12)
