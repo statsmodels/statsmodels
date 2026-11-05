@@ -136,6 +136,9 @@ Behavior changes
   such data changes. Curves are not interpolated, so only the sampled values
   matter. ``data`` can be any array_like, for example a ``DataFrame``.
   :issue:`7105`, :pr:`10513`, :pr:`10638`
+- :func:`~statsmodels.graphics.functional.banddepth` with ``method="MBD"``
+  counts values equal to a band boundary as inside. Previously, tied values
+  were assigned arbitrary ranks, so depths could depend on the input row order.
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
