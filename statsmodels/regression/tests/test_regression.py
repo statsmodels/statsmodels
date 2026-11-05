@@ -2188,6 +2188,26 @@ def test_hessian_factor_gls_full_sigma_raises(diagonal):
     assert np.isfinite(res.params).all()
 
 
+@pytest.mark.parametrize("order", [1, 2])
+def test_hessian_factor_glsar_raises(order):
+    # The whitened design of GLSAR has nobs - order rows, each of which mixes
+    # neighboring observations, so there is no vector of weights for the
+    # nobs observations that reproduces wexog.T @ wexog.
+    rng = np.random.default_rng(5419)
+    n = 30
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    endog = exog.dot([1.0, 0.5, -0.5]) + rng.standard_normal(n) * 0.5
+
+    mod = GLSAR(endog, exog, rho=order)
+    assert mod.wexog.shape[0] == n - order
+    with pytest.raises(NotImplementedError, match="GLSAR"):
+        mod.hessian_factor(np.array([1.0, 0.5, -0.5]))
+
+    # fit() whitens with the AR coefficients and is unaffected.
+    res = mod.iterative_fit(maxiter=3)
+    assert np.isfinite(res.params).all()
+
+
 def test_conf_int_el_matches_own_critical_value_and_shrinks():
     # OLSResults.conf_int_el had no test coverage in the standard (non-slow)
     # suite: the only existing calls, in emplike/tests/test_regression.py,
