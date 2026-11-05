@@ -1033,7 +1033,8 @@ def test_pseudo_rsquared_freq_weights_vs_repeated(family, use_var_weights):
         endog = rng.gamma(2.0, np.exp(lin_pred) / 2.0)
     else:
         endog = lin_pred + rng.standard_normal(nobs)
-    fweights = rng.integers(1, 5, size=nobs)
+    # intp: np.repeat needs counts that safely cast to intp (int32 on wasm32)
+    fweights = rng.integers(1, 5, size=nobs).astype(np.intp)
     if use_var_weights:
         vweights = rng.uniform(0.5, 2.0, size=nobs)
     else:
