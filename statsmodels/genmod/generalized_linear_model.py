@@ -2195,11 +2195,6 @@ class GLMResults(base.LikelihoodModelResults):
 
         McFadden's pseudo-R-squared: 1 - (llf / llnull)
 
-        If the model has ``freq_weights``, ``nobs`` in the Cox & Snell
-        pseudo-R-squared is the sum of the frequency weights, so that the
-        value is the same as for the data with each observation repeated
-        according to its frequency weight.
-
         Parameters
         ----------
         kind : {'cs', 'mcf'}, optional
@@ -2209,6 +2204,19 @@ class GLMResults(base.LikelihoodModelResults):
         -------
         float
             Pseudo R-squared
+
+        Notes
+        -----
+        ``nobs`` in the Cox & Snell pseudo-R-squared is the number of
+        observations. If the model has ``freq_weights``, it is their sum, so
+        that the value is the same as for the data with each observation
+        repeated according to its frequency weight. ``var_weights`` do not
+        change ``nobs``.
+
+        .. versionchanged:: 0.15.1
+
+           ``nobs`` is the sum of the ``freq_weights`` instead of the number
+           of rows.
         """
         kind = kind.lower()
         if kind.startswith("mcf"):
