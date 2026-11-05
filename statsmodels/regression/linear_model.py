@@ -1651,6 +1651,43 @@ class GLSAR(GLS):
             _x[(i + 1) :] = _x[(i + 1) :] - self.rho[i] * x[0 : -(i + 1)]
         return _x[self.order :]
 
+    def hessian_factor(self, params, scale=None, observed=True):
+        """
+        Not available, the whitening of GLSAR cannot be written as weights.
+
+        Parameters
+        ----------
+        params : ndarray
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
+
+        Raises
+        ------
+        NotImplementedError
+            Always. The whitened design matrix has ``nobs - order`` rows and
+            each row mixes neighboring observations, so there is no
+            per-observation weight vector for which
+            ``(exog.T * weights).dot(exog)`` equals ``wexog.T.dot(wexog)``.
+            `fit`, `predict`, and other core results are unaffected.
+
+        Notes
+        -----
+        ``GLSAR`` inherited ``GLS.hessian_factor``, which returned a vector
+        with one entry for each of the ``nobs`` observations and did not
+        reproduce the cross-product of the whitened design.
+        """
+        raise NotImplementedError(
+            "hessian_factor is not available for GLSAR: the whitened design "
+            "has nobs - order rows and each row mixes neighboring "
+            "observations, so a 1d per-observation weight vector cannot "
+            "represent its cross-product. This affects only diagnostics "
+            "built on hessian_factor; fit(), predict(), and other core "
+            "results are unaffected."
+        )
+
 
 class YuleWalkerResult(NamedTuple):
     """Result of :func:`yule_walker`."""

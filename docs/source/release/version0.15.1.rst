@@ -268,6 +268,11 @@ Regression and linear models
   involves ``X'X``. The results of ``OLS.fit_regularized`` with
   ``profile_scale=True`` change because they use this Hessian.
   :issue:`9469`, :pr:`10473`, :pr:`10556`
+- ``GLSAR.hessian_factor`` raises a ``NotImplementedError``. It inherited
+  ``GLS.hessian_factor``, which returned one value for each of the ``nobs``
+  observations, but the whitened design of ``GLSAR`` has ``nobs - order`` rows
+  that mix neighboring observations, so the values did not reproduce its
+  cross-product. :pr:`10675`
 - ``OLSInfluence`` for the results of a ``WLS`` model used the unweighted
   design matrix and residuals for the hat matrix, the studentized residuals,
   Cook's distance, ``dffits`` and the leave-one-observation-out measures.
