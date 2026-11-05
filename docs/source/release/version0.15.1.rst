@@ -854,7 +854,7 @@ Documentation
 
 - Clarify that ``hessian_factor`` in ``OLS``, ``WLS`` and ``GLS``
   returns unscaled least-squares weights and ignores its compatibility
-  arguments. Numerical behavior is unchanged. :issue:`8653`
+  arguments. Numerical behavior is unchanged. :issue:`8653`, :pr:`10675`
 
 Stricter Input Validation
 =========================
