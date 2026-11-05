@@ -44,3 +44,34 @@ jobs:
           CIBW_TEST_REQUIRES: pytest pytest-xdist pytest-cov pytest-run-parallel pytest-randomly matplotlib numpy scipy pandas seaborn
           CIBW_SKIP: "pp* *-musllinux_* *-win32"
           CIBW_ARCHS_LINUX: "x86_64"
+
+  # Windows on ARM64 runs on a native ARM runner. This job does not set
+  # MKL_NUM_THREADS, OMP_NUM_THREADS or OPENBLAS_NUM_THREADS, so that the
+  # tests run without limits on the number of threads.
+  build_wheels_windows_arm:
+    name: windows-11-arm, Python cp314
+    runs-on: windows-11-arm
+    defaults:
+      run:
+        shell: bash
+    env:
+      BUILD_COMMIT: "main"
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 #v6
+        with:
+          python-version: '3.x'
+
+      - uses: pypa/cibuildwheel@f9b966cfadf4109556cadc5bb39ddb72d0ce664e #v4.3.5
+        env:
+          CIBW_BUILD: cp314-*
+          CIBW_BEFORE_BUILD: python -m pip install pip --upgrade
+          CIBW_TEST_COMMAND: python -c "import statsmodels; statsmodels.test(['--skip-slow','-n','auto','--skip-examples'])"
+          CIBW_TEST_REQUIRES: pytest pytest-xdist pytest-cov pytest-run-parallel pytest-randomly matplotlib numpy scipy pandas seaborn
+          CIBW_SKIP: "pp* *-musllinux_* *-win32"
+          CIBW_ARCHS_WINDOWS: "ARM64"
