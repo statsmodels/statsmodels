@@ -1871,13 +1871,24 @@ def confint_poisson_2indep(
             # coded based on Price, Bonett 2000 equ (2.4)
             # Fieller interval for sqrt(mu1 / mu2) of the expected counts,
             # the bounds are then rescaled from counts to rates by n2 / n1
+            # With a = sqrt(y1 + 0.5), b = sqrt(y2 + 0.5) and th = sqrt(mu1 / mu2),
+            # the interval is the set of th >= 0 with
+            # (a - th * b)**2 <= crit**2 / 4 * (1 + th**2), a quadratic in th
+            # with leading coefficient denom = b**2 - crit**2 / 4.
             crit = stats.norm.isf(alpha)
-            center = np.sqrt((count1 + 0.5) * (count2 + 0.5))
-            std = 0.5 * np.sqrt(count1 + 0.5 + count2 + 0.5 - 0.25 * crit**2)
-            denom = count2 + 0.5 - 0.25 * crit**2
+            c1, c2 = y1 + 0.5, y2 + 0.5
+            center = np.sqrt(c1 * c2)
+            # the radicand is negative only if both counts are 0 and alpha is small
+            std = 0.5 * np.sqrt(np.maximum(c1 + c2 - 0.25 * crit**2, 0))
+            denom = c2 - 0.25 * crit**2
 
-            low_sqrt = (center - crit * std) / denom
-            upp_sqrt = (center + crit * std) / denom
+            # (center - crit * std) / denom, without the division by denom. It
+            # is negative if c1 < crit**2 / 4, and th is not negative.
+            low_sqrt = np.maximum((c1 - 0.25 * crit**2) / (center + crit * std), 0)
+            # If denom <= 0 the set is unbounded above.
+            with np.errstate(divide="ignore", invalid="ignore"):
+                upp_sqrt = (center + crit * std) / denom
+            upp_sqrt = np.where(denom > 0, upp_sqrt, np.inf)[()]
 
             ci = (low_sqrt**2 * n2 / n1, upp_sqrt**2 * n2 / n1)
 

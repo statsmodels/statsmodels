@@ -717,8 +717,9 @@ Statistics and tests
   ignored ``exposure1`` and ``exposure2`` and returned an interval for the ratio
   of the counts instead of the ratio of the rates. It also used the critical
   value instead of its square in the Fieller discriminant. The bounds are now
-  rescaled by ``exposure2 / exposure1`` and use the squared critical value, and
-  they agree with the other methods of the function. :pr:`10660`
+  rescaled by ``exposure2 / exposure1`` and use the squared critical value. For
+  small counts the upper limit was the square of a negative root instead of
+  ``inf`` and the lower limit was positive instead of 0. :pr:`10660`
 
 Treatment effects
 -----------------
