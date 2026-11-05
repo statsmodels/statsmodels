@@ -213,7 +213,7 @@ class TestTheil3(CheckEquivalenceMixin):
         # sp = np.zeros(5), np.ones(5)
         r_matrix = np.eye(5, 10, 5)
         mod1 = TheilGLS(y, xd, r_matrix=r_matrix)  # sigma_prior=[0, 0, 1., 1.])
-        with pytest.warns(SingularMatrixWarning, match="The design matrix is rank-deficient"):
+        with pytest.warns(SingularMatrixWarning, match="exog matrix is singular"):
             # x is intentionally repeated
             cls.res1 = mod1.fit(0.001, cov_type="data-prior")
         cls.res2 = OLS(y, x).fit()
