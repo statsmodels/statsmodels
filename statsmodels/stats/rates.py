@@ -1767,14 +1767,20 @@ def confint_poisson_2indep(
 
         - 'wald': NOT YET, method W1A, wald test, variance based on observed
           rates
-        - 'waldcc' :
+        - 'waldcc' : like 'wald-log' with 0.5 added to both counts
         - 'score': method W2A, score test, variance based on estimate under
           the Null hypothesis
         - 'wald-log': W3A, uses log-ratio, variance based on observed rates
         - 'score-log': W4A, uses log-ratio, variance based on estimate under
           the Null hypothesis
         - 'sqrt': W5A, based on variance stabilizing square root transformation
-        - 'sqrtcc' :
+        - 'sqrtcc' : Fieller interval for the square root of the ratio of the
+          expected counts, based on the square roots of the counts plus 0.5
+          [1]_. The upper limit is infinite if ``count2 + 0.5`` is not larger
+          than ``crit**2 / 4``, where ``crit`` is the critical value of the
+          standard normal distribution (this is ``count2 = 0`` at the default
+          ``alpha``). Likewise the lower limit is 0 if ``count1 + 0.5`` is not
+          larger than ``crit**2 / 4``.
         - 'exact-cond': NOT YET, exact conditional test based on binomial
           distribution
           This uses ``binom_test`` which is minlike in the two-sided case.
@@ -1810,6 +1816,12 @@ def confint_poisson_2indep(
     ------
     ValueError
         If a count is negative or an exposure is not positive.
+
+    References
+    ----------
+    .. [1] Price, Robert M., and Douglas G. Bonett. 2000. "Estimating the
+       Ratio of Two Poisson Rates." Computational Statistics & Data Analysis
+       34 (3): 345-356. https://doi.org/10.1016/S0167-9473(99)00100-0.
     """
 
     # shortcut names
