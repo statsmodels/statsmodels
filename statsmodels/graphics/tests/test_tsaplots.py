@@ -341,8 +341,12 @@ def test_plot_month(close_figures):
 )
 @pytest.mark.thread_unsafe(reason="Uses matplotlib and changes LC_TIME")
 @pytest.mark.matplotlib
-@pytest.mark.parametrize("locale_name", ["C", "de_DE.UTF-8"])
-def test_plot_month_locale(close_figures, locale_name):
+@pytest.mark.parametrize(
+    "locale_name, may_oct_dec",
+    [("C", ["May", "Oct", "Dec"]), ("de_DE.UTF-8", ["Mai", "Okt", "Dez"])],
+    ids=["C", "de_DE"],
+)
+def test_plot_month_locale(close_figures, locale_name, may_oct_dec):
     index = pd.period_range("2000-01", periods=12, freq="M")
     data = pd.Series(np.arange(12), index=index)
 
@@ -354,10 +358,13 @@ def test_plot_month_locale(close_figures, locale_name):
 
         fig = month_plot(data)
         labels = [label.get_text() for label in fig.axes[0].get_xticklabels()]
-        expected = [
-            date(2000, month, 1).strftime("%b") for month in range(1, 13)
-        ]
+        expected = [date(2000, month, 1).strftime("%b") for month in range(1, 13)]
         assert_equal(labels, expected)
+        # month_plot and strftime get the names from the same place, so the
+        # comparison above does not show that the locale was applied. Three
+        # months have the same name in every variant of the locale (March is
+        # "Mär" or "Mrz").
+        assert_equal([labels[4], labels[9], labels[11]], may_oct_dec)
 
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
