@@ -8,6 +8,7 @@ from multiprocessing import Pool
 import numpy as np
 from scipy.optimize import brute, differential_evolution, fmin
 from scipy.special import comb
+from scipy.stats import rankdata
 
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.multivariate.pca import PCA
@@ -990,11 +991,11 @@ def banddepth(data, method="MBD"):
 
     # modified band depth
     def _fmbd():
-        rv = np.argsort(data, axis=0)
-        rmat = np.argsort(rv, axis=0) + 1
-        down = rmat - 1
-        up = n - rmat
-        return ((np.sum(up * down, axis=1) / p) + n - 1) / comb(n, 2)
+        down = rankdata(data, method="min", axis=0) - 1
+        up = n - rankdata(data, method="max", axis=0)
+        # Exclude only pairs lying strictly on the same side of the curve.
+        outside = comb(down, 2) + comb(up, 2)
+        return 1 - np.sum(outside, axis=1) / (p * comb(n, 2))
 
     method = string_like(method, "method", options=("MBD", "BD2"), lower=False)
     if method == "BD2":
