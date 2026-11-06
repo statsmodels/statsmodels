@@ -729,6 +729,9 @@ Statistics and tests
   rescaled by ``exposure2 / exposure1`` and use the squared critical value. For
   small counts the upper limit was the square of a negative root instead of
   ``inf`` and the lower limit was positive instead of 0. :pr:`10660`
+- ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
+  from SciPy if no ratio attains the requested power. It returns ``nan`` with
+  a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`
 
 Treatment effects
 -----------------
