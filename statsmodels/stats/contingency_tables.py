@@ -1513,6 +1513,12 @@ def mcnemar(table, exact=True, correction=True):
         distribution (if exact is False.) As in R's ``mcnemar.test``, the
         correction is not applied if the two off-diagonal counts are equal.
 
+        .. versionchanged:: 0.15.1
+
+           The correction is no longer applied if the two off-diagonal counts
+           are equal. Previously the statistic was ``1 / (n1 + n2)`` for
+           equal counts, and ``inf`` with a p-value of 0 if both are 0.
+
     Returns
     -------
     Bunch
@@ -1538,6 +1544,10 @@ def mcnemar(table, exact=True, correction=True):
     This is a special case of Cochran's Q test, and of the homogeneity
     test. The results when the chisquare distribution is used are
     identical, except for continuity correction.
+
+    If both off-diagonal counts are 0, there is nothing to test. The
+    statistic and the p-value are nan (0 / 0, as in R) if exact is False,
+    with or without the correction, and the p-value is 1 if exact is True.
     """
 
     table = _make_df_square(table)

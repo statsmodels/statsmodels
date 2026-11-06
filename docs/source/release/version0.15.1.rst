@@ -736,7 +736,8 @@ Statistics and tests
   continuity correction also when the two discordant counts are equal, which
   gave a positive statistic, and ``inf`` with a p-value of 0 if both counts
   are 0. As in R's ``mcnemar.test``, the correction is now only applied if the
-  counts differ. :issue:`10670`, :pr:`10671`
+  counts differ, so the statistic and the p-value are ``nan`` if both counts
+  are 0. :issue:`10670`, :pr:`10671`
 - ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
   from SciPy if no ratio attains the requested power. It returns ``nan`` with
   a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`
