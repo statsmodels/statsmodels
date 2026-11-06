@@ -93,7 +93,15 @@ def select_order(
         exogs = hstack(exogs) if exogs else None
         var_model = VAR(data, exogs)
         # exclude some periods ==> same amount of data used for each lag order
-        var_result = var_model._estimate_var(lags=p, offset=maxlags + 1 - p)
+        # warn_singular=False: "co"/"ci" deterministic terms are deliberately
+        # estimated alongside VAR's own unrestricted constant (matching
+        # JMulTi's lag-order-selection procedure), which is rank deficient by
+        # construction. The resulting information criteria only depend on
+        # the residuals, which are well-defined regardless, so this is not
+        # a problem worth warning the user about here.
+        var_result = var_model._estimate_var(
+            lags=p, offset=maxlags + 1 - p, warn_singular=False
+        )
 
         for k, v in var_result.info_criteria.items():
             ic[k].append(v)
