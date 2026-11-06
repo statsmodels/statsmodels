@@ -2,6 +2,8 @@ from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lmap
 
 import calendar
+from contextlib import ExitStack
+from datetime import date
 from io import BytesIO
 import locale
 
@@ -319,46 +321,50 @@ def test_plot_month(close_figures):
     )
 
     # test dates argument
-    fig = month_plot(dta.values, dates=dates, ylabel="el nino")
+    month_plot(dta.values, dates=dates, ylabel="el nino")
 
     # test with a TimeSeries DatetimeIndex with no freq
     dta.index = pd.DatetimeIndex(dates)
-    fig = month_plot(dta)
+    month_plot(dta)
 
     # w freq
     dta.index = pd.DatetimeIndex(dates, freq="MS")
-    fig = month_plot(dta)
+    month_plot(dta)
 
     # test with a TimeSeries PeriodIndex
     dta.index = pd.PeriodIndex(dates, freq="M")
-    fig = month_plot(dta)
+    month_plot(dta)
 
-    # test localized xlabels
-    try:
-        with calendar.different_locale("DE_de"):
-            fig = month_plot(dta)
-            labels = [_.get_text() for _ in fig.axes[0].get_xticklabels()]
-            expected = [
-                "Jan",
-                "Feb",
-                ("Mär", "Mrz"),
-                "Apr",
-                "Mai",
-                "Jun",
-                "Jul",
-                "Aug",
-                "Sep",
-                "Okt",
-                "Nov",
-                "Dez",
-            ]
-            for lbl, exp in zip(labels, expected, strict=True):
-                if isinstance(exp, tuple):
-                    assert lbl in exp
-                else:
-                    assert lbl == exp
-    except locale.Error:
-        pytest.xfail(reason="Failure due to unsupported locale")
+
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM"
+)
+@pytest.mark.thread_unsafe(reason="Uses matplotlib and changes LC_TIME")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "locale_name, may_oct_dec",
+    [("C", ["May", "Oct", "Dec"]), ("de_DE.UTF-8", ["Mai", "Okt", "Dez"])],
+    ids=["C", "de_DE"],
+)
+def test_plot_month_locale(close_figures, locale_name, may_oct_dec):
+    index = pd.period_range("2000-01", periods=12, freq="M")
+    data = pd.Series(np.arange(12), index=index)
+
+    with ExitStack() as stack:
+        try:
+            stack.enter_context(calendar.different_locale(locale_name))
+        except locale.Error:
+            pytest.xfail(reason=f"Unsupported locale: {locale_name}")
+
+        fig = month_plot(data)
+        labels = [label.get_text() for label in fig.axes[0].get_xticklabels()]
+        expected = [date(2000, month, 1).strftime("%b") for month in range(1, 13)]
+        assert_equal(labels, expected)
+        # month_plot and strftime get the names from the same place, so the
+        # comparison above does not show that the locale was applied. Three
+        # months have the same name in every variant of the locale (March is
+        # "Mär" or "Mrz").
+        assert_equal([labels[4], labels[9], labels[11]], may_oct_dec)
 
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")

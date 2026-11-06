@@ -716,35 +716,43 @@ class GLS(RegressionModel):
 
     def hessian_factor(self, params, scale=None, observed=True):
         """
-        Compute weights for calculating Hessian.
+        Compute unscaled weights for the least-squares cross-product.
 
         Parameters
         ----------
         params : ndarray
-            The parameter at which Hessian is evaluated.
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
 
         Returns
         -------
         ndarray
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`.
+            An array of ones if ``sigma`` is None, otherwise ``1 / sigma``
+            for a scalar or one-dimensional ``sigma``. A scalar ``sigma`` is
+            the value for every observation.
 
         Raises
         ------
         NotImplementedError
-            If `sigma` is a full (non-diagonal) covariance matrix. A 1d
-            per-observation weight vector cannot represent the
-            off-diagonal correlation terms, so no choice of
-            `hessian_factor` can satisfy the reassembly formula above in
-            this case; `fit`, `predict`, and other core results are
-            unaffected; only this diagnostic is unavailable.
+            If `sigma` is two-dimensional. Per-observation weights are
+            only supported for scalar or one-dimensional variances;
+            `fit`, `predict`, and other core results are unaffected.
+
+        Notes
+        -----
+        The arguments are accepted for compatibility with other models.
+        For the standard GLS whitening, if ``weights`` is the returned
+        array, the weighted cross-product ``(exog.T * weights).dot(exog)``
+        equals ``wexog.T.dot(wexog)``. For a fixed positive Gaussian
+        error-variance scale ``s``, the Hessian of the log-likelihood with
+        respect to the regression coefficients is the negative of this
+        matrix divided by ``s``. This sign and scaling are not applied
+        here, so the factor is not divided by the scale as the one of
+        ``GLM.hessian_factor`` is. These identities do not in general apply
+        to subclasses that override ``whiten``, such as ``GLSAR``.
 
         """
         if self.sigma is None or self.sigma.shape == ():
@@ -958,25 +966,33 @@ class WLS(RegressionModel):
 
     def hessian_factor(self, params, scale=None, observed=True):
         """
-        Compute the weights for calculating the Hessian.
+        Compute unscaled weights for the least-squares cross-product.
 
         Parameters
         ----------
         params : ndarray
-            The parameter at which Hessian is evaluated.
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
 
         Returns
         -------
         ndarray
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`.
+            The observation weights supplied to the model. This is the
+            ``weights`` array of the model itself, not a copy.
+
+        Notes
+        -----
+        The arguments are accepted for compatibility with other models.
+        If ``weights`` is the returned array, the weighted cross-product
+        ``(exog.T * weights).dot(exog)`` equals ``wexog.T.dot(wexog)``.
+        For a fixed positive Gaussian error-variance scale ``s``, the
+        Hessian of the log-likelihood with respect to the regression
+        coefficients is the negative of this matrix divided by ``s``. This
+        sign and scaling are not applied here, so the factor is not divided
+        by the scale as the one of ``GLM.hessian_factor`` is.
 
         """
         return self.weights
@@ -1261,25 +1277,32 @@ class OLS(WLS):
 
     def hessian_factor(self, params, scale=None, observed=True):
         """
-        Calculate the weights for the Hessian.
+        Compute unscaled weights for the least-squares cross-product.
 
         Parameters
         ----------
         params : ndarray
-            The parameter at which Hessian is evaluated.
-        scale : None or float
-            If scale is None, then the default scale will be calculated.
-            Default scale is defined by `self.scaletype` and set in fit.
-            If scale is not None, then it is used as a fixed scale.
-        observed : bool
-            If True, then the observed Hessian is returned. If false then the
-            expected information matrix is returned.
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
 
         Returns
         -------
         ndarray
-            A 1d weight vector used in the calculation of the Hessian.
-            The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`.
+            An array of ones, with one entry per observation.
+
+        Notes
+        -----
+        The arguments are accepted for compatibility with other models.
+        If ``weights`` is the returned array, the weighted cross-product
+        ``(exog.T * weights).dot(exog)`` equals ``wexog.T.dot(wexog)``.
+        For a fixed positive Gaussian error-variance scale ``s``, the
+        Hessian of the log-likelihood with respect to the regression
+        coefficients is the negative of this matrix divided by ``s``. This
+        sign and scaling are not applied here, so the factor is not divided
+        by the scale as the one of ``GLM.hessian_factor`` is.
 
         """
         return np.ones(self.exog.shape[0])
@@ -1627,6 +1650,43 @@ class GLSAR(GLS):
         for i in range(self.order):
             _x[(i + 1) :] = _x[(i + 1) :] - self.rho[i] * x[0 : -(i + 1)]
         return _x[self.order :]
+
+    def hessian_factor(self, params, scale=None, observed=True):
+        """
+        Not available, the whitening of GLSAR cannot be written as weights.
+
+        Parameters
+        ----------
+        params : ndarray
+            Not used.
+        scale : float, optional
+            Not used.
+        observed : bool, optional
+            Not used.
+
+        Raises
+        ------
+        NotImplementedError
+            Always. The whitened design matrix has ``nobs - order`` rows and
+            each row mixes neighboring observations, so there is no
+            per-observation weight vector for which
+            ``(exog.T * weights).dot(exog)`` equals ``wexog.T.dot(wexog)``.
+            `fit`, `predict`, and other core results are unaffected.
+
+        Notes
+        -----
+        ``GLSAR`` inherited ``GLS.hessian_factor``, which returned a vector
+        with one entry for each of the ``nobs`` observations and did not
+        reproduce the cross-product of the whitened design.
+        """
+        raise NotImplementedError(
+            "hessian_factor is not available for GLSAR: the whitened design "
+            "has nobs - order rows and each row mixes neighboring "
+            "observations, so a 1d per-observation weight vector cannot "
+            "represent its cross-product. This affects only diagnostics "
+            "built on hessian_factor; fit(), predict(), and other core "
+            "results are unaffected."
+        )
 
 
 class YuleWalkerResult(NamedTuple):

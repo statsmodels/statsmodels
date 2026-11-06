@@ -1,12 +1,14 @@
-"""Regression tests for x13 rawspec file handling that do not need the X-13 binary.
+"""Regression tests for x13 file handling that do not need the X-13 binary.
 
 ``test_x13`` skips its whole module when x12a/x13as is absent. These checks only
 exercise the spec-building path (``speconly=True`` returns before the binary is
-called), so they live here and run everywhere.
+called) and the clean-up of the temporary files with ``run_spec`` replaced by a
+stub, so they live here and run everywhere.
 """
 
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
+import io
 import json
 import os
 from pathlib import Path
@@ -17,6 +19,7 @@ import pandas as pd
 import pytest
 
 import statsmodels
+from statsmodels.tools.sm_exceptions import IOWarning, X13Error
 from statsmodels.tsa import x13
 
 # Non-ASCII text that is not valid in an ASCII locale. The capital A with acute
@@ -140,3 +143,85 @@ def test_rawspec_file_not_utf8(no_x12, tmp_path):
 
     assert isinstance(exc_info.value.__cause__, UnicodeDecodeError)
     assert str(specfile) in str(exc_info.value)
+
+
+# The files that x12/x13 writes next to the output name. The first four are
+# read by x13_arima_analysis, the others are written for some specs only.
+OUTPUT_EXTENSIONS = ("err", "out", "log", "d11", "d12", "d13", "mdl", "udg", "html")
+
+
+class _FinishedProcess:
+    def __init__(self):
+        self.stdout = io.BytesIO(b"")
+
+    def wait(self):
+        return 0
+
+
+@pytest.fixture
+def stub_run_spec(monkeypatch, no_x12):
+    """Replace run_spec by a stub that writes the files x12/x13 writes."""
+
+    def install(error=""):
+        # two header lines, then the date and the value
+        table = "date\tvalue\n----\t-----\n" + "".join(
+            f"{2000 + i // 12}{i % 12 + 1:02d}\t{i}.0\n" for i in range(24)
+        )
+
+        def run_spec(x12path, specpath, outname=None, **kwargs):
+            for extension in OUTPUT_EXTENSIONS:
+                content = table if extension.startswith("d1") else ""
+                if extension == "err":
+                    content = error
+                Path(f"{outname}.{extension}").write_text(content, encoding="utf-8")
+            return _FinishedProcess()
+
+        monkeypatch.setattr(x13, "run_spec", run_spec)
+
+    return install
+
+
+@pytest.mark.parametrize("dirname", ["plain", "we[ird] dir"])
+def test_output_files_removed(stub_run_spec, tmp_path, dirname):
+    # GH 8277, the files written by x12/x13 were left in the temporary directory
+    stub_run_spec()
+    tempdir = tmp_path / dirname
+    tempdir.mkdir()
+    (tempdir / "keep.out").write_text("not written by x13")
+
+    res = x13.x13_arima_analysis(
+        _monthly_endog(), tempdir=str(tempdir), log_diagnostics=False
+    )
+
+    assert res.seasadj.shape == (24,)
+    assert [path.name for path in tempdir.iterdir()] == ["keep.out"]
+
+
+def test_output_files_removed_on_error(stub_run_spec, tmp_path):
+    stub_run_spec(error="spc:\n ERROR: stub error")
+
+    with pytest.raises(X13Error, match="stub error"):
+        x13.x13_arima_analysis(
+            _monthly_endog(), tempdir=str(tmp_path), log_diagnostics=False
+        )
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_output_file_not_deleted_warns(stub_run_spec, tmp_path, monkeypatch):
+    stub_run_spec()
+    unlink = Path.unlink
+
+    def failing_unlink(self, *args, **kwargs):
+        if self.suffix == ".d11":
+            raise PermissionError(f"cannot delete {self}")
+        return unlink(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", failing_unlink)
+
+    with pytest.warns(IOWarning, match=r"Failed to delete resource .*\.d11"):
+        x13.x13_arima_analysis(
+            _monthly_endog(), tempdir=str(tmp_path), log_diagnostics=False
+        )
+
+    assert [path.suffix for path in tmp_path.iterdir()] == [".d11"]
