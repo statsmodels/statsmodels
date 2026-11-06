@@ -258,7 +258,8 @@ class _OptFuncts:
         def hess(x0):
             return -self._hess(x0, est_vect, weights, nobs)
 
-        kwds = {"tol": 1e-8}
+        # the modified Newton method uses its own extension of the log
+        kwds = {"tol": 1e-8, "step_halving": False}
         eta = eta.squeeze()
         res = _fit_newton(f, grad, eta, (), kwds, hess=hess, maxiter=50, disp=0)
         return res[0]
