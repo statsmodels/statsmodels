@@ -141,6 +141,14 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     if upp is None:
         su = max(su, sl + 1.)
 
+    # The expansion multiplies the starting bounds. A Python int grows beyond
+    # int64 if the function has no root, and then a function that creates an
+    # array from it fails with an object array, so int bounds become floats.
+    if isinstance(sl, (int, np.integer)):
+        sl = float(sl)
+    if isinstance(su, (int, np.integer)):
+        su = float(su)
+
     # increasing or not ?
     if ((low is None) or (upp is None)) and increasing is None:
         assert sl < su  # check during development
