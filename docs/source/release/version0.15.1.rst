@@ -871,6 +871,10 @@ Documentation
 - Clarify that ``hessian_factor`` in ``OLS``, ``WLS`` and ``GLS``
   returns unscaled least-squares weights and ignores its compatibility
   arguments. Numerical behavior is unchanged. :issue:`8653`, :pr:`10675`
+- The ``news`` docstrings of ``MLEResults`` and ``DynamicFactorMQResults``
+  say that two of ``start``, ``end`` and ``periods`` must be given, and that
+  the default impact date is the last observation of the previous dataset.
+  :issue:`10692`, :pr:`10693`
 
 Stricter Input Validation
 =========================
