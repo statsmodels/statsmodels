@@ -111,6 +111,23 @@ def test_log_diagnostics_false(dataset):
     assert next(iter(res.x13_diagnostic.values())) == "Log diagnostics not retrieved."
 
 
+def test_x13_output_files_removed(dataset, tmp_path):
+    # GH 8277, the files written by x12/x13 were left in the temporary directory
+    x13_arima_analysis(dataset, tempdir=str(tmp_path))
+    assert list(tmp_path.iterdir()) == []
+    # also if x12/x13 reports an error
+    raw_spec_file = """
+seri es {
+    modelspan=(,)
+}
+x11 {
+    seasonalma=(  msr)
+"""
+    with pytest.raises(X13Error):
+        x13_arima_analysis(dataset, rawspec=raw_spec_file, tempdir=str(tmp_path))
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_x13_arima_rawspec_arg():
     with pytest.raises(ValueError):
         # error because both param and rawspec are specified

@@ -268,6 +268,11 @@ Regression and linear models
   involves ``X'X``. The results of ``OLS.fit_regularized`` with
   ``profile_scale=True`` change because they use this Hessian.
   :issue:`9469`, :pr:`10473`, :pr:`10556`
+- ``GLSAR.hessian_factor`` raises a ``NotImplementedError``. It inherited
+  ``GLS.hessian_factor``, which returned one value for each of the ``nobs``
+  observations, but the whitened design of ``GLSAR`` has ``nobs - order`` rows
+  that mix neighboring observations, so the values did not reproduce its
+  cross-product. :pr:`10675`
 - ``OLSInfluence`` for the results of a ``WLS`` model used the unweighted
   design matrix and residuals for the hat matrix, the studentized residuals,
   Cook's distance, ``dffits`` and the leave-one-observation-out measures.
@@ -378,6 +383,10 @@ Generalized linear models and discrete models
   minimum was exactly at a point of the search. The estimate is now found for
   values up to within about 1e-6 of one. A larger estimate still raises the
   ``ValueError``. A zero estimate is a ``float``. :issue:`8122`, :pr:`10636`
+- The Cox-Snell ``GLMResults.pseudo_rsquared``, which is also shown in
+  ``summary``, used the number of rows instead of the sum of the
+  ``freq_weights``. With frequency weights the value differed from the value
+  for the data with each row repeated according to its weight. :pr:`10684`
 
 Mixed models and imputation
 ---------------------------
@@ -546,6 +555,10 @@ Time series analysis
   A UTF-8 byte order mark is ignored, a file that is not valid UTF-8 raises a
   ``ValueError`` that says so, and ``rawspec`` accepts a ``pathlib.Path`` as
   documented. :pr:`10585`
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` remove the output files
+  written by X-12/X-13 from the temporary directory. Before, each call left
+  files such as ``.out``, ``.err``, ``.log``, ``.d11``, ``.d12`` and ``.d13``
+  behind. :issue:`8277`, :pr:`10674`
 - ``coint_johansen``, ``select_coint_rank`` and the error bands of the
   impulse responses of a ``VAR`` returned complex eigenvalues and eigenvectors
   with NumPy 2.5 and later, which ``np.linalg.eig`` returns as complex arrays
@@ -629,6 +642,14 @@ Statistics and tests
   score test also returned ``nan`` for symmetric tables. The root finding for
   the confidence interval of the difference could start outside of the
   parameter space. :issue:`10269`, :pr:`10270`, :pr:`10366`
+- The score confidence interval of the risk ratio
+  (``method="score"`` and ``compare="ratio"`` in
+  :func:`~statsmodels.stats.proportion.confint_proportions_2indep`) was wrong,
+  and sometimes complex, if a count is equal to ``nobs``, for example 10 of 10
+  events in one sample. The interval often did not contain the estimate. The
+  limits are now found by inverting the score test, with a bracket that also
+  works for ``alpha`` of 0.5 and larger. If both counts are equal to ``nobs``
+  the limits have a closed form. :issue:`10538`, :pr:`10539`, :pr:`10640`
 - ``power_equivalence_poisson_2indep`` and
   ``power_equivalence_neginb_2indep`` returned wrong results if ``nobs_ratio``
   is not 1. The ``ftotal`` null variance of
@@ -701,6 +722,13 @@ Statistics and tests
   limits are now ``0`` and ``-log(alpha) / nobs``. The numerical inversion
   checks that ``count`` and ``nobs`` have a single element, and raises a
   ``ValueError`` otherwise. :issue:`10536`, :pr:`10537`, :pr:`10633`
+- ``confint_poisson_2indep`` with ``method="sqrtcc"`` and ``compare="ratio"``
+  ignored ``exposure1`` and ``exposure2`` and returned an interval for the ratio
+  of the counts instead of the ratio of the rates. It also used the critical
+  value instead of its square in the Fieller discriminant. The bounds are now
+  rescaled by ``exposure2 / exposure1`` and use the squared critical value. For
+  small counts the upper limit was the square of a negative root instead of
+  ``inf`` and the lower limit was positive instead of 0. :pr:`10660`
 
 Treatment effects
 -----------------
@@ -830,6 +858,13 @@ Other
   1-dimensional". :issue:`5445`, :pr:`10477`
 - ``ExpandedNormal`` no longer modifies the array of cumulants that is passed
   in. :pr:`10281`
+
+Documentation
+=============
+
+- Clarify that ``hessian_factor`` in ``OLS``, ``WLS`` and ``GLS``
+  returns unscaled least-squares weights and ignores its compatibility
+  arguments. Numerical behavior is unchanged. :issue:`8653`, :pr:`10675`
 
 Stricter Input Validation
 =========================
