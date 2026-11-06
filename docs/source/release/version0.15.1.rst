@@ -422,6 +422,11 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
+- ``VAR.fit`` now raises a ``SingularMatrixWarning`` if the lagged regressors
+  are perfectly collinear, matching the warning already raised by ``OLS`` for
+  a rank-deficient design matrix. ``VAR.select_order`` collects this check
+  across all lag orders it evaluates internally and raises at most one
+  warning per call instead of one per lag order. :issue:`10646`
 - ``ARDL.predict`` with a ``start`` after the first out-of-sample observation
   returned wrong forecasts for a model with ``exog``, ``fixed`` or seasonal
   terms, and raised an ``IndexError`` if ``dynamic`` was used. The forecasts

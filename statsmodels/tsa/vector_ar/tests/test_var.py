@@ -20,7 +20,7 @@ import pytest
 
 from statsmodels.datasets import macrodata
 import statsmodels.tools.data as data_util
-from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning, ValueWarning
 from statsmodels.tsa.base.datetools import dates_from_str
 from statsmodels.tsa.stattools import acovf
 from statsmodels.tsa.vector_ar import util, var_model
@@ -721,6 +721,26 @@ def test_var_fit_invalid_trend_raises():
     data = get_macrodata().view((float, 3), type=np.ndarray)
     with pytest.raises(ValueError, match="trend"):
         VAR(data).fit(2, trend="not-a-trend")
+
+
+def test_var_fit_perfectly_collinear_warns():
+    # see GH#10646: two identical series make the design matrix
+    # rank-deficient, so the parameters are not uniquely determined, just
+    # as with a rank-deficient OLS design matrix.
+    r = np.random.default_rng(0).normal(0, 0.01, 60)
+    data = pd.DataFrame({"a": r, "b": r})
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        VAR(data).fit(1)
+
+
+def test_var_fit_full_rank_does_not_warn():
+    rng = np.random.default_rng(0)
+    data = pd.DataFrame({"a": rng.normal(0, 0.01, 60), "b": rng.normal(0, 0.01, 60)})
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        VAR(data).fit(1)
+    singular = [x for x in w if issubclass(x.category, SingularMatrixWarning)]
+    assert len(singular) == 0
 
 
 def test_irf_trend():
@@ -1446,11 +1466,14 @@ def test_select_order_qr_fallback():
     # Constant in exog and trend: singular regressors
     exog = np.column_stack([np.ones(200), rng.standard_normal(200)])
     assert var_model._var_order_ics(y, exog, 6, "c", 0) is None
-    res = VAR(y, exog=exog).select_order(6, trend="c")
-    expected = _select_order_loop(VAR(y, exog=exog), 6, "c")
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res = VAR(y, exog=exog).select_order(6, trend="c")
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        expected = _select_order_loop(VAR(y, exog=exog), 6, "c")
     _assert_lag_orders_equal(res, expected, rtol=0)
 
-    # Almost perfect fit of the third series
+    # Almost perfect fit of the third series: ill-conditioned but not
+    # exactly singular, so no warning is expected here.
     y_fit = y.copy()
     y_fit[:, 2] = y[:, 0] + y[:, 1] + 1e-6 * rng.standard_normal(200)
     assert var_model._var_order_ics(y_fit, None, 6, "c", 0) is None
@@ -1478,3 +1501,17 @@ def test_select_order_qr_fallback():
     res = VAR(y_short, exog=exog_many).select_order(3, trend="c")
     expected = _select_order_loop(VAR(y_short, exog=exog_many), 3, "c")
     _assert_lag_orders_equal(res, expected, rtol=0)
+
+
+def test_select_order_qr_fallback_singular_warns_once():
+    # The constant exog column duplicates the trend constant for every lag
+    # order considered by the fallback loop; select_order should collapse
+    # that into a single warning instead of one per lag order (GH#10646).
+    rng = np.random.default_rng(5)
+    y = np.cumsum(rng.standard_normal((100, 2)), axis=0)
+    exog = np.ones((100, 1))
+    assert var_model._var_order_ics(y, exog, 6, "c", 0) is None
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient") as record:
+        VAR(y, exog=exog).select_order(6, trend="c")
+    singular = [w for w in record.list if issubclass(w.category, SingularMatrixWarning)]
+    assert len(singular) == 1
