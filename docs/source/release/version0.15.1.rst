@@ -136,6 +136,9 @@ Behavior changes
   such data changes. Curves are not interpolated, so only the sampled values
   matter. ``data`` can be any array_like, for example a ``DataFrame``.
   :issue:`7105`, :pr:`10513`, :pr:`10638`
+- :func:`~statsmodels.graphics.functional.banddepth` with ``method="MBD"``
+  counts values equal to a band boundary as inside. Previously, tied values
+  were assigned arbitrary ranks, so depths could depend on the input row order.
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
@@ -734,6 +737,9 @@ Statistics and tests
   gave a positive statistic, and ``inf`` with a p-value of 0 if both counts
   are 0. As in R's ``mcnemar.test``, the correction is now only applied if the
   counts differ. :issue:`10670`, :pr:`10671`
+- ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
+  from SciPy if no ratio attains the requested power. It returns ``nan`` with
+  a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`
 
 Treatment effects
 -----------------
@@ -870,6 +876,10 @@ Documentation
 - Clarify that ``hessian_factor`` in ``OLS``, ``WLS`` and ``GLS``
   returns unscaled least-squares weights and ignores its compatibility
   arguments. Numerical behavior is unchanged. :issue:`8653`, :pr:`10675`
+- The ``news`` docstrings of ``MLEResults`` and ``DynamicFactorMQResults``
+  say that two of ``start``, ``end`` and ``periods`` must be given, and that
+  the default impact date is the last observation of the previous dataset.
+  :issue:`10692`, :pr:`10693`
 
 Stricter Input Validation
 =========================
