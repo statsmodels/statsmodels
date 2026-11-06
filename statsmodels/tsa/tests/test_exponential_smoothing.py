@@ -1201,3 +1201,90 @@ def test_summary_after_remove_data(oildata):
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+# Monthly demand series from GH 8551 (24 observations, seasonal_periods=12)
+GH8551_DATA = np.array(
+    [
+        52.0, 250.43, 261.01, 265.0, 56.77, 16.0, 50.09, 65.0, 21.0, 89.5,
+        20.0, 1.0, 123.0, 84.0, 91.0, 163.0, 16.0, 27.0, 78.5, 38.0, 61.0,
+        5.0, 82.0, 15.0,
+    ]
+)  # fmt: skip
+
+
+@pytest.mark.parametrize("trend, damped_trend", [("add", True), (None, False)])
+def test_estimated_initial_seasonal_mul(trend, damped_trend):
+    # GH 8551: with multiplicative seasonality, the estimated initialization
+    # divided the heuristic initial seasonals by the last one (0.0175 here)
+    # and fixed it to 1. The fit then ended in a much worse optimum than the
+    # heuristic initial states, which are a feasible point of the same
+    # problem, and the forecasts of this positive series were all negative.
+    kwargs = dict(
+        error="mul",
+        trend=trend,
+        damped_trend=damped_trend,
+        seasonal="mul",
+        seasonal_periods=12,
+    )
+    res_heuristic = ETSModel(
+        GH8551_DATA, initialization_method="heuristic", **kwargs
+    ).fit(disp=False)
+    res_estimated = ETSModel(
+        GH8551_DATA, initialization_method="estimated", **kwargs
+    ).fit(disp=False)
+
+    assert res_estimated.llf >= res_heuristic.llf - 1e-6
+
+    fcast = res_estimated.forecast(12)
+    assert np.all(np.isfinite(fcast))
+    assert np.all(fcast > 0)
+    assert np.all(fcast < 2 * GH8551_DATA.max())
+
+    # the initial seasonals are normalized to have mean 1
+    assert_allclose(res_estimated.initial_seasonal.mean(), 1.0, rtol=1e-10)
+    assert_allclose(res_estimated.params[-12:].mean(), 1.0, rtol=1e-10)
+
+
+@pytest.mark.parametrize("error", ["add", "mul"])
+@pytest.mark.parametrize("trend", [None, "add"])
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+def test_estimated_initial_seasonal_normalized(austourists, error, trend, seasonal):
+    # With initialization_method="estimated", m - 1 initial seasonals are
+    # estimated and the last one is determined so that the initial seasonals
+    # sum to 0 (additive) or to m (multiplicative), as in R's forecast::ets.
+    model = ETSModel(
+        austourists,
+        error=error,
+        trend=trend,
+        seasonal=seasonal,
+        seasonal_periods=4,
+        initialization_method="estimated",
+    )
+    initial_seasonal = np.array(model.initial_seasonal)
+    start_params = model.start_params
+    # start_params must not change the heuristic initial states of the model
+    assert_allclose(model.initial_seasonal, initial_seasonal)
+    assert_allclose(model.start_params, start_params)
+
+    res = model.fit(disp=False)
+    assert_allclose(res.llf, model.loglike(res.params))
+
+    params = np.asarray(res.params)
+    for seas in (start_params[-4:], params[-4:], res.initial_seasonal):
+        if seasonal == "mul":
+            assert_allclose(np.mean(seas), 1.0, rtol=1e-10)
+        else:
+            assert_allclose(np.sum(seas), 0.0, atol=1e-8)
+
+
+def test_estimated_initial_seasonal_fixed_last(austourists):
+    # If the user fixes the last initial seasonal, it is not determined by the
+    # others any more and the fixed value is used.
+    kwargs = dict(error="add", trend="add", seasonal="add", seasonal_periods=4)
+    model = ETSModel(austourists, **kwargs)
+    with model.fix_params({"initial_seasonal.3": 0.0}):
+        res = model.fit(disp=False)
+    assert np.asarray(res.params)[-1] == 0.0
+    assert np.isfinite(res.llf)
+    assert "initial_seasonal.3 (fixed)" in res.param_names
