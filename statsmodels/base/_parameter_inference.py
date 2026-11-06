@@ -122,6 +122,61 @@ def _lm_robust(score, constraint_matrix, score_deriv_inv, cov_score, cov_params=
     )
 
 
+def _full_rank_exog_extra(exog, exog_extra, tol=1e-7):
+    """
+    Reduce the additional regressors of a variable addition test to full rank.
+
+    Columns of `exog_extra` that are linear combinations of other columns of
+    `exog_extra` or of `exog` do not add a restriction to the model, so the
+    number of constraints of the score test is the rank of `exog_extra` after
+    projecting out `exog`, and the test statistic has to be computed from a
+    basis of that space, GH#5364.
+
+    Parameters
+    ----------
+    exog : ndarray
+        Explanatory variables of the restricted model, nobs x k_vars.
+    exog_extra : array_like
+        Additional explanatory variables, nobs x k_extra. A one dimensional
+        array is one additional variable.
+    tol : float, optional
+        Relative tolerance for the rank. The columns of `exog_extra` are
+        projected on `exog` and the residuals divided by the norms of the
+        columns. The rank is the number of singular values of the scaled
+        residuals larger than `tol`. For a single column this is the
+        criterion of R's ``lm`` with its default tolerance: the column is
+        redundant if its norm after projecting out `exog` is less than `tol`
+        times its norm.
+
+    Returns
+    -------
+    exog_extra : ndarray
+        The additional regressors as a 2-dim array. If the columns are
+        linearly independent of each other and of `exog`, this is
+        `exog_extra` unchanged. Otherwise it is an orthonormal basis of the
+        columns of `exog_extra` after projecting out `exog`, with as many
+        columns as the rank. The test statistic is invariant to this change
+        of basis.
+    k_rank : int
+        The rank of `exog_extra` given `exog`, the number of constraints.
+    """
+    exog_extra = np.asarray(exog_extra)
+    if exog_extra.ndim == 1:
+        exog_extra = exog_extra[:, None]
+    k_extra = exog_extra.shape[1]
+    if k_extra == 0:
+        return exog_extra, 0
+    params = np.linalg.lstsq(exog, exog_extra, rcond=None)[0]
+    resid = exog_extra - exog @ params
+    norms = np.sqrt((exog_extra**2).sum(0))
+    norms[norms == 0] = 1.0
+    u, s, _ = np.linalg.svd(resid / norms, full_matrices=False)
+    k_rank = int((s > tol).sum())
+    if k_rank == k_extra:
+        return exog_extra, k_extra
+    return u[:, :k_rank], k_rank
+
+
 def score_test(
     self,
     exog_extra=None,
@@ -168,7 +223,12 @@ def score_test(
         model, i.e., omitted variables. A 2-tuple of array_like can be
         given to jointly test the addition of exogenous regressors to
         both the mean and a second (e.g., precision or scale) model
-        component.
+        component. Columns that are linear combinations of other columns
+        of `exog_extra` or of the `exog` of the model, for example the
+        linear term in a spline basis, do not add a constraint. The number
+        of constraints is the rank of `exog_extra` after projecting out
+        `exog`, and the joint test statistic is computed from a basis of
+        that space, see Notes. This is not implemented for the 2-tuple.
     params_constrained : array_like, optional
         estimated parameter of the restricted model. This can be the
         parameter estimate for the current when testing for omitted
@@ -241,6 +301,18 @@ def score_test(
 
     The covariance matrix of the score is the simple empirical covariance of
     score_obs without degrees of freedom correction.
+
+    Redundant columns in `exog_extra`
+
+    A column of `exog_extra` is redundant if its norm after projecting out
+    the `exog` of the model and the other columns is less than 1e-7 times its
+    norm, the tolerance of R's ``lm``. If `exog_extra` has redundant columns
+    and `hypothesis` is "joint", then it is replaced by an orthonormal basis
+    of its columns after projecting out `exog`. The test statistic is
+    invariant to this change of basis, and the number of constraints and the
+    degrees of freedom of the p-value are the rank of the basis. Without
+    this, the number of columns is used as the number of constraints and
+    the p-value is too large, or the covariance of the score is singular.
     """
     hypothesis = string_like(
         hypothesis, "hypothesis", options=("joint", "separate"), lower=False
@@ -304,12 +376,16 @@ def score_test(
             score_obs, hessian, k_constraints, r_matrix = sh
             score = score_obs.sum(0)
         else:
-            exog_extra = np.asarray(exog_extra)
+            if hypothesis == "joint":
+                # k_constraints is the rank of exog_extra given exog, and
+                # redundant columns are replaced by a basis, GH#5364
+                exog_extra, k_extra = _full_rank_exog_extra(model.exog, exog_extra)
+            else:
+                exog_extra = np.asarray(exog_extra)
+                if exog_extra.ndim == 1:
+                    exog_extra = exog_extra[:, None]
+                k_extra = exog_extra.shape[1]
             ex = np.column_stack((model.exog, exog_extra))
-            # this uses shape not matrix rank to determine k_constraints
-            # requires nonsingular (no added perfect collinearity)
-            # exog_extra can be 1-dim, which column_stack makes a column
-            k_extra = ex.shape[1] - model.exog.shape[1]
 
             score_factor = model.score_factor(params_constrained)
             hessian_factor = model.hessian_factor(params_constrained, **hess_kwd)

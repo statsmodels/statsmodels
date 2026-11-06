@@ -892,7 +892,10 @@ class GLM(base.LikelihoodModel):
             not None, then k_constraints is assumed to be zero if it is None.
         exog_extra : array_like, optional
             Explanatory variables that are jointly tested for inclusion in the
-            model, i.e., omitted variables.
+            model, i.e., omitted variables. Columns that are linear
+            combinations of other columns of `exog_extra` or of `exog`, for
+            example the linear term in a spline basis, do not add a
+            constraint, see Notes.
         observed : bool, optional
             If True, then the observed Hessian is used in calculating the
             covariance matrix of the score. If false then the expected
@@ -906,11 +909,20 @@ class GLM(base.LikelihoodModel):
             P-value of the score test based on the chisquare distribution.
         df : int
             Degrees of freedom used in the p-value calculation. This is equal
-            to the number of constraints.
+            to the number of constraints. With `exog_extra` it is
+            `k_constraints` plus the rank of `exog_extra` given `exog`.
 
         Notes
         -----
         not yet verified for case with scale not equal to 1.
+
+        A column of `exog_extra` is redundant if its norm after projecting
+        out `exog` and the other columns is less than 1e-7 times its norm,
+        the tolerance of R's ``lm``. If `exog_extra` has redundant columns,
+        it is replaced by an orthonormal basis of its columns after
+        projecting out `exog`. The test statistic is invariant to this
+        change of basis, and the number of constraints is the rank of the
+        basis.
         """
 
         if exog_extra is None:
@@ -923,12 +935,14 @@ class GLM(base.LikelihoodModel):
             hessian = self.hessian(params_constrained, observed=observed)
 
         else:
-            # exog_extra = np.asarray(exog_extra)
             if k_constraints is None:
                 k_constraints = 0
 
+            # the number of constraints is the rank of exog_extra given exog,
+            # and redundant columns are replaced by a basis, GH#5364
+            exog_extra, k_extra = pinfer._full_rank_exog_extra(self.exog, exog_extra)
             ex = np.column_stack((self.exog, exog_extra))
-            k_constraints += ex.shape[1] - self.exog.shape[1]
+            k_constraints += k_extra
 
             score_factor = self.score_factor(params_constrained)
             score = (score_factor[:, None] * ex).sum(0)

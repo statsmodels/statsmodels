@@ -344,6 +344,16 @@ Generalized linear models and discrete models
   models and the ``GLM`` result method raised an ``IndexError`` in 0.15.0. A
   one-dimensional ``exog_extra`` is a single additional variable, as before.
   :pr:`10609`
+- ``score_test`` with ``exog_extra`` used the number of columns of
+  ``exog_extra`` as the number of constraints. If some of the columns are
+  linear combinations of other columns or of the model's ``exog``, for
+  example the linear term that a spline basis contains, the degrees of
+  freedom were too large and the p-value too small, or the test raised a
+  ``LinAlgError`` for exactly redundant columns. The number of constraints
+  is now the rank of ``exog_extra`` after projecting out ``exog``, and the
+  statistic is computed from a basis of the independent part. This applies
+  to ``GLM.score_test``, the ``score_test`` method of ``GLM`` results and
+  of the discrete models. :issue:`5364`
 - ``predict`` preserves the observation index of a pandas Series for models
   with one predictor and additional parameters, such as ``NegativeBinomial``,
   ``GeneralizedPoisson``, ``ZeroInflatedPoisson``, ``BetaModel``,
