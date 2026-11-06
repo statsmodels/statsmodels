@@ -732,6 +732,11 @@ Statistics and tests
   rescaled by ``exposure2 / exposure1`` and use the squared critical value. For
   small counts the upper limit was the square of a negative root instead of
   ``inf`` and the lower limit was positive instead of 0. :pr:`10660`
+- ``mcnemar`` with ``exact=False`` and ``correction=True`` applied the
+  continuity correction also when the two discordant counts are equal, which
+  gave a positive statistic, and ``inf`` with a p-value of 0 if both counts
+  are 0. As in R's ``mcnemar.test``, the correction is now only applied if the
+  counts differ. :issue:`10670`, :pr:`10671`
 - ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
   from SciPy if no ratio attains the requested power. It returns ``nan`` with
   a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`
