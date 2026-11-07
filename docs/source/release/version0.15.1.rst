@@ -259,6 +259,13 @@ Performance
   regressors are close to collinear, so for such series the statistic can
   change in the later digits. The new values agree with R (urca) and with
   high-precision arithmetic. :issue:`10601`, :pr:`10602`, :pr:`10624`
+- ``get_margeff`` with the default ``at="overall"`` computes the delta method
+  Jacobian of the average marginal effects directly instead of averaging the
+  Jacobian at each observation. Memory use no longer grows with the number of
+  observations times the number of marginal effects times the number of
+  parameters. For ``MNLogit`` with 4 categories, 28 regressors and 20,000
+  observations the peak memory drops from 3 GB to 0.09 GB. This also applies
+  to ``get_margeff`` of ``GLM`` and ``GEE``. :issue:`4158`
 
 Bug Fixes
 =========
