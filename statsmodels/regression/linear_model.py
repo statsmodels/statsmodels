@@ -2260,6 +2260,9 @@ class RegressionResults(base.LikelihoodModelResults):
                 mat = mat[idx]  # remove constant
                 if mat.size == 0:  # see  #3642
                     return np.nan
+            if np.isnan(self.cov_params(r_matrix=mat)).any():
+                # not identified, e.g. HC2/HC3 with leverage one, see GH-10659
+                return np.nan
             ft = self.f_test(mat)
             # using backdoor to set another attribute that we already have
             self._cache["f_pvalue"] = float(ft.pvalue)
@@ -2397,15 +2400,41 @@ class RegressionResults(base.LikelihoodModelResults):
         cov_HC1 = self._HCCM(self.het_scale)
         return cov_HC1
 
+    def _hc_leverage(self, tol=1e-8):
+        # Leverage for HC2/HC3. Observations with leverage one have a residual
+        # of exactly zero, so e / (1 - h) is 0 / 0. Their h is set to zero so
+        # that they drop out of the sandwich, see GH-10659.
+        h = self._abat_diagonal(self.model.wexog, self.normalized_cov_params)
+        lev_one = h > 1 - tol
+        if lev_one.any():
+            warnings.warn(
+                f"Observations {np.flatnonzero(lev_one).tolist()} have leverage "
+                "one. The HC2/HC3 variance of parameters that depend on them is "
+                "not identified and is set to nan.",
+                ValueWarning,
+                stacklevel=3,
+            )
+            h = np.where(lev_one, 0.0, h)
+        return h, lev_one
+
+    def _nan_lev_one_params(self, cov, lev_one, tol=1e-8):
+        # Set rows and columns of parameters that load on a leverage-one
+        # observation to nan. All other parameters do not depend on it.
+        if lev_one.any():
+            pinv = np.abs(self.model.pinv_wexog)
+            affected = pinv[:, lev_one].max(1) > tol * pinv.max(1)
+            cov[affected, :] = np.nan
+            cov[:, affected] = np.nan
+        return cov
+
     @cache_readonly
     def cov_HC2(self):
         """
         Heteroscedasticity robust covariance matrix. See HC2_se.
         """
-        wexog = self.model.wexog
-        h = self._abat_diagonal(wexog, self.normalized_cov_params)
+        h, lev_one = self._hc_leverage()
         self.het_scale = self.wresid**2 / (1 - h)
-        cov_HC2 = self._HCCM(self.het_scale)
+        cov_HC2 = self._nan_lev_one_params(self._HCCM(self.het_scale), lev_one)
         return cov_HC2
 
     @cache_readonly
@@ -2413,10 +2442,9 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         Heteroscedasticity robust covariance matrix. See HC3_se.
         """
-        wexog = self.model.wexog
-        h = self._abat_diagonal(wexog, self.normalized_cov_params)
+        h, lev_one = self._hc_leverage()
         self.het_scale = (self.wresid / (1 - h)) ** 2
-        cov_HC3 = self._HCCM(self.het_scale)
+        cov_HC3 = self._nan_lev_one_params(self._HCCM(self.het_scale), lev_one)
         return cov_HC3
 
     @cache_readonly
