@@ -595,6 +595,14 @@ Time series analysis
 Statistics and tests
 --------------------
 
+- ``psturng`` bounded the studentized range probabilities it returned to
+  the interval [0.001, 0.9], and ``qsturng`` raised a ``ValueError`` for
+  probabilities outside [0.1, 0.999]. Both functions in
+  ``statsmodels.stats.libqsturng`` now delegate to
+  ``scipy.stats.studentized_range``, so probabilities and quantiles are
+  available over their full range. The ``ValueError`` for degrees of
+  freedom ``1 <= v < 2`` combined with a probability above 0.1 is
+  unchanged. :issue:`8185`
 - ``statsmodels.stats.power`` validates that a root returned by a solver
   attains the requested power. Failed solutions now return ``NaN`` with a
   ``ConvergenceWarning`` instead of returning a misleading finite result or
