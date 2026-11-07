@@ -39,7 +39,11 @@ from statsmodels.regression.linear_model import (
 )
 from statsmodels.regression.quantile_regression import QuantReg
 from statsmodels.tools.numdiff import approx_hess
-from statsmodels.tools.sm_exceptions import MissingDataError, SingularMatrixWarning
+from statsmodels.tools.sm_exceptions import (
+    MissingDataError,
+    SingularMatrixWarning,
+    ValueWarning,
+)
 from statsmodels.tools.testing import warns_or_none
 from statsmodels.tools.tools import add_constant
 
@@ -2414,3 +2418,59 @@ def test_finite_data_unchanged():
     assert np.all(np.isfinite(res.params))
     res = GLS(endog, exog, sigma=np.linspace(1e-10, 1e10, 100)).fit()
     assert np.all(np.isfinite(res.params))
+
+
+@pytest.mark.parametrize("cov_type", ["HC2", "HC3"])
+@pytest.mark.parametrize(
+    "n_dummies, scale, weighted",
+    [(1, 1.0, False), (2, 1.0, False), (1, 1e6, False), (1, 1.0, True)],
+)
+def test_hc_leverage_one(cov_type, n_dummies, scale, weighted):
+    # GH-10659: observations with leverage one gave arbitrary or inf HC2/HC3
+    # standard errors. They do not affect the other parameters, so those
+    # parameters must have the robust covariance of the regression without
+    # these observations and dummies, and the dummies get nan.
+    rng = np.random.default_rng(10659)
+    nobs = 50
+    x = rng.standard_normal(nobs)
+    rows = np.arange(7, 7 + 5 * n_dummies, 5)
+    dummies = np.zeros((nobs, n_dummies))
+    dummies[rows, np.arange(n_dummies)] = scale
+    endog = 1 + 2 * x + rng.standard_normal(nobs) * (1 + abs(x))
+    exog = np.column_stack([np.ones(nobs), x, dummies])
+    weights = np.linspace(0.5, 2, nobs) if weighted else np.ones(nobs)
+    keep = np.ones(nobs, dtype=bool)
+    keep[rows] = False
+
+    with pytest.warns(ValueWarning, match="leverage one"):
+        res = WLS(endog, exog, weights=weights).fit(cov_type=cov_type)
+    res_drop = WLS(endog[keep], exog[keep, :2], weights=weights[keep]).fit(
+        cov_type=cov_type
+    )
+
+    cov = res.cov_params()
+    assert_allclose(cov[:2, :2], res_drop.cov_params(), rtol=1e-8, atol=1e-12)
+    assert np.all(np.isnan(cov[2:, :]))
+    assert np.all(np.isnan(cov[:, 2:]))
+    # nan of the dummies does not propagate to tests that do not use them
+    tt = res.t_test(np.eye(exog.shape[1])[1])
+    assert_allclose(tt.sd.squeeze(), res_drop.bse[1], rtol=1e-8)
+    assert np.isnan(res.fvalue)
+    res.summary()
+
+
+@pytest.mark.parametrize("cov_type", ["HC2", "HC3"])
+def test_hc_leverage_below_one_unchanged(cov_type):
+    # No leverage-one observation: no warning and the textbook formula
+    rng = np.random.default_rng(10659)
+    exog = add_constant(rng.standard_normal((100, 3)))
+    endog = exog.sum(1) + rng.standard_normal(100)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = OLS(endog, exog).fit()
+        cov = getattr(res, "cov_" + cov_type)
+    h = res.get_influence().hat_matrix_diag
+    power = 1 if cov_type == "HC2" else 2
+    pinv_x = np.linalg.pinv(exog)
+    expected = pinv_x @ np.diag(res.resid**2 / (1 - h) ** power) @ pinv_x.T
+    assert_allclose(cov, expected, rtol=1e-12)
