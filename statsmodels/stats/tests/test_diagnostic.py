@@ -2623,6 +2623,14 @@ def test_acorr_ljungbox_lags_exceed_nobs():
     assert np.isfinite(res["lb_pvalue"].iloc[0])
 
 
+@pytest.mark.parametrize("v", [101.37, 123.456])
+def test_acorr_ljungbox_constant(v):
+    # GH10647: A constant series carries no autocorrelation information.
+    x = np.full(100, v)
+    with pytest.raises(ValueError, match="x is constant"):
+        smsdia.acorr_ljungbox(x)
+
+
 def test_compare_cox_j_mismatched_nobs():
     # comparing models fit on different sample sizes used to leak a bare
     # numpy broadcast error

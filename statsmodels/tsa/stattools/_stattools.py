@@ -650,7 +650,10 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
         if missing == "conservative":
             xo[~notmask_bool] = 0
     elif demean:
-        xo = x - x.mean()
+        if x.size > 0 and x.max() == x.min():
+            xo = np.zeros_like(x)
+        else:
+            xo = x - x.mean()
     else:
         xo = x
 
@@ -1094,6 +1097,9 @@ def acf(
         missing, "missing", options=("none", "raise", "conservative", "drop")
     )
     x = array_like(x, "x")
+    x_valid = x[~np.isnan(x)] if missing in ("drop", "conservative") else x
+    if x_valid.size > 0 and x_valid.max() == x_valid.min():
+        raise ValueError("Invalid input, x is constant")
     nobs = x.shape[0]
     if nlags is None:
         nlags = min(int(10 * np.log10(nobs)), nobs - 1)
@@ -1204,7 +1210,10 @@ def _pacf_yw_levinson(x, nlags, adjusted):
     # Invalid values produce non-finite autocovariances, and yule_walker
     # then repeats the calculation and its warnings
     with np.errstate(all="ignore"):
-        x = x - x.mean()
+        if x.size > 0 and x.max() == x.min():
+            x = np.zeros_like(x)
+        else:
+            x = x - x.mean()
         acov = np.empty(nlags + 1)
         acov[0] = (x**2).sum() / nobs
         for k in range(1, nlags + 1):
@@ -1349,7 +1358,10 @@ def pacf_burg(
     """
     x = array_like(x, "x")
     if demean:
-        x = x - x.mean()
+        if x.size > 0 and x.max() == x.min():
+            x = np.zeros_like(x)
+        else:
+            x = x - x.mean()
     nobs = x.shape[0]
     p = nlags if nlags is not None else min(int(10 * np.log10(nobs)), nobs - 1)
     p = max(p, 1)
@@ -1514,12 +1526,18 @@ def pacf_ols(
     if nlags > nobs // 2:
         raise ValueError(f"nlags must be smaller than nobs // 2 ({nobs // 2})")
     if not efficient:
-        x = x - np.mean(x)
+        if x.size > 0 and x.max() == x.min():
+            x = np.zeros_like(x)
+        else:
+            x = x - np.mean(x)
     pacf = None
     if (x.ndim == 1 or x.shape[1:] == (1,)) and 0 < nlags:
         xd = x.reshape(-1)
         if efficient:
-            xd = xd - xd.mean()
+            if xd.size > 0 and xd.max() == xd.min():
+                xd = np.zeros_like(xd)
+            else:
+                xd = xd - xd.mean()
         pacf = _pacf_ols_qr(xd, nlags, efficient)
     if pacf is not None:
         if adjusted:
@@ -1899,6 +1917,10 @@ def ccf(
     """
     x = array_like(x, "x")
     y = array_like(y, "y")
+    if x.size > 0 and x.max() == x.min():
+        raise ValueError("Invalid input, x is constant")
+    if y.size > 0 and y.max() == y.min():
+        raise ValueError("Invalid input, y is constant")
     adjusted = bool_like(adjusted, "adjusted")
     fft = bool_like(fft, "fft", optional=False)
     result_object = bool_like(result_object, "result_object", optional=True)
@@ -4405,6 +4427,8 @@ class ZivotAndrewsUnitRoot:
            Journal of Business & Economic Studies, 10: 251-270.
         """
         x = array_like(x, "x", dtype=np.double, ndim=1)
+        if x.size > 0 and x.max() == x.min():
+            raise ValueError("Invalid input, x is constant")
         trim = float_like(trim, "trim")
         maxlag = int_like(maxlag, "maxlag", optional=True)
         regression = string_like(regression, "regression", options=("c", "t", "ct"))
