@@ -2627,8 +2627,9 @@ def test_acorr_ljungbox_lags_exceed_nobs():
 def test_acorr_ljungbox_constant(v):
     # GH10647: A constant series carries no autocorrelation information.
     x = np.full(100, v)
-    with pytest.raises(ValueError, match="x is constant"):
-        smsdia.acorr_ljungbox(x)
+    res = smsdia.acorr_ljungbox(x)
+    assert np.all(np.isnan(res["lb_stat"]))
+    assert np.all(np.isnan(res["lb_pvalue"]))
 
 
 def test_compare_cox_j_mismatched_nobs():

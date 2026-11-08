@@ -2980,12 +2980,22 @@ def test_acf_constant_series(v):
     # When x.mean() is not exactly representable in floating point,
     # x - x.mean() left a residue misinterpreted as near-perfect autocorrelation.
     x = np.full(100, v)
-    with pytest.raises(ValueError, match="x is constant"):
-        acf(x)
-    with pytest.raises(ValueError, match="x is constant"):
-        ccf(x, np.arange(100.0))
-    with pytest.raises(ValueError, match="y is constant"):
-        ccf(np.arange(100.0), x)
+    a = acf(x)
+    assert np.all(np.isnan(a))
+    res_acf = acf(x, alpha=0.05, qstat=True)
+    assert np.all(np.isnan(res_acf.acf))
+    assert np.all(np.isnan(res_acf.confint))
+    assert np.all(np.isnan(res_acf.qstat))
+    assert np.all(np.isnan(res_acf.pvalues))
+
+    c1 = ccf(x, np.arange(100.0))
+    assert np.all(np.isnan(c1))
+    c2 = ccf(np.arange(100.0), x)
+    assert np.all(np.isnan(c2))
+    res_ccf = ccf(x, np.arange(100.0), alpha=0.05)
+    assert np.all(np.isnan(res_ccf.ccf))
+    assert np.all(np.isnan(res_ccf.confint))
+
     with pytest.raises(ValueError, match="x is constant"):
         zivot_andrews(x)
 
@@ -2995,9 +3005,12 @@ def test_acf_constant_series(v):
 
 
 def test_acf_constant_with_missing():
-    x = np.array([5.0, 5.0, np.nan, 5.0, 5.0])
-    with pytest.raises(ValueError, match="x is constant"):
-        acf(x, missing="drop")
+    x = np.full(50, 5.0)
+    x[10] = np.nan
+    a = acf(x, missing="drop")
+    assert np.all(np.isnan(a))
+    a_cons = acf(x, missing="conservative")
+    assert np.all(np.isnan(a_cons))
 
 
 def test_coint_auto_tstat():
