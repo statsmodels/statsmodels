@@ -28,7 +28,6 @@ from statsmodels.regression.mixed_linear_model import (
 )
 import statsmodels.tools.numdiff as nd
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, SingularMatrixWarning
-from statsmodels.tools.testing import warns_or_none
 
 from .results import lme_r_results
 
@@ -1333,14 +1332,11 @@ def test_singular():
     df["class"] = pd.Series([i % 3 for i in df.index], index=df.index)
 
     md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
-    # The optimizer retries and the boundary warning for the singular fit are
-    # optimizer dependent
-    with warns_or_none(
-        ConvergenceWarning,
-        match="Maximum Likelihood|Retrying MixedLM|The MLE may be on the boundary",
-    ):
-        with pytest.warns(SingularMatrixWarning, match=r"effects"):
-            mdf = md.fit()
+    # The optimum is in the interior, next to the boundary
+    with pytest.warns(ConvergenceWarning, match="The MLE may be on the boundary"):
+        mdf = md.fit()
+    assert mdf.converged
+    assert mdf.cov_re.iloc[0, 0] > 0
     mdf.summary()
 
 
@@ -2131,3 +2127,65 @@ def test_missing_drop_exog_vc():
     exog = np.nan_to_num(exog)
     model = MixedLM(endog, exog, groups, exog_vc=exog_vc, missing="drop")
     assert_equal(model.nobs, 120)
+
+
+@pytest.mark.parametrize("reml", [True, False])
+@pytest.mark.parametrize("with_vc", [True, False])
+@pytest.mark.parametrize("flip", [1.0, -1.0])
+def test_score_negative_sqrt_numdiff(flip, with_vc, reml):
+    # The optimizer can step to negative entries of the Cholesky factor.
+    model = _singular_model(with_vc)
+    _prepare(model, reml)
+    signed_params = flip * np.array([-0.8, 0.3, 1.2])
+    if with_vc:
+        signed_params = np.concatenate((signed_params, flip * np.array([0.7, -1.1])))
+    step = 1e-6
+    numeric_score = np.zeros(len(signed_params))
+    for j in range(len(signed_params)):
+        shift = np.zeros(len(signed_params))
+        shift[j] = step
+        numeric_score[j] = (
+            model.loglike(signed_params + shift) - model.loglike(signed_params - shift)
+        ) / (2 * step)
+    assert_allclose(model.score(signed_params), numeric_score, rtol=1e-6, atol=1e-6)
+
+
+# lme4 2.1.0 on _intercept_data(seed), m <- lmer(y ~ x + (1 | g), d)
+# fixef(m), VarCorr(m)$g[1], sigma(m)^2, logLik(m)
+_lme4_intercept = {
+    184: (
+        [-0.0769799899850217, 0.962765244576289],
+        2.42502545262947e-13,
+        1.04509787461214,
+        -70.0721021492391,
+    ),
+    188: (
+        [0.0575399088590791, 1.11906890485877],
+        0.0717892831028352,
+        0.675942983975866,
+        -61.9424579388422,
+    ),
+}
+
+
+def _intercept_data(seed):
+    rng = np.random.default_rng(seed)
+    groups = np.repeat(np.arange(8), 6)
+    data = pd.DataFrame({"g": groups, "x": rng.normal(size=48)})
+    data["y"] = data["x"] + rng.normal(size=48) + 0.3 * rng.normal(size=8)[groups]
+    return data
+
+
+@pytest.mark.parametrize("seed", sorted(_lme4_intercept))
+def test_fit_reaches_lme4_reml_optimum(seed):
+    ref_fe_params, ref_cov_re, ref_scale, ref_llf = _lme4_intercept[seed]
+    data = _intercept_data(seed)
+    model = MixedLM.from_formula("y ~ x", data, groups=data["g"])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ConvergenceWarning)
+        res = model.fit()
+    assert res.converged
+    assert_allclose(res.llf, ref_llf, rtol=0, atol=1e-5)
+    assert_allclose(res.cov_re.iloc[0, 0], ref_cov_re, rtol=1e-3, atol=1e-4)
+    assert_allclose(res.scale, ref_scale, rtol=1e-4)
+    assert_allclose(res.fe_params, ref_fe_params, rtol=1e-4)
