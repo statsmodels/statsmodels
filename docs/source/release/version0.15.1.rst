@@ -740,6 +740,11 @@ Statistics and tests
 - ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
   from SciPy if no ratio attains the requested power. It returns ``nan`` with
   a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`
+- ``cohens_kappa`` emitted ``RuntimeWarning`` from NumPy if a rater uses only
+  one category. Variances that are slightly negative because of rounding
+  errors are set to 0, so that the standard error and the confidence interval
+  are 0, and the statistics that are 0 / 0 are ``nan`` without a warning, as
+  in R's ``vcd::Kappa``. :issue:`5530`
 
 Treatment effects
 -----------------

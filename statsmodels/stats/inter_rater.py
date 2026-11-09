@@ -366,88 +366,95 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         raise ValueError(
             f"table must be a square 2-d array, got shape {table.shape}"
         )
-    agree = np.diag(table).sum()
-    nobs = table.sum()
-    probs = table / nobs
-    freqs = probs  # TODO: rename to use freqs instead of probs for observed
-    probs_diag = np.diag(probs)
-    freq_row = table.sum(1) / nobs
-    freq_col = table.sum(0) / nobs
-    prob_exp = freq_col * freq_row[:, None]
-    assert np.allclose(prob_exp.sum(), 1)
-    # print prob_exp.sum()
-    agree_exp = np.diag(prob_exp).sum()  # need for kappa_max
-    if weights is None and wt is None:
-        kind = "Simple"
-        kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
+    # if both raters use the same single category, then kappa is 0 / 0 and
+    # the statistics are nan, as in R's vcd::Kappa
+    with np.errstate(divide="ignore", invalid="ignore"):
+        agree = np.diag(table).sum()
+        nobs = table.sum()
+        probs = table / nobs
+        freqs = probs  # TODO: rename to use freqs instead of probs for observed
+        probs_diag = np.diag(probs)
+        freq_row = table.sum(1) / nobs
+        freq_col = table.sum(0) / nobs
+        prob_exp = freq_col * freq_row[:, None]
+        assert np.allclose(prob_exp.sum(), 1)
+        # print prob_exp.sum()
+        agree_exp = np.diag(prob_exp).sum()  # need for kappa_max
+        if weights is None and wt is None:
+            kind = "Simple"
+            kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
 
-        if return_results:
-            # variance
-            term_a = probs_diag * (1 - (freq_row + freq_col) * (1 - kappa))**2
-            term_a = term_a.sum()
-            term_b = probs * (freq_col[:, None] + freq_row)**2
-            d_idx = np.arange(table.shape[0])
-            term_b[d_idx, d_idx] = 0   # set diagonal to zero
-            term_b = (1 - kappa)**2 * term_b.sum()
-            term_c = (kappa - agree_exp * (1-kappa))**2
-            var_kappa = (term_a + term_b - term_c) / (1 - agree_exp)**2 / nobs
-            # term_c = freq_col * freq_row[:, None] * (freq_col + freq_row[:,None])
-            term_c = freq_col * freq_row * (freq_col + freq_row)
-            var_kappa0 = (agree_exp + agree_exp**2 - term_c.sum())
-            var_kappa0 /= (1 - agree_exp)**2 * nobs
+            if return_results:
+                # variance
+                term_a = probs_diag * (1 - (freq_row + freq_col) * (1 - kappa))**2
+                term_a = term_a.sum()
+                term_b = probs * (freq_col[:, None] + freq_row)**2
+                d_idx = np.arange(table.shape[0])
+                term_b[d_idx, d_idx] = 0   # set diagonal to zero
+                term_b = (1 - kappa)**2 * term_b.sum()
+                term_c = (kappa - agree_exp * (1-kappa))**2
+                var_kappa = (term_a + term_b - term_c) / (1 - agree_exp)**2 / nobs
+                # term_c = freq_col * freq_row[:, None] * (freq_col + freq_row[:,None])
+                term_c = freq_col * freq_row * (freq_col + freq_row)
+                var_kappa0 = (agree_exp + agree_exp**2 - term_c.sum())
+                var_kappa0 /= (1 - agree_exp)**2 * nobs
 
-    else:
-        if weights is None:
-            weights = np.arange(table.shape[0])
-        # weights follows the Wikipedia definition, not the SAS, which is 1 -
-        kind = "Weighted"
-        weights = np.asarray(weights, float)
-        if weights.ndim == 1:
-            if wt in ["ca", "linear", None]:
-                weights = np.abs(weights[:, None] - weights) /  \
-                           (weights[-1] - weights[0])
-            elif wt in ["fc", "quadratic"]:
-                weights = (weights[:, None] - weights)**2 /  \
-                           (weights[-1] - weights[0])**2
-            elif wt == "toeplitz":
-                # assume toeplitz structure
-                from scipy.linalg import toeplitz
-
-                # weights = toeplitz(np.arange(table.shape[0]))
-                weights = toeplitz(weights)
-            else:
-                raise ValueError("wt option is not known")
         else:
-            rows, cols = table.shape
-            if (table.shape != weights.shape):
-                raise ValueError("weights are not square")
-        # this is formula from Wikipedia
-        kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
-        # TODO: add var_kappa for weighted version
-        if return_results:
-            var_kappa = np.nan
-            var_kappa0 = np.nan
-            # switch to SAS manual weights, problem if user specifies weights
-            # w is negative in some examples,
-            # but weights is scale invariant in examples and rough check of source
-            w = 1. - weights
-            w_row = (freq_col * w).sum(1)
-            w_col = (freq_row[:, None] * w).sum(0)
-            agree_wexp = (w * freq_col * freq_row[:, None]).sum()
-            term_a = freqs * (w - (w_col + w_row[:, None]) * (1 - kappa))**2
-            fac = 1. / ((1 - agree_wexp)**2 * nobs)
-            var_kappa = term_a.sum() - (kappa - agree_wexp * (1 - kappa))**2
-            var_kappa *= fac
+            if weights is None:
+                weights = np.arange(table.shape[0])
+            # weights follows the Wikipedia definition, not the SAS, which is 1 -
+            kind = "Weighted"
+            weights = np.asarray(weights, float)
+            if weights.ndim == 1:
+                if wt in ["ca", "linear", None]:
+                    weights = np.abs(weights[:, None] - weights) /  \
+                               (weights[-1] - weights[0])
+                elif wt in ["fc", "quadratic"]:
+                    weights = (weights[:, None] - weights)**2 /  \
+                               (weights[-1] - weights[0])**2
+                elif wt == "toeplitz":
+                    # assume toeplitz structure
+                    from scipy.linalg import toeplitz
 
-            freqse = freq_col * freq_row[:, None]
-            var_kappa0 = (freqse * (w - (w_col + w_row[:, None]))**2).sum()
-            var_kappa0 -= agree_wexp**2
-            var_kappa0 *= fac
+                    # weights = toeplitz(np.arange(table.shape[0]))
+                    weights = toeplitz(weights)
+                else:
+                    raise ValueError("wt option is not known")
+            else:
+                rows, cols = table.shape
+                if (table.shape != weights.shape):
+                    raise ValueError("weights are not square")
+            # this is formula from Wikipedia
+            kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
+            # TODO: add var_kappa for weighted version
+            if return_results:
+                var_kappa = np.nan
+                var_kappa0 = np.nan
+                # switch to SAS manual weights, problem if user specifies weights
+                # w is negative in some examples,
+                # but weights is scale invariant in examples and rough check of source
+                w = 1. - weights
+                w_row = (freq_col * w).sum(1)
+                w_col = (freq_row[:, None] * w).sum(0)
+                agree_wexp = (w * freq_col * freq_row[:, None]).sum()
+                term_a = freqs * (w - (w_col + w_row[:, None]) * (1 - kappa))**2
+                fac = 1. / ((1 - agree_wexp)**2 * nobs)
+                var_kappa = term_a.sum() - (kappa - agree_wexp * (1 - kappa))**2
+                var_kappa *= fac
 
-    kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / \
-                (1 - agree_exp)
+                freqse = freq_col * freq_row[:, None]
+                var_kappa0 = (freqse * (w - (w_col + w_row[:, None]))**2).sum()
+                var_kappa0 -= agree_wexp**2
+                var_kappa0 *= fac
+
+        kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / \
+                    (1 - agree_exp)
 
     if return_results:
+        # the variances can be slightly negative because of rounding errors,
+        # for example if a rater uses only one category
+        var_kappa = np.maximum(var_kappa, 0)
+        var_kappa0 = np.maximum(var_kappa0, 0)
         res = KappaResults(
             kind=kind,
             kappa=kappa,
@@ -551,7 +558,8 @@ class KappaResults(ResultsBunch):
         self["std_kappa"] = np.sqrt(self["var_kappa"])
         self["std_kappa0"] = np.sqrt(self["var_kappa0"])
 
-        self["z_value"] = self["kappa"] / self["std_kappa0"]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            self["z_value"] = self["kappa"] / self["std_kappa0"]
 
         self["pvalue_one_sided"] = stats.norm.sf(self["z_value"])
         self["pvalue_two_sided"] = stats.norm.sf(np.abs(self["z_value"])) * 2

@@ -5,6 +5,8 @@ Created on Mon Dec 10 09:18:14 2012
 Author: Josef Perktold
 """
 
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pytest
@@ -512,3 +514,36 @@ def test_fleiss_kappa_rejects_1d_table():
     # a 1-d table used to crash with a bare "not enough values to unpack"
     with pytest.raises(ValueError, match="2-d array"):
         fleiss_kappa(np.array([5, 5, 5]))
+
+
+@pytest.mark.parametrize("wt", [None, "linear", "quadratic"])
+def test_cohens_kappa_one_category(wt):
+    # GH 5530, the rater in the rows uses only one category
+    # R 4.5.3, vcd 1.4.14, Kappa(t) and DescTools 0.99.60, CohenKappa(t)
+    # give kappa = 0, ASE = 0 and the confidence interval (0, 0), vcd gives
+    # NaN for z and the p-value
+    table = np.array([[60.0, 29.0], [0, 0]])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, wt=wt)
+        str(res)
+    assert_equal(res.kappa, 0)
+    assert_equal(res.var_kappa, 0)
+    assert_equal(res.var_kappa0, 0)
+    assert_equal([res.kappa_low, res.kappa_upp], [0, 0])
+    assert np.isnan(res.z_value)
+    assert np.isnan(res.pvalue_two_sided)
+
+
+@pytest.mark.parametrize("wt", [None, "linear"])
+def test_cohens_kappa_same_single_category(wt):
+    # GH 5530, both raters use the same single category, kappa is 0 / 0
+    # R 4.5.3, vcd 1.4.14, Kappa(t) gives NaN for kappa and ASE
+    table = np.array([[10.0, 0], [0, 0]])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, wt=wt)
+        kappa = cohens_kappa(table, wt=wt, return_results=False)
+    assert np.isnan(kappa)
+    for name in ["kappa", "var_kappa", "kappa_low", "z_value", "kappa_max"]:
+        assert np.isnan(res[name]), name
