@@ -357,6 +357,11 @@ Generalized linear models and discrete models
 - ``Logit.loglike`` and ``Logit.loglikeobs`` are computed with ``logaddexp``
   and no longer overflow for large absolute values of the linear predictor.
   :issue:`3923`, :pr:`10217`
+- The ``hessian`` and ``hessian_factor`` of ``NegativeBinomialP`` had an
+  incorrect cross derivative of the regression parameters and ``alpha`` if
+  ``p`` is not 1 or 2. For example, with ``p=1.5`` the standard error of the
+  constant and of ``alpha`` were about 19% too large, and for ``p`` larger
+  than 2 the Hessian could not be inverted, so that ``bse`` was ``nan``.
 - ``Probit.loglike``, ``loglikeobs``, ``score``, ``score_obs`` and
   ``hessian`` are computed in log space. The log-likelihood was clipped to a
   constant and the Hessian was ``nan`` for extreme values of the linear
