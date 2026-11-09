@@ -744,7 +744,7 @@ Statistics and tests
   one category. Variances that are slightly negative because of rounding
   errors are set to 0, so that the standard error and the confidence interval
   are 0, and the statistics that are 0 / 0 are ``nan`` without a warning, as
-  in R's ``vcd::Kappa``. :issue:`5530`
+  in R's ``vcd::Kappa``. :issue:`5530`, :pr:`10709`
 
 Treatment effects
 -----------------
