@@ -1,9 +1,63 @@
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pytest
+from scipy.linalg import toeplitz
 
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake, oshorts
 from statsmodels.tsa.arima.estimators.gls import gls
+
+
+@pytest.mark.parametrize("arma_estimator", ["innovations_mle", "statespace"])
+@pytest.mark.parametrize("component", ["ar", "ma"])
+@pytest.mark.parametrize("lag, seasonal", [(1, False), (2, False), (4, True)])
+def test_gls_whitening_lags(arma_estimator, component, lag, seasonal):
+    # Compare one feasible GLS step with the closed-form matrix estimator.
+    # For an AR process with just lag s, gamma(k*s) = phi**k / (1-phi**2)
+    # and all other autocovariances are zero (unit innovation variance).
+    # For an MA process with just lag s, gamma(0) = 1 + theta**2,
+    # gamma(s) = theta, and all other autocovariances are zero.
+    rng = np.random.default_rng(24680)
+    nobs = 80
+    innovations = rng.standard_normal(nobs + 200)
+    errors = innovations.copy()
+    for t in range(lag, len(errors)):
+        previous = errors if component == "ar" else innovations
+        errors[t] += 0.6 * previous[t - lag]
+    exog = np.column_stack([np.ones(nobs), rng.standard_normal(nobs)])
+    endog = exog @ np.array([2.0, 0.7]) + errors[-nobs:]
+
+    order = (0, 0, 0)
+    seasonal_order = (0, 0, 0, 0)
+    if seasonal:
+        seasonal_order = (1, 0, 0, lag) if component == "ar" else (0, 0, 1, lag)
+    else:
+        order = ([lag], 0, 0) if component == "ar" else (0, 0, [lag])
+
+    result = gls(
+        endog,
+        exog,
+        order=order,
+        seasonal_order=seasonal_order,
+        arma_estimator=arma_estimator,
+        n_iter=1,
+    )
+    prefix = "seasonal_" if seasonal else ""
+    coefficient = getattr(result.parameters, f"{prefix}{component}_params")[0]
+    autocovariances = np.zeros(nobs)
+    if component == "ar":
+        autocovariances[::lag] = (
+            coefficient ** np.arange(len(autocovariances[::lag]))
+            / (1 - coefficient**2)
+        )
+    else:
+        autocovariances[0] = 1 + coefficient**2
+        autocovariances[lag] = coefficient
+    covariance = toeplitz(autocovariances)
+    precision_exog = np.linalg.solve(covariance, exog)
+    precision_endog = np.linalg.solve(covariance, endog)
+    expected = np.linalg.solve(exog.T @ precision_exog, exog.T @ precision_endog)
+
+    assert_allclose(result.parameters.exog_params, expected, rtol=1e-10, atol=1e-10)
 
 
 @pytest.mark.low_precision(
