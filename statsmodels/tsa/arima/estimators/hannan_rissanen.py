@@ -289,7 +289,9 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
                     Z[t] = endog[t] - tmp_ar - tmp_ma
 
             V = lfilter([1], ar_coef, Z)
-            W = lfilter(np.r_[1, -ma_coef[1:]], [1], Z)
+            # W solves theta(B) W_t = Z_t, see Brockwell and Davis (2016),
+            # section 5.1.4.
+            W = lfilter([1], ma_coef, Z)
 
             lagged_V = lagmat(V, max_ar_order, trim="both")
             lagged_W = lagmat(W, max_ma_order, trim="both")

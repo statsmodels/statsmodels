@@ -11,6 +11,7 @@ from statsmodels.tsa.arima.estimators.hannan_rissanen import (
     hannan_rissanen,
 )
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 
 
@@ -127,6 +128,66 @@ def test_set_default_unbiased():
     # unbiased=False
     p_3 = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=False).parameters
     assert not np.array_equal(p_1.ar_params, p_3.ar_params)
+
+
+def _bias_correction_reference(endog, ar_params, ma_params):
+    # Third step of the Hannan-Rissanen procedure, written directly from
+    # Brockwell and Davis (2016), section 5.1.4. `endog` is the demeaned series
+    # and `ar_params`, `ma_params` are the second-step estimates.
+    p, q, nobs = len(ar_params), len(ma_params), len(endog)
+    m = max(p, q)
+    z = np.zeros(nobs)
+    v = np.zeros(nobs)
+    w = np.zeros(nobs)
+    for t in range(m, nobs):
+        z[t] = (
+            endog[t]
+            - sum(ar_params[j] * endog[t - 1 - j] for j in range(p))
+            - sum(ma_params[j] * z[t - 1 - j] for j in range(q))
+        )
+        v[t] = z[t] + sum(ar_params[j] * v[t - 1 - j] for j in range(p))
+        w[t] = z[t] - sum(ma_params[j] * w[t - 1 - j] for j in range(q))
+    exog = np.array(
+        [
+            [v[t - 1 - j] for j in range(p)] + [w[t - 1 - j] for j in range(q)]
+            for t in range(m, nobs)
+        ]
+    )
+    correction = np.linalg.lstsq(exog, z[m:], rcond=None)[0]
+    return ar_params + correction[:p], ma_params + correction[p:]
+
+
+@pytest.mark.parametrize(
+    "ar_params, ma_params",
+    [([0.5], [0.4]), ([0.5], [0.8]), ([0.6, -0.2], [0.5]), ([0.4], [0.5, 0.3])],
+)
+def test_unbiased_brockwell_davis_reference(ar_params, ma_params):
+    # Test the bias-corrected (third step) estimates against an independent
+    # implementation of Brockwell and Davis (2016), section 5.1.4. ITSM / itsmr
+    # do not implement the third step, so we cannot test against them.
+    rng = np.random.default_rng(12345)
+    endog = arma_generate_sample(
+        np.r_[1, -np.array(ar_params)],
+        np.r_[1, ma_params],
+        500,
+        distrvs=rng.standard_normal,
+    )
+    ar_order, ma_order = len(ar_params), len(ma_params)
+
+    step2 = hannan_rissanen(
+        endog, ar_order=ar_order, ma_order=ma_order, unbiased=False
+    ).parameters
+    assert step2.is_stationary
+    assert step2.is_invertible
+    desired_ar, desired_ma = _bias_correction_reference(
+        endog - endog.mean(), step2.ar_params, step2.ma_params
+    )
+
+    actual = hannan_rissanen(
+        endog, ar_order=ar_order, ma_order=ma_order, unbiased=True
+    ).parameters
+    assert_allclose(actual.ar_params, desired_ar)
+    assert_allclose(actual.ma_params, desired_ma)
 
 
 @pytest.mark.parametrize(
