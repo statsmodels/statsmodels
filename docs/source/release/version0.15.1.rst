@@ -362,6 +362,14 @@ Generalized linear models and discrete models
   constant and the Hessian was ``nan`` for extreme values of the linear
   predictor. :issue:`10228`, :pr:`10229`
 - ``HurdleCountModel.fit`` ignored the ``use_t`` argument. :pr:`10299`
+- The ``score`` of ``TruncatedLFGeneralizedPoisson`` and
+  ``TruncatedLFNegativeBinomialP`` used the default ``p`` of the untruncated
+  model for the probability of the truncated counts, so it was incorrect
+  unless ``p=1`` for the generalized Poisson and ``p=2`` for the negative
+  binomial model. This includes the default ``p=2`` of
+  ``TruncatedLFGeneralizedPoisson`` and ``HurdleCountModel`` with
+  ``dist="negbin"`` and ``p=1``. ``fit`` stopped before reaching the maximum
+  of the log-likelihood with a ``ConvergenceWarning``.
 - ``MNLogit.get_margeff`` with ``dummy=True`` or ``count=True`` failed or
   returned an incorrect covariance if the number of regressors differs from
   the number of outcome categories. :issue:`5488`, :pr:`10298`
