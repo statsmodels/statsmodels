@@ -332,8 +332,13 @@ def gls(
                 "parameters. You should consider differencing the model data"
                 "or applying a nonlinear transformation (e.g., natural log)."
             )
+        # Expand sparse lags and combine seasonal and nonseasonal factors
+        # before whitening with the innovations algorithm.
         tmp, _ = arma_innovations.arma_innovations(
-            augmented, ar_params=ar_params, ma_params=ma_params, normalize=True
+            augmented,
+            ar_params=-p_arma.reduced_ar_poly.coef[1:],
+            ma_params=p_arma.reduced_ma_poly.coef[1:],
+            normalize=True,
         )
         u = tmp[:, 0]
         x = tmp[:, 1:]

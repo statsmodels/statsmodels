@@ -427,6 +427,11 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
+- The ARIMA GLS estimator now uses the complete AR and MA lag polynomials
+  when whitening the regression data. Seasonal terms were previously
+  omitted, and nonconsecutive lags were treated as consecutive, producing
+  incorrect regression coefficient estimates.
+
 - ``ARDL.predict`` with a ``start`` after the first out-of-sample observation
   returned wrong forecasts for a model with ``exog``, ``fixed`` or seasonal
   terms, and raised an ``IndexError`` if ``dynamic`` was used. The forecasts
