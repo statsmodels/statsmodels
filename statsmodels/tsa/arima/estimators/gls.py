@@ -118,9 +118,19 @@ def gls(
     described in section 6.6.1 is done via an application of the innovations
     algorithm (rather than explicit construction of the transformation matrix).
 
+    Deterministic terms are treated as exogenous regressors. The
+    `include_constant` argument is a convenience for adding an intercept;
+    other deterministic terms, such as a linear time trend, can be supplied
+    as columns of `exog`. There is no separate trend argument for the ARMA
+    error process: at each iteration, the ARMA estimator is applied to the
+    regression residuals without demeaning them or adding another constant.
+
     Note that if the specified model includes integration, both the `endog` and
     `exog` series will be differenced prior to estimation and a warning will
-    be issued to alert the user.
+    be issued to alert the user. In this case, `include_constant=True` is
+    not allowed because differencing would eliminate the constant column.
+    A linear trend supplied in `exog`, however, becomes a constant after
+    first differencing and can represent drift in an ARIMA(p, 1, q) model.
 
     References
     ----------

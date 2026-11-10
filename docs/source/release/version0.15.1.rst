@@ -875,6 +875,9 @@ Other
 Documentation
 =============
 
+- Clarify how the ARIMA GLS estimator handles constants, deterministic
+  regressors, and trends in integrated models. :issue:`6159`
+
 - Clarify that ``hessian_factor`` in ``OLS``, ``WLS`` and ``GLS``
   returns unscaled least-squares weights and ignores its compatibility
   arguments. Numerical behavior is unchanged. :issue:`8653`, :pr:`10675`
