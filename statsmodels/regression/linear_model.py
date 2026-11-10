@@ -40,7 +40,7 @@ import warnings
 
 import numpy as np
 from scipy import optimize, stats
-from scipy.linalg import cholesky, toeplitz
+from scipy.linalg import cho_solve, cholesky, toeplitz
 from scipy.linalg.lapack import get_lapack_funcs
 
 import statsmodels.base.model as base
@@ -284,9 +284,40 @@ class RegressionModel(base.LikelihoodModel):
         # set by fit, None until the model has been fit
         self.rank: int | None = None
         self.pinv_wexog: Float64Array | None = None
+        # True after fit(method="chol"): pinv_wexog is computed on first access
+        self._pinv_wexog_lazy = False
         self.normalized_cov_params: Float64Array | None = None
         self.wexog_singular_values: Float64Array | None = None
         self.effects: Float64Array | None = None  # only set by fit(method="qr")
+
+    @property
+    def pinv_wexog(self) -> Float64Array | None:
+        """
+        The p x n Moore-Penrose pseudoinverse of the whitened design matrix.
+
+        It is computed in ``fit`` with ``method="pinv"`` or ``method="qr"``.
+        With ``method="chol"`` it is not needed for the estimation and is
+        only computed, as ``normalized_cov_params @ wexog.T``, when it is
+        first used, for example by a heteroscedasticity robust covariance or
+        by influence measures. It is None before the model has been fit.
+        """
+        state = self.__dict__
+        pinv_wexog = state.get("_pinv_wexog", state.get("pinv_wexog"))
+        if pinv_wexog is None and state.get("_pinv_wexog_lazy", False):
+            wexog = state.get("wexog")
+            normalized_cov_params = state.get("normalized_cov_params")
+            if wexog is not None and normalized_cov_params is not None:
+                pinv_wexog = normalized_cov_params @ wexog.T
+                self._pinv_wexog = pinv_wexog
+        return pinv_wexog
+
+    @pinv_wexog.setter
+    def pinv_wexog(self, value):
+        self._pinv_wexog = value
+
+    @pinv_wexog.deleter
+    def pinv_wexog(self):
+        self._pinv_wexog = None
 
     @property
     def df_model(self):
@@ -336,9 +367,69 @@ class RegressionModel(base.LikelihoodModel):
         """
         raise NotImplementedError("Subclasses must implement.")
 
+    def _fit_normal_equations(self):
+        """
+        Estimate the parameters by solving the normal equations.
+
+        Returns
+        -------
+        ndarray or None
+            The parameter estimates, or None if the whitened regressors are
+            collinear or too close to collinear for the normal equations.
+            In that case nothing is changed and a ``SingularMatrixWarning``
+            is raised. Otherwise ``normalized_cov_params``,
+            ``wexog_singular_values`` and ``rank`` are set from the Cholesky
+            factor of ``wexog.T @ wexog`` and ``pinv_wexog`` is computed from
+            them when it is first accessed.
+
+        Notes
+        -----
+        The regressors are checked column by column in the order of the
+        Cholesky factorization: a column is treated as collinear with the
+        preceding columns if its norm after projecting out the preceding
+        columns is less than ``tol = 1e-7`` times its own norm. This is the
+        criterion and the default tolerance of ``lm`` in R. A column that is
+        a linear combination of other columns always makes one of the pivots
+        of the factorization that small, or the factorization fail.
+        """
+        tol = 1e-7
+        wexog = self.wexog
+        k_vars = wexog.shape[1]
+        # For an array X, X.T @ X uses the symmetric rank-k update of BLAS,
+        # so no n x k temporary array is created.
+        xtx = wexog.T @ wexog
+        xty = wexog.T @ self.wendog
+        try:
+            chol = cholesky(xtx, lower=True, check_finite=False)
+        except np.linalg.LinAlgError:
+            chol = None
+        if chol is None or np.any(np.diag(chol) < tol * np.sqrt(np.diag(xtx))):
+            warnings.warn(
+                "The design matrix is collinear or nearly collinear, so the "
+                "normal equations cannot be solved accurately. Using pinv.",
+                SingularMatrixWarning,
+                stacklevel=3,
+            )
+            return None
+
+        # (X'X)^{-1} from the Cholesky factor
+        normalized_cov_params = cho_solve(
+            (chol, True), np.eye(k_vars), check_finite=False
+        )
+        self.normalized_cov_params = (
+            normalized_cov_params + normalized_cov_params.T
+        ) / 2
+        # X'X = L L', so the singular values of wexog are those of the
+        # Cholesky factor. Only used for the condition number in the summary.
+        self.wexog_singular_values = np.linalg.svd(chol, compute_uv=False)
+        self.rank = k_vars
+        self.pinv_wexog = None
+        self._pinv_wexog_lazy = True
+        return cho_solve((chol, True), xty, check_finite=False)
+
     def fit(
             self,
-            method: Literal["pinv", "qr"] = "pinv",
+            method: Literal["pinv", "qr", "chol"] = "pinv",
             cov_type: Literal[
                 "nonrobust",
                 "fixed scale",
@@ -365,10 +456,13 @@ class RegressionModel(base.LikelihoodModel):
 
         Parameters
         ----------
-        method : {'pinv', 'qr'}, optional
-            Can be "pinv", "qr".  "pinv" uses the Moore-Penrose pseudoinverse
-            to solve the least squares problem. "qr" uses the QR
-            factorization.
+        method : {'pinv', 'qr', 'chol'}, optional
+            The method used to solve the least squares problem. "pinv" uses
+            the Moore-Penrose pseudoinverse of the whitened design matrix.
+            "qr" uses the QR factorization of the whitened design matrix.
+            "chol" uses the Cholesky factorization of the cross product
+            matrix of the whitened design matrix to solve the normal
+            equations. See Notes for the differences between the methods.
         cov_type : str, optional
             See `regression.linear_model.RegressionResults` for a description
             of the available covariance estimators.
@@ -400,16 +494,74 @@ class RegressionModel(base.LikelihoodModel):
 
         Notes
         -----
-        The fit method uses the pseudoinverse of the design/exogenous variables
-        to solve the least squares minimization.
+        By default, the fit method uses the pseudoinverse of the
+        design/exogenous variables to solve the least squares minimization.
 
+        ``method="pinv"`` computes the pseudoinverse of the n x k whitened
+        design matrix from its singular value decomposition. It supports a
+        rank-deficient design, with a ``SingularMatrixWarning`` that the
+        parameters are not uniquely determined.
+
+        ``method="qr"`` computes the QR factorization of the n x k whitened
+        design matrix and solves the triangular system. It also stores the
+        ``effects`` used by ``anova_lm``. The pseudoinverse is computed as
+        well, because some covariance estimators need it.
+
+        ``method="chol"`` forms the k x k cross product matrix of the whitened
+        regressors and solves the normal equations ``X'X b = X'y`` with its
+        Cholesky factor, so the only arrays with the size of the design
+        matrix are the data. It is much faster and needs much less memory
+        than the other two methods when the number of observations is large
+        relative to the number of regressors. The pseudoinverse
+        ``pinv_wexog`` is computed from the Cholesky factor when it is first
+        used, for example by the heteroscedasticity robust covariance
+        estimators or by influence measures.
+
+        ``method="chol"`` is less accurate than the other two methods and
+        should only be used when speed and memory usage are more important
+        than numerical accuracy. Forming ``X'X`` squares the condition
+        number of the design, so the rounding error of the parameters grows
+        roughly like ``cond(X)**2 * eps`` instead of ``cond(X) * eps`` for
+        "pinv" and "qr", that is, "chol" loses about twice as many digits.
+        In a simulation with 10,000 observations, 50 regressors and the
+        condition number of the design controlled directly, the relative
+        error of the parameters from "chol" against the exact least squares
+        solution was about 1e-9 to 1e-8 at ``cond(X) = 1e4``, 1e-7 at 1e5,
+        1e-5 at 1e6, 1e-3 at 1e7 and a few percent at 1e8, against about
+        1e-12 at 1e4 and 1e5, 1e-11 at 1e6, 1e-10 at 1e7 and 1e-9 at 1e8
+        with "pinv" and "qr". The standard errors lose precision in the
+        same way. "chol" is therefore a poor choice for ill-conditioned
+        designs: regressors that are nearly collinear or measured on very
+        different scales, polynomial or interaction terms of unscaled
+        variables, or dummy variables with few observations in a category.
+        The ``condition_number`` of the results (in the summary) indicates
+        the number of digits lost. The regressors are checked column by
+        column: if the norm of a column after projecting out the preceding
+        columns is less than 1e-7 times its norm, the default tolerance of
+        ``lm`` in R, or if the Cholesky factorization fails, the regressors
+        are treated as collinear, a ``SingularMatrixWarning`` is raised and
+        the parameters are estimated with the pseudoinverse instead. This
+        check only prevents the factorization from breaking down on
+        (nearly) collinear regressors; in the simulation it did not trigger
+        below ``cond(X)`` of about 1e8. It does not trigger for designs that
+        are merely ill-conditioned, and it is not a guarantee of accuracy.
         """
         # NOTE: pinv_wexog, normalized_cov_params, wexog_singular_values and
         # rank are recomputed from self.wexog on every call (rather than
         # cached based on whether they already exist) so that the model's
         # state after fit() depends only on the current data, never on
         # which `method` a previous fit() call happened to use.
-        method = string_like(method, "method", options=("pinv", "qr"), lower=False)
+        method = string_like(
+            method, "method", options=("pinv", "qr", "chol"), lower=False
+        )
+        self._pinv_wexog_lazy = False
+        if method == "chol":
+            # Solve the normal equations from the Cholesky factor of X'X,
+            # GH#9317. Falls back to "pinv" if the regressors are collinear.
+            beta = self._fit_normal_equations()
+            if beta is None:
+                method = "pinv"
+
         if method == "pinv":
             pinv_wexog, singular_values = pinv_extended(self.wexog)
             self.pinv_wexog = pinv_wexog
@@ -429,7 +581,7 @@ class RegressionModel(base.LikelihoodModel):
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
-        else:  # method == "qr"
+        elif method == "qr":
             Q, R = np.linalg.qr(self.wexog)
             self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
             self.wexog_singular_values = np.linalg.svd(R, 0, 0)
