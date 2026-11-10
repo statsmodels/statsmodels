@@ -16,6 +16,7 @@ import pytest
 import scipy.stats
 
 from statsmodels.iolib.summary import Summary
+from statsmodels.tools.numdiff import approx_hess_cs
 from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
@@ -1386,3 +1387,54 @@ def test_estimated_initial_seasonal_bounded_last(austourists):
     params = np.asarray(res.params)
     assert 20.0 <= params[-1] <= 21.0
     assert_allclose(res.llf, model.loglike(params), rtol=1e-12)
+
+
+@pytest.mark.parametrize("name", ["AAdA", "ANA", "MNA", "MNM"])
+def test_estimated_initial_seasonal_cov(
+    austourists, ets_austourists_fit_results_R, name
+):
+    # The Hessian of all m initial seasonals is singular (for additive
+    # seasonality, a constant can be moved between the level and the
+    # seasonals). The covariance is computed for the m - 1 free initial
+    # seasonals and mapped to the derived one, s[-m] = total - sum(others).
+    error, trend, damped, seasonal = {
+        "AAdA": ("add", "add", True, "add"),
+        "ANA": ("add", None, False, "add"),
+        "MNA": ("mul", None, False, "add"),
+        "MNM": ("mul", None, False, "mul"),
+    }[name]
+    results_R = ets_austourists_fit_results_R[damped][
+        short_model_name(error, trend, seasonal)
+    ]
+    params = np.array(get_params_from_R(results_R))
+    model = ETSModel(
+        austourists,
+        error=error,
+        trend=trend,
+        damped_trend=damped,
+        seasonal=seasonal,
+        seasonal_periods=4,
+    )
+    res = model.smooth(params)
+    cov = np.asarray(res.cov_params())
+    k = len(params)
+    jac = np.eye(k)[:, :-1]
+    jac[-1, -3:] = -1
+    total = params[-1] + params[-4:-1].sum()
+
+    def loglike_free(free_params):
+        full = jac @ free_params
+        full[-1] += total
+        return model.loglike(full)
+
+    hessian = approx_hess_cs(params[:-1], loglike_free)
+    expected = jac @ np.linalg.inv(-hessian) @ jac.T
+    assert_allclose(cov, expected, rtol=1e-5, atol=1e-10)
+    # the derived seasonal moves with the others, so the sum of the
+    # initial seasonals has no variance
+    assert_allclose(cov[:, -4:].sum(1), 0, atol=1e-10 * np.abs(cov).max())
+    # the initial level and seasonals have finite standard errors
+    idx = [model.param_names.index("initial_level")] + list(range(k - 4, k))
+    bse = np.asarray(res.bse)[idx]
+    assert np.all(np.isfinite(bse))
+    assert np.all(bse > 0)

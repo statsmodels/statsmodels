@@ -156,7 +156,7 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.tools import Bunch
+from statsmodels.tools.tools import Bunch, pinv_extended
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -1522,6 +1522,10 @@ class ETSResults(base.StateSpaceMLEResults):
         # Setup the cache
         self._cache = {}
 
+        # Whether the last initial seasonal is computed from the others, see
+        # ETSModel._derive_last_initial_seasonal. Used for the covariance.
+        self._derived_last_seasonal = model._derive_last_initial_seasonal
+
         # Handle covariance matrix calculation
         self._cov_approx_complex_step = True
         self._cov_approx_centered = False
@@ -1545,6 +1549,53 @@ class ETSResults(base.StateSpaceMLEResults):
                 "Covariance matrix could not be calculated: singular."
                 " information matrix."
             )
+
+    def _cov_params_approx(self, approx_complex_step=True, approx_centered=False):
+        if not self._derived_last_seasonal:
+            return super()._cov_params_approx(
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered,
+            )
+        # The last initial seasonal is computed from the others, s[-m] =
+        # total - sum(s[-1], ..., s[-m+1]), so the free parameters are all
+        # parameters except it. The Hessian of the full parameter vector is
+        # singular (for additive seasonality, adding a constant to the level
+        # and subtracting it from all seasonals does not change the
+        # likelihood), so the covariance is computed for the free parameters
+        # and mapped back with the Jacobian of this linear map, which also
+        # gives the delta-method variance of the derived seasonal.
+        evaluated_hessian = self.nobs_effective * self.model.hessian(
+            params=self.params,
+            transformed=True,
+            includes_fixed=True,
+            method="approx",
+            approx_complex_step=approx_complex_step,
+            approx_centered=approx_centered,
+        )
+        m = self.seasonal_periods
+        params_index = self.model._params_index
+        last = params_index[f"initial_seasonal.{m - 1}"]
+        others = [params_index[f"initial_seasonal.{i}"] for i in range(m - 1)]
+        if len(self.fixed_params) > 0:
+            free = list(self._free_params_index)
+        else:
+            free = list(range(self.k_params))
+        reduced = [i for i in free if i != last]
+        jac = np.zeros((self.k_params, len(reduced)))
+        jac[reduced, np.arange(len(reduced))] = 1
+        for j, i in enumerate(reduced):
+            if i in others:
+                jac[last, j] = -1
+        neg_cov_reduced, singular_values = pinv_extended(
+            jac.T @ evaluated_hessian @ jac
+        )
+        neg_cov = np.zeros_like(evaluated_hessian) * np.nan
+        mask = np.ix_(free, free)
+        neg_cov[mask] = (jac @ neg_cov_reduced @ jac.T)[mask]
+        if self._rank is None:
+            # the derived seasonal does not add to the rank deficiency
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values)) + 1
+        return -neg_cov
 
     @cache_readonly
     def nobs_effective(self):
