@@ -880,9 +880,6 @@ Other
 Documentation
 =============
 
-- Clarify how the ARIMA GLS estimator handles constants, deterministic
-  regressors, and trends in integrated models. :issue:`6159`
-
 - Clarify that ``hessian_factor`` in ``OLS``, ``WLS`` and ``GLS``
   returns unscaled least-squares weights and ignores its compatibility
   arguments. Numerical behavior is unchanged. :issue:`8653`, :pr:`10675`
@@ -890,6 +887,9 @@ Documentation
   say that two of ``start``, ``end`` and ``periods`` must be given, and that
   the default impact date is the last observation of the previous dataset.
   :issue:`10692`, :pr:`10693`
+- Clarify how the ARIMA GLS estimator handles constants, deterministic
+  regressors, and trends in integrated models. Numerical behavior is
+  unchanged. :issue:`6159`, :pr:`10711`
 
 Stricter Input Validation
 =========================

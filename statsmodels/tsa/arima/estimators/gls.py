@@ -44,8 +44,9 @@ def gls(
     endog : array_like
         Input time series array.
     exog : array_like, optional
-        Array of exogenous regressors. If not included, then `include_constant`
-        must be True, and then `exog` will only include the constant column.
+        Array of exogenous regressors. If not included, then the model must not
+        include integration and `include_constant` must be True, and then
+        `exog` will only include the constant column.
     order : tuple, optional
         The (p,d,q) order of the ARIMA model. Default is (0, 0, 0).
     seasonal_order : tuple, optional
@@ -122,15 +123,20 @@ def gls(
     `include_constant` argument is a convenience for adding an intercept;
     other deterministic terms, such as a linear time trend, can be supplied
     as columns of `exog`. There is no separate trend argument for the ARMA
-    error process: at each iteration, the ARMA estimator is applied to the
-    regression residuals without demeaning them or adding another constant.
+    error process. The regression absorbs every deterministic term, so at each
+    iteration the ARMA estimator is applied to the regression residuals
+    without demeaning them or adding another constant.
 
     Note that if the specified model includes integration, both the `endog` and
     `exog` series will be differenced prior to estimation and a warning will
     be issued to alert the user. In this case, `include_constant=True` is
-    not allowed because differencing would eliminate the constant column.
-    A linear trend supplied in `exog`, however, becomes a constant after
-    first differencing and can represent drift in an ARIMA(p, 1, q) model.
+    not allowed because differencing would eliminate the constant column. A
+    constant column supplied in `exog` is eliminated in the same way and makes
+    the regression singular. A linear trend supplied in `exog` becomes a
+    constant after one difference (regular or seasonal), and its coefficient
+    is then the drift per unit of the column, so it can represent drift in an
+    ARIMA(p, 1, q) model. After a second difference the column is zero and
+    cannot be estimated.
 
     References
     ----------
