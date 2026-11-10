@@ -144,7 +144,9 @@ class BaseIRAnalysis:
             To pass to subplot plotting functions. Example: if fonts are too big,
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict, optional
-            Keyword arguments to pass to the individual plotting functions.
+            Matplotlib Line2D properties for the response curves, such as
+            ``color`` and ``linewidth``. Does not affect error bands or
+            horizontal reference lines.
         figsize : tuple of float, optional
             Figure size (width, height in inches). The default is (10, 10).
         plot_stderr : bool, optional
@@ -307,7 +309,9 @@ class BaseIRAnalysis:
             To pass to subplot plotting functions. Example: if fonts are too big,
             pass {'fontsize' : 8} or some number to your taste.
         plot_params : dict, optional
-            Keyword arguments to pass to the individual plotting functions.
+            Matplotlib Line2D properties for the response curves, such as
+            ``color`` and ``linewidth``. Does not affect error bands or
+            horizontal reference lines.
         figsize : tuple of float, optional
             Figure size (width, height in inches). The default is (10, 10).
         plot_stderr : bool, optional

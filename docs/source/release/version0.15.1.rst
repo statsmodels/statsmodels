@@ -155,6 +155,11 @@ Behavior changes
 New Features and Enhancements
 =============================
 
+- ``IRAnalysis.plot`` and ``IRAnalysis.plot_cum_effects`` apply
+  ``plot_params`` to the response curves, allowing customization of their
+  color, line width, and other Matplotlib ``Line2D`` properties. Error bands
+  and horizontal reference lines retain their default styles. :issue:`380`
+
 New functions and methods
 -------------------------
 
