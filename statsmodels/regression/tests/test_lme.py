@@ -960,6 +960,45 @@ def test_mixed_lm_wrapper():
     assert_(bse_re.index.tolist() == re_names_full)
 
 
+def _vc_noise_data():
+    rng = np.random.default_rng(0)
+    return pd.DataFrame(
+        {
+            "y": rng.normal(size=40),
+            "g": np.repeat(np.arange(10), 4),
+            "h": np.tile([0, 0, 1, 1], 10),
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "re_formula, names", [(None, ["h Var"]), ("1", ["g Var", "h Var"])]
+)
+def test_bse_re_names_formula(re_formula, names):
+    model = MixedLM.from_formula(
+        "y ~ 1",
+        _vc_noise_data(),
+        groups="g",
+        re_formula=re_formula,
+        vc_formula={"h": "0 + C(h)"},
+    )
+    assert model.fit().bse_re.index.tolist() == names
+
+
+def test_bse_re_names_array():
+    df = _vc_noise_data()
+    vc_mats = [np.kron(np.eye(2), np.ones((2, 1)))] * 10
+    exog_vc = VCSpec(["h"], [[["h0", "h1"]] * 10], [vc_mats])
+    model = MixedLM(
+        df["y"],
+        pd.DataFrame({"const": 1.0}, index=df.index),
+        df["g"],
+        exog_re=pd.Series(1.0, index=df.index, name="re"),
+        exog_vc=exog_vc,
+    )
+    assert model.fit().bse_re.index.tolist() == ["re Var", "h Var"]
+
+
 def test_random_effects():
 
     rs = np.random.RandomState(23429)
