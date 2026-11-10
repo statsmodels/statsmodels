@@ -937,9 +937,12 @@ class MixedLM(base.LikelihoodModel):
 
     def _make_param_names(self, exog_re):
         """
-        Return the full parameter names list, just the exogenous random
-        effects variables, and the exogenous random effects variables with
-        the interaction terms
+        Return the parameter names of the model and their subsets
+
+        The names are the full list of parameter names, the names of the
+        random effects covariates, the names of the random effects
+        covariance parameters, and the names of the covariance parameters
+        followed by the variance components.
 
         Parameters
         ----------
@@ -949,15 +952,15 @@ class MixedLM(base.LikelihoodModel):
 
         Returns
         -------
-        param_names : list[str]
+        param_names : list of str
             The full list of parameter names (fixed effects, random
             effects covariance terms, and variance components).
-        exog_re_names : list[str]
+        exog_re_names : list of str
             The names of the random effects covariates.
-        cov_re_names : list[str]
+        cov_re_names : list of str
             The names of the random effects covariance parameters
             (excluding fixed effects and variance components).
-        variance_param_names : list[str]
+        variance_param_names : list of str
             `cov_re_names` followed by the variance component names.
         """
         exog_names = list(self.exog_names)
