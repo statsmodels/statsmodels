@@ -430,8 +430,12 @@ Time series analysis
 - The ARIMA GLS estimator now uses the complete AR and MA lag polynomials
   when whitening the regression data. Seasonal terms were previously
   omitted, and nonconsecutive lags were treated as consecutive, producing
-  incorrect regression coefficient estimates.
-
+  incorrect regression coefficient estimates. This affects
+  ``statsmodels.tsa.arima.estimators.gls.gls`` and ``ARIMA.fit`` for a model
+  with ``exog`` or a trend that is estimated with a ``method`` other than
+  ``"statespace"``, or with ``method="statespace"`` and ``gls=True``. The
+  estimates of such models with seasonal terms or nonconsecutive lags change.
+  :pr:`10713`
 - ``ARDL.predict`` with a ``start`` after the first out-of-sample observation
   returned wrong forecasts for a model with ``exog``, ``fixed`` or seasonal
   terms, and raised an ``IndexError`` if ``dynamic`` was used. The forecasts
