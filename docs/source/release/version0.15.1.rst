@@ -413,7 +413,7 @@ Mixed models and imputation
   from a formula: ``summary`` raised a ``KeyError`` and, with pandas 3,
   ``fit_regularized`` itself failed. :issue:`8902`, :pr:`10465`
 - ``MixedLMResults.bse_re`` raised a ``ValueError`` for models with variance
-  components and pandas data, for example from a formula.
+  components and pandas data, for example from a formula. :pr:`10702`
 - ``MICE.combine`` failed for results of models that do not have a
   ``_results`` attribute, for example those of ``PHReg``. :issue:`9136`,
   :pr:`10479`, :pr:`10557`
