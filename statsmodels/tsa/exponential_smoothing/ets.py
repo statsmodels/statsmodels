@@ -199,16 +199,24 @@ from statsmodels.tsa.tsatools import freq_to_period
 # * Since the traditional bounds are nonlinear for beta and gamma, if no bounds
 #   are given, we internally use beta_star and gamma_star for fitting
 # * When estimating initial level and initial seasonal values, one of them has
-#   to be removed in order to have a well posed problem: adding a constant to
-#   the level and subtracting it from all additive seasonals (or multiplying
-#   the level and dividing all multiplicative seasonals by it) does not change
-#   the model. As in Hyndman et al. (2008) and R's forecast::ets, the initial
-#   seasonals are normalized to sum to 0 (additive) or to m (multiplicative)
-#   over the first season: the first m - 1 initial seasonals are estimated and
-#   the last one (s[-m], the one used for the first observation) is computed
-#   from them in every likelihood evaluation. The heuristic start values
-#   already satisfy this normalization, so they are used as they are.
-#   The model parameter vector still contains all m initial seasonals.
+#   to be removed in order to have a well posed problem. As in Hyndman et al.
+#   (2008) and R's forecast::ets, the initial seasonals are normalized to sum
+#   to 0 (additive) or to m (multiplicative) over the first season: the first
+#   m - 1 initial seasonals are estimated and the last one (s[-m], the one
+#   used for the first observation) is computed from them in every likelihood
+#   evaluation. The model parameter vector still contains all m initial
+#   seasonals.
+#   For multiplicative seasonality, and for additive seasonality with an
+#   additive or no trend, this is only an identification: multiplying the
+#   level (and an additive trend) by a constant and dividing all seasonals by
+#   it, or adding a constant to the level and subtracting it from all
+#   additive seasonals, does not change the model. For additive seasonality
+#   with a multiplicative trend (forecast l * b + s) a constant cannot be
+#   moved between the level and the seasonals, so the sum-zero constraint is
+#   a restriction of the model, as it is in R.
+#   The heuristic start values already satisfy this normalization, so they
+#   are used as they are. The covariance of the parameters is computed for
+#   the m - 1 free initial seasonals and mapped back to all m.
 
 
 class ETSModel(base.StateSpaceMLEModel):
@@ -253,12 +261,16 @@ class ETSModel(base.StateSpaceMLEModel):
         as initial guesses, but then estimates the initial states as part of
         the fitting process.  Default is 'estimated'.
 
-        The initial seasonal states are only identified up to a constant that
-        can be moved into the initial level. With 'estimated', they are
-        therefore normalized to sum to 0 (additive seasonality) or to
-        ``seasonal_periods`` (multiplicative seasonality): the first
+        With 'estimated', the initial seasonal states are normalized to sum
+        to 0 (additive seasonality) or to ``seasonal_periods``
+        (multiplicative seasonality), as in R's ``forecast::ets``: the first
         ``seasonal_periods - 1`` initial seasonal states are estimated and
         the last one, ``initial_seasonal.<m-1>``, is computed from them.
+        For multiplicative seasonality and for additive seasonality with an
+        additive or no trend, this only removes a constant that could be
+        moved between the initial level and the initial seasonals. For
+        additive seasonality with a multiplicative trend, it is a
+        restriction of the model.
     initial_level : float, optional
         The initial level component. Only used if initialization is 'known'.
     initial_trend : float, optional

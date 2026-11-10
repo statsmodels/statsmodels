@@ -422,17 +422,6 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
-- ``ETSModel`` with ``initialization_method="estimated"`` (the default) and a
-  seasonal component estimates ``seasonal_periods - 1`` initial seasonal
-  states and computes the last one so that the initial seasonals sum to 0
-  (additive seasonality) or to ``seasonal_periods`` (multiplicative
-  seasonality), as R's ``forecast::ets`` does. Before, the last initial
-  seasonal was fixed to 0 or 1 and the heuristic start values were shifted or
-  divided by it. With multiplicative seasonality and a small last heuristic
-  seasonal this moved the start far from the heuristic initial states, and the
-  fit ended in a much worse optimum than ``initialization_method="heuristic"``
-  with negative forecasts for a positive series. ``start_params`` also changed
-  the ``initial_seasonal`` attribute of the model in place. :issue:`8551`
 - ``ARDL.predict`` with a ``start`` after the first out-of-sample observation
   returned wrong forecasts for a model with ``exog``, ``fixed`` or seasonal
   terms, and raised an ``IndexError`` if ``dynamic`` was used. The forecasts
@@ -519,6 +508,29 @@ Time series analysis
 - ``ExponentialSmoothing`` accepts ``use_boxcox="log"`` in the constructor.
   The value was documented but raised a ``TypeError``. :issue:`9135`,
   :pr:`10361`
+- ``ETSModel`` with ``initialization_method="estimated"`` (the default) and a
+  seasonal component estimates ``seasonal_periods - 1`` initial seasonal
+  states and computes the last one so that the initial seasonals sum to 0
+  (additive seasonality) or to ``seasonal_periods`` (multiplicative
+  seasonality), as R's ``forecast::ets`` does. Before, the last initial
+  seasonal was fixed to 0 or 1 and the heuristic start values were shifted or
+  divided by it. With multiplicative seasonality and a small last heuristic
+  seasonal this moved the start far from the heuristic initial states, and the
+  fit ended in a much worse optimum than ``initialization_method="heuristic"``
+  with negative forecasts for a positive series. ``start_params`` also changed
+  the ``initial_seasonal`` attribute of the model in place. The results of
+  seasonal fits with estimated initial states change: the optimum, the
+  ``initial_level`` and the initial seasonals. For example, the damped
+  additive model of the ``austourists`` data in the ETS example notebook has
+  an initial level of 24.23 instead of 29.45 (R: 24.01). ``aic``, ``aicc``
+  and ``bic`` of a given fit are computed as before, because ``df_model``
+  still counts all initial seasonals. The covariance of the parameters is
+  computed for the free initial seasonals and mapped to the computed one.
+  Before, the Hessian of all initial states was singular, so the standard
+  errors of the initial level and the initial seasonals were ``nan`` or
+  arbitrarily large, for example in the summary of the notebook example. If
+  ``initial_seasonal.<m-1>`` is fixed or bounded, all initial seasonals are
+  free parameters, as before. :issue:`8551`, :pr:`10710`
 - ``MSTL.fit`` consumed the ``inner_iter`` and ``outer_iter`` entries of
   ``stl_kwargs``, so that a second call of ``fit`` used different settings.
   :pr:`10292`
