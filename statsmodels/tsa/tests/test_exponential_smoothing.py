@@ -1212,6 +1212,59 @@ GH8551_DATA = np.array(
     ]
 )  # fmt: skip
 
+GH8551_MODELS = [
+    ("gh8551", "mul", "add", True, "mul"),
+    ("gh8551", "mul", None, False, "mul"),
+    ("gh8551", "mul", None, False, "add"),
+    ("gh8551", "add", "add", True, "add"),
+] + [
+    ("austourists", error, trend, damped, seasonal)
+    for error, (trend, damped), seasonal in product(
+        ["add", "mul"],
+        [(None, False), ("add", False), ("add", True), ("mul", False)],
+        ["add", "mul"],
+    )
+]
+
+
+@pytest.mark.parametrize("data, error, trend, damped, seasonal", GH8551_MODELS)
+def test_estimated_start_params_are_heuristic_states(
+    austourists, data, error, trend, damped, seasonal
+):
+    # GH 8551: the start parameters of initialization_method="estimated" are
+    # the heuristic initial states. The parameter vector holds the initial
+    # seasonals as s[-1], ..., s[-m], while model.initial_seasonal starts with
+    # the seasonal of the first observation, s[-m].
+    if data == "gh8551":
+        endog, m = GH8551_DATA, 12
+    else:
+        endog, m = austourists, 4
+    kwargs = dict(
+        error=error,
+        trend=trend,
+        damped_trend=damped,
+        seasonal=seasonal,
+        seasonal_periods=m,
+    )
+    model = ETSModel(endog, initialization_method="estimated", **kwargs)
+    model_heuristic = ETSModel(endog, initialization_method="heuristic", **kwargs)
+    start_params = model.start_params
+    smoothing_params = start_params[: len(model_heuristic.param_names)]
+
+    assert_allclose(
+        model.loglike(start_params),
+        model_heuristic.loglike(smoothing_params),
+        rtol=1e-12,
+    )
+    res = model.smooth(start_params)
+    res_heuristic = model_heuristic.smooth(smoothing_params)
+    assert_allclose(res.initial_seasonal, model_heuristic.initial_seasonal)
+    assert_allclose(res.initial_state, res_heuristic.initial_state)
+    assert_allclose(res.fittedvalues, res_heuristic.fittedvalues)
+    # start_params does not change the heuristic initial states of the model
+    assert_allclose(model.initial_seasonal, model_heuristic.initial_seasonal)
+    assert_allclose(model.start_params, start_params)
+
 
 @pytest.mark.parametrize("trend, damped_trend", [("add", True), (None, False)])
 def test_estimated_initial_seasonal_mul(trend, damped_trend):
@@ -1227,14 +1280,16 @@ def test_estimated_initial_seasonal_mul(trend, damped_trend):
         seasonal="mul",
         seasonal_periods=12,
     )
+    model = ETSModel(GH8551_DATA, initialization_method="estimated", **kwargs)
     res_heuristic = ETSModel(
         GH8551_DATA, initialization_method="heuristic", **kwargs
     ).fit(disp=False)
-    res_estimated = ETSModel(
-        GH8551_DATA, initialization_method="estimated", **kwargs
-    ).fit(disp=False)
+    res_estimated = model.fit(disp=False)
 
-    assert res_estimated.llf >= res_heuristic.llf - 1e-6
+    # the optimizer does not end below its start, the heuristic states
+    assert res_estimated.llf >= model.loglike(model.start_params)
+    # this holds with a margin of more than 10 here
+    assert res_estimated.llf >= res_heuristic.llf
 
     fcast = res_estimated.forecast(12)
     assert np.all(np.isfinite(fcast))
@@ -1261,12 +1316,7 @@ def test_estimated_initial_seasonal_normalized(austourists, error, trend, season
         seasonal_periods=4,
         initialization_method="estimated",
     )
-    initial_seasonal = np.array(model.initial_seasonal)
     start_params = model.start_params
-    # start_params must not change the heuristic initial states of the model
-    assert_allclose(model.initial_seasonal, initial_seasonal)
-    assert_allclose(model.start_params, start_params)
-
     res = model.fit(disp=False)
     assert_allclose(res.llf, model.loglike(res.params))
 
@@ -1276,6 +1326,31 @@ def test_estimated_initial_seasonal_normalized(austourists, error, trend, season
             assert_allclose(np.mean(seas), 1.0, rtol=1e-10)
         else:
             assert_allclose(np.sum(seas), 0.0, atol=1e-8)
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+def test_estimated_initial_seasonal_fixed_or_bounded_other(austourists, seasonal):
+    # A fixed or bounded initial seasonal other than the last one does not
+    # change that the last one is computed from the others.
+    kwargs = dict(error="add", trend="add", seasonal=seasonal, seasonal_periods=4)
+    total = 4.0 if seasonal == "mul" else 0.0
+    model = ETSModel(austourists, **kwargs)
+    value = model.start_params[-3] + (0.05 if seasonal == "mul" else 1.0)
+    with model.fix_params({"initial_seasonal.1": value}):
+        res = model.fit(disp=False)
+    params = np.asarray(res.params)
+    assert params[-3] == value
+    assert_allclose(params[-1], total - np.sum(params[-4:-1]), rtol=1e-12)
+    assert_allclose(res.llf, model.loglike(params), rtol=1e-12)
+
+    model = ETSModel(austourists, **kwargs)
+    bounds = (value - 0.01, value) if seasonal == "mul" else (value - 0.1, value)
+    model.set_bounds({"initial_seasonal.2": bounds})
+    res = model.fit(disp=False)
+    params = np.asarray(res.params)
+    assert bounds[0] <= params[-2] <= bounds[1]
+    assert_allclose(params[-1], total - np.sum(params[-4:-1]), rtol=1e-12)
+    assert_allclose(res.llf, model.loglike(params), rtol=1e-12)
 
 
 def test_estimated_initial_seasonal_fixed_last(austourists):
@@ -1288,3 +1363,26 @@ def test_estimated_initial_seasonal_fixed_last(austourists):
     assert np.asarray(res.params)[-1] == 0.0
     assert np.isfinite(res.llf)
     assert "initial_seasonal.3 (fixed)" in res.param_names
+    # the initial level and seasonals are identified by the fixed value
+    assert np.all(np.isfinite(res.bse[4:-1]))
+
+    # results from smooth (no fit, so the fixed value is not in the bounds
+    # of the model) use the same parametrization for the covariance
+    model = ETSModel(austourists, **kwargs)
+    with model.fix_params({"initial_seasonal.3": 0.0}):
+        res_smooth = model.smooth(res.params)
+    assert_allclose(res_smooth.cov_params(), res.cov_params(), rtol=1e-10)
+
+
+def test_estimated_initial_seasonal_bounded_last(austourists):
+    # A bound cannot be imposed on a computed value, so if the user gives
+    # bounds for the last initial seasonal, it is a free parameter within
+    # them, as before GH 8551. The fitted sum-zero value would be outside
+    # these bounds.
+    kwargs = dict(error="add", trend="add", seasonal="add", seasonal_periods=4)
+    model = ETSModel(austourists, **kwargs)
+    model.set_bounds({"initial_seasonal.3": (20.0, 21.0)})
+    res = model.fit(disp=False)
+    params = np.asarray(res.params)
+    assert 20.0 <= params[-1] <= 21.0
+    assert_allclose(res.llf, model.loglike(params), rtol=1e-12)

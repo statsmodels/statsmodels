@@ -871,7 +871,10 @@ class ETSModel(base.StateSpaceMLEModel):
                     shift = np.mean(initial_seasonal)
                     params[lvl_idx] += shift
                     initial_seasonal -= shift
-                params += initial_seasonal.tolist()
+                # self.initial_seasonal starts with the seasonal of the first
+                # observation, s_{-m}, while the parameter vector starts with
+                # initial_seasonal.0 = s_{-1}, see `_internal_params`
+                params += initial_seasonal[::-1].tolist()
 
         return np.array(params)
 
@@ -884,11 +887,15 @@ class ETSModel(base.StateSpaceMLEModel):
         normalized to sum to 0 (additive) or to m (multiplicative) over the
         first season, so that only m - 1 of them are free parameters. The
         last one, ``initial_seasonal.<m-1>``, is computed from the others
-        unless the user fixed it or gave bounds for it.
+        unless the user fixed it or gave bounds for it. A bound cannot be
+        imposed on a computed value, so then all m initial seasonals are
+        free parameters within the bounds, as before GH 8551.
         """
         if self.initialization_method != "estimated" or not self.has_seasonal:
             return False
         last = self._internal_initial_state_names[-1]
+        # user bounds (fit also adds fixed parameters to self.bounds, but
+        # ETSResults reads this property for results from `smooth` as well)
         if last in self.bounds:
             return False
         return not (self._has_fixed_params and last in self._fixed_params)
