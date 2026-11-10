@@ -1422,7 +1422,7 @@ def test_estimated_initial_seasonal_cov(
     jac[-1, -3:] = -1
     total = params[-1] + params[-4:-1].sum()
 
-    def loglike_free(free_params):
+    def loglike_free(free_params, *args, **kwargs):
         full = jac @ free_params
         full[-1] += total
         return model.loglike(full)
