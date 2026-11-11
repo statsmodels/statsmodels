@@ -265,7 +265,7 @@ Performance
   observations times the number of marginal effects times the number of
   parameters. For ``MNLogit`` with 4 categories, 28 regressors and 20,000
   observations the peak memory drops from 3 GB to 0.09 GB. This also applies
-  to ``get_margeff`` of ``GLM`` and ``GEE``. :issue:`4158`
+  to ``get_margeff`` of ``GLM`` and ``GEE``. :issue:`4158`, :pr:`10722`
 
 Bug Fixes
 =========
