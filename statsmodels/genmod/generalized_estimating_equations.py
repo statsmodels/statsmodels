@@ -2647,7 +2647,7 @@ class OrdinalGEE(GEE):
 class OrdinalGEEResults(GEEResults):
 
     __doc__ = (
-        "This class summarizes the fit of a marginal regression model"
+        "This class summarizes the fit of a marginal regression model "
         "for an ordinal response using GEE.\n" + _gee_results_doc
     )
 
@@ -3086,7 +3086,7 @@ class NominalGEE(GEE):
 class NominalGEEResults(GEEResults):
 
     __doc__ = (
-        "This class summarizes the fit of a marginal regression model"
+        "This class summarizes the fit of a marginal regression model "
         "for a nominal response using GEE.\n" + _gee_results_doc
     )
 

@@ -446,8 +446,8 @@ def median_test_ksample(x, groups):
 
     if (expected < 5).any():
         print(
-            "Warning: There are cells with less than 5 expected"
-            "observations. The chisquare distribution might not be a good"
+            "Warning: There are cells with less than 5 expected "
+            "observations. The chisquare distribution might not be a good "
             "approximation for the true distribution."
         )
 

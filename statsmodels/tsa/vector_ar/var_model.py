@@ -1174,7 +1174,7 @@ class VARProcess:
                 steps = steps_
         elif steps_ is not None and steps != steps_:
             raise ValueError(
-                "if exog or offset are used, then steps must"
+                "if exog or offset are used, then steps must "
                 "be equal to their length or None"
             )
         rng = check_random_state(rng, deprecated=True)
