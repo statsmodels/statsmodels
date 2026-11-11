@@ -150,7 +150,7 @@ def interaction_plot(
     if len(colors) != n_trace:
         raise ValueError("Must be a color for each trace level")
 
-    if plottype == "both" or plottype == "b":
+    if plottype in {"both", "b"}:
         for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
             label = str(group["trace"].values[0])
@@ -163,7 +163,7 @@ def interaction_plot(
                 linestyle=linestyles[i],
                 **kwargs,
             )
-    elif plottype == "line" or plottype == "l":
+    elif plottype in {"line", "l"}:
         for i, (_, group) in enumerate(plot_data.groupby("trace")):
             # trace label
             label = str(group["trace"].values[0])

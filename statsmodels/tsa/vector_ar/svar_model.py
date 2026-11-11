@@ -26,9 +26,9 @@ from statsmodels.tsa.vector_ar.var_model import VARProcess, VARResults
 
 
 def svar_ckerr(svar_type, A, B):
-    if A is None and (svar_type == "A" or svar_type == "AB"):
+    if A is None and svar_type in {"A", "AB"}:
         raise ValueError("SVAR of type A or AB but A array not given.")
-    if B is None and (svar_type == "B" or svar_type == "AB"):
+    if B is None and svar_type in {"B", "AB"}:
 
         raise ValueError("SVAR of type B or AB but B array not given.")
 

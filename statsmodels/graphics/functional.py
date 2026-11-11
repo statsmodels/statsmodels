@@ -472,7 +472,7 @@ def hdrboxplot(
 
         return band_quantiles
 
-    extra_alpha = [i for i in alpha if 0.5 != i and 0.9 != i and threshold != i]
+    extra_alpha = [i for i in alpha if i not in (0.5, 0.9, threshold)]
     if len(extra_alpha) > 0:
         extra_quantiles = []
         for x in extra_alpha:

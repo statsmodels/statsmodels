@@ -493,7 +493,7 @@ class _MultivariateOLSResults(LikelihoodModelResults):
                 hypotheses = []
                 for key in terms:
                     if skip_intercept_test and (
-                        key == "Intercept" or key == mgr.intercept_term
+                        key in ("Intercept", mgr.intercept_term)
                     ):
                         continue
                     L_contrast = np.eye(k_xvar)[terms[key], :]
@@ -656,7 +656,7 @@ class MultivariateLSResults(LikelihoodModelResults):
                 hypotheses = []
                 for key in terms:
                     if skip_intercept_test and (
-                        key == "Intercept" or key == mgr.intercept_term
+                        key in ("Intercept", mgr.intercept_term)
                     ):
                         continue
                     L_contrast = np.eye(k_xvar)[terms[key], :]

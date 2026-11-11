@@ -93,7 +93,7 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
     elif trend == "c":  # handles structured arrays
         columns = columns[:1]
         trendorder = 0
-    elif trend == "ct" or trend == "t":
+    elif trend in {"ct", "t"}:
         columns = columns[:2]
         if trend == "t":
             columns = columns[1:2]

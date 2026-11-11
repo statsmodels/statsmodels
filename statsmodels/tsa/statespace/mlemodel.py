@@ -3075,7 +3075,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             res.cov_kwds["description"] = descriptions["OPG"].format(
                 approx_type=approx_type_str
             )
-        elif self.cov_type == "robust" or self.cov_type == "robust_oim":
+        elif self.cov_type in {"robust", "robust_oim"}:
             res.cov_params_default = res.cov_params_robust_oim
             res.cov_kwds["description"] = descriptions["robust-OIM"].format(
                 approx_type=approx_type_str
