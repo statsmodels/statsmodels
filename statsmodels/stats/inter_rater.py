@@ -7,7 +7,7 @@ License: BSD-3
 
 Notes
 -----
-Contains fleiss_kappa and cohens_kappa.
+Contains fleiss_kappa, cohens_kappa and krippendorff_alpha.
 
 aggregate_raters:
     helper function to get data into fleiss_kappa format
@@ -34,6 +34,8 @@ see also R package irr
 
 import numpy as np
 from scipy import stats  # get rid of this? need only norm.sf
+
+from statsmodels.tools.validation import array_like, string_like
 
 
 class ResultsBunch(dict):
@@ -284,6 +286,153 @@ def fleiss_kappa(table, method="fleiss"):
 
     kappa = (p_mean - p_mean_exp) / (1 - p_mean_exp)
     return kappa
+
+
+def krippendorff_alpha(data, level="nominal"):
+    r"""
+    Compute Krippendorff's alpha reliability coefficient.
+
+    Agreement among any number of raters, for nominal, ordinal, interval or
+    ratio data, with any number of missing ratings.
+
+    .. versionadded:: 0.15.1
+
+    Parameters
+    ----------
+    data : array_like
+        Numeric ratings in a 2-D array with subjects in rows and raters in
+        columns, the layout used by
+        :func:`statsmodels.stats.inter_rater.aggregate_raters`. Missing
+        ratings are coded as ``nan``. Nominal categories can be any numeric
+        codes.
+    level : {"nominal", "ordinal", "interval", "ratio"}, optional
+        Level of measurement of the ratings. It defines the squared difference
+        :math:`\delta^2_{ck}` between two ratings :math:`c` and :math:`k`.
+        The default is "nominal".
+
+        - "nominal": 0 if :math:`c = k` and 1 otherwise.
+        - "ordinal": :math:`(\sum_{g=c}^{k} n_g - (n_c + n_k) / 2)^2`, which
+          depends on how often the ratings between :math:`c` and :math:`k`
+          are used, not on their numeric distance.
+        - "interval": :math:`(c - k)^2`.
+        - "ratio": :math:`((c - k) / (c + k))^2`. The ratings must be
+          nonnegative.
+
+    Returns
+    -------
+    float
+        Krippendorff's alpha. It is 1 for perfect agreement and 0 for
+        agreement at the level of chance. It is ``nan`` if no subject has two
+        or more ratings, or if all those ratings are equal, because alpha is
+        0 / 0 then.
+
+    See Also
+    --------
+    fleiss_kappa : Fleiss' kappa for nominal ratings without missing values.
+    cohens_kappa : Cohen's kappa for two raters.
+
+    Notes
+    -----
+    Only subjects with at least two ratings are used. Following Krippendorff
+    (2011), the ratings within each subject :math:`u` with :math:`m_u`
+    ratings are tabulated in the coincidence matrix :math:`o_{ck}`: each of
+    the :math:`m_u (m_u - 1)` ordered pairs of ratings adds
+    :math:`1 / (m_u - 1)` to the cell of its two values. With the margins
+    :math:`n_c = \sum_k o_{ck}` and :math:`n = \sum_c n_c`,
+
+    .. math::
+
+       \alpha = 1 - (n - 1)
+       \frac{\sum_c \sum_k o_{ck} \delta^2_{ck}}
+       {\sum_c \sum_k n_c n_k \delta^2_{ck}}
+
+    For nominal data without missing ratings, alpha is a function of
+    Fleiss' kappa, :math:`\alpha = 1 - (1 - \kappa) (n - 1) / n` (see
+    :func:`fleiss_kappa`). For two raters this is Scott's pi.
+
+    References
+    ----------
+    Krippendorff, Klaus. 2011. "Computing Krippendorff's Alpha-Reliability."
+    Annenberg School for Communication, University of Pennsylvania.
+    https://repository.upenn.edu/asc_papers/43
+
+    Hayes, Andrew F., and Klaus Krippendorff. 2007. "Answering the Call for a
+    Standard Reliability Measure for Coding Data." Communication Methods and
+    Measures 1 (1): 77-89. https://doi.org/10.1080/19312450709336664
+
+    Examples
+    --------
+    The example of Krippendorff (2011): 12 subjects rated by 4 raters, with
+    7 missing ratings.
+
+    >>> import numpy as np
+    >>> from statsmodels.stats.inter_rater import krippendorff_alpha
+    >>> nan = np.nan
+    >>> data = [[1, 1, nan, 1], [2, 2, 3, 2], [3, 3, 3, 3], [3, 3, 3, 3],
+    ...         [2, 2, 2, 2], [1, 2, 3, 4], [4, 4, 4, 4], [1, 1, 2, 1],
+    ...         [2, 2, 2, 2], [nan, 5, 5, 5], [nan, nan, 1, 1],
+    ...         [nan, 3, nan, nan]]
+    >>> round(krippendorff_alpha(data), 3)
+    0.743
+    >>> round(krippendorff_alpha(data, level="interval"), 3)
+    0.849
+    """
+    data = array_like(data, "data", maxdim=2)
+    if data.ndim != 2:
+        raise ValueError(
+            f"data must be a 2-d array of subjects by raters, got a {data.ndim}-d array"
+        )
+    level = string_like(
+        level, "level", options=("nominal", "ordinal", "interval", "ratio")
+    )
+    if np.isinf(data).any():
+        raise ValueError("data must not contain inf; code missing ratings as nan")
+    if level == "ratio" and (data < 0).any():
+        raise ValueError("ratings must be nonnegative for level='ratio'")
+
+    observed = ~np.isnan(data)
+    n_ratings = observed.sum(1)
+    # a subject with fewer than two ratings has no pair of ratings to compare
+    pairable = n_ratings >= 2
+    data = data[pairable]
+    observed = observed[pairable]
+    n_ratings = n_ratings[pairable]
+    if data.shape[0] == 0:
+        return np.nan
+
+    values, codes = np.unique(data[observed], return_inverse=True)
+    if len(values) < 2:
+        return np.nan
+    # counts[u, c]: number of ratings of subject u equal to values[c]
+    counts = np.zeros((data.shape[0], len(values)))
+    np.add.at(counts, (np.nonzero(observed)[0], codes), 1)
+
+    # coincidence matrix: sum over subjects of
+    # (n_uc * n_uk - [c == k] * n_uc) / (m_u - 1)
+    weights = counts / (n_ratings - 1)[:, None]
+    coincidence = counts.T @ weights - np.diag(weights.sum(0))
+    n_c = coincidence.sum(1)
+    n = n_c.sum()
+
+    if level == "nominal":
+        delta2 = 1.0 - np.eye(len(values))
+    elif level == "ordinal":
+        # with midpoints cumsum(n)_c - n_c / 2, the difference of two
+        # midpoints is sum_{g=c}^{k} n_g - (n_c + n_k) / 2
+        midpoint = np.cumsum(n_c) - n_c / 2
+        delta2 = np.subtract.outer(midpoint, midpoint) ** 2
+    elif level == "interval":
+        delta2 = np.subtract.outer(values, values) ** 2
+    else:
+        diff = np.subtract.outer(values, values)
+        total = np.add.outer(values, values)
+        # c + k is 0 only for c = k = 0, where the difference is 0
+        ratio = np.divide(diff, total, out=np.zeros_like(diff), where=total > 0)
+        delta2 = ratio**2
+
+    d_observed = (coincidence * delta2).sum()
+    d_expected = (np.outer(n_c, n_c) * delta2).sum()
+    return float(1.0 - (n - 1) * d_observed / d_expected)
 
 
 def cohens_kappa(table, weights=None, return_results=True, wt=None):

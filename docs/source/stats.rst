@@ -316,6 +316,8 @@ Interrater Reliability and Agreement
 The main function that statsmodels has currently available for interrater
 agreement measures and tests is Cohen's Kappa. Fleiss' Kappa is currently
 only implemented as a measures but without associated results statistics.
+Krippendorff's alpha measures agreement for nominal, ordinal, interval and
+ratio data with any number of raters and missing ratings.
 
 .. module:: statsmodels.stats.inter_rater
 .. currentmodule:: statsmodels.stats.inter_rater
@@ -325,6 +327,7 @@ only implemented as a measures but without associated results statistics.
 
    cohens_kappa
    fleiss_kappa
+   krippendorff_alpha
    to_table
    aggregate_raters
 
