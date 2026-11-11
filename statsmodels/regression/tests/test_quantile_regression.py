@@ -1,14 +1,23 @@
 """Tests for quantile regression models."""
 
+from pathlib import Path
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
+import pandas as pd
 import pytest
+import scipy.optimize
 import scipy.stats
 
 import statsmodels.api as sm
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.iolib.summary import Summary
-from statsmodels.regression.quantile_regression import QuantReg
+from statsmodels.regression.quantile_regression import (
+    QuantReg,
+    _max_step,
+    _normal_solver,
+)
+from statsmodels.tools.sm_exceptions import IterationLimitWarning
 
 from .results.results_quantile_regression import (
     Rquantreg,
@@ -428,3 +437,197 @@ def test_fit_invalid_options_raise():
     # string_like(..., lower=False) preserves that
     with pytest.raises(ValueError, match="vcov"):
         mod.fit(0.5, vcov="ROBUST")
+
+
+# Tests of the Frisch-Newton interior point solver, method="fn"
+
+RESULTS_DIR = Path(__file__).resolve().parent / "results"
+
+
+def _load_fn_data(name):
+    if name == "engel":
+        data = sm.datasets.engel.load_pandas().data
+        return data["foodexp"].to_numpy(), sm.add_constant(data["income"].to_numpy())
+    data = pd.read_csv(RESULTS_DIR / "quantreg_sim.csv")
+    exog = sm.add_constant(data[["x1", "x2", "x3", "x4", "x5"]].to_numpy())
+    return data["y"].to_numpy(), exog
+
+
+def _r_fn_results(name, method, q):
+    # Computed by results/results_quantreg_fn.R with rq of R quantreg 6.1
+    res = pd.read_csv(RESULTS_DIR / "results_quantreg_fn.csv")
+    res = res[(res["dataset"] == name) & (res["method"] == method)]
+    res = res[np.isclose(res["q"], q)].sort_values("index")
+    return res["value"].to_numpy(), res["objective"].iloc[0]
+
+
+def _check_loss(resid, q):
+    return np.sum(resid * (q - (resid < 0)))
+
+
+FN_QUANTILES = [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
+
+
+@pytest.mark.parametrize("name", ["engel", "sim"])
+@pytest.mark.parametrize("q", FN_QUANTILES)
+def test_fn_matches_r(name, q):
+    endog, exog = _load_fn_data(name)
+    res = QuantReg(endog, exog).fit(q, method="fn")
+    params_fn, objective_fn = _r_fn_results(name, "fn", q)
+    params_br, objective_br = _r_fn_results(name, "br", q)
+    # R uses the same algorithm and the same tolerance on the duality gap,
+    # the iterates agree to rounding error.
+    assert_allclose(res.params, params_fn, rtol=1e-8)
+    # The exact simplex solution differs from both interior point solutions
+    # by the remaining duality gap.
+    assert_allclose(res.params, params_br, rtol=1e-6)
+    # the duality gap, below p_tol=1e-6, bounds the excess objective
+    assert_allclose(_check_loss(res.resid, q), objective_br, rtol=0, atol=1e-6)
+    assert res.history["gap"][-1] < 1e-6
+    assert res.iterations < 50
+
+
+@pytest.mark.parametrize("q", [0.1, 0.25, 0.5, 0.75, 0.9])
+def test_fn_matches_irls(q):
+    endog, exog = _load_fn_data("sim")
+    mod = QuantReg(endog, exog)
+    res_irls = mod.fit(q)
+    res_fn = mod.fit(q, method="fn")
+    # IRLS stops when the parameters change by less than p_tol=1e-6 and is
+    # less precise than the interior point solution.
+    assert_allclose(res_fn.params, res_irls.params, rtol=1e-3, atol=1e-4)
+    # The iid covariance depends on the residuals only through the kernel
+    # density estimate. The robust covariance also depends on the signs of
+    # the residuals that are zero at the solution, which are rounding noise.
+    res_irls = mod.fit(q, vcov="iid")
+    res_fn = mod.fit(q, vcov="iid", method="fn")
+    assert_allclose(res_fn.bse, res_irls.bse, rtol=1e-3)
+    # fn is at least as good as irls in terms of the objective
+    assert _check_loss(res_fn.resid, q) <= _check_loss(res_irls.resid, q)
+
+
+class TestEpanechnikovHsheatherFn(CheckModelResultsMixin):
+    # Stata results, the interior point solution is the same vertex
+    @classmethod
+    def setup_class(cls):
+        data = sm.datasets.engel.load_pandas().data
+        mgr = FormulaManager()
+        y, X = mgr.get_matrices("foodexp ~ income", data)
+        cls.res1 = QuantReg(y, X).fit(
+            vcov="iid", kernel="epa", bandwidth="hsheather", method="fn"
+        )
+        cls.res2 = epan2_hsheather
+
+
+def _linprog_objective(endog, exog, q):
+    # Primal linear program min q 1'u + (1 - q) 1'v, exog b + u - v = endog,
+    # solved by HiGHS as an independent check of the optimal value.
+    nobs, k = exog.shape
+    c = np.concatenate([np.zeros(k), q * np.ones(nobs), (1 - q) * np.ones(nobs)])
+    a_eq = np.hstack([exog, np.eye(nobs), -np.eye(nobs)])
+    bounds = [(None, None)] * k + [(0, None)] * (2 * nobs)
+    res = scipy.optimize.linprog(c, A_eq=a_eq, b_eq=endog, bounds=bounds)
+    assert res.status == 0
+    return res.fun
+
+
+@pytest.mark.parametrize("q", [0.001, 0.01, 0.99, 0.999])
+def test_fn_extreme_quantiles(q):
+    endog, exog = _load_fn_data("engel")
+    res = QuantReg(endog, exog).fit(q, method="fn")
+    assert_allclose(
+        _check_loss(res.resid, q), _linprog_objective(endog, exog, q), rtol=1e-8
+    )
+
+
+def test_fn_nonunique_solution():
+    # every value in [5, 6] is a median of 1, ..., 10
+    endog = np.arange(1.0, 11.0)
+    exog = np.ones((10, 1))
+    res = QuantReg(endog, exog).fit(0.5, method="fn")
+    assert 5 <= res.params[0] <= 6
+    # sum of |y - 5.5| / 2 = 12.5 for every median
+    assert_allclose(_check_loss(res.resid, 0.5), 12.5, rtol=1e-10)
+
+
+def test_fn_exact_fit():
+    # All least squares residuals are zero, the starting point has to move
+    # the dual slacks away from zero.
+    exog = sm.add_constant(np.arange(10.0))
+    endog = exog @ np.array([1.0, 2.0])
+    res = QuantReg(endog, exog).fit(0.3, method="fn")
+    assert np.all(np.isfinite(res.params))
+    assert_allclose(res.params, [1.0, 2.0], rtol=1e-6)
+
+
+def test_fn_collinear():
+    rs = np.random.RandomState(2382109)
+    x_one = rs.random(1000)
+    x_two = rs.random(1000) * 10
+    x_three = rs.random(1000)
+    intercept = np.ones(1000)
+    y = rs.random(1000) * 5
+    X = np.column_stack((intercept, x_one, x_two, x_three, x_one))
+
+    res = QuantReg(y, X).fit(0.5, method="fn")
+    res_ns = QuantReg(y, X[:, :-1]).fit(0.5, method="fn")
+    res_irls = QuantReg(y, X).fit(0.5)
+    assert_allclose(res.fittedvalues, res_ns.fittedvalues, rtol=1e-10)
+    # minimum norm solution: the duplicated column splits the coefficient
+    assert_allclose(res.params[1], res.params[4], rtol=1e-10)
+    assert_allclose(res.params[1] + res.params[4], res_ns.params[1], rtol=1e-8)
+    # the same convention as the pseudoinverse in irls
+    assert_allclose(res.params, res_irls.params, rtol=1e-3)
+    assert np.linalg.matrix_rank(res.cov_params()) == X.shape[1] - 1
+    assert len(res.history["params"][-1]) == X.shape[1]
+
+
+def test_fn_pandas_formula():
+    data = sm.datasets.engel.load_pandas().data
+    res_formula = sm.formula.quantreg("foodexp ~ income", data).fit(
+        0.25, method="fn"
+    )
+    res_pandas = QuantReg(data["foodexp"], sm.add_constant(data["income"])).fit(
+        0.25, method="fn"
+    )
+    assert list(res_formula.params.index) == ["Intercept", "income"]
+    assert list(res_pandas.params.index) == ["const", "income"]
+    assert_allclose(res_formula.params.to_numpy(), res_pandas.params.to_numpy())
+    params_r, _ = _r_fn_results("engel", "fn", 0.25)
+    assert_allclose(res_formula.params.to_numpy(), params_r, rtol=1e-8)
+    smry = res_formula.summary()
+    assert "income" in str(smry)
+    assert isinstance(res_formula.conf_int(), pd.DataFrame)
+
+
+def test_fn_iteration_limit():
+    endog, exog = _load_fn_data("sim")
+    with pytest.warns(IterationLimitWarning):
+        res = QuantReg(endog, exog).fit(0.5, method="fn", max_iter=2)
+    assert res.iterations == 2
+    assert len(res.history["gap"]) == 2
+
+
+def test_fit_invalid_method_raises():
+    endog, exog = _load_fn_data("engel")
+    with pytest.raises(ValueError, match="method"):
+        QuantReg(endog, exog).fit(0.5, method="br")
+
+
+def test_solve_normal_fallback():
+    # A matrix that is not positive definite makes the Cholesky factorization
+    # fail, the fallback least squares solve still solves the system.
+    rs = np.random.RandomState(0)
+    exog = rs.standard_normal((20, 3))
+    rhs = rs.standard_normal(20)
+    sol = _normal_solver(-exog, exog)(rhs)
+    assert_allclose(sol, np.linalg.lstsq(exog, rhs, rcond=None)[0], rtol=1e-10)
+
+
+def test_max_step():
+    v = np.array([1.0, 2.0, 3.0])
+    assert _max_step(v, np.array([1.0, 0.0, 2.0])) == np.inf
+    assert_allclose(_max_step(v, np.array([-2.0, -1.0, 1.0])), 0.5)
+    # a variable at the boundary blocks a step in a decreasing direction
+    assert _max_step(np.array([0.0, 1.0]), np.array([-1.0, -1.0])) == 0
+    assert _max_step(np.array([0.0, 1.0]), np.array([0.0, -2.0])) == 0.5
