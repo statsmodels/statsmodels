@@ -123,7 +123,7 @@ class MANOVA(Model):
 
                 for key in terms:
                     if skip_intercept_test and (
-                        key == "Intercept" or key == mgr.intercept_term
+                        key in ("Intercept", mgr.intercept_term)
                     ):
                         continue
                     L_contrast = np.eye(self.exog.shape[1])[terms[key], :]
