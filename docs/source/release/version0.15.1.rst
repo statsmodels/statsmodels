@@ -151,6 +151,18 @@ Behavior changes
   these kernels returned ``nan`` for most data. They now integrate the density
   over the support of the observations, in the units of the data, so that the
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
+- The bias correction (third) step of
+  :func:`~statsmodels.tsa.arima.estimators.hannan_rissanen.hannan_rissanen`
+  filters the second-step residuals with the inverse of the MA polynomial,
+  :math:`\theta(B) W_t = Z_t`, as in Brockwell and Davis (2016), section
+  5.1.4. Previously :math:`W_t` was a first-order approximation of this
+  filter. **This changes the estimated coefficients** whenever the third step
+  is applied, which is the default (``unbiased=None``) if the second-step
+  estimates are stationary and invertible. This also affects
+  ``ARIMA.fit(method="hannan_rissanen")`` and the starting parameters of the
+  ``"innovations_mle"`` and ``"gls"`` methods. If the corrected parameters are
+  non-stationary or non-invertible, the second-step estimates are returned
+  with an ``EstimationWarning``. :issue:`6159`, :pr:`10712`
 
 New Features and Enhancements
 =============================

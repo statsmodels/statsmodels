@@ -4,10 +4,13 @@ Hannan-Rissanen procedure for estimating ARMA(p,q) model parameters
 Author: Chad Fulton
 License: BSD-3
 """
+import warnings
+
 import numpy as np
 from scipy.signal import lfilter
 
 from statsmodels.regression.linear_model import OLS, yule_walker
+from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.estimators._base import ARMAEstimationResult
 from statsmodels.tsa.arima.params import SARIMAXParams
@@ -20,7 +23,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
                     seasonal_order=(0, 0, 0, 0), demean=True,
                     initial_ar_order=None, unbiased=None,
                     fixed_params=None):
-    """
+    r"""
     Estimate ARMA parameters using Hannan-Rissanen procedure
 
     Parameters
@@ -47,6 +50,14 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
         Whether or not to apply the bias correction step. Default is True if
         the estimated coefficients from the previous step imply a stationary
         and invertible process and False otherwise.
+
+        .. versionchanged:: 0.15.1
+
+           The bias correction step filters the second-step residuals with
+           the inverse of the MA polynomial, as in [1]_, which changes the
+           estimates. Previously a first-order approximation was used. If the
+           bias-corrected parameters are non-stationary or non-invertible,
+           the second-step estimates are returned with a warning.
     fixed_params : dict, optional
         Dictionary with names of fixed parameters as keys (e.g., 'ar.L1',
         'ma.L2'), which correspond to SARIMAXSpecification.param_names.
@@ -65,6 +76,12 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
             order used in the first step; and `resid`, which contains the
             computed residuals from the last step.
 
+    Warns
+    -----
+    EstimationWarning
+        If the bias correction step yields non-stationary or non-invertible
+        parameters. The second-step estimates are returned in that case.
+
     Notes
     -----
     The primary reference is [1]_, section 5.1.4, which describes a three-step
@@ -74,6 +91,16 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
     2. Compute AR and MA estimates via least squares
     3. (Unless the estimated coefficients from step (2) are non-stationary /
        non-invertible or `unbiased=False`) Perform bias correction
+
+    In step 3, the residuals :math:`Z_t` implied by the second-step estimates
+    are filtered to :math:`V_t = \phi(B)^{-1} Z_t` and
+    :math:`W_t = 	heta(B)^{-1} Z_t`. The least-squares regression of
+    :math:`Z_t` on the lags of :math:`V_t` and :math:`W_t` gives a correction
+    that is added to the second-step estimates. This is one Gauss-Newton step
+    towards the minimizer of the conditional sum of squares. If the corrected
+    parameters are non-stationary or non-invertible, the second-step
+    estimates, residuals and variance are returned instead, with an
+    ``EstimationWarning``.
 
     The order used for the AR model in the first step may be given as an
     argument. If it is not, we compute it as suggested by [2]_.
@@ -289,7 +316,8 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
                     Z[t] = endog[t] - tmp_ar - tmp_ma
 
             V = lfilter([1], ar_coef, Z)
-            W = lfilter(np.r_[1, -ma_coef[1:]], [1], Z)
+            # W solves theta(B) W_t = Z_t (Brockwell and Davis, 2016, 5.1.4)
+            W = lfilter([1], ma_coef, Z)
 
             lagged_V = lagmat(V, max_ar_order, trim="both")
             lagged_W = lagmat(W, max_ma_order, trim="both")
@@ -308,15 +336,29 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
             mod_unbias = OLS(Z[max(max_ar_order, max_ma_order):], exog)
             res_unbias = mod_unbias.fit()
 
+            step2_ar_params = p.ar_params
+            step2_ma_params = p.ma_params
             p.ar_params = (
                 p.ar_params + res_unbias.params[:spec.k_ar_params])
             p.ma_params = (
                 p.ma_params + res_unbias.params[spec.k_ar_params:])
 
-            # Recompute sigma2
-            resid = mod.endog - mod.exog.dot(
-                np.r_[p.ar_params, p.ma_params])
-            p.sigma2 = np.inner(resid, resid) / len(resid)
+            if p.is_stationary and p.is_invertible:
+                # Recompute sigma2
+                resid = mod.endog - mod.exog.dot(
+                    np.r_[p.ar_params, p.ma_params])
+                p.sigma2 = np.inner(resid, resid) / len(resid)
+            else:
+                # Step 3 left the stationary/invertible region: keep step 2
+                p.ar_params = step2_ar_params
+                p.ma_params = step2_ma_params
+                warnings.warn(
+                    "The third step of Hannan-Rissanen estimation produced "
+                    "non-stationary or non-invertible parameters. The "
+                    "estimates from the second step are returned instead.",
+                    EstimationWarning,
+                    stacklevel=2,
+                )
 
     # TODO: Gomez and Maravall (2001) or Gomez (1998)
     # propose one more step here to further improve MA estimates

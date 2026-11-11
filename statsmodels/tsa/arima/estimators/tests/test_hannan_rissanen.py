@@ -2,6 +2,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
+from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake
 from statsmodels.tsa.arima.estimators.hannan_rissanen import (
@@ -11,6 +12,7 @@ from statsmodels.tsa.arima.estimators.hannan_rissanen import (
     hannan_rissanen,
 )
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 
 
@@ -108,6 +110,36 @@ def test_unbiased_error():
         hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=True)
 
 
+def test_unbiased_default_skips_non_stationary_step2():
+    # With unbiased=None, a non-stationary second step skips the third step.
+    endog = np.arange(1000) * 1.0
+    res_none = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=None)
+    res_false = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=False)
+    assert not (res_false.parameters.is_stationary
+                and res_false.parameters.is_invertible)
+    assert_allclose(res_none.parameters.params, res_false.parameters.params)
+    assert_allclose(res_none.other_results.resid,
+                    res_false.other_results.resid)
+
+
+@pytest.mark.parametrize("unbiased", [None, True])
+def test_unbiased_fallback_to_step2(unbiased):
+    # Near-unit MA root: step 2 is invertible but the step 3 correction is not.
+    rng = np.random.default_rng(53)
+    endog = arma_generate_sample(
+        [1, -0.5], [1, 0.9], 100, distrvs=rng.standard_normal
+    )
+    res_step2 = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=False)
+    assert res_step2.parameters.is_stationary
+    assert res_step2.parameters.is_invertible
+    with pytest.warns(EstimationWarning, match="third step"):
+        res = hannan_rissanen(
+            endog, ar_order=1, ma_order=1, unbiased=unbiased
+        )
+    assert_allclose(res.parameters.params, res_step2.parameters.params)
+    assert_allclose(res.other_results.resid, res_step2.other_results.resid)
+
+
 def test_set_default_unbiased():
     # setting unbiased=None with stationary and invertible parameters should
     # yield the exact same results as setting unbiased=True
@@ -127,6 +159,62 @@ def test_set_default_unbiased():
     # unbiased=False
     p_3 = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=False).parameters
     assert not np.array_equal(p_1.ar_params, p_3.ar_params)
+
+
+def _bias_correction_reference(endog, ar_params, ma_params):
+    # Hannan-Rissanen step 3 from Brockwell and Davis (2016), section 5.1.4
+    p, q, nobs = len(ar_params), len(ma_params), len(endog)
+    m = max(p, q)
+    z = np.zeros(nobs)
+    v = np.zeros(nobs)
+    w = np.zeros(nobs)
+    for t in range(m, nobs):
+        z[t] = (
+            endog[t]
+            - sum(ar_params[j] * endog[t - 1 - j] for j in range(p))
+            - sum(ma_params[j] * z[t - 1 - j] for j in range(q))
+        )
+        v[t] = z[t] + sum(ar_params[j] * v[t - 1 - j] for j in range(p))
+        w[t] = z[t] - sum(ma_params[j] * w[t - 1 - j] for j in range(q))
+    exog = np.array(
+        [
+            [v[t - 1 - j] for j in range(p)] + [w[t - 1 - j] for j in range(q)]
+            for t in range(m, nobs)
+        ]
+    )
+    correction = np.linalg.lstsq(exog, z[m:], rcond=None)[0]
+    return ar_params + correction[:p], ma_params + correction[p:]
+
+
+@pytest.mark.parametrize(
+    "ar_params, ma_params",
+    [([0.5], [0.4]), ([0.5], [0.8]), ([0.6, -0.2], [0.5]), ([0.4], [0.5, 0.3])],
+)
+def test_unbiased_brockwell_davis_reference(ar_params, ma_params):
+    # Compare step 3 with an independent loop (ITSM/itsmr lack step 3)
+    rng = np.random.default_rng(12345)
+    endog = arma_generate_sample(
+        np.r_[1, -np.array(ar_params)],
+        np.r_[1, ma_params],
+        500,
+        distrvs=rng.standard_normal,
+    )
+    ar_order, ma_order = len(ar_params), len(ma_params)
+
+    step2 = hannan_rissanen(
+        endog, ar_order=ar_order, ma_order=ma_order, unbiased=False
+    ).parameters
+    assert step2.is_stationary
+    assert step2.is_invertible
+    desired_ar, desired_ma = _bias_correction_reference(
+        endog - endog.mean(), step2.ar_params, step2.ma_params
+    )
+
+    actual = hannan_rissanen(
+        endog, ar_order=ar_order, ma_order=ma_order, unbiased=True
+    ).parameters
+    assert_allclose(actual.ar_params, desired_ar)
+    assert_allclose(actual.ma_params, desired_ma)
 
 
 @pytest.mark.parametrize(
