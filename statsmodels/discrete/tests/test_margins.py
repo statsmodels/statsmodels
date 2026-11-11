@@ -6,15 +6,21 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
 # load data into module namespace
 from statsmodels.datasets.cpunish import load
+from statsmodels.discrete import discrete_margins
 from statsmodels.discrete.discrete_model import (
+    Logit,
+    MNLogit,
     NegativeBinomial,
     NegativeBinomialP,
     Poisson,
+    Probit,
 )
 import statsmodels.discrete.tests.results.results_count_margins as res_stata
+from statsmodels.tools import numdiff
 from statsmodels.tools.tools import add_constant
 
 cpunish_data = load()
@@ -152,8 +158,6 @@ def test_discrete_margins_summary_single_equation():
 
 
 def test_discrete_margins_summary_multi_equation():
-    from statsmodels.discrete.discrete_model import MNLogit
-
     rs = np.random.RandomState(20260823)
     n = 300
     x = rs.standard_normal((n, 2))
@@ -175,3 +179,111 @@ def test_discrete_margins_summary_multi_equation():
     for eq in range(marge.margeff.shape[1]):
         for val in marge.margeff[:, eq]:
             assert f"{val:.4f}" in text
+
+
+@pytest.fixture(scope="module")
+def overall_margins_results():
+    # regressors: constant, two continuous, a dummy and a count variable
+    rs = np.random.RandomState(4158)
+    n = 300
+    exog = np.column_stack(
+        [
+            rs.uniform(0.5, 2, size=(n, 2)),
+            rs.randint(0, 2, size=n),
+            rs.randint(0, 5, size=n),
+        ]
+    )
+    exog = add_constant(exog.astype(float))
+    linpred = exog @ [-0.3, 0.4, -0.3, 0.5, 0.1]
+    y_bin = (rs.uniform(size=n) < 1 / (1 + np.exp(-linpred))).astype(float)
+    y_count = rs.poisson(np.exp(linpred))
+    y_overdisp = rs.poisson(np.exp(linpred) * rs.gamma(2, 0.5, size=n))
+    y_multi = rs.randint(0, 3, size=n)
+    return {
+        "logit": Logit(y_bin, exog).fit(disp=0),
+        "probit": Probit(y_bin, exog).fit(disp=0),
+        "poisson": Poisson(y_count, exog).fit(disp=0),
+        "negbin": NegativeBinomial(y_overdisp, exog).fit(disp=0),
+        "mnlogit": MNLogit(y_multi, exog).fit(disp=0),
+    }
+
+
+def _margeff_cov_overall_per_obs(results, method, dummy, count):
+    # delta method covariance of the average marginal effects with the
+    # Jacobian at each observation averaged afterwards, as before GH#4158
+    model = results.model
+    params = np.asarray(results.params).ravel("F")
+    exog = model.exog
+    J = getattr(model, "J", 1)
+    jac = numdiff.approx_fprime_cs(params, model._derivative_exog, args=(exog, method))
+    jac = jac.mean(1)
+    const_idx = discrete_margins._get_const_index(exog)[1]
+    if dummy:
+        dummy_idx = discrete_margins._get_dummy_index(exog, const_idx)[0]
+        jac = discrete_margins._margeff_cov_params_dummy(
+            model, jac, params, exog, dummy_idx, method, J
+        )
+    if count:
+        count_idx = discrete_margins._get_count_index(exog, const_idx)[0]
+        jac = discrete_margins._margeff_cov_params_count(
+            model, jac, params, exog, count_idx, method, J
+        )
+    return jac @ np.asarray(results.cov_params()) @ jac.T
+
+
+_overall_margins_options = [
+    ("dydx", False, False),
+    ("eyex", False, False),
+    ("dyex", False, False),
+    ("eydx", False, False),
+    ("dydx", True, False),
+    ("dydx", False, True),
+    ("eydx", True, True),
+]
+
+
+@pytest.mark.parametrize(
+    "model, method, dummy, count",
+    [
+        (model, *options)
+        for model in ["logit", "probit", "poisson", "negbin", "mnlogit"]
+        for options in _overall_margins_options
+        # eyex and dyex currently raise in MNLogit._derivative_exog
+        if not (model == "mnlogit" and "ex" in options[0])
+    ],
+)
+def test_margeff_overall_cov_per_obs(
+    overall_margins_results, model, method, dummy, count
+):
+    # GH#4158: the Jacobian of the average marginal effect is computed
+    # directly, the result has to agree with averaging the Jacobian of the
+    # marginal effect at each observation
+    res = overall_margins_results[model]
+    marge = res.get_margeff(method=method, dummy=dummy, count=count)
+    cov = _margeff_cov_overall_per_obs(res, method, dummy, count)
+    # drop the constant as in get_margeff
+    effects_idx = discrete_margins._get_const_index(res.model.exog)[0]
+    effects_idx = np.tile(effects_idx, getattr(res.model, "J", 1))
+    cov = cov[effects_idx][:, effects_idx]
+    assert_allclose(marge.margeff_cov, cov, rtol=1e-12, atol=1e-16)
+    se = np.sqrt(np.diag(cov))
+    assert_allclose(np.ravel(marge.margeff_se, order="F"), se, rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="Monkeypatches statsmodels.tools.numdiff")
+@pytest.mark.parametrize("model", ["logit", "mnlogit"])
+def test_margeff_overall_jacobian_shape(overall_margins_results, model, monkeypatch):
+    # GH#4158: the Jacobian for at="overall" must not have a nobs dimension
+    res = overall_margins_results[model]
+    shapes = []
+    orig_approx_fprime_cs = numdiff.approx_fprime_cs
+
+    def approx_fprime_cs(*args, **kwargs):
+        jac = orig_approx_fprime_cs(*args, **kwargs)
+        shapes.append(jac.shape)
+        return jac
+
+    monkeypatch.setattr(numdiff, "approx_fprime_cs", approx_fprime_cs)
+    res.get_margeff(at="overall")
+    k_effects = res.model.exog.shape[1] * getattr(res.model, "J", 1)
+    assert shapes == [(k_effects, res.params.size)]
