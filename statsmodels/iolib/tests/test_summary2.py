@@ -331,3 +331,102 @@ def test_summarycol_fixed_effects_before_info_dict():
         "R-squared Adj.",
         "N",
     ]
+
+
+def test_summarycol_parentheses_options():
+    # gh-8996
+    x = [1, 5, 7, 3, 5]
+    x = add_constant(x)
+    y = [6, 4, 2, 7, 4]
+    reg = OLS(y, x).fit()
+
+    # t-statistics
+    s_t = summary_col([reg], parentheses="t", float_format="%.4f")
+    assert s_t.extra_txt == ["t-statistics in parentheses."]
+    assert f"({reg.tvalues[0]:.4f})" in str(s_t)
+    assert f"({reg.bse[0]:.4f})" not in str(s_t)
+
+    # z-statistics
+    s_z = summary_col([reg], parentheses="z", float_format="%.4f")
+    assert s_z.extra_txt == ["z-statistics in parentheses."]
+    assert f"({reg.tvalues[0]:.4f})" in str(s_z)
+
+    # stat
+    s_stat = summary_col([reg], parentheses="stat", float_format="%.4f")
+    assert s_stat.extra_txt == ["Test statistics in parentheses."]
+
+    # p-values
+    s_p = summary_col([reg], parentheses="p", float_format="%.4f")
+    assert s_p.extra_txt == ["p-values in parentheses."]
+    assert f"({reg.pvalues[0]:.4f})" in str(s_p)
+
+    # None / False
+    s_none = summary_col([reg], parentheses=None)
+    assert s_none.extra_txt == []
+    assert "(" not in str(s_none)
+    assert list(s_none.tables[0].index) == ["const", "x1", "R-squared", "R-squared Adj."]
+
+    s_false = summary_col([reg], parentheses=False)
+    assert s_false.extra_txt == []
+    assert list(s_false.tables[0].index) == ["const", "x1", "R-squared", "R-squared Adj."]
+
+    with pytest.raises(ValueError, match="Unknown parentheses option"):
+        summary_col([reg], parentheses="unsupported")
+
+
+def test_summarycol_float_format_dict():
+    # gh-8996
+    x = [1, 5, 7, 3, 5]
+    x = add_constant(x)
+    y = [6, 4, 2, 7, 4]
+    reg = OLS(y, x).fit()
+
+    fmt = {"coeff": "%.2f", "parentheses": "%.3f", "r2": "%.1f"}
+    s = summary_col([reg], float_format=fmt)
+    # Coeff format: 7.75
+    assert "7.75" in str(s)
+    # SE format: 1.106
+    assert "(1.106)" in str(s)
+    # R2 format: 0.8
+    assert "0.8" in str(s)
+
+    with pytest.raises(TypeError, match="float_format must be a str or dict"):
+        summary_col([reg], float_format=1234)
+
+
+def test_summarycol_granular_r2_and_n():
+    # gh-8996
+    x = [1, 5, 7, 3, 5]
+    x = add_constant(x)
+    y = [6, 4, 2, 7, 4]
+    reg = OLS(y, x).fit()
+
+    # include_adj_r2=False
+    s_no_adj = summary_col([reg], include_r2=True, include_adj_r2=False)
+    assert "R-squared" in str(s_no_adj)
+    assert "R-squared Adj." not in str(s_no_adj)
+
+    # include_r2=False, include_adj_r2=True
+    s_only_adj = summary_col([reg], include_r2=False, include_adj_r2=True)
+    assert "R-squared Adj." in str(s_only_adj)
+    assert "R-squared  " not in str(s_only_adj)
+
+    # include_n=True
+    s_n = summary_col([reg], include_n=True)
+    assert "N" in s_n.tables[0].index
+    assert s_n.tables[0].loc["N"].iloc[0] == "5"
+
+    # include_n=True with custom N format in float_format dict
+    s_n_fmt = summary_col([reg], include_n=True, float_format={"N": "%04d"})
+    assert s_n_fmt.tables[0].loc["N"].iloc[0] == "0005"
+
+    # include_n=True combined with info_dict
+    s_n_info = summary_col(
+        [reg],
+        include_n=True,
+        info_dict={"AIC": lambda m: f"{m.aic:.1f}"},
+    )
+    idx = list(s_n_info.tables[0].index)
+    assert "N" in idx
+    assert "AIC" in idx
+
