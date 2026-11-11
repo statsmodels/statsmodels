@@ -155,11 +155,6 @@ Behavior changes
 New Features and Enhancements
 =============================
 
-- ``IRAnalysis.plot`` and ``IRAnalysis.plot_cum_effects`` apply
-  ``plot_params`` to the response curves, allowing customization of their
-  color, line width, and other Matplotlib ``Line2D`` properties. Error bands
-  and horizontal reference lines retain their default styles. :issue:`380`
-
 New functions and methods
 -------------------------
 
@@ -642,6 +637,13 @@ Time series analysis
   show one ``ConvergenceWarning`` with the number of replications whose
   maximum likelihood fit did not converge, instead of one warning for each of
   them. :pr:`10613`
+- ``IRAnalysis.plot`` and ``IRAnalysis.plot_cum_effects`` ignored the
+  argument ``plot_params``. It is now applied to the response curves, so that
+  their color, line width and other Matplotlib ``Line2D`` properties can be
+  set. Error bands and horizontal reference lines keep their default styles.
+  A key of ``plot_params`` that is not a ``Line2D`` property, for example
+  ``"fontsize"``, was ignored before and now raises an ``AttributeError``.
+  :issue:`380`, :pr:`10720`
 
 Statistics and tests
 --------------------
@@ -934,6 +936,10 @@ Documentation
 - Clarify how the ARIMA GLS estimator handles constants, deterministic
   regressors, and trends in integrated models. Numerical behavior is
   unchanged. :issue:`6159`, :pr:`10711`
+- Clarify that ``mu0`` of ``sign_test`` is the median under the null
+  hypothesis, and that the sample median is not a useful value for it when
+  the data have no ties. Numerical behavior is unchanged. :issue:`4101`,
+  :pr:`10721`
 
 Stricter Input Validation
 =========================
