@@ -96,3 +96,15 @@ def test_brentq_expanding():
         assert_equal(val, getattr(info, k))
 
     assert_allclose(info.root, a, rtol=1e-5)
+
+
+@pytest.mark.parametrize("start_upp", [2, np.int64(2), 2.0])
+def test_brentq_expanding_int_start_no_root(start_upp):
+    # The function is increasing and negative everywhere, so the expansion
+    # runs up to max_it. An int start bound would grow beyond int64, and
+    # np.sqrt fails for the object array that np.asarray makes of it.
+    def func_no_root(x):
+        return -1.0 / (1.0 + np.sqrt(np.asarray(x)))
+
+    with pytest.raises(ValueError, match="different signs"):
+        brentq_expanding(func_no_root, low=1e-8, start_upp=start_upp)
