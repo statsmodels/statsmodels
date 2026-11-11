@@ -2745,6 +2745,46 @@ def test_glm_lasso_6431():
                 assert_allclose(params, fit.params, atol=1e-6, rtol=1e-6)
 
 
+@pytest.mark.parametrize(
+    "family", [sm.families.Gaussian, sm.families.Binomial, sm.families.Poisson]
+)
+@pytest.mark.parametrize(
+    "fit_kwds",
+    [
+        {"L1_wt": 1.0},
+        {"L1_wt": 0.5},
+        {"L1_wt": 0.0},
+        {"method": "l1_slsqp"},
+    ],
+)
+def test_regularized_freq_weights_match_expanded_data(family, fit_kwds):
+    # A row with frequency weight w is w identical observations, so the
+    # penalized fit has to match the fit on the expanded data set.  The
+    # log-likelihood used to be scaled by the number of rows instead of
+    # the total frequency weight, which silently changed the effective
+    # penalty.
+    rng = np.random.default_rng(1)
+    n = 60
+    exog = add_constant(rng.normal(size=(n, 3)))
+    if family is sm.families.Binomial:
+        endog = (rng.random(n) < 0.4).astype(float)
+    elif family is sm.families.Poisson:
+        endog = rng.poisson(2, n).astype(float)
+    else:
+        endog = rng.normal(size=n)
+    freq_weights = rng.integers(1, 5, size=n)
+
+    weighted = GLM(endog, exog, family=family(), freq_weights=freq_weights)
+    expanded = GLM(
+        np.repeat(endog, freq_weights),
+        np.repeat(exog, freq_weights, axis=0),
+        family=family(),
+    )
+    res_w = weighted.fit_regularized(alpha=0.05, **fit_kwds)
+    res_e = expanded.fit_regularized(alpha=0.05, **fit_kwds)
+    assert_allclose(res_w.params, res_e.params, rtol=1e-6, atol=1e-8)
+
+
 class TestRegularized:
 
     def test_regularized(self):
