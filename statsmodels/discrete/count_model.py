@@ -410,6 +410,7 @@ class GenericZeroInflated(CountModel):
                 hess_arr[i, j] = a - b
 
         # d2l/dpdw
+        pmf_main = np.exp(llf_main)
         for i in range(self.k_inflate):
             for j in range(self.k_exog):
                 hess_arr[i, j + self.k_inflate] = -(
@@ -417,7 +418,8 @@ class GenericZeroInflated(CountModel):
                     * w[zero_idx]
                     * (1 - w[zero_idx])
                     * self.exog_infl[zero_idx, i]
-                    / pmf[zero_idx]
+                    * pmf_main[zero_idx]
+                    / pmf[zero_idx] ** 2
                 ).sum()
 
         return hess_arr
@@ -450,8 +452,11 @@ class GenericZeroInflated(CountModel):
 
         hess_arr = np.zeros((dim, dim))
 
-        hess_arr[:self.k_inflate, :] = hess_arr_infl
-        hess_arr[self.k_inflate:, self.k_inflate:] = hess_arr_main
+        k_infl = self.k_inflate
+        hess_arr[:k_infl, :k_infl] = hess_arr_infl[:, :k_infl]
+        # cross block goes into the lower triangle, which is mirrored below
+        hess_arr[k_infl:, :k_infl] = hess_arr_infl[:, k_infl:].T
+        hess_arr[k_infl:, k_infl:] = hess_arr_main
 
         tri_idx = np.triu_indices(self.k_exog + self.k_inflate, k=1)
         hess_arr[tri_idx] = hess_arr.T[tri_idx]

@@ -357,6 +357,11 @@ Generalized linear models and discrete models
   ``OrderedModel`` and ``MNLogit``. Previously, multiple observations raised
   an index length error and a single observation received an incorrect label.
   :pr:`10590`
+- The analytic ``hessian`` of ``ZeroInflatedPoisson`` with logit inflation,
+  the default, set the cross derivatives between the inflation and the count
+  parameters to zero, and the formula for them was also incorrect. The
+  standard errors of the parameters could be off by more than 10%. They now
+  agree with the standard errors from a numerical Hessian.
 - ``GEE`` used the number of columns of ``exog`` for ``df_model``,
   ``df_resid`` and the default ``ddof_scale``. These are now based on the rank
   of ``exog`` as in the other models, so that a singular design can no longer
