@@ -934,6 +934,10 @@ Documentation
 - Clarify how the ARIMA GLS estimator handles constants, deterministic
   regressors, and trends in integrated models. Numerical behavior is
   unchanged. :issue:`6159`, :pr:`10711`
+- Clarify that ``mu0`` of ``sign_test`` is the median under the null
+  hypothesis, and that the sample median is not a useful value for it when
+  the data have no ties. Numerical behavior is unchanged. :issue:`4101`,
+  :pr:`10721`
 
 Stricter Input Validation
 =========================
