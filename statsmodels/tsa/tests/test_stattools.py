@@ -2974,6 +2974,45 @@ def test_pacf_negative_nlags():
     assert pacf(e, 0).shape == (2,)
 
 
+@pytest.mark.parametrize("v", [101.37, 123.456])
+def test_acf_constant_series(v):
+    # GH10647: A constant series carries no autocorrelation information.
+    # When x.mean() is not exactly representable in floating point,
+    # x - x.mean() left a residue misinterpreted as near-perfect autocorrelation.
+    x = np.full(100, v)
+    a = acf(x)
+    assert np.all(np.isnan(a))
+    res_acf = acf(x, alpha=0.05, qstat=True)
+    assert np.all(np.isnan(res_acf.acf))
+    assert np.all(np.isnan(res_acf.confint))
+    assert np.all(np.isnan(res_acf.qstat))
+    assert np.all(np.isnan(res_acf.pvalues))
+
+    c1 = ccf(x, np.arange(100.0))
+    assert np.all(np.isnan(c1))
+    c2 = ccf(np.arange(100.0), x)
+    assert np.all(np.isnan(c2))
+    res_ccf = ccf(x, np.arange(100.0), alpha=0.05)
+    assert np.all(np.isnan(res_ccf.ccf))
+    assert np.all(np.isnan(res_ccf.confint))
+
+    with pytest.raises(ValueError, match="x is constant"):
+        zivot_andrews(x)
+
+    with pytest.warns(SingularMatrixWarning):
+        p = pacf(x, nlags=5)
+    assert_allclose(p[1:], 1.0 / np.arange(1, 6), atol=1e-12)
+
+
+def test_acf_constant_with_missing():
+    x = np.full(50, 5.0)
+    x[10] = np.nan
+    a = acf(x, missing="drop")
+    assert np.all(np.isnan(a))
+    a_cons = acf(x, missing="conservative")
+    assert np.all(np.isnan(a_cons))
+
+
 def test_coint_auto_tstat():
     rs = np.random.RandomState(3733696641)
     x = np.cumsum(rs.standard_normal(100))

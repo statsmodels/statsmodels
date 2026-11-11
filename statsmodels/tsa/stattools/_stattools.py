@@ -650,7 +650,10 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
         if missing == "conservative":
             xo[~notmask_bool] = 0
     elif demean:
-        xo = x - x.mean()
+        if x.size > 0 and x.max() == x.min():
+            xo = np.zeros_like(x)
+        else:
+            xo = x - x.mean()
     else:
         xo = x
 
@@ -1095,8 +1098,6 @@ def acf(
     )
     x = array_like(x, "x")
     nobs = x.shape[0]
-    if nlags is None:
-        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
     if missing in ("drop", "conservative"):
         # "drop" removes the NaNs and "conservative" zeroes them out, and
         # acovf uses the non-missing count as the divisor in both cases
@@ -1104,6 +1105,8 @@ def acf(
         nobs = int(np.sum(~np.isnan(x)))
         if nobs == 0:
             raise ValueError("All observations are missing after dropping.")
+    if nlags is None:
+        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
     if nlags < 0:
         raise ValueError(f"nlags must be non-negative, got {nlags}")
     if nlags >= nobs:
@@ -1111,6 +1114,21 @@ def acf(
             "nlags must be smaller than the number of observations "
             f"({nobs}), got {nlags}"
         )
+
+    x_valid = x[~np.isnan(x)] if missing in ("drop", "conservative") else x
+    if x_valid.size > 0 and np.ptp(x_valid) == 0:
+        acf = np.full(nlags + 1, np.nan)
+        confint = np.full((nlags + 1, 2), np.nan) if alpha is not None else None
+        qstat_vals = np.full(nlags, np.nan) if qstat else None
+        pvalue = np.full(nlags, np.nan) if qstat else None
+        same_arity_as_legacy = qstat and alpha is not None
+        if result_object or same_arity_as_legacy:
+            return AcfResult(acf, confint, qstat_vals, pvalue)
+        if not (qstat or alpha):
+            return acf
+        elif not qstat:
+            return acf, confint
+        return acf, qstat_vals, pvalue
 
     avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
     acf = avf[: nlags + 1] / avf[0]
@@ -1204,7 +1222,10 @@ def _pacf_yw_levinson(x, nlags, adjusted):
     # Invalid values produce non-finite autocovariances, and yule_walker
     # then repeats the calculation and its warnings
     with np.errstate(all="ignore"):
-        x = x - x.mean()
+        if x.size > 0 and np.ptp(x) == 0:
+            x = np.zeros_like(x)
+        else:
+            x = x - x.mean()
         acov = np.empty(nlags + 1)
         acov[0] = (x**2).sum() / nobs
         for k in range(1, nlags + 1):
@@ -1349,7 +1370,10 @@ def pacf_burg(
     """
     x = array_like(x, "x")
     if demean:
-        x = x - x.mean()
+        if x.size > 0 and np.ptp(x) == 0:
+            x = np.zeros_like(x)
+        else:
+            x = x - x.mean()
     nobs = x.shape[0]
     p = nlags if nlags is not None else min(int(10 * np.log10(nobs)), nobs - 1)
     p = max(p, 1)
@@ -1514,12 +1538,18 @@ def pacf_ols(
     if nlags > nobs // 2:
         raise ValueError(f"nlags must be smaller than nobs // 2 ({nobs // 2})")
     if not efficient:
-        x = x - np.mean(x)
+        if x.size > 0 and x.max() == x.min():
+            x = np.zeros_like(x)
+        else:
+            x = x - np.mean(x)
     pacf = None
     if (x.ndim == 1 or x.shape[1:] == (1,)) and 0 < nlags:
         xd = x.reshape(-1)
         if efficient:
-            xd = xd - xd.mean()
+            if xd.size > 0 and xd.max() == xd.min():
+                xd = np.zeros_like(xd)
+            else:
+                xd = xd - xd.mean()
         pacf = _pacf_ols_qr(xd, nlags, efficient)
     if pacf is not None:
         if adjusted:
@@ -1912,13 +1942,26 @@ def ccf(
                 f"({len(x)}), got {nlags}"
             )
 
-    cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
-    ret = cvf / (np.std(x) * np.std(y))
-    ret = ret[:nlags]
-
     confint = None
     if alpha is not None and not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
+    is_constant = (x.size > 0 and x.max() == x.min()) or (
+        y.size > 0 and y.max() == y.min()
+    )
+    denom = np.std(x) * np.std(y)
+    if is_constant or denom == 0:
+        n_ret = nlags if nlags is not None else len(x)
+        ret = np.full(n_ret, np.nan)
+        if alpha is not None:
+            confint = np.full((n_ret, 2), np.nan)
+        if result_object or alpha is not None:
+            return CcfResult(ret, confint)
+        return ret
+
+    cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
+    ret = cvf / denom
+    ret = ret[:nlags]
 
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(len(x))
@@ -4405,6 +4448,8 @@ class ZivotAndrewsUnitRoot:
            Journal of Business & Economic Studies, 10: 251-270.
         """
         x = array_like(x, "x", dtype=np.double, ndim=1)
+        if x.size > 0 and x.max() == x.min():
+            raise ValueError("Invalid input, x is constant")
         trim = float_like(trim, "trim")
         maxlag = int_like(maxlag, "maxlag", optional=True)
         regression = string_like(regression, "regression", options=("c", "t", "ct"))
