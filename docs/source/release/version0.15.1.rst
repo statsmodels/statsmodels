@@ -412,6 +412,8 @@ Mixed models and imputation
 - ``MixedLM.fit_regularized`` failed for models with pandas data, for example
   from a formula: ``summary`` raised a ``KeyError`` and, with pandas 3,
   ``fit_regularized`` itself failed. :issue:`8902`, :pr:`10465`
+- ``MixedLMResults.bse_re`` raised a ``ValueError`` for models with variance
+  components and pandas data, for example from a formula. :pr:`10702`
 - ``MICE.combine`` failed for results of models that do not have a
   ``_results`` attribute, for example those of ``PHReg``. :issue:`9136`,
   :pr:`10479`, :pr:`10557`
@@ -425,6 +427,15 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
+- The ARIMA GLS estimator now uses the complete AR and MA lag polynomials
+  when whitening the regression data. Seasonal terms were previously
+  omitted, and nonconsecutive lags were treated as consecutive, producing
+  incorrect regression coefficient estimates. This affects
+  ``statsmodels.tsa.arima.estimators.gls.gls`` and ``ARIMA.fit`` for a model
+  with ``exog`` or a trend that is estimated with a ``method`` other than
+  ``"statespace"``, or with ``method="statespace"`` and ``gls=True``. The
+  estimates of such models with seasonal terms or nonconsecutive lags change.
+  :pr:`10713`
 - ``ARDL.predict`` with a ``start`` after the first out-of-sample observation
   returned wrong forecasts for a model with ``exog``, ``fixed`` or seasonal
   terms, and raised an ``IndexError`` if ``dynamic`` was used. The forecasts
@@ -511,6 +522,29 @@ Time series analysis
 - ``ExponentialSmoothing`` accepts ``use_boxcox="log"`` in the constructor.
   The value was documented but raised a ``TypeError``. :issue:`9135`,
   :pr:`10361`
+- ``ETSModel`` with ``initialization_method="estimated"`` (the default) and a
+  seasonal component estimates ``seasonal_periods - 1`` initial seasonal
+  states and computes the last one so that the initial seasonals sum to 0
+  (additive seasonality) or to ``seasonal_periods`` (multiplicative
+  seasonality), as R's ``forecast::ets`` does. Before, the last initial
+  seasonal was fixed to 0 or 1 and the heuristic start values were shifted or
+  divided by it. With multiplicative seasonality and a small last heuristic
+  seasonal this moved the start far from the heuristic initial states, and the
+  fit ended in a much worse optimum than ``initialization_method="heuristic"``
+  with negative forecasts for a positive series. ``start_params`` also changed
+  the ``initial_seasonal`` attribute of the model in place. The results of
+  seasonal fits with estimated initial states change: the optimum, the
+  ``initial_level`` and the initial seasonals. For example, the damped
+  additive model of the ``austourists`` data in the ETS example notebook has
+  an initial level of 24.23 instead of 29.45 (R: 24.01). ``aic``, ``aicc``
+  and ``bic`` of a given fit are computed as before, because ``df_model``
+  still counts all initial seasonals. The covariance of the parameters is
+  computed for the free initial seasonals and mapped to the computed one.
+  Before, the Hessian of all initial states was singular, so the standard
+  errors of the initial level and the initial seasonals were ``nan`` or
+  arbitrarily large, for example in the summary of the notebook example. If
+  ``initial_seasonal.<m-1>`` is fixed or bounded, all initial seasonals are
+  free parameters, as before. :issue:`8551`, :pr:`10710`
 - ``MSTL.fit`` consumed the ``inner_iter`` and ``outer_iter`` entries of
   ``stl_kwargs``, so that a second call of ``fit`` used different settings.
   :pr:`10292`
@@ -885,6 +919,9 @@ Documentation
   say that two of ``start``, ``end`` and ``periods`` must be given, and that
   the default impact date is the last observation of the previous dataset.
   :issue:`10692`, :pr:`10693`
+- Clarify how the ARIMA GLS estimator handles constants, deterministic
+  regressors, and trends in integrated models. Numerical behavior is
+  unchanged. :issue:`6159`, :pr:`10711`
 
 Stricter Input Validation
 =========================

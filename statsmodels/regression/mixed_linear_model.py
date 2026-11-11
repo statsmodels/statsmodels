@@ -834,6 +834,7 @@ class MixedLM(base.LikelihoodModel):
             self.data.param_names = self.exog_names + names
             self.data.exog_re_names = names
             self.data.exog_re_names_full = names
+            self.data.variance_param_names = names
 
         elif exog_re is not None:
             # Process exog_re the same way that exog is handled
@@ -857,12 +858,16 @@ class MixedLM(base.LikelihoodModel):
         if not self.data._param_names:
             # HACK: could have been set in from_formula already
             # needs refactor
-            param_names, exog_re_names, exog_re_names_full = self._make_param_names(
-                exog_re
-            )
+            (
+                param_names,
+                exog_re_names,
+                exog_re_names_full,
+                variance_param_names,
+            ) = self._make_param_names(exog_re)
             self.data.param_names = param_names
             self.data.exog_re_names = exog_re_names
             self.data.exog_re_names_full = exog_re_names_full
+            self.data.variance_param_names = variance_param_names
 
         self.k_params = self.k_fe + self.k_re2
 
@@ -932,9 +937,12 @@ class MixedLM(base.LikelihoodModel):
 
     def _make_param_names(self, exog_re):
         """
-        Return the full parameter names list, just the exogenous random
-        effects variables, and the exogenous random effects variables with
-        the interaction terms
+        Return the parameter names of the model and their subsets
+
+        The names are the full list of parameter names, the names of the
+        random effects covariates, the names of the random effects
+        covariance parameters, and the names of the covariance parameters
+        followed by the variance components.
 
         Parameters
         ----------
@@ -944,33 +952,38 @@ class MixedLM(base.LikelihoodModel):
 
         Returns
         -------
-        param_names : list[str]
+        param_names : list of str
             The full list of parameter names (fixed effects, random
             effects covariance terms, and variance components).
-        exog_re_names : list[str]
+        exog_re_names : list of str
             The names of the random effects covariates.
-        param_names_re : list[str]
+        cov_re_names : list of str
             The names of the random effects covariance parameters
             (excluding fixed effects and variance components).
+        variance_param_names : list of str
+            `cov_re_names` followed by the variance component names.
         """
         exog_names = list(self.exog_names)
         exog_re_names = _get_exog_re_names(self, exog_re)
-        param_names = []
+        cov_re_names = []
 
-        jj = self.k_fe
         for i in range(len(exog_re_names)):
             for j in range(i + 1):
                 if i == j:
-                    param_names.append(exog_re_names[i] + " Var")
+                    cov_re_names.append(exog_re_names[i] + " Var")
                 else:
-                    param_names.append(
+                    cov_re_names.append(
                         exog_re_names[j] + " x " + exog_re_names[i] + " Cov"
                     )
-                jj += 1
 
-        vc_names = [x + " Var" for x in self.exog_vc.names]
+        variance_names = [x + " Var" for x in self.exog_vc.names]
 
-        return exog_names + param_names + vc_names, exog_re_names, param_names
+        return (
+            exog_names + cov_re_names + variance_names,
+            exog_re_names,
+            cov_re_names,
+            cov_re_names + variance_names,
+        )
 
     @classmethod
     def from_formula(
@@ -1178,13 +1191,17 @@ class MixedLM(base.LikelihoodModel):
         mod = super().from_formula(formula, data, *args, **kwargs)
 
         # expand re names to account for pairs of RE
-        param_names, exog_re_names, exog_re_names_full = mod._make_param_names(
-            exog_re_names
-        )
+        (
+            param_names,
+            exog_re_names,
+            exog_re_names_full,
+            variance_param_names,
+        ) = mod._make_param_names(exog_re_names)
 
         mod.data.param_names = param_names
         mod.data.exog_re_names = exog_re_names
         mod.data.exog_re_names_full = exog_re_names_full
+        mod.data.variance_param_names = variance_param_names
 
         if vc_formula is not None:
             mod.data.vcomp_names = mod.exog_vc.names
@@ -3320,7 +3337,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
 
 class MixedLMResultsWrapper(base.LikelihoodResultsWrapper):
     _attrs = {
-        "bse_re": ("generic_columns", "exog_re_names_full"),
+        "bse_re": ("generic_columns", "variance_param_names"),
         "fe_params": ("generic_columns", "xnames"),
         "bse_fe": ("generic_columns", "xnames"),
         "cov_re": ("generic_columns_2d", "exog_re_names"),

@@ -1,9 +1,194 @@
+from contextlib import nullcontext
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pytest
+from scipy.linalg import toeplitz
+from scipy.signal import lfilter
 
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake, oshorts
 from statsmodels.tsa.arima.estimators.gls import gls
+from statsmodels.tsa.arima_process import arma_acovf
+
+
+@pytest.mark.parametrize("arma_estimator", ["innovations_mle", "statespace"])
+@pytest.mark.parametrize("component", ["ar", "ma"])
+@pytest.mark.parametrize("lag, seasonal", [(1, False), (2, False), (4, True)])
+def test_gls_whitening_lags(arma_estimator, component, lag, seasonal):
+    # Compare one feasible GLS step with the closed-form matrix estimator.
+    # For an AR process with just lag s, gamma(k*s) = phi**k / (1-phi**2)
+    # and all other autocovariances are zero (unit innovation variance).
+    # For an MA process with just lag s, gamma(0) = 1 + theta**2,
+    # gamma(s) = theta, and all other autocovariances are zero.
+    rng = np.random.default_rng(24680)
+    nobs = 80
+    innovations = rng.standard_normal(nobs + 200)
+    errors = innovations.copy()
+    for t in range(lag, len(errors)):
+        previous = errors if component == "ar" else innovations
+        errors[t] += 0.6 * previous[t - lag]
+    exog = np.column_stack([np.ones(nobs), rng.standard_normal(nobs)])
+    endog = exog @ np.array([2.0, 0.7]) + errors[-nobs:]
+
+    order = (0, 0, 0)
+    seasonal_order = (0, 0, 0, 0)
+    if seasonal:
+        seasonal_order = (1, 0, 0, lag) if component == "ar" else (0, 0, 1, lag)
+    else:
+        order = ([lag], 0, 0) if component == "ar" else (0, 0, [lag])
+
+    result = gls(
+        endog,
+        exog,
+        order=order,
+        seasonal_order=seasonal_order,
+        arma_estimator=arma_estimator,
+        n_iter=1,
+    )
+    prefix = "seasonal_" if seasonal else ""
+    coefficient = getattr(result.parameters, f"{prefix}{component}_params")[0]
+    autocovariances = np.zeros(nobs)
+    if component == "ar":
+        autocovariances[::lag] = (
+            coefficient ** np.arange(len(autocovariances[::lag]))
+            / (1 - coefficient**2)
+        )
+    else:
+        autocovariances[0] = 1 + coefficient**2
+        autocovariances[lag] = coefficient
+    covariance = toeplitz(autocovariances)
+    precision_exog = np.linalg.solve(covariance, exog)
+    precision_endog = np.linalg.solve(covariance, endog)
+    expected = np.linalg.solve(exog.T @ precision_exog, exog.T @ precision_endog)
+
+    assert_allclose(result.parameters.exog_params, expected, rtol=1e-10, atol=1e-10)
+
+
+def _lag_polynomial(lags, coefficients, period, sign):
+    # Coefficients of 1 + sign * sum_j coefficients[j] * L**(period * lags[j]),
+    # where sign is -1 for an AR and +1 for an MA polynomial. `lags` is an int
+    # (all lags up to it) or a list of lags, as in the `order` argument.
+    lags = list(range(1, lags + 1)) if isinstance(lags, int) else list(lags)
+    if len(lags) == 0:
+        return np.ones(1)
+    polynomial = np.zeros(period * max(lags) + 1)
+    polynomial[0] = 1.0
+    polynomial[period * np.array(lags)] = sign * np.asarray(coefficients)
+    return polynomial
+
+
+def _difference(x, k_diff, k_seasonal_diff, period):
+    for _ in range(k_diff):
+        x = x[1:] - x[:-1]
+    for _ in range(k_seasonal_diff):
+        x = x[period:] - x[:-period]
+    return x
+
+
+_PRODUCT_SPECS = [
+    # Non-seasonal and seasonal factors in the same polynomial
+    ((1, 0, 0), (1, 0, 0, 4)),
+    ((0, 0, 1), (0, 0, 1, 4)),
+    ((1, 0, 1), (1, 0, 1, 4)),
+    (([2], 0, 0), (1, 0, 0, 3)),
+    # Differencing: D=1 alone, D=1 with an AR factor, and d=1
+    ((0, 0, 0), (0, 1, 1, 4)),
+    ((1, 0, 0), (0, 1, 1, 4)),
+    ((1, 1, 0), (0, 0, 1, 4)),
+]
+
+
+@pytest.mark.parametrize(
+    "order, seasonal_order, arma_estimator",
+    [
+        pytest.param(
+            order,
+            seasonal_order,
+            arma_estimator,
+            id=f"{arma_estimator}-{order}x{seasonal_order}",
+        )
+        for arma_estimator in ["innovations_mle", "statespace"]
+        for order, seasonal_order in _PRODUCT_SPECS
+    ]
+    # Hannan-Rissanen does not support seasonal terms; sparse lags only
+    + [
+        pytest.param(
+            ([2], 0, [2]),
+            (0, 0, 0, 0),
+            "hannan_rissanen",
+            id="hannan_rissanen-([2], 0, [2])x(0, 0, 0, 0)",
+        )
+    ],
+)
+def test_gls_whitening_polynomial_products(order, seasonal_order, arma_estimator):
+    # The reference does not use the innovations algorithm of the estimator.
+    # The data and the regressors are differenced here (differencing is not
+    # part of the whitening polynomials), the AR and MA polynomials of the
+    # differenced error process are the products (np.convolve) of the
+    # non-seasonal and the seasonal factors built from the parameters that
+    # the estimator found, the autocovariances come from arma_acovf, and the
+    # GLS normal equations are solved with np.linalg.solve.
+    rng = np.random.default_rng(13579)
+    nobs = 80
+    k_diff, k_seasonal_diff, period = order[1], seasonal_order[1], seasonal_order[3]
+
+    # Simulate regression errors with all ARMA coefficients nonzero (0.5 for
+    # AR, 0.4 for MA), integrated if there is differencing
+    ar = np.convolve(
+        _lag_polynomial(order[0], 0.5, 1, -1),
+        _lag_polynomial(seasonal_order[0], 0.5, period, -1),
+    )
+    ma = np.convolve(
+        _lag_polynomial(order[2], 0.4, 1, 1),
+        _lag_polynomial(seasonal_order[2], 0.4, period, 1),
+    )
+    integration = np.ones(1)
+    for _ in range(k_diff):
+        integration = np.convolve(integration, [1.0, -1.0])
+    for _ in range(k_seasonal_diff):
+        seasonal_difference = np.zeros(period + 1)
+        seasonal_difference[[0, -1]] = [1.0, -1.0]
+        integration = np.convolve(integration, seasonal_difference)
+    innovations = rng.standard_normal(nobs + 200)
+    stationary = lfilter(ma, ar, innovations)[200:]
+    errors = lfilter([1.0], integration, stationary)
+    exog = rng.standard_normal((nobs, 2))
+    endog = exog @ np.array([0.7, -0.4]) + errors
+
+    integrated = k_diff + k_seasonal_diff > 0
+    with pytest.warns(SpecificationWarning) if integrated else nullcontext():
+        result = gls(
+            endog,
+            exog,
+            order=order,
+            seasonal_order=seasonal_order,
+            include_constant=False,
+            arma_estimator=arma_estimator,
+            n_iter=1,
+        )
+    params = result.parameters
+    ar_poly = np.convolve(
+        _lag_polynomial(order[0], params.ar_params, 1, -1),
+        _lag_polynomial(seasonal_order[0], params.seasonal_ar_params, period, -1),
+    )
+    ma_poly = np.convolve(
+        _lag_polynomial(order[2], params.ma_params, 1, 1),
+        _lag_polynomial(seasonal_order[2], params.seasonal_ma_params, period, 1),
+    )
+
+    endog_diff = _difference(endog, k_diff, k_seasonal_diff, period)
+    exog_diff = np.column_stack(
+        [_difference(col, k_diff, k_seasonal_diff, period) for col in exog.T]
+    )
+    covariance = toeplitz(arma_acovf(ar_poly, ma_poly, nobs=len(endog_diff)))
+    precision_exog = np.linalg.solve(covariance, exog_diff)
+    precision_endog = np.linalg.solve(covariance, endog_diff)
+    expected = np.linalg.solve(
+        exog_diff.T @ precision_exog, exog_diff.T @ precision_endog
+    )
+
+    assert_allclose(params.exog_params, expected, rtol=1e-8, atol=1e-8)
 
 
 @pytest.mark.low_precision(

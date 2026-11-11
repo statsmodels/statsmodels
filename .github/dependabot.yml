@@ -6,3 +6,10 @@ updates:
     schedule:
       # Check for updates to GitHub Actions every week
       interval: "weekly"
+    groups:
+      # CodeQL refuses to run if the steps of a workflow use different
+      # versions of github/codeql-action. Dependabot treats init, autobuild
+      # and analyze as separate dependencies, so keep their updates in one PR.
+      codeql-action:
+        patterns:
+          - "github/codeql-action/*"
