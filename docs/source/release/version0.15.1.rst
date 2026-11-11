@@ -266,6 +266,24 @@ Bug Fixes
 Regression and linear models
 ----------------------------
 
+- ``OLS.fit`` did not detect an exactly rank-deficient design, for example a
+  duplicated constant, from about 1,000 observations on. The smallest singular
+  value of such a design is a few multiples of the machine precision times the
+  largest, independent of the number of observations, and was above the fixed
+  cutoff. No ``SingularMatrixWarning`` was issued and the parameters were of
+  the order of 1e12. The rank is now the number of singular values above
+  ``max(nobs, k) * eps`` times the largest, the rule of
+  ``numpy.linalg.matrix_rank``. This is used for the rank and for the
+  pseudoinverse in both ``method="pinv"`` and ``method="qr"``. Designs with a
+  condition number above about ``1 / (nobs * eps)`` are now treated as
+  rank-deficient and the minimum-norm solution is returned. :pr:`10714`
+- ``OLS.fit(method="qr")`` computed the covariance of the parameters as
+  ``inv(R'R)``, which squares the condition number of the design, and solved
+  ``R b = Q'y``, which has no solution for a rank-deficient design. It now uses
+  the SVD of ``R``, so the covariance has the accuracy of the default
+  ``method="pinv"`` and a rank-deficient design returns the minimum-norm
+  solution with a ``SingularMatrixWarning``. The ``pinv_wexog`` attribute is
+  computed from the same factorization instead of a second SVD. :pr:`10714`
 - ``OLS.hessian(params, scale=None)``, the Hessian of the profile
   (concentrated) log-likelihood, was missing a factor of 2 in the term that
   involves ``X'X``. The results of ``OLS.fit_regularized`` with
