@@ -143,9 +143,9 @@ def sign_test(samp, mu0=0):
     samp : array_like
         1d array. The sample for which you want to perform the sign test.
     mu0 : float, optional
-        The median under the null hypothesis. mu0 is 0 by default. Setting 
+        The median under the null hypothesis. mu0 is 0 by default. Setting
         it to the sample median is not useful, because M is then always 0
-        and the p-value 1. See Notes for the definition of the sign test. 
+        and the p-value 1. See Notes for the definition of the sign test.
 
     Returns
     -------
