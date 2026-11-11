@@ -266,11 +266,22 @@ class ETSModel(base.StateSpaceMLEModel):
         (multiplicative seasonality), as in R's ``forecast::ets``: the first
         ``seasonal_periods - 1`` initial seasonal states are estimated and
         the last one, ``initial_seasonal.<m-1>``, is computed from them.
+        If ``initial_seasonal.<m-1>`` is fixed or bounded, this does not
+        apply and all initial seasonal states are free parameters.
         For multiplicative seasonality and for additive seasonality with an
         additive or no trend, this only removes a constant that could be
         moved between the initial level and the initial seasonals. For
         additive seasonality with a multiplicative trend, it is a
         restriction of the model.
+
+        The initial level is the level around which the initial seasonal
+        states average 0 (additive seasonality) or 1 (multiplicative
+        seasonality). A fixed ``initial_level``, for example with
+        ``fix_params``, is therefore a restriction of the model: the
+        initial seasonals still add up to 0 or ``seasonal_periods``.
+        Versions before 0.15.1 fixed ``initial_seasonal.<m-1>`` to 0 or 1
+        instead, so a model with a fixed initial level is a different
+        restriction there and gives a different fit.
     initial_level : float, optional
         The initial level component. Only used if initialization is 'known'.
     initial_trend : float, optional
@@ -1024,8 +1035,14 @@ class ETSModel(base.StateSpaceMLEModel):
             also have to be specified. The initial seasonal states are
             normalized to sum to 0 (additive seasonality) or to m
             (multiplicative seasonality) during the fit, so that the last
-            one, :math:`s_{-m}`, is computed from the others and its start
-            value is only used if it is fixed or bounded.
+            one, :math:`s_{-m}`, is computed from the others in every
+            evaluation of the log-likelihood. Its start value is then
+            ignored, and the fit starts from the value that makes the
+            initial seasonals add up to 0 or m. If `initial_seasonal.<m-1>`
+            is bounded, all m initial seasonals are free parameters, and its
+            start value, moved into the bounds, is the starting point. If it
+            is fixed, for example with ``fix_params``, the fixed value is
+            used and the start value is ignored.
         maxiter : int, optional
             The maximum number of iterations to perform.
         full_output : bool, optional
