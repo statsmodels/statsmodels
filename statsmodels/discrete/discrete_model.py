@@ -2566,8 +2566,8 @@ class GeneralizedPoisson(CountModel):
 
         if exposure is None:
             exposure = getattr(self, "exposure", 0)
-        elif exposure != 0:
-            exposure = np.log(exposure)
+        else:
+            exposure = np.log(np.asarray(exposure))
 
         if offset is None:
             offset = getattr(self, "offset", 0)
@@ -2588,9 +2588,7 @@ class GeneralizedPoisson(CountModel):
         elif which == "prob":
             if y_values is None:
                 y_values = np.atleast_2d(np.arange(0, np.max(self.endog) + 1))
-            mu = self.predict(params, exog=exog, exposure=exposure, offset=offset)[
-                :, None
-            ]
+            mu = np.exp(linpred)[:, None]
             return genpoisson_p.pmf(y_values, mu, params[-1], self.parameterization + 1)
         else:
             raise ValueError("keyword 'which' not recognized")
@@ -5006,8 +5004,8 @@ class NegativeBinomialP(CountModel):
 
         if exposure is None:
             exposure = getattr(self, "exposure", 0)
-        elif exposure != 0:
-            exposure = np.log(exposure)
+        else:
+            exposure = np.log(np.asarray(exposure))
 
         if offset is None:
             offset = getattr(self, "offset", 0)
@@ -5029,7 +5027,7 @@ class NegativeBinomialP(CountModel):
             if y_values is None:
                 y_values = np.atleast_2d(np.arange(0, np.max(self.endog) + 1))
 
-            mu = self.predict(params, exog, exposure, offset)
+            mu = np.exp(linpred)
             size, prob = self.convert_params(params, mu)
             return nbinom.pmf(y_values, size[:, None], prob[:, None])
         else:
