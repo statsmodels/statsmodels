@@ -4,8 +4,7 @@ Tests for recursive least squares models
 Author: Chad Fulton
 License: Simplified-BSD
 """
-
-import os
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -15,19 +14,21 @@ from scipy.stats import norm
 
 from statsmodels.datasets import macrodata
 from statsmodels.genmod.api import GLM
+from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.stats.diagnostic import recursive_olsresiduals
 from statsmodels.tools import add_constant
 from statsmodels.tools.eval_measures import aic, bic
+from statsmodels.tools.sm_exceptions import ValueWarning
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
-results_R_path = "results" + os.sep + "results_rls_R.csv"
-results_R = pd.read_csv(current_path + os.sep + results_R_path)
+results_R_path = Path("results") / "results_rls_R.csv"
+results_R = pd.read_csv(current_path / results_R_path)
 
-results_stata_path = "results" + os.sep + "results_rls_stata.csv"
-results_stata = pd.read_csv(current_path + os.sep + results_stata_path)
+results_stata_path = Path("results") / "results_rls_stata.csv"
+results_stata = pd.read_csv(current_path / results_stata_path)
 
 dta = macrodata.load_pandas().data
 dta.index = pd.date_range(start="1959-01-01", end="2009-07-01", freq="QS")
@@ -68,7 +69,7 @@ def test_ols():
     assert_allclose(res.params, res_ols.params)
     assert_allclose(res.bse, res_ols.bse)
     # Note: scale here is computed according to Harvey, 1989, 4.2.5, and is
-    # the called the ML estimator and sometimes (e.g. later in section 5)
+    # the called the ML estimator and sometimes (e.g., later in section 5)
     # denoted \tilde \sigma_*^2
     assert_allclose(res.filter_results.obs_cov[0, 0], res_ols.scale)
 
@@ -83,7 +84,7 @@ def test_ols():
 
     # Given the estimate of scale as `sum(v_t^2 / f_t) / (T - d)` (see
     # Harvey, 1989, 4.2.5 on p. 183), then llf_recursive is equivalent to the
-    # full OLS loglikelihood (i.e. without the scale concentrated out).
+    # full OLS loglikelihood (i.e., without the scale concentrated out).
     desired = mod_ols.loglike(res_ols.params, scale=res_ols.scale)
     assert_allclose(res.llf_recursive, desired)
     # Alternatively, we can construct the concentrated OLS loglikelihood
@@ -143,7 +144,9 @@ def test_ols():
     assert_allclose(actual_bic, res_ols.bic)
 
 
-@pytest.mark.parametrize("constraints", [None, "m1 + unemp = 1"], ids=["No constraint", "Constrained"])
+@pytest.mark.parametrize(
+    "constraints", [None, "m1 + unemp = 1"], ids=["No constraint", "Constrained"]
+)
 def test_glm(constraints):
     # More comprehensive tests against GLM estimates (this is sort of redundant
     # given `test_ols`, but this is mostly to complement the tests in
@@ -165,7 +168,7 @@ def test_glm(constraints):
     assert_allclose(res.params, res_glm.params)
     assert_allclose(res.bse, res_glm.bse, atol=1e-6)
     # Note: scale here is computed according to Harvey, 1989, 4.2.5, and is
-    # the called the ML estimator and sometimes (e.g. later in section 5)
+    # the called the ML estimator and sometimes (e.g., later in section 5)
     # denoted \tilde \sigma_*^2
     assert_allclose(res.filter_results.obs_cov[0, 0], res_glm.scale)
 
@@ -184,7 +187,7 @@ def test_glm(constraints):
 
     # Given the estimate of scale as `sum(v_t^2 / f_t) / (T - d)` (see
     # Harvey, 1989, 4.2.5 on p. 183), then llf_recursive is equivalent to the
-    # full OLS loglikelihood (i.e. without the scale concentrated out).
+    # full OLS loglikelihood (i.e., without the scale concentrated out).
     desired = mod_glm.loglike(res_glm.params, scale=res_glm.scale)
     assert_allclose(res.llf_recursive, desired)
     # Alternatively, we can construct the concentrated OLS loglikelihood
@@ -281,17 +284,13 @@ def test_estimates():
     assert_allclose(res.params, res_ols.params)
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 def test_plots(close_figures):
     import matplotlib.pyplot as plt
+    from pandas.plotting import register_matplotlib_converters
 
-    # Basic plot
-    try:
-        from pandas.plotting import register_matplotlib_converters
-
-        register_matplotlib_converters()
-    except ImportError:
-        pass
+    register_matplotlib_converters()
 
     exog = add_constant(dta[["m1", "pop"]])
     mod = RecursiveLS(endog, exog)
@@ -365,10 +364,11 @@ def test_resid_recursive():
     assert_allclose(res.resid_recursive[2:], desired_resid_recursive)
 
 
-def test_recursive_olsresiduals_bad_input(reset_randomstate):
+def test_recursive_olsresiduals_bad_input():
     from statsmodels.tsa.arima.model import ARIMA
 
-    e = np.random.standard_normal(250)
+    rs = np.random.RandomState(9889821)
+    e = rs.standard_normal(250)
     y = e.copy()
     for i in range(1, y.shape[0]):
         y[i] += 0.1 + 0.8 * y[i - 1] + e[i]
@@ -547,3 +547,198 @@ def test_fix_params():
         ValueError, match=("Linear constraints on coefficients should be given")
     ):
         mod.fit_constrained({"const": 0.1})
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    mod = RecursiveLS(endog, exog)
+    res = mod.fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_constraints_numpy_endog():
+    # The numpy branch of the constraint setup used to write the constraint
+    # columns into the original endog array without ever appending them:
+    # a 1-d endog crashed with IndexError, and a (nobs, 1) endog silently
+    # dropped the constraints entirely (the constraint rows never entered the
+    # state space representation).
+    endog = np.asarray(dta["infl"])
+    exog = np.asarray(add_constant(dta[["m1", "unemp"]]))
+
+    mod = RecursiveLS(endog, exog, constraints="x1 + x2 = 1")
+    assert mod.ssm.k_endog == 2  # infl + one column for the constraint
+
+    res = mod.fit()
+    # The constraint is imposed and the estimates match the pandas-input
+    # results from test_constraints_stata (params: const, m1, unemp)
+    desired = [-0.7001083844336, -0.0018477514060, 1.0018477514060]
+    assert_allclose(res.params, desired)
+
+
+def _forecast_data():
+    rng = np.random.default_rng(9708)
+    nobs = 50
+    x = add_constant(rng.standard_normal((nobs + 3, 2)))
+    y = x @ [1.0, 2.0, 3.0] + rng.standard_normal(nobs + 3)
+    return y[:nobs], x[:nobs], x[nobs:]
+
+
+def test_forecast_exog():
+    # GH 9708: out-of-sample predictions use the exog of the new periods
+    y, x, x_new = _forecast_data()
+    res = RecursiveLS(y, x).fit()
+    # the forecast of the full sample estimates is the OLS prediction and
+    # its variance is the variance of a new observation
+    res_ols = OLS(y, x).fit()
+    pred_ols = res_ols.get_prediction(x_new).summary_frame()
+    se_obs = np.sqrt(pred_ols["mean_se"] ** 2 + res_ols.scale)
+
+    pred = res.get_forecast(3, exog=x_new)
+    assert_allclose(pred.predicted_mean, pred_ols["mean"])
+    assert_allclose(np.sqrt(pred.var_pred_mean), se_obs)
+    assert_allclose(res.forecast(3, exog=x_new), pred_ols["mean"])
+    assert_allclose(
+        res.predict(start=48, end=52, exog=x_new),
+        np.r_[res.fittedvalues[48:], pred_ols["mean"]],
+    )
+    # a design matrix for the new periods can still be given directly
+    design = x_new.T[None, :, :]
+    assert_allclose(res.forecast(3, design=design), pred_ols["mean"])
+
+
+def test_forecast_exog_pandas():
+    y, x, x_new = _forecast_data()
+    index = pd.date_range("2000-01-01", periods=y.shape[0], freq="MS")
+    columns = ["const", "x1", "x2"]
+    endog = pd.Series(y, index=index, name="y")
+    exog = pd.DataFrame(x, index=index, columns=columns)
+    res = RecursiveLS(endog, exog).fit()
+    forecast = res.forecast(3, exog=pd.DataFrame(x_new, columns=columns))
+    expected_index = pd.date_range("2004-03-01", periods=3, freq="MS")
+    pd.testing.assert_index_equal(forecast.index, expected_index)
+    assert_allclose(forecast, RecursiveLS(y, x).fit().forecast(3, exog=x_new))
+
+
+def test_forecast_exog_invalid():
+    y, x, x_new = _forecast_data()
+    res = RecursiveLS(y, x).fit()
+    with pytest.raises(ValueError, match="require additional exogenous"):
+        res.forecast(3)
+    with pytest.raises(ValueError, match="not of the appropriate shape"):
+        res.forecast(3, exog=x_new[:2])
+    with pytest.warns(ValueWarning, match="`exog` argument ignored"):
+        pred = res.get_prediction(end=49, exog=x_new)
+    assert_allclose(pred.predicted_mean, res.fittedvalues)
+
+
+# Reference values from R 4.6.1 (package stats) for the data of
+# _forecast_data written to a csv file with columns y, x1, x2 (the 50 estimation
+# rows and the 3 rows of the new periods; x1 and x2 are the last two columns of
+# x, the first column of x is the constant):
+#   d <- read.csv("data.csv"); dd <- d[1:50, ]; nd <- d[51:53, ]
+#   fit <- lm(y ~ x1 + x2, data=dd)   # "y ~ 0 + x1 + x2", "y ~ 0 + x1"
+#   p <- predict(fit, newdata=nd, se.fit=TRUE)
+#   format(p$fit, digits=15)
+#   format(sqrt(p$se.fit^2 + summary(fit)$sigma^2), digits=15)
+# The second line is the standard deviation of a new observation. The Kalman
+# filter uses an approximate diffuse initialization, so the agreement is about
+# 1e-8.
+forecast_r = {
+    "const": {
+        "cols": [0, 1, 2],
+        "mean": [-0.418486122810356, 0.945663173385399, 4.837328570584427],
+        "sd": [0.889853423123584, 0.891741418421635, 0.909358765089120],
+    },
+    "noconst": {
+        "cols": [1, 2],
+        "mean": [-1.3849205127979054, -0.0513863794727698, 3.7159859203344836],
+        "sd": [1.34530632407474, 1.34741172717069, 1.37110212417822],
+    },
+    "one": {
+        "cols": [1],
+        "mean": [-1.60211517569945, 1.39783626407548, 3.86328128403707],
+        "sd": [3.17169632291307, 3.16864485013499, 3.23261716863293],
+    },
+}
+
+
+@pytest.mark.parametrize("case", ["const", "noconst", "one"])
+def test_forecast_exog_r(case):
+    y, x, x_new = _forecast_data()
+    ref = forecast_r[case]
+    cols = ref["cols"]
+    res = RecursiveLS(y, x[:, cols]).fit()
+    pred = res.get_forecast(3, exog=x_new[:, cols])
+    assert_allclose(pred.predicted_mean, ref["mean"], rtol=1e-6)
+    assert_allclose(np.sqrt(pred.var_pred_mean), ref["sd"], rtol=1e-6)
+    if len(cols) == 1:
+        # a 1-d exog is a column of one regressor
+        assert_allclose(res.forecast(3, exog=x_new[:, 1]), ref["mean"])
+        res_1d = RecursiveLS(y, x[:, 1]).fit()
+        assert_allclose(res_1d.forecast(3, exog=x_new[:, 1]), ref["mean"])
+
+
+def test_forecast_exog_dynamic():
+    y, x, x_new = _forecast_data()
+    x_all = np.vstack([x, x_new])
+    res = RecursiveLS(y, x).fit()
+    # Dynamic prediction from observation 45: the coefficients are then the
+    # OLS estimates of the first 45 observations
+    pred = res.predict(start=40, end=52, dynamic=5, exog=x_new)
+    params = OLS(y[:45], x[:45]).fit().params
+    assert_allclose(pred[:5], res.fittedvalues[40:45])
+    assert_allclose(pred[5:], x_all[45:] @ params)
+
+
+def test_forecast_exog_start_after_sample():
+    y, x, x_new = _forecast_data()
+    res = RecursiveLS(y, x).fit()
+    # exog has to cover all periods from the end of the sample
+    pred = res.predict(start=51, end=52, exog=x_new)
+    assert_allclose(pred, res.forecast(3, exog=x_new)[1:])
+    assert_allclose(pred, forecast_r["const"]["mean"][1:], rtol=1e-6)
+
+
+def test_forecast_exog_transposed():
+    y, x, x_new = _forecast_data()
+    res = RecursiveLS(y, x).fit()
+    # The layout of `design` (k_exog x steps) is not accepted for `exog`
+    with pytest.raises(ValueError, match="transpose of `design`"):
+        res.forecast(2, exog=x_new[:2].T)
+    with pytest.raises(ValueError, match="transpose of `design`"):
+        res.forecast(2, exog=pd.DataFrame(x_new[:2].T))
+    # with one regressor the orientation does not matter
+    res_1 = RecursiveLS(y, x[:, 1]).fit()
+    assert_allclose(
+        res_1.forecast(3, exog=x_new[:, 1][None, :]),
+        res_1.forecast(3, exog=x_new[:, 1]),
+    )
+
+
+def test_forecast_exog_design_precedence():
+    y, x, x_new = _forecast_data()
+    res = RecursiveLS(y, x).fit()
+    design = x_new.T[None, :, :]
+    # exog is ignored without validation if a design matrix is given
+    forecast = res.forecast(3, design=design, exog=np.ones((7, 7)))
+    assert_allclose(forecast, res.forecast(3, exog=x_new))
+
+
+def test_forecast_exog_formula():
+    y, x, x_new = _forecast_data()
+    data = pd.DataFrame({"y": y, "x1": x[:, 1], "x2": x[:, 2]})
+    res = RecursiveLS.from_formula("y ~ x1 + x2", data).fit()
+    # no formula is evaluated for the new periods, so exog has to contain
+    # the intercept column
+    new = pd.DataFrame(x_new, columns=res.model.exog_names)
+    assert res.model.exog_names[0] == "Intercept"
+    assert_allclose(
+        res.forecast(3, exog=new),
+        forecast_r["const"]["mean"],
+        rtol=1e-6,
+    )
+    with pytest.raises(ValueError, match="not of the appropriate shape"):
+        res.forecast(3, exog=new[["x1", "x2"]])

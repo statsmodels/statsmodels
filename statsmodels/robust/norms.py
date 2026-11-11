@@ -1,28 +1,173 @@
 import numpy as np
 
+from statsmodels.tools.validation import array_like, float_like, int_like
+
 from . import _tables
 
 
 def _cabs(x):
-    """absolute value function that changes complex sign based on real sign
+    """
+    Absolute value function that changes complex sign based on real sign
 
     This could be useful for complex step derivatives of functions that
     need abs. Not yet used.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array, real or complex.
+
+    Returns
+    -------
+    ndarray
+        The absolute value of `x`, with the sign of the real part of `x`
+        applied for complex input.
     """
     sign = (x.real >= 0) * 2 - 1
     return sign * x
 
 
+def _check_positive(value, name, scalar=False):
+    """
+    Check that a tuning constant is a positive real number
+
+    Array valued tuning constants are allowed unless `scalar` is True, and
+    every element has to be positive. ``nan`` is rejected, ``inf`` is
+    allowed.
+
+    Parameters
+    ----------
+    value : float or array_like
+        The tuning constant to check. It is not converted or modified.
+    name : str
+        Name of the constant, used in the error messages.
+    scalar : bool, optional
+        If True, then only a scalar is accepted.
+
+    Raises
+    ------
+    TypeError
+        If `value` is not a real number, or not an array of real numbers
+        (for example None, a string, a bool or a complex number), or if an
+        array is given and `scalar` is True.
+    ValueError
+        If `value` is not positive, or is nan, or is an empty array. The
+        message names the offending elements of an array.
+    """
+    if scalar or not (isinstance(value, np.ndarray) or np.ndim(value) > 0):
+        if not float_like(value, name, strict=True) > 0:
+            raise ValueError(f"{name} must be positive, got {value}")
+        return
+
+    arr = array_like(value, name, dtype=None)
+    if arr.dtype.kind not in "iuf":
+        raise TypeError(
+            f"{name} must be array_like of real numbers, got dtype {arr.dtype}"
+        )
+    if arr.size == 0:
+        raise ValueError(f"{name} must not be empty")
+    bad = ~(arr > 0)
+    if bad.any():
+        idx = np.argwhere(bad)
+        shown = ", ".join(
+            f"{name}[{', '.join(str(i) for i in ix)}]={arr[tuple(ix)]}"
+            for ix in idx[:5]
+        )
+        more = ", ..." if len(idx) > 5 else ""
+        raise ValueError(
+            f"{name} must be positive, got non-positive or nan elements: "
+            f"{shown}{more}"
+        )
+
+
+def _check_positive_even_int(value, name):
+    """
+    Check that a constant is a positive, even integer
+
+    Parameters
+    ----------
+    value : int
+        The constant to check. It is not converted or modified.
+    name : str
+        Name of the constant, used in the error messages.
+
+    Raises
+    ------
+    TypeError
+        If `value` is not integer valued, for example None, a string, a bool
+        or a non-integer float.
+    ValueError
+        If `value` is not positive or is odd.
+    """
+    k = int_like(value, name)
+    if k <= 0 or k % 2 != 0:
+        raise ValueError(f"{name} must be a positive even integer, got {value}")
+
+
+def _check_unit_interval(value, name):
+    """
+    Check that a scalar is strictly between zero and one
+
+    Parameters
+    ----------
+    value : float
+        The constant to check. It is not converted or modified.
+    name : str
+        Name of the constant, used in the error messages.
+
+    Raises
+    ------
+    TypeError
+        If `value` is not a real scalar, for example None, a string, a bool
+        or a complex number.
+    ValueError
+        If `value` is not in the open interval (0, 1), or is nan.
+    """
+    if not 0 < float_like(value, name, strict=True) < 1:
+        raise ValueError(f"{name} must be between 0 and 1, got {value}")
+
+
+def _check_hampel(a, b, c):
+    """
+    Check the tuning constants of `Hampel`
+
+    The constants have to be scalars with ``0 < a <= b <= c``. Ties are
+    allowed. ``inf`` is allowed.
+
+    Parameters
+    ----------
+    a, b, c : float
+        The tuning constants of :class:`Hampel`. They are not converted or
+        modified.
+
+    Raises
+    ------
+    TypeError
+        If a constant is not a real scalar, for example None, a string, a
+        bool, a complex number or an array.
+    ValueError
+        If the constants are not ordered or not positive, or one is nan.
+    """
+    a_ = float_like(a, "a", strict=True)
+    b_ = float_like(b, "b", strict=True)
+    c_ = float_like(c, "c", strict=True)
+    if not 0 < a_ <= b_ <= c_:
+        raise ValueError(
+            f"tuning constants must satisfy 0 < a <= b <= c, "
+            f"got a={a}, b={b}, c={c}"
+        )
+
+
 class RobustNorm:
     """
-    The parent class for the norms used for robust regression.
+    The parent class for the norms used for robust regression
 
     Lays out the methods expected of the robust norms to be used
     by statsmodels.RLM.
 
     See Also
     --------
-    statsmodels.rlm
+    statsmodels.robust.robust_linear_model.RLM
 
     Notes
     -----
@@ -46,56 +191,106 @@ class RobustNorm:
 
     def rho(self, z):
         """
-        The robust criterion estimator function.
+        The robust criterion estimator function
 
         Abstract method:
 
         -2 loglike used in M-estimator
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the robust criterion function.
         """
         raise NotImplementedError
 
     def psi(self, z):
         """
-        Derivative of rho.  Sometimes referred to as the influence function.
+        Derivative of rho.  Sometimes referred to as the influence function
 
         Abstract method:
 
         psi = rho'
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the psi function.
         """
         raise NotImplementedError
 
     def weights(self, z):
         """
-        Returns the value of psi(z) / z
+        Return the value of psi(z) / z
 
         Abstract method:
 
         psi(z) / z
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the weighting function.
         """
         raise NotImplementedError
 
     def psi_deriv(self, z):
         """
-        Derivative of psi.  Used to obtain robust covariance matrix.
+        Derivative of psi.  Used to obtain robust covariance matrix
 
-        See statsmodels.rlm for more information.
+        See statsmodels.robust.robust_linear_model.RLM for more information.
 
         Abstract method:
 
         psi_derive = psi'
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the derivative of the psi function.
         """
         raise NotImplementedError
 
     def __call__(self, z):
         """
-        Returns the value of estimator rho applied to an input
+        Return the value of estimator rho applied to an input
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the robust criterion function.
         """
         return self.rho(z)
 
 
 class LeastSquares(RobustNorm):
     """
-    Least squares rho for M-estimation and its derived functions.
+    Least squares rho for M-estimation and its derived functions
 
     See Also
     --------
@@ -110,11 +305,7 @@ class LeastSquares(RobustNorm):
 
     def rho(self, z):
         r"""
-        The robust criterion function for the least squares estimator.
-
-        .. math::
-
-            \rho(z) = \frac{1}{2} z^2
+        The robust criterion function for the least squares estimator
 
         Parameters
         ----------
@@ -125,19 +316,19 @@ class LeastSquares(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
-        """
 
+            .. math::
+
+                \rho(z) = \frac{z^2}{2}
+        """
+        z = np.asarray(z)
         return z**2 * 0.5
 
     def psi(self, z):
         r"""
-        The psi function for the least squares estimator.
+        The psi function for the least squares estimator
 
         The analytic derivative of rho.
-
-        .. math::
-
-            \psi(z) = z
 
         Parameters
         ----------
@@ -148,19 +339,19 @@ class LeastSquares(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = z
         """
 
         return np.asarray(z)
 
     def weights(self, z):
         r"""
-        The least squares estimator weighting function for the IRLS algorithm.
+        The least squares estimator weighting function for the IRLS algorithm
 
         The psi function scaled by the input z.
-
-        .. math::
-
-            w(z) = 1
 
         Parameters
         ----------
@@ -171,6 +362,10 @@ class LeastSquares(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                w(z) = 1
         """
 
         z = np.asarray(z)
@@ -178,11 +373,7 @@ class LeastSquares(RobustNorm):
 
     def psi_deriv(self, z):
         r"""
-        The derivative of the least squares psi function.
-
-        .. math::
-
-            \psi'(z) = 1
+        The derivative of the least squares psi function
 
         Parameters
         ----------
@@ -194,6 +385,10 @@ class LeastSquares(RobustNorm):
         psi_deriv : ndarray
             The value of the derivative of the psi function.
 
+            .. math::
+
+                \psi'(z) = 1
+
         Notes
         -----
         Used to estimate the robust covariance matrix.
@@ -204,31 +399,69 @@ class LeastSquares(RobustNorm):
 
 class HuberT(RobustNorm):
     """
-    Huber's T for M estimation.
+    Huber's T for M estimation
 
     Parameters
     ----------
-    t : float, optional
-        The tuning constant for Huber's t function. The default value is
-        1.345.
+    t : float or array_like, optional
+        The tuning constant for Huber's t function. It has to be positive.
+        An array is used element-wise, broadcast with the argument of the
+        methods. The default value is 1.345.
+
+    Raises
+    ------
+    TypeError
+        If `t` is not a real number or an array of real numbers.
+    ValueError
+        If `t` or any element of `t` is not positive, or is nan.
 
     See Also
     --------
     statsmodels.robust.norms.RobustNorm
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The tuning constant is validated. Zero, negative and nan values raise
+       a ``ValueError`` instead of creating a degenerate norm.
+
+    The tuning constant is validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    ``norm.t = value``, is not validated.
     """
 
     continuous = 1
     redescending = "not"
 
     def __init__(self, t=1.345):
+        _check_positive(t, "t")
         self.t = t
 
     def _set_tuning_param(self, c, inplace=False):
-        """Set and change the tuning parameter of the Norm.
+        """
+        Set and change the tuning parameter of the Norm
 
-        Warning: this needs to wipe cached attributes that depend on the param.
+        Parameters
+        ----------
+        c : float
+            The new value for the tuning parameter `t`.
+        inplace : bool, optional
+            If True, modify this instance in place and return it. If
+            False, return a new instance with the new tuning parameter.
+            The default is False.
+
+        Returns
+        -------
+        RobustNorm
+            The norm instance with the new tuning parameter.
+
+        Warnings
+        --------
+        This needs to wipe cached attributes that depend on the parameter.
         """
         if inplace:
+            _check_positive(c, "t")
             self.t = c
             return self
         else:
@@ -239,21 +472,25 @@ class HuberT(RobustNorm):
 
     def _subset(self, z):
         """
-        Huber's T is defined piecewise over the range for z
+        Huber's T is defined piecewise over the range of z
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            Boolean array indicating which elements of `z` fall in the
+            quadratic (rather than linear) region of rho.
         """
         z = np.asarray(z)
         return np.less_equal(np.abs(z), self.t)
 
     def rho(self, z):
         r"""
-        The robust criterion function for Huber's t estimator.
-
-        .. math::
-
-            \rho(z) = \begin{cases}
-            \frac{1}{2} z^2 & \text{for } |z| \le t \\
-            t|z| - \frac{1}{2} t^2 & \text{for } |z| > t
-            \end{cases}
+        The robust criterion function for Huber's t estimator
 
         Parameters
         ----------
@@ -264,6 +501,13 @@ class HuberT(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              \frac{z^2}{2} & \text{if } \lvert z \rvert \le t \\
+                              \lvert z \rvert t - \frac{t^2}{2} & \text{if } \lvert z \rvert > t
+                          \end{cases}
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -272,16 +516,9 @@ class HuberT(RobustNorm):
 
     def psi(self, z):
         r"""
-        The psi function for Huber's t estimator.
+        The psi function for Huber's t estimator
 
         The analytic derivative of rho.
-
-        .. math::
-
-            \psi(z) = \begin{cases}
-            z & \text{for } |z| \le t \\
-            \text{sign}(z) \cdot t & \text{for } |z| > t
-            \end{cases}
 
         Parameters
         ----------
@@ -292,6 +529,13 @@ class HuberT(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = \begin{cases}
+                              z & \text{if } \lvert z \rvert \le t \\
+                              \text{sign}(z) \cdot t & \text{if } \lvert z \rvert > t
+                          \end{cases}
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -299,16 +543,9 @@ class HuberT(RobustNorm):
 
     def weights(self, z):
         r"""
-        Huber's t weighting function for the IRLS algorithm.
+        Huber's t weighting function for the IRLS algorithm
 
         The psi function scaled by z.
-
-        .. math::
-
-            w(z) = \begin{cases}
-            1 & \text{for } |z| \le t \\
-            t/|z| & \text{for } |z| > t
-            \end{cases}
 
         Parameters
         ----------
@@ -319,6 +556,13 @@ class HuberT(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                \text{weights}(z) = \begin{cases}
+                                        1 & \text{if } \lvert z \rvert \le t \\
+                                        \frac{t}{\lvert z \rvert} & \text{if } \lvert z \rvert > t
+                                    \end{cases}
         """
         z_isscalar = np.isscalar(z)
         z = np.atleast_1d(z)
@@ -334,43 +578,91 @@ class HuberT(RobustNorm):
 
     def psi_deriv(self, z):
         """
-        The derivative of Huber's t psi function
+        Derivative of the Huber T psi function.
+
+        Parameters
+        ----------
+        z : array_like
+            Input residual values.
+
+        Returns
+        -------
+        ndarray
+            The value of the derivative of the psi function. Indicator values
+            equal to 1 when ``|z| <= t`` and 0 otherwise.
 
         Notes
         -----
-        Used to estimate the robust covariance matrix.
+        Used when computing the robust covariance matrix in robust linear models.
         """
         return np.less_equal(np.abs(z), self.t).astype(float)
 
 
 class RamsayE(RobustNorm):
     """
-    Ramsay's Ea for M estimation.
+    Ramsay's Ea for M estimation
 
     Parameters
     ----------
     a : float, optional
-        The tuning constant for Ramsay's Ea function.  The default value is
-        0.3.
+        The tuning constant for Ramsay's Ea function. It has to be positive.
+        The default value is 0.3.
+
+    Raises
+    ------
+    TypeError
+        If `a` is not a real number.
+    ValueError
+        If `a` is not positive, or is nan.
 
     See Also
     --------
     statsmodels.robust.norms.RobustNorm
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The tuning constant is validated. Zero, negative and nan values raise
+       a ``ValueError`` instead of creating a degenerate norm.
+
+    The tuning constant is validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    ``norm.a = value``, is not validated.
     """
 
     continuous = 2
     redescending = "soft"
 
     def __init__(self, a=.3):
+        _check_positive(a, "a")
         self.a = a
 
     def _set_tuning_param(self, c, inplace=False):
-        """Set and change the tuning parameter of the Norm.
+        """
+        Set and change the tuning parameter of the Norm
 
-        Warning: this needs to wipe cached attributes that depend on the param.
+        Parameters
+        ----------
+        c : float
+            The new value for the tuning parameter `a`.
+        inplace : bool, optional
+            If True, modify this instance in place and return it. If
+            False, return a new instance with the new tuning parameter.
+            The default is False.
+
+        Returns
+        -------
+        RobustNorm
+            The norm instance with the new tuning parameter.
+
+        Warnings
+        --------
+        This needs to wipe cached attributes that depend on the parameter.
         """
         # todo : change default to inplace=False, when tools are fixed
         if inplace:
+            _check_positive(c, "a")
             self.a = c
             return self
         else:
@@ -381,11 +673,7 @@ class RamsayE(RobustNorm):
 
     def rho(self, z):
         r"""
-        The robust criterion function for Ramsay's Ea.
-
-        .. math::
-
-            \rho(z) = a^{-2} (1 - \exp(-a|z|)(1 + a|z|))
+        The robust criterion function for Ramsay's Ea
 
         Parameters
         ----------
@@ -396,6 +684,10 @@ class RamsayE(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = a^{-2} \cdot (1 - \exp(-a \lvert z \rvert ) \cdot (1 + a \lvert z \rvert))
         """
         z = np.asarray(z)
         return (1 - np.exp(-self.a * np.abs(z)) *
@@ -403,13 +695,9 @@ class RamsayE(RobustNorm):
 
     def psi(self, z):
         r"""
-        The psi function for Ramsay's Ea estimator.
+        The psi function for Ramsay's Ea estimator
 
         The analytic derivative of rho.
-
-        .. math::
-
-            \psi(z) = z \exp(-a|z|)
 
         Parameters
         ----------
@@ -420,19 +708,19 @@ class RamsayE(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = z \cdot \exp(-a \cdot \lvert z \rvert)
         """
         z = np.asarray(z)
         return z * np.exp(-self.a * np.abs(z))
 
     def weights(self, z):
         r"""
-        Ramsay's Ea weighting function for the IRLS algorithm.
+        Ramsay's Ea weighting function for the IRLS algorithm
 
         The psi function scaled by z.
-
-        .. math::
-
-            w(z) = \exp(-a|z|)
 
         Parameters
         ----------
@@ -443,6 +731,10 @@ class RamsayE(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                \text{weights}(z) = \exp(-a \cdot \lvert z \rvert)
         """
 
         z = np.asarray(z)
@@ -450,7 +742,17 @@ class RamsayE(RobustNorm):
 
     def psi_deriv(self, z):
         """
-        The derivative of Ramsay's Ea psi function.
+        The derivative of Ramsay's Ea psi function
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the derivative of the psi function.
 
         Notes
         -----
@@ -466,31 +768,69 @@ class RamsayE(RobustNorm):
 
 class AndrewWave(RobustNorm):
     """
-    Andrew's wave for M estimation.
+    Andrew's wave for M estimation
 
     Parameters
     ----------
-    a : float, optional
-        The tuning constant for Andrew's Wave function.  The default value is
-        1.339.
+    a : float or array_like, optional
+        The tuning constant for Andrew's Wave function. It has to be
+        positive. An array is used element-wise, broadcast with the argument
+        of the methods. The default value is 1.339.
+
+    Raises
+    ------
+    TypeError
+        If `a` is not a real number or an array of real numbers.
+    ValueError
+        If `a` or any element of `a` is not positive, or is nan.
 
     See Also
     --------
     statsmodels.robust.norms.RobustNorm
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The tuning constant is validated. Zero, negative and nan values raise
+       a ``ValueError`` instead of creating a degenerate norm.
+
+    The tuning constant is validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    ``norm.a = value``, is not validated.
     """
 
     continuous = 1
     redescending = "hard"
 
     def __init__(self, a=1.339):
+        _check_positive(a, "a")
         self.a = a
 
     def _set_tuning_param(self, c, inplace=False):
-        """Set and change the tuning parameter of the Norm.
+        """
+        Set and change the tuning parameter of the Norm
 
-        Warning: this needs to wipe cached attributes that depend on the param.
+        Parameters
+        ----------
+        c : float
+            The new value for the tuning parameter `a`.
+        inplace : bool, optional
+            If True, modify this instance in place and return it. If
+            False, return a new instance with the new tuning parameter.
+            The default is False.
+
+        Returns
+        -------
+        RobustNorm
+            The norm instance with the new tuning parameter.
+
+        Warnings
+        --------
+        This needs to wipe cached attributes that depend on the parameter.
         """
         if inplace:
+            _check_positive(c, "a")
             self.a = c
             return self
         else:
@@ -501,21 +841,25 @@ class AndrewWave(RobustNorm):
 
     def _subset(self, z):
         """
-        Andrew's wave is defined piecewise over the range of z.
+        Andrew's wave is defined piecewise over the range of z
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            Boolean array indicating which elements of `z` fall in the
+            nonzero region of psi.
         """
         z = np.asarray(z)
         return np.less_equal(np.abs(z), self.a * np.pi)
 
     def rho(self, z):
         r"""
-        The robust criterion function for Andrew's wave.
-
-        .. math::
-
-            \rho(z) = \begin{cases}
-            a^2 (1 - \cos(z/a)) & \text{for } |z| \le a\pi \\
-            2a^2 & \text{for } |z| > a\pi
-            \end{cases}
+        The robust criterion function for Andrew's wave
 
         Parameters
         ----------
@@ -526,6 +870,13 @@ class AndrewWave(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              a^2 \cdot (1 - \cos(\frac{z}{a})) & \text{if } \lvert z \rvert \le a\pi \\
+                              2a^2 & \text{if } \lvert z \rvert > a\pi
+                          \end{cases}
         """
 
         a = self.a
@@ -536,16 +887,9 @@ class AndrewWave(RobustNorm):
 
     def psi(self, z):
         r"""
-        The psi function for Andrew's wave.
+        The psi function for Andrew's wave
 
         The analytic derivative of rho.
-
-        .. math::
-
-            \psi(z) = \begin{cases}
-            a \sin(z/a) & \text{for } |z| \le a\pi \\
-            0 & \text{for } |z| > a\pi
-            \end{cases}
 
         Parameters
         ----------
@@ -556,6 +900,13 @@ class AndrewWave(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = \begin{cases}
+                              a \cdot \sin(\frac{z}{a}) & \text{if } \lvert z \rvert \le a\pi \\
+                              0 & \text{if } \lvert z \rvert > a\pi
+                          \end{cases}
         """
 
         a = self.a
@@ -565,16 +916,9 @@ class AndrewWave(RobustNorm):
 
     def weights(self, z):
         r"""
-        Andrew's wave weighting function for the IRLS algorithm.
+        Andrew's wave weighting function for the IRLS algorithm
 
         The psi function scaled by z.
-
-        .. math::
-
-            w(z) = \begin{cases}
-            \sin(z/a) / (z/a) & \text{for } |z| \le a\pi \\
-            0 & \text{for } |z| > a\pi
-            \end{cases}
 
         Parameters
         ----------
@@ -585,6 +929,13 @@ class AndrewWave(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                \text{weights}(z) = \begin{cases}
+                                        \frac{a}{z} \cdot \sin(\frac{z}{a}) & \text{if } \lvert z \rvert \le a\pi \\
+                                        0 & \text{if } \lvert z \rvert > a\pi
+                                    \end{cases}
         """
         a = self.a
         z = np.asarray(z)
@@ -604,6 +955,16 @@ class AndrewWave(RobustNorm):
         """
         The derivative of Andrew's wave psi function
 
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the derivative of the psi function.
+
         Notes
         -----
         Used to estimate the robust covariance matrix.
@@ -615,31 +976,68 @@ class AndrewWave(RobustNorm):
 
 class TrimmedMean(RobustNorm):
     """
-    Trimmed mean function for M-estimation.
+    Trimmed mean function for M-estimation
 
     Parameters
     ----------
     c : float, optional
-        The tuning constant for Ramsay's Ea function.  The default value is
-        2.0.
+        The tuning constant for the trimmed mean function. It has to be
+        positive. The default value is 2.0.
+
+    Raises
+    ------
+    TypeError
+        If `c` is not a real number.
+    ValueError
+        If `c` is not positive, or is nan.
 
     See Also
     --------
     statsmodels.robust.norms.RobustNorm
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The tuning constant is validated. Zero, negative and nan values raise
+       a ``ValueError`` instead of creating a degenerate norm.
+
+    The tuning constant is validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    ``norm.c = value``, is not validated.
     """
 
     continuous = 0
     redescending = "hard"
 
     def __init__(self, c=2.):
+        _check_positive(c, "c")
         self.c = c
 
     def _set_tuning_param(self, c, inplace=False):
-        """Set and change the tuning parameter of the Norm.
+        """
+        Set and change the tuning parameter of the Norm
 
-        Warning: this needs to wipe cached attributes that depend on the param.
+        Parameters
+        ----------
+        c : float
+            The new value for the tuning parameter `c`.
+        inplace : bool, optional
+            If True, modify this instance in place and return it. If
+            False, return a new instance with the new tuning parameter.
+            The default is False.
+
+        Returns
+        -------
+        RobustNorm
+            The norm instance with the new tuning parameter.
+
+        Warnings
+        --------
+        This needs to wipe cached attributes that depend on the parameter.
         """
         if inplace:
+            _check_positive(c, "c")
             self.c = c
             return self
         else:
@@ -650,7 +1048,18 @@ class TrimmedMean(RobustNorm):
 
     def _subset(self, z):
         """
-        Least trimmed mean is defined piecewise over the range of z.
+        Least trimmed mean is defined piecewise over the range of z
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            Boolean array indicating which elements of `z` fall in the
+            quadratic (rather than constant) region of rho.
         """
 
         z = np.asarray(z)
@@ -658,14 +1067,7 @@ class TrimmedMean(RobustNorm):
 
     def rho(self, z):
         r"""
-        The robust criterion function for least trimmed mean.
-
-        .. math::
-
-            \rho(z) = \begin{cases}
-            \frac{1}{2} z^2 & \text{for } |z| \le c \\
-            \frac{1}{2} c^2 & \text{for } |z| > c
-            \end{cases}
+        The robust criterion function for least trimmed mean
 
         Parameters
         ----------
@@ -676,6 +1078,13 @@ class TrimmedMean(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              \frac{z^2}{2} & \text{if } \lvert z \rvert \le c \\
+                              \frac{c^2}{2} & \text{if } \lvert z \rvert > c
+                          \end{cases}
         """
 
         z = np.asarray(z)
@@ -684,16 +1093,9 @@ class TrimmedMean(RobustNorm):
 
     def psi(self, z):
         r"""
-        The psi function for least trimmed mean.
+        The psi function for least trimmed mean
 
         The analytic derivative of rho.
-
-        .. math::
-
-            \psi(z) = \begin{cases}
-            z & \text{for } |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
 
         Parameters
         ----------
@@ -704,6 +1106,13 @@ class TrimmedMean(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = \begin{cases}
+                              z & \text{if } \lvert z \rvert \le c \\
+                              0 & \text{if } \lvert z \rvert > c
+                          \end{cases}
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -711,16 +1120,9 @@ class TrimmedMean(RobustNorm):
 
     def weights(self, z):
         r"""
-        Least trimmed mean weighting function for the IRLS algorithm.
+        Least trimmed mean weighting function for the IRLS algorithm
 
         The psi function scaled by z.
-
-        .. math::
-
-            w(z) = \begin{cases}
-            1 & \text{for } |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
 
         Parameters
         ----------
@@ -731,6 +1133,13 @@ class TrimmedMean(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                \text{weights}(z) = \begin{cases}
+                                        1 & \text{if } \lvert z \rvert \le c \\
+                                        0 & \text{if } \lvert z \rvert > c
+                                    \end{cases}
         """
         z = np.asarray(z)
         test = self._subset(z)
@@ -739,6 +1148,16 @@ class TrimmedMean(RobustNorm):
     def psi_deriv(self, z):
         """
         The derivative of least trimmed mean psi function
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the derivative of the psi function.
 
         Notes
         -----
@@ -750,35 +1169,77 @@ class TrimmedMean(RobustNorm):
 
 class Hampel(RobustNorm):
     """
-
-    Hampel function for M-estimation.
+    Hampel function for M-estimation
 
     Parameters
     ----------
-    a : float, optional
-    b : float, optional
-    c : float, optional
-        The tuning constants for Hampel's function.  The default values are
-        a,b,c = 2, 4, 8.
+    a, b, c : float, optional
+        The tuning constants for Hampel's function. They have to be scalars
+        that satisfy ``0 < a <= b <= c``, equal values are allowed. The
+        default values are a, b, c = 2, 4, 8.
+
+    Raises
+    ------
+    TypeError
+        If `a`, `b` or `c` is not a real scalar. Arrays are not accepted.
+    ValueError
+        If the constants do not satisfy ``0 < a <= b <= c``, or if one of
+        them is nan.
 
     See Also
     --------
     statsmodels.robust.norms.RobustNorm
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The tuning constants are validated. Constants that are not positive
+       or not ordered, and nan values, raise a ``ValueError`` instead of
+       creating a degenerate norm. Array valued constants raise a
+       ``TypeError``, they never worked in the methods of the norm.
+
+    The tuning constants are validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    for example ``norm.c = value``, is not validated.
     """
 
     continuous = 1
     redescending = "hard"
 
     def __init__(self, a=2., b=4., c=8.):
+        _check_hampel(a, b, c)
         self.a = a
         self.b = b
         self.c = c
 
     def _set_tuning_param(self, c, inplace=False):
-        """Set and change the tuning parameter of the Norm.
-
-        Warning: this needs to wipe cached attributes that depend on the param.
         """
+        Set and change the tuning parameter of the Norm
+
+        The tuning constants `a` and `b` are re-derived from `c` as
+        ``a = c / 4`` and ``b = c / 2``.
+
+        Parameters
+        ----------
+        c : float
+            The new value for the tuning parameter `c`.
+        inplace : bool, optional
+            If True, modify this instance in place and return it. If
+            False, return a new instance with the new tuning parameters.
+            The default is False.
+
+        Returns
+        -------
+        RobustNorm
+            The norm instance with the new tuning parameters.
+
+        Warnings
+        --------
+        This needs to wipe cached attributes that depend on the parameter.
+        """
+        # check c first, so that the error refers to the value that was passed
+        _check_positive(c, "c", scalar=True)
         a = c / 4
         b = c / 2
         if inplace:
@@ -795,6 +1256,18 @@ class Hampel(RobustNorm):
     def _subset(self, z):
         """
         Hampel's function is defined piecewise over the range of z
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        tuple of ndarray
+            Three boolean arrays, ``t1``, ``t2`` and ``t3``, indicating
+            which elements of `z` fall in each of the piecewise regions of
+            rho.
         """
         z = np.abs(np.asarray(z))
         t1 = np.less_equal(z, self.a)
@@ -804,16 +1277,7 @@ class Hampel(RobustNorm):
 
     def rho(self, z):
         r"""
-        The robust criterion function for Hampel's estimator.
-
-        .. math::
-
-            \rho(z) = \begin{cases}
-            \frac{1}{2} z^2 & \text{for } |z| \le a \\
-            a|z| - \frac{1}{2} a^2 & \text{for } a < |z| \le b \\
-            \frac{a(c - |z|)^2}{2(c - b)} & \text{for } b < |z| \le c \\
-            \frac{a(b + c - a)}{2} & \text{for } |z| > c
-            \end{cases}
+        The robust criterion function for Hampel's estimator
 
         Parameters
         ----------
@@ -824,6 +1288,15 @@ class Hampel(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              \frac{z^2}{2} & \text{if } \lvert z \rvert \le a \\
+                              a \lvert z \rvert - \frac{a^2}{2} & \text{if } a < \lvert z \rvert \le b \\
+                              \frac{a}{2}(b + c - a) - \frac{a}{2(c - b)}(c - \lvert z \rvert)^2  & \text{if } b < \lvert z \rvert \le c \\
+                              \frac{a}{2} \cdot (b + c - a) & \text{if } \lvert z \rvert > c
+                          \end{cases}
         """
         a, b, c = self.a, self.b, self.c
 
@@ -848,18 +1321,9 @@ class Hampel(RobustNorm):
 
     def psi(self, z):
         r"""
-        The psi function for Hampel's estimator.
+        The psi function for Hampel's estimator
 
         The analytic derivative of rho.
-
-        .. math::
-
-            \psi(z) = \begin{cases}
-            z & \text{for } |z| \le a \\
-            a \cdot \text{sgn}(z) & \text{for } a < |z| \le b \\
-            a \cdot \text{sgn}(z) \frac{c - |z|}{c - b} & \text{for } b < |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
 
         Parameters
         ----------
@@ -870,6 +1334,15 @@ class Hampel(RobustNorm):
         -------
         psi : ndarray
             The value of the psi function.
+
+            .. math::
+
+                \psi(z) = \begin{cases}
+                              z & \text{if } \lvert z \rvert \le a \\
+                              a \cdot \text{sign}(z) & \text{if } a < \lvert z \rvert \le b \\
+                              \frac{a}{c - b} \cdot \text{sign}(z) \cdot (c - \lvert z \rvert) & \text{if } b < \lvert z \rvert \le c \\
+                              0 & \text{if } \lvert z \rvert > c \\
+                          \end{cases}
         """
         a, b, c = self.a, self.b, self.c
 
@@ -892,18 +1365,9 @@ class Hampel(RobustNorm):
 
     def weights(self, z):
         r"""
-        Hampel weighting function for the IRLS algorithm.
+        Hampel weighting function for the IRLS algorithm
 
         The psi function scaled by z.
-
-        .. math::
-
-            w(z) = \begin{cases}
-            1 & \text{for } |z| \le a \\
-            a/|z| & \text{for } a < |z| \le b \\
-            \frac{a(c - |z|)}{|z|(c - b)} & \text{for } b < |z| \le c \\
-            0 & \text{for } |z| > c
-            \end{cases}
 
         Parameters
         ----------
@@ -914,6 +1378,15 @@ class Hampel(RobustNorm):
         -------
         weights : ndarray
             The value of the weighting function.
+
+            .. math::
+
+                \text{weights}(z) = \begin{cases}
+                                        1 & \text{if } \lvert z \rvert \le a \\
+                                        \frac{a}{\lvert z \rvert} & \text{if } a < \lvert z \rvert \le b \\
+                                        \frac{a}{\lvert z \rvert (c - b)} \cdot (c - \lvert z \rvert) & \text{if } b < \lvert z \rvert \le c \\
+                                        0 & \text{if } \lvert z \rvert > c \\
+                                    \end{cases}
         """
         a, b, c = self.a, self.b, self.c
 
@@ -935,7 +1408,22 @@ class Hampel(RobustNorm):
         return v
 
     def psi_deriv(self, z):
-        """Derivative of psi function, second derivative of rho function.
+        """
+        Derivative of psi function, second derivative of rho function
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the derivative of the psi function.
+
+        Notes
+        -----
+        Used to estimate the robust covariance matrix.
         """
         a, b, c = self.a, self.b, self.c
 
@@ -957,24 +1445,41 @@ class Hampel(RobustNorm):
 
 class TukeyBiweight(RobustNorm):
     """
-
-    Tukey's biweight function for M-estimation.
+    Tukey's biweight function for M-estimation
 
     Parameters
     ----------
-    c : float, optional
-        The tuning constant for Tukey's Biweight.  The default value is
-        c = 4.685.
+    c : float or array_like, optional
+        The tuning constant for Tukey's Biweight. It has to be positive. An
+        array is used element-wise, broadcast with the argument of the
+        methods. The default value is c = 4.685.
+
+    Raises
+    ------
+    TypeError
+        If `c` is not a real number or an array of real numbers.
+    ValueError
+        If `c` or any element of `c` is not positive, or is nan.
 
     Notes
     -----
-    Tukey's biweight is sometime's called bisquare.
+    Tukey's biweight is sometimes called bisquare.
+
+    .. versionchanged:: 0.15.1
+
+       The tuning constant is validated. Zero, negative and nan values raise
+       a ``ValueError`` instead of creating a degenerate norm.
+
+    The tuning constant is validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    ``norm.c = value``, is not validated.
     """
 
     continuous = 2
     redescending = "hard"
 
     def __init__(self, c=4.685):
+        _check_positive(c, "c")
         self.c = c
 
     def __repr__(self):
@@ -982,23 +1487,26 @@ class TukeyBiweight(RobustNorm):
 
     @classmethod
     def get_tuning(cls, bp=None, eff=None):
-        """Tuning parameter for given breakdown point or efficiency.
+        """
+        Tuning parameter for given breakdown point or efficiency
 
-        This currently only return values from a table.
+        This currently only returns values from a table.
 
         Parameters
         ----------
-        bp : float in [0.05, 0.5] or None
+        bp : float in [0.05, 0.10, 0.15, ..., 0.5], optional
             Required breakdown point
             Either bp or eff has to be specified, but not both.
-        eff : float or None
+        eff : float or None, optional
             Required asymptotic efficiency.
             Either bp or eff has to be specified, but not both.
 
         Returns
         -------
-        float : tuning parameter.
-
+        tuple of float
+            The output depends on whether using bp or eff. If using bp, returns
+            (tuning parameter, efficiency, scale bias) where c is the tuning.
+            If using eff, (tuning parameter, breakdown point).
         """
         if ((bp is None and eff is None) or
                 (bp is not None and eff is not None)):
@@ -1010,12 +1518,30 @@ class TukeyBiweight(RobustNorm):
             return _tables.tukeybiweight_eff[eff]
 
     def _set_tuning_param(self, c, inplace=False):
-        """Set and change the tuning parameter of the Norm.
+        """
+        Set and change the tuning parameter of the Norm
 
-        Warning: this needs to wipe cached attributes that depend on the param.
+        Parameters
+        ----------
+        c : float
+            The new value for the tuning parameter `c`.
+        inplace : bool, optional
+            If True, modify this instance in place and return it. If
+            False, return a new instance with the new tuning parameter.
+            The default is False.
+
+        Returns
+        -------
+        RobustNorm
+            The norm instance with the new tuning parameter.
+
+        Warnings
+        --------
+        This needs to wipe cached attributes that depend on the parameter.
         """
         # todo : change default to inplace=False, when tools are fixed
         if inplace:
+            _check_positive(c, "c")
             self.c = c
             return self
         else:
@@ -1027,6 +1553,17 @@ class TukeyBiweight(RobustNorm):
     def _subset(self, z):
         """
         Tukey's biweight is defined piecewise over the range of z
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            Boolean array indicating which elements of `z` fall in the
+            nonzero region of psi.
         """
         z = np.abs(np.asarray(z))
         return np.less_equal(z, self.c)
@@ -1043,9 +1580,14 @@ class TukeyBiweight(RobustNorm):
         Returns
         -------
         rho : ndarray
-            rho(z) = -(1 - (z/c)**2)**3 * c**2/6 + c**2/6   for \|z\| <= R
+            The value of the robust criterion function.
 
-            rho(z) = 0                              for \|z\| > R
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              \frac{c^2}{6}\left(1 - \left(1 - (\frac{z}{c})^2\right)^3\right) & \text{if } \lvert z \rvert \le c \\
+                              \frac{c^2}{6} & \text{if } \lvert z \rvert > c
+                          \end{cases}
         """
         subset = self._subset(z)
         factor = self.c**2 / 6.
@@ -1055,7 +1597,7 @@ class TukeyBiweight(RobustNorm):
         r"""
         The psi function for Tukey's biweight estimator
 
-        The analytic derivative of rho
+        The analytic derivative of rho.
 
         Parameters
         ----------
@@ -1065,9 +1607,14 @@ class TukeyBiweight(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z*(1 - (z/c)**2)**2        for \|z\| <= R
+            The value of the psi function.
 
-            psi(z) = 0                           for \|z\| > R
+            .. math::
+
+                \psi(z) = \begin{cases}
+                              z \cdot (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le c \\
+                              0 & \text{if } \lvert z \rvert > c
+                          \end{cases}
         """
 
         z = np.asarray(z)
@@ -1078,7 +1625,7 @@ class TukeyBiweight(RobustNorm):
         r"""
         Tukey's biweight weighting function for the IRLS algorithm
 
-        The psi function scaled by z
+        The psi function scaled by z.
 
         Parameters
         ----------
@@ -1088,9 +1635,14 @@ class TukeyBiweight(RobustNorm):
         Returns
         -------
         weights : ndarray
-            psi(z) = (1 - (z/c)**2)**2          for \|z\| <= R
+            The value of the weighting function.
 
-            psi(z) = 0                          for \|z\| > R
+            .. math::
+
+                \text{weights}(z) = \begin{cases}
+                                        (1 - (\frac{z}{c})^2)^2 & \text{if } \lvert z \rvert \le c \\
+                                        0 & \text{if } \lvert z \rvert > c
+                                    \end{cases}
         """
         z = np.asarray(z)
         subset = self._subset(z)
@@ -1099,6 +1651,16 @@ class TukeyBiweight(RobustNorm):
     def psi_deriv(self, z):
         """
         The derivative of Tukey's biweight psi function
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the derivative of the psi function.
 
         Notes
         -----
@@ -1111,19 +1673,43 @@ class TukeyBiweight(RobustNorm):
 
 class TukeyQuartic(RobustNorm):
     """
-
-    Varinant of Tukey's biweight function with power 4 for M-estimation.
+    Variant of Tukey's biweight function with power 4 for M-estimation
 
     Parameters
     ----------
     c : float, optional
-        The tuning constant for Tukey's Biweight.  The default value is
-        c = ???.
+        The tuning constant for Tukey's Biweight. It has to be positive. The
+        default value is c = 3.61752.
+    k : int, optional
+        The power used in the inner term in place of the power 2 used by
+        Tukey's biweight. It has to be a positive, even integer, because
+        psi is an odd function only for even powers. The default value is 4.
+
+    Raises
+    ------
+    TypeError
+        If `c` is not a real number, or `k` is not an integer.
+    ValueError
+        If `c` is not positive or is nan, or if `k` is not positive and
+        even.
 
     Notes
     -----
     This is a variation of Tukey's biweight (bisquare) function where
     the weight function has power 4 instead of power 2 in the inner term.
+
+    The default value of `c` is only valid for ``k = 4``, it needs to be
+    changed for other powers.
+
+    .. versionchanged:: 0.15.1
+
+       The tuning constant `c` and the power `k` are validated. Invalid
+       values raise a ``TypeError`` or ``ValueError`` instead of creating a
+       degenerate norm.
+
+    The constants are validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    for example ``norm.c = value``, is not validated.
     """
 
     continuous = 2
@@ -1131,16 +1717,35 @@ class TukeyQuartic(RobustNorm):
 
     def __init__(self, c=3.61752, k=4):
         # TODO: c needs to be changed if k != 4
-        # also, I think implementation assumes k is even integer
+        _check_positive(c, "c")
+        _check_positive_even_int(k, "k")
         self.c = c
         self.k = k
 
     def _set_tuning_param(self, c, inplace=False):
-        """Set and change the tuning parameter of the Norm.
+        """
+        Set and change the tuning parameter of the Norm
 
-        Warning: this needs to wipe cached attributes that depend on the param.
+        Parameters
+        ----------
+        c : float
+            The new value for the tuning parameter `c`.
+        inplace : bool, optional
+            If True, modify this instance in place and return it. If
+            False, return a new instance with the new tuning parameter.
+            The default is False.
+
+        Returns
+        -------
+        RobustNorm
+            The norm instance with the new tuning parameter.
+
+        Warnings
+        --------
+        This needs to wipe cached attributes that depend on the parameter.
         """
         if inplace:
+            _check_positive(c, "c")
             self.c = c
             return self
         else:
@@ -1152,22 +1757,24 @@ class TukeyQuartic(RobustNorm):
     def _subset(self, z):
         """
         TukeyQuartic is defined piecewise over the range of z
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            Boolean array indicating which elements of `z` fall in the
+            nonzero region of psi.
         """
         z = np.abs(np.asarray(z))
         return np.less_equal(z, self.c)
 
     def rho(self, z):
         r"""
-        The robust criterion function for TukeyQuartic norm.
-
-        .. math::
-
-            \rho(z) = \begin{cases}
-            \frac{1}{2} z^2 \left(1 - \frac{4}{k + 2} x^k + \frac{1}{k + 1} x^{2k}\right) & \text{for } |z| \le c \\
-            \rho(c) & \text{for } | z | > c
-            \end{cases}
-
-        where :math:`x = z / c`.
+        The robust criterion function for TukeyQuartic norm
 
         Parameters
         ----------
@@ -1178,6 +1785,15 @@ class TukeyQuartic(RobustNorm):
         -------
         rho : ndarray
             The value of the robust criterion function.
+
+            .. math::
+
+                \rho(z) = \begin{cases}
+                              \frac{1}{2} z^2 \left(1 - \frac{4}{k + 2} x^k + \frac{1}{k + 1} x^{2k}\right) & \text{if } \lvert z \rvert \le c \\
+                              \rho(c) & \text{if } \lvert z \rvert > c
+                          \end{cases}
+
+            where :math:`x = z / c`.
         """
         c = self.c
         k = self.k
@@ -1201,7 +1817,7 @@ class TukeyQuartic(RobustNorm):
 
     def psi(self, z):
         r"""
-        The psi function of TukeyQuartic norm.
+        The psi function of TukeyQuartic norm
 
         The analytic derivative of rho.
 
@@ -1213,9 +1829,9 @@ class TukeyQuartic(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z*(1 - (z/c)**4)**2        for \|z\| <= c
+            psi(z) = z*(1 - (z/c)**k)**2        for \|z\| <= c
 
-            psi(z) = psi(c)                     for \|z\| > c
+            psi(z) = 0                          for \|z\| > c
         """
         k = self.k
         z = np.asarray(z)
@@ -1224,7 +1840,7 @@ class TukeyQuartic(RobustNorm):
 
     def weights(self, z):
         r"""
-         TukeyQuartic weighting function for the IRLS algorithm.
+        TukeyQuartic weighting function for the IRLS algorithm
 
         The psi function scaled by z.
 
@@ -1236,9 +1852,9 @@ class TukeyQuartic(RobustNorm):
         Returns
         -------
         weights : ndarray
-            psi(z) = (1 - (z/c)**4)**2          for \|z\| <= R
+            weights(z) = (1 - (z/c)**k)**2          for \|z\| <= c
 
-            psi(z) = 0                          for \|z\| > R
+            weights(z) = 0                          for \|z\| > c
         """
         k = self.k
         z = np.asarray(z)
@@ -1247,7 +1863,17 @@ class TukeyQuartic(RobustNorm):
 
     def psi_deriv(self, z):
         """
-        The derivative of the TukeyQuartic psi function.
+        The derivative of the TukeyQuartic psi function
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the derivative of the psi function.
 
         Notes
         -----
@@ -1263,7 +1889,8 @@ class TukeyQuartic(RobustNorm):
 
 
 class StudentT(RobustNorm):
-    """Robust norm based on t distribution.
+    """
+    Robust norm based on t distribution
 
     Rho is a rescaled version of the t-loglikelihood function after dropping
     constant terms.
@@ -1272,24 +1899,70 @@ class StudentT(RobustNorm):
 
     The maximum likelihood estimator based on the loglikelihood
     function of the t-distribution is available in
-    ``statsmodels.miscmodels`, which can be used to also
+    ``statsmodels.miscmodels``, which can be used to also
     estimate scale and degrees of freedom by MLE.
 
+    Parameters
+    ----------
+    c : float, optional
+        The tuning constant for the StudentT norm. It has to be positive. The
+        default value is 2.3849.
+    df : float, optional
+        The degrees of freedom of the t distribution used to derive the
+        norm. It has to be positive. The default value is 4.
+
+    Raises
+    ------
+    TypeError
+        If `c` or `df` is not a real number.
+    ValueError
+        If `c` or `df` is not positive, or is nan.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The constants `c` and `df` are validated. Zero, negative and nan
+       values raise a ``ValueError`` instead of creating a degenerate norm.
+
+    The constants are validated when the norm is created and in
+    ``_set_tuning_param``. Plain attribute assignment after construction,
+    for example ``norm.c = value``, is not validated.
     """
 
     continuous = 2
     redescending = "soft"
 
     def __init__(self, c=2.3849, df=4):
+        _check_positive(c, "c")
+        _check_positive(df, "df", scalar=True)
         self.c = c
         self.df = df
 
     def _set_tuning_param(self, c, inplace=False):
-        """Set and change the tuning parameter of the Norm.
+        """
+        Set and change the tuning parameter of the Norm
 
-        Warning: this needs to wipe cached attributes that depend on the param.
+        Parameters
+        ----------
+        c : float
+            The new value for the tuning parameter `c`.
+        inplace : bool, optional
+            If True, modify this instance in place and return it. If
+            False, return a new instance with the new tuning parameter.
+            The default is False.
+
+        Returns
+        -------
+        RobustNorm
+            The norm instance with the new tuning parameter.
+
+        Warnings
+        --------
+        This needs to wipe cached attributes that depend on the parameter.
         """
         if inplace:
+            _check_positive(c, "c")
             self.c = c
             return self
         else:
@@ -1300,11 +1973,11 @@ class StudentT(RobustNorm):
 
     def rho(self, z):
         """
-        The rho function of the StudentT norm.
+        The rho function of the StudentT norm
 
         Parameters
         ----------
-        z : ndarray
+        z : array_like
             1d array
 
         Returns
@@ -1321,7 +1994,7 @@ class StudentT(RobustNorm):
 
     def psi(self, z):
         """
-        The psi function of the StudentT norm.
+        The psi function of the StudentT norm
 
         The analytic derivative of rho.
 
@@ -1333,7 +2006,7 @@ class StudentT(RobustNorm):
         Returns
         -------
         psi : ndarray
-            psi(z) = z
+            psi(z) = z * df / (df + (z / c)**2)
         """
 
         c = self.c
@@ -1343,7 +2016,7 @@ class StudentT(RobustNorm):
 
     def weights(self, z):
         """
-        The weighting function for the IRLS algorithm of the StudentT norm.
+        The weighting function for the IRLS algorithm of the StudentT norm
 
         The psi function scaled by the input z
 
@@ -1355,7 +2028,7 @@ class StudentT(RobustNorm):
         Returns
         -------
         weights : ndarray
-            weights(z) = np.ones(z.shape)
+            weights(z) = df / (df + (z / c)**2)
         """
 
         c = self.c
@@ -1365,12 +2038,18 @@ class StudentT(RobustNorm):
 
     def psi_deriv(self, z):
         """
-        The derivative of the psi function of the StudentT norm.
+        The derivative of the psi function of the StudentT norm
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
 
         Returns
         -------
         psi_deriv : ndarray
-            ones(z.shape)
+            psi_deriv(z) = -2 * df * x**2 / (df + x**2)**2 + df / (df + x**2)
+            where ``x = z / c``.
 
         Notes
         -----
@@ -1383,13 +2062,14 @@ class StudentT(RobustNorm):
 
 
 class MQuantileNorm(RobustNorm):
-    """M-quantiles objective function based on a base norm
+    """
+    M-quantiles objective function based on a base norm
 
     This norm has the same asymmetric structure as the objective function
     in QuantileRegression but replaces the L1 absolute value by a chosen
     base norm.
 
-        rho_q(u) = abs(q - I(q < 0)) * rho_base(u)
+        rho_q(u) = abs(q - I(u < 0)) * rho_base(u)
 
     or, equivalently,
 
@@ -1400,41 +2080,57 @@ class MQuantileNorm(RobustNorm):
     Parameters
     ----------
     q : float
-        M-quantile, must be between 0 and 1
+        M-quantile, must be between 0 and 1, excluding the end points.
     base_norm : RobustNorm instance
-        basic norm that is transformed into an asymmetric M-quantile norm
+        Basic norm that is transformed into an asymmetric M-quantile norm
+
+    Raises
+    ------
+    TypeError
+        If `q` is not a real number.
+    ValueError
+        If `q` is not in the open interval (0, 1), or is nan.
 
     Notes
     -----
+    .. versionchanged:: 0.15.1
+
+       The M-quantile `q` is validated.
+
+    The constant `q` is validated when the norm is created. Plain attribute
+    assignment after construction, ``norm.q = value``, is not validated.
+
     This is mainly for base norms that are not redescending, like HuberT or
     LeastSquares. (See Jones for the relationship of M-quantiles to quantiles
-    in the case of non-redescending Norms.)
+    in the case of non-redescending Norms.) See [BianchiEtAl2015]_,
+    [BrecklingChambers1988]_, [Jones1994]_, and [NeweyPowell1987]_ for more
+    information.
 
     Expectiles are M-quantiles with the LeastSquares as base norm.
 
     References
     ----------
-
-    .. [*] Bianchi, Annamaria, and Nicola Salvati. 2015. “Asymptotic Properties
-       and Variance Estimators of the M-Quantile Regression Coefficients
+    .. [BianchiEtAl2015] Bianchi, Annamaria, and Nicola Salvati. 2015. “Asymptotic
+       Properties and Variance Estimators of the M-Quantile Regression Coefficients
        Estimators.” Communications in Statistics - Theory and Methods 44 (11):
        2416-29. doi:10.1080/03610926.2013.791375.
 
-    .. [*] Breckling, Jens, and Ray Chambers. 1988. “M-Quantiles.”
+    .. [BrecklingChambers1988] Breckling, Jens, and Ray Chambers. 1988. “M-Quantiles.”
        Biometrika 75 (4): 761-71. doi:10.2307/2336317.
 
-    .. [*] Jones, M. C. 1994. “Expectiles and M-Quantiles Are Quantiles.”
+    .. [Jones1994] Jones, M. C. 1994. “Expectiles and M-Quantiles Are Quantiles.”
        Statistics & Probability Letters 20 (2): 149-53.
        doi:10.1016/0167-7152(94)90031-0.
 
-    .. [*] Newey, Whitney K., and James L. Powell. 1987. “Asymmetric Least
-       Squares Estimation and Testing.” Econometrica 55 (4): 819-47.
+    .. [NeweyPowell1987] Newey, Whitney K., and James L. Powell. 1987. “Asymmetric
+       Least Squares Estimation and Testing.” Econometrica 55 (4): 819-47.
        doi:10.2307/1911031.
     """
 
     continuous = 1
 
     def __init__(self, q, base_norm):
+        _check_unit_interval(q, "q")
         self.q = q
         self.base_norm = base_norm
 
@@ -1449,7 +2145,7 @@ class MQuantileNorm(RobustNorm):
 
     def rho(self, z):
         """
-        The robust criterion function for MQuantileNorm.
+        The robust criterion function for MQuantileNorm
 
         Parameters
         ----------
@@ -1459,13 +2155,15 @@ class MQuantileNorm(RobustNorm):
         Returns
         -------
         rho : ndarray
+            The value of the robust criterion function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.rho(z)
 
     def psi(self, z):
         """
-        The psi function for MQuantileNorm estimator.
+        The psi function for MQuantileNorm estimator
 
         The analytic derivative of rho
 
@@ -1477,7 +2175,9 @@ class MQuantileNorm(RobustNorm):
         Returns
         -------
         psi : ndarray
+            The value of the psi function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.psi(z)
 
@@ -1495,7 +2195,9 @@ class MQuantileNorm(RobustNorm):
         Returns
         -------
         weights : ndarray
+            The value of the weighting function.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.weights(z)
 
@@ -1511,17 +2213,29 @@ class MQuantileNorm(RobustNorm):
         Returns
         -------
         psi_deriv : ndarray
+            The value of the derivative of the psi function.
 
         Notes
         -----
         Used to estimate the robust covariance matrix.
         """
+        z = np.asarray(z)
         qq = self._get_q(z)
         return qq * self.base_norm.psi_deriv(z)
 
     def __call__(self, z):
         """
-        Returns the value of estimator rho applied to an input
+        Return the value of estimator rho applied to an input
+
+        Parameters
+        ----------
+        z : array_like
+            1d array
+
+        Returns
+        -------
+        ndarray
+            The value of the robust criterion function.
         """
         return self.rho(z)
 
@@ -1529,16 +2243,16 @@ class MQuantileNorm(RobustNorm):
 def estimate_location(a, scale, norm=None, axis=0, initial=None,
                       maxiter=30, tol=1.0e-06):
     """
-    M-estimator of location using self.norm and a current
-    estimator of scale.
+    Estimate a robust location parameter using an M-estimator.
 
-    This iteratively finds a solution to
+    This function iteratively computes the location parameter that satisfies:
+            sum(psi((a-mu)/scale))=0
 
-    norm.psi((a-mu)/scale).sum() == 0
+    where 'psi' is the influence function defined by the selected robust norm.
 
     Parameters
     ----------
-    a : ndarray
+    a : array_like
         Array over which the location parameter is to be estimated
     scale : ndarray
         Scale parameter to be used in M-estimator
@@ -1549,7 +2263,7 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
     initial : ndarray, optional
         Initial condition for the location parameter.  Default is None, which
         uses the median of a.
-    niter : int, optional
+    maxiter : int, optional
         Maximum number of iterations.  The default is 30.
     tol : float, optional
         Toleration for convergence.  The default is 1e-06.
@@ -1569,10 +2283,12 @@ def estimate_location(a, scale, norm=None, axis=0, initial=None,
 
     for _ in range(maxiter):
         W = norm.weights((a-mu)/scale)
-        nmu = np.sum(W*a, axis) / np.sum(W, axis)
+        denom = np.sum(W, axis)
+        if np.any(denom <= 0):
+            return mu
+        nmu = np.sum(W * a, axis) / denom
         if np.all(np.less(np.abs(mu - nmu), scale * tol)):
             return nmu
         else:
             mu = nmu
-    raise ValueError("location estimator failed to converge in %d iterations"
-                     % maxiter)
+    raise ValueError(f"location estimator failed to converge in {maxiter:d} iterations")

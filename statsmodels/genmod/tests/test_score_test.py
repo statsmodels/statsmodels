@@ -4,9 +4,9 @@ Created on Thu May 31 15:39:15 2018
 Author: Josef Perktold
 """
 
-
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 
 from statsmodels.base._parameter_inference import score_test
 import statsmodels.discrete._diagnostics_count as diac
@@ -16,7 +16,44 @@ from statsmodels.genmod.generalized_linear_model import GLM
 import statsmodels.stats._diagnostic_other as diao
 
 
-class CheckScoreTest():
+def test_score_test_invalid_hypothesis_raises():
+    # hypothesis is validated before any use of `self`/`model`, so this
+    # is cheap to check without a fitted model.
+    with pytest.raises(ValueError, match="hypothesis"):
+        score_test(None, hypothesis="not-a-hypothesis")
+
+
+@pytest.mark.parametrize("model_class", ["poisson", "glm"])
+def test_score_test_exog_extra_1d(model_class):
+    # a 1-dim exog_extra is one additional column, as in 2-dim with one column
+    rng = np.random.default_rng(982345)
+    nobs = 300
+    x = rng.standard_normal((nobs, 2))
+    exog = np.column_stack((np.ones(nobs), x[:, 0]))
+    extra = x[:, 1] ** 2
+    y = rng.poisson(np.exp(0.3 + 0.2 * exog[:, 1] + 0.1 * extra))
+    if model_class == "poisson":
+        res = Poisson(y, exog).fit(disp=False)
+    else:
+        res = GLM(y, exog, family=families.Poisson()).fit()
+
+    res_1d = score_test(res, exog_extra=extra)
+    res_2d = score_test(res, exog_extra=extra[:, None])
+    assert res_1d.k_constraint == 1
+    assert res_2d.k_constraint == 1
+    assert_allclose(res_1d.statistic, res_2d.statistic, rtol=1e-12)
+    assert_allclose(res_1d.pvalue, res_2d.pvalue, rtol=1e-12)
+    res_1d_hc = score_test(res, exog_extra=extra, cov_type="HC0")
+    res_2d_hc = score_test(res, exog_extra=extra[:, None], cov_type="HC0")
+    assert_allclose(res_1d_hc.statistic, res_2d_hc.statistic, rtol=1e-12)
+    assert_allclose(res_1d_hc.pvalue, res_2d_hc.pvalue, rtol=1e-12)
+    # the score test of the discrete models uses the same code
+    if model_class == "poisson":
+        res_method = res.score_test(exog_extra=extra)
+        assert_allclose(res_method.statistic, res_1d.statistic, rtol=1e-12)
+
+
+class CheckScoreTest:
 
     def test_wald_score(self):
         mod_full = self.model_full
@@ -28,11 +65,14 @@ class CheckScoreTest():
 
         wald = res_full.wald_test(restriction, scalar=True)
         # note: need to use method for res_constr for correct df_resid
-        lm_constr = np.hstack(res_constr.score_test())
-        lm_extra = np.hstack(score_test(res_drop, exog_extra=self.exog_extra))
-        lm_full = np.hstack(res_full.score_test(
-            params_constrained=res_constr.params,
-            k_constraints=res_constr.k_constr))
+        res = res_constr.score_test()
+        lm_constr = np.hstack([res.statistic, res.pvalue, res.k_constraint])
+        res = score_test(res_drop, exog_extra=self.exog_extra)
+        lm_extra = np.hstack([res.statistic, res.pvalue, res.k_constraint])
+        res = res_full.score_test(
+            params_constrained=res_constr.params, k_constraints=res_constr.k_constr
+        )
+        lm_full = np.hstack([res.statistic, res.pvalue, res.k_constraint])
 
         res_wald = np.hstack([wald.statistic, wald.pvalue, [wald.df_denom]])
         assert_allclose(lm_constr, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)
@@ -45,9 +85,10 @@ class CheckScoreTest():
         cov_type = "HC0"
         res_full_hc = mod_full.fit(cov_type=cov_type, start_params=res_full.params)
         wald = res_full_hc.wald_test(restriction, scalar=True)
-        lm_constr = np.hstack(score_test(res_constr, cov_type=cov_type))
-        lm_extra = np.hstack(score_test(res_drop, exog_extra=self.exog_extra,
-                                        cov_type=cov_type))
+        _res = score_test(res_constr, cov_type=cov_type)
+        lm_constr = np.hstack([_res.statistic, _res.pvalue, _res.k_constraint])
+        _res = score_test(res_drop, exog_extra=self.exog_extra, cov_type=cov_type)
+        lm_extra = np.hstack([_res.statistic, _res.pvalue, _res.k_constraint])
 
         res_wald = np.hstack([wald.statistic, wald.pvalue, [wald.df_denom]])
         assert_allclose(lm_constr, res_wald, rtol=self.rtol_ws, atol=self.atol_ws)
@@ -61,10 +102,12 @@ class CheckScoreTest():
             # does not work for Poisson, even with family attribute
             # diao.lm_test_glm assumes fittedvalues is mean (not linear pred)
             lm_wooldridge = diao.lm_test_glm(res_drop, self.exog_extra)
-            assert_allclose(lm_wooldridge.pval1, self.res_pvalue[0],
-                            rtol=1e-12, atol=1e-14)
-            assert_allclose(lm_wooldridge.pval3, self.res_pvalue[1],
-                            rtol=self.rtol_wooldridge)
+            assert_allclose(
+                lm_wooldridge.pval1, self.res_pvalue[0], rtol=1e-12, atol=1e-14
+            )
+            assert_allclose(
+                lm_wooldridge.pval3, self.res_pvalue[1], rtol=self.rtol_wooldridge
+            )
             # smoke test
             lm_wooldridge.summary()
 
@@ -78,15 +121,17 @@ class TestScoreTest(CheckScoreTest):
     # regression numbers
     res_pvalue = [0.31786373532550893, 0.32654081685271297]
     skip_wooldridge = False
-    res_disptest = np.array([
-        [0.1392791916012637, 0.8892295323009857],
-        [0.1392791916012645, 0.8892295323009850],
-        [0.2129554490802097, 0.8313617120611572],
-        [0.1493501809372359, 0.8812773205886350],
-        [0.1493501809372359, 0.8812773205886350],
-        [0.1454862255574059, 0.8843269904545624],
-        [0.2281321688124869, 0.8195434922982738]
-        ])
+    res_disptest = np.array(
+        [
+            [0.1392791916012637, 0.8892295323009857],
+            [0.1392791916012645, 0.8892295323009850],
+            [0.2129554490802097, 0.8313617120611572],
+            [0.1493501809372359, 0.8812773205886350],
+            [0.1493501809372359, 0.8812773205886350],
+            [0.1454862255574059, 0.8843269904545624],
+            [0.2281321688124869, 0.8195434922982738],
+        ]
+    )
     res_disptest_g = [0.052247629593715761, 0.81919738867722225]
 
     @classmethod
@@ -132,15 +177,17 @@ class TestScoreTestDispersed(TestScoreTest):
     rtol_wooldridge = 0.03
     dispersed = True  # Poisson is mis-specified
     res_pvalue = [5.412978775609189e-14, 0.05027602575743518]
-    res_disptest = np.array([
-        [1.2647363371056005e+02, 0.0000000000000000e+00],
-        [1.2647363371056124e+02, 0.0000000000000000e+00],
-        [1.1939362149777617e+02, 0.0000000000000000e+00],
-        [4.5394051864300318e+00, 5.6413139746586543e-06],
-        [4.5394051864300318e+00, 5.6413139746586543e-06],
-        [2.9164548934767525e+00, 3.5403391013549782e-03],
-        [4.2714141112771529e+00, 1.9423733575592056e-05]
-        ])
+    res_disptest = np.array(
+        [
+            [1.2647363371056005e02, 0.0000000000000000e00],
+            [1.2647363371056124e02, 0.0000000000000000e00],
+            [1.1939362149777617e02, 0.0000000000000000e00],
+            [4.5394051864300318e00, 5.6413139746586543e-06],
+            [4.5394051864300318e00, 5.6413139746586543e-06],
+            [2.9164548934767525e00, 3.5403391013549782e-03],
+            [4.2714141112771529e00, 1.9423733575592056e-05],
+        ]
+    )
     res_disptest_g = [17.670784788586968, 2.6262956791721383e-05]
 
 
@@ -154,15 +201,17 @@ class TestScoreTestPoisson(TestScoreTest):
     # regression numbers
     res_pvalue = [0.31786373532550893, 0.32654081685271297]
     skip_wooldridge = False
-    res_disptest = np.array([
-        [0.1392791916012637, 0.8892295323009857],
-        [0.1392791916012645, 0.8892295323009850],
-        [0.2129554490802097, 0.8313617120611572],
-        [0.1493501809372359, 0.8812773205886350],
-        [0.1493501809372359, 0.8812773205886350],
-        [0.1454862255574059, 0.8843269904545624],
-        [0.2281321688124869, 0.8195434922982738]
-        ])
+    res_disptest = np.array(
+        [
+            [0.1392791916012637, 0.8892295323009857],
+            [0.1392791916012645, 0.8892295323009850],
+            [0.2129554490802097, 0.8313617120611572],
+            [0.1493501809372359, 0.8812773205886350],
+            [0.1493501809372359, 0.8812773205886350],
+            [0.1454862255574059, 0.8843269904545624],
+            [0.2281321688124869, 0.8195434922982738],
+        ]
+    )
     res_disptest_g = [0.052247629593715761, 0.81919738867722225]
 
     @classmethod
@@ -198,15 +247,17 @@ class TestScoreTestPoissonDispersed(TestScoreTestPoisson):
     rtol_wooldridge = 0.03
     dispersed = True  # Poisson is mis-specified
     res_pvalue = [5.412978775609189e-14, 0.05027602575743518]
-    res_disptest = np.array([
-        [1.2647363371056005e+02, 0.0000000000000000e+00],
-        [1.2647363371056124e+02, 0.0000000000000000e+00],
-        [1.1939362149777617e+02, 0.0000000000000000e+00],
-        [4.5394051864300318e+00, 5.6413139746586543e-06],
-        [4.5394051864300318e+00, 5.6413139746586543e-06],
-        [2.9164548934767525e+00, 3.5403391013549782e-03],
-        [4.2714141112771529e+00, 1.9423733575592056e-05]
-        ])
+    res_disptest = np.array(
+        [
+            [1.2647363371056005e02, 0.0000000000000000e00],
+            [1.2647363371056124e02, 0.0000000000000000e00],
+            [1.1939362149777617e02, 0.0000000000000000e00],
+            [4.5394051864300318e00, 5.6413139746586543e-06],
+            [4.5394051864300318e00, 5.6413139746586543e-06],
+            [2.9164548934767525e00, 3.5403391013549782e-03],
+            [4.2714141112771529e00, 1.9423733575592056e-05],
+        ]
+    )
     res_disptest_g = [17.670784788586968, 2.6262956791721383e-05]
 
 

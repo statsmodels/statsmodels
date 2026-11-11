@@ -3,9 +3,9 @@ Created on Sun Nov  5 14:48:19 2017
 
 Author: Josef Perktold
 """
-
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 
 from statsmodels.stats import weightstats
 import statsmodels.stats.multivariate as smmv  # pytest cannot import test_xxx
@@ -242,8 +242,8 @@ class TestCovStructure:
         p_chi2 = 0.0004589987613319
         # df = 3
         chi2 = 17.91025335733012
-
         stat, pv = smmv.test_cov_diagonal(cov, nobs)
+
         assert_allclose(stat, chi2, rtol=1e-8)
         assert_allclose(pv, p_chi2, rtol=1e-7)
 
@@ -272,6 +272,10 @@ class TestCovStructure:
         stat, pv = smmv.test_cov(cov, nobs, cov_null)
         assert_allclose(stat, chi2, rtol=1e-7)
         assert_allclose(pv, p_chi2, rtol=1e-6)
+
+        stat_2, pv_2 = smmv.test_cov(cov.tolist(), nobs, cov_null.tolist())
+        assert_allclose(stat, stat_2, rtol=1e-7)
+        assert_allclose(pv, pv_2, rtol=1e-6)
 
 
 def test_cov_oneway():
@@ -313,3 +317,42 @@ def test_cov_oneway():
     assert_allclose(res.statistic_chi2, chi2, rtol=1e-10)
     assert_allclose(res.pvalue_chi2, p_chi2, rtol=1e-6)
     assert_equal(res.df_chi2, df)
+
+
+@pytest.mark.parametrize("nobs", [0, -2])
+def test_cov_tests_nonpositive_nobs_raise(nobs):
+    # non-positive sample sizes used to fall through to p-values of 1.0
+    cov = np.eye(2)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smmv.test_cov_spherical(cov, nobs=nobs)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smmv.test_cov_diagonal(cov, nobs=nobs)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smmv.test_cov_blockdiagonal(cov, nobs=nobs, block_len=[1, 1])
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smmv.test_cov_oneway([cov, cov], nobs_list=[nobs, 50])
+
+
+def test_cov_tests_positive_nobs_still_work():
+    cov = np.eye(2)
+    assert np.isfinite(smmv.test_cov_spherical(cov, nobs=50)[1])
+    assert np.isfinite(smmv.test_cov_oneway([cov, cov], nobs_list=[50, 50])[1])
+
+
+def test_confint_mvmean_alpha_out_of_range_raises():
+    # gh-style regression test: alpha outside (0, 1) previously produced
+    # inverted or NaN confidence limits without an error
+    mean = np.zeros(2)
+    cov = np.eye(2)
+    for alpha in (-0.1, 0.0, 1.0, 1.5):
+        with pytest.raises(ValueError, match="alpha must be in the range"):
+            confint_mvmean_fromstats(
+                mean, cov, 30, lin_transf=np.eye(2), alpha=alpha
+            )
+
+    # sanity check: valid alpha still works, low <= upp
+    low, upp, values = confint_mvmean_fromstats(
+        mean, cov, 30, lin_transf=np.eye(2, dtype=float), alpha=0.05
+    )
+    assert np.all(low <= values)
+    assert np.all(values <= upp)

@@ -30,7 +30,7 @@ NOTE = """::
                 0 - Strong Democrat
                 1 - Weak Democrat
                 2 - Independent-Democrat
-                3 - Independent-Indpendent
+                3 - Independent-Independent
                 4 - Independent-Republican
                 5 - Weak Republican
                 6 - Strong Republican
@@ -90,24 +90,28 @@ NOTE = """::
 
 
 def load_pandas():
-    """Load the anes96 data and returns a Dataset class.
+    """
+    Load the anes96 data and returns a Dataset class.
 
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     data = _get_data()
     return du.process_pandas(data, endog_idx=5, exog_idx=[10, 2, 6, 7, 8])
 
 
 def load():
-    """Load the anes96 data and returns a Dataset class.
+    """
+    Load the anes96 data and returns a Dataset class.
 
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name`` and ``exog_name`` attributes.
     """
     return load_pandas()
 

@@ -9,9 +9,14 @@ Author: Josef Perktold
 import warnings
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import (
+    assert_allclose,
+    assert_equal,
+)
+import pandas as pd
 import pytest
 from scipy import stats
+from scipy.stats import t
 
 from statsmodels.datasets import macrodata
 from statsmodels.regression.linear_model import OLS, WLS
@@ -944,6 +949,8 @@ def test_cov_type_fixed_scale():
         ("HC3", {}),
         ("HAC", {"maxlags": 7}),
         ("cluster", {"groups": (np.arange(500) % 27)}),
+        ("cluster-jk", {"groups": (np.arange(500) % 27)}),
+        ("cluster-crv3", {"groups": (np.arange(500) % 27)}),
     ],
 )
 def test_qr_equiv(cov_info):
@@ -956,3 +963,402 @@ def test_qr_equiv(cov_info):
     pinv_fit = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds)
     qr_fit = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds, method="qr")
     assert_allclose(pinv_fit.bse, qr_fit.bse)
+
+
+class TestOLSRobustClusterJK:
+
+    @classmethod
+    def setup_class(cls):
+
+        from statsmodels.datasets import grunfeld
+
+        dtapa = grunfeld.data.load_pandas()
+
+        cls.dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
+        cls.N = cls.exog.shape[0]
+        cls.id = pd.Series(range(cls.N))
+        cls.firm = dtapa.data.firm[:200]
+        cls.G = len(np.unique(cls.firm))
+
+    def test_hc3_vs_crv3(self):
+
+        # test hc3 vs crv3 inference
+
+        res_hc3 = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type="HC3", use_correction=False
+        )
+
+        res_crv3 = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type="cluster-crv3",
+            cov_kwds={"groups": self.id, "use_correction": False},
+        )
+
+        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol=1e-06)
+        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol=1e-06)
+
+    def test_cr3_vs_r(self):
+
+        res_crv3 = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type="cluster-crv3",
+            cov_kwds={"groups": self.firm, "use_correction": True, "use_t": True},
+        )
+
+        res_crv3_jk = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type="cluster-jk",
+            cov_kwds={"groups": self.firm, "use_correction": True, "use_t": True},
+        )
+
+        # check the actual .fit()-produced covariance against the R reference
+
+        assert_allclose(res2.results_cluster_crv3.cov, res_crv3.cov_params(), rtol=1e-6)
+        assert_allclose(
+            res2.results_cluster_crv_jk.cov, res_crv3_jk.cov_params(), rtol=1e-6
+        )
+
+        # and cross-check the standalone helper agrees with the .fit() path
+
+        assert_allclose(
+            res_crv3.cov_params(),
+            sw.cov_cluster(res_crv3, self.firm, True, "cluster-crv3"),
+            rtol=1e-6,
+        )
+        assert_allclose(
+            res_crv3_jk.cov_params(),
+            sw.cov_cluster(res_crv3_jk, self.firm, True, "cluster-jk"),
+            rtol=1e-6,
+        )
+
+        assert_allclose(res_crv3.tvalues, res2.results_cluster_crv3.tvalues, rtol=1e-6)
+        assert_allclose(
+            res_crv3_jk.tvalues, res2.results_cluster_crv_jk.tvalues, rtol=1e-6
+        )
+
+        def pvalue(x, G):
+            return 2 * np.minimum(t.cdf(x, G - 1), 1 - t.cdf(x, G - 1))
+
+        assert_allclose(
+            pvalue(res_crv3.tvalues, self.G),
+            res2.results_cluster_crv3.pvalues,
+            rtol=1e-6,
+        )
+        assert_allclose(
+            pvalue(res_crv3_jk.tvalues, self.G),
+            res2.results_cluster_crv_jk.pvalues,
+            rtol=1e-6,
+        )
+
+
+class TestWLSRobustClusterJK:
+
+    @classmethod
+    def setup_class(cls):
+
+        from statsmodels.datasets import grunfeld
+
+        dtapa = grunfeld.data.load_pandas()
+
+        cls.dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
+        cls.N = cls.exog.shape[0]
+        cls.id = pd.Series(range(cls.N))
+        cls.firm = dtapa.data.firm[:200]
+        cls.G = len(np.unique(cls.firm))
+        cls.weights = np.arange(1, cls.N + 1, 1)
+
+    def test_hc3_vs_crv3(self):
+
+        # test hc3 vs crv3 inference
+
+        res_hc3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type="HC3", use_correction=False
+        )
+
+        res_crv3 = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type="cluster-crv3",
+            cov_kwds={"groups": self.id, "use_correction": False},
+        )
+
+        assert_allclose(res_hc3.tvalues, res_crv3.tvalues, rtol=1e-06)
+        assert_allclose(res_hc3.pvalues, res_crv3.pvalues, rtol=1e-06)
+
+    def test_cr3_vs_r(self):
+
+        res_crv3_wls = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type="cluster-crv3",
+            cov_kwds={"groups": self.firm, "use_correction": True, "use_t": True},
+        )
+
+        res_crv3_jk_wls = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type="cluster-jk",
+            cov_kwds={"groups": self.firm, "use_correction": True, "use_t": True},
+        )
+
+        assert_allclose(
+            res2.results_cluster_crv3_wls.cov, res_crv3_wls.cov_params(), rtol=1e-6
+        )
+        assert_allclose(
+            res2.results_cluster_crv_jk_wls.cov, res_crv3_jk_wls.cov_params(), rtol=1e-6
+        )
+
+        assert_allclose(
+            res_crv3_wls.tvalues, res2.results_cluster_crv3_wls.tvalues, rtol=1e-6
+        )
+        assert_allclose(
+            res_crv3_jk_wls.tvalues, res2.results_cluster_crv_jk_wls.tvalues, rtol=1e-6
+        )
+
+        def pvalue(x, G):
+            return 2 * np.minimum(t.cdf(x, G - 1), 1 - t.cdf(x, G - 1))
+
+        assert_allclose(
+            pvalue(res_crv3_wls.tvalues, self.G),
+            res2.results_cluster_crv3_wls.pvalues,
+            rtol=1e-6,
+        )
+        assert_allclose(
+            pvalue(res_crv3_jk_wls.tvalues, self.G),
+            res2.results_cluster_crv_jk_wls.pvalues,
+            rtol=1e-6,
+        )
+
+
+class TestClusterJackknifeRegressions:
+    """
+    Regression tests for bugs in the original 'cluster-crv3'/'cluster-jk'
+    implementation that were not covered by any existing test:
+
+    - the leave-one-cluster-out mask used the position of a cluster's label
+      in ``np.unique(group)`` instead of the label itself, silently
+      corrupting results for ordinary (non 0-indexed) integer group labels
+    - a regressor collinear within a cluster (e.g. a cluster fixed effect)
+      made the leave-one-cluster-out design singular, and this was not
+      detected
+    - two-way clustering silently returned an invalid (non positive
+      semi-definite) covariance matrix
+    - a single cluster silently produced an all-zero covariance instead of
+      raising
+    - the shared ``covtype.get_robustcov_results`` dispatcher (used by GLM
+      and the discrete models) advertised the new cov_types in its
+      docstring without actually supporting them
+    - ``res.cov_kwds["description"]`` always reported "(CRV1)" regardless
+      of which estimator was actually used
+    - ``cov_cluster``'s ``crv_type`` argument silently accepted unrecognized
+      values
+    - the documented ``df_correction`` behavior never took effect for the
+      new cov_types
+    """
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.datasets import grunfeld
+
+        dtapa = grunfeld.data.load_pandas()
+
+        cls.dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
+        cls.N = cls.exog.shape[0]
+        cls.firm = dtapa.data.firm[:200]
+        cls.G = len(np.unique(cls.firm))
+        # integer-coded, already-contiguous cluster labels equivalent to
+        # `firm`, plus a shifted (non 0-indexed, non-contiguous) version
+
+        _, firm_codes = np.unique(cls.firm, return_inverse=True)
+        cls.firm_codes = firm_codes.astype(int)
+        cls.firm_codes_shifted = cls.firm_codes + 1001
+
+    @pytest.mark.parametrize("cov_type", ["cluster-crv3", "cluster-jk"])
+    def test_noncontiguous_integer_labels_match_contiguous(self, cov_type):
+        res_contig = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type=cov_type,
+            cov_kwds={"groups": self.firm_codes, "use_correction": True},
+        )
+        res_shifted = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type=cov_type,
+            cov_kwds={"groups": self.firm_codes_shifted, "use_correction": True},
+        )
+        assert_allclose(res_contig.cov_params(), res_shifted.cov_params(), rtol=1e-10)
+        # sanity: string labels always went through the reindexing branch,
+        # so they were never affected by this bug -- results should match
+
+        res_str = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type=cov_type,
+            cov_kwds={"groups": self.firm, "use_correction": True},
+        )
+        assert_allclose(res_contig.cov_params(), res_str.cov_params(), rtol=1e-10)
+        # and the result should be far from all-zero (the failure mode when
+        # the leave-one-cluster-out mask silently selected zero rows)
+
+        cov_params = np.asarray(res_shifted.cov_params())
+        assert np.max(np.abs(cov_params)) > 1e-6
+
+    @pytest.mark.parametrize("cov_type", ["cluster-crv3", "cluster-jk"])
+    def test_two_way_clustering_not_supported(self, cov_type):
+        time = np.tile(np.arange(20), 10)
+        with pytest.raises(NotImplementedError):
+            OLS(self.dtapa_endog, self.exog).fit(
+                cov_type=cov_type,
+                cov_kwds={"groups": (self.firm_codes, time)},
+            )
+
+    @pytest.mark.parametrize("cov_type", ["cluster-crv3", "cluster-jk"])
+    def test_fixed_effect_collinear_with_cluster_raises(self, cov_type):
+        dummies = pd.get_dummies(self.firm, drop_first=True).astype(float)
+        dummies.index = self.exog.index
+        exog_fe = pd.concat([self.exog, dummies], axis=1)
+        with pytest.raises(ValueError, match="rank-deficient"):
+            OLS(self.dtapa_endog, exog_fe).fit(
+                cov_type=cov_type,
+                cov_kwds={"groups": self.firm},
+            )
+
+    @pytest.mark.parametrize("cov_type", ["cluster-crv3", "cluster-jk"])
+    def test_single_cluster_raises(self, cov_type):
+        single = np.zeros(self.N, dtype=int)
+        with pytest.raises(ValueError, match="at least 2 clusters"):
+            OLS(self.dtapa_endog, self.exog).fit(
+                cov_type=cov_type,
+                cov_kwds={"groups": single},
+            )
+
+    @pytest.mark.parametrize("cov_type", ["cluster-crv3", "cluster-jk"])
+    def test_glm_raises_clear_error(self, cov_type):
+        from statsmodels.genmod import families
+        from statsmodels.genmod.generalized_linear_model import GLM
+
+        with pytest.raises(TypeError, match="wexog"):
+            GLM(self.dtapa_endog, self.exog, family=families.Gaussian()).fit(
+                cov_type=cov_type,
+                cov_kwds={"groups": self.firm},
+            )
+
+    @pytest.mark.parametrize(
+        "cov_type,expected",
+        [
+            ("cluster", "(CRV1)"),
+            ("cluster-crv3", "(CRV3)"),
+            ("cluster-jk", "cluster correlation"),
+        ],
+    )
+    def test_description_matches_cov_type(self, cov_type, expected):
+        res = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type=cov_type, cov_kwds={"groups": self.firm}
+        )
+        assert expected in res.cov_kwds["description"]
+        if cov_type != "cluster":
+            assert "CRV1" not in res.cov_kwds["description"]
+
+    @pytest.mark.parametrize("crv_type", ["bogus", "CRV3", "cluster_jk"])
+    def test_cov_cluster_rejects_unknown_crv_type(self, crv_type):
+        res = OLS(self.dtapa_endog, self.exog).fit()
+        with pytest.raises(ValueError, match="crv_type"):
+            sw.cov_cluster(res, self.firm, crv_type=crv_type)
+
+    @pytest.mark.parametrize("cov_type", ["cluster-crv3", "cluster-jk"])
+    def test_df_correction_adjusts_df_resid_inference(self, cov_type):
+        res = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type=cov_type,
+            cov_kwds={"groups": self.firm, "use_t": True},
+        )
+        assert res.df_resid_inference == self.G - 1
+
+        res_nocorr = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type=cov_type,
+            cov_kwds={"groups": self.firm, "use_t": True, "df_correction": False},
+        )
+        assert not hasattr(res_nocorr, "df_resid_inference")
+
+
+class TestClusterJKvsRSandwich:
+    """
+    Cross-check `cov_type='cluster-crv3'/'cluster-jk'` against the CRAN
+    `sandwich` package's `vcovJK()` -- a second, independent, actively
+    maintained R implementation of the same leave-one-cluster-out
+    jackknife/CRV3 estimator used to validate the original
+    `results_cluster_crv3`/`results_cluster_crv_jk`-style reference values
+    (computed there via the `summclust` package). See
+    results/generate_crv3_jackknife.py and
+    results/crv3_jackknife_r_results.R for how the reference values in
+    results/results_grunfeld_ols_robust_cluster.py were produced; both
+    scripts are self-contained and re-runnable.
+    """
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.datasets import grunfeld
+
+        dtapa = grunfeld.data.load_pandas()
+
+        cls.dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        cls.exog = add_constant(dtapa_exog[["value", "capital"]], prepend=False)
+        cls.firm = dtapa.data.firm[:200]
+        cls.weights = np.arange(1, len(cls.dtapa_endog) + 1)
+
+    @pytest.mark.parametrize(
+        "cov_type,ref_name",
+        [
+            ("cluster-crv3", "results_cluster_crv3_sandwich_r"),
+            ("cluster-jk", "results_cluster_jk_sandwich_r"),
+        ],
+    )
+    def test_ols_vs_r_sandwich(self, cov_type, ref_name):
+        ref = getattr(res2, ref_name)
+        result = OLS(self.dtapa_endog, self.exog).fit(
+            cov_type=cov_type,
+            cov_kwds={"groups": self.firm, "use_correction": True, "use_t": True},
+        )
+        assert_allclose(result.params, ref.params_table[:, 0], rtol=1e-6)
+        assert_allclose(result.bse, ref.params_table[:, 1], rtol=1e-6)
+        assert_allclose(result.tvalues, ref.params_table[:, 2], rtol=1e-6)
+        assert_allclose(result.pvalues, ref.params_table[:, 3], rtol=1e-6)
+        assert_allclose(result.cov_params(), ref.cov, rtol=1e-6)
+
+    @pytest.mark.parametrize(
+        "cov_type,ref_name",
+        [
+            ("cluster-crv3", "results_cluster_crv3_wls_sandwich_r"),
+            ("cluster-jk", "results_cluster_jk_wls_sandwich_r"),
+        ],
+    )
+    def test_wls_vs_r_sandwich(self, cov_type, ref_name):
+        ref = getattr(res2, ref_name)
+        result = WLS(self.dtapa_endog, self.exog, self.weights).fit(
+            cov_type=cov_type,
+            cov_kwds={"groups": self.firm, "use_correction": True, "use_t": True},
+        )
+        assert_allclose(result.params, ref.params_table[:, 0], rtol=1e-6)
+        assert_allclose(result.bse, ref.params_table[:, 1], rtol=1e-6)
+        assert_allclose(result.tvalues, ref.params_table[:, 2], rtol=1e-6)
+        assert_allclose(result.pvalues, ref.params_table[:, 3], rtol=1e-6)
+        assert_allclose(result.cov_params(), ref.cov, rtol=1e-6)
+
+    def test_r_sandwich_agrees_with_r_summclust(self):
+        # The two independent R packages should themselves agree, since
+        # they implement the same estimator -- this pins that down so a
+        # future edit can't silently let the two reference sources drift
+        # apart without a visible test failure.
+
+        assert_allclose(
+            res2.results_cluster_crv3_sandwich_r.cov,
+            res2.results_cluster_crv3.cov,
+            rtol=1e-5,
+        )
+        assert_allclose(
+            res2.results_cluster_jk_sandwich_r.cov,
+            res2.results_cluster_crv_jk.cov,
+            rtol=1e-5,
+        )
+        assert_allclose(
+            res2.results_cluster_crv3_wls_sandwich_r.cov,
+            res2.results_cluster_crv3_wls.cov,
+            rtol=1e-5,
+        )
+        assert_allclose(
+            res2.results_cluster_jk_wls_sandwich_r.cov,
+            res2.results_cluster_crv_jk_wls.cov,
+            rtol=1e-5,
+        )

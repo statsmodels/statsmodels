@@ -11,23 +11,23 @@ import numpy as np
 
 class StandardizeTransform:
     """
-    class to reparameterize a model for standardized exog
+    Class to reparameterize a model for standardized exog
 
     Parameters
     ----------
     data : array_like
         data that is standardized along axis=0
-    ddof : None or int
+    ddof : int, optional
         degrees of freedom for calculation of standard deviation.
         default is 1, in contrast to numpy.std
-    const_idx : None or int
-        If None, then the presence of a constant is detected if the standard
-        deviation of a column is **equal** to zero. A constant column is
-        not transformed. If this is an integer, then the corresponding column
-        will not be transformed.
-    demean : bool, default is True
+    const_idx : int, optional
+        If None (default), then the presence of a constant is detected if
+        the standard deviation of a column is **equal** to zero. A constant
+        column is not transformed. If this is an integer, then the
+        corresponding column will not be transformed.
+    demean : bool, optional
         If demean is true, then the data will be demeaned, otherwise it will
-        only be rescaled.
+        only be rescaled. Default is True.
 
     Notes
     -----
@@ -44,7 +44,8 @@ class StandardizeTransform:
     def __init__(self, data, ddof=1, const_idx=None, demean=True):
         data = np.asarray(data)
         self.mean = data.mean(0)
-        self.scale = data.std(0, ddof=1)
+        self.scale = data.std(0, ddof=ddof)
+        self.ddof = ddof
 
         # do not transform a constant
         if const_idx is None:
@@ -64,9 +65,7 @@ class StandardizeTransform:
         self.const_idx = const_idx
 
     def transform(self, data):
-        """
-        Standardize the data using the stored transformation
-        """
+        """Standardize the data using the stored transformation"""
         # could use scipy.stats.zscore instead
         if self.mean is None:
             return np.asarray(data) / self.scale

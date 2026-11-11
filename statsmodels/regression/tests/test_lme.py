@@ -1,9 +1,8 @@
 """Tests for linear mixed effects models."""
-
 from statsmodels.compat.platform import PLATFORM_OSX
 
 import csv
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -18,14 +17,18 @@ import pytest
 from scipy import sparse
 
 from statsmodels.base import _penalties as penalties
+from statsmodels.iolib.summary2 import Summary
+from statsmodels.regression.linear_model import OLS
 from statsmodels.regression.mixed_linear_model import (
     MixedLM,
     MixedLMParams,
+    VCSpec,
     _smw_logdet,
     _smw_solver,
 )
 import statsmodels.tools.numdiff as nd
-from statsmodels.tools.sm_exceptions import SingularMatrixWarning
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, SingularMatrixWarning
+from statsmodels.tools.testing import warns_or_none
 
 from .results import lme_r_results
 
@@ -51,7 +54,7 @@ class R_Results:
 
     def __init__(self, meth, irfs, ds_ix):
 
-        bname = "_%s_%s_%d" % (meth, irfs, ds_ix)
+        bname = f"_{meth}_{irfs}_{ds_ix:d}"
 
         self.coef = getattr(lme_r_results, "coef" + bname)
         self.vcov_r = getattr(lme_r_results, "vcov" + bname)
@@ -65,10 +68,10 @@ class R_Results:
             self.ranef_condvar = np.atleast_2d(self.ranef_condvar)
 
         # Load the data file
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "lme%02d.csv" % ds_ix)
-        with open(fname, encoding="utf-8") as fid:
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath(f"lme{ds_ix:02d}.csv")
+        with Path(fname).open(encoding="utf-8") as fid:
             rdr = csv.reader(fid)
             header = next(rdr)
             data = [[float(x) for x in line] for line in rdr]
@@ -111,20 +114,20 @@ class TestMixedLM:
         k_fe = 3
         k_re = 2
 
-        np.random.seed(3558)
-        exog_fe = np.random.normal(size=(n_grp * grpsize, k_fe))
-        exog_re = np.random.normal(size=(n_grp * grpsize, k_re))
+        rs = np.random.RandomState(3558)
+        exog_fe = rs.normal(size=(n_grp * grpsize, k_fe))
+        exog_re = rs.normal(size=(n_grp * grpsize, k_re))
         exog_re[:, 0] = 1
-        exog_vc = np.random.normal(size=(n_grp * grpsize, 3))
-        slopes = np.random.normal(size=(n_grp, k_re))
+        exog_vc = rs.normal(size=(n_grp * grpsize, 3))
+        slopes = rs.normal(size=(n_grp, k_re))
         slopes[:, -1] *= 2
         slopes = np.kron(slopes, np.ones((grpsize, 1)))
-        slopes_vc = np.random.normal(size=(n_grp, 3))
+        slopes_vc = rs.normal(size=(n_grp, 3))
         slopes_vc = np.kron(slopes_vc, np.ones((grpsize, 1)))
         slopes_vc[:, -1] *= 2
         re_values = (slopes * exog_re).sum(1)
         vc_values = (slopes_vc * exog_vc).sum(1)
-        err = np.random.normal(size=n_grp * grpsize)
+        err = rs.normal(size=n_grp * grpsize)
         endog = exog_fe.sum(1) + re_values + vc_values + err
         groups = np.kron(range(n_grp), np.ones(grpsize))
 
@@ -145,10 +148,10 @@ class TestMixedLM:
         try:
             # Test the score at several points.
             for _ in range(5):
-                fe_params = np.random.normal(size=k_fe)
-                cov_re = np.random.normal(size=(k_re, k_re))
+                fe_params = rs.normal(size=k_fe)
+                cov_re = rs.normal(size=(k_re, k_re))
                 cov_re = np.dot(cov_re.T, cov_re)
-                vcomp = np.random.normal(size=2) ** 2
+                vcomp = rs.normal(size=2) ** 2
                 params = MixedLMParams.from_components(
                     fe_params, cov_re=cov_re, vcomp=vcomp
                 )
@@ -182,22 +185,22 @@ class TestMixedLM:
 
     def test_default_re(self):
 
-        np.random.seed(3235)
-        exog = np.random.normal(size=(300, 4))
+        rs = np.random.RandomState(3235)
+        exog = rs.normal(size=(300, 4))
         groups = np.kron(np.arange(100), [1, 1, 1])
-        g_errors = np.kron(np.random.normal(size=100), [1, 1, 1])
-        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+        g_errors = np.kron(rs.normal(size=100), [1, 1, 1])
+        endog = exog.sum(1) + g_errors + rs.normal(size=300)
         mdf1 = MixedLM(endog, exog, groups).fit()
         mdf2 = MixedLM(endog, exog, groups, np.ones(300)).fit()
         assert_almost_equal(mdf1.params, mdf2.params, decimal=8)
 
     def test_history(self):
 
-        np.random.seed(3235)
-        exog = np.random.normal(size=(300, 4))
+        rs = np.random.RandomState(3235)
+        exog = rs.normal(size=(300, 4))
         groups = np.kron(np.arange(100), [1, 1, 1])
-        g_errors = np.kron(np.random.normal(size=100), [1, 1, 1])
-        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+        g_errors = np.kron(rs.normal(size=100), [1, 1, 1])
+        endog = exog.sum(1) + g_errors + rs.normal(size=300)
         mod = MixedLM(endog, exog, groups)
         rslt = mod.fit(full_output=True)
         assert_equal(hasattr(rslt, "hist"), True)
@@ -205,23 +208,23 @@ class TestMixedLM:
     @pytest.mark.slow
     @pytest.mark.smoke
     def test_profile_inference(self):
-        np.random.seed(9814)
+        rs = np.random.RandomState(9814)
         k_fe = 2
         gsize = 3
         n_grp = 100
-        exog = np.random.normal(size=(n_grp * gsize, k_fe))
+        exog = rs.normal(size=(n_grp * gsize, k_fe))
         exog_re = np.ones((n_grp * gsize, 1))
         groups = np.kron(np.arange(n_grp), np.ones(gsize))
-        vca = np.random.normal(size=n_grp * gsize)
-        vcb = np.random.normal(size=n_grp * gsize)
+        vca = rs.normal(size=n_grp * gsize)
+        vcb = rs.normal(size=n_grp * gsize)
         errors = 0
-        g_errors = np.kron(np.random.normal(size=100), np.ones(gsize))
+        g_errors = np.kron(rs.normal(size=100), np.ones(gsize))
         errors += g_errors + exog_re[:, 0]
-        rc = np.random.normal(size=n_grp)
+        rc = rs.normal(size=n_grp)
         errors += np.kron(rc, np.ones(gsize)) * vca
-        rc = np.random.normal(size=n_grp)
+        rc = rs.normal(size=n_grp)
         errors += np.kron(rc, np.ones(gsize)) * vcb
-        errors += np.random.normal(size=n_grp * gsize)
+        errors += rs.normal(size=n_grp * gsize)
 
         endog = exog.sum(1) + errors
         vc = {"a": {}, "b": {}}
@@ -237,19 +240,21 @@ class TestMixedLM:
         rslt.profile_re(
             "b", vtype="vc", dist_low=0.5, num_low=3, dist_high=0.5, num_high=3
         )
+        with pytest.raises(ValueError, match="vtype"):
+            rslt.profile_re(0, vtype="not-a-vtype")
 
     def test_vcomp_1(self):
         # Fit the same model using constrained random effects and
         # variance components.
 
-        np.random.seed(4279)
-        exog = np.random.normal(size=(400, 1))
-        exog_re = np.random.normal(size=(400, 2))
+        rs = np.random.RandomState(4279)
+        exog = rs.normal(size=(400, 1))
+        exog_re = rs.normal(size=(400, 2))
         groups = np.kron(np.arange(100), np.ones(4))
-        slopes = np.random.normal(size=(100, 2))
+        slopes = rs.normal(size=(100, 2))
         slopes[:, 1] *= 2
         slopes = np.kron(slopes, np.ones((4, 1))) * exog_re
-        errors = slopes.sum(1) + np.random.normal(size=400)
+        errors = slopes.sum(1) + rs.normal(size=400)
         endog = exog.sum(1) + errors
 
         free = MixedLMParams(1, 2, 0)
@@ -277,30 +282,30 @@ class TestMixedLM:
     def test_vcomp_2(self):
         # Simulated data comparison to R
 
-        np.random.seed(6241)
+        rs = np.random.RandomState(6241)
         n = 1600
-        exog = np.random.normal(size=(n, 2))
+        exog = rs.normal(size=(n, 2))
         groups = np.kron(np.arange(n / 16), np.ones(16))
 
         # Build up the random error vector
         errors = 0
 
         # The random effects
-        exog_re = np.random.normal(size=(n, 2))
-        slopes = np.random.normal(size=(n // 16, 2))
+        exog_re = rs.normal(size=(n, 2))
+        slopes = rs.normal(size=(n // 16, 2))
         slopes = np.kron(slopes, np.ones((16, 1))) * exog_re
         errors += slopes.sum(1)
 
         # First variance component
         subgroups1 = np.kron(np.arange(n / 4), np.ones(4))
-        errors += np.kron(2 * np.random.normal(size=n // 4), np.ones(4))
+        errors += np.kron(2 * rs.normal(size=n // 4), np.ones(4))
 
         # Second variance component
         subgroups2 = np.kron(np.arange(n / 2), np.ones(2))
-        errors += np.kron(2 * np.random.normal(size=n // 2), np.ones(2))
+        errors += np.kron(2 * rs.normal(size=n // 2), np.ones(2))
 
         # iid errors
-        errors += np.random.normal(size=n)
+        errors += rs.normal(size=n)
 
         endog = exog.sum(1) + errors
 
@@ -351,12 +356,12 @@ class TestMixedLM:
     def test_vcomp_3(self):
         # Test a model with vcomp but no other random effects, using formulas.
 
-        np.random.seed(4279)
-        x1 = np.random.normal(size=400)
+        rs = np.random.RandomState(4279)
+        x1 = rs.normal(size=400)
         groups = np.kron(np.arange(100), np.ones(4))
-        slopes = np.random.normal(size=100)
+        slopes = rs.normal(size=100)
         slopes = np.kron(slopes, np.ones(4)) * x1
-        y = slopes + np.random.normal(size=400)
+        y = slopes + rs.normal(size=400)
         vc_fml = {"a": "0 + x1"}
         df = pd.DataFrame({"y": y, "x1": x1, "groups": groups})
 
@@ -379,9 +384,9 @@ class TestMixedLM:
 
     def test_sparse(self):
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "pastes.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("pastes.csv")
 
         # Dense
         data = pd.read_csv(fname)
@@ -417,9 +422,9 @@ class TestMixedLM:
         # Comments below are R code used to extract the numbers used
         # for comparison.
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "dietox.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("dietox.csv")
 
         # REML
         data = pd.read_csv(fname)
@@ -473,9 +478,9 @@ class TestMixedLM:
         # Comments below are the R code used to extract the constants
         # for comparison.
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "dietox.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("dietox.csv")
 
         # REML
         data = pd.read_csv(fname)
@@ -538,9 +543,9 @@ class TestMixedLM:
         # r = lmer(strength ~ (1|batch) + (1|batch:cask), data=data,
         #          reml=FALSE)
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, "results")
-        fname = os.path.join(rdir, "pastes.csv")
+        cur_dir = Path(__file__).resolve().parent
+        rdir = Path(cur_dir).joinpath("results")
+        fname = Path(rdir).joinpath("pastes.csv")
         data = pd.read_csv(fname)
         vcf = {"cask": "0 + cask"}
 
@@ -607,23 +612,23 @@ class TestMixedLM:
     @pytest.mark.slow
     def test_vcomp_formula(self):
 
-        np.random.seed(6241)
+        rs = np.random.RandomState(6241)
         n = 800
-        exog = np.random.normal(size=(n, 2))
+        exog = rs.normal(size=(n, 2))
         exog[:, 0] = 1
         ex_vc = []
         groups = np.kron(np.arange(n / 4), np.ones(4))
         errors = 0
-        exog_re = np.random.normal(size=(n, 2))
-        slopes = np.random.normal(size=(n // 4, 2))
+        exog_re = rs.normal(size=(n, 2))
+        slopes = rs.normal(size=(n // 4, 2))
         slopes = np.kron(slopes, np.ones((4, 1))) * exog_re
         errors += slopes.sum(1)
-        ex_vc = np.random.normal(size=(n, 4))
-        slopes = np.random.normal(size=(n // 4, 4))
+        ex_vc = rs.normal(size=(n, 4))
+        slopes = rs.normal(size=(n // 4, 4))
         slopes[:, 2:] *= 2
         slopes = np.kron(slopes, np.ones((4, 1))) * ex_vc
         errors += slopes.sum(1)
-        errors += np.random.normal(size=n)
+        errors += rs.normal(size=n)
         endog = exog.sum(1) + errors
 
         exog_vc = {"a": {}, "b": {}}
@@ -660,12 +665,12 @@ class TestMixedLM:
         assert_allclose(result1.bse, result2.bse, rtol=1e-8)
 
     def test_formulas(self):
-        np.random.seed(2410)
-        exog = np.random.normal(size=(300, 4))
-        exog_re = np.random.normal(size=300)
+        rs = np.random.RandomState(2410)
+        exog = rs.normal(size=(300, 4))
+        exog_re = rs.normal(size=300)
         groups = np.kron(np.arange(100), [1, 1, 1])
-        g_errors = exog_re * np.kron(np.random.normal(size=100), [1, 1, 1])
-        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+        g_errors = exog_re * np.kron(rs.normal(size=100), [1, 1, 1])
+        endog = exog.sum(1) + g_errors + rs.normal(size=300)
 
         mod1 = MixedLM(endog, exog, groups, exog_re)
         # test the names
@@ -677,7 +682,7 @@ class TestMixedLM:
         # Fit with a formula, passing groups as the actual values.
         df = pd.DataFrame({"endog": endog})
         for k in range(exog.shape[1]):
-            df["exog%d" % k] = exog[:, k]
+            df[f"exog{k:d}"] = exog[:, k]
         df["exog_re"] = exog_re
         fml = "endog ~ 0 + exog0 + exog1 + exog2 + exog3"
         re_fml = "0 + exog_re"
@@ -721,14 +726,14 @@ class TestMixedLM:
     @pytest.mark.slow
     def test_regularized(self):
 
-        np.random.seed(3453)
-        exog = np.random.normal(size=(400, 5))
+        rs = np.random.RandomState(3453)
+        exog = rs.normal(size=(400, 5))
         groups = np.kron(np.arange(100), np.ones(4))
         expected_endog = exog[:, 0] - exog[:, 2]
         endog = (
             expected_endog
-            + np.kron(np.random.normal(size=100), np.ones(4))
-            + np.random.normal(size=400)
+            + np.kron(rs.normal(size=100), np.ones(4))
+            + rs.normal(size=400)
         )
 
         # L1 regularization
@@ -886,9 +891,9 @@ def do1(reml, irf, ds_ix):
 # ------------------------------------------------------------------
 
 # Run all the tests against R
-cur_dir = os.path.dirname(os.path.abspath(__file__))
-rdir = os.path.join(cur_dir, "results")
-fnames = os.listdir(rdir)
+cur_dir = Path(__file__).resolve().parent
+rdir = Path(cur_dir).joinpath("results")
+fnames = [p.name for p in rdir.iterdir()]
 fnames = [x for x in fnames if x.startswith("lme") and x.endswith(".csv")]
 
 
@@ -906,17 +911,17 @@ def test_r(fname, reml, irf):
 
 def test_mixed_lm_wrapper():
     # a bit more complicated model to test
-    np.random.seed(2410)
-    exog = np.random.normal(size=(300, 4))
-    exog_re = np.random.normal(size=300)
+    rs = np.random.RandomState(2410)
+    exog = rs.normal(size=(300, 4))
+    exog_re = rs.normal(size=300)
     groups = np.kron(np.arange(100), [1, 1, 1])
-    g_errors = exog_re * np.kron(np.random.normal(size=100), [1, 1, 1])
-    endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+    g_errors = exog_re * np.kron(rs.normal(size=100), [1, 1, 1])
+    endog = exog.sum(1) + g_errors + rs.normal(size=300)
 
     # Fit with a formula, passing groups as the actual values.
     df = pd.DataFrame({"endog": endog})
     for k in range(exog.shape[1]):
-        df["exog%d" % k] = exog[:, k]
+        df[f"exog{k:d}"] = exog[:, k]
     df["exog_re"] = exog_re
     fml = "endog ~ 0 + exog0 + exog1 + exog2 + exog3"
     re_fml = "~ exog_re"
@@ -955,18 +960,141 @@ def test_mixed_lm_wrapper():
     assert_(bse_re.index.tolist() == re_names_full)
 
 
+def _vc_noise_data():
+    rng = np.random.default_rng(0)
+    return pd.DataFrame(
+        {
+            "y": rng.normal(size=40),
+            "g": np.repeat(np.arange(10), 4),
+            "h": np.tile([0, 0, 1, 1], 10),
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "re_formula, names", [(None, ["h Var"]), ("1", ["g Var", "h Var"])]
+)
+def test_bse_re_names_formula(re_formula, names):
+    model = MixedLM.from_formula(
+        "y ~ 1",
+        _vc_noise_data(),
+        groups="g",
+        re_formula=re_formula,
+        vc_formula={"h": "0 + C(h)"},
+    )
+    assert model.fit().bse_re.index.tolist() == names
+
+
+def test_bse_re_names_direct():
+    df = _vc_noise_data()
+    vc_mats = [np.kron(np.eye(2), np.ones((2, 1)))] * 10
+    exog_vc = VCSpec(["h"], [[["h0", "h1"]] * 10], [vc_mats])
+    model = MixedLM(
+        df["y"],
+        pd.DataFrame({"const": 1.0}, index=df.index),
+        df["g"],
+        exog_re=pd.Series(1.0, index=df.index, name="re"),
+        exog_vc=exog_vc,
+    )
+    assert model.fit().bse_re.index.tolist() == ["re Var", "h Var"]
+
+
+def _bse_re_labels_data():
+    # 20 groups of 10 observations with a random intercept, a random slope
+    # on x and two crossed variance components, h (5 levels) and k (2 levels)
+    rng = np.random.default_rng(20261110)
+    n_g, m = 20, 10
+    g = np.repeat(np.arange(n_g), m)
+    x = rng.normal(size=n_g * m)
+    h = np.tile(np.arange(5), n_g * m // 5)
+    k = np.tile(np.arange(2), n_g * m // 2)
+    u0 = rng.normal(size=n_g)[g]
+    u1 = 0.5 * rng.normal(size=n_g)[g]
+    vh = 0.7 * rng.normal(size=(n_g, 5))[g, h]
+    vk = 0.5 * rng.normal(size=(n_g, 2))[g, k]
+    y = 1 + 0.5 * x + u0 + u1 * x + vh + vk + rng.normal(size=n_g * m)
+    return pd.DataFrame({"y": y, "x": x, "g": g, "h": h, "k": k})
+
+
+_VC_H = {"h": "0 + C(h)"}
+_VC_HK = {"h": "0 + C(h)", "k": "0 + C(k)"}
+
+
+@pytest.mark.parametrize(
+    "re_formula, vc_formula, labels",
+    [
+        (None, None, ["g Var"]),
+        ("1", None, ["g Var"]),
+        ("~x", None, ["g Var", "g x x Cov", "x Var"]),
+        (None, _VC_H, ["h Var"]),
+        ("1", _VC_H, ["g Var", "h Var"]),
+        ("~x", _VC_H, ["g Var", "g x x Cov", "x Var", "h Var"]),
+        (None, _VC_HK, ["h Var", "k Var"]),
+        ("1", _VC_HK, ["g Var", "h Var", "k Var"]),
+        ("~x", _VC_HK, ["g Var", "g x x Cov", "x Var", "h Var", "k Var"]),
+    ],
+)
+def test_bse_re_names_formula_orderings(re_formula, vc_formula, labels):
+    # bse_re is labelled with the random effects covariance parameters
+    # followed by the variance components, as params and summary are
+    model = MixedLM.from_formula(
+        "y ~ x",
+        _bse_re_labels_data(),
+        groups="g",
+        re_formula=re_formula,
+        vc_formula=vc_formula,
+    )
+    result = model.fit(method="bfgs")
+    k_fe = model.k_fe
+    bse_re = result.bse_re
+
+    assert bse_re.index.tolist() == labels
+    assert result.params.index[k_fe:].tolist() == labels
+    assert result.summary().tables[1].index[k_fe:].tolist() == labels
+    assert_allclose(bse_re.to_numpy(), result._results.bse_re)
+
+
+def test_bse_re_default_random_intercept():
+    df = _bse_re_labels_data()
+    model = MixedLM(df["y"], df[["x"]], df["g"])
+    result = model.fit(method="bfgs")
+    bse_re = result.bse_re
+    assert bse_re.index.tolist() == ["Group Var"]
+    assert result.params.index[model.k_fe :].tolist() == ["Group Var"]
+    assert result.summary().tables[1].index[-1] == "Group Var"
+    assert_allclose(bse_re.to_numpy(), result._results.bse_re)
+
+
+@pytest.mark.parametrize("with_exog_re", [True, False])
+def test_bse_re_numpy_data(with_exog_re):
+    # without names bse_re stays a plain ndarray
+    df = _bse_re_labels_data()
+    exog_re = df[["x"]].assign(c=1.0).to_numpy() if with_exog_re else None
+    model = MixedLM(
+        df["y"].to_numpy(),
+        df[["x"]].to_numpy(),
+        df["g"].to_numpy(),
+        exog_re=exog_re,
+    )
+    result = model.fit(method="bfgs")
+    bse_re = result.bse_re
+    assert type(bse_re) is np.ndarray
+    assert bse_re.shape == ((3,) if with_exog_re else (1,))
+    assert_equal(bse_re, result._results.bse_re)
+
+
 def test_random_effects():
 
-    np.random.seed(23429)
+    rs = np.random.RandomState(23429)
 
     # Default model (random effects only)
     ngrp = 100
     gsize = 10
     rsd = 2
     gsd = 3
-    mn = gsd * np.random.normal(size=ngrp)
+    mn = gsd * rs.normal(size=ngrp)
     gmn = np.kron(mn, np.ones(gsize))
-    y = gmn + rsd * np.random.normal(size=ngrp * gsize)
+    y = gmn + rsd * rs.normal(size=ngrp * gsize)
     gr = np.kron(np.arange(ngrp), np.ones(gsize))
     x = np.ones(ngrp * gsize)
     model = MixedLM(y, x, groups=gr)
@@ -987,7 +1115,7 @@ def test_random_effects():
     assert_(len(re[0]) == 1)
 
     # Random intercept and slope
-    xr = np.random.normal(size=(ngrp * gsize, 2))
+    xr = rs.normal(size=(ngrp * gsize, 2))
     xr[:, 0] = 1
     qp = np.linspace(-1, 1, gsize)
     xr[:, 1] = np.kron(np.ones(ngrp), qp)
@@ -1003,15 +1131,15 @@ def test_random_effects():
 @pytest.mark.slow
 def test_handle_missing():
 
-    np.random.seed(23423)
-    df = np.random.normal(size=(100, 6))
+    rs = np.random.RandomState(23423)
+    df = rs.normal(size=(100, 6))
     df = pd.DataFrame(df)
     df.columns = ["y", "g", "x1", "z1", "c1", "c2"]
     df["g"] = np.kron(np.arange(50), np.ones(2))
-    re = np.random.normal(size=(50, 4))
+    re = rs.normal(size=(50, 4))
     re = np.kron(re, np.ones((2, 1)))
     df["y"] = re[:, 0] + re[:, 1] * df.z1 + re[:, 2] * df.c1
-    df["y"] += re[:, 3] * df.c2 + np.random.normal(size=100)
+    df["y"] += re[:, 3] * df.c2 + rs.normal(size=100)
     df.loc[1, "y"] = np.nan
     df.loc[2, "g"] = np.nan
     df.loc[3, "x1"] = np.nan
@@ -1057,6 +1185,40 @@ def test_handle_missing():
                 assert_equal(len(result1.fittedvalues), result1.nobs)
 
 
+def test_from_formula_missing_kwarg_forwarded():
+    # GH: MixedLM.from_formula captured its own `missing` argument but
+    # never forwarded it to Model.from_formula's **kwargs. That meant the
+    # parent class's own default ("drop") was silently used regardless of
+    # what the caller passed, which desynced the already-computed `groups`
+    # array (built from the un-dropped data) from the row-dropped
+    # exog/endog and crashed with a confusing, unrelated IndexError during
+    # fit() instead of raising a clear error about the missing data.
+    rs = np.random.RandomState(23423)
+    n = 50
+    df = pd.DataFrame(
+        {
+            "y": rs.normal(size=n),
+            "x": rs.normal(size=n),
+            "g": np.repeat(np.arange(10), 5),
+        }
+    )
+    df.loc[0, "y"] = np.nan
+
+    for kwargs in ({}, {"missing": "none"}, {"missing": "raise"}):
+        with pytest.raises(Exception) as excinfo:
+            MixedLM.from_formula("y ~ x", groups="g", data=df, **kwargs)
+        # Before the fix this raised IndexError from misaligned groups vs.
+        # exog/endog instead of a clear missing-data error.
+        assert not isinstance(excinfo.value, IndexError)
+
+    model = MixedLM.from_formula("y ~ x", groups="g", data=df, missing="drop")
+    assert model.exog.shape[0] == n - 1
+    assert model.endog.shape[0] == n - 1
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        model.fit()
+
+
 def test_summary_col():
     from statsmodels.iolib.summary2 import summary_col
 
@@ -1064,8 +1226,8 @@ def test_summary_col():
     x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     # hard coded simulated y
     # ids = np.asarray(ids)
-    # np.random.seed(123987)
-    # y = x + np.array([-1, 0, 1])[ids - 1] + 2 * np.random.randn(len(y))
+    # rs = np.random.RandomState(123987)
+    # y = x + np.array([-1, 0, 1])[ids - 1] + 2 * rs.randn(len(y))
     y = np.array(
         [
             1.727,
@@ -1119,7 +1281,7 @@ def test_random_effects_getters():
     # Simulation-based test to make sure that the BLUPs and actual
     # random effects line up.
 
-    np.random.seed(34234)
+    rs = np.random.RandomState(34234)
     ng = 500  # number of groups
     m = 10  # group size
 
@@ -1128,12 +1290,12 @@ def test_random_effects_getters():
     for i in range(ng):
 
         # Fixed effects
-        xx = np.random.normal(size=(m, 2))
-        yy = xx[:, 0] + 0.5 * np.random.normal(size=m)
+        xx = rs.normal(size=(m, 2))
+        yy = xx[:, 0] + 0.5 * rs.normal(size=m)
 
         # Random effects (re_formula)
-        zz = np.random.normal(size=(m, 2))
-        bb = np.random.normal(size=2)
+        zz = rs.normal(size=(m, 2))
+        bb = rs.normal(size=2)
         bb[0] *= 3
         bb[1] *= 1
         yy += np.dot(zz, bb).flat
@@ -1141,14 +1303,14 @@ def test_random_effects_getters():
 
         # First variance component
         vv0 = np.kron(np.r_[0, 1], np.ones(m // 2)).astype(int)
-        cc0 = np.random.normal(size=2)
+        cc0 = rs.normal(size=2)
         yy += cc0[vv0]
         v0.append(vv0)
         c0.append(cc0)
 
         # Second variance component
         vv1 = np.kron(np.ones(m // 2), np.r_[0, 1]).astype(int)
-        cc1 = np.random.normal(size=2)
+        cc1 = rs.normal(size=2)
         yy += cc1[vv1]
         v1.append(vv1)
         c1.append(cc1)
@@ -1156,7 +1318,7 @@ def test_random_effects_getters():
         y.append(yy)
         x.append(xx)
         z.append(zz)
-        g.append(["g%d" % i] * m)
+        g.append([f"g{i:d}"] * m)
 
     y = np.concatenate(y)
     x = np.concatenate(x)
@@ -1192,12 +1354,12 @@ def test_random_effects_getters():
     result = model.fit()
 
     ref = result.random_effects
-    b0 = [ref["g%d" % k][0:2] for k in range(ng)]
+    b0 = [ref[f"g{k:d}"][0:2] for k in range(ng)]
     b0 = np.asarray(b0)
     assert np.corrcoef(b0[:, 0], b[:, 0])[0, 1] > 0.8
     assert np.corrcoef(b0[:, 1], b[:, 1])[0, 1] > 0.8
 
-    cf0 = [ref["g%d" % k][2:6] for k in range(ng)]
+    cf0 = [ref[f"g{k:d}"][2:6] for k in range(ng)]
     cf0 = np.asarray(cf0)
     for k in range(4):
         assert np.corrcoef(cf0[:, k], cc[:, k])[0, 1] > 0.8
@@ -1212,34 +1374,35 @@ def test_random_effects_getters():
 def check_smw_solver(p, q, r, s):
     # Helper to check that _smw_solver results do in fact solve the desired
     # SMW equation
+    rs = np.random.RandomState(38213821)
     d = q - r
 
-    A = np.random.normal(size=(p, q))
+    A = rs.normal(size=(p, q))
     AtA = np.dot(A.T, A)
 
     B = np.zeros((q, q))
-    B[0:r, 0:r] = np.random.normal(size=(r, r))
-    di = np.random.uniform(size=d)
+    B[0:r, 0:r] = rs.normal(size=(r, r))
+    di = rs.uniform(size=d)
     B[r:q, r:q] = np.diag(1 / di)
     Qi = np.linalg.inv(B[0:r, 0:r])
     s = 0.5
 
-    x = np.random.normal(size=p)
+    x = rs.normal(size=p)
     y2 = np.linalg.solve(s * np.eye(p, p) + np.dot(A, np.dot(B, A.T)), x)
 
     f = _smw_solver(s, A, AtA, Qi, di)
     y1 = f(x)
     assert_allclose(y1, y2)
 
-    f = _smw_solver(s, sparse.csr_matrix(A), sparse.csr_matrix(AtA), Qi, di)
+    A_sp = sparse.csr_array(A)
+    AtA_sp = sparse.csr_array(AtA)
+
+    f = _smw_solver(s, A_sp, AtA_sp, Qi, di)
     y1 = f(x)
     assert_allclose(y1, y2)
 
 
 class TestSMWSolver:
-    @classmethod
-    def setup_class(cls):
-        np.random.seed(23)
 
     @pytest.mark.parametrize("p", [5, 10])
     @pytest.mark.parametrize("q", [4, 8])
@@ -1252,13 +1415,14 @@ class TestSMWSolver:
 def check_smw_logdet(p, q, r, s):
     # Helper to check that _smw_logdet results match non-optimized equivalent
     d = q - r
-    A = np.random.normal(size=(p, q))
+    rs = np.random.RandomState(98631)
+    A = rs.normal(size=(p, q))
     AtA = np.dot(A.T, A)
 
     B = np.zeros((q, q))
-    c = np.random.normal(size=(r, r))
+    c = rs.normal(size=(r, r))
     B[0:r, 0:r] = np.dot(c.T, c)
-    di = np.random.uniform(size=d)
+    di = rs.uniform(size=d)
     B[r:q, r:q] = np.diag(1 / di)
     Qi = np.linalg.inv(B[0:r, 0:r])
     s = 0.5
@@ -1273,10 +1437,6 @@ def check_smw_logdet(p, q, r, s):
 
 
 class TestSMWLogdet:
-    @classmethod
-    def setup_class(cls):
-        np.random.seed(23)
-
     @pytest.mark.parametrize("p", [5, 10])
     @pytest.mark.parametrize("q", [4, 8])
     @pytest.mark.parametrize("r", [2, 3])
@@ -1288,22 +1448,260 @@ class TestSMWLogdet:
 def test_singular():
     # Issue #7051
 
-    np.random.seed(3423)
+    rs = np.random.RandomState(3423)
     n = 100
 
-    data = np.random.randn(n, 2)
+    data = rs.randn(n, 2)
     df = pd.DataFrame(data, columns=["Y", "X"])
     df["class"] = pd.Series([i % 3 for i in df.index], index=df.index)
 
     md = MixedLM.from_formula("Y ~ X", df, groups=df["class"])
-    with pytest.warns(SingularMatrixWarning, match=r"effects"):
-        mdf = md.fit()
+    # The optimizer retries and the boundary warning for the singular fit are
+    # optimizer dependent
+    with warns_or_none(
+        ConvergenceWarning,
+        match="Maximum Likelihood|Retrying MixedLM|The MLE may be on the boundary",
+    ):
+        with pytest.warns(SingularMatrixWarning, match=r"effects"):
+            mdf = md.fit()
     mdf.summary()
+
+
+def _dense_gls(model, cov_re):
+    # Reference GLS fit: build V = I + Z cov_re Z' densely and solve
+    # directly, without any eigendecomposition tricks.
+    n = int(model.nobs)
+    vdense = np.eye(n)
+    row = 0
+    for zg in model.exog_re_li:
+        ng = zg.shape[0]
+        vdense[row:row + ng, row:row + ng] += zg @ cov_re @ zg.T
+        row += ng
+    vinv = np.linalg.inv(vdense)
+    exog, endog = model.exog, model.endog
+    return np.linalg.solve(exog.T @ vinv @ exog, exog.T @ vinv @ endog)
+
+
+def test_get_fe_params_singular_cov_re_matches_ols():
+    # GH 10239: as cov_re -> 0, the fixed effects should approach OLS.
+    # They used to jump to a within-group fit that zeroed the
+    # between-group coefficient.
+    rng = np.random.default_rng(0)
+    n_groups, n_per_group = 30, 3
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)  # constant within each group
+    within = np.tile(np.arange(n_per_group, dtype=float), n_groups)
+    exog = np.column_stack([np.ones(n), between, within])
+    endog = (10.0 + 5.0 * between + 2.0 * within
+             + rng.standard_normal(n))
+
+    model = MixedLM(endog, exog, groups)
+    ols_params = OLS(endog, exog).fit().params
+
+    for v in [1e-9, 1e-10, 9.9e-11, 1e-12, 0.0]:
+        fe_params, singular = model.get_fe_params(np.array([[v]]), np.array([]))
+        assert_allclose(fe_params, ols_params, atol=1e-8)
+        assert singular == (v < 1e-10)
+
+
+def test_get_fe_params_partial_singular_cov_re():
+    # GH 10239: the bug also occurs when only one of two eigendirections
+    # of cov_re collapses.
+    rng = np.random.default_rng(1)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re)
+
+    # Only the intercept variance goes below tol; the slope variance
+    # stays at 2.0.
+    for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
+        cov_re = np.diag([v0, 2.0])
+        fe_params, singular = model.get_fe_params(cov_re, np.array([]))
+        gold = _dense_gls(model, cov_re)
+        assert_allclose(fe_params, gold, atol=1e-8)
+        assert singular == (v0 < 1e-10)
+
+
+def test_get_fe_params_correlated_singular_cov_re():
+    # GH 10239: a correlated, nearly singular cov_re used to feed huge
+    # values into the Woodbury solver and raise LinAlgError.
+    rng = np.random.default_rng(1)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re)
+
+    a = np.random.default_rng(1).standard_normal((2, 1)) * np.sqrt(2.0)
+    cov_re_good = a @ a.T
+    for noise_scale in [1e-6, 1e-8, 1e-11, 1e-15]:
+        noise = np.random.default_rng(2).standard_normal((2, 2)) * noise_scale
+        cov_re = cov_re_good + noise @ noise.T
+
+        fe_params, singular = model.get_fe_params(cov_re, np.array([]))
+        gold = _dense_gls(model, cov_re)
+        assert_allclose(fe_params, gold, atol=1e-8)
+
+
+def _dense_gls_vc(model, cov_re, vcomp):
+    # Same as _dense_gls, but V also includes the variance components.
+    n = int(model.nobs)
+    vdense = np.eye(n)
+    row = 0
+    for group_ix, _ in enumerate(model.group_labels):
+        ng = model.exog_li[group_ix].shape[0]
+        block = np.zeros((ng, ng))
+        if model.k_re > 0:
+            zg = model.exog_re_li[group_ix]
+            block += zg @ cov_re @ zg.T
+        for j in range(len(model.exog_vc.names)):
+            mat = np.asarray(model.exog_vc.mats[j][group_ix])
+            block += vcomp[j] * (mat @ mat.T)
+        vdense[row:row + ng, row:row + ng] += block
+        row += ng
+    vinv = np.linalg.inv(vdense)
+    exog, endog = model.exog, model.endog
+    return np.linalg.solve(exog.T @ vinv @ exog, exog.T @ vinv @ endog)
+
+
+def test_get_fe_params_singular_vcomp_matches_ols():
+    # GH 10239: same as the cov_re test above, but with a single variance
+    # component collapsing to zero.
+    rng = np.random.default_rng(0)
+    n_groups, n_per_group = 30, 3
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)  # constant within each group
+    within = np.tile(np.arange(n_per_group, dtype=float), n_groups)
+    exog = np.column_stack([np.ones(n), between, within])
+    endog = (10.0 + 5.0 * between + 2.0 * within
+             + rng.standard_normal(n))
+
+    vc_mats = [np.ones((n_per_group, 1)) for _ in range(n_groups)]
+    vc_colnames = [["vc0"] for _ in range(n_groups)]
+    exog_vc = VCSpec(["vc0"], [vc_colnames], [vc_mats])
+
+    model = MixedLM(endog, exog, groups, exog_vc=exog_vc)
+    ols_params = OLS(endog, exog).fit().params
+
+    for v in [1e-9, 1e-10, 9.9e-11, 1e-12, 0.0]:
+        fe_params, singular = model.get_fe_params(np.empty((0, 0)), np.array([v]))
+        assert_allclose(fe_params, ols_params, atol=1e-8)
+        assert singular == (v < 1e-10)
+
+
+def test_get_fe_params_partial_singular_vcomp():
+    # GH 10239: the bug also occurs when only one of two variance
+    # components collapses.
+    rng = np.random.default_rng(1)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+
+    vc0_mats = [np.ones((n_per_group, 1)) for _ in range(n_groups)]
+    vc1_mats = [x[groups == g][:, None] for g in range(n_groups)]
+    exog_vc = VCSpec(
+        ["vc0", "vc1"],
+        [[["vc0"] for _ in range(n_groups)], [["vc1"] for _ in range(n_groups)]],
+        [vc0_mats, vc1_mats],
+    )
+
+    model = MixedLM(endog, exog, groups, exog_vc=exog_vc)
+
+    # Only vc0 goes below tol; vc1 stays at 2.0.
+    for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
+        vcomp = np.array([v0, 2.0])
+        fe_params, singular = model.get_fe_params(np.empty((0, 0)), vcomp)
+        gold = _dense_gls_vc(model, np.empty((0, 0)), vcomp)
+        assert_allclose(fe_params, gold, atol=1e-8)
+        assert singular == (v0 < 1e-10)
+
+
+def test_get_fe_params_mixed_singular_cov_re_and_vcomp():
+    # GH 10239: cov_re and a variance component collapse together, so
+    # both the re_project and vc_project paths run in the same call.
+    rng = np.random.default_rng(2)
+    n_groups, n_per_group = 40, 4
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 10.0 + 3.0 * between + 2.0 * x + rng.standard_normal(n) * 0.5
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+
+    vc_mats = [np.ones((n_per_group, 1)) for _ in range(n_groups)]
+    exog_vc = VCSpec(["vc0"], [[["vc0"] for _ in range(n_groups)]], [vc_mats])
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re, exog_vc=exog_vc)
+
+    for v0 in [1e-9, 9.9e-11, 1e-15, 0.0]:
+        cov_re = np.diag([v0, 2.0])
+        vcomp = np.array([v0])
+        fe_params, singular = model.get_fe_params(cov_re, vcomp)
+        gold = _dense_gls_vc(model, cov_re, vcomp)
+        assert_allclose(fe_params, gold, atol=1e-8)
+        assert singular == (v0 < 1e-10)
+
+
+@pytest.mark.parametrize("method", ["lbfgs", "powell", "nm"])
+def test_fit_boundary_fixed_effects_equal_ols(method):
+    # GH 10239, code sample 2: the within-subject errors are negatively
+    # correlated, so that the ML estimate of the random intercept variance is
+    # at the boundary (0) and the fixed effects are the OLS estimates.
+    # method="lbfgs" ends at a random intercept variance that is exactly 0. The
+    # log-likelihood was inf, the scale was wrong and the fit raised
+    # LinAlgError('Singular matrix') for the Hessian.
+    rng = np.random.default_rng(12345)
+    n_subj, sd, c = 74, 28.0, 0.25
+    z = rng.standard_normal((n_subj, 3))
+    e = sd * (z - c * z.mean(axis=1, keepdims=True))
+    rows = []
+    for s in range(n_subj):
+        g = s % 2
+        for k, cond in enumerate(["c1", "c2", "c3"]):
+            mu = 10 + 5 * g + (20 + 25 * g) * (k == 1) + 8 * g * (k == 2)
+            rows.append(
+                {"subj": s, "grp": "B" if g else "A", "cond": cond, "y": mu + e[s, k]}
+            )
+    df = pd.DataFrame(rows)
+
+    ols = OLS.from_formula("y ~ grp * cond", df).fit()
+    model = MixedLM.from_formula("y ~ grp * cond", df, groups="subj")
+    with warnings.catch_warnings():
+        # the MLE is on the boundary of the parameter space
+        warnings.simplefilter("ignore")
+        res = model.fit(reml=False, method=method)
+    assert_allclose(res.params[ols.params.index], ols.params, rtol=1e-8)
+    assert_allclose(res.scale, ols.ssr / ols.nobs, rtol=1e-8)
+    assert res.cov_re.iloc[0, 0] < 1e-8
+    # the likelihood of the boundary is the likelihood of OLS, and the
+    # covariance of the fixed effects is the OLS covariance for the ML scale
+    assert_allclose(res.llf, ols.llf, rtol=1e-10)
+    bse_ml = ols.bse * np.sqrt(ols.df_resid / ols.nobs)
+    assert_allclose(res.bse[ols.params.index], bse_ml, rtol=1e-6)
 
 
 def test_get_distribution():
 
-    np.random.seed(234)
+    rs = np.random.RandomState(234)
 
     n = 100
     n_groups = 10
@@ -1312,25 +1710,25 @@ def test_get_distribution():
     vcomp = np.r_[0.5**2, 1.5**2]
     scale = 1.5
 
-    exog_fe = np.random.normal(size=(n, 2))
-    exog_re = np.random.normal(size=(n, 2))
-    exog_vca = np.random.normal(size=(n, 2))
-    exog_vcb = np.random.normal(size=(n, 2))
+    exog_fe = rs.normal(size=(n, 2))
+    exog_re = rs.normal(size=(n, 2))
+    exog_vca = rs.normal(size=(n, 2))
+    exog_vcb = rs.normal(size=(n, 2))
 
     groups = np.repeat(np.arange(n_groups, dtype=int), n / n_groups)
 
     ey = np.dot(exog_fe, fe_params)
 
-    u = np.random.normal(size=(n_groups, 2))
+    u = rs.normal(size=(n_groups, 2))
     u = np.dot(u, np.linalg.cholesky(cov_re).T)
 
-    u1 = np.sqrt(vcomp[0]) * np.random.normal(size=(n_groups, 2))
-    u2 = np.sqrt(vcomp[1]) * np.random.normal(size=(n_groups, 2))
+    u1 = np.sqrt(vcomp[0]) * rs.normal(size=(n_groups, 2))
+    u2 = np.sqrt(vcomp[1]) * rs.normal(size=(n_groups, 2))
 
     y = ey + (u[groups, :] * exog_re).sum(1)
     y += (u1[groups, :] * exog_vca).sum(1)
     y += (u2[groups, :] * exog_vcb).sum(1)
-    y += np.sqrt(scale) * np.random.normal(size=n)
+    y += np.sqrt(scale) * rs.normal(size=n)
 
     df = pd.DataFrame(
         {
@@ -1358,16 +1756,14 @@ def test_get_distribution():
 
     # Build a params vector that is comparable to
     # MixedLMResults.params
-    import statsmodels
-
-    mp = statsmodels.regression.mixed_linear_model.MixedLMParams
+    mp = MixedLMParams
     po = mp.from_components(fe_params=fe_params, cov_re=cov_re, vcomp=vcomp)
     pa = po.get_packed(has_fe=True, use_sqrt=False)
     pa[len(fe_params) :] /= scale
 
     # Get a realization
     dist = m.get_distribution(pa, scale, None)
-    yr = dist.rvs(0)
+    yr = dist.rvs(0, rng=rs)
 
     # Check the overall variance
     v = (np.dot(exog_re, cov_re) * exog_re).sum(1).mean()
@@ -1375,3 +1771,486 @@ def test_get_distribution():
     v += vcomp[1] * (exog_vcb**2).sum(1).mean()
     v += scale
     assert_allclose(np.var(yr - ey), v, rtol=1e-2, atol=1e-4)
+
+
+def test_fit_unsupported_kwargs_ignored():
+    # GH#9677 - passing cov_type to MixedLM.fit should warn but not crash
+    rs = np.random.RandomState(123)
+    n = 100
+    groups = np.repeat(np.arange(10), 10)
+    x = rs.normal(size=n)
+    # a group effect keeps the random effects variance off the boundary
+    y = x + rs.normal(size=n) + rs.normal(size=10)[groups]
+    df = pd.DataFrame({"y": y, "x": x, "g": groups})
+
+    model = MixedLM.from_formula("y ~ x", groups="g", data=df)
+
+    with pytest.warns(FutureWarning, match="Argument cov_type"):
+        result = model.fit(cov_type="hc1")
+
+    # Should complete without AttributeError and return valid results
+    assert result.fe_params is not None
+    assert len(result.fe_params) == 2
+
+
+def test_fit_unsupported_kwargs_warns():
+    # GH#9677 - unsupported kwargs should emit RuntimeWarning
+    rs = np.random.RandomState(456)
+    n = 50
+    groups = np.repeat(np.arange(5), 10)
+    x = rs.normal(size=n)
+    # a group effect keeps the random effects variance off the boundary
+    y = x + rs.normal(size=n) + rs.normal(size=5)[groups]
+    df = pd.DataFrame({"y": y, "x": x, "g": groups})
+
+    model = MixedLM.from_formula("y ~ x", groups="g", data=df)
+
+    with pytest.warns(FutureWarning, match="Argument cov_type"):
+        model.fit(cov_type="hc1")
+
+
+def test_summary_after_remove_data():
+    # summary() must still work after remove_data() has been called
+    pid = np.repeat([0, 1], 5)
+    x0 = np.repeat([1], 10)
+    x1 = [1, 5, 7, 3, 5, 1, 2, 6, 9, 8]
+    x2 = [6, 2, 1, 0, 1, 4, 3, 8, 2, 1]
+    y = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    df = pd.DataFrame({"y": y, "pid": pid, "x0": x0, "x1": x1, "x2": x2})
+    endog = df["y"].values
+    exog = df[["x0", "x1", "x2"]].values
+    groups = df["pid"].values
+    res = MixedLM(endog, exog, groups=groups).fit()
+
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+def test_mixedlm_t_test():
+    # MixedLMResults.t_test overrides the base implementation to restrict
+    # t-tests to fixed-effects parameters (padding the random-effects
+    # covariance parameters with zero restrictions internally), but this
+    # override had no test coverage.
+    rs = np.random.RandomState(12345)
+    n_groups, group_size = 30, 10
+    n = n_groups * group_size
+    groups = np.repeat(np.arange(n_groups), group_size)
+    exog = np.column_stack(
+        [np.ones(n), rs.standard_normal((n, 2))]
+    )
+    random_intercepts = rs.standard_normal(n_groups) * 0.5
+    endog = (exog @ [1.0, 0.5, -0.5] + random_intercepts[groups]
+             + rs.standard_normal(n) * 0.5)
+
+    res = MixedLM(endog, exog, groups).fit()
+
+    # An identity r_matrix over the fixed effects reproduces fe_params and
+    # bse_fe exactly.
+    tt = res.t_test(np.eye(res.k_fe))
+    assert_allclose(tt.effect, res.fe_params)
+    assert_allclose(tt.sd, res.bse_fe)
+    assert_allclose(tt.tvalue, res.fe_params / res.bse_fe)
+
+    # A contrast that is a linear combination of fixed effects should match
+    # a manual computation.
+    contrast = np.array([[1.0, -1.0, 0.0]])
+    tt_contrast = res.t_test(contrast)
+    expected_effect = res.fe_params[0] - res.fe_params[1]
+    assert_allclose(tt_contrast.effect, [expected_effect])
+
+    # r_matrix must have exactly k_fe columns.
+    with pytest.raises(ValueError, match=f"should have {res.k_fe:d} columns"):
+        res.t_test(np.eye(res.k_fe + 1))
+
+
+def test_predict_reflects_only_fixed_effects():
+    rs = np.random.RandomState(2024)
+    n_groups, n_per_group = 8, 12
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    exog = np.column_stack(
+        [np.ones(n), rs.standard_normal((n, 2))]
+    )
+    random_intercepts = rs.standard_normal(n_groups) * 0.5
+    endog = (exog @ [1.0, 0.5, -0.5] + random_intercepts[groups]
+             + rs.standard_normal(n) * 0.5)
+
+    mod = MixedLM(endog, exog, groups)
+    res = mod.fit()
+
+    # predict() is documented to reflect only the fixed-effects mean
+    # structure: exog @ fe_params, closed form.
+    assert_allclose(mod.predict(res.params), exog @ res.fe_params)
+    assert_allclose(mod.predict(res.params), mod.predict(res.params_object))
+
+    # a MixedLMParams instance and custom exog are both accepted
+    new_exog = rs.standard_normal((5, 3))
+    assert_allclose(mod.predict(res.params_object, exog=new_exog),
+                    new_exog @ res.fe_params)
+
+    packed = np.concatenate([res.fe_params, [999.0]])
+    assert_allclose(mod.predict(packed), exog @ res.fe_params)
+
+
+def test_profile_re_likelihood_peaks_at_mle():
+    # MixedLMResults.profile_re had no test coverage in the standard suite:
+    # the only existing call, test_profile_inference above, is marked both
+    # slow and smoke (it only checks the call does not raise).
+    #
+    # profile_re refits the model with the profiled variance component
+    # fixed at each grid point, optimizing over everything else. The grid
+    # point equal to the MLE's own estimate (row `num_low`, since
+    # `left = linspace(low, ru0, num_low + 1)` ends exactly at ru0 and
+    # `right` starts there) is therefore just the original fit again, so
+    # its likelihood should equal the full model's llf; every other grid
+    # point is a genuinely restricted fit and so cannot exceed it.
+    rng = np.random.default_rng(4021)
+    n_groups, n_per_group = 15, 8
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 1))])
+    random_intercepts = rng.standard_normal(n_groups) * 0.6
+    endog = exog @ [1.0, 0.5] + random_intercepts[groups] + rng.standard_normal(n) * 0.5
+
+    res = MixedLM(endog, exog, groups).fit(reml=False)
+
+    num_low, num_high = 2, 2
+    likev = res.profile_re(
+        0,
+        vtype="re",
+        num_low=num_low,
+        dist_low=0.2,
+        num_high=num_high,
+        dist_high=0.2,
+    )
+    assert likev.shape == (num_low + num_high + 1, 2)
+
+    mle_row = likev[num_low]
+    assert_allclose(mle_row[0], res.cov_re[0, 0], rtol=1e-6)
+    assert_allclose(mle_row[1], res.llf, rtol=1e-6)
+    assert np.all(likev[:, 1] <= mle_row[1] + 1e-6)
+
+
+def test_fit_do_cg_false():
+    # GH#7980 - do_cg=False skips optimization and returns results at the
+    # starting values instead of raising
+    rs = np.random.RandomState(789)
+    groups = np.repeat(np.arange(20), 10)
+    x = rs.normal(size=200)
+    y = 1 + x + rs.normal(size=20)[groups] + rs.normal(size=200)
+    model = MixedLM(y, np.column_stack((np.ones(200), x)), groups=groups)
+    result = model.fit()
+
+    result0 = model.fit(start_params=result.params_object, do_cg=False)
+    assert_allclose(result0.params, result.params, rtol=1e-5)
+    assert_allclose(result0.llf, result.llf, rtol=1e-8)
+    assert not result0.converged
+
+    result0 = model.fit(do_cg=False)
+    assert_allclose(result0.cov_re_unscaled, np.eye(1))
+
+
+def _dense_profile(model, fe_params, cov_re, vcomp, reml):
+    # Profile log-likelihood (scale profiled out), and the scale. V is built
+    # densely for each group as V = I + Z cov_re Z' + sum_j vcomp_j M_j M_j'.
+    # The inverse of cov_re is not needed, so that this is also defined for a
+    # singular cov_re. fe_params=None uses the GLS estimates.
+    xvx = np.zeros((model.k_fe, model.k_fe))
+    xvy = np.zeros(model.k_fe)
+    vinv, logdet = [], 0.0
+    for group_ix, _ in enumerate(model.group_labels):
+        ng = model.exog_li[group_ix].shape[0]
+        v = np.eye(ng)
+        if model.k_re > 0:
+            zg = model.exog_re_li[group_ix]
+            v += zg @ cov_re @ zg.T
+        for j in range(len(model.exog_vc.names)):
+            mat = np.asarray(model.exog_vc.mats[j][group_ix])
+            v += vcomp[j] * (mat @ mat.T)
+        vinv.append(np.linalg.inv(v))
+        logdet += np.linalg.slogdet(v)[1]
+        xg, yg = model.exog_li[group_ix], model.endog_li[group_ix]
+        xvx += xg.T @ vinv[-1] @ xg
+        xvy += xg.T @ vinv[-1] @ yg
+    if fe_params is None:
+        fe_params = np.linalg.solve(xvx, xvy)
+    qf = 0.0
+    for group_ix, _ in enumerate(model.group_labels):
+        resid = model.endog_li[group_ix] - model.exog_li[group_ix] @ fe_params
+        qf += resid @ vinv[group_ix] @ resid
+    n = model.n_totobs
+    nu = n - model.k_fe if reml else n
+    scale = qf / nu
+    ll = -logdet / 2 - nu * np.log(qf) / 2 - nu * np.log(2 * np.pi) / 2
+    ll += nu * np.log(nu) / 2 - nu / 2
+    if reml:
+        ll -= np.linalg.slogdet(xvx)[1] / 2
+    return ll, scale
+
+
+def _prepare(model, reml):
+    # fit without optimization to set the attributes that loglike uses, the
+    # starting values are not a maximum
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ConvergenceWarning)
+        model.fit(do_cg=False, reml=reml)
+
+
+def _singular_model(with_vc, use_sqrt=True):
+    rng = np.random.default_rng(3)
+    n_groups, n_per_group = 25, 5
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    x = rng.standard_normal(n)
+    between = np.where(groups % 2 == 0, 0.0, 1.0)
+    endog = 2.0 + 1.5 * between + 0.5 * x + rng.standard_normal(n)
+    exog = np.column_stack([np.ones(n), between, x])
+    exog_re = np.column_stack([np.ones(n), x])
+    exog_vc = None
+    if with_vc:
+        vc0 = [np.ones((n_per_group, 1)) for _ in range(n_groups)]
+        vc1 = [x[groups == g][:, None] for g in range(n_groups)]
+        exog_vc = VCSpec(
+            ["vc0", "vc1"],
+            [[["vc0"] for _ in range(n_groups)], [["vc1"] for _ in range(n_groups)]],
+            [vc0, vc1],
+        )
+    model = MixedLM(
+        endog, exog, groups, exog_re=exog_re, exog_vc=exog_vc, use_sqrt=use_sqrt
+    )
+    return model
+
+
+# cov_re and vcomp of the cases, the vcomp is only used with variance components
+_singular_cases = [
+    (np.diag([1.0, 2.0]), np.array([0.5, 1.5])),
+    (np.diag([0.0, 2.0]), np.array([0.5, 1.5])),
+    (np.diag([1e-12, 2.0]), np.array([0.0, 1.5])),
+    (np.zeros((2, 2)), np.array([0.0, 0.0])),
+    (0.8 * np.ones((2, 2)), np.array([0.5, 0.0])),
+]
+
+
+@pytest.mark.parametrize("reml", [True, False])
+@pytest.mark.parametrize("with_vc", [True, False])
+@pytest.mark.parametrize("cov_re, vcomp", _singular_cases)
+def test_loglike_scale_singular_cov_dense(cov_re, vcomp, with_vc, reml):
+    # A singular cov_re or a variance component of zero is on the boundary of
+    # the parameter space. The log-likelihood and the scale are continuous
+    # there, and the limit is the model without the degenerate directions. The
+    # log-likelihood was inf and the scale used the limit of an infinite
+    # variance, because the inverse of cov_re was replaced by the
+    # pseudo-inverse.
+    model = _singular_model(with_vc)
+    _prepare(model, reml)
+    vc = vcomp if with_vc else np.empty(0)
+    params = MixedLMParams.from_components(cov_re=cov_re, vcomp=vc)
+    ll, scale = _dense_profile(model, None, cov_re, vc, reml)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SingularMatrixWarning)
+        assert_allclose(model.loglike(params), ll, rtol=1e-12)
+        fe_params, _ = model.get_fe_params(cov_re, vc)
+        assert_allclose(model.get_scale(fe_params, cov_re, vc), scale, rtol=1e-12)
+
+
+@pytest.mark.parametrize("reml", [True, False])
+@pytest.mark.parametrize("with_vc", [True, False])
+@pytest.mark.parametrize("cov_re, vcomp", _singular_cases)
+def test_score_hessian_singular_cov_numdiff(cov_re, vcomp, with_vc, reml):
+    # The score and the Hessian at the boundary of the parameter space are the
+    # derivatives of the log-likelihood. The score was computed with the
+    # limit of an infinite variance and the Hessian of the fixed effects was
+    # singular if the variance of the random intercept is 0.
+    model = _singular_model(with_vc, use_sqrt=False)
+    _prepare(model, reml)
+    vc = vcomp if with_vc else np.empty(0)
+    k_re2, k_fe = model.k_re2, model.k_fe
+    rows, cols = np.tril_indices(model.k_re)
+
+    def unpack(theta):
+        c = np.zeros((model.k_re, model.k_re))
+        c[rows, cols] = theta[:k_re2]
+        c = c + np.tril(c, -1).T
+        return c, theta[k_re2:]
+
+    def ll_cov(theta):
+        c, v = unpack(theta)
+        return _dense_profile(model, None, c, v, reml)[0]
+
+    theta0 = np.concatenate((cov_re[rows, cols], vc))
+    h = 1e-5
+    fd = np.zeros(len(theta0))
+    for j in range(len(theta0)):
+        e = np.zeros(len(theta0))
+        e[j] = h
+        fd[j] = (ll_cov(theta0 + e) - ll_cov(theta0 - e)) / (2 * h)
+    params = MixedLMParams.from_components(cov_re=cov_re, vcomp=vc)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SingularMatrixWarning)
+        score = model.score(params)
+    assert_allclose(score, fd, rtol=1e-5, atol=1e-6)
+
+    # Hessian of the log-likelihood with the scale profiled out, with respect
+    # to the fixed effects and the covariance parameters
+    fe_params, _ = model.get_fe_params(cov_re, vc)
+
+    def ll_all(theta):
+        c, v = unpack(theta[k_fe:])
+        return _dense_profile(model, theta[:k_fe], c, v, reml)[0]
+
+    theta = np.concatenate((fe_params, theta0))
+    m = len(theta)
+    num_hess = np.zeros((m, m))
+    h = 1e-3
+    for i in range(m):
+        for j in range(i + 1):
+            ei, ej = np.zeros(m), np.zeros(m)
+            ei[i], ej[j] = h, h
+            f = [ll_all(theta + a * ei + b * ej) for a in (1, -1) for b in (1, -1)]
+            num_hess[i, j] = num_hess[j, i] = (f[0] - f[1] - f[2] + f[3]) / (4 * h * h)
+    params = MixedLMParams.from_components(
+        fe_params=fe_params, cov_re=cov_re, vcomp=vc
+    )
+    hess, _ = model.hessian(params)
+    assert_allclose(hess, num_hess, rtol=1e-4, atol=1e-3 * np.abs(hess).max())
+
+
+@pytest.mark.parametrize("reml", [True, False])
+@pytest.mark.parametrize("cov_re, vcomp", [(0.0, 0.5), (1.0, 0.0), (0.0, 0.0)])
+def test_singular_variance_sparse(cov_re, vcomp, reml):
+    # the degenerate directions are also dropped for sparse variance components
+    cur_dir = Path(__file__).resolve().parent
+    data = pd.read_csv(Path(cur_dir).joinpath("results", "pastes.csv"))
+    kwds = {
+        "groups": "batch",
+        "re_formula": "1",
+        "vc_formula": {"cask": "0 + cask"},
+        "data": data,
+    }
+    cov_re, vcomp = np.array([[cov_re]]), np.array([vcomp])
+    params = MixedLMParams.from_components(cov_re=cov_re, vcomp=vcomp)
+    out = []
+    for use_sparse in (False, True):
+        model = MixedLM.from_formula("strength ~ 1", use_sparse=use_sparse, **kwds)
+        if not use_sparse:
+            dense_model = model
+        _prepare(model, reml)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SingularMatrixWarning)
+            fe_params, _ = model.get_fe_params(cov_re, vcomp)
+            scale = model.get_scale(fe_params, cov_re, vcomp)
+            out.append((model.loglike(params), fe_params, scale))
+    assert_allclose(out[1][0], out[0][0], rtol=1e-10)
+    assert_allclose(out[1][1], out[0][1], rtol=1e-10)
+    assert_allclose(out[1][2], out[0][2], rtol=1e-10)
+
+    ll, scale = _dense_profile(dense_model, None, cov_re, vcomp, reml)
+    assert_allclose(out[0][0], ll, rtol=1e-10)
+    assert_allclose(out[0][2], scale, rtol=1e-10)
+
+
+@pytest.mark.parametrize("alpha", [0.0, 1.0, 40.0])
+def test_fit_regularized_pandas(alpha):
+    # GH 8902: fit_regularized used the pandas output of the unpenalized fit
+    # and failed for models created from pandas data or formulas
+    rng = np.random.default_rng(8902)
+    exog = rng.standard_normal((200, 3))
+    groups = np.repeat(np.arange(50), 4)
+    endog = (
+        exog[:, 0]
+        - exog[:, 2]
+        + np.repeat(rng.standard_normal(50), 4)
+        + rng.standard_normal(200)
+    )
+    data = pd.DataFrame(exog, columns=["x0", "x1", "x2"])
+    data["y"] = endog
+    data["g"] = groups
+
+    res = MixedLM(endog, exog, groups).fit_regularized(alpha=alpha)
+    model = MixedLM.from_formula("y ~ 0 + x0 + x1 + x2", data, groups="g")
+    res_pd = model.fit_regularized(alpha=alpha)
+
+    assert isinstance(res_pd.fe_params, pd.Series)
+    assert list(res_pd.fe_params.index) == ["x0", "x1", "x2"]
+    assert isinstance(res_pd.cov_re, pd.DataFrame)
+    assert_allclose(np.asarray(res_pd.fe_params), res.fe_params)
+    assert_allclose(np.asarray(res_pd.params), res.params)
+    assert_allclose(np.asarray(res_pd.bse), res.bse)
+    assert_allclose(np.asarray(res_pd.cov_re), res.cov_re)
+    assert_allclose(res_pd.scale, res.scale)
+    if alpha == 40.0:
+        # x1 is set to zero by the penalty and has no standard error
+        assert res_pd.fe_params["x1"] == 0.0
+        assert np.isnan(res_pd.bse["x1"])
+    summ = res_pd.summary()
+    assert "x1" in summ.as_text()
+
+
+def _missing_data(pandas):
+    rng = np.random.default_rng(7978)
+    n_groups, n_per_group = 20, 6
+    n = n_groups * n_per_group
+    groups = np.repeat(np.arange(n_groups), n_per_group)
+    exog = np.column_stack([np.ones(n), rng.standard_normal(n)])
+    exog_re = np.column_stack([np.ones(n), rng.standard_normal(n)])
+    re = rng.standard_normal((n_groups, 2))[groups]
+    endog = exog[:, 1] + np.sum(exog_re * re, axis=1) + rng.standard_normal(n)
+    endog[[3, 50]] = np.nan
+    exog[17, 1] = np.nan
+    exog_re[90, 1] = np.nan
+    if pandas:
+        endog = pd.Series(endog, name="y")
+        exog = pd.DataFrame(exog, columns=["const", "x"])
+        exog_re = pd.DataFrame(exog_re, columns=["re0", "re1"])
+        groups = pd.Series(groups, name="g")
+    keep = ~(
+        np.isnan(np.asarray(endog))
+        | np.isnan(np.asarray(exog)).any(1)
+        | np.isnan(np.asarray(exog_re)).any(1)
+    )
+    return endog, exog, exog_re, groups, keep
+
+
+@pytest.mark.parametrize("pandas", [False, True])
+@pytest.mark.parametrize("use_exog_re", [False, True])
+def test_missing_drop(pandas, use_exog_re):
+    # GH 7978: missing="drop" did not drop the rows of groups and exog_re
+    endog, exog, exog_re, groups, keep = _missing_data(pandas)
+    if not use_exog_re:
+        exog_re = None
+        keep = ~(np.isnan(np.asarray(endog)) | np.isnan(np.asarray(exog)).any(1))
+
+    def subset(x):
+        if x is None:
+            return None
+        return x[keep] if isinstance(x, np.ndarray) else x.loc[keep]
+
+    model = MixedLM(endog, exog, groups, exog_re=exog_re, missing="drop")
+    model_cc = MixedLM(subset(endog), subset(exog), subset(groups), subset(exog_re))
+    assert_equal(model.nobs, keep.sum())
+    assert_equal(model.n_groups, model_cc.n_groups)
+    assert_equal(model.exog_re.shape, model_cc.exog_re.shape)
+
+    res = model.fit()
+    res_cc = model_cc.fit()
+    assert_allclose(res.params, res_cc.params, rtol=1e-8)
+    assert_allclose(res.bse, res_cc.bse, rtol=1e-6)
+    assert_allclose(res.llf, res_cc.llf, rtol=1e-10)
+    if pandas:
+        assert_equal(list(res.params.index), list(res_cc.params.index))
+
+
+def test_missing_drop_exog_vc():
+    # exog_vc is split by groups and cannot be used with dropped rows
+    endog, exog, _, groups, _ = _missing_data(False)
+    vc_mats = [np.ones((6, 1)) for _ in range(20)]
+    vc_colnames = [["vc0"] for _ in range(20)]
+    exog_vc = VCSpec(["vc0"], [vc_colnames], [vc_mats])
+    with pytest.raises(ValueError, match="exog_vc"):
+        MixedLM(endog, exog, groups, exog_vc=exog_vc, missing="drop")
+    # without missing values, missing="drop" does not drop anything
+    endog = np.nan_to_num(endog)
+    exog = np.nan_to_num(exog)
+    model = MixedLM(endog, exog, groups, exog_vc=exog_vc, missing="drop")
+    assert_equal(model.nobs, 120)

@@ -1,4 +1,5 @@
-'''extra statistical function and helper functions
+'''
+Extra statistical function and helper functions
 
 contains:
 
@@ -17,15 +18,18 @@ changes
 2013-02-25 : add chisquare_power, effectsize and "value"
 
 '''
-from statsmodels.compat.python import lrange
+from typing import NamedTuple
 
 import numpy as np
 from scipy import stats
 
+from statsmodels.tools.validation import int_like, string_like
+
 
 # copied from regression/stats.utils
 def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
-    r"""Calculates power discrepancy, a class of goodness-of-fit tests
+    r"""
+    Calculates power discrepancy, a class of goodness-of-fit tests
     as a measure of discrepancy between observed and expected data.
 
     This contains several goodness-of-fit tests as special cases, see the
@@ -37,28 +41,28 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
     Parameters
     ----------
-    observed : Iterable
+    observed : array_like
         Observed values
-    expected : Iterable
+    expected : array_like
         Expected values
-    lambd : {float, str}
+    lambd : float or {'loglikeratio', 'freeman_tukey', 'pearson', 'modified_loglikeratio', 'cressie_read'}, optional
         * float : exponent `a` for power discrepancy
         * 'loglikeratio': a = 0
         * 'freeman_tukey': a = -0.5
         * 'pearson': a = 1   (standard chisquare test statistic)
         * 'modified_loglikeratio': a = -1
         * 'cressie_read': a = 2/3
-        * 'neyman' : a = -2 (Neyman-modified chisquare, reference from a book?)
-    axis : int
+    axis : int, optional
         axis for observations of one series
-    ddof : int
+    ddof : int, optional
         degrees of freedom correction,
 
     Returns
     -------
-    D_obs : Discrepancy of observed values
-    pvalue : pvalue
-
+    D_obs : float or ndarray
+        Discrepancy of observed values.
+    pvalue : float or ndarray
+        The p-value.
 
     References
     ----------
@@ -71,7 +75,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
     Nobuhiro Taneichi, Yuri Sekiya, Akio Suzukawa, Asymptotic Approximations
         for the Distributions of the Multinomial Goodness-of-Fit Statistics
-        under Local Alternatives, Journal of Multivariate Analysis 81, 335?359 (2002)
+        under Local Alternatives, Journal of Multivariate Analysis 81, 335-359 (2002)
     Steele, M. 1,2, C. Hurst 3 and J. Chaseling, Simulated Power of Discrete
         Goodness-of-Fit Tests for Likert Type Data
 
@@ -116,6 +120,17 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     o = np.array(observed)
     e = np.array(expected)
 
+    if isinstance(lambd, str):
+        lambd = string_like(
+            lambd,
+            "lambd",
+            options=(
+                "loglikeratio", "freeman_tukey", "pearson",
+                "modified_loglikeratio", "cressie_read",
+            ),
+            lower=False,
+        )
+
     if not isinstance(lambd, str):
         a = lambd
     elif lambd == "loglikeratio":
@@ -126,12 +141,8 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
         a = 1
     elif lambd == "modified_loglikeratio":
         a = -1
-    elif lambd == "cressie_read":
+    else:  # lambd == "cressie_read"
         a = 2/3.0
-    else:
-        raise ValueError("lambd has to be a number or one of "
-                         "loglikeratio, freeman_tukey, pearson, "
-                         "modified_loglikeratio or cressie_read")
 
     n = np.sum(o, axis=axis)
     nt = n
@@ -174,21 +185,33 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
 
 def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
-    """perform chisquare test for random sample of a discrete distribution
+    """
+    Perform chisquare test for random sample of a discrete distribution
 
     Parameters
     ----------
-    distname : str
-        name of distribution function
+    distfn : distribution instance
+        Discrete distribution function to be tested; needs ``support``,
+        ``ppf`` and ``cdf`` methods.
     arg : sequence
         parameters of distribution
+    rvs : array_like
+        random sample from the distribution to be tested
     alpha : float
         significance level, threshold for p-value
+    msg : str
+        identifying message that is included in the returned result string
 
     Returns
     -------
-    result : bool
-        0 if test passes, 1 if test fails
+    chis : float
+        chisquare statistic of the test
+    pval : float
+        p-value of the test based on the chisquare distribution
+    truefalse : bool
+        True if the test passes (``pval > alpha``), False if it fails
+    outstr : str
+        summary string describing the test and its result
 
     Notes
     -----
@@ -196,96 +219,163 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
     still needs to be checked for standalone usage, insufficient input checking
     may not run yet (after copy/paste)
 
+    The bins are computed by :func:`gof_binning_discrete` with its default
+    number of bins. Observations outside the support of the distribution are
+    dropped. The last bin can have a very small expected count, which makes
+    the chisquare approximation of the p-value unreliable.
+
+    .. versionchanged:: 0.15.1
+
+       The support of the distribution is taken from ``distfn.support(*arg)``
+       instead of a fixed window of integers from -1000 to 1000. The bins
+       now follow loc shifts and large means.
+
     refactor: maybe a class, check returns, or separate binning from
         test results
     """
 
-    # define parameters for test
-    #    n=2000
-
-    n = len(rvs)
-    nsupp = 20
-    wsupp = 1.0 / nsupp
-
-    #    distfn = getattr(stats, distname)
-    #    np.random.seed(9765456)
-    #    rvs = distfn.rvs(size=n,*arg)
-
-    # construct intervals with minimum mass 1/nsupp
-    # intervalls are left-half-open as in a cdf difference
-
-    distsupport = lrange(max(distfn.a, -1000), min(distfn.b, 1000) + 1)
-    last = 0
-    distsupp = [max(distfn.a, -1000)]
-    distmass = []
-    for ii in distsupport:
-        current = distfn.cdf(ii, *arg)
-        if current - last >= wsupp - 1e-14:
-            distsupp.append(ii)
-            distmass.append(current - last)
-            last = current
-            if current > (1 - wsupp):
-                break
-    if distsupp[-1] < distfn.b:
-        distsupp.append(distfn.b)
-        distmass.append(1 - last)
-    distsupp = np.array(distsupp)
-    distmass = np.array(distmass)
-
-    # convert intervals to right-half-open as required by histogram
-
-    histsupp = distsupp + 1e-8
-    histsupp[0] = distfn.a
-
-    # find sample frequencies and perform chisquare test
-    # TODO: move to compatibility.py
-
-    freq, hsupp = np.histogram(rvs, histsupp)
-    # cdfs = distfn.cdf(distsupp,*arg)
-
-    (chis, pval) = stats.chisquare(np.array(freq), n * distmass)
+    freq, expfreq, _ = gof_binning_discrete(rvs, distfn, arg)
+    chis, pval = stats.chisquare(freq, expfreq)
 
     return (
         chis,
         pval,
         (pval > alpha),
-        "chisquare - test for %s"
-        "at arg = %s with pval = %s" % (msg, str(arg), str(pval)),
+        f"chisquare - test for {msg} at arg = {arg!s} with pval = {pval!s}",
     )
 
 
-# copy/paste, remove code duplication when it works
+def _discrete_ppf_from_cdf(distfn, q, arg, lower, upper, start):
+    """
+    Smallest integer-spaced point with ``cdf >= q`` using only ``distfn.cdf``
 
-
-def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
-    """get bins for chisquare type gof tests for a discrete distribution
+    Fallback for distributions where the ``ppf`` method fails. The cdf of a
+    distribution on an integer support is monotone, so the quantile is found
+    by an exponential search for a bracket followed by bisection.
 
     Parameters
     ----------
-    rvs : ndarray
-        sample data
-    distname : str
-        name of distribution function
+    distfn : distribution instance
+        Discrete distribution with a ``cdf`` method.
+    q : float
+        Probability, ``0 < q < 1``.
+    arg : sequence
+        Parameters of the distribution, shape parameters and loc, which is
+        assumed to be an integer.
+    lower, upper : float
+        Support of the distribution, possibly infinite.
+    start : float
+        Starting point for the search, e.g. the previous quantile. It is
+        clipped to the support.
+
+    Returns
+    -------
+    float
+        The smallest integer ``k`` in the support, shifted by loc, such that
+        ``cdf(k) >= q``.
+    """
+    max_expansions = 1100
+
+    def reached(k):
+        # nan compares as False, which is treated as not reached
+        return distfn.cdf(k, *arg) >= q
+
+    if not np.isfinite(start):
+        start = 0.0
+    start = np.floor(min(max(start, lower), upper))
+    lo = lower - 1 if np.isfinite(lower) else None
+    hi = upper if np.isfinite(upper) else None
+    step = 1.0
+    if reached(start):
+        hi = start
+        if lo is None:
+            for _ in range(max_expansions):
+                pos = hi - step
+                step *= 2
+                if not reached(pos):
+                    lo = pos
+                    break
+                hi = pos
+    else:
+        lo = start
+        if hi is None:
+            for _ in range(max_expansions):
+                pos = lo + step
+                step *= 2
+                if reached(pos):
+                    hi = pos
+                    break
+                lo = pos
+    if lo is None or hi is None:
+        raise RuntimeError("could not bracket the quantile using the cdf")
+    while hi - lo > 1:
+        mid = np.floor((lo + hi) / 2)
+        if reached(mid):
+            hi = mid
+        else:
+            lo = mid
+    return hi
+
+
+def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
+    """
+    Get bins for chisquare type gof tests for a discrete distribution
+
+    Parameters
+    ----------
+    rvs : array_like
+        One-dimensional sample data.
+    distfn : distribution instance
+        Discrete distribution function to be tested; needs ``support``,
+        ``ppf`` and ``cdf`` methods.
     arg : sequence
         parameters of distribution
-    nsupp : int
-        number of bins. The algorithm tries to find bins with equal weights.
-        depending on the distribution, the actual number of bins can be smaller.
+    nsupp : int, optional
+        number of bins, at least 1. The default is 20. The algorithm tries to
+        find bins with equal weights. depending on the distribution, the
+        actual number of bins can be smaller.
 
     Returns
     -------
     freq : ndarray
-        empirical frequencies for sample; not normalized, adds up to sample size
+        empirical frequencies for sample; not normalized, adds up to sample
+        size if all observations are in the support
     expfreq : ndarray
         theoretical frequencies according to distribution
     histsupp : ndarray
-        bin boundaries for histogram, (added 1e-8 for numerical robustness)
+        bin boundaries for histogram. The first is the lower end of the
+        support. The others are the upper bin edges moved to the next
+        representable float, so that the bins are right-half-open.
+
+    Raises
+    ------
+    ValueError
+        If ``nsupp`` is not an integer greater than or equal to 1.
 
     Notes
     -----
     The results can be used for a chisquare test ::
 
         (chis,pval) = stats.chisquare(freq, expfreq)
+
+    The bins are quantile based and the expected count of each bin is at
+    least ``len(rvs) / nsupp``, except for the last (tail) bin, which can have
+    a very small expected count. Observations outside the support of the
+    distribution are dropped, so that ``freq`` does not add up to the sample
+    size in that case.
+
+    If the ``ppf`` method of the distribution raises a ``RuntimeError``, the
+    quantiles are found by a search using only the ``cdf`` method. Both
+    methods assume that the support is integer valued and that loc is an
+    integer.
+
+    .. versionchanged:: 0.15.1
+
+       The support of the distribution is taken from ``distfn.support(*arg)``
+       instead of a fixed window of integers from -1000 to 1000. The bins
+       now follow loc shifts and large means. The upper boundaries in
+       ``histsupp`` are the next representable float above the bin edges
+       instead of the edges plus 1e-8.
 
     originally written for scipy.stats test suite,
     still needs to be checked for standalone usage, insufficient input checking
@@ -299,49 +389,58 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
 
     """
 
+    nsupp = int_like(nsupp, "nsupp")
+    if nsupp < 1:
+        raise ValueError(f"nsupp must be an integer >= 1, got {nsupp}")
+
     # define parameters for test
-#    n=2000
     n = len(rvs)
 
     wsupp = 1.0/nsupp
 
-#    distfn = getattr(stats, distname)
-#    np.random.seed(9765456)
-#    rvs = distfn.rvs(size=n,*arg)
-
-    # construct intervals with minimum mass 1/nsupp
-    # intervalls are left-half-open as in a cdf difference
-    distsupport = lrange(max(distfn.a, -1000), min(distfn.b, 1000) + 1)
+    # Construct intervals with minimum mass 1/nsupp, apart from the tail.
+    # Use quantiles rather than scanning a fixed range of integers.
+    lower, upper = distfn.support(*arg)
     last = 0
-    distsupp = [max(distfn.a, -1000)]
+    distsupp = [lower]
     distmass = []
-    for ii in distsupport:
+    use_cdf_search = False
+    while last < 1 - wsupp:
+        # Retain the tolerance used for comparing the bin mass to 1/nsupp.
+        q = last + wsupp - 1e-14
+        if not use_cdf_search:
+            try:
+                ii = distfn.ppf(q, *arg)
+            except RuntimeError:
+                # The generic ppf of SciPy can fail to converge, e.g. for
+                # skellam with large parameters. Use the monotone cdf instead.
+                use_cdf_search = True
+        if use_cdf_search:
+            ii = _discrete_ppf_from_cdf(distfn, q, arg, lower, upper, distsupp[-1])
         current = distfn.cdf(ii, *arg)
-        if current - last >= wsupp-1e-14:
-            distsupp.append(ii)
-            distmass.append(current - last)
-            last = current
-            if current > (1-wsupp):
-                break
-    if distsupp[-1] < distfn.b:
-        distsupp.append(distfn.b)
+        distsupp.append(ii)
+        distmass.append(current - last)
+        last = current
+    if distsupp[-1] < upper:
+        distsupp.append(upper)
         distmass.append(1-last)
     distsupp = np.array(distsupp)
     distmass = np.array(distmass)
 
-    # convert intervals to right-half-open as required by histogram
-    histsupp = distsupp+1e-8
-    histsupp[0] = distfn.a
+    # convert intervals to right-half-open as required by histogram. The
+    # support is integer valued, so the next representable float is exact,
+    # unlike adding a fixed epsilon which is lost for large values.
+    histsupp = np.nextafter(distsupp, np.inf)
+    histsupp[0] = lower
 
     # find sample frequencies and perform chisquare test
     freq, hsupp = np.histogram(rvs, histsupp)
-    # freq,hsupp = np.histogram(rvs,histsupp,new=True)
-    distfn.cdf(distsupp, *arg)
     return np.array(freq), n*distmass, histsupp
 
 
 # -*- coding: utf-8 -*-
-"""Extension to chisquare goodness-of-fit test
+"""
+Extension to chisquare goodness-of-fit test
 
 Created on Mon Feb 25 13:46:53 2013
 
@@ -350,8 +449,36 @@ License: BSD-3
 """
 
 
+class ChisquareResult(NamedTuple):
+    """
+    Result of :func:`chisquare` when ``return_basic`` is False.
+
+    Parameters
+    ----------
+    chisq : float
+        The chisquare test statistic.
+    pvalue : float
+        The p-value based on the chisquare distribution if ``value`` is
+        zero, or on the noncentral chisquare distribution otherwise.
+    df : int
+        Degrees of freedom of the (potentially noncentral) chisquare
+        distribution used to compute ``pvalue``, equal to
+        ``n_bins - 1 - ddof``.
+    distribution : {"chi2", "ncx2"}
+        The name of the distribution used to compute ``pvalue``: ``"chi2"``
+        when ``value`` is 0, otherwise ``"ncx2"`` (the noncentral chisquare
+        distribution).
+    """
+
+    chisq: float
+    pvalue: float
+    df: int
+    distribution: str
+
+
 def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
-    '''chisquare goodness-of-fit test
+    '''
+    chisquare goodness-of-fit test
 
     The null hypothesis is that the distance between the expected distribution
     and the observed frequencies is ``value``. The alternative hypothesis is
@@ -361,6 +488,34 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
     The standard chisquare test has the null hypothesis that ``value=0``, that
     is the distributions are the same.
 
+    Parameters
+    ----------
+    f_obs : array_like
+        Observed frequencies.
+    f_exp : array_like, optional
+        Expected frequencies. If None, then the observed frequencies are
+        assumed to follow a uniform distribution over the bins.
+    value : float, optional
+        Value of the effect size under the null hypothesis.
+    ddof : int, optional
+        Degrees of freedom correction.
+    return_basic : bool, optional
+        If True, return only the chisquare statistic and the p-value as a
+        plain tuple. If False, return a :class:`ChisquareResult` NamedTuple
+        that additionally reports the degrees of freedom and the name of
+        the distribution used to compute the p-value.
+
+    Returns
+    -------
+    chisq : float
+        The chisquare test statistic.
+    pvalue : float
+        The p-value based on the chisquare distribution if ``value`` is
+        zero, or on the noncentral chisquare distribution otherwise.
+
+    If ``return_basic`` is False, a :class:`ChisquareResult` NamedTuple is
+    returned instead, with fields ``chisq``, ``pvalue``, ``df``, and
+    ``distribution``.
 
     Notes
     -----
@@ -392,34 +547,42 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
 
     f_exp = np.asarray(f_exp, float)
 
+    df = n_bins - 1 - ddof
     chisq = ((f_obs - f_exp)**2 / f_exp).sum(0)
     if value == 0:
-        pvalue = stats.chi2.sf(chisq, n_bins - 1 - ddof)
+        pvalue = stats.chi2.sf(chisq, df)
+        distribution = "chi2"
     else:
-        pvalue = stats.ncx2.sf(chisq, n_bins - 1 - ddof, value**2 * nobs)
+        pvalue = stats.ncx2.sf(chisq, df, value**2 * nobs)
+        distribution = "ncx2"
 
     if return_basic:
         return chisq, pvalue
     else:
-        return chisq, pvalue    # TODO: replace with TestResults
+        return ChisquareResult(
+            chisq=chisq, pvalue=pvalue, df=df, distribution=distribution
+        )
 
 
 def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
-    """power of chisquare goodness of fit test
+    """
+    Power of chisquare goodness of fit test
 
     effect size is sqrt of chisquare statistic divided by nobs
 
     Parameters
     ----------
-    effect_size : float
+    effect_size : float or array_like
         This is the deviation from the Null of the normalized chi_square
         statistic. This follows Cohen's definition (sqrt).
-    nobs : int or float
+    nobs : float or array_like
         number of observations
-    n_bins : int (or float)
+    n_bins : float or array_like
         number of bins, or points in the discrete distribution
-    alpha : float in (0,1)
+    alpha : float or array_like, optional
         significance level of the test, default alpha=0.05
+    ddof : int, optional
+        degrees of freedom correction, default 0
 
     Returns
     -------
@@ -445,13 +608,21 @@ def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
     statsmodels.stats.GofChisquarePower
 
     """
+    if not np.all(np.greater(nobs, 0)):
+        raise ValueError("nobs must be positive")
+    if not np.all(np.greater_equal(n_bins, 1)):
+        raise ValueError("n_bins must be at least 1")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     crit = stats.chi2.isf(alpha, n_bins - 1 - ddof)
     power = stats.ncx2.sf(crit, n_bins - 1 - ddof, effect_size**2 * nobs)
     return power
 
 
 def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
-    """effect size for a chisquare goodness-of-fit test
+    """
+    Effect size for a chisquare goodness-of-fit test
 
     Parameters
     ----------
@@ -463,7 +634,7 @@ def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
         and broadcast in the other dimensions
         Both probs0 and probs1 are normalized to add to one (in the ``axis``
         dimension).
-    correction : None or tuple
+    correction : None or tuple, optional
         If None, then the effect size is the chisquare statistic divide by
         the number of observations.
         If the correction is a tuple (nobs, df), then the effectsize is
@@ -471,11 +642,11 @@ def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
         correction can make the effectsize negative. In that case, the
         effectsize is set to zero.
         Pederson and Johnson (1990) as referenced in McLaren et all. (1994)
-    cohen : bool
+    cohen : bool, optional
         If True, then the square root is returned as in the definition of the
         effect size by Cohen (1977), If False, then the original effect size
         is returned.
-    axis : int
+    axis : int, optional
         If the probability arrays broadcast to more than 1 dimension, then
         this is the axis over which the sums are taken.
 
@@ -487,6 +658,10 @@ def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
     """
     probs0 = np.asarray(probs0, float)
     probs1 = np.asarray(probs1, float)
+
+    if np.any(probs0 < 0) or np.any(probs1 < 0):
+        raise ValueError("probs0 and probs1 must be non-negative")
+
     probs0 = probs0 / probs0.sum(axis)
     probs1 = probs1 / probs1.sum(axis)
 

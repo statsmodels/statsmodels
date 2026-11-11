@@ -3,16 +3,6 @@ from statsmodels._version import __version__, __version_tuple__
 __version_info__ = __version_tuple__
 
 
-debug_warnings = False
-
-if debug_warnings:
-    import warnings
-
-    warnings.simplefilter("default")
-    # use the following to raise an exception for debugging specific warnings
-    # warnings.filterwarnings("error", message=".*integer.*")
-
-
 def test(extra_args=None, exit=False):
     """
     Run the test suite

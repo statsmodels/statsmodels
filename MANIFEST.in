@@ -1,7 +1,7 @@
 global-include *.csv *.py *.txt *.pyx *.pyx.in *.pxd *.pxi *.c *.h *.pkl
 include statsmodels/_version.py
 include MANIFEST.in
-include README.rst
+include README.md
 
 recursive-exclude build *
 recursive-exclude dist *

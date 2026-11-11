@@ -18,7 +18,7 @@ def test_brockwell_davis_example_511():
     endog = dowj.diff().iloc[1:]
 
     # Durbin-Levinson
-    dl, _ = durbin_levinson(endog, ar_order=2, demean=True)
+    dl = durbin_levinson(endog, ar_order=2, demean=True).parameters
 
     assert_allclose(dl[0].params, np.var(endog))
     assert_allclose(dl[1].params, [0.4219, 0.1479], atol=1e-4)
@@ -27,7 +27,7 @@ def test_brockwell_davis_example_511():
 
 def check_itsmr(lake):
     # Test against R itsmr::yw; see results/results_yw_dl.R
-    dl, _ = durbin_levinson(lake, 5)
+    dl = durbin_levinson(lake, 5).parameters
 
     assert_allclose(dl[0].params, np.var(lake))
     assert_allclose(dl[1].ar_params, [0.8319112104])
@@ -67,7 +67,7 @@ def test_itsmr():
 def test_nonstationary_series():
     # Test against R stats::ar.yw; see results/results_yw_dl.R
     endog = np.arange(1, 12) * 1.0
-    res, _ = durbin_levinson(endog, 2, demean=False)
+    res = durbin_levinson(endog, 2, demean=False).parameters
 
     desired_ar_params = [0.92318534179, -0.06166314306]
     assert_allclose(res[2].ar_params, desired_ar_params)
@@ -80,7 +80,7 @@ def test_nonstationary_series_variance():
     # from stats::ar.yw, but keeping the test in case we want to also implement
     # that variance estimate in the future.
     endog = np.arange(1, 12) * 1.0
-    res, _ = durbin_levinson(endog, 2, demean=False)
+    res = durbin_levinson(endog, 2, demean=False).parameters
 
     desired_sigma2 = 15.36526603
     assert_allclose(res[2].sigma2, desired_sigma2)
@@ -103,13 +103,13 @@ def test_invalid():
 def test_misc():
     # Test defaults (order = 0, demean=True)
     endog = lake.copy()
-    res, _ = durbin_levinson(endog)
+    res = durbin_levinson(endog).parameters
     assert_allclose(res[0].params, np.var(endog))
 
     # Test that integer input gives the same result as float-coerced input.
     endog = np.array([1, 2, 5, 3, -2, 1, -3, 5, 2, 3, -1], dtype=int)
-    res_int, _ = durbin_levinson(endog, 2, demean=False)
-    res_float, _ = durbin_levinson(endog * 1.0, 2, demean=False)
+    res_int = durbin_levinson(endog, 2, demean=False).parameters
+    res_float = durbin_levinson(endog * 1.0, 2, demean=False).parameters
     assert_allclose(res_int[0].params, res_float[0].params)
     assert_allclose(res_int[1].params, res_float[1].params)
     assert_allclose(res_int[2].params, res_float[2].params)

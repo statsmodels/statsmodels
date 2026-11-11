@@ -1,5 +1,5 @@
 """
-Methods for analyzing two-way contingency tables (i.e. frequency
+Methods for analyzing two-way contingency tables (i.e., frequency
 tables for observations that are cross-classified with respect to two
 categorical variables).
 
@@ -25,6 +25,8 @@ sampled.  In general the observed units are independent and
 identically distributed.
 """
 
+from math import fsum
+from typing import NamedTuple
 import warnings
 
 import numpy as np
@@ -34,13 +36,27 @@ from scipy import stats
 from statsmodels import iolib
 from statsmodels.tools import sm_exceptions
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.validation import string_like
 
 
 def _make_df_square(table):
     """
-    Reindex a pandas DataFrame so that it becomes square, meaning that
-    the row and column indices contain the same values, in the same
+    Reindex a pandas DataFrame so that it becomes square
+
+    The row and column indices contain the same values, in the same
     order.  The row and column index are extended to achieve this.
+
+    Parameters
+    ----------
+    table : array_like
+        A contingency table. If not a DataFrame, it is returned
+        unchanged.
+
+    Returns
+    -------
+    table : array_like
+        The reindexed, square DataFrame, or the original `table` if it
+        is not a DataFrame.
     """
 
     if not isinstance(table, pd.DataFrame):
@@ -58,6 +74,30 @@ def _make_df_square(table):
     return table
 
 
+def _check_cell_counts(table):
+    """
+    Check that the cell counts of a contingency table are valid
+
+    Parameters
+    ----------
+    table : ndarray
+        The cell counts, with a float dtype.
+
+    Raises
+    ------
+    ValueError
+        If any cell count is not finite or is negative.
+    """
+    # NaN is not negative, so that it has to be checked first
+    if not np.isfinite(table).all():
+        raise ValueError("contingency table cell counts must be finite")
+    if table.min() < 0:
+        raise ValueError(
+            "contingency table cell counts must be non-negative, got "
+            f"minimum {table.min()}"
+        )
+
+
 class _Bunch:
 
     def __repr__(self):
@@ -67,22 +107,20 @@ class _Bunch:
         ky = [k for k, _ in self.__dict__.items()]
         ky.sort()
         m = max([len(k) for k in ky])
-        tab = []
         f = "{:" + str(m) + "}   {}"
-        for k in ky:
-            tab.append(f.format(k, self.__dict__[k]))
+        tab = [f.format(k, self.__dict__[k]) for k in ky]
         return "\n".join(tab)
 
 
 class Table:
     """
-    A two-way contingency table.
+    A two-way contingency table
 
     Parameters
     ----------
     table : array_like
         A contingency table.
-    shift_zeros : bool
+    shift_zeros : bool, optional
         If True and any cell count is zero, add 0.5 to all values
         in the table.
 
@@ -90,6 +128,11 @@ class Table:
     ----------
     table_orig : array_like
         The original table is cached as `table_orig`.
+
+    Raises
+    ------
+    ValueError
+        If any cell of the table is negative or not finite.
 
     See Also
     --------
@@ -114,31 +157,36 @@ class Table:
         self.table_orig = table
         self.table = np.asarray(table, dtype=np.float64)
 
+        _check_cell_counts(self.table)
+
         if shift_zeros and (self.table.min() == 0):
             self.table[self.table == 0] = 0.5
 
     def __str__(self):
-        s = "A %dx%d contingency table with counts:\n" % tuple(self.table.shape)
+        s = "A {:d}x{:d} contingency table with counts:\n".format(
+            *tuple(self.table.shape)
+        )
         s += np.array_str(self.table)
         return s
 
     @classmethod
     def from_data(cls, data, shift_zeros=True):
         """
-        Construct a Table object from data.
+        Construct a Table object from data
 
         Parameters
         ----------
         data : array_like
             The raw data, from which a contingency table is constructed
             using the first two columns.
-        shift_zeros : bool
+        shift_zeros : bool, optional
             If True and any cell count is zero, add 0.5 to all values
             in the table.
 
         Returns
         -------
-        A Table instance.
+        Table
+            A Table instance.
         """
 
         if isinstance(data, pd.DataFrame):
@@ -150,7 +198,7 @@ class Table:
 
     def test_nominal_association(self):
         """
-        Assess independence for nominal factors.
+        Assess independence for nominal factors
 
         Assessment of independence between rows and columns using
         chi^2 testing.  The rows and columns are treated as nominal
@@ -158,19 +206,21 @@ class Table:
 
         Returns
         -------
-        A bunch containing the following attributes:
+        Bunch
+            A bunch with attributes
 
-        statistic : float
-            The chi^2 test statistic.
-        df : int
-            The degrees of freedom of the reference distribution
-        pvalue : float
-            The p-value for the test.
+            * statistic : float
+                The chi^2 test statistic.
+            * df : int
+                The degrees of freedom of the reference distribution.
+            * pvalue : float
+                The p-value for the test.
         """
 
         statistic = np.asarray(self.chi2_contribs).sum()
         df = np.prod(np.asarray(self.table.shape) - 1)
-        pvalue = 1 - stats.chi2.cdf(statistic, df)
+        # 1 - stats.chi2.cdf(statistic, df) loses the upper tail
+        pvalue = stats.chi2.sf(statistic, df)
         b = _Bunch()
         b.statistic = statistic
         b.df = df
@@ -179,7 +229,7 @@ class Table:
 
     def test_ordinal_association(self, row_scores=None, col_scores=None):
         """
-        Assess independence between two ordinal variables.
+        Assess independence between two ordinal variables
 
         This is the 'linear by linear' association test, which uses
         weights or scores to target the test to have more power
@@ -187,27 +237,28 @@ class Table:
 
         Parameters
         ----------
-        row_scores : array_like
+        row_scores : array_like, optional
             An array of numeric row scores
-        col_scores : array_like
+        col_scores : array_like, optional
             An array of numeric column scores
 
         Returns
         -------
-        A bunch with the following attributes:
+        Bunch
+            A bunch with attributes
 
-        statistic : float
-            The test statistic.
-        null_mean : float
-            The expected value of the test statistic under the null
-            hypothesis.
-        null_sd : float
-            The standard deviation of the test statistic under the
-            null hypothesis.
-        zscore : float
-            The Z-score for the test statistic.
-        pvalue : float
-            The p-value for the test.
+            * statistic : float
+                The test statistic.
+            * null_mean : float
+                The expected value of the test statistic under the null
+                hypothesis.
+            * null_sd : float
+                The standard deviation of the test statistic under the
+                null hypothesis.
+            * zscore : float
+                The Z-score for the test statistic.
+            * pvalue : float
+                The p-value for the test.
 
         Notes
         -----
@@ -266,14 +317,16 @@ class Table:
     @cache_readonly
     def marginal_probabilities(self):
         """
-        Estimate marginal probability distributions for the rows and columns.
+        Estimate marginal probability distributions for the rows and columns
 
         Returns
         -------
-        row : ndarray
-            Marginal row probabilities
-        col : ndarray
-            Marginal column probabilities
+        row : ndarray or Series
+            Marginal row probabilities. A Series if `table_orig` is a
+            DataFrame, otherwise an ndarray.
+        col : ndarray or Series
+            Marginal column probabilities. A Series if `table_orig` is a
+            DataFrame, otherwise an ndarray.
         """
 
         n = self.table.sum()
@@ -289,7 +342,7 @@ class Table:
     @cache_readonly
     def independence_probabilities(self):
         """
-        Returns fitted joint probabilities under independence.
+        Returns fitted joint probabilities under independence
 
         The returned table is outer(row, column), where row and
         column are the estimated marginal distributions
@@ -307,7 +360,7 @@ class Table:
     @cache_readonly
     def fittedvalues(self):
         """
-        Returns fitted cell counts under independence.
+        Returns fitted cell counts under independence
 
         The returned cell counts are estimates under a model
         where the rows and columns of the table are independent.
@@ -320,7 +373,7 @@ class Table:
     @cache_readonly
     def resid_pearson(self):
         """
-        Returns Pearson residuals.
+        Returns Pearson residuals
 
         The Pearson residuals are calculated under a model where
         the rows and columns of the table are independent.
@@ -332,9 +385,7 @@ class Table:
 
     @cache_readonly
     def standardized_resids(self):
-        """
-        Returns standardized residuals under independence.
-        """
+        """Returns standardized residuals under independence"""
 
         row, col = self.marginal_probabilities
         sresids = self.resid_pearson / np.sqrt(np.outer(1 - row, 1 - col))
@@ -343,7 +394,7 @@ class Table:
     @cache_readonly
     def chi2_contribs(self):
         """
-        Returns the contributions to the chi^2 statistic for independence.
+        Returns the contributions to the chi^2 statistic for independence
 
         The returned table contains the contribution of each cell to the chi^2
         test statistic for the null hypothesis that the rows and columns
@@ -355,7 +406,7 @@ class Table:
     @cache_readonly
     def local_log_oddsratios(self):
         """
-        Returns local log odds ratios.
+        Returns local log odds ratios
 
         The local log odds ratios are the log odds ratios
         calculated for contiguous 2x2 sub-tables.
@@ -381,7 +432,7 @@ class Table:
     @cache_readonly
     def local_oddsratios(self):
         """
-        Returns local odds ratios.
+        Returns local odds ratios
 
         See documentation for local_log_oddsratios.
         """
@@ -391,7 +442,7 @@ class Table:
     @cache_readonly
     def cumulative_log_oddsratios(self):
         """
-        Returns cumulative log odds ratios.
+        Returns cumulative log odds ratios
 
         The cumulative log odds ratios for a contingency table
         with ordered rows and columns are calculated by collapsing
@@ -422,9 +473,9 @@ class Table:
     @cache_readonly
     def cumulative_oddsratios(self):
         """
-        Returns the cumulative odds ratios for a contingency table.
+        Returns the cumulative odds ratios for a contingency table
 
-        See documentation for cumulative_log_oddsratio.
+        See documentation for cumulative_log_oddsratios.
         """
 
         return np.exp(self.cumulative_log_oddsratios)
@@ -432,14 +483,14 @@ class Table:
 
 class SquareTable(Table):
     """
-    Methods for analyzing a square contingency table.
+    Methods for analyzing a square contingency table
 
     Parameters
     ----------
     table : array_like
         A square contingency table, or DataFrame that is converted
         to a square form.
-    shift_zeros : bool
+    shift_zeros : bool, optional
         If True and any cell count is zero, add 0.5 to all values
         in the table.
 
@@ -464,14 +515,20 @@ class SquareTable(Table):
 
     def symmetry(self, method="bowker"):
         """
-        Test for symmetry of a joint distribution.
+        Test for symmetry of a joint distribution
 
         This procedure tests the null hypothesis that the joint
         distribution is symmetric around the main diagonal, that is
 
         .. math::
 
-        p_{i, j} = p_{j, i}  for all i, j
+           p_{i, j} = p_{j, i}  for all i, j
+
+        Parameters
+        ----------
+        method : {"bowker"}, optional
+            The method for testing symmetry. Currently must be 'bowker'
+            for Bowker's test.
 
         Returns
         -------
@@ -480,10 +537,15 @@ class SquareTable(Table):
 
             * statistic : float
                 chisquare test statistic
-            * p-value : float
+            * pvalue : float
                 p-value of the test statistic based on chisquare distribution
             * df : int
                 degrees of freedom of the chisquare distribution
+
+        See Also
+        --------
+        mcnemar
+        homogeneity
 
         Notes
         -----
@@ -496,11 +558,6 @@ class SquareTable(Table):
         that the sample size is not very small to be a good approximation
         of the true distribution. For 2x2 contingency tables the exact
         distribution can be obtained with `mcnemar`
-
-        See Also
-        --------
-        mcnemar
-        homogeneity
         """
 
         if method.lower() != "bowker":
@@ -525,11 +582,11 @@ class SquareTable(Table):
 
     def homogeneity(self, method="stuart_maxwell"):
         """
-        Compare row and column marginal distributions.
+        Compare row and column marginal distributions
 
         Parameters
         ----------
-        method : str
+        method : {"stuart_maxwell", "bhapkar"}, optional
             Either 'stuart_maxwell' or 'bhapkar', leading to two different
             estimates of the covariance matrix for the estimated
             difference between the row margins and the column margins.
@@ -553,9 +610,11 @@ class SquareTable(Table):
         marginal distribution of the row factor is equal to the
         marginal distribution of the column factor.  For this to be
         meaningful, the two factors must have the same sample space
-        (i.e. the same categories).
+        (i.e., the same categories).
         """
-
+        method = string_like(
+            method, "method", options=("stuart_maxwell", "bhapkar"), lower=True
+        )
         if self.table.shape[0] < 1:
             raise ValueError("table is empty")
         elif self.table.shape[0] == 1:
@@ -564,10 +623,6 @@ class SquareTable(Table):
             b.pvalue = 1
             b.df = 0
             return b
-
-        method = method.lower()
-        if method not in ["bhapkar", "stuart_maxwell"]:
-            raise ValueError("method '%s' for homogeneity not known" % method)
 
         n_obs = self.table.sum()
         pr = self.table.astype(np.float64) / n_obs
@@ -607,7 +662,8 @@ class SquareTable(Table):
             b.df = df
             return b
 
-        pvalue = 1 - stats.chi2.cdf(statistic, df)
+        # 1 - stats.chi2.cdf(statistic, df) loses the upper tail
+        pvalue = stats.chi2.sf(statistic, df)
 
         b = _Bunch()
         b.statistic = statistic
@@ -618,17 +674,14 @@ class SquareTable(Table):
 
     def summary(self, alpha=0.05, float_format="%.3f"):
         """
-        Produce a summary of the analysis.
+        Produce a summary of the analysis
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the interval.
-        float_format : str
+        float_format : str, optional
             Used to format numeric values in the table.
-        method : str
-            The method for producing the confidence interval.  Currently
-            must be 'normal' which uses the normal approximation.
         """
 
         fmt = float_format
@@ -638,8 +691,8 @@ class SquareTable(Table):
         sy = self.symmetry()
         hm = self.homogeneity()
         data = [
-            [fmt % sy.statistic, fmt % sy.pvalue, "%d" % sy.df],
-            [fmt % hm.statistic, fmt % hm.pvalue, "%d" % hm.df],
+            [fmt % sy.statistic, fmt % sy.pvalue, f"{int(sy.df):d}"],
+            [fmt % hm.statistic, fmt % hm.pvalue, f"{int(hm.df):d}"],
         ]
         tab = iolib.SimpleTable(
             data, headers, stubs, data_aligns="r", table_dec_above=""
@@ -650,14 +703,14 @@ class SquareTable(Table):
 
 class Table2x2(SquareTable):
     """
-    Analyses that can be performed on a 2x2 contingency table.
+    Analyses that can be performed on a 2x2 contingency table
 
     Parameters
     ----------
     table : array_like
         A 2x2 contingency table
-    shift_zeros : bool
-        If true, 0.5 is added to all cells of the table if any cell is
+    shift_zeros : bool, optional
+        If True, 0.5 is added to all cells of the table if any cell is
         equal to zero.
 
     Notes
@@ -686,16 +739,21 @@ class Table2x2(SquareTable):
     @classmethod
     def from_data(cls, data, shift_zeros=True):
         """
-        Construct a Table object from data.
+        Construct a Table object from data
 
         Parameters
         ----------
         data : array_like
             The raw data, the first column defines the rows and the
             second column defines the columns.
-        shift_zeros : bool
+        shift_zeros : bool, optional
             If True, and if there are any zeros in the contingency
             table, add 0.5 to all four cells of the table.
+
+        Returns
+        -------
+        Table2x2
+            A Table2x2 instance.
         """
 
         if isinstance(data, pd.DataFrame):
@@ -706,18 +764,14 @@ class Table2x2(SquareTable):
 
     @cache_readonly
     def log_oddsratio(self):
-        """
-        Returns the log odds ratio for a 2x2 table.
-        """
+        """Returns the log odds ratio for a 2x2 table"""
 
         f = self.table.flatten()
         return np.dot(np.log(f), np.r_[1, -1, -1, 1])
 
     @cache_readonly
     def oddsratio(self):
-        """
-        Returns the odds ratio for a 2x2 table.
-        """
+        """Returns the odds ratio for a 2x2 table"""
 
         return (
             self.table[0, 0] * self.table[1, 1] / (self.table[0, 1] * self.table[1, 0])
@@ -725,19 +779,17 @@ class Table2x2(SquareTable):
 
     @cache_readonly
     def log_oddsratio_se(self):
-        """
-        Returns the standard error for the log odds ratio.
-        """
+        """Returns the standard error for the log odds ratio"""
 
         return np.sqrt(np.sum(1 / self.table))
 
     def oddsratio_pvalue(self, null=1):
         """
-        P-value for a hypothesis test about the odds ratio.
+        P-value for a hypothesis test about the odds ratio
 
         Parameters
         ----------
-        null : float
+        null : float, optional
             The null value of the odds ratio.
         """
 
@@ -745,11 +797,11 @@ class Table2x2(SquareTable):
 
     def log_oddsratio_pvalue(self, null=0):
         """
-        P-value for a hypothesis test about the log odds ratio.
+        P-value for a hypothesis test about the log odds ratio
 
         Parameters
         ----------
-        null : float
+        null : float, optional
             The null value of the log odds ratio.
         """
 
@@ -759,18 +811,20 @@ class Table2x2(SquareTable):
 
     def log_oddsratio_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence level for the log odds ratio.
+        A confidence level for the log odds ratio
 
         Parameters
         ----------
-        alpha : float
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
-
+        _ = string_like(method, "method", options=("normal",))
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         f = -stats.norm.ppf(alpha / 2)
         lor = self.log_oddsratio
         se = self.log_oddsratio_se
@@ -780,24 +834,25 @@ class Table2x2(SquareTable):
 
     def oddsratio_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence interval for the odds ratio.
+        A confidence interval for the odds ratio
 
         Parameters
         ----------
-        alpha : float
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
+        _ = string_like(method, "method", options=("normal",))
         lcb, ucb = self.log_oddsratio_confint(alpha, method=method)
         return np.exp(lcb), np.exp(ucb)
 
     @cache_readonly
     def riskratio(self):
         """
-        Returns the risk ratio for a 2x2 table.
+        Returns the risk ratio for a 2x2 table
 
         The risk ratio is calculated with respect to the rows.
         """
@@ -807,17 +862,13 @@ class Table2x2(SquareTable):
 
     @cache_readonly
     def log_riskratio(self):
-        """
-        Returns the log of the risk ratio.
-        """
+        """Returns the log of the risk ratio"""
 
         return np.log(self.riskratio)
 
     @cache_readonly
     def log_riskratio_se(self):
-        """
-        Returns the standard error of the log of the risk ratio.
-        """
+        """Returns the standard error of the log of the risk ratio"""
 
         n = self.table.sum(1)
         p = self.table[:, 0] / n
@@ -826,11 +877,11 @@ class Table2x2(SquareTable):
 
     def riskratio_pvalue(self, null=1):
         """
-        p-value for a hypothesis test about the risk ratio.
+        p-value for a hypothesis test about the risk ratio
 
         Parameters
         ----------
-        null : float
+        null : float, optional
             The null value of the risk ratio.
         """
 
@@ -838,11 +889,11 @@ class Table2x2(SquareTable):
 
     def log_riskratio_pvalue(self, null=0):
         """
-        p-value for a hypothesis test about the log risk ratio.
+        p-value for a hypothesis test about the log risk ratio
 
         Parameters
         ----------
-        null : float
+        null : float, optional
             The null value of the log risk ratio.
         """
 
@@ -852,17 +903,20 @@ class Table2x2(SquareTable):
 
     def log_riskratio_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence interval for the log risk ratio.
+        A confidence interval for the log risk ratio
 
         Parameters
         ----------
-        alpha : float
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
+        _ = string_like(method, "method", options=("normal",))
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         f = -stats.norm.ppf(alpha / 2)
         lrr = self.log_riskratio
         se = self.log_riskratio_se
@@ -872,35 +926,37 @@ class Table2x2(SquareTable):
 
     def riskratio_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence interval for the risk ratio.
+        A confidence interval for the risk ratio
 
         Parameters
         ----------
-        alpha : float
+        alpha : float or array_like, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence interval.
-        method : str
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
+        _ = string_like(method, "method", options=("normal",))
         lcb, ucb = self.log_riskratio_confint(alpha, method=method)
         return np.exp(lcb), np.exp(ucb)
 
     def summary(self, alpha=0.05, float_format="%.3f", method="normal"):
         """
-        Summarizes results for a 2x2 table analysis.
+        Summarizes results for a 2x2 table analysis
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the confidence
             intervals.
-        float_format : str
+        float_format : str, optional
             Used to format the numeric values in the table.
-        method : str
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
+        _ = string_like(method, "method", options=("normal",))
 
         def fmt(x):
             if isinstance(x, str):
@@ -944,9 +1000,76 @@ class Table2x2(SquareTable):
         return tab
 
 
+def _breslow_day_statistic(table, odds, adjust):
+    """Stable finite-OR calculation, or None to retain the legacy path."""
+    if table.shape[2] == 0 or not (np.isfinite(odds) and odds > 0):
+        return None
+    observed = table.reshape(4, -1)
+    a, b, c, d = observed
+
+    # Fit each cell directly: subtracting large fitted cells can erase a
+    # small cell. All four quadratics share this nonnegative discriminant.
+    # Unsupported overflow/underflow falls back to the unchanged method.
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore",
+                     under="ignore"):
+        row, col = a + b, a + c
+        row2, col2 = c + d, b + d
+        margins = np.array([row, col, row2, col2])
+        if not (np.all(np.isfinite(margins)) and np.all(margins > 0)):
+            return None
+        root = np.sqrt((d - a + odds * (b - c)) ** 2
+                       + 4 * odds * col * col2)
+        quadratic = np.array([1 - odds, odds - 1, odds - 1, 1 - odds])[:, None]
+        linear = np.array([
+            d - a + odds * (row + col),
+            odds * (c - b) + row + col2,
+            odds * (b - c) + row2 + col,
+            a - d + odds * (row2 + col2),
+        ])
+        product = np.array([odds * row * col, row * col2,
+                            row2 * col, odds * row2 * col2])
+        positive = linear >= 0
+        roots = np.broadcast_to(root, linear.shape)
+        quadratic = np.broadcast_to(quadratic, linear.shape)
+        fitted = np.empty_like(linear)
+        # Rationalization includes the linear odds == 1 case. The other
+        # branch cannot have zero quadratic coefficient for positive odds.
+        fitted[positive] = 2 * product[positive] / (
+            linear[positive] + roots[positive]
+        )
+        fitted[~positive] = (-linear[~positive] + roots[~positive]) / (
+            2 * quadratic[~positive]
+        )
+        if not (np.all(np.isfinite(fitted)) and np.all(fitted > 0)):
+            return None
+        # All four terms are positive, so the plain sum is accurate to a few
+        # ulp. Only the sums over strata, which can cancel, use fsum.
+        variance = 1 / np.sum(1 / fitted, axis=0)
+        if not (np.all(np.isfinite(variance)) and np.all(variance > 0)):
+            return None
+
+        # Fixed margins give residual signs (+, -, -, +). Select the
+        # smallest subtraction scale, not necessarily the first cell.
+        corner = np.argmin(np.maximum(observed, fitted), axis=0)
+        residual = (observed - fitted) * np.array([1, -1, -1, 1])[:, None]
+        delta = residual[corner, np.arange(table.shape[2])]
+        try:
+            if adjust:
+                # Algebraically identical to Tarone's subtraction, without
+                # subtracting two large, nearly equal sums of squares.
+                delta = delta - (
+                    fsum(delta.tolist()) / fsum(variance.tolist())
+                ) * variance
+            # tolist is faster than iterating over the array in fsum
+            statistic = np.float64(fsum((delta * delta / variance).tolist()))
+        except OverflowError:
+            return None
+        return statistic if np.isfinite(statistic) else None
+
+
 class StratifiedTable:
     """
-    Analyses for a collection of 2x2 contingency tables.
+    Analyses for a collection of 2x2 contingency tables
 
     Such a collection may arise by stratifying a single 2x2 table with
     respect to another factor.  This class implements the
@@ -959,10 +1082,19 @@ class StratifiedTable:
         Either a list containing several 2x2 contingency tables, or
         a 2x2xk ndarray in which each slice along the third axis is a
         2x2 contingency table.
+    shift_zeros : bool, optional
+        If True and any cell count is zero, add 0.5 to all cells of the
+        affected table(s).
+
+    Raises
+    ------
+    ValueError
+        If the tables are not 2x2 or if any cell count is negative or not
+        finite.
 
     Notes
     -----
-    This results are based on a sampling model in which the units are
+    These results are based on a sampling model in which the units are
     independent both within and between strata.
     """
 
@@ -988,6 +1120,8 @@ class StratifiedTable:
                 table = table.copy()
                 table[:, :, ix] += 0.5
 
+        _check_cell_counts(table)
+
         self.table = table
 
         self._cache = {}
@@ -1008,19 +1142,19 @@ class StratifiedTable:
     @classmethod
     def from_data(cls, var1, var2, strata, data):
         """
-        Construct a StratifiedTable object from data.
+        Construct a StratifiedTable object from data
 
         Parameters
         ----------
-        var1 : int or string
+        var1 : int or str
             The column index or name of `data` specifying the variable
             defining the rows of the contingency table.  The variable
             must have only two distinct values.
-        var2 : int or string
+        var2 : int or str
             The column index or name of `data` specifying the variable
             defining the columns of the contingency table.  The variable
             must have only two distinct values.
-        strata : int or string
+        strata : int or str
             The column index or name of `data` specifying the variable
             defining the strata.
         data : array_like
@@ -1056,15 +1190,27 @@ class StratifiedTable:
 
     def test_null_odds(self, correction=False):
         """
-        Test that all tables have odds ratio equal to 1.
+        Test that all tables have odds ratio equal to 1
 
         This is the 'Mantel-Haenszel' test.
 
         Parameters
         ----------
-        correction : bool
+        correction : bool, optional
             If True, use the continuity correction when calculating the
-            test statistic.
+            test statistic. As in R's ``mantelhaen.test``, the correction of
+            0.5 is applied only if ``|sum(a - E(a))| >= 0.5``, where the sum
+            is over the strata and ``E(a)`` is the expected count of the
+            upper left cell under the null hypothesis. Otherwise the
+            statistic is not corrected.
+
+            .. versionchanged:: 0.15.1
+
+               The correction is no longer applied if ``|sum(a - E(a))|`` is
+               smaller than 0.5. Previously ``min(0.5, |sum(a - E(a))|)`` was
+               subtracted, which changed the statistic and p-value in this
+               case. If the variance is zero, the statistic and p-value
+               are now nan instead of inf and 0 when the correction is used.
 
         Returns
         -------
@@ -1074,7 +1220,9 @@ class StratifiedTable:
 
         statistic = np.sum(self.table[0, 0, :] - self._apb * self._apc / self._n)
         statistic = np.abs(statistic)
-        if correction:
+        # The continuity correction must not overshoot zero; as in R's
+        # mantelhaen.test it is only applied if |sum(a - E(a))| >= 0.5
+        if correction and statistic >= 0.5:
             statistic -= 0.5
         statistic = statistic**2
         denom = self._apb * self._apc * self._bpd * self._cpd
@@ -1083,7 +1231,8 @@ class StratifiedTable:
         statistic /= denom
 
         # df is always 1
-        pvalue = 1 - stats.chi2.cdf(statistic, 1)
+        # 1 - stats.chi2.cdf(statistic, 1) loses the upper tail
+        pvalue = stats.chi2.sf(statistic, 1)
 
         b = _Bunch()
         b.statistic = statistic
@@ -1094,7 +1243,7 @@ class StratifiedTable:
     @cache_readonly
     def oddsratio_pooled(self):
         """
-        The pooled odds ratio.
+        The pooled odds ratio
 
         The value is an estimate of a common odds ratio across all of the
         stratified tables.
@@ -1105,7 +1254,7 @@ class StratifiedTable:
     @cache_readonly
     def logodds_pooled(self):
         """
-        Returns the logarithm of the pooled odds ratio.
+        Returns the logarithm of the pooled odds ratio
 
         See oddsratio_pooled for more information.
         """
@@ -1113,9 +1262,7 @@ class StratifiedTable:
 
     @cache_readonly
     def riskratio_pooled(self):
-        """
-        Estimate of the pooled risk ratio.
-        """
+        """Estimate of the pooled risk ratio"""
 
         acd = self.table[0, 0, :] * self._cpd
         cab = self.table[1, 0, :] * self._apb
@@ -1128,8 +1275,8 @@ class StratifiedTable:
         """
         Estimated standard error of the pooled log odds ratio
 
-        References
-        ----------
+        Based on work by:
+
         J. Robins, N. Breslow, S. Greenland. "Estimators of the
         Mantel-Haenszel Variance Consistent in Both Sparse Data and
         Large-Strata Limiting Models." Biometrics 42, no. 2 (1986): 311-23.
@@ -1150,14 +1297,14 @@ class StratifiedTable:
 
     def logodds_pooled_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence interval for the pooled log odds ratio.
+        A confidence interval for the pooled log odds ratio
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             interval.
-        method : str
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
 
@@ -1168,7 +1315,7 @@ class StratifiedTable:
         ucb : float
             The upper confidence limit.
         """
-
+        _ = string_like(method, "method", options=("normal",))
         lor = np.log(self.oddsratio_pooled)
         lor_se = self.logodds_pooled_se
 
@@ -1181,14 +1328,14 @@ class StratifiedTable:
 
     def oddsratio_pooled_confint(self, alpha=0.05, method="normal"):
         """
-        A confidence interval for the pooled odds ratio.
+        A confidence interval for the pooled odds ratio
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             interval.
-        method : str
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
 
@@ -1199,7 +1346,7 @@ class StratifiedTable:
         ucb : float
             The upper confidence limit.
         """
-
+        _ = string_like(method, "method", options=("normal",))
         lcb, ucb = self.logodds_pooled_confint(alpha, method=method)
         lcb = np.exp(lcb)
         ucb = np.exp(ucb)
@@ -1207,55 +1354,77 @@ class StratifiedTable:
 
     def test_equal_odds(self, adjust=False):
         """
-        Test that all odds ratios are identical.
+        Test that all odds ratios are identical
 
         This is the 'Breslow-Day' testing procedure.
 
         Parameters
         ----------
-        adjust : bool
+        adjust : bool, optional
             Use the 'Tarone' adjustment to achieve the chi^2
             asymptotic distribution.
 
         Returns
         -------
-        A bunch containing the following attributes:
+        Bunch
+            A bunch with attributes
 
-        statistic : float
-            The chi^2 test statistic.
-        p-value : float
-            The p-value for the test.
+            * statistic : float
+                The chi^2 test statistic.
+            * pvalue : float
+                The p-value for the test.
+
+        Notes
+        -----
+        The statistic is computed from the fitted cell counts of each stratum
+        given the pooled (Mantel-Haenszel) odds ratio.
+
+        If a stratum has a row or column total of zero, the statistic and the
+        p-value are NaN.
+
+        .. versionchanged:: 0.15.1
+
+           The test can be computed if the pooled odds ratio is exactly 1,
+           where it was NaN before. The fitted counts are computed in a way
+           that avoids a loss of precision if the pooled odds ratio is close
+           to 1 or some fitted counts are small. Results can differ from
+           those of earlier versions by a relative amount of about 1e-12, and
+           by more for tables where the earlier calculation lost precision.
         """
 
         table = self.table
 
         r = self.oddsratio_pooled
-        a = 1 - r
-        b = r * (self._apb + self._apc) + self._dma
-        c = -r * self._apb * self._apc
+        statistic = _breslow_day_statistic(table, r, adjust)
+        if statistic is None:
+            # Preserve existing behavior outside the finite computable domain.
+            a = 1 - r
+            b = r * (self._apb + self._apc) + self._dma
+            c = -r * self._apb * self._apc
 
-        # Expected value of first cell
-        dr = np.sqrt(b**2 - 4 * a * c)
-        e11 = (-b + dr) / (2 * a)
+            # Expected value of first cell
+            dr = np.sqrt(b**2 - 4 * a * c)
+            e11 = (-b + dr) / (2 * a)
 
-        # Variance of the first cell
-        v11 = (
-            1 / e11
-            + 1 / (self._apc - e11)
-            + 1 / (self._apb - e11)
-            + 1 / (self._dma + e11)
-        )
-        v11 = 1 / v11
+            # Variance of the first cell
+            v11 = (
+                1 / e11
+                + 1 / (self._apc - e11)
+                + 1 / (self._apb - e11)
+                + 1 / (self._dma + e11)
+            )
+            v11 = 1 / v11
 
-        statistic = np.sum((table[0, 0, :] - e11) ** 2 / v11)
+            statistic = np.sum((table[0, 0, :] - e11) ** 2 / v11)
 
-        if adjust:
-            adj = table[0, 0, :].sum() - e11.sum()
-            adj = adj**2
-            adj /= np.sum(v11)
-            statistic -= adj
+            if adjust:
+                adj = table[0, 0, :].sum() - e11.sum()
+                adj = adj**2
+                adj /= np.sum(v11)
+                statistic -= adj
 
-        pvalue = 1 - stats.chi2.cdf(statistic, table.shape[2] - 1)
+        # 1 - stats.chi2.cdf(statistic, df) loses the upper tail
+        pvalue = stats.chi2.sf(statistic, table.shape[2] - 1)
 
         b = _Bunch()
         b.statistic = statistic
@@ -1265,19 +1434,20 @@ class StratifiedTable:
 
     def summary(self, alpha=0.05, float_format="%.3f", method="normal"):
         """
-        A summary of all the main results.
+        A summary of all the main results
 
         Parameters
         ----------
-        alpha : float
+        alpha : float, optional
             `1 - alpha` is the nominal coverage probability of the
             confidence intervals.
-        float_format : str
+        float_format : str, optional
             Used for formatting numeric values in the summary.
-        method : str
+        method : {"normal"}, optional
             The method for producing the confidence interval.  Currently
             must be 'normal' which uses the normal approximation.
         """
+        _ = string_like(method, "method", options=("normal",))
 
         def fmt(x):
             if isinstance(x, str):
@@ -1298,26 +1468,26 @@ class StratifiedTable:
             data, headers, stubs, data_aligns="r", table_dec_above=""
         )
 
-        headers = ["Statistic", "P-value", ""]
+        headers = ["Statistic", "P-value", "   "]
         stubs = ["Test of OR=1", "Test constant OR"]
         rslt1 = self.test_null_odds()
         rslt2 = self.test_equal_odds()
         data = [
-            [fmt(x) for x in [rslt1.statistic, rslt1.pvalue, ""]],
-            [fmt(x) for x in [rslt2.statistic, rslt2.pvalue, ""]],
+            [fmt(x) for x in [rslt1.statistic, rslt1.pvalue, "    "]],
+            [fmt(x) for x in [rslt2.statistic, rslt2.pvalue, "    "]],
         ]
         tab2 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
         tab1.extend(tab2)
 
-        headers = ["", "", ""]
+        headers = [" ", " ", " "]
         stubs = ["Number of tables", "Min n", "Max n", "Avg n", "Total n"]
         ss = self.table.sum(0).sum(0)
         data = [
-            ["%d" % self.table.shape[2], "", ""],
-            ["%d" % min(ss), "", ""],
-            ["%d" % max(ss), "", ""],
-            ["%.0f" % np.mean(ss), "", ""],
-            ["%d" % sum(ss), "", "", ""],
+            [f"{self.table.shape[2]:d}", "", ""],
+            [f"{int(min(ss)):d}", "", ""],
+            [f"{int(max(ss)):d}", "", ""],
+            [f"{np.mean(ss):.0f}", "", ""],
+            [f"{int(sum(ss)):d}", "", ""],
         ]
         tab3 = iolib.SimpleTable(data, headers, stubs, data_aligns="r")
         tab1.extend(tab3)
@@ -1327,32 +1497,41 @@ class StratifiedTable:
 
 def mcnemar(table, exact=True, correction=True):
     """
-    McNemar test of homogeneity.
+    McNemar test of homogeneity
 
     Parameters
     ----------
     table : array_like
-        A square contingency table.
-    exact : bool
-        If exact is true, then the binomial distribution will be used.
-        If exact is false, then the chisquare distribution will be
+        A 2x2 contingency table.
+    exact : bool, optional
+        If exact is True, then the binomial distribution will be used.
+        If exact is False, then the chisquare distribution will be
         used, which is the approximation to the distribution of the
         test statistic for large sample sizes.
-    correction : bool
-        If true, then a continuity correction is used for the chisquare
-        distribution (if exact is false.)
+    correction : bool, optional
+        If True, then a continuity correction is used for the chisquare
+        distribution (if exact is False.) As in R's ``mcnemar.test``, the
+        correction is not applied if the two off-diagonal counts are equal.
 
     Returns
     -------
-    A bunch with attributes:
+    Bunch
+        A bunch with attributes
 
-    statistic : float or int, array
-        The test statistic is the chisquare statistic if exact is
-        false. If the exact binomial distribution is used, then this
-        contains the min(n1, n2), where n1, n2 are cases that are zero
-        in one sample but one in the other sample.
-    pvalue : float or array
-        p-value of the null hypothesis of equal marginal distributions.
+        * statistic : float
+            The test statistic is the chisquare statistic if exact is
+            False. If the exact binomial distribution is used, then this
+            contains the min(n1, n2), where n1, n2 are cases that are zero
+            in one sample but one in the other sample.
+        * pvalue : float
+            p-value of the null hypothesis of equal marginal distributions.
+
+    Raises
+    ------
+    ValueError
+        If the table is not a 2x2 table, if any cell count is negative or not
+        finite, or if ``exact`` is True and the off-diagonal counts do not
+        add up to an integer.
 
     Notes
     -----
@@ -1363,6 +1542,19 @@ def mcnemar(table, exact=True, correction=True):
 
     table = _make_df_square(table)
     table = np.asarray(table, dtype=np.float64)
+    if table.ndim != 2:
+        raise ValueError(
+            "mcnemar requires a two-dimensional contingency table, but the input has "
+            f"shape {table.shape}."
+        )
+    if table.shape != (2, 2):
+        raise ValueError(
+            "mcnemar requires a 2x2 contingency table, but the input has "
+            f"shape {table.shape}. For a larger square table, use "
+            "SquareTable.symmetry (Bowker's test of symmetry), which "
+            "generalizes McNemar's test to k x k tables."
+        )
+    _check_cell_counts(table)
     n1, n2 = table[0, 1], table[1, 0]
 
     if exact:
@@ -1375,7 +1567,8 @@ def mcnemar(table, exact=True, correction=True):
         pvalue = stats.binom.cdf(statistic, int_sum, 0.5) * 2
         pvalue = np.minimum(pvalue, 1)  # limit to 1 if n1==n2
     else:
-        corr = int(correction)  # convert bool to 0 or 1
+        # no correction for equal counts, |n1 - n2| - 1 would be negative
+        corr = int(correction and n1 != n2)  # convert bool to 0 or 1
         statistic = (np.abs(n1 - n2) - corr) ** 2 / (1.0 * (n1 + n2))
         df = 1
         pvalue = stats.chi2.sf(statistic, df)
@@ -1386,26 +1579,63 @@ def mcnemar(table, exact=True, correction=True):
     return b
 
 
-def cochrans_q(x, return_object=True):
+class CochransQResult(NamedTuple):
     """
-    Cochran's Q test for identical binomial proportions.
+    Result of :func:`cochrans_q`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic.
+    pvalue : float
+        p-value from the chisquare distribution.
+    df : int
+        Degrees of freedom of the chisquare distribution.
+    """
+
+    statistic: float
+    pvalue: float
+    df: int
+
+
+def cochrans_q(x, return_object=None):
+    """
+    Cochran's Q test for identical binomial proportions
 
     Parameters
     ----------
     x : array_like, 2d (N, k)
         data with N cases and k variables
-    return_object : bool
-        Return values as bunch instead of as individual values.
+    return_object : bool, optional
+        No longer used. ``cochrans_q`` always returns a
+        ``CochransQResult``, which supports both the attribute access of the
+        bunch that ``return_object=True`` used to produce and the positional
+        unpacking of the ``(statistic, pvalue, df)`` tuple that
+        ``return_object=False`` used to produce.
+
+        .. deprecated:: 0.15.0
+
+            ``return_object`` no longer affects the return value and will be
+            removed in statsmodels 0.16.0. Passing it raises a
+            ``FutureWarning``; simply stop passing it.
 
     Returns
     -------
-    Returns a bunch containing the following attributes, or the
-    individual values according to the value of `return_object`.
+    CochransQResult
+        A NamedTuple with fields:
 
-    statistic : float
-       test statistic
-    pvalue : float
-       pvalue from the chisquare distribution
+        statistic : float
+            test statistic
+        pvalue : float
+            pvalue from the chisquare distribution
+        df : int
+            degrees of freedom of the chisquare distribution
+
+        ``CochransQResult`` unpacks and indexes exactly like the
+        ``(statistic, pvalue, df)`` tuple that ``return_object=False``
+        returned, and exposes the same ``statistic``, ``pvalue`` and ``df``
+        attributes as the bunch that ``return_object=True`` returned. See
+        :class:`~statsmodels.stats.contingency_tables.CochransQResult`.
 
     Notes
     -----
@@ -1429,6 +1659,17 @@ def cochrans_q(x, return_object=True):
     https://en.wikipedia.org/wiki/Cochran_test
     SAS Manual for NPAR TESTS
     """
+    if return_object is not None:
+        warnings.warn(
+            "The return_object keyword of cochrans_q no longer changes the "
+            "return value and will be removed in statsmodels 0.16.0. "
+            "cochrans_q now always returns a CochransQResult, which unpacks "
+            "as (statistic, pvalue, df) and also exposes .statistic, "
+            ".pvalue and .df. Stop passing return_object to silence this "
+            "warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     x = np.asarray(x, dtype=np.float64)
     gruni = np.unique(x)
@@ -1455,11 +1696,8 @@ def cochrans_q(x, return_object=True):
     df = k - 1
     pvalue = stats.chi2.sf(q_stat, df)
 
-    if return_object:
-        b = _Bunch()
-        b.statistic = q_stat
-        b.df = df
-        b.pvalue = pvalue
-        return b
-
-    return q_stat, pvalue, df
+    # CochransQResult replaces both legacy return paths at once: it unpacks
+    # as the (statistic, pvalue, df) tuple that return_object=False produced
+    # and carries the same attributes as the bunch that return_object=True
+    # produced, so a single return covers every caller.
+    return CochransQResult(q_stat, pvalue, df)

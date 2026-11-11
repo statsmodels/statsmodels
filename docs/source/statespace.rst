@@ -237,7 +237,7 @@ For an example of the use of this model, see the `VARMAX example notebook <examp
    print(res_var1.summary())
 
    # Construct impulse responses
-   irfs = res_ll.impulse_responses(steps=10)
+   irfs = res_var1.impulse_responses(steps=10)
 
 Dynamic Factor Models
 ^^^^^^^^^^^^^^^^^^^^^
@@ -268,7 +268,7 @@ For an example of the `DynamicFactorMQ` class, see the very brief code snippet b
    endog = pd.read_csv('your/dataset/here.csv')
 
    # Create a dynamic factor model
-   mod_dfm = sm.tsa.DynamicFactorMQ(endog, k_factors=1, factor_order=2)
+   mod_dfm = sm.tsa.DynamicFactorMQ(endog, factors=1, factor_orders=2)
    # Note that mod_dfm is an instance of the DynamicFactorMQ class
 
    # Fit the model via maximum likelihood, using the EM algorithm
@@ -276,11 +276,11 @@ For an example of the `DynamicFactorMQ` class, see the very brief code snippet b
    # Note that res_dfm is an instance of the DynamicFactorMQResults class
 
    # Show the summary of results
-   print(res_ll.summary())
+   print(res_dfm.summary())
 
    # Show a plot of the r^2 values from regressions of
    # individual estimated factors on endogenous variables.
-   fig_dfm = res_ll.plot_coefficients_of_determination()
+   fig_dfm = res_dfm.plot_coefficients_of_determination()
 
 
 The `DynamicFactor` class is suitable for models with a smaller number of
@@ -725,9 +725,9 @@ the example below, we use the `extend` method.
 Understanding the Impact of Data Revisions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Statespace model results expose a :meth:`~mlemodel.MLEModel.news` method that
-can be used to understand the impact of data revisions -- news -- on model
-parameters.
+Statespace model results expose a :meth:`~mlemodel.MLEResults.news` method that
+can be used to understand the impact of news (the unexpected component of new
+observations) and data revisions on the estimates of variables of interest.
 
 .. autosummary::
    :toctree: generated/
@@ -813,6 +813,17 @@ documentation for the full list of available attributes.
    representation.Representation
    representation.FrozenRepresentation
 
+The `Initialization` class specifies how the initial state distribution
+(mean and covariance) is constructed for a `Representation`, and it supports
+combining different initialization types (`known`, `diffuse`,
+`approximate_diffuse`, or `stationary`) across different blocks of the state
+vector.
+
+.. autosummary::
+   :toctree: generated/
+
+   initialization.Initialization
+
 The `KalmanFilter` class is a subclass of Representation that provides
 filtering capabilities. Once the state space representation matrices have been
 constructed, the :py:meth:`filter <kalman_filter.KalmanFilter.filter>`
@@ -826,9 +837,11 @@ dimensions, etc.) but it also holds the filtering output, including the
 loglikelihood (see the class documentation for the full list of available
 results). It also provides a
 :py:meth:`predict <kalman_filter.FilterResults.predict>` method, which allows
-in-sample prediction or out-of-sample forecasting. A similar method,
-:py:meth:`predict <kalman_filter.FilterResults.get_prediction>`, provides
-additional prediction or forecasting results, including confidence intervals.
+in-sample prediction or out-of-sample forecasting. The results of a fitted
+model (`MLEResults`) provide a similar method,
+:py:meth:`get_prediction <mlemodel.MLEResults.get_prediction>`, which also
+gives additional prediction or forecasting results, including confidence
+intervals.
 
 .. autosummary::
    :toctree: generated/

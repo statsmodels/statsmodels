@@ -6,6 +6,8 @@ License: BSD-3
 
 """
 
+from statsmodels.compat.pandas import deprecate_kwarg
+
 import sys
 
 import numpy as np
@@ -60,7 +62,8 @@ def tau_frank(theta):
 
     Returns
     -------
-    tau : float, tau for given theta
+    tau : float
+        Kendall's tau for given theta.
     """
 
     if theta <= 1:
@@ -95,10 +98,10 @@ class ArchimedeanCopula(Copula):
     transform : instance of transformation class
         Archimedean generator with required methods including first and second
         derivatives
-    args : tuple
-        Optional copula parameters. Copula parameters can be either provided
+    args : tuple, optional
+        Copula parameters. Copula parameters can be either provided
         when creating the instance or as arguments when calling methods.
-    k_dim : int
+    k_dim : int, optional
         Dimension, number of components in the multivariate random variable.
         Currently only bivariate copulas are verified. Support for more than
         2 dimension is incomplete.
@@ -139,7 +142,25 @@ class ArchimedeanCopula(Copula):
         return u
 
     def cdf(self, u, args=()):
-        """Evaluate cdf of Archimedean copula."""
+        """Evaluate cdf of Archimedean copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which cdf is computed. The second (or last)
+            dimension should be the same as the dimension of the random
+            variable, e.g., 2 for bivariate copula.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula cdf evaluated at points ``u``.
+        """
         args = self._handle_args(args)
         u = self._handle_u(u)
         axis = -1
@@ -152,7 +173,25 @@ class ArchimedeanCopula(Copula):
         return cdfv
 
     def pdf(self, u, args=()):
-        """Evaluate pdf of Archimedean copula."""
+        """Evaluate pdf of Archimedean copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which pdf is computed. The second (or last)
+            dimension should be the same as the dimension of the random
+            variable, e.g., 2 for bivariate copula.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula pdf evaluated at points ``u``.
+        """
         u = self._handle_u(u)
         args = self._handle_args(args)
         axis = -1
@@ -180,7 +219,25 @@ class ArchimedeanCopula(Copula):
         return np.abs(pdfv)
 
     def logpdf(self, u, args=()):
-        """Evaluate log pdf of multivariate Archimedean copula."""
+        """Evaluate log pdf of multivariate Archimedean copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which log-pdf is computed. The second (or last)
+            dimension should be the same as the dimension of the random
+            variable, e.g., 2 for bivariate copula.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula log-pdf evaluated at points ``u``.
+        """
 
         u = self._handle_u(u)
         args = self._handle_args(args)
@@ -226,6 +283,16 @@ class ClaytonCopula(ArchimedeanCopula):
 
     with :math:`\theta\in[-1,\infty)\backslash\{0\}`.
 
+    Parameters
+    ----------
+    theta : float, optional
+        Parameter of the copula, must be > -1 and != 0. If not provided,
+        then the copula parameter must be provided as ``args`` when calling
+        methods.
+    k_dim : int, optional
+        Dimension, number of components in the multivariate random
+        variable.
+
     """
 
     def __init__(self, theta=None, k_dim=2):
@@ -240,8 +307,35 @@ class ClaytonCopula(ArchimedeanCopula):
                 raise ValueError("Theta must be > -1 and !=0")
         self.theta = theta
 
-    def rvs(self, nobs=1, args=(), random_state=None):
-        rng = check_random_state(random_state)
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
+        """Generate random variates from the copula.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        args : tuple, optional
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        sample : ndarray of shape (nobs, k_dim)
+            Sample from the copula.
+        """
+        rng = check_random_state(rng)
         (th,) = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))
         v = stats.gamma(1.0 / th).rvs(size=(nobs, 1), random_state=rng)
@@ -252,6 +346,25 @@ class ClaytonCopula(ArchimedeanCopula):
         return rv
 
     def pdf(self, u, args=()):
+        """Evaluate pdf of the Clayton copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which pdf is computed. Bivariate case uses a
+            closed-form expression; for higher dimensions the generic
+            Archimedean pdf is used.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula pdf evaluated at points ``u``.
+        """
         u = self._handle_u(u)
         (th,) = self._handle_args(args)
         if u.shape[-1] == 2:
@@ -263,16 +376,64 @@ class ClaytonCopula(ArchimedeanCopula):
             return super().pdf(u, args)
 
     def logpdf(self, u, args=()):
+        """Evaluate log-pdf of the Clayton copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which log-pdf is computed.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula log-pdf evaluated at points ``u``.
+        """
         # we skip Archimedean logpdf, that uses numdiff
         return super().logpdf(u, args=args)
 
     def cdf(self, u, args=()):
+        """Evaluate cdf of the Clayton copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which cdf is computed.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula cdf evaluated at points ``u``.
+        """
         u = self._handle_u(u)
         (th,) = self._handle_args(args)
         d = u.shape[-1]  # self.k_dim
         return (np.sum(u ** (-th), axis=-1) - d + 1) ** (-1.0 / th)
 
     def tau(self, theta=None):
+        """Kendall's tau as a function of the copula parameter theta.
+
+        Joe (2014), p. 168.
+
+        Parameters
+        ----------
+        theta : float, optional
+            Copula parameter. If not given, then ``self.theta`` is used.
+
+        Returns
+        -------
+        float
+            Kendall's tau corresponding to `theta`.
+        """
         # Joe 2014 p. 168
         if theta is None:
             theta = self.theta
@@ -280,6 +441,18 @@ class ClaytonCopula(ArchimedeanCopula):
         return theta / (theta + 2)
 
     def theta_from_tau(self, tau):
+        """Compute the copula parameter theta from Kendall's tau.
+
+        Parameters
+        ----------
+        tau : float
+            Kendall's tau.
+
+        Returns
+        -------
+        float
+            Copula parameter theta corresponding to `tau`.
+        """
         return 2 * tau / (1 - tau)
 
 
@@ -296,6 +469,15 @@ class FrankCopula(ArchimedeanCopula):
 
     with :math:`\theta\in \mathbb{R}\backslash\{0\}, \mathbf{u} \in [0, 1]^d`.
 
+    Parameters
+    ----------
+    theta : float, optional
+        Parameter of the copula, must be != 0. If not provided, then the
+        copula parameter must be provided as ``args`` when calling methods.
+    k_dim : int, optional
+        Dimension, number of components in the multivariate random
+        variable.
+
     """
 
     def __init__(self, theta=None, k_dim=2):
@@ -310,8 +492,35 @@ class FrankCopula(ArchimedeanCopula):
                 raise ValueError("Theta must be !=0")
         self.theta = theta
 
-    def rvs(self, nobs=1, args=(), random_state=None):
-        rng = check_random_state(random_state)
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
+        """Generate random variates from the copula.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        args : tuple, optional
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        sample : ndarray of shape (nobs, k_dim)
+            Sample from the copula.
+        """
+        rng = check_random_state(rng)
         (th,) = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))
         v = stats.logser.rvs(1.0 - np.exp(-th), size=(nobs, 1), random_state=rng)
@@ -322,6 +531,25 @@ class FrankCopula(ArchimedeanCopula):
     # todo: check expm1 and log1p for improved numerical precision
 
     def pdf(self, u, args=()):
+        """Evaluate pdf of the Frank copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which pdf is computed. Bivariate case uses a
+            closed-form expression; for higher dimensions the generic
+            Archimedean pdf is used.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula pdf evaluated at points ``u``.
+        """
         u = self._handle_u(u)
         (th,) = self._handle_args(args)
         if u.shape[-1] != 2:
@@ -336,6 +564,23 @@ class FrankCopula(ArchimedeanCopula):
         return num / den
 
     def cdf(self, u, args=()):
+        """Evaluate cdf of the Frank copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which cdf is computed.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula cdf evaluated at points ``u``.
+        """
         u = self._handle_u(u)
         (th,) = self._handle_args(args)
         dim = u.shape[-1]
@@ -346,6 +591,25 @@ class FrankCopula(ArchimedeanCopula):
         return -1.0 / th * np.log(1 - num / den)
 
     def logpdf(self, u, args=()):
+        """Evaluate log-pdf of the Frank copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which log-pdf is computed. Bivariate case uses a
+            closed-form expression; for higher dimensions the generic
+            Copula log-pdf, ``log(self.pdf(...))``, is used.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula log-pdf evaluated at points ``u``.
+        """
         u = self._handle_u(u)
         (th,) = self._handle_args(args)
         if u.shape[-1] == 2:
@@ -361,7 +625,24 @@ class FrankCopula(ArchimedeanCopula):
             return super().logpdf(u, args)
 
     def cdfcond_2g1(self, u, args=()):
-        """Conditional cdf of second component given the value of first."""
+        """Conditional cdf of second component given the value of first.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of bivariate random variable, each defined on [0, 1],
+            at which the conditional cdf is evaluated.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Conditional cdf of the second component given the first,
+            evaluated at ``u``.
+        """
         u = self._handle_u(u)
         (th,) = self._handle_args(args)
         if u.shape[-1] == 2:
@@ -374,7 +655,27 @@ class FrankCopula(ArchimedeanCopula):
             raise NotImplementedError("u needs to be bivariate (2 columns)")
 
     def ppfcond_2g1(self, q, u1, args=()):
-        """Conditional pdf of second component given the value of first."""
+        """Conditional ppf (quantile) of second component given first.
+
+        Parameters
+        ----------
+        q : array_like
+            Values of the conditional cdf, in [0, 1], for which the
+            conditional ppf (quantile) is computed.
+        u1 : array_like
+            Values of the first component on which the second component is
+            conditioned.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Conditional ppf of the second component given the first,
+            evaluated at ``q``.
+        """
         u1 = np.asarray(u1)
         (th,) = self._handle_args(args)
         if u1.shape[-1] == 1:
@@ -388,6 +689,20 @@ class FrankCopula(ArchimedeanCopula):
             raise NotImplementedError("u needs to be bivariate (2 columns)")
 
     def tau(self, theta=None):
+        """Kendall's tau as a function of the copula parameter theta.
+
+        Joe (2014), p. 166.
+
+        Parameters
+        ----------
+        theta : float, optional
+            Copula parameter. If not given, then ``self.theta`` is used.
+
+        Returns
+        -------
+        float
+            Kendall's tau corresponding to `theta`.
+        """
         # Joe 2014 p. 166
         if theta is None:
             theta = self.theta
@@ -395,6 +710,19 @@ class FrankCopula(ArchimedeanCopula):
         return tau_frank(theta)
 
     def theta_from_tau(self, tau):
+        """Compute the copula parameter theta from Kendall's tau.
+
+        Parameters
+        ----------
+        tau : float
+            Kendall's tau.
+
+        Returns
+        -------
+        float
+            Copula parameter theta corresponding to `tau`, found
+            numerically by least squares.
+        """
         MIN_FLOAT_LOG = np.log(sys.float_info.min)
         MAX_FLOAT_LOG = np.log(sys.float_info.max)
 
@@ -423,6 +751,15 @@ class GumbelCopula(ArchimedeanCopula):
 
     with :math:`\theta\in[1,\infty)`.
 
+    Parameters
+    ----------
+    theta : float, optional
+        Parameter of the copula, must be > 1. If not provided, then the
+        copula parameter must be provided as ``args`` when calling methods.
+    k_dim : int, optional
+        Dimension, number of components in the multivariate random
+        variable.
+
     """
 
     def __init__(self, theta=None, k_dim=2):
@@ -437,8 +774,35 @@ class GumbelCopula(ArchimedeanCopula):
                 raise ValueError("Theta must be > 1")
         self.theta = theta
 
-    def rvs(self, nobs=1, args=(), random_state=None):
-        rng = check_random_state(random_state)
+    @deprecate_kwarg("random_state", "rng")
+    def rvs(self, nobs=1, args=(), rng=None):
+        """Generate random variates from the copula.
+
+        Parameters
+        ----------
+        nobs : int, optional
+            Number of samples to generate from the copula. Default is 1.
+        args : tuple, optional
+            Arguments for copula parameters. The number of arguments depends
+            on the copula.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int or array
+            of ints, a new ``Generator`` is created, seeded with `rng`. If
+            `rng` is already a ``Generator`` or ``RandomState`` instance,
+            that instance is used.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            .. deprecated:: 0.15
+
+               random_state has been deprecated. In-line with SPEC-007, use
+               rng for passing a random number generator or seed.
+
+        Returns
+        -------
+        sample : ndarray of shape (nobs, k_dim)
+            Sample from the copula.
+        """
+        rng = check_random_state(rng)
         (th,) = self._handle_args(args)
         x = rng.random((nobs, self.k_dim))
         v = stats.levy_stable.rvs(
@@ -457,6 +821,25 @@ class GumbelCopula(ArchimedeanCopula):
         return rv
 
     def pdf(self, u, args=()):
+        """Evaluate pdf of the Gumbel copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which pdf is computed. Bivariate case uses a
+            closed-form expression; for higher dimensions the generic
+            Archimedean pdf is used.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula pdf evaluated at points ``u``.
+        """
         u = self._handle_u(u)
         (th,) = self._handle_args(args)
         if u.shape[-1] == 2:
@@ -477,6 +860,23 @@ class GumbelCopula(ArchimedeanCopula):
             return super().pdf(u, args)
 
     def cdf(self, u, args=()):
+        """Evaluate cdf of the Gumbel copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which cdf is computed.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula cdf evaluated at points ``u``.
+        """
         u = self._handle_u(u)
         (th,) = self._handle_args(args)
         h = np.sum((-np.log(u)) ** th, axis=-1)
@@ -484,10 +884,41 @@ class GumbelCopula(ArchimedeanCopula):
         return cdf
 
     def logpdf(self, u, args=()):
+        """Evaluate log-pdf of the Gumbel copula.
+
+        Parameters
+        ----------
+        u : array_like
+            Values of random bivariate random variable, each defined on
+            [0, 1], for which log-pdf is computed.
+        args : tuple, optional
+            Copula parameters. If empty, then the copula parameters will be
+            taken from the ``args`` attribute created when initializing the
+            instance.
+
+        Returns
+        -------
+        ndarray
+            Copula log-pdf evaluated at points ``u``.
+        """
         # we skip Archimedean logpdf, that uses numdiff
         return super().logpdf(u, args=args)
 
     def tau(self, theta=None):
+        """Kendall's tau as a function of the copula parameter theta.
+
+        Joe (2014), p. 172.
+
+        Parameters
+        ----------
+        theta : float, optional
+            Copula parameter. If not given, then ``self.theta`` is used.
+
+        Returns
+        -------
+        float
+            Kendall's tau corresponding to `theta`.
+        """
         # Joe 2014 p. 172
         if theta is None:
             theta = self.theta
@@ -495,4 +926,16 @@ class GumbelCopula(ArchimedeanCopula):
         return (theta - 1) / theta
 
     def theta_from_tau(self, tau):
+        """Compute the copula parameter theta from Kendall's tau.
+
+        Parameters
+        ----------
+        tau : float
+            Kendall's tau.
+
+        Returns
+        -------
+        float
+            Copula parameter theta corresponding to `tau`.
+        """
         return 1 / (1 - tau)

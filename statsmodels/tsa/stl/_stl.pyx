@@ -108,9 +108,7 @@ def _is_pos_int(x, odd):
 
 cdef class STL(object):
     """
-    STL(endog, period=None, seasonal=7, trend=None, low_pass=None,
-        seasonal_deg=1, trend_deg=1, low_pass_deg=1, robust=False,
-        seasonal_jump=1, trend_jump=1, low_pass_jump=1)
+    STL(endog, period=None, seasonal=7, trend=None, low_pass=None, seasonal_deg=1, trend_deg=1, low_pass_deg=1, robust=False, seasonal_jump=1, trend_jump=1, low_pass_jump=1)
 
     Season-Trend decomposition using LOESS.
 
@@ -161,7 +159,9 @@ cdef class STL(object):
     See Also
     --------
     statsmodels.tsa.seasonal.DecomposeResult
+        Container class for all seasonal decomposition results
     statsmodels.tsa.seasonal.seasonal_decompose
+        Seasonal decomposition using moving averages
 
     Notes
     -----
@@ -201,7 +201,6 @@ cdef class STL(object):
     >>> plt.show()
 
     .. plot:: plots/stl_plot.py
-
     """
     cdef object endog
     cdef Py_ssize_t nobs

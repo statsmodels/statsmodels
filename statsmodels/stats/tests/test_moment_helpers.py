@@ -4,8 +4,9 @@ Created on Sun Oct 16 17:33:56 2011
 Author: Josef Perktold
 """
 import numpy as np
-from numpy.testing import assert_, assert_almost_equal, assert_equal
+from numpy.testing import assert_, assert_allclose, assert_almost_equal, assert_equal
 import pytest
+from scipy import stats as scipy_stats
 
 from statsmodels.stats import moment_helpers
 from statsmodels.stats.moment_helpers import (
@@ -16,6 +17,7 @@ from statsmodels.stats.moment_helpers import (
     mc2mvsk,
     mnc2cum,
     mnc2mc,
+    mnc2mvsk,
     mvsk2mc,
 )
 
@@ -111,6 +113,34 @@ def test_multidimensional(test_vals):
     assert_almost_equal(mvsk2mc(mc2mvsk(test_vals).T).T, test_vals)
 
 
+def test_mnc2mvsk_exponential():
+    # Exponential(scale=1) has textbook non-central moments E[X^k] = k!,
+    # and well-known mean/var/skew/excess-kurtosis of 1/1/2/6; also cross
+    # check against scipy's independently computed reference values.
+    mnc = [1.0, 2.0, 6.0, 24.0]
+    mean, var, skew, kurt = mnc2mvsk(mnc)
+    assert_almost_equal(mean, 1.0, decimal=13)
+    assert_almost_equal(var, 1.0, decimal=13)
+    assert_almost_equal(skew, 2.0, decimal=13)
+    assert_almost_equal(kurt, 6.0, decimal=13)
+
+    mnc_scipy = [scipy_stats.expon.moment(k) for k in range(1, 5)]
+    assert_allclose(mnc_scipy, mnc)
+    res = mnc2mvsk(mnc_scipy)
+    expected = scipy_stats.expon.stats(moments="mvsk")
+    assert_allclose(res, expected, atol=1e-13)
+
+
+def test_mnc2mvsk_standard_normal():
+    # standard normal non-central moments are 0, 1, 0, 3
+    mnc = [0.0, 1.0, 0.0, 3.0]
+    mean, var, skew, kurt = mnc2mvsk(mnc)
+    assert_almost_equal(mean, 0.0, decimal=13)
+    assert_almost_equal(var, 1.0, decimal=13)
+    assert_almost_equal(skew, 0.0, decimal=13)
+    assert_almost_equal(kurt, 0.0, decimal=13)
+
+
 @pytest.mark.parametrize("func_name", ["cum2mc", "mc2cum", "mc2mnc",
                                        "mc2mvsk", "mnc2cum", "mnc2mc",
                                        "mvsk2mc", "mvsk2mnc"])
@@ -127,3 +157,20 @@ def test_moment_conversion_types(func_name):
 
     assert (isinstance(func((1.0, 1, 0, 3)), list) or
             isinstance(func(np.array([1.0, 1, 0, 3])), (tuple, np.ndarray)))
+
+
+def test_cov2corr_corr2cov_negative_scales_raise():
+    cov_bad = np.array([[1.0, 0.5], [0.5, -2.0]])
+    with pytest.raises(ValueError, match="diagonal of cov must be non-negative"):
+        cov2corr(cov_bad)
+
+    corr = np.array([[1.0, 0.5], [0.5, 1.0]])
+    with pytest.raises(ValueError, match="standard deviations must be non-negative"):
+        moment_helpers.corr2cov(corr, np.array([1.0, -2.0]))
+
+    # valid inputs unchanged
+    res = cov2corr(np.array([[4.0, 1.0], [1.0, 9.0]]), return_std=True)
+    assert_allclose(np.diag(res.corr), 1.0)
+    assert_allclose(res.std, [2.0, 3.0])
+    cov = moment_helpers.corr2cov(corr, np.array([1.0, 2.0]))
+    assert_allclose(cov, [[1.0, 1.0], [1.0, 4.0]])

@@ -54,7 +54,8 @@ Examples
   el.ci_mean()
 
   # test variance is 1
-  el.test_var(1)
+  res = el.test_var(1, result_object=True)
+  print(f"llr: {res.llr}, pvalue: {res.pvalue}")
 
 
 Module Reference
@@ -69,3 +70,8 @@ Module Reference
    descriptive.DescStat
    descriptive.DescStatUV
    descriptive.DescStatMV
+   descriptive.EmpLikeTestResult
+   elanova.ANOVA
+   elanova.ANOVAResult
+   originregress.ELOriginRegress
+   aft_el.emplikeAFT

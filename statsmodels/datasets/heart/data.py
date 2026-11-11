@@ -7,7 +7,7 @@ COPYRIGHT = """???"""
 
 TITLE = """Transplant Survival Data"""
 
-SOURCE = """Miller, R. (1976). Least squares regression with censored data. Biometrica, 63 (3). 449-464.
+SOURCE = """Miller, R. (1976). Least squares regression with censored data. *Biometrika*, 63 (3). 449-464.
 
 """
 
@@ -36,12 +36,22 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name``, ``exog_name`` and ``censors`` attributes.
     """
     return load_pandas()
 
 
 def load_pandas():
+    """
+    Load the data and return a Dataset class instance.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data``, ``names``, ``endog``, ``exog``,
+        ``endog_name``, ``exog_name`` and ``censors`` attributes.
+    """
     data = _get_data()
     dataset = du.process_pandas(data, endog_idx=0, exog_idx=None)
     dataset.censors = dataset.exog.iloc[:, 0]

@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -9,20 +8,26 @@ def plot_scree(eigenvals, total_var, ncomp=None, x_label="factor"):
     Parameters
     ----------
     eigenvals : array_like
-        The eigenvalues
+        The eigenvalues.
     total_var : float
-        the total variance (for plotting percent variance explained)
+        The total variance (for plotting percent variance explained).
     ncomp : int, optional
         Number of factors to include in the plot.  If None, will
-        included the same as the number of maximum possible loadings
-    x_label : str
-        label of x-axis
+        include the same number as the maximum possible number of loadings.
+    x_label : str, optional
+        Label of the x-axis.
 
     Returns
     -------
     Figure
         Handle to the figure.
     """
+    # deferred import: matplotlib is only needed when this function is
+    # actually called, and _import_mpl gives a clear error if it is missing
+    from statsmodels.graphics.utils import _import_mpl
+
+    plt = _import_mpl()
+
     fig = plt.figure()
     ncomp = len(eigenvals) if ncomp is None else ncomp
     vals = eigenvals
@@ -81,23 +86,32 @@ def plot_loadings(loadings, col_names=None, row_names=None,
 
     Parameters
     ----------
-    loadings : array like
-        Each column is a component (or factor)
-    col_names : a list of strings
-        column names of `loadings`
-    row_names : a list of strings
-        row names of `loadings`
-    loading_pairs : None or a list of tuples
-        Specify plots. Each tuple (i, j) represent one figure, i and j is
-        the loading number for x-axis and y-axis, respectively. If `None`,
-        all combinations of the loadings will be plotted.
-    percent_variance : array_like
+    loadings : array_like
+        Each column is a component (or factor).
+    col_names : list[str], optional
+        Column names of `loadings`.
+    row_names : list[str], optional
+        Row names of `loadings`.
+    loading_pairs : None or list[tuple], optional
+        Specify plots. Each tuple (i, j) represents one figure, where i and
+        j are the loading numbers for the x-axis and y-axis, respectively.
+        If `None`, all combinations of the loadings will be plotted.
+    percent_variance : array_like, optional
         The percent variance explained by each factor.
+    title : str, optional
+        The title of each figure.
 
     Returns
     -------
-    figs : a list of figure handles
+    figs : list[Figure]
+        A list of figure handles.
     """
+    # deferred import: matplotlib is only needed when this function is
+    # actually called, and _import_mpl gives a clear error if it is missing
+    from statsmodels.graphics.utils import _import_mpl
+
+    plt = _import_mpl()
+
     k_var, n_factor = loadings.shape
     if loading_pairs is None:
         loading_pairs = []
@@ -105,9 +119,9 @@ def plot_loadings(loadings, col_names=None, row_names=None,
             for j in range(i + 1, n_factor):
                 loading_pairs.append([i, j])
     if col_names is None:
-        col_names = ["factor %d" % i for i in range(n_factor)]
+        col_names = [f"factor {i:d}" for i in range(n_factor)]
     if row_names is None:
-        row_names = ["var %d" % i for i in range(k_var)]
+        row_names = [f"var {i:d}" for i in range(k_var)]
     figs = []
     for item in loading_pairs:
         i = item[0]

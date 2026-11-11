@@ -39,7 +39,13 @@ def get_sarimax_models(endog, filter_univariate=False, **kwargs):
     res_orig = mod_orig.smooth(params_orig)
 
     return Bunch(
-        mod_conc=mod_conc, params_conc=params_conc, mod_orig=mod_orig, params_orig=params_orig, res_conc=res_conc, res_orig=res_orig, scale=scale
+        mod_conc=mod_conc,
+        params_conc=params_conc,
+        mod_orig=mod_orig,
+        params_orig=params_orig,
+        res_conc=res_conc,
+        res_orig=res_orig,
+        scale=scale,
     )
 
 
@@ -48,8 +54,8 @@ def test_concentrated_loglike_sarimax():
     # test, which is a lower-level test of the Kalman filter using the SARIMAX
     # model as an example
     nobs = 30
-    np.random.seed(28953)
-    endog = np.random.normal(size=nobs)
+    rs = np.random.RandomState(28953)
+    endog = rs.normal(size=nobs)
     kwargs = {}
 
     # Typical model
@@ -115,8 +121,8 @@ def test_concentrated_predict_sarimax():
     # test, which is a lower-level test of the Kalman filter using the SARIMAX
     # model as an example
     nobs = 30
-    np.random.seed(28953)
-    endog = np.random.normal(size=nobs)
+    rs = np.random.RandomState(28953)
+    endog = rs.normal(size=nobs)
 
     # Typical model
     out = get_sarimax_models(endog)
@@ -131,8 +137,8 @@ def test_concentrated_predict_sarimax():
 def test_fixed_scale_sarimax():
     # Test that the fixed_scale context manager works
     nobs = 30
-    np.random.seed(28953)
-    endog = np.random.normal(size=nobs)
+    rs = np.random.RandomState(28953)
+    endog = rs.normal(size=nobs)
     kwargs = {
         "seasonal_order": (1, 1, 1, 2),
         "trend": "ct",

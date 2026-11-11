@@ -5,7 +5,7 @@ from statsmodels.compat.pandas import (
 )
 
 import numpy as np
-from numpy.testing import assert_equal
+from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
@@ -22,7 +22,7 @@ from statsmodels.tools.sm_exceptions import MissingDataError
 #    @classmethod
 #    def setup_class(cls):
 #        nrows = 10
-#        cls.dates_result = cls.dates_results = np.random.random(nrows)
+#        cls.dates_result = cls.dates_results = rs.random(nrows)
 #
 #    def test_dates(self):
 #        np.testing.assert_equal(data.wrap_output(self.dates_input, 'dates'),
@@ -32,14 +32,15 @@ from statsmodels.tools.sm_exceptions import MissingDataError
 class TestArrays:
     @classmethod
     def setup_class(cls):
-        cls.endog = np.random.random(10)
-        cls.exog = np.c_[np.ones(10), np.random.random((10, 2))]
+        rs = np.random.RandomState(8643652)
+        cls.endog = rs.random(10)
+        cls.exog = np.c_[np.ones(10), rs.random((10, 2))]
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
         nvars = 3
-        cls.col_result = cls.col_input = np.random.random(nvars)
-        cls.row_result = cls.row_input = np.random.random(nrows)
-        cls.cov_result = cls.cov_input = np.random.random((nvars, nvars))
+        cls.col_result = cls.col_input = rs.random(nvars)
+        cls.row_result = cls.row_input = rs.random(nrows)
+        cls.cov_result = cls.cov_input = rs.random((nvars, nvars))
         cls.xnames = ["const", "x1", "x2"]
         cls.ynames = "y"
         cls.row_labels = None
@@ -82,8 +83,9 @@ class TestArrays2dEndog(TestArrays):
     @classmethod
     def setup_class(cls):
         super().setup_class()
-        cls.endog = np.random.random((10, 1))
-        cls.exog = np.c_[np.ones(10), np.random.random((10, 2))]
+        rs = np.random.RandomState(8643652)
+        cls.endog = rs.random((10, 1))
+        cls.exog = np.c_[np.ones(10), rs.random((10, 2))]
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
 
     def test_endogexog(self):
@@ -94,9 +96,10 @@ class TestArrays2dEndog(TestArrays):
 class TestArrays1dExog(TestArrays):
     @classmethod
     def setup_class(cls):
+        rs = np.random.RandomState(8643652)
         super().setup_class()
-        cls.endog = np.random.random(10)
-        exog = np.random.random(10)
+        cls.endog = rs.random(10)
+        exog = rs.random(10)
         cls.data = sm_data.handle_data(cls.endog, exog)
         cls.exog = exog[:, None]
         cls.xnames = ["x1"]
@@ -110,18 +113,19 @@ class TestArrays1dExog(TestArrays):
 class TestDataFrames(TestArrays):
     @classmethod
     def setup_class(cls):
-        cls.endog = pd.DataFrame(np.random.random(10), columns=["y_1"])
-        exog = pd.DataFrame(np.random.random((10, 2)), columns=["x_1", "x_2"])
+        rs = np.random.RandomState(8643652)
+        cls.endog = pd.DataFrame(rs.random(10), columns=["y_1"])
+        exog = pd.DataFrame(rs.random((10, 2)), columns=["x_1", "x_2"])
         exog.insert(0, "const", 1)
         cls.exog = exog
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
         nvars = 3
-        cls.col_input = np.random.random(nvars)
+        cls.col_input = rs.random(nvars)
         cls.col_result = pd.Series(cls.col_input, index=exog.columns)
-        cls.row_input = np.random.random(nrows)
+        cls.row_input = rs.random(nrows)
         cls.row_result = pd.Series(cls.row_input, index=exog.index)
-        cls.cov_input = np.random.random((nvars, nvars))
+        cls.cov_input = rs.random((nvars, nvars))
         cls.cov_result = pd.DataFrame(
             cls.cov_input, index=exog.columns, columns=exog.columns
         )
@@ -151,20 +155,21 @@ class TestDataFrames(TestArrays):
 class TestDataFramesWithMultiIndex(TestDataFrames):
     @classmethod
     def setup_class(cls):
-        cls.endog = pd.DataFrame(np.random.random(10), columns=["y_1"])
+        rs = np.random.RandomState(8643652)
+        cls.endog = pd.DataFrame(rs.random(10), columns=["y_1"])
         mi = pd.MultiIndex.from_product([["x"], ["1", "2"]])
-        exog = pd.DataFrame(np.random.random((10, 2)), columns=mi)
+        exog = pd.DataFrame(rs.random((10, 2)), columns=mi)
         exog_flattened_idx = pd.Index(["const", "x_1", "x_2"])
-        exog.insert(0, "const", 1)
+        exog.insert(0, ("", "const"), 1)
         cls.exog = exog
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
         nvars = 3
-        cls.col_input = np.random.random(nvars)
+        cls.col_input = rs.random(nvars)
         cls.col_result = pd.Series(cls.col_input, index=exog_flattened_idx)
-        cls.row_input = np.random.random(nrows)
+        cls.row_input = rs.random(nrows)
         cls.row_result = pd.Series(cls.row_input, index=exog.index)
-        cls.cov_input = np.random.random((nvars, nvars))
+        cls.cov_input = rs.random((nvars, nvars))
         cls.cov_result = pd.DataFrame(
             cls.cov_input, index=exog_flattened_idx, columns=exog_flattened_idx
         )
@@ -177,27 +182,29 @@ class TestLists(TestArrays):
     @classmethod
     def setup_class(cls):
         super().setup_class()
-        cls.endog = np.random.random(10).tolist()
-        cls.exog = np.c_[np.ones(10), np.random.random((10, 2))].tolist()
+        rs = np.random.RandomState(8643652)
+        cls.endog = rs.random(10).tolist()
+        cls.exog = np.c_[np.ones(10), rs.random((10, 2))].tolist()
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
 
 
 class TestListDataFrame(TestDataFrames):
     @classmethod
     def setup_class(cls):
-        cls.endog = np.random.random(10).tolist()
+        rs = np.random.RandomState(8643652)
+        cls.endog = rs.random(10).tolist()
 
-        exog = pd.DataFrame(np.random.random((10, 2)), columns=["x_1", "x_2"])
+        exog = pd.DataFrame(rs.random((10, 2)), columns=["x_1", "x_2"])
         exog.insert(0, "const", 1)
         cls.exog = exog
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
         nvars = 3
-        cls.col_input = np.random.random(nvars)
+        cls.col_input = rs.random(nvars)
         cls.col_result = pd.Series(cls.col_input, index=exog.columns)
-        cls.row_input = np.random.random(nrows)
+        cls.row_input = rs.random(nrows)
         cls.row_result = pd.Series(cls.row_input, index=exog.index)
-        cls.cov_input = np.random.random((nvars, nvars))
+        cls.cov_input = rs.random((nvars, nvars))
         cls.cov_result = pd.DataFrame(
             cls.cov_input, index=exog.columns, columns=exog.columns
         )
@@ -217,19 +224,20 @@ class TestListDataFrame(TestDataFrames):
 class TestDataFrameList(TestDataFrames):
     @classmethod
     def setup_class(cls):
-        cls.endog = pd.DataFrame(np.random.random(10), columns=["y_1"])
+        rs = np.random.RandomState(8643652)
+        cls.endog = pd.DataFrame(rs.random(10), columns=["y_1"])
 
-        exog = pd.DataFrame(np.random.random((10, 2)), columns=["x1", "x2"])
+        exog = pd.DataFrame(rs.random((10, 2)), columns=["x1", "x2"])
         exog.insert(0, "const", 1)
         cls.exog = exog.values.tolist()
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
         nvars = 3
-        cls.col_input = np.random.random(nvars)
+        cls.col_input = rs.random(nvars)
         cls.col_result = pd.Series(cls.col_input, index=exog.columns)
-        cls.row_input = np.random.random(nrows)
+        cls.row_input = rs.random(nrows)
         cls.row_result = pd.Series(cls.row_input, index=exog.index)
-        cls.cov_input = np.random.random((nvars, nvars))
+        cls.cov_input = rs.random((nvars, nvars))
         cls.cov_result = pd.DataFrame(
             cls.cov_input, index=exog.columns, columns=exog.columns
         )
@@ -249,19 +257,20 @@ class TestDataFrameList(TestDataFrames):
 class TestArrayDataFrame(TestDataFrames):
     @classmethod
     def setup_class(cls):
-        cls.endog = np.random.random(10)
+        rs = np.random.RandomState(8643652)
+        cls.endog = rs.random(10)
 
-        exog = pd.DataFrame(np.random.random((10, 2)), columns=["x_1", "x_2"])
+        exog = pd.DataFrame(rs.random((10, 2)), columns=["x_1", "x_2"])
         exog.insert(0, "const", 1)
         cls.exog = exog
         cls.data = sm_data.handle_data(cls.endog, exog)
         nrows = 10
         nvars = 3
-        cls.col_input = np.random.random(nvars)
+        cls.col_input = rs.random(nvars)
         cls.col_result = pd.Series(cls.col_input, index=exog.columns)
-        cls.row_input = np.random.random(nrows)
+        cls.row_input = rs.random(nrows)
         cls.row_result = pd.Series(cls.row_input, index=exog.index)
-        cls.cov_input = np.random.random((nvars, nvars))
+        cls.cov_input = rs.random((nvars, nvars))
         cls.cov_result = pd.DataFrame(
             cls.cov_input, index=exog.columns, columns=exog.columns
         )
@@ -281,21 +290,22 @@ class TestArrayDataFrame(TestDataFrames):
 class TestDataFrameArray(TestDataFrames):
     @classmethod
     def setup_class(cls):
-        cls.endog = pd.DataFrame(np.random.random(10), columns=["y_1"])
+        rs = np.random.RandomState(8643652)
+        cls.endog = pd.DataFrame(rs.random(10), columns=["y_1"])
 
         exog = pd.DataFrame(
-            np.random.random((10, 2)), columns=["x1", "x2"]
+            rs.random((10, 2)), columns=["x1", "x2"]
         )  # names mimic defaults
         exog.insert(0, "const", 1)
         cls.exog = exog.values
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
         nvars = 3
-        cls.col_input = np.random.random(nvars)
+        cls.col_input = rs.random(nvars)
         cls.col_result = pd.Series(cls.col_input, index=exog.columns)
-        cls.row_input = np.random.random(nrows)
+        cls.row_input = rs.random(nrows)
         cls.row_result = pd.Series(cls.row_input, index=exog.index)
-        cls.cov_input = np.random.random((nvars, nvars))
+        cls.cov_input = rs.random((nvars, nvars))
         cls.cov_result = pd.DataFrame(
             cls.cov_input, index=exog.columns, columns=exog.columns
         )
@@ -315,19 +325,20 @@ class TestDataFrameArray(TestDataFrames):
 class TestSeriesDataFrame(TestDataFrames):
     @classmethod
     def setup_class(cls):
-        cls.endog = pd.Series(np.random.random(10), name="y_1")
+        rs = np.random.RandomState(8643652)
+        cls.endog = pd.Series(rs.random(10), name="y_1")
 
-        exog = pd.DataFrame(np.random.random((10, 2)), columns=["x_1", "x_2"])
+        exog = pd.DataFrame(rs.random((10, 2)), columns=["x_1", "x_2"])
         exog.insert(0, "const", 1)
         cls.exog = exog
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
         nvars = 3
-        cls.col_input = np.random.random(nvars)
+        cls.col_input = rs.random(nvars)
         cls.col_result = pd.Series(cls.col_input, index=exog.columns)
-        cls.row_input = np.random.random(nrows)
+        cls.row_input = rs.random(nrows)
         cls.row_result = pd.Series(cls.row_input, index=exog.index)
-        cls.cov_input = np.random.random((nvars, nvars))
+        cls.cov_input = rs.random((nvars, nvars))
         cls.cov_result = pd.DataFrame(
             cls.cov_input, index=exog.columns, columns=exog.columns
         )
@@ -343,18 +354,19 @@ class TestSeriesDataFrame(TestDataFrames):
 class TestSeriesSeries(TestDataFrames):
     @classmethod
     def setup_class(cls):
-        cls.endog = pd.Series(np.random.random(10), name="y_1")
+        rs = np.random.RandomState(8643652)
+        cls.endog = pd.Series(rs.random(10), name="y_1")
 
-        exog = pd.Series(np.random.random(10), name="x_1")
+        exog = pd.Series(rs.random(10), name="x_1")
         cls.exog = exog
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
         nvars = 1
-        cls.col_input = np.random.random(nvars)
+        cls.col_input = rs.random(nvars)
         cls.col_result = pd.Series(cls.col_input, index=[exog.name])
-        cls.row_input = np.random.random(nrows)
+        cls.row_input = rs.random(nrows)
         cls.row_result = pd.Series(cls.row_input, index=exog.index)
-        cls.cov_input = np.random.random((nvars, nvars))
+        cls.cov_input = rs.random((nvars, nvars))
         cls.cov_result = pd.DataFrame(
             cls.cov_input, index=[exog.name], columns=[exog.name]
         )
@@ -396,16 +408,17 @@ def test_alignment():
 class TestMultipleEqsArrays(TestArrays):
     @classmethod
     def setup_class(cls):
-        cls.endog = np.random.random((10, 4))
-        cls.exog = np.c_[np.ones(10), np.random.random((10, 2))]
+        rs = np.random.RandomState(8643652)
+        cls.endog = rs.random((10, 4))
+        cls.exog = np.c_[np.ones(10), rs.random((10, 2))]
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
         nvars = 3
         neqs = 4
-        cls.col_result = cls.col_input = np.random.random(nvars)
-        cls.row_result = cls.row_input = np.random.random(nrows)
-        cls.cov_result = cls.cov_input = np.random.random((nvars, nvars))
-        cls.cov_eq_result = cls.cov_eq_input = np.random.random((neqs, neqs))
+        cls.col_result = cls.col_input = rs.random(nvars)
+        cls.row_result = cls.row_input = rs.random(nrows)
+        cls.cov_result = cls.cov_input = rs.random((nvars, nvars))
+        cls.cov_eq_result = cls.cov_eq_input = rs.random((neqs, neqs))
         cls.col_eq_result = cls.col_eq_input = np.array((neqs, nvars))
         cls.xnames = ["const", "x1", "x2"]
         cls.ynames = ["y1", "y2", "y3", "y4"]
@@ -435,29 +448,30 @@ class TestMultipleEqsArrays(TestArrays):
 class TestMultipleEqsDataFrames(TestDataFrames):
     @classmethod
     def setup_class(cls):
+        rs = np.random.RandomState(8643652)
         cls.endog = endog = pd.DataFrame(
-            np.random.random((10, 4)), columns=["y_1", "y_2", "y_3", "y_4"]
+            rs.random((10, 4)), columns=["y_1", "y_2", "y_3", "y_4"]
         )
-        exog = pd.DataFrame(np.random.random((10, 2)), columns=["x_1", "x_2"])
+        exog = pd.DataFrame(rs.random((10, 2)), columns=["x_1", "x_2"])
         exog.insert(0, "const", 1)
         cls.exog = exog
         cls.data = sm_data.handle_data(cls.endog, cls.exog)
         nrows = 10
         nvars = 3
         neqs = 4
-        cls.col_input = np.random.random(nvars)
+        cls.col_input = rs.random(nvars)
         cls.col_result = pd.Series(cls.col_input, index=exog.columns)
-        cls.row_input = np.random.random(nrows)
+        cls.row_input = rs.random(nrows)
         cls.row_result = pd.Series(cls.row_input, index=exog.index)
-        cls.cov_input = np.random.random((nvars, nvars))
+        cls.cov_input = rs.random((nvars, nvars))
         cls.cov_result = pd.DataFrame(
             cls.cov_input, index=exog.columns, columns=exog.columns
         )
-        cls.cov_eq_input = np.random.random((neqs, neqs))
+        cls.cov_eq_input = rs.random((neqs, neqs))
         cls.cov_eq_result = pd.DataFrame(
             cls.cov_eq_input, index=endog.columns, columns=endog.columns
         )
-        cls.col_eq_input = np.random.random((nvars, neqs))
+        cls.col_eq_input = rs.random((nvars, neqs))
         cls.col_eq_result = pd.DataFrame(
             cls.col_eq_input, index=exog.columns, columns=endog.columns
         )
@@ -483,8 +497,9 @@ class TestMultipleEqsDataFrames(TestDataFrames):
 class TestMissingArray:
     @classmethod
     def setup_class(cls):
-        X = np.random.random((25, 4))
-        y = np.random.random(25)
+        rs = np.random.RandomState(8643652)
+        X = rs.random((25, 4))
+        y = rs.random(25)
         y[10] = np.nan
         X[2, 3] = np.nan
         X[14, 2] = np.nan
@@ -493,7 +508,8 @@ class TestMissingArray:
     @pytest.mark.smoke
     def test_raise_no_missing(self):
         # GH#1700
-        sm_data.handle_data(np.random.random(20), np.random.random((20, 2)), "raise")
+        rs = np.random.RandomState(8643652)
+        sm_data.handle_data(rs.random(20), rs.random((20, 2)), "raise")
 
     def test_raise(self):
         with pytest.raises(MissingDataError):
@@ -535,7 +551,8 @@ class TestMissingArray:
         np.testing.assert_array_equal(data.endog, y)
 
     def test_extra_kwargs_2d(self):
-        sigma = np.random.random((25, 25))
+        rs = np.random.RandomState(8643652)
+        sigma = rs.random((25, 25))
         sigma = sigma + sigma.T - np.diag(np.diag(sigma))
         data = sm_data.handle_data(self.y, self.X, "drop", sigma=sigma)
         idx = ~np.isnan(np.c_[self.y, self.X]).any(axis=1)
@@ -543,7 +560,8 @@ class TestMissingArray:
         np.testing.assert_array_equal(data.sigma, sigma)
 
     def test_extra_kwargs_1d(self):
-        weights = np.random.random(25)
+        rs = np.random.RandomState(8643652)
+        weights = rs.random(25)
         data = sm_data.handle_data(self.y, self.X, "drop", weights=weights)
         idx = ~np.isnan(np.c_[self.y, self.X]).any(axis=1)
         weights = weights[idx]
@@ -553,8 +571,9 @@ class TestMissingArray:
 class TestMissingPandas:
     @classmethod
     def setup_class(cls):
-        X = np.random.random((25, 4))
-        y = np.random.random(25)
+        rs = np.random.RandomState(8643652)
+        X = rs.random((25, 4))
+        y = rs.random(25)
         y[10] = np.nan
         X[2, 3] = np.nan
         X[14, 2] = np.nan
@@ -564,9 +583,10 @@ class TestMissingPandas:
     @pytest.mark.smoke
     def test_raise_no_missing(self):
         # GH#1700
+        rs = np.random.RandomState(8643652)
         sm_data.handle_data(
-            pd.Series(np.random.random(20)),
-            pd.DataFrame(np.random.random((20, 2))),
+            pd.Series(rs.random(20)),
+            pd.DataFrame(rs.random((20, 2))),
             "raise",
         )
 
@@ -691,7 +711,8 @@ class TestHandleMissing:
         assert_series_equal(data["endog"], y_exp)
 
     def test_arrays(self):
-        arr = np.random.randn(20, 4)
+        rs = np.random.RandomState(8643652)
+        arr = rs.randn(20, 4)
         arr[[2, 5, 10], [2, 3, 1]] = np.nan
         y, X = arr[:, 0], arr[:, 1:]
         data, _ = sm_data.handle_missing(y, X, missing="drop")
@@ -739,7 +760,7 @@ class TestHandleMissing:
 class CheckHasConstant:
 
     def test_hasconst(self):
-        for x, result in zip(self.exogs, self.results):
+        for x, result in zip(self.exogs, self.results, strict=True):
             mod = self.mod(self.y, x)
             assert_equal(mod.k_constant, result[0])
             assert_equal(mod.data.k_constant, result[0])
@@ -761,30 +782,30 @@ class CheckHasConstant:
     @classmethod
     def setup_class(cls):
         # create data
-        np.random.seed(0)
-        cls.y_c = np.random.randn(20)
+        rs = np.random.RandomState(0)
+        cls.y_c = rs.randn(20)
         cls.y_bin = (cls.y_c > 0).astype(int)
-        x1 = np.column_stack((np.ones(20), np.zeros(20)))
+        x1 = np.column_stack((np.ones(20), rs.standard_normal(20)))
         result1 = (1, 0)
         x2 = np.column_stack((np.arange(20) < 10.5, np.arange(20) > 10.5)).astype(float)
         result2 = (1, None)
-        x3 = np.column_stack((np.arange(20), np.zeros(20)))
+        x3 = np.column_stack((np.arange(20), rs.standard_normal(20)))
         result3 = (0, None)
-        x4 = np.column_stack((np.arange(20), np.zeros((20, 2))))
+        x4 = np.column_stack((np.arange(20), rs.standard_normal((20, 2))))
         result4 = (0, None)
-        x5 = np.column_stack((np.zeros(20), 0.5 * np.ones(20)))
+        x5 = np.column_stack((rs.standard_normal(20), 0.5 * np.ones(20)))
         result5 = (1, 1)
-        x5b = np.column_stack((np.arange(20), np.ones((20, 3))))
+        x5b = np.column_stack((np.arange(20), np.ones((20, 1))))
         result5b = (1, 1)
-        x5c = np.column_stack((np.arange(20), np.ones((20, 3)) * [0.5, 1, 1]))
+        x5c = np.column_stack((rs.standard_normal(20), np.arange(20), np.ones(20) * (-2)))
         result5c = (1, 2)
         # implicit and zero column
         x6 = np.column_stack(
-            (np.arange(20) < 10.5, np.arange(20) > 10.5, np.zeros(20))
+            (np.arange(20) < 10.5, np.arange(20) > 10.5, rs.standard_normal(20))
         ).astype(float)
         result6 = (1, None)
         x7 = np.column_stack(
-            (np.arange(20) < 10.5, np.arange(20) > 10.5, np.zeros((20, 2)))
+            (np.arange(20) < 10.5, np.arange(20) > 10.5, rs.standard_normal((20, 2)))
         ).astype(float)
         result7 = (1, None)
 
@@ -834,13 +855,13 @@ class TestHasConstantLogit(CheckHasConstant):
 
 def test_dtype_object():
     # see GH#880
-
-    X = np.random.random((40, 2))
+    rs = np.random.RandomState(8643652)
+    X = rs.random((40, 2))
     df = pd.DataFrame(X)
-    df[2] = np.random.randint(2, size=40).astype("object")
+    df[2] = rs.randint(2, size=40).astype("object")
     df["constant"] = 1
 
-    y = pd.Series(np.random.randint(2, size=40))
+    y = pd.Series(rs.randint(2, size=40))
     out = sm_data.handle_data(y, df)
     assert isinstance(out, sm_data.PandasData)
     assert_equal(out.endog, np.array(y))
@@ -848,17 +869,18 @@ def test_dtype_object():
 
 
 def test_dtype_actual_object():
-    X = np.random.random((40, 2))
+    rs = np.random.RandomState(8643652)
+    X = rs.random((40, 2))
     df = pd.DataFrame(X)
-    df[2] = np.random.randint(2, size=40).astype("object")
+    df[2] = rs.randint(2, size=40).astype("object")
     df["constant"] = "A"
-    y = pd.Series(np.random.randint(2, size=40))
+    y = pd.Series(rs.randint(2, size=40))
     with pytest.raises(ValueError):
         sm_data.handle_data(y, df)
 
 
 def test_formula_missing_extra_arrays():
-    np.random.seed(1)
+    rs = np.random.RandomState(1)
     # because patsy cannot turn off missing data-handling as of 0.3.0, we need
     # separate tests to make sure that missing values are handled correctly
     # when going through formulas
@@ -870,18 +892,18 @@ def test_formula_missing_extra_arrays():
     # the untested cases are endog/exog have missing. extra has missing.
     # endog/exog are fine. extra has missing.
     # endog/exog do or do not have missing and extra has wrong dimension
-    y = np.random.randn(10)
+    y = rs.randn(10)
     y_missing = y.copy()
     y_missing[[2, 5]] = np.nan
-    X = np.random.randn(10)
+    X = rs.randn(10)
     X_missing = X.copy()
     X_missing[[1, 3]] = np.nan
 
-    weights = np.random.uniform(size=10)
+    weights = rs.uniform(size=10)
     weights_missing = weights.copy()
     weights_missing[[6]] = np.nan
 
-    weights_wrong_size = np.random.randn(12)
+    weights_wrong_size = rs.randn(12)
 
     data = {
         "y": y,
@@ -896,7 +918,7 @@ def test_formula_missing_extra_arrays():
 
     formula = "y_missing ~ X_missing"
 
-    ((endog, exog), missing_idx, model_spec) = handle_formula_data(
+    (endog, exog), missing_idx, model_spec = handle_formula_data(
         data, None, formula, depth=2, missing="drop"
     )
 
@@ -914,7 +936,7 @@ def test_formula_missing_extra_arrays():
 
     tmp = handle_formula_data(data, None, formula, depth=2, missing="drop")
     (endog, exog), missing_idx, model_spec = tmp
-    weights_2d = np.random.randn(10, 10)
+    weights_2d = rs.randn(10, 10)
     weights_2d[[8, 7], [7, 8]] = np.nan  # symmetric missing values
     kwargs.update({"weights": weights_2d, "missing_idx": missing_idx})
 
@@ -941,9 +963,72 @@ def test_raise_nonfinite_exog():
     # random numbers for y
     y = np.array([-0.6, -0.1, 0.0, -0.7, -0.5, 0.5, 0.1, -0.8, -2.0, 1.1])
 
-    x[1, 1] = np.inf
-    with pytest.raises(MissingDataError):
-        OLS(y, x)
-    x[1, 1] = np.nan
-    with pytest.raises(MissingDataError):
-        OLS(y, x)
+    # -inf is only found by the column minimum, and raised a LinAlgError in the
+    # rank computation of the implicit constant check
+    for bad_value in [np.inf, -np.inf, np.nan]:
+        x[1, 1] = bad_value
+        with pytest.raises(MissingDataError, match="exog contains inf or nans"):
+            OLS(y, x)
+
+
+def test_nan_rows_bool_first():
+    # a boolean array is data, not a mask of missing rows
+    nan_rows = sm_data._nan_rows(
+        np.array([True, False, True]), np.array([1.0, np.nan, 2.0])
+    )
+    assert_equal(nan_rows, [False, True, False])
+
+
+@pytest.mark.parametrize("pandas", [False, True])
+@pytest.mark.parametrize("missing_exog", [False, True])
+def test_missing_drop_bool_endog(pandas, missing_exog):
+    # GH 5445: a boolean endog failed with missing="drop"
+    rng = np.random.default_rng(5445)
+    x = np.linspace(0, 1, 50)
+    endog = (5 * x - 3 + rng.standard_normal(50)) > 0
+    exog = np.column_stack([np.ones(50), x])
+    if missing_exog:
+        exog[[3, 20], 1] = np.nan
+    keep = ~np.isnan(exog).any(axis=1)
+    endog_cc = endog[keep]
+    exog_cc = exog[keep]
+    if pandas:
+        endog = pd.Series(endog, name="y")
+        exog = pd.DataFrame(exog, columns=["const", "x"])
+
+    data = sm_data.handle_data(endog, exog, "drop")
+    assert_equal(np.asarray(data.endog), endog_cc)
+    assert_equal(np.asarray(data.exog), exog_cc)
+
+    res = Logit(endog, exog, missing="drop").fit(disp=0)
+    res_cc = Logit(endog_cc.astype(float), exog_cc).fit(disp=0)
+    assert_allclose(np.asarray(res.params), res_cc.params, rtol=1e-10)
+    assert_equal(res.nobs, keep.sum())
+
+
+@pytest.mark.parametrize("pandas", [False, True])
+def test_nan_rows_single_row(pandas):
+    # GH 4417: the mask for a single row was squeezed to a scalar
+    endog = np.array([1.0])
+    exog = np.array([[np.nan]])
+    if pandas:
+        index = pd.DatetimeIndex(["2017-01-01"])
+        endog = pd.Series(endog, index=index)
+        exog = pd.DataFrame(exog, index=index)
+    nan_rows = sm_data._nan_rows(endog, exog)
+    assert nan_rows.shape == (1,)
+    assert_equal(nan_rows, [True])
+
+
+@pytest.mark.parametrize("pandas", [False, True])
+@pytest.mark.parametrize("nobs", [1, 3])
+def test_missing_drop_all_rows(pandas, nobs):
+    # GH 4417: dropping every row gave a KeyError or a zero-size reduction
+    endog = np.full(nobs, np.nan)
+    exog = np.column_stack([np.ones(nobs), np.arange(nobs, dtype=float)])
+    if pandas:
+        index = pd.date_range("2017-01-01", periods=nobs, freq="YS")
+        endog = pd.Series(endog, index=index)
+        exog = pd.DataFrame(exog, index=index, columns=["const", "x"])
+    with pytest.raises(MissingDataError, match="All observations"):
+        OLS(endog, exog, missing="drop")

@@ -1,5 +1,5 @@
 r"""
-ETS models for time series analysis.
+ETS models for time series analysis
 
 The ETS models are a family of time series models. They can be seen as a
 generalization of simple exponential smoothing to time series that contain
@@ -129,8 +129,8 @@ When using the multiplicative error model
                L_t\quad\text{else}
            \end{cases}
 
-When fitting an ETS model, the parameters :math:`\alpha, \beta`, \gamma,
-\phi` and the initial states `l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}` are
+When fitting an ETS model, the parameters :math:`\alpha, \beta, \gamma, \phi`
+and the initial states :math:`l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}` are
 selected as maximizers of log likelihood.
 
 References
@@ -155,7 +155,8 @@ from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 from statsmodels.tools._decorators import cache_readonly
-from statsmodels.tools.tools import Bunch
+from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.tools import Bunch, pinv_extended
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -198,38 +199,54 @@ from statsmodels.tsa.tsatools import freq_to_period
 # * Since the traditional bounds are nonlinear for beta and gamma, if no bounds
 #   are given, we internally use beta_star and gamma_star for fitting
 # * When estimating initial level and initial seasonal values, one of them has
-#   to be removed in order to have a well posed problem. I am solving this by
-#   fixing the last initial seasonal value to 0 (for additive seasonality) or 1
-#   (for multiplicative seasonality).
-#   For the additive models, this means I have to subtract the last initial
-#   seasonal value from all initial seasonal values and add it to the initial
-#   level; for the multiplicative models I do the same with division and
-#   multiplication
+#   to be removed in order to have a well posed problem. As in Hyndman et al.
+#   (2008) and R's forecast::ets, the initial seasonals are normalized to sum
+#   to 0 (additive) or to m (multiplicative) over the first season: the first
+#   m - 1 initial seasonals are estimated and the last one (s[-m], the one
+#   used for the first observation) is computed from them in every likelihood
+#   evaluation. The model parameter vector still contains all m initial
+#   seasonals.
+#   For multiplicative seasonality, and for additive seasonality with an
+#   additive or no trend, this is only an identification: multiplying the
+#   level (and an additive trend) by a constant and dividing all seasonals by
+#   it, or adding a constant to the level and subtracting it from all
+#   additive seasonals, does not change the model. For additive seasonality
+#   with a multiplicative trend (forecast l * b + s) a constant cannot be
+#   moved between the level and the seasonals, so the sum-zero constraint is
+#   a restriction of the model, as it is in R.
+#   The heuristic start values already satisfy this normalization, so they
+#   are used as they are. The covariance of the parameters is computed for
+#   the m - 1 free initial seasonals and mapped back to all m.
 
 
 class ETSModel(base.StateSpaceMLEModel):
     r"""
-    ETS models.
+    ETS models
 
     Parameters
     ----------
     endog : array_like
         The observed time-series process :math:`y`
-    error : str, optional
-        The error model. "add" (default) or "mul".
-    trend : str or None, optional
+    error : {"add", "additive", "mul", "multiplicative"}, optional
+        The error model. "add" (default) or "mul". "additive" and
+        "multiplicative" are accepted as aliases for "add" and "mul".
+    trend : {"add", "additive", "mul", "multiplicative"} or None, optional
         The trend component model. "add", "mul", or None (default).
+        "additive" and "multiplicative" are accepted as aliases for "add"
+        and "mul".
     damped_trend : bool, optional
         Whether or not an included trend component is damped. Default is
         False.
-    seasonal : str, optional
+    seasonal : {"add", "additive", "mul", "multiplicative"} or None, optional
         The seasonality model. "add", "mul", or None (default).
+        "additive" and "multiplicative" are accepted as aliases for "add"
+        and "mul".
     seasonal_periods : int, optional
         The number of periods in a complete seasonal cycle for seasonal
         (Holt-Winters) models. For example, 4 for quarterly data with an
         annual cycle or 7 for daily data with a weekly cycle. Required if
         `seasonal` is not None.
-    initialization_method : str, optional
+    initialization_method : {"estimated", "heuristic", "known"}, optional
         Method for initialization of the state space model. One of:
 
         * 'estimated' (default)
@@ -243,6 +260,17 @@ class ETSModel(base.StateSpaceMLEModel):
         level, trend, and seasonal state. 'estimated' uses the same heuristic
         as initial guesses, but then estimates the initial states as part of
         the fitting process.  Default is 'estimated'.
+
+        With 'estimated', the initial seasonal states are normalized to sum
+        to 0 (additive seasonality) or to ``seasonal_periods``
+        (multiplicative seasonality), as in R's ``forecast::ets``: the first
+        ``seasonal_periods - 1`` initial seasonal states are estimated and
+        the last one, ``initial_seasonal.<m-1>``, is computed from them.
+        For multiplicative seasonality and for additive seasonality with an
+        additive or no trend, this only removes a constant that could be
+        moved between the initial level and the initial seasonals. For
+        additive seasonality with a multiplicative trend, it is a
+        restriction of the model.
     initial_level : float, optional
         The initial level component. Only used if initialization is 'known'.
     initial_trend : float, optional
@@ -397,9 +425,10 @@ class ETSModel(base.StateSpaceMLEModel):
                    L_t\quad\text{else}
                \end{cases}
 
-    When fitting an ETS model, the parameters :math:`\alpha, \beta`, \gamma,
-    \phi` and the initial states `l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}` are
-    selected as maximizers of log likelihood.
+    When fitting an ETS model, the parameters
+    :math:`\alpha, \beta, \gamma, \phi` and the initial states
+    :math:`l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}` are selected as
+    maximizers of log likelihood.
 
     References
     ----------
@@ -426,18 +455,14 @@ class ETSModel(base.StateSpaceMLEModel):
         missing="none",
     ):
 
-        super().__init__(
-            endog, exog=None, dates=dates, freq=freq, missing=missing
-        )
+        super().__init__(endog, exog=None, dates=dates, freq=freq, missing=missing)
 
         # MODEL DEFINITION
         # ================
         options = ("add", "mul", "additive", "multiplicative")
         # take first three letters of option -> either "add" or "mul"
         self.error = string_like(error, "error", options=options)[:3]
-        self.trend = string_like(
-            trend, "trend", options=options, optional=True
-        )
+        self.trend = string_like(trend, "trend", options=options, optional=True)
         if self.trend is not None:
             self.trend = self.trend[:3]
         self.damped_trend = bool_like(damped_trend, "damped_trend")
@@ -467,9 +492,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         # reject invalid models
         if np.any(self.endog <= 0) and (
-            self.error == "mul"
-            or self.trend == "mul"
-            or self.seasonal == "mul"
+            self.error == "mul" or self.trend == "mul" or self.seasonal == "mul"
         ):
             raise ValueError(
                 "endog must be strictly positive when using "
@@ -511,11 +534,11 @@ class ETSModel(base.StateSpaceMLEModel):
         initial_seasonal=None,
     ):
         """
-        Sets a new initialization method for the state space model.
+        Sets a new initialization method for the state space model
 
         Parameters
         ----------
-        initialization_method : str, optional
+        initialization_method : {"estimated", "heuristic", "known"}, optional
             Method for initialization of the state space model. One of:
 
             * 'estimated' (default)
@@ -606,15 +629,15 @@ class ETSModel(base.StateSpaceMLEModel):
 
         # we also have to reset the params index dictionaries
         self._internal_params_index = OrderedDict(
-            zip(self._internal_param_names, np.arange(self._k_params_internal))
+            zip(self._internal_param_names, np.arange(self._k_params_internal), strict=True)
         )
         self._params_index = OrderedDict(
-            zip(self.param_names, np.arange(self.k_params))
+            zip(self.param_names, np.arange(self.k_params), strict=True)
         )
 
     def set_bounds(self, bounds):
         """
-        Set bounds for parameter estimation.
+        Set bounds for parameter estimation
 
         Parameters
         ----------
@@ -638,26 +661,18 @@ class ETSModel(base.StateSpaceMLEModel):
                 raise ValueError("bounds must be a dictionary")
             for key in bounds:
                 if key not in self.param_names:
-                    raise ValueError(
-                        f"Invalid key: {key} in bounds dictionary"
-                    )
-                bounds[key] = array_like(
-                    bounds[key], f"bounds[{key}]", shape=(2,)
-                )
+                    raise ValueError(f"Invalid key: {key} in bounds dictionary")
+                bounds[key] = array_like(bounds[key], f"bounds[{key}]", shape=(2,))
             self.bounds = bounds
 
     @staticmethod
     def prepare_data(data):
-        """
-        Prepare data for use in the state space representation
-        """
+        """Prepare data for use in the state space representation"""
         endog = np.require(data.orig_endog, requirements="WC")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
         if endog.dtype != np.double:
-            endog = np.require(
-                data.orig_endog, requirements="WC", dtype=float
-            )
+            endog = np.require(data.orig_endog, requirements="WC", dtype=float)
         return endog, None
 
     @property
@@ -671,10 +686,7 @@ class ETSModel(base.StateSpaceMLEModel):
     @property
     def short_name(self):
         name = "".join(
-            [
-                str(s)[0].upper()
-                for s in [self.error, self.trend, self.seasonal]
-            ]
+            [str(s)[0].upper() for s in [self.error, self.trend, self.seasonal]]
         )
         if self.damped_trend:
             name = name[0:2] + "d" + name[2]
@@ -697,8 +709,7 @@ class ETSModel(base.StateSpaceMLEModel):
                 param_names += ["initial_trend"]
             if self.has_seasonal:
                 param_names += [
-                    f"initial_seasonal.{i}"
-                    for i in range(self.seasonal_periods)
+                    f"initial_seasonal.{i}" for i in range(self.seasonal_periods)
                 ]
         return param_names
 
@@ -717,9 +728,7 @@ class ETSModel(base.StateSpaceMLEModel):
         if self.has_trend:
             names += ["initial_trend"]
         if self.has_seasonal:
-            names += [
-                f"initial_seasonal.{i}" for i in range(self.seasonal_periods)
-            ]
+            names += [f"initial_seasonal.{i}" for i in range(self.seasonal_periods)]
         return names
 
     @property
@@ -737,9 +746,7 @@ class ETSModel(base.StateSpaceMLEModel):
             "initial_level",
             "initial_trend",
         ]
-        param_names += [
-            f"initial_seasonal.{i}" for i in range(self.seasonal_periods)
-        ]
+        param_names += [f"initial_seasonal.{i}" for i in range(self.seasonal_periods)]
         return param_names
 
     @property
@@ -760,11 +767,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @property
     def _k_initial_states(self):
-        return (
-            1
-            + int(self.has_trend)
-            + +int(self.has_seasonal) * self.seasonal_periods
-        )
+        return 1 + int(self.has_trend) + +int(self.has_seasonal) * self.seasonal_periods
 
     @property
     def k_params(self):
@@ -778,10 +781,7 @@ class ETSModel(base.StateSpaceMLEModel):
         return 4 + 2 + self.seasonal_periods
 
     def _internal_params(self, params):
-        """
-        Converts a parameter array passed from outside to the internally used
-        full parameter array.
-        """
+        """Converts a parameter array passed from outside to the internally used full parameter array"""
         # internal params that are not needed are all set to zero, except phi,
         # which is one
         internal = np.zeros(self._k_params_internal, dtype=params.dtype)
@@ -801,9 +801,7 @@ class ETSModel(base.StateSpaceMLEModel):
         return internal
 
     def _model_params(self, internal):
-        """
-        Converts internal parameters to model parameters
-        """
+        """Converts internal parameters to model parameters"""
         params = np.empty(self.k_params)
         for i, name in enumerate(self.param_names):
             internal_idx = self._internal_params_index[name]
@@ -823,10 +821,7 @@ class ETSModel(base.StateSpaceMLEModel):
         return states
 
     def _get_internal_states(self, states, params):
-        """
-        Converts a state matrix/dataframe to the (nobs, 2+m) matrix used
-        internally
-        """
+        """Converts a state matrix/dataframe to the (nobs, 2+m) matrix used internally"""
         internal_params = self._internal_params(params)
         if isinstance(states, (pd.Series, pd.DataFrame)):
             states = states.values
@@ -854,14 +849,16 @@ class ETSModel(base.StateSpaceMLEModel):
     @property
     def _start_params(self):
         """
-        Default start params in the format of external parameters.
+        Default start params in the format of external parameters
+
         This should not be called directly, but by calling
         ``self.start_params``.
         """
-        params = []
-        for p in self._smoothing_param_names:
-            if p in self.param_names:
-                params.append(self._default_start_params[p])
+        params = [
+            self._default_start_params[p]
+            for p in self._smoothing_param_names
+            if p in self.param_names
+        ]
 
         if self.initialization_method == "estimated":
             lvl_idx = len(params)
@@ -869,25 +866,64 @@ class ETSModel(base.StateSpaceMLEModel):
             if self.has_trend:
                 params += [self.initial_trend]
             if self.has_seasonal:
-                # we have to adapt the seasonal values a bit to make sure the
-                # problem is well posed (see implementation notes above)
-                initial_seasonal = self.initial_seasonal
+                # Normalize the initial seasonals so that they sum to 0 or to
+                # m over the first season, and move the constant into the
+                # initial level (and an additive trend), so that the start
+                # values describe the same model as the heuristic. The
+                # heuristic initializations already satisfy this, so this is
+                # usually a no-op. See the implementation notes above.
+                initial_seasonal = np.array(self.initial_seasonal, dtype=float)
                 if self.seasonal == "mul":
-                    params[lvl_idx] *= initial_seasonal[-1]
-                    initial_seasonal /= initial_seasonal[-1]
+                    scale = np.mean(initial_seasonal)
+                    params[lvl_idx] *= scale
+                    if self.trend == "add":
+                        params[lvl_idx + 1] *= scale
+                    initial_seasonal /= scale
                 else:
-                    params[lvl_idx] += initial_seasonal[-1]
-                    initial_seasonal -= initial_seasonal[-1]
-                params += initial_seasonal.tolist()
+                    shift = np.mean(initial_seasonal)
+                    params[lvl_idx] += shift
+                    initial_seasonal -= shift
+                # self.initial_seasonal starts with the seasonal of the first
+                # observation, s_{-m}, while the parameter vector starts with
+                # initial_seasonal.0 = s_{-1}, see `_internal_params`
+                params += initial_seasonal[::-1].tolist()
 
         return np.array(params)
 
+    @property
+    def _derive_last_initial_seasonal(self):
+        """
+        Whether the last initial seasonal state is computed from the others
+
+        With ``initialization_method="estimated"``, the initial seasonals are
+        normalized to sum to 0 (additive) or to m (multiplicative) over the
+        first season, so that only m - 1 of them are free parameters. The
+        last one, ``initial_seasonal.<m-1>``, is computed from the others
+        unless the user fixed it or gave bounds for it. A bound cannot be
+        imposed on a computed value, so then all m initial seasonals are
+        free parameters within the bounds, as before GH 8551.
+        """
+        if self.initialization_method != "estimated" or not self.has_seasonal:
+            return False
+        last = self._internal_initial_state_names[-1]
+        # user bounds (fit also adds fixed parameters to self.bounds, but
+        # ETSResults reads this property for results from `smooth` as well)
+        if last in self.bounds:
+            return False
+        return not (self._has_fixed_params and last in self._fixed_params)
+
+    def _last_initial_seasonal(self, initial_seasonal):
+        """
+        Computes the last initial seasonal state from the first m - 1
+
+        The initial seasonals sum to 0 for additive seasonality and to m for
+        multiplicative seasonality.
+        """
+        total = self.seasonal_periods if self.seasonal == "mul" else 0
+        return total - np.sum(initial_seasonal)
+
     def _convert_and_bound_start_params(self, params):
-        """
-        This converts start params to internal params, sets internal-only
-        parameters as bounded, sets bounds for fixed parameters, and then makes
-        sure that all start parameters are within the specified bounds.
-        """
+        """This converts start params to internal params, sets internal-only parameters as bounded, sets bounds for fixed parameters, and then makes sure that all start parameters are within the specified bounds"""
         internal_params = self._internal_params(params)
         # set bounds for missing and fixed
         for p in self._internal_param_names:
@@ -901,8 +937,7 @@ class ETSModel(base.StateSpaceMLEModel):
             # make sure everything is within bounds
             if p in self.bounds:
                 internal_params[idx] = np.clip(
-                    internal_params[idx]
-                    + 1e-3,  # try not to start on boundary
+                    internal_params[idx] + 1e-3,  # try not to start on boundary
                     *self.bounds[p],
                 )
         return internal_params
@@ -928,14 +963,11 @@ class ETSModel(base.StateSpaceMLEModel):
         # other bounds for phi and initial states
         lb[3], ub[3] = 0.8, 0.98
         if self.initialization_method == "estimated":
-            lb[4:-1] = -np.inf
-            ub[4:-1] = np.inf
-            # fix the last initial_seasonal to 0 or 1, otherwise the equation
-            # is underdetermined
-            if self.seasonal == "mul":
-                lb[-1], ub[-1] = 1, 1
-            else:
-                lb[-1], ub[-1] = 0, 0
+            lb[4:] = -np.inf
+            ub[4:] = np.inf
+            # The last initial seasonal is not a free parameter: it is
+            # computed from the others in every likelihood evaluation, see
+            # `_derive_last_initial_seasonal` and `fit`.
 
         # set lb and ub for parameters with bounds
         for p in self._internal_param_names:
@@ -956,12 +988,13 @@ class ETSModel(base.StateSpaceMLEModel):
         **kwargs,
     ):
         r"""
-        Fit an ETS model by maximizing log-likelihood.
+        Fit an ETS model by maximizing log-likelihood
 
-        Log-likelihood is a function of the model parameters :math:`\alpha,
-        \beta, \gamma, \phi` (depending on the chosen model), and, if
-        `initialization_method` was set to `'estimated'` in the constructor,
-        also the initial states :math:`l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}`.
+        Log-likelihood is a function of the model parameters
+        :math:`\alpha, \beta, \gamma, \phi` (depending on the chosen model),
+        and, if `initialization_method` was set to `'estimated'` in the
+        constructor, also the initial states
+        :math:`l_{-1}, b_{-1}, s_{-1}, \ldots, s_{-m}`.
 
         The fit is performed using the L-BFGS algorithm.
 
@@ -983,12 +1016,16 @@ class ETSModel(base.StateSpaceMLEModel):
             default), additionally, the parameters
 
             * `initial_level` (:math:`l_{-1}`)
-            * `initial_trend` (:math:`l_{-1}`)
+            * `initial_trend` (:math:`b_{-1}`)
             * `initial_seasonal.0` (:math:`s_{-1}`)
             * ...
             * `initial_seasonal.<m-1>` (:math:`s_{-m}`)
 
-            also have to be specified.
+            also have to be specified. The initial seasonal states are
+            normalized to sum to 0 (additive seasonality) or to m
+            (multiplicative seasonality) during the fit, so that the last
+            one, :math:`s_{-m}`, is computed from the others and its start
+            value is only used if it is fixed or bounded.
         maxiter : int, optional
             The maximum number of iterations to perform.
         full_output : bool, optional
@@ -997,7 +1034,7 @@ class ETSModel(base.StateSpaceMLEModel):
             See LikelihoodModelResults notes section for more information.
         disp : bool, optional
             Set to True to print convergence messages.
-        callback : callable callback(xk), optional
+        callback : callable, optional
             Called after each iteration, as callback(xk), where xk is the
             current parameter vector.
         return_params : bool, optional
@@ -1009,6 +1046,7 @@ class ETSModel(base.StateSpaceMLEModel):
         Returns
         -------
         results : ETSResults
+            The fitted model results.
         """
 
         if start_params is None:
@@ -1018,13 +1056,9 @@ class ETSModel(base.StateSpaceMLEModel):
 
         if self._has_fixed_params and len(self._free_params_index) == 0:
             final_params = np.asarray(list(self._fixed_params.values()))
-            mlefit = Bunch(
-                params=start_params, mle_retvals=None, mle_settings=None
-            )
+            mlefit = Bunch(params=start_params, mle_retvals=None, mle_settings=None)
         else:
-            internal_start_params = self._convert_and_bound_start_params(
-                start_params
-            )
+            internal_start_params = self._convert_and_bound_start_params(start_params)
             bounds = self._setup_bounds()
 
             # check if we need to use the starred parameters
@@ -1036,7 +1070,11 @@ class ETSModel(base.StateSpaceMLEModel):
                 internal_start_params[2] /= 1 - internal_start_params[0]
 
             # check if we have fixed parameters and remove them from the
-            # parameter vector
+            # parameter vector. The last initial seasonal is removed as well
+            # if it is computed from the other initial seasonals (see the
+            # implementation notes above); its value in `fixed_values` is
+            # updated in every call of `_loglike_internal`.
+            derive_last_seasonal = self._derive_last_initial_seasonal
             is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
             fixed_values = np.empty_like(internal_start_params)
             params_without_fixed = []
@@ -1045,6 +1083,11 @@ class ETSModel(base.StateSpaceMLEModel):
                 if bounds[i][0] == bounds[i][1]:
                     is_fixed[i] = True
                     fixed_values[i] = bounds[i][0]
+                elif derive_last_seasonal and i == self._k_params_internal - 1:
+                    is_fixed[i] = True
+                    fixed_values[i] = self._last_initial_seasonal(
+                        internal_start_params[6:-1]
+                    )
                 else:
                     params_without_fixed.append(internal_start_params[i])
                     kwargs["bounds"].append(bounds[i])
@@ -1065,6 +1108,7 @@ class ETSModel(base.StateSpaceMLEModel):
                         fixed_values,
                         use_beta_star,
                         use_gamma_star,
+                        derive_last_seasonal,
                     ),
                     method="lbfgs",
                     maxiter=maxiter,
@@ -1089,6 +1133,10 @@ class ETSModel(base.StateSpaceMLEModel):
                 fitted_params[1] *= fitted_params[0]
             if use_gamma_star:
                 fitted_params[2] *= 1 - fitted_params[0]
+            if derive_last_seasonal:
+                # fixed_values[-1] holds the value of the last likelihood
+                # evaluation, which is not necessarily at the optimum
+                fitted_params[-1] = self._last_initial_seasonal(fitted_params[6:-1])
             final_params = self._model_params(fitted_params)
 
         if return_params:
@@ -1109,6 +1157,7 @@ class ETSModel(base.StateSpaceMLEModel):
         fixed_values=None,
         use_beta_star=False,
         use_gamma_star=False,
+        derive_last_seasonal=False,
     ):
         """
         Log-likelihood function to be called from fit to avoid reallocation of
@@ -1116,26 +1165,32 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Parameters
         ----------
-        params : np.ndarray of np.float
+        params : ndarray of float
             Model parameters: (alpha, beta, gamma, phi, l[-1],
             b[-1], s[-1], ..., s[-m]). If there are no fixed values this must
             be in the format of internal parameters. Otherwise the fixed values
             are skipped.
-        yhat : np.ndarray
+        yhat : ndarray
             Array of size (n,) where fitted values will be written to.
-        xhat : np.ndarray
+        xhat : ndarray
             Array of size (n, _k_states_internal) where fitted states will be
             written to.
-        is_fixed : np.ndarray or None
+        is_fixed : ndarray, optional
             Boolean array indicating values which are fixed during fitting.
             This must have the full length of internal parameters.
-        fixed_values : np.ndarray or None
+        fixed_values : ndarray, optional
             Array of fixed values (arbitrary values for non-fixed parameters)
             This must have the full length of internal parameters.
-        use_beta_star : boolean
+        use_beta_star : bool
             Whether to internally use beta_star as parameter
-        use_gamma_star : boolean
+        use_gamma_star : bool
             Whether to internally use gamma_star as parameter
+        derive_last_seasonal : bool
+            Whether the last initial seasonal state (the last entry of
+            `fixed_values`, which must be marked as fixed in `is_fixed`) is
+            computed from the other initial seasonal states, so that the
+            initial seasonals sum to 0 (additive seasonality) or to m
+            (multiplicative seasonality).
         """
         if np.iscomplexobj(params):
             data = np.asarray(self.endog, dtype=complex)
@@ -1144,11 +1199,14 @@ class ETSModel(base.StateSpaceMLEModel):
 
         if is_fixed is None:
             is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
-            fixed_values = np.empty(
-                self._k_params_internal, dtype=params.dtype
-            )
+            fixed_values = np.empty(self._k_params_internal, dtype=params.dtype)
         else:
             is_fixed = np.ascontiguousarray(is_fixed, dtype=np.int64)
+
+        if derive_last_seasonal:
+            full_params = np.array(fixed_values, dtype=params.dtype)
+            full_params[is_fixed == 0] = params
+            fixed_values[-1] = self._last_initial_seasonal(full_params[6:-1])
 
         self._smoothing_func(
             params,
@@ -1161,7 +1219,7 @@ class ETSModel(base.StateSpaceMLEModel):
             use_gamma_star,
         )
         res = self._residuals(yhat, data=data)
-        logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res ** 2)) + 1)
+        logL = -self.nobs / 2 * (np.log(2 * np.pi * np.mean(res**2)) + 1)
         if self.error == "mul":
             # In some cases, yhat can become negative or zero, so that a
             # multiplicative model is no longer well-defined. Zero values
@@ -1184,13 +1242,15 @@ class ETSModel(base.StateSpaceMLEModel):
 
     def loglike(self, params, **kwargs):
         r"""
-        Log-likelihood of model.
+        Log-likelihood of model
 
         Parameters
         ----------
-        params : np.ndarray of np.float
+        params : array_like
             Model parameters: (alpha, beta, gamma, phi, l[-1],
             b[-1], s[-1], ..., s[-m])
+        **kwargs
+            Additional keyword arguments, unused.
 
         Notes
         -----
@@ -1207,8 +1267,8 @@ class ETSModel(base.StateSpaceMLEModel):
 
            s^2 = \frac{1}{n}\sum\limits_{t=1}^n \frac{(\hat{y}_t - y_t)^2}{k_t}
 
-        where :math:`k_t = 1` for the additive error model and :math:`k_t =
-        y_t` for the multiplicative error model.
+        where :math:`k_t = 1` for the additive error model and
+        :math:`k_t = y_t` for the multiplicative error model.
 
         References
         ----------
@@ -1219,9 +1279,7 @@ class ETSModel(base.StateSpaceMLEModel):
         """
         params = self._internal_params(np.asarray(params))
         yhat = np.zeros(self.nobs, dtype=params.dtype)
-        xhat = np.zeros(
-            (self.nobs, self._k_states_internal), dtype=params.dtype
-        )
+        xhat = np.zeros((self.nobs, self._k_states_internal), dtype=params.dtype)
         return self._loglike_internal(np.asarray(params), yhat, xhat)
 
     def _residuals(self, yhat, data=None):
@@ -1239,17 +1297,18 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Parameters
         ----------
-        params : array_like
+        params : ndarray
             Model parameters
 
         Returns
         -------
-        yhat : pd.Series or np.ndarray
+        yhat : Series or ndarray
             Predicted values from exponential smoothing. If original data was a
-            ``pd.Series``, returns a ``pd.Series``, else a ``np.ndarray``.
-        xhat : pd.DataFrame or np.ndarray
-            Internal states of exponential smoothing. If original data was a
-            ``pd.Series``, returns a ``pd.DataFrame``, else a ``np.ndarray``.
+            Series, returns a Series, else a ndarray.
+        states : DataFrame or ndarray
+            States (level, trend, and/or seasonal) of exponential smoothing.
+            If original data was a Series, returns a DataFrame,
+            else a ndarray.
         """
         internal_params = self._internal_params(params)
         yhat = np.zeros(self.nobs)
@@ -1312,11 +1371,14 @@ class ETSModel(base.StateSpaceMLEModel):
         ----------
         params : array_like
             Array of parameters at which to evaluate the hessian.
-        approx_centered : bool
+        approx_centered : bool, optional
             Whether to use a centered scheme for finite difference
             approximation
-        approx_complex_step : bool
+        approx_complex_step : bool, optional
             Whether to use complex step differentiation for approximation
+        **kwargs
+            Additional keyword arguments, including ``method``, which may be
+            used to specify the Hessian calculation method.
 
         Returns
         -------
@@ -1341,9 +1403,33 @@ class ETSModel(base.StateSpaceMLEModel):
 
         return hessian
 
-    def score(
-        self, params, approx_centered=False, approx_complex_step=True, **kwargs
-    ):
+    def score(self, params, approx_centered=False, approx_complex_step=True, **kwargs):
+        r"""
+        Score vector of the likelihood function, evaluated at the given
+        parameters
+
+        Parameters
+        ----------
+        params : array_like
+            Array of parameters at which to evaluate the score.
+        approx_centered : bool, optional
+            Whether to use a centered scheme for finite difference
+            approximation
+        approx_complex_step : bool, optional
+            Whether to use complex step differentiation for approximation
+        **kwargs
+            Additional keyword arguments, including ``method``, which may be
+            used to specify the score calculation method.
+
+        Returns
+        -------
+        score : ndarray
+            Score vector evaluated at `params`
+
+        Notes
+        -----
+        This is a numerical approximation.
+        """
         method = kwargs.get("method", "approx")
 
         if method == "approx":
@@ -1358,7 +1444,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
         return score
 
-    def update(params, *args, **kwargs):
+    def update(self, params, *args, **kwargs):
         # Dummy method to make methods copied from statespace.MLEModel work
         ...
 
@@ -1367,6 +1453,7 @@ class ETSResults(base.StateSpaceMLEResults):
     """
     Results from an error, trend, seasonal (ETS) exponential smoothing model
     """
+
     def __init__(self, model, params, results):
         yhat, xhat = results
         self._llf = model.loglike(params)
@@ -1374,7 +1461,7 @@ class ETSResults(base.StateSpaceMLEResults):
         self._fittedvalues = yhat
         # scale is concentrated in this model formulation and corresponds to
         # mean squared residuals, see docstring of model.loglike
-        scale = np.mean(self._residuals ** 2)
+        scale = np.mean(self._residuals**2)
         super().__init__(model, params, scale=scale)
 
         # get model definition
@@ -1392,7 +1479,7 @@ class ETSResults(base.StateSpaceMLEResults):
         for attr in model_definition_attrs:
             setattr(self, attr, getattr(model, attr))
         self.param_names = [
-            "%s (fixed)" % name if name in self.fixed_params else name
+            f"{name} (fixed)" if name in self.fixed_params else name
             for name in (self.model.param_names or [])
         ]
 
@@ -1420,9 +1507,7 @@ class ETSResults(base.StateSpaceMLEResults):
             self.season = states[:, self.model._seasonal_index]
             # See GH 7893
             self.initial_seasonal = internal_params[6:][::-1]
-            self.initial_state[
-                self.model._seasonal_index :
-            ] = self.initial_seasonal
+            self.initial_state[self.model._seasonal_index :] = self.initial_seasonal
             self.gamma = self.params[self.model._seasonal_index]
             self.smoothing_seasonal = self.gamma
         if self.damped_trend:
@@ -1449,6 +1534,10 @@ class ETSResults(base.StateSpaceMLEResults):
         # Setup the cache
         self._cache = {}
 
+        # Whether the last initial seasonal is computed from the others, see
+        # ETSModel._derive_last_initial_seasonal. Used for the covariance.
+        self._derived_last_seasonal = model._derive_last_initial_seasonal
+
         # Handle covariance matrix calculation
         self._cov_approx_complex_step = True
         self._cov_approx_centered = False
@@ -1473,6 +1562,53 @@ class ETSResults(base.StateSpaceMLEResults):
                 " information matrix."
             )
 
+    def _cov_params_approx(self, approx_complex_step=True, approx_centered=False):
+        if not self._derived_last_seasonal:
+            return super()._cov_params_approx(
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered,
+            )
+        # The last initial seasonal is computed from the others, s[-m] =
+        # total - sum(s[-1], ..., s[-m+1]), so the free parameters are all
+        # parameters except it. The Hessian of the full parameter vector is
+        # singular (for additive seasonality, adding a constant to the level
+        # and subtracting it from all seasonals does not change the
+        # likelihood), so the covariance is computed for the free parameters
+        # and mapped back with the Jacobian of this linear map, which also
+        # gives the delta-method variance of the derived seasonal.
+        evaluated_hessian = self.nobs_effective * self.model.hessian(
+            params=self.params,
+            transformed=True,
+            includes_fixed=True,
+            method="approx",
+            approx_complex_step=approx_complex_step,
+            approx_centered=approx_centered,
+        )
+        m = self.seasonal_periods
+        params_index = self.model._params_index
+        last = params_index[f"initial_seasonal.{m - 1}"]
+        others = [params_index[f"initial_seasonal.{i}"] for i in range(m - 1)]
+        if len(self.fixed_params) > 0:
+            free = list(self._free_params_index)
+        else:
+            free = list(range(self.k_params))
+        reduced = [i for i in free if i != last]
+        jac = np.zeros((self.k_params, len(reduced)))
+        jac[reduced, np.arange(len(reduced))] = 1
+        for j, i in enumerate(reduced):
+            if i in others:
+                jac[last, j] = -1
+        neg_cov_reduced, singular_values = pinv_extended(
+            jac.T @ evaluated_hessian @ jac
+        )
+        neg_cov = np.zeros_like(evaluated_hessian) * np.nan
+        mask = np.ix_(free, free)
+        neg_cov[mask] = (jac @ neg_cov_reduced @ jac.T)[mask]
+        if self._rank is None:
+            # the derived seasonal does not add to the rank deficiency
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values)) + 1
+        return -neg_cov
+
     @cache_readonly
     def nobs_effective(self):
         return self.nobs
@@ -1487,24 +1623,16 @@ class ETSResults(base.StateSpaceMLEResults):
 
     @cache_readonly
     def llf(self):
-        """
-        log-likelihood function evaluated at the fitted params
-        """
+        """Log-likelihood function evaluated at the fitted params"""
         return self._llf
 
     def _get_prediction_params(self, start_idx):
-        """
-        Returns internal parameter representation of smoothing parameters and
-        "initial" states for prediction/simulation, that is the states just
-        before the first prediction/simulation step.
-        """
+        """Returns internal parameter representation of smoothing parameters and "initial" states for prediction/simulation, that is the states just before the first prediction/simulation step"""
         internal_params = self.model._internal_params(self.params)
         if start_idx == 0:
             return internal_params
         else:
-            internal_states = self.model._get_internal_states(
-                self.states, self.params
-            )
+            internal_states = self.model._get_internal_states(self.states, self.params)
             start_state = np.empty(6 + self.seasonal_periods)
             start_state[0:4] = internal_params[0:4]
             start_state[4:] = internal_states[start_idx - 1, :]
@@ -1512,6 +1640,24 @@ class ETSResults(base.StateSpaceMLEResults):
 
     def _relative_forecast_variance(self, steps):
         """
+        Compute the relative variance of the `steps`-ahead forecast error
+
+        The result is multiplied by the residual mean squared error to
+        obtain the analytical forecast variance used for prediction
+        intervals.
+
+        Parameters
+        ----------
+        steps : ndarray
+            The forecast horizons (in periods) at which to evaluate the
+            relative forecast error variance.
+
+        Returns
+        -------
+        ndarray
+            The relative variance of the forecast error at each horizon in
+            `steps`.
+
         References
         ----------
         .. [1] Hyndman, R.J., & Athanasopoulos, G. (2019) *Forecasting:
@@ -1530,62 +1676,52 @@ class ETSResults(base.StateSpaceMLEResults):
             phi = self.damping_trend
         model = self.model.short_name
         if model == "ANN":
-            return 1 + alpha ** 2 * (h - 1)
+            return 1 + alpha**2 * (h - 1)
         elif model == "AAN":
             return 1 + (h - 1) * (
-                alpha ** 2 + alpha * beta * h + beta ** 2 * h / 6 * (2 * h - 1)
+                alpha**2 + alpha * beta * h + beta**2 * h / 6 * (2 * h - 1)
             )
         elif model == "AAdN":
             return (
                 1
-                + alpha ** 2 * (h - 1)
+                + alpha**2 * (h - 1)
                 + (
                     (beta * phi * h)
                     / ((1 - phi) ** 2)
                     * (2 * alpha * (1 - phi) + beta * phi)
                 )
                 - (
-                    (beta * phi * (1 - phi ** h))
-                    / ((1 - phi) ** 2 * (1 - phi ** 2))
-                    * (
-                        2 * alpha * (1 - phi ** 2)
-                        + beta * phi * (1 + 2 * phi - phi ** h)
-                    )
+                    (beta * phi * (1 - phi**h))
+                    / ((1 - phi) ** 2 * (1 - phi**2))
+                    * (2 * alpha * (1 - phi**2) + beta * phi * (1 + 2 * phi - phi**h))
                 )
             )
         elif model == "ANA":
-            return 1 + alpha ** 2 * (h - 1) + gamma * k * (2 * alpha + gamma)
+            return 1 + alpha**2 * (h - 1) + gamma * k * (2 * alpha + gamma)
         elif model == "AAA":
             return (
                 1
                 + (h - 1)
-                * (
-                    alpha ** 2
-                    + alpha * beta * h
-                    + (beta ** 2) / 6 * h * (2 * h - 1)
-                )
+                * (alpha**2 + alpha * beta * h + (beta**2) / 6 * h * (2 * h - 1))
                 + gamma * k * (2 * alpha + gamma + beta * m * (k + 1))
             )
         elif model == "AAdA":
             return (
                 1
-                + alpha ** 2 * (h - 1)
+                + alpha**2 * (h - 1)
                 + gamma * k * (2 * alpha + gamma)
                 + (beta * phi * h)
                 / ((1 - phi) ** 2)
                 * (2 * alpha * (1 - phi) + beta * phi)
                 - (
-                    (beta * phi * (1 - phi ** h))
-                    / ((1 - phi) ** 2 * (1 - phi ** 2))
-                    * (
-                        2 * alpha * (1 - phi ** 2)
-                        + beta * phi * (1 + 2 * phi - phi ** h)
-                    )
+                    (beta * phi * (1 - phi**h))
+                    / ((1 - phi) ** 2 * (1 - phi**2))
+                    * (2 * alpha * (1 - phi**2) + beta * phi * (1 + 2 * phi - phi**h))
                 )
                 + (
                     (2 * beta * gamma * phi)
-                    / ((1 - phi) * (1 - phi ** m))
-                    * (k * (1 - phi ** m) - phi ** m * (1 - phi ** (m * k)))
+                    / ((1 - phi) * (1 - phi**m))
+                    * (k * (1 - phi**m) - phi**m * (1 - phi ** (m * k)))
                 )
             )
         else:
@@ -1597,10 +1733,10 @@ class ETSResults(base.StateSpaceMLEResults):
         anchor=None,
         repetitions=1,
         random_errors=None,
-        random_state=None,
+        rng=None,
     ):
         r"""
-        Random simulations using the state space formulation.
+        Random simulations using the state space formulation
 
         Parameters
         ----------
@@ -1611,7 +1747,7 @@ class ETSResults(base.StateSpaceMLEResults):
             all existing datapoints prior to the `anchor`.  Type depends on the
             index of the given `endog` in the model. Two special cases are the
             strings 'start' and 'end'. `start` refers to beginning the
-            simulation at the first period of the sample (i.e. using the
+            simulation at the first period of the sample (i.e., using the
             initial values as simulation anchor), and `end` refers to
             beginning the simulation at the first period after the sample.
             Integer values can run from 0 to `nobs`, or can be negative to
@@ -1622,13 +1758,13 @@ class ETSResults(base.StateSpaceMLEResults):
             `start` observation in the `predict` method.
         repetitions : int, optional
             Number of simulated paths to generate. Default is 1 simulated path.
-        random_errors : optional
+        random_errors : ndarray, rv_continuous, rv_discrete, rv_frozen, or "bootstrap", optional
             Specifies how the random errors should be obtained. Can be one of
             the following:
 
             * ``None``: Random normally distributed values with variance
               estimated from the fit errors drawn from numpy's standard
-              RNG (can be seeded with the `random_state` argument). This is the
+              RNG (can be seeded with the `rng` argument). This is the
               default option.
             * A distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm``: Fits the distribution function to the fit
@@ -1639,33 +1775,33 @@ class ETSResults(base.StateSpaceMLEResults):
             * A frozen distribution function from ``scipy.stats``, e.g.
               ``scipy.stats.norm(scale=2)``: Draws from the frozen distribution
               function.
-            * A ``np.ndarray`` with shape (`nsimulations`, `repetitions`): Uses
+            * A ndarray with shape (`nsimulations`, `repetitions`): Uses
               the given values as random errors.
             * ``"bootstrap"``: Samples the random errors from the fit errors.
 
-        random_state : int or np.random.RandomState, optional
-            A seed for the random number generator or a
-            ``np.random.RandomState`` object. Only used if `random_errors` is
-            ``None``. Default is ``None``.
+        rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+            If `rng` is None, a new ``Generator`` is created using fresh
+            entropy from the operating system. If `rng` is an int, a new
+            ``RandomState`` instance is created, seeded with `rng`; this
+            integer-seeding behavior is deprecated and will change to
+            creating a ``Generator`` in a future release. If `rng` is
+            already a ``Generator`` or ``RandomState`` instance, that
+            instance is used. Only used if `random_errors` is ``None``.
 
         Returns
         -------
-        sim : pd.Series, pd.DataFrame or np.ndarray
-            An ``np.ndarray``, ``pd.Series``, or ``pd.DataFrame`` of simulated
-            values.
-            If the original data was a ``pd.Series`` or ``pd.DataFrame``, `sim`
-            will be a ``pd.Series`` if `repetitions` is 1, and a
-            ``pd.DataFrame`` of shape (`nsimulations`, `repetitions`) else.
-            Otherwise, if `repetitions` is 1, a ``np.ndarray`` of shape
-            (`nsimulations`,) is returned, and if `repetitions` is not 1 a
-            ``np.ndarray`` of shape (`nsimulations`, `repetitions`) is
-            returned.
-        """
+        sim : Series, DataFrame or ndarray
+            An ndarray, Series, or DataFrame of simulated values. If the
+            original data was a Series or DataFrame, `sim` will be a
+            Series if `repetitions` is 1, and a DataFrame of shape
+            (`nsimulations`, `repetitions`) else. Otherwise, if `repetitions`
+            is 1, a ndarray of shape (`nsimulations`,) is returned, and
+            if `repetitions` is not 1 a ndarray of shape
+            (`nsimulations`, `repetitions`) is returned.
 
-        r"""
-        Implementation notes
-        --------------------
-        The simulation is based on the state space model of the Holt-Winter's
+        Notes
+        -----
+        The simulation is based on the state space model of the Holt-Winters'
         methods. The state space model assumes that the true value at time
         :math:`t` is randomly distributed around the prediction value.
         If using the additive error model, this means:
@@ -1699,7 +1835,7 @@ class ETSResults(base.StateSpaceMLEResults):
         parameter (multiplication if the trend is additive, power if the trend
         is multiplicative), :math:`\circ_b` is the operation linking level and
         trend (addition if the trend is additive, multiplication if the trend
-        is multiplicative), and :math:'\circ_s` is the operation linking
+        is multiplicative), and :math:`\circ_s` is the operation linking
         seasonality to the rest.
 
         The state space equations can then be formulated as
@@ -1785,9 +1921,7 @@ class ETSResults(base.StateSpaceMLEResults):
             phi,
             m,
             _,
-        ) = smooth._initialize_ets_smooth(
-            start_params, x, is_fixed, fixed_values
-        )
+        ) = smooth._initialize_ets_smooth(start_params, x, is_fixed, fixed_values)
         beta = alpha * beta_star
         gamma = (1 - alpha) * gamma_star
         # make x a 3 dimensional matrix: first dimension is nsimulations
@@ -1798,6 +1932,7 @@ class ETSResults(base.StateSpaceMLEResults):
 
         # get random error eps
         sigma = np.sqrt(self.scale)
+        rng = check_random_state(rng, deprecated=True)
         if isinstance(random_errors, np.ndarray):
             if random_errors.shape != (nsimulations, repetitions):
                 raise ValueError(
@@ -1806,27 +1941,26 @@ class ETSResults(base.StateSpaceMLEResults):
                 )
             eps = random_errors
         elif random_errors == "bootstrap":
-            eps = np.random.choice(
-                self.resid, size=(nsimulations, repetitions), replace=True
-            )
+            eps = rng.choice(self.resid, size=(nsimulations, repetitions), replace=True)
         elif random_errors is None:
-            if random_state is None:
-                eps = np.random.randn(nsimulations, repetitions) * sigma
-            elif isinstance(random_state, int):
-                rng = np.random.RandomState(random_state)
-                eps = rng.randn(nsimulations, repetitions) * sigma
-            elif isinstance(random_state, np.random.RandomState):
-                eps = random_state.randn(nsimulations, repetitions) * sigma
-            else:
-                raise ValueError(
-                    "Argument random_state must be None, an integer, "
-                    "or an instance of np.random.RandomState"
-                )
+            eps = rng.standard_normal((nsimulations, repetitions)) * sigma
         elif isinstance(random_errors, (rv_continuous, rv_discrete)):
             params = random_errors.fit(self.resid)
-            eps = random_errors.rvs(*params, size=(nsimulations, repetitions))
+            try:
+                eps = random_errors.rvs(
+                    *params, size=(nsimulations, repetitions), rng=rng
+                )
+            except TypeError:
+                eps = random_errors.rvs(
+                    *params, size=(nsimulations, repetitions), random_state=rng
+                )
         elif isinstance(random_errors, rv_frozen):
-            eps = random_errors.rvs(size=(nsimulations, repetitions))
+            try:
+                eps = random_errors.rvs(size=(nsimulations, repetitions), rng=rng)
+            except TypeError:
+                eps = random_errors.rvs(
+                    size=(nsimulations, repetitions), random_state=rng
+                )
         else:
             raise ValueError("Argument random_errors has unexpected value!")
 
@@ -1868,9 +2002,7 @@ class ETSResults(base.StateSpaceMLEResults):
                 eta = Y
                 kappa_l = 0 if mul_seasonal else S
                 kappa_b = (
-                    kappa_l / x[t - 1, 0, :]
-                    if mul_trend
-                    else kappa_l + x[t - 1, 0, :]
+                    kappa_l / x[t - 1, 0, :] if mul_trend else kappa_l + x[t - 1, 0, :]
                 )
                 kappa_s = 0 if mul_seasonal else L
 
@@ -1883,7 +2015,7 @@ class ETSResults(base.StateSpaceMLEResults):
 
         # Wrap data / squeeze where appropriate
         if repetitions > 1:
-            names = ["simulation.%d" % num for num in range(repetitions)]
+            names = [f"simulation.{num:d}" for num in range(repetitions)]
         else:
             names = "simulation"
         return self.model._wrap_data(
@@ -1900,7 +2032,7 @@ class ETSResults(base.StateSpaceMLEResults):
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default
+            must be an integer. Default is 1.
 
         Returns
         -------
@@ -1912,11 +2044,16 @@ class ETSResults(base.StateSpaceMLEResults):
     def _forecast(self, steps, anchor):
         """
         Dynamic prediction/forecasting
+
+        Parameters
+        ----------
+        steps : int
+            The number of steps to forecast.
+        anchor : int, str, or datetime
+            The anchor point relative to which the forecast is simulated.
         """
         # forecast is the same as simulation without errors
-        return self.simulate(
-            steps, anchor=anchor, random_errors=np.zeros((steps, 1))
-        )
+        return self.simulate(steps, anchor=anchor, random_errors=np.zeros((steps, 1)))
 
     def _handle_prediction_index(self, start, dynamic, end, index):
         if start is None:
@@ -1929,9 +2066,7 @@ class ETSResults(base.StateSpaceMLEResults):
         # if end was outside of the sample, it is now the last point in the
         # sample
         if start > end + out_of_sample + 1:
-            raise ValueError(
-                "Prediction start cannot lie outside of the sample."
-            )
+            raise ValueError("Prediction start cannot lie outside of the sample.")
 
         # Handle `dynamic`
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
@@ -1989,7 +2124,7 @@ class ETSResults(base.StateSpaceMLEResults):
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -2012,10 +2147,10 @@ class ETSResults(base.StateSpaceMLEResults):
 
         Returns
         -------
-        forecast : array_like or pd.Series.
+        forecast : ndarray or Series.
             Array of out of in-sample predictions and / or out-of-sample
-            forecasts. An (npredict,) array. If original data was a pd.Series
-            or DataFrame, a pd.Series is returned.
+            forecasts. An (npredict,) array. If original data was a Series
+            or DataFrame, a Series is returned.
         """
 
         (
@@ -2061,14 +2196,14 @@ class ETSResults(base.StateSpaceMLEResults):
         **simulate_kwargs,
     ):
         """
-        Calculates mean prediction and prediction intervals.
+        Calculates mean prediction and prediction intervals
 
         Parameters
         ----------
         start : int, str, or datetime, optional
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
-            parse or a datetime type. Default is the the zeroth observation.
+            parse or a datetime type. Default is the zeroth observation.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -2088,7 +2223,7 @@ class ETSResults(base.StateSpaceMLEResults):
             Optionally an index to associate the predicted results to. If None,
             an attempt is made to create an index for the predicted results
             from the model's index or model's row labels.
-        method : str or None, optional
+        method : {"exact", "simulated"} or None, optional
             Method to use for calculating prediction intervals. 'exact'
             (default, if available) or 'simulated'.
         simulate_repetitions : int, optional
@@ -2151,12 +2286,10 @@ class ETSResults(base.StateSpaceMLEResults):
                 params = params[0]
             names = self.model.initial_state_names
             param_header = [
-                "initialization method: %s" % self.model.initialization_method
+                f"initialization method: {self.model.initialization_method}"
             ]
             params_stubs = names
-            params_data = [
-                [forg(params[i], prec=4)] for i in range(len(params))
-            ]
+            params_data = [[forg(params[i], prec=4)] for i in range(len(params))]
 
             initial_state_table = SimpleTable(
                 params_data, param_header, params_stubs, txt_fmt=fmt_params
@@ -2174,9 +2307,7 @@ class ETSResultsWrapper(wrap.ResultsWrapper):
         "season": "rows",
         "slope": "rows",
     }
-    _wrap_attrs = wrap.union_dicts(
-        tsbase.TimeSeriesResultsWrapper._wrap_attrs, _attrs
-    )
+    _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs, _attrs)
     _methods = {"predict": "dates", "forecast": "dates"}
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods
@@ -2197,7 +2328,7 @@ class PredictionResults:
     start : int, str, or datetime, optional
         Zero-indexed observation number at which to start forecasting,
         i.e., the first forecast is start. Can also be a date string to
-        parse or a datetime type. Default is the the zeroth observation.
+        parse or a datetime type. Default is the zeroth observation.
     end : int, str, or datetime, optional
         Zero-indexed observation number at which to end forecasting, i.e.,
         the last forecast is end. Can also be a date string to
@@ -2217,7 +2348,7 @@ class PredictionResults:
         Optionally an index to associate the predicted results to. If None,
         an attempt is made to create an index for the predicted results
         from the model's index or model's row labels.
-    method : str or None, optional
+    method : {"exact", "simulated"} or None, optional
         Method to use for calculating prediction intervals. 'exact' (default,
         if available) or 'simulated'.
     simulate_repetitions : int, optional
@@ -2267,9 +2398,7 @@ class PredictionResults:
         self.row_labels = self.predicted_mean.index
         self.endog = np.empty(nsmooth + ndynamic) * np.nan
         if nsmooth > 0:
-            self.endog[0: (end - start + 1)] = results.data.endog[
-                start: (end + 1)
-            ]
+            self.endog[0 : (end - start + 1)] = results.data.endog[start : (end + 1)]
         self.model = Bunch(
             data=results.model.data.__class__(
                 endog=self.endog, predict_dates=self.row_labels
@@ -2279,7 +2408,7 @@ class PredictionResults:
         if self.method == "simulated":
 
             sim_results = []
-            # first, perform "non-dynamic" simulations, i.e. simulations of
+            # first, perform "non-dynamic" simulations, i.e., simulations of
             # only one step, based on the previous step
             if nsmooth > 1:
                 if start_smooth == 0:
@@ -2314,17 +2443,17 @@ class PredictionResults:
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
-                steps[
-                    (start_dynamic - min(start_dynamic, start)):
-                    ] = range(1, ndynamic + 1)
+                steps[(start_dynamic - min(start_dynamic, start)) :] = range(
+                    1, ndynamic + 1
+                )
             # when we are doing out of sample only prediction,
             # start > end + 1, and
             # we only want to output beginning at start
             if start > end + 1:
                 ndiscard = start - (end + 1)
                 steps = steps[ndiscard:]
-            self.forecast_variance = (
-                results.mse * results._relative_forecast_variance(steps)
+            self.forecast_variance = results.mse * results._relative_forecast_variance(
+                steps
             )
 
     @property
@@ -2334,22 +2463,28 @@ class PredictionResults:
 
     def pred_int(self, alpha=0.05):
         """
-        Calculates prediction intervals by performing multiple simulations.
+        Calculates prediction intervals for the forecasted values
 
         Parameters
         ----------
         alpha : float, optional
             The significance level for the prediction interval. Default is
             0.05, that is, a 95% prediction interval.
+
+        Returns
+        -------
+        ndarray or DataFrame
+            The array or DataFrame of lower and upper prediction intervals,
+            with one row per forecast period. Returns a DataFrame with
+            columns labeled by `alpha` if the original data was a pandas
+            object, otherwise an ndarray.
         """
 
         if self.method == "simulated":
             simulated_upper_pi = np.quantile(
                 self.simulation_results, 1 - alpha / 2, axis=1
             )
-            simulated_lower_pi = np.quantile(
-                self.simulation_results, alpha / 2, axis=1
-            )
+            simulated_lower_pi = np.quantile(self.simulation_results, alpha / 2, axis=1)
             pred_int = np.vstack((simulated_lower_pi, simulated_upper_pi)).T
         else:
             q = norm.ppf(1 - alpha / 2)
@@ -2371,13 +2506,31 @@ class PredictionResults:
         return pred_int
 
     def summary_frame(self, endog=0, alpha=0.05):
+        """
+        Summarize the mean prediction and prediction intervals in a DataFrame
+
+        Parameters
+        ----------
+        endog : int, optional
+            Index of the endogenous variable. Unused, since ETS models have
+            a single endogenous variable; present for compatibility with the
+            state space prediction API. Default is 0.
+        alpha : float, optional
+            The significance level for the prediction interval. Default is
+            0.05, that is, a 95% prediction interval.
+
+        Returns
+        -------
+        DataFrame
+            DataFrame containing the columns `mean`, `pi_lower`, and
+            `pi_upper`, and, when ``method='simulated'``, `mean_numerical`
+            (the average of the simulated paths).
+        """
         pred_int = np.asarray(self.pred_int(alpha=alpha))
         to_include = {}
         to_include["mean"] = self.predicted_mean
         if self.method == "simulated":
-            to_include["mean_numerical"] = np.mean(
-                self.simulation_results, axis=1
-            )
+            to_include["mean_numerical"] = np.mean(self.simulation_results, axis=1)
         to_include["pi_lower"] = pred_int[:, 0]
         to_include["pi_upper"] = pred_int[:, 1]
 

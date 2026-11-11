@@ -40,7 +40,7 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data`` and ``names`` attributes.
 
     Notes
     -----
@@ -51,6 +51,19 @@ def load():
 
 
 def load_pandas():
+    """
+    Load the West German interest/inflation data and return a Dataset class.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data`` and ``names`` attributes.
+
+    Notes
+    -----
+    The interest_inflation Dataset instance does not contain endog and exog
+    attributes.
+    """
     data = _get_data()
     names = data.columns
     dataset = du.Dataset(data=data, names=names)

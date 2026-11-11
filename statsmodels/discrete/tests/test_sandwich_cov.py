@@ -4,8 +4,8 @@ Created on Mon Dec 09 21:29:20 2013
 
 Author: Josef Perktold
 """
-
-import os
+from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
@@ -20,14 +20,15 @@ from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.tools._testing as smt
+from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tools.tools import add_constant
 
 # get data and results as module global for now, TODO: move to class
 from .results import results_count_robust_cluster as results_st
 
-cur_dir = os.path.dirname(os.path.abspath(__file__))
+cur_dir = Path(__file__).resolve().parent
 
-filepath = os.path.join(cur_dir, "results", "ships.csv")
+filepath = Path(cur_dir).joinpath("results", "ships.csv")
 data_raw = pd.read_csv(filepath, index_col=False)
 data = data_raw.dropna()
 
@@ -81,7 +82,7 @@ class CheckCountRobustMixin:
         else:
             k_params = 0
 
-        corr_fact = (nobs - 1.) / float(nobs - k_params)
+        corr_fact = (nobs - 1.0) / float(nobs - k_params)
         # for bse we need sqrt of correction factor
         return np.sqrt(corr_fact)
 
@@ -116,31 +117,27 @@ class TestPoissonCluGeneric(CheckCountRobustMixin):
         mod = smd.Poisson(endog, exog)
         cls.res1 = mod.fit(disp=False)
 
-        debug = False
-        if debug:
-            # for debugging
-            cls.bse_nonrobust = cls.res1.bse.copy()
-            cls.res1 = mod.fit(disp=False)
-            cls.get_robust_clu()
-            cls.res3 = cls.res1
-            cls.bse_rob3 = cls.bse_rob.copy()
-            cls.res1 = mod.fit(disp=False)
-
         from statsmodels.base.covtype import get_robustcov_results
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')
-        get_robustcov_results(cls.res1._results,
-                              "cluster",
-                              groups=group,
-                              use_correction=True,
-                              df_correction=True,  # TODO has no effect
-                              use_t=False,  # True,
-                              use_self=True)
+        get_robustcov_results(
+            cls.res1._results,
+            "cluster",
+            groups=group,
+            use_correction=True,
+            df_correction=True,  # TODO has no effect
+            use_t=False,  # True,
+            use_self=True,
+        )
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1)
 
 
+# The HC1 test classes below keep their name to stay traceable to the Stata
+# results (results_poisson_hc1). HC1 is not implemented for Poisson and GLM, so
+# the tests request HC0 and reproduce Stata's HC1 with the explicit
+# correction factor in corr_fact, which is applied to the bse in test_basic.
 class TestPoissonHC1Generic(CheckCountRobustMixin):
 
     @classmethod
@@ -152,7 +149,8 @@ class TestPoissonHC1Generic(CheckCountRobustMixin):
         from statsmodels.base.covtype import get_robustcov_results
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')
-        get_robustcov_results(cls.res1._results, "HC1", use_self=True)
+        # HC0 plus correction factor (cls.corr_fact below) matches Stata's HC1
+        get_robustcov_results(cls.res1._results, "HC0", use_self=True)
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1, sub_kparams=False)
@@ -172,15 +170,19 @@ class TestPoissonCluFit(CheckCountRobustMixin):
         nobs, k_params = mod.exog.shape
         # TODO: this is similar but not identical to logic in
         #   get_correction_factor; can we de-duplicate?
-        sc_fact = (nobs-1.) / float(nobs - k_params)
+        sc_fact = (nobs - 1.0) / float(nobs - k_params)
 
-        cls.res1 = mod.fit(disp=False, cov_type="cluster",
-                           cov_kwds=dict(groups=group,
-                                         use_correction=True,
-                                         scaling_factor=1. / sc_fact,
-                                         df_correction=True),  # TODO has no effect
-                           use_t=False,  # True,
-                           )
+        cls.res1 = mod.fit(
+            disp=False,
+            cov_type="cluster",
+            cov_kwds=dict(
+                groups=group,
+                use_correction=True,
+                scaling_factor=1.0 / sc_fact,
+                df_correction=True,
+            ),  # TODO has no effect
+            use_t=False,  # True,
+        )
 
         # The model results, t_test, ... should also work without
         # normalized_cov_params, see #2209
@@ -210,7 +212,8 @@ class TestPoissonHC1Fit(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_hc1
         mod = smd.Poisson(endog, exog)
-        cls.res1 = mod.fit(disp=False, cov_type="HC1")
+        # HC0 plus correction factor (cls.corr_fact below) matches Stata's HC1
+        cls.res1 = mod.fit(disp=False, cov_type="HC0")
 
         cls.bse_rob = cls.res1.bse
 
@@ -223,7 +226,8 @@ class TestPoissonHC1FitExposure(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_exposure_hc1
         mod = smd.Poisson(endog, exog, exposure=exposure)
-        cls.res1 = mod.fit(disp=False, cov_type="HC1")
+        # HC0 plus correction factor (cls.corr_fact below) matches Stata's HC1
+        cls.res1 = mod.fit(disp=False, cov_type="HC0")
 
         cls.bse_rob = cls.res1.bse
 
@@ -308,7 +312,8 @@ class TestGLMPoissonHC1Generic(CheckCountRobustMixin):
         cls.res1 = mod.fit()
 
         # res_hc0_ = cls.res1.get_robustcov_results('HC1')
-        get_robustcov_results(cls.res1._results, "HC1", use_self=True)
+        # HC0 plus correction factor (cls.corr_fact below) matches Stata's HC1
+        get_robustcov_results(cls.res1._results, "HC0", use_self=True)
         cls.bse_rob = cls.res1.bse
 
         cls.corr_fact = cls.get_correction_factor(cls.res1, sub_kparams=False)
@@ -346,7 +351,8 @@ class TestGLMPoissonHC1Fit(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_hc1
         mod = GLM(endog, exog, family=families.Poisson())
-        cls.res1 = mod.fit(cov_type="HC1")
+        # HC0 plus correction factor (cls.corr_fact below) matches Stata's HC1
+        cls.res1 = mod.fit(cov_type="HC0")
 
         cls.bse_rob = cls.res1.bse
 
@@ -386,6 +392,7 @@ class TestNegbinCluExposure(CheckCountRobustMixin):
 #        print wt
 #
 #        print dir(results_st)
+
 
 class TestNegbinCluGeneric(CheckCountRobustMixin):
 
@@ -473,7 +480,7 @@ class CheckDiscreteGLM:
         else:
             kwds = {}
         if isinstance(res2.model, OLS):
-            sgn = + 1
+            sgn = +1
         else:
             sgn = -1  # see #4714
 
@@ -511,8 +518,7 @@ class CheckDiscreteGLM:
         assert_allclose(np.hstack(res_lm1), np.hstack(res_lm2), rtol=5e-7)
 
     def test_margeff(self):
-        if (isinstance(self.res2.model, OLS) or
-                hasattr(self.res1.model, "offset")):
+        if isinstance(self.res2.model, OLS) or hasattr(self.res1.model, "offset"):
             pytest.skip("not available yet")
 
         marg1 = self.res1.get_margeff()
@@ -530,8 +536,8 @@ class TestGLMPoisson(CheckDiscreteGLM):
 
     @classmethod
     def setup_class(cls):
-        np.random.seed(987125643)  # not intentional seed
-        endog_count = np.random.poisson(endog)
+        rs = np.random.RandomState(987125643)  # not intentional seed
+        endog_count = rs.poisson(endog)
         cls.cov_type = "HC0"
 
         mod1 = GLM(endog_count, exog, family=families.Poisson())
@@ -580,8 +586,9 @@ class TestGLMProbit(CheckDiscreteGLM):
         cls.cov_type = "cluster"
 
         mod1 = GLM(endog_bin, exog, family=families.Binomial(link=links.Probit()))
-        cls.res1 = mod1.fit(method="newton",
-                            cov_type="cluster", cov_kwds=dict(groups=group))
+        cls.res1 = mod1.fit(
+            method="newton", cov_type="cluster", cov_kwds=dict(groups=group)
+        )
 
         mod1 = smd.Probit(endog_bin, exog)
         cls.res2 = mod1.fit(cov_type="cluster", cov_kwds=dict(groups=group))
@@ -608,11 +615,15 @@ class TestGLMProbitOffset(CheckDiscreteGLM):
         cls.cov_type = "cluster"
         offset = np.ones(endog_bin.shape[0])
 
-        mod1 = GLM(endog_bin, exog,
-                   family=families.Binomial(link=links.Probit()),
-                   offset=offset)
-        cls.res1 = mod1.fit(method="newton",
-                            cov_type="cluster", cov_kwds=dict(groups=group))
+        mod1 = GLM(
+            endog_bin,
+            exog,
+            family=families.Binomial(link=links.Probit()),
+            offset=offset,
+        )
+        cls.res1 = mod1.fit(
+            method="newton", cov_type="cluster", cov_kwds=dict(groups=group)
+        )
 
         mod1 = smd.Probit(endog_bin, exog, offset=offset)
         cls.res2 = mod1.fit(cov_type="cluster", cov_kwds=dict(groups=group))
@@ -717,7 +728,7 @@ class TestGLMGaussHACUniform(CheckDiscreteGLM):
         assert_allclose(res2a.bse, self.res2.bse, rtol=1e-12)
 
         # regression test for bse values
-        bse = np.array([2.82203924,   4.60199596,  11.01275064])
+        bse = np.array([2.82203924, 4.60199596, 11.01275064])
         assert_allclose(res1a.bse, bse, rtol=1e-6)
 
         assert_(res1a.cov_kwds["weights_func"] is sw.weights_uniform)
@@ -728,7 +739,7 @@ class TestGLMGaussHACUniform(CheckDiscreteGLM):
         assert_allclose(res1a.bse, res2a.bse, rtol=1e-12)
 
         # regression test for bse values
-        bse = np.array([2.502264,  3.697807,  9.193303])
+        bse = np.array([2.502264, 3.697807, 9.193303])
         assert_allclose(res1a.bse, bse, rtol=1e-6)
 
 
@@ -757,11 +768,13 @@ class TestGLMGaussHACPanel(CheckDiscreteGLM):
         # time index is just made up to have a test case
         time = np.tile(np.arange(7), 5)[:-1]
         mod1 = GLM(endog.copy(), exog.copy(), family=families.Gaussian())
-        kwds = dict(time=time,
-                    maxlags=2,
-                    kernel=sw.weights_uniform,
-                    use_correction="hac",
-                    df_correction=False)
+        kwds = dict(
+            time=time,
+            maxlags=2,
+            kernel=sw.weights_uniform,
+            use_correction="hac",
+            df_correction=False,
+        )
         cls.res1 = mod1.fit(cov_type="hac-panel", cov_kwds=kwds)
         cls.res1b = mod1.fit(cov_type="nw-panel", cov_kwds=kwds)
 
@@ -781,11 +794,13 @@ class TestGLMGaussHACPanelGroups(CheckDiscreteGLM):
         # time index is just made up to have a test case
         groups = np.repeat(np.arange(5), 7)[:-1]
         mod1 = GLM(endog.copy(), exog.copy(), family=families.Gaussian())
-        kwds = dict(groups=pd.Series(groups),  # check for #3606
-                    maxlags=2,
-                    kernel=sw.weights_uniform,
-                    use_correction="hac",
-                    df_correction=False)
+        kwds = dict(
+            groups=pd.Series(groups),  # check for #3606
+            maxlags=2,
+            kernel=sw.weights_uniform,
+            use_correction="hac",
+            df_correction=False,
+        )
         cls.res1 = mod1.fit(cov_type="hac-panel", cov_kwds=kwds)
 
         mod2 = OLS(endog, exog)
@@ -800,10 +815,12 @@ class TestGLMGaussHACGroupsum(CheckDiscreteGLM):
         # time index is just made up to have a test case
         time = np.tile(np.arange(7), 5)[:-1]
         mod1 = GLM(endog, exog, family=families.Gaussian())
-        kwds = dict(time=pd.Series(time),  # check for #3606
-                    maxlags=2,
-                    use_correction="hac",
-                    df_correction=False)
+        kwds = dict(
+            time=pd.Series(time),  # check for #3606
+            maxlags=2,
+            use_correction="hac",
+            df_correction=False,
+        )
         cls.res1 = mod1.fit(cov_type="hac-groupsum", cov_kwds=kwds)
         cls.res1b = mod1.fit(cov_type="nw-groupsum", cov_kwds=kwds)
 
@@ -813,3 +830,94 @@ class TestGLMGaussHACGroupsum(CheckDiscreteGLM):
     def test_kwd(self):
         # test corrected keyword name
         assert_allclose(self.res1b.bse, self.res1.bse, rtol=1e-12)
+
+
+def _hc_models():
+    endog_bin = (endog > 0).astype(float)
+    return {
+        "poisson": lambda: smd.Poisson(endog, exog),
+        "logit": lambda: smd.Logit(endog_bin, exog),
+        "glm-poisson": lambda: GLM(endog, exog, family=families.Poisson()),
+        "glm-gaussian": lambda: GLM(endog, exog, family=families.Gaussian()),
+    }
+
+
+def _fit(mod, cov_type):
+    if isinstance(mod, GLM):
+        return mod.fit(cov_type=cov_type)
+    return mod.fit(disp=False, cov_type=cov_type)
+
+
+@pytest.mark.parametrize("cov_type", ["HC1", "HC2", "HC3", "hc3"])
+@pytest.mark.parametrize("model", ["poisson", "logit", "glm-poisson", "glm-gaussian"])
+def test_hcx_fallback_warns_and_labels_hc0(model, cov_type):
+    # GH#7798 HC1-HC3 are not implemented outside of linear regression
+    # models, the HC0 sandwich is used instead. Warn and report it as HC0.
+    mod = _hc_models()[model]()
+    res_hc0 = _fit(mod, "HC0")
+
+    with pytest.warns(SpecificationWarning, match="HC0"):
+        res = _fit(mod, cov_type)
+
+    assert_equal(res.cov_type, "HC0")
+    assert "(HC0)" in res.cov_kwds["description"]
+    assert "HC0" in str(res.summary())
+    assert_allclose(res.bse, res_hc0.bse, rtol=1e-12)
+
+
+@pytest.mark.parametrize("model", ["poisson", "logit", "glm-poisson", "glm-gaussian"])
+def test_hc0_does_not_warn(model):
+    mod = _hc_models()[model]()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SpecificationWarning)
+        res = _fit(mod, "HC0")
+    assert_equal(res.cov_type, "HC0")
+
+
+@pytest.mark.parametrize("cov_type", ["HC1", "HC2", "HC3"])
+def test_ols_hcx_unchanged(cov_type):
+    # linear regression implements HC1-HC3, no fallback
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SpecificationWarning)
+        res = OLS(endog, exog).fit(cov_type=cov_type)
+    res_hc0 = OLS(endog, exog).fit(cov_type="HC0")
+    assert_equal(res.cov_type, cov_type)
+    assert np.all(res.bse > res_hc0.bse)
+
+
+@pytest.mark.parametrize("model", ["logit", "glm-poisson"])
+def test_hcx_fallback_warning_points_to_caller(model):
+    # The warning should be attributed to the user's call, not to statsmodels
+    mod = _hc_models()[model]()
+    with pytest.warns(SpecificationWarning) as record:
+        _fit(mod, "HC2")
+    assert len(record) == 1
+    assert record[0].filename == __file__
+
+    res = _fit(mod, "HC0")
+    with pytest.warns(SpecificationWarning) as record:
+        get_robustcov_results(res._results, "HC2", use_self=True)
+    assert len(record) == 1
+    assert record[0].filename == __file__
+
+
+def test_hcx_fallback_message():
+    mod = _hc_models()["poisson"]()
+    with pytest.warns(SpecificationWarning, match="was requested") as record:
+        _fit(mod, "HC1")
+    msg = str(record[0].message)
+    assert "Poisson" in msg
+    assert "..." not in msg
+
+
+@pytest.mark.parametrize("model", ["poisson", "glm-poisson"])
+def test_hc0_scaling_factor_matches_stata_hc1(model):
+    # the example in the fallback warning reproduces Stata's robust se
+    mod = _hc_models()[model]()
+    nobs = mod.exog.shape[0]
+    kwds = {"scaling_factor": nobs / (nobs - 1.0)}
+    if isinstance(mod, GLM):
+        res = mod.fit(cov_type="HC0", cov_kwds=kwds)
+    else:
+        res = mod.fit(disp=False, cov_type="HC0", cov_kwds=kwds)
+    assert_allclose(res.bse, results_st.results_poisson_hc1.bse, rtol=6e-5)

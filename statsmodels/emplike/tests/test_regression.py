@@ -35,26 +35,26 @@ class TestRegressionPowell(GenRes):
     @pytest.mark.slow
     def test_hypothesis_beta0(self):
         beta0res = self.res1.el_test([-30], [0], return_weights=1,
-                                     method="powell")
+                                     method="powell", result_object=False)
         assert_almost_equal(beta0res[:2], self.res2.test_beta0[:2], 4)
         assert_almost_equal(beta0res[2], self.res2.test_beta0[2], 4)
 
     @pytest.mark.slow
     def test_hypothesis_beta1(self):
         beta1res = self.res1.el_test([.5], [1], return_weights=1,
-                                     method="powell")
+                                     method="powell", result_object=False)
         assert_almost_equal(beta1res[:2], self.res2.test_beta1[:2], 4)
         assert_almost_equal(beta1res[2], self.res2.test_beta1[2], 4)
 
     def test_hypothesis_beta2(self):
         beta2res = self.res1.el_test([1], [2], return_weights=1,
-                                     method="powell")
+                                     method="powell", result_object=False)
         assert_almost_equal(beta2res[:2], self.res2.test_beta2[:2], 4)
         assert_almost_equal(beta2res[2], self.res2.test_beta2[2], 4)
 
     def test_hypothesis_beta3(self):
         beta3res = self.res1.el_test([0], [3], return_weights=1,
-                                     method="powell")
+                                     method="powell", result_object=False)
         assert_almost_equal(beta3res[:2], self.res2.test_beta3[:2], 4)
         assert_almost_equal(beta3res[2], self.res2.test_beta3[2], 4)
 
@@ -98,27 +98,27 @@ class TestRegressionNM(GenRes):
 
     def test_hypothesis_beta0(self):
         beta0res = self.res1.el_test([-30], [0], return_weights=1,
-                                     method="nm")
+                                     method="nm", result_object=False)
         assert_almost_equal(beta0res[:2], self.res2.test_beta0[:2], 4)
         assert_almost_equal(beta0res[2], self.res2.test_beta0[2], 4)
 
     def test_hypothesis_beta1(self):
         beta1res = self.res1.el_test([.5], [1], return_weights=1,
-                                     method="nm")
+                                     method="nm", result_object=False)
         assert_almost_equal(beta1res[:2], self.res2.test_beta1[:2], 4)
         assert_almost_equal(beta1res[2], self.res2.test_beta1[2], 4)
 
     @pytest.mark.slow
     def test_hypothesis_beta2(self):
         beta2res = self.res1.el_test([1], [2], return_weights=1,
-                                     method="nm")
+                                     method="nm", result_object=False)
         assert_almost_equal(beta2res[:2], self.res2.test_beta2[:2], 4)
         assert_almost_equal(beta2res[2], self.res2.test_beta2[2], 4)
 
     @pytest.mark.slow
     def test_hypothesis_beta3(self):
         beta3res = self.res1.el_test([0], [3], return_weights=1,
-                                     method="nm")
+                                     method="nm", result_object=False)
         assert_almost_equal(beta3res[:2], self.res2.test_beta3[:2], 4)
         assert_almost_equal(beta3res[2], self.res2.test_beta3[2], 4)
 

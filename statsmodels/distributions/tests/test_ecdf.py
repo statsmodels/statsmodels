@@ -64,12 +64,13 @@ class TestDistributions:
 
     def test_ecdf_data_modification(self):
         # GH9383
+        rs = np.random.RandomState(78439891)
         now = pd.to_datetime("2024-01-01")
         weeks = 2
         testdata = pd.DataFrame(columns=["dates", "values", "othervalues"])
         testdata["dates"] = pd.date_range(start=now, periods=weeks * 7, freq="D")
-        testdata["values"] = np.random.randint(0, 100, size=(weeks * 7))
-        testdata["othervalues"] = np.random.randint(0, 100, size=(weeks * 7))
+        testdata["values"] = rs.randint(0, 100, size=(weeks * 7))
+        testdata["othervalues"] = rs.randint(0, 100, size=(weeks * 7))
         orig_testadata = testdata.copy()
 
         ECDF(testdata["values"])

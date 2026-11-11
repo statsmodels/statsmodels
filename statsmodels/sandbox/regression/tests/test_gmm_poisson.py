@@ -3,8 +3,9 @@
 TestGMMMultTwostepDefault() has lower precision
 
 """
-
 from statsmodels.compat.python import lmap
+
+from pathlib import Path
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -20,7 +21,7 @@ def get_data():
     import os
 
     curdir = os.path.split(__file__)[0]
-    dt = pd.read_csv(os.path.join(curdir, "racd10data_with_transformed.csv"))
+    dt = pd.read_csv(Path(curdir).joinpath("racd10data_with_transformed.csv"))
 
     # Transformations compared to original data
     # dt3['income'] /= 10.
@@ -419,35 +420,3 @@ class TestGMMMultTwostepCenter(CheckGMM):
         _, jpval, _ = self.res1.jtest()
 
         assert_allclose(jpval, J_p, rtol=5e-5, atol=0)
-
-
-if __name__ == "__main__":
-    tt = TestGMMAddOnestep()
-    tt.setup_class()
-    tt.test_basic()
-    tt.test_other()
-
-    tt = TestGMMAddTwostep()
-    tt.setup_class()
-    tt.test_basic()
-    tt.test_other()
-
-    tt = TestGMMMultOnestep()
-    tt.setup_class()
-    tt.test_basic()
-    # tt.test_other()
-
-    tt = TestGMMMultTwostep()
-    tt.setup_class()
-    tt.test_basic()
-    tt.test_other()
-
-    tt = TestGMMMultTwostepDefault()
-    tt.setup_class()
-    tt.test_basic()
-    tt.test_other()
-
-    tt = TestGMMMultTwostepCenter()
-    tt.setup_class()
-    tt.test_basic()
-    tt.test_other()

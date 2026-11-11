@@ -4,7 +4,7 @@ This models contains the Kernels for Kernel smoothing.
 Hopefully in the future they may be reused/extended for other kernel based
 method
 
-References:
+References
 ----------
 
 Pointwise Kernel Confidence Bounds
@@ -12,12 +12,12 @@ Pointwise Kernel Confidence Bounds
 http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 """
 
+from statsmodels.compat.python import lzip
+
 # pylint: disable-msg=C0103
 # pylint: disable-msg=W0142
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0611
-from statsmodels.compat.python import lfilter, lzip
-
 import numpy as np
 from numpy import divide, exp, inf, multiply, square, subtract
 import scipy.integrate
@@ -25,7 +25,16 @@ from scipy.special import factorial
 
 
 class NdKernel:
-    """Generic N-dimensial kernel
+    """Generic N-dimensional kernel
+
+    Can be constructed from either
+    a) a list of n kernels which will be treated as
+    independent marginals on a gaussian copula (specified by H)
+    or b) a single univariate kernel which will be applied radially to the
+    mahalanobis distance defined by H.
+
+    In the case of the Gaussian these are both equivalent, and the second construction
+    is preferred.
 
     Parameters
     ----------
@@ -33,15 +42,9 @@ class NdKernel:
         The number of series for kernel estimates
     kernels : list
         kernels
-
-    Can be constructed from either
-    a) a list of n kernels which will be treated as
-    indepent marginals on a gaussian copula (specified by H)
-    or b) a single univariate kernel which will be applied radially to the
-    mahalanobis distance defined by H.
-
-    In the case of the Gaussian these are both equivalent, and the second constructiong
-    is prefered.
+    H : ndarray, optional
+        Kernel bandwidth matrix. If None, defaults to the (n, n) identity
+        matrix.
     """
 
     def __init__(self, n, kernels=None, H=None):
@@ -181,7 +184,8 @@ class CustomKernel:
         if self.domain is None:
             return (xs, ys)
         else:
-            filtered = lfilter(isInDomain, lzip(xs, ys))
+            filtered = filter(isInDomain, lzip(xs, ys))
+            filtered = list(filtered)
             if len(filtered) > 0:
                 xs, ys = lzip(*filtered)
                 return (xs, ys)
@@ -191,26 +195,33 @@ class CustomKernel:
     def density(self, xs, x):
         """Returns the kernel density estimate for point x based on x-values
         xs
+
+        ``x`` may be a scalar or an array of evaluation points, and the
+        estimate is computed separately for each of them. For a kernel with
+        a finite domain, the estimate is zero - not nan - at any point that
+        has no observation inside the kernel's support, since the kernel
+        contributes zero there.
         """
-        xs = np.asarray(xs)
-        n = len(xs)  # before in_domain?
+        xs = np.asarray(xs, dtype=float)
+        n = len(xs)  # before domain filter?
+        x = np.atleast_1d(np.asarray(x, dtype=float))
+        u = (xs[:, None] - x[None, :]) / self.h
+        if self.domain is None:
+            kernel_vals = self(u)
+        else:
+            # Only evaluate the shape function for scaled distances inside
+            # the domain, where it is defined; contributions outside the
+            # support are zero. Filtering data points once for all
+            # evaluation points (as in_domain does) is only valid for a
+            # single scalar x.
+            kernel_vals = np.zeros_like(u)
+            in_support = (u >= self.domain[0]) & (u <= self.domain[1])
+            if np.any(in_support):
+                kernel_vals[in_support] = self(u[in_support])
         if self.weights is not None:
-            xs, weights = self.in_domain(xs, self.weights, x)
-        else:
-            xs = self.in_domain(xs, xs, x)[0]
-        xs = np.asarray(xs)
-        # print 'len(xs)', len(xs), x
-        if xs.ndim == 1:
-            xs = xs[:, None]
-        if len(xs) > 0:
-            h = self.h
-            if self.weights is not None:
-                w = 1 / h * np.sum(self((xs - x) / h).T * weights, axis=1)
-            else:
-                w = 1.0 / (h * n) * np.sum(self((xs - x) / h), axis=0)
-            return w
-        else:
-            return np.nan
+            weights = np.asarray(self.weights, dtype=float)
+            return 1.0 / self.h * np.sum(kernel_vals * weights[:, None], axis=0)
+        return 1.0 / (self.h * n) * np.sum(kernel_vals, axis=0)
 
     def density_var(self, density, nobs):
         """approximate pointwise variance for kernel density
@@ -250,6 +261,9 @@ class CustomKernel:
             pdf of the kernel density
         nobs : int
             number of observations used in the KDE estimation
+        alpha : float
+            confidence level for the confidence interval, the default
+            alpha=0.05 corresponds to a 95% confidence interval.
 
         Returns
         -------
@@ -281,7 +295,7 @@ class CustomKernel:
         if len(xs) > 0:
             w = np.sum(self((xs - x) / self.h))
             # TODO: change the below to broadcasting when shape is sorted
-            v = np.sum([yy * self((xx - x) / self.h) for xx, yy in zip(xs, ys)])
+            v = np.sum([yy * self((xx - x) / self.h) for xx, yy in zip(xs, ys, strict=True)])
             return v / w
         else:
             return np.nan
@@ -294,7 +308,7 @@ class CustomKernel:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
             sqresid = square(subtract(ys, fittedvals))
             w = np.sum(self((xs - x) / self.h))
-            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid)])
+            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid, strict=True)])
             return v / w
         else:
             return np.nan
@@ -309,7 +323,7 @@ class CustomKernel:
             sqresid = square(subtract(ys, fittedvals))
             w = np.sum(self((xs - x) / self.h))
             # var = sqresid.sum() / (len(sqresid) - 0)  # nonlocal var ? JP just trying
-            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid)])
+            v = np.sum([rr * self((xx - x) / self.h) for xx, rr in zip(xs, sqresid, strict=True)])
             var = v / w
             sd = np.sqrt(var)
             K = self.L2Norm

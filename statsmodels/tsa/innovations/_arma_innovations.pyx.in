@@ -105,13 +105,13 @@ cpdef {{prefix}}arma_transformed_acovf_fast({{cython_type}} [:] ar,
     ar : ndarray
         Autoregressive coefficients, including the zero lag, where the sign
         convention assumes the coefficients are part of the lag polynomial on
-        the left-hand-side of the ARMA definition (i.e. they have the opposite
+        the left-hand-side of the ARMA definition (i.e., they have the opposite
         sign from the usual econometrics convention in which the coefficients
         are on the right-hand-side of the ARMA definition).
     ma : ndarray
         Moving average coefficients, including the zero lag, where the sign
         convention assumes the coefficients are part of the lag polynomial on
-        the right-hand-side of the ARMA definition (i.e. they have the same
+        the right-hand-side of the ARMA definition (i.e., they have the same
         sign from the usual econometrics convention in which the coefficients
         are on the right-hand-side of the ARMA definition).
     arma_acovf : ndarray

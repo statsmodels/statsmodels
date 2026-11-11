@@ -291,6 +291,7 @@ Module Reference
    StratifiedTable
    mcnemar
    cochrans_q
+   CochransQResult
 
 See also
 --------

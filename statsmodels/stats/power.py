@@ -1,11 +1,13 @@
 # pylint: disable-msg=W0142
-"""Statistical power, solving for nobs, ... - trial version
+"""
+Statistical power, solving for nobs, ... - trial version
 
 Created on Sat Jan 12 21:48:06 2013
 
 Author: Josef Perktold
 
-Example
+Examples
+--------
 roundtrip - root with respect to all variables
 
        calculated, desired
@@ -29,20 +31,108 @@ refactoring
 
 
 """
+
 import warnings
 
 import numpy as np
 from scipy import optimize, special, stats
 
+from statsmodels.graphics.utils import _import_mpl
 from statsmodels.tools.rootfinding import brentq_expanding
+from statsmodels.tools.validation import string_like
+
+# Undocumented short form accepted for backwards compatibility by
+# ttest_power, normal_power and normal_power_het. Deprecated in favor of
+# the documented spelling.
+_ALTERNATIVE_ALIASES = {"2s": "two-sided"}
+
+# Largest absolute value of the power equation, ``power(x) - target``, at which
+# ``Power.solve_power`` accepts a root. It must exceed the roughly 1e-5
+# accuracy of the CDFLIB functions in scipy.special, which are used to compute
+# the power, or valid roots are rejected.
+_POWER_ROOT_TOL = 1e-4
 
 
 def nct_cdf(x, df, nc):
-    return special.nctdtr(df, nc, x)
+    """
+    Cumulative distribution function of the noncentral t distribution
+
+    Parameters
+    ----------
+    x : array_like
+        Quantiles.
+    df : array_like
+        Degrees of freedom.
+    nc : array_like
+        Noncentrality parameter.
+
+    Returns
+    -------
+    cdf : float or ndarray
+        The cdf at ``x``, with the type of the input if it is a pandas Series.
+
+    Notes
+    -----
+    This uses ``scipy.special.nctdtr``. Its absolute accuracy is about 1e-15
+    and it can return nan far in the tail opposite to the sign of ``nc``. The
+    reflection ``cdf(x; nc) = 1 - cdf(-x; -nc)`` is tried for those values. If
+    that is nan too, then the probability is below the resolution of the
+    function and 0 (``x < 0 < nc``) or 1 (``nc < 0 < x``) is returned.
+    Values in the tails are therefore not accurate in a relative sense.
+    """
+    res = special.nctdtr(df, nc, x)
+    nan = np.asarray(np.isnan(res))
+    if not nan.any():
+        return res
+    # CDFLIB can return nan far in the tail opposite to the sign of ``nc``.
+    # Retry with the reflection cdf(x; nc) = 1 - cdf(-x; -nc), which leaves
+    # already finite values unchanged.
+    x_, df_, nc_ = np.broadcast_arrays(
+        np.asarray(x, dtype=float),
+        np.asarray(df, dtype=float),
+        np.asarray(nc, dtype=float),
+    )
+    alt = 1 - special.nctdtr(df_, -nc_, -x_)
+    # If the reflection is nan too, the probability is below the resolution
+    # of CDFLIB (absolute error of about 1e-15; the exact values in all such
+    # cases we checked are smaller than 1e-17), so use the limit 0 or 1.
+    # Invalid arguments stay nan.
+    valid = np.isfinite(x_) & np.isfinite(nc_) & (df_ > 0)
+    alt = np.where(np.isnan(alt) & valid & (x_ < 0) & (nc_ > 0), 0.0, alt)
+    alt = np.where(np.isnan(alt) & valid & (x_ > 0) & (nc_ < 0), 1.0, alt)
+    if np.ndim(res) == 0:
+        return np.asarray(np.where(nan, alt, res))[()]
+    # assign in place to keep the type of the input, e.g. a pandas Series
+    res[nan] = alt[nan]
+    return res
 
 
 def nct_sf(x, df, nc):
-    return 1 - special.nctdtr(df, nc, x)
+    """
+    Survival function of the noncentral t distribution
+
+    Parameters
+    ----------
+    x : array_like
+        Quantiles.
+    df : array_like
+        Degrees of freedom.
+    nc : array_like
+        Noncentrality parameter.
+
+    Returns
+    -------
+    sf : float or ndarray
+        The survival function at ``x``, with the type of the input if it is a
+        pandas Series.
+
+    Notes
+    -----
+    This is ``nct_cdf(-x, df, -nc)``, which keeps the relative accuracy in the
+    upper tail, where ``1 - nct_cdf(x, df, nc)`` cancels most digits. See
+    `nct_cdf` for the handling of nan in the far tail.
+    """
+    return nct_cdf(np.negative(x), df, np.negative(nc))
 
 
 def ncf_cdf(x, dfn, dfd, nc):
@@ -58,22 +148,54 @@ def ncf_ppf(q, dfn, dfd, nc):
 
 
 def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
-    """Calculate power of a ttest"""
+    """
+    Calculate power of a ttest
+
+    Parameters
+    ----------
+    effect_size : float
+        Standardized effect size, mean divided by the standard deviation.
+    nobs : int or float
+        Sample size, number of observations.
+    alpha : float in interval (0,1)
+        Significance level, e.g., 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    df : int or float, optional
+        Degrees of freedom. By default this is None, and ``df = nobs - 1``
+        is used.
+    alternative : {'two-sided', 'larger', 'smaller'}, optional
+        Extra argument to choose whether the power is calculated for a
+        two-sided (default) or one sided test. The one-sided test can be
+        either 'larger', 'smaller'.
+
+    Returns
+    -------
+    power : float
+        Power of the test, e.g., 0.8, is one minus the probability of a
+        type II error. Power is the probability that the test correctly
+        rejects the Null Hypothesis if the Alternative Hypothesis is true.
+    """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     d = effect_size
     if df is None:
         df = nobs - 1
 
-    if alternative in ["two-sided", "2s"]:
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated=_ALTERNATIVE_ALIASES,
+        removed_after="0.16",
+    )
+    if alternative == "two-sided":
         alpha_ = alpha / 2.0  # no inplace changes, does not work
-    elif alternative in ["smaller", "larger"]:
-        alpha_ = alpha
     else:
-        raise ValueError(
-            "alternative has to be 'two-sided', 'larger' " + "or 'smaller'"
-        )
+        alpha_ = alpha
 
     pow_ = 0
-    if alternative in ["two-sided", "2s", "larger"]:
+    if alternative in ["two-sided", "larger"]:
         crit_upp = stats.t.isf(alpha_, df)
         # print crit_upp, df, d*np.sqrt(nobs)
         # use private methods, generic methods return nan with negative d
@@ -84,7 +206,7 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
             # pow_ = stats.nct._sf(crit_upp, df, d*np.sqrt(nobs))
             # use scipy.special
             pow_ = nct_sf(crit_upp, df, d * np.sqrt(nobs))
-    if alternative in ["two-sided", "2s", "smaller"]:
+    if alternative in ["two-sided", "smaller"]:
         crit_low = stats.t.ppf(alpha_, df)
         # print crit_low, df, d*np.sqrt(nobs)
         if np.any(np.isnan(crit_low)):
@@ -96,43 +218,56 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative="two-sided"):
 
 
 def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
-    """Calculate power of a normal distributed test statistic
-
-    This is an generalization of `normal_power` when variance under Null and
-    Alternative differ.
+    """
+    Calculate power of a normal distributed test statistic
 
     Parameters
     ----------
-    effect size : float
+    effect_size : float
         difference in the estimated means or statistics under the alternative
         normalized by the standard deviation (without division by sqrt(nobs).
     nobs : float or int
         number of observations
     alpha : float in interval (0,1)
-        significance level, e.g. 0.05, is the probability of a type I
+        significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    alternative : string, 'two-sided' (default), 'larger', 'smaller'
+    alternative : {'two-sided', 'larger', 'smaller'}, optional
         extra argument to choose whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
         either 'larger', 'smaller'.
+    sigma : float, optional
+        The standard deviation used to standardize the effect size.
+
+    Returns
+    -------
+    power : float
+        Power of the test, e.g., 0.8, is one minus the probability of a
+        type II error. Power is the probability that the test correctly
+        rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     d = effect_size
 
-    if alternative in ["two-sided", "2s"]:
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated=_ALTERNATIVE_ALIASES,
+        removed_after="0.16",
+    )
+    if alternative == "two-sided":
         alpha_ = alpha / 2.0  # no inplace changes, does not work
-    elif alternative in ["smaller", "larger"]:
-        alpha_ = alpha
     else:
-        raise ValueError(
-            "alternative has to be 'two-sided', 'larger' " + "or 'smaller'"
-        )
+        alpha_ = alpha
 
     pow_ = 0
-    if alternative in ["two-sided", "2s", "larger"]:
+    if alternative in ["two-sided", "larger"]:
         crit = stats.norm.isf(alpha_)
         pow_ = stats.norm.sf(crit - d * np.sqrt(nobs) / sigma)
-    if alternative in ["two-sided", "2s", "smaller"]:
+    if alternative in ["two-sided", "smaller"]:
         crit = stats.norm.ppf(alpha_)
         pow_ += stats.norm.cdf(crit - d * np.sqrt(nobs) / sigma)
     return pow_
@@ -141,9 +276,10 @@ def normal_power(effect_size, nobs, alpha, alternative="two-sided", sigma=1.0):
 def normal_power_het(
     diff, nobs, alpha, std_null=1.0, std_alternative=None, alternative="two-sided"
 ):
-    """Calculate power of a normal distributed test statistic
+    """
+    Calculate power of a normal distributed test statistic
 
-    This is an generalization of `normal_power` when variance under Null and
+    This is a generalization of `normal_power` when variance under Null and
     Alternative differ.
 
     Parameters
@@ -153,15 +289,16 @@ def normal_power_het(
     nobs : float or int
         number of observations
     alpha : float in interval (0,1)
-        significance level, e.g. 0.05, is the probability of a type I
+        significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    std_null : float
+    std_null : float, optional
         standard deviation under the Null hypothesis without division by
         sqrt(nobs)
-    std_alternative : float
+    std_alternative : float, optional
         standard deviation under the Alternative hypothesis without division
-        by sqrt(nobs)
-    alternative : string, 'two-sided' (default), 'larger', 'smaller'
+        by sqrt(nobs). If None, ``std_alternative`` is set to the value of
+        ``std_null``.
+    alternative : {'two-sided', 'larger', 'smaller'}, optional
         extra argument to choose whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
         either 'larger', 'smaller'.
@@ -169,58 +306,68 @@ def normal_power_het(
     Returns
     -------
     power : float
+        Power of the test, e.g., 0.8, is one minus the probability of a
+        type II error. Power is the probability that the test correctly
+        rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     d = diff
     if std_alternative is None:
         std_alternative = std_null
 
-    if alternative in ["two-sided", "2s"]:
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated=_ALTERNATIVE_ALIASES,
+        removed_after="0.16",
+    )
+    if alternative == "two-sided":
         alpha_ = alpha / 2.0  # no inplace changes, does not work
-    elif alternative in ["smaller", "larger"]:
-        alpha_ = alpha
     else:
-        raise ValueError(
-            "alternative has to be 'two-sided', 'larger' " + "or 'smaller'"
-        )
+        alpha_ = alpha
 
     std_ratio = std_null / std_alternative
     pow_ = 0
-    if alternative in ["two-sided", "2s", "larger"]:
+    if alternative in ["two-sided", "larger"]:
         crit = stats.norm.isf(alpha_)
         pow_ = stats.norm.sf(crit * std_ratio - d * np.sqrt(nobs) / std_alternative)
-    if alternative in ["two-sided", "2s", "smaller"]:
+    if alternative in ["two-sided", "smaller"]:
         crit = stats.norm.ppf(alpha_)
         pow_ += stats.norm.cdf(crit * std_ratio - d * np.sqrt(nobs) / std_alternative)
     return pow_
 
 
 def normal_sample_size_one_tail(diff, power, alpha, std_null=1.0, std_alternative=None):
-    """explicit sample size computation if only one tail is relevant
+    """
+    Explicit sample size computation if only one tail is relevant
 
     The sample size is based on the power in one tail assuming that the
     alternative is in the tail where the test has power that increases
     with sample size.
     Use alpha/2 to compute the one tail approximation to the two-sided
-    test, i.e. consider only one tail of two-sided test.
+    test, i.e., consider only one tail of two-sided test.
 
     Parameters
     ----------
     diff : float
         difference in the estimated means or statistics under the alternative.
     power : float in interval (0,1)
-        power of the test, e.g. 0.8, is one minus the probability of a type II
+        power of the test, e.g., 0.8, is one minus the probability of a type II
         error. Power is the probability that the test correctly rejects the
         Null Hypothesis if the Alternative Hypothesis is true.
     alpha : float in interval (0,1)
-        significance level, e.g. 0.05, is the probability of a type I
+        significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
         Note: alpha is used for one tail. Use alpha/2 for two-sided
         alternative.
-    std_null : float
+    std_null : float, optional
         standard deviation under the Null hypothesis without division by
         sqrt(nobs)
-    std_alternative : float
+    std_alternative : float, optional
         standard deviation under the Alternative hypothesis without division
         by sqrt(nobs). Defaults to None. If None, ``std_alternative`` is set
         to the value of ``std_null``.
@@ -245,12 +392,37 @@ def normal_sample_size_one_tail(diff, power, alpha, std_null=1.0, std_alternativ
 
 
 def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
-    """power for ftest for one way anova with k equal sized groups
+    """
+    Power for ftest for one way anova with k equal sized groups
 
     nobs total sample size, sum over all groups
 
     should be general nobs observations, k_groups restrictions ???
+
+    Parameters
+    ----------
+    effect_size : float
+        Standardized effect size, according to Cohen's f definition.
+    nobs : int or float
+        Total sample size, sum over all groups.
+    alpha : float in interval (0,1)
+        Significance level, e.g., 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    k_groups : int, optional
+        Number of groups in the one-way ANOVA. Default is 2.
+    df : None
+        Unused. Included for compatibility; degrees of freedom are
+        computed internally from ``nobs`` and ``k_groups``.
+
+    Returns
+    -------
+    power : float
+        Power of the test, e.g., 0.8, is one minus the probability of a
+        type II error. Power is the probability that the test correctly
+        rejects the Null Hypothesis if the Alternative Hypothesis is true.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     df_num = k_groups - 1
     df_denom = nobs - k_groups
     crit = stats.f.isf(alpha, df_num, df_denom)
@@ -259,7 +431,8 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
 
 
 def ftest_power(effect_size, df2, df1, alpha, ncc=1):
-    """Calculate the power of a F-test.
+    """
+    Calculate the power of a F-test
 
     Parameters
     ----------
@@ -272,16 +445,16 @@ def ftest_power(effect_size, df2, df1, alpha, ncc=1):
         Numerator degrees of freedom.
         This corresponds to the number of constraints in Wald tests.
     alpha : float in interval (0,1)
-        significance level, e.g. 0.05, is the probability of a type I
+        significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    ncc : int
+    ncc : int, optional
         degrees of freedom correction for non-centrality parameter.
         see Notes
 
     Returns
     -------
     power : float
-        Power of the test, e.g. 0.8, is one minus the probability of a
+        Power of the test, e.g., 0.8, is one minus the probability of a
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -302,6 +475,8 @@ def ftest_power(effect_size, df2, df1, alpha, ncc=1):
     models, with df_num (df1) as number of constraints and d_denom (df2) as
     df_resid.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
     df_num, df_denom = df1, df2
     nc = effect_size**2 * (df_denom + df_num + ncc)
     crit = stats.f.isf(alpha, df_num, df_denom)
@@ -312,7 +487,8 @@ def ftest_power(effect_size, df2, df1, alpha, ncc=1):
 
 
 def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
-    """Calculate the power of a F-test.
+    """
+    Calculate the power of a F-test
 
     Based on Cohen's `f^2` effect size.
 
@@ -336,21 +512,21 @@ def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
         Denominator degrees of freedom.
         This corresponds to the df_resid in Wald tests.
     alpha : float in interval (0,1)
-        significance level, e.g. 0.05, is the probability of a type I
+        significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    ncc : int
+    ncc : int, optional
         degrees of freedom correction for non-centrality parameter.
         see Notes
 
     Returns
     -------
     power : float
-        Power of the test, e.g. 0.8, is one minus the probability of a
+        Power of the test, e.g., 0.8, is one minus the probability of a
         type II error. Power is the probability that the test correctly
         rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
     Notes
-
+    -----
     The sample size is given implicitly by ``df_denom`` with fixed number of
     constraints given by numerator degrees of freedom ``df_num``:
 
@@ -363,6 +539,8 @@ def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
     models, with df_num (df1) as number of constraints and d_denom (df2) as
     df_resid.
     """
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     nc = effect_size * (df_denom + df_num + ncc)
     crit = stats.f.isf(alpha, df_num, df_denom)
@@ -377,24 +555,29 @@ def ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=1):
 
 
 class Power:
-    """Statistical Power calculations, Base Class
+    """
+    Statistical Power calculations, Base Class
 
     so far this could all be class methods
     """
 
-    def __init__(self, **kwds):
-        self.__dict__.update(kwds)
+    def __init__(self):
+        # Populated by `solve_power`; declared here so they exist (as
+        # None) even before `solve_power` has been called.
+        self._counter = None
+        self.cache_fit_res = None
+
         # used only for instance level start values
-        self.start_ttp = dict(
-            effect_size=0.01,
-            nobs=10.0,
-            alpha=0.15,
-            power=0.6,
-            nobs1=10.0,
-            ratio=1,
-            df_num=10,
-            df_denom=3,  # for FTestPower
-        )
+        self.start_ttp = {
+            "effect_size": 0.01,
+            "nobs": 10.0,
+            "alpha": 0.15,
+            "power": 0.6,
+            "nobs1": 10.0,
+            "ratio": 1,
+            "df_num": 10,
+            "df_denom": 3,  # for FTestPower
+        }
         # TODO: nobs1 and ratio are for ttest_ind,
         #      need start_ttp for each test/class separately,
         # possible rootfinding problem for effect_size, starting small seems to
@@ -403,13 +586,20 @@ class Power:
 
         self.start_bqexp = defaultdict(dict)
         for key in ["nobs", "nobs1", "df_num", "df_denom"]:
-            self.start_bqexp[key] = dict(low=2.0, start_upp=50.0)
+            self.start_bqexp[key] = {"low": 2.0, "start_upp": 50.0}
         for key in ["df_denom"]:
-            self.start_bqexp[key] = dict(low=1.0, start_upp=50.0)
+            self.start_bqexp[key] = {"low": 1.0, "start_upp": 50.0}
         for key in ["ratio"]:
-            self.start_bqexp[key] = dict(low=1e-8, start_upp=2)
+            # a float, the expanding bracket search multiplies the upper bound
+            # by 10, and an int overflows int64 if there is no solution
+            self.start_bqexp[key] = {"low": 1e-8, "start_upp": 2.0}
         for key in ["alpha"]:
-            self.start_bqexp[key] = dict(low=1e-12, upp=1 - 1e-12)
+            self.start_bqexp[key] = {
+                "low": 1e-12,
+                "upp": 1 - 1e-12,
+                # roots can be far below the default xtol of 1e-5 of brentq_expanding
+                "xtol": 1e-18,
+            }
 
     def power(self, *args, **kwds):
         raise NotImplementedError
@@ -419,14 +609,31 @@ class Power:
         return self.power(*args, **kwds) - power_
 
     def solve_power(self, **kwds):
-        """solve for any one of the parameters of a t-test
+        """
+        Solve for any one of the parameters of a t-test
 
         for t-test the keywords are:
             effect_size, nobs, alpha, power
 
         exactly one needs to be ``None``, all others need numeric values
 
-        *attaches*
+        Parameters
+        ----------
+        **kwds
+            The keyword arguments of the power function for the specific
+            test, exactly one of which must be ``None``; the others must
+            be given numeric values.
+
+        Returns
+        -------
+        value : float
+            The value of the parameter that was set to None in the call.
+            The value solves the power equation given the remaining
+            parameters.
+
+        Notes
+        -----
+        This method attaches the following to the instance:
 
         cache_fit_res : list
             Cache of the result of the root finding procedure for the latest
@@ -435,6 +642,9 @@ class Power:
             The remaining elements contain the return information of the up to
             three solvers that have been tried.
 
+        If no solver finds a value that solves the power equation, for example
+        because the equation has no solution, a ``ConvergenceWarning`` is
+        issued and ``nan`` is returned.
 
         """
         # TODO: maybe use explicit kwds,
@@ -467,6 +677,33 @@ class Power:
             else:
                 raise ValueError(
                     "Cannot detect an effect-size of 0. Try changing your effect-size."
+                )
+
+        # GH#9378 intercept impossible one-sided cases before root finding:
+        # if the effect size points into the tail opposite to the
+        # alternative, the attained power is smaller than alpha for any
+        # sample size, so no solution exists unless the requested power is
+        # also smaller than alpha.
+        alternative = kwds.get("alternative")
+        if key in ("nobs", "nobs1", "ratio") and alternative in (
+            "larger",
+            "smaller",
+        ):
+            effect_size = kwds["effect_size"]
+            wrong_sign = (
+                effect_size < 0
+                if alternative == "larger"
+                else effect_size > 0
+            )
+            if wrong_sign and kwds["power"] >= kwds["alpha"]:
+                raise ValueError(
+                    f"No solution exists for {key}: with alternative="
+                    f"{alternative!r} the attained power is smaller than "
+                    f"alpha for any {key} because effect_size is "
+                    f"{'negative' if effect_size < 0 else 'positive'}. A "
+                    "one-sided alternative requires an effect size with "
+                    "matching sign: positive for 'larger', negative for "
+                    "'smaller'."
                 )
 
         self._counter = 0
@@ -513,32 +750,51 @@ class Power:
             fit_res.append(None)
 
         success = None
-        if (not failed) and res.converged:
+        if (not failed) and res.converged and np.abs(func(val)) < _POWER_ROOT_TOL:
             success = 1
         else:
             # try backup
             # TODO: check more cases to make this robust
             if not np.isnan(start_value):
-                val, infodict, ier, msg = optimize.fsolve(
-                    func, start_value, full_output=True
-                )  # scalar
-                # val = optimize.newton(func, start_value) # scalar
-                fval = infodict["fvec"]
-                fit_res.append(infodict)
+                try:
+                    val, infodict, ier, msg = optimize.fsolve(
+                        func, start_value, full_output=True
+                    )  # scalar
+                except ValueError:
+                    # fsolve left the range of valid arguments of the power
+                    # function, for example alpha outside (0, 1)
+                    ier = -1
+                    fval = 1
+                    fit_res.append([None])
+                else:
+                    # val = optimize.newton(func, start_value) # scalar
+                    fval = infodict["fvec"]
+                    fit_res.append(infodict)
             else:
                 ier = -1
                 fval = 1
                 fit_res.append([None])
 
-            if ier == 1 and np.abs(fval) < 1e-4:
+            if ier == 1 and np.abs(fval) < _POWER_ROOT_TOL:
                 success = 1
             # print infodict
             elif key in ["alpha", "power", "effect_size"]:
-                val, r = optimize.brentq(
-                    func, 1e-8, 1 - 1e-8, full_output=True
-                )  # scalar
-                success = 1 if r.converged else 0
-                fit_res.append(r)
+                try:
+                    val, r = optimize.brentq(
+                        func, 1e-8, 1 - 1e-8, full_output=True
+                    )  # scalar
+                except ValueError:
+                    # func has the same sign at both bounds, so the bracket
+                    # contains no root, or an even number of them
+                    success = 0
+                    fit_res.append(None)
+                else:
+                    # brentq also "converges" to a jump of func, e.g. to the
+                    # boundary where power returns nan (mapped to inf above),
+                    # so require that val actually solves the power equation
+                    solved = r.converged and np.abs(func(val)) < _POWER_ROOT_TOL
+                    success = 1 if solved else 0
+                    fit_res.append(r)
             else:
                 success = 0
 
@@ -551,7 +807,7 @@ class Power:
             )
 
             # the root finder did not converge, so ``val`` is not a solution
-            # (it is the last point the solver evaluated, e.g. a bracket
+            # (it is the last point the solver evaluated, e.g., a bracket
             # bound). Report it in the warning for diagnostics, but return
             # nan instead so it cannot masquerade as a valid answer.
             warnings.warn(
@@ -585,30 +841,31 @@ class Power:
 
         Parameters
         ----------
-        dep_var : {'nobs', 'effect_size', 'alpha'}
+        dep_var : {'nobs', 'effect_size', 'alpha'}, optional
             This specifies which variable is used for the horizontal axis.
             If dep_var='nobs' (default), then one curve is created for each
             value of ``effect_size``. If dep_var='effect_size' or alpha, then
             one curve is created for each value of ``nobs``.
-        nobs : {scalar, array_like}
+        nobs : array_like, optional
             specifies the values of the number of observations in the plot
-        effect_size : {scalar, array_like}
+        effect_size : array_like, optional
             specifies the values of the effect_size in the plot
-        alpha : {float, array_like}
+        alpha : float or array_like, optional
             The significance level (type I error) used in the power
             calculation. Can only be more than a scalar, if ``dep_var='alpha'``
-        ax : None or axis instance
+        ax : AxesSubplot, optional
             If ax is None, than a matplotlib figure is created. If ax is a
             matplotlib axis instance, then it is reused, and the plot elements
             are created with it.
-        title : str
-            title for the axis. Use an empty string, ``''``, to avoid a title.
-        plt_kwds : {None, dict}
-            not used yet
-        kwds : dict
+        title : str, optional
+            Title for the axis. Use an empty string, ``''``, to avoid a
+            title. If not given, the default title "Power of Test" is used.
+        plt_kwds : dict, optional
+            Not used yet.
+        **kwds
             These remaining keyword arguments are used as arguments to the
-            power function. Many power function support ``alternative`` as a
-            keyword argument, two-sample test support ``ratio``.
+            power function. Many power functions support ``alternative`` as
+            a keyword argument, two-sample tests support ``ratio``.
 
         Returns
         -------
@@ -631,8 +888,8 @@ class Power:
         from statsmodels.graphics import utils
         from statsmodels.graphics.plottools import rainbow
 
+        plt = _import_mpl()
         fig, ax = utils.create_mpl_ax(ax)
-        import matplotlib.pyplot as plt
 
         colormap = plt.cm.Dark2  # pylint: disable-msg=E1101
         plt_alpha = 1  # 0.75
@@ -648,7 +905,7 @@ class Power:
                     lw=lw,
                     alpha=plt_alpha,
                     color=colors[ii],
-                    label="es=%4.2F" % es,
+                    label=f"es={es:4.2F}",
                 )
                 xlabel = "Number of Observations"
         elif dep_var in ["effect size", "effect_size", "es"]:
@@ -662,10 +919,10 @@ class Power:
                     lw=lw,
                     alpha=plt_alpha,
                     color=colors[ii],
-                    label="N=%4.2F" % n,
+                    label=f"N={n:4.2F}",
                 )
                 xlabel = "Effect Size"
-        elif dep_var in ["alpha"]:
+        elif dep_var == "alpha":
             # experimental nobs as defining separate lines
             colors = rainbow(len(nobs))
 
@@ -677,7 +934,7 @@ class Power:
                     lw=lw,
                     alpha=plt_alpha,
                     color=colors[ii],
-                    label="N=%4.2F" % n,
+                    label=f"N={n:4.2F}",
                 )
                 xlabel = "alpha"
         else:
@@ -695,7 +952,8 @@ class TTestPower(Power):
     """Statistical Power calculations for one sample or paired sample t-test"""
 
     def power(self, effect_size, nobs, alpha, df=None, alternative="two-sided"):
-        """Calculate the power of a t-test for one sample or paired samples.
+        """
+        Calculate the power of a t-test for one sample or paired samples
 
         Parameters
         ----------
@@ -704,26 +962,27 @@ class TTestPower(Power):
             effect size has to be positive.
         nobs : int or float
             sample size, number of observations.
-        alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+        alpha : float or array_like in interval (0,1)
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        df : int or float
+        df : int or float, optional
             degrees of freedom. By default this is None, and the df from the
             one sample or paired ttest is used, ``df = nobs1 - 1``
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
-            .
 
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
         """
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
         # for debugging
         # print 'calling ttest power with', (effect_size, nobs, alpha, df, alternative)
         return ttest_power(effect_size, nobs, alpha, df=df, alternative=alternative)
@@ -737,7 +996,8 @@ class TTestPower(Power):
         power=None,
         alternative="two-sided",
     ):
-        """solve for any one parameter of the power of a one sample t-test
+        """
+        Solve for any one parameter of the power of a one sample t-test
 
         for the one sample t-test the keywords are:
             effect_size, nobs, alpha, power
@@ -750,19 +1010,19 @@ class TTestPower(Power):
 
         Parameters
         ----------
-        effect_size : float
-            Standardized effect size.The effect size is here Cohen's f, square
-            root of "f2".
-        nobs : int or float
+        effect_size : None or float
+            Standardized effect size, mean divided by the standard
+            deviation.
+        nobs : None or int or float
             sample size, number of observations.
-        alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+        alpha : None or float in interval (0,1)
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+        power : None or float in interval (0,1)
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -773,7 +1033,9 @@ class TTestPower(Power):
             The value of the parameter that was set to None in the call. The
             value solves the power equation given the remaining parameters.
 
-        *attaches*
+        Notes
+        -----
+        This method attaches the following to the instance:
 
         cache_fit_res : list
             Cache of the result of the root finding procedure for the latest
@@ -782,16 +1044,28 @@ class TTestPower(Power):
             The remaining elements contain the return information of the up to
             three solvers that have been tried.
 
-        Notes
-        -----
         The function uses scipy.optimize for finding the value that satisfies
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
+        # Validate `alternative` up front so an invalid value raises a clear
+        # error instead of being swallowed by the root finder (GH#9378).
+        # Otherwise e.g. ``alternative="one-sided"`` returns ``nan`` with a
+        # confusing ``ConvergenceWarning``.
+        alternative = string_like(
+            alternative,
+            "alternative",
+            options=("two-sided", "larger", "smaller"),
+            lower=False,
+            deprecated=_ALTERNATIVE_ALIASES,
+            removed_after="0.16",
+        )
+
         # for debugging
         # print 'calling ttest solve with', (effect_size, nobs, alpha, power, alternative)
         return super().solve_power(
@@ -803,8 +1077,27 @@ class TTestPower(Power):
         )
 
 
+def _validate_ratio(ratio):
+    """
+    Check that ``ratio`` of ``TTestIndPower`` is non-negative and not NaN.
+
+    Parameters
+    ----------
+    ratio : float or array_like
+        Ratio of the number of observations in sample 2 relative to sample 1.
+
+    Raises
+    ------
+    ValueError
+        If any element of ``ratio`` is negative or NaN.
+    """
+    if not np.all(np.greater_equal(ratio, 0)):
+        raise ValueError(f"ratio must be non-negative and not NaN, got {ratio}")
+
+
 class TTestIndPower(Power):
-    """Statistical Power calculations for t-test for two independent sample
+    """
+    Statistical Power calculations for t-test for two independent sample
 
     currently only uses pooled variance
 
@@ -813,7 +1106,8 @@ class TTestIndPower(Power):
     def power(
         self, effect_size, nobs1, alpha, ratio=1, df=None, alternative="two-sided"
     ):
-        """Calculate the power of a t-test for two independent sample
+        """
+        Calculate the power of a t-test for two independent sample
 
         Parameters
         ----------
@@ -823,31 +1117,81 @@ class TTestIndPower(Power):
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
+            i.e., ``nobs2 = nobs1 * ratio``
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ratio : float
+        ratio : float or array_like, optional
             ratio of the number of observations in sample 2 relative to
-            sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ratio given the other
-            arguments, it has to be explicitly set to None.
-        df : int or float
+            sample 1. see description of nobs1. ``ratio`` must be
+            non-negative and not NaN.
+            ``ratio`` can be set to zero in order to get the power of the
+            one sample t-test with ``nobs1`` observations, in which case the
+            default degrees of freedom are ``df = nobs1 - 1``. This is a
+            convention and not the limit of ``ratio`` going to zero: a ratio
+            close to zero, e.g. ``1e-9``, means that sample 2 has almost no
+            observations and the power is close to alpha, while ``ratio=0``
+            returns the one sample power.
+        df : int or float, optional
             degrees of freedom. By default this is None, and the df from the
             ttest with pooled variance is used, ``df = (nobs1 - 1 + nobs2 - 1)``
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+            or ``df = nobs1 - 1`` if ``ratio=0``.
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
 
         Returns
         -------
-        power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+        power : float or ndarray
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
+            The result is a float for scalar arguments and an array if
+            ``ratio`` or another argument is array_like.
+
+        Raises
+        ------
+        ValueError
+            If any element of ``ratio`` is negative or NaN.
+
+        Notes
+        -----
+        If ``ratio`` is an array_like, then the one sample convention for
+        ``ratio=0`` is applied to the elements that are zero.
+
+        .. versionchanged:: 0.15.1
+
+           ``ratio=0`` returns the power of the one sample t-test, it used to
+           raise a ``ZeroDivisionError`` or to return alpha with a
+           ``RuntimeWarning``. A negative or NaN ``ratio`` raises a
+           ``ValueError``.
 
         """
+
+        # negative ratios have no sample-size interpretation and used to
+        # crash with a bare ZeroDivisionError or return nan
+        _validate_ratio(ratio)
+        if isinstance(ratio, (list, tuple)):
+            ratio = np.asarray(ratio, dtype=float)
+
+        is_one_sample = np.equal(ratio, 0)
+        if np.any(is_one_sample):
+            # ratio == 0 is the convention for the one-sample t-test with nobs1
+            # observations (see the docstring), applied elementwise. It is not
+            # the limit of ratio -> 0, where nobs2 -> 0 and the power -> alpha.
+            # asarray, so that division by zero gives inf instead of an
+            # exception for Python scalars
+            nobs2 = np.asarray(nobs1 * ratio, dtype=float)
+            with np.errstate(divide="ignore"):
+                nobs = np.where(
+                    is_one_sample, nobs1, 1.0 / (1.0 / nobs1 + 1.0 / nobs2)
+                )
+            if df is None:
+                df = np.where(is_one_sample, nobs1 - 1, nobs1 - 1 + nobs2 - 1)
+            res = ttest_power(effect_size, nobs, alpha, df=df, alternative=alternative)
+            # return a scalar for scalar input
+            return res[()] if isinstance(res, np.ndarray) else res
 
         nobs2 = nobs1 * ratio
         # pooled variance
@@ -868,7 +1212,8 @@ class TTestIndPower(Power):
         ratio=1.0,
         alternative="two-sided",
     ):
-        """solve for any one parameter of the power of a two sample t-test
+        """
+        Solve for any one parameter of the power of a two sample t-test
 
         for t-test the keywords are:
             effect_size, nobs1, alpha, power, ratio
@@ -877,26 +1222,32 @@ class TTestIndPower(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             standardized effect size, difference between the two means divided
             by the standard deviation. `effect_size` has to be positive.
-        nobs1 : int or float
+        nobs1 : None or int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
-        alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            i.e., ``nobs2 = nobs1 * ratio``
+        alpha : None or float in interval (0,1)
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+        power : None or float in interval (0,1)
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        ratio : float
+        ratio : None or float, optional
             ratio of the number of observations in sample 2 relative to
-            sample 1. see description of nobs1
+            sample 1. see description of nobs1. ``ratio`` must be
+            non-negative and not NaN.
+            ``ratio`` can be set to zero in order to get the power of the
+            one sample t-test with ``nobs1`` observations (``df = nobs1 - 1``).
+            This is a convention and not the limit of ``ratio`` going to
+            zero: a ratio close to zero, e.g. ``1e-9``, means that sample 2
+            has almost no observations and the power is close to alpha.
             The default for ratio is 1; to solve for ratio given the other
             arguments it has to be explicitly set to None.
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -907,6 +1258,10 @@ class TTestIndPower(Power):
             The value of the parameter that was set to None in the call. The
             value solves the power equation given the remaining parameters.
 
+        Raises
+        ------
+        ValueError
+            If ``ratio`` is negative or NaN.
 
         Notes
         -----
@@ -914,10 +1269,33 @@ class TTestIndPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
+
+        .. versionchanged:: 0.15.1
+
+           ``ratio=0`` solves the power equation of the one sample t-test, it
+           used to raise a ``ZeroDivisionError`` or to give wrong results. A
+           negative or NaN ``ratio`` raises a ``ValueError``, it used to
+           return nan with a ``ConvergenceWarning``.
 
         """
+        if ratio is not None:
+            # validate before the root finding, which swallows ValueError and
+            # returns nan with a ConvergenceWarning instead
+            _validate_ratio(ratio)
+        # Validate `alternative` up front so an invalid value raises a clear
+        # error instead of being swallowed by the root finder (GH#9378).
+        alternative = string_like(
+            alternative,
+            "alternative",
+            options=("two-sided", "larger", "smaller"),
+            lower=False,
+            deprecated=_ALTERNATIVE_ALIASES,
+            removed_after="0.16",
+        )
+
         return super().solve_power(
             effect_size=effect_size,
             nobs1=nobs1,
@@ -929,9 +1307,19 @@ class TTestIndPower(Power):
 
 
 class NormalIndPower(Power):
-    """Statistical Power calculations for z-test for two independent samples.
+    """
+    Statistical Power calculations for z-test for two independent samples
 
     currently only uses pooled variance
+
+    Parameters
+    ----------
+    ddof : int, optional
+        Degrees of freedom correction for the standard deviation used in
+        computing the effective sample size. Used, e.g., for a correlation
+        coefficient where ddof=3.
+    **kwds
+        Additional keyword arguments passed to the ``Power`` base class.
 
     """
 
@@ -940,7 +1328,8 @@ class NormalIndPower(Power):
         super().__init__(**kwds)
 
     def power(self, effect_size, nobs1, alpha, ratio=1, alternative="two-sided"):
-        """Calculate the power of a z-test for two independent sample
+        """
+        Calculate the power of a z-test for two independent sample
 
         Parameters
         ----------
@@ -950,16 +1339,16 @@ class NormalIndPower(Power):
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
+            i.e., ``nobs2 = nobs1 * ratio``
             ``ratio`` can be set to zero in order to get the power for a
             one sample test.
-        alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+        alpha : float or array_like in interval (0,1)
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ratio : float
+        ratio : float, optional
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -967,11 +1356,13 @@ class NormalIndPower(Power):
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
         """
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
         ddof = self.ddof  # for correlation, ddof=3
 
@@ -994,7 +1385,8 @@ class NormalIndPower(Power):
         ratio=1.0,
         alternative="two-sided",
     ):
-        """solve for any one parameter of the power of a two sample z-test
+        """
+        Solve for any one parameter of the power of a two sample z-test
 
         for z-test the keywords are:
             effect_size, nobs1, alpha, power, ratio
@@ -1003,30 +1395,30 @@ class NormalIndPower(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             standardized effect size, difference between the two means divided
             by the standard deviation.
             If ratio=0, then this is the standardized mean in the one sample
             test.
-        nobs1 : int or float
+        nobs1 : None or int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
+            i.e., ``nobs2 = nobs1 * ratio``
             ``ratio`` can be set to zero in order to get the power for a
             one sample test.
-        alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+        alpha : None or float in interval (0,1)
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+        power : None or float in interval (0,1)
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        ratio : float
+        ratio : None or float, optional
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ration given the other
+            The default for ratio is 1; to solve for ratio given the other
             arguments it has to be explicitly set to None.
-        alternative : str, 'two-sided' (default), 'larger', 'smaller'
+        alternative : {'two-sided', 'larger', 'smaller'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test. The one-sided test can be
             either 'larger', 'smaller'.
@@ -1044,8 +1436,9 @@ class NormalIndPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         return super().solve_power(
@@ -1059,7 +1452,8 @@ class NormalIndPower(Power):
 
 
 class FTestPower(Power):
-    """Statistical Power calculations for generic F-test of a constraint
+    """
+    Statistical Power calculations for generic F-test of a constraint
 
     This class is not recommended, use `FTestPowerF2` with corrected interface.
 
@@ -1088,7 +1482,7 @@ class FTestPower(Power):
 
     >>> df1 = 1  # number of constraints in hypothesis test
     >>> df2 = FTestPower().solve_power(effect_size=f, alpha=0.1, power=0.9,
-                                       df_denom=df1)
+    ...                                df_denom=df1)
     >>> ncc = 1  # default
     >>> nobs = df2 + df1 + ncc
     >>> df2, nobs
@@ -1102,7 +1496,8 @@ class FTestPower(Power):
     """
 
     def power(self, effect_size, df_num, df_denom, alpha, ncc=1):
-        """Calculate the power of a F-test.
+        """
+        Calculate the power of a F-test
 
         The effect size is Cohen's ``f``, square root of ``f2``.
 
@@ -1123,17 +1518,17 @@ class FTestPower(Power):
             Warning incorrect name
             numerator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+        alpha : float or array_like in interval (0,1)
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ncc : int
+        ncc : int, optional
             degrees of freedom correction for non-centrality parameter.
             see Notes
 
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -1148,6 +1543,10 @@ class FTestPower(Power):
         ftest_power with ncc=0 should also be correct for f_test in regression
         models, with df_num and d_denom as defined there. (not verified yet)
         """
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+        if np.any(np.asarray(df_num) <= 0) or np.any(np.asarray(df_denom) <= 0):
+            raise ValueError("df_num and df_denom must be positive")
 
         pow_ = ftest_power(effect_size, df_num, df_denom, alpha, ncc=ncc)
         # print effect_size, df_num, df_denom, alpha, pow_
@@ -1164,7 +1563,8 @@ class FTestPower(Power):
         ncc=1,
         **kwargs,
     ):
-        """solve for any one parameter of the power of a F-test
+        """
+        Solve for any one parameter of the power of a F-test
 
         for the one sample F-test the keywords are:
             effect_size, df_num, df_denom, alpha, power
@@ -1179,29 +1579,29 @@ class FTestPower(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             Standardized effect size. The effect size is here Cohen's ``f``,
             square root of ``f2``.
-        df_num : int or float
+        df_num : None or int or float
             Warning incorrect name
             denominator degrees of freedom,
             This corresponds to the number of constraints in Wald tests.
             Sample size is given by ``nobs = df_denom + df_num + ncc``
-        df_denom : int or float
+        df_denom : None or int or float
             Warning incorrect name
             numerator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+        alpha : None or float in interval (0,1)
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+        power : None or float in interval (0,1)
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        ncc : int
+        ncc : int, optional
             degrees of freedom correction for non-centrality parameter.
             see Notes
-        kwargs : empty
+        **kwargs
             ``kwargs`` are not used and included for backwards compatibility.
             If ``nobs`` is used as keyword, then a warning is issued. All
             other keywords in ``kwargs`` raise a ValueError.
@@ -1219,8 +1619,9 @@ class FTestPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         if kwargs:
@@ -1239,7 +1640,8 @@ class FTestPower(Power):
 
 
 class FTestPowerF2(Power):
-    """Statistical Power calculations for generic F-test of a constraint
+    """
+    Statistical Power calculations for generic F-test of a constraint
 
     This is based on Cohen's f^2 as effect size measure.
 
@@ -1259,7 +1661,7 @@ class FTestPowerF2(Power):
 
     >>> df1 = 1  # number of constraints in hypothesis test
     >>> df2 = FTestPowerF2().solve_power(effect_size=f2, alpha=0.1, power=0.9,
-                                         df_num=df1)
+    ...                                  df_num=df1)
     >>> ncc = 1  # default
     >>> nobs = df2 + df1 + ncc
     >>> df2, nobs
@@ -1273,7 +1675,8 @@ class FTestPowerF2(Power):
     """
 
     def power(self, effect_size, df_num, df_denom, alpha, ncc=1):
-        """Calculate the power of a F-test.
+        """
+        Calculate the power of a F-test
 
         The effect size is Cohen's ``f^2``.
 
@@ -1290,17 +1693,17 @@ class FTestPowerF2(Power):
         df_denom : int or float
             Denominator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
-            Significance level, e.g. 0.05, is the probability of a type I
+        alpha : float or array_like in interval (0,1)
+            Significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ncc : int
+        ncc : int, optional
             Degrees of freedom correction for non-centrality parameter.
             see Notes
 
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -1314,6 +1717,10 @@ class FTestPowerF2(Power):
         ftest_power with ncc=0 should also be correct for f_test in regression
         models, with df_num and d_denom as defined there. (not verified yet)
         """
+        if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+            raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+        if np.any(np.asarray(df_num) <= 0) or np.any(np.asarray(df_denom) <= 0):
+            raise ValueError("df_num and df_denom must be positive")
 
         pow_ = ftest_power_f2(effect_size, df_num, df_denom, alpha, ncc=ncc)
         return pow_
@@ -1328,7 +1735,8 @@ class FTestPowerF2(Power):
         power=None,
         ncc=1,
     ):
-        """Solve for any one parameter of the power of a F-test
+        """
+        Solve for any one parameter of the power of a F-test
 
         for the one sample F-test the keywords are:
             effect_size, df_num, df_denom, alpha, power
@@ -1342,23 +1750,23 @@ class FTestPowerF2(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             The effect size is here Cohen's ``f2``. This is equal to
             the noncentrality of an F-test divided by nobs.
-        df_num : int or float
+        df_num : None or int or float
             Numerator degrees of freedom,
             This corresponds to the number of constraints in Wald tests.
-        df_denom : int or float
+        df_denom : None or int or float
             Denominator degrees of freedom.
             This corresponds to the df_resid in Wald tests.
-        alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+        alpha : None or float in interval (0,1)
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+        power : None or float in interval (0,1)
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        ncc : int
+        ncc : int, optional
             degrees of freedom correction for non-centrality parameter.
             see Notes
 
@@ -1375,8 +1783,9 @@ class FTestPowerF2(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
 
@@ -1391,7 +1800,8 @@ class FTestPowerF2(Power):
 
 
 class FTestAnovaPower(Power):
-    """Statistical Power calculations F-test for one factor balanced ANOVA
+    """
+    Statistical Power calculations F-test for one factor balanced ANOVA
 
     This is based on Cohen's f as effect size measure.
 
@@ -1402,7 +1812,8 @@ class FTestAnovaPower(Power):
     """
 
     def power(self, effect_size, nobs, alpha, k_groups=2):
-        """Calculate the power of a F-test for one factor ANOVA.
+        """
+        Calculate the power of a F-test for one factor ANOVA
 
         Parameters
         ----------
@@ -1412,7 +1823,7 @@ class FTestAnovaPower(Power):
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         k_groups : int or float
             number of groups in the ANOVA or k-sample comparison. Default is 2.
@@ -1420,7 +1831,7 @@ class FTestAnovaPower(Power):
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -1431,7 +1842,8 @@ class FTestAnovaPower(Power):
     def solve_power(
         self, effect_size=None, nobs=None, alpha=None, power=None, k_groups=2
     ):
-        """solve for any one parameter of the power of a F-test
+        """
+        Solve for any one parameter of the power of a F-test
 
         for the one sample F-test the keywords are:
             effect_size, nobs, alpha, power
@@ -1441,18 +1853,20 @@ class FTestAnovaPower(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             standardized effect size, mean divided by the standard deviation.
             effect size has to be positive.
-        nobs : int or float
+        nobs : None or int or float
             sample size, number of observations.
-        alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+        alpha : None or float in interval (0,1)
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+        power : None or float in interval (0,1)
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
+        k_groups : int or float, optional
+            number of groups in the ANOVA or k-sample comparison. Default is 2.
 
         Returns
         -------
@@ -1467,14 +1881,15 @@ class FTestAnovaPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         # update start values for root finding
         if k_groups is not None:
             self.start_ttp["nobs"] = k_groups * 10
-            self.start_bqexp["nobs"] = dict(low=k_groups * 2, start_upp=k_groups * 10)
+            self.start_bqexp["nobs"] = {"low": k_groups * 2, "start_upp": k_groups * 10}
         # first attempt at special casing
         if effect_size is None:
             return self._solve_effect_size(
@@ -1520,7 +1935,8 @@ class GofChisquarePower(Power):
     def power(
         self, effect_size, nobs, alpha, n_bins, ddof=0
     ):  # alternative='two-sided'):
-        """Calculate the power of a chisquare test for one sample
+        """
+        Calculate the power of a chisquare test for one sample
 
         Only two-sided alternative is implemented
 
@@ -1532,28 +1948,31 @@ class GofChisquarePower(Power):
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
         n_bins : int
             number of bins or cells in the distribution.
+        ddof : int, optional
+            Degrees of freedom correction for the chisquare distribution.
 
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
         """
         from statsmodels.stats.gof import chisquare_power
 
-        return chisquare_power(effect_size, nobs, n_bins, alpha, ddof=0)
+        return chisquare_power(effect_size, nobs, n_bins, alpha, ddof=ddof)
 
     # method is only added to have explicit keywords and docstring
     def solve_power(
         self, effect_size=None, nobs=None, alpha=None, power=None, n_bins=2
     ):
-        """solve for any one parameter of the power of a one sample chisquare-test
+        """
+        Solve for any one parameter of the power of a one sample chisquare-test
 
         for the one sample chisquare-test the keywords are:
             effect_size, nobs, alpha, power
@@ -1565,19 +1984,19 @@ class GofChisquarePower(Power):
 
         Parameters
         ----------
-        effect_size : float
+        effect_size : None or float
             standardized effect size, according to Cohen's definition.
             see :func:`statsmodels.stats.gof.chisquare_effectsize`
-        nobs : int or float
+        nobs : None or int or float
             sample size, number of observations.
-        alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+        alpha : None or float in interval (0,1)
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+        power : None or float in interval (0,1)
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        n_bins : int
+        n_bins : int, optional
             number of bins or cells in the distribution
 
         Returns
@@ -1593,8 +2012,9 @@ class GofChisquarePower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         return super().solve_power(
@@ -1603,7 +2023,8 @@ class GofChisquarePower(Power):
 
 
 class _GofChisquareIndPower(Power):
-    """Statistical Power calculations for chisquare goodness-of-fit test
+    """
+    Statistical Power calculations for chisquare goodness-of-fit test
 
     TODO: this is not working yet
           for 2sample case need two nobs in function
@@ -1612,26 +2033,25 @@ class _GofChisquareIndPower(Power):
     """
 
     def power(self, effect_size, nobs1, alpha, ratio=1, alternative="two-sided"):
-        """Calculate the power of a chisquare for two independent sample
+        """
+        Calculate the power of a chisquare for two independent sample
 
         Parameters
         ----------
         effect_size : float
-            standardize effect size, difference between the two means divided
+            standardized effect size, difference between the two means divided
             by the standard deviation. effect size has to be positive.
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
+            i.e., ``nobs2 = nobs1 * ratio``
         alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        ratio : float
+        ratio : float, optional
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ration given the other
-            arguments it has to be explicitely set to None.
-        alternative : str, 'two-sided' (default) or 'one-sided'
+        alternative : {'two-sided', 'one-sided'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test.
             'one-sided' assumes we are in the relevant tail.
@@ -1639,7 +2059,7 @@ class _GofChisquareIndPower(Power):
         Returns
         -------
         power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
+            Power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
@@ -1662,35 +2082,36 @@ class _GofChisquareIndPower(Power):
         ratio=1.0,
         alternative="two-sided",
     ):
-        """solve for any one parameter of the power of a two sample z-test
+        """
+        Solve for any one parameter of the power of a two sample chisquare-test
 
-        for z-test the keywords are:
+        for the chisquare-test the keywords are:
             effect_size, nobs1, alpha, power, ratio
 
         exactly one needs to be ``None``, all others need numeric values
 
         Parameters
         ----------
-        effect_size : float
-            standardize effect size, difference between the two means divided
+        effect_size : None or float
+            standardized effect size, difference between the two means divided
             by the standard deviation.
-        nobs1 : int or float
+        nobs1 : None or int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
-            i.e. ``nobs2 = nobs1 * ratio``
-        alpha : float in interval (0,1)
-            significance level, e.g. 0.05, is the probability of a type I
+            i.e., ``nobs2 = nobs1 * ratio``
+        alpha : None or float in interval (0,1)
+            significance level, e.g., 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        power : float in interval (0,1)
-            power of the test, e.g. 0.8, is one minus the probability of a
+        power : None or float in interval (0,1)
+            power of the test, e.g., 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
-        ratio : float
+        ratio : None or float, optional
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ration given the other
-            arguments it has to be explicitely set to None.
-        alternative : str, 'two-sided' (default) or 'one-sided'
+            The default for ratio is 1; to solve for ratio given the other
+            arguments it has to be explicitly set to None.
+        alternative : {'two-sided', 'one-sided'}, optional
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test.
             'one-sided' assumes we are in the relevant tail.
@@ -1708,8 +2129,9 @@ class _GofChisquareIndPower(Power):
         the power equation. It first uses ``brentq`` with a prior search for
         bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
         also fails, then, for ``alpha``, ``power`` and ``effect_size``,
-        ``brentq`` with fixed bounds is used. However, there can still be cases
-        where this fails.
+        ``brentq`` with fixed bounds is used. If these also fail to find a solution
+        of the power equation, for example because it has no solution, a
+        ``ConvergenceWarning`` is issued and ``nan`` is returned.
 
         """
         return super().solve_power(

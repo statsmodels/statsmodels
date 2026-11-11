@@ -5,6 +5,7 @@ This script checks Poisson models.
 
 See the generated file "gee_poisson_simulation_check.txt" for results.
 """
+from pathlib import Path
 
 import numpy as np
 
@@ -37,14 +38,10 @@ class Exchangeable_simulator(GEE_simulator):
     scale_inv = 1.
 
     def print_dparams(self, dparams_est):
-        OUT.write("Estimated common pairwise correlation:   %8.4f\n" %
-                  dparams_est[0])
-        OUT.write("True common pairwise correlation:        %8.4f\n" %
-                  self.dparams[0])
-        OUT.write("Estimated inverse scale parameter:       %8.4f\n" %
-                  dparams_est[1])
-        OUT.write("True inverse scale parameter:            %8.4f\n" %
-                  self.scale_inv)
+        OUT.write(f"Estimated common pairwise correlation:   {dparams_est[0]:8.4f}\n")
+        OUT.write(f"True common pairwise correlation:        {self.dparams[0]:8.4f}\n")
+        OUT.write(f"Estimated inverse scale parameter:       {dparams_est[1]:8.4f}\n")
+        OUT.write(f"True inverse scale parameter:            {self.scale_inv:8.4f}\n")
         OUT.write("\n")
 
     def simulate(self):
@@ -110,10 +107,8 @@ class Overdispersed_simulator(GEE_simulator):
     """
 
     def print_dparams(self, dparams_est):
-        OUT.write("Estimated inverse scale parameter:       %8.4f\n" %
-                  dparams_est[0])
-        OUT.write("True inverse scale parameter:            %8.4f\n" %
-                  self.scale_inv)
+        OUT.write(f"Estimated inverse scale parameter:       {dparams_est[0]:8.4f}\n")
+        OUT.write(f"True inverse scale parameter:            {self.scale_inv:8.4f}\n")
         OUT.write("\n")
 
     def simulate(self):
@@ -176,10 +171,10 @@ def gendat_overdispersed():
 
 if __name__ == "__main__":
 
-    np.set_printoptions(formatter={"all": lambda x: "%8.3f" % x},
+    np.set_printoptions(formatter={"all": lambda x: f"{x:8.3f}"},
                         suppress=True)
 
-    OUT = open("gee_poisson_simulation_check.txt", "w", encoding="utf-8")
+    OUT = Path("gee_poisson_simulation_check.txt").open("w", encoding="utf-8")
 
     nrep = 100
 
@@ -233,8 +228,7 @@ if __name__ == "__main__":
             pvalues.append(pvalue)
 
         dparams_mean = np.array(sum(dparams) / len(dparams))
-        OUT.write("Results based on %d successful fits out of %d data sets.\n\n"
-                  % (len(dparams), nrep))
+        OUT.write(f"Results based on {len(dparams):d} successful fits out of {nrep:d} data sets.\n\n")
         OUT.write("Checking dependence parameters:\n")
         da.print_dparams(dparams_mean)
 
@@ -275,9 +269,7 @@ if __name__ == "__main__":
         OUT.write("Right hand side:\n")
         OUT.write(np.array_str(rhs) + "\n")
         OUT.write("Observed p-values   Expected Null p-values\n")
-        for q in np.arange(0.1, 0.91, 0.1):
-            OUT.write("%20.3f %20.3f\n" %
-                      (pvalues[int(q*len(pvalues))], q))
+        OUT.writelines(f"{pvalues[int(q*len(pvalues))]:20.3f} {q:20.3f}\n" for q in np.arange(0.1, 0.91, 0.1))
 
         OUT.write("=" * 80 + "\n\n")
 

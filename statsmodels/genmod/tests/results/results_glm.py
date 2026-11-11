@@ -5,7 +5,7 @@ Hard-coded from R or Stata.  Note that some of the remaining discrepancy vs.
 Stata may be because Stata uses ML by default unless you specifically ask for
 IRLS.
 """
-import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -704,8 +704,7 @@ class Lbw:
     """
     def __init__(self):
         # data set up for data not in datasets
-        filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                "stata_lbw_glm.csv")
+        filename = Path(__file__).resolve().parent.joinpath("stata_lbw_glm.csv")
 
         data = pd.read_csv(filename)
         dummies = pd.get_dummies(data.race, prefix="race", drop_first=False,
@@ -822,8 +821,7 @@ class Cancer:
     https://www.stata-press.com/data/r10/rmain.html
     """
     def __init__(self):
-        filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                "stata_cancer_glm.csv")
+        filename = Path(__file__).resolve().parent.joinpath("stata_cancer_glm.csv")
         data = pd.read_csv(filename)
         self.endog = data.studytime
         dummies = pd.get_dummies(pd.Series(data.drug, dtype="category"),
@@ -1192,16 +1190,14 @@ class InvGauss:
 
     def __init__(self):
         # set up data #
-        filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                "inv_gaussian.csv")
-        with open(filename, encoding="utf-8") as fd:
-            data = np.genfromtxt(fd, delimiter=",", dtype=float)[1:]
+        filename = Path(__file__).resolve().parent.joinpath("inv_gaussian.csv")
+        data = pd.read_csv(filename).values
         self.endog = data[:5000, 0]
         self.exog = data[:5000, 1:]
         self.exog = add_constant(self.exog, prepend=False)
 
         # Results
-        # NOTE: loglikelihood difference in R vs. Stata vs. Models
+        # NOTE: log-likelihood difference in R vs. Stata vs. Models
         #  is the same situation as gamma
         self.params = (0.4519770, -0.2508288, 1.0359574)
         self.bse = (0.03148291, 0.02237211, 0.03429943)
@@ -2228,8 +2224,7 @@ class Medpar1:
     https://www.stata-press.com/data/hh2/medpar1
     """
     def __init__(self):
-        filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                "stata_medpar1_glm.csv")
+        filename = Path(__file__).resolve().parent.joinpath("stata_medpar1_glm.csv")
         data = pd.read_csv(filename).to_records()
         self.endog = data.los
         dummies = pd.get_dummies(data.admitype, prefix="race", drop_first=True,
@@ -2244,8 +2239,7 @@ class InvGaussLog(Medpar1):
     """
     def __init__(self):
         super().__init__()
-        filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                "medparlogresids.csv")
+        filename = Path(__file__).resolve().parent.joinpath("medparlogresids.csv")
         self.resids = pd.read_csv(filename, sep=",", header=None).values
         self.null_deviance = 335.1539777981053  # from R, Rpy bug
         self.params = np.array([0.09927544, -0.19161722,  1.05712336])
@@ -3007,8 +3001,7 @@ class InvGaussIdentity(Medpar1):
         super().__init__()
         self.params = np.array([0.44538838, -1.05872706,  2.83947966])
         self.bse = np.array([0.02586783,  0.13830023,  0.20834864])
-        filename = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                "igaussident_resids.csv")
+        filename = Path(__file__).resolve().parent.joinpath("igaussident_resids.csv")
         self.resids = pd.read_csv(filename, sep=",", header=None).values
         self.null_deviance = 335.1539777981053  # from R, Rpy bug
         self.df_null = 3675

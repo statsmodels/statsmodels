@@ -30,11 +30,26 @@ NOTE = """::
 
 
 def load_pandas():
+    """
+    Load the yearly sunspot data and returns a data class.
+
+    Returns
+    -------
+    Dataset
+        A `Dataset` instance with ``data``, ``names``, ``endog`` and ``endog_name``
+        attributes.
+
+    Notes
+    -----
+    This dataset only contains data for one variable, so the attributes
+    data, raw_data, and endog are all the same variable.  There is no exog
+    attribute defined.
+    """
     data = _get_data()
     # TODO: time series
     endog = data.set_index(data.YEAR).SUNACTIVITY
     dataset = du.Dataset(data=data, names=list(data.columns),
-                         endog=endog, endog_name="volume")
+                         endog=endog, endog_name="SUNACTIVITY")
     return dataset
 
 
@@ -45,7 +60,8 @@ def load():
     Returns
     -------
     Dataset
-        See DATASET_PROPOSAL.txt for more information.
+        A `Dataset` instance with ``data``, ``names``, ``endog`` and ``endog_name``
+        attributes.
 
     Notes
     -----

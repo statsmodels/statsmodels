@@ -182,7 +182,7 @@ Class Reference
 
 
 Post-estimation Analysis
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Several process properties and additional results after
 estimation are available for vector autoregressive processes.
@@ -193,14 +193,40 @@ estimation are available for vector autoregressive processes.
 
    LagOrderResults
 
+
+Normality
+~~~~~~~~~
+
+As pointed out in the beginning of this document, the white noise component
+:math:`u_t` is assumed to be normally distributed. While this assumption
+is not required for parameter estimates to be consistent or asymptotically
+normal, results are generally more reliable in finite samples when residuals
+are Gaussian white noise. To test whether this assumption is consistent with
+a data set, :class:`VARResults` offers the `test_normality` method.
+
+.. ipython:: python
+
+    results.test_normality()
+
+
+Whiteness of residuals
+~~~~~~~~~~~~~~~~~~~~~~
+
+To test the whiteness of the estimation residuals (this means absence of
+significant residual autocorrelations) one can use the `test_whiteness`
+method of :class:`VARResults`.
+
+
 .. currentmodule:: statsmodels.tsa.vector_ar.hypothesis_test_results
 .. autosummary::
    :toctree: generated/
 
    HypothesisTestResults
+   CausalityTestResults
    NormalityTestResults
    WhitenessTestResults
-
+   ForecastInterval
+   ErrorBand
 
 Impulse Response Analysis
 -------------------------
@@ -253,6 +279,12 @@ the long run effects as follows:
    @savefig var_irf_cum.png
    irf.plot_cum_effects(orth=False)
 
+Both plotting methods accept ``plot_params`` to style the response curves with
+Matplotlib ``Line2D`` properties. For example,
+``irf.plot(plot_params={"color": "red", "linewidth": 2})`` draws red response
+curves with a line width of 2. Confidence bands and horizontal reference lines
+keep their default styles.
+
 
 .. currentmodule:: statsmodels.tsa.vector_ar.irf
 .. autosummary::
@@ -263,12 +295,16 @@ the long run effects as follows:
 Forecast Error Variance Decomposition (FEVD)
 --------------------------------------------
 
-Forecast errors of component j on k in an i-step ahead forecast can be
-decomposed using the orthogonalized impulse responses :math:`\Theta_i`:
+The forecast error variance decomposition gives the share of the h-step ahead
+forecast error variance of variable j that is due to the orthogonalized shock
+to variable k. It is computed from the orthogonalized impulse responses
+:math:`\Theta_i = \Phi_i P`, where :math:`P` is, by default, the Cholesky factor
+of :math:`\Sigma_u` (any :math:`P` with :math:`\Sigma_u = P P^\prime` can be
+passed instead) and :math:`e_j` is the j-th unit vector:
 
 .. math::
 
-    \omega_{jk, i} = \sum_{i=0}^{h-1} (e_j^\prime \Theta_i e_k)^2 / \mathrm{MSE}_j(h)
+    \omega_{jk, h} = \sum_{i=0}^{h-1} (e_j^\prime \Theta_i e_k)^2 / \mathrm{MSE}_j(h)
 
     \mathrm{MSE}_j(h) = \sum_{i=0}^{h-1} e_j^\prime \Phi_i \Sigma_u \Phi_i^\prime e_j
 
@@ -278,6 +314,10 @@ These are computed via the `fevd` function up through a total number of steps ah
 
    fevd = results.fevd(5)
    fevd.summary()
+
+The ``decomp`` attribute of the returned object is a 3-dimensional array
+indexed ``[j, h - 1, k]``, that is by variable, by horizon (the first step
+ahead is stored at position 0) and by shock.
 
 They can also be visualized through the returned :class:`FEVD` object:
 
@@ -314,37 +354,6 @@ F-test.
 .. ipython:: python
 
    results.test_causality('realgdp', ['realinv', 'realcons'], kind='f')
-
-Normality
-~~~~~~~~~
-
-As pointed out in the beginning of this document, the white noise component
-:math:`u_t` is assumed to be normally distributed. While this assumption
-is not required for parameter estimates to be consistent or asymptotically
-normal, results are generally more reliable in finite samples when residuals
-are Gaussian white noise. To test whether this assumption is consistent with
-a data set, :class:`VARResults` offers the `test_normality` method.
-
-.. ipython:: python
-
-    results.test_normality()
-
-Whiteness of residuals
-~~~~~~~~~~~~~~~~~~~~~~
-
-To test the whiteness of the estimation residuals (this means absence of
-significant residual autocorrelations) one can use the `test_whiteness`
-method of :class:`VARResults`.
-
-
-.. currentmodule:: statsmodels.tsa.vector_ar.hypothesis_test_results
-.. autosummary::
-   :toctree: generated/
-
-   HypothesisTestResults
-   CausalityTestResults
-   NormalityTestResults
-   WhitenessTestResults
 
 .. _svar:
 
@@ -444,6 +453,40 @@ V     :math:`\neq 0`                   :math:`\neq 0`                       ``"c
    VECMResults
    CointRankResults
 
+.. _local_projections:
+
+Local Projections
+------------------
+
+*Local projections* (:class:`LocalProjections`) are a nonparametric
+alternative to VAR-based impulse response estimation. Rather than fitting
+a single VAR and inverting it into its MA(:math:`\infty`) representation,
+a separate OLS regression is estimated for each horizon :math:`h`:
+
+.. math::
+
+    y_{t+h} = \alpha_h + \beta_h z_t + \Gamma_h x_t + \varepsilon_{t+h}
+
+where :math:`z_t` is the (contemporaneous) shock variable and :math:`x_t`
+contains lagged controls. Because each horizon is estimated separately
+rather than propagated through a single fitted lag structure, local
+projections are more robust to VAR misspecification and are often used
+as a check on VAR-based impulse responses, at some cost in efficiency.
+Standard errors are Newey-West HAC-corrected to account for the induced
+MA(:math:`h`) serial correlation in the :math:`h`-step-ahead residuals.
+
+See Jordà (2005) [3]_ for details, and the :doc:`Local Projections example
+notebook <examples/notebooks/generated/local_projections>` for a full
+worked application estimating a fiscal-multiplier-style impulse response
+and comparing it against a VAR.
+
+.. currentmodule:: statsmodels.tsa.vector_ar.local_proj
+.. autosummary::
+   :toctree: generated/
+
+   LocalProjections
+   LocalProjectionsResults
+
 
 References
 ----------
@@ -451,3 +494,6 @@ References
 
 .. [2] Johansen, S. 1995. *Likelihood-Based Inference in Cointegrated *
        *Vector Autoregressive Models*. Oxford University Press.
+
+.. [3] Jordà, Ò. 2005. "Estimation and Inference of Impulse Responses by
+       Local Projections." *American Economic Review*, 95(1): 161-182.

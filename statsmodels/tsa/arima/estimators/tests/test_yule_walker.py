@@ -23,7 +23,7 @@ def test_brockwell_davis_example_511():
     assert_allclose(acovf(endog, fft=True, nlag=2), desired, atol=1e-5)
 
     # Yule-Walker
-    yw, _ = yule_walker(endog, ar_order=1, demean=True)
+    yw = yule_walker(endog, ar_order=1, demean=True).parameters
     assert_allclose(yw.ar_params, [0.4219], atol=1e-4)
     assert_allclose(yw.sigma2, 0.1479, atol=1e-4)
 
@@ -39,14 +39,14 @@ def test_brockwell_davis_example_514():
     endog = lake.copy()
 
     # Yule-Walker
-    res, _ = yule_walker(endog, ar_order=2, demean=True)
+    res = yule_walker(endog, ar_order=2, demean=True).parameters
     assert_allclose(res.ar_params, [1.0538, -0.2668], atol=1e-4)
     assert_allclose(res.sigma2, 0.4920, atol=1e-4)
 
 
 def check_itsmr(lake):
     # Test against R itsmr::yw; see results/results_yw_dl.R
-    yw, _ = yule_walker(lake, 5)
+    yw = yule_walker(lake, 5).parameters
 
     desired = [
         1.08213598501,

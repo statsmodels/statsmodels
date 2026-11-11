@@ -6,6 +6,8 @@ import pandas as pd
 import pytest
 
 import statsmodels.datasets
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.base.prediction import PredictionResults
@@ -40,8 +42,10 @@ def test_smoke(data):
     assert isinstance(res.result, DecomposeResult)
     assert isinstance(res.model, ARIMA)
     assert hasattr(res.model_result, "forecast")
+    assert res.result.nobs == 500
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_sharex(data, close_figures):
     stlf = STLForecast(data, ARIMA, model_kwargs={"order": (2, 0, 0)})
@@ -55,7 +59,7 @@ def test_sharex(data, close_figures):
 MODELS = [
     (ARIMA, {"order": (2, 0, 0), "trend": "c"}),
     (ExponentialSmoothing, {"trend": True}),
-    (AutoReg, {"lags": 2, "old_names": False}),
+    (AutoReg, {"lags": 2}),
     (ETSModel, {}),
 ]
 MODELS = MODELS[-1:]
@@ -75,9 +79,7 @@ def test_equivalence_forecast(data, config, horizon, close_figures):
     if model is ETSModel:
         fit_kwarg["disp"] = False
     res = mod.fit(**fit_kwarg)
-    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(
-        fit_kwargs=fit_kwarg
-    )
+    stlf = STLForecast(data, model, model_kwargs=kwargs).fit(fit_kwargs=fit_kwarg)
 
     seasonal = np.asarray(stl_fit.seasonal)[-12:]
     seasonal = np.tile(seasonal, 1 + horizon // 12)
@@ -157,7 +159,9 @@ def test_get_prediction(sunspots):
     stlf_model = STLForecast(
         sunspots, model=ARIMA, model_kwargs={"order": (2, 2, 0)}, period=11
     )
-    stlf_res = stlf_model.fit()
+    # The default optimizer may stop short of convergence on some platforms
+    with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optimization"):
+        stlf_res = stlf_model.fit()
     pred = stlf_res.get_prediction()
     assert pred.predicted_mean.shape == (309,)
     assert pred.var_pred_mean.shape == (309,)

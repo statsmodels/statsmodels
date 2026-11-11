@@ -1,8 +1,8 @@
 """
 Test functions for models.robust.scale
 """
-
-import os
+import itertools
+from pathlib import Path
 
 import numpy as np
 from numpy.random import standard_normal
@@ -17,10 +17,10 @@ from statsmodels.robust import scale
 import statsmodels.robust.norms as rnorms
 from statsmodels.robust.scale import mad, scale_tau
 
-cur_dir = os.path.abspath(os.path.dirname(__file__))
+cur_dir = Path(__file__).parent.resolve()
 
 file_name = "hbk.csv"
-file_path = os.path.join(cur_dir, "results", file_name)
+file_path = Path(cur_dir).joinpath("results", file_name)
 dta_hbk = pd.read_csv(file_path)
 
 
@@ -88,12 +88,8 @@ class TestChem:
         n = scale.norms.HuberT()
         n.t = 1.5
         h = scale.Huber(norm=n)
-        assert_almost_equal(
-            scale.huber(self.chem)[0], h(self.chem)[0], DECIMAL
-        )
-        assert_almost_equal(
-            scale.huber(self.chem)[1], h(self.chem)[1], DECIMAL
-        )
+        assert_almost_equal(scale.huber(self.chem)[0], h(self.chem)[0], DECIMAL)
+        assert_almost_equal(scale.huber(self.chem)[1], h(self.chem)[1], DECIMAL)
 
     def test_huber_Hampel(self):
         hh = scale.Huber(norm=scale.norms.Hampel())
@@ -104,8 +100,8 @@ class TestChem:
 class TestMad:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10))
 
     def test_mad(self):
         m = scale.mad(self.X)
@@ -134,8 +130,8 @@ class TestMad:
 class TestMadAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
 
     def test_axis0(self):
         m = scale.mad(self.X, axis=0)
@@ -157,8 +153,8 @@ class TestMadAxes:
 class TestIqr:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10))
 
     def test_iqr(self):
         m = scale.iqr(self.X)
@@ -179,8 +175,8 @@ class TestIqr:
 class TestIqrAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
 
     def test_axis0(self):
         m = scale.iqr(self.X, axis=0)
@@ -202,10 +198,10 @@ class TestIqrAxes:
 class TestQn:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
+        rs = np.random.RandomState(54321)
         cls.normal = standard_normal(size=40)
         cls.range = np.arange(0, 40)
-        cls.exponential = np.random.exponential(size=40)
+        cls.exponential = rs.exponential(size=40)
         cls.stackloss = sm.datasets.stackloss.load_pandas().data
         cls.sunspot = sm.datasets.sunspots.load_pandas().data.SUNACTIVITY
 
@@ -231,8 +227,21 @@ class TestQn:
             DECIMAL,
         )
         # sunspot.year from datasets in R only goes up to 289
-        assert_almost_equal(
-            scale.qn_scale(self.sunspot[0:289]), 33.50901, DECIMAL
+        assert_almost_equal(scale.qn_scale(self.sunspot[0:289]), 33.50901, DECIMAL)
+
+    @pytest.mark.parametrize("n", [46341, 72000])
+    def test_qn_large_n(self, n):
+        # n * (n + 1) // 2 and n ** 2 pass 2 ** 31 - 1 at n = 46341, which
+        # used to break the counters in _qn. Qn of arange(n) is exact and
+        # cheap to state: the distance d occurs n - d times among the pairs,
+        # so the k-th order statistic of the distances is found by counting.
+        h = n // 2 + 1
+        k = h * (h - 1) // 2
+        counts = np.cumsum(n - np.arange(1, n, dtype=np.int64))
+        d = np.searchsorted(counts, k) + 1
+        assert_allclose(
+            scale.qn_scale(np.arange(n, dtype=float)),
+            scale.ONE_OVER_SQRT2_GAUSSIAN_5_8 * d,
         )
 
     def test_qn_empty(self):
@@ -246,12 +255,71 @@ class TestQn:
         with pytest.raises(ValueError):
             scale.iqr(empty)
 
+    def test_qn_too_few_observations(self):
+        # Qn needs at least 2 observations, empty input is nan, see above
+        with pytest.raises(ValueError, match="at least 2 observations"):
+            scale.qn_scale(np.array([1.0]))
+        with pytest.raises(ValueError, match="at least 2 observations"):
+            scale.qn_scale(np.array([[1.0, 2.0, 3.0]]), axis=0)
+        with pytest.raises(ValueError, match="at least 2 observations"):
+            scale.qn_scale(np.array([[1.0], [2.0]]), axis=1)
+        # two observations are enough: c * |a[1] - a[0]|
+        assert_allclose(
+            scale.qn_scale(np.array([1.0, 3.0])),
+            2 * scale.ONE_OVER_SQRT2_GAUSSIAN_5_8,
+        )
+
+
+    def test_qn_ties_exhaustive(self):
+        # all multisets of small samples from a small alphabet, which covers
+        # every pattern of ties of the differences
+        for n_values, n_max in [(3, 9), (4, 8), (5, 7)]:
+            for n in range(2, n_max + 1):
+                for values in itertools.combinations_with_replacement(
+                    range(n_values), n
+                ):
+                    x = np.array(values, dtype=float)
+                    assert_allclose(
+                        scale.qn_scale(x), scale._qn_naive(x), rtol=1e-12
+                    )
+
+    @pytest.mark.parametrize("bad", [np.nan, np.inf, -np.inf])
+    def test_qn_nonfinite(self, bad):
+        # The result for NaN was a finite value in most cases, and for
+        # infinite values it was a wrong value or the RuntimeError of the
+        # guard of the candidate set of _qn.
+        rng = np.random.default_rng(8446)
+        for n in range(2, 30):
+            for position in (0, n // 2, n - 1):
+                x = rng.standard_normal(n)
+                x[position] = bad
+                assert np.isnan(scale.qn_scale(x))
+        x = np.array([-0.883, 0.405, -2.219, -0.481, np.inf, -1.118])
+        assert np.isnan(scale.qn_scale(x))
+        x = np.array([0.3, 0.54, np.nan, 0.47])
+        assert np.isnan(scale.qn_scale(x))
+        # two infinite values of the same sign
+        assert np.isnan(scale.qn_scale(np.array([np.inf, np.inf, 1.0, 2.0, 3.0])))
+
+    def test_qn_nonfinite_axis(self):
+        # only the columns with a value that is not finite are nan
+        rng = np.random.default_rng(8446)
+        x = rng.standard_normal((20, 4))
+        x[3, 1] = np.nan
+        x[7, 3] = np.inf
+        res = scale.qn_scale(x)
+        assert_equal(np.isnan(res), [False, True, False, True])
+        for j in (0, 2):
+            assert_allclose(res[j], scale._qn_naive(x[:, j]), rtol=1e-12)
+        res = scale.qn_scale(x.T, axis=1)
+        assert_equal(np.isnan(res), [False, True, False, True])
+
 
 class TestQnAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
 
     def test_axis0(self):
         m = scale.qn_scale(self.X, axis=0)
@@ -273,8 +341,8 @@ class TestQnAxes:
 class TestHuber:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10))
 
     def test_huber_result_shape(self):
         h = scale.Huber(maxiter=100)
@@ -285,8 +353,8 @@ class TestHuber:
 class TestHuberAxes:
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.X = standard_normal((40, 10, 30))
+        rs = np.random.RandomState(54321)
+        cls.X = rs.standard_normal((40, 10, 30))
         cls.h = scale.Huber(maxiter=100, tol=1.0e-05)
 
     def test_default(self):
@@ -338,9 +406,10 @@ def test_tau_scale1():
 
 def test_tau_scale2():
     import pandas as pd
-    cur_dir = os.path.abspath(os.path.dirname(__file__))
+
+    cur_dir = Path(__file__).parent.resolve()
     file_name = "hbk.csv"
-    file_path = os.path.join(cur_dir, "results", file_name)
+    file_path = Path(cur_dir).joinpath("results", file_name)
     dta_hbk = pd.read_csv(file_path)
 
     # from R robustbase
@@ -353,12 +422,14 @@ def test_tau_scale2():
     # > scaleTau2(hbk[,4], mu.too = TRUE, consistency = FALSE)
     # [1] -0.0443521228044396  0.8343974588144727
 
-    res2 = np.array([
-        [1.55545438650723, 1.93522607240954],
-        [1.87924505206092, 1.72121373687210],
-        [1.74163126730520, 1.81045973143159],
-        [-0.0443521228044396, 0.8343974588144727]
-        ])
+    res2 = np.array(
+        [
+            [1.55545438650723, 1.93522607240954],
+            [1.87924505206092, 1.72121373687210],
+            [1.74163126730520, 1.81045973143159],
+            [-0.0443521228044396, 0.8343974588144727],
+        ]
+    )
     res1 = scale_tau(dta_hbk, normalize=False, ddof=0)
     assert_allclose(np.asarray(res1).T, res2, rtol=1e-13)
 
@@ -371,21 +442,23 @@ def test_tau_scale2():
     # > scaleTau2(hbk[,4], mu.too = TRUE, consistency = TRUE)
     # [1] -0.0443521228044396  0.8676986653327993
 
-    res2 = np.array([
-        [1.55545438650723, 2.01246188181448],
-        [1.87924505206092, 1.78990821036102],
-        [1.74163126730520, 1.88271605576794],
-        [-0.0443521228044396, 0.8676986653327993]
-        ])
+    res2 = np.array(
+        [
+            [1.55545438650723, 2.01246188181448],
+            [1.87924505206092, 1.78990821036102],
+            [1.74163126730520, 1.88271605576794],
+            [-0.0443521228044396, 0.8676986653327993],
+        ]
+    )
     res1 = scale_tau(dta_hbk, ddof=0)
     assert_allclose(np.asarray(res1).T, res2, rtol=1e-13)
 
 
 def test_scale_iter():
     # regression test, and approximately correct
-    np.random.seed(54321)
+    rs = np.random.RandomState(54321)
     v = np.array([1, 0.5, 0.4])
-    x = standard_normal((40, 3)) * np.sqrt(v)
+    x = rs.standard_normal((40, 3)) * np.sqrt(v)
     x[:2] = [2, 2, 2]
 
     x = x[:, 0]  # 1d only ?
@@ -413,12 +486,12 @@ def test_scale_iter():
     assert_allclose(s_biw, 1.0326176662, rtol=1e-9)  # regression test number
 
 
-class TestMScale():
+class TestMScale:
 
     def test_huber_equivalence(self):
-        np.random.seed(54321)
+        rs = np.random.RandomState(54321)
         nobs = 50
-        x = 1.5 * standard_normal(nobs)
+        x = 1.5 * rs.standard_normal(nobs)
 
         # test equivalence of HuberScale and TrimmedMean M-scale
         chi_tm = rnorms.TrimmedMean(c=2.5)
@@ -439,23 +512,23 @@ class TestMScale():
         scale_bias = 0.19959963130721095
         mscale_biw = scale.MScale(chi, scale_bias)
         scale0 = mscale_biw(ry)
-        scale1 = 0.817260483784376   # from R RobStatTM scaleM
+        scale1 = 0.817260483784376  # from R RobStatTM scaleM
         assert_allclose(scale0, scale1, rtol=1e-6)
 
 
 def test_scale_trimmed_approx():
     scale_trimmed = scale.scale_trimmed  # shorthand
     nobs = 500
-    np.random.seed(965578)
-    x = 2*np.random.randn(nobs)
+    rs = np.random.RandomState(965578)
+    x = 2 * rs.randn(nobs)
     x[:10] = 60
 
     alpha = 0.2
     res = scale_trimmed(x, alpha)
     assert_allclose(res.scale, 2, rtol=1e-1)
-    s = scale_trimmed(np.column_stack((x, 2*x)), alpha).scale
+    s = scale_trimmed(np.column_stack((x, 2 * x)), alpha).scale
     assert_allclose(s, [2, 4], rtol=1e-1)
-    s = scale_trimmed(np.column_stack((x, 2*x)).T, alpha, axis=1).scale
+    s = scale_trimmed(np.column_stack((x, 2 * x)).T, alpha, axis=1).scale
     assert_allclose(s, [2, 4], rtol=1e-1)
     s = scale_trimmed(np.column_stack((x, x)).T, alpha, axis=None).scale
     assert_allclose(s, [2], rtol=1e-1)
@@ -464,3 +537,31 @@ def test_scale_trimmed_approx():
     assert_allclose(s2, s, rtol=1e-1)
     s = scale_trimmed(x, alpha, distr=stats.t, distargs=(100,)).scale
     assert_allclose(s, [2], rtol=1e-1)
+
+    # "med" is a documented alias for "median"
+    res_med = scale_trimmed(x, alpha, center="med")
+    res_median = scale_trimmed(x, alpha, center="median")
+    assert_allclose(res_med.scale, res_median.scale)
+
+    # center may also be array_like, not just one of the 4 string options
+    res_num = scale_trimmed(x, alpha, center=0.0)
+    assert res_num.center_type == "user"
+
+    with pytest.raises(ValueError, match="center"):
+        scale_trimmed(x, alpha, center="not-a-center")
+
+
+def test_scale_trimmed_distarge():
+    nobs = 500
+    rs = np.random.RandomState(965578)
+    x = 2 * rs.randn(nobs)
+    x[:10] = 60
+
+    alpha = 0.2
+    res = scale.scale_trimmed(x, alpha)
+    assert_allclose(res.scale, 2, rtol=1e-1)
+    distr = stats.norm
+    res_distr = scale.scale_trimmed(x, alpha, distr=distr)
+    assert_allclose(res_distr.scale, res.scale)
+    res_distargs = scale.scale_trimmed(x, alpha, distargs=())
+    assert_allclose(res_distargs.scale, res.scale)

@@ -9,17 +9,18 @@ License: BSD-3
 
 from statsmodels.compat.python import lzip
 
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import ClassVar, NamedTuple
 
 import numpy as np
 import pandas as pd
 from scipy import optimize, stats
 
-from statsmodels.stats.base import AllPairsResults, HolderTuple
+from statsmodels.stats.base import AllPairsResults, LimitedIterationMixin
 from statsmodels.stats.weightstats import _zstat_generic2
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tools.testing import Holder
-from statsmodels.tools.validation import array_like
+from statsmodels.tools.validation import array_like, float_like, string_like
 
 FLOAT_INFO = np.finfo(float)
 
@@ -36,8 +37,8 @@ def _bound_proportion_confint(
         Callable function to use as the objective of the search
     qi : float
         The empirical success rate
-    lower : bool
-        Whether to fund a lower bound for the left side of the CI
+    lower : bool, optional
+        Whether to find a lower bound for the left side of the CI
 
     Returns
     -------
@@ -75,7 +76,7 @@ def _bisection_search_conservative(
         Lower bound
     ub : float
         Upper bound
-    steps : int
+    steps : int, optional
         Number of steps to use in the bisection
 
     Returns
@@ -124,9 +125,9 @@ def proportion_confint(
     nobs : {int or float, array_like}
         total number of trials.  Arrays must contain integer values if method
         is "binom_test".
-    alpha : float
+    alpha : float, optional
         Significance level, default 0.05. Must be in (0, 1)
-    method : {"normal", "agresti_coull", "beta", "wilson", "binom_test"}
+    method : {"normal", "agresti_coull", "beta", "wilson", "jeffreys", "binom_test"}, optional
         default: "normal"
         method to use for confidence interval. Supported methods:
 
@@ -137,13 +138,13 @@ def proportion_confint(
          - `jeffreys` : Jeffreys Bayesian Interval
          - `binom_test` : Numerical inversion of binom_test
 
-    alternative : {"two-sided", "larger", "smaller"}
+    alternative : {"two-sided", "larger", "smaller"}, optional
         default: "two-sided"
         specifies whether to calculate a two-sided or one-sided confidence interval.
 
     Returns
     -------
-    ci_low, ci_upp : {float, ndarray, Series DataFrame}
+    ci_low, ci_upp : {float, ndarray, Series, DataFrame}
         larger and smaller confidence level with coverage (approximately) 1-alpha.
         When a pandas object is returned, then the index is taken from `count`.
         When side is not "two-sided", lower or upper bound is set to 0 or 1 respectively.
@@ -160,9 +161,11 @@ def proportion_confint(
     1 - alpha/2 in the case of "beta".
 
     The confidence intervals are clipped to be in the [0, 1] interval in the
-    case of "normal" and "agresti_coull".
+    case of "normal", "agresti_coull" and "wilson". The "wilson" interval is
+    contained in [0, 1] mathematically, but floating point error could
+    otherwise produce bounds slightly outside of it.
 
-    Method "binom_test" directly inverts the binomial test in scipy.stats.
+    Method "binom_test" directly inverts the binomial test in scipy.stats,
     which has discrete steps.
 
     TODO: binom_test intervals raise an exception in small samples if one
@@ -178,8 +181,16 @@ def proportion_confint(
     """
     is_scalar = np.isscalar(count) and np.isscalar(nobs)
     is_pandas = isinstance(count, (pd.Series, pd.DataFrame))
-    count_a = array_like(count, "count", optional=False, ndim=None)
-    nobs_a = array_like(nobs, "nobs", optional=False, ndim=None)
+    count_a = array_like(count, "count", optional=False, mindim=None)
+    nobs_a = array_like(nobs, "nobs", optional=False, mindim=None)
+    if np.any(count_a < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs_a <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count_a > nobs_a):
+        raise ValueError("count must not exceed nobs")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
 
     def _check(x: np.ndarray, name: str) -> np.ndarray:
         if np.issubdtype(x.dtype, np.integer):
@@ -198,11 +209,13 @@ def proportion_confint(
 
     q_ = count_a / nobs_a
 
+    alternative = string_like(
+        alternative, "alternative", options=("two-sided", "larger", "smaller"),
+        lower=False,
+    )
     if alternative == "two-sided":
         if method != "binom_test":
             alpha = alpha / 2.0
-    elif alternative not in ["larger", "smaller"]:
-        raise NotImplementedError(f"alternative {alternative} is not available")
 
     if method == "normal":
         std_ = np.sqrt(q_ * (1 - q_) / nobs_a)
@@ -212,15 +225,8 @@ def proportion_confint(
     elif method == "binom_test" and alternative == "two-sided":
 
         def func_factory(count: int, nobs: int) -> Callable[[float], float]:
-            if hasattr(stats, "binomtest"):
-
-                def func(qi):
-                    return stats.binomtest(count, nobs, p=qi).pvalue - alpha
-
-            else:
-                # Remove after min SciPy >= 1.7
-                def func(qi):
-                    return stats.binom_test(count, nobs, p=qi) - alpha
+            def func(qi):
+                return stats.binomtest(count, nobs, p=qi).pvalue - alpha
 
             return func
 
@@ -232,12 +238,13 @@ def proportion_confint(
             # Enforce symmetry
             reverse = False
             _q = q_.flat[index]
+            c_work = c
             if c > n // 2:
-                c = n - c
+                c_work = n - c
                 reverse = True
                 _q = 1 - _q
-            func = func_factory(c, n)
-            if c == 0:
+            func = func_factory(c_work, n)
+            if c_work == 0:
                 ci_low.flat[index] = 0.0
             else:
                 lower_bnd = _bound_proportion_confint(func, _q, lower=True)
@@ -250,7 +257,7 @@ def proportion_confint(
                         new_lb = val - (val - lower_bnd) / 2**power
                     val, _ = _bisection_search_conservative(func, new_lb, _q)
                 ci_low.flat[index] = val
-            if c == n:
+            if c_work == n:
                 ci_upp.flat[index] = 1.0
             else:
                 upper_bnd = _bound_proportion_confint(func, _q, lower=False)
@@ -301,7 +308,7 @@ def proportion_confint(
         ci_upp = stats.beta.isf(alpha, count_a + 0.5, nobs_a - count_a + 0.5)
     else:
         raise NotImplementedError(f"method {method} is not available")
-    if method in ["normal", "agresti_coull"]:
+    if method in ["normal", "agresti_coull", "wilson"]:
         ci_low = np.clip(ci_low, 0, 1)
         ci_upp = np.clip(ci_upp, 0, 1)
     if is_pandas:
@@ -319,7 +326,7 @@ def proportion_confint(
 
 def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
     """
-    Confidence intervals for multinomial proportions.
+    Confidence intervals for multinomial proportions
 
     Parameters
     ----------
@@ -348,7 +355,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
         If `alpha` is not in `(0, 1)` (bounds excluded), or if the values in
         `counts` are not all positive or null.
     NotImplementedError
-        If `method` is not kown.
+        If `method` is not known.
     Exception
         When ``method == 'sison-glaz'``, if for some reason `c` cannot be
         computed; this signals a bug and should be reported.
@@ -369,7 +376,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
     their paper, Sison & Glaz demo their method with at least 7 categories, so
     ``len(counts) >= 7`` with all values in `counts` at or above 5 can be used
     as a rule of thumb for the validity of this method. This method is less
-    conservative than the `goodman` method (i.e. it will yield confidence
+    conservative than the `goodman` method (i.e., it will yield confidence
     intervals closer to the desired significance level), but produces
     confidence intervals of uniform width over all categories (except when the
     intervals reach 0 or 1, in which case they are truncated), which makes it
@@ -402,7 +409,8 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
            small counts in a large number of cells," Journal of Statistical
            Software, Vol. 5, No. 6, 2000, pp. 1-24.
     """
-    if alpha <= 0 or alpha >= 1:
+    alpha = float_like(alpha, "alpha")
+    if not 0 < alpha < 1:
         raise ValueError("alpha must be in (0, 1), bounds excluded")
     counts = np.array(counts, dtype=float)
     if (counts < 0).any():
@@ -422,8 +430,19 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
         # Define a few functions we'll use a lot.
         def poisson_interval(interval, p):
             """
-            Compute P(b <= Z <= a) where Z ~ Poisson(p) and
-            `interval = (b, a)`.
+            Compute P(b <= Z <= a) where Z ~ Poisson(p)
+
+            Parameters
+            ----------
+            interval : tuple
+                The bounds ``(b, a)`` of the interval.
+            p : float
+                The Poisson parameter.
+
+            Returns
+            -------
+            float
+                The probability that Z falls in ``interval``.
             """
             b, a = interval
             prob = stats.poisson.cdf(a, p) - stats.poisson.cdf(b - 1, p)
@@ -431,8 +450,22 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
 
         def truncated_poisson_factorial_moment(interval, r, p):
             """
-            Compute mu_r, the r-th factorial moment of a poisson random
-            variable of parameter `p` truncated to `interval = (b, a)`.
+            Compute mu_r, the r-th factorial moment of a truncated Poisson
+
+            Parameters
+            ----------
+            interval : tuple
+                The bounds ``(b, a)`` to which the Poisson variable of
+                parameter `p` is truncated.
+            r : int
+                The order of the factorial moment.
+            p : float
+                The Poisson parameter.
+
+            Returns
+            -------
+            float
+                The r-th factorial moment mu_r.
             """
             b, a = interval
             return p**r * (
@@ -448,9 +481,20 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
 
         def edgeworth(intervals):
             """
-            Compute the Edgeworth expansion term of Sison & Glaz's formula
-            (1) (approximated probability for multinomial proportions in a
-            given box).
+            Compute the Edgeworth expansion term of Sison & Glaz's formula (1)
+
+            Approximated probability for multinomial proportions in a
+            given box.
+
+            Parameters
+            ----------
+            intervals : list of tuple
+                The per-category intervals ``(b, a)`` defining the box.
+
+            Returns
+            -------
+            float
+                The Edgeworth expansion term.
             """
             # Compute means and central moments of the truncated poisson
             # variables.
@@ -458,7 +502,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
                 np.array(
                     [
                         truncated_poisson_factorial_moment(interval, r, p)
-                        for (interval, p) in zip(intervals, counts)
+                        for (interval, p) in zip(intervals, counts, strict=True)
                     ]
                 )
                 for r in range(1, 5)
@@ -492,14 +536,26 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
         def approximated_multinomial_interval(intervals):
             """
             Compute approximated probability for Multinomial(n, proportions)
-            to be in `intervals` (Sison & Glaz's formula (1)).
+
+            The probability that Multinomial(n, proportions) falls in
+            `intervals` (Sison & Glaz's formula (1)).
+
+            Parameters
+            ----------
+            intervals : list of tuple
+                The per-category intervals ``(b, a)`` defining the box.
+
+            Returns
+            -------
+            float
+                The approximated probability.
             """
             return np.exp(
                 np.sum(
                     np.log(
                         [
                             poisson_interval(interval, p)
-                            for (interval, p) in zip(intervals, counts)
+                            for (interval, p) in zip(intervals, counts, strict=True)
                         ]
                     )
                 )
@@ -509,8 +565,18 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
 
         def nu(c):
             """
-            Compute interval coverage for a given `c` (Sison & Glaz's
-            formula (7)).
+            Compute interval coverage for a given `c` (Sison & Glaz's formula (7))
+
+            Parameters
+            ----------
+            c : float
+                The half-width added to and subtracted from each observed
+                count to form the per-category interval.
+
+            Returns
+            -------
+            float
+                The approximated interval coverage.
             """
             return approximated_multinomial_interval(
                 [
@@ -520,10 +586,18 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
             )
 
         # Find the value of `c` that will give us the confidence intervals
-        # (solving nu(c) <= 1 - alpha < nu(c + 1).
-        c = 1.0
-        nuc = nu(c)
-        nucp1 = nu(c + 1)
+        # (solving nu(c) <= 1 - alpha < nu(c + 1)).
+        # The coverage of the degenerate box (`c` = 0) is taken to be zero,
+        # following the reference implementation in R's MultinomialCI, so
+        # that `c` = 0 is a valid solution when nu(1) already exceeds
+        # 1 - alpha (possible for very small `n`).  Once `c` >= `n`, the box
+        # [count - c, count + c] contains the full support {0, ..., n} of
+        # every cell, so its coverage is exactly one; the Edgeworth-based
+        # approximation `nu` is not used there, as it can plateau below
+        # 1 - alpha for small or sparse counts (see GH#9587).
+        c = 0.0
+        nuc = 0.0
+        nucp1 = nu(c + 1) if c + 1 < n else 1.0
         while not (nuc <= (1 - alpha) < nucp1):
             if c > n:
                 raise Exception(
@@ -532,7 +606,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
                 )
             c += 1
             nuc = nucp1
-            nucp1 = nu(c + 1)
+            nucp1 = nu(c + 1) if c + 1 < n else 1.0
 
         # Compute gamma and the corresponding confidence intervals.
         g = (1 - alpha - nuc) / (nucp1 - nuc)
@@ -540,7 +614,7 @@ def multinomial_proportions_confint(counts, alpha=0.05, method="goodman"):
         ci_upper = np.minimum(proportions + (c + 2 * g) / n, 1)
         region = np.array([ci_lower, ci_upper]).T
     else:
-        raise NotImplementedError('method "%s" is not available' % method)
+        raise NotImplementedError(f'method "{method}" is not available')
     return region
 
 
@@ -550,31 +624,79 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05, method="n
 
     Parameters
     ----------
-    proportion : float in (0, 1)
-        proportion or quantile
-    half_length : float in (0, 1)
-        desired half length of the confidence interval
-    alpha : float in (0, 1)
-        significance level, default 0.05,
-        coverage of the two-sided interval is (approximately) ``1 - alpha``
-    method : str in ['normal']
-        method to use for confidence interval,
-        currently only normal approximation
+    proportion : float or array_like in [0, 1]
+        Proportion or quantile. All values have to be in the closed interval
+        [0, 1].
+    half_length : float or array_like, positive
+        Desired half length of the confidence interval. All values have to
+        be positive.
+    alpha : float or array_like in (0, 1), optional
+        Significance level, default 0.05. Coverage of the two-sided interval
+        is (approximately) ``1 - alpha``. All values have to be in the open
+        interval (0, 1).
+    method : {"normal"}, optional
+        Method to use for the confidence interval. Currently only the normal
+        approximation is available.
 
     Returns
     -------
-    n : float
-        sample size to get the desired half length of the confidence interval
+    n : float, ndarray, Series or DataFrame
+        Sample size to get the desired half length of the confidence
+        interval. The sample size is not rounded to an integer, and it is 0
+        if ``proportion`` is 0 or 1. The result is a float if all arguments
+        are scalars, and an ndarray if the arguments are array_like. It is a
+        pandas Series or DataFrame if ``proportion`` or ``half_length`` is
+        one, in which case the result has the index of that argument.
+
+    Raises
+    ------
+    ValueError
+        If a value of ``alpha`` is not in (0, 1), a value of ``half_length``
+        is not positive, or a value of ``proportion`` is not in [0, 1]. The
+        check also rejects nan. NumPy raises a ``ValueError`` if an argument,
+        for example a string, cannot be converted to float.
+    TypeError
+        If ``proportion``, ``half_length`` or ``alpha`` is None.
+    NotImplementedError
+        If ``method`` is not "normal".
 
     Notes
     -----
-    this is mainly to store the formula.
-    possible application: number of replications in bootstrap samples
+    This is mainly to store the formula. For the normal approximation the
+    sample size is ``proportion * (1 - proportion) / (half_length / z) ** 2``,
+    where ``z`` is the ``1 - alpha / 2`` quantile of the standard normal
+    distribution.
 
+    A possible application is the number of replications in bootstrap
+    samples.
+
+    .. versionchanged:: 0.15.1
+
+       Values of ``alpha``, ``half_length`` and ``proportion`` that are out of
+       range or nan raise a ``ValueError``. Previously the function returned
+       ``inf``, ``nan`` or a meaningless, possibly negative, sample size.
+       Lists are accepted for the three arguments.
     """
-    q_ = proportion
+    # array_like converts lists and raises a TypeError for None
+    proportion_a = array_like(proportion, "proportion", mindim=None)
+    half_length_a = array_like(half_length, "half_length", mindim=None)
+    alpha_a = array_like(alpha, "alpha", mindim=None)
+    # the np.all form is vector safe and rejects nan
+    if not np.all(np.greater(alpha_a, 0) & np.less(alpha_a, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater(half_length_a, 0)):
+        raise ValueError(f"half_length must be positive, got {half_length}")
+    if not np.all(np.greater_equal(proportion_a, 0) & np.less_equal(proportion_a, 1)):
+        raise ValueError(f"proportion must be in the range [0, 1], got {proportion}")
+
+    # keep pandas objects in the computation so that the result is a pandas
+    # object with the index of the input
+    pandas_types = (pd.Series, pd.DataFrame)
+    q_ = proportion if isinstance(proportion, pandas_types) else proportion_a
+    if isinstance(half_length, pandas_types):
+        half_length_a = half_length
     if method == "normal":
-        n = q_ * (1 - q_) / (half_length / stats.norm.isf(alpha / 2.0)) ** 2
+        n = q_ * (1 - q_) / (half_length_a / stats.norm.isf(alpha_a / 2.0)) ** 2
     else:
         raise NotImplementedError('only "normal" is available')
 
@@ -591,6 +713,8 @@ def proportion_effectsize(prop1, prop2, method="normal"):
     ----------
     prop1, prop2 : float or array_like
         The proportion value(s).
+    method : str, optional
+        Effect size method to use, currently only 'normal' is implemented.
 
     Returns
     -------
@@ -615,10 +739,13 @@ def proportion_effectsize(prop1, prop2, method="normal"):
     0.20135792079033088
     >>> sm.stats.proportion_effectsize([0.3, 0.4, 0.5], 0.4)
     array([-0.21015893,  0.        ,  0.20135792])
-
     """
     if method != "normal":
         raise ValueError('only "normal" is implemented')
+    if np.any(np.asarray(prop1) < 0) or np.any(np.asarray(prop1) > 1):
+        raise ValueError("prop1 must be in the range [0, 1]")
+    if np.any(np.asarray(prop2) < 0) or np.any(np.asarray(prop2) > 1):
+        raise ValueError("prop2 must be in the range [0, 1]")
 
     es = 2 * (np.arcsin(np.sqrt(prop1)) - np.arcsin(np.sqrt(prop2)))
     return es
@@ -669,7 +796,7 @@ def _power_ztost(
     This includes options to adjust the normal approximation and can use
     the binomial to evaluate the probability of the rejection region
 
-    see power_ztost_prob for a description of the options
+    see power_ztost_prop for a description of the options
     """
     # TODO: refactor structure, separate norm and binom better
     if not isinstance(continuity, tuple):
@@ -715,19 +842,22 @@ def binom_tost(count, nobs, low, upp):
     ----------
     count : {int, array_like}
         the number of successes in nobs trials.
-    nobs : int
+    nobs : int or array_like
         the number of trials or observations.
-    low, upp : floats
+    low, upp : float or array_like
         lower and upper limit of equivalence region
 
     Returns
     -------
-    pvalue : float
+    pvalue : float or ndarray
         p-value of equivalence test
-    pval_low, pval_upp : floats
+    pval_low, pval_upp : float or ndarray
         p-values of lower and upper one-sided tests
-
     """
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     # binom_test_stat only returns pval
     tt1 = binom_test(count, nobs, alternative="larger", prop=low)
     tt2 = binom_test(count, nobs, alternative="smaller", prop=upp)
@@ -749,17 +879,26 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
 
     Parameters
     ----------
-    low, upp : floats
+    low, upp : float or array_like
         lower and upper limit of equivalence region
-    nobs : int
+    nobs : int or array_like
         the number of trials or observations.
+    alpha : float or array_like, optional
+        Significance level of the test, default 0.05.
 
     Returns
     -------
     x_low, x_upp : float
         lower and upper bound of rejection region
-
     """
+    if not np.all(np.less(low, upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater(nobs, 0)):
+        raise ValueError(f"nobs must be positive, got {nobs}")
     x_low = stats.binom.isf(alpha, nobs, low) + 1
     x_upp = stats.binom.ppf(alpha, nobs, upp) - 1
     return x_low, x_upp
@@ -773,35 +912,100 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative="two-sided")
 
     Parameters
     ----------
-    value : float
-        proportion under the Null hypothesis
-    nobs : int
+    value : float or array_like
+        proportion under the Null hypothesis, `0 <= value <= 1`.
+    nobs : int or array_like
         the number of trials or observations.
+    alpha : float or array_like, optional
+        Significance level of the test, default 0.05.
+    alternative : {'two-sided', 'smaller', 'larger'}, optional
+        alternative hypothesis, which can be two-sided or either one of the
+        one-sided tests.
 
     Returns
     -------
-    x_low, x_upp : int
-        lower and upper bound of rejection region
-    """
-    if alternative in ["2s", "two-sided"]:
-        alternative = "2s"  # normalize alternative name
-        alpha = alpha / 2
+    x_low, x_upp : int or ndarray of int
+        lower and upper bound of rejection region. The bounds are integers,
+        and arrays with the shape that ``value``, ``nobs`` and ``alpha``
+        broadcast to if any of them is an array.
 
-    if alternative in ["2s", "smaller"]:
-        x_low = stats.binom.ppf(alpha, nobs, value) - 1
+    Raises
+    ------
+    ValueError
+        If ``value`` is not in [0, 1], ``alpha`` is not in (0, 1), or
+        ``nobs`` is not a positive integer. This includes NaN values.
+
+    See Also
+    --------
+    binom_test
+        Exact binomial test for one sample proportion.
+    binom_tost_reject_interval
+        Rejection region of the exact equivalence test.
+
+    Notes
+    -----
+    For the two-sided alternative, the null hypothesis is rejected if and only
+    if ``count <= x_low`` or ``count >= x_upp``. The region is equal-tailed,
+    the probability of each tail is at most ``alpha / 2`` under the null
+    hypothesis. It differs in general from the rejection region of the
+    two-sided test in :func:`binom_test`, which is based on the probabilities
+    of the outcomes, as in ``scipy.stats.binomtest``.
+
+    For the one-sided alternatives, the null hypothesis is rejected if and
+    only if ``count <= x_low`` for ``'smaller'`` and ``count >= x_upp`` for
+    ``'larger'``. The other bound is not used, it is ``nobs`` for
+    ``'smaller'`` and ``0`` for ``'larger'``, broadcast to the shape of the
+    result.
+
+    .. versionchanged:: 0.15.1
+
+        ``value``, ``nobs`` and ``alpha`` can be array_like. Invalid
+        arguments raise a ``ValueError``.
+    """
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated={"2s": "two-sided"},
+        removed_after="0.16",
+    )
+    if not np.all(np.greater_equal(value, 0) & np.less_equal(value, 1)):
+        raise ValueError(f"value must be in the range [0, 1], got {value}")
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater(nobs, 0)):
+        raise ValueError(f"nobs must be positive, got {nobs}")
+    if not np.all(np.equal(np.mod(nobs, 1), 0)):
+        raise ValueError(f"nobs must be an integer, got {nobs}")
+
+    if alternative == "two-sided":
+        alpha = np.asarray(alpha) / 2
+
+    if alternative in ["two-sided", "smaller"]:
+        x_low = stats.binom.ppf(alpha, nobs, value)
+        # Old SciPy versions return 0 instead of nobs for the degenerate
+        # distribution at value=1
+        x_low = np.where(np.equal(value, 1), nobs, x_low) - 1
     else:
         x_low = 0
-    if alternative in ["2s", "larger"]:
+    if alternative in ["two-sided", "larger"]:
         x_upp = stats.binom.isf(alpha, nobs, value) + 1
     else:
         x_upp = nobs
 
-    return int(x_low), int(x_upp)
+    # the arguments are valid, so the bounds are finite integers
+    shape = np.broadcast(value, nobs, alpha).shape
+    x_low = np.broadcast_to(x_low, shape).astype(np.int64)
+    x_upp = np.broadcast_to(x_upp, shape).astype(np.int64)
+    if shape == ():
+        return int(x_low), int(x_upp)
+    return x_low, x_upp
 
 
 def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
     """
-    Perform a test that the probability of success is p.
+    Perform a test that the probability of success is p
 
     This is an exact, two-sided test of the null hypothesis
     that the probability of success in a Bernoulli experiment
@@ -811,52 +1015,109 @@ def binom_test(count, nobs, prop=0.5, alternative="two-sided"):
     ----------
     count : {int, array_like}
         the number of successes in nobs trials.
-    nobs : int
+    nobs : int or array_like
         the number of trials or observations.
-    prop : float, optional
+    prop : float or array_like, optional
         The probability of success under the null hypothesis,
         `0 <= prop <= 1`. The default value is `prop = 0.5`
-    alternative : str in ['two-sided', 'smaller', 'larger']
+    alternative : {'two-sided', 'smaller', 'larger'}, optional
         alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
 
     Returns
     -------
-    p-value : float
+    p-value : float or ndarray
         The p-value of the hypothesis test
 
     Notes
     -----
     This uses scipy.stats.binom_test for the two-sided alternative.
-    """
 
-    if np.any(prop > 1.0) or np.any(prop < 0.0):
+    The one-sided alternatives broadcast over `count`, `nobs` and `prop`,
+    which is used by `binom_tost` and `test_poisson_2indep`.
+    """
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated={"2s": "two-sided", "l": "larger", "s": "smaller"},
+        removed_after="0.16",
+    )
+
+    if not np.all(np.greater_equal(prop, 0) & np.less_equal(prop, 1)):
         raise ValueError("p must be in range [0,1]")
-    if alternative in ["2s", "two-sided"]:
-        try:
-            pval = stats.binomtest(count, n=nobs, p=prop).pvalue
-        except AttributeError:
-            # Remove after min SciPy >= 1.7
-            pval = stats.binom_test(count, n=nobs, p=prop)
-    elif alternative in ["l", "larger"]:
+    if np.any(np.less(count, 0)):
+        raise ValueError("count must be non-negative")
+    if not np.all(np.greater(nobs, 0)):
+        raise ValueError("nobs must be positive")
+    if np.any(np.greater(count, nobs)):
+        raise ValueError("count must not exceed nobs")
+
+    if alternative == "two-sided":
+        pval = stats.binomtest(count, n=nobs, p=prop).pvalue
+    elif alternative == "larger":
         pval = stats.binom.sf(count - 1, nobs, prop)
-    elif alternative in ["s", "smaller"]:
+    elif alternative == "smaller":
         pval = stats.binom.cdf(count, nobs, prop)
-    else:
-        raise ValueError(
-            "alternative not recognized\nshould be two-sided, larger or smaller"
-        )
     return pval
 
 
 def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
+    """
+    Power for exact binomial equivalence test
+
+    Parameters
+    ----------
+    low, upp : float or array_like
+        lower and upper limit of equivalence region
+    nobs : int or array_like
+        the number of trials or observations.
+    p_alt : float or array_like in [0, 1], optional
+        proportion under the alternative. If p_alt is None, then the
+        midpoint of the equivalence region, ``0.5 * (low + upp)``, is used.
+    alpha : float or array_like in (0, 1), optional
+        significance level of the test
+
+    Returns
+    -------
+    power : float or ndarray
+        statistical power of the equivalence test.
+
+    Raises
+    ------
+    ValueError
+        If ``p_alt`` is not in [0, 1] (this includes NaN values), or if the
+        arguments of :func:`binom_tost_reject_interval` are not valid.
+
+    See Also
+    --------
+    binom_tost_reject_interval
+        Rejection region of the exact equivalence test.
+
+    Notes
+    -----
+    The power is the probability of the rejection region of the exact
+    equivalence test under the alternative. The rejection region can be
+    empty, for example if the equivalence region is narrow relative to the
+    sample size. In this case the power is zero.
+
+    .. versionchanged:: 0.15.1
+
+        The power is zero if the rejection region is empty. Previously a
+        negative value was returned.
+    """
     if p_alt is None:
-        p_alt = 0.5 * (low + upp)
+        p_alt = 0.5 * (np.asarray(low) + np.asarray(upp))
+    elif not np.all(np.greater_equal(p_alt, 0) & np.less_equal(p_alt, 1)):
+        raise ValueError("p_alt must be in the range [0, 1]")
     x_low, x_upp = binom_tost_reject_interval(low, upp, nobs, alpha=alpha)
     power = stats.binom.cdf(x_upp, nobs, p_alt) - stats.binom.cdf(
         x_low - 1, nobs, p_alt
     )
-    return power
+    # the rejection region is empty if x_low > x_upp, then the difference of
+    # the cdfs is negative and the power is zero
+    return np.maximum(power, 0)
 
 
 def power_ztost_prop(
@@ -876,35 +1137,35 @@ def power_ztost_prop(
 
     Parameters
     ----------
-    low, upp : floats
+    low, upp : float or array_like
         lower and upper limit of equivalence region
-    nobs : int
+    nobs : int or array_like
         number of observations
-    p_alt : float in (0,1)
+    p_alt : float or array_like in (0,1)
         proportion under the alternative
-    alpha : float in (0,1)
+    alpha : float or array_like in (0,1), optional
         significance level of the test
-    dist : str in ['norm', 'binom']
+    dist : str in ['norm', 'binom'], optional
         This defines the distribution to evaluate the power of the test. The
         critical values of the TOST test are always based on the normal
         approximation, but the distribution for the power can be either the
         normal (default) or the binomial (exact) distribution.
-    variance_prop : None or float in (0,1)
+    variance_prop : float in (0,1), optional
         If this is None, then the variances for the two one sided tests are
         based on the proportions equal to the equivalence limits.
         If variance_prop is given, then it is used to calculate the variance
         for the TOST statistics. If this is based on an sample, then the
         estimated proportion can be used.
-    discrete : bool
+    discrete : bool, optional
         If true, then the critical values of the rejection region are converted
         to integers. If dist is "binom", this is automatically assumed.
         If discrete is false, then the TOST critical values are used as
         floating point numbers, and the power is calculated based on the
         rejection region that is not discretized.
-    continuity : bool or float
+    continuity : bool or float, optional
         adjust the rejection region for the normal power probability. This has
-        and effect only if ``dist='norm'``
-    critval_continuity : bool or float
+        an effect only if ``dist='norm'``
+    critval_continuity : bool or float, optional
         If this is non-zero, then the critical values of the tost rejection
         region are adjusted before converting to integers. This affects both
         distributions, ``dist='norm'`` and ``dist='binom'``.
@@ -940,8 +1201,20 @@ def power_ztost_prop(
     ----------
     SAS Manual: Chapter 68: The Power Procedure, Computational Resources
     PASS Chapter 110: Equivalence Tests for One Proportion.
-
     """
+    if not np.all(np.less(low, upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater(nobs, 0)):
+        raise ValueError(f"nobs must be positive, got {nobs}")
+    if p_alt is not None and (
+        np.any(np.asarray(p_alt) < 0) or np.any(np.asarray(p_alt) > 1)
+    ):
+        raise ValueError("p_alt must be in the range [0, 1]")
+
     mean_low = low
     var_low = std_prop(low, nobs) ** 2
     mean_upp = upp
@@ -988,9 +1261,15 @@ def _table_proportion(count, nobs):
     Notes
     -----
     recent scipy has more elaborate contingency table functions
-
     """
     count = np.asarray(count)
+    nobs = np.asarray(nobs)
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count > nobs):
+        raise ValueError("count must not exceed nobs")
     dt = np.promote_types(count.dtype, np.float64)
     count = np.asarray(count, dtype=dt)
     table = np.column_stack((count, nobs - count))
@@ -1012,20 +1291,20 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
     nobs : {int, array_like}
         the number of trials or observations, with the same length as
         count.
-    value : float, array_like or None, optional
+    value : float or array_like, optional
         This is the value of the null hypothesis equal to the proportion in the
         case of a one sample test. In the case of a two-sample test, the
         null hypothesis is that prop[0] - prop[1] = value, where prop is the
         proportion in the two samples. If not provided value = 0 and the null
         is prop[0] = prop[1]
-    alternative : str in ['two-sided', 'smaller', 'larger']
+    alternative : {'two-sided', 'smaller', 'larger'}, optional
         The alternative hypothesis can be either two-sided or one of the one-
         sided tests, smaller means that the alternative hypothesis is
         ``prop < value`` and larger means ``prop > value``. In the two sample
         test, smaller means that the alternative hypothesis is ``p1 < p2`` and
         larger means ``p1 > p2`` where ``p1`` is the proportion of the first
         sample and ``p2`` of the second one.
-    prop_var : False or float in (0, 1)
+    prop_var : False or float in (0, 1), optional
         If prop_var is false, then the variance of the proportion estimate is
         calculated based on the sample proportion. Alternatively, a proportion
         can be specified to calculate this variance. Common use case is to
@@ -1077,12 +1356,36 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
     if nobs.size == 1:
         nobs = nobs * np.ones_like(count)
 
+    if not np.all(np.isfinite(count)):
+        # NaN and inf pass the sign comparisons below and come back as NaN
+        # p-values
+        raise ValueError("count must be finite")
+    if not np.all(np.isfinite(nobs)):
+        raise ValueError("nobs must be finite")
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count > nobs):
+        raise ValueError("count must not exceed nobs")
+
     prop = count * 1.0 / nobs
     k_sample = np.size(prop)
     if value is None:
         if k_sample == 1:
             raise ValueError("value must be provided for a 1-sample test")
         value = 0
+    else:
+        value_arr = np.asarray(value)
+        # 1-sample: value is a proportion; 2-sample: a difference of
+        # proportions. Non-finite or out-of-range values used to produce
+        # silently wrong p-values.
+        lo, hi = (0.0, 1.0) if k_sample == 1 else (-1.0, 1.0)
+        if not np.all(np.isfinite(value_arr)) or np.any(value_arr < lo) or np.any(value_arr > hi):
+            raise ValueError(
+                f"value must be finite and in [{lo}, {hi}] for a "
+                f"{k_sample}-sample test, got {value!r}"
+            )
     if k_sample == 1:
         diff = prop - value
     elif k_sample == 2:
@@ -1095,6 +1398,11 @@ def proportions_ztest(count, nobs, value=None, alternative="two-sided", prop_var
 
     nobs_fact = np.sum(1.0 / nobs)
     if prop_var:
+        prop_var = float_like(prop_var, "prop_var")
+        if not 0 < prop_var < 1:
+            raise ValueError(
+                f"prop_var must be in the range (0, 1), got {prop_var}"
+            )
         p_pooled = prop_var
     var_ = p_pooled * (1 - p_pooled) * nobs_fact
     std_diff = np.sqrt(var_)
@@ -1118,7 +1426,7 @@ def proportions_ztost(count, nobs, low, upp, prop_var="sample"):
         count.
     low, upp : float
         equivalence interval low < prop1 - prop2 < upp
-    prop_var : str or float in (0, 1)
+    prop_var : str or float in (0, 1), optional
         prop_var determines which proportion is used for the calculation
         of the standard deviation of the proportion estimate
         The available options for string are 'sample' (default), 'null' and
@@ -1136,8 +1444,11 @@ def proportions_ztost(count, nobs, low, upp, prop_var="sample"):
     Notes
     -----
     checked only for 1 sample case
-
     """
+    if np.any(np.asarray(low) >= np.asarray(upp)):
+        raise ValueError(
+            f"the equivalence interval must satisfy low < upp, got low={low}, upp={upp}"
+        )
     if prop_var == "limits":
         prop_var_low = low
         prop_var_upp = upp
@@ -1174,7 +1485,12 @@ def proportions_chisquare(count, nobs, value=None):
     nobs : int
         the number of trials or observations, with the same length as
         count.
-    value : None or float or array_like
+    value : float or array_like, optional
+        Value of the proportion under the null hypothesis. If value is
+        given, then all proportions are jointly tested against this value.
+        If value is not given and count and nobs are not scalar, then the
+        null hypothesis is that all samples have the same proportion.
+        value is required for a single sample.
 
     Returns
     -------
@@ -1182,7 +1498,7 @@ def proportions_chisquare(count, nobs, value=None):
         test statistic for the chisquare test
     p-value : float
         p-value for the chisquare test
-    (table, expected)
+    (table, expected) : tuple of ndarray
         table is a (k, 2) contingency table, ``expected`` is the corresponding
         table of counts that are expected under independence with given
         margins
@@ -1201,10 +1517,34 @@ def proportions_chisquare(count, nobs, value=None):
     all proportions are jointly tested against this value. If value is not
     given and count and nobs are not scalar, then the null hypothesis is
     that all samples have the same proportion.
-
     """
+    count = np.asarray(count)
     nobs = np.atleast_1d(nobs)
+    if not np.all(np.isfinite(count)):
+        raise ValueError("count must be finite")
+    if not np.all(np.isfinite(nobs)):
+        raise ValueError("nobs must be finite")
+    if np.any(count < 0):
+        raise ValueError("count must be non-negative")
+    if np.any(nobs <= 0):
+        raise ValueError("nobs must be positive")
+    if np.any(count > nobs):
+        raise ValueError("count must not exceed nobs")
+    if value is not None:
+        value_arr = np.asarray(value)
+        # value scales the expected counts, so non-finite or out-of-range
+        # values used to produce silently wrong chi-square statistics
+        if (
+            not np.all(np.isfinite(value_arr))
+            or np.any(value_arr < 0)
+            or np.any(value_arr > 1)
+        ):
+            raise ValueError(f"value must be finite and in [0, 1], got {value!r}")
     table, expected, n_rows = _table_proportion(count, nobs)
+    if value is None and n_rows == 1:
+        # a single sample has no null hypothesis without value, the statistic
+        # would be 0 and the p-value nan
+        raise ValueError("value must be provided for a 1-sample test")
     if value is not None:
         expected = np.column_stack((nobs * value, nobs * (1 - value)))
         ddof = n_rows - 1
@@ -1229,7 +1569,7 @@ def proportions_chisquare_allpairs(count, nobs, multitest_method="hs"):
         the number of successes in nobs trials.
     nobs : int
         the number of trials or observations.
-    multitest_method : str
+    multitest_method : str, optional
         This chooses the method for the multiple testing p-value correction,
         that is used as default in the results.
         It can be any method that is available in  ``multipletesting``.
@@ -1272,12 +1612,15 @@ def proportions_chisquare_pairscontrol(
         the number of successes in nobs trials.
     nobs : int
         the number of trials or observations.
-    multitest_method : str
+    value : None or float, optional
+        Value of the proportion under the null hypothesis. Not yet
+        implemented.
+    multitest_method : str, optional
         This chooses the method for the multiple testing p-value correction,
         that is used as default in the results.
         It can be any method that is available in  ``multipletesting``.
         The default is Holm-Sidak 'hs'.
-    alternative : str in ['two-sided', 'smaller', 'larger']
+    alternative : {'two-sided', 'smaller', 'larger'}, optional
         alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
 
@@ -1288,15 +1631,21 @@ def proportions_chisquare_pairscontrol(
         attached, and additional methods for using a non-default
         ``multitest_method``.
 
-
     Notes
     -----
     Yates continuity correction is not available.
 
     ``value`` and ``alternative`` options are not yet implemented.
-
     """
-    if (value is not None) or (alternative not in ["two-sided", "2s"]):
+    _ = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided",),
+        lower=False,
+        deprecated={"2s": "two-sided"},
+        removed_after="0.16",
+    )
+    if value is not None:
         raise NotImplementedError
     # all_pairs = lmap(list, lzip(*np.triu_indices(4, 1)))
     all_pairs = [(0, k) for k in range(1, len(count))]
@@ -1322,7 +1671,7 @@ def confint_proportions_2indep(
     correction=True,
 ):
     """
-    Confidence intervals for comparing two independent proportions.
+    Confidence intervals for comparing two independent proportions
 
     This assumes that we have two independent binomial samples.
 
@@ -1332,7 +1681,7 @@ def confint_proportions_2indep(
         Count and sample size for first sample.
     count2, nobs2 : float
         Count and sample size for the second sample.
-    method : str
+    method : str, optional
         Method for computing confidence interval. If method is None, then a
         default method is used. The default might change as more methods are
         added.
@@ -1353,19 +1702,25 @@ def confint_proportions_2indep(
          - 'logit-adjusted' (default)
          - 'score'
 
-    compare : string in ['diff', 'ratio' 'odds-ratio']
+    compare : str in ['diff', 'ratio', 'odds-ratio'], optional
         If compare is diff, then the confidence interval is for diff = p1 - p2.
         If compare is ratio, then the confidence interval is for the risk ratio
         defined by ratio = p1 / p2.
         If compare is odds-ratio, then the confidence interval is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2).
-    alpha : float
+    alpha : float, optional
         Significance level for the confidence interval, default is 0.05.
         The nominal coverage probability is 1 - alpha.
+    correction : bool, optional
+        If correction is True (default), then the Miettinen and Nurminen
+        small sample correction to the variance nobs / (nobs - 1) is used.
+        Applies only if method='score'.
 
     Returns
     -------
-    low, upp
+    low, upp : float
+        Lower and upper confidence limits for the chosen comparison
+        (`compare`) of the two proportions.
 
     See Also
     --------
@@ -1398,6 +1753,14 @@ def confint_proportions_2indep(
        in Statistics - Theory and Methods 40 (7): 1271-82.
        https://doi.org/10.1080/03610920903576580.
     """
+    if np.any(np.asarray(count1) < 0) or np.any(np.asarray(count2) < 0):
+        raise ValueError("count1 and count2 must be non-negative")
+    if np.any(np.asarray(nobs1) <= 0) or np.any(np.asarray(nobs2) <= 0):
+        raise ValueError("nobs1 and nobs2 must be positive")
+    alpha = float_like(alpha, "alpha")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
     method_default = {
         "diff": "newcomb",
         "ratio": "log-adjusted",
@@ -1469,10 +1832,17 @@ def confint_proportions_2indep(
             upp = np.exp(np.log(ratio_) + d_log)
 
         elif method == "score":
-            res = _confint_riskratio_koopman(
-                count1, nobs1, count2, nobs2, alpha=alpha, correction=correction
-            )
-            low, upp = res.confint
+            if count1 == nobs1 or count2 == nobs2:
+                # The closed form of Koopman/Nam picks the wrong roots of the
+                # cubic, or complex ones, if a count is equal to nobs.
+                low, upp = _score_confint_inversion_ratio(
+                    count1, nobs1, count2, nobs2, alpha=alpha, correction=correction
+                )
+            else:
+                res = _confint_riskratio_koopman(
+                    count1, nobs1, count2, nobs2, alpha=alpha, correction=correction
+                )
+                low, upp = res.confint
 
         else:
             raise ValueError("method not recognized")
@@ -1480,7 +1850,7 @@ def confint_proportions_2indep(
     elif compare == "odds-ratio":
         # odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
         if method in ["logit", "logit-adjusted", "logit-smoothed"]:
-            if method in ["logit-smoothed"]:
+            if method == "logit-smoothed":
                 adjusted = _shrink_prob(
                     count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=False
                 )[0]
@@ -1524,6 +1894,151 @@ def confint_proportions_2indep(
     return low, upp
 
 
+def confint_proportions_paired(table, method="newcomb", alpha=0.05):
+    """
+    Confidence interval for the difference of two paired proportions
+
+    This assumes that each of ``n`` units is classified twice as success or
+    failure, for example before and after a treatment, or by two raters, so
+    that the two proportions are correlated. The confidence interval is for
+    the difference ``p1 - p2`` of the two marginal proportions.
+
+    Parameters
+    ----------
+    table : array_like
+        2x2 contingency table of counts, ``[[n11, n12], [n21, n22]]``. Rows
+        correspond to the first classification and columns to the second,
+        with success in the first row and first column. ``n12`` and ``n21``
+        are the discordant counts. The first marginal proportion is
+        ``p1 = (n11 + n12) / n`` and the second is ``p2 = (n11 + n21) / n``,
+        where ``n`` is the total count.
+    method : {"newcomb", "newcombe", "wald"}, optional
+        Method for computing the confidence interval.
+
+        - "newcomb" : Newcombe's method 10, which combines the Wilson score
+          intervals of the two marginal proportions with a correction for the
+          correlation between them. This is the default. The spelling
+          "newcombe" is accepted as an alias; "newcomb" matches the method
+          name in :func:`confint_proportions_2indep`.
+        - "wald" : simple asymptotic (Wald) interval without continuity
+          correction, Newcombe's method 1. It degenerates to a zero-width
+          interval when there are no discordant pairs.
+
+    alpha : float, optional
+        Significance level for the confidence interval, default is 0.05.
+        The nominal coverage probability is 1 - alpha.
+
+    Returns
+    -------
+    low : float
+        Lower confidence limit for ``p1 - p2``.
+    upp : float
+        Upper confidence limit for ``p1 - p2``.
+
+    See Also
+    --------
+    confint_proportions_2indep : Confidence interval for two independent
+        proportions.
+    statsmodels.stats.contingency_tables.mcnemar : Hypothesis test for
+        marginal homogeneity of paired binary data.
+
+    Notes
+    -----
+    Newcombe's method 10 is the paired analogue of the hybrid score interval
+    recommended for independent proportions in [1]_. Let ``(l1, u1)`` and
+    ``(l2, u2)`` be the Wilson score limits of ``p1`` and ``p2``, and let
+    ``phi`` be the corrected phi coefficient of the table, which is zero if
+    any marginal count is zero. The limits are
+
+    ``p1 - p2 - sqrt((p1 - l1)**2 - 2 * phi * (p1 - l1) * (u2 - p2) + (u2 - p2)**2)``
+
+    and
+
+    ``p1 - p2 + sqrt((u1 - p1)**2 - 2 * phi * (u1 - p1) * (p2 - l2) + (p2 - l2)**2)``.
+
+    The interval always lies within ``[-1, 1]`` and has positive width even
+    when all pairs are concordant. The Wald interval is not bounded.
+
+    The results have been verified against the R packages ``ratesci``
+    (``moverpairci`` with Wilson base and the phi correction) and
+    ``PropCIs`` (``diffpropci.Wald.mp``).
+
+    References
+    ----------
+    .. [1] Newcombe, Robert G. 1998. "Improved Confidence Intervals for the
+       Difference between Binomial Proportions Based on Paired Data."
+       Statistics in Medicine 17 (22): 2635-50.
+       https://doi.org/10.1002/(SICI)1097-0258(19981130)17:22<2635::AID-
+       SIM954>3.0.CO;2-C.
+
+    Examples
+    --------
+    Of 37 patients, 15 respond to treatment A and 12 to treatment B, with 10
+    responding to both.
+
+    >>> from statsmodels.stats.proportion import confint_proportions_paired
+    >>> table = [[10, 5], [2, 20]]
+    >>> confint_proportions_paired(table)
+    (-0.0643926050711..., 0.2211160178958...)
+    >>> confint_proportions_paired(table, method="wald")
+    (-0.0566130751996..., 0.2187752373618...)
+    """
+    method = string_like(method, "method", options=("newcomb", "newcombe", "wald"))
+    alpha = float_like(alpha, "alpha")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    table = np.asarray(table, dtype=np.float64)
+    if table.shape != (2, 2):
+        raise ValueError(
+            "confint_proportions_paired requires a 2x2 contingency table, but "
+            f"the input has shape {table.shape}."
+        )
+    if not np.all(np.isfinite(table)):
+        raise ValueError("table counts must be finite")
+    if np.any(table < 0):
+        raise ValueError("table counts must be non-negative")
+    n11, n12, n21, n22 = table.ravel()
+    nobs = table.sum()
+    if nobs <= 0:
+        raise ValueError("table must contain at least one observation")
+
+    p1 = (n11 + n12) / nobs
+    p2 = (n11 + n21) / nobs
+    diff = p1 - p2
+
+    if method == "wald":
+        z = stats.norm.isf(alpha / 2)
+        half_width = z * np.sqrt(n12 + n21 - (n12 - n21) ** 2 / nobs) / nobs
+        low = diff - half_width
+        upp = diff + half_width
+
+    else:
+        l1, u1 = proportion_confint(n11 + n12, nobs, alpha=alpha, method="wilson")
+        l2, u2 = proportion_confint(n11 + n21, nobs, alpha=alpha, method="wilson")
+
+        # phi coefficient with Newcombe's n / 2 adjustment of a positive
+        # covariance term; the marginal product is zero when a marginal
+        # proportion is 0 or 1, in which case the correlation is undefined
+        # and Newcombe sets phi to zero.
+        marg_prod = (n11 + n12) * (n21 + n22) * (n11 + n21) * (n12 + n22)
+        if marg_prod == 0:
+            phi = 0.0
+        else:
+            cov = n11 * n22 - n12 * n21
+            if cov > 0:
+                cov = max(cov - nobs / 2, 0.0)
+            phi = cov / np.sqrt(marg_prod)
+
+        dl = p1 - l1
+        du = u2 - p2
+        low = diff - np.sqrt(dl**2 - 2 * phi * dl * du + du**2)
+        dl = u1 - p1
+        du = p2 - l2
+        upp = diff + np.sqrt(dl**2 - 2 * phi * dl * du + du**2)
+
+    return float(low), float(upp)
+
+
 def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True):
     """
     Shrink observed counts towards independence
@@ -1537,23 +2052,22 @@ def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True
         count and sample size for first sample
     count2, nobs2 : float or int
         count and sample size for the second sample
-    shrink_factor : float
+    shrink_factor : float, optional
         This corresponds to the number of observations that are added in total
         proportional to the probabilities under independence.
-    return_corr : bool
+    return_corr : bool, optional
         If true, then only the correction term is returned
-        If false, then the corrected counts, i.e. original counts plus
+        If false, then the corrected counts, i.e., original counts plus
         correction term, are returned.
 
     Returns
     -------
     count1_corr, nobs1_corr, count2_corr, nobs2_corr : float
         correction or corrected counts
-    prob_indep :
+    prob_indep : ndarray
         TODO/Warning : this will change most likely
         probabilities under independence, only returned if return_corr is
         false.
-
     """
     vectorized = any(np.size(i) > 1 for i in [count1, nobs1, count2, nobs2])
     if vectorized:
@@ -1572,6 +2086,50 @@ def _shrink_prob(count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=True
             count2 + corr[1, 0],
             nobs2 + corr[1].sum(),
         ), prob_indep
+
+
+@dataclass(frozen=True, slots=True)
+class ScoreTestProportionsResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`score_test_proportions_2indep`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic, asymptotically normal distributed N(0, 1).
+    pvalue : float
+        p-value based on the normal distribution.
+    compare : {"diff", "ratio", "odds-ratio"}
+        Which comparison of the two proportions the test is for.
+    method : str
+        Method used to compute the test, always ``"score"``.
+    variance : float
+        Estimated variance of the test statistic under the null hypothesis.
+    alternative : {'two-sided', 'smaller', 'larger'}
+        The alternative hypothesis used for the test.
+    prop1_null : float
+        Constrained estimate of the first proportion under the null
+        hypothesis.
+    prop2_null : float
+        Constrained estimate of the second proportion under the null
+        hypothesis.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+    statistic: float
+    pvalue: float
+    compare: str
+    method: str
+    variance: float
+    alternative: str
+    prop1_null: float
+    prop2_null: float
 
 
 def score_test_proportions_2indep(
@@ -1593,44 +2151,42 @@ def score_test_proportions_2indep(
 
     Parameters
     ----------
-    count1, nobs1 :
+    count1, nobs1 : int
         count and sample size for first sample
-    count2, nobs2 :
+    count2, nobs2 : int
         count and sample size for the second sample
-    value : float
+    value : float, optional
         diff, ratio or odds-ratio under the null hypothesis. If value is None,
         then equality of proportions under the Null is assumed,
-        i.e. value=0 for 'diff' or value=1 for either rate or odds-ratio.
-    compare : string in ['diff', 'ratio' 'odds-ratio']
+        i.e., value=0 for 'diff' or value=1 for either rate or odds-ratio.
+    compare : str in ['diff', 'ratio', 'odds-ratio'], optional
         If compare is diff, then the confidence interval is for diff = p1 - p2.
         If compare is ratio, then the confidence interval is for the risk ratio
         defined by ratio = p1 / p2.
         If compare is odds-ratio, then the confidence interval is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
-    return_results : bool
+    alternative : {'two-sided', 'smaller', 'larger'}, optional
+        alternative hypothesis, which can be two-sided or either one of the
+        one-sided tests.
+    correction : bool, optional
+        If correction is True (default), then the Miettinen and Nurminen
+        small sample correction to the variance nobs / (nobs - 1) is used.
+    return_results : bool, optional
         If true, then a results instance with extra information is returned,
         otherwise a tuple with statistic and pvalue is returned.
 
     Returns
     -------
-    results : results instance or tuple
-        If return_results is True, then a results instance with the
-        information in attributes is returned.
-        If return_results is False, then only ``statistic`` and ``pvalue``
-        are returned.
-
-        statistic : float
-            test statistic asymptotically normal distributed N(0, 1)
-        pvalue : float
-            p-value based on normal distribution
-        other attributes :
-            additional information about the hypothesis test
+    ScoreTestProportionsResult or tuple
+        If return_results is True (default), then a
+        :class:`ScoreTestProportionsResult` result object is returned.
+        If return_results is False, then only a plain ``(statistic,
+        pvalue)`` tuple is returned.
 
     Notes
     -----
     Status: experimental, the type or extra information in the return might
     change.
-
     """
 
     value_default = 0 if compare == "diff" else 1
@@ -1656,14 +2212,17 @@ def score_test_proportions_2indep(
         if diff != 0:
             tmp3 = nobs
             tmp2 = (nobs1 + 2 * nobs0) * diff - nobs - count
-            tmp1 = (count0 * diff - nobs - 2 * count0) * diff + count
+            tmp1 = (nobs0 * diff - nobs - 2 * count0) * diff + count
             tmp0 = count0 * diff * (1 - diff)
             q = (
                 (tmp2 / (3 * tmp3)) ** 3
                 - tmp1 * tmp2 / (6 * tmp3**2)
                 + tmp0 / (2 * tmp3)
             )
-            p = np.sign(q) * np.sqrt((tmp2 / (3 * tmp3)) ** 2 - tmp1 / (3 * tmp3))
+            # np.sign(q) is 0 for q == 0, which happens for symmetric tables
+            p = np.copysign(1.0, q) * np.sqrt(
+                (tmp2 / (3 * tmp3)) ** 2 - tmp1 / (3 * tmp3)
+            )
             a = (np.pi + np.arccos(q / p**3)) / 3
 
             prop0 = 2 * p * np.cos(a) - tmp2 / (3 * tmp3)
@@ -1681,7 +2240,7 @@ def score_test_proportions_2indep(
 
         if ratio != 1:
             a = nobs * ratio
-            b = -(nobs1 * ratio + count1 + nobs2 + count0 * ratio)
+            b = -(nobs1 * ratio + count1 + nobs0 + count0 * ratio)
             c = count
             prop0 = (-b - np.sqrt(b**2 - 4 * a * c)) / (2 * a)
             prop1 = prop0 * ratio
@@ -1725,7 +2284,7 @@ def score_test_proportions_2indep(
     )
 
     if return_results:
-        res = HolderTuple(
+        res = ScoreTestProportionsResult(
             statistic=statistic,
             pvalue=pvalue,
             compare=compare,
@@ -1738,6 +2297,63 @@ def score_test_proportions_2indep(
         return res
     else:
         return statistic, pvalue
+
+
+@dataclass(frozen=True, slots=True)
+class Proportions2indepTestResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`test_proportions_2indep`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic, asymptotically normal distributed N(0, 1).
+    pvalue : float
+        p-value based on the normal distribution.
+    compare : {"diff", "ratio", "odds-ratio"}
+        Which comparison of the two proportions the test is for.
+    method : str
+        Method used to compute the test.
+    diff : float
+        Observed difference, ``prop1 - prop2``.
+    ratio : float
+        Observed risk ratio, ``prop1 / prop2``.
+    odds_ratio : float
+        Observed odds ratio.
+    variance : float
+        Estimated variance of the test statistic under the null hypothesis.
+    alternative : {'two-sided', 'smaller', 'larger'}
+        The alternative hypothesis used for the test.
+    value : float
+        Value of the difference, risk ratio or odds ratio under the null
+        hypothesis.
+    prop1_null : float or None, optional
+        Constrained estimate of the first proportion under the null
+        hypothesis. Only set if ``method="score"``, otherwise None.
+    prop2_null : float or None, optional
+        Constrained estimate of the second proportion under the null
+        hypothesis. Only set if ``method="score"``, otherwise None.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+    statistic: float
+    pvalue: float
+    compare: str
+    method: str
+    diff: float
+    ratio: float
+    odds_ratio: float
+    variance: float
+    alternative: str
+    value: float
+    prop1_null: float | None = None
+    prop2_null: float | None = None
 
 
 def test_proportions_2indep(
@@ -1792,12 +2408,12 @@ def test_proportions_2indep(
         Count for the second sample.
     nobs2 : int
         Sample size for the second sample.
-    value : float
+    value : float, optional
         Value of the difference, risk ratio or odds ratio of 2 independent
         proportions under the null hypothesis.
         Default is equal proportions, 0 for diff and 1 for risk-ratio and for
         odds-ratio.
-    method : string
+    method : str, optional
         Method for computing the hypothesis test. If method is None, then a
         default method is used. The default might change as more methods are
         added.
@@ -1828,38 +2444,31 @@ def test_proportions_2indep(
         - 'score' if correction is True, then this uses the degrees of freedom
            correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
 
-    compare : {'diff', 'ratio' 'odds-ratio'}
+    compare : {'diff', 'ratio', 'odds-ratio'}, optional
         If compare is `diff`, then the hypothesis test is for the risk
         difference diff = p1 - p2.
         If compare is `ratio`, then the hypothesis test is for the
         risk ratio defined by ratio = p1 / p2.
         If compare is `odds-ratio`, then the hypothesis test is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2)
-    alternative : {'two-sided', 'smaller', 'larger'}
+    alternative : {'two-sided', 'smaller', 'larger'}, optional
         alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
-    correction : bool
+    correction : bool, optional
         If correction is True (default), then the Miettinen and Nurminen
         small sample correction to the variance nobs / (nobs - 1) is used.
         Applies only if method='score'.
-    return_results : bool
+    return_results : bool, optional
         If true, then a results instance with extra information is returned,
         otherwise a tuple with statistic and pvalue is returned.
 
     Returns
     -------
-    results : results instance or tuple
-        If return_results is True, then a results instance with the
-        information in attributes is returned.
-        If return_results is False, then only ``statistic`` and ``pvalue``
-        are returned.
-
-        statistic : float
-            test statistic asymptotically normal distributed N(0, 1)
-        pvalue : float
-            p-value based on normal distribution
-        other attributes :
-            additional information about the hypothesis test
+    Proportions2indepTestResult or tuple
+        If return_results is True (default), then a
+        :class:`Proportions2indepTestResult` result object is returned.
+        If return_results is False, then only a plain ``(statistic,
+        pvalue)`` tuple is returned.
 
     See Also
     --------
@@ -1876,7 +2485,6 @@ def test_proportions_2indep(
     - 'diff': 'agresti-caffo',
     - 'ratio': 'log-adjusted',
     - 'odds-ratio': 'logit-adjusted'
-
     """
     method_default = {
         "diff": "agresti-caffo",
@@ -1897,7 +2505,12 @@ def test_proportions_2indep(
         # TODO: odds ratio does not work if value=1 for score test
         value = 0 if compare == "diff" else 1
 
-    count1, nobs1, count2, nobs2 = map(np.asarray, [count1, nobs1, count2, nobs2])
+    count1, nobs1, count2, nobs2 = (
+        np.asarray(count1),
+        np.asarray(nobs1),
+        np.asarray(count2),
+        np.asarray(nobs2),
+    )
 
     p1 = count1 / nobs1
     p2 = count2 / nobs2
@@ -1980,7 +2593,7 @@ def test_proportions_2indep(
     elif compare == "odds-ratio":
 
         if method in ["logit", "logit-adjusted", "logit-smoothed"]:
-            if method in ["logit-smoothed"]:
+            if method == "logit-smoothed":
                 adjusted = _shrink_prob(
                     count1, nobs1, count2, nobs2, shrink_factor=2, return_corr=False
                 )[0]
@@ -2021,10 +2634,10 @@ def test_proportions_2indep(
             distr = "normal"
             diff_stat = None
         else:
-            raise ValueError('method "%s" not recognized' % method)
+            raise ValueError(f'method "{method}" not recognized')
 
     else:
-        raise ValueError('compare "%s" not recognized' % compare)
+        raise ValueError(f'compare "{compare}" not recognized')
 
     if distr == "normal" and diff_stat is not None:
         statistic, pvalue = _zstat_generic2(
@@ -2033,7 +2646,7 @@ def test_proportions_2indep(
 
     if return_results:
         if res is None:
-            res = HolderTuple(
+            res = Proportions2indepTestResult(
                 statistic=statistic,
                 pvalue=pvalue,
                 compare=compare,
@@ -2046,15 +2659,67 @@ def test_proportions_2indep(
                 value=value,
             )
         else:
-            # we already have a return result from score test
-            # add missing attributes
-            res.diff = diff
-            res.ratio = ratio
-            res.odds_ratio = odds_ratio
-            res.value = value
+            # we already have a return result from score test;
+            # rebuild with the missing attributes added
+            res = Proportions2indepTestResult(
+                statistic=res.statistic,
+                pvalue=res.pvalue,
+                compare=res.compare,
+                method=res.method,
+                diff=diff,
+                ratio=ratio,
+                odds_ratio=odds_ratio,
+                variance=res.variance,
+                alternative=res.alternative,
+                value=value,
+                prop1_null=res.prop1_null,
+                prop2_null=res.prop2_null,
+            )
         return res
     else:
         return statistic, pvalue
+
+
+@dataclass(frozen=True, slots=True)
+class TostProportionsResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`tost_proportions_2indep`.
+
+    Parameters
+    ----------
+    statistic : float
+        Test statistic of the one-sided test that has the larger pvalue.
+    pvalue : float
+        p-value of the equivalence test given by the larger pvalue of the
+        two one-sided tests.
+    compare : {"diff", "ratio", "odds-ratio"}
+        Which comparison of the two proportions the test is for.
+    method : str
+        Method used to compute the underlying one-sided tests.
+    results_larger : Proportions2indepTestResult
+        Results instance for the one-sided test at the lower equivalence
+        margin.
+    results_smaller : Proportions2indepTestResult
+        Results instance for the one-sided test at the upper equivalence
+        margin.
+    title : str
+        Descriptive title of the equivalence test.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+    statistic: float
+    pvalue: float
+    compare: str
+    method: str
+    results_larger: Proportions2indepTestResult
+    results_smaller: Proportions2indepTestResult
+    title: str
 
 
 def tost_proportions_2indep(
@@ -2087,13 +2752,13 @@ def tost_proportions_2indep(
 
     Parameters
     ----------
-    count1, nobs1 :
+    count1, nobs1 : int
         count and sample size for first sample
-    count2, nobs2 :
+    count2, nobs2 : int
         count and sample size for the second sample
-    low, upp :
+    low, upp : float
         equivalence margin for diff, risk ratio or odds ratio
-    method : string
+    method : str, optional
         method for computing the hypothesis test. If method is None, then a
         default method is used. The default might change as more methods are
         added.
@@ -2121,26 +2786,23 @@ def tost_proportions_2indep(
          - 'score' if correction is True, then this uses the degrees of freedom
             correction ``nobs / (nobs - 1)`` as in Miettinen Nurminen 1985
 
-    compare : string in ['diff', 'ratio' 'odds-ratio']
+    compare : str in ['diff', 'ratio', 'odds-ratio'], optional
         If compare is `diff`, then the hypothesis test is for
         diff = p1 - p2.
         If compare is `ratio`, then the hypothesis test is for the
         risk ratio defined by ratio = p1 / p2.
         If compare is `odds-ratio`, then the hypothesis test is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2).
-    correction : bool
+    correction : bool, optional
         If correction is True (default), then the Miettinen and Nurminen
         small sample correction to the variance nobs / (nobs - 1) is used.
         Applies only if method='score'.
 
     Returns
     -------
-    pvalue : float
-        p-value is the max of the pvalues of the two one-sided tests
-    t1 : test results
-        results instance for one-sided hypothesis at the lower margin
-    t1 : test results
-        results instance for one-sided hypothesis at the upper margin
+    TostProportionsResult
+        See :class:`TostProportionsResult` for a description of the
+        attributes.
 
     See Also
     --------
@@ -2153,7 +2815,6 @@ def tost_proportions_2indep(
 
     The TOST equivalence test delegates to `test_proportions_2indep` and has
     the same method and comparison options.
-
     """
 
     tt1 = test_proportions_2indep(
@@ -2186,7 +2847,7 @@ def tost_proportions_2indep(
     statistic = np.choose(idx_max, [tt1.statistic, tt2.statistic])
     pvalue = np.choose(idx_max, [tt1.pvalue, tt2.pvalue])
 
-    res = HolderTuple(
+    res = TostProportionsResult(
         statistic=statistic,
         pvalue=pvalue,
         compare=compare,
@@ -2204,7 +2865,6 @@ def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0):
     Compute standard error under null and alternative for 2 proportions
 
     helper function for power and sample size computation
-
     """
     if value != 0:
         msg = "non-zero diff under null, value, is not yet implemented"
@@ -2225,6 +2885,42 @@ def _std_2prop_power(diff, p2, ratio=1, alpha=0.05, value=0):
     return p_pooled, std_null, std_alt
 
 
+class PowerProportionsResult(NamedTuple):
+    """
+    Result of :func:`power_proportions_2indep`.
+
+    Parameters
+    ----------
+    power : float
+        Power of the test.
+    p_pooled : float
+        Pooled proportion, used for `std_null`.
+    std_null : float
+        Standard error of the difference under the null hypothesis
+        (without ``sqrt(nobs1)``).
+    std_alt : float
+        Standard error of the difference under the alternative hypothesis
+        (without ``sqrt(nobs1)``).
+    nobs1 : float or int
+        Number of observations in sample 1.
+    nobs2 : float or int
+        Number of observations in sample 2.
+    nobs_ratio : float
+        Sample size ratio, ``nobs2 = nobs_ratio * nobs1``.
+    alpha : float
+        Significance level used for the power computation.
+    """
+
+    power: float
+    p_pooled: float
+    std_null: float
+    std_alt: float
+    nobs1: float
+    nobs2: float
+    nobs_ratio: float
+    alpha: float
+
+
 def power_proportions_2indep(
     diff,
     prop2,
@@ -2243,54 +2939,48 @@ def power_proportions_2indep(
 
     Parameters
     ----------
-    diff : float
+    diff : float or array_like
         difference between proportion 1 and 2 under the alternative
-    prop2 : float
+    prop2 : float or array_like
         proportion for the reference case, prop2, proportions for the
         first case will be computed using p2 and diff
         p1 = p2 + diff
-    nobs1 : float or int
+    nobs1 : float or array_like
         number of observations in sample 1
-    ratio : float
+    ratio : float, optional
         sample size ratio, nobs2 = ratio * nobs1
-    alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+    alpha : float or array_like in interval (0,1), optional
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    value : float
-        currently only `value=0`, i.e. equality testing, is supported
-    alternative : string, 'two-sided' (default), 'larger', 'smaller'
+    value : float, optional
+        currently only `value=0`, i.e., equality testing, is supported
+    alternative : {'two-sided', 'larger', 'smaller'}, optional
         Alternative hypothesis whether the power is calculated for a
         two-sided (default) or one sided test. The one-sided test can be
         either 'larger', 'smaller'.
-    return_results : bool
+    return_results : bool, optional
         If true, then a results instance with extra information is returned,
         otherwise only the computed power is returned.
 
     Returns
     -------
-    results : results instance or float
-        If return_results is True, then a results instance with the
-        information in attributes is returned.
-        If return_results is False, then only the power is returned.
-
-        power : float
-            Power of the test, e.g. 0.8, is one minus the probability of a
-            type II error. Power is the probability that the test correctly
-            rejects the Null Hypothesis if the Alternative Hypothesis is true.
-
-        Other attributes in results instance include :
-
-        p_pooled
-            pooled proportion, used for std_null
-        std_null
-            standard error of difference under the null hypothesis (without
-            sqrt(nobs1))
-        std_alt
-            standard error of difference under the alternative hypothesis
-            (without sqrt(nobs1))
+    PowerProportionsResult or float
+        If return_results is True (default), then a
+        :class:`PowerProportionsResult` namedtuple is returned.
+        If return_results is False, then only the power is returned as a
+        float.
     """
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_power_het
+
+    if not np.all(np.greater_equal(prop2, 0) & np.less_equal(prop2, 1)):
+        raise ValueError(f"prop2 must be in the range [0, 1], got {prop2}")
+    prop1 = np.add(prop2, diff)
+    if not np.all(np.greater_equal(prop1, 0) & np.less_equal(prop1, 1)):
+        raise ValueError(
+            f"diff must keep prop1 = prop2 + diff inside [0, 1], got "
+            f"prop2={prop2}, diff={diff}"
+        )
 
     p_pooled, std_null, std_alt = _std_2prop_power(
         diff, prop2, ratio=ratio, alpha=alpha, value=value
@@ -2306,7 +2996,7 @@ def power_proportions_2indep(
     )
 
     if return_results:
-        res = Holder(
+        res = PowerProportionsResult(
             power=pow_,
             p_pooled=p_pooled,
             std_null=std_null,
@@ -2335,22 +3025,22 @@ def samplesize_proportions_2indep_onetail(
 
     Parameters
     ----------
-    diff : float
+    diff : float or array_like
         Difference between proportion 1 and 2 under the alternative
-    prop2 : float
+    prop2 : float or array_like
         proportion for the reference case, prop2, proportions for the
         first case will be computing using p2 and diff
         p1 = p2 + diff
-    power : float
+    power : float or array_like
         Power for which sample size is computed.
-    ratio : float
+    ratio : float, optional
         Sample size ratio, nobs2 = ratio * nobs1
-    alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+    alpha : float or array_like in interval (0,1), optional
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    value : float
-        Currently only `value=0`, i.e. equality testing, is supported
-    alternative : string, 'two-sided' (default), 'larger', 'smaller'
+    value : float, optional
+        Currently only `value=0`, i.e., equality testing, is supported
+    alternative : {'two-sided', 'larger', 'smaller'}, optional
         Alternative hypothesis whether the power is calculated for a
         two-sided (default) or one sided test. In the case of a one-sided
         alternative, it is assumed that the test is in the appropriate tail.
@@ -2363,7 +3053,28 @@ def samplesize_proportions_2indep_onetail(
     # TODO: avoid possible circular import, check if needed
     from statsmodels.stats.power import normal_sample_size_one_tail
 
-    if alternative in ["two-sided", "2s"]:
+    alternative = string_like(
+        alternative,
+        "alternative",
+        options=("two-sided", "larger", "smaller"),
+        lower=False,
+        deprecated={"2s": "two-sided"},
+        removed_after="0.16",
+    )
+    if not np.all(np.greater(alpha, 0) & np.less(alpha, 1)):
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if not np.all(np.greater(power, 0) & np.less(power, 1)):
+        raise ValueError(f"power must be in the range (0, 1), got {power}")
+    if not np.all(np.greater_equal(prop2, 0) & np.less_equal(prop2, 1)):
+        raise ValueError(f"prop2 must be in the range [0, 1], got {prop2}")
+    prop1 = np.add(prop2, diff)
+    if not np.all(np.greater_equal(prop1, 0) & np.less_equal(prop1, 1)):
+        raise ValueError(
+            f"diff must keep prop1 = prop2 + diff inside [0, 1], got "
+            f"prop2={prop2}, diff={diff}"
+        )
+
+    if alternative == "two-sided":
         alpha = alpha / 2
 
     _, std_null, std_alt = _std_2prop_power(
@@ -2384,21 +3095,21 @@ def _score_confint_inversion(
 
     Parameters
     ----------
-    count1, nobs1 :
+    count1, nobs1 : int
         Count and sample size for first sample.
-    count2, nobs2 :
+    count2, nobs2 : int
         Count and sample size for the second sample.
-    compare : string in ['diff', 'ratio' 'odds-ratio']
+    compare : str in ['diff', 'ratio', 'odds-ratio'], optional
         If compare is `diff`, then the confidence interval is for
         diff = p1 - p2.
         If compare is `ratio`, then the confidence interval is for the
         risk ratio defined by ratio = p1 / p2.
         If compare is `odds-ratio`, then the confidence interval is for the
         odds-ratio defined by or = p1 / (1 - p1) / (p2 / (1 - p2).
-    alpha : float in interval (0,1)
-        Significance level, e.g. 0.05, is the probability of a type I
+    alpha : float in interval (0,1), optional
+        Significance level, e.g., 0.05, is the probability of a type I
         error, that is wrong rejections if the Null Hypothesis is true.
-    correction : bool
+    correction : bool, optional
         If correction is True (default), then the Miettinen and Nurminen
         small sample correction to the variance nobs / (nobs - 1) is used.
         Applies only if method='score'.
@@ -2465,10 +3176,135 @@ def _score_confint_inversion(
     if compare == "odds-ratio":
         param = rt0.odds_ratio
 
+    if compare == "diff":
+        # The starting values based on the Wald interval can be inside the
+        # score interval (too narrow) and outside of the parameter space
+        # (-1, 1). Move them towards the limit of the parameter space until the
+        # p-value is below alpha.
+        lb = max(lb, -0.99999)
+
+        def _expand(x, limit):
+            for _ in range(60):
+                if func(x) <= 0:
+                    return x
+                x = x + 0.5 * (limit - x)
+            return x
+
+        ub = _expand(ub, 0.99999)
+        lb = _expand(lb, -0.99999)
+
     # root finding for confint bounds
     upp = optimize.brentq(func, param, ub)
     low = optimize.brentq(func, lb, param)
     return low, upp
+
+
+def _score_confint_inversion_ratio(
+    count1, nobs1, count2, nobs2, alpha=0.05, correction=True
+):
+    """
+    Compute score confidence interval of the risk ratio by inverting the test
+
+    This is used if a count is equal to nobs. Then the closed form of
+    Koopman/Nam in `_confint_riskratio_koopman` does not apply, because the
+    constrained estimate is on the boundary of the parameter space for
+    part of the range of the ratio.
+
+    Parameters
+    ----------
+    count1, nobs1 : int
+        Count and sample size for first sample.
+    count2, nobs2 : int
+        Count and sample size for the second sample.
+    alpha : float in interval (0,1), optional
+        Significance level, e.g., 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    correction : bool, optional
+        If correction is True (default), then the Miettinen and Nurminen
+        small sample correction to the variance nobs / (nobs - 1) is used.
+
+    Returns
+    -------
+    low : float
+        Lower confidence bound, it is 0 if count1 is 0.
+    upp : float
+        Upper confidence bound, it is inf if count2 is 0.
+    """
+    if count1 == nobs1 and count2 == nobs2:
+        # The estimate is ratio=1, where the score test is 0 / 0. For ratio > 1
+        # the constrained estimate is p1 = 1, p2 = 1 / ratio, and for ratio < 1
+        # it is p1 = ratio, p2 = 1. The squared score statistic is then
+        # (ratio - 1) * nobs2 / c and (1 - ratio) * nobs1 / (c * ratio), with
+        # c = nobs / (nobs - 1) if correction is True, else 1.
+        nobs = nobs1 + nobs2
+        c_z2 = stats.norm.isf(alpha / 2) ** 2
+        if correction:
+            c_z2 *= nobs / (nobs - 1)
+        return nobs1 / (nobs1 + c_z2), 1 + c_z2 / nobs2
+
+    def func(log_ratio):
+        res = score_test_proportions_2indep(
+            count1,
+            nobs1,
+            count2,
+            nobs2,
+            value=np.exp(log_ratio),
+            compare="ratio",
+            correction=correction,
+        )
+        return res.pvalue - alpha
+
+    def limit(log_inside, sign):
+        # The p-value is above alpha at log_inside and goes to 0, so that it
+        # is below alpha at some point in the direction sign. Expand the
+        # bracket until it contains the limit.
+        step = 1.0
+        for _ in range(9):
+            log_outside = log_inside + sign * step
+            if func(log_outside) < 0:
+                break
+            log_inside = log_outside
+            step *= 2
+        bracket = sorted((log_inside, log_outside))
+        return np.exp(optimize.brentq(func, *bracket))
+
+    if count1 > 0 and count2 > 0:
+        # The p-value is 1 at the estimate
+        log_inside = np.log(count1 / nobs1 * nobs2 / count2)
+    else:
+        # The estimate is 0 or inf. Start at the log-adjusted estimate and move
+        # to the side where the p-value goes to 1.
+        log_inside = np.log(
+            (count1 + 0.5) / (nobs1 + 0.5) * (nobs2 + 0.5) / (count2 + 0.5)
+        )
+        for step in 2.0 ** np.arange(9):
+            if func(log_inside) > 0:
+                break
+            log_inside += step if count2 == 0 else -step
+
+    # The p-value stays above alpha towards a ratio of 0 if count1 is 0, and
+    # towards a ratio of inf if count2 is 0. Then the limit is 0 or inf.
+    low = 0.0 if count1 == 0 else limit(log_inside, -1)
+    upp = np.inf if count2 == 0 else limit(log_inside, 1)
+    return low, upp
+
+
+class KoopmanConfintResult(NamedTuple):
+    """
+    Result of :func:`_confint_riskratio_koopman`.
+
+    Parameters
+    ----------
+    confint : ndarray
+        Lower and upper confidence limits for the risk ratio.
+    p_roots : ndarray
+        All roots of the cubic equation used to compute `confint`, sorted
+        in ascending order; `confint` is derived from the two smallest.
+        Kept for unit tests, otherwise not used.
+    """
+
+    confint: np.ndarray
+    p_roots: np.ndarray
 
 
 def _confint_riskratio_koopman(
@@ -2503,10 +3339,28 @@ def _confint_riskratio_koopman(
     # equ 5
     ci = (1 - (n1 - x1) * (1 - p_roots) / (x0 + n1 - n * p_roots)) / p_roots
 
-    res = Holder()
-    res.confint = ci
-    res._p_roots = p_roots_  # for unit tests, can be dropped
-    return res
+    return KoopmanConfintResult(confint=ci, p_roots=p_roots_)
+
+
+class PairedNamConfintResult(NamedTuple):
+    """
+    Result of :func:`_confint_riskratio_paired_nam`.
+
+    Parameters
+    ----------
+    confint : list
+        Lower and upper confidence limits for the marginal risk ratio.
+    p : tuple
+        The two marginal proportions, ``(p1, p0)``.
+    p_roots : ndarray
+        All roots of the quartic equation used to compute `confint`,
+        sorted in ascending order. Kept for unit tests, otherwise not
+        used.
+    """
+
+    confint: list
+    p: tuple
+    p_roots: np.ndarray
 
 
 def _confint_riskratio_paired_nam(table, alpha=0.05):
@@ -2522,7 +3376,7 @@ def _confint_riskratio_paired_nam(table, alpha=0.05):
 
     The confidence interval is for the ratio p1 / p0 where
     p1 = x1. / n and
-    p0 - x.1 / n
+    p0 = x.1 / n
     Todo: rename p1 to pa and p2 to pb, so we have a, b for treatment and
     0, 1 for success/failure
 
@@ -2534,7 +3388,6 @@ def _confint_riskratio_paired_nam(table, alpha=0.05):
     internal polynomial coefficients in calculation correspond at around
         4 decimals
     confidence interval agrees only at 2 decimals
-
     """
     x11, x10, x01, x00 = np.ravel(table)
     n = np.sum(table)  # nobs
@@ -2561,8 +3414,4 @@ def _confint_riskratio_paired_nam(table, alpha=0.05):
     # p_roots = np.sort(np.roots([1, a1 / a0, a2 / a0, a3 / a0, a4 / a0]))
 
     ci = [p_roots.min(), p_roots.max()]
-    res = Holder()
-    res.confint = ci
-    res.p = p1, p0
-    res._p_roots = p_roots  # for unit tests, can be dropped
-    return res
+    return PairedNamConfintResult(confint=ci, p=(p1, p0), p_roots=p_roots)

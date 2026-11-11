@@ -84,7 +84,9 @@ def to_restricted(p, sel, bounds):
 
     Returns
     -------
-
+    tuple
+        The transformed (alpha, beta, gamma) parameters that satisfy the
+        bounds and the constraints.
     """
     a, b, g = p[:3]
 
@@ -112,11 +114,17 @@ def to_unrestricted(p, sel, bounds):
     ----------
     p : ndarray
         Parameters that strictly satisfy the constraints
+    sel : ndarray
+        Array indicating whether a parameter is being estimated. If not
+        estimated, not transformed.
+    bounds : ndarray
+        2-d array of bounds where bound for element i is in row i
+        and stored as [lb, ub]
 
     Returns
     -------
-    ndarray
-        Parameters all in (0,1)
+    tuple
+        The transformed (alpha, beta, gamma) parameters, all in (0,1).
     """
     # eps < a < 1 - eps
     # eps < b <= a
@@ -141,9 +149,7 @@ def to_unrestricted(p, sel, bounds):
 
 
 def holt_init(x, hw_args: HoltWintersArgs):
-    """
-    Initialization for the Holt Models
-    """
+    """Initialization for the Holt Models"""
     # Map back to the full set of parameters
     hw_args.p[hw_args.xi.astype(bool)] = x
 

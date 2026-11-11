@@ -25,9 +25,9 @@ def test_brockwell_davis_example_517():
     # so we can't use their results to test that. Thus here `unbiased=False`.
     # Note: it's not clear why BD use initial_order=22 (and they don't mention
     # that they do this), but it is the value that allows the test to pass.
-    hr, _ = hannan_rissanen(
+    hr = hannan_rissanen(
         endog, ar_order=1, ma_order=1, demean=True, initial_ar_order=22, unbiased=False
-    )
+    ).parameters
     assert_allclose(hr.ar_params, [0.6961], atol=1e-4)
     assert_allclose(hr.ma_params, [0.3788], atol=1e-4)
 
@@ -48,9 +48,9 @@ def test_itsmr():
     # test_brockwell_davis_example_517, where the desired values were computed
     # from R itsmr::hannan; see results/results_hr.R
     endog = lake.copy()
-    hr, _ = hannan_rissanen(
+    hr = hannan_rissanen(
         endog, ar_order=1, ma_order=1, demean=True, initial_ar_order=22, unbiased=False
-    )
+    ).parameters
 
     assert_allclose(hr.ar_params, [0.69607715], atol=1e-4)
     assert_allclose(hr.ma_params, [0.3787969217], atol=1e-4)
@@ -88,7 +88,8 @@ def test_invalid_orders():
 @pytest.mark.todo("Improve checks on valid order parameters.")
 @pytest.mark.smoke
 def test_nonconsecutive_lags():
-    endog = np.arange(20) * 1.0
+    rs = np.random.default_rng(392039)
+    endog = rs.standard_normal(200) * 1.0
     hannan_rissanen(endog, ar_order=[1, 4])
     hannan_rissanen(endog, ma_order=[1, 3])
     hannan_rissanen(endog, ar_order=[1, 4], ma_order=[1, 3])
@@ -111,10 +112,12 @@ def test_set_default_unbiased():
     # setting unbiased=None with stationary and invertible parameters should
     # yield the exact same results as setting unbiased=True
     endog = lake.copy()
-    p_1, other_results_2 = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=None)
+    _result = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=None)
+    p_1, other_results_2 = _result.parameters, _result.other_results
 
     # unbiased=True
-    p_2, other_results_1 = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=True)
+    _result = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=True)
+    p_2, other_results_1 = _result.parameters, _result.other_results
 
     assert_allclose(p_1.ar_params, p_2.ar_params)
     assert_allclose(p_1.ma_params, p_2.ma_params)
@@ -122,7 +125,7 @@ def test_set_default_unbiased():
     assert_allclose(other_results_1.resid, other_results_2.resid)
 
     # unbiased=False
-    p_3, _ = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=False)
+    p_3 = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=False).parameters
     assert not np.array_equal(p_1.ar_params, p_3.ar_params)
 
 
@@ -330,7 +333,7 @@ def test_itsmr_with_fixed_params(fixed_params):
     # parameters are still correct'.
 
     endog = lake.copy()
-    hr, _ = hannan_rissanen(
+    hr = hannan_rissanen(
         endog,
         ar_order=1,
         ma_order=1,
@@ -338,7 +341,7 @@ def test_itsmr_with_fixed_params(fixed_params):
         initial_ar_order=22,
         unbiased=False,
         fixed_params=fixed_params,
-    )
+    ).parameters
 
     assert_allclose(hr.ar_params, [0.69607715], atol=1e-4)
     assert_allclose(hr.ma_params, [0.3787969217], atol=1e-4)
@@ -375,17 +378,19 @@ def test_set_default_unbiased_with_fixed_params():
     rs = np.random.RandomState(590193)
     endog = rs.normal(size=1000)
     # unbiased=None
-    p_1, other_results_2 = hannan_rissanen(
+    _result = hannan_rissanen(
         endog, ar_order=1, ma_order=1, unbiased=None, fixed_params={"ar.L1": 0.69607715}
     )
+    p_1, other_results_2 = _result.parameters, _result.other_results
     # unbiased=False
-    p_2, other_results_1 = hannan_rissanen(
+    _result = hannan_rissanen(
         endog,
         ar_order=1,
         ma_order=1,
         unbiased=False,
         fixed_params={"ar.L1": 0.69607715},
     )
+    p_2, other_results_1 = _result.parameters, _result.other_results
 
     assert_allclose(p_1.ar_params, p_2.ar_params)
     assert_allclose(p_1.ma_params, p_2.ma_params)

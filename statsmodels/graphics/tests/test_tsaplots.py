@@ -2,11 +2,13 @@ from statsmodels.compat.pandas import MONTH_END
 from statsmodels.compat.python import PYTHON_IMPL_WASM, lmap
 
 import calendar
+from contextlib import ExitStack
+from datetime import date
 from io import BytesIO
 import locale
 
 import numpy as np
-from numpy.testing import assert_, assert_equal
+from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
 from scipy import stats
@@ -18,6 +20,7 @@ from statsmodels.graphics.tsaplots import (
     plot_acf,
     plot_ccf,
     plot_pacf,
+    plot_pccf,
     plot_predict,
     quarter_plot,
     seasonal_diagnostic_plot,
@@ -27,6 +30,7 @@ from statsmodels.tsa import arima_process as tsp
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.seasonal import STL
+from statsmodels.tsa.stattools import pccf
 
 try:
     from matplotlib import pyplot as plt
@@ -34,6 +38,7 @@ except ImportError:
     pass
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_acf(close_figures):
     # Just test that it runs.
@@ -50,6 +55,7 @@ def test_plot_acf(close_figures):
     plot_acf(acf, ax=ax, alpha=None)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_acf_irregular(close_figures):
     # Just test that it runs.
@@ -66,6 +72,7 @@ def test_plot_acf_irregular(close_figures):
     plot_acf(acf, ax=ax, alpha=None, zero=False)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_pacf(close_figures):
     # Just test that it runs.
@@ -81,6 +88,7 @@ def test_plot_pacf(close_figures):
     plot_pacf(pacf, ax=ax, alpha=None)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_pacf_kwargs(close_figures):
     # Just test that it runs.
@@ -122,6 +130,7 @@ def test_plot_pacf_kwargs(close_figures):
     assert_(linestyle != with_vlines)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_acf_kwargs(close_figures):
     # Just test that it runs.
@@ -153,6 +162,7 @@ def test_plot_acf_kwargs(close_figures):
     assert_(with_vlines != plain)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_acf_missing(close_figures):
     # Just test that it runs.
@@ -180,6 +190,7 @@ def test_plot_acf_missing(close_figures):
     assert_(buff.read() != buff_conservative.read())
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_pacf_irregular(close_figures):
     # Just test that it runs.
@@ -196,6 +207,7 @@ def test_plot_pacf_irregular(close_figures):
     plot_pacf(pacf, ax=ax, alpha=None, zero=False)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_ccf(close_figures):
     # Just test that it runs.
@@ -218,6 +230,54 @@ def test_plot_ccf(close_figures):
     plot_ccf(x1, x2, ax=ax, title="CCF")
     plot_ccf(x1, x2, ax=ax, auto_ylims=True)
     plot_ccf(x1, x2, ax=ax, use_vlines=False)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_pccf(close_figures):
+    # Just test that it runs.
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ar = np.r_[1.0, -0.9]
+    ma = np.r_[1.0, 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    x1 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    x2 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    plot_pccf(x1, x2)
+    plot_pccf(x1, x2, ax=ax, lags=10)
+    plot_pccf(x1, x2, ax=ax)
+    plot_pccf(x1, x2, ax=ax, alpha=None)
+    plot_pccf(x1, x2, ax=ax, alpha=None, auto_ylims=True)
+    plot_pccf(x1, x2, ax=ax, title="PCCF")
+    plot_pccf(x1, x2, ax=ax, auto_ylims=True)
+    plot_pccf(x1, x2, ax=ax, use_vlines=False)
+    plot_pccf(x1, x2, ax=ax, method="yw")
+    plot_pccf(x1, x2, ax=ax, method="ywmle")
+    plot_pccf(x1, x2, ax=ax, method="ols")
+
+
+@pytest.mark.matplotlib
+def test_plot_pccf_irregular_lags(close_figures):
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ar = np.r_[1.0, -0.9]
+    ma = np.r_[1.0, 0.9]
+    armaprocess = tsp.ArmaProcess(ar, ma)
+    rs = np.random.RandomState(1234)
+    x1 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+    x2 = armaprocess.generate_sample(100, distrvs=rs.standard_normal)
+
+    lags = np.array([0, 1, 3, 5])
+    plot_pccf(x1, x2, ax=ax, lags=lags, use_vlines=False)
+
+    pccf_xy = pccf(x1, x2, nlags=lags.max())
+    line = ax.lines[-1]
+    expected_lags = lags[lags > 0]
+    assert_equal(line.get_xdata(), expected_lags)
+    assert_allclose(line.get_ydata(), pccf_xy[expected_lags - 1], atol=1e-14)
 
 
 @pytest.mark.matplotlib
@@ -250,6 +310,7 @@ def test_plot_accf_grid(close_figures):
 @pytest.mark.skipif(
     PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM"
 )
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_month(close_figures):
     dta = elnino.load_pandas().data
@@ -260,54 +321,72 @@ def test_plot_month(close_figures):
     )
 
     # test dates argument
-    fig = month_plot(dta.values, dates=dates, ylabel="el nino")
+    month_plot(dta.values, dates=dates, ylabel="el nino")
 
     # test with a TimeSeries DatetimeIndex with no freq
     dta.index = pd.DatetimeIndex(dates)
-    fig = month_plot(dta)
+    month_plot(dta)
 
     # w freq
     dta.index = pd.DatetimeIndex(dates, freq="MS")
-    fig = month_plot(dta)
+    month_plot(dta)
 
     # test with a TimeSeries PeriodIndex
     dta.index = pd.PeriodIndex(dates, freq="M")
-    fig = month_plot(dta)
-
-    # test localized xlabels
-    try:
-        with calendar.different_locale("DE_de"):
-            fig = month_plot(dta)
-            labels = [_.get_text() for _ in fig.axes[0].get_xticklabels()]
-            expected = [
-                "Jan",
-                "Feb",
-                ("Mär", "Mrz"),
-                "Apr",
-                "Mai",
-                "Jun",
-                "Jul",
-                "Aug",
-                "Sep",
-                "Okt",
-                "Nov",
-                "Dez",
-            ]
-            for lbl, exp in zip(labels, expected):
-                if isinstance(exp, tuple):
-                    assert lbl in exp
-                else:
-                    assert lbl == exp
-    except locale.Error:
-        pytest.xfail(reason="Failure due to unsupported locale")
+    month_plot(dta)
 
 
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM, reason="Matplotlib uses different backend in WASM"
+)
+@pytest.mark.thread_unsafe(reason="Uses matplotlib and changes LC_TIME")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "locale_name, may_oct_dec",
+    [("C", ["May", "Oct", "Dec"]), ("de_DE.UTF-8", ["Mai", "Okt", "Dez"])],
+    ids=["C", "de_DE"],
+)
+def test_plot_month_locale(close_figures, locale_name, may_oct_dec):
+    index = pd.period_range("2000-01", periods=12, freq="M")
+    data = pd.Series(np.arange(12), index=index)
+
+    with ExitStack() as stack:
+        try:
+            stack.enter_context(calendar.different_locale(locale_name))
+        except locale.Error:
+            pytest.xfail(reason=f"Unsupported locale: {locale_name}")
+
+        fig = month_plot(data)
+        labels = [label.get_text() for label in fig.axes[0].get_xticklabels()]
+        expected = [date(2000, month, 1).strftime("%b") for month in range(1, 13)]
+        assert_equal(labels, expected)
+        # month_plot and strftime get the names from the same place, so the
+        # comparison above does not show that the locale was applied. Three
+        # months have the same name in every variant of the locale (March is
+        # "Mär" or "Mrz").
+        assert_equal([labels[4], labels[9], labels[11]], may_oct_dec)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_seasonal_plot_sorts_within_season(close_figures):
+    # each season must be plotted in index order, not in input order
+    index = pd.PeriodIndex(["2020Q1", "2022Q1", "2021Q1"], freq="Q")
+    series = pd.Series([1.0, 3.0, 2.0], index=index)
+
+    fig = seasonal_plot(series.groupby(lambda x: x.quarter), ["Q1"])
+
+    plotted = fig.axes[0].lines[0].get_ydata()
+    assert_equal(plotted, [1.0, 2.0, 3.0])
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_quarter(close_figures):
     dta = macrodata.load_pandas().data
     dates = lmap(
-        "-Q".join,
-        zip(dta.year.astype(int).apply(str), dta.quarter.astype(int).apply(str)),
+        "Q".join,
+        zip(dta.year.astype(int).apply(str), dta.quarter.astype(int).apply(str), strict=True),
     )
     # test dates argument
     quarter_plot(dta.unemp.values, dates)
@@ -315,13 +394,13 @@ def test_plot_quarter(close_figures):
     # test with a DatetimeIndex with no freq
     from statsmodels.compat.pandas import PD_LT_2_2_0
 
-    FREQ = "QS-Oct" if PD_LT_2_2_0 else "QS-OCT"
-    dta.set_index(pd.DatetimeIndex(dates, freq=FREQ), inplace=True)
+    FREQ = "Q-Oct" if PD_LT_2_2_0 else "Q-OCT"
+    dta = dta.set_index(pd.PeriodIndex(dates, freq=FREQ))
     quarter_plot(dta.unemp)
 
     # w freq
     # see pandas #6631
-    dta.index = pd.DatetimeIndex(dates, freq=FREQ)
+    dta.index = pd.PeriodIndex(dates, freq=FREQ).to_timestamp(freq=FREQ)
     quarter_plot(dta.unemp)
 
     # w PeriodIndex
@@ -329,6 +408,7 @@ def test_plot_quarter(close_figures):
     quarter_plot(dta.unemp)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_seasonal_plot(close_figures):
     rs = np.random.RandomState(1234)
@@ -359,10 +439,11 @@ def test_seasonal_plot(close_figures):
     assert_equal(labels, output)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize(
     "model_and_args",
-    [(AutoReg, dict(lags=2, old_names=False)), (ARIMA, dict(order=(2, 0, 0)))],
+    [(AutoReg, dict(lags=2)), (ARIMA, dict(order=(2, 0, 0)))],
 )
 @pytest.mark.parametrize("use_pandas", [True, False])
 @pytest.mark.parametrize("alpha", [None, 0.10])
@@ -386,6 +467,7 @@ def test_predict_plot(use_pandas, model_and_args, alpha, close_figures):
     assert isinstance(fig, plt.Figure)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_pacf_small_sample(close_figures):
     idx = [pd.Timestamp.now() + pd.Timedelta(seconds=i) for i in range(10)]
@@ -393,6 +475,7 @@ def test_plot_pacf_small_sample(close_figures):
     plot_pacf(df)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_plot_predict_passes_alpha_to_conf_int(close_figures):
 
@@ -475,6 +558,7 @@ def get_elnino_stl():
     return STL(data, period=12, seasonal=53).fit()
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_seasonal_diagnostic_plot(close_figures):
 
@@ -487,6 +571,7 @@ def test_seasonal_diagnostic_plot(close_figures):
     assert isinstance(fig, plt.Figure)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("subplots", [1, 2, 7, 12])
 @pytest.mark.parametrize("nrows", [1, 2, 7, 12])
@@ -496,6 +581,7 @@ def test_sdp_numbers(subplots, nrows, close_figures):
     assert isinstance(fig, plt.Figure)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_sdp_labels(close_figures):
     res = get_elnino_stl()
@@ -516,6 +602,7 @@ def test_sdp_labels(close_figures):
     assert isinstance(fig, plt.Figure)
 
 
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_sdp_invalid_subplots(close_figures):
     res = get_elnino_stl()

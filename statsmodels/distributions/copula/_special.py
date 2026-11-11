@@ -9,7 +9,7 @@ import numpy as np
 from scipy.special import factorial
 
 
-class Sterling1():
+class Sterling1:
     """Stirling numbers of the first kind
     """
     # based on
@@ -42,7 +42,7 @@ class Sterling1():
 sterling1 = Sterling1()
 
 
-class Sterling2():
+class Sterling2:
     """Stirling numbers of the second kind
     """
     # based on
@@ -81,6 +81,16 @@ def li3(z):
     """Polylogarithm for negative integer order -3
 
     Li(-3, z)
+
+    Parameters
+    ----------
+    z : array_like
+        Value(s) at which the polylogarithm is evaluated.
+
+    Returns
+    -------
+    ndarray or float
+        Value(s) of the polylogarithm Li(-3, z).
     """
     return z * (1 + 4 * z + z**2) / (1 - z)**4
 
@@ -89,6 +99,16 @@ def li4(z):
     """Polylogarithm for negative integer order -4
 
     Li(-4, z)
+
+    Parameters
+    ----------
+    z : array_like
+        Value(s) at which the polylogarithm is evaluated.
+
+    Returns
+    -------
+    ndarray or float
+        Value(s) of the polylogarithm Li(-4, z).
     """
     return z * (1 + z) * (1 + 10 * z + z**2) / (1 - z)**5
 
@@ -99,6 +119,18 @@ def lin(n, z):
     Li(-n, z)
 
     https://en.wikipedia.org/wiki/Polylogarithm#Particular_values
+
+    Parameters
+    ----------
+    n : int
+        Order of the polylogarithm, evaluated at -n.
+    z : array_like
+        Value(s) at which the polylogarithm is evaluated.
+
+    Returns
+    -------
+    ndarray
+        Value(s) of the polylogarithm Li(-n, z).
     """
     if np.size(z) > 1:
         z = np.array(z)[..., None]

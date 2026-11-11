@@ -11,14 +11,14 @@ typedef double complex double_complex;
 
 #endif
 
-inline double sm_cabs(double_complex z){
+static inline double sm_cabs(double_complex z){
    return cabs(z);
 }
 
-inline double_complex sm_clog(double_complex z){
+static inline double_complex sm_clog(double_complex z){
    return clog(z);
 }
 
-inline double_complex sm_cexp(double_complex z){
+static inline double_complex sm_cexp(double_complex z){
    return cexp(z);
 }

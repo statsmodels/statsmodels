@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from statsmodels.tools.validation import string_like
+
 
 class PredictionResults:
     """
@@ -9,19 +11,19 @@ class PredictionResults:
 
     Parameters
     ----------
-    predicted_mean : {ndarray, Series, DataFrame}
-        The predicted mean values
-    var_pred_mean : {ndarray, Series, DataFrame}
-        The variance of the predicted mean values
-    dist : {None, "norm", "t", rv_frozen}
+    predicted_mean : ndarray, Series, or DataFrame
+        The predicted mean values.
+    var_pred_mean : ndarray, Series, or DataFrame
+        The variance of the predicted mean values.
+    dist : "norm", "t", or rv_frozen, optional
         The distribution to use when constructing prediction intervals.
-        Default is normal.
+        Default is the normal distribution.
     df : int, optional
-        The degree of freedom parameter for the t. Not used if dist is None,
-        "norm" or a callable.
-    row_labels : {Sequence[Hashable], pd.Index}
-        Row labels to use for the summary frame. If None, attempts to read the
-        index of ``predicted_mean``
+        The degrees of freedom parameter for the t distribution. Not used
+        if dist is "norm" or an rv_frozen distribution.
+    row_labels : sequence of hashable or pandas.Index, optional
+        Row labels to use for the summary frame. If None, attempts to read
+        the index of ``predicted_mean``.
     """
 
     def __init__(
@@ -64,7 +66,7 @@ class PredictionResults:
 
     @property
     def row_labels(self):
-        """The row labels used in pandas-types."""
+        """The row labels used in pandas-types"""
         return self._row_labels
 
     @property
@@ -105,36 +107,47 @@ class PredictionResults:
 
         Parameters
         ----------
-        value : array_like
-            value under the null hypothesis
-        alternative : str
-            'two-sided', 'larger', 'smaller'
+        value : array_like, optional
+            Value under the null hypothesis.
+        alternative : {"two-sided", "larger", "smaller"}, optional
+            The alternative hypothesis for the test.
 
         Returns
         -------
-        stat : ndarray
-            test statistic
-        pvalue : ndarray
-            p-value of the hypothesis test, the distribution is given by
-            the attribute of the instance, specified in `__init__`. Default
-            if not specified is the normal distribution.
+        stat : ndarray or Series
+            The test statistic.
+        pvalue : ndarray or Series
+            The p-value of the hypothesis test. The distribution used is
+            given by the attribute of the instance specified in `__init__`.
+            The default, if not specified, is the normal distribution.
         """
+        alternative = string_like(
+            alternative,
+            "alternative",
+            options=("two-sided", "larger", "smaller"),
+            lower=False,
+            deprecated={
+                "2-sided": "two-sided",
+                "2s": "two-sided",
+                "l": "larger",
+                "s": "smaller",
+            },
+            removed_after="0.16",
+        )
         # assumes symmetric distribution
         stat = (self.predicted_mean - value) / self.se_mean
 
-        if alternative in ["two-sided", "2-sided", "2s"]:
+        if alternative == "two-sided":
             pvalue = self.dist.sf(np.abs(stat), *self.dist_args) * 2
-        elif alternative in ["larger", "l"]:
+        elif alternative == "larger":
             pvalue = self.dist.sf(stat, *self.dist_args)
-        elif alternative in ["smaller", "s"]:
+        elif alternative == "smaller":
             pvalue = self.dist.cdf(stat, *self.dist_args)
-        else:
-            raise ValueError("invalid alternative")
         return stat, pvalue
 
     def conf_int(self, alpha=0.05):
         """
-        Confidence interval construction for the predicted mean.
+        Confidence interval construction for the predicted mean
 
         This is currently only available for t and z tests.
 
@@ -146,7 +159,7 @@ class PredictionResults:
 
         Returns
         -------
-        pi : {ndarray, DataFrame}
+        pi : ndarray or DataFrame
             The array has the lower and the upper limit of the prediction
             interval in the columns.
         """
@@ -161,7 +174,13 @@ class PredictionResults:
 
     def summary_frame(self, alpha=0.05):
         """
-        Summary frame of mean, variance and confidence interval.
+        Summary frame of mean, variance and confidence interval
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The significance level for the confidence interval. The default
+            `alpha` = .05 returns a 95% confidence interval.
 
         Returns
         -------
@@ -172,11 +191,6 @@ class PredictionResults:
             * mean_se
             * mean_ci_lower
             * mean_ci_upper
-
-        Notes
-        -----
-        Fixes alpha to 0.05 so that the confidence interval should have 95%
-        coverage.
         """
         ci_mean = np.asarray(self.conf_int(alpha=alpha))
         lower, upper = ci_mean[:, 0], ci_mean[:, 1]

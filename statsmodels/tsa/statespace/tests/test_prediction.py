@@ -20,8 +20,8 @@ dta.index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")
 
 def test_predict_dates():
     index = pd.date_range(start="1950-01-01", periods=11, freq="D")
-    np.random.seed(324328)
-    endog = pd.Series(np.random.normal(size=10), index=index[:-1])
+    rs = np.random.RandomState(324328)
+    endog = pd.Series(rs.normal(size=10), index=index[:-1])
 
     # Basic test
     mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
@@ -254,7 +254,7 @@ def test_predicted_filtered_smoothed_with_nans(use_exog, trend):
         )
 
 
-def test_predicted_filtered_smoothed_with_nans_TVSS(reset_randomstate):
+def test_predicted_filtered_smoothed_with_nans_TVSS():
     mod = TVSS(np.zeros((50, 2)) * np.nan)
     mod.ssm.initialize_known([1.2, 0.8], np.eye(2))
     res = mod.smooth([])
@@ -428,7 +428,7 @@ def test_predicted_filtered_smoothed_varmax(use_exog, trend):
     assert_allclose(p_signal.var_pred_mean[50:], fcast_signal_cov, rtol=1e-6, atol=1e-8)
 
 
-def test_predicted_filtered_smoothed_TVSS(reset_randomstate):
+def test_predicted_filtered_smoothed_TVSS():
     mod = TVSS(np.zeros((50, 2)))
     mod.ssm.initialize_known([1.2, 0.8], np.eye(2))
     res = mod.smooth([])

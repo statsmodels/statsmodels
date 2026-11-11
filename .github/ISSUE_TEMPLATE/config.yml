@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://www.statsmodels.org/stable/
+    about: Check the documentation before opening an issue.
+  - name: Stack Overflow
+    url: https://stackoverflow.com/questions/tagged/statsmodels
+    about: Please ask and answer usage questions on Stack Overflow
+  - name: Blank issue
+    url: https://github.com/statsmodels/statsmodels/issues/new
+    about: Please note that other templates should be used in most cases

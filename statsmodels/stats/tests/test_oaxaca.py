@@ -7,44 +7,40 @@
 # must be done.
 
 import numpy as np
+import pytest
 
 from statsmodels.datasets.ccard.data import load_pandas
-from statsmodels.stats.oaxaca import OaxacaBlinder
+from statsmodels.stats.oaxaca import OaxacaBlinder, OaxacaResults
 from statsmodels.tools.tools import add_constant
 
 pandas_df = load_pandas()
 endog = pandas_df.endog.values
 exog = add_constant(pandas_df.exog.values, prepend=False)
-pd_endog, pd_exog = pandas_df.endog, add_constant(
-    pandas_df.exog, prepend=False
-)
+pd_endog, pd_exog = pandas_df.endog, add_constant(pandas_df.exog, prepend=False)
 
 
-class TestOaxaca:
-    @classmethod
-    def setup_class(cls):
-        cls.model = OaxacaBlinder(endog, exog, 3)
+def test_oaxaca_results():
+    rs = np.random.RandomState(0)
+    model = OaxacaBlinder(endog, exog, 3, rng=rs)
 
-    def test_results(self):
-        np.random.seed(0)
-        stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
-        stata_results_pooled = np.array([158.7504, 130.8095, 27.94091])
-        stata_results_std = np.array([653.10389, 64.584796, 655.0323717])
-        endow, coef, inter, gap = self.model.three_fold().params
-        unexp, exp, gap = self.model.two_fold().params
-        endow_var, coef_var, inter_var = self.model.three_fold(True).std
-        np.testing.assert_almost_equal(gap, stata_results[0], 3)
-        np.testing.assert_almost_equal(endow, stata_results[1], 3)
-        np.testing.assert_almost_equal(coef, stata_results[2], 3)
-        np.testing.assert_almost_equal(inter, stata_results[3], 3)
+    stata_results = np.array([158.7504, 321.7482, 75.45371, -238.4515])
+    stata_results_pooled = np.array([158.7504, 130.8095, 27.94091])
+    stata_results_std = np.array([653.10389, 64.584796, 655.0323717])
+    endow, coef, inter, gap = model.three_fold().params
+    unexp, exp, gap = model.two_fold().params
+    endow_var, coef_var, inter_var = model.three_fold(True).std
+    np.testing.assert_almost_equal(gap, stata_results[0], 3)
+    np.testing.assert_almost_equal(endow, stata_results[1], 3)
+    np.testing.assert_almost_equal(coef, stata_results[2], 3)
+    np.testing.assert_almost_equal(inter, stata_results[3], 3)
 
-        np.testing.assert_almost_equal(gap, stata_results_pooled[0], 3)
-        np.testing.assert_almost_equal(exp, stata_results_pooled[1], 3)
-        np.testing.assert_almost_equal(unexp, stata_results_pooled[2], 3)
+    np.testing.assert_almost_equal(gap, stata_results_pooled[0], 3)
+    np.testing.assert_almost_equal(exp, stata_results_pooled[1], 3)
+    np.testing.assert_almost_equal(unexp, stata_results_pooled[2], 3)
 
-        np.testing.assert_almost_equal(endow_var, stata_results_std[0], 3)
-        np.testing.assert_almost_equal(coef_var, stata_results_std[1], 3)
-        np.testing.assert_almost_equal(inter_var, stata_results_std[2], 3)
+    np.testing.assert_almost_equal(endow_var, stata_results_std[0], 3)
+    np.testing.assert_almost_equal(coef_var, stata_results_std[1], 3)
+    np.testing.assert_almost_equal(inter_var, stata_results_std[2], 3)
 
 
 class TestOaxacaNoSwap:
@@ -206,9 +202,9 @@ class TestOaxacaPandasNoSwapNoConstPassed:
 class TestOneModel:
     @classmethod
     def setup_class(cls):
-        np.random.seed(0)
+        rs = np.random.RandomState(0)
         cls.one_model = OaxacaBlinder(
-            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False
+            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False, rng=rs
         ).two_fold(True, two_fold_type="self_submitted", submitted_weight=1)
 
     def test_results(self):
@@ -228,9 +224,9 @@ class TestOneModel:
 class TestZeroModel:
     @classmethod
     def setup_class(cls):
-        np.random.seed(0)
+        rs = np.random.RandomState(0)
         cls.zero_model = OaxacaBlinder(
-            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False
+            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False, rng=rs
         ).two_fold(True, two_fold_type="self_submitted", submitted_weight=0)
 
     def test_results(self):
@@ -247,12 +243,13 @@ class TestZeroModel:
         np.testing.assert_almost_equal(exp_std, zero_std_stata_results[1], 3)
 
 
+@pytest.mark.slow
 class TestOmegaModel:
     @classmethod
     def setup_class(cls):
-        np.random.seed(0)
+        rs = np.random.RandomState(0)
         cls.omega_model = OaxacaBlinder(
-            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False
+            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False, rng=rs
         ).two_fold(True, two_fold_type="nuemark")
 
     def test_results(self):
@@ -269,20 +266,19 @@ class TestOmegaModel:
         np.testing.assert_almost_equal(exp_std, nue_std_stata_results[1], 3)
 
 
+@pytest.mark.slow
 class TestPooledModel:
     @classmethod
     def setup_class(cls):
-        np.random.seed(0)
+        rs = np.random.RandomState(0)
         cls.pooled_model = OaxacaBlinder(
-            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False
+            pandas_df.endog, pandas_df.exog, "OWNRENT", hasconst=False, rng=rs
         ).two_fold(True)
 
     def test_results(self):
         unexp, exp, gap = self.pooled_model.params
         unexp_std, exp_std = self.pooled_model.std
-        pool_params_stata_results = np.array(
-            [27.940908, 130.809536, 158.75044]
-        )
+        pool_params_stata_results = np.array([27.940908, 130.809536, 158.75044])
         pool_std_stata_results = np.array([89.209487, 58.612367])
 
         np.testing.assert_almost_equal(unexp, pool_params_stata_results[0], 3)
@@ -291,3 +287,116 @@ class TestPooledModel:
 
         np.testing.assert_almost_equal(unexp_std, pool_std_stata_results[0], 3)
         np.testing.assert_almost_equal(exp_std, pool_std_stata_results[1], 3)
+
+
+@pytest.mark.slow
+def test_oaxaca_results_summary(capsys):
+    # Check the returned summary against the same Stata-verified values
+    # test_oaxaca_results checks the underlying params/std against above.
+    rs = np.random.RandomState(0)
+    model = OaxacaBlinder(endog, exog, 3, rng=rs)
+
+    three_fold = model.three_fold()
+    out = three_fold.summary()
+    assert capsys.readouterr().out == ""
+    assert "Oaxaca-Blinder Three-fold Effects" in out
+    endow, coef, inter, gap = three_fold.params
+    assert f"Endowment Effect: {endow:.5f}" in out
+    assert f"Coefficient Effect: {coef:.5f}" in out
+    assert f"Interaction Effect: {inter:.5f}" in out
+    assert f"Gap: {gap:.5f}" in out
+    assert "Standard Error" not in out
+
+    three_fold_std = model.three_fold(True)
+    out_std = three_fold_std.summary()
+    assert capsys.readouterr().out == ""
+    endow_var, coef_var, inter_var = three_fold_std.std
+    assert f"Endowment Standard Error: {endow_var:.5f}" in out_std
+    assert f"Coefficient Standard Error: {coef_var:.5f}" in out_std
+    assert f"Interaction Standard Error: {inter_var:.5f}" in out_std
+
+    two_fold = model.two_fold()
+    out_two = two_fold.summary()
+    assert capsys.readouterr().out == ""
+    assert "Oaxaca-Blinder Two-fold Effects" in out_two
+    unexp, exp, gap2 = two_fold.params
+    assert f"Unexplained Effect: {unexp:.5f}" in out_two
+    assert f"Explained Effect: {exp:.5f}" in out_two
+    assert f"Gap: {gap2:.5f}" in out_two
+
+    two_fold_std = model.two_fold(True)
+    out_two_std = two_fold_std.summary()
+    assert capsys.readouterr().out == ""
+    unexp_std, exp_std = two_fold_std.std
+    assert f"Unexplained Standard Error: {unexp_std:.5f}" in out_two_std
+    assert f"Explained Standard Error: {exp_std:.5f}" in out_two_std
+
+
+@pytest.mark.parametrize(
+    "model_type, params, std, expected",
+    [
+        (
+            2,
+            (1.234567, -2.345678, 0.0),
+            None,
+            (
+                "Oaxaca-Blinder Two-fold Effects\n"
+                "Unexplained Effect: 1.23457\n"
+                "Explained Effect: -2.34568\n"
+                "Gap: 0.00000"
+            ),
+        ),
+        (
+            2,
+            (1.234567, -2.345678, 0.0),
+            (0.123456, 0.234567),
+            (
+                "Oaxaca-Blinder Two-fold Effects\n"
+                "Unexplained Effect: 1.23457\n"
+                "Unexplained Standard Error: 0.12346\n"
+                "Explained Effect: -2.34568\n"
+                "Explained Standard Error: 0.23457\n"
+                "Gap: 0.00000"
+            ),
+        ),
+        (
+            3,
+            (1.234567, -2.345678, 3.456789, 0.0),
+            None,
+            (
+                "Oaxaca-Blinder Three-fold Effects\n"
+                "Endowment Effect: 1.23457\n"
+                "Coefficient Effect: -2.34568\n"
+                "Interaction Effect: 3.45679\n"
+                "Gap: 0.00000"
+            ),
+        ),
+        (
+            3,
+            (1.234567, -2.345678, 3.456789, 0.0),
+            (0.123456, 0.234567, 0.345678),
+            (
+                "Oaxaca-Blinder Three-fold Effects\n"
+                "Endowment Effect: 1.23457\n"
+                "Endowment Standard Error: 0.12346\n"
+                "Coefficient Effect: -2.34568\n"
+                "Coefficient Standard Error: 0.23457\n"
+                "Interaction Effect: 3.45679\n"
+                "Interaction Standard Error: 0.34568\n"
+                "Gap: 0.00000"
+            ),
+        ),
+    ],
+    ids=["two-fold", "two-fold-std", "three-fold", "three-fold-std"],
+)
+def test_oaxaca_summary_returns_text(model_type, params, std, expected, capsys):
+    # Literal values isolate the display contract from estimation accuracy.
+    result = OaxacaResults(params, model_type, std_val=std)
+
+    summary = result.summary()
+
+    assert isinstance(summary, str)
+    assert summary == expected
+    assert capsys.readouterr().out == ""
+    assert result.params == params
+    assert result.std == std

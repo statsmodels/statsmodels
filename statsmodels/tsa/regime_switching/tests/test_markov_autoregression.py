@@ -4,8 +4,7 @@ Tests for Markov Autoregression models
 Author: Chad Fulton
 License: BSD-3
 """
-
-import os
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -16,7 +15,7 @@ import pytest
 from statsmodels.tools import add_constant
 from statsmodels.tsa.regime_switching import markov_autoregression
 
-current_path = os.path.dirname(os.path.abspath(__file__))
+current_path = Path(__file__).resolve().parent
 
 
 rgnp = [2.59316421, 2.20217133, 0.45827562, 0.9687438,
@@ -535,8 +534,7 @@ class TestHamiltonAR2Switch(MarkovAutoregression):
     # Results from Stata, see http://www.stata.com/manuals14/tsmswitch.pdf
     @classmethod
     def setup_class(cls):
-        path = os.path.join(current_path, "results",
-                            "results_predict_rgnp.csv")
+        path = Path(current_path).joinpath("results", "results_predict_rgnp.csv")
         results = pd.read_csv(path)
 
         true = {
@@ -820,7 +818,7 @@ class TestHamiltonAR1SwitchTVTP(MarkovAutoregression):
 class TestFilardo(MarkovAutoregression):
     @classmethod
     def setup_class(cls):
-        path = os.path.join(current_path, "results", "mar_filardo.csv")
+        path = Path(current_path).joinpath("results", "mar_filardo.csv")
         cls.mar_filardo = pd.read_csv(path)
         true = {
             "params": np.r_[4.35941747, -1.6493936, 1.7702123, 0.9945672,
@@ -863,7 +861,7 @@ class TestFilardo(MarkovAutoregression):
 class TestFilardoPandas(MarkovAutoregression):
     @classmethod
     def setup_class(cls):
-        path = os.path.join(current_path, "results", "mar_filardo.csv")
+        path = Path(current_path).joinpath("results", "mar_filardo.csv")
         cls.mar_filardo = pd.read_csv(path)
         cls.mar_filardo.index = pd.date_range("1948-02-01", "1991-04-01",
                                               freq="MS")

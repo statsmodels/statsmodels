@@ -1,6 +1,4 @@
-"""
-Initialization methods for states of exponential smoothing models
-"""
+"""Initialization methods for states of exponential smoothing models"""
 
 import numpy as np
 import pandas as pd
@@ -8,6 +6,52 @@ import pandas as pd
 
 def _initialization_simple(endog, trend=False, seasonal=False,
                            seasonal_periods=None):
+    """
+    Compute simple initial values for level, trend, and seasonal components
+
+    Parameters
+    ----------
+    endog : array_like
+        The observed time-series process :math:`y`.
+    trend : {'add', 'mul'} or None, optional
+        The type of trend component. If not 'add' or 'mul', no initial
+        trend value is computed. Default is False, which is treated the
+        same as None.
+    seasonal : {'add', 'mul'} or None, optional
+        The type of seasonal component. If not 'add' or 'mul', the
+        non-seasonal branch is used and no initial seasonal values are
+        computed. Default is False, which is treated the same as None.
+    seasonal_periods : int, optional
+        The number of periods in a complete seasonal cycle. Required if
+        `seasonal` is 'add' or 'mul'.
+
+    Returns
+    -------
+    initial_level : float
+        The initial value for the level component.
+    initial_trend : float or None
+        The initial value for the trend component, or None if `trend` is
+        not 'add' or 'mul'.
+    initial_seasonal : ndarray or None
+        The initial values for the seasonal component, or None if
+        `seasonal` is not 'add' or 'mul'.
+
+    Raises
+    ------
+    ValueError
+        If `seasonal` is 'add' or 'mul' and `endog` does not contain at
+        least two full seasonal cycles.
+
+    Notes
+    -----
+    See Section 7.6 of Hyndman and Athanasopoulos [1]_.
+
+    References
+    ----------
+    .. [1] Hyndman, R.J., & Athanasopoulos, G. (2019) *Forecasting:
+       principles and practice*, 3rd edition, OTexts: Melbourne,
+       Australia. OTexts.com/fpp3. Accessed on April 19th 2020.
+    """
     # See Section 7.6 of Hyndman and Athanasopoulos
     nobs = len(endog)
     initial_trend = None
@@ -30,7 +74,7 @@ def _initialization_simple(endog, trend=False, seasonal=False,
         initial_level = np.mean(endog[:seasonal_periods])
         m = seasonal_periods
 
-        if trend is not None:
+        if trend in ("add", "mul"):
             initial_trend = (pd.Series(endog).diff(m)[m:2 * m] / m).mean()
 
         if seasonal == "add":
@@ -43,6 +87,53 @@ def _initialization_simple(endog, trend=False, seasonal=False,
 
 def _initialization_heuristic(endog, trend=False, seasonal=False,
                               seasonal_periods=None):
+    """
+    Compute heuristic initial values for level, trend, and seasonal components
+
+    Parameters
+    ----------
+    endog : ndarray
+        The observed time-series process :math:`y`.
+    trend : {'add', 'mul'} or None, optional
+        The type of trend component. If not 'add' or 'mul', no initial
+        trend value is computed. Default is False, which is treated the
+        same as None.
+    seasonal : {'add', 'mul'} or None, optional
+        The type of seasonal component. If not 'add' or 'mul', the
+        non-seasonal branch is used and no initial seasonal values are
+        computed. Default is False, which is treated the same as None.
+    seasonal_periods : int, optional
+        The number of periods in a complete seasonal cycle. Required if
+        `seasonal` is 'add' or 'mul'.
+
+    Returns
+    -------
+    initial_level : float
+        The initial value for the level component.
+    initial_trend : float or None
+        The initial value for the trend component, or None if `trend` is
+        not 'add' or 'mul'.
+    initial_seasonal : ndarray or None
+        The initial values for the seasonal component, or None if
+        `seasonal` is not 'add' or 'mul'.
+
+    Raises
+    ------
+    ValueError
+        If `endog` has fewer than 10 observations, or if `seasonal` is
+        'add' or 'mul' and `endog` does not contain enough observations
+        to compute the seasonally adjusted level.
+
+    Notes
+    -----
+    See Section 2.6 of Hyndman et al. [1]_.
+
+    References
+    ----------
+    .. [1] Hyndman, R.J., & Athanasopoulos, G. (2019) *Forecasting:
+       principles and practice*, 3rd edition, OTexts: Melbourne,
+       Australia. OTexts.com/fpp3. Accessed on April 19th 2020.
+    """
     # See Section 2.6 of Hyndman et al.
     endog = endog.copy()
     nobs = len(endog)

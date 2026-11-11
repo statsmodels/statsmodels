@@ -20,17 +20,20 @@ of ARMA or related processes. It also includes methods to work with autoregressi
 moving average lag-polynomials.
 Additionally, related statistical tests and some useful helper functions are available.
 
-Estimation is either done by exact or conditional Maximum Likelihood or conditional
-least-squares, either using Kalman Filter or direct filters.
+Estimation is either done by exact Maximum Likelihood (using the Kalman filter or the
+innovations algorithm), by conditional Maximum Likelihood or least-squares (using
+regressions, for example in AutoReg), or by other regression-based and moment-based
+estimators such as Hannan-Rissanen and Yule-Walker.
 
-Currently, functions and classes have to be imported from the corresponding module, but
-the main classes will be made available in the statsmodels.tsa namespace. The module
-structure is within statsmodels.tsa is
+Most of the main classes and functions can be imported from ``statsmodels.tsa.api``,
+which is also available as ``sm.tsa`` after ``import statsmodels.api as sm``. Others
+have to be imported from the corresponding module. The module structure within
+statsmodels.tsa is
 
 - stattools : empirical properties and tests, acf, pacf, granger-causality,
   adf unit root test, kpss test, bds test, ljung-box test and others.
 - ar_model : univariate autoregressive process, estimation with conditional
-  and exact maximum likelihood and conditional least-squares
+  maximum likelihood (OLS)
 - arima.model : univariate ARIMA process, estimation with alternative methods
 - statespace : Comprehensive statespace model specification and estimation. See
   the :ref:`statespace documentation <statespace>`.
@@ -66,26 +69,42 @@ Descriptive Statistics and Tests
 
    stattools.acovf
    stattools.acf
+   stattools.AcfResult
    stattools.pacf
+   stattools.PacfResult
    stattools.pacf_yw
    stattools.pacf_ols
    stattools.pacf_burg
+   stattools.PacfBurgResult
    stattools.ccovf
    stattools.ccf
+   stattools.CcfResult
+   stattools.pccf
+   stattools.PccfResult
    stattools.adfuller
+   stattools.ADFullerResult
    stattools.kpss
+   stattools.KPSSResult
    stattools.leybourne
    stattools.range_unit_root_test
+   stattools.RURResult
    stattools.zivot_andrews
    stattools.coint
+   stattools.CointResult
    stattools.bds
+   stattools.block_jackknife
+   stattools.JackknifeResult
    stattools.q_stat
+   stattools.QStatResult
    stattools.breakvar_heteroskedasticity_test
+   stattools.BreakvarHeteroskedasticityResult
    stattools.grangercausalitytests
    stattools.levinson_durbin
+   stattools.LevinsonDurbinResult
    stattools.innovations_algo
    stattools.innovations_filter
    stattools.levinson_durbin_pacf
+   stattools.LevinsonDurbinPacfResult
    stattools.arma_order_select_ic
    x13.x13_arima_select_order
    x13.x13_arima_analysis
@@ -109,6 +128,7 @@ The basic autoregressive model in Statsmodels is:
    ar_model.AutoReg
    ar_model.AutoRegResults
    ar_model.ar_select_order
+   ar_model.InformationCriteria
 
 The `ar_model.AutoReg` model estimates parameters using conditional MLE (OLS),
 and supports exogenous regressors (an AR-X model) and seasonal effects.
@@ -133,9 +153,15 @@ Basic ARIMA model and results classes are as follows:
    arima.model.ARIMA
    arima.model.ARIMAResults
 
-This model allows estimating parameters by various methods (including
-conditional MLE via the Hannan-Rissanen method and full MLE via the Kalman
-filter). It is a special case of the `SARIMAX` model, and it includes a large
+This model allows estimating parameters by various methods, selected with the
+``method`` argument of ``fit``: full MLE via the Kalman filter
+(``"statespace"``, the default), full MLE via the innovations algorithm
+(``"innovations_mle"``), the regression-based Hannan-Rissanen method
+(``"hannan_rissanen"``), and the Yule-Walker (``"yule_walker"``), Burg
+(``"burg"``) and innovations algorithm (``"innovations"``) estimators. Not
+every method is available for every specification. Regression effects of
+exogenous variables are estimated by GLS unless ``method="statespace"``. It is
+a special case of the `SARIMAX` model, and it includes a large
 number of inherited features from the :ref:`state space <statespace>` models
 (including prediction / forecasting, residual diagnostics, simulation and
 impulse responses, etc.).
@@ -144,6 +170,22 @@ See the notebooks `ARMA: Sunspots Data
 <examples/notebooks/generated/tsa_arma_0.ipynb>`_ and
 `ARMA: Artificial Data <examples/notebooks/generated/tsa_arma_1.ipynb>`_
 for an overview.
+
+The innovations algorithm provides a way to compute the likelihood, score, and
+related quantities for a given ARMA process without constructing a full state
+space representation; it is used internally by the ``"innovations_mle"``
+estimator and by the GLS estimation of regression effects.
+
+.. currentmodule:: statsmodels.tsa.innovations
+
+.. autosummary::
+   :toctree: generated/
+
+   arma_innovations.arma_innovations
+   arma_innovations.arma_loglike
+   arma_innovations.arma_loglikeobs
+   arma_innovations.arma_score
+   arma_innovations.arma_scoreobs
 
 
 Exponential Smoothing
@@ -263,8 +305,9 @@ Error Correction Models (ECM)
 """""""""""""""""""""""""""""
 Error correction models are reparameterizations of ARDL models that
 regress the difference of the endogenous variable on the lagged levels
-of the endogenous variables and optional lagged differences of the
-exogenous variables.
+of the endogenous and exogenous variables and, optionally, lagged
+differences of the endogenous variable and current and lagged differences
+of the exogenous variables.
 
 .. currentmodule:: statsmodels.tsa
 
@@ -327,10 +370,18 @@ Time Series Filters
 
    cffilter
 
+.. currentmodule:: statsmodels.tsa.filters.hamilton_filter
+.. autosummary::
+   :toctree: generated/
+
+   hamilton_filter
+
+
 .. currentmodule:: statsmodels.tsa.filters.filtertools
 .. autosummary::
    :toctree: generated/
 
+   CycleTrendResult
    convolution_filter
    recursive_filter
    miso_lfilter
@@ -362,6 +413,7 @@ TSA Tools
    add_trend
    detrend
    lagmat
+   LagmatResult
    lagmat2ds
 
 VARMA Process

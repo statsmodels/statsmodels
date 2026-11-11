@@ -1,13 +1,147 @@
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
+import pytest
 
 from statsmodels.discrete.conditional_models import (
     ConditionalLogit,
     ConditionalMNLogit,
     ConditionalPoisson,
 )
+from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import approx_fprime
+
+
+@pytest.fixture(params=[ConditionalLogit, ConditionalPoisson, ConditionalMNLogit])
+def conditional_model(request):
+    rng = np.random.default_rng(8849)
+    groups = np.repeat(np.arange(20), 3)
+    endog = np.tile([0, 1, 2], 20)
+    if request.param is ConditionalLogit:
+        endog = (endog == 1).astype(int)
+    exog = rng.normal(size=(len(endog), 2))
+    return request.param(endog, exog, groups=groups)
+
+
+def _conditional_start_params(model):
+    k_params = model.exog.shape[1]
+    if isinstance(model, ConditionalMNLogit):
+        k_params *= model.k_cat - 1
+    return np.zeros(k_params)
+
+
+@pytest.mark.parametrize("method", ["bfgs", "nm"])
+def test_conditional_fit_callback_retall(conditional_model, method):
+    start_params = _conditional_start_params(conditional_model)
+    iterates = []
+
+    def callback(params):
+        iterates.append(params.copy())
+
+    result = conditional_model.fit(
+        start_params=start_params,
+        method=method,
+        maxiter=1000,
+        callback=callback,
+        retall=True,
+    )
+
+    assert iterates
+    assert_allclose(iterates[-1], np.asarray(result.params).ravel())
+    assert result.mle_retvals["converged"]
+    assert_allclose(result.mle_retvals["allvecs"][0], start_params)
+    assert_allclose(result.mle_retvals["allvecs"][-1], iterates[-1])
+    assert result.mle_settings["callback"] is callback
+    assert result.mle_settings["retall"] is True
+
+
+@pytest.mark.parametrize("method", ["bfgs", "lbfgs"])
+def test_conditional_fit_optimizer_kwargs(conditional_model, method):
+    start_params = _conditional_start_params(conditional_model) + 0.2
+    if method == "bfgs":
+        # A loose tolerance accepts the starting values without an iteration.
+        fit_kwargs = {"gtol": 1e3}
+        expected = start_params
+    else:
+        # Fix every coefficient at zero using the optimizer's box constraints.
+        fit_kwargs = {"bounds": [(0, 0)] * len(start_params)}
+        expected = np.zeros_like(start_params)
+
+    result = conditional_model.fit(
+        start_params=start_params, method=method, **fit_kwargs
+    )
+
+    assert_allclose(np.asarray(result.params).ravel(), expected, atol=1e-12)
+    for key, value in fit_kwargs.items():
+        assert result.mle_settings[key] == value
+
+
+def test_conditional_fit_fargs(conditional_model, monkeypatch):
+    start_params = _conditional_start_params(conditional_model)
+    reference = conditional_model.fit(start_params=start_params, skip_hessian=True)
+    loglike = conditional_model.loglike
+    score = conditional_model.score
+
+    # Translating the objective translates its maximizer by the same amount.
+    # The required argument ensures fargs reaches both likelihood and score.
+    def shifted_loglike(params, shift):
+        return loglike(params - shift)
+
+    def shifted_score(params, shift):
+        return score(params - shift)
+
+    monkeypatch.setattr(conditional_model, "loglike", shifted_loglike)
+    monkeypatch.setattr(conditional_model, "score", shifted_score)
+    shift = 0.25
+    result = conditional_model.fit(
+        start_params=start_params + shift, fargs=(shift,), skip_hessian=True
+    )
+
+    assert_allclose(result.params, reference.params + shift, atol=1e-10)
+    assert result.mle_settings["fargs"] == (shift,)
+    assert result.normalized_cov_params is None
+
+
+def test_conditional_fit_warn_convergence(conditional_model, recwarn):
+    result = conditional_model.fit(
+        start_params=_conditional_start_params(conditional_model),
+        maxiter=0,
+        warn_convergence=False,
+    )
+
+    assert not recwarn.list
+    assert not result.mle_retvals["converged"]
+
+
+def test_conditional_fit_settings(conditional_model, capsys):
+    start_params = _conditional_start_params(conditional_model)
+    result = conditional_model.fit(
+        start_params=start_params, method="bfgs", maxiter=50, disp=True
+    )
+
+    assert result.mle_settings["optimizer"] == "bfgs"
+    assert result.mle_settings["maxiter"] == 50
+    assert_allclose(result.mle_settings["start_params"], start_params)
+    assert result.mle_retvals["converged"]
+    assert "Optimization terminated successfully" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "fit_kwargs",
+    [
+        {"cov_type": "HC0"},
+        {"cov_type": "cluster", "cov_kwds": {"groups": np.repeat(np.arange(20), 3)}},
+    ],
+)
+def test_conditional_fit_robust_cov_type(conditional_model, fit_kwargs):
+    start_params = _conditional_start_params(conditional_model)
+    msg = "is not available for conditional models"
+    with pytest.raises(NotImplementedError, match=msg):
+        conditional_model.fit(start_params=start_params, **fit_kwargs)
+
+    # nonrobust is the only covariance type, passing it is allowed
+    result = conditional_model.fit(start_params=start_params, cov_type="nonrobust")
+    assert result.bse.shape == result.params.shape
 
 
 def test_logit_1d():
@@ -41,7 +175,7 @@ def test_logit_1d():
 
 
 def test_logit_formula():
-    """Test that ConditionalLogit uses the right environment for formulas."""
+    """Test that ConditionalLogit uses the right environment for formulas"""
 
     def times_two(x):
         return 2 * x
@@ -49,9 +183,11 @@ def test_logit_formula():
     groups = np.repeat([0, 1], 50)
     exog = np.linspace(-2, 2, len(groups))
 
-    error = np.linspace(-1, 1, len(groups))  # Needed for within-group variance
-    logit_link = 1 / (1 + np.exp(exog + groups)) + error
-    endog = (logit_link > 0.5).astype(int)
+    # Random endog with within-group variance, a deterministic threshold on exog
+    # is perfectly separated and one group has no variation
+    rng = np.random.default_rng(123)
+    prob = 1 / (1 + np.exp(-(0.5 * exog + groups - 0.5)))
+    endog = rng.binomial(1, prob)
 
     data = pd.DataFrame({"exog": exog, "groups": groups, "endog": endog})
 
@@ -105,12 +241,12 @@ def test_formula():
 
     for j in 0, 1:
 
-        np.random.seed(34234)
+        rs = np.random.RandomState(34234)
         n = 200
-        y = np.random.randint(0, 2, size=n)
-        x1 = np.random.normal(size=n)
-        x2 = np.random.normal(size=n)
-        g = np.random.randint(0, 25, size=n)
+        y = rs.randint(0, 2, size=n)
+        x1 = rs.normal(size=n)
+        x2 = rs.normal(size=n)
+        g = rs.randint(0, 25, size=n)
 
         x = np.hstack((x1[:, None], x2[:, None]))
         if j == 0:
@@ -190,20 +326,20 @@ def test_poisson_2d():
 
 def test_lasso_logistic():
 
-    np.random.seed(3423948)
+    rs = np.random.RandomState(3423948)
 
     n = 200
     groups = np.arange(10)
     groups = np.kron(groups, np.ones(n // 10))
-    group_effects = np.random.normal(size=10)
+    group_effects = rs.normal(size=10)
     group_effects = np.kron(group_effects, np.ones(n // 10))
 
-    x = np.random.normal(size=(n, 4))
+    x = rs.normal(size=(n, 4))
     params = np.r_[0, 0, 1, 0]
     lin_pred = np.dot(x, params) + group_effects
 
     mean = 1 / (1 + np.exp(-lin_pred))
-    y = (np.random.uniform(size=n) < mean).astype(int)
+    y = (rs.uniform(size=n) < mean).astype(int)
 
     model0 = ConditionalLogit(y, x, groups=groups)
     result0 = model0.fit()
@@ -239,20 +375,20 @@ def test_lasso_logistic():
 
 def test_lasso_poisson():
 
-    np.random.seed(342394)
+    rs = np.random.RandomState(342394)
 
     n = 200
     groups = np.arange(10)
     groups = np.kron(groups, np.ones(n // 10))
-    group_effects = np.random.normal(size=10)
+    group_effects = rs.normal(size=10)
     group_effects = np.kron(group_effects, np.ones(n // 10))
 
-    x = np.random.normal(size=(n, 4))
+    x = rs.normal(size=(n, 4))
     params = np.r_[0, 0, 1, 0]
     lin_pred = np.dot(x, params) + group_effects
 
     mean = np.exp(lin_pred)
-    y = np.random.poisson(mean)
+    y = rs.poisson(mean)
 
     model0 = ConditionalPoisson(y, x, groups=groups)
     result0 = model0.fit()
@@ -286,13 +422,25 @@ def test_lasso_poisson():
     assert_allclose(result2.params, result3.params)
 
 
+def test_fit_regularized_invalid_method():
+    rs = np.random.RandomState(3423948)
+    n = 200
+    groups = np.kron(np.arange(10), np.ones(n // 10))
+    x = rs.normal(size=(n, 2))
+    y = (rs.uniform(size=n) < 0.5).astype(int)
+
+    model = ConditionalLogit(y, x, groups=groups)
+    with pytest.raises(ValueError, match="method"):
+        model.fit_regularized(method="not-a-method")
+
+
 def gen_mnlogit(n):
 
-    np.random.seed(235)
+    rs = np.random.RandomState(235)
 
     g = np.kron(np.ones(5), np.arange(n // 5))
-    x1 = np.random.normal(size=n)
-    x2 = np.random.normal(size=n)
+    x1 = rs.normal(size=n)
+    x2 = rs.normal(size=n)
     xm = np.concatenate((x1[:, None], x2[:, None]), axis=1)
     pa = np.array([[0, 1, -1], [0, 2, -1]])
     lpr = np.dot(xm, pa)
@@ -300,23 +448,22 @@ def gen_mnlogit(n):
     pr /= pr.sum(1)[:, None]
     cpr = pr.cumsum(1)
     y = 2 * np.ones(n)
-    u = np.random.uniform(size=n)
+    u = rs.uniform(size=n)
     y[u < cpr[:, 2]] = 2
     y[u < cpr[:, 1]] = 1
     y[u < cpr[:, 0]] = 0
 
     df = pd.DataFrame({"y": y, "x1": x1, "x2": x2, "g": g})
-    return df
+    return df, rs
 
 
 def test_conditional_mnlogit_grad():
-
-    df = gen_mnlogit(90)
+    df, rs = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
 
     # Compare the gradients to numeric gradients
     for _ in range(5):
-        za = np.random.normal(size=4)
+        za = rs.normal(size=4)
         grad = model.score(za)
         ngrad = approx_fprime(za, model.loglike)
         assert_allclose(grad, ngrad, rtol=1e-5, atol=1e-3)
@@ -324,9 +471,9 @@ def test_conditional_mnlogit_grad():
 
 def test_conditional_mnlogit_2d():
 
-    df = gen_mnlogit(90)
+    df, rs = gen_mnlogit(90)
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
-    result = model.fit()
+    result = model.fit(rng=rs)
 
     # Regression tests
     assert_allclose(
@@ -344,11 +491,10 @@ def test_conditional_mnlogit_2d():
 
 
 def test_conditional_mnlogit_3d():
-
-    df = gen_mnlogit(90)
-    df["x3"] = np.random.normal(size=df.shape[0])
+    df, rs = gen_mnlogit(90)
+    df["x3"] = rs.normal(size=df.shape[0])
     model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2 + x3", groups="g", data=df)
-    result = model.fit()
+    result = model.fit(rng=rs)
 
     # Regression tests
     assert_allclose(
@@ -371,6 +517,45 @@ def test_conditional_mnlogit_3d():
     result.summary()
 
 
+@pytest.mark.parametrize(
+    "rng",
+    [0, np.random.RandomState(0), np.random.default_rng(0)],
+    ids=["int", "randomstate", "generator"],
+)
+def test_conditional_mnlogit_fit_rng_types(recwarn, rng):
+    # GH: fit() used to special-case rng=None with an unconditional
+    # FutureWarning and global np.random state instead of routing
+    # through check_random_state like every other rng-accepting
+    # function, so the default call emitted a warning that no other
+    # canonical rng parameter does.
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    model.fit(rng=rng, disp=False)
+    future_warnings = [w for w in recwarn.list if issubclass(w.category, FutureWarning)]
+    assert not future_warnings, [str(w.message) for w in future_warnings]
+
+
+@pytest.mark.singleton_randomstate
+def test_conditional_mnlogit_fit_warn():
+    # GH: fit() used to special-case rng=None with an unconditional
+    # FutureWarning and global np.random state instead of routing
+    # through check_random_state like every other rng-accepting
+    # function, so the default call emitted a warning that no other
+    # canonical rng parameter does.
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    with pytest.warns(FutureWarning, match="When start_params is not specified,"):
+        model.fit(rng=None, disp=False)
+
+
+def test_conditional_mnlogit_fit_rng_reproducible():
+    df, _ = gen_mnlogit(60)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    res1 = model.fit(rng=0, disp=False)
+    res2 = model.fit(rng=0, disp=False)
+    assert_allclose(res1.params, res2.params)
+
+
 def test_skip_hessian():
     y = np.r_[0, 1, 0, 1, 0, 1, 0, 1, 1, 1]
     g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 2]
@@ -383,3 +568,44 @@ def test_skip_hessian():
     result_hess = model.fit(skip_hessian=False)
     assert result_no_hess.normalized_cov_params is None
     assert isinstance(result_hess.normalized_cov_params, np.ndarray)
+
+
+def _fit_conditional_logit_for_summary():
+    y = np.r_[0, 1, 0, 1, 0, 1, 0, 1, 1, 1]
+    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 2]
+    x1 = np.r_[0, 1, 0, 0, 1, 1, 0, 0, 1, 0]
+    x2 = np.r_[0, 0, 1, 0, 0, 1, 0, 1, 1, 1]
+    x = np.column_stack((x1, x2))
+    return ConditionalLogit(y, x, groups=g).fit()
+
+
+def _fit_conditional_poisson_for_summary():
+    y = np.r_[3, 1, 4, 8, 2, 5, 4, 7, 2, 6]
+    g = np.r_[0, 0, 0, 1, 1, 1, 2, 2, 2, 2]
+    x1 = np.r_[0, 1, 0, 0, 1, 1, 0, 0, 1, 0]
+    x2 = np.r_[2, 1, 0, 0, 1, 2, 3, 2, 0, 1]
+    x = np.column_stack((x1, x2))
+    return ConditionalPoisson(y, x, groups=g).fit()
+
+
+def _fit_conditional_mnlogit_for_summary():
+    df, rs = gen_mnlogit(90)
+    model = ConditionalMNLogit.from_formula("y ~ 0 + x1 + x2", groups="g", data=df)
+    return model.fit(rng=rs)
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [
+        _fit_conditional_logit_for_summary,
+        _fit_conditional_poisson_for_summary,
+        _fit_conditional_mnlogit_for_summary,
+    ],
+    ids=["ConditionalLogit", "ConditionalPoisson", "ConditionalMNLogit"],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)

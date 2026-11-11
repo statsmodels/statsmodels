@@ -4,6 +4,10 @@ assert functions from numpy and pandas testing
 """
 from statsmodels.compat.pandas import testing as pdt
 
+import contextlib
+import re
+import warnings
+
 import numpy.testing as npt
 import pandas as pd
 
@@ -19,14 +23,14 @@ def bunch_factory(attribute, columns):
 
     Parameters
     ----------
-    attribute: str
+    attribute : str
         Attribute to access when splitting
-    columns: List[str]
+    columns : list of str
         List of names to use when splitting the columns of attribute
 
     Notes
     -----
-    After the class is initialized as a Bunch, the columne of attribute
+    After the class is initialized as a Bunch, the columns of attribute
     are split so that Bunch has the keys in columns and
     bunch[column[i]] = bunch[attribute][:, i]
 
@@ -35,8 +39,8 @@ def bunch_factory(attribute, columns):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             if not hasattr(self, attribute):
-                raise AttributeError("{} is required and must be passed to "
-                                     "the constructor".format(attribute))
+                raise AttributeError(f"{attribute} is required and must be passed to "
+                                     "the constructor")
             for i, att in enumerate(columns):
                 self[att] = getattr(self, attribute)[:, i]
 
@@ -49,9 +53,7 @@ MarginTableTestBunch = bunch_factory("margins_table", PARAM_LIST)
 
 
 class Holder:
-    """
-    Test-focused class to simplify accessing values by attribute
-    """
+    """Test-focused class to simplify accessing values by attribute"""
 
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
@@ -72,11 +74,70 @@ class Holder:
 # adjusted functions
 
 def assert_equal(actual, desired, err_msg="", verbose=True, **kwds):
+    """
+    Dispatch to the appropriate pandas or numpy testing assert function
+
+    Parameters
+    ----------
+    actual : array_like
+        The value to test.
+    desired : array_like
+        The expected value. If a pandas Index, Series, or DataFrame, the
+        matching pandas assert function is used.
+    err_msg : str, optional
+        The error message to use on failure when neither `desired` is a
+        pandas Index, Series, or DataFrame.
+    verbose : bool, optional
+        Whether to include the actual and desired values in the error
+        message when neither `desired` is a pandas Index, Series, or
+        DataFrame.
+    **kwds
+        Additional keyword arguments passed to the pandas assert function
+        when `desired` is a pandas Index, Series, or DataFrame.
+    """
     if isinstance(desired, pd.Index):
-        pdt.assert_index_equal(actual, desired)
+        pdt.assert_index_equal(actual, desired, **kwds)
     elif isinstance(desired, pd.Series):
         pdt.assert_series_equal(actual, desired, **kwds)
     elif isinstance(desired, pd.DataFrame):
         pdt.assert_frame_equal(actual, desired, **kwds)
     else:
-        npt.assert_equal(actual, desired, err_msg="", verbose=True)
+        npt.assert_equal(actual, desired, err_msg=err_msg, verbose=verbose)
+
+
+@contextlib.contextmanager
+def warns_or_none(category, match=None):
+    """
+    Allow, but do not require, a warning in a test
+
+    Use this for a warning of another package that depends on the platform or
+    on the version of the package, so that the test cannot expect it with
+    ``pytest.warns``, which fails if the warning is not emitted.
+
+    Parameters
+    ----------
+    category : type of Warning or tuple of type of Warning
+        The category of the warning that is allowed. Subclasses are allowed.
+    match : str, optional
+        A regular expression that has to match the start of the message of
+        the allowed warning, as in ``pytest.warns``. All messages are allowed
+        if None.
+
+    Notes
+    -----
+    A warning that is not allowed is emitted again when the block ends, so
+    that the warning filters of the test run apply to it, for example if the
+    filters turn it into an error or ``pytest.warns`` expects it around this
+    block.
+    """
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        yield
+    for w in record:
+        allowed = issubclass(w.category, category) and (
+            match is None or re.match(match, str(w.message))
+        )
+        if not allowed:
+            warnings.warn_explicit(
+                w.message, w.category, w.filename, w.lineno, source=w.source
+            )

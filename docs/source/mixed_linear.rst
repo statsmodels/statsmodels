@@ -129,9 +129,9 @@ where
   values are independent both within and between groups
 
 :math:`Y, X, \{Q_j\}` and :math:`Z` must be entirely observed.  :math:`\beta`,
-:math:`\Psi`, and :math:`\sigma^2` are estimated using ML or REML estimation,
-and :math:`\gamma`, :math:`\{\eta_j\}` and :math:`\epsilon` are
-random so define the probability model.
+:math:`\Psi`, :math:`\{\tau_j^2\}`, and :math:`\sigma^2` are estimated using
+ML or REML estimation, and :math:`\gamma`, :math:`\{\eta_j\}` and
+:math:`\epsilon` are random so define the probability model.
 
 The marginal mean structure is :math:`E[Y|X,Z] = X*\beta`.  If only
 the marginal mean structure is of interest, GEE is a good alternative
@@ -144,8 +144,11 @@ Notation:
   variance.  There is also a single estimated variance parameter
   :math:`\tau_j^2` for each variance component.  For a single group,
   the marginal covariance matrix of endog given exog is
-  :math:`scale*I + Z * cov_{re} * Z`, where :math:`Z` is the design
-  matrix for the random effects in one group.
+  :math:`scale*I + Z * cov_{re} * Z' + \sum_j \tau_j^2 Q_j Q_j'`, where
+  :math:`Z` is the design matrix for the random effects and :math:`Q_j`
+  is the design matrix for the :math:`j^\rm{th}` variance component in
+  one group.  The last term is absent if the model has no variance
+  components.
 
 References
 ^^^^^^^^^^
@@ -158,7 +161,7 @@ The primary reference for the implementation details is:
 
 See also this more recent document:
 
-* http://econ.ucsb.edu/~doug/245a/Papers/Mixed%20Effects%20Implement.pdf
+* https://econ.ucsb.edu/~doug/245a/Papers/Mixed%20Effects%20Implement.pdf
 
 All the likelihood, gradient, and Hessian calculations closely follow
 Lindstrom and Bates.
@@ -194,3 +197,11 @@ The result class is:
    :toctree: generated/
 
    MixedLMResults
+
+Custom variance structures (the ``exog_vc`` argument to ``MixedLM``) are
+specified with:
+
+.. autosummary::
+   :toctree: generated/
+
+   VCSpec

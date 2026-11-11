@@ -24,6 +24,30 @@ def assert_maxabs(actual, expected, value):
     npt.assert_array_less(em.maxabs(actual, expected, None), value)
 
 
+def test_panel_sample_rng_default_is_generator():
+    # GH: rng=None used to be pre-converted to a random int before being
+    # handed to check_random_state(deprecated=True), so the default case
+    # always produced a legacy RandomState instead of a fresh Generator
+    # like every other canonical rng-accepting constructor in the
+    # library.
+    dgp = PanelSample(20, 2, 4, rng=None)
+    assert isinstance(dgp.random_state, np.random.Generator)
+
+
+def test_panel_sample_rng_types():
+    for rng in (0, np.random.RandomState(0), np.random.default_rng(0)):
+        dgp = PanelSample(20, 2, 4, rng=rng)
+        dgp.generate_panel()
+
+
+def test_panel_sample_rng_reproducible():
+    dgp1 = PanelSample(20, 2, 4, rng=0)
+    dgp2 = PanelSample(20, 2, 4, rng=0)
+    y1 = dgp1.generate_panel()
+    y2 = dgp2.generate_panel()
+    assert_almost_equal(y1, y2, decimal=13)
+
+
 def test_short_panel():
     # this checks that some basic statistical properties are satisfied by the
     # results, not verified results against other packages
@@ -44,10 +68,10 @@ def test_short_panel():
             [1],
             [1.0, -0.9],
         ),
-        seed=377769,
+        rng=377769,
         within=False,
     )
-    # print 'seed', dgp.seed
+    # print 'rng', dgp.rng
     y = dgp.generate_panel()
     noise = y - dgp.y_true
 
@@ -163,3 +187,29 @@ def test_short_panel():
         mod2.res_pooled, 0, mod2.group.groupidx, use_correction="hac"
     )
     assert_almost_equal(cov_pnw0, cov_white, decimal=13)
+
+
+def test_fit_iterative_repeated_call():
+    # GH#9880 repeated calls start from the current covariance, so 2 + 2
+    # iterations are the same as 3 iterations on a fresh model.
+    nobs = 100
+    n_groups = nobs // 5
+    dgp = PanelSample(
+        nobs,
+        3,
+        n_groups,
+        corr_structure=cs.corr_arma,
+        corr_args=([1], [1.0, -0.9]),
+        rng=377769,
+        within=False,
+    )
+    y = dgp.generate_panel()
+
+    mod = ShortPanelGLS(y, dgp.exog, dgp.groups)
+    res_a = mod.fit_iterative(2)
+    res_b = mod.fit_iterative(2)
+    expected = ShortPanelGLS(y, dgp.exog, dgp.groups).fit_iterative(3)
+    assert not np.allclose(res_a.params, res_b.params, rtol=1e-10, atol=0)
+    npt.assert_allclose(res_b.params, expected.params, rtol=1e-10)
+    npt.assert_allclose(res_b.bse, expected.bse, rtol=1e-10)
+    npt.assert_allclose(mod.pinv_wexog, np.linalg.pinv(mod.wexog))

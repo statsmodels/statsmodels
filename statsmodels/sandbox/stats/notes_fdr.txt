@@ -12,7 +12,7 @@ pvalues are uniformly on [0,1] distributed under the null hypothesis.
 
 fdr for microarray or fmri can use special structure
 A special case in general statistical literature is the comparison of means
-with specific methods to correct for multiple tests, e.g. Tukey
+with specific methods to correct for multiple tests, e.g., Tukey
 
 (survey by Shaffer
 

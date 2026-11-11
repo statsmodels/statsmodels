@@ -1,0 +1,53 @@
+name: Feature request
+description: Suggest an idea or enhancement for statsmodels
+title: "ENH: "
+labels: ["type-enh"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest an improvement!
+
+        Please search the [issue tracker](https://github.com/statsmodels/statsmodels/issues)
+        first to check whether something similar has already been requested.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem? Please describe
+      description: >
+        A clear and concise description of what the problem is. Ex. I'm always
+        frustrated when [...]
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the solution you'd like
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Describe alternatives you have considered
+      description: >
+        A clear and concise description of any alternative solutions or features you
+        have considered.
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: >
+        If this request implements a specific statistical or econometric method, link
+        to a paper, textbook, or an existing implementation in another package
+        (e.g. R, SAS, Stata) that can be used to validate correctness.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other context or screenshots about the feature request here.

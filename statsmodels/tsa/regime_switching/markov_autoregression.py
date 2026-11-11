@@ -19,7 +19,7 @@ from statsmodels.tsa.tsatools import lagmat
 
 class MarkovAutoregression(markov_regression.MarkovRegression):
     r"""
-    Markov switching regression model
+    Markov switching autoregression model
 
     Parameters
     ----------
@@ -29,8 +29,8 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         The number of regimes.
     order : int
         The order of the autoregressive lag polynomial.
-    trend : {'n', 'c', 't', 'ct'}
-        Whether or not to include a trend. To include an constant, time trend,
+    trend : {'n', 'c', 't', 'ct'}, optional
+        Whether or not to include a trend. To include a constant, time trend,
         or both, set `trend='c'`, `trend='t'`, or `trend='ct'`. For no trend,
         set `trend='n'`. Default is a constant.
     exog : array_like, optional
@@ -40,20 +40,20 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         time-varying transition probabilities (TVTP). TVTP is only used if this
         variable is provided. If an intercept is desired, a column of ones must
         be explicitly included in this array.
-    switching_ar : bool or iterable, optional
+    switching_ar : bool or sequence of bool, optional
         If a boolean, sets whether or not all autoregressive coefficients are
-        switching across regimes. If an iterable, should be of length equal
+        switching across regimes. If a sequence, should be of length equal
         to `order`, where each element is a boolean describing whether the
         corresponding coefficient is switching. Default is True.
-    switching_trend : bool or iterable, optional
+    switching_trend : bool or sequence of bool, optional
         If a boolean, sets whether or not all trend coefficients are
-        switching across regimes. If an iterable, should be of length equal
+        switching across regimes. If a sequence, should be of length equal
         to the number of trend variables, where each element is
         a boolean describing whether the corresponding coefficient is
         switching. Default is True.
-    switching_exog : bool or iterable, optional
+    switching_exog : bool or sequence of bool, optional
         If a boolean, sets whether or not all regression coefficients are
-        switching across regimes. If an iterable, should be of length equal
+        switching across regimes. If a sequence, should be of length equal
         to the number of exogenous variables, where each element is
         a boolean describing whether the corresponding coefficient is
         switching. Default is True.
@@ -61,6 +61,16 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         Whether or not there is regime-specific heteroskedasticity, i.e.
         whether or not the error term has a switching variance. Default is
         False.
+    dates : array_like, optional
+        An array-like object of datetime objects. If a pandas object is given
+        for endog or exog, it is assumed to have a DateIndex.
+    freq : str, optional
+        The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
+        'M', 'A', or 'Q'. This is optional if dates are given.
+    missing : str, optional
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none'.
 
     Notes
     -----
@@ -77,7 +87,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         \varepsilon_t \\
         \varepsilon_t \sim N(0, \sigma_{S_t}^2)
 
-    i.e. the model is an autoregression with where the autoregressive
+    i.e., the model is an autoregression where the autoregressive
     coefficients, the mean of the process (possibly including trend or
     regression effects) and the variance of the error term may be switching
     across regimes.
@@ -109,7 +119,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         # Switching options
         if self.switching_ar is True or self.switching_ar is False:
             self.switching_ar = [self.switching_ar] * order
-        elif not len(self.switching_ar) == order:
+        elif len(self.switching_ar) != order:
             raise ValueError("Invalid iterable passed to `switching_ar`.")
 
         # Initialize the base model
@@ -167,7 +177,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
         Returns
         -------
-        predict : array_like
+        predict : ndarray
             Array of predictions conditional on current, and possibly past,
             regimes
         """
@@ -223,10 +233,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         return self.endog - self.predict_conditional(params)
 
     def _conditional_loglikelihoods(self, params):
-        """
-        Compute loglikelihoods conditional on the current period's regime and
-        the last `self.order` regimes.
-        """
+        """Compute loglikelihoods conditional on the current period's regime and the last `self.order` regimes"""
         # Get the residuals
         resid = self._resid(params)
 
@@ -246,9 +253,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
                         MarkovAutoregressionResultsWrapper)}
 
     def _em_iteration(self, params0):
-        """
-        EM iteration
-        """
+        """EM iteration"""
         # Inherited parameters
         result, params1 = markov_switching.MarkovSwitching._em_iteration(
             self, params0)
@@ -281,9 +286,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         return result, params1
 
     def _em_autoregressive(self, result, betas, tmp=None):
-        """
-        EM step for autoregressive coefficients and variances
-        """
+        """EM step for autoregressive coefficients and variances"""
         if tmp is None:
             tmp = np.sqrt(result.smoothed_marginal_probabilities)
 
@@ -323,9 +326,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
     @property
     def start_params(self):
-        """
-        (array) Starting parameters for maximum likelihood estimation.
-        """
+        """(array) Starting parameters for maximum likelihood estimation"""
         # Inherited parameters
         params = markov_switching.MarkovSwitching.start_params.fget(self)
 
@@ -373,10 +374,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
     @property
     def param_names(self):
-        """
-        (list of str) List of human readable parameter names (for parameters
-        actually included in the model).
-        """
+        """(list of str) List of human readable parameter names (for parameters actually included in the model)"""
         # Inherited parameters
         param_names = np.array(
             markov_regression.MarkovRegression.param_names.fget(self),
@@ -386,10 +384,10 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         if np.any(self.switching_ar):
             for i in range(self.k_regimes):
                 param_names[self.parameters[i, "autoregressive"]] = [
-                    "ar.L%d[%d]" % (j+1, i) for j in range(self.order)]
+                    f"ar.L{j+1:d}[{i:d}]" for j in range(self.order)]
         else:
             param_names[self.parameters["autoregressive"]] = [
-                "ar.L%d" % (j+1) for j in range(self.order)]
+                f"ar.L{j+1:d}" for j in range(self.order)]
 
         return param_names.tolist()
 
@@ -406,7 +404,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
         Returns
         -------
-        constrained : array_like
+        constrained : ndarray
             Array of constrained parameters which may be used in likelihood
             evaluation.
         """
@@ -437,7 +435,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
         Returns
         -------
-        unconstrained : array_like
+        unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
         """
         # Inherited parameters
@@ -467,7 +465,7 @@ class MarkovAutoregressionResults(markov_regression.MarkovRegressionResults):
         Fitted parameters
     filter_results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
-    cov_type : str
+    cov_type : str, optional
         The type of covariance matrix estimator to use. Can be one of 'approx',
         'opg', 'robust', or 'none'.
 

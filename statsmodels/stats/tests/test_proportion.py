@@ -16,6 +16,7 @@ from numpy.testing import (
 )
 import pandas as pd
 import pytest
+from scipy import stats
 
 import statsmodels.stats.proportion as smprop
 from statsmodels.stats.proportion import (
@@ -51,7 +52,7 @@ def test_confint_proportion(method, case):
     res_upp = res_binom[case].ci_upp[idx]
     if np.isnan(res_low) or np.isnan(res_upp):
         pytest.skip("Skipping due to NaN value")
-    if (count == 0 or count == nobs) and method == "jeffreys":
+    if count in (0, nobs) and method == "jeffreys":
         # maybe a bug or different corner case definition
         pytest.skip("Skipping nobs 0 or count and jeffreys")
     if method == "jeffreys" and nobs == 30:
@@ -104,6 +105,19 @@ def test_confint_proportion_ndim(method):
     ci_arr2 = proportion_confint(count + 1e-4, nobs[1, 2], alpha=0.05, method=method)
     # should be close to values with integer values
     assert_allclose((ci_arr2[0][1, 2], ci_arr[1][1, 2]), ci12, rtol=1e-4)
+
+
+def test_confint_proportion_wilson_clip():
+    # GH 7386, floating point error could push wilson bounds outside [0, 1]
+    ci_low, ci_upp = proportion_confint(38, 38, alpha=0.05, method="wilson")
+    assert 0 <= ci_low <= ci_upp <= 1
+
+    ci_low, ci_upp = proportion_confint(0, 77, alpha=0.05, method="wilson")
+    assert 0 <= ci_low <= ci_upp <= 1
+
+    # clipping must not alter bounds that are already inside [0, 1]
+    ci = proportion_confint(19, 38, alpha=0.05, method="wilson")
+    assert_allclose(ci, (0.348499283643951, 0.651500716356049), rtol=1e-12)
 
 
 def test_samplesize_confidenceinterval_prop():
@@ -201,6 +215,55 @@ def test_confint_multinomial_proportions_zeros():
     assert_allclose(ci_01, ci01, atol=1e-5)
     assert_allclose(ci_0, np.maximum(ci0 - ci0_shift, 0), atol=1e-5)
     assert_allclose(ci_01, ci_0, atol=5e-4)
+
+
+@pytest.mark.parametrize(
+    "counts",
+    [
+        [6, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+    ],
+)
+def test_confint_multinomial_proportions_sison_glaz_sparse(counts):
+    # GH#9587: the search for `c` used to fail for small or sparse counts,
+    # for which the approximated coverage nu(c) either exceeds 1 - alpha
+    # already at c = 1 or plateaus below 1 - alpha.
+    counts = np.asarray(counts)
+    cis = multinomial_proportions_confint(counts, 0.05, method="sison-glaz")
+    proportions = counts / counts.sum()
+    assert cis.shape == (len(counts), 2)
+    assert np.all(cis >= 0)
+    assert np.all(cis <= 1)
+    # intervals must contain the point estimates
+    assert np.all(cis[:, 0] <= proportions)
+    assert np.all(proportions <= cis[:, 1])
+
+
+def test_confint_multinomial_proportions_sison_glaz_sparse_r_reference():
+    # GH#9587: check the fixed sison-glaz output for a sparse case against
+    # reference values computed from R's MultinomialCI (Sison-Glaz)
+    # algorithm.  For this vector nu(1) already exceeds 1 - alpha, so the
+    # search terminates at c = 0 (the branch added by the fix); R reaches
+    # the same solution by initialising pold = 0 before testing cc = 1.
+    # The counts are kept small enough that count + c never exceeds n, so
+    # the box upper bounds are not truncated and the two implementations
+    # are directly comparable.
+    ci_r = np.array(
+        [
+            0.5, 1.0,
+            0.5, 1.0,
+            0.0, 0.9655815875,
+            0.0, 0.9655815875,
+            0.0, 0.9655815875,
+            0.0, 0.9655815875,
+            0.0, 0.9655815875,
+        ]
+    ).reshape(-1, 2)
+    counts = [1, 1, 0, 0, 0, 0, 0]
+    cis = multinomial_proportions_confint(counts, 0.05, method="sison-glaz")
+    assert_allclose(cis, ci_r, atol=1e-6)
 
 
 class CheckProportionMixin:
@@ -507,8 +570,58 @@ def test_power_binom_tost():
     res_power = np.array(
         [0.0, 0.0, 0.0, 0.0889, 0.2356, 0.3517, 0.4457, 0.6154, 0.6674, 0.7708]
     )
-    # TODO: I currently do not impose power>=0, i.e np.maximum(power, 0)
-    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+    assert_almost_equal(power, res_power, decimal=4)
+
+    # the rejection region (27, 23) is empty, so the power is zero
+    assert_equal(smprop.power_binom_tost(0.4, 0.6, 50, p_alt=0.5), 0)
+
+
+@pytest.mark.parametrize(
+    "nobs, low, upp, alpha",
+    [
+        (1, 0.4, 0.6, 0.05),  # empty rejection region
+        (20, 0.4, 0.6, 0.05),  # empty
+        (50, 0.4, 0.6, 0.05),  # empty
+        (100, 0.4, 0.6, 0.05),
+        (200, 0.4, 0.6, 0.05),
+        (30, 0.3, 0.7, 0.05),
+        (10, 0.2, 0.8, 0.10),
+        (500, 0.5, 0.7, 0.05),
+    ],
+)
+def test_power_binom_tost_exact(nobs, low, upp, alpha):
+    # The exact power is the probability of the counts at which both one-sided
+    # exact tests reject. This covers empty and non-empty rejection regions.
+    p_alt = np.array([0.35, 0.5, 0.55, 0.7])
+    x = np.arange(nobs + 1)
+    reject = smprop.binom_tost(x, nobs, low, upp)[0] <= alpha
+    expected = [stats.binom.pmf(x[reject], nobs, p).sum() for p in p_alt]
+    power = smprop.power_binom_tost(low, upp, nobs, p_alt=p_alt, alpha=alpha)
+    assert_allclose(power, expected, atol=1e-12)
+    assert np.all(power >= 0)
+
+
+def test_power_binom_tost_empty_region_array_inputs():
+    # array_like p_alt with an empty rejection region
+    power = smprop.power_binom_tost(0.4, 0.6, 20, p_alt=[0.4, 0.5, 0.9])
+    assert_equal(power, np.zeros(3))
+    # a single observation can never reject
+    assert_equal(smprop.power_binom_tost(0.4, 0.6, 1), 0)
+    # array_like equivalence limits with the default p_alt
+    power = smprop.power_binom_tost([0.4, 0.3], [0.6, 0.7], 100)
+    assert_allclose(
+        power,
+        [
+            smprop.power_binom_tost(0.4, 0.6, 100),
+            smprop.power_binom_tost(0.3, 0.7, 100),
+        ],
+    )
+
+
+@pytest.mark.parametrize("p_alt", [-0.1, 1.1, np.nan])
+def test_power_binom_tost_p_alt_invalid(p_alt):
+    with pytest.raises(ValueError, match="p_alt must be in the range"):
+        smprop.power_binom_tost(0.4, 0.6, 50, p_alt=p_alt)
 
 
 def test_power_ztost_prop():
@@ -827,10 +940,12 @@ def test_confint_2indep():
         count1, nobs1, count2, nobs2, method="agresti-caffo", compare="diff", alpha=0.05
     )
     assert_allclose(ci, [0.012, 0.322], atol=0.005)
+    # the published MN values agree with the interval without the N / (N - 1)
+    # variance factor, see #10269
     ci = confint_proportions_2indep(
-        count1, nobs1, count2, nobs2, compare="diff", method="score", correction=True
+        count1, nobs1, count2, nobs2, compare="diff", method="score", correction=False
     )
-    assert_allclose(ci, [0.028, 0.343], rtol=0.03)
+    assert_allclose(ci, [0.028, 0.340], atol=0.005)
 
     # ratio
     ci = confint_proportions_2indep(
@@ -872,6 +987,31 @@ def test_confint_2indep():
     assert_allclose(ci, [1.246622, 56.461576], rtol=0.01)
 
 
+@pytest.mark.parametrize("value", [-0.3, -0.1, 0.05, 0.2, 0.4])
+@pytest.mark.parametrize(
+    "count1, nobs1, count2, nobs2",
+    [(7, 34, 1, 34), (15, 40, 12, 60), (3, 20, 9, 25)],
+)
+def test_score_2indep_diff_constrained_mle(count1, nobs1, count2, nobs2, value):
+    # #10269: prop1_null and prop2_null are the MLE under p1 - p2 = value,
+    # so they must satisfy the constraint and zero the score of the
+    # restricted loglikelihood
+    res = score_test_proportions_2indep(
+        count1, nobs1, count2, nobs2, value=value, compare="diff"
+    )
+    p1, p2 = res.prop1_null, res.prop2_null
+    assert 0 < p1 < 1
+    assert 0 < p2 < 1
+    assert_allclose(p1 - p2, value, atol=1e-12)
+    score = (
+        count1 / p1
+        - (nobs1 - count1) / (1 - p1)
+        + count2 / p2
+        - (nobs2 - count2) / (1 - p2)
+    )
+    assert_allclose(score, 0, atol=1e-8)
+
+
 def test_confint_2indep_propcis():
     # unit tests compared to R package PropCis
     # alpha = 0.05
@@ -884,7 +1024,7 @@ def test_confint_2indep_propcis():
     ci1 = confint_proportions_2indep(
         count1, nobs1, count2, nobs2, compare="diff", method="score", correction=True
     )
-    assert_allclose(ci1, ci, atol=0.002)  # lower agreement (iterative)
+    assert_allclose(ci1, ci, atol=1e-6)
     # > wald2ci(7, 34, 1, 34, 0.95, adjust="AC")
     ci = 0.01161167, 0.32172166
     ci1 = confint_proportions_2indep(
@@ -1165,7 +1305,7 @@ def test_score_confint_koopman_nam():
 
     res = smprop._confint_riskratio_koopman(x1, n1, x0, n0, alpha=0.05)
 
-    assert_allclose(res._p_roots, results_nam.p0_roots, atol=4)
+    assert_allclose(res.p_roots, results_nam.p0_roots, atol=4)
     assert_allclose(res.confint, results_nam.conf_int, atol=3)
 
     table = [67, 9, 7, 16]  # [67, 7, 9, 16]
@@ -1173,6 +1313,189 @@ def test_score_confint_koopman_nam():
     # TODO: currently regression test, need verified results
     ci_old = [0.917832, 1.154177]
     assert_allclose(resp.confint, ci_old, atol=3)
+
+
+@pytest.mark.parametrize(
+    "count1, nobs1, count2, nobs2, ci_expected",
+    [
+        (7, 10, 10, 10, (0.38986150248208756, 1.0437094711118755)),
+        (10, 10, 7, 10, (0.958121036244503, 2.5650134564028813)),
+        (0, 10, 10, 10, (0.0, 0.2879339412820121)),
+        (15, 20, 20, 20, (0.5284369902899365, 0.9223731531332053)),
+        (10, 10, 0, 10, (3.473018830456555, np.inf)),
+    ],
+)
+def test_confint_2indep_ratio_score_count_equal_nobs(
+    count1, nobs1, count2, nobs2, ci_expected
+):
+    # The closed form of Koopman/Nam does not apply if a count is equal to
+    # nobs. Expected values are from maximizing the likelihood under the
+    # ratio constraint numerically and inverting the score statistic.
+    ci = confint_proportions_2indep(
+        count1, nobs1, count2, nobs2, compare="ratio", method="score"
+    )
+    assert all(np.isrealobj(limit) for limit in ci)
+    assert_allclose(ci, ci_expected, rtol=1e-6)
+    for limit in ci:
+        if 0 < limit < np.inf:
+            pv = smprop.test_proportions_2indep(
+                count1,
+                nobs1,
+                count2,
+                nobs2,
+                value=limit,
+                compare="ratio",
+                method="score",
+            ).pvalue
+            assert_allclose(pv, 0.05, rtol=1e-6)
+
+
+# Reference values for the score confint of the risk ratio computed in R 4.6.1
+# with ratesci 1.1.1:
+#
+#   library(ratesci)
+#   scoreci(x1, n1, x0, n0, contrast = "RR", distrib = "bin", skew = FALSE,
+#           bcf = correction, level = 1 - alpha, precis = 12)$estimates[
+#           1, c("lower", "upper")]
+#
+# bcf=TRUE is the small sample correction nobs / (nobs - 1), i.e.
+# correction=True, bcf=FALSE is correction=False. The tables have one or both
+# counts equal to nobs, or a count 0, and alpha is up to 0.9. PropCIs 0.3-0
+# riskscoreci(x1, n1, x0, n0, 1 - alpha) is the same as bcf=FALSE, but its root
+# finding is coarse. It is off in the 4th digit or worse for some tables, e.g.
+# for alpha=0.7 and the table (10, 10, 7, 10).
+# columns: count1, nobs1, count2, nobs2, alpha, correction, low, upp
+_RATIO_SCORE_RATESCI = [
+    (7, 10, 10, 10, 0.05, True, 0.389861502482, 1.04370947336),
+    (10, 10, 7, 10, 0.05, True, 0.958121034116, 2.56501345639),
+    (0, 10, 10, 10, 0.05, True, 0.0, 0.287933941282),
+    (10, 10, 0, 10, 0.05, True, 3.47301883043, np.inf),
+    (15, 20, 20, 20, 0.05, True, 0.52843699029, 0.922373152234),
+    (10, 10, 10, 10, 0.05, True, 0.712066058718, 1.40436408641),
+    (3, 3, 20, 20, 0.05, True, 0.42758976888, 1.20080352926),
+    (1, 1, 1, 1, 0.05, True, 0.115168661192, 8.68291764252),
+    (5, 20, 20, 20, 0.05, True, 0.110725309332, 0.47156300971),
+    (0, 10, 3, 10, 0.05, True, 0.0, 1.13539976451),
+    (5, 10, 3, 10, 0.05, True, 0.560506248595, 5.37193293573),
+    (7, 10, 10, 10, 0.05, False, 0.396778147461, 1.02652399977),
+    (10, 10, 7, 10, 0.05, False, 0.974161344727, 2.52030008807),
+    (0, 10, 10, 10, 0.05, False, 0.0, 0.277532799863),
+    (10, 10, 0, 10, 0.05, False, 3.6031777162, np.inf),
+    (15, 20, 20, 20, 0.05, False, 0.531299122381, 0.918063823396),
+    (10, 10, 10, 10, 0.05, False, 0.722467200137, 1.38414588201),
+    (3, 3, 20, 20, 0.05, False, 0.438502968245, 1.19207294097),
+    (1, 1, 1, 1, 0.05, False, 0.206549314377, 4.84145882102),
+    (5, 20, 20, 20, 0.05, False, 0.111861701408, 0.468700877619),
+    (0, 10, 3, 10, 0.05, False, 0.0, 1.08225979476),
+    (5, 10, 3, 10, 0.05, False, 0.575198047523, 5.22444041025),
+    (7, 10, 10, 10, 0.5, True, 0.59247080557, 0.789249362042),
+    (10, 10, 7, 10, 0.5, True, 1.26702668141, 1.68784687885),
+    (0, 10, 10, 10, 0.5, True, 0.0, 0.04569958097),
+    (10, 10, 0, 10, 0.5, True, 21.8820387074, np.inf),
+    (15, 20, 20, 20, 0.5, True, 0.678671606957, 0.809929298265),
+    (10, 10, 10, 10, 0.5, True, 0.95430041903, 1.04788804449),
+    (3, 3, 20, 20, 0.5, True, 0.863156505151, 1.02378076776),
+    (1, 1, 1, 1, 0.5, True, 0.523595066535, 1.90987284629),
+    (5, 20, 20, 20, 0.5, True, 0.190070701735, 0.321328393043),
+    (7, 10, 10, 10, 0.5, False, 0.595309250613, 0.78728513716),
+    (10, 10, 7, 10, 0.5, False, 1.27018783007, 1.67979919508),
+    (0, 10, 10, 10, 0.5, False, 0.0, 0.04351403057),
+    (10, 10, 0, 10, 0.5, False, 22.9810933757, np.inf),
+    (15, 20, 20, 20, 0.5, False, 0.679623979624, 0.809255564811),
+    (10, 10, 10, 10, 0.5, False, 0.95648596943, 1.04549364233),
+    (3, 3, 20, 20, 0.5, False, 0.868322780102, 1.02274682104),
+    (1, 1, 1, 1, 0.5, False, 0.687315255917, 1.45493642314),
+    (5, 20, 20, 20, 0.5, False, 0.190744435189, 0.320376020376),
+    (7, 10, 10, 10, 0.7, True, 0.639992792913, 0.753851958299),
+    (10, 10, 7, 10, 0.7, True, 1.32652039833, 1.56251759563),
+    (0, 10, 10, 10, 0.7, True, 0.0, 0.01538812197),
+    (10, 10, 0, 10, 0.7, True, 64.9851879913, np.inf),
+    (10, 10, 10, 10, 0.7, True, 0.98461187803, 1.01562861706),
+    (1, 1, 1, 1, 0.7, True, 0.771043478412, 1.29694372368),
+    (7, 10, 10, 10, 0.7, False, 0.641568549794, 0.752579461301),
+    (10, 10, 7, 10, 0.7, False, 1.32876334184, 1.55867989527),
+    (0, 10, 10, 10, 0.7, False, 0.0, 0.014629972261),
+    (10, 10, 0, 10, 0.7, False, 68.3528294414, np.inf),
+    (10, 10, 10, 10, 0.7, False, 0.985370027739, 1.01484718628),
+    (1, 1, 1, 1, 0.7, False, 0.870722246868, 1.14847186181),
+    (7, 10, 10, 10, 0.9, True, 0.68099754586, 0.718338682753),
+    (10, 10, 7, 10, 0.9, True, 1.39210100195, 1.46843407304),
+    (0, 10, 10, 10, 0.9, True, 0.0, 0.001659428467),
+    (10, 10, 0, 10, 0.9, True, 602.617111895, np.inf),
+    (10, 10, 10, 10, 0.9, True, 0.998340571533, 1.00166218677),
+    (7, 10, 10, 10, 0.9, False, 0.681486251872, 0.717883112986),
+    (10, 10, 7, 10, 0.9, False, 1.39298443146, 1.46738103264),
+    (0, 10, 10, 10, 0.9, False, 0.0, 0.001576587855),
+    (10, 10, 0, 10, 0.9, False, 634.281187823, np.inf),
+    (10, 10, 10, 10, 0.9, False, 0.998423412145, 1.00157907737),
+]
+
+
+@pytest.mark.parametrize(
+    "count1, nobs1, count2, nobs2, alpha, correction, low, upp",
+    _RATIO_SCORE_RATESCI,
+)
+def test_confint_2indep_ratio_score_ratesci(
+    count1, nobs1, count2, nobs2, alpha, correction, low, upp
+):
+    # includes alpha >= 0.5 and count1 == nobs1 and count2 == nobs2
+    ci = confint_proportions_2indep(
+        count1,
+        nobs1,
+        count2,
+        nobs2,
+        compare="ratio",
+        method="score",
+        alpha=alpha,
+        correction=correction,
+    )
+    assert all(np.isrealobj(limit) for limit in ci)
+    assert_allclose(ci, (low, upp), rtol=1e-6, atol=1e-9)
+
+
+@pytest.mark.parametrize("correction", [True, False])
+@pytest.mark.parametrize("alpha", [0.05, 0.5, 0.8])
+@pytest.mark.parametrize("nobs1, nobs2", [(1, 1), (2, 5), (6, 9)])
+def test_confint_2indep_ratio_score_all_tables(nobs1, nobs2, alpha, correction):
+    # All tables, including the tables with a count equal to nobs or 0. The
+    # limits are real, contain the estimate, and the p-value of the score test
+    # is alpha at the finite limits.
+    for count1 in range(nobs1 + 1):
+        for count2 in range(nobs2 + 1):
+            if count1 == 0 and count2 == 0:
+                # the ratio is not defined
+                continue
+            ci = confint_proportions_2indep(
+                count1,
+                nobs1,
+                count2,
+                nobs2,
+                compare="ratio",
+                method="score",
+                alpha=alpha,
+                correction=correction,
+            )
+            low, upp = ci
+            assert all(np.isrealobj(limit) for limit in ci)
+            ratio = np.inf if count2 == 0 else (count1 / nobs1) / (count2 / nobs2)
+            assert low <= ratio * (1 + 1e-12) + 1e-9
+            assert ratio <= upp * (1 + 1e-12)
+            for limit in ci:
+                if 1e-9 < limit < np.inf:
+                    _, pvalue = score_test_proportions_2indep(
+                        count1,
+                        nobs1,
+                        count2,
+                        nobs2,
+                        value=limit,
+                        compare="ratio",
+                        correction=correction,
+                        return_results=False,
+                    )
+                    assert_allclose(pvalue, alpha, rtol=1e-6)
+            # the limits are 0 and inf if the p-value does not go to 0
+            assert (low < 1e-9) == (count1 == 0)
+            assert (upp == np.inf) == (count2 == 0)
 
 
 def test_power_2indep():
@@ -1327,6 +1650,11 @@ def test_proportion_confint(count, nobs, method, alpha, alternative, expected):
     assert_allclose(np.array([ci_low, ci_upp]), np.array(expected))
 
 
+def test_proportion_confint_invalid_alternative_raises():
+    with pytest.raises(ValueError, match="alternative"):
+        proportion_confint(50, 100, alternative="not-a-real-alternative")
+
+
 @pytest.mark.parametrize("count", [100])
 @pytest.mark.parametrize("nobs", [200])
 @pytest.mark.parametrize(
@@ -1350,3 +1678,730 @@ def test_proportion_confint_binom_test(count, nobs, alpha, alternative, expected
         count, nobs, alpha=alpha, method="binom_test", alternative=alternative
     )
     assert_allclose(np.array([ci_low, ci_upp]), np.array(expected), rtol=rtol)
+
+
+def test_binom_test_alternative_deprecated_alias():
+    # undocumented short forms still work but warn, and are equivalent to
+    # spelling out the documented alternative
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        pval_alias = smprop.binom_test(5, 10, prop=0.3, alternative="2s")
+    pval = smprop.binom_test(5, 10, prop=0.3, alternative="two-sided")
+    assert pval_alias == pval
+
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        pval_alias = smprop.binom_test(5, 10, prop=0.3, alternative="l")
+    pval = smprop.binom_test(5, 10, prop=0.3, alternative="larger")
+    assert pval_alias == pval
+
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        smprop.binom_test(5, 10, prop=0.3, alternative="bogus")
+
+
+def test_binom_test_reject_interval_alternative():
+    # undocumented "2s" alias still works but warns
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        alias_interval = smprop.binom_test_reject_interval(0.3, 10, alternative="2s")
+    interval = smprop.binom_test_reject_interval(0.3, 10, alternative="two-sided")
+    assert alias_interval == interval
+
+    # previously a garbage value silently behaved like an unbounded,
+    # always-reject interval instead of raising
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        smprop.binom_test_reject_interval(0.3, 10, alternative="bogus")
+
+
+ALTERNATIVES_REJECT_INTERVAL = ["two-sided", "larger", "smaller"]
+
+
+@pytest.mark.parametrize("alternative", ALTERNATIVES_REJECT_INTERVAL)
+def test_binom_test_reject_interval_vectorized(alternative):
+    # gh-9238: the ``int()`` cast on the result broke vectorized calls
+    # (``int(ndarray)`` raises ``TypeError``).
+    value = np.array([0.3, 0.5, 0.8])
+    nobs = np.array([10, 20, 35])
+    alpha = np.array([0.05, 0.1, 0.01])
+    res = smprop.binom_test_reject_interval(
+        value, nobs, alpha=alpha, alternative=alternative
+    )
+    expected = np.array(
+        [
+            smprop.binom_test_reject_interval(v, n, alpha=a, alternative=alternative)
+            for v, n, a in zip(value, nobs, alpha, strict=True)
+        ]
+    )
+    for x, exp in zip(res, expected.T, strict=True):
+        # the unused bound of a one-sided test has the shape of the input
+        assert isinstance(x, np.ndarray)
+        assert x.shape == (3,)
+        assert np.issubdtype(x.dtype, np.integer)
+        assert_equal(x, exp)
+
+    # list and Series input, and broadcasting with scalars
+    res_list = smprop.binom_test_reject_interval(
+        list(value), 20, alpha=0.1, alternative=alternative
+    )
+    res_series = smprop.binom_test_reject_interval(
+        pd.Series(value), 20, alpha=0.1, alternative=alternative
+    )
+    for x_list, x_series in zip(res_list, res_series, strict=True):
+        assert x_list.shape == (3,)
+        assert np.issubdtype(x_list.dtype, np.integer)
+        assert_equal(x_list, x_series)
+    res_nobs = smprop.binom_test_reject_interval(
+        0.5, nobs, alpha=0.1, alternative=alternative
+    )
+    for x in res_nobs:
+        assert x.shape == (3,)
+        assert np.issubdtype(x.dtype, np.integer)
+    assert_equal(
+        [x[1] for x in res_nobs],
+        smprop.binom_test_reject_interval(0.5, 20, 0.1, alternative),
+    )
+
+
+@pytest.mark.parametrize("alternative", ALTERNATIVES_REJECT_INTERVAL)
+def test_binom_test_reject_interval_region(alternative):
+    # the bounds are Python integers for scalar input, and the rejection
+    # region is the set of counts with a tail probability below alpha
+    for nobs in [1, 5, 20]:
+        for value in [0, 0.2, 0.5, 0.85, 1]:
+            for alpha in [0.01, 0.05, 0.2]:
+                x_low, x_upp = smprop.binom_test_reject_interval(
+                    value, nobs, alpha=alpha, alternative=alternative
+                )
+                assert type(x_low) is int
+                assert type(x_upp) is int
+
+                x = np.arange(nobs + 1)
+                alpha_tail = alpha / 2 if alternative == "two-sided" else alpha
+                if alternative == "larger":
+                    assert x_low == 0
+                else:
+                    cdf = stats.binom.cdf(x, nobs, value)
+                    assert_equal(x <= x_low, cdf < alpha_tail)
+                if alternative == "smaller":
+                    assert x_upp == nobs
+                else:
+                    sf = stats.binom.sf(x - 1, nobs, value)
+                    assert_equal(x >= x_upp, sf <= alpha_tail)
+
+
+@pytest.mark.parametrize("alternative", ALTERNATIVES_REJECT_INTERVAL)
+@pytest.mark.parametrize(
+    "kwds, match",
+    [
+        (dict(value=1.5), "value must be in the range"),
+        (dict(value=-0.1), "value must be in the range"),
+        (dict(value=np.nan), "value must be in the range"),
+        (dict(value=[0.3, 1.5]), "value must be in the range"),
+        (dict(nobs=0), "nobs must be positive"),
+        (dict(nobs=-5), "nobs must be positive"),
+        (dict(nobs=np.nan), "nobs must be positive"),
+        (dict(nobs=[10, 0]), "nobs must be positive"),
+        (dict(nobs=10.5), "nobs must be an integer"),
+        (dict(alpha=0), "alpha must be in the range"),
+        (dict(alpha=1), "alpha must be in the range"),
+        (dict(alpha=2), "alpha must be in the range"),
+        (dict(alpha=-1), "alpha must be in the range"),
+        (dict(alpha=np.nan), "alpha must be in the range"),
+        (dict(alpha=[0.05, np.nan]), "alpha must be in the range"),
+    ],
+)
+def test_binom_test_reject_interval_invalid(alternative, kwds, match):
+    # invalid arguments gave nan or a meaningless region
+    args = dict(value=0.3, nobs=10, alpha=0.05)
+    args.update(kwds)
+    with pytest.raises(ValueError, match=match):
+        smprop.binom_test_reject_interval(alternative=alternative, **args)
+
+
+def test_samplesize_proportions_2indep_onetail_alternative():
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        nobs_alias = samplesize_proportions_2indep_onetail(
+            0.1, 0.3, 0.8, alternative="2s"
+        )
+    nobs = samplesize_proportions_2indep_onetail(0.1, 0.3, 0.8, alternative="two-sided")
+    assert nobs_alias == nobs
+
+    # previously a garbage value was silently treated as one-sided instead
+    # of raising
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        samplesize_proportions_2indep_onetail(0.1, 0.3, 0.8, alternative="bogus")
+
+
+def test_proportions_chisquare_pairscontrol_alternative():
+    count = np.array([20, 18, 15, 12])
+    nobs = np.array([50, 50, 50, 50])
+    with pytest.warns(FutureWarning, match="is a deprecated alias"):
+        smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="2s")
+
+    # "larger"/"smaller" are not implemented for this function and must
+    # continue to raise, now via the shared alternative validation
+    with pytest.raises(ValueError, match="alternative must be one of"):
+        smprop.proportions_chisquare_pairscontrol(count, nobs, alternative="larger")
+
+
+def test_proportion_confint_invalid_inputs_raises():
+    # negative counts and count > nobs previously returned (nan, nan);
+    # alpha outside (0, 1) silently produced reversed bounds
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportion_confint(-1, 10)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smprop.proportion_confint(1, 0)
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportion_confint(11, 10)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.proportion_confint(3, 10, alpha=1.5)
+
+
+def test_binom_test_invalid_inputs_raises():
+    # negative counts previously returned a nan p-value
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.binom_test(-1, 10, 0.5)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smprop.binom_test(1, 0, 0.5)
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.binom_test(11, 10, 0.5)
+
+
+def test_proportions_ztest_nonfinite_and_value_domain_raises():
+    # NaN/inf inputs used to slip past the sign checks and come back as NaN
+    # p-values; an out-of-range null proportion used to produce silently
+    # wrong p-values
+    with pytest.raises(ValueError, match="count must be finite"):
+        smprop.proportions_ztest(np.nan, 10, value=0.5)
+    with pytest.raises(ValueError, match="nobs must be finite"):
+        smprop.proportions_ztest(1, np.inf, value=0.5)
+    with pytest.raises(ValueError, match=r"value must be finite and in \[0\.0, 1\.0\] for a 1-sample"):
+        smprop.proportions_ztest(3, 10, value=1.5)
+    with pytest.raises(ValueError, match=r"value must be finite and in \[-1\.0, 1\.0\] for a 2-sample"):
+        smprop.proportions_ztest([3, 5], [10, 10], value=2.0)
+
+
+@pytest.mark.parametrize("count, nobs", [(15, 50), ([15], [50]), (15, [50])])
+def test_proportions_chisquare_one_sample(count, nobs):
+    # Without value a single sample has no null hypothesis. The statistic was
+    # 0 and the p-value nan.
+    with pytest.raises(ValueError, match="value must be provided"):
+        smprop.proportions_chisquare(count, nobs)
+
+    # With value the statistic is the square of the z statistic that uses the
+    # variance under the null hypothesis, (15 - 10)**2 / 10 + 5**2 / 40
+    chi2stat, pvalue, _ = smprop.proportions_chisquare(count, nobs, value=0.2)
+    assert_allclose(chi2stat, 3.125, rtol=1e-13)
+    zstat, pvalue_z = smprop.proportions_ztest(15, 50, value=0.2, prop_var=0.2)
+    assert_allclose(chi2stat, zstat**2, rtol=1e-13)
+    assert_allclose(pvalue, pvalue_z, rtol=1e-12)
+
+
+def test_proportions_chisquare_nonfinite_and_value_domain_raises():
+    with pytest.raises(ValueError, match="count must be finite"):
+        smprop.proportions_chisquare(np.nan, 10, value=0.5)
+    with pytest.raises(ValueError, match=r"value must be finite and in \[0, 1\], got 1\.5"):
+        smprop.proportions_chisquare(3, 10, value=1.5)
+
+
+def test_proportions_ztest_invalid_inputs_raises():
+    # impossible counts previously returned (nan, nan) or silently wrong
+    # p-values (a negative count in a 2-sample test gave z=-2.98, p=0.0029)
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportions_ztest(-1, 10, value=0.1)
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportions_ztest(11, 10, value=0.5)
+    with pytest.raises(ValueError, match="nobs must be positive"):
+        smprop.proportions_ztest(1, 0, value=0.5)
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportions_ztest([-1, 3], [10, 10])
+
+
+def test_proportions_chisquare_invalid_inputs_raises():
+    # a negative count previously returned a "significant" p-value (0.035)
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportions_chisquare(-1, 10, value=0.1)
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportions_chisquare(11, 10, value=0.5)
+
+
+def test_binom_tost_invalid_interval_raises():
+    # an inverted equivalence interval previously returned p-values without
+    # any error
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low < upp"):
+        smprop.binom_tost(5, 100, 0.6, 0.3)
+    p = smprop.binom_tost(5, 100, 0.1, 0.3)
+    assert np.isfinite(p).all()
+
+
+def test_proportions_ztost_invalid_interval_raises():
+    # an inverted equivalence interval previously returned p-value 1.0
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low < upp"):
+        smprop.proportions_ztost(5, 100, 0.6, 0.3)
+
+
+def test_samplesize_proportions_2indep_onetail_invalid_inputs_raises():
+    # alpha=2 previously returned a sample size of 0.0, power=2 returned nan
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.samplesize_proportions_2indep_onetail(0.1, 0.5, alpha=2, power=0.8)
+    with pytest.raises(ValueError, match="power must be in the range"):
+        smprop.samplesize_proportions_2indep_onetail(0.1, 0.5, alpha=0.05, power=2)
+
+
+def test_proportions_chisquare_allpairs_invalid_inputs_raises():
+    # count > nobs previously produced a "significant" corrected p-value
+    # instead of an error
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportions_chisquare_allpairs(
+            np.array([11, 3, 5]), np.array([10.0, 10.0, 10.0])
+        )
+    with pytest.raises(ValueError, match="count must be non-negative"):
+        smprop.proportions_chisquare_allpairs(
+            np.array([-1, 3, 5]), np.array([10.0, 10.0, 10.0])
+        )
+    with pytest.raises(ValueError, match="count must not exceed nobs"):
+        smprop.proportions_chisquare_pairscontrol(
+            np.array([11, 3, 5]), np.array([10.0, 10.0, 10.0])
+        )
+
+
+def test_proportion_effectsize_invalid_inputs_raises():
+    # out-of-range proportions previously returned nan without any error
+    with pytest.raises(ValueError, match="prop1 must be in the range"):
+        smprop.proportion_effectsize(-0.1, 0.2)
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        smprop.proportion_effectsize(0.2, 1.2)
+    assert np.isfinite(smprop.proportion_effectsize(0.5, 0.4))
+
+
+def test_confint_proportions_2indep_invalid_inputs_raises():
+    # negative counts and non-positive nobs previously returned (nan, nan)
+    # or divided by zero instead of raising
+    with pytest.raises(ValueError, match="count1 and count2 must be non-negative"):
+        smprop.confint_proportions_2indep(-1, 10, 3, 10)
+    with pytest.raises(ValueError, match="nobs1 and nobs2 must be positive"):
+        smprop.confint_proportions_2indep(1, 0, 3, 10)
+
+
+@pytest.mark.parametrize(
+    "counts, expected",
+    [
+        ((12, 16, 3, 11), (0.0890486619714, 0.739426279773)),
+        ((1, 20, 31, 36), (-0.912967201658, -0.591487082224)),
+        ((3, 20, 9, 25), (-0.443226028419, 0.0568197462183)),
+        ((3, 14, 11, 14), (-0.798498767391, -0.202009770047)),
+    ],
+)
+def test_confint_2indep_score_diff_bracket(counts, expected):
+    # The root finding bracket based on the Wald interval was too narrow (first
+    # and third table) or left the parameter space (second table). The last
+    # table is symmetric (p1 + p2 = 1), so that q == 0 exactly in the cubic
+    # equation of the Miettinen-Nurminen restricted MLE for some values of the
+    # difference.
+    # expected: independent implementation in R (restricted score equation
+    # solved by root finding, N / (N - 1) correction), the limits solve
+    # z**2 = qchisq(0.95, 1)
+    res = confint_proportions_2indep(*counts, method="score", compare="diff")
+    assert_allclose(res, expected, rtol=1e-7)
+
+
+@pytest.mark.parametrize(
+    "count1, nobs1, count0, nobs0, delta, prop0, stat",
+    [
+        (5, 20, 0, 20, 0.2, 1e-13, 0.551985054145214),
+        (0, 20, 5, 20, -0.2, 0.2000000000001, -0.551985054145214),
+        (20, 20, 3, 20, -0.5, 0.776720061523383, 9.75357596716112),
+        (7, 20, 20, 20, 0.05, 0.637268440065536, -4.62812543241672),
+        (0, 15, 0, 25, 0.2, 1e-13, -1.91213231759658),
+        (1, 30, 0, 12, -0.05, 0.0734479980138942, 1.02643721090643),
+    ],
+)
+def test_score_2indep_diff_boundary_tables(
+    count1, nobs1, count0, nobs0, delta, prop0, stat
+):
+    # tables with a zero or a full cell
+    # expected: independent implementation in R (restricted score equation
+    # solved by root finding or bounded optimization, N / (N - 1) correction)
+    res = score_test_proportions_2indep(
+        count1, nobs1, count0, nobs0, value=delta, compare="diff", correction=True
+    )
+    assert_allclose(res.prop2_null, prop0, atol=1e-8)
+    assert_allclose(res.statistic, stat, rtol=1e-8)
+
+
+def test_score_2indep_diff_symmetric_table():
+    # p1 + p2 = 1: q == 0 exactly in the cubic equation for these values of the
+    # difference, np.sign(q) = 0 returned nan
+    for value in [-0.86, -0.88, -0.8704853539268427]:
+        res = score_test_proportions_2indep(
+            3, 14, 11, 14, value=value, compare="diff", correction=True
+        )
+        assert np.isfinite(res.statistic)
+        assert np.isfinite(res.pvalue)
+
+
+# Reference values for confint_proportions_paired computed in R 4.5.1 with
+# ratesci 1.1.0 (Newcombe method 10: MOVER on Wilson limits with the phi
+# correction) and PropCIs 0.3.0 (Wald). PropCIs defines the difference as
+# p2 - p1, so its limits are negated and swapped below.
+#
+#   library(ratesci); library(PropCIs)
+#   t <- c(n11, n12, n21, n22); n <- sum(t)
+#   diffpropci.Wald.mp(t[2], t[3], n, conf.level = level)$conf.int
+#   moverpairci(t, level = level, contrast = "RD", type = "wilson",
+#               corc = TRUE, cc = FALSE, precis = 12)$estimates[, c("lower", "upper")]
+#
+# Tables cover a positive and a negative phi, no discordant pairs, no
+# concordant pairs, a zero marginal (phi set to 0), a single zero discordant
+# cell, phi exactly 0, a large table, and degenerate single-cell tables.
+_PAIRED_TABLES = [
+    (10, 5, 2, 20),
+    (3, 12, 7, 3),
+    (10, 0, 0, 20),
+    (0, 5, 3, 0),
+    (0, 0, 4, 6),
+    (5, 3, 0, 2),
+    (1, 1, 1, 1),
+    (100, 20, 30, 850),
+    (2, 0, 0, 0),
+    (0, 3, 0, 0),
+]
+
+_PAIRED_WALD = {
+    0.05: [
+        (-0.0566130752, 0.2187752374),
+        (-0.1326169178, 0.5326169178),
+        (0.0, 0.0),
+        (-0.4209478039, 0.9209478039),
+        (-0.7036363149, -0.0963636851),
+        (0.0159742349, 0.5840257651),
+        (-0.6929519122, 0.6929519122),
+        (-0.0238451723, 0.0038451723),
+        (0.0, 0.0),
+        (1.0, 1.0),
+    ],
+    0.01: [
+        (-0.0998797149, 0.2620418770),
+        (-0.2371327283, 0.6371327283),
+        (0.0, 0.0),
+        (-0.6317748836, 1.1317748836),
+        (-0.7990457598, -0.0009542402),
+        (-0.0732731287, 0.6732731287),
+        (-0.9106931839, 0.9106931839),
+        (-0.0281956407, 0.0081956407),
+        (0.0, 0.0),
+        (1.0, 1.0),
+    ],
+}
+
+_PAIRED_NEWCOMB = {
+    0.05: [
+        (-0.0643926051, 0.2211160179),
+        (-0.1336023844, 0.4874632352),
+        (-0.0722182713, 0.0722182713),
+        (-0.3885152108, 0.7263114284),
+        (-0.6873262303, -0.0383858209),
+        (-0.0529530013, 0.5665478379),
+        (-0.4949196078, 0.4949196078),
+        (-0.0243592378, 0.0041365528),
+        (-0.6576197725, 0.6576197725),
+        (0.2059232825, 1.0),
+    ],
+    0.01: [
+        (-0.1066889470, 0.2599315957),
+        (-0.2266187694, 0.5539649645),
+        (-0.0983942957, 0.0983942957),
+        (-0.5250595443, 0.7983788652),
+        (-0.7518402591, 0.0828109031),
+        (-0.1427568201, 0.6162757033),
+        (-0.5585157773, 0.5585157773),
+        (-0.0291585105, 0.0087824399),
+        (-0.7683817083, 0.7683817083),
+        (0.0261275085, 1.0),
+    ],
+}
+
+
+@pytest.mark.parametrize("alpha", [0.05, 0.01])
+@pytest.mark.parametrize("idx", range(len(_PAIRED_TABLES)))
+@pytest.mark.parametrize("method", ["wald", "newcomb"])
+def test_confint_proportions_paired(method, idx, alpha):
+    n11, n12, n21, n22 = _PAIRED_TABLES[idx]
+    table = [[n11, n12], [n21, n22]]
+    expected = {"wald": _PAIRED_WALD, "newcomb": _PAIRED_NEWCOMB}[method][alpha][idx]
+    low, upp = smprop.confint_proportions_paired(table, method=method, alpha=alpha)
+    assert_allclose((low, upp), expected, atol=1e-9)
+    assert isinstance(low, float)
+    assert isinstance(upp, float)
+
+
+@pytest.mark.parametrize("method", ["newcomb", "newcombe", "Newcombe"])
+def test_confint_proportions_paired_default_method(method):
+    table = np.array([[10, 5], [2, 20]])
+    assert_allclose(
+        smprop.confint_proportions_paired(table),
+        smprop.confint_proportions_paired(table, method=method),
+    )
+
+
+def test_confint_proportions_paired_invalid_inputs_raises():
+    with pytest.raises(ValueError, match="2x2 contingency table"):
+        smprop.confint_proportions_paired([1, 2, 3, 4])
+    with pytest.raises(ValueError, match="2x2 contingency table"):
+        smprop.confint_proportions_paired([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    with pytest.raises(ValueError, match="non-negative"):
+        smprop.confint_proportions_paired([[1, -2], [3, 4]])
+    with pytest.raises(ValueError, match="at least one observation"):
+        smprop.confint_proportions_paired([[0, 0], [0, 0]])
+    with pytest.raises(ValueError, match="method must be one of"):
+        smprop.confint_proportions_paired([[1, 2], [3, 4]], method="score")
+    with pytest.raises(TypeError, match="method must be a string"):
+        smprop.confint_proportions_paired([[1, 2], [3, 4]], method=10)
+
+
+@pytest.mark.parametrize("method", ["newcomb", "wald"])
+@pytest.mark.parametrize("alpha", [0, 1, -0.1, 2, np.nan, np.inf])
+def test_confint_proportions_paired_invalid_alpha(method, alpha):
+    # these returned nan, inf or an interval of zero width
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.confint_proportions_paired(
+            [[10, 5], [2, 20]], method=method, alpha=alpha
+        )
+
+
+@pytest.mark.parametrize("alpha", [[0.05, 0.1], np.array([0.05, 0.1]), None, "a", True])
+def test_confint_proportions_paired_alpha_type(alpha):
+    with pytest.raises(TypeError, match="alpha"):
+        smprop.confint_proportions_paired([[10, 5], [2, 20]], alpha=alpha)
+
+
+@pytest.mark.parametrize("method", ["newcomb", "wald"])
+@pytest.mark.parametrize("bad", [np.nan, np.inf])
+def test_confint_proportions_paired_nonfinite_table(method, bad):
+    with pytest.raises(ValueError, match="must be finite"):
+        smprop.confint_proportions_paired([[10, bad], [2, 20]], method=method)
+
+
+def test_proportions_ztest_invalid_prop_var_raises():
+    # a prop_var outside (0, 1) previously returned (nan, nan) silently
+    with pytest.raises(ValueError, match="prop_var must be in the range"):
+        smprop.proportions_ztest(3, 10, value=0.3, prop_var=-0.5)
+    with pytest.raises(ValueError, match="prop_var must be in the range"):
+        smprop.proportions_ztest(3, 10, value=0.3, prop_var=1.5)
+    stat, pval = smprop.proportions_ztest(3, 10, value=0.3, prop_var=0.5)
+    assert np.isfinite([stat, pval]).all()
+
+
+def test_confint_proportions_2indep_invalid_alpha_raises():
+    # alpha outside (0, 1) previously returned (nan, nan) silently
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.confint_proportions_2indep(3, 10, 5, 10, alpha=2)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.confint_proportions_2indep(3, 10, 5, 10, alpha=0)
+    lo, hi = smprop.confint_proportions_2indep(3, 10, 5, 10)
+    assert np.isfinite([lo, hi]).all()
+
+
+def test_power_proportions_2indep_invalid_bounds_raises():
+    # out-of-range probabilities used to propagate into negative variances
+    # and a silent NaN power
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        power_proportions_2indep(0.1, 1.5, nobs1=100)
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        power_proportions_2indep(0.1, -0.2, nobs1=100)
+    with pytest.raises(ValueError, match="diff must keep prop1"):
+        power_proportions_2indep(0.7, 0.8, nobs1=100)
+    with pytest.raises(ValueError, match="diff must keep prop1"):
+        power_proportions_2indep(-2.0, 0.5, nobs1=100)
+
+    # boundary values stay valid
+    res = power_proportions_2indep(0.5, 0.5, nobs1=100)
+    assert np.isfinite(res.power)
+
+
+def test_samplesize_proportions_2indep_invalid_bounds_raises():
+    # diff pushing prop1 outside [0, 1], or prop2 outside [0, 1], used to
+    # propagate into negative variances and a silent NaN sample size
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        samplesize_proportions_2indep_onetail(0.1, 1.5, 0.8)
+    with pytest.raises(ValueError, match="prop2 must be in the range"):
+        samplesize_proportions_2indep_onetail(0.1, -0.2, 0.8)
+    with pytest.raises(ValueError, match="diff must keep prop1"):
+        samplesize_proportions_2indep_onetail(0.5, 0.8, 0.8)
+    with pytest.raises(ValueError, match="diff must keep prop1"):
+        samplesize_proportions_2indep_onetail(-0.5, 0.2, 0.8)
+
+    # boundary values remain valid (prop1 = prop2 + diff exactly at 0 or 1)
+    n = samplesize_proportions_2indep_onetail(0.5, 0.5, 0.8)
+    assert np.isfinite(n)
+    n = samplesize_proportions_2indep_onetail(-0.5, 0.5, 0.8)
+    assert np.isfinite(n)
+
+
+def test_binom_tost_helpers_invalid_inputs_raises():
+    # inverted intervals previously returned a reversed rejection region
+    # (69, 22) or a negative power (-0.9999) silently
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low < upp"):
+        smprop.binom_tost_reject_interval(0.6, 0.3, 100)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.binom_tost_reject_interval(0.1, 0.3, 100, alpha=2)
+    with pytest.raises(ValueError, match="equivalence interval must satisfy low < upp"):
+        smprop.power_binom_tost(0.6, 0.3, 100, p_alt=0.5)
+    with pytest.raises(ValueError, match="alpha must be in the range"):
+        smprop.power_binom_tost(0.1, 0.3, 100, p_alt=0.5, alpha=2)
+    with pytest.raises(ValueError, match="p_alt must be in the range"):
+        smprop.power_binom_tost(0.1, 0.3, 100, p_alt=1.5)
+    power = smprop.power_binom_tost(0.1, 0.3, 100, p_alt=0.5)
+    assert np.isfinite(power)
+
+
+@pytest.mark.parametrize(
+    "func, args",
+    [
+        (smprop.binom_tost_reject_interval, (0.4, 0.6)),
+        (smprop.power_binom_tost, (0.4, 0.6)),
+        (smprop.power_ztost_prop, (0.4, 0.6)),
+    ],
+    ids=["binom_tost_reject_interval", "power_binom_tost", "power_ztost_prop"],
+)
+def test_binom_tost_helpers_nobs_raises(func, args):
+    # nobs <= 0 gave a "power" of -1 or nan without an error
+    extra = (0.5,) if func is smprop.power_ztost_prop else ()
+    for nobs in [0, -5, np.nan, [100, 0]]:
+        with pytest.raises(ValueError, match="nobs must be positive"):
+            func(*args, nobs, *extra)
+    # arrays of nobs keep working
+    res = func(*args, np.array([100, 200]), *extra)
+    assert np.shape(res[0] if isinstance(res, tuple) else res)[0] == 2
+
+
+@pytest.mark.parametrize(
+    "kwds, match",
+    [
+        # alpha outside of (0, 1) returned inf or nan
+        ({"alpha": 2}, "alpha must be in the range"),
+        ({"alpha": 0}, "alpha must be in the range"),
+        ({"alpha": 1}, "alpha must be in the range"),
+        ({"alpha": -0.1}, "alpha must be in the range"),
+        ({"alpha": np.nan}, "alpha must be in the range"),
+        ({"alpha": np.array([0.05, 1.5])}, "alpha must be in the range"),
+        ({"alpha": np.array([0.05, np.nan])}, "alpha must be in the range"),
+        ({"alpha": pd.Series([0.05, 0.0])}, "alpha must be in the range"),
+        ({"alpha": [0.05, 2]}, "alpha must be in the range"),
+        # a negative half_length returned a positive sample size
+        ({"half_length": -0.1}, "half_length must be positive"),
+        ({"half_length": 0}, "half_length must be positive"),
+        ({"half_length": np.nan}, "half_length must be positive"),
+        ({"half_length": np.array([0.1, -0.1])}, "half_length must be positive"),
+        ({"half_length": np.array([0.1, np.nan])}, "half_length must be positive"),
+        ({"half_length": pd.Series([0.1, 0.0])}, "half_length must be positive"),
+        ({"half_length": [0.1, 0]}, "half_length must be positive"),
+        # proportions outside of [0, 1] returned a negative sample size
+        ({"proportion": 1.5}, "proportion must be in the range"),
+        ({"proportion": -0.1}, "proportion must be in the range"),
+        ({"proportion": np.nan}, "proportion must be in the range"),
+        ({"proportion": np.array([0.5, 1.5])}, "proportion must be in the range"),
+        ({"proportion": np.array([-0.1, 0.5])}, "proportion must be in the range"),
+        ({"proportion": np.array([0.5, np.nan])}, "proportion must be in the range"),
+        ({"proportion": pd.Series([0.5, 1.2])}, "proportion must be in the range"),
+        ({"proportion": [0.5, -0.1]}, "proportion must be in the range"),
+    ],
+)
+def test_samplesize_confint_proportion_invalid_raises(kwds, match):
+    args = {"proportion": 0.5, "half_length": 0.1, "alpha": 0.05}
+    args.update(kwds)
+    with pytest.raises(ValueError, match=match):
+        smprop.samplesize_confint_proportion(**args)
+
+
+@pytest.mark.parametrize("arg", ["proportion", "half_length", "alpha"])
+def test_samplesize_confint_proportion_none_raises(arg):
+    args = {"proportion": 0.5, "half_length": 0.1, "alpha": 0.05, arg: None}
+    with pytest.raises(TypeError, match=f"{arg} must be array_like"):
+        smprop.samplesize_confint_proportion(**args)
+
+
+def test_samplesize_confint_proportion_method_raises():
+    with pytest.raises(NotImplementedError, match="only"):
+        smprop.samplesize_confint_proportion(0.5, 0.1, method="wilson")
+
+
+def test_samplesize_confint_proportion_closed_form():
+    n = smprop.samplesize_confint_proportion(0.5, 0.1)
+    assert isinstance(n, float)
+    assert_allclose(n, 96.03647051735317, rtol=1e-13)
+
+    # n = q * (1 - q) / (half_length / z) ** 2 with z the 1 - alpha / 2 quantile
+    for q, h, alpha in [(0.5, 0.1, 0.05), (0.2, 0.05, 0.1), (0.9, 0.03, 0.01)]:
+        expected = q * (1 - q) / (h / stats.norm.isf(alpha / 2)) ** 2
+        n = smprop.samplesize_confint_proportion(q, h, alpha=alpha)
+        assert_allclose(n, expected, rtol=1e-13)
+
+
+def test_samplesize_confint_proportion_r():
+    # Reference values from R 4.6.1, qnorm based formula of the normal
+    # approximation interval, element wise for the four parameter sets:
+    # p <- c(0.5, 0.2, 0.9, 0.35); h <- c(0.1, 0.05, 0.03, 0.02)
+    # a <- c(0.05, 0.1, 0.01, 0.2)
+    # print(p * (1 - p) / (h / qnorm(1 - a / 2))^2, digits = 17)
+    p = [0.5, 0.2, 0.9, 0.35]
+    h = [0.1, 0.05, 0.03, 0.02]
+    a = [0.05, 0.1, 0.01, 0.2]
+    expected = [
+        96.036470517353081,
+        173.154781062106338,
+        663.489660102120979,
+        934.100448616458380,
+    ]
+    res = smprop.samplesize_confint_proportion(np.array(p), np.array(h), np.array(a))
+    assert_allclose(res, expected, rtol=1e-13)
+    for pi, hi, ai, ei in zip(p, h, a, expected, strict=True):
+        res = smprop.samplesize_confint_proportion(pi, hi, alpha=ai)
+        assert_allclose(res, ei, rtol=1e-13)
+
+
+@pytest.mark.parametrize("proportion", [0, 1, 0.0, 1.0])
+def test_samplesize_confint_proportion_endpoints(proportion):
+    # the end points of the proportion are valid and need no observations
+    assert smprop.samplesize_confint_proportion(proportion, 0.1) == 0
+    res = smprop.samplesize_confint_proportion(np.array([proportion, 0.5]), 0.1)
+    assert_allclose(res, [0, 96.03647051735317], rtol=1e-13)
+
+
+@pytest.mark.parametrize("arg", ["proportion", "half_length", "alpha"])
+@pytest.mark.parametrize("kind", ["ndarray", "list", "tuple", "series"])
+def test_samplesize_confint_proportion_vectorized(arg, kind):
+    # arrays, lists and Series give the same as the scalar calls
+    values = {
+        "proportion": [0.2, 0.5, 0.0, 1.0],
+        "half_length": [0.05, 0.1, 0.2, 0.3],
+        "alpha": [0.01, 0.05, 0.1, 0.5],
+    }[arg]
+    container = {
+        "ndarray": np.array,
+        "list": list,
+        "tuple": tuple,
+        "series": lambda x: pd.Series(x, index=list("abcd")),
+    }[kind]
+    args = {"proportion": 0.4, "half_length": 0.1, "alpha": 0.05}
+    expected = np.array(
+        [smprop.samplesize_confint_proportion(**{**args, arg: v}) for v in values]
+    )
+
+    res = smprop.samplesize_confint_proportion(**{**args, arg: container(values)})
+    assert_allclose(np.asarray(res), expected, rtol=1e-13)
+    assert np.shape(res) == (4,)
+    # the result type is the same as before the input validation was added
+    if kind == "series" and arg != "alpha":
+        assert isinstance(res, pd.Series)
+        assert list(res.index) == list("abcd")
+    else:
+        assert isinstance(res, np.ndarray)
+
+
+def test_samplesize_confint_proportion_broadcast():
+    q = np.array([0.2, 0.5])
+    h = np.array([0.05, 0.1, 0.2])
+    res = smprop.samplesize_confint_proportion(q[:, None], h)
+    assert res.shape == (2, 3)
+    for i, qi in enumerate(q):
+        for j, hj in enumerate(h):
+            expected = smprop.samplesize_confint_proportion(qi, hj)
+            assert_allclose(res[i, j], expected, rtol=1e-13)

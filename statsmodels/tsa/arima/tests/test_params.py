@@ -83,7 +83,7 @@ def test_init():
 
 
 def test_set_params_single():
-    # Test setting parameters directly (i.e. we test setting the AR/MA
+    # Test setting parameters directly (i.e., we test setting the AR/MA
     # parameters by setting the lag polynomials elsewhere)
     # Here each type has only a single parameters
     exog = pd.DataFrame([[0]], columns=["a"])
@@ -196,7 +196,7 @@ def test_set_params_single():
 
 
 def test_set_params_single_nonconsecutive():
-    # Test setting parameters directly (i.e. we test setting the AR/MA
+    # Test setting parameters directly (i.e., we test setting the AR/MA
     # parameters by setting the lag polynomials elsewhere)
     # Here each type has only a single parameters but has non-consecutive
     # lag orders
@@ -277,7 +277,7 @@ def test_set_params_single_nonconsecutive():
 
 
 def test_set_params_multiple():
-    # Test setting parameters directly (i.e. we test setting the AR/MA
+    # Test setting parameters directly (i.e., we test setting the AR/MA
     # parameters by setting the lag polynomials elsewhere)
     # Here each type has multiple a single parameters
     exog = pd.DataFrame([[0, 0]], columns=["a", "b"])
@@ -424,7 +424,7 @@ def test_set_poly_short_lags_nonconsecutive():
     assert_equal(p.seasonal_ma_params, [0.15])
 
     # Invalid polynomials
-    # Number in invalid (i.e. an excluded lag) location
+    # Number in invalid (i.e., an excluded lag) location
     # (now also for non-seasonal polynomials)
     with pytest.raises(ValueError):
         p.__setattr__("ar_poly", [1, 1, -0.5])

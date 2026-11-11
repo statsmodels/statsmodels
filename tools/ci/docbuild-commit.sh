@@ -4,6 +4,11 @@ echo "Set git email and name"
 git config --global user.email "bot@statsmodels.org"
 git config --global user.name "Statsmodels Doc Bot"
 
+echo "Git pull for any commits since docbuild started"
+pushd statsmodels.github.io
+git remote -v
+git pull origin master
+popd
 echo "Remove devel"
 rm -rf statsmodels.github.io/devel
 echo "Make a new devel"

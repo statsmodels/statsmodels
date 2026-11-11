@@ -11,17 +11,21 @@ import pytest
 from scipy import stats
 
 from statsmodels.distributions.mixture_rvs import mixture_rvs
-from statsmodels.nonparametric.bandwidths import bw_normal_reference, select_bandwidth
+from statsmodels.nonparametric.bandwidths import (
+    _select_sigma,
+    bw_normal_reference,
+    select_bandwidth,
+)
 from statsmodels.sandbox.nonparametric import kernels
 
 # setup test data
-
-np.random.seed(12345)
+RANDOM_STATE = np.random.RandomState(12345)
 Xi = mixture_rvs(
     [0.25, 0.75],
     size=200,
     dist=[stats.norm, stats.norm],
     kwargs=(dict(loc=-1, scale=0.5), dict(loc=1, scale=0.5)),
+    rng=RANDOM_STATE,
 )
 
 
@@ -44,6 +48,28 @@ class TestBandwidthCalculation:
         bw_expected = 0.29781147113698891
         bw = bw_normal_reference(Xi)
         assert_allclose(bw, bw_expected)
+
+
+@pytest.mark.parametrize("percentile", [40, 45])
+def test_select_sigma_percentile(percentile):
+    # the inter-percentile range must be normalized by the same range of the
+    # standard normal, otherwise a non-default percentile badly understates
+    # the dispersion of normal data
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(50000)
+    assert_allclose(
+        _select_sigma(x, percentile=percentile), np.std(x, ddof=1), rtol=0.02
+    )
+
+
+def test_select_sigma_default_normalization():
+    # the default keeps Silverman's rounded constant, so bandwidths that
+    # depend on it are unchanged
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(500)
+    iqr = stats.scoreatpercentile(x, 75) - stats.scoreatpercentile(x, 25)
+    expected = np.minimum(np.std(x, ddof=1), iqr / 1.349)
+    assert_allclose(_select_sigma(x), expected, rtol=0, atol=0)
 
 
 class CheckNormalReferenceConstant:
@@ -94,6 +120,6 @@ class TestAllBandwidthZero(BandwidthZero):
 
 
 class TestAnyBandwidthZero(BandwidthZero):
-
-    xx = np.random.normal(size=(100, 3))
+    rs = np.random.RandomState(328193821)
+    xx = rs.normal(size=(100, 3))
     xx[:, 0] = 1.0

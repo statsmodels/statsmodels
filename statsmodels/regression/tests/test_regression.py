@@ -1,12 +1,14 @@
 """
 Test functions for models.regression
 """
-
 from statsmodels.compat.python import lrange
 
 # TODO: Test for LM
 from statsmodels.compat.scipy import SP_LT_116
 
+import contextlib
+from pathlib import Path
+import pickle
 import warnings
 
 import numpy as np
@@ -19,17 +21,26 @@ from numpy.testing import (
 import pandas as pd
 import pytest
 from scipy.linalg import toeplitz
-from scipy.stats import t as student_t
+from scipy.stats import chi2, t as student_t
 
 from statsmodels.datasets import longley
 from statsmodels.formula._manager import FormulaManager
+from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import (
     GLS,
+    GLSAR,
     OLS,
     WLS,
+    CompareLRTestResult,
+    ELTestResult,
+    YuleWalkerResult,
     burg,
     yule_walker,
 )
+from statsmodels.regression.quantile_regression import QuantReg
+from statsmodels.tools.numdiff import approx_hess
+from statsmodels.tools.sm_exceptions import MissingDataError, SingularMatrixWarning
+from statsmodels.tools.testing import warns_or_none
 from statsmodels.tools.tools import add_constant
 
 DECIMAL_4 = 4
@@ -80,17 +91,6 @@ class CheckRegressionResults:
                 conf2[i][1],
                 rtol=10**-self.decimal_confidenceintervals,
             )
-
-    decimal_conf_int_subset = DECIMAL_4
-
-    def test_conf_int_subset(self):
-        if len(self.res1.params) > 1:
-            with pytest.warns(FutureWarning, match="cols is"):
-                ci1 = self.res1.conf_int(cols=(1, 2))
-            ci2 = self.res1.conf_int()[1:3]
-            assert_almost_equal(ci1, ci2, self.decimal_conf_int_subset)
-        else:
-            pass
 
     decimal_scale = DECIMAL_4
 
@@ -150,7 +150,7 @@ class CheckRegressionResults:
             self.res1.mse_total,
             self.res2.mse_total,
             self.decimal_mse_total,
-            err_msg="Test class %s" % self,
+            err_msg=f"Test class {self}",
         )
 
     decimal_fvalue = DECIMAL_4
@@ -178,6 +178,11 @@ class CheckRegressionResults:
         hqic1 = self.res1.info_criteria("hqic")
         hqic2 = (self.res1.aic - 2 * k) + 2 * np.log(np.log(nobs)) * k
         assert_allclose(hqic1, hqic2, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("aic"), self.res1.aic, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("AIC"), self.res1.aic, rtol=1e-10)
+        assert_allclose(self.res1.info_criteria("bic"), self.res1.bic, rtol=1e-10)
+        with pytest.raises(ValueError, match="crit"):
+            self.res1.info_criteria("not-a-real-criterion")
 
     decimal_bic = DECIMAL_4
 
@@ -290,10 +295,13 @@ class TestOLS(CheckRegressionResults):
         # Test that if df_resid = 0, rsquared_adj = 0.
         # This is a regression test for user issue:
         # https://github.com/statsmodels/statsmodels/issues/868
+        rs = np.random.RandomState(323212)
         with warnings.catch_warnings(record=True):
-            x = np.random.randn(5)
-            y = np.random.randn(5, 6)
-            results = OLS(x, y).fit()
+            x = rs.randn(5)
+            y = rs.randn(5, 6)
+            with pytest.warns(SingularMatrixWarning, match="The design matrix is rank"):
+                # Intentional to get a nan rsquared_adj
+                results = OLS(x, y).fit()
             rsquared_adj = results.rsquared_adj
             assert_equal(rsquared_adj, np.nan)
 
@@ -710,6 +718,18 @@ class TestLM:
         LMstat2 = LMstat_OLS[0]
         assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
+    def test_LM_cluster_nodemean(self):
+        # GH-10284, LM = (sum_i s_i)' (sum_g S_g S_g')^-1 (sum_i s_i)
+        resid = self.res1_restricted.wresid
+        groups = np.repeat(np.arange(20), 5)
+        scores = self.x * resid[:, None]
+        group_sums = np.array([scores[groups == g].sum(0) for g in range(20)])
+        total = scores.sum(0)
+        LMstat = total @ np.linalg.solve(group_sums.T @ group_sums, total)
+        res_full = self.res1_full.get_robustcov_results("cluster", groups=groups)
+        LMstat_OLS = res_full.compare_lm_test(self.res1_restricted, demean=False)
+        assert_almost_equal(LMstat, LMstat_OLS[0], DECIMAL_7)
+
     def test_LM_nonnested(self):
         with pytest.raises(ValueError):
             self.res2_restricted.compare_lm_test(self.res2_full)
@@ -749,7 +769,7 @@ class TestOLS_GLS_WLS_equivalence:
         params_1 = np.array([self.results[0].params] * len(self.results))
         assert_allclose(params, params_1)
 
-    def test_ss(self):
+    def test_bse(self):
         bse = np.array([r.bse for r in self.results])
         bse_1 = np.array([self.results[0].bse] * len(self.results))
         assert_allclose(bse, bse_1)
@@ -770,8 +790,8 @@ class TestGLS_WLS_equivalence(TestOLS_GLS_WLS_equivalence):
         y = data.endog
         x = data.exog
         n = y.shape[0]
-        np.random.seed(5)
-        w = np.random.uniform(0.5, 1, n)
+        rs = np.random.RandomState(5)
+        w = rs.uniform(0.5, 1, n)
         w_inv = 1.0 / w
         cls.results = []
         cls.results.append(WLS(y, x, w).fit())
@@ -807,6 +827,26 @@ class TestWLS_CornerCases:
         weights = np.ones((10, 10))
         with pytest.raises(ValueError):
             WLS(self.endog, self.exog, weights=weights)
+
+    def test_whiten_wrong_ndim(self):
+        mod = WLS(self.endog, self.exog, weights=1)
+        with pytest.raises(ValueError):
+            mod.whiten(np.ones((2, 2, 2)))
+
+    def test_rank_deficient_warning(self):
+        x = np.array(
+            [
+                [1.0, 2.0],
+                [2.0, 4.0],
+                [3.0, 6.0],
+            ]
+        )
+        y = np.array([1.0, 2.0, 3.0])
+
+        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+            result = WLS(y, x).fit()
+
+        assert_allclose(result.fittedvalues, y)
 
 
 class TestWLSExogWeights(CheckRegressionResults):
@@ -961,7 +1001,9 @@ class TestYuleWalker:
         from statsmodels.datasets.sunspots import load
 
         data = load()
-        cls.rho, cls.sigma = yule_walker(data.endog, order=4, method="mle")
+        cls.rho, cls.sigma = yule_walker(
+            data.endog, order=4, method="mle", result_object=False
+        )
         cls.R_params = [
             1.2831003105694765,
             -0.45240924374091945,
@@ -973,13 +1015,131 @@ class TestYuleWalker:
         assert_almost_equal(self.rho, self.R_params, DECIMAL_4)
 
 
+def test_yule_walker_result_object_default_warns():
+    from statsmodels.datasets.sunspots import load
+
+    data = load()
+    with pytest.warns(FutureWarning, match="result_object"):
+        res = yule_walker(data.endog, order=2)
+    assert not isinstance(res, YuleWalkerResult)
+
+
+def test_yule_walker_result_object_true():
+    from statsmodels.datasets.sunspots import load
+
+    data = load()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = yule_walker(data.endog, order=2, result_object=True)
+    assert isinstance(res, YuleWalkerResult)
+    assert res.Rinv is None
+    assert res[0] is res.rho
+    assert res[1] == res.sigma
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", category=FutureWarning)
+        res = yule_walker(data.endog, order=2, inv=True, result_object=True)
+    assert isinstance(res, YuleWalkerResult)
+    assert res.Rinv is not None
+
+
+class TestCompareAndElTestNamedTuple:
+    @classmethod
+    def setup_class(cls):
+        rs = np.random.RandomState(12345)
+        nobs = 200
+        x = rs.standard_normal((nobs, 2))
+        y = 1 + x[:, 0] + rs.standard_normal(nobs)
+        exog_full = add_constant(x)
+        cls.res_full = OLS(y, exog_full).fit()
+        cls.res_restr = OLS(y, add_constant(x[:, 0])).fit()
+
+    def test_compare_lr_test_returns_namedtuple(self):
+        # compare_lr_test always returns three values, so it returns the
+        # NamedTuple unconditionally with no deprecation cycle.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.compare_lr_test(self.res_restr)
+        assert isinstance(res, CompareLRTestResult)
+        assert res[0] == res.statistic
+        assert res[1] == res.pvalue
+        assert res[2] == res.df_diff
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res_large = self.res_full.compare_lr_test(
+                self.res_restr, large_sample=True
+            )
+        assert isinstance(res_large, CompareLRTestResult)
+
+    def test_el_test_invalid_method_raises(self):
+        # An unsupported `method` used to fall through both `if` branches
+        # with no `else`, leaving `llr` unassigned and raising
+        # UnboundLocalError instead of a clear ValueError.
+        with pytest.raises(ValueError):
+            self.res_full.el_test(
+                np.array([0.0]), np.array([1]), method="unknown"
+            )
+
+    def test_el_test_result_object_default_warns(self):
+        with pytest.warns(FutureWarning, match="result_object"):
+            res = self.res_full.el_test(np.array([0.0]), np.array([1]))
+        assert not isinstance(res, ELTestResult)
+
+    def test_el_test_result_object_true_full(self):
+        # len(param_nums) == len(params): no nuisance parameters
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_restr.el_test(
+                np.array([0.0, 0.0]), np.array([0, 1]), result_object=True
+            )
+        assert isinstance(res, ELTestResult)
+        assert res.weights is None
+        assert res.nuisance_params is None
+        assert res[0] == res.statistic
+        assert res[1] == res.pvalue
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_restr.el_test(
+                np.array([0.0, 0.0]),
+                np.array([0, 1]),
+                return_weights=True,
+                result_object=True,
+            )
+        assert res.weights is not None
+        assert res.nuisance_params is None
+
+    def test_el_test_result_object_true_nuisance(self):
+        # len(param_nums) < len(params): nuisance parameters present
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.el_test(
+                np.array([0.0]), np.array([1]), result_object=True
+            )
+        assert isinstance(res, ELTestResult)
+        assert res.weights is None
+        assert res.nuisance_params is None
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("error", category=FutureWarning)
+            res = self.res_full.el_test(
+                np.array([0.0]),
+                np.array([1]),
+                ret_params=True,
+                result_object=True,
+            )
+        assert res.weights is not None
+        assert res.nuisance_params is not None
+
+
 class TestDataDimensions(CheckRegressionResults):
     @classmethod
     def setup_class(cls):
-        np.random.seed(54321)
-        cls.endog_n_ = np.random.uniform(0, 20, size=30)
+        rs = np.random.RandomState(54321)
+        cls.endog_n_ = rs.uniform(0, 20, size=30)
         cls.endog_n_one = cls.endog_n_[:, None]
-        cls.exog_n_ = np.random.uniform(0, 20, size=30)
+        cls.exog_n_ = rs.uniform(0, 20, size=30)
         cls.exog_n_one = cls.exog_n_[:, None]
         cls.degen_exog = cls.exog_n_one[:-1]
         cls.mod1 = OLS(cls.endog_n_one, cls.exog_n_one)
@@ -1000,8 +1160,9 @@ class TestGLS_large_data(TestDataDimensions):
     def setup_class(cls):
         super().setup_class()
         nobs = 1000
-        y = np.random.randn(nobs, 1)
-        x = np.random.randn(nobs, 20)
+        rs = np.random.RandomState(3232122)
+        y = rs.randn(nobs, 1)
+        x = rs.randn(nobs, 20)
         sigma = np.ones_like(y)
         cls.gls_res = GLS(y, x, sigma=sigma).fit()
         cls.gls_res_scalar = GLS(y, x, sigma=1).fit()
@@ -1046,8 +1207,8 @@ class TestNxNxOne(TestDataDimensions):
 
 
 def test_bad_size():
-    np.random.seed(54321)
-    data = np.random.uniform(0, 20, 31)
+    rs = np.random.RandomState(54321)
+    data = rs.uniform(0, 20, 31)
     with pytest.raises(ValueError):
         OLS(data, data[1:])
 
@@ -1077,9 +1238,10 @@ def test_fvalue_const_only():
 
 
 def test_conf_int_single_regressor():
-    # GH#706 single-regressor model (i.e. no intercept) with 1D exog
+    # GH#706 single-regressor model (i.e., no intercept) with 1D exog
     # should get passed to DataFrame for conf_int
-    y = pd.Series(np.random.randn(10))
+    rs = np.random.RandomState(3232121)
+    y = pd.Series(rs.randn(10))
     x = pd.Series(np.ones(10))
     res = OLS(y, x).fit()
     conf_int = res.conf_int()
@@ -1158,13 +1320,35 @@ Notes: \\newline
 
 class TestRegularizedFit:
 
+    def test_invalid_method_raises(self):
+        from statsmodels.base.elastic_net import fit_elasticnet
+
+        rs = np.random.RandomState(742)
+        n = 100
+        endog = rs.normal(size=n)
+        exog = rs.normal(size=(n, 3))
+        model = OLS(endog, exog)
+
+        # OLS.fit_regularized only exposes "elastic_net"/"sqrt_lasso"
+        with pytest.raises(ValueError, match="method"):
+            model.fit_regularized(method="not-a-method")
+
+        # fit_elasticnet itself also accepts "coord_descent"/"l1_slsqp"
+        with pytest.raises(ValueError, match="method"):
+            fit_elasticnet(model, method="not-a-method")
+
+        with pytest.raises(ValueError, match="trim_mode"):
+            fit_elasticnet(
+                model, method="l1_slsqp", L1_wt=1.0, trim_mode="not-a-trim-mode"
+            )
+
     # Make sure there are no problems when no variables are selected.
     def test_empty_model(self):
 
-        np.random.seed(742)
+        rs = np.random.RandomState(742)
         n = 100
-        endog = np.random.normal(size=n)
-        exog = np.random.normal(size=(n, 3))
+        endog = rs.normal(size=n)
+        exog = rs.normal(size=(n, 3))
 
         for cls in OLS, WLS, GLS:
             model = cls(endog, exog)
@@ -1173,13 +1357,11 @@ class TestRegularizedFit:
 
     def test_regularized(self):
 
-        import os
-
         from .results import glmnet_r_results
 
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        cur_dir = Path(__file__).resolve().parent
         data = np.loadtxt(
-            os.path.join(cur_dir, "results", "lasso_data.csv"), delimiter=","
+            Path(cur_dir).joinpath("results", "lasso_data.csv"), delimiter=","
         )
 
         tests = [x for x in dir(glmnet_r_results) if x.startswith("rslt_")]
@@ -1212,11 +1394,11 @@ class TestRegularizedFit:
 
     def test_regularized_weights(self):
 
-        np.random.seed(1432)
-        exog1 = np.random.normal(size=(100, 3))
-        endog1 = exog1[:, 0] + exog1[:, 1] + np.random.normal(size=100)
-        exog2 = np.random.normal(size=(100, 3))
-        endog2 = exog2[:, 0] + exog2[:, 1] + np.random.normal(size=100)
+        rs = np.random.RandomState(1432)
+        exog1 = rs.normal(size=(100, 3))
+        endog1 = exog1[:, 0] + exog1[:, 1] + rs.normal(size=100)
+        exog2 = rs.normal(size=(100, 3))
+        endog2 = exog2[:, 0] + exog2[:, 1] + rs.normal(size=100)
 
         exog_a = np.vstack((exog1, exog1, exog2))
         endog_a = np.concatenate((endog1, endog1, endog2))
@@ -1244,11 +1426,11 @@ class TestRegularizedFit:
 
     def test_regularized_weights_list(self):
 
-        np.random.seed(132)
-        exog1 = np.random.normal(size=(100, 3))
-        endog1 = exog1[:, 0] + exog1[:, 1] + np.random.normal(size=100)
-        exog2 = np.random.normal(size=(100, 3))
-        endog2 = exog2[:, 0] + exog2[:, 1] + np.random.normal(size=100)
+        rs = np.random.RandomState(132)
+        exog1 = rs.normal(size=(100, 3))
+        endog1 = exog1[:, 0] + exog1[:, 1] + rs.normal(size=100)
+        exog2 = rs.normal(size=(100, 3))
+        endog2 = exog2[:, 0] + exog2[:, 1] + rs.normal(size=100)
 
         exog_a = np.vstack((exog1, exog1, exog2))
         endog_a = np.concatenate((endog1, endog1, endog2))
@@ -1313,7 +1495,8 @@ def test_missing_formula_predict():
     null = np.array([np.nan])
     data = pd.DataFrame({"x": np.concatenate((data, null))})
     beta = np.array([1, 0.1])
-    e = np.random.normal(size=nsample + 1)
+    rs = np.random.RandomState(3232123)
+    e = rs.normal(size=nsample + 1)
     data["y"] = beta[0] + beta[1] * data["x"] + e
     model = OLS.from_formula("y ~ x", data=data)
     fit = model.fit()
@@ -1323,10 +1506,10 @@ def test_missing_formula_predict():
 def test_fvalue_implicit_constant():
     # if constant is implicit, return nan see #2444
     nobs = 100
-    np.random.seed(2)
-    x = np.random.randn(nobs, 1)
+    rs = np.random.RandomState(2)
+    x = rs.randn(nobs, 1)
     x = ((x > 0) == [True, False]).astype(int)
-    y = x.sum(1) + np.random.randn(nobs)
+    y = x.sum(1) + rs.randn(nobs)
 
     from statsmodels.regression.linear_model import OLS, WLS
 
@@ -1344,9 +1527,9 @@ def test_fvalue_implicit_constant():
 def test_fvalue_only_constant():
     # if only constant in model, return nan see #3642
     nobs = 20
-    np.random.seed(2)
+    rs = np.random.RandomState(2)
     x = np.ones(nobs)
-    y = np.random.randn(nobs)
+    y = rs.randn(nobs)
 
     from statsmodels.regression.linear_model import OLS, WLS
 
@@ -1361,12 +1544,20 @@ def test_fvalue_only_constant():
     res.summary()
 
 
+def test_fit_invalid_method_raises():
+    rs = np.random.RandomState(89432)
+    exog = add_constant(rs.normal(size=(50, 2)))
+    endog = exog @ [1.0, 0.5, -0.5] + rs.normal(size=50)
+    with pytest.raises(ValueError, match="method"):
+        OLS(endog, exog).fit(method="not-a-method")
+
+
 def test_ridge():
     n = 100
     p = 5
-    np.random.seed(3132)
-    xmat = np.random.normal(size=(n, p))
-    yvec = xmat.sum(1) + np.random.normal(size=n)
+    rs = np.random.RandomState(3132)
+    xmat = rs.normal(size=(n, p))
+    yvec = xmat.sum(1) + rs.normal(size=n)
 
     v = np.ones(p)
     v[0] = 0
@@ -1387,13 +1578,31 @@ def test_ridge():
     assert_allclose(fv1, fv2)
 
 
+def test_ridge_pandas():
+    # GH 4724, L1_wt=0 uses the ridge code path, results were not wrapped
+    n = 100
+    p = 5
+    rs = np.random.RandomState(3132)
+    xmat = pd.DataFrame(rs.normal(size=(n, p)), columns=list("abcde"))
+    yvec = pd.Series(xmat.sum(axis=1) + rs.normal(size=n), name="y")
+
+    model = OLS(yvec, xmat)
+    result_ridge = model.fit_regularized(alpha=1.0, L1_wt=0)
+    result_enet = model.fit_regularized(alpha=1.0, L1_wt=1e-10)
+    assert isinstance(result_ridge.params, pd.Series)
+    assert isinstance(result_ridge.fittedvalues, pd.Series)
+    pd.testing.assert_index_equal(result_ridge.params.index, xmat.columns)
+    pd.testing.assert_index_equal(result_ridge.fittedvalues.index, xmat.index)
+    pd.testing.assert_series_equal(result_ridge.params, result_enet.params)
+
+
 def test_regularized_refit():
     n = 100
     p = 5
-    np.random.seed(3132)
-    xmat = np.random.normal(size=(n, p))
+    rs = np.random.RandomState(3132)
+    xmat = rs.normal(size=(n, p))
     # covariates 0 and 2 matter
-    yvec = xmat[:, 0] + xmat[:, 2] + np.random.normal(size=n)
+    yvec = xmat[:, 0] + xmat[:, 2] + rs.normal(size=n)
     model1 = OLS(yvec, xmat)
     result1 = model1.fit_regularized(alpha=2.0, L1_wt=0.5, refit=True)
     model2 = OLS(yvec, xmat[:, [0, 2]])
@@ -1407,10 +1616,10 @@ def test_regularized_predict():
     # this also compares WLS with GLS
     n = 100
     p = 5
-    np.random.seed(3132)
-    xmat = np.random.normal(size=(n, p))
-    yvec = xmat.sum(1) + np.random.normal(size=n)
-    wgt = np.random.uniform(1, 2, n)
+    rs = np.random.RandomState(3132)
+    xmat = rs.normal(size=(n, p))
+    yvec = xmat.sum(1) + rs.normal(size=n)
+    wgt = rs.uniform(1, 2, n)
     model_wls = WLS(yvec, xmat, weights=wgt)
     # TODO: params is not the same in GLS if sigma=1 / wgt, i.e 1-dim, #7755
     model_gls1 = GLS(yvec, xmat, sigma=np.diag(1 / wgt))
@@ -1442,9 +1651,9 @@ def test_regularized_predict():
 def test_regularized_options():
     n = 100
     p = 5
-    np.random.seed(3132)
-    xmat = np.random.normal(size=(n, p))
-    yvec = xmat.sum(1) + np.random.normal(size=n)
+    rs = np.random.RandomState(3132)
+    xmat = rs.normal(size=(n, p))
+    yvec = xmat.sum(1) + rs.normal(size=n)
     model1 = OLS(yvec - 1, xmat)
     result1 = model1.fit_regularized(alpha=1.0, L1_wt=0.5)
     model2 = OLS(yvec, xmat, offset=1)
@@ -1475,16 +1684,17 @@ def test_burg():
 def test_burg_errors():
     with pytest.raises(ValueError):
         burg(np.ones((100, 2)))
+    rs = np.random.RandomState(323211)
     with pytest.raises(ValueError):
-        burg(np.random.randn(100), 0)
+        burg(rs.randn(100), 0)
     with pytest.raises(ValueError):
-        burg(np.random.randn(100), "apple")
+        burg(rs.randn(100), "apple")
 
 
 @pytest.mark.skipif(not has_cvxopt, reason="sqrt_lasso requires cvxopt")
 def test_sqrt_lasso():
 
-    np.random.seed(234923)
+    rs = np.random.RandomState(234923)
 
     # Based on the example in the Belloni paper
     n = 100
@@ -1493,7 +1703,7 @@ def test_sqrt_lasso():
     cx = 0.5 ** np.abs(np.subtract.outer(ii, ii))
     cxr = np.linalg.cholesky(cx)
 
-    x = np.dot(np.random.normal(size=(n, p)), cxr.T)
+    x = np.dot(rs.normal(size=(n, p)), cxr.T)
     b = np.zeros(p)
     b[0:5] = [1, 1, 1, 1, 1]
 
@@ -1502,7 +1712,7 @@ def test_sqrt_lasso():
     alpha = 1.1 * np.sqrt(n) * norm.ppf(1 - 0.05 / (2 * p))
 
     # Use very low noise level for a unit test
-    y = np.dot(x, b) + 0.25 * np.random.normal(size=n)
+    y = np.dot(x, b) + 0.25 * rs.normal(size=n)
 
     # At low noise levels, the sqrt lasso should be around a
     # factor of 3 from the oracle without refit, and should
@@ -1533,16 +1743,18 @@ def test_sqrt_lasso():
         assert_allclose(rslt.params[0:5], expected_params[refit], rtol=1e-5, atol=1e-5)
 
 
-def test_bool_regressor(reset_randomstate):
-    exog = np.random.randint(0, 2, size=(100, 2)).astype(bool)
-    endog = np.random.standard_normal(100)
+def test_bool_regressor():
+    rs = np.random.RandomState(3232127)
+    exog = rs.randint(0, 2, size=(100, 2)).astype(bool)
+    endog = rs.standard_normal(100)
     bool_res = OLS(endog, exog).fit()
     res = OLS(endog, exog.astype(np.double)).fit()
     assert_allclose(bool_res.params, res.params)
 
 
-def test_ols_constant(reset_randomstate):
-    y = np.random.standard_normal(200)
+def test_ols_constant():
+    rs = np.random.RandomState(323219)
+    y = rs.standard_normal(200)
     x = np.ones((200, 1))
     res = OLS(y, x).fit()
     with warnings.catch_warnings(record=True) as recording:
@@ -1559,19 +1771,37 @@ def test_summary_no_constant():
     assert "R² is computed " in summary.as_text()
 
 
-def test_condition_number(reset_randomstate):
-    y = np.random.standard_normal(100)
-    x = np.random.standard_normal((100, 1))
-    x = x + np.random.standard_normal((100, 5))
+def test_condition_number():
+    rs = np.random.RandomState(323218)
+    y = rs.standard_normal(100)
+    x = rs.standard_normal((100, 1))
+    x = x + rs.standard_normal((100, 5))
     res = OLS(y, x).fit()
     assert_allclose(res.condition_number, np.sqrt(np.linalg.cond(x.T @ x)))
     assert_allclose(res.condition_number, np.linalg.cond(x))
 
 
-def test_slim_summary(reset_randomstate):
-    y = np.random.standard_normal(100)
-    x = np.random.standard_normal((100, 1))
-    x = x + np.random.standard_normal((100, 5))
+def test_condition_number_nonpositive_eigval():
+    # GH 9653
+    rs = np.random.RandomState(323218)
+    y = rs.standard_normal(100)
+    x = rs.standard_normal((100, 1))
+    x = x + rs.standard_normal((100, 5))
+    res = OLS(y, x).fit()
+    for smallest_eigval in (0.0, -1e-12):
+        eigvals = res.eigenvals.copy()
+        eigvals[-1] = smallest_eigval
+        res._cache["eigenvals"] = eigvals
+        assert res.condition_number == np.inf
+        del res._cache["condition_number"]
+    del res._cache["eigenvals"]
+
+
+def test_slim_summary():
+    rs = np.random.RandomState(323217)
+    y = rs.standard_normal(100)
+    x = rs.standard_normal((100, 1))
+    x = x + rs.standard_normal((100, 5))
     res = OLS(y, x).fit()
     import copy
 
@@ -1583,7 +1813,198 @@ def test_slim_summary(reset_randomstate):
     assert slim_summ.tables[1].as_text() == summ.tables[1].as_text()
 
 
-def test_slim_summary_skips_diagnostics(reset_randomstate, monkeypatch):
+@pytest.mark.parametrize("method", ["pinv", "qr"])
+def test_fit_attributes_reset_on_initialize(method):
+    # GH#9880
+    data = longley.load()
+    exog = add_constant(np.asarray(data.exog), prepend=False)
+    endog = np.asarray(data.endog)
+    rs = np.random.RandomState(12345)
+    w1, w2 = rs.uniform(0.5, 2.0, size=(2, endog.shape[0]))
+    fit_attrs = [
+        "pinv_wexog", "normalized_cov_params", "rank",
+        "wexog_singular_values", "effects",
+    ]
+
+    mod = WLS(endog, exog, weights=w1)
+    assert all(getattr(mod, attr) is None for attr in fit_attrs)
+    mod.fit(method=method)
+    assert mod.pinv_wexog is not None
+    assert mod.normalized_cov_params is not None
+    assert (mod.effects is None) == (method == "pinv")
+
+    mod.weights = w2
+    mod.initialize()
+    assert all(getattr(mod, attr) is None for attr in fit_attrs)
+    res = mod.fit(method=method)
+    expected = WLS(endog, exog, weights=w2).fit(method=method)
+    assert_allclose(res.params, expected.params)
+    assert_allclose(res.bse, expected.bse)
+
+
+def test_ols_offset_and_score_cache():
+    # GH#9880
+    data = longley.load()
+    exog = add_constant(np.asarray(data.exog), prepend=False)
+    endog = np.asarray(data.endog)
+
+    assert OLS(endog, exog).offset is None
+    offset = np.ones_like(endog)
+    mod = OLS(endog, exog, offset=offset)
+    assert_allclose(mod.offset, offset)
+
+    assert mod._wexog_xprod is None
+    mod.score(np.zeros(exog.shape[1]))
+    assert mod._wexog_xprod is not None
+    mod.initialize()
+    assert mod._wexog_xprod is None
+
+
+def _make_old_pickle_models():
+    rng = np.random.default_rng(20261025)
+    nobs = 40
+    exog = add_constant(rng.standard_normal((nobs, 2)))
+    endog = exog @ [1.0, 0.5, -0.3] + rng.standard_normal(nobs)
+    weights = rng.uniform(0.5, 2.0, nobs)
+    sigma = 0.4 ** np.abs(np.subtract.outer(np.arange(nobs), np.arange(nobs)))
+    return {
+        "OLS": lambda: OLS(endog, exog),
+        "WLS": lambda: WLS(endog, exog, weights=weights),
+        "GLS": lambda: GLS(endog, exog, sigma=sigma),
+        "GLSAR": lambda: GLSAR(endog, exog, rho=1),
+    }
+
+
+def _summary_cells(res):
+    """Cells of the tables of summary, without the date and time of the call"""
+    rows = []
+    for table in res.summary().tables:
+        for row in table.data:
+            cells = [str(cell) for cell in row]
+            if cells[0].strip() in ("Date:", "Time:"):
+                cells[1] = ""
+            rows.append(cells)
+    return rows
+
+
+@pytest.mark.parametrize("name", ["OLS", "WLS", "GLS", "GLSAR"])
+@pytest.mark.parametrize("pickle_results", [True, False])
+def test_unpickle_without_default_attributes(name, pickle_results):
+    # GH#9880 releases before the attributes were initialized in __init__ did
+    # not store them, and unpickling never goes through __init__. Mimic these
+    # pickles by dropping the attributes that were not set at the time.
+    make = _make_old_pickle_models()[name]
+    new_attrs = [
+        "weights", "sigma", "offset", "_wendog_xprod", "_wexog_xprod",
+        "_wexog_x_wendog",
+    ]
+    mod = make()
+    res = mod.fit()
+    for attr in new_attrs:
+        # only drop attributes that are unset, WLS needs its weights
+        if attr in vars(mod) and vars(mod)[attr] is None:
+            del vars(mod)[attr]
+    assert any(attr not in vars(mod) for attr in new_attrs)
+
+    obj = pickle.loads(pickle.dumps(res if pickle_results else mod))
+    old_res = obj if pickle_results else obj.fit()
+    old_mod = old_res.model
+
+    expected = make().fit()
+    params = expected.params
+    for attr in ["rsquared", "rsquared_adj", "fvalue", "f_pvalue",
+                 "centered_tss", "llf", "aic", "bic"]:
+        assert_allclose(getattr(old_res, attr), getattr(expected, attr))
+    # The header of the summary holds the date and time of the call, and the
+    # two models are created at different times, so compare all other cells.
+    assert _summary_cells(old_res) == _summary_cells(expected)
+
+    exp_mod = expected.model
+    assert_allclose(old_mod.loglike(params), exp_mod.loglike(params))
+    if name == "OLS":
+        assert_allclose(old_mod.score(params), exp_mod.score(params))
+        assert_allclose(old_mod.hessian(params), exp_mod.hessian(params))
+
+
+def test_iterative_fit_repeated_call_glsar():
+    # GH#9880 repeated calls start from the current rho. Without a
+    # convergence stop, 2 + 2 iterations are the same as 3 iterations.
+    rng = np.random.default_rng(3293829)
+    nobs = 80
+    exog = add_constant(rng.standard_normal((nobs, 2)))
+    u = np.zeros(nobs)
+    e = rng.standard_normal(nobs)
+    for i in range(1, nobs):
+        u[i] = 0.6 * u[i - 1] + e[i]
+    endog = exog @ [1.0, 0.5, -0.3] + u
+
+    mod = GLSAR(endog, exog, rho=1)
+    res_a = mod.iterative_fit(2, rtol=0)
+    res_b = mod.iterative_fit(2, rtol=0)
+    expected = GLSAR(endog, exog, rho=1).iterative_fit(3, rtol=0)
+    assert not np.allclose(res_a.params, res_b.params, rtol=1e-10, atol=0)
+    assert_allclose(res_b.params, expected.params)
+    assert_allclose(res_b.bse, expected.bse)
+    assert_allclose(mod.pinv_wexog, np.linalg.pinv(mod.wexog))
+
+
+def test_iterative_fit_repeated_call_glshet():
+    # GH#9880 repeated calls start from the current weights, so 2 + 2
+    # iterations are the same as 3 iterations on a fresh model.
+    from statsmodels.regression.feasible_gls import GLSHet
+
+    rng = np.random.default_rng(12345)
+    nobs = 200
+    x = rng.uniform(0.5, 3, nobs)
+    exog = add_constant(x)
+    exog_var = add_constant(x**2)
+    endog = exog @ [1.0, 2.0] + np.sqrt(0.2 + x**2) * rng.standard_normal(nobs)
+
+    def make():
+        with pytest.warns(FutureWarning, match="GLSHet is deprecated"):
+            return GLSHet(endog, exog, exog_var=exog_var)
+
+    mod = make()
+    res_a = mod.iterative_fit(2)
+    res_b = mod.iterative_fit(2)
+    expected = make().iterative_fit(3)
+    assert not np.allclose(res_a.params, res_b.params, rtol=1e-10, atol=0)
+    assert_allclose(res_b.params, expected.params)
+    assert_allclose(res_b.bse, expected.bse)
+    assert_allclose(mod.pinv_wexog, np.linalg.pinv(mod.wexog))
+    # a single iteration is WLS with the given (unit) weights
+    res_wls = WLS(endog, exog, weights=np.ones(nobs)).fit()
+    assert_allclose(make().iterative_fit(1).params, res_wls.params)
+
+
+def test_ols_wls_fixed_scale():
+    rs = np.random.RandomState(3293829)
+    X = add_constant(rs.uniform(size=(50, 2)))
+    y = np.dot(X, [1, 2, 3]) + rs.standard_normal(50)
+    expected_scale = 5.0
+
+    res1 = OLS(y, X).fit(cov_type="fixed scale", cov_kwds={"scale": expected_scale})
+    assert_allclose(res1.scale, expected_scale)
+    assert_allclose(res1.resid_pearson, res1.resid / np.sqrt(expected_scale))
+
+    weights = rs.uniform(0.5, 2.0, 50)
+    res2 = WLS(y, X, weights=weights).fit(
+        cov_type="fixed_scale", cov_kwds={"scale": expected_scale}
+    )
+    assert_allclose(res2.scale, expected_scale)
+    assert_allclose(res2.resid_pearson, res2.wresid / np.sqrt(expected_scale))
+
+    res3 = OLS(y, X).fit()
+    res3_robust = res3.get_robustcov_results(
+        cov_type="fixed scale", scale=expected_scale
+    )
+    assert_allclose(res3_robust.scale, expected_scale)
+    assert_allclose(
+        res3_robust.resid_pearson, res3_robust.wresid / np.sqrt(expected_scale)
+    )
+
+
+def test_slim_summary_skips_diagnostics(monkeypatch):
     # GH#9054 the slim summary omits the normality/residual diagnostics, so it
     # must not compute them. Make omni_normtest raise to prove the slim summary
     # never calls it, while the full summary still does.
@@ -1594,8 +2015,9 @@ def test_slim_summary_skips_diagnostics(reset_randomstate, monkeypatch):
 
     monkeypatch.setattr(stattools, "omni_normtest", _boom)
 
-    y = np.random.standard_normal(50)
-    x = add_constant(np.random.standard_normal((50, 2)))
+    rs = np.random.RandomState(323216)
+    y = rs.standard_normal(50)
+    x = add_constant(rs.standard_normal((50, 2)))
     res = OLS(y, x).fit()
 
     slim_summ = res.summary(slim=True)
@@ -1607,3 +2029,388 @@ def test_slim_summary_skips_diagnostics(reset_randomstate, monkeypatch):
     # the full summary does compute the normality diagnostics
     with pytest.raises(RuntimeError):
         res.summary()
+
+
+def _fit_ols_for_summary():
+    data = longley.load()
+    endog = np.asarray(data.endog)
+    exog = np.asarray(data.exog)
+    exog = add_constant(exog, prepend=False)
+    return OLS(endog, exog).fit()
+
+
+def _fit_gls_for_summary():
+    data = longley.load()
+    exog = add_constant(
+        np.column_stack((data.exog.iloc[:, 1], data.exog.iloc[:, 4])),
+        prepend=False,
+    )
+    tmp_results = OLS(data.endog, exog).fit()
+    rho = np.corrcoef(tmp_results.resid[1:], tmp_results.resid[:-1])[0][1]
+    order = toeplitz(np.arange(16))
+    sigma = rho**order
+    return GLS(data.endog, exog, sigma=sigma).fit()
+
+
+@pytest.mark.parametrize(
+    "fit_func",
+    [_fit_ols_for_summary, _fit_gls_for_summary],
+    ids=["OLS", "GLS"],
+)
+def test_summary_after_remove_data(fit_func):
+    # summary() must still work after remove_data() has been called
+    res = fit_func()
+    assert isinstance(res.summary(), Summary)
+    res.remove_data()
+    assert isinstance(res.summary(), Summary)
+
+
+@pytest.mark.parametrize("scale", [None, 3.5])
+@pytest.mark.parametrize("use_offset", [False, True])
+@pytest.mark.parametrize("n_columns", [1, 2])
+@pytest.mark.parametrize("at_fit", [False, True])
+def test_ols_hessian_numerical_derivative(scale, use_offset, n_columns, at_fit):
+    x = add_constant(np.arange(-1.0, 4.0))[:, :n_columns]
+    y = np.array([1.0, -1.5, 3.0, -0.5, 3.0])
+    offset = np.array([0.1, 0.3, -0.2, 0.4, 0.2]) if use_offset else 0.0
+    model = OLS(y, x, **({"offset": offset} if use_offset else {}))
+    # Fitting y - offset avoids relying on OLS.fit's treatment of offset.
+    if at_fit:
+        params = OLS(y - offset, x).fit().params
+    else:
+        params = np.array([0.7, 0.2])[:n_columns]
+    numeric_hessian = approx_hess(params, lambda p: model.loglike(p, scale=scale))
+    assert_allclose(model.hessian(params, scale=scale), numeric_hessian,
+                    rtol=1e-5, atol=1e-6)
+
+
+def test_ols_hessian_at_fit():
+    x = add_constant(np.arange(-2.0, 3.0))
+    y = np.array([1.0, -1.5, 3.0, -0.5, 3.0])
+    result = OLS(y, x).fit()
+    # At the optimum the profile likelihood curvature is the negative
+    # inverse covariance using the ML variance SSR / n (not SSR / df_resid).
+    ml_scale = result.ssr / result.nobs
+    covariance = result.normalized_cov_params * ml_scale
+    assert_allclose(result.model.hessian(result.params), -np.linalg.inv(covariance),
+                    atol=1e-12)
+    assert_allclose(result.model.hessian(result.params, scale=ml_scale),
+                    -np.linalg.inv(covariance), atol=1e-12)
+
+
+def test_ols_regularized_profile_scale():
+    x = np.array([-1.0, -1.0, 1.0, 1.0])
+    y = 0.3 * x + np.array([-1.0, 1.0, -1.0, 1.0])
+    alpha = 0.02
+    # The objective, up to a constant, is
+    # log(1 + (params - 0.3)**2) / 2 + alpha * abs(params).
+    # Its unique minimum is positive and solves
+    # (params - 0.3) / (1 + (params - 0.3)**2) + alpha = 0.
+    expected = 0.3 - 2 * alpha / (1 + np.sqrt(1 - 4 * alpha**2))
+    result = OLS(y, x).fit_regularized(
+        alpha=alpha, L1_wt=1, profile_scale=True, cnvrg_tol=1e-12
+    )
+    assert result.converged
+    assert_allclose(result.params, [expected], rtol=1e-10, atol=1e-12)
+
+
+@pytest.mark.parametrize("scale", [None, 0.83, 2.0])
+@pytest.mark.parametrize("observed", [True, False])
+def test_hessian_factor_unscaled(scale, observed):
+    # For fixed Gaussian error variance s, the coefficient Hessian is
+    # -wexog.T @ wexog / s. The factor supplies only the observation weights;
+    # scale and observed do not change them (GH#8653).
+    rng = np.random.default_rng(348203)
+    n, k = 40, 3
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, k - 1))])
+    beta = np.array([1.0, 0.5, -0.5])
+    endog = exog @ beta + rng.standard_normal(n) * 0.5
+    params = beta + 0.05 * rng.standard_normal(k)
+    fixed_scale = 0.83
+
+    def numeric_hessian(mod):
+        # WLS and GLS have no log-likelihood or Hessian for a fixed scale, so
+        # this is the Gaussian log-likelihood of the whitened data, written
+        # out here, differentiated numerically.
+        def ll_fixed_scale(p):
+            resid = mod.wendog - mod.wexog.dot(p)
+            ssr = np.sum(resid**2)
+            return (
+                -0.5 * n * np.log(2 * np.pi * fixed_scale)
+                - 0.5 / fixed_scale * ssr
+            )
+
+        return approx_hess(params, ll_fixed_scale)
+
+    def check(mod):
+        hf = mod.hessian_factor(params, scale=scale, observed=observed)
+        assert hf.shape == (n,)
+        reassembled = (mod.exog.T * hf).dot(mod.exog)
+        assert_allclose(
+            -reassembled / fixed_scale, numeric_hessian(mod), rtol=1e-4, atol=1e-6
+        )
+
+    check(OLS(endog, exog))
+
+    # OLS does have a Hessian for a fixed scale, which ties the factor to
+    # the library code.
+    ols = OLS(endog, exog)
+    hf = ols.hessian_factor(params, scale=scale, observed=observed)
+    assert_allclose(
+        -(ols.exog.T * hf).dot(ols.exog) / fixed_scale,
+        ols.hessian(params, scale=fixed_scale),
+        rtol=1e-12,
+    )
+
+    # WLS with heteroskedastic weights.
+    weights = rng.uniform(0.5, 3.0, size=n)
+    check(WLS(endog, exog, weights=weights))
+
+    # GLS with no sigma is equivalent to OLS: hessian_factor is all ones.
+    mod_nosigma = GLS(endog, exog)
+    check(mod_nosigma)
+    assert_allclose(mod_nosigma.hessian_factor(params), np.ones(n))
+
+    check(GLS(endog, exog, sigma=2.0))
+
+    # GLS with a 1d (heteroskedastic diagonal) sigma.
+    sigma = rng.uniform(0.3, 4.0, size=n)
+    check(GLS(endog, exog, sigma=sigma))
+
+
+@pytest.mark.parametrize("diagonal", [True, False])
+def test_hessian_factor_gls_full_sigma_raises(diagonal):
+    # Per-observation factors are only implemented for scalar or 1d sigma.
+    # fit() itself also supports 2d sigma, including diagonal matrices.
+    rng = np.random.default_rng(9284)
+    n, k = 12, 2
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, k - 1))])
+    endog = exog.dot([1.0, -0.5]) + rng.standard_normal(n) * 0.5
+    a = rng.standard_normal((n, n))
+    sigma = a.dot(a.T) + n * np.eye(n)
+    if diagonal:
+        sigma = np.diag(np.diag(sigma))
+
+    mod = GLS(endog, exog, sigma=sigma)
+    with pytest.raises(NotImplementedError, match="hessian_factor"):
+        mod.hessian_factor(np.array([1.0, -0.5]))
+
+    # fit() itself is unaffected -- it whitens with the full cholsigmainv
+    # matrix, never going through hessian_factor.
+    res = mod.fit()
+    assert np.isfinite(res.params).all()
+
+
+@pytest.mark.parametrize("order", [1, 2])
+def test_hessian_factor_glsar_raises(order):
+    # The whitened design of GLSAR has nobs - order rows, each of which mixes
+    # neighboring observations, so there is no vector of weights for the
+    # nobs observations that reproduces wexog.T @ wexog.
+    rng = np.random.default_rng(5419)
+    n = 30
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    endog = exog.dot([1.0, 0.5, -0.5]) + rng.standard_normal(n) * 0.5
+
+    mod = GLSAR(endog, exog, rho=order)
+    assert mod.wexog.shape[0] == n - order
+    with pytest.raises(NotImplementedError, match="GLSAR"):
+        mod.hessian_factor(np.array([1.0, 0.5, -0.5]))
+
+    # fit() whitens with the AR coefficients and is unaffected.
+    res = mod.iterative_fit(maxiter=3)
+    assert np.isfinite(res.params).all()
+
+
+def test_conf_int_el_matches_own_critical_value_and_shrinks():
+    # OLSResults.conf_int_el had no test coverage in the standard (non-slow)
+    # suite: the only existing calls, in emplike/tests/test_regression.py,
+    # are all marked slow (Matlab-cross-checked reference values there).
+    #
+    # conf_int_el's own docstring describes what it computes: "this function
+    # uses brentq to find the value of beta where test_beta([beta],
+    # param_num)[1] is equal to the critical value... For alpha=.05, the
+    # value is 3.841459" -- i.e. at the returned endpoints, el_test's LR
+    # statistic must equal chi2.ppf(1 - sig, 1). That is an independent,
+    # documented property to check against, not a tautological re-run of
+    # conf_int_el itself.
+    rng = np.random.default_rng(89123)
+    n = 40
+    x = rng.standard_normal(n)
+    y = 1.0 + 0.5 * x + rng.standard_normal(n) * 0.5
+    res = OLS(y, add_constant(x)).fit()
+
+    param_num = 1
+    point_estimate = res.params[param_num]
+
+    sig = 0.05
+    lower, upper = res.conf_int_el(param_num, sig=sig)
+    assert lower < point_estimate < upper
+
+    r0 = chi2.ppf(1 - sig, 1)
+    llr_lower = res.el_test(
+        np.array([lower]), np.array([param_num]), result_object=False
+    )[0]
+    llr_upper = res.el_test(
+        np.array([upper]), np.array([param_num]), result_object=False
+    )[0]
+    assert_allclose(llr_lower, r0, rtol=1e-3)
+    assert_allclose(llr_upper, r0, rtol=1e-3)
+
+    # A smaller significance level (higher confidence) gives a wider
+    # interval.
+    lower_wide, upper_wide = res.conf_int_el(param_num, sig=0.01)
+    lower_narrow, upper_narrow = res.conf_int_el(param_num, sig=0.2)
+    assert (upper_wide - lower_wide) > (upper_narrow - lower_narrow)
+
+
+def test_yule_walker_order_validation():
+    # a negative order used to leak a bare IndexError from the
+    # autocovariance loop; order 0 stays valid (AR(0) = white noise) and
+    # returns empty AR parameters. Orders >= nobs keep main's degenerate
+    # behavior (pinned by test_pacf_1_obs / test_invalid_xfail upstream).
+    rs = np.random.RandomState(12345)
+    x = rs.standard_normal(30)
+    with pytest.raises(ValueError, match="order must be a non-negative integer"):
+        yule_walker(x, order=-1)
+    rho0, sigma0 = yule_walker(x, order=0, result_object=False)
+    assert rho0.shape == (0,)
+    rho, sigma = yule_walker(x, order=4, result_object=False)
+    assert rho.shape == (4,)
+
+
+def _finite_check_data(use_pandas, nobs=100):
+    rng = np.random.default_rng(20180823)
+    endog = rng.standard_normal(nobs)
+    exog = rng.standard_normal((nobs, 2))
+    if use_pandas:
+        return pd.Series(endog), pd.DataFrame(exog)
+    return endog, exog
+
+
+def _set_value(arr, idx, value):
+    if isinstance(arr, (pd.Series, pd.DataFrame)):
+        arr.iloc[idx] = value
+    else:
+        arr[idx] = value
+
+
+def _glsar_inf_warns(model, name, bad_value):
+    # GLSAR whitens the data with the initial rho of 0 before the check of the
+    # data, and 0 * inf is invalid
+    if model is GLSAR and name == "endog" and np.isinf(bad_value):
+        return warns_or_none(RuntimeWarning, match="invalid value encountered in mul")
+    return contextlib.nullcontext()
+
+
+@pytest.mark.parametrize("model", [OLS, WLS, GLS, GLSAR, QuantReg])
+@pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize("use_pandas", [True, False])
+@pytest.mark.parametrize("name", ["endog", "exog"])
+@pytest.mark.parametrize("hasconst", [None, False, True])
+def test_nonfinite_data_raises(model, bad_value, use_pandas, name, hasconst):
+    endog, exog = _finite_check_data(use_pandas)
+    data = {"endog": endog, "exog": exog}
+    _set_value(data[name], 50 if name == "endog" else (3, 1), bad_value)
+    with _glsar_inf_warns(model, name, bad_value):
+        with pytest.raises(MissingDataError, match=f"{name} contains inf or nans"):
+            model(data["endog"], data["exog"], hasconst=hasconst)
+
+
+@pytest.mark.parametrize("model", [OLS, WLS, GLS, GLSAR])
+@pytest.mark.parametrize("name", ["endog", "exog"])
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_nonfinite_data_missing_drop(model, name, use_pandas):
+    # nan is removed by missing="drop", inf is not
+    endog, exog = _finite_check_data(use_pandas)
+    data = {"endog": endog, "exog": exog}
+    _set_value(data[name], 50 if name == "endog" else (3, 1), np.nan)
+    res = model(data["endog"], data["exog"], missing="drop").fit()
+    assert res.model.exog.shape[0] == 99
+    assert np.all(np.isfinite(np.asarray(res.params)))
+
+    endog, exog = _finite_check_data(use_pandas)
+    data = {"endog": endog, "exog": exog}
+    _set_value(data[name], 50 if name == "endog" else (3, 1), np.inf)
+    with _glsar_inf_warns(model, name, np.inf):
+        with pytest.raises(MissingDataError, match=f"{name} contains inf or nans"):
+            model(data["endog"], data["exog"], missing="drop")
+
+
+@pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_nonfinite_weights_raises(bad_value, use_pandas):
+    endog, exog = _finite_check_data(use_pandas)
+    weights = np.ones(100)
+    weights[-2:] = bad_value
+    if use_pandas:
+        weights = pd.Series(weights)
+    # WLS whitens with sqrt(weights) before the check, and sqrt(-inf) is invalid
+    def sqrt_warns():
+        if bad_value == -np.inf:
+            return warns_or_none(RuntimeWarning, match="invalid value encountered in")
+        return contextlib.nullcontext()
+
+    with sqrt_warns(), pytest.raises(MissingDataError, match="weights contains"):
+        WLS(endog, exog, weights=weights)
+    # also for a scalar
+    with sqrt_warns(), pytest.raises(MissingDataError, match="weights contains"):
+        WLS(endog, exog, weights=bad_value)
+
+
+# sqrt(sigma) is computed for the Cholesky factor before the check of sigma
+@pytest.mark.filterwarnings("ignore:invalid value encountered in sqrt:RuntimeWarning")
+@pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_nonfinite_sigma_raises(bad_value, use_pandas):
+    endog, exog = _finite_check_data(use_pandas)
+    sigma = np.ones(100)
+    sigma[-2:] = bad_value
+    if use_pandas:
+        sigma = pd.Series(sigma)
+    with pytest.raises(MissingDataError, match="sigma contains inf or nans"):
+        GLS(endog, exog, sigma=sigma)
+    with pytest.raises(MissingDataError, match="sigma contains inf or nans"):
+        GLS(endog, exog, sigma=bad_value)
+
+
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_nonfinite_weights_sigma_missing_drop(use_pandas):
+    endog, exog = _finite_check_data(use_pandas)
+    weights = np.ones(100)
+    weights[-2:] = np.nan
+    if use_pandas:
+        weights = pd.Series(weights)
+    res = WLS(endog, exog, weights=weights, missing="drop").fit()
+    assert res.nobs == 98
+    assert np.all(np.isfinite(np.asarray(res.params)))
+
+    sigma = np.ones(100)
+    sigma[-2:] = np.nan
+    if use_pandas:
+        sigma = pd.Series(sigma)
+    res = GLS(endog, exog, sigma=sigma, missing="drop").fit()
+    assert res.nobs == 98
+    assert np.all(np.isfinite(np.asarray(res.params)))
+
+
+def test_nonfinite_formula():
+    data = pd.DataFrame(
+        {"y": np.linspace(0, 1, 20) ** 2, "x": np.linspace(0, 1, 20)}
+    )
+    data.loc[4, "y"] = np.inf
+    with pytest.raises(MissingDataError, match="endog contains inf or nans"):
+        OLS.from_formula("y ~ x", data)
+    data.loc[4, "y"] = np.nan
+    res = OLS.from_formula("y ~ x", data).fit()
+    assert res.nobs == 19
+
+
+def test_finite_data_unchanged():
+    # large but finite values and the default options are not affected
+    endog, exog = _finite_check_data(False)
+    res = OLS(1e150 * endog, exog).fit()
+    assert np.all(np.isfinite(res.params))
+    res = WLS(endog, exog, weights=np.linspace(1e-10, 1e10, 100)).fit()
+    assert np.all(np.isfinite(res.params))
+    res = GLS(endog, exog, sigma=np.linspace(1e-10, 1e10, 100)).fit()
+    assert np.all(np.isfinite(res.params))
