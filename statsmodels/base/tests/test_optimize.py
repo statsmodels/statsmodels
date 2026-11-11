@@ -238,3 +238,119 @@ def test_lbfgs_disp_false_no_output(capsys):
     )
     captured = capsys.readouterr()
     assert captured.out == ""
+
+
+def _newton_funcs(region, curvature):
+    """Quadratic objective that is nan outside of |x| <= region"""
+
+    def f(x, *args):
+        x = np.asarray(x)
+        return 0.5 * float(x @ x) if np.all(np.abs(x) <= region) else np.nan
+
+    def score(x):
+        return np.asarray(x, dtype=float)
+
+    def hess(x):
+        return curvature * np.eye(len(x))
+
+    return f, score, hess
+
+
+def test_newton_step_halving_nonfinite():
+    # The Hessian is too small by a factor of 100, so that the first Newton
+    # step leaves the region where f is finite. The step is halved.
+    f, score, hess = _newton_funcs(1.0, 0.01)
+    params, retvals = _fit_newton(f, score, np.array([0.5]), (), {}, hess=hess)
+    assert np.all(np.isfinite(params))
+    assert retvals["converged"]
+    assert retvals["warnflag"] == 0
+    assert_allclose(params, 0.0, atol=1e-7)
+
+
+def test_newton_step_halving_increase():
+    # f = sum(sqrt(1 + x**2)) is convex and finite everywhere, but Newton's
+    # method diverges from |x| > 1 since the Newton update is -x**3
+    def f(x, *args):
+        return float(np.sum(np.sqrt(1 + x**2)))
+
+    def score(x):
+        return x / np.sqrt(1 + x**2)
+
+    def hess(x):
+        return np.diag((1 + x**2) ** -1.5)
+
+    start = np.array([2.0, -1.5])
+    params, retvals = _fit_newton(
+        f, score, start, (), {}, hess=hess, maxiter=100, retall=True
+    )
+    assert retvals["converged"]
+    assert_allclose(params, 0.0, atol=1e-7)
+    # f does not increase by more than the tolerance in any iteration
+    values = [f(v) for v in retvals["allvecs"][1:]]
+    assert np.all(np.diff(values) <= 1e-12 * np.abs(values[:-1]))
+
+    # the full Newton steps diverge
+    _, retvals = _fit_newton(
+        f,
+        score,
+        start,
+        (),
+        {"step_halving": False},
+        hess=hess,
+        maxiter=5,
+        retall=True,
+    )
+    assert f(retvals["allvecs"][-1]) > f(start)
+    assert not retvals["converged"]
+
+
+def test_newton_step_halving_disabled():
+    # without step halving the first step leaves the region where f is finite
+    f, score, hess = _newton_funcs(1.0, 0.01)
+    params, retvals = _fit_newton(
+        f,
+        score,
+        np.array([0.5]),
+        (),
+        {"step_halving": False},
+        hess=hess,
+        maxiter=5,
+    )
+    assert np.isnan(retvals["fopt"])
+    assert retvals["warnflag"] == 2
+    assert not retvals["converged"]
+
+
+def test_newton_no_finite_step_is_not_converged():
+    # f is nan at every point but the start. The iteration stops at the start
+    # and reports that it did not converge, instead of returning nan.
+    start = np.array([0.5, 0.25])
+
+    def f(x, *args):
+        return 1.0 if np.all(np.asarray(x) == start) else np.nan
+
+    f_ok, score, hess = _newton_funcs(1.0, 1.0)
+    params, retvals = _fit_newton(f, score, start, (), {}, hess=hess)
+    assert_allclose(params, start)
+    assert not retvals["converged"]
+    assert retvals["warnflag"] == 2
+    assert retvals["iterations"] == 0
+
+
+def test_newton_nonfinite_start_is_not_converged():
+    # f, the score and the Hessian are not finite at the start
+    start = np.array([0.5, 0.25])
+
+    def f(x, *args):
+        return np.nan
+
+    def score(x):
+        return np.full(2, np.nan)
+
+    def hess(x):
+        return np.full((2, 2), np.nan) + np.eye(2)
+
+    params, retvals = _fit_newton(f, score, start, (), {}, hess=hess)
+    assert np.all(np.isfinite(params))
+    assert not retvals["converged"]
+    assert retvals["warnflag"] == 2

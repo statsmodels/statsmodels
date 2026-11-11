@@ -2872,11 +2872,13 @@ def test_poisson_newton():
     x = sm.add_constant(x, prepend=True)
     y_count = rs.poisson(np.exp(x.sum(1)))
     mod = sm.Poisson(y_count, x)
-    # this is not thread-safe
-    with pytest.warns(ConvergenceWarning):
-        res = mod.fit(start_params=-np.ones(4), method="newton", disp=0)
-
-    assert_(not res.mle_retvals["converged"])
+    res = mod.fit(start_params=-np.ones(4), method="newton", disp=0)
+    # Newton used to diverge from these starting values, the first step is
+    # now shortened if it increases the negative log-likelihood
+    assert res.mle_retvals["converged"]
+    # compare with the fit from the default starting values
+    res_default = mod.fit(method="newton", disp=0)
+    assert_allclose(res.params, res_default.params, rtol=1e-6)
 
 
 def test_l1_regularized_respects_warning_filters():
@@ -4870,3 +4872,42 @@ def test_negativebinomial_rejects_alpha_kwarg():
     # the estimator itself keeps working
     mod = NegativeBinomial(y, x, loglike_method="nb1")
     assert mod.k_extra == 1
+
+
+# Counts with a large exog: the linear predictor of Newton and IRLS steps from
+# zeros reaches 700 and exp overflows. The reference is R 4.6.1,
+# glm(y ~ x, family=poisson()) with x = seq(50, 100, length.out=25)
+POISSON_LARGE_X = np.linspace(50, 100, 25)
+POISSON_LARGE_Y = np.array(
+    [1, 0, 1, 6, 6, 5, 6, 3, 12, 11, 8, 11, 10, 22, 19, 25, 43, 39, 51, 67, 66,
+     97, 107, 113, 165]
+)
+POISSON_LARGE_PARAMS = [-4.0750125697357502, 0.0912572389978606]
+POISSON_LARGE_BSE = [0.31088188217520529, 0.00341507856884331]
+POISSON_LARGE_LLF = -69.7106854448857
+
+
+@pytest.mark.parametrize("start", [np.zeros(2), np.array([1.0, 0.0])])
+def test_poisson_newton_large_exog_starting_values(start):
+    # Newton from zeros overflowed in the first step and returned nan params
+    # with converged True
+    exog = sm.add_constant(POISSON_LARGE_X)
+    res = Poisson(POISSON_LARGE_Y, exog).fit(
+        start_params=start, method="newton", disp=0, maxiter=100
+    )
+    assert res.mle_retvals["converged"]
+    assert_allclose(res.params, POISSON_LARGE_PARAMS, rtol=1e-8)
+    assert_allclose(res.bse, POISSON_LARGE_BSE, rtol=1e-5)
+    assert_allclose(res.llf, POISSON_LARGE_LLF, rtol=1e-10)
+
+
+def test_newton_nonfinite_start_reports_nonconvergence():
+    exog = sm.add_constant(POISSON_LARGE_X)
+    with pytest.warns(ConvergenceWarning):
+        res = Poisson(POISSON_LARGE_Y, exog).fit(
+            start_params=[1000.0, 1000.0], method="newton", disp=0
+        )
+    assert not res.mle_retvals["converged"]
+    assert res.mle_retvals["warnflag"] == 2
+    assert np.all(np.isfinite(res.params))
+    assert_allclose(res.params, [1000.0, 1000.0])
