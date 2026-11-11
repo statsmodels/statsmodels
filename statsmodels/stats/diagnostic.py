@@ -2080,8 +2080,8 @@ def linear_rainbow(res, frac=0.5, order_by=None, use_distance=False, center=None
     uppidx = np.floor(lowidx + frac * nobs).astype(int)
     if uppidx - lowidx < exog.shape[1]:
         raise ValueError(
-            "frac is too small to perform test. frac * nobs"
-            "must be greater than the number of exogenous"
+            "frac is too small to perform test. frac * nobs "
+            "must be greater than the number of exogenous "
             "variables in the model."
         )
     mi_sl = slice(lowidx, uppidx)
@@ -2199,7 +2199,7 @@ def spec_white(resid, exog):
     e = array_like(resid, "resid", ndim=1)
     if x.shape[1] < 2 or not np.any(np.ptp(x, 0) == 0.0):
         raise ValueError(
-            "White's specification test requires at least two"
+            "White's specification test requires at least two "
             "columns where one is a constant."
         )
 

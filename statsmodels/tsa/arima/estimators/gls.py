@@ -333,9 +333,9 @@ def gls(
 
         if not p_arma.is_stationary:
             raise ValueError(
-                "Roots of the autoregressive parameters indicate that data is"
+                "Roots of the autoregressive parameters indicate that data is "
                 "non-stationary. GLS cannot be used with non-stationary "
-                "parameters. You should consider differencing the model data"
+                "parameters. You should consider differencing the model data "
                 "or applying a nonlinear transformation (e.g., natural log)."
             )
         # Expand sparse lags and combine seasonal and nonseasonal factors

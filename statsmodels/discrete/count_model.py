@@ -103,7 +103,7 @@ class GenericZeroInflated(CountModel):
         self.k_extra = self.k_inflate
 
         if len(self.exog) != len(self.exog_infl):
-            raise ValueError("exog and exog_infl have different number of"
+            raise ValueError("exog and exog_infl have different number of "
                              "observation. `missing` handling is not supported")
 
         infl_names = [f"inflate_{i}" for i in self.model_infl.data.param_names]

@@ -293,7 +293,7 @@ def score_test(
             raise ValueError("if exog_extra is not None, then cov_type cannot be V")
         if hasattr(self, "constraints"):
             raise NotImplementedError(
-                "if exog_extra is not None, then self"
+                "if exog_extra is not None, then self "
                 "should not be a constrained fit result"
             )
 

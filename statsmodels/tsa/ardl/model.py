@@ -376,7 +376,7 @@ class ARDL(AutoReg):
             ):
                 raise ValueError(
                     "fixed must be an (nobs, m) array where nobs matches the "
-                    "number of observations in the endog variable, and all"
+                    "number of observations in the endog variable, and all "
                     "values must be finite"
                 )
             if isinstance(fixed, pd.DataFrame):

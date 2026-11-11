@@ -643,7 +643,7 @@ def _create_labels(rects, horizontal, ax, rotation):
     """
     categories = _categories_level(list(rects.keys()))
     if len(categories) > 4:
-        msg = ("maximum of 4 level supported for axes labeling... and 4"
+        msg = ("maximum of 4 level supported for axes labeling... and 4 "
                "is already a lot of levels, are you sure you need them all?")
         raise ValueError(msg)
     labels = {}
