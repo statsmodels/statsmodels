@@ -2621,6 +2621,101 @@ def test_mnlogit_predict_columns_formula():
     assert pred.columns.dtype.kind == "i"
 
 
+@pytest.mark.parametrize("which", ["mean", "linear", "var"])
+@pytest.mark.parametrize("kind", ["categorical", "string", "numeric"])
+def test_mnlogit_predict_in_sample_pandas(kind, which):
+    # GH 4541: omitting exog preserves the training index and categories.
+    endog = _mnlogit_names_endog(kind)
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
+    exog.index = index
+    if isinstance(endog, pd.Series):
+        endog.index = index
+    res = MNLogit(endog, exog).fit(disp=0)
+
+    pred = res.predict(which=which)
+    pd.testing.assert_frame_equal(pred, res.predict(exog, which=which))
+    assert_index_equal(pred.index, index)
+    expected_columns = {
+        "categorical": ["train", "car", "bus"],
+        "string": ["a", "b", "c"],
+        "numeric": [1, 2, 3],
+    }
+    assert pred.columns.tolist() == expected_columns[kind]
+    expected = res.model.predict(np.asarray(res.params), which=which)
+    assert_allclose(pred, expected)
+
+
+@pytest.mark.parametrize("pandas_endog", [False, True])
+@pytest.mark.parametrize("pandas_exog", [False, True])
+def test_mnlogit_predict_in_sample_input_types(pandas_endog, pandas_exog):
+    endog = _mnlogit_names_endog("numeric")
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog)) * 3 + 7, name="obs")
+    exog.index = index
+    if pandas_endog:
+        endog = pd.Series(endog, index=index)
+    model = MNLogit(endog, exog if pandas_exog else exog.to_numpy())
+    res = model.fit(disp=0)
+
+    pred = res.predict()
+    expected = model.predict(np.asarray(res.params))
+    if pandas_endog or pandas_exog:
+        assert isinstance(pred, pd.DataFrame)
+        assert_index_equal(pred.index, index)
+        assert pred.columns.tolist() == [1, 2, 3]
+    else:
+        assert isinstance(pred, np.ndarray)
+    assert_allclose(pred, expected)
+    assert isinstance(res.predict(exog.to_numpy()), np.ndarray)
+
+
+@pytest.mark.parametrize("which", ["mean", "linear", "var"])
+def test_mnlogit_predict_in_sample_pandas_missing(which):
+    endog = _mnlogit_names_endog("categorical")
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
+    endog.index = exog.index = index
+    exog.iloc[[3, 8], 0] = np.nan
+    res = MNLogit(endog, exog, missing="drop").fit(disp=0)
+
+    pred = res.predict(which=which)
+    retained = exog.dropna()
+    pd.testing.assert_frame_equal(pred, res.predict(retained, which=which))
+    assert_index_equal(pred.index, retained.index)
+    assert pred.columns.tolist() == ["train", "car", "bus"]
+    expected = res.model.predict(
+        np.asarray(res.params), retained.to_numpy(), which=which
+    )
+    assert_allclose(pred, expected)
+
+
+def test_mnlogit_predict_in_sample_formula_missing():
+    rng = np.random.default_rng(4541)
+    df = pd.DataFrame({"y": np.tile([-1, 0, 1], 10), "x": rng.standard_normal(30)})
+    df.index = pd.Index(np.arange(len(df)) * 3 + 7, name="obs")
+    df.loc[df.index[3], "x"] = np.nan
+    res = smf.mnlogit("y ~ x", data=df).fit(disp=0)
+
+    pred = res.predict()
+    pd.testing.assert_frame_equal(pred, res.predict(df.dropna()))
+    assert_index_equal(pred.index, df.dropna().index)
+    assert pred.columns.tolist() == [-1, 0, 1]
+
+
+def test_mnlogit_in_sample_pandas_diagnostics():
+    endog = _mnlogit_names_endog("numeric")
+    exog = _mnlogit_predict_data(endog)
+    res = MNLogit(endog, exog).fit(disp=0)
+    expected = MNLogit(endog, exog.to_numpy()).fit(disp=0)
+
+    for name in ("resid_response", "resid_pearson", "resid_misclassified"):
+        actual = getattr(res._results, name)
+        assert isinstance(actual, np.ndarray)
+        assert_allclose(actual, getattr(expected, name))
+    assert_array_equal(res.pred_table(), expected.pred_table())
+
+
 def _mnlogit_predict_data(endog, seed=4804):
     rng = np.random.default_rng(seed)
     exog = pd.DataFrame(
@@ -2649,12 +2744,12 @@ def test_mnlogit_predict_columns_index_and_types():
     assert_index_equal(pred_row.index, exog.index[[3]])
     assert_allclose(pred_row, expected[[3]])
 
-    # exog that is not a pandas object and predict without exog are arrays
+    # Explicit numpy exog returns arrays even for a model fit with pandas.
     for pred_arr in (res.predict(np.asarray(exog)), res.predict(exog.to_numpy())):
         assert isinstance(pred_arr, np.ndarray)
         assert_allclose(pred_arr, expected)
     pred_none = res.predict()
-    assert isinstance(pred_none, np.ndarray)
+    pd.testing.assert_frame_equal(pred_none, pred)
     assert_allclose(pred_none, expected)
 
 
