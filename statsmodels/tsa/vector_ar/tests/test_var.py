@@ -1105,6 +1105,7 @@ def test_irf_err_bands():
         assert res[1] is res.upper
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
 @pytest.mark.parametrize("stderr_type", [None, "asym", "mc"])
@@ -1155,6 +1156,53 @@ def test_irf_plot_params(
                 assert actual.get_alpha() == expected.get_alpha()
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
+@pytest.mark.parametrize(
+    "plot_params, bad_key",
+    [
+        ({"fontsize": 8}, "fontsize"),
+        ({"figsize": (4, 4)}, "figsize"),
+        ({"color": "red", "fontsize": 8}, "fontsize"),
+    ],
+)
+def test_irf_plot_params_invalid_key(
+    bivariate_var_result, close_figures, method, plot_params, bad_key
+):
+    # Keys that are not Line2D properties were ignored before, see #380
+    irf = bivariate_var_result.irf(3)
+    with pytest.raises(AttributeError, match=bad_key):
+        getattr(irf, method)(plot_params=plot_params)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
+@pytest.mark.parametrize("plot_params", [{}, None])
+def test_irf_plot_params_default_style(
+    bivariate_var_result, close_figures, method, plot_params
+):
+    from matplotlib.colors import to_rgba
+
+    irf = bivariate_var_result.irf(3)
+    plot = getattr(irf, method)
+    baseline = plot()
+    fig = plot(plot_params=plot_params)
+
+    assert len(fig.axes) == len(baseline.axes) == 4
+    for ax, ax_base in zip(fig.axes, baseline.axes, strict=True):
+        assert len(ax.lines) == len(ax_base.lines)
+        for line, line_base in zip(ax.lines, ax_base.lines, strict=True):
+            assert_allclose(line.get_xydata(), line_base.get_xydata())
+            assert to_rgba(line.get_color()) == to_rgba(line_base.get_color())
+            assert line.get_linewidth() == line_base.get_linewidth()
+            assert line.get_linestyle() == line_base.get_linestyle()
+            assert line.get_marker() == line_base.get_marker()
+            assert line.get_alpha() == line_base.get_alpha()
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 def test_irf_plot_err_bands_kwarg(close_figures):
     # test that user can pass precalculated error bands to plot and plot_cum_effects
