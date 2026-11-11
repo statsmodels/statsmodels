@@ -279,6 +279,12 @@ the long run effects as follows:
    @savefig var_irf_cum.png
    irf.plot_cum_effects(orth=False)
 
+Both plotting methods accept ``plot_params`` to style the response curves with
+Matplotlib ``Line2D`` properties. For example,
+``irf.plot(plot_params={"color": "red", "linewidth": 2})`` draws red response
+curves with a line width of 2. Confidence bands and horizontal reference lines
+keep their default styles.
+
 
 .. currentmodule:: statsmodels.tsa.vector_ar.irf
 .. autosummary::

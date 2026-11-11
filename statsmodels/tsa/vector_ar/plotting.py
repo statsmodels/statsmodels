@@ -365,7 +365,9 @@ def irf_grid_plot(
         May contain a "fontsize" key controlling the subplot title font
         size.
     plot_params : dict, optional
-        Additional keyword arguments (currently unused).
+        Matplotlib Line2D properties for the response curves, such as
+        ``color`` and ``linewidth``. Does not affect error bands or
+        horizontal reference lines.
     figsize : tuple of float, optional
         The size of the figure to create.
     stderr_type : {"asym", "mc", "sz1", "sz2", "sz3"}, optional
@@ -429,6 +431,7 @@ def irf_grid_plot(
         else:
             plot_with_error(values[:, i, j], None, x=rng, axes=ax, value_fmt="b")
 
+        ax.lines[0].set(**plot_params)
         ax.axhline(0, color="k")
 
         if hlines is not None:
