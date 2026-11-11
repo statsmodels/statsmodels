@@ -2,6 +2,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
+from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake
 from statsmodels.tsa.arima.estimators.hannan_rissanen import (
@@ -109,6 +110,36 @@ def test_unbiased_error():
         hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=True)
 
 
+def test_unbiased_default_skips_non_stationary_step2():
+    # With unbiased=None, a non-stationary second step skips the third step.
+    endog = np.arange(1000) * 1.0
+    res_none = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=None)
+    res_false = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=False)
+    assert not (res_false.parameters.is_stationary
+                and res_false.parameters.is_invertible)
+    assert_allclose(res_none.parameters.params, res_false.parameters.params)
+    assert_allclose(res_none.other_results.resid,
+                    res_false.other_results.resid)
+
+
+@pytest.mark.parametrize("unbiased", [None, True])
+def test_unbiased_fallback_to_step2(unbiased):
+    # Near-unit MA root: step 2 is invertible but the step 3 correction is not.
+    rng = np.random.default_rng(53)
+    endog = arma_generate_sample(
+        [1, -0.5], [1, 0.9], 100, distrvs=rng.standard_normal
+    )
+    res_step2 = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=False)
+    assert res_step2.parameters.is_stationary
+    assert res_step2.parameters.is_invertible
+    with pytest.warns(EstimationWarning, match="third step"):
+        res = hannan_rissanen(
+            endog, ar_order=1, ma_order=1, unbiased=unbiased
+        )
+    assert_allclose(res.parameters.params, res_step2.parameters.params)
+    assert_allclose(res.other_results.resid, res_step2.other_results.resid)
+
+
 def test_set_default_unbiased():
     # setting unbiased=None with stationary and invertible parameters should
     # yield the exact same results as setting unbiased=True
@@ -131,9 +162,7 @@ def test_set_default_unbiased():
 
 
 def _bias_correction_reference(endog, ar_params, ma_params):
-    # Third step of the Hannan-Rissanen procedure, written directly from
-    # Brockwell and Davis (2016), section 5.1.4. `endog` is the demeaned series
-    # and `ar_params`, `ma_params` are the second-step estimates.
+    # Hannan-Rissanen step 3 from Brockwell and Davis (2016), section 5.1.4
     p, q, nobs = len(ar_params), len(ma_params), len(endog)
     m = max(p, q)
     z = np.zeros(nobs)
@@ -162,9 +191,7 @@ def _bias_correction_reference(endog, ar_params, ma_params):
     [([0.5], [0.4]), ([0.5], [0.8]), ([0.6, -0.2], [0.5]), ([0.4], [0.5, 0.3])],
 )
 def test_unbiased_brockwell_davis_reference(ar_params, ma_params):
-    # Test the bias-corrected (third step) estimates against an independent
-    # implementation of Brockwell and Davis (2016), section 5.1.4. ITSM / itsmr
-    # do not implement the third step, so we cannot test against them.
+    # Compare step 3 with an independent loop (ITSM/itsmr lack step 3)
     rng = np.random.default_rng(12345)
     endog = arma_generate_sample(
         np.r_[1, -np.array(ar_params)],
