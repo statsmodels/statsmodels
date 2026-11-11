@@ -276,6 +276,13 @@ Regression and linear models
   observations, but the whitened design of ``GLSAR`` has ``nobs - order`` rows
   that mix neighboring observations, so the values did not reproduce its
   cross-product. :pr:`10675`
+- ``HC2`` and ``HC3`` robust covariances of regression results were
+  arbitrary, or ``inf`` for all parameters, when an observation has leverage
+  one, for example with a dummy variable that is one for a single
+  observation. These observations are now dropped from the sandwich, a
+  ``ValueWarning`` is issued, and the variance of the parameters that depend
+  on them is ``nan``. The robust ``fvalue`` is then also ``nan``.
+  :issue:`10659`
 - ``OLSInfluence`` for the results of a ``WLS`` model used the unweighted
   design matrix and residuals for the hat matrix, the studentized residuals,
   Cook's distance, ``dffits`` and the leave-one-observation-out measures.

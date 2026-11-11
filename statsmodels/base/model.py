@@ -1777,6 +1777,9 @@ class LikelihoodModelResults(Results):
                 other = r_matrix
             else:
                 other = np.asarray(other)
+            if np.isnan(np.asarray(cov_p)).any():
+                # nan only propagates to restrictions that use the parameter
+                dot_fun = nan_dot
             tmp = dot_fun(r_matrix, dot_fun(cov_p, np.transpose(other)))
             return tmp
         else:  # if r_matrix is None and column is None:
@@ -2138,7 +2141,7 @@ class LikelihoodModelResults(Results):
                 raise ValueError(
                     "r_matrix performs f_test for using "
                     "dimensions that are asymptotically "
-                    "non-normal"
+                    "non-normal or have nan covariance"
                 )
             invcov = np.linalg.pinv(cov_p)
             J_ = np.linalg.matrix_rank(cov_p)
