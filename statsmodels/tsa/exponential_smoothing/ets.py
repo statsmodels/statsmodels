@@ -214,9 +214,10 @@ from statsmodels.tsa.tsatools import freq_to_period
 #   with a multiplicative trend (forecast l * b + s) a constant cannot be
 #   moved between the level and the seasonals, so the sum-zero constraint is
 #   a restriction of the model, as it is in R.
-#   The heuristic start values already satisfy this normalization, so they
-#   are used as they are. The covariance of the parameters is computed for
-#   the m - 1 free initial seasonals and mapped back to all m.
+#   The heuristic and the simple start values (used for short series)
+#   already satisfy this normalization, so they are used as they are. The
+#   covariance of the parameters is computed for the m - 1 free initial
+#   seasonals and mapped back to all m.
 
 
 class ETSModel(base.StateSpaceMLEModel):
@@ -266,11 +267,22 @@ class ETSModel(base.StateSpaceMLEModel):
         (multiplicative seasonality), as in R's ``forecast::ets``: the first
         ``seasonal_periods - 1`` initial seasonal states are estimated and
         the last one, ``initial_seasonal.<m-1>``, is computed from them.
+        If ``initial_seasonal.<m-1>`` is fixed or bounded, this does not
+        apply and all initial seasonal states are free parameters.
         For multiplicative seasonality and for additive seasonality with an
         additive or no trend, this only removes a constant that could be
         moved between the initial level and the initial seasonals. For
         additive seasonality with a multiplicative trend, it is a
         restriction of the model.
+
+        The initial level is the level around which the initial seasonal
+        states average 0 (additive seasonality) or 1 (multiplicative
+        seasonality). A fixed ``initial_level``, for example with
+        ``fix_params``, is therefore a restriction of the model: the
+        initial seasonals still add up to 0 or ``seasonal_periods``.
+        Versions before 0.15.1 fixed ``initial_seasonal.<m-1>`` to 0 or 1
+        instead, so a model with a fixed initial level is a different
+        restriction there and gives a different fit.
     initial_level : float, optional
         The initial level component. Only used if initialization is 'known'.
     initial_trend : float, optional
@@ -861,31 +873,18 @@ class ETSModel(base.StateSpaceMLEModel):
         ]
 
         if self.initialization_method == "estimated":
-            lvl_idx = len(params)
             params += [self.initial_level]
             if self.has_trend:
                 params += [self.initial_trend]
             if self.has_seasonal:
-                # Normalize the initial seasonals so that they sum to 0 or to
-                # m over the first season, and move the constant into the
-                # initial level (and an additive trend), so that the start
-                # values describe the same model as the heuristic. The
-                # heuristic initializations already satisfy this, so this is
-                # usually a no-op. See the implementation notes above.
-                initial_seasonal = np.array(self.initial_seasonal, dtype=float)
-                if self.seasonal == "mul":
-                    scale = np.mean(initial_seasonal)
-                    params[lvl_idx] *= scale
-                    if self.trend == "add":
-                        params[lvl_idx + 1] *= scale
-                    initial_seasonal /= scale
-                else:
-                    shift = np.mean(initial_seasonal)
-                    params[lvl_idx] += shift
-                    initial_seasonal -= shift
+                # The heuristic and the simple initial seasonals already sum
+                # to 0 (additive) or to m (multiplicative) over the first
+                # season, as required by the normalization described in the
+                # implementation notes above, so they are used as they are.
                 # self.initial_seasonal starts with the seasonal of the first
                 # observation, s_{-m}, while the parameter vector starts with
                 # initial_seasonal.0 = s_{-1}, see `_internal_params`
+                initial_seasonal = np.array(self.initial_seasonal, dtype=float)
                 params += initial_seasonal[::-1].tolist()
 
         return np.array(params)
@@ -1024,8 +1023,14 @@ class ETSModel(base.StateSpaceMLEModel):
             also have to be specified. The initial seasonal states are
             normalized to sum to 0 (additive seasonality) or to m
             (multiplicative seasonality) during the fit, so that the last
-            one, :math:`s_{-m}`, is computed from the others and its start
-            value is only used if it is fixed or bounded.
+            one, :math:`s_{-m}`, is computed from the others in every
+            evaluation of the log-likelihood. Its start value is then
+            ignored, and the fit starts from the value that makes the
+            initial seasonals add up to 0 or m. If `initial_seasonal.<m-1>`
+            is bounded, all m initial seasonals are free parameters, and its
+            start value, moved into the bounds, is the starting point. If it
+            is fixed, for example with ``fix_params``, the fixed value is
+            used and the start value is ignored.
         maxiter : int, optional
             The maximum number of iterations to perform.
         full_output : bool, optional

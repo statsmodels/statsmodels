@@ -556,7 +556,11 @@ Time series analysis
   errors of the initial level and the initial seasonals were ``nan`` or
   arbitrarily large, for example in the summary of the notebook example. If
   ``initial_seasonal.<m-1>`` is fixed or bounded, all initial seasonals are
-  free parameters, as before. :issue:`8551`, :pr:`10710`
+  free parameters, as before. A fixed ``initial_level`` is a restriction, as
+  the initial seasonals still sum to 0 or m, while before the last one was
+  fixed to 0 or 1. For example, with ``fix_params({"initial_level": 30})``
+  the additive model with an additive trend of the ``austourists`` data has
+  a log-likelihood of -155.84 instead of -150.51. :issue:`8551`, :pr:`10710`
 - ``MSTL.fit`` consumed the ``inner_iter`` and ``outer_iter`` entries of
   ``stl_kwargs``, so that a second call of ``fit`` used different settings.
   :pr:`10292`
