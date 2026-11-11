@@ -360,8 +360,11 @@ Generalized linear models and discrete models
 - The analytic ``hessian`` of ``ZeroInflatedPoisson`` with logit inflation,
   the default, set the cross derivatives between the inflation and the count
   parameters to zero, and the formula for them was also incorrect. The
-  standard errors of the parameters could be off by more than 10%. They now
-  agree with the standard errors from a numerical Hessian.
+  standard errors were too small by about 10% for the two intercepts in
+  a simulated example with 3000 observations, and by up to 0.6% for the
+  RandHIE data. ``bse``, ``cov_params``, ``conf_int`` and the p-values of the
+  results change accordingly, and ``bse`` now agrees with the standard errors
+  from a numerical Hessian. :pr:`10723`
 - ``GEE`` used the number of columns of ``exog`` for ``df_model``,
   ``df_resid`` and the default ``ddof_scale``. These are now based on the rank
   of ``exog`` as in the other models, so that a singular design can no longer
