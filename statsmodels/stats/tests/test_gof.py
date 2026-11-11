@@ -41,6 +41,23 @@ def test_powerdiscrepancy_lambd_aliases():
         powerdiscrepancy(observed, expected, lambd="not-a-lambd")
 
 
+def test_powerdiscrepancy_zero_counts():
+    # GH 10703: zero observed counts should not produce NaN or warnings
+    # for G-test / log-likelihood ratio (lambd=0)
+    observed = np.array([0, 15, 15])
+    expected = np.array([10, 10, 10])
+
+    stat, pval = powerdiscrepancy(observed, expected, lambd=0)
+    ref = stats.power_divergence(observed, expected, lambda_=0)
+
+    assert_allclose(stat, ref.statistic, rtol=1e-12)
+    assert_allclose(pval, ref.pvalue, rtol=1e-12)
+
+    stat_llr, pval_llr = powerdiscrepancy(observed, expected, lambd="loglikeratio")
+    assert_allclose(stat_llr, ref.statistic, rtol=1e-12)
+    assert_allclose(pval_llr, ref.pvalue, rtol=1e-12)
+
+
 def test_gof_binning_discrete_bernoulli():
     # With nsupp=20 and a 2-point support, each mass (0.7, 0.3) already
     # exceeds the minimum bin mass 1/20, so the algorithm's bins align
