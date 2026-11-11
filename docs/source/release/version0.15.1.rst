@@ -215,6 +215,10 @@ New functions and methods
   1000 observations, about 300 times faster for 60 variables, and returns a
   ``Series`` for a ``DataFrame``. :issue:`1669`, :pr:`2380`, :pr:`7711`,
   :pr:`10623`
+- Add :func:`~statsmodels.stats.inter_rater.krippendorff_alpha`, Krippendorff's
+  alpha for the agreement of any number of raters, with missing ratings, for
+  nominal, ordinal, interval and ratio data. It is available from
+  ``statsmodels.stats.api``. :pr:`10738`
 
 Performance
 -----------
