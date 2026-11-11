@@ -21,6 +21,7 @@ from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa.exponential_smoothing.initialization import (
+    _initialization_heuristic,
     _initialization_simple,
 )
 import statsmodels.tsa.statespace.exponential_smoothing as statespace
@@ -1265,6 +1266,39 @@ def test_estimated_start_params_are_heuristic_states(
     # start_params does not change the heuristic initial states of the model
     assert_allclose(model.initial_seasonal, model_heuristic.initial_seasonal)
     assert_allclose(model.start_params, start_params)
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize("trend", [None, "add"])
+@pytest.mark.parametrize(
+    "m, nobs", [(3, 11), (3, 40), (4, 12), (4, 40), (7, 15), (7, 60)]
+)
+def test_estimated_start_params_seasonals_normalized(seasonal, trend, m, nobs):
+    # GH 8551: the start values of the initial seasonals are used as they
+    # are, so the heuristic initialization (long series) and the simple one
+    # (short series, nobs < 10 + 2 * (m // 2)) must already sum to 0
+    # (additive) or to m (multiplicative). The parameter vector starts with
+    # initial_seasonal.0 = s[-1], while model.initial_seasonal starts with
+    # s[-m].
+    rng = np.random.default_rng(8551 + m + nobs)
+    t = np.arange(nobs)
+    endog = 50 + 0.3 * t + 8 * np.sin(2 * np.pi * t / m) + rng.normal(0, 3, nobs)
+    kwargs = dict(trend=trend, seasonal=seasonal, seasonal_periods=m)
+    model = ETSModel(endog, initialization_method="estimated", **kwargs)
+
+    # check that both initialization paths are tested
+    if nobs < 10 + 2 * (m // 2):
+        init = _initialization_simple
+    else:
+        init = _initialization_heuristic
+    _, _, expected = init(endog, trend=trend, seasonal=seasonal, seasonal_periods=m)
+    assert_allclose(model.initial_seasonal, expected)
+
+    total = m if seasonal == "mul" else 0.0
+    start_seasonal = model.start_params[-m:]
+    assert_allclose(np.sum(start_seasonal), total, rtol=1e-12, atol=1e-12)
+    assert_allclose(np.sum(model.initial_seasonal), total, rtol=1e-12, atol=1e-12)
+    assert_allclose(start_seasonal, model.initial_seasonal[::-1])
 
 
 @pytest.mark.parametrize("trend, damped_trend", [("add", True), (None, False)])

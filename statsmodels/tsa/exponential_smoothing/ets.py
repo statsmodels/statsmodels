@@ -214,9 +214,10 @@ from statsmodels.tsa.tsatools import freq_to_period
 #   with a multiplicative trend (forecast l * b + s) a constant cannot be
 #   moved between the level and the seasonals, so the sum-zero constraint is
 #   a restriction of the model, as it is in R.
-#   The heuristic start values already satisfy this normalization, so they
-#   are used as they are. The covariance of the parameters is computed for
-#   the m - 1 free initial seasonals and mapped back to all m.
+#   The heuristic and the simple start values (used for short series)
+#   already satisfy this normalization, so they are used as they are. The
+#   covariance of the parameters is computed for the m - 1 free initial
+#   seasonals and mapped back to all m.
 
 
 class ETSModel(base.StateSpaceMLEModel):
@@ -872,31 +873,18 @@ class ETSModel(base.StateSpaceMLEModel):
         ]
 
         if self.initialization_method == "estimated":
-            lvl_idx = len(params)
             params += [self.initial_level]
             if self.has_trend:
                 params += [self.initial_trend]
             if self.has_seasonal:
-                # Normalize the initial seasonals so that they sum to 0 or to
-                # m over the first season, and move the constant into the
-                # initial level (and an additive trend), so that the start
-                # values describe the same model as the heuristic. The
-                # heuristic initializations already satisfy this, so this is
-                # usually a no-op. See the implementation notes above.
-                initial_seasonal = np.array(self.initial_seasonal, dtype=float)
-                if self.seasonal == "mul":
-                    scale = np.mean(initial_seasonal)
-                    params[lvl_idx] *= scale
-                    if self.trend == "add":
-                        params[lvl_idx + 1] *= scale
-                    initial_seasonal /= scale
-                else:
-                    shift = np.mean(initial_seasonal)
-                    params[lvl_idx] += shift
-                    initial_seasonal -= shift
+                # The heuristic and the simple initial seasonals already sum
+                # to 0 (additive) or to m (multiplicative) over the first
+                # season, as required by the normalization described in the
+                # implementation notes above, so they are used as they are.
                 # self.initial_seasonal starts with the seasonal of the first
                 # observation, s_{-m}, while the parameter vector starts with
                 # initial_seasonal.0 = s_{-1}, see `_internal_params`
+                initial_seasonal = np.array(self.initial_seasonal, dtype=float)
                 params += initial_seasonal[::-1].tolist()
 
         return np.array(params)
