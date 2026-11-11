@@ -4693,7 +4693,7 @@ class NegativeBinomialP(CountModel):
             * (
                 (1 + a4) * (1 - a3 / a2) / a2
                 - p * (lprob + dgpart + 2) / mu
-                + p / mu * (a3 + p * a1) / a2
+                + (p * a3 / mu + a4) / a2
                 - a4 * pgpart
             )
             / alpha
@@ -4780,7 +4780,7 @@ class NegativeBinomialP(CountModel):
             * (
                 (1 + a4) * (1 - a3 / a2) / a2
                 - p * (np.log(a1 / a2) + dgpart + 2) / mu
-                + p * (a3 / mu + a4) / a2
+                + (p * a3 / mu + a4) / a2
                 + a4 * (polygamma(1, a1) - polygamma(1, a3))
             )
             / alpha
