@@ -496,9 +496,10 @@ def test_fn_matches_irls(q):
     mod = QuantReg(endog, exog)
     res_irls = mod.fit(q)
     res_fn = mod.fit(q, method="fn")
-    # IRLS stops when the parameters change by less than p_tol=1e-6 and is
-    # less precise than the interior point solution.
-    assert_allclose(res_fn.params, res_irls.params, rtol=1e-3, atol=1e-4)
+    # IRLS stops when the parameters change by less than p_tol=1e-6, which
+    # can leave it a few 1e-3 away from the exact solution, depending on the
+    # platform. The comparison with R above checks the interior point solution.
+    assert_allclose(res_fn.params, res_irls.params, rtol=1e-2, atol=1e-2)
     # The iid covariance depends on the residuals only through the kernel
     # density estimate. The robust covariance also depends on the signs of
     # the residuals that are zero at the solution, which are rounding noise.
