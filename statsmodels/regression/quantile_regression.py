@@ -141,7 +141,10 @@ class QuantReg(RegressionModel):
             ``method="fn"`` it is the tolerance for the duality gap, which
             is in the units of the objective function, the sum of the check
             function of the residuals. The default 1e-6 is the default of
-            ``rq.fit.fnb`` in the R package quantreg.
+            ``rq.fit.fnb`` in the R package quantreg. If the largest absolute
+            value of ``endog`` is below one, the tolerance is multiplied by
+            it, so that the estimates do not depend on the scale of
+            ``endog``.
         method : {"irls", "fn"}, optional
             The algorithm used to estimate the parameters:
 
@@ -170,8 +173,12 @@ class QuantReg(RegressionModel):
         The Frisch-Newton method solves the dual of the linear program of
         quantile regression by a primal-dual path following interior point
         algorithm with Mehrotra's predictor-corrector steps. It needs few
-        iterations, usually fewer than 50 also for large samples, each of
-        which costs one weighted cross product of ``exog``.
+        iterations, usually fewer than 50, each of which costs one weighted
+        cross product of ``exog``. Quantiles very close to 0 or 1 in large
+        samples can need several hundred.
+
+        With a nearly singular ``exog`` the duality gap may not reach
+        ``p_tol``, in which case a ``ConvergenceWarning`` is issued.
 
         If the solution is not unique, for example the median of an even
         number of observations, the interior point method stops at a point
@@ -192,14 +199,18 @@ class QuantReg(RegressionModel):
         method = string_like(method, "method", options=("irls", "fn"), lower=False)
 
         kernel = string_like(
-            kernel, "kernel", options=("biw", "cos", "epa", "gau", "par"),
+            kernel,
+            "kernel",
+            options=("biw", "cos", "epa", "gau", "par"),
             lower=False,
         )
         kernel = kernels[kernel]
 
         bandwidth = string_like(
-            bandwidth, "bandwidth",
-            options=("hsheather", "bofinger", "chamberlain"), lower=False,
+            bandwidth,
+            "bandwidth",
+            options=("hsheather", "bofinger", "chamberlain"),
+            lower=False,
         )
         if bandwidth == "hsheather":
             bandwidth = hall_sheather
@@ -229,10 +240,18 @@ class QuantReg(RegressionModel):
                 beta, n_iter, history, converged = _fit_frisch_newton(
                     endog, exog, q, max_iter, p_tol
                 )
-            if not converged:
+            if n_iter >= max_iter:
                 warnings.warn(
                     f"Maximum number of iterations ({max_iter}) reached.",
                     IterationLimitWarning,
+                    stacklevel=2,
+                )
+            elif not converged:
+                warnings.warn(
+                    "The interior point iterations stopped before the duality "
+                    "gap reached p_tol. The design matrix may be nearly "
+                    "singular, the estimates may not be optimal.",
+                    ConvergenceWarning,
                     stacklevel=2,
                 )
         else:  # method == "irls"
@@ -332,20 +351,32 @@ def _max_step(v, dv):
     return 1.0 / largest if largest > 0 else np.inf
 
 
-def _normal_solver(xq, exog):
+def _normal_solver(xq, exog, weights):
     """
-    Factor exog' diag(q) exog once, with xq = diag(q) exog.
+    Factor exog' diag(weights) exog once, with xq = diag(weights) exog.
 
-    Returns a function that solves (exog' diag(q) exog) d = xq' rhs.
+    Returns a function that solves (exog' diag(weights) exog) d = xq' rhs,
+    or None if the matrix is not finite.
     """
     mat = xq.T @ exog
+    if not np.all(np.isfinite(mat)):
+        return None
     try:
         factor = linalg.cho_factor(mat)
+        # The squared ratio of the extreme diagonal elements of the Cholesky
+        # factor is a lower bound for the condition number of mat.
+        diag = np.abs(np.diag(factor[0]))
+        if (diag.max() / diag.min()) ** 2 < 1e10:
+            return lambda rhs: linalg.cho_solve(factor, xq.T @ rhs)
     except linalg.LinAlgError:
-        # Near the solution the weights q span many orders of magnitude and
-        # the matrix can lose positive definiteness in floating point.
-        return lambda rhs: np.linalg.lstsq(mat, xq.T @ rhs, rcond=None)[0]
-    return lambda rhs: linalg.cho_solve(factor, xq.T @ rhs)
+        pass
+    # Near the solution the weights span many orders of magnitude and mat can
+    # be ill conditioned or lose positive definiteness in floating point. The
+    # weighted least squares problem min ||W^1/2 (exog d - rhs)|| has the same
+    # solution and the condition number of W^1/2 exog, not its square.
+    sqrt_w = np.sqrt(weights)
+    xw = exog * sqrt_w[:, None]
+    return lambda rhs: np.linalg.lstsq(xw, sqrt_w * rhs, rcond=None)[0]
 
 
 def _fit_frisch_newton(endog, exog, q, max_iter, tol, step=0.99995):
@@ -406,6 +437,16 @@ def _fit_frisch_newton(endog, exog, q, max_iter, tol, step=0.99995):
        absolute-error estimators. Statistical Science 12(4): 279-300.
     """
     nobs = exog.shape[0]
+    # The duality gap is in the units of endog. The iterations use endog
+    # divided by its largest absolute value, the solution is equivariant to
+    # the rescaling. tol stays an absolute tolerance as in R's rq.fit.fnb,
+    # except that for endog smaller than one it is relative to the scale of
+    # endog, otherwise the starting point could already meet it.
+    scale = np.max(np.abs(endog), initial=0.0)
+    if scale == 0:
+        scale = 1.0
+    endog = endog / scale
+    tol = tol / max(scale, 1.0)
     # Feasible primal start: a = 1 - q satisfies the equality constraints.
     x = np.full(nobs, 1.0 - q)
     s = np.full(nobs, q)
@@ -428,13 +469,17 @@ def _fit_frisch_newton(endog, exog, q, max_iter, tol, step=0.99995):
     gap = x @ z + s @ w
     n_iter = 0
     while gap > tol and n_iter < max_iter:
+        qw = 1.0 / (z / x + w / s)
+        np.multiply(exog, qw[:, None], out=xq)
+        solve = _normal_solver(xq, exog, qw)
+        if solve is None:
+            # The iterates reached the boundary in floating point, for
+            # example if tol is below the attainable precision.
+            break
         n_iter += 1
         # Affine scaling (predictor) direction. Dual feasibility is kept,
         # so r = z - w = c - A'y.
-        qw = 1.0 / (z / x + w / s)
         r = z - w
-        np.multiply(exog, qw[:, None], out=xq)
-        solve = _normal_solver(xq, exog)
         dy = solve(r)
         dx = qw * (exog @ dy - r)
         ds = -dx
@@ -474,10 +519,20 @@ def _fit_frisch_newton(endog, exog, q, max_iter, tol, step=0.99995):
         z += fd * dz
         w += fd * dw
         gap = x @ z + s @ w
-        history["params"].append(-y)
-        history["gap"].append(gap)
+        history["params"].append(-scale * y)
+        history["gap"].append(scale * gap)
 
-    return -y, n_iter, history, gap <= tol
+    # x z + s w is the duality gap only if exog' x = b holds, which with an
+    # ill conditioned exog is only approximately true. The difference of the
+    # primal objective at params and the dual objective is the gap in any
+    # case. Its rounding error is about eps * sum(|endog|), which can exceed
+    # an absolute tol for endog much larger than one.
+    params = -y
+    resid = endog - exog @ params
+    primal = resid @ (q - (resid < 0))
+    dual = endog @ x - (1 - q) * endog.sum()
+    converged = gap <= tol and primal - dual <= tol + 1e-12 * np.abs(endog).sum()
+    return scale * params, n_iter, history, converged
 
 
 def _parzen(u):
@@ -601,13 +656,7 @@ class QuantRegResults(RegressionResults):
     def HC3_se(self):
         raise NotImplementedError
 
-    def summary(
-            self,
-            yname=None,
-            xname=None,
-            title=None,
-            alpha=0.05
-    ):
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05):
         """
         Summarize the Regression Results
 

@@ -17,7 +17,10 @@ from statsmodels.regression.quantile_regression import (
     _max_step,
     _normal_solver,
 )
-from statsmodels.tools.sm_exceptions import IterationLimitWarning
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    IterationLimitWarning,
+)
 
 from .results.results_quantile_regression import (
     Rquantreg,
@@ -389,16 +392,16 @@ def test_ols_criteria_are_nan_not_ols_values():
     res = QuantReg(y, X).fit(0.5)
 
     for name in (
-        "bic",
-        "aic",
-        "llf",
-        "rsquared",
-        "rsquared_adj",
-        "mse",
-        "mse_model",
-        "mse_total",
-        "centered_tss",
-        "uncentered_tss",
+            "bic",
+            "aic",
+            "llf",
+            "rsquared",
+            "rsquared_adj",
+            "mse",
+            "mse_model",
+            "mse_total",
+            "centered_tss",
+            "uncentered_tss"
     ):
         assert np.isnan(getattr(res, name)), name
 
@@ -552,13 +555,48 @@ def test_fn_ties(q):
     )
 
 
-@pytest.mark.parametrize("scale", [1e-3, 1e6])
-def test_fn_scale_equivariance(scale):
-    # the quantile regression estimator is equivariant to scaling endog
+@pytest.mark.parametrize("q", [0.1, 0.5])
+@pytest.mark.parametrize("scale", [1e-10, 1e-3, 1e6])
+def test_fn_scale_equivariance(scale, q):
+    # The quantile regression estimator is equivariant to scaling endog. For
+    # endog far below one the absolute default p_tol would already hold at
+    # the least squares start.
     endog, exog = _load_fn_data("engel")
-    res = QuantReg(endog, exog).fit(0.5, method="fn")
-    res_scaled = QuantReg(scale * endog, exog).fit(0.5, method="fn", p_tol=1e-6 * scale)
+    res = QuantReg(endog, exog).fit(q, method="fn")
+    res_scaled = QuantReg(scale * endog, exog).fit(q, method="fn")
+    assert res_scaled.iterations > 0
     assert_allclose(res_scaled.params, scale * res.params, rtol=1e-6)
+
+
+@pytest.mark.filterwarnings(
+    "ignore::statsmodels.tools.sm_exceptions.ConvergenceWarning"
+)
+def test_fn_nearly_collinear():
+    # Ill conditioned but full rank design, the normal equations lose
+    # positive definiteness near the solution. The duality gap may stop short
+    # of p_tol, which warns.
+    rng = np.random.default_rng(1)
+    nobs, k, q = 1000, 10, 0.001
+    exog = np.column_stack([np.ones(nobs), rng.standard_normal((nobs, k - 1))])
+    exog[:, 2] = exog[:, 1] + 1e-7 * rng.standard_normal(nobs)
+    endog = exog @ rng.standard_normal(k) + rng.standard_t(3, nobs)
+    assert np.linalg.matrix_rank(exog) == k
+    res = QuantReg(endog, exog).fit(q, method="fn")
+    assert_allclose(
+        _check_loss(res.resid, q), _linprog_objective(endog, exog, q), rtol=1e-7
+    )
+
+
+def test_fn_unattainable_tolerance():
+    endog, exog = _load_fn_data("engel")
+    with pytest.warns(ConvergenceWarning, match="duality gap"):
+        res = QuantReg(endog, exog).fit(0.5, method="fn", p_tol=0)
+    assert np.all(np.isfinite(res.params))
+    assert_allclose(
+        _check_loss(res.resid, 0.5),
+        _linprog_objective(endog, exog, 0.5),
+        rtol=1e-10,
+    )
 
 
 def test_fn_nonunique_solution():
@@ -633,14 +671,25 @@ def test_fit_invalid_method_raises():
         QuantReg(endog, exog).fit(0.5, method="br")
 
 
-def test_solve_normal_fallback():
-    # A matrix that is not positive definite makes the Cholesky factorization
-    # fail, the fallback least squares solve still solves the system.
-    rs = np.random.RandomState(0)
-    exog = rs.standard_normal((20, 3))
-    rhs = rs.standard_normal(20)
-    sol = _normal_solver(-exog, exog)(rhs)
-    assert_allclose(sol, np.linalg.lstsq(exog, rhs, rcond=None)[0], rtol=1e-10)
+@pytest.mark.parametrize("weight_range", [0, 30])
+def test_normal_solver(weight_range):
+    # Weights spanning 30 orders of magnitude make exog' W exog too ill
+    # conditioned for the Cholesky solve, the weighted least squares solve
+    # gives the same solution.
+    rng = np.random.default_rng(0)
+    exog = rng.standard_normal((20, 3))
+    weights = 10.0 ** rng.uniform(-weight_range / 2, weight_range / 2, 20)
+    rhs = rng.standard_normal(20)
+    sol = _normal_solver(exog * weights[:, None], exog, weights)(rhs)
+    sqrt_w = np.sqrt(weights)
+    expected = np.linalg.lstsq(exog * sqrt_w[:, None], sqrt_w * rhs, rcond=None)[0]
+    assert_allclose(sol, expected, rtol=1e-8)
+
+
+def test_normal_solver_not_finite():
+    exog = np.ones((3, 1))
+    weights = np.array([1.0, np.inf, 1.0])
+    assert _normal_solver(exog * weights[:, None], exog, weights) is None
 
 
 def test_max_step():

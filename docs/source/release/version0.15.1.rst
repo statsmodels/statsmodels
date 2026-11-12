@@ -219,9 +219,9 @@ New functions and methods
   parameters with the Frisch-Newton interior point method of Portnoy and
   Koenker (1997). It needs far fewer iterations than the default iterative
   reweighted least squares, ``method="irls"``, and solves the linear program
-  to a duality gap below ``p_tol``. The parameters agree with
-  ``rq(method="fn")`` of the R package quantreg. The default is unchanged.
-  :issue:`3770`
+  to high precision. The parameters agree with ``rq(method="fn")`` of the R
+  package quantreg. The default is unchanged. An unknown ``method`` now
+  raises ``ValueError``, before it was ignored. :issue:`3770`
 
 Performance
 -----------
