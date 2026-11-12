@@ -5294,7 +5294,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         Pearson residuals defined as response residuals divided by standard
         deviation implied by the model.
         """
-        var_ = self.predict(which="var")
+        var_ = np.asarray(self.predict(which="var"))
         return self.resid_response / np.sqrt(var_)
 
     @cache_readonly
@@ -6258,7 +6258,8 @@ class MultinomialResults(DiscreteResults):
         # these are the actual, predicted indices
         # idx = lzip(self.model.endog, self.predict().argmax(1))
         bins = np.concatenate(([0], np.linspace(0.5, ju - 0.5, ju), [ju]))
-        return np.histogram2d(self.model.endog, self.predict().argmax(1), bins=bins)[0]
+        pred = np.asarray(self.predict()).argmax(1)
+        return np.histogram2d(self.model.endog, pred, bins=bins)[0]
 
     @cache_readonly
     def bse(self):
@@ -6291,11 +6292,13 @@ class MultinomialResults(DiscreteResults):
         Returns
         -------
         ndarray or DataFrame
-            An ndarray of shape (nobs, J) is returned if ``exog`` is not
-            given or is not a pandas object. If ``exog`` is a DataFrame, or
+            An ndarray of shape (nobs, J) is returned for explicitly supplied
+            ``exog`` that is not a pandas object. If ``exog`` is a DataFrame, or
             if the model was fit using a formula and ``exog`` is a DataFrame
             or a dict, a DataFrame with the row index of ``exog`` is
-            returned. The columns of the DataFrame are the categories of the
+            returned. If ``exog`` is omitted and the model was fit with pandas
+            data, a DataFrame with the training row index is returned.
+            The columns of the DataFrame are the categories of the
             endogenous variable in the order of the columns of ``wendog`` and
             of ``names``, so that the first column is the reference category.
 
@@ -6313,8 +6316,14 @@ class MultinomialResults(DiscreteResults):
 
            The columns of the returned DataFrame are the categories of
            ``endog``. In previous versions they were 0, 1, ..., J - 1.
+           In-sample predictions from models fit with pandas data return a
+           DataFrame instead of an ndarray.
         """
         pred = super().predict(exog, transform, *args, **kwargs)
+        if exog is None:
+            index = self.model.data.row_labels
+            if index is not None:
+                pred = DataFrame(pred, index=index)
         categories = getattr(self.model, "_endog_categories", None)
         if isinstance(pred, DataFrame) and categories is not None:
             # label the columns with the endog categories, see GH 4804
@@ -6344,7 +6353,7 @@ class MultinomialResults(DiscreteResults):
         # `endog` holds the 1-dim category codes for the multinomial models,
         # so the base class version does not conform with `predict`. `wendog`
         # is the indicator matrix of the observed categories, which does.
-        return self.model.wendog - self.predict()
+        return self.model.wendog - np.asarray(self.predict())
 
     @cache_readonly
     def resid_misclassified(self):
@@ -6363,7 +6372,8 @@ class MultinomialResults(DiscreteResults):
         and 1 otherwise.
         """
         # it's 0 or 1 - 0 for correct prediction and 1 for a missed one
-        return (self.model.wendog.argmax(1) != self.predict().argmax(1)).astype(float)
+        pred = np.asarray(self.predict()).argmax(1)
+        return (self.model.wendog.argmax(1) != pred).astype(float)
 
     def summary2(self, alpha=0.05, float_format="%.4f"):
         """
