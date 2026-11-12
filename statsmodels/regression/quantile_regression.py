@@ -1,8 +1,9 @@
 """
 Quantile regression model
 
-Model parameters are estimated using iterated reweighted least squares. The
-asymptotic covariance matrix estimated using kernel density estimation.
+Model parameters are estimated using iterated reweighted least squares or the
+Frisch-Newton interior point method. The asymptotic covariance matrix
+estimated using kernel density estimation.
 
 Author: Vincent Arel-Bundock
 License: BSD-3
@@ -19,7 +20,7 @@ import warnings
 
 import numpy as np
 from numpy.linalg import pinv
-from scipy import stats
+from scipy import linalg, stats
 from scipy.stats import norm
 
 from statsmodels.regression.linear_model import (
@@ -37,7 +38,7 @@ class QuantReg(RegressionModel):
     Quantile Regression
 
     Estimate a quantile regression model using iterative reweighted least
-    squares.
+    squares or the Frisch-Newton interior point method.
 
     Parameters
     ----------
@@ -63,6 +64,7 @@ class QuantReg(RegressionModel):
     * Green, W. H. (2008). Econometric Analysis. Sixth Edition. International Student Edition.
     * Koenker, R. (2005). Quantile Regression. New York: Cambridge University Press.
     * LeSage, J. P. (1999). Applied Econometrics Using MATLAB,
+    * Portnoy, S. and R. Koenker (1997). The Gaussian hare and the Laplacian tortoise: computability of squared-error versus absolute-error estimators. Statistical Science 12(4): 279-300.
 
     Kernels (used by the fit method):
 
@@ -95,10 +97,11 @@ class QuantReg(RegressionModel):
         bandwidth="hsheather",
         max_iter=1000,
         p_tol=1e-6,
+        method="irls",
         **kwargs,
     ):
         """
-        Solve by Iterative Weighted Least Squares
+        Solve by Iterative Weighted Least Squares or Interior Point
 
         Parameters
         ----------
@@ -133,7 +136,25 @@ class QuantReg(RegressionModel):
         max_iter : int, optional
             Maximum number of iterations.
         p_tol : float, optional
-            Convergence tolerance for the iterative parameter estimates.
+            Convergence tolerance. For ``method="irls"`` it is the tolerance
+            for the largest absolute change of the parameter estimates. For
+            ``method="fn"`` it is the tolerance for the duality gap, which
+            is in the units of the objective function, the sum of the check
+            function of the residuals. The default 1e-6 is the default of
+            ``rq.fit.fnb`` in the R package quantreg. If the largest absolute
+            value of ``endog`` is below one, the tolerance is multiplied by
+            it, so that the estimates do not depend on the scale of
+            ``endog``.
+        method : {"irls", "fn"}, optional
+            The algorithm used to estimate the parameters:
+
+            - irls : Iterative reweighted least squares (default).
+            - fn : Frisch-Newton interior point method of Portnoy and
+              Koenker (1997), as ``rq(method="fn")`` in the R package
+              quantreg. It is usually much faster than ``irls`` and
+              solves the linear program to high precision, see Notes.
+
+            .. versionadded:: 0.15.1
         **kwargs
             Additional keyword arguments, accepted for API compatibility.
 
@@ -142,20 +163,54 @@ class QuantReg(RegressionModel):
         RegressionResultsWrapper
             Results instance for the fitted quantile regression, with
             additional ``q``, ``iterations``, ``sparsity``, ``bandwidth``,
-            and ``history`` attributes.
+            and ``history`` attributes. For ``method="irls"`` the
+            ``history`` dict holds the ``params`` and ``mse`` of each
+            iteration, for ``method="fn"`` it holds the ``params`` and the
+            duality ``gap`` of each iteration.
+
+        Notes
+        -----
+        The Frisch-Newton method solves the dual of the linear program of
+        quantile regression by a primal-dual path following interior point
+        algorithm with Mehrotra's predictor-corrector steps. It needs few
+        iterations, usually fewer than 50, each of which costs one weighted
+        cross product of ``exog``. Quantiles very close to 0 or 1 in large
+        samples can need several hundred.
+
+        With a nearly singular ``exog`` the duality gap may not reach
+        ``p_tol``, in which case a ``ConvergenceWarning`` is issued.
+
+        If the solution is not unique, for example the median of an even
+        number of observations, the interior point method stops at a point
+        inside the set of solutions, close to its center, and not at a
+        vertex as a simplex method would. All points in the set have the
+        same value of the objective function.
+
+        If ``exog`` does not have full column rank, both methods return the
+        solution of minimum norm that lies in the row space of ``exog``,
+        i.e. the parameters of the collinear columns are not identified and
+        only the fitted values are unique. ``irls`` obtains this by the
+        pseudoinverse, ``fn`` by solving the problem in the basis of the
+        right singular vectors of ``exog`` with nonzero singular values.
         """
         if q <= 0 or q >= 1:
             raise ValueError("q must be strictly between 0 and 1")
 
+        method = string_like(method, "method", options=("irls", "fn"), lower=False)
+
         kernel = string_like(
-            kernel, "kernel", options=("biw", "cos", "epa", "gau", "par"),
+            kernel,
+            "kernel",
+            options=("biw", "cos", "epa", "gau", "par"),
             lower=False,
         )
         kernel = kernels[kernel]
 
         bandwidth = string_like(
-            bandwidth, "bandwidth",
-            options=("hsheather", "bofinger", "chamberlain"), lower=False,
+            bandwidth,
+            "bandwidth",
+            options=("hsheather", "bofinger", "chamberlain"),
+            lower=False,
         )
         if bandwidth == "hsheather":
             bandwidth = hall_sheather
@@ -171,61 +226,90 @@ class QuantReg(RegressionModel):
         self.rank = exog_rank
         self.df_model = float(self.rank - self.k_constant)
         self.df_resid = self.nobs - self.rank
-        n_iter = 0
-        xstar = exog
+        if method == "fn":
+            if exog_rank < exog.shape[1]:
+                # Solve in the basis of the row space of exog, which gives the
+                # minimum norm solution like the pseudoinverse in IRLS.
+                basis = np.linalg.svd(exog, full_matrices=False)[2][:exog_rank].T
+                gamma, n_iter, history, converged = _fit_frisch_newton(
+                    endog, exog @ basis, q, max_iter, p_tol
+                )
+                beta = basis @ gamma
+                history["params"] = [basis @ g for g in history["params"]]
+            else:
+                beta, n_iter, history, converged = _fit_frisch_newton(
+                    endog, exog, q, max_iter, p_tol
+                )
+            if n_iter >= max_iter:
+                warnings.warn(
+                    f"Maximum number of iterations ({max_iter}) reached.",
+                    IterationLimitWarning,
+                    stacklevel=2,
+                )
+            elif not converged:
+                warnings.warn(
+                    "The interior point iterations stopped before the duality "
+                    "gap reached p_tol. The design matrix may be nearly "
+                    "singular, the estimates may not be optimal.",
+                    ConvergenceWarning,
+                    stacklevel=2,
+                )
+        else:  # method == "irls"
+            n_iter = 0
+            xstar = exog
 
-        beta = np.ones(exog.shape[1])
-        # TODO: better start, initial beta is used only for convergence check
+            beta = np.ones(exog.shape[1])
+            # TODO: better start, initial beta is used only for convergence check
 
-        # Note the following does not work yet,
-        # the iteration loop always starts with OLS as initial beta
-        # if start_params is not None:
-        #    if len(start_params) != rank:
-        #       raise ValueError('start_params has wrong length')
-        #       beta = start_params
-        #    else:
-        #       # start with OLS
-        #       beta = np.dot(np.linalg.pinv(exog), endog)
+            # Note the following does not work yet,
+            # the iteration loop always starts with OLS as initial beta
+            # if start_params is not None:
+            #    if len(start_params) != rank:
+            #       raise ValueError('start_params has wrong length')
+            #       beta = start_params
+            #    else:
+            #       # start with OLS
+            #       beta = np.dot(np.linalg.pinv(exog), endog)
 
-        diff = 10
-        cycle = False
+            diff = 10
+            cycle = False
 
-        history = dict(params=[], mse=[])
-        while n_iter < max_iter and diff > p_tol and not cycle:
-            n_iter += 1
-            beta0 = beta
-            xtx = np.dot(xstar.T, exog)
-            xty = np.dot(xstar.T, endog)
-            beta = np.dot(pinv(xtx), xty)
-            resid = endog - np.dot(exog, beta)
+            history = dict(params=[], mse=[])
+            while n_iter < max_iter and diff > p_tol and not cycle:
+                n_iter += 1
+                beta0 = beta
+                xtx = np.dot(xstar.T, exog)
+                xty = np.dot(xstar.T, endog)
+                beta = np.dot(pinv(xtx), xty)
+                resid = endog - np.dot(exog, beta)
 
-            mask = np.abs(resid) < 0.000001
-            resid[mask] = ((resid[mask] >= 0) * 2 - 1) * 0.000001
-            resid = np.where(resid < 0, q * resid, (1 - q) * resid)
-            resid = np.abs(resid)
-            xstar = exog / resid[:, np.newaxis]
-            diff = np.max(np.abs(beta - beta0))
-            history["params"].append(beta)
-            history["mse"].append(np.mean(resid * resid))
+                mask = np.abs(resid) < 0.000001
+                resid[mask] = ((resid[mask] >= 0) * 2 - 1) * 0.000001
+                resid = np.where(resid < 0, q * resid, (1 - q) * resid)
+                resid = np.abs(resid)
+                xstar = exog / resid[:, np.newaxis]
+                diff = np.max(np.abs(beta - beta0))
+                history["params"].append(beta)
+                history["mse"].append(np.mean(resid * resid))
 
-            if (n_iter >= 300) and (n_iter % 100 == 0):
-                # check for convergence circle, should not happen
-                for ii in range(2, 10):
-                    if np.all(beta == history["params"][-ii]):
-                        cycle = True
-                        warnings.warn(
-                            "Convergence cycle detected",
-                            ConvergenceWarning,
-                            stacklevel=2,
-                        )
-                        break
+                if (n_iter >= 300) and (n_iter % 100 == 0):
+                    # check for convergence circle, should not happen
+                    for ii in range(2, 10):
+                        if np.all(beta == history["params"][-ii]):
+                            cycle = True
+                            warnings.warn(
+                                "Convergence cycle detected",
+                                ConvergenceWarning,
+                                stacklevel=2,
+                            )
+                            break
 
-        if n_iter == max_iter:
-            warnings.warn(
-                "Maximum number of iterations (" + str(max_iter) + ") reached.",
-                IterationLimitWarning,
-                stacklevel=2,
-            )
+            if n_iter == max_iter:
+                warnings.warn(
+                    "Maximum number of iterations (" + str(max_iter) + ") reached.",
+                    IterationLimitWarning,
+                    stacklevel=2,
+                )
 
         e = endog - np.dot(exog, beta)
         # Greene (2008, p.407) writes that Stata 6 uses this bandwidth:
@@ -255,6 +339,200 @@ class QuantReg(RegressionModel):
         lfit.history = history
 
         return RegressionResultsWrapper(lfit)
+
+
+def _max_step(v, dv):
+    """Largest step t with v + t * dv >= 0 for v >= 0, inf if dv >= 0."""
+    # v + t * dv >= 0 is 1 / t >= -dv / v for the elements with dv < 0. An
+    # element with v = 0 and dv < 0 gives inf, i.e. a step of zero, and
+    # v = dv = 0 gives nan, which fmax ignores.
+    with np.errstate(divide="ignore", invalid="ignore"):
+        largest = np.fmax.reduce(-dv / v)
+    return 1.0 / largest if largest > 0 else np.inf
+
+
+def _normal_solver(xq, exog, weights):
+    """
+    Factor exog' diag(weights) exog once, with xq = diag(weights) exog.
+
+    Returns a function that solves (exog' diag(weights) exog) d = xq' rhs,
+    or None if the matrix is not finite.
+    """
+    mat = xq.T @ exog
+    if not np.all(np.isfinite(mat)):
+        return None
+    try:
+        factor = linalg.cho_factor(mat)
+        # The squared ratio of the extreme diagonal elements of the Cholesky
+        # factor is a lower bound for the condition number of mat.
+        diag = np.abs(np.diag(factor[0]))
+        if (diag.max() / diag.min()) ** 2 < 1e10:
+            return lambda rhs: linalg.cho_solve(factor, xq.T @ rhs)
+    except linalg.LinAlgError:
+        pass
+    # Near the solution the weights span many orders of magnitude and mat can
+    # be ill conditioned or lose positive definiteness in floating point. The
+    # weighted least squares problem min ||W^1/2 (exog d - rhs)|| has the same
+    # solution and the condition number of W^1/2 exog, not its square.
+    sqrt_w = np.sqrt(weights)
+    xw = exog * sqrt_w[:, None]
+    return lambda rhs: np.linalg.lstsq(xw, sqrt_w * rhs, rcond=None)[0]
+
+
+def _fit_frisch_newton(endog, exog, q, max_iter, tol, step=0.99995):
+    """
+    Quantile regression by the Frisch-Newton interior point method.
+
+    Parameters
+    ----------
+    endog : ndarray
+        The response, shape (nobs,).
+    exog : ndarray
+        The design matrix with full column rank, shape (nobs, k).
+    q : float
+        The quantile, strictly between 0 and 1.
+    max_iter : int
+        The maximum number of interior point iterations.
+    tol : float
+        The iterations stop when the duality gap is below ``tol``.
+    step : float, optional
+        Fraction of the step to the boundary of the feasible region.
+
+    Returns
+    -------
+    params : ndarray
+        The estimated coefficients.
+    n_iter : int
+        The number of iterations.
+    history : dict
+        The ``params`` and the duality ``gap`` after each iteration.
+    converged : bool
+        True if the duality gap is below ``tol``.
+
+    Notes
+    -----
+    The primal-dual path following algorithm with Mehrotra's predictor
+    corrector steps of Portnoy and Koenker (1997) is applied to the dual of
+    the quantile regression linear program,
+
+        max_a endog' a  subject to  exog' a = (1 - q) exog' 1,  0 <= a <= 1.
+
+    The coefficients are the Lagrange multipliers of the equality
+    constraints. In the notation below the problem is written as
+    min c'x subject to A x = b, 0 <= x <= 1 with c = -endog, A = exog' and
+    b = (1 - q) exog' 1, the slack is s = 1 - x, the dual variables are y
+    (with params = -y), z >= 0 for x >= 0 and w >= 0 for s >= 0.
+
+    The structure of the iterations (starting point, step lengths and the
+    centering parameter) follows Portnoy and Koenker (1997) and the lp_fnm
+    code of Morillo, Koenker and Eilers, as released under the BSD-3 license
+    with the permission of the authors in QuantileRegressions.jl, see also
+    pyqreg (BSD-3). The Newton directions are derived from the perturbed
+    KKT conditions of the problem above.
+
+    References
+    ----------
+    .. [*] Portnoy, S. and R. Koenker (1997). The Gaussian hare and the
+       Laplacian tortoise: computability of squared-error versus
+       absolute-error estimators. Statistical Science 12(4): 279-300.
+    """
+    nobs = exog.shape[0]
+    # The duality gap is in the units of endog. The iterations use endog
+    # divided by its largest absolute value, the solution is equivariant to
+    # the rescaling. tol stays an absolute tolerance as in R's rq.fit.fnb,
+    # except that for endog smaller than one it is relative to the scale of
+    # endog, otherwise the starting point could already meet it.
+    scale = np.max(np.abs(endog), initial=0.0)
+    if scale == 0:
+        scale = 1.0
+    endog = endog / scale
+    tol = tol / max(scale, 1.0)
+    # Feasible primal start: a = 1 - q satisfies the equality constraints.
+    x = np.full(nobs, 1.0 - q)
+    s = np.full(nobs, q)
+    # Dual start from least squares, the dual slacks split the residuals
+    # r = c - A'y = -(endog - exog @ beta_ols) into positive and negative
+    # parts, so that A'y + z - w = c holds exactly.
+    y = -np.linalg.lstsq(exog, endog, rcond=None)[0]
+    r = -endog - exog @ y
+    z = np.maximum(r, 0)
+    w = z - r
+    # Zero residuals would give z = w = 0 on the boundary. Moving both
+    # slacks into the interior keeps z - w = r, so the start stays dual
+    # feasible.
+    zero = r == 0
+    z[zero] = 0.001
+    w[zero] = 0.001
+
+    xq = np.empty_like(exog)
+    history = dict(params=[], gap=[])
+    gap = x @ z + s @ w
+    n_iter = 0
+    while gap > tol and n_iter < max_iter:
+        qw = 1.0 / (z / x + w / s)
+        np.multiply(exog, qw[:, None], out=xq)
+        solve = _normal_solver(xq, exog, qw)
+        if solve is None:
+            # The iterates reached the boundary in floating point, for
+            # example if tol is below the attainable precision.
+            break
+        n_iter += 1
+        # Affine scaling (predictor) direction. Dual feasibility is kept,
+        # so r = z - w = c - A'y.
+        r = z - w
+        dy = solve(r)
+        dx = qw * (exog @ dy - r)
+        ds = -dx
+        dz = -z * (1 + dx / x)
+        dw = -w * (1 + ds / s)
+
+        fp = min(step * min(_max_step(x, dx), _max_step(s, ds)), 1.0)
+        fd = min(step * min(_max_step(z, dz), _max_step(w, dw)), 1.0)
+
+        if min(fp, fd) < 1:
+            # Centering and corrector step. The target mu shrinks with the
+            # cube of the complementarity reached by the affine step.
+            mu = x @ z + s @ w
+            g = (x + fp * dx) @ (z + fd * dz) + (s + fp * ds) @ (w + fd * dw)
+            mu = mu * (g / mu) ** 3 / (2 * nobs)
+
+            # Newton step for x z = mu and s w = mu including the second
+            # order terms dx * dz and ds * dw of the affine step.
+            dxdz = dx * dz
+            dsdw = ds * dw
+            xinv = 1.0 / x
+            sinv = 1.0 / s
+            xi = mu * (xinv - sinv)
+            rhs = r - xi + dxdz * xinv - dsdw * sinv
+            dy = solve(rhs)
+            dx = qw * (exog @ dy - rhs)
+            ds = -dx
+            dz = mu * xinv - z - xinv * (z * dx + dxdz)
+            dw = mu * sinv - w - sinv * (w * ds + dsdw)
+
+            fp = min(step * min(_max_step(x, dx), _max_step(s, ds)), 1.0)
+            fd = min(step * min(_max_step(z, dz), _max_step(w, dw)), 1.0)
+
+        x += fp * dx
+        s += fp * ds
+        y += fd * dy
+        z += fd * dz
+        w += fd * dw
+        gap = x @ z + s @ w
+        history["params"].append(-scale * y)
+        history["gap"].append(scale * gap)
+
+    # x z + s w is the duality gap only if exog' x = b holds, which with an
+    # ill conditioned exog is only approximately true. The difference of the
+    # primal objective at params and the dual objective is the gap in any
+    # case. Its rounding error is about eps * sum(|endog|), which can exceed
+    # an absolute tol for endog much larger than one.
+    params = -y
+    resid = endog - exog @ params
+    primal = resid @ (q - (resid < 0))
+    dual = endog @ x - (1 - q) * endog.sum()
+    converged = gap <= tol and primal - dual <= tol + 1e-12 * np.abs(endog).sum()
+    return scale * params, n_iter, history, converged
 
 
 def _parzen(u):
@@ -378,13 +656,7 @@ class QuantRegResults(RegressionResults):
     def HC3_se(self):
         raise NotImplementedError
 
-    def summary(
-            self,
-            yname=None,
-            xname=None,
-            title=None,
-            alpha=0.05
-    ):
+    def summary(self, yname=None, xname=None, title=None, alpha=0.05):
         """
         Summarize the Regression Results
 
