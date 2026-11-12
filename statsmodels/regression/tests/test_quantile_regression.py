@@ -389,16 +389,16 @@ def test_ols_criteria_are_nan_not_ols_values():
     res = QuantReg(y, X).fit(0.5)
 
     for name in (
-            "bic",
-            "aic",
-            "llf",
-            "rsquared",
-            "rsquared_adj",
-            "mse",
-            "mse_model",
-            "mse_total",
-            "centered_tss",
-            "uncentered_tss"
+        "bic",
+        "aic",
+        "llf",
+        "rsquared",
+        "rsquared_adj",
+        "mse",
+        "mse_model",
+        "mse_total",
+        "centered_tss",
+        "uncentered_tss",
     ):
         assert np.isnan(getattr(res, name)), name
 
@@ -540,6 +540,27 @@ def test_fn_extreme_quantiles(q):
     )
 
 
+@pytest.mark.parametrize("q", [0.25, 0.5])
+def test_fn_ties(q):
+    # integer response and binary regressors give many tied residuals
+    rng = np.random.default_rng(0)
+    exog = np.column_stack([np.ones(300), rng.integers(0, 2, size=(300, 2))])
+    endog = np.round(exog @ [1.0, 2.0, -1.0] + rng.standard_t(3, size=300))
+    res = QuantReg(endog, exog).fit(q, method="fn")
+    assert_allclose(
+        _check_loss(res.resid, q), _linprog_objective(endog, exog, q), rtol=1e-8
+    )
+
+
+@pytest.mark.parametrize("scale", [1e-3, 1e6])
+def test_fn_scale_equivariance(scale):
+    # the quantile regression estimator is equivariant to scaling endog
+    endog, exog = _load_fn_data("engel")
+    res = QuantReg(endog, exog).fit(0.5, method="fn")
+    res_scaled = QuantReg(scale * endog, exog).fit(0.5, method="fn", p_tol=1e-6 * scale)
+    assert_allclose(res_scaled.params, scale * res.params, rtol=1e-6)
+
+
 def test_fn_nonunique_solution():
     # every value in [5, 6] is a median of 1, ..., 10
     endog = np.arange(1.0, 11.0)
@@ -584,9 +605,7 @@ def test_fn_collinear():
 
 def test_fn_pandas_formula():
     data = sm.datasets.engel.load_pandas().data
-    res_formula = sm.formula.quantreg("foodexp ~ income", data).fit(
-        0.25, method="fn"
-    )
+    res_formula = sm.formula.quantreg("foodexp ~ income", data).fit(0.25, method="fn")
     res_pandas = QuantReg(data["foodexp"], sm.add_constant(data["income"])).fit(
         0.25, method="fn"
     )
