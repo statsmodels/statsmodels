@@ -462,13 +462,20 @@ class GenericKDE:
     def _cv_initial_bw(self):
         """Return a starting bandwidth for cross-validation optimization."""
         bw = self._normal_reference()
-        ix_cont, _, _ = _get_type_pos(self.data_type)
+        _, ix_ord, ix_unord = _get_type_pos(self.data_type)
         _, upper = self._get_bw_bounds()
+        # Ordered kernels use numeric distances between levels. Preserve
+        # their established starting simplex independently of the zero
+        # discrete bandwidth convention for normal-reference estimation.
+        bw[ix_ord] = (
+            1.06 * np.std(self.data[:, ix_ord], axis=0)
+            * self.nobs ** (-1.0 / (4 + self.k_vars))
+        )
         # Starting at zero would collapse the Nelder-Mead simplex after it
-        # is clipped to the positive lower bound. Start discrete bandwidths
-        # in the interior without using the arbitrary category codes.
-        bw[~ix_cont] = upper[~ix_cont] / 2
-        return bw
+        # is clipped to the positive lower bound. Start unordered bandwidths
+        # in the interior without using their arbitrary category codes.
+        bw[ix_unord] = upper[ix_unord] / 2
+        return self._set_bw_bounds(bw)
 
     def _get_bw_bounds(self):
         """
@@ -959,3 +966,4 @@ def initialize_generator(
         )
         return np.random.mtrand._rand
     return check_random_state(entropy)
+

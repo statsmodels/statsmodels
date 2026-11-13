@@ -857,6 +857,25 @@ def test_normal_reference_bw_of_ordered_variable(scale):
     assert_allclose(pdf, np.full(11, 1 / 11), rtol=1e-14)
 
 
+def test_cv_initial_bandwidth_preserves_ordered_distances():
+    continuous = np.linspace(-2, 2, 30)
+    ordered = np.tile([0, 1, 2], 10)
+    unordered = np.tile([0, 1], 15)
+    data = np.column_stack((continuous, ordered, unordered))
+    density = KDEMultivariate(data, "cou", rng=0)
+    initial = density._cv_initial_bw()
+    reference = 1.06 * data.std(axis=0) * len(data) ** (-1 / 7)
+    expected = density._set_bw_bounds(reference)
+    assert_allclose(initial[:2], expected[:2], rtol=1e-14)
+    assert_equal(initial[2], 0.25)
+    # Only unordered codes are arbitrary; changing them must not alter
+    # the optimization's starting simplex or normal-reference estimate.
+    data[:, 2] *= 1000
+    relabeled = KDEMultivariate(data, "cou", rng=0)
+    assert_allclose(relabeled._cv_initial_bw(), initial, rtol=1e-14)
+    assert_equal(relabeled.bw[1:], [0, 0])
+
+
 @pytest.mark.parametrize("bw", ["cv_ml", "cv_ls"])
 @pytest.mark.parametrize(
     "levels, r_bw", [(3, 0.66000057), (4, 0.74250011), (5, 0.79200058), (6, 0.8250008)]
@@ -1369,3 +1388,4 @@ def test_unordered_cv_unaggregated_inputs(data):
         expected_ls = -0.5552
     assert_allclose(model.loo_likelihood(bw, np.log), expected_log, rtol=1e-14)
     assert_allclose(model.imse(bw), expected_ls, rtol=1e-14)
+
