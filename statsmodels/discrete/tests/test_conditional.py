@@ -1,7 +1,10 @@
+from itertools import combinations
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
+from scipy.special import gammaln, logsumexp
 
 from statsmodels.discrete.conditional_models import (
     ConditionalLogit,
@@ -10,6 +13,109 @@ from statsmodels.discrete.conditional_models import (
 )
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import approx_fprime
+
+
+@pytest.mark.parametrize("offset", [0.0, 300.0, -1000.0])
+def test_logit_large_balanced_group(offset):
+    # PR10530 requests the balanced group whose raw normalizer overflows.
+    nobs = 2000
+    n1 = nobs // 2
+    exog = np.linspace(-1, 1, nobs)[:, None]
+    endog = np.r_[np.zeros(n1), np.ones(n1)]
+    model = ConditionalLogit(
+        endog, exog, groups=np.zeros(nobs), offset=np.full(nobs, offset)
+    )
+    expected_ll = -(gammaln(nobs + 1) - 2 * gammaln(n1 + 1))
+    expected_score = endog @ exog - n1 * exog.mean(axis=0)
+    assert_allclose(model.loglike([0.0]), expected_ll, rtol=1e-13)
+    assert_allclose(model.score([0.0]), expected_score, rtol=1e-12)
+
+
+@pytest.mark.parametrize("n1", [1, 2, 4, 5])
+def test_logit_stable_score_and_complex_parameters(n1):
+    # Direct subsets independently determine the first two derivatives.
+    exog = np.column_stack((np.linspace(-1, 1, 6), [0, 1, -1, 0.5, 2, -0.5]))
+    endog = np.zeros(6)
+    endog[:n1] = 1
+    params = np.array([0.2, -0.3])
+    offset = np.linspace(-0.4, 0.2, 6)
+    model = ConditionalLogit(endog, exog, groups=np.zeros(6), offset=offset + 300)
+    subsets = np.array(list(combinations(range(6), n1)))
+    subset_exog = exog[subsets].sum(axis=1)
+    linear = exog @ params + offset
+    log_weights = linear[subsets].sum(axis=1)
+    log_denom = logsumexp(log_weights)
+    weights = np.exp(log_weights - log_denom)
+    mean = weights @ subset_exog
+    expected_ll = endog @ linear - log_denom
+    expected_score = endog @ exog - mean
+    expected_hessian = np.outer(mean, mean) - (subset_exog.T * weights) @ subset_exog
+    assert_allclose(model.loglike(params), expected_ll, rtol=1e-13)
+    assert_allclose(model.score(params), expected_score, rtol=1e-12, atol=1e-13)
+    for j in range(len(params)):
+        complex_params = params.astype(complex)
+        complex_params[j] += 1e-20j
+        assert_allclose(
+            model.loglike(complex_params).imag / 1e-20,
+            expected_score[j],
+            rtol=1e-12,
+            atol=1e-13,
+        )
+        assert_allclose(
+            model.score(complex_params).imag / 1e-20,
+            expected_hessian[:, j],
+            rtol=1e-12,
+            atol=1e-13,
+        )
+
+
+def test_logit_batched_pairs_with_offsets():
+    exog = np.array(
+        [[0.0, 1.0], [2.0, -1.0], [1.0, 3.0], [-1.0, 0.0], [0.0, -2.0], [3.0, 1.0]]
+    )
+    endog = np.array([0, 1, 1, 0, 0, 1])
+    offset = np.array([300.0, 300.5, -1000.0, -999.0, 50.0, 49.5])
+    model = ConditionalLogit(endog, exog, groups=np.repeat([0, 1, 2], 2), offset=offset)
+    for params in (np.array([0.2, -0.3]), np.array([0.2 + 1e-20j, -0.3])):
+        expected_ll = sum(model.loglike_grp(g, params) for g in range(3))
+        expected_score = sum(model.score_grp(g, params) for g in range(3))
+        assert_allclose(model.loglike(params), expected_ll, rtol=1e-13)
+        assert_allclose(model.score(params), expected_score, rtol=1e-13)
+
+
+@pytest.mark.parametrize("dtype", [np.uint8, np.uint64])
+def test_logit_unsigned_outcomes_and_offsets(dtype):
+    # Cover both pair orientations and both minority outcomes in batched triples.
+    endog = np.array([0, 1, 1, 0, 1, 0, 0, 0, 1, 1], dtype=dtype)
+    offset = np.array([0, 1, 1, 0, 0, 1, 2, 2, 0, 1], dtype=dtype)
+    exog = np.column_stack((np.arange(10), np.sin(np.arange(10))))
+    groups = np.array([0, 0, 1, 1, 2, 2, 2, 3, 3, 3])
+    model = ConditionalLogit(endog, exog, groups=groups, offset=offset)
+    reference = ConditionalLogit(
+        endog.astype(float), exog, groups=groups, offset=offset.astype(float)
+    )
+    params = np.array([0.2, -0.3])
+    assert_allclose(model.loglike(params), reference.loglike(params), rtol=1e-13)
+    assert_allclose(model.score(params), reference.score(params), rtol=1e-13)
+
+
+def test_logit_single_case_extreme_ties():
+    # The two equally weighted alternatives each carry probability one half.
+    endog = np.tile([1, 0, 0], 2)
+    exog = np.tile([0.0, 1.0, 1.0], 2)[:, None]
+    model = ConditionalLogit(endog, exog, groups=np.repeat([0, 1], 3))
+    assert_allclose(model.score([1e20]), [-2.0], rtol=1e-14)
+    assert_allclose(model.score_grp(0, [1e20]), [-1.0], rtol=1e-14)
+
+
+def test_logit_balanced_extreme_ties():
+    # Three top-weight pairs tie; direct subtraction of 2e16 loses log(3).
+    model = ConditionalLogit(
+        np.array([0, 1, 1, 0]),
+        np.array([0.0, 1.0, 1.0, 1.0])[:, None],
+        groups=np.zeros(4),
+    )
+    assert_allclose(model.loglike([1e16]), -np.log(3), rtol=1e-14)
 
 
 @pytest.fixture(params=[ConditionalLogit, ConditionalPoisson, ConditionalMNLogit])

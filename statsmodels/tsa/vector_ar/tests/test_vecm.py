@@ -1788,3 +1788,93 @@ def test_pvalues_large_tvalues(n, alpha, drift, c_coint, deterministic, names):
         # 2 * norm.sf(t) = erfc(t / sqrt(2))
         assert_allclose(pvalues, special.erfc(tvalues / np.sqrt(2)), rtol=1e-10)
         assert np.all(pvalues[lost] > 0)
+
+
+@pytest.mark.parametrize("k_ar_diff", [0, 3])
+@pytest.mark.parametrize("deterministic", ["n", "ci", "cili"])
+def test_vecm_canonical_correlations_reparameterized(k_ar_diff, deterministic):
+    # GH 9081: canonical correlations cannot depend on an invertible change
+    # of coordinates. Use the existing West German interest/inflation data,
+    # also used by the independently computed JMulTi reference cases above.
+    from statsmodels.tsa.vector_ar.vecm import _endog_matrices, _sij
+
+    endog = e6.load_pandas().data[["Dp", "R"]].to_numpy()
+    transform = np.array([[1.0, 1.0], [0.0, 1e-6]])
+
+    def roots(data):
+        _, dy, lagged, dx = _endog_matrices(
+            data.T, None, None, k_ar_diff, deterministic, 0, 0
+        )
+        return _sij(dx, dy, lagged)[5]
+
+    expected = roots(endog)
+    actual = roots(endog @ transform)
+    # The coordinate map has condition number about 2e6. Allow accumulated
+    # roundoff of the input transformation and differencing, but not the
+    # much larger errors from squaring that condition number.
+    assert_allclose(actual, expected, rtol=1e-6, atol=1e-10)
+    assert np.isrealobj(actual)
+    assert len(actual) == 2 + ("ci" in deterministic) + ("li" in deterministic)
+    assert np.all(np.diff(actual) <= 0)
+
+
+@pytest.mark.parametrize("k_ar_diff", [0, 3])
+@pytest.mark.parametrize("coint_rank", [0, 1, 2])
+def test_vecm_fit_reparameterized(k_ar_diff, coint_rank):
+    endog = e6.load_pandas().data[["Dp", "R"]].to_numpy()
+    transform = np.array([[1.0, 1.0], [0.0, 1e-6]])
+    expected = VECM(endog, k_ar_diff=k_ar_diff, coint_rank=coint_rank).fit()
+    actual = VECM(
+        endog @ transform, k_ar_diff=k_ar_diff, coint_rank=coint_rank
+    ).fit()
+    recovered = np.linalg.solve(transform.T, actual.fittedvalues.T).T
+    # Check the actual fitted observations, not just the decomposition.
+    assert_allclose(recovered, expected.fittedvalues, rtol=1e-5, atol=1e-8)
+    log_jacobian = np.linalg.slogdet(transform)[1]
+    assert_allclose(
+        actual.llf + actual.nobs * log_jacobian,
+        expected.llf,
+        rtol=1e-6,
+        atol=1e-5,
+    )
+
+
+@pytest.mark.parametrize("scale", [1e-8, 1e8])
+def test_vecm_change_measurement_units(scale):
+    endog = e6.load_pandas().data[["Dp", "R"]].to_numpy()
+    units = np.array([scale, 1.0])
+    expected = VECM(endog, k_ar_diff=3, coint_rank=1, deterministic="ci").fit()
+    actual = VECM(
+        endog * units, k_ar_diff=3, coint_rank=1, deterministic="ci"
+    ).fit()
+    assert_allclose(
+        actual.fittedvalues / units, expected.fittedvalues, rtol=1e-9, atol=1e-12
+    )
+
+
+@pytest.mark.parametrize("regressors", ["duplicate", "zero", "underdetermined"])
+def test_vecm_singular_short_run_regressors(regressors):
+    from statsmodels.tsa.vector_ar.vecm import _r_matrices
+
+    observed = e6.load_pandas().data[["Dp", "R"]].to_numpy().T
+    if regressors == "duplicate":
+        dx = np.vstack((observed, observed))
+    elif regressors == "zero":
+        dx = observed - observed
+    else:
+        observed = observed[:, :1]
+        dx = observed
+    with pytest.raises(np.linalg.LinAlgError, match="Singular matrix"):
+        _r_matrices(observed, observed, dx)
+
+
+@pytest.mark.parametrize("units", [1e-200, 1e200])
+def test_vecm_svd_extreme_measurement_units(units):
+    from statsmodels.tsa.vector_ar.vecm import _full_rank_svd
+
+    observed = e6.load_pandas().data[["Dp", "R"]].to_numpy()
+    u, s, vh, scale = _full_rank_svd(observed * units)
+    # Reconstruct in the original units so the check does not itself square
+    # extreme values. A Euclidean-norm scale overflows or underflows here.
+    reconstructed = ((u * s) @ vh) * (scale / units)
+    assert_allclose(reconstructed, observed, rtol=1e-12, atol=1e-15)

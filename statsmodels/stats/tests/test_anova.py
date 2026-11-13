@@ -1,4 +1,5 @@
 from io import StringIO
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -503,22 +504,16 @@ def fit_rank_deficient(model_func, formula, data, **kwargs):
 
 
 def nested_data(label_within):
-    # Factor B has nB levels in each of the nA levels of factor A. The labels
-    # of B are reused in every level of A if label_within is True and are
-    # unique to the level of A that contains them otherwise.
-    nA, nB, nobs = 3, 4, 5
-    a = [f"A{i}" for i in range(nA) for _ in range(nB * nobs)]
+    # Original 60 observations from GH 8506, not generated substitutes.
+    path = Path(__file__).parent / "results" / "anova_nested.csv"
+    data = read_csv(path)
     if label_within:
-        b = [f"B{j}" for _ in range(nA) for j in range(nB) for _ in range(nobs)]
-    else:
-        b = [f"B{i}{j}" for i in range(nA) for j in range(nB) for _ in range(nobs)]
-    rng = np.random.default_rng(8506)
-    data = pd.DataFrame({"A": a, "B": b, "y": rng.standard_normal(len(a))})
+        data["B"] = data["B"].str[-1]
     return data.astype({"A": "category", "B": "category"})
 
 
 @pytest.mark.parametrize("robust", [None, "hc3"])
-@pytest.mark.parametrize("typ, label", ANOVA_TYPES)
+@pytest.mark.parametrize("typ, label", ANOVA_TYPES[2:])
 @pytest.mark.parametrize("formula", ["y ~ x + duplicate", "y ~ x + zero"])
 def test_rank_deficient(formula, typ, label, robust):
     # The duplicate or the zero column would be assigned an arbitrary sum of
@@ -539,7 +534,7 @@ def test_rank_deficient(formula, typ, label, robust):
         anova_lm(res, typ=typ, robust=robust)
 
 
-@pytest.mark.parametrize("typ, label", ANOVA_TYPES)
+@pytest.mark.parametrize("typ, label", ANOVA_TYPES[2:])
 def test_more_columns_than_observations(typ, label):
     data = pd.DataFrame({"y": [1.0, 2.0, 4.0], "x": [0.0, 1.0, 2.0]})
     res = fit_rank_deficient(ols, "y ~ x + I(x**2) + I(x**3)", data)
@@ -547,7 +542,7 @@ def test_more_columns_than_observations(typ, label):
         anova_lm(res, typ=typ)
 
 
-@pytest.mark.parametrize("typ, label", ANOVA_TYPES)
+@pytest.mark.parametrize("typ, label", ANOVA_TYPES[2:])
 @pytest.mark.parametrize("formula", ["y ~ C(a) * C(b)", "y ~ C(a):C(b)"])
 def test_empty_cell(formula, typ, label):
     # No observation in the cell (a="u", b="q"), so one interaction column is
@@ -567,7 +562,7 @@ def test_empty_cell(formula, typ, label):
         anova_lm(res, typ=typ)
 
 
-@pytest.mark.parametrize("typ, label", ANOVA_TYPES)
+@pytest.mark.parametrize("typ, label", ANOVA_TYPES[2:])
 def test_nested_factor_crossed_with_unique_labels(typ, label):
     # GH 8506. If the labels of B are unique to a level of A, A + A:B contains
     # the interactions of B with the levels of A that do not contain it.
@@ -618,7 +613,8 @@ def test_zero_weights_rank_deficient(typ, label):
 
 
 @pytest.mark.parametrize("typ", [1, "I", 2, "II", 3, "III"])
-def test_full_rank_control(typ):
+@pytest.mark.parametrize("method", ["pinv", "qr"])
+def test_full_rank_control(typ, method):
     # Dropping the redundant column leaves the fit unchanged and the table
     # of the model without it is available.
     data = pd.DataFrame(
@@ -628,7 +624,7 @@ def test_full_rank_control(typ):
             "duplicate": np.arange(12),
         }
     )
-    res = ols("y ~ x", data=data).fit()
+    res = ols("y ~ x", data=data).fit(method=method)
     table = anova_lm(res, typ=typ)
     pvalue = "PR(>F)"
     np.testing.assert_allclose(table.loc["x", pvalue], res.pvalues["x"])
@@ -636,3 +632,159 @@ def test_full_rank_control(typ):
     assert table.loc["Residual", "df"] == res.df_resid
     redundant = fit_rank_deficient(ols, "y ~ x + duplicate", data)
     np.testing.assert_allclose(redundant.fittedvalues, res.fittedvalues, atol=1e-12)
+
+
+@pytest.mark.parametrize("typ", [1, "I"])
+@pytest.mark.parametrize("intercept", [True, False])
+def test_type1_nested_original(typ, intercept):
+    # GH 8506, josef-pkt's full-rank recoding reference:
+    # https://github.com/statsmodels/statsmodels/issues/8506#issuecomment-1307746481
+    # Independently, these are the between-A and within-A/between-B group
+    # mean sums of squares; the observations are retained in results/.
+    data = nested_data(label_within=False)
+    formula = "y ~ A + A:B" if intercept else "y ~ 0 + A + A:B"
+    res = fit_rank_deficient(ols, formula, data)
+    table = anova_lm(res, typ=typ)
+    expected_ss = [441.2333333333333, 2656.9, 18388.8]
+    if not intercept:
+        expected_ss[0] += len(data) * data["y"].mean() ** 2
+    np.testing.assert_allclose(table["sum_sq"], expected_ss, rtol=1e-12)
+    np.testing.assert_array_equal(table["df"], [2 if intercept else 3, 9, 48])
+    np.testing.assert_allclose(table.iloc[:2]["F"],
+                               table.iloc[:2]["mean_sq"] / 383.1)
+    np.testing.assert_allclose(table["sum_sq"].sum(),
+                               np.sum((data.y - data.y.mean()) ** 2)
+                               if intercept else data.y @ data.y)
+
+
+def test_type1_nested_unequal_levels_and_observations():
+    # Unequal nested levels cannot be made full rank just by relabeling B.
+    data = nested_data(label_within=False)
+    data = data.loc[~data.B.isin(["B11", "B12", "B21"])].iloc[2:].copy()
+    data["A"] = data.A.cat.remove_unused_categories()
+    data["B"] = data.B.cat.remove_unused_categories()
+    res = fit_rank_deficient(ols, "y ~ A/B", data)
+    table = anova_lm(res)
+    mean_a = data.groupby("A", observed=True).y.transform("mean")
+    mean_b = data.groupby("B", observed=True).y.transform("mean")
+    expected = [np.sum((mean_a - data.y.mean()) ** 2),
+                np.sum((mean_b - mean_a) ** 2),
+                np.sum((data.y - mean_b) ** 2)]
+    np.testing.assert_allclose(table["sum_sq"], expected, rtol=1e-12)
+    np.testing.assert_array_equal(table["df"], [2, 6, len(data) - 9])
+
+
+@pytest.mark.parametrize("redundant", ["duplicate", "zero"])
+@pytest.mark.parametrize("first", [False, True])
+@pytest.mark.parametrize("robust", [None, "hc3"])
+def test_type1_aliased_term(redundant, first, robust):
+    data = nested_data(label_within=False)
+    data["x"] = np.arange(len(data))
+    data["duplicate"] = data.x
+    data["zero"] = 0.0
+    terms = f"{redundant} + x" if first else f"x + {redundant}"
+    res = fit_rank_deficient(ols, "y ~ " + terms, data)
+    table = anova_lm(res, robust=robust)
+    reference = anova_lm(ols("y ~ x", data=data).fit())
+    alias = "x" if first and redundant == "duplicate" else redundant
+    identified = redundant if alias == "x" else "x"
+    np.testing.assert_allclose(table.loc[identified], reference.loc["x"],
+                               rtol=1e-12)
+    np.testing.assert_array_equal(table.loc[alias, ["df", "sum_sq"]], [0, 0])
+    assert table.loc[alias, ["mean_sq", "F", "PR(>F)"]].isna().all()
+
+
+def test_type1_rank_zero():
+    data = nested_data(label_within=False)
+    data["zero"] = 0.0
+    table = anova_lm(fit_rank_deficient(ols, "y ~ 0 + zero", data))
+    np.testing.assert_array_equal(table["df"], [0, len(data)])
+    np.testing.assert_allclose(table["sum_sq"], [0, data.y @ data.y])
+    assert table.loc["zero", ["mean_sq", "F", "PR(>F)"]].isna().all()
+
+
+def test_type1_saturated():
+    data = pd.DataFrame({"y": [1.0, 2.0, 4.0], "x": [0.0, 1.0, 2.0]})
+    res = fit_rank_deficient(ols, "y ~ x + I(x**2) + I(x**3)", data)
+    table = anova_lm(res)
+    np.testing.assert_array_equal(table["df"], [1, 1, 0, 0])
+    np.testing.assert_allclose(table.iloc[:2]["sum_sq"], [4.5, 1 / 6])
+    assert table[["F", "PR(>F)"]].isna().all().all()
+
+
+def test_type1_large_mean_small_effect():
+    # The nested effect should not disappear through subtraction of large RSS.
+    data = nested_data(label_within=False)
+    reference = anova_lm(fit_rank_deficient(ols, "y ~ A/B", data))
+    data["y"] = data.y + 1e9
+    table = anova_lm(fit_rank_deficient(ols, "y ~ A/B", data))
+    np.testing.assert_allclose(table["sum_sq"], reference["sum_sq"], rtol=1e-7)
+
+
+def test_type1_inconsistent_rank():
+    # The fit truncates an independent column far below its cutoff in the
+    # original units. Normalization recovers that direction: these are
+    # different numerical models and must not be combined in one table.
+    data = nested_data(label_within=False)
+    data["tiny"] = 1e-100 * np.linspace(-1, 1, len(data))
+    data["zero"] = 0.0
+    res = fit_rank_deficient(ols, "y ~ tiny + zero", data)
+    with pytest.raises(ValueError, match="inconsistent with the fitted"):
+        anova_lm(res)
+
+
+def test_type1_inconsistent_residuals():
+    # A badly scaled alias can leave pinv with inaccurate fitted values even
+    # when the sequential rank agrees. A plausible table must not be returned.
+    data = nested_data(label_within=False)
+    data["x"] = 1 + 1e-8 * np.arange(len(data))
+    data["duplicate"] = data.x
+    res = fit_rank_deficient(ols, "y ~ x + duplicate", data)
+    with pytest.raises(ValueError, match="inconsistent with the fitted"):
+        anova_lm(res)
+
+
+@pytest.mark.parametrize("scale", [1e-200, 1e-20, 1.0, 1e10])
+def test_type1_aliased_column_scaling(scale):
+    # Observation number from GH 8506 is a retained, observed covariate.
+    # Even a tiny first copy must receive the effect before its later alias.
+    data = nested_data(label_within=False)
+    data["observation"] = np.tile(np.arange(5), 12)
+    data["scaled"] = scale * data.observation
+    res = fit_rank_deficient(ols, "y ~ scaled + observation", data)
+    table = anova_lm(res)
+    reference = anova_lm(ols("y ~ observation", data=data).fit())
+    np.testing.assert_allclose(table.loc["scaled"], reference.loc["observation"],
+                               rtol=1e-12)
+    np.testing.assert_array_equal(table.loc["observation", ["df", "sum_sq"]], [0, 0])
+
+
+
+def test_type1_empty_interaction_cell():
+    data = nested_data(label_within=True)
+    data = data.loc[~((data.A == "A3") & (data.B == "4"))]
+    res = fit_rank_deficient(ols, "y ~ A * B", data)
+    table = anova_lm(res)
+    mean_a = data.groupby("A", observed=True).y.transform("mean")
+    mean_cell = data.groupby(["A", "B"], observed=True).y.transform("mean")
+    ssr_a = np.sum((data.y - mean_a) ** 2)
+    ssr_additive = ols("y ~ A + B", data=data).fit().ssr
+    ssr_cells = np.sum((data.y - mean_cell) ** 2)
+    expected = [np.sum((mean_a - data.y.mean()) ** 2),
+                ssr_a - ssr_additive, ssr_additive - ssr_cells, ssr_cells]
+    np.testing.assert_allclose(table["sum_sq"], expected, rtol=1e-12)
+    np.testing.assert_array_equal(table["df"], [2, 3, 5, 44])
+
+
+
+def test_type1_no_test():
+    data = nested_data(label_within=False)
+    res = fit_rank_deficient(ols, "y ~ A/B", data)
+    table = anova_lm(res, test=None)
+    np.testing.assert_allclose(table["sum_sq"], [441.2333333333333, 2656.9, 18388.8])
+
+
+def test_type1_full_rank_saturated():
+    data = pd.DataFrame({"y": [1.0, 2.0, 4.0], "x": [0.0, 1.0, 2.0]})
+    table = anova_lm(ols("y ~ x + I(x**2)", data=data).fit())
+    assert table[["F", "PR(>F)"]].isna().all().all()

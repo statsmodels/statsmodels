@@ -151,6 +151,12 @@ Behavior changes
   these kernels returned ``nan`` for most data. They now integrate the density
   over the support of the observations, in the units of the data, so that the
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
+- ``KDEUnivariate`` density evaluation, distribution and survival probabilities,
+  entropy and empirical quantiles consistently exclude observations and weights
+  outside ``clip``. Previously, some fitted evaluations reused the original
+  sample. Small upper-tail probabilities are preserved instead of rounding to
+  zero when the CDF rounds to one. The meaning of ``icdf`` as empirical sample
+  quantiles is unchanged. :issue:`904`
 
 New Features and Enhancements
 =============================
@@ -266,6 +272,10 @@ Performance
   parameters. For ``MNLogit`` with 4 categories, 28 regressors and 20,000
   observations the peak memory drops from 3 GB to 0.09 GB. This also applies
   to ``get_margeff`` of ``GLM`` and ``GEE``. :issue:`4158`, :pr:`10722`
+- ``KDEUnivariate.cdf`` and ``KDEUnivariate.sf`` evaluate the built-in kernels
+  more quickly, particularly for samples with many exactly repeated values,
+  while limiting temporary probability-array size. The fitted bandwidth and
+  kernel density estimate are unchanged. :issue:`904`
 
 Bug Fixes
 =========
@@ -868,6 +878,17 @@ Robust and multivariate statistics
 
 Nonparametric
 -------------
+
+- Negative binomial likelihood and derivatives use stable Poisson-boundary
+  calculations. Conditional logistic likelihood uses scaled iterative recurrence
+  and matched-group batches, preserving per-group overrides.
+- Cox score and martingale residuals use interval reductions while retaining
+  tie, delayed-entry and stratification semantics.
+- Categorical KDE bandwidths and cross-validation use fixed observed support
+  and aggregate repeated observations without changing their weights.
+- Type I ANOVA computes effective nested-term ranks in singular OLS designs.
+- VECM estimation uses scaled SVD and cached fitted projections; numerically
+  rank-deficient designs raise ``LinAlgError``.
 
 - The tricube kernel in ``statsmodels.nonparametric.kernels`` returns 0
   outside of its support, :math:`|u| > 1`, instead of the peak value. Results

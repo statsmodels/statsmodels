@@ -20,7 +20,7 @@ from typing import NamedTuple
 import warnings
 
 import numpy as np
-from scipy import integrate
+from scipy import integrate, special
 
 from statsmodels.sandbox.nonparametric import kernels
 from statsmodels.tools._decorators import cache_readonly
@@ -45,6 +45,84 @@ kernel_switch = dict(
 )
 
 
+def _kernel_cdf(kernel, z):
+    """Evaluate the integrated standard kernel, with stable small tails."""
+    kind = type(kernel)
+    if kind is kernels.Gaussian:
+        return special.ndtr(z)
+
+    # All built-in kernels are symmetric. Evaluate the smaller tail first,
+    # so a survival probability near the right boundary is not 1 - cdf.
+    u = np.clip(1.0 - np.abs(z), 0.0, 1.0)
+    if kind is kernels.Uniform:
+        tail = 0.5 * u
+    elif kind is kernels.Triangular:
+        tail = 0.5 * u**2
+    elif kind is kernels.Epanechnikov:
+        t = 0.5 * u
+        tail = t**2 * (3.0 - 2.0 * t)
+    elif kind is kernels.Biweight:
+        t = 0.5 * u
+        tail = t**3 * (10.0 + t * (-15.0 + 6.0 * t))
+    elif kind is kernels.Triweight:
+        t = 0.5 * u
+        tail = t**4 * (35.0 + t * (-84.0 + t * (70.0 - 20.0 * t)))
+    elif kind is kernels.Cosine:
+        tail = np.sin(np.pi * u / 4.0) ** 2
+    elif kind is kernels.Cosine2:
+        t = np.clip(0.5 - np.abs(z), 0.0, 0.5)
+        angle = 2.0 * np.pi * t
+        angle2 = angle**2
+        # t - sin(2*pi*t)/(2*pi) loses its leading cubic term near zero.
+        # The series through angle**12 has sub-roundoff truncation error
+        # for angle < 0.1.
+        series = (
+            t
+            * angle2
+            * (
+                1.0 / 6.0
+                + angle2
+                * (
+                    -1.0 / 120.0
+                    + angle2
+                    * (
+                        1.0 / 5040.0
+                        + angle2
+                        * (
+                            -1.0 / 362880.0
+                            + angle2 * (1.0 / 39916800.0 - angle2 / 6227020800.0)
+                        )
+                    )
+                )
+            )
+        )
+        tail = np.where(angle < 0.1, series, t - np.sin(angle) / (2.0 * np.pi))
+    elif kind is kernels.Tricube:
+        # Integral from -1 to -abs(z), expressed in the distance from
+        # the support boundary. This avoids subtracting two nearly
+        # equal primitive values when the tail is small.
+        tail = (
+            (70.0 / 81.0)
+            * u**4
+            * (
+                27.0 / 4.0
+                + u
+                * (
+                    -81.0 / 5.0
+                    + u
+                    * (
+                        18.0
+                        + u * (-81.0 / 7.0 + u * (9.0 / 2.0 + u * (-1.0 + u / 10.0)))
+                    )
+                )
+            )
+        )
+    else:
+        return None
+    tail = np.clip(tail, 0.0, 0.5)
+    return np.where(z > 0, 1.0 - tail, tail)
+
+
 def _checkisfit(self):
     try:
         _ = self.density
@@ -65,8 +143,16 @@ class KDEUnivariate:
     Notes
     -----
     If cdf, sf, cumhazard, or entropy are computed, they are computed based on
-    the definition of the kernel rather than the FFT approximation, even if
-    the density is fit with FFT = True.
+    the definition of the fitted kernel rather than the FFT approximation,
+    even if the density is fit with FFT = True. The built-in kernels use
+    analytic integrals for cdf and sf, evaluated in bounded work blocks.
+    The sf is computed directly to preserve small upper-tail probabilities.
+    Clipped observations and their weights are excluded from all fitted
+    evaluations. The icdf remains the empirical sample quantile function.
+
+    .. versionchanged:: 0.15.1
+       Fitted evaluations consistently use the observations retained by clip.
+       Analytic cdf and sf evaluation replaces quadrature for built-in kernels.
 
     `KDEUnivariate` is much faster than `KDEMultivariate`, due to its FFT-based
     implementation.  It should be preferred for univariate, continuous data.
@@ -212,12 +298,76 @@ class KDEUnivariate:
         self.kernel = kernel_switch[kernel](h=bw)  # we instantiate twice,
         # should this passed to funcs?
         # put here to ensure empty cache after re-fit with new options
+        fit_mask = (endog > clip[0]) & (endog < clip[1])
+        self._fit_endog = endog[fit_mask]
         if weights is not None:
-            weights = np.asarray(weights)
+            weights = np.asarray(weights)[fit_mask]
             weights = weights / weights.sum()
         self.kernel.weights = weights
         self._cache = {}
         return self
+
+    @cache_readonly
+    def _cdf_sample(self):
+        """Combine exactly repeated observations for probability evaluation."""
+        endog = getattr(self, "_fit_endog", self.endog)
+        weights = self.kernel.weights
+        if weights is not None:
+            weights = np.asarray(weights, dtype=float)
+        # Avoid a full-size sort for small or mostly distinct samples. This
+        # only selects an evaluation path: observations are never approximated.
+        probe_size = 256
+        if len(endog) < probe_size:
+            return endog, weights
+        if len(np.unique(endog[:probe_size])) > probe_size // 2:
+            return endog, weights
+        # A repeated prefix alone need not represent the rest of the data.
+        stride = max(1, len(endog) // probe_size)
+        if len(np.unique(endog[::stride][:probe_size])) > probe_size // 2:
+            return endog, weights
+        if weights is None:
+            values, counts = np.unique(endog, return_counts=True)
+            return values, counts / len(endog)
+
+        order = np.argsort(endog, kind="stable")
+        sorted_endog = endog[order]
+        starts = np.r_[0, np.flatnonzero(sorted_endog[1:] != sorted_endog[:-1]) + 1]
+        # reduceat avoids the sequential accumulation error of bincount;
+        # stable sorting preserves the order of weights within each value.
+        masses = np.add.reduceat(weights[order], starts)
+        return sorted_endog[starts], masses
+
+    def _evaluate_cdf(self, survival=False):
+        """Sum integrated kernels without a full data-by-support array."""
+        kern = self.kernel
+        if _kernel_cdf(kern, np.empty(0)) is None:
+            return None
+        endog, weights = self._cdf_sample
+        nobs = len(endog)
+        result = np.zeros(len(self.support), dtype=float)
+
+        # Bound both dimensions: a single support point can itself have
+        # more observations than fit in a work block.
+        max_elements = 1 << 18
+        sample_block = min(nobs, max_elements)
+        point_block = max(1, max_elements // sample_block)
+        for start in range(0, len(self.support), point_block):
+            stop = min(start + point_block, len(self.support))
+            points = self.support[start:stop, None]
+            subtotal = np.zeros(stop - start, dtype=float)
+            for obs_start in range(0, nobs, sample_block):
+                obs_stop = min(obs_start + sample_block, nobs)
+                z = (points - endog[None, obs_start:obs_stop]) / kern.h
+                if survival:
+                    z = -z
+                probabilities = _kernel_cdf(kern, z)
+                if weights is not None:
+                    probabilities *= weights[None, obs_start:obs_stop]
+                subtotal += probabilities.sum(axis=1)
+            result[start:stop] = subtotal
+        if weights is None:
+            result /= nobs
+        return result
 
     @cache_readonly
     def cdf(self):
@@ -227,12 +377,16 @@ class KDEUnivariate:
         Note: Will not work if fit has not been called.
         """
         _checkisfit(self)
+        probabilities = self._evaluate_cdf()
+        if probabilities is not None:
+            return probabilities
         kern = self.kernel
+        endog = getattr(self, "_fit_endog", self.endog)
         if kern.domain is None:  # TODO: test for grid point at domain bound
             a = -np.inf
         else:
             # lowest point with a positive density, in the units of the data
-            a = self.endog.min() + kern.domain[0] * kern.h
+            a = endog.min() + kern.domain[0] * kern.h
             a = min(a, self.support[0])
 
         def func(x, s):
@@ -241,7 +395,6 @@ class KDEUnivariate:
         support = self.support
         support = np.r_[a, support]
         gridsize = len(support)
-        endog = self.endog
         probs = [
             integrate.quad(func, support[i - 1], support[i], args=endog)[0]
             for i in range(1, gridsize)
@@ -266,6 +419,9 @@ class KDEUnivariate:
         Note: Will not work if fit has not been called.
         """
         _checkisfit(self)
+        probabilities = self._evaluate_cdf(survival=True)
+        if probabilities is not None:
+            return probabilities
         return 1 - self.cdf
 
     @cache_readonly
@@ -284,7 +440,7 @@ class KDEUnivariate:
 
         kern = self.kernel
 
-        endog = self.endog
+        endog = getattr(self, "_fit_endog", self.endog)
         if kern.domain is not None:
             # the density is positive only within the kernel domain around
             # the observations, in the units of the data
@@ -307,7 +463,8 @@ class KDEUnivariate:
         _checkisfit(self)
         gridsize = len(self.density)
 
-        return _mquantiles(self.endog, np.linspace(0, 1, gridsize))
+        endog = getattr(self, "_fit_endog", self.endog)
+        return _mquantiles(endog, np.linspace(0, 1, gridsize))
 
     def evaluate(self, point):
         """
@@ -324,7 +481,8 @@ class KDEUnivariate:
             The estimated density at `point`.
         """
         _checkisfit(self)
-        return self.kernel.density(self.endog, point)
+        endog = getattr(self, "_fit_endog", self.endog)
+        return self.kernel.density(endog, point)
 
 
 # Kernel Density Estimator Functions

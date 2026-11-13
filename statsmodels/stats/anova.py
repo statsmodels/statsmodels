@@ -139,6 +139,69 @@ def anova_single(model, **kwargs):
         raise ValueError(f"Type {typ!s} not understood")
 
 
+def _anova1_rank_deficient(model, endog, exog, slices, has_intercept):
+    """Sequential sums of squares and effective df for a singular OLS fit.
+
+    Each block contributes the part of its column space orthogonal to all
+    preceding blocks. Nonzero columns are first normalized to unit length
+    so rescaling an aliased column cannot change which term receives its
+    effect. Singular values of residualized blocks use a common absolute
+    tolerance, ``max(exog.shape) * eps * norm(normalized_exog, 2)``.
+    Reorthogonalization prevents roundoff in an aliased column from being
+    counted as a new direction. Squared effects, rather than differences of
+    residual sums of squares, avoid cancellation for small effects.
+
+    Rank and residual checks keep this decomposition consistent with the
+    supplied fit, whose numerical rank convention can differ near singularity.
+    """
+    exog = np.asarray(exog, dtype=float)
+    eps = np.finfo(exog.dtype).eps
+    # Scale by the largest entry first so column norms cannot overflow or
+    # underflow merely because a covariate is measured in extreme units.
+    scales = np.max(np.abs(exog), axis=0)
+    exog = np.divide(exog, scales, out=np.zeros_like(exog), where=scales != 0)
+    norms = np.linalg.norm(exog, axis=0)
+    np.divide(exog, norms, out=exog, where=norms != 0)
+    tol = max(exog.shape) * eps * np.linalg.norm(exog, 2)
+    basis = np.empty((exog.shape[0], 0))
+    # Center before projecting out the intercept to avoid losing small effects
+    # when the response has a large mean. The intercept SS is not reported.
+    resid = np.array(endog, dtype=float, copy=True)
+    if has_intercept:
+        resid -= resid.mean()
+    df = np.zeros(len(slices))
+    sum_sq = np.zeros(len(slices))
+    for i, slice_ in enumerate(slices):
+        block = exog[:, slice_].copy()
+        for _ in range(2):
+            block -= basis @ (basis.T @ block)
+        u, singular_values, _ = np.linalg.svd(block, full_matrices=False)
+        rank = np.count_nonzero(singular_values > tol)
+        if rank:
+            new_basis = u[:, :rank]
+            for _ in range(2):
+                new_basis -= basis @ (basis.T @ new_basis)
+            new_basis, _ = np.linalg.qr(new_basis)
+            effects = new_basis.T @ resid
+            sum_sq[i] = effects @ effects
+            df[i] = rank
+            resid -= new_basis @ effects
+            basis = np.column_stack((basis, new_basis))
+
+    # Do not silently combine one numerical model's numerator with another
+    # model's residual degrees of freedom or residual variance.
+    resid_tol = 10 * max(exog.shape) * eps * np.linalg.norm(endog)
+    if df.sum() != model.model.rank or not np.allclose(
+        resid, model.resid, rtol=0, atol=resid_tol
+    ):
+        raise ValueError(
+            "Type I ANOVA decomposition is inconsistent with the fitted "
+            "model's numerical rank or residuals. Rescale or remove "
+            "nearly collinear columns before fitting the model."
+        )
+    return df, sum_sq
+
+
 def anova1_lm_single(
     model, endog, exog, nobs, model_spec, table, n_rows, test, pr_test, robust
 ):
@@ -184,22 +247,27 @@ def anova1_lm_single(
     terms that precede it in the model. Consequently, the results depend
     on the order of the terms when the design is unbalanced.
     """
-    _check_full_rank(model, "I")
-
     mgr = FormulaManager()
-    effects = getattr(model, "effects", None)
-    if effects is None:
-        q, r = np.linalg.qr(exog)
-        effects = np.dot(q.T, endog)
-
-    arr = np.zeros((len(model_spec.terms), len(model_spec.column_names)))
     slices = [
         mgr.get_slice(model_spec, name) for name in mgr.get_term_names(model_spec)
     ]
-    for i, slice_ in enumerate(slices):
-        arr[i, slice_] = 1
+    rank = model.model.rank
+    if isinstance(model.model, OLS) and rank is not None and rank < exog.shape[1]:
+        df, sum_sq = _anova1_rank_deficient(
+            model, endog, exog, slices, mgr.has_intercept(model_spec)
+        )
+    else:
+        _check_full_rank(model, "I")
+        effects = getattr(model, "effects", None)
+        if effects is None:
+            q, r = np.linalg.qr(exog)
+            effects = np.dot(q.T, endog)
 
-    sum_sq = np.dot(arr, effects**2)
+        arr = np.zeros((len(model_spec.terms), len(model_spec.column_names)))
+        for i, slice_ in enumerate(slices):
+            arr[i, slice_] = 1
+        df = arr.sum(1)
+        sum_sq = np.dot(arr, effects**2)
     # NOTE: assumes intercept is first column
     mgr = FormulaManager()
     idx = mgr.intercept_idx(model_spec)
@@ -209,12 +277,17 @@ def anova1_lm_single(
 
     index = term_names.tolist()
     table.index = Index([*index, "Residual"])
-    table.loc[index, ["df", "sum_sq"]] = np.c_[arr[~idx].sum(1), sum_sq]
+    table.loc[index, ["df", "sum_sq"]] = np.c_[df[~idx], sum_sq]
     # fill in residual
     table.loc["Residual", ["sum_sq", "df"]] = model.ssr, model.df_resid
     if test == "F":
-        table[test] = (table["sum_sq"] / table["df"]) / (model.ssr / model.df_resid)
-        table[pr_test] = stats.f.sf(table["F"], table["df"], model.df_resid)
+        if model.df_resid > 0:
+            table[test] = (table["sum_sq"] / table["df"]) / (
+                model.ssr / model.df_resid
+            )
+            table[pr_test] = stats.f.sf(table["F"], table["df"], model.df_resid)
+        else:
+            table[[test, pr_test]] = np.nan
         table.loc["Residual", [test, pr_test]] = np.nan, np.nan
     table["mean_sq"] = table["sum_sq"] / table["df"]
     return table
@@ -442,26 +515,41 @@ def anova_lm(*args, **kwargs):
     Raises
     ------
     ValueError
-        If a single model with a rank-deficient design matrix is passed, for
-        any type of Anova table. Remove redundant columns, empty cells and
-        unused factor levels before fitting the model.
+        If a single model with a rank-deficient design matrix is passed for
+        Type II or III, or for Type I with a model other than OLS. Also raised
+        if a singular OLS model's Type I decomposition disagrees with the
+        fitted model's numerical rank or residuals; rescale or remove nearly
+        collinear columns before fitting in this case.
 
     Notes
     -----
     Model statistics are given in the order of args. Models must have been fit
     using the formula api.
 
-    The tables of a single model assume that the design matrix has full
-    column rank. This fails if a term duplicates or is a linear combination of
-    other terms, if a factor level or a cell of an interaction has no
-    observations, or if there are more columns than observations. A model
-    with a redundant term has the same fitted values as the model without it,
-    but the redundant term would be assigned an arbitrary sum of squares,
-    degrees of freedom and p-value, so the model is rejected. A factor ``B``
-    that is nested in a factor ``A`` can be used in the formula ``A/B`` if the
-    same labels of ``B`` are used within every level of ``A``. If each level
-    of ``A`` has its own labels of ``B``, the cells that combine a label of
-    ``B`` with the other levels of ``A`` are empty.
+    Type II and III tables require full column rank. Type I tables for OLS
+    allow redundant columns, including empty interaction cells and unused
+    factor levels. Each term's degrees of freedom count the new directions
+    added to the span of the preceding terms. A wholly redundant term has
+    zero degrees of freedom and sum of squares, and undefined mean square,
+    F statistic and p-value. This is a sequential test of model subspaces;
+    it does not identify coefficients of aliased terms. The F statistic and
+    p-value are also undefined when there are no residual degrees of freedom.
+
+    For singular OLS designs, nonzero columns are normalized to unit length
+    before the sequential decomposition. A new direction is retained if its
+    singular value exceeds ``max(nobs, ncols) * eps`` times the largest
+    singular value of the normalized full design. Near this numerical cutoff,
+    degrees of freedom can depend on the order and conditioning of the terms.
+
+    In particular, a factor ``B`` nested within ``A`` can be specified as
+    ``A/B`` with labels of ``B`` unique to each level of ``A``, including
+    different numbers of nested levels. These are fixed-effects tests using
+    the residual mean square as the denominator. Random-effects nested
+    designs can require different error terms.
+
+    .. versionchanged:: 0.15.1
+        Type I ANOVA supports rank-deficient OLS models when the sequential
+        decomposition agrees with the fitted model's rank and residuals.
 
     **Type I**: Sequential sums of squares. Each term is tested after the
     terms that precede it in the model. Consequently, the results depend

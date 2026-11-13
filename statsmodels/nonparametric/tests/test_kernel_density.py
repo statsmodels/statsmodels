@@ -3,11 +3,9 @@ import numpy.testing as npt
 from numpy.testing import assert_allclose, assert_equal
 import pytest
 
-import statsmodels.api as sm
+from statsmodels.nonparametric import api as nparam
 from statsmodels.nonparametric._kernel_base import gpke
 from statsmodels.nonparametric.kernel_density import KDEMultivariate
-
-nparam = sm.nonparametric
 
 
 class KDETestBase:
@@ -398,6 +396,7 @@ class TestKDEMultivariate(KDETestBase):
 
     def test_continuous_cdf(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
+
             dens = nparam.KDEMultivariate(
                 data=[self.Italy_gdp, self.growth], var_type="cc", bw="cv_ml"
             )
@@ -646,7 +645,6 @@ class TestKDEMultivariateConditional(KDETestBase):
 
     def test_continuous_cdf(self):
         with pytest.warns(FutureWarning, match="After 0.17"):
-
             dens_nm = nparam.KDEMultivariateConditional(
                 endog=[self.Italy_gdp],
                 exog=[self.growth],
@@ -773,77 +771,90 @@ def test_conditional_cdf_formula(dep_type, indep_type):
     assert_allclose(dens.cdf(), expected, rtol=1e-12)
 
 
-def test_normal_reference_bw_of_unordered_variable_in_range():
-    # GH 3790: the normal reference rule of thumb is defined for continuous
-    # variables, so applying it to an unordered variable makes the bandwidth
-    # scale with the arbitrary numeric codes.  The bandwidth of an unordered
-    # variable is the smoothing probability of the Aitchison-Aitken kernel
-    # (see kernels.aitchison_aitken), for which the estimate is a probability
-    # density only if 0 <= bw <= (levels - 1) / levels.  Larger values put
-    # less weight on the observed levels than on the unobserved ones, which
-    # made the density negative for codes on a large scale.
-    codes = 1000 * np.array([0, 0, 0, 0, 1])
-    dens = nparam.KDEMultivariate(data=codes, var_type="u", rng=0)
-    # two levels, so the largest valid bandwidth is 1 / 2
-    npt.assert_allclose(dens.bw, [0.5])
-    pdf = dens.pdf([0, 1000])
-    assert np.all(np.isfinite(pdf))
-    assert np.all(pdf >= 0)
-    # the bandwidth is at its bound, so the kernel is the uniform one
-    npt.assert_allclose(pdf, [0.5, 0.5])
-    npt.assert_allclose(pdf.sum(), 1.0)
-
-    # codes that give a bandwidth inside the valid range are unchanged
-    dens_small = nparam.KDEMultivariate(data=[0, 0, 0, 0, 1], var_type="u", rng=0)
-    npt.assert_allclose(dens_small.bw, [0.30730658])
-    npt.assert_allclose(dens_small.pdf([0, 1]), [0.61561605, 0.38438395], rtol=1e-6)
+@pytest.mark.parametrize("levels", [[0, 1], [0, 1000], [42, -7]])
+@pytest.mark.parametrize("bw", [None, "normal_reference", [0]])
+@pytest.mark.parametrize("var_type", ["u", "o"])
+def test_normal_reference_bw_of_discrete_variable(levels, bw, var_type):
+    # GH 3790's observations have empirical probabilities 4/5 and 1/5.
+    # The np normal-reference convention is no smoothing for factors:
+    # https://search.r-project.org/CRAN/refmans/np/html/np.density.bw.html
+    # Thus their numeric labels must not affect the resulting probabilities.
+    codes = np.asarray(levels)[[0, 0, 0, 0, 1]]
+    dens = nparam.KDEMultivariate(data=codes, var_type=var_type, bw=bw, rng=0)
+    assert_equal(dens.bw, [0])
+    assert_allclose(dens.pdf(levels), [0.8, 0.2], rtol=1e-14)
 
 
 def test_normal_reference_bw_of_unordered_variable_mixed_data():
-    # The bound is applied to the unordered variables only, the continuous
-    # bandwidth is still the normal reference rule of thumb.
+    # The discrete kernel is an indicator, so each density is the sum of
+    # the Gaussian kernels for its category, divided by the total sample size.
     codes = 1000 * np.array([0, 0, 0, 0, 1])
     cont = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
     dens = nparam.KDEMultivariate(
         data=np.column_stack((codes, cont)), var_type="uc", rng=0
     )
-    npt.assert_allclose(dens.bw[0], 0.5)
+    assert_equal(dens.bw[0], 0)
     npt.assert_allclose(dens.bw[1], 1.06 * np.std(cont) * 5 ** (-1.0 / (4 + 2)))
-    pdf = dens.pdf([[0, 0.1], [1000, 0.5]])
-    assert np.all(np.isfinite(pdf))
-    assert np.all(pdf > 0)
+    points = np.array([[0, 0.1], [1000, 0.5]])
+    expected = []
+    h = dens.bw[1]
+    for level, point in points:
+        z = (cont[codes == level] - point) / h
+        expected.append(np.exp(-0.5 * z**2).sum() / (5 * h * np.sqrt(2 * np.pi)))
+    assert_allclose(dens.pdf(points), expected, rtol=1e-14)
+    reused = nparam.KDEMultivariate(
+        data=np.column_stack((codes, cont)), var_type="uc", bw=dens.bw, rng=0
+    )
+    assert_allclose(reused.pdf(points), expected, rtol=1e-14)
 
 
-def test_normal_reference_bw_of_unordered_dependent_variable():
-    # KDEMultivariateConditional selects its bandwidths with the same rule
+@pytest.mark.parametrize("categorical_dependent", [True, False])
+@pytest.mark.parametrize("efficient", [False, True])
+def test_normal_reference_bw_of_conditional_density(categorical_dependent, efficient):
+    # KDEMultivariateConditional uses zero categorical smoothing on either
+    # side of the conditioning relation, including the efficient path.
     codes = 1000 * np.array([0, 0, 0, 0, 1])
     cont = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+    endog, exog = (codes, cont) if categorical_dependent else (cont, codes)
+    dep_type, indep_type = ("u", "c") if categorical_dependent else ("c", "u")
+    defaults = nparam.EstimatorSettings(efficient=efficient, n_sub=5, n_jobs=1)
     dens = nparam.KDEMultivariateConditional(
-        endog=codes,
-        exog=cont,
-        dep_type="u",
-        indep_type="c",
+        endog=endog,
+        exog=exog,
+        dep_type=dep_type,
+        indep_type=indep_type,
         bw="normal_reference",
+        defaults=defaults,
         rng=0,
     )
-    npt.assert_allclose(dens.bw[0], 0.5)
-    pdf = dens.pdf(endog_predict=[0, 1000], exog_predict=[0.1, 0.5])
-    assert np.all(np.isfinite(pdf))
-    assert np.all(pdf > 0)
+    categorical_axis = 0 if categorical_dependent else 1
+    assert_equal(dens.bw[categorical_axis], 0)
+    endog_predict, exog_predict = (
+        ([0, 1000], [0.1, 0.5])
+        if categorical_dependent
+        else ([0.1, 0.5], [0, 1000])
+    )
+    pdf = dens.pdf(endog_predict=endog_predict, exog_predict=exog_predict)
+    h = dens.bw[1 - categorical_axis]
+    expected = []
+    for level, point in [(0, 0.1), (1000, 0.5)]:
+        weights = np.exp(-0.5 * ((cont - point) / h) ** 2)
+        if categorical_dependent:
+            expected.append(weights[codes == level].sum() / weights.sum())
+        else:
+            expected.append(weights[codes == level].mean() / (h * np.sqrt(2 * np.pi)))
+    assert_allclose(pdf, expected, rtol=1e-14)
 
 
 @pytest.mark.parametrize("scale", [1, 100])
-def test_normal_reference_bw_of_ordered_variable_below_one(scale):
-    # The Wang-Ryzin kernel contains the factor 1 - bw, so that the density
-    # is identically zero at bw = 1.  The rule of thumb 1.06 * std * nobs ** -0.2
-    # is 1.3 for these codes and larger for the scaled codes, so the bandwidth
-    # has to be bounded strictly below 1.
+def test_normal_reference_bw_of_ordered_variable(scale):
+    # Zero smoothing also gives the empirical mass for ordered variables,
+    # including the codes on a large scale reported in GH 10641.
     codes = np.repeat(np.arange(11), 10) * scale
     dens = KDEMultivariate(data=codes, var_type="o", rng=0)
-    assert 0 < dens.bw[0] < 1
+    assert_equal(dens.bw[0], 0)
     pdf = dens.pdf(np.unique(codes))
-    assert np.all(np.isfinite(pdf))
-    assert np.all(pdf > 0)
+    assert_allclose(pdf, np.full(11, 1 / 11), rtol=1e-14)
 
 
 @pytest.mark.parametrize("bw", ["cv_ml", "cv_ls"])
@@ -867,6 +878,13 @@ def test_cv_bw_of_unordered_variable_at_bound(levels, r_bw, bw):
     assert 0.99 * bound < dens.bw[0] <= bound
     if bw == "cv_ml":
         assert_allclose(dens.bw, r_bw, rtol=0.02)
+
+    # A different set of numeric category labels must not change the
+    # optimizer's starting point or the selected estimate (GH 3790).
+    labels = np.arange(levels)[::-1] ** 2 * 1000 - 7
+    relabeled = KDEMultivariate(data=labels[x], var_type="u", bw=bw, rng=0)
+    assert_allclose(relabeled.bw, dens.bw, rtol=1e-14)
+    assert_allclose(relabeled.pdf(labels), dens.pdf(np.arange(levels)), rtol=1e-14)
 
 
 def test_cv_ml_bw_of_ordered_variable_matches_r():
@@ -900,11 +918,10 @@ def test_cv_ml_bw_is_constrained_optimum():
     assert dens.loo_likelihood(dens.bw, np.log) < min(grid) + 1e-3
 
 
-@pytest.mark.parametrize("var_type, upper", [("u", 0.75), ("o", 1.0)])
-def test_efficient_normal_reference_bw_of_discrete_variable_in_range(var_type, upper):
-    # The codes are on a large scale, so the bandwidths of the sub samples,
-    # which the efficient estimation scales up to the full sample, are far
-    # outside of the range of the kernel if they are not bounded.
+@pytest.mark.parametrize("var_type", ["u", "o"])
+def test_efficient_normal_reference_bw_of_discrete_variable(var_type):
+    # Zero categorical smoothing is preserved when subset bandwidths are
+    # scaled to the full sample.
     rng = np.random.default_rng(3790)
     data = np.column_stack((rng.standard_normal(300), 1000 * rng.integers(0, 4, 300)))
     dens = KDEMultivariate(
@@ -913,9 +930,7 @@ def test_efficient_normal_reference_bw_of_discrete_variable_in_range(var_type, u
         defaults=nparam.EstimatorSettings(efficient=True, n_sub=50, n_jobs=1),
         rng=0,
     )
-    assert 0 < dens.bw[1] <= upper
-    if var_type == "o":
-        assert dens.bw[1] < 1
+    assert_equal(dens.bw[1], 0)
     assert np.all(np.isfinite(dens.pdf(data[:5])))
 
 
@@ -1021,7 +1036,8 @@ def test_conditional_imse_matches_hand_computed_cv():
 def _elementary_kernel(var_type, h, a, b, levels, convolution=False):
     # Kernel of a single variable at the scalar values a and b, written out
     # from the definitions in statsmodels.nonparametric.kernels. `levels` are
-    # the values observed in the (leave-one-out) sample of the variable.
+    # the full training support for unordered variables and the observed
+    # leave-one-out support for ordered variables.
     if var_type == "c":
         scale = 4 if convolution else 2
         return np.exp(-((a - b) ** 2) / (scale * h**2)) / np.sqrt(scale * np.pi)
@@ -1029,6 +1045,8 @@ def _elementary_kernel(var_type, h, a, b, levels, convolution=False):
     def kernel(a, b):
         if var_type == "o":
             return 1 - h if a == b else 0.5 * (1 - h) * h ** abs(a - b)
+        if len(levels) == 1:
+            return float(a == b)
         return 1 - h if a == b else h / (len(levels) - 1)
 
     if convolution:
@@ -1085,10 +1103,14 @@ def test_conditional_imse_brute_force(dep_type, indep_type):
     dep_cols = range(k_dep)
     indep_cols = range(k_dep, len(var_type))
     all_cols = range(len(var_type))
+    full_levels = [np.unique(data[:, k]) for k in all_cols]
     cv = 0.0
     for ll in range(nobs):
         others = [i for i in range(nobs) if i != ll]
-        levels = [np.unique(data[others, k]) for k in all_cols]
+        levels = [
+            full_levels[k] if var_type[k] == "u" else np.unique(data[others, k])
+            for k in all_cols
+        ]
         G = 0.0
         for i in others:
             for j in others:
@@ -1117,7 +1139,7 @@ def test_all_kernels(kernel):
     rs = np.random.RandomState(32989053)
     data = rs.normal(size=200)
     x_grid = np.linspace(min(data), max(data), 200)
-    density = sm.nonparametric.KDEUnivariate(data)
+    density = nparam.KDEUnivariate(data)
     density.fit(kernel="gau", fft=False)
     assert isinstance(density.evaluate(x_grid), np.ndarray)
 
@@ -1129,7 +1151,221 @@ def test_kdemultivariate_invalid_bw_raises():
     data = np.tile(np.linspace(-2.0, 2.0, 50)[:, None], (1, 2))
     with pytest.raises(ValueError, match="bw must be positive"):
         KDEMultivariate(data, var_type="cc", bw=[-0.5, 0.5])
+    with pytest.raises(ValueError, match="bw must be positive"):
+        KDEMultivariate(data, var_type="uc", bw=[0.5, 0])
+    with pytest.raises(ValueError, match="bw must be non-negative"):
+        KDEMultivariate(data, var_type="uc", bw=[-0.5, 0.5])
     with pytest.raises(ValueError, match="bw must be one of"):
         KDEMultivariate(data, var_type="cc", bw="bogus")
     dens = KDEMultivariate(data, var_type="cc", bw=[0.5, 0.5]).pdf([0, 0])
     assert dens > 0
+
+
+@pytest.mark.parametrize("levels", [[0, 1], [42, -7]])
+def test_unordered_cv_retains_singleton_category(levels):
+    # Original GH 3790 observations. Removing the rare observation changes
+    # the sample, not the two-level support of the Aitchison-Aitken kernel.
+    data = np.asarray(levels)[[0, 0, 0, 0, 1]]
+    bw = np.array([0.2])
+    model = KDEMultivariate(data, "u", bw=bw, rng=0)
+    with np.errstate(divide="raise", invalid="raise"):
+        loo = np.array(
+            [
+                gpke(
+                    bw,
+                    np.delete(data, i)[:, None],
+                    np.array([data[i]]),
+                    "u",
+                    num_levels=[2],
+                )
+                / 4
+                for i in range(5)
+            ]
+        )
+        assert_allclose(loo, [0.65, 0.65, 0.65, 0.65, 0.2])
+        # The existing unconditional likelihood uses unnormalized kernel
+        # sums; normalization changes its log score by 5 * log(4) only.
+        assert_allclose(model.loo_likelihood(bw, np.log), -np.log(4 * loo).sum())
+        # Integrate the fitted PMF squared and subtract twice the mean LOO
+        # probability: CV(h) = (18 h**2 - 8 h - 13) / 25.
+        assert_allclose(model.imse(bw), -0.5552, rtol=1e-14)
+
+
+@pytest.mark.parametrize("method, optimum", [("cv_ml", 0.3), ("cv_ls", 2 / 9)])
+def test_unordered_singleton_category_cv_optimum(method, optimum):
+    # Exact optima for the original GH 3790 five observations, derived from
+    # log L(h)=4 log((3-2h)/4)+log(h) and CV(h)=(18h**2-8h-13)/25.
+    data = np.array([0, 0, 0, 0, 1])
+    model = KDEMultivariate(data, "u", bw=[optimum], rng=0)
+    bandwidths = np.array([0.1, 0.2, 0.4, 0.5, optimum])
+    with np.errstate(divide="raise", invalid="raise"):
+        if method == "cv_ml":
+            actual = [model.loo_likelihood(np.array([h]), np.log) for h in bandwidths]
+            # The implementation sums raw kernel weights, adding the fixed
+            # normalization constant -5 * log(4) to the negative log score.
+            expected = -4 * np.log(3 - 2 * bandwidths) - np.log(4 * bandwidths)
+        else:
+            actual = [model.imse(np.array([h])) for h in bandwidths]
+            expected = (18 * bandwidths**2 - 8 * bandwidths - 13) / 25
+    assert_allclose(actual, expected, rtol=1e-13, atol=0)
+    assert actual[-1] < min(actual[:-1])
+
+
+@pytest.mark.parametrize("dep_type, indep_type", [("u", "u"), ("u", "c"), ("c", "u")])
+def test_conditional_cv_retains_full_unordered_support(dep_type, indep_type):
+    # Reuse GH 3790's observations and GH 10641's continuous companion.
+    # Enumerate the full discrete outcome support in the reference rather
+    # than invoking the implementation's convolution kernels.
+    codes = np.array([0, 0, 0, 0, 1])
+    continuous = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+    endog = codes if dep_type == "u" else continuous
+    exog = codes if indep_type == "u" else continuous
+    bw = np.array([0.2, 0.3])
+    model = nparam.KDEMultivariateConditional(
+        endog, exog, dep_type, indep_type, bw=bw, rng=0
+    )
+
+    def kernel(data, point, bandwidth, var_type):
+        if var_type == "u":
+            return np.where(data == point, 1 - bandwidth, bandwidth)
+        return np.exp(-0.5 * ((data - point) / bandwidth) ** 2) / (
+            bandwidth * np.sqrt(2 * np.pi)
+        )
+
+    likelihood = 0.0
+    cv = 0.0
+    for i in range(5):
+        y = np.delete(endog, i)
+        x = np.delete(exog, i)
+        weights = kernel(x, exog[i], bw[1], indep_type)
+        weights /= weights.sum()
+        probability = weights @ kernel(y, endog[i], bw[0], dep_type)
+        likelihood -= np.log(probability)
+        if dep_type == "u":
+            pmf = [weights @ kernel(y, level, bw[0], "u") for level in [0, 1]]
+            assert_allclose(sum(pmf), 1.0)
+            integral = np.square(pmf).sum()
+        else:
+            differences = y[:, None] - y[None, :]
+            overlap = np.exp(-(differences**2) / (4 * bw[0] ** 2)) / (
+                2 * np.sqrt(np.pi) * bw[0]
+            )
+            integral = weights @ overlap @ weights
+        cv += integral - 2 * probability
+
+    with np.errstate(divide="raise", invalid="raise"):
+        assert_allclose(model.loo_likelihood(bw, np.log), likelihood, rtol=1e-13)
+        assert_allclose(model.imse(bw), cv / 5, rtol=1e-13)
+    if dep_type == indep_type == "u":
+        assert_allclose(cv / 5, -623 / 1000, rtol=1e-14)
+
+
+@pytest.mark.parametrize("bw", [[0.2], "cv_ml", "cv_ls"])
+def test_unordered_single_training_level_is_point_mass(bw):
+    # A true one-level domain differs from a LOO sample missing one of two
+    # training levels. There is no other category over which to smooth.
+    data = np.array([0, 0, 0, 0])  # observed majority category from GH 3790
+    with np.errstate(divide="raise", invalid="raise"):
+        model = KDEMultivariate(data, "u", bw=bw, rng=0)
+        assert_allclose(model.pdf([0, 1]), [1, 0])
+        assert_allclose(model.loo_likelihood(model.bw, np.log), -4 * np.log(3))
+        assert_allclose(model.imse(model.bw), -1)
+
+
+def test_gpke_level_counts_preserve_regression_kernel_contract():
+    data = np.array([0, 0, 0, 0, 1])[:, None]
+    # The regression kernel uses weights 1 and h, independent of the number
+    # of levels. The optional density support must not change its call.
+    value = gpke(
+        np.array([0.2]),
+        data,
+        np.array([1]),
+        "u",
+        ukertype="aitchison_aitken_reg",
+        num_levels=[2],
+    )
+    assert_allclose(value, 1.8)
+
+
+@pytest.mark.parametrize(
+    "columns, bandwidth, log_reference, ls_reference",
+    [
+        (["occupation"], [0.2], -46886.23275392202, -0.2979655689931496),
+        (
+            ["occupation", "occupation_husb"],
+            [0.2, 0.3],
+            -36835.21405579813,
+            -0.06885191010097953,
+        ),
+    ],
+)
+def test_unordered_cv_fair_category_counts(
+    columns, bandwidth, log_reference, ls_reference
+):
+    # All 6,366 observed Fair rows. These nominal occupation variables have
+    # six marginal levels and 6/36 joint groups. References enumerate the
+    # categorical PMF with rational weights, then integrate its square and
+    # evaluate held-out probabilities; no KDE kernels enter the reference.
+    from statsmodels.datasets import fair
+
+    data = fair.load_pandas().data[columns].to_numpy()
+    bw = np.array(bandwidth)
+    model = KDEMultivariate(data, "u" * len(columns), bw=bw, rng=0)
+    assert_allclose(model.loo_likelihood(bw, np.log), log_reference, rtol=5e-14)
+    assert_allclose(model.imse(bw), ls_reference, rtol=5e-14)
+
+
+def test_unordered_cv_singleton_tiny_bandwidth():
+    # GH 3790: the singleton's LOO sum is 4h. Adding that contribution to
+    # its self-kernel and subtracting afterwards would round it down to zero.
+    bw = np.array([1e-20])
+    model = KDEMultivariate([0, 0, 0, 0, 1], "u", bw=bw, rng=0)
+    reference = -4 * np.log(3 - 2 * bw[0]) - np.log(4 * bw[0])
+    with np.errstate(divide="raise", invalid="raise"):
+        assert_allclose(model.loo_likelihood(bw, np.log), reference, rtol=1e-14)
+
+
+def test_unordered_cv_custom_callable_observation_order():
+    # A reordered copy of GH 3790. A caller can observe each scalar call and
+    # return an array; multiplying one call per group would change this API.
+    bw = np.array([0.2])
+    model = KDEMultivariate([1, 0, 0, 0, 0], "u", bw=bw, rng=0)
+    calls = []
+
+    def transform(value):
+        calls.append(value)
+        return np.array([value, len(calls) - 1])
+
+    result = model.loo_likelihood(bw, transform)
+    assert_allclose(calls, [0.8, 2.6, 2.6, 2.6, 2.6], rtol=1e-14)
+    assert_allclose(result, [-11.2, -10], rtol=1e-14)
+
+
+def test_unordered_cv_recounts_changed_observations():
+    bw = np.array([0.2])
+    model = KDEMultivariate([0, 0, 0, 0, 1], "u", bw=bw, rng=0)
+    assert_allclose(model.imse(bw), -0.5552, rtol=1e-14)
+    # Keep the same category domain while changing its observed frequencies.
+    # Group multiplicities must not remain cached from the preceding call.
+    model.data[0, 0] = 1
+    assert_allclose(
+        model.loo_likelihood(bw, np.log), -3 * np.log(2) - 2 * np.log(1.4),
+        rtol=1e-14,
+    )
+    assert_allclose(model.imse(bw), -0.3728, rtol=1e-14)
+
+
+@pytest.mark.parametrize(
+    "data", [np.array([42, -7]), np.array([0, 0, 0, 0, 1], dtype=object)]
+)
+def test_unordered_cv_unaggregated_inputs(data):
+    bw = np.array([0.2])
+    model = KDEMultivariate(data, "u", bw=bw, rng=0)
+    if len(data) == 2:
+        # Both retained levels occur only once: each held-out kernel is h.
+        expected_log, expected_ls = -2 * np.log(0.2), 0.1
+    else:
+        expected_log = -4 * np.log(2.6) - np.log(0.8)
+        expected_ls = -0.5552
+    assert_allclose(model.loo_likelihood(bw, np.log), expected_log, rtol=1e-14)
+    assert_allclose(model.imse(bw), expected_ls, rtol=1e-14)

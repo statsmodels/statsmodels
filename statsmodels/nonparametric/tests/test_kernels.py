@@ -7,11 +7,15 @@ Author: Josef Perktold
 from pathlib import Path
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_array_less
+from numpy.testing import assert_allclose, assert_array_equal, assert_array_less
 import pandas as pd
 import pytest
 
-from statsmodels.nonparametric.kernels import tricube
+from statsmodels.nonparametric.kernels import (
+    aitchison_aitken,
+    aitchison_aitken_convolution,
+    tricube,
+)
 from statsmodels.sandbox.nonparametric import kernels
 
 curdir = Path(__file__).resolve().parent
@@ -201,3 +205,46 @@ def test_tricube_function_scalar_and_nan():
     res = tricube(1.0, np.array([np.nan, 0.0]), 0.0)
     assert np.isnan(res[0])
     assert_allclose(res[1], 70.0 / 81, rtol=1e-12)
+
+
+@pytest.mark.parametrize("num_levels", [None, 1, 2])
+def test_aitchison_aitken_zero_bandwidth_single_level(num_levels):
+    # GH#3790: normal-reference bandwidths do not smooth categorical data.
+    # The unsmoothed kernel is a unit point mass even in a single-level
+    # sub-sample; evaluating it must not divide by levels - 1.
+    data = np.array([0, 0, 0, 0])
+    with np.errstate(divide="raise", invalid="raise"):
+        assert_array_equal(
+            aitchison_aitken(0.0, data, 0, num_levels), np.ones(4)
+        )
+        assert_array_equal(
+            aitchison_aitken(0.0, data, 1, num_levels), np.zeros(4)
+        )
+
+
+def test_aitchison_aitken_zero_bandwidth_reported_categories():
+    # The original report's five observations give empirical masses 4/5
+    # and 1/5, independently of the numeric name of the second category.
+    data = np.array([0, 0, 0, 0, 1000])
+    assert_array_equal(aitchison_aitken(0.0, data, 0), [1, 1, 1, 1, 0])
+    assert_array_equal(aitchison_aitken(0.0, data, 1000), [0, 0, 0, 0, 1])
+
+
+@pytest.mark.parametrize("num_levels", [None, 1])
+def test_aitchison_aitken_single_level_positive_bandwidth(num_levels):
+    data = np.array([0, 0, 0, 0])
+    with np.errstate(divide="raise", invalid="raise"):
+        assert_array_equal(aitchison_aitken(0.2, data, 0, num_levels), np.ones(4))
+        assert_array_equal(aitchison_aitken(0.2, data, 1, num_levels), np.zeros(4))
+        assert_array_equal(
+            aitchison_aitken_convolution(0.2, data, data, num_levels), np.ones(4)
+        )
+
+
+def test_aitchison_aitken_convolution_retains_missing_level():
+    # Omitting the rare observation of GH 3790 must retain its contribution
+    # to the integral: .8**2 + .2**2 = .68 for two matching observations.
+    data = np.array([0, 0, 0, 0])
+    with np.errstate(divide="raise", invalid="raise"):
+        assert_allclose(aitchison_aitken_convolution(0.2, data, 0, num_levels=2), 0.68)
+        assert_allclose(aitchison_aitken_convolution(0.2, data, 1, num_levels=2), 0.32)

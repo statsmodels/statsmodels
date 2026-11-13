@@ -637,13 +637,13 @@ class Tricube(CustomKernel):
     """
     Tricube Kernel
 
-    K(u) = 0.864197530864 * (1 - abs(x)**3)**3 between -1.0 and 1.0
+    K(u) = (70/81) * (1 - abs(x)**3)**3 between -1.0 and 1.0
     """
 
     def __init__(self, h=1.0):
         CustomKernel.__init__(
             self,
-            shape=lambda x: 0.864197530864 * (1 - abs(x) ** 3) ** 3,
+            shape=lambda x: (70.0 / 81.0) * (1 - abs(x) ** 3) ** 3,
             h=h,
             domain=[-1.0, 1.0],
             norm=1.0,

@@ -47,6 +47,16 @@ from ._kernel_base import (
 __all__ = ["EstimatorSettings", "KDEMultivariate", "KDEMultivariateConditional"]
 
 
+def _get_unordered_level_counts(data, var_type):
+    """Retain each unordered variable's support before removing observations."""
+    return np.array(
+        [
+            np.unique(data[:, i]).size if vtype == "u" else 0
+            for i, vtype in enumerate(var_type)
+        ]
+    )
+
+
 def _gpke_pairwise(
     bw,
     data,
@@ -55,6 +65,7 @@ def _gpke_pairwise(
     ckertype="gaussian",
     okertype="wangryzin",
     ukertype="aitchisonaitken",
+    num_levels=None,
 ):
     """Product kernel evaluated pairwise, elementwise between two samples.
 
@@ -63,12 +74,24 @@ def _gpke_pairwise(
     `data` is paired with row ``k`` of `data_predict`, instead of `gpke`'s
     assumption that `data_predict` is a single evaluation point shared by
     every row of `data`.
+
+    `num_levels` retains full-training support for the unordered density
+    and convolution kernels when these arrays omit observations.
     """
     kertypes = dict(c=ckertype, o=okertype, u=ukertype)
     Kval = np.empty(data.shape)
     for ii, vtype in enumerate(var_type):
         func = kernel_func[kertypes[vtype]]
-        Kval[:, ii] = func(bw[ii], data[:, ii], data_predict[:, ii])
+        if (
+            vtype == "u"
+            and num_levels is not None
+            and ukertype in ("aitchisonaitken", "aitchisonaitken_convolution")
+        ):
+            Kval[:, ii] = func(
+                bw[ii], data[:, ii], data_predict[:, ii], num_levels=num_levels[ii]
+            )
+        else:
+            Kval[:, ii] = func(bw[ii], data[:, ii], data_predict[:, ii])
 
     iscontinuous = np.array([c == "c" for c in var_type])
     return Kval.prod(axis=1) / np.prod(bw[iscontinuous])
@@ -107,19 +130,32 @@ class KDEMultivariate(GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
+        ``normal_reference`` applies the normal reference rule to continuous
+        variables and sets the bandwidths of ordered and unordered discrete
+        variables to zero.  A zero discrete bandwidth gives weight only to
+        observations with the same category, so it does not smooth across
+        categories.  The continuous bandwidths retain the rule
+        ``1.06 * std * nobs ** (-1 / (4 + k_vars))``, where ``k_vars`` is the
+        total number of variables.  Use ``cv_ml``, ``cv_ls`` or an explicit
+        bandwidth to smooth the discrete variables.
+
         The bandwidths that are selected by one of the methods are kept in
-        the range for which the kernels of the discrete variables are
-        defined.  The bandwidth of an unordered variable is at most
+        the smoothing range of the discrete kernels.  The bandwidth of an
+        unordered variable is at most
         ``(levels - 1) / levels``, where ``levels`` is the number of distinct
         values of the variable, and the bandwidth of an ordered variable is
-        less than 1.  A user-specified bandwidth is used as given.
+        less than 1.  A user-specified bandwidth is used as given; zero is
+        allowed for a discrete variable.
 
         .. versionchanged:: 0.15.1
 
             The bandwidths of discrete variables that are selected by one of
-            the methods are bounded.  They can have been outside the range
-            of the kernels, so that the density estimate was not a
-            probability mass function.
+            the methods are bounded.  Previously the selected bandwidths
+            could produce negative or identically zero density estimates.
+
+            The normal reference bandwidth of a discrete variable is zero.
+            Previously it depended on the numeric codes of the categories,
+            so relabeling an unordered variable could change its density.
 
     defaults : EstimatorSettings instance, optional
         The default values for (efficient) bandwidth estimation.
@@ -149,6 +185,14 @@ class KDEMultivariate(GenericKDE):
     --------
     KDEMultivariateConditional
 
+    Notes
+    -----
+    The number of levels of each unordered variable is determined from the
+    full training data. Both cross-validation criteria retain this number
+    when leaving out an observation, including the only observation of a
+    category. A variable with only one level in the full training data has
+    an indicator kernel, independently of its bandwidth.
+
     Examples
     --------
     >>> import statsmodels.api as sm
@@ -172,6 +216,7 @@ class KDEMultivariate(GenericKDE):
         self.data = _adjust_shape(data, self.k_vars)
         self.data_type = var_type
         self.nobs, self.k_vars = np.shape(self.data)
+        self._num_levels = _get_unordered_level_counts(self.data, self.data_type)
         if self.nobs <= self.k_vars:
             raise ValueError(
                 "The number of observations must be larger "
@@ -226,15 +271,55 @@ class KDEMultivariate(GenericKDE):
         .. math:: K_{h}(X_{i},X_{j}) =
             \prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
         """
+        # The standard likelihood can combine repeated joint categories. Keep
+        # arbitrary callables on the observation-order path: they can be
+        # stateful, non-vectorized, or return arrays rather than scalars.
+        groups = self._unordered_groups() if func is np.log else None
+        if groups is not None:
+            values, counts = groups
+            likelihood = 0.0
+            for i, point in enumerate(values):
+                weights = counts.copy()
+                weights[i] -= 1
+                kernel = gpke(
+                    bw, values, point, self.var_type, tosum=False,
+                    num_levels=self._num_levels,
+                )
+                likelihood += counts[i] * np.log(weights @ kernel)
+            return -likelihood
+
         LOO = LeaveOneOut(self.data)
         L = 0
         for i, X_not_i in enumerate(LOO):
             f_i = gpke(
-                bw, data=-X_not_i, data_predict=-self.data[i, :], var_type=self.var_type
+                bw,
+                data=-X_not_i,
+                data_predict=-self.data[i, :],
+                var_type=self.var_type,
+                num_levels=self._num_levels,
             )
             L += func(f_i)
 
         return -L
+
+    def _unordered_groups(self):
+        """Group repeated joint unordered observations for one calculation.
+
+        Group afresh because ``data`` can share memory with the caller. The
+        numeric finite-label restriction also preserves the existing handling
+        of object arrays and missing categories. Never construct a square
+        group matrix.
+        """
+        if (
+            self.var_type != "u" * self.k_vars
+            or not np.issubdtype(self.data.dtype, np.number)
+            or not np.isfinite(self.data).all()
+        ):
+            return None
+        values, counts = np.unique(self.data, axis=0, return_counts=True)
+        if len(counts) == self.nobs:
+            return None
+        return values, counts
 
     def pdf(self, data_predict=None):
         r"""
@@ -271,6 +356,7 @@ class KDEMultivariate(GenericKDE):
                     data=self.data,
                     data_predict=data_predict[i, :],
                     var_type=self.var_type,
+                    num_levels=self._num_levels,
                 )
                 / self.nobs
             )
@@ -367,6 +453,32 @@ class KDEMultivariate(GenericKDE):
         .. [2] Racine, J., Li, Q. "Nonparametric Estimation of Distributions
                 with Categorical and Continuous Data." Working Paper. (2000)
         """
+        groups = self._unordered_groups()
+        if groups is not None:
+            values, counts = groups
+            integrated = 0.0
+            leave_one_out = 0.0
+            for i, point in enumerate(values):
+                convolution = gpke(
+                    bw, values, point, self.var_type,
+                    ukertype="aitchisonaitken_convolution", tosum=False,
+                    num_levels=self._num_levels,
+                )
+                integrated += counts[i] * (counts @ convolution)
+                weights = counts.copy()
+                weights[i] -= 1
+                kernel = gpke(
+                    bw, values, point, self.var_type, tosum=False,
+                    num_levels=self._num_levels,
+                )
+                # Remove one observation from its multiplicity before summing.
+                # Subtracting the self-kernel afterwards can erase a rare
+                # category's small, positive leave-one-out probability.
+                leave_one_out += counts[i] * (weights @ kernel)
+            return integrated / self.nobs**2 - 2 * leave_one_out / (
+                self.nobs * (self.nobs - 1)
+            )
+
         # F = 0
         # for i in range(self.nobs):
         #    k_bar_sum = gpke(bw, data=-self.data,
@@ -397,7 +509,15 @@ class KDEMultivariate(GenericKDE):
         Kval = np.empty(data.shape)
         for i in range(nobs):
             for ii, vtype in enumerate(var_type):
-                Kval[:, ii] = kertypes[vtype](bw[ii], data[:, ii], data[i, ii])
+                if vtype == "u":
+                    Kval[:, ii] = kertypes[vtype](
+                        bw[ii],
+                        data[:, ii],
+                        data[i, ii],
+                        num_levels=self._num_levels[ii],
+                    )
+                else:
+                    Kval[:, ii] = kertypes[vtype](bw[ii], data[:, ii], data[i, ii])
 
             dens = Kval.prod(axis=1) / _bw_cont_product
             k_bar_sum = dens.sum(axis=0)
@@ -411,7 +531,15 @@ class KDEMultivariate(GenericKDE):
         Kval = np.empty((data.shape[0] - 1, data.shape[1]))
         for i, X_not_i in enumerate(LOO):
             for ii, vtype in enumerate(var_type):
-                Kval[:, ii] = kertypes[vtype](bw[ii], -X_not_i[:, ii], data[i, ii])
+                if vtype == "u":
+                    Kval[:, ii] = kertypes[vtype](
+                        bw[ii],
+                        -X_not_i[:, ii],
+                        data[i, ii],
+                        num_levels=self._num_levels[ii],
+                    )
+                else:
+                    Kval[:, ii] = kertypes[vtype](bw[ii], -X_not_i[:, ii], data[i, ii])
             dens = Kval.prod(axis=1) / _bw_cont_product
             L += dens.sum(axis=0)
 
@@ -462,19 +590,33 @@ class KDEMultivariateConditional(GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
+        ``normal_reference`` applies the normal reference rule to continuous
+        variables and sets the bandwidths of ordered and unordered discrete
+        variables to zero, for both dependent and independent variables.
+        A zero discrete bandwidth gives weight only to observations with
+        the same category, so it does not smooth across categories.  The
+        continuous bandwidths retain the rule
+        ``1.06 * std * nobs ** (-1 / (4 + k_vars))``, where ``k_vars`` is the
+        total number of dependent and independent variables.  Use ``cv_ml``,
+        ``cv_ls`` or an explicit bandwidth to smooth the discrete variables.
+
         The bandwidths that are selected by one of the methods are kept in
-        the range for which the kernels of the discrete variables are
-        defined.  The bandwidth of an unordered variable is at most
+        the smoothing range of the discrete kernels.  The bandwidth of an
+        unordered variable is at most
         ``(levels - 1) / levels``, where ``levels`` is the number of distinct
         values of the variable, and the bandwidth of an ordered variable is
-        less than 1.  A user-specified bandwidth is used as given.
+        less than 1.  A user-specified bandwidth is used as given; zero is
+        allowed for a discrete variable.
 
         .. versionchanged:: 0.15.1
 
             The bandwidths of discrete variables that are selected by one of
-            the methods are bounded.  They can have been outside the range
-            of the kernels, so that the density estimate was not a
-            probability mass function.
+            the methods are bounded.  Previously the selected bandwidths
+            could produce negative or identically zero density estimates.
+
+            The normal reference bandwidth of a discrete variable is zero.
+            Previously it depended on the numeric codes of the categories,
+            so relabeling an unordered variable could change its density.
 
     defaults : EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
@@ -502,6 +644,20 @@ class KDEMultivariateConditional(GenericKDE):
     See Also
     --------
     KDEMultivariate
+
+    Notes
+    -----
+    With zero bandwidths for discrete independent variables, the conditional
+    density uses only observations matching their combination of categories.
+    If no training observation has that combination, the marginal density
+    in the denominator is zero and the conditional density and CDF are
+    undefined at that evaluation point.
+
+    The number of unordered levels is determined from the full training
+    data, separately for each dependent and independent variable. The joint,
+    marginal and convolution kernels retain these counts when leaving out
+    an observation for either cross-validation criterion. A variable with
+    only one training level has an indicator kernel for any bandwidth.
 
     References
     ----------
@@ -534,6 +690,7 @@ class KDEMultivariateConditional(GenericKDE):
         self.nobs, self.k_dep = np.shape(self.endog)
         self.data = np.column_stack((self.endog, self.exog))
         self.k_vars = np.shape(self.data)[1]
+        self._num_levels = _get_unordered_level_counts(self.data, self.data_type)
         self._generator = initialize_generator(rng)
         defaults = EstimatorSettings() if defaults is None else defaults
         self._set_defaults(defaults)
@@ -588,12 +745,14 @@ class KDEMultivariateConditional(GenericKDE):
                 data=-Y_j,
                 data_predict=-self.data[i, :],
                 var_type=(self.dep_type + self.indep_type),
+                num_levels=self._num_levels,
             )
             f_x = gpke(
                 bw[self.k_dep :],
                 data=-X_not_i,
                 data_predict=-self.exog[i, :],
                 var_type=self.indep_type,
+                num_levels=self._num_levels[self.k_dep :],
             )
             f_i = f_yx / f_x
             L += func(f_i)
@@ -647,12 +806,14 @@ class KDEMultivariateConditional(GenericKDE):
                 data=self.data,
                 data_predict=data_predict[i, :],
                 var_type=(self.dep_type + self.indep_type),
+                num_levels=self._num_levels,
             )
             f_x = gpke(
                 self.bw[self.k_dep :],
                 data=self.exog,
                 data_predict=exog_predict[i, :],
                 var_type=self.indep_type,
+                num_levels=self._num_levels[self.k_dep :],
             )
             pdf_est.append(f_yx / f_x)
 
@@ -728,6 +889,7 @@ class KDEMultivariateConditional(GenericKDE):
                 data_predict=exog_predict[i, :],
                 var_type=self.indep_type,
                 tosum=False,
+                num_levels=self._num_levels[self.k_dep :],
             )
             S = (cdf_endog * cdf_exog).sum(axis=0)
             # the sum of the exog kernel values is nobs times the estimate of
@@ -798,6 +960,7 @@ class KDEMultivariateConditional(GenericKDE):
                 data_predict=self.exog[ii, :],
                 var_type=self.indep_type,
                 tosum=False,
+                num_levels=self._num_levels[self.k_dep :],
             )
             # the kernel values of the expanded data kron(X, expander) and
             # kron(expander, X) only repeat the values of the nobs - 1 rows
@@ -815,6 +978,7 @@ class KDEMultivariateConditional(GenericKDE):
                 ckertype="gauss_convolution",
                 okertype="wangryzin_convolution",
                 ukertype="aitchisonaitken_convolution",
+                num_levels=self._num_levels[: self.k_dep],
             )
             G = (K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj).sum() / nobs**2
             f_X_Y = (
@@ -823,6 +987,7 @@ class KDEMultivariateConditional(GenericKDE):
                     data=-Z,
                     data_predict=-self.data[ii, :],
                     var_type=(self.dep_type + self.indep_type),
+                    num_levels=self._num_levels,
                 )
                 / nobs
             )
@@ -832,6 +997,7 @@ class KDEMultivariateConditional(GenericKDE):
                     data=-X,
                     data_predict=-self.exog[ii, :],
                     var_type=self.indep_type,
+                    num_levels=self._num_levels[self.k_dep :],
                 )
                 / nobs
             )

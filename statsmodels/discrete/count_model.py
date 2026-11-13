@@ -1072,6 +1072,33 @@ class ZeroInflatedNegativeBinomialP(GenericZeroInflated):
         self.result_class_reg = L1ZeroInflatedNegativeBinomialResults
         self.result_class_reg_wrapper = L1ZeroInflatedNegativeBinomialResultsWrapper
 
+    def _hessian_main(self, params):
+        """Observed main-parameter curvature of the NB-P mixture.
+
+        A zero observation has posterior count-component probability tau.
+        Its curvature is tau*H + tau*(1-tau)*s*s.T. Nonzero observations
+        belong to the count component with probability one.
+        """
+        params_main = params[self.k_inflate:]
+        score = self.model_main.score_obs(params_main)
+        hfbb, hfba, hfaa = self.model_main.hessian_factor(params_main)
+        w = self.model_infl.predict(params[:self.k_inflate])
+        w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
+        tau = np.ones_like(self.endog, dtype=float)
+        zero = self.endog == 0
+        pmf_main = np.exp(self.model_main.loglikeobs(params_main)[zero])
+        numerator = (1 - w[zero]) * pmf_main
+        tau[zero] = numerator / (w[zero] + numerator)
+
+        exog = self.exog
+        dim = exog.shape[1]
+        hess = np.empty((dim + 1, dim + 1))
+        hess[:-1, :-1] = (exog.T * (tau * hfbb)) @ exog
+        hess[-1, :-1] = hess[:-1, -1] = (tau * hfba) @ exog
+        hess[-1, -1] = (tau * hfaa).sum()
+        hess += (score.T * (tau * (1 - tau))) @ score
+        return hess
+
     def _get_init_kwds(self):
         kwds = super()._get_init_kwds()
         kwds["p"] = self.model_main.parameterization

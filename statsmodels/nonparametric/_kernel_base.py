@@ -231,8 +231,11 @@ class GenericKDE:
         if not isinstance(bw, str):
             self._bw_method = "user-specified"
             res = array_like(bw, "bw", ndim=1)
-            if np.any(res <= 0):
-                raise ValueError("bw must be positive")
+            ix_cont, _, _ = _get_type_pos(self.data_type)
+            if np.any(res[ix_cont] <= 0):
+                raise ValueError("bw must be positive for continuous variables")
+            if np.any(res[~ix_cont] < 0):
+                raise ValueError("bw must be non-negative for discrete variables")
         else:
             # The user specified a bandwidth selection method
             if bw not in ("normal_reference", "cv_ml", "cv_ls"):
@@ -424,7 +427,7 @@ class GenericKDE:
         self.n_jobs = defaults.n_jobs
 
     def _normal_reference(self):
-        """
+        r"""
         Returns Scott's normal reference rule of thumb bandwidth parameter
 
         Returns
@@ -437,21 +440,35 @@ class GenericKDE:
         See p.13 in [2] for an example and discussion.  The formula for the
         bandwidth is
 
-        .. math:: h = 1.06n^{-1/(4+q)}
+        .. math:: h_j = 1.06\sigma_j n^{-1/(4+q)}
 
         where ``n`` is the number of observations and ``q`` is the number of
-        variables.
+        variables, and :math:`\sigma_j` is the standard deviation of a
+        continuous variable.
 
-        The rule of thumb is defined for continuous variables, so the
-        bandwidths of the discrete variables are passed through
-        :meth:`_set_bw_bounds` to keep them inside the range in which the
-        discrete kernels are defined.  Otherwise the bandwidth of a discrete
-        variable scales with its arbitrary numeric codes and the density
-        estimate is no longer valid.
+        The rule of thumb is defined for continuous variables. Discrete
+        variables have bandwidth zero, so their kernels only put weight on
+        matching categories. This is the normal-reference convention of R's
+        ``np`` package and makes the estimate independent of the numeric
+        codes assigned to categories.
         """
-        X = np.std(self.data, axis=0)
-        bw = 1.06 * X * self.nobs ** (-1.0 / (4 + self.data.shape[1]))
-        return self._set_bw_bounds(bw)
+        ix_cont, _, _ = _get_type_pos(self.data_type)
+        bw = np.zeros(self.k_vars)
+        continuous = self.data if ix_cont.all() else self.data[:, ix_cont]
+        X = np.std(continuous, axis=0)
+        bw[ix_cont] = 1.06 * X * self.nobs ** (-1.0 / (4 + self.k_vars))
+        return bw
+
+    def _cv_initial_bw(self):
+        """Return a starting bandwidth for cross-validation optimization."""
+        bw = self._normal_reference()
+        ix_cont, _, _ = _get_type_pos(self.data_type)
+        _, upper = self._get_bw_bounds()
+        # Starting at zero would collapse the Nelder-Mead simplex after it
+        # is clipped to the positive lower bound. Start discrete bandwidths
+        # in the interior without using the arbitrary category codes.
+        bw[~ix_cont] = upper[~ix_cont] / 2
+        return bw
 
     def _get_bw_bounds(self):
         """
@@ -469,8 +486,8 @@ class GenericKDE:
         Notes
         -----
         The bandwidth of an unordered variable is the smoothing probability of
-        the Aitchison-Aitken kernel, which is a probability mass function
-        only for ``bw <= (levels - 1) / levels``.  This upper end is the fully
+        the Aitchison-Aitken kernel, with the usual smoothing range ending
+        at ``bw = (levels - 1) / levels``. This upper end is the fully
         smoothed, uniform kernel, while a larger value puts less weight on an
         observed level than on the unobserved ones.  The number of levels is
         the number of distinct values in the data.  A variable with a single
@@ -609,8 +626,7 @@ class GenericKDE:
         .. math:: K_{h}(X_{i},X_{j})=\prod_{s=1}^
                         {q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
         """
-        # the initial value for the optimization is the normal_reference
-        h0 = self._normal_reference()
+        h0 = self._cv_initial_bw()
         return self._minimize_bw(self.loo_likelihood, h0, args=(np.log,), xtol=1e-3)
 
     def _cv_ls(self):
@@ -636,7 +652,7 @@ class GenericKDE:
         conditional (``KDEMultivariateConditional``) and unconditional
         (``KDEMultivariate``) kernel density estimation.
         """
-        h0 = self._normal_reference()
+        h0 = self._cv_initial_bw()
         return self._minimize_bw(self.imse, h0, xtol=1e-3)
 
     def loo_likelihood(self):
@@ -819,6 +835,8 @@ def gpke(
     okertype="wangryzin",
     ukertype="aitchisonaitken",
     tosum=True,
+    *,
+    num_levels=None,
 ):
     r"""
     Returns the non-normalized Generalized Product Kernel Estimator
@@ -842,6 +860,12 @@ def gpke(
     tosum : bool, optional
         Whether or not to sum the calculated array of densities.  Default is
         True.
+    num_levels : array_like, optional
+        Number of unordered levels for each variable in the full training
+        sample. Used by the Aitchison-Aitken density and convolution kernels
+        to retain support when `data` is a subset. Entries for other variable
+        types and kernels are ignored. If omitted, support is inferred from
+        `data` as before.
 
     Returns
     -------
@@ -875,7 +899,16 @@ def gpke(
     Kval = np.empty(data.shape)
     for ii, vtype in enumerate(var_type):
         func = kernel_func[kertypes[vtype]]
-        Kval[:, ii] = func(bw[ii], data[:, ii], data_predict[ii])
+        if (
+            vtype == "u"
+            and num_levels is not None
+            and ukertype in ("aitchisonaitken", "aitchisonaitken_convolution")
+        ):
+            Kval[:, ii] = func(
+                bw[ii], data[:, ii], data_predict[ii], num_levels=num_levels[ii]
+            )
+        else:
+            Kval[:, ii] = func(bw[ii], data[:, ii], data_predict[ii])
 
     iscontinuous = np.array([c == "c" for c in var_type])
     dens = Kval.prod(axis=1) / np.prod(bw[iscontinuous])
