@@ -28,6 +28,7 @@ __all__ = [
 ]
 
 
+from math import comb
 import warnings
 
 import numpy as np
@@ -3766,6 +3767,91 @@ class MNLogit(MultinomialModel):
 #
 
 
+def _nbinom_poisson_expansion(y, mu, alpha, Q, deriv=2):
+    """Evaluate NB likelihood derivatives close to the Poisson boundary.
+
+    Returns a mask and, for the selected observations, the log likelihood,
+    derivatives with respect to eta=log(mu) and alpha, and their three second
+    derivatives.  Q is zero for NB2, one for NB1, and 2-p for NB-P.
+    With deriv=0, only
+    the likelihood is evaluated and returned.
+
+    Expanding log(Gamma(r+y)/Gamma(r)) - y*log(r), r=mu**Q/alpha,
+    gives power sums S_k(y)=sum(j**k, j=0,...,y-1).  Combining that expansion
+    with log1p(mu/r) before differentiation avoids the cancelling inverse
+    powers of alpha in the usual digamma/trigamma formulas.  The Bernoulli
+    polynomial expression also covers noninteger responses.
+
+    The expansion parameter is bounded by 0.01 and ten terms are retained.
+    Scaling the power sums and means first avoids large intermediate powers.
+    The scale is purely algebraic; derivatives include the mu dependence of r.
+    """
+    scale = np.maximum(1, np.maximum(np.abs(y), np.abs(mu)))
+    a_scale = scale / mu**Q
+    a = alpha * a_scale
+    mask = (np.real(alpha) >= 0) & (np.abs(a) <= 0.01)
+    y, mu, scale, a_scale, a = (
+        value[mask] for value in (y, mu, scale, a_scale, a)
+    )
+    dtype = np.result_type(y, mu, alpha, float)
+    if not mask.any():
+        return mask, np.empty((6, 0), dtype=dtype)
+
+    # B_1=-1/2 is the convention for summing j=0,...,y-1.
+    bernoulli = (1, -0.5, 1 / 6, 0, -1 / 30, 0, 1 / 42,
+                 0, -1 / 30, 0, 5 / 66)
+    ratio_y, ratio_mu, inv_scale = y / scale, mu / scale, 1 / scale
+    powers_y = np.array([ratio_y**j for j in range(11)])
+    powers_scale = np.array([inv_scale**j for j in range(11)])
+    ll = np.zeros_like(mu, dtype=dtype)
+    d_eta = ll.copy()
+    d_alpha = ll.copy()
+    d_eta_eta = ll.copy()
+    d_eta_alpha = ll.copy()
+    d_alpha_alpha = ll.copy()
+    for k in range(10, 0, -1):
+        # S_k(y)/scale**k, using Faulhaber's formula.
+        coefficients = [comb(k + 1, j) * bernoulli[j] for j in range(k + 1)]
+        power_sum = np.einsum(
+            "j,ji,ji->i", coefficients, powers_y[k::-1], powers_scale[: k + 1]
+        )
+        power_sum *= y / (k + 1)
+        power_sum = np.where((y == 0) | (y == 1), 0, power_sum)
+        gamma_term = power_sum / k
+        mean_term = mu * ratio_mu**k / (k + 1)
+        count_term = -y * ratio_mu**k / k
+        sign = (-1) ** (k + 1)
+        c = sign * (gamma_term + mean_term + count_term)
+        ll = ll * a + c
+        if deriv == 0:
+            continue
+        e_gamma, e_mean, e_count = -Q * k, 1 + (1 - Q) * k, (1 - Q) * k
+        c_eta = sign * (
+            e_gamma * gamma_term + e_mean * mean_term + e_count * count_term
+        )
+        c_eta_eta = sign * (
+            e_gamma**2 * gamma_term + e_mean**2 * mean_term
+            + e_count**2 * count_term
+        )
+        # Simultaneous Horner evaluation of the polynomial and derivatives.
+        d_eta = d_eta * a + c_eta
+        d_eta_eta = d_eta_eta * a + c_eta_eta
+        d_alpha = d_alpha * a + k * c
+        d_eta_alpha = d_eta_alpha * a + k * c_eta
+        if k >= 2:
+            d_alpha_alpha = d_alpha_alpha * a + k * (k - 1) * c
+    gamma_ln = loggamma if np.iscomplexobj(y) else gammaln
+    ll = special.xlogy(y, mu) - mu - gamma_ln(y + 1) + a * ll
+    if deriv == 0:
+        return mask, np.array([ll])
+    d_eta = y - mu + a * d_eta
+    d_eta_eta = -mu + a * d_eta_eta
+    return mask, np.array([
+        ll, d_eta, a_scale * d_alpha, d_eta_eta,
+        a_scale * d_eta_alpha, a_scale**2 * d_alpha_alpha,
+    ])
+
+
 class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial Model
@@ -3879,11 +3965,21 @@ class NegativeBinomial(CountModel):
             gamma_ln = gammaln
         endog = self.endog
         mu = self.predict(params)
+        mask, expansion = _nbinom_poisson_expansion(endog, mu, alpha, Q, deriv=0)
+        if mask.any():
+            llf = np.empty_like(mu, dtype=np.result_type(mu, alpha, float))
+            llf[mask] = expansion[0]
+            if mask.all():
+                return llf
+            endog, mu = endog[~mask], mu[~mask]
         size = 1 / alpha * mu**Q
         prob = size / (size + mu)
         coeff = gamma_ln(size + endog) - gamma_ln(endog + 1) - gamma_ln(size)
-        llf = coeff + size * np.log(prob) + endog * np.log(1 - prob)
-        return llf
+        value = coeff + size * np.log(prob) + endog * np.log(1 - prob)
+        if mask.any():
+            llf[~mask] = value
+            return llf
+        return value
 
     def _ll_nb2(self, params):
         if self._transparams:  # got lnalpha during fit
@@ -3956,8 +4052,18 @@ class NegativeBinomial(CountModel):
             alpha = params[-1]
         params = params[:-1]
         exog = self.exog
-        y = self.endog[:, None]
-        mu = self.predict(params)[:, None]
+        y = self.endog
+        mu = self.predict(params)
+        mask, expansion = _nbinom_poisson_expansion(y, mu, alpha, Q)
+        near_score = 0
+        if mask.any():
+            near_score = np.r_[exog[mask].T @ expansion[1], expansion[2].sum()]
+            if mask.all():
+                if self._transparams:
+                    near_score[-1] *= alpha
+                return near_score
+            exog, y, mu = exog[~mask], y[~mask], mu[~mask]
+        y, mu = y[:, None], mu[:, None]
         a1 = 1 / alpha * mu**Q
         prob = a1 / (a1 + mu)  # a1 aka "size" in _ll_nbin
         if Q == 1:  # nb1
@@ -3980,11 +4086,10 @@ class NegativeBinomial(CountModel):
                 dgpart + np.log(a1) - np.log(a1 + mu) - (y - mu) / (a1 + mu)
             ).sum() * da1
 
-        # multiply above by constant outside sum to reduce rounding error
+        score = np.r_[dparams.sum(0), dalpha] + near_score
         if self._transparams:
-            return np.r_[dparams.sum(0), dalpha * alpha]
-        else:
-            return np.r_[dparams.sum(0), dalpha]
+            score[-1] *= alpha
+        return score
 
     def _score_nb1(self, params):
         return self._score_nbin(params, Q=1)
@@ -4020,8 +4125,21 @@ class NegativeBinomial(CountModel):
 
         params = params[:-1]
         exog = self.exog
-        y = self.endog[:, None]
-        mu = self.predict(params)[:, None]
+        y = self.endog
+        mu = self.predict(params)
+        mask, expansion = _nbinom_poisson_expansion(y, mu, alpha, 1)
+        near_hess = 0
+        if mask.any():
+            x_near = exog[mask]
+            dim = exog.shape[1]
+            near_hess = np.empty((dim + 1, dim + 1))
+            near_hess[:-1, :-1] = (x_near.T * expansion[3]) @ x_near
+            near_hess[-1, :-1] = near_hess[:-1, -1] = x_near.T @ expansion[4]
+            near_hess[-1, -1] = expansion[5].sum()
+            if mask.all():
+                return near_hess
+            exog, y, mu = exog[~mask], y[~mask], mu[~mask]
+        y, mu = y[:, None], mu[:, None]
 
         a1 = mu / alpha
         dgpart = digamma(y + a1) - digamma(a1)
@@ -4076,6 +4194,8 @@ class NegativeBinomial(CountModel):
         ) / (alpha**4 * (alpha2 + 2 * alpha + 1))
         hess_arr[-1, -1] = dada.sum()
 
+        if mask.any():
+            hess_arr += near_hess
         return hess_arr
 
     def _hessian_nb2(self, params):
@@ -4086,12 +4206,25 @@ class NegativeBinomial(CountModel):
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
-        a1 = 1 / alpha
         params = params[:-1]
 
         exog = self.exog
-        y = self.endog[:, None]
-        mu = self.predict(params)[:, None]
+        y = self.endog
+        mu = self.predict(params)
+        mask, expansion = _nbinom_poisson_expansion(y, mu, alpha, 0)
+        near_hess = 0
+        if mask.any():
+            x_near = exog[mask]
+            dim = exog.shape[1]
+            near_hess = np.empty((dim + 1, dim + 1))
+            near_hess[:-1, :-1] = (x_near.T * expansion[3]) @ x_near
+            near_hess[-1, :-1] = near_hess[:-1, -1] = x_near.T @ expansion[4]
+            near_hess[-1, -1] = expansion[5].sum()
+            if mask.all():
+                return near_hess
+            exog, y, mu = exog[~mask], y[~mask], mu[~mask]
+        y, mu = y[:, None], mu[:, None]
+        a1 = 1 / alpha
         prob = a1 / (a1 + mu)
         dgpart = digamma(a1 + y) - digamma(a1)
 
@@ -4132,6 +4265,8 @@ class NegativeBinomial(CountModel):
         ).sum()
         hess_arr[-1, -1] = dada
 
+        if mask.any():
+            hess_arr += near_hess
         return hess_arr
 
     # TODO: replace this with analytic where is it used?
@@ -4258,7 +4393,7 @@ class NegativeBinomial(CountModel):
                 start_params = np.append(start_params, max(0.05, a))
         elif self._transparams is True:
             # transform user provided start_params dispersion, see #3918
-            start_params = np.array(start_params, copy=True)
+            start_params = np.array(start_params, dtype=float, copy=True)
             start_params[-1] = np.log(start_params[-1])
 
         if callback is None:
@@ -4496,30 +4631,28 @@ class NegativeBinomialP(CountModel):
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
         """
-        if self._transparams:
-            alpha = np.exp(params[-1])
-        else:
-            alpha = params[-1]
 
-        params = params[:-1]
-        p = self.parameterization
+        alpha = np.exp(params[-1]) if self._transparams else params[-1]
         y = self.endog
-
-        mu = self.predict(params)
-        mu_p = mu ** (2 - p)
-        a1 = mu_p / alpha
+        mu = self.predict(params[:-1])
+        q = 2 - self.parameterization
+        mask, expansion = _nbinom_poisson_expansion(y, mu, alpha, q, deriv=0)
+        if mask.any():
+            llf = np.empty_like(mu, dtype=np.result_type(mu, alpha, float))
+            llf[mask] = expansion[0]
+            if mask.all():
+                return llf
+            y, mu = y[~mask], mu[~mask]
+        a1 = mu**q / alpha
         a2 = mu + a1
-
-        llf = (
-            gammaln(y + a1)
-            - gammaln(y + 1)
-            - gammaln(a1)
-            + a1 * np.log(a1)
-            + y * np.log(mu)
-            - (y + a1) * np.log(a2)
-        )
-
-        return llf
+        gamma_ln = loggamma if np.iscomplexobj(mu) or np.iscomplexobj(alpha) else gammaln
+        value = (gamma_ln(y + a1) - gammaln(y + 1) - gamma_ln(a1)
+                 + a1 * np.log(a1) + y * np.log(mu)
+                 - (y + a1) * np.log(a2))
+        if mask.any():
+            llf[~mask] = value
+            return llf
+        return value
 
     def score_obs(self, params):
         """
@@ -4536,31 +4669,12 @@ class NegativeBinomialP(CountModel):
             The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
+
+        dparams, dalpha = self.score_factor(params)
         if self._transparams:
-            alpha = np.exp(params[-1])
-        else:
-            alpha = params[-1]
-
-        params = params[:-1]
-        p = 2 - self.parameterization
-        y = self.endog
-
-        mu = self.predict(params)
-        mu_p = mu**p
-        a1 = mu_p / alpha
-        a2 = mu + a1
-        a3 = y + a1
-        a4 = p * a1 / mu
-
-        dgpart = digamma(a3) - digamma(a1)
-        dgterm = dgpart + np.log(a1 / a2) + 1 - a3 / a2
-        # TODO: better name/interpretation for dgterm?
-
-        dparams = a4 * dgterm - a3 / a2 + y / mu
-        dparams = (self.exog.T * mu * dparams).T
-        dalpha = -a1 / alpha * dgterm
-
-        return np.concatenate((dparams, np.atleast_2d(dalpha).T), axis=1)
+            # d alpha / d log(alpha), not the square of the summed score.
+            dalpha = dalpha * np.exp(params[-1])
+        return np.column_stack((self.exog * dparams[:, None], dalpha))
 
     def score(self, params):
         """
@@ -4577,12 +4691,8 @@ class NegativeBinomialP(CountModel):
             The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
-        score = np.sum(self.score_obs(params), axis=0)
-        if self._transparams:
-            score[-1] = score[-1] ** 2
-            return score
-        else:
-            return score
+
+        return self.score_obs(params).sum(axis=0)
 
     def score_factor(self, params, endog=None):
         """
@@ -4602,31 +4712,31 @@ class NegativeBinomialP(CountModel):
             The score vector of the model, i.e., the first derivative of the
             log-likelihood function, evaluated at `params`
         """
+
         params = np.asarray(params)
-        if self._transparams:
-            alpha = np.exp(params[-1])
-        else:
-            alpha = params[-1]
-
-        params = params[:-1]
-        p = 2 - self.parameterization
-        y = self.endog if endog is None else endog
-
-        mu = self.predict(params)
-        mu_p = mu**p
-        a1 = mu_p / alpha
+        alpha = np.exp(params[-1]) if self._transparams else params[-1]
+        q = 2 - self.parameterization
+        y = self.endog if endog is None else np.asarray(endog)
+        mu = self.predict(params[:-1])
+        y = np.broadcast_to(y, mu.shape)
+        mask, expansion = _nbinom_poisson_expansion(y, mu, alpha, q)
+        if mask.all():
+            return tuple(expansion[1:3])
+        if mask.any():
+            factors = np.empty((2, len(y)), dtype=np.result_type(y, mu, alpha, float))
+            factors[:, mask] = expansion[1:3]
+            y, mu = y[~mask], mu[~mask]
+        a1 = mu**q / alpha
         a2 = mu + a1
         a3 = y + a1
-        a4 = p * a1 / mu
-
+        a4 = q * a1 / mu
         dgpart = digamma(a3) - digamma(a1)
-
-        dparams = (
-            (a4 * dgpart - a3 / a2) + y / mu + a4 * (1 - a3 / a2 + np.log(a1 / a2))
-        )
-        dparams = (mu * dparams).T
-        dalpha = -a1 / alpha * (dgpart + np.log(a1 / a2) + 1 - a3 / a2)
-
+        dgterm = dgpart + np.log(a1 / a2) + 1 - a3 / a2
+        dparams = mu * (a4 * dgterm - a3 / a2 + y / mu)
+        dalpha = -a1 / alpha * dgterm
+        if mask.any():
+            factors[:, ~mask] = dparams, dalpha
+            return tuple(factors)
         return dparams, dalpha
 
     def hessian(self, params):
@@ -4643,82 +4753,15 @@ class NegativeBinomialP(CountModel):
         hessian : ndarray, 2-D
             The hessian matrix of the model.
         """
-        if self._transparams:
-            alpha = np.exp(params[-1])
-        else:
-            alpha = params[-1]
-        params = params[:-1]
 
-        p = 2 - self.parameterization
-        y = self.endog
+        hfbb, hfba, hfaa = self.hessian_factor(params)
         exog = self.exog
-        mu = self.predict(params)
-
-        mu_p = mu**p
-        a1 = mu_p / alpha
-        a2 = mu + a1
-        a3 = y + a1
-        a4 = p * a1 / mu
-
-        prob = a1 / a2
-        lprob = np.log(prob)
-        dgpart = digamma(a3) - digamma(a1)
-        pgpart = polygamma(1, a3) - polygamma(1, a1)
-
         dim = exog.shape[1]
-        hess_arr = np.zeros((dim + 1, dim + 1))
-
-        coeff = mu**2 * (
-            (
-                (1 + a4) ** 2 * a3 / a2**2
-                - a3 / a2 * (p - 1) * a4 / mu
-                - y / mu**2
-                - 2 * a4 * (1 + a4) / a2
-                + p * a4 / mu * (lprob + dgpart + 2)
-                - a4 / mu * (lprob + dgpart + 1)
-                + a4**2 * pgpart
-            )
-            + (-(1 + a4) * a3 / a2 + y / mu + a4 * (lprob + dgpart + 1)) / mu
-        )
-
-        for i in range(dim):
-            hess_arr[i, :-1] = np.sum(
-                self.exog[:, :].T * self.exog[:, i] * coeff, axis=1
-            )
-
-        hess_arr[-1, :-1] = (
-            self.exog[:, :].T
-            * mu
-            * a1
-            * (
-                (1 + a4) * (1 - a3 / a2) / a2
-                - p * (lprob + dgpart + 2) / mu
-                + p / mu * (a3 + p * a1) / a2
-                - a4 * pgpart
-            )
-            / alpha
-        ).sum(axis=1)
-
-        da2 = (
-            a1
-            * (
-                2 * lprob
-                + 2 * dgpart
-                + 3
-                - 2 * a3 / a2
-                + a1 * pgpart
-                - 2 * prob
-                + prob * a3 / a2
-            )
-            / alpha**2
-        )
-
-        hess_arr[-1, -1] = da2.sum()
-
-        tri_idx = np.triu_indices(dim + 1, k=1)
-        hess_arr[tri_idx] = hess_arr.T[tri_idx]
-
-        return hess_arr
+        hess = np.empty((dim + 1, dim + 1))
+        hess[:-1, :-1] = (exog.T * hfbb) @ exog
+        hess[-1, :-1] = hess[:-1, -1] = hfba @ exog
+        hess[-1, -1] = hfaa.sum()
+        return hess
 
     def hessian_factor(self, params):
         """
@@ -4745,6 +4788,13 @@ class NegativeBinomialP(CountModel):
         y = self.endog
         mu = self.predict(params)
 
+        mask, expansion = _nbinom_poisson_expansion(y, mu, alpha, p)
+        if mask.all():
+            return tuple(expansion[3:])
+        if mask.any():
+            factors = np.empty((3, len(y)), dtype=np.result_type(mu, alpha, float))
+            factors[:, mask] = expansion[3:]
+            y, mu = y[~mask], mu[~mask]
         mu_p = mu**p
         a1 = mu_p / alpha
         a2 = mu + a1
@@ -4780,7 +4830,7 @@ class NegativeBinomialP(CountModel):
             * (
                 (1 + a4) * (1 - a3 / a2) / a2
                 - p * (np.log(a1 / a2) + dgpart + 2) / mu
-                + p * (a3 / mu + a4) / a2
+                + (p * a3 / mu + a4) / a2
                 + a4 * (polygamma(1, a1) - polygamma(1, a3))
             )
             / alpha
@@ -4801,6 +4851,9 @@ class NegativeBinomialP(CountModel):
             / alpha**2
         )
 
+        if mask.any():
+            factors[:, ~mask] = hfbb, hfba, hfaa
+            return tuple(factors)
         return hfbb, hfba, hfaa
 
     @Appender(_get_start_params_null_docs)
@@ -4892,6 +4945,12 @@ class NegativeBinomialP(CountModel):
                 res_poi.predict(), res_poi.resid, df_resid=res_poi.df_resid
             )
             start_params = np.append(start_params, max(0.05, a))
+
+        if self._transparams:
+            start_params = np.array(start_params, dtype=float, copy=True)
+            if start_params[-1] <= 0:
+                raise ValueError("alpha in start_params must be positive when use_transparams=True")
+            start_params[-1] = np.log(start_params[-1])
 
         if callback is None:
             # work around perfect separation callback #3895

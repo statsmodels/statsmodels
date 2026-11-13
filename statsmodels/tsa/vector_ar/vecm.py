@@ -374,6 +374,24 @@ def _endog_matrices(
     return y_1_T, delta_y_1_T, y_lag1, delta_x
 
 
+def _full_rank_svd(matrix):
+    """Factor a full-column-rank matrix after equilibrating its columns.
+
+    Scaling before the rank check makes the decision independent of the units
+    of the regressors. The returned factors satisfy
+    ``matrix = (u * s) @ vh * scale``.
+    """
+    scale = np.max(np.abs(matrix), axis=0, initial=0)
+    if np.any(scale == 0):
+        raise np.linalg.LinAlgError("Singular matrix")
+    u, s, vh = svd(matrix / scale, full_matrices=False)
+    if s.size < matrix.shape[1] or (
+        s.size and s[-1] <= np.finfo(s.dtype).eps * max(matrix.shape) * s[0]
+    ):
+        raise np.linalg.LinAlgError("Singular matrix")
+    return u, s, vh, scale
+
+
 def _r_matrices(delta_y_1_T, y_lag1, delta_x):
     """
     Returns two ndarrays needed for parameter estimation as well as the
@@ -404,11 +422,13 @@ def _r_matrices(delta_y_1_T, y_lag1, delta_x):
     .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
     """
 
-    delta_x_t = delta_x.T
-    xx_inv = inv(delta_x.dot(delta_x_t))
+    # Project onto an orthonormal basis, rather than inverting the Gram
+    # matrix of the short-run regressors. This also handles zero regressors
+    # without constructing an nobs-by-nobs projection matrix.
+    q, _, _, _ = _full_rank_svd(delta_x.T)
 
     def _residualize(mat):
-        return mat - mat.dot(delta_x_t).dot(xx_inv).dot(delta_x)
+        return mat - (mat @ q) @ q.T
 
     r0 = _residualize(delta_y_1_T)  # p. 292
     r1 = _residualize(y_lag1)
@@ -434,7 +454,9 @@ def _sij(delta_x, delta_y_1_T, y_lag1):
     -------
     result : tuple of ndarray
         A tuple of five ndarrays as well as eigenvalues and -vectors of a
-        certain (matrix) product of some of the returned ndarrays.
+        certain (matrix) product of some of the returned ndarrays. The fifth
+        array is a whitening factor W with ``W.T @ S_11 @ W = I``; the last
+        array contains eigenvectors in these whitened coordinates.
         (See pp. 294-295 in [1]_ for more information on
         :math:`S_0, S_1, \\lambda_i, \\v_i` for
         :math:`i \\in \\{1, \\dots, K\\}`.)
@@ -449,16 +471,22 @@ def _sij(delta_x, delta_y_1_T, y_lag1):
     s01 = np.dot(r0, r1.T) / nobs
     s10 = s01.T
     s11 = np.dot(r1, r1.T) / nobs
-    s11_ = inv(_mat_sqrt(s11))
-    # p. 295:
-    s01_s11_ = np.dot(s01, s11_)
-    eig = np.linalg.eig(s01_s11_.T @ inv(s00) @ s01_s11_)
-    lambd = eig[0]
-    v = eig[1]
-    # reorder eig_vals to make them decreasing (and order eig_vecs accordingly)
-    lambd_order = np.argsort(lambd)[::-1]
-    lambd = lambd[lambd_order]
-    v = v[:, lambd_order]
+    # Canonical correlations of the residual spaces. Forming and inverting
+    # their covariance matrices squares the condition numbers (GH 9081).
+    u0, _, _, _ = _full_rank_svd(r0.T)
+    u1, singular_values, vh1, scale1 = _full_rank_svd(r1.T)
+    _, correlations, vh = svd(u0.T @ u1, full_matrices=True)
+
+    # A whitening factor: s11_.T @ s11 @ s11_ = I. It need not be the
+    # symmetric inverse square root. Keeping the factors separate avoids
+    # forming that ill-conditioned matrix before computing beta.
+    s11_ = (vh1.T / singular_values) / scale1[:, None] * np.sqrt(nobs)
+    v = vh.T
+
+    # Deterministic terms inside the cointegration relation can make r1
+    # wider than r0. Complete the right singular basis with zero roots.
+    lambd = np.zeros(r1.shape[0], dtype=correlations.dtype)
+    lambd[: correlations.size] = correlations**2
     return s00, s01, s10, s11, s11_, lambd, v
 
 
@@ -994,6 +1022,11 @@ class VECM(tsbase.TimeSeriesModel):
 
         The estimation procedure is described on pp. 269-304 in [1]_.
 
+        .. versionchanged:: 0.15.1
+           Estimation uses rank-checked, scaled singular value decompositions
+           to reduce sensitivity to nearly collinear variables and changes
+           of measurement units. Rank-deficient designs raise LinAlgError.
+
         Parameters
         ----------
         method : {"ml"}, optional
@@ -1022,28 +1055,32 @@ class VECM(tsbase.TimeSeriesModel):
         )
         T = y_1_T.shape[1]
 
-        s00, s01, s10, s11, s11_, _, v = _sij(delta_x, delta_y_1_T, y_lag1)
+        _, _, _, _, s11_, _, v = _sij(delta_x, delta_y_1_T, y_lag1)
 
-        beta_tilde = (v[:, : self.coint_rank].T.dot(s11_)).T
-        beta_tilde = np.real_if_close(beta_tilde)
-        # normalize beta tilde such that eye(r) forms the first r rows of it:
-        beta_tilde = np.dot(beta_tilde, inv(beta_tilde[: self.coint_rank]))
-        alpha_tilde = s01.dot(beta_tilde).dot(
-            inv(beta_tilde.T.dot(s11).dot(beta_tilde))
-        )
-        gamma_tilde = (
-            (delta_y_1_T - alpha_tilde.dot(beta_tilde.T).dot(y_lag1))
-            .dot(delta_x.T)
-            .dot(inv(np.dot(delta_x, delta_x.T)))
-        )
-        temp = (
-            delta_y_1_T
-            - alpha_tilde.dot(beta_tilde.T).dot(y_lag1)
-            - gamma_tilde.dot(delta_x)
-        )
+        beta_tilde = s11_ @ v[:, : self.coint_rank]
+        # Normalize beta tilde such that eye(r) forms its first r rows.
+        beta_tilde = np.linalg.solve(
+            beta_tilde[: self.coint_rank].T, beta_tilde.T
+        ).T
+
+        # Conditional on beta, the adjustment and short-run coefficients
+        # are a single least-squares problem. Do not reintroduce covariance
+        # normal equations after obtaining beta from the stable SVD.
+        regressors = np.vstack((beta_tilde.T @ y_lag1, delta_x)).T
+        u, singular_values, vh, scale = _full_rank_svd(regressors)
+        projected = u.T @ delta_y_1_T.T
+        parameters = (
+            (vh.T / singular_values) @ projected
+        ) / scale[:, None]
+        alpha_tilde = parameters[: self.coint_rank].T
+        gamma_tilde = parameters[self.coint_rank :].T
+        # Obtain fitted observations from the orthogonal projection. Large
+        # coefficients can cancel when multiplied by collinear regressors,
+        # even after those coefficients have been estimated accurately.
+        temp = delta_y_1_T - (u @ projected).T
         sigma_u_tilde = temp.dot(temp.T) / T
 
-        return VECMResults(
+        result = VECMResults(
             self.y,
             self.exog,
             self.exog_coint,
@@ -1063,6 +1100,11 @@ class VECM(tsbase.TimeSeriesModel):
             dates=self.data.dates,
             first_season=self.first_season,
         )
+        result._cache = {
+            "fittedvalues": (y_1_T - temp).T,
+            "resid": temp.T,
+        }
+        return result
 
     @property
     def _lagged_param_names(self):
@@ -1489,13 +1531,13 @@ class VECMResults:
         """Compute the VECM's loglikelihood"""
         K = self.neqs
         T = self.nobs
-        r = self.coint_rank
-        s00, _, _, _, _, lambd, _ = _sij(self._delta_x, self._delta_y_1_T, self._y_lag1)
-        return (
-            -K * T * np.log(2 * np.pi) / 2
-            - T * (np.log(np.linalg.det(s00)) + sum(np.log(1 - lambd)[:r])) / 2
-            - K * T / 2
-        )
+        # The determinant of the fitted innovation covariance is the product
+        # of the squared residual singular values divided by T**K. Evaluate
+        # it in log space, without forming an ill-conditioned covariance or
+        # subtracting canonical roots close to one.
+        singular_values = svd(self.resid, compute_uv=False)
+        logdet = 2 * np.log(singular_values).sum() - K * np.log(T)
+        return -T * (K * (np.log(2 * np.pi) + 1) + logdet) / 2
 
     @cache_readonly
     def _cov_sigma(self):

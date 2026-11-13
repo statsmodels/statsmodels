@@ -153,6 +153,78 @@ def _tie_terms(xp0, xp1, xp0d, xp1d, ndeath, efron):
     return haz.sum(), haz @ xbar_j, (f * haz).sum(), (f * haz) @ xbar_j, xbar_j.mean(0)
 
 
+def _sum_risk_sets(values, first, last, nperiods):
+    """Accumulate risk-set totals without subtracting departed subjects.
+
+    An interval is added to its disjoint dyadic tree nodes. Propagating each
+    node to its children then gives the total at every event. Positive hazard
+    weights are only added, so removing a much larger subject cannot erase a
+    smaller subject's contribution to a later risk set.
+    """
+    size = 1 << (nperiods - 1).bit_length()
+    totals = np.zeros((2 * size, values.shape[1]), dtype=values.dtype)
+    left = first + size
+    right = last + size + 1
+    empty = left >= right
+    left[empty] = size
+    right[empty] = size
+
+    while np.any(left < right):
+        take = (left < right) & (left % 2 != 0)
+        np.add.at(totals, left[take], values[take])
+        left[take] += 1
+
+        take = (left < right) & (right % 2 != 0)
+        right[take] -= 1
+        np.add.at(totals, right[take], values[take])
+
+        left //= 2
+        right //= 2
+
+    width = 1
+    while width < size:
+        totals[2 * width:4 * width:2] += totals[width:2 * width]
+        totals[2 * width + 1:4 * width:2] += totals[width:2 * width]
+        width *= 2
+    return totals[size:size + nperiods].copy()
+
+
+def _sum_risk_intervals(values, first, last):
+    """Sum inclusive event intervals without subtracting cumulative totals.
+
+    All subjects are processed together at each level of a pairwise reduction.
+    This avoids an event-by-subject matrix and the loss of small interval sums
+    when two large cumulative hazards are subtracted. Empty risk intervals
+    contribute zero.
+    """
+    left = first.copy()
+    right = last + 1
+    empty = left >= right
+    left[empty] = 0
+    right[empty] = 0
+    result = np.zeros((len(first),) + values.shape[1:], dtype=values.dtype)
+
+    while np.any(left < right):
+        take = (left < right) & (left % 2 != 0)
+        result[take] += values[left[take]]
+        left[take] += 1
+
+        take = (left < right) & (right % 2 != 0)
+        right[take] -= 1
+        result[take] += values[right[take]]
+
+        left //= 2
+        right //= 2
+        if np.any(left < right):
+            npaired = 2 * (len(values) // 2)
+            paired = values[:npaired:2] + values[1:npaired:2]
+            if npaired < len(values):
+                paired = np.concatenate((paired, values[-1:]), axis=0)
+            values = paired
+
+    return result
+
+
 class PHSurvivalTime:
 
     def __init__(self, time, status, exog, strata=None, entry=None, offset=None):
@@ -1204,6 +1276,82 @@ class PHReg(model.LikelihoodModel):
             last[ix] = k
         return first, last
 
+    def _residuals(self, params, score):
+        """Compute residuals from interval risk totals and compensators."""
+        surv = self.surv
+        efron = self.ties == "efron"
+        shape = self.exog.shape if score else self.exog.shape[:1]
+        residuals = np.full(shape, np.nan, dtype=np.float64)
+
+        for stx in range(surv.nstrat):
+            uft_ix = surv.ufailt_ix[stx]
+            exog_s = surv.exog_s[stx]
+            strat_ix = surv.stratum_rows[stx]
+            nobs, nvar = exog_s.shape
+
+            linpred = np.dot(exog_s, params)
+            if surv.offset_s is not None:
+                linpred += surv.offset_s[stx]
+            linpred -= linpred.max()
+            e_linpred = np.exp(linpred)
+
+            first, last = self._risk_range(stx)
+            if score:
+                # Score differences are invariant to a stratum-wise shift.
+                # Center before factoring compensators, so large common
+                # covariate offsets do not cancel after event aggregation.
+                score_exog = np.asarray(exog_s, dtype=np.result_type(exog_s.dtype, np.float64))
+                center = np.partition(score_exog, nobs // 2, axis=0)[nobs // 2].copy()
+                with np.errstate(over="ignore", invalid="ignore"):
+                    score_exog = score_exog - center
+                overflow = ~np.isfinite(score_exog).all(axis=0)
+                score_exog[:, overflow] = exog_s[:, overflow]
+            nterms = nvar + 1 if score else 1
+            values = np.empty((nobs, nterms), dtype=np.result_type(e_linpred.dtype, np.float64))
+            values[:, 0] = e_linpred
+            if score:
+                values[:, 1:] = e_linpred[:, None] * score_exog
+            increments = _sum_risk_sets(values, first, last, len(uft_ix))
+            del values
+
+            if score:
+                resid_s = np.zeros((nobs, nvar), dtype=np.float64)
+            else:
+                resid_s = surv.status_s[stx].astype(np.float64, copy=True)
+
+            # Reuse the risk-total array for each event's compensator terms.
+            # _tie_terms supplies the current Breslow/Efron formulas unchanged.
+            for i, ix in enumerate(uft_ix):
+                xp0d = e_linpred[ix].sum()
+                if score:
+                    xp1 = increments[i, 1:]
+                    xp1d = np.dot(e_linpred[ix], score_exog[ix, :])
+                else:
+                    xp1 = xp1d = np.zeros(1)
+                h, hx, hf, hxf, xbar = _tie_terms(
+                    increments[i, 0], xp1, xp0d, xp1d, len(ix), efron
+                )
+                increments[i, 0] = h
+
+                if score:
+                    increments[i, 1:] = hx
+                    resid_s[ix, :] += (score_exog[ix, :] - xbar) + (
+                        e_linpred[ix, None] * (score_exog[ix, :] * hf - hxf)
+                    )
+                else:
+                    resid_s[ix] += e_linpred[ix] * hf
+
+            compensator = _sum_risk_intervals(increments, first, last)
+            if score:
+                resid_s -= e_linpred[:, None] * (
+                    score_exog * compensator[:, :1] - compensator[:, 1:]
+                )
+            else:
+                resid_s -= e_linpred * compensator[:, 0]
+            residuals[strat_ix] = resid_s
+
+        return residuals
+
     def score_residuals(self, params):
         """
         Returns the score residuals calculated at a given vector of
@@ -1233,60 +1381,7 @@ class PHReg(model.LikelihoodModel):
         observations that are not at risk at any failure time are 0.
         """
 
-        surv = self.surv
-        efron = self.ties == "efron"
-
-        score_resid = np.full(self.exog.shape, np.nan, dtype=np.float64)
-
-        # Loop over strata
-        for stx in range(surv.nstrat):
-
-            uft_ix = surv.ufailt_ix[stx]
-            exog_s = surv.exog_s[stx]
-            nuft = len(uft_ix)
-            strat_ix = surv.stratum_rows[stx]
-
-            linpred = np.dot(exog_s, params)
-            if surv.offset_s is not None:
-                linpred += surv.offset_s[stx]
-            linpred -= linpred.max()
-            e_linpred = np.exp(linpred)
-
-            first, last = self._risk_range(stx)
-            resid_s = np.zeros(exog_s.shape, dtype=np.float64)
-
-            # Loop over the unique failure times.
-            for i in range(nuft):
-
-                at_risk = np.flatnonzero((first <= i) & (i <= last))
-                e_risk = e_linpred[at_risk]
-                x_risk = exog_s[at_risk, :]
-
-                ix = uft_ix[i]
-                xp0d = e_linpred[ix].sum()
-                xp1d = np.dot(e_linpred[ix], exog_s[ix, :])
-                h, hx, hf, hxf, xbar = _tie_terms(
-                    e_risk.sum(),
-                    np.dot(e_risk, x_risk),
-                    xp0d,
-                    xp1d,
-                    len(ix),
-                    efron,
-                )
-
-                # The compensator of the subjects at risk, the subjects that
-                # fail have the weight 1 - f in the steps of the Efron
-                # approximation.
-                comp = -e_risk[:, None] * (x_risk * h - hx)
-                dead = np.isin(at_risk, ix)
-                comp[dead, :] += (x_risk[dead, :] - xbar) + e_risk[dead, None] * (
-                    x_risk[dead, :] * hf - hxf
-                )
-                resid_s[at_risk, :] += comp
-
-            score_resid[strat_ix, :] = resid_s
-
-        return score_resid
+        return self._residuals(params, score=True)
 
     def _martingale_residuals(self, params):
         """
@@ -1305,51 +1400,7 @@ class PHReg(model.LikelihoodModel):
             observations that are not used.
         """
 
-        surv = self.surv
-        efron = self.ties == "efron"
-
-        mart_resid = np.full(self.exog.shape[0], np.nan, dtype=np.float64)
-
-        # Loop over strata
-        for stx in range(surv.nstrat):
-
-            uft_ix = surv.ufailt_ix[stx]
-            exog_s = surv.exog_s[stx]
-            nuft = len(uft_ix)
-            strat_ix = surv.stratum_rows[stx]
-
-            linpred = np.dot(exog_s, params)
-            if surv.offset_s is not None:
-                linpred += surv.offset_s[stx]
-            linpred -= linpred.max()
-            e_linpred = np.exp(linpred)
-
-            first, last = self._risk_range(stx)
-            # cumulative hazard of each subject while it is at risk
-            cumhaz = np.zeros(exog_s.shape[0], dtype=np.float64)
-
-            for i in range(nuft):
-
-                at_risk = np.flatnonzero((first <= i) & (i <= last))
-                e_risk = e_linpred[at_risk]
-
-                ix = uft_ix[i]
-                xp0d = e_linpred[ix].sum()
-                # only the hazard is needed, not the averages of the covariates
-                h, _, hf, _, _ = _tie_terms(
-                    e_risk.sum(),
-                    np.zeros(1),
-                    xp0d,
-                    np.zeros(1),
-                    len(ix),
-                    efron,
-                )
-                cumhaz[at_risk] += h
-                cumhaz[ix] -= hf
-
-            mart_resid[strat_ix] = surv.status_s[stx] - e_linpred * cumhaz
-
-        return mart_resid
+        return self._residuals(params, score=False)
 
     def weighted_covariate_averages(self, params):
         """
@@ -2164,3 +2215,4 @@ class rv_discrete_float:
         """
 
         return np.sqrt(self.var())
+

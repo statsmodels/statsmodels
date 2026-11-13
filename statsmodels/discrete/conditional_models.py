@@ -7,7 +7,7 @@ import itertools
 import warnings
 
 import numpy as np
-from scipy.special import logsumexp
+from scipy.special import expit, logsumexp
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -329,6 +329,13 @@ class ConditionalLogit(_ConditionalModel):
     missing : {'none', 'drop', 'raise'}, optional
         If 'none', no nan checking is done. If 'drop', any observations
         with nans are dropped. If 'raise', an error is raised.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The conditional likelihood uses iterative, scaled log-space recurrences
+       for large groups and batched calculations for matched small groups.
     """
 
     def __init__(self, endog, exog, missing="none", **kwargs):
@@ -341,6 +348,57 @@ class ConditionalLogit(_ConditionalModel):
 
         self.K = self.exog.shape[1]
         # i.e., self.k_params, for compatibility with MNLogit
+
+        # A matched pair is an ordinary logistic likelihood for the difference
+        # between its case and control. Batch these very common small groups.
+        pair_exog, pair_offset = [], []
+        single_groups = collections.defaultdict(list)
+        self._nonpair_groups = []
+        for g, size in enumerate(self._groupsize):
+            if size != 2:
+                if self._n1[g] == 1 or self._n1[g] == size - 1:
+                    single_groups[size].append(g)
+                else:
+                    self._nonpair_groups.append(g)
+                continue
+            direction = 1 if self._endog_grp[g][0] == 1 else -1
+            exog = self._exog_grp[g]
+            exog = np.asarray(exog, dtype=np.result_type(exog, float))
+            pair_exog.append(direction * (exog[0] - exog[1]))
+            if hasattr(self, "offset"):
+                offset = self._offset_grp[g]
+                offset = np.asarray(offset, dtype=np.result_type(offset, float))
+                pair_offset.append(direction * (offset[0] - offset[1]))
+            else:
+                pair_offset.append(0.0)
+        self._pair_exog = np.asarray(pair_exog).reshape(-1, self.K)
+        self._pair_offset = np.asarray(pair_offset)
+
+        self._single_batches = []
+        for size, groups in single_groups.items():
+            # Bound each design/offset batch to about 512 KiB for float64.
+            batch_size = 65536 // (size * (self.K + 1))
+            if len(groups) == 1 or batch_size < 2:
+                self._nonpair_groups.extend(groups)
+                continue
+            for start in range(0, len(groups), batch_size):
+                indices = groups[start : start + batch_size]
+                design, offsets = [], []
+                for g in indices:
+                    direction = 1 if self._n1[g] == 1 else -1
+                    endog = np.asarray(self._endog_grp[g])
+                    reference = np.argmax(endog if direction == 1 else 1 - endog)
+                    exog = self._exog_grp[g]
+                    exog = np.asarray(exog, dtype=np.result_type(exog, float))
+                    design.append(direction * (exog - exog[reference]))
+                    if hasattr(self, "offset"):
+                        offset = self._offset_grp[g]
+                        offset = np.asarray(offset, dtype=np.result_type(offset, float))
+                        offsets.append(direction * (offset - offset[reference]))
+                    else:
+                        offsets.append(np.zeros(size))
+                self._single_batches.append((np.asarray(design), np.asarray(offsets)))
+        self._nonpair_groups.sort()
 
     def loglike(self, params):
         """
@@ -358,10 +416,22 @@ class ConditionalLogit(_ConditionalModel):
             groups.
         """
 
-        ll = 0
-        for g in range(len(self._endog_grp)):
-            ll += self.loglike_grp(g, params)
+        if (
+            getattr(self.loglike_grp, "__func__", None)
+            is not ConditionalLogit.loglike_grp
+        ):
+            return sum(self.loglike_grp(g, params) for g in range(self._n_groups))
 
+        linear = self._pair_exog @ params + self._pair_offset
+        if np.iscomplexobj(linear):
+            ll = -logsumexp(np.stack((np.zeros_like(linear), -linear)), axis=0).sum()
+        else:
+            ll = -np.logaddexp(0, -linear).sum()
+        for design, offset in self._single_batches:
+            linear = design @ params + offset
+            ll -= logsumexp(linear, axis=1).sum()
+        for g in self._nonpair_groups:
+            ll += self.loglike_grp(g, params)
         return ll
 
     def score(self, params):
@@ -379,10 +449,28 @@ class ConditionalLogit(_ConditionalModel):
             The score vector at `params`, summed over all groups.
         """
 
-        score = 0
-        for g in range(self._n_groups):
-            score += self.score_grp(g, params)
+        score = np.zeros(self.K, dtype=np.result_type(np.asarray(params), float))
+        if getattr(self.score_grp, "__func__", None) is not ConditionalLogit.score_grp:
+            for g in range(self._n_groups):
+                score += self.score_grp(g, params)
+            return score
 
+        linear = self._pair_exog @ params + self._pair_offset
+        if np.iscomplexobj(linear):
+            weights = np.exp(
+                -logsumexp(np.stack((np.zeros_like(linear), linear)), axis=0)
+            )
+        else:
+            weights = expit(-linear)
+        score = self._pair_exog.T @ weights
+        for design, offset in self._single_batches:
+            linear = design @ params + offset
+            shifted = linear - np.max(linear.real, axis=1, keepdims=True)
+            weights = np.exp(shifted)
+            weights /= weights.sum(axis=1, keepdims=True)
+            score -= np.einsum("ij,ijk->k", weights, design)
+        for g in self._nonpair_groups:
+            score += self.score_grp(g, params)
         return score
 
     def _denom(self, grp, params, ofs=None):
@@ -392,27 +480,19 @@ class ConditionalLogit(_ConditionalModel):
 
         exb = np.exp(np.dot(self._exog_grp[grp], params) + ofs)
 
-        # In the recursions, f may be called multiple times with the
-        # same arguments, so we memoize the results.
-        memo = {}
+        nobs = len(exb)
+        n1 = int(self._n1[grp])
+        denom = np.zeros(n1 + 1, dtype=exb.dtype)
+        denom[0] = 1
+        for t, value in enumerate(exb, 1):
+            # Update only states that can reach the final number of successes.
+            lower = max(1, n1 - nobs + t)
+            upper = min(t, n1)
+            # D(t, k) = D(t-1, k) + value * D(t-1, k-1).
+            # The right-hand side is evaluated before updating the slice.
+            denom[lower : upper + 1] += value * denom[lower - 1 : upper]
 
-        def f(t, k):
-            if t < k:
-                return 0
-            if k == 0:
-                return 1
-
-            try:
-                return memo[(t, k)]
-            except KeyError:
-                pass
-
-            v = f(t - 1, k) + f(t - 1, k - 1) * exb[t - 1]
-            memo[(t, k)] = v
-
-            return v
-
-        return f(self._groupsize[grp], self._n1[grp])
+        return denom[n1]
 
     def _denom_grad(self, grp, params, ofs=None):
 
@@ -422,33 +502,129 @@ class ConditionalLogit(_ConditionalModel):
         ex = self._exog_grp[grp]
         exb = np.exp(np.dot(ex, params) + ofs)
 
-        # s may be called multiple times in the recursions with the
-        # same arguments, so memoize the results.
-        memo = {}
+        nobs = len(exb)
+        n1 = int(self._n1[grp])
+        denom = np.zeros(n1 + 1, dtype=exb.dtype)
+        grad = np.zeros((n1 + 1, self.k_params), dtype=exb.dtype)
+        denom[0] = 1
+        for t, value in enumerate(exb, 1):
+            lower = max(1, n1 - nobs + t)
+            upper = min(t, n1)
+            # Update the gradient first, using the preceding denominator state.
+            grad[lower : upper + 1] += value * (
+                grad[lower - 1 : upper] + denom[lower - 1 : upper, None] * ex[t - 1]
+            )
+            denom[lower : upper + 1] += value * denom[lower - 1 : upper]
 
-        def s(t, k):
+        return denom[n1], grad[n1]
 
-            if t < k:
-                return 0, np.zeros(self.k_params)
-            if k == 0:
-                return 1, 0
+    def _loglike_score_grp(self, grp, params, ofs=None, calc_score=False):
+        """Evaluate a group's likelihood without forming its normalizer.
 
-            try:
-                return memo[(t, k)]
-            except KeyError:
-                pass
+        The denominator is an elementary symmetric polynomial in exp(X beta).
+        Each log-polynomial state is normalized by its largest subset term,
+        retaining small likelihood differences even at large predictor contrasts.
+        """
+        exog = self._exog_grp[grp]
+        exog = np.asarray(exog, dtype=np.result_type(exog, float))
+        endog = np.asarray(self._endog_grp[grp])
+        nobs = len(endog)
+        n1 = int(self._n1[grp])
 
-            h = exb[t - 1]
-            a, b = s(t - 1, k)
-            c, e = s(t - 1, k - 1)
-            d = c * h * ex[t - 1, :]
+        # Conditioning on failures gives the same likelihood with -X beta.
+        # Use the smaller number of selected observations to reduce the state.
+        direction = 1
+        if n1 > nobs // 2:
+            direction = -1
+            endog = 1 - endog
+            n1 = nobs - n1
 
-            u, v = a + c * h, b + d + e * h
-            memo[(t, k)] = (u, v)
+        # Remove a common group predictor before taking exponentials or sums.
+        # This also removes constant offsets without cancellation at the end.
+        reference = np.argmax(endog) if n1 == 1 else 0
+        design = direction * (exog - exog[reference])
+        linear = design @ params
+        if ofs is not None and np.ndim(ofs):
+            ofs = np.asarray(ofs, dtype=np.result_type(ofs, float))
+            linear = linear + direction * (ofs - ofs[reference])
 
-            return u, v
+        if n1 == 1:
+            log_denom = logsumexp(linear)
+            if calc_score:
+                # Reconstructing a large log-normalizer can round away log(2)
+                # for tied leading terms. Normalize shifted weights directly.
+                weights = np.exp(linear - np.max(linear.real))
+                weights /= weights.sum()
+                return -log_denom, -(weights @ design)
+            return -log_denom
 
-        return s(self._groupsize[grp], self._n1[grp])
+        dtype = np.result_type(linear, float)
+        log_denom = np.full(n1 + 1, -np.inf, dtype=dtype)
+        log_denom[0] = 0
+        if calc_score:
+            mean = np.zeros((n1 + 1, self.K), dtype=dtype)
+
+        # For state k, subtract the sum of the k largest preceding predictors.
+        # The difference between the two candidate reference sums is just
+        # value - kth, so neither large cumulative sum needs to be formed.
+        top = np.full(n1, -np.inf, dtype=dtype)
+        top_indices = np.full(n1, -1, dtype=int)
+        complex_params = np.iscomplexobj(linear)
+        for t, value in enumerate(linear, 1):
+            lower = max(1, n1 - nobs + t)
+            upper = min(t, n1)
+            current = slice(lower, upper + 1)
+            previous = slice(lower - 1, upper)
+            kth = top[lower - 1 : upper]
+            difference = value - kth
+            choose_include = value.real > kth.real
+
+            # Use one complementary branch for both shifts. At equal real
+            # parts this retains the imaginary difference for complex-step
+            # derivatives, consistently with the stable top-k insertion below.
+            exclude = log_denom[current] + np.where(choose_include, -difference, 0)
+            include = log_denom[previous] + np.where(choose_include, 0, difference)
+            if complex_params:
+                shift = np.maximum(exclude.real, include.real)
+                weight_exclude = np.exp(exclude - shift)
+                weight_include = np.exp(include - shift)
+                total = weight_exclude + weight_include
+                combined = shift + np.log(total)
+                if calc_score:
+                    weight_exclude /= total
+                    weight_include /= total
+            else:
+                combined = np.logaddexp(exclude, include)
+                if calc_score:
+                    difference = include - exclude
+                    weight_exclude = expit(-difference)
+                    weight_include = expit(difference)
+
+            if calc_score:
+                mean[current] = weight_exclude[:, None] * mean[
+                    current
+                ] + weight_include[:, None] * (mean[previous] + design[t - 1])
+            log_denom[current] = combined
+
+            insertion = np.searchsorted(-top.real, -value.real, side="right")
+            if insertion < n1:
+                top[insertion + 1 :] = top[insertion:-1]
+                top_indices[insertion + 1 :] = top_indices[insertion:-1]
+                top[insertion] = value
+                top_indices[insertion] = t - 1
+
+        # Cancel observations common to the observed and reference subsets
+        # before summing. Every remaining real contrast is nonpositive, so
+        # small likelihood differences cannot disappear in a subtraction of
+        # two large accumulated predictor sums.
+        top_mask = np.zeros(nobs, dtype=bool)
+        top_mask[top_indices] = True
+        observed_only = linear[(endog != 0) & ~top_mask]
+        top_only = linear[(endog == 0) & top_mask]
+        ll = np.sum(observed_only - top_only) - log_denom[n1]
+        if calc_score:
+            return ll, np.dot(endog, design) - mean[n1]
+        return ll
 
     def loglike_grp(self, grp, params):
 
@@ -456,23 +632,15 @@ class ConditionalLogit(_ConditionalModel):
         if hasattr(self, "offset"):
             ofs = self._offset_grp[grp]
 
-        llg = np.dot(self._xy[grp], params)
-
-        if ofs is not None:
-            llg += self._endofs[grp]
-
-        llg -= np.log(self._denom(grp, params, ofs))
-
-        return llg
+        return self._loglike_score_grp(grp, params, ofs)
 
     def score_grp(self, grp, params):
 
-        ofs = 0
+        ofs = None
         if hasattr(self, "offset"):
             ofs = self._offset_grp[grp]
 
-        d, h = self._denom_grad(grp, params, ofs)
-        return self._xy[grp] - h / d
+        return self._loglike_score_grp(grp, params, ofs, calc_score=True)[1]
 
 
 class ConditionalPoisson(_ConditionalModel):

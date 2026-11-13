@@ -35,7 +35,8 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
     num_levels : int, optional
         Gives the user the option to specify the number of levels for the
         random variable. If not given, the number of levels is calculated
-        from the data.
+        from the data. When evaluating a subset, this can retain the number
+        of levels in the full training sample.
 
     Returns
     -------
@@ -46,7 +47,9 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
     -----
     See p.18 of [2]_ for details.  The value of the kernel L if :math:`X_{i}=x`
     is :math:`1-\lambda`, otherwise it is :math:`\frac{\lambda}{c-1}`.
-    Here :math:`c` is the number of levels plus one of the RV.
+    Here :math:`c` is the number of levels in the random variable's support.
+    A support containing one level gives an indicator kernel independently
+    of the bandwidth, since there is no other level over which to smooth.
 
     References
     ----------
@@ -56,8 +59,16 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
            and Trends in Econometrics: Vol 3: No 1, pp1-88., 2008.
     """
     Xi = Xi.reshape(Xi.size)  # seems needed in case Xi is scalar
+    if h == 0:
+        # With no smoothing the kernel is a point mass, including when
+        # a resampled column contains only one observed level.
+        return (Xi == x).astype(float)
+
     if num_levels is None:
         num_levels = np.asarray(np.unique(Xi).size)
+    if num_levels == 1:
+        # A variable supported on one level has no smoothing parameter.
+        return (Xi == x).astype(float)
 
     kernel_value = np.ones(Xi.size) * h / (num_levels - 1)
     idx = Xi == x
@@ -215,7 +226,7 @@ def wang_ryzin_convolution(h, Xi, Xj):
     return ordered
 
 
-def aitchison_aitken_convolution(h, Xi, Xj):
+def aitchison_aitken_convolution(h, Xi, Xj, num_levels=None):
     """
     Calculates the Aitchison-Aitken convolution kernel
 
@@ -228,12 +239,25 @@ def aitchison_aitken_convolution(h, Xi, Xj):
     Xj : float or ndarray of int
         The value of the second training set; may be a scalar or a 1-D
         array.
+    num_levels : int, optional
+        Number of levels in the full training support. If supplied, both
+        `Xi` and `Xj` must take values in that support, and the convolution
+        includes levels absent from these arrays. If omitted, the support
+        is inferred from `Xi`.
 
     Returns
     -------
     ordered : ndarray
         The value of the convolution kernel function for each observation.
     """
+    if num_levels is not None:
+        if num_levels == 1:
+            return (Xi == Xj).astype(float)
+        off_diagonal = h / (num_levels - 1)
+        same = (1 - h) ** 2 + (num_levels - 1) * off_diagonal**2
+        different = 2 * (1 - h) * off_diagonal + (num_levels - 2) * off_diagonal**2
+        return np.where(Xi == Xj, same, different)
+
     Xi_vals = np.unique(Xi)
     ordered = np.zeros(Xi.size)
     num_levels = Xi_vals.size
