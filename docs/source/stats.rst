@@ -69,6 +69,8 @@ Forecast Evaluation
 
    diebold_mariano_test
    DieboldMarianoResult
+   clark_west_test
+   ClarkWestResult
 
 
 Heteroscedasticity
