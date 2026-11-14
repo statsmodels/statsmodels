@@ -151,6 +151,12 @@ Behavior changes
   these kernels returned ``nan`` for most data. They now integrate the density
   over the support of the observations, in the units of the data, so that the
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
+- :func:`~statsmodels.tsa.stattools.diebold_mariano_test` raises a
+  ``ValueError`` if the loss differential is constant up to rounding error,
+  for example if the two forecasts are identical, if the estimated long-run
+  variance is not positive, if ``horizon`` is not smaller than the number of
+  observations, or if ``lags`` is too large for it. It returned ``nan``, a
+  meaningless statistic or a statistic of 0 before. :issue:`10753`, :pr:`10755`
 
 New Features and Enhancements
 =============================
@@ -215,6 +221,16 @@ New functions and methods
   1000 observations, about 300 times faster for 60 variables, and returns a
   ``Series`` for a ``DataFrame``. :issue:`1669`, :pr:`2380`, :pr:`7711`,
   :pr:`10623`
+- Add the arguments ``alternative`` and ``kernel`` to
+  :func:`~statsmodels.tsa.stattools.diebold_mariano_test`. ``alternative``
+  selects a one-sided test, ``"larger"`` if ``forecast_b`` is more accurate
+  or ``"smaller"`` if ``forecast_a`` is. ``kernel="uniform"`` estimates the
+  long-run variance with equal weights up to ``lags``, as in Diebold and
+  Mariano (1995) and Harvey et al. (1997), and uses ``horizon - 1`` lags by
+  default. With ``harvey_adj=True`` this gives the results of ``dm.test`` in
+  the R package forecast. The results of the default arguments are
+  unchanged.
+  :issue:`10753`, :pr:`10755`
 
 Performance
 -----------
