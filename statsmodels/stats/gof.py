@@ -174,7 +174,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
     if a == 0:   # log likelihood ratio
         D_obs = 2*n * np.sum(special.xlogy(o/(1.0*nt), o/e), axis=axis)
     elif a == -1:  # modified log likelihood ratio
-        D_obs = 2*n * np.sum(special.xlogy(e/(1.0*nt), e/o), axis=axis)
+        D_obs = 2*n * np.sum(e/(1.0*nt) * np.log(e/o), axis=axis)
     else:
         D_obs = 2*n/a/(a+1) * np.sum(o/(1.0*nt) * ((o/e)**a - 1), axis=axis)
 
