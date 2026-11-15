@@ -442,6 +442,12 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
+- Correct the joint log-likelihood for state space models combining exact
+  diffuse initialization and concentrated scale. Finite innovations within
+  diffuse periods now contribute to both scale-dependent likelihood terms,
+  with ``loglikelihood_burn`` applied consistently. This corrects
+  ``KalmanFilter.loglike`` without changing the scale estimator.
+  :issue:`10741`
 - The ARIMA GLS estimator now uses the complete AR and MA lag polynomials
   when whitening the regression data. Seasonal terms were previously
   omitted, and nonconsecutive lags were treated as consecutive, producing
