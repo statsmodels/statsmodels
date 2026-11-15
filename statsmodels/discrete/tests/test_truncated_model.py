@@ -10,6 +10,7 @@ import pytest
 from statsmodels import datasets
 from statsmodels.discrete.truncated_model import (
     HurdleCountModel,
+    TruncatedLFGeneralizedPoisson,
     TruncatedLFNegativeBinomialP,
     TruncatedLFPoisson,
 )
@@ -692,6 +693,56 @@ def test_truncated_negative_binomial_dispersion_factor():
     expected = 1 - alpha_hat * mu_hat ** (p - 1) / (
         np.exp(mu_hat ** (p - 1)) - 1)
     assert_allclose(res._dispersion_factor, expected)
+
+def _simulate_negbin_counts():
+    rng = np.random.default_rng(2843)
+    nobs = 500
+    exog = add_constant(0.4 * rng.normal(size=(nobs, 2)))
+    mu = np.exp(exog @ [0.6, 0.3, -0.2])
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    return endog, exog
+
+
+@pytest.mark.parametrize(
+    "model_class, p, truncation",
+    [
+        (TruncatedLFGeneralizedPoisson, 1, 0),
+        (TruncatedLFGeneralizedPoisson, 1.5, 0),
+        (TruncatedLFGeneralizedPoisson, 2, 0),
+        (TruncatedLFGeneralizedPoisson, 2, 1),
+        (TruncatedLFNegativeBinomialP, 1, 0),
+        (TruncatedLFNegativeBinomialP, 1.5, 0),
+        (TruncatedLFNegativeBinomialP, 2, 0),
+        (TruncatedLFNegativeBinomialP, 1, 1),
+    ],
+)
+def test_score_numerical_p(model_class, p, truncation):
+    # the models for the truncated counts in score_obs used the default p
+    endog, exog = _simulate_negbin_counts()
+    model = model_class(endog, exog, truncation=truncation, p=p)
+    params = np.array([0.5, 0.2, -0.1, 0.4])
+    numerical_score = approx_fprime(params, model.loglike, centered=True)
+    assert_allclose(model.score(params), numerical_score, rtol=1e-6)
+
+
+def test_hurdle_negbin_p1_score_numerical():
+    endog, exog = _simulate_negbin_counts()
+    model = HurdleCountModel(endog, exog, dist="negbin", p=1)
+    params = np.array([0.5, 0.2, -0.1, 0.5, 0.2, -0.1, 0.4])
+    numerical_score = approx_fprime(params, model.loglike, centered=True)
+    assert_allclose(model.score(params), numerical_score, rtol=1e-6)
+
+
+def test_truncated_genpoisson_default_fit():
+    # default p=2, fit stopped early because the score was incorrect
+    endog, exog = _simulate_negbin_counts()
+    model = TruncatedLFGeneralizedPoisson(endog, exog)
+    res = model.fit(disp=0)
+    assert res.mle_retvals["converged"]
+    nobs = model.endog.shape[0]
+    numerical_score = approx_fprime(res.params, model.loglike, centered=True)
+    assert_allclose(numerical_score / nobs, 0, atol=1e-5)
+
 
 class CheckHurdleL1Coherence:
     """
