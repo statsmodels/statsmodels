@@ -646,11 +646,18 @@ def acovf(x, adjusted=False, demean=True, fft=True, missing="none", nlag=None):
 
     if demean and deal_with_masked:
         # whether "drop" or "conservative":
-        xo = x - x.sum() / notmask_int.sum()
-        if missing == "conservative":
-            xo[~notmask_bool] = 0
+        x_valid = x if missing == "drop" else x[notmask_bool]
+        if x_valid.size > 0 and np.ptp(x_valid) == 0:
+            xo = np.zeros_like(x)
+        else:
+            xo = x - x.sum() / notmask_int.sum()
+            if missing == "conservative":
+                xo[~notmask_bool] = 0
     elif demean:
-        xo = x - x.mean()
+        if x.size > 0 and np.ptp(x) == 0:
+            xo = np.zeros_like(x)
+        else:
+            xo = x - x.mean()
     else:
         xo = x
 
@@ -1068,6 +1075,11 @@ def acf(
     If adjusted is true, the denominator for the autocovariance is adjusted
     for the loss of data.
 
+    .. versionchanged:: 0.15.1
+
+       Returns 1.0 for lag 0 and NaN for lags 1 and higher when `x` is
+       constant.
+
     References
     ----------
     .. [1] Parzen, E., 1963. On spectral analysis with missing observations
@@ -1113,7 +1125,10 @@ def acf(
         )
 
     avf = acovf(x, adjusted=adjusted, demean=True, fft=fft, missing=missing)
-    acf = avf[: nlags + 1] / avf[0]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        acf = avf[: nlags + 1] / avf[0]
+    if avf[0] == 0:
+        acf[0] = 1.0
 
     confint = None
     if alpha is not None and not 0 < alpha < 1:
@@ -1361,17 +1376,18 @@ def pacf_burg(
     u = x[::-1].copy()
     v = x[::-1].copy()
     d[1] = u[:-1].dot(u[:-1]) + v[1:].dot(v[1:])
-    pacf[1] = 2 / d[1] * v[1:].dot(u[:-1])
-    last_u = np.empty_like(u)
-    last_v = np.empty_like(v)
-    for i in range(1, p):
-        last_u[:] = u
-        last_v[:] = v
-        u[1:] = last_u[:-1] - pacf[i] * last_v[1:]
-        v[1:] = last_v[1:] - pacf[i] * last_u[:-1]
-        d[i + 1] = (1 - pacf[i] ** 2) * d[i] - v[i] ** 2 - u[-1] ** 2
-        pacf[i + 1] = 2 / d[i + 1] * v[i + 1 :].dot(u[i:-1])
-    sigma2 = (1 - pacf**2) * d / (2.0 * (nobs - np.arange(0, p + 1)))
+    with np.errstate(invalid="ignore", divide="ignore"):
+        pacf[1] = 2 / d[1] * v[1:].dot(u[:-1])
+        last_u = np.empty_like(u)
+        last_v = np.empty_like(v)
+        for i in range(1, p):
+            last_u[:] = u
+            last_v[:] = v
+            u[1:] = last_u[:-1] - pacf[i] * last_v[1:]
+            v[1:] = last_v[1:] - pacf[i] * last_u[:-1]
+            d[i + 1] = (1 - pacf[i] ** 2) * d[i] - v[i] ** 2 - u[-1] ** 2
+            pacf[i + 1] = 2 / d[i + 1] * v[i + 1 :].dot(u[i:-1])
+        sigma2 = (1 - pacf**2) * d / (2.0 * (nobs - np.arange(0, p + 1)))
     pacf[0] = 1  # Insert the 0 lag partial autocorrel
 
     return PacfBurgResult(pacf, sigma2)
@@ -1672,6 +1688,11 @@ def pacf(
 
     Yule-Walker (adjusted) and Levinson-Durbin (adjusted) performed
     consistently worse than the other options.
+
+    .. versionchanged:: 0.15.1
+
+       Returns 1.0 for lag 0 and NaN for lags 1 and higher when `x` is
+       constant.
     """
     result_object = bool_like(result_object, "result_object", optional=True)
     nlags = int_like(nlags, "nlags", optional=True)
@@ -1711,7 +1732,10 @@ def pacf(
             f"sample size. The requested nlags {nlags} must be < "
             f"{x.shape[0] // 2}."
         )
-    if method in ("ols", "ols-inefficient", "ols-adjusted"):
+    if x.size > 0 and np.ptp(x) == 0:
+        ret = np.full(nlags + 1, np.nan)
+        ret[0] = 1.0
+    elif method in ("ols", "ols-inefficient", "ols-adjusted"):
         efficient = "inefficient" not in method
         adjusted = "adjusted" in method
         ret = pacf_ols(x, nlags=nlags, efficient=efficient, adjusted=adjusted)
@@ -1892,6 +1916,10 @@ def ccf(
     -----
     If adjusted is True, the denominator for the cross-correlation is adjusted.
 
+    .. versionchanged:: 0.15.1
+
+       Returns NaN when either series is constant.
+
     References
     ----------
     .. [1] Brockwell and Davis, 2016. Introduction to Time Series and
@@ -1912,13 +1940,28 @@ def ccf(
                 f"({len(x)}), got {nlags}"
             )
 
-    cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
-    ret = cvf / (np.std(x) * np.std(y))
-    ret = ret[:nlags]
-
     confint = None
     if alpha is not None and not 0 < alpha < 1:
         raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+
+    x_valid = x[~np.isnan(x)]
+    y_valid = y[~np.isnan(y)]
+    is_constant = (x_valid.size > 0 and np.ptp(x_valid) == 0) or (
+        y_valid.size > 0 and np.ptp(y_valid) == 0
+    )
+    denom = np.std(x) * np.std(y)
+    if is_constant or denom == 0:
+        n_ret = nlags if nlags is not None else len(x)
+        ret = np.full(n_ret, np.nan)
+        if alpha is not None:
+            confint = np.full((n_ret, 2), np.nan)
+        if result_object or alpha is not None:
+            return CcfResult(ret, confint)
+        return ret
+
+    cvf = ccovf(x, y, adjusted=adjusted, demean=True, fft=fft)
+    ret = cvf / denom
+    ret = ret[:nlags]
 
     if alpha is not None:
         interval = stats.norm.ppf(1.0 - alpha / 2.0) / np.sqrt(len(x))
@@ -2367,13 +2410,14 @@ def levinson_durbin(s, nlags=10, isacov=False):
     phi = np.zeros((order + 1, order + 1), "d")
     sig = np.zeros(order + 1)
     # initial points for the recursion
-    phi[1, 1] = sxx_m[1] / sxx_m[0]
-    sig[1] = sxx_m[0] - phi[1, 1] * sxx_m[1]
-    for k in range(2, order + 1):
-        phi[k, k] = (sxx_m[k] - np.dot(phi[1:k, k - 1], sxx_m[1:k][::-1])) / sig[k - 1]
-        for j in range(1, k):
-            phi[j, k] = phi[j, k - 1] - phi[k, k] * phi[k - j, k - 1]
-        sig[k] = sig[k - 1] * (1 - phi[k, k] ** 2)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        phi[1, 1] = sxx_m[1] / sxx_m[0]
+        sig[1] = sxx_m[0] - phi[1, 1] * sxx_m[1]
+        for k in range(2, order + 1):
+            phi[k, k] = (sxx_m[k] - np.dot(phi[1:k, k - 1], sxx_m[1:k][::-1])) / sig[k - 1]
+            for j in range(1, k):
+                phi[j, k] = phi[j, k - 1] - phi[k, k] * phi[k - j, k - 1]
+            sig[k] = sig[k - 1] * (1 - phi[k, k] ** 2)
 
     sigma_v = sig[-1]
     arcoefs = phi[1:, -1]

@@ -570,7 +570,7 @@ class TestPACF(CheckCorrGram):
     @pytest.mark.skipif(PYTHON_IMPL_WASM, reason="No fp exception support in WASM")
     def test_yw_singular(self):
         with pytest.warns(SingularMatrixWarning):
-            pacf(np.ones(30), nlags=6)
+            pacf_yw(np.ones(30), nlags=6)
 
     def test_ld(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
@@ -2972,6 +2972,81 @@ def test_pacf_negative_nlags():
         pacf(e, -5)
     # nlags=0 keeps its historical clamp to a single lag
     assert pacf(e, 0).shape == (2,)
+
+
+@pytest.mark.parametrize("constant", [101.37, 123.456])
+@pytest.mark.parametrize("length", [50, 100])
+@pytest.mark.parametrize(
+    "method",
+    [
+        "ywadjusted",
+        "ywmle",
+        "ols",
+        "ols-inefficient",
+        "ols-adjusted",
+        "ldadjusted",
+        "ldbiased",
+        "burg",
+    ],
+)
+def test_pacf_constant(constant, length, method):
+    # GH10647: A constant series carries no autocorrelation information.
+    x = np.full(length, constant)
+    p = pacf(x, nlags=5, method=method)
+    assert p[0] == 1.0
+    assert np.all(np.isnan(p[1:]))
+
+    res = pacf(x, nlags=5, method=method, alpha=0.05)
+    assert res.pacf[0] == 1.0
+    assert np.all(np.isnan(res.pacf[1:]))
+    assert_allclose(res.confint[0], [1.0, 1.0])
+    assert np.all(np.isnan(res.confint[1:]))
+
+
+@pytest.mark.parametrize("constant", [101.37, 123.456])
+@pytest.mark.parametrize("length", [50, 100])
+@pytest.mark.parametrize("has_nan", [False, True])
+def test_acf_ccf_constant(constant, length, has_nan):
+    # GH10647: A constant series carries no autocorrelation information.
+    x = np.full(length, constant)
+    if has_nan:
+        x[length // 2] = np.nan
+        missing_options = ["drop", "conservative"]
+    else:
+        missing_options = ["none"]
+
+    for missing in missing_options:
+        a = acf(x, nlags=5, missing=missing)
+        assert a[0] == 1.0
+        assert np.all(np.isnan(a[1:]))
+
+        res_a = acf(x, nlags=5, missing=missing, alpha=0.05, qstat=True)
+        assert res_a.acf[0] == 1.0
+        assert np.all(np.isnan(res_a.acf[1:]))
+        assert_allclose(res_a.confint[0], [1.0, 1.0])
+        assert np.all(np.isnan(res_a.confint[1:]))
+        assert np.all(np.isnan(res_a.qstat))
+        assert np.all(np.isnan(res_a.pvalues))
+
+    other = np.arange(float(length))
+    c1 = ccf(x, other, nlags=5)
+    assert np.all(np.isnan(c1))
+    c2 = ccf(other, x, nlags=5)
+    assert np.all(np.isnan(c2))
+    res_c = ccf(x, other, nlags=5, alpha=0.05)
+    assert np.all(np.isnan(res_c.ccf))
+    assert np.all(np.isnan(res_c.confint))
+
+
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM,
+    reason="Pyodide does not handle linear algebra errors correctly",
+)
+def test_pacf_yw_constant_warning():
+    x = np.full(100, 101.37)
+    with pytest.warns(SingularMatrixWarning):
+        p = pacf_yw(x, nlags=5)
+    assert_allclose(p[1:], 1.0 / np.arange(1, 6), atol=1e-12)
 
 
 def test_coint_auto_tstat():

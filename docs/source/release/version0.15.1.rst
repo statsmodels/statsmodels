@@ -470,6 +470,12 @@ Time series analysis
   ``"statespace"``, or with ``method="statespace"`` and ``gls=True``. The
   estimates of such models with seasonal terms or nonconsecutive lags change.
   :pr:`10713`
+- :func:`~statsmodels.tsa.stattools.acf` and
+  :func:`~statsmodels.tsa.stattools.pacf` return 1.0 for lag 0 and ``nan`` for
+  lags 1 and higher when the input series is constant, avoiding near-perfect
+  false autocorrelation due to floating-point truncation when the mean is not
+  exactly representable. :func:`~statsmodels.tsa.stattools.ccf` returns ``nan``
+  for all lags when either series is constant. :issue:`10647`, :pr:`10701`
 - ``ARDL.predict`` with a ``start`` after the first out-of-sample observation
   returned wrong forecasts for a model with ``exog``, ``fixed`` or seasonal
   terms, and raised an ``IndexError`` if ``dynamic`` was used. The forecasts
