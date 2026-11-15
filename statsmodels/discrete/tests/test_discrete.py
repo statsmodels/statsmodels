@@ -3896,6 +3896,43 @@ def test_optim_kwds_prelim():
     assert_allclose(res.predict().mean(), y.mean(), rtol=0.1)
 
 
+@pytest.mark.parametrize("p", [0.5, 1, 1.2, 1.5, 1.8, 2, 2.5, 3])
+def test_negbinp_hessian_numdiff(p):
+    # the cross derivative of params and alpha was only correct for p=1, 2
+    from statsmodels.tools.numdiff import approx_hess
+
+    rng = np.random.default_rng(7461)
+    nobs = 500
+    exog = sm.add_constant(0.4 * rng.normal(size=(nobs, 2)))
+    mu = np.exp(exog @ [0.6, 0.3, -0.2])
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    offset = 0.3 * rng.normal(size=nobs)
+    model = NegativeBinomialP(endog, exog, offset=offset, p=p)
+    params = np.array([0.5, 0.2, -0.1, 0.6])
+
+    hess = model.hessian(params)
+    hess_num = approx_hess(params, model.loglike)
+    assert_allclose(hess, hess_num, rtol=1e-4, atol=1e-5 * np.abs(hess_num).max())
+
+    hf0, hf1, hf2 = model.hessian_factor(params)
+    assert_allclose(hf1 @ exog, hess[-1, :-1], rtol=1e-10)
+
+
+def test_negbinp_bse_p15():
+    from statsmodels.tools.numdiff import approx_hess
+
+    rng = np.random.default_rng(7461)
+    nobs = 1000
+    exog = sm.add_constant(0.4 * rng.normal(size=(nobs, 2)))
+    mu = np.exp(exog @ [0.6, 0.3, -0.2])
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    model = NegativeBinomialP(endog, exog, p=1.5)
+    res = model.fit(method="newton", disp=0)
+    hess_num = approx_hess(res.params, model.loglike)
+    bse_num = np.sqrt(np.diag(np.linalg.inv(-hess_num)))
+    assert_allclose(res.bse, bse_num, rtol=1e-5)
+
+
 def test_unchanging_degrees_of_freedom():
     data = load_randhie()
     # see GH3734
