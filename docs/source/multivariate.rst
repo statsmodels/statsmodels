@@ -75,6 +75,34 @@ MANOVA
    MANOVA
 
 
+Repeated-measures data
+^^^^^^^^^^^^^^^^^^^^^^
+
+MANOVA can be used for repeated-measures analyses when the repeated
+measurements are represented as multiple dependent variables. In this
+wide-format representation, each subject contributes one row, with
+separate columns for measurements taken under different conditions
+or at different time points.
+
+The multivariate model can test hypotheses about predictors and
+linear combinations of the dependent variables. Questions about
+within-subject effects require appropriate specification of
+multivariate contrasts.
+
+The :class:`MANOVA` implementation is based on multivariate
+regression and provides multivariate hypothesis tests through
+:meth:`MANOVA.mv_test`. It does not provide a dedicated
+repeated-measures interface or automatically construct
+within-subject contrasts.
+
+MANOVA and univariate repeated-measures ANOVA have different
+formulations and assumptions. For longitudinal data in long format,
+particularly when observations are unbalanced or incomplete,
+linear mixed-effects models and generalized estimating equations
+may also be appropriate. See :ref:`anova_ref` for an overview
+of these alternatives.
+
+
 MultivariateOLS
 ---------------
 
