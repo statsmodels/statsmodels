@@ -372,11 +372,6 @@ Generalized linear models and discrete models
 - ``Logit.loglike`` and ``Logit.loglikeobs`` are computed with ``logaddexp``
   and no longer overflow for large absolute values of the linear predictor.
   :issue:`3923`, :pr:`10217`
-- The ``hessian`` and ``hessian_factor`` of ``NegativeBinomialP`` had an
-  incorrect cross derivative of the regression parameters and ``alpha`` if
-  ``p`` is not 1 or 2. For example, with ``p=1.5`` the standard error of the
-  constant and of ``alpha`` were about 19% too large, and for ``p`` larger
-  than 2 the Hessian could not be inverted, so that ``bse`` was ``nan``.
 - ``Probit.loglike``, ``loglikeobs``, ``score``, ``score_obs`` and
   ``hessian`` are computed in log space. The log-likelihood was clipped to a
   constant and the Hessian was ``nan`` for extreme values of the linear
@@ -418,6 +413,21 @@ Generalized linear models and discrete models
   ``summary``, used the number of rows instead of the sum of the
   ``freq_weights``. With frequency weights the value differed from the value
   for the data with each row repeated according to its weight. :pr:`10684`
+- The ``hessian`` and ``hessian_factor`` of ``NegativeBinomialP`` had an
+  incorrect cross derivative of the regression parameters and ``alpha`` if
+  ``p`` is not 1 or 2. ``bse``, ``cov_params``, ``conf_int``, the p-values and
+  the robust (``cov_type="HC0"``) covariance of the results change for these
+  values of ``p``, and ``bse`` now agrees with the standard errors from a
+  numerical Hessian. In 20 simulated samples of 3000 counts, the standard
+  errors of the constant and of ``alpha`` were too large by a factor of 1.2 to
+  2.2 for ``p=1.5`` and by 1.1 to 1.3 for ``p=1.8``, while they were within 8%
+  for ``p=1.2``. ``bse`` was ``nan`` for ``p=2.5`` and ``p=3``.
+  ``fit(method="newton")``, which uses the Hessian, now converges for these
+  values of ``p``. In one sample of 1000 counts it stopped after 100
+  iterations without convergence for ``p=1.5``, ``2.5`` and ``3``, and it had
+  a ``nan`` log-likelihood for ``p=1.8``. ``score_test`` with a tuple
+  ``exog_extra`` also changes. The results for ``p=1`` and ``p=2`` are not
+  changed. :pr:`10737`
 
 Mixed models and imputation
 ---------------------------

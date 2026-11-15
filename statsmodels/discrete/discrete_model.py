@@ -4406,7 +4406,7 @@ _nbo_fit_params = _lm_fit_docstring.extract_parameters(
 
 
 class NegativeBinomialP(CountModel):
-    __doc__ = """
+    __doc__ = r"""
     Generalized Negative Binomial (NB-P) Model
 
     {params}
@@ -4418,11 +4418,20 @@ class NegativeBinomialP(CountModel):
         A reference to the endogenous response variable
     exog : ndarray
         A reference to the exogenous design.
+
+    Notes
+    -----
+    The final element of the parameter vector is the dispersion parameter
+    :math:`\alpha`. For conditional mean :math:`\mu`, the conditional variance
+    is :math:`\mu + \alpha \mu^p`. Thus NB-1 (``p=1``) has variance
+    :math:`\mu (1 + \alpha)` and NB-2 (``p=2``) has variance
+    :math:`\mu + \alpha \mu^2`. Values of ``p`` other than 1 and 2 are
+    allowed, the model does not restrict ``p`` to a range.
     """.format(
         params=base._model_params_doc,
-        extra_params="""p : int, optional
+        extra_params="""p : float, optional
         P denotes parameterizations for NB regression. p=1 for NB-1 and
-        p=2 for NB-2. Default is p=2.
+        p=2 for NB-2. Other values of p are allowed. Default is p=2.
     offset : array_like, optional
         Offset is added to the linear prediction with coefficient equal to 1.
     exposure : array_like, optional
@@ -4642,6 +4651,15 @@ class NegativeBinomialP(CountModel):
         -------
         hessian : ndarray, 2-D
             The hessian matrix of the model.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           The cross derivatives of the regression parameters and ``alpha``
+           were incorrect if ``p`` is not 1 or 2, so that the Hessian, and
+           the results that are based on it, changed for these values of
+           ``p``.
         """
         if self._transparams:
             alpha = np.exp(params[-1])
@@ -4722,7 +4740,7 @@ class NegativeBinomialP(CountModel):
 
     def hessian_factor(self, params):
         """
-        Generalized Negative Binomial (NB-P) model Hessian matrix of the log-likelihood.
+        Generalized Negative Binomial (NB-P) model Hessian factors of the log-likelihood.
 
         Parameters
         ----------
@@ -4731,8 +4749,25 @@ class NegativeBinomialP(CountModel):
 
         Returns
         -------
-        hessian : ndarray, 2-D
-            The hessian matrix of the model.
+        hfbb : ndarray, 1-D
+            The factor for the block of the regression parameters, one value
+            for each observation. The block of the Hessian is
+            ``(exog.T * hfbb) @ exog``.
+        hfba : ndarray, 1-D
+            The factor for the cross derivatives of the regression parameters
+            and ``alpha``, one value for each observation. The cross block of
+            the Hessian is ``hfba @ exog``.
+        hfaa : ndarray, 1-D
+            The second derivative with respect to ``alpha`` of the
+            log-likelihood of each observation. The corresponding element of
+            the Hessian is ``hfaa.sum()``.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           The factor ``hfba`` was incorrect if ``p`` is not 1 or 2, so that
+           the cross block of the Hessian changed for these values of ``p``.
         """
         params = np.asarray(params)
         if self._transparams:
