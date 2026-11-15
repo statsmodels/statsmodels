@@ -382,14 +382,6 @@ Generalized linear models and discrete models
   constant and the Hessian was ``nan`` for extreme values of the linear
   predictor. :issue:`10228`, :pr:`10229`
 - ``HurdleCountModel.fit`` ignored the ``use_t`` argument. :pr:`10299`
-- The ``score`` of ``TruncatedLFGeneralizedPoisson`` and
-  ``TruncatedLFNegativeBinomialP`` used the default ``p`` of the untruncated
-  model for the probability of the truncated counts, so it was incorrect
-  unless ``p=1`` for the generalized Poisson and ``p=2`` for the negative
-  binomial model. This includes the default ``p=2`` of
-  ``TruncatedLFGeneralizedPoisson`` and ``HurdleCountModel`` with
-  ``dist="negbin"`` and ``p=1``. ``fit`` stopped before reaching the maximum
-  of the log-likelihood with a ``ConvergenceWarning``.
 - ``MNLogit.get_margeff`` with ``dummy=True`` or ``count=True`` failed or
   returned an incorrect covariance if the number of regressors differs from
   the number of outcome categories. :issue:`5488`, :pr:`10298`
@@ -418,6 +410,21 @@ Generalized linear models and discrete models
   ``summary``, used the number of rows instead of the sum of the
   ``freq_weights``. With frequency weights the value differed from the value
   for the data with each row repeated according to its weight. :pr:`10684`
+- The ``score`` of ``TruncatedLFGeneralizedPoisson`` and
+  ``TruncatedLFNegativeBinomialP`` was incorrect for every ``p`` except
+  ``p=1`` of the generalized Poisson and ``p=2`` of the negative binomial
+  model. The part of the score that comes from the probability of the
+  truncated counts used the default ``p`` of the untruncated model. This
+  includes the default ``p=2`` of ``TruncatedLFGeneralizedPoisson`` and
+  ``HurdleCountModel`` with ``dist="negbin"`` and ``p`` other than 2.
+  ``fit`` stopped before reaching the maximum of the log-likelihood with a
+  ``ConvergenceWarning``, so the fitted ``params``, ``bse`` and ``llf`` of
+  these models change for valid input. For example, the ``alpha`` of the
+  default ``TruncatedLFGeneralizedPoisson`` changes from 0.099 to 0.219 and
+  ``llf`` from -3582.06 to -3554.15 for 3000 simulated negative binomial
+  counts. The results are unchanged for ``p=1`` of the generalized Poisson
+  and ``p=2`` of the negative binomial model, and they change for every
+  other ``p``. :pr:`10736`
 
 Mixed models and imputation
 ---------------------------
