@@ -941,6 +941,19 @@ class KalmanFilter(Representation):
         # Need to modify the computed log-likelihood to incorporate the
         # MLE scale.
         if self.filter_method & FILTER_CONCENTRATED:
+            # Exact diffuse periods can also contain finite innovations. Keep
+            # their individual scale terms, and, when burn ends inside the
+            # diffuse period, the diffuse forecast covariances needed to count
+            # only the innovations retained after burn.
+            if kfilter.nobs_diffuse > 0:
+                required = MEMORY_NO_LIKELIHOOD
+                if 0 < loglikelihood_burn < kfilter.nobs_diffuse:
+                    required |= MEMORY_NO_FORECAST_COV
+                if kwargs["conserve_memory"] & required:
+                    kwargs["conserve_memory"] &= ~required
+                    kfilter = self._filter(**kwargs)
+                    loglike = np.sum(kfilter.loglikelihood[loglikelihood_burn:])
+
             d = max(loglikelihood_burn, kfilter.nobs_diffuse)
             nobs_k_endog = np.sum(
                 self.k_endog -
@@ -955,15 +968,26 @@ class KalmanFilter(Representation):
             else:
                 scale = kfilter.scale[0] / nobs_k_endog
 
-            loglike += -0.5 * nobs_k_endog
-
-            # Now need to modify this for diffuse initialization, since for
-            # diffuse periods we only need to add in the scale value part if
-            # the diffuse forecast error covariance matrix element was singular
             if kfilter.nobs_diffuse > 0:
-                nobs_k_endog -= kfilter.nobs_kendog_diffuse_nonsingular
-
-            loglike += -0.5 * nobs_k_endog * np.log(scale)
+                # The counter records finite innovations within diffuse
+                # periods. They contribute both log(scale) and v' F^-1 v,
+                # unless their period is excluded by loglikelihood_burn.
+                if loglikelihood_burn == 0:
+                    nobs_k_endog += kfilter.nobs_kendog_diffuse_nonsingular
+                elif loglikelihood_burn < kfilter.nobs_diffuse:
+                    Finf = np.array(kfilter.forecast_error_diffuse_cov)
+                    F = np.array(kfilter.forecast_error_cov)
+                    finite = (
+                        (np.diagonal(Finf).real <= kfilter.tolerance_diffuse) &
+                        (np.diagonal(F).real > kfilter.tolerance_diffuse))
+                    nobs_k_endog += np.sum(
+                        finite[
+                            loglikelihood_burn:kfilter.nobs_diffuse])
+                loglike -= 0.5 * (
+                    nobs_k_endog * np.log(scale) +
+                    np.sum(kfilter.scale[loglikelihood_burn:]) / scale)
+            else:
+                loglike -= 0.5 * nobs_k_endog * (1 + np.log(scale))
         return loglike
 
     def loglikeobs(self, **kwargs):
