@@ -857,6 +857,11 @@ Statistics and tests
 - ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
   from SciPy if no ratio attains the requested power. It returns ``nan`` with
   a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`
+- ``eval_measures.iqr`` returned 0 if ``x1`` had length 1 along ``axis`` and
+  was broadcast against a longer ``x2``, raised an ``IndexError`` for a scalar
+  ``x1``, and raised a ``ValueError`` with ``axis=None`` for inputs of
+  different shapes. The quartiles are now those of the broadcast difference.
+  :issue:`10757`, :pr:`10758`
 
 Treatment effects
 -----------------
