@@ -1156,6 +1156,10 @@ class GenericLikelihoodModel(LikelihoodModel):
         hessian_factor : ndarray, 1d
             A 1d weight vector used in the calculation of the Hessian.
             The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+            up to the sign and the scaling that the model uses, see the
+            ``hessian_factor`` of the model. For example, the factors of
+            ``OLS``, ``WLS`` and ``GLS`` are not divided by the scale and
+            ignore `scale` and `observed`.
         """
 
         raise NotImplementedError

@@ -3075,7 +3075,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             res.cov_kwds["description"] = descriptions["OPG"].format(
                 approx_type=approx_type_str
             )
-        elif self.cov_type == "robust" or self.cov_type == "robust_oim":
+        elif self.cov_type in {"robust", "robust_oim"}:
             res.cov_params_default = res.cov_params_robust_oim
             res.cov_kwds["description"] = descriptions["robust-OIM"].format(
                 approx_type=approx_type_str
@@ -4581,7 +4581,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             A single specific period of impacts from news and revisions to
             compute. Can also be a date string to parse or a datetime type.
             This argument cannot be used in combination with `start`, `end`, or
-            `periods`. Default is the first out-of-sample observation.
+            `periods`. If none of `impact_date`, `start`, `end` and `periods`
+            is given, the impacts are computed for the last observation of the
+            previous dataset.
         impacted_variable : str, list, array, or slice, optional
             Observation variable label or slice of labels specifying that only
             specific impacted variables should be shown in the News output. The
@@ -4590,15 +4592,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             the `endog_names` attribute of the model instance.
         start : int, str, or datetime, optional
             The first period of impacts from news and revisions to compute.
-            Can also be a date string to parse or a datetime type. Default is
-            the first out-of-sample observation.
+            Can also be a date string to parse or a datetime type. If given,
+            one of `end` or `periods` must also be given.
         end : int, str, or datetime, optional
             The last period of impacts from news and revisions to compute.
-            Can also be a date string to parse or a datetime type. Default is
-            the first out-of-sample observation.
+            Can also be a date string to parse or a datetime type. If given,
+            one of `start` or `periods` must also be given.
         periods : int, optional
             The number of periods of impacts from news and revisions to
-            compute.
+            compute. If given, one of `start` or `end` must also be given.
         exog : array_like, optional
             Array of exogenous regressors for the out-of-sample period, if
             applicable.
