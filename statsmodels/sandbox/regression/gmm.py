@@ -691,7 +691,7 @@ class GMM(Model):
         if "disp" not in optim_args:
             optim_args["disp"] = 1
 
-        if maxiter == 0 or maxiter == "cue":
+        if maxiter in {0, "cue"}:
             if inv_weights is not None:
                 weights = np.linalg.pinv(inv_weights)
             else:

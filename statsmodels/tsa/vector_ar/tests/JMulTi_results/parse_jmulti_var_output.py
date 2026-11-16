@@ -35,7 +35,7 @@ def dt_s_tup_to_string(dt_s_tup):
     if dt_s_tup[1] > 0:  # if there are seasons in the model
         if dt_string == "nc":
             dt_string = dt_string[:2] + "s"
-        if dt_string == "c" or dt_string == "ct":
+        if dt_string in {"c", "ct"}:
             dt_string = dt_string[:1] + "s" + dt_string[1:]
     return dt_string
 

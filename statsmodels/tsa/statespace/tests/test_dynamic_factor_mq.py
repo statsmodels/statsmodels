@@ -1618,7 +1618,7 @@ def test_date_indexes(freq_M, freq_Q):
     assert_allclose(mod.endog, mod_base.endog)
 
 
-def gen_dfm_data(k_endog=2, nobs=1000):
+def gen_dfm_data(k_endog=2, nobs=1000, seed=0):
     if k_endog > 10:
         raise ValueError("Only allows for k_endog <= 10")
     ix = pd.period_range(start="1950-01", periods=1, freq="M")
@@ -1630,7 +1630,9 @@ def gen_dfm_data(k_endog=2, nobs=1000):
     idio_ar1 = [0] * k_endog
     idio_var = [1.0, 0.2, 1.5, 0.8, 0.8, 1.4, 0.1, 0.2, 0.4, 0.5][:k_endog]
     params = np.r_[loadings, idio_var, phi]
-    endog = mod.simulate(params, nobs)
+    # simulate with rng=None draws OS entropy, which neither np.random.seed
+    # nor the pytest-randomly seed controls, so the data must be seeded here
+    endog = mod.simulate(params, nobs, rng=np.random.default_rng(seed))
     return endog, loadings, phi, sigma2, idio_ar1, idio_var
 
 

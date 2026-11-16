@@ -3695,7 +3695,11 @@ def _offset_model_case(name, rng):
         res = sm.Poisson(y, x, exposure=expo).fit(disp=0)
         explicit = {"exposure": expo}
     elif name == "nb_offset":
-        res = sm.NegativeBinomial(y, x, offset=off).fit(disp=0)
+        # Overdispersed counts, gamma-Poisson with alpha=0.5. With Poisson counts
+        # the estimate of alpha is on the boundary (about 1e-6), where the Hessian
+        # is nearly singular and its inversion depends on the BLAS library.
+        y_nb = rng.poisson(mean * rng.gamma(2.0, 0.5, size=nobs))
+        res = sm.NegativeBinomial(y_nb, x, offset=off).fit(disp=0)
         explicit = {"offset": off}
     elif name == "zip_offset":
         res = sm.ZeroInflatedPoisson(y, x, offset=off).fit(disp=0, maxiter=200)

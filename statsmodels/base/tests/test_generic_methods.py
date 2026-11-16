@@ -41,6 +41,7 @@ from statsmodels.tools.sm_exceptions import (
     SingularMatrixWarning,
     ValueWarning,
 )
+from statsmodels.tools.testing import warns_or_none
 
 
 class CheckGenericMixinBase:
@@ -151,8 +152,15 @@ class CheckGenericMixinBase:
         # TODO: Investigate how to resolve unseen warnings for Pyodide
         # Most likely coming from NumPy.linalg + lack of fp exceptions
         # support under WASM
+        warns = pytest_warns
         if isinstance(mod, sm.GLM) and not PYTHON_IMPL_WASM:
             warn_cls = HessianInversionWarning
+            # The warning comes from the fit of the full model with collinear
+            # exog at the end of _fit_zeros, which is only used to create the
+            # results instance. It is raised if np.linalg.inv raises a
+            # LinAlgError for the singular Hessian. This depends on the
+            # LAPACK library, for example it is not raised on Windows ARM64.
+            warns = warns_or_none
         elif self.__class__.__name__ == "TestGenericOLSOneExog" and PYTHON_IMPL_WASM:
             # Workaround for likely bug in WASM
             warn_cls = None
@@ -179,7 +187,7 @@ class CheckGenericMixinBase:
                     sp[self.transform_index] = np.exp(sp[self.transform_index])
 
                 start_params[keep_index_p] = sp
-                with pytest_warns(warn_cls):
+                with warns(warn_cls):
                     res1 = mod._fit_collinear(
                         cov_type=cov_type,
                         start_params=start_params,
@@ -188,7 +196,7 @@ class CheckGenericMixinBase:
                     )
                 if cov_type != "nonrobust":
                     # reestimate original model to get robust cov
-                    with pytest_warns(warn_cls):
+                    with warns(warn_cls):
                         res2 = self.results.model.fit(
                             cov_type=cov_type, start_params=sp, method=method, disp=0
                         )
@@ -196,7 +204,7 @@ class CheckGenericMixinBase:
                 # TODO: _fit_collinear is clearly broken with OLS/WLS/GLS/RLM
                 #  Should be fixed in one of these classes.
                 #  For now just skip the test for these classes
-                with pytest_warns(warn_cls):
+                with warns(warn_cls):
                     # more special casing RLM
                     if isinstance(self.results.model, (sm.RLM)):
                         res1 = mod._fit_collinear()

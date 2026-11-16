@@ -1510,7 +1510,8 @@ def mcnemar(table, exact=True, correction=True):
         test statistic for large sample sizes.
     correction : bool, optional
         If True, then a continuity correction is used for the chisquare
-        distribution (if exact is False.)
+        distribution (if exact is False.) As in R's ``mcnemar.test``, the
+        correction is not applied if the two off-diagonal counts are equal.
 
     Returns
     -------
@@ -1566,7 +1567,8 @@ def mcnemar(table, exact=True, correction=True):
         pvalue = stats.binom.cdf(statistic, int_sum, 0.5) * 2
         pvalue = np.minimum(pvalue, 1)  # limit to 1 if n1==n2
     else:
-        corr = int(correction)  # convert bool to 0 or 1
+        # no correction for equal counts, |n1 - n2| - 1 would be negative
+        corr = int(correction and n1 != n2)  # convert bool to 0 or 1
         statistic = (np.abs(n1 - n2) - corr) ** 2 / (1.0 * (n1 + n2))
         df = 1
         pvalue = stats.chi2.sf(statistic, df)

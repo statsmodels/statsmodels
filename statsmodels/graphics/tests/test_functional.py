@@ -500,10 +500,25 @@ def test_banddepth_BD2_crossings_and_ties(curves, expected):
 
 
 @pytest.mark.parametrize(
+    "curves, expected",
+    [
+        (np.ones((5, 3)), np.ones(5)),
+        ([[0, 0], [0, 1], [1, 0], [1, 1]], np.full(4, 5 / 6)),
+    ],
+)
+def test_banddepth_MBD_ties(curves, expected):
+    curves = np.asarray(curves)
+    assert_almost_equal(banddepth(curves, method="MBD"), expected)
+    order = np.r_[1, 0, np.arange(2, len(curves))]
+    assert_almost_equal(banddepth(curves[order], method="MBD"), expected[order])
+
+
+@pytest.mark.parametrize(
     "shape", [(2, 1), (4, 3), (25, 4), (12, 17), (8, 65), (6, 129)]
 )
 @pytest.mark.parametrize("ties", [False, True])
-def test_banddepth_BD2_pairwise_reference(shape, ties):
+@pytest.mark.parametrize("method, aggregate", [("BD2", np.all), ("MBD", np.mean)])
+def test_banddepth_pairwise_reference(shape, ties, method, aggregate):
     rng = np.random.default_rng(7105)
     curves = rng.integers(-2, 3, size=shape) if ties else rng.normal(size=shape)
     original = curves.copy()
@@ -513,8 +528,8 @@ def test_banddepth_BD2_pairwise_reference(shape, ties):
     for first, second in pairs:
         lower = np.minimum(first, second)
         upper = np.maximum(first, second)
-        counts += np.all((curves >= lower) & (curves <= upper), axis=1)
-    assert_equal(banddepth(curves, method="BD2"), counts / len(pairs))
+        counts += aggregate((curves >= lower) & (curves <= upper), axis=1)
+    assert_almost_equal(banddepth(curves, method=method), counts / len(pairs))
     assert_equal(curves, original)
 
 
