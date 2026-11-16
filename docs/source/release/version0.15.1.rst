@@ -477,12 +477,6 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
-- Correct the joint log-likelihood for state space models combining exact
-  diffuse initialization and concentrated scale. Finite innovations within
-  diffuse periods now contribute to both scale-dependent likelihood terms,
-  with ``loglikelihood_burn`` applied consistently. This corrects
-  ``KalmanFilter.loglike`` without changing the scale estimator.
-  :issue:`10741`
 - The ARIMA GLS estimator now uses the complete AR and MA lag polynomials
   when whitening the regression data. Seasonal terms were previously
   omitted, and nonconsecutive lags were treated as consecutive, producing
@@ -692,6 +686,21 @@ Time series analysis
   A key of ``plot_params`` that is not a ``Line2D`` property, for example
   ``"fontsize"``, was ignored before and now raises an ``AttributeError``.
   :issue:`380`, :pr:`10720`
+- ``KalmanFilter.loglike`` of a state space model with exact diffuse
+  initialization and a concentrated scale (``filter_concentrated``) is now
+  equal to ``loglikeobs().sum()``, to ``llf`` and to the value with
+  ``fixed_scale``, and it no longer depends on ``conserve_memory``. The
+  concentrated log-likelihood left out the finite innovations of the diffuse
+  periods, and with ``conserve_memory`` options that discard the
+  log-likelihood it ignored ``loglikelihood_burn`` in exact diffuse models. The
+  value of ``loglike``, which is the objective of ``fit``, and so the fitted
+  parameters change for models in which the diffuse periods contain finite
+  innovations, for example several observed series with fewer diffuse states,
+  also if some observations are missing, or a diffuse state that is observed
+  only later in the sample. Models without such innovations, for example a
+  single series with a local level or local linear trend, also with missing
+  values, and ``SARIMAX`` with ``concentrate_scale=True`` and exact diffuse
+  initialization, are unchanged. :issue:`10741`, :pr:`10742`
 
 Statistics and tests
 --------------------
