@@ -1732,7 +1732,8 @@ def pacf(
             f"sample size. The requested nlags {nlags} must be < "
             f"{x.shape[0] // 2}."
         )
-    if x.size > 0 and np.ptp(x) == 0:
+    # x.size == nobs: a vector or one column; other shapes raise below
+    if x.size > 0 and x.size == nobs and np.ptp(x) == 0:
         ret = np.full(nlags + 1, np.nan)
         ret[0] = 1.0
     elif method in ("ols", "ols-inefficient", "ols-adjusted"):
@@ -1950,7 +1951,8 @@ def ccf(
         y_valid.size > 0 and np.ptp(y_valid) == 0
     )
     denom = np.std(x) * np.std(y)
-    if is_constant or denom == 0:
+    # Input that is not 1-D takes the path below, where ccovf raises
+    if x.ndim == y.ndim == 1 and (is_constant or denom == 0):
         n_ret = nlags if nlags is not None else len(x)
         ret = np.full(n_ret, np.nan)
         if alpha is not None:

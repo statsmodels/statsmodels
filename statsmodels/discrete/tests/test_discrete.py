@@ -3912,13 +3912,23 @@ def test_negbinp_hessian_numdiff(p):
 
     hess = model.hessian(params)
     hess_num = approx_hess(params, model.loglike)
+    # approx_hess has an error of up to 5e-7 times the largest entry of the
+    # Hessian (measured for these p), while the smallest entries are 4e-4 to
+    # 1e-2 times the largest, so rtol alone is too tight for them: atol is
+    # 1e-5 times the largest entry, a margin of about 20 over the error.
     assert_allclose(hess, hess_num, rtol=1e-4, atol=1e-5 * np.abs(hess_num).max())
 
+    # the hessian factors are the observation-wise blocks of the hessian
     hf0, hf1, hf2 = model.hessian_factor(params)
+    assert_allclose((hf0 * exog.T) @ exog, hess[:-1, :-1], rtol=1e-10)
     assert_allclose(hf1 @ exog, hess[-1, :-1], rtol=1e-10)
+    assert_allclose(hf2.sum(), hess[-1, -1], rtol=1e-10)
 
 
-def test_negbinp_bse_p15():
+@pytest.mark.parametrize("p", [1.5, 2.5])
+def test_negbinp_bse_p15(p):
+    # bse is nan for p=2.5 and the newton fit does not converge for p=1.5
+    # if the cross derivative of params and alpha is wrong
     from statsmodels.tools.numdiff import approx_hess
 
     rng = np.random.default_rng(7461)
@@ -3926,10 +3936,12 @@ def test_negbinp_bse_p15():
     exog = sm.add_constant(0.4 * rng.normal(size=(nobs, 2)))
     mu = np.exp(exog @ [0.6, 0.3, -0.2])
     endog = rng.negative_binomial(2, 2 / (2 + mu))
-    model = NegativeBinomialP(endog, exog, p=1.5)
+    model = NegativeBinomialP(endog, exog, p=p)
     res = model.fit(method="newton", disp=0)
+    assert res.mle_retvals["converged"]
     hess_num = approx_hess(res.params, model.loglike)
     bse_num = np.sqrt(np.diag(np.linalg.inv(-hess_num)))
+    assert np.all(np.isfinite(res.bse))
     assert_allclose(res.bse, bse_num, rtol=1e-5)
 
 

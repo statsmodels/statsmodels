@@ -3173,21 +3173,21 @@ def test_pacf_negative_nlags():
     assert pacf(e, 0).shape == (2,)
 
 
+PACF_METHODS = [
+    "ywadjusted",
+    "ywmle",
+    "ols",
+    "ols-inefficient",
+    "ols-adjusted",
+    "ldadjusted",
+    "ldbiased",
+    "burg",
+]
+
+
 @pytest.mark.parametrize("constant", [101.37, 123.456])
 @pytest.mark.parametrize("length", [50, 100])
-@pytest.mark.parametrize(
-    "method",
-    [
-        "ywadjusted",
-        "ywmle",
-        "ols",
-        "ols-inefficient",
-        "ols-adjusted",
-        "ldadjusted",
-        "ldbiased",
-        "burg",
-    ],
-)
+@pytest.mark.parametrize("method", PACF_METHODS)
 def test_pacf_constant(constant, length, method):
     # GH10647: A constant series carries no autocorrelation information.
     x = np.full(length, constant)
@@ -3204,48 +3204,105 @@ def test_pacf_constant(constant, length, method):
 
 @pytest.mark.parametrize("constant", [101.37, 123.456])
 @pytest.mark.parametrize("length", [50, 100])
-@pytest.mark.parametrize("has_nan", [False, True])
-def test_acf_ccf_constant(constant, length, has_nan):
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("fft", [True, False])
+@pytest.mark.parametrize("missing", ["none", "drop", "conservative"])
+def test_acf_constant(constant, length, adjusted, fft, missing):
     # GH10647: A constant series carries no autocorrelation information.
+    x = np.full(length, constant)
+    if missing != "none":
+        x[length // 2] = np.nan
+    kwargs = {"adjusted": adjusted, "fft": fft, "missing": missing}
+
+    a = acf(x, nlags=5, **kwargs)
+    assert a[0] == 1.0
+    assert np.all(np.isnan(a[1:]))
+
+    res_a = acf(x, nlags=5, alpha=0.05, qstat=True, **kwargs)
+    assert res_a.acf[0] == 1.0
+    assert np.all(np.isnan(res_a.acf[1:]))
+    assert_allclose(res_a.confint[0], [1.0, 1.0])
+    assert np.all(np.isnan(res_a.confint[1:]))
+    assert np.all(np.isnan(res_a.qstat))
+    assert np.all(np.isnan(res_a.pvalues))
+
+
+@pytest.mark.parametrize("constant", [101.37, 123.456])
+@pytest.mark.parametrize("length", [50, 100])
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("fft", [True, False])
+@pytest.mark.parametrize("nlags", [None, 5])
+@pytest.mark.parametrize("has_nan", [False, True])
+@pytest.mark.parametrize("constant_first", [True, False])
+def test_ccf_constant(
+    constant, length, adjusted, fft, nlags, has_nan, constant_first
+):
+    # GH10647: x is constant, or constant once the NaN is dropped.
     x = np.full(length, constant)
     if has_nan:
         x[length // 2] = np.nan
-        missing_options = ["drop", "conservative"]
-    else:
-        missing_options = ["none"]
-
-    for missing in missing_options:
-        a = acf(x, nlags=5, missing=missing)
-        assert a[0] == 1.0
-        assert np.all(np.isnan(a[1:]))
-
-        res_a = acf(x, nlags=5, missing=missing, alpha=0.05, qstat=True)
-        assert res_a.acf[0] == 1.0
-        assert np.all(np.isnan(res_a.acf[1:]))
-        assert_allclose(res_a.confint[0], [1.0, 1.0])
-        assert np.all(np.isnan(res_a.confint[1:]))
-        assert np.all(np.isnan(res_a.qstat))
-        assert np.all(np.isnan(res_a.pvalues))
-
     other = np.arange(float(length))
-    c1 = ccf(x, other, nlags=5)
-    assert np.all(np.isnan(c1))
-    c2 = ccf(other, x, nlags=5)
-    assert np.all(np.isnan(c2))
-    res_c = ccf(x, other, nlags=5, alpha=0.05)
+    first, second = (x, other) if constant_first else (other, x)
+    n_ret = length if nlags is None else nlags
+    kwargs = {"nlags": nlags, "adjusted": adjusted, "fft": fft}
+
+    # The fft path of scipy warns about NaN: the shortcut must come first
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        c = ccf(first, second, **kwargs)
+        res_c = ccf(first, second, alpha=0.05, **kwargs)
+    assert c.shape == (n_ret,)
+    assert np.all(np.isnan(c))
+    assert res_c.ccf.shape == (n_ret,)
     assert np.all(np.isnan(res_c.ccf))
+    assert res_c.confint.shape == (n_ret, 2)
     assert np.all(np.isnan(res_c.confint))
 
 
-@pytest.mark.skipif(
-    PYTHON_IMPL_WASM,
-    reason="Pyodide does not handle linear algebra errors correctly",
+@pytest.mark.parametrize(
+    "shape_x, shape_y, match",
+    [
+        ((20, 1), (20,), "same dimensionality"),
+        ((20, 2), (20,), "same dimensionality"),
+        ((20,), (20, 1), "same dimensionality"),
+        ((20,), (20, 2), "same dimensionality"),
+        ((20, 2), (20, 2), "broadcast"),
+    ],
 )
-def test_pacf_yw_constant_warning():
-    x = np.full(100, 101.37)
-    with pytest.warns(SingularMatrixWarning):
-        p = pacf_yw(x, nlags=5)
-    assert_allclose(p[1:], 1.0 / np.arange(1, 6), atol=1e-12)
+@pytest.mark.parametrize(
+    "constant_x, constant_y", [(True, False), (False, True), (True, True)]
+)
+def test_ccf_constant_invalid_shape_raises(
+    shape_x, shape_y, match, constant_x, constant_y
+):
+    # GH10647: the shortcut for constant series must not hide invalid input
+    x = np.arange(float(np.prod(shape_x))).reshape(shape_x)
+    y = np.arange(float(np.prod(shape_y))).reshape(shape_y)
+    if constant_x:
+        x = np.full(shape_x, 2.5)
+    if constant_y:
+        y = np.full(shape_y, 2.5)
+    with pytest.raises(ValueError, match=match):
+        ccf(x, y)
+
+
+@pytest.mark.parametrize("method", PACF_METHODS)
+def test_pacf_constant_invalid_shape_raises(method):
+    # GH10647: a constant (n, 2) array raises as a non-constant one does
+    rng = np.random.default_rng(3213)
+    with pytest.raises(ValueError) as exc_info:
+        pacf(rng.standard_normal((30, 2)), nlags=3, method=method)
+    with pytest.raises(ValueError) as exc_info_const:
+        pacf(np.full((30, 2), 101.37), nlags=3, method=method)
+    assert str(exc_info_const.value) == str(exc_info.value)
+
+
+@pytest.mark.parametrize("method", PACF_METHODS)
+def test_pacf_constant_column(method):
+    # GH10647: a single column is a valid input
+    p = pacf(np.full((30, 1), 101.37), nlags=3, method=method)
+    assert p[0] == 1.0
+    assert np.all(np.isnan(p[1:]))
 
 
 def test_coint_auto_tstat():
