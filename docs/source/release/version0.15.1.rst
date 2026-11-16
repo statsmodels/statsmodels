@@ -169,11 +169,18 @@ Behavior changes
   non-stationary or non-invertible, the second-step estimates are returned
   with an ``EstimationWarning``. :issue:`6159`, :pr:`10712`
 - :func:`~statsmodels.tsa.stattools.diebold_mariano_test` raises a
-  ``ValueError`` if the loss differential is constant up to rounding error,
-  for example if the two forecasts are identical, if the estimated long-run
-  variance is not positive, if ``horizon`` is not smaller than the number of
-  observations, or if ``lags`` is too large for it. It returned ``nan``, a
-  meaningless statistic or a statistic of 0 before. :issue:`10753`, :pr:`10755`
+  ``ValueError`` for inputs for which it returned a meaningless result or
+  raised another exception before. This is the case if the loss differential
+  is constant up to rounding error, for example if the two forecasts are
+  identical (``nan`` before, or a huge statistic with a p-value of 0 if the
+  forecast errors are constant); if ``lags`` is not smaller than the number
+  of observations, or ``horizon`` is not smaller than it when ``lags`` is
+  not given or ``harvey_adj=True`` (a statistic that is not meaningful
+  before, which is 0 with ``harvey_adj=True`` if ``horizon`` is the number of
+  observations or one more); and if ``criterion`` does not return one loss
+  per observation (a ``TypeError`` before for a scalar, otherwise a
+  statistic from a loss series of the wrong length). The results that were
+  returned for other input are unchanged. :issue:`10753`, :pr:`10755`
 - :func:`~statsmodels.tsa.stattools.acf` and
   :func:`~statsmodels.tsa.stattools.pacf` return 1.0 for lag 0 and ``nan`` for
   lags 1 and higher when the input series is constant, for every method of
@@ -260,7 +267,8 @@ New functions and methods
   or ``"smaller"`` if ``forecast_a`` is. ``kernel="uniform"`` estimates the
   long-run variance with equal weights up to ``lags``, as in Diebold and
   Mariano (1995) and Harvey et al. (1997), and uses ``horizon - 1`` lags by
-  default. With ``harvey_adj=True`` this gives the results of ``dm.test`` in
+  default; a ``ValueError`` is raised if its estimate of the variance is not
+  positive. With ``harvey_adj=True`` this gives the results of ``dm.test`` in
   the R package forecast. The results of the default arguments are
   unchanged.
   :issue:`10753`, :pr:`10755`

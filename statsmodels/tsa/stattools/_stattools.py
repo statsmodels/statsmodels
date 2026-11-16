@@ -3259,7 +3259,9 @@ def diebold_mariano_test(
         observation, if the loss differential is constant up to rounding
         error, for example when the two forecasts are identical, or if the
         estimated long-run variance is not positive, which can happen with
-        the uniform kernel.
+        the uniform kernel. The loss differential is constant up to rounding
+        error if its range is at most ``sqrt(eps)`` times its largest
+        absolute value, which is a heuristic, see the Notes.
 
     Notes
     -----
@@ -3308,6 +3310,17 @@ def diebold_mariano_test(
     the uniform kernel is not positive, ``dm.test`` warns and computes the
     test with ``h=1`` instead, while a ``ValueError`` is raised here.
 
+    The loss differential is constant up to rounding error if its range,
+    ``np.ptp(d)``, is at most ``sqrt(eps) * np.max(np.abs(d))``, where
+    ``eps`` is the machine epsilon of float64. This relative threshold is a
+    heuristic. A loss differential that varies only slightly relative to its
+    largest value raises a ``ValueError`` even if it is not exactly
+    constant. If the losses are large relative to their difference, for
+    example for forecasts that differ from a series ``y`` of very large scale
+    by constants, rounding error can make the loss differential vary by more
+    than the threshold. The constant differential is then not detected and
+    the statistic is meaningless.
+
     Because ``forecast_a`` and ``forecast_b`` are typically generated from
     overlapping information sets (e.g., multi-step-ahead forecasts), the
     loss differential is often serially correlated even under the null,
@@ -3350,10 +3363,13 @@ def diebold_mariano_test(
     .. versionchanged:: 0.15.1
 
        A ``ValueError`` is raised if the loss differential is constant up
-       to rounding error, if its estimated long-run variance is not
-       positive, or if ``horizon`` or ``lags`` is too large for the number
-       of observations. These cases returned ``nan`` or a meaningless
-       statistic before.
+       to rounding error, if ``horizon`` or ``lags`` is too large for the
+       number of observations, or if ``criterion`` does not return one loss
+       per observation. These cases returned ``nan`` or a statistic that is
+       not meaningful before, or raised a ``TypeError`` if ``criterion``
+       returned a scalar. A ``ValueError`` is also raised if the estimated
+       long-run variance is not positive, which only happens with
+       ``kernel="uniform"``.
 
     References
     ----------
