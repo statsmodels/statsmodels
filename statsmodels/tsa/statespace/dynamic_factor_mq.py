@@ -3758,7 +3758,9 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             A single specific period of impacts from news and revisions to
             compute. Can also be a date string to parse or a datetime type.
             This argument cannot be used in combination with `start`, `end`, or
-            `periods`. Default is the first out-of-sample observation.
+            `periods`. If none of `impact_date`, `start`, `end` and `periods`
+            is given, the impacts are computed for the last observation of the
+            previous dataset.
         impacted_variable : str, list, array, or slice, optional
             Observation variable label or slice of labels specifying that only
             specific impacted variables should be shown in the News output. The
@@ -3767,15 +3769,15 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             the `endog_names` attribute of the model instance.
         start : int, str, or datetime, optional
             The first period of impacts from news and revisions to compute.
-            Can also be a date string to parse or a datetime type. Default is
-            the first out-of-sample observation.
+            Can also be a date string to parse or a datetime type. If given,
+            one of `end` or `periods` must also be given.
         end : int, str, or datetime, optional
             The last period of impacts from news and revisions to compute.
-            Can also be a date string to parse or a datetime type. Default is
-            the first out-of-sample observation.
+            Can also be a date string to parse or a datetime type. If given,
+            one of `start` or `periods` must also be given.
         periods : int, optional
             The number of periods of impacts from news and revisions to
-            compute.
+            compute. If given, one of `start` or `end` must also be given.
         exog : array_like, optional
             Array of exogenous regressors for the out-of-sample period, if
             applicable.

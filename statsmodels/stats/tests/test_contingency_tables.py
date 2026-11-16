@@ -246,6 +246,32 @@ def test_mcnemar():
     assert_allclose(b4.pvalue, r_results.loc[0, "homog_binom_p"])
 
 
+@pytest.mark.parametrize("n_discordant", [0, 1, 4])
+def test_mcnemar_correction_equal_counts(n_discordant):
+    # the continuity correction made the statistic 1 / (n1 + n2) for equal
+    # off-diagonal counts, and inf with a p-value of 0 if both are 0.
+    # R's mcnemar.test does not correct if the counts are equal:
+    # mcnemar.test(matrix(c(5, 4, 4, 5), 2)) gives a statistic of 0, p 1
+    table = np.array([[5, n_discordant], [n_discordant, 5]])
+    with np.errstate(invalid="ignore"):
+        corrected = ctab.mcnemar(table, exact=False, correction=True)
+        uncorrected = ctab.mcnemar(table, exact=False, correction=False)
+    if n_discordant == 0:
+        # 0 / 0, as in R and as without the correction
+        assert np.isnan(corrected.statistic)
+        assert np.isnan(corrected.pvalue)
+    else:
+        assert_equal(corrected.statistic, 0)
+        assert_equal(corrected.pvalue, 1)
+    assert_equal(corrected.statistic, uncorrected.statistic)
+
+    # unequal counts still use the correction, R's
+    # mcnemar.test(matrix(c(5, 1, 4, 5), 2)) gives 0.8, p 0.3711
+    res = ctab.mcnemar(np.array([[5, 4], [1, 5]]), exact=False)
+    assert_allclose(res.statistic, 0.8)
+    assert_allclose(res.pvalue, 0.37109336952269756)
+
+
 def test_mcnemar_non_2x2():
     # GH#9485: mcnemar only uses the [0, 1] and [1, 0] cells, so a table
     # that is not 2x2 must raise instead of silently ignoring the rest.

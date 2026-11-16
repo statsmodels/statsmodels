@@ -1674,3 +1674,20 @@ def test_nct_sf_upper_tail_relative_accuracy():
     assert_allclose(
         smp.nct_sf(12.0, 29, nc), 7.6017385833974256e-11, rtol=1e-10, atol=atol
     )
+
+
+@pytest.mark.parametrize("power_class", [smp.TTestIndPower, smp.NormalIndPower])
+def test_solve_power_ratio_no_solution(power_class):
+    # with nobs1=20 the power is below 0.8 for any ratio, the bracket search
+    # for ratio started at the int 2 and multiplied it by 10 until it
+    # overflowed int64, and TTestIndPower raised a TypeError from scipy
+    # instead of returning nan with a ConvergenceWarning
+    pw = power_class()
+    assert pw.power(0.5, 20, 0.05, ratio=1e8) < 0.8
+    with pytest.warns(ConvergenceWarning):
+        res = pw.solve_power(0.5, 20, 0.05, 0.8, ratio=None)
+    assert np.isnan(res)
+
+    # a ratio that has a solution is still found
+    res = pw.solve_power(0.5, 40, 0.05, 0.6, ratio=None)
+    assert_allclose(pw.power(0.5, 40, 0.05, ratio=res), 0.6, rtol=1e-6)

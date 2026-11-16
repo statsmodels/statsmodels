@@ -163,6 +163,11 @@ jobs:
     displayName: 'List Configuration (conda)'
     condition: eq(variables['use.conda'], 'true')
 
+  - ${{ if eq(parameters.name, 'macOS') }}:
+    - script: python -c "import locale; locale.setlocale(locale.LC_TIME, 'de_DE.UTF-8')"
+      displayName: 'Require German locale for the month plot test'
+      condition: and(succeeded(), ne(variables['test.install'], 'true'))
+
   - script: |
       echo "Testing site packages"
       mkdir test_run_dir

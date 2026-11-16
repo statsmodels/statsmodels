@@ -359,7 +359,7 @@ def _get_sandwich_arrays(results, cov_type=""):
             xu /= np.sqrt(np.asarray(results.model.freq_weights)[:, None])
 
     else:
-        raise ValueError("need either tuple of (jac, hessian_inv) or results"
+        raise ValueError("need either tuple of (jac, hessian_inv) or results "
                          "instance")
 
     return xu, hessian_inv
