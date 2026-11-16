@@ -397,3 +397,64 @@ def test_prediction_results_mean_var_pred_mean():
     # it is documented as a backwards-compatibility alias for var_pred
     assert pred.var_pred_mean is pred.var_pred
     assert_allclose(pred.var_pred_mean, pred.se_mean**2, rtol=1e-10)
+
+
+@pytest.mark.parametrize("model", ["ols", "wls", "glm", "glm-poisson", "logit"])
+def test_prediction_cluster_use_t_df(model):
+    # with cov_type="cluster" and use_t=True, prediction intervals use the
+    # same t(n_groups - 1) distribution as conf_int and t_test
+    from scipy import special, stats as sp_stats
+
+    from statsmodels.discrete.discrete_model import Logit
+    from statsmodels.genmod import families
+    from statsmodels.genmod.generalized_linear_model import GLM
+
+    rng = np.random.default_rng(91827)
+    n_groups = 8
+    groups = np.repeat(np.arange(n_groups), 15)
+    n = groups.shape[0]
+    exog = np.column_stack([np.ones(n), rng.standard_normal(n)])
+    linpred = exog @ [0.5, 0.5] + 0.5 * rng.standard_normal(n_groups)[groups]
+    if model == "glm-poisson":
+        endog = rng.poisson(np.exp(linpred))
+        mod = GLM(endog, exog, family=families.Poisson())
+    elif model == "logit":
+        endog = (rng.uniform(size=n) < 1 / (1 + np.exp(-linpred))).astype(float)
+        mod = Logit(endog, exog)
+    else:
+        endog = linpred + rng.standard_normal(n)
+        if model == "ols":
+            mod = OLS(endog, exog)
+        elif model == "wls":
+            mod = WLS(endog, exog, weights=rng.uniform(0.5, 2, size=n))
+        else:
+            mod = GLM(endog, exog)
+
+    kwds = {"disp": 0} if model == "logit" else {}
+    res = mod.fit(cov_type="cluster", cov_kwds={"groups": groups}, use_t=True, **kwds)
+    assert res.df_resid_inference == n_groups - 1
+
+    exog0 = np.array([[1.0, -1.0], [1.0, 0.0], [1.0, 2.0]])
+    lin0 = exog0 @ res.params
+    se0 = np.sqrt(np.einsum("ij,jk,ik->i", exog0, res.cov_params(), exog0))
+    q = sp_stats.t.ppf(0.975, n_groups - 1)
+    ci_lin = np.column_stack([lin0 - q * se0, lin0 + q * se0])
+    # t_test of the same linear combinations uses df_resid_inference
+    assert_allclose(res.t_test(exog0).conf_int(), ci_lin, rtol=1e-10)
+
+    if model in ["ols", "wls", "glm"]:
+        sf = res.get_prediction(exog0).summary_frame()
+        assert_allclose(sf[["mean_ci_lower", "mean_ci_upper"]], ci_lin, rtol=1e-10)
+    if model in ["ols", "wls"]:
+        se_obs = np.sqrt(se0**2 + res.scale)
+        ci_obs = np.column_stack([lin0 - q * se_obs, lin0 + q * se_obs])
+        assert_allclose(sf[["obs_ci_lower", "obs_ci_upper"]], ci_obs, rtol=1e-10)
+    if model in ["glm", "glm-poisson", "logit"]:
+        pred = res.get_prediction(exog0, which="linear")
+        assert_allclose(pred.conf_int(), ci_lin, rtol=1e-10)
+        pred = res.get_prediction(exog0, which="mean")
+        if model == "logit":
+            ci_mean = special.expit(ci_lin)
+        else:
+            ci_mean = res.model.family.link.inverse(ci_lin)
+        assert_allclose(pred.conf_int(), ci_mean, rtol=1e-10)

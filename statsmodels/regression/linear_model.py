@@ -1104,7 +1104,7 @@ class OLS(WLS):
     def __init__(self, endog, exog=None, missing="none", hasconst=None, **kwargs):
         if "weights" in kwargs:
             msg = (
-                "Weights are not supported in OLS and will be ignored"
+                "Weights are not supported in OLS and will be ignored. "
                 "An exception will be raised in the next version."
             )
             warnings.warn(msg, ValueWarning, stacklevel=2)
