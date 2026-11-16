@@ -4173,6 +4173,49 @@ def test_mnlogit_margeff_dummy_and_count_together(k_choices):
     assert np.abs(expected).max() > 0.01
 
 
+@pytest.mark.parametrize("k_choices", [3, 4])
+@pytest.mark.parametrize("at", ["overall", "mean"])
+@pytest.mark.parametrize("method", ["eyex", "dyex"])
+def test_mnlogit_margeff_elasticity(method, at, k_choices):
+    # get_margeff with eyex or dyex raised a broadcasting error in
+    # _derivative_exog, or was incorrect if K = J and at is not "overall"
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rng = np.random.default_rng(1055 + k_choices)
+    nobs = 1000
+    exog = sm.add_constant(rng.uniform(1, 3, size=(nobs, 2)))
+    beta = rng.normal(scale=0.5, size=(exog.shape[1], k_choices - 1))
+    prob = np.exp(np.column_stack([np.zeros(nobs), exog @ beta]))
+    prob /= prob.sum(1, keepdims=True)
+    endog = (rng.random(nobs)[:, None] > prob.cumsum(1)).sum(1)
+    mod = MNLogit(endog, exog)
+    res = mod.fit(disp=0)
+    exog_at = exog if at == "overall" else exog.mean(0, keepdims=True)
+
+    def effects(params):
+        # complex step derivative of predict with respect to each regressor
+        params = params.reshape(mod.K, mod.J - 1, order="F")
+        pred = mod.predict(params, exog_at)
+        out = []
+        for col in range(1, exog.shape[1]):
+            exog_c = exog_at.astype(complex)
+            exog_c[:, col] += 1e-20j
+            deriv = mod.predict(params, exog_c).imag / 1e-20
+            deriv *= exog_at[:, col : col + 1]
+            if method == "eyex":
+                deriv /= pred
+            out.append(deriv.mean(0))
+        return np.concatenate(out)
+
+    marg = res.get_margeff(at=at, method=method)
+    params = res.params.ravel(order="F")
+    expected = effects(params)
+    jac = approx_fprime(params, effects, centered=True)
+    se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
+    assert_allclose(marg.margeff.ravel(), expected, rtol=1e-10)
+    assert_allclose(marg.margeff_se.ravel(), se, rtol=1e-6)
+
+
 def _fit_logit_for_summary():
     data = load_spector()
     data.exog = sm.add_constant(data.exog, prepend=False)

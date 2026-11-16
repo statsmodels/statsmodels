@@ -1053,7 +1053,7 @@ class MultinomialModel(BinaryModel):
         margeff = np.transpose(margeff, (1, 2, 0))
 
         if "ex" in transform:
-            margeff *= exog
+            margeff *= exog[:, :, None]
         if "ey" in transform:
             margeff /= self.predict(params, exog)[:, None, :]
 
