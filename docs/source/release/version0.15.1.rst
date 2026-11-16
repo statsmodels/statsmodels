@@ -139,6 +139,8 @@ Behavior changes
 - :func:`~statsmodels.graphics.functional.banddepth` with ``method="MBD"``
   counts values equal to a band boundary as inside. Previously, tied values
   were assigned arbitrary ranks, so depths could depend on the input row order.
+  The depths of data with tied values change.
+  :pr:`10691`
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
@@ -157,6 +159,9 @@ Behavior changes
   ndarrays. Models fit with NumPy data and predictions with explicit NumPy
   ``exog`` still return ndarrays. Use ``np.asarray`` on the predictions if an
   ndarray is needed. :issue:`4541`, :pr:`10735`
+- ``powerdiscrepancy`` (and the G-test) with ``lambd=0`` returns valid test
+  statistics when observed counts contain zeros, evaluating :math:`x \ln(x)`
+  to 0, instead of returning ``(nan, nan)``. :issue:`10703`, :pr:`10704`
 - The bias correction (third) step of
   :func:`~statsmodels.tsa.arima.estimators.hannan_rissanen.hannan_rissanen`
   filters the second-step residuals with the inverse of the MA polynomial,
@@ -251,6 +256,10 @@ New functions and methods
   1000 observations, about 300 times faster for 60 variables, and returns a
   ``Series`` for a ``DataFrame``. :issue:`1669`, :pr:`2380`, :pr:`7711`,
   :pr:`10623`
+- Add :func:`~statsmodels.stats.inter_rater.krippendorff_alpha`, Krippendorff's
+  alpha for the agreement of any number of raters, with missing ratings, for
+  nominal, ordinal, interval and ratio data. It is available from
+  ``statsmodels.stats.api``. :pr:`10738`
 - Add the arguments ``alternative`` and ``kernel`` to
   :func:`~statsmodels.tsa.stattools.diebold_mariano_test`. ``alternative``
   selects a one-sided test, ``"larger"`` if ``forecast_b`` is more accurate
@@ -898,7 +907,8 @@ Statistics and tests
   continuity correction also when the two discordant counts are equal, which
   gave a positive statistic, and ``inf`` with a p-value of 0 if both counts
   are 0. As in R's ``mcnemar.test``, the correction is now only applied if the
-  counts differ. :issue:`10670`, :pr:`10671`
+  counts differ, so the statistic and the p-value are ``nan`` if both counts
+  are 0. :issue:`10670`, :pr:`10671`
 - ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
   from SciPy if no ratio attains the requested power. It returns ``nan`` with
   a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`

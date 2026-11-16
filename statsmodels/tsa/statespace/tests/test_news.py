@@ -796,6 +796,43 @@ def test_defaults(revisions, updates):
             assert_frame_equal(w, z)
 
 
+def test_default_impact_date_is_previous_last_observation():
+    # The default is the last observation of the previous data, whichever of
+    # the previous and the updated results calls `news`
+    endog = dta["infl"].copy()
+    prev = sarimax.SARIMAX(endog.iloc[:-1]).smooth([0.5, 1.0])
+    upd = sarimax.SARIMAX(endog).smooth([0.5, 1.0])
+    desired = pd.period_range(start="2009Q2", periods=1, freq="Q")
+
+    for news in (prev.news(upd), upd.news(prev), prev.news(endog)):
+        assert_(news.total_impacts.index.equals(desired))
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"start": 10},
+        {"end": 10},
+        {"periods": 2},
+        {"start": 10, "end": 12, "periods": 3},
+    ],
+)
+def test_start_end_periods_exactly_two(kwargs):
+    # Of start, end and periods, exactly two must be given if any is
+    endog = dta["infl"].copy()
+    res = sarimax.SARIMAX(endog.iloc[:-1]).smooth([0.5, 1.0])
+    with pytest.raises(ValueError, match="exactly two must be specified"):
+        res.news(endog, **kwargs)
+
+
+@pytest.mark.parametrize("kwargs", [{"start": 10}, {"end": 10}, {"periods": 1}])
+def test_impact_date_with_start_end_periods(kwargs):
+    endog = dta["infl"].copy()
+    res = sarimax.SARIMAX(endog.iloc[:-1]).smooth([0.5, 1.0])
+    with pytest.raises(ValueError, match="Cannot use the `impact_date`"):
+        res.news(endog, impact_date=10, **kwargs)
+
+
 def test_comparison_types():
     endog = dta["infl"].copy()
     endog.iloc[-1] = np.nan
@@ -844,7 +881,7 @@ def test_start_end_dates(use_periods):
     mod = sarimax.SARIMAX(endog.iloc[:-1])
     res = mod.smooth([0.5, 1.0])
 
-    # Default is the first out-of-sample period
+    # Default is the last observation of the previous data
     news = res.news(endog)
     desired = index_range(start="2009Q2", periods=1, freq="Q")
     assert_(news.total_impacts.index.equals(desired))
