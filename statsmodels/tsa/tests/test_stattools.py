@@ -2403,6 +2403,52 @@ def test_diebold_mariano_sample_size_limits(dm_data):
     assert np.isfinite(res.statistic)
 
 
+@pytest.mark.parametrize(
+    "kwargs, statistic, pvalue",
+    [
+        ({"horizon": 15, "lags": 0}, 0.8160666104384313, 0.4144620395041849),
+        ({"horizon": 20, "lags": 2}, 0.8209841996526007, 0.4116552682333907),
+        ({"horizon": 15, "lags": 14}, 0.9363182910488854, 0.34910933336926364),
+        (
+            {"horizon": 40, "lags": 0, "criterion": "mad"},
+            0.580413346387792,
+            0.5616359069919612,
+        ),
+        # with 0 lags both kernels give the same variance
+        (
+            {"horizon": 15, "lags": 0, "kernel": "uniform"},
+            0.8160666104384313,
+            0.4144620395041849,
+        ),
+    ],
+    ids=["h=nobs", "h>nobs", "lags=nobs-1", "mad", "uniform"],
+)
+def test_diebold_mariano_horizon_unused(dm_data, kwargs, statistic, pvalue):
+    # horizon only sets the default lags and the Harvey et al. adjustment, so
+    # it can be as large as nobs if harvey_adj is False and lags is given.
+    # Reference values computed with statsmodels before alternative and kernel
+    # were added, which did not check horizon against nobs.
+    res = diebold_mariano_test(*dm_data, **kwargs)
+    assert_allclose(res.statistic, statistic, rtol=1e-12)
+    assert_allclose(res.pvalue, pvalue, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"horizon": 15},
+        {"horizon": 16},
+        {"horizon": 15, "lags": 0, "harvey_adj": True},
+        {"horizon": 16, "lags": 0, "harvey_adj": True},
+    ],
+    ids=["default-lags", "default-lags-h>nobs", "harvey", "harvey-h>nobs"],
+)
+def test_diebold_mariano_horizon_used(dm_data, kwargs):
+    # horizon sets the default lags and the Harvey et al. adjustment
+    with pytest.raises(ValueError, match=r"horizon \(\d+\) must be smaller"):
+        diebold_mariano_test(*dm_data, **kwargs)
+
+
 def test_diebold_mariano_criterion_shape(dm_data):
     y, f1, f2 = dm_data
     with pytest.raises(ValueError, match="one loss per observation"):

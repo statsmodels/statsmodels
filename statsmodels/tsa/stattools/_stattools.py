@@ -3222,8 +3222,9 @@ def diebold_mariano_test(
     horizon : int, optional
         The forecast horizon used to (1) form the default number of HAC
         lags and (2) compute the Harvey et al. (1997) adjustment when
-        ``harvey_adj`` is True. Must be a positive integer smaller than
-        ``nobs``. Default is 1.
+        ``harvey_adj`` is True. Must be a positive integer. Must be smaller
+        than ``nobs`` if ``harvey_adj`` is True or ``lags`` is not provided,
+        and is otherwise not used. Default is 1.
     alternative : {"two-sided", "larger", "smaller"}, optional
         The alternative hypothesis, in terms of the mean loss differential
         :math:`E[d_t]` defined in the Notes. "larger" is
@@ -3407,7 +3408,8 @@ def diebold_mariano_test(
     t = len(y)
     if forecast_a.shape[0] != t or forecast_b.shape[0] != t:
         raise ValueError("y, forecast_a and forecast_b must all have equal length.")
-    if horizon >= t:
+    # horizon is only used for the default lags and the Harvey adjustment
+    if horizon >= t and (harvey_adj or lags is None):
         raise ValueError(
             f"horizon ({horizon}) must be smaller than the number of "
             f"observations ({t})."
