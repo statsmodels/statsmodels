@@ -369,12 +369,13 @@ def iqr(x1, x2, axis=0):
     """
     x1 = array_like(x1, "x1", dtype=None, mindim=None)
     x2 = array_like(x2, "x2", dtype=None, mindim=None)
+    xdiff = x1 - x2
     if axis is None:
-        x1 = x1.ravel()
-        x2 = x2.ravel()
+        xdiff = xdiff.ravel()
         axis = 0
-    xdiff = np.sort(x1 - x2, axis=axis)
-    nobs = x1.shape[axis]
+    xdiff = np.sort(xdiff, axis=axis)
+    # the number of errors, x1 alone can be smaller if the inputs broadcast
+    nobs = xdiff.shape[axis]
     if nobs == 0:
         # no observations to take quantiles of
         return _nan_reduction_result(xdiff, axis)
