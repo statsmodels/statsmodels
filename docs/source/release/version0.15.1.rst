@@ -153,6 +153,12 @@ Behavior changes
   these kernels returned ``nan`` for most data. They now integrate the density
   over the support of the observations, in the units of the data, so that the
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
+- In-sample ``MNLogit`` results predictions with ``exog`` omitted return a
+  ``DataFrame`` with the training row index and response categories as columns
+  when the model was fit with pandas data. Previously, these predictions were
+  ndarrays. Models fit with NumPy data and predictions with explicit NumPy
+  ``exog`` still return ndarrays. Use ``np.asarray`` on the predictions if an
+  ndarray is needed. :issue:`4541`, :pr:`10735`
 - ``powerdiscrepancy`` (and the G-test) with ``lambd=0`` returns valid test
   statistics when observed counts contain zeros, evaluating :math:`x \ln(x)`
   to 0, instead of returning ``(nan, nan)``. :issue:`10703`, :pr:`10704`
