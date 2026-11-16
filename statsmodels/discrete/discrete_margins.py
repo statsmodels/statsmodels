@@ -525,7 +525,7 @@ def margeff_cov_params(
     derivative : callable or array_like
         If callable, it returns the marginal effects of the model with
         respect to the exogenous variables evaluated at exog. Expected to be
-        called derivative(params, exog). This will be numerically
+        called derivative(params, exog, method). This will be numerically
         differentiated. Otherwise, it can be the Jacobian of the marginal
         effects with respect to the parameters.
     dummy_ind : array_like
@@ -549,8 +549,9 @@ def margeff_cov_params(
 
     The outer Jacobians are computed via numerical differentiation if
     derivative is a function. For ``at="overall"`` the average of the
-    marginal effects is differentiated, so that memory use does not grow
-    with ``nobs * k_effects * k_params``.
+    marginal effects is differentiated, so that the Jacobian has shape
+    (k_effects, k_params) and its size does not depend on the number of
+    observations.
     """
     if callable(derivative):
         from statsmodels.tools.numdiff import approx_fprime_cs

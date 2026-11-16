@@ -172,12 +172,16 @@ class TruncatedLFGeneric(CountModel):
         pmf = np.zeros_like(self.endog, dtype=np.float64)
         # TODO: can we rewrite to following without creating new models
         score_trunc = np.zeros_like(score_main, dtype=np.float64)
+        # the models for the truncated counts need the same `p` as model_main
+        init_kwds = self.model_main._get_init_kwds()
+        kwds = {"p": init_kwds["p"]} if "p" in init_kwds else {}
         for i in range(self.trunc + 1):
             model = self.model_main.__class__(
                 np.ones_like(self.endog) * i,
                 self.exog,
                 offset=getattr(self, "offset", None),
                 exposure=getattr(self, "exposure", None),
+                **kwds,
                 )
             pmf_i = np.exp(model.loglikeobs(params))
             score_trunc += (model.score_obs(params).T * pmf_i).T
