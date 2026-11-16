@@ -5,6 +5,8 @@ Created on Mon Dec 10 09:18:14 2012
 Author: Josef Perktold
 """
 
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
@@ -645,25 +647,53 @@ def test_krippendorff_alpha_published_fractions():
     )
 
 
-@pytest.mark.parametrize("level", ["nominal", "ordinal", "interval", "ratio"])
-def test_krippendorff_alpha_random_vs_pairs(level):
-    rng = np.random.default_rng(1234)
-    n_checked = 0
-    while n_checked < 5:
-        n_sub, n_rat = rng.integers(3, 15), rng.integers(2, 5)
-        base = rng.integers(0, 4, n_sub)
-        noise = rng.integers(0, 4, (n_sub, n_rat))
-        data = np.where(rng.random((n_sub, n_rat)) < 0.6, base[:, None], noise)
-        data = data.astype(float)
-        data[rng.random(data.shape) < 0.2] = np.nan
-        pairable = data[(~np.isnan(data)).sum(1) >= 2]
-        if len(np.unique(pairable[~np.isnan(pairable)])) < 2:
-            # alpha is undefined, see test_krippendorff_alpha_undefined
-            continue
+def _random_ratings(kind, seed):
+    # Subjects rated by 2 to 4 raters, about 20% of the ratings missing. The
+    # ratings of a subject agree with a common value with probability 0.6.
+    rng = np.random.default_rng(seed)
+    n_sub, n_rat = rng.integers(5, 15), rng.integers(2, 5)
+    if kind == "continuous":
+        data = rng.uniform(0, 10, (n_sub, 1)) + rng.uniform(0, 2, (n_sub, n_rat))
+    else:
         # zeros are included on purpose, they exercise c + k = 0 for "ratio"
-        expected = _alpha_from_pairs(data, level)
-        assert_allclose(krippendorff_alpha(data, level=level), expected, rtol=1e-12)
-        n_checked += 1
+        codes = {
+            "consecutive": [0, 1, 2, 3],
+            "nonconsecutive": [3, 4, 9, 12],
+            "negative": [-5, -2, -1, 4],
+        }[kind]
+        base = rng.choice(codes, n_sub)
+        noise = rng.choice(codes, (n_sub, n_rat))
+        data = np.where(rng.random((n_sub, n_rat)) < 0.6, base[:, None], noise)
+    data = data.astype(float)
+    data[rng.random(data.shape) < 0.2] = np.nan
+    return data
+
+
+_levels = ["nominal", "ordinal", "interval", "ratio"]
+_random_cases = (
+    [("consecutive", level, seed) for level in _levels for seed in range(5)]
+    # codes that are not consecutive integers, so that a difference of the
+    # ranks of the codes is not the difference of the codes
+    + [("nonconsecutive", level, seed) for level in _levels for seed in range(2)]
+    # negative codes are not allowed for the ratio level
+    + [("negative", level, seed) for level in _levels[:3] for seed in range(2)]
+    # float ratings, almost all of them distinct
+    + [("continuous", level, seed) for level in _levels for seed in range(2)]
+)
+
+
+@pytest.mark.parametrize(
+    "kind, level, seed",
+    _random_cases,
+    ids=[f"{kind}-{level}-{seed}" for kind, level, seed in _random_cases],
+)
+def test_krippendorff_alpha_random_vs_pairs(kind, level, seed):
+    data = _random_ratings(kind, seed)
+    expected = _alpha_from_pairs(data, level)
+    # alpha is undefined without two different pairable ratings, see
+    # test_krippendorff_alpha_undefined; the seeds are chosen to avoid it
+    assert np.isfinite(expected)
+    assert_allclose(krippendorff_alpha(data, level=level), expected, rtol=1e-12)
 
 
 def test_krippendorff_alpha_fleiss_kappa():
@@ -727,19 +757,33 @@ def test_krippendorff_alpha_perfect_agreement():
         assert_equal(krippendorff_alpha(data, level=level), 1.0)
 
 
-def test_krippendorff_alpha_undefined():
-    # no subject has two ratings
-    data = np.array([[1, np.nan], [np.nan, 2], [3, np.nan]])
-    assert np.isnan(krippendorff_alpha(data))
-    # all pairable ratings are equal; the single rating 2 is not pairable
-    data = np.array([[1, 1], [1, 1], [2, np.nan]])
-    assert np.isnan(krippendorff_alpha(data, level="interval"))
+@pytest.mark.parametrize("level", ["nominal", "interval"])
+@pytest.mark.parametrize(
+    "data",
+    [
+        # no subject has two ratings
+        [[1, np.nan], [np.nan, 2], [3, np.nan]],
+        # no rating at all
+        [[np.nan, np.nan], [np.nan, np.nan]],
+        # all pairable ratings are equal; the single rating 2 is not pairable
+        [[1, 1], [1, 1], [2, np.nan]],
+    ],
+    ids=["no-pairs", "all-missing", "one-value"],
+)
+def test_krippendorff_alpha_undefined(data, level):
+    # alpha is 0 / 0 in the last case, which must not be computed: it would
+    # return nan as well, but with a RuntimeWarning
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        alpha = krippendorff_alpha(np.array(data), level=level)
+    assert np.isnan(alpha)
 
 
 def test_krippendorff_alpha_raises():
     with pytest.raises(ValueError, match="2-d array"):
         krippendorff_alpha(np.array([1, 2, 3]))
-    with pytest.raises(ValueError, match="ndim"):
+    # the message comes from array_like, so it is not matched
+    with pytest.raises(ValueError):
         krippendorff_alpha(np.ones((2, 2, 2)))
     with pytest.raises(ValueError, match="level"):
         krippendorff_alpha(kripp_data, level="circular")

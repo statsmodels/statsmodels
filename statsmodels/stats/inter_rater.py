@@ -304,7 +304,7 @@ def krippendorff_alpha(data, level="nominal"):
         columns, the layout used by
         :func:`statsmodels.stats.inter_rater.aggregate_raters`. Missing
         ratings are coded as ``nan``. Nominal categories can be any numeric
-        codes.
+        codes. See examples.
     level : {"nominal", "ordinal", "interval", "ratio"}, optional
         Level of measurement of the ratings. It defines the squared difference
         :math:`\delta^2_{ck}` between two ratings :math:`c` and :math:`k`.
@@ -348,7 +348,20 @@ def krippendorff_alpha(data, level="nominal"):
 
     For nominal data without missing ratings, alpha is a function of
     Fleiss' kappa, :math:`\alpha = 1 - (1 - \kappa) (n - 1) / n` (see
-    :func:`fleiss_kappa`). For two raters this is Scott's pi.
+    :func:`fleiss_kappa`). For two raters, Fleiss' kappa is Scott's pi, so
+    nominal alpha is 1 - (1 - pi) (n - 1) / n, which is Scott's pi with a
+    correction for the finite number n of ratings.
+
+    If all ratings of the subjects with at least two ratings have the same
+    value, the agreement is perfect but alpha is 0 / 0 and ``nan`` is
+    returned, for example for ``[[1, 1], [1, 1]]``, while ``[[1, 1], [2, 2]]``
+    gives 1. R's ``irr::kripp.alpha`` returns 1 in that case.
+
+    The ratings are held in a matrix of subjects by distinct values and in
+    matrices of distinct values by distinct values. Memory and time therefore
+    grow with the number of subjects times the number of distinct ratings
+    plus the square of the number of distinct ratings. This is small for
+    ratings on a scale with a few levels but large for continuous ratings.
 
     References
     ----------
@@ -376,6 +389,18 @@ def krippendorff_alpha(data, level="nominal"):
     0.743
     >>> round(krippendorff_alpha(data, level="interval"), 3)
     0.849
+
+    Subjects are in rows. Data with raters in rows, as used by R, has to be
+    transposed. Here 6 subjects are rated by 3 raters. The transposed matrix
+    is accepted as 3 subjects with 6 ratings each and gives a different alpha
+    without an error.
+
+    >>> ratings = np.array([[1, 1, 2], [2, 2, 2], [3, 3, 1],
+    ...                     [1, 2, 1], [3, 3, 3], [2, 2, 3]])
+    >>> round(krippendorff_alpha(ratings), 3)
+    0.364
+    >>> round(krippendorff_alpha(ratings.T), 3)
+    -0.112
     """
     data = array_like(data, "data", maxdim=2)
     if data.ndim != 2:
