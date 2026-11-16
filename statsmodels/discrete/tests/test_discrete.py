@@ -4173,24 +4173,37 @@ def test_mnlogit_margeff_dummy_and_count_together(k_choices):
     assert np.abs(expected).max() > 0.01
 
 
-@pytest.mark.parametrize("k_choices", [3, 4])
-@pytest.mark.parametrize("at", ["overall", "mean"])
+@pytest.mark.parametrize(
+    "k_exog, k_choices",
+    [(2, 3), (2, 4), (3, 3)],
+    ids=["K3-J3", "K3-J4", "K4-J3"],
+)
+@pytest.mark.parametrize("at", ["overall", "all", "mean", "median"])
 @pytest.mark.parametrize("method", ["eyex", "dyex"])
-def test_mnlogit_margeff_elasticity(method, at, k_choices):
+def test_mnlogit_margeff_elasticity(method, at, k_exog, k_choices):
     # get_margeff with eyex or dyex raised a broadcasting error in
-    # _derivative_exog, or was incorrect if K = J and at is not "overall"
+    # _derivative_exog, or was incorrect if K = J and at is not "overall".
+    # K is the number of columns of exog with the constant and J is the
+    # number of choices, K = J, K < J and K > J are covered
     from statsmodels.tools.numdiff import approx_fprime
 
-    rng = np.random.default_rng(1055 + k_choices)
+    rng = np.random.default_rng(1055 + 10 * k_exog + k_choices)
     nobs = 1000
-    exog = sm.add_constant(rng.uniform(1, 3, size=(nobs, 2)))
+    exog = sm.add_constant(rng.uniform(1, 3, size=(nobs, k_exog)))
     beta = rng.normal(scale=0.5, size=(exog.shape[1], k_choices - 1))
     prob = np.exp(np.column_stack([np.zeros(nobs), exog @ beta]))
     prob /= prob.sum(1, keepdims=True)
     endog = (rng.random(nobs)[:, None] > prob.cumsum(1)).sum(1)
     mod = MNLogit(endog, exog)
     res = mod.fit(disp=0)
-    exog_at = exog if at == "overall" else exog.mean(0, keepdims=True)
+    assert mod.K == k_exog + 1
+    assert mod.J == k_choices
+    if at in ("overall", "all"):
+        exog_at = exog
+    elif at == "mean":
+        exog_at = exog.mean(0, keepdims=True)
+    else:
+        exog_at = np.median(exog, axis=0, keepdims=True)
 
     def effects(params):
         # complex step derivative of predict with respect to each regressor
@@ -4204,12 +4217,20 @@ def test_mnlogit_margeff_elasticity(method, at, k_choices):
             deriv *= exog_at[:, col : col + 1]
             if method == "eyex":
                 deriv /= pred
-            out.append(deriv.mean(0))
-        return np.concatenate(out)
+            out.append(deriv)
+        if at == "all":
+            # one row of elasticities per observation, shape (nobs, K - 1, J)
+            return np.stack(out, axis=1)
+        return np.concatenate([deriv.mean(0) for deriv in out])
 
     marg = res.get_margeff(at=at, method=method)
     params = res.params.ravel(order="F")
     expected = effects(params)
+    if at == "all":
+        # the delta method standard errors are not available for at="all"
+        assert marg.margeff.shape == (nobs, k_exog, k_choices)
+        assert_allclose(marg.margeff, expected, rtol=1e-10)
+        return
     jac = approx_fprime(params, effects, centered=True)
     se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
     assert_allclose(marg.margeff.ravel(), expected, rtol=1e-10)
