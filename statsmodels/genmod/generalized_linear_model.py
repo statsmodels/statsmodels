@@ -2446,6 +2446,17 @@ class GLMResults(base.LikelihoodModelResults):
         In a future version ``which`` will become not None and the backwards
         compatible prediction results class will be removed.
 
+        The confidence intervals use the t distribution if ``use_t`` is True,
+        with ``df_resid_inference`` degrees of freedom if the results have it
+        (``n_groups - 1`` with ``cov_type="cluster"``, for example) and
+        ``df_resid`` otherwise. They use the normal distribution if ``use_t``
+        is False and, if ``which`` is not None, if ``average`` is True or
+        ``which`` is not "mean" or "linear".
+
+        .. versionchanged:: 0.15.1
+
+           The t distribution uses ``df_resid_inference`` instead of
+           ``df_resid`` if the results have it.
         """
 
         import statsmodels.regression._prediction as linpred

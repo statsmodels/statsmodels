@@ -116,6 +116,18 @@ class PredictionResultsBase:
     def conf_int(self, *, alpha=0.05, **kwds):
         """Confidence interval for the predicted value
 
+        For the results of ``get_prediction``, the t distribution is used if
+        ``use_t`` is True, with ``df_resid_inference`` degrees of freedom if
+        the results have it (``n_groups - 1`` with ``cov_type="cluster"``,
+        for example) and ``df_resid`` otherwise. The normal distribution is
+        used if ``use_t`` is False and for results based on the delta method
+        (for example with ``average=True``).
+
+        .. versionchanged:: 0.15.1
+
+           The t distribution uses ``df_resid_inference`` instead of
+           ``df_resid`` if the results have it.
+
         Parameters
         ----------
         alpha : float, optional
@@ -220,6 +232,17 @@ class PredictionResultsMonotonic(PredictionResultsBase):
         """Confidence interval for the predicted value
 
         This is currently only available for t and z tests.
+
+        For the results of ``get_prediction``, the t distribution is used if
+        ``use_t`` is True, with ``df_resid_inference`` degrees of freedom if
+        the results have it (``n_groups - 1`` with ``cov_type="cluster"``,
+        for example) and ``df_resid`` otherwise. The normal distribution is
+        used if ``use_t`` is False.
+
+        .. versionchanged:: 0.15.1
+
+           The t distribution uses ``df_resid_inference`` instead of
+           ``df_resid`` if the results have it.
 
         Parameters
         ----------
@@ -330,6 +353,17 @@ class PredictionResultsMean(PredictionResultsBase):
         """Confidence interval for the predicted value
 
         This is currently only available for t and z tests.
+
+        For the results of ``get_prediction``, the t distribution is used if
+        ``use_t`` is True, with ``df_resid_inference`` degrees of freedom if
+        the results have it (``n_groups - 1`` with ``cov_type="cluster"``,
+        for example) and ``df_resid`` otherwise. The normal distribution is
+        used if ``use_t`` is False.
+
+        .. versionchanged:: 0.15.1
+
+           The t distribution uses ``df_resid_inference`` instead of
+           ``df_resid`` if the results have it.
 
         Parameters
         ----------
@@ -895,6 +929,17 @@ def get_prediction(
     Notes
     -----
     Status: new in 0.14, experimental
+
+    The confidence intervals use the t distribution if ``use_t`` is True, with
+    ``df_resid_inference`` degrees of freedom if the results have it
+    (``n_groups - 1`` with ``cov_type="cluster"``, for example) and
+    ``df_resid`` otherwise. They use the normal distribution if ``use_t`` is
+    False, if ``average`` is True and if ``which`` is not "mean" or "linear".
+
+    .. versionchanged:: 0.15.1
+
+       The t distribution uses ``df_resid_inference`` instead of ``df_resid``
+       if the results have it.
     """
     use_endpoint = getattr(self.model, "_use_endpoint", True)
 
