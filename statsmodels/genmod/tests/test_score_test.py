@@ -314,6 +314,7 @@ class TestScoreTestRedundantExtra:
         cls.res_glm = GLM(y, x, family=families.Poisson()).fit()
         cls.res_poisson = Poisson(y, x).fit(disp=0)
         cls.noise = rng.standard_normal((nobs, 2))
+        cls.endog = y
 
     def test_rank(self):
         from statsmodels.stats.multivariate_tools import partial_project
@@ -361,6 +362,91 @@ class TestScoreTestRedundantExtra:
             assert st_near.k_constraint == 2
             assert_allclose(st_near.statistic, st.statistic, rtol=1e-6)
             assert_allclose(st_near.pvalue, st.pvalue, rtol=1e-6)
+
+    def test_nearly_redundant_above_tolerance(self):
+        # noise of relative size 1e-5 is far above the tolerance 1e-7, the
+        # columns are kept: df is the number of columns and the statistic
+        # is the one of the columns as given, which differs from the statistic
+        # of the exactly redundant block.
+        exog_extra = self.exog_extra_redundant.copy()
+        exog_extra[:, 2:] += 1e-5 * self.noise
+        ex = np.column_stack((self.exog, exog_extra))
+        mu = np.exp(self.exog @ self.res_glm.params)
+        # closed form of the score statistic for the Poisson model with log
+        # link: score = ex'(y - mu), information = ex' diag(mu) ex
+        score = ex.T @ (self.endog - mu)
+        info = (ex.T * mu) @ ex
+        stat = score @ np.linalg.solve(info, score)
+        for res in (self.res_glm, self.res_poisson):
+            st = res.score_test(exog_extra=exog_extra)
+            assert st.k_constraint == 4
+            # the information matrix has a condition number of about 4e7
+            assert_allclose(st.statistic, stat, rtol=1e-4)
+            assert_allclose(st.pvalue, stats.chi2.sf(stat, 4), rtol=1e-4)
+            st_exact = res.score_test(exog_extra=self.exog_extra)
+            assert st_exact.k_constraint == 2
+            assert abs(st.statistic / st_exact.statistic - 1) > 0.1
+
+    @pytest.mark.parametrize(
+        "case, match",
+        [
+            ("nan", "nan or infinite"),
+            ("inf", "nan or infinite"),
+            ("nan_1d", "nan or infinite"),
+            ("few_rows", "same number of rows"),
+            ("more_rows", "same number of rows"),
+            ("few_rows_1d", "same number of rows"),
+            ("ndim3", "same number of rows"),
+        ],
+    )
+    @pytest.mark.parametrize("caller", ["glm", "poisson", "glm_hc0", "model", "generic"])
+    def test_invalid_exog_extra(self, case, match, caller):
+        # bad input raises a ValueError with a message that names the
+        # problem. Before the check it was a LinAlgError from the SVD of the
+        # helper, "SVD did not converge" or "Incompatible dimensions"
+        z = self.exog_extra
+        exog_extra = {
+            "nan": np.where(np.arange(z.size).reshape(z.shape) == 7, np.nan, z),
+            "inf": np.where(np.arange(z.size).reshape(z.shape) == 8, np.inf, z),
+            "nan_1d": np.where(np.arange(z.shape[0]) == 3, np.nan, z[:, 0]),
+            "few_rows": z[:-5],
+            "more_rows": np.vstack((z, z[:5])),
+            "few_rows_1d": z[:-5, 0],
+            "ndim3": z[:, :, None],
+        }[case]
+        res = self.res_poisson if caller == "poisson" else self.res_glm
+        with pytest.raises(ValueError, match=match):
+            if caller == "model":
+                res.model.score_test(res.params, exog_extra=exog_extra)
+            elif caller == "generic":
+                score_test(res, exog_extra=exog_extra)
+            elif caller == "glm_hc0":
+                res.score_test(exog_extra=exog_extra, cov_type="HC0")
+            else:
+                res.score_test(exog_extra=exog_extra)
+
+    @pytest.mark.parametrize("weights", ["freq_weights", "var_weights"])
+    def test_weights_not_used_in_rank(self, weights):
+        # Documented in the Notes: the projection is unweighted. A column
+        # that is in the span of exog except on observations with weight 1e-12
+        # is not redundant, but it adds nothing to the statistic: the
+        # statistic is that without the column and df is one larger.
+        nobs = self.exog.shape[0]
+        w = np.ones(nobs)
+        w[:5] = 1e-12
+        col = self.exog[:, 1].copy()
+        col[:5] += 1.0
+        mod = GLM(self.endog, self.exog, family=families.Poisson(), **{weights: w})
+        params = mod.fit().params
+        st, pv, df = mod.score_test(params, exog_extra=self.exog_extra)
+        st_col, pv_col, df_col = mod.score_test(
+            params, exog_extra=np.column_stack((self.exog_extra, col))
+        )
+        assert df == 2
+        assert df_col == 3
+        assert_allclose(st_col, st, rtol=1e-8)
+        assert_allclose(pv_col, stats.chi2.sf(st_col, 3), rtol=1e-10)
+        assert pv_col > pv
 
     def test_independent_unchanged(self):
         # without redundancy the columns are used as given
