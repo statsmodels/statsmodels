@@ -6332,7 +6332,11 @@ class MultinomialResults(DiscreteResults):
             if the model was fit using a formula and ``exog`` is a DataFrame
             or a dict, a DataFrame with the row index of ``exog`` is
             returned. If ``exog`` is omitted and the model was fit with pandas
-            data, a DataFrame with the training row index is returned.
+            data (``endog`` or ``exog``) or with a formula, a DataFrame with
+            the training row index is returned (0, 1, ..., nobs - 1 if the
+            formula was used with a dict or a recarray). If ``exog`` is
+            omitted and the model was fit with NumPy data and no formula, an
+            ndarray is returned.
             The columns of the DataFrame are the categories of the
             endogenous variable in the order of the columns of ``wendog`` and
             of ``names``, so that the first column is the reference category.
@@ -6351,8 +6355,8 @@ class MultinomialResults(DiscreteResults):
 
            The columns of the returned DataFrame are the categories of
            ``endog``. In previous versions they were 0, 1, ..., J - 1.
-           In-sample predictions from models fit with pandas data return a
-           DataFrame instead of an ndarray.
+           In-sample predictions from models fit with pandas data or a
+           formula return a DataFrame instead of an ndarray.
         """
         pred = super().predict(exog, transform, *args, **kwargs)
         if exog is None:
