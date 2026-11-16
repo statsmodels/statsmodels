@@ -169,9 +169,16 @@ Behavior changes
   5.1.4. Previously :math:`W_t` was a first-order approximation of this
   filter. **This changes the estimated coefficients** whenever the third step
   is applied, which is the default (``unbiased=None``) if the second-step
-  estimates are stationary and invertible. This also affects
-  ``ARIMA.fit(method="hannan_rissanen")`` and the starting parameters of the
-  ``"innovations_mle"`` and ``"gls"`` methods. If the corrected parameters are
+  estimates are stationary and invertible. The estimates are closer to the
+  maximum likelihood estimates: for 50 simulated ARMA(2, 1) series with 1000
+  observations the median distance to the estimates of
+  ``ARIMA(..., trend="n").fit()`` fell from 0.083 to 0.020. This also changes
+  the final estimates of ``ARIMA.fit(method="hannan_rissanen")`` and of
+  :func:`~statsmodels.tsa.arima.estimators.gls.gls` with
+  ``arma_estimator="hannan_rissanen"``. It changes the starting parameters of
+  ``arma_estimator="innovations_mle"`` (``ARIMA.fit(method="innovations_mle")``
+  and the default of ``gls``), but not their final estimates, which agree up
+  to the tolerance of the optimizer. If the corrected parameters are
   non-stationary or non-invertible, the second-step estimates are returned
   with an ``EstimationWarning``. :issue:`6159`, :pr:`10712`
 - :func:`~statsmodels.tsa.stattools.diebold_mariano_test` raises a
