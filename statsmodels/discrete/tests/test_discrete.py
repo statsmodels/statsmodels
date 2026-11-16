@@ -12,6 +12,7 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 # pylint: disable-msg=E1101
 from pathlib import Path
+import pickle
 import warnings
 
 import numpy as np
@@ -2673,6 +2674,8 @@ def test_mnlogit_predict_in_sample_input_types(pandas_endog, pandas_exog):
 @pytest.mark.parametrize("which", ["mean", "linear", "var"])
 @pytest.mark.parametrize("pandas_exog", [False, True])
 def test_mnlogit_predict_in_sample_pandas_missing(which, pandas_exog):
+    # The NaN are only in exog. A NaN in a categorical endog is not dropped
+    # by MNLogit (not changed by GH 4541), so it is not tested here.
     endog = _mnlogit_names_endog("categorical")
     exog = _mnlogit_predict_data(endog)
     index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
@@ -2725,6 +2728,12 @@ def test_mnlogit_predict_in_sample_formula_missing():
 
 
 def test_mnlogit_in_sample_pandas_diagnostics():
+    # GH 4541: this test passes without the change of ``predict`` (the
+    # diagnostics were ndarrays before it) and pins that they stay ndarrays
+    # that equal those of a NumPy fit now that ``predict()`` returns a
+    # DataFrame. The attributes are read from ``_results`` to get the raw
+    # values, as the results wrapper converts some of them (for example
+    # ``resid_misclassified`` becomes a Series).
     endog = _mnlogit_names_endog("numeric")
     exog = _mnlogit_predict_data(endog)
     res = MNLogit(endog, exog).fit(disp=0)
@@ -2735,6 +2744,41 @@ def test_mnlogit_in_sample_pandas_diagnostics():
         assert isinstance(actual, np.ndarray)
         assert_allclose(actual, getattr(expected, name))
     assert_array_equal(res.pred_table(), expected.pred_table())
+
+
+def _mnlogit_pandas_fit(regularized):
+    endog = _mnlogit_names_endog("categorical")
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
+    endog.index = exog.index = index
+    model = MNLogit(endog, exog)
+    if regularized:
+        # a mild penalty, so that the fit is regular and fast
+        res = model.fit_regularized(
+            method="l1", alpha=0.1, disp=0, acc=1e-10, maxiter=1000
+        )
+    else:
+        res = model.fit(disp=0)
+    return res, exog, index
+
+
+@pytest.mark.parametrize("regularized", [False, True], ids=["fit", "fit_regularized"])
+@pytest.mark.parametrize("pickled", [False, True], ids=["fitted", "pickled"])
+def test_mnlogit_predict_in_sample_fit_methods(regularized, pickled):
+    # GH 4541: the in-sample DataFrame is kept by the results of
+    # fit_regularized and by results that are pickled and unpickled
+    res, exog, index = _mnlogit_pandas_fit(regularized)
+    if pickled:
+        res = pickle.loads(pickle.dumps(res))
+
+    pred = res.predict()
+    assert isinstance(pred, pd.DataFrame)
+    assert_index_equal(pred.index, index)
+    assert pred.columns.tolist() == ["train", "car", "bus"]
+    assert_allclose(pred.sum(axis=1), 1.0, rtol=1e-12)
+    expected = res.model.predict(np.asarray(res.params), np.asarray(exog))
+    assert_allclose(pred, expected)
+    pd.testing.assert_frame_equal(pred, res.predict(exog))
 
 
 def _mnlogit_predict_data(endog, seed=4804):
