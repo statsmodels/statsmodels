@@ -304,10 +304,7 @@ def krippendorff_alpha(data, level="nominal"):
         columns, the layout used by
         :func:`statsmodels.stats.inter_rater.aggregate_raters`. Missing
         ratings are coded as ``nan``. Nominal categories can be any numeric
-        codes. R's ``irr::kripp.alpha`` and ``DescTools::KrippAlpha`` expect
-        the raters in rows, so a matrix in that layout has to be transposed
-        first. A transposed matrix is not detected: it gives a valid-looking
-        alpha and no error (see the examples).
+        codes. See examples.
     level : {"nominal", "ordinal", "interval", "ratio"}, optional
         Level of measurement of the ratings. It defines the squared difference
         :math:`\delta^2_{ck}` between two ratings :math:`c` and :math:`k`.
