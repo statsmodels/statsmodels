@@ -94,7 +94,7 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
 
     In step 3, the residuals :math:`Z_t` implied by the second-step estimates
     are filtered to :math:`V_t = \phi(B)^{-1} Z_t` and
-    :math:`W_t = 	heta(B)^{-1} Z_t`. The least-squares regression of
+    :math:`W_t = \theta(B)^{-1} Z_t`. The least-squares regression of
     :math:`Z_t` on the lags of :math:`V_t` and :math:`W_t` gives a correction
     that is added to the second-step estimates. This is one Gauss-Newton step
     towards the minimizer of the conditional sum of squares. If the corrected
