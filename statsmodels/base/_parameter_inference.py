@@ -142,11 +142,13 @@ def _full_rank_exog_extra(exog, exog_extra, tol=1e-7):
     tol : float, optional
         Relative tolerance for the rank. The columns of `exog_extra` are
         projected on `exog` and the residuals divided by the norms of the
-        columns. The rank is the number of singular values of the scaled
-        residuals larger than `tol`. For a single column this is the
-        criterion of R's ``lm`` with its default tolerance: the column is
+        columns of `exog_extra`. The rank is the number of singular values of
+        the scaled residuals larger than `tol`. For a single column this is
+        the criterion of R's ``lm`` with its default tolerance: the column is
         redundant if its norm after projecting out `exog` is less than `tol`
-        times its norm.
+        times its norm. For several columns it differs from the sequential
+        rule of ``lm``. R's ``glm`` uses a tighter tolerance, 1e-11 by
+        default.
 
     Returns
     -------
@@ -326,17 +328,45 @@ def score_test(
 
     Redundant columns in `exog_extra`
 
-    A column of `exog_extra` is redundant if its norm after projecting out
-    the `exog` of the model and the other columns is less than 1e-7 times its
-    norm, the tolerance of R's ``lm``. If `exog_extra` has redundant columns
-    and `hypothesis` is "joint", then it is replaced by an orthonormal basis
-    of its columns after projecting out `exog`. The test statistic is
-    invariant to this change of basis, and the number of constraints and the
-    degrees of freedom of the p-value are the rank of the basis. Without
-    this, the number of columns is used as the number of constraints and
-    the p-value is too large, or the covariance of the score is singular.
-    If all columns of `exog_extra` are in the span of `exog`, then there is
-    no constraint to test and a ValueError is raised.
+    The number of constraints is the rank of `exog_extra` after projecting
+    out the `exog` of the model. The rank is the number of singular values
+    larger than 1e-7 of the matrix of the residuals of this projection, with
+    each column divided by the norm of the corresponding column of
+    `exog_extra`. For a single column this is the tolerance of R's ``lm``:
+    the column is redundant if the norm of its residual is less than 1e-7
+    times its norm. For several columns this is not the sequential rule of
+    ``lm``, so a column can be dropped here that ``lm`` keeps and the other
+    way round. R's ``glm``, and so ``anova(..., test="Rao")``, uses the
+    tighter tolerance ``min(1e-7, epsilon / 1000)``, which is 1e-11 with the
+    default ``epsilon``. It keeps columns that are linearly dependent on
+    other columns up to noise of relative size 1e-9 or 1e-8, which are
+    dropped here.
+
+    If `exog_extra` has redundant columns and `hypothesis` is "joint", then
+    it is replaced by an orthonormal basis of its columns after projecting
+    out `exog`. The test statistic is invariant to this change of basis, and
+    the number of constraints and the degrees of freedom of the p-value are
+    the rank of the basis. Without this, the number of columns is used as
+    the number of constraints and the p-value is too large, or the
+    covariance of the score is singular. If all columns of `exog_extra` are
+    in the span of `exog`, then there is no constraint to test and a
+    ValueError is raised.
+
+    The projection is not weighted. For a GLM with `freq_weights` or
+    `var_weights`, a column that differs from the span of `exog` only on
+    observations with weights close to zero, for example 1e-12, adds no
+    information to the statistic but is not redundant here, so it is counted
+    in the degrees of freedom.
+
+    .. versionchanged:: 0.15.1
+
+        With `exog_extra` and ``hypothesis="joint"``, the number of
+        constraints is the rank of `exog_extra` after projecting out `exog`
+        instead of its number of columns, and the statistic is computed from
+        a basis of the independent part, so both change if columns of
+        `exog_extra` are redundant. A ValueError is raised if all columns
+        are redundant, if `exog_extra` has nan or infinite values or if it
+        does not have as many rows as `exog`.
     """
     hypothesis = string_like(
         hypothesis, "hypothesis", options=("joint", "separate"), lower=False
