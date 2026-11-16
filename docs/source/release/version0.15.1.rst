@@ -756,6 +756,10 @@ Time series analysis
   single series with a local level or local linear trend, also with missing
   values, and ``SARIMAX`` with ``concentrate_scale=True`` and exact diffuse
   initialization, are unchanged. :issue:`10741`, :pr:`10742`
+- ``MarkovRegression``, ``MarkovAutoregression`` and ``MarkovSwitching`` now
+  raise a ``MissingDataError`` if ``exog_tvtp`` contains NaN or inf. Before,
+  such values were accepted and ``fit`` returned a log-likelihood of NaN
+  without an error. The ``missing`` option does not apply to ``exog_tvtp``.
 
 Statistics and tests
 --------------------
