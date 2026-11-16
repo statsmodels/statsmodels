@@ -3105,6 +3105,18 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         Notes
         -----
         Status: new in 0.14, experimental
+
+        The confidence intervals use the t distribution if ``use_t`` is True,
+        with ``df_resid_inference`` degrees of freedom if the results have it
+        (``n_groups - 1`` with ``cov_type="cluster"``, for example) and
+        ``df_resid`` otherwise. They use the normal distribution if ``use_t``
+        is False, if ``average`` is True and if ``which`` is not "mean" or
+        "linear".
+
+        .. versionchanged:: 0.15.1
+
+           The t distribution uses ``df_resid_inference`` instead of
+           ``df_resid`` if the results have it.
         """
         from statsmodels.base._prediction_inference import get_prediction
 
