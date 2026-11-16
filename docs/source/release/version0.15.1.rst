@@ -157,6 +157,15 @@ Behavior changes
   is the G-test) returns valid test statistics when observed counts contain
   zeros, evaluating :math:`x \ln(x)` to 0, instead of returning
   ``(nan, nan)``. :issue:`10703`, :pr:`10704`
+- In-sample ``MNLogit`` results predictions with ``exog`` omitted return a
+  ``DataFrame`` with the training row index and response categories as columns
+  when the model was fit with pandas data. Previously, these predictions were
+  ndarrays. Models fit with NumPy data and predictions with explicit NumPy
+  ``exog`` still return ndarrays. Use ``np.asarray`` on the predictions if an
+  ndarray is needed. :issue:`4541`, :pr:`10735`
+- ``powerdiscrepancy`` (and the G-test) with ``lambd=0`` returns valid test
+  statistics when observed counts contain zeros, evaluating :math:`x \ln(x)`
+  to 0, instead of returning ``(nan, nan)``. :issue:`10703`, :pr:`10704`
 - The bias correction (third) step of
   :func:`~statsmodels.tsa.arima.estimators.hannan_rissanen.hannan_rissanen`
   filters the second-step residuals with the inverse of the MA polynomial,
@@ -164,17 +173,31 @@ Behavior changes
   5.1.4. Previously :math:`W_t` was a first-order approximation of this
   filter. **This changes the estimated coefficients** whenever the third step
   is applied, which is the default (``unbiased=None``) if the second-step
-  estimates are stationary and invertible. This also affects
-  ``ARIMA.fit(method="hannan_rissanen")`` and the starting parameters of the
-  ``"innovations_mle"`` and ``"gls"`` methods. If the corrected parameters are
+  estimates are stationary and invertible. The estimates are closer to the
+  maximum likelihood estimates: for 50 simulated ARMA(2, 1) series with 1000
+  observations the median distance to the estimates of
+  ``ARIMA(..., trend="n").fit()`` fell from 0.083 to 0.020. This also changes
+  the final estimates of ``ARIMA.fit(method="hannan_rissanen")`` and of
+  :func:`~statsmodels.tsa.arima.estimators.gls.gls` with
+  ``arma_estimator="hannan_rissanen"``. It changes the starting parameters of
+  ``arma_estimator="innovations_mle"`` (``ARIMA.fit(method="innovations_mle")``
+  and the default of ``gls``), but not their final estimates, which agree up
+  to the tolerance of the optimizer. If the corrected parameters are
   non-stationary or non-invertible, the second-step estimates are returned
   with an ``EstimationWarning``. :issue:`6159`, :pr:`10712`
 - :func:`~statsmodels.tsa.stattools.diebold_mariano_test` raises a
-  ``ValueError`` if the loss differential is constant up to rounding error,
-  for example if the two forecasts are identical, if the estimated long-run
-  variance is not positive, if ``horizon`` is not smaller than the number of
-  observations, or if ``lags`` is too large for it. It returned ``nan``, a
-  meaningless statistic or a statistic of 0 before. :issue:`10753`, :pr:`10755`
+  ``ValueError`` for inputs for which it returned a meaningless result or
+  raised another exception before. This is the case if the loss differential
+  is constant up to rounding error, for example if the two forecasts are
+  identical (``nan`` before, or a huge statistic with a p-value of 0 if the
+  forecast errors are constant); if ``lags`` is not smaller than the number
+  of observations, or ``horizon`` is not smaller than it when ``lags`` is
+  not given or ``harvey_adj=True`` (a statistic that is not meaningful
+  before, which is 0 with ``harvey_adj=True`` if ``horizon`` is the number of
+  observations or one more); and if ``criterion`` does not return one loss
+  per observation (a ``TypeError`` before for a scalar, otherwise a
+  statistic from a loss series of the wrong length). The results that were
+  returned for other input are unchanged. :issue:`10753`, :pr:`10755`
 - :func:`~statsmodels.tsa.stattools.acf` and
   :func:`~statsmodels.tsa.stattools.pacf` return 1.0 for lag 0 and ``nan`` for
   lags 1 and higher when the input series is constant, for every method of
@@ -261,7 +284,8 @@ New functions and methods
   or ``"smaller"`` if ``forecast_a`` is. ``kernel="uniform"`` estimates the
   long-run variance with equal weights up to ``lags``, as in Diebold and
   Mariano (1995) and Harvey et al. (1997), and uses ``horizon - 1`` lags by
-  default. With ``harvey_adj=True`` this gives the results of ``dm.test`` in
+  default; a ``ValueError`` is raised if its estimate of the variance is not
+  positive. With ``harvey_adj=True`` this gives the results of ``dm.test`` in
   the R package forecast. The results of the default arguments are
   unchanged.
   :issue:`10753`, :pr:`10755`
@@ -394,12 +418,15 @@ Regression and linear models
 - ``yule_walker`` raises a ``ValueError`` for a negative ``order`` instead of
   an ``IndexError``. :pr:`10346`
 - ``get_prediction`` of regression, GLM and discrete results with
-  ``cov_type="cluster"`` and ``use_t=True`` used the t distribution with
-  ``df_resid`` degrees of freedom instead of ``n_groups - 1`` as in
-  ``conf_int`` and ``t_test``, so the confidence interval of the mean was too
-  narrow. The prediction interval for a new observation (``obs_ci``) now uses
-  the same degrees of freedom, which is conservative. :issue:`10743`,
-  :pr:`10744`
+  ``use_t=True`` and ``cov_type="cluster"`` (also two-way clustering),
+  ``"hac-panel"`` or ``"hac-groupsum"``, and for linear models
+  ``"cluster-crv3"`` or ``"cluster-jk"``, used the t distribution with
+  ``df_resid`` degrees of freedom instead of ``n_groups - 1`` (the smaller
+  number of groups minus one for two-way clustering) as in ``conf_int`` and
+  ``t_test``, so the confidence interval of the mean was too narrow. Nothing
+  changes with ``df_correction=False`` or ``use_t=False``. The prediction
+  interval for a new observation (``obs_ci``) now uses the same degrees of
+  freedom, which is conservative. :issue:`10743`, :pr:`10744`
 
 Generalized linear models and discrete models
 ---------------------------------------------
@@ -408,6 +435,18 @@ Generalized linear models and discrete models
   models and the ``GLM`` result method raised an ``IndexError`` in 0.15.0. A
   one-dimensional ``exog_extra`` is a single additional variable, as before.
   :pr:`10609`
+- ``score_test`` with ``exog_extra`` used the number of columns of
+  ``exog_extra`` as the number of constraints. If some of the columns are
+  linear combinations of other columns or of the model's ``exog``, for
+  example the linear term that a spline basis contains, the degrees of
+  freedom were too large, so the p-value was too large and the test
+  conservative, or the test raised a ``LinAlgError`` for exactly redundant
+  columns. The number of constraints is now the rank of ``exog_extra``
+  after projecting out ``exog``, and the statistic is computed from a basis
+  of the independent part. If all columns of ``exog_extra`` are in the span
+  of ``exog``, a ``ValueError`` is raised. This applies to
+  ``GLM.score_test``, the ``score_test`` method of ``GLM`` results and of
+  the discrete models. :issue:`5364`, :pr:`10680`
 - ``predict`` preserves the observation index of a pandas Series for models
   with one predictor and additional parameters, such as ``NegativeBinomial``,
   ``GeneralizedPoisson``, ``ZeroInflatedPoisson``, ``BetaModel``,
@@ -437,10 +476,6 @@ Generalized linear models and discrete models
 - ``MNLogit.get_margeff`` with ``dummy=True`` or ``count=True`` failed or
   returned an incorrect covariance if the number of regressors differs from
   the number of outcome categories. :issue:`5488`, :pr:`10298`
-- ``MNLogit.get_margeff`` with ``method="eyex"`` or ``method="dyex"`` raised
-  a ``ValueError`` from array broadcasting, or returned incorrect marginal
-  effects and standard errors if the number of regressors is equal to the
-  number of outcome categories and ``at`` is not ``"overall"``.
 - ``MNLogit.from_formula`` raised a ``ValueError`` if the response is a str,
   bool or categorical variable. The response can now be a single categorical
   variable, which is treated like the corresponding ``endog`` of the array
@@ -496,6 +531,12 @@ Generalized linear models and discrete models
   a ``nan`` log-likelihood for ``p=1.8``. ``score_test`` with a tuple
   ``exog_extra`` also changes. The results for ``p=1`` and ``p=2`` are not
   changed. :pr:`10737`
+- ``MNLogit.get_margeff`` with ``method="eyex"`` or ``method="dyex"`` raised
+  a ``ValueError`` (array broadcasting) if ``at`` is ``"overall"`` or
+  ``"all"``, and whenever the number of regressors differs from the number of
+  outcome categories. If the two numbers are equal and ``at`` is ``"mean"``,
+  ``"median"`` or ``"zero"``, it returned incorrect marginal effects and
+  standard errors. :pr:`10746`
 
 Mixed models and imputation
 ---------------------------

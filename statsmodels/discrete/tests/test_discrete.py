@@ -2621,6 +2621,122 @@ def test_mnlogit_predict_columns_formula():
     assert pred.columns.dtype.kind == "i"
 
 
+@pytest.mark.parametrize("which", ["mean", "linear", "var"])
+@pytest.mark.parametrize("kind", ["categorical", "string", "numeric"])
+def test_mnlogit_predict_in_sample_pandas(kind, which):
+    # GH 4541: omitting exog preserves the training index and categories.
+    endog = _mnlogit_names_endog(kind)
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
+    exog.index = index
+    if isinstance(endog, pd.Series):
+        endog.index = index
+    res = MNLogit(endog, exog).fit(disp=0)
+
+    pred = res.predict(which=which)
+    pd.testing.assert_frame_equal(pred, res.predict(exog, which=which))
+    assert_index_equal(pred.index, index)
+    expected_columns = {
+        "categorical": ["train", "car", "bus"],
+        "string": ["a", "b", "c"],
+        "numeric": [1, 2, 3],
+    }
+    assert pred.columns.tolist() == expected_columns[kind]
+    expected = res.model.predict(np.asarray(res.params), which=which)
+    assert_allclose(pred, expected)
+
+
+@pytest.mark.parametrize("pandas_endog", [False, True])
+@pytest.mark.parametrize("pandas_exog", [False, True])
+def test_mnlogit_predict_in_sample_input_types(pandas_endog, pandas_exog):
+    endog = _mnlogit_names_endog("numeric")
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog)) * 3 + 7, name="obs")
+    exog.index = index
+    if pandas_endog:
+        endog = pd.Series(endog, index=index)
+    model = MNLogit(endog, exog if pandas_exog else exog.to_numpy())
+    res = model.fit(disp=0)
+
+    pred = res.predict()
+    expected = model.predict(np.asarray(res.params))
+    if pandas_endog or pandas_exog:
+        assert isinstance(pred, pd.DataFrame)
+        assert_index_equal(pred.index, index)
+        assert pred.columns.tolist() == [1, 2, 3]
+    else:
+        assert isinstance(pred, np.ndarray)
+    assert_allclose(pred, expected)
+    assert isinstance(res.predict(exog.to_numpy()), np.ndarray)
+
+
+@pytest.mark.parametrize("which", ["mean", "linear", "var"])
+@pytest.mark.parametrize("pandas_exog", [False, True])
+def test_mnlogit_predict_in_sample_pandas_missing(which, pandas_exog):
+    endog = _mnlogit_names_endog("categorical")
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
+    endog.index = exog.index = index
+    exog.iloc[[3, 8], 0] = np.nan
+    model_exog = exog if pandas_exog else exog.to_numpy()
+    res = MNLogit(endog, model_exog, missing="drop").fit(disp=0)
+
+    pred = res.predict(which=which)
+    retained = exog.dropna()
+    pd.testing.assert_frame_equal(pred, res.predict(retained, which=which))
+    assert_index_equal(pred.index, retained.index)
+    assert pred.columns.tolist() == ["train", "car", "bus"]
+    expected = res.model.predict(
+        np.asarray(res.params), retained.to_numpy(), which=which
+    )
+    assert_allclose(pred, expected)
+
+
+@pytest.mark.parametrize("pandas_exog", [False, True])
+def test_mnlogit_in_sample_pandas_missing_diagnostics(pandas_exog):
+    endog = _mnlogit_names_endog("categorical")
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
+    endog.index = exog.index = index
+    exog.iloc[[3, 8], 0] = np.nan
+    model_exog = exog if pandas_exog else exog.to_numpy()
+    res = MNLogit(endog, model_exog, missing="drop").fit(disp=0)
+    keep = exog.notna().all(axis=1).to_numpy()
+    expected = MNLogit(endog.iloc[keep], exog.iloc[keep].to_numpy()).fit(disp=0)
+
+    for name in ("resid_response", "resid_pearson", "resid_misclassified"):
+        actual = getattr(res._results, name)
+        assert isinstance(actual, np.ndarray)
+        assert_allclose(actual, getattr(expected._results, name))
+    assert_array_equal(res.pred_table(), expected.pred_table())
+
+
+def test_mnlogit_predict_in_sample_formula_missing():
+    rng = np.random.default_rng(4541)
+    df = pd.DataFrame({"y": np.tile([-1, 0, 1], 10), "x": rng.standard_normal(30)})
+    df.index = pd.Index(np.arange(len(df)) * 3 + 7, name="obs")
+    df.loc[df.index[3], "x"] = np.nan
+    res = smf.mnlogit("y ~ x", data=df).fit(disp=0)
+
+    pred = res.predict()
+    pd.testing.assert_frame_equal(pred, res.predict(df.dropna()))
+    assert_index_equal(pred.index, df.dropna().index)
+    assert pred.columns.tolist() == [-1, 0, 1]
+
+
+def test_mnlogit_in_sample_pandas_diagnostics():
+    endog = _mnlogit_names_endog("numeric")
+    exog = _mnlogit_predict_data(endog)
+    res = MNLogit(endog, exog).fit(disp=0)
+    expected = MNLogit(endog, exog.to_numpy()).fit(disp=0)
+
+    for name in ("resid_response", "resid_pearson", "resid_misclassified"):
+        actual = getattr(res._results, name)
+        assert isinstance(actual, np.ndarray)
+        assert_allclose(actual, getattr(expected, name))
+    assert_array_equal(res.pred_table(), expected.pred_table())
+
+
 def _mnlogit_predict_data(endog, seed=4804):
     rng = np.random.default_rng(seed)
     exog = pd.DataFrame(
@@ -2649,12 +2765,12 @@ def test_mnlogit_predict_columns_index_and_types():
     assert_index_equal(pred_row.index, exog.index[[3]])
     assert_allclose(pred_row, expected[[3]])
 
-    # exog that is not a pandas object and predict without exog are arrays
+    # Explicit numpy exog returns arrays even for a model fit with pandas.
     for pred_arr in (res.predict(np.asarray(exog)), res.predict(exog.to_numpy())):
         assert isinstance(pred_arr, np.ndarray)
         assert_allclose(pred_arr, expected)
     pred_none = res.predict()
-    assert isinstance(pred_none, np.ndarray)
+    pd.testing.assert_frame_equal(pred_none, pred)
     assert_allclose(pred_none, expected)
 
 
@@ -4173,24 +4289,37 @@ def test_mnlogit_margeff_dummy_and_count_together(k_choices):
     assert np.abs(expected).max() > 0.01
 
 
-@pytest.mark.parametrize("k_choices", [3, 4])
-@pytest.mark.parametrize("at", ["overall", "mean"])
+@pytest.mark.parametrize(
+    "k_exog, k_choices",
+    [(2, 3), (2, 4), (3, 3)],
+    ids=["K3-J3", "K3-J4", "K4-J3"],
+)
+@pytest.mark.parametrize("at", ["overall", "all", "mean", "median"])
 @pytest.mark.parametrize("method", ["eyex", "dyex"])
-def test_mnlogit_margeff_elasticity(method, at, k_choices):
+def test_mnlogit_margeff_elasticity(method, at, k_exog, k_choices):
     # get_margeff with eyex or dyex raised a broadcasting error in
-    # _derivative_exog, or was incorrect if K = J and at is not "overall"
+    # _derivative_exog, or was incorrect if K = J and at is not "overall".
+    # K is the number of columns of exog with the constant and J is the
+    # number of choices, K = J, K < J and K > J are covered
     from statsmodels.tools.numdiff import approx_fprime
 
-    rng = np.random.default_rng(1055 + k_choices)
+    rng = np.random.default_rng(1055 + 10 * k_exog + k_choices)
     nobs = 1000
-    exog = sm.add_constant(rng.uniform(1, 3, size=(nobs, 2)))
+    exog = sm.add_constant(rng.uniform(1, 3, size=(nobs, k_exog)))
     beta = rng.normal(scale=0.5, size=(exog.shape[1], k_choices - 1))
     prob = np.exp(np.column_stack([np.zeros(nobs), exog @ beta]))
     prob /= prob.sum(1, keepdims=True)
     endog = (rng.random(nobs)[:, None] > prob.cumsum(1)).sum(1)
     mod = MNLogit(endog, exog)
     res = mod.fit(disp=0)
-    exog_at = exog if at == "overall" else exog.mean(0, keepdims=True)
+    assert mod.K == k_exog + 1
+    assert mod.J == k_choices
+    if at in ("overall", "all"):
+        exog_at = exog
+    elif at == "mean":
+        exog_at = exog.mean(0, keepdims=True)
+    else:
+        exog_at = np.median(exog, axis=0, keepdims=True)
 
     def effects(params):
         # complex step derivative of predict with respect to each regressor
@@ -4204,12 +4333,20 @@ def test_mnlogit_margeff_elasticity(method, at, k_choices):
             deriv *= exog_at[:, col : col + 1]
             if method == "eyex":
                 deriv /= pred
-            out.append(deriv.mean(0))
-        return np.concatenate(out)
+            out.append(deriv)
+        if at == "all":
+            # one row of elasticities per observation, shape (nobs, K - 1, J)
+            return np.stack(out, axis=1)
+        return np.concatenate([deriv.mean(0) for deriv in out])
 
     marg = res.get_margeff(at=at, method=method)
     params = res.params.ravel(order="F")
     expected = effects(params)
+    if at == "all":
+        # the delta method standard errors are not available for at="all"
+        assert marg.margeff.shape == (nobs, k_exog, k_choices)
+        assert_allclose(marg.margeff, expected, rtol=1e-10)
+        return
     jac = approx_fprime(params, effects, centered=True)
     se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
     assert_allclose(marg.margeff.ravel(), expected, rtol=1e-10)

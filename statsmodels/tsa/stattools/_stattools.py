@@ -3222,8 +3222,9 @@ def diebold_mariano_test(
     horizon : int, optional
         The forecast horizon used to (1) form the default number of HAC
         lags and (2) compute the Harvey et al. (1997) adjustment when
-        ``harvey_adj`` is True. Must be a positive integer smaller than
-        ``nobs``. Default is 1.
+        ``harvey_adj`` is True. Must be a positive integer. Must be smaller
+        than ``nobs`` if ``harvey_adj`` is True or ``lags`` is not provided,
+        and is otherwise not used. Default is 1.
     alternative : {"two-sided", "larger", "smaller"}, optional
         The alternative hypothesis, in terms of the mean loss differential
         :math:`E[d_t]` defined in the Notes. "larger" is
@@ -3258,7 +3259,9 @@ def diebold_mariano_test(
         observation, if the loss differential is constant up to rounding
         error, for example when the two forecasts are identical, or if the
         estimated long-run variance is not positive, which can happen with
-        the uniform kernel.
+        the uniform kernel. The loss differential is constant up to rounding
+        error if its range is at most ``sqrt(eps)`` times its largest
+        absolute value, which is a heuristic, see the Notes.
 
     Notes
     -----
@@ -3307,6 +3310,17 @@ def diebold_mariano_test(
     the uniform kernel is not positive, ``dm.test`` warns and computes the
     test with ``h=1`` instead, while a ``ValueError`` is raised here.
 
+    The loss differential is constant up to rounding error if its range,
+    ``np.ptp(d)``, is at most ``sqrt(eps) * np.max(np.abs(d))``, where
+    ``eps`` is the machine epsilon of float64. This relative threshold is a
+    heuristic. A loss differential that varies only slightly relative to its
+    largest value raises a ``ValueError`` even if it is not exactly
+    constant. If the losses are large relative to their difference, for
+    example for forecasts that differ from a series ``y`` of very large scale
+    by constants, rounding error can make the loss differential vary by more
+    than the threshold. The constant differential is then not detected and
+    the statistic is meaningless.
+
     Because ``forecast_a`` and ``forecast_b`` are typically generated from
     overlapping information sets (e.g., multi-step-ahead forecasts), the
     loss differential is often serially correlated even under the null,
@@ -3349,10 +3363,13 @@ def diebold_mariano_test(
     .. versionchanged:: 0.15.1
 
        A ``ValueError`` is raised if the loss differential is constant up
-       to rounding error, if its estimated long-run variance is not
-       positive, or if ``horizon`` or ``lags`` is too large for the number
-       of observations. These cases returned ``nan`` or a meaningless
-       statistic before.
+       to rounding error, if ``horizon`` or ``lags`` is too large for the
+       number of observations, or if ``criterion`` does not return one loss
+       per observation. These cases returned ``nan`` or a statistic that is
+       not meaningful before, or raised a ``TypeError`` if ``criterion``
+       returned a scalar. A ``ValueError`` is also raised if the estimated
+       long-run variance is not positive, which only happens with
+       ``kernel="uniform"``.
 
     References
     ----------
@@ -3407,7 +3424,8 @@ def diebold_mariano_test(
     t = len(y)
     if forecast_a.shape[0] != t or forecast_b.shape[0] != t:
         raise ValueError("y, forecast_a and forecast_b must all have equal length.")
-    if horizon >= t:
+    # horizon is only used for the default lags and the Harvey adjustment
+    if horizon >= t and (harvey_adj or lags is None):
         raise ValueError(
             f"horizon ({horizon}) must be smaller than the number of "
             f"observations ({t})."
