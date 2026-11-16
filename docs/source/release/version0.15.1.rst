@@ -139,6 +139,8 @@ Behavior changes
 - :func:`~statsmodels.graphics.functional.banddepth` with ``method="MBD"``
   counts values equal to a band boundary as inside. Previously, tied values
   were assigned arbitrary ranks, so depths could depend on the input row order.
+  The depths of data with tied values change.
+  :pr:`10691`
 - Many functions in ``statsmodels.stats``, ``statsmodels.tsa`` and other
   modules now raise a ``ValueError`` for invalid arguments that were accepted
   before, see *Stricter Input Validation* below.
