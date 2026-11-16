@@ -6358,6 +6358,8 @@ class MultinomialResults(DiscreteResults):
         if exog is None:
             index = self.model.data.row_labels
             if index is not None:
+                if len(index) != len(pred):
+                    index = index.delete(self.model.data.missing_row_idx)
                 pred = DataFrame(pred, index=index)
         categories = getattr(self.model, "_endog_categories", None)
         if isinstance(pred, DataFrame) and categories is not None:

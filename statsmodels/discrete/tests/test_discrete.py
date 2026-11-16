@@ -2671,13 +2671,15 @@ def test_mnlogit_predict_in_sample_input_types(pandas_endog, pandas_exog):
 
 
 @pytest.mark.parametrize("which", ["mean", "linear", "var"])
-def test_mnlogit_predict_in_sample_pandas_missing(which):
+@pytest.mark.parametrize("pandas_exog", [False, True])
+def test_mnlogit_predict_in_sample_pandas_missing(which, pandas_exog):
     endog = _mnlogit_names_endog("categorical")
     exog = _mnlogit_predict_data(endog)
     index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
     endog.index = exog.index = index
     exog.iloc[[3, 8], 0] = np.nan
-    res = MNLogit(endog, exog, missing="drop").fit(disp=0)
+    model_exog = exog if pandas_exog else exog.to_numpy()
+    res = MNLogit(endog, model_exog, missing="drop").fit(disp=0)
 
     pred = res.predict(which=which)
     retained = exog.dropna()
@@ -2688,6 +2690,25 @@ def test_mnlogit_predict_in_sample_pandas_missing(which):
         np.asarray(res.params), retained.to_numpy(), which=which
     )
     assert_allclose(pred, expected)
+
+
+@pytest.mark.parametrize("pandas_exog", [False, True])
+def test_mnlogit_in_sample_pandas_missing_diagnostics(pandas_exog):
+    endog = _mnlogit_names_endog("categorical")
+    exog = _mnlogit_predict_data(endog)
+    index = pd.Index(np.arange(len(endog))[::-1] // 2, name="obs")
+    endog.index = exog.index = index
+    exog.iloc[[3, 8], 0] = np.nan
+    model_exog = exog if pandas_exog else exog.to_numpy()
+    res = MNLogit(endog, model_exog, missing="drop").fit(disp=0)
+    keep = exog.notna().all(axis=1).to_numpy()
+    expected = MNLogit(endog.iloc[keep], exog.iloc[keep].to_numpy()).fit(disp=0)
+
+    for name in ("resid_response", "resid_pearson", "resid_misclassified"):
+        actual = getattr(res._results, name)
+        assert isinstance(actual, np.ndarray)
+        assert_allclose(actual, getattr(expected._results, name))
+    assert_array_equal(res.pred_table(), expected.pred_table())
 
 
 def test_mnlogit_predict_in_sample_formula_missing():
