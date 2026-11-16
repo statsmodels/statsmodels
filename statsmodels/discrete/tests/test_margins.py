@@ -266,8 +266,6 @@ _overall_margins_options = [
             "gee_poisson",
         ]
         for options in _overall_margins_options
-        # eyex and dyex currently raise in MNLogit._derivative_exog
-        if not (model == "mnlogit" and "ex" in options[0])
     ],
 )
 def test_margeff_overall_cov_per_obs(
