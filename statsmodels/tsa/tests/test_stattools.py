@@ -570,7 +570,7 @@ class TestPACF(CheckCorrGram):
     @pytest.mark.skipif(PYTHON_IMPL_WASM, reason="No fp exception support in WASM")
     def test_yw_singular(self):
         with pytest.warns(SingularMatrixWarning):
-            pacf(np.ones(30), nlags=6)
+            pacf_yw(np.ones(30), nlags=6)
 
     def test_ld(self):
         pacfyw = pacf_yw(self.x, nlags=40, method="mle")
@@ -2972,6 +2972,138 @@ def test_pacf_negative_nlags():
         pacf(e, -5)
     # nlags=0 keeps its historical clamp to a single lag
     assert pacf(e, 0).shape == (2,)
+
+
+PACF_METHODS = [
+    "ywadjusted",
+    "ywmle",
+    "ols",
+    "ols-inefficient",
+    "ols-adjusted",
+    "ldadjusted",
+    "ldbiased",
+    "burg",
+]
+
+
+@pytest.mark.parametrize("constant", [101.37, 123.456])
+@pytest.mark.parametrize("length", [50, 100])
+@pytest.mark.parametrize("method", PACF_METHODS)
+def test_pacf_constant(constant, length, method):
+    # GH10647: A constant series carries no autocorrelation information.
+    x = np.full(length, constant)
+    p = pacf(x, nlags=5, method=method)
+    assert p[0] == 1.0
+    assert np.all(np.isnan(p[1:]))
+
+    res = pacf(x, nlags=5, method=method, alpha=0.05)
+    assert res.pacf[0] == 1.0
+    assert np.all(np.isnan(res.pacf[1:]))
+    assert_allclose(res.confint[0], [1.0, 1.0])
+    assert np.all(np.isnan(res.confint[1:]))
+
+
+@pytest.mark.parametrize("constant", [101.37, 123.456])
+@pytest.mark.parametrize("length", [50, 100])
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("fft", [True, False])
+@pytest.mark.parametrize("missing", ["none", "drop", "conservative"])
+def test_acf_constant(constant, length, adjusted, fft, missing):
+    # GH10647: A constant series carries no autocorrelation information.
+    x = np.full(length, constant)
+    if missing != "none":
+        x[length // 2] = np.nan
+    kwargs = {"adjusted": adjusted, "fft": fft, "missing": missing}
+
+    a = acf(x, nlags=5, **kwargs)
+    assert a[0] == 1.0
+    assert np.all(np.isnan(a[1:]))
+
+    res_a = acf(x, nlags=5, alpha=0.05, qstat=True, **kwargs)
+    assert res_a.acf[0] == 1.0
+    assert np.all(np.isnan(res_a.acf[1:]))
+    assert_allclose(res_a.confint[0], [1.0, 1.0])
+    assert np.all(np.isnan(res_a.confint[1:]))
+    assert np.all(np.isnan(res_a.qstat))
+    assert np.all(np.isnan(res_a.pvalues))
+
+
+@pytest.mark.parametrize("constant", [101.37, 123.456])
+@pytest.mark.parametrize("length", [50, 100])
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("fft", [True, False])
+@pytest.mark.parametrize("nlags", [None, 5])
+@pytest.mark.parametrize("has_nan", [False, True])
+@pytest.mark.parametrize("constant_first", [True, False])
+def test_ccf_constant(
+    constant, length, adjusted, fft, nlags, has_nan, constant_first
+):
+    # GH10647: x is constant, or constant once the NaN is dropped.
+    x = np.full(length, constant)
+    if has_nan:
+        x[length // 2] = np.nan
+    other = np.arange(float(length))
+    first, second = (x, other) if constant_first else (other, x)
+    n_ret = length if nlags is None else nlags
+    kwargs = {"nlags": nlags, "adjusted": adjusted, "fft": fft}
+
+    # The fft path of scipy warns about NaN: the shortcut must come first
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        c = ccf(first, second, **kwargs)
+        res_c = ccf(first, second, alpha=0.05, **kwargs)
+    assert c.shape == (n_ret,)
+    assert np.all(np.isnan(c))
+    assert res_c.ccf.shape == (n_ret,)
+    assert np.all(np.isnan(res_c.ccf))
+    assert res_c.confint.shape == (n_ret, 2)
+    assert np.all(np.isnan(res_c.confint))
+
+
+@pytest.mark.parametrize(
+    "shape_x, shape_y, match",
+    [
+        ((20, 1), (20,), "same dimensionality"),
+        ((20, 2), (20,), "same dimensionality"),
+        ((20,), (20, 1), "same dimensionality"),
+        ((20,), (20, 2), "same dimensionality"),
+        ((20, 2), (20, 2), "broadcast"),
+    ],
+)
+@pytest.mark.parametrize(
+    "constant_x, constant_y", [(True, False), (False, True), (True, True)]
+)
+def test_ccf_constant_invalid_shape_raises(
+    shape_x, shape_y, match, constant_x, constant_y
+):
+    # GH10647: the shortcut for constant series must not hide invalid input
+    x = np.arange(float(np.prod(shape_x))).reshape(shape_x)
+    y = np.arange(float(np.prod(shape_y))).reshape(shape_y)
+    if constant_x:
+        x = np.full(shape_x, 2.5)
+    if constant_y:
+        y = np.full(shape_y, 2.5)
+    with pytest.raises(ValueError, match=match):
+        ccf(x, y)
+
+
+@pytest.mark.parametrize("method", PACF_METHODS)
+def test_pacf_constant_invalid_shape_raises(method):
+    # GH10647: a constant (n, 2) array raises as a non-constant one does
+    rng = np.random.default_rng(3213)
+    with pytest.raises(ValueError) as exc_info:
+        pacf(rng.standard_normal((30, 2)), nlags=3, method=method)
+    with pytest.raises(ValueError) as exc_info_const:
+        pacf(np.full((30, 2), 101.37), nlags=3, method=method)
+    assert str(exc_info_const.value) == str(exc_info.value)
+
+
+@pytest.mark.parametrize("method", PACF_METHODS)
+def test_pacf_constant_column(method):
+    # GH10647: a single column is a valid input
+    p = pacf(np.full((30, 1), 101.37), nlags=3, method=method)
+    assert p[0] == 1.0
+    assert np.all(np.isnan(p[1:]))
 
 
 def test_coint_auto_tstat():

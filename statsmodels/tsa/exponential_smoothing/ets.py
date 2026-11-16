@@ -156,7 +156,7 @@ from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.tools import Bunch
+from statsmodels.tools.tools import Bunch, pinv_extended
 from statsmodels.tools.validation import (
     array_like,
     bool_like,
@@ -199,13 +199,25 @@ from statsmodels.tsa.tsatools import freq_to_period
 # * Since the traditional bounds are nonlinear for beta and gamma, if no bounds
 #   are given, we internally use beta_star and gamma_star for fitting
 # * When estimating initial level and initial seasonal values, one of them has
-#   to be removed in order to have a well posed problem. I am solving this by
-#   fixing the last initial seasonal value to 0 (for additive seasonality) or 1
-#   (for multiplicative seasonality).
-#   For the additive models, this means I have to subtract the last initial
-#   seasonal value from all initial seasonal values and add it to the initial
-#   level; for the multiplicative models I do the same with division and
-#   multiplication
+#   to be removed in order to have a well posed problem. As in Hyndman et al.
+#   (2008) and R's forecast::ets, the initial seasonals are normalized to sum
+#   to 0 (additive) or to m (multiplicative) over the first season: the first
+#   m - 1 initial seasonals are estimated and the last one (s[-m], the one
+#   used for the first observation) is computed from them in every likelihood
+#   evaluation. The model parameter vector still contains all m initial
+#   seasonals.
+#   For multiplicative seasonality, and for additive seasonality with an
+#   additive or no trend, this is only an identification: multiplying the
+#   level (and an additive trend) by a constant and dividing all seasonals by
+#   it, or adding a constant to the level and subtracting it from all
+#   additive seasonals, does not change the model. For additive seasonality
+#   with a multiplicative trend (forecast l * b + s) a constant cannot be
+#   moved between the level and the seasonals, so the sum-zero constraint is
+#   a restriction of the model, as it is in R.
+#   The heuristic and the simple start values (used for short series)
+#   already satisfy this normalization, so they are used as they are. The
+#   covariance of the parameters is computed for the m - 1 free initial
+#   seasonals and mapped back to all m.
 
 
 class ETSModel(base.StateSpaceMLEModel):
@@ -249,6 +261,28 @@ class ETSModel(base.StateSpaceMLEModel):
         level, trend, and seasonal state. 'estimated' uses the same heuristic
         as initial guesses, but then estimates the initial states as part of
         the fitting process.  Default is 'estimated'.
+
+        With 'estimated', the initial seasonal states are normalized to sum
+        to 0 (additive seasonality) or to ``seasonal_periods``
+        (multiplicative seasonality), as in R's ``forecast::ets``: the first
+        ``seasonal_periods - 1`` initial seasonal states are estimated and
+        the last one, ``initial_seasonal.<m-1>``, is computed from them.
+        If ``initial_seasonal.<m-1>`` is fixed or bounded, this does not
+        apply and all initial seasonal states are free parameters.
+        For multiplicative seasonality and for additive seasonality with an
+        additive or no trend, this only removes a constant that could be
+        moved between the initial level and the initial seasonals. For
+        additive seasonality with a multiplicative trend, it is a
+        restriction of the model.
+
+        The initial level is the level around which the initial seasonal
+        states average 0 (additive seasonality) or 1 (multiplicative
+        seasonality). A fixed ``initial_level``, for example with
+        ``fix_params``, is therefore a restriction of the model: the
+        initial seasonals still add up to 0 or ``seasonal_periods``.
+        Versions before 0.15.1 fixed ``initial_seasonal.<m-1>`` to 0 or 1
+        instead, so a model with a fixed initial level is a different
+        restriction there and gives a different fit.
     initial_level : float, optional
         The initial level component. Only used if initialization is 'known'.
     initial_trend : float, optional
@@ -839,23 +873,53 @@ class ETSModel(base.StateSpaceMLEModel):
         ]
 
         if self.initialization_method == "estimated":
-            lvl_idx = len(params)
             params += [self.initial_level]
             if self.has_trend:
                 params += [self.initial_trend]
             if self.has_seasonal:
-                # we have to adapt the seasonal values a bit to make sure the
-                # problem is well posed (see implementation notes above)
-                initial_seasonal = self.initial_seasonal
-                if self.seasonal == "mul":
-                    params[lvl_idx] *= initial_seasonal[-1]
-                    initial_seasonal /= initial_seasonal[-1]
-                else:
-                    params[lvl_idx] += initial_seasonal[-1]
-                    initial_seasonal -= initial_seasonal[-1]
-                params += initial_seasonal.tolist()
+                # The heuristic and the simple initial seasonals already sum
+                # to 0 (additive) or to m (multiplicative) over the first
+                # season, as required by the normalization described in the
+                # implementation notes above, so they are used as they are.
+                # self.initial_seasonal starts with the seasonal of the first
+                # observation, s_{-m}, while the parameter vector starts with
+                # initial_seasonal.0 = s_{-1}, see `_internal_params`
+                initial_seasonal = np.array(self.initial_seasonal, dtype=float)
+                params += initial_seasonal[::-1].tolist()
 
         return np.array(params)
+
+    @property
+    def _derive_last_initial_seasonal(self):
+        """
+        Whether the last initial seasonal state is computed from the others
+
+        With ``initialization_method="estimated"``, the initial seasonals are
+        normalized to sum to 0 (additive) or to m (multiplicative) over the
+        first season, so that only m - 1 of them are free parameters. The
+        last one, ``initial_seasonal.<m-1>``, is computed from the others
+        unless the user fixed it or gave bounds for it. A bound cannot be
+        imposed on a computed value, so then all m initial seasonals are
+        free parameters within the bounds, as before GH 8551.
+        """
+        if self.initialization_method != "estimated" or not self.has_seasonal:
+            return False
+        last = self._internal_initial_state_names[-1]
+        # user bounds (fit also adds fixed parameters to self.bounds, but
+        # ETSResults reads this property for results from `smooth` as well)
+        if last in self.bounds:
+            return False
+        return not (self._has_fixed_params and last in self._fixed_params)
+
+    def _last_initial_seasonal(self, initial_seasonal):
+        """
+        Computes the last initial seasonal state from the first m - 1
+
+        The initial seasonals sum to 0 for additive seasonality and to m for
+        multiplicative seasonality.
+        """
+        total = self.seasonal_periods if self.seasonal == "mul" else 0
+        return total - np.sum(initial_seasonal)
 
     def _convert_and_bound_start_params(self, params):
         """This converts start params to internal params, sets internal-only parameters as bounded, sets bounds for fixed parameters, and then makes sure that all start parameters are within the specified bounds"""
@@ -898,14 +962,11 @@ class ETSModel(base.StateSpaceMLEModel):
         # other bounds for phi and initial states
         lb[3], ub[3] = 0.8, 0.98
         if self.initialization_method == "estimated":
-            lb[4:-1] = -np.inf
-            ub[4:-1] = np.inf
-            # fix the last initial_seasonal to 0 or 1, otherwise the equation
-            # is underdetermined
-            if self.seasonal == "mul":
-                lb[-1], ub[-1] = 1, 1
-            else:
-                lb[-1], ub[-1] = 0, 0
+            lb[4:] = -np.inf
+            ub[4:] = np.inf
+            # The last initial seasonal is not a free parameter: it is
+            # computed from the others in every likelihood evaluation, see
+            # `_derive_last_initial_seasonal` and `fit`.
 
         # set lb and ub for parameters with bounds
         for p in self._internal_param_names:
@@ -959,7 +1020,17 @@ class ETSModel(base.StateSpaceMLEModel):
             * ...
             * `initial_seasonal.<m-1>` (:math:`s_{-m}`)
 
-            also have to be specified.
+            also have to be specified. The initial seasonal states are
+            normalized to sum to 0 (additive seasonality) or to m
+            (multiplicative seasonality) during the fit, so that the last
+            one, :math:`s_{-m}`, is computed from the others in every
+            evaluation of the log-likelihood. Its start value is then
+            ignored, and the fit starts from the value that makes the
+            initial seasonals add up to 0 or m. If `initial_seasonal.<m-1>`
+            is bounded, all m initial seasonals are free parameters, and its
+            start value, moved into the bounds, is the starting point. If it
+            is fixed, for example with ``fix_params``, the fixed value is
+            used and the start value is ignored.
         maxiter : int, optional
             The maximum number of iterations to perform.
         full_output : bool, optional
@@ -1004,7 +1075,11 @@ class ETSModel(base.StateSpaceMLEModel):
                 internal_start_params[2] /= 1 - internal_start_params[0]
 
             # check if we have fixed parameters and remove them from the
-            # parameter vector
+            # parameter vector. The last initial seasonal is removed as well
+            # if it is computed from the other initial seasonals (see the
+            # implementation notes above); its value in `fixed_values` is
+            # updated in every call of `_loglike_internal`.
+            derive_last_seasonal = self._derive_last_initial_seasonal
             is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
             fixed_values = np.empty_like(internal_start_params)
             params_without_fixed = []
@@ -1013,6 +1088,11 @@ class ETSModel(base.StateSpaceMLEModel):
                 if bounds[i][0] == bounds[i][1]:
                     is_fixed[i] = True
                     fixed_values[i] = bounds[i][0]
+                elif derive_last_seasonal and i == self._k_params_internal - 1:
+                    is_fixed[i] = True
+                    fixed_values[i] = self._last_initial_seasonal(
+                        internal_start_params[6:-1]
+                    )
                 else:
                     params_without_fixed.append(internal_start_params[i])
                     kwargs["bounds"].append(bounds[i])
@@ -1033,6 +1113,7 @@ class ETSModel(base.StateSpaceMLEModel):
                         fixed_values,
                         use_beta_star,
                         use_gamma_star,
+                        derive_last_seasonal,
                     ),
                     method="lbfgs",
                     maxiter=maxiter,
@@ -1057,6 +1138,10 @@ class ETSModel(base.StateSpaceMLEModel):
                 fitted_params[1] *= fitted_params[0]
             if use_gamma_star:
                 fitted_params[2] *= 1 - fitted_params[0]
+            if derive_last_seasonal:
+                # fixed_values[-1] holds the value of the last likelihood
+                # evaluation, which is not necessarily at the optimum
+                fitted_params[-1] = self._last_initial_seasonal(fitted_params[6:-1])
             final_params = self._model_params(fitted_params)
 
         if return_params:
@@ -1077,6 +1162,7 @@ class ETSModel(base.StateSpaceMLEModel):
         fixed_values=None,
         use_beta_star=False,
         use_gamma_star=False,
+        derive_last_seasonal=False,
     ):
         """
         Log-likelihood function to be called from fit to avoid reallocation of
@@ -1104,6 +1190,12 @@ class ETSModel(base.StateSpaceMLEModel):
             Whether to internally use beta_star as parameter
         use_gamma_star : bool
             Whether to internally use gamma_star as parameter
+        derive_last_seasonal : bool
+            Whether the last initial seasonal state (the last entry of
+            `fixed_values`, which must be marked as fixed in `is_fixed`) is
+            computed from the other initial seasonal states, so that the
+            initial seasonals sum to 0 (additive seasonality) or to m
+            (multiplicative seasonality).
         """
         if np.iscomplexobj(params):
             data = np.asarray(self.endog, dtype=complex)
@@ -1115,6 +1207,11 @@ class ETSModel(base.StateSpaceMLEModel):
             fixed_values = np.empty(self._k_params_internal, dtype=params.dtype)
         else:
             is_fixed = np.ascontiguousarray(is_fixed, dtype=np.int64)
+
+        if derive_last_seasonal:
+            full_params = np.array(fixed_values, dtype=params.dtype)
+            full_params[is_fixed == 0] = params
+            fixed_values[-1] = self._last_initial_seasonal(full_params[6:-1])
 
         self._smoothing_func(
             params,
@@ -1442,6 +1539,10 @@ class ETSResults(base.StateSpaceMLEResults):
         # Setup the cache
         self._cache = {}
 
+        # Whether the last initial seasonal is computed from the others, see
+        # ETSModel._derive_last_initial_seasonal. Used for the covariance.
+        self._derived_last_seasonal = model._derive_last_initial_seasonal
+
         # Handle covariance matrix calculation
         self._cov_approx_complex_step = True
         self._cov_approx_centered = False
@@ -1465,6 +1566,53 @@ class ETSResults(base.StateSpaceMLEResults):
                 "Covariance matrix could not be calculated: singular."
                 " information matrix."
             )
+
+    def _cov_params_approx(self, approx_complex_step=True, approx_centered=False):
+        if not self._derived_last_seasonal:
+            return super()._cov_params_approx(
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered,
+            )
+        # The last initial seasonal is computed from the others, s[-m] =
+        # total - sum(s[-1], ..., s[-m+1]), so the free parameters are all
+        # parameters except it. The Hessian of the full parameter vector is
+        # singular (for additive seasonality, adding a constant to the level
+        # and subtracting it from all seasonals does not change the
+        # likelihood), so the covariance is computed for the free parameters
+        # and mapped back with the Jacobian of this linear map, which also
+        # gives the delta-method variance of the derived seasonal.
+        evaluated_hessian = self.nobs_effective * self.model.hessian(
+            params=self.params,
+            transformed=True,
+            includes_fixed=True,
+            method="approx",
+            approx_complex_step=approx_complex_step,
+            approx_centered=approx_centered,
+        )
+        m = self.seasonal_periods
+        params_index = self.model._params_index
+        last = params_index[f"initial_seasonal.{m - 1}"]
+        others = [params_index[f"initial_seasonal.{i}"] for i in range(m - 1)]
+        if len(self.fixed_params) > 0:
+            free = list(self._free_params_index)
+        else:
+            free = list(range(self.k_params))
+        reduced = [i for i in free if i != last]
+        jac = np.zeros((self.k_params, len(reduced)))
+        jac[reduced, np.arange(len(reduced))] = 1
+        for j, i in enumerate(reduced):
+            if i in others:
+                jac[last, j] = -1
+        neg_cov_reduced, singular_values = pinv_extended(
+            jac.T @ evaluated_hessian @ jac
+        )
+        neg_cov = np.zeros_like(evaluated_hessian) * np.nan
+        mask = np.ix_(free, free)
+        neg_cov[mask] = (jac @ neg_cov_reduced @ jac.T)[mask]
+        if self._rank is None:
+            # the derived seasonal does not add to the rank deficiency
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values)) + 1
+        return -neg_cov
 
     @cache_readonly
     def nobs_effective(self):

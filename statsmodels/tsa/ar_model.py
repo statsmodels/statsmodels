@@ -323,7 +323,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
             hold_back = self._maxlag
         if hold_back < self._maxlag:
             raise ValueError(
-                "hold_back must be >= lags if lags is an int or"
+                "hold_back must be >= lags if lags is an int or "
                 "max(lags) if lags is array_like."
             )
         return _lags, int(hold_back)

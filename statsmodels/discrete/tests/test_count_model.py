@@ -13,6 +13,7 @@ import pytest
 
 import statsmodels.api as sm
 from statsmodels.iolib.summary import Summary
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
     HessianInversionWarning,
@@ -107,6 +108,10 @@ class TestZeroInflatedModel_logit(CheckGeneric):
         res2 = RandHIE.zero_inflated_poisson_logit
         cls.res2 = res2
 
+    def test_bse(self):
+        # tighter than CheckGeneric, needs the cross terms in the hessian
+        assert_allclose(self.res1.bse, self.res2.bse, rtol=1e-4)
+
 
 @pytest.mark.slow
 class TestZeroInflatedModel_probit(CheckGeneric):
@@ -149,6 +154,10 @@ class TestZeroInflatedModel_offset(CheckGeneric):
         cls.init_kwds = {"inflation": "logit"}
         res2 = RandHIE.zero_inflated_poisson_offset
         cls.res2 = res2
+
+    def test_bse(self):
+        # tighter than CheckGeneric, needs the cross terms in the hessian
+        assert_allclose(self.res1.bse, self.res2.bse, rtol=1e-4)
 
     @pytest.mark.thread_unsafe(reason="count models are not threadsafe")
     def test_exposure(self):
@@ -232,6 +241,10 @@ class TestZeroInflatedModelPandas(CheckGeneric):
         cls.init_kwds = {"inflation": "logit"}
         res2 = RandHIE.zero_inflated_poisson_logit
         cls.res2 = res2
+
+    def test_bse(self):
+        # tighter than CheckGeneric, needs the cross terms in the hessian
+        assert_allclose(self.res1.bse, self.res2.bse, rtol=1e-4)
 
     def test_names(self):
         param_names = [
@@ -796,6 +809,56 @@ class TestZeroInflatedNegativeBinomialP_predict2:
             which="mean-nonzero"
         ).mean()
         assert_allclose(mean1, mean2, atol=0.2)
+
+
+@pytest.mark.parametrize("infl_design", ["const", "one_x", "two_x", "exog"])
+@pytest.mark.parametrize("offset_exposure", [None, "offset", "exposure"])
+def test_zip_hessian_numdiff(offset_exposure, infl_design):
+    # cross derivatives between inflation and count parameters were dropped
+    # k_exog is 3, k_inflate is 1, 2, 3 and 3. "two_x" has a square cross
+    # block that is not symmetric. In "exog", exog_infl is exog and the block
+    # is symmetric, so it does not detect a missing transpose.
+    rng = np.random.default_rng(987125)
+    nobs = 1000
+    exog = sm.add_constant(rng.normal(size=(nobs, 2)))
+    if infl_design == "const":
+        exog_infl = None
+        z = np.ones((nobs, 1))
+    elif infl_design == "one_x":
+        exog_infl = sm.add_constant(rng.normal(size=nobs))
+        z = exog_infl
+    elif infl_design == "two_x":
+        exog_infl = sm.add_constant(rng.normal(size=(nobs, 2)))
+        z = exog_infl
+    else:
+        exog_infl = exog
+        z = exog
+    k_infl = z.shape[1]
+    kwds = {}
+    if offset_exposure == "offset":
+        kwds["offset"] = 0.2 * rng.normal(size=nobs)
+    elif offset_exposure == "exposure":
+        kwds["exposure"] = np.exp(0.2 * rng.normal(size=nobs))
+    mu = np.exp(exog @ [0.5, 0.2, -0.1])
+    prob_infl = 1 / (1 + np.exp(-z @ [-0.5, 0.3, -0.2][:k_infl]))
+    endog = rng.poisson(mu)
+    endog[rng.random(nobs) < prob_infl] = 0
+    model = sm.ZeroInflatedPoisson(endog, exog, exog_infl=exog_infl, **kwds)
+    assert model.k_inflate == k_infl
+    params = np.r_[[-0.4, 0.2, 0.3][:k_infl], [0.6, 0.1, -0.2]]
+    hess = model.hessian(params)
+    hess_num = approx_hess(params, model.loglike)
+    assert_allclose(hess, hess.T, rtol=1e-13)
+    assert_allclose(hess, hess_num, rtol=1e-5, atol=1e-5 * np.abs(hess_num).max())
+
+    score = model.score(params)
+    score_num = approx_fprime(params, model.loglike, centered=True)
+    assert_allclose(score, score_num, rtol=1e-6, atol=1e-6 * np.abs(score_num).max())
+
+    res = model.fit(method="newton", maxiter=100, disp=False)
+    hess_num = approx_hess(res.params, model.loglike)
+    bse_num = np.sqrt(np.diag(np.linalg.inv(-hess_num)))
+    assert_allclose(res.bse, bse_num, rtol=1e-5)
 
 
 class TestPandasOffset:
