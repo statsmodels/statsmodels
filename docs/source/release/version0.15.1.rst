@@ -159,9 +159,11 @@ Behavior changes
   ``(nan, nan)``. :issue:`10703`, :pr:`10704`
 - In-sample ``MNLogit`` results predictions with ``exog`` omitted return a
   ``DataFrame`` with the training row index and response categories as columns
-  when the model was fit with pandas data. Previously, these predictions were
-  ndarrays. Models fit with NumPy data and predictions with explicit NumPy
-  ``exog`` still return ndarrays. Use ``np.asarray`` on the predictions if an
+  when the model was fit with pandas data (``endog`` or ``exog``) or with a
+  formula, including a formula on a dict or a recarray (the index is then
+  0, 1, ..., nobs - 1). Previously, these predictions were ndarrays. Models
+  fit with NumPy data and no formula, and predictions with explicit NumPy
+  ``exog``, still return ndarrays. Use ``np.asarray`` on the predictions if an
   ndarray is needed. :issue:`4541`, :pr:`10735`
 - ``powerdiscrepancy`` (and the G-test) with ``lambd=0`` returns valid test
   statistics when observed counts contain zeros, evaluating :math:`x \ln(x)`
