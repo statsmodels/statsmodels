@@ -53,7 +53,7 @@ def check_random_state(seed=None, deprecated=False, warn=True):
                 import warnings
 
                 warnings.warn(
-                    "After statsmodels 0.15 is released, passing an integer when"
+                    "After statsmodels 0.15 is released, passing an integer when "
                     "creating a random number generator will pass the value to "
                     "np.random.default_rng, rather than the current behavior of passing "
                     "it to np.random.RandomState. To continue using RandomState, directly "
