@@ -454,10 +454,6 @@ Generalized linear models and discrete models
 - ``MNLogit.get_margeff`` with ``dummy=True`` or ``count=True`` failed or
   returned an incorrect covariance if the number of regressors differs from
   the number of outcome categories. :issue:`5488`, :pr:`10298`
-- ``MNLogit.get_margeff`` with ``method="eyex"`` or ``method="dyex"`` raised
-  a ``ValueError`` from array broadcasting, or returned incorrect marginal
-  effects and standard errors if the number of regressors is equal to the
-  number of outcome categories and ``at`` is not ``"overall"``.
 - ``MNLogit.from_formula`` raised a ``ValueError`` if the response is a str,
   bool or categorical variable. The response can now be a single categorical
   variable, which is treated like the corresponding ``endog`` of the array
@@ -513,6 +509,12 @@ Generalized linear models and discrete models
   a ``nan`` log-likelihood for ``p=1.8``. ``score_test`` with a tuple
   ``exog_extra`` also changes. The results for ``p=1`` and ``p=2`` are not
   changed. :pr:`10737`
+- ``MNLogit.get_margeff`` with ``method="eyex"`` or ``method="dyex"`` raised
+  a ``ValueError`` (array broadcasting) if ``at`` is ``"overall"`` or
+  ``"all"``, and whenever the number of regressors differs from the number of
+  outcome categories. If the two numbers are equal and ``at`` is ``"mean"``,
+  ``"median"`` or ``"zero"``, it returned incorrect marginal effects and
+  standard errors. :pr:`10746`
 
 Mixed models and imputation
 ---------------------------
