@@ -50,6 +50,7 @@ from statsmodels.tsa.stattools import (
     PccfResult,
     QStatResult,
     RURResult,
+    _stattools,
     acf,
     acovf,
     adfuller,
@@ -2281,7 +2282,25 @@ def test_diebold_mariano_exceptions():
 DM_R_RESULTS = pd.read_csv(CURR_DIR.joinpath("results", "results_diebold_mariano.csv"))
 
 
-@pytest.mark.parametrize("row", DM_R_RESULTS.to_dict("records"))
+DM_R_ROWS = [
+    pytest.param(
+        row,
+        id="-".join(
+            [
+                row["source"],
+                row["kernel"],
+                f"h{row['horizon']}",
+                f"lags{row['lags']}",
+                f"power{row['power']}",
+                row["alternative"],
+            ]
+        ),
+    )
+    for row in DM_R_RESULTS.to_dict("records")
+]
+
+
+@pytest.mark.parametrize("row", DM_R_ROWS)
 def test_diebold_mariano_r_reference(dm_data, row):
     y, f1, f2 = dm_data
     res = diebold_mariano_test(
@@ -2367,23 +2386,66 @@ def test_diebold_mariano_uniform_default_lags(dm_data, horizon):
     assert bartlett.lags == max(horizon - 1, int(np.ceil(15 ** (1 / 3))))
 
 
-def test_diebold_mariano_degenerate_loss_differential(dm_data):
+@pytest.mark.parametrize("kernel", ["bartlett", "uniform"])
+def test_diebold_mariano_identical_forecasts(dm_data, kernel):
     y, f1, _ = dm_data
-    for kernel in ("bartlett", "uniform"):
-        with pytest.raises(ValueError, match="loss differential is constant"):
-            diebold_mariano_test(y, f1, f1, kernel=kernel)
+    with pytest.raises(ValueError, match="loss differential is constant"):
+        diebold_mariano_test(y, f1, f1, kernel=kernel)
+
+
+def test_diebold_mariano_constant_forecast_errors():
+    # the losses are 4 and 1 for every observation
     with pytest.raises(ValueError, match="loss differential is constant"):
         diebold_mariano_test(np.zeros(10), np.full(10, 2.0), np.ones(10))
-    y_scaled = 10 * np.random.default_rng(0).standard_normal(100)
-    for criterion in ("mse", "mae"):
+
+
+@pytest.mark.parametrize("criterion", ["mse", "mae"])
+def test_diebold_mariano_constant_up_to_rounding(criterion):
+    # the forecast errors are -0.1 and -0.2 up to rounding error
+    y = 10 * np.random.default_rng(0).standard_normal(100)
+    with pytest.raises(ValueError, match="constant up to rounding"):
+        diebold_mariano_test(y, y + 0.1, y + 0.2, criterion=criterion)
+
+
+@pytest.mark.parametrize(
+    "rel_range, raises",
+    [
+        (1e-10, True),
+        (5e-9, True),
+        (5e-8, False),
+        (1e-6, False),
+        (1e-4, False),
+    ],
+    ids=["1e-10", "5e-9", "5e-8", "1e-6", "1e-4"],
+)
+def test_diebold_mariano_constant_threshold(rel_range, raises):
+    # The loss differential is constant up to rounding error if its range is
+    # at most sqrt(eps) = 1.5e-8 times its largest absolute value. Here the
+    # range of d is rel_range and its largest value is 1 + rel_range.
+    z = np.random.default_rng(20261116).uniform(size=60)
+    d = 1.0 + rel_range * (z - z.min()) / np.ptp(z)
+    zeros = np.zeros(60)
+
+    def call():
+        return diebold_mariano_test(zeros, d, zeros, criterion=lambda y, f: f)
+
+    if raises:
         with pytest.raises(ValueError, match="constant up to rounding"):
-            diebold_mariano_test(
-                y_scaled, y_scaled + 0.1, y_scaled + 0.2, criterion=criterion
-            )
+            call()
+    else:
+        assert np.isfinite(call().statistic)
+
+
+def test_diebold_mariano_non_finite_forecast(dm_data):
+    y, f1, _ = dm_data
     f_nan = f1.copy()
     f_nan[3] = np.nan
     with pytest.raises(MissingDataError, match="non-finite values"):
         diebold_mariano_test(y, f1, f_nan)
+
+
+def test_diebold_mariano_mape_zero_observation(dm_data):
+    y, f1, _ = dm_data
     y_zero = y.copy()
     y_zero[0] = 0.0
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -2391,42 +2453,121 @@ def test_diebold_mariano_degenerate_loss_differential(dm_data):
             diebold_mariano_test(y_zero, f1, f1 + 1, criterion="mape")
 
 
-def test_diebold_mariano_sample_size_limits(dm_data):
-    y, f1, f2 = dm_data
-    with pytest.raises(ValueError, match=r"horizon \(15\) must be smaller"):
-        diebold_mariano_test(y, f1, f2, horizon=15)
-    with pytest.raises(ValueError, match=r"lags \(15\) must be smaller"):
-        diebold_mariano_test(y, f1, f2, lags=15)
-    with pytest.raises(ValueError, match="minus one"):
-        diebold_mariano_test(y, f1, f2, lags=14, kernel="uniform")
-    res = diebold_mariano_test(y, f1, f2, lags=14)
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        ({"lags": 15}, r"lags \(15\) must be smaller"),
+        ({"lags": 20}, r"lags \(20\) must be smaller"),
+        ({"lags": 14, "kernel": "uniform"}, "minus one"),
+    ],
+    ids=["lags=nobs", "lags>nobs", "uniform-lags=nobs-1"],
+)
+def test_diebold_mariano_lags_too_large(dm_data, kwargs, match):
+    with pytest.raises(ValueError, match=match):
+        diebold_mariano_test(*dm_data, **kwargs)
+
+
+def test_diebold_mariano_largest_lags(dm_data):
+    # lags = nobs - 1 is the largest value for the Bartlett kernel
+    res = diebold_mariano_test(*dm_data, lags=14)
     assert np.isfinite(res.statistic)
 
 
-def test_diebold_mariano_criterion_shape(dm_data):
+@pytest.mark.parametrize(
+    "kwargs, statistic, pvalue",
+    [
+        ({"horizon": 15, "lags": 0}, 0.8160666104384313, 0.4144620395041849),
+        ({"horizon": 20, "lags": 2}, 0.8209841996526007, 0.4116552682333907),
+        ({"horizon": 15, "lags": 14}, 0.9363182910488854, 0.34910933336926364),
+        (
+            {"horizon": 40, "lags": 0, "criterion": "mad"},
+            0.580413346387792,
+            0.5616359069919612,
+        ),
+        # with 0 lags both kernels give the same variance
+        (
+            {"horizon": 15, "lags": 0, "kernel": "uniform"},
+            0.8160666104384313,
+            0.4144620395041849,
+        ),
+    ],
+    ids=["h=nobs", "h>nobs", "lags=nobs-1", "mad", "uniform"],
+)
+def test_diebold_mariano_horizon_unused(dm_data, kwargs, statistic, pvalue):
+    # horizon only sets the default lags and the Harvey et al. adjustment, so
+    # it can be as large as nobs if harvey_adj is False and lags is given.
+    # Reference values computed with statsmodels before alternative and kernel
+    # were added, which did not check horizon against nobs.
+    res = diebold_mariano_test(*dm_data, **kwargs)
+    assert_allclose(res.statistic, statistic, rtol=1e-12)
+    assert_allclose(res.pvalue, pvalue, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"horizon": 15},
+        {"horizon": 16},
+        {"horizon": 15, "lags": 0, "harvey_adj": True},
+        {"horizon": 16, "lags": 0, "harvey_adj": True},
+    ],
+    ids=["default-lags", "default-lags-h>nobs", "harvey", "harvey-h>nobs"],
+)
+def test_diebold_mariano_horizon_used(dm_data, kwargs):
+    # horizon sets the default lags and the Harvey et al. adjustment
+    with pytest.raises(ValueError, match=r"horizon \(\d+\) must be smaller"):
+        diebold_mariano_test(*dm_data, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "criterion",
+    [
+        lambda y, f: np.mean((y - f) ** 2),
+        lambda y, f: np.array([np.mean((y - f) ** 2)]),
+        lambda y, f: ((y - f) ** 2)[:-1],
+        lambda y, f: np.column_stack([(y - f) ** 2, (y - f) ** 2]),
+    ],
+    ids=["scalar", "one-loss", "too-short", "two-columns"],
+)
+def test_diebold_mariano_criterion_shape(dm_data, criterion):
+    with pytest.raises(ValueError, match="one loss per observation"):
+        diebold_mariano_test(*dm_data, criterion=criterion)
+
+
+def test_diebold_mariano_criterion_column(dm_data):
     y, f1, f2 = dm_data
-    with pytest.raises(ValueError, match="one loss per observation"):
-        diebold_mariano_test(y, f1, f2, criterion=lambda y, f: np.mean((y - f) ** 2))
-    with pytest.raises(ValueError, match="one loss per observation"):
-        diebold_mariano_test(y, f1, f2, criterion=lambda y, f: ((y - f) ** 2)[:-1])
     res = diebold_mariano_test(
         y, f1, f2, criterion=lambda y, f: ((y - f) ** 2)[:, None]
     )
     assert_allclose(res.statistic, diebold_mariano_test(y, f1, f2).statistic)
 
 
-def test_diebold_mariano_zero_variance():
-    # With one lag, gamma_0 + 2 * gamma_1 of (-3, -3, 0, -3, -1) is exactly 0
-    d = np.array([-3.0, -3.0, 0.0, -3.0, -1.0])
-    with pytest.raises(ValueError, match="not positive"):
-        diebold_mariano_test(
-            np.zeros(5),
-            d,
-            np.zeros(5),
-            criterion=lambda y, f: f,
-            kernel="uniform",
-            lags=1,
-        )
+@pytest.mark.parametrize("kernel", ["bartlett", "uniform"])
+@pytest.mark.parametrize(
+    "variance", [0.0, -1e-3, np.nan], ids=["zero", "negative", "nan"]
+)
+def test_diebold_mariano_non_positive_variance(dm_data, monkeypatch, kernel, variance):
+    # Replace the HAC estimate of the variance of the mean. An exact zero
+    # variance is only reached by cancellation in floating point arithmetic,
+    # so it cannot be produced reliably from data.
+    class FakeFit:
+        params = np.array([0.5])
+
+        def cov_params(self):
+            return np.array([[variance]])
+
+    class FakeOLS:
+        def __init__(self, endog, exog):
+            pass
+
+        def fit(self, **kwargs):
+            return FakeFit()
+
+    monkeypatch.setattr(_stattools, "OLS", FakeOLS)
+    with pytest.raises(ValueError, match="not positive") as exc:
+        diebold_mariano_test(*dm_data, kernel=kernel)
+    # only the message for the uniform kernel suggests the Bartlett kernel
+    assert ("Use kernel='bartlett'" in str(exc.value)) == (kernel == "uniform")
 
 
 def test_diebold_mariano_negative_variance():
