@@ -444,7 +444,9 @@ Generalized linear models and discrete models
   columns. The number of constraints is now the rank of ``exog_extra``
   after projecting out ``exog``, and the statistic is computed from a basis
   of the independent part. If all columns of ``exog_extra`` are in the span
-  of ``exog``, a ``ValueError`` is raised. This applies to
+  of ``exog``, a ``ValueError`` is raised. An ``exog_extra`` with ``nan`` or
+  infinite values or with a different number of rows than the model's
+  ``exog`` also raises a ``ValueError``. This applies to
   ``GLM.score_test``, the ``score_test`` method of ``GLM`` results and of
   the discrete models. :issue:`5364`, :pr:`10680`
 - ``predict`` preserves the observation index of a pandas Series for models

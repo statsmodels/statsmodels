@@ -916,14 +916,42 @@ class GLM(base.LikelihoodModel):
         -----
         not yet verified for case with scale not equal to 1.
 
-        A column of `exog_extra` is redundant if its norm after projecting
-        out `exog` and the other columns is less than 1e-7 times its norm,
-        the tolerance of R's ``lm``. If `exog_extra` has redundant columns,
-        it is replaced by an orthonormal basis of its columns after
-        projecting out `exog`. The test statistic is invariant to this
-        change of basis, and the number of constraints is the rank of the
-        basis. If all columns of `exog_extra` are in the span of `exog`, a
-        ValueError is raised.
+        The number of constraints of `exog_extra` is its rank after
+        projecting out `exog`. The rank is the number of singular values
+        larger than 1e-7 of the matrix of the residuals of this projection,
+        with each column divided by the norm of the corresponding column of
+        `exog_extra`. For a single column this is the tolerance of R's
+        ``lm``: the column is redundant if the norm of its residual is less
+        than 1e-7 times its norm. For several columns this is not the
+        sequential rule of ``lm``, so a column can be dropped here that
+        ``lm`` keeps and the other way round. R's ``glm``, and so
+        ``anova(..., test="Rao")``, uses the tighter tolerance
+        ``min(1e-7, epsilon / 1000)``, which is 1e-11 with the default
+        ``epsilon``. It keeps columns that are linearly dependent on other
+        columns up to noise of relative size 1e-9 or 1e-8, which are dropped
+        here.
+
+        If `exog_extra` has redundant columns, it is replaced by an
+        orthonormal basis of its columns after projecting out `exog`. The
+        test statistic is invariant to this change of basis, and the number
+        of constraints is the rank of the basis. If all columns of
+        `exog_extra` are in the span of `exog`, a ValueError is raised.
+
+        The projection is not weighted. If the model has `freq_weights` or
+        `var_weights`, a column that differs from the span of `exog` only on
+        observations with weights close to zero, for example 1e-12, adds no
+        information to the statistic but is not redundant here, so it is
+        counted in the degrees of freedom.
+
+        .. versionchanged:: 0.15.1
+
+            With `exog_extra`, the number of constraints is the rank of
+            `exog_extra` after projecting out `exog` instead of its number
+            of columns, and the statistic is computed from a basis of the
+            independent part, so both change if columns of `exog_extra` are
+            redundant. A ValueError is raised if all columns are redundant,
+            if `exog_extra` has nan or infinite values or if it does not
+            have as many rows as `exog`.
         """
 
         if exog_extra is None:
