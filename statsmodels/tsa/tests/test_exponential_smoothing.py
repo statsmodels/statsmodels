@@ -10,7 +10,11 @@ import json
 import pathlib
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_almost_equal
+from numpy.testing import (
+    assert_allclose,
+    assert_almost_equal,
+    assert_array_equal,
+)
 import pandas as pd
 import pytest
 import scipy.stats
@@ -21,6 +25,7 @@ from statsmodels.tools.sm_exceptions import PrecisionWarning
 from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa.exponential_smoothing.initialization import (
+    _initialization_heuristic,
     _initialization_simple,
 )
 import statsmodels.tsa.statespace.exponential_smoothing as statespace
@@ -1267,6 +1272,39 @@ def test_estimated_start_params_are_heuristic_states(
     assert_allclose(model.start_params, start_params)
 
 
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize("trend", [None, "add"])
+@pytest.mark.parametrize(
+    "m, nobs", [(3, 11), (3, 40), (4, 12), (4, 40), (7, 15), (7, 60)]
+)
+def test_estimated_start_params_seasonals_normalized(seasonal, trend, m, nobs):
+    # GH 8551: the start values of the initial seasonals are used as they
+    # are, so the heuristic initialization (long series) and the simple one
+    # (short series, nobs < 10 + 2 * (m // 2)) must already sum to 0
+    # (additive) or to m (multiplicative). The parameter vector starts with
+    # initial_seasonal.0 = s[-1], while model.initial_seasonal starts with
+    # s[-m].
+    rng = np.random.default_rng(8551 + m + nobs)
+    t = np.arange(nobs)
+    endog = 50 + 0.3 * t + 8 * np.sin(2 * np.pi * t / m) + rng.normal(0, 3, nobs)
+    kwargs = dict(trend=trend, seasonal=seasonal, seasonal_periods=m)
+    model = ETSModel(endog, initialization_method="estimated", **kwargs)
+
+    # check that both initialization paths are tested
+    if nobs < 10 + 2 * (m // 2):
+        init = _initialization_simple
+    else:
+        init = _initialization_heuristic
+    _, _, expected = init(endog, trend=trend, seasonal=seasonal, seasonal_periods=m)
+    assert_allclose(model.initial_seasonal, expected)
+
+    total = m if seasonal == "mul" else 0.0
+    start_seasonal = model.start_params[-m:]
+    assert_allclose(np.sum(start_seasonal), total, rtol=1e-12, atol=1e-12)
+    assert_allclose(np.sum(model.initial_seasonal), total, rtol=1e-12, atol=1e-12)
+    assert_allclose(start_seasonal, model.initial_seasonal[::-1])
+
+
 @pytest.mark.parametrize("trend, damped_trend", [("add", True), (None, False)])
 def test_estimated_initial_seasonal_mul(trend, damped_trend):
     # GH 8551: with multiplicative seasonality, the estimated initialization
@@ -1387,6 +1425,83 @@ def test_estimated_initial_seasonal_bounded_last(austourists):
     params = np.asarray(res.params)
     assert 20.0 <= params[-1] <= 21.0
     assert_allclose(res.llf, model.loglike(params), rtol=1e-12)
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize("fixed", [None, 0, 1, 2])
+def test_loglike_internal_derived_last_seasonal(austourists, seasonal, fixed):
+    # GH 8551: the objective of the fit is `_loglike_internal` evaluated at
+    # the free parameters, with the last initial seasonal computed from the
+    # others, including a fixed initial seasonal other than the last one. It
+    # must equal the public log-likelihood at the parameters with
+    # s[-m] = total - sum(s[-1], ..., s[-m+1]). The tests of the fits only
+    # look at parameters that are recomputed after the fit, so they cannot
+    # see an objective that ignores a fixed seasonal. The point is a random
+    # one, not the optimum.
+    m = 4
+    total = m if seasonal == "mul" else 0.0
+    scale = 0.05 if seasonal == "mul" else 1.0
+    rng = np.random.default_rng(8551)
+    model = ETSModel(
+        austourists, error="add", trend="add", seasonal=seasonal, seasonal_periods=m
+    )
+    start = model.start_params.copy()
+    start[3:] += scale * rng.standard_normal(len(start) - 3)
+    full = start.copy()
+    fixed_params = {}
+    if fixed is not None:
+        # a fixed value that is far from the other initial seasonals
+        idx = model.param_names.index(f"initial_seasonal.{fixed}")
+        full[idx] += 10 * scale
+        fixed_params[f"initial_seasonal.{fixed}"] = full[idx]
+    full[-1] = total - np.sum(full[-m:-1])
+
+    # build the arguments as `fit` does
+    with model.fix_params(fixed_params):
+        assert model._derive_last_initial_seasonal
+        internal_start = model._convert_and_bound_start_params(start)
+        bounds = model._setup_bounds()
+        use_beta_star = "smoothing_trend" not in model.bounds
+        use_gamma_star = "smoothing_seasonal" not in model.bounds
+    internal_start[1] /= internal_start[0]
+    internal_start[2] /= 1 - internal_start[0]
+    is_fixed = np.zeros(model._k_params_internal, dtype=np.int64)
+    fixed_values = np.empty_like(internal_start)
+    free_params = []
+    for i, (lower, upper) in enumerate(bounds):
+        if lower == upper:
+            is_fixed[i] = True
+            fixed_values[i] = lower
+        elif i == model._k_params_internal - 1:
+            is_fixed[i] = True
+            fixed_values[i] = model._last_initial_seasonal(internal_start[6:-1])
+        else:
+            free_params.append(internal_start[i])
+    expected_fixed = np.zeros(m, dtype=np.int64)
+    expected_fixed[-1] = 1
+    if fixed is not None:
+        expected_fixed[fixed] = 1
+    assert_array_equal(is_fixed[6:], expected_fixed)
+    # In a fit, the optimizer evaluates the objective at other points than
+    # the start, where the last value is stale. It must be recomputed in
+    # every evaluation.
+    fixed_values[-1] = np.nan
+
+    yhat = np.zeros(model.nobs)
+    xhat = np.zeros((model.nobs, model._k_states_internal))
+    llf = model._loglike_internal(
+        np.array(free_params),
+        yhat,
+        xhat,
+        is_fixed,
+        fixed_values,
+        use_beta_star,
+        use_gamma_star,
+        True,
+    )
+    assert_allclose(llf, model.loglike(full), rtol=1e-10)
+    # the last initial seasonal of the objective is the derived one
+    assert_allclose(fixed_values[-1], full[-1], rtol=1e-12)
 
 
 @pytest.mark.parametrize("name", ["AAdA", "ANA", "MNA", "MNM"])
