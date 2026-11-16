@@ -158,16 +158,16 @@ def test_iqr_axis():
 @pytest.mark.parametrize(
     "shape1, shape2, axis",
     [
-        ((1,), (21,), 0),
-        ((), (21,), 0),
-        ((21,), (), 0),
-        ((1, 3), (21, 3), 0),
-        ((21, 1), (21, 3), 0),
-        ((21, 3), (3,), 0),
-        ((4, 1), (4, 21), 1),
-        ((4, 1), (1, 21), 1),
-        ((1, 3), (7, 3), None),
-        ((7, 1), (7, 3), None),
+        pytest.param((1,), (21,), 0, id="x1-length-1"),
+        pytest.param((), (21,), 0, id="x1-scalar"),
+        pytest.param((21,), (), 0, id="x2-scalar"),
+        pytest.param((1, 3), (21, 3), 0, id="x1-row-axis0"),
+        pytest.param((21, 1), (21, 3), 0, id="x1-column-axis0"),
+        pytest.param((21, 3), (3,), 0, id="x2-1d-axis0"),
+        pytest.param((4, 1), (4, 21), 1, id="x1-column-axis1"),
+        pytest.param((4, 1), (1, 21), 1, id="both-broadcast-axis1"),
+        pytest.param((1, 3), (7, 3), None, id="x1-row-axis-none"),
+        pytest.param((7, 1), (7, 3), None, id="x1-column-axis-none"),
     ],
 )
 def test_iqr_broadcast(shape1, shape2, axis):
@@ -182,12 +182,17 @@ def test_iqr_broadcast(shape1, shape2, axis):
     assert_equal(res, expected)
     assert np.all(res > 0)
 
-    # error quartiles at 0-based positions 5 and 15 of 21 sorted errors
-    err = np.sort(b1 - b2, axis=axis)
-    if axis is not None and err.shape[axis] == 21:
-        q1 = np.take(err, 5, axis=axis)
-        q3 = np.take(err, 15, axis=axis)
-        assert_equal(res, q3 - q1)
+    # independent check: the quartiles of n = 21 sorted errors are the 0-based
+    # order statistics round((n - 1) * 0.25) = 5 and round((n - 1) * 0.75) = 15
+    if axis is None:
+        err = np.sort((b1 - b2).ravel())
+        assert err.shape == (21,)
+        q1, q3 = err[5], err[15]
+    else:
+        err = np.sort(b1 - b2, axis=axis)
+        assert err.shape[axis] == 21
+        q1, q3 = np.take(err, 5, axis=axis), np.take(err, 15, axis=axis)
+    assert_equal(res, q3 - q1)
 
 
 @contextmanager
