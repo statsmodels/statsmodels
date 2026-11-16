@@ -153,6 +153,10 @@ Behavior changes
   these kernels returned ``nan`` for most data. They now integrate the density
   over the support of the observations, in the units of the data, so that the
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
+- ``powerdiscrepancy`` with ``lambd=0`` (``"loglikeratio"``, the default, which
+  is the G-test) returns valid test statistics when observed counts contain
+  zeros, evaluating :math:`x \ln(x)` to 0, instead of returning
+  ``(nan, nan)``. :issue:`10703`, :pr:`10704`
 - In-sample ``MNLogit`` results predictions with ``exog`` omitted return a
   ``DataFrame`` with the training row index and response categories as columns
   when the model was fit with pandas data. Previously, these predictions were
