@@ -376,17 +376,56 @@ class TestScoreTestRedundantExtra:
         ex, k = _full_rank_exog_extra(self.exog, 1e-12 * self.exog_extra)
         assert k == 2
 
-    def test_all_redundant(self):
-        # a column of exog as exog_extra adds no constraint
+    def _exog_extra_in_span(self):
+        x = self.exog
+        # a column of exog, all columns of exog except the constant, and
+        # linear combinations of the columns of exog
+        return [
+            x[:, 1],
+            x[:, 1:],
+            np.column_stack((x[:, 1] - 2 * x[:, 2], 3 + x[:, 2])),
+        ]
+
+    @pytest.mark.parametrize("cov_type", ["nonrobust", "HC0"])
+    def test_all_redundant(self, cov_type):
+        # exog_extra in the span of exog adds no constraint, there is
+        # nothing to test
+        msg = "exog_extra is in the span of exog"
+        for exog_extra in self._exog_extra_in_span():
+            for res in (self.res_glm, self.res_poisson):
+                with pytest.raises(ValueError, match=msg):
+                    res.score_test(exog_extra=exog_extra, cov_type=cov_type)
+
+    def test_all_redundant_hc0(self):
+        # with HC0, rank 0 selected all rows of the identity as the
+        # constraint matrix, k_constraint was the number of parameters and
+        # the p-value 1
+        msg = "exog_extra is in the span of exog"
         for res in (self.res_glm, self.res_poisson):
-            st = res.score_test(exog_extra=self.exog[:, 1])
-            assert st.k_constraint == 0
-            assert_allclose(st.statistic, 0, atol=1e-8)
-        st, pv, df = self.res_glm.model.score_test(
-            self.res_glm.params, exog_extra=self.exog[:, 1:]
-        )
-        assert df == 0
-        assert_allclose(st, 0, atol=1e-8)
+            with pytest.raises(ValueError, match=msg):
+                res.score_test(exog_extra=self.exog[:, 1], cov_type="HC0")
+            # with a column outside the span of exog the test has 1 constraint
+            exog_extra = np.column_stack((self.exog[:, 1], self.exog_extra[:, 0]))
+            st = res.score_test(exog_extra=exog_extra, cov_type="HC0")
+            st1 = res.score_test(exog_extra=self.exog_extra[:, 0], cov_type="HC0")
+            assert st.k_constraint == 1
+            assert_allclose(st.statistic, st1.statistic, rtol=1e-10)
+            assert_allclose(st.pvalue, st1.pvalue, rtol=1e-10)
+            assert_allclose(st.pvalue, stats.chi2.sf(st.statistic, 1), rtol=1e-13)
+
+    def test_all_redundant_model_method(self):
+        msg = "exog_extra is in the span of exog"
+        res = self.res_glm
+        for exog_extra in self._exog_extra_in_span():
+            with pytest.raises(ValueError, match=msg):
+                res.model.score_test(res.params, exog_extra=exog_extra)
+            with pytest.raises(ValueError, match=msg):
+                res.model.score_test(res.params, exog_extra=exog_extra, k_constraints=1)
+
+    def test_all_redundant_separate(self):
+        # the separate z-tests do not use the rank and are still computed
+        st = self.res_glm.score_test(exog_extra=self.exog[:, 1], hypothesis="separate")
+        assert st.statistic.shape == (4,)
 
     def test_separate_unchanged(self):
         # the separate z-tests use the columns as given

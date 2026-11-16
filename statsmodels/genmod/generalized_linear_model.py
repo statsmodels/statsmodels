@@ -922,7 +922,8 @@ class GLM(base.LikelihoodModel):
         it is replaced by an orthonormal basis of its columns after
         projecting out `exog`. The test statistic is invariant to this
         change of basis, and the number of constraints is the rank of the
-        basis.
+        basis. If all columns of `exog_extra` are in the span of `exog`, a
+        ValueError is raised.
         """
 
         if exog_extra is None:

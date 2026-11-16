@@ -159,6 +159,12 @@ def _full_rank_exog_extra(exog, exog_extra, tol=1e-7):
         of basis.
     k_rank : int
         The rank of `exog_extra` given `exog`, the number of constraints.
+
+    Raises
+    ------
+    ValueError
+        If `exog_extra` has columns but its rank given `exog` is 0, i.e., all
+        columns of `exog_extra` are in the span of `exog`.
     """
     exog_extra = np.asarray(exog_extra)
     if exog_extra.ndim == 1:
@@ -172,6 +178,12 @@ def _full_rank_exog_extra(exog, exog_extra, tol=1e-7):
     norms[norms == 0] = 1.0
     u, s, _ = np.linalg.svd(resid / norms, full_matrices=False)
     k_rank = int((s > tol).sum())
+    if k_rank == 0:
+        raise ValueError(
+            "exog_extra is in the span of exog. All columns of exog_extra are "
+            "linear combinations of the columns of exog, so they do not add "
+            "any constraint to test."
+        )
     if k_rank == k_extra:
         return exog_extra, k_extra
     return u[:, :k_rank], k_rank
@@ -313,6 +325,8 @@ def score_test(
     degrees of freedom of the p-value are the rank of the basis. Without
     this, the number of columns is used as the number of constraints and
     the p-value is too large, or the covariance of the score is singular.
+    If all columns of `exog_extra` are in the span of `exog`, then there is
+    no constraint to test and a ValueError is raised.
     """
     hypothesis = string_like(
         hypothesis, "hypothesis", options=("joint", "separate"), lower=False
