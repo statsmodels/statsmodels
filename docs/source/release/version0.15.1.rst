@@ -151,6 +151,18 @@ Behavior changes
   these kernels returned ``nan`` for most data. They now integrate the density
   over the support of the observations, in the units of the data, so that the
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
+- :func:`~statsmodels.tsa.stattools.acf` and
+  :func:`~statsmodels.tsa.stattools.pacf` return 1.0 for lag 0 and ``nan`` for
+  lags 1 and higher when the input series is constant, for every method of
+  ``pacf``. Before, ``acf`` returned ``nan`` at all lags if the mean of the
+  series is exactly representable, and otherwise autocorrelations close to 1
+  caused by the rounding error of the mean, for example 0.99 at lag 1 for 100
+  observations of 101.37. ``pacf`` returned numbers or ``nan`` depending on
+  the method and the constant. :func:`~statsmodels.tsa.stattools.ccf` returns
+  ``nan`` for all lags when either series is constant. The ``qstat`` and
+  ``pvalues`` of ``acf(..., qstat=True)`` and the statistics and p-values of
+  :func:`~statsmodels.stats.diagnostic.acorr_ljungbox` are ``nan`` for a
+  constant series. :issue:`10647`, :pr:`10701`
 
 New Features and Enhancements
 =============================
@@ -372,11 +384,6 @@ Generalized linear models and discrete models
 - ``Logit.loglike`` and ``Logit.loglikeobs`` are computed with ``logaddexp``
   and no longer overflow for large absolute values of the linear predictor.
   :issue:`3923`, :pr:`10217`
-- The ``hessian`` and ``hessian_factor`` of ``NegativeBinomialP`` had an
-  incorrect cross derivative of the regression parameters and ``alpha`` if
-  ``p`` is not 1 or 2. For example, with ``p=1.5`` the standard error of the
-  constant and of ``alpha`` were about 19% too large, and for ``p`` larger
-  than 2 the Hessian could not be inverted, so that ``bse`` was ``nan``.
 - ``Probit.loglike``, ``loglikeobs``, ``score``, ``score_obs`` and
   ``hessian`` are computed in log space. The log-likelihood was clipped to a
   constant and the Hessian was ``nan`` for extreme values of the linear
@@ -425,6 +432,21 @@ Generalized linear models and discrete models
   counts. The results are unchanged for ``p=1`` of the generalized Poisson
   and ``p=2`` of the negative binomial model, and they change for every
   other ``p``. :pr:`10736`
+- The ``hessian`` and ``hessian_factor`` of ``NegativeBinomialP`` had an
+  incorrect cross derivative of the regression parameters and ``alpha`` if
+  ``p`` is not 1 or 2. ``bse``, ``cov_params``, ``conf_int``, the p-values and
+  the robust (``cov_type="HC0"``) covariance of the results change for these
+  values of ``p``, and ``bse`` now agrees with the standard errors from a
+  numerical Hessian. In 20 simulated samples of 3000 counts, the standard
+  errors of the constant and of ``alpha`` were too large by a factor of 1.2 to
+  2.2 for ``p=1.5`` and by 1.1 to 1.3 for ``p=1.8``, while they were within 8%
+  for ``p=1.2``. ``bse`` was ``nan`` for ``p=2.5`` and ``p=3``.
+  ``fit(method="newton")``, which uses the Hessian, now converges for these
+  values of ``p``. In one sample of 1000 counts it stopped after 100
+  iterations without convergence for ``p=1.5``, ``2.5`` and ``3``, and it had
+  a ``nan`` log-likelihood for ``p=1.8``. ``score_test`` with a tuple
+  ``exog_extra`` also changes. The results for ``p=1`` and ``p=2`` are not
+  changed. :pr:`10737`
 
 Mixed models and imputation
 ---------------------------
@@ -462,12 +484,6 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
-- Correct the joint log-likelihood for state space models combining exact
-  diffuse initialization and concentrated scale. Finite innovations within
-  diffuse periods now contribute to both scale-dependent likelihood terms,
-  with ``loglikelihood_burn`` applied consistently. This corrects
-  ``KalmanFilter.loglike`` without changing the scale estimator.
-  :issue:`10741`
 - The ARIMA GLS estimator now uses the complete AR and MA lag polynomials
   when whitening the regression data. Seasonal terms were previously
   omitted, and nonconsecutive lags were treated as consecutive, producing
@@ -477,12 +493,6 @@ Time series analysis
   ``"statespace"``, or with ``method="statespace"`` and ``gls=True``. The
   estimates of such models with seasonal terms or nonconsecutive lags change.
   :pr:`10713`
-- :func:`~statsmodels.tsa.stattools.acf` and
-  :func:`~statsmodels.tsa.stattools.pacf` return 1.0 for lag 0 and ``nan`` for
-  lags 1 and higher when the input series is constant, avoiding near-perfect
-  false autocorrelation due to floating-point truncation when the mean is not
-  exactly representable. :func:`~statsmodels.tsa.stattools.ccf` returns ``nan``
-  for all lags when either series is constant. :issue:`10647`, :pr:`10701`
 - ``ARDL.predict`` with a ``start`` after the first out-of-sample observation
   returned wrong forecasts for a model with ``exog``, ``fixed`` or seasonal
   terms, and raised an ``IndexError`` if ``dynamic`` was used. The forecasts
@@ -683,6 +693,21 @@ Time series analysis
   A key of ``plot_params`` that is not a ``Line2D`` property, for example
   ``"fontsize"``, was ignored before and now raises an ``AttributeError``.
   :issue:`380`, :pr:`10720`
+- ``KalmanFilter.loglike`` of a state space model with exact diffuse
+  initialization and a concentrated scale (``filter_concentrated``) is now
+  equal to ``loglikeobs().sum()``, to ``llf`` and to the value with
+  ``fixed_scale``, and it no longer depends on ``conserve_memory``. The
+  concentrated log-likelihood left out the finite innovations of the diffuse
+  periods, and with ``conserve_memory`` options that discard the
+  log-likelihood it ignored ``loglikelihood_burn`` in exact diffuse models. The
+  value of ``loglike``, which is the objective of ``fit``, and so the fitted
+  parameters change for models in which the diffuse periods contain finite
+  innovations, for example several observed series with fewer diffuse states,
+  also if some observations are missing, or a diffuse state that is observed
+  only later in the sample. Models without such innovations, for example a
+  single series with a local level or local linear trend, also with missing
+  values, and ``SARIMAX`` with ``concentrate_scale=True`` and exact diffuse
+  initialization, are unchanged. :issue:`10741`, :pr:`10742`
 
 Statistics and tests
 --------------------
