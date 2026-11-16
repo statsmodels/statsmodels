@@ -163,6 +163,12 @@ Behavior changes
   ``"innovations_mle"`` and ``"gls"`` methods. If the corrected parameters are
   non-stationary or non-invertible, the second-step estimates are returned
   with an ``EstimationWarning``. :issue:`6159`, :pr:`10712`
+- :func:`~statsmodels.tsa.stattools.diebold_mariano_test` raises a
+  ``ValueError`` if the loss differential is constant up to rounding error,
+  for example if the two forecasts are identical, if the estimated long-run
+  variance is not positive, if ``horizon`` is not smaller than the number of
+  observations, or if ``lags`` is too large for it. It returned ``nan``, a
+  meaningless statistic or a statistic of 0 before. :issue:`10753`, :pr:`10755`
 - :func:`~statsmodels.tsa.stattools.acf` and
   :func:`~statsmodels.tsa.stattools.pacf` return 1.0 for lag 0 and ``nan`` for
   lags 1 and higher when the input series is constant, for every method of
@@ -239,6 +245,16 @@ New functions and methods
   1000 observations, about 300 times faster for 60 variables, and returns a
   ``Series`` for a ``DataFrame``. :issue:`1669`, :pr:`2380`, :pr:`7711`,
   :pr:`10623`
+- Add the arguments ``alternative`` and ``kernel`` to
+  :func:`~statsmodels.tsa.stattools.diebold_mariano_test`. ``alternative``
+  selects a one-sided test, ``"larger"`` if ``forecast_b`` is more accurate
+  or ``"smaller"`` if ``forecast_a`` is. ``kernel="uniform"`` estimates the
+  long-run variance with equal weights up to ``lags``, as in Diebold and
+  Mariano (1995) and Harvey et al. (1997), and uses ``horizon - 1`` lags by
+  default. With ``harvey_adj=True`` this gives the results of ``dm.test`` in
+  the R package forecast. The results of the default arguments are
+  unchanged.
+  :issue:`10753`, :pr:`10755`
 
 Performance
 -----------
@@ -367,6 +383,13 @@ Regression and linear models
   :pr:`10402`, :pr:`10495`
 - ``yule_walker`` raises a ``ValueError`` for a negative ``order`` instead of
   an ``IndexError``. :pr:`10346`
+- ``get_prediction`` of regression, GLM and discrete results with
+  ``cov_type="cluster"`` and ``use_t=True`` used the t distribution with
+  ``df_resid`` degrees of freedom instead of ``n_groups - 1`` as in
+  ``conf_int`` and ``t_test``, so the confidence interval of the mean was too
+  narrow. The prediction interval for a new observation (``obs_ci``) now uses
+  the same degrees of freedom, which is conservative. :issue:`10743`,
+  :pr:`10744`
 
 Generalized linear models and discrete models
 ---------------------------------------------
@@ -869,6 +892,11 @@ Statistics and tests
 - ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
   from SciPy if no ratio attains the requested power. It returns ``nan`` with
   a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`
+- ``eval_measures.iqr`` returned 0 if ``x1`` had length 1 along ``axis`` and
+  was broadcast against a longer ``x2``, raised an ``IndexError`` for a scalar
+  ``x1``, and raised a ``ValueError`` with ``axis=None`` for inputs of
+  different shapes. The quartiles are now those of the broadcast difference.
+  :issue:`10757`, :pr:`10758`
 
 Treatment effects
 -----------------
