@@ -246,30 +246,44 @@ def test_mcnemar():
     assert_allclose(b4.pvalue, r_results.loc[0, "homog_binom_p"])
 
 
-@pytest.mark.parametrize("n_discordant", [0, 1, 4])
-def test_mcnemar_correction_equal_counts(n_discordant):
-    # the continuity correction made the statistic 1 / (n1 + n2) for equal
-    # off-diagonal counts, and inf with a p-value of 0 if both are 0.
-    # R's mcnemar.test does not correct if the counts are equal:
-    # mcnemar.test(matrix(c(5, 4, 4, 5), 2)) gives a statistic of 0, p 1
+@pytest.mark.parametrize("correction", [True, False])
+@pytest.mark.parametrize("n_discordant", [1, 4])
+def test_mcnemar_correction_equal_counts(n_discordant, correction):
+    # The continuity correction made the statistic 1 / (n1 + n2) for equal
+    # off-diagonal counts. R's mcnemar.test does not correct them:
+    # mcnemar.test(matrix(c(5, b, b, 5), 2)) gives a statistic of 0 and a
+    # p-value of 1 for b = 1 and b = 4, with and without correct = FALSE.
     table = np.array([[5, n_discordant], [n_discordant, 5]])
-    with np.errstate(invalid="ignore"):
-        corrected = ctab.mcnemar(table, exact=False, correction=True)
-        uncorrected = ctab.mcnemar(table, exact=False, correction=False)
-    if n_discordant == 0:
-        # 0 / 0, as in R and as without the correction
-        assert np.isnan(corrected.statistic)
-        assert np.isnan(corrected.pvalue)
-    else:
-        assert_equal(corrected.statistic, 0)
-        assert_equal(corrected.pvalue, 1)
-    assert_equal(corrected.statistic, uncorrected.statistic)
+    res = ctab.mcnemar(table, exact=False, correction=correction)
+    assert_equal(res.statistic, 0)
+    assert_equal(res.pvalue, 1)
 
-    # unequal counts still use the correction, R's
-    # mcnemar.test(matrix(c(5, 1, 4, 5), 2)) gives 0.8, p 0.3711
-    res = ctab.mcnemar(np.array([[5, 4], [1, 5]]), exact=False)
-    assert_allclose(res.statistic, 0.8)
-    assert_allclose(res.pvalue, 0.37109336952269756)
+
+@pytest.mark.parametrize("correction", [True, False])
+def test_mcnemar_no_discordant_pairs(correction):
+    # mcnemar.test(matrix(c(5, 0, 0, 5), 2)) gives NaN for the statistic and
+    # the p-value, 0 / 0, with and without correct = FALSE.
+    table = np.array([[5, 0], [0, 5]])
+    with np.errstate(invalid="ignore"):
+        res = ctab.mcnemar(table, exact=False, correction=correction)
+    assert np.isnan(res.statistic)
+    assert np.isnan(res.pvalue)
+    # The exact test has nothing to reject
+    res = ctab.mcnemar(table, exact=True)
+    assert_equal(res.statistic, 0)
+    assert_equal(res.pvalue, 1)
+
+
+def test_mcnemar_correction_unequal_counts():
+    # The correction is still used if the counts differ,
+    # mcnemar.test(matrix(c(5, 1, 4, 5), 2)) gives a statistic of 0.8 and a
+    # p-value of 0.37109336952269761
+    table = np.array([[5, 4], [1, 5]])
+    res = ctab.mcnemar(table, exact=False)
+    assert_allclose(res.statistic, 0.8, rtol=1e-14)
+    assert_allclose(res.pvalue, 0.37109336952269761, rtol=1e-12)
+    res = ctab.mcnemar(table, exact=False, correction=False)
+    assert_allclose(res.statistic, 9 / 5, rtol=1e-14)
 
 
 def test_mcnemar_non_2x2():
