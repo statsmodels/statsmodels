@@ -694,6 +694,7 @@ def test_truncated_negative_binomial_dispersion_factor():
         np.exp(mu_hat ** (p - 1)) - 1)
     assert_allclose(res._dispersion_factor, expected)
 
+
 def _simulate_negbin_counts():
     rng = np.random.default_rng(2843)
     nobs = 500
@@ -704,44 +705,81 @@ def _simulate_negbin_counts():
 
 
 @pytest.mark.parametrize(
-    "model_class, p, truncation",
+    "model_class, p, truncation, use_offset",
     [
-        (TruncatedLFGeneralizedPoisson, 1, 0),
-        (TruncatedLFGeneralizedPoisson, 1.5, 0),
-        (TruncatedLFGeneralizedPoisson, 2, 0),
-        (TruncatedLFGeneralizedPoisson, 2, 1),
-        (TruncatedLFNegativeBinomialP, 1, 0),
-        (TruncatedLFNegativeBinomialP, 1.5, 0),
-        (TruncatedLFNegativeBinomialP, 2, 0),
-        (TruncatedLFNegativeBinomialP, 1, 1),
+        (TruncatedLFGeneralizedPoisson, 1, 0, False),
+        (TruncatedLFGeneralizedPoisson, 1.5, 0, False),
+        (TruncatedLFGeneralizedPoisson, 2, 0, False),
+        (TruncatedLFGeneralizedPoisson, 2, 1, False),
+        (TruncatedLFNegativeBinomialP, 1, 0, False),
+        (TruncatedLFNegativeBinomialP, 1.5, 0, False),
+        (TruncatedLFNegativeBinomialP, 2, 0, False),
+        (TruncatedLFNegativeBinomialP, 1, 1, False),
+        # the models for the truncated counts need the offset too
+        (TruncatedLFGeneralizedPoisson, 1.5, 0, True),
+        (TruncatedLFGeneralizedPoisson, 2, 1, True),
+        (TruncatedLFNegativeBinomialP, 1.5, 0, True),
+        (TruncatedLFNegativeBinomialP, 1, 1, True),
     ],
 )
-def test_score_numerical_p(model_class, p, truncation):
+def test_score_numerical_p(model_class, p, truncation, use_offset):
     # the models for the truncated counts in score_obs used the default p
     endog, exog = _simulate_negbin_counts()
-    model = model_class(endog, exog, truncation=truncation, p=p)
+    offset = None
+    if use_offset:
+        offset = np.random.default_rng(7).normal(scale=0.2, size=len(endog))
+    model = model_class(endog, exog, truncation=truncation, p=p,
+                        offset=offset)
     params = np.array([0.5, 0.2, -0.1, 0.4])
     numerical_score = approx_fprime(params, model.loglike, centered=True)
+    # rtol is the accuracy of the centered finite difference: the largest
+    # elementwise relative difference of these cases is 2.2e-7
     assert_allclose(model.score(params), numerical_score, rtol=1e-6)
 
 
 def test_hurdle_negbin_p1_score_numerical():
     endog, exog = _simulate_negbin_counts()
     model = HurdleCountModel(endog, exog, dist="negbin", p=1)
+    # loglike and score are consistent also with the default p, so check that
+    # p reaches the truncated model
+    assert model.model2.model_main.parameterization == 1
     params = np.array([0.5, 0.2, -0.1, 0.5, 0.2, -0.1, 0.4])
     numerical_score = approx_fprime(params, model.loglike, centered=True)
+    # finite difference accuracy, see test_score_numerical_p
     assert_allclose(model.score(params), numerical_score, rtol=1e-6)
 
 
 def test_truncated_genpoisson_default_fit():
     # default p=2, fit stopped early because the score was incorrect
     endog, exog = _simulate_negbin_counts()
-    model = TruncatedLFGeneralizedPoisson(endog, exog)
-    res = model.fit(disp=0)
-    assert res.mle_retvals["converged"]
-    nobs = model.endog.shape[0]
-    numerical_score = approx_fprime(res.params, model.loglike, centered=True)
-    assert_allclose(numerical_score / nobs, 0, atol=1e-5)
+    res = TruncatedLFGeneralizedPoisson(endog, exog).fit(disp=0)
+    # Reference: maximum of the zero-truncated generalized Poisson
+    # (Consul-Famoye) log-likelihood with p=2, computed in R 4.6.1 with
+    # numDeriv 2016.8.1.1. With y and X the endog and exog of
+    # _simulate_negbin_counts, the log-likelihood of the observations with
+    # y > 0 is
+    #   f <- function(b) {
+    #     k <- y > 0; mu <- exp(drop(X[k, ] %*% b[1:3])); a1 <- 1 + b[4] * mu
+    #     a2 <- mu + (a1 - 1) * y[k]
+    #     sum(log(mu) + (y[k] - 1) * log(a2) - y[k] * log(a1) -
+    #         lgamma(y[k] + 1) - a2 / a1 - log1p(-exp(-mu / a1)))
+    #   }
+    # and it is maximized with
+    #   optim(c(0.5, 0.2, -0.1, 0.5), function(b) -f(b),
+    #         gr = function(b) -numDeriv::grad(f, b), method = "L-BFGS-B",
+    #         lower = c(-Inf, -Inf, -Inf, 1e-6),
+    #         control = list(maxit = 2000, factr = 1e3, pgtol = 0))
+    # followed by
+    #   optim(<result>, function(b) -f(b), method = "Nelder-Mead",
+    #         control = list(maxit = 20000, reltol = 1e-14))
+    # The maximum of the log-likelihood is flat, and both optimizers stop at
+    # a small gradient (3e-5 at the R solution), which is why params have a
+    # larger tolerance than llf.
+    llf_r = -641.290608843211
+    params_r = [0.659939397910, 0.211405177648, -0.173976192083,
+                0.228936047726]
+    assert_allclose(res.llf, llf_r, rtol=1e-8)
+    assert_allclose(res.params, params_r, rtol=1e-3)
 
 
 class CheckHurdleL1Coherence:

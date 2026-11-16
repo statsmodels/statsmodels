@@ -3912,13 +3912,23 @@ def test_negbinp_hessian_numdiff(p):
 
     hess = model.hessian(params)
     hess_num = approx_hess(params, model.loglike)
+    # approx_hess has an error of up to 5e-7 times the largest entry of the
+    # Hessian (measured for these p), while the smallest entries are 4e-4 to
+    # 1e-2 times the largest, so rtol alone is too tight for them: atol is
+    # 1e-5 times the largest entry, a margin of about 20 over the error.
     assert_allclose(hess, hess_num, rtol=1e-4, atol=1e-5 * np.abs(hess_num).max())
 
+    # the hessian factors are the observation-wise blocks of the hessian
     hf0, hf1, hf2 = model.hessian_factor(params)
+    assert_allclose((hf0 * exog.T) @ exog, hess[:-1, :-1], rtol=1e-10)
     assert_allclose(hf1 @ exog, hess[-1, :-1], rtol=1e-10)
+    assert_allclose(hf2.sum(), hess[-1, -1], rtol=1e-10)
 
 
-def test_negbinp_bse_p15():
+@pytest.mark.parametrize("p", [1.5, 2.5])
+def test_negbinp_bse_p15(p):
+    # bse is nan for p=2.5 and the newton fit does not converge for p=1.5
+    # if the cross derivative of params and alpha is wrong
     from statsmodels.tools.numdiff import approx_hess
 
     rng = np.random.default_rng(7461)
@@ -3926,10 +3936,12 @@ def test_negbinp_bse_p15():
     exog = sm.add_constant(0.4 * rng.normal(size=(nobs, 2)))
     mu = np.exp(exog @ [0.6, 0.3, -0.2])
     endog = rng.negative_binomial(2, 2 / (2 + mu))
-    model = NegativeBinomialP(endog, exog, p=1.5)
+    model = NegativeBinomialP(endog, exog, p=p)
     res = model.fit(method="newton", disp=0)
+    assert res.mle_retvals["converged"]
     hess_num = approx_hess(res.params, model.loglike)
     bse_num = np.sqrt(np.diag(np.linalg.inv(-hess_num)))
+    assert np.all(np.isfinite(res.bse))
     assert_allclose(res.bse, bse_num, rtol=1e-5)
 
 
@@ -4159,6 +4171,49 @@ def test_mnlogit_margeff_dummy_and_count_together(k_choices):
     assert_allclose(marg.margeff[1:4].ravel(), expected, rtol=1e-8)
     assert_allclose(marg.margeff_se[1:4].ravel(), se, rtol=1e-5)
     assert np.abs(expected).max() > 0.01
+
+
+@pytest.mark.parametrize("k_choices", [3, 4])
+@pytest.mark.parametrize("at", ["overall", "mean"])
+@pytest.mark.parametrize("method", ["eyex", "dyex"])
+def test_mnlogit_margeff_elasticity(method, at, k_choices):
+    # get_margeff with eyex or dyex raised a broadcasting error in
+    # _derivative_exog, or was incorrect if K = J and at is not "overall"
+    from statsmodels.tools.numdiff import approx_fprime
+
+    rng = np.random.default_rng(1055 + k_choices)
+    nobs = 1000
+    exog = sm.add_constant(rng.uniform(1, 3, size=(nobs, 2)))
+    beta = rng.normal(scale=0.5, size=(exog.shape[1], k_choices - 1))
+    prob = np.exp(np.column_stack([np.zeros(nobs), exog @ beta]))
+    prob /= prob.sum(1, keepdims=True)
+    endog = (rng.random(nobs)[:, None] > prob.cumsum(1)).sum(1)
+    mod = MNLogit(endog, exog)
+    res = mod.fit(disp=0)
+    exog_at = exog if at == "overall" else exog.mean(0, keepdims=True)
+
+    def effects(params):
+        # complex step derivative of predict with respect to each regressor
+        params = params.reshape(mod.K, mod.J - 1, order="F")
+        pred = mod.predict(params, exog_at)
+        out = []
+        for col in range(1, exog.shape[1]):
+            exog_c = exog_at.astype(complex)
+            exog_c[:, col] += 1e-20j
+            deriv = mod.predict(params, exog_c).imag / 1e-20
+            deriv *= exog_at[:, col : col + 1]
+            if method == "eyex":
+                deriv /= pred
+            out.append(deriv.mean(0))
+        return np.concatenate(out)
+
+    marg = res.get_margeff(at=at, method=method)
+    params = res.params.ravel(order="F")
+    expected = effects(params)
+    jac = approx_fprime(params, effects, centered=True)
+    se = np.sqrt(np.diag(jac @ res.cov_params() @ jac.T))
+    assert_allclose(marg.margeff.ravel(), expected, rtol=1e-10)
+    assert_allclose(marg.margeff_se.ravel(), se, rtol=1e-6)
 
 
 def _fit_logit_for_summary():

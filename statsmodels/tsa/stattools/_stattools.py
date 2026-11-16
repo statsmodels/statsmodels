@@ -1732,7 +1732,8 @@ def pacf(
             f"sample size. The requested nlags {nlags} must be < "
             f"{x.shape[0] // 2}."
         )
-    if x.size > 0 and np.ptp(x) == 0:
+    # x.size == nobs: a vector or one column; other shapes raise below
+    if x.size > 0 and x.size == nobs and np.ptp(x) == 0:
         ret = np.full(nlags + 1, np.nan)
         ret[0] = 1.0
     elif method in ("ols", "ols-inefficient", "ols-adjusted"):
@@ -1950,7 +1951,8 @@ def ccf(
         y_valid.size > 0 and np.ptp(y_valid) == 0
     )
     denom = np.std(x) * np.std(y)
-    if is_constant or denom == 0:
+    # Input that is not 1-D takes the path below, where ccovf raises
+    if x.ndim == y.ndim == 1 and (is_constant or denom == 0):
         n_ret = nlags if nlags is not None else len(x)
         ret = np.full(n_ret, np.nan)
         if alpha is not None:
@@ -3057,18 +3059,28 @@ class DieboldMarianoResult(LimitedIterationMixin[float]):
         ``nobs - 1`` degrees of freedom when the Harvey et al. (1997)
         small-sample correction is applied.
     pvalue : float
-        The two-sided p-value for the null of equal predictive accuracy.
+        The p-value for the null of equal predictive accuracy against the
+        alternative given by ``alternative``.
     lags : int
-        The number of lags used in the Newey-West estimator of the long-run
+        The number of lags used in the HAC estimator of the long-run
         variance of the loss differential.
     harvey_adj_factor : float or None
         The finite-sample adjustment factor of Harvey et al. (1997) that
         was applied to ``statistic``. ``None`` unless ``harvey_adj`` was
         True.
+    alternative : str
+        The alternative hypothesis, one of "two-sided", "larger" or
+        "smaller".
+
+        .. versionadded:: 0.15.1
+    kernel : str
+        The kernel of the HAC estimator, "bartlett" or "uniform".
+
+        .. versionadded:: 0.15.1
 
     Notes
     -----
-    Unpacks as ``statistic, pvalue = result``. The other two fields are only
+    Unpacks as ``statistic, pvalue = result``. The other fields are only
     available through attribute access.
     """
 
@@ -3076,8 +3088,80 @@ class DieboldMarianoResult(LimitedIterationMixin[float]):
     pvalue: float
     lags: int
     harvey_adj_factor: float | None
+    alternative: str = "two-sided"
+    kernel: str = "bartlett"
 
     _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+
+def _hac_mean_tstat(d, lags, kernel, name):
+    """
+    Compute the t-statistic of the mean of d with a HAC variance estimate.
+
+    Parameters
+    ----------
+    d : ndarray
+        The series whose mean is tested.
+    lags : int
+        The number of lags of the HAC estimator.
+    kernel : {"bartlett", "uniform"}
+        The kernel of the HAC estimator.
+    name : str
+        The name of ``d`` used in error messages.
+
+    Returns
+    -------
+    float
+        The mean of ``d`` divided by the square root of its estimated
+        variance.
+
+    Raises
+    ------
+    MissingDataError
+        If ``d`` contains non-finite values.
+    ValueError
+        If ``lags`` is too large for the number of observations, if ``d`` is
+        constant up to rounding error, or if the estimated variance of its
+        mean is not positive.
+    """
+    nobs = d.shape[0]
+    if lags >= nobs:
+        raise ValueError(
+            f"lags ({lags}) must be smaller than the number of observations "
+            f"({nobs})."
+        )
+    if kernel == "uniform" and lags >= nobs - 1:
+        raise ValueError(
+            f"With kernel='uniform', lags ({lags}) must be smaller than the "
+            f"number of observations minus one ({nobs - 1}), since the "
+            "estimate of the long-run variance is otherwise identically zero."
+        )
+    if not np.all(np.isfinite(d)):
+        raise MissingDataError(
+            f"The {name} contains non-finite values. Check y and the forecasts."
+        )
+    if np.ptp(d) <= SQRTEPS * np.max(np.abs(d)):
+        raise ValueError(
+            f"The {name} is constant up to rounding error, so its variance is "
+            "zero and the test is undefined. This happens if the forecasts are "
+            "identical or if both forecast errors are constant."
+        )
+    res = OLS(d, np.ones_like(d)).fit(
+        cov_type="HAC", cov_kwds={"maxlags": lags, "kernel": kernel}
+    )
+    variance = res.cov_params()[0, 0]
+    if not variance > 0:
+        msg = (
+            f"The estimated long-run variance of the {name} is not positive "
+            f"({variance:.6g}) with kernel='{kernel}' and lags={lags}."
+        )
+        if kernel == "uniform":
+            msg += (
+                " Use kernel='bartlett', which always gives a non-negative "
+                "estimate, or fewer lags."
+            )
+        raise ValueError(msg)
+    return float(res.params[0] / np.sqrt(variance))
 
 
 def diebold_mariano_test(
@@ -3090,6 +3174,8 @@ def diebold_mariano_test(
     power=2,
     harvey_adj=False,
     horizon=1,
+    alternative="two-sided",
+    kernel="bartlett",
 ):
     """
     Performs a Diebold-Mariano test under the null hypothesis of
@@ -3104,11 +3190,13 @@ def diebold_mariano_test(
     forecast_b : array_like
         Array of forecasted values from the second model.
     lags : int, optional
-        The number of lags to include in the Newey-West (HAC) variance
-        estimator used for the loss differential. Must be non-negative if
-        provided. If not provided, ``max(horizon - 1, ceil(nobs ** (1/3)))``
-        is used, so this also depends on ``horizon`` even when
-        ``harvey_adj`` is False. See the Notes for details.
+        The number of lags to include in the HAC variance estimator used for
+        the loss differential. Must be non-negative if provided. If not
+        provided, ``max(horizon - 1, ceil(nobs ** (1/3)))`` is used with the
+        Bartlett kernel and ``horizon - 1`` with the uniform kernel, so this
+        also depends on ``horizon`` even when ``harvey_adj`` is False. See
+        the Notes for details. Must be smaller than ``nobs``, and smaller
+        than ``nobs - 1`` with the uniform kernel.
     criterion : str or callable, optional
         The loss function used to score each forecast. Default is 'mse'.
         Implemented criteria are 'mse', 'mad' (equivalently 'mae') and
@@ -3127,17 +3215,50 @@ def diebold_mariano_test(
         small samples should be applied. Default is False. When True, the
         test statistic is rescaled and the p-value is computed from a
         Student's t distribution with ``nobs - 1`` degrees of freedom
-        instead of the standard normal.
+        instead of the standard normal. The adjustment factor depends only
+        on ``nobs`` and ``horizon``. Harvey et al. (1997) derive it for the
+        uniform kernel with ``lags=horizon - 1``; with other kernels or lags
+        it is applied unchanged, as in ``dm.test`` in R. See the Notes.
     horizon : int, optional
         The forecast horizon used to (1) form the default number of HAC
         lags and (2) compute the Harvey et al. (1997) adjustment when
-        ``harvey_adj`` is True. Must be a positive integer. Default is 1.
+        ``harvey_adj`` is True. Must be a positive integer smaller than
+        ``nobs``. Default is 1.
+    alternative : {"two-sided", "larger", "smaller"}, optional
+        The alternative hypothesis, in terms of the mean loss differential
+        :math:`E[d_t]` defined in the Notes. "larger" is
+        :math:`E[d_t] > 0`, i.e. ``forecast_b`` is more accurate than
+        ``forecast_a``, and "smaller" is :math:`E[d_t] < 0`, i.e.
+        ``forecast_a`` is more accurate. Default is "two-sided".
+
+        .. versionadded:: 0.15.1
+    kernel : {"bartlett", "uniform"}, optional
+        The kernel of the HAC estimator of the long-run variance of the
+        loss differential. "bartlett" (the default) is the Newey-West
+        estimator. "uniform" weights all autocovariances up to ``lags``
+        equally, which with ``lags=horizon - 1`` is the estimator of
+        Diebold and Mariano (1995) and Harvey et al. (1997). See the Notes.
+
+        .. versionadded:: 0.15.1
 
     Returns
     -------
     DieboldMarianoResult
-        A result object containing the DM test statistic, its p-value, and
-        the Harvey et al. (1997) adjustment factor, if applicable.
+        A result object with the test statistic, the p-value, the number of
+        lags, the Harvey et al. (1997) adjustment factor, the alternative
+        and the kernel. Unpacks as ``statistic, pvalue``.
+
+    Raises
+    ------
+    MissingDataError
+        If the loss differential contains non-finite values.
+    ValueError
+        If ``horizon`` or ``lags`` is too large for the number of
+        observations, if ``criterion`` does not return one loss per
+        observation, if the loss differential is constant up to rounding
+        error, for example when the two forecasts are identical, or if the
+        estimated long-run variance is not positive, which can happen with
+        the uniform kernel.
 
     Notes
     -----
@@ -3153,21 +3274,38 @@ def diebold_mariano_test(
 
     Under the null hypothesis of equal predictive accuracy,
     :math:`E[d_t] = 0`. The test statistic is the t-statistic from
-    regressing :math:`d_t` on a constant using a Newey-West (HAC)
-    covariance estimator with ``lags`` lags, i.e.
+    regressing :math:`d_t` on a constant using a HAC covariance estimator
+    with :math:`L` = ``lags`` lags, i.e.
 
     .. math::
 
         DM = \\frac{\\bar{d}}{\\sqrt{\\widehat{\\mathrm{avar}}(\\bar{d})}},
+        \\qquad
+        \\widehat{\\mathrm{avar}}(\\bar{d}) = \\frac{1}{T}\\left(
+        \\hat{\\gamma}_0 + 2 \\sum_{j=1}^{L} w_j \\hat{\\gamma}_j\\right),
 
-    where :math:`\\bar{d}` is the sample mean of :math:`d_t` and
-    :math:`\\widehat{\\mathrm{avar}}` is the HAC long-run variance
-    estimator. When ``lags`` is not supplied, a bandwidth of
-    ``max(horizon - 1, ceil(nobs ** (1/3)))`` is used. This differs from
-    some presentations of the DM test that always use ``horizon - 1``
-    lags; pass ``lags=horizon - 1`` explicitly to reproduce that
-    parameterization. Under the null, ``statistic`` is asymptotically
-    standard normal.
+    where :math:`\\bar{d}` is the sample mean of :math:`d_t`,
+    :math:`\\hat{\\gamma}_j` is its sample autocovariance at lag :math:`j`
+    (with divisor :math:`T`) and :math:`w_j` are the kernel weights. The
+    Bartlett kernel uses :math:`w_j = 1 - j / (L + 1)`, which always gives
+    a non-negative variance. The uniform kernel uses :math:`w_j = 1`. The
+    h-step forecast errors of an optimal forecast are at most MA(h - 1), so
+    Diebold and Mariano (1995) use the uniform kernel with
+    :math:`L = h - 1`, and Harvey et al. (1997) derive their correction for
+    this estimator. Its estimate of the variance can be negative, in which
+    case a ``ValueError`` is raised. When ``lags`` is not supplied,
+    ``max(horizon - 1, ceil(nobs ** (1/3)))`` lags are used with the
+    Bartlett kernel and ``horizon - 1`` with the uniform kernel. Under the
+    null, ``statistic`` is asymptotically standard normal.
+
+    With ``kernel="uniform"``, ``lags=horizon - 1`` and ``harvey_adj=True``,
+    the statistic and the p-values are those of ``dm.test`` in the R
+    package forecast with ``varestimator="acf"``, its default. With
+    ``kernel="bartlett"`` and ``lags=horizon - 1`` they are those of
+    ``varestimator="bartlett"``. ``alternative="larger"`` corresponds to
+    ``alternative="greater"`` in R. If the estimate of the variance with
+    the uniform kernel is not positive, ``dm.test`` warns and computes the
+    test with ``h=1`` instead, while a ``ValueError`` is raised here.
 
     Because ``forecast_a`` and ``forecast_b`` are typically generated from
     overlapping information sets (e.g., multi-step-ahead forecasts), the
@@ -3207,6 +3345,14 @@ def diebold_mariano_test(
     Any other loss can be supplied directly through ``criterion`` as a
     callable, for example an asymmetric loss or a loss appropriate for
     strictly positive series such as QLIKE (see Examples).
+
+    .. versionchanged:: 0.15.1
+
+       A ``ValueError`` is raised if the loss differential is constant up
+       to rounding error, if its estimated long-run variance is not
+       positive, or if ``horizon`` or ``lags`` is too large for the number
+       of observations. These cases returned ``nan`` or a meaningless
+       statistic before.
 
     References
     ----------
@@ -3248,6 +3394,10 @@ def diebold_mariano_test(
     harvey_adj = bool_like(harvey_adj, "harvey_adj")
     power = float_like(power, "power", optional=True)
     horizon = int_like(horizon, "horizon")
+    alternative = string_like(
+        alternative, "alternative", options=("two-sided", "larger", "smaller")
+    )
+    kernel = string_like(kernel, "kernel", options=("bartlett", "uniform"))
 
     if horizon < 1:
         raise ValueError("horizon must be a positive integer.")
@@ -3257,9 +3407,17 @@ def diebold_mariano_test(
     t = len(y)
     if forecast_a.shape[0] != t or forecast_b.shape[0] != t:
         raise ValueError("y, forecast_a and forecast_b must all have equal length.")
+    if horizon >= t:
+        raise ValueError(
+            f"horizon ({horizon}) must be smaller than the number of "
+            f"observations ({t})."
+        )
 
     if lags is None:
-        lags = int(max(horizon - 1, np.ceil(t ** (1 / 3))))
+        if kernel == "uniform":
+            lags = horizon - 1
+        else:
+            lags = int(max(horizon - 1, np.ceil(t ** (1 / 3))))
 
     if isinstance(criterion, str):
         criterion = string_like(
@@ -3291,11 +3449,16 @@ def diebold_mariano_test(
     # calculate d based on criterion
     loss_1 = criterion_func(y, forecast_a)
     loss_2 = criterion_func(y, forecast_b)
-    d = loss_1 - loss_2
+    d = np.asarray(loss_1 - loss_2, dtype=float)
+    if d.shape == (t, 1):
+        d = d[:, 0]
+    if d.shape != (t,):
+        raise ValueError(
+            "criterion must return one loss per observation, an array with "
+            f"shape ({t},), but the loss differential has shape {d.shape}."
+        )
 
-    # calculate test statistic as the t-stat of a constant-only HAC regression
-    res = OLS(d, np.ones_like(d)).fit(cov_type="HAC", cov_kwds={"maxlags": lags})
-    dm_stat = float(res.tvalues[0])
+    dm_stat = _hac_mean_tstat(d, lags, kernel, "loss differential")
 
     # Harvey et. al (1997) small-sample adjustment
     if harvey_adj:
@@ -3303,12 +3466,21 @@ def diebold_mariano_test(
             (t + 1 - (2 * horizon) + (horizon * (horizon - 1) / t)) / t
         )
         dm_stat = adj_factor * dm_stat
-        p_value = 2 * stats.t.cdf(-np.abs(dm_stat), df=t - 1)
+        dist = stats.t(df=t - 1)
     else:
         adj_factor = None
-        p_value = 2 * stats.norm.cdf(-np.abs(dm_stat))
+        dist = stats.norm
 
-    return DieboldMarianoResult(dm_stat, float(p_value), lags, adj_factor)
+    if alternative == "two-sided":
+        p_value = 2 * dist.cdf(-np.abs(dm_stat))
+    elif alternative == "larger":
+        p_value = dist.sf(dm_stat)
+    else:
+        p_value = dist.cdf(dm_stat)
+
+    return DieboldMarianoResult(
+        dm_stat, float(p_value), lags, adj_factor, alternative, kernel
+    )
 
 
 def has_missing(data):
