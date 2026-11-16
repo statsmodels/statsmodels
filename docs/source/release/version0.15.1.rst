@@ -151,6 +151,18 @@ Behavior changes
   these kernels returned ``nan`` for most data. They now integrate the density
   over the support of the observations, in the units of the data, so that the
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
+- :func:`~statsmodels.tsa.stattools.acf` and
+  :func:`~statsmodels.tsa.stattools.pacf` return 1.0 for lag 0 and ``nan`` for
+  lags 1 and higher when the input series is constant, for every method of
+  ``pacf``. Before, ``acf`` returned ``nan`` at all lags if the mean of the
+  series is exactly representable, and otherwise autocorrelations close to 1
+  caused by the rounding error of the mean, for example 0.99 at lag 1 for 100
+  observations of 101.37. ``pacf`` returned numbers or ``nan`` depending on
+  the method and the constant. :func:`~statsmodels.tsa.stattools.ccf` returns
+  ``nan`` for all lags when either series is constant. The ``qstat`` and
+  ``pvalues`` of ``acf(..., qstat=True)`` and the statistics and p-values of
+  :func:`~statsmodels.stats.diagnostic.acorr_ljungbox` are ``nan`` for a
+  constant series. :issue:`10647`, :pr:`10701`
 
 New Features and Enhancements
 =============================
@@ -470,12 +482,6 @@ Time series analysis
   ``"statespace"``, or with ``method="statespace"`` and ``gls=True``. The
   estimates of such models with seasonal terms or nonconsecutive lags change.
   :pr:`10713`
-- :func:`~statsmodels.tsa.stattools.acf` and
-  :func:`~statsmodels.tsa.stattools.pacf` return 1.0 for lag 0 and ``nan`` for
-  lags 1 and higher when the input series is constant, avoiding near-perfect
-  false autocorrelation due to floating-point truncation when the mean is not
-  exactly representable. :func:`~statsmodels.tsa.stattools.ccf` returns ``nan``
-  for all lags when either series is constant. :issue:`10647`, :pr:`10701`
 - ``ARDL.predict`` with a ``start`` after the first out-of-sample observation
   returned wrong forecasts for a model with ``exog``, ``fixed`` or seasonal
   terms, and raised an ``IndexError`` if ``dynamic`` was used. The forecasts
