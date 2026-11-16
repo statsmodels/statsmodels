@@ -21,7 +21,7 @@ changes
 from typing import NamedTuple
 
 import numpy as np
-from scipy import stats
+from scipy import special, stats
 
 from statsmodels.tools.validation import int_like, string_like
 
@@ -172,7 +172,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
     # Note: taken from formulas, to simplify cancel n
     if a == 0:   # log likelihood ratio
-        D_obs = 2*n * np.sum(o/(1.0*nt) * np.log(o/e), axis=axis)
+        D_obs = 2*n * np.sum(special.xlogy(o/(1.0*nt), o/e), axis=axis)
     elif a == -1:  # modified log likelihood ratio
         D_obs = 2*n * np.sum(e/(1.0*nt) * np.log(e/o), axis=axis)
     else:
