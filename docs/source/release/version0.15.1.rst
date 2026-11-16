@@ -829,7 +829,7 @@ Statistics and tests
   was broadcast against a longer ``x2``, raised an ``IndexError`` for a scalar
   ``x1``, and raised a ``ValueError`` with ``axis=None`` for inputs of
   different shapes. The quartiles are now those of the broadcast difference.
-  :issue:`10757`
+  :issue:`10757`, :pr:`10758`
 
 Treatment effects
 -----------------
