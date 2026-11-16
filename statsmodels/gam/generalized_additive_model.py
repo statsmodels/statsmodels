@@ -80,32 +80,58 @@ def _transform_predict_exog(model, exog, model_spec=None):
     if model_spec is not None and (exog is not None):
         from statsmodels.formula._manager import FormulaManager
 
-        if isinstance(exog, pd.Series):
-            # we are guessing whether it should be column or row
-            if (
-                hasattr(exog, "name")
-                and isinstance(exog.name, str)
-                and exog.name in model_spec.describe()
-            ):
-                # assume we need one column
-                exog = pd.DataFrame(exog)
-            else:
-                # assume we need a row
-                exog = pd.DataFrame(exog).T
-        orig_exog_len = len(exog)
-        is_dict = isinstance(exog, dict)
+        mgr = FormulaManager()
+        model_columns = mgr.get_column_names(model_spec)
 
-        exog = FormulaManager().get_matrices(model_spec, exog, pandas=True)
-        if orig_exog_len > len(exog) and not is_dict:
-            import warnings
-
-            if exog_index is None:
-                warnings.warn(
-                    "nan values have been dropped", ValueWarning, stacklevel=2
+        # If exog is already a design matrix built from a model specification,
+        # then it must not be transformed a second time. This happens, for
+        # example, when a new exog is created with
+        # ``dmatrix(exog.design_info, new_data, return_type="dataframe")``.
+        exog_spec = mgr.get_model_spec(exog, optional=True)
+        if exog_spec is not None:
+            if mgr.get_column_names(exog_spec) != model_columns:
+                raise ValueError(
+                    "exog was created using a different model specification "
+                    "than the one used to fit the model. Pass the original "
+                    "data or an exog created with the fitted model's "
+                    "specification."
                 )
-            else:
-                exog = exog.reindex(exog_index)
-        exog_index = exog.index
+            already_transformed = True
+        elif isinstance(exog, pd.DataFrame):
+            # Design matrices created by some tools do not keep the model
+            # specification attached. Matching column names are then used as
+            # an indicator that exog is already a design matrix.
+            already_transformed = list(exog.columns) == model_columns
+        else:
+            already_transformed = False
+
+        if not already_transformed:
+            if isinstance(exog, pd.Series):
+                # we are guessing whether it should be column or row
+                if (
+                    hasattr(exog, "name")
+                    and isinstance(exog.name, str)
+                    and exog.name in model_spec.describe()
+                ):
+                    # assume we need one column
+                    exog = pd.DataFrame(exog)
+                else:
+                    # assume we need a row
+                    exog = pd.DataFrame(exog).T
+            orig_exog_len = len(exog)
+            is_dict = isinstance(exog, dict)
+
+            exog = mgr.get_matrices(model_spec, exog, pandas=True)
+            if orig_exog_len > len(exog) and not is_dict:
+                import warnings
+
+                if exog_index is None:
+                    warnings.warn(
+                        "nan values have been dropped", ValueWarning, stacklevel=2
+                    )
+                else:
+                    exog = exog.reindex(exog_index)
+            exog_index = exog.index
 
     if exog is not None:
         exog = np.asarray(exog)
