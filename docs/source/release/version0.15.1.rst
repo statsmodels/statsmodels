@@ -371,6 +371,13 @@ Regression and linear models
   :pr:`10402`, :pr:`10495`
 - ``yule_walker`` raises a ``ValueError`` for a negative ``order`` instead of
   an ``IndexError``. :pr:`10346`
+- ``get_prediction`` of regression, GLM and discrete results with
+  ``cov_type="cluster"`` and ``use_t=True`` used the t distribution with
+  ``df_resid`` degrees of freedom instead of ``n_groups - 1`` as in
+  ``conf_int`` and ``t_test``, so the confidence interval of the mean was too
+  narrow. The prediction interval for a new observation (``obs_ci``) now uses
+  the same degrees of freedom, which is conservative. :issue:`10743`,
+  :pr:`10744`
 
 Generalized linear models and discrete models
 ---------------------------------------------
