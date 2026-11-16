@@ -163,12 +163,22 @@ def _full_rank_exog_extra(exog, exog_extra, tol=1e-7):
     Raises
     ------
     ValueError
+        If `exog_extra` does not have as many rows as `exog` or contains nan
+        or infinite values.
+    ValueError
         If `exog_extra` has columns but its rank given `exog` is 0, i.e., all
         columns of `exog_extra` are in the span of `exog`.
     """
     exog_extra = np.asarray(exog_extra)
     if exog_extra.ndim == 1:
         exog_extra = exog_extra[:, None]
+    if exog_extra.ndim != 2 or exog_extra.shape[0] != exog.shape[0]:
+        raise ValueError(
+            "exog_extra must have the same number of rows as exog, "
+            f"{exog.shape[0]}, but has shape {exog_extra.shape}."
+        )
+    if not np.isfinite(exog_extra).all():
+        raise ValueError("exog_extra contains nan or infinite values.")
     k_extra = exog_extra.shape[1]
     if k_extra == 0:
         return exog_extra, 0
