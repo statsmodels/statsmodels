@@ -1510,7 +1510,14 @@ def mcnemar(table, exact=True, correction=True):
         test statistic for large sample sizes.
     correction : bool, optional
         If True, then a continuity correction is used for the chisquare
-        distribution (if exact is False.)
+        distribution (if exact is False.) As in R's ``mcnemar.test``, the
+        correction is not applied if the two off-diagonal counts are equal.
+
+        .. versionchanged:: 0.15.1
+
+           The correction is no longer applied if the two off-diagonal counts
+           are equal. Previously the statistic was ``1 / (n1 + n2)`` for
+           equal counts, and ``inf`` with a p-value of 0 if both are 0.
 
     Returns
     -------
@@ -1537,6 +1544,10 @@ def mcnemar(table, exact=True, correction=True):
     This is a special case of Cochran's Q test, and of the homogeneity
     test. The results when the chisquare distribution is used are
     identical, except for continuity correction.
+
+    If both off-diagonal counts are 0, there is nothing to test. The
+    statistic and the p-value are nan (0 / 0, as in R) if exact is False,
+    with or without the correction, and the p-value is 1 if exact is True.
     """
 
     table = _make_df_square(table)
@@ -1566,7 +1577,8 @@ def mcnemar(table, exact=True, correction=True):
         pvalue = stats.binom.cdf(statistic, int_sum, 0.5) * 2
         pvalue = np.minimum(pvalue, 1)  # limit to 1 if n1==n2
     else:
-        corr = int(correction)  # convert bool to 0 or 1
+        # no correction for equal counts, |n1 - n2| - 1 would be negative
+        corr = int(correction and n1 != n2)  # convert bool to 0 or 1
         statistic = (np.abs(n1 - n2) - corr) ** 2 / (1.0 * (n1 + n2))
         df = 1
         pvalue = stats.chi2.sf(statistic, df)

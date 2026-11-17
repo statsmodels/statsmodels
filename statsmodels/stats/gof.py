@@ -21,7 +21,7 @@ changes
 from typing import NamedTuple
 
 import numpy as np
-from scipy import stats
+from scipy import special, stats
 
 from statsmodels.tools.validation import int_like, string_like
 
@@ -63,6 +63,32 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
         Discrepancy of observed values.
     pvalue : float or ndarray
         The p-value.
+
+    Notes
+    -----
+    For ``lambd=0`` (``"loglikeratio"``, the G-test) a zero observed count
+    contributes 0 to the statistic, :math:`0 \ln(0) = 0`, so the statistic
+    is finite if the expected counts are positive.
+
+    The other exponents are not changed. A zero observed count with a
+    positive expected count gives a finite statistic for positive exponents,
+    for example ``"pearson"`` and ``"cressie_read"``. It gives an infinite
+    statistic and a p-value of 0 for ``lambd=-1``
+    (``"modified_loglikeratio"``), and ``nan`` for the other negative
+    exponents, including ``"freeman_tukey"``; both emit a
+    ``RuntimeWarning``. A zero expected count with a positive observed count
+    gives an infinite statistic for ``lambd=0`` and ``nan`` for ``lambd=-1``,
+    with a ``RuntimeWarning``.
+
+    A cell with zero observed and zero expected count gives ``nan`` for every
+    exponent, including ``lambd=0``, with a ``RuntimeWarning``, as in
+    `scipy.stats.power_divergence`. ``DescTools::GTest`` in R counts such a
+    cell as 0 in the G statistic.
+
+    .. versionchanged:: 0.15.1
+
+       For ``lambd=0``, zero observed counts used to return ``(nan, nan)``
+       with a ``RuntimeWarning``. They now contribute 0 to the statistic.
 
     References
     ----------
@@ -172,7 +198,7 @@ def powerdiscrepancy(observed, expected, lambd=0.0, axis=0, ddof=0):
 
     # Note: taken from formulas, to simplify cancel n
     if a == 0:   # log likelihood ratio
-        D_obs = 2*n * np.sum(o/(1.0*nt) * np.log(o/e), axis=axis)
+        D_obs = 2*n * np.sum(special.xlogy(o/(1.0*nt), o/e), axis=axis)
     elif a == -1:  # modified log likelihood ratio
         D_obs = 2*n * np.sum(e/(1.0*nt) * np.log(e/o), axis=axis)
     else:

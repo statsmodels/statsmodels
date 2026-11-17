@@ -1143,6 +1143,85 @@ def test_dynamic_predictions_oos(ar2):
     assert_allclose(expected, d25_end)
 
 
+@pytest.mark.parametrize("index_type", ["numpy", "range", "date", "period"])
+@pytest.mark.parametrize("dynamic", [False, True, 1, 4, 10])
+@pytest.mark.parametrize("start", [8, 10])
+def test_predict_oos_start(index_type, dynamic, start):
+    y = np.array([2, 7, 1, 3, -1, 5, 2, 4], dtype=float)
+    index = pd.RangeIndex(13)
+    if index_type == "date":
+        index = pd.date_range("2000-01-01", periods=13, freq="MS")
+    elif index_type == "period":
+        index = pd.period_range("2000-01", periods=13, freq="M")
+    if index_type != "numpy":
+        y = pd.Series(y, index=index[:8])
+    model = AutoReg(y, 2)
+    # y[t] = 1 + 0.5*y[t-1] - 0.25*y[t-2], with final observations 2, 4.
+    expected = np.array([2.5, 1.25, 1, 1.1875, 1.34375])
+    end = 12
+    if index_type in ("date", "period"):
+        prediction = model.predict([1, 0.5, -0.25], index[start], index[end], dynamic)
+    else:
+        prediction = model.predict([1, 0.5, -0.25], start, end, dynamic)
+    assert_allclose(prediction, expected[start - 8 :])
+    if index_type != "numpy":
+        pd.testing.assert_index_equal(prediction.index, index[start : end + 1])
+    if index_type in ("date", "period"):
+        prediction = model.predict(
+            [1, 0.5, -0.25], index[start], index[end], dynamic=index[start + 1]
+        )
+        assert_allclose(prediction, expected[start - 8 :])
+        with pytest.raises(ValueError, match="Dynamic prediction cannot begin prior"):
+            model.predict(
+                [1, 0.5, -0.25], index[start], index[end], dynamic=index[start - 1]
+            )
+
+
+@pytest.mark.parametrize("dynamic", [3, 4, 8, 20])
+def test_predict_dynamic_after_sample(dynamic):
+    y = np.array([2, 7, 1, 3, -1, 5, 2, 4], dtype=float)
+    model = AutoReg(y, 2)
+    prediction = model.predict([1, 0.5, -0.25], 5, 12, dynamic)
+    # One-step predictions for 5, 6 and 7 use the observations, and the
+    # out-of-sample observations from 8 are forecast whatever the offset is.
+    expected = [-0.25, 3.75, 0.75, 2.5, 1.25, 1, 1.1875, 1.34375]
+    assert_allclose(prediction, expected)
+
+
+@pytest.mark.parametrize("trend", ["n", "ct"])
+@pytest.mark.parametrize("seasonal", [False, True])
+@pytest.mark.parametrize("use_exog", [False, True])
+@pytest.mark.parametrize("dynamic", [False, True, 2])
+@pytest.mark.parametrize("start", [20, 23])
+def test_predict_oos_start_matches_forecast(trend, seasonal, use_exog, dynamic, start):
+    y, rs = gen_ar_data(20)
+    exog = exog_oos = None
+    if use_exog:
+        x = rs.standard_normal((28, 2))
+        exog, exog_oos = x[:20], x[20:]
+    res = AutoReg(y, 2, trend=trend, seasonal=seasonal, period=4, exog=exog).fit()
+    forecast = res.forecast(8, exog=exog_oos)
+    prediction = res.predict(start, 27, dynamic=dynamic, exog_oos=exog_oos)
+    assert_series_equal(prediction, forecast.iloc[start - 20 :])
+
+
+@pytest.mark.parametrize("start", [8, 10])
+def test_get_prediction_oos_start(start):
+    y = np.array([2, 7, 1, 3, -1, 5, 2, 4], dtype=float)
+    index = pd.date_range("2000-01-01", periods=13, freq="MS")
+    res = AutoReg(pd.Series(y, index=index[:8]), 1).fit()
+    const, phi = res.params
+    prediction = res.get_prediction(start, 12)
+    horizons = np.arange(start - 7, 6)
+    expected_mean = const * (1 - phi**horizons) / (1 - phi) + phi**horizons * 4
+    expected_var = [
+        res.sigma2 * sum(phi ** (2 * i) for i in range(h)) for h in horizons
+    ]
+    assert_allclose(prediction.predicted_mean, expected_mean)
+    assert_allclose(prediction.var_pred_mean, expected_var)
+    pd.testing.assert_index_equal(prediction.predicted_mean.index, index[start:13])
+
+
 def test_invalid_dynamic(ar2):
     mod = AutoReg(ar2, 2, trend="c")
     res = mod.fit()

@@ -730,7 +730,8 @@ class KDEMultivariateConditional(GenericKDE):
                 tosum=False,
             )
             S = (cdf_endog * cdf_exog).sum(axis=0)
-            # the sum of cdf_exog is nobs * mu_x, the estimate of f(x)
+            # the sum of the exog kernel values is nobs times the estimate of
+            # the density f(x) of the exog at the evaluation point
             cdf_est[i] = S / cdf_exog.sum(axis=0)
 
         return cdf_est

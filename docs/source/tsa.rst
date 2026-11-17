@@ -20,17 +20,20 @@ of ARMA or related processes. It also includes methods to work with autoregressi
 moving average lag-polynomials.
 Additionally, related statistical tests and some useful helper functions are available.
 
-Estimation is either done by exact or conditional Maximum Likelihood or conditional
-least-squares, either using Kalman Filter or direct filters.
+Estimation is either done by exact Maximum Likelihood (using the Kalman filter or the
+innovations algorithm), by conditional Maximum Likelihood or least-squares (using
+regressions, for example in AutoReg), or by other regression-based and moment-based
+estimators such as Hannan-Rissanen and Yule-Walker.
 
-Currently, functions and classes have to be imported from the corresponding module, but
-the main classes will be made available in the statsmodels.tsa namespace. The module
-structure is within statsmodels.tsa is
+Most of the main classes and functions can be imported from ``statsmodels.tsa.api``,
+which is also available as ``sm.tsa`` after ``import statsmodels.api as sm``. Others
+have to be imported from the corresponding module. The module structure within
+statsmodels.tsa is
 
 - stattools : empirical properties and tests, acf, pacf, granger-causality,
   adf unit root test, kpss test, bds test, ljung-box test and others.
 - ar_model : univariate autoregressive process, estimation with conditional
-  and exact maximum likelihood and conditional least-squares
+  maximum likelihood (OLS)
 - arima.model : univariate ARIMA process, estimation with alternative methods
 - statespace : Comprehensive statespace model specification and estimation. See
   the :ref:`statespace documentation <statespace>`.
@@ -150,9 +153,15 @@ Basic ARIMA model and results classes are as follows:
    arima.model.ARIMA
    arima.model.ARIMAResults
 
-This model allows estimating parameters by various methods (including
-conditional MLE via the Hannan-Rissanen method and full MLE via the Kalman
-filter). It is a special case of the `SARIMAX` model, and it includes a large
+This model allows estimating parameters by various methods, selected with the
+``method`` argument of ``fit``: full MLE via the Kalman filter
+(``"statespace"``, the default), full MLE via the innovations algorithm
+(``"innovations_mle"``), the regression-based Hannan-Rissanen method
+(``"hannan_rissanen"``), and the Yule-Walker (``"yule_walker"``), Burg
+(``"burg"``) and innovations algorithm (``"innovations"``) estimators. Not
+every method is available for every specification. Regression effects of
+exogenous variables are estimated by GLS unless ``method="statespace"``. It is
+a special case of the `SARIMAX` model, and it includes a large
 number of inherited features from the :ref:`state space <statespace>` models
 (including prediction / forecasting, residual diagnostics, simulation and
 impulse responses, etc.).
@@ -164,8 +173,8 @@ for an overview.
 
 The innovations algorithm provides a way to compute the likelihood, score, and
 related quantities for a given ARMA process without constructing a full state
-space representation; it is used internally by some of the Hannan-Rissanen and
-innovations-based ARMA parameter estimators.
+space representation; it is used internally by the ``"innovations_mle"``
+estimator and by the GLS estimation of regression effects.
 
 .. currentmodule:: statsmodels.tsa.innovations
 
@@ -296,8 +305,9 @@ Error Correction Models (ECM)
 """""""""""""""""""""""""""""
 Error correction models are reparameterizations of ARDL models that
 regress the difference of the endogenous variable on the lagged levels
-of the endogenous variables and optional lagged differences of the
-exogenous variables.
+of the endogenous and exogenous variables and, optionally, lagged
+differences of the endogenous variable and current and lagged differences
+of the exogenous variables.
 
 .. currentmodule:: statsmodels.tsa
 

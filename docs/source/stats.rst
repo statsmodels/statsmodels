@@ -69,6 +69,8 @@ Forecast Evaluation
 
    diebold_mariano_test
    DieboldMarianoResult
+   clark_west_test
+   ClarkWestResult
 
 
 Heteroscedasticity
@@ -316,6 +318,8 @@ Interrater Reliability and Agreement
 The main function that statsmodels has currently available for interrater
 agreement measures and tests is Cohen's Kappa. Fleiss' Kappa is currently
 only implemented as a measures but without associated results statistics.
+Krippendorff's alpha measures agreement for nominal, ordinal, interval and
+ratio data with any number of raters and missing ratings.
 
 .. module:: statsmodels.stats.inter_rater
 .. currentmodule:: statsmodels.stats.inter_rater
@@ -325,6 +329,7 @@ only implemented as a measures but without associated results statistics.
 
    cohens_kappa
    fleiss_kappa
+   krippendorff_alpha
    to_table
    aggregate_raters
 
@@ -337,7 +342,9 @@ correction based on fdr in `fdrcorrection` and based on local fdr in
 `tukeyhsd` performs simultaneous testing for the comparison of (independent) means.
 These three functions are verified.
 GroupsStats and MultiComparison are convenience classes to multiple comparisons similar
-to one way ANOVA, but still in development
+to one way ANOVA, but still in development.
+`MultiComparison.dunnett_t3` performs Dunnett's T3 test for the pairwise comparison of
+means when the variances differ across groups.
 
 .. module:: statsmodels.sandbox.stats.multicomp
    :synopsis: Experimental methods for controlling size while performing multiple comparisons

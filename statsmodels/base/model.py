@@ -1156,6 +1156,10 @@ class GenericLikelihoodModel(LikelihoodModel):
         hessian_factor : ndarray, 1d
             A 1d weight vector used in the calculation of the Hessian.
             The hessian is obtained by `(exog.T * hessian_factor).dot(exog)`
+            up to the sign and the scaling that the model uses, see the
+            ``hessian_factor`` of the model. For example, the factors of
+            ``OLS``, ``WLS`` and ``GLS`` are not divided by the scale and
+            ignore `scale` and `observed`.
         """
 
         raise NotImplementedError
@@ -3101,6 +3105,18 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         Notes
         -----
         Status: new in 0.14, experimental
+
+        The confidence intervals use the t distribution if ``use_t`` is True,
+        with ``df_resid_inference`` degrees of freedom if the results have it
+        (``n_groups - 1`` with ``cov_type="cluster"``, for example) and
+        ``df_resid`` otherwise. They use the normal distribution if ``use_t``
+        is False, if ``average`` is True and if ``which`` is not "mean" or
+        "linear".
+
+        .. versionchanged:: 0.15.1
+
+           The t distribution uses ``df_resid_inference`` instead of
+           ``df_resid`` if the results have it.
         """
         from statsmodels.base._prediction_inference import get_prediction
 

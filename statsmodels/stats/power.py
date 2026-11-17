@@ -590,7 +590,9 @@ class Power:
         for key in ["df_denom"]:
             self.start_bqexp[key] = {"low": 1.0, "start_upp": 50.0}
         for key in ["ratio"]:
-            self.start_bqexp[key] = {"low": 1e-8, "start_upp": 2}
+            # a float, the expanding bracket search multiplies the upper bound
+            # by 10, and an int overflows int64 if there is no solution
+            self.start_bqexp[key] = {"low": 1e-8, "start_upp": 2.0}
         for key in ["alpha"]:
             self.start_bqexp[key] = {
                 "low": 1e-12,

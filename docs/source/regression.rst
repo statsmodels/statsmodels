@@ -49,8 +49,8 @@ The statistical model is assumed to be
 Depending on the properties of :math:`\Sigma`, we have currently four classes available:
 
 * GLS : generalized least squares for arbitrary covariance :math:`\Sigma`
-* OLS : ordinary least squares for i.i.d. errors :math:`\Sigma=\textbf{I}`
-* WLS : weighted least squares for heteroskedastic errors :math:`\text{diag}\left  (\Sigma\right)`
+* OLS : ordinary least squares for i.i.d. errors :math:`\Sigma=\sigma^2\textbf{I}`
+* WLS : weighted least squares for heteroskedastic errors :math:`\Sigma=\text{diag}\left(\sigma_1^2, \ldots, \sigma_n^2\right)`
 * GLSAR : feasible generalized least squares with autocorrelated AR(p) errors
   :math:`\Sigma=\Sigma\left(\rho\right)`
 

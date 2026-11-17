@@ -960,6 +960,129 @@ def test_mixed_lm_wrapper():
     assert_(bse_re.index.tolist() == re_names_full)
 
 
+def _vc_noise_data():
+    rng = np.random.default_rng(0)
+    return pd.DataFrame(
+        {
+            "y": rng.normal(size=40),
+            "g": np.repeat(np.arange(10), 4),
+            "h": np.tile([0, 0, 1, 1], 10),
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "re_formula, names", [(None, ["h Var"]), ("1", ["g Var", "h Var"])]
+)
+def test_bse_re_names_formula(re_formula, names):
+    model = MixedLM.from_formula(
+        "y ~ 1",
+        _vc_noise_data(),
+        groups="g",
+        re_formula=re_formula,
+        vc_formula={"h": "0 + C(h)"},
+    )
+    assert model.fit().bse_re.index.tolist() == names
+
+
+def test_bse_re_names_direct():
+    df = _vc_noise_data()
+    vc_mats = [np.kron(np.eye(2), np.ones((2, 1)))] * 10
+    exog_vc = VCSpec(["h"], [[["h0", "h1"]] * 10], [vc_mats])
+    model = MixedLM(
+        df["y"],
+        pd.DataFrame({"const": 1.0}, index=df.index),
+        df["g"],
+        exog_re=pd.Series(1.0, index=df.index, name="re"),
+        exog_vc=exog_vc,
+    )
+    assert model.fit().bse_re.index.tolist() == ["re Var", "h Var"]
+
+
+def _bse_re_labels_data():
+    # 20 groups of 10 observations with a random intercept, a random slope
+    # on x and two crossed variance components, h (5 levels) and k (2 levels)
+    rng = np.random.default_rng(20261110)
+    n_g, m = 20, 10
+    g = np.repeat(np.arange(n_g), m)
+    x = rng.normal(size=n_g * m)
+    h = np.tile(np.arange(5), n_g * m // 5)
+    k = np.tile(np.arange(2), n_g * m // 2)
+    u0 = rng.normal(size=n_g)[g]
+    u1 = 0.5 * rng.normal(size=n_g)[g]
+    vh = 0.7 * rng.normal(size=(n_g, 5))[g, h]
+    vk = 0.5 * rng.normal(size=(n_g, 2))[g, k]
+    y = 1 + 0.5 * x + u0 + u1 * x + vh + vk + rng.normal(size=n_g * m)
+    return pd.DataFrame({"y": y, "x": x, "g": g, "h": h, "k": k})
+
+
+_VC_H = {"h": "0 + C(h)"}
+_VC_HK = {"h": "0 + C(h)", "k": "0 + C(k)"}
+
+
+@pytest.mark.parametrize(
+    "re_formula, vc_formula, labels",
+    [
+        (None, None, ["g Var"]),
+        ("1", None, ["g Var"]),
+        ("~x", None, ["g Var", "g x x Cov", "x Var"]),
+        (None, _VC_H, ["h Var"]),
+        ("1", _VC_H, ["g Var", "h Var"]),
+        ("~x", _VC_H, ["g Var", "g x x Cov", "x Var", "h Var"]),
+        (None, _VC_HK, ["h Var", "k Var"]),
+        ("1", _VC_HK, ["g Var", "h Var", "k Var"]),
+        ("~x", _VC_HK, ["g Var", "g x x Cov", "x Var", "h Var", "k Var"]),
+    ],
+)
+def test_bse_re_names_formula_orderings(re_formula, vc_formula, labels):
+    # bse_re is labelled with the random effects covariance parameters
+    # followed by the variance components, as params and summary are
+    model = MixedLM.from_formula(
+        "y ~ x",
+        _bse_re_labels_data(),
+        groups="g",
+        re_formula=re_formula,
+        vc_formula=vc_formula,
+    )
+    result = model.fit(method="bfgs")
+    k_fe = model.k_fe
+    bse_re = result.bse_re
+
+    assert bse_re.index.tolist() == labels
+    assert result.params.index[k_fe:].tolist() == labels
+    assert result.summary().tables[1].index[k_fe:].tolist() == labels
+    assert_allclose(bse_re.to_numpy(), result._results.bse_re)
+
+
+def test_bse_re_default_random_intercept():
+    df = _bse_re_labels_data()
+    model = MixedLM(df["y"], df[["x"]], df["g"])
+    result = model.fit(method="bfgs")
+    bse_re = result.bse_re
+    assert bse_re.index.tolist() == ["Group Var"]
+    assert result.params.index[model.k_fe :].tolist() == ["Group Var"]
+    assert result.summary().tables[1].index[-1] == "Group Var"
+    assert_allclose(bse_re.to_numpy(), result._results.bse_re)
+
+
+@pytest.mark.parametrize("with_exog_re", [True, False])
+def test_bse_re_numpy_data(with_exog_re):
+    # without names bse_re stays a plain ndarray
+    df = _bse_re_labels_data()
+    exog_re = df[["x"]].assign(c=1.0).to_numpy() if with_exog_re else None
+    model = MixedLM(
+        df["y"].to_numpy(),
+        df[["x"]].to_numpy(),
+        df["g"].to_numpy(),
+        exog_re=exog_re,
+    )
+    result = model.fit(method="bfgs")
+    bse_re = result.bse_re
+    assert type(bse_re) is np.ndarray
+    assert bse_re.shape == ((3,) if with_exog_re else (1,))
+    assert_equal(bse_re, result._results.bse_re)
+
+
 def test_random_effects():
 
     rs = np.random.RandomState(23429)

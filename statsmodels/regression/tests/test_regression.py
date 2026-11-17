@@ -2114,46 +2114,53 @@ def test_ols_regularized_profile_scale():
     assert_allclose(result.params, [expected], rtol=1e-10, atol=1e-12)
 
 
-def test_hessian_factor_gls_wls_matches_numerical_hessian():
-    # GLS.hessian_factor/WLS.hessian_factor had no test coverage. Neither
-    # class implements its own .hessian() (RegressionModel does not define
-    # one, so the inherited base LikelihoodModel.hessian raises
-    # NotImplementedError), so there is nothing to reassemble against
-    # directly the way OLS/BetaModel tests do.
-    #
-    # Instead, cross-check against a numerical Hessian of the fixed-scale
-    # Gaussian log-likelihood of the whitened residuals -- the quantity
-    # "scale is not None" in hessian_factor's own docstring refers to:
-    # ll(params; scale) = const - 0.5*nobs*log(scale) - ssr(params)/(2*scale)
-    # whose params-Hessian is the textbook -wexog.T@wexog/scale. Per the
-    # docstring, "The hessian is obtained by (exog.T*hessian_factor).dot
-    # (exog)" -- comparing against OLS's own working hessian(scale=...)
-    # branch confirms the missing piece is an extra -1/scale applied by the
-    # caller (OLS.hessian(params, scale=s) == -exog.T@exog/s, while
-    # OLS.hessian_factor unconditionally returns ones).
+@pytest.mark.parametrize("scale", [None, 0.83, 2.0])
+@pytest.mark.parametrize("observed", [True, False])
+def test_hessian_factor_unscaled(scale, observed):
+    # For fixed Gaussian error variance s, the coefficient Hessian is
+    # -wexog.T @ wexog / s. The factor supplies only the observation weights;
+    # scale and observed do not change them (GH#8653).
     rng = np.random.default_rng(348203)
     n, k = 40, 3
     exog = np.column_stack([np.ones(n), rng.standard_normal((n, k - 1))])
     beta = np.array([1.0, 0.5, -0.5])
     endog = exog @ beta + rng.standard_normal(n) * 0.5
     params = beta + 0.05 * rng.standard_normal(k)
-    scale = 0.83
+    fixed_scale = 0.83
 
     def numeric_hessian(mod):
+        # WLS and GLS have no log-likelihood or Hessian for a fixed scale, so
+        # this is the Gaussian log-likelihood of the whitened data, written
+        # out here, differentiated numerically.
         def ll_fixed_scale(p):
             resid = mod.wendog - mod.wexog.dot(p)
             ssr = np.sum(resid**2)
-            return -0.5 * n * np.log(2 * np.pi * scale) - 0.5 / scale * ssr
+            return (
+                -0.5 * n * np.log(2 * np.pi * fixed_scale)
+                - 0.5 / fixed_scale * ssr
+            )
 
         return approx_hess(params, ll_fixed_scale)
 
     def check(mod):
-        hf = mod.hessian_factor(params, scale=scale)
+        hf = mod.hessian_factor(params, scale=scale, observed=observed)
         assert hf.shape == (n,)
         reassembled = (mod.exog.T * hf).dot(mod.exog)
         assert_allclose(
-            -reassembled / scale, numeric_hessian(mod), rtol=1e-4, atol=1e-6
+            -reassembled / fixed_scale, numeric_hessian(mod), rtol=1e-4, atol=1e-6
         )
+
+    check(OLS(endog, exog))
+
+    # OLS does have a Hessian for a fixed scale, which ties the factor to
+    # the library code.
+    ols = OLS(endog, exog)
+    hf = ols.hessian_factor(params, scale=scale, observed=observed)
+    assert_allclose(
+        -(ols.exog.T * hf).dot(ols.exog) / fixed_scale,
+        ols.hessian(params, scale=fixed_scale),
+        rtol=1e-12,
+    )
 
     # WLS with heteroskedastic weights.
     weights = rng.uniform(0.5, 3.0, size=n)
@@ -2164,27 +2171,25 @@ def test_hessian_factor_gls_wls_matches_numerical_hessian():
     check(mod_nosigma)
     assert_allclose(mod_nosigma.hessian_factor(params), np.ones(n))
 
+    check(GLS(endog, exog, sigma=2.0))
+
     # GLS with a 1d (heteroskedastic diagonal) sigma.
     sigma = rng.uniform(0.3, 4.0, size=n)
     check(GLS(endog, exog, sigma=sigma))
 
 
-def test_hessian_factor_gls_full_sigma_raises():
-    # For a full (non-diagonal) sigma, hessian_factor can only return a 1d
-    # per-observation vector, so (exog.T*hessian_factor).dot(exog) can never
-    # reconstruct the true GLS Hessian -exog.T@sigma^-1@exog/scale when
-    # sigma^-1 has off-diagonal entries -- no diagonal reweighting of exog
-    # reproduces an off-diagonal quadratic form. This used to silently
-    # return the diagonal of cholsigmainv (a genuinely wrong Hessian, not
-    # just an unnormalized one -- see GH real-bugs.md); it now raises
-    # instead of returning a value nothing could use correctly. fit() uses
-    # the full cholsigmainv matrix, not hessian_factor, so it's unaffected.
+@pytest.mark.parametrize("diagonal", [True, False])
+def test_hessian_factor_gls_full_sigma_raises(diagonal):
+    # Per-observation factors are only implemented for scalar or 1d sigma.
+    # fit() itself also supports 2d sigma, including diagonal matrices.
     rng = np.random.default_rng(9284)
     n, k = 12, 2
     exog = np.column_stack([np.ones(n), rng.standard_normal((n, k - 1))])
     endog = exog.dot([1.0, -0.5]) + rng.standard_normal(n) * 0.5
     a = rng.standard_normal((n, n))
     sigma = a.dot(a.T) + n * np.eye(n)
+    if diagonal:
+        sigma = np.diag(np.diag(sigma))
 
     mod = GLS(endog, exog, sigma=sigma)
     with pytest.raises(NotImplementedError, match="hessian_factor"):
@@ -2193,6 +2198,26 @@ def test_hessian_factor_gls_full_sigma_raises():
     # fit() itself is unaffected -- it whitens with the full cholsigmainv
     # matrix, never going through hessian_factor.
     res = mod.fit()
+    assert np.isfinite(res.params).all()
+
+
+@pytest.mark.parametrize("order", [1, 2])
+def test_hessian_factor_glsar_raises(order):
+    # The whitened design of GLSAR has nobs - order rows, each of which mixes
+    # neighboring observations, so there is no vector of weights for the
+    # nobs observations that reproduces wexog.T @ wexog.
+    rng = np.random.default_rng(5419)
+    n = 30
+    exog = np.column_stack([np.ones(n), rng.standard_normal((n, 2))])
+    endog = exog.dot([1.0, 0.5, -0.5]) + rng.standard_normal(n) * 0.5
+
+    mod = GLSAR(endog, exog, rho=order)
+    assert mod.wexog.shape[0] == n - order
+    with pytest.raises(NotImplementedError, match="GLSAR"):
+        mod.hessian_factor(np.array([1.0, 0.5, -0.5]))
+
+    # fit() whitens with the AR coefficients and is unaffected.
+    res = mod.iterative_fit(maxiter=3)
     assert np.isfinite(res.params).all()
 
 
@@ -2389,3 +2414,90 @@ def test_finite_data_unchanged():
     assert np.all(np.isfinite(res.params))
     res = GLS(endog, exog, sigma=np.linspace(1e-10, 1e10, 100)).fit()
     assert np.all(np.isfinite(res.params))
+
+
+def _duplicated_constant_data(nobs, seed):
+    rng = np.random.default_rng(seed)
+    exog = np.column_stack(
+        [np.ones(nobs), np.ones(nobs), rng.standard_normal((nobs, 3))]
+    )
+    endog = exog @ np.array([1.0, 2.0, 0.5, -1.0, 2.0]) + rng.standard_normal(nobs)
+    return endog, exog
+
+
+@pytest.mark.parametrize("method", ["pinv", "qr"])
+@pytest.mark.parametrize("nobs", [100, 1000, 6000])
+def test_rank_deficient_exog_detected(method, nobs):
+    # The smallest singular value of an exactly rank deficient design is a
+    # few eps times the largest and does not depend on nobs. A rank cutoff that
+    # does not grow with nobs missed the duplicated constant from about 1000
+    # observations and returned parameters of the order of 1e12.
+    endog, exog = _duplicated_constant_data(nobs, 20261108 + nobs)
+    mod = OLS(endog, exog)
+    with pytest.warns(SingularMatrixWarning):
+        res = mod.fit(method=method)
+    assert mod.rank == 4
+    assert res.df_resid == nobs - 4
+    # minimum-norm solution
+    expected = np.linalg.lstsq(exog, endog, rcond=None)[0]
+    assert_allclose(res.params, expected, atol=1e-8)
+    assert_allclose(res.params[0], res.params[1])
+    assert np.all(np.asarray(res.bse) < 1)
+
+
+@pytest.mark.parametrize("nobs", [100, 6000])
+def test_qr_matches_pinv_rank_deficient(nobs):
+    endog, exog = _duplicated_constant_data(nobs, 77 + nobs)
+    with pytest.warns(SingularMatrixWarning):
+        res_pinv = OLS(endog, exog).fit()
+    with pytest.warns(SingularMatrixWarning):
+        res_qr = OLS(endog, exog).fit(method="qr")
+    assert res_qr.model.rank == res_pinv.model.rank
+    assert_allclose(res_qr.params, res_pinv.params, atol=1e-8)
+    assert_allclose(res_qr.bse, res_pinv.bse, rtol=1e-6)
+    assert_allclose(
+        res_qr.model.pinv_wexog, res_pinv.model.pinv_wexog, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(
+        res_qr.model.wexog_singular_values,
+        res_pinv.model.wexog_singular_values,
+        rtol=1e-8,
+    )
+
+
+@pytest.mark.parametrize("level", [1e3, 1e4])
+def test_qr_covariance_ill_conditioned(level):
+    # The covariance was computed as inv(R'R), which squares the condition
+    # number of the design and lost about twice as many digits as pinv.
+    rng = np.random.default_rng(31)
+    nobs, k = 200, 5
+    exog = np.column_stack(
+        [np.ones(nobs)] + [level + rng.standard_normal(nobs) for _ in range(k - 1)]
+    )
+    endog = exog @ np.arange(1.0, k + 1) + rng.standard_normal(nobs)
+    res_pinv = OLS(endog, exog).fit()
+    res_qr = OLS(endog, exog).fit(method="qr")
+    assert_allclose(res_qr.bse, res_pinv.bse, rtol=1e-10)
+    assert_allclose(res_qr.params, res_pinv.params, rtol=1e-8)
+    assert_allclose(
+        res_qr.model.normalized_cov_params,
+        res_pinv.model.normalized_cov_params,
+        rtol=1e-8,
+        atol=1e-12 * np.max(np.abs(res_pinv.model.normalized_cov_params)),
+    )
+
+
+@pytest.mark.parametrize("method", ["pinv", "qr"])
+def test_ill_conditioned_full_rank_not_flagged(method):
+    # condition number about 4e8, far below 1 / (nobs * eps)
+    rng = np.random.default_rng(32)
+    nobs, k = 100000, 5
+    exog = np.column_stack(
+        [np.ones(nobs)] + [1e4 + rng.standard_normal(nobs) for _ in range(k - 1)]
+    )
+    endog = exog @ np.arange(1.0, k + 1) + rng.standard_normal(nobs)
+    mod = OLS(endog, exog)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SingularMatrixWarning)
+        mod.fit(method=method)
+    assert mod.rank == k
