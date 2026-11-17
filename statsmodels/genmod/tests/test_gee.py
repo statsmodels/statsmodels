@@ -1836,15 +1836,20 @@ class CheckConsistency:
         res_robust = mod.fit(start_params=self.start_params)
         res_naive = mod.fit(start_params=self.start_params, cov_type="naive")
         res_robust_bc = mod.fit(start_params=self.start_params, cov_type="bias_reduced")
+        res_robust_kc = mod.fit(
+            start_params=self.start_params, cov_type="kauermann_carroll"
+        )
 
         # call summary to make sure it does not change cov_type
         res_naive.summary()
         res_robust_bc.summary()
+        res_robust_kc.summary()
 
         # check cov_type
         assert_equal(res_robust.cov_type, "robust")
         assert_equal(res_naive.cov_type, "naive")
         assert_equal(res_robust_bc.cov_type, "bias_reduced")
+        assert_equal(res_robust_kc.cov_type, "kauermann_carroll")
 
         # check bse and cov_params
         # we are comparing different runs of the optimization
@@ -1855,10 +1860,11 @@ class CheckConsistency:
             (res_robust, "robust", res_robust.cov_robust),
             (res_naive, "naive", res_robust.cov_naive),
             (res_robust_bc, "bias_reduced", res_robust_bc.cov_robust_bc),
+            (res_robust_kc, "kauermann_carroll", res_robust_kc.cov_robust_kc),
         ]:
             bse = np.sqrt(np.diag(cov))
             assert_allclose(res.bse, bse, rtol=rtol)
-            if cov_type != "bias_reduced":
+            if cov_type not in ("bias_reduced", "kauermann_carroll"):
                 # cov_type=naive shortcuts calculation of bias reduced
                 # covariance for efficiency
                 bse = res_naive.standard_errors(cov_type=cov_type)
@@ -1870,6 +1876,7 @@ class CheckConsistency:
         assert_(res_robust.cov_params_default is res_robust.cov_robust)
         assert_(res_naive.cov_params_default is res_naive.cov_naive)
         assert_(res_robust_bc.cov_params_default is res_robust_bc.cov_robust_bc)
+        assert_(res_robust_kc.cov_params_default is res_robust_kc.cov_robust_kc)
 
         # check exception for misspelled cov_type
         with pytest.raises(ValueError):
@@ -2781,3 +2788,70 @@ def test_use_t_df_constraint_ordinal():
     res = gee.OrdinalGEE(endog_ord, exog[:, 1:], groups).fit(use_t=True)
     assert res.use_t
     assert_equal(res.df_resid_inference, 12 - len(res.params))
+
+
+def _small_sample_ref():
+    path = Path(__file__).parent / "results"
+    data = pd.read_csv(path / "gee_small_sample.csv")
+    ref = pd.read_csv(path / "gee_small_sample_geesmv.csv")
+    return data, ref
+
+
+_FAMILIES = {
+    "gaussian": ("y_gauss", families.Gaussian),
+    "poisson": ("y_pois", families.Poisson),
+    "binomial": ("y_bin", families.Binomial),
+}
+
+
+@pytest.mark.parametrize("row", range(4))
+def test_small_sample_cov_geesmv(row):
+    # GH 1183, reference values from R geesmv, see gee_small_sample.R
+    data, ref = _small_sample_ref()
+    ref = ref.iloc[row]
+    yname, family = _FAMILIES[ref["family"]]
+    cov_type = {"kc": "kauermann_carroll", "md": "bias_reduced"}[ref["method"]]
+    exog = tools.add_constant(data[["x1", "x2"]].to_numpy())
+    mod = gee.GEE(data[yname], exog, data["id"], family=family())
+    res = mod.fit(cov_type=cov_type)
+    var = ref[["var0", "var1", "var2"]].to_numpy(float)
+    assert_allclose(np.diag(res.cov_params()), var, rtol=1e-7)
+    assert_allclose(res.standard_errors(cov_type), np.sqrt(var), rtol=1e-7)
+
+
+@pytest.mark.parametrize(
+    "fam, cs",
+    [
+        ("poisson", cov_struct.Independence),
+        ("binomial", cov_struct.Independence),
+        ("gaussian", cov_struct.Exchangeable),
+    ],
+)
+def test_kauermann_carroll_root(fam, cs):
+    # GH 1183, I - H is not symmetric here, compare to the principal root
+    from scipy.linalg import sqrtm
+
+    data, _ = _small_sample_ref()
+    yname, family = _FAMILIES[fam]
+    exog = tools.add_constant(data[["x1", "x2"]].to_numpy())
+    mod = gee.GEE(data[yname], exog, data["id"], family=family(), cov_struct=cs())
+    res = mod.fit(cov_type="kauermann_carroll")
+
+    dmats, vmats, resids = [], [], []
+    for i in range(mod.num_group):
+        mu, lpr = mod.cached_means[i]
+        sd = np.sqrt(mod.family.variance(mu))
+        cmat, _ = mod.cov_struct.covariance_matrix(mu, i)
+        dmats.append(mod.mean_deriv(mod.exog_li[i], lpr))
+        vmats.append(np.outer(sd, sd) * cmat)
+        resids.append(mod.endog_li[i] - mu)
+    bread = np.linalg.inv(
+        sum(d.T @ np.linalg.solve(v, d) for d, v in zip(dmats, vmats, strict=True))
+    )
+    meat = 0
+    for d, v, r in zip(dmats, vmats, resids, strict=True):
+        hmat = d @ bread @ d.T @ np.linalg.inv(v)
+        root = np.real(sqrtm(np.linalg.inv(np.eye(len(r)) - hmat)))
+        u = d.T @ np.linalg.solve(v, root @ r)
+        meat = meat + np.outer(u, u)
+    assert_allclose(res.cov_robust_kc, bread @ meat @ bread, rtol=1e-8)

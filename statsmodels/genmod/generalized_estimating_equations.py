@@ -30,7 +30,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import linalg, stats
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -306,7 +306,12 @@ _gee_fit_doc = """
         No dependence structure updates occur before this
         iteration number.
     cov_type : str, optional
-        One of "robust", "naive", or "bias_reduced".
+        One of "robust", "naive", "bias_reduced" or "kauermann_carroll".
+        "bias_reduced" is the Mancl-DeRouen and "kauermann_carroll" the
+        Kauermann-Carroll small-sample correction of the robust covariance.
+
+        .. versionchanged:: 0.15.1
+           Added "kauermann_carroll".
     ddof_scale : int, optional
         The scale parameter is estimated as the sum of squared
         Pearson residuals divided by `N - ddof_scale`, where N
@@ -364,12 +369,14 @@ _gee_results_doc = """
     cov_robust_bc : ndarray
         covariance of the parameter estimates that is robust and bias
         reduced
+    cov_robust_kc : ndarray
+        Kauermann-Carroll robust covariance of the parameter estimates
     converged : bool
         indicator for convergence of the optimization.
         True if the norm of the score is smaller than a threshold
     cov_type : str
-        string indicating whether a "robust", "naive" or "bias_reduced"
-        covariance is used as default
+        string indicating whether a "robust", "naive", "bias_reduced" or
+        "kauermann_carroll" covariance is used as default
     fit_history : dict
         Contains information about the iterations.
     fittedvalues : ndarray
@@ -1243,7 +1250,8 @@ class GEE(GLM):
 
     # Calculate the bias-corrected sandwich estimate of Mancl and
     # DeRouen.
-    def _bc_covmat(self, cov_naive):
+    def _bc_covmat(self, cov_naive, method="md"):
+        """Mancl-DeRouen ("md") or Kauermann-Carroll ("kc") covariance."""
 
         cov_naive = cov_naive / self.scaling_factor
         endog = self.endog_li
@@ -1271,7 +1279,11 @@ class GEE(GLM):
 
             f = self.weights_li[i] if self.weights is not None else 1.0
 
-            aresid = np.linalg.solve(np.eye(len(resid)) - hmat, resid)
+            imh = np.eye(len(resid)) - hmat
+            if method == "kc":
+                # principal root, since I - H is not symmetric in general
+                imh = linalg.sqrtm(imh).real
+            aresid = np.linalg.solve(imh, resid)
             rslt = self.cov_struct.covariance_matrix_solve(expval, i, sdev, (aresid,))
             if rslt is None:
                 return None
@@ -1402,9 +1414,11 @@ class GEE(GLM):
                 stacklevel=2,
             )
             return None
-        bc_cov = None
+        bc_cov = kc_cov = None
         if cov_type == "bias_reduced":
             bc_cov = self._bc_covmat(ncov)
+        elif cov_type == "kauermann_carroll":
+            kc_cov = self._bc_covmat(ncov, method="kc")
 
         if self.constraint is not None:
             x = mean_params.copy()
@@ -1428,6 +1442,8 @@ class GEE(GLM):
 
             if bc_cov is not None:
                 y, bc_cov = self._handle_constraint(x, bc_cov)
+            if kc_cov is not None:
+                y, kc_cov = self._handle_constraint(x, kc_cov)
                 if x is None:
                     warnings.warn(
                         "Unable to estimate constrained GEE parameters.",
@@ -1440,7 +1456,11 @@ class GEE(GLM):
 
         # kwargs to add to results instance, need to be available in __init__
         res_kwds = dict(
-            cov_type=cov_type, cov_robust=bcov, cov_naive=ncov, cov_robust_bc=bc_cov
+            cov_type=cov_type,
+            cov_robust=bcov,
+            cov_naive=ncov,
+            cov_robust_bc=bc_cov,
+            cov_robust_kc=kc_cov,
         )
 
         # The superclass constructor will multiply the covariance
@@ -1475,6 +1495,7 @@ class GEE(GLM):
             "cov_robust",
             "cov_naive",
             "cov_robust_bc",
+            "cov_robust_kc",
             "fit_history",
             "score_norm",
             "converged",
@@ -1931,7 +1952,12 @@ class GEEResults(GLMResults):
         if not (hasattr(self, "cov_type") and hasattr(self, "cov_params_default")):
             self.cov_type = cov_type  # keep alias
             covariance_type = self.cov_type.lower()
-            allowed_covariances = ["robust", "naive", "bias_reduced"]
+            allowed_covariances = [
+                "robust",
+                "naive",
+                "bias_reduced",
+                "kauermann_carroll",
+            ]
             if covariance_type not in allowed_covariances:
                 msg = "GEE: `cov_type` must be one of " + ", ".join(allowed_covariances)
                 raise ValueError(msg)
@@ -1942,6 +1968,8 @@ class GEEResults(GLMResults):
                 cov = self.cov_naive
             elif cov_type == "bias_reduced":
                 cov = self.cov_robust_bc
+            elif cov_type == "kauermann_carroll":
+                cov = self.cov_robust_kc
 
             self.cov_params_default = cov
         elif self.cov_type != cov_type:
@@ -1967,14 +1995,14 @@ class GEEResults(GLMResults):
         Parameters
         ----------
         cov_type : str, optional
-            One of "robust", "naive", or "bias_reduced".  Determines
-            the covariance used to compute standard errors.  Defaults
-            to "robust".
+            One of "robust", "naive", "bias_reduced" or
+            "kauermann_carroll".  Determines the covariance used to compute
+            standard errors.  Defaults to "robust".
         """
 
         # Check covariance_type
         covariance_type = cov_type.lower()
-        allowed_covariances = ["robust", "naive", "bias_reduced"]
+        allowed_covariances = ["robust", "naive", "bias_reduced", "kauermann_carroll"]
         if covariance_type not in allowed_covariances:
             msg = "GEE: `covariance_type` must be one of " + ", ".join(
                 allowed_covariances
@@ -1989,6 +2017,10 @@ class GEEResults(GLMResults):
             if self.cov_robust_bc is None:
                 raise ValueError("GEE: `bias_reduced` covariance not available")
             return np.sqrt(np.diag(self.cov_robust_bc))
+        elif covariance_type == "kauermann_carroll":
+            if getattr(self, "cov_robust_kc", None) is None:
+                raise ValueError("GEE: `kauermann_carroll` covariance not available")
+            return np.sqrt(np.diag(self.cov_robust_kc))
 
     # Need to override to allow for different covariance types.
     @cache_readonly
@@ -2144,7 +2176,8 @@ class GEEResults(GLMResults):
              default `alpha` = .05 returns a 95% confidence interval.
         cov_type : str, optional
              The covariance type used for computing standard errors;
-             must be one of 'robust', 'naive', and 'bias reduced'.
+             must be one of 'robust', 'naive', 'bias_reduced' and
+             'kauermann_carroll'.
              See `GEE` for details.
 
         Notes
