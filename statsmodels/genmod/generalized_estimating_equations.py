@@ -1934,13 +1934,14 @@ class GEEResults(GLMResults):
         **kwds,
     ):
 
-        super().__init__(model, params, normalized_cov_params=cov_params, scale=scale)
+        super().__init__(
+            model, params, normalized_cov_params=cov_params, scale=scale, use_t=use_t
+        )
 
         # not added by super
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.family = model.family
-        self.use_t = use_t
         # t inference uses clusters, not observations
         self.df_resid_inference = model.num_group - (model.nobs - model.df_resid)
 
