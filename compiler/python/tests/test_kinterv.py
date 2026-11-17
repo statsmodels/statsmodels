@@ -18,7 +18,7 @@ def test_fused_matches_statsmodels():
     doses = np.array([0.0, 1.5, 4.0])
     device, fused = kinterv.load(kinterv.compile_fused(500, w.shape[0], 3, "generic"))
     args = [iree_rt.asdevicearray(device, a) for a in (x, w, c, doses)]
-    got = np.asarray(fused(*args)).copy()
+    got = kinterv.to_numpy(fused(*args))
     ref = np.column_stack(
         [results.predict(frame.assign(T=t)).to_numpy() for t in doses])
     np.testing.assert_allclose(got, ref, rtol=0, atol=1e-12)

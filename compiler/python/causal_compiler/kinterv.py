@@ -121,14 +121,35 @@ def compile_fused(n: int, d: int, k: int, target_cpu: str) -> bytes:
         extra_args=_iree_cpu_codegen_args(target_cpu))
 
 
+_CONFIG = None
+
+
 def load(module: bytes):
+    """Load a module on a single shared local-sync device.
+
+    All modules must share one device: device arrays created for one
+    device are not valid inputs to a function loaded on another.
+    """
     import iree.runtime as rt
 
-    config = rt.Config("local-sync")
+    global _CONFIG
+    if _CONFIG is None:
+        _CONFIG = rt.Config("local-sync")
+    config = _CONFIG
     ctx = rt.SystemContext(config=config)
     ctx.add_vm_module(rt.VmModule.from_flatbuffer(
         ctx.instance, module, warn_if_copy=False))
     return config.device, ctx.modules.module.predict
+
+
+def to_numpy(device_array) -> np.ndarray:
+    """Copy an IREE result to a NumPy array that owns its memory.
+
+    np.asarray(result) is a view that does not keep ``result`` alive; if the
+    device array is released (e.g. a temporary), the view reads freed memory.
+    Holding ``device_array`` here keeps it alive until the copy is made.
+    """
+    return np.array(np.asarray(device_array), copy=True)
 
 
 def timed(fn, repeats: int) -> float:
@@ -220,16 +241,19 @@ def main() -> None:
 
             use_sm = n <= a.statsmodels_max_rows
             ref = statsmodels_all() if use_sm else numpy_naive()
-            got_fused = np.asarray(iree_fused())
-            # Copy each result immediately: IREE may reuse the output buffer
-            # on the next call, so np.asarray views would all alias.
+            got_fused = to_numpy(iree_fused())
             got_per_k = np.column_stack([
-                np.asarray(single(x_dev, w_dev, c_dev, s))[:, 0].copy()
-                for s in singles])
-            err = max(np.abs(v - ref).max() for v in
-                      (got_fused, got_per_k, numpy_hoisted(), numpy_naive()))
+                to_numpy(single(x_dev, w_dev, c_dev, s))[:, 0] for s in singles])
+            errors = {
+                name: float(np.abs(v - ref).max()) for name, v in (
+                    ("iree_fused", got_fused), ("iree_per_k", got_per_k),
+                    ("numpy_hoisted", numpy_hoisted()),
+                    ("numpy_naive", numpy_naive()))}
+            err = max(errors.values())
             if err > 1e-10:
-                raise AssertionError(f"mismatch {err:.3e} at rows={n} K={k}")
+                raise AssertionError(
+                    f"mismatch at rows={n} K={k} (reference="
+                    f"{'statsmodels' if use_sm else 'numpy_naive'}): {errors}")
 
             t_sm = timed(statsmodels_all, 3) if use_sm else float("nan")
             t_nv = timed(numpy_naive, a.repeats)

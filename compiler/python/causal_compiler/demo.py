@@ -25,6 +25,12 @@ from .synthetic import (
 )
 
 
+
+def _owned(device_array):
+    """Copy an IREE result while it is still alive (np.asarray alone is a
+    view that does not keep the device buffer alive)."""
+    return np.array(np.asarray(device_array), copy=True)
+
 def load_resident_kernel(workflow, module: bytes, threads: int):
     """Load the module and copy inputs to the IREE device once.
 
@@ -44,7 +50,7 @@ def load_resident_kernel(workflow, module: bytes, threads: int):
     x, beta = workflow.mlir_inputs()
     x_dev = ireert.asdevicearray(config.device, x)
     b_dev = ireert.asdevicearray(config.device, beta)
-    return (lambda: entry(x_dev, b_dev)), (lambda: np.asarray(entry(x_dev, b_dev)))
+    return (lambda: entry(x_dev, b_dev)), (lambda: _owned(entry(x_dev, b_dev)))
 
 
 def banner(text: str) -> None:

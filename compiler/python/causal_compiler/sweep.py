@@ -45,6 +45,12 @@ func.func public @effect(%x: tensor<{n}x{d}xf64>, %b: tensor<{d}xf64>,
 """
 
 
+
+def _owned(device_array):
+    """Copy an IREE result while it is still alive (np.asarray alone is a
+    view that does not keep the device buffer alive)."""
+    return np.array(np.asarray(device_array), copy=True)
+
 def _resident(module: bytes, name: str, *arrays):
     import iree.runtime as rt
 
@@ -54,7 +60,7 @@ def _resident(module: bytes, name: str, *arrays):
         ctx.instance, module, warn_if_copy=False))
     fn = getattr(ctx.modules.module, name)
     dev = [rt.asdevicearray(config.device, a) for a in arrays]
-    return (lambda: fn(*dev)), (lambda: np.asarray(fn(*dev)))
+    return (lambda: fn(*dev)), (lambda: _owned(fn(*dev)))
 
 
 def main() -> None:
