@@ -3,6 +3,7 @@ Test functions for models.GLM
 """
 import contextlib
 import copy
+import itertools
 from pathlib import Path
 import re
 import warnings
@@ -25,6 +26,7 @@ from statsmodels.datasets import cpunish, longley
 from statsmodels.discrete import discrete_model as discrete
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.genmod.tests.results import results_poisson_large_exog as large_exog
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import (
     approx_fprime,
@@ -3887,6 +3889,288 @@ def test_get_prediction_default_offset_formula_pandas():
     sf = res.get_prediction(which="mean").summary_frame()
     assert sf.index.equals(index)
     assert_allclose(sf["predicted"], res.predict(), rtol=1e-10)
+
+
+def _poisson_overflow_model():
+    exog = add_constant(large_exog.x_overflow)
+    return GLM(large_exog.y_overflow, exog, family=sm.families.Poisson())
+
+
+@pytest.mark.parametrize("start", [np.zeros(2), np.array([1.0, 0.0])])
+def test_irls_step_halving_large_exog(start):
+    # The full IRLS steps from these start params need 96 and 35 iterations,
+    # the limit is far below that.
+    exog = add_constant(large_exog.x_large)
+    mod = GLM(large_exog.y_large, exog, family=sm.families.Poisson())
+    res = mod.fit(start_params=start, maxiter=20)
+    assert res.converged
+    assert_allclose(res.params, large_exog.params_large, rtol=1e-8)
+    assert_allclose(res.bse, large_exog.bse_large, rtol=1e-6)
+    assert_allclose(res.llf, large_exog.llf_large, rtol=1e-10)
+
+
+@pytest.mark.parametrize("start", [np.zeros(2), np.array([1.0, 0.0])])
+def test_irls_step_halving_overflow(start):
+    # The first IRLS step gives mu of inf. It raised "NaN, inf or invalid
+    # value detected in weights" before.
+    res = _poisson_overflow_model().fit(start_params=start, maxiter=100)
+    assert res.converged
+    assert_allclose(res.params, large_exog.params_overflow, rtol=1e-8)
+    assert_allclose(res.bse, large_exog.bse_overflow, rtol=1e-6)
+    assert_allclose(res.llf, large_exog.llf_overflow, rtol=1e-10)
+    assert np.all(np.isfinite(res.fit_history["deviance"][1:]))
+
+
+@pytest.mark.parametrize(
+    "x, y, params",
+    [
+        (large_exog.x_large, large_exog.y_large, large_exog.params_large),
+        (large_exog.x_overflow, large_exog.y_overflow, large_exog.params_overflow),
+    ],
+    ids=["large", "overflow"],
+)
+def test_irls_default_start_unchanged_large_exog(x, y, params):
+    res = GLM(y, add_constant(x), family=sm.families.Poisson()).fit()
+    assert res.converged
+    assert_allclose(res.params, params, rtol=1e-8)
+
+
+def test_irls_halved_step_is_not_convergence():
+    # atol is so large that the change of the deviance shows convergence at
+    # every iteration. The first step is halved and a halved step is shorter
+    # than the IRLS step, so it does not show convergence.
+    res = _poisson_overflow_model().fit(start_params=np.zeros(2), atol=1e10)
+    assert res.fit_history["iteration"] > 1
+
+
+def test_irls_params_of_halved_last_step():
+    # The only step is halved. The results have the parameters of that step
+    # and not those of the refit of WLS, which are those of the full step.
+    mod = _poisson_overflow_model()
+    res = mod.fit(start_params=np.zeros(2), maxiter=1)
+    assert not res.converged
+    assert_allclose(res.params, res.fit_history["params"][-1])
+    assert np.all(np.isfinite(res.mu))
+    assert_allclose(res.mu, np.exp(mod.exog @ res.params), rtol=1e-10)
+    assert np.all(np.isfinite(res.params))
+
+
+@pytest.mark.parametrize("start", [[0.0, 8.0], [1000.0, 1000.0], [-1000.0, 20.0]])
+def test_irls_start_params_not_finite(start):
+    # exp of the linear predictor overflows, or the mean is 0 and so are the
+    # IRLS weights of the identity link at the start
+    with pytest.raises(ValueError, match="start_params"):
+        _poisson_overflow_model().fit(start_params=start)
+
+
+def test_irls_start_params_weights_not_finite():
+    # the mean is finite but the IRLS weights 1 / mu of the identity link are
+    # not, for a mean of 0
+    family = sm.families.Poisson(sm.families.links.Identity())
+    exog = add_constant(large_exog.x_large)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DomainWarning)
+        mod = GLM(large_exog.y_large, exog, family=family)
+    with pytest.raises(ValueError, match="start_params"):
+        mod.fit(start_params=[0.0, 0.0])
+
+
+def test_irls_start_params_finite_but_large():
+    # a mean of up to 1e78 is finite and so are its weights, so that the start
+    # is valid. The fit needs more than two iterations from there.
+    mod = _poisson_overflow_model()
+    res = mod.fit(start_params=[0.0, 1.8], maxiter=2)
+    assert not res.converged
+    assert np.all(np.isfinite(res.params))
+    assert np.all(np.isfinite(res.mu))
+
+
+def _halve_irls(devs, dev_prev):
+    """Halve a step of GLM for the deviances `devs` of the trial steps"""
+    mod = _poisson_overflow_model()
+    values = itertools.chain(devs, itertools.repeat(None))
+    mod._finite_deviance = lambda mu: next(values)
+    params, params_prev = np.array([2.0, 1.0]), np.zeros(2)
+    lin_pred = mod.exog @ params
+    mu = mod.family.fitted(lin_pred)
+    return params, params_prev, mod._halve_irls_step(
+        params, params_prev, lin_pred, mu, dev_prev
+    )
+
+
+def test_halve_irls_step_tolerance():
+    # noise in the deviance of a relative size of 1e-14 does not shorten the
+    # step, an increase of 1e-6 does
+    params, _, out = _halve_irls([1 + 1e-14, 0.5], 1.0)
+    assert not out[4]
+    assert_allclose(out[0], params)
+    assert_allclose(out[3], 1 + 1e-14)
+
+    params, params_prev, out = _halve_irls([1 + 1e-6, 0.5], 1.0)
+    assert out[4]
+    assert_allclose(out[0], 0.5 * (params + params_prev))
+    assert out[3] == 0.5
+
+
+def test_halve_irls_step_no_decrease_found():
+    # no step decreases the deviance, the first with a finite deviance is used
+    params, params_prev, out = _halve_irls([2.0, 3.0], 1.0)
+    assert not out[4]
+    assert_allclose(out[0], params)
+    assert out[3] == 2.0
+
+    params, params_prev, out = _halve_irls([None, 3.0, 2.5], 1.0)
+    assert out[4]
+    assert_allclose(out[0], 0.5 * (params + params_prev))
+    assert out[3] == 3.0
+
+
+def test_halve_irls_step_nonfinite():
+    # a step with a non-finite deviance is halved even if there is no previous
+    # deviance, and a step with a larger deviance is then not halved
+    params, params_prev, out = _halve_irls([None, None, 1e9], None)
+    assert out[4]
+    assert_allclose(out[0], params_prev + (params - params_prev) / 4)
+    assert out[3] == 1e9
+
+    params, _, out = _halve_irls([1e9], None)
+    assert not out[4]
+    assert_allclose(out[0], params)
+
+    with pytest.raises(ValueError, match="start_params"):
+        _halve_irls([], 1.0)
+
+
+def test_finite_deviance_needs_finite_mean_and_weights(monkeypatch):
+    mod = _poisson_overflow_model()
+    mu = np.full(mod.endog.shape[0], 5.0)
+    assert mod._finite_deviance(mu) == pytest.approx(mod._unscaled_deviance(mu))
+    # the deviance can be finite while the IRLS weights are not
+    monkeypatch.setattr(
+        mod.family, "weights", lambda mu: np.full(np.shape(mu), np.inf)
+    )
+    assert np.isfinite(mod._unscaled_deviance(mu))
+    assert mod._finite_deviance(mu) is None
+    monkeypatch.undo()
+    assert mod._finite_deviance(np.where(np.arange(mu.size) == 3, np.inf, mu)) is None
+
+
+LINKS = sm.families.links
+
+
+@pytest.mark.filterwarnings("ignore::statsmodels.tools.sm_exceptions.DomainWarning")
+@pytest.mark.parametrize(
+    "family, link, canonical",
+    [
+        ("Binomial", LINKS.Logit(), True),
+        ("Binomial", LINKS.Probit(), False),
+        ("Binomial", LINKS.Cauchy(), False),
+        ("Binomial", LINKS.CLogLog(), False),
+        ("Binomial", LINKS.LogLog(), False),
+        ("Poisson", LINKS.Log(), True),
+        ("Poisson", LINKS.Sqrt(), False),
+        ("Poisson", LINKS.Identity(), False),
+        ("Gaussian", LINKS.Identity(), True),
+        ("Gaussian", LINKS.Log(), False),
+        ("Gamma", LINKS.InversePower(), True),
+        ("Gamma", LINKS.Log(), False),
+        ("InverseGaussian", LINKS.InverseSquared(), True),
+        ("InverseGaussian", LINKS.Identity(), False),
+        ("NegativeBinomial", LINKS.NegativeBinomial(alpha=0.5), True),
+        ("NegativeBinomial", LINKS.NegativeBinomial(alpha=3.0), False),
+        ("NegativeBinomial", LINKS.Log(), False),
+    ],
+)
+def test_canonical_link(family, link, canonical):
+    # Probit, Cauchy, CLogLog and LogLog subclass Logit
+    kwds = {"alpha": 0.5} if family == "NegativeBinomial" else {}
+    fam = getattr(sm.families, family)(link=link, **kwds)
+    mod = GLM(np.ones(5), np.ones((5, 1)), family=fam)
+    assert mod._canonical_link() is canonical
+
+
+def test_canonical_link_deprecated_alias():
+    # the deprecated aliases are subclasses of the link classes
+    with pytest.warns(FutureWarning, match="alias is deprecated"):
+        log_alias = LINKS.log()
+    with pytest.warns(FutureWarning, match="alias is deprecated"):
+        probit_alias = LINKS.probit()
+    mod = GLM(np.ones(5), np.ones((5, 1)), family=sm.families.Poisson(log_alias))
+    assert mod._canonical_link()
+    mod = GLM(np.ones(5), np.ones((5, 1)), family=sm.families.Binomial(probit_alias))
+    assert not mod._canonical_link()
+
+
+def _irls_wiring_data(family, seed=20261117):
+    rng = np.random.default_rng(seed)
+    exog = add_constant(rng.uniform(0.5, 1.5, size=(200, 2)))
+    eta = exog @ np.array([0.2, 0.4, -0.3])
+    if isinstance(family, sm.families.Poisson):
+        mean = np.exp(eta) if isinstance(family.link, LINKS.Log) else (1 + eta) ** 2
+        return rng.poisson(mean), exog
+    prob = 1 / (1 + np.exp(-eta)) if isinstance(family.link, LINKS.Logit) else 0.5 + 0.3 * eta
+    return (rng.uniform(size=200) < prob).astype(float), exog
+
+
+WIRING_FAMILIES = [
+    (sm.families.Poisson(), True),
+    (sm.families.Poisson(LINKS.Sqrt()), False),
+    (sm.families.Binomial(), True),
+    (sm.families.Binomial(LINKS.Probit()), False),
+]
+
+
+@pytest.mark.filterwarnings("ignore::statsmodels.tools.sm_exceptions.DomainWarning")
+@pytest.mark.parametrize("family, monotone", WIRING_FAMILIES)
+@pytest.mark.parametrize("with_start", [False, True])
+def test_irls_halves_deviance_increase_only_for_canonical_link(
+    monkeypatch, family, monotone, with_start
+):
+    # A step is checked in every iteration after the first of the default
+    # start, and in every iteration if there are start_params. The deviance
+    # is only compared for a canonical link.
+    y, exog = _irls_wiring_data(family)
+    calls = []
+    halve = GLM._halve_irls_step
+
+    def spy(self, params, params_prev, lin_pred, mu, dev_prev=None):
+        calls.append(dev_prev is not None)
+        return halve(self, params, params_prev, lin_pred, mu, dev_prev)
+
+    monkeypatch.setattr(GLM, "_halve_irls_step", spy)
+    start_params = None
+    if with_start:
+        start_params = GLM(y, exog, family=family).fit().params * 0.5 + 0.1
+        calls.clear()
+    res = GLM(y, exog, family=family).fit(start_params=start_params)
+    n_iter = res.fit_history["iteration"]
+    assert n_iter > 1
+    assert len(calls) == (n_iter if with_start else n_iter - 1)
+    assert all(calls) == monotone
+    assert any(calls) == monotone
+
+
+@pytest.mark.filterwarnings("ignore::statsmodels.tools.sm_exceptions.DomainWarning")
+@pytest.mark.parametrize("family, monotone", WIRING_FAMILIES)
+def test_newton_step_halving_option_by_link(monkeypatch, family, monotone):
+    # GLM only halves the steps of Newton's method that are not finite
+    # ("finite") if the link is not canonical, unless the user chooses.
+    from statsmodels.base import optimizer
+
+    y, exog = _irls_wiring_data(family)
+    seen = []
+    fit_newton = optimizer._fit_newton
+
+    def spy(f, score, start_params, fargs, kwargs, *args, **kw):
+        seen.append(kwargs.get("step_halving", True))
+        return fit_newton(f, score, start_params, fargs, kwargs, *args, **kw)
+
+    monkeypatch.setattr(optimizer, "_fit_newton", spy)
+    GLM(y, exog, family=family).fit(method="newton", disp=0)
+    assert seen == [True if monotone else "finite"]
+    seen.clear()
+    GLM(y, exog, family=family).fit(method="newton", disp=0, step_halving=False)
+    assert seen == [False]
 
 
 @pytest.mark.parametrize(

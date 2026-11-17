@@ -986,6 +986,124 @@ class GLM(base.LikelihoodModel):
         # return a stats results instance instead?  Contrast?
         return chi2stat, pval, k_constraints
 
+    def _unscaled_deviance(self, mu):
+        """Deviance with a scale of 1, which is comparable across iterations"""
+        return self.family.deviance(
+            self.endog, mu, self.var_weights, self.freq_weights, 1.0
+        )
+
+    def _finite_deviance(self, mu):
+        """
+        The deviance with scale 1 if the step is finite, or None
+
+        The mean, the deviance and the IRLS weights have to be finite.
+        """
+        if not np.all(np.isfinite(mu)):
+            return None
+        if not np.all(np.isfinite(self.family.weights(mu))):
+            return None
+        dev = self._unscaled_deviance(mu)
+        return float(dev) if np.isfinite(dev) else None
+
+    def _canonical_link(self):
+        """True if the link of the family is its canonical link"""
+        family = self.family
+        link = family.link
+        links = families.links
+        canonical = (
+            (families.Poisson, links.Log),
+            (families.Binomial, links.Logit),
+            (families.Gaussian, links.Identity),
+            (families.Gamma, links.InversePower),
+            (families.InverseGaussian, links.InverseSquared),
+            (families.NegativeBinomial, links.NegativeBinomial),
+        )
+        # Probit, Cauchy, CLogLog and LogLog subclass Logit, so that isinstance
+        # takes them for the canonical link of the binomial family. The class
+        # of the link is the first class in its MRO of the classes below,
+        # which also resolves the deprecated aliases such as links.log.
+        not_canonical = (
+            links.CDFLink,
+            links.Probit,
+            links.Cauchy,
+            links.CLogLog,
+            links.LogLog,
+        )
+        known = tuple(lnk for _, lnk in canonical) + not_canonical
+        link_class = next((c for c in type(link).__mro__ if c in known), None)
+        for fam, lnk in canonical:
+            if isinstance(family, fam) and link_class is lnk:
+                if lnk is links.NegativeBinomial:
+                    # the link is only canonical for the alpha of the family
+                    return bool(np.array_equal(link.alpha, family.alpha))
+                return True
+        return False
+
+    def _halve_irls_step(self, params, params_prev, lin_pred, mu, dev_prev=None):
+        """
+        Halve an IRLS step that gives a non-finite or a larger deviance
+
+        Parameters
+        ----------
+        params : ndarray
+            Parameters after the full IRLS step.
+        params_prev : ndarray
+            Parameters before the step.
+        lin_pred : ndarray
+            Linear predictor after the full step.
+        mu : ndarray
+            Mean after the full step.
+        dev_prev : float, optional
+            Deviance with scale 1 before the step. A step that increases the
+            deviance is only halved if it is given.
+
+        Returns
+        -------
+        params : ndarray
+            The parameters of the accepted step.
+        lin_pred : ndarray
+            The linear predictor of the accepted step.
+        mu : ndarray
+            The mean of the accepted step.
+        dev : float
+            Deviance with scale 1 of the accepted step.
+        halved : bool
+            True if the step was shortened.
+
+        Notes
+        -----
+        The full step is used if its deviance and IRLS weights are finite, and
+        the deviance does not increase if `dev_prev` is given, apart from a
+        small relative tolerance. Otherwise the step is halved up to 30 times
+        towards the previous parameters. If no step is found that does not
+        increase the deviance, the first step with a finite deviance is used.
+        A ValueError is raised if there is no step with a finite deviance.
+        """
+        max_halvings = 30
+        finite_prev = dev_prev is not None and np.isfinite(dev_prev)
+        # relative tolerance for the rounding error of the deviance
+        tol = 1e-12 * abs(dev_prev) if finite_prev else 0.0
+        first_finite = None
+        with np.errstate(all="ignore"):
+            for k in range(max_halvings + 1):
+                if k > 0:
+                    params = 0.5 * (params + params_prev)
+                    lin_pred = np.dot(self.exog, params) + self._offset_exposure
+                    mu = self.family.fitted(lin_pred)
+                dev = self._finite_deviance(mu)
+                if dev is None:
+                    continue
+                if not finite_prev or dev <= dev_prev + tol:
+                    return params, lin_pred, mu, dev, k > 0
+                if first_finite is None:
+                    first_finite = (params, lin_pred, mu, dev, k > 0)
+        if first_finite is not None:
+            return first_finite
+        raise ValueError(
+            "The IRLS step could not be halved to a step with a finite "
+            "deviance. Provide better start_params."
+        )
+
     def _update_history(self, tmp_result, mu, history):
         """
         Helper method to update history during iterative fit.
@@ -1280,6 +1398,9 @@ class GLM(base.LikelihoodModel):
             The default is family-specific and is given by the
             ``family.starting_mu(endog)``. If start_params is given then the
             initial mean will be calculated as ``np.dot(exog, start_params)``.
+            A ``ValueError`` is raised for IRLS if the mean or the IRLS
+            weights at start_params are not finite, for example if the
+            exponential of the linear predictor overflows.
         maxiter : int, optional
             Default is 100.
         method : str, optional
@@ -1341,6 +1462,20 @@ class GLM(base.LikelihoodModel):
             observed Hessian is used in fitting. 'eim' is the expected Hessian.
             This may provide more stable fits, but adds assumption that the
             Hessian is correctly specified.
+        step_halving : {True, False, "finite"}, optional
+            (available with ``method="newton"``) What is done with a step of
+            Newton's method that gives a log-likelihood that is not finite or
+            lower. The default is True, which halves such a step up to 30
+            times, if the link is the canonical link of the family. For the
+            other links the default is ``"finite"``, which halves only a step
+            that gives a log-likelihood that is not finite. A step that gives
+            a lower log-likelihood is kept for these links, since for some of
+            them, for example the square root link, the score and the Hessian
+            are not the derivatives of the log-likelihood where the linear
+            predictor is negative. False takes the full step. See Notes of
+            `LikelihoodModel.fit`.
+
+            .. versionadded:: 0.15.1
 
         Notes
         -----
@@ -1349,6 +1484,23 @@ class GLM(base.LikelihoodModel):
         in future versions. If attach_wls' is true, then the final WLS
         instance of the IRLS iteration is attached to the results instance
         as `results_wls` attribute.
+
+        A step of the IRLS iteration that gives a mean, IRLS weights or a
+        deviance that are not finite is halved towards the previous parameters,
+        up to 30 times, so that the fit converges from starting values for
+        which the full step overflows. For the canonical link of the family,
+        where IRLS is Newton's method, a step that increases the deviance is
+        halved as well. The convergence is not tested after a halved step. If
+        there is no finite step a ``ValueError`` is raised, and a
+        ``ValueError`` is raised if the mean or the weights at start_params
+        are not finite.
+
+        .. versionchanged:: 0.15.1
+
+           Steps of IRLS and of Newton's method are halved. Before, a step
+           that was not finite gave nan parameters with ``converged`` True for
+           Newton's method, and the IRLS fit raised a ``ValueError`` that did
+           not mention start_params.
         """
         if isinstance(scale, str):
             scale = string_like(scale, "scale", options=("x2", "dev"))
@@ -1440,13 +1592,21 @@ class GLM(base.LikelihoodModel):
             )
             start_params = irls_rslt.params
             del irls_rslt
+        fit_kwargs = dict(kwargs)
+        if method == "newton" and "step_halving" not in fit_kwargs:
+            if not self._canonical_link():
+                # For some other links, for example Sqrt, the score and the
+                # Hessian are not the derivatives of the log-likelihood where
+                # the mean is outside of its domain, so that a step is only
+                # halved if it is not finite.
+                fit_kwargs["step_halving"] = "finite"
         rslt = super().fit(
             start_params=start_params,
             maxiter=maxiter,
             full_output=full_output,
             method=method,
             disp=disp,
-            **kwargs,
+            **fit_kwargs,
         )
 
         # reset scaletype to original
@@ -1524,13 +1684,33 @@ class GLM(base.LikelihoodModel):
 
         endog = self.endog
         wlsexog = self.exog
+        # The parameters and the deviance of the last step, used to halve a
+        # step that gives a non-finite or a larger deviance. They are not
+        # known if the iteration starts from starting values of the mean, since
+        # that mean is not a fit of the model.
+        params_prev = None
+        dev_prev = None
+        # IRLS is Newton's method for a canonical link, and a step that
+        # increases the deviance is halved. For the other links the iterates
+        # are not monotone, so that only a step that is not finite is halved.
+        monotone = self._canonical_link()
         if start_params is None:
             start_params = np.zeros(self.exog.shape[1])
             mu = self.family.starting_mu(self.endog)
             lin_pred = self.family.predict(mu)
         else:
             lin_pred = np.dot(wlsexog, start_params) + self._offset_exposure
-            mu = self.family.fitted(lin_pred)
+            with np.errstate(all="ignore"):
+                mu = self.family.fitted(lin_pred)
+                start_weights = self.family.weights(mu)
+            if not (np.all(np.isfinite(mu)) and np.all(np.isfinite(start_weights))):
+                raise ValueError(
+                    "The mean or the IRLS weights at start_params are not "
+                    "finite. Provide other start_params."
+                )
+            params_prev = np.asarray(start_params, dtype=float)
+            if monotone:
+                dev_prev = self._unscaled_deviance(mu)
         self.scale = self.estimate_scale(mu)
         dev = self.family.deviance(
             self.endog, mu, self.var_weights, self.freq_weights, self.scale
@@ -1546,6 +1726,7 @@ class GLM(base.LikelihoodModel):
         # params are none to start, so they line up with the deviance
         history = dict(params=[np.inf, start_params], deviance=[np.inf, dev])
         converged = False
+        last_halved = False
         criterion = history[tol_criterion]
         # This special case is used to get the likelihood for a specific
         # params vector.
@@ -1567,7 +1748,31 @@ class GLM(base.LikelihoodModel):
             wls_results = wls_mod.fit(method=wls_method)
             lin_pred = np.dot(self.exog, wls_results.params)
             lin_pred += self._offset_exposure
-            mu = self.family.fitted(lin_pred)
+            halved = False
+            if params_prev is not None:
+                # a step that gives a non-finite deviance (or a larger one,
+                # for a canonical link) is halved towards the last parameters
+                with np.errstate(all="ignore"):
+                    mu = self.family.fitted(lin_pred)
+                params, lin_pred, mu, dev, halved = self._halve_irls_step(
+                    wls_results.params, params_prev, lin_pred, mu, dev_prev
+                )
+                if monotone:
+                    dev_prev = dev
+                if halved:
+                    wls_results.params = params
+            else:
+                mu = self.family.fitted(lin_pred)
+                if not np.all(np.isfinite(mu)):
+                    raise ValueError(
+                        "The IRLS step from the starting values of the mean "
+                        "gave a non-finite linear predictor or mean. Provide "
+                        "start_params."
+                    )
+                if monotone:
+                    dev_prev = self._unscaled_deviance(mu)
+            last_halved = halved
+            params_prev = np.asarray(wls_results.params, dtype=float)
             history = self._update_history(wls_results, mu, history)
             self.scale = self.estimate_scale(mu)
             if endog.squeeze().ndim == 1 and np.allclose(mu - endog, 0):
@@ -1576,7 +1781,11 @@ class GLM(base.LikelihoodModel):
                     "parameter may not be identified"
                 )
                 warnings.warn(msg, category=PerfectSeparationWarning, stacklevel=2)
-            converged = _check_convergence(criterion, iteration + 1, atol, rtol)
+            # a halved step is shorter than the step of IRLS, so the change of
+            # the deviance does not show that the iteration converged
+            converged = not halved and _check_convergence(
+                criterion, iteration + 1, atol, rtol
+            )
             if converged:
                 break
         self.mu = mu
@@ -1586,9 +1795,13 @@ class GLM(base.LikelihoodModel):
             wls_model = lm.WLS(wlsendog, wlsexog, self.weights)
             wls_results = wls_model.fit(method=wls_method2)
 
+        params = wls_results.params
+        if maxiter > 0 and last_halved:
+            # the last step was halved, so the refit of WLS gives other params
+            params = params_prev
         glm_results = GLMResults(
             self,
-            wls_results.params,
+            params,
             wls_results.normalized_cov_params,
             self.scale,
             cov_type=cov_type,

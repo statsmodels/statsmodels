@@ -212,6 +212,21 @@ Behavior changes
   ``pvalues`` of ``acf(..., qstat=True)`` and the statistics and p-values of
   :func:`~statsmodels.stats.diagnostic.acorr_ljungbox` are ``nan`` for a
   constant series. :issue:`10647`, :pr:`10701`
+- Newton's method (``method="newton"``, which is the default of the
+  discrete models and ``PHReg``) shortens a step that gives a
+  log-likelihood that is not finite or lower. Fits that did not take such a
+  step are unchanged. Fits from starting values for which the full steps
+  diverge or need many iterations, for example ``Poisson`` with a large
+  ``exog`` and zeros as starting values, now converge. If no step is found,
+  the fit stops at the last parameters with ``converged`` ``False`` and a
+  ``ConvergenceWarning``, where the parameters were ``nan`` and
+  ``converged`` was ``True``. A step that is not a direction of descent, for
+  example because the Hessian is not positive definite, is only taken if it
+  decreases the log-likelihood, and the iteration stops if the change of the
+  parameters of the full Newton step, not that of a shortened step, is at
+  most ``tol``. ``GLM.fit`` with ``method="newton"`` shortens only a step
+  that is not finite if the link is not the canonical link of the family.
+  :pr:`10605`
 
 New Features and Enhancements
 =============================
@@ -299,6 +314,12 @@ New functions and methods
   errors, for example with ``diebold_mariano_test``, against the larger
   model. The function is available from ``statsmodels.tsa.api``.
   :issue:`10754`, :pr:`10756`
+- Add the option ``step_halving`` to ``fit(method="newton")``. It is
+  ``True`` to halve a step, up to 30 times, that gives a log-likelihood
+  that is not finite or lower, ``"finite"`` to halve only a step that is
+  not finite, and ``False`` for the full Newton step. The default is
+  ``True``, and ``GLM`` uses ``"finite"`` if the link is not the canonical
+  link of the family. :pr:`10605`
 
 Performance
 -----------
@@ -573,6 +594,15 @@ Generalized linear models and discrete models
   outcome categories. If the two numbers are equal and ``at`` is ``"mean"``,
   ``"median"`` or ``"zero"``, it returned incorrect marginal effects and
   standard errors. :pr:`10746`
+- The IRLS fit of ``GLM`` from ``start_params`` or starting values of the
+  mean for which the first step overflows raised a ``ValueError`` about the
+  weights. A step that gives a mean, weights or a deviance that is not
+  finite is now halved towards the last parameters, up to 30 times, and for
+  the canonical link of the family a step that increases the deviance is
+  halved as well. A ``ValueError`` that names ``start_params`` is raised if
+  the mean or the weights at ``start_params`` are not finite. A Newton fit
+  from such starting values returned ``nan`` parameters with ``converged``
+  ``True``. :issue:`5394`, :pr:`10605`
 
 Mixed models and imputation
 ---------------------------
