@@ -1136,6 +1136,8 @@ Documentation
   hypothesis, and that the sample median is not a useful value for it when
   the data have no ties. Numerical behavior is unchanged. :issue:`4101`,
   :pr:`10721`
+- Fix typos in the "``endog``, ``exog``, what's that?", "Generalized
+  Estimating Equations" and "Getting started" pages.
 
 Stricter Input Validation
 =========================
