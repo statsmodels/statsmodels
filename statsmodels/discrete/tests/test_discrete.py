@@ -2762,8 +2762,31 @@ def _mnlogit_pandas_fit(regularized):
     return res, exog, index
 
 
+def _categorical_pickle_fails():
+    # pandas GH 62820: some builds of pandas 2.x, for example on Pyodide,
+    # raise NotImplementedError when a Categorical is unpickled
+    try:
+        pickle.loads(pickle.dumps(pd.Categorical(["a"])))
+    except NotImplementedError:
+        return True
+    return False
+
+
 @pytest.mark.parametrize("regularized", [False, True], ids=["fit", "fit_regularized"])
-@pytest.mark.parametrize("pickled", [False, True], ids=["fitted", "pickled"])
+@pytest.mark.parametrize(
+    "pickled",
+    [
+        False,
+        pytest.param(
+            True,
+            marks=pytest.mark.skipif(
+                _categorical_pickle_fails(),
+                reason="Categorical cannot be unpickled (pandas GH 62820)",
+            ),
+        ),
+    ],
+    ids=["fitted", "pickled"],
+)
 def test_mnlogit_predict_in_sample_fit_methods(regularized, pickled):
     # GH 4541: the in-sample DataFrame is kept by the results of
     # fit_regularized and by results that are pickled and unpickled
