@@ -49,6 +49,7 @@ from statsmodels.discrete.discrete_model import (
 )
 from statsmodels.discrete.truncated_model import TruncatedLFPoisson
 import statsmodels.formula.api as smf
+from statsmodels.genmod.tests.results import results_poisson_large_exog as large_exog
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
@@ -5147,69 +5148,56 @@ def test_negativebinomial_rejects_alpha_kwarg():
     assert mod.k_extra == 1
 
 
-# Counts with a large exog, see also test_glm. The references are R 4.6.1,
-# glm(y ~ x, family=poisson()) with x = seq(50, 100, length.out=n).
-#
-# n = 25: the full Newton steps from zeros have a linear predictor of at most
-# 96, so that exp does not overflow, but they need 96 iterations. The fit
-# converges in 7 with step halving.
-POISSON_LARGE_X = np.linspace(50, 100, 25)
-POISSON_LARGE_Y = np.array(
-    [1, 0, 1, 6, 6, 5, 6, 3, 12, 11, 8, 11, 10, 22, 19, 25, 43, 39, 51, 67, 66,
-     97, 107, 113, 165]
-)
-POISSON_LARGE_PARAMS = [-4.0750125697357502, 0.0912572389978606]
-POISSON_LARGE_BSE = [0.31088188217520529, 0.00341507856884331]
-POISSON_LARGE_LLF = -69.7106854448857
-
-# n = 40, glm.control(epsilon=1e-14): the first full step from zeros has a
-# linear predictor of 1539, so that exp overflows.
-POISSON_OVERFLOW_X = np.linspace(50, 100, 40)
-POISSON_OVERFLOW_Y = np.array(
-    [5, 10, 11, 9, 25, 14, 20, 26, 28, 21, 45, 43, 52, 48, 67, 83, 73, 98, 105,
-     130, 152, 183, 204, 266, 300, 328, 411, 490, 540, 615, 780, 853, 1035,
-     1189, 1299, 1596, 1900, 2194, 2507, 2909]
-)
-POISSON_OVERFLOW_PARAMS = [-3.9525979059627634, 0.11938444519416855]
-POISSON_OVERFLOW_BSE = [0.080470355764021881, 0.00086799628559341589]
-POISSON_OVERFLOW_LLF = -155.05237286776074
-
-
 @pytest.mark.parametrize("start", [np.zeros(2), np.array([1.0, 0.0])])
 def test_poisson_newton_large_exog_starting_values(start):
     # The full Newton steps from these starting values need 96 and 36
     # iterations, the limit is far below that.
-    exog = sm.add_constant(POISSON_LARGE_X)
-    res = Poisson(POISSON_LARGE_Y, exog).fit(
+    exog = sm.add_constant(large_exog.x_large)
+    res = Poisson(large_exog.y_large, exog).fit(
         start_params=start, method="newton", disp=0, maxiter=20
     )
     assert res.mle_retvals["converged"]
-    assert_allclose(res.params, POISSON_LARGE_PARAMS, rtol=1e-8)
-    assert_allclose(res.bse, POISSON_LARGE_BSE, rtol=1e-5)
-    assert_allclose(res.llf, POISSON_LARGE_LLF, rtol=1e-10)
+    assert_allclose(res.params, large_exog.params_large, rtol=1e-8)
+    assert_allclose(res.bse, large_exog.bse_large, rtol=1e-6)
+    assert_allclose(res.llf, large_exog.llf_large, rtol=1e-10)
 
 
 @pytest.mark.parametrize("start", [np.zeros(2), np.array([1.0, 0.0])])
 def test_poisson_newton_overflow_starting_values(start):
     # Newton from zeros overflowed in the first step and returned nan params
     # with converged True. From [1, 0] it did not converge in 100 iterations.
-    exog = sm.add_constant(POISSON_OVERFLOW_X)
-    res = Poisson(POISSON_OVERFLOW_Y, exog).fit(
+    exog = sm.add_constant(large_exog.x_overflow)
+    res = Poisson(large_exog.y_overflow, exog).fit(
         start_params=start, method="newton", disp=0, maxiter=100
     )
     assert res.mle_retvals["converged"]
-    assert_allclose(res.params, POISSON_OVERFLOW_PARAMS, rtol=1e-8)
-    assert_allclose(res.bse, POISSON_OVERFLOW_BSE, rtol=1e-6)
-    assert_allclose(res.llf, POISSON_OVERFLOW_LLF, rtol=1e-10)
+    assert_allclose(res.params, large_exog.params_overflow, rtol=1e-8)
+    assert_allclose(res.bse, large_exog.bse_overflow, rtol=1e-6)
+    assert_allclose(res.llf, large_exog.llf_overflow, rtol=1e-10)
 
 
 def test_newton_nonfinite_start_reports_nonconvergence():
-    exog = sm.add_constant(POISSON_LARGE_X)
-    with pytest.warns(ConvergenceWarning):
-        res = Poisson(POISSON_LARGE_Y, exog).fit(
+    # exp overflows at the start and at every step. The fit reports that it did
+    # not converge, with finite parameters, and the overflow is not reported
+    # for the parameters at which the fit stops.
+    exog = sm.add_constant(large_exog.x_large)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        res = Poisson(large_exog.y_large, exog).fit(
             start_params=[1000.0, 1000.0], method="newton", disp=0
         )
+    assert any(issubclass(w.category, ConvergenceWarning) for w in caught)
+    assert not any(issubclass(w.category, RuntimeWarning) for w in caught)
     assert not res.mle_retvals["converged"]
     assert res.mle_retvals["warnflag"] == 2
     assert np.all(np.isfinite(res.params))
-    assert_allclose(res.params, [1000.0, 1000.0])
+
+
+@pytest.mark.parametrize("value", ["False", 1, None])
+def test_newton_step_halving_invalid(value):
+    exog = sm.add_constant(large_exog.x_large)
+    exception = ValueError if isinstance(value, str) else TypeError
+    with pytest.raises(exception, match="step_halving"):
+        Poisson(large_exog.y_large, exog).fit(
+            method="newton", disp=0, step_halving=value
+        )

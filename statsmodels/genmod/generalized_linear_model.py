@@ -1398,6 +1398,9 @@ class GLM(base.LikelihoodModel):
             The default is family-specific and is given by the
             ``family.starting_mu(endog)``. If start_params is given then the
             initial mean will be calculated as ``np.dot(exog, start_params)``.
+            A ``ValueError`` is raised for IRLS if the mean or the IRLS
+            weights at start_params are not finite, for example if the
+            exponential of the linear predictor overflows.
         maxiter : int, optional
             Default is 100.
         method : str, optional
@@ -1459,6 +1462,20 @@ class GLM(base.LikelihoodModel):
             observed Hessian is used in fitting. 'eim' is the expected Hessian.
             This may provide more stable fits, but adds assumption that the
             Hessian is correctly specified.
+        step_halving : {True, False, "finite"}, optional
+            (available with ``method="newton"``) What is done with a step of
+            Newton's method that gives a log-likelihood that is not finite or
+            lower. The default is True, which halves such a step up to 30
+            times, if the link is the canonical link of the family. For the
+            other links the default is ``"finite"``, which halves only a step
+            that gives a log-likelihood that is not finite. A step that gives
+            a lower log-likelihood is kept for these links, since for some of
+            them, for example the square root link, the score and the Hessian
+            are not the derivatives of the log-likelihood where the linear
+            predictor is negative. False takes the full step. See Notes of
+            `LikelihoodModel.fit`.
+
+            .. versionadded:: 0.15.1
 
         Notes
         -----
@@ -1467,6 +1484,23 @@ class GLM(base.LikelihoodModel):
         in future versions. If attach_wls' is true, then the final WLS
         instance of the IRLS iteration is attached to the results instance
         as `results_wls` attribute.
+
+        A step of the IRLS iteration that gives a mean, IRLS weights or a
+        deviance that are not finite is halved towards the previous parameters,
+        up to 30 times, so that the fit converges from starting values for
+        which the full step overflows. For the canonical link of the family,
+        where IRLS is Newton's method, a step that increases the deviance is
+        halved as well. The convergence is not tested after a halved step. If
+        there is no finite step a ``ValueError`` is raised, and a
+        ``ValueError`` is raised if the mean or the weights at start_params
+        are not finite.
+
+        .. versionchanged:: 0.15.1
+
+           Steps of IRLS and of Newton's method are halved. Before, a step
+           that was not finite gave nan parameters with ``converged`` True for
+           Newton's method, and the IRLS fit raised a ``ValueError`` that did
+           not mention start_params.
         """
         if isinstance(scale, str):
             scale = string_like(scale, "scale", options=("x2", "dev"))
@@ -1561,9 +1595,10 @@ class GLM(base.LikelihoodModel):
         fit_kwargs = dict(kwargs)
         if method == "newton" and "step_halving" not in fit_kwargs:
             if not self._canonical_link():
-                # The score and the Hessian of the model are not the derivatives
-                # of the log-likelihood for every other link, so that a step
-                # is only halved if it is not finite.
+                # For some other links, for example Sqrt, the score and the
+                # Hessian are not the derivatives of the log-likelihood where
+                # the mean is outside of its domain, so that a step is only
+                # halved if it is not finite.
                 fit_kwargs["step_halving"] = "finite"
         rslt = super().fit(
             start_params=start_params,
@@ -1665,7 +1700,14 @@ class GLM(base.LikelihoodModel):
             lin_pred = self.family.predict(mu)
         else:
             lin_pred = np.dot(wlsexog, start_params) + self._offset_exposure
-            mu = self.family.fitted(lin_pred)
+            with np.errstate(all="ignore"):
+                mu = self.family.fitted(lin_pred)
+                start_weights = self.family.weights(mu)
+            if not (np.all(np.isfinite(mu)) and np.all(np.isfinite(start_weights))):
+                raise ValueError(
+                    "The mean or the IRLS weights at start_params are not "
+                    "finite. Provide other start_params."
+                )
             params_prev = np.asarray(start_params, dtype=float)
             if monotone:
                 dev_prev = self._unscaled_deviance(mu)
