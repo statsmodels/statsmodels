@@ -105,8 +105,8 @@ def test_survdiff_basic():
 def test_simultaneous_cb():
 
     # Reference values: Klein and Moeschberger (2003), eqs. 4.4.4-4.4.5,
-    # with n = 38 (total sample size) and h = 1.3581, computed
-    # independently with exact Kaplan-Meier/Greenwood sums in mpmath.
+    # n = 38, k = 1.3581; they agree with the Hall-Wellner helper
+    # functions of the R package km.ci at k = 1.3581.
 
     df = bmt.loc[bmt["Group"] == "ALL", :]
     sf = SurvfuncRight(df["T"], df["Status"])
@@ -139,6 +139,24 @@ def test_simultaneous_cb_uses_total_sample_size():
     assert_allclose([lcb[ix], ucb[ix]], [0.2404046938, 0.6655467336], rtol=1e-7)
     lcb, ucb = sf.simultaneous_cb(transform="arcsin")
     assert_allclose([lcb[ix], ucb[ix]], [0.2545953816, 0.6855519801], rtol=1e-7)
+
+
+@pytest.mark.parametrize("transform", ["log", "arcsin"])
+def test_simultaneous_cb_freq_weights_equal_expanded_data(transform):
+    rng = np.random.default_rng(10649)
+    time = rng.integers(1, 30, size=40).astype(np.float64)
+    status = rng.integers(0, 2, size=40)
+    status[:5] = 1
+    weights = rng.integers(1, 5, size=40)
+
+    sf_w = SurvfuncRight(time, status, freq_weights=weights)
+    sf_x = SurvfuncRight(np.repeat(time, weights), np.repeat(status, weights))
+    assert_allclose(sf_w.surv_times, sf_x.surv_times)
+
+    lcb_w, ucb_w = sf_w.simultaneous_cb(transform=transform)
+    lcb_x, ucb_x = sf_x.simultaneous_cb(transform=transform)
+    assert_allclose(lcb_w, lcb_x, rtol=1e-12, atol=1e-14)
+    assert_allclose(ucb_w, ucb_x, rtol=1e-12, atol=1e-14)
 
 
 @pytest.mark.parametrize("n", [8, 10, 12, 18, 24])
