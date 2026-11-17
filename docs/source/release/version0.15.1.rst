@@ -323,11 +323,13 @@ New functions and methods
 - Add the option ``use_t`` to ``GEE.fit``, ``OrdinalGEE.fit`` and
   ``NominalGEE.fit``. With ``use_t=True``, p-values, confidence intervals,
   ``t_test`` and ``f_test`` use the t distribution with the number of groups
-  minus the number of parameters as degrees of freedom. :issue:`8610`
+  minus the number of parameters as degrees of freedom. :issue:`8610`,
+  :pr:`10781`
 - Add ``cov_type="kauermann_carroll"`` to ``GEE.fit``, the Kauermann-Carroll
   small-sample correction of the robust covariance. It scales the residuals
   of each group by the inverse square root of one minus the leverage, where
-  ``"bias_reduced"`` (Mancl-DeRouen) uses the inverse. :issue:`1183`
+  ``"bias_reduced"`` (Mancl-DeRouen) uses the inverse. :issue:`1183`,
+  :pr:`10781`
 
 Performance
 -----------
