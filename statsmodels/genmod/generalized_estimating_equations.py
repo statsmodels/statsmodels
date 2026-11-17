@@ -324,6 +324,12 @@ _gee_fit_doc = """
         The default value is None, which uses `X2` (Pearson's
         chi-square) for Gamma, Gaussian, and Inverse Gaussian.
         The default is 1 for the Binomial and Poisson families.
+    use_t : bool, optional
+        If True, use the t distribution for inference, with the number
+        of groups minus the number of parameters as degrees of freedom.
+        The default is False, which uses the normal distribution.
+
+        .. versionadded:: 0.15.1
 
     Returns
     -------
@@ -1307,6 +1313,7 @@ class GEE(GLM):
         ddof_scale=None,
         scaling_factor=1.0,
         scale=None,
+        use_t=False,
     ):
 
         self.scaletype = scale
@@ -1445,7 +1452,7 @@ class GEE(GLM):
             bcov / scale,
             scale,
             cov_type=cov_type,
-            use_t=False,
+            use_t=use_t,
             attr_kwds=res_kwds,
         )
 
@@ -1912,6 +1919,9 @@ class GEEResults(GLMResults):
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.family = model.family
+        self.use_t = use_t
+        # t inference uses clusters, not observations
+        self.df_resid_inference = model.num_group - (model.nobs - model.df_resid)
 
         attr_kwds = kwds.pop("attr_kwds", {})
         self.__dict__.update(attr_kwds)
@@ -2139,7 +2149,9 @@ class GEEResults(GLMResults):
 
         Notes
         -----
-        The confidence interval is based on the Gaussian distribution.
+        The confidence interval is based on the t distribution with
+        ``df_resid_inference`` degrees of freedom if ``use_t`` is True,
+        and on the normal distribution otherwise.
         """
         # super does not allow to specify cov_type and method is not
         # implemented,
@@ -2149,8 +2161,10 @@ class GEEResults(GLMResults):
         else:
             bse = self.standard_errors(cov_type=cov_type)
         params = self.params
-        dist = stats.norm
-        q = dist.ppf(1 - alpha / 2)
+        if self.use_t:
+            q = stats.t.ppf(1 - alpha / 2, self.df_resid_inference)
+        else:
+            q = stats.norm.ppf(1 - alpha / 2)
 
         lower = params - q * bse
         upper = params + q * bse
@@ -2252,7 +2266,9 @@ class GEEResults(GLMResults):
             xname=xname,
             title=title,
         )
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha, use_t=False)
+        smry.add_table_params(
+            self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t
+        )
         smry.add_table_2cols(
             self,
             gleft=diagn_left,
@@ -2615,6 +2631,7 @@ class OrdinalGEE(GEE):
         params_niter=1,
         first_dep_update=0,
         cov_type="robust",
+        use_t=False,
     ):
 
         rslt = super().fit(
@@ -2624,6 +2641,7 @@ class OrdinalGEE(GEE):
             params_niter,
             first_dep_update,
             cov_type=cov_type,
+            use_t=use_t,
         )
 
         rslt = rslt._results  # use unwrapped instance
@@ -2635,6 +2653,7 @@ class OrdinalGEE(GEE):
             rslt.cov_params() / rslt.scale,
             rslt.scale,
             cov_type=cov_type,
+            use_t=use_t,
             attr_kwds=res_kwds,
         )
         # for k in rslt._props:
@@ -3049,6 +3068,7 @@ class NominalGEE(GEE):
         params_niter=1,
         first_dep_update=0,
         cov_type="robust",
+        use_t=False,
     ):
 
         rslt = super().fit(
@@ -3058,6 +3078,7 @@ class NominalGEE(GEE):
             params_niter,
             first_dep_update,
             cov_type=cov_type,
+            use_t=use_t,
         )
         if rslt is None:
             warnings.warn(
@@ -3074,6 +3095,7 @@ class NominalGEE(GEE):
             rslt.cov_params() / rslt.scale,
             rslt.scale,
             cov_type=cov_type,
+            use_t=use_t,
             attr_kwds=res_kwds,
         )
         # TODO: document or delete

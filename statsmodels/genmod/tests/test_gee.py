@@ -2729,3 +2729,55 @@ def test_autoregressive_equal_objective():
     result = model.fit(scale=1.0, start_params=[1.0, 2.0, 3.0, 5.0])
     ar.update(result.params)
     assert ar.dep_params == 0.0
+
+
+def _small_cluster_data():
+    rng = np.random.default_rng(5243)
+    n_groups, m = 12, 4
+    groups = np.repeat(np.arange(n_groups), m)
+    exog = np.column_stack((np.ones(n_groups * m), rng.standard_normal((48, 2))))
+    endog = exog @ [1.0, 0.5, -0.3] + np.repeat(rng.standard_normal(n_groups), m)
+    endog += rng.standard_normal(n_groups * m)
+    return endog, exog, groups
+
+
+@pytest.mark.parametrize("use_t", [False, True])
+def test_use_t(use_t):
+    # GH 8610
+    from scipy import stats
+
+    endog, exog, groups = _small_cluster_data()
+
+    def fit(**kwds):
+        cs = cov_struct.Exchangeable()
+        return gee.GEE(endog, exog, groups, cov_struct=cs).fit(**kwds)
+
+    res = fit(use_t=use_t)
+
+    assert res.use_t is use_t
+    assert_equal(res.df_resid_inference, 12 - 3)
+    assert_allclose(res.bse, fit().bse, rtol=1e-12)
+
+    if use_t:
+        dist = stats.t(res.df_resid_inference)
+    else:
+        dist = stats.norm
+    assert_allclose(res.pvalues, 2 * dist.sf(np.abs(res.tvalues)), rtol=1e-10)
+    q = dist.ppf(0.975)
+    ci = np.column_stack((res.params - q * res.bse, res.params + q * res.bse))
+    assert_allclose(res.conf_int(), ci, rtol=1e-10)
+    assert_allclose(res.t_test(np.eye(3)).pvalue, res.pvalues, rtol=1e-10)
+    assert ("P>|t|" in str(res.summary())) is use_t
+
+
+def test_use_t_df_constraint_ordinal():
+    # GH 8610
+    endog, exog, groups = _small_cluster_data()
+    constraint = (np.array([[0.0, 1.0, 1.0]]), np.zeros(1))
+    res = gee.GEE(endog, exog, groups, constraint=constraint).fit(use_t=True)
+    assert_equal(res.df_resid_inference, 12 - 2)
+
+    endog_ord = np.digitize(endog, [0, 1, 2])
+    res = gee.OrdinalGEE(endog_ord, exog[:, 1:], groups).fit(use_t=True)
+    assert res.use_t
+    assert_equal(res.df_resid_inference, 12 - len(res.params))
