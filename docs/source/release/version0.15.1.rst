@@ -760,6 +760,7 @@ Time series analysis
   raise a ``MissingDataError`` if ``exog_tvtp`` contains NaN or inf. Before,
   such values were accepted and ``fit`` returned a log-likelihood of NaN
   without an error. The ``missing`` option does not apply to ``exog_tvtp``.
+  :pr:`10766`
 
 Statistics and tests
 --------------------

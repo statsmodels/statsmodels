@@ -12,7 +12,11 @@ import pytest
 
 from statsmodels.tools.numdiff import approx_fprime_cs
 from statsmodels.tools.sm_exceptions import MissingDataError
-from statsmodels.tsa.regime_switching import markov_switching
+from statsmodels.tsa.regime_switching import (
+    markov_autoregression,
+    markov_regression,
+    markov_switching,
+)
 
 
 def test_params():
@@ -114,16 +118,26 @@ def test_init_exog_tvtp():
         markov_switching.MarkovSwitching(endog, k_regimes=2, exog_tvtp=exog_tvtp)
 
 
+@pytest.mark.parametrize(
+    "model, kwargs",
+    [
+        (markov_switching.MarkovSwitching, {}),
+        (markov_regression.MarkovRegression, {}),
+        (markov_autoregression.MarkovAutoregression, {"order": 1}),
+    ],
+    ids=["MarkovSwitching", "MarkovRegression", "MarkovAutoregression"],
+)
+@pytest.mark.parametrize("missing", ["none", "drop", "raise"])
 @pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
 @pytest.mark.parametrize("use_pandas", [False, True])
-def test_init_exog_tvtp_not_finite(value, use_pandas):
-    endog = np.ones(10)
+def test_init_exog_tvtp_not_finite(model, kwargs, missing, value, use_pandas):
+    endog = np.arange(10.0)
     exog_tvtp = np.c_[np.ones((10, 1)), (np.arange(10) + 1)[:, np.newaxis]]
     exog_tvtp[3, 1] = value
     if use_pandas:
         exog_tvtp = pd.DataFrame(exog_tvtp, columns=["const", "x"])
     with pytest.raises(MissingDataError, match="exog_tvtp contains inf or nans"):
-        markov_switching.MarkovSwitching(endog, k_regimes=2, exog_tvtp=exog_tvtp)
+        model(endog, k_regimes=2, exog_tvtp=exog_tvtp, missing=missing, **kwargs)
 
 
 def test_transition_matrix():
