@@ -1,3 +1,5 @@
+import inspect
+
 import numpy as np
 
 from statsmodels.base.elastic_net import RegularizedResults
@@ -548,6 +550,8 @@ class DistributedModel:
         if fit_kwds is None:
             fit_kwds = {}
 
+        self._check_estimation_method()
+
         parallel_method = string_like(
             parallel_method,
             "parallel_method",
@@ -566,14 +570,40 @@ class DistributedModel:
 
         params = self.join_method(results_l, **self.join_kwds)
 
-        # NOTE that currently, the dummy result model that is initialized
-        # here does not use any init_kwds from the init_kwds_generator event
-        # if it is provided.  It is possible to imagine an edge case where
-        # this might be a problem but given that the results model instance
-        # does not correspond to any data partition this seems reasonable.
-        res_mod = self.model_class([0], [0], **self.init_kwds)
+        res_mod = self._dummy_model()
 
         return self.results_class(res_mod, params, **self.results_kwds)
+
+    def _check_estimation_method(self):
+        """Raise early if the debiased method cannot use this model."""
+        if self.estimation_method is not _est_regularized_debiased:
+            return
+        fit_reg = getattr(self.model_class, "fit_regularized", None)
+        if fit_reg is None or "alpha" not in inspect.signature(fit_reg).parameters:
+            name = self.model_class.__name__
+            raise NotImplementedError(
+                f"The default estimation method (_est_regularized_debiased) "
+                f"requires a model whose fit_regularized accepts alpha, which "
+                f"{name} does not support. Use, for example, "
+                f"estimation_method=_est_unregularized_naive with "
+                f"join_method=_join_naive."
+            )
+
+    def _dummy_model(self):
+        """Fake-data model for the results, e.g. for predict."""
+        init_kwds = dict(self.init_kwds)
+        try:
+            sig_params = inspect.signature(self.model_class).parameters
+        except (TypeError, ValueError):
+            sig_params = {}
+        groups = sig_params.get("groups")
+        if (
+            groups is not None
+            and groups.default is inspect.Parameter.empty
+            and "groups" not in init_kwds
+        ):
+            init_kwds["groups"] = [0]
+        return self.model_class([0], [0], **init_kwds)
 
     def fit_sequential(self, data_generator, fit_kwds, init_kwds_generator=None):
         """Sequentially performs the distributed estimation using
