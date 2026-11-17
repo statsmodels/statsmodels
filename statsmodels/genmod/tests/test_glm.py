@@ -2772,7 +2772,8 @@ def test_regularized_freq_weights_match_expanded_data(family, fit_kwds):
         endog = rng.poisson(2, n).astype(float)
     else:
         endog = rng.normal(size=n)
-    freq_weights = rng.integers(1, 5, size=n)
+    # intp: np.repeat needs counts that safely cast to intp (int32 on wasm32)
+    freq_weights = rng.integers(1, 5, size=n).astype(np.intp)
 
     weighted = GLM(endog, exog, family=family(), freq_weights=freq_weights)
     expanded = GLM(
