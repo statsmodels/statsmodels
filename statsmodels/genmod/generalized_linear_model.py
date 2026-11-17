@@ -1980,10 +1980,11 @@ class GLM(base.LikelihoodModel):
             start_params = np.zeros(self.exog.shape[1])
 
         def fun(x):
-            return -(self.loglike(x) / self.wnobs - np.sum(alpha * x**2) / 2)
+            llf = self.loglike(x, scale=1)
+            return -(llf / self.wnobs - np.sum(alpha * x**2) / 2)
 
         def grad(x):
-            return -(self.score(x) / self.wnobs - alpha * x)
+            return -(self.score(x, scale=1) / self.wnobs - alpha * x)
 
         from scipy.optimize import minimize
 

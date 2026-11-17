@@ -2568,11 +2568,13 @@ def test_tweedie_EQL():
         atol=atol,
     )
 
-    # Series of ridge fits using gradients
+    # Series of ridge fits using gradients.  The values are the fits with
+    # a log-likelihood of scale 1, which the coordinate descent of
+    # fit_regularized with L1_wt=1e-8 reproduces to 2e-6.
     ev = (
-        np.array([1.001778, -0.99388, 0.00797, 0.506183]),
-        np.array([0.98586638, -0.96953481, 0.00749983, 0.4975267]),
-        np.array([0.206429, -0.164547, 0.000235, 0.102489]),
+        np.array([0.983342, -0.965747, 0.007411, 0.496125]),
+        np.array([0.830026, -0.762183, 0.004555, 0.415303]),
+        np.array([0.776406, -0.699885, 0.003953, 0.387769]),
     )
     for j, alpha in enumerate([0.05, 0.5, 0.7]):
         model3 = sm.GLM(y, x, family=fam)
@@ -2786,6 +2788,63 @@ def test_regularized_freq_weights_match_expanded_data(family, fit_kwds):
     res_w = weighted.fit_regularized(alpha=0.05, **fit_kwds)
     res_e = expanded.fit_regularized(alpha=0.05, **fit_kwds)
     assert_allclose(res_w.params, res_e.params, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "alpha",
+    [0.15, np.array([0.0, 0.1, 0.3, 0.3])],
+    ids=["scalar", "array_with_zero"],
+)
+def test_ridge_gaussian_matches_closed_form(alpha):
+    # With L1_wt=0 the objective is the penalized least squares problem
+    # RSS / (2 n) + sum(alpha * params**2) / 2, whose minimizer is
+    # solve(X'X / n + diag(alpha), X'y / n).  The ridge fit used to divide the
+    # residual sum of squares by the scale estimated at each parameter value.
+    rng = np.random.default_rng(20261117)
+    n = 100
+    exog = add_constant(rng.normal(size=(n, 3)))
+    endog = exog @ [0.5, 1.0, -0.5, 0.3] + rng.normal(size=n)
+    expected = np.linalg.solve(
+        exog.T @ exog / n + np.diag(np.ones(4) * alpha), exog.T @ endog / n
+    )
+    model = GLM(endog, exog, family=sm.families.Gaussian())
+    res = model.fit_regularized(alpha=alpha, L1_wt=0)
+    # atol: the ridge problem is solved with BFGS (gradient tolerance 1e-5)
+    assert_allclose(res.params, expected, rtol=1e-5, atol=1e-4)
+
+
+@pytest.mark.parametrize(
+    "family",
+    [
+        sm.families.Gaussian(),
+        sm.families.Gamma(sm.families.links.Log()),
+        sm.families.Binomial(),
+        sm.families.Poisson(),
+    ],
+    ids=["Gaussian", "Gamma", "Binomial", "Poisson"],
+)
+def test_ridge_matches_elastic_net_with_tiny_l1_wt(family):
+    # L1_wt=0 is solved with scipy, any L1_wt > 0 with coordinate descent,
+    # which uses a log-likelihood with scale 1.  A tiny L1_wt gives the same
+    # problem, whatever the family.  Binomial and Poisson have a fixed scale.
+    rng = np.random.default_rng(20261118)
+    n = 100
+    exog = add_constant(rng.normal(size=(n, 3)))
+    eta = 0.3 + exog[:, 1:] @ [0.4, -0.3, 0.2]
+    if isinstance(family, sm.families.Binomial):
+        endog = (rng.random(n) < 1 / (1 + np.exp(-eta))).astype(float)
+    elif isinstance(family, sm.families.Poisson):
+        endog = rng.poisson(np.exp(eta)).astype(float)
+    elif isinstance(family, sm.families.Gamma):
+        endog = np.exp(eta) * rng.gamma(5, 0.2, size=n)
+    else:
+        endog = eta + rng.normal(size=n)
+    alpha = np.array([0.0, 0.1, 0.1, 0.1])
+    model = GLM(endog, exog, family=family)
+    res_ridge = model.fit_regularized(alpha=alpha, L1_wt=0)
+    res_enet = model.fit_regularized(alpha=alpha, L1_wt=1e-8)
+    # atol: BFGS stops at a gradient norm of 1e-5
+    assert_allclose(res_ridge.params, res_enet.params, rtol=1e-5, atol=1e-4)
 
 
 class TestRegularized:

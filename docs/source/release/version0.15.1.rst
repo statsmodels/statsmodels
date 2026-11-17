@@ -603,6 +603,15 @@ Generalized linear models and discrete models
   the mean or the weights at ``start_params`` are not finite. A Newton fit
   from such starting values returned ``nan`` parameters with ``converged``
   ``True``. :issue:`5394`, :pr:`10605`
+- ``GLM.fit_regularized`` with ``L1_wt=0`` (the ridge fit) used the scale
+  estimated at the current parameters in the log-likelihood and the score,
+  where the fits with ``L1_wt`` greater than 0 and ``method="l1_slsqp"`` use a
+  scale of 1. For families with an estimated scale, for example ``Gaussian``,
+  ``Gamma`` and ``Tweedie``, the estimates differed from the solution of the
+  penalized problem, for example from the closed-form ridge estimate of the
+  linear model, and the fit often warned that the optimization may have
+  failed. The estimates of ``Binomial`` and ``Poisson``, which have a fixed
+  scale, are unchanged. :pr:`10705`
 
 Mixed models and imputation
 ---------------------------
