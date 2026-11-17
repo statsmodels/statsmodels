@@ -513,6 +513,12 @@ Generalized linear models and discrete models
   ``summary``, used the number of rows instead of the sum of the
   ``freq_weights``. With frequency weights the value differed from the value
   for the data with each row repeated according to its weight. :pr:`10684`
+- ``GLM.fit_regularized`` scaled the log-likelihood by the number of rows
+  instead of the sum of the ``freq_weights``, for ``method="elastic_net"``,
+  ``method="l1_slsqp"`` and the ridge fit with ``L1_wt=0``. With frequency
+  weights this changed the effective penalty, so the estimates and the
+  selected variables differed from the fit on the data with each row
+  repeated according to its weight.
 - The ``score`` of ``TruncatedLFGeneralizedPoisson`` and
   ``TruncatedLFNegativeBinomialP`` was incorrect for every ``p`` except
   ``p=1`` of the generalized Poisson and ``p=2`` of the negative binomial
