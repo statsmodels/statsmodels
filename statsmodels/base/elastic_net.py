@@ -15,6 +15,9 @@ regularization.  The elastic net minimizes the objective function
 -llf / nobs + alpha((1 - L1_wt) * sum(params**2) / 2 +
     L1_wt * sum(abs(params)))
 
+where nobs is the number of observations, or the sum of the frequency
+weights if the model has a ``wnobs`` attribute (GLM).
+
 The algorithm implemented here closely follows the implementation in
 the R glmnet package, documented here:
 
@@ -328,7 +331,10 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
     -loglike/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
 
-    where |*|_1 and |*|_2 are the L1 and L2 norms.
+    where |*|_1 and |*|_2 are the L1 and L2 norms, and ``n`` is the number of
+    observations, ``model.nobs``. If the model has a ``wnobs`` attribute,
+    which is the sum of the ``freq_weights`` for GLM, ``n`` is ``model.wnobs``.
+    The ``var_weights`` of GLM are not part of ``n``.
 
     When ``method`` is 'coord_descent', the computational approach
     used is to obtain a quadratic approximation to the smooth part of

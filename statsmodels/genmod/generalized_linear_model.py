@@ -1874,7 +1874,22 @@ class GLM(base.LikelihoodModel):
 
             -loglike/n + alpha*((1-L1\_wt)*|params|_2^2/2 + L1\_wt*|params|_1)
 
-        where :math:`|*|_1` and :math:`|*|_2` are the L1 and L2 norms.
+        where :math:`|*|_1` and :math:`|*|_2` are the L1 and L2 norms, and
+        ``n`` is the sum of ``freq_weights``, which is the number of rows if
+        the model has no ``freq_weights``. A fit with ``freq_weights`` has the
+        same estimates as a fit to the data with each row repeated according
+        to its weight. The ``var_weights`` are not part of ``n``. They enter
+        ``loglike``, so that multiplying ``var_weights`` by a constant changes
+        the estimates. The log-likelihood is computed with a scale of 1.
+
+        .. versionchanged:: 0.15.1
+
+           ``n`` is the sum of ``freq_weights``. Before, it was the number of
+           rows, so that the estimates of fits with ``freq_weights`` differed
+           from those of the data with repeated rows. The estimates of fits
+           without ``freq_weights`` are unchanged. The ridge fit with
+           ``L1_wt=0`` uses a scale of 1 as the other fits do, where it used
+           the estimated scale for the families with an estimated scale.
 
         Post-estimation results are based on the same data used to
         select variables, hence may be subject to overfitting biases.
