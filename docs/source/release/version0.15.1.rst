@@ -467,9 +467,12 @@ Generalized linear models and discrete models
   step with a finite log-likelihood is found, the fit stops at the last
   parameters, ``converged`` is ``False`` and a ``ConvergenceWarning`` is
   issued. Before, the parameters were ``nan`` and ``converged`` was ``True``.
-  The keyword ``step_halving`` is ``"finite"`` to halve only a step that is not
-  finite, which is used for ``GLM`` with a link that is not canonical, and
-  ``False`` for the full Newton step. The IRLS fit of ``GLM`` halves a step
+  The iteration ends when the full Newton step is small, not when a shortened
+  step is, so that a fit that stops at the border of the region where the
+  log-likelihood is finite is not reported as converged. The keyword
+  ``step_halving`` is ``"finite"`` to halve only a step that is not finite,
+  which is used for ``GLM`` with a link that is not canonical, and ``False``
+  for the full Newton step. The IRLS fit of ``GLM`` halves a step
   towards the last parameters if the deviance or the weights are not finite,
   and for a canonical link if the deviance increases, as ``glm.fit`` in R
   halves a step that diverges, where it raised "NaN, inf or invalid value

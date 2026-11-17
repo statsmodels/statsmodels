@@ -14,6 +14,7 @@ from statsmodels.base.optimizer import (
     _fit_newton,
     _fit_nm,
     _fit_powell,
+    _newton_step_halving,
 )
 
 fit_funcs = {
@@ -335,6 +336,114 @@ def test_newton_no_finite_step_is_not_converged():
     assert not retvals["converged"]
     assert retvals["warnflag"] == 2
     assert retvals["iterations"] == 0
+
+
+def test_newton_shortened_step_is_not_convergence():
+    # f is finite for x <= 1 + 1e-9 only and its minimum at 2 is outside of
+    # that region. The shortened steps end at the border, where they are
+    # smaller than tol, but the gradient is -2 and the full Newton step is 1.
+    limit = 1 + 1e-9
+
+    def f(x, *args):
+        x = np.asarray(x)
+        return float(np.sum((x - 2) ** 2)) if np.all(x <= limit) else np.nan
+
+    def score(x):
+        return 2 * (np.asarray(x, dtype=float) - 2)
+
+    def hess(x):
+        return 2 * np.eye(len(x))
+
+    params, retvals = _fit_newton(
+        f, score, np.array([0.0]), (), {}, hess=hess, maxiter=100
+    )
+    assert not retvals["converged"]
+    assert retvals["warnflag"] == 2
+    assert_allclose(params, 1.0, atol=2e-9)
+    assert_allclose(score(params), -2.0, atol=1e-8)
+
+
+def test_newton_shortened_steps_converge_if_the_newton_step_is_small():
+    # The Hessian is wrong by a factor of 100, so that every step is shortened.
+    # The iteration converges anyway, when the full Newton step is below tol.
+    f, score, hess = _newton_funcs(1.0, 0.01)
+    _, retvals = _fit_newton(
+        f, score, np.array([0.5]), (), {"tol": 1e-4}, hess=hess, retall=True
+    )
+    assert retvals["converged"]
+    last, previous = retvals["allvecs"][-1], retvals["allvecs"][-2]
+    # the last step is shortened, its length is far below that of the full step
+    assert abs(last - previous) < 1e-4 / 10
+    assert abs(100 * previous) <= 1e-4
+
+
+def _line_f(values):
+    """f along the ray x = 1, 1/2, 1/4, ... given by `values`, else nan"""
+    table = {1.0 / 2**k: v for k, v in enumerate(values)}
+
+    def f(x, *args):
+        return table.get(float(x[0]), np.nan)
+
+    return f
+
+
+def _halve_newton(values, fold):
+    # the update is oldparams - step = 1, then 1 / 2 and so on
+    return _newton_step_halving(
+        _line_f(values), (), np.array([0.0]), np.array([-1.0]), fold
+    )
+
+
+def test_newton_step_halving_tolerance():
+    # an increase of f of 1e-14 is rounding noise and is accepted, the larger
+    # increase of 1e-6 is not
+    params, fnew, success, shortened = _halve_newton([1 + 1e-14, 0.5], 1.0)
+    assert success
+    assert not shortened
+    assert_allclose(params, 1.0)
+    assert fnew == 1 + 1e-14
+
+    params, fnew, success, shortened = _halve_newton([1 + 1e-6, 0.5], 1.0)
+    assert success
+    assert shortened
+    assert_allclose(params, 0.5)
+    assert fnew == 0.5
+
+
+def test_newton_step_halving_no_decrease_found():
+    # f does not decrease for any step, so that the first step with a finite
+    # value is used
+    params, fnew, success, shortened = _halve_newton([2.0, 3.0], 1.0)
+    assert success
+    assert not shortened
+    assert_allclose(params, 1.0)
+    assert fnew == 2.0
+
+    params, fnew, success, shortened = _halve_newton([np.nan, 3.0, 2.0], 1.0)
+    assert success
+    assert shortened
+    assert_allclose(params, 0.5)
+    assert fnew == 3.0
+
+
+def test_newton_step_halving_value_not_needed():
+    # fold is nan if the step is not a direction of descent. Then any step
+    # with a finite value is accepted, and a step that is not finite is not.
+    params, fnew, success, shortened = _halve_newton([1e9, 0.5], np.nan)
+    assert success
+    assert not shortened
+    assert fnew == 1e9
+
+    params, fnew, success, shortened = _halve_newton([np.nan, 1e9], np.nan)
+    assert success
+    assert shortened
+    assert_allclose(params, 0.5)
+
+    params, fnew, success, shortened = _halve_newton([np.nan, np.nan], 1.0)
+    assert not success
+    assert not shortened
+    assert_allclose(params, 0.0)
+    assert fnew == 1.0
 
 
 def test_newton_nonfinite_start_is_not_converged():

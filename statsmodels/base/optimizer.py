@@ -482,6 +482,9 @@ def _newton_step_halving(f, fargs, oldparams, step, fold, max_halvings=30):
     success : bool
         False if no step with a finite value of f was found. Then newparams
         and fnew are the unchanged oldparams and fold.
+    shortened : bool
+        True if the step was shortened, so that newparams is not the full
+        Newton update.
 
     Notes
     -----
@@ -510,13 +513,13 @@ def _newton_step_halving(f, fargs, oldparams, step, fold, max_halvings=30):
             fnew = f(newparams, *fargs)
             if np.isfinite(fnew):
                 if not finite_fold or fnew <= fold + tol:
-                    return newparams, fnew, True
+                    return newparams, fnew, True, factor < 1
                 if first_finite is None:
-                    first_finite = (newparams, fnew, True)
+                    first_finite = (newparams, fnew, True, factor < 1)
             factor /= 2
     if first_finite is not None:
         return first_finite
-    return oldparams, fold, False
+    return oldparams, fold, False, False
 
 
 def _fit_newton(
@@ -591,6 +594,12 @@ def _fit_newton(
     finite is halved, which is the choice for models where the score and the
     Hessian are not the derivatives of the objective. Use
     ``step_halving=False`` to take the full Newton step in every iteration.
+    The iteration stops if the change of the parameters is at most `tol` in
+    every element. For a step that was shortened the change of the parameters
+    is that of the full Newton step, since a shortened step can be small only
+    because the objective is not finite or increases beyond it. If the
+    iteration only takes shortened steps, it ends at `maxiter` with
+    `warnflag` 1, or at a point beyond which no step has a finite value.
 
     .. versionchanged:: 0.15.1
 
@@ -610,7 +619,8 @@ def _fit_newton(
             fnew = f(newparams, *fargs)
     if retall:
         history = [oldparams, newparams]
-    while iterations < maxiter and np.any(np.abs(newparams - oldparams) > tol):
+    change = np.abs(newparams - oldparams)
+    while iterations < maxiter and np.any(change > tol):
         H = np.asarray(hess(newparams))
         # regularize Hessian, not clear what ridge factor should be
         # keyword option with absolute default 1e-10, see #1847
@@ -627,7 +637,7 @@ def _fit_newton(
             # because of it.
             descent = float(np.dot(np.ravel(grad), np.ravel(step))) > 0
             decrease = step_halving != "finite" and descent
-            newparams, fnew, success = _newton_step_halving(
+            newparams, fnew, success, shortened = _newton_step_halving(
                 f, fargs, oldparams, step, fnew if decrease else np.nan
             )
             if not success:
@@ -635,6 +645,11 @@ def _fit_newton(
                 break
         else:
             newparams = oldparams - step
+            shortened = False
+        # A shortened step can be small only because f is not finite or
+        # increases beyond it, which does not show that the iteration
+        # converged. Then the change of the full Newton step is used.
+        change = np.abs(step) if shortened else np.abs(newparams - oldparams)
         if retall:
             history.append(newparams)
         if callback is not None:
