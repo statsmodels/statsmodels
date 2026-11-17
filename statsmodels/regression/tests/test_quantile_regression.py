@@ -133,6 +133,36 @@ def test_fitted_residuals():
     assert_almost_equal(np.array(res.resid), Rquantreg.residuals, 5)
 
 
+@pytest.mark.parametrize(
+    "q, bse_r",
+    [
+        (0.25, [24.16391949, 0.02954882232]),
+        (0.5, [30.21531585, 0.03731703545]),
+        (0.75, [29.11875602, 0.03621606536]),
+    ],
+)
+def test_robust_vcov_rquantreg(q, bse_r):
+    # R quantreg 6.1:
+    # data(engel)
+    # summary(rq(foodexp ~ income, tau=q, data=engel), se="ker")
+    data = sm.datasets.engel.load_pandas().data
+    res = QuantReg.from_formula("foodexp ~ income", data).fit(q=q, kernel="gau")
+    assert_allclose(res.bse.values, bse_r, rtol=1e-7)
+
+
+def test_robust_vcov_heteroskedastic():
+    # the density of the errors at each observation depends on exog, so the
+    # robust standard errors must differ from the iid ones also at q=0.5
+    rng = np.random.default_rng(0)
+    nobs = 2000
+    x = rng.uniform(0, 2, size=nobs)
+    exog = sm.add_constant(x)
+    endog = 1 + x + (0.2 + x) * rng.standard_normal(nobs)
+    res_robust = QuantReg(endog, exog).fit(q=0.5)
+    res_iid = QuantReg(endog, exog).fit(q=0.5, vcov="iid")
+    assert res_robust.bse[1] > 1.2 * res_iid.bse[1]
+
+
 class TestEpanechnikovHsheatherQ75(CheckModelResultsMixin):
     # Vincent Arel-Bundock also spot-checked q=.1
     @classmethod
@@ -262,7 +292,7 @@ def test_zero_resid():
     res.summary()
 
     assert_allclose(res.params, np.array([0.0, 0.96774163]), rtol=1e-4, atol=1e-20)
-    assert_allclose(res.bse, np.array([0.0447576, 0.01154867]), rtol=1e-4, atol=1e-20)
+    assert_allclose(res.bse, np.array([0.03733108, 0.01094006]), rtol=1e-4, atol=1e-20)
     assert_allclose(
         res.resid,
         np.array([0.0, 3.22583680e-02, -3.22574272e-02, 9.40732912e-07]),
@@ -279,7 +309,7 @@ def test_zero_resid():
     assert_allclose(
         res.params, np.array([9.99982796e-08, 9.67741630e-01]), rtol=1e-4, atol=1e-20
     )
-    assert_allclose(res.bse, np.array([0.04455029, 0.01155251]), rtol=1e-4, atol=1e-20)
+    assert_allclose(res.bse, np.array([0.03726937, 0.01094055]), rtol=1e-4, atol=1e-20)
     assert_allclose(
         res.resid,
         np.array([-9.99982796e-08, 3.22583598e-02, -3.22574234e-02, 9.46361860e-07]),
