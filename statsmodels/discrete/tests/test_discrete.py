@@ -2762,8 +2762,13 @@ def _mnlogit_pandas_fit(regularized):
     return res, exog, index
 
 
+# pandas GH 62820: a Categorical cannot be unpickled with pandas 2.3.3 on WASM
+PICKLED = [False] if PYTHON_IMPL_WASM else [False, True]
+PICKLED_IDS = ["fitted"] if PYTHON_IMPL_WASM else ["fitted", "pickled"]
+
+
 @pytest.mark.parametrize("regularized", [False, True], ids=["fit", "fit_regularized"])
-@pytest.mark.parametrize("pickled", [False, True], ids=["fitted", "pickled"])
+@pytest.mark.parametrize("pickled", PICKLED, ids=PICKLED_IDS)
 def test_mnlogit_predict_in_sample_fit_methods(regularized, pickled):
     # GH 4541: the in-sample DataFrame is kept by the results of
     # fit_regularized and by results that are pickled and unpickled
