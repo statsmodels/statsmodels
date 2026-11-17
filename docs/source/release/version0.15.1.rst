@@ -291,6 +291,14 @@ New functions and methods
   the R package forecast. The results of the default arguments are
   unchanged.
   :issue:`10753`, :pr:`10755`
+- Add :func:`~statsmodels.tsa.stattools.clark_west_test`, the test of Clark
+  and West (2007) of equal predictive accuracy of nested models, and its
+  result class ``ClarkWestResult``. It adjusts the mean squared prediction
+  error of the larger model for the noise from estimating parameters that
+  are zero under the null, which biases the comparison of the unadjusted
+  errors, for example with ``diebold_mariano_test``, against the larger
+  model. The function is available from ``statsmodels.tsa.api``.
+  :issue:`10754`, :pr:`10756`
 
 Performance
 -----------

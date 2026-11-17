@@ -40,6 +40,7 @@ from statsmodels.tsa.stattools import (
     ADFullerResult,
     BreakvarHeteroskedasticityResult,
     CcfResult,
+    ClarkWestResult,
     CointResult,
     JackknifeResult,
     KPSSResult,
@@ -59,6 +60,7 @@ from statsmodels.tsa.stattools import (
     breakvar_heteroskedasticity_test,
     ccf,
     ccovf,
+    clark_west_test,
     coint,
     diebold_mariano_test,
     grangercausalitytests,
@@ -2581,6 +2583,211 @@ def test_diebold_mariano_negative_variance():
         diebold_mariano_test(y, forecast_a, forecast_b, kernel="uniform", horizon=2)
     res = diebold_mariano_test(y, forecast_a, forecast_b, kernel="bartlett", lags=1)
     assert np.isfinite(res.statistic)
+
+
+# clark_west_data.csv: 60 one-step forecasts of y[t + 1] = 0.3 + 0.25 x[t] + e,
+# x an AR(1) with coefficient 0.8, from recursive estimation starting with 60
+# observations (numpy default_rng(20261111)), rounded to 6 decimals. The
+# restricted forecast is the historical mean of y, the unrestricted forecast
+# the OLS regression of y on a constant and x:
+#
+# rng = np.random.default_rng(20261111)
+# x = np.empty(121)
+# x[0] = rng.normal()
+# for t in range(1, 121):
+#     x[t] = 0.8 * x[t - 1] + rng.normal()
+# y = 0.3 + 0.25 * np.r_[0.0, x[:-1]] + rng.normal(size=121)
+# rows = []
+# for t in range(60, 120):
+#     ys, xs = y[1 : t + 1], x[:t]
+#     beta = np.linalg.lstsq(np.column_stack([np.ones(t), xs]), ys, rcond=None)[0]
+#     rows.append((y[t + 1], ys.mean(), beta[0] + beta[1] * x[t]))
+# np.round(rows, 6) gives the columns y, f_restricted, f_unrestricted
+# The reference values in results_clark_west.csv are from R 4.4.2 with
+# sandwich 3.1.3 and forecastdom 0.1.1:
+#
+# library(sandwich); library(forecastdom)
+# cw <- read.csv("clark_west_data.csv")
+# e1 <- cw$y - cw$f_restricted
+# e2 <- cw$y - cw$f_unrestricted
+# f <- e1^2 - (e2^2 - (cw$f_restricted - cw$f_unrestricted)^2)
+# fit <- lm(f ~ 1)
+# for (L in 0:4) {
+#   v <- NeweyWest(fit, lag = L, prewhite = FALSE, adjust = FALSE)[1, 1]
+#   s <- coef(fit)[[1]] / sqrt(v)
+#   print(c(s, pnorm(s, lower.tail = FALSE)), digits = 17)
+# }
+# for (L in 1:3) {
+#   v <- kernHAC(fit, kernel = "Truncated", bw = L, prewhite = FALSE,
+#                adjust = FALSE)[1, 1]
+#   s <- coef(fit)[[1]] / sqrt(v)
+#   print(c(s, pnorm(s, lower.tail = FALSE)), digits = 17)
+# }
+# r <- cw_test(e1, e2, cw$f_restricted, cw$f_unrestricted)
+# print(c(r$statistic, r$pvalue), digits = 17)
+# print(c(mean(e1^2), mean(e2^2),
+#         mean((cw$f_restricted - cw$f_unrestricted)^2)), digits = 17)
+CW_RESULTS = pd.read_csv(CURR_DIR.joinpath("results", "results_clark_west.csv"))
+
+
+@pytest.fixture
+def cw_data():
+    data = pd.read_csv(CURR_DIR.joinpath("results", "clark_west_data.csv"))
+    return data["y"], data["f_restricted"], data["f_unrestricted"]
+
+
+@pytest.mark.parametrize("row", CW_RESULTS.to_dict("records"))
+def test_clark_west_r_reference(cw_data, row):
+    res = clark_west_test(*cw_data, lags=row["lags"], kernel=row["kernel"])
+    assert isinstance(res, ClarkWestResult)
+    assert_allclose(res.statistic, row["statistic"], rtol=1e-10)
+    assert_allclose(res.pvalue, row["pvalue"], rtol=1e-10)
+    assert res.lags == row["lags"]
+    assert res.kernel == row["kernel"]
+
+
+def test_clark_west_forecastdom(cw_data):
+    res = clark_west_test(*cw_data, lags=0)
+    # forecastdom::cw_test uses the least squares standard error, which
+    # divides the variance by T - 1 instead of T
+    nobs = len(cw_data[0])
+    statistic = res.statistic * np.sqrt((nobs - 1) / nobs)
+    assert_allclose(statistic, 1.4128255421051328, rtol=1e-10)
+    assert_allclose(stats.norm.sf(statistic), 0.078853513078140369, rtol=1e-10)
+    assert_allclose(res.mspe_restricted, 1.2824170794716332, rtol=1e-12)
+    assert_allclose(res.mspe_unrestricted, 1.2418206833121166, rtol=1e-12)
+    assert_allclose(res.adjustment, 0.036854387906683335, rtol=1e-12)
+    statistic, pvalue = res
+    assert statistic == res.statistic
+    assert pvalue == res.pvalue
+
+
+@pytest.mark.parametrize("kernel", ["bartlett", "uniform"])
+def test_clark_west_adjusted_loss_identity(kernel):
+    # The adjusted loss differential equals 2 e_1 (f_2 - f_1)
+    rng = np.random.default_rng(20261114)
+    y, f1, f2 = rng.standard_normal((3, 100))
+    res = clark_west_test(y, f1, f2, kernel=kernel, horizon=3)
+    adj_loss_diff = 2 * (y - f1) * (f2 - f1)
+    ols = OLS(adj_loss_diff, np.ones(100)).fit(
+        cov_type="HAC", cov_kwds={"maxlags": res.lags, "kernel": kernel}
+    )
+    assert_allclose(res.statistic, ols.tvalues[0], rtol=1e-12)
+    assert_allclose(res.pvalue, stats.norm.sf(ols.tvalues[0]), rtol=1e-12)
+
+
+def test_clark_west_argument_order(cw_data):
+    y, f_restricted, f_unrestricted = (np.asarray(a, dtype=float) for a in cw_data)
+    res = clark_west_test(y, f_restricted, f_unrestricted)
+    swapped = clark_west_test(y, f_unrestricted, f_restricted)
+    adj_loss_diff = (y - f_restricted) ** 2 - (
+        (y - f_unrestricted) ** 2 - (f_restricted - f_unrestricted) ** 2
+    )
+    swapped_adj_loss_diff = -adj_loss_diff + 2 * (f_restricted - f_unrestricted) ** 2
+    ols = OLS(swapped_adj_loss_diff, np.ones_like(y)).fit(
+        cov_type="HAC", cov_kwds={"maxlags": swapped.lags}
+    )
+    assert_allclose(swapped.statistic, ols.tvalues[0], rtol=1e-10)
+    assert not np.isclose(swapped.statistic, -res.statistic, rtol=1e-3)
+    assert_allclose(
+        swapped.mspe_restricted - swapped.mspe_unrestricted,
+        res.mspe_unrestricted - res.mspe_restricted,
+        rtol=1e-12,
+    )
+
+
+def test_clark_west_statistic_exceeds_dm():
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal(400)
+    y = 0.05 * x + rng.standard_normal(400)
+    f_restricted, f_unrestricted = [], []
+    for t in range(200, 400):
+        f_restricted.append(y[:t].mean())
+        slope, intercept = np.polyfit(x[:t], y[:t], 1)
+        f_unrestricted.append(intercept + slope * x[t])
+    res = clark_west_test(y[200:], f_restricted, f_unrestricted)
+    dm = diebold_mariano_test(
+        y[200:], f_restricted, f_unrestricted, alternative="larger"
+    )
+    assert res.statistic > dm.statistic
+    assert_allclose(res.statistic, 1.8726072917195915, rtol=1e-6)
+    assert_allclose(dm.statistic, 1.2505199142075583, rtol=1e-6)
+
+
+@pytest.mark.parametrize("horizon", [1, 2, 3])
+def test_clark_west_default_lags(cw_data, horizon):
+    uniform = clark_west_test(*cw_data, kernel="uniform", horizon=horizon)
+    assert uniform.lags == horizon - 1
+    bartlett = clark_west_test(*cw_data, horizon=horizon)
+    assert bartlett.lags == max(horizon - 1, int(np.ceil(60 ** (1 / 3))))
+
+
+def _cw_degenerate_inputs(case, cw_data):
+    y, f_restricted, _ = (np.asarray(a, dtype=float) for a in cw_data)
+    if case in ("identical_bartlett", "identical_uniform"):
+        kernel = case.split("_")[1]
+        return (y, f_restricted, f_restricted), {"kernel": kernel}
+    if case == "constant_errors":
+        y_scaled = 10 * np.random.default_rng(0).standard_normal(100)
+        return (y_scaled, y_scaled + 0.1, y_scaled + 0.2), {}
+    if case == "non_finite":
+        f_nan = f_restricted.copy()
+        f_nan[5] = np.nan
+        return (y, f_restricted, f_nan), {}
+    if case == "negative_variance":
+        # 2 * f_restricted**2 alternates between 8 and 0.5, so the uniform
+        # kernel with one lag gives a negative variance
+        return (
+            (np.zeros(20), np.tile([2.0, 0.5], 10), np.zeros(20)),
+            {"kernel": "uniform", "lags": 1},
+        )
+    raise ValueError(f"unknown case {case}")
+
+
+@pytest.mark.parametrize(
+    "case, exception, match",
+    [
+        ("identical_bartlett", ValueError, "constant"),
+        ("identical_uniform", ValueError, "constant"),
+        ("constant_errors", ValueError, "constant"),
+        ("non_finite", MissingDataError, "non-finite"),
+        ("negative_variance", ValueError, "not positive"),
+    ],
+)
+def test_clark_west_degenerate(cw_data, case, exception, match):
+    args, kwargs = _cw_degenerate_inputs(case, cw_data)
+    with pytest.raises(exception, match=match):
+        clark_west_test(*args, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        pytest.param({"lags": -1}, "^lags must", id="negative_lags"),
+        pytest.param({"horizon": 0}, "horizon", id="horizon_zero"),
+        pytest.param({"kernel": "parzen"}, "kernel", id="unknown_kernel"),
+        pytest.param({"horizon": 60}, r"horizon \(60\)", id="horizon_nobs"),
+        pytest.param(
+            {"kernel": "uniform", "lags": 59}, r"lags \(59\)", id="uniform_lags"
+        ),
+    ],
+)
+def test_clark_west_invalid_arguments(cw_data, kwargs, match):
+    with pytest.raises(ValueError, match=match):
+        clark_west_test(*cw_data, **kwargs)
+
+
+def test_clark_west_horizon_unused_with_lags(cw_data):
+    res = clark_west_test(*cw_data, horizon=60, lags=0)
+    expected = clark_west_test(*cw_data, horizon=1, lags=0)
+    assert_allclose(res.statistic, expected.statistic, rtol=1e-14)
+    assert res.lags == 0
+
+
+def test_clark_west_unequal_length(cw_data):
+    y, f_restricted, f_unrestricted = cw_data
+    with pytest.raises(ValueError, match="equal length"):
+        clark_west_test(y, f_restricted, f_unrestricted[:-1])
 
 
 def test_arma_order_select_ic_failure():
