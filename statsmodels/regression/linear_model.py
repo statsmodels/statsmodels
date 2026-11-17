@@ -50,6 +50,7 @@ from statsmodels.emplike.elregress import _ELRegOpts
 # need import in module instead of lazily to copy `__doc__`
 from statsmodels.regression._prediction import PredictionResults
 from statsmodels.tools._decorators import cache_readonly, cache_writable
+from statsmodels.tools._lstsq import QRSVD, default_rcond, numerical_rank
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.sm_exceptions import (
     InvalidTestWarning,
@@ -368,7 +369,9 @@ class RegressionModel(base.LikelihoodModel):
         method : {'pinv', 'qr'}, optional
             Can be "pinv", "qr".  "pinv" uses the Moore-Penrose pseudoinverse
             to solve the least squares problem. "qr" uses the QR
-            factorization.
+            factorization of the design followed by the SVD of the R factor.
+            Both return the minimum-norm solution and use the same rank rule,
+            see Notes.
         cov_type : str, optional
             See `regression.linear_model.RegressionResults` for a description
             of the available covariance estimators.
@@ -403,6 +406,13 @@ class RegressionModel(base.LikelihoodModel):
         The fit method uses the pseudoinverse of the design/exogenous variables
         to solve the least squares minimization.
 
+        A singular value of the design is treated as zero if it is at most
+        ``max(nobs, k) * eps`` times the largest singular value, where ``eps``
+        is the machine precision. This is the rule of
+        ``numpy.linalg.matrix_rank``. The rank, ``rank``, is the number of
+        singular values above the cutoff and a ``SingularMatrixWarning`` is
+        issued if it is less than the number of columns of the design.
+
         """
         # NOTE: pinv_wexog, normalized_cov_params, wexog_singular_values and
         # rank are recomputed from self.wexog on every call (rather than
@@ -410,35 +420,40 @@ class RegressionModel(base.LikelihoodModel):
         # state after fit() depends only on the current data, never on
         # which `method` a previous fit() call happened to use.
         method = string_like(method, "method", options=("pinv", "qr"), lower=False)
+        # One rank rule for both methods: singular values at or below
+        # rcond * max(singular values) are zero, see tools._lstsq
+        rcond = default_rcond(*self.wexog.shape)
         if method == "pinv":
-            pinv_wexog, singular_values = pinv_extended(self.wexog)
+            pinv_wexog, singular_values = pinv_extended(self.wexog, rcond=rcond)
             self.pinv_wexog = pinv_wexog
             self.normalized_cov_params = np.dot(
                 pinv_wexog, np.transpose(pinv_wexog)
             )
             self.wexog_singular_values = singular_values
-            self.rank = np.linalg.matrix_rank(np.diag(singular_values))
-
-            if self.rank < self.wexog.shape[1]:
-                warnings.warn(
-                    "The design matrix is rank-deficient. "
-                    "The model parameters are not uniquely determined.",
-                    SingularMatrixWarning,
-                    stacklevel=2,
-                )
+            self.rank = numerical_rank(singular_values, self.wexog.shape, rcond)
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
         else:  # method == "qr"
-            Q, R = np.linalg.qr(self.wexog)
-            self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
-            self.wexog_singular_values = np.linalg.svd(R, 0, 0)
-            self.rank = np.linalg.matrix_rank(R)
+            # QR of the design, then the SVD of R. The covariance comes from
+            # the SVD and not from inv(R'R), which squares the condition number
+            qr_svd = QRSVD(self.wexog)
+            self.normalized_cov_params = qr_svd.cov_unscaled(rcond)
+            self.wexog_singular_values = qr_svd.singular_values
+            self.rank = qr_svd.rank(rcond)
             # Needed for some covariance estimators, see GH #8157
-            self.pinv_wexog = np.linalg.pinv(self.wexog)
+            self.pinv_wexog = qr_svd.pinv(rcond)
             # used in ANOVA
-            self.effects = effects = np.dot(Q.T, self.wendog)
-            beta = np.linalg.solve(R, effects)
+            self.effects = qr_svd.effects(self.wendog)
+            beta = qr_svd.solve(self.wendog, rcond)
+
+        if self.rank < self.wexog.shape[1]:
+            warnings.warn(
+                "The design matrix is rank-deficient. "
+                "The model parameters are not uniquely determined.",
+                SingularMatrixWarning,
+                stacklevel=2,
+            )
 
         if self._df_model is None:
             self._df_model = float(self.rank - self.k_constant)
