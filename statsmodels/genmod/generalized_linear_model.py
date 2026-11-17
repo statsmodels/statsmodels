@@ -1007,19 +1007,37 @@ class GLM(base.LikelihoodModel):
 
     def _canonical_link(self):
         """True if the link of the family is its canonical link"""
-        link = self.family.link
+        family = self.family
+        link = family.link
+        links = families.links
         canonical = (
-            (families.Poisson, families.links.Log),
-            (families.Binomial, families.links.Logit),
-            (families.Gaussian, families.links.Identity),
-            (families.Gamma, families.links.InversePower),
-            (families.InverseGaussian, families.links.InverseSquared),
-            (families.NegativeBinomial, families.links.NegativeBinomial),
+            (families.Poisson, links.Log),
+            (families.Binomial, links.Logit),
+            (families.Gaussian, links.Identity),
+            (families.Gamma, links.InversePower),
+            (families.InverseGaussian, links.InverseSquared),
+            (families.NegativeBinomial, links.NegativeBinomial),
         )
-        return any(
-            isinstance(self.family, fam) and isinstance(link, lnk)
-            for fam, lnk in canonical
+        # Probit, Cauchy, CLogLog and LogLog subclass Logit, so that isinstance
+        # takes them for the canonical link of the binomial family. The class
+        # of the link is the first class in its MRO of the classes below,
+        # which also resolves the deprecated aliases such as links.log.
+        not_canonical = (
+            links.CDFLink,
+            links.Probit,
+            links.Cauchy,
+            links.CLogLog,
+            links.LogLog,
         )
+        known = tuple(lnk for _, lnk in canonical) + not_canonical
+        link_class = next((c for c in type(link).__mro__ if c in known), None)
+        for fam, lnk in canonical:
+            if isinstance(family, fam) and link_class is lnk:
+                if lnk is links.NegativeBinomial:
+                    # the link is only canonical for the alpha of the family
+                    return bool(np.array_equal(link.alpha, family.alpha))
+                return True
+        return False
 
     def _halve_irls_step(self, params, params_prev, lin_pred, mu, dev_prev=None):
         """
