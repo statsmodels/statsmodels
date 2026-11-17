@@ -35,6 +35,7 @@ from statsmodels.tools.numdiff import (
     approx_hess_cs,
 )
 from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
     DomainWarning,
     PerfectSeparationWarning,
     ValueWarning,
@@ -2787,6 +2788,169 @@ def test_regularized_freq_weights_match_expanded_data(family, fit_kwds):
     )
     res_w = weighted.fit_regularized(alpha=0.05, **fit_kwds)
     res_e = expanded.fit_regularized(alpha=0.05, **fit_kwds)
+    assert_allclose(res_w.params, res_e.params, rtol=1e-6, atol=1e-8)
+
+
+# glmnet 5.2 in R 4.6.1, coefficients at lambda = 0.05 of
+#   glmnet(cbind(x1, x2), y, weights=w, family=<family>(), alpha=<L1_wt>,
+#          lambda=c(0.1, 0.05), standardize=FALSE, intercept=TRUE,
+#          control=list(thresh=1e-15, maxit=1e7))
+# with family gaussian(), binomial() or poisson() objects (the string
+# family="gaussian" standardizes y and is not comparable for alpha < 1).
+# glmnet normalizes the weights to sum to one, so that its objective is
+# -loglike / sum(w) + lambda * penalty.  The coefficients are
+# (intercept, x1, x2); the intercept is not penalized.
+_GLMNET_X = np.array(
+    [
+        [-1.5, 0.5],
+        [-0.9, -1.1],
+        [-0.4, 0.9],
+        [0.1, -0.3],
+        [0.6, 1.4],
+        [1.2, -0.8],
+        [-0.2, 0.2],
+        [0.8, -1.6],
+        [1.6, 0.7],
+        [-0.7, 1.0],
+    ]
+)
+_GLMNET_WEIGHTS = np.array([1, 2, 3, 1, 2, 4, 1, 3, 2, 1], dtype=float)
+_GLMNET_ENDOG = {
+    "gaussian": np.array([-1.1, -0.4, 0.3, 0.6, 1.5, 1.9, 0.0, 0.5, 2.3, -0.2]),
+    "binomial": np.array([0, 0, 1, 0, 1, 1, 0, 1, 1, 0], dtype=float),
+    "poisson": np.array([1, 0, 2, 1, 3, 4, 0, 2, 5, 1], dtype=float),
+}
+_GLMNET_FAMILY = {
+    "gaussian": sm.families.Gaussian,
+    "binomial": sm.families.Binomial,
+    "poisson": sm.families.Poisson,
+}
+_GLMNET_PARAMS = {
+    ("gaussian", 1.0): [0.509708349454511, 0.994210219261278, 0.188258616019091],
+    ("gaussian", 0.5): [0.510134669236970, 0.998738456435588, 0.207760873833476],
+    ("binomial", 1.0): [0.722158356609137, 1.981320957929859, 0.190660850592927],
+    ("binomial", 0.5): [0.699130656029896, 1.758602609605634, 0.270808310371468],
+    ("poisson", 1.0): [0.442847222150387, 0.732251879893724, 0.158090127698189],
+    ("poisson", 0.5): [0.438121461213865, 0.738352935954592, 0.167097604621228],
+}
+
+
+@pytest.mark.parametrize("family_name", ["gaussian", "binomial", "poisson"])
+@pytest.mark.parametrize(
+    "fit_kwds, atol",
+    [
+        ({"L1_wt": 1.0}, 1e-5),
+        ({"L1_wt": 0.5}, 1e-5),
+        ({"method": "l1_slsqp", "L1_wt": 1.0}, 1e-4),
+    ],
+    ids=["lasso", "elastic_net", "l1_slsqp"],
+)
+def test_regularized_freq_weights_glmnet(family_name, fit_kwds, atol):
+    # Reference values from glmnet, see _GLMNET_PARAMS.  The atol is the
+    # agreement that the two algorithms reach: the coordinate descent of
+    # glmnet and of fit_regularized stop at different convergence tolerances
+    # (1.6e-6 is the largest difference for the elastic net), and slsqp
+    # needs 1e-4 (largest difference 1e-5).
+    L1_wt = fit_kwds["L1_wt"]
+    exog = add_constant(_GLMNET_X)
+    family = _GLMNET_FAMILY[family_name]()
+    model = GLM(
+        _GLMNET_ENDOG[family_name], exog, family=family, freq_weights=_GLMNET_WEIGHTS
+    )
+    res = model.fit_regularized(alpha=np.array([0.0, 0.05, 0.05]), **fit_kwds)
+    assert_allclose(res.params, _GLMNET_PARAMS[(family_name, L1_wt)], rtol=0, atol=atol)
+
+
+def _regularized_freq_weights_data(family, seed=2):
+    rng = np.random.default_rng(seed)
+    n = 60
+    exog = add_constant(rng.normal(size=(n, 3)))
+    if family is sm.families.Binomial:
+        endog = (rng.random(n) < 0.4).astype(float)
+    elif family is sm.families.Poisson:
+        endog = rng.poisson(2, n).astype(float)
+    else:
+        endog = rng.normal(size=n)
+    # intp: np.repeat needs counts that safely cast to intp (int32 on wasm32)
+    freq_weights = rng.integers(1, 5, size=n).astype(np.intp)
+    offset = 0.2 * rng.normal(size=n)
+    return endog, exog, freq_weights, offset
+
+
+_FIT_KWDS = [
+    {"L1_wt": 1.0},
+    {"L1_wt": 0.5},
+    {"L1_wt": 0.0},
+    {"method": "l1_slsqp"},
+]
+_FIT_KWDS_IDS = ["lasso", "elastic_net", "ridge", "l1_slsqp"]
+_FAMILIES = [sm.families.Gaussian, sm.families.Binomial, sm.families.Poisson]
+
+
+@pytest.mark.parametrize("family", _FAMILIES)
+@pytest.mark.parametrize("fit_kwds", _FIT_KWDS, ids=_FIT_KWDS_IDS)
+def test_regularized_freq_weights_rescaled(family, fit_kwds):
+    # The penalty is relative to the total weight, so that rescaling the
+    # frequency weights does not change the estimates (glmnet has the same
+    # property).  The Gaussian ridge fit estimated a scale before.
+    endog, exog, freq_weights, _ = _regularized_freq_weights_data(family)
+    freq_weights = freq_weights.astype(float)
+    res = GLM(endog, exog, family=family(), freq_weights=freq_weights)
+    res_scaled = GLM(endog, exog, family=family(), freq_weights=0.3 * freq_weights)
+    p = res.fit_regularized(alpha=0.05, **fit_kwds).params
+    p_scaled = res_scaled.fit_regularized(alpha=0.05, **fit_kwds).params
+    assert_allclose(p_scaled, p, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize("family", _FAMILIES)
+@pytest.mark.parametrize("fit_kwds", _FIT_KWDS, ids=_FIT_KWDS_IDS)
+@pytest.mark.parametrize("variant", ["alpha_with_zero", "offset"])
+def test_regularized_freq_weights_alpha_array_offset(family, fit_kwds, variant):
+    endog, exog, freq_weights, offset = _regularized_freq_weights_data(family)
+    alpha = 0.05
+    kwds = {}
+    expanded_kwds = {}
+    if variant == "alpha_with_zero":
+        # no penalty for the constant, other penalty weights differ
+        alpha = np.array([0.0, 0.05, 0.1, 0.05])
+    else:
+        kwds["offset"] = offset
+        expanded_kwds["offset"] = np.repeat(offset, freq_weights)
+    weighted = GLM(
+        endog, exog, family=family(), freq_weights=freq_weights, **kwds
+    )
+    expanded = GLM(
+        np.repeat(endog, freq_weights),
+        np.repeat(exog, freq_weights, axis=0),
+        family=family(),
+        **expanded_kwds,
+    )
+    res_w = weighted.fit_regularized(alpha=alpha, **fit_kwds)
+    res_e = expanded.fit_regularized(alpha=alpha, **fit_kwds)
+    assert_allclose(res_w.params, res_e.params, rtol=1e-6, atol=1e-8)
+
+
+@pytest.mark.parametrize("family", _FAMILIES)
+@pytest.mark.parametrize("L1_wt", [1.0, 0.5])
+def test_regularized_freq_weights_first_sweep(family, L1_wt):
+    # The Hessian (nphess in statsmodels.base.elastic_net) only sets the
+    # step of the coordinate descent, so that the estimates at convergence do
+    # not depend on it.  After a single sweep through the coefficients they do:
+    # the sweep on the weighted data has to equal the sweep on the data with
+    # each row repeated, which needs the Hessian divided by the sum of the
+    # frequency weights as well.
+    endog, exog, freq_weights, _ = _regularized_freq_weights_data(family)
+    weighted = GLM(endog, exog, family=family(), freq_weights=freq_weights)
+    expanded = GLM(
+        np.repeat(endog, freq_weights),
+        np.repeat(exog, freq_weights, axis=0),
+        family=family(),
+    )
+    kwds = {"alpha": 0.05, "L1_wt": L1_wt, "maxiter": 1, "cnvrg_tol": 1e-15}
+    with pytest.warns(ConvergenceWarning, match="Regularized fitting did not"):
+        res_w = weighted.fit_regularized(**kwds)
+    with pytest.warns(ConvergenceWarning, match="Regularized fitting did not"):
+        res_e = expanded.fit_regularized(**kwds)
     assert_allclose(res_w.params, res_e.params, rtol=1e-6, atol=1e-8)
 
 
