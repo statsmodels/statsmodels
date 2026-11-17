@@ -323,8 +323,8 @@ def test_newton_step_halving_disabled():
 
 
 def test_newton_no_finite_step_is_not_converged():
-    # f is nan at every point but the start. The iteration stops at the start
-    # and reports that it did not converge, instead of returning nan.
+    # f is nan at every point but the start. The fit reports that it did not
+    # converge and returns a point with a finite value, instead of nan.
     start = np.array([0.5, 0.25])
 
     def f(x, *args):
@@ -332,10 +332,108 @@ def test_newton_no_finite_step_is_not_converged():
 
     f_ok, score, hess = _newton_funcs(1.0, 1.0)
     params, retvals = _fit_newton(f, score, start, (), {}, hess=hess)
-    assert_allclose(params, start)
     assert not retvals["converged"]
     assert retvals["warnflag"] == 2
-    assert retvals["iterations"] == 0
+    assert np.isfinite(f(params))
+    assert np.isfinite(retvals["fopt"])
+
+
+def test_newton_result_does_not_share_start_params():
+    # the parameters of a fit without a step are not the array of the user
+    start = np.array([0.5, 0.25])
+
+    def f(x, *args):
+        return 1.0 if np.all(np.asarray(x) == start) else np.nan
+
+    f_ok, score, hess = _newton_funcs(1.0, 1.0)
+    params, _ = _fit_newton(f, score, start, (), {}, hess=hess)
+    assert not np.shares_memory(params, start)
+    params[0] = 99.0
+    assert_allclose(start, [0.5, 0.25])
+
+    # integer starting values give float parameters
+    params, _ = _fit_newton(
+        f_ok, score, np.array([1, 0]), (), {}, hess=hess, maxiter=1
+    )
+    assert params.dtype == np.float64
+
+
+@pytest.mark.parametrize("step_halving", [True, False, "finite"])
+def test_newton_function_evaluations(step_halving):
+    # f is evaluated at the start if the steps have to decrease it, once for a
+    # step, and not again for the results
+    calls = []
+    f_ok, score, hess = _newton_funcs(10.0, 1.0)
+
+    def f(x, *args):
+        calls.append(1)
+        return f_ok(x, *args)
+
+    params, retvals = _fit_newton(
+        f, score, np.array([0.5]), (), {"step_halving": step_halving}, hess=hess
+    )
+    assert retvals["converged"]
+    iterations = retvals["iterations"]
+    if step_halving is True:
+        expected = iterations + 1
+    elif step_halving == "finite":
+        expected = iterations
+    else:
+        expected = 1
+    assert len(calls) == expected
+    assert retvals["fopt"] == f_ok(params)
+
+
+@pytest.mark.parametrize("value", ["False", "no", "Finite ", 1, 0, None, 1.0, [True]])
+def test_newton_step_halving_invalid(value):
+    f, score, hess = _newton_funcs(1.0, 1.0)
+    exception = ValueError if isinstance(value, str) else TypeError
+    with pytest.raises(exception, match="step_halving"):
+        _fit_newton(
+            f, score, np.array([0.5]), (), {"step_halving": value}, hess=hess
+        )
+
+
+@pytest.mark.parametrize("value", [True, False, "finite", "FINITE"])
+def test_newton_step_halving_valid(value):
+    f, score, hess = _newton_funcs(1.0, 1.0)
+    _, retvals = _fit_newton(
+        f, score, np.array([0.5]), (), {"step_halving": value}, hess=hess
+    )
+    assert retvals["converged"]
+
+
+def _double_well():
+    """f = x**4 / 4 - x**2 / 2, with a negative curvature at x = 0.3"""
+
+    def f(x, *args):
+        x = np.asarray(x)
+        return float(np.sum(x**4 / 4 - x**2 / 2))
+
+    def score(x):
+        return np.asarray(x) ** 3 - np.asarray(x)
+
+    def hess(x):
+        return np.diag(3 * np.asarray(x) ** 2 - 1.0)
+
+    return f, score, hess
+
+
+def test_newton_not_descent_direction_does_not_increase_f():
+    # The Hessian is negative at the start, so that the Newton step goes to
+    # the maximum of f at 0 and f increases for all of its shortened steps.
+    f, score, hess = _double_well()
+    start = np.array([0.3])
+    params, retvals = _fit_newton(f, score, start, (), {}, hess=hess)
+    assert not retvals["converged"]
+    assert retvals["warnflag"] == 2
+    assert f(params) <= f(start)
+
+    # the step is taken if only a finite value is required
+    params, retvals = _fit_newton(
+        f, score, start, (), {"step_halving": "finite"}, hess=hess
+    )
+    assert f(params) > f(start)
 
 
 def test_newton_shortened_step_is_not_convergence():
@@ -387,10 +485,10 @@ def _line_f(values):
     return f
 
 
-def _halve_newton(values, fold):
+def _halve_newton(values, fold, **kwargs):
     # the update is oldparams - step = 1, then 1 / 2 and so on
     return _newton_step_halving(
-        _line_f(values), (), np.array([0.0]), np.array([-1.0]), fold
+        _line_f(values), (), np.array([0.0]), np.array([-1.0]), fold, **kwargs
     )
 
 
@@ -426,9 +524,29 @@ def test_newton_step_halving_no_decrease_found():
     assert fnew == 3.0
 
 
+def test_newton_step_halving_no_decrease_found_without_first_finite():
+    # for a direction that is not one of descent there is no step if f does
+    # not decrease for any step, and a step that decreases f is used
+    params, fnew, success, shortened = _halve_newton(
+        [2.0, 3.0], 1.0, use_first_finite=False
+    )
+    assert not success
+    assert not shortened
+    assert_allclose(params, 0.0)
+    assert fnew == 1.0
+
+    params, fnew, success, shortened = _halve_newton(
+        [2.0, 0.5], 1.0, use_first_finite=False
+    )
+    assert success
+    assert shortened
+    assert_allclose(params, 0.5)
+    assert fnew == 0.5
+
+
 def test_newton_step_halving_value_not_needed():
-    # fold is nan if the step is not a direction of descent. Then any step
-    # with a finite value is accepted, and a step that is not finite is not.
+    # fold is nan if the steps do not have to decrease f. Then any step with a
+    # finite value is accepted, and a step that is not finite is not.
     params, fnew, success, shortened = _halve_newton([1e9, 0.5], np.nan)
     assert success
     assert not shortened

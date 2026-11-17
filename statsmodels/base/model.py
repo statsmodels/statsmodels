@@ -483,6 +483,15 @@ class LikelihoodModel(Model):
             'newton'
                 tol : float
                     Relative error in params acceptable for convergence.
+                step_halving : {True, False, "finite"}
+                    What is done with a Newton step that gives a log-likelihood
+                    that is not finite or lower than the current one. True,
+                    the default, halves such a step up to 30 times, "finite"
+                    halves only a step with a log-likelihood that is not
+                    finite, and False takes the full step. If no step is
+                    found, the iteration stops at the last parameters, the
+                    `warnflag` of the results is 2, `converged` is False and
+                    a ConvergenceWarning is issued.
             'nm' -- Nelder Mead
                 xtol : float
                     Relative error in params acceptable for convergence
@@ -578,6 +587,12 @@ class LikelihoodModel(Model):
                     For a list of methods and their arguments, see
                     documentation of `scipy.optimize.minimize`.
                     If no method is specified, then BFGS is used.
+
+        .. versionchanged:: 0.15.1
+
+           Added the option ``step_halving`` of ``method="newton"``. Before,
+           a Newton step that gave a log-likelihood that is not finite
+           continued with nan parameters and `converged` was True.
         """
         if not full_output:
             warnings.warn(
