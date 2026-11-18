@@ -1189,6 +1189,11 @@ Other
   1-dimensional". :issue:`5445`, :pr:`10477`
 - ``ExpandedNormal`` no longer modifies the array of cumulants that is passed
   in. :pr:`10281`
+- ``DistributedModel`` failed with ``GEE`` because the model for the results
+  was created without ``groups``. The default debiased estimation method needs
+  ``fit_regularized`` with ``alpha``, which ``GEE`` does not have, and now
+  raises a ``NotImplementedError`` before any data is fit. :issue:`10778`,
+  :pr:`10780`
 
 Documentation
 =============
