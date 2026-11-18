@@ -3401,6 +3401,16 @@ class GEEMargins:
     def _reset(self):
         self._cache = {}
 
+    def _dist(self):
+        # follow use_t of the results, see GEEResults.conf_int
+        if self.results.use_t:
+            return stats.t(self.results.df_resid_inference)
+        return stats.norm
+
+    @property
+    def _stat_name(self):
+        return "t" if self.results.use_t else "z"
+
     @cache_readonly
     def tvalues(self):
         _check_at_is_all(self.margeff_options)
@@ -3427,8 +3437,8 @@ class GEEMargins:
         names = [
             _transform_names[self.margeff_options["method"]],
             "Std. Err.",
-            "z",
-            "Pr(>|z|)",
+            self._stat_name,
+            f"Pr(>|{self._stat_name}|)",
             "Conf. Int. Low",
             "Cont. Int. Hi.",
         ]
@@ -3449,7 +3459,7 @@ class GEEMargins:
     @cache_readonly
     def pvalues(self):
         _check_at_is_all(self.margeff_options)
-        return stats.norm.sf(np.abs(self.tvalues)) * 2
+        return self._dist().sf(np.abs(self.tvalues)) * 2
 
     def conf_int(self, alpha=0.05):
         """
@@ -3469,7 +3479,7 @@ class GEEMargins:
         """
         _check_at_is_all(self.margeff_options)
         me_se = self.margeff_se
-        q = stats.norm.ppf(1 - alpha / 2)
+        q = self._dist().ppf(1 - alpha / 2)
         lower = self.margeff - q * me_se
         upper = self.margeff + q * me_se
         return np.asarray(lzip(lower, upper))
@@ -3559,8 +3569,8 @@ class GEEMargins:
                     "",
                     _transform_names[method],
                     "std err",
-                    "z",
-                    "P>|z|",
+                    self._stat_name,
+                    f"P>|{self._stat_name}|",
                     f"[{alpha / 2}",
                     f"{1 - alpha / 2}]",
                 ]
@@ -3583,8 +3593,8 @@ class GEEMargins:
                 "",
                 _transform_names[method],
                 "std err",
-                "z",
-                "P>|z|",
+                self._stat_name,
+                f"P>|{self._stat_name}|",
                 f"[{alpha / 2}",
                 f"{1 - alpha / 2}]",
             ]

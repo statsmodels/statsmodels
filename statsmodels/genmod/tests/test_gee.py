@@ -2929,3 +2929,21 @@ def test_margeff_summary(model_class):
     smry = str(marg.summary(alpha=0.1))
     assert "[0.05" in smry
     assert "0.95]" in smry
+
+
+@pytest.mark.parametrize("use_t", [False, True])
+@pytest.mark.parametrize("model_class", [gee.GEE, gee.OrdinalGEE])
+def test_margeff_use_t(model_class, use_t):
+    from scipy import stats
+
+    res = _margeff_model(model_class, use_t=use_t)
+    marg = res.get_margeff()
+
+    dist = stats.t(res.df_resid_inference) if use_t else stats.norm
+    assert_allclose(marg.pvalues, 2 * dist.sf(np.abs(marg.tvalues)), rtol=1e-12)
+    q = dist.ppf(0.975)
+    ci = marg.conf_int()
+    assert_allclose(ci[:, 0], marg.margeff - q * marg.margeff_se, rtol=1e-12)
+    assert_allclose(ci[:, 1], marg.margeff + q * marg.margeff_se, rtol=1e-12)
+    assert ("P>|t|" in str(marg.summary())) is use_t
+    assert ("t" in marg.summary_frame().columns) is use_t
