@@ -317,9 +317,10 @@ _gee_fit_doc = """
         One of "robust", "naive", "bias_reduced" or "kauermann_carroll".
         "bias_reduced" is the Mancl-DeRouen and "kauermann_carroll" the
         Kauermann-Carroll small-sample correction of the robust covariance.
+        The value is case-insensitive.
 
         .. versionchanged:: 0.15.1
-           Added "kauermann_carroll".
+           Added "kauermann_carroll"; the value is case-insensitive.
     ddof_scale : int, optional
         The scale parameter is estimated as the sum of squared
         Pearson residuals divided by `N - ddof_scale`, where N

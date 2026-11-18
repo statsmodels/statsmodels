@@ -636,6 +636,9 @@ Generalized linear models and discrete models
   factor, or ``C(g)``. An ``exog`` that carries the ``design_info`` of another
   design used to be re-evaluated by the formula and now raises a
   ``ValueError``. :issue:`9562` :pr:`10752`
+- ``cov_type`` of ``GEE.fit``, ``OrdinalGEE.fit`` and ``NominalGEE.fit`` is
+  case-insensitive. A value such as ``"Bias_Reduced"`` raised an
+  ``UnboundLocalError``. :pr:`10791`
 
 Mixed models and imputation
 ---------------------------
