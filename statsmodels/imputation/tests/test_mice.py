@@ -1,6 +1,7 @@
 from statsmodels.compat.pandas import PD_LT_3_1_0
 
 import itertools
+from pathlib import Path
 import warnings
 
 import numpy as np
@@ -610,16 +611,50 @@ def test_micedata_all_missing_rows_warn():
     df = pd.DataFrame(gen.normal(size=(20, 3)), columns=["a", "b", "c"])
     df.iloc[[4, 11], :] = np.nan
     df.iloc[7, 1] = np.nan
-    with pytest.warns(ValueWarning, match="2 of the 20 rows"):
+    with pytest.warns(ValueWarning, match="2 of the 20 rows") as rec:
         mid = mice.MICEData(df, rng=np.random.RandomState(0))
     assert_equal(mid.data.index.values, np.delete(np.arange(20), [4, 11]))
+    # the warning points at the call of MICEData, not at statsmodels
+    value_warnings = [w for w in rec if w.category is ValueWarning]
+    assert len(value_warnings) == 1
+    assert Path(value_warnings[0].filename).samefile(__file__)
 
     # no warning if no row is dropped
     df = df.dropna(how="all")
     with warnings.catch_warnings():
-        warnings.simplefilter("error")
+        warnings.simplefilter("error", ValueWarning)
         mid = mice.MICEData(df, rng=np.random.RandomState(0))
     assert_equal(mid.data.shape[0], 18)
+
+
+@pytest.mark.parametrize(
+    "rows, message",
+    [
+        (
+            [4],
+            (
+                "1 of the 20 rows has missing values in all variables and is "
+                "dropped. It is not in MICEData.data."
+            ),
+        ),
+        (
+            [4, 11],
+            (
+                "2 of the 20 rows have missing values in all variables and are "
+                "dropped. They are not in MICEData.data."
+            ),
+        ),
+    ],
+    ids=["one_row", "two_rows"],
+)
+def test_micedata_all_missing_rows_warning_message(rows, message):
+    gen = np.random.RandomState(4567)
+    df = pd.DataFrame(gen.normal(size=(20, 3)), columns=["a", "b", "c"])
+    df.iloc[rows, :] = np.nan
+    with pytest.warns(ValueWarning) as rec:
+        mice.MICEData(df, rng=np.random.RandomState(0))
+    messages = [str(w.message) for w in rec if w.category is ValueWarning]
+    assert messages == [message]
 
 
 def test_micedata_duplicate_index():

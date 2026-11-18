@@ -192,6 +192,11 @@ class MICEData:
     `MICE` fits its analysis model to `MICEData.data`, so the data of the
     analysis model have this index.
 
+    .. versionchanged:: 0.15.1
+
+       A ``ValueWarning`` is issued if rows in which all variables are
+       missing are dropped.  They were dropped without a warning before.
+
     Examples
     --------
     Draw 20 imputations from a data set called `data` and save them in
@@ -234,10 +239,12 @@ class MICEData:
         self.data = data.dropna(how="all").copy()
         n_dropped = data.shape[0] - self.data.shape[0]
         if n_dropped > 0:
+            one = n_dropped == 1
             warnings.warn(
-                f"{n_dropped} of the {data.shape[0]} rows have missing values "
-                "in all variables and are dropped. They are not in "
-                "MICEData.data.",
+                f"{n_dropped} of the {data.shape[0]} rows "
+                f"{'has' if one else 'have'} missing values in all "
+                f"variables and {'is' if one else 'are'} dropped. "
+                f"{'It is' if one else 'They are'} not in MICEData.data.",
                 ValueWarning,
                 stacklevel=2,
             )
