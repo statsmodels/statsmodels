@@ -636,6 +636,9 @@ Mixed models and imputation
   imputed values can be matched to the rows of the input. Rows in which all
   variables are missing are still dropped before imputation.
   :issue:`6532`, :pr:`10499`, :pr:`10629`
+- ``MICEData`` issues a ``ValueWarning`` when it drops rows in which all
+  variables are missing. These rows were dropped without a warning.
+  :issue:`6532`, :pr:`10777`
 
 Time series analysis
 --------------------

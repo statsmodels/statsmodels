@@ -114,6 +114,7 @@ Opening Windows into the Black Box', Journal of Statistical Software,
 from statsmodels.compat.pandas import PD_LT_3
 
 from collections import defaultdict
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -123,6 +124,7 @@ from statsmodels.formula._manager import FormulaManager
 from statsmodels.graphics import utils as gutils
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.sm_exceptions import ValueWarning
 from statsmodels.tools.tools import maybe_unwrap_results
 
 _mice_data_example_1 = """
@@ -184,8 +186,9 @@ class MICEData:
     values can be matched to the rows of the input by label.  The index can
     be of any type and can contain duplicate labels.  The only change to the
     rows is that rows in which all variables are missing are dropped before
-    imputation.  `MICEData.data` then has fewer rows than the input, and
-    their labels are missing from its index.  The input is not modified.
+    imputation, with a ``ValueWarning``.  `MICEData.data` then has fewer rows
+    than the input, and their labels are missing from its index.  The input is
+    not modified.
     `MICE` fits its analysis model to `MICEData.data`, so the data of the
     analysis model have this index.
 
@@ -229,6 +232,15 @@ class MICEData:
         # is preserved so imputed values can be related back to the input
         # (#6532).
         self.data = data.dropna(how="all").copy()
+        n_dropped = data.shape[0] - self.data.shape[0]
+        if n_dropped > 0:
+            warnings.warn(
+                f"{n_dropped} of the {data.shape[0]} rows have missing values "
+                "in all variables and are dropped. They are not in "
+                "MICEData.data.",
+                ValueWarning,
+                stacklevel=2,
+            )
 
         self.history_callback = history_callback
         self.history = []
