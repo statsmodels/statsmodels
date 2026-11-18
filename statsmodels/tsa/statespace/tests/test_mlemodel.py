@@ -1465,10 +1465,6 @@ def test_loglike_stationary_init_unit_root_ar1():
     # negative initial state variance (-4.99e291 here). The filter then gave
     # a loglikelihood of 0.0, above that of any stationary model.
     mod = sarimax.SARIMAX(np.zeros(10))
-    # scipy has no solution either
-    with pytest.raises(np.linalg.LinAlgError):
-        solve_discrete_lyapunov(np.eye(1), np.eye(1))
-
     assert mod.loglike([1.0, 1.0]) == -np.inf
     with pytest.raises(np.linalg.LinAlgError, match="not stationary to numerical"):
         mod.filter([1.0, 1.0])
@@ -1489,11 +1485,23 @@ def test_loglike_stationary_init_unit_root_ar1():
 
 
 @pytest.mark.parametrize(
-    "ar_params", [[0.5, 0.5], [0.5, 0.5 - 1e-16], [1.0, 0.0], [2.0, -1.0]]
+    "ar_params",
+    [
+        [0.5, 0.5],
+        [0.5, 0.5 - 1e-16],
+        [1.0, 0.0],
+        [2.0, -1.0],
+        # a complex pair of roots on the unit circle
+        [2 * np.cos(0.7), -1.0],
+        # roots 2 and 0.5, which are not unit roots, but their product is 1
+        [2.5, -1.0],
+    ],
 )
 def test_loglike_stationary_init_unit_root_ar2(ar_params):
-    # GH#5459: loglike returned 0.0 for these AR(2) unit roots, with initial
-    # state variances of about -3e14, instead of failing
+    # GH#5459: loglike returned 0.0 for these AR(2) parameters, with initial
+    # state variances of about -3e14 to -2e15, instead of failing. The
+    # Lyapunov equation is singular if the product of two eigenvalues of the
+    # transition matrix is 1.
     rng = np.random.default_rng(5459)
     mod = sarimax.SARIMAX(rng.standard_normal(200), order=(2, 0, 0))
     assert mod.loglike(np.r_[ar_params, 1.0]) == -np.inf

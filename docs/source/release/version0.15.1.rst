@@ -151,6 +151,11 @@ Behavior changes
   these kernels returned ``nan`` for most data. They now integrate the density
   over the support of the observations, in the units of the data, so that the
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
+- ``filter``, ``smooth`` and ``fit`` of state space models with a stationary
+  initialization raise a ``LinAlgError`` if a parameter is fixed at a unit
+  root, for example with ``fix_params``, instead of returning results with an
+  ``llf`` of 0.0 that were computed from an initial state covariance with
+  negative variances. :issue:`5459`, :pr:`10747`
 
 New Features and Enhancements
 =============================
@@ -438,13 +443,6 @@ Time series analysis
   parameters that are transformed to the boundary of the stationary region.
   The fit of the dynamic factor model in the example notebook failed with this
   error on some platforms. :pr:`10611`
-- At a unit root the stationary initialization could also return an initial
-  state covariance with negative variances instead of raising, for example
-  ``-4.99e291`` for ``SARIMAX(np.zeros(10)).filter([1, 1])``. The filter then
-  reported a loglikelihood of exactly 0, above that of any stationary model.
-  This is now detected: ``filter`` raises a ``LinAlgError`` saying that the
-  model is not stationary to numerical precision, and ``MLEModel.loglike``
-  returns ``-inf`` as above. :issue:`5459`, :pr:`10747`
 - ``range_unit_root_test`` documents the correct null hypothesis, a unit
   root, which is rejected for small statistics. The ``InterpolationWarning``
   reports the correct direction: it is raised if the statistic is outside the
@@ -598,6 +596,14 @@ Time series analysis
   show one ``ConvergenceWarning`` with the number of replications whose
   maximum likelihood fit did not converge, instead of one warning for each of
   them. :pr:`10613`
+- At a unit root the stationary initialization could return an initial state
+  covariance with negative variances instead of raising, for example
+  ``-4.99e291`` for ``SARIMAX(np.zeros(10)).filter([1, 1])``. The filter then
+  reported a loglikelihood of exactly 0, above that of any stationary model.
+  This is now detected: ``filter`` raises a ``LinAlgError`` saying that the
+  model is not stationary to numerical precision, and ``MLEModel.loglike``
+  returns ``-inf``, as for the unit roots that already raised (:pr:`10611`).
+  :issue:`5459`, :pr:`10747`
 
 Statistics and tests
 --------------------
