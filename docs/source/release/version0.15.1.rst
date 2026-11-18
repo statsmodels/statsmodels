@@ -312,7 +312,7 @@ Performance
   the tolerance of R's ``lm`` fall back to the pseudoinverse with a
   ``SingularMatrixWarning``. The pseudoinverse ``pinv_wexog`` is only
   computed when a covariance estimator or an influence measure needs it.
-  :issue:`9317`
+  :issue:`9317`, :pr:`10679`
 - ``get_margeff`` with the default ``at="overall"`` computes the delta method
   Jacobian of the average marginal effects directly instead of averaging the
   Jacobian at each observation. Memory use no longer grows with the number of
