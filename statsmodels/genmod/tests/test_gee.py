@@ -1836,15 +1836,20 @@ class CheckConsistency:
         res_robust = mod.fit(start_params=self.start_params)
         res_naive = mod.fit(start_params=self.start_params, cov_type="naive")
         res_robust_bc = mod.fit(start_params=self.start_params, cov_type="bias_reduced")
+        res_robust_kc = mod.fit(
+            start_params=self.start_params, cov_type="kauermann_carroll"
+        )
 
         # call summary to make sure it does not change cov_type
         res_naive.summary()
         res_robust_bc.summary()
+        res_robust_kc.summary()
 
         # check cov_type
         assert_equal(res_robust.cov_type, "robust")
         assert_equal(res_naive.cov_type, "naive")
         assert_equal(res_robust_bc.cov_type, "bias_reduced")
+        assert_equal(res_robust_kc.cov_type, "kauermann_carroll")
 
         # check bse and cov_params
         # we are comparing different runs of the optimization
@@ -1855,10 +1860,11 @@ class CheckConsistency:
             (res_robust, "robust", res_robust.cov_robust),
             (res_naive, "naive", res_robust.cov_naive),
             (res_robust_bc, "bias_reduced", res_robust_bc.cov_robust_bc),
+            (res_robust_kc, "kauermann_carroll", res_robust_kc.cov_robust_kc),
         ]:
             bse = np.sqrt(np.diag(cov))
             assert_allclose(res.bse, bse, rtol=rtol)
-            if cov_type != "bias_reduced":
+            if cov_type not in ("bias_reduced", "kauermann_carroll"):
                 # cov_type=naive shortcuts calculation of bias reduced
                 # covariance for efficiency
                 bse = res_naive.standard_errors(cov_type=cov_type)
@@ -1870,6 +1876,7 @@ class CheckConsistency:
         assert_(res_robust.cov_params_default is res_robust.cov_robust)
         assert_(res_naive.cov_params_default is res_naive.cov_naive)
         assert_(res_robust_bc.cov_params_default is res_robust_bc.cov_robust_bc)
+        assert_(res_robust_kc.cov_params_default is res_robust_kc.cov_robust_kc)
 
         # check exception for misspelled cov_type
         with pytest.raises(ValueError):
@@ -2729,3 +2736,163 @@ def test_autoregressive_equal_objective():
     result = model.fit(scale=1.0, start_params=[1.0, 2.0, 3.0, 5.0])
     ar.update(result.params)
     assert ar.dep_params == 0.0
+
+
+def _small_cluster_data():
+    rng = np.random.default_rng(5243)
+    n_groups, m = 12, 4
+    groups = np.repeat(np.arange(n_groups), m)
+    exog = np.column_stack((np.ones(n_groups * m), rng.standard_normal((48, 2))))
+    endog = exog @ [1.0, 0.5, -0.3] + np.repeat(rng.standard_normal(n_groups), m)
+    endog += rng.standard_normal(n_groups * m)
+    return endog, exog, groups
+
+
+@pytest.mark.parametrize("use_t", [False, True])
+def test_use_t(use_t):
+    # GH 8610
+    from scipy import stats
+
+    endog, exog, groups = _small_cluster_data()
+
+    def fit(**kwds):
+        cs = cov_struct.Exchangeable()
+        return gee.GEE(endog, exog, groups, cov_struct=cs).fit(**kwds)
+
+    res = fit(use_t=use_t)
+
+    assert res.use_t is use_t
+    assert_equal(res.df_resid_inference, 12 - 3)
+    assert_allclose(res.bse, fit().bse, rtol=1e-12)
+
+    if use_t:
+        dist = stats.t(res.df_resid_inference)
+    else:
+        dist = stats.norm
+    assert_allclose(res.pvalues, 2 * dist.sf(np.abs(res.tvalues)), rtol=1e-10)
+    q = dist.ppf(0.975)
+    ci = np.column_stack((res.params - q * res.bse, res.params + q * res.bse))
+    assert_allclose(res.conf_int(), ci, rtol=1e-10)
+    assert_allclose(res.t_test(np.eye(3)).pvalue, res.pvalues, rtol=1e-10)
+    assert ("P>|t|" in str(res.summary())) is use_t
+
+
+def test_use_t_df_constraint():
+    # GH 8610
+    endog, exog, groups = _small_cluster_data()
+    constraint = (np.array([[0.0, 1.0, 1.0]]), np.zeros(1))
+    res = gee.GEE(endog, exog, groups, constraint=constraint).fit(use_t=True)
+    assert_equal(res.df_resid_inference, 12 - 2)
+
+
+@pytest.mark.parametrize("n_groups", [2, 3])
+def test_use_t_too_few_groups(n_groups):
+    # GH 8610, df_resid_inference would be <= 0
+    endog, exog, groups = _small_cluster_data()
+    keep = groups < n_groups
+    mod = gee.GEE(endog[keep], exog[keep], groups[keep])
+    with pytest.raises(ValueError, match="more groups"):
+        mod.fit(use_t=True)
+    mod.fit()
+
+    keep = groups < 4
+    res = gee.GEE(endog[keep], exog[keep], groups[keep]).fit(use_t=True)
+    assert_equal(res.df_resid_inference, 1)
+
+
+@pytest.mark.parametrize("model_class", [gee.OrdinalGEE, gee.NominalGEE])
+def test_use_t_multicategory(model_class):
+    # GH 8610
+    from scipy import stats
+
+    endog, exog, groups = _small_cluster_data()
+    endog = np.digitize(endog, [0.5, 1.5])
+    if model_class is gee.OrdinalGEE:
+        exog = exog[:, 1:]
+    res = model_class(endog, exog, groups).fit(use_t=True)
+
+    assert res.use_t
+    assert_equal(res.df_resid_inference, 12 - len(res.params))
+    pvalues = 2 * stats.t.sf(np.abs(res.tvalues), res.df_resid_inference)
+    assert_allclose(res.pvalues, pvalues, rtol=1e-10)
+
+
+def test_kauermann_carroll_constraint():
+    # GH 1183, the KC covariance must be projected onto the constraint
+    endog, exog, groups = _small_cluster_data()
+    lhs = np.array([[0.0, 1.0, 1.0]])
+    mod = gee.GEE(endog, exog, groups, constraint=(lhs, np.zeros(1)))
+    res = mod.fit(cov_type="kauermann_carroll", use_t=True)
+
+    assert_allclose(res.params @ lhs.T, 0, atol=1e-10)
+    cov = res.cov_robust_kc
+    assert_equal(cov.shape, (3, 3))
+    assert_allclose(lhs @ cov @ lhs.T, 0, atol=1e-12)
+    assert_allclose(res.bse, np.sqrt(np.diag(cov)), rtol=1e-12)
+
+
+def _small_sample_ref():
+    path = Path(__file__).parent / "results"
+    data = pd.read_csv(path / "gee_small_sample.csv")
+    ref = pd.read_csv(path / "gee_small_sample_geesmv.csv")
+    return data, ref
+
+
+_FAMILIES = {
+    "gaussian": ("y_gauss", families.Gaussian),
+    "poisson": ("y_pois", families.Poisson),
+    "binomial": ("y_bin", families.Binomial),
+}
+
+
+@pytest.mark.parametrize("row", range(4))
+def test_small_sample_cov_geesmv(row):
+    # GH 1183, reference values from R geesmv, see gee_small_sample.R
+    data, ref = _small_sample_ref()
+    ref = ref.iloc[row]
+    yname, family = _FAMILIES[ref["family"]]
+    cov_type = {"kc": "kauermann_carroll", "md": "bias_reduced"}[ref["method"]]
+    exog = tools.add_constant(data[["x1", "x2"]].to_numpy())
+    mod = gee.GEE(data[yname], exog, data["id"], family=family())
+    res = mod.fit(cov_type=cov_type)
+    var = ref[["var0", "var1", "var2"]].to_numpy(float)
+    assert_allclose(np.diag(res.cov_params()), var, rtol=1e-7)
+    assert_allclose(res.standard_errors(cov_type), np.sqrt(var), rtol=1e-7)
+
+
+@pytest.mark.parametrize(
+    "fam, cs",
+    [
+        ("poisson", cov_struct.Independence),
+        ("binomial", cov_struct.Independence),
+        ("gaussian", cov_struct.Exchangeable),
+    ],
+)
+def test_kauermann_carroll_root(fam, cs):
+    # GH 1183, I - H is not symmetric here, compare to the principal root
+    from scipy.linalg import sqrtm
+
+    data, _ = _small_sample_ref()
+    yname, family = _FAMILIES[fam]
+    exog = tools.add_constant(data[["x1", "x2"]].to_numpy())
+    mod = gee.GEE(data[yname], exog, data["id"], family=family(), cov_struct=cs())
+    res = mod.fit(cov_type="kauermann_carroll")
+
+    dmats, vmats, resids = [], [], []
+    for i in range(mod.num_group):
+        mu, lpr = mod.cached_means[i]
+        sd = np.sqrt(mod.family.variance(mu))
+        cmat, _ = mod.cov_struct.covariance_matrix(mu, i)
+        dmats.append(mod.mean_deriv(mod.exog_li[i], lpr))
+        vmats.append(np.outer(sd, sd) * cmat)
+        resids.append(mod.endog_li[i] - mu)
+    bread = np.linalg.inv(
+        sum(d.T @ np.linalg.solve(v, d) for d, v in zip(dmats, vmats, strict=True))
+    )
+    meat = 0
+    for d, v, r in zip(dmats, vmats, resids, strict=True):
+        hmat = d @ bread @ d.T @ np.linalg.inv(v)
+        root = np.real(sqrtm(np.linalg.inv(np.eye(len(r)) - hmat)))
+        u = d.T @ np.linalg.solve(v, root @ r)
+        meat = meat + np.outer(u, u)
+    assert_allclose(res.cov_robust_kc, bread @ meat @ bread, rtol=1e-8)

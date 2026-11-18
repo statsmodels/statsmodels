@@ -21,6 +21,14 @@ http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
 
 LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
+
+G Kauermann and RJ Carroll (2001). A note on the efficiency of sandwich
+covariance matrix estimation. Journal of the American Statistical
+Association, 96(456), 1387-1396.
+
+P Li and DT Redden (2015). Small sample performance of bias-corrected
+sandwich estimators for cluster-randomized trials with binary outcomes.
+Statistics in Medicine, 34(2), 281-296.
 """
 
 from statsmodels.compat.python import lzip
@@ -30,7 +38,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import linalg, stats
 
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -306,7 +314,12 @@ _gee_fit_doc = """
         No dependence structure updates occur before this
         iteration number.
     cov_type : str, optional
-        One of "robust", "naive", or "bias_reduced".
+        One of "robust", "naive", "bias_reduced" or "kauermann_carroll".
+        "bias_reduced" is the Mancl-DeRouen and "kauermann_carroll" the
+        Kauermann-Carroll small-sample correction of the robust covariance.
+
+        .. versionchanged:: 0.15.1
+           Added "kauermann_carroll".
     ddof_scale : int, optional
         The scale parameter is estimated as the sum of squared
         Pearson residuals divided by `N - ddof_scale`, where N
@@ -324,6 +337,18 @@ _gee_fit_doc = """
         The default value is None, which uses `X2` (Pearson's
         chi-square) for Gamma, Gaussian, and Inverse Gaussian.
         The default is 1 for the Binomial and Poisson families.
+    use_t : bool, optional
+        If True, use the t distribution for inference, with the number
+        of groups minus the number of parameters as degrees of freedom.
+        The default is False, which uses the normal distribution.
+        The number of parameters is subtracted, not 1 as for ``OLS`` with
+        ``cov_type="cluster"`` or Stata's ``vce(cluster)``, because Li and
+        Redden (2015) found these degrees of freedom to work well with the
+        bias-corrected covariances when there are few groups. A
+        ``ValueError`` is raised if the number of groups is not larger
+        than the number of parameters.
+
+        .. versionadded:: 0.15.1
 
     Returns
     -------
@@ -341,6 +366,29 @@ _gee_fit_doc = """
     For the Gaussian family, there is no benefit to setting
     `params_niter` to a value greater than 1, since the mean
     structure parameters converge in one step.
+
+    The small-sample covariances adjust the residuals of each group
+    with its leverage matrix ``H``. ``cov_type="bias_reduced"`` (Mancl
+    and DeRouen, 2001) uses ``(I - H)^{-1}`` and
+    ``cov_type="kauermann_carroll"`` (Kauermann and Carroll, 2001) uses
+    ``(I - H)^{-1/2}``. ``I - H`` is not symmetric unless the family is
+    Gaussian and the working correlation is independence, and the
+    principal square root is used. Its eigenvalues are positive, so the
+    root is real. Each group needs an ``O(m^3)`` matrix root, where
+    ``m`` is the group size, which can be slow for large groups.
+
+    References
+    ----------
+    LA Mancl and TA DeRouen (2001). A covariance estimator for GEE with
+    improved small-sample properties. Biometrics, 57(1), 126-134.
+
+    G Kauermann and RJ Carroll (2001). A note on the efficiency of
+    sandwich covariance matrix estimation. Journal of the American
+    Statistical Association, 96(456), 1387-1396.
+
+    P Li and DT Redden (2015). Small sample performance of bias-corrected
+    sandwich estimators for cluster-randomized trials with binary
+    outcomes. Statistics in Medicine, 34(2), 281-296.
 """
 
 _gee_results_doc = """
@@ -358,12 +406,14 @@ _gee_results_doc = """
     cov_robust_bc : ndarray
         covariance of the parameter estimates that is robust and bias
         reduced
+    cov_robust_kc : ndarray
+        Kauermann-Carroll robust covariance of the parameter estimates
     converged : bool
         indicator for convergence of the optimization.
         True if the norm of the score is smaller than a threshold
     cov_type : str
-        string indicating whether a "robust", "naive" or "bias_reduced"
-        covariance is used as default
+        string indicating whether a "robust", "naive", "bias_reduced" or
+        "kauermann_carroll" covariance is used as default
     fit_history : dict
         Contains information about the iterations.
     fittedvalues : ndarray
@@ -1237,7 +1287,8 @@ class GEE(GLM):
 
     # Calculate the bias-corrected sandwich estimate of Mancl and
     # DeRouen.
-    def _bc_covmat(self, cov_naive):
+    def _bc_covmat(self, cov_naive, method="md"):
+        """Mancl-DeRouen ("md") or Kauermann-Carroll ("kc") covariance."""
 
         cov_naive = cov_naive / self.scaling_factor
         endog = self.endog_li
@@ -1265,7 +1316,11 @@ class GEE(GLM):
 
             f = self.weights_li[i] if self.weights is not None else 1.0
 
-            aresid = np.linalg.solve(np.eye(len(resid)) - hmat, resid)
+            imh = np.eye(len(resid)) - hmat
+            if method == "kc":
+                # principal root, since I - H is not symmetric in general
+                imh = linalg.sqrtm(imh).real
+            aresid = np.linalg.solve(imh, resid)
             rslt = self.cov_struct.covariance_matrix_solve(expval, i, sdev, (aresid,))
             if rslt is None:
                 return None
@@ -1307,7 +1362,15 @@ class GEE(GLM):
         ddof_scale=None,
         scaling_factor=1.0,
         scale=None,
+        use_t=False,
     ):
+
+        k_params = self.nobs - self.df_resid
+        if use_t and self.num_group <= k_params:
+            raise ValueError(
+                f"use_t requires more groups ({self.num_group}) than "
+                f"parameters ({k_params:g})."
+            )
 
         self.scaletype = scale
 
@@ -1395,9 +1458,11 @@ class GEE(GLM):
                 stacklevel=2,
             )
             return None
-        bc_cov = None
+        bc_cov = kc_cov = None
         if cov_type == "bias_reduced":
             bc_cov = self._bc_covmat(ncov)
+        elif cov_type == "kauermann_carroll":
+            kc_cov = self._bc_covmat(ncov, method="kc")
 
         if self.constraint is not None:
             x = mean_params.copy()
@@ -1428,12 +1493,18 @@ class GEE(GLM):
                         stacklevel=2,
                     )
                     return None
+            if kc_cov is not None:
+                y, kc_cov = self._handle_constraint(x, kc_cov)
 
         scale = self.estimate_scale()
 
         # kwargs to add to results instance, need to be available in __init__
         res_kwds = dict(
-            cov_type=cov_type, cov_robust=bcov, cov_naive=ncov, cov_robust_bc=bc_cov
+            cov_type=cov_type,
+            cov_robust=bcov,
+            cov_naive=ncov,
+            cov_robust_bc=bc_cov,
+            cov_robust_kc=kc_cov,
         )
 
         # The superclass constructor will multiply the covariance
@@ -1445,7 +1516,7 @@ class GEE(GLM):
             bcov / scale,
             scale,
             cov_type=cov_type,
-            use_t=False,
+            use_t=use_t,
             attr_kwds=res_kwds,
         )
 
@@ -1468,6 +1539,7 @@ class GEE(GLM):
             "cov_robust",
             "cov_naive",
             "cov_robust_bc",
+            "cov_robust_kc",
             "fit_history",
             "score_norm",
             "converged",
@@ -1906,12 +1978,16 @@ class GEEResults(GLMResults):
         **kwds,
     ):
 
-        super().__init__(model, params, normalized_cov_params=cov_params, scale=scale)
+        super().__init__(
+            model, params, normalized_cov_params=cov_params, scale=scale, use_t=use_t
+        )
 
         # not added by super
         self.df_resid = model.df_resid
         self.df_model = model.df_model
         self.family = model.family
+        # t inference uses clusters, not observations
+        self.df_resid_inference = model.num_group - (model.nobs - model.df_resid)
 
         attr_kwds = kwds.pop("attr_kwds", {})
         self.__dict__.update(attr_kwds)
@@ -1921,7 +1997,12 @@ class GEEResults(GLMResults):
         if not (hasattr(self, "cov_type") and hasattr(self, "cov_params_default")):
             self.cov_type = cov_type  # keep alias
             covariance_type = self.cov_type.lower()
-            allowed_covariances = ["robust", "naive", "bias_reduced"]
+            allowed_covariances = [
+                "robust",
+                "naive",
+                "bias_reduced",
+                "kauermann_carroll",
+            ]
             if covariance_type not in allowed_covariances:
                 msg = "GEE: `cov_type` must be one of " + ", ".join(allowed_covariances)
                 raise ValueError(msg)
@@ -1932,6 +2013,8 @@ class GEEResults(GLMResults):
                 cov = self.cov_naive
             elif cov_type == "bias_reduced":
                 cov = self.cov_robust_bc
+            elif cov_type == "kauermann_carroll":
+                cov = self.cov_robust_kc
 
             self.cov_params_default = cov
         elif self.cov_type != cov_type:
@@ -1957,14 +2040,14 @@ class GEEResults(GLMResults):
         Parameters
         ----------
         cov_type : str, optional
-            One of "robust", "naive", or "bias_reduced".  Determines
-            the covariance used to compute standard errors.  Defaults
-            to "robust".
+            One of "robust", "naive", "bias_reduced" or
+            "kauermann_carroll".  Determines the covariance used to compute
+            standard errors.  Defaults to "robust".
         """
 
         # Check covariance_type
         covariance_type = cov_type.lower()
-        allowed_covariances = ["robust", "naive", "bias_reduced"]
+        allowed_covariances = ["robust", "naive", "bias_reduced", "kauermann_carroll"]
         if covariance_type not in allowed_covariances:
             msg = "GEE: `covariance_type` must be one of " + ", ".join(
                 allowed_covariances
@@ -1979,6 +2062,10 @@ class GEEResults(GLMResults):
             if self.cov_robust_bc is None:
                 raise ValueError("GEE: `bias_reduced` covariance not available")
             return np.sqrt(np.diag(self.cov_robust_bc))
+        elif covariance_type == "kauermann_carroll":
+            if getattr(self, "cov_robust_kc", None) is None:
+                raise ValueError("GEE: `kauermann_carroll` covariance not available")
+            return np.sqrt(np.diag(self.cov_robust_kc))
 
     # Need to override to allow for different covariance types.
     @cache_readonly
@@ -2134,12 +2221,15 @@ class GEEResults(GLMResults):
              default `alpha` = .05 returns a 95% confidence interval.
         cov_type : str, optional
              The covariance type used for computing standard errors;
-             must be one of 'robust', 'naive', and 'bias reduced'.
+             must be one of 'robust', 'naive', 'bias_reduced' and
+             'kauermann_carroll'.
              See `GEE` for details.
 
         Notes
         -----
-        The confidence interval is based on the Gaussian distribution.
+        The confidence interval is based on the t distribution with
+        ``df_resid_inference`` degrees of freedom if ``use_t`` is True,
+        and on the normal distribution otherwise.
         """
         # super does not allow to specify cov_type and method is not
         # implemented,
@@ -2149,8 +2239,10 @@ class GEEResults(GLMResults):
         else:
             bse = self.standard_errors(cov_type=cov_type)
         params = self.params
-        dist = stats.norm
-        q = dist.ppf(1 - alpha / 2)
+        if self.use_t:
+            q = stats.t.ppf(1 - alpha / 2, self.df_resid_inference)
+        else:
+            q = stats.norm.ppf(1 - alpha / 2)
 
         lower = params - q * bse
         upper = params + q * bse
@@ -2252,7 +2344,9 @@ class GEEResults(GLMResults):
             xname=xname,
             title=title,
         )
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha, use_t=False)
+        smry.add_table_params(
+            self, yname=yname, xname=xname, alpha=alpha, use_t=self.use_t
+        )
         smry.add_table_2cols(
             self,
             gleft=diagn_left,
@@ -2615,6 +2709,7 @@ class OrdinalGEE(GEE):
         params_niter=1,
         first_dep_update=0,
         cov_type="robust",
+        use_t=False,
     ):
 
         rslt = super().fit(
@@ -2624,6 +2719,7 @@ class OrdinalGEE(GEE):
             params_niter,
             first_dep_update,
             cov_type=cov_type,
+            use_t=use_t,
         )
 
         rslt = rslt._results  # use unwrapped instance
@@ -2635,6 +2731,7 @@ class OrdinalGEE(GEE):
             rslt.cov_params() / rslt.scale,
             rslt.scale,
             cov_type=cov_type,
+            use_t=use_t,
             attr_kwds=res_kwds,
         )
         # for k in rslt._props:
@@ -3049,6 +3146,7 @@ class NominalGEE(GEE):
         params_niter=1,
         first_dep_update=0,
         cov_type="robust",
+        use_t=False,
     ):
 
         rslt = super().fit(
@@ -3058,6 +3156,7 @@ class NominalGEE(GEE):
             params_niter,
             first_dep_update,
             cov_type=cov_type,
+            use_t=use_t,
         )
         if rslt is None:
             warnings.warn(
@@ -3074,6 +3173,7 @@ class NominalGEE(GEE):
             rslt.cov_params() / rslt.scale,
             rslt.scale,
             cov_type=cov_type,
+            use_t=use_t,
             attr_kwds=res_kwds,
         )
         # TODO: document or delete

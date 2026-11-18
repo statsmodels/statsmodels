@@ -341,6 +341,16 @@ New functions and methods
   not finite, and ``False`` for the full Newton step. The default is
   ``True``, and ``GLM`` uses ``"finite"`` if the link is not the canonical
   link of the family. :pr:`10605`
+- Add the option ``use_t`` to ``GEE.fit``, ``OrdinalGEE.fit`` and
+  ``NominalGEE.fit``. With ``use_t=True``, p-values, confidence intervals,
+  ``t_test`` and ``f_test`` use the t distribution with the number of groups
+  minus the number of parameters as degrees of freedom. :issue:`8610`,
+  :pr:`10781`
+- Add ``cov_type="kauermann_carroll"`` to ``GEE.fit``, the Kauermann-Carroll
+  small-sample correction of the robust covariance. It scales the residuals
+  of each group by the inverse square root of one minus the leverage, where
+  ``"bias_reduced"`` (Mancl-DeRouen) uses the inverse. :issue:`1183`,
+  :pr:`10781`
 
 Performance
 -----------
