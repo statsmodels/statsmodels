@@ -280,20 +280,30 @@ def extract_intervention_inputs(
     results,
     treatment_var: str,
     doses: tuple[Real, ...] | list[Real],
-    data: pd.DataFrame,
+    data: pd.DataFrame | np.ndarray,
 ) -> InterventionInputs:
-    """Extract K-dose prediction inputs from a fitted OLS, Logit, Poisson, or GLM."""
+    """Extract K-dose prediction inputs from a fitted OLS, Logit, Poisson, or GLM.
+
+    ``data`` may be a ``pandas.DataFrame`` or a pre-extracted 2-D ``ndarray``
+    whose columns match the model's covariates in ``exog_names`` order.
+    """
     model = getattr(results, "model", None)
     link = _detect_link(model)
     if not hasattr(results, "params"):
         raise ValueError("results must contain fitted parameters")
     if not hasattr(model, "formula"):
         raise ValueError("results must come from a formula-based model")
-    if not isinstance(data, pd.DataFrame) or data.empty:
-        raise ValueError("data must be a non-empty pandas DataFrame")
+    is_df = isinstance(data, pd.DataFrame)
+    if is_df:
+        if data.empty:
+            raise ValueError("data must be a non-empty pandas DataFrame")
+    else:
+        arr = np.asarray(data, dtype=np.float64)
+        if arr.ndim != 2 or arr.shape[0] == 0:
+            raise ValueError("ndarray data must be a non-empty 2-D array")
     if not isinstance(treatment_var, str) or not treatment_var:
         raise TypeError("treatment_var must be a non-empty column name")
-    if treatment_var not in data.columns:
+    if is_df and treatment_var not in data.columns:
         raise ValueError(f"treatment column {treatment_var!r} is missing from data")
     if (
         not isinstance(doses, (tuple, list))
@@ -316,10 +326,11 @@ def extract_intervention_inputs(
 
     def _register_cov(col: str) -> None:
         if col not in base_map and col not in int_map:
-            if col not in data.columns:
-                raise ValueError(f"covariate column {col!r} is missing from data")
-            if not pd.api.types.is_numeric_dtype(data[col]):
-                raise TypeError("covariate columns must contain numeric values")
+            if is_df:
+                if col not in data.columns:
+                    raise ValueError(f"covariate column {col!r} is missing from data")
+                if not pd.api.types.is_numeric_dtype(data[col]):
+                    raise TypeError("covariate columns must contain numeric values")
             cov_order.append(col)
 
     for index, name in enumerate(names):
@@ -351,7 +362,14 @@ def extract_intervention_inputs(
     if not np.isfinite(coefficients).all():
         raise ValueError("fitted coefficients must all be finite")
 
-    covariate_data = data[cov_order].to_numpy(dtype=np.float64)
+    if is_df:
+        covariate_data = data[cov_order].to_numpy(dtype=np.float64)
+    else:
+        covariate_data = np.asarray(data, dtype=np.float64)
+        if covariate_data.shape[1] != len(cov_order):
+            raise ValueError(
+                f"ndarray data has {covariate_data.shape[1]} columns, expected {len(cov_order)}"
+            )
     if not np.isfinite(covariate_data).all():
         raise ValueError("covariate data must contain only finite values")
 
@@ -373,7 +391,8 @@ def evaluate_intervention_predict(
     results,
     treatment_var: str,
     doses: tuple[Real, ...] | list[Real],
-    data: pd.DataFrame,
+    data: pd.DataFrame | np.ndarray,
+    reduction: str = "none",
 ) -> np.ndarray:
     """Evaluate K treatment doses for a fitted OLS, Logit, Poisson, or GLM."""
     inputs = extract_intervention_inputs(results, treatment_var, doses, data)
@@ -386,4 +405,5 @@ def evaluate_intervention_predict(
         treatment_index=inputs.treatment_index,
         doses=inputs.doses,
         link=inputs.link,
+        reduction=reduction,
     )

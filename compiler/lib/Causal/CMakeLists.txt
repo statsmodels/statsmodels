@@ -17,6 +17,7 @@ add_mlir_dialect_library(CausalDialect
   MLIRLinalgDialect
   MLIRMathDialect
   MLIRPass
+  MLIRSCFDialect
   MLIRTensorDialect
 )
 

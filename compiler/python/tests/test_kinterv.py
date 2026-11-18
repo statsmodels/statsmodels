@@ -76,3 +76,27 @@ def test_emit_predict_sequence_and_fused_mlir(glm_df):
     assert '"ci.intervention_predict"' in fused
     assert "-> tensor<10x3xf64>" in fused
     assert "doses = array<f64:" in fused
+
+
+def test_intervention_predict_ate_argmax_and_ndarray_input(glm_df):
+    results = smf.logit("y_bin ~ T * (x1 + x2) + x3", data=glm_df).fit(disp=False)
+    doses = [0.0, 1.0, 2.5]
+    scoring = glm_df.iloc[:12].copy()
+
+    expected = np.column_stack(
+        [results.predict(scoring.assign(T=d)).to_numpy() for d in doses]
+    )
+    inputs = extract_intervention_inputs(results, "T", doses, scoring)
+
+    ate = evaluate_intervention_predict(results, "T", doses, scoring, reduction="ate")
+    np.testing.assert_allclose(ate, expected.mean(axis=0), rtol=1e-12, atol=1e-12)
+
+    policy = evaluate_intervention_predict(
+        results, "T", doses, inputs.covariate_data, reduction="argmax"
+    )
+    np.testing.assert_array_equal(policy, np.argmax(expected, axis=1))
+
+    assert "-> tensor<3xf64>" in emit_intervention_predict_mlir(inputs, reduction="ate")
+    assert "-> tensor<12xi64>" in emit_intervention_predict_mlir(
+        inputs, reduction="argmax"
+    )

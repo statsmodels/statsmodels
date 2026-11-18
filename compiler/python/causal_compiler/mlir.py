@@ -87,8 +87,11 @@ def emit_predict_sequence_mlir(inputs: InterventionInputs) -> str:
 }}"""
 
 
-def emit_intervention_predict_mlir(inputs: InterventionInputs) -> str:
-    """Emit a fused ``ci.intervention_predict`` op returning ``tensor<NxKxf64>``."""
+def emit_intervention_predict_mlir(
+    inputs: InterventionInputs,
+    reduction: str = "none",
+) -> str:
+    """Emit a fused ``ci.intervention_predict`` op with optional reduction."""
     n_rows, n_covs = inputs.covariate_data.shape
     n_coeff = inputs.coefficients.size
     n_doses = len(inputs.doses)
@@ -96,14 +99,24 @@ def emit_intervention_predict_mlir(inputs: InterventionInputs) -> str:
     int_idx = ", ".join(str(i) for i in inputs.interaction_indices)
     doses_str = ", ".join(f"{d:.17e}" for d in inputs.doses)
 
+    if reduction == "none":
+        out_type = f"tensor<{n_rows}x{n_doses}xf64>"
+    elif reduction == "ate":
+        out_type = f"tensor<{n_doses}xf64>"
+    elif reduction == "argmax":
+        out_type = f"tensor<{n_rows}xi64>"
+    else:
+        raise ValueError(f"unsupported reduction {reduction!r}")
+
     return f"""module {{
   func.func public @counterfactual_k(
       %data: tensor<{n_rows}x{n_covs}xf64>,
       %coefficients: tensor<{n_coeff}xf64>
-  ) -> tensor<{n_rows}x{n_doses}xf64> {{
+  ) -> {out_type} {{
     %preds = "ci.intervention_predict"(%data, %coefficients) {{
       treatment_name = {json.dumps(inputs.treatment_var)},
       link = {json.dumps(inputs.link)},
+      reduction = {json.dumps(reduction)},
       doses = array<f64: {doses_str}>,
       base_coefficients = array<i64: {base_idx}>,
       interaction_coefficients = array<i64: {int_idx}>,
@@ -112,7 +125,7 @@ def emit_intervention_predict_mlir(inputs: InterventionInputs) -> str:
     }} : (
       tensor<{n_rows}x{n_covs}xf64>,
       tensor<{n_coeff}xf64>
-    ) -> tensor<{n_rows}x{n_doses}xf64>
-    return %preds : tensor<{n_rows}x{n_doses}xf64>
+    ) -> {out_type}
+    return %preds : {out_type}
   }}
 }}"""

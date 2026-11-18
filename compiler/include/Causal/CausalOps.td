@@ -60,12 +60,13 @@ def Causal_PredictOp : Causal_Op<"predict"> {
 }
 
 def Causal_InterventionPredictOp : Causal_Op<"intervention_predict"> {
-  let summary = "Predict outcomes for K treatment doses in one pass";
+  let summary = "Predict outcomes (or ATE / policy argmax) for K doses in one pass";
   let arguments = (ins
     AnyRankedTensor:$data,
     AnyRankedTensor:$coefficients,
     StrAttr:$treatment_name,
     StrAttr:$link,
+    DefaultValuedStrAttr<StrAttr, "none">:$reduction,
     DenseF64ArrayAttr:$doses,
     DenseI64ArrayAttr:$base_coefficients,
     DenseI64ArrayAttr:$interaction_coefficients,

@@ -67,6 +67,7 @@ def intervention_predict(
     treatment_index: int,
     doses: tuple[float, ...] | list[float],
     link: str = "logit",
+    reduction: str = "none",
 ) -> np.ndarray:
     """Evaluate K treatment doses in one pass by hoisting ``X @ [beta_x, beta_int]``.
 
@@ -90,11 +91,14 @@ def intervention_predict(
         ``K`` treatment values to evaluate.
     link : {"identity", "logit", "log"}, optional
         Model link function.
+    reduction : {"none", "ate", "argmax"}, optional
+        Output mode: ``"none"`` returns ``(N, K)``, ``"ate"`` returns ``(K,)``
+        column means, and ``"argmax"`` returns ``(N,)`` best-dose indices.
 
     Returns
     -------
     ndarray
-        Two-dimensional ``(N, K)`` array of predicted outcomes.
+        Predicted outcomes, dose ATEs, or per-row optimal dose indices.
     """
     x = np.asarray(covariate_data, dtype=np.float64)
     coeffs = np.asarray(coefficients, dtype=np.float64)
@@ -127,9 +131,18 @@ def intervention_predict(
     eta = (shared[:, [0]] + beta_0) + (shared[:, [1]] + beta_t) * dose_vec[None, :]
 
     if link == "identity":
-        return eta
-    if link == "logit":
-        return 1.0 / (1.0 + np.exp(-eta))
-    if link == "log":
-        return np.exp(eta)
-    raise ValueError(f"unsupported link {link!r}")
+        preds = eta
+    elif link == "logit":
+        preds = 1.0 / (1.0 + np.exp(-eta))
+    elif link == "log":
+        preds = np.exp(eta)
+    else:
+        raise ValueError(f"unsupported link {link!r}")
+
+    if reduction == "none":
+        return preds
+    if reduction == "ate":
+        return preds.mean(axis=0)
+    if reduction == "argmax":
+        return np.argmax(preds, axis=1).astype(np.int64)
+    raise ValueError(f"unsupported reduction {reduction!r}")

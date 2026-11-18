@@ -196,13 +196,34 @@ mlir::LogicalResult causal::InterventionPredictOp::verify() {
   if (getDoses().empty()) {
     return emitOpError("doses must not be empty");
   }
-  if (!outType || outType.getRank() != 2 || !outType.getElementType().isF64()) {
-    return emitOpError("result must be a rank-2 f64 tensor");
-  }
-  if (outType.hasStaticShape() && dataType.hasStaticShape()
-      && (outType.getDimSize(0) != dataType.getDimSize(0)
-          || outType.getDimSize(1) != static_cast<int64_t>(getDoses().size()))) {
-    return emitOpError("result shape must be (N, K)");
+  llvm::StringRef reduction = getReduction();
+  int64_t k = static_cast<int64_t>(getDoses().size());
+  if (reduction == "none") {
+    if (!outType || outType.getRank() != 2 || !outType.getElementType().isF64()) {
+      return emitOpError("result must be a rank-2 f64 tensor");
+    }
+    if (outType.hasStaticShape() && dataType.hasStaticShape()
+        && (outType.getDimSize(0) != dataType.getDimSize(0)
+            || outType.getDimSize(1) != k)) {
+      return emitOpError("result shape must be (N, K)");
+    }
+  } else if (reduction == "ate") {
+    if (!outType || outType.getRank() != 1 || !outType.getElementType().isF64()) {
+      return emitOpError("ate result must be a rank-1 f64 tensor");
+    }
+    if (outType.hasStaticShape() && outType.getDimSize(0) != k) {
+      return emitOpError("ate result length must equal K");
+    }
+  } else if (reduction == "argmax") {
+    if (!outType || outType.getRank() != 1 || !outType.getElementType().isInteger(64)) {
+      return emitOpError("argmax result must be a rank-1 i64 tensor");
+    }
+    if (outType.hasStaticShape() && dataType.hasStaticShape()
+        && outType.getDimSize(0) != dataType.getDimSize(0)) {
+      return emitOpError("argmax result length must equal N");
+    }
+  } else {
+    return emitOpError("reduction must be 'none', 'ate', or 'argmax'");
   }
   return mlir::success();
 }

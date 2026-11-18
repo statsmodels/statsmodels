@@ -5,6 +5,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
@@ -22,6 +23,7 @@ int main(int argc, char **argv) {
       mlir::func::FuncDialect,
       mlir::linalg::LinalgDialect,
       mlir::math::MathDialect,
+      mlir::scf::SCFDialect,
       mlir::tensor::TensorDialect>();
 
   return mlir::asMainReturnCode(

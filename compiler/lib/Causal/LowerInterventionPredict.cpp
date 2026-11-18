@@ -4,6 +4,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -29,7 +30,8 @@ public:
 
   void getDependentDialects(mlir::DialectRegistry &registry) const override {
     registry.insert<mlir::arith::ArithDialect, mlir::linalg::LinalgDialect,
-                    mlir::math::MathDialect, mlir::tensor::TensorDialect>();
+                    mlir::math::MathDialect, mlir::scf::SCFDialect,
+                    mlir::tensor::TensorDialect>();
   }
 
   void runOnOperation() override {
@@ -120,6 +122,144 @@ private:
     mlir::MLIRContext *ctx = rewriter.getContext();
     mlir::AffineExpr d0 = mlir::getAffineDimExpr(0, ctx);
     mlir::AffineExpr d1 = mlir::getAffineDimExpr(1, ctx);
+    llvm::StringRef link = op.getLink();
+    llvm::StringRef reduction = op.getReduction();
+
+    auto emitPred = [&](mlir::OpBuilder &b, mlir::Location bLoc,
+                        mlir::Value m0, mlir::Value m1, mlir::Value dose) {
+      mlir::Value base = b.create<mlir::arith::AddFOp>(bLoc, m0, c0);
+      mlir::Value slope = b.create<mlir::arith::AddFOp>(bLoc, m1, c1);
+      mlir::Value scaled = b.create<mlir::arith::MulFOp>(bLoc, slope, dose);
+      mlir::Value eta = b.create<mlir::arith::AddFOp>(bLoc, base, scaled);
+      if (link == "logit") {
+        mlir::Value one = b.create<mlir::arith::ConstantOp>(
+            bLoc, b.getF64Type(), b.getF64FloatAttr(1.0));
+        mlir::Value negEta = b.create<mlir::arith::NegFOp>(bLoc, eta);
+        mlir::Value expNeg = b.create<mlir::math::ExpOp>(bLoc, negEta);
+        mlir::Value denom = b.create<mlir::arith::AddFOp>(bLoc, one, expNeg);
+        return b.create<mlir::arith::DivFOp>(bLoc, one, denom).getResult();
+      }
+      if (link == "log") {
+        return b.create<mlir::math::ExpOp>(bLoc, eta).getResult();
+      }
+      return eta;
+    };
+
+    if (reduction == "ate") {
+      auto kType = mlir::RankedTensorType::get(
+          {static_cast<int64_t>(doses.size())}, rewriter.getF64Type());
+      mlir::Value kEmpty = rewriter.create<mlir::tensor::EmptyOp>(loc, kType);
+      mlir::Value kZero =
+          rewriter
+              .create<mlir::linalg::FillOp>(
+                  loc, mlir::ValueRange{zero}, mlir::ValueRange{kEmpty})
+              .getResult(0);
+      mlir::AffineMap m0Map =
+          mlir::AffineMap::get(2, 0, {d0, mlir::getAffineConstantExpr(0, ctx)}, ctx);
+      mlir::AffineMap m1Map =
+          mlir::AffineMap::get(2, 0, {d0, mlir::getAffineConstantExpr(1, ctx)}, ctx);
+      mlir::AffineMap doseMap = mlir::AffineMap::get(2, 0, {d1}, ctx);
+      mlir::AffineMap kMap = mlir::AffineMap::get(2, 0, {d1}, ctx);
+      llvm::SmallVector<mlir::AffineMap> maps{m0Map, m1Map, doseMap, kMap};
+      llvm::SmallVector<mlir::utils::IteratorType> iters{
+          mlir::utils::IteratorType::reduction,
+          mlir::utils::IteratorType::parallel};
+      auto sumOp = rewriter.create<mlir::linalg::GenericOp>(
+          loc,
+          mlir::TypeRange{kType},
+          mlir::ValueRange{m, m, dosesConst},
+          mlir::ValueRange{kZero},
+          maps,
+          iters,
+          [&](mlir::OpBuilder &b, mlir::Location bLoc, mlir::ValueRange args) {
+            mlir::Value p = emitPred(b, bLoc, args[0], args[1], args[2]);
+            mlir::Value acc = b.create<mlir::arith::AddFOp>(bLoc, args[3], p);
+            b.create<mlir::linalg::YieldOp>(bLoc, acc);
+          });
+
+      mlir::Value nRowsIdx = dataType.isDynamicDim(0)
+          ? dynRows[0]
+          : rewriter.create<mlir::arith::ConstantIndexOp>(
+                loc, dataType.getDimSize(0))
+                .getResult();
+      mlir::Value nRowsI64 = rewriter.create<mlir::arith::IndexCastOp>(
+          loc, rewriter.getI64Type(), nRowsIdx);
+      mlir::Value nRowsF64 = rewriter.create<mlir::arith::SIToFPOp>(
+          loc, rewriter.getF64Type(), nRowsI64);
+      mlir::AffineMap id1d = mlir::AffineMap::getMultiDimIdentityMap(1, ctx);
+      mlir::Value meanEmpty =
+          rewriter.create<mlir::tensor::EmptyOp>(loc, outType);
+      auto meanOp = rewriter.create<mlir::linalg::GenericOp>(
+          loc,
+          mlir::TypeRange{outType},
+          mlir::ValueRange{sumOp.getResult(0)},
+          mlir::ValueRange{meanEmpty},
+          llvm::SmallVector<mlir::AffineMap>{id1d, id1d},
+          llvm::SmallVector<mlir::utils::IteratorType>{
+              mlir::utils::IteratorType::parallel},
+          [&](mlir::OpBuilder &b, mlir::Location bLoc, mlir::ValueRange args) {
+            mlir::Value avg =
+                b.create<mlir::arith::DivFOp>(bLoc, args[0], nRowsF64);
+            b.create<mlir::linalg::YieldOp>(bLoc, avg);
+          });
+      rewriter.replaceOp(op, meanOp.getResult(0));
+      return;
+    }
+
+    if (reduction == "argmax") {
+      mlir::AffineMap m0Map =
+          mlir::AffineMap::get(1, 0, {d0, mlir::getAffineConstantExpr(0, ctx)}, ctx);
+      mlir::AffineMap m1Map =
+          mlir::AffineMap::get(1, 0, {d0, mlir::getAffineConstantExpr(1, ctx)}, ctx);
+      mlir::AffineMap outMap = mlir::AffineMap::getMultiDimIdentityMap(1, ctx);
+      auto argmaxOp = rewriter.create<mlir::linalg::GenericOp>(
+          loc,
+          mlir::TypeRange{outType},
+          mlir::ValueRange{m, m},
+          mlir::ValueRange{outEmpty},
+          llvm::SmallVector<mlir::AffineMap>{m0Map, m1Map, outMap},
+          llvm::SmallVector<mlir::utils::IteratorType>{
+              mlir::utils::IteratorType::parallel},
+          [&](mlir::OpBuilder &b, mlir::Location bLoc, mlir::ValueRange args) {
+            mlir::Value cZeroIdx =
+                b.create<mlir::arith::ConstantIndexOp>(bLoc, 0);
+            mlir::Value cOneIdx =
+                b.create<mlir::arith::ConstantIndexOp>(bLoc, 1);
+            mlir::Value cKIdx =
+                b.create<mlir::arith::ConstantIndexOp>(bLoc, doses.size());
+            mlir::Value d0Val = b.create<mlir::tensor::ExtractOp>(
+                bLoc, dosesConst, mlir::ValueRange{cZeroIdx});
+            mlir::Value initVal = emitPred(b, bLoc, args[0], args[1], d0Val);
+            mlir::Value initIdx = b.create<mlir::arith::ConstantOp>(
+                bLoc, b.getI64Type(), b.getI64IntegerAttr(0));
+            auto loop = b.create<mlir::scf::ForOp>(
+                bLoc,
+                cOneIdx,
+                cKIdx,
+                cOneIdx,
+                mlir::ValueRange{initVal, initIdx},
+                [&](mlir::OpBuilder &lb, mlir::Location lLoc, mlir::Value k,
+                    mlir::ValueRange iterArgs) {
+                  mlir::Value dk = lb.create<mlir::tensor::ExtractOp>(
+                      lLoc, dosesConst, mlir::ValueRange{k});
+                  mlir::Value cand = emitPred(lb, lLoc, args[0], args[1], dk);
+                  mlir::Value better = lb.create<mlir::arith::CmpFOp>(
+                      lLoc, mlir::arith::CmpFPredicate::OGT, cand, iterArgs[0]);
+                  mlir::Value kI64 = lb.create<mlir::arith::IndexCastOp>(
+                      lLoc, lb.getI64Type(), k);
+                  mlir::Value nextVal = lb.create<mlir::arith::SelectOp>(
+                      lLoc, better, cand, iterArgs[0]);
+                  mlir::Value nextIdx = lb.create<mlir::arith::SelectOp>(
+                      lLoc, better, kI64, iterArgs[1]);
+                  lb.create<mlir::scf::YieldOp>(
+                      lLoc, mlir::ValueRange{nextVal, nextIdx});
+                });
+            b.create<mlir::linalg::YieldOp>(bLoc, loop.getResult(1));
+          });
+      rewriter.replaceOp(op, argmaxOp.getResult(0));
+      return;
+    }
+
     mlir::AffineMap m0Map =
         mlir::AffineMap::get(2, 0, {d0, mlir::getAffineConstantExpr(0, ctx)}, ctx);
     mlir::AffineMap m1Map =
@@ -132,7 +272,6 @@ private:
         mlir::utils::IteratorType::parallel,
         mlir::utils::IteratorType::parallel};
 
-    llvm::StringRef link = op.getLink();
     auto fused = rewriter.create<mlir::linalg::GenericOp>(
         loc,
         mlir::TypeRange{outType},
@@ -141,23 +280,7 @@ private:
         maps,
         iters,
         [&](mlir::OpBuilder &b, mlir::Location bLoc, mlir::ValueRange args) {
-          mlir::Value base = b.create<mlir::arith::AddFOp>(bLoc, args[0], c0);
-          mlir::Value slope = b.create<mlir::arith::AddFOp>(bLoc, args[1], c1);
-          mlir::Value scaled =
-              b.create<mlir::arith::MulFOp>(bLoc, slope, args[2]);
-          mlir::Value eta = b.create<mlir::arith::AddFOp>(bLoc, base, scaled);
-
-          mlir::Value result = eta;
-          if (link == "logit") {
-            mlir::Value one = b.create<mlir::arith::ConstantOp>(
-                bLoc, b.getF64Type(), b.getF64FloatAttr(1.0));
-            mlir::Value negEta = b.create<mlir::arith::NegFOp>(bLoc, eta);
-            mlir::Value expNeg = b.create<mlir::math::ExpOp>(bLoc, negEta);
-            mlir::Value denom = b.create<mlir::arith::AddFOp>(bLoc, one, expNeg);
-            result = b.create<mlir::arith::DivFOp>(bLoc, one, denom);
-          } else if (link == "log") {
-            result = b.create<mlir::math::ExpOp>(bLoc, eta);
-          }
+          mlir::Value result = emitPred(b, bLoc, args[0], args[1], args[2]);
           b.create<mlir::linalg::YieldOp>(bLoc, result);
         });
 
