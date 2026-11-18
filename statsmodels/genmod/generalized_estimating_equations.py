@@ -1459,8 +1459,6 @@ class GEE(GLM):
 
             if bc_cov is not None:
                 y, bc_cov = self._handle_constraint(x, bc_cov)
-            if kc_cov is not None:
-                y, kc_cov = self._handle_constraint(x, kc_cov)
                 if x is None:
                     warnings.warn(
                         "Unable to estimate constrained GEE parameters.",
@@ -1468,6 +1466,8 @@ class GEE(GLM):
                         stacklevel=2,
                     )
                     return None
+            if kc_cov is not None:
+                y, kc_cov = self._handle_constraint(x, kc_cov)
 
         scale = self.estimate_scale()
 
