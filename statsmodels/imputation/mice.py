@@ -239,10 +239,12 @@ class MICEData:
         self.data = data.dropna(how="all").copy()
         n_dropped = data.shape[0] - self.data.shape[0]
         if n_dropped > 0:
+            one = n_dropped == 1
             warnings.warn(
-                f"{n_dropped} of the {data.shape[0]} rows have missing values "
-                "in all variables and are dropped. They are not in "
-                "MICEData.data.",
+                f"{n_dropped} of the {data.shape[0]} rows "
+                f"{'has' if one else 'have'} missing values in all "
+                f"variables and {'is' if one else 'are'} dropped. "
+                f"{'It is' if one else 'They are'} not in MICEData.data.",
                 ValueWarning,
                 stacklevel=2,
             )
