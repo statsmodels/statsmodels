@@ -10,6 +10,7 @@ import pytest
 
 import statsmodels.api as sm
 from statsmodels.imputation import mice
+from statsmodels.tools.sm_exceptions import ValueWarning
 
 try:
     import matplotlib.pyplot as plt
@@ -218,9 +219,11 @@ class TestMICEData:
             hist.append(imp.data.shape)
 
         for pm in "gaussian", "boot":
-            idata = mice.MICEData(
-                df, perturbation_method=pm, history_callback=cb, rng=gen
-            )
+            # row 40 is missing in all variables
+            with pytest.warns(ValueWarning, match="1 of the 300 rows"):
+                idata = mice.MICEData(
+                    df, perturbation_method=pm, history_callback=cb, rng=gen
+                )
             idata.set_imputer(
                 "time",
                 "0 + x1 + x2",
@@ -588,7 +591,8 @@ def test_micedata_preserves_index():
     # an all-missing row is still dropped, but the other labels survive
     df.iloc[9, :] = np.nan
     df_orig = df.copy()
-    mid2 = mice.MICEData(df, rng=np.random.RandomState(0))
+    with pytest.warns(ValueWarning, match="1 of the 25 rows"):
+        mid2 = mice.MICEData(df, rng=np.random.RandomState(0))
     assert mid2.data.shape[0] == 24
     expected = np.array([x for x in range(100, 125) if x != 109])
     assert_equal(mid2.data.index.values, expected)
@@ -598,6 +602,24 @@ def test_micedata_preserves_index():
 
     # the user's frame is never modified in place
     pd.testing.assert_frame_equal(df, df_orig)
+
+
+def test_micedata_all_missing_rows_warn():
+    # gh-6532: rows in which all variables are missing were dropped silently
+    gen = np.random.RandomState(4567)
+    df = pd.DataFrame(gen.normal(size=(20, 3)), columns=["a", "b", "c"])
+    df.iloc[[4, 11], :] = np.nan
+    df.iloc[7, 1] = np.nan
+    with pytest.warns(ValueWarning, match="2 of the 20 rows"):
+        mid = mice.MICEData(df, rng=np.random.RandomState(0))
+    assert_equal(mid.data.index.values, np.delete(np.arange(20), [4, 11]))
+
+    # no warning if no row is dropped
+    df = df.dropna(how="all")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        mid = mice.MICEData(df, rng=np.random.RandomState(0))
+    assert_equal(mid.data.shape[0], 18)
 
 
 def test_micedata_duplicate_index():

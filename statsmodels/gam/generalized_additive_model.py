@@ -80,32 +80,58 @@ def _transform_predict_exog(model, exog, model_spec=None):
     if model_spec is not None and (exog is not None):
         from statsmodels.formula._manager import FormulaManager
 
-        if isinstance(exog, pd.Series):
-            # we are guessing whether it should be column or row
-            if (
-                hasattr(exog, "name")
-                and isinstance(exog.name, str)
-                and exog.name in model_spec.describe()
-            ):
-                # assume we need one column
-                exog = pd.DataFrame(exog)
-            else:
-                # assume we need a row
-                exog = pd.DataFrame(exog).T
-        orig_exog_len = len(exog)
-        is_dict = isinstance(exog, dict)
+        mgr = FormulaManager()
+        model_columns = mgr.get_column_names(model_spec)
 
-        exog = FormulaManager().get_matrices(model_spec, exog, pandas=True)
-        if orig_exog_len > len(exog) and not is_dict:
-            import warnings
-
-            if exog_index is None:
-                warnings.warn(
-                    "nan values have been dropped", ValueWarning, stacklevel=2
+        # If exog is already a design matrix built from a model specification,
+        # then it must not be transformed a second time. This happens, for
+        # example, when a new exog is created with
+        # ``dmatrix(exog.design_info, new_data, return_type="dataframe")``.
+        exog_spec = mgr.get_model_spec(exog, optional=True)
+        if exog_spec is not None:
+            if mgr.get_column_names(exog_spec) != model_columns:
+                raise ValueError(
+                    "exog was created using a different model specification "
+                    "than the one used to fit the model. Pass the original "
+                    "data or an exog created with the fitted model's "
+                    "specification."
                 )
-            else:
-                exog = exog.reindex(exog_index)
-        exog_index = exog.index
+            already_transformed = True
+        elif isinstance(exog, pd.DataFrame):
+            # Design matrices created by some tools do not keep the model
+            # specification attached. Matching column names are then used as
+            # an indicator that exog is already a design matrix.
+            already_transformed = list(exog.columns) == model_columns
+        else:
+            already_transformed = False
+
+        if not already_transformed:
+            if isinstance(exog, pd.Series):
+                # we are guessing whether it should be column or row
+                if (
+                    hasattr(exog, "name")
+                    and isinstance(exog.name, str)
+                    and exog.name in model_spec.describe()
+                ):
+                    # assume we need one column
+                    exog = pd.DataFrame(exog)
+                else:
+                    # assume we need a row
+                    exog = pd.DataFrame(exog).T
+            orig_exog_len = len(exog)
+            is_dict = isinstance(exog, dict)
+
+            exog = mgr.get_matrices(model_spec, exog, pandas=True)
+            if orig_exog_len > len(exog) and not is_dict:
+                import warnings
+
+                if exog_index is None:
+                    warnings.warn(
+                        "nan values have been dropped", ValueWarning, stacklevel=2
+                    )
+                else:
+                    exog = exog.reindex(exog_index)
+            exog_index = exog.index
 
     if exog is not None:
         exog = np.asarray(exog)
@@ -229,7 +255,20 @@ class GLMGamResults(GLMResults):
         Parameters
         ----------
         exog : array_like, optional
-            The values for the linear explanatory variables
+            The values for the linear explanatory variables. This can be the
+            original data used by the formula, or a design matrix created
+            from the fitted model's ``design_info`` or ``model_spec``, for
+            example with ``FormulaManager().get_matrices(model_spec, data)``.
+            A prebuilt design matrix is used as is and the formula is not
+            applied again. It must be created from the fitted design info.
+            Only the column names are compared, so a matrix built with a
+            different transform that produces the same names, for example
+            its own ``center(x1)``, is accepted silently.
+
+            .. versionchanged:: 0.15.1
+
+               A design matrix created from the fitted model's design info is
+               no longer passed through the formula a second time.
         exog_smooth : array_like, optional
             values for the variables in the smooth terms
         transform : bool, optional
@@ -243,6 +282,12 @@ class GLMGamResults(GLMResults):
         -------
         prediction : ndarray, pandas.Series or pandas.DataFrame
             predicted values
+
+        Raises
+        ------
+        ValueError
+            If ``exog`` carries the design info or model specification of a
+            different design than the one used to fit the model.
 
         Notes
         -----
@@ -300,9 +345,18 @@ class GLMGamResults(GLMResults):
             the stored offset and exposure are not used unless they are
             passed explicitly.
 
+            ``exog`` can be the original data or a design matrix created from
+            the fitted model's ``design_info`` or ``model_spec``. A prebuilt
+            design matrix must be created from the fitted design info. Only
+            the column names are compared, so a matrix built with a different
+            transform that produces the same names, for example its own
+            ``center(x1)``, is accepted silently.
+
             .. versionchanged:: 0.15.1
 
                Without exog, the stored offset and exposure are now used.
+               A design matrix created from the fitted model's design info is
+               no longer passed through the formula a second time.
         exog_smooth : array_like, optional
             values for the variables in the smooth terms
         transform : bool, optional
@@ -319,6 +373,12 @@ class GLMGamResults(GLMResults):
             variance and can on demand calculate confidence intervals and
             summary tables for the prediction of the mean and of new
             observations.
+
+        Raises
+        ------
+        ValueError
+            If ``exog`` carries the design info or model specification of a
+            different design than the one used to fit the model.
         """
         ex, exog_index = self._tranform_predict_exog(
             exog=exog, exog_smooth=exog_smooth, transform=transform

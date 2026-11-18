@@ -3655,9 +3655,11 @@ def clark_west_test(
     The errors of forecasts ``h > 1`` steps ahead are serially correlated,
     and Clark and West (2007) only state that an autocorrelation consistent
     standard error should be used. For one-step forecasts they use the
-    least squares standard error; with ``lags=0`` the statistic differs
-    from it by the factor :math:`\\sqrt{T / (T - 1)}`, since the HAC
-    estimator divides by :math:`T`.
+    least squares standard error, which corresponds to ``lags=0`` and not
+    to the default number of lags. With ``lags=0`` the statistic is the
+    least squares t-statistic of the mean of :math:`f_t` multiplied by
+    :math:`\\sqrt{T / (T - 1)}`, since the HAC estimator divides by
+    :math:`T`.
 
     References
     ----------

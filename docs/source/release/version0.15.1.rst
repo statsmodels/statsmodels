@@ -618,6 +618,15 @@ Generalized linear models and discrete models
   the mean or the weights at ``start_params`` are not finite. A Newton fit
   from such starting values returned ``nan`` parameters with ``converged``
   ``True``. :issue:`5394`, :pr:`10605`
+- ``GLMGamResults.predict`` and ``get_prediction`` no longer apply the
+  model's formula a second time when ``exog`` is a design matrix created from
+  the fitted model's ``design_info`` or model specification. Before, the fitted
+  exog frame could not be reused for any linear term that is not a plain
+  column, for example ``np.log(x1)``, ``I(x1**2)``, an interaction with a
+  factor, or ``C(g)``. An ``exog`` that carries the ``design_info`` of another
+  design used to be re-evaluated by the formula and now raises a
+  ``ValueError``. :issue:`9562` :pr:`10752`
+
 Mixed models and imputation
 ---------------------------
 
@@ -650,6 +659,9 @@ Mixed models and imputation
   imputed values can be matched to the rows of the input. Rows in which all
   variables are missing are still dropped before imputation.
   :issue:`6532`, :pr:`10499`, :pr:`10629`
+- ``MICEData`` issues a ``ValueWarning`` when it drops rows in which all
+  variables are missing. These rows were dropped without a warning.
+  :issue:`6532`, :pr:`10777`
 
 Time series analysis
 --------------------
@@ -878,6 +890,11 @@ Time series analysis
   single series with a local level or local linear trend, also with missing
   values, and ``SARIMAX`` with ``concentrate_scale=True`` and exact diffuse
   initialization, are unchanged. :issue:`10741`, :pr:`10742`
+- ``MarkovRegression``, ``MarkovAutoregression`` and ``MarkovSwitching`` now
+  raise a ``MissingDataError`` if ``exog_tvtp`` contains NaN or inf. Before,
+  such values were accepted and ``fit`` returned a log-likelihood of NaN
+  without an error. The ``missing`` option does not apply to ``exog_tvtp``.
+  :pr:`10766`
 
 Statistics and tests
 --------------------
