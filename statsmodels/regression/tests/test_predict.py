@@ -9,7 +9,11 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
+from scipy import special, stats as sp_stats
 
+from statsmodels.discrete.discrete_model import Logit
+from statsmodels.genmod import families
+from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression._prediction import get_prediction
 from statsmodels.regression.linear_model import OLS, WLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
@@ -397,3 +401,194 @@ def test_prediction_results_mean_var_pred_mean():
     # it is documented as a backwards-compatibility alias for var_pred
     assert pred.var_pred_mean is pred.var_pred
     assert_allclose(pred.var_pred_mean, pred.se_mean**2, rtol=1e-10)
+
+
+def _make_cluster_model(model, n_groups=8, nobs_group=15, seed=91827):
+    # model with a cluster structure for the tests of the degrees of freedom
+    # of the prediction intervals: returns the model, the groups and the extra
+    # arguments for fit
+    rng = np.random.default_rng(seed)
+    groups = np.repeat(np.arange(n_groups), nobs_group)
+    n = groups.shape[0]
+    exog = np.column_stack([np.ones(n), rng.standard_normal(n)])
+    linpred = exog @ [0.5, 0.5] + 0.5 * rng.standard_normal(n_groups)[groups]
+    if model == "glm-poisson":
+        endog = rng.poisson(np.exp(linpred))
+        mod = GLM(endog, exog, family=families.Poisson())
+    elif model == "logit":
+        endog = (rng.uniform(size=n) < 1 / (1 + np.exp(-linpred))).astype(float)
+        mod = Logit(endog, exog)
+    else:
+        endog = linpred + rng.standard_normal(n)
+        if model == "ols":
+            mod = OLS(endog, exog)
+        elif model == "wls":
+            mod = WLS(endog, exog, weights=rng.uniform(0.5, 2, size=n))
+        else:
+            mod = GLM(endog, exog)
+
+    kwds = {"disp": 0} if model == "logit" else {}
+    return mod, groups, kwds
+
+
+def _linear_ci_from_cov(res, exog0, dist):
+    # interval of the linear predictor from the covariance of the parameters,
+    # the same formula as for ``t_test``, independent of ``get_prediction``
+    lin0 = exog0 @ res.params
+    se0 = np.sqrt(np.einsum("ij,jk,ik->i", exog0, res.cov_params(), exog0))
+    q = dist.ppf(0.975)
+    return lin0, se0, np.column_stack([lin0 - q * se0, lin0 + q * se0])
+
+
+def _linear_ci_prediction(res, model, exog0):
+    # the results of the linear models do not have the ``which`` option
+    if model in ["ols", "wls"]:
+        return res.get_prediction(exog0).conf_int()
+    return res.get_prediction(exog0, which="linear").conf_int()
+
+
+@pytest.mark.parametrize("model", ["ols", "wls", "glm", "glm-poisson", "logit"])
+def test_prediction_cluster_use_t_df(model):
+    # with cov_type="cluster" and use_t=True, prediction intervals use the
+    # same t(n_groups - 1) distribution as conf_int and t_test
+    n_groups = 8
+    mod, groups, kwds = _make_cluster_model(model, n_groups=n_groups)
+    res = mod.fit(cov_type="cluster", cov_kwds={"groups": groups}, use_t=True, **kwds)
+    assert res.df_resid_inference == n_groups - 1
+
+    exog0 = np.array([[1.0, -1.0], [1.0, 0.0], [1.0, 2.0]])
+    lin0, se0, ci_lin = _linear_ci_from_cov(res, exog0, sp_stats.t(n_groups - 1))
+    # t_test of the same linear combinations uses df_resid_inference
+    assert_allclose(res.t_test(exog0).conf_int(), ci_lin, rtol=1e-10)
+
+    sf = res.get_prediction(exog0).summary_frame()
+    if model in ["ols", "wls", "glm"]:
+        assert_allclose(sf[["mean_ci_lower", "mean_ci_upper"]], ci_lin, rtol=1e-10)
+    if model in ["ols", "wls"]:
+        q = sp_stats.t.ppf(0.975, n_groups - 1)
+        se_obs = np.sqrt(se0**2 + res.scale)
+        ci_obs = np.column_stack([lin0 - q * se_obs, lin0 + q * se_obs])
+        assert_allclose(sf[["obs_ci_lower", "obs_ci_upper"]], ci_obs, rtol=1e-10)
+    if model in ["glm", "glm-poisson", "logit"]:
+        pred = res.get_prediction(exog0, which="linear")
+        assert_allclose(pred.conf_int(), ci_lin, rtol=1e-10)
+        pred = res.get_prediction(exog0, which="mean")
+        if model == "logit":
+            ci_mean = special.expit(ci_lin)
+        else:
+            ci_mean = res.model.family.link.inverse(ci_lin)
+        assert_allclose(pred.conf_int(), ci_mean, rtol=1e-10)
+
+
+# Five clusters of four observations as literal numbers: draws of
+# ``np.random.default_rng(20261116)`` (x = N(0, 1) + cluster effect,
+# y = 1 + 0.5 x + cluster effect + N(0, 1)) rounded to three digits.
+_X_R = [
+    -0.498, 0.631, -0.725, -0.158, 0.188, -0.045, 0.953, -0.82, -1.694, 0.149,
+    -1.593, 1.084, -0.03, 0.253, 1.177, -1.743, 1.035, 0.441, 0.723, 2.202,
+]  # fmt: skip
+_Y_R = [
+    0.658, 0.262, 0.809, 2.362, 2.629, 1.19, 2.126, 1.318, 0.676, 0.004,
+    -1.372, 0.825, 2.905, 2.356, 3.589, 2.267, 0.85, 0.71, -1.088, 1.71,
+]  # fmt: skip
+
+# Reference values from R 4.6.1 with sandwich 3.1.3 and lmtest 0.9.40. The
+# confidence interval of the mean prediction at x0 is the interval of the
+# intercept of the regression on x - x0:
+#   d <- data.frame(g = rep(0:4, each = 4), x = x, y = y)
+#   fit <- lm(y ~ I(x - x0), data = d)
+#   v <- sandwich::vcovCL(fit, cluster = d$g, type = "HC1", cadjust = TRUE)
+#   lmtest::coefci(fit, parm = "(Intercept)", vcov. = v, df = 4)  # use_t=True
+#   lmtest::coefci(fit, parm = "(Intercept)", vcov. = v, df = Inf)  # False
+_X0_R = [-0.5, 1.5]
+_CI_R = {
+    True: [
+        [-0.408853965825686, 2.59075655066675],
+        [0.0214611166522727, 3.18974733170635],
+    ],
+    False: [
+        [0.032200199347159, 2.14970238549391],
+        [0.487316874900288, 2.72389157345833],
+    ],
+}
+
+
+@pytest.mark.parametrize("use_t", [True, False], ids=["t", "normal"])
+def test_prediction_cluster_use_t_df_r_reference(use_t):
+    # rtol 1e-8: statsmodels and R agree to about 1e-14 (the same linear
+    # function of the parameters and the same HC1 cluster covariance), the
+    # values of R are printed with 15 digits
+    groups = np.repeat(np.arange(5), 4)
+    exog = np.column_stack([np.ones(20), _X_R])
+    res = OLS(_Y_R, exog).fit(
+        cov_type="cluster", cov_kwds={"groups": groups}, use_t=use_t
+    )
+    exog0 = np.column_stack([np.ones(2), _X0_R])
+    ci = res.get_prediction(exog0).conf_int()
+    assert_allclose(ci, _CI_R[use_t], rtol=1e-8)
+
+
+def _cov_type_case(case):
+    # returns cov_type, cov_kwds and the expected df_resid_inference for OLS
+    # with 8 groups of 15 observations (time index 0, ..., 14 in each group)
+    n_groups, nobs_group = 8, 15
+    n = n_groups * nobs_group
+    groups = np.repeat(np.arange(n_groups), nobs_group)
+    time = np.tile(np.arange(nobs_group), n_groups)
+    if case in ["cluster", "cluster-crv3", "cluster-jk"]:
+        return case, {"groups": groups}, n_groups - 1
+    if case == "hac-panel":
+        return case, {"groups": groups, "maxlags": 2}, n_groups - 1
+    if case == "hac-groupsum":
+        return case, {"time": time, "maxlags": 2}, n_groups - 1
+    # two-way clustering, the smaller number of groups defines the df
+    two_way = np.column_stack([groups, np.arange(n) % 5])
+    return "cluster", {"groups": two_way}, 5 - 1
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["cluster", "cluster-crv3", "cluster-jk", "hac-panel", "hac-groupsum", "two-way"],
+)
+def test_prediction_cov_types_df_resid_inference(case):
+    # every covariance type that sets df_resid_inference changes the degrees
+    # of freedom of the prediction intervals, OLS can use all of them
+    cov_type, cov_kwds, df_expected = _cov_type_case(case)
+    mod, _, _ = _make_cluster_model("ols", n_groups=8, nobs_group=15)
+    res = mod.fit(cov_type=cov_type, cov_kwds=cov_kwds, use_t=True)
+    assert res.df_resid_inference == df_expected
+    assert df_expected != res.df_resid
+
+    exog0 = np.array([[1.0, -1.0], [1.0, 0.0], [1.0, 2.0]])
+    lin0, se0, ci_mean = _linear_ci_from_cov(res, exog0, sp_stats.t(df_expected))
+    sf = res.get_prediction(exog0).summary_frame()
+    assert_allclose(sf[["mean_ci_lower", "mean_ci_upper"]], ci_mean, rtol=1e-10)
+
+    q = sp_stats.t.ppf(0.975, df_expected)
+    se_obs = np.sqrt(se0**2 + res.scale)
+    ci_obs = np.column_stack([lin0 - q * se_obs, lin0 + q * se_obs])
+    assert_allclose(sf[["obs_ci_lower", "obs_ci_upper"]], ci_obs, rtol=1e-10)
+
+
+@pytest.mark.parametrize("model", ["ols", "wls", "glm", "glm-poisson", "logit"])
+@pytest.mark.parametrize("option", ["df_correction", "use_t"])
+def test_prediction_cluster_df_resid_unchanged(model, option):
+    # negative control: without df_resid_inference (df_correction=False) the
+    # intervals use t(df_resid) and with use_t=False they are normal
+    mod, groups, kwds = _make_cluster_model(model)
+    cov_kwds = {"groups": groups}
+    if option == "df_correction":
+        cov_kwds["df_correction"] = False
+    res = mod.fit(
+        cov_type="cluster", cov_kwds=cov_kwds, use_t=option != "use_t", **kwds
+    )
+    if option == "df_correction":
+        assert not hasattr(res, "df_resid_inference")
+        dist = sp_stats.t(res.df_resid)
+    else:
+        dist = sp_stats.norm
+
+    exog0 = np.array([[1.0, -1.0], [1.0, 0.0], [1.0, 2.0]])
+    _, _, ci_lin = _linear_ci_from_cov(res, exog0, dist)
+    assert_allclose(res.t_test(exog0).conf_int(), ci_lin, rtol=1e-10)
+    assert_allclose(_linear_ci_prediction(res, model, exog0), ci_lin, rtol=1e-10)

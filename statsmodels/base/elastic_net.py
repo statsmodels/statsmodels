@@ -29,6 +29,17 @@ loglike, score, and hess.
 """
 
 
+def _nobs(model):
+    """
+    Return the number of observations used to scale the log-likelihood.
+
+    Models with frequency weights (GLM) count each row as many times
+    as its weight, so the penalized objective matches a fit on the
+    expanded data.
+    """
+    return getattr(model, "wnobs", model.nobs)
+
+
 def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     """
     Negative penalized log-likelihood functions.
@@ -67,19 +78,19 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     """
 
     def nploglike(params, model):
-        nobs = model.nobs
+        nobs = _nobs(model)
         pen_llf = alpha[k] * (1 - L1_wt) * np.sum(params**2) / 2
         llf = model.loglike(np.r_[params], **loglike_kwds)
         return - llf / nobs + pen_llf
 
     def npscore(params, model):
-        nobs = model.nobs
+        nobs = _nobs(model)
         pen_grad = alpha[k] * (1 - L1_wt) * params
         gr = -model.score(np.r_[params], **score_kwds)[0] / nobs
         return gr + pen_grad
 
     def nphess(params, model):
-        nobs = model.nobs
+        nobs = _nobs(model)
         pen_hess = alpha[k] * (1 - L1_wt)
         h = -model.hessian(np.r_[params], **hess_kwds)[0, 0] / nobs + pen_hess
         return h
@@ -196,7 +207,7 @@ def _l1_slsqp(model, alpha, start_params, maxiter, loglike_kwds, score_kwds,
     if start_params is None:
         start_params = np.zeros(model.exog.shape[1])
 
-    nobs = model.nobs
+    nobs = _nobs(model)
 
     def f(params, *args):
         return -model.loglike(params, **loglike_kwds) / nobs

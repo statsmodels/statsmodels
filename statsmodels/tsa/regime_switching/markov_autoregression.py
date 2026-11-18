@@ -40,6 +40,11 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         time-varying transition probabilities (TVTP). TVTP is only used if this
         variable is provided. If an intercept is desired, a column of ones must
         be explicitly included in this array.
+
+        .. versionchanged:: 0.15.1
+
+           Raises ``MissingDataError`` if ``exog_tvtp`` contains NaN or inf.
+           The ``missing`` option does not apply to ``exog_tvtp``.
     switching_ar : bool or sequence of bool, optional
         If a boolean, sets whether or not all autoregressive coefficients are
         switching across regimes. If a sequence, should be of length equal

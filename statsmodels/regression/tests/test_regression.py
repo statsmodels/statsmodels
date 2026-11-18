@@ -2414,3 +2414,90 @@ def test_finite_data_unchanged():
     assert np.all(np.isfinite(res.params))
     res = GLS(endog, exog, sigma=np.linspace(1e-10, 1e10, 100)).fit()
     assert np.all(np.isfinite(res.params))
+
+
+def _duplicated_constant_data(nobs, seed):
+    rng = np.random.default_rng(seed)
+    exog = np.column_stack(
+        [np.ones(nobs), np.ones(nobs), rng.standard_normal((nobs, 3))]
+    )
+    endog = exog @ np.array([1.0, 2.0, 0.5, -1.0, 2.0]) + rng.standard_normal(nobs)
+    return endog, exog
+
+
+@pytest.mark.parametrize("method", ["pinv", "qr"])
+@pytest.mark.parametrize("nobs", [100, 1000, 6000])
+def test_rank_deficient_exog_detected(method, nobs):
+    # The smallest singular value of an exactly rank deficient design is a
+    # few eps times the largest and does not depend on nobs. A rank cutoff that
+    # does not grow with nobs missed the duplicated constant from about 1000
+    # observations and returned parameters of the order of 1e12.
+    endog, exog = _duplicated_constant_data(nobs, 20261108 + nobs)
+    mod = OLS(endog, exog)
+    with pytest.warns(SingularMatrixWarning):
+        res = mod.fit(method=method)
+    assert mod.rank == 4
+    assert res.df_resid == nobs - 4
+    # minimum-norm solution
+    expected = np.linalg.lstsq(exog, endog, rcond=None)[0]
+    assert_allclose(res.params, expected, atol=1e-8)
+    assert_allclose(res.params[0], res.params[1])
+    assert np.all(np.asarray(res.bse) < 1)
+
+
+@pytest.mark.parametrize("nobs", [100, 6000])
+def test_qr_matches_pinv_rank_deficient(nobs):
+    endog, exog = _duplicated_constant_data(nobs, 77 + nobs)
+    with pytest.warns(SingularMatrixWarning):
+        res_pinv = OLS(endog, exog).fit()
+    with pytest.warns(SingularMatrixWarning):
+        res_qr = OLS(endog, exog).fit(method="qr")
+    assert res_qr.model.rank == res_pinv.model.rank
+    assert_allclose(res_qr.params, res_pinv.params, atol=1e-8)
+    assert_allclose(res_qr.bse, res_pinv.bse, rtol=1e-6)
+    assert_allclose(
+        res_qr.model.pinv_wexog, res_pinv.model.pinv_wexog, rtol=1e-6, atol=1e-8
+    )
+    assert_allclose(
+        res_qr.model.wexog_singular_values,
+        res_pinv.model.wexog_singular_values,
+        rtol=1e-8,
+    )
+
+
+@pytest.mark.parametrize("level", [1e3, 1e4])
+def test_qr_covariance_ill_conditioned(level):
+    # The covariance was computed as inv(R'R), which squares the condition
+    # number of the design and lost about twice as many digits as pinv.
+    rng = np.random.default_rng(31)
+    nobs, k = 200, 5
+    exog = np.column_stack(
+        [np.ones(nobs)] + [level + rng.standard_normal(nobs) for _ in range(k - 1)]
+    )
+    endog = exog @ np.arange(1.0, k + 1) + rng.standard_normal(nobs)
+    res_pinv = OLS(endog, exog).fit()
+    res_qr = OLS(endog, exog).fit(method="qr")
+    assert_allclose(res_qr.bse, res_pinv.bse, rtol=1e-10)
+    assert_allclose(res_qr.params, res_pinv.params, rtol=1e-8)
+    assert_allclose(
+        res_qr.model.normalized_cov_params,
+        res_pinv.model.normalized_cov_params,
+        rtol=1e-8,
+        atol=1e-12 * np.max(np.abs(res_pinv.model.normalized_cov_params)),
+    )
+
+
+@pytest.mark.parametrize("method", ["pinv", "qr"])
+def test_ill_conditioned_full_rank_not_flagged(method):
+    # condition number about 4e8, far below 1 / (nobs * eps)
+    rng = np.random.default_rng(32)
+    nobs, k = 100000, 5
+    exog = np.column_stack(
+        [np.ones(nobs)] + [1e4 + rng.standard_normal(nobs) for _ in range(k - 1)]
+    )
+    endog = exog @ np.arange(1.0, k + 1) + rng.standard_normal(nobs)
+    mod = OLS(endog, exog)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SingularMatrixWarning)
+        mod.fit(method=method)
+    assert mod.rank == k
