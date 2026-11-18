@@ -314,12 +314,15 @@ _gee_fit_doc = """
         No dependence structure updates occur before this
         iteration number.
     cov_type : str, optional
-        One of "robust", "naive", "bias_reduced" or "kauermann_carroll".
-        "bias_reduced" is the Mancl-DeRouen and "kauermann_carroll" the
-        Kauermann-Carroll small-sample correction of the robust covariance.
+        One of "robust", "naive", "bias_reduced", "kauermann_carroll",
+        "fay_graubard" or "morel_bokossa_neerchal". The last four are
+        small-sample corrections of the robust covariance by Mancl and
+        DeRouen, Kauermann and Carroll, Fay and Graubard, and Morel,
+        Bokossa and Neerchal. See Notes.
 
         .. versionchanged:: 0.15.1
-           Added "kauermann_carroll".
+           Added "kauermann_carroll", "fay_graubard" and
+           "morel_bokossa_neerchal".
     ddof_scale : int, optional
         The scale parameter is estimated as the sum of squared
         Pearson residuals divided by `N - ddof_scale`, where N
@@ -379,6 +382,19 @@ _gee_fit_doc = """
     root is real. Each group needs an ``O(m^3)`` matrix root, where
     ``m`` is the group size, which can be slow for large groups.
 
+    ``cov_type="fay_graubard"`` (Fay and Graubard, 2001) multiplies the
+    score of group ``i`` elementwise by
+    ``(1 - min(b, diag(Omega_i Omega^{-1})))^{-1/2}``, where ``Omega_i``
+    is the contribution of the group to the information ``Omega`` and
+    ``b = 0.75``. ``cov_type="morel_bokossa_neerchal"`` (Morel, Bokossa
+    and Neerchal, 2003) is ``c * cov_robust + delta * xi * cov_naive``
+    with ``c = (N - 1) / (N - p) * K / (K - 1)``, ``delta = p / (K - p)``
+    if ``K > (d + 1) p`` and ``1 / d`` otherwise, and
+    ``xi = max(r, trace(cov_naive M) / p)``, where ``N`` is the number of
+    observations, ``K`` the number of groups, ``p`` the number of
+    parameters, ``M`` the center of the robust covariance, ``d = 2`` and
+    ``r = 1``. These follow the R packages saws and geesmv.
+
     References
     ----------
     LA Mancl and TA DeRouen (2001). A covariance estimator for GEE with
@@ -391,6 +407,13 @@ _gee_fit_doc = """
     P Li and DT Redden (2015). Small sample performance of bias-corrected
     sandwich estimators for cluster-randomized trials with binary
     outcomes. Statistics in Medicine, 34(2), 281-296.
+
+    MP Fay and BI Graubard (2001). Small-sample adjustments for Wald-type
+    tests using sandwich estimators. Biometrics, 57(4), 1198-1206.
+
+    Morel, Bokossa and Neerchal (2003). Small sample correction for the
+    variance of GEE estimators. Biometrical Journal, 45(4), 395-409.
+    doi:10.1002/bimj.200390021
 """
 
 _gee_results_doc = """
@@ -410,12 +433,17 @@ _gee_results_doc = """
         reduced
     cov_robust_kc : ndarray
         Kauermann-Carroll robust covariance of the parameter estimates
+    cov_robust_fg : ndarray
+        Fay-Graubard robust covariance of the parameter estimates
+    cov_robust_mbn : ndarray
+        Morel-Bokossa-Neerchal robust covariance of the parameter estimates
     converged : bool
         indicator for convergence of the optimization.
         True if the norm of the score is smaller than a threshold
     cov_type : str
-        string indicating whether a "robust", "naive", "bias_reduced" or
-        "kauermann_carroll" covariance is used as default
+        string indicating whether a "robust", "naive", "bias_reduced",
+        "kauermann_carroll", "fay_graubard" or "morel_bokossa_neerchal"
+        covariance is used as default
     fit_history : dict
         Contains information about the iterations.
     fittedvalues : ndarray
@@ -2116,9 +2144,10 @@ class GEEResults(GLMResults):
         Parameters
         ----------
         cov_type : str, optional
-            One of "robust", "naive", "bias_reduced" or
-            "kauermann_carroll".  Determines the covariance used to compute
-            standard errors.  Defaults to "robust".
+            One of "robust", "naive", "bias_reduced", "kauermann_carroll",
+            "fay_graubard" or "morel_bokossa_neerchal".  Determines the
+            covariance used to compute standard errors.  Defaults to
+            "robust".
         """
 
         # Check covariance_type
@@ -2314,8 +2343,9 @@ class GEEResults(GLMResults):
              default `alpha` = .05 returns a 95% confidence interval.
         cov_type : str, optional
              The covariance type used for computing standard errors;
-             must be one of 'robust', 'naive', 'bias_reduced' and
-             'kauermann_carroll'.
+             must be one of 'robust', 'naive', 'bias_reduced',
+             'kauermann_carroll', 'fay_graubard' and
+             'morel_bokossa_neerchal'.
              See `GEE` for details.
 
         Notes
