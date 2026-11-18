@@ -18,6 +18,7 @@ from statsmodels.genmod.families import Binomial
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
+from statsmodels.robust.robust_linear_model import RLM
 
 
 def _data_gen(endog, exog, partitions):
@@ -631,3 +632,62 @@ def test_gee_debiased_raises_before_fitting():
             init_kwds_generator=({"groups": groups[k]} for k in masks),
         )
     assert_equal(len(consumed), 0)
+
+
+class _OLSKeywordFit(OLS):
+    # alpha reaches fit_regularized only through **kwargs
+    def fit_regularized(self, **kwargs):
+        return super().fit_regularized(**kwargs)
+
+
+class _OLSNoAlpha(OLS):
+    # neither an alpha parameter nor **kwargs
+    def fit_regularized(self, method="elastic_net"):
+        return super().fit_regularized(method=method)
+
+
+@pytest.mark.parametrize(
+    "model_class, raises",
+    [
+        (OLS, False),
+        (_OLSKeywordFit, False),
+        (_OLSNoAlpha, True),
+        (GEE, True),
+        (RLM, True),  # no fit_regularized at all
+    ],
+)
+def test_check_estimation_method_signature(model_class, raises):
+    # GH 10778
+    mod = DistributedModel(2, model_class=model_class)
+    if raises:
+        with pytest.raises(NotImplementedError, match=model_class.__name__):
+            mod._check_estimation_method()
+    else:
+        mod._check_estimation_method()
+
+
+def test_fit_regularized_with_keywords_only():
+    # GH 10778, the signature check accepts fit_regularized(**kwargs)
+    rs = np.random.RandomState(435265)
+    X = rs.normal(size=(50, 3))
+    y = rs.randint(0, 2, size=50)
+
+    fits = [
+        DistributedModel(2, model_class=model_class).fit(
+            _data_gen(y, X, 2), fit_kwds={"alpha": 0.5}
+        )
+        for model_class in (OLS, _OLSKeywordFit)
+    ]
+    assert_allclose(fits[1].params, fits[0].params, rtol=1e-12)
+    assert_allclose(
+        fits[1].params, np.array([-0.157416, -0.029643, -0.471653]), atol=1e-6, rtol=0
+    )
+
+
+@pytest.mark.parametrize("init_groups, expected", [(None, [0]), (np.array([3]), [3])])
+def test_dummy_model_groups(init_groups, expected):
+    # GH 10778, groups is required by GEE: the placeholder model uses the
+    # groups of init_kwds if there are any and one group otherwise
+    init_kwds = {} if init_groups is None else {"groups": init_groups}
+    mod = DistributedModel(2, model_class=GEE, init_kwds=init_kwds)
+    assert_equal(mod._dummy_model().groups, expected)
