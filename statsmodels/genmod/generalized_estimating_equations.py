@@ -1318,6 +1318,16 @@ class GEE(GLM):
 
             f = self.weights_li[i] if self.weights is not None else 1.0
 
+            # a leverage of 1 leaves the correction undefined
+            if np.linalg.eigvals(hmat).real.max() > 1 - 1e-8:
+                name = {"md": "bias_reduced", "kc": "kauermann_carroll"}[method]
+                raise ValueError(
+                    f"Group {self.group_labels[i]} has leverage 1, for example a "
+                    f"single observation with its own dummy variable, so "
+                    f'cov_type="{name}" is not defined. Use cov_type="robust" or '
+                    f"drop the group."
+                )
+
             imh = np.eye(len(resid)) - hmat
             if method == "kc":
                 # principal root, since I - H is not symmetric in general

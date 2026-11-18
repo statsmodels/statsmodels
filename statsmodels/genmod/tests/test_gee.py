@@ -2896,3 +2896,18 @@ def test_kauermann_carroll_root(fam, cs):
         u = d.T @ np.linalg.solve(v, root @ r)
         meat = meat + np.outer(u, u)
     assert_allclose(res.cov_robust_kc, bread @ meat @ bread, rtol=1e-8)
+
+
+@pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
+@pytest.mark.parametrize("family", [families.Gaussian, families.Poisson])
+def test_small_sample_cov_leverage_one(family, cov_type):
+    # a single observation with its own dummy has leverage 1
+    rng = np.random.default_rng(1)
+    groups = np.r_[np.repeat(np.arange(10), 4), 10]
+    n = len(groups)
+    exog = np.column_stack((np.ones(n), rng.standard_normal(n), groups == 10))
+    endog = rng.poisson(2, n).astype(float)
+    mod = gee.GEE(endog, exog, groups, family=family())
+    with pytest.raises(ValueError, match="Group 10 has leverage 1"):
+        mod.fit(cov_type=cov_type)
+    mod.fit()
