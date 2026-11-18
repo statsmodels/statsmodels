@@ -52,6 +52,9 @@ Behavior changes
 ----------------
 
 - ``MixedLM.score_sqrt`` is private.
+- ``QuantReg.fit`` validates ``method``, case insensitive, and raises
+  ``ValueError`` for an unknown value. Before, ``method`` was accepted
+  through ``**kwargs`` and ignored. :issue:`3770`, :pr:`10739`
 - ``OaxacaResults.summary()`` returns the summary as a string instead of
   printing it and returning ``None``. Use ``print(result.summary())`` to
   display it. :issue:`7733`, :pr:`10491`
@@ -330,6 +333,13 @@ New functions and methods
   1000 observations, about 300 times faster for 60 variables, and returns a
   ``Series`` for a ``DataFrame``. :issue:`1669`, :pr:`2380`, :pr:`7711`,
   :pr:`10623`
+- ``QuantReg.fit`` has a new option ``method="interior-point"`` (or
+  ``"ip"``) that estimates the parameters with the Frisch-Newton interior
+  point method of Portnoy and Koenker (1997). It needs far fewer iterations
+  than the default iterative reweighted least squares, ``method="irls"``, and
+  solves the linear program to high precision. The parameters agree with
+  ``rq(method="fn")`` of the R package quantreg. The default is unchanged.
+  :issue:`3770`, :pr:`10739`
 - Add :func:`~statsmodels.stats.inter_rater.krippendorff_alpha`, Krippendorff's
   alpha for the agreement of any number of raters, with missing ratings, for
   nominal, ordinal, interval and ratio data. It is available from
