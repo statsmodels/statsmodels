@@ -2896,3 +2896,27 @@ def test_kauermann_carroll_root(fam, cs):
         u = d.T @ np.linalg.solve(v, root @ r)
         meat = meat + np.outer(u, u)
     assert_allclose(res.cov_robust_kc, bread @ meat @ bread, rtol=1e-8)
+
+
+@pytest.mark.parametrize("model_class", [gee.GEE, gee.OrdinalGEE, gee.NominalGEE])
+@pytest.mark.parametrize(
+    "cov_type", ["Robust", "NAIVE", "Bias_Reduced", "Kauermann_Carroll"]
+)
+def test_cov_type_case_insensitive(model_class, cov_type):
+    endog, exog, groups = _small_cluster_data()
+    if model_class is not gee.GEE:
+        endog = np.digitize(endog, [0.5, 1.5])
+    if model_class is gee.OrdinalGEE:
+        exog = exog[:, 1:]
+    mod = model_class(endog, exog, groups)
+    res = mod.fit(cov_type=cov_type)
+    res_lower = mod.fit(cov_type=cov_type.lower())
+    assert_equal(res.cov_type, cov_type.lower())
+    assert_allclose(res.bse, res_lower.bse, rtol=1e-12)
+
+
+def test_cov_type_case_weights_naive():
+    endog, exog, groups = _small_cluster_data()
+    mod = gee.GEE(endog, exog, groups, weights=np.ones(len(endog)))
+    with pytest.raises(ValueError, match="may not be naive"):
+        mod.fit(cov_type="Naive")

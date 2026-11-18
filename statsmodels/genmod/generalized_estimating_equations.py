@@ -1367,6 +1367,7 @@ class GEE(GLM):
         use_t=False,
     ):
 
+        cov_type = cov_type.lower()
         k_params = self.nobs - self.df_resid
         if use_t and self.num_group <= k_params:
             raise ValueError(
@@ -1980,6 +1981,7 @@ class GEEResults(GLMResults):
         **kwds,
     ):
 
+        cov_type = cov_type.lower()
         super().__init__(
             model, params, normalized_cov_params=cov_params, scale=scale, use_t=use_t
         )
