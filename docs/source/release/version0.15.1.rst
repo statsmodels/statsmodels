@@ -636,6 +636,11 @@ Generalized linear models and discrete models
   factor, or ``C(g)``. An ``exog`` that carries the ``design_info`` of another
   design used to be re-evaluated by the formula and now raises a
   ``ValueError``. :issue:`9562` :pr:`10752`
+- ``GEE.fit`` with ``cov_type="bias_reduced"`` or ``"kauermann_carroll"``
+  raises a ``ValueError`` that names the group if a group has leverage 1, for
+  example a single observation with its own dummy variable. It raised a bare
+  ``LinAlgError``, or for the Gaussian family returned a meaningless
+  covariance.
 
 Mixed models and imputation
 ---------------------------

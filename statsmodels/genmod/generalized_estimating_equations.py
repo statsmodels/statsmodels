@@ -376,8 +376,11 @@ _gee_fit_doc = """
     ``(I - H)^{-1/2}``. ``I - H`` is not symmetric unless the family is
     Gaussian and the working correlation is independence, and the
     principal square root is used. Its eigenvalues are positive, so the
-    root is real. Each group needs an ``O(m^3)`` matrix root, where
-    ``m`` is the group size, which can be slow for large groups.
+    root is real, unless a group has leverage 1, for example a single
+    observation with its own dummy variable. Both corrections are then
+    not defined and a ``ValueError`` is raised. Each group needs an
+    ``O(m^3)`` matrix root, where ``m`` is the group size, which can be
+    slow for large groups.
 
     References
     ----------
