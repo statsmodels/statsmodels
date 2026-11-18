@@ -19,6 +19,20 @@ suppressMessages({
   library(saws)
 })
 
+# Converge tightly and fix the scale at 1 for Poisson and binomial, as in
+# statsmodels. gee stops at tol = 0.001 by default, which leaves the
+# exchangeable fits about 1e-4 from the solution. geesmv calls gee itself,
+# so its calls are routed through the same settings.
+gee_tight <- function(formula, data, id, family, corstr, ...) {
+  fam <- if (is.function(family)) family() else family
+  fixed <- fam$family != "gaussian"
+  gee::gee(formula, data = data, id = id, family = family, corstr = corstr,
+    tol = 1e-12, maxiter = 200, scale.fix = fixed, scale.value = 1)
+}
+imports <- parent.env(asNamespace("geesmv"))
+unlockBinding("gee", imports)
+assign("gee", gee_tight, envir = imports)
+
 set.seed(10793)
 n_groups <- 12
 m <- 4
@@ -52,7 +66,9 @@ for (data_name in c("equal", "equal8", "unequal")) {
       f <- as.formula(paste(yname, "~ x1 + x2"))
       fam <- families[[yname]]
       invisible(capture.output(
-        fit <- gee(f, id = id, data = dat, family = fam, corstr = corstr)
+        fit <- gee(f, id = id, data = dat, family = fam, corstr = corstr,
+          tol = 1e-12, maxiter = 200, scale.fix = yname != "y_gauss",
+          scale.value = 1)
       ))
       # full Fay-Graubard covariance, bound b = 0.75
       add(data_name, yname, corstr, "fg_saws",
