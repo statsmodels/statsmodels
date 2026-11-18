@@ -1,5 +1,14 @@
 # Reference values for the GEE small-sample covariances in test_gee.py.
 # R 4.5.2, gee 4.13-30, geesmv 1.3.
+# geesmv is archived on CRAN; install version 1.3 from the archive:
+#   install.packages(
+#     "https://cran.r-project.org/src/contrib/Archive/geesmv/geesmv_1.3.tar.gz",
+#     repos = NULL, type = "source")
+# gee_small_sample.csv is simulated data: 64 observations in 15 clusters of
+# 2 to 6, with covariates x1 and x2 and Gaussian, Poisson and binary
+# responses. It is stored so the reference values do not depend on an RNG.
+# All reference values use the independence working correlation; other
+# working correlations are checked in Python only.
 # geesmv's Kauermann-Carroll uses a symmetric matrix root, which is only
 # valid when I - H is symmetric (Gaussian, independence), so it is used
 # only there. Mancl-DeRouen is used for all three families.
