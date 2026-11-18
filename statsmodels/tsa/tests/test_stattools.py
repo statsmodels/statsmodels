@@ -2784,6 +2784,33 @@ def test_clark_west_horizon_unused_with_lags(cw_data):
     assert res.lags == 0
 
 
+def test_clark_west_zero_lags_is_ols_tstat():
+    # The identity holds for any forecasts, so the forecasts need not be
+    # out-of-sample: a constant forecast against a regression on x.
+    rng = np.random.default_rng(20261117)
+    nobs = 150
+    x = rng.standard_normal(nobs)
+    y = 0.2 * x + rng.standard_normal(nobs)
+    f_restricted = np.full(nobs, y.mean())
+    slope, intercept = np.polyfit(x, y, 1)
+    f_unrestricted = intercept + slope * x
+    adj_loss_diff = (y - f_restricted) ** 2 - (
+        (y - f_unrestricted) ** 2 - (f_restricted - f_unrestricted) ** 2
+    )
+    # OLS divides the variance by nobs - 1, the HAC estimator with no lags by
+    # nobs. The two statistics differ only by this factor, up to rounding.
+    ols_tstat = OLS(adj_loss_diff, np.ones(nobs)).fit().tvalues[0]
+    expected = ols_tstat * np.sqrt(nobs / (nobs - 1))
+    res = clark_west_test(y, f_restricted, f_unrestricted, lags=0)
+    assert res.lags == 0
+    assert_allclose(res.statistic, expected, rtol=1e-12)
+    assert_allclose(res.pvalue, stats.norm.sf(expected), rtol=1e-12)
+    # The default number of lags is larger and gives another statistic
+    default = clark_west_test(y, f_restricted, f_unrestricted)
+    assert default.lags > 0
+    assert not np.isclose(default.statistic, res.statistic, rtol=1e-3)
+
+
 def test_clark_west_unequal_length(cw_data):
     y, f_restricted, f_unrestricted = cw_data
     with pytest.raises(ValueError, match="equal length"):
