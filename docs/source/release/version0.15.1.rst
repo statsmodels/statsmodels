@@ -253,6 +253,7 @@ Behavior changes
   parameters do. Their p-values and confidence intervals change, and the
   ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
   ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
+  :pr:`10792`
 
 New Features and Enhancements
 =============================
@@ -645,9 +646,9 @@ Generalized linear models and discrete models
   raises a ``ValueError`` that names the group if a group has leverage 1, for
   example a single observation with its own dummy variable. It raised a bare
   ``LinAlgError``, or for the Gaussian family returned a meaningless
-  covariance.
+  covariance. :pr:`10792`
 - ``summary`` of the marginal effects of ``GEE`` results raised a
-  ``ValueError``.
+  ``ValueError``. :pr:`10792`
 
 Mixed models and imputation
 ---------------------------
