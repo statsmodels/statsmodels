@@ -26,7 +26,8 @@ jobs:
         python.architecture: 'x64'
       python314t_win_latest:
         python.version: '3.14'
-        python.architecture: 'x64-freethreaded'
+        python.architecture: 'x64'
+        python.freethreaded: true
     maxParallel: 10
 
   steps:
@@ -35,6 +36,24 @@ jobs:
       versionSpec: '$(python.version)'
       architecture: '$(python.architecture)'
     displayName: 'Use Python $(python.version) $(python.architecture)'
+
+  - pwsh: |
+      # Since version 0.283.0 UsePythonVersion rejects the architecture
+      # x64-freethreaded ("Invalid architecture ... Allowed values are x86,
+      # x64, arm64") and has no other way to select a free-threaded build. The
+      # task above provides the interpreter that installs uv, uv installs the
+      # free-threaded Python, and its virtual environment goes first on PATH.
+      $ErrorActionPreference = 'Stop'
+      $PSNativeCommandUseErrorActionPreference = $true
+      python -m pip install uv
+      python -m uv python install "${env:PYTHON_VERSION}t"
+      $venv = Join-Path $env:AGENT_TEMPDIRECTORY 'venv-freethreaded'
+      python -m uv venv --seed --python "${env:PYTHON_VERSION}t" $venv
+      # Fail here rather than silently testing a build that has a GIL
+      & "$venv\Scripts\python.exe" -c "import sys, sysconfig; print(sys.version); assert sysconfig.get_config_var('Py_GIL_DISABLED') == 1, 'not a free-threaded build'"
+      Write-Host "##vso[task.prependpath]$venv\Scripts"
+    displayName: 'Install free-threaded Python $(python.version)'
+    condition: eq(variables['python.freethreaded'], 'true')
 
   - script: |
       python -m pip install --upgrade pip setuptools wheel
