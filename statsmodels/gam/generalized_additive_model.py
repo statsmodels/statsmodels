@@ -255,7 +255,20 @@ class GLMGamResults(GLMResults):
         Parameters
         ----------
         exog : array_like, optional
-            The values for the linear explanatory variables
+            The values for the linear explanatory variables. This can be the
+            original data used by the formula, or a design matrix created
+            from the fitted model's ``design_info`` or ``model_spec``, for
+            example with ``FormulaManager().get_matrices(model_spec, data)``.
+            A prebuilt design matrix is used as is and the formula is not
+            applied again. It must be created from the fitted design info.
+            Only the column names are compared, so a matrix built with a
+            different transform that produces the same names, for example
+            its own ``center(x1)``, is accepted silently.
+
+            .. versionchanged:: 0.15.1
+
+               A design matrix created from the fitted model's design info is
+               no longer passed through the formula a second time.
         exog_smooth : array_like, optional
             values for the variables in the smooth terms
         transform : bool, optional
@@ -269,6 +282,12 @@ class GLMGamResults(GLMResults):
         -------
         prediction : ndarray, pandas.Series or pandas.DataFrame
             predicted values
+
+        Raises
+        ------
+        ValueError
+            If ``exog`` carries the design info or model specification of a
+            different design than the one used to fit the model.
 
         Notes
         -----
@@ -326,9 +345,18 @@ class GLMGamResults(GLMResults):
             the stored offset and exposure are not used unless they are
             passed explicitly.
 
+            ``exog`` can be the original data or a design matrix created from
+            the fitted model's ``design_info`` or ``model_spec``. A prebuilt
+            design matrix must be created from the fitted design info. Only
+            the column names are compared, so a matrix built with a different
+            transform that produces the same names, for example its own
+            ``center(x1)``, is accepted silently.
+
             .. versionchanged:: 0.15.1
 
                Without exog, the stored offset and exposure are now used.
+               A design matrix created from the fitted model's design info is
+               no longer passed through the formula a second time.
         exog_smooth : array_like, optional
             values for the variables in the smooth terms
         transform : bool, optional
@@ -345,6 +373,12 @@ class GLMGamResults(GLMResults):
             variance and can on demand calculate confidence intervals and
             summary tables for the prediction of the mean and of new
             observations.
+
+        Raises
+        ------
+        ValueError
+            If ``exog`` carries the design info or model specification of a
+            different design than the one used to fit the model.
         """
         ex, exog_index = self._tranform_predict_exog(
             exog=exog, exog_smooth=exog_smooth, transform=transform

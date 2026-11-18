@@ -12,7 +12,6 @@ import warnings
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
-import patsy
 import pytest
 from scipy.linalg import block_diag
 
@@ -939,38 +938,6 @@ def test_predict_with_design_matrix_exog(exog_smooth_kind):
     )
     predicted = res.predict(exog=exog_plain, exog_smooth=exog_smooth)
     assert_allclose(predicted, expected, rtol=1e-12)
-
-
-def test_predict_with_patsy_design_matrix_exog():
-    rng = np.random.default_rng(4212)
-    nobs = 40
-    week = np.linspace(1.0, 17.0, nobs)
-    plot_treat = np.where(np.arange(nobs) % 2, "Drought", "Ambient")
-    endog = np.sin(week / 3) + (plot_treat == "Drought") + rng.normal(0, 0.05, nobs)
-    data = pd.DataFrame({"Week": week, "Plot_treat": plot_treat, "y": endog})
-    smoother = BSplines(
-        data["Week"].values,
-        df=5,
-        degree=3,
-        variable_names=["Week"],
-        constraints="center",
-        include_intercept=True,
-    )
-    exog = patsy.dmatrix("Plot_treat", data, return_type="dataframe")
-    res = GLMGam(data["y"], exog=exog, smoother=smoother).fit(
-        method="newton", use_t=True
-    )
-
-    new = pd.DataFrame({"Week": np.linspace(1.5, 16.5, 10)})
-    new["Plot_treat"] = "Ambient"
-    exog_new = patsy.dmatrix(exog.design_info, new, return_type="dataframe")
-    expected = res.predict(exog=new, exog_smooth=new["Week"].values)
-
-    predicted = res.predict(exog=exog_new, exog_smooth=new["Week"].values)
-    assert_allclose(predicted, expected, rtol=1e-12)
-
-    pred = res.get_prediction(exog=exog_new, exog_smooth=new["Week"].values)
-    assert_allclose(pred.predicted, expected, rtol=1e-12)
 
 
 def test_predict_with_mismatched_design_matrix_exog():

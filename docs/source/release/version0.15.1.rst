@@ -419,13 +419,13 @@ Generalized linear models and discrete models
   ``freq_weights``. With frequency weights the value differed from the value
   for the data with each row repeated according to its weight. :pr:`10684`
 - ``GLMGamResults.predict`` and ``get_prediction`` no longer apply the
-  model's formula a second time when ``exog`` is already a design matrix
-  created from the fitted model's ``design_info`` or model specification,
-  for example with ``dmatrix(exog.design_info, new_data,
-  return_type="dataframe")``. Before, this raised a ``PatsyError`` (or the
-  corresponding formulaic error) for models with categorical linear terms.
-  An ``exog`` created with a different model specification raises a
-  ``ValueError``. :issue:`9562`
+  model's formula a second time when ``exog`` is a design matrix created from
+  the fitted model's ``design_info`` or model specification. Before, the fitted
+  exog frame could not be reused for any linear term that is not a plain
+  column, for example ``np.log(x1)``, ``I(x1**2)``, an interaction with a
+  factor, or ``C(g)``. An ``exog`` that carries the ``design_info`` of another
+  design used to be re-evaluated by the formula and now raises a
+  ``ValueError``. :issue:`9562` :pr:`10752`
 
 Mixed models and imputation
 ---------------------------
