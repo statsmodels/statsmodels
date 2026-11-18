@@ -1318,8 +1318,10 @@ class GEE(GLM):
 
             f = self.weights_li[i] if self.weights is not None else 1.0
 
-            # a leverage of 1 leaves the correction undefined
-            if np.linalg.eigvals(hmat).real.max() > 1 - 1e-8:
+            # a leverage of 1 leaves the correction undefined; the nonzero
+            # eigenvalues of hmat are those of this p x p matrix
+            lev = np.linalg.eigvals(cov_naive @ (vinv_d.T @ dmat)).real
+            if lev.max() > 1 - 1e-8:
                 name = {"md": "bias_reduced", "kc": "kauermann_carroll"}[method]
                 raise ValueError(
                     f"Group {self.group_labels[i]} has leverage 1, for example a "
