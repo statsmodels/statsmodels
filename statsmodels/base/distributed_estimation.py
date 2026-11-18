@@ -545,6 +545,17 @@ class DistributedModel:
             An instance of results_class (RegularizedResults by
             default), initialized using the dummy result model and
             the join_method result as params.
+
+        Raises
+        ------
+        NotImplementedError
+            If the default debiased estimation method is used with a model
+            whose ``fit_regularized`` does not accept ``alpha``, e.g. GEE.
+
+        .. versionchanged:: 0.15.1
+
+           Raises ``NotImplementedError`` before fitting for models that
+           cannot use the default estimation method.
         """
 
         if fit_kwds is None:
@@ -570,6 +581,11 @@ class DistributedModel:
 
         params = self.join_method(results_l, **self.join_kwds)
 
+        # NOTE that currently, the dummy result model that is initialized
+        # here does not use any init_kwds from the init_kwds_generator event
+        # if it is provided.  It is possible to imagine an edge case where
+        # this might be a problem but given that the results model instance
+        # does not correspond to any data partition this seems reasonable.
         res_mod = self._dummy_model()
 
         return self.results_class(res_mod, params, **self.results_kwds)
@@ -579,7 +595,14 @@ class DistributedModel:
         if self.estimation_method is not _est_regularized_debiased:
             return
         fit_reg = getattr(self.model_class, "fit_regularized", None)
-        if fit_reg is None or "alpha" not in inspect.signature(fit_reg).parameters:
+        if fit_reg is None:
+            accepts_alpha = False
+        else:
+            params = inspect.signature(fit_reg).parameters
+            accepts_alpha = "alpha" in params or any(
+                p.kind is inspect.Parameter.VAR_KEYWORD for p in params.values()
+            )
+        if not accepts_alpha:
             name = self.model_class.__name__
             raise NotImplementedError(
                 f"The default estimation method (_est_regularized_debiased) "
