@@ -192,6 +192,11 @@ class MICEData:
     `MICE` fits its analysis model to `MICEData.data`, so the data of the
     analysis model have this index.
 
+    .. versionchanged:: 0.15.1
+
+       A ``ValueWarning`` is issued if rows in which all variables are
+       missing are dropped.  They were dropped without a warning before.
+
     Examples
     --------
     Draw 20 imputations from a data set called `data` and save them in
