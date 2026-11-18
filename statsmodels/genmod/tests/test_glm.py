@@ -2861,6 +2861,96 @@ def test_regularized_freq_weights_glmnet(family_name, fit_kwds, atol):
     assert_allclose(res.params, _GLMNET_PARAMS[(family_name, L1_wt)], rtol=0, atol=atol)
 
 
+# "gaussian3" is three times the gaussian endog, a fit whose estimated scale
+# is far from one.
+_GLMNET_ENDOG["gaussian3"] = 3 * _GLMNET_ENDOG["gaussian"]
+_GLMNET_FAMILY["gaussian3"] = sm.families.Gaussian
+
+# glmnet 5.2 in R 4.6.1, coefficients at lambda = 0.05 of the ridge fit
+#   glmnet(cbind(x1, x2), y, weights=w, family=<family>(), alpha=0,
+#          lambda=c(0.1, 0.05), standardize=<standardize>, intercept=TRUE,
+#          control=list(thresh=1e-15, maxit=1e7))
+# for the data above, keyed by (family, standardize).
+_GLMNET_RIDGE_PARAMS = {
+    ("gaussian", False): [0.510617305852763, 1.002798798238448, 0.226304497872358],
+    ("gaussian", True): [0.507375167371321, 1.013455083680229, 0.227510723479926],
+    ("gaussian3", False): [1.531851917558288, 3.008396394715344, 0.678913493617074],
+    ("gaussian3", True): [1.522125502113962, 3.040365251040688, 0.682532170439778],
+    ("binomial", False): [0.694534509059638, 1.638376304534531, 0.337697239564448],
+    ("binomial", True): [0.700131555014648, 1.760255781444299, 0.358205674504501],
+    ("poisson", False): [0.433493697370173, 0.744212456224561, 0.175919409656114],
+    ("poisson", True): [0.429531349130683, 0.749061735199303, 0.176059335523080],
+}
+# The same call with alpha=1 and alpha=0.5 and standardize=TRUE, keyed by
+# (family, L1_wt).
+_GLMNET_STANDARDIZED_PARAMS = {
+    ("gaussian", 1.0): [0.507901765688611, 0.999830775960993, 0.187878527540250],
+    ("gaussian", 0.5): [0.507599056296679, 1.006928816255381, 0.208227720180257],
+    ("binomial", 1.0): [0.730716709231770, 2.055864265964942, 0.194987333479025],
+    ("binomial", 0.5): [0.706741323493328, 1.868584142717468, 0.287684067143429],
+    ("poisson", 1.0): [0.440035166880792, 0.735703795858661, 0.157746087565982],
+    ("poisson", 0.5): [0.434745233729621, 0.742495056136925, 0.167002648710089],
+}
+
+
+def _glmnet_column_sd():
+    # glmnet standardizes with the weights and the divisor sum(weights)
+    mean = np.average(_GLMNET_X, axis=0, weights=_GLMNET_WEIGHTS)
+    var = np.average((_GLMNET_X - mean) ** 2, axis=0, weights=_GLMNET_WEIGHTS)
+    return np.sqrt(var)
+
+
+@pytest.mark.parametrize("standardize", [False, True])
+@pytest.mark.parametrize("family_name", ["gaussian", "gaussian3", "binomial", "poisson"])
+def test_ridge_glmnet(family_name, standardize):
+    # The ridge fit (L1_wt=0) minimizes the objective of glmnet with
+    # alpha=0, also for a family with an estimated scale (gaussian3).  The
+    # intercept is left unpenalized with a zero in alpha, and glmnet's
+    # standardize=TRUE is the weight alpha * sd**2 for each penalized
+    # coefficient (see the Notes of fit_regularized).  The atol is the
+    # tolerance of the BFGS solver of the ridge fit (largest difference 6e-6).
+    exog = add_constant(_GLMNET_X)
+    family = _GLMNET_FAMILY[family_name]()
+    model = GLM(
+        _GLMNET_ENDOG[family_name], exog, family=family, freq_weights=_GLMNET_WEIGHTS
+    )
+    penalty = _glmnet_column_sd() ** 2 if standardize else np.ones(2)
+    res = model.fit_regularized(alpha=0.05 * np.r_[0.0, penalty], L1_wt=0.0)
+    expected = _GLMNET_RIDGE_PARAMS[(family_name, standardize)]
+    assert_allclose(res.params, expected, rtol=0, atol=5e-5)
+
+
+@pytest.mark.parametrize("L1_wt", [1.0, 0.5])
+@pytest.mark.parametrize("family_name", ["gaussian", "binomial", "poisson"])
+def test_regularized_glmnet_standardized_columns(family_name, L1_wt):
+    # glmnet's standardize=TRUE: divide the columns of exog by their standard
+    # deviations, fit with the penalty weight alpha for each of them and
+    # divide the coefficients by the standard deviations.  For the lasso, the
+    # penalty weights alpha * sd on the unscaled columns are the same fit.
+    sd = _glmnet_column_sd()
+    expected = _GLMNET_STANDARDIZED_PARAMS[(family_name, L1_wt)]
+    family = _GLMNET_FAMILY[family_name]()
+    endog = _GLMNET_ENDOG[family_name]
+    model = GLM(
+        endog,
+        add_constant(_GLMNET_X / sd),
+        family=family,
+        freq_weights=_GLMNET_WEIGHTS,
+    )
+    res = model.fit_regularized(alpha=np.array([0.0, 0.05, 0.05]), L1_wt=L1_wt)
+    params = np.r_[res.params[0], res.params[1:] / sd]
+    assert_allclose(params, expected, rtol=0, atol=1e-5)
+    if L1_wt == 1.0:
+        model = GLM(
+            endog,
+            add_constant(_GLMNET_X),
+            family=family,
+            freq_weights=_GLMNET_WEIGHTS,
+        )
+        res = model.fit_regularized(alpha=0.05 * np.r_[0.0, sd], L1_wt=L1_wt)
+        assert_allclose(res.params, expected, rtol=0, atol=1e-5)
+
+
 def _regularized_freq_weights_data(family, seed=2):
     rng = np.random.default_rng(seed)
     n = 60
