@@ -342,11 +342,13 @@ _gee_fit_doc = """
         of groups minus the number of parameters as degrees of freedom.
         The default is False, which uses the normal distribution.
         The number of parameters is subtracted, not 1 as for ``OLS`` with
-        ``cov_type="cluster"`` or Stata's ``vce(cluster)``, because Li and
-        Redden (2015) found these degrees of freedom to work well with the
-        bias-corrected covariances when there are few groups. A
-        ``ValueError`` is raised if the number of groups is not larger
-        than the number of parameters.
+        ``cov_type="cluster"`` or Stata's ``vce(cluster)``, so the t
+        distribution has fewer degrees of freedom, and heavier tails, the
+        more parameters the model has. Li and Redden (2015) found that,
+        with a t distribution, the Kauermann-Carroll covariance keeps the
+        size of the test close to its nominal level when there are few
+        groups. A ``ValueError`` is raised if the number of groups is not
+        larger than the number of parameters.
 
         .. versionadded:: 0.15.1
 
