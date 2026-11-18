@@ -21,6 +21,10 @@ http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
 
 LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
+
+P Li and DT Redden (2015). Small sample performance of bias-corrected
+sandwich estimators for cluster-randomized trials with binary outcomes.
+Statistics in Medicine, 34(2), 281-296.
 """
 
 from statsmodels.compat.python import lzip
@@ -333,6 +337,12 @@ _gee_fit_doc = """
         If True, use the t distribution for inference, with the number
         of groups minus the number of parameters as degrees of freedom.
         The default is False, which uses the normal distribution.
+        The number of parameters is subtracted, not 1 as for ``OLS`` with
+        ``cov_type="cluster"`` or Stata's ``vce(cluster)``, because Li and
+        Redden (2015) found these degrees of freedom to work well with the
+        bias-corrected covariances when there are few groups. A
+        ``ValueError`` is raised if the number of groups is not larger
+        than the number of parameters.
 
         .. versionadded:: 0.15.1
 
@@ -1327,6 +1337,13 @@ class GEE(GLM):
         scale=None,
         use_t=False,
     ):
+
+        k_params = self.nobs - self.df_resid
+        if use_t and self.num_group <= k_params:
+            raise ValueError(
+                f"use_t requires more groups ({self.num_group}) than "
+                f"parameters ({k_params:g})."
+            )
 
         self.scaletype = scale
 

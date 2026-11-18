@@ -2785,6 +2785,21 @@ def test_use_t_df_constraint():
     assert_equal(res.df_resid_inference, 12 - 2)
 
 
+@pytest.mark.parametrize("n_groups", [2, 3])
+def test_use_t_too_few_groups(n_groups):
+    # GH 8610, df_resid_inference would be <= 0
+    endog, exog, groups = _small_cluster_data()
+    keep = groups < n_groups
+    mod = gee.GEE(endog[keep], exog[keep], groups[keep])
+    with pytest.raises(ValueError, match="more groups"):
+        mod.fit(use_t=True)
+    mod.fit()
+
+    keep = groups < 4
+    res = gee.GEE(endog[keep], exog[keep], groups[keep]).fit(use_t=True)
+    assert_equal(res.df_resid_inference, 1)
+
+
 @pytest.mark.parametrize("model_class", [gee.OrdinalGEE, gee.NominalGEE])
 def test_use_t_multicategory(model_class):
     # GH 8610
