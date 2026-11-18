@@ -52,7 +52,7 @@ def test_confint_proportion(method, case):
     res_upp = res_binom[case].ci_upp[idx]
     if np.isnan(res_low) or np.isnan(res_upp):
         pytest.skip("Skipping due to NaN value")
-    if (count == 0 or count == nobs) and method == "jeffreys":
+    if count in (0, nobs) and method == "jeffreys":
         # maybe a bug or different corner case definition
         pytest.skip("Skipping nobs 0 or count and jeffreys")
     if method == "jeffreys" and nobs == 30:

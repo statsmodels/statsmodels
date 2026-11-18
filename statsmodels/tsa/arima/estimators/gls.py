@@ -44,8 +44,9 @@ def gls(
     endog : array_like
         Input time series array.
     exog : array_like, optional
-        Array of exogenous regressors. If not included, then `include_constant`
-        must be True, and then `exog` will only include the constant column.
+        Array of exogenous regressors. If not included, then the model must not
+        include integration and `include_constant` must be True, and then
+        `exog` will only include the constant column.
     order : tuple, optional
         The (p,d,q) order of the ARIMA model. Default is (0, 0, 0).
     seasonal_order : tuple, optional
@@ -118,9 +119,24 @@ def gls(
     described in section 6.6.1 is done via an application of the innovations
     algorithm (rather than explicit construction of the transformation matrix).
 
+    Deterministic terms are treated as exogenous regressors. The
+    `include_constant` argument is a convenience for adding an intercept;
+    other deterministic terms, such as a linear time trend, can be supplied
+    as columns of `exog`. There is no separate trend argument for the ARMA
+    error process. The regression absorbs every deterministic term, so at each
+    iteration the ARMA estimator is applied to the regression residuals
+    without demeaning them or adding another constant.
+
     Note that if the specified model includes integration, both the `endog` and
     `exog` series will be differenced prior to estimation and a warning will
-    be issued to alert the user.
+    be issued to alert the user. In this case, `include_constant=True` is
+    not allowed because differencing would eliminate the constant column. A
+    constant column supplied in `exog` is eliminated in the same way and makes
+    the regression singular. A linear trend supplied in `exog` becomes a
+    constant after one difference (regular or seasonal), and its coefficient
+    is then the drift per unit of the column, so it can represent drift in an
+    ARIMA(p, 1, q) model. After a second difference the column is zero and
+    cannot be estimated.
 
     References
     ----------
@@ -317,13 +333,18 @@ def gls(
 
         if not p_arma.is_stationary:
             raise ValueError(
-                "Roots of the autoregressive parameters indicate that data is"
+                "Roots of the autoregressive parameters indicate that data is "
                 "non-stationary. GLS cannot be used with non-stationary "
-                "parameters. You should consider differencing the model data"
+                "parameters. You should consider differencing the model data "
                 "or applying a nonlinear transformation (e.g., natural log)."
             )
+        # Expand sparse lags and combine seasonal and nonseasonal factors
+        # before whitening with the innovations algorithm.
         tmp, _ = arma_innovations.arma_innovations(
-            augmented, ar_params=ar_params, ma_params=ma_params, normalize=True
+            augmented,
+            ar_params=-p_arma.reduced_ar_poly.coef[1:],
+            ma_params=p_arma.reduced_ma_poly.coef[1:],
+            normalize=True,
         )
         u = tmp[:, 0]
         x = tmp[:, 1:]

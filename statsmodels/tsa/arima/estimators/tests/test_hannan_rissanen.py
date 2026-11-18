@@ -1,7 +1,10 @@
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
+from statsmodels.tools.sm_exceptions import EstimationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake
 from statsmodels.tsa.arima.estimators.hannan_rissanen import (
@@ -10,7 +13,10 @@ from statsmodels.tsa.arima.estimators.hannan_rissanen import (
     _validate_fixed_params,
     hannan_rissanen,
 )
+from statsmodels.tsa.arima.model import ARIMA
+from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
+from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.tsa.innovations.arma_innovations import arma_innovations
 
 
@@ -108,6 +114,80 @@ def test_unbiased_error():
         hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=True)
 
 
+def test_unbiased_default_skips_non_stationary_step2():
+    # With unbiased=None, a non-stationary second step skips the third step.
+    # The third step would fall back to the second-step result with an
+    # EstimationWarning, so any EstimationWarning is an error here: only
+    # skipping the third step passes.
+    endog = np.arange(1000) * 1.0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", EstimationWarning)
+        res_none = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=None)
+        res_false = hannan_rissanen(
+            endog, ar_order=1, ma_order=1, unbiased=False
+        )
+    assert not (res_false.parameters.is_stationary
+                and res_false.parameters.is_invertible)
+    assert_allclose(res_none.parameters.params, res_false.parameters.params)
+    assert_allclose(res_none.other_results.resid,
+                    res_false.other_results.resid)
+
+
+@pytest.mark.parametrize("unbiased", [None, True])
+@pytest.mark.parametrize(
+    "ar_poly, ma_poly, ar_order, ma_order, seed, outside",
+    [
+        # Near-unit MA root: step 2 is invertible but the step 3 correction
+        # is not.
+        pytest.param([1, -0.5], [1, 0.9], 1, 1, 53, "ma", id="arma11-ma-root"),
+        # Step 2 is (0.6417, -0.3945); the step 3 correction makes the AR
+        # parameter 1.0297, which is non-stationary, the MA part is fine.
+        pytest.param([1, -0.9], [1, -0.5], 1, 1, 58, "ar", id="arma11-ar-root"),
+        pytest.param([1], [1, 0.95], 0, 1, 1, "ma", id="ma1"),
+        pytest.param(
+            [1, 0, -0.5], [1, 0, 0, 0.9], [2], [2, 3], 19, "ma",
+            id="sparse-ar2-ma23",
+        ),
+    ],
+)
+def test_unbiased_fallback_to_step2(
+    unbiased, ar_poly, ma_poly, ar_order, ma_order, seed, outside
+):
+    # Step 2 is stationary and invertible, the step 3 correction is not: the
+    # step 2 results are returned with a warning. The cases cover both halves
+    # of the gate (stationarity, invertibility), a model without AR part and
+    # non-consecutive lags. The seeds were found by a search with
+    # default_rng(seed) for series of 100 observations.
+    rng = np.random.default_rng(seed)
+    endog = arma_generate_sample(
+        ar_poly, ma_poly, 100, distrvs=rng.standard_normal
+    )
+    res_step2 = hannan_rissanen(
+        endog, ar_order=ar_order, ma_order=ma_order, unbiased=False
+    )
+    assert res_step2.parameters.is_stationary
+    assert res_step2.parameters.is_invertible
+    # The independent step 3 leaves the region through the AR or the MA
+    # polynomial, as intended by the case.
+    spec = res_step2.other_results.spec
+    step3 = SARIMAXParams(spec=spec)
+    step3.ar_params, step3.ma_params = _bias_correction_reference(
+        endog - endog.mean(),
+        res_step2.parameters.ar_params,
+        res_step2.parameters.ma_params,
+        spec.ar_lags,
+        spec.ma_lags,
+    )
+    assert step3.is_stationary == (outside != "ar")
+    assert step3.is_invertible == (outside != "ma")
+    with pytest.warns(EstimationWarning, match="third step"):
+        res = hannan_rissanen(
+            endog, ar_order=ar_order, ma_order=ma_order, unbiased=unbiased
+        )
+    assert_allclose(res.parameters.params, res_step2.parameters.params)
+    assert_allclose(res.other_results.resid, res_step2.other_results.resid)
+
+
 def test_set_default_unbiased():
     # setting unbiased=None with stationary and invertible parameters should
     # yield the exact same results as setting unbiased=True
@@ -127,6 +207,101 @@ def test_set_default_unbiased():
     # unbiased=False
     p_3 = hannan_rissanen(endog, ar_order=1, ma_order=1, unbiased=False).parameters
     assert not np.array_equal(p_1.ar_params, p_3.ar_params)
+
+
+def _bias_correction_reference(
+    endog, ar_params, ma_params, ar_lags=None, ma_lags=None
+):
+    # Hannan-Rissanen step 3 from Brockwell and Davis (2016), section 5.1.4;
+    # `ar_lags` and `ma_lags` are the lags of the parameters (default: 1, ...)
+    ar_params, ma_params = np.asarray(ar_params), np.asarray(ma_params)
+    if ar_lags is None:
+        ar_lags = list(range(1, len(ar_params) + 1))
+    if ma_lags is None:
+        ma_lags = list(range(1, len(ma_params) + 1))
+    p, q, nobs = max(ar_lags, default=0), max(ma_lags, default=0), len(endog)
+    m = max(p, q)
+    # polynomials with zeros for the lags that are not in the model
+    phi = np.zeros(p)
+    theta = np.zeros(q)
+    phi[np.array(ar_lags, dtype=int) - 1] = ar_params
+    theta[np.array(ma_lags, dtype=int) - 1] = ma_params
+    z = np.zeros(nobs)
+    v = np.zeros(nobs)
+    w = np.zeros(nobs)
+    for t in range(m, nobs):
+        z[t] = (
+            endog[t]
+            - sum(phi[j] * endog[t - 1 - j] for j in range(p))
+            - sum(theta[j] * z[t - 1 - j] for j in range(q))
+        )
+        v[t] = z[t] + sum(phi[j] * v[t - 1 - j] for j in range(p))
+        w[t] = z[t] - sum(theta[j] * w[t - 1 - j] for j in range(q))
+    exog = np.array(
+        [
+            [v[t - lag] for lag in ar_lags] + [w[t - lag] for lag in ma_lags]
+            for t in range(m, nobs)
+        ]
+    )
+    correction = np.linalg.lstsq(exog, z[m:], rcond=None)[0]
+    k_ar = len(ar_lags)
+    return ar_params + correction[:k_ar], ma_params + correction[k_ar:]
+
+
+@pytest.mark.parametrize(
+    "ar_poly, ma_poly, ar_order, ma_order",
+    [
+        pytest.param([1, -0.5], [1, 0.4], 1, 1, id="arma11"),
+        pytest.param([1, -0.5], [1, 0.8], 1, 1, id="arma11-large-ma"),
+        pytest.param([1, -0.6, 0.2], [1, 0.5], 2, 1, id="arma21"),
+        pytest.param([1, -0.4], [1, 0.5, 0.3], 1, 2, id="arma12"),
+        pytest.param(
+            [1, -0.5, 0, 0.3], [1, 0.4, 0.3], [1, 0, 1], [1, 1],
+            id="sparse-ar13-ma12",
+        ),
+    ],
+)
+def test_unbiased_brockwell_davis_reference(
+    ar_poly, ma_poly, ar_order, ma_order
+):
+    # Compare step 3 with an independent loop (ITSM/itsmr lack step 3)
+    rng = np.random.default_rng(12345)
+    endog = arma_generate_sample(
+        ar_poly, ma_poly, 500, distrvs=rng.standard_normal
+    )
+
+    step2 = hannan_rissanen(
+        endog, ar_order=ar_order, ma_order=ma_order, unbiased=False
+    ).parameters
+    assert step2.is_stationary
+    assert step2.is_invertible
+    spec = step2.spec
+    desired_ar, desired_ma = _bias_correction_reference(
+        endog - endog.mean(),
+        step2.ar_params,
+        step2.ma_params,
+        spec.ar_lags,
+        spec.ma_lags,
+    )
+
+    with warnings.catch_warnings():
+        # the third step must not fall back to the second step
+        warnings.simplefilter("error", EstimationWarning)
+        actual = hannan_rissanen(
+            endog, ar_order=ar_order, ma_order=ma_order, unbiased=True
+        ).parameters
+    assert_allclose(actual.ar_params, desired_ar)
+    assert_allclose(actual.ma_params, desired_ma)
+
+    # One Gauss-Newton step moves the step 2 estimates towards the maximum
+    # likelihood estimates
+    k = spec.k_ar_params + spec.k_ma_params
+    mle = ARIMA(
+        endog, order=(ar_order, 0, ma_order), trend="n"
+    ).fit().params[:k]
+    distance_step2 = np.linalg.norm(step2.params[:k] - mle)
+    distance_step3 = np.linalg.norm(actual.params[:k] - mle)
+    assert distance_step3 < distance_step2
 
 
 @pytest.mark.parametrize(

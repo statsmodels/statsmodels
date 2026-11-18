@@ -3075,7 +3075,7 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             res.cov_kwds["description"] = descriptions["OPG"].format(
                 approx_type=approx_type_str
             )
-        elif self.cov_type == "robust" or self.cov_type == "robust_oim":
+        elif self.cov_type in {"robust", "robust_oim"}:
             res.cov_params_default = res.cov_params_robust_oim
             res.cov_kwds["description"] = descriptions["robust-OIM"].format(
                 approx_type=approx_type_str
@@ -4583,7 +4583,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             This argument cannot be used in combination with `start`, `end`, or
             `periods`. If none of `impact_date`, `start`, `end` and `periods`
             is given, the impacts are computed for the last observation of the
-            previous dataset.
+            previous dataset, that is, for observation `nobs - 1` of the
+            results that use the earlier data (`comparison`, if it is the
+            previous data, and otherwise the results on which this method is
+            called).
         impacted_variable : str, list, array, or slice, optional
             Observation variable label or slice of labels specifying that only
             specific impacted variables should be shown in the News output. The
@@ -4601,6 +4604,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         periods : int, optional
             The number of periods of impacts from news and revisions to
             compute. If given, one of `start` or `end` must also be given.
+            If any of `start`, `end` and `periods` is given, exactly two of
+            them must be given: giving all three raises a `ValueError`.
         exog : array_like, optional
             Array of exogenous regressors for the out-of-sample period, if
             applicable.
