@@ -520,6 +520,11 @@ class DistributedModel:
         """Performs the distributed estimation using the corresponding
         DistributedModel
 
+        .. versionchanged:: 0.15.1
+
+           Raises ``NotImplementedError`` before fitting for models that
+           cannot use the default estimation method.
+
         Parameters
         ----------
         data_generator : generator
@@ -551,11 +556,6 @@ class DistributedModel:
         NotImplementedError
             If the default debiased estimation method is used with a model
             whose ``fit_regularized`` does not accept ``alpha``, e.g. GEE.
-
-        .. versionchanged:: 0.15.1
-
-           Raises ``NotImplementedError`` before fitting for models that
-           cannot use the default estimation method.
         """
 
         if fit_kwds is None:
