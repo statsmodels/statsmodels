@@ -579,7 +579,7 @@ def x13_arima_analysis(
         if any([diff, exog, start, freq]):
 
             raise ValueError(
-                "other arguments not allowed for diff, exog, start, freq"
+                "other arguments not allowed for diff, exog, start, freq "
                 "when rawspec is specified"
             )
 

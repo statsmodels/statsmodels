@@ -354,8 +354,10 @@ def iqr(x1, x2, axis=0):
        One of the inputs into the IQR calculation.
     x2 : array_like
        The other input into the IQR calculation.
-    axis : int, optional
-       axis along which the summary statistic is calculated
+    axis : int or None, optional
+       Axis along which the summary statistic is calculated. If None, the
+       differences are flattened and the interquartile range of all of them
+       is returned.
 
     Returns
     -------
@@ -365,16 +367,34 @@ def iqr(x1, x2, axis=0):
     Notes
     -----
     If ``x1`` and ``x2`` have different shapes, then they must broadcast.
+    The quartiles are those of the broadcast difference ``x1 - x2``.
+
+    The result is the difference between the order statistics at the 0-based
+    positions ``round((n - 1) * 0.75)`` and ``round((n - 1) * 0.25)`` of the
+    ``n`` sorted errors ``x1 - x2``, where the rounding of a tie is to the
+    even integer. There is no interpolation. This equals the difference
+    between the quartiles of R's ``IQR(type = 7)`` and of ``numpy.percentile``
+    with the default method if ``n = 1 (mod 4)``, where both positions are
+    integers. For other ``n``, for example 6 or 10, the results generally
+    differ.
+
+    .. versionchanged:: 0.15.1
+
+       Inputs that are broadcast, an ``x1`` of length 1 or a scalar ``x1``,
+       and ``axis=None`` with ``x1`` and ``x2`` of different shapes, now use
+       the broadcast difference. They used to return 0 (length 1), or raise
+       an error (scalar, and different shapes with ``axis=None``).
 
     """
     x1 = array_like(x1, "x1", dtype=None, mindim=None)
     x2 = array_like(x2, "x2", dtype=None, mindim=None)
+    xdiff = x1 - x2
     if axis is None:
-        x1 = x1.ravel()
-        x2 = x2.ravel()
+        xdiff = xdiff.ravel()
         axis = 0
-    xdiff = np.sort(x1 - x2, axis=axis)
-    nobs = x1.shape[axis]
+    xdiff = np.sort(xdiff, axis=axis)
+    # the number of errors, x1 alone can be smaller if the inputs broadcast
+    nobs = xdiff.shape[axis]
     if nobs == 0:
         # no observations to take quantiles of
         return _nan_reduction_result(xdiff, axis)

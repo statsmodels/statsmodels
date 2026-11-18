@@ -65,7 +65,7 @@ class TestMVNormal:
         assert_array_almost_equal(reconstructed, COV3)
 
     def test_rvs_moments_match_by_monte_carlo(self):
-        rvs = self.mvn.rvs(size=200000)
+        rvs = self.mvn.rvs(size=200000, rng=0)
         assert_allclose(rvs.mean(0), MEAN3, atol=0.02)
         assert_allclose(np.cov(rvs, rowvar=False), COV3, atol=0.05)
 
@@ -227,7 +227,9 @@ class TestMVT:
         assert np.all(np.isnan(mvt1.cov))
 
     def test_rvs_covariance_matches_by_monte_carlo(self):
-        rvs = self.mvt.rvs(size=200000)
+        # seeded: with 5 degrees of freedom the sample covariance of the
+        # draws has heavy tails, and an unseeded draw can miss atol=0.1
+        rvs = self.mvt.rvs(size=200000, rng=0)
         assert_allclose(np.cov(rvs, rowvar=False), self.mvt.cov, atol=0.1)
 
     def test_affine_transformed(self):
