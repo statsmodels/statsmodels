@@ -137,6 +137,34 @@ _fit_regularized_doc = r"""
         For WLS and GLS, the RSS is calculated using the whitened endog and
         exog data.
 
+        Every element of ``params`` is penalized, including the coefficient
+        of the constant, and the columns of ``exog`` are used as they are. R's
+        ``glmnet`` does not penalize the intercept and standardizes the
+        columns by default (``standardize=TRUE``). For OLS and a vector
+        ``alpha`` the fit has the estimates of ``glmnet``, where ``alpha`` is
+        its ``lambda`` and ``L1_wt`` is its ``alpha``:
+
+        * To leave the constant unpenalized, as ``glmnet`` with
+          ``intercept=TRUE`` and ``standardize=FALSE`` does, give it the
+          penalty weight 0. If the constant is the first of the ``k`` columns
+          of ``exog``, use ``alpha * np.r_[0.0, np.ones(k - 1)]``.
+        * To standardize the columns, as ``standardize=TRUE`` does, let
+          ``sd`` be the standard deviations of the columns other than the
+          constant, with the divisor ``n``. Use the weights
+          ``alpha * np.r_[0.0, sd**2]`` for the ridge penalty (``L1_wt=0``)
+          and ``alpha * np.r_[0.0, sd]`` for the lasso (``L1_wt=1``). For
+          other values of ``L1_wt``, divide the columns of ``exog`` by
+          ``sd``, fit with the weights ``alpha * np.r_[0.0, np.ones(k - 1)]``
+          and divide the estimated coefficients other than the constant by
+          ``sd``.
+
+        The estimates agree with those of ``glmnet`` up to the convergence
+        tolerances of the two algorithms. In R, use the family object
+        ``gaussian()``: the default ``family="gaussian"`` standardizes ``y``
+        and so divides the weight of the L2 penalty,
+        ``(1 - L1_wt) * alpha``, by the standard deviation of ``y`` (with the
+        divisor ``n``).
+
         Post-estimation results are based on the same data used to
         select variables, hence may be subject to overfitting biases.
 

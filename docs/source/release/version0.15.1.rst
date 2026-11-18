@@ -227,6 +227,27 @@ Behavior changes
   most ``tol``. ``GLM.fit`` with ``method="newton"`` shortens only a step
   that is not finite if the link is not the canonical link of the family.
   :pr:`10605`
+- ``GLM.fit_regularized`` scaled the log-likelihood by the number of rows
+  instead of the sum of the ``freq_weights``, for ``method="elastic_net"``,
+  ``method="l1_slsqp"`` and the ridge fit with ``L1_wt=0``. With frequency
+  weights this changed the effective penalty, so the estimates and the
+  selected variables differed from the fit on the data with each row
+  repeated according to its weight. The estimates of existing fits with
+  ``freq_weights`` change. The estimates of fits without ``freq_weights`` are
+  unchanged. :pr:`10705`
+- ``GLM.fit_regularized`` with ``L1_wt=0`` (the ridge fit) used the scale
+  estimated at the current parameters in the log-likelihood and the score,
+  where the fits with ``L1_wt`` greater than 0 and ``method="l1_slsqp"`` use a
+  scale of 1. For families with an estimated scale, for example ``Gaussian``,
+  ``Gamma`` and ``Tweedie``, the estimates differed from the solution of the
+  penalized problem, for example from the closed-form ridge estimate of the
+  linear model, and the fit often warned that the optimization may have
+  failed. The ridge fit now uses a scale of 1, so that its estimates change
+  for these families, by much if the estimated scale is far from 1. The
+  estimates of ``Binomial``, ``Poisson`` and ``NegativeBinomial``, which have
+  a fixed scale, are unchanged. Multiplying ``alpha`` by the scale estimated
+  at the estimates gives the penalty of earlier versions, where that fit
+  converged; the example of ``GLM.fit_regularized`` shows how. :pr:`10776`
 
 New Features and Enhancements
 =============================
@@ -552,12 +573,6 @@ Generalized linear models and discrete models
   ``summary``, used the number of rows instead of the sum of the
   ``freq_weights``. With frequency weights the value differed from the value
   for the data with each row repeated according to its weight. :pr:`10684`
-- ``GLM.fit_regularized`` scaled the log-likelihood by the number of rows
-  instead of the sum of the ``freq_weights``, for ``method="elastic_net"``,
-  ``method="l1_slsqp"`` and the ridge fit with ``L1_wt=0``. With frequency
-  weights this changed the effective penalty, so the estimates and the
-  selected variables differed from the fit on the data with each row
-  repeated according to its weight.
 - The ``score`` of ``TruncatedLFGeneralizedPoisson`` and
   ``TruncatedLFNegativeBinomialP`` was incorrect for every ``p`` except
   ``p=1`` of the generalized Poisson and ``p=2`` of the negative binomial
