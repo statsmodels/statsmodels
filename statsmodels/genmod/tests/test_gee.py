@@ -32,6 +32,7 @@ import statsmodels.genmod.generalized_estimating_equations as gee
 from statsmodels.iolib.summary import Summary
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
     SingularMatrixWarning,
     SpecificationWarning,
 )
@@ -2920,3 +2921,23 @@ def test_cov_type_case_weights_naive():
     mod = gee.GEE(endog, exog, groups, weights=np.ones(len(endog)))
     with pytest.raises(ValueError, match="may not be naive"):
         mod.fit(cov_type="Naive")
+
+
+@pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
+def test_constraint_small_sample_cov_fails(cov_type, monkeypatch):
+    # the third _handle_constraint call expands the small-sample covariance
+    endog, exog, groups = _small_cluster_data()
+    constraint = (np.array([[0.0, 1.0, 1.0]]), np.zeros(1))
+    mod = gee.GEE(endog, exog, groups, constraint=constraint)
+    handle = mod._handle_constraint
+    calls = []
+
+    def fail_third(mean_params, bcov):
+        calls.append(1)
+        if len(calls) == 3:
+            return None, None
+        return handle(mean_params, bcov)
+
+    monkeypatch.setattr(mod, "_handle_constraint", fail_third)
+    with pytest.warns(ConvergenceWarning, match="constrained GEE"):
+        assert mod.fit(cov_type=cov_type) is None
