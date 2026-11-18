@@ -282,7 +282,7 @@ Regression and linear models
   observation. These observations are now dropped from the sandwich, a
   ``ValueWarning`` is issued, and the variance of the parameters that depend
   on them is ``nan``. The robust ``fvalue`` is then also ``nan``.
-  :issue:`10659`
+  :issue:`10659`, :pr:`10699`
 - ``OLSInfluence`` for the results of a ``WLS`` model used the unweighted
   design matrix and residuals for the hat matrix, the studentized residuals,
   Cook's distance, ``dffits`` and the leave-one-observation-out measures.
