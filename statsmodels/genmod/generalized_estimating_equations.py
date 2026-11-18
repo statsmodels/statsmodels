@@ -1335,6 +1335,46 @@ class GEE(GLM):
 
         return cov_robust_bc
 
+    def _fg_mbn_covmat(self, method):
+        """Fay-Graubard ("fg") covariance."""
+
+        endog = self.endog_li
+        exog = self.exog_li
+        weights = getattr(self, "weights_li", None)
+        varfunc = self.family.variance
+
+        bmats, scores = [], []
+        for i in range(self.num_group):
+            expval, lpr = self.cached_means[i]
+            resid = endog[i] - expval
+            dmat = self.mean_deriv(exog[i], lpr)
+            sdev = np.sqrt(varfunc(expval))
+            if weights is not None:
+                w = weights[i]
+                resid = resid * w
+                wdmat = dmat * w[:, None]
+            else:
+                wdmat = dmat
+            rslt = self.cov_struct.covariance_matrix_solve(
+                expval, i, sdev, (wdmat, resid)
+            )
+            if rslt is None:
+                return None
+            vinv_d, vinv_resid = rslt
+            bmats.append(np.dot(dmat.T, vinv_d))
+            scores.append(np.dot(dmat.T, vinv_resid))
+
+        bmati = np.linalg.inv(sum(bmats))
+        scores = np.asarray(scores)
+
+        # scale each score by (1 - min(b, diag(Omega_i Omega^{-1})))^{-1/2}
+        bound = 0.75
+        lev = np.array([np.diag(bm @ bmati) for bm in bmats])
+        scores = scores / np.sqrt(1 - np.minimum(bound, lev))
+        cov = bmati @ (scores.T @ scores) @ bmati
+
+        return cov * self.scaling_factor
+
     def _starting_params(self):
 
         if np.isscalar(self._offset_exposure):
@@ -1460,11 +1500,13 @@ class GEE(GLM):
                 stacklevel=2,
             )
             return None
-        bc_cov = kc_cov = None
+        bc_cov = kc_cov = fg_cov = None
         if cov_type == "bias_reduced":
             bc_cov = self._bc_covmat(ncov)
         elif cov_type == "kauermann_carroll":
             kc_cov = self._bc_covmat(ncov, method="kc")
+        elif cov_type == "fay_graubard":
+            fg_cov = self._fg_mbn_covmat("fg")
 
         if self.constraint is not None:
             x = mean_params.copy()
@@ -1497,6 +1539,8 @@ class GEE(GLM):
                     return None
             if kc_cov is not None:
                 y, kc_cov = self._handle_constraint(x, kc_cov)
+            if fg_cov is not None:
+                y, fg_cov = self._handle_constraint(x, fg_cov)
 
         scale = self.estimate_scale()
 
@@ -1507,6 +1551,7 @@ class GEE(GLM):
             cov_naive=ncov,
             cov_robust_bc=bc_cov,
             cov_robust_kc=kc_cov,
+            cov_robust_fg=fg_cov,
         )
 
         # The superclass constructor will multiply the covariance
@@ -1542,6 +1587,7 @@ class GEE(GLM):
             "cov_naive",
             "cov_robust_bc",
             "cov_robust_kc",
+            "cov_robust_fg",
             "fit_history",
             "score_norm",
             "converged",
@@ -2004,6 +2050,7 @@ class GEEResults(GLMResults):
                 "naive",
                 "bias_reduced",
                 "kauermann_carroll",
+                "fay_graubard",
             ]
             if covariance_type not in allowed_covariances:
                 msg = "GEE: `cov_type` must be one of " + ", ".join(allowed_covariances)
@@ -2017,6 +2064,8 @@ class GEEResults(GLMResults):
                 cov = self.cov_robust_bc
             elif cov_type == "kauermann_carroll":
                 cov = self.cov_robust_kc
+            elif cov_type == "fay_graubard":
+                cov = self.cov_robust_fg
 
             self.cov_params_default = cov
         elif self.cov_type != cov_type:
@@ -2049,7 +2098,13 @@ class GEEResults(GLMResults):
 
         # Check covariance_type
         covariance_type = cov_type.lower()
-        allowed_covariances = ["robust", "naive", "bias_reduced", "kauermann_carroll"]
+        allowed_covariances = [
+            "robust",
+            "naive",
+            "bias_reduced",
+            "kauermann_carroll",
+            "fay_graubard",
+        ]
         if covariance_type not in allowed_covariances:
             msg = "GEE: `covariance_type` must be one of " + ", ".join(
                 allowed_covariances
@@ -2068,6 +2123,10 @@ class GEEResults(GLMResults):
             if getattr(self, "cov_robust_kc", None) is None:
                 raise ValueError("GEE: `kauermann_carroll` covariance not available")
             return np.sqrt(np.diag(self.cov_robust_kc))
+        elif covariance_type == "fay_graubard":
+            if getattr(self, "cov_robust_fg", None) is None:
+                raise ValueError("GEE: `fay_graubard` covariance not available")
+            return np.sqrt(np.diag(self.cov_robust_fg))
 
     # Need to override to allow for different covariance types.
     @cache_readonly
