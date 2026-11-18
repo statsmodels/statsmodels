@@ -283,7 +283,7 @@ class RegressionModel(base.LikelihoodModel):
         self.weights: Float64Array | None = None
         self.sigma: Float64Array | None = None
         super().__init__(endog, exog, **kwargs)
-        self._data_attr.extend(["pinv_wexog", "wendog", "wexog", "weights"])
+        self._data_attr.extend(["_pinv_wexog", "wendog", "wexog", "weights"])
         self._check_finite()
 
     def _check_finite(self):
@@ -559,32 +559,46 @@ class RegressionModel(base.LikelihoodModel):
         ``method="chol"`` is less accurate than the other two methods and
         should only be used when speed and memory usage are more important
         than numerical accuracy. Forming ``X'X`` squares the condition
-        number of the design, so the rounding error of the parameters grows
-        roughly like ``cond(X)**2 * eps`` instead of ``cond(X) * eps`` for
-        "pinv" and "qr", that is, "chol" loses about twice as many digits.
-        In a simulation with 10,000 observations, 50 regressors and the
-        condition number of the design controlled directly, the relative
-        error of the parameters from "chol" against the exact least squares
-        solution was about 1e-9 to 1e-8 at ``cond(X) = 1e4``, 1e-7 at 1e5,
-        1e-5 at 1e6, 1e-3 at 1e7 and a few percent at 1e8, against about
-        1e-12 at 1e4 and 1e5, 1e-11 at 1e6, 1e-10 at 1e7 and 1e-9 at 1e8
-        with "pinv" and "qr". The standard errors lose precision in the
-        same way. "chol" is therefore a poor choice for ill-conditioned
-        designs: regressors that are nearly collinear or measured on very
-        different scales, polynomial or interaction terms of unscaled
-        variables, or dummy variables with few observations in a category.
-        The ``condition_number`` of the results (in the summary) indicates
-        the number of digits lost. The regressors are checked column by
-        column: if the norm of a column after projecting out the preceding
-        columns is less than 1e-7 times its norm, the default tolerance of
-        ``lm`` in R, or if the Cholesky factorization fails, the regressors
-        are treated as collinear, a ``SingularMatrixWarning`` is raised and
-        the model is estimated with "pinv" instead, including its rank rule.
-        Otherwise the rank is the number of columns. This check only
-        prevents the factorization from breaking down on (nearly) collinear
-        regressors; in the simulation it did not trigger below ``cond(X)`` of
-        about 1e8. It does not trigger for designs that are merely
-        ill-conditioned, and it is not a guarantee of accuracy.
+        number, so "chol" loses about twice as many digits as "pinv" and
+        "qr". The loss depends on the condition number of the design after
+        its columns are scaled to unit norm,
+        ``np.linalg.cond(X / np.linalg.norm(X, axis=0))``, and not on the
+        scales of the columns: the rounding error of the parameters grows
+        roughly like the square of this condition number times ``eps``
+        instead of the condition number times ``eps`` for "pinv" and "qr".
+        In a simulation with 10,000 observations, 50 regressors with columns
+        of similar norm and the condition number of the design controlled
+        directly, the relative error of the parameters from "chol" against
+        the exact least squares solution was about 1e-9 to 1e-8 at a
+        condition number of 1e4, 1e-7 at 1e5, 1e-5 at 1e6, 1e-3 at 1e7 and a
+        few percent at 1e8, against about 1e-12 at 1e4 and 1e5, 1e-11 at
+        1e6, 1e-10 at 1e7 and 1e-9 at 1e8 with "pinv" and "qr". The standard
+        errors lose precision in the same way.
+
+        The typical silent failure of "chol" is a regressor with a large mean
+        next to the constant, which is nearly collinear with the constant
+        once the columns are scaled. For a regressor with mean 1e6 and
+        standard deviation 1, the condition number of the scaled design is
+        about 2e6, and with 1,000 observations the slope from "chol" had a
+        relative error of up to 3e-3 and the parameters were off by up to
+        0.2 standard errors, without a warning, against at most 1e-10 and
+        4e-9 with "pinv" and "qr". Center such regressors before the fit, or use
+        "pinv" or "qr". Other ill-conditioned designs are nearly collinear
+        regressors, polynomial or interaction terms of uncentered variables
+        and dummy variables with few observations in a category.
+
+        The regressors are checked column by column: if the norm of a column
+        after projecting out the preceding columns is less than 1e-7 times
+        its norm, the default tolerance of ``lm`` in R, or if the Cholesky
+        factorization fails, the regressors are treated as collinear, a
+        ``SingularMatrixWarning`` is raised and the model is estimated with
+        "pinv" instead, including its rank rule. Otherwise the rank is the
+        number of columns. This check only prevents the factorization from
+        breaking down on (nearly) collinear regressors; in the simulation it
+        did not trigger below a condition number of about 1e8. It does not
+        trigger for designs that are merely ill-conditioned, such as the
+        regressor with a large mean above, and it is not a guarantee of
+        accuracy.
         """
         # NOTE: pinv_wexog, normalized_cov_params, wexog_singular_values and
         # rank are recomputed from self.wexog on every call (rather than

@@ -33,6 +33,7 @@ from statsmodels.regression.linear_model import (
     WLS,
     CompareLRTestResult,
     ELTestResult,
+    RegressionModel,
     YuleWalkerResult,
     burg,
     yule_walker,
@@ -2545,6 +2546,42 @@ def test_fit_chol_summary_pickle_remove_data():
     assert isinstance(res.summary(), Summary)
 
 
+def test_fit_chol_remove_data_does_not_compute_pinv_wexog(monkeypatch):
+    # remove_data must not compute the k x n pseudoinverse that a chol fit
+    # did not need, only to delete it again
+    endog, exog, _, _ = _chol_fit_data()
+    model = OLS(endog, exog)
+    res = model.fit(method="chol")
+    params = np.asarray(res.params).copy()
+    bse = np.asarray(res.bse).copy()
+    # summary needs data, so it has to be computed before remove_data
+    assert isinstance(res.summary(), Summary)
+
+    computed = []
+    pinv_wexog = RegressionModel.pinv_wexog
+
+    def getter(self):
+        computed.append(True)
+        return pinv_wexog.fget(self)
+
+    monkeypatch.setattr(
+        RegressionModel,
+        "pinv_wexog",
+        property(getter, pinv_wexog.fset, pinv_wexog.fdel),
+    )
+    res.remove_data()
+    assert not computed
+    assert model.__dict__["_pinv_wexog"] is None
+    assert model.wexog is None
+    monkeypatch.undo()
+
+    assert model.pinv_wexog is None
+    assert_allclose(res.params, params)
+    assert_allclose(res.bse, bse)
+    assert_allclose(res.predict(exog[:3]), exog[:3] @ params)
+    assert isinstance(res.summary(), Summary)
+
+
 @pytest.mark.parametrize("perturbation", [0.0, 1e-9])
 def test_fit_chol_collinear_uses_pinv(perturbation):
     # a column that is (nearly) a linear combination of other columns
@@ -2605,16 +2642,20 @@ def test_fit_chol_memory():
     endog = exog.sum(1) + rng.standard_normal(nobs)
     model = OLS(endog, exog)
 
+    def peak_memory(**kwargs):
+        # tracing may already be on, for example with PYTHONTRACEMALLOC=1, so
+        # measure the peak relative to the memory traced before the fit
+        tracemalloc.reset_peak()
+        baseline = tracemalloc.get_traced_memory()[0]
+        model.fit(**kwargs)
+        return tracemalloc.get_traced_memory()[1] - baseline
+
     was_tracing = tracemalloc.is_tracing()
     if not was_tracing:
         tracemalloc.start()
     try:
-        tracemalloc.reset_peak()
-        model.fit(method="chol")
-        _, peak_chol = tracemalloc.get_traced_memory()
-        tracemalloc.reset_peak()
-        model.fit()
-        _, peak_pinv = tracemalloc.get_traced_memory()
+        peak_chol = peak_memory(method="chol")
+        peak_pinv = peak_memory()
     finally:
         if not was_tracing:
             tracemalloc.stop()
