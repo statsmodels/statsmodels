@@ -22,6 +22,10 @@ http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
 LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 
+G Kauermann and RJ Carroll (2001). A note on the efficiency of sandwich
+covariance matrix estimation. Journal of the American Statistical
+Association, 96(456), 1387-1396.
+
 P Li and DT Redden (2015). Small sample performance of bias-corrected
 sandwich estimators for cluster-randomized trials with binary outcomes.
 Statistics in Medicine, 34(2), 281-296.
@@ -362,6 +366,29 @@ _gee_fit_doc = """
     For the Gaussian family, there is no benefit to setting
     `params_niter` to a value greater than 1, since the mean
     structure parameters converge in one step.
+
+    The small-sample covariances adjust the residuals of each group
+    with its leverage matrix ``H``. ``cov_type="bias_reduced"`` (Mancl
+    and DeRouen, 2001) uses ``(I - H)^{-1}`` and
+    ``cov_type="kauermann_carroll"`` (Kauermann and Carroll, 2001) uses
+    ``(I - H)^{-1/2}``. ``I - H`` is not symmetric unless the family is
+    Gaussian and the working correlation is independence, and the
+    principal square root is used. Its eigenvalues are positive, so the
+    root is real. Each group needs an ``O(m^3)`` matrix root, where
+    ``m`` is the group size, which can be slow for large groups.
+
+    References
+    ----------
+    LA Mancl and TA DeRouen (2001). A covariance estimator for GEE with
+    improved small-sample properties. Biometrics, 57(1), 126-134.
+
+    G Kauermann and RJ Carroll (2001). A note on the efficiency of
+    sandwich covariance matrix estimation. Journal of the American
+    Statistical Association, 96(456), 1387-1396.
+
+    P Li and DT Redden (2015). Small sample performance of bias-corrected
+    sandwich estimators for cluster-randomized trials with binary
+    outcomes. Statistics in Medicine, 34(2), 281-296.
 """
 
 _gee_results_doc = """
