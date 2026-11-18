@@ -3003,3 +3003,31 @@ def test_fay_graubard_bound():
         meat = meat + np.outer(score, score)
     assert np.isfinite(res.cov_robust_fg).all()
     assert_allclose(res.cov_robust_fg, omegai @ meat @ omegai, rtol=1e-10)
+
+
+@pytest.mark.parametrize("case", range(12))
+def test_morel_bokossa_neerchal_geesmv(case):
+    # reference variances from R geesmv, see gee_fg_mbn.R
+    data, ref = _fg_mbn_ref("mbn_geesmv")[case]
+    res = _fg_mbn_fit(data, ref, "morel_bokossa_neerchal")
+    var = ref[["v0", "v1", "v2"]].to_numpy(float)
+    assert_equal(res.cov_type, "morel_bokossa_neerchal")
+    assert_allclose(np.diag(res.cov_params()), var, rtol=1e-9)
+    assert_allclose(res.standard_errors("morel_bokossa_neerchal"), np.sqrt(var))
+    assert res.cov_params_default is res.cov_robust_mbn
+
+
+def test_morel_bokossa_neerchal_constraint():
+    endog, exog, groups = _small_cluster_data()
+    lhs = np.array([[0.0, 1.0, 1.0]])
+    mod = gee.GEE(endog, exog, groups, constraint=(lhs, np.zeros(1)))
+    res = mod.fit(cov_type="morel_bokossa_neerchal")
+    assert_equal(res.cov_robust_mbn.shape, (3, 3))
+    assert_allclose(lhs @ res.cov_robust_mbn @ lhs.T, 0, atol=1e-12)
+
+
+def test_morel_bokossa_neerchal_not_available():
+    endog, exog, groups = _small_cluster_data()
+    res = gee.GEE(endog, exog, groups).fit()
+    with pytest.raises(ValueError, match="morel_bokossa_neerchal"):
+        res.standard_errors("morel_bokossa_neerchal")
