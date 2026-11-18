@@ -332,12 +332,12 @@ class HoltWintersResults(Results):
             return fmt.format(x)
 
         tab = []
-        for _, vals in formatted.iterrows():
+        for vals in formatted.itertuples(index=False):
             tab.append(
                 [
-                    _fmt(vals.iloc[1]),
-                    f"{vals.iloc[0]:>20}",
-                    f"{bool(vals.iloc[2])!s:>20}",
+                    _fmt(vals[1]),
+                    f"{vals[0]:>20}",
+                    f"{bool(vals[2])!s:>20}",
                 ]
             )
         params_table = SimpleTable(

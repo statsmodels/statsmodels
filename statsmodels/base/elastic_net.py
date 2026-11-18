@@ -15,6 +15,9 @@ regularization.  The elastic net minimizes the objective function
 -llf / nobs + alpha((1 - L1_wt) * sum(params**2) / 2 +
     L1_wt * sum(abs(params)))
 
+where nobs is the number of observations, or the sum of the frequency
+weights if the model has a ``wnobs`` attribute (GLM).
+
 The algorithm implemented here closely follows the implementation in
 the R glmnet package, documented here:
 
@@ -27,6 +30,17 @@ http://www.jstatsoft.org/v33/i01/paper
 This routine should work for any regression model that implements
 loglike, score, and hess.
 """
+
+
+def _nobs(model):
+    """
+    Return the number of observations used to scale the log-likelihood.
+
+    Models with frequency weights (GLM) count each row as many times
+    as its weight, so the penalized objective matches a fit on the
+    expanded data.
+    """
+    return getattr(model, "wnobs", model.nobs)
 
 
 def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
@@ -67,19 +81,19 @@ def _gen_npfuncs(k, L1_wt, alpha, loglike_kwds, score_kwds, hess_kwds):
     """
 
     def nploglike(params, model):
-        nobs = model.nobs
+        nobs = _nobs(model)
         pen_llf = alpha[k] * (1 - L1_wt) * np.sum(params**2) / 2
         llf = model.loglike(np.r_[params], **loglike_kwds)
         return - llf / nobs + pen_llf
 
     def npscore(params, model):
-        nobs = model.nobs
+        nobs = _nobs(model)
         pen_grad = alpha[k] * (1 - L1_wt) * params
         gr = -model.score(np.r_[params], **score_kwds)[0] / nobs
         return gr + pen_grad
 
     def nphess(params, model):
-        nobs = model.nobs
+        nobs = _nobs(model)
         pen_hess = alpha[k] * (1 - L1_wt)
         h = -model.hessian(np.r_[params], **hess_kwds)[0, 0] / nobs + pen_hess
         return h
@@ -196,7 +210,7 @@ def _l1_slsqp(model, alpha, start_params, maxiter, loglike_kwds, score_kwds,
     if start_params is None:
         start_params = np.zeros(model.exog.shape[1])
 
-    nobs = model.nobs
+    nobs = _nobs(model)
 
     def f(params, *args):
         return -model.loglike(params, **loglike_kwds) / nobs
@@ -317,7 +331,38 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
 
     -loglike/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
 
-    where |*|_1 and |*|_2 are the L1 and L2 norms.
+    where |*|_1 and |*|_2 are the L1 and L2 norms, and ``n`` is the number of
+    observations, ``model.nobs``. If the model has a ``wnobs`` attribute,
+    which is the sum of the ``freq_weights`` for GLM, ``n`` is ``model.wnobs``.
+    The ``var_weights`` of GLM are not part of ``n``.
+
+    Every element of ``params`` is penalized, including the coefficient of
+    the constant, and the columns of ``exog`` are used as they are. R's
+    ``glmnet`` does not penalize the intercept and standardizes the columns by
+    default (``standardize=TRUE``). With a vector ``alpha`` the fit has the
+    estimates of ``glmnet``, where ``alpha`` is its ``lambda`` and ``L1_wt`` is
+    its ``alpha``:
+
+    * To leave the constant unpenalized, as ``glmnet`` with
+      ``intercept=TRUE`` and ``standardize=FALSE`` does, give it the penalty
+      weight 0. If the constant is the first of the ``k`` columns of
+      ``exog``, use ``alpha * np.r_[0.0, np.ones(k - 1)]``.
+    * To standardize the columns, as ``standardize=TRUE`` does, let ``sd`` be
+      the standard deviations of the columns other than the constant, with the
+      divisor ``n`` (and the ``freq_weights`` as weights, if the model has
+      them). Use the weights ``alpha * np.r_[0.0, sd]`` for the lasso
+      (``L1_wt=1``). For other values of ``L1_wt``, divide the columns of
+      ``exog`` by ``sd``, fit with the weights
+      ``alpha * np.r_[0.0, np.ones(k - 1)]`` and divide the estimated
+      coefficients other than the constant by ``sd``. For the ridge penalty
+      (``L1_wt=0``) the weights ``alpha * np.r_[0.0, sd**2]`` are the same fit
+      as the standardized columns.
+
+    The estimates agree with those of ``glmnet`` up to the convergence
+    tolerances of the two algorithms. In R, use a family object such as
+    ``gaussian()``: the default ``family="gaussian"`` standardizes ``y`` and so
+    divides the weight of the L2 penalty, ``(1 - L1_wt) * alpha``, by the
+    standard deviation of ``y`` (with the divisor ``n``).
 
     When ``method`` is 'coord_descent', the computational approach
     used is to obtain a quadratic approximation to the smooth part of

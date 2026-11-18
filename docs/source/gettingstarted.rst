@@ -21,7 +21,7 @@ few modules and functions:
 
 `pandas <https://pandas.pydata.org/>`_ builds on ``numpy`` arrays to provide
 rich data structures and data analysis tools. The ``pandas.DataFrame`` function
-provides labelled arrays of (potentially heterogenous) data, similar to the
+provides labelled arrays of (potentially heterogeneous) data, similar to the
 ``R`` "data.frame". The ``pandas.read_csv`` function can be used to convert a
 comma-separated values file to a ``DataFrame`` object.
 

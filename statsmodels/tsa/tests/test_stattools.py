@@ -40,6 +40,7 @@ from statsmodels.tsa.stattools import (
     ADFullerResult,
     BreakvarHeteroskedasticityResult,
     CcfResult,
+    ClarkWestResult,
     CointResult,
     JackknifeResult,
     KPSSResult,
@@ -50,6 +51,7 @@ from statsmodels.tsa.stattools import (
     PccfResult,
     QStatResult,
     RURResult,
+    _stattools,
     acf,
     acovf,
     adfuller,
@@ -58,6 +60,7 @@ from statsmodels.tsa.stattools import (
     breakvar_heteroskedasticity_test,
     ccf,
     ccovf,
+    clark_west_test,
     coint,
     diebold_mariano_test,
     grangercausalitytests,
@@ -2281,7 +2284,25 @@ def test_diebold_mariano_exceptions():
 DM_R_RESULTS = pd.read_csv(CURR_DIR.joinpath("results", "results_diebold_mariano.csv"))
 
 
-@pytest.mark.parametrize("row", DM_R_RESULTS.to_dict("records"))
+DM_R_ROWS = [
+    pytest.param(
+        row,
+        id="-".join(
+            [
+                row["source"],
+                row["kernel"],
+                f"h{row['horizon']}",
+                f"lags{row['lags']}",
+                f"power{row['power']}",
+                row["alternative"],
+            ]
+        ),
+    )
+    for row in DM_R_RESULTS.to_dict("records")
+]
+
+
+@pytest.mark.parametrize("row", DM_R_ROWS)
 def test_diebold_mariano_r_reference(dm_data, row):
     y, f1, f2 = dm_data
     res = diebold_mariano_test(
@@ -2367,23 +2388,66 @@ def test_diebold_mariano_uniform_default_lags(dm_data, horizon):
     assert bartlett.lags == max(horizon - 1, int(np.ceil(15 ** (1 / 3))))
 
 
-def test_diebold_mariano_degenerate_loss_differential(dm_data):
+@pytest.mark.parametrize("kernel", ["bartlett", "uniform"])
+def test_diebold_mariano_identical_forecasts(dm_data, kernel):
     y, f1, _ = dm_data
-    for kernel in ("bartlett", "uniform"):
-        with pytest.raises(ValueError, match="loss differential is constant"):
-            diebold_mariano_test(y, f1, f1, kernel=kernel)
+    with pytest.raises(ValueError, match="loss differential is constant"):
+        diebold_mariano_test(y, f1, f1, kernel=kernel)
+
+
+def test_diebold_mariano_constant_forecast_errors():
+    # the losses are 4 and 1 for every observation
     with pytest.raises(ValueError, match="loss differential is constant"):
         diebold_mariano_test(np.zeros(10), np.full(10, 2.0), np.ones(10))
-    y_scaled = 10 * np.random.default_rng(0).standard_normal(100)
-    for criterion in ("mse", "mae"):
+
+
+@pytest.mark.parametrize("criterion", ["mse", "mae"])
+def test_diebold_mariano_constant_up_to_rounding(criterion):
+    # the forecast errors are -0.1 and -0.2 up to rounding error
+    y = 10 * np.random.default_rng(0).standard_normal(100)
+    with pytest.raises(ValueError, match="constant up to rounding"):
+        diebold_mariano_test(y, y + 0.1, y + 0.2, criterion=criterion)
+
+
+@pytest.mark.parametrize(
+    "rel_range, raises",
+    [
+        (1e-10, True),
+        (5e-9, True),
+        (5e-8, False),
+        (1e-6, False),
+        (1e-4, False),
+    ],
+    ids=["1e-10", "5e-9", "5e-8", "1e-6", "1e-4"],
+)
+def test_diebold_mariano_constant_threshold(rel_range, raises):
+    # The loss differential is constant up to rounding error if its range is
+    # at most sqrt(eps) = 1.5e-8 times its largest absolute value. Here the
+    # range of d is rel_range and its largest value is 1 + rel_range.
+    z = np.random.default_rng(20261116).uniform(size=60)
+    d = 1.0 + rel_range * (z - z.min()) / np.ptp(z)
+    zeros = np.zeros(60)
+
+    def call():
+        return diebold_mariano_test(zeros, d, zeros, criterion=lambda y, f: f)
+
+    if raises:
         with pytest.raises(ValueError, match="constant up to rounding"):
-            diebold_mariano_test(
-                y_scaled, y_scaled + 0.1, y_scaled + 0.2, criterion=criterion
-            )
+            call()
+    else:
+        assert np.isfinite(call().statistic)
+
+
+def test_diebold_mariano_non_finite_forecast(dm_data):
+    y, f1, _ = dm_data
     f_nan = f1.copy()
     f_nan[3] = np.nan
     with pytest.raises(MissingDataError, match="non-finite values"):
         diebold_mariano_test(y, f1, f_nan)
+
+
+def test_diebold_mariano_mape_zero_observation(dm_data):
+    y, f1, _ = dm_data
     y_zero = y.copy()
     y_zero[0] = 0.0
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -2391,42 +2455,121 @@ def test_diebold_mariano_degenerate_loss_differential(dm_data):
             diebold_mariano_test(y_zero, f1, f1 + 1, criterion="mape")
 
 
-def test_diebold_mariano_sample_size_limits(dm_data):
-    y, f1, f2 = dm_data
-    with pytest.raises(ValueError, match=r"horizon \(15\) must be smaller"):
-        diebold_mariano_test(y, f1, f2, horizon=15)
-    with pytest.raises(ValueError, match=r"lags \(15\) must be smaller"):
-        diebold_mariano_test(y, f1, f2, lags=15)
-    with pytest.raises(ValueError, match="minus one"):
-        diebold_mariano_test(y, f1, f2, lags=14, kernel="uniform")
-    res = diebold_mariano_test(y, f1, f2, lags=14)
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        ({"lags": 15}, r"lags \(15\) must be smaller"),
+        ({"lags": 20}, r"lags \(20\) must be smaller"),
+        ({"lags": 14, "kernel": "uniform"}, "minus one"),
+    ],
+    ids=["lags=nobs", "lags>nobs", "uniform-lags=nobs-1"],
+)
+def test_diebold_mariano_lags_too_large(dm_data, kwargs, match):
+    with pytest.raises(ValueError, match=match):
+        diebold_mariano_test(*dm_data, **kwargs)
+
+
+def test_diebold_mariano_largest_lags(dm_data):
+    # lags = nobs - 1 is the largest value for the Bartlett kernel
+    res = diebold_mariano_test(*dm_data, lags=14)
     assert np.isfinite(res.statistic)
 
 
-def test_diebold_mariano_criterion_shape(dm_data):
+@pytest.mark.parametrize(
+    "kwargs, statistic, pvalue",
+    [
+        ({"horizon": 15, "lags": 0}, 0.8160666104384313, 0.4144620395041849),
+        ({"horizon": 20, "lags": 2}, 0.8209841996526007, 0.4116552682333907),
+        ({"horizon": 15, "lags": 14}, 0.9363182910488854, 0.34910933336926364),
+        (
+            {"horizon": 40, "lags": 0, "criterion": "mad"},
+            0.580413346387792,
+            0.5616359069919612,
+        ),
+        # with 0 lags both kernels give the same variance
+        (
+            {"horizon": 15, "lags": 0, "kernel": "uniform"},
+            0.8160666104384313,
+            0.4144620395041849,
+        ),
+    ],
+    ids=["h=nobs", "h>nobs", "lags=nobs-1", "mad", "uniform"],
+)
+def test_diebold_mariano_horizon_unused(dm_data, kwargs, statistic, pvalue):
+    # horizon only sets the default lags and the Harvey et al. adjustment, so
+    # it can be as large as nobs if harvey_adj is False and lags is given.
+    # Reference values computed with statsmodels before alternative and kernel
+    # were added, which did not check horizon against nobs.
+    res = diebold_mariano_test(*dm_data, **kwargs)
+    assert_allclose(res.statistic, statistic, rtol=1e-12)
+    assert_allclose(res.pvalue, pvalue, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"horizon": 15},
+        {"horizon": 16},
+        {"horizon": 15, "lags": 0, "harvey_adj": True},
+        {"horizon": 16, "lags": 0, "harvey_adj": True},
+    ],
+    ids=["default-lags", "default-lags-h>nobs", "harvey", "harvey-h>nobs"],
+)
+def test_diebold_mariano_horizon_used(dm_data, kwargs):
+    # horizon sets the default lags and the Harvey et al. adjustment
+    with pytest.raises(ValueError, match=r"horizon \(\d+\) must be smaller"):
+        diebold_mariano_test(*dm_data, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "criterion",
+    [
+        lambda y, f: np.mean((y - f) ** 2),
+        lambda y, f: np.array([np.mean((y - f) ** 2)]),
+        lambda y, f: ((y - f) ** 2)[:-1],
+        lambda y, f: np.column_stack([(y - f) ** 2, (y - f) ** 2]),
+    ],
+    ids=["scalar", "one-loss", "too-short", "two-columns"],
+)
+def test_diebold_mariano_criterion_shape(dm_data, criterion):
+    with pytest.raises(ValueError, match="one loss per observation"):
+        diebold_mariano_test(*dm_data, criterion=criterion)
+
+
+def test_diebold_mariano_criterion_column(dm_data):
     y, f1, f2 = dm_data
-    with pytest.raises(ValueError, match="one loss per observation"):
-        diebold_mariano_test(y, f1, f2, criterion=lambda y, f: np.mean((y - f) ** 2))
-    with pytest.raises(ValueError, match="one loss per observation"):
-        diebold_mariano_test(y, f1, f2, criterion=lambda y, f: ((y - f) ** 2)[:-1])
     res = diebold_mariano_test(
         y, f1, f2, criterion=lambda y, f: ((y - f) ** 2)[:, None]
     )
     assert_allclose(res.statistic, diebold_mariano_test(y, f1, f2).statistic)
 
 
-def test_diebold_mariano_zero_variance():
-    # With one lag, gamma_0 + 2 * gamma_1 of (-3, -3, 0, -3, -1) is exactly 0
-    d = np.array([-3.0, -3.0, 0.0, -3.0, -1.0])
-    with pytest.raises(ValueError, match="not positive"):
-        diebold_mariano_test(
-            np.zeros(5),
-            d,
-            np.zeros(5),
-            criterion=lambda y, f: f,
-            kernel="uniform",
-            lags=1,
-        )
+@pytest.mark.parametrize("kernel", ["bartlett", "uniform"])
+@pytest.mark.parametrize(
+    "variance", [0.0, -1e-3, np.nan], ids=["zero", "negative", "nan"]
+)
+def test_diebold_mariano_non_positive_variance(dm_data, monkeypatch, kernel, variance):
+    # Replace the HAC estimate of the variance of the mean. An exact zero
+    # variance is only reached by cancellation in floating point arithmetic,
+    # so it cannot be produced reliably from data.
+    class FakeFit:
+        params = np.array([0.5])
+
+        def cov_params(self):
+            return np.array([[variance]])
+
+    class FakeOLS:
+        def __init__(self, endog, exog):
+            pass
+
+        def fit(self, **kwargs):
+            return FakeFit()
+
+    monkeypatch.setattr(_stattools, "OLS", FakeOLS)
+    with pytest.raises(ValueError, match="not positive") as exc:
+        diebold_mariano_test(*dm_data, kernel=kernel)
+    # only the message for the uniform kernel suggests the Bartlett kernel
+    assert ("Use kernel='bartlett'" in str(exc.value)) == (kernel == "uniform")
 
 
 def test_diebold_mariano_negative_variance():
@@ -2440,6 +2583,238 @@ def test_diebold_mariano_negative_variance():
         diebold_mariano_test(y, forecast_a, forecast_b, kernel="uniform", horizon=2)
     res = diebold_mariano_test(y, forecast_a, forecast_b, kernel="bartlett", lags=1)
     assert np.isfinite(res.statistic)
+
+
+# clark_west_data.csv: 60 one-step forecasts of y[t + 1] = 0.3 + 0.25 x[t] + e,
+# x an AR(1) with coefficient 0.8, from recursive estimation starting with 60
+# observations (numpy default_rng(20261111)), rounded to 6 decimals. The
+# restricted forecast is the historical mean of y, the unrestricted forecast
+# the OLS regression of y on a constant and x:
+#
+# rng = np.random.default_rng(20261111)
+# x = np.empty(121)
+# x[0] = rng.normal()
+# for t in range(1, 121):
+#     x[t] = 0.8 * x[t - 1] + rng.normal()
+# y = 0.3 + 0.25 * np.r_[0.0, x[:-1]] + rng.normal(size=121)
+# rows = []
+# for t in range(60, 120):
+#     ys, xs = y[1 : t + 1], x[:t]
+#     beta = np.linalg.lstsq(np.column_stack([np.ones(t), xs]), ys, rcond=None)[0]
+#     rows.append((y[t + 1], ys.mean(), beta[0] + beta[1] * x[t]))
+# np.round(rows, 6) gives the columns y, f_restricted, f_unrestricted
+# The reference values in results_clark_west.csv are from R 4.4.2 with
+# sandwich 3.1.3 and forecastdom 0.1.1:
+#
+# library(sandwich); library(forecastdom)
+# cw <- read.csv("clark_west_data.csv")
+# e1 <- cw$y - cw$f_restricted
+# e2 <- cw$y - cw$f_unrestricted
+# f <- e1^2 - (e2^2 - (cw$f_restricted - cw$f_unrestricted)^2)
+# fit <- lm(f ~ 1)
+# for (L in 0:4) {
+#   v <- NeweyWest(fit, lag = L, prewhite = FALSE, adjust = FALSE)[1, 1]
+#   s <- coef(fit)[[1]] / sqrt(v)
+#   print(c(s, pnorm(s, lower.tail = FALSE)), digits = 17)
+# }
+# for (L in 1:3) {
+#   v <- kernHAC(fit, kernel = "Truncated", bw = L, prewhite = FALSE,
+#                adjust = FALSE)[1, 1]
+#   s <- coef(fit)[[1]] / sqrt(v)
+#   print(c(s, pnorm(s, lower.tail = FALSE)), digits = 17)
+# }
+# r <- cw_test(e1, e2, cw$f_restricted, cw$f_unrestricted)
+# print(c(r$statistic, r$pvalue), digits = 17)
+# print(c(mean(e1^2), mean(e2^2),
+#         mean((cw$f_restricted - cw$f_unrestricted)^2)), digits = 17)
+CW_RESULTS = pd.read_csv(CURR_DIR.joinpath("results", "results_clark_west.csv"))
+
+
+@pytest.fixture
+def cw_data():
+    data = pd.read_csv(CURR_DIR.joinpath("results", "clark_west_data.csv"))
+    return data["y"], data["f_restricted"], data["f_unrestricted"]
+
+
+@pytest.mark.parametrize("row", CW_RESULTS.to_dict("records"))
+def test_clark_west_r_reference(cw_data, row):
+    res = clark_west_test(*cw_data, lags=row["lags"], kernel=row["kernel"])
+    assert isinstance(res, ClarkWestResult)
+    assert_allclose(res.statistic, row["statistic"], rtol=1e-10)
+    assert_allclose(res.pvalue, row["pvalue"], rtol=1e-10)
+    assert res.lags == row["lags"]
+    assert res.kernel == row["kernel"]
+
+
+def test_clark_west_forecastdom(cw_data):
+    res = clark_west_test(*cw_data, lags=0)
+    # forecastdom::cw_test uses the least squares standard error, which
+    # divides the variance by T - 1 instead of T
+    nobs = len(cw_data[0])
+    statistic = res.statistic * np.sqrt((nobs - 1) / nobs)
+    assert_allclose(statistic, 1.4128255421051328, rtol=1e-10)
+    assert_allclose(stats.norm.sf(statistic), 0.078853513078140369, rtol=1e-10)
+    assert_allclose(res.mspe_restricted, 1.2824170794716332, rtol=1e-12)
+    assert_allclose(res.mspe_unrestricted, 1.2418206833121166, rtol=1e-12)
+    assert_allclose(res.adjustment, 0.036854387906683335, rtol=1e-12)
+    statistic, pvalue = res
+    assert statistic == res.statistic
+    assert pvalue == res.pvalue
+
+
+@pytest.mark.parametrize("kernel", ["bartlett", "uniform"])
+def test_clark_west_adjusted_loss_identity(kernel):
+    # The adjusted loss differential equals 2 e_1 (f_2 - f_1)
+    rng = np.random.default_rng(20261114)
+    y, f1, f2 = rng.standard_normal((3, 100))
+    res = clark_west_test(y, f1, f2, kernel=kernel, horizon=3)
+    adj_loss_diff = 2 * (y - f1) * (f2 - f1)
+    ols = OLS(adj_loss_diff, np.ones(100)).fit(
+        cov_type="HAC", cov_kwds={"maxlags": res.lags, "kernel": kernel}
+    )
+    assert_allclose(res.statistic, ols.tvalues[0], rtol=1e-12)
+    assert_allclose(res.pvalue, stats.norm.sf(ols.tvalues[0]), rtol=1e-12)
+
+
+def test_clark_west_argument_order(cw_data):
+    y, f_restricted, f_unrestricted = (np.asarray(a, dtype=float) for a in cw_data)
+    res = clark_west_test(y, f_restricted, f_unrestricted)
+    swapped = clark_west_test(y, f_unrestricted, f_restricted)
+    adj_loss_diff = (y - f_restricted) ** 2 - (
+        (y - f_unrestricted) ** 2 - (f_restricted - f_unrestricted) ** 2
+    )
+    swapped_adj_loss_diff = -adj_loss_diff + 2 * (f_restricted - f_unrestricted) ** 2
+    ols = OLS(swapped_adj_loss_diff, np.ones_like(y)).fit(
+        cov_type="HAC", cov_kwds={"maxlags": swapped.lags}
+    )
+    assert_allclose(swapped.statistic, ols.tvalues[0], rtol=1e-10)
+    assert not np.isclose(swapped.statistic, -res.statistic, rtol=1e-3)
+    assert_allclose(
+        swapped.mspe_restricted - swapped.mspe_unrestricted,
+        res.mspe_unrestricted - res.mspe_restricted,
+        rtol=1e-12,
+    )
+
+
+def test_clark_west_statistic_exceeds_dm():
+    rng = np.random.default_rng(0)
+    x = rng.standard_normal(400)
+    y = 0.05 * x + rng.standard_normal(400)
+    f_restricted, f_unrestricted = [], []
+    for t in range(200, 400):
+        f_restricted.append(y[:t].mean())
+        slope, intercept = np.polyfit(x[:t], y[:t], 1)
+        f_unrestricted.append(intercept + slope * x[t])
+    res = clark_west_test(y[200:], f_restricted, f_unrestricted)
+    dm = diebold_mariano_test(
+        y[200:], f_restricted, f_unrestricted, alternative="larger"
+    )
+    assert res.statistic > dm.statistic
+    assert_allclose(res.statistic, 1.8726072917195915, rtol=1e-6)
+    assert_allclose(dm.statistic, 1.2505199142075583, rtol=1e-6)
+
+
+@pytest.mark.parametrize("horizon", [1, 2, 3])
+def test_clark_west_default_lags(cw_data, horizon):
+    uniform = clark_west_test(*cw_data, kernel="uniform", horizon=horizon)
+    assert uniform.lags == horizon - 1
+    bartlett = clark_west_test(*cw_data, horizon=horizon)
+    assert bartlett.lags == max(horizon - 1, int(np.ceil(60 ** (1 / 3))))
+
+
+def _cw_degenerate_inputs(case, cw_data):
+    y, f_restricted, _ = (np.asarray(a, dtype=float) for a in cw_data)
+    if case in ("identical_bartlett", "identical_uniform"):
+        kernel = case.split("_")[1]
+        return (y, f_restricted, f_restricted), {"kernel": kernel}
+    if case == "constant_errors":
+        y_scaled = 10 * np.random.default_rng(0).standard_normal(100)
+        return (y_scaled, y_scaled + 0.1, y_scaled + 0.2), {}
+    if case == "non_finite":
+        f_nan = f_restricted.copy()
+        f_nan[5] = np.nan
+        return (y, f_restricted, f_nan), {}
+    if case == "negative_variance":
+        # 2 * f_restricted**2 alternates between 8 and 0.5, so the uniform
+        # kernel with one lag gives a negative variance
+        return (
+            (np.zeros(20), np.tile([2.0, 0.5], 10), np.zeros(20)),
+            {"kernel": "uniform", "lags": 1},
+        )
+    raise ValueError(f"unknown case {case}")
+
+
+@pytest.mark.parametrize(
+    "case, exception, match",
+    [
+        ("identical_bartlett", ValueError, "constant"),
+        ("identical_uniform", ValueError, "constant"),
+        ("constant_errors", ValueError, "constant"),
+        ("non_finite", MissingDataError, "non-finite"),
+        ("negative_variance", ValueError, "not positive"),
+    ],
+)
+def test_clark_west_degenerate(cw_data, case, exception, match):
+    args, kwargs = _cw_degenerate_inputs(case, cw_data)
+    with pytest.raises(exception, match=match):
+        clark_west_test(*args, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        pytest.param({"lags": -1}, "^lags must", id="negative_lags"),
+        pytest.param({"horizon": 0}, "horizon", id="horizon_zero"),
+        pytest.param({"kernel": "parzen"}, "kernel", id="unknown_kernel"),
+        pytest.param({"horizon": 60}, r"horizon \(60\)", id="horizon_nobs"),
+        pytest.param(
+            {"kernel": "uniform", "lags": 59}, r"lags \(59\)", id="uniform_lags"
+        ),
+    ],
+)
+def test_clark_west_invalid_arguments(cw_data, kwargs, match):
+    with pytest.raises(ValueError, match=match):
+        clark_west_test(*cw_data, **kwargs)
+
+
+def test_clark_west_horizon_unused_with_lags(cw_data):
+    res = clark_west_test(*cw_data, horizon=60, lags=0)
+    expected = clark_west_test(*cw_data, horizon=1, lags=0)
+    assert_allclose(res.statistic, expected.statistic, rtol=1e-14)
+    assert res.lags == 0
+
+
+def test_clark_west_zero_lags_is_ols_tstat():
+    # The identity holds for any forecasts, so the forecasts need not be
+    # out-of-sample: a constant forecast against a regression on x.
+    rng = np.random.default_rng(20261117)
+    nobs = 150
+    x = rng.standard_normal(nobs)
+    y = 0.2 * x + rng.standard_normal(nobs)
+    f_restricted = np.full(nobs, y.mean())
+    slope, intercept = np.polyfit(x, y, 1)
+    f_unrestricted = intercept + slope * x
+    adj_loss_diff = (y - f_restricted) ** 2 - (
+        (y - f_unrestricted) ** 2 - (f_restricted - f_unrestricted) ** 2
+    )
+    # OLS divides the variance by nobs - 1, the HAC estimator with no lags by
+    # nobs. The two statistics differ only by this factor, up to rounding.
+    ols_tstat = OLS(adj_loss_diff, np.ones(nobs)).fit().tvalues[0]
+    expected = ols_tstat * np.sqrt(nobs / (nobs - 1))
+    res = clark_west_test(y, f_restricted, f_unrestricted, lags=0)
+    assert res.lags == 0
+    assert_allclose(res.statistic, expected, rtol=1e-12)
+    assert_allclose(res.pvalue, stats.norm.sf(expected), rtol=1e-12)
+    # The default number of lags is larger and gives another statistic
+    default = clark_west_test(y, f_restricted, f_unrestricted)
+    assert default.lags > 0
+    assert not np.isclose(default.statistic, res.statistic, rtol=1e-3)
+
+
+def test_clark_west_unequal_length(cw_data):
+    y, f_restricted, f_unrestricted = cw_data
+    with pytest.raises(ValueError, match="equal length"):
+        clark_west_test(y, f_restricted, f_unrestricted[:-1])
 
 
 def test_arma_order_select_ic_failure():

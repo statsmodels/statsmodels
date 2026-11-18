@@ -181,6 +181,18 @@ def get_prediction(self, exog=None, transform=True, weights=None,
         variance and can on demand calculate confidence intervals and summary
         tables for the prediction of the mean and of new observations.
 
+    Notes
+    -----
+    The intervals of the prediction results use the t distribution if
+    ``use_t`` is True and the normal distribution otherwise. With the t
+    distribution, the degrees of freedom are ``df_resid_inference`` if the
+    results have it (``n_groups - 1`` with ``cov_type="cluster"``, for
+    example) and ``df_resid`` otherwise.
+
+    .. versionchanged:: 0.15.1
+
+       The t distribution uses ``df_resid_inference`` instead of ``df_resid``
+       if the results have it.
     """
     # prepare exog and row_labels, based on base Results.predict
     # without exog, predict must use the model's offset and exposure
