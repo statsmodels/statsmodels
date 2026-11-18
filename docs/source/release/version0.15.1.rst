@@ -444,7 +444,7 @@ Time series analysis
   reported a loglikelihood of exactly 0, above that of any stationary model.
   This is now detected: ``filter`` raises a ``LinAlgError`` saying that the
   model is not stationary to numerical precision, and ``MLEModel.loglike``
-  returns ``-inf`` as above. :issue:`5459`
+  returns ``-inf`` as above. :issue:`5459`, :pr:`10747`
 - ``range_unit_root_test`` documents the correct null hypothesis, a unit
   root, which is rejected for small statistics. The ``InterpolationWarning``
   reports the correct direction: it is raised if the statistic is outside the
