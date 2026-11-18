@@ -3561,7 +3561,8 @@ class GEEMargins:
                     "std err",
                     "z",
                     "P>|z|",
-                    f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
+                    f"[{alpha / 2}",
+                    f"{1 - alpha / 2}]",
                 ]
                 tble.insert_header_row(0, header)
                 # from IPython.core.debugger import Pdb; Pdb().set_trace()
@@ -3584,7 +3585,8 @@ class GEEMargins:
                 "std err",
                 "z",
                 "P>|z|",
-                f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
+                f"[{alpha / 2}",
+                f"{1 - alpha / 2}]",
             ]
             table.insert_header_row(0, header)
 

@@ -2911,3 +2911,21 @@ def test_small_sample_cov_leverage_one(family, cov_type):
     with pytest.raises(ValueError, match="Group 10 has leverage 1"):
         mod.fit(cov_type=cov_type)
     mod.fit()
+
+
+def _margeff_model(model_class, use_t=False):
+    endog, exog, groups = _small_cluster_data()
+    if model_class is gee.OrdinalGEE:
+        endog = np.digitize(endog, [0.5, 1.5])
+        mod = gee.OrdinalGEE(endog, exog[:, 1:], groups)
+    else:
+        mod = gee.GEE(1.0 * (endog > 1), exog, groups, family=families.Binomial())
+    return mod.fit(use_t=use_t)
+
+
+@pytest.mark.parametrize("model_class", [gee.GEE, gee.OrdinalGEE])
+def test_margeff_summary(model_class):
+    marg = _margeff_model(model_class).get_margeff()
+    smry = str(marg.summary(alpha=0.1))
+    assert "[0.05" in smry
+    assert "0.95]" in smry
