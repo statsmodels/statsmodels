@@ -14,9 +14,9 @@ from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels.datasets import danish_data
+from statsmodels.datasets import danish_data, macrodata
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tsa.vector_ar.vecm import coint_johansen
+from statsmodels.tsa.vector_ar.vecm import VECM, coint_johansen
 
 current_path = Path(__file__).resolve().parent
 dta_path = Path(current_path).joinpath("Matlab_results", "test_coint.csv")
@@ -478,6 +478,27 @@ def test_coint_johansen_0lag():
     data = pd.concat([x, y], axis=1)
     result = coint_johansen(data, det_order=-1, k_ar_diff=0)
     assert result.eig.shape == (2,)
+
+
+@pytest.mark.parametrize("det_order, deterministic", [(-1, "n"), (0, "co")])
+@pytest.mark.parametrize("k_ar_diff", [0, 1, 2])
+def test_coint_johansen_trace_equals_vecm_lr(det_order, deterministic, k_ar_diff):
+    # GH 7459: the trace statistic is the likelihood ratio statistic of the
+    # VECM with rank r against the VECM with full rank. With k_ar_diff=0 the
+    # levels were not lagged.
+    data = np.log(macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]])
+    neqs = data.shape[1]
+    res = coint_johansen(data, det_order, k_ar_diff)
+    llf = [
+        VECM(data, k_ar_diff=k_ar_diff, coint_rank=r, deterministic=deterministic)
+        .fit()
+        .llf
+        for r in range(neqs + 1)
+    ]
+    lr_trace = [2 * (llf[neqs] - llf[r]) for r in range(neqs)]
+    lr_max = [2 * (llf[r + 1] - llf[r]) for r in range(neqs)]
+    assert_allclose(res.lr1, lr_trace, rtol=1e-6)
+    assert_allclose(res.lr2, lr_max, rtol=1e-6)
 
 
 def test_johansen_result_aliases_and_rkt_meth():
