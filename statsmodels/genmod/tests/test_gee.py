@@ -2777,17 +2777,43 @@ def test_use_t(use_t):
     assert ("P>|t|" in str(res.summary())) is use_t
 
 
-def test_use_t_df_constraint_ordinal():
+def test_use_t_df_constraint():
     # GH 8610
     endog, exog, groups = _small_cluster_data()
     constraint = (np.array([[0.0, 1.0, 1.0]]), np.zeros(1))
     res = gee.GEE(endog, exog, groups, constraint=constraint).fit(use_t=True)
     assert_equal(res.df_resid_inference, 12 - 2)
 
-    endog_ord = np.digitize(endog, [0, 1, 2])
-    res = gee.OrdinalGEE(endog_ord, exog[:, 1:], groups).fit(use_t=True)
+
+@pytest.mark.parametrize("model_class", [gee.OrdinalGEE, gee.NominalGEE])
+def test_use_t_multicategory(model_class):
+    # GH 8610
+    from scipy import stats
+
+    endog, exog, groups = _small_cluster_data()
+    endog = np.digitize(endog, [0.5, 1.5])
+    if model_class is gee.OrdinalGEE:
+        exog = exog[:, 1:]
+    res = model_class(endog, exog, groups).fit(use_t=True)
+
     assert res.use_t
     assert_equal(res.df_resid_inference, 12 - len(res.params))
+    pvalues = 2 * stats.t.sf(np.abs(res.tvalues), res.df_resid_inference)
+    assert_allclose(res.pvalues, pvalues, rtol=1e-10)
+
+
+def test_kauermann_carroll_constraint():
+    # GH 1183, the KC covariance must be projected onto the constraint
+    endog, exog, groups = _small_cluster_data()
+    lhs = np.array([[0.0, 1.0, 1.0]])
+    mod = gee.GEE(endog, exog, groups, constraint=(lhs, np.zeros(1)))
+    res = mod.fit(cov_type="kauermann_carroll", use_t=True)
+
+    assert_allclose(res.params @ lhs.T, 0, atol=1e-10)
+    cov = res.cov_robust_kc
+    assert_equal(cov.shape, (3, 3))
+    assert_allclose(lhs @ cov @ lhs.T, 0, atol=1e-12)
+    assert_allclose(res.bse, np.sqrt(np.diag(cov)), rtol=1e-12)
 
 
 def _small_sample_ref():
