@@ -49,7 +49,7 @@ def row_strided(a):
 
 def column_strided(a):
     a = np.asarray(a)
-    buf = np.zeros((a.shape[0], 2 * a.shape[1]), dtype=a.dtype)
+    buf = np.zeros((a.shape[0], 2 * a.shape[1]) + a.shape[2:], dtype=a.dtype)
     buf[:, ::2] = a
     return buf[:, ::2]
 
@@ -97,6 +97,12 @@ SARIMAX_PARAMS = np.array([0.2, -0.1, 0.5, 0.3, 1.0])
 SHOCKS = RNG.standard_normal((20, 1))
 UNCONSTRAINED = RNG.standard_normal((2, 4))
 CONSTRAINED = ss_tools.constrain_stationary_multivariate(UNCONSTRAINED, np.eye(2))[0]
+MATRICES = RNG.standard_normal((2, 2, 10))
+MATRICES_B = RNG.standard_normal((2, 2, 10))
+VECTORS = RNG.standard_normal((2, 10))
+VECTORS_B = RNG.standard_normal((2, 10))
+MISSING = (RNG.uniform(size=(2, 10)) < 0.4).astype(np.intc)
+INDEX = (RNG.uniform(size=(2, 10)) < 0.6).astype(np.intc)
 
 
 def _ets_model(endog, error="add", trend="add", seasonal="add"):
@@ -381,6 +387,66 @@ CASES = [
         (np.array([0.2, -0.4, 0.1]),),
         0,
     ),
+    (
+        "VARMAX start_params",
+        lambda y: VARMAX(y, order=(1, 0)).start_params,
+        (ARMA2,),
+        0,
+    ),
+    *[
+        (
+            f"reorder_missing_matrix {i}",
+            lambda a, m: ss_tools.reorder_missing_matrix(a, m, reorder_rows=True),
+            (MATRICES, MISSING),
+            i,
+        )
+        for i in range(2)
+    ],
+    *[
+        (
+            f"reorder_missing_vector {i}",
+            ss_tools.reorder_missing_vector,
+            (VECTORS, MISSING),
+            i,
+        )
+        for i in range(2)
+    ],
+    *[
+        (
+            f"copy_missing_matrix {i}",
+            lambda a, b, m: ss_tools.copy_missing_matrix(a, b, m, missing_rows=True),
+            (MATRICES, MATRICES_B, MISSING),
+            i,
+        )
+        for i in range(3)
+    ],
+    *[
+        (
+            f"copy_missing_vector {i}",
+            ss_tools.copy_missing_vector,
+            (VECTORS, VECTORS_B, MISSING),
+            i,
+        )
+        for i in range(3)
+    ],
+    *[
+        (
+            f"copy_index_matrix {i}",
+            lambda a, b, m: ss_tools.copy_index_matrix(a, b, m, index_rows=True),
+            (MATRICES, MATRICES_B, INDEX),
+            i,
+        )
+        for i in range(3)
+    ],
+    *[
+        (
+            f"copy_index_vector {i}",
+            ss_tools.copy_index_vector,
+            (VECTORS, VECTORS_B, INDEX),
+            i,
+        )
+        for i in range(3)
+    ],
 ]
 
 

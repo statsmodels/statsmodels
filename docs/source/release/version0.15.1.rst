@@ -909,6 +909,14 @@ Time series analysis
   ``start_params`` raised an error for parameters that are not float64 in
   native byte order, for example a big-endian, ``float32`` or integer array.
   :issue:`10770`, :pr:`10795`
+- ``VARMAX.start_params``, and so ``VARMAX.fit``, raised a ``ValueError`` for
+  big-endian ``endog``. :issue:`10770`, :pr:`10795`
+- ``reorder_missing_matrix``, ``reorder_missing_vector``,
+  ``copy_missing_matrix``, ``copy_missing_vector``, ``copy_index_matrix`` and
+  ``copy_index_vector`` in ``statsmodels.tsa.statespace.tools`` raised a
+  ``ValueError`` for big-endian arrays, and for a ``missing`` or ``index``
+  mask of ``bool`` or ``int64`` dtype although the masks are documented as
+  bool. :issue:`10770`, :pr:`10795`
 
 Statistics and tests
 --------------------
