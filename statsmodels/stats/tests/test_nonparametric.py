@@ -818,7 +818,7 @@ def test_samplesize_rank_compare_onetail(reference_implementation_results):
     generated using the `generate_results_samplesize_rank_compare_onetail.R`
     script.
     """
-    for _, r_result in reference_implementation_results.iterrows():
+    for r_result in reference_implementation_results.to_dict("records"):
         synthetic_sample = np.array(
             r_result["synthetic_sample"].split(","), dtype=np.float64
         )

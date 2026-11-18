@@ -3612,7 +3612,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
         if method in ["individual", "cumulative"]:
             plot_idx = 1
-            for factor_name, coeffs in rsquared.T.iterrows():
+            for factor_name, coeffs in rsquared.items():
                 # Create the new axis
                 ax = fig.add_subplot(self.model.k_factors, 1, plot_idx)
                 ax.set_ylim((0, 1))

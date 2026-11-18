@@ -620,9 +620,7 @@ class Description:
             df = df.fillna("")
         cols = [str(col) for col in df.columns]
         stubs = [str(idx) for idx in df.index]
-        data = []
-        for _, row in df.iterrows():
-            data.append(list(row))
+        data = df.to_numpy().tolist()
 
         def _formatter(v):
             if isinstance(v, str):
