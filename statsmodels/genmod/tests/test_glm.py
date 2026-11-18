@@ -2908,7 +2908,7 @@ def test_ridge_glmnet(family_name, standardize):
     # intercept is left unpenalized with a zero in alpha, and glmnet's
     # standardize=TRUE is the weight alpha * sd**2 for each penalized
     # coefficient (see the Notes of fit_regularized).  The atol is the
-    # tolerance of the BFGS solver of the ridge fit (largest difference 6e-6).
+    # tolerance of the BFGS solver of the ridge fit (largest difference 8e-6).
     exog = add_constant(_GLMNET_X)
     family = _GLMNET_FAMILY[family_name]()
     model = GLM(
