@@ -336,6 +336,34 @@ def fit_elasticnet(model, method="coord_descent", maxiter=100,
     which is the sum of the ``freq_weights`` for GLM, ``n`` is ``model.wnobs``.
     The ``var_weights`` of GLM are not part of ``n``.
 
+    Every element of ``params`` is penalized, including the coefficient of
+    the constant, and the columns of ``exog`` are used as they are. R's
+    ``glmnet`` does not penalize the intercept and standardizes the columns by
+    default (``standardize=TRUE``). With a vector ``alpha`` the fit has the
+    estimates of ``glmnet``, where ``alpha`` is its ``lambda`` and ``L1_wt`` is
+    its ``alpha``:
+
+    * To leave the constant unpenalized, as ``glmnet`` with
+      ``intercept=TRUE`` and ``standardize=FALSE`` does, give it the penalty
+      weight 0. If the constant is the first of the ``k`` columns of
+      ``exog``, use ``alpha * np.r_[0.0, np.ones(k - 1)]``.
+    * To standardize the columns, as ``standardize=TRUE`` does, let ``sd`` be
+      the standard deviations of the columns other than the constant, with the
+      divisor ``n`` (and the ``freq_weights`` as weights, if the model has
+      them). Use the weights ``alpha * np.r_[0.0, sd]`` for the lasso
+      (``L1_wt=1``). For other values of ``L1_wt``, divide the columns of
+      ``exog`` by ``sd``, fit with the weights
+      ``alpha * np.r_[0.0, np.ones(k - 1)]`` and divide the estimated
+      coefficients other than the constant by ``sd``. For the ridge penalty
+      (``L1_wt=0``) the weights ``alpha * np.r_[0.0, sd**2]`` are the same fit
+      as the standardized columns.
+
+    The estimates agree with those of ``glmnet`` up to the convergence
+    tolerances of the two algorithms. In R, use a family object such as
+    ``gaussian()``: the default ``family="gaussian"`` standardizes ``y`` and so
+    divides the weight of the L2 penalty, ``(1 - L1_wt) * alpha``, by the
+    standard deviation of ``y`` (with the divisor ``n``).
+
     When ``method`` is 'coord_descent', the computational approach
     used is to obtain a quadratic approximation to the smooth part of
     the target function:
