@@ -35,7 +35,7 @@ Branch: `demo-setup` (based on `598_compiler_project`)
 | `causal_compiler/demo.py` | End-to-end run: IHDP → IR at each stage → correctness check → scaling table → CSV |
 | `causal_compiler/sweep.py` | Covariate sweep: current lowering vs a `linalg.matvec` formulation vs NumPy |
 | `causal_compiler/kinterv.py` + `scripts/sol_kinterv.sbatch` | K-intervention logistic benchmark (§2b), with a hand-written fused MLIR kernel |
-| `tests/test_kinterv.py` | Fused kernel matches statsmodels `Logit.predict` |
+| `tests/test_kinterv_bench.py` | Fused kernel matches statsmodels `Logit.predict` |
 | `tests/test_datasets.py` | Loader tests (Python suite is now 12 tests, all passing) |
 
 ### Quick start
