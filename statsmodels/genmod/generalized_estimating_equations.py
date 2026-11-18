@@ -2381,6 +2381,10 @@ class GEEResults(GLMResults):
         """
         Get marginal effects of the fitted model
 
+        .. versionchanged:: 0.15.1
+
+           P-values and confidence intervals follow ``use_t`` of the results.
+
         Parameters
         ----------
         at : str, optional
@@ -2436,6 +2440,10 @@ class GEEResults(GLMResults):
         -----
         When using after Poisson, returns the expected number of events
         per period, assuming that the model is loglinear.
+
+        If the model was fit with ``use_t=True``, p-values and confidence
+        intervals use the t distribution with ``df_resid_inference``
+        degrees of freedom, as for the parameters.
         """
 
         if self.model.constraint is not None:

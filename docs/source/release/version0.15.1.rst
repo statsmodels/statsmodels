@@ -248,6 +248,11 @@ Behavior changes
   a fixed scale, are unchanged. Multiplying ``alpha`` by the scale estimated
   at the estimates gives the penalty of earlier versions, where that fit
   converged; the example of ``GLM.fit_regularized`` shows how. :pr:`10776`
+- The marginal effects of ``GEE`` results fit with ``use_t=True`` use the t
+  distribution with ``df_resid_inference`` degrees of freedom, as the
+  parameters do. Their p-values and confidence intervals change, and the
+  ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
+  ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
 
 New Features and Enhancements
 =============================
@@ -641,6 +646,8 @@ Generalized linear models and discrete models
   example a single observation with its own dummy variable. It raised a bare
   ``LinAlgError``, or for the Gaussian family returned a meaningless
   covariance.
+- ``summary`` of the marginal effects of ``GEE`` results raised a
+  ``ValueError``.
 
 Mixed models and imputation
 ---------------------------
