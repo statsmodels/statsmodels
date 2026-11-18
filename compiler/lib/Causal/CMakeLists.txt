@@ -2,6 +2,8 @@ add_mlir_dialect_library(CausalDialect
   CausalDialect.cpp
   CausalOps.cpp
   ColumnProjection.cpp
+  FusePredictions.cpp
+  LowerInterventionPredict.cpp
   LowerTreatmentEffect.cpp
 
   DEPENDS
@@ -13,6 +15,7 @@ add_mlir_dialect_library(CausalDialect
   MLIRFuncDialect
   MLIRIR
   MLIRLinalgDialect
+  MLIRMathDialect
   MLIRPass
   MLIRTensorDialect
 )

@@ -41,3 +41,37 @@ def Causal_TreatmentEffectOp : Causal_Op<"treatment_effect"> {
 
   let hasVerifier = 1;
 }
+
+def Causal_PredictOp : Causal_Op<"predict"> {
+  let summary = "Predict outcome for a single treatment dose";
+  let arguments = (ins
+    AnyRankedTensor:$data,
+    AnyRankedTensor:$coefficients,
+    StrAttr:$treatment_name,
+    StrAttr:$link,
+    F64Attr:$dose,
+    DenseI64ArrayAttr:$base_coefficients,
+    DenseI64ArrayAttr:$interaction_coefficients,
+    I64Attr:$intercept_index,
+    I64Attr:$treatment_index
+  );
+  let results = (outs AnyRankedTensor:$prediction);
+  let hasVerifier = 1;
+}
+
+def Causal_InterventionPredictOp : Causal_Op<"intervention_predict"> {
+  let summary = "Predict outcomes for K treatment doses in one pass";
+  let arguments = (ins
+    AnyRankedTensor:$data,
+    AnyRankedTensor:$coefficients,
+    StrAttr:$treatment_name,
+    StrAttr:$link,
+    DenseF64ArrayAttr:$doses,
+    DenseI64ArrayAttr:$base_coefficients,
+    DenseI64ArrayAttr:$interaction_coefficients,
+    I64Attr:$intercept_index,
+    I64Attr:$treatment_index
+  );
+  let results = (outs AnyRankedTensor:$predictions);
+  let hasVerifier = 1;
+}

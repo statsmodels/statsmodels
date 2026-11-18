@@ -10,6 +10,7 @@ target_link_libraries(ci-opt
   MLIRArithDialect
   MLIRFuncDialect
   MLIRLinalgDialect
+  MLIRMathDialect
   MLIRMlirOptMain
   MLIRTensorDialect
 )

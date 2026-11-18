@@ -4,5 +4,5 @@
 #include "Causal/CausalDialect.cpp.inc"
 
 void causal::CausalDialect::initialize() {
-  addOperations<LoadDatasetOp, TreatmentEffectOp>();
+  addOperations<LoadDatasetOp, TreatmentEffectOp, PredictOp, InterventionPredictOp>();
 }

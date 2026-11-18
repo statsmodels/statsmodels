@@ -128,3 +128,81 @@ mlir::LogicalResult causal::TreatmentEffectOp::verify() {
   }
   return mlir::success();
 }
+
+static mlir::LogicalResult verifyPredictCommon(
+    mlir::Operation *op,
+    mlir::RankedTensorType dataType,
+    mlir::RankedTensorType coeffType,
+    llvm::StringRef link,
+    llvm::ArrayRef<int64_t> baseCoeffs,
+    llvm::ArrayRef<int64_t> intCoeffs,
+    int64_t interceptIdx,
+    int64_t treatmentIdx) {
+  if (!dataType || dataType.getRank() != 2 || !dataType.getElementType().isF64()) {
+    return op->emitOpError("data must be a rank-2 f64 tensor");
+  }
+  if (!coeffType || coeffType.getRank() != 1 || !coeffType.getElementType().isF64()) {
+    return op->emitOpError("coefficients must be a rank-1 f64 tensor");
+  }
+  if (link != "identity" && link != "logit" && link != "log") {
+    return op->emitOpError("link must be 'identity', 'logit', or 'log'");
+  }
+  if (baseCoeffs.size() != intCoeffs.size() || baseCoeffs.empty()) {
+    return op->emitOpError("base_coefficients and interaction_coefficients must be non-empty and equal length");
+  }
+  if (!dataType.isDynamicDim(1)
+      && dataType.getDimSize(1) != static_cast<int64_t>(baseCoeffs.size())) {
+    return op->emitOpError("data column count must match base_coefficients");
+  }
+  if (treatmentIdx < 0 || (coeffType.hasStaticShape() && treatmentIdx >= coeffType.getDimSize(0))) {
+    return op->emitOpError("treatment_index is outside coefficients");
+  }
+  if (interceptIdx < -1 || (coeffType.hasStaticShape() && interceptIdx >= coeffType.getDimSize(0))) {
+    return op->emitOpError("intercept_index is outside coefficients");
+  }
+  return mlir::success();
+}
+
+mlir::LogicalResult causal::PredictOp::verify() {
+  auto dataType = llvm::dyn_cast<mlir::RankedTensorType>(getData().getType());
+  auto coeffType = llvm::dyn_cast<mlir::RankedTensorType>(getCoefficients().getType());
+  auto outType = llvm::dyn_cast<mlir::RankedTensorType>(getPrediction().getType());
+  if (mlir::failed(verifyPredictCommon(
+          getOperation(), dataType, coeffType, getLink(),
+          getBaseCoefficients(), getInteractionCoefficients(),
+          getInterceptIndex(), getTreatmentIndex()))) {
+    return mlir::failure();
+  }
+  if (!outType || outType.getRank() != 1 || !outType.getElementType().isF64()) {
+    return emitOpError("result must be a rank-1 f64 tensor");
+  }
+  if (outType.hasStaticShape() && dataType.hasStaticShape()
+      && outType.getDimSize(0) != dataType.getDimSize(0)) {
+    return emitOpError("result row count must match data row count");
+  }
+  return mlir::success();
+}
+
+mlir::LogicalResult causal::InterventionPredictOp::verify() {
+  auto dataType = llvm::dyn_cast<mlir::RankedTensorType>(getData().getType());
+  auto coeffType = llvm::dyn_cast<mlir::RankedTensorType>(getCoefficients().getType());
+  auto outType = llvm::dyn_cast<mlir::RankedTensorType>(getPredictions().getType());
+  if (mlir::failed(verifyPredictCommon(
+          getOperation(), dataType, coeffType, getLink(),
+          getBaseCoefficients(), getInteractionCoefficients(),
+          getInterceptIndex(), getTreatmentIndex()))) {
+    return mlir::failure();
+  }
+  if (getDoses().empty()) {
+    return emitOpError("doses must not be empty");
+  }
+  if (!outType || outType.getRank() != 2 || !outType.getElementType().isF64()) {
+    return emitOpError("result must be a rank-2 f64 tensor");
+  }
+  if (outType.hasStaticShape() && dataType.hasStaticShape()
+      && (outType.getDimSize(0) != dataType.getDimSize(0)
+          || outType.getDimSize(1) != static_cast<int64_t>(getDoses().size()))) {
+    return emitOpError("result shape must be (N, K)");
+  }
+  return mlir::success();
+}
