@@ -355,6 +355,7 @@ New functions and methods
   to ``GEE.fit``, the Fay-Graubard and Morel-Bokossa-Neerchal small-sample
   corrections of the robust covariance, with ``b = 0.75`` and ``d = 2``,
   ``r = 1``, the defaults of the R packages saws and geesmv.
+  :pr:`10794`
 
 Performance
 -----------
