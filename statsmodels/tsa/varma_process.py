@@ -55,12 +55,10 @@ def varfilter(x, a):
     Returns
     -------
     y : ndarray
-        filtered array, 2d, number of columns determined by x and a
-
-    Warnings
-    --------
-    convolve does not work as expected; this likely does not work
-    correctly for nvars>3.
+        filtered array, 2d, of shape (nobs - nlags + 1, nvars) in cases 1
+        and 2 and (nobs - nlags + 1, npoly) in case 3, see Notes. It holds
+        the times t = nlags-1,...,nobs-1, at which every lag of x is
+        available.
 
     Notes
     -----
@@ -88,8 +86,12 @@ def varfilter(x, a):
             y[:,i] = a(.,.,i)(L) * x
             y[t,i] = sum_p sum_j a(p,j,i)*x(t-p,j)
                      for p = 0,...nlags-1, j = 0,...nvars-1,
-                     for all t >= nlags
+                     for t = nlags-1,...,nobs-1
 
+    .. versionchanged:: 0.15.1
+       In case 3 the result previously used the variables of x in reverse
+       order, and unless nlags was 2 it had the wrong number of rows, none
+       when nlags was 1. It now follows the formula above.
 
     Note: maybe convert to axis=1, Not
 
@@ -102,9 +104,8 @@ def varfilter(x, a):
         x = x[:, None]
     if x.ndim > 2:
         raise ValueError("x array has to be 1d or 2d")
-    nvar = x.shape[1]
+    nobs, nvar = x.shape
     nlags = a.shape[0]
-    ntrim = nlags // 2
     # for x is 2d with ncols >1
 
     if a.ndim == 1:
@@ -128,10 +129,9 @@ def varfilter(x, a):
 
     elif a.ndim == 3:
         # case: vector autoregressive with lag matrices
-        # Note: we must have shape[1] == shape[2] == nvar
-        yf = signal.convolve(x[:, :, None], a)
-        yvalid = yf[ntrim:-ntrim, yf.shape[1] // 2, :]
-        return yvalid
+        # Note: we must have shape[1] == nvar
+        # y[t] = sum_p x[t - p] @ a[p] for t = nlags - 1, ..., nobs - 1
+        return sum(x[nlags - 1 - p : nobs - p] @ a[p] for p in range(nlags))
 
 
 def varinversefilter(ar, nobs, version=1):
