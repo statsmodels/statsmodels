@@ -43,9 +43,9 @@ def parse(path, ssm):
     res["forecasts"] = dta["m"].values[:n].T
     res["forecasts_error"] = dta["v"].values[:n].T
     res["forecasts_error_cov"] = np.c_[
-        [np.diag(x) for y, x in dta["F"].iloc[:n].iterrows()]].T
+        [np.diag(x) for x in dta["F"].values[:n]]].T
     res["forecasts_error_diffuse_cov"] = np.c_[
-        [np.diag(x) for y, x in dta["Finf"].iloc[:n].iterrows()]].T
+        [np.diag(x) for x in dta["Finf"].values[:n]]].T
 
     res["kalman_gain"] = dta["K"].values[:n].reshape(n, m, p, order="F").T
     res["Kinf"] = dta["Kinf"].values[:n].reshape(n, m, p, order="F")
@@ -71,7 +71,7 @@ def parse(path, ssm):
 
     res["smoothed_measurement_disturbance"] = dta["epshat"].values[:n].T
     res["smoothed_measurement_disturbance_cov"] = np.c_[
-        [np.diag(x) for y, x in dta["V_eps"].iloc[:n].iterrows()]].T
+        [np.diag(x) for x in dta["V_eps"].values[:n]]].T
     res["smoothed_state_disturbance"] = dta["etahat"].values[:n].T
     res["smoothed_state_disturbance_cov"] = dta["V_eta"].values[:n].reshape(
         n, r, r, order="F").T

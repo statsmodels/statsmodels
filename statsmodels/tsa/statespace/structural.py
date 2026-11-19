@@ -451,57 +451,57 @@ class UnobservedComponents(MLEModel):
 
             # Now set the correct specification
             spec = self.trend_specification
-            if spec == "irregular" or spec == "ntrend":
+            if spec in {"irregular", "ntrend"}:
                 self.irregular = True
                 self.trend_specification = "irregular"
             elif spec == "fixed intercept":
                 self.level = True
-            elif spec == "deterministic constant" or spec == "dconstant":
+            elif spec in {"deterministic constant", "dconstant"}:
                 self.irregular = True
                 self.level = True
                 self.trend_specification = "deterministic constant"
-            elif spec == "local level" or spec == "llevel":
+            elif spec in {"local level", "llevel"}:
                 self.irregular = True
                 self.level = True
                 self.stochastic_level = True
                 self.trend_specification = "local level"
-            elif spec == "random walk" or spec == "rwalk":
+            elif spec in {"random walk", "rwalk"}:
                 self.level = True
                 self.stochastic_level = True
                 self.trend_specification = "random walk"
             elif spec == "fixed slope":
                 self.level = True
                 self.trend = True
-            elif spec == "deterministic trend" or spec == "dtrend":
+            elif spec in {"deterministic trend", "dtrend"}:
                 self.irregular = True
                 self.level = True
                 self.trend = True
                 self.trend_specification = "deterministic trend"
-            elif spec == "local linear deterministic trend" or spec == "lldtrend":
+            elif spec in {"local linear deterministic trend", "lldtrend"}:
                 self.irregular = True
                 self.level = True
                 self.stochastic_level = True
                 self.trend = True
                 self.trend_specification = "local linear deterministic trend"
-            elif spec == "random walk with drift" or spec == "rwdrift":
+            elif spec in {"random walk with drift", "rwdrift"}:
                 self.level = True
                 self.stochastic_level = True
                 self.trend = True
                 self.trend_specification = "random walk with drift"
-            elif spec == "local linear trend" or spec == "lltrend":
+            elif spec in {"local linear trend", "lltrend"}:
                 self.irregular = True
                 self.level = True
                 self.stochastic_level = True
                 self.trend = True
                 self.stochastic_trend = True
                 self.trend_specification = "local linear trend"
-            elif spec == "smooth trend" or spec == "strend":
+            elif spec in {"smooth trend", "strend"}:
                 self.irregular = True
                 self.level = True
                 self.trend = True
                 self.stochastic_trend = True
                 self.trend_specification = "smooth trend"
-            elif spec == "random trend" or spec == "rtrend":
+            elif spec in {"random trend", "rtrend"}:
                 self.level = True
                 self.trend = True
                 self.stochastic_trend = True

@@ -161,9 +161,6 @@ class CheckGenericMixinBase:
             # LinAlgError for the singular Hessian. This depends on the
             # LAPACK library, for example it is not raised on Windows ARM64.
             warns = warns_or_none
-        elif self.__class__.__name__ == "TestGenericOLSOneExog" and PYTHON_IMPL_WASM:
-            # Workaround for likely bug in WASM
-            warn_cls = None
         elif isinstance(mod, (sm.WLS, sm.GLS, sm.RLM)):
             warn_cls = SingularMatrixWarning
         else:

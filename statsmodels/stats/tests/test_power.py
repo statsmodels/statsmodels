@@ -1676,8 +1676,14 @@ def test_nct_sf_upper_tail_relative_accuracy():
     )
 
 
-@pytest.mark.parametrize("power_class", [smp.TTestIndPower, smp.NormalIndPower])
-def test_solve_power_ratio_no_solution(power_class):
+@pytest.mark.parametrize(
+    "power_class, solution",
+    [
+        (smp.TTestIndPower, 1.00851157425621),
+        (smp.NormalIndPower, 0.960236190535714),
+    ],
+)
+def test_solve_power_ratio_no_solution(power_class, solution):
     # with nobs1=20 the power is below 0.8 for any ratio, the bracket search
     # for ratio started at the int 2 and multiplied it by 10 until it
     # overflowed int64, and TTestIndPower raised a TypeError from scipy
@@ -1688,6 +1694,12 @@ def test_solve_power_ratio_no_solution(power_class):
         res = pw.solve_power(0.5, 20, 0.05, 0.8, ratio=None)
     assert np.isnan(res)
 
-    # a ratio that has a solution is still found
+    # a ratio that has a solution is still found. The solutions are from
+    # R 4.6.1 and pwr 1.3.0 (uniroot with tol=1e-13), n2 / n1 with n1 = 40:
+    # pwr.t2n.test(n1 = 40, n2 = n2, d = 0.5, sig.level = 0.05)$power = 0.6
+    # for the t test, and for the normal approximation
+    # pwr.norm.test(d = 0.5, n = n, sig.level = 0.05)$power = 0.6 with
+    # n = n1 * r / (1 + r) for the effective sample size, solved for r
     res = pw.solve_power(0.5, 40, 0.05, 0.6, ratio=None)
+    assert_allclose(res, solution, rtol=1e-6)
     assert_allclose(pw.power(0.5, 40, 0.05, ratio=res), 0.6, rtol=1e-6)

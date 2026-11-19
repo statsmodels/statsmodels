@@ -17,7 +17,7 @@ from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
 from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.sm_exceptions import EstimationWarning
+from statsmodels.tools.sm_exceptions import EstimationWarning, MissingDataError
 from statsmodels.tools.tools import Bunch, pinv_extended
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.regime_switching._hamilton_filter import (
@@ -508,6 +508,11 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         time-varying transition probabilities (TVTP). TVTP is only used if this
         variable is provided. If an intercept is desired, a column of ones must
         be explicitly included in this array.
+
+        .. versionchanged:: 0.15.1
+
+           Raises ``MissingDataError`` if ``exog_tvtp`` contains NaN or inf.
+           The ``missing`` option does not apply to ``exog_tvtp``.
     exog : array_like, optional
         Array of exogenous regressors, shaped nobs x k.
     dates : array_like, optional
@@ -553,7 +558,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         self.order = order
 
         # Exogenous data
-        # TODO add checks for exog_tvtp consistent shape and indices
+        # TODO: check that the index of a pandas exog_tvtp matches endog
         self.k_tvtp, self.exog_tvtp = prepare_exog(exog_tvtp)
 
         # Initialize the base model
@@ -573,6 +578,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 " array must have the same number of observations"
                 " as the endogenous array."
             )
+        if self.tvtp and not np.isfinite(np.asarray(self.exog_tvtp, dtype=float)).all():
+            raise MissingDataError("exog_tvtp contains inf or nans")
 
         # Parameters
         self.parameters = MarkovSwitchingParams(self.k_regimes)

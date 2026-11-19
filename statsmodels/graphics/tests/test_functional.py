@@ -3,7 +3,7 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 from itertools import combinations
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
 
@@ -508,9 +508,23 @@ def test_banddepth_BD2_crossings_and_ties(curves, expected):
 )
 def test_banddepth_MBD_ties(curves, expected):
     curves = np.asarray(curves)
-    assert_almost_equal(banddepth(curves, method="MBD"), expected)
-    order = np.r_[1, 0, np.arange(2, len(curves))]
-    assert_almost_equal(banddepth(curves[order], method="MBD"), expected[order])
+    assert_allclose(banddepth(curves, method="MBD"), expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("method", ["BD2", "MBD"])
+def test_banddepth_ties_order_invariant(method):
+    # Tied values must not make the depth depend on the order of the curves.
+    # The depths differ between the curves here, so a permutation of the
+    # curves has to permute the depths.
+    rng = np.random.default_rng(10691)
+    curves = rng.integers(0, 3, size=(8, 5))
+    depth = banddepth(curves, method=method)
+    assert np.ptp(depth) > 0.1
+    for _ in range(5):
+        order = rng.permutation(len(curves))
+        assert_allclose(
+            banddepth(curves[order], method=method), depth[order], rtol=1e-12
+        )
 
 
 @pytest.mark.parametrize(
@@ -529,7 +543,8 @@ def test_banddepth_pairwise_reference(shape, ties, method, aggregate):
         lower = np.minimum(first, second)
         upper = np.maximum(first, second)
         counts += aggregate((curves >= lower) & (curves <= upper), axis=1)
-    assert_almost_equal(banddepth(curves, method=method), counts / len(pairs))
+    depth = banddepth(curves, method=method)
+    assert_allclose(depth, counts / len(pairs), rtol=1e-12)
     assert_equal(curves, original)
 
 

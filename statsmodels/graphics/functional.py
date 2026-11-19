@@ -472,7 +472,7 @@ def hdrboxplot(
 
         return band_quantiles
 
-    extra_alpha = [i for i in alpha if 0.5 != i and 0.9 != i and threshold != i]
+    extra_alpha = [i for i in alpha if i not in (0.5, 0.9, threshold)]
     if len(extra_alpha) > 0:
         extra_quantiles = []
         for x in extra_alpha:
@@ -908,7 +908,16 @@ def banddepth(data, method="MBD"):
     of ties.
 
     The method 'MBD' is similar to 'BD2', but checks the fraction of the curve
-    falling within the bands.  It therefore generates very few ties.
+    falling within the bands.  It therefore generates very few ties.  As in
+    'BD2', a value equal to a value of a bounding curve counts as inside the
+    band, so tied values do not make the depth depend on the order of the
+    curves.
+
+    .. versionchanged:: 0.15.1
+
+       For 'MBD', tied values used to be assigned arbitrary ranks, so the
+       depths of data with tied values can differ from those of earlier
+       versions.
 
     The method 'MBD' uses the rank-based implementation proposed in [3]_. The
     ranks at each point are not sufficient for 'BD2', since the same two curves

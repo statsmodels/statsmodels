@@ -143,8 +143,10 @@ def sign_test(samp, mu0=0):
     samp : array_like
         1d array. The sample for which you want to perform the sign test.
     mu0 : float, optional
-        See Notes for the definition of the sign test. mu0 is 0 by
-        default, but it is common to set it to the median.
+        The median under the null hypothesis. mu0 is 0 by default. Setting
+        it to the sample median is not useful for data without ties, because
+        N(+) and N(-) are then equal, so that M is 0 and the p-value is 1.
+        See Notes for the definition of the sign test.
 
     Returns
     -------
@@ -618,9 +620,7 @@ class Description:
             df = df.fillna("")
         cols = [str(col) for col in df.columns]
         stubs = [str(idx) for idx in df.index]
-        data = []
-        for _, row in df.iterrows():
-            data.append(list(row))
+        data = df.to_numpy().tolist()
 
         def _formatter(v):
             if isinstance(v, str):
