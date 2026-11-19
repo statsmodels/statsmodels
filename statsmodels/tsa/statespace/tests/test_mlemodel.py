@@ -18,6 +18,7 @@ from numpy.testing import (
 )
 import pandas as pd
 import pytest
+from scipy.linalg import solve_discrete_lyapunov
 
 from statsmodels.datasets import nile
 from statsmodels.iolib.summary import Summary
@@ -29,6 +30,7 @@ from statsmodels.tsa.statespace import (
     sarimax,
     varmax,
 )
+from statsmodels.tsa.statespace.initialization import Initialization
 from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
 from statsmodels.tsa.statespace.tests.results import (
     results_sarimax,
@@ -1456,3 +1458,84 @@ def test_loglike_unconstrained_stationary_boundary(scale, sign):
     # other initializations do not use the stationary covariance
     mod.ssm.initialize_approximate_diffuse()
     assert np.isfinite(mod.loglike(params, transformed=False))
+
+
+def test_loglike_stationary_init_unit_root_ar1():
+    # GH#5459: at a unit root the Lyapunov solver may not raise but return a
+    # negative initial state variance (-4.99e291 here). The filter then gave
+    # a loglikelihood of 0.0, above that of any stationary model.
+    mod = sarimax.SARIMAX(np.zeros(10))
+    assert mod.loglike([1.0, 1.0]) == -np.inf
+    with pytest.raises(np.linalg.LinAlgError, match="not stationary to numerical"):
+        mod.filter([1.0, 1.0])
+    with pytest.raises(np.linalg.LinAlgError, match="not stationary to numerical"):
+        mod.ssm.loglike()
+
+    # close to the unit root the stationary covariance is still computed
+    phi = 1 - 1e-8
+    res = mod.filter([phi, 1.0])
+    desired = solve_discrete_lyapunov(np.array([[phi]]), np.eye(1))
+    assert_allclose(res.filter_results.initial_state_cov, desired, rtol=1e-6)
+
+    # An explosive root is not changed here: the Lyapunov equation has a
+    # solution, -1 / 0.44, although it is not a covariance matrix
+    res = mod.filter([1.2, 1.0])
+    desired = solve_discrete_lyapunov(np.array([[1.2]]), np.eye(1))
+    assert_allclose(res.filter_results.initial_state_cov, desired)
+
+
+@pytest.mark.parametrize(
+    "ar_params",
+    [
+        [0.5, 0.5],
+        [0.5, 0.5 - 1e-16],
+        [1.0, 0.0],
+        [2.0, -1.0],
+        # a complex pair of roots on the unit circle
+        [2 * np.cos(0.7), -1.0],
+        # roots 2 and 0.5, which are not unit roots, but their product is 1
+        [2.5, -1.0],
+    ],
+)
+def test_loglike_stationary_init_unit_root_ar2(ar_params):
+    # GH#5459: loglike returned 0.0 for these AR(2) parameters, with initial
+    # state variances of about -3e14 to -2e15, instead of failing. The
+    # Lyapunov equation is singular if the product of two eigenvalues of the
+    # transition matrix is 1.
+    rng = np.random.default_rng(5459)
+    mod = sarimax.SARIMAX(rng.standard_normal(200), order=(2, 0, 0))
+    assert mod.loglike(np.r_[ar_params, 1.0]) == -np.inf
+    with pytest.raises(np.linalg.LinAlgError, match="not stationary to numerical"):
+        mod.filter(np.r_[ar_params, 1.0])
+
+    # the loglikelihood of a stationary model is unchanged, and matches the
+    # one with the initial covariance from scipy as a known initialization
+    params = [0.5, 0.3, 1.0]
+    llf = mod.loglike(params)
+    transition = np.array([[0.5, 1.0], [0.3, 0.0]])
+    cov = solve_discrete_lyapunov(transition, np.diag([1.0, 0.0]))
+    mod_known = sarimax.SARIMAX(mod.endog, order=(2, 0, 0))
+    mod_known.ssm.initialize_known(np.zeros(2), cov)
+    assert_allclose(llf, mod_known.loglike(params), rtol=1e-12)
+
+
+def test_loglike_stationary_init_unit_root_block():
+    # Only the states with a stationary initialization are checked: here the
+    # first state is a diffuse random walk and the second is an AR(1)
+    endog = np.random.default_rng(5459).standard_normal(50)
+    mod = MLEModel(endog, k_states=2, k_posdef=2)
+    mod["design"] = [1.0, 1.0]
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.eye(2)
+    mod["obs_cov"] = [[1.0]]
+    init = Initialization(2)
+    init.set(0, "diffuse")
+    init.set(1, "stationary")
+    mod.ssm.initialization = init
+
+    mod["transition"] = np.diag([1.0, 0.5])
+    assert np.isfinite(mod.ssm.loglike())
+
+    mod["transition"] = np.diag([1.0, 1.0])
+    with pytest.raises(np.linalg.LinAlgError, match="not stationary to numerical"):
+        mod.ssm.loglike()

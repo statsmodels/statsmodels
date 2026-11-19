@@ -12,6 +12,13 @@ from . import tools
 from .initialization import Initialization, _StationaryInitializationError
 from .tools import find_best_blas_type, validate_matrix_shape, validate_vector_shape
 
+_NOT_STATIONARY_MESSAGE = (
+    "The transition matrix of the states with stationary initialization is"
+    " not stationary to numerical precision, so their initial covariance does"
+    " not exist. Use a different initialization, such as"
+    " 'approximate_diffuse', for non-stationary models."
+)
+
 
 class OptionWrapper:
     def __init__(self, mask_attribute, mask_value):
@@ -1161,9 +1168,40 @@ class Representation:
             except np.linalg.LinAlgError as exc:
                 if not self.initialization._uses_stationary():
                     raise
-                raise _StationaryInitializationError(str(exc)) from exc
+                raise _StationaryInitializationError(
+                    f"{exc} {_NOT_STATIONARY_MESSAGE}"
+                ) from exc
+            if self.initialization._uses_stationary():
+                self._check_stationary_initialization(prefix)
         else:
             raise RuntimeError("Statespace model not initialized.")
+
+    def _check_stationary_initialization(self, prefix):
+        # At a unit root the Lyapunov equation of the stationary covariance is
+        # singular, but the solver may not raise and instead return a matrix
+        # with negative variances (GH#5459). Filtering with it gives a
+        # meaningless loglikelihood, often exactly 0, so raise instead. The
+        # negative variances are checked first, since that is cheap; the
+        # eigenvalues then tell this apart from an explosive transition, for
+        # which the equation has a solution, although not a covariance matrix.
+        cov = np.asarray(self._statespaces[prefix].initial_state_cov)
+        transition = self._representations[prefix]["transition"][..., 0]
+        eps = np.finfo(float).eps
+        for index in self.initialization._stationary_blocks():
+            variances = np.real(np.diagonal(cov))[index]
+            finite = variances[np.isfinite(variances)]
+            scale = np.max(np.abs(finite)) if finite.size else 0.0
+            if not np.any(variances < -np.sqrt(eps) * scale):
+                continue
+            # The equation is singular if the product of two eigenvalues of
+            # the transition matrix is 1. The tolerance allows for the error
+            # of the computed eigenvalues of a root of multiplicity up to 4.
+            eigvals = np.linalg.eigvals(np.real(transition[np.ix_(index, index)]))
+            if np.min(np.abs(1 - np.outer(eigvals, eigvals))) < eps**0.25:
+                raise _StationaryInitializationError(
+                    "The stationary initial state covariance has negative"
+                    f" variances. {_NOT_STATIONARY_MESSAGE}"
+                )
 
 
 class FrozenRepresentation:
