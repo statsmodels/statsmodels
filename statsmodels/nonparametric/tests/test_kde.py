@@ -656,6 +656,15 @@ def test_cdf_entropy_bounded_kernels(kernel, location, weighted):
     npt.assert_allclose(entropy, expected, rtol=1e-3)
 
 
+def test_kdensityfft_big_endian_input():
+    # https://github.com/statsmodels/statsmodels/issues/10770
+    x = np.array([-1.5, -0.5, 0.0, 0.5, 1.5], dtype=">f8")
+    native = kdensityfft(x.astype(np.float64), result_object=True)
+    big_endian = kdensityfft(x, result_object=True)
+    npt.assert_allclose(big_endian.density, native.density)
+    assert big_endian.bw == native.bw
+
+
 @pytest.mark.parametrize("func", [kdensity, kdensityfft])
 def test_kdensity_result_object_default(func):
     # retgrid=True (the default) yields a KDEResult with the same length and
