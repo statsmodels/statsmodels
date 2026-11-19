@@ -731,7 +731,9 @@ class MLEModel(tsbase.TimeSeriesModel):
                     "score_method": optim_score,
                     "approx_complex_step": optim_complex_step,
                     # The optimizer needs the Hessian of the loglikelihood,
-                    # like its score, and not the average over observations
+                    # like its score, and not the average over observations.
+                    # Only hessian reads this entry; loglike and score ignore
+                    # the entries that are not theirs.
                     "average": False,
                 }
             )
@@ -1786,11 +1788,10 @@ class MLEModel(tsbase.TimeSeriesModel):
         "hessian_method",
         "approx_complex_step",
         "approx_centered",
-        "average",
     ]
-    _hessian_param_defaults = [True, "approx", None, False, True]
+    _hessian_param_defaults = [True, "approx", None, False]
 
-    def hessian(self, params, *args, **kwargs):
+    def hessian(self, params, *args, average=True, **kwargs):
         r"""
         Hessian matrix of the likelihood function, evaluated at the given
         parameters
@@ -1801,6 +1802,14 @@ class MLEModel(tsbase.TimeSeriesModel):
             Array of parameters at which to evaluate the hessian.
         *args
             Additional positional arguments to the `loglike` method.
+        average : bool, optional
+            Keyword-only. If True, the default, the Hessian is divided by the
+            number of observations in the loglikelihood,
+            ``nobs - loglikelihood_burn``. If False, it is the Hessian of the
+            loglikelihood itself. If the flags are passed as a dictionary, as
+            `fit` does, its entry ``average`` is used if it has one; `fit` sets
+            it to False, since the optimizer needs the Hessian of the
+            loglikelihood.
         **kwargs
             Additional keyword arguments to the `loglike` method.
 
@@ -1817,11 +1826,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         `fit` must call this function and only supports passing arguments via
         args (for example `scipy.optimize.fmin_l_bfgs`).
 
-        The Hessian is divided by the number of observations in the
-        loglikelihood, ``nobs - loglikelihood_burn``, unless ``average`` is
-        False. `fit` sets ``average`` to False, since the optimizer needs the
-        Hessian of the loglikelihood itself.
-
         If ``transformed`` is False, this is the Hessian of the loglikelihood
         as a function of the unconstrained parameters. It is computed from the
         derivatives with respect to the constrained parameters by the chain
@@ -1831,24 +1835,23 @@ class MLEModel(tsbase.TimeSeriesModel):
         .. versionchanged:: 0.15.1
 
            The Hessian with respect to the unconstrained parameters is computed
-           by the chain rule, and ``average`` was added. Before, it raised with
-           ``approx_complex_step=True``, and most other settings gave
-           derivatives with respect to the constrained parameters, or at the
-           wrong parameters.
+           by the chain rule, and the keyword-only argument ``average`` was
+           added. Before, it raised with ``approx_complex_step=True``, and most
+           other settings gave derivatives with respect to the constrained
+           parameters, or at the wrong parameters.
         """
-        (
-            transformed,
-            method,
-            approx_complex_step,
-            approx_centered,
-            average,
-            kwargs,
-        ) = _handle_args(
-            MLEModel._hessian_param_names,
-            MLEModel._hessian_param_defaults,
-            *args,
-            **kwargs,
+        transformed, method, approx_complex_step, approx_centered, kwargs = (
+            _handle_args(
+                MLEModel._hessian_param_names,
+                MLEModel._hessian_param_defaults,
+                *args,
+                **kwargs,
+            )
         )
+        # The flags of fit() are a dictionary, the only argument that the
+        # optimizer passes on, so that `average` is read from it as well
+        if args and isinstance(args[0], dict):
+            average = args[0].get("average", average)
         # For fit() calls, the method is called 'hessian_method' (to
         # distinguish it from the method used for fit) but generally in kwargs
         # the method will just be called 'method'

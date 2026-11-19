@@ -6,6 +6,7 @@ License: Simplified-BSD
 """
 from statsmodels.compat.pandas import MONTH_END
 
+import inspect
 from pathlib import Path
 import re
 import warnings
@@ -410,6 +411,58 @@ def test_hessian_untransformed_opg():
     desired = -score_obs.T @ score_obs / (mod.nobs - mod.loglikelihood_burn)
     actual = mod.hessian(params, transformed=False, method="opg")
     assert_allclose(actual, desired, rtol=1e-7)
+
+
+@pytest.mark.parametrize("method", ["approx", "oim", "opg"])
+def test_hessian_average(method):
+    # The Hessian of the loglikelihood is its average times the number of
+    # observations that are not burned
+    mod = _ar2_model()
+    params = mod.start_params
+    average = mod.hessian(params, method=method)
+    total = mod.hessian(params, method=method, average=False)
+    assert_allclose(total, average * (mod.nobs - mod.loglikelihood_burn), rtol=1e-14)
+
+
+def test_hessian_positional_flags():
+    # The four flags can be passed positionally, as before `average` was added.
+    # `average` is keyword-only, so that a fifth positional flag is one too many.
+    mod = _ar2_model()
+    params = mod.start_params
+    desired = mod.hessian(
+        params,
+        transformed=True,
+        method="approx",
+        approx_complex_step=None,
+        approx_centered=False,
+    )
+    actual = mod.hessian(params, True, "approx", None, False)
+    assert_allclose(actual, desired, rtol=1e-14)
+    with pytest.raises(ValueError, match="zip"):
+        mod.hessian(params, True, "approx", None, False, False)
+    kind = inspect.signature(MLEModel.hessian).parameters["average"].kind
+    assert kind is inspect.Parameter.KEYWORD_ONLY
+
+
+def test_hessian_fit_flags_average():
+    # fit passes the same dictionary of flags, with average False, to
+    # loglike, score and hessian. Only hessian uses average.
+    mod = _newton_model("sarimax_infl")
+    res = mod.fit(method="newton", maxiter=0, disp=0, warn_convergence=False)
+    (flags,) = res.mle_settings["fargs"]
+    assert flags["average"] is False
+    params = mod.untransform_params(mod.start_params)
+    assert_allclose(
+        mod.loglike(params, flags), mod.loglike(params, transformed=False), rtol=1e-14
+    )
+    assert_allclose(
+        mod.score(params, flags), mod.score(params, transformed=False), rtol=1e-14
+    )
+    desired = mod.hessian(params, transformed=False, average=False)
+    assert_allclose(mod.hessian(params, flags), desired, rtol=1e-14)
+    # without an entry in the dictionary, the keyword is used
+    actual = mod.hessian(params, {"transformed": False}, average=False)
+    assert_allclose(actual, desired, rtol=1e-14)
 
 
 @pytest.mark.parametrize("name", ["mlefit", "mle_retvals", "mle_settings"])
