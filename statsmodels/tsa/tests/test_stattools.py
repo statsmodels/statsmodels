@@ -86,6 +86,7 @@ from statsmodels.tsa.stattools._stattools import (
     _pacf_ols_qr,
     _pacf_yw_levinson,
 )
+from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 from statsmodels.tsa.tsatools import add_trend, lagmat
 
 DECIMAL_8 = 8
@@ -4432,3 +4433,25 @@ def test_q_stat_invalid_nobs():
     assert np.isfinite(q).all()
     assert np.isfinite(p).all()
 
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS)
+def test_acf_pacf_adfuller_input_forms(form):
+    # x is documented as array_like: every form of a 1-D series gives the
+    # result of the ndarray
+    x = np.random.default_rng(20261120).standard_normal(200).cumsum()
+    x_form = series_forms(x)[form]
+    assert_allclose(acf(x_form, nlags=10), acf(x, nlags=10), rtol=1e-12)
+    for method in ("yw", "ols", "burg", "ldb"):
+        if method == "burg" and form in ("column", "dataframe"):
+            # pacf_burg does not accept an (n, 1) column yet
+            continue
+        assert_allclose(
+            pacf(x_form, nlags=10, method=method),
+            pacf(x, nlags=10, method=method),
+            rtol=1e-12,
+        )
+    res = adfuller(x_form, maxlag=4, autolag=None, result_object=True)
+    expected = adfuller(x, maxlag=4, autolag=None, result_object=True)
+    assert_allclose(res.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(res.pvalue, expected.pvalue, rtol=1e-12)
