@@ -1316,6 +1316,9 @@ Documentation
   :pr:`10721`
 - Fix typos in the "``endog``, ``exog``, what's that?", "Generalized
   Estimating Equations" and "Getting started" pages.
+- Add an example to ``cohens_kappa`` showing that kappa depends on class
+  prevalence: with the same rater accuracy and raw agreement, kappa is much
+  smaller when one class is rare. :issue:`9680`, :pr:`10806`
 
 Stricter Input Validation
 =========================

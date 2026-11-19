@@ -540,10 +540,39 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
        Before, they depended on rounding errors, and NumPy emitted a
        ``RuntimeWarning``.
 
+    Kappa depends on the prevalence of the categories, not only on the
+    accuracy of the raters. Chance agreement is computed from the margins of
+    the table. If one category is rare, both raters mostly assign the common
+    category, chance agreement is close to the observed agreement, and kappa
+    is small even if raw agreement is high. See the example below.
+
     References
     ----------
     Wikipedia
     SAS Manual
+
+    Examples
+    --------
+    Two raters each have sensitivity and specificity of 0.9, and their errors
+    are independent given the true class. The expected tables for 10000
+    subjects (rows: rater 1 positive, negative; columns: rater 2) differ only
+    in the proportion of positive subjects.
+
+    >>> from statsmodels.stats.inter_rater import cohens_kappa
+
+    With 50% positive subjects, observed agreement is 0.82 and chance
+    agreement is 0.50.
+
+    >>> table_balanced = [[4100, 900], [900, 4100]]
+    >>> print(f"{cohens_kappa(table_balanced, return_results=False):.4f}")
+    0.6400
+
+    With 1% positive subjects, observed agreement is still 0.82, but chance
+    agreement from the margins is 0.8073, so kappa is much smaller.
+
+    >>> table_rare = [[180, 900], [900, 8020]]
+    >>> print(f"{cohens_kappa(table_rare, return_results=False):.4f}")
+    0.0658
     '''
     table = np.asarray(table, float)  # avoid integer division
     if table.ndim != 2 or table.shape[0] != table.shape[1]:
