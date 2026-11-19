@@ -230,7 +230,17 @@ def recursive_filter(x, ar_coeff, init=None):
     Parameters
     ----------
     x : array_like
-        Time-series data. Should be 1d or n x 1.
+        Time-series data, either 1d with shape (n,) or a single column with
+        shape (n, 1), such as a one-column DataFrame. Both are filtered along
+        the n observations.
+
+        .. versionchanged:: 0.15.1
+
+           An (n, 1) column is now filtered along its rows, the same as 1d
+           input. Previously no recursion was applied, so the column was
+           returned unchanged, and ``init`` raised a ValueError. Input with
+           more than one column, or with more than two dimensions, now
+           raises a ValueError.
     ar_coeff : array_like
         AR coefficients in reverse time order. See Notes for details.
     init : array_like, optional
@@ -239,9 +249,17 @@ def recursive_filter(x, ar_coeff, init=None):
 
     Returns
     -------
-    ndarray or Series
-        Filtered array, number of columns determined by x and ar_coeff. If x
-        is a pandas object than a Series is returned.
+    ndarray, Series or DataFrame
+        The filtered series, with the same shape as ``x``: (n,) for 1d input
+        and (n, 1) for an (n, 1) column. A Series input returns a Series and
+        a one-column DataFrame returns a one-column DataFrame, each with the
+        index of ``x``.
+
+    Raises
+    ------
+    ValueError
+        If ``x`` has more than one column or more than two dimensions, or if
+        ``init`` and ``ar_coeff`` have different lengths.
 
     Notes
     -----
@@ -253,7 +271,16 @@ def recursive_filter(x, ar_coeff, init=None):
     where n_coeff = len(ar_coeff).
     """
     pw = PandasWrapper(x)
-    x = array_like(x, "x")
+    x = array_like(x, "x", maxdim=2)
+    is_column = x.ndim == 2
+    if is_column:
+        if x.shape[1] != 1:
+            raise ValueError(
+                "x must be 1d or a single column with shape (n, 1), but has "
+                f"shape {x.shape}. Filter each column separately."
+            )
+        # lfilter works along the last axis, so filter the column as 1d
+        x = x[:, 0]
     ar_coeff = array_like(ar_coeff, "ar_coeff")
 
     if init is not None:  # integer init are treated differently in lfiltic
@@ -272,6 +299,8 @@ def recursive_filter(x, ar_coeff, init=None):
         result = y[0]
     else:
         result = y
+    if is_column:
+        result = result[:, None]
 
     return pw.wrap(result)
 
