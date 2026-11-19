@@ -3078,6 +3078,43 @@ def test_fay_graubard_not_available():
         res.standard_errors("fay_graubard")
 
 
+@pytest.mark.parametrize("cov_type", ["fay_graubard", "morel_bokossa_neerchal"])
+def test_fg_mbn_rank_deficient(cov_type):
+    # a duplicated column: like the robust covariance, the covariance
+    # uses the pseudoinverse of the information matrix
+    endog, exog, groups = _small_cluster_data()
+    exog = np.column_stack((exog, exog[:, 1]))
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res = gee.GEE(endog, exog, groups).fit(cov_type=cov_type)
+
+    # direct computation for the Gaussian family and independence
+    n_groups, k_params = 12, exog.shape[1]
+    resid = endog - exog @ res.params
+    omega = [exog[groups == g].T @ exog[groups == g] for g in range(n_groups)]
+    omegai = np.linalg.pinv(sum(omega))
+    scores = [exog[groups == g].T @ resid[groups == g] for g in range(n_groups)]
+    if cov_type == "fay_graubard":
+        scores = [
+            s / np.sqrt(1 - np.minimum(0.75, np.diag(o @ omegai)))
+            for s, o in zip(scores, omega, strict=True)
+        ]
+        expected = omegai @ sum(np.outer(s, s) for s in scores) @ omegai
+    else:
+        # the scale of a Gaussian fit divides by the degrees of freedom of
+        # the rank of exog, see test_df_resid_rank_deficient
+        nobs = len(endog)
+        df_resid = nobs - np.linalg.matrix_rank(exog)
+        scale = np.sum(resid**2) / df_resid
+        meat = sum(np.outer(s, s) for s in scores)
+        c = (nobs - 1) / (nobs - k_params) * n_groups / (n_groups - 1)
+        delta = k_params / (n_groups - k_params)
+        xi = max(1.0, np.trace(omegai @ meat) / (k_params * scale))
+        expected = c * omegai @ meat @ omegai + delta * xi * scale * omegai
+    assert_allclose(res.cov_params(), expected, rtol=1e-8, atol=1e-12)
+    assert np.isfinite(res.bse).all()
+    assert_allclose(res.bse, np.sqrt(np.diag(expected)), rtol=1e-8)
+
+
 def test_fay_graubard_bound():
     # x2 is nonzero only in group 0, so the share of group 0 is 1 for it and
     # the bound b = 0.75 applies

@@ -1408,7 +1408,11 @@ class GEE(GLM):
             bmats.append(np.dot(dmat.T, vinv_d))
             scores.append(np.dot(dmat.T, vinv_resid))
 
-        bmati = np.linalg.inv(sum(bmats))
+        bmat = sum(bmats)
+        try:
+            bmati = np.linalg.inv(bmat)
+        except np.linalg.LinAlgError:
+            bmati = np.linalg.pinv(bmat)
         scores = np.asarray(scores)
 
         if method == "fg":
