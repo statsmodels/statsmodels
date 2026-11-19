@@ -223,17 +223,9 @@ def test_varfilter_3d_example():
 @pytest.mark.parametrize("nvars", [1, 2, 3])
 @pytest.mark.parametrize("nlags", [1, 2, 3])
 @pytest.mark.parametrize("case", ["1d", "2d_column", "2d", "3d", "3d_npoly"])
-def test_varfilter(request, case, nlags, nvars):
-    if case == "2d" and nlags == 1 and nvars > 1:
-        request.applymarker(
-            pytest.mark.xfail(
-                strict=True,
-                raises=AssertionError,
-                reason="varfilter takes a 2-d a of shape (1, nvars) for one lag "
-                "polynomial (case 1), since min(a.shape) == 1, and returns one "
-                "column",
-            )
-        )
+def test_varfilter(case, nlags, nvars):
+    # case "2d" with nlags == 1 and nvars > 1: a 2-d a of shape (1, nvars)
+    # used to be taken as one lag polynomial (case 1) and gave one column
     rng = np.random.default_rng(20261121)
     nobs = 20
     x = rng.standard_normal((nobs, nvars))

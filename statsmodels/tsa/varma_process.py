@@ -91,7 +91,10 @@ def varfilter(x, a):
     .. versionchanged:: 0.15.1
        In case 3 the result previously used the variables of x in reverse
        order, and unless nlags was 2 it had the wrong number of rows, none
-       when nlags was 1. It now follows the formula above.
+       when nlags was 1. It now follows the formula above. In case 2, an
+       ``a`` of shape (1, nvars) with nvars > 1 (one lag) was taken as the
+       single lag polynomial of case 1 and gave one column; it now gives one
+       filter per variable.
 
     Note: maybe convert to axis=1, Not
 
@@ -114,7 +117,7 @@ def varfilter(x, a):
         # alternative:
         # return signal.lfilter(a,[1],x.astype(float),axis=0)
     elif a.ndim == 2:
-        if min(a.shape) == 1:
+        if a.shape[1] == 1:
             # case: identical ar filter (lag polynomial)
             return signal.convolve(x, a, mode="valid")
 
