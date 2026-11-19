@@ -1555,15 +1555,34 @@ def test_estimated_initial_seasonal_cov(
     assert np.all(bse > 0)
 
 
-@pytest.mark.parametrize("dtype", [np.int64, np.float32, ">f8", "<f8"])
+@pytest.mark.parametrize("dtype", [np.float32, ">f8", "<f8"])
 def test_params_dtype(austourists_model, dtype):
     # GH 10770: params that are not native float64 failed in the smoother
     model = austourists_model
-    params = np.round(model._start_params, 0).astype(dtype)
+    params = model._start_params.astype(dtype)
     native = params.astype(np.float64)
-    assert_allclose(model.loglike(params), model.loglike(native), rtol=1e-12)
+    # the reference has to be a valid fit, or NaN would compare equal to NaN
+    llf = model.loglike(native)
+    fitted = model.smooth(native).fittedvalues
+    assert np.isfinite(llf)
+    assert np.isfinite(fitted).all()
+    assert_allclose(model.loglike(params), llf, rtol=1e-12)
+    assert_allclose(model.smooth(params).fittedvalues, fitted, rtol=1e-12)
+
+
+def test_params_dtype_int(austourists_model):
+    # GH 10770: integer params were rejected. Integer values cannot be valid
+    # smoothing parameters, which have to be strictly between 0 and 1, so this
+    # only checks that they are accepted and give what float64 gives.
+    model = austourists_model
+    params = np.round(model._start_params, 0).astype(np.int64)
+    native = params.astype(np.float64)
+    assert_allclose(
+        model.loglike(params), model.loglike(native), rtol=1e-12, equal_nan=True
+    )
     assert_allclose(
         model.smooth(params).fittedvalues,
         model.smooth(native).fittedvalues,
         rtol=1e-12,
+        equal_nan=True,
     )
