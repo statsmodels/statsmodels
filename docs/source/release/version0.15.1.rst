@@ -51,6 +51,7 @@ Deprecations
 Behavior changes
 ----------------
 
+- ``MixedLM.score_sqrt`` is private.
 - ``OaxacaResults.summary()`` returns the summary as a string instead of
   printing it and returning ``None``. Use ``print(result.summary())`` to
   display it. :issue:`7733`, :pr:`10491`
@@ -153,6 +154,17 @@ Behavior changes
   these kernels returned ``nan`` for most data. They now integrate the density
   over the support of the observations, in the units of the data, so that the
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
+- ``filter``, ``smooth`` and ``fit`` of state space models with a stationary
+  initialization raise a ``LinAlgError`` if a parameter is fixed at a unit
+  root, for example with ``fix_params``, instead of returning results with an
+  ``llf`` of 0.0 that were computed from an initial state covariance with
+  negative variances. Loglikelihoods at parameters with a valid stationary
+  covariance are unchanged, but the fit of a very ill-conditioned model, whose
+  optimizer used to survive negative covariances along its path, can end at a
+  different optimum. For example, a ``SARIMAX`` model with ``order=(15, 0, 0)``
+  and ``trend="c"`` for ``np.linspace(0, 2 * np.pi, 1000)`` ends at an ``llf``
+  of 1667.85 instead of 6835.06.
+  :issue:`5459`, :pr:`10747`
 - ``powerdiscrepancy`` with ``lambd=0`` (``"loglikeratio"``, the default, which
   is the G-test) returns valid test statistics when observed counts contain
   zeros, evaluating :math:`x \ln(x)` to 0, instead of returning
@@ -248,6 +260,12 @@ Behavior changes
   a fixed scale, are unchanged. Multiplying ``alpha`` by the scale estimated
   at the estimates gives the penalty of earlier versions, where that fit
   converged; the example of ``GLM.fit_regularized`` shows how. :pr:`10776`
+- The marginal effects of ``GEE`` results fit with ``use_t=True`` use the t
+  distribution with ``df_resid_inference`` degrees of freedom, as the
+  parameters do. Their p-values and confidence intervals change, and the
+  ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
+  ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
+  :pr:`10792`
 
 New Features and Enhancements
 =============================
@@ -351,6 +369,11 @@ New functions and methods
   of each group by the inverse square root of one minus the leverage, where
   ``"bias_reduced"`` (Mancl-DeRouen) uses the inverse. :issue:`1183`,
   :pr:`10781`
+- Add ``cov_type="fay_graubard"`` and ``cov_type="morel_bokossa_neerchal"``
+  to ``GEE.fit``, the Fay-Graubard and Morel-Bokossa-Neerchal small-sample
+  corrections of the robust covariance, with ``b = 0.75`` and ``d = 2``,
+  ``r = 1``, the defaults of the R packages saws and geesmv.
+  :pr:`10794`
 
 Performance
 -----------
@@ -395,6 +418,24 @@ Performance
   regressors are close to collinear, so for such series the statistic can
   change in the later digits. The new values agree with R (urca) and with
   high-precision arithmetic. :issue:`10601`, :pr:`10602`, :pr:`10624`
+- ``OLS``, ``WLS`` and ``GLS`` have the new fit option ``method="chol"``,
+  which solves the normal equations with a Cholesky factorization of the
+  k x k cross product matrix of the whitened regressors instead of computing
+  the pseudoinverse or the QR factorization of the n x k design matrix. For
+  3,000,000 observations and 10 regressors, ``fit`` is about 20 times faster
+  than with the default ``method="pinv"``, and creating and fitting the model
+  needs more than 10 times less peak memory: the fit itself allocates no
+  array of the size of the design matrix, while ``"pinv"`` and ``"qr"`` need
+  about three times its size. The method squares the condition number of
+  the design with unit-norm columns and is less accurate than ``"pinv"`` and
+  ``"qr"`` on ill-conditioned designs, for example with an uncentered
+  regressor with a large mean next to the constant; it should only be used
+  when speed and memory usage matter more than numerical accuracy, see the
+  Notes of ``fit``. Collinear regressors by the tolerance of R's ``lm`` fall
+  back to the pseudoinverse with a ``SingularMatrixWarning``. The
+  pseudoinverse ``pinv_wexog`` is only computed when a covariance estimator
+  or an influence measure needs it.
+  :issue:`9317`, :pr:`10679`
 - ``get_margeff`` with the default ``at="overall"`` computes the delta method
   Jacobian of the average marginal effects directly instead of averaging the
   Jacobian at each observation. Memory use no longer grows with the number of
@@ -636,6 +677,16 @@ Generalized linear models and discrete models
   factor, or ``C(g)``. An ``exog`` that carries the ``design_info`` of another
   design used to be re-evaluated by the formula and now raises a
   ``ValueError``. :issue:`9562` :pr:`10752`
+- ``cov_type`` of ``GEE.fit``, ``OrdinalGEE.fit`` and ``NominalGEE.fit`` is
+  case-insensitive. A value such as ``"Bias_Reduced"`` raised an
+  ``UnboundLocalError``. :pr:`10791`
+- ``GEE.fit`` with ``cov_type="bias_reduced"`` or ``"kauermann_carroll"``
+  raises a ``ValueError`` that names the group if a group has leverage 1, for
+  example a single observation with its own dummy variable. It raised a bare
+  ``LinAlgError``, or for the Gaussian family returned a meaningless
+  covariance. :pr:`10792`
+- ``summary`` of the marginal effects of ``GEE`` results raised a
+  ``ValueError``. :pr:`10792`
 
 Mixed models and imputation
 ---------------------------
@@ -658,6 +709,8 @@ Mixed models and imputation
 - ``MixedLM.fit_regularized`` failed for models with pandas data, for example
   from a formula: ``summary`` raised a ``KeyError`` and, with pandas 3,
   ``fit_regularized`` itself failed. :issue:`8902`, :pr:`10465`
+- ``MixedLM.fit`` often stopped short of the optimum, because ``MixedLM.score``
+  had a sign error.
 - ``MixedLMResults.bse_re`` raised a ``ValueError`` for models with variance
   components and pandas data, for example from a formula. :pr:`10702`
 - ``MICE.combine`` failed for results of models that do not have a
@@ -878,6 +931,18 @@ Time series analysis
   show one ``ConvergenceWarning`` with the number of replications whose
   maximum likelihood fit did not converge, instead of one warning for each of
   them. :pr:`10613`
+- At a unit root the stationary initialization could return an initial state
+  covariance with negative variances instead of raising, for example
+  ``-4.99e291`` for ``SARIMAX(np.zeros(10)).filter([1, 1])``. The filter then
+  reported a loglikelihood of exactly 0, above that of any stationary model.
+  This is now detected: ``filter`` raises a ``LinAlgError`` saying that the
+  model is not stationary to numerical precision, and ``MLEModel.loglike``
+  returns ``-inf``, as for the unit roots that already raised (:pr:`10611`).
+  Unit roots of this kind are rejected, and explosive roots farther from the
+  unit circle are not changed: for an AR(1) model the check applies up to a
+  coefficient of about ``1 + 6e-5``, while coefficients of ``1 + 1e-4`` or
+  ``1.2`` still give a negative initial variance and an ``llf`` of 0.0.
+  :issue:`5459`, :pr:`10747`
 - ``IRAnalysis.plot`` and ``IRAnalysis.plot_cum_effects`` ignored the
   argument ``plot_params``. It is now applied to the response curves, so that
   their color, line width and other Matplotlib ``Line2D`` properties can be
@@ -1067,6 +1132,12 @@ Statistics and tests
 - ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
   from SciPy if no ratio attains the requested power. It returns ``nan`` with
   a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`
+- ``cohens_kappa`` returns the same results for all tables in which a rater
+  uses a single category: kappa is 0, its standard errors and confidence
+  limits are 0, and the z statistic and the p-values are nan. If both raters
+  use the same single category, all statistics are nan. Before, the results
+  depended on rounding errors, and NumPy emitted a ``RuntimeWarning``.
+  :issue:`5530`, :pr:`10709`
 - ``eval_measures.iqr`` returned 0 if ``x1`` had length 1 along ``axis`` and
   was broadcast against a longer ``x2``, raised an ``IndexError`` for a scalar
   ``x1``, and raised a ``ValueError`` with ``axis=None`` for inputs of
@@ -1192,6 +1263,14 @@ Duration models
   of the 12 distinct uncensored times 1, ..., 12 is 7 instead of 6. At such a
   tie the next event time is returned, unlike R, which returns the midpoint of
   the two event times. :pr:`10648`
+- ``SurvfuncRight.simultaneous_cb`` used the number at risk at each time
+  instead of the total sample size ``n`` in the Hall-Wellner band of Hall and
+  Wellner (1980) and Klein and Moeschberger (2003), eqs. 4.4.4-4.4.5, and with
+  ``freq_weights`` it used Tsiatis' variance instead of the Greenwood
+  variance. The band was too wide at early times and too narrow in the tail.
+  All limits change. They agree with the R package ``km.ci`` at
+  ``k = 1.3581``, and with ``freq_weights`` they equal the band of the data
+  with each row repeated by its weight. :pr:`10649`
 - ``PHReg`` warns with a ``ValueWarning`` for unknown keyword arguments. Before, they
   were ignored silently, for example ``weights``, which ``PHReg`` does not support,
   and ``event``, which is the name of ``status`` in ``lifelines``. :issue:`7741`,

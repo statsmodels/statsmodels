@@ -717,6 +717,21 @@ class Initialization:
             return True
         return any(block._uses_stationary() for block in self.blocks.values())
 
+    def _stationary_blocks(self):
+        """
+        Indices of the blocks of states that are initialized as stationary
+
+        The initial covariance of each block solves its own discrete Lyapunov
+        equation.
+        """
+        if self.initialization_type == "stationary":
+            return [np.arange(self.k_states)]
+        blocks = []
+        for block_index, block in self.blocks.items():
+            block_index = np.asarray(block_index, dtype=int)
+            blocks += [block_index[index] for index in block._stationary_blocks()]
+        return blocks
+
     @property
     def initialized(self):
         """bool, whether or not all states have been initialized"""

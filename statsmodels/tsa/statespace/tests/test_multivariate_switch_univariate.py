@@ -99,6 +99,10 @@ def get_model(univariate, missing=None, init=None):
     elif init == "approximate_diffuse":
         mod.ssm.initialize_approximate_diffuse()
     elif init == "stationary":
+        if not univariate:
+            # The first state is a random walk, which has no stationary
+            # distribution
+            mod["transition", 0, 0] = 0.9
         mod.ssm.initialize_stationary()
 
     return mod

@@ -12,6 +12,13 @@ from . import tools
 from .initialization import Initialization, _StationaryInitializationError
 from .tools import find_best_blas_type, validate_matrix_shape, validate_vector_shape
 
+_NOT_STATIONARY_MESSAGE = (
+    "The transition matrix of the states with stationary initialization is"
+    " not stationary to numerical precision, so their initial covariance does"
+    " not exist. Use a different initialization, such as"
+    " 'approximate_diffuse', for non-stationary models."
+)
+
 
 class OptionWrapper:
     def __init__(self, mask_attribute, mask_value):
@@ -1067,7 +1074,27 @@ class Representation:
         self.initialize("components", a=a, Pstar=Pstar, Pinf=Pinf, A=A, R0=R0, Q0=Q0)
 
     def initialize_stationary(self):
-        """Initialize the statespace model as stationary"""
+        """
+        Initialize the statespace model as stationary
+
+        Notes
+        -----
+        The initial state covariance is the solution of the discrete Lyapunov
+        equation of the transition matrix. It does not exist if the transition
+        matrix has a unit root, for example if an AR(1) coefficient is 1. In
+        that case ``filter`` and ``smooth`` raise a
+        ``numpy.linalg.LinAlgError`` that says that the transition matrix is
+        not stationary to numerical precision, and ``MLEModel.loglike``
+        returns ``-inf``. Use ``initialize_approximate_diffuse`` or
+        ``initialize_diffuse`` for such models. Explosive transition matrices
+        that are not close to a unit root are not detected.
+
+        .. versionchanged:: 0.15.1
+
+           A transition matrix with a unit root raises or gives ``-inf``
+           instead of being filtered with an initial state covariance that
+           has negative variances.
+        """
         self.initialize("stationary")
 
     def initialize_diffuse(self):
@@ -1161,9 +1188,40 @@ class Representation:
             except np.linalg.LinAlgError as exc:
                 if not self.initialization._uses_stationary():
                     raise
-                raise _StationaryInitializationError(str(exc)) from exc
+                raise _StationaryInitializationError(
+                    f"{exc} {_NOT_STATIONARY_MESSAGE}"
+                ) from exc
+            if self.initialization._uses_stationary():
+                self._check_stationary_initialization(prefix)
         else:
             raise RuntimeError("Statespace model not initialized.")
+
+    def _check_stationary_initialization(self, prefix):
+        # At a unit root the Lyapunov equation of the stationary covariance is
+        # singular, but the solver may not raise and instead return a matrix
+        # with negative variances (GH#5459). Filtering with it gives a
+        # meaningless loglikelihood, often exactly 0, so raise instead. The
+        # negative variances are checked first, since that is cheap; the
+        # eigenvalues then tell this apart from an explosive transition, for
+        # which the equation has a solution, although not a covariance matrix.
+        cov = np.asarray(self._statespaces[prefix].initial_state_cov)
+        transition = self._representations[prefix]["transition"][..., 0]
+        eps = np.finfo(float).eps
+        for index in self.initialization._stationary_blocks():
+            variances = np.real(np.diagonal(cov))[index]
+            finite = variances[np.isfinite(variances)]
+            scale = np.max(np.abs(finite)) if finite.size else 0.0
+            if not np.any(variances < -np.sqrt(eps) * scale):
+                continue
+            # The equation is singular if the product of two eigenvalues of
+            # the transition matrix is 1. The tolerance allows for the error
+            # of the computed eigenvalues of a root of multiplicity up to 4.
+            eigvals = np.linalg.eigvals(np.real(transition[np.ix_(index, index)]))
+            if np.min(np.abs(1 - np.outer(eigvals, eigvals))) < eps**0.25:
+                raise _StationaryInitializationError(
+                    "The stationary initial state covariance has negative"
+                    f" variances. {_NOT_STATIONARY_MESSAGE}"
+                )
 
 
 class FrozenRepresentation:
