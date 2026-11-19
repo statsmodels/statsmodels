@@ -673,7 +673,7 @@ Time series analysis
   consumption and investment in ``macrodata`` the trace statistic for rank 0
   was 39.4 instead of 29.6, which selected rank 1 instead of 0. The statistics
   now equal the likelihood ratio statistics of ``VECM``. Results with
-  ``k_ar_diff`` of 1 or more do not change. :issue:`7459`
+  ``k_ar_diff`` of 1 or more do not change. :issue:`7459`, :pr:`10807`
 - The ARIMA GLS estimator now uses the complete AR and MA lag polynomials
   when whitening the regression data. Seasonal terms were previously
   omitted, and nonconsecutive lags were treated as consecutive, producing
