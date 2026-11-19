@@ -1074,7 +1074,27 @@ class Representation:
         self.initialize("components", a=a, Pstar=Pstar, Pinf=Pinf, A=A, R0=R0, Q0=Q0)
 
     def initialize_stationary(self):
-        """Initialize the statespace model as stationary"""
+        """
+        Initialize the statespace model as stationary
+
+        Notes
+        -----
+        The initial state covariance is the solution of the discrete Lyapunov
+        equation of the transition matrix. It does not exist if the transition
+        matrix has a unit root, for example if an AR(1) coefficient is 1. In
+        that case ``filter`` and ``smooth`` raise a
+        ``numpy.linalg.LinAlgError`` that says that the transition matrix is
+        not stationary to numerical precision, and ``MLEModel.loglike``
+        returns ``-inf``. Use ``initialize_approximate_diffuse`` or
+        ``initialize_diffuse`` for such models. Explosive transition matrices
+        that are not close to a unit root are not detected.
+
+        .. versionchanged:: 0.15.1
+
+           A transition matrix with a unit root raises or gives ``-inf``
+           instead of being filtered with an initial state covariance that
+           has negative variances.
+        """
         self.initialize("stationary")
 
     def initialize_diffuse(self):

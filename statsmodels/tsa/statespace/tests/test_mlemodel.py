@@ -1471,24 +1471,32 @@ def test_loglike_stationary_init_unit_root_ar1():
     with pytest.raises(np.linalg.LinAlgError, match="not stationary to numerical"):
         mod.ssm.loglike()
 
-    # close to the unit root the stationary covariance is still computed
-    phi = 1 - 1e-8
-    res = mod.filter([phi, 1.0])
-    desired = solve_discrete_lyapunov(np.array([[phi]]), np.eye(1))
-    assert_allclose(res.filter_results.initial_state_cov, desired, rtol=1e-6)
-
     # An explosive root is not changed here: the Lyapunov equation has a
-    # solution, -1 / 0.44, although it is not a covariance matrix
+    # solution, 1 / (1 - 1.2**2) = -1 / 0.44, although it is not a covariance
+    # matrix
     res = mod.filter([1.2, 1.0])
-    desired = solve_discrete_lyapunov(np.array([[1.2]]), np.eye(1))
-    assert_allclose(res.filter_results.initial_state_cov, desired)
+    desired = 1 / (1 - 1.2**2)
+    assert_allclose(res.filter_results.initial_state_cov, [[desired]], rtol=1e-12)
+
+
+@pytest.mark.parametrize("gap", [1e-4, 1e-8, 1e-12, 1e-15])
+def test_stationary_init_near_unit_root_ar1(gap):
+    # Close to the unit root the stationary covariance is still computed. The
+    # variance of a stationary AR(1) process with unit innovation variance is
+    # 1 / (1 - phi**2), which is exact for the double precision phi. The
+    # relative error of the solver was at most 2.2e-16 for these gaps (scipy
+    # 1.8.1 and 1.18.1), the tolerance leaves room for other LAPACK builds.
+    phi = 1 - gap
+    mod = sarimax.SARIMAX(np.zeros(10))
+    res = mod.filter([phi, 1.0])
+    desired = 1 / ((1 - phi) * (1 + phi))
+    assert_allclose(res.filter_results.initial_state_cov, [[desired]], rtol=1e-12)
 
 
 @pytest.mark.parametrize(
     "ar_params",
     [
         [0.5, 0.5],
-        [0.5, 0.5 - 1e-16],
         [1.0, 0.0],
         [2.0, -1.0],
         # a complex pair of roots on the unit circle
@@ -1517,6 +1525,27 @@ def test_loglike_stationary_init_unit_root_ar2(ar_params):
     mod_known = sarimax.SARIMAX(mod.endog, order=(2, 0, 0))
     mod_known.ssm.initialize_known(np.zeros(2), cov)
     assert_allclose(llf, mod_known.loglike(params), rtol=1e-12)
+
+
+@pytest.mark.parametrize("gap", [1e-2, 1e-4, 1e-6])
+def test_stationary_init_near_unit_root_ar2(gap):
+    # The covariance of the state (y_t, phi_2 y_{t-1}) of a stationary AR(2)
+    # process with unit innovation variance, from the autocovariances
+    # gamma_0 = (1 - phi_2) / ((1 + phi_2) ((1 - phi_2)**2 - phi_1**2)) and
+    # gamma_1 = phi_1 gamma_0 / (1 - phi_2). With phi_2 = 0.5 - gap, gamma_0 is
+    # about 0.33 / gap. The relative error of the solver was at most 5.1e-10
+    # for these gaps (scipy 1.8.1 and 1.18.1), and it grows as the gap shrinks:
+    # it is 5.3e-8 for a gap of 1e-8.
+    phi1, phi2 = 0.5, 0.5 - gap
+    gamma0 = (1 - phi2) / ((1 + phi2) * ((1 - phi2) ** 2 - phi1**2))
+    gamma1 = phi1 * gamma0 / (1 - phi2)
+    desired = np.array(
+        [[gamma0, phi2 * gamma1], [phi2 * gamma1, phi2**2 * gamma0]]
+    )
+    mod = sarimax.SARIMAX(np.zeros(10), order=(2, 0, 0))
+    res = mod.filter([phi1, phi2, 1.0])
+    assert_allclose(res.filter_results.initial_state_cov, desired, rtol=1e-8)
+    assert np.isfinite(mod.loglike([phi1, phi2, 1.0]))
 
 
 def test_loglike_stationary_init_unit_root_block():
