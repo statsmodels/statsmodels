@@ -8,6 +8,7 @@ exists, against a direct computation.
 
 import numpy as np
 from numpy.testing import assert_allclose
+import pandas as pd
 import pytest
 from scipy import linalg, signal
 
@@ -163,30 +164,32 @@ def test_pacf(data, nlags):
 
 
 def _periodogram(x):
-    # The definition of statsmodels.tsa.stattools.periodogram, removed in
-    # statsmodels 0.12
-    pgram = np.abs(np.fft.fft(x)) ** 2 / x.shape[0]
+    # |fft(x)|**2 / n at all n Fourier frequencies, as scipy computes it: with
+    # a boxcar window, no detrending and density scaling at fs = 1, scipy
+    # divides by sum(window**2) = n, and the two-sided periodogram is not
+    # doubled. The removed statsmodels.tsa.stattools.periodogram, which
+    # TsaDescriptive.periodogram called, set the zero frequency to 0.
+    pgram = signal.periodogram(
+        x, window="boxcar", detrend=False, return_onesided=False, scaling="density"
+    )[1]
     pgram[0] = 0.0
     return pgram
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AttributeError,
-    reason="TsaDescriptive.periodogram calls statsmodels.tsa.stattools."
-    "periodogram, which was removed in statsmodels 0.12",
-)
-def test_periodogram(data):
-    td = make(data)
-    assert_allclose(td.periodogram(), _periodogram(data), rtol=1e-12)
-
-
-class RestoredPeriodogram(TsaDescriptive):
-    # TsaDescriptive.periodogram is broken (see test_periodogram), and plot4
-    # calls it before drawing anything. Restore the removed function so
-    # that the rest of plot4 can be checked.
-    def periodogram(self):
-        return _periodogram(np.asarray(self.data))
+@pytest.mark.parametrize("as_series", [False, True])
+def test_periodogram(data, as_series):
+    y = data
+    if as_series:
+        index = pd.date_range("2000-01-01", periods=data.shape[0], freq="D")
+        y = pd.Series(data, index=index)
+    td = make(y)
+    res = td.periodogram()
+    assert isinstance(res, np.ndarray)
+    assert_allclose(res, _periodogram(data), rtol=1e-10)
+    # Parseval: the full periodogram sums to sum(x**2). Its value at frequency
+    # zero, n * mean(x)**2, is set to 0, which leaves the sum of squared
+    # deviations from the mean.
+    assert_allclose(res.sum(), ((data - data.mean()) ** 2).sum(), rtol=1e-10)
 
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
@@ -196,8 +199,7 @@ class RestoredPeriodogram(TsaDescriptive):
 def test_plot4(data, close_figures, new_fig, name):
     import matplotlib.pyplot as plt
 
-    with pytest.warns(FutureWarning, match=DEPRECATED):
-        td = RestoredPeriodogram(data, name=name)
+    td = make(data, name=name)
     if new_fig:
         fig = td.plot4(nacf=15, nfreq=50)
     else:
