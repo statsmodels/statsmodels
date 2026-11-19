@@ -25,6 +25,7 @@ from statsmodels.tools.numdiff import (
     _get_epsilon,
     approx_fprime,
     approx_fprime_cs,
+    approx_hess3,
     approx_hess_cs,
 )
 from statsmodels.tools.rng_qrng import check_random_state
@@ -729,6 +730,9 @@ class MLEModel(tsbase.TimeSeriesModel):
                     "includes_fixed": False,
                     "score_method": optim_score,
                     "approx_complex_step": optim_complex_step,
+                    # The optimizer needs the Hessian of the loglikelihood,
+                    # like its score, and not the average over observations
+                    "average": False,
                 }
             )
             if optim_hessian is not None:
@@ -1782,8 +1786,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         "hessian_method",
         "approx_complex_step",
         "approx_centered",
+        "average",
     ]
-    _hessian_param_defaults = [True, "approx", None, False]
+    _hessian_param_defaults = [True, "approx", None, False, True]
 
     def hessian(self, params, *args, **kwargs):
         r"""
@@ -1811,14 +1816,38 @@ class MLEModel(tsbase.TimeSeriesModel):
         Both args and kwargs are necessary because the optimizer from
         `fit` must call this function and only supports passing arguments via
         args (for example `scipy.optimize.fmin_l_bfgs`).
+
+        The Hessian is divided by the number of observations in the
+        loglikelihood, ``nobs - loglikelihood_burn``, unless ``average`` is
+        False. `fit` sets ``average`` to False, since the optimizer needs the
+        Hessian of the loglikelihood itself.
+
+        If ``transformed`` is False, this is the Hessian of the loglikelihood
+        as a function of the unconstrained parameters. It is computed from the
+        derivatives with respect to the constrained parameters by the chain
+        rule, so that complex-step differentiation can be used although
+        `transform_params` need not accept complex values.
+
+        .. versionchanged:: 0.15.1
+
+           The Hessian with respect to the unconstrained parameters is computed
+           by the chain rule, and ``average`` was added. Before, it raised with
+           ``approx_complex_step=True``, and most other settings gave
+           derivatives with respect to the constrained parameters, or at the
+           wrong parameters.
         """
-        transformed, method, approx_complex_step, approx_centered, kwargs = (
-            _handle_args(
-                MLEModel._hessian_param_names,
-                MLEModel._hessian_param_defaults,
-                *args,
-                **kwargs,
-            )
+        (
+            transformed,
+            method,
+            approx_complex_step,
+            approx_centered,
+            average,
+            kwargs,
+        ) = _handle_args(
+            MLEModel._hessian_param_names,
+            MLEModel._hessian_param_defaults,
+            *args,
+            **kwargs,
         )
         # For fit() calls, the method is called 'hessian_method' (to
         # distinguish it from the method used for fit) but generally in kwargs
@@ -1826,13 +1855,6 @@ class MLEModel(tsbase.TimeSeriesModel):
         if "method" in kwargs:
             method = kwargs.pop("method")
         method = string_like(method, "method", options=("oim", "opg", "approx"))
-
-        if not transformed and approx_complex_step:
-            raise ValueError(
-                "Cannot use complex-step approximations to"
-                " calculate the hessian with untransformed"
-                " parameters."
-            )
 
         if approx_complex_step is None:
             approx_complex_step = not self.ssm._complex_endog
@@ -1842,7 +1864,15 @@ class MLEModel(tsbase.TimeSeriesModel):
                 " or parameters are complex."
             )
 
-        if method == "oim":
+        if not transformed:
+            hessian = self._hessian_untransformed(
+                params,
+                method=method,
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered,
+                **kwargs,
+            )
+        elif method == "oim":
             hessian = self._hessian_oim(
                 params,
                 transformed=transformed,
@@ -1868,6 +1898,46 @@ class MLEModel(tsbase.TimeSeriesModel):
                 transformed=transformed,
                 approx_centered=approx_centered,
                 **kwargs,
+            )
+        if not average:
+            hessian = hessian * (self.nobs - self.ssm.loglikelihood_burn)
+        return hessian
+
+    def _hessian_untransformed(self, params, method, includes_fixed=False, **kwargs):
+        """
+        Hessian matrix with respect to the unconstrained parameters
+
+        The derivatives with respect to the constrained parameters are
+        combined with those of `transform_params` by the chain rule.
+        """
+        params = np.array(params, ndmin=1)
+
+        def constrain(unconstrained):
+            return self.handle_params(
+                unconstrained, transformed=False, includes_fixed=includes_fixed
+            )
+
+        constrained = constrain(params)
+        # The Jacobian of the transformation, with one row for each parameter
+        # of the model. The rows of fixed parameters are zero.
+        jacobian = approx_fprime(params, constrain, centered=True)
+        hessian = self.hessian(
+            constrained, transformed=True, includes_fixed=True, method=method, **kwargs
+        )
+        hessian = jacobian.T @ hessian @ jacobian
+        if method == "approx":
+            # The second derivatives of the transformation, weighted by the
+            # score. The information matrices of "oim" and "opg" do not have
+            # this term, since the expected score is zero.
+            score = self.score(
+                constrained,
+                transformed=True,
+                includes_fixed=True,
+                method="approx",
+                **kwargs,
+            ) / (self.nobs - self.ssm.loglikelihood_burn)
+            hessian = hessian + approx_hess3(
+                params, lambda unconstrained: score @ constrain(unconstrained)
             )
         return hessian
 
