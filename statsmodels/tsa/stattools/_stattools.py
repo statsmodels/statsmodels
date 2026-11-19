@@ -3263,6 +3263,11 @@ def diebold_mariano_test(
         error if its range is at most ``sqrt(eps)`` times its largest
         absolute value, which is a heuristic, see the Notes.
 
+    See Also
+    --------
+    clark_west_test
+        Test of equal predictive accuracy of forecasts from nested models.
+
     Notes
     -----
     The Diebold-Mariano (1995) test compares the predictive accuracy of two
@@ -3498,6 +3503,252 @@ def diebold_mariano_test(
 
     return DieboldMarianoResult(
         dm_stat, float(p_value), lags, adj_factor, alternative, kernel
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class ClarkWestResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`clark_west_test`.
+
+    .. versionadded:: 0.15.1
+
+    Parameters
+    ----------
+    statistic : float
+        The Clark-West test statistic, approximately standard normal under
+        the null of equal predictive accuracy.
+    pvalue : float
+        The one-sided p-value against the alternative that the unrestricted
+        model is more accurate, from the standard normal distribution.
+    lags : int
+        The number of lags used in the HAC estimator of the long-run
+        variance of the adjusted loss differential.
+    kernel : str
+        The kernel of the HAC estimator, "bartlett" or "uniform".
+    mspe_restricted : float
+        The mean squared prediction error of ``forecast_restricted``.
+    mspe_unrestricted : float
+        The mean squared prediction error of ``forecast_unrestricted``.
+    adjustment : float
+        The mean squared difference between the two forecasts. The mean of
+        the adjusted loss differential is
+        ``mspe_restricted - (mspe_unrestricted - adjustment)``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, pvalue = result``. The other fields are only
+    available through attribute access.
+    """
+
+    statistic: float
+    pvalue: float
+    lags: int
+    kernel: str
+    mspe_restricted: float
+    mspe_unrestricted: float
+    adjustment: float
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "pvalue")
+
+
+def clark_west_test(
+    y,
+    forecast_restricted,
+    forecast_unrestricted,
+    *,
+    lags=None,
+    horizon=1,
+    kernel="bartlett",
+):
+    """
+    Clark-West test of equal predictive accuracy of nested models.
+
+    .. versionadded:: 0.15.1
+
+    Parameters
+    ----------
+    y : array_like
+        The observed values of the forecast variable.
+    forecast_restricted : array_like
+        The forecasts of ``y`` from the restricted model, for example the
+        historical mean or a random walk.
+    forecast_unrestricted : array_like
+        The forecasts of ``y`` from the unrestricted model, which nests the
+        restricted model.
+    lags : int, optional
+        The number of lags to include in the HAC variance estimator used for
+        the adjusted loss differential. Must be non-negative if provided. If
+        not provided, ``max(horizon - 1, ceil(nobs ** (1/3)))`` is used with
+        the Bartlett kernel and ``horizon - 1`` with the uniform kernel, as
+        in :func:`diebold_mariano_test`. Must be smaller than ``nobs``, and
+        smaller than ``nobs - 1`` with the uniform kernel.
+    horizon : int, optional
+        The forecast horizon, used to form the default number of lags. Must
+        be a positive integer. Must be smaller than ``nobs`` if ``lags`` is not
+        provided, and is otherwise not used. Default is 1.
+    kernel : {"bartlett", "uniform"}, optional
+        The kernel of the HAC estimator. "bartlett" (the default) is the
+        Newey-West estimator. "uniform" weights all autocovariances up to
+        ``lags`` equally. See :func:`diebold_mariano_test`.
+
+    Returns
+    -------
+    ClarkWestResult
+        A result object containing the test statistic, its one-sided p-value
+        and the mean squared prediction errors.
+
+    Raises
+    ------
+    MissingDataError
+        If the adjusted loss differential contains non-finite values.
+    ValueError
+        If ``horizon`` or ``lags`` is too large for the number of
+        observations, if the adjusted loss differential is constant up to
+        rounding error, for example when the two forecasts are identical, or
+        if its estimated long-run variance is not positive, which can happen
+        with the uniform kernel.
+
+    See Also
+    --------
+    diebold_mariano_test
+        Test of equal predictive accuracy of two forecasts.
+
+    Notes
+    -----
+    If the restricted model is nested in the unrestricted model, the
+    comparison of their mean squared prediction errors (MSPE), for example
+    with :func:`diebold_mariano_test`, is biased against the unrestricted
+    model. Under the null hypothesis the additional parameters of the
+    unrestricted model are zero, but their estimation adds noise to its
+    forecasts, so its MSPE is expected to be larger. Clark and West (2007)
+    adjust the MSPE of the unrestricted model for this noise. With the
+    forecast errors :math:`e_{1,t}` and :math:`e_{2,t}` and the forecasts
+    :math:`\\hat{y}_{1,t}` and :math:`\\hat{y}_{2,t}` of the restricted and
+    the unrestricted model, the test is based on the adjusted loss
+    differential
+
+    .. math::
+
+        f_t = e_{1,t}^2 - \\left[e_{2,t}^2
+        - (\\hat{y}_{1,t} - \\hat{y}_{2,t})^2\\right]
+        = 2 e_{1,t} (\\hat{y}_{2,t} - \\hat{y}_{1,t}).
+
+    The statistic is the t-statistic of the mean of :math:`f_t`, computed
+    with a HAC estimate of its variance as in :func:`diebold_mariano_test`.
+    The null hypothesis is equal predictive accuracy and the alternative is
+    that the unrestricted model is more accurate, so the test is one-sided
+    and rejects for large values of the statistic. Because of the
+    adjustment, ``forecast_restricted`` and ``forecast_unrestricted`` are
+    not interchangeable: swapping them does not only change the sign of the
+    statistic.
+
+    The statistic is not exactly normal under the null. Clark and West
+    (2007) recommend the standard normal critical values 1.282 for a test
+    at the 10% level and 1.645 at the 5% level, and find that these tests
+    reject slightly less often than the nominal level. The p-value is
+    computed from the standard normal distribution and is approximate.
+
+    The forecasts must be out-of-sample, for example from rolling or
+    recursive estimation, and ``y[t]`` is the observation that
+    ``forecast_restricted[t]`` and ``forecast_unrestricted[t]`` predict.
+    The errors of forecasts ``h > 1`` steps ahead are serially correlated,
+    and Clark and West (2007) only state that an autocorrelation consistent
+    standard error should be used. For one-step forecasts they use the
+    least squares standard error, which corresponds to ``lags=0`` and not
+    to the default number of lags. With ``lags=0`` the statistic is the
+    least squares t-statistic of the mean of :math:`f_t` multiplied by
+    :math:`\\sqrt{T / (T - 1)}`, since the HAC estimator divides by
+    :math:`T`.
+
+    References
+    ----------
+    .. [1] Clark, Todd E., and Kenneth D. West. "Approximately normal tests
+       for equal predictive accuracy in nested models." Journal of
+       Econometrics 138, no. 1 (2007): 291-311.
+
+    Examples
+    --------
+    Compare the historical mean with a predictive regression on ``x``,
+    where ``x[t]`` is known before ``y[t]`` is observed. Both forecasts use
+    recursive estimation windows.
+
+    >>> import numpy as np
+    >>> from statsmodels.tsa.stattools import clark_west_test, diebold_mariano_test
+    >>> rng = np.random.default_rng(0)
+    >>> x = rng.standard_normal(400)
+    >>> y = 0.05 * x + rng.standard_normal(400)
+    >>> f_restricted, f_unrestricted = [], []
+    >>> for t in range(200, 400):
+    ...     f_restricted.append(y[:t].mean())
+    ...     slope, intercept = np.polyfit(x[:t], y[:t], 1)
+    ...     f_unrestricted.append(intercept + slope * x[t])
+    >>> res = clark_west_test(y[200:], f_restricted, f_unrestricted)
+    >>> print(f"{res.statistic:.3f}, {res.pvalue:.4f}")
+    1.873, 0.0306
+
+    The one-sided Diebold-Mariano test of the same forecasts does not adjust
+    for the noise from the estimated slope and does not reject at the 5%
+    level.
+
+    >>> dm = diebold_mariano_test(
+    ...     y[200:], f_restricted, f_unrestricted, alternative="larger"
+    ... )
+    >>> print(f"{dm.statistic:.3f}, {dm.pvalue:.4f}")
+    1.251, 0.1056
+    """
+    y = array_like(y, "y", ndim=1, maxdim=1, dtype=float)
+    forecast_restricted = array_like(
+        forecast_restricted, "forecast_restricted", ndim=1, maxdim=1, dtype=float
+    )
+    forecast_unrestricted = array_like(
+        forecast_unrestricted, "forecast_unrestricted", ndim=1, maxdim=1, dtype=float
+    )
+    lags = int_like(lags, "lags", optional=True)
+    horizon = int_like(horizon, "horizon")
+    kernel = string_like(kernel, "kernel", options=("bartlett", "uniform"))
+
+    if horizon < 1:
+        raise ValueError("horizon must be a positive integer.")
+    if lags is not None and lags < 0:
+        raise ValueError("lags must be a non-negative integer.")
+
+    t = len(y)
+    if forecast_restricted.shape[0] != t or forecast_unrestricted.shape[0] != t:
+        raise ValueError(
+            "y, forecast_restricted and forecast_unrestricted must all have "
+            "equal length."
+        )
+    if horizon >= t and lags is None:
+        raise ValueError(
+            f"horizon ({horizon}) must be smaller than the number of "
+            f"observations ({t})."
+        )
+
+    if lags is None:
+        if kernel == "uniform":
+            lags = horizon - 1
+        else:
+            lags = int(max(horizon - 1, np.ceil(t ** (1 / 3))))
+
+    sq_err_restricted = (y - forecast_restricted) ** 2
+    sq_err_unrestricted = (y - forecast_unrestricted) ** 2
+    sq_diff = (forecast_restricted - forecast_unrestricted) ** 2
+    adj_loss_diff = sq_err_restricted - (sq_err_unrestricted - sq_diff)
+
+    statistic = _hac_mean_tstat(
+        adj_loss_diff, lags, kernel, "adjusted loss differential"
+    )
+    pvalue = float(stats.norm.sf(statistic))
+
+    return ClarkWestResult(
+        statistic,
+        pvalue,
+        lags,
+        kernel,
+        float(np.mean(sq_err_restricted)),
+        float(np.mean(sq_err_unrestricted)),
+        float(np.mean(sq_diff)),
     )
 
 

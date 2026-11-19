@@ -7,7 +7,7 @@ Generalized Estimating Equations
 
 Generalized Estimating Equations estimate generalized linear models for
 panel, cluster or repeated measures data when the observations are possibly
-correlated withing a cluster but uncorrelated across clusters. It supports
+correlated within a cluster but uncorrelated across clusters. It supports
 estimation of the same one-parameter exponential families as Generalized
 Linear models (`GLM`).
 

@@ -158,8 +158,13 @@ in review. Check before submitting:
   Enhancements", fixes under "Bug Fixes" in the topic subsection, and docs-only
   fixes under "Documentation". Append to the end of the list (the lists are in
   merge order), with no blank lines between bullets.
-- End the bullet with the roles ``:issue:`1234`, :pr:`5678` ``. The PR number
-  is only known once the PR is open, so add it in a follow-up commit.
+- End every bullet with the roles ``:issue:`1234`, :pr:`5678` ``. `:pr:` is
+  required, so a bullet without it is incomplete. `:issue:` is required for
+  each issue the change fixes or addresses (several are written
+  ``:issue:`1234`, :issue:`1235` ``) and is left out only if there is none.
+  The PR number is only known once the PR is open, so add it in a follow-up
+  commit right after opening the PR, before asking for review. Do not use a
+  placeholder.
 - Say what a user sees: what was wrong, what changes, and that results of
   valid input change if they do. No internals, no timings from one machine,
   and no claim of agreement with R or Stata that you did not compute.
