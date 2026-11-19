@@ -361,6 +361,18 @@ _gee_fit_doc = """
     results : GEEResultsWrapper
         An instance of the GEEResults class or subclass.
 
+    Raises
+    ------
+    ValueError
+        If `cov_type` is "bias_reduced" or "kauermann_carroll" and a group
+        has leverage 1, for example a single observation with its own dummy
+        variable, or if the covariance of the parameter estimates is not
+        finite, so that the leverages cannot be computed.
+
+        .. versionchanged:: 0.15.1
+           The ``ValueError`` replaces a ``LinAlgError`` and, for some
+           families, a meaningless covariance.
+
     Notes
     -----
     If convergence difficulties occur, increase the values of
@@ -382,7 +394,8 @@ _gee_fit_doc = """
     principal square root is used. Its eigenvalues are positive, so the
     root is real, unless a group has leverage 1, for example a single
     observation with its own dummy variable. Both corrections are then
-    not defined and a ``ValueError`` is raised. Each group needs an
+    not defined and a ``ValueError`` is raised. A leverage larger than
+    ``1 - 1e-8`` counts as 1. Each group needs an
     ``O(m^3)`` matrix root, where ``m`` is the group size, which can be
     slow for large groups.
 

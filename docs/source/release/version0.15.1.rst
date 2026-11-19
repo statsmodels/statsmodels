@@ -683,8 +683,10 @@ Generalized linear models and discrete models
 - ``GEE.fit`` with ``cov_type="bias_reduced"`` or ``"kauermann_carroll"``
   raises a ``ValueError`` that names the group if a group has leverage 1, for
   example a single observation with its own dummy variable. It raised a bare
-  ``LinAlgError``, or for the Gaussian family returned a meaningless
-  covariance. :pr:`10792`
+  ``LinAlgError``, or for some families returned a meaningless covariance.
+  The same ``ValueError`` is raised if the covariance of the parameters is not
+  finite, where the standard errors were ``NaN`` or a ``LinAlgError`` was
+  raised. :pr:`10792`
 - ``summary`` of the marginal effects of ``GEE`` results raised a
   ``ValueError``. :pr:`10792`
 
