@@ -878,6 +878,13 @@ def q_stat(x, nobs):
     ----------
     x : array_like
         Array of autocorrelation coefficients.  Can be obtained from acf.
+        The array is 1-D; a column with shape (nlags, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nlags, 1) now gives the same result as the
+           1-D array, and input with more than one column raises
+           ValueError.
     nobs : int
         Number of observations in the entire sample (ie., not just the length
         of the autocorrelation function results).
@@ -903,7 +910,7 @@ def q_stat(x, nobs):
     -----
     Designed to be used with acf.
     """
-    x = array_like(x, "x")
+    x = array_like(x, "x", ndim=1)
     nobs = int_like(nobs, "nobs")
     if nobs <= len(x):
         raise ValueError(
@@ -1329,7 +1336,14 @@ def pacf_burg(
     Parameters
     ----------
     x : array_like
-        Observations of time series for which pacf is calculated.
+        Observations of time series for which pacf is calculated. The
+        series is 1-D; a column with shape (nobs, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series, and input with more than one column raises
+           ValueError.
     nlags : int, optional
         Number of lags to return autocorrelation for. If not provided,
         uses min(10 * np.log10(nobs), nobs - 1).
@@ -1362,7 +1376,7 @@ def pacf_burg(
     .. [1] Brockwell, P.J. and Davis, R.A., 2016. Introduction to time series
         and forecasting. Springer.
     """
-    x = array_like(x, "x")
+    x = array_like(x, "x", ndim=1)
     if demean:
         x = x - x.mean()
     nobs = x.shape[0]
@@ -1614,6 +1628,11 @@ def pacf(
     ----------
     x : array_like
         Observations of time series for which pacf is calculated.
+
+        .. versionchanged:: 0.15.1
+
+           With method="burg", a column with shape (nobs, 1) now gives the
+           same result as the 1-D series, as with the other methods.
     nlags : int, optional
         Number of lags to return autocorrelation for. If not provided,
         uses min(10 * np.log10(nobs), nobs // 2 - 1). The returned value
@@ -2133,7 +2152,14 @@ def pccf(
     Parameters
     ----------
     x, y : array_like
-        The time series data to use in the calculation.
+        The time series data to use in the calculation. Each series is 1-D;
+        a column with shape (nobs, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series, and input with more than one column raises
+           ValueError.
     nlags : int, optional
         Number of lags to return partial cross-correlations for.
         If not provided, uses
@@ -2256,8 +2282,8 @@ def pccf(
     >>> result_with_ci.confint.shape
     (5, 2)
     """
-    x = array_like(x, "x")
-    y = array_like(y, "y")
+    x = array_like(x, "x", ndim=1)
+    y = array_like(y, "y", ndim=1)
     nlags = int_like(nlags, "nlags", optional=True)
     methods = (
         "ols",
@@ -3837,7 +3863,13 @@ def kpss(
     Parameters
     ----------
     x : array_like, 1d
-        The data series to test.
+        The data series to test. A column with shape (nobs, 1) is also
+        accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series with regression="c", as it did with "ct".
     regression : {"c", "ct"}, optional
         The null hypothesis for the KPSS test.
 
@@ -3930,7 +3962,7 @@ def kpss(
        investigation. Journal of Business and Economic Statistics, 7 (2):
        147-159.
     """
-    x = array_like(x, "x")
+    x = array_like(x, "x", ndim=1)
     regression = string_like(regression, "regression", options=("c", "ct"))
     store = bool_like(store, "store")
     result_object = bool_like(result_object, "result_object", optional=True)
@@ -3942,10 +3974,6 @@ def kpss(
 
     nobs = x.shape[0]
     hypo = regression
-
-    # if m is not one, n != m * n
-    if nobs != x.size:
-        raise ValueError(f"x of shape {x.shape} not understood")
 
     if x.max() == x.min():
         # the residual variance is zero, so the statistic is undefined
@@ -4163,7 +4191,13 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
     Parameters
     ----------
     x : array_like, 1d
-        The data series to test.
+        The data series to test. A column with shape (nobs, 1) is also
+        accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series.
     store : bool, optional
         If True, then a result instance is returned additionally to
         the RUR statistic (default is False).
@@ -4236,15 +4270,11 @@ def range_unit_root_test(x, store=False, *, result_object: bool | None = None):
         tests: robust against nonlinearities, error distributions, structural breaks
         and outliers. Journal of Time Series Analysis, 27 (4): 545-576.
     """
-    x = array_like(x, "x")
+    x = array_like(x, "x", ndim=1)
     store = bool_like(store, "store")
     result_object = bool_like(result_object, "result_object", optional=True)
 
     nobs = x.shape[0]
-
-    # if m is not one, n != m * n
-    if nobs != x.size:
-        raise ValueError(f"x of shape {x.shape} not understood")
 
     # Table from [1] has been replicated using 200,000 samples
     # Critical values for new n_obs values have been identified
