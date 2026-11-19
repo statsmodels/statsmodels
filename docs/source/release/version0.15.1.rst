@@ -51,6 +51,7 @@ Deprecations
 Behavior changes
 ----------------
 
+- ``MixedLM.score_sqrt`` is private.
 - ``OaxacaResults.summary()`` returns the summary as a string instead of
   printing it and returning ``None``. Use ``print(result.summary())`` to
   display it. :issue:`7733`, :pr:`10491`
@@ -702,6 +703,8 @@ Mixed models and imputation
 - ``MixedLM.fit_regularized`` failed for models with pandas data, for example
   from a formula: ``summary`` raised a ``KeyError`` and, with pandas 3,
   ``fit_regularized`` itself failed. :issue:`8902`, :pr:`10465`
+- ``MixedLM.fit`` often stopped short of the optimum, because ``MixedLM.score``
+  had a sign error.
 - ``MixedLMResults.bse_re`` raised a ``ValueError`` for models with variance
   components and pandas data, for example from a formula. :pr:`10702`
 - ``MICE.combine`` failed for results of models that do not have a
