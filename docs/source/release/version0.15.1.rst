@@ -1055,6 +1055,12 @@ Statistics and tests
 - ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
   from SciPy if no ratio attains the requested power. It returns ``nan`` with
   a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`
+- ``cohens_kappa`` returns the same results for all tables in which a rater
+  uses a single category: kappa is 0, its standard errors and confidence
+  limits are 0, and the z statistic and the p-values are nan. If both raters
+  use the same single category, all statistics are nan. Before, the results
+  depended on rounding errors, and NumPy emitted a ``RuntimeWarning``.
+  :issue:`5530`, :pr:`10709`
 - ``eval_measures.iqr`` returned 0 if ``x1`` had length 1 along ``axis`` and
   was broadcast against a longer ``x2``, raised an ``IndexError`` for a scalar
   ``x1``, and raised a ``ValueError`` with ``axis=None`` for inputs of
