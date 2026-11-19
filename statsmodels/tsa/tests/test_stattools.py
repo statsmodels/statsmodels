@@ -2036,6 +2036,95 @@ def test_ccf_nlags_validation():
     assert ccf(x, y, nlags=100).shape == (100,)
 
 
+def _ccf_input(form, a):
+    if form == "column":
+        return a[:, None]
+    if form == "dataframe":
+        return pd.DataFrame({"a": a})
+    if form == "list":
+        return a.tolist()
+    if form == "series":
+        return pd.Series(a)
+    return a
+
+
+# Pairs of (x form, y form): each form on its own, and a column mixed with
+# a 1-D series
+CCF_INPUT_FORMS = [
+    ("column", "column"),
+    ("dataframe", "dataframe"),
+    ("list", "list"),
+    ("series", "series"),
+    ("column", "ndarray"),
+    ("ndarray", "dataframe"),
+]
+
+
+@pytest.fixture
+def ccf_data():
+    rng = np.random.default_rng(10795)
+    # y is shorter than x, so the adjusted denominators depend on len(y)
+    return rng.standard_normal(120), rng.standard_normal(100)
+
+
+@pytest.mark.parametrize("x_form, y_form", CCF_INPUT_FORMS)
+@pytest.mark.parametrize("adjusted", [True, False])
+def test_ccovf_input_forms(ccf_data, x_form, y_form, adjusted):
+    # An (nobs, 1) column is the same series as the 1-D array. Columns for
+    # both x and y used to give an (nobs, nobs) array, or an (nobs, 1) one
+    # with adjusted=False.
+    x, y = ccf_data
+    expected = ccovf(x, y, adjusted=adjusted)
+    result = ccovf(_ccf_input(x_form, x), _ccf_input(y_form, y), adjusted=adjusted)
+    assert result.shape == (120,)
+    assert_allclose(result, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("x_form, y_form", CCF_INPUT_FORMS)
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("nlags", [None, 5])
+def test_ccf_input_forms(ccf_data, x_form, y_form, adjusted, nlags):
+    x, y = ccf_data
+    x_in, y_in = _ccf_input(x_form, x), _ccf_input(y_form, y)
+    n_ret = 120 if nlags is None else nlags
+    kwargs = {"adjusted": adjusted, "nlags": nlags}
+
+    expected = ccf(x, y, **kwargs)
+    result = ccf(x_in, y_in, **kwargs)
+    assert result.shape == (n_ret,)
+    assert_allclose(result, expected, rtol=1e-12)
+
+    res_obj = ccf(x_in, y_in, result_object=True, **kwargs)
+    assert res_obj.confint is None
+    assert_allclose(res_obj.ccf, expected, rtol=1e-12)
+
+    expected_alpha = ccf(x, y, alpha=0.05, **kwargs)
+    res_alpha = ccf(x_in, y_in, alpha=0.05, **kwargs)
+    assert res_alpha.ccf.shape == (n_ret,)
+    assert_allclose(res_alpha.ccf, expected_alpha.ccf, rtol=1e-12)
+    assert res_alpha.confint.shape == (n_ret, 2)
+    assert_allclose(res_alpha.confint, expected_alpha.confint, rtol=1e-12)
+
+
+@pytest.mark.parametrize("func", [ccf, ccovf])
+@pytest.mark.parametrize("bad", ["x", "y", "both"])
+@pytest.mark.parametrize("form", ["ndarray", "dataframe"])
+@pytest.mark.parametrize("adjusted", [True, False])
+def test_ccf_ccovf_two_columns_raises(func, bad, form, adjusted):
+    # With adjusted=False, (nobs, 2) arrays for both x and y used to return
+    # an (nobs, 3) array without an error
+    rng = np.random.default_rng(10796)
+    two = rng.standard_normal((50, 2))
+    if form == "dataframe":
+        two = pd.DataFrame(two, columns=["a", "b"])
+    one = rng.standard_normal(50)
+    x = one if bad == "y" else two
+    y = one if bad == "x" else two
+    name = "y" if bad == "y" else "x"
+    with pytest.raises(ValueError, match=f"{name} is required to have ndim 1"):
+        func(x, y, adjusted=adjusted)
+
+
 @pytest.mark.smoke
 @pytest.mark.slow
 def test_arma_order_select_ic():
@@ -3637,11 +3726,9 @@ def test_ccf_constant(
 @pytest.mark.parametrize(
     "shape_x, shape_y, match",
     [
-        ((20, 1), (20,), "same dimensionality"),
-        ((20, 2), (20,), "same dimensionality"),
-        ((20,), (20, 1), "same dimensionality"),
-        ((20,), (20, 2), "same dimensionality"),
-        ((20, 2), (20, 2), "broadcast"),
+        ((20, 2), (20,), "x is required to have ndim 1"),
+        ((20,), (20, 2), "y is required to have ndim 1"),
+        ((20, 2), (20, 2), "x is required to have ndim 1"),
     ],
 )
 @pytest.mark.parametrize(
@@ -3659,6 +3746,32 @@ def test_ccf_constant_invalid_shape_raises(
         y = np.full(shape_y, 2.5)
     with pytest.raises(ValueError, match=match):
         ccf(x, y)
+
+
+@pytest.mark.parametrize(
+    "shape_x, shape_y", [((20, 1), (20,)), ((20,), (20, 1)), ((20, 1), (20, 1))]
+)
+@pytest.mark.parametrize(
+    "constant_x, constant_y", [(True, False), (False, True), (True, True)]
+)
+def test_ccf_constant_column(shape_x, shape_y, constant_x, constant_y):
+    # A constant (nobs, 1) column gives NaN, as a constant 1-D series does
+    x = np.arange(float(np.prod(shape_x))).reshape(shape_x)
+    y = np.arange(float(np.prod(shape_y))).reshape(shape_y)
+    if constant_x:
+        x = np.full(shape_x, 2.5)
+    if constant_y:
+        y = np.full(shape_y, 2.5)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        c = ccf(x, y)
+        res_c = ccf(x, y, alpha=0.05)
+    assert c.shape == (20,)
+    assert np.all(np.isnan(c))
+    assert res_c.ccf.shape == (20,)
+    assert np.all(np.isnan(res_c.ccf))
+    assert res_c.confint.shape == (20, 2)
+    assert np.all(np.isnan(res_c.confint))
 
 
 @pytest.mark.parametrize("method", PACF_METHODS)
