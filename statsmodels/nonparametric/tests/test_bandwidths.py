@@ -144,7 +144,7 @@ def _isj_data(name):
 
 
 # Reference values are from botev() in the R package provenance 4.4, which
-# uses 512 bins. nile and sunspots have ties.
+# uses 512 bins. All data except for xi have ties.
 #
 # library(provenance)
 # xi <- read.csv("nonparametric/tests/Xi_test_data.csv", header=FALSE)[, 1]
