@@ -1426,7 +1426,7 @@ RF_CONTAINERS = {
 @pytest.mark.parametrize("init", [None, RF_INIT], ids=["zero-init", "init"])
 @pytest.mark.parametrize("container", list(RF_CONTAINERS))
 def test_recursive_filter_containers(container, init):
-    # GH: an (n, 1) column, documented as accepted, was filtered along the
+    # GH10810: an (n, 1) column, documented as accepted, was filtered along the
     # wrong axis, so no recursion was applied and the input came back
     # unchanged; with init it raised. It must give the 1d values, and keep
     # the container and shape of the input.

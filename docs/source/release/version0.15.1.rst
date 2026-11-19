@@ -266,6 +266,13 @@ Behavior changes
   ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
   ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
   :pr:`10792`
+- :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` filters an
+  (n, 1) column, such as a one-column ``DataFrame``, along its rows and
+  returns the values of the 1-D series. Before, no recursion was applied to a
+  column, which was returned unchanged without an error, and ``init`` raised a
+  ``ValueError``. Input with more than one column, which was filtered across
+  the columns of each row, and input with more than two dimensions now raise a
+  ``ValueError``. Results for 1-D input are unchanged. :pr:`10810`
 
 New Features and Enhancements
 =============================
