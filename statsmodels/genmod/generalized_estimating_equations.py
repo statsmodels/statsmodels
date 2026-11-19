@@ -394,10 +394,22 @@ _gee_fit_doc = """
     and Neerchal, 2003) is ``c * cov_robust + delta * xi * cov_naive``
     with ``c = (N - 1) / (N - p) * K / (K - 1)``, ``delta = p / (K - p)``
     if ``K > (d + 1) p`` and ``1 / d`` otherwise, and
-    ``xi = max(r, trace(cov_naive M) / p)``, where ``N`` is the number of
-    observations, ``K`` the number of groups, ``p`` the number of
-    parameters, ``M`` the center of the robust covariance, ``d = 2`` and
-    ``r = 1``. These follow the R packages saws and geesmv.
+    ``xi = max(r, trace(cov_naive^{-1} cov_robust) / p)``, where ``N`` is
+    the number of observations, ``K`` the number of groups and ``p`` the
+    number of parameters. Here ``cov_robust`` is the uncorrected robust
+    covariance and ``c`` multiplies only the robust term, not the trace
+    in ``xi``. ``N`` is the number of rows of the data, also if weights
+    are used, and for `OrdinalGEE` and `NominalGEE` the number of rows
+    after the expansion to binary indicators. The formulas are those of
+    the two papers, with the constants ``b = 0.75``, ``d = 2`` and
+    ``r = 1``, which cannot be changed.
+
+    ``cov_type="fay_graubard"`` and ``"morel_bokossa_neerchal"`` have
+    been compared with the results of the R packages saws and geesmv for
+    `GEE` with the Gaussian, Poisson and binomial families and the
+    independence and exchangeable working correlations. `OrdinalGEE` and
+    `NominalGEE` accept both values and return covariances, which have
+    not been compared with another implementation.
 
     References
     ----------
@@ -415,9 +427,9 @@ _gee_fit_doc = """
     MP Fay and BI Graubard (2001). Small-sample adjustments for Wald-type
     tests using sandwich estimators. Biometrics, 57(4), 1198-1206.
 
-    Morel, Bokossa and Neerchal (2003). Small sample correction for the
-    variance of GEE estimators. Biometrical Journal, 45(4), 395-409.
-    doi:10.1002/bimj.200390021
+    JG Morel, MC Bokossa and NK Neerchal (2003). Small sample correction
+    for the variance of GEE estimators. Biometrical Journal, 45(4),
+    395-409. doi:10.1002/bimj.200390021
 """
 
 _gee_results_doc = """

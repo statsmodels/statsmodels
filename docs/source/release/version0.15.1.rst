@@ -364,9 +364,9 @@ New functions and methods
   ``"bias_reduced"`` (Mancl-DeRouen) uses the inverse. :issue:`1183`,
   :pr:`10781`
 - Add ``cov_type="fay_graubard"`` and ``cov_type="morel_bokossa_neerchal"``
-  to ``GEE.fit``, the Fay-Graubard and Morel-Bokossa-Neerchal small-sample
-  corrections of the robust covariance, with ``b = 0.75`` and ``d = 2``,
-  ``r = 1``, the defaults of the R packages saws and geesmv.
+  to ``GEE.fit``, the small-sample corrections of the robust covariance of
+  Fay and Graubard (2001) and Morel, Bokossa and Neerchal (2003), with the
+  constants ``b = 0.75``, ``d = 2`` and ``r = 1``. :issue:`1183`,
   :pr:`10794`
 
 Performance
