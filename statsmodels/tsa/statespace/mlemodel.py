@@ -1683,7 +1683,14 @@ class MLEModel(tsbase.TimeSeriesModel):
             )
 
         if not transformed:
-            score = np.dot(transform_score, score)
+            # Chain rule: the score with respect to the unconstrained
+            # parameters u is J' g, where g is the score with respect to the
+            # constrained parameters and J[i, j] = d constrained_i / d u_j.
+            # Fixed parameters are set after the transformation, so their
+            # rows of J are zero.
+            if self._has_fixed_params and not includes_fixed:
+                transform_score[self._fixed_params_index] = 0
+            score = np.dot(transform_score.T, score)
 
         if self._has_fixed_params and not includes_fixed:
             score = score[self._free_params_index]

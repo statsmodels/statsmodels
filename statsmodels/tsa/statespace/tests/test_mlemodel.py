@@ -20,7 +20,7 @@ import pandas as pd
 import pytest
 from scipy.linalg import solve_discrete_lyapunov
 
-from statsmodels.datasets import nile
+from statsmodels.datasets import macrodata, nile
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.statespace import (
@@ -483,6 +483,138 @@ def test_score_analytic_ar1():
         assert_allclose(
             mod._hessian_finite_difference(params) * 2, analytic_hessian, atol=1e-1
         )
+
+
+def _score_model(name):
+    data = macrodata.load_pandas().data
+    infl = data["infl"].to_numpy()
+    levels = data[["realgdp", "realcons", "realinv"]].to_numpy()
+    growth = 100 * np.diff(np.log(levels), axis=0)
+    if name == "sarimax_arma21":
+        return sarimax.SARIMAX(infl, order=(2, 0, 1), trend="c")
+    elif name == "sarimax_seasonal":
+        return sarimax.SARIMAX(infl, order=(1, 0, 0), seasonal_order=(2, 0, 0, 4))
+    elif name == "var1":
+        return varmax.VARMAX(growth[:, :2], order=(1, 0), trend="c")
+    elif name == "var2":
+        return varmax.VARMAX(growth[:, :2], order=(2, 0), trend="c")
+    elif name == "dynamic_factor":
+        return dynamic_factor.DynamicFactor(growth, k_factors=1, factor_order=2)
+    else:  # "sarimax_ar1"
+        return sarimax.SARIMAX(infl, order=(1, 0, 0))
+
+
+def _centered_gradient(func, x):
+    # Centered finite differences, with the step that balances the truncation
+    # and the rounding errors
+    step = np.finfo(float).eps ** (1 / 3) * np.maximum(np.abs(x), 0.1)
+    grad = np.zeros_like(x)
+    for i in range(len(x)):
+        dx = np.zeros_like(x)
+        dx[i] = step[i]
+        grad[i] = (func(x + dx) - func(x - dx)) / (2 * step[i])
+    return grad
+
+
+_score_methods = [
+    pytest.param("approx", True, False, id="approx-cs"),
+    pytest.param("approx", False, False, id="approx-fd"),
+    pytest.param("approx", False, True, id="approx-fd-centered"),
+    pytest.param("harvey", True, False, id="harvey-cs"),
+    pytest.param("harvey", False, False, id="harvey-fd"),
+]
+
+
+@pytest.mark.parametrize("method, approx_complex_step, approx_centered", _score_methods)
+@pytest.mark.parametrize(
+    "name",
+    ["sarimax_arma21", "sarimax_seasonal", "var2", "dynamic_factor", "sarimax_ar1"],
+)
+def test_score_untransformed(name, method, approx_complex_step, approx_centered):
+    # The score with respect to the unconstrained parameters u is J' g, where g
+    # is the score with respect to the constrained parameters and J is the
+    # Jacobian of the transformation. It was J g, which is wrong unless J is
+    # symmetric. In the autoregressive parts of the first four models it is
+    # not; in the AR(1) it is diagonal. The reference is the gradient of the
+    # loglikelihood as a function of u, at a point away from the optimum.
+    mod = _score_model(name)
+    uparams = mod.untransform_params(mod.start_params) + 0.1
+    actual = mod.score(
+        uparams,
+        transformed=False,
+        method=method,
+        approx_complex_step=approx_complex_step,
+        approx_centered=approx_centered,
+    )
+    desired = _centered_gradient(
+        lambda params: mod.loglike(params, transformed=False), uparams
+    )
+    # The errors of numerical derivatives scale with the largest element of
+    # the gradient, not with each element
+    assert_allclose(actual, desired, rtol=1e-5, atol=1e-4 * np.max(np.abs(desired)))
+
+
+@pytest.mark.parametrize("method, approx_complex_step, approx_centered", _score_methods)
+@pytest.mark.parametrize(
+    "name, includes_fixed",
+    [("sarimax_arma21", False), ("var1", False), ("var1", True)],
+)
+def test_score_untransformed_fixed_params(
+    name, includes_fixed, method, approx_complex_step, approx_centered
+):
+    # Fixed parameters are set after the transformation, so that they do not
+    # depend on the free parameters, unless `includes_fixed` is True, when all
+    # of the parameters passed are transformed. In the VAR(1), the transformed
+    # autoregressive coefficients depend on the error covariance, so that the
+    # rows of J of the fixed coefficients must be left out.
+    mod = _score_model(name)
+    if name == "sarimax_arma21":
+        fixed = ["ma.L1"]
+    else:
+        fixed = [param for param in mod.param_names if param.startswith("L1.")]
+    start_params = dict(zip(mod.param_names, mod.start_params, strict=True))
+    uparams = mod.untransform_params(mod.start_params) + 0.1
+    if not includes_fixed:
+        free = [i for i, param in enumerate(mod.param_names) if param not in fixed]
+        uparams = uparams[free]
+
+    with mod.fix_params({param: start_params[param] for param in fixed}):
+        actual = mod.score(
+            uparams,
+            transformed=False,
+            includes_fixed=includes_fixed,
+            method=method,
+            approx_complex_step=approx_complex_step,
+            approx_centered=approx_centered,
+        )
+        desired = _centered_gradient(
+            lambda params: mod.loglike(
+                params, transformed=False, includes_fixed=includes_fixed
+            ),
+            uparams,
+        )
+    # The errors of numerical derivatives scale with the largest element of
+    # the gradient, not with each element
+    assert_allclose(actual, desired, rtol=1e-5, atol=1e-4 * np.max(np.abs(desired)))
+
+
+@pytest.mark.parametrize("method", ["bfgs", "lbfgs"])
+def test_fit_untransformed_score_optimum(method):
+    # With the wrong score, BFGS and L-BFGS stopped far from the optimum.
+    # Nelder-Mead, which does not use the score, is the reference, with tight
+    # tolerances. BFGS and L-BFGS stop when the score is below their default
+    # tolerances, which leaves errors of about 1e-4 in the parameters. The
+    # loglikelihood is flat at the optimum, so that its error is quadratic in
+    # those and much smaller.
+    mod = _score_model("sarimax_arma21")
+    desired = mod.fit(
+        method="nm", maxiter=20000, maxfun=40000, xtol=1e-10, ftol=1e-12, disp=0
+    )
+    res = mod.fit(method=method, optim_score="approx", disp=0)
+    assert desired.mle_retvals["converged"]
+    assert res.mle_retvals["converged"]
+    assert_allclose(res.llf, desired.llf, rtol=1e-8)
+    assert_allclose(res.params, desired.params, rtol=1e-3)
 
 
 def test_cov_params():
