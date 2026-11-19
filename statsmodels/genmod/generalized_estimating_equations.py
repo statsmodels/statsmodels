@@ -1337,6 +1337,12 @@ class GEE(GLM):
         """Mancl-DeRouen ("md") or Kauermann-Carroll ("kc") covariance."""
 
         cov_naive = cov_naive / self.scaling_factor
+        if not np.isfinite(cov_naive).all():
+            name = {"md": "bias_reduced", "kc": "kauermann_carroll"}[method]
+            raise ValueError(
+                f"The covariance of the parameters is not finite, so the "
+                f'leverages needed by cov_type="{name}" cannot be computed.'
+            )
         endog = self.endog_li
         exog = self.exog_li
         varfunc = self.family.variance
