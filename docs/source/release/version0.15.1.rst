@@ -158,7 +158,13 @@ Behavior changes
   initialization raise a ``LinAlgError`` if a parameter is fixed at a unit
   root, for example with ``fix_params``, instead of returning results with an
   ``llf`` of 0.0 that were computed from an initial state covariance with
-  negative variances. :issue:`5459`, :pr:`10747`
+  negative variances. Loglikelihoods at parameters with a valid stationary
+  covariance are unchanged, but the fit of a very ill-conditioned model, whose
+  optimizer used to survive negative covariances along its path, can end at a
+  different optimum. For example, a ``SARIMAX`` model with ``order=(15, 0, 0)``
+  and ``trend="c"`` for ``np.linspace(0, 2 * np.pi, 1000)`` ends at an ``llf``
+  of 1667.85 instead of 6835.06.
+  :issue:`5459`, :pr:`10747`
 - ``powerdiscrepancy`` with ``lambd=0`` (``"loglikeratio"``, the default, which
   is the G-test) returns valid test statistics when observed counts contain
   zeros, evaluating :math:`x \ln(x)` to 0, instead of returning
@@ -932,6 +938,10 @@ Time series analysis
   This is now detected: ``filter`` raises a ``LinAlgError`` saying that the
   model is not stationary to numerical precision, and ``MLEModel.loglike``
   returns ``-inf``, as for the unit roots that already raised (:pr:`10611`).
+  Unit roots of this kind are rejected, and explosive roots farther from the
+  unit circle are not changed: for an AR(1) model the check applies up to a
+  coefficient of about ``1 + 6e-5``, while coefficients of ``1 + 1e-4`` or
+  ``1.2`` still give a negative initial variance and an ``llf`` of 0.0.
   :issue:`5459`, :pr:`10747`
 - ``IRAnalysis.plot`` and ``IRAnalysis.plot_cum_effects`` ignored the
   argument ``plot_params``. It is now applied to the response curves, so that
