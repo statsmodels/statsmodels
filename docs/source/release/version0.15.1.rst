@@ -47,6 +47,14 @@ Deprecations
   it will be removed in statsmodels 0.17.0. The value of ``which`` is case
   sensitive and ``exog`` can be a list. :issue:`8562`, :pr:`10554`,
   :pr:`10555`
+- Passing a (1, n) row with n > 1 as ``x`` to
+  :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` is
+  deprecated, since ``x`` must be 1-D or an (n, 1) column. The row is still
+  filtered as a 1-D series of n observations and returned with shape (1, n),
+  and ``init`` now works with it instead of raising a ``ValueError``. Passing
+  a row now raises a ``FutureWarning``, and it will raise a ``ValueError`` in
+  statsmodels 0.17.0. Pass a 1-D array or an (n, 1) column instead.
+  :pr:`10810`
 
 Behavior changes
 ----------------
@@ -270,9 +278,10 @@ Behavior changes
   (n, 1) column, such as a one-column ``DataFrame``, along its rows and
   returns the values of the 1-D series. Before, no recursion was applied to a
   column, which was returned unchanged without an error, and ``init`` raised a
-  ``ValueError``. Input with more than one column, which was filtered across
-  the columns of each row, and input with more than two dimensions now raise a
-  ``ValueError``. Results for 1-D input are unchanged. :pr:`10810`
+  ``ValueError``. Input with more than one row and more than one column, which
+  was filtered across the columns of each row, and input with more than two
+  dimensions now raise a ``ValueError``. Results for 1-D input are unchanged.
+  :pr:`10810`
 
 New Features and Enhancements
 =============================

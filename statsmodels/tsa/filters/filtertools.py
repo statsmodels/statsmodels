@@ -15,6 +15,7 @@ Author: Josef-pktd
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
+import warnings
 
 import numpy as np
 from scipy import signal
@@ -230,17 +231,26 @@ def recursive_filter(x, ar_coeff, init=None):
     Parameters
     ----------
     x : array_like
-        Time-series data, either 1d with shape (n,) or a single column with
+        Time-series data, either 1-D with shape (n,) or a single column with
         shape (n, 1), such as a one-column DataFrame. Both are filtered along
         the n observations.
 
         .. versionchanged:: 0.15.1
 
-           An (n, 1) column is now filtered along its rows, the same as 1d
+           An (n, 1) column is now filtered along its rows, the same as 1-D
            input. Previously no recursion was applied, so the column was
-           returned unchanged, and ``init`` raised a ValueError. Input with
-           more than one column, or with more than two dimensions, now
-           raises a ValueError.
+           returned unchanged. ``init`` now works with an (n, 1) column and
+           a (1, n) row, where it raised a ValueError. Other input with more
+           than one column, or with more than two dimensions, now raises a
+           ValueError.
+
+        .. deprecated:: 0.15.1
+
+           A (1, n) row with n > 1 is filtered along the row, as a 1-D
+           series of n observations, and returned with shape (1, n). ``x``
+           must have the correct shape, 1-D or an (n, 1) column, so a row
+           now warns and will raise a ValueError in statsmodels 0.17.0.
+           Pass the row as a 1-D array instead.
     ar_coeff : array_like
         AR coefficients in reverse time order. See Notes for details.
     init : array_like, optional
@@ -250,16 +260,22 @@ def recursive_filter(x, ar_coeff, init=None):
     Returns
     -------
     ndarray, Series or DataFrame
-        The filtered series, with the same shape as ``x``: (n,) for 1d input
-        and (n, 1) for an (n, 1) column. A Series input returns a Series and
-        a one-column DataFrame returns a one-column DataFrame, each with the
-        index of ``x``.
+        The filtered series, with the same shape as ``x``: (n,) for 1-D
+        input, (n, 1) for an (n, 1) column and (1, n) for a (1, n) row. A
+        Series input returns a Series and a DataFrame returns a DataFrame,
+        each with the index and name or columns of ``x``.
 
     Raises
     ------
     ValueError
-        If ``x`` has more than one column or more than two dimensions, or if
-        ``init`` and ``ar_coeff`` have different lengths.
+        If ``x`` is not 1-D, an (n, 1) column or a (1, n) row, or if ``init``
+        and ``ar_coeff`` have different lengths.
+
+    Warns
+    -----
+    FutureWarning
+        If ``x`` is a (1, n) row, which is deprecated. A (1, 1) array is an
+        (n, 1) column with n = 1 and does not warn.
 
     Notes
     -----
@@ -272,15 +288,28 @@ def recursive_filter(x, ar_coeff, init=None):
     """
     pw = PandasWrapper(x)
     x = array_like(x, "x", maxdim=2)
-    is_column = x.ndim == 2
-    if is_column:
-        if x.shape[1] != 1:
-            raise ValueError(
-                "x must be 1d or a single column with shape (n, 1), but has "
-                f"shape {x.shape}. Filter each column separately."
+    is_column = is_row = False
+    if x.ndim == 2:
+        if x.shape[1] == 1:
+            # lfilter works along the last axis, so filter the column as 1-D
+            is_column = True
+            x = x[:, 0]
+        elif x.shape[0] == 1:
+            warnings.warn(
+                f"x must be 1-D or an (n, 1) column, but has shape {x.shape}. "
+                "A (1, n) row is filtered as a 1-D series of n observations, "
+                "but this is deprecated and will raise a ValueError in "
+                "statsmodels 0.17.0. Pass the row as a 1-D array instead.",
+                FutureWarning,
+                stacklevel=2,
             )
-        # lfilter works along the last axis, so filter the column as 1d
-        x = x[:, 0]
+            is_row = True
+            x = x[0]
+        else:
+            raise ValueError(
+                f"x must be 1-D or an (n, 1) column, but has shape {x.shape}. "
+                "Filter each column separately."
+            )
     ar_coeff = array_like(ar_coeff, "ar_coeff")
 
     if init is not None:  # integer init are treated differently in lfiltic
@@ -301,6 +330,8 @@ def recursive_filter(x, ar_coeff, init=None):
         result = y
     if is_column:
         result = result[:, None]
+    elif is_row:
+        result = result[None, :]
 
     return pw.wrap(result)
 
