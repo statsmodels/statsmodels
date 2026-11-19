@@ -917,6 +917,10 @@ def unintegrate_levels(x, d):
     """
     Returns the successive differences needed to unintegrate the series
 
+    .. deprecated:: 0.15.1
+        ``unintegrate_levels`` has no callers in statsmodels. It will be
+        removed after statsmodels 0.17 is released.
+
     Parameters
     ----------
     x : array_like
@@ -934,6 +938,15 @@ def unintegrate_levels(x, d):
     --------
     unintegrate
     """
+    warnings.warn(
+        "statsmodels.tsa.tsatools.unintegrate_levels is deprecated and is not "
+        "exported from any public statsmodels API; it has no callers in "
+        "statsmodels. It will be removed after statsmodels 0.17 is released. "
+        "If you rely on this function, please open an issue at "
+        "https://github.com/statsmodels/statsmodels/issues.",
+        FutureWarning,
+        stacklevel=2,
+    )
     d = int_like(d, "d")
     x = x[:d]
     return np.asarray([np.diff(x, d - i)[0] for i in range(d, 0, -1)])
@@ -943,13 +956,18 @@ def unintegrate(x, levels):
     """
     After taking n-differences of a series, return the original series
 
+    .. deprecated:: 0.15.1
+        ``unintegrate`` has no callers in statsmodels. It will be removed
+        after statsmodels 0.17 is released.
+
     Parameters
     ----------
     x : array_like
         The n-th differenced series
     levels : sequence of float
-        The first-value in each differenced series, for
-        [first-difference, second-difference, ..., n-th difference]
+        The first value of each differenced series ``np.diff(y, k)`` of the
+        original series ``y``, for k = 0, 1, ..., n - 1, as returned by
+        `unintegrate_levels`.
 
     Returns
     -------
@@ -965,10 +983,23 @@ def unintegrate(x, levels):
     >>> unintegrate(np.diff(x, 2), levels)
     array([  1.,   3.,   9.,  19.,   8.])
     """
+    warnings.warn(
+        "statsmodels.tsa.tsatools.unintegrate is deprecated and is not "
+        "exported from any public statsmodels API; it has no callers in "
+        "statsmodels. It will be removed after statsmodels 0.17 is released. "
+        "If you rely on this function, please open an issue at "
+        "https://github.com/statsmodels/statsmodels/issues.",
+        FutureWarning,
+        stacklevel=2,
+    )
+    return _unintegrate(x, levels)
+
+
+def _unintegrate(x, levels):
     levels = list(levels)[:]  # copy
     if len(levels) > 1:
         x0 = levels.pop(-1)
-        return unintegrate(np.cumsum(np.r_[x0, x]), levels)
+        return _unintegrate(np.cumsum(np.r_[x0, x]), levels)
     x0 = levels[0]
     return np.cumsum(np.r_[x0, x])
 

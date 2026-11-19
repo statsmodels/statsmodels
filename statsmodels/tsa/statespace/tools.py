@@ -5,6 +5,8 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
 from scipy.linalg import solve_sylvester
@@ -122,6 +124,11 @@ def set_mode(compatibility=None):
     """
     Set the compatibility mode
 
+    .. deprecated:: 0.15.1
+        ``set_mode`` has had no effect since compatibility mode was removed
+        in statsmodels 0.10, and nothing in statsmodels calls it. It will be
+        removed after statsmodels 0.17 is released.
+
     Parameters
     ----------
     compatibility : bool, optional
@@ -134,6 +141,16 @@ def set_mode(compatibility=None):
     NotImplementedError
         If `compatibility` is truthy.
     """
+    warnings.warn(
+        "statsmodels.tsa.statespace.tools.set_mode is deprecated and is not "
+        "exported from any public statsmodels API; it has had no effect "
+        "since compatibility mode was removed in statsmodels 0.10. It will "
+        "be removed after statsmodels 0.17 is released. If you rely on this "
+        "function, please open an issue at "
+        "https://github.com/statsmodels/statsmodels/issues.",
+        FutureWarning,
+        stacklevel=2,
+    )
     if compatibility:
         raise NotImplementedError("Compatibility mode is only available in"
                                   " statsmodels <= 0.9")

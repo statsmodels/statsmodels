@@ -994,3 +994,20 @@ def test_missing_index_dtype(dtype):
     expected = tools.copy_index_matrix(a, b, mask.astype(np.intc), True)
     actual = tools.copy_index_matrix(a, b, mask.astype(dtype), True)
     assert_equal(actual, expected)
+
+
+@pytest.mark.parametrize(
+    "kwargs", [{}, {"compatibility": None}, {"compatibility": False}]
+)
+def test_set_mode_off(kwargs):
+    with pytest.warns(FutureWarning, match=r"tools\.set_mode is deprecated"):
+        assert tools.set_mode(**kwargs) is None
+
+
+@pytest.mark.parametrize("compatibility", [True, 1])
+def test_set_mode_compatibility_raises(compatibility):
+    with (
+        pytest.warns(FutureWarning, match=r"tools\.set_mode is deprecated"),
+        pytest.raises(NotImplementedError, match=r"statsmodels <= 0\.9"),
+    ):
+        tools.set_mode(compatibility)
