@@ -323,7 +323,7 @@ _gee_fit_doc = """
         .. versionchanged:: 0.15.1
            Added "kauermann_carroll", "fay_graubard" and
            "morel_bokossa_neerchal".
-           
+
     ddof_scale : int, optional
         The scale parameter is estimated as the sum of squared
         Pearson residuals divided by `N - ddof_scale`, where N
