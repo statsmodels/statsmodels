@@ -1253,6 +1253,14 @@ Duration models
   of the 12 distinct uncensored times 1, ..., 12 is 7 instead of 6. At such a
   tie the next event time is returned, unlike R, which returns the midpoint of
   the two event times. :pr:`10648`
+- ``SurvfuncRight.simultaneous_cb`` used the number at risk at each time
+  instead of the total sample size ``n`` in the Hall-Wellner band of Hall and
+  Wellner (1980) and Klein and Moeschberger (2003), eqs. 4.4.4-4.4.5, and with
+  ``freq_weights`` it used Tsiatis' variance instead of the Greenwood
+  variance. The band was too wide at early times and too narrow in the tail.
+  All limits change. They agree with the R package ``km.ci`` at
+  ``k = 1.3581``, and with ``freq_weights`` they equal the band of the data
+  with each row repeated by its weight. :pr:`10649`
 - ``PHReg`` warns with a ``ValueWarning`` for unknown keyword arguments. Before, they
   were ignored silently, for example ``weights``, which ``PHReg`` does not support,
   and ``event``, which is the name of ``status`` in ``lifelines``. :issue:`7741`,
