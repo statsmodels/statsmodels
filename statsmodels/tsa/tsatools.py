@@ -70,6 +70,12 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
         'trend' and 'trend_squared'.  A Series is only returned when
         ``trend='n'`` and x is a Series, since no columns are added.
 
+        .. versionchanged:: 0.15.1
+
+           With ``trend='n'``, a list or a tuple is returned as an ndarray,
+           as with the other trends. A list was returned as a list, and a
+           tuple raised an ``AttributeError``.
+
     See Also
     --------
     statsmodels.tools.tools.add_constant
@@ -89,7 +95,10 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
     # TODO: could be generalized for trend of aribitrary order
     columns = ["const", "trend", "trend_squared"]
     if trend == "n":
-        return x.copy()
+        if _is_using_pandas(x, None):
+            return x.copy()
+        # array_like input is returned as an array, as for the other trends
+        return np.asanyarray(x).copy()
     elif trend == "c":  # handles structured arrays
         columns = columns[:1]
         trendorder = 0
