@@ -1,4 +1,10 @@
-"""See statsmodels.tsa.arima.model.ARIMA and statsmodels.tsa.SARIMAX"""
+"""
+See statsmodels.tsa.arima.model.ARIMA and statsmodels.tsa.SARIMAX
+
+ARMA and ARIMA were removed from this module in statsmodels 0.13, and the
+classes left here only raise NotImplementedError. This module will be
+removed after statsmodels 0.16 is released.
+"""
 
 ARIMA_DEPRECATION_ERROR = """
 statsmodels.tsa.arima_model.ARMA and statsmodels.tsa.arima_model.ARIMA have
@@ -8,6 +14,9 @@ between arima and model) and statsmodels.tsa.SARIMAX.
 statsmodels.tsa.arima.model.ARIMA makes use of the statespace framework and
 is both well tested and maintained. It also offers alternative specialized
 parameter estimators.
+
+The statsmodels.tsa.arima_model module will be removed after statsmodels
+0.16 is released.
 """
 
 
