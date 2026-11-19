@@ -256,8 +256,6 @@ def arma_pacf(ar, ma, lags=10):
     Notes
     -----
     Solves the Yule-Walker equation for each lag order up to ``lags``.
-
-    not tested/checked yet
     """
     # TODO: Should use rank 1 inverse update
     apacf = np.zeros(lags)
@@ -299,7 +297,12 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
 
     Notes
     -----
-    Normalization ?
+    The spectral density is computed as
+    ``abs(ma(z)) ** 2 / abs(ar(z)) ** 2 / sqrt(2 * pi)`` with
+    ``z = exp(-1j * w)``, where ``ar(z)`` and ``ma(z)`` are the lag
+    polynomials. This assumes a unit innovation variance and divides by
+    ``sqrt(2 * pi)``, while the usual definition of the spectral density
+    divides by ``2 * pi``.
 
     This uses signal.freqz, which does not use fft. There is a fft version
     somewhere.
@@ -631,8 +634,9 @@ def deconvolve(num, den, n=None):
 
     Returns
     -------
-    quot : ndarray
-        quotient or filtered series
+    quot : ndarray or list
+        quotient or filtered series. An empty list if ``den`` is longer than
+        ``num`` and ``n`` is not given.
     rem : ndarray
         remainder
 
