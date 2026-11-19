@@ -530,8 +530,9 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     If one rater uses a single category, then kappa is 0, its standard
     errors and confidence limits are 0, and the z statistic and the p-values
-    are nan. If both raters use the same single category, then kappa and all
-    other statistics are nan.
+    are nan. If both raters use the same single category, which includes a
+    table with a single row and column, then kappa and all other statistics
+    are nan.
 
     .. versionchanged:: 0.15.1
 
@@ -551,16 +552,20 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         raise ValueError(
             f"table must be a square 2-d array, got shape {table.shape}"
         )
+    if not np.isfinite(table).all():
+        raise ValueError("table must contain only finite counts")
     agree = np.diag(table).sum()
     nobs = table.sum()
+    if not np.isfinite(nobs):
+        raise ValueError("the sum of the table must be finite")
+    if nobs == 0:
+        raise ValueError("table must have a positive number of observations")
     probs = table / nobs
     freqs = probs  # TODO: rename to use freqs instead of probs for observed
     probs_diag = np.diag(probs)
     freq_row = table.sum(1) / nobs
     freq_col = table.sum(0) / nobs
     prob_exp = freq_col * freq_row[:, None]
-    assert np.allclose(prob_exp.sum(), 1)
-    # print prob_exp.sum()
     agree_exp = np.diag(prob_exp).sum()  # need for kappa_max
     # If a rater uses a single category, then kappa and its variances are 0,
     # and if both raters use the same single category, then they are 0 / 0.
