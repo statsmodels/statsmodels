@@ -601,6 +601,68 @@ def test_cohens_kappa_same_single_category(table, wt):
         assert np.isnan(res[name]), name
 
 
+# the first row is the only one used; the first table gives exact zeros also
+# without the one category rule, the others gave rounding noise or nan in
+# the standard errors with user weights
+user_weights = {
+    "weights-1d": {"weights": [0, 1, 2]},
+    "toeplitz": {"weights": [0, 1, 4], "wt": "toeplitz"},
+    "weights-2d": {"weights": np.array([[0, 1, 2], [1, 0, 1], [2, 1, 0]])},
+}
+
+
+@pytest.mark.parametrize(
+    "kwds", list(user_weights.values()), ids=list(user_weights)
+)
+@pytest.mark.parametrize(
+    "first_row",
+    [[1, 5, 2], [1, 1, 3], [1, 2, 2], [1, 1, 1], [1, 1, 8]],
+    ids=lambda row: "-".join(map(str, row)),
+)
+def test_cohens_kappa_one_category_user_weights(first_row, kwds):
+    # user weights give the same exact result as the built-in weights
+    table = [first_row, [0, 0, 0], [0, 0, 0]]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, **kwds)
+        str(res)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    for name in names + ["kappa_low", "kappa_upp", "kappa_max"]:
+        assert_equal(res[name], 0, err_msg=name)
+    for name in ["z_value", "pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+@pytest.mark.parametrize("wt", [None, "linear"])
+def test_cohens_kappa_one_category_proportions(wt):
+    # a table of proportions: the standard error was 5e-9 instead of 0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa([[0.3, 0.7], [0, 0]], wt=wt)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    for name in names + ["kappa_low", "kappa_upp", "kappa_max"]:
+        assert_equal(res[name], 0, err_msg=name)
+    for name in ["z_value", "pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+@pytest.mark.parametrize(
+    "kwds",
+    [{}, {"weights": [0], "wt": "toeplitz"}, {"weights": np.zeros((1, 1))}],
+    ids=["simple", "toeplitz", "weights-2d"],
+)
+def test_cohens_kappa_single_cell_table(kwds):
+    # a 1 x 1 table is the same single category for both raters
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa([[5]], **kwds)
+        str(res)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    names += ["kappa_low", "kappa_upp", "kappa_max", "z_value"]
+    for name in names + ["pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
 @pytest.mark.parametrize(
     "wt, kappa, ase",
     [
