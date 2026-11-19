@@ -1664,7 +1664,7 @@ class MLEModel(tsbase.TimeSeriesModel):
             return_jacobian=not transformed,
         )
         if transformed:
-            params = out
+            params, transform_score = out, None
         else:
             params, transform_score = out
 

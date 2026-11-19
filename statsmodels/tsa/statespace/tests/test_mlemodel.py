@@ -575,7 +575,10 @@ def test_score_untransformed_fixed_params(
     start_params = dict(zip(mod.param_names, mod.start_params, strict=True))
     uparams = mod.untransform_params(mod.start_params) + 0.1
     if not includes_fixed:
-        free = [i for i, param in enumerate(mod.param_names) if param not in fixed]
+        free = np.array(
+            [i for i, param in enumerate(mod.param_names) if param not in fixed],
+            dtype=int,
+        )
         uparams = uparams[free]
 
     with mod.fix_params({param: start_params[param] for param in fixed}):
