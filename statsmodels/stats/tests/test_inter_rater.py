@@ -512,6 +512,34 @@ def test_cohens_kappa_rejects_non_square_table():
         cohens_kappa(np.ones((2, 3)))
 
 
+@pytest.mark.parametrize(
+    "table, message",
+    [
+        ([[0, 0], [0, 0]], "positive number of observations"),
+        ([[0]], "positive number of observations"),
+        ([[1, np.nan], [2, 3]], "finite counts"),
+        ([[1, np.inf], [2, 3]], "finite counts"),
+        ([[1, -np.inf], [2, 3]], "finite counts"),
+    ],
+    ids=["zeros", "zero-1x1", "nan", "inf", "neg-inf"],
+)
+@pytest.mark.parametrize("wt", [None, "linear"])
+def test_cohens_kappa_rejects_invalid_counts(table, message, wt):
+    # an all-zero table and non-finite counts used to warn about invalid
+    # divisions and then fail with an AssertionError without a message
+    with warnings.catch_warnings():
+        # the ValueError has to be raised before any value is divided
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match=message):
+            cohens_kappa(table, wt=wt)
+
+
+@pytest.mark.filterwarnings("ignore:overflow encountered")  # the sum overflows
+def test_cohens_kappa_rejects_overflowing_sum():
+    with pytest.raises(ValueError, match="sum of the table must be finite"):
+        cohens_kappa([[1e308, 1e308], [0, 0]])
+
+
 def test_fleiss_kappa_rejects_1d_table():
     # a 1-d table used to crash with a bare "not enough values to unpack"
     with pytest.raises(ValueError, match="2-d array"):
