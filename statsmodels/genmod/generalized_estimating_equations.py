@@ -379,8 +379,11 @@ _gee_fit_doc = """
     ``(I - H)^{-1/2}``. ``I - H`` is not symmetric unless the family is
     Gaussian and the working correlation is independence, and the
     principal square root is used. Its eigenvalues are positive, so the
-    root is real. Each group needs an ``O(m^3)`` matrix root, where
-    ``m`` is the group size, which can be slow for large groups.
+    root is real, unless a group has leverage 1, for example a single
+    observation with its own dummy variable. Both corrections are then
+    not defined and a ``ValueError`` is raised. Each group needs an
+    ``O(m^3)`` matrix root, where ``m`` is the group size, which can be
+    slow for large groups.
 
     ``cov_type="fay_graubard"`` (Fay and Graubard, 2001) multiplies the
     score of group ``i`` elementwise by
@@ -1345,6 +1348,18 @@ class GEE(GLM):
             hmat = np.dot(hmat, dmat.T).T
 
             f = self.weights_li[i] if self.weights is not None else 1.0
+
+            # a leverage of 1 leaves the correction undefined; the nonzero
+            # eigenvalues of hmat are those of this p x p matrix
+            lev = np.linalg.eigvals(cov_naive @ (vinv_d.T @ dmat)).real
+            if lev.max() > 1 - 1e-8:
+                name = {"md": "bias_reduced", "kc": "kauermann_carroll"}[method]
+                raise ValueError(
+                    f"Group {self.group_labels[i]} has leverage 1, for example a "
+                    f"single observation with its own dummy variable, so "
+                    f'cov_type="{name}" is not defined. Use cov_type="robust" or '
+                    f"drop the group."
+                )
 
             imh = np.eye(len(resid)) - hmat
             if method == "kc":
@@ -2487,6 +2502,10 @@ class GEEResults(GLMResults):
         """
         Get marginal effects of the fitted model
 
+        .. versionchanged:: 0.15.1
+
+           P-values and confidence intervals follow ``use_t`` of the results.
+
         Parameters
         ----------
         at : str, optional
@@ -2542,6 +2561,10 @@ class GEEResults(GLMResults):
         -----
         When using after Poisson, returns the expected number of events
         per period, assuming that the model is loglinear.
+
+        If the model was fit with ``use_t=True``, p-values and confidence
+        intervals use the t distribution with ``df_resid_inference``
+        degrees of freedom, as for the parameters.
         """
 
         if self.model.constraint is not None:
@@ -3507,6 +3530,16 @@ class GEEMargins:
     def _reset(self):
         self._cache = {}
 
+    def _dist(self):
+        # follow use_t of the results, see GEEResults.conf_int
+        if self.results.use_t:
+            return stats.t(self.results.df_resid_inference)
+        return stats.norm
+
+    @property
+    def _stat_name(self):
+        return "t" if self.results.use_t else "z"
+
     @cache_readonly
     def tvalues(self):
         _check_at_is_all(self.margeff_options)
@@ -3533,8 +3566,8 @@ class GEEMargins:
         names = [
             _transform_names[self.margeff_options["method"]],
             "Std. Err.",
-            "z",
-            "Pr(>|z|)",
+            self._stat_name,
+            f"Pr(>|{self._stat_name}|)",
             "Conf. Int. Low",
             "Cont. Int. Hi.",
         ]
@@ -3555,7 +3588,7 @@ class GEEMargins:
     @cache_readonly
     def pvalues(self):
         _check_at_is_all(self.margeff_options)
-        return stats.norm.sf(np.abs(self.tvalues)) * 2
+        return self._dist().sf(np.abs(self.tvalues)) * 2
 
     def conf_int(self, alpha=0.05):
         """
@@ -3575,7 +3608,7 @@ class GEEMargins:
         """
         _check_at_is_all(self.margeff_options)
         me_se = self.margeff_se
-        q = stats.norm.ppf(1 - alpha / 2)
+        q = self._dist().ppf(1 - alpha / 2)
         lower = self.margeff - q * me_se
         upper = self.margeff + q * me_se
         return np.asarray(lzip(lower, upper))
@@ -3665,9 +3698,10 @@ class GEEMargins:
                     "",
                     _transform_names[method],
                     "std err",
-                    "z",
-                    "P>|z|",
-                    f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
+                    self._stat_name,
+                    f"P>|{self._stat_name}|",
+                    f"[{alpha / 2}",
+                    f"{1 - alpha / 2}]",
                 ]
                 tble.insert_header_row(0, header)
                 # from IPython.core.debugger import Pdb; Pdb().set_trace()
@@ -3688,9 +3722,10 @@ class GEEMargins:
                 "",
                 _transform_names[method],
                 "std err",
-                "z",
-                "P>|z|",
-                f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
+                self._stat_name,
+                f"P>|{self._stat_name}|",
+                f"[{alpha / 2}",
+                f"{1 - alpha / 2}]",
             ]
             table.insert_header_row(0, header)
 

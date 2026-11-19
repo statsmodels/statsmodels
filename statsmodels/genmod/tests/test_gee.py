@@ -2898,6 +2898,57 @@ def test_kauermann_carroll_root(fam, cs):
     assert_allclose(res.cov_robust_kc, bread @ meat @ bread, rtol=1e-8)
 
 
+@pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
+@pytest.mark.parametrize("family", [families.Gaussian, families.Poisson])
+def test_small_sample_cov_leverage_one(family, cov_type):
+    # a single observation with its own dummy has leverage 1
+    rng = np.random.default_rng(1)
+    groups = np.r_[np.repeat(np.arange(10), 4), 10]
+    n = len(groups)
+    exog = np.column_stack((np.ones(n), rng.standard_normal(n), groups == 10))
+    endog = rng.poisson(2, n).astype(float)
+    mod = gee.GEE(endog, exog, groups, family=family())
+    with pytest.raises(ValueError, match="Group 10 has leverage 1"):
+        mod.fit(cov_type=cov_type)
+    mod.fit()
+
+
+def _margeff_model(model_class, use_t=False):
+    endog, exog, groups = _small_cluster_data()
+    if model_class is gee.OrdinalGEE:
+        endog = np.digitize(endog, [0.5, 1.5])
+        mod = gee.OrdinalGEE(endog, exog[:, 1:], groups)
+    else:
+        mod = gee.GEE(1.0 * (endog > 1), exog, groups, family=families.Binomial())
+    return mod.fit(use_t=use_t)
+
+
+@pytest.mark.parametrize("model_class", [gee.GEE, gee.OrdinalGEE])
+def test_margeff_summary(model_class):
+    marg = _margeff_model(model_class).get_margeff()
+    smry = str(marg.summary(alpha=0.1))
+    assert "[0.05" in smry
+    assert "0.95]" in smry
+
+
+@pytest.mark.parametrize("use_t", [False, True])
+@pytest.mark.parametrize("model_class", [gee.GEE, gee.OrdinalGEE])
+def test_margeff_use_t(model_class, use_t):
+    from scipy import stats
+
+    res = _margeff_model(model_class, use_t=use_t)
+    marg = res.get_margeff()
+
+    dist = stats.t(res.df_resid_inference) if use_t else stats.norm
+    assert_allclose(marg.pvalues, 2 * dist.sf(np.abs(marg.tvalues)), rtol=1e-12)
+    q = dist.ppf(0.975)
+    ci = marg.conf_int()
+    assert_allclose(ci[:, 0], marg.margeff - q * marg.margeff_se, rtol=1e-12)
+    assert_allclose(ci[:, 1], marg.margeff + q * marg.margeff_se, rtol=1e-12)
+    assert ("P>|t|" in str(marg.summary())) is use_t
+    assert ("t" in marg.summary_frame().columns) is use_t
+
+
 def _fg_mbn_ref(method):
     path = Path(__file__).parent / "results"
     ref = pd.read_csv(path / "gee_fg_mbn_ref.csv")

@@ -253,6 +253,12 @@ Behavior changes
   a fixed scale, are unchanged. Multiplying ``alpha`` by the scale estimated
   at the estimates gives the penalty of earlier versions, where that fit
   converged; the example of ``GLM.fit_regularized`` shows how. :pr:`10776`
+- The marginal effects of ``GEE`` results fit with ``use_t=True`` use the t
+  distribution with ``df_resid_inference`` degrees of freedom, as the
+  parameters do. Their p-values and confidence intervals change, and the
+  ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
+  ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
+  :pr:`10792`
 
 New Features and Enhancements
 =============================
@@ -664,6 +670,13 @@ Generalized linear models and discrete models
   factor, or ``C(g)``. An ``exog`` that carries the ``design_info`` of another
   design used to be re-evaluated by the formula and now raises a
   ``ValueError``. :issue:`9562` :pr:`10752`
+- ``GEE.fit`` with ``cov_type="bias_reduced"`` or ``"kauermann_carroll"``
+  raises a ``ValueError`` that names the group if a group has leverage 1, for
+  example a single observation with its own dummy variable. It raised a bare
+  ``LinAlgError``, or for the Gaussian family returned a meaningless
+  covariance. :pr:`10792`
+- ``summary`` of the marginal effects of ``GEE`` results raised a
+  ``ValueError``. :pr:`10792`
 
 Mixed models and imputation
 ---------------------------
