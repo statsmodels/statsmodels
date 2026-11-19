@@ -530,8 +530,9 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     If one rater uses a single category, then kappa is 0, its standard
     errors and confidence limits are 0, and the z statistic and the p-values
-    are nan. If both raters use the same single category, then kappa and all
-    other statistics are nan.
+    are nan. If both raters use the same single category, which includes a
+    table with a single row and column, then kappa and all other statistics
+    are nan.
 
     .. versionchanged:: 0.15.1
 
