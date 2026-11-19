@@ -261,20 +261,33 @@ def test_var_forecast_with_errors(var_data):
     assert_allclose(fcast[nobs:], expected, rtol=1e-10)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="_Var.predict filters y with the full lag polynomial through "
-    "varfilter, which reverses the variable axis of the lag matrices, so it "
-    "returns neither the fitted values nor the residuals",
-)
-def test_var_predict(var_data):
-    v = make_var(var_data)
-    v.fit(1)
-    res = VAR(var_data).fit(1, trend="n")
+@pytest.mark.parametrize("as_frame", [False, True])
+@pytest.mark.parametrize("nlags", [1, 2, 3])
+def test_var_predict(var_data, nlags, as_frame):
+    nobs, nvars = var_data.shape
+    y = var_data
+    if as_frame:
+        index = pd.date_range("2000-01-01", periods=nobs, freq="D")
+        y = pd.DataFrame(var_data, index=index, columns=["a", "b"])
+    v = make_var(y)
+    v.fit(nlags)
+    res = VAR(var_data).fit(nlags, trend="n")
     yhat = v.predict()
     assert v.predict() is yhat
-    assert_allclose(yhat, np.asarray(res.fittedvalues), rtol=1e-10)
+    assert v.yhat is yhat
+    assert isinstance(yhat, np.ndarray)
+    assert yhat.shape == (nobs - nlags, nvars)
+    assert_allclose(yhat, res.fittedvalues, rtol=1e-10)
+
+
+def test_var_predict_after_refit(var_data):
+    # predict caches its result, and a new fit must replace it
+    v = make_var(var_data)
+    v.fit(1)
+    v.predict()
+    v.fit(2)
+    res = VAR(var_data).fit(2, trend="n")
+    assert_allclose(v.predict(), res.fittedvalues, rtol=1e-10)
 
 
 @pytest.mark.xfail(
