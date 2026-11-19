@@ -695,6 +695,11 @@ class SurvfuncRight:
         value that depends on the range of times covered by the band
         (1.3364 for the ``bmt`` ALL group), so its limits differ slightly.
 
+        With left truncation (``entry`` is given), ``n`` is still the
+        number of records (the sum of ``freq_weights`` if given), which
+        includes subjects that enter after the early event times, and not
+        the number at risk at any time.
+
         .. versionchanged:: 0.15.1
 
            The band uses the total sample size ``n`` instead of the number
