@@ -987,9 +987,12 @@ Time series analysis
 - ``reorder_missing_matrix``, ``reorder_missing_vector``,
   ``copy_missing_matrix``, ``copy_missing_vector``, ``copy_index_matrix`` and
   ``copy_index_vector`` in ``statsmodels.tsa.statespace.tools`` raised a
-  ``ValueError`` for big-endian arrays, and for a ``missing`` or ``index``
-  mask of ``bool`` or ``int64`` dtype although the masks are documented as
-  bool. :issue:`10770`, :pr:`10795`
+  ``ValueError`` for big-endian arrays when ``inplace=False``, and for a
+  ``missing`` or ``index`` mask of ``bool`` or ``int64`` dtype although the
+  masks are documented as bool. They now accept big-endian arrays, and masks of
+  bool or any integer dtype, where a nonzero value counts as True. With
+  ``inplace=True`` a big-endian array that is changed in place still raises a
+  ``ValueError``. :issue:`10770`, :pr:`10795`
 - ``VAR.fit`` now raises a ``SingularMatrixWarning`` if the lagged regressors
   are perfectly collinear, matching the warning already raised by ``OLS`` for
   a rank-deficient design matrix, using the same ``nobs``-scaled rank rule
