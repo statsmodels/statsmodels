@@ -72,6 +72,14 @@ def select_order(
     Returns
     -------
     selected_orders : :class:`statsmodels.tsa.vector_ar.var_model.LagOrderResults`
+
+    Notes
+    -----
+    The information criteria are those of a VAR in levels with the
+    deterministic terms as exogenous variables and the constant that ``VAR``
+    adds by default. For ``"co"`` and ``"ci"`` the two constants are collinear,
+    which is not reported as a ``SingularMatrixWarning``, as it is not for a
+    collinear ``exog`` or ``exog_coint``.
     """
     ic = defaultdict(list)
     deterministic = string_like(deterministic, "deterministic")
@@ -96,11 +104,11 @@ def select_order(
         # warn_singular=False: when "co" or "ci" is requested, exogs already
         # includes a constant column, which VAR's own default trend="c" then
         # duplicates, matching JMulTi's lag-order-selection procedure; the
-        # resulting design matrix is rank-deficient by construction. Other
-        # deterministic choices never hit this, and the information
-        # criteria only depend on the residuals, which are well-defined
-        # regardless of the non-unique parameterization, so this is not
-        # worth warning the user about here.
+        # resulting design matrix is rank-deficient by construction, so a
+        # warning would not tell the user anything. The duplicated column
+        # is counted in the number of parameters of AIC, BIC and HQIC, which
+        # therefore differ from those of the model without the duplicate.
+        # A rank deficiency of a user supplied exog is not reported either.
         var_result = var_model._estimate_var(
             lags=p, offset=maxlags + 1 - p, warn_singular=False
         )
