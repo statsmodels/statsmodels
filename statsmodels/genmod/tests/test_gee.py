@@ -10,6 +10,7 @@ exactly.
 """
 from statsmodels.compat import lrange
 
+import itertools
 from pathlib import Path
 import warnings
 
@@ -2994,41 +2995,68 @@ def test_margeff_use_t(model_class, use_t):
     assert ("t" in marg.summary_frame().columns) is use_t
 
 
-def _fg_mbn_ref(method):
+_FG_MBN_FAMILIES = ["y_gauss", "y_pois", "y_bin"]
+_FG_MBN_CORSTR = ["independence", "exchangeable"]
+_MBN_CASES = list(
+    itertools.product(["equal", "equal8"], _FG_MBN_FAMILIES, _FG_MBN_CORSTR)
+)
+# "hilev" has a cluster with a leverage of 0.985, above the bound b = 0.75
+_FG_CASES = [
+    *itertools.product(
+        ["equal", "equal8", "unequal"], _FG_MBN_FAMILIES, _FG_MBN_CORSTR
+    ),
+    ("hilev", "y_gauss", "exchangeable"),
+]
+
+
+@pytest.fixture(scope="module")
+def fg_mbn_ref():
     path = Path(__file__).parent / "results"
     ref = pd.read_csv(path / "gee_fg_mbn_ref.csv")
     sim = pd.read_csv(path / "gee_fg_mbn.csv")
     data = {
-        "equal": sim,
+        "equal": sim[sim["id"] <= 12],
         "equal8": sim[sim["id"] <= 8],
+        "hilev": sim[sim["id"] > 100],
         "unequal": pd.read_csv(path / "gee_small_sample.csv"),
     }
-    ref = ref[ref["method"] == method]
-    return [(data[r["data"]], r) for _, r in ref.iterrows()]
+    return ref, data
 
 
-def _fg_mbn_fit(data, ref, cov_type):
+def _fg_mbn_case(fg_mbn_ref, method, data_name, endog, corstr):
+    ref, data = fg_mbn_ref
+    row = ref[
+        (ref["method"] == method)
+        & (ref["data"] == data_name)
+        & (ref["endog"] == endog)
+        & (ref["corstr"] == corstr)
+    ]
+    assert len(row) == 1
+    return data[data_name], row.iloc[0]
+
+
+def _fg_mbn_fit(data, endog, corstr, cov_type):
     family = {
         "y_gauss": families.Gaussian,
         "y_pois": families.Poisson,
         "y_bin": families.Binomial,
-    }[ref["endog"]]
+    }[endog]
     cs = {
         "independence": cov_struct.Independence,
         "exchangeable": cov_struct.Exchangeable,
-    }[ref["corstr"]]
+    }[corstr]
     exog = tools.add_constant(data[["x1", "x2"]].to_numpy())
-    mod = gee.GEE(
-        data[ref["endog"]], exog, data["id"], family=family(), cov_struct=cs()
-    )
+    mod = gee.GEE(data[endog], exog, data["id"], family=family(), cov_struct=cs())
     return mod.fit(cov_type=cov_type, ctol=1e-12, maxiter=200)
 
 
-@pytest.mark.parametrize("case", range(18))
-def test_fay_graubard_saws(case):
+@pytest.mark.parametrize(
+    "data_name, endog, corstr", _FG_CASES, ids=["-".join(c) for c in _FG_CASES]
+)
+def test_fay_graubard_saws(fg_mbn_ref, data_name, endog, corstr):
     # reference values from R saws, see gee_fg_mbn.R
-    data, ref = _fg_mbn_ref("fg_saws")[case]
-    res = _fg_mbn_fit(data, ref, "fay_graubard")
+    data, ref = _fg_mbn_case(fg_mbn_ref, "fg_saws", data_name, endog, corstr)
+    res = _fg_mbn_fit(data, endog, corstr, "fay_graubard")
     cov = ref[[f"v{i}" for i in range(9)]].to_numpy(float).reshape(3, 3)
     assert_equal(res.cov_type, "fay_graubard")
     assert_allclose(res.cov_params(), cov, rtol=1e-9, atol=1e-12)
@@ -3138,11 +3166,13 @@ def test_fay_graubard_bound():
     assert_allclose(res.cov_robust_fg, omegai @ meat @ omegai, rtol=1e-10)
 
 
-@pytest.mark.parametrize("case", range(12))
-def test_morel_bokossa_neerchal_geesmv(case):
+@pytest.mark.parametrize(
+    "data_name, endog, corstr", _MBN_CASES, ids=["-".join(c) for c in _MBN_CASES]
+)
+def test_morel_bokossa_neerchal_geesmv(fg_mbn_ref, data_name, endog, corstr):
     # reference variances from R geesmv, see gee_fg_mbn.R
-    data, ref = _fg_mbn_ref("mbn_geesmv")[case]
-    res = _fg_mbn_fit(data, ref, "morel_bokossa_neerchal")
+    data, ref = _fg_mbn_case(fg_mbn_ref, "mbn_geesmv", data_name, endog, corstr)
+    res = _fg_mbn_fit(data, endog, corstr, "morel_bokossa_neerchal")
     var = ref[["v0", "v1", "v2"]].to_numpy(float)
     assert_equal(res.cov_type, "morel_bokossa_neerchal")
     assert_allclose(np.diag(res.cov_params()), var, rtol=1e-9)
