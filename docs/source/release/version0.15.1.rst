@@ -996,6 +996,11 @@ Time series analysis
   (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``varfilter`` in ``statsmodels.tsa.varma_process`` with 3-d lag matrices
+  used the variables in reverse order and returned the wrong number of rows
+  unless there were two lags, and a 2-d filter with one lag and several
+  variables was taken as a single lag polynomial and returned one column. It
+  now computes the documented filter. :pr:`10824`
 
 Statistics and tests
 --------------------
