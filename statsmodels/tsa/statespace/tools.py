@@ -1625,10 +1625,10 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     reorder = prefix_reorder_missing_matrix_map[prefix]
 
     if not inplace:
-        matrix = np.copy(matrix, order="F")
+        matrix = np.array(matrix, dtype=prefix_dtype_map[prefix], order="F")
 
-    reorder(matrix, np.asfortranarray(missing), reorder_rows, reorder_cols,
-            is_diagonal)
+    missing = np.require(missing, dtype=np.intc, requirements="F")
+    reorder(matrix, missing, reorder_rows, reorder_cols, is_diagonal)
 
     return matrix
 
@@ -1660,9 +1660,10 @@ def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
     reorder = prefix_reorder_missing_vector_map[prefix]
 
     if not inplace:
-        vector = np.copy(vector, order="F")
+        vector = np.array(vector, dtype=prefix_dtype_map[prefix], order="F")
 
-    reorder(vector, np.asfortranarray(missing))
+    missing = np.require(missing, dtype=np.intc, requirements="F")
+    reorder(vector, missing)
 
     return vector
 
@@ -1708,7 +1709,7 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     copy = prefix_copy_missing_matrix_map[prefix]
 
     if not inplace:
-        B = np.copy(B, order="F")
+        B = np.array(B, dtype=prefix_dtype_map[prefix], order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
@@ -1716,10 +1717,10 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
         if not A.is_f_contig():
             raise ValueError
     except (AttributeError, ValueError):
-        A = np.asfortranarray(A)
+        A = np.require(A, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    copy(A, B, np.asfortranarray(missing), missing_rows, missing_cols,
-         is_diagonal)
+    missing = np.require(missing, dtype=np.intc, requirements="F")
+    copy(A, B, missing, missing_rows, missing_cols, is_diagonal)
 
     return B
 
@@ -1753,7 +1754,7 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     copy = prefix_copy_missing_vector_map[prefix]
 
     if not inplace:
-        b = np.copy(b, order="F")
+        b = np.array(b, dtype=prefix_dtype_map[prefix], order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
@@ -1761,9 +1762,10 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
         if not a.is_f_contig():
             raise ValueError
     except (AttributeError, ValueError):
-        a = np.asfortranarray(a)
+        a = np.require(a, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    copy(a, b, np.asfortranarray(missing))
+    missing = np.require(missing, dtype=np.intc, requirements="F")
+    copy(a, b, missing)
 
     return b
 
@@ -1809,7 +1811,7 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     copy = prefix_copy_index_matrix_map[prefix]
 
     if not inplace:
-        B = np.copy(B, order="F")
+        B = np.array(B, dtype=prefix_dtype_map[prefix], order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
@@ -1817,10 +1819,10 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
         if not A.is_f_contig():
             raise ValueError
     except (AttributeError, ValueError):
-        A = np.asfortranarray(A)
+        A = np.require(A, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    copy(A, B, np.asfortranarray(index), index_rows, index_cols,
-         is_diagonal)
+    index = np.require(index, dtype=np.intc, requirements="F")
+    copy(A, B, index, index_rows, index_cols, is_diagonal)
 
     return B
 
@@ -1854,7 +1856,7 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     copy = prefix_copy_index_vector_map[prefix]
 
     if not inplace:
-        b = np.copy(b, order="F")
+        b = np.array(b, dtype=prefix_dtype_map[prefix], order="F")
 
     # We may have been given an F-contiguous memoryview; in that case, we do
     # not want to alter it or convert it to a numpy array
@@ -1862,9 +1864,10 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
         if not a.is_f_contig():
             raise ValueError
     except (AttributeError, ValueError):
-        a = np.asfortranarray(a)
+        a = np.require(a, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    copy(a, b, np.asfortranarray(index))
+    index = np.require(index, dtype=np.intc, requirements="F")
+    copy(a, b, index)
 
     return b
 

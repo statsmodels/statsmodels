@@ -1553,3 +1553,17 @@ def test_estimated_initial_seasonal_cov(
     bse = np.asarray(res.bse)[idx]
     assert np.all(np.isfinite(bse))
     assert np.all(bse > 0)
+
+
+@pytest.mark.parametrize("dtype", [np.int64, np.float32, ">f8", "<f8"])
+def test_params_dtype(austourists_model, dtype):
+    # GH 10770: params that are not native float64 failed in the smoother
+    model = austourists_model
+    params = np.round(model._start_params, 0).astype(dtype)
+    native = params.astype(np.float64)
+    assert_allclose(model.loglike(params), model.loglike(native), rtol=1e-12)
+    assert_allclose(
+        model.smooth(params).fittedvalues,
+        model.smooth(native).fittedvalues,
+        rtol=1e-12,
+    )

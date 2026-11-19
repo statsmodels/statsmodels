@@ -437,3 +437,21 @@ def test_uses_stationary():
     init_inner.set(1, "stationary")
     nested.set(2, "diffuse")
     assert nested._uses_stationary()
+
+
+def test_stationary_blocks():
+    def blocks(init):
+        return [list(index) for index in init._stationary_blocks()]
+
+    assert blocks(Initialization(3, "stationary")) == [[0, 1, 2]]
+    assert blocks(Initialization(3, "diffuse")) == []
+    assert blocks(Initialization(3)) == []
+
+    nested = Initialization(5)
+    nested.set(0, "diffuse")
+    init_inner = Initialization(2)
+    init_inner.set(0, "known", constant=[0.0])
+    init_inner.set(1, "stationary")
+    nested.set((1, 3), init_inner)
+    nested.set((3, 5), "stationary")
+    assert blocks(nested) == [[2], [3, 4]]

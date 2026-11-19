@@ -518,6 +518,78 @@ def test_fleiss_kappa_rejects_1d_table():
         fleiss_kappa(np.array([5, 5, 5]))
 
 
+# GH 5530, tables in which one rater uses a single category
+one_category_tables = [
+    [[60, 29], [0, 0]],
+    [[7, 3], [0, 0]],
+    [[1, 5], [0, 0]],
+    [[1, 4], [0, 0]],
+    [[60, 0], [29, 0]],
+    [[7, 0], [3, 0]],
+    [[1, 0], [5, 0]],
+    [[0, 10], [0, 0]],
+    [[20, 10, 5], [0, 0, 0], [0, 0, 0]],
+    [[20, 0, 0], [10, 0, 0], [5, 0, 0]],
+    [[0, 0, 0], [6, 0, 2], [0, 0, 0]],
+]
+
+
+@pytest.mark.parametrize("wt", [None, "linear", "quadratic"])
+@pytest.mark.parametrize("table", one_category_tables)
+def test_cohens_kappa_one_category(table, wt):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, wt=wt)
+        str(res)
+        kappa = cohens_kappa(table, wt=wt, return_results=False)
+    assert_equal(kappa, 0)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    for name in names + ["kappa_low", "kappa_upp", "kappa_max"]:
+        assert_equal(res[name], 0, err_msg=name)
+    for name in ["z_value", "pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+# GH 5530, tables in which both raters use the same single category
+same_category_tables = [
+    [[10, 0], [0, 0]],
+    [[0, 0], [0, 7]],
+    [[0, 0, 0], [0, 5, 0], [0, 0, 0]],
+]
+
+
+@pytest.mark.parametrize("wt", [None, "linear", "quadratic"])
+@pytest.mark.parametrize("table", same_category_tables)
+def test_cohens_kappa_same_single_category(table, wt):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = cohens_kappa(table, wt=wt)
+        str(res)
+        kappa = cohens_kappa(table, wt=wt, return_results=False)
+    assert np.isnan(kappa)
+    names = ["kappa", "var_kappa", "std_kappa", "var_kappa0", "std_kappa0"]
+    names += ["kappa_low", "kappa_upp", "kappa_max", "z_value"]
+    for name in names + ["pvalue_one_sided", "pvalue_two_sided"]:
+        assert np.isnan(res[name]), name
+
+
+@pytest.mark.parametrize(
+    "wt, kappa, ase",
+    [
+        (None, 0.2666666666666667, 0.0913617149738498),
+        ("linear", 0.347826086956522, 0.111651276225669),
+    ],
+)
+def test_cohens_kappa_empty_category(wt, kappa, ase):
+    # both raters use several categories, one category is not used
+    # R 4.5.3, vcd 1.4.14, Kappa(t), the weighted kappa with the default
+    # equal spacing weights, which are the linear weights
+    table = [[20, 10, 5], [0, 0, 0], [3, 4, 8]]
+    res = cohens_kappa(table, wt=wt)
+    assert_allclose(res.kappa, kappa, rtol=1e-13)
+    assert_allclose(res.std_kappa, ase, rtol=1e-13)
+
+
 # Krippendorff (2011), "Computing Krippendorff's Alpha-Reliability", section C:
 # 12 units (rows) rated by 4 observers (columns), 7 ratings missing.
 # https://repository.upenn.edu/asc_papers/43

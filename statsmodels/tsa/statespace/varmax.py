@@ -347,7 +347,7 @@ class VARMAX(MLEModel):
         params = np.zeros(self.k_params, dtype=np.float64)
 
         # A. Run a multivariate regression to get beta estimates
-        endog = pd.DataFrame(self.endog.copy())
+        endog = pd.DataFrame(np.require(self.endog, dtype=np.float64).copy())
         endog = endog.interpolate()
         endog = np.require(endog.bfill(), dtype=np.float64, requirements="W")
         exog = None

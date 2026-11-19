@@ -153,6 +153,11 @@ Behavior changes
   these kernels returned ``nan`` for most data. They now integrate the density
   over the support of the observations, in the units of the data, so that the
   ``cdf`` starts at 0 and ends at 1. :issue:`7195`, :pr:`10632`
+- ``filter``, ``smooth`` and ``fit`` of state space models with a stationary
+  initialization raise a ``LinAlgError`` if a parameter is fixed at a unit
+  root, for example with ``fix_params``, instead of returning results with an
+  ``llf`` of 0.0 that were computed from an initial state covariance with
+  negative variances. :issue:`5459`, :pr:`10747`
 - ``powerdiscrepancy`` with ``lambd=0`` (``"loglikeratio"``, the default, which
   is the G-test) returns valid test statistics when observed counts contain
   zeros, evaluating :math:`x \ln(x)` to 0, instead of returning
@@ -357,6 +362,11 @@ New functions and methods
   of each group by the inverse square root of one minus the leverage, where
   ``"bias_reduced"`` (Mancl-DeRouen) uses the inverse. :issue:`1183`,
   :pr:`10781`
+- Add ``cov_type="fay_graubard"`` and ``cov_type="morel_bokossa_neerchal"``
+  to ``GEE.fit``, the Fay-Graubard and Morel-Bokossa-Neerchal small-sample
+  corrections of the robust covariance, with ``b = 0.75`` and ``d = 2``,
+  ``r = 1``, the defaults of the R packages saws and geesmv.
+  :pr:`10794`
 
 Performance
 -----------
@@ -401,6 +411,24 @@ Performance
   regressors are close to collinear, so for such series the statistic can
   change in the later digits. The new values agree with R (urca) and with
   high-precision arithmetic. :issue:`10601`, :pr:`10602`, :pr:`10624`
+- ``OLS``, ``WLS`` and ``GLS`` have the new fit option ``method="chol"``,
+  which solves the normal equations with a Cholesky factorization of the
+  k x k cross product matrix of the whitened regressors instead of computing
+  the pseudoinverse or the QR factorization of the n x k design matrix. For
+  3,000,000 observations and 10 regressors, ``fit`` is about 20 times faster
+  than with the default ``method="pinv"``, and creating and fitting the model
+  needs more than 10 times less peak memory: the fit itself allocates no
+  array of the size of the design matrix, while ``"pinv"`` and ``"qr"`` need
+  about three times its size. The method squares the condition number of
+  the design with unit-norm columns and is less accurate than ``"pinv"`` and
+  ``"qr"`` on ill-conditioned designs, for example with an uncentered
+  regressor with a large mean next to the constant; it should only be used
+  when speed and memory usage matter more than numerical accuracy, see the
+  Notes of ``fit``. Collinear regressors by the tolerance of R's ``lm`` fall
+  back to the pseudoinverse with a ``SingularMatrixWarning``. The
+  pseudoinverse ``pinv_wexog`` is only computed when a covariance estimator
+  or an influence measure needs it.
+  :issue:`9317`, :pr:`10679`
 - ``get_margeff`` with the default ``at="overall"`` computes the delta method
   Jacobian of the average marginal effects directly instead of averaging the
   Jacobian at each observation. Memory use no longer grows with the number of
@@ -891,6 +919,14 @@ Time series analysis
   show one ``ConvergenceWarning`` with the number of replications whose
   maximum likelihood fit did not converge, instead of one warning for each of
   them. :pr:`10613`
+- At a unit root the stationary initialization could return an initial state
+  covariance with negative variances instead of raising, for example
+  ``-4.99e291`` for ``SARIMAX(np.zeros(10)).filter([1, 1])``. The filter then
+  reported a loglikelihood of exactly 0, above that of any stationary model.
+  This is now detected: ``filter`` raises a ``LinAlgError`` saying that the
+  model is not stationary to numerical precision, and ``MLEModel.loglike``
+  returns ``-inf``, as for the unit roots that already raised (:pr:`10611`).
+  :issue:`5459`, :pr:`10747`
 - ``IRAnalysis.plot`` and ``IRAnalysis.plot_cum_effects`` ignored the
   argument ``plot_params``. It is now applied to the response curves, so that
   their color, line width and other Matplotlib ``Line2D`` properties can be
@@ -918,6 +954,18 @@ Time series analysis
   such values were accepted and ``fit`` returned a log-likelihood of NaN
   without an error. The ``missing`` option does not apply to ``exog_tvtp``.
   :pr:`10766`
+- ``ETSModel.loglike``, ``ETSModel.smooth`` and ``ETSModel.fit`` with
+  ``start_params`` raised an error for parameters that are not float64 in
+  native byte order, for example a big-endian, ``float32`` or integer array.
+  :issue:`10770`, :pr:`10795`
+- ``VARMAX.start_params``, and so ``VARMAX.fit``, raised a ``ValueError`` for
+  big-endian ``endog``. :issue:`10770`, :pr:`10795`
+- ``reorder_missing_matrix``, ``reorder_missing_vector``,
+  ``copy_missing_matrix``, ``copy_missing_vector``, ``copy_index_matrix`` and
+  ``copy_index_vector`` in ``statsmodels.tsa.statespace.tools`` raised a
+  ``ValueError`` for big-endian arrays, and for a ``missing`` or ``index``
+  mask of ``bool`` or ``int64`` dtype although the masks are documented as
+  bool. :issue:`10770`, :pr:`10795`
 
 Statistics and tests
 --------------------
@@ -1068,6 +1116,12 @@ Statistics and tests
 - ``TTestIndPower.solve_power`` with ``ratio=None`` raised a ``TypeError``
   from SciPy if no ratio attains the requested power. It returns ``nan`` with
   a ``ConvergenceWarning``, as documented. :issue:`10672`, :pr:`10673`
+- ``cohens_kappa`` returns the same results for all tables in which a rater
+  uses a single category: kappa is 0, its standard errors and confidence
+  limits are 0, and the z statistic and the p-values are nan. If both raters
+  use the same single category, all statistics are nan. Before, the results
+  depended on rounding errors, and NumPy emitted a ``RuntimeWarning``.
+  :issue:`5530`, :pr:`10709`
 - ``eval_measures.iqr`` returned 0 if ``x1`` had length 1 along ``axis`` and
   was broadcast against a longer ``x2``, raised an ``IndexError`` for a scalar
   ``x1``, and raised a ``ValueError`` with ``axis=None`` for inputs of
@@ -1168,6 +1222,9 @@ Nonparametric
 - ``fast_linbin``, used by ``KDEUnivariate.fit(fft=True)``, wrote outside of
   its array for some inputs and dropped observations at the upper end of the
   grid. :issue:`9556`, :pr:`10232`
+- ``kdensityfft`` raised a ``ValueError`` for data that is not float64 in
+  native byte order, for example a big-endian, ``float32`` or integer array.
+  :issue:`10770`, :pr:`10795`
 
 Duration models
 ---------------

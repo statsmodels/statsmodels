@@ -662,7 +662,7 @@ def test_misc():
     mod = sarimax.SARIMAX(obs["realgdp"], order=(1, 0, 0))
     mod["design", 0, 0] = 0.0
     mod["obs_cov", 0, 0] = 1.0
-    mod.update(np.r_[1.0, 1.0])
+    mod.update(np.r_[0.5, 1.0])
     sim = mod.simulation_smoother()
 
     # Test that the simulation smoother is drawing variates correctly
