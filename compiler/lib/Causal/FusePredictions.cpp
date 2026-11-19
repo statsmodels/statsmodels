@@ -88,6 +88,7 @@ public:
           anchor.getCoefficients(),
           anchor.getTreatmentNameAttr(),
           anchor.getLinkAttr(),
+          rewriter.getStringAttr("none"),
           rewriter.getDenseF64ArrayAttr(doses),
           anchor.getBaseCoefficientsAttr(),
           anchor.getInteractionCoefficientsAttr(),
@@ -102,6 +103,8 @@ public:
                                    .getResult())
           : mlir::OpFoldResult(rewriter.getIndexAttr(dataType.getDimSize(0)));
 
+      llvm::SmallVector<mlir::Value> slices;
+      slices.reserve(group.size());
       for (auto it : llvm::enumerate(group)) {
         llvm::SmallVector<mlir::OpFoldResult> offsets{
             rewriter.getIndexAttr(0),
@@ -117,7 +120,10 @@ public:
             offsets,
             sizes,
             strides);
-        rewriter.replaceOp(it.value(), slice.getResult());
+        slices.push_back(slice.getResult());
+      }
+      for (auto it : llvm::enumerate(group)) {
+        rewriter.replaceOp(it.value(), slices[it.index()]);
       }
     }
   }

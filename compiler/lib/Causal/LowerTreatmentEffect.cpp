@@ -6,7 +6,6 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-#include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -26,7 +25,7 @@ public:
   }
 
   llvm::StringRef getDescription() const final {
-    return "Lower ci.treatment_effect to Linalg, tensor, and arith operations";
+    return "Lower ci.treatment_effect to gather + linalg.matvec + linalg.generic";
   }
 
   void getDependentDialects(mlir::DialectRegistry &registry) const override {
@@ -47,94 +46,127 @@ public:
 
 private:
   static void lower(TreatmentEffectOp effect, mlir::IRRewriter &rewriter) {
-    mlir::Location location = effect.getLoc();
+    mlir::Location loc = effect.getLoc();
     mlir::Value data = effect.getData();
     mlir::Value coefficients = effect.getCoefficients();
-    auto result_type =
+    auto dataType = llvm::cast<mlir::RankedTensorType>(data.getType());
+    auto resultType =
         llvm::cast<mlir::RankedTensorType>(effect.getEffects().getType());
 
     rewriter.setInsertionPoint(effect);
-    mlir::Value row_count =
-        rewriter.create<mlir::tensor::DimOp>(location, data, 0);
-    llvm::SmallVector<mlir::Value> dynamic_sizes;
-    if (result_type.isDynamicDim(0)) {
-      dynamic_sizes.push_back(row_count);
-    }
-    mlir::Value output = rewriter.create<mlir::tensor::EmptyOp>(
-        location, result_type, dynamic_sizes);
-    mlir::ArrayAttr interaction_columns = effect.getInteractionColumns();
-    auto interaction_coefficients = effect.getInteractionCoefficients();
-    llvm::SmallVector<mlir::Value> inputs;
-    llvm::SmallVector<mlir::AffineMap> indexing_maps;
-    mlir::MLIRContext *context = rewriter.getContext();
-    mlir::AffineExpr row = mlir::getAffineDimExpr(0, context);
 
-    auto source = effect.getData().getDefiningOp<LoadDatasetOp>();
-    auto source_columns = source ? source.getColumns() : mlir::ArrayAttr();
-    for (auto indexed_column : llvm::enumerate(interaction_columns)) {
-      int64_t feature_position = indexed_column.index();
+    // 1. Gather interaction weights into a contiguous 1-D tensor matching
+    //    data's column count (mapping through LoadDatasetOp if present).
+    int64_t dataCols = dataType.getDimSize(1);
+    llvm::SmallVector<int64_t> idxData(dataCols, 0);
+    llvm::SmallVector<double> maskData(dataCols, 0.0);
+
+    mlir::ArrayAttr interactionColumns = effect.getInteractionColumns();
+    auto interactionCoeffs = effect.getInteractionCoefficients();
+    auto source = data.getDefiningOp<LoadDatasetOp>();
+    auto sourceColumns = source ? source.getColumns() : mlir::ArrayAttr();
+
+    for (auto indexedCol : llvm::enumerate(interactionColumns)) {
+      int64_t pos = static_cast<int64_t>(indexedCol.index());
       if (source) {
-        auto column = llvm::cast<mlir::StringAttr>(indexed_column.value());
-        auto found = llvm::find_if(
-            source_columns, [&](mlir::Attribute attribute) {
-              return llvm::cast<mlir::StringAttr>(attribute) == column;
-            });
-        feature_position = std::distance(source_columns.begin(), found);
+        auto colAttr = llvm::cast<mlir::StringAttr>(indexedCol.value());
+        auto found = llvm::find_if(sourceColumns, [&](mlir::Attribute attr) {
+          return llvm::cast<mlir::StringAttr>(attr) == colAttr;
+        });
+        pos = std::distance(sourceColumns.begin(), found);
       }
-      inputs.push_back(data);
-      indexing_maps.push_back(mlir::AffineMap::get(
-          1,
-          0,
-          {row, mlir::getAffineConstantExpr(feature_position, context)},
-          context));
+      idxData[pos] = interactionCoeffs[indexedCol.index()];
+      maskData[pos] = 1.0;
     }
 
-    llvm::SmallVector<int64_t> coefficient_indices;
-    coefficient_indices.push_back(effect.getMainEffectIndex());
-    for (int64_t index : interaction_coefficients) {
-      coefficient_indices.push_back(index);
-    }
-    for (int64_t index : coefficient_indices) {
-      inputs.push_back(coefficients);
-      indexing_maps.push_back(mlir::AffineMap::get(
-          1, 0, {mlir::getAffineConstantExpr(index, context)}, context));
-    }
+    auto idxType =
+        mlir::RankedTensorType::get({dataCols}, rewriter.getI64Type());
+    auto weightType =
+        mlir::RankedTensorType::get({dataCols}, rewriter.getF64Type());
+    mlir::Value idxConst = rewriter.create<mlir::arith::ConstantOp>(
+        loc, idxType,
+        mlir::DenseElementsAttr::get(idxType, llvm::ArrayRef<int64_t>(idxData)));
+    mlir::Value maskConst = rewriter.create<mlir::arith::ConstantOp>(
+        loc, weightType,
+        mlir::DenseElementsAttr::get(weightType, llvm::ArrayRef<double>(maskData)));
+    mlir::Value wEmpty = rewriter.create<mlir::tensor::EmptyOp>(
+        loc, weightType, mlir::ValueRange{});
 
-    indexing_maps.push_back(mlir::AffineMap::getMultiDimIdentityMap(1, context));
-    llvm::SmallVector<mlir::utils::IteratorType> iterator_types{
-        mlir::utils::IteratorType::parallel};
-    double treatment_delta = effect.getTreatedValue().convertToDouble()
+    mlir::MLIRContext *ctx = rewriter.getContext();
+    mlir::AffineMap id1d = mlir::AffineMap::getMultiDimIdentityMap(1, ctx);
+    mlir::Value weights =
+        rewriter
+            .create<mlir::linalg::GenericOp>(
+                loc,
+                mlir::TypeRange{weightType},
+                mlir::ValueRange{idxConst, maskConst},
+                mlir::ValueRange{wEmpty},
+                llvm::SmallVector<mlir::AffineMap>{id1d, id1d, id1d},
+                llvm::SmallVector<mlir::utils::IteratorType>{
+                    mlir::utils::IteratorType::parallel},
+                [&](mlir::OpBuilder &b, mlir::Location bLoc,
+                    mlir::ValueRange args) {
+                  mlir::Value idx = b.create<mlir::arith::IndexCastOp>(
+                      bLoc, b.getIndexType(), args[0]);
+                  mlir::Value val = b.create<mlir::tensor::ExtractOp>(
+                      bLoc, coefficients, mlir::ValueRange{idx});
+                  mlir::Value masked =
+                      b.create<mlir::arith::MulFOp>(bLoc, val, args[1]);
+                  b.create<mlir::linalg::YieldOp>(bLoc, masked);
+                })
+            .getResult(0);
+
+    // 2. Compute data @ weights via linalg.matvec.
+    llvm::SmallVector<mlir::Value> dynamicSizes;
+    if (resultType.isDynamicDim(0)) {
+      dynamicSizes.push_back(
+          rewriter.create<mlir::tensor::DimOp>(loc, data, 0));
+    }
+    mlir::Value emptyInit = rewriter.create<mlir::tensor::EmptyOp>(
+        loc, resultType, dynamicSizes);
+    mlir::Value zero = rewriter.create<mlir::arith::ConstantOp>(
+        loc, rewriter.getF64Type(), rewriter.getF64FloatAttr(0.0));
+    mlir::Value zeroed =
+        rewriter
+            .create<mlir::linalg::FillOp>(
+                loc, mlir::ValueRange{zero}, mlir::ValueRange{emptyInit})
+            .getResult(0);
+    mlir::Value dot =
+        rewriter
+            .create<mlir::linalg::MatvecOp>(
+                loc, resultType, mlir::ValueRange{data, weights},
+                mlir::ValueRange{zeroed})
+            .getResult(0);
+
+    // 3. Add main_effect and scale by (treated_value - control_value).
+    mlir::Value cMainIdx = rewriter.create<mlir::arith::ConstantIndexOp>(
+        loc, effect.getMainEffectIndex());
+    mlir::Value mainEffect = rewriter.create<mlir::tensor::ExtractOp>(
+        loc, coefficients, mlir::ValueRange{cMainIdx});
+    double treatmentDelta = effect.getTreatedValue().convertToDouble()
         - effect.getControlValue().convertToDouble();
-    auto generic = rewriter.create<mlir::linalg::GenericOp>(
-        location,
-        mlir::TypeRange{result_type},
-        inputs,
-        mlir::ValueRange{output},
-        indexing_maps,
-        iterator_types,
-        [&](mlir::OpBuilder &builder,
-            mlir::Location body_location,
-            mlir::ValueRange arguments) {
-          size_t interaction_count = interaction_columns.size();
-          mlir::Value accumulator = arguments[interaction_count];
-          for (size_t index = 0; index < interaction_count; ++index) {
-            mlir::Value product = builder.create<mlir::arith::MulFOp>(
-                body_location,
-                arguments[index],
-                arguments[interaction_count + 1 + index]);
-            accumulator = builder.create<mlir::arith::AddFOp>(
-                body_location, accumulator, product);
-          }
-          mlir::Value delta = builder.create<mlir::arith::ConstantOp>(
-              body_location,
-              builder.getF64Type(),
-              builder.getF64FloatAttr(treatment_delta));
-          mlir::Value row_effect = builder.create<mlir::arith::MulFOp>(
-              body_location, accumulator, delta);
-          builder.create<mlir::linalg::YieldOp>(body_location, row_effect);
+    mlir::Value delta = rewriter.create<mlir::arith::ConstantOp>(
+        loc, rewriter.getF64Type(), rewriter.getF64FloatAttr(treatmentDelta));
+
+    mlir::Value emptyOut = rewriter.create<mlir::tensor::EmptyOp>(
+        loc, resultType, dynamicSizes);
+    auto scaled = rewriter.create<mlir::linalg::GenericOp>(
+        loc,
+        mlir::TypeRange{resultType},
+        mlir::ValueRange{dot},
+        mlir::ValueRange{emptyOut},
+        llvm::SmallVector<mlir::AffineMap>{id1d, id1d},
+        llvm::SmallVector<mlir::utils::IteratorType>{
+            mlir::utils::IteratorType::parallel},
+        [&](mlir::OpBuilder &b, mlir::Location bLoc, mlir::ValueRange args) {
+          mlir::Value sum =
+              b.create<mlir::arith::AddFOp>(bLoc, args[0], mainEffect);
+          mlir::Value rowEffect =
+              b.create<mlir::arith::MulFOp>(bLoc, sum, delta);
+          b.create<mlir::linalg::YieldOp>(bLoc, rowEffect);
         });
 
-    rewriter.replaceOp(effect, generic.getResult(0));
+    rewriter.replaceOp(effect, scaled.getResult(0));
   }
 };
 

@@ -70,19 +70,59 @@ private:
     mlir::Value zero = rewriter.create<mlir::arith::ConstantOp>(
         loc, rewriter.getF64Type(), rewriter.getF64FloatAttr(0.0));
 
-    // 1. Gather W = [beta_x, beta_int] as tensor<Dx2xf64> (row-major).
+    // 1. Gather W = [beta_x, beta_int] as tensor<Dx2xf64> via linalg.generic
+    //    (avoids IREE stream.async.fill bug with tensor.from_elements at D>=25).
     auto baseIdx = op.getBaseCoefficients();
     auto intIdx = op.getInteractionCoefficients();
     int64_t nCovs = static_cast<int64_t>(baseIdx.size());
-    llvm::SmallVector<mlir::Value> wElements;
-    wElements.reserve(nCovs * 2);
+    llvm::SmallVector<int64_t> idxData;
+    llvm::SmallVector<double> maskData;
+    idxData.reserve(nCovs * 2);
+    maskData.reserve(nCovs * 2);
     for (int64_t j = 0; j < nCovs; ++j) {
-      wElements.push_back(extractOrZero(rewriter, loc, coeffs, baseIdx[j], zero));
-      wElements.push_back(extractOrZero(rewriter, loc, coeffs, intIdx[j], zero));
+      idxData.push_back(baseIdx[j] >= 0 ? baseIdx[j] : 0);
+      maskData.push_back(baseIdx[j] >= 0 ? 1.0 : 0.0);
+      idxData.push_back(intIdx[j] >= 0 ? intIdx[j] : 0);
+      maskData.push_back(intIdx[j] >= 0 ? 1.0 : 0.0);
     }
+
+    auto idxType = mlir::RankedTensorType::get({nCovs, 2}, rewriter.getI64Type());
     auto wType = mlir::RankedTensorType::get({nCovs, 2}, rewriter.getF64Type());
+    mlir::Value idxConst = rewriter.create<mlir::arith::ConstantOp>(
+        loc, idxType,
+        mlir::DenseElementsAttr::get(idxType, llvm::ArrayRef<int64_t>(idxData)));
+    mlir::Value maskConst = rewriter.create<mlir::arith::ConstantOp>(
+        loc, wType,
+        mlir::DenseElementsAttr::get(wType, llvm::ArrayRef<double>(maskData)));
+    mlir::Value wEmpty = rewriter.create<mlir::tensor::EmptyOp>(
+        loc, wType, mlir::ValueRange{});
+
+    mlir::MLIRContext *ctx = rewriter.getContext();
+    mlir::AffineMap id2d = mlir::AffineMap::getMultiDimIdentityMap(2, ctx);
+    llvm::SmallVector<mlir::AffineMap> gatherMaps{id2d, id2d, id2d};
+    llvm::SmallVector<mlir::utils::IteratorType> gatherIters{
+        mlir::utils::IteratorType::parallel,
+        mlir::utils::IteratorType::parallel};
     mlir::Value w =
-        rewriter.create<mlir::tensor::FromElementsOp>(loc, wType, wElements);
+        rewriter
+            .create<mlir::linalg::GenericOp>(
+                loc,
+                mlir::TypeRange{wType},
+                mlir::ValueRange{idxConst, maskConst},
+                mlir::ValueRange{wEmpty},
+                gatherMaps,
+                gatherIters,
+                [&](mlir::OpBuilder &b, mlir::Location bLoc,
+                    mlir::ValueRange args) {
+                  mlir::Value idx = b.create<mlir::arith::IndexCastOp>(
+                      bLoc, b.getIndexType(), args[0]);
+                  mlir::Value val = b.create<mlir::tensor::ExtractOp>(
+                      bLoc, coeffs, mlir::ValueRange{idx});
+                  mlir::Value masked =
+                      b.create<mlir::arith::MulFOp>(bLoc, val, args[1]);
+                  b.create<mlir::linalg::YieldOp>(bLoc, masked);
+                })
+            .getResult(0);
 
     // 2. Compute shared M = X @ W (Nx2) once via linalg.matmul.
     llvm::SmallVector<mlir::Value> dynRows;
@@ -114,12 +154,12 @@ private:
     auto dosesType = mlir::RankedTensorType::get(
         {static_cast<int64_t>(doses.size())}, rewriter.getF64Type());
     mlir::Value dosesConst = rewriter.create<mlir::arith::ConstantOp>(
-        loc, dosesType, rewriter.getF64TensorAttr(doses));
+        loc, dosesType,
+        mlir::DenseElementsAttr::get(dosesType, llvm::ArrayRef<double>(doses)));
 
     mlir::Value outEmpty =
         rewriter.create<mlir::tensor::EmptyOp>(loc, outType, dynRows);
 
-    mlir::MLIRContext *ctx = rewriter.getContext();
     mlir::AffineExpr d0 = mlir::getAffineDimExpr(0, ctx);
     mlir::AffineExpr d1 = mlir::getAffineDimExpr(1, ctx);
     llvm::StringRef link = op.getLink();
@@ -148,7 +188,8 @@ private:
     if (reduction == "ate") {
       auto kType = mlir::RankedTensorType::get(
           {static_cast<int64_t>(doses.size())}, rewriter.getF64Type());
-      mlir::Value kEmpty = rewriter.create<mlir::tensor::EmptyOp>(loc, kType);
+      mlir::Value kEmpty = rewriter.create<mlir::tensor::EmptyOp>(
+          loc, kType, mlir::ValueRange{});
       mlir::Value kZero =
           rewriter
               .create<mlir::linalg::FillOp>(
@@ -187,8 +228,8 @@ private:
       mlir::Value nRowsF64 = rewriter.create<mlir::arith::SIToFPOp>(
           loc, rewriter.getF64Type(), nRowsI64);
       mlir::AffineMap id1d = mlir::AffineMap::getMultiDimIdentityMap(1, ctx);
-      mlir::Value meanEmpty =
-          rewriter.create<mlir::tensor::EmptyOp>(loc, outType);
+      mlir::Value meanEmpty = rewriter.create<mlir::tensor::EmptyOp>(
+          loc, outType, mlir::ValueRange{});
       auto meanOp = rewriter.create<mlir::linalg::GenericOp>(
           loc,
           mlir::TypeRange{outType},
