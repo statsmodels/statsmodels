@@ -938,7 +938,11 @@ def test_summary_after_remove_data(fit_func):
 
 @pytest.mark.parametrize(
     "model_class",
-    [sm.ZeroInflatedNegativeBinomialP, sm.ZeroInflatedGeneralizedPoisson],
+    [
+        sm.ZeroInflatedPoisson,
+        sm.ZeroInflatedNegativeBinomialP,
+        sm.ZeroInflatedGeneralizedPoisson,
+    ],
 )
 def test_predict_prob_exposure(model_class):
     # exposure was logged twice, or raised with an array, in which="prob"
@@ -948,10 +952,11 @@ def test_predict_prob_exposure(model_class):
     exposure = rng.uniform(0.5, 2.0, size=nobs)
     mu = exposure * np.exp(0.5 + 0.3 * exog[:, 1])
     endog = rng.negative_binomial(2, 2 / (2 + mu)) * (rng.uniform(size=nobs) > 0.2)
-    params = np.array([-1.0, 0.5, 0.3, 0.5])
     y_values = np.arange(4)
 
     mod_offset = model_class(endog, exog, offset=np.log(exposure))
+    # ZeroInflatedPoisson has no extra dispersion parameter
+    params = np.array([-1.0, 0.5, 0.3, 0.5])[: len(mod_offset.exog_names)]
     expected = mod_offset.predict(params, which="prob", y_values=y_values)
 
     mod_exposure = model_class(endog, exog, exposure=exposure)

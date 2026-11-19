@@ -782,7 +782,10 @@ class ZeroInflatedPoisson(GenericZeroInflated):
             w = self.model_infl.predict(params_infl, exog_infl)[:, None]
 
         w = np.clip(w, np.finfo(float).eps, 1 - np.finfo(float).eps)
-        mu = self.model_main.predict(params_main, exog, offset=offset)[:, None]
+        # exposure is already logged, model_main.predict logs it again
+        mu = self.model_main.predict(
+            params_main, exog, exposure=np.exp(exposure), offset=offset
+        )[:, None]
         result = self.distribution.pmf(y_values, mu, w)
         return result[0] if transform else result
 

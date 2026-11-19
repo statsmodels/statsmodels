@@ -1137,13 +1137,22 @@ def test_truncated_exposure_matches_offset(model_class, count_data_exposure):
         mod_exposure.score(params), mod_offset.score(params), rtol=1e-10
     )
 
-    with warnings.catch_warnings():
-        # generalized Poisson can overflow at trial values and bfgs may not
-        # fully converge, the fits only need to agree with each other
-        warnings.simplefilter("ignore", RuntimeWarning)
-        warnings.simplefilter("ignore", ConvergenceWarning)
-        res_offset = mod_offset.fit(maxiter=300, disp=0)
-        res_exposure = mod_exposure.fit(maxiter=300, disp=0)
+
+# the bfgs fit of TruncatedLFGeneralizedPoisson does not converge on this
+# data, so its fitted params are not compared
+@pytest.mark.parametrize(
+    "model_class", [TruncatedLFPoisson, TruncatedLFNegativeBinomialP]
+)
+def test_truncated_exposure_fit_matches_offset(model_class, count_data_exposure):
+    # GH-8842
+    endog, exog, exposure = count_data_exposure
+    mod_offset = model_class(endog, exog, offset=np.log(exposure))
+    mod_exposure = model_class(endog, exog, exposure=exposure)
+
+    res_offset = mod_offset.fit(maxiter=300, disp=0)
+    res_exposure = mod_exposure.fit(maxiter=300, disp=0)
+    assert res_offset.mle_retvals["converged"]
+    assert res_exposure.mle_retvals["converged"]
     assert_allclose(res_exposure.params, res_offset.params, rtol=1e-6)
     assert_allclose(res_exposure.llf, res_offset.llf, rtol=1e-10)
     assert_allclose(res_exposure.bse, res_offset.bse, rtol=1e-5)
