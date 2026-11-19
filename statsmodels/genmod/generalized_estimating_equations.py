@@ -323,6 +323,7 @@ _gee_fit_doc = """
         .. versionchanged:: 0.15.1
            Added "kauermann_carroll", "fay_graubard" and
            "morel_bokossa_neerchal".
+           
     ddof_scale : int, optional
         The scale parameter is estimated as the sum of squared
         Pearson residuals divided by `N - ddof_scale`, where N
@@ -1466,6 +1467,7 @@ class GEE(GLM):
         use_t=False,
     ):
 
+        cov_type = cov_type.lower()
         k_params = self.nobs - self.df_resid
         if use_t and self.num_group <= k_params:
             raise ValueError(
@@ -1591,7 +1593,7 @@ class GEE(GLM):
 
             if bc_cov is not None:
                 y, bc_cov = self._handle_constraint(x, bc_cov)
-                if x is None:
+                if y is None:
                     warnings.warn(
                         "Unable to estimate constrained GEE parameters.",
                         ConvergenceWarning,
@@ -1600,6 +1602,13 @@ class GEE(GLM):
                     return None
             if kc_cov is not None:
                 y, kc_cov = self._handle_constraint(x, kc_cov)
+                if y is None:
+                    warnings.warn(
+                        "Unable to estimate constrained GEE parameters.",
+                        ConvergenceWarning,
+                        stacklevel=2,
+                    )
+                    return None
             if fg_cov is not None:
                 y, fg_cov = self._handle_constraint(x, fg_cov)
             if mbn_cov is not None:
@@ -2091,6 +2100,7 @@ class GEEResults(GLMResults):
         **kwds,
     ):
 
+        cov_type = cov_type.lower()
         super().__init__(
             model, params, normalized_cov_params=cov_params, scale=scale, use_t=use_t
         )
