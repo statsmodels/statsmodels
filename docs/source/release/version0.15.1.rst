@@ -905,6 +905,18 @@ Time series analysis
   such values were accepted and ``fit`` returned a log-likelihood of NaN
   without an error. The ``missing`` option does not apply to ``exog_tvtp``.
   :pr:`10766`
+- ``ETSModel.loglike``, ``ETSModel.smooth`` and ``ETSModel.fit`` with
+  ``start_params`` raised an error for parameters that are not float64 in
+  native byte order, for example a big-endian, ``float32`` or integer array.
+  :issue:`10770`, :pr:`10795`
+- ``VARMAX.start_params``, and so ``VARMAX.fit``, raised a ``ValueError`` for
+  big-endian ``endog``. :issue:`10770`, :pr:`10795`
+- ``reorder_missing_matrix``, ``reorder_missing_vector``,
+  ``copy_missing_matrix``, ``copy_missing_vector``, ``copy_index_matrix`` and
+  ``copy_index_vector`` in ``statsmodels.tsa.statespace.tools`` raised a
+  ``ValueError`` for big-endian arrays, and for a ``missing`` or ``index``
+  mask of ``bool`` or ``int64`` dtype although the masks are documented as
+  bool. :issue:`10770`, :pr:`10795`
 
 Statistics and tests
 --------------------
@@ -1155,6 +1167,9 @@ Nonparametric
 - ``fast_linbin``, used by ``KDEUnivariate.fit(fft=True)``, wrote outside of
   its array for some inputs and dropped observations at the upper end of the
   grid. :issue:`9556`, :pr:`10232`
+- ``kdensityfft`` raised a ``ValueError`` for data that is not float64 in
+  native byte order, for example a big-endian, ``float32`` or integer array.
+  :issue:`10770`, :pr:`10795`
 
 Duration models
 ---------------

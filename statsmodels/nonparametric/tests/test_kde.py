@@ -705,3 +705,14 @@ def test_kde_univariate_negative_bw_raises():
         KDE(x).fit(bw=0)
     dens = KDE(x).fit(bw=0.3).evaluate([0.0])
     assert dens[0] > 0
+
+
+@pytest.mark.parametrize("dtype", [np.int64, np.float32, ">f8", "<f8"])
+def test_kdensityfft_dtype(dtype):
+    # GH 10770: fast_linbin only takes native float64
+    x = np.random.default_rng(10770).integers(-5, 6, 100).astype(dtype)
+    density, grid, bw = kdensityfft(x)
+    expected = kdensityfft(x.astype(np.float64))
+    npt.assert_allclose(density, expected[0], rtol=1e-12)
+    npt.assert_allclose(grid, expected[1], rtol=1e-12)
+    assert bw == expected[2]
