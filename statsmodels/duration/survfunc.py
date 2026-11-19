@@ -409,6 +409,7 @@ class SurvfuncRight:
         _checkargs(time, status, entry, freq_weights, exog)
         time = self.time = np.asarray(time)
         status = self.status = np.asarray(status)
+        self.freq_weights = None
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
 
@@ -724,7 +725,7 @@ class SurvfuncRight:
         # Hall and Wellner (1980); Klein and Moeschberger (2003), eqs.
         # 4.4.3-4.4.5: ``n`` is the total sample size, not the number at
         # risk at each time point.
-        freq_weights = getattr(self, "freq_weights", None)
+        freq_weights = self.freq_weights
         if freq_weights is not None:
             nn = float(np.sum(freq_weights))
         else:
