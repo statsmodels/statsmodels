@@ -16,7 +16,7 @@ import pytest
 
 from statsmodels.datasets import danish_data, macrodata
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
-from statsmodels.tsa.vector_ar.vecm import VECM, coint_johansen
+from statsmodels.tsa.vector_ar.vecm import VECM, coint_johansen, select_coint_rank
 
 current_path = Path(__file__).resolve().parent
 dta_path = Path(current_path).joinpath("Matlab_results", "test_coint.csv")
@@ -499,6 +499,55 @@ def test_coint_johansen_trace_equals_vecm_lr(det_order, deterministic, k_ar_diff
     lr_max = [2 * (llf[r + 1] - llf[r]) for r in range(neqs)]
     assert_allclose(res.lr1, lr_trace, rtol=1e-6)
     assert_allclose(res.lr2, lr_max, rtol=1e-6)
+
+
+# Reference values for k_ar_diff=0 on the log of realgdp, realcons and realinv
+# of macrodata (203 observations), as (lr1, lr2). det_order -1 and 0: R 4.6.1
+# with tsDyn 11.0.6, rank.test(VECM(data, lag=0, r=1, estim="ML", include="none"
+# or "const"), type="trace" or "eigen"). urca::ca.jo needs K >= 2 and cannot
+# fit a model without lagged differences. det_order 1 (the sample is detrended
+# with a linear trend and the constant is partialled out afterwards) is not the
+# model of any R package: the values are those of a base R implementation of
+# the same steps (the moment matrices of the detrended differences and lagged
+# levels, the eigenvalues of S11^-1 S10 S00^-1 S01).
+ZERO_LAG_REFERENCE = {
+    -1: (
+        [224.65936991867954, 9.6618003484821973, 0.1274814825683236],
+        [214.99756957019736, 9.5343188659138729, 0.1274814825683236],
+    ),
+    0: (
+        [29.559752448160449, 12.996142176882785, 1.976442940717079],
+        [16.563610271277664, 11.019699236165707, 1.976442940717079],
+    ),
+    1: (
+        [25.018734502955127, 9.699926952440137, 0.253804581240836],
+        [15.318807550514990, 9.446122371199301, 0.253804581240836],
+    ),
+}
+
+
+@pytest.mark.parametrize("det_order", [-1, 0, 1])
+def test_coint_johansen_zero_lag_reference(det_order):
+    # GH 7459: without lagged differences the levels have to be lagged once
+    data = np.log(macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]])
+    lr1, lr2 = ZERO_LAG_REFERENCE[det_order]
+    res = coint_johansen(data, det_order, 0)
+    assert_allclose(res.lr1, lr1, rtol=1e-8)
+    assert_allclose(res.lr2, lr2, rtol=1e-8)
+    # the eigenvalues follow from the maximum eigenvalue statistics
+    nobs = data.shape[0] - 1
+    assert_allclose(res.eig, 1 - np.exp(-np.asarray(lr2) / nobs), rtol=1e-8)
+
+
+@pytest.mark.parametrize("method", ["trace", "maxeig"])
+@pytest.mark.parametrize("det_order, rank", [(-1, 1), (0, 0), (1, 0)])
+def test_select_coint_rank_zero_lag(det_order, rank, method):
+    # GH 7459: with the unlagged levels the rank was 2 for det_order=-1 and 1
+    # for det_order=0 (the trace statistic of rank 0 was 39.4 and not 29.6, the
+    # 5% critical value is 29.8)
+    data = np.log(macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]])
+    res = select_coint_rank(data, det_order, 0, method=method)
+    assert res.rank == rank
 
 
 def test_johansen_result_aliases_and_rkt_meth():
