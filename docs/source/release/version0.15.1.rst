@@ -381,7 +381,7 @@ New functions and methods
   the Gaussian kernel, which does not use a normal reference distribution
   and is also appropriate for multimodal densities. A ``RuntimeError`` is
   raised if the fixed point equation that defines the bandwidth has no
-  solution, which is common in small samples. :issue:`7205`
+  solution, which is common in small samples. :issue:`7205`, :pr:`10809`
 
 Performance
 -----------
