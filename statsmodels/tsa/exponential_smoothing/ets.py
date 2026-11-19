@@ -795,8 +795,10 @@ class ETSModel(base.StateSpaceMLEModel):
     def _internal_params(self, params):
         """Converts a parameter array passed from outside to the internally used full parameter array"""
         # internal params that are not needed are all set to zero, except phi,
-        # which is one
-        internal = np.zeros(self._k_params_internal, dtype=params.dtype)
+        # which is one. The smoothers take float64 or complex128 (complex step
+        # derivatives) in native byte order.
+        dtype = np.result_type(np.asarray(params).dtype, np.float64)
+        internal = np.zeros(self._k_params_internal, dtype=dtype)
         for i, name in enumerate(self.param_names):
             internal_idx = self._internal_params_index[name]
             internal[internal_idx] = params[i]
@@ -1319,7 +1321,7 @@ class ETSModel(base.StateSpaceMLEModel):
         yhat = np.zeros(self.nobs)
         xhat = np.zeros((self.nobs, self._k_states_internal))
         is_fixed = np.zeros(self._k_params_internal, dtype=np.int64)
-        fixed_values = np.empty(self._k_params_internal, dtype=params.dtype)
+        fixed_values = np.empty(self._k_params_internal, dtype=internal_params.dtype)
         self._smoothing_func(
             internal_params, self.endog, yhat, xhat, is_fixed, fixed_values
         )

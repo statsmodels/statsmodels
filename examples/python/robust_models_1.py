@@ -353,7 +353,8 @@ ax.annotate(
     fontsize=16,
 )
 # annotate these with their index
-for i, row in dta.loc[dta["log.Te"] < 3.8].iterrows():
+giants = dta.loc[dta["log.Te"] < 3.8]
+for i, row in zip(giants.index, giants.to_numpy(), strict=True):
     ax.annotate(i, row, row + 0.01, fontsize=14)
 xlim, ylim = ax.get_xlim(), ax.get_ylim()
 

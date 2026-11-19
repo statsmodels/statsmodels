@@ -2941,3 +2941,189 @@ def test_constraint_small_sample_cov_fails(cov_type, monkeypatch):
     monkeypatch.setattr(mod, "_handle_constraint", fail_third)
     with pytest.warns(ConvergenceWarning, match="constrained GEE"):
         assert mod.fit(cov_type=cov_type) is None
+
+
+@pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
+@pytest.mark.parametrize("family", [families.Gaussian, families.Poisson])
+def test_small_sample_cov_leverage_one(family, cov_type):
+    # a single observation with its own dummy has leverage 1
+    rng = np.random.default_rng(1)
+    groups = np.r_[np.repeat(np.arange(10), 4), 10]
+    n = len(groups)
+    exog = np.column_stack((np.ones(n), rng.standard_normal(n), groups == 10))
+    endog = rng.poisson(2, n).astype(float)
+    mod = gee.GEE(endog, exog, groups, family=family())
+    with pytest.raises(ValueError, match="Group 10 has leverage 1"):
+        mod.fit(cov_type=cov_type)
+    mod.fit()
+
+
+def _margeff_model(model_class, use_t=False):
+    endog, exog, groups = _small_cluster_data()
+    if model_class is gee.OrdinalGEE:
+        endog = np.digitize(endog, [0.5, 1.5])
+        mod = gee.OrdinalGEE(endog, exog[:, 1:], groups)
+    else:
+        mod = gee.GEE(1.0 * (endog > 1), exog, groups, family=families.Binomial())
+    return mod.fit(use_t=use_t)
+
+
+@pytest.mark.parametrize("model_class", [gee.GEE, gee.OrdinalGEE])
+def test_margeff_summary(model_class):
+    marg = _margeff_model(model_class).get_margeff()
+    smry = str(marg.summary(alpha=0.1))
+    assert "[0.05" in smry
+    assert "0.95]" in smry
+
+
+@pytest.mark.parametrize("use_t", [False, True])
+@pytest.mark.parametrize("model_class", [gee.GEE, gee.OrdinalGEE])
+def test_margeff_use_t(model_class, use_t):
+    from scipy import stats
+
+    res = _margeff_model(model_class, use_t=use_t)
+    marg = res.get_margeff()
+
+    dist = stats.t(res.df_resid_inference) if use_t else stats.norm
+    assert_allclose(marg.pvalues, 2 * dist.sf(np.abs(marg.tvalues)), rtol=1e-12)
+    q = dist.ppf(0.975)
+    ci = marg.conf_int()
+    assert_allclose(ci[:, 0], marg.margeff - q * marg.margeff_se, rtol=1e-12)
+    assert_allclose(ci[:, 1], marg.margeff + q * marg.margeff_se, rtol=1e-12)
+    assert ("P>|t|" in str(marg.summary())) is use_t
+    assert ("t" in marg.summary_frame().columns) is use_t
+
+
+def _fg_mbn_ref(method):
+    path = Path(__file__).parent / "results"
+    ref = pd.read_csv(path / "gee_fg_mbn_ref.csv")
+    sim = pd.read_csv(path / "gee_fg_mbn.csv")
+    data = {
+        "equal": sim,
+        "equal8": sim[sim["id"] <= 8],
+        "unequal": pd.read_csv(path / "gee_small_sample.csv"),
+    }
+    ref = ref[ref["method"] == method]
+    return [(data[r["data"]], r) for _, r in ref.iterrows()]
+
+
+def _fg_mbn_fit(data, ref, cov_type):
+    family = {
+        "y_gauss": families.Gaussian,
+        "y_pois": families.Poisson,
+        "y_bin": families.Binomial,
+    }[ref["endog"]]
+    cs = {
+        "independence": cov_struct.Independence,
+        "exchangeable": cov_struct.Exchangeable,
+    }[ref["corstr"]]
+    exog = tools.add_constant(data[["x1", "x2"]].to_numpy())
+    mod = gee.GEE(
+        data[ref["endog"]], exog, data["id"], family=family(), cov_struct=cs()
+    )
+    return mod.fit(cov_type=cov_type, ctol=1e-12, maxiter=200)
+
+
+@pytest.mark.parametrize("case", range(18))
+def test_fay_graubard_saws(case):
+    # reference values from R saws, see gee_fg_mbn.R
+    data, ref = _fg_mbn_ref("fg_saws")[case]
+    res = _fg_mbn_fit(data, ref, "fay_graubard")
+    cov = ref[[f"v{i}" for i in range(9)]].to_numpy(float).reshape(3, 3)
+    assert_equal(res.cov_type, "fay_graubard")
+    assert_allclose(res.cov_params(), cov, rtol=1e-9, atol=1e-12)
+    assert_allclose(res.standard_errors("fay_graubard"), np.sqrt(np.diag(cov)))
+    assert res.cov_params_default is res.cov_robust_fg
+
+
+def test_fay_graubard_weights():
+    # direct computation with each group's weighted score and information
+    endog, exog, groups = _small_cluster_data()
+    weights = np.repeat(np.linspace(0.5, 2, 12), 4)
+    mod = gee.GEE(endog, exog, groups, weights=weights)
+    res = mod.fit(cov_type="fay_graubard")
+
+    resid = endog - exog @ res.params
+    omega = [
+        exog[groups == g].T @ (weights[groups == g, None] * exog[groups == g])
+        for g in range(12)
+    ]
+    omegai = np.linalg.inv(sum(omega))
+    meat = meat_fg = 0
+    for g in range(12):
+        ix = groups == g
+        score = exog[ix].T @ (weights[ix] * resid[ix])
+        meat = meat + np.outer(score, score)
+        score = score / np.sqrt(1 - np.minimum(0.75, np.diag(omega[g] @ omegai)))
+        meat_fg = meat_fg + np.outer(score, score)
+    # the same convention as the robust covariance
+    assert_allclose(res.cov_robust, omegai @ meat @ omegai, rtol=1e-10)
+    assert_allclose(res.cov_robust_fg, omegai @ meat_fg @ omegai, rtol=1e-10)
+
+
+def test_fay_graubard_constraint():
+    endog, exog, groups = _small_cluster_data()
+    lhs = np.array([[0.0, 1.0, 1.0]])
+    mod = gee.GEE(endog, exog, groups, constraint=(lhs, np.zeros(1)))
+    res = mod.fit(cov_type="fay_graubard")
+    assert_equal(res.cov_robust_fg.shape, (3, 3))
+    assert_allclose(lhs @ res.cov_robust_fg @ lhs.T, 0, atol=1e-12)
+    assert_allclose(res.bse, np.sqrt(np.diag(res.cov_robust_fg)), rtol=1e-12)
+
+
+def test_fay_graubard_not_available():
+    endog, exog, groups = _small_cluster_data()
+    res = gee.GEE(endog, exog, groups).fit()
+    with pytest.raises(ValueError, match="fay_graubard"):
+        res.standard_errors("fay_graubard")
+
+
+def test_fay_graubard_bound():
+    # x2 is nonzero only in group 0, so the share of group 0 is 1 for it and
+    # the bound b = 0.75 applies
+    endog, exog, groups = _small_cluster_data()
+    exog = exog.copy()
+    exog[groups != 0, 2] = 0
+    res = gee.GEE(endog, exog, groups).fit(cov_type="fay_graubard")
+
+    resid = endog - exog @ res.params
+    omega = [exog[groups == g].T @ exog[groups == g] for g in range(12)]
+    omegai = np.linalg.inv(sum(omega))
+    share = np.diag(omega[0] @ omegai)
+    assert share.max() > 0.75
+    meat = 0
+    for g in range(12):
+        ix = groups == g
+        score = exog[ix].T @ resid[ix]
+        score = score / np.sqrt(1 - np.minimum(0.75, np.diag(omega[g] @ omegai)))
+        meat = meat + np.outer(score, score)
+    assert np.isfinite(res.cov_robust_fg).all()
+    assert_allclose(res.cov_robust_fg, omegai @ meat @ omegai, rtol=1e-10)
+
+
+@pytest.mark.parametrize("case", range(12))
+def test_morel_bokossa_neerchal_geesmv(case):
+    # reference variances from R geesmv, see gee_fg_mbn.R
+    data, ref = _fg_mbn_ref("mbn_geesmv")[case]
+    res = _fg_mbn_fit(data, ref, "morel_bokossa_neerchal")
+    var = ref[["v0", "v1", "v2"]].to_numpy(float)
+    assert_equal(res.cov_type, "morel_bokossa_neerchal")
+    assert_allclose(np.diag(res.cov_params()), var, rtol=1e-9)
+    assert_allclose(res.standard_errors("morel_bokossa_neerchal"), np.sqrt(var))
+    assert res.cov_params_default is res.cov_robust_mbn
+
+
+def test_morel_bokossa_neerchal_constraint():
+    endog, exog, groups = _small_cluster_data()
+    lhs = np.array([[0.0, 1.0, 1.0]])
+    mod = gee.GEE(endog, exog, groups, constraint=(lhs, np.zeros(1)))
+    res = mod.fit(cov_type="morel_bokossa_neerchal")
+    assert_equal(res.cov_robust_mbn.shape, (3, 3))
+    assert_allclose(lhs @ res.cov_robust_mbn @ lhs.T, 0, atol=1e-12)
+
+
+def test_morel_bokossa_neerchal_not_available():
+    endog, exog, groups = _small_cluster_data()
+    res = gee.GEE(endog, exog, groups).fit()
+    with pytest.raises(ValueError, match="morel_bokossa_neerchal"):
+        res.standard_errors("morel_bokossa_neerchal")

@@ -314,13 +314,16 @@ _gee_fit_doc = """
         No dependence structure updates occur before this
         iteration number.
     cov_type : str, optional
-        One of "robust", "naive", "bias_reduced" or "kauermann_carroll".
-        "bias_reduced" is the Mancl-DeRouen and "kauermann_carroll" the
-        Kauermann-Carroll small-sample correction of the robust covariance.
-        The value is case-insensitive.
+        One of "robust", "naive", "bias_reduced", "kauermann_carroll",
+        "fay_graubard" or "morel_bokossa_neerchal". The last four are
+        small-sample corrections of the robust covariance by Mancl and
+        DeRouen, Kauermann and Carroll, Fay and Graubard, and Morel,
+        Bokossa and Neerchal. See Notes.
 
         .. versionchanged:: 0.15.1
-           Added "kauermann_carroll"; the value is case-insensitive.
+           Added "kauermann_carroll", "fay_graubard" and
+           "morel_bokossa_neerchal".
+           
     ddof_scale : int, optional
         The scale parameter is estimated as the sum of squared
         Pearson residuals divided by `N - ddof_scale`, where N
@@ -377,8 +380,24 @@ _gee_fit_doc = """
     ``(I - H)^{-1/2}``. ``I - H`` is not symmetric unless the family is
     Gaussian and the working correlation is independence, and the
     principal square root is used. Its eigenvalues are positive, so the
-    root is real. Each group needs an ``O(m^3)`` matrix root, where
-    ``m`` is the group size, which can be slow for large groups.
+    root is real, unless a group has leverage 1, for example a single
+    observation with its own dummy variable. Both corrections are then
+    not defined and a ``ValueError`` is raised. Each group needs an
+    ``O(m^3)`` matrix root, where ``m`` is the group size, which can be
+    slow for large groups.
+
+    ``cov_type="fay_graubard"`` (Fay and Graubard, 2001) multiplies the
+    score of group ``i`` elementwise by
+    ``(1 - min(b, diag(Omega_i Omega^{-1})))^{-1/2}``, where ``Omega_i``
+    is the contribution of the group to the information ``Omega`` and
+    ``b = 0.75``. ``cov_type="morel_bokossa_neerchal"`` (Morel, Bokossa
+    and Neerchal, 2003) is ``c * cov_robust + delta * xi * cov_naive``
+    with ``c = (N - 1) / (N - p) * K / (K - 1)``, ``delta = p / (K - p)``
+    if ``K > (d + 1) p`` and ``1 / d`` otherwise, and
+    ``xi = max(r, trace(cov_naive M) / p)``, where ``N`` is the number of
+    observations, ``K`` the number of groups, ``p`` the number of
+    parameters, ``M`` the center of the robust covariance, ``d = 2`` and
+    ``r = 1``. These follow the R packages saws and geesmv.
 
     References
     ----------
@@ -392,6 +411,13 @@ _gee_fit_doc = """
     P Li and DT Redden (2015). Small sample performance of bias-corrected
     sandwich estimators for cluster-randomized trials with binary
     outcomes. Statistics in Medicine, 34(2), 281-296.
+
+    MP Fay and BI Graubard (2001). Small-sample adjustments for Wald-type
+    tests using sandwich estimators. Biometrics, 57(4), 1198-1206.
+
+    Morel, Bokossa and Neerchal (2003). Small sample correction for the
+    variance of GEE estimators. Biometrical Journal, 45(4), 395-409.
+    doi:10.1002/bimj.200390021
 """
 
 _gee_results_doc = """
@@ -411,12 +437,17 @@ _gee_results_doc = """
         reduced
     cov_robust_kc : ndarray
         Kauermann-Carroll robust covariance of the parameter estimates
+    cov_robust_fg : ndarray
+        Fay-Graubard robust covariance of the parameter estimates
+    cov_robust_mbn : ndarray
+        Morel-Bokossa-Neerchal robust covariance of the parameter estimates
     converged : bool
         indicator for convergence of the optimization.
         True if the norm of the score is smaller than a threshold
     cov_type : str
-        string indicating whether a "robust", "naive", "bias_reduced" or
-        "kauermann_carroll" covariance is used as default
+        string indicating whether a "robust", "naive", "bias_reduced",
+        "kauermann_carroll", "fay_graubard" or "morel_bokossa_neerchal"
+        covariance is used as default
     fit_history : dict
         Contains information about the iterations.
     fittedvalues : ndarray
@@ -1319,6 +1350,18 @@ class GEE(GLM):
 
             f = self.weights_li[i] if self.weights is not None else 1.0
 
+            # a leverage of 1 leaves the correction undefined; the nonzero
+            # eigenvalues of hmat are those of this p x p matrix
+            lev = np.linalg.eigvals(cov_naive @ (vinv_d.T @ dmat)).real
+            if lev.max() > 1 - 1e-8:
+                name = {"md": "bias_reduced", "kc": "kauermann_carroll"}[method]
+                raise ValueError(
+                    f"Group {self.group_labels[i]} has leverage 1, for example a "
+                    f"single observation with its own dummy variable, so "
+                    f'cov_type="{name}" is not defined. Use cov_type="robust" or '
+                    f"drop the group."
+                )
+
             imh = np.eye(len(resid)) - hmat
             if method == "kc":
                 # principal root, since I - H is not symmetric in general
@@ -1335,6 +1378,62 @@ class GEE(GLM):
         cov_robust_bc *= self.scaling_factor
 
         return cov_robust_bc
+
+    def _fg_mbn_covmat(self, method):
+        """Fay-Graubard ("fg") or Morel-Bokossa-Neerchal ("mbn") covariance."""
+
+        endog = self.endog_li
+        exog = self.exog_li
+        weights = getattr(self, "weights_li", None)
+        varfunc = self.family.variance
+
+        bmats, scores = [], []
+        for i in range(self.num_group):
+            expval, lpr = self.cached_means[i]
+            resid = endog[i] - expval
+            dmat = self.mean_deriv(exog[i], lpr)
+            sdev = np.sqrt(varfunc(expval))
+            if weights is not None:
+                w = weights[i]
+                resid = resid * w
+                wdmat = dmat * w[:, None]
+            else:
+                wdmat = dmat
+            rslt = self.cov_struct.covariance_matrix_solve(
+                expval, i, sdev, (wdmat, resid)
+            )
+            if rslt is None:
+                return None
+            vinv_d, vinv_resid = rslt
+            bmats.append(np.dot(dmat.T, vinv_d))
+            scores.append(np.dot(dmat.T, vinv_resid))
+
+        bmati = np.linalg.inv(sum(bmats))
+        scores = np.asarray(scores)
+
+        if method == "fg":
+            # scale each score by (1 - min(b, diag(Omega_i Omega^{-1})))^{-1/2}
+            bound = 0.75
+            lev = np.array([np.diag(bm @ bmati) for bm in bmats])
+            scores = scores / np.sqrt(1 - np.minimum(bound, lev))
+            cov = bmati @ (scores.T @ scores) @ bmati
+        else:
+            # c * robust + delta * xi * naive, with d = 2 and r = 1
+            d, r = 2.0, 1.0
+            k_params = bmati.shape[0]
+            n_groups = self.num_group
+            nobs = self.nobs
+            meat = scores.T @ scores
+            scale = self.estimate_scale()
+            c = (nobs - 1) / (nobs - k_params) * n_groups / (n_groups - 1)
+            if n_groups > (d + 1) * k_params:
+                delta = k_params / (n_groups - k_params)
+            else:
+                delta = 1 / d
+            xi = max(r, np.trace(bmati @ meat) / (k_params * scale))
+            cov = c * (bmati @ meat @ bmati) + delta * xi * scale * bmati
+
+        return cov * self.scaling_factor
 
     def _starting_params(self):
 
@@ -1462,11 +1561,15 @@ class GEE(GLM):
                 stacklevel=2,
             )
             return None
-        bc_cov = kc_cov = None
+        bc_cov = kc_cov = fg_cov = mbn_cov = None
         if cov_type == "bias_reduced":
             bc_cov = self._bc_covmat(ncov)
         elif cov_type == "kauermann_carroll":
             kc_cov = self._bc_covmat(ncov, method="kc")
+        elif cov_type == "fay_graubard":
+            fg_cov = self._fg_mbn_covmat("fg")
+        elif cov_type == "morel_bokossa_neerchal":
+            mbn_cov = self._fg_mbn_covmat("mbn")
 
         if self.constraint is not None:
             x = mean_params.copy()
@@ -1506,6 +1609,10 @@ class GEE(GLM):
                         stacklevel=2,
                     )
                     return None
+            if fg_cov is not None:
+                y, fg_cov = self._handle_constraint(x, fg_cov)
+            if mbn_cov is not None:
+                y, mbn_cov = self._handle_constraint(x, mbn_cov)
 
         scale = self.estimate_scale()
 
@@ -1516,6 +1623,8 @@ class GEE(GLM):
             cov_naive=ncov,
             cov_robust_bc=bc_cov,
             cov_robust_kc=kc_cov,
+            cov_robust_fg=fg_cov,
+            cov_robust_mbn=mbn_cov,
         )
 
         # The superclass constructor will multiply the covariance
@@ -1551,6 +1660,8 @@ class GEE(GLM):
             "cov_naive",
             "cov_robust_bc",
             "cov_robust_kc",
+            "cov_robust_fg",
+            "cov_robust_mbn",
             "fit_history",
             "score_norm",
             "converged",
@@ -2014,6 +2125,8 @@ class GEEResults(GLMResults):
                 "naive",
                 "bias_reduced",
                 "kauermann_carroll",
+                "fay_graubard",
+                "morel_bokossa_neerchal",
             ]
             if covariance_type not in allowed_covariances:
                 msg = "GEE: `cov_type` must be one of " + ", ".join(allowed_covariances)
@@ -2027,6 +2140,10 @@ class GEEResults(GLMResults):
                 cov = self.cov_robust_bc
             elif cov_type == "kauermann_carroll":
                 cov = self.cov_robust_kc
+            elif cov_type == "fay_graubard":
+                cov = self.cov_robust_fg
+            elif cov_type == "morel_bokossa_neerchal":
+                cov = self.cov_robust_mbn
 
             self.cov_params_default = cov
         elif self.cov_type != cov_type:
@@ -2052,14 +2169,22 @@ class GEEResults(GLMResults):
         Parameters
         ----------
         cov_type : str, optional
-            One of "robust", "naive", "bias_reduced" or
-            "kauermann_carroll".  Determines the covariance used to compute
-            standard errors.  Defaults to "robust".
+            One of "robust", "naive", "bias_reduced", "kauermann_carroll",
+            "fay_graubard" or "morel_bokossa_neerchal".  Determines the
+            covariance used to compute standard errors.  Defaults to
+            "robust".
         """
 
         # Check covariance_type
         covariance_type = cov_type.lower()
-        allowed_covariances = ["robust", "naive", "bias_reduced", "kauermann_carroll"]
+        allowed_covariances = [
+            "robust",
+            "naive",
+            "bias_reduced",
+            "kauermann_carroll",
+            "fay_graubard",
+            "morel_bokossa_neerchal",
+        ]
         if covariance_type not in allowed_covariances:
             msg = "GEE: `covariance_type` must be one of " + ", ".join(
                 allowed_covariances
@@ -2078,6 +2203,16 @@ class GEEResults(GLMResults):
             if getattr(self, "cov_robust_kc", None) is None:
                 raise ValueError("GEE: `kauermann_carroll` covariance not available")
             return np.sqrt(np.diag(self.cov_robust_kc))
+        elif covariance_type == "fay_graubard":
+            if getattr(self, "cov_robust_fg", None) is None:
+                raise ValueError("GEE: `fay_graubard` covariance not available")
+            return np.sqrt(np.diag(self.cov_robust_fg))
+        elif covariance_type == "morel_bokossa_neerchal":
+            if getattr(self, "cov_robust_mbn", None) is None:
+                raise ValueError(
+                    "GEE: `morel_bokossa_neerchal` covariance not available"
+                )
+            return np.sqrt(np.diag(self.cov_robust_mbn))
 
     # Need to override to allow for different covariance types.
     @cache_readonly
@@ -2233,8 +2368,9 @@ class GEEResults(GLMResults):
              default `alpha` = .05 returns a 95% confidence interval.
         cov_type : str, optional
              The covariance type used for computing standard errors;
-             must be one of 'robust', 'naive', 'bias_reduced' and
-             'kauermann_carroll'.
+             must be one of 'robust', 'naive', 'bias_reduced',
+             'kauermann_carroll', 'fay_graubard' and
+             'morel_bokossa_neerchal'.
              See `GEE` for details.
 
         Notes
@@ -2376,6 +2512,10 @@ class GEEResults(GLMResults):
         """
         Get marginal effects of the fitted model
 
+        .. versionchanged:: 0.15.1
+
+           P-values and confidence intervals follow ``use_t`` of the results.
+
         Parameters
         ----------
         at : str, optional
@@ -2431,6 +2571,10 @@ class GEEResults(GLMResults):
         -----
         When using after Poisson, returns the expected number of events
         per period, assuming that the model is loglinear.
+
+        If the model was fit with ``use_t=True``, p-values and confidence
+        intervals use the t distribution with ``df_resid_inference``
+        degrees of freedom, as for the parameters.
         """
 
         if self.model.constraint is not None:
@@ -3396,6 +3540,16 @@ class GEEMargins:
     def _reset(self):
         self._cache = {}
 
+    def _dist(self):
+        # follow use_t of the results, see GEEResults.conf_int
+        if self.results.use_t:
+            return stats.t(self.results.df_resid_inference)
+        return stats.norm
+
+    @property
+    def _stat_name(self):
+        return "t" if self.results.use_t else "z"
+
     @cache_readonly
     def tvalues(self):
         _check_at_is_all(self.margeff_options)
@@ -3422,8 +3576,8 @@ class GEEMargins:
         names = [
             _transform_names[self.margeff_options["method"]],
             "Std. Err.",
-            "z",
-            "Pr(>|z|)",
+            self._stat_name,
+            f"Pr(>|{self._stat_name}|)",
             "Conf. Int. Low",
             "Cont. Int. Hi.",
         ]
@@ -3444,7 +3598,7 @@ class GEEMargins:
     @cache_readonly
     def pvalues(self):
         _check_at_is_all(self.margeff_options)
-        return stats.norm.sf(np.abs(self.tvalues)) * 2
+        return self._dist().sf(np.abs(self.tvalues)) * 2
 
     def conf_int(self, alpha=0.05):
         """
@@ -3464,7 +3618,7 @@ class GEEMargins:
         """
         _check_at_is_all(self.margeff_options)
         me_se = self.margeff_se
-        q = stats.norm.ppf(1 - alpha / 2)
+        q = self._dist().ppf(1 - alpha / 2)
         lower = self.margeff - q * me_se
         upper = self.margeff + q * me_se
         return np.asarray(lzip(lower, upper))
@@ -3554,9 +3708,10 @@ class GEEMargins:
                     "",
                     _transform_names[method],
                     "std err",
-                    "z",
-                    "P>|z|",
-                    f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
+                    self._stat_name,
+                    f"P>|{self._stat_name}|",
+                    f"[{alpha / 2}",
+                    f"{1 - alpha / 2}]",
                 ]
                 tble.insert_header_row(0, header)
                 # from IPython.core.debugger import Pdb; Pdb().set_trace()
@@ -3577,9 +3732,10 @@ class GEEMargins:
                 "",
                 _transform_names[method],
                 "std err",
-                "z",
-                "P>|z|",
-                f"[{100 - alpha * 100:3.1f}% Conf. Int.]",
+                self._stat_name,
+                f"P>|{self._stat_name}|",
+                f"[{alpha / 2}",
+                f"{1 - alpha / 2}]",
             ]
             table.insert_header_row(0, header)
 

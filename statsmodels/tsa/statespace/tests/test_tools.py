@@ -976,3 +976,21 @@ def test_prepare_trend_spec_invalid_array(trend):
     # UFuncTypeError, or to be accepted and give a trend with the wrong terms
     with pytest.raises(ValueError, match="Valid trend inputs are"):
         tools.prepare_trend_spec(trend)
+
+
+@pytest.mark.parametrize("dtype", [bool, np.int64, np.intc])
+def test_missing_index_dtype(dtype):
+    # GH 10770: masks that were not C int raised a buffer dtype error
+    rng = np.random.default_rng(10770)
+    a = rng.standard_normal((2, 2, 10))
+    b = rng.standard_normal((2, 2, 10))
+    mask = rng.uniform(size=(2, 10)) < 0.5
+    expected = tools.reorder_missing_matrix(a, mask.astype(np.intc), True)
+    actual = tools.reorder_missing_matrix(a, mask.astype(dtype), True)
+    assert_equal(actual, expected)
+    expected = tools.copy_missing_vector(a[0], b[0], mask.astype(np.intc))
+    actual = tools.copy_missing_vector(a[0], b[0], mask.astype(dtype))
+    assert_equal(actual, expected)
+    expected = tools.copy_index_matrix(a, b, mask.astype(np.intc), True)
+    actual = tools.copy_index_matrix(a, b, mask.astype(dtype), True)
+    assert_equal(actual, expected)

@@ -1665,7 +1665,10 @@ def test_dynamic_factor_end_time_invariant_noshocks():
     # Test simulating values from the end of a time-invariant dynamic factor
     # In this test, we suppress randomness by setting the shocks to zeros
     endog = np.arange(1, 21).reshape(10, 2)
-    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
+    # The factor is a random walk, so it is not initialized as stationary
+    mod = dynamic_factor.DynamicFactor(
+        endog, k_factors=1, factor_order=1, initialization="diffuse"
+    )
     mod.ssm.filter_univariate = True
     res = mod.filter([1.0, 1.0, 1.0, 1.0, 1.0])
 
@@ -1712,7 +1715,10 @@ def test_dynamic_factor_end_time_invariant_shocks():
     # Test simulating values from the end of a time-invariant dynamic factor
     rs = np.random.RandomState(2831239)
     endog = np.arange(1, 21).reshape(10, 2)
-    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
+    # The factor is a random walk, so it is not initialized as stationary
+    mod = dynamic_factor.DynamicFactor(
+        endog, k_factors=1, factor_order=1, initialization="diffuse"
+    )
     mod.ssm.filter_univariate = True
     res = mod.filter([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
@@ -1757,8 +1763,13 @@ def test_dynamic_factor_end_time_varying_exog_noshocks():
     # In this test, we suppress randomness by setting the shocks to zeros
     endog = np.arange(1, 21).reshape(10, 2)
     exog = np.arange(1, 21) ** 2
+    # The factor is a random walk, so it is not initialized as stationary
     mod = dynamic_factor.DynamicFactor(
-        endog, k_factors=1, factor_order=1, exog=exog[:10]
+        endog,
+        k_factors=1,
+        factor_order=1,
+        exog=exog[:10],
+        initialization="diffuse",
     )
     mod.ssm.filter_univariate = True
     res = mod.filter([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
@@ -1810,14 +1821,23 @@ def test_dynamic_factor_end_time_varying_exog_shocks():
     rs = np.random.RandomState(283121)
     endog = np.arange(1, 23).reshape(11, 2)
     exog = np.arange(1, 21) ** 2
+    # The factor is a random walk, so it is not initialized as stationary
     mod = dynamic_factor.DynamicFactor(
-        endog[:10], k_factors=1, factor_order=1, exog=exog[:10]
+        endog[:10],
+        k_factors=1,
+        factor_order=1,
+        exog=exog[:10],
+        initialization="diffuse",
     )
     mod.ssm.filter_univariate = True
     res = mod.filter([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
     mod2 = dynamic_factor.DynamicFactor(
-        endog, k_factors=1, factor_order=1, exog=exog[:11]
+        endog,
+        k_factors=1,
+        factor_order=1,
+        exog=exog[:11],
+        initialization="diffuse",
     )
     mod2.ssm.filter_univariate = True
     res2 = mod2.filter([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
