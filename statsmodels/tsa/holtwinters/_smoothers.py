@@ -403,4 +403,4 @@ def holt_win_mul_add_dam(x, hw_args: HoltWintersArgs):
             - (gamma * (lvl[i - 1] * b[i - 1] ** phi))
             + (gammac * s[i - 1])
         )
-    return hw_args.y - ((lvl * phi * b) + s[: -(m - 1)])
+    return hw_args.y - ((lvl * b**phi) + s[: -(m - 1)])

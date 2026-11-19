@@ -2344,3 +2344,114 @@ def test_damped_initial_trend_round_trip(trend, seasonal):
         res.params_formatted.loc["initial_trend", "param"],
         params["initial_trend"],
     )
+
+
+def _smoother_predictions(trend, seasonal, p, y, m):
+    """
+    One-step predictions of the Cython and the pure-Python smoother
+
+    ``p`` is ``[alpha, beta, gamma, l0, b0, phi, s0, ..., s(m-1)]``. The
+    smoothers return the residuals that the optimizer minimizes, so ``y``
+    minus them are their one-step predictions.
+    """
+    xi = np.ones(p.shape[0], dtype=np.int64)
+    bounds = np.array([[0.0, 1.0]] * 3)
+    predictions = {}
+    for name, smoothers, args in (
+        ("cython", SMOOTHERS, HoltWintersArgs),
+        ("python", PY_SMOOTHERS, PyHoltWintersArgs),
+    ):
+        hw_args = args(xi, p.copy(), bounds, y, m, y.shape[0])
+        resid = smoothers[(seasonal, trend)](p.copy(), hw_args)
+        predictions[name] = (y - resid, resid)
+    return predictions
+
+
+@pytest.mark.parametrize("trend", ["add", "mul"])
+@pytest.mark.parametrize("seasonal", SEASONALS)
+def test_damped_smoother_objective_is_reported_sse(trend, seasonal):
+    # The optimizer minimizes the sum of squared residuals of the smoother,
+    # so at the fitted parameters these must be the residuals and the SSE
+    # of the reported fit. With a multiplicative damped trend and additive
+    # seasonality, the smoothers predicted l * phi * b + s instead of
+    # l * b ** phi + s. The two agree when phi = 1, so phi is fixed below 1.
+    res = ExponentialSmoothing(
+        housing_data,
+        trend=trend,
+        damped_trend=True,
+        seasonal=seasonal,
+        initialization_method="estimated",
+    ).fit(damping_trend=0.95)
+    params = res.params
+    m = 12 if seasonal else 0
+    p = np.zeros(6 + m)
+    p[:6] = [
+        params["smoothing_level"],
+        params["smoothing_trend"],
+        params["smoothing_seasonal"] if seasonal else 0.0,
+        params["initial_level"],
+        params["initial_trend"],
+        params["damping_trend"],
+    ]
+    if seasonal:
+        p[6:] = params["initial_seasons"]
+    y = np.squeeze(np.asarray(housing_data, dtype=float))
+    fitted = np.asarray(res.fittedvalues)
+    predictions = _smoother_predictions(trend, seasonal, p, y, m)
+    for name, (prediction, resid) in predictions.items():
+        assert_allclose(prediction, fitted, rtol=1e-10, err_msg=name)
+        assert_allclose(resid @ resid, res.sse, rtol=1e-10, err_msg=name)
+
+
+def test_mul_damped_add_seasonal_one_step_closed_form():
+    # The (Md, A) method of Hyndman, Koehler, Ord and Snyder (2008),
+    # Forecasting with Exponential Smoothing, Table 2.1, with phi_1 = phi:
+    #   y[t+1|t] = l[t] * b[t] ** phi + s[t+1-m]
+    #   l[t] = alpha * (y[t] - s[t-m]) + (1 - alpha) * l[t-1] * b[t-1] ** phi
+    #   b[t] = beta * l[t] / l[t-1] + (1 - beta) * b[t-1] ** phi
+    #   s[t] = gamma * (y[t] - l[t-1] * b[t-1] ** phi) + (1 - gamma) * s[t-m]
+    m = 4
+    nobs = 12
+    rng = np.random.default_rng(20261119)
+    pattern = np.array([1.0, -0.5, 0.8, -1.3])
+    y = 10 * 1.02 ** np.arange(nobs) + np.tile(pattern, nobs // m)
+    y += 0.2 * rng.standard_normal(nobs)
+    alpha, beta, gamma, phi = 0.4, 0.2, 0.3, 0.9
+    l0, b0 = 10.0, 1.02
+    s0 = np.array([0.9, -0.6, 0.7, -1.2])
+    res = ExponentialSmoothing(
+        y,
+        trend="mul",
+        damped_trend=True,
+        seasonal="add",
+        seasonal_periods=m,
+        initialization_method="known",
+        initial_level=l0,
+        initial_trend=b0,
+        initial_seasonal=s0,
+    ).fit(
+        smoothing_level=alpha,
+        smoothing_trend=beta,
+        smoothing_seasonal=gamma,
+        damping_trend=phi,
+        optimized=False,
+    )
+
+    level, slope = l0, b0
+    # season[t] is s[t+1-m], the seasonal term of the prediction of y[t]
+    season = list(s0)
+    expected = np.empty(nobs)
+    for t in range(nobs):
+        damped = level * slope**phi
+        expected[t] = damped + season[t]
+        new_level = alpha * (y[t] - season[t]) + (1 - alpha) * damped
+        slope = beta * new_level / level + (1 - beta) * slope**phi
+        season.append(gamma * (y[t] - damped) + (1 - gamma) * season[t])
+        level = new_level
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+    assert_allclose(res.forecast(1), level * slope**phi + season[nobs], rtol=1e-10)
+
+    p = np.r_[alpha, beta, gamma, l0, b0, phi, s0]
+    predictions = _smoother_predictions("mul", "add", p, y, m)
+    for name, (prediction, _) in predictions.items():
+        assert_allclose(prediction, expected, rtol=1e-10, err_msg=name)
