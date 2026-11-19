@@ -21,7 +21,7 @@ import scipy.stats
 
 from statsmodels.iolib.summary import Summary
 from statsmodels.tools.numdiff import approx_hess_cs
-from statsmodels.tools.sm_exceptions import PrecisionWarning
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, PrecisionWarning
 from statsmodels.tsa import holtwinters
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa.exponential_smoothing.initialization import (
@@ -1166,12 +1166,21 @@ def test_estimated_initialization_short_data(oildata, trend, seasonal, nobs):
 def test_seasonal_order(method):
     seasonal = np.arange(12.0)
     time_series = np.array(list(seasonal) * 100)
-    res = ETSModel(
+    mod = ETSModel(
         time_series,
         seasonal="add",
         seasonal_periods=12,
         initialization_method=method,
-    ).fit()
+    )
+    if method == "estimated":
+        # The series has no noise, so the likelihood has no maximum: it grows
+        # without bound as the residual variance goes to zero. The start
+        # values already fit the series up to rounding, and the optimizer
+        # stops there without converging.
+        with pytest.warns(ConvergenceWarning, match="Maximum Likelihood"):
+            res = mod.fit()
+    else:
+        res = mod.fit()
     assert_allclose(
         res.initial_seasonal + res.initial_level,
         seasonal,
@@ -1559,11 +1568,20 @@ def test_estimated_initial_seasonal_cov(
 def test_params_dtype(austourists_model, dtype):
     # GH 10770: params that are not native float64 failed in the smoother
     model = austourists_model
-    params = np.round(model._start_params, 0).astype(dtype)
+    # The values are exact in every dtype, so that the native float64 copy
+    # holds the same numbers. The smoother uses beta / alpha and
+    # gamma / (1 - alpha), which are not finite for alpha = 0 or 1, so the
+    # integer params use alpha = 2: outside the usual bounds, but the output
+    # is finite. The floating point params are inside the bounds.
+    if np.dtype(dtype).kind == "i":
+        values = [2, 0, 0, 1, 26, 1, 2, -1, -7, 6]
+    else:
+        values = [0.5, 0.25, 0.125, 0.875, 26, 0.5, 1.5, -0.5, -6.75, 5.75]
+    params = np.array(values, dtype=dtype)
     native = params.astype(np.float64)
-    assert_allclose(model.loglike(params), model.loglike(native), rtol=1e-12)
-    assert_allclose(
-        model.smooth(params).fittedvalues,
-        model.smooth(native).fittedvalues,
-        rtol=1e-12,
-    )
+    llf = model.loglike(native)
+    assert np.isfinite(llf)
+    assert_allclose(model.loglike(params), llf, rtol=1e-12)
+    fitted = model.smooth(native).fittedvalues
+    assert np.all(np.isfinite(fitted))
+    assert_allclose(model.smooth(params).fittedvalues, fitted, rtol=1e-12)

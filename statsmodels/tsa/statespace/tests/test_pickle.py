@@ -44,8 +44,10 @@ def test_pickle_fit_sarimax(data):
     mod = sarimax.SARIMAX(data["lgdp"], order=(1, 1, 0))
     pkl_mod = pickle.loads(pickle.dumps(mod))
 
-    res = mod.fit(disp=-1, full_output=True, method="newton")
-    pkl_res = pkl_mod.fit(disp=-1, full_output=True, method="newton")
+    # L-BFGS converges here. Newton's method stops at the start values with a
+    # ConvergenceWarning.
+    res = mod.fit(disp=-1, full_output=True, method="lbfgs")
+    pkl_res = pkl_mod.fit(disp=-1, full_output=True, method="lbfgs")
 
     assert_allclose(res.llf_obs, pkl_res.llf_obs)
     assert_allclose(res.tvalues, pkl_res.tvalues)
