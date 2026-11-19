@@ -1957,8 +1957,9 @@ class MixedLM(base.LikelihoodModel):
         """
         signed_params = None
         if type(params) is not MixedLMParams:
-            # from_packed squares the square roots, so keep their signs
-            signed_params = params
+            if self.use_sqrt:
+                # from_packed squares the square roots, so keep their signs
+                signed_params = params
             params = MixedLMParams.from_packed(
                 params, self.k_fe, self.k_re, self.use_sqrt, has_fe=False
             )
