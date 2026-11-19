@@ -9,6 +9,7 @@ estimation differ among implementations and the results will not agree
 exactly.
 """
 from statsmodels.compat import lrange
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 import itertools
 from pathlib import Path
@@ -3106,6 +3107,10 @@ def test_fay_graubard_not_available():
         res.standard_errors("fay_graubard")
 
 
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM,
+    reason="np.linalg.inv does not raise for a singular matrix on WASM",
+)
 @pytest.mark.parametrize("cov_type", ["fay_graubard", "morel_bokossa_neerchal"])
 def test_fg_mbn_rank_deficient(cov_type):
     # a duplicated column: like the robust covariance, the covariance
