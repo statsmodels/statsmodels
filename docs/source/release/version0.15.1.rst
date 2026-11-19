@@ -982,6 +982,12 @@ Time series analysis
   ``ValueError`` for big-endian arrays, and for a ``missing`` or ``index``
   mask of ``bool`` or ``int64`` dtype although the masks are documented as
   bool. :issue:`10770`, :pr:`10795`
+- ``VAR.fit`` now raises a ``SingularMatrixWarning`` if the lagged regressors
+  are perfectly collinear, matching the warning already raised by ``OLS`` for
+  a rank-deficient design matrix, using the same ``nobs``-scaled rank rule
+  (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
+  orders it evaluates internally and raises at most one warning per call
+  instead of one per lag order. :issue:`10646`, :pr:`10694`
 
 Statistics and tests
 --------------------

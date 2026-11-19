@@ -13,6 +13,7 @@ from statsmodels.compat.python import lrange
 
 from collections import defaultdict
 from io import StringIO
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -22,9 +23,10 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools._lstsq import default_rcond
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.sm_exceptions import OutputWarning
+from statsmodels.tools.sm_exceptions import OutputWarning, SingularMatrixWarning
 from statsmodels.tools.validation import array_like, float_like, int_like, string_like
 from statsmodels.tsa._lagselect import nested_lag_ols
 from statsmodels.tsa.base.tsa_model import (
@@ -815,6 +817,13 @@ class VAR(TimeSeriesModel):
         VARResults
             Estimation results
 
+        Warns
+        -----
+        SingularMatrixWarning
+            If the lagged regressors are collinear so that the design
+            matrix is rank-deficient, the fitted parameters are not
+            uniquely determined.
+
         Notes
         -----
         See Lütkepohl pp. 146-153 for implementation details.
@@ -833,7 +842,14 @@ class VAR(TimeSeriesModel):
                 )
 
         if ic is not None:
-            selections = self.select_order(maxlags=maxlags)
+            # The final _estimate_var call below already warns if the
+            # chosen lag order is singular, so do not also warn here for
+            # the other lag orders select_order considers internally.
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", category=SingularMatrixWarning
+                )
+                selections = self.select_order(maxlags=maxlags, trend=trend)
             if not hasattr(selections, ic):
                 raise ValueError(
                     f"{ic} not recognized, must be among {sorted(selections.ics)}"
@@ -865,7 +881,7 @@ class VAR(TimeSeriesModel):
         )
         return self._estimate_var(lags, trend=trend)
 
-    def _estimate_var(self, lags, offset=0, trend="c"):
+    def _estimate_var(self, lags, offset=0, trend="c", warn_singular=True):
         """
         Estimate a VAR model with a given number of lags
 
@@ -878,6 +894,12 @@ class VAR(TimeSeriesModel):
             apples-to-apples comparison
         trend : {"n", "c", "ct", "ctt"}, optional
             As per above
+        warn_singular : bool, optional
+            Whether to warn immediately if the design matrix is
+            rank-deficient. Callers that estimate many lag orders in a loop
+            (e.g. ``select_order``) should pass False and instead check
+            ``result._rank_deficient`` once per call, so that a single
+            warning can be raised for the whole loop instead of one per lag.
         """
         # have to do this again because select_order does not call fit
         self.k_trend = k_trend = util.get_trendorder(trend)
@@ -911,8 +933,20 @@ class VAR(TimeSeriesModel):
                 z[:, i] = (np.sqrt(z[:, i]) + lags) ** 2
 
         y_sample = endog[lags:]
-        # Lütkepohl p75, about 5x faster than stated formula
-        params = np.linalg.lstsq(z, y_sample, rcond=1e-15)[0]
+        # Lütkepohl p75, about 5x faster than stated formula. Same rank
+        # rule as OLS (statsmodels.tools._lstsq): rcond scales with nobs,
+        # not just the number of columns, or the cutoff misses designs
+        # that are exactly rank-deficient at a few thousand observations.
+        rcond = default_rcond(*z.shape)
+        params, _, rank, _ = np.linalg.lstsq(z, y_sample, rcond=rcond)
+        rank_deficient = rank < z.shape[1]
+        if rank_deficient and warn_singular:
+            warnings.warn(
+                "The design matrix is rank-deficient. "
+                "The VAR parameters are not uniquely determined.",
+                SingularMatrixWarning,
+                stacklevel=3,
+            )
         resid = y_sample - np.dot(z, params)
 
         # Unbiased estimate of covariance matrix $\Sigma_u$ of the white noise
@@ -946,6 +980,7 @@ class VAR(TimeSeriesModel):
             model=self,
             exog=self.exog,
         )
+        varfit._rank_deficient = rank_deficient
         return VARResultsWrapper(varfit)
 
     def select_order(self, maxlags=None, trend="c"):
@@ -966,6 +1001,13 @@ class VAR(TimeSeriesModel):
         Returns
         -------
         selections : LagOrderResults
+
+        Warns
+        -----
+        SingularMatrixWarning
+            If the design matrix is rank-deficient for at least one of the
+            lag orders considered, at most one warning is raised for the
+            whole call, rather than one per affected lag order.
         """
         ntrend = len(trend) if trend.startswith("c") else 0
         max_estimable = (self.n_totobs - self.neqs - ntrend) // (1 + self.neqs)
@@ -995,13 +1037,27 @@ class VAR(TimeSeriesModel):
             for k, v in fast_ics.items():
                 ics[k].extend(v)
         else:
+            singular = False
             for p in range(p_min, maxlags + 1):
                 # exclude some periods to same amount of data used for each
                 # lag order
-                result = self._estimate_var(p, offset=maxlags - p, trend=trend)
+                result = self._estimate_var(
+                    p, offset=maxlags - p, trend=trend, warn_singular=False
+                )
+                singular = singular or result._rank_deficient
 
                 for k, v in result.info_criteria.items():
                     ics[k].append(v)
+
+            if singular:
+                warnings.warn(
+                    "The design matrix is rank-deficient for at least one "
+                    "lag order considered by select_order. The VAR "
+                    "parameters are not uniquely determined for those "
+                    "models.",
+                    SingularMatrixWarning,
+                    stacklevel=2,
+                )
 
         selected_orders = {k: np.array(v).argmin() + p_min for k, v in ics.items()}
 

@@ -93,7 +93,17 @@ def select_order(
         exogs = hstack(exogs) if exogs else None
         var_model = VAR(data, exogs)
         # exclude some periods ==> same amount of data used for each lag order
-        var_result = var_model._estimate_var(lags=p, offset=maxlags + 1 - p)
+        # warn_singular=False: when "co" or "ci" is requested, exogs already
+        # includes a constant column, which VAR's own default trend="c" then
+        # duplicates, matching JMulTi's lag-order-selection procedure; the
+        # resulting design matrix is rank-deficient by construction. Other
+        # deterministic choices never hit this, and the information
+        # criteria only depend on the residuals, which are well-defined
+        # regardless of the non-unique parameterization, so this is not
+        # worth warning the user about here.
+        var_result = var_model._estimate_var(
+            lags=p, offset=maxlags + 1 - p, warn_singular=False
+        )
 
         for k, v in var_result.info_criteria.items():
             ic[k].append(v)
