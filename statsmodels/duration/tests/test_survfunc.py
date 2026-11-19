@@ -148,9 +148,11 @@ def test_simultaneous_cb_freq_weights_equal_expanded_data(transform):
     status = rng.integers(0, 2, size=40)
     status[:5] = 1
     weights = rng.integers(1, 5, size=40)
+    # np.repeat needs counts that cast safely to intp (int32 on Pyodide)
+    counts = weights.astype(np.intp)
 
     sf_w = SurvfuncRight(time, status, freq_weights=weights)
-    sf_x = SurvfuncRight(np.repeat(time, weights), np.repeat(status, weights))
+    sf_x = SurvfuncRight(np.repeat(time, counts), np.repeat(status, counts))
     assert_allclose(sf_w.surv_times, sf_x.surv_times)
 
     lcb_w, ucb_w = sf_w.simultaneous_cb(transform=transform)

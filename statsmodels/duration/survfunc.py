@@ -409,6 +409,7 @@ class SurvfuncRight:
         _checkargs(time, status, entry, freq_weights, exog)
         time = self.time = np.asarray(time)
         status = self.status = np.asarray(status)
+        self.freq_weights = None
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
 
@@ -695,6 +696,11 @@ class SurvfuncRight:
         value that depends on the range of times covered by the band
         (1.3364 for the ``bmt`` ALL group), so its limits differ slightly.
 
+        With left truncation (``entry`` is given), ``n`` is still the
+        number of records (the sum of ``freq_weights`` if given), which
+        includes subjects that enter after the early event times, and not
+        the number at risk at any time.
+
         .. versionchanged:: 0.15.1
 
            The band uses the total sample size ``n`` instead of the number
@@ -719,7 +725,7 @@ class SurvfuncRight:
         # Hall and Wellner (1980); Klein and Moeschberger (2003), eqs.
         # 4.4.3-4.4.5: ``n`` is the total sample size, not the number at
         # risk at each time point.
-        freq_weights = getattr(self, "freq_weights", None)
+        freq_weights = self.freq_weights
         if freq_weights is not None:
             nn = float(np.sum(freq_weights))
         else:
