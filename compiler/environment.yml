@@ -18,7 +18,9 @@ dependencies:
   - patsy
   - statsmodels
   - pytest
+  - scikit-learn
   - pip
   - pip:
       - iree-base-compiler
       - iree-base-runtime
+      - econml           # LinearDML baseline (econml_baseline.py)
