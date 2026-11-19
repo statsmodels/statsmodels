@@ -4639,3 +4639,135 @@ def test_acf_pacf_adfuller_input_forms(form):
     expected = adfuller(x, maxlag=4, autolag=None, result_object=True)
     assert_allclose(res.statistic, expected.statistic, rtol=1e-12)
     assert_allclose(res.pvalue, expected.pvalue, rtol=1e-12)
+
+
+def _numeric_leaves(res):
+    """The numeric values of a result, flattened, to compare two results"""
+    if isinstance(res, dict):
+        return np.concatenate([_numeric_leaves(res[key]) for key in sorted(res)])
+    if isinstance(res, tuple):
+        return np.concatenate([_numeric_leaves(item) for item in res])
+    return np.asarray(res, dtype=float).ravel()
+
+
+def _series_contract_cases():
+    """
+    Functions of one 1-D array_like argument, and the ndarray to pass
+
+    The other arguments are fixed.
+    """
+    rng = np.random.default_rng(20261121)
+    x = rng.standard_normal(200).cumsum()
+    dx = np.diff(x)
+    y1 = x + rng.standard_normal(200)
+    acov = acovf(dx)[:6]
+    theta = innovations_algo(acov)[0]
+    return {
+        "acovf": (lambda v: acovf(v, nlag=10), x),
+        "arma_order_select_ic": (
+            lambda v: arma_order_select_ic(v, max_ar=1, max_ma=0, ic="aic").aic,
+            dx[:100],
+        ),
+        "block_jackknife": (lambda v: block_jackknife(v, np.mean, n_blocks=10), x),
+        "breakvar_heteroskedasticity_test": (breakvar_heteroskedasticity_test, dx),
+        "coint y0": (lambda v: coint(v, y1, maxlag=2, autolag=None), x),
+        "coint y1": (lambda v: coint(x, v, maxlag=2, autolag=None), y1),
+        "innovations_algo": (innovations_algo, acov),
+        "innovations_filter": (lambda v: innovations_filter(v, theta), dx[:6]),
+        "levinson_durbin": (lambda v: levinson_durbin(v, nlags=5), dx),
+        "levinson_durbin_pacf": (levinson_durbin_pacf, pacf(dx, nlags=5)),
+        "leybourne": (leybourne, x),
+        "pacf_ols": (lambda v: pacf_ols(v, nlags=10), x),
+        "pacf_yw": (lambda v: pacf_yw(v, nlags=10), x),
+        "zivot_andrews": (lambda v: zivot_andrews(v, maxlag=2, autolag=None), x),
+    }
+
+
+_SERIES_CONTRACT_NAMES = tuple(sorted(_series_contract_cases()))
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS)
+@pytest.mark.parametrize("name", _SERIES_CONTRACT_NAMES)
+def test_stattools_input_forms(name, form):
+    # The argument is documented as array_like: every form of a 1-D series
+    # gives the result of the ndarray
+    func, x = _series_contract_cases()[name]
+    expected = _numeric_leaves(func(x))
+    res = _numeric_leaves(func(series_forms(x)[form]))
+    assert_allclose(res, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        name
+        for name in _SERIES_CONTRACT_NAMES
+        if name not in ("innovations_algo", "levinson_durbin_pacf")
+    ],
+)
+def test_stattools_integer_input(name):
+    # Integer data gives the result of the same values as floats
+    func, x = _series_contract_cases()[name]
+    x_int = np.round(4 * x).astype(np.int64)
+    expected = _numeric_leaves(func(x_int.astype(float)))
+    assert_allclose(_numeric_leaves(func(x_int)), expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("form", ["list", "tuple", "series"])
+@pytest.mark.parametrize("position", [0, 1, 2])
+@pytest.mark.parametrize("test", [diebold_mariano_test, clark_west_test])
+def test_forecast_comparison_input_forms(test, position, form):
+    # y and the two forecasts are documented as array_like
+    rng = np.random.default_rng(20261122)
+    y = rng.standard_normal(100)
+    args = [y, y + 0.5 * rng.standard_normal(100), y + 0.8 * rng.standard_normal(100)]
+    expected = test(*args)
+    args[position] = series_forms(args[position])[form]
+    res = test(*args)
+    assert_allclose(
+        [res.statistic, res.pvalue], [expected.statistic, expected.pvalue], rtol=1e-12
+    )
+
+
+@pytest.mark.parametrize("form", ["dataframe", "list", "int"])
+def test_two_column_input_forms(form):
+    # x of grangercausalitytests and resid of
+    # breakvar_heteroskedasticity_test are documented as 2-D array_like
+    rng = np.random.default_rng(20261123)
+    x = np.round(4 * rng.standard_normal((100, 2)))
+    index = pd.date_range("2000-01-01", periods=100, freq="MS")
+    x_form = {
+        "dataframe": pd.DataFrame(x, index=index, columns=["a", "b"]),
+        "list": x.tolist(),
+        "int": x.astype(np.int64),
+    }[form]
+    res = grangercausalitytests(x_form, 2)
+    expected = grangercausalitytests(x, 2)
+    assert sorted(res) == [1, 2]
+    for lag in (1, 2):
+        for name in ("ssr_ftest", "ssr_chi2test", "lrtest", "params_ftest"):
+            assert_allclose(res[lag][0][name], expected[lag][0][name], rtol=1e-12)
+    res = breakvar_heteroskedasticity_test(x_form)
+    expected = breakvar_heteroskedasticity_test(x)
+    assert_allclose(_numeric_leaves(res), _numeric_leaves(expected), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "maxlag, lags",
+    [
+        (2, [1, 2]),
+        (np.int64(2), [1, 2]),
+        ([2], [2]),
+        ((2,), [2]),
+        (range(1, 3), [1, 2]),
+    ],
+)
+def test_grangercausalitytests_maxlag_forms(gc_data, maxlag, lags):
+    # An int gives the lags up to maxlag, a sequence only the lags in it
+    res = grangercausalitytests(gc_data, maxlag)
+    assert sorted(res) == lags
+    expected = grangercausalitytests(gc_data, [1, 2])
+    for lag in lags:
+        assert_allclose(
+            res[lag][0]["ssr_ftest"], expected[lag][0]["ssr_ftest"], rtol=1e-12
+        )
