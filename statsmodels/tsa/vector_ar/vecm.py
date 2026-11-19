@@ -684,9 +684,11 @@ def coint_johansen(endog, det_order, k_ar_diff):
     dx = dx[k_ar_diff:]
 
     dx = detrend(dx, f)
-    # GH 5731, [:-0] does not work, need [:t-0]
-    lx = endog[: (endog.shape[0] - k_ar_diff)]
-    lx = lx[1:]
+    # levels lagged once, y_{t-1}, aligned with dx. For k_ar_diff > 0 any
+    # lag y_{t-j}, 1 <= j <= k_ar_diff + 1, gives the same residuals after
+    # partialling out the lagged differences, but for k_ar_diff = 0 there is
+    # nothing to partial out and the lag must be one.
+    lx = endog[k_ar_diff:-1]
     lx = detrend(lx, f)
     # Doornik and O'Brien (2002), Algorithm 3: the thin QR of the lagged
     # differences, the levels and the differences partials out the lagged
