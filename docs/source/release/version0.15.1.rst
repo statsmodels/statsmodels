@@ -1325,6 +1325,11 @@ Documentation
 - Add an example to ``cohens_kappa`` showing that kappa depends on class
   prevalence: with the same rater accuracy and raw agreement, kappa is much
   smaller when one class is rare. :issue:`9680`, :pr:`10806`
+- Correct the docstrings of the deprecated ``TsaDescriptive``,
+  ``TSMLEModel`` and ``_Var``: the accepted data types, the ``order`` of
+  ``TsaDescriptive.fit`` (p, d, q) and its return type, the shapes of the
+  ``_Var`` coefficient arrays, and a runnable ``_Var`` example in place of one
+  that used undefined names. :pr:`10815`
 
 Stricter Input Validation
 =========================
