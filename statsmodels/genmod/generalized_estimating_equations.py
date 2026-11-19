@@ -1427,6 +1427,15 @@ class GEE(GLM):
             k_params = bmati.shape[0]
             n_groups = self.num_group
             nobs = self.nobs
+            if n_groups < 2:
+                raise ValueError(
+                    'cov_type="morel_bokossa_neerchal" requires more than one group'
+                )
+            if nobs <= k_params:
+                raise ValueError(
+                    'cov_type="morel_bokossa_neerchal" requires more observations '
+                    "than parameters"
+                )
             meat = scores.T @ scores
             scale = self.estimate_scale()
             c = (nobs - 1) / (nobs - k_params) * n_groups / (n_groups - 1)

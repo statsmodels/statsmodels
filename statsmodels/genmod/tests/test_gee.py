@@ -3159,6 +3159,25 @@ def test_morel_bokossa_neerchal_constraint():
     assert_allclose(lhs @ res.cov_robust_mbn @ lhs.T, 0, atol=1e-12)
 
 
+def test_morel_bokossa_neerchal_one_group():
+    # the constant c has the factor n_groups / (n_groups - 1)
+    endog, exog, _ = _small_cluster_data()
+    mod = gee.GEE(endog, exog, np.zeros(len(endog)))
+    with pytest.raises(ValueError, match="requires more than one group"):
+        mod.fit(cov_type="morel_bokossa_neerchal")
+
+
+def test_morel_bokossa_neerchal_nobs_equals_params():
+    # the constant c has the factor (nobs - 1) / (nobs - k_params); the start
+    # parameters keep the fit itself free of warnings
+    rng = np.random.default_rng(4182)
+    exog = np.column_stack((np.ones(3), rng.standard_normal((3, 2))))
+    endog = np.array([1.0, 3.0, 2.0])
+    mod = gee.GEE(endog, exog, [0, 0, 1], family=families.Poisson())
+    with pytest.raises(ValueError, match="more observations than parameters"):
+        mod.fit(cov_type="morel_bokossa_neerchal", start_params=np.zeros(3))
+
+
 def test_morel_bokossa_neerchal_not_available():
     endog, exog, groups = _small_cluster_data()
     res = gee.GEE(endog, exog, groups).fit()
