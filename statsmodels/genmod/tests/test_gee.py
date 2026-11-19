@@ -9,7 +9,9 @@ estimation differ among implementations and the results will not agree
 exactly.
 """
 from statsmodels.compat import lrange
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 
+import itertools
 from pathlib import Path
 import warnings
 
@@ -2994,41 +2996,68 @@ def test_margeff_use_t(model_class, use_t):
     assert ("t" in marg.summary_frame().columns) is use_t
 
 
-def _fg_mbn_ref(method):
+_FG_MBN_FAMILIES = ["y_gauss", "y_pois", "y_bin"]
+_FG_MBN_CORSTR = ["independence", "exchangeable"]
+_MBN_CASES = list(
+    itertools.product(["equal", "equal8"], _FG_MBN_FAMILIES, _FG_MBN_CORSTR)
+)
+# "hilev" has a cluster with a leverage of 0.985, above the bound b = 0.75
+_FG_CASES = [
+    *itertools.product(
+        ["equal", "equal8", "unequal"], _FG_MBN_FAMILIES, _FG_MBN_CORSTR
+    ),
+    ("hilev", "y_gauss", "exchangeable"),
+]
+
+
+@pytest.fixture(scope="module")
+def fg_mbn_ref():
     path = Path(__file__).parent / "results"
     ref = pd.read_csv(path / "gee_fg_mbn_ref.csv")
     sim = pd.read_csv(path / "gee_fg_mbn.csv")
     data = {
-        "equal": sim,
+        "equal": sim[sim["id"] <= 12],
         "equal8": sim[sim["id"] <= 8],
+        "hilev": sim[sim["id"] > 100],
         "unequal": pd.read_csv(path / "gee_small_sample.csv"),
     }
-    ref = ref[ref["method"] == method]
-    return [(data[r["data"]], r) for _, r in ref.iterrows()]
+    return ref, data
 
 
-def _fg_mbn_fit(data, ref, cov_type):
+def _fg_mbn_case(fg_mbn_ref, method, data_name, endog, corstr):
+    ref, data = fg_mbn_ref
+    row = ref[
+        (ref["method"] == method)
+        & (ref["data"] == data_name)
+        & (ref["endog"] == endog)
+        & (ref["corstr"] == corstr)
+    ]
+    assert len(row) == 1
+    return data[data_name], row.iloc[0]
+
+
+def _fg_mbn_fit(data, endog, corstr, cov_type):
     family = {
         "y_gauss": families.Gaussian,
         "y_pois": families.Poisson,
         "y_bin": families.Binomial,
-    }[ref["endog"]]
+    }[endog]
     cs = {
         "independence": cov_struct.Independence,
         "exchangeable": cov_struct.Exchangeable,
-    }[ref["corstr"]]
+    }[corstr]
     exog = tools.add_constant(data[["x1", "x2"]].to_numpy())
-    mod = gee.GEE(
-        data[ref["endog"]], exog, data["id"], family=family(), cov_struct=cs()
-    )
+    mod = gee.GEE(data[endog], exog, data["id"], family=family(), cov_struct=cs())
     return mod.fit(cov_type=cov_type, ctol=1e-12, maxiter=200)
 
 
-@pytest.mark.parametrize("case", range(18))
-def test_fay_graubard_saws(case):
+@pytest.mark.parametrize(
+    "data_name, endog, corstr", _FG_CASES, ids=["-".join(c) for c in _FG_CASES]
+)
+def test_fay_graubard_saws(fg_mbn_ref, data_name, endog, corstr):
     # reference values from R saws, see gee_fg_mbn.R
-    data, ref = _fg_mbn_ref("fg_saws")[case]
-    res = _fg_mbn_fit(data, ref, "fay_graubard")
+    data, ref = _fg_mbn_case(fg_mbn_ref, "fg_saws", data_name, endog, corstr)
+    res = _fg_mbn_fit(data, endog, corstr, "fay_graubard")
     cov = ref[[f"v{i}" for i in range(9)]].to_numpy(float).reshape(3, 3)
     assert_equal(res.cov_type, "fay_graubard")
     assert_allclose(res.cov_params(), cov, rtol=1e-9, atol=1e-12)
@@ -3078,6 +3107,47 @@ def test_fay_graubard_not_available():
         res.standard_errors("fay_graubard")
 
 
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM,
+    reason="np.linalg.inv does not raise for a singular matrix on WASM",
+)
+@pytest.mark.parametrize("cov_type", ["fay_graubard", "morel_bokossa_neerchal"])
+def test_fg_mbn_rank_deficient(cov_type):
+    # a duplicated column: like the robust covariance, the covariance
+    # uses the pseudoinverse of the information matrix
+    endog, exog, groups = _small_cluster_data()
+    exog = np.column_stack((exog, exog[:, 1]))
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res = gee.GEE(endog, exog, groups).fit(cov_type=cov_type)
+
+    # direct computation for the Gaussian family and independence
+    n_groups, k_params = 12, exog.shape[1]
+    resid = endog - exog @ res.params
+    omega = [exog[groups == g].T @ exog[groups == g] for g in range(n_groups)]
+    omegai = np.linalg.pinv(sum(omega))
+    scores = [exog[groups == g].T @ resid[groups == g] for g in range(n_groups)]
+    if cov_type == "fay_graubard":
+        scores = [
+            s / np.sqrt(1 - np.minimum(0.75, np.diag(o @ omegai)))
+            for s, o in zip(scores, omega, strict=True)
+        ]
+        expected = omegai @ sum(np.outer(s, s) for s in scores) @ omegai
+    else:
+        # the scale of a Gaussian fit divides by the degrees of freedom of
+        # the rank of exog, see test_df_resid_rank_deficient
+        nobs = len(endog)
+        df_resid = nobs - np.linalg.matrix_rank(exog)
+        scale = np.sum(resid**2) / df_resid
+        meat = sum(np.outer(s, s) for s in scores)
+        c = (nobs - 1) / (nobs - k_params) * n_groups / (n_groups - 1)
+        delta = k_params / (n_groups - k_params)
+        xi = max(1.0, np.trace(omegai @ meat) / (k_params * scale))
+        expected = c * omegai @ meat @ omegai + delta * xi * scale * omegai
+    assert_allclose(res.cov_params(), expected, rtol=1e-8, atol=1e-12)
+    assert np.isfinite(res.bse).all()
+    assert_allclose(res.bse, np.sqrt(np.diag(expected)), rtol=1e-8)
+
+
 def test_fay_graubard_bound():
     # x2 is nonzero only in group 0, so the share of group 0 is 1 for it and
     # the bound b = 0.75 applies
@@ -3101,11 +3171,13 @@ def test_fay_graubard_bound():
     assert_allclose(res.cov_robust_fg, omegai @ meat @ omegai, rtol=1e-10)
 
 
-@pytest.mark.parametrize("case", range(12))
-def test_morel_bokossa_neerchal_geesmv(case):
+@pytest.mark.parametrize(
+    "data_name, endog, corstr", _MBN_CASES, ids=["-".join(c) for c in _MBN_CASES]
+)
+def test_morel_bokossa_neerchal_geesmv(fg_mbn_ref, data_name, endog, corstr):
     # reference variances from R geesmv, see gee_fg_mbn.R
-    data, ref = _fg_mbn_ref("mbn_geesmv")[case]
-    res = _fg_mbn_fit(data, ref, "morel_bokossa_neerchal")
+    data, ref = _fg_mbn_case(fg_mbn_ref, "mbn_geesmv", data_name, endog, corstr)
+    res = _fg_mbn_fit(data, endog, corstr, "morel_bokossa_neerchal")
     var = ref[["v0", "v1", "v2"]].to_numpy(float)
     assert_equal(res.cov_type, "morel_bokossa_neerchal")
     assert_allclose(np.diag(res.cov_params()), var, rtol=1e-9)
@@ -3120,6 +3192,25 @@ def test_morel_bokossa_neerchal_constraint():
     res = mod.fit(cov_type="morel_bokossa_neerchal")
     assert_equal(res.cov_robust_mbn.shape, (3, 3))
     assert_allclose(lhs @ res.cov_robust_mbn @ lhs.T, 0, atol=1e-12)
+
+
+def test_morel_bokossa_neerchal_one_group():
+    # the constant c has the factor n_groups / (n_groups - 1)
+    endog, exog, _ = _small_cluster_data()
+    mod = gee.GEE(endog, exog, np.zeros(len(endog)))
+    with pytest.raises(ValueError, match="requires more than one group"):
+        mod.fit(cov_type="morel_bokossa_neerchal")
+
+
+def test_morel_bokossa_neerchal_nobs_equals_params():
+    # the constant c has the factor (nobs - 1) / (nobs - k_params); the start
+    # parameters keep the fit itself free of warnings
+    rng = np.random.default_rng(4182)
+    exog = np.column_stack((np.ones(3), rng.standard_normal((3, 2))))
+    endog = np.array([1.0, 3.0, 2.0])
+    mod = gee.GEE(endog, exog, [0, 0, 1], family=families.Poisson())
+    with pytest.raises(ValueError, match="more observations than parameters"):
+        mod.fit(cov_type="morel_bokossa_neerchal", start_params=np.zeros(3))
 
 
 def test_morel_bokossa_neerchal_not_available():
