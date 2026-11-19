@@ -47,6 +47,18 @@ Deprecations
   it will be removed in statsmodels 0.17.0. The value of ``which`` is case
   sensitive and ``exog`` can be a list. :issue:`8562`, :pr:`10554`,
   :pr:`10555`
+- ``statsmodels.tsa.statespace.tools.set_mode``,
+  ``statsmodels.tsa.tsatools.unintegrate`` and ``unintegrate_levels``, and
+  ``statsmodels.tsa.vector_ar.output.normality_summary`` and
+  ``hypothesis_test_table`` are deprecated. Nothing in statsmodels uses them
+  and they are neither exported nor documented. Calling them now raises a
+  ``FutureWarning``, and they will be removed after statsmodels 0.17.
+  :pr:`10828`
+- The ``statsmodels.tsa.arima_model`` module, whose ``ARMA`` and ``ARIMA``
+  classes were removed in statsmodels 0.13 and only raise
+  ``NotImplementedError``, will be removed after statsmodels 0.16. Use
+  ``statsmodels.tsa.arima.model.ARIMA`` or
+  ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
 
 Behavior changes
 ----------------
