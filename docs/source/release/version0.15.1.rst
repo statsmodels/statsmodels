@@ -731,14 +731,6 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
-- ``coint_johansen`` and ``select_coint_rank`` with ``k_ar_diff=0`` used the
-  levels ``y_t`` instead of the lagged levels ``y_{t-1}``, so the eigenvalues,
-  the trace and maximum eigenvalue statistics and the eigenvectors were wrong
-  and the selected cointegration rank could change. On the log of real GDP,
-  consumption and investment in ``macrodata`` the trace statistic for rank 0
-  was 39.4 instead of 29.6, which selected rank 1 instead of 0. The statistics
-  now equal the likelihood ratio statistics of ``VECM``. Results with
-  ``k_ar_diff`` of 1 or more do not change. :issue:`7459`, :pr:`10807`
 - The ARIMA GLS estimator now uses the complete AR and MA lag polynomials
   when whitening the regression data. Seasonal terms were previously
   omitted, and nonconsecutive lags were treated as consecutive, producing
@@ -1001,6 +993,15 @@ Time series analysis
   (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``coint_johansen`` and ``select_coint_rank`` with ``k_ar_diff=0`` used the
+  levels ``y_t`` instead of the lagged levels ``y_{t-1}``, so the eigenvalues,
+  the trace and maximum eigenvalue statistics and the eigenvectors were wrong
+  and the selected cointegration rank could change. With ``det_order=0``, on
+  the log of real GDP, consumption and investment in ``macrodata`` the trace
+  statistic for rank 0 was 39.4 instead of 29.6, which selected rank 1 instead
+  of 0. For a ``det_order`` of -1 and 0 the statistics now equal the
+  likelihood ratio statistics of ``VECM``. Results with ``k_ar_diff`` of 1 or
+  more do not change. :issue:`7459`, :pr:`10807`
 
 Statistics and tests
 --------------------
