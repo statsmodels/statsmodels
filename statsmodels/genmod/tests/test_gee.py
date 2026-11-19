@@ -3004,7 +3004,11 @@ def _fg_mbn_ref(method):
         "unequal": pd.read_csv(path / "gee_small_sample.csv"),
     }
     ref = ref[ref["method"] == method]
-    return [(data[r["data"]], r) for _, r in ref.iterrows()]
+    values = []
+    for tpl in ref.itertuples():
+        r = pd.Series(tpl._asdict()).drop("Index")
+        values.append((data[r["data"]], r))
+    return values
 
 
 def _fg_mbn_fit(data, ref, cov_type):
