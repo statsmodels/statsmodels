@@ -351,6 +351,11 @@ New functions and methods
   of each group by the inverse square root of one minus the leverage, where
   ``"bias_reduced"`` (Mancl-DeRouen) uses the inverse. :issue:`1183`,
   :pr:`10781`
+- Add ``cov_type="fay_graubard"`` and ``cov_type="morel_bokossa_neerchal"``
+  to ``GEE.fit``, the Fay-Graubard and Morel-Bokossa-Neerchal small-sample
+  corrections of the robust covariance, with ``b = 0.75`` and ``d = 2``,
+  ``r = 1``, the defaults of the R packages saws and geesmv.
+  :pr:`10794`
 
 Performance
 -----------
