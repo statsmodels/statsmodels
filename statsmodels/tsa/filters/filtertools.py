@@ -15,6 +15,7 @@ Author: Josef-pktd
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, NamedTuple
+import warnings
 
 import numpy as np
 from scipy import signal
@@ -230,7 +231,28 @@ def recursive_filter(x, ar_coeff, init=None):
     Parameters
     ----------
     x : array_like
-        Time-series data. Should be 1d or n x 1.
+        Time-series data, either 1-D with shape (n,) or a single column with
+        shape (n, 1), such as a one-column DataFrame. Both are filtered along
+        the n observations. An array with shape (1, ..., 1) is a single
+        observation.
+
+        .. versionchanged:: 0.15.1
+
+           An (n, 1) column is now filtered along its rows, the same as 1-D
+           input. Previously no recursion was applied, so the column was
+           returned unchanged. ``init`` now works with an (n, 1) column, a
+           row and a single observation, where it raised a ValueError. Other
+           input with more than one column or more than two dimensions now
+           raises a ValueError.
+
+        .. deprecated:: 0.15.1
+
+           A row, an array with shape (1, n) or (1, ..., 1, n) with n > 1, is
+           filtered along its last axis, as a 1-D series of n observations,
+           and returned with the shape of ``x``. ``x`` must have the correct
+           shape, 1-D or an (n, 1) column, so a row now warns and will raise
+           a ValueError in statsmodels 0.17.0. Pass the row as a 1-D array
+           instead.
     ar_coeff : array_like
         AR coefficients in reverse time order. See Notes for details.
     init : array_like, optional
@@ -239,9 +261,24 @@ def recursive_filter(x, ar_coeff, init=None):
 
     Returns
     -------
-    ndarray or Series
-        Filtered array, number of columns determined by x and ar_coeff. If x
-        is a pandas object than a Series is returned.
+    ndarray, Series or DataFrame
+        The filtered series, with the same shape as ``x``. A Series input
+        returns a Series and a DataFrame returns a DataFrame, each with the
+        index and name or columns of ``x``.
+
+    Raises
+    ------
+    ValueError
+        If ``x`` is not 1-D, an (n, 1) column, a row with shape (1, n) or
+        (1, ..., 1, n), or a single observation with shape (1, ..., 1), or if
+        ``init`` and ``ar_coeff`` have different lengths.
+
+    Warns
+    -----
+    FutureWarning
+        If ``x`` is a row with shape (1, n) or (1, ..., 1, n), which is
+        deprecated. A (1, 1) or (1, ..., 1) array is a single observation and
+        does not warn.
 
     Notes
     -----
@@ -254,6 +291,28 @@ def recursive_filter(x, ar_coeff, init=None):
     """
     pw = PandasWrapper(x)
     x = array_like(x, "x")
+    shape = x.shape
+    if x.ndim > 1:
+        # an (n, 1) column, or a single observation with shape (1, ..., 1)
+        is_column = (x.ndim == 2 and shape[1] == 1) or x.size == 1
+        if not is_column:
+            if any(nobs != 1 for nobs in shape[:-1]):
+                raise ValueError(
+                    f"x must be 1-D or an (n, 1) column, but has shape {shape}. "
+                    "Filter each series separately."
+                )
+            warnings.warn(
+                f"x must be 1-D or an (n, 1) column, but has shape {shape}. "
+                "A row with shape (1, n) or (1, ..., 1, n) is filtered as a "
+                "1-D series of n observations, but this is deprecated and "
+                "will raise a ValueError in statsmodels 0.17.0. Pass the row "
+                "as a 1-D array instead.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        # lfilter works along the last axis, so filter x as 1-D and give the
+        # result the shape of x
+        x = x.ravel()
     ar_coeff = array_like(ar_coeff, "ar_coeff")
 
     if init is not None:  # integer init are treated differently in lfiltic
@@ -273,7 +332,7 @@ def recursive_filter(x, ar_coeff, init=None):
     else:
         result = y
 
-    return pw.wrap(result)
+    return pw.wrap(result.reshape(shape))
 
 
 def convolution_filter(x, filt, nsides=2):

@@ -25,6 +25,7 @@ from numpy.testing import (
 )
 import pandas as pd
 import pytest
+from scipy import stats
 from scipy.stats.distributions import norm
 
 from statsmodels import tools
@@ -2754,8 +2755,6 @@ def _small_cluster_data():
 @pytest.mark.parametrize("use_t", [False, True])
 def test_use_t(use_t):
     # GH 8610
-    from scipy import stats
-
     endog, exog, groups = _small_cluster_data()
 
     def fit(**kwds):
@@ -2806,8 +2805,6 @@ def test_use_t_too_few_groups(n_groups):
 @pytest.mark.parametrize("model_class", [gee.OrdinalGEE, gee.NominalGEE])
 def test_use_t_multicategory(model_class):
     # GH 8610
-    from scipy import stats
-
     endog, exog, groups = _small_cluster_data()
     endog = np.digitize(endog, [0.5, 1.5])
     if model_class is gee.OrdinalGEE:
@@ -2948,16 +2945,95 @@ def test_constraint_small_sample_cov_fails(cov_type, monkeypatch):
 @pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
 @pytest.mark.parametrize("family", [families.Gaussian, families.Poisson])
 def test_small_sample_cov_leverage_one(family, cov_type):
-    # a single observation with its own dummy has leverage 1
+    # a single observation with its own dummy has leverage 1; the labels are
+    # strings, so that the message cannot show the position of the group
+    rng = np.random.default_rng(1)
+    labels = np.array([f"site_{c}" for c in "abcdefghijk"])
+    groups = np.concatenate((np.repeat(labels[:10], 4), labels[10:]))
+    n = len(groups)
+    exog = np.column_stack((np.ones(n), rng.standard_normal(n), groups == "site_k"))
+    endog = rng.poisson(2, n).astype(float)
+    mod = gee.GEE(endog, exog, groups, family=family())
+    match = f'Group site_k has leverage 1.*cov_type="{cov_type}"'
+    with pytest.raises(ValueError, match=match):
+        mod.fit(cov_type=cov_type)
+    mod.fit()
+
+
+def _full_leverage(res, exog, groups):
+    # Largest eigenvalue of the full leverage matrix D_i B^{-1} D_i' V_i^{-1}
+    # of each group, for a Gaussian family and an exchangeable correlation
+    # (D_i = X_i, V_i = R_i up to a scale that cancels), in plain numpy.
+    rho = res.cov_struct.dep_params
+    blocks = {}
+    for g in np.unique(groups):
+        m = np.sum(groups == g)
+        blocks[g] = (1 - rho) * np.eye(m) + rho * np.ones((m, m))
+    bmat = sum(
+        exog[groups == g].T @ np.linalg.solve(r, exog[groups == g])
+        for g, r in blocks.items()
+    )
+    lev = []
+    for g, r in blocks.items():
+        x = exog[groups == g]
+        hmat = x @ np.linalg.solve(bmat, x.T) @ np.linalg.inv(r)
+        lev.append(np.linalg.eigvals(hmat).real.max())
+    return np.array(lev)
+
+
+@pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
+@pytest.mark.parametrize(
+    "jitter, raises",
+    [(0.0, True), (1e-5, True), (1e-4, False)],
+    ids=["exact", "within_1e-8", "outside_1e-8"],
+)
+def test_small_sample_cov_leverage_exchangeable(jitter, raises, cov_type):
+    # The leverages are the eigenvalues of the full leverage matrix of each
+    # group. A single observation with a dummy that is 1 there and `jitter`
+    # times noise elsewhere has a leverage 1 - O(jitter**2), and leverages
+    # within 1e-8 of 1 count as 1.
     rng = np.random.default_rng(1)
     groups = np.r_[np.repeat(np.arange(10), 4), 10]
     n = len(groups)
-    exog = np.column_stack((np.ones(n), rng.standard_normal(n), groups == 10))
-    endog = rng.poisson(2, n).astype(float)
-    mod = gee.GEE(endog, exog, groups, family=family())
-    with pytest.raises(ValueError, match="Group 10 has leverage 1"):
-        mod.fit(cov_type=cov_type)
-    mod.fit()
+    dummy = (groups == 10) + jitter * rng.standard_normal(n) * (groups != 10)
+    exog = np.column_stack((np.ones(n), rng.standard_normal(n), dummy))
+    endog = rng.standard_normal(n)
+    mod = gee.GEE(endog, exog, groups, cov_struct=cov_struct.Exchangeable())
+    lev = _full_leverage(mod.fit(), exog, groups)
+    assert lev[:10].max() < 0.5
+    assert bool(1 - lev[10] < 1e-8) is raises
+    if raises:
+        with pytest.raises(ValueError, match="Group 10 has leverage 1"):
+            mod.fit(cov_type=cov_type)
+    else:
+        assert np.all(np.isfinite(mod.fit(cov_type=cov_type).bse))
+
+
+@pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
+def test_small_sample_cov_naive_not_finite(cov_type):
+    # An observation with y = 0 and its own dummy in a Poisson model drives
+    # the estimate of the dummy to -inf and the covariance to NaN.
+    rng = np.random.default_rng(3)
+    groups = np.repeat(np.arange(11), 4)
+    n = len(groups)
+    dummy = np.zeros(n)
+    dummy[-1] = 1.0
+    exog = np.column_stack((np.ones(n), rng.standard_normal(n), dummy))
+    endog = rng.poisson(2, n) + 1.0
+    endog[-1] = 0.0
+    mod = gee.GEE(
+        endog,
+        exog,
+        groups,
+        family=families.Poisson(),
+        cov_struct=cov_struct.Exchangeable(),
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        assert not np.isfinite(mod.fit().cov_naive).all()
+        match = f'not finite.*cov_type="{cov_type}"'
+        with pytest.raises(ValueError, match=match):
+            mod.fit(cov_type=cov_type)
 
 
 def _margeff_model(model_class, use_t=False):
@@ -2981,8 +3057,6 @@ def test_margeff_summary(model_class):
 @pytest.mark.parametrize("use_t", [False, True])
 @pytest.mark.parametrize("model_class", [gee.GEE, gee.OrdinalGEE])
 def test_margeff_use_t(model_class, use_t):
-    from scipy import stats
-
     res = _margeff_model(model_class, use_t=use_t)
     marg = res.get_margeff()
 

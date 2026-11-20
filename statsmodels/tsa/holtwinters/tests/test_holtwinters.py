@@ -947,23 +947,47 @@ def test_use_boxcox_fit_override():
     ), f"Expected fitted lambda, got {res.params['lamda']}"
 
 
-@pytest.mark.parametrize("trend", TRENDS)
-@pytest.mark.parametrize("seasonal", SEASONALS)
-def test_equivalence_cython_python(trend, seasonal):
+HW_TWIN_CASES = [
+    (trend, seasonal, damped)
+    for trend in TRENDS
+    for seasonal in SEASONALS
+    for damped in (False, True)
+    if trend is not None or not damped
+]
+
+
+def _assert_hw_twins_agree(actual, expected, y):
+    # The smoothers return y minus the fitted values, so rounding error is
+    # relative to the size of y rather than to each residual
+    rtol = 1e-10
+    assert_allclose(actual, expected, rtol=rtol, atol=rtol * np.abs(y).max())
+
+
+@pytest.fixture(
+    scope="module",
+    params=HW_TWIN_CASES,
+    ids=[f"{t}-{s}-{'damped' if d else 'undamped'}" for t, s, d in HW_TWIN_CASES],
+)
+def hw_twin_case(request):
+    """
+    A fitted model and its parameters in the layout the smoothers use
+
+    The parameters are ``p = [alpha, beta, gamma, l0, b0, phi, s0, ...]``
+    and ``sel`` marks those that ExponentialSmoothing estimates.
+    """
+    trend, seasonal, damped = request.param
     mod = ExponentialSmoothing(
         housing_data,
         trend=trend,
         seasonal=seasonal,
+        damped_trend=damped,
         initialization_method="estimated",
     )
 
     # Overflow in mul-mul case fixed
     res = mod.fit()
-    assert isinstance(res.summary().as_text(), str)
 
     params = res.params
-    nobs = housing_data.shape[0]
-    y = np.squeeze(np.asarray(housing_data))
     m = 12 if seasonal else 0
     p = np.zeros(6 + m)
     alpha = params["smoothing_level"]
@@ -976,6 +1000,23 @@ def test_equivalence_cython_python(trend, seasonal):
     p[:6] = alpha, beta, gamma, l0, b0, phi
     if seasonal:
         p[6:] = params["initial_seasons"]
+    has_trend = trend is not None
+    has_seasonal = seasonal is not None
+    sel = np.array(
+        [True, has_trend, has_seasonal, True, has_trend, damped] + [has_seasonal] * m
+    )
+    return trend, seasonal, res, p, sel
+
+
+def test_equivalence_cython_python(hw_twin_case):
+    # The pure-Python smoothers in PY_SMOOTHERS are the twin of the Cython
+    # smoothers in SMOOTHERS
+    trend, seasonal, res, p, _ = hw_twin_case
+    assert isinstance(res.summary().as_text(), str)
+
+    nobs = housing_data.shape[0]
+    y = np.squeeze(np.asarray(housing_data))
+    m = 12 if seasonal else 0
     xi = np.ones_like(p).astype(np.int64)
 
     p_copy = p.copy()
@@ -988,9 +1029,70 @@ def test_equivalence_cython_python(trend, seasonal):
 
     sse_cy = cy_func(p, cy_hw_args)
     sse_py = py_func(p, py_hw_args)
-    assert_allclose(sse_py, sse_cy)
+    _assert_hw_twins_agree(sse_py, sse_cy, y)
     sse_py = py_func(p, cy_hw_args)
-    assert_allclose(sse_py, sse_cy)
+    _assert_hw_twins_agree(sse_py, sse_cy, y)
+
+    # With transform=True, alpha, beta and gamma are given in the unrestricted
+    # space and mapped back by to_restricted. At the image of p under
+    # to_unrestricted, both smoothers must give the residuals at p.
+    unrestricted = p.copy()
+    unrestricted[:3] = to_unrestricted(p, xi, bounds)
+    py_hw_args = PyHoltWintersArgs(xi, p.copy(), bounds, y, m, nobs, True)
+    cy_hw_args = HoltWintersArgs(xi, p.copy(), bounds, y, m, nobs, True)
+    sse_cy_transform = cy_func(unrestricted, cy_hw_args)
+    sse_py_transform = py_func(unrestricted, py_hw_args)
+    _assert_hw_twins_agree(sse_py_transform, sse_cy_transform, y)
+    _assert_hw_twins_agree(sse_py_transform, sse_cy, y)
+
+
+def test_equivalence_cython_python_model_usage(hw_twin_case):
+    # Set xi and transform on the arguments as
+    # ExponentialSmoothing._optimize_parameters sets them on the Cython
+    # arguments: create them with the estimated parameters selected, search
+    # over alpha, beta and gamma in the restricted space for starting values,
+    # then optimize all estimated parameters in the unrestricted space
+    trend, seasonal, _, p, sel = hw_twin_case
+    nobs = housing_data.shape[0]
+    y = np.squeeze(np.asarray(housing_data))
+    m = 12 if seasonal else 0
+    bounds = np.array([[0.0, 1.0]] * 3)
+    py_func = PY_SMOOTHERS[(seasonal, trend)]
+    cy_func = SMOOTHERS[(seasonal, trend)]
+    py_hw_args = PyHoltWintersArgs(sel.astype(np.int64), p.copy(), bounds, y, m, nobs)
+    cy_hw_args = HoltWintersArgs(sel.astype(np.int64), p.copy(), bounds, y, m, nobs)
+
+    # Residuals with every parameter given, the reference for both steps
+    def full_residuals(params):
+        xi = np.ones_like(params, dtype=np.int64)
+        hw_args = HoltWintersArgs(xi, params.copy(), bounds, y, m, nobs)
+        return cy_func(params, hw_args)
+
+    # Starting values: only alpha, beta and gamma, in the restricted space
+    sv_sel = np.zeros_like(sel)
+    sv_sel[:3] = True
+    sv_sel &= sel
+    for hw_args in (py_hw_args, cy_hw_args):
+        hw_args.xi = sv_sel.astype(np.int64)
+        hw_args.transform = False
+    point = np.array([0.3, 0.1, 0.2])[sv_sel[:3]]
+    err_py = py_func(point, py_hw_args)
+    err_cy = cy_func(point, cy_hw_args)
+    _assert_hw_twins_agree(err_py, err_cy, y)
+    with_point = p.copy()
+    with_point[sv_sel] = point
+    _assert_hw_twins_agree(err_py, full_residuals(with_point), y)
+
+    # Optimization: all estimated parameters, in the unrestricted space
+    for hw_args in (py_hw_args, cy_hw_args):
+        hw_args.xi = sel.astype(np.int64)
+        hw_args.transform = True
+    unrestricted = p.copy()
+    unrestricted[:3] = to_unrestricted(p, sel, bounds)
+    err_py = py_func(unrestricted[sel], py_hw_args)
+    err_cy = cy_func(unrestricted[sel], cy_hw_args)
+    _assert_hw_twins_agree(err_py, err_cy, y)
+    _assert_hw_twins_agree(err_py, full_residuals(p), y)
 
 
 def test_direct_holt_add():

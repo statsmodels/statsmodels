@@ -494,6 +494,10 @@ class RegressionModel(base.LikelihoodModel):
             factorization of the cross product matrix of the whitened design
             matrix to solve the normal equations. See Notes for the
             differences between the methods.
+
+            .. versionadded:: 0.15.1
+
+               The ``"chol"`` method.
         cov_type : str, optional
             See `regression.linear_model.RegressionResults` for a description
             of the available covariance estimators.
@@ -554,26 +558,38 @@ class RegressionModel(base.LikelihoodModel):
         relative to the number of regressors. The pseudoinverse
         ``pinv_wexog`` is computed from the Cholesky factor when it is first
         used, for example by the heteroscedasticity robust covariance
-        estimators or by influence measures.
+        estimators or by influence measures. It is an array of the size of
+        the design matrix, so the memory advantage is lost when it is needed.
+        For example, with 1,000,000 observations and 10 regressors (a design
+        matrix of 80 MB) the peak memory of ``fit`` followed by ``bse``,
+        measured with ``tracemalloc``, was about 16 MB with the default
+        covariance, about 180 MB with ``cov_type="HC0"`` and about 240 MB
+        with ``method="pinv"``. The ``"cluster"`` and ``"HAC"`` covariances
+        need other arrays of the size of the design matrix (about 90 MB in
+        this example).
 
-        ``method="chol"`` is less accurate than the other two methods and
-        should only be used when speed and memory usage are more important
-        than numerical accuracy. Forming ``X'X`` squares the condition
-        number, so "chol" loses about twice as many digits as "pinv" and
-        "qr". The loss depends on the condition number of the design after
-        its columns are scaled to unit norm,
+        **Limitations of "chol".** ``method="chol"`` is less accurate than
+        the other two methods and should only be used when speed and memory
+        usage are more important than numerical accuracy. Forming ``X'X``
+        squares the condition number, so "chol" loses about twice as many
+        digits as "pinv" and "qr". The loss depends on the condition number
+        of the design after its columns are scaled to unit norm,
         ``np.linalg.cond(X / np.linalg.norm(X, axis=0))``, and not on the
         scales of the columns: the rounding error of the parameters grows
         roughly like the square of this condition number times ``eps``
         instead of the condition number times ``eps`` for "pinv" and "qr".
-        In a simulation with 10,000 observations, 50 regressors with columns
-        of similar norm and the condition number of the design controlled
-        directly, the relative error of the parameters from "chol" against
-        the exact least squares solution was about 1e-9 to 1e-8 at a
-        condition number of 1e4, 1e-7 at 1e5, 1e-5 at 1e6, 1e-3 at 1e7 and a
-        few percent at 1e8, against about 1e-12 at 1e4 and 1e5, 1e-11 at
-        1e6, 1e-10 at 1e7 and 1e-9 at 1e8 with "pinv" and "qr". The standard
-        errors lose precision in the same way.
+        In simulated designs with 10,000 observations and 50 regressors, the
+        relative error of the parameter vector against the exact least
+        squares solution was about:
+
+        - 1e-9 for "chol" and 5e-13 for "pinv" and "qr" at a condition
+          number of about 1e4,
+        - 2e-6 to 9e-6 for "chol" and 5e-11 for "pinv" and "qr" at about 1e6,
+        - 0.02 to 0.1 for "chol" and 5e-9 for "pinv" and "qr" at about 1e8.
+
+        The error of a single coefficient can be much larger than the error
+        of the whole vector: at 1e8 the largest relative error of a
+        coefficient from "chol" was between 0.6 and 8.
 
         The typical silent failure of "chol" is a regressor with a large mean
         next to the constant, which is nearly collinear with the constant
@@ -587,18 +603,21 @@ class RegressionModel(base.LikelihoodModel):
         regressors, polynomial or interaction terms of uncentered variables
         and dummy variables with few observations in a category.
 
-        The regressors are checked column by column: if the norm of a column
-        after projecting out the preceding columns is less than 1e-7 times
-        its norm, the default tolerance of ``lm`` in R, or if the Cholesky
-        factorization fails, the regressors are treated as collinear, a
-        ``SingularMatrixWarning`` is raised and the model is estimated with
-        "pinv" instead, including its rank rule. Otherwise the rank is the
-        number of columns. This check only prevents the factorization from
-        breaking down on (nearly) collinear regressors; in the simulation it
-        did not trigger below a condition number of about 1e8. It does not
-        trigger for designs that are merely ill-conditioned, such as the
-        regressor with a large mean above, and it is not a guarantee of
-        accuracy.
+        **Collinearity check and fallback.** The regressors are checked
+        column by column: if the norm of a column after projecting out the
+        preceding columns is less than 1e-7 times its norm, the default
+        tolerance of ``lm`` in R, or if the Cholesky factorization fails, the
+        regressors are treated as collinear, a ``SingularMatrixWarning`` is
+        raised and the model is estimated with "pinv" instead, including its
+        rank rule. Otherwise the rank is the number of columns. In contrast
+        to ``lm``, which drops an aliased column and reports an ``NA``
+        coefficient, the fallback keeps all columns and returns the
+        minimum-norm solution of "pinv". This check only prevents the
+        factorization from breaking down on (nearly) collinear regressors;
+        in the simulation it did not trigger below a condition number of
+        about 1e8. It does not trigger for designs that are merely
+        ill-conditioned, such as the regressor with a large mean above, and
+        it is not a guarantee of accuracy.
         """
         # NOTE: pinv_wexog, normalized_cov_params, wexog_singular_values and
         # rank are recomputed from self.wexog on every call (rather than
