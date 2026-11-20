@@ -851,11 +851,24 @@ def deconvolve(num, den, n=None):
 
     Returns
     -------
-    quot : ndarray or list
-        quotient or filtered series. An empty list if ``den`` is longer than
+    quot : ndarray
+        quotient or filtered series. An empty array if ``den`` is longer than
         ``num`` and ``n`` is not given.
+
+        .. versionchanged:: 0.15.1
+
+           The empty quotient is an ndarray with the dtype of the quotient
+           of the other cases, float64 or complex128. It used to be an
+           empty list, as it still is for the deprecated 2-D input.
     rem : ndarray
-        remainder
+        remainder. A copy of ``num`` if ``den`` is longer than ``num`` and
+        ``n`` is not given.
+
+        .. versionchanged:: 0.15.1
+
+           The copy of ``num`` has the dtype of the remainder of the other
+           cases, float64 or complex128. It used to be ``num`` with its own
+           dtype, the same object if ``num`` was a 1-D ndarray.
 
     Notes
     -----
@@ -871,8 +884,15 @@ def deconvolve(num, den, n=None):
     N = len(num)
     D = len(den)
     if D > N and n is None:
-        quot = []
-        rem = num
+        if num.ndim > 1 or den.ndim > 1:
+            # The deprecated 2-D input keeps its result
+            quot = []
+            rem = num
+        else:
+            # The dtype of the quotient and the remainder in the other branch
+            dtype = np.result_type(num, den, float)
+            quot = np.zeros(0, dtype=dtype)
+            rem = num.astype(dtype)
     else:
         if n is None:
             n = N - D + 1
