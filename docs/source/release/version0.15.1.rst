@@ -47,6 +47,14 @@ Deprecations
   it will be removed in statsmodels 0.17.0. The value of ``which`` is case
   sensitive and ``exog`` can be a list. :issue:`8562`, :pr:`10554`,
   :pr:`10555`
+- Passing a row, an array with shape (1, n) or (1, ..., 1, n) with n > 1, as
+  ``x`` to :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` is
+  deprecated, since ``x`` must be 1-D or an (n, 1) column. The row is still
+  filtered as a 1-D series of n observations and returned with the shape of
+  ``x``, and ``init`` now works with it instead of raising a ``ValueError``.
+  Passing a row now raises a ``FutureWarning``, and it will raise a
+  ``ValueError`` in statsmodels 0.17.0. Pass a 1-D array or an (n, 1) column
+  instead. :pr:`10810`
 - ``statsmodels.tsa.statespace.tools.set_mode``,
   ``statsmodels.tsa.tsatools.unintegrate`` and ``unintegrate_levels``, and
   ``statsmodels.tsa.vector_ar.output.normality_summary`` and
@@ -63,7 +71,7 @@ Deprecations
 Behavior changes
 ----------------
 
-- ``MixedLM.score_sqrt`` is private.
+- ``MixedLM.score_sqrt`` is private. :pr:`10700`
 - ``OaxacaResults.summary()`` returns the summary as a string instead of
   printing it and returning ``None``. Use ``print(result.summary())`` to
   display it. :issue:`7733`, :pr:`10491`
@@ -278,6 +286,31 @@ Behavior changes
   ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
   ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
   :pr:`10792`
+- ``ExponentialSmoothing`` in ``statsmodels.tsa.holtwinters`` with
+  ``trend="mul"``, ``damped_trend=True`` and ``seasonal="add"`` estimated its
+  parameters by minimizing residuals computed with ``l * phi * b`` instead of
+  ``l * b**phi``, while the fitted values, the reported ``sse`` and the
+  forecasts use ``l * b**phi``. The estimates of this model now minimize the
+  reported ``sse``, so its parameters, fitted values and forecasts change, for
+  example the ``sse`` of a fit to the first 240 months of the co2 data falls
+  from 590.8 to 27.0. Results of all other trend, damping and seasonal
+  combinations are unchanged. :pr:`10829`
+- :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` filters an
+  (n, 1) column, such as a one-column ``DataFrame``, along its rows and
+  returns the values of the 1-D series. Before, no recursion was applied to a
+  column, which was returned unchanged without an error, and ``init`` raised a
+  ``ValueError``. Input with more than one row and more than one column, which
+  was filtered across the columns of each row, now raises a ``ValueError``. So
+  does input with more than two dimensions that is neither a row with shape
+  (1, ..., 1, n) nor a single observation with shape (1, ..., 1), such as an
+  (n, 1, 1) array, which was returned unchanged. Results for 1-D input are
+  unchanged. :pr:`10810`
+- The ``lags`` arguments of the ``ArmaProcess`` methods ``acovf``, ``acf``,
+  ``pacf``, ``periodogram``, ``impulse_response``, ``arma2ma`` and
+  ``arma2ar`` raise a ``ValueError`` for values below 1. Before, ``lags=0``
+  was taken as the default and returned ``nobs`` values, and a negative
+  value gave a numpy error or an empty result. An integral float is now
+  accepted by all of them. :pr:`10835`
 - ``pacf_burg`` (and ``pacf`` with ``method="burg"``), ``kpss`` with
   ``regression="c"``, ``range_unit_root_test``, ``pccf`` and ``q_stat`` treat
   an (nobs, 1) column, such as a one-column ``DataFrame``, as the 1-D series
@@ -737,8 +770,16 @@ Mixed models and imputation
 - ``MixedLM.fit_regularized`` failed for models with pandas data, for example
   from a formula: ``summary`` raised a ``KeyError`` and, with pandas 3,
   ``fit_regularized`` itself failed. :issue:`8902`, :pr:`10465`
-- ``MixedLM.fit`` often stopped short of the optimum, because ``MixedLM.score``
-  had a sign error.
+- ``MixedLM.fit`` could stop below the maximum of the log-likelihood, report that
+  it had not converged, or end at a variance of 0, because ``MixedLM.score``
+  dropped the signs of the packed square-root parameters and so was not the
+  derivative at the vector that the optimizer holds. These fits now reach the
+  maximum, so estimates, standard errors and log-likelihoods of existing
+  models can change. ``MixedLM.score`` with a packed vector that has negative
+  entries now returns the derivative at that vector. In 72 simulated models
+  fitted with the default options, 16 ended more than 1e-4 below the maximum
+  found by lme4 and 12 reported no convergence, and none does now.
+  :pr:`10700`
 - ``MixedLMResults.bse_re`` raised a ``ValueError`` for models with variance
   components and pandas data, for example from a formula. :pr:`10702`
 - ``MICE.combine`` failed for results of models that do not have a
@@ -1028,6 +1069,13 @@ Time series analysis
   of 0. For a ``det_order`` of -1 and 0 the statistics now equal the
   likelihood ratio statistics of ``VECM``. Results with ``k_ar_diff`` of 1 or
   more do not change. :issue:`7459`, :pr:`10807`
+- ``DeterministicProcess.out_of_sample`` without any deterministic terms
+  returned the in-sample rows on the in-sample index instead of ``steps``
+  rows on the forecast index, and ``DeterministicProcess.range`` beyond the
+  sample returned the wrong rows in that case. :pr:`10834`
+- ``arma_order_select_ic`` accepts ``ic`` as any sequence of str, such as an
+  ndarray or an ``Index``, as documented, instead of only a list or tuple.
+  :pr:`10840`
 - ``grangercausalitytests`` with an empty ``maxlag`` raised a NumPy error
   instead of its own ``ValueError``. :pr:`10839`
 - ``breakvar_heteroskedasticity_test`` raised an ``UnboundLocalError`` for a
@@ -1367,6 +1415,8 @@ Other
   ``fit_regularized`` with ``alpha``, which ``GEE`` does not have, and now
   raises a ``NotImplementedError`` before any data is fit. :issue:`10778`,
   :pr:`10780`
+- ``zipoisson.ppf`` and ``zinegbin.ppf`` returned -1 when ``q`` equals the
+  zero inflation ``w``. They return 0. :issue:`10841`, :pr:`10842`
 
 Documentation
 =============
@@ -1390,6 +1440,14 @@ Documentation
 - Add an example to ``cohens_kappa`` showing that kappa depends on class
   prevalence: with the same rater accuracy and raw agreement, kappa is much
   smaller when one class is rare. :issue:`9680`, :pr:`10806`
+- Correct docstrings in ``statsmodels.tsa.stattools``: the default ``nlags``
+  and result shape of ``pacf_ols``, the result shape of ``pacf_yw``, the
+  ``"legacy"`` lags of ``kpss``, the default ``maxlag`` and ``icbest`` of
+  ``adfuller``, the default ``maxlag`` of ``zivot_andrews``, the unused
+  ``return_results`` of ``coint`` and its critical values for ``trend="n"``,
+  the two columns of ``x`` and ``addconst`` in ``grangercausalitytests``, and
+  the fit advice of ``arma_order_select_ic``, which suggested a method that
+  makes every fit fail. :pr:`10836`
 - Correct docstrings in ``statsmodels.tsa.tsatools``, ``arima_process``,
   ``deterministic`` and the BDS test: ``detrend`` returns pandas objects for
   pandas input, the parameters of ``DeterministicProcess.in_sample`` and

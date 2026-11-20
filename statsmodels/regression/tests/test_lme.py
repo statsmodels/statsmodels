@@ -29,7 +29,7 @@ from statsmodels.regression.mixed_linear_model import (
 import statsmodels.tools.numdiff as nd
 from statsmodels.tools.sm_exceptions import ConvergenceWarning, SingularMatrixWarning
 
-from .results import lme_r_results
+from .results import lme_r_results, mixedlm_optimum_r_results
 
 # TODO: add tests with unequal group sizes
 
@@ -1460,6 +1460,11 @@ def test_singular():
         mdf = md.fit()
     assert mdf.converged
     assert mdf.cov_re.iloc[0, 0] > 0
+    # lme4 2.0.6 and 2.1.0, d is the data of this test with class as factor:
+    # m <- lmer(Y ~ X + (1 | class), d); as.numeric(logLik(m))
+    # gives -150.739393981162 and a variance of 5.69143e-4 (not singular). The
+    # likelihood is flat near the boundary, so the variance is not compared.
+    assert_allclose(mdf.llf, -150.739393981162, rtol=0, atol=1e-5)
     mdf.summary()
 
 
@@ -2262,15 +2267,55 @@ def test_score_negative_sqrt_numdiff(flip, with_vc, reml):
     signed_params = flip * np.array([-0.8, 0.3, 1.2])
     if with_vc:
         signed_params = np.concatenate((signed_params, flip * np.array([0.7, -1.1])))
-    step = 1e-6
-    numeric_score = np.zeros(len(signed_params))
-    for j in range(len(signed_params)):
-        shift = np.zeros(len(signed_params))
-        shift[j] = step
-        numeric_score[j] = (
-            model.loglike(signed_params + shift) - model.loglike(signed_params - shift)
-        ) / (2 * step)
+    numeric_score = nd.approx_fprime(signed_params, model.loglike, centered=True)
     assert_allclose(model.score(signed_params), numeric_score, rtol=1e-6, atol=1e-6)
+
+
+@pytest.mark.parametrize("with_vc", [True, False])
+def test_score_singular_cov_warns(with_vc):
+    # Profiling the fixed effects at a singular covariance matrix warns
+    model = _singular_model(with_vc)
+    _prepare(model, True)
+    params = np.zeros(5 if with_vc else 3)
+    with pytest.warns(SingularMatrixWarning, match="covariance is singular"):
+        model.score(params)
+    params[[0, 2]] = 1.0
+    if with_vc:
+        params[3:] = 1.0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        model.score(params)
+
+
+@pytest.mark.parametrize("case", sorted(mixedlm_optimum_r_results.mixedlm_optimum))
+def test_fit_reaches_lme4_optimum_random_slope_vc(case):
+    # The Cholesky factor of a random slope and the square roots of variance
+    # components are the parameters whose signs the optimizer can flip.
+    # Data, lme4 code and reference values: results/generate_mixedlm_optimum.py,
+    # mixedlm_optimum.R and mixedlm_optimum_r_results.py (lme4 2.1.0, and
+    # 2.0.6 prints the same values). The log-likelihood is flat near the
+    # optimum, so the covariance parameters are compared with atol=1e-4 and
+    # rtol=1e-3. For 66 of 160 simulated fits with an interior optimum (not
+    # singular in lme4) the largest difference from lme4 was 5.8e-5 for the
+    # covariance parameters (3e-5 for these four cases), 1.5e-5 relative for
+    # the fixed effects, 2.3e-5 relative for the scale and 5.6e-8 for llf.
+    ref = mixedlm_optimum_r_results.mixedlm_optimum[case]
+    data = pd.read_csv(cur_dir.joinpath("results", "mixedlm_optimum.csv"))
+    data = data[data["case"] == case]
+    if case.startswith("slope"):
+        kwargs = {"re_formula": "~x"}
+    else:
+        kwargs = {"re_formula": "0", "vc_formula": {"a": "0 + x", "b": "0 + z"}}
+    model = MixedLM.from_formula("y ~ x + z", data, groups="g", **kwargs)
+    res = model.fit(reml=case.endswith("_reml"))
+    assert res.converged
+    assert_allclose(res.llf, ref["llf"], rtol=0, atol=1e-5)
+    assert_allclose(res.fe_params, ref["fe_params"], rtol=1e-4)
+    assert_allclose(res.scale, ref["scale"], rtol=1e-4)
+    if case.startswith("slope"):
+        assert_allclose(res.cov_re, ref["cov_re"], rtol=1e-3, atol=1e-4)
+    else:
+        assert_allclose(res.vcomp, ref["vcomp"], rtol=1e-3, atol=1e-4)
 
 
 # lme4 2.1.0 on _intercept_data(seed), m <- lmer(y ~ x + (1 | g), d)

@@ -1319,7 +1319,11 @@ you can pass additional components using the additional_terms input.""")
             self.in_sample()
         index = self._index
         if not self._deterministic_terms:
-            return pd.DataFrame(np.empty((index.shape[0], 0)), index=index)
+            # The forecast index that the terms would have, with no columns
+            fcast_index = DeterministicTerm._extend_index(
+                index, steps, forecast_index
+            )
+            return pd.DataFrame(np.empty((steps, 0)), index=fcast_index)
         raw_terms = [
             term.out_of_sample(steps, index, forecast_index)
             for term in self._deterministic_terms

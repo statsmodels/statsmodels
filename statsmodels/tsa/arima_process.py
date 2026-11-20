@@ -19,12 +19,13 @@ License: BSD
 """
 from statsmodels.compat.numpy import ComplexWarning
 
+import textwrap
 import warnings
 
 import numpy as np
 from scipy import linalg, optimize, signal
 
-from statsmodels.tools.docstring import Docstring, Parameter, remove_parameters
+from statsmodels.tools.docstring import Docstring, Parameter
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.validation import array_like, int_like
 
@@ -669,36 +670,50 @@ def deconvolve(num, den, n=None):
     return quot, rem
 
 
-def _arma_lags_method_doc(func):
+def _arma_lags_method_doc(func, name, description, changes=()):
     """
-    Build the ArmaProcess method docstring of arma2ma and arma2ar
+    Build the docstring of an ArmaProcess method from a module level function
 
     Parameters
     ----------
     func : callable
-        The module level function, arma2ma or arma2ar.
+        The module level function that the method calls.
+    name : str
+        The name of the only parameter of the method, which sets the number
+        of values that it returns.
+    description : str
+        The description of the parameter.
+    changes : sequence of str, optional
+        Earlier changes of the parameter, for its versionchanged note.
 
     Returns
     -------
     str
-        The docstring of func without ar and ma, where the description of
-        lags states the default value and the behavior change.
+        The docstring of func with the parameter of the method in place of
+        the parameters of func. The description of the parameter states the
+        default value, that the value must be positive, and the behavior
+        changes.
     """
     if func.__doc__ is None:
         return None
     ds = Docstring(func.__doc__)
-    ds.remove_parameters(["ar", "ma"])
-    lags_desc = [
-        (
-            "The number of coefficients to calculate. If not given, the "
-            "``nobs`` attribute of the process is used."
-        ),
-        "",
-        ".. versionchanged:: 0.15.1",
-        "",
-        "    Omitting ``lags`` no longer raises an ``AttributeError``.",
-    ]
-    ds.replace_block("Parameters", [Parameter("lags", "int, optional", lags_desc)])
+    desc = textwrap.wrap(
+        f"{description} If not given, the ``nobs`` attribute of the process "
+        "is used. Must be a positive integer.",
+        width=72,
+    )
+    change = (
+        f"``{name}=0`` raises a ``ValueError``. It used to select the "
+        "``nobs`` attribute, as omitting the value does."
+    )
+    note = textwrap.wrap(
+        " ".join([*changes, change]),
+        width=72,
+        initial_indent="    ",
+        subsequent_indent="    ",
+    )
+    desc += ["", ".. versionchanged:: 0.15.1", "", *note]
+    ds.replace_block("Parameters", [Parameter(name, "int, optional", desc)])
     return str(ds)
 
 
@@ -939,43 +954,96 @@ class ArmaProcess:
     def __str__(self):
         return f"ArmaProcess\nAR: {self.ar.tolist()}\nMA: {self.ma.tolist()}"
 
-    @Appender(remove_parameters(arma_acovf.__doc__, ["ar", "ma", "sigma2"]))
+    def _check_lags(self, value, name):
+        # None selects nobs. This used to be "value or self.nobs", which
+        # also selected nobs for 0.
+        if value is None:
+            return self.nobs
+        value = int_like(value, name)
+        if value < 1:
+            raise ValueError(f"{name} must be a positive integer, got {value}")
+        return value
+
+    @Appender(
+        _arma_lags_method_doc(
+            arma_acovf,
+            "nobs",
+            "The number of terms (lags plus zero lag) to include in returned "
+            "acovf.",
+        )
+    )
     def acovf(self, nobs=None):
-        nobs = nobs or self.nobs
+        nobs = self._check_lags(nobs, "nobs")
         return arma_acovf(self.ar, self.ma, nobs=nobs)
 
-    @Appender(remove_parameters(arma_acf.__doc__, ["ar", "ma"]))
+    @Appender(
+        _arma_lags_method_doc(
+            arma_acf,
+            "lags",
+            "The number of terms (lags plus zero lag) to include in returned acf.",
+        )
+    )
     def acf(self, lags=None):
-        lags = lags or self.nobs
+        lags = self._check_lags(lags, "lags")
         return arma_acf(self.ar, self.ma, lags=lags)
 
-    @Appender(remove_parameters(arma_pacf.__doc__, ["ar", "ma"]))
+    @Appender(
+        _arma_lags_method_doc(
+            arma_pacf,
+            "lags",
+            "The number of terms (lags plus zero lag) to include in returned "
+            "pacf.",
+        )
+    )
     def pacf(self, lags=None):
-        lags = lags or self.nobs
+        lags = self._check_lags(lags, "lags")
         return arma_pacf(self.ar, self.ma, lags=lags)
 
     @Appender(
-        remove_parameters(
-            arma_periodogram.__doc__, ["ar", "ma", "worN", "whole"]
+        _arma_lags_method_doc(
+            arma_periodogram,
+            "nobs",
+            "The number of frequencies, equally spaced on [0, pi), at which the "
+            "periodogram is computed.",
         )
     )
     def periodogram(self, nobs=None):
-        nobs = nobs or self.nobs
+        nobs = self._check_lags(nobs, "nobs")
         return arma_periodogram(self.ar, self.ma, worN=nobs)
 
-    @Appender(remove_parameters(arma_impulse_response.__doc__, ["ar", "ma"]))
+    @Appender(
+        _arma_lags_method_doc(
+            arma_impulse_response,
+            "leads",
+            "The number of observations to calculate.",
+        )
+    )
     def impulse_response(self, leads=None):
-        leads = leads or self.nobs
+        leads = self._check_lags(leads, "leads")
         return arma_impulse_response(self.ar, self.ma, leads=leads)
 
-    @Appender(_arma_lags_method_doc(arma2ma))
+    @Appender(
+        _arma_lags_method_doc(
+            arma2ma,
+            "lags",
+            "The number of coefficients to calculate.",
+            ["Omitting ``lags`` no longer raises an ``AttributeError``."],
+        )
+    )
     def arma2ma(self, lags=None):
-        lags = lags or self.nobs
+        lags = self._check_lags(lags, "lags")
         return arma2ma(self.ar, self.ma, lags=lags)
 
-    @Appender(_arma_lags_method_doc(arma2ar))
+    @Appender(
+        _arma_lags_method_doc(
+            arma2ar,
+            "lags",
+            "The number of coefficients to calculate.",
+            ["Omitting ``lags`` no longer raises an ``AttributeError``."],
+        )
+    )
     def arma2ar(self, lags=None):
-        lags = lags or self.nobs
+        lags = self._check_lags(lags, "lags")
         return arma2ar(self.ar, self.ma, lags=lags)
 
     @property
