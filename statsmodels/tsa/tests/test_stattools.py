@@ -1500,6 +1500,15 @@ class TestGrangerCausality:
         ):
             grangercausalitytests(x, [0, 1, 2])
 
+    @pytest.mark.parametrize("maxlag", [[], ()], ids=["list", "tuple"])
+    def test_granger_fails_on_empty_lags(self, maxlag):
+        x = np.random.default_rng(20261126).standard_normal((100, 2))
+        with pytest.raises(
+            ValueError,
+            match="maxlag must be a non-empty list containing only positive integers",
+        ):
+            grangercausalitytests(x, maxlag)
+
 
 class TestKPSS:
     """
