@@ -5037,10 +5037,18 @@ def test_two_column_input_forms(form):
         ([2], [2]),
         ((2,), [2]),
         (range(1, 3), [1, 2]),
+        (np.array(2), [1, 2]),
+        (np.array([2]), [2]),
+        (pd.Series([2]), [2]),
+        (pd.Index([2]), [2]),
+        (np.array([1, 2]), [1, 2]),
+        # Not an int and not an array
+        ({1, 2}, [1, 2]),
     ],
 )
 def test_grangercausalitytests_maxlag_forms(gc_data, maxlag, lags):
-    # An int gives the lags up to maxlag, a sequence only the lags in it
+    # An int gives the lags up to maxlag, a sequence only the lags in it. A
+    # one-element ndarray or Series used to be read as an int.
     res = grangercausalitytests(gc_data, maxlag)
     assert sorted(res) == lags
     expected = grangercausalitytests(gc_data, [1, 2])

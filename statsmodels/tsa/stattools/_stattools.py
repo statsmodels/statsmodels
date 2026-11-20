@@ -2763,6 +2763,12 @@ def grangercausalitytests(x, maxlag, addconst=True):
     maxlag : int or sequence of int
         If an integer, computes the test for all lags up to maxlag. If a
         sequence, computes the tests only for the lags in maxlag.
+
+        .. versionchanged:: 0.15.1
+
+           A sequence with one element, such as ``np.array([3])`` or a
+           Series, gives only that lag, as a list does. It used to give
+           all lags up to its element.
     addconst : bool, optional
         Include a constant in the model. Only True is implemented; False
         raises NotImplementedError.
@@ -2822,17 +2828,25 @@ def grangercausalitytests(x, maxlag, addconst=True):
         raise ValueError("x contains NaN or inf values.")
     addconst = bool_like(addconst, "addconst")
 
-    try:
-        maxlag = int_like(maxlag, "maxlag")
+    is_int = False
+    # int_like would squeeze a sequence with one element, such as
+    # np.array([3]), to an int, so only a scalar is treated as an int
+    if np.ndim(maxlag) == 0:
+        try:
+            maxlag = int_like(maxlag, "maxlag")
+            is_int = True
+        except TypeError:
+            pass
+    if is_int:
         if maxlag <= 0:
             raise ValueError("maxlag must be a positive integer")
         lags = np.arange(1, maxlag + 1)
-    except TypeError as exc:
+    else:
         lags = np.array([int(lag) for lag in maxlag])
         if lags.size == 0 or lags.min() <= 0:
             raise ValueError(
                 "maxlag must be a non-empty list containing only positive integers"
-            ) from exc
+            )
         maxlag = lags.max()
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
