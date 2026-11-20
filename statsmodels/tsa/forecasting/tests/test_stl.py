@@ -1,12 +1,16 @@
 from statsmodels.compat.pandas import MONTH_END
 
+import datetime as dt
+import re
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 
 import statsmodels.datasets
-from statsmodels.tools.sm_exceptions import ConvergenceWarning
+from statsmodels.iolib.summary import Summary
+from statsmodels.tools.sm_exceptions import ConvergenceWarning, ValueWarning
 from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
@@ -18,6 +22,7 @@ from statsmodels.tsa.seasonal import STL, DecomposeResult
 from statsmodels.tsa.statespace.exponential_smoothing import (
     ExponentialSmoothing,
 )
+from statsmodels.tsa.tests._contract import series_forms
 
 
 @pytest.fixture(scope="module")
@@ -205,3 +210,165 @@ def test_no_var_pred(sunspots, not_implemented, close_figures):
     with pytest.warns(UserWarning, match="The variance of"):
         pred = stl_res.get_prediction()
     assert np.all(np.isnan(pred.var_pred_mean))
+
+
+NOBS = 120
+PERIOD = 12
+AR_KWARGS = {"lags": 2, "trend": "c"}
+
+
+@pytest.fixture(scope="module")
+def monthly():
+    # Integer-valued so that the int dtype form holds the same values
+    rng = np.random.default_rng([20261120, 2])
+    t = np.arange(NOBS)
+    y = 10 + 0.05 * t + 2 * np.sin(2 * np.pi * t / PERIOD)
+    return np.round(100 * (y + rng.standard_normal(NOBS)))
+
+
+def _stl_form(y, form):
+    if form == "ndarray":
+        return y
+    if form == "int":
+        return y.astype(np.int64)
+    return series_forms(y)[form]
+
+
+def _stl_ar_by_hand(y):
+    # STL followed by an AutoReg of the deseasonalized data, fit by OLS
+    stl_res = STL(y, period=PERIOD).fit()
+    ar_res = AutoReg(stl_res.trend + stl_res.resid, **AR_KWARGS).fit()
+    return stl_res.seasonal, ar_res
+
+
+def _seasonal_by_hand(seasonal, origin, locs):
+    # The STL seasonal is used before origin. From origin on, the last full
+    # period before origin repeats.
+    locs = np.asarray(locs)
+    repeated = seasonal[origin - PERIOD + (locs - origin) % PERIOD]
+    in_sample = seasonal[np.minimum(locs, origin - 1)]
+    return np.where(locs < origin, in_sample, repeated)
+
+
+# list and tuple are left out: STLForecast.fit raises TypeError for them
+@pytest.mark.parametrize("form", ["ndarray", "int", "series", "column", "dataframe"])
+def test_forecast_assembled_by_hand(monthly, form):
+    x = _stl_form(monthly, form)
+    res = STLForecast(x, AutoReg, model_kwargs=AR_KWARGS, period=PERIOD).fit()
+    seasonal, ar_res = _stl_ar_by_hand(monthly)
+    steps = 2 * PERIOD + 5
+    locs = np.arange(NOBS, NOBS + steps)
+    expected = ar_res.forecast(steps) + _seasonal_by_hand(seasonal, NOBS, locs)
+    fcast = res.forecast(steps)
+    assert_allclose(np.asarray(fcast), expected, rtol=1e-10)
+    if form in ("series", "dataframe"):
+        assert isinstance(fcast, pd.Series)
+        index = x.index
+        expected_index = pd.date_range(
+            index[-1] + index.freq, periods=steps, freq=index.freq
+        )
+        pd.testing.assert_index_equal(fcast.index, expected_index)
+    else:
+        assert isinstance(fcast, np.ndarray)
+
+
+# column and dataframe are left out: get_prediction raises ValueError for
+# 2-d endog when it builds a Series from it
+@pytest.mark.parametrize("form", ["ndarray", "int", "series"])
+@pytest.mark.parametrize("dynamic", [False, 6])
+def test_get_prediction_assembled_by_hand(monthly, form, dynamic):
+    x = _stl_form(monthly, form)
+    res = STLForecast(x, AutoReg, model_kwargs=AR_KWARGS, period=PERIOD).fit()
+    seasonal, ar_res = _stl_ar_by_hand(monthly)
+    start, end = 100, NOBS + 17
+    pred = res.get_prediction(start, end, dynamic=dynamic)
+    ar_pred = ar_res.get_prediction(start, end, dynamic=dynamic)
+    # Dynamic prediction repeats the seasonal from the dynamic origin
+    origin = NOBS if dynamic is False else start + dynamic
+    locs = np.arange(start, end + 1)
+    expected = ar_pred.predicted_mean + _seasonal_by_hand(seasonal, origin, locs)
+    assert_allclose(np.asarray(pred.predicted_mean), expected, rtol=1e-10)
+    # The seasonal is treated as known, so the variance is the model's
+    assert_allclose(
+        np.asarray(pred.var_pred_mean), ar_pred.var_pred_mean, rtol=1e-10
+    )
+    if form == "series":
+        expected_index = pd.date_range(
+            x.index[start], periods=end - start + 1, freq=x.index.freq
+        )
+        pd.testing.assert_index_equal(pred.predicted_mean.index, expected_index)
+
+
+def test_date_string_index(monthly):
+    # An index of date strings is read as dates, so that dates can locate
+    # the seasonal part of the prediction
+    dates = pd.date_range("2000-01-01", periods=NOBS, freq="MS")
+    y = pd.Series(monthly, index=dates.strftime("%Y-%m-%d"))
+    # AutoReg also reads the strings as dates, which have no frequency
+    with pytest.warns(ValueWarning, match="No frequency information"):
+        res = STLForecast(y, AutoReg, model_kwargs=AR_KWARGS, period=PERIOD).fit()
+    pred = res.get_prediction(
+        pd.Timestamp("2008-05-01"),
+        pd.Timestamp("2009-12-01"),
+        dynamic=dt.datetime(2009, 1, 1),
+    )
+    # Observations 100 to 119, with dynamic prediction from 108
+    seasonal, ar_res = _stl_ar_by_hand(monthly)
+    ar_pred = ar_res.get_prediction(100, NOBS - 1, dynamic=8)
+    locs = np.arange(100, NOBS)
+    expected = ar_pred.predicted_mean + _seasonal_by_hand(seasonal, 108, locs)
+    assert_allclose(np.asarray(pred.predicted_mean), expected, rtol=1e-10)
+
+
+def test_unparseable_string_index(monthly):
+    # An index that cannot be read as dates is replaced by positions
+    y = pd.Series(monthly, index=[f"obs{i}" for i in range(NOBS)])
+    # AutoReg warns that the index is unsupported, and pandas >= 2.0 warns
+    # that it cannot infer a date format while the labels are tried as dates
+    match = "unsupported index|Could not infer format"
+    with pytest.warns(UserWarning, match=match) as record:
+        res = STLForecast(y, AutoReg, model_kwargs=AR_KWARGS, period=PERIOD).fit()
+    assert any(
+        issubclass(w.category, ValueWarning) and "unsupported index" in str(w.message)
+        for w in record
+    )
+    pred = res.get_prediction(100, NOBS - 1, dynamic=8)
+    seasonal, ar_res = _stl_ar_by_hand(monthly)
+    ar_pred = ar_res.get_prediction(100, NOBS - 1, dynamic=8)
+    locs = np.arange(100, NOBS)
+    expected = ar_pred.predicted_mean + _seasonal_by_hand(seasonal, 108, locs)
+    assert_allclose(np.asarray(pred.predicted_mean), expected, rtol=1e-10)
+
+
+def test_fit_options_and_properties(monthly):
+    dates = pd.date_range("2000-01-01", periods=NOBS, freq="MS")
+    y = pd.Series(monthly, index=dates)
+    stl_kwargs = {"seasonal": 13, "robust": True}
+    mod = STLForecast(y, AutoReg, model_kwargs=AR_KWARGS, **stl_kwargs)
+    res = mod.fit(inner_iter=3, outer_iter=4, fit_kwargs={"cov_type": "HC0"})
+
+    stl = STL(y, **stl_kwargs)
+    stl_res = stl.fit(inner_iter=3, outer_iter=4)
+    ar_res = AutoReg(stl_res.trend + stl_res.resid, **AR_KWARGS).fit(cov_type="HC0")
+    # The period is read from the monthly index
+    assert res.period == 12
+    assert isinstance(res.stl, STL)
+    assert res.stl.config == stl.config
+    assert isinstance(res.result, DecomposeResult)
+    assert_allclose(res.result.seasonal, stl_res.seasonal, rtol=1e-10)
+    assert_allclose(res.result.trend, stl_res.trend, rtol=1e-10)
+    assert isinstance(res.model, AutoReg)
+    assert_allclose(res.model.endog, ar_res.model.endog, rtol=1e-10)
+    assert_allclose(res.model_result.params, ar_res.params, rtol=1e-10)
+    assert_allclose(res.model_result.bse, ar_res.bse, rtol=1e-10)
+
+    smry = res.summary()
+    assert isinstance(smry, Summary)
+    title = ar_res.summary().tables[0].title
+    assert smry.tables[0].title == "STL Decomposition and " + title
+    config = smry.tables[-1].as_text()
+    assert "STL Configuration" in config
+    assert re.search(r"Period:\s+12\b", config)
+    assert re.search(r"Seasonal:\s+13\b", config)
+    assert re.search(r"Robust:\s+True\b", config)
+    assert re.search(rf"Trend Length:\s+{stl.config['trend']}\b", config)
