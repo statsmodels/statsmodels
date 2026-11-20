@@ -4644,6 +4644,54 @@ def test_arma_order_select_ic_negative_bounds():
         arma_order_select_ic(y, max_ar=2, max_ma=-1)
 
 
+@pytest.mark.parametrize(
+    "ic",
+    [
+        ("aic", "bic"),
+        ["aic", "bic"],
+        np.array(["aic", "bic"]),
+        pd.Index(["aic", "bic"]),
+        pd.Series(["aic", "bic"]),
+    ],
+    ids=["tuple", "list", "ndarray", "index", "series"],
+)
+def test_arma_order_select_ic_sequence(ic):
+    # ic is documented as a str or a sequence of str
+    from statsmodels.tsa.arima.model import ARIMA
+
+    y = np.random.default_rng(20261127).standard_normal(100)
+    res = arma_order_select_ic(y, max_ar=2, max_ma=0, ic=ic, trend="n")
+    assert sorted(res) == ["aic", "aic_min_order", "bic", "bic_min_order"]
+    assert all(type(key) is str for key in res)
+    fits = [ARIMA(y, order=(p, 0, 0), trend="n").fit() for p in range(3)]
+    for name in ("aic", "bic"):
+        expected = np.array([getattr(fit, name) for fit in fits])
+        assert_allclose(res[name][0], expected, rtol=1e-10)
+        assert res[f"{name}_min_order"] == (np.argmin(expected), 0)
+
+
+@pytest.mark.parametrize(
+    "ic",
+    [5, [5], ["aic", 5], np.array([1, 2])],
+    ids=["int", "list of int", "mixed list", "int ndarray"],
+)
+def test_arma_order_select_ic_invalid_type(ic):
+    y = np.random.default_rng(20261127).standard_normal(100)
+    with pytest.raises(ValueError, match="ic must be a str or a sequence of str"):
+        arma_order_select_ic(y, max_ar=0, max_ma=0, ic=ic)
+
+
+@pytest.mark.parametrize(
+    "ic",
+    ["bogus", ["aic", "bogus"], np.array(["bogus"])],
+    ids=["str", "list", "ndarray"],
+)
+def test_arma_order_select_ic_unknown_criterion(ic):
+    y = np.random.default_rng(20261127).standard_normal(100)
+    with pytest.raises(AttributeError, match="bogus"):
+        arma_order_select_ic(y, max_ar=0, max_ma=0, ic=ic)
+
+
 def test_q_stat_invalid_nobs():
     # nobs <= len(x) previously divided by zero (nobs=-1) or returned a
     # degenerate statistic without any error
