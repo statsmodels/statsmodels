@@ -1801,25 +1801,41 @@ def test_ardl_apply_ndarray_exog():
         res.apply(y[80:], exog=np.column_stack([x[80:], x[80:, :1]]))
 
 
-@pytest.mark.parametrize("use_pandas", [True, False])
-def test_ardl_apply_deterministic(use_pandas):
-    # The deterministic process of the model is applied to the index of the
-    # new data, so the time trend restarts at 1
+def test_ardl_apply_deterministic_ndarray():
+    # The deterministic process of the model is applied to the positions of
+    # the new data, so the time trend restarts at 1
     y, x = _contract_ardl_data()
     index = pd.date_range("2000-01-01", periods=y.shape[0], freq="MS")
     dp = DeterministicProcess(index[:80], constant=True, order=1)
-    if use_pandas:
-        endog = pd.Series(y, index=index, name="y")
-        exog = pd.DataFrame(x, index=index, columns=["x0", "x1"])
-    else:
-        endog, exog = y, x
-    res = ARDL(endog[:80], 1, exog[:80], 1, trend="n", deterministic=dp).fit()
-    new_res = res.apply(endog[80:], exog=exog[80:])
+    res = ARDL(y[:80], 1, x[:80], 1, trend="n", deterministic=dp).fit()
+    new_res = res.apply(y[80:], exog=x[80:])
     design = _ardl_design(y[80:], x[80:], 1, 1, 1)
     trend = np.arange(2.0, 41.0)
     design = np.column_stack([design[:, 0], trend, design[:, 1:]])
     expected = design @ np.asarray(res.params)
+    assert_allclose(new_res.fittedvalues, expected, rtol=1e-10)
+
+
+def test_ardl_apply_deterministic_pandas():
+    # The deterministic process of the model is applied to the index of the
+    # new data, so calendar dummies follow the dates of the new data
+    from statsmodels.tsa.deterministic import CalendarSeasonality
+
+    y, x = _contract_ardl_data()
+    index = pd.date_range("2000-01-01", periods=y.shape[0], freq="MS")
+    endog = pd.Series(y, index=index, name="y")
+    exog = pd.DataFrame(x, index=index, columns=["x0", "x1"])
+    terms = [CalendarSeasonality("MS", "A")]
+    dp = DeterministicProcess(index[:80], constant=True, additional_terms=terms)
+    res = ARDL(endog[:80], 1, exog[:80], 1, trend="n", deterministic=dp).fit()
+    new_res = res.apply(endog[80:], exog=exog[80:])
+    design = _ardl_design(y[80:], x[80:], 1, 1, 1)
+    months = np.asarray(index[81:].month)
+    dummies = np.column_stack([months == m for m in range(2, 13)]).astype(float)
+    design = np.column_stack([design[:, 0], dummies, design[:, 1:]])
+    expected = design @ np.asarray(res.params)
     assert_allclose(np.asarray(new_res.fittedvalues), expected, rtol=1e-10)
+    assert list(new_res.fittedvalues.index) == list(index[81:])
 
 
 def test_ardl_apply_construction_error():
