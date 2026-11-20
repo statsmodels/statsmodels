@@ -301,6 +301,26 @@ def test_time_trend_str(term, expected):
     np.testing.assert_allclose(trends, trends[:, :1] ** powers, rtol=1e-14)
 
 
+@pytest.mark.parametrize("order", [-1, -3])
+@pytest.mark.parametrize("constant", [True, False])
+@pytest.mark.parametrize(
+    "create",
+    [
+        TimeTrend,
+        lambda constant, order: CalendarTimeTrend("D", constant, order),
+        lambda constant, order: DeterministicProcess(
+            pd.RangeIndex(10), constant=constant, order=order
+        ),
+    ],
+    ids=["TimeTrend", "CalendarTimeTrend", "DeterministicProcess"],
+)
+def test_time_trend_negative_order(create, constant, order):
+    # A negative order was accepted, and computing the terms raised an
+    # unrelated error, or gave "Powers 1 to 0" in the string
+    with pytest.raises(ValueError, match=f"order must be non-negative, got {order}"):
+        create(constant, order)
+
+
 def test_seasonality(index):
     s = Seasonality(period=12)
     exog = s.in_sample(index)
