@@ -1156,6 +1156,8 @@ Time series analysis
   array was promoted to double precision. :pr:`10857`
 - ``coint`` returned ``critical_values`` as a list for ``trend="n"``. It is an
   ndarray of NaN values, as for the other trends. :pr:`10848`
+- ``coint`` returned ``critical_values`` as a list for ``trend="n"``. It is now
+  an ndarray, as it is for the other trends. :pr:`10848`
 
 Statistics and tests
 --------------------
