@@ -840,8 +840,10 @@ def test_arma_periodogram_closed_form():
 def test_arma_periodogram_unit_root():
     # The frequency response of a unit root is not defined at frequency 0
     with np.errstate(divide="ignore", invalid="ignore"):
-        with pytest.warns(RuntimeWarning, match="nan in frequency response"):
+        with pytest.warns(RuntimeWarning, match="nan in frequency response") as rec:
             w, sd = arma_periodogram([1.0, -1.0], [1.0], worN=8)
+    # The warning points at the caller, not at the wrapper of _require_1d
+    assert [r.filename for r in rec if r.category is RuntimeWarning] == [__file__]
     expected = 1 / (2 - 2 * np.cos(w[1:])) / np.sqrt(2 * np.pi)
     assert_allclose(sd[1:], expected, rtol=1e-10)
 
