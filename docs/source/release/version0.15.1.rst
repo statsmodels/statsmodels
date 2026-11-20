@@ -1590,6 +1590,13 @@ Documentation
   ``TsaDescriptive.fit`` (p, d, q) and its return type, the shapes of the
   ``_Var`` coefficient arrays, and a runnable ``_Var`` example in place of one
   that used undefined names. :pr:`10815`
+- Correct docstrings in ``statsmodels.tsa.filters``, ``seasonal_decompose``,
+  ``STL`` and ``MSTL``: the ``convolution_filter`` formulas and return type,
+  the reverse time order of ``init`` in ``recursive_filter`` and of ``useic``
+  in ``miso_lfilter``, the return types of ``bkfilter``, the trend of
+  ``cffilter`` with ``drift=True``, the ``bkfilter`` and ``cffilter``
+  examples that failed on current pandas, and the parameter types of ``STL``
+  and ``MSTL``. :pr:`10868`
 
 Stricter Input Validation
 =========================
