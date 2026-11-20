@@ -71,7 +71,7 @@ Deprecations
 Behavior changes
 ----------------
 
-- ``MixedLM.score_sqrt`` is private.
+- ``MixedLM.score_sqrt`` is private. :pr:`10700`
 - ``OaxacaResults.summary()`` returns the summary as a string instead of
   printing it and returning ``None``. Use ``print(result.summary())`` to
   display it. :issue:`7733`, :pr:`10491`
@@ -770,8 +770,16 @@ Mixed models and imputation
 - ``MixedLM.fit_regularized`` failed for models with pandas data, for example
   from a formula: ``summary`` raised a ``KeyError`` and, with pandas 3,
   ``fit_regularized`` itself failed. :issue:`8902`, :pr:`10465`
-- ``MixedLM.fit`` often stopped short of the optimum, because ``MixedLM.score``
-  had a sign error.
+- ``MixedLM.fit`` could stop below the maximum of the log-likelihood, report that
+  it had not converged, or end at a variance of 0, because ``MixedLM.score``
+  dropped the signs of the packed square-root parameters and so was not the
+  derivative at the vector that the optimizer holds. These fits now reach the
+  maximum, so estimates, standard errors and log-likelihoods of existing
+  models can change. ``MixedLM.score`` with a packed vector that has negative
+  entries now returns the derivative at that vector. In 72 simulated models
+  fitted with the default options, 16 ended more than 1e-4 below the maximum
+  found by lme4 and 12 reported no convergence, and none does now.
+  :pr:`10700`
 - ``MixedLMResults.bse_re`` raised a ``ValueError`` for models with variance
   components and pandas data, for example from a formula. :pr:`10702`
 - ``MICE.combine`` failed for results of models that do not have a
