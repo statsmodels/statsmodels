@@ -2793,9 +2793,20 @@ def grangercausalitytests(x, maxlag, addconst=True):
         The data, with two columns, for testing whether the time series in
         the second column Granger causes the time series in the first column.
         Missing values are not supported.
+
+        .. versionchanged:: 0.15.1
+
+           x with a number of columns other than two raises a ValueError
+           that says so.
     maxlag : int or sequence of int
         If an integer, computes the test for all lags up to maxlag. If a
         sequence, computes the tests only for the lags in maxlag.
+
+        .. versionchanged:: 0.15.1
+
+           A sequence with one element, such as ``np.array([3])`` or a
+           Series, gives only that lag, as a list does. It used to give
+           all lags up to its element.
     addconst : bool, optional
         Include a constant in the model. Only True is implemented; False
         raises NotImplementedError.
@@ -2851,27 +2862,42 @@ def grangercausalitytests(x, maxlag, addconst=True):
     >>> gc_res = grangercausalitytests(data, [4])
     """
     x = array_like(x, "x", ndim=2)
+    if x.shape[1] != 2:
+        raise ValueError(f"x must have exactly 2 columns, but it has {x.shape[1]}.")
     if not np.isfinite(x).all():
         raise ValueError("x contains NaN or inf values.")
     addconst = bool_like(addconst, "addconst")
 
-    try:
-        maxlag = int_like(maxlag, "maxlag")
+    is_int = False
+    # int_like would squeeze a sequence with one element, such as
+    # np.array([3]), to an int, so only a scalar is treated as an int
+    if np.ndim(maxlag) == 0:
+        try:
+            maxlag = int_like(maxlag, "maxlag")
+            is_int = True
+        except TypeError:
+            pass
+    if is_int:
         if maxlag <= 0:
             raise ValueError("maxlag must be a positive integer")
         lags = np.arange(1, maxlag + 1)
-    except TypeError as exc:
+    else:
         lags = np.array([int(lag) for lag in maxlag])
         if lags.size == 0 or lags.min() <= 0:
             raise ValueError(
                 "maxlag must be a non-empty list containing only positive integers"
-            ) from exc
+            )
         maxlag = lags.max()
 
-    if x.shape[0] <= 3 * maxlag + int(addconst):
-        raise ValueError(
-            f"Insufficient observations. Maximum allowable lag is {int((x.shape[0] - int(addconst)) / 3) - 1}"
-        )
+    nobs = x.shape[0]
+    if nobs <= 3 * maxlag + int(addconst):
+        # The largest lag that passes this check
+        max_lag = (nobs - int(addconst) - 1) // 3
+        if max_lag > 0:
+            detail = f"Maximum allowable lag is {max_lag}."
+        else:
+            detail = "x has too few observations for any lag."
+        raise ValueError(f"Insufficient observations. {detail}")
 
     resli = {}
 

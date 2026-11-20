@@ -1140,6 +1140,12 @@ Time series analysis
   any parameters and whose model, refit, returned the starting parameters.
   Pickles written by earlier versions load correctly. :issue:`3290`,
   :pr:`10816`
+- ``grangercausalitytests`` with a one-element ndarray or ``Series`` ``maxlag``,
+  such as ``np.array([3])``, ran the tests for every lag up to that value
+  instead of only that lag, as a list does. The "Insufficient observations"
+  error gave a maximum allowable lag that was one too small in most cases, and
+  ``x`` without exactly two columns raised an unrelated error; it now raises a
+  ``ValueError`` that says so. :pr:`10846`
 - ``constrain_stationary_multivariate`` with float32 or complex64 input and
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
