@@ -172,7 +172,7 @@ class ThetaModel:
         self._diff = bool_like(difference, "difference")
         self._method = string_like(
             method,
-            "model",
+            "method",
             options=("auto", "additive", "multiplicative", "mul", "add"),
         )
         if self._method == "auto":
