@@ -29,7 +29,7 @@ from scipy import linalg, optimize, signal
 
 from statsmodels.tools.docstring import Docstring, Parameter
 from statsmodels.tools.docstring_helpers import Appender
-from statsmodels.tools.validation import array_like, int_like
+from statsmodels.tools.validation import array_like, int_like, string_like
 
 __all__ = [
     "arma2ar",
@@ -399,8 +399,37 @@ def arma_pacf(ar, ma, lags=10):
     return apacf
 
 
+# The values of normalization in arma_periodogram. Omitting it gives
+# "sqrt(2pi)" with a FutureWarning; the default will be "2pi" after 0.17.
+_PERIODOGRAM_NORMALIZATIONS = ("sqrt(2pi)", "2pi")
+
+
+def _periodogram_normalization(normalization, func, stacklevel):
+    # Validate normalization, and warn if it is omitted. stacklevel is the
+    # stacklevel of the warning in the caller of this function.
+    normalization = string_like(
+        normalization,
+        "normalization",
+        optional=True,
+        options=_PERIODOGRAM_NORMALIZATIONS,
+    )
+    if normalization is None:
+        warnings.warn(
+            f"The spectral density returned by {func} is divided by "
+            "sqrt(2 * pi), not by 2 * pi as in the usual definition. The "
+            "default will change to 2 * pi after statsmodels 0.17 is "
+            'released. Set normalization="2pi" to switch now, or '
+            'normalization="sqrt(2pi)" to keep the current result and '
+            "silence this warning.",
+            FutureWarning,
+            stacklevel=stacklevel + 1,
+        )
+        normalization = "sqrt(2pi)"
+    return normalization
+
+
 @_require_1d("ar", "ma")
-def arma_periodogram(ar, ma, worN=None, whole=0):
+def arma_periodogram(ar, ma, worN=None, whole=0, *, normalization=None):
     """
     Periodogram for ARMA process given by lag-polynomials ar and ma
 
@@ -440,6 +469,21 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
         An option for scipy.signal.freqz.
         Normally, frequencies are computed from 0 to pi (upper-half of
         unit-circle.  If whole is non-zero compute frequencies from 0 to 2*pi.
+    normalization : {"sqrt(2pi)", "2pi"}, optional
+        The constant that ``abs(ma(z)) ** 2 / abs(ar(z)) ** 2`` is divided
+        by, see the Notes. "2pi" gives the spectral density of the process.
+        "sqrt(2pi)" divides by ``sqrt(2 * pi)`` instead, which is the result
+        of earlier versions. If not given, "sqrt(2pi)" is used and a
+        ``FutureWarning`` is issued.
+
+        .. versionadded:: 0.15.1
+
+        .. deprecated:: 0.15.1
+
+           The default will change to "2pi" after statsmodels 0.17 is
+           released. Set ``normalization="2pi"`` to switch now, or
+           ``normalization="sqrt(2pi)"`` to keep the current result and
+           silence the warning.
 
     Returns
     -------
@@ -450,12 +494,13 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
 
     Notes
     -----
-    The spectral density is computed as
-    ``abs(ma(z)) ** 2 / abs(ar(z)) ** 2 / sqrt(2 * pi)`` with
+    With ``normalization="2pi"``, the spectral density is computed as
+    ``abs(ma(z)) ** 2 / abs(ar(z)) ** 2 / (2 * pi)`` with
     ``z = exp(-1j * w)``, where ``ar(z)`` and ``ma(z)`` are the lag
-    polynomials. This assumes a unit innovation variance and divides by
-    ``sqrt(2 * pi)``, while the usual definition of the spectral density
-    divides by ``2 * pi``.
+    polynomials. This is the spectral density of the process with a unit
+    innovation variance, whose integral over ``[-pi, pi]`` is the variance
+    of the process. ``normalization="sqrt(2pi)"`` divides by
+    ``sqrt(2 * pi)`` instead.
 
     This uses signal.freqz, which does not use fft. There is a fft version
     somewhere.
@@ -465,7 +510,12 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
     if isinstance(worN, (int, np.integer)) and worN < 1:
         raise ValueError(f"worN must be a positive integer, got {worN}")
     w, h = signal.freqz(ma, ar, worN=worN, whole=whole)
-    sd = np.abs(h) ** 2 / np.sqrt(2 * np.pi)
+    # The caller is 3 frames up, as _require_1d wraps this function
+    normalization = _periodogram_normalization(
+        normalization, "arma_periodogram", stacklevel=3
+    )
+    scale = 2 * np.pi if normalization == "2pi" else np.sqrt(2 * np.pi)
+    sd = np.abs(h) ** 2 / scale
     if np.any(np.isnan(h)):
         # this happens with unit root or seasonal unit root'
         import warnings
@@ -886,7 +936,7 @@ def deconvolve(num, den, n=None):
     return quot, rem
 
 
-def _arma_lags_method_doc(func, name, description, changes=()):
+def _arma_lags_method_doc(func, name, description, changes=(), keep=()):
     """
     Build the docstring of an ArmaProcess method from a module level function
 
@@ -895,20 +945,23 @@ def _arma_lags_method_doc(func, name, description, changes=()):
     func : callable
         The module level function that the method calls.
     name : str
-        The name of the only parameter of the method, which sets the number
-        of values that it returns.
+        The name of the parameter of the method that sets the number of
+        values that it returns.
     description : str
         The description of the parameter.
     changes : sequence of str, optional
         Earlier changes of the parameter, for its versionchanged note.
+    keep : sequence of str, optional
+        The parameters of func that the method also takes. They are
+        documented after the parameter, as in func.
 
     Returns
     -------
     str
-        The docstring of func with the parameter of the method in place of
-        the parameters of func. The description of the parameter states the
-        default value, that the value must be positive, and the behavior
-        changes.
+        The docstring of func with the parameter of the method, and the
+        parameters in keep, in place of the parameters of func. The
+        description of the parameter states the default value, that the
+        value must be positive, and the behavior changes.
     """
     if func.__doc__ is None:
         return None
@@ -929,7 +982,9 @@ def _arma_lags_method_doc(func, name, description, changes=()):
         subsequent_indent="    ",
     )
     desc += ["", ".. versionchanged:: 0.15.1", "", *note]
-    ds.replace_block("Parameters", [Parameter(name, "int, optional", desc)])
+    params = [Parameter(name, "int, optional", desc)]
+    params += [param for param in ds._ds["Parameters"] if param.name in keep]
+    ds.replace_block("Parameters", params)
     return str(ds)
 
 
@@ -1231,11 +1286,17 @@ class ArmaProcess:
             "nobs",
             "The number of frequencies, equally spaced on [0, pi), at which the "
             "periodogram is computed.",
+            keep=["normalization"],
         )
     )
-    def periodogram(self, nobs=None):
+    def periodogram(self, nobs=None, *, normalization=None):
         nobs = self._check_lags(nobs, "nobs")
-        return arma_periodogram(self.ar, self.ma, worN=nobs)
+        normalization = _periodogram_normalization(
+            normalization, "ArmaProcess.periodogram", stacklevel=2
+        )
+        return arma_periodogram(
+            self.ar, self.ma, worN=nobs, normalization=normalization
+        )
 
     @Appender(
         _arma_lags_method_doc(
