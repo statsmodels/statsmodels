@@ -1172,6 +1172,66 @@ class TestFilters:
         assert res.index[-1] == end
 
 
+def test_convolution_filter_2d_filter_matches_r():
+    # each column of x is filtered with its column of filt. R 4.6.2:
+    # filter(1:10, c(1, 2, 3), sides=s) and filter(10 * (1:10), c(3, 2, 1),
+    # sides=s) from stats
+    x = np.c_[np.arange(1.0, 11.0), 10 * np.arange(1.0, 11.0)]
+    filt = np.array([[1.0, 3.0], [2.0, 2.0], [3.0, 1.0]])
+    col0 = np.arange(10, 53, 6, dtype=float)
+    col1 = np.arange(140, 561, 60, dtype=float)
+    nan2 = [np.nan, np.nan]
+    expected = {
+        1: np.r_[[nan2, nan2], np.c_[col0, col1]],
+        2: np.r_[[nan2], np.c_[col0, col1], [nan2]],
+    }
+    for nsides in (1, 2):
+        res = convolution_filter(x, filt, nsides=nsides)
+        assert_allclose(res, expected[nsides], rtol=1e-12)
+
+
+CONVOLUTION_2D_CASES = [
+    (kind, nlags, nsides)
+    for kind in ("1d", "column", "2d")
+    for nlags in (1, 2, 3, 4)
+    for nsides in (1, 2)
+    # a (1, nvar) filter is not a separate lag polynomial per column
+    if not (kind == "2d" and nlags == 1)
+]
+
+
+@pytest.mark.parametrize("kind, nlags, nsides", CONVOLUTION_2D_CASES)
+def test_convolution_filter_2d_x_matches_columns(kind, nlags, nsides):
+    # nsides=1 raised a ValueError for a 2-d filter, and for 2-d x with a
+    # filter of length one. 2-d x is filtered column by column, with the
+    # column's own lag polynomial for a 2-d filter and with the same one for a
+    # 1-d or (nlags, 1) filter, as the 1-d filter path filters 1-d x.
+    rng = np.random.default_rng(20261201)
+    # integer data, so that every sum is exact
+    x = rng.integers(-9, 10, size=(25, 2)).astype(float)
+    filt = rng.integers(-5, 6, size=(nlags, 2)).astype(float)
+    if kind == "1d":
+        filt_in, columns = filt[:, 0], [filt[:, 0], filt[:, 0]]
+    elif kind == "column":
+        filt_in, columns = filt[:, :1], [filt[:, 0], filt[:, 0]]
+    else:
+        filt_in, columns = filt, [filt[:, 0], filt[:, 1]]
+    res = convolution_filter(x, filt_in, nsides=nsides)
+    assert res.shape == x.shape
+    for i in range(2):
+        expected = convolution_filter(x[:, i], columns[i], nsides=nsides)
+        # atol keeps a sum that cancels to zero from failing if scipy
+        # convolves by FFT
+        assert_allclose(res[:, i], expected, rtol=1e-12, atol=1e-10)
+    # pandas input keeps the index and columns
+    index = date_range("2000-01-01", periods=25)
+    df = DataFrame(x, columns=["a", "b"], index=index)
+    res_df = convolution_filter(df, filt_in, nsides=nsides)
+    assert list(res_df.columns) == ["a", "b"]
+    assert_index_equal(res_df.index, df.index)
+    assert_allclose(res_df.to_numpy(), res, rtol=1e-12)
+
+
 @pytest.mark.parametrize("mode", ["full", "same", "valid"])
 def test_fftconvolve3_modes(mode):
     # GH: fftconvolve3 raised AttributeError on numpy >= 1.24 (np.complex)

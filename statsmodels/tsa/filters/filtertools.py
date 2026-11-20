@@ -353,6 +353,11 @@ def convolution_filter(x, filt, nsides=2):
         coefficients. If 1, the filter coefficients are for past values only.
         Both methods use scipy.signal.convolve.
 
+        .. versionchanged:: 0.15.1
+
+           nsides=1 works with a 2d filter, and with 2d x and a filter of
+           length one, where it raised a ValueError.
+
     Returns
     -------
     y : ndarray, 2d
@@ -388,7 +393,7 @@ def convolution_filter(x, filt, nsides=2):
     # for nsides shift the index instead of using 0 for 0 lag this
     # allows correct handling of NaNs
     if nsides == 1:
-        trim_head = len(filt) - 1
+        trim_head = len(filt) - 1 or None
         trim_tail = None
     elif nsides == 2:
         trim_head = int(np.ceil(len(filt)/2.) - 1) or None
@@ -406,15 +411,10 @@ def convolution_filter(x, filt, nsides=2):
         nlags = filt.shape[0]
         nvar = x.shape[1]
         result = np.zeros((x.shape[0] - nlags + 1, nvar))
-        if nsides == 2:
-            for i in range(nvar):
-                # could also use np.convolve, but easier for swiching to fft
-                result[:, i] = signal.convolve(x[:, i], filt[:, i],
-                                               mode="valid")
-        elif nsides == 1:
-            for i in range(nvar):
-                result[:, i] = signal.convolve(x[:, i], np.r_[0, filt[:, i]],
-                                               mode="valid")
+        # nsides only sets the NaN padding, as for a 1d filter
+        for i in range(nvar):
+            # could also use np.convolve, but easier for swiching to fft
+            result[:, i] = signal.convolve(x[:, i], filt[:, i], mode="valid")
     result = _pad_nans(result, trim_head, trim_tail)
     return pw.wrap(result)
 
