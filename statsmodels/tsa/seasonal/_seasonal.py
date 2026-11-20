@@ -134,9 +134,9 @@ def seasonal_decompose(
         If set to 'period', use `period` closest points. Setting this parameter
         results in no NaN values in trend or resid components. The default is 0.
 
-        .. deprecated: 0.14
-            `extrapolate_trend="freq"` is deprecated and will be removed,
-            use `extrapolate_trend=period` instead.
+        .. deprecated:: 0.14
+            ``extrapolate_trend="freq"`` is deprecated and will be removed
+            in 0.16, use ``extrapolate_trend="period"`` instead.
 
     Returns
     -------
@@ -152,7 +152,7 @@ def seasonal_decompose(
     statsmodels.tsa.filters.hp_filter.hpfilter
         Hodrick-Prescott filter.
     statsmodels.tsa.filters.hamilton_filter.hamilton_filter
-        Hanilton's autoregression-based filter.
+        Hamilton's autoregression-based filter.
     statsmodels.tsa.filters.convolution_filter
         Linear filtering via convolution.
     statsmodels.tsa.seasonal.STL
