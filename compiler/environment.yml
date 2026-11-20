@@ -1,0 +1,26 @@
+# No-sudo toolchain for the causal compiler (local Linux/WSL or ASU Sol).
+# GCC 13 is pinned on purpose: conda-forge clang 18 fails to compile MLIR 18
+# headers against the newer libstdc++ that conda-forge resolves by default.
+name: causal-ci
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - mlir=18.1.*
+  - llvmdev=18.1.*
+  - gcc_linux-64=13.*
+  - gxx_linux-64=13.*
+  - cmake
+  - ninja
+  - numpy
+  - scipy
+  - pandas
+  - patsy
+  - statsmodels
+  - pytest
+  - scikit-learn
+  - pip
+  - pip:
+      - iree-base-compiler
+      - iree-base-runtime
+      - econml           # LinearDML baseline (econml_baseline.py)

@@ -140,7 +140,10 @@ def _load_iree_cpu_kernel(
     interaction_data, coefficients = workflow.mlir_inputs()
 
     def run() -> np.ndarray:
-        return np.asarray(entrypoint(interaction_data, coefficients))
+        # Copy while the IREE result is alive; np.asarray alone returns a view
+        # that does not keep the device buffer alive.
+        result = entrypoint(interaction_data, coefficients)
+        return np.array(np.asarray(result), copy=True)
 
     return run
 
