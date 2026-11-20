@@ -759,7 +759,7 @@ def test_coint_tables_out_of_range(func, n, p):
 
 
 @pytest.mark.parametrize("func", [c_sja, c_sjt])
-@pytest.mark.parametrize("p", [0.5, -0.5, 1.5, -1.5, True])
+@pytest.mark.parametrize("p", [0.5, -0.5, 1.5, -1.5])
 def test_coint_tables_invalid_p(func, p):
     # p is not an integer. Between -1 and 1, c_sja raised an
     # UnboundLocalError and c_sjt "invalid p"; outside, both returned NaN.
@@ -784,6 +784,28 @@ def test_coint_tables_integral_p(func, p):
     expected = COINT_TABLES_N3[func, p]
     for value in (p, float(p), np.float64(p), np.int64(p), np.array(p)):
         assert_allclose(func(3, value), expected, rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [True, False, np.True_, np.False_])
+def test_coint_tables_bool_p_deprecated(func, p):
+    # A bool selected the table of 0 or 1. It is deprecated.
+    with pytest.warns(FutureWarning, match="^p must be an integer. Passing a bool"):
+        res = func(3, p)
+    assert_allclose(res, COINT_TABLES_N3[func, int(p)], rtol=1e-15)
+
+
+def test_coint_johansen_bool_det_order_deprecated():
+    # det_order=True was used as 1 by coint_johansen and the tables
+    endog = np.cumsum(np.random.default_rng(0).standard_normal((100, 2)), axis=0)
+    expected = coint_johansen(endog, 1, 1)
+    with pytest.warns(FutureWarning, match="^p must be an integer. Passing a bool"):
+        res = coint_johansen(endog, True, 1)
+    assert_allclose(res.lr1, expected.lr1, rtol=1e-12)
+    assert_allclose(res.cvt, expected.cvt, rtol=1e-15)
+    assert_allclose(res.cvm, expected.cvm, rtol=1e-15)
+    # The critical values of 2 and 1 variables with a trend
+    assert_allclose(res.cvt[:, 1], [18.3985, 3.8415], rtol=1e-15)
 
 
 @pytest.mark.parametrize("func", [c_sja, c_sjt])

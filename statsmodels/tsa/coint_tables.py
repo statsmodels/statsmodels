@@ -37,6 +37,8 @@ function jc =  c_sja(n,p)
 
 """
 
+import warnings
+
 import numpy as np
 
 from statsmodels.tools.validation import int_like
@@ -92,6 +94,15 @@ def _check_p(p):
     # An integer outside -1 to 1 is valid and gives NaN, but a value that is
     # not an integer is an error. ValueError, not the TypeError of int_like,
     # as c_sjt raised a ValueError for 0.5 before.
+    if isinstance(p, (bool, np.bool_)):
+        # A bool selected the table of 0 or 1
+        warnings.warn(
+            "p must be an integer. Passing a bool is deprecated and will raise "
+            "a ValueError after statsmodels 0.17 is released.",
+            FutureWarning,
+            stacklevel=3,
+        )
+        return int(p)
     try:
         return int_like(p, "p")
     except TypeError:
@@ -114,9 +125,14 @@ def c_sja(n, p):
 
         .. versionchanged:: 0.15.1
 
-           A value that is not an integer, including a bool, raises
-           ValueError. A value between -1 and 1 raised an
-           UnboundLocalError, and a value outside returned NaN.
+           A value that is not an integer raises ValueError. A value
+           between -1 and 1 raised an UnboundLocalError, and a value
+           outside returned NaN.
+
+        .. deprecated:: 0.15.1
+
+           A bool is deprecated and will raise a ValueError after
+           statsmodels 0.17 is released. It is used as 0 or 1.
 
     Returns
     -------
@@ -270,9 +286,14 @@ def c_sjt(n, p):
 
         .. versionchanged:: 0.15.1
 
-           A value that is not an integer, including a bool, raises
-           ValueError. A value outside -1 to 1 returned NaN, and the error
-           message for a value between them was "invalid p".
+           A value that is not an integer raises ValueError. A value
+           outside -1 to 1 returned NaN, and the error message for a value
+           between them was "invalid p".
+
+        .. deprecated:: 0.15.1
+
+           A bool is deprecated and will raise a ValueError after
+           statsmodels 0.17 is released. It is used as 0 or 1.
 
     Returns
     -------
