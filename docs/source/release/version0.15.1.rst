@@ -325,6 +325,15 @@ Behavior changes
   from ``ccf``, and a column next to a 1-D series raised an error from SciPy.
   Input with more than one column now raises a ``ValueError``. Results for
   1-D input are unchanged. :pr:`10811`
+- :func:`~statsmodels.tsa.stattools.pccf` with ``method="yw"`` or ``"ywm"``
+  (the default) no longer depends on the scales of ``x`` and ``y``: rescaling
+  one series, for example by ``1e8``, made every lag ``nan``. Series that are
+  collinear to working precision give ``nan`` for every lag, as exactly
+  collinear series did, instead of inaccurate values. When the recursion
+  reaches a singular prediction error covariance matrix, the later lags are
+  ``nan`` on every platform; before, they depended on rounding, and the lag
+  computed just before could be dropped. Results for other input change only
+  by rounding. :pr:`10843`
 
 New Features and Enhancements
 =============================
@@ -1118,6 +1127,10 @@ Time series analysis
   error gave a maximum allowable lag that was one too small in most cases, and
   ``x`` without exactly two columns raised an unrelated error; it now raises a
   ``ValueError`` that says so. :pr:`10846`
+- ``constrain_stationary_multivariate`` with float32 or complex64 input and
+  ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
+  NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
+  array was promoted to double precision. :pr:`10857`
 
 Statistics and tests
 --------------------

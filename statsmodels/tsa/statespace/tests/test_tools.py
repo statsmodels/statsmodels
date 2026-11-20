@@ -529,6 +529,7 @@ TWIN_CASES = [
     pytest.param(np.complex128, 1.0, 1e-10, id="complex128"),
     pytest.param(np.complex128, 10.0, 1e-5, id="complex128-large"),
     pytest.param(np.float32, 1.0, 1e-3, id="float32"),
+    pytest.param(np.complex64, 1.0, 1e-3, id="complex64"),
 ]
 
 
