@@ -5,6 +5,8 @@ import pandas as pd
 import pytest
 
 from statsmodels.tsa.forecasting.theta import ThetaModel
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 SMOKE_PARAMS = list(product(["array", "dataframe", "series"], [True, False]))
 SMOKE_IDS = [f"type: {typ}, exponential: {exp}" for typ, exp in SMOKE_PARAMS]
@@ -202,3 +204,31 @@ def test_theta_invalid_period_raises():
         ThetaModel(y, period=-3)
     with pytest.raises(ValueError, match="period must be >= 2"):
         ThetaModel(y, period=1)
+
+
+@pytest.mark.parametrize("method", ["additive", "multiplicative", None])
+def test_sigma2_deseasonalized(method):
+    # Without MLE, sigma2 is estimated from an IMA(1,1) with drift fit to the
+    # deseasonalized data, which the forecasts and the MLE estimates use.
+    # method=None does not deseasonalize. The data are an IMA(1,1) with drift
+    # plus a seasonal pattern
+    rng = np.random.default_rng(20261120)
+    e = rng.standard_normal(121)
+    t = np.arange(120)
+    y = 50 + np.cumsum(0.3 + e[1:] - 0.5 * e[:-1])
+    y = y + 5 * np.sin(2 * np.pi * t / 12)
+    if method is None:
+        model = ThetaModel(y, deseasonalize=False)
+        deseasonalized = y
+    else:
+        model = ThetaModel(y, period=12, use_test=False, method=method)
+        seasonal = seasonal_decompose(y, model=method, period=12).seasonal
+        if method == "multiplicative":
+            deseasonalized = y / seasonal
+        else:
+            deseasonalized = y - seasonal
+    res = model.fit(use_mle=False)
+    # The same estimator on the same data, so only rounding can differ
+    ima = SARIMAX(deseasonalized, order=(0, 1, 1), trend="c")
+    expected = ima.fit(disp=False).params[-1]
+    np.testing.assert_allclose(res.sigma2, expected, rtol=1e-8)
