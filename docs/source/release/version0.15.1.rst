@@ -996,6 +996,10 @@ Time series analysis
   (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``DeterministicProcess.out_of_sample`` without any deterministic terms
+  returned the in-sample rows on the in-sample index instead of ``steps``
+  rows on the forecast index, and ``DeterministicProcess.range`` beyond the
+  sample returned the wrong rows. :pr:`10834`
 
 Statistics and tests
 --------------------
