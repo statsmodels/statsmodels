@@ -157,6 +157,9 @@ class ThetaModel:
         self._y = array_like(endog, "endog", ndim=1)
         if isinstance(endog, pd.DataFrame):
             self.endog_orig = endog.iloc[:, 0]
+        elif not hasattr(endog, "shape"):
+            # A sequence such as a list or a tuple
+            self.endog_orig = self._y
         else:
             self.endog_orig = endog
         self._period = int_like(period, "period", optional=True)
