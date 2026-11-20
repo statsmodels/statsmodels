@@ -67,6 +67,10 @@ Deprecations
   ``NotImplementedError``, will be removed after statsmodels 0.16. Use
   ``statsmodels.tsa.arima.model.ARIMA`` or
   ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
+- ``distance_indicators`` with ``x`` of more than one dimension issues a
+  ``FutureWarning`` and returns the same result as before. After statsmodels
+  0.17, a column will give the result of the 1-D series and other input will
+  raise. :pr:`10858`
 
 Behavior changes
 ----------------
@@ -1150,6 +1154,8 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- ``index2lpol`` raised an ``IndexError`` for a tuple ``index``, and ``ar2arma``
+  raised a ``TypeError`` for a tuple ``ar_des``. :pr:`10858`
 
 Statistics and tests
 --------------------
