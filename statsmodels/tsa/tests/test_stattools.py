@@ -4904,9 +4904,6 @@ def test_acf_pacf_adfuller_input_forms(form):
     x_form = series_forms(x)[form]
     assert_allclose(acf(x_form, nlags=10), acf(x, nlags=10), rtol=1e-12)
     for method in ("yw", "ols", "burg", "ldb"):
-        if method == "burg" and form in ("column", "dataframe"):
-            # pacf_burg does not accept an (n, 1) column yet
-            continue
         assert_allclose(
             pacf(x_form, nlags=10, method=method),
             pacf(x, nlags=10, method=method),
