@@ -8,6 +8,8 @@ conditions rather than merely asserting the methods run.
 
 _Var is deprecated and will be removed after statsmodels 0.16. Until then
 it is checked against statsmodels.tsa.api.VAR without a trend.
+
+varfilter is checked against explicit loops over its documented formula.
 """
 
 from statsmodels.compat.python import PYTHON_IMPL_WASM
@@ -18,7 +20,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.tsa.api import VAR
-from statsmodels.tsa.varma_process import VarmaPoly, _Var
+from statsmodels.tsa.varma_process import VarmaPoly, _Var, varfilter
 
 VAR_DEPRECATED = "_Var is deprecated"
 
@@ -181,6 +183,78 @@ def test_reduceform_linalg_error():
         vp.reduceform(singular)
 
 
+def _varfilter_loop(x, a):
+    # The filter documented in varfilter, y[t] = a(L) x[t] for
+    # t = nlags - 1, ..., nobs - 1, by explicit loops
+    x = np.asarray(x, dtype=float)
+    a = np.asarray(a, dtype=float)
+    if x.ndim == 1:
+        x = x[:, None]
+    nobs, nvars = x.shape
+    nlags = a.shape[0]
+    if a.ndim == 3:
+        # Case 3: y[t, i] = sum_p sum_j a[p, j, i] x[t - p, j]
+        out = np.zeros((nobs - nlags + 1, a.shape[2]))
+        for t in range(nlags - 1, nobs):
+            for i in range(a.shape[2]):
+                for p in range(nlags):
+                    for j in range(nvars):
+                        out[t - nlags + 1, i] += a[p, j, i] * x[t - p, j]
+        return out
+    # Case 2: y[t, j] = sum_p a[p, j] x[t - p, j]. In case 1, a 1-d or
+    # (nlags, 1) a is the same lag polynomial for every variable.
+    coef = np.broadcast_to(a.reshape(nlags, -1), (nlags, nvars))
+    out = np.zeros((nobs - nlags + 1, nvars))
+    for t in range(nlags - 1, nobs):
+        for j in range(nvars):
+            for p in range(nlags):
+                out[t - nlags + 1, j] += coef[p, j] * x[t - p, j]
+    return out
+
+
+def test_varfilter_3d_example():
+    # y[t] = x[t] + 0.5 * x[t - 1, 0] e_0 for t = 1, ..., 4
+    x = np.arange(10.0).reshape(5, 2)
+    a = [[[1.0, 0.0], [0.0, 1.0]], [[0.5, 0.0], [0.0, 0.0]]]
+    expected = x[1:] + np.c_[0.5 * x[:-1, 0], np.zeros(4)]
+    assert_allclose(varfilter(x, a), expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("nvars", [1, 2, 3])
+@pytest.mark.parametrize("nlags", [1, 2, 3])
+@pytest.mark.parametrize("case", ["1d", "2d_column", "2d", "3d", "3d_npoly"])
+def test_varfilter(case, nlags, nvars):
+    # case "2d" with nlags == 1 and nvars > 1: a 2-d a of shape (1, nvars)
+    # used to be taken as one lag polynomial (case 1) and gave one column
+    rng = np.random.default_rng(20261121)
+    nobs = 20
+    x = rng.standard_normal((nobs, nvars))
+    shape = {
+        "1d": (nlags,),
+        "2d_column": (nlags, 1),
+        "2d": (nlags, nvars),
+        "3d": (nlags, nvars, nvars),
+        "3d_npoly": (nlags, nvars, nvars + 1),
+    }[case]
+    a = rng.standard_normal(shape)
+    expected = _varfilter_loop(x, a)
+    y = varfilter(x, a)
+    assert y.shape == expected.shape
+    assert_allclose(y, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("ndim", [1, 2, 3])
+def test_varfilter_lists_and_1d_x(ndim):
+    # x and a are array_like, and a 1-d x is a single variable
+    rng = np.random.default_rng(20261122)
+    x = rng.standard_normal(15)
+    a = rng.standard_normal((3,) + (1,) * (ndim - 1))
+    expected = _varfilter_loop(x, a)
+    y = varfilter(x.tolist(), a.tolist())
+    assert y.shape == (13, 1)
+    assert_allclose(y, expected, rtol=1e-10)
+
+
 @pytest.fixture
 def var_data():
     # Stationary VAR(2): y_t = A1 y_{t-1} + A2 y_{t-2} + e_t
@@ -290,18 +364,15 @@ def test_var_predict_after_refit(var_data):
     assert_allclose(v.predict(), res.fittedvalues, rtol=1e-10)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="_Var.covmat scales inv(X'X) by each equation's residual sum of "
-    "squares, not by its residual variance",
-)
-def test_var_covmat(var_data):
+@pytest.mark.parametrize("nlags", [1, 2, 3])
+def test_var_covmat(var_data, nlags):
     nvars = var_data.shape[1]
     v = make_var(var_data)
-    v.fit(2)
-    res = VAR(var_data).fit(2, trend="n")
+    v.fit(nlags)
+    res = VAR(var_data).fit(nlags, trend="n")
     assert v.covmat() is None
+    k = nlags * nvars
+    assert v.paramcov.shape == (k, k, nvars)
     # VAR orders its parameters regressor by regressor, equation within
     cov = np.asarray(res.cov_params())
     for eq in range(nvars):

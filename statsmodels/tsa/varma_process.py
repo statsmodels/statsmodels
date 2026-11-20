@@ -55,12 +55,10 @@ def varfilter(x, a):
     Returns
     -------
     y : ndarray
-        filtered array, 2d, number of columns determined by x and a
-
-    Warnings
-    --------
-    convolve does not work as expected; this likely does not work
-    correctly for nvars>3.
+        filtered array, 2d, of shape (nobs - nlags + 1, nvars) in cases 1
+        and 2 and (nobs - nlags + 1, npoly) in case 3, see Notes. It holds
+        the times t = nlags-1,...,nobs-1, at which every lag of x is
+        available.
 
     Notes
     -----
@@ -88,8 +86,15 @@ def varfilter(x, a):
             y[:,i] = a(.,.,i)(L) * x
             y[t,i] = sum_p sum_j a(p,j,i)*x(t-p,j)
                      for p = 0,...nlags-1, j = 0,...nvars-1,
-                     for all t >= nlags
+                     for t = nlags-1,...,nobs-1
 
+    .. versionchanged:: 0.15.1
+       In case 3 the result previously used the variables of x in reverse
+       order, and unless nlags was 2 it had the wrong number of rows, none
+       when nlags was 1. It now follows the formula above. In case 2, an
+       ``a`` of shape (1, nvars) with nvars > 1 (one lag) was taken as the
+       single lag polynomial of case 1 and gave one column; it now gives one
+       filter per variable.
 
     Note: maybe convert to axis=1, Not
 
@@ -102,9 +107,8 @@ def varfilter(x, a):
         x = x[:, None]
     if x.ndim > 2:
         raise ValueError("x array has to be 1d or 2d")
-    nvar = x.shape[1]
+    nobs, nvar = x.shape
     nlags = a.shape[0]
-    ntrim = nlags // 2
     # for x is 2d with ncols >1
 
     if a.ndim == 1:
@@ -113,7 +117,7 @@ def varfilter(x, a):
         # alternative:
         # return signal.lfilter(a,[1],x.astype(float),axis=0)
     elif a.ndim == 2:
-        if min(a.shape) == 1:
+        if a.shape[1] == 1:
             # case: identical ar filter (lag polynomial)
             return signal.convolve(x, a, mode="valid")
 
@@ -128,10 +132,9 @@ def varfilter(x, a):
 
     elif a.ndim == 3:
         # case: vector autoregressive with lag matrices
-        # Note: we must have shape[1] == shape[2] == nvar
-        yf = signal.convolve(x[:, :, None], a)
-        yvalid = yf[ntrim:-ntrim, yf.shape[1] // 2, :]
-        return yvalid
+        # Note: we must have shape[1] == nvar
+        # y[t] = sum_p x[t - p] @ a[p] for t = nlags - 1, ..., nobs - 1
+        return sum(x[nlags - 1 - p : nobs - p] @ a[p] for p in range(nlags))
 
 
 def varinversefilter(ar, nobs, version=1):
@@ -526,29 +529,38 @@ class _Var:
 
         Notes
         -----
-        Not sure it's correct, need to check orientation everywhere.
-        Looks ok, display needs getting used to.
+        ``paramcov[:, :, i]`` is ``rss[i] / df_resid * inv(xred.T @ xred)``,
+        the covariance of the coefficients ``estresults[0][:, i]`` of
+        equation ``i``. ``df_resid = nobs - nlags - nlags * nvar`` is the
+        number of observations in the regression less the number of
+        coefficients in each equation. These are the diagonal blocks of the
+        ``cov_params`` of ``VAR(y).fit(nlags, trend="n")``; the covariances
+        between the coefficients of different equations are not computed.
+
+        .. versionchanged:: 0.15.1
+           ``paramcov`` was previously too large by the factor
+           ``df_resid``: it scaled ``inv(xred.T @ xred)`` by the residual
+           sum of squares of each equation instead of its residual
+           variance.
 
         Examples
         --------
-        >>> v.rss[None,None,:]*np.linalg.inv(np.dot(v.xred.T,v.xred))[:,:,None]
-        array([[[ 0.37247445,  0.32210609],
-                [ 0.1002642 ,  0.08670584]],
+        Continuing the example of the class, the block of the first
+        equation is the matching block of the covariance of the VAR
+        estimates:
 
-               [[ 0.1002642 ,  0.08670584],
-                [ 0.45903637,  0.39696255]]])
-        >>>
-        >>> v.rss[0]*np.linalg.inv(np.dot(v.xred.T,v.xred))
-        array([[ 0.37247445,  0.1002642 ],
-               [ 0.1002642 ,  0.45903637]])
-        >>> v.rss[1]*np.linalg.inv(np.dot(v.xred.T,v.xred))
-        array([[ 0.32210609,  0.08670584],
-               [ 0.08670584,  0.39696255]])
+        >>> from statsmodels.tsa.api import VAR
+        >>> v.covmat()
+        >>> cov = VAR(y).fit(1, trend="n").cov_params()
+        >>> np.allclose(v.paramcov[:, :, 0], cov[0::2, 0::2])
+        True
         """
-
-        # check if orientation is same as self.arhat
+        # The residual variance of each equation, with the degrees of freedom
+        # of VAR: the observations in the regression less the coefficients of
+        # each equation
+        df_resid = self.xred.shape[0] - self.xred.shape[1]
         self.paramcov = (
-            self.rss[None, None, :]
+            (self.rss / df_resid)[None, None, :]
             * np.linalg.inv(np.dot(self.xred.T, self.xred))[:, :, None]
         )
 

@@ -9,7 +9,10 @@ License: BSD(3clause)
 
 import warnings
 
+import numpy as np
+
 from statsmodels.graphics.utils import _import_mpl
+from statsmodels.tools.validation import array_like
 
 from . import stattools as stt
 
@@ -169,10 +172,25 @@ class TsaDescriptive:
         Returns
         -------
         ndarray
-            The periodogram values.
+            The periodogram ``abs(fft(data)) ** 2 / nobs`` at the Fourier
+            frequencies ``2 * pi * k / nobs`` for ``k = 0, ..., nobs - 1``,
+            with the value at frequency zero set to 0. The frequencies are
+            not returned.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+           Since statsmodels 0.12 this method, and `plot4`, raised
+           AttributeError, because it called
+           ``statsmodels.tsa.stattools.periodogram``, which was removed. It
+           now computes the periodogram as that function did.
         """
-        # does not return frequencies
-        return stt.periodogram(self.data)
+        # The code of statsmodels.tsa.stattools.periodogram, removed in
+        # statsmodels 0.12
+        x = array_like(self.data, "x")
+        pergr = 1.0 / len(x) * np.abs(np.fft.fft(x)) ** 2
+        pergr[0] = 0.0
+        return pergr
 
     # copied from fftarma.py
     def plot4(self, fig=None, nobs=100, nacf=20, nfreq=100):
@@ -196,6 +214,12 @@ class TsaDescriptive:
         -------
         Figure
             The figure containing the plots.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+           Since statsmodels 0.12 this method raised AttributeError, from
+           `periodogram`. It now draws all four plots.
         """
         data = self.data
         acf = self.acf(nacf)
