@@ -21,6 +21,11 @@ see:
   Gleason, J. R. (1998). A table of quantile points of the
     Studentized range distribution.
     http://www.stata.com/stb/stb46/dm64/sturng.pdf
+
+The public functions ``psturng`` and ``qsturng`` delegate to
+``scipy.stats.studentized_range``, which evaluates the distribution
+directly. The Gleason approximation is retained in the private
+functions below.
 """
 
 from statsmodels.compat.python import lrange
@@ -2339,20 +2344,20 @@ _vqsturng.__doc__ = """Vector version of qsturng"""
 
 def qsturng(p, r, v):
     """
-    Approximates the quantile p for a studentized range
+    Quantile of the studentized range distribution
+
+    Evaluates the quantile p for a studentized range
     distribution having v degrees of freedom and r samples
-    for probability p
+    for probability p.
 
     Parameters
     ----------
     p : scalar or array_like
         The cumulative probability value
-        p >= .1 and p <=.999
-        (values under .5 are not recommended)
+        0 <= p <= 1
     r : scalar or array_like
         The number of samples
-        r >= 2 and r <= 200
-        (values over 200 are permitted but not recommended)
+        r >= 2
     v : scalar or array_like
         The sample degrees of freedom
         if p >= .9:
@@ -2363,12 +2368,28 @@ def qsturng(p, r, v):
     Returns
     -------
     q : float or ndarray
-        approximation of the Studentized Range
-    """
+        Quantile of the Studentized Range distribution
 
-    if all(map(_isfloat, [p, r, v])):
-        return _qsturng(p, r, v)
-    return _vqsturng(p, r, v)
+    Notes
+    -----
+    The quantile is evaluated with `scipy.stats.studentized_range`.
+    Previous versions used the approximation of Gleason (1999),
+    which was only available for .1 <= p <= .999.
+    """
+    p, r, v = np.broadcast_arrays(
+        np.asarray(p, dtype=float),
+        np.asarray(r, dtype=float),
+        np.asarray(v, dtype=float),
+    )
+    if np.any((p < 0) | (p > 1)):
+        raise ValueError("p must be between 0 and 1")
+    if np.any(r < 2):
+        raise ValueError("r must be >= 2")
+    if np.any((p < 0.9) & (v < 2)):
+        raise ValueError("v must be >= 2 when p < .9")
+    if np.any((p >= 0.9) & (v < 1)):
+        raise ValueError("v must be >= 1 when p >= .9")
+    return scipy.stats.studentized_range.ppf(p, r, v)
 
 
 # def _qsturng0(p, r, v):
@@ -2441,6 +2462,8 @@ _vpsturng.__doc__ = """Vector version of psturng"""
 
 def psturng(q, r, v):
     """
+    Survival function of the studentized range distribution
+
     Evaluates the probability from 0 to q for a studentized
     range having v degrees of freedom and r samples
 
@@ -2451,23 +2474,49 @@ def psturng(q, r, v):
         q >= 0.
     r : scalar or array_like
         The number of samples
-        r >= 2 and r <= 200
-        (values over 200 are permitted but not recommended)
+        r >= 2
     v : scalar or array_like
         The sample degrees of freedom
-        if the corresponding probability is >= .9:
-            v >=1 and v <= inf
-        else:
-            v >=2 and v <= inf
+        v >=1 and v <= inf. If 1 <= v < 2, then q must be at
+        least the quantile corresponding to a probability
+        of .9, see Notes.
 
     Returns
     -------
     p : float or ndarray
         1. - area from zero to q under the Studentized Range
-        distribution. When v == 1, p is bound between .001
-        and .1, when v > 1, p is bound between .001 and .9.
-        Values between .5 and .9 are 1st order approximations.
+        distribution, evaluated with
+        `scipy.stats.studentized_range`.
+
+    Notes
+    -----
+    Previous versions inverted the approximation of Gleason
+    (1999) and bounded the returned probability between .001
+    and .9. For degrees of freedom 1 <= v < 2, probabilities
+    above .1 are still not supported: a ValueError is raised
+    if q is below the quantile corresponding to a probability
+    of .9, as in previous versions.
     """
-    if all(map(_isfloat, [q, r, v])):
-        return _psturng(q, r, v)
-    return _vpsturng(q, r, v)
+    q, r, v = np.broadcast_arrays(
+        np.asarray(q, dtype=float),
+        np.asarray(r, dtype=float),
+        np.asarray(v, dtype=float),
+    )
+    if np.any(q < 0):
+        raise ValueError("q should be >= 0")
+    if np.any(r < 2):
+        raise ValueError("r must be >= 2")
+    if np.any(v < 1):
+        raise ValueError("v must be >= 1")
+    small_v = (v >= 1) & (v < 2)
+    if np.any(small_v):
+        q_crit = scipy.stats.studentized_range.ppf(0.9, r, v)
+        below = small_v & (q < q_crit)
+        if np.any(below):
+            idx = np.unravel_index(np.argmax(below), below.shape)
+            raise ValueError(
+                f"v must be >= 2 when p < 0.9 and the q passed {q[idx]} is less than"
+                f" {q_crit[idx]} which is the q corresponding to p = 0.9,"
+                f" r = {r[idx]} and v = {v[idx]}."
+            )
+    return scipy.stats.studentized_range.sf(q, r, v)
