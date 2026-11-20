@@ -3089,8 +3089,8 @@ def coint(
 
             .. versionchanged:: 0.15.1
 
-               With trend "n", critical_values is an ndarray of three NaN
-               values, as for the other trends. It was a list.
+               With trend "n", critical_values is an ndarray, as it is for
+               the other trends. It was a list.
 
     Notes
     -----
