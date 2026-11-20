@@ -1313,6 +1313,12 @@ you can pass additional components using the additional_terms input.""")
         DataFrame
             A DataFrame containing the deterministic terms, with ``steps``
             rows and the columns of ``in_sample``.
+
+            .. versionchanged:: 0.15.1
+
+               Without deterministic terms, the result has ``steps`` rows on
+               the forecast index. Before, it had the rows and index of the
+               sample.
         """
         steps = required_int_like(steps, "steps")
         if self._retain_cols is None:
