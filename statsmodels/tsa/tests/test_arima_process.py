@@ -458,6 +458,52 @@ class TestArmaProcess:
         assert_allclose(ar_rep[:4], ar_expected, rtol=1e-12)
         assert_allclose(ar_rep, arma2ar(process2.ar, process2.ma, lags=37))
 
+    LAGS_METHODS = [
+        "acovf",
+        "acf",
+        "pacf",
+        "periodogram",
+        "impulse_response",
+        "arma2ma",
+        "arma2ar",
+    ]
+
+    @pytest.mark.parametrize("method", LAGS_METHODS)
+    @pytest.mark.parametrize("value", [0, -1])
+    def test_lags_not_positive(self, method, value):
+        # 0 selected nobs, as omitting the value does, and a negative value
+        # raised a different error in each method
+        process = ArmaProcess.from_coeffs([0.6], [0.3], nobs=7)
+        with pytest.raises(ValueError, match="must be a positive integer, got"):
+            getattr(process, method)(value)
+
+    @pytest.mark.parametrize("method", LAGS_METHODS)
+    def test_lags_default(self, method):
+        process = ArmaProcess.from_coeffs([0.6], [0.3], nobs=7)
+        default = np.asarray(getattr(process, method)())
+        assert default.shape[-1] == 7
+        # Any integer value, including an integral float, is accepted
+        for value in (7, np.int64(7), 7.0):
+            res = np.asarray(getattr(process, method)(value))
+            assert_allclose(res, default, rtol=1e-15)
+        for value in (7.5, True):
+            with pytest.raises(TypeError, match="must be integer_like"):
+                getattr(process, method)(value)
+
+    def test_lags_one(self):
+        # One value, against the closed forms of an ARMA(1, 1) with unit
+        # innovation variance
+        phi, theta = 0.6, 0.3
+        process = ArmaProcess.from_coeffs([phi], [theta], nobs=7)
+        gamma0 = (1 + 2 * phi * theta + theta**2) / (1 - phi**2)
+        assert_allclose(process.acovf(1), [gamma0], rtol=1e-12)
+        for method in ("acf", "pacf", "impulse_response", "arma2ma", "arma2ar"):
+            assert_allclose(getattr(process, method)(1), [1.0], rtol=1e-15)
+        freq, sd = process.periodogram(1)
+        assert_allclose(freq, [0.0], rtol=1e-15)
+        expected = (1 + theta) ** 2 / (1 - phi) ** 2 / np.sqrt(2 * np.pi)
+        assert_allclose(sd, [expected], rtol=1e-12)
+
     def test_isstationary(self):
         process1 = ArmaProcess.from_coeffs([1.1])
         assert_equal(process1.isstationary, False)
