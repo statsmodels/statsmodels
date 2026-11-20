@@ -996,6 +996,10 @@ Time series analysis
   (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``breakvar_heteroskedasticity_test`` raised an ``UnboundLocalError`` for a
+  ``subset_length`` that is a NumPy integer or a whole-number float, such as
+  ``np.int64(40)`` or ``40.0``, and for invalid values. It accepts every
+  numeric type and raises a ``ValueError`` for invalid values. :pr:`10838`
 
 Statistics and tests
 --------------------
