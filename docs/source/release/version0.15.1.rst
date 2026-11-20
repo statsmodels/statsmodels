@@ -325,6 +325,15 @@ Behavior changes
   from ``ccf``, and a column next to a 1-D series raised an error from SciPy.
   Input with more than one column now raises a ``ValueError``. Results for
   1-D input are unchanged. :pr:`10811`
+- :func:`~statsmodels.tsa.stattools.pccf` with ``method="yw"`` or ``"ywm"``
+  (the default) no longer depends on the scales of ``x`` and ``y``: rescaling
+  one series, for example by ``1e8``, made every lag ``nan``. Series that are
+  collinear to working precision give ``nan`` for every lag, as exactly
+  collinear series did, instead of inaccurate values. When the recursion
+  reaches a singular prediction error covariance matrix, the later lags are
+  ``nan`` on every platform; before, they depended on rounding, and the lag
+  computed just before could be dropped. Results for other input change only
+  by rounding. :pr:`10843`
 
 New Features and Enhancements
 =============================
