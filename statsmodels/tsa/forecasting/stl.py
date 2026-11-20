@@ -463,6 +463,9 @@ class STLForecastResults:
         """
         forecast = self._model_result.forecast(steps=steps, **kwargs)
         index = forecast.index if isinstance(forecast, pd.Series) else None
+        if not isinstance(steps, (int, np.integer)):
+            # A date: the model has forecast up to and including it
+            steps = len(forecast)
         return forecast + self._seasonal_forecast(steps, index)
 
     def get_prediction(
