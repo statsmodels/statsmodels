@@ -98,3 +98,25 @@ def test_invalid_xfail():
     # yule_walker function works
     with pytest.raises(ValueError):
         yule_walker(endog, ar_order=2)
+
+
+@pytest.mark.parametrize(
+    "form", ["list", "tuple", "series", "column", "dataframe", "integer"]
+)
+def test_yule_walker_input_forms(form):
+    # endog is documented as array_like: every form of a 1-D series gives the
+    # solution of the Yule-Walker equations of the demeaned ndarray
+    from statsmodels.tsa.tests._contract import series_forms
+
+    x = np.random.default_rng(20261128).standard_normal(200).cumsum()
+    if form == "integer":
+        x = np.round(4 * x)
+        endog = x.astype(np.int64)
+    else:
+        endog = series_forms(x)[form]
+    p, _ = yule_walker(endog, ar_order=2)
+    xd = x - x.mean()
+    r = np.array([xd[k:] @ xd[: 200 - k] / 200 for k in range(3)])
+    phi = np.linalg.solve([[r[0], r[1]], [r[1], r[0]]], r[1:])
+    assert_allclose(p.ar_params, phi, rtol=1e-10)
+    assert_allclose(p.sigma2, r[0] - phi @ r[1:], rtol=1e-10)

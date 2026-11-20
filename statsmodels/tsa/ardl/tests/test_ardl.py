@@ -1750,3 +1750,376 @@ def test_ardl_select_order_nan(data):
     error = SystemError if NP_LT_1_24 else np.linalg.LinAlgError
     with pytest.raises(error):
         ardl_select_order(y, 2, data.x, 2, "c")
+
+
+def _contract_ardl_data(n=120):
+    rng = np.random.default_rng(20261123)
+    x = rng.standard_normal((n, 2))
+    e = rng.standard_normal(n)
+    y = np.zeros(n)
+    for t in range(2, n):
+        y[t] = (
+            0.5 * y[t - 1] - 0.2 * y[t - 2] + x[t, 0] + 0.5 * x[t - 1, 1] + e[t]
+        )
+    return 10 + y, x
+
+
+def _ardl_design(y, x, lags, order, start):
+    # [const, y.L1, ..., y.Llags, x0.L0, ..., x0.Lorder, x1.L0, ...] for
+    # observations start, start + 1, ..., nobs - 1
+    n = y.shape[0]
+    cols = [np.ones(n - start)]
+    cols += [y[start - j : n - j] for j in range(1, lags + 1)]
+    for i in range(x.shape[1]):
+        cols += [x[start - j : n - j, i] for j in range(order + 1)]
+    return np.column_stack(cols)
+
+
+def test_ardl_causal_forecast_without_exog_ndarray():
+    # With only lagged exog, the one-step forecast does not need exog_oos.
+    # The two-step forecast needs x[T + 1], which is unknown
+    y, x = _contract_ardl_data()
+    res = ARDL(y, 2, x, [1, 2]).fit()
+    p = np.asarray(res.params)
+    reg = [1.0, y[-1], y[-2], x[-1, 0], x[-2, 0], x[-1, 1], x[-2, 1]]
+    fcast = res.forecast(1)
+    assert isinstance(fcast, np.ndarray)
+    assert_allclose(fcast[0], np.dot(reg, p), rtol=1e-10)
+    with pytest.raises(ValueError, match="exog_oos must be provided"):
+        res.forecast(2)
+
+
+def test_ardl_apply_ndarray_exog():
+    # An ndarray exog applies the fitted parameters to the new data, and one
+    # with the wrong number of columns raises
+    y, x = _contract_ardl_data()
+    res = ARDL(y[:80], 2, x[:80], 1).fit()
+    new_res = res.apply(y[80:], exog=x[80:])
+    expected = _ardl_design(y[80:], x[80:], 2, 1, 2) @ np.asarray(res.params)
+    assert_allclose(new_res.fittedvalues, expected, rtol=1e-10)
+    with pytest.raises(ValueError, match="number of exog variables"):
+        res.apply(y[80:], exog=np.column_stack([x[80:], x[80:, :1]]))
+
+
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_ardl_apply_deterministic(use_pandas):
+    # The deterministic process of the model is applied to the index of the
+    # new data, so the time trend restarts at 1
+    y, x = _contract_ardl_data()
+    index = pd.date_range("2000-01-01", periods=y.shape[0], freq="MS")
+    dp = DeterministicProcess(index[:80], constant=True, order=1)
+    if use_pandas:
+        endog = pd.Series(y, index=index, name="y")
+        exog = pd.DataFrame(x, index=index, columns=["x0", "x1"])
+    else:
+        endog, exog = y, x
+    res = ARDL(endog[:80], 1, exog[:80], 1, trend="n", deterministic=dp).fit()
+    new_res = res.apply(endog[80:], exog=exog[80:])
+    design = _ardl_design(y[80:], x[80:], 1, 1, 1)
+    trend = np.arange(2.0, 41.0)
+    design = np.column_stack([design[:, 0], trend, design[:, 1:]])
+    expected = design @ np.asarray(res.params)
+    assert_allclose(np.asarray(new_res.fittedvalues), expected, rtol=1e-10)
+
+
+def test_ardl_apply_construction_error():
+    # An error when building the model for the new data is raised with an
+    # explanation in front of the original message
+    y, x = _contract_ardl_data()
+    res = ARDL(y, 2, x, 1).fit()
+    with pytest.raises(ValueError, match="An exception occurred during the") as err:
+        res.apply(y[:4], exog=x[:4])
+    assert "The number of regressors" in err.value.args[1]
+
+
+@pytest.mark.parametrize("end", [None, 100])
+def test_ardl_get_prediction_in_sample(end):
+    # In sample, the variance of the prediction is sigma2 and the mean is
+    # the fitted value
+    y, x = _contract_ardl_data()
+    index = pd.date_range("2000-01-01", periods=y.shape[0], freq="MS")
+    endog = pd.Series(y, index=index, name="y")
+    exog = pd.DataFrame(x, index=index, columns=["x0", "x1"])
+    res = ARDL(endog, 2, exog, 1).fit()
+    if end is not None:
+        end = index[end]
+    pred = res.get_prediction(start=index[2], end=end)
+    resid = y[2:] - _ardl_design(y, x, 2, 1, 2) @ np.asarray(res.params)
+    sigma2 = resid @ resid / resid.shape[0]
+    n_pred = 118 if end is None else 99
+    assert_allclose(
+        np.asarray(pred.var_pred_mean), np.full(n_pred, sigma2), rtol=1e-10
+    )
+    assert_allclose(
+        np.asarray(pred.predicted_mean),
+        y[2 : 2 + n_pred] - resid[:n_pred],
+        rtol=1e-10,
+    )
+    assert list(pred.predicted_mean.index) == list(index[2 : 2 + n_pred])
+
+
+def _contract_ardl_endog_forms(y):
+    from statsmodels.tsa.tests._contract import series_forms
+
+    forms = dict(series_forms(y))
+    forms["period"] = pd.Series(
+        y, index=pd.period_range("2000-01", periods=y.shape[0], freq="M")
+    )
+    forms["range"] = pd.Series(y, index=pd.RangeIndex(y.shape[0]))
+    return forms
+
+
+_ENDOG_FORMS = ["list", "tuple", "series", "column", "dataframe", "period", "range"]
+
+
+@pytest.mark.parametrize("form", _ENDOG_FORMS)
+def test_ardl_endog_input_forms(form):
+    # endog is documented as array_like: every form of a 1-D series gives the
+    # OLS estimates of the ndarray, and pandas input gives pandas predictions
+    y, x = _contract_ardl_data()
+    endog = _contract_ardl_endog_forms(y)[form]
+    res = ARDL(endog, 2, x, 1).fit()
+    expected = np.linalg.lstsq(_ardl_design(y, x, 2, 1, 2), y[2:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+    pred = res.predict()
+    if isinstance(endog, (pd.Series, pd.DataFrame)):
+        assert isinstance(pred, pd.Series)
+        assert list(pred.index) == list(endog.index)
+    else:
+        assert isinstance(pred, np.ndarray)
+
+
+def test_ardl_endog_integer():
+    # Integer endog gives the result of the same values as floats
+    y, x = _contract_ardl_data()
+    y_int = np.round(4 * y).astype(np.int64)
+    res = ARDL(y_int, 2, x, 1).fit()
+    expected = ARDL(y_int.astype(float), 2, x, 1).fit()
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+
+
+@pytest.mark.parametrize("form", ["list", "dataframe", "integer", "1d"])
+def test_ardl_exog_input_forms(form):
+    # exog is documented as array_like
+    y, x = _contract_ardl_data()
+    if form == "integer":
+        x = np.round(4 * x).astype(np.int64)
+    elif form == "1d":
+        x = x[:, :1]
+    if form == "list":
+        exog = x.tolist()
+    elif form == "dataframe":
+        exog = pd.DataFrame(x, columns=["a", "b"])
+    elif form == "1d":
+        exog = x[:, 0]
+    else:
+        exog = x
+    res = ARDL(y, 2, exog, 1).fit()
+    expected = np.linalg.lstsq(_ardl_design(y, x, 2, 1, 2), y[2:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "order",
+    [1, [0, 1], (0, 1), np.array([0, 1]), {0: 1, 1: 1}, {0: [0, 1], 1: (0, 1)}],
+    ids=["int", "list", "tuple", "ndarray", "dict", "dict-of-sequences"],
+)
+def test_ardl_order_forms(order):
+    # order is documented as int, sequence of int, or dict
+    y, x = _contract_ardl_data()
+    res = ARDL(y, 2, x, order).fit()
+    expected = np.linalg.lstsq(_ardl_design(y, x, 2, 1, 2), y[2:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+    assert res.model.dl_lags == {0: [0, 1], 1: [0, 1]}
+
+
+@pytest.mark.parametrize(
+    "lags", [[1, 2], (1, 2), np.array([1, 2]), np.int64(2)], ids=str
+)
+def test_ardl_lags_forms(lags):
+    # lags is documented as int or sequence of int
+    y, x = _contract_ardl_data()
+    res = ARDL(y, lags, x, 1).fit()
+    expected = np.linalg.lstsq(_ardl_design(y, x, 2, 1, 2), y[2:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "trend, names",
+    [
+        ("n", []),
+        ("c", ["const"]),
+        ("t", ["trend"]),
+        ("ct", ["const", "trend"]),
+        ("ctt", ["const", "trend", "trend_squared"]),
+    ],
+)
+def test_ardl_uecm_trend_values(trend, names):
+    # Each documented trend adds its terms in front of the other regressors
+    y, x = _contract_ardl_data()
+    res = ARDL(y, 1, x[:, :1], 1, trend=trend).fit()
+    assert res.model.exog_names == names + ["y.L1", "x0.L0", "x0.L1"]
+    t = np.arange(2.0, 121.0)
+    terms = {"n": [], "c": [1.0], "t": [t], "ct": [1.0, t], "ctt": [1.0, t, t**2]}
+    det = [np.broadcast_to(term, (119,)) for term in terms[trend]]
+    reg = np.column_stack(det + [y[:-1], x[1:, 0], x[:-1, 0]])
+    expected = np.linalg.lstsq(reg, y[1:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-8)
+    ures = UECM(y, 1, x[:, :1], 1, trend=trend).fit()
+    assert ures.model.exog_names == names + ["y.L1", "x0.L1", "D.x0.L0"]
+    # The UECM is a reparametrization of the same ARDL
+    assert_allclose(ures.llf, res.llf, rtol=1e-10)
+
+
+@pytest.mark.parametrize("func", ["ARDL", "UECM", "ardl_select_order"])
+def test_ardl_invalid_trend(func):
+    y, x = _contract_ardl_data()
+    with pytest.raises(ValueError, match="trend must be one of"):
+        if func == "ARDL":
+            ARDL(y, 1, x, 1, trend="x")
+        elif func == "UECM":
+            UECM(y, 1, x, 1, trend="x")
+        else:
+            ardl_select_order(y, 1, x, 1, trend="x")
+
+
+def test_ardl_missing_values():
+    # missing="drop" drops the observations with NaNs, "raise" raises
+    from statsmodels.tools.sm_exceptions import MissingDataError
+
+    y, x = _contract_ardl_data()
+    y_nan = y.copy()
+    y_nan[5] = np.nan
+    res = ARDL(y_nan, 1, x, 1, missing="drop").fit()
+    expected = ARDL(np.delete(y, 5), 1, np.delete(x, 5, axis=0), 1).fit()
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+    with pytest.raises(MissingDataError):
+        ARDL(y_nan, 1, x, 1, missing="raise")
+    with pytest.raises(ValueError, match="missing must be one of"):
+        ARDL(y_nan, 1, x, 1, missing="x")
+
+
+@pytest.mark.parametrize("form", ["ndarray", "list", "dataframe", "1d", "series"])
+def test_ardl_fixed_input_forms(form):
+    # fixed is documented as array_like and is included without lags
+    y, x = _contract_ardl_data()
+    fixed = np.random.default_rng(20261124).standard_normal((120, 1))
+    index = pd.date_range("2000-01-01", periods=120, freq="MS")
+    fixed_form = {
+        "ndarray": fixed,
+        "list": fixed.tolist(),
+        "dataframe": pd.DataFrame(fixed, index=index, columns=["f"]),
+        "1d": fixed[:, 0],
+        "series": pd.Series(fixed[:, 0], index=index, name="f"),
+    }[form]
+    endog = pd.Series(y, index=index, name="y")
+    exog = pd.DataFrame(x, index=index, columns=["x0", "x1"])
+    res = ARDL(endog, 2, exog, 1, fixed=fixed_form).fit()
+    reg = np.column_stack([_ardl_design(y, x, 2, 1, 2), fixed[2:]])
+    expected = np.linalg.lstsq(reg, y[2:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("form", _ENDOG_FORMS)
+def test_ardl_select_order_endog_input_forms(form):
+    # endog is documented as array_like: every form selects the same model
+    # with the same criteria
+    y, x = _contract_ardl_data()
+    expected = ardl_select_order(y, 2, x, 1, ic="aic")
+    res = ardl_select_order(_contract_ardl_endog_forms(y)[form], 2, x, 1, ic="aic")
+    assert res.model.ardl_order == expected.model.ardl_order
+    assert_allclose(
+        np.asarray(res.aic.index), np.asarray(expected.aic.index), rtol=1e-10
+    )
+
+
+def _uecm_design(y, x, start):
+    # UECM(y, 2, x, 2): [const, y.L1, x0.L1, x1.L1, D.y.L1, D.x0.L0, D.x0.L1,
+    # D.x1.L0, D.x1.L1] for observations start, ..., nobs - 1
+    n = y.shape[0]
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.r_[np.full((1, x.shape[1]), np.nan), np.diff(x, axis=0)]
+    cols = [np.ones(n - start), y[start - 1 : n - 1]]
+    cols += [x[start - 1 : n - 1, i] for i in range(x.shape[1])]
+    cols += [dy[start - 1 : n - 1]]
+    for i in range(x.shape[1]):
+        cols += [dx[start - j : n - j, i] for j in range(2)]
+    return np.column_stack(cols), dy[start:]
+
+
+def _contract_uecm_data():
+    y, x = _contract_ardl_data()
+    return y.cumsum() / 10, x.cumsum(0)
+
+
+@pytest.mark.parametrize("form", _ENDOG_FORMS)
+def test_uecm_endog_input_forms(form):
+    # endog is documented as array_like: every form of a 1-D series gives the
+    # OLS estimates of the regression of the difference
+    y, x = _contract_uecm_data()
+    res = UECM(_contract_ardl_endog_forms(y)[form], 2, x, 2).fit()
+    reg, dy = _uecm_design(y, x, 2)
+    expected = np.linalg.lstsq(reg, dy, rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("form", ["list", "dataframe"])
+def test_uecm_exog_input_forms(form):
+    # exog is documented as a DataFrame or a 2-d array_like
+    y, x = _contract_uecm_data()
+    exog = x.tolist() if form == "list" else pd.DataFrame(x, columns=["a", "b"])
+    res = UECM(y, 2, exog, 2).fit()
+    reg, dy = _uecm_design(y, x, 2)
+    expected = np.linalg.lstsq(reg, dy, rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "order", [2, np.int64(2), {0: 2, 1: 2}], ids=["int", "np.int64", "dict"]
+)
+def test_uecm_order_forms(order):
+    # order is documented as int or dict; a sequence raises, as does a
+    # sequence of lags
+    y, x = _contract_uecm_data()
+    res = UECM(y, 2, x, order).fit()
+    reg, dy = _uecm_design(y, x, 2)
+    expected = np.linalg.lstsq(reg, dy, rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+    with pytest.raises(TypeError, match="order must be None"):
+        UECM(y, 2, x, [1, 2])
+    with pytest.raises(TypeError, match="lags must be an integer or None"):
+        UECM(y, [1, 2], x, 2)
+
+
+def test_uecm_results_ci_types():
+    # pandas input gives pandas output of the cointegrating vector, labelled
+    # by the level variables, and ndarray input gives ndarrays
+    y, x = _contract_uecm_data()
+    index = pd.date_range("2000-01-01", periods=120, freq="MS")
+    endog = pd.Series(y, index=index, name="y")
+    exog = pd.DataFrame(x, index=index, columns=["a", "b"])
+    res = UECM(endog, 2, exog, 2).fit()
+    res_np = UECM(y, 2, x, 2).fit()
+    labels = ["const", "y", "a", "b"]
+    for attr in ("ci_params", "ci_bse", "ci_tvalues", "ci_pvalues"):
+        value = getattr(res, attr)
+        assert isinstance(value, pd.Series)
+        assert list(value.index) == labels
+        value_np = getattr(res_np, attr)
+        assert isinstance(value_np, np.ndarray)
+        assert_allclose(np.asarray(value), value_np, rtol=1e-10)
+    # The cointegrating vector is normalized by the coefficient on y.L1
+    params = np.asarray(res.params)[:4]
+    assert_allclose(np.asarray(res.ci_params), params / params[1], rtol=1e-12)
+    ci = res.ci_conf_int()
+    assert isinstance(ci, pd.DataFrame)
+    assert list(ci.columns) == ["lower", "upper"]
+    assert_allclose(res_np.ci_conf_int(), np.asarray(ci), rtol=1e-10)
+    assert isinstance(res.ci_cov_params(), pd.DataFrame)
+    assert isinstance(res.ci_summary(), Summary)
+    resids = res.ci_resids
+    assert isinstance(resids, pd.Series)
+    assert list(resids.index) == list(index)
+    expected = np.column_stack([np.ones(120), y, x]) @ (params / params[1])
+    assert_allclose(np.asarray(resids), expected, rtol=1e-10)
+    assert_allclose(res_np.ci_resids, expected, rtol=1e-10)

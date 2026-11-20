@@ -433,3 +433,40 @@ def test_arma_kwargs():
         msg = msg.decode("utf-8")
     assert msg.startswith("CONVERGENCE: REL")
     assert msg.endswith("FACTR*EPSMCH")
+
+
+@pytest.mark.parametrize("arma_estimator", ["burg", "innovations"])
+def test_gls_arma_estimator_kwargs_not_supported(arma_estimator):
+    rng = np.random.default_rng(20261133)
+    endog = rng.standard_normal(100)
+    exog = rng.standard_normal((100, 1))
+    order = (1, 0, 0) if arma_estimator == "burg" else (0, 0, 1)
+    with pytest.raises(ValueError, match="arma_estimator_kwargs not supported"):
+        gls(
+            endog,
+            exog,
+            order=order,
+            arma_estimator=arma_estimator,
+            arma_estimator_kwargs={"demean": False},
+        )
+
+
+@pytest.mark.parametrize(
+    "form", ["list", "tuple", "series", "column", "dataframe", "integer"]
+)
+def test_gls_input_forms(form):
+    # endog is documented as array_like: every form of a 1-D series gives the
+    # estimates of the ndarray
+    from statsmodels.tsa.tests._contract import series_forms
+
+    rng = np.random.default_rng(20261134)
+    x = rng.standard_normal(200).cumsum()
+    exog = rng.standard_normal((200, 2))
+    if form == "integer":
+        x = np.round(4 * x)
+        endog = x.astype(np.int64)
+    else:
+        endog = series_forms(x)[form]
+    p, _ = gls(endog, exog, order=(1, 0, 0), arma_estimator="yule_walker")
+    expected, _ = gls(x, exog, order=(1, 0, 0), arma_estimator="yule_walker")
+    assert_allclose(p.params, expected.params, rtol=1e-12)

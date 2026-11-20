@@ -543,3 +543,227 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def _contract_arima_data(n=120):
+    rng = np.random.default_rng(20261125)
+    e = rng.standard_normal(n)
+    y = np.zeros(n)
+    for t in range(2, n):
+        y[t] = 0.5 * y[t - 1] - 0.2 * y[t - 2] + e[t]
+    return 10 + y, rng.standard_normal((n, 2))
+
+
+def _yule_walker_by_hand(x, order):
+    # Yule-Walker equations with the (biased) autocovariances of x, which is
+    # not demeaned
+    n = x.shape[0]
+    r = np.array([x[k:] @ x[: n - k] / n for k in range(order + 1)])
+    toeplitz = np.array([[r[abs(i - j)] for j in range(order)] for i in range(order)])
+    phi = np.linalg.solve(toeplitz, r[1:])
+    return np.r_[phi, r[0] - phi @ r[1:]]
+
+
+def test_arima_integrated_non_statespace_method():
+    # Methods that cannot handle integration are applied to the differenced
+    # endog
+    y, _ = _contract_arima_data()
+    y = np.cumsum(y)
+    mod = ARIMA(y, order=(2, 1, 0))
+    with pytest.warns(UserWarning, match="has been differenced"):
+        res = mod.fit(method="yule_walker")
+    assert_allclose(res.params, _yule_walker_by_hand(np.diff(y), 2), rtol=1e-10)
+
+
+def test_arima_return_params_non_statespace_method():
+    y, _ = _contract_arima_data()
+    params = ARIMA(y, order=(2, 0, 0), trend="n").fit(
+        method="yule_walker", return_params=True
+    )
+    assert isinstance(params, np.ndarray)
+    assert_allclose(params, _yule_walker_by_hand(y, 2), rtol=1e-10)
+
+
+def test_arima_return_params_statespace():
+    y, x = _contract_arima_data()
+    mod = ARIMA(y, x, order=(1, 0, 0))
+    params = mod.fit(return_params=True)
+    assert isinstance(params, np.ndarray)
+    assert_allclose(params, mod.fit().params, rtol=1e-12)
+
+
+def test_arima_low_memory_non_statespace_method():
+    # The results are filtered with memory conservation, which is reset
+    # afterwards
+    from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+    y, _ = _contract_arima_data()
+    mod = ARIMA(y, order=(2, 0, 0), trend="n")
+    conserve_memory = mod.ssm.conserve_memory
+    res = mod.fit(method="yule_walker", low_memory=True)
+    assert mod.ssm.conserve_memory == conserve_memory
+    assert res.filter_results.conserve_memory != conserve_memory
+    assert res.smoothed_state is None
+    params = _yule_walker_by_hand(y, 2)
+    assert_allclose(res.params, params, rtol=1e-10)
+    # The loglikelihood is that of the state space model at these parameters
+    expected = SARIMAX(y, order=(2, 0, 0)).loglike(params)
+    assert_allclose(res.llf, expected, rtol=1e-10)
+    full = mod.fit(method="yule_walker")
+    assert full.smoothed_state is not None
+    assert_allclose(res.forecast(3), full.forecast(3), rtol=1e-10)
+
+
+def test_arima_gls_kwargs():
+    # gls_kwargs are passed to the GLS estimator
+    from statsmodels.tools.sm_exceptions import ConvergenceWarning
+    from statsmodels.tsa.arima.estimators.gls import gls
+
+    y, x = _contract_arima_data()
+    mod = ARIMA(y, x, order=(1, 0, 0), trend="n")
+    with pytest.warns(ConvergenceWarning, match="failed to converge in 1"):
+        res = mod.fit(method="yule_walker", gls=True, gls_kwargs={"max_iter": 1})
+    with pytest.warns(ConvergenceWarning, match="failed to converge in 1"):
+        expected = gls(
+            y,
+            x,
+            order=(1, 0, 0),
+            include_constant=False,
+            arma_estimator="yule_walker",
+            max_iter=1,
+        )
+    assert res.fit_details.iterations == 1
+    assert_allclose(res.params, expected.parameters.params, rtol=1e-10)
+    converged = mod.fit(method="yule_walker", gls=True)
+    assert converged.fit_details.iterations > 1
+
+
+def test_arima_impulse_responses_kwargs():
+    # anchor and exog are passed on through kwargs. The impulse responses of
+    # an AR(1) are phi ** h, whatever the anchor
+    y, x = _contract_arima_data()
+    res = ARIMA(y, x, order=(1, 0, 0)).fit()
+    phi = res.params[res.model.param_names.index("ar.L1")]
+    expected = phi ** np.arange(4)
+    for anchor in ("start", "end", 10):
+        irf = res.impulse_responses(3, anchor=anchor, exog=x[-3:])
+        assert_allclose(irf, expected, rtol=1e-10)
+
+
+def _contract_arima_endog_forms(y):
+    from statsmodels.tsa.tests._contract import series_forms
+
+    forms = dict(series_forms(y))
+    forms["period"] = pd.Series(
+        y, index=pd.period_range("2000-01", periods=y.shape[0], freq="M")
+    )
+    forms["range"] = pd.Series(y, index=pd.RangeIndex(y.shape[0]))
+    return forms
+
+
+@pytest.mark.parametrize(
+    "form", ["list", "tuple", "series", "column", "dataframe", "period", "range"]
+)
+def test_arima_endog_input_forms(form):
+    # endog is documented as array_like: every form of a 1-D series gives the
+    # estimates of the ndarray, and pandas input gives pandas forecasts that
+    # continue the index
+    y, _ = _contract_arima_data()
+    endog = _contract_arima_endog_forms(y)[form]
+    res = ARIMA(endog, order=(2, 0, 0), trend="n").fit(method="yule_walker")
+    params = _yule_walker_by_hand(y, 2)
+    assert_allclose(np.asarray(res.params), params, rtol=1e-10)
+    fcast = res.forecast(2)
+    assert_allclose(
+        np.asarray(fcast)[0], params[0] * y[-1] + params[1] * y[-2], rtol=1e-10
+    )
+    if not isinstance(endog, (pd.Series, pd.DataFrame)):
+        assert isinstance(fcast, np.ndarray)
+    elif isinstance(endog.index, pd.RangeIndex):
+        assert list(fcast.index) == [120, 121]
+    elif isinstance(endog.index, pd.PeriodIndex):
+        expected = pd.period_range("2010-01", periods=2, freq="M")
+        assert list(fcast.index) == list(expected)
+    else:
+        expected = pd.date_range("2010-01-01", periods=2, freq="MS")
+        assert list(fcast.index) == list(expected)
+
+
+def test_arima_endog_integer():
+    # Integer endog gives the result of the same values as floats
+    y, _ = _contract_arima_data()
+    y_int = np.round(4 * y).astype(np.int64)
+    res = ARIMA(y_int, order=(2, 0, 0), trend="n").fit(method="yule_walker")
+    assert_allclose(res.params, _yule_walker_by_hand(y_int.astype(float), 2), rtol=1e-10)
+
+
+@pytest.mark.parametrize("form", ["list", "dataframe", "1d"])
+def test_arima_exog_input_forms(form):
+    # exog is documented as array_like. Compare the likelihood at fixed
+    # parameters with that of the ndarray
+    y, x = _contract_arima_data()
+    if form == "1d":
+        x = x[:, :1]
+    if form == "list":
+        exog = x.tolist()
+    elif form == "dataframe":
+        exog = pd.DataFrame(x, columns=["a", "b"])
+    else:
+        exog = x[:, 0]
+    mod = ARIMA(y, exog, order=(1, 0, 0), trend="n")
+    expected = ARIMA(y, x, order=(1, 0, 0), trend="n")
+    params = np.r_[np.linspace(0.5, -0.5, x.shape[1]), 0.6, 1.2]
+    assert_allclose(mod.loglike(params), expected.loglike(params), rtol=1e-12)
+    if form == "dataframe":
+        assert mod.exog_names == ["a", "b"]
+
+
+@pytest.mark.parametrize(
+    "order", [(2, 0, 0), [2, 0, 0], np.array([2, 0, 0]), ([1, 2], 0, 0)], ids=str
+)
+def test_arima_order_forms(order):
+    # order is documented as a tuple; lists, arrays and lists of lags work too
+    y, _ = _contract_arima_data()
+    res = ARIMA(y, order=order, trend="n").fit(method="yule_walker")
+    assert_allclose(res.params, _yule_walker_by_hand(y, 2), rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "trend, n_trend",
+    [("n", 0), ("c", 1), ("t", 1), ("ct", 2), ("ctt", 3), ([1, 0, 1], 2)],
+    ids=str,
+)
+def test_arima_trend_values(trend, n_trend):
+    # The trend is part of exog: the polynomial in t = 1, 2, ..., nobs
+    y, _ = _contract_arima_data()
+    mod = ARIMA(y, order=(1, 0, 0), trend=trend)
+    assert mod.k_trend == n_trend
+    powers = {"n": [], "c": [0], "t": [1], "ct": [0, 1], "ctt": [0, 1, 2]}
+    powers = powers.get(trend, [0, 2]) if isinstance(trend, str) else [0, 2]
+    t = np.arange(1.0, 121.0)
+    expected = np.column_stack([t**p for p in powers]) if powers else None
+    if expected is None:
+        assert mod.exog is None
+    else:
+        assert_allclose(mod.exog, expected, rtol=1e-12)
+
+
+def test_arima_invalid_trend():
+    y, _ = _contract_arima_data()
+    with pytest.raises(ValueError, match="Valid trend inputs are"):
+        ARIMA(y, order=(1, 0, 0), trend="x")
+    with pytest.raises(ValueError, match="trend terms of lower order than"):
+        ARIMA(y, order=(1, 1, 0), trend="c")
+
+
+def test_arima_missing_values():
+    # missing="raise" raises if endog contains NaNs
+    from statsmodels.tools.sm_exceptions import MissingDataError
+
+    y, _ = _contract_arima_data()
+    y_nan = y.copy()
+    y_nan[5] = np.nan
+    with pytest.raises(MissingDataError):
+        ARIMA(y_nan, order=(1, 0, 0), missing="raise")
+    with pytest.raises(ValueError, match="missing must be one of"):
+        ARIMA(y_nan, order=(1, 0, 0), missing="x")
