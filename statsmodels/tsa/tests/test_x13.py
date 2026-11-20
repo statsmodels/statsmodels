@@ -1,14 +1,16 @@
 from statsmodels.compat.pandas import MONTH_END
 
+import contextlib
 from pathlib import Path
 import tempfile
+import warnings
 
 import numpy as np
 import pandas as pd
 import pytest
 
 from statsmodels.datasets import co2, macrodata
-from statsmodels.tools.sm_exceptions import X13Error
+from statsmodels.tools.sm_exceptions import X13Error, X13Warning
 from statsmodels.tsa.x13 import (
     _find_x12,
     x13_arima_analysis,
@@ -18,6 +20,33 @@ from statsmodels.tsa.x13 import (
 x13path = _find_x12()
 
 pytestmark = pytest.mark.skipif(x13path is False, reason="X13/X12 not available")
+
+# X-13 relays its own notes on the data as an X13Warning. For the monthly CO2
+# data it finds a seasonal peak in the spectrum of the regARIMA residuals, and
+# with the history spec of the rawspec tests it also notes the start of the
+# forecast history. They describe the data and the spec, not the code under
+# test, so the tests that only need a run ignore exactly these messages, and
+# any other X-13 warning still shows. The quarterly data give no warning.
+SEASONAL_PEAK = (
+    r"WARNING: At least one visually significant seasonal peak has been found"
+    r"\s+in the estimated spectrum of the regARIMA residuals\."
+)
+HISTORY_NOTE = (
+    r"\s+NOTE: The default starting date of the forecast history analysis has"
+    r"\s+been\s+used since it is later than the default starting date"
+    r"\s+determined by\s+the length of the maximum seasonal filter from the"
+    r"\s+seasonal adjustment\."
+)
+# Warned before the X13Error for a rawspec that X-13 rejects
+RAWSPEC_ERRORS = "User-provided rawspec file has errors"
+
+
+@contextlib.contextmanager
+def ignore_x13_warning(message):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=message + r"\Z", category=X13Warning)
+        yield
+
 
 dta = macrodata.load_pandas().data
 index = pd.period_range(start="1959Q1", end="2009Q3", freq="Q")
@@ -78,7 +107,8 @@ def test_x13_arima_select_order(dataset, use_numpy):
         assert freq is not None
     else:
         freq = start = None
-    res = x13_arima_select_order(dataset, start=start, freq=freq)
+    with ignore_x13_warning(SEASONAL_PEAK):
+        res = x13_arima_select_order(dataset, start=start, freq=freq)
     assert isinstance(res.order, tuple)
     assert isinstance(res.sorder, tuple)
 
@@ -86,18 +116,21 @@ def test_x13_arima_select_order(dataset, use_numpy):
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 def test_x13_arima_plot(dataset, close_figures):
-    res = x13_arima_analysis(dataset)
+    with ignore_x13_warning(SEASONAL_PEAK):
+        res = x13_arima_analysis(dataset)
     res.plot()
 
 
 def test_x13_arima_plot_no_pandas(dataset, close_figures):
-    res = x13_arima_analysis(dataset)
+    with ignore_x13_warning(SEASONAL_PEAK):
+        res = x13_arima_analysis(dataset)
     res.plot()
 
 
 @pytest.mark.smoke
 def test_log_diagnostics(dataset):
-    res = x13_arima_analysis(dataset, log_diagnostics=True)
+    with ignore_x13_warning(SEASONAL_PEAK):
+        res = x13_arima_analysis(dataset, log_diagnostics=True)
     assert isinstance(res.x13_diagnostic, dict)
     assert next(iter(res.x13_diagnostic.keys())) == "F-D8"
     assert isinstance(next(iter(res.x13_diagnostic.values())), float)
@@ -105,7 +138,8 @@ def test_log_diagnostics(dataset):
 
 @pytest.mark.smoke
 def test_log_diagnostics_false(dataset):
-    res = x13_arima_analysis(dataset, log_diagnostics=False)
+    with ignore_x13_warning(SEASONAL_PEAK):
+        res = x13_arima_analysis(dataset, log_diagnostics=False)
     assert isinstance(res.x13_diagnostic, dict)
     assert next(iter(res.x13_diagnostic.keys())) == "F-D8"
     assert next(iter(res.x13_diagnostic.values())) == "Log diagnostics not retrieved."
@@ -113,7 +147,8 @@ def test_log_diagnostics_false(dataset):
 
 def test_x13_output_files_removed(dataset, tmp_path):
     # GH 8277, the files written by x12/x13 were left in the temporary directory
-    x13_arima_analysis(dataset, tempdir=str(tmp_path))
+    with ignore_x13_warning(SEASONAL_PEAK):
+        x13_arima_analysis(dataset, tempdir=str(tmp_path))
     assert list(tmp_path.iterdir()) == []
     # also if x12/x13 reports an error
     raw_spec_file = """
@@ -123,7 +158,10 @@ seri es {
 x11 {
     seasonalma=(  msr)
 """
-    with pytest.raises(X13Error):
+    with (
+        pytest.raises(X13Error),
+        pytest.warns(UserWarning, match=RAWSPEC_ERRORS),
+    ):
         x13_arima_analysis(dataset, rawspec=raw_spec_file, tempdir=str(tmp_path))
     assert list(tmp_path.iterdir()) == []
 
@@ -171,7 +209,8 @@ history {
 """
 
     # pass rawspec as string
-    x13_arima_analysis(dataset, rawspec=raw_spec_file)
+    with ignore_x13_warning(SEASONAL_PEAK + HISTORY_NOTE):
+        x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
     with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
@@ -179,7 +218,8 @@ history {
         ft.seek(0)
         ft.close()
 
-        x13_arima_analysis(dataset, rawspec=ft.name)
+        with ignore_x13_warning(SEASONAL_PEAK + HISTORY_NOTE):
+            x13_arima_analysis(dataset, rawspec=ft.name)
 
 
 def test_x13_arima_rawspec_no_save(dataset):
@@ -214,7 +254,8 @@ history {
 """
 
     # pass rawspec as string
-    x13_arima_analysis(dataset, rawspec=raw_spec_file)
+    with ignore_x13_warning(SEASONAL_PEAK + HISTORY_NOTE):
+        x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
     with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
@@ -222,7 +263,8 @@ history {
         ft.seek(0)
         ft.close()
 
-        x13_arima_analysis(dataset, rawspec=ft.name)
+        with ignore_x13_warning(SEASONAL_PEAK + HISTORY_NOTE):
+            x13_arima_analysis(dataset, rawspec=ft.name)
 
 
 def test_x13_arima_rawspec_no_x11(dataset):
@@ -250,7 +292,8 @@ history {
 """
 
     # pass rawspec as string
-    x13_arima_analysis(dataset, rawspec=raw_spec_file)
+    with ignore_x13_warning(SEASONAL_PEAK + HISTORY_NOTE):
+        x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
     with tempfile.NamedTemporaryFile(suffix=".spc", delete_on_close=False) as ft:
@@ -258,7 +301,8 @@ history {
         ft.seek(0)
         ft.close()
 
-        x13_arima_analysis(dataset, rawspec=ft.name)
+        with ignore_x13_warning(SEASONAL_PEAK + HISTORY_NOTE):
+            x13_arima_analysis(dataset, rawspec=ft.name)
         try:
             Path(ft.name).unlink()
         except OSError:
@@ -277,8 +321,10 @@ x11 {
 """
 
     # pass rawspec as string
-    with pytest.raises(X13Error):
-
+    with (
+        pytest.raises(X13Error),
+        pytest.warns(UserWarning, match=RAWSPEC_ERRORS),
+    ):
         x13_arima_analysis(dataset, rawspec=raw_spec_file)
 
     # pass rawspec as file path
@@ -287,6 +333,8 @@ x11 {
         ft.seek(0)
         ft.close()
 
-        with pytest.raises(X13Error):
-
+        with (
+            pytest.raises(X13Error),
+            pytest.warns(UserWarning, match=RAWSPEC_ERRORS),
+        ):
             x13_arima_analysis(dataset, rawspec=ft.name)
