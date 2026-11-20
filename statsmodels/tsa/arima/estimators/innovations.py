@@ -30,7 +30,7 @@ def innovations(endog, ma_order=0, demean=True):
 
     Parameters
     ----------
-    endog : array_like or SARIMAXSpecification
+    endog : array_like
         Input time series array, assumed to be stationary.
     ma_order : int, optional
         Maximum moving average order. Default is 0.

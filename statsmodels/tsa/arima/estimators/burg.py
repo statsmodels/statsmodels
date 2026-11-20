@@ -19,7 +19,7 @@ def burg(endog, ar_order=0, demean=True):
 
     Parameters
     ----------
-    endog : array_like or SARIMAXSpecification
+    endog : array_like
         Input time series array, assumed to be stationary.
     ar_order : int, optional
         Autoregressive order. Default is 0.
