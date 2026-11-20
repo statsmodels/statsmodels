@@ -1150,6 +1150,10 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- ``CalendarFourier`` and ``CalendarTimeTrend`` accepted frequencies that
+  pandas has no periods for, such as ``"MS"``, ``"QS"`` and ``"YS"``, and
+  then failed with an internal pandas error when the terms were computed.
+  They raise a ``ValueError`` when they are created. :pr:`10854`
 
 Statistics and tests
 --------------------
