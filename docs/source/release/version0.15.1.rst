@@ -334,6 +334,11 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- The default ``nlags`` of :func:`~statsmodels.tsa.stattools.acf` with
+  ``missing="drop"`` or ``"conservative"`` counts only the non-missing
+  observations. It counted the NaNs, so it could return more lags, or raise
+  when ``nlags`` was not given. The values at each lag are unchanged.
+  :pr:`10847`
 
 New Features and Enhancements
 =============================
