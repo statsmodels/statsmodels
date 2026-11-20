@@ -1001,6 +1001,10 @@ Time series analysis
   (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``TsaDescriptive.periodogram`` and ``TsaDescriptive.plot4`` (deprecated)
+  raised an ``AttributeError`` since 0.12.0, because they called a function
+  that was removed then. They compute the periodogram again, as before 0.12.0.
+  :pr:`10821`
 - ``_Var.covmat`` (deprecated) scaled the covariance of the coefficients by
   the residual sum of squares instead of the residual variance, so it was too
   large by the residual degrees of freedom. :pr:`10823`
