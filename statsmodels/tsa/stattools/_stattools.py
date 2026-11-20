@@ -1778,7 +1778,14 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
     Parameters
     ----------
     x, y : array_like
-       The time series data to use in the calculation.
+        The time series data to use in the calculation. Each series is 1-D;
+        a column with shape (nobs, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series, and input with more than one column raises
+           ValueError.
     adjusted : bool, optional
        If True, then denominators for cross-covariance are the number of
        overlapping observations at each lag k, min(m, n-k), otherwise n.
@@ -1796,8 +1803,8 @@ def ccovf(x, y, adjusted=True, demean=True, fft=True):
         {y[0], y[1], ..., y[m-k]}, where n and m are the lengths of x and y,
         respectively.
     """
-    x = array_like(x, "x")
-    y = array_like(y, "y")
+    x = array_like(x, "x", ndim=1)
+    y = array_like(y, "y", ndim=1)
     adjusted = bool_like(adjusted, "adjusted")
     demean = bool_like(demean, "demean")
     fft = bool_like(fft, "fft", optional=False)
@@ -1857,7 +1864,14 @@ def ccf(
     Parameters
     ----------
     x, y : array_like
-        The time series data to use in the calculation.
+        The time series data to use in the calculation. Each series is 1-D;
+        a column with shape (nobs, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1) now gives the same result as the
+           1-D series, and input with more than one column raises
+           ValueError.
     adjusted : bool, optional
         If True, then denominators for cross-covariance are the number of
         overlapping observations at each lag k, min(m, n-k), otherwise n.
@@ -1926,8 +1940,8 @@ def ccf(
     .. [1] Brockwell and Davis, 2016. Introduction to Time Series and
        Forecasting, 3rd edition, p. 242.
     """
-    x = array_like(x, "x")
-    y = array_like(y, "y")
+    x = array_like(x, "x", ndim=1)
+    y = array_like(y, "y", ndim=1)
     adjusted = bool_like(adjusted, "adjusted")
     fft = bool_like(fft, "fft", optional=False)
     result_object = bool_like(result_object, "result_object", optional=True)
@@ -1951,8 +1965,7 @@ def ccf(
         y_valid.size > 0 and np.ptp(y_valid) == 0
     )
     denom = np.std(x) * np.std(y)
-    # Input that is not 1-D takes the path below, where ccovf raises
-    if x.ndim == y.ndim == 1 and (is_constant or denom == 0):
+    if is_constant or denom == 0:
         n_ret = nlags if nlags is not None else len(x)
         ret = np.full(n_ret, np.nan)
         if alpha is not None:

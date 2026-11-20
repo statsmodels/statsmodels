@@ -664,21 +664,11 @@ def vech(mat):
     return mat.T.take(_triu_indices(len(mat)))
 
 
-# tril/triu/diag, suitable for ndarray.take
-
-
-def _tril_indices(n):
-    rows, cols = np.tril_indices(n)
-    return rows * n + cols
+# triu, suitable for ndarray.take
 
 
 def _triu_indices(n):
     rows, cols = np.triu_indices(n)
-    return rows * n + cols
-
-
-def _diag_indices(n):
-    rows, cols = np.diag_indices(n)
     return rows * n + cols
 
 
@@ -804,113 +794,6 @@ def commutation_matrix(p, q):
     K = np.eye(p * q)
     indices = np.arange(p * q).reshape((p, q), order="F")
     return K.take(indices.ravel(), axis=0)
-
-
-def _ar_transparams(params):
-    """
-    Transforms params to induce stationarity/invertibility
-
-    Parameters
-    ----------
-    params : ndarray
-        The AR coefficients
-
-    Returns
-    -------
-    ndarray
-        The transformed AR coefficients.
-
-    References
-    ----------
-    Jones(1980)
-    """
-    newparams = np.tanh(params / 2)
-    tmp = np.tanh(params / 2)
-    for j in range(1, len(params)):
-        a = newparams[j]
-        for kiter in range(j):
-            tmp[kiter] -= a * newparams[j - kiter - 1]
-        newparams[:j] = tmp[:j]
-    return newparams
-
-
-def _ar_invtransparams(params):
-    """
-    Inverse of the Jones reparameterization
-
-    Parameters
-    ----------
-    params : ndarray
-        The transformed AR coefficients
-
-    Returns
-    -------
-    ndarray
-        The untransformed AR coefficients.
-    """
-    params = params.copy()
-    tmp = params.copy()
-    for j in range(len(params) - 1, 0, -1):
-        a = params[j]
-        for kiter in range(j):
-            tmp[kiter] = (params[kiter] + a * params[j - kiter - 1]) / (1 - a**2)
-        params[:j] = tmp[:j]
-    invarcoefs = 2 * np.arctanh(params)
-    return invarcoefs
-
-
-def _ma_transparams(params):
-    """
-    Transforms params to induce stationarity/invertibility
-
-    Parameters
-    ----------
-    params : ndarray
-        The ma coefficients of an (AR)MA model.
-
-    Returns
-    -------
-    ndarray
-        The transformed MA coefficients.
-
-    References
-    ----------
-    Jones(1980)
-    """
-    newparams = ((1 - np.exp(-params)) / (1 + np.exp(-params))).copy()
-    tmp = ((1 - np.exp(-params)) / (1 + np.exp(-params))).copy()
-
-    # levinson-durbin to get macf
-    for j in range(1, len(params)):
-        b = newparams[j]
-        for kiter in range(j):
-            tmp[kiter] += b * newparams[j - kiter - 1]
-        newparams[:j] = tmp[:j]
-    return newparams
-
-
-def _ma_invtransparams(macoefs):
-    """
-    Inverse of the Jones reparameterization
-
-    Parameters
-    ----------
-    macoefs : ndarray
-        The transformed MA coefficients
-
-    Returns
-    -------
-    ndarray
-        The untransformed MA coefficients.
-    """
-    tmp = macoefs.copy()
-    for j in range(len(macoefs) - 1, 0, -1):
-        b = macoefs[j]
-        for kiter in range(j):
-            tmp[kiter] = (macoefs[kiter] - b * macoefs[j - kiter - 1]) / (1 - b**2)
-        macoefs[:j] = tmp[:j]
-    invmacoefs = -np.log((1 - macoefs) / (1 + macoefs))
-    return invmacoefs
 
 
 def unintegrate_levels(x, d):
