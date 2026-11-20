@@ -4567,64 +4567,6 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         )
         return out
 
-    def _news_updated_results(
-        self,
-        updated,
-        start,
-        end,
-        periods,
-        revisions_details_start=False,
-        state_index=None,
-    ):
-        return updated._news_previous_results(
-            self,
-            start,
-            end,
-            periods,
-            revisions_details_start=revisions_details_start,
-            state_index=state_index,
-        )
-
-    def _news_previous_data(
-        self,
-        endog,
-        start,
-        end,
-        periods,
-        exog,
-        revisions_details_start=False,
-        state_index=None,
-    ):
-        previous = self.apply(endog, exog=exog, copy_initialization=True)
-        return self._news_previous_results(
-            previous,
-            start,
-            end,
-            periods,
-            revisions_details_start=revisions_details_start,
-            state_index=state_index,
-        )
-
-    def _news_updated_data(
-        self,
-        endog,
-        start,
-        end,
-        periods,
-        exog,
-        revisions_details_start=False,
-        state_index=None,
-    ):
-        updated = self.apply(endog, exog=exog, copy_initialization=True)
-        return self._news_updated_results(
-            updated,
-            start,
-            end,
-            periods,
-            revisions_details_start=revisions_details_start,
-            state_index=state_index,
-        )
-
     def news(
         self,
         comparison,

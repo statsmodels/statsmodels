@@ -439,12 +439,12 @@ def holt_win_mul_add_dam(double[::1] x, HoltWintersArgs hw_args):
     b = hw_args._b
     s = hw_args._s
     m = hw_args._m
-    err[0] = y[0] - ((l[0] * phi * b[0]) + s[0])
+    err[0] = y[0] - ((l[0] * b[0]**phi) + s[0])
     for i in range(1, hw_args._n):
         l[i] = (alpha * y[i - 1]) - (alpha * s[i - 1]) + \
             (alphac * (l[i - 1] * b[i - 1]**phi))
         b[i] = (beta * (l[i] / l[i - 1])) + (betac * b[i - 1]**phi)
         s[i + m - 1] = gamma * y[i - 1] - \
             (gamma * (l[i - 1] * b[i - 1]**phi)) + (gammac * s[i - 1])
-        err[i] = y[i] - ((l[i] * phi * b[i]) + s[i])
+        err[i] = y[i] - ((l[i] * b[i]**phi) + s[i])
     return np.asarray(err)

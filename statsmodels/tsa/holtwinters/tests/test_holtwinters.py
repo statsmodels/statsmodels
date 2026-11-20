@@ -947,23 +947,47 @@ def test_use_boxcox_fit_override():
     ), f"Expected fitted lambda, got {res.params['lamda']}"
 
 
-@pytest.mark.parametrize("trend", TRENDS)
-@pytest.mark.parametrize("seasonal", SEASONALS)
-def test_equivalence_cython_python(trend, seasonal):
+HW_TWIN_CASES = [
+    (trend, seasonal, damped)
+    for trend in TRENDS
+    for seasonal in SEASONALS
+    for damped in (False, True)
+    if trend is not None or not damped
+]
+
+
+def _assert_hw_twins_agree(actual, expected, y):
+    # The smoothers return y minus the fitted values, so rounding error is
+    # relative to the size of y rather than to each residual
+    rtol = 1e-10
+    assert_allclose(actual, expected, rtol=rtol, atol=rtol * np.abs(y).max())
+
+
+@pytest.fixture(
+    scope="module",
+    params=HW_TWIN_CASES,
+    ids=[f"{t}-{s}-{'damped' if d else 'undamped'}" for t, s, d in HW_TWIN_CASES],
+)
+def hw_twin_case(request):
+    """
+    A fitted model and its parameters in the layout the smoothers use
+
+    The parameters are ``p = [alpha, beta, gamma, l0, b0, phi, s0, ...]``
+    and ``sel`` marks those that ExponentialSmoothing estimates.
+    """
+    trend, seasonal, damped = request.param
     mod = ExponentialSmoothing(
         housing_data,
         trend=trend,
         seasonal=seasonal,
+        damped_trend=damped,
         initialization_method="estimated",
     )
 
     # Overflow in mul-mul case fixed
     res = mod.fit()
-    assert isinstance(res.summary().as_text(), str)
 
     params = res.params
-    nobs = housing_data.shape[0]
-    y = np.squeeze(np.asarray(housing_data))
     m = 12 if seasonal else 0
     p = np.zeros(6 + m)
     alpha = params["smoothing_level"]
@@ -976,6 +1000,23 @@ def test_equivalence_cython_python(trend, seasonal):
     p[:6] = alpha, beta, gamma, l0, b0, phi
     if seasonal:
         p[6:] = params["initial_seasons"]
+    has_trend = trend is not None
+    has_seasonal = seasonal is not None
+    sel = np.array(
+        [True, has_trend, has_seasonal, True, has_trend, damped] + [has_seasonal] * m
+    )
+    return trend, seasonal, res, p, sel
+
+
+def test_equivalence_cython_python(hw_twin_case):
+    # The pure-Python smoothers in PY_SMOOTHERS are the twin of the Cython
+    # smoothers in SMOOTHERS
+    trend, seasonal, res, p, _ = hw_twin_case
+    assert isinstance(res.summary().as_text(), str)
+
+    nobs = housing_data.shape[0]
+    y = np.squeeze(np.asarray(housing_data))
+    m = 12 if seasonal else 0
     xi = np.ones_like(p).astype(np.int64)
 
     p_copy = p.copy()
@@ -988,9 +1029,70 @@ def test_equivalence_cython_python(trend, seasonal):
 
     sse_cy = cy_func(p, cy_hw_args)
     sse_py = py_func(p, py_hw_args)
-    assert_allclose(sse_py, sse_cy)
+    _assert_hw_twins_agree(sse_py, sse_cy, y)
     sse_py = py_func(p, cy_hw_args)
-    assert_allclose(sse_py, sse_cy)
+    _assert_hw_twins_agree(sse_py, sse_cy, y)
+
+    # With transform=True, alpha, beta and gamma are given in the unrestricted
+    # space and mapped back by to_restricted. At the image of p under
+    # to_unrestricted, both smoothers must give the residuals at p.
+    unrestricted = p.copy()
+    unrestricted[:3] = to_unrestricted(p, xi, bounds)
+    py_hw_args = PyHoltWintersArgs(xi, p.copy(), bounds, y, m, nobs, True)
+    cy_hw_args = HoltWintersArgs(xi, p.copy(), bounds, y, m, nobs, True)
+    sse_cy_transform = cy_func(unrestricted, cy_hw_args)
+    sse_py_transform = py_func(unrestricted, py_hw_args)
+    _assert_hw_twins_agree(sse_py_transform, sse_cy_transform, y)
+    _assert_hw_twins_agree(sse_py_transform, sse_cy, y)
+
+
+def test_equivalence_cython_python_model_usage(hw_twin_case):
+    # Set xi and transform on the arguments as
+    # ExponentialSmoothing._optimize_parameters sets them on the Cython
+    # arguments: create them with the estimated parameters selected, search
+    # over alpha, beta and gamma in the restricted space for starting values,
+    # then optimize all estimated parameters in the unrestricted space
+    trend, seasonal, _, p, sel = hw_twin_case
+    nobs = housing_data.shape[0]
+    y = np.squeeze(np.asarray(housing_data))
+    m = 12 if seasonal else 0
+    bounds = np.array([[0.0, 1.0]] * 3)
+    py_func = PY_SMOOTHERS[(seasonal, trend)]
+    cy_func = SMOOTHERS[(seasonal, trend)]
+    py_hw_args = PyHoltWintersArgs(sel.astype(np.int64), p.copy(), bounds, y, m, nobs)
+    cy_hw_args = HoltWintersArgs(sel.astype(np.int64), p.copy(), bounds, y, m, nobs)
+
+    # Residuals with every parameter given, the reference for both steps
+    def full_residuals(params):
+        xi = np.ones_like(params, dtype=np.int64)
+        hw_args = HoltWintersArgs(xi, params.copy(), bounds, y, m, nobs)
+        return cy_func(params, hw_args)
+
+    # Starting values: only alpha, beta and gamma, in the restricted space
+    sv_sel = np.zeros_like(sel)
+    sv_sel[:3] = True
+    sv_sel &= sel
+    for hw_args in (py_hw_args, cy_hw_args):
+        hw_args.xi = sv_sel.astype(np.int64)
+        hw_args.transform = False
+    point = np.array([0.3, 0.1, 0.2])[sv_sel[:3]]
+    err_py = py_func(point, py_hw_args)
+    err_cy = cy_func(point, cy_hw_args)
+    _assert_hw_twins_agree(err_py, err_cy, y)
+    with_point = p.copy()
+    with_point[sv_sel] = point
+    _assert_hw_twins_agree(err_py, full_residuals(with_point), y)
+
+    # Optimization: all estimated parameters, in the unrestricted space
+    for hw_args in (py_hw_args, cy_hw_args):
+        hw_args.xi = sel.astype(np.int64)
+        hw_args.transform = True
+    unrestricted = p.copy()
+    unrestricted[:3] = to_unrestricted(p, sel, bounds)
+    err_py = py_func(unrestricted[sel], py_hw_args)
+    err_cy = cy_func(unrestricted[sel], cy_hw_args)
+    _assert_hw_twins_agree(err_py, err_cy, y)
+    _assert_hw_twins_agree(err_py, full_residuals(p), y)
 
 
 def test_direct_holt_add():
@@ -2344,3 +2446,114 @@ def test_damped_initial_trend_round_trip(trend, seasonal):
         res.params_formatted.loc["initial_trend", "param"],
         params["initial_trend"],
     )
+
+
+def _smoother_predictions(trend, seasonal, p, y, m):
+    """
+    One-step predictions of the Cython and the pure-Python smoother
+
+    ``p`` is ``[alpha, beta, gamma, l0, b0, phi, s0, ..., s(m-1)]``. The
+    smoothers return the residuals that the optimizer minimizes, so ``y``
+    minus them are their one-step predictions.
+    """
+    xi = np.ones(p.shape[0], dtype=np.int64)
+    bounds = np.array([[0.0, 1.0]] * 3)
+    predictions = {}
+    for name, smoothers, args in (
+        ("cython", SMOOTHERS, HoltWintersArgs),
+        ("python", PY_SMOOTHERS, PyHoltWintersArgs),
+    ):
+        hw_args = args(xi, p.copy(), bounds, y, m, y.shape[0])
+        resid = smoothers[(seasonal, trend)](p.copy(), hw_args)
+        predictions[name] = (y - resid, resid)
+    return predictions
+
+
+@pytest.mark.parametrize("trend", ["add", "mul"])
+@pytest.mark.parametrize("seasonal", SEASONALS)
+def test_damped_smoother_objective_is_reported_sse(trend, seasonal):
+    # The optimizer minimizes the sum of squared residuals of the smoother,
+    # so at the fitted parameters these must be the residuals and the SSE
+    # of the reported fit. With a multiplicative damped trend and additive
+    # seasonality, the smoothers predicted l * phi * b + s instead of
+    # l * b ** phi + s. The two agree when phi = 1, so phi is fixed below 1.
+    res = ExponentialSmoothing(
+        housing_data,
+        trend=trend,
+        damped_trend=True,
+        seasonal=seasonal,
+        initialization_method="estimated",
+    ).fit(damping_trend=0.95)
+    params = res.params
+    m = 12 if seasonal else 0
+    p = np.zeros(6 + m)
+    p[:6] = [
+        params["smoothing_level"],
+        params["smoothing_trend"],
+        params["smoothing_seasonal"] if seasonal else 0.0,
+        params["initial_level"],
+        params["initial_trend"],
+        params["damping_trend"],
+    ]
+    if seasonal:
+        p[6:] = params["initial_seasons"]
+    y = np.squeeze(np.asarray(housing_data, dtype=float))
+    fitted = np.asarray(res.fittedvalues)
+    predictions = _smoother_predictions(trend, seasonal, p, y, m)
+    for name, (prediction, resid) in predictions.items():
+        assert_allclose(prediction, fitted, rtol=1e-10, err_msg=name)
+        assert_allclose(resid @ resid, res.sse, rtol=1e-10, err_msg=name)
+
+
+def test_mul_damped_add_seasonal_one_step_closed_form():
+    # The (Md, A) method of Hyndman, Koehler, Ord and Snyder (2008),
+    # Forecasting with Exponential Smoothing, Table 2.1, with phi_1 = phi:
+    #   y[t+1|t] = l[t] * b[t] ** phi + s[t+1-m]
+    #   l[t] = alpha * (y[t] - s[t-m]) + (1 - alpha) * l[t-1] * b[t-1] ** phi
+    #   b[t] = beta * l[t] / l[t-1] + (1 - beta) * b[t-1] ** phi
+    #   s[t] = gamma * (y[t] - l[t-1] * b[t-1] ** phi) + (1 - gamma) * s[t-m]
+    m = 4
+    nobs = 12
+    rng = np.random.default_rng(20261119)
+    pattern = np.array([1.0, -0.5, 0.8, -1.3])
+    y = 10 * 1.02 ** np.arange(nobs) + np.tile(pattern, nobs // m)
+    y += 0.2 * rng.standard_normal(nobs)
+    alpha, beta, gamma, phi = 0.4, 0.2, 0.3, 0.9
+    l0, b0 = 10.0, 1.02
+    s0 = np.array([0.9, -0.6, 0.7, -1.2])
+    res = ExponentialSmoothing(
+        y,
+        trend="mul",
+        damped_trend=True,
+        seasonal="add",
+        seasonal_periods=m,
+        initialization_method="known",
+        initial_level=l0,
+        initial_trend=b0,
+        initial_seasonal=s0,
+    ).fit(
+        smoothing_level=alpha,
+        smoothing_trend=beta,
+        smoothing_seasonal=gamma,
+        damping_trend=phi,
+        optimized=False,
+    )
+
+    level, slope = l0, b0
+    # season[t] is s[t+1-m], the seasonal term of the prediction of y[t]
+    season = list(s0)
+    expected = np.empty(nobs)
+    for t in range(nobs):
+        damped = level * slope**phi
+        expected[t] = damped + season[t]
+        new_level = alpha * (y[t] - season[t]) + (1 - alpha) * damped
+        slope = beta * new_level / level + (1 - beta) * slope**phi
+        season.append(gamma * (y[t] - damped) + (1 - gamma) * season[t])
+        level = new_level
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+    assert_allclose(res.forecast(1), level * slope**phi + season[nobs], rtol=1e-10)
+
+    p = np.r_[alpha, beta, gamma, l0, b0, phi, s0]
+    predictions = _smoother_predictions("mul", "add", p, y, m)
+    for name, (prediction, _) in predictions.items():
+        assert_allclose(prediction, expected, rtol=1e-10, err_msg=name)
