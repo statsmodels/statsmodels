@@ -822,7 +822,9 @@ class VAR(TimeSeriesModel):
         SingularMatrixWarning
             If the lagged regressors are collinear so that the design
             matrix is rank-deficient, the fitted parameters are not
-            uniquely determined.
+            uniquely determined. This also happens if a column of ``exog``
+            duplicates the constant that ``trend`` adds. With ``ic`` the
+            warning is raised for the selected lag order only.
 
         Notes
         -----

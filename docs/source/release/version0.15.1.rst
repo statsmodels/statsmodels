@@ -1057,7 +1057,10 @@ Time series analysis
 - ``VAR.fit`` now raises a ``SingularMatrixWarning`` if the lagged regressors
   are perfectly collinear, matching the warning already raised by ``OLS`` for
   a rank-deficient design matrix, using the same ``nobs``-scaled rank rule
-  (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
+  (:pr:`10714`). The same cutoff now chooses the minimum-norm solution, so
+  the coefficients of such a design are no longer of the order of 1e11, as
+  they could be with the earlier cutoff of 1e-15.
+  ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
 - ``coint_johansen`` and ``select_coint_rank`` with ``k_ar_diff=0`` used the
