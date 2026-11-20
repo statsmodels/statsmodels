@@ -47,6 +47,18 @@ Deprecations
   it will be removed in statsmodels 0.17.0. The value of ``which`` is case
   sensitive and ``exog`` can be a list. :issue:`8562`, :pr:`10554`,
   :pr:`10555`
+- ``statsmodels.tsa.statespace.tools.set_mode``,
+  ``statsmodels.tsa.tsatools.unintegrate`` and ``unintegrate_levels``, and
+  ``statsmodels.tsa.vector_ar.output.normality_summary`` and
+  ``hypothesis_test_table`` are deprecated. Nothing in statsmodels uses them
+  and they are neither exported nor documented. Calling them now raises a
+  ``FutureWarning``, and they will be removed after statsmodels 0.17.
+  :pr:`10828`
+- The ``statsmodels.tsa.arima_model`` module, whose ``ARMA`` and ``ARIMA``
+  classes were removed in statsmodels 0.13 and only raise
+  ``NotImplementedError``, will be removed after statsmodels 0.16. Use
+  ``statsmodels.tsa.arima.model.ARIMA`` or
+  ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
 
 Behavior changes
 ----------------
@@ -266,6 +278,20 @@ Behavior changes
   ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
   ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
   :pr:`10792`
+- ``pacf_burg`` (and ``pacf`` with ``method="burg"``), ``kpss`` with
+  ``regression="c"``, ``range_unit_root_test``, ``pccf`` and ``q_stat`` treat
+  an (nobs, 1) column, such as a one-column ``DataFrame``, as the 1-D series
+  instead of raising, and raise a ``ValueError`` for input with more than one
+  column. ``q_stat`` silently took a (1, k) row as k values at lag 1 and gave
+  wrong statistics; it now raises. Results for 1-D input are unchanged.
+  :pr:`10837`
+- :func:`~statsmodels.tsa.stattools.ccf` and
+  :func:`~statsmodels.tsa.stattools.ccovf` treat an (nobs, 1) column, such as
+  a one-column ``DataFrame``, as the 1-D series. Before, two columns gave a
+  meaningless 2-D result without an error, for example an (nlags, nobs) array
+  from ``ccf``, and a column next to a 1-D series raised an error from SciPy.
+  Input with more than one column now raises a ``ValueError``. Results for
+  1-D input are unchanged. :pr:`10811`
 
 New Features and Enhancements
 =============================
@@ -1002,6 +1028,15 @@ Time series analysis
   of 0. For a ``det_order`` of -1 and 0 the statistics now equal the
   likelihood ratio statistics of ``VECM``. Results with ``k_ar_diff`` of 1 or
   more do not change. :issue:`7459`, :pr:`10807`
+- ``grangercausalitytests`` with an empty ``maxlag`` raised a NumPy error
+  instead of its own ``ValueError``. :pr:`10839`
+- ``breakvar_heteroskedasticity_test`` raised an ``UnboundLocalError`` for a
+  ``subset_length`` that is a NumPy integer or a whole-number float, such as
+  ``np.int64(40)`` or ``40.0``, and for invalid values. It accepts every
+  numeric type and raises a ``ValueError`` for invalid values. :pr:`10838`
+- ``add_trend`` with ``trend="n"`` returned a list unchanged and raised an
+  ``AttributeError`` for a tuple. It returns an ndarray, like the other
+  trends. :pr:`10833`
 - ``_Var.predict`` (deprecated) returned neither the fitted values nor the
   residuals, with the wrong number of rows unless there was one lag, and kept
   returning the first result after a refit. It returns the fitted values.
@@ -1355,6 +1390,13 @@ Documentation
 - Add an example to ``cohens_kappa`` showing that kappa depends on class
   prevalence: with the same rater accuracy and raw agreement, kappa is much
   smaller when one class is rare. :issue:`9680`, :pr:`10806`
+- Correct docstrings in ``statsmodels.tsa.tsatools``, ``arima_process``,
+  ``deterministic`` and the BDS test: ``detrend`` returns pandas objects for
+  pandas input, the parameters of ``DeterministicProcess.in_sample`` and
+  ``out_of_sample`` (which listed a non-existent ``index``), the order
+  constraint of ``Fourier`` and ``CalendarFourier``, return types of
+  ``bds``, ``distance_indicators`` and ``correlation_sums``, and examples
+  that failed on pandas 3. :pr:`10832`
 - Correct the docstrings of the deprecated ``TsaDescriptive``,
   ``TSMLEModel`` and ``_Var``: the accepted data types, the ``order`` of
   ``TsaDescriptive.fit`` (p, d, q) and its return type, the shapes of the

@@ -86,6 +86,7 @@ from statsmodels.tsa.stattools._stattools import (
     _pacf_ols_qr,
     _pacf_yw_levinson,
 )
+from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 from statsmodels.tsa.tsatools import add_trend, lagmat
 
 DECIMAL_8 = 8
@@ -1267,6 +1268,45 @@ class TestBreakvarHeteroskedasticityTest:
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
 
+    @pytest.mark.parametrize(
+        "subset_length",
+        [40, np.int64(40), 40.0, np.float64(40.0), 0.25],
+        ids=["int", "int64", "float", "float64", "fraction"],
+    )
+    def test_subset_length_integer_like(self, subset_length):
+        # Any integer-like value and the fraction 0.25 of 160 observations
+        # give subsets of 40 observations
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        res = breakvar_heteroskedasticity_test(resid, subset_length=subset_length)
+        expected_statistic = np.sum(resid[-40:] ** 2) / np.sum(resid[:40] ** 2)
+        expected_pvalue = 2 * min(
+            self.f.cdf(expected_statistic, 40, 40),
+            self.f.sf(expected_statistic, 40, 40),
+        )
+        assert_allclose(res.statistic, expected_statistic, rtol=1e-12)
+        assert_allclose(res.pvalue, expected_pvalue, rtol=1e-12)
+
+    def test_subset_length_one(self):
+        # One observation in each subset is too few for the statistic
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        with pytest.warns(UserWarning, match="too few non-missing observations"):
+            res = breakvar_heteroskedasticity_test(resid, subset_length=1.0)
+        assert np.isnan(res.statistic)
+
+    @pytest.mark.parametrize(
+        "subset_length", [0, 0.0, -1, -0.25, 1.5, 40.5, np.nan, np.inf]
+    )
+    def test_subset_length_invalid_value(self, subset_length):
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        with pytest.raises(ValueError, match="subset_length must be a fraction"):
+            breakvar_heteroskedasticity_test(resid, subset_length=subset_length)
+
+    @pytest.mark.parametrize("subset_length", ["40", True, None])
+    def test_subset_length_invalid_type(self, subset_length):
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        with pytest.raises(TypeError, match="subset_length must be float_like"):
+            breakvar_heteroskedasticity_test(resid, subset_length=subset_length)
+
 
 class CheckCoint:
     """
@@ -1499,6 +1539,15 @@ class TestGrangerCausality:
             match="maxlag must be a non-empty list containing only positive integers",
         ):
             grangercausalitytests(x, [0, 1, 2])
+
+    @pytest.mark.parametrize("maxlag", [[], ()], ids=["list", "tuple"])
+    def test_granger_fails_on_empty_lags(self, maxlag):
+        x = np.random.default_rng(20261126).standard_normal((100, 2))
+        with pytest.raises(
+            ValueError,
+            match="maxlag must be a non-empty list containing only positive integers",
+        ):
+            grangercausalitytests(x, maxlag)
 
 
 class TestKPSS:
@@ -2034,6 +2083,95 @@ def test_ccf_nlags_validation():
         ccf(x, y, nlags=2.5)
     # the default output length, len(x), remains a valid request
     assert ccf(x, y, nlags=100).shape == (100,)
+
+
+def _ccf_input(form, a):
+    if form == "column":
+        return a[:, None]
+    if form == "dataframe":
+        return pd.DataFrame({"a": a})
+    if form == "list":
+        return a.tolist()
+    if form == "series":
+        return pd.Series(a)
+    return a
+
+
+# Pairs of (x form, y form): each form on its own, and a column mixed with
+# a 1-D series
+CCF_INPUT_FORMS = [
+    ("column", "column"),
+    ("dataframe", "dataframe"),
+    ("list", "list"),
+    ("series", "series"),
+    ("column", "ndarray"),
+    ("ndarray", "dataframe"),
+]
+
+
+@pytest.fixture
+def ccf_data():
+    rng = np.random.default_rng(10795)
+    # y is shorter than x, so the adjusted denominators depend on len(y)
+    return rng.standard_normal(120), rng.standard_normal(100)
+
+
+@pytest.mark.parametrize("x_form, y_form", CCF_INPUT_FORMS)
+@pytest.mark.parametrize("adjusted", [True, False])
+def test_ccovf_input_forms(ccf_data, x_form, y_form, adjusted):
+    # An (nobs, 1) column is the same series as the 1-D array. Columns for
+    # both x and y used to give an (nobs, nobs) array, or an (nobs, 1) one
+    # with adjusted=False.
+    x, y = ccf_data
+    expected = ccovf(x, y, adjusted=adjusted)
+    result = ccovf(_ccf_input(x_form, x), _ccf_input(y_form, y), adjusted=adjusted)
+    assert result.shape == (120,)
+    assert_allclose(result, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("x_form, y_form", CCF_INPUT_FORMS)
+@pytest.mark.parametrize("adjusted", [True, False])
+@pytest.mark.parametrize("nlags", [None, 5])
+def test_ccf_input_forms(ccf_data, x_form, y_form, adjusted, nlags):
+    x, y = ccf_data
+    x_in, y_in = _ccf_input(x_form, x), _ccf_input(y_form, y)
+    n_ret = 120 if nlags is None else nlags
+    kwargs = {"adjusted": adjusted, "nlags": nlags}
+
+    expected = ccf(x, y, **kwargs)
+    result = ccf(x_in, y_in, **kwargs)
+    assert result.shape == (n_ret,)
+    assert_allclose(result, expected, rtol=1e-12)
+
+    res_obj = ccf(x_in, y_in, result_object=True, **kwargs)
+    assert res_obj.confint is None
+    assert_allclose(res_obj.ccf, expected, rtol=1e-12)
+
+    expected_alpha = ccf(x, y, alpha=0.05, **kwargs)
+    res_alpha = ccf(x_in, y_in, alpha=0.05, **kwargs)
+    assert res_alpha.ccf.shape == (n_ret,)
+    assert_allclose(res_alpha.ccf, expected_alpha.ccf, rtol=1e-12)
+    assert res_alpha.confint.shape == (n_ret, 2)
+    assert_allclose(res_alpha.confint, expected_alpha.confint, rtol=1e-12)
+
+
+@pytest.mark.parametrize("func", [ccf, ccovf])
+@pytest.mark.parametrize("bad", ["x", "y", "both"])
+@pytest.mark.parametrize("form", ["ndarray", "dataframe"])
+@pytest.mark.parametrize("adjusted", [True, False])
+def test_ccf_ccovf_two_columns_raises(func, bad, form, adjusted):
+    # With adjusted=False, (nobs, 2) arrays for both x and y used to return
+    # an (nobs, 3) array without an error
+    rng = np.random.default_rng(10796)
+    two = rng.standard_normal((50, 2))
+    if form == "dataframe":
+        two = pd.DataFrame(two, columns=["a", "b"])
+    one = rng.standard_normal(50)
+    x = one if bad == "y" else two
+    y = one if bad == "x" else two
+    name = "y" if bad == "y" else "x"
+    with pytest.raises(ValueError, match=f"{name} is required to have ndim 1"):
+        func(x, y, adjusted=adjusted)
 
 
 @pytest.mark.smoke
@@ -3023,6 +3161,67 @@ def test_pacf_burg_error():
         pacf_burg(np.empty(100), 101)
 
 
+def _column_input_cases():
+    """
+    Functions of one 1-D array_like argument that used to reject a column
+
+    Each returns the numeric values of its result as a flat array.
+    """
+    rng = np.random.default_rng(20261124)
+    x = rng.standard_normal(250).cumsum()
+    y = x + rng.standard_normal(250)
+    e = rng.standard_normal(250)
+    r = acf(e, nlags=10)[1:]
+
+    def kpss_values(v, regression):
+        res = kpss(v, regression, nlags=4, result_object=True)
+        return np.r_[res.statistic, res.pvalue, res.lags]
+
+    def rur_values(v):
+        res = range_unit_root_test(v, result_object=True)
+        return np.r_[res.statistic, res.pvalue, list(res.critical_values.values())]
+
+    return {
+        "pacf_burg": (lambda v: np.concatenate(pacf_burg(v, nlags=10)), x),
+        "pacf burg": (lambda v: pacf(v, nlags=10, method="burg"), x),
+        "kpss c": (lambda v: kpss_values(v, "c"), e),
+        "kpss ct": (lambda v: kpss_values(v, "ct"), e),
+        "range_unit_root_test": (rur_values, x),
+        "pccf x": (lambda v: pccf(v, y, nlags=5), x),
+        "pccf y": (lambda v: pccf(x, v, nlags=5), y),
+        "pccf ols": (lambda v: pccf(v, y, nlags=5, method="ols"), x),
+        "q_stat": (lambda v: np.concatenate(q_stat(v, 250)), r),
+    }
+
+
+@pytest.mark.parametrize("form", ["list", "tuple", "series", "column", "dataframe"])
+@pytest.mark.parametrize("name", sorted(_column_input_cases()))
+def test_column_input(name, form):
+    # x is documented as a 1-D array_like: every form of the series, including
+    # an (n, 1) column, gives the result of the ndarray
+    func, x = _column_input_cases()[name]
+    index = pd.date_range("2000-01-01", periods=x.shape[0], freq="MS")
+    x_form = {
+        "list": x.tolist(),
+        "tuple": tuple(x.tolist()),
+        "series": pd.Series(x, index=index, name="x"),
+        "column": x[:, None],
+        "dataframe": pd.DataFrame({"x": x}, index=index),
+    }[form]
+    with warnings.catch_warnings():
+        # The p-values of kpss and range_unit_root_test may be at the edge
+        # of their tables
+        warnings.simplefilter("ignore", InterpolationWarning)
+        assert_allclose(func(x_form), func(x), rtol=1e-12)
+
+
+@pytest.mark.parametrize("name", sorted(_column_input_cases()))
+def test_column_input_two_columns_raises(name):
+    func, x = _column_input_cases()[name]
+    with pytest.raises(ValueError, match="required to have ndim 1"):
+        func(np.column_stack([x, x[::-1]]))
+
+
 def test_innovations_algo_brockwell_davis():
     ma = -0.9
     acovf = np.array([1 + ma**2, ma])
@@ -3637,11 +3836,9 @@ def test_ccf_constant(
 @pytest.mark.parametrize(
     "shape_x, shape_y, match",
     [
-        ((20, 1), (20,), "same dimensionality"),
-        ((20, 2), (20,), "same dimensionality"),
-        ((20,), (20, 1), "same dimensionality"),
-        ((20,), (20, 2), "same dimensionality"),
-        ((20, 2), (20, 2), "broadcast"),
+        ((20, 2), (20,), "x is required to have ndim 1"),
+        ((20,), (20, 2), "y is required to have ndim 1"),
+        ((20, 2), (20, 2), "x is required to have ndim 1"),
     ],
 )
 @pytest.mark.parametrize(
@@ -3659,6 +3856,32 @@ def test_ccf_constant_invalid_shape_raises(
         y = np.full(shape_y, 2.5)
     with pytest.raises(ValueError, match=match):
         ccf(x, y)
+
+
+@pytest.mark.parametrize(
+    "shape_x, shape_y", [((20, 1), (20,)), ((20,), (20, 1)), ((20, 1), (20, 1))]
+)
+@pytest.mark.parametrize(
+    "constant_x, constant_y", [(True, False), (False, True), (True, True)]
+)
+def test_ccf_constant_column(shape_x, shape_y, constant_x, constant_y):
+    # A constant (nobs, 1) column gives NaN, as a constant 1-D series does
+    x = np.arange(float(np.prod(shape_x))).reshape(shape_x)
+    y = np.arange(float(np.prod(shape_y))).reshape(shape_y)
+    if constant_x:
+        x = np.full(shape_x, 2.5)
+    if constant_y:
+        y = np.full(shape_y, 2.5)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        c = ccf(x, y)
+        res_c = ccf(x, y, alpha=0.05)
+    assert c.shape == (20,)
+    assert np.all(np.isnan(c))
+    assert res_c.ccf.shape == (20,)
+    assert np.all(np.isnan(res_c.ccf))
+    assert res_c.confint.shape == (20, 2)
+    assert np.all(np.isnan(res_c.confint))
 
 
 @pytest.mark.parametrize("method", PACF_METHODS)
@@ -4432,3 +4655,25 @@ def test_q_stat_invalid_nobs():
     assert np.isfinite(q).all()
     assert np.isfinite(p).all()
 
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS)
+def test_acf_pacf_adfuller_input_forms(form):
+    # x is documented as array_like: every form of a 1-D series gives the
+    # result of the ndarray
+    x = np.random.default_rng(20261120).standard_normal(200).cumsum()
+    x_form = series_forms(x)[form]
+    assert_allclose(acf(x_form, nlags=10), acf(x, nlags=10), rtol=1e-12)
+    for method in ("yw", "ols", "burg", "ldb"):
+        if method == "burg" and form in ("column", "dataframe"):
+            # pacf_burg does not accept an (n, 1) column yet
+            continue
+        assert_allclose(
+            pacf(x_form, nlags=10, method=method),
+            pacf(x, nlags=10, method=method),
+            rtol=1e-12,
+        )
+    res = adfuller(x_form, maxlag=4, autolag=None, result_object=True)
+    expected = adfuller(x, maxlag=4, autolag=None, result_object=True)
+    assert_allclose(res.statistic, expected.statistic, rtol=1e-12)
+    assert_allclose(res.pvalue, expected.pvalue, rtol=1e-12)

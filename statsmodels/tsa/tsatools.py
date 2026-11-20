@@ -70,6 +70,12 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
         'trend' and 'trend_squared'.  A Series is only returned when
         ``trend='n'`` and x is a Series, since no columns are added.
 
+        .. versionchanged:: 0.15.1
+
+           With ``trend='n'``, a list or a tuple is returned as an ndarray,
+           as with the other trends. A list was returned as a list, and a
+           tuple raised an ``AttributeError``.
+
     See Also
     --------
     statsmodels.tools.tools.add_constant
@@ -89,7 +95,10 @@ def add_trend(x, trend="c", prepend=False, has_constant="skip"):
     # TODO: could be generalized for trend of aribitrary order
     columns = ["const", "trend", "trend_squared"]
     if trend == "n":
-        return x.copy()
+        if _is_using_pandas(x, None):
+            return x.copy()
+        # array_like input is returned as an array, as for the other trends
+        return np.asanyarray(x).copy()
     elif trend == "c":  # handles structured arrays
         columns = columns[:1]
         trendorder = 0
@@ -269,7 +278,7 @@ def detrend(x, order=1, axis=0):
 
     Parameters
     ----------
-    x : ndarray
+    x : ndarray, Series, or DataFrame
         Data, 1d or 2d. If 2d, then each row or column is independently
         detrended with the same trendorder, but independent trend estimates.
     order : int, optional
@@ -281,9 +290,10 @@ def detrend(x, order=1, axis=0):
 
     Returns
     -------
-    ndarray
+    ndarray, Series, or DataFrame
         The detrended series is the residual of the linear regression of the
-        data on the trend of given order.
+        data on the trend of given order. It has the type, and for pandas
+        input the index and columns, of `x`.
     """
     order = int_like(order, "order")
     axis = int_like(axis, "axis")
@@ -548,13 +558,13 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=Fa
     dropex : int, optional
         Exclude first dropex lags from other variables. For all variables,
         except the first, lags from dropex to maxlagex are included.
-    trim : {'forward', 'backward', 'both', 'none'}, optional
+    trim : {'forward', 'backward', 'both', 'none', None}, optional
         The trimming method to use.
 
         * 'forward' : trim invalid observations in front.
         * 'backward' : trim invalid initial observations.
         * 'both' : trim invalid observations on both sides.
-        * 'none' : no trimming of observations.
+        * 'none', None : no trimming of observations.
     use_pandas : bool, optional
         If true, returns a DataFrame when the input is a pandas
         Series or DataFrame.  If false, return numpy ndarrays.
@@ -645,7 +655,8 @@ def vech(mat):
     Parameters
     ----------
     mat : ndarray
-        A symmetric 2d array.
+        A square 2d array, usually symmetric. Only its lower triangle is
+        used.
 
     Returns
     -------
@@ -703,7 +714,7 @@ def unvech(v):
 
     Parameters
     ----------
-    v : ndarray
+    v : array_like
         A 1d array containing the stacked lower-triangular elements of a
         symmetric matrix, as produced by :func:`vech`.
 
@@ -800,6 +811,10 @@ def unintegrate_levels(x, d):
     """
     Returns the successive differences needed to unintegrate the series
 
+    .. deprecated:: 0.15.1
+        ``unintegrate_levels`` has no callers in statsmodels. It will be
+        removed after statsmodels 0.17 is released.
+
     Parameters
     ----------
     x : array_like
@@ -817,6 +832,15 @@ def unintegrate_levels(x, d):
     --------
     unintegrate
     """
+    warnings.warn(
+        "statsmodels.tsa.tsatools.unintegrate_levels is deprecated and is not "
+        "exported from any public statsmodels API; it has no callers in "
+        "statsmodels. It will be removed after statsmodels 0.17 is released. "
+        "If you rely on this function, please open an issue at "
+        "https://github.com/statsmodels/statsmodels/issues.",
+        FutureWarning,
+        stacklevel=2,
+    )
     d = int_like(d, "d")
     x = x[:d]
     return np.asarray([np.diff(x, d - i)[0] for i in range(d, 0, -1)])
@@ -826,13 +850,18 @@ def unintegrate(x, levels):
     """
     After taking n-differences of a series, return the original series
 
+    .. deprecated:: 0.15.1
+        ``unintegrate`` has no callers in statsmodels. It will be removed
+        after statsmodels 0.17 is released.
+
     Parameters
     ----------
     x : array_like
         The n-th differenced series
     levels : sequence of float
-        The first-value in each differenced series, for
-        [first-difference, second-difference, ..., n-th difference]
+        The first value of each differenced series ``np.diff(y, k)`` of the
+        original series ``y``, for k = 0, 1, ..., n - 1, as returned by
+        `unintegrate_levels`.
 
     Returns
     -------
@@ -848,10 +877,23 @@ def unintegrate(x, levels):
     >>> unintegrate(np.diff(x, 2), levels)
     array([  1.,   3.,   9.,  19.,   8.])
     """
+    warnings.warn(
+        "statsmodels.tsa.tsatools.unintegrate is deprecated and is not "
+        "exported from any public statsmodels API; it has no callers in "
+        "statsmodels. It will be removed after statsmodels 0.17 is released. "
+        "If you rely on this function, please open an issue at "
+        "https://github.com/statsmodels/statsmodels/issues.",
+        FutureWarning,
+        stacklevel=2,
+    )
+    return _unintegrate(x, levels)
+
+
+def _unintegrate(x, levels):
     levels = list(levels)[:]  # copy
     if len(levels) > 1:
         x0 = levels.pop(-1)
-        return unintegrate(np.cumsum(np.r_[x0, x]), levels)
+        return _unintegrate(np.cumsum(np.r_[x0, x]), levels)
     x0 = levels[0]
     return np.cumsum(np.r_[x0, x])
 
