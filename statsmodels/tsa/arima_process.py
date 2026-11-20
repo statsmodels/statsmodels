@@ -473,6 +473,10 @@ def ar2arma(ar_des, p, q, n=20, mse="ar", start=None):
     -----
     Extension is possible if we want to match autocovariance instead
     of impulse response function.
+
+    .. versionchanged:: 0.15.1
+
+       ``ar_des`` can be a tuple. It used to raise a TypeError.
     """
 
     # TODO: convert MA lag polynomial, ma_app, to be invertible, by mirroring
@@ -489,7 +493,8 @@ def ar2arma(ar_des, p, q, n=20, mse="ar", start=None):
         arma0 = np.r_[-0.9 * np.ones(p - 1), np.zeros(q - 1)]
     else:
         arma0 = start
-    res = optimize.leastsq(msear_err, arma0, ar_des, maxfev=5000)
+    # leastsq would unpack a tuple ar_des into separate arguments
+    res = optimize.leastsq(msear_err, arma0, args=(ar_des,), maxfev=5000)
     arma_app = np.atleast_1d(res[0])
     ar_app = np.r_[1, arma_app[: p - 1]]
     ma_app = np.r_[1, arma_app[p - 1 :]]
@@ -538,10 +543,17 @@ def index2lpol(coeffs, index):
     -------
     ar : ndarray
         coefficients of lag polynomial
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       ``index`` can be a tuple. It used to raise an IndexError.
     """
     n = max(index)
     ar = np.zeros(n + 1)
-    ar[index] = coeffs
+    # A tuple would index more than one dimension
+    ar[np.asarray(index)] = coeffs
     return ar
 
 
