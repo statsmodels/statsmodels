@@ -1030,6 +1030,8 @@ Time series analysis
 - ``arma_order_select_ic`` accepts ``ic`` as any sequence of str, such as an
   ndarray or an ``Index``, as documented, instead of only a list or tuple.
   :pr:`10840`
+- ``grangercausalitytests`` with an empty ``maxlag`` raised a NumPy error
+  instead of its own ``ValueError``. :pr:`10839`
 - ``breakvar_heteroskedasticity_test`` raised an ``UnboundLocalError`` for a
   ``subset_length`` that is a NumPy integer or a whole-number float, such as
   ``np.int64(40)`` or ``40.0``, and for invalid values. It accepts every
