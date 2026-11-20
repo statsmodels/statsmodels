@@ -334,6 +334,13 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- ``arma_order_select_ic`` warns with an ``EstimationWarning`` that lists the
+  orders whose fit failed, and raises a ``ValueError`` if every fit fails or no
+  model has a non-NaN criterion, instead of returning tables of NaN. A
+  ``TypeError`` from ``model_kw`` or ``fit_kw``, such as one for a mistyped
+  keyword, is raised instead of making every fit fail, and ``start_params`` in
+  ``fit_kw`` now works. ``ic`` accepts only ``"aic"``, ``"aicc"``, ``"bic"`` and
+  ``"hqic"``, checked before any model is fitted. :pr:`10845`
 
 New Features and Enhancements
 =============================
@@ -1150,6 +1157,9 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- ``arma_order_select_ic`` returned minimum orders (``aic_min_order`` and the
+  others) that could point at a model whose fit had failed, because failed fits
+  have NaN criteria. The minimum orders now ignore them. :pr:`10845`
 
 Statistics and tests
 --------------------
