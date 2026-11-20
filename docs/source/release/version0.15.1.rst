@@ -286,6 +286,15 @@ Behavior changes
   ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
   ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
   :pr:`10792`
+- ``ExponentialSmoothing`` in ``statsmodels.tsa.holtwinters`` with
+  ``trend="mul"``, ``damped_trend=True`` and ``seasonal="add"`` estimated its
+  parameters by minimizing residuals computed with ``l * phi * b`` instead of
+  ``l * b**phi``, while the fitted values, the reported ``sse`` and the
+  forecasts use ``l * b**phi``. The estimates of this model now minimize the
+  reported ``sse``, so its parameters, fitted values and forecasts change, for
+  example the ``sse`` of a fit to the first 240 months of the co2 data falls
+  from 590.8 to 27.0. Results of all other trend, damping and seasonal
+  combinations are unchanged. :pr:`10829`
 - :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` filters an
   (n, 1) column, such as a one-column ``DataFrame``, along its rows and
   returns the values of the 1-D series. Before, no recursion was applied to a
