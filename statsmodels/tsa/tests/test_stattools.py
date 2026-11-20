@@ -1582,6 +1582,37 @@ class TestGrangerCausality:
         with pytest.raises(ValueError, match="Insufficient observations"):
             grangercausalitytests(x[:7], 2)
 
+    @pytest.mark.parametrize("nobs", [5, 6, 7, 8, 11, 13])
+    def test_granger_maximum_allowable_lag(self, nobs):
+        # The test needs nobs > 3 * maxlag + 1, so the largest lag is
+        # floor((nobs - 2) / 3). The message used to say one less unless
+        # nobs - 1 was a multiple of 3.
+        max_lag = (nobs - 2) // 3
+        x = np.random.default_rng(20261120).standard_normal((nobs, 2))
+        res = grangercausalitytests(x, max_lag)
+        assert max(res) == max_lag
+        match = rf"Insufficient observations. Maximum allowable lag is {max_lag}\."
+        with pytest.raises(ValueError, match=match):
+            grangercausalitytests(x, max_lag + 1)
+
+    @pytest.mark.parametrize("nobs", [1, 3, 4])
+    def test_granger_too_few_observations_for_any_lag(self, nobs):
+        # The message used to give a maximum allowable lag of 0 or -1
+        x = np.random.default_rng(20261120).standard_normal((nobs, 2))
+        match = "Insufficient observations. x has too few observations for any lag"
+        with pytest.raises(ValueError, match=match):
+            grangercausalitytests(x, 1)
+
+    @pytest.mark.parametrize("shape", [(50,), (50, 1), (50, 3), (50, 0)])
+    def test_granger_fails_on_number_of_columns(self, shape):
+        # The error used to come from deep inside, for example "wrong shape
+        # for coefs", or an IndexError for no column
+        x = np.random.default_rng(20261120).standard_normal(shape)
+        ncols = 1 if len(shape) == 1 else shape[1]
+        match = f"x must have exactly 2 columns, but it has {ncols}"
+        with pytest.raises(ValueError, match=match):
+            grangercausalitytests(x, 2)
+
     def test_granger_fails_on_finite_check(self):
         rs = np.random.RandomState(1234)
         x = rs.rand(1000, 2)
