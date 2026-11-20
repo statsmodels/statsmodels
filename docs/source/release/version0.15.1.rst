@@ -1002,6 +1002,17 @@ Time series analysis
   of 0. For a ``det_order`` of -1 and 0 the statistics now equal the
   likelihood ratio statistics of ``VECM``. Results with ``k_ar_diff`` of 1 or
   more do not change. :issue:`7459`, :pr:`10807`
+- ``_Var.covmat`` (deprecated) scaled the covariance of the coefficients by
+  the residual sum of squares instead of the residual variance, so it was too
+  large by the residual degrees of freedom. :pr:`10823`
+- A state space model that was pickled or deep-copied after it had been used
+  ignored new parameters once restored: ``loglike``, ``filter``, ``smooth``
+  and ``fit`` used the system matrices of the last evaluation before
+  pickling. This also affected results saved with ``save`` and read with
+  ``load``, whose ``model.loglike`` returned the fitted log-likelihood for
+  any parameters and whose model, refit, returned the starting parameters.
+  Pickles written by earlier versions load correctly. :issue:`3290`,
+  :pr:`10816`
 
 Statistics and tests
 --------------------
@@ -1331,6 +1342,11 @@ Documentation
 - Add an example to ``cohens_kappa`` showing that kappa depends on class
   prevalence: with the same rater accuracy and raw agreement, kappa is much
   smaller when one class is rare. :issue:`9680`, :pr:`10806`
+- Correct the docstrings of the deprecated ``TsaDescriptive``,
+  ``TSMLEModel`` and ``_Var``: the accepted data types, the ``order`` of
+  ``TsaDescriptive.fit`` (p, d, q) and its return type, the shapes of the
+  ``_Var`` coefficient arrays, and a runnable ``_Var`` example in place of one
+  that used undefined names. :pr:`10815`
 
 Stricter Input Validation
 =========================
