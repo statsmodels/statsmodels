@@ -245,7 +245,10 @@ class STLForecastResults:
         self._model_result = model_result
         self._endog = np.asarray(endog)
         self._nobs = self._endog.shape[0]
-        self._index = getattr(endog, "index", pd.RangeIndex(self._nobs))
+        self._index = getattr(endog, "index", None)
+        if not isinstance(self._index, pd.Index):
+            # No index, or not a pandas one, such as the method list.index
+            self._index = pd.RangeIndex(self._nobs)
         if not (
             isinstance(self._index, (pd.DatetimeIndex, pd.PeriodIndex))
             or is_int_index(self._index)
