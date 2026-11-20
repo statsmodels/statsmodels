@@ -325,6 +325,15 @@ Behavior changes
   from ``ccf``, and a column next to a 1-D series raised an error from SciPy.
   Input with more than one column now raises a ``ValueError``. Results for
   1-D input are unchanged. :pr:`10811`
+- :func:`~statsmodels.tsa.stattools.pccf` with ``method="yw"`` or ``"ywm"``
+  (the default) no longer depends on the scales of ``x`` and ``y``: rescaling
+  one series, for example by ``1e8``, made every lag ``nan``. Series that are
+  collinear to working precision give ``nan`` for every lag, as exactly
+  collinear series did, instead of inaccurate values. When the recursion
+  reaches a singular prediction error covariance matrix, the later lags are
+  ``nan`` on every platform; before, they depended on rounding, and the lag
+  computed just before could be dropped. Results for other input change only
+  by rounding. :pr:`10843`
 
 New Features and Enhancements
 =============================
@@ -1071,6 +1080,17 @@ Time series analysis
   ``basinhopping``, ``minimize`` with a gradient method) got a wrong gradient
   away from the optimum and often stopped short of it, for example with a
   ``ConvergenceWarning``. :pr:`10818`
+- ``fit(method="newton")`` of state space models and of Markov switching
+  models used the score and the Hessian with respect to the constrained
+  parameters, evaluated at the values of the unconstrained ones, and for
+  state space models a Newton step that was ``nobs`` times too long, so that
+  it often stopped with a ``ConvergenceWarning`` short of the optimum.
+  Newton's method passes its extra arguments to the score and the Hessian,
+  and ``MLEModel.hessian`` with ``transformed=False`` gives the Hessian with
+  respect to the unconstrained parameters (by the chain rule) instead of
+  raising or returning derivatives with respect to the constrained ones.
+  ``MLEModel.hessian`` has a new keyword-only argument ``average``.
+  ``fit(method="ncg")`` of state space models no longer raises. :pr:`10817`
 - ``coint_johansen`` and ``select_coint_rank`` with ``k_ar_diff=0`` used the
   levels ``y_t`` instead of the lagged levels ``y_{t-1}``, so the eigenvalues,
   the trace and maximum eigenvalue statistics and the eigenvectors were wrong
@@ -1120,6 +1140,10 @@ Time series analysis
   any parameters and whose model, refit, returned the starting parameters.
   Pickles written by earlier versions load correctly. :issue:`3290`,
   :pr:`10816`
+- ``constrain_stationary_multivariate`` with float32 or complex64 input and
+  ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
+  NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
+  array was promoted to double precision. :pr:`10857`
 
 Statistics and tests
 --------------------

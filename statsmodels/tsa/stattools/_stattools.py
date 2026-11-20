@@ -2019,8 +2019,16 @@ def ccf(
 def _pccf_yw(x, y, nlags, adjusted=False):
     """PCCF via multivariate Levinson-Durbin recursion."""
     nobs = len(x)
+    if np.ptp(x) == 0 or np.ptp(y) == 0:
+        return np.full(nlags, np.nan)
     xo = x - x.mean()
     yo = y - y.mean()
+    # Standardizing does not change the PCCF, and it makes the checks below
+    # relative to the variances of x and y. Dividing by the largest absolute
+    # value first avoids overflow and underflow.
+    for z in (xo, yo):
+        z /= np.max(np.abs(z))
+        z /= np.sqrt(z.dot(z) / nobs)
 
     gamma = np.empty((nlags + 1, 2, 2))
     for h in range(nlags + 1):
@@ -2033,7 +2041,15 @@ def _pccf_yw(x, y, nlags, adjusted=False):
             ]
         gamma[h] /= nobs - h if adjusted else nobs
 
-    if np.linalg.matrix_rank(gamma[0]) < 2:
+    # Rounding leaves the smallest singular value of a singular matrix at up
+    # to about nobs * eps times the largest; the factor 100 is a margin.
+    tol = 100 * nobs * np.finfo(np.float64).eps
+
+    def singular(cov):
+        sv = np.linalg.svd(cov, compute_uv=False)
+        return sv[-1] <= tol * sv[0]
+
+    if singular(gamma[0]):
         return np.full(nlags, np.nan)
 
     sig_f = gamma[0].copy()
@@ -2053,10 +2069,6 @@ def _pccf_yw(x, y, nlags, adjusted=False):
 
         v_f = sig_f[0, 0]
         v_b = sig_b[1, 1]
-        if not np.isfinite(v_f) or not np.isfinite(v_b):
-            pccf_vals[s - 1 :] = np.nan
-            break
-        tol = np.finfo(np.float64).eps * gamma[0].trace()
         if v_f <= tol or v_b <= tol:
             pccf_vals[s - 1 :] = np.nan
             break
@@ -2066,12 +2078,14 @@ def _pccf_yw(x, y, nlags, adjusted=False):
 
         pccf_vals[s - 1] = delta_f[0, 1] / (d_f * d_b)
 
-        try:
-            phi_ss = np.linalg.solve(sig_b.T, delta_f.T).T
-            psi_ss = np.linalg.solve(sig_f.T, delta_b.T).T
-        except np.linalg.LinAlgError:
-            pccf_vals[s - 1 :] = np.nan
+        # Lag s only uses the diagonals of sig_f and sig_b; the later lags
+        # need their inverses
+        if singular(sig_f) or singular(sig_b):
+            pccf_vals[s:] = np.nan
             break
+
+        phi_ss = np.linalg.solve(sig_b.T, delta_f.T).T
+        psi_ss = np.linalg.solve(sig_f.T, delta_b.T).T
 
         phi_new = [None] * (nlags + 1)
         psi_new = [None] * (nlags + 1)
@@ -2265,9 +2279,28 @@ def pccf(
     For a bivariate VAR(p) process, P(h) = 0 for h > p,
     providing a useful identification tool.
 
-    If the series are perfectly collinear or constant, the sample
-    autocovariance matrix is singular and the Yule-Walker methods
-    return NaN for all lags.
+    The Yule-Walker methods return NaN for all lags if x or y is
+    constant or the covariance matrix of x and y is singular, that is,
+    x and y are perfectly collinear. Their recursion stops when a
+    prediction error variance is not positive or a prediction error
+    covariance matrix is singular, as happens when the lagged values are
+    perfectly collinear: the lags that would divide by that variance, or
+    need the inverse of that matrix, are NaN. These decisions are made on
+    the standardized series, so they do not depend on the scales of x
+    and y. A variance counts as not positive when it is at most
+    ``100 * nobs * eps``, where ``eps`` is the machine epsilon of float64,
+    and a matrix as singular when its smallest singular value is at most
+    ``100 * nobs * eps`` times its largest.
+
+    .. versionchanged:: 0.15.1
+
+       These decisions no longer depend on the scales of x and y
+       (rescaling one series could make every lag NaN). Series that are
+       collinear to working precision give NaN instead of inaccurate
+       values. The lags after a singular prediction error covariance
+       matrix are NaN on every platform instead of depending on
+       rounding, and the lag computed just before it is no longer
+       dropped.
 
     The OLS method returns NaN for lags where either residual series
     has zero variance.

@@ -6,6 +6,7 @@ License: Simplified-BSD
 """
 from statsmodels.compat.pandas import MONTH_END
 
+import inspect
 from pathlib import Path
 import re
 import warnings
@@ -22,12 +23,14 @@ from scipy.linalg import solve_discrete_lyapunov
 
 from statsmodels.datasets import macrodata, nile
 from statsmodels.iolib.summary import Summary
+from statsmodels.tools.numdiff import approx_fprime, approx_hess3
 from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.statespace import (
     dynamic_factor,
     kalman_filter,
     kalman_smoother,
     sarimax,
+    structural,
     varmax,
 )
 from statsmodels.tsa.statespace.initialization import Initialization
@@ -296,6 +299,170 @@ def test_fit_misc():
 
     # 5 digits necessary to accommodate 32-bit numpy/scipy with OpenBLAS 0.2.18
     assert_almost_equal(res_params, [0, 0], 5)
+
+
+def _newton_model(name):
+    data = macrodata.load_pandas().data
+    if name == "sarimax_lgdp":
+        # With the approximate diffuse initialization, the loglikelihood of this
+        # model has a rounding error that is large compared with its curvature
+        # near the optimum. Newton reaches the optimum but cannot meet its
+        # tolerance then, so that the exact diffuse initialization is used.
+        endog = np.log(data["realgdp"].to_numpy())
+        return sarimax.SARIMAX(endog, order=(1, 1, 0), use_exact_diffuse=True)
+    elif name.startswith("sarimax_infl"):
+        return sarimax.SARIMAX(data["infl"].to_numpy(), order=(1, 0, 1), trend="c")
+    else:  # "uc_infl"
+        return structural.UnobservedComponents(data["infl"].to_numpy(), "llevel")
+
+
+@pytest.mark.parametrize(
+    "name, optim_hessian",
+    [
+        ("sarimax_lgdp", None),
+        ("sarimax_infl", None),
+        ("sarimax_infl", "oim"),
+        ("sarimax_infl", "opg"),
+        ("sarimax_infl_fixed", None),
+        ("uc_infl", None),
+    ],
+)
+def test_fit_newton_optimum(name, optim_hessian):
+    # Newton evaluated the score and the Hessian without the flags of `fit`,
+    # that is, as functions of the constrained parameters at the values of the
+    # unconstrained ones, and it stopped before the optimum or failed. L-BFGS
+    # with the complex-step score, which does not use the Hessian, is the
+    # reference. Its default tolerances bound the agreement of the parameters
+    # at about 1e-5.
+    mod = _newton_model(name)
+    fit_kwargs = {"disp": 0}
+    if name.endswith("_fixed"):
+        res = mod.fit_constrained(
+            {"ar.L1": 0.6}, method="newton", optim_hessian=optim_hessian, **fit_kwargs
+        )
+        desired = mod.fit_constrained(
+            {"ar.L1": 0.6}, method="lbfgs", optim_score="approx", **fit_kwargs
+        )
+    else:
+        res = mod.fit(method="newton", optim_hessian=optim_hessian, **fit_kwargs)
+        desired = mod.fit(method="lbfgs", optim_score="approx", **fit_kwargs)
+    assert res.mle_retvals["converged"]
+    assert desired.mle_retvals["converged"]
+    assert_allclose(res.llf, desired.llf, rtol=1e-8)
+    assert_allclose(res.params, desired.params, rtol=1e-4)
+
+
+def test_fit_newton_derivatives_at_start():
+    # Newton minimizes -loglike(params, transformed=False) / nobs over the
+    # unconstrained parameters. Its score and Hessian at the start are the
+    # derivatives of that objective, here computed by finite differences with
+    # steps that are far above the rounding error of the loglikelihood.
+    mod = _newton_model("sarimax_lgdp")
+    start = mod.untransform_params(mod.start_params)
+    res = mod.fit(method="newton", maxiter=0, disp=0, warn_convergence=False)
+    assert_allclose(res.mle_settings["start_params"], start, rtol=1e-12)
+
+    def objective(params):
+        return -mod.loglike(params, transformed=False) / mod.nobs
+
+    score = approx_fprime(start, objective, epsilon=1e-5 * np.abs(start), centered=True)
+    hessian = approx_hess3(start, objective, epsilon=1e-3 * np.abs(start))
+    assert_allclose(res.mle_retvals["score"], score, rtol=1e-6)
+    assert_allclose(res.mle_retvals["Hessian"], hessian, rtol=1e-4)
+
+
+def _ar2_model():
+    # The transformation of the AR(2) parameters has a Jacobian that is not
+    # diagonal, and the burned observations make nobs - loglikelihood_burn
+    # differ from nobs.
+    endog = macrodata.load_pandas().data["infl"].to_numpy()
+    return sarimax.SARIMAX(endog, order=(2, 0, 1), trend="c", loglikelihood_burn=3)
+
+
+@pytest.mark.parametrize("average", [True, False])
+def test_hessian_untransformed(average):
+    # The Hessian of the loglikelihood with respect to the unconstrained
+    # parameters, at the start, where the score is not zero, so that the second
+    # derivatives of the transformation matter. The finite differences agree to
+    # about 1e-6 here.
+    mod = _ar2_model()
+    params = mod.untransform_params(mod.start_params)
+
+    def loglike(params):
+        return mod.loglike(params, transformed=False)
+
+    epsilon = 1e-4 * np.maximum(np.abs(params), 0.1)
+    desired = approx_hess3(params, loglike, epsilon=epsilon)
+    if average:
+        desired /= mod.nobs - mod.loglikelihood_burn
+    actual = mod.hessian(params, transformed=False, average=average)
+    assert_allclose(actual, desired, rtol=1e-5)
+
+
+def test_hessian_untransformed_opg():
+    # The outer product of the scores with respect to the unconstrained
+    # parameters, which are here computed by differentiating loglikeobs
+    # through the transformation
+    mod = _ar2_model()
+    params = mod.untransform_params(mod.start_params)
+    score_obs = mod.score_obs(
+        params, transformed=False, approx_complex_step=False, approx_centered=True
+    )
+    desired = -score_obs.T @ score_obs / (mod.nobs - mod.loglikelihood_burn)
+    actual = mod.hessian(params, transformed=False, method="opg")
+    assert_allclose(actual, desired, rtol=1e-7)
+
+
+@pytest.mark.parametrize("method", ["approx", "oim", "opg"])
+def test_hessian_average(method):
+    # The Hessian of the loglikelihood is its average times the number of
+    # observations that are not burned
+    mod = _ar2_model()
+    params = mod.start_params
+    average = mod.hessian(params, method=method)
+    total = mod.hessian(params, method=method, average=False)
+    assert_allclose(total, average * (mod.nobs - mod.loglikelihood_burn), rtol=1e-14)
+
+
+def test_hessian_positional_flags():
+    # The four flags can be passed positionally, as before `average` was added.
+    # `average` is keyword-only, so that a fifth positional flag is one too many.
+    mod = _ar2_model()
+    params = mod.start_params
+    desired = mod.hessian(
+        params,
+        transformed=True,
+        method="approx",
+        approx_complex_step=None,
+        approx_centered=False,
+    )
+    actual = mod.hessian(params, True, "approx", None, False)
+    assert_allclose(actual, desired, rtol=1e-14)
+    with pytest.raises(ValueError, match="zip"):
+        mod.hessian(params, True, "approx", None, False, False)
+    kind = inspect.signature(MLEModel.hessian).parameters["average"].kind
+    assert kind is inspect.Parameter.KEYWORD_ONLY
+
+
+def test_hessian_fit_flags_average():
+    # fit passes the same dictionary of flags, with average False, to
+    # loglike, score and hessian. Only hessian uses average.
+    mod = _newton_model("sarimax_infl")
+    res = mod.fit(method="newton", maxiter=0, disp=0, warn_convergence=False)
+    (flags,) = res.mle_settings["fargs"]
+    assert flags["average"] is False
+    params = mod.untransform_params(mod.start_params)
+    assert_allclose(
+        mod.loglike(params, flags), mod.loglike(params, transformed=False), rtol=1e-14
+    )
+    assert_allclose(
+        mod.score(params, flags), mod.score(params, transformed=False), rtol=1e-14
+    )
+    desired = mod.hessian(params, transformed=False, average=False)
+    assert_allclose(mod.hessian(params, flags), desired, rtol=1e-14)
+    # without an entry in the dictionary, the keyword is used
+    actual = mod.hessian(params, {"transformed": False}, average=False)
+    assert_allclose(actual, desired, rtol=1e-14)
 
 
 @pytest.mark.parametrize("name", ["mlefit", "mle_retvals", "mle_settings"])

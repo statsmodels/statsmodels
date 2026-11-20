@@ -1026,6 +1026,99 @@ class TestPCCF:
                     result[h - 1]
                 ), f"lag {h}: {n_obs} obs, {n_cols} cols should be NaN"
 
+    @pytest.mark.filterwarnings("error::RuntimeWarning")
+    @pytest.mark.parametrize("method", ["yw", "ywm"])
+    @pytest.mark.parametrize("scale", [1e-200, 1e-8, 1e8, 1e200])
+    @pytest.mark.parametrize("scaled", ["x", "y"])
+    def test_yw_scale_invariant(self, method, scale, scaled):
+        # The PCCF does not depend on the scales of x and y. The singularity
+        # checks used absolute tolerances, so rescaling one series made every
+        # lag NaN, and 1e200 overflowed.
+        x = np.diff(np.log(self.x.to_numpy()))
+        y = np.diff(np.log(self.y.to_numpy()))
+        expected = pccf(x, y, nlags=5, method=method)
+        assert np.all(np.isfinite(expected))
+        if scaled == "x":
+            x = scale * x
+        else:
+            y = scale * y
+        result = pccf(x, y, nlags=5, method=method)
+        assert_allclose(result, expected, rtol=1e-12)
+
+    # A negative variance must stop the recursion, not reach np.sqrt
+    @pytest.mark.filterwarnings("error::RuntimeWarning")
+    @pytest.mark.parametrize(
+        "method, expected",
+        [
+            ("ywm", [1 / 8, 3 / np.sqrt(217), -1 / 14, np.nan]),
+            ("yw", [1 / 7, np.nan, np.nan, np.nan]),
+        ],
+    )
+    def test_yw_singular_step_later_lags_nan(self, method, expected):
+        # In rational arithmetic, the "ywm" prediction error covariance
+        # matrices after two lags are singular for these periodic series,
+        # with diagonals 21/104. Lag 3 only needs the diagonals and is
+        # (-3/208) / (21/104) = -1/14. Lag 4 needs the inverses, so it is NaN;
+        # it came from solving the singular system and depended on rounding.
+        # With "yw", the forward prediction error variance after one lag is
+        # -1/49, so the lags from 2 on are NaN.
+        x = np.tile([1.0, -1.0], 4)
+        y = np.tile([1.0, 1.0, -1.0, -1.0], 2)
+        result = pccf(x, y, nlags=4, method=method)
+        assert_allclose(result, expected, rtol=1e-12)
+
+    def test_yw_lag_before_singular_step_kept(self):
+        # y_t = x_{t+1}, and every step here is exact in binary floating
+        # point. Gamma(0) = I and Gamma(1)[0, 1] = -7/8. The "ywm" prediction
+        # error covariance after one lag is singular, with diagonal 7/32, so
+        # np.linalg.solve raised and lag 2 was discarded, although it only
+        # needs the diagonal. Lags 3 and 4 need the inverse and are NaN.
+        x = np.tile([-1.0, -1.0, 1.0, 1.0], 2)
+        y = np.roll(x, -1)
+        result = pccf(x, y, nlags=4, method="ywm")
+        # lag 2 is exactly 0, which rtol cannot check, hence atol
+        assert_allclose(result[:2], [-7 / 8, 0.0], rtol=1e-12, atol=1e-14)
+        assert np.all(np.isnan(result[2:]))
+
+    @pytest.mark.parametrize(
+        "method, expected",
+        [
+            (
+                "ywm",
+                [
+                    -0.163137921011545,
+                    -0.0395017554720548,
+                    -0.022027194791587,
+                    -0.140490723788968,
+                ],
+            ),
+            (
+                "yw",
+                [
+                    -0.165902970520216,
+                    -0.0409034423438503,
+                    -0.023252913269295,
+                    -0.151223237958104,
+                ],
+            ),
+        ],
+    )
+    def test_yw_collinear_to_working_precision_nan(self, method, expected):
+        # y = x + noise * e. The expected values for noise = 1e-3 are from
+        # exact rational arithmetic on the same floats. With noise = 1e-7
+        # the correlation of x and y is 1 - O(1e-14), so x and y are
+        # collinear to working precision: the values were off by up to 0.03
+        # against exact arithmetic, and are now NaN, as for exactly
+        # collinear series (noise = 0).
+        rng = np.random.default_rng(3)
+        x = rng.standard_normal(60)
+        e = rng.standard_normal(60)
+        result = pccf(x, x + 1e-3 * e, nlags=4, method=method)
+        assert_allclose(result, expected, rtol=1e-8)
+        for noise in (1e-7, 0.0):
+            result = pccf(x, x + noise * e, nlags=4, method=method)
+            assert np.all(np.isnan(result))
+
 
 class TestBlockJackknife:
     """
@@ -4904,9 +4997,6 @@ def test_acf_pacf_adfuller_input_forms(form):
     x_form = series_forms(x)[form]
     assert_allclose(acf(x_form, nlags=10), acf(x, nlags=10), rtol=1e-12)
     for method in ("yw", "ols", "burg", "ldb"):
-        if method == "burg" and form in ("column", "dataframe"):
-            # pacf_burg does not accept an (n, 1) column yet
-            continue
         assert_allclose(
             pacf(x_form, nlags=10, method=method),
             pacf(x, nlags=10, method=method),
