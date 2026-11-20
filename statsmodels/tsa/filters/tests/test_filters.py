@@ -2,6 +2,7 @@ from statsmodels.compat.pandas import QUARTER_END, assert_index_equal
 
 from datetime import datetime
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy import array, column_stack
@@ -10,7 +11,7 @@ from numpy.testing import (
     assert_almost_equal,
     assert_equal,
 )
-from pandas import DataFrame, concat, date_range, read_csv
+from pandas import DataFrame, Series, concat, date_range, read_csv
 import pytest
 
 from statsmodels.datasets import macrodata
@@ -1300,3 +1301,198 @@ def test_bkfilter_band_order():
     # a non-positive low used to crash with ZeroDivisionError (2*pi/low)
     with pytest.raises(ValueError, match="0 < low < high, got low=0"):
         bkfilter(np.arange(100.0), low=0, high=32, K=3)
+
+
+RF_AR_COEFF = [0.6, -0.3, 0.2]
+RF_INIT = [1.5, -0.5, 2.0]
+RF_NOBS = 40
+
+
+def _recursive_filter_data():
+    return np.random.default_rng(20261119).standard_normal(RF_NOBS)
+
+
+def _recursive_filter_reference(x, ar_coeff, init=None):
+    # The recursion in the recursive_filter docstring, evaluated directly:
+    #     y[t] = ar_coeff[0] * y[t-1] + ... + ar_coeff[k-1] * y[t-k] + x[t]
+    # The values before the first observation are init in reverse time
+    # order (init[0] is y[-1], as in R's stats::filter), or zero.
+    k = len(ar_coeff)
+    past = [0.0] * k if init is None else list(init)
+    y = []
+    for xt in x:
+        yt = xt + sum(ar_coeff[j] * past[j] for j in range(k))
+        y.append(yt)
+        past = [yt] + past[:-1]
+    return np.array(y)
+
+
+def test_recursive_filter_reference_matches_lfilter():
+    # check the loop reference against scipy for the zero initial values
+    from scipy import signal
+
+    x = _recursive_filter_data()
+    expected = signal.lfilter([1.0], np.r_[1.0, -np.array(RF_AR_COEFF)], x)
+    res = _recursive_filter_reference(x, RF_AR_COEFF)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("init", [None, RF_INIT], ids=["zero-init", "init"])
+def test_recursive_filter_1d_matches_reference(init):
+    x = _recursive_filter_data()
+    res = recursive_filter(x, RF_AR_COEFF, init=init)
+    assert isinstance(res, np.ndarray)
+    assert res.shape == (RF_NOBS,)
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, init)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+def _rf_index():
+    return date_range("2000-01-01", periods=RF_NOBS, freq="D")
+
+
+# Each case: how to build the input from the 1d data, the type and shape
+# that must be returned, and how to get the values out as 1d
+RF_CONTAINERS = {
+    "column": (
+        lambda x: x[:, None],
+        np.ndarray,
+        (RF_NOBS, 1),
+        lambda res: res[:, 0],
+    ),
+    "nested-list": (
+        lambda x: [[v] for v in x],
+        np.ndarray,
+        (RF_NOBS, 1),
+        lambda res: res[:, 0],
+    ),
+    "dataframe": (
+        lambda x: DataFrame({"y": x}, index=_rf_index()),
+        DataFrame,
+        (RF_NOBS, 1),
+        lambda res: res["y"].to_numpy(),
+    ),
+    "list": (
+        lambda x: x.tolist(),
+        np.ndarray,
+        (RF_NOBS,),
+        lambda res: res,
+    ),
+    "series": (
+        lambda x: Series(x, index=_rf_index(), name="y"),
+        Series,
+        (RF_NOBS,),
+        lambda res: res.to_numpy(),
+    ),
+}
+
+
+@pytest.mark.parametrize("init", [None, RF_INIT], ids=["zero-init", "init"])
+@pytest.mark.parametrize("container", list(RF_CONTAINERS))
+def test_recursive_filter_containers(container, init):
+    # GH10810: an (n, 1) column, documented as accepted, was filtered along the
+    # wrong axis, so no recursion was applied and the input came back
+    # unchanged; with init it raised. It must give the 1d values, and keep
+    # the container and shape of the input.
+    make_input, out_type, out_shape, values = RF_CONTAINERS[container]
+    x = _recursive_filter_data()
+    res = recursive_filter(make_input(x), RF_AR_COEFF, init=init)
+    assert type(res) is out_type
+    assert res.shape == out_shape
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, init)
+    assert_allclose(values(res), expected, rtol=1e-10)
+    if isinstance(res, (Series, DataFrame)):
+        assert_index_equal(res.index, _rf_index())
+    if isinstance(res, DataFrame):
+        assert list(res.columns) == ["y"]
+    if isinstance(res, Series):
+        assert res.name == "y"
+
+
+def _rf_row_dataframe(x):
+    columns = [f"c{i}" for i in range(x.shape[0])]
+    return DataFrame(x[None, :], index=_rf_index()[:1], columns=columns)
+
+
+# Each case: how to build a row from the 1d data, and the type and shape that
+# must be returned
+RF_ROWS = {
+    "row": (lambda x: x[None, :], np.ndarray, (1, RF_NOBS)),
+    "nested-list": (lambda x: [x.tolist()], np.ndarray, (1, RF_NOBS)),
+    "dataframe": (_rf_row_dataframe, DataFrame, (1, RF_NOBS)),
+    "row-3d": (lambda x: x[None, None, :], np.ndarray, (1, 1, RF_NOBS)),
+    "row-4d": (lambda x: x.reshape(1, 1, 1, -1), np.ndarray, (1, 1, 1, RF_NOBS)),
+}
+RF_ROW_WARNING = (
+    rf"x must be 1-D or an \(n, 1\) column, but has shape \((1, )+{RF_NOBS}\)\. "
+    r"A row with shape \(1, n\) or \(1, \.\.\., 1, n\) .* deprecated and will "
+    r"raise a ValueError in statsmodels 0\.17\.0\."
+)
+
+
+@pytest.mark.parametrize("init", [None, RF_INIT], ids=["zero-init", "init"])
+@pytest.mark.parametrize("container", list(RF_ROWS))
+def test_recursive_filter_row_deprecated(container, init):
+    # GH10810: a row with shape (1, n) or (1, ..., 1, n) was filtered along its
+    # last axis, so it gave the values of the 1d input in the shape of the
+    # row. It keeps doing so, with a warning, until it raises in 0.17.0. With
+    # init it used to raise, as for a column.
+    make_input, out_type, out_shape = RF_ROWS[container]
+    x = _recursive_filter_data()
+    x_row = make_input(x)
+    with pytest.warns(FutureWarning, match=RF_ROW_WARNING):
+        res = recursive_filter(x_row, RF_AR_COEFF, init=init)
+    assert type(res) is out_type
+    assert res.shape == out_shape
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, init)
+    assert_allclose(np.asarray(res).ravel(), expected, rtol=1e-10)
+    if isinstance(res, DataFrame):
+        assert_index_equal(res.index, x_row.index)
+        assert_index_equal(res.columns, x_row.columns)
+
+
+@pytest.mark.parametrize("init", [None, RF_INIT], ids=["zero-init", "init"])
+@pytest.mark.parametrize("container", ["ndarray", "ndarray-3d", "dataframe"])
+def test_recursive_filter_single_observation(container, init):
+    # a (1, 1) or (1, 1, 1) array is one observation, like an (n, 1) column
+    # with n = 1, and not a deprecated row
+    x = _recursive_filter_data()[:1]
+    if container == "ndarray":
+        x_in = x.reshape(1, 1)
+    elif container == "ndarray-3d":
+        x_in = x.reshape(1, 1, 1)
+    else:
+        x_in = DataFrame({"y": x}, index=_rf_index()[:1])
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = recursive_filter(x_in, RF_AR_COEFF, init=init)
+    assert type(res) is type(x_in)
+    assert res.shape == x_in.shape
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, init)
+    assert_allclose(np.asarray(res).ravel(), expected, rtol=1e-10)
+    if isinstance(res, DataFrame):
+        assert_index_equal(res.index, x_in.index)
+        assert list(res.columns) == ["y"]
+
+
+@pytest.mark.parametrize(
+    "x",
+    [
+        np.ones((10, 2)),
+        DataFrame(np.ones((10, 2))),
+    ],
+    ids=["ndarray", "dataframe"],
+)
+@pytest.mark.parametrize("init", [None, [1.0]], ids=["zero-init", "init"])
+def test_recursive_filter_more_than_one_column_raises(x, init):
+    # these used to filter across the columns of each row
+    with pytest.raises(ValueError, match=r"x must be 1-D or an \(n, 1\) column"):
+        recursive_filter(x, [0.5], init=init)
+
+
+@pytest.mark.parametrize("shape", [(10, 1, 1), (1, 10, 1)], ids=["n-1-1", "1-n-1"])
+@pytest.mark.parametrize("init", [None, [1.0]], ids=["zero-init", "init"])
+def test_recursive_filter_3d_raises(shape, init):
+    # (n, 1, 1) and (1, n, 1) arrays used to be returned unchanged
+    with pytest.raises(ValueError, match=r"x must be 1-D or an \(n, 1\) column"):
+        recursive_filter(np.ones(shape), [0.5], init=init)

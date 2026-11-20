@@ -47,6 +47,14 @@ Deprecations
   it will be removed in statsmodels 0.17.0. The value of ``which`` is case
   sensitive and ``exog`` can be a list. :issue:`8562`, :pr:`10554`,
   :pr:`10555`
+- Passing a row, an array with shape (1, n) or (1, ..., 1, n) with n > 1, as
+  ``x`` to :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` is
+  deprecated, since ``x`` must be 1-D or an (n, 1) column. The row is still
+  filtered as a 1-D series of n observations and returned with the shape of
+  ``x``, and ``init`` now works with it instead of raising a ``ValueError``.
+  Passing a row now raises a ``FutureWarning``, and it will raise a
+  ``ValueError`` in statsmodels 0.17.0. Pass a 1-D array or an (n, 1) column
+  instead. :pr:`10810`
 - ``statsmodels.tsa.statespace.tools.set_mode``,
   ``statsmodels.tsa.tsatools.unintegrate`` and ``unintegrate_levels``, and
   ``statsmodels.tsa.vector_ar.output.normality_summary`` and
@@ -278,6 +286,16 @@ Behavior changes
   ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
   ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
   :pr:`10792`
+- :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` filters an
+  (n, 1) column, such as a one-column ``DataFrame``, along its rows and
+  returns the values of the 1-D series. Before, no recursion was applied to a
+  column, which was returned unchanged without an error, and ``init`` raised a
+  ``ValueError``. Input with more than one row and more than one column, which
+  was filtered across the columns of each row, now raises a ``ValueError``. So
+  does input with more than two dimensions that is neither a row with shape
+  (1, ..., 1, n) nor a single observation with shape (1, ..., 1), such as an
+  (n, 1, 1) array, which was returned unchanged. Results for 1-D input are
+  unchanged. :pr:`10810`
 - The ``lags`` arguments of the ``ArmaProcess`` methods ``acovf``, ``acf``,
   ``pacf``, ``periodogram``, ``impulse_response``, ``arma2ma`` and
   ``arma2ar`` raise a ``ValueError`` for values below 1. Before, ``lags=0``
