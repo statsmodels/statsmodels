@@ -4,6 +4,7 @@ from statsmodels.compat.pandas import Substitution, is_int_index
 
 import datetime as dt
 from typing import Any
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -255,7 +256,12 @@ class STLForecastResults:
             or is_int_index(self._index)
         ):
             try:
-                self._index = pd.to_datetime(self._index)
+                with warnings.catch_warnings():
+                    # pandas warns before failing on an index of non-dates
+                    warnings.filterwarnings(
+                        "ignore", "Could not infer format", UserWarning
+                    )
+                    self._index = pd.to_datetime(self._index)
             except ValueError:
                 self._index = pd.RangeIndex(self._nobs)
 
@@ -512,8 +518,6 @@ class STLForecastResults:
             var_pred_mean = pred.var_pred_mean
         except (AttributeError, NotImplementedError):
             # Allow models that do not return var_pred_mean
-            import warnings
-
             warnings.warn(
                 "The variance of the predicted mean is not available using "
                 f"the {self.model.__class__.__name__} model class.",

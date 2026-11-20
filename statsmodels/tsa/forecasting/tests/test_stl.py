@@ -3,6 +3,9 @@ from statsmodels.compat.pandas import MONTH_END
 import datetime as dt
 import re
 
+
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
@@ -451,3 +454,29 @@ def test_one_column_endog(form):
     assert_allclose(res.forecast(14), forecast, rtol=1e-10)
     pred = res.get_prediction(100, 133)
     assert_allclose(pred.predicted_mean, predicted, rtol=1e-10)
+
+
+class _ValuesAR:
+    # An AR(2) with a constant fit to the values of endog, without its index
+    def __init__(self, endog):
+        self._model = AutoReg(np.asarray(endog), lags=2, trend="c")
+
+    def fit(self):
+        return self._model.fit()
+
+
+def test_non_date_index_no_warning():
+    # An index that does not hold dates is replaced by a RangeIndex without
+    # the warning that pandas gives when it cannot infer a date format. The
+    # model ignores the index, so any warning comes from STLForecast
+    y = _seasonal_data()
+    endog = pd.Series(y, index=[f"obs{i}" for i in range(120)])
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        res = STLForecast(endog, _ValuesAR, period=12).fit()
+        forecast = res.forecast(14)
+        pred = res.get_prediction(100, 133)
+    assert [str(w.message) for w in record] == []
+    expected_forecast, expected_predicted = _stl_ar_reference(y, 100, 14)
+    assert_allclose(forecast, expected_forecast, rtol=1e-10)
+    assert_allclose(pred.predicted_mean, expected_predicted, rtol=1e-10)
