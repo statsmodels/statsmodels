@@ -107,12 +107,13 @@ def nested_lag_ols(endog, lags, exog=None, *, rcond, start=None, check_fit=True)
     ----------
     endog : array_like
         The dependent variable, (nobs,), or variables, (nobs, neqs).
-    lags : ndarray or list of array_like
+    lags : ndarray or sequence of array_like
         The lag blocks in the order in which they enter the regressions. If
         an ndarray of shape (nobs, nlags), each column is one block. If a
-        list, each block has shape (nobs, k_j). Order p uses the first p
-        blocks. The blocks are copied in groups of rows, so views of the data
-        avoid forming the full matrix of lags.
+        sequence, each block has shape (nobs, k_j), or (nobs,) for a single
+        column. Order p uses the first p blocks. The blocks are copied in
+        groups of rows, so views of the data avoid forming the full matrix
+        of lags.
     exog : array_like, optional
         Regressors included in every order, of shape (nobs, k_exog).
     rcond : float or None
