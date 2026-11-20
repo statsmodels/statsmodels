@@ -980,15 +980,61 @@ LAG_POLYNOMIAL_2D_RAISED = [
 ]
 
 
+def _unchecked(func):
+    # The function without the 1-D check of _require_1d
+    return getattr(func, "__wrapped__", func)
+
+
+# The functions without the 1-D check, which tell what 2-D input did before
+LAG_POLYNOMIAL_UNCHECKED = {
+    "arma_acovf": _unchecked(arma_acovf),
+    "arma_acf": _unchecked(arma_acf),
+    "arma_pacf": _unchecked(arma_pacf),
+    "arma_impulse_response": _unchecked(arma_impulse_response),
+    "arma2ma": lambda ar, ma, n: _unchecked(arma_impulse_response)(ar, ma, leads=n),
+    "arma2ar": _unchecked(arma2ar),
+    "arma_periodogram": _unchecked(arma_periodogram),
+    "arma_generate_sample": lambda ar, ma, n: _unchecked(arma_generate_sample)(
+        ar, ma, n, distrvs=np.random.default_rng(0).standard_normal
+    ),
+}
+
+
+def _as_tuple(value):
+    return value if isinstance(value, tuple) else (value,)
+
+
 @pytest.mark.parametrize("name, arg, shape", LAG_POLYNOMIAL_2D_RAISED)
 def test_lag_polynomial_2d_raises(name, arg, shape):
     # NumPy and SciPy raised errors that did not name the argument, and
     # arma2ar named the other one
     polynomials = {"ar": [1.0, -0.5, 0.25], "ma": [1.0, 0.4]}
     polynomials[arg] = _as_2d(polynomials[arg], shape)
+    args = (polynomials["ar"], polynomials["ma"], 8)
+    func = LAG_POLYNOMIAL_FUNCTIONS[name]
+    if shape == "1x1":
+        # A (1, 1) polynomial can reach a conversion of an array to a scalar,
+        # which raises in recent NumPy but returned in older NumPy (with a
+        # DeprecationWarning from NumPy 1.25). What the function without the
+        # check does decides what is expected.
+        try:
+            with warnings.catch_warnings(record=True):
+                expected = LAG_POLYNOMIAL_UNCHECKED[name](*args)
+        except Exception:
+            pass
+        else:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                with pytest.warns(FutureWarning, match=_warns_2d(arg)):
+                    result = func(*args)
+            for res, exp in zip(_as_tuple(result), _as_tuple(expected), strict=True):
+                assert_allclose(res, exp, rtol=1e-12)
+            return
     match = _raises_2d(arg, np.shape(polynomials[arg]))
-    with pytest.raises(ValueError, match=match):
-        LAG_POLYNOMIAL_FUNCTIONS[name](polynomials["ar"], polynomials["ma"], 8)
+    with pytest.raises(ValueError, match=match) as exc_info:
+        func(*args)
+    # The error of the function without the check is the cause
+    assert exc_info.value.__cause__ is not None
 
 
 @pytest.mark.parametrize("name, arg, shape", LAG_POLYNOMIAL_2D_RETURNED)
