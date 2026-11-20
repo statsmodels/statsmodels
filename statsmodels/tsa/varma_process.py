@@ -397,18 +397,28 @@ class _Var:
     """
     Obsolete VAR class, use tsa.VAR instead, for internal use only
 
+    Parameters
+    ----------
+    y : ndarray or DataFrame
+        The data, of shape (nobs, nvars), with observations in rows.
+
     Examples
     --------
-
-    >>> v = Var(ar2s)
+    >>> import numpy as np
+    >>> from statsmodels.tsa.varma_process import _Var
+    >>> rng = np.random.default_rng(0)
+    >>> a = np.array([[0.8, 0.0], [-0.1, 0.8]])
+    >>> y = np.zeros((500, 2))
+    >>> for t in range(1, 500):
+    ...     y[t] = a @ y[t - 1] + rng.standard_normal(2)
+    >>> v = _Var(y)
     >>> v.fit(1)
-    >>> v.arhat
-    array([[[ 1.        ,  0.        ],
-            [ 0.        ,  1.        ]],
-
-           [[-0.77784898,  0.01726193],
-            [ 0.10733009, -0.78665335]]])
-
+    >>> v.arhat.round(2)
+    array([[[ 1.  ,  0.  ],
+            [ 0.  ,  1.  ]],
+    <BLANKLINE>
+           [[-0.83,  0.09],
+            [ 0.02, -0.75]]])
     """
 
     def __init__(self, y):
@@ -447,13 +457,21 @@ class _Var:
 
         The following are attached to the instance:
 
-        arhat : ndarray of shape (nlags, nvar, nvar)
-            Full lag polynomial array.
-        arlhs : ndarray of shape (nlags - 1, nvar, nvar)
-            Reduced lag polynomial for the left-hand side.
+        arhat : ndarray of shape (nlags + 1, nvar, nvar)
+            Full lag polynomial array, the identity followed by ``-arlhs``.
+        arlhs : ndarray of shape (nlags, nvar, nvar)
+            Reduced lag polynomial for the left-hand side. ``arlhs[i]`` is
+            the transpose of the coefficient matrix of lag ``i + 1``.
         estresults
             The full result tuple as returned by ``linalg.lstsq``; other
             statistics still need to be completed.
+        rss : ndarray of shape (nvar,)
+            The residual sum of squares of each equation.
+        xredrank : int
+            The rank of the regressor matrix.
+        yred, xred : ndarray
+            The dependent variables and the lagged regressors used in the
+            regression.
         """
         self.nlags = nlags  # without current period
         nvars = self.nvars
@@ -479,6 +497,13 @@ class _Var:
     def covmat(self):
         """
         Covariance matrix of estimate
+
+        Returns
+        -------
+        None
+            Nothing is returned; the result is attached to the instance as
+            ``paramcov``, of shape (nlags * nvar, nlags * nvar, nvar), where
+            ``paramcov[:, :, i]`` belongs to equation ``i``.
 
         Notes
         -----
@@ -515,7 +540,8 @@ class _Var:
         Parameters
         ----------
         horiz : int, optional
-            Forecast horizon.
+            Forecast horizon. Ignored if `u` is given, in which case the
+            horizon is the number of rows of `u`.
         u : ndarray, optional
             Error term for forecast periods, of shape (horiz, nvars). If
             None, then u is zero.
