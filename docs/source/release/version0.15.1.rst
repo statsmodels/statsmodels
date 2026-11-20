@@ -334,6 +334,12 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- With ``autolag=None`` and no ``maxlag``,
+  :func:`~statsmodels.tsa.stattools.zivot_andrews` uses the default number of
+  lags of ``adfuller`` with ``regression="ct"``, as its lag search already
+  did: ``ceil(12 * (nobs / 100) ** (1 / 4))``, capped at ``nobs // 2 - 3``. It
+  used the floor of the same formula, without the cap, which is one lag fewer
+  for most sample sizes, so the results of such calls change. :pr:`10851`
 
 New Features and Enhancements
 =============================
