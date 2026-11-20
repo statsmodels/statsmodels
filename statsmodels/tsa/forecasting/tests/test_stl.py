@@ -205,3 +205,39 @@ def test_no_var_pred(sunspots, not_implemented, close_figures):
     with pytest.warns(UserWarning, match="The variance of"):
         pred = stl_res.get_prediction()
     assert np.all(np.isnan(pred.var_pred_mean))
+
+
+def _seasonal_data():
+    rng = np.random.default_rng(20261120)
+    t = np.arange(120)
+    y = 10 + 0.05 * t + 2 * np.sin(2 * np.pi * t / 12)
+    return y + rng.standard_normal(120)
+
+
+def _stl_ar_reference(y, start, steps):
+    # STL of the values, an AR(2) with a constant fit to the deseasonalized
+    # values, and the seasonal component of the last period repeated out of
+    # sample. Returns the forecasts and the predictions from start
+    stl_res = STL(y, period=12).fit()
+    seasonal = np.asarray(stl_res.seasonal)
+    deseasonalized = np.asarray(stl_res.trend + stl_res.resid)
+    ar_res = AutoReg(deseasonalized, lags=2, trend="c").fit()
+    oos_seasonal = np.resize(seasonal[-12:], steps)
+    forecast = ar_res.forecast(steps) + oos_seasonal
+    end = y.shape[0] + steps - 1
+    predicted = ar_res.predict(start, end)
+    predicted = predicted + np.r_[seasonal[start:], oos_seasonal]
+    return forecast, predicted
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_sequence_endog(container):
+    y = _seasonal_data()
+    endog = container(y.tolist())
+    model_kwargs = {"lags": 2, "trend": "c"}
+    stlf = STLForecast(endog, AutoReg, model_kwargs=model_kwargs, period=12)
+    res = stlf.fit()
+    forecast, predicted = _stl_ar_reference(y, 100, 14)
+    assert_allclose(res.forecast(14), forecast, rtol=1e-10)
+    pred = res.get_prediction(100, 133)
+    assert_allclose(pred.predicted_mean, predicted, rtol=1e-10)
