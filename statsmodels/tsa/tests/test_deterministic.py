@@ -531,6 +531,47 @@ def test_out_of_sample_without_in_sample(drop):
     pd.testing.assert_frame_equal(fresh2.range(10, 15), primed.range(10, 15))
 
 
+@pytest.mark.parametrize(
+    "index, expected",
+    [
+        (pd.RangeIndex(10), pd.RangeIndex(10, 13)),
+        (pd.Index(np.arange(10)), pd.Index(np.arange(10, 13))),
+        (
+            pd.date_range("2000-01-01", periods=10, freq="MS"),
+            pd.date_range("2000-11-01", periods=3, freq="MS"),
+        ),
+        (
+            pd.period_range("2000-01", periods=10, freq="M"),
+            pd.period_range("2000-11", periods=3, freq="M"),
+        ),
+    ],
+)
+def test_out_of_sample_without_terms(index, expected):
+    # A process without terms returned nobs rows on the in-sample index
+    dp = DeterministicProcess(index)
+    fcast = dp.out_of_sample(3)
+    assert fcast.shape == (3, 0)
+    pd.testing.assert_index_equal(fcast.index, expected)
+    # The forecast index of a process with terms
+    with_terms = DeterministicProcess(index, constant=True).out_of_sample(3)
+    pd.testing.assert_index_equal(fcast.index, with_terms.index)
+
+    forecast_index = pd.RangeIndex(20, 23)
+    fcast = dp.out_of_sample(3, forecast_index=forecast_index)
+    assert fcast.shape == (3, 0)
+    pd.testing.assert_index_equal(fcast.index, forecast_index)
+    with pytest.raises(ValueError, match="The number of values in forecast_"):
+        dp.out_of_sample(4, forecast_index=forecast_index)
+
+
+def test_range_without_terms():
+    # The out-of-sample part used to have the rows of the in-sample index
+    dp = DeterministicProcess(pd.RangeIndex(10))
+    terms = dp.range(8, 12)
+    assert terms.shape == (5, 0)
+    pd.testing.assert_index_equal(terms.index, pd.RangeIndex(8, 13), exact=False)
+
+
 def test_deterministic_process_errors(time_index):
     with pytest.raises(ValueError, match="seasonal and fourier"):
         DeterministicProcess(time_index, seasonal=True, fourier=2, period=5)

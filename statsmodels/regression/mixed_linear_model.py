@@ -1936,11 +1936,30 @@ class MixedLM(base.LikelihoodModel):
         the parameterization defined by this model instance's
         `use_sqrt` attribute.
 
+        If `use_sqrt` is True, the packed entries are the Cholesky factor
+        of the random effects covariance matrix and the square roots of
+        the variance components. Their signs matter: the score is the
+        derivative at exactly the vector that is passed in. If a
+        MixedLMParams is passed instead, the Cholesky factor with a
+        nonnegative diagonal is used. If `cov_re` is singular, for example
+        ``[[1, 1], [1, 1]]``, the packing falls back to the square roots of
+        its diagonal, so the packed vector does not reproduce `cov_re` and
+        the returned score is not the derivative at a Cholesky factor of
+        `cov_re`.
+
+        .. versionchanged:: 0.15.1
+
+           If `use_sqrt` is True, the score is the derivative at the packed
+           vector with the signs of its entries. The signs of the diagonal
+           of the Cholesky factor and of the square roots of the variance
+           components used to be dropped.
+
         """
         signed_params = None
         if type(params) is not MixedLMParams:
-            # from_packed squares the square roots, so keep their signs
-            signed_params = params
+            if self.use_sqrt:
+                # from_packed squares the square roots, so keep their signs
+                signed_params = params
             params = MixedLMParams.from_packed(
                 params, self.k_fe, self.k_re, self.use_sqrt, has_fe=False
             )
