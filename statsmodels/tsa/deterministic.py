@@ -1308,6 +1308,12 @@ you can pass additional components using the additional_terms input.""")
             provided must have steps elements. If not provided, the index of
             the process is extended.
 
+            .. versionchanged:: 0.15.1
+
+               A ``DatetimeIndex`` without a ``freq`` is extended with the
+               inferred freq, as in ``range``. Before, the forecasts had
+               integer labels, with a warning, and calendar terms raised.
+
         Returns
         -------
         DataFrame
@@ -1324,6 +1330,16 @@ you can pass additional components using the additional_terms input.""")
         if self._retain_cols is None:
             self.in_sample()
         index = self._index
+        if (
+            forecast_index is None
+            and isinstance(index, pd.DatetimeIndex)
+            and self._index_freq is not None
+        ):
+            # Extend with the freq of the process, which may have been
+            # inferred, since the terms can only use the freq of the index
+            forecast_index = pd.date_range(
+                index[-1], freq=self._index_freq, periods=steps + 1
+            )[1:]
         if not self._deterministic_terms:
             # The forecast index that the terms would have, with no columns
             fcast_index = DeterministicTerm._extend_index(
