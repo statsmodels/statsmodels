@@ -1150,6 +1150,11 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- ``CalendarTimeTrend`` returned its terms on a ``PeriodIndex`` for a
+  ``DatetimeIndex``, so a ``DeterministicProcess`` that combined it with other
+  terms gave misaligned frames with NaN, and on a ``PeriodIndex`` with a
+  frequency other than ``freq`` it counted time in the wrong unit.
+  :pr:`10853`
 
 Statistics and tests
 --------------------
