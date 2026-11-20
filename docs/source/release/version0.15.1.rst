@@ -1150,6 +1150,11 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- The string of ``TimeTrend`` and ``CalendarTimeTrend`` gave a highest power
+  one too large, and a negative trend ``order`` failed later with an unrelated
+  error; it raises a ``ValueError`` when the term is created. The ``lagmat``
+  error said that ``maxlag`` must be greater than 0, although 0 is allowed.
+  :pr:`10856`
 
 Statistics and tests
 --------------------
