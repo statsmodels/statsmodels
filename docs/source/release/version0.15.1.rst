@@ -996,6 +996,8 @@ Time series analysis
   (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``grangercausalitytests`` with an empty ``maxlag`` raised a NumPy error
+  instead of its own ``ValueError``. :pr:`10839`
 
 Statistics and tests
 --------------------
