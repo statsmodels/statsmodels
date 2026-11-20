@@ -278,6 +278,12 @@ Behavior changes
   ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
   ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
   :pr:`10792`
+- The ``lags`` arguments of the ``ArmaProcess`` methods ``acovf``, ``acf``,
+  ``pacf``, ``periodogram``, ``impulse_response``, ``arma2ma`` and
+  ``arma2ar`` raise a ``ValueError`` for values below 1. Before, ``lags=0``
+  was taken as the default and returned ``nobs`` values, and a negative
+  value gave a numpy error or an empty result. An integral float is now
+  accepted by all of them. :pr:`10835`
 - ``pacf_burg`` (and ``pacf`` with ``method="burg"``), ``kpss`` with
   ``regression="c"``, ``range_unit_root_test``, ``pccf`` and ``q_stat`` treat
   an (nobs, 1) column, such as a one-column ``DataFrame``, as the 1-D series
