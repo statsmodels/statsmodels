@@ -48,6 +48,16 @@ The model's autoregressive parameters (ar) indicate that the process
 """
 
 
+def _validate_lags(value, name):
+    # The number of values to return must be a positive integer. 0 used to
+    # raise an IndexError in the module level functions, and to select the
+    # default in the ArmaProcess methods.
+    value = int_like(value, name)
+    if value < 1:
+        raise ValueError(f"{name} must be a positive integer, got {value}")
+    return value
+
+
 def arma_generate_sample(
     ar, ma, nsample, scale=1, distrvs=None, axis=0, burnin=0
 ):
@@ -248,6 +258,12 @@ def arma_pacf(ar, ma, lags=10):
         The coefficients for moving-average lag polynomial, including zero lag.
     lags : int, optional
         The number of terms (lags plus zero lag) to include in returned pacf.
+        Must be a positive integer.
+
+        .. versionchanged:: 0.15.1
+
+           ``lags=0`` raises a ``ValueError``. It used to raise an
+           ``IndexError``. An integral float such as 7.0 is accepted.
 
     Returns
     -------
@@ -258,6 +274,7 @@ def arma_pacf(ar, ma, lags=10):
     -----
     Solves the Yule-Walker equation for each lag order up to ``lags``.
     """
+    lags = _validate_lags(lags, "lags")
     # TODO: Should use rank 1 inverse update
     apacf = np.zeros(lags)
     acov = arma_acf(ar, ma, lags=lags + 1)
@@ -284,6 +301,12 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
         If None, then compute at 512 frequencies around the unit circle.
         If a single integer, the compute at that many frequencies.
         Otherwise, compute the response at frequencies given in worN.
+        An integer must be positive.
+
+        .. versionchanged:: 0.15.1
+
+           ``worN=0`` raises a ``ValueError``. It used to return empty
+           arrays. A negative integer raises the same ``ValueError``.
     whole : bool, optional
         An option for scipy.signal.freqz.
         Normally, frequencies are computed from 0 to pi (upper-half of
@@ -308,6 +331,10 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
     This uses signal.freqz, which does not use fft. There is a fft version
     somewhere.
     """
+    # An integer is the number of frequencies, as in signal.freqz. A float is
+    # a frequency.
+    if isinstance(worN, (int, np.integer)) and worN < 1:
+        raise ValueError(f"worN must be a positive integer, got {worN}")
     w, h = signal.freqz(ma, ar, worN=worN, whole=whole)
     sd = np.abs(h) ** 2 / np.sqrt(2 * np.pi)
     if np.any(np.isnan(h)):
@@ -334,6 +361,12 @@ def arma_impulse_response(ar, ma, leads=100):
         The moving average lag polynomial.
     leads : int, optional
         The number of observations to calculate.
+        Must be a positive integer.
+
+        .. versionchanged:: 0.15.1
+
+           ``leads=0`` raises a ``ValueError``. It used to raise an
+           ``IndexError``. An integral float such as 7.0 is accepted.
 
     Returns
     -------
@@ -376,6 +409,7 @@ def arma_impulse_response(ar, ma, leads=100):
     array([ 1.        ,  1.3       ,  1.24      ,  0.992     ,  0.7936    ,
             0.63488   ,  0.507904  ,  0.4063232 ,  0.32505856,  0.26004685])
     """
+    leads = _validate_lags(leads, "leads")
     impulse = np.zeros(leads)
     impulse[0] = 1.0
     return signal.lfilter(ma, ar, impulse)
@@ -393,6 +427,12 @@ def arma2ma(ar, ma, lags=100):
         The moving average lag polynomial.
     lags : int, optional
         The number of coefficients to calculate.
+        Must be a positive integer.
+
+        .. versionchanged:: 0.15.1
+
+           ``lags=0`` raises a ``ValueError``. It used to raise an
+           ``IndexError``. An integral float such as 7.0 is accepted.
 
     Returns
     -------
@@ -403,6 +443,7 @@ def arma2ma(ar, ma, lags=100):
     -----
     Equivalent to ``arma_impulse_response(ar, ma, leads=lags)``
     """
+    lags = _validate_lags(lags, "lags")
     return arma_impulse_response(ar, ma, leads=lags)
 
 
@@ -418,6 +459,12 @@ def arma2ar(ar, ma, lags=100):
         The moving average lag polynomial.
     lags : int, optional
         The number of coefficients to calculate.
+        Must be a positive integer.
+
+        .. versionchanged:: 0.15.1
+
+           ``lags=0`` raises a ``ValueError``. It used to raise an
+           ``IndexError``. An integral float such as 7.0 is accepted.
 
     Returns
     -------
@@ -428,6 +475,7 @@ def arma2ar(ar, ma, lags=100):
     -----
     Equivalent to ``arma_impulse_response(ma, ar, leads=lags)``
     """
+    lags = _validate_lags(lags, "lags")
     return arma_impulse_response(ma, ar, leads=lags)
 
 
@@ -913,6 +961,12 @@ class ArmaProcess:
         nobs : int, optional
             If None, nobs is taken from the results.
 
+            .. versionchanged:: 0.15.1
+
+               ``nobs=0`` is used as given, as in the constructor. It used
+               to select the nobs of the results, as omitting the value
+               does.
+
         Returns
         -------
         ArmaProcess
@@ -923,7 +977,8 @@ class ArmaProcess:
         statsmodels.tsa.arima.model.ARIMA
             The models class used to create the ArmaProcess
         """
-        nobs = nobs or model_results.nobs
+        if nobs is None:
+            nobs = model_results.nobs
         return cls(
             model_results.polynomial_reduced_ar,
             model_results.polynomial_reduced_ma,
@@ -959,10 +1014,7 @@ class ArmaProcess:
         # also selected nobs for 0.
         if value is None:
             return self.nobs
-        value = int_like(value, name)
-        if value < 1:
-            raise ValueError(f"{name} must be a positive integer, got {value}")
-        return value
+        return _validate_lags(value, name)
 
     @Appender(
         _arma_lags_method_doc(

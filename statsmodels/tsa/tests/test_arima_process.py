@@ -603,6 +603,20 @@ def test_from_estimation(d, seasonal):
     assert ap_from.macoefs.shape == shape
 
 
+def test_from_estimation_nobs():
+    # nobs=0 used to select the nobs of the results, as omitting it does
+    rng = np.random.default_rng(0)
+    data = arma_generate_sample([1.0, -0.6], [1.0, 0.3], 80, distrvs=rng.normal)
+    res = ARIMA(data, order=(1, 0, 1), trend="n").fit()
+    assert res.nobs == 80
+    assert ArmaProcess.from_estimation(res).nobs == 80
+    for nobs in (0, 7):
+        process = ArmaProcess.from_estimation(res, nobs=nobs)
+        assert process.nobs == nobs
+        assert_allclose(process.ar, res.polynomial_reduced_ar, rtol=1e-15)
+        assert_allclose(process.ma, res.polynomial_reduced_ma, rtol=1e-15)
+
+
 @pytest.mark.parametrize("s", [4, 12])
 def test_lpol_sdiff(s):
     # (1 - L^s) has coefficient 1 at lag 0, -1 at lag s, and 0 elsewhere.
@@ -689,6 +703,37 @@ def test_arma_acovf_nobs_validation():
         arma_acovf([1.0], [1.0], nobs=-1)
     with pytest.raises(ValueError, match="nobs must be a positive integer"):
         arma_acf([1.0, -0.5], [1.0], lags=0)
+
+
+LAGS_FUNCTIONS = [
+    (arma_pacf, "lags"),
+    (arma_impulse_response, "leads"),
+    (arma2ma, "lags"),
+    (arma2ar, "lags"),
+]
+
+
+@pytest.mark.parametrize("value", [0, -1, np.int64(0)])
+@pytest.mark.parametrize("func, name", LAGS_FUNCTIONS)
+def test_arma_functions_lags_not_positive(func, name, value):
+    # 0 raised an IndexError, and a negative value a numpy error about
+    # negative dimensions
+    with pytest.raises(ValueError, match=f"{name} must be a positive integer, got"):
+        func([1.0, -0.6], [1.0, 0.3], **{name: value})
+
+
+@pytest.mark.parametrize("func, name", LAGS_FUNCTIONS)
+def test_arma_functions_lags_integer_like(func, name):
+    ar, ma = [1.0, -0.6], [1.0, 0.3]
+    # Lag zero of each is 1
+    assert_allclose(func(ar, ma, **{name: 1}), [1.0], rtol=1e-15)
+    # An integral float used to raise a TypeError from numpy
+    expected = func(ar, ma, **{name: 7})
+    for value in (np.int64(7), 7.0):
+        assert_allclose(func(ar, ma, **{name: value}), expected, rtol=1e-15)
+    for value in (7.5, True):
+        with pytest.raises(TypeError, match="must be integer_like"):
+            func(ar, ma, **{name: value})
 
 
 def test_arma_acovf_negative_sigma2():
@@ -798,6 +843,23 @@ def test_arma_periodogram_unit_root():
             w, sd = arma_periodogram([1.0, -1.0], [1.0], worN=8)
     expected = 1 / (2 - 2 * np.cos(w[1:])) / np.sqrt(2 * np.pi)
     assert_allclose(sd[1:], expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("worN", [0, -1, np.int64(0)])
+def test_arma_periodogram_worn_not_positive(worN):
+    # 0 returned empty arrays, and a negative integer raised an error from
+    # scipy that said that worN must be nonnegative
+    with pytest.raises(ValueError, match="worN must be a positive integer, got"):
+        arma_periodogram([1.0, -0.6], [1.0, 0.3], worN=worN)
+
+
+def test_arma_periodogram_worn_float_is_frequency():
+    # A float is a frequency, 0.0 too, not the number of frequencies
+    phi, theta = 0.6, 0.3
+    w, sd = arma_periodogram([1.0, -phi], [1.0, theta], worN=0.0)
+    assert_allclose(w, [0.0], rtol=1e-15)
+    expected = (1 + theta) ** 2 / (1 - phi) ** 2 / np.sqrt(2 * np.pi)
+    assert_allclose(sd, [expected], rtol=1e-12)
 
 
 def test_ar2arma_start():
