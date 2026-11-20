@@ -4993,13 +4993,19 @@ class ZivotAndrewsUnitRoot:
         statistics than the original Zivot-Andrews method, although no attempt
         has been made to characterize the size/power trade-off.
 
-        The regressions start at observation ``baselag + 1``. A candidate
-        break period whose dummies are zero, constant or a linear trend over
-        the rows of the regression is collinear with the constant and the
-        trend, has no test statistic, and is skipped: the break periods are at
-        least ``baselag + 1`` ("c"), ``baselag + 3`` ("t") or ``baselag + 2``
-        ("ct"), and at most ``nobs - 2`` ("c") or ``nobs - 3`` ("ct"), as
-        indices of x. A ValueError is raised if no candidate period is left.
+        A candidate break is skipped if its dummies are collinear with the
+        constant and the trend over the rows of the regression, which start
+        at observation ``baselag + 1``, since it then has no test statistic.
+        A level shift needs at least one row before the break and one after
+        it, and a trend shift two rows before it (and, next to a level
+        shift, two after it). So the last observation before the break is at
+        least ``baselag + 1`` ("c") or ``baselag + 2`` ("t" and "ct"), and at
+        most ``nobs - 2`` ("c") or ``nobs - 3`` ("ct"). The returned
+        ``bpidx`` is that observation for "c" and "ct", but the first
+        observation of the trend shift, one later, for "t", so the smallest
+        ``bpidx`` is ``baselag + 1`` ("c"), ``baselag + 3`` ("t") or
+        ``baselag + 2`` ("ct"). A ValueError is raised if no candidate break
+        is left.
 
         .. versionchanged:: 0.15.1
 
@@ -5056,7 +5062,10 @@ class ZivotAndrewsUnitRoot:
         # the dummies are collinear with the constant and the trend, so the
         # period has no t-statistic and is skipped. The level shift needs a
         # zero and a nonzero row, the trend shift two zero rows and, next to
-        # the level shift ("ct"), two nonzero rows.
+        # the level shift ("ct"), two nonzero rows. The shifts of period p
+        # start at observation p for "c" and "ct" but at p - 1 for "t" (see
+        # _update_regression_exog), so the first valid period of "t" is one
+        # larger than that of "ct" although both need two zero rows.
         if regression == "c":
             first_valid, last_valid = baselags + 2, nobs - 1
         elif regression == "t":
