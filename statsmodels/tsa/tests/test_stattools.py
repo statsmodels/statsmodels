@@ -1267,6 +1267,45 @@ class TestBreakvarHeteroskedasticityTest:
         assert actual_statistic == expected_statistic
         assert actual_pvalue == expected_pvalue
 
+    @pytest.mark.parametrize(
+        "subset_length",
+        [40, np.int64(40), 40.0, np.float64(40.0), 0.25],
+        ids=["int", "int64", "float", "float64", "fraction"],
+    )
+    def test_subset_length_integer_like(self, subset_length):
+        # Any integer-like value and the fraction 0.25 of 160 observations
+        # give subsets of 40 observations
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        res = breakvar_heteroskedasticity_test(resid, subset_length=subset_length)
+        expected_statistic = np.sum(resid[-40:] ** 2) / np.sum(resid[:40] ** 2)
+        expected_pvalue = 2 * min(
+            self.f.cdf(expected_statistic, 40, 40),
+            self.f.sf(expected_statistic, 40, 40),
+        )
+        assert_allclose(res.statistic, expected_statistic, rtol=1e-12)
+        assert_allclose(res.pvalue, expected_pvalue, rtol=1e-12)
+
+    def test_subset_length_one(self):
+        # One observation in each subset is too few for the statistic
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        with pytest.warns(UserWarning, match="too few non-missing observations"):
+            res = breakvar_heteroskedasticity_test(resid, subset_length=1.0)
+        assert np.isnan(res.statistic)
+
+    @pytest.mark.parametrize(
+        "subset_length", [0, 0.0, -1, -0.25, 1.5, 40.5, np.nan, np.inf]
+    )
+    def test_subset_length_invalid_value(self, subset_length):
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        with pytest.raises(ValueError, match="subset_length must be a fraction"):
+            breakvar_heteroskedasticity_test(resid, subset_length=subset_length)
+
+    @pytest.mark.parametrize("subset_length", ["40", True, None])
+    def test_subset_length_invalid_type(self, subset_length):
+        resid = np.random.default_rng(20261125).standard_normal(160)
+        with pytest.raises(TypeError, match="subset_length must be float_like"):
+            breakvar_heteroskedasticity_test(resid, subset_length=subset_length)
+
 
 class CheckCoint:
     """
