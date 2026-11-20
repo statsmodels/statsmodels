@@ -65,8 +65,8 @@ class zipoisson_gen(rv_discrete):
         x = poisson(mu=mu).ppf(q_mod)
         # set to zero if in the zi range
         if isinstance(x, np.ndarray):
-            x[q < w] = 0
-        elif np.isscalar(x) and q < w:
+            x[q <= w] = 0
+        elif np.isscalar(x) and q <= w:
             return 0.0
         return x
 
@@ -151,8 +151,8 @@ class zinegativebinomial_gen(rv_discrete):
         x = nbinom.ppf(q_mod, s, p)
         # set to zero if in the zi range
         if isinstance(x, np.ndarray):
-            x[q < w] = 0
-        elif np.isscalar(x) and q < w:
+            x[q <= w] = 0
+        elif np.isscalar(x) and q <= w:
             return 0.0
         return x
 

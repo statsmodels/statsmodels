@@ -1372,6 +1372,8 @@ Other
   ``fit_regularized`` with ``alpha``, which ``GEE`` does not have, and now
   raises a ``NotImplementedError`` before any data is fit. :issue:`10778`,
   :pr:`10780`
+- ``zipoisson.ppf`` and ``zinegbin.ppf`` returned -1 when ``q`` equals the
+  zero inflation ``w``. They return 0. :issue:`10841`, :pr:`10842`
 
 Documentation
 =============
