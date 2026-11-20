@@ -1001,6 +1001,10 @@ Time series analysis
   (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``_Var.predict`` (deprecated) returned neither the fitted values nor the
+  residuals, with the wrong number of rows unless there was one lag, and kept
+  returning the first result after a refit. It returns the fitted values.
+  :pr:`10822`
 - ``varfilter`` in ``statsmodels.tsa.varma_process`` with 3-d lag matrices
   used the variables in reverse order and returned the wrong number of rows
   unless there were two lags, and a 2-d filter with one lag and several
