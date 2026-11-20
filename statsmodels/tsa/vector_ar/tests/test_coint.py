@@ -13,9 +13,11 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
+from scipy import stats
 
 from statsmodels.datasets import danish_data, macrodata
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
+from statsmodels.tsa.coint_tables import c_sja, c_sjt
 from statsmodels.tsa.vector_ar.vecm import VECM, coint_johansen
 
 current_path = Path(__file__).resolve().parent
@@ -676,3 +678,38 @@ def test_johansen_too_few_observations(shape, det_order, k_ar_diff):
     endog = np.cumsum(np.random.default_rng(0).standard_normal(shape), axis=0)
     with pytest.raises(ValueError, match="too few observations"):
         coint_johansen(endog, det_order, k_ar_diff)
+
+
+@pytest.mark.parametrize("p", [-1, 0, 1])
+def test_coint_tables_one_variable(p):
+    # With one variable, the trace and the maximum eigenvalue statistics are
+    # the same statistic
+    assert_allclose(c_sja(1, p), c_sjt(1, p), rtol=1e-15)
+    if p >= 0:
+        # The tabulated values equal the 90%, 95% and 99% quantiles of
+        # chi2(1) to the 4 decimals given
+        expected = stats.chi2.ppf([0.90, 0.95, 0.99], 1)
+        assert_allclose(c_sja(1, p), expected, rtol=1e-4)
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [-1, 0, 1])
+def test_coint_tables_ordered(func, p):
+    # The critical values increase with the level and with the number of
+    # variables, and n can be any integer type
+    values = np.array([func(n, p) for n in range(1, 13)])
+    assert np.all(np.diff(values, axis=1) > 0)
+    assert np.all(np.diff(values, axis=0) > 0)
+    assert_allclose(func(np.int64(3), p), values[2], rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("n, p", [(0, 0), (13, 0), (3, -2), (3, 2)])
+def test_coint_tables_out_of_range(func, n, p):
+    assert np.all(np.isnan(func(n, p)))
+
+
+def test_c_sjt_invalid_p():
+    # p is not one of -1, 0 and 1, but is within their range
+    with pytest.raises(ValueError, match="invalid p"):
+        c_sjt(3, 0.5)
