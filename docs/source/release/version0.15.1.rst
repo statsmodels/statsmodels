@@ -266,6 +266,13 @@ Behavior changes
   ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
   ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
   :pr:`10792`
+- :func:`~statsmodels.tsa.stattools.ccf` and
+  :func:`~statsmodels.tsa.stattools.ccovf` treat an (nobs, 1) column, such as
+  a one-column ``DataFrame``, as the 1-D series. Before, two columns gave a
+  meaningless 2-D result without an error, for example an (nlags, nobs) array
+  from ``ccf``, and a column next to a 1-D series raised an error from SciPy.
+  Input with more than one column now raises a ``ValueError``. Results for
+  1-D input are unchanged. :pr:`10811`
 
 New Features and Enhancements
 =============================
