@@ -1072,6 +1072,14 @@ Time series analysis
   ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``MLEModel.score`` with ``transformed=False``, which ``fit`` uses, applied
+  the Jacobian of the parameter transformation instead of its transpose, and
+  did not zero the rows of fixed parameters. For models whose Jacobian is not
+  symmetric, such as SARIMAX with an AR order of two or more and VARMAX, the
+  solvers that use the score (``bfgs``, ``lbfgs`` with ``optim_score``,
+  ``basinhopping``, ``minimize`` with a gradient method) got a wrong gradient
+  away from the optimum and often stopped short of it, for example with a
+  ``ConvergenceWarning``. :pr:`10818`
 - ``fit(method="newton")`` of state space models and of Markov switching
   models used the score and the Hessian with respect to the constrained
   parameters, evaluated at the values of the unconstrained ones, and for
