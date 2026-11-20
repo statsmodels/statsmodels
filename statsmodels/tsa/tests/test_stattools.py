@@ -5144,7 +5144,11 @@ def test_two_column_input_forms(form):
     assert sorted(res) == [1, 2]
     for lag in (1, 2):
         for name in ("ssr_ftest", "ssr_chi2test", "lrtest", "params_ftest"):
-            assert_allclose(res[lag][0][name], expected[lag][0][name], rtol=1e-12)
+            # The lag 2 F statistic is about 0.0015: the restricted and full
+            # sums of squared residuals agree to about 3e-5 (relative), so a
+            # rounding difference from another memory layout of x (macOS
+            # Accelerate) changes the statistics by about 1e-11 (relative).
+            assert_allclose(res[lag][0][name], expected[lag][0][name], rtol=1e-9)
     res = breakvar_heteroskedasticity_test(x_form)
     expected = breakvar_heteroskedasticity_test(x)
     assert_allclose(_numeric_leaves(res), _numeric_leaves(expected), rtol=1e-12)
