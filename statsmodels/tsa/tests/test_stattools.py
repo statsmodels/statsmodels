@@ -841,8 +841,15 @@ class TestPCCF:
         # lag 1 is Gamma(1)[0, 1] / sqrt(Gamma(0)[0, 0] * Gamma(0)[1, 1])
         assert_allclose(result[0], 1 / 7, rtol=1e-12)
         assert np.all(np.isnan(result[1:]))
-        # The biased autocovariances of "ywm" are positive definite
-        assert np.all(np.isfinite(pccf(x, y, nlags=4, method="ywm")))
+        # With the biased autocovariances (divisor nobs) of "ywm", the variances
+        # at lag 2 are positive, and lags 1 and 2 are 1/8 and
+        # (3/32) / sqrt(7/32 * 31/32) = 3 / sqrt(217). Stop at lag 2: for these
+        # periodic series the "ywm" prediction error covariance after two lags
+        # is exactly singular, so the recursion from lag 3 on solves a singular
+        # system and its result depends on rounding.
+        assert_allclose(
+            pccf(x, y, nlags=2, method="ywm"), [1 / 8, 3 / np.sqrt(217)], rtol=1e-12
+        )
 
     def test_return_consistency(self):
         result_no_alpha = pccf(self.x, self.y, nlags=5)
