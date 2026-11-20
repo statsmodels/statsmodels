@@ -265,12 +265,13 @@ class ADFullerResult(LimitedIterationMixin[float]):
     nobs : int
         The number of observations used for the ADF regression and
         calculation of the critical values.
-    critical_values : dict[str, float]
+    critical_values : dict of str to float
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
         levels. Based on MacKinnon (2010).
     icbest : float or None
-        The maximized information criterion if autolag is not None,
-        otherwise None.
+        The criterion of the selected lag length if autolag is not None,
+        otherwise None: the smallest AIC or BIC, or with "t-stat" the
+        absolute t-statistic of the last lag.
     resstore : ResultsStore or None
         A dummy class with results attached as attributes, if ``store`` was
         True, otherwise None.
@@ -329,8 +330,11 @@ def adfuller(
     x : array_like, 1d
         The data series to test.
     maxlag : int, optional
-        Maximum lag which is included in test, default value of
-        12*(nobs/100)^{1/4} is used when ``None``.
+        Maximum lag which is included in test. If ``None``,
+        ``ceil(12 * (nobs / 100) ** (1 / 4))`` is used, or
+        ``min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)`` if that is
+        smaller, where ntrend is the number of trend terms in
+        ``regression``. A larger maxlag raises ValueError.
     regression : {"c","ct","ctt","n"}, optional
         Constant and trend order to include in regression.
 
@@ -392,7 +396,9 @@ def adfuller(
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
         levels. Based on MacKinnon (2010).
     icbest : float
-        The maximized information criterion if autolag is not None.
+        The criterion of the selected lag length if autolag is not None:
+        the smallest AIC or BIC, or with "t-stat" the absolute t-statistic
+        of the last lag.
     resstore : ResultsStore, optional
         A dummy class with results attached as attributes.
 
@@ -1098,8 +1104,8 @@ def acf(
 
     See Also
     --------
-    statsmodels.tsa.stattools.acf
-        Estimate the autocorrelation function.
+    statsmodels.tsa.stattools.acovf
+        Estimate the autocovariances.
     statsmodels.graphics.tsaplots.plot_acf
         Plot autocorrelations and confidence intervals.
     """
@@ -1269,7 +1275,8 @@ def pacf_yw(
     Returns
     -------
     ndarray
-        The partial autocorrelations, maxlag+1 elements.
+        The partial autocorrelations for lags 0, 1, ..., nlags, an array
+        with shape (nlags + 1,).
 
     See Also
     --------
@@ -1488,7 +1495,7 @@ def pacf_ols(
         Observations of time series for which pacf is calculated.
     nlags : int, optional
         Number of lags to return autocorrelation for. If not provided,
-        uses min(10 * np.log10(nobs), nobs - 1).
+        uses min(10 * np.log10(nobs), nobs // 2). At most nobs // 2.
     efficient : bool, optional
         If true, uses the maximum number of available observations to compute
         each partial autocorrelation. If not, uses the same number of
@@ -1499,8 +1506,8 @@ def pacf_ols(
     Returns
     -------
     ndarray
-        The partial autocorrelations, (maxlag,) array corresponding to lags
-        0, 1, ..., maxlag.
+        The partial autocorrelations, an array with shape (nlags + 1,)
+        corresponding to lags 0, 1, ..., nlags.
 
     See Also
     --------
@@ -2750,14 +2757,15 @@ def grangercausalitytests(x, maxlag, addconst=True):
     Parameters
     ----------
     x : array_like
-        The data for testing whether the time series in the second column Granger
-        causes the time series in the first column. Missing values are not
-        supported.
+        The data, with two columns, for testing whether the time series in
+        the second column Granger causes the time series in the first column.
+        Missing values are not supported.
     maxlag : int or sequence of int
         If an integer, computes the test for all lags up to maxlag. If a
         sequence, computes the tests only for the lags in maxlag.
     addconst : bool, optional
-        Include a constant in the model.
+        Include a constant in the model. Only True is implemented; False
+        raises NotImplementedError.
 
     Returns
     -------
@@ -2935,7 +2943,7 @@ class CointResult(NamedTuple):
     critical_values : ndarray
         Critical values for the test statistic at the 1 %, 5 %, and 10 %
         levels based on regression curve. This depends on the number of
-        observations.
+        observations. For trend "n" they are not available and are NaN.
     """
 
     coint_t: float
@@ -2963,7 +2971,7 @@ def coint(
     cointegrating equation.
 
     **Warning:** The autolag default has changed compared to statsmodels 0.8.
-    In 0.8 autolag was always None, no the keyword is used and defaults to
+    In 0.8 autolag was always None, now the keyword is used and defaults to
     "aic". Use `autolag=None` to avoid the lag search.
 
     Parameters
@@ -2994,10 +3002,9 @@ def coint(
           lag until the t-statistic on the last lag length is significant
           using a 5%-sized test.
     return_results : bool, optional
-        For future compatibility, currently only tuple available.
-        If True, then a results instance is returned. Otherwise, a tuple
-        with the test outcome is returned. Set `return_results=False` to
-        avoid future changes in return.
+        Not used. A ``CointResult`` is returned for every value. It is a
+        named tuple, so it also unpacks as the tuple
+        ``coint_t, pvalue, critical_values``.
 
     Returns
     -------
@@ -3012,7 +3019,8 @@ def coint(
         critical_values : ndarray
             Critical values for the test statistic at the 1 %, 5 %, and
             10 % levels based on regression curve. This depends on the
-            number of observations.
+            number of observations. For trend "n" they are not available
+            and are NaN.
 
     Notes
     -----
@@ -3831,7 +3839,7 @@ class KPSSResult(LimitedIterationMixin[float]):
         is, if the p-value is outside the interval (0.01, 0.1).
     lags : int
         The truncation lag parameter.
-    critical_values : dict[str, float]
+    critical_values : dict of str to float
         The critical values at 10%, 5%, 2.5% and 1%. Based on Kwiatkowski
         et al. (1992).
     resstore : ResultsStore or None
@@ -3899,8 +3907,8 @@ def kpss(
         Indicates the number of lags to be used. If "auto" (default), lags
         is calculated using the data-dependent method of Hobijn et al. (1998).
         See also Andrews (1991), Newey & West (1994), and Schwert (1989). If
-        set to "legacy", uses int(12 * (n / 100)**(1 / 4)), as outlined in
-        Schwert (1989).
+        set to "legacy", uses ceil(12 * (n / 100) ** (1 / 4)), as outlined in
+        Schwert (1989), and at most n - 1.
     store : bool, optional
         If True, then a result instance is returned additionally to
         the KPSS statistic (default is False).
@@ -3951,7 +3959,7 @@ def kpss(
     Notes
     -----
     To estimate sigma^2 the Newey-West estimator is used. If lags is "legacy",
-    the truncation lag parameter is set to int(12 * (n / 100) ** (1 / 4)),
+    the truncation lag parameter is set to ceil(12 * (n / 100) ** (1 / 4)),
     as outlined in Schwert (1989). The p-values are interpolated from
     Table 1 of Kwiatkowski et al. (1992). If the computed statistic is
     outside the table of critical values, then a warning message is
@@ -4171,7 +4179,7 @@ class RURResult(LimitedIterationMixin[float]):
         statistic is below the 1% critical value, and 0.95 if it is at or
         above the 95% critical value, that is, if the actual p-value is
         outside the interval (0.01, 0.95).
-    critical_values : dict[str, float]
+    critical_values : dict of str to float
         The critical values at 10%, 5%, 2.5% and 1%. Based on Aparicio et
         al. (2006).
     resstore : ResultsStore or None
@@ -4876,9 +4884,11 @@ class ZivotAndrewsUnitRoot:
             The percentage of series at begin/end to exclude from break-period
             calculation in range [0, 0.333] (default=0.15).
         maxlag : int, optional
-            The maximum lag which is included in test, default is
-            12*(nobs/100)^{1/4} (Schwert, 1989). Use 0 for a test without
-            lagged differences.
+            The maximum lag which is included in test. If None, the lag
+            search uses the default of ``adfuller`` with ``regression="ct"``,
+            ceil(12 * (nobs / 100) ** (1 / 4)) (Schwert, 1989), and
+            int(12 * (nobs / 100) ** (1 / 4)) lags are used when autolag is
+            None. Use 0 for a test without lagged differences.
         regression : {"c","t","ct"}, optional
             Constant and trend order to include in regression.
 
