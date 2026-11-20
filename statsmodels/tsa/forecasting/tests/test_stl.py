@@ -241,3 +241,22 @@ def test_sequence_endog(container):
     assert_allclose(res.forecast(14), forecast, rtol=1e-10)
     pred = res.get_prediction(100, 133)
     assert_allclose(pred.predicted_mean, predicted, rtol=1e-10)
+
+
+@pytest.mark.parametrize("form", ["column", "dataframe"])
+def test_one_column_endog(form):
+    # An (n, 1) column or a one-column DataFrame gives the results of the
+    # 1-d data
+    y = _seasonal_data()
+    if form == "column":
+        endog = y[:, None]
+    else:
+        index = pd.date_range("2000-01-01", periods=120, freq="MS")
+        endog = pd.DataFrame({"y": y}, index=index)
+    model_kwargs = {"lags": 2, "trend": "c"}
+    stlf = STLForecast(endog, AutoReg, model_kwargs=model_kwargs, period=12)
+    res = stlf.fit()
+    forecast, predicted = _stl_ar_reference(y, 100, 14)
+    assert_allclose(res.forecast(14), forecast, rtol=1e-10)
+    pred = res.get_prediction(100, 133)
+    assert_allclose(pred.predicted_mean, predicted, rtol=1e-10)

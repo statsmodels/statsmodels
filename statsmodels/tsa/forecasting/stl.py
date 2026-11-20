@@ -11,6 +11,7 @@ import pandas as pd
 from statsmodels.base.data import PandasData
 from statsmodels.iolib.summary import SimpleTable, Summary
 from statsmodels.tools.docstring import Docstring, Parameter, indent
+from statsmodels.tools.validation import array_like
 from statsmodels.tsa.base.prediction import PredictionResults
 from statsmodels.tsa.base.tsa_model import get_index_loc, get_prediction_index
 from statsmodels.tsa.seasonal import STL, DecomposeResult
@@ -246,7 +247,7 @@ class STLForecastResults:
         self._result = result
         self._model = model
         self._model_result = model_result
-        self._endog = np.asarray(endog)
+        self._endog = array_like(endog, "endog", ndim=1, dtype=None)
         self._nobs = self._endog.shape[0]
         self._index = getattr(endog, "index", None)
         if not isinstance(self._index, pd.Index):
