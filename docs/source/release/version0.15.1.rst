@@ -1158,6 +1158,10 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- :func:`~statsmodels.tsa.seasonal.seasonal_decompose` raised a ``TypeError``
+  for a DataFrame with more than one column. Each column is decomposed, as
+  for a 2-d ndarray, and the components are DataFrames with the index and
+  columns of ``x``. :pr:`10869`
 
 Statistics and tests
 --------------------
