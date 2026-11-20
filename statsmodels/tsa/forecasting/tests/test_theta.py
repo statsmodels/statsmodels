@@ -232,3 +232,17 @@ def test_sequence_endog(container, use_mle):
         return [ln for ln in lines if "Date:" not in ln and "Time:" not in ln]
 
     assert without_time(res.summary()) == without_time(expected.summary())
+
+
+@pytest.mark.parametrize(
+    ("method", "error", "match"),
+    [
+        ("geometric", ValueError, "^method must be one of"),
+        (1, TypeError, "^method must be a string"),
+    ],
+)
+def test_invalid_method_message(method, error, match):
+    # The error names the method argument
+    y = np.arange(1.0, 49.0)
+    with pytest.raises(error, match=match):
+        ThetaModel(y, period=12, method=method)
