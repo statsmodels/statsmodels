@@ -202,3 +202,33 @@ def test_theta_invalid_period_raises():
         ThetaModel(y, period=-3)
     with pytest.raises(ValueError, match="period must be >= 2"):
         ThetaModel(y, period=1)
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+@pytest.mark.parametrize("use_mle", [True, False])
+def test_sequence_endog(container, use_mle):
+    # A list or a tuple gives the results of the same data in an ndarray
+    rng = np.random.default_rng(20261120)
+    t = np.arange(96)
+    y = 50 + 0.3 * t + 5 * np.sin(2 * np.pi * t / 12)
+    y = y + rng.standard_normal(96)
+    expected = ThetaModel(y, period=12).fit(use_mle=use_mle)
+    res = ThetaModel(container(y.tolist()), period=12).fit(use_mle=use_mle)
+    np.testing.assert_allclose(res.params, expected.params, rtol=1e-12)
+    pd.testing.assert_frame_equal(
+        res.forecast_components(15), expected.forecast_components(15), rtol=1e-12
+    )
+    pd.testing.assert_series_equal(
+        res.forecast(15), expected.forecast(15), rtol=1e-12
+    )
+    pd.testing.assert_frame_equal(
+        res.prediction_intervals(15),
+        expected.prediction_intervals(15),
+        rtol=1e-12,
+    )
+
+    def without_time(smry):
+        lines = smry.as_text().splitlines()
+        return [ln for ln in lines if "Date:" not in ln and "Time:" not in ln]
+
+    assert without_time(res.summary()) == without_time(expected.summary())
