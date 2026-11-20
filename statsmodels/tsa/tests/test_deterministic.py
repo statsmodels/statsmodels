@@ -276,6 +276,31 @@ def test_time_trend(index):
     pd.testing.assert_frame_equal(combined, final, check_index_type=False)
 
 
+@pytest.mark.parametrize(
+    "term, expected",
+    [
+        (TimeTrend(True, 0), "TimeTrend(Constant)"),
+        (TimeTrend(False, 0), "TimeTrend(Empty)"),
+        (TimeTrend(True, 1), "TimeTrend(Constant,Powers 1 to 1)"),
+        (TimeTrend(False, 2), "TimeTrend(Powers 1 to 2)"),
+        (TimeTrend(True, 3), "TimeTrend(Constant,Powers 1 to 3)"),
+        (
+            CalendarTimeTrend("D", True, 2),
+            "CalendarTimeTrend(Constant,Powers 1 to 2, freq=D)",
+        ),
+    ],
+)
+def test_time_trend_str(term, expected):
+    # The highest power was given as order + 1
+    assert str(term) == expected
+    # The terms have the powers 1, ..., order of the time trend
+    index = pd.date_range("2000-01-01", periods=5, freq="D")
+    trends = term.in_sample(index).iloc[:, int(term.constant) :].to_numpy()
+    assert trends.shape[1] == term.order
+    powers = np.arange(1, term.order + 1)
+    np.testing.assert_allclose(trends, trends[:, :1] ** powers, rtol=1e-14)
+
+
 def test_seasonality(index):
     s = Seasonality(period=12)
     exog = s.in_sample(index)

@@ -216,7 +216,7 @@ class TimeTrendDeterministicTerm(DeterministicTerm, ABC):
         if self._constant:
             terms.append("Constant")
         if self._order:
-            terms.append(f"Powers 1 to {self._order + 1}")
+            terms.append(f"Powers 1 to {self._order}")
         if not terms:
             terms = ["Empty"]
         terms_str = ",".join(terms)
