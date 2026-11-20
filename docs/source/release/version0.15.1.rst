@@ -1027,6 +1027,9 @@ Time series analysis
   (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``add_trend`` with ``trend="n"`` returned a list unchanged and raised an
+  ``AttributeError`` for a tuple. It returns an ndarray, like the other
+  trends. :pr:`10833`
 - ``_Var.predict`` (deprecated) returned neither the fitted values nor the
   residuals, with the wrong number of rows unless there was one lag, and kept
   returning the first result after a refit. It returns the fitted values.

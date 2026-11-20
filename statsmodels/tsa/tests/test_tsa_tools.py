@@ -1160,6 +1160,33 @@ class TestAddTrend:
         assert_equal(tools.add_trend(self.arr_2d, "n"), self.arr_2d)
         assert tools.add_trend(self.arr_2d, "n") is not self.arr_2d
 
+    @pytest.mark.parametrize("container", [list, tuple])
+    @pytest.mark.parametrize("ndim", [1, 2])
+    def test_trend_n_array_like(self, container, ndim):
+        # A list was returned as a list, and a tuple raised AttributeError.
+        # The other trends return an ndarray for both.
+        if ndim == 1:
+            data = self.arr_1d
+            x = container(data.tolist())
+        else:
+            data = self.arr_2d
+            x = container(container(row) for row in data.tolist())
+        res = tools.add_trend(x, "n")
+        assert isinstance(res, np.ndarray)
+        assert_allclose(res, data, rtol=1e-15)
+        assert isinstance(tools.add_trend(x, "c"), np.ndarray)
+
+    def test_trend_n_pandas(self):
+        # pandas input is returned as a copy of the same type
+        s = pd.Series(self.arr_1d, name="y")
+        res = tools.add_trend(s, "n")
+        assert res is not s
+        assert_series_equal(res, s)
+        df = pd.DataFrame(self.arr_2d, columns=["a", "b"])
+        res = tools.add_trend(df, "n")
+        assert res is not df
+        assert_frame_equal(res, df)
+
 
 class TestLagmat2DS:
     @classmethod
