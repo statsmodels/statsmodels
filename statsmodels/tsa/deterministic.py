@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from statsmodels.compat.pandas import (
+    MONTH_END,
     PD_LT_2_2_0,
     PD_LT_3_1_0,
+    QUARTER_END,
+    YEAR_END,
     _infer_freq_returns_offset,
     is_int_index,
     to_numpy,
@@ -11,6 +14,7 @@ from statsmodels.compat.pandas import (
 from abc import ABC, abstractmethod
 import datetime as dt
 from typing import TYPE_CHECKING
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -579,12 +583,31 @@ class Fourier(FourierDeterministicTerm):
 class CalendarDeterministicTerm(DeterministicTerm, ABC):
     """Abstract Base Class for calendar deterministic terms"""
 
+    # Set _uses_periods to False if the terms do not use periods of freq
+    _uses_periods = True
+
     def __init__(self, freq: str) -> None:
         try:
             index = pd.date_range("2020-01-01", freq=freq, periods=1)
             self._freq = index.freq
         except ValueError as exc:
             raise ValueError("freq is not understood by pandas") from exc
+        if not self._uses_periods:
+            return
+        try:
+            with warnings.catch_warnings():
+                # Periods with freq "B" are deprecated in pandas, but work
+                warnings.simplefilter("ignore", FutureWarning)
+                index.to_period(self._freq)
+        except (AttributeError, ValueError) as exc:
+            raise ValueError(
+                f'freq "{freq}" is not supported by {type(self).__name__}. Its '
+                "terms are computed from periods, so freq must be a frequency "
+                "that pandas supports for periods, for example "
+                f'"D", "W", "{MONTH_END}", "{QUARTER_END}" or "{YEAR_END}". '
+                'Start-anchored frequencies, such as "MS", "QS" and "YS", are '
+                "not supported."
+            ) from exc
 
     @property
     def freq(self) -> str:
@@ -635,7 +658,15 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
     Parameters
     ----------
     freq : str
-        A string convertible to a pandas frequency.
+        A string convertible to a pandas frequency that pandas supports for
+        periods, for example "D", "W", "ME", "QE" or "YE". Start-anchored
+        frequencies, such as "MS", "QS" and "YS", are not supported.
+
+        .. versionchanged:: 0.15.1
+
+           A frequency that pandas does not support for periods raises a
+           ``ValueError``. Before, an error, usually an ``AttributeError``, was
+           raised when the terms were computed.
     order : int
         The number of Fourier components to include.
 
@@ -760,6 +791,9 @@ class CalendarSeasonality(CalendarDeterministicTerm):
     """
 
     _is_dummy = True
+    # The dummies are computed from the fields of the time stamps, so "MS"
+    # can be used
+    _uses_periods = False
 
     # out_of: freq
     if PD_LT_2_2_0:
@@ -904,7 +938,15 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     Parameters
     ----------
     freq : str
-        A string convertible to a pandas frequency.
+        A string convertible to a pandas frequency that pandas supports for
+        periods, for example "D", "W", "ME", "QE" or "YE". Start-anchored
+        frequencies, such as "MS", "QS" and "YS", are not supported.
+
+        .. versionchanged:: 0.15.1
+
+           A frequency that pandas does not support for periods raises a
+           ``ValueError``. Before, an error, usually an ``AttributeError``, was
+           raised when the terms were computed.
     constant : bool, optional
         Flag indicating whether a constant should be included.
     order : int, optional

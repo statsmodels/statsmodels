@@ -1,5 +1,6 @@
 from statsmodels.compat.pandas import (
     MONTH_END,
+    PD_LT_2_2_0,
     QUARTER_END,
     YEAR_END,
     is_int_index,
@@ -7,6 +8,7 @@ from statsmodels.compat.pandas import (
 from statsmodels.compat.pytest import pytest_warns
 
 from collections.abc import Hashable
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -218,6 +220,57 @@ def test_check_index_type():
 def test_unknown_freq():
     with pytest.raises(ValueError, match="freq is not understood by pandas"):
         CalendarTimeTrend("unknown", True, order=3)
+
+
+@pytest.mark.parametrize(
+    "freq",
+    [
+        "MS",
+        "2MS",
+        "QS",
+        "QS-FEB",
+        "YS",
+        "BMS",
+        "SMS",
+        "WOM-1MON",
+        pytest.param(
+            "C",
+            marks=pytest.mark.skipif(PD_LT_2_2_0, reason="pandas has C periods"),
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "term, kwargs",
+    [
+        (CalendarFourier, {"order": 1}),
+        (CalendarTimeTrend, {}),
+        (CalendarTimeTrend, {"base_period": "2000-01-01"}),
+    ],
+)
+def test_calendar_term_freq_without_periods(freq, term, kwargs):
+    # pandas has no periods with these freqs, such as the start-anchored ones,
+    # so an AttributeError was raised when the terms were computed
+    with pytest.raises(ValueError, match=f'freq "{freq}" is not supported by'):
+        term(freq, **kwargs)
+
+
+@pytest.mark.parametrize("term", [CalendarFourier, CalendarTimeTrend])
+def test_calendar_term_business_day_freq(term):
+    # Periods with freq "B" are deprecated in recent pandas, but still
+    # supported, so checking the freq does not warn
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        created = term("B", order=1)
+    assert created.freq == "B"
+
+
+def test_calendar_seasonality_month_start():
+    # The dummies are computed without periods, so "MS" is supported
+    index = pd.date_range("2000-01-01", periods=24, freq="MS")
+    terms = CalendarSeasonality("MS", "Y").in_sample(index)
+    expected = CalendarSeasonality(MONTH_END, "Y").in_sample(index)
+    np.testing.assert_allclose(terms, expected, rtol=1e-15)
+    np.testing.assert_allclose(terms, np.tile(np.eye(12), (2, 1)), rtol=1e-15)
 
 
 def test_invalid_formcast_index(index):
