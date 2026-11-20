@@ -660,8 +660,9 @@ def test_range_non_unit_step(index, first, last):
 
 def test_range_int_index_non_unit_step():
     # An integer Index with a step other than 1 cannot be extended, so range
-    # raises instead of using the step
-    index = pd.Index(np.arange(0, 20, 2))
+    # raises instead of using the step. int64, as the RangeIndex below, since
+    # np.arange gives int32 where the default integer has 32 bits (Pyodide).
+    index = pd.Index(np.arange(0, 20, 2, dtype=np.int64))
     kwargs = {"constant": True, "order": 1}
     dp = DeterministicProcess(index, **kwargs)
     expected = DeterministicProcess(pd.RangeIndex(0, 20, 2), **kwargs)
