@@ -42,7 +42,9 @@ def cffilter(x, low=6, high=32, drift=True):
         cycle : ndarray, Series, or DataFrame
             The features of x between the periodicities low and high.
         trend : ndarray, Series, or DataFrame
-            The trend in the data with the cycles removed.
+            The trend in the data with the cycles removed. If drift is True,
+            it is the trend of x less the drift line, so cycle + trend is x
+            less the drift line.
 
     See Also
     --------
