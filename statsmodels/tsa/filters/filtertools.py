@@ -287,7 +287,12 @@ def recursive_filter(x, ar_coeff, init=None):
         y[n] = ar_coeff[0] * y[n-1] + ...
                 + ar_coeff[n_coeff - 1] * y[n - n_coeff] + x[n]
 
-    where n_coeff = len(ar_coeff).
+    where n_coeff = len(ar_coeff). The values before the first observation
+    are ``init`` in reverse time order, ``y[-1] = init[0]``, ...,
+    ``y[-n_coeff] = init[n_coeff - 1]``, or zero if ``init`` is None. This is
+    the recursive filter of ``stats::filter`` in R. For example, with
+    ``ar_coeff=[0.5, 0.25]``, ``init=[1, 2]`` and ``x`` zero, y starts
+    ``1, 0.75, 0.625``.
     """
     pw = PandasWrapper(x)
     x = array_like(x, "x")
@@ -355,25 +360,31 @@ def convolution_filter(x, filt, nsides=2):
 
     Returns
     -------
-    y : ndarray, 2d
-        Filtered array, number of columns determined by x and filt. If a
-        pandas object is given, a pandas object is returned. The index of
-        the return is the exact same as the time period in ``x``
+    ndarray, Series or DataFrame
+        The filtered array, with the number of observations of ``x``. It is
+        1d if ``x`` is 1d, and otherwise has one column per column of ``x``.
+        The values that the filter cannot compute at the ends are NaN. A
+        Series or DataFrame ``x`` returns a Series or DataFrame with the
+        index and the name or columns of ``x``.
 
     Notes
     -----
-    In nsides == 1, x is filtered ::
+    The filters are the convolution filters of ``stats::filter`` in R.
 
-        y[n] = filt[0]*x[n-1] + ... + filt[n_filt-1]*x[n-n_filt]
+    If nsides == 1, x is filtered with its current and past values ::
 
-    where n_filt is len(filt).
+        y[n] = filt[0]*x[n] + filt[1]*x[n-1] + ...
+               + filt[n_filt-1]*x[n-n_filt+1]
+
+    where n_filt is len(filt). The first n_filt - 1 values are NaN.
 
     If nsides == 2, x is filtered around lag 0 ::
 
-        y[n] = filt[0]*x[n - n_filt/2] + ... + filt[n_filt / 2] * x[n]
-               + ... + x[n + n_filt/2]
+        y[n] = filt[0]*x[n+m] + ... + filt[m]*x[n] + ...
+               + filt[n_filt-1]*x[n+m-n_filt+1]
 
-    where n_filt is len(filt). If n_filt is even, then more of the filter
+    where n_filt is len(filt) and m = n_filt // 2. The first n_filt - 1 - m
+    and the last m values are NaN. If n_filt is even, then more of the filter
     is forward in time than backward.
 
     If filt is 1d or (nlags,1) one lag polynomial is applied to all
@@ -439,9 +450,10 @@ def miso_lfilter(ar, ma, x, useic=False):
         The 2-d input data series, time in rows, variables in columns.
     useic : array_like or bool, optional
         Initial conditions for the AR filter, as accepted by
-        ``scipy.signal.lfiltic`` (i.e. an array_like of the initial values
-        of the filtered series, of length ``ar.shape[0] - 1``). Use the
-        default, False, for zero initial conditions.
+        ``scipy.signal.lfiltic``: the values of the filtered series before
+        the first observation in reverse time order (``useic[0]`` is
+        ``y[-1]``), of length ``ar.shape[0] - 1``. Use the default, False,
+        for zero initial conditions.
 
     Returns
     -------
