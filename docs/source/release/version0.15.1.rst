@@ -1380,6 +1380,13 @@ Documentation
 - Add an example to ``cohens_kappa`` showing that kappa depends on class
   prevalence: with the same rater accuracy and raw agreement, kappa is much
   smaller when one class is rare. :issue:`9680`, :pr:`10806`
+- Correct docstrings in ``statsmodels.tsa.tsatools``, ``arima_process``,
+  ``deterministic`` and the BDS test: ``detrend`` returns pandas objects for
+  pandas input, the parameters of ``DeterministicProcess.in_sample`` and
+  ``out_of_sample`` (which listed a non-existent ``index``), the order
+  constraint of ``Fourier`` and ``CalendarFourier``, return types of
+  ``bds``, ``distance_indicators`` and ``correlation_sums``, and examples
+  that failed on pandas 3. :pr:`10832`
 - Correct the docstrings of the deprecated ``TsaDescriptive``,
   ``TSMLEModel`` and ``_Var``: the accepted data types, the ``order`` of
   ``TsaDescriptive.fit`` (p, d, q) and its return type, the shapes of the

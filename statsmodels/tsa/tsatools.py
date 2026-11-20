@@ -269,7 +269,7 @@ def detrend(x, order=1, axis=0):
 
     Parameters
     ----------
-    x : ndarray
+    x : ndarray, Series, or DataFrame
         Data, 1d or 2d. If 2d, then each row or column is independently
         detrended with the same trendorder, but independent trend estimates.
     order : int, optional
@@ -281,9 +281,10 @@ def detrend(x, order=1, axis=0):
 
     Returns
     -------
-    ndarray
+    ndarray, Series, or DataFrame
         The detrended series is the residual of the linear regression of the
-        data on the trend of given order.
+        data on the trend of given order. It has the type, and for pandas
+        input the index and columns, of `x`.
     """
     order = int_like(order, "order")
     axis = int_like(axis, "axis")
@@ -548,13 +549,13 @@ def lagmat2ds(x, maxlag0, maxlagex=None, dropex=0, trim="forward", use_pandas=Fa
     dropex : int, optional
         Exclude first dropex lags from other variables. For all variables,
         except the first, lags from dropex to maxlagex are included.
-    trim : {'forward', 'backward', 'both', 'none'}, optional
+    trim : {'forward', 'backward', 'both', 'none', None}, optional
         The trimming method to use.
 
         * 'forward' : trim invalid observations in front.
         * 'backward' : trim invalid initial observations.
         * 'both' : trim invalid observations on both sides.
-        * 'none' : no trimming of observations.
+        * 'none', None : no trimming of observations.
     use_pandas : bool, optional
         If true, returns a DataFrame when the input is a pandas
         Series or DataFrame.  If false, return numpy ndarrays.
@@ -645,7 +646,8 @@ def vech(mat):
     Parameters
     ----------
     mat : ndarray
-        A symmetric 2d array.
+        A square 2d array, usually symmetric. Only its lower triangle is
+        used.
 
     Returns
     -------
@@ -703,7 +705,7 @@ def unvech(v):
 
     Parameters
     ----------
-    v : ndarray
+    v : array_like
         A 1d array containing the stacked lower-triangular elements of a
         symmetric matrix, as produced by :func:`vech`.
 

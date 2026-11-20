@@ -25,6 +25,8 @@ from statsmodels.tsa.arima_process import (
     arma_acovf,
     arma_generate_sample,
     arma_impulse_response,
+    arma_pacf,
+    arma_periodogram,
     deconvolve,
     index2lpol,
     lpol2index,
@@ -641,3 +643,204 @@ def test_arma_acovf_nobs_validation():
         arma_acovf([1.0], [1.0], nobs=-1)
     with pytest.raises(ValueError, match="nobs must be a positive integer"):
         arma_acf([1.0, -0.5], [1.0], lags=0)
+
+
+def test_arma_acovf_negative_sigma2():
+    with pytest.raises(ValueError, match="positive innovation variance"):
+        arma_acovf([1.0, -0.5], [1.0], nobs=5, sigma2=-1.0)
+
+
+@pytest.mark.parametrize("nobs", [1, 2, 6])
+def test_arma11_acovf_closed_form(nobs):
+    # ARMA(1, 1), see Brockwell and Davis (2009), Section 3.3:
+    # gamma(0) = s2 (1 + 2 phi theta + theta^2) / (1 - phi^2),
+    # gamma(1) = s2 (1 + phi theta) (phi + theta) / (1 - phi^2) and
+    # gamma(k) = phi gamma(k - 1) for k > 1. The first two are solved for
+    # jointly, so nobs = 1 and 2 return part of that solution.
+    phi, theta, sigma2 = 0.6, 0.3, 2.5
+    g0 = sigma2 * (1 + 2 * phi * theta + theta**2) / (1 - phi**2)
+    g1 = sigma2 * (1 + phi * theta) * (phi + theta) / (1 - phi**2)
+    expected = np.r_[g0, g1 * phi ** np.arange(nobs - 1)]
+    acovf = arma_acovf([1.0, -phi], [1.0, theta], nobs=nobs, sigma2=sigma2)
+    assert_allclose(acovf, expected, rtol=1e-12)
+
+
+def test_ma1_acf_pacf_closed_form():
+    # MA(1), see Brockwell and Davis (2009), Sections 3.3 and 3.4:
+    # rho(1) = theta / (1 + theta^2), rho(k) = 0 for k > 1, and the partial
+    # autocorrelation of lag k is
+    # -(-theta)^k (1 - theta^2) / (1 - theta^(2 (k + 1))).
+    theta, lags = 0.5, 8
+    k = np.arange(1, lags)
+    expected_acf = np.r_[1.0, theta / (1 + theta**2), np.zeros(lags - 2)]
+    pacf_k = -((-theta) ** k) * (1 - theta**2) / (1 - theta ** (2 * (k + 1)))
+    expected_pacf = np.r_[1.0, pacf_k]
+    process = ArmaProcess(ma=[1.0, theta])
+    # atol: the autocorrelations beyond lag 1 are zero
+    acf = arma_acf([1.0], [1.0, theta], lags)
+    assert_allclose(acf, expected_acf, rtol=1e-12, atol=1e-15)
+    assert_allclose(process.acf(lags), expected_acf, rtol=1e-12, atol=1e-15)
+    assert_allclose(arma_pacf([1.0], [1.0, theta], lags), expected_pacf, rtol=1e-10)
+    assert_allclose(process.pacf(lags), expected_pacf, rtol=1e-10)
+
+
+def test_arma11_representations_closed_form():
+    # (1 + theta L) / (1 - phi L) = 1 + sum_k (phi + theta) phi^(k - 1) L^k
+    # (1 - phi L) / (1 + theta L) = 1 - sum_k (phi + theta) (-theta)^(k - 1) L^k
+    phi, theta, n = 0.7, 0.4, 10
+    k = np.arange(1, n)
+    ma_rep = np.r_[1.0, (phi + theta) * phi ** (k - 1)]
+    ar_rep = np.r_[1.0, -(phi + theta) * (-theta) ** (k - 1)]
+    ar, ma = [1.0, -phi], [1.0, theta]
+    process = ArmaProcess(ar, ma)
+    assert_allclose(arma_impulse_response(ar, ma, leads=n), ma_rep, rtol=1e-12)
+    assert_allclose(arma2ma(ar, ma, lags=n), ma_rep, rtol=1e-12)
+    assert_allclose(arma2ar(ar, ma, lags=n), ar_rep, rtol=1e-12)
+    assert_allclose(process.impulse_response(n), ma_rep, rtol=1e-12)
+    assert_allclose(process.arma2ma(n), ma_rep, rtol=1e-12)
+    assert_allclose(process.arma2ar(n), ar_rep, rtol=1e-12)
+
+
+def test_lag_polynomial_identities():
+    # ar(L) psi(L) = ma(L) and ma(L) pi(L) = ar(L) for the MA and AR
+    # representations psi and pi, up to the truncation after n terms
+    ar = np.array([1.0, -0.5, 0.25])
+    ma = np.array([1.0, 0.4, -0.2])
+    n = 12
+    psi = arma2ma(ar, ma, lags=n)
+    pi = arma2ar(ar, ma, lags=n)
+    # atol: the coefficients after lag 2 are zero
+    expected_ma = np.r_[ma, np.zeros(n - 3)]
+    expected_ar = np.r_[ar, np.zeros(n - 3)]
+    assert_allclose(np.convolve(ar, psi)[:n], expected_ma, rtol=1e-12, atol=1e-14)
+    assert_allclose(np.convolve(ma, pi)[:n], expected_ar, rtol=1e-12, atol=1e-14)
+    # The product of two processes multiplies their lag polynomials
+    product = ArmaProcess(ar, ma) * ArmaProcess([1.0, 0.3], [1.0, -0.6])
+    assert_allclose(product.ar, np.convolve(ar, [1.0, 0.3]), rtol=1e-15)
+    assert_allclose(product.ma, np.convolve(ma, [1.0, -0.6]), rtol=1e-15)
+    # (1 - z / 2) (1 + z / 4) = 1 - z / 4 - z^2 / 8 and 1 + z / 5
+    process = ArmaProcess.from_roots(maroots=[-5.0], arroots=[2.0, -4.0])
+    assert_allclose(process.ar, [1.0, -0.25, -0.125], rtol=1e-15)
+    assert_allclose(process.ma, [1.0, 0.2], rtol=1e-15)
+    assert process.isstationary
+    assert process.isinvertible
+
+
+def test_arma_periodogram_closed_form():
+    # |ma(exp(-iw))|^2 = 1 + 2 theta cos(w) + theta^2 and
+    # |ar(exp(-iw))|^2 = 1 - 2 phi cos(w) + phi^2, see the Notes for the
+    # division by sqrt(2 pi)
+    phi, theta = 0.5, 0.4
+    w = np.linspace(0, np.pi, 7)
+    freq, sd = arma_periodogram([1.0, -phi], [1.0, theta], worN=w)
+    num = 1 + 2 * theta * np.cos(w) + theta**2
+    den = 1 - 2 * phi * np.cos(w) + phi**2
+    assert_allclose(freq, w, rtol=1e-15)
+    assert_allclose(sd, num / den / np.sqrt(2 * np.pi), rtol=1e-12)
+    process = ArmaProcess([1.0, -phi], [1.0, theta])
+    freq, sd = process.periodogram(7)
+    assert_allclose(freq, np.linspace(0, np.pi, 7, endpoint=False), rtol=1e-15)
+    den = 1 - 2 * phi * np.cos(freq) + phi**2
+    num = 1 + 2 * theta * np.cos(freq) + theta**2
+    assert_allclose(sd, num / den / np.sqrt(2 * np.pi), rtol=1e-12)
+
+
+def test_arma_periodogram_unit_root():
+    # The frequency response of a unit root is not defined at frequency 0
+    with np.errstate(divide="ignore", invalid="ignore"):
+        with pytest.warns(RuntimeWarning, match="nan in frequency response"):
+            w, sd = arma_periodogram([1.0, -1.0], [1.0], worN=8)
+    expected = 1 / (2 - 2 * np.cos(w[1:])) / np.sqrt(2 * np.pi)
+    assert_allclose(sd[1:], expected, rtol=1e-10)
+
+
+def test_ar2arma_start():
+    # A correctly specified AR(1) is fit exactly, so the coefficients are
+    # found from a start other than the default
+    n = 40
+    ar_true = [1.0, -0.8]
+    ar_des = np.r_[ar_true, np.zeros(n - 2)]
+    ar_app, ma_app, _ = ar2arma(ar_des, p=2, q=2, n=n, start=np.array([-0.2, 0.3]))
+    assert_allclose(ar_app, ar_true, rtol=1e-6)
+    # atol: the MA coefficient of the process is zero
+    assert_allclose(ma_app, [1.0, 0.0], rtol=1e-6, atol=1e-6)
+
+
+def test_deconvolve_n_terms():
+    # 1 / (1 - L / 2) = sum_k L^k / 2^k. With n terms of the quotient, the
+    # remainder is 1 - (1 - L / 2) sum_{k<n} L^k / 2^k = L^n / 2^n. All of the
+    # values are powers of 2, so the arithmetic is exact.
+    n = 6
+    quot, rem = deconvolve([1.0], [1.0, -0.5], n=n)
+    assert_allclose(quot, 0.5 ** np.arange(n), rtol=1e-15)
+    assert_allclose(rem, np.r_[np.zeros(n), 0.5**n], rtol=1e-15)
+
+
+COEFFICIENT_FORMS = ("list", "tuple", "series")
+
+
+def _coefficient_form(value, form):
+    return {"list": list, "tuple": tuple, "series": pd.Series}[form](
+        np.asarray(value).tolist()
+    )
+
+
+@pytest.mark.parametrize("form", COEFFICIENT_FORMS)
+@pytest.mark.parametrize(
+    "func", [arma_acovf, arma_acf, arma_pacf, arma_impulse_response, arma2ma, arma2ar]
+)
+def test_lag_polynomial_input_forms(func, form):
+    # A lag polynomial is array_like, and 1-d
+    ar = np.array([1.0, -0.5, 0.25])
+    ma = np.array([1.0, 0.4])
+    res = func(_coefficient_form(ar, form), _coefficient_form(ma, form), 8)
+    assert isinstance(res, np.ndarray)
+    assert_allclose(res, func(ar, ma, 8), rtol=1e-14)
+
+
+@pytest.mark.parametrize(
+    "func", [arma_acovf, arma_acf, arma_pacf, arma_impulse_response, arma2ma, arma2ar]
+)
+def test_lag_polynomial_int_dtype(func):
+    expected = func(np.array([1.0]), np.array([1.0, 2.0, -1.0]), 6)
+    assert_allclose(func(np.array([1]), np.array([1, 2, -1]), 6), expected, rtol=1e-14)
+
+
+@pytest.mark.parametrize("form", COEFFICIENT_FORMS)
+def test_arma_process_input_forms(form):
+    ar = np.array([1.0, -0.5, 0.25])
+    ma = np.array([1.0, 0.4])
+    expected = ArmaProcess(ar, ma)
+    arroots = _coefficient_form(expected.arroots, form)
+    maroots = _coefficient_form(expected.maroots, form)
+    processes = [
+        ArmaProcess(_coefficient_form(ar, form), _coefficient_form(ma, form)),
+        ArmaProcess.from_coeffs(
+            _coefficient_form(-ar[1:], form), _coefficient_form(ma[1:], form)
+        ),
+        ArmaProcess.from_roots(maroots, arroots),
+    ]
+    for process in processes:
+        assert_allclose(process.ar, ar, rtol=1e-12)
+        assert_allclose(process.ma, ma, rtol=1e-12)
+        assert_allclose(process.acf(8), expected.acf(8), rtol=1e-12)
+    ar_form, ma_form = _coefficient_form(ar, form), _coefficient_form(ma, form)
+    _, sd = arma_periodogram(ar_form, ma_form, 8)
+    assert_allclose(sd, arma_periodogram(ar, ma, 8)[1], rtol=1e-14)
+    rng = np.random.default_rng(0)
+    sample = arma_generate_sample(ar_form, ma_form, 20, distrvs=rng.standard_normal)
+    rng = np.random.default_rng(0)
+    expected_sample = arma_generate_sample(ar, ma, 20, distrvs=rng.standard_normal)
+    assert_allclose(sample, expected_sample, rtol=1e-14)
+
+
+@pytest.mark.parametrize("form", COEFFICIENT_FORMS)
+def test_lpol2index_deconvolve_input_forms(form):
+    coeffs, index = lpol2index(_coefficient_form([1.0, 0.0, -0.5, 0.0, 0.2], form))
+    assert_allclose(coeffs, [1.0, -0.5, 0.2], rtol=1e-15)
+    assert_equal(index, [0, 2, 4])
+    # (1 - L / 2) (2 + L + L^2 / 2) = 2 - L^3 / 4, exact in floating point
+    num = _coefficient_form([2.0, 0.0, 0.0, -0.25], form)
+    quot, rem = deconvolve(num, _coefficient_form([1.0, -0.5], form))
+    assert_allclose(quot, [2.0, 1.0, 0.5], rtol=1e-15)
+    assert_allclose(rem, np.zeros(4), rtol=1e-15)

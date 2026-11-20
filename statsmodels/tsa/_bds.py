@@ -42,12 +42,15 @@ def distance_indicators(x, epsilon=None, distance=1.5):
 
     Returns
     -------
-    indicators : 2d array
-        matrix of distance threshold indicators
+    indicators : ndarray
+        The (nobs, nobs) boolean matrix of distance threshold indicators,
+        which is True where the absolute difference of two observations is
+        less than ``epsilon``.
 
     Notes
     -----
-    Since this can be a very large matrix, use np.int8 to save some space.
+    Since this can be a very large matrix, it is stored as bool to save
+    some space.
     """
     x = array_like(x, "x")
 
@@ -117,7 +120,8 @@ def correlation_sums(indicators, max_dim):
     Returns
     -------
     corrsums : ndarray
-        Correlation sums
+        The correlation sums for the embedding dimensions 1, ..., max_dim,
+        of shape (1, max_dim).
     """
 
     corrsums = np.zeros((1, max_dim))
@@ -188,11 +192,12 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
 
     Returns
     -------
-    bds_stat : float or ndarray
-        The BDS statistic. An ndarray is returned if max_dim > 2.
-    pvalue : float or ndarray
-        The p-values associated with the BDS statistic. An ndarray is
-        returned if max_dim > 2.
+    bds_stat : ndarray
+        The BDS statistic for each embedding dimension 2, ..., max_dim, of
+        shape (max_dim - 1,). It is 0-dimensional if max_dim is 2.
+    pvalue : ndarray
+        The p-values associated with the BDS statistic, of the same shape
+        as ``bds_stat``.
 
     Notes
     -----
