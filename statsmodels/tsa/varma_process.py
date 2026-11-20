@@ -489,12 +489,31 @@ class _Var:
         self.arhat = ar2full(self.arlhs)
         self.rss = res[1]
         self.xredrank = res[2]
+        # Reset the fitted values cached by predict
+        self.yhat = None
 
     def predict(self):
-        """Calculate estimated timeseries (yhat) for sample"""
+        """
+        Calculate estimated timeseries (yhat) for sample
 
-        if not hasattr(self, "yhat"):
-            self.yhat = varfilter(self.y, self.arhat)
+        Returns
+        -------
+        yhat : ndarray
+            The fitted values ``xred @ estresults[0]`` of the regression in
+            `fit`, of shape (nobs - nlags, nvars), for the observations
+            ``nlags, ..., nobs - 1``. They are also attached as ``yhat``,
+            and are computed again after `fit` is called.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+           The result was previously neither the fitted values nor the
+           residuals, and it had nobs - nlags rows only when nlags was 1.
+           It was also not updated when `fit` was called again with a
+           different number of lags.
+        """
+        if self.yhat is None:
+            self.yhat = self.xred @ self.estresults[0]
         return self.yhat
 
     def covmat(self):

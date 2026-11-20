@@ -1002,6 +1002,10 @@ Time series analysis
   of 0. For a ``det_order`` of -1 and 0 the statistics now equal the
   likelihood ratio statistics of ``VECM``. Results with ``k_ar_diff`` of 1 or
   more do not change. :issue:`7459`, :pr:`10807`
+- ``_Var.predict`` (deprecated) returned neither the fitted values nor the
+  residuals, with the wrong number of rows unless there was one lag, and kept
+  returning the first result after a refit. It returns the fitted values.
+  :pr:`10822`
 - ``varfilter`` in ``statsmodels.tsa.varma_process`` with 3-d lag matrices
   used the variables in reverse order and returned the wrong number of rows
   unless there were two lags, and a 2-d filter with one lag and several
