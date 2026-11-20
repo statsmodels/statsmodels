@@ -17,6 +17,7 @@ pandas
 matplotlib
 scikit-learn
 qsturng-py http://code.google.com/p/qsturng-py/
+QuantileRegressions.jl https://github.com/pkofod/QuantileRegressions.jl
 
 
 numpy (statsmodels.compatnp contains copy of entire model)
@@ -246,4 +247,55 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
 ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
+----------------------------------------------------------
+
+QuantileRegressions.jl (basis of the interior point solver in
+statsmodels.regression.quantile_regression)
+--------------------------------------------------------------
+The iteration structure of the Frisch-Newton interior point method
+(starting point, step length rule and centering parameter) follows the
+function qreg_coef in src/InteriorPoint.jl of QuantileRegressions.jl, a
+modified version of lp_fnm by Daniel Morillo and Roger Koenker, translated
+from Ox to Matlab by Paul Eilers. The file states that it is released under
+the BSD-3 license with the permission of Roger Koenker and Paul Eilers,
+given to Patrick Kofod Mogensen on April 24, 2015.
+
+Copyright (C) 2006, Jonathan E. Taylor
+All rights reserved.
+
+Copyright (c) 2006-2008 Scipy Developers.
+All rights reserved.
+
+Copyright (c) 2009-2012 Statsmodels Developers.
+All rights reserved.
+
+Copyright (c) 2013 Vincent Arel-Bundock varel@umich.edu.
+All rights reserved.
+
+Copyright (c) 2015 QuantileRegressions.jl Developers
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+  a. Redistributions of source code must retain the above copyright notice,
+     this list of conditions and the following disclaimer.
+  b. Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in the
+     documentation and/or other materials provided with the distribution.
+  c. Neither the name of Statsmodels nor the names of its contributors
+     may be used to endorse or promote products derived from this software
+     without specific prior written permission.
+
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL QUANTILEREGRESSION.JL OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSE-
+QUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+DAMAGE.
 ----------------------------------------------------------
