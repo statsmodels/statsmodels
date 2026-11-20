@@ -450,9 +450,9 @@ def miso_lfilter(ar, ma, x, useic=False):
 
            ``x``, ``ar`` and ``ma`` are converted with ``array_like``, so a
            list or tuple ``x``, a column ``ar`` and a 1-d ``x`` or ``ma``
-           work where they raised, and ``useic`` can be an ndarray. An ``ma``
-           without one column per column of ``x`` raises a ValueError
-           instead of returning a wrong result.
+           work where they raised, and ``useic`` can be an ndarray. A 2-d
+           ``ma`` without one column per column of a 2-d ``x`` is
+           deprecated.
     useic : array_like or bool, optional
         Initial conditions for the AR filter, as accepted by
         ``scipy.signal.lfiltic`` (i.e. an array_like of the initial values
@@ -469,7 +469,16 @@ def miso_lfilter(ar, ma, x, useic=False):
     Raises
     ------
     ValueError
-        If ``ma`` does not have one column per column of ``x``.
+        If ``ma`` or ``x`` is 1-d and ``ma`` does not have one column per
+        column of ``x``.
+
+    Warns
+    -----
+    FutureWarning
+        If ``ma`` and ``x`` are 2-d and ``ma`` does not have one column per
+        column of ``x``. The result does not filter each column of ``x`` with
+        its own column of ``ma``. This is deprecated and will raise a
+        ValueError in statsmodels 0.17.0.
 
     Notes
     -----
@@ -485,13 +494,26 @@ def miso_lfilter(ar, ma, x, useic=False):
     with shapes y (nobs,), x (nobs, nvars), ar (narlags,), and
     ma (narlags, nvars).
     """
+    # a 2-d ma and x with different numbers of columns ran before, so they
+    # are deprecated rather than rejected
+    both_2d = np.ndim(ma) == 2 and np.ndim(x) == 2
     ma = array_like(ma, "ma", ndim=2)
     ar = array_like(ar, "ar", ndim=1)
-    x = array_like(x, "x", ndim=2)
+    # dtype=None keeps complex x complex, as before
+    x = array_like(x, "x", ndim=2, dtype=None)
     if ma.shape[1] != x.shape[1]:
-        raise ValueError(
+        msg = (
             "ma must have one column per column of x, but ma has "
             f"{ma.shape[1]} columns and x has {x.shape[1]}"
+        )
+        if not both_2d:
+            raise ValueError(msg)
+        warnings.warn(
+            f"{msg}. The result does not filter each column of x with its "
+            "own column of ma. This is deprecated and will raise a "
+            "ValueError in statsmodels 0.17.0.",
+            FutureWarning,
+            stacklevel=2,
         )
     inp = signal.correlate(x, ma[::-1, :])[:, x.shape[1] - 1]
     # for testing 2d equivalence between convolve and correlate
