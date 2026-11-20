@@ -72,6 +72,14 @@ def select_order(
     Returns
     -------
     selected_orders : :class:`statsmodels.tsa.vector_ar.var_model.LagOrderResults`
+
+    Notes
+    -----
+    The information criteria are those of a VAR in levels with the
+    deterministic terms as exogenous variables and the constant that ``VAR``
+    adds by default. For ``"co"`` and ``"ci"`` the two constants are collinear,
+    which is not reported as a ``SingularMatrixWarning``, as it is not for a
+    collinear ``exog`` or ``exog_coint``.
     """
     ic = defaultdict(list)
     deterministic = string_like(deterministic, "deterministic")
@@ -96,11 +104,11 @@ def select_order(
         # warn_singular=False: when "co" or "ci" is requested, exogs already
         # includes a constant column, which VAR's own default trend="c" then
         # duplicates, matching JMulTi's lag-order-selection procedure; the
-        # resulting design matrix is rank-deficient by construction. Other
-        # deterministic choices never hit this, and the information
-        # criteria only depend on the residuals, which are well-defined
-        # regardless of the non-unique parameterization, so this is not
-        # worth warning the user about here.
+        # resulting design matrix is rank-deficient by construction, so a
+        # warning would not tell the user anything. The duplicated column
+        # is counted in the number of parameters of AIC, BIC and HQIC, which
+        # therefore differ from those of the model without the duplicate.
+        # A rank deficiency of a user supplied exog is not reported either.
         var_result = var_model._estimate_var(
             lags=p, offset=maxlags + 1 - p, warn_singular=False
         )
@@ -566,6 +574,14 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace", signif=0.05):
     rank : :class:`CointRankResults`
         A :class:`CointRankResults` object containing the cointegration rank suggested
         by the test and allowing a summary to be printed.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The test statistics, and so the rank, were wrong for ``k_ar_diff=0``
+       before, because the levels were not lagged. The results for
+       ``k_ar_diff`` of 1 or more are unchanged.
     """
     method = string_like(method, "method", options=("trace", "maxeig"), lower=False)
 
@@ -644,6 +660,12 @@ def coint_johansen(endog, det_order, k_ar_diff):
     use is larger than if only the moment matrices were stored. A
     ``LinAlgError`` is raised if these columns are linearly dependent, for
     example if ``endog`` contains a duplicated series.
+
+    .. versionchanged:: 0.15.1
+
+       The eigenvalues, the eigenvectors and the test statistics were wrong
+       for ``k_ar_diff=0`` before, because the levels were not lagged. The
+       results for ``k_ar_diff`` of 1 or more are unchanged.
 
     References
     ----------

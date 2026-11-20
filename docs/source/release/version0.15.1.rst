@@ -71,7 +71,7 @@ Deprecations
 Behavior changes
 ----------------
 
-- ``MixedLM.score_sqrt`` is private.
+- ``MixedLM.score_sqrt`` is private. :pr:`10700`
 - ``OaxacaResults.summary()`` returns the summary as a string instead of
   printing it and returning ``None``. Use ``print(result.summary())`` to
   display it. :issue:`7733`, :pr:`10491`
@@ -770,8 +770,16 @@ Mixed models and imputation
 - ``MixedLM.fit_regularized`` failed for models with pandas data, for example
   from a formula: ``summary`` raised a ``KeyError`` and, with pandas 3,
   ``fit_regularized`` itself failed. :issue:`8902`, :pr:`10465`
-- ``MixedLM.fit`` often stopped short of the optimum, because ``MixedLM.score``
-  had a sign error.
+- ``MixedLM.fit`` could stop below the maximum of the log-likelihood, report that
+  it had not converged, or end at a variance of 0, because ``MixedLM.score``
+  dropped the signs of the packed square-root parameters and so was not the
+  derivative at the vector that the optimizer holds. These fits now reach the
+  maximum, so estimates, standard errors and log-likelihoods of existing
+  models can change. ``MixedLM.score`` with a packed vector that has negative
+  entries now returns the derivative at that vector. In 72 simulated models
+  fitted with the default options, 16 ended more than 1e-4 below the maximum
+  found by lme4 and 12 reported no convergence, and none does now.
+  :pr:`10700`
 - ``MixedLMResults.bse_re`` raised a ``ValueError`` for models with variance
   components and pandas data, for example from a formula. :pr:`10702`
 - ``MICE.combine`` failed for results of models that do not have a
@@ -790,14 +798,6 @@ Mixed models and imputation
 Time series analysis
 --------------------
 
-- ``coint_johansen`` and ``select_coint_rank`` with ``k_ar_diff=0`` used the
-  levels ``y_t`` instead of the lagged levels ``y_{t-1}``, so the eigenvalues,
-  the trace and maximum eigenvalue statistics and the eigenvectors were wrong
-  and the selected cointegration rank could change. On the log of real GDP,
-  consumption and investment in ``macrodata`` the trace statistic for rank 0
-  was 39.4 instead of 29.6, which selected rank 1 instead of 0. The statistics
-  now equal the likelihood ratio statistics of ``VECM``. Results with
-  ``k_ar_diff`` of 1 or more do not change. :issue:`7459`, :pr:`10807`
 - The ARIMA GLS estimator now uses the complete AR and MA lag polynomials
   when whitening the regression data. Seasonal terms were previously
   omitted, and nonconsecutive lags were treated as consecutive, producing
@@ -1057,7 +1057,10 @@ Time series analysis
 - ``VAR.fit`` now raises a ``SingularMatrixWarning`` if the lagged regressors
   are perfectly collinear, matching the warning already raised by ``OLS`` for
   a rank-deficient design matrix, using the same ``nobs``-scaled rank rule
-  (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
+  (:pr:`10714`). The same cutoff now chooses the minimum-norm solution, so
+  the coefficients of such a design are no longer of the order of 1e11, as
+  they could be with the earlier cutoff of 1e-15.
+  ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
 - ``fit(method="newton")`` of state space models and of Markov switching
@@ -1071,6 +1074,22 @@ Time series analysis
   raising or returning derivatives with respect to the constrained ones.
   ``MLEModel.hessian`` has a new keyword-only argument ``average``.
   ``fit(method="ncg")`` of state space models no longer raises. :pr:`10817`
+- ``coint_johansen`` and ``select_coint_rank`` with ``k_ar_diff=0`` used the
+  levels ``y_t`` instead of the lagged levels ``y_{t-1}``, so the eigenvalues,
+  the trace and maximum eigenvalue statistics and the eigenvectors were wrong
+  and the selected cointegration rank could change. With ``det_order=0``, on
+  the log of real GDP, consumption and investment in ``macrodata`` the trace
+  statistic for rank 0 was 39.4 instead of 29.6, which selected rank 1 instead
+  of 0. For a ``det_order`` of -1 and 0 the statistics now equal the
+  likelihood ratio statistics of ``VECM``. Results with ``k_ar_diff`` of 1 or
+  more do not change. :issue:`7459`, :pr:`10807`
+- ``DeterministicProcess.out_of_sample`` without any deterministic terms
+  returned the in-sample rows on the in-sample index instead of ``steps``
+  rows on the forecast index, and ``DeterministicProcess.range`` beyond the
+  sample returned the wrong rows in that case. :pr:`10834`
+- ``arma_order_select_ic`` accepts ``ic`` as any sequence of str, such as an
+  ndarray or an ``Index``, as documented, instead of only a list or tuple.
+  :pr:`10840`
 - ``grangercausalitytests`` with an empty ``maxlag`` raised a NumPy error
   instead of its own ``ValueError``. :pr:`10839`
 - ``breakvar_heteroskedasticity_test`` raised an ``UnboundLocalError`` for a
@@ -1435,6 +1454,14 @@ Documentation
 - Add an example to ``cohens_kappa`` showing that kappa depends on class
   prevalence: with the same rater accuracy and raw agreement, kappa is much
   smaller when one class is rare. :issue:`9680`, :pr:`10806`
+- Correct docstrings in ``statsmodels.tsa.stattools``: the default ``nlags``
+  and result shape of ``pacf_ols``, the result shape of ``pacf_yw``, the
+  ``"legacy"`` lags of ``kpss``, the default ``maxlag`` and ``icbest`` of
+  ``adfuller``, the default ``maxlag`` of ``zivot_andrews``, the unused
+  ``return_results`` of ``coint`` and its critical values for ``trend="n"``,
+  the two columns of ``x`` and ``addconst`` in ``grangercausalitytests``, and
+  the fit advice of ``arma_order_select_ic``, which suggested a method that
+  makes every fit fail. :pr:`10836`
 - Correct docstrings in ``statsmodels.tsa.tsatools``, ``arima_process``,
   ``deterministic`` and the BDS test: ``detrend`` returns pandas objects for
   pandas input, the parameters of ``DeterministicProcess.in_sample`` and

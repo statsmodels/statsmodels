@@ -730,8 +730,41 @@ def test_var_fit_perfectly_collinear_warns():
     # as with a rank-deficient OLS design matrix.
     r = np.random.default_rng(0).normal(0, 0.01, 60)
     data = pd.DataFrame({"a": r, "b": r})
-    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient") as record:
         VAR(data).fit(1)
+    # the warning points at the line of the user, not at the library
+    assert record[0].filename == __file__
+
+
+def test_var_fit_ic_warns_once_at_user_line():
+    # fit(maxlags, ic) selects the lag order with select_order, which would
+    # warn for every singular lag order; only the final fit warns
+    rng = np.random.default_rng(1)
+    y = np.cumsum(rng.standard_normal((100, 2)), axis=0)
+    exog = np.ones((100, 1))
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient") as record:
+        VAR(y, exog=exog).fit(maxlags=4, ic="aic")
+    assert len(record) == 1
+    assert record[0].filename == __file__
+    # the design is full rank without the constant: no warning for any order
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SingularMatrixWarning)
+        VAR(y, exog=exog).fit(maxlags=4, ic="bic", trend="n")
+
+
+def test_var_fit_near_collinear_minimum_norm():
+    # The second series equals the first up to 1e-14 noise: the smallest
+    # singular value of the design is below the cutoff of the rank rule, so
+    # the design is rank-deficient and the minimum-norm solution is returned.
+    # The cutoff 1e-15 of lstsq gave coefficients of the order of 1e12.
+    rng = np.random.default_rng(3)
+    a = rng.standard_normal(1000)
+    y = np.column_stack([a, a + 1e-14 * rng.standard_normal(1000)])
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res = VAR(y).fit(1)
+    assert np.abs(res.params).max() < 1
+    # the two lag columns have the same coefficient in the minimum-norm solution
+    assert_allclose(res.params[1, :], res.params[2, :], rtol=1e-3, atol=1e-3)
 
 
 def test_var_fit_full_rank_does_not_warn():
@@ -1601,8 +1634,10 @@ def test_select_order_qr_fallback():
     y_fit = y.copy()
     y_fit[:, 2] = y[:, 0] + y[:, 1] + 1e-6 * rng.standard_normal(200)
     assert var_model._var_order_ics(y_fit, None, 6, "c", 0) is None
-    res = VAR(y_fit).select_order(6, trend="c")
-    expected = _select_order_loop(VAR(y_fit), 6, "c")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SingularMatrixWarning)
+        res = VAR(y_fit).select_order(6, trend="c")
+        expected = _select_order_loop(VAR(y_fit), 6, "c")
     _assert_lag_orders_equal(res, expected, rtol=0)
 
     # Non-finite data
@@ -1639,6 +1674,7 @@ def test_select_order_qr_fallback_singular_warns_once():
         VAR(y, exog=exog).select_order(6, trend="c")
     singular = [w for w in record.list if issubclass(w.category, SingularMatrixWarning)]
     assert len(singular) == 1
+    assert singular[0].filename == __file__
 
 
 TABLE_HEADER = ["Test", "statistic", "Critical", "Value", "p-value", "df"]

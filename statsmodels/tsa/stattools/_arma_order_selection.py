@@ -87,9 +87,11 @@ def arma_order_select_ic(
     This method can be used to tentatively identify the order of an ARMA
     process, provided that the time series is stationary and invertible. This
     function computes the full exact MLE estimate of each model and can
-    therefore be a little slow. An implementation using approximate estimates
-    will be provided in the future. In the meantime, consider passing
-    {method : "css"} to fit_kw.
+    therefore be a little slow. A faster, approximate estimator of
+    ``ARIMA.fit`` can be selected with fit_kw, for example
+    ``fit_kw={"method": "hannan_rissanen"}``.
+
+    A model whose fit fails has NaN information criteria.
 
     Examples
     --------
@@ -126,8 +128,16 @@ def arma_order_select_ic(
     ma_range = list(range(max_ma + 1))
     if isinstance(ic, str):
         ic = [ic]
-    elif not isinstance(ic, (list, tuple)):
-        raise ValueError("Need a list or a tuple for ic if not a string.")
+    else:
+        msg = "ic must be a str or a sequence of str"
+        try:
+            ic = list(ic)
+        except TypeError:
+            raise ValueError(msg) from None
+        if not all(isinstance(name, str) for name in ic):
+            raise ValueError(msg)
+        # Elements of an ndarray are np.str_
+        ic = [str(name) for name in ic]
 
     results = np.zeros((len(ic), max_ar + 1, max_ma + 1))
     model_kw = {} if model_kw is None else model_kw
