@@ -338,6 +338,10 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- When ``den`` is longer than ``num``, ``deconvolve`` returns an empty ndarray
+  instead of a list as the quotient, and a float (or complex) copy of ``num``
+  as the remainder instead of ``num`` itself. The values are unchanged.
+  :pr:`10864`
 
 New Features and Enhancements
 =============================
