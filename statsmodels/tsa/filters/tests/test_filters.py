@@ -1340,18 +1340,46 @@ def test_miso_lfilter_one_variable(ma_1d, x_1d):
     assert_allclose(y, signal.lfilter(ma[:, 0], ar, x[:, 0]), rtol=1e-10)
 
 
-@pytest.mark.parametrize(
-    "ma_shape, x_shape",
-    [((3, 1), (12, 2)), ((3, 3), (12, 2)), ((3,), (12, 2)), ((3, 2), (12,))],
-)
-def test_miso_lfilter_ma_columns_mismatch(ma_shape, x_shape):
-    # an ma without one column per column of x silently returned the filter
-    # of a misaligned part of x, or raised an unclear error
+@pytest.mark.parametrize("ma_shape", [(3, 1), (3, 3)])
+def test_miso_lfilter_ma_columns_mismatch_deprecated(ma_shape):
+    # a 2-d ma without one column per column of a 2-d x silently returned the
+    # filter of a misaligned part of x. It warns and keeps that result: the
+    # middle column of the full 2-d correlation, filtered by ar.
+    from scipy import signal
+
+    rng = np.random.default_rng(0)
+    ma = rng.standard_normal(ma_shape)
+    x = rng.standard_normal((12, 2))
+    ar = array([1.0, -0.5])
+    with pytest.warns(FutureWarning, match="ma must have one column per column"):
+        y, inp = miso_lfilter(ar, ma, x)
+    expected_inp = signal.correlate(x, ma[::-1, :])[:12, 1]
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, signal.lfilter([1.0], ar, expected_inp), rtol=1e-12)
+
+
+@pytest.mark.parametrize("ma_shape, x_shape", [((3,), (12, 2)), ((3, 2), (12,))])
+def test_miso_lfilter_ma_columns_mismatch_1d(ma_shape, x_shape):
+    # a 1-d ma or x is a single column, which raised before; a mismatch with
+    # the other argument raises
     rng = np.random.default_rng(0)
     ma = rng.standard_normal(ma_shape)
     x = rng.standard_normal(x_shape)
     with pytest.raises(ValueError, match="ma must have one column per column of x"):
         miso_lfilter(array([1.0, -0.5]), ma, x)
+
+
+def test_miso_lfilter_complex_x():
+    # the filter is linear with real coefficients, so a complex x gives the
+    # filter of its real part plus i times the filter of its imaginary part
+    ar, ma, x = _miso_lfilter_data()
+    x_imag = np.random.default_rng(1).standard_normal(x.shape)
+    y, inp = miso_lfilter(ar, ma, x + 1j * x_imag)
+    y_real, inp_real = _miso_lfilter_recursion(ar, ma, x)
+    y_imag, inp_imag = _miso_lfilter_recursion(ar, ma, x_imag)
+    assert np.iscomplexobj(y)
+    assert_allclose(inp, inp_real + 1j * inp_imag, rtol=1e-12)
+    assert_allclose(y, y_real + 1j * y_imag, rtol=1e-10)
 
 
 @pytest.mark.parametrize(
