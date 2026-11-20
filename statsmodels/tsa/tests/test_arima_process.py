@@ -571,6 +571,54 @@ class TestArmaProcess:
         sample = process.generate_sample(nsample=(100, 5), distrvs=rs.standard_normal)
         assert_equal(sample.shape, (100, 5))
 
+    @pytest.mark.parametrize(
+        "make",
+        [
+            lambda nobs: ArmaProcess([1.0, -0.9], nobs=nobs),
+            lambda nobs: ArmaProcess.from_coeffs([0.9], nobs=nobs),
+            lambda nobs: ArmaProcess.from_roots(arroots=[1 / 0.9], nobs=nobs),
+        ],
+        ids=["init", "from_coeffs", "from_roots"],
+    )
+    @pytest.mark.parametrize("nsample", [{}, {"nsample": None}])
+    def test_generate_sample_default_nobs(self, make, nsample):
+        # The default sample size is nobs. It used to be 100, whatever nobs
+        process = make(37)
+        rng = np.random.default_rng(12345)
+        sample = process.generate_sample(distrvs=rng.standard_normal, **nsample)
+        # The AR(1) recursion with the same innovations
+        expected = np.random.default_rng(12345).standard_normal(37)
+        for i in range(1, 37):
+            expected[i] += 0.9 * expected[i - 1]
+        assert sample.shape == (37,)
+        assert_allclose(sample, expected, rtol=1e-12)
+
+        rng = np.random.default_rng(12345)
+        sample = process.generate_sample(
+            burnin=5, distrvs=rng.standard_normal, **nsample
+        )
+        expected = np.random.default_rng(12345).standard_normal(42)
+        for i in range(1, 42):
+            expected[i] += 0.9 * expected[i - 1]
+        assert sample.shape == (37,)
+        assert_allclose(sample, expected[5:], rtol=1e-12)
+
+    def test_generate_sample_default_nobs_from_estimation(self):
+        # from_estimation takes nobs from the results
+        rng = np.random.default_rng(0)
+        data = arma_generate_sample([1.0, -0.6], [1.0, 0.3], 80, distrvs=rng.normal)
+        res = ARIMA(data, order=(1, 0, 1), trend="n").fit()
+        process = ArmaProcess.from_estimation(res)
+        sample = process.generate_sample(distrvs=np.random.default_rng(1).normal)
+        expected = arma_generate_sample(
+            res.polynomial_reduced_ar,
+            res.polynomial_reduced_ma,
+            80,
+            distrvs=np.random.default_rng(1).normal,
+        )
+        assert sample.shape == (80,)
+        assert_allclose(sample, expected, rtol=1e-15)
+
     def test_impulse_response(self):
         process = ArmaProcess.from_coeffs([0.9])
         ir = process.impulse_response(10)
