@@ -5,6 +5,8 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
 from scipy.linalg import solve_sylvester
@@ -122,6 +124,11 @@ def set_mode(compatibility=None):
     """
     Set the compatibility mode
 
+    .. deprecated:: 0.15.1
+        ``set_mode`` has had no effect since compatibility mode was removed
+        in statsmodels 0.10, and nothing in statsmodels calls it. It will be
+        removed after statsmodels 0.17 is released.
+
     Parameters
     ----------
     compatibility : bool, optional
@@ -134,6 +141,16 @@ def set_mode(compatibility=None):
     NotImplementedError
         If `compatibility` is truthy.
     """
+    warnings.warn(
+        "statsmodels.tsa.statespace.tools.set_mode is deprecated and is not "
+        "exported from any public statsmodels API; it has had no effect "
+        "since compatibility mode was removed in statsmodels 0.10. It will "
+        "be removed after statsmodels 0.17 is released. If you rely on this "
+        "function, please open an issue at "
+        "https://github.com/statsmodels/statsmodels/issues.",
+        FutureWarning,
+        stacklevel=2,
+    )
     if compatibility:
         raise NotImplementedError("Compatibility mode is only available in"
                                   " statsmodels <= 0.9")
@@ -1586,6 +1603,14 @@ def validate_vector_shape(name, shape, nrows, nobs):
                          f" vector. Requires shape (*,{nobs:d}), got {shape!s}")
 
 
+def _mask_as_intc(mask):
+    # The Cython code takes an F-contiguous int mask and uses its values
+    # arithmetically. Go through bool first so that any nonzero value,
+    # including NaN, is 1.
+    return np.require(np.asarray(mask, dtype=bool), dtype=np.intc,
+                      requirements="F")
+
+
 def reorder_missing_matrix(matrix, missing, reorder_rows=False,
                            reorder_cols=False, is_diagonal=False,
                            inplace=False, prefix=None):
@@ -1627,7 +1652,7 @@ def reorder_missing_matrix(matrix, missing, reorder_rows=False,
     if not inplace:
         matrix = np.array(matrix, dtype=prefix_dtype_map[prefix], order="F")
 
-    missing = np.require(missing, dtype=np.intc, requirements="F")
+    missing = _mask_as_intc(missing)
     reorder(matrix, missing, reorder_rows, reorder_cols, is_diagonal)
 
     return matrix
@@ -1662,7 +1687,7 @@ def reorder_missing_vector(vector, missing, inplace=False, prefix=None):
     if not inplace:
         vector = np.array(vector, dtype=prefix_dtype_map[prefix], order="F")
 
-    missing = np.require(missing, dtype=np.intc, requirements="F")
+    missing = _mask_as_intc(missing)
     reorder(vector, missing)
 
     return vector
@@ -1719,7 +1744,7 @@ def copy_missing_matrix(A, B, missing, missing_rows=False, missing_cols=False,
     except (AttributeError, ValueError):
         A = np.require(A, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    missing = np.require(missing, dtype=np.intc, requirements="F")
+    missing = _mask_as_intc(missing)
     copy(A, B, missing, missing_rows, missing_cols, is_diagonal)
 
     return B
@@ -1764,7 +1789,7 @@ def copy_missing_vector(a, b, missing, inplace=False, prefix=None):
     except (AttributeError, ValueError):
         a = np.require(a, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    missing = np.require(missing, dtype=np.intc, requirements="F")
+    missing = _mask_as_intc(missing)
     copy(a, b, missing)
 
     return b
@@ -1821,7 +1846,7 @@ def copy_index_matrix(A, B, index, index_rows=False, index_cols=False,
     except (AttributeError, ValueError):
         A = np.require(A, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    index = np.require(index, dtype=np.intc, requirements="F")
+    index = _mask_as_intc(index)
     copy(A, B, index, index_rows, index_cols, is_diagonal)
 
     return B
@@ -1866,7 +1891,7 @@ def copy_index_vector(a, b, index, inplace=False, prefix=None):
     except (AttributeError, ValueError):
         a = np.require(a, dtype=prefix_dtype_map[prefix], requirements="F")
 
-    index = np.require(index, dtype=np.intc, requirements="F")
+    index = _mask_as_intc(index)
     copy(a, b, index)
 
     return b

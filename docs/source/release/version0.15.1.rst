@@ -47,6 +47,18 @@ Deprecations
   it will be removed in statsmodels 0.17.0. The value of ``which`` is case
   sensitive and ``exog`` can be a list. :issue:`8562`, :pr:`10554`,
   :pr:`10555`
+- ``statsmodels.tsa.statespace.tools.set_mode``,
+  ``statsmodels.tsa.tsatools.unintegrate`` and ``unintegrate_levels``, and
+  ``statsmodels.tsa.vector_ar.output.normality_summary`` and
+  ``hypothesis_test_table`` are deprecated. Nothing in statsmodels uses them
+  and they are neither exported nor documented. Calling them now raises a
+  ``FutureWarning``, and they will be removed after statsmodels 0.17.
+  :pr:`10828`
+- The ``statsmodels.tsa.arima_model`` module, whose ``ARMA`` and ``ARIMA``
+  classes were removed in statsmodels 0.13 and only raise
+  ``NotImplementedError``, will be removed after statsmodels 0.16. Use
+  ``statsmodels.tsa.arima.model.ARIMA`` or
+  ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
 
 Behavior changes
 ----------------
@@ -266,6 +278,20 @@ Behavior changes
   ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
   ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
   :pr:`10792`
+- ``pacf_burg`` (and ``pacf`` with ``method="burg"``), ``kpss`` with
+  ``regression="c"``, ``range_unit_root_test``, ``pccf`` and ``q_stat`` treat
+  an (nobs, 1) column, such as a one-column ``DataFrame``, as the 1-D series
+  instead of raising, and raise a ``ValueError`` for input with more than one
+  column. ``q_stat`` silently took a (1, k) row as k values at lag 1 and gave
+  wrong statistics; it now raises. Results for 1-D input are unchanged.
+  :pr:`10837`
+- :func:`~statsmodels.tsa.stattools.ccf` and
+  :func:`~statsmodels.tsa.stattools.ccovf` treat an (nobs, 1) column, such as
+  a one-column ``DataFrame``, as the 1-D series. Before, two columns gave a
+  meaningless 2-D result without an error, for example an (nlags, nobs) array
+  from ``ccf``, and a column next to a 1-D series raised an error from SciPy.
+  Input with more than one column now raises a ``ValueError``. Results for
+  1-D input are unchanged. :pr:`10811`
 
 New Features and Enhancements
 =============================
@@ -683,8 +709,10 @@ Generalized linear models and discrete models
 - ``GEE.fit`` with ``cov_type="bias_reduced"`` or ``"kauermann_carroll"``
   raises a ``ValueError`` that names the group if a group has leverage 1, for
   example a single observation with its own dummy variable. It raised a bare
-  ``LinAlgError``, or for the Gaussian family returned a meaningless
-  covariance. :pr:`10792`
+  ``LinAlgError``, or for some families returned a meaningless covariance.
+  The same ``ValueError`` is raised if the covariance of the parameters is not
+  finite, where the standard errors were ``NaN`` or a ``LinAlgError`` was
+  raised. :pr:`10792`
 - ``summary`` of the marginal effects of ``GEE`` results raised a
   ``ValueError``. :pr:`10792`
 
@@ -987,9 +1015,12 @@ Time series analysis
 - ``reorder_missing_matrix``, ``reorder_missing_vector``,
   ``copy_missing_matrix``, ``copy_missing_vector``, ``copy_index_matrix`` and
   ``copy_index_vector`` in ``statsmodels.tsa.statespace.tools`` raised a
-  ``ValueError`` for big-endian arrays, and for a ``missing`` or ``index``
-  mask of ``bool`` or ``int64`` dtype although the masks are documented as
-  bool. :issue:`10770`, :pr:`10795`
+  ``ValueError`` for big-endian arrays when ``inplace=False``, and for a
+  ``missing`` or ``index`` mask of ``bool`` or ``int64`` dtype although the
+  masks are documented as bool. They now accept big-endian arrays, and masks of
+  bool or any integer dtype, where a nonzero value counts as True. With
+  ``inplace=True`` a big-endian array that is changed in place still raises a
+  ``ValueError``. :issue:`10770`, :pr:`10795`
 - ``VAR.fit`` now raises a ``SingularMatrixWarning`` if the lagged regressors
   are perfectly collinear, matching the warning already raised by ``OLS`` for
   a rank-deficient design matrix, using the same ``nobs``-scaled rank rule
@@ -999,6 +1030,37 @@ Time series analysis
 - ``arma_order_select_ic`` accepts ``ic`` as any sequence of str, such as an
   ndarray or an ``Index``, as documented, instead of only a list or tuple.
   :pr:`10840`
+- ``breakvar_heteroskedasticity_test`` raised an ``UnboundLocalError`` for a
+  ``subset_length`` that is a NumPy integer or a whole-number float, such as
+  ``np.int64(40)`` or ``40.0``, and for invalid values. It accepts every
+  numeric type and raises a ``ValueError`` for invalid values. :pr:`10838`
+- ``add_trend`` with ``trend="n"`` returned a list unchanged and raised an
+  ``AttributeError`` for a tuple. It returns an ndarray, like the other
+  trends. :pr:`10833`
+- ``_Var.predict`` (deprecated) returned neither the fitted values nor the
+  residuals, with the wrong number of rows unless there was one lag, and kept
+  returning the first result after a refit. It returns the fitted values.
+  :pr:`10822`
+- ``varfilter`` in ``statsmodels.tsa.varma_process`` with 3-d lag matrices
+  used the variables in reverse order and returned the wrong number of rows
+  unless there were two lags, and a 2-d filter with one lag and several
+  variables was taken as a single lag polynomial and returned one column. It
+  now computes the documented filter. :pr:`10824`
+- ``TsaDescriptive.periodogram`` and ``TsaDescriptive.plot4`` (deprecated)
+  raised an ``AttributeError`` since 0.12.0, because they called a function
+  that was removed then. They compute the periodogram again, as before 0.12.0.
+  :pr:`10821`
+- ``_Var.covmat`` (deprecated) scaled the covariance of the coefficients by
+  the residual sum of squares instead of the residual variance, so it was too
+  large by the residual degrees of freedom. :pr:`10823`
+- A state space model that was pickled or deep-copied after it had been used
+  ignored new parameters once restored: ``loglike``, ``filter``, ``smooth``
+  and ``fit`` used the system matrices of the last evaluation before
+  pickling. This also affected results saved with ``save`` and read with
+  ``load``, whose ``model.loglike`` returned the fitted log-likelihood for
+  any parameters and whose model, refit, returned the starting parameters.
+  Pickles written by earlier versions load correctly. :issue:`3290`,
+  :pr:`10816`
 
 Statistics and tests
 --------------------
@@ -1328,6 +1390,18 @@ Documentation
 - Add an example to ``cohens_kappa`` showing that kappa depends on class
   prevalence: with the same rater accuracy and raw agreement, kappa is much
   smaller when one class is rare. :issue:`9680`, :pr:`10806`
+- Correct docstrings in ``statsmodels.tsa.tsatools``, ``arima_process``,
+  ``deterministic`` and the BDS test: ``detrend`` returns pandas objects for
+  pandas input, the parameters of ``DeterministicProcess.in_sample`` and
+  ``out_of_sample`` (which listed a non-existent ``index``), the order
+  constraint of ``Fourier`` and ``CalendarFourier``, return types of
+  ``bds``, ``distance_indicators`` and ``correlation_sums``, and examples
+  that failed on pandas 3. :pr:`10832`
+- Correct the docstrings of the deprecated ``TsaDescriptive``,
+  ``TSMLEModel`` and ``_Var``: the accepted data types, the ``order`` of
+  ``TsaDescriptive.fit`` (p, d, q) and its return type, the shapes of the
+  ``_Var`` coefficient arrays, and a runnable ``_Var`` example in place of one
+  that used undefined names. :pr:`10815`
 
 Stricter Input Validation
 =========================
