@@ -758,7 +758,44 @@ def test_coint_tables_out_of_range(func, n, p):
     assert np.all(np.isnan(func(n, p)))
 
 
-def test_c_sjt_invalid_p():
-    # p is not one of -1, 0 and 1, but is within their range
-    with pytest.raises(ValueError, match="invalid p"):
-        c_sjt(3, 0.5)
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [0.5, -0.5, 1.5, -1.5, True])
+def test_coint_tables_invalid_p(func, p):
+    # p is not an integer. Between -1 and 1, c_sja raised an
+    # UnboundLocalError and c_sjt "invalid p"; outside, both returned NaN.
+    with pytest.raises(ValueError, match="p must be an integer, got"):
+        func(3, p)
+
+
+# Rows n = 3 of the tables, MacKinnon, Haug and Michelis (1996)
+COINT_TABLES_N3 = {
+    (c_sja, -1): [15.7175, 17.7961, 22.2519],
+    (c_sja, 0): [18.8928, 21.1314, 25.8650],
+    (c_sja, 1): [21.8731, 24.2522, 29.2631],
+    (c_sjt, -1): [21.7781, 24.2761, 29.5147],
+    (c_sjt, 0): [27.0669, 29.7961, 35.4628],
+    (c_sjt, 1): [32.0645, 35.0116, 41.0815],
+}
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [-1, 0, 1])
+def test_coint_tables_integral_p(func, p):
+    expected = COINT_TABLES_N3[func, p]
+    for value in (p, float(p), np.float64(p), np.int64(p), np.array(p)):
+        assert_allclose(func(3, value), expected, rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [-1, 0, 1])
+def test_coint_tables_return_copy(func, p):
+    # The result was a view of the table, so changing it changed the
+    # values returned by later calls
+    expected = COINT_TABLES_N3[func, p]
+    res = func(3, p)
+    try:
+        res[:] = 0.0
+        assert_allclose(func(3, p), expected, rtol=1e-15)
+    finally:
+        # Restore the table if the result is a view
+        res[:] = expected
