@@ -1121,6 +1121,10 @@ Time series analysis
   any parameters and whose model, refit, returned the starting parameters.
   Pickles written by earlier versions load correctly. :issue:`3290`,
   :pr:`10816`
+- ``constrain_stationary_multivariate`` with float32 or complex64 input and
+  ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
+  NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
+  array was promoted to double precision. :pr:`10857`
 
 Statistics and tests
 --------------------
