@@ -334,6 +334,11 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- ``levinson_durbin`` with ``isacov=True`` and
+  :func:`~statsmodels.tsa.stattools.diebold_mariano_test` treat an (nobs, 1)
+  column, such as a one-column ``DataFrame``, as the 1-D series instead of
+  raising, and raise a ``ValueError`` for input with more than one column.
+  Results for 1-D input are unchanged. :pr:`10849`
 
 New Features and Enhancements
 =============================
