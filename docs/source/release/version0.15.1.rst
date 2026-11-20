@@ -1072,6 +1072,17 @@ Time series analysis
   ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``fit(method="newton")`` of state space models and of Markov switching
+  models used the score and the Hessian with respect to the constrained
+  parameters, evaluated at the values of the unconstrained ones, and for
+  state space models a Newton step that was ``nobs`` times too long, so that
+  it often stopped with a ``ConvergenceWarning`` short of the optimum.
+  Newton's method passes its extra arguments to the score and the Hessian,
+  and ``MLEModel.hessian`` with ``transformed=False`` gives the Hessian with
+  respect to the unconstrained parameters (by the chain rule) instead of
+  raising or returning derivatives with respect to the constrained ones.
+  ``MLEModel.hessian`` has a new keyword-only argument ``average``.
+  ``fit(method="ncg")`` of state space models no longer raises. :pr:`10817`
 - ``coint_johansen`` and ``select_coint_rank`` with ``k_ar_diff=0`` used the
   levels ``y_t`` instead of the lagged levels ``y_{t-1}``, so the eigenvalues,
   the trace and maximum eigenvalue statistics and the eigenvectors were wrong
