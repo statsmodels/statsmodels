@@ -351,18 +351,15 @@ def test_var_predict(var_data):
     assert_allclose(yhat, np.asarray(res.fittedvalues), rtol=1e-10)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="_Var.covmat scales inv(X'X) by each equation's residual sum of "
-    "squares, not by its residual variance",
-)
-def test_var_covmat(var_data):
+@pytest.mark.parametrize("nlags", [1, 2, 3])
+def test_var_covmat(var_data, nlags):
     nvars = var_data.shape[1]
     v = make_var(var_data)
-    v.fit(2)
-    res = VAR(var_data).fit(2, trend="n")
+    v.fit(nlags)
+    res = VAR(var_data).fit(nlags, trend="n")
     assert v.covmat() is None
+    k = nlags * nvars
+    assert v.paramcov.shape == (k, k, nvars)
     # VAR orders its parameters regressor by regressor, equation within
     cov = np.asarray(res.cov_params())
     for eq in range(nvars):

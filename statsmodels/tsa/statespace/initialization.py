@@ -248,6 +248,14 @@ class Initialization:
                 stationary_cov=stationary_cov,
             )
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # A compiled initialization object copies `constant` and
+        # `stationary_cov` when it is pickled or deep-copied, so afterwards it
+        # would not see later changes to them. Drop the compiled objects;
+        # they are rebuilt on first use.
+        self._initializations = {}
+
     @classmethod
     def from_components(
         cls, k_states, a=None, Pstar=None, Pinf=None, A=None, R0=None, Q0=None

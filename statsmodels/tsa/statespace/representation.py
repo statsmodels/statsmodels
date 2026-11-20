@@ -396,6 +396,18 @@ class Representation:
         # Caches
         self._time_invariant = None
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # A compiled statespace object copies its matrices when it is pickled
+        # or deep-copied, so afterwards it no longer shares memory with the
+        # arrays in `_representations`, and new parameters written to those
+        # arrays would not reach it. Restore the shared memory.
+        for prefix, statespace in self._statespaces.items():
+            for name in self.shapes:
+                self._representations[prefix][name] = np.asarray(
+                    getattr(statespace, name)
+                )
+
     def __getitem__(self, key):
         _type = type(key)
         # If only a string is given then we must be getting an entire matrix
