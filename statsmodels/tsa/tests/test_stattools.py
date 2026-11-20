@@ -3112,6 +3112,67 @@ def test_pacf_burg_error():
         pacf_burg(np.empty(100), 101)
 
 
+def _column_input_cases():
+    """
+    Functions of one 1-D array_like argument that used to reject a column
+
+    Each returns the numeric values of its result as a flat array.
+    """
+    rng = np.random.default_rng(20261124)
+    x = rng.standard_normal(250).cumsum()
+    y = x + rng.standard_normal(250)
+    e = rng.standard_normal(250)
+    r = acf(e, nlags=10)[1:]
+
+    def kpss_values(v, regression):
+        res = kpss(v, regression, nlags=4, result_object=True)
+        return np.r_[res.statistic, res.pvalue, res.lags]
+
+    def rur_values(v):
+        res = range_unit_root_test(v, result_object=True)
+        return np.r_[res.statistic, res.pvalue, list(res.critical_values.values())]
+
+    return {
+        "pacf_burg": (lambda v: np.concatenate(pacf_burg(v, nlags=10)), x),
+        "pacf burg": (lambda v: pacf(v, nlags=10, method="burg"), x),
+        "kpss c": (lambda v: kpss_values(v, "c"), e),
+        "kpss ct": (lambda v: kpss_values(v, "ct"), e),
+        "range_unit_root_test": (rur_values, x),
+        "pccf x": (lambda v: pccf(v, y, nlags=5), x),
+        "pccf y": (lambda v: pccf(x, v, nlags=5), y),
+        "pccf ols": (lambda v: pccf(v, y, nlags=5, method="ols"), x),
+        "q_stat": (lambda v: np.concatenate(q_stat(v, 250)), r),
+    }
+
+
+@pytest.mark.parametrize("form", ["list", "tuple", "series", "column", "dataframe"])
+@pytest.mark.parametrize("name", sorted(_column_input_cases()))
+def test_column_input(name, form):
+    # x is documented as a 1-D array_like: every form of the series, including
+    # an (n, 1) column, gives the result of the ndarray
+    func, x = _column_input_cases()[name]
+    index = pd.date_range("2000-01-01", periods=x.shape[0], freq="MS")
+    x_form = {
+        "list": x.tolist(),
+        "tuple": tuple(x.tolist()),
+        "series": pd.Series(x, index=index, name="x"),
+        "column": x[:, None],
+        "dataframe": pd.DataFrame({"x": x}, index=index),
+    }[form]
+    with warnings.catch_warnings():
+        # The p-values of kpss and range_unit_root_test may be at the edge
+        # of their tables
+        warnings.simplefilter("ignore", InterpolationWarning)
+        assert_allclose(func(x_form), func(x), rtol=1e-12)
+
+
+@pytest.mark.parametrize("name", sorted(_column_input_cases()))
+def test_column_input_two_columns_raises(name):
+    func, x = _column_input_cases()[name]
+    with pytest.raises(ValueError, match="required to have ndim 1"):
+        func(np.column_stack([x, x[::-1]]))
+
+
 def test_innovations_algo_brockwell_davis():
     ma = -0.9
     acovf = np.array([1 + ma**2, ma])

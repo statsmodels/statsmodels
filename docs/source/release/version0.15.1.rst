@@ -278,6 +278,13 @@ Behavior changes
   ``z`` and ``Pr(>|z|)`` columns of ``summary_frame`` are named ``t`` and
   ``Pr(>|t|)``. Results with the default ``use_t=False`` are unchanged.
   :pr:`10792`
+- ``pacf_burg`` (and ``pacf`` with ``method="burg"``), ``kpss`` with
+  ``regression="c"``, ``range_unit_root_test``, ``pccf`` and ``q_stat`` treat
+  an (nobs, 1) column, such as a one-column ``DataFrame``, as the 1-D series
+  instead of raising, and raise a ``ValueError`` for input with more than one
+  column. ``q_stat`` silently took a (1, k) row as k values at lag 1 and gave
+  wrong statistics; it now raises. Results for 1-D input are unchanged.
+  :pr:`10837`
 - :func:`~statsmodels.tsa.stattools.ccf` and
   :func:`~statsmodels.tsa.stattools.ccovf` treat an (nobs, 1) column, such as
   a one-column ``DataFrame``, as the 1-D series. Before, two columns gave a
