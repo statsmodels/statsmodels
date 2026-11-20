@@ -488,6 +488,116 @@ class TestStationaryMultivariate:
             assert_allclose(reunconstrained, unconstrained, atol=1e-4)
 
 
+def _assert_twins_agree(actual, expected, rtol):
+    # The compiled routine returns the dtype of its input, while the Python
+    # twin returns float64 for float32 input: compare in the wider dtype.
+    # Rounding error in these Cholesky-based recursions is relative to the
+    # largest entry of a matrix, not to each entry, so entries much smaller
+    # than the largest get an absolute allowance of the same relative size.
+    dtype = np.promote_types(actual.dtype, expected.dtype)
+    actual = np.asarray(actual, dtype=dtype)
+    expected = np.asarray(expected, dtype=dtype)
+    assert_allclose(actual, expected, rtol=rtol, atol=rtol * np.abs(expected).max())
+
+
+def _assert_stationary_var(coefficients, k_endog, order):
+    # The coefficients of a stationary VAR give a companion matrix whose
+    # eigenvalues are all inside the unit circle
+    coefficients = np.real(coefficients).astype(np.float64)
+    polynomial = [1] + [
+        -np.squeeze(coefficients[:, i * k_endog : (i + 1) * k_endog])
+        for i in range(order)
+    ]
+    eigenvalues = np.linalg.eigvals(tools.companion_matrix(polynomial))
+    assert_array_less(np.abs(eigenvalues), 1)
+
+
+# Input dtype, scale of the unconstrained draws and rtol for comparing
+# constrain_stationary_multivariate_python with the compiled
+# constrain_stationary_multivariate. Over 200 draws for each k_endog 1-4,
+# order 1-3 and transform_variance, the largest difference relative to the
+# largest entry was 2e-13 for standard normal draws in double precision
+# (float64 or complex128). Scaled by 10 it was 3.4e-7: large unconstrained
+# values give partial autocorrelations with singular values close to one, and
+# the variance recursion becomes ill-conditioned. For float32 input, which the
+# compiled routine computes in single precision, it was 3.1e-5. Float32 input
+# is not scaled up because single precision cannot resolve singular values
+# that close to one.
+TWIN_CASES = [
+    pytest.param(np.float64, 1.0, 1e-10, id="float64"),
+    pytest.param(np.float64, 10.0, 1e-5, id="float64-large"),
+    pytest.param(np.complex128, 1.0, 1e-10, id="complex128"),
+    pytest.param(np.complex128, 10.0, 1e-5, id="complex128-large"),
+    pytest.param(np.float32, 1.0, 1e-3, id="float32"),
+]
+
+
+@pytest.mark.parametrize("dtype, scale, rtol", TWIN_CASES)
+@pytest.mark.parametrize("transform_variance", [True, False])
+@pytest.mark.parametrize("order", [1, 2, 3])
+@pytest.mark.parametrize("k_endog", [1, 2, 3, 4])
+def test_constrain_stationary_multivariate_python_twin(
+    k_endog, order, transform_variance, dtype, scale, rtol
+):
+    # constrain_stationary_multivariate_python is the pure-Python twin of the
+    # compiled constrain_stationary_multivariate: both must return the same
+    # coefficients and variance, and coefficients of a stationary VAR.
+    # Complex input has a zero imaginary part; these routines are not
+    # complex-step safe (the Cholesky factorizations conjugate).
+    rng = np.random.default_rng([k_endog, order, transform_variance, int(scale)])
+    for _ in range(3):
+        unconstrained = scale * rng.standard_normal((k_endog, k_endog * order))
+        factor = rng.standard_normal((k_endog, k_endog))
+        variance = factor @ factor.T + k_endog * np.eye(k_endog)
+        unconstrained = unconstrained.astype(dtype)
+        variance = variance.astype(dtype)
+
+        expected = tools.constrain_stationary_multivariate(
+            unconstrained, variance, transform_variance
+        )
+        actual = tools.constrain_stationary_multivariate_python(
+            unconstrained, variance, transform_variance
+        )
+        # Coefficients, then variance
+        _assert_twins_agree(actual[0], expected[0], rtol)
+        _assert_twins_agree(actual[1], expected[1], rtol)
+        _assert_stationary_var(actual[0], k_endog, order)
+        _assert_stationary_var(expected[0], k_endog, order)
+
+
+@pytest.mark.parametrize("transform_variance", [True, False])
+@pytest.mark.parametrize("order", [1, 2, 3])
+@pytest.mark.parametrize("k_endog", [1, 2, 3, 4])
+def test_constrain_stationary_multivariate_python_twin_list(
+    k_endog, order, transform_variance
+):
+    # A list of coefficient matrices gives a list back, with the blocks of the
+    # result for the horizontally concatenated matrices
+    rng = np.random.default_rng([k_endog, order, transform_variance])
+    unconstrained = rng.standard_normal((k_endog, k_endog * order))
+    blocks = [
+        unconstrained[:, i * k_endog : (i + 1) * k_endog] for i in range(order)
+    ]
+    variance = np.eye(k_endog)
+
+    from_array, _ = tools.constrain_stationary_multivariate_python(
+        unconstrained, variance, transform_variance
+    )
+    actual, actual_variance = tools.constrain_stationary_multivariate_python(
+        blocks, variance, transform_variance
+    )
+    expected, expected_variance = tools.constrain_stationary_multivariate(
+        blocks, variance, transform_variance
+    )
+    assert isinstance(actual, list)
+    assert len(actual) == order
+    for i in range(order):
+        block = from_array[:, i * k_endog : (i + 1) * k_endog]
+        assert_allclose(actual[i], block, rtol=1e-14)
+        _assert_twins_agree(actual[i], expected[i], 1e-10)
+    _assert_twins_agree(actual_variance, expected_variance, 1e-10)
+
+
 def test_reorder_matrix_rows():
     nobs = 5
     k_endog = 3
