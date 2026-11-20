@@ -2579,7 +2579,8 @@ def breakvar_heteroskedasticity_test(
     subset_length : int or float, optional
         Length of the subsets to test (h in Notes below).
         If a float in 0 < subset_length < 1, it is interpreted as fraction.
-        Default is 1/3.
+        A value of 1 or more is the number of observations and must be a
+        whole number, such as 40 or 40.0. Default is 1/3.
     alternative : {"increasing", "decreasing", "two-sided"}, optional
         This specifies the alternative for the p-value calculation. Default
         is two-sided.
@@ -2658,10 +2659,16 @@ def breakvar_heteroskedasticity_test(
         squared_resid = squared_resid.reshape(-1, 1)
     nobs = len(resid)
 
-    if 0 < subset_length < 1:
-        h = int(np.round(nobs * subset_length))
-    elif type(subset_length) is int and subset_length >= 1:
-        h = subset_length
+    length = float_like(subset_length, "subset_length")
+    if 0 < length < 1:
+        h = int(np.round(nobs * length))
+    elif length >= 1 and length.is_integer():
+        h = int(length)
+    else:
+        raise ValueError(
+            "subset_length must be a fraction in (0, 1) or a positive integer, "
+            f"got {subset_length!r}"
+        )
 
     numer_resid = squared_resid[-h:]
     numer_dof = (~np.isnan(numer_resid)).sum(axis=0)
