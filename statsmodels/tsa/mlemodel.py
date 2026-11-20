@@ -24,9 +24,16 @@ class TSMLEModel(LikelihoodModel):
     """
     Univariate time series model for estimation with maximum likelihood
 
+    Parameters
+    ----------
+    endog : array_like
+        The observed time series.
+    exog : array_like, optional
+        Exogenous regressors.
+
     Notes
     -----
-    This is not working yet.
+    This is not working yet. A subclass must implement `loglike`.
     """
 
     def __init__(self, endog, exog=None):
@@ -49,6 +56,23 @@ class TSMLEModel(LikelihoodModel):
         # self.initialize()
 
     def geterrors(self, params):
+        """
+        Errors (residuals) of the model
+
+        Parameters
+        ----------
+        params : array_like
+            The model parameters.
+
+        Returns
+        -------
+        ndarray
+            The errors evaluated at `params`.
+
+        Notes
+        -----
+        Must be overridden by a subclass.
+        """
         raise NotImplementedError
 
     def loglike(self, params):
@@ -59,6 +83,11 @@ class TSMLEModel(LikelihoodModel):
         ----------
         params : array_like
             The model parameters
+
+        Returns
+        -------
+        float
+            The log-likelihood evaluated at `params`.
 
         Notes
         -----
@@ -89,12 +118,19 @@ class TSMLEModel(LikelihoodModel):
         ----------
         start_params : array_like, optional
             Initial guess of the solution for the loglikelihood maximization.
+            If not provided, the model's ``_start_params`` attribute is used
+            when it exists.
         maxiter : int, optional
             The maximum number of iterations to perform.
         method : str, optional
             The optimizer to use.  The default is "fmin".
         tol : float, optional
             The convergence tolerance.
+
+        Returns
+        -------
+        LikelihoodModelResults
+            The results of the maximum likelihood estimation.
         """
         if start_params is None and hasattr(self, "_start_params"):
             start_params = self._start_params

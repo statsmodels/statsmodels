@@ -1564,24 +1564,35 @@ def test_estimated_initial_seasonal_cov(
     assert np.all(bse > 0)
 
 
-@pytest.mark.parametrize("dtype", [np.int64, np.float32, ">f8", "<f8"])
+@pytest.mark.parametrize("dtype", [np.float32, ">f8", "<f8"])
 def test_params_dtype(austourists_model, dtype):
     # GH 10770: params that are not native float64 failed in the smoother
     model = austourists_model
-    # The values are exact in every dtype, so that the native float64 copy
-    # holds the same numbers. The smoother uses beta / alpha and
-    # gamma / (1 - alpha), which are not finite for alpha = 0 or 1, so the
-    # integer params use alpha = 2: outside the usual bounds, but the output
-    # is finite. The floating point params are inside the bounds.
-    if np.dtype(dtype).kind == "i":
-        values = [2, 0, 0, 1, 26, 1, 2, -1, -7, 6]
-    else:
-        values = [0.5, 0.25, 0.125, 0.875, 26, 0.5, 1.5, -0.5, -6.75, 5.75]
-    params = np.array(values, dtype=dtype)
+    params = model._start_params.astype(dtype)
+    native = params.astype(np.float64)
+    # the reference has to be a valid fit, or NaN would compare equal to NaN
+    llf = model.loglike(native)
+    fitted = model.smooth(native).fittedvalues
+    assert np.isfinite(llf)
+    assert np.isfinite(fitted).all()
+    assert_allclose(model.loglike(params), llf, rtol=1e-12)
+    assert_allclose(model.smooth(params).fittedvalues, fitted, rtol=1e-12)
+
+
+def test_params_dtype_int(austourists_model):
+    # GH 10770: integer params were rejected. Integer values cannot be valid
+    # smoothing parameters, which have to be strictly between 0 and 1, so this
+    # only checks that they are accepted and give what float64 gives. The
+    # smoother uses beta / alpha and gamma / (1 - alpha), which are not finite
+    # for alpha = 0 or 1 (rounding the start params gives alpha = 0, so every
+    # value would be NaN and the complex-step Hessian of smooth would warn),
+    # so alpha = 2: outside the usual bounds, but the output is finite.
+    model = austourists_model
+    params = np.array([2, 0, 0, 1, 26, 1, 2, -1, -7, 6], dtype=np.int64)
     native = params.astype(np.float64)
     llf = model.loglike(native)
-    assert np.isfinite(llf)
-    assert_allclose(model.loglike(params), llf, rtol=1e-12)
     fitted = model.smooth(native).fittedvalues
-    assert np.all(np.isfinite(fitted))
+    assert np.isfinite(llf)
+    assert np.isfinite(fitted).all()
+    assert_allclose(model.loglike(params), llf, rtol=1e-12)
     assert_allclose(model.smooth(params).fittedvalues, fitted, rtol=1e-12)

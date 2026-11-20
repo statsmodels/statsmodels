@@ -683,8 +683,10 @@ Generalized linear models and discrete models
 - ``GEE.fit`` with ``cov_type="bias_reduced"`` or ``"kauermann_carroll"``
   raises a ``ValueError`` that names the group if a group has leverage 1, for
   example a single observation with its own dummy variable. It raised a bare
-  ``LinAlgError``, or for the Gaussian family returned a meaningless
-  covariance. :pr:`10792`
+  ``LinAlgError``, or for some families returned a meaningless covariance.
+  The same ``ValueError`` is raised if the covariance of the parameters is not
+  finite, where the standard errors were ``NaN`` or a ``LinAlgError`` was
+  raised. :pr:`10792`
 - ``summary`` of the marginal effects of ``GEE`` results raised a
   ``ValueError``. :pr:`10792`
 
@@ -987,15 +989,29 @@ Time series analysis
 - ``reorder_missing_matrix``, ``reorder_missing_vector``,
   ``copy_missing_matrix``, ``copy_missing_vector``, ``copy_index_matrix`` and
   ``copy_index_vector`` in ``statsmodels.tsa.statespace.tools`` raised a
-  ``ValueError`` for big-endian arrays, and for a ``missing`` or ``index``
-  mask of ``bool`` or ``int64`` dtype although the masks are documented as
-  bool. :issue:`10770`, :pr:`10795`
+  ``ValueError`` for big-endian arrays when ``inplace=False``, and for a
+  ``missing`` or ``index`` mask of ``bool`` or ``int64`` dtype although the
+  masks are documented as bool. They now accept big-endian arrays, and masks of
+  bool or any integer dtype, where a nonzero value counts as True. With
+  ``inplace=True`` a big-endian array that is changed in place still raises a
+  ``ValueError``. :issue:`10770`, :pr:`10795`
 - ``VAR.fit`` now raises a ``SingularMatrixWarning`` if the lagged regressors
   are perfectly collinear, matching the warning already raised by ``OLS`` for
   a rank-deficient design matrix, using the same ``nobs``-scaled rank rule
   (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``_Var.covmat`` (deprecated) scaled the covariance of the coefficients by
+  the residual sum of squares instead of the residual variance, so it was too
+  large by the residual degrees of freedom. :pr:`10823`
+- A state space model that was pickled or deep-copied after it had been used
+  ignored new parameters once restored: ``loglike``, ``filter``, ``smooth``
+  and ``fit`` used the system matrices of the last evaluation before
+  pickling. This also affected results saved with ``save`` and read with
+  ``load``, whose ``model.loglike`` returned the fitted log-likelihood for
+  any parameters and whose model, refit, returned the starting parameters.
+  Pickles written by earlier versions load correctly. :issue:`3290`,
+  :pr:`10816`
 
 Statistics and tests
 --------------------
@@ -1325,6 +1341,11 @@ Documentation
 - Add an example to ``cohens_kappa`` showing that kappa depends on class
   prevalence: with the same rater accuracy and raw agreement, kappa is much
   smaller when one class is rare. :issue:`9680`, :pr:`10806`
+- Correct the docstrings of the deprecated ``TsaDescriptive``,
+  ``TSMLEModel`` and ``_Var``: the accepted data types, the ``order`` of
+  ``TsaDescriptive.fit`` (p, d, q) and its return type, the shapes of the
+  ``_Var`` coefficient arrays, and a runnable ``_Var`` example in place of one
+  that used undefined names. :pr:`10815`
 
 Stricter Input Validation
 =========================
