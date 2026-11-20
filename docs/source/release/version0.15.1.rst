@@ -1001,6 +1001,9 @@ Time series analysis
   (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- ``_Var.covmat`` (deprecated) scaled the covariance of the coefficients by
+  the residual sum of squares instead of the residual variance, so it was too
+  large by the residual degrees of freedom. :pr:`10823`
 - A state space model that was pickled or deep-copied after it had been used
   ignored new parameters once restored: ``loglike``, ``filter``, ``smooth``
   and ``fit`` used the system matrices of the last evaluation before

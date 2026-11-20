@@ -507,29 +507,38 @@ class _Var:
 
         Notes
         -----
-        Not sure it's correct, need to check orientation everywhere.
-        Looks ok, display needs getting used to.
+        ``paramcov[:, :, i]`` is ``rss[i] / df_resid * inv(xred.T @ xred)``,
+        the covariance of the coefficients ``estresults[0][:, i]`` of
+        equation ``i``. ``df_resid = nobs - nlags - nlags * nvar`` is the
+        number of observations in the regression less the number of
+        coefficients in each equation. These are the diagonal blocks of the
+        ``cov_params`` of ``VAR(y).fit(nlags, trend="n")``; the covariances
+        between the coefficients of different equations are not computed.
+
+        .. versionchanged:: 0.15.1
+           ``paramcov`` was previously too large by the factor
+           ``df_resid``: it scaled ``inv(xred.T @ xred)`` by the residual
+           sum of squares of each equation instead of its residual
+           variance.
 
         Examples
         --------
-        >>> v.rss[None,None,:]*np.linalg.inv(np.dot(v.xred.T,v.xred))[:,:,None]
-        array([[[ 0.37247445,  0.32210609],
-                [ 0.1002642 ,  0.08670584]],
+        Continuing the example of the class, the block of the first
+        equation is the matching block of the covariance of the VAR
+        estimates:
 
-               [[ 0.1002642 ,  0.08670584],
-                [ 0.45903637,  0.39696255]]])
-        >>>
-        >>> v.rss[0]*np.linalg.inv(np.dot(v.xred.T,v.xred))
-        array([[ 0.37247445,  0.1002642 ],
-               [ 0.1002642 ,  0.45903637]])
-        >>> v.rss[1]*np.linalg.inv(np.dot(v.xred.T,v.xred))
-        array([[ 0.32210609,  0.08670584],
-               [ 0.08670584,  0.39696255]])
+        >>> from statsmodels.tsa.api import VAR
+        >>> v.covmat()
+        >>> cov = VAR(y).fit(1, trend="n").cov_params()
+        >>> np.allclose(v.paramcov[:, :, 0], cov[0::2, 0::2])
+        True
         """
-
-        # check if orientation is same as self.arhat
+        # The residual variance of each equation, with the degrees of freedom
+        # of VAR: the observations in the regression less the coefficients of
+        # each equation
+        df_resid = self.xred.shape[0] - self.xred.shape[1]
         self.paramcov = (
-            self.rss[None, None, :]
+            (self.rss / df_resid)[None, None, :]
             * np.linalg.inv(np.dot(self.xred.T, self.xred))[:, :, None]
         )
 
