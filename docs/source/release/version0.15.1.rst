@@ -1509,6 +1509,14 @@ Documentation
   ``TsaDescriptive.fit`` (p, d, q) and its return type, the shapes of the
   ``_Var`` coefficient arrays, and a runnable ``_Var`` example in place of one
   that used undefined names. :pr:`10815`
+- Correct docstrings in ``statsmodels.tsa.forecasting``, ``interp`` and
+  ``innovations``: the meaning of ``innovations_mse`` and of normalized
+  innovations in :func:`~statsmodels.tsa.innovations.arma_innovations.arma_innovations`,
+  the input :func:`~statsmodels.tsa.interp.denton.dentonm` accepts and its
+  only keyword argument ``k``, the ``method`` values and the theta bound of
+  :class:`~statsmodels.tsa.forecasting.theta.ThetaModel`, and the data the
+  model in :class:`~statsmodels.tsa.forecasting.stl.STLForecast` is fit to.
+  :pr:`10867`
 
 Stricter Input Validation
 =========================
