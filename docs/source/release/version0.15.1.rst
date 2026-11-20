@@ -1150,6 +1150,9 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- ``DeterministicProcess.range`` ignored the step of a ``RangeIndex`` whose
+  step is not 1, so it returned the wrong rows or raised a ``KeyError``.
+  :pr:`10852`
 
 Statistics and tests
 --------------------
