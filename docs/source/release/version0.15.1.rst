@@ -334,6 +334,12 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- ``arma_pacf``, ``arma_impulse_response``, ``arma2ma`` and ``arma2ar`` raise
+  a ``ValueError`` for ``lags`` below 1, as the ``ArmaProcess`` methods do since
+  :pr:`10835`, instead of NumPy errors, and ``arma_periodogram`` raises for an
+  integer ``worN`` below 1 instead of returning empty arrays.
+  ``ArmaProcess.from_estimation`` no longer replaces ``nobs=0`` with the number
+  of observations of the results. :pr:`10860`
 
 New Features and Enhancements
 =============================
