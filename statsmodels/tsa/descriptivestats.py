@@ -9,7 +9,10 @@ License: BSD(3clause)
 
 import warnings
 
+import numpy as np
+
 from statsmodels.graphics.utils import _import_mpl
+from statsmodels.tools.validation import array_like
 
 from . import stattools as stt
 
@@ -21,8 +24,8 @@ class TsaDescriptive:
 
     Parameters
     ----------
-    data : array_like
-        The time series data.
+    data : ndarray or Series
+        The time series data, 1-D.
     label : str, optional
         A label used to identify the series.
     name : str, optional
@@ -31,16 +34,16 @@ class TsaDescriptive:
 
     Attributes
     ----------
-    data : array_like
-        The time series data.
+    data : ndarray or Series
+        The time series data, as passed.
     label : str
         The label identifying the series.
     name : str
         The base name used for derived series.
-    mod : None
-        Placeholder for the model instance created by `fit`.
-    res : None
-        Placeholder for the results instance created by `fit`.
+    mod : ARIMA or None
+        The model created by `fit`, None until `fit` is called.
+    res : ARIMAResults or None
+        The results returned by `fit`, None until `fit` is called.
     """
 
     def __init__(self, data, label=None, name=""):
@@ -73,7 +76,13 @@ class TsaDescriptive:
         Returns
         -------
         TsaDescriptive
-            A new instance containing the filtered data.
+            A new instance containing the filtered data, with the same
+            label and the name ``name + "_filtered"``.
+
+        Notes
+        -----
+        The filter is applied by ``scipy.signal.lfilter`` with zero initial
+        conditions.
         """
         from scipy.signal import lfilter
         xfiltered = lfilter(num, den, self.data)
@@ -86,12 +95,14 @@ class TsaDescriptive:
         Parameters
         ----------
         order : int, optional
-            The polynomial order of the trend to remove.
+            The polynomial order of the trend to remove. The default, 1,
+            removes a linear trend; 0 removes the mean.
 
         Returns
         -------
         TsaDescriptive
-            A new instance containing the detrended data.
+            A new instance containing the detrended data, with the same
+            label and the name ``name + "_detrended"``.
         """
         from . import tsatools
         xdetrended = tsatools.detrend(self.data, order=order)
@@ -99,19 +110,21 @@ class TsaDescriptive:
 
     def fit(self, order=(1, 0, 1), **kwds):
         """
-        Fit an ARMA model to the time series.
+        Fit an ARIMA model to the time series.
 
         Parameters
         ----------
         order : tuple of int, optional
-            The (p, q) order, or (p, d, q) order, of the ARMA model to fit.
+            The (p, d, q) order of the ARIMA model to fit. The default is
+            (1, 0, 1).
         **kwds
-            Additional keyword arguments passed to the model's `fit` method.
+            Additional keyword arguments passed to ``ARIMA.fit``.
 
         Returns
         -------
-        Results
-            The results instance from fitting the model.
+        ARIMAResults
+            The results instance from fitting the model. It is also stored
+            as `res`, and the model as `mod`.
         """
         from statsmodels.tsa.arima.model import ARIMA
         self.mod = ARIMA(self.data, order=order)
@@ -131,7 +144,7 @@ class TsaDescriptive:
         Returns
         -------
         ndarray
-            The autocorrelation function.
+            The autocorrelation function at lags 0 to `nlags`.
         """
         return stt.acf(self.data, nlags=nlags)
 
@@ -142,12 +155,13 @@ class TsaDescriptive:
         Parameters
         ----------
         nlags : int, optional
-            The number of lags to include.
+            The number of lags to include, at most half the number of
+            observations.
 
         Returns
         -------
         ndarray
-            The partial autocorrelation function.
+            The partial autocorrelation function at lags 0 to `nlags`.
         """
         return stt.pacf(self.data, nlags=nlags)
 
@@ -158,10 +172,25 @@ class TsaDescriptive:
         Returns
         -------
         ndarray
-            The periodogram values.
+            The periodogram ``abs(fft(data)) ** 2 / nobs`` at the Fourier
+            frequencies ``2 * pi * k / nobs`` for ``k = 0, ..., nobs - 1``,
+            with the value at frequency zero set to 0. The frequencies are
+            not returned.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+           Since statsmodels 0.12 this method, and `plot4`, raised
+           AttributeError, because it called
+           ``statsmodels.tsa.stattools.periodogram``, which was removed. It
+           now computes the periodogram as that function did.
         """
-        # does not return frequencies
-        return stt.periodogram(self.data)
+        # The code of statsmodels.tsa.stattools.periodogram, removed in
+        # statsmodels 0.12
+        x = array_like(self.data, "x")
+        pergr = 1.0 / len(x) * np.abs(np.fft.fft(x)) ** 2
+        pergr[0] = 0.0
+        return pergr
 
     # copied from fftarma.py
     def plot4(self, fig=None, nobs=100, nacf=20, nfreq=100):
@@ -185,6 +214,12 @@ class TsaDescriptive:
         -------
         Figure
             The figure containing the plots.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+           Since statsmodels 0.12 this method raised AttributeError, from
+           `periodogram`. It now draws all four plots.
         """
         data = self.data
         acf = self.acf(nacf)

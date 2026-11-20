@@ -750,3 +750,133 @@ def test_drop():
     valid = ("const", "trend", "dummy", "normal")
     for valid_col in valid:
         assert sum([1 for col in oos if valid_col in col]) == 1
+
+
+def test_calendar_time_trend_period_index():
+    # For periods, the time trend counts the periods since base_period, which
+    # is 1, and no part of a period has elapsed at its start
+    index = pd.period_range("2000-01", periods=24, freq="M")
+    ct = CalendarTimeTrend(MONTH_END, True, order=2, base_period="2000-01-01")
+    terms = ct.in_sample(index)
+    t = np.arange(1.0, 25.0)
+    np.testing.assert_allclose(terms, np.column_stack([t**0, t, t**2]), rtol=1e-15)
+    pd.testing.assert_index_equal(terms.index, index)
+    fcast = ct.out_of_sample(3, index)
+    t = np.arange(25.0, 28.0)
+    np.testing.assert_allclose(fcast, np.column_stack([t**0, t, t**2]), rtol=1e-15)
+    expected_index = pd.period_range("2002-01", periods=3, freq="M")
+    pd.testing.assert_index_equal(fcast.index, expected_index)
+
+
+def test_calendar_fourier_period_index():
+    # tau is the fraction of the year that has elapsed at the start of each
+    # month
+    index = pd.period_range("2000-01", periods=24, freq="M")
+    cf = CalendarFourier(YEAR_END, 2)
+    terms = cf.in_sample(index)
+    tau = []
+    for ts in index.to_timestamp():
+        year_start = pd.Timestamp(ts.year, 1, 1)
+        year_length = pd.Timestamp(ts.year + 1, 1, 1) - year_start
+        tau.append((ts - year_start) / year_length)
+    tau = 2 * np.pi * np.array(tau)
+    expected = np.column_stack(
+        [np.sin(tau), np.cos(tau), np.sin(2 * tau), np.cos(2 * tau)]
+    )
+    # atol: some of the values are close to zero
+    np.testing.assert_allclose(terms, expected, rtol=1e-12, atol=1e-14)
+    pd.testing.assert_index_equal(terms.index, index)
+    fcast = cf.out_of_sample(12, index[:12])
+    np.testing.assert_allclose(fcast, expected[12:], rtol=1e-12, atol=1e-14)
+
+
+@pytest.mark.parametrize("trend, constant", [("n", False), ("c", True)])
+def test_calendar_time_trend_from_string_without_trend(trend, constant):
+    index = pd.date_range("2000-01-01", periods=10, freq="D")
+    ct = CalendarTimeTrend.from_string("D", trend)
+    assert ct == CalendarTimeTrend("D", constant, 0)
+    terms = ct.in_sample(index)
+    assert terms.shape == (10, int(constant))
+    np.testing.assert_allclose(terms, np.ones((10, int(constant))), rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "index", [pd.Index(list("abcdef")), pd.Index(np.arange(6) + 0.5)]
+)
+def test_deterministic_process_non_extendable_index(index):
+    # The terms of any index can be computed in-sample, but the index cannot
+    # be extended
+    dp = DeterministicProcess(index, constant=True, order=1)
+    terms = dp.in_sample()
+    pd.testing.assert_index_equal(terms.index, index)
+    expected = np.column_stack([np.ones(6), np.arange(1.0, 7.0)])
+    np.testing.assert_allclose(terms, expected, rtol=1e-15)
+    with pytest.raises(TypeError, match="does not support extension"):
+        dp.range(0, 7)
+
+
+def test_drop_full_rank_keeps_all_columns():
+    # The terms have full column rank, so drop removes none of them
+    index = pd.RangeIndex(50)
+    kwargs = {"constant": True, "order": 3, "fourier": 2, "period": 12}
+    full = DeterministicProcess(index, **kwargs).in_sample()
+    assert full.shape == (50, 8)
+    assert np.linalg.matrix_rank(full.to_numpy()) == 8
+    dropped = DeterministicProcess(index, drop=True, **kwargs).in_sample()
+    pd.testing.assert_frame_equal(dropped, full)
+
+
+INDEX_FORMS = {
+    "list": list,
+    "tuple": tuple,
+    "ndarray": lambda idx: idx.to_numpy(),
+    "series": pd.Series,
+}
+
+
+@pytest.mark.parametrize("form", list(INDEX_FORMS))
+@pytest.mark.parametrize(
+    "term",
+    [
+        TimeTrend(True, 2),
+        Seasonality(12),
+        Fourier(12, 2),
+        CalendarFourier(YEAR_END, 2),
+        CalendarSeasonality(MONTH_END, "Y"),
+    ],
+    ids=str,
+)
+def test_term_index_forms(term, form):
+    # An index_like is converted to an index
+    index = pd.date_range("2000-01-31", periods=30, freq=MONTH_END)
+    terms = term.in_sample(INDEX_FORMS[form](index))
+    np.testing.assert_allclose(terms, term.in_sample(index), rtol=1e-15)
+    assert terms.index.equals(index)
+
+
+@pytest.mark.parametrize("form", list(INDEX_FORMS))
+def test_deterministic_process_index_forms(form):
+    index = pd.date_range("2000-01-31", periods=30, freq=MONTH_END)
+    kwargs = {"constant": True, "order": 1, "seasonal": True}
+    expected = DeterministicProcess(index, **kwargs)
+    dp = DeterministicProcess(INDEX_FORMS[form](index), **kwargs)
+    np.testing.assert_allclose(dp.in_sample(), expected.in_sample(), rtol=1e-15)
+    assert dp.in_sample().index.equals(index)
+    # The frequency is inferred, so the index can be extended
+    pd.testing.assert_frame_equal(
+        dp.range(25, 34), expected.range(25, 34), check_freq=False
+    )
+
+
+def test_apply():
+    # apply keeps the terms and uses the new index
+    index = pd.RangeIndex(40)
+    fourier = Fourier(period=7, order=1)
+    kwargs = {"constant": True, "order": 1, "seasonal": True, "period": 4}
+    dp = DeterministicProcess(index, additional_terms=[fourier], drop=True, **kwargs)
+    new_index = pd.date_range("2000-01-01", periods=12, freq="D")
+    applied = dp.apply(new_index)
+    assert applied.terms == dp.terms
+    terms = applied.in_sample()
+    pd.testing.assert_index_equal(terms.index, new_index)
+    np.testing.assert_allclose(terms, dp.in_sample().iloc[:12], rtol=1e-15)
