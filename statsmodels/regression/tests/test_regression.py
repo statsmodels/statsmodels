@@ -21,6 +21,7 @@ from numpy.testing import (
 import pandas as pd
 import pytest
 from scipy.linalg import toeplitz
+from scipy.signal import lfilter
 from scipy.stats import chi2, t as student_t
 
 from statsmodels.datasets import longley
@@ -2630,6 +2631,59 @@ def test_fit_chol_longley():
     assert_allclose(res_chol.params, res_pinv.params, rtol=1e-6)
     assert_allclose(res_chol.bse, res_pinv.bse, rtol=1e-6)
     assert_allclose(res_chol.ssr, res_pinv.ssr, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "dtypes",
+    [("float32", "float32"), ("float32", "float64"), ("float64", "float32")],
+    ids=["float32", "float32-endog", "float32-exog"],
+)
+def test_fit_chol_float32(dtypes):
+    # float32 data are not converted: the normal equations are formed in
+    # single precision and the results agree with those of pinv to the
+    # precision of float32 on a well conditioned design
+    endog, exog, _, _ = _chol_fit_data()
+    endog = endog.astype(dtypes[0])
+    exog = exog.astype(dtypes[1])
+    res_chol = OLS(endog, exog).fit(method="chol")
+    res_pinv = OLS(endog, exog).fit()
+    # float32 has a relative precision of 1.2e-7 and the design has a
+    # condition number of about 5 after scaling its columns to unit norm. The
+    # differences between the two methods in float32 are up to 4e-3 standard
+    # errors, so the parameters are compared in units of the standard errors
+    # (one coefficient is close to zero, which rules out rtol) with a margin
+    se = np.asarray(res_pinv.bse)
+    assert_allclose(res_chol.params / se, res_pinv.params / se, atol=2e-2)
+    assert_allclose(res_chol.bse, res_pinv.bse, rtol=1e-4)
+    assert_allclose(
+        res_chol.normalized_cov_params, res_pinv.normalized_cov_params, rtol=1e-4
+    )
+    assert res_chol.model.rank == exog.shape[1]
+
+
+def test_fit_chol_glsar_iterative_fit():
+    # iterative_fit passes method to the last fit, the iterations use pinv
+    rng = np.random.default_rng(20241119)
+    nobs = 300
+    exog = add_constant(rng.standard_normal((nobs, 3)))
+    errors = lfilter([1.0], [1.0, -0.5], rng.standard_normal(nobs))
+    endog = exog @ np.array([1.0, 2.0, -1.0, 0.5]) + errors
+
+    model_pinv = GLSAR(endog, exog, rho=1)
+    res_pinv = model_pinv.iterative_fit(maxiter=3)
+    model_chol = GLSAR(endog, exog, rho=1)
+    res_chol = model_chol.iterative_fit(maxiter=3, method="chol")
+
+    assert model_chol._pinv_wexog_lazy
+    assert model_chol.__dict__["_pinv_wexog"] is None
+    assert not model_pinv._pinv_wexog_lazy
+    assert_allclose(model_chol.rho, model_pinv.rho, rtol=1e-9)
+    assert_allclose(res_chol.params, res_pinv.params, rtol=1e-9)
+    assert_allclose(res_chol.bse, res_pinv.bse, rtol=1e-9)
+    assert_allclose(res_chol.history["params"][-1], res_pinv.history["params"][-1],
+                    rtol=1e-9)
+    assert res_chol.iter == res_pinv.iter == 3
+    assert res_chol.converged == res_pinv.converged
 
 
 def test_fit_chol_memory():
