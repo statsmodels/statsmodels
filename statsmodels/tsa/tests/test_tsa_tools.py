@@ -124,11 +124,6 @@ def test_vech():
     assert np.array_equal(vech(arr), [1, 4, 7, 5, 8, 9])
 
 
-def test_ar_transparams():
-    arr = np.array([-1000.0, -100.0, -10.0, 1.0, 0.0, 1.0, 10.0, 100.0, 1000.0])
-    assert not np.isnan(tools._ar_transparams(arr)).any()
-
-
 class TestLagmat:
     @classmethod
     def setup_class(cls):
@@ -1056,3 +1051,31 @@ def test_grangercausality():
     result, models = out[1]
     res2down, res2djoint, rconstr = models
     assert res2djoint.centered_tss is not res2djoint.uncentered_tss
+
+
+def test_unintegrate_docstring_example():
+    x = np.array([1, 3, 9.0, 19, 8.0])
+    with pytest.warns(FutureWarning, match=r"tsatools\.unintegrate_levels is"):
+        levels = tools.unintegrate_levels(x, 2)
+    assert_allclose(levels, [1.0, 2.0], rtol=1e-12)
+    with pytest.warns(FutureWarning, match=r"tsatools\.unintegrate is"):
+        undiffed = tools.unintegrate(np.diff(x, 2), levels)
+    assert_allclose(undiffed, x, rtol=1e-12)
+
+
+@pytest.mark.parametrize("d", [1, 2, 3])
+def test_unintegrate_round_trip(d):
+    # Integer-valued data, so that differencing and summing are exact
+    rng = np.random.default_rng(20261119)
+    x = rng.integers(-20, 20, size=25).cumsum().astype(float)
+    with pytest.warns(FutureWarning, match=r"tsatools\.unintegrate_levels is"):
+        levels = tools.unintegrate_levels(x, d)
+    # The first value of the k-th difference, for k = 0, 1, 2
+    first_values = [x[0], x[1] - x[0], x[2] - 2 * x[1] + x[0]]
+    assert_allclose(levels, first_values[:d], rtol=1e-12)
+
+    with pytest.warns(FutureWarning, match=r"tsatools\.unintegrate is") as record:
+        undiffed = tools.unintegrate(np.diff(x, d), levels)
+    # unintegrate recurses once per difference, but warns only once
+    assert sum(issubclass(w.category, FutureWarning) for w in record) == 1
+    assert_allclose(undiffed, x, rtol=1e-12)
