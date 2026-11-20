@@ -3081,6 +3081,11 @@ def coint(
             number of observations. For trend "n" they are not available
             and are NaN.
 
+            .. versionchanged:: 0.15.1
+
+               With trend "n", critical_values is an ndarray of three NaN
+               values, as for the other trends. It was a list.
+
     Notes
     -----
     The Null hypothesis is that there is no cointegration, the alternative
@@ -3149,7 +3154,7 @@ def coint(
 
     # no constant or trend, see egranger in Stata and MacKinnon
     if trend == "n":
-        crit = [np.nan] * 3  # 2010 critical values not available
+        crit = np.full(3, np.nan)  # 2010 critical values not available
     else:
         crit = mackinnoncrit(N=k_vars, regression=trend, nobs=nobs - 1)
         #  nobs - 1, the -1 is to match egranger in Stata, I do not know why.

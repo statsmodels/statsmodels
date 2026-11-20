@@ -1628,14 +1628,23 @@ def test_coint_return_results_not_used(return_results):
     assert_allclose(crit, default.critical_values, rtol=1e-12)
 
 
-def test_coint_no_trend_critical_values_nan():
-    # MacKinnon (2010) has no critical values without a constant
+@pytest.mark.parametrize("trend", ["c", "ct", "ctt", "n"])
+def test_coint_critical_values_ndarray(trend):
+    # critical_values is an ndarray of the 1%, 5% and 10% critical values for
+    # every trend. MacKinnon (2010) has no critical values without a
+    # constant, so they are NaN with trend="n". Otherwise a smaller size has
+    # a more negative critical value.
     rng = np.random.default_rng(20261119)
     y1 = rng.standard_normal(200).cumsum()
     y0 = 0.5 * y1 + rng.standard_normal(200)
-    res = coint(y0, y1, trend="n", maxlag=2, autolag=None)
-    assert np.all(np.isnan(res.critical_values))
-    assert len(res.critical_values) == 3
+    crit = coint(y0, y1, trend=trend, maxlag=2, autolag=None).critical_values
+    assert isinstance(crit, np.ndarray)
+    assert crit.shape == (3,)
+    assert crit.dtype == np.float64
+    if trend == "n":
+        assert np.all(np.isnan(crit))
+    else:
+        assert np.all(np.diff(crit) > 0)
 
 
 class TestGrangerCausality:
