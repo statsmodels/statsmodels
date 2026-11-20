@@ -1001,6 +1001,14 @@ Time series analysis
   (:pr:`10714`). ``VAR.select_order`` collects this check across all lag
   orders it evaluates internally and raises at most one warning per call
   instead of one per lag order. :issue:`10646`, :pr:`10694`
+- A state space model that was pickled or deep-copied after it had been used
+  ignored new parameters once restored: ``loglike``, ``filter``, ``smooth``
+  and ``fit`` used the system matrices of the last evaluation before
+  pickling. This also affected results saved with ``save`` and read with
+  ``load``, whose ``model.loglike`` returned the fitted log-likelihood for
+  any parameters and whose model, refit, returned the starting parameters.
+  Pickles written by earlier versions load correctly. :issue:`3290`,
+  :pr:`10816`
 
 Statistics and tests
 --------------------
