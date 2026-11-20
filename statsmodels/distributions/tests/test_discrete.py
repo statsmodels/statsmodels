@@ -261,6 +261,21 @@ class TestZiNBP:
         assert_allclose(nb_m2, zinb_m2, rtol=1e-10)
 
 
+@pytest.mark.parametrize(
+    "dist, args",
+    [
+        (zipoisson, (2.0, 0.3)),
+        (zinegbin, (2.0, 0.5, 2, 0.2)),
+        (zinegbin, (4.0, 1.0, 1, 0.25)),
+    ],
+)
+def test_zero_inflated_ppf_at_w(dist, args):
+    # cdf(0) > w, so ppf(w) is 0. The base distribution's ppf(0) is -1.
+    w = args[-1]
+    assert_equal(dist.ppf(w, *args), 0)
+    assert_equal(dist.ppf([w / 2, w, 0.99], *args)[:2], [0, 0])
+
+
 class CheckDiscretized:
 
     def convert_params(self, params):

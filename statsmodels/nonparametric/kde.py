@@ -662,7 +662,7 @@ def kdensityfft(
     """
     result_object = bool_like(result_object, "result_object", optional=True)
     # fast_linbin needs float64 in native byte order
-    x = np.require(x, dtype=np.float64)
+    x = np.asarray(x, dtype=np.float64)
     # will not work for two columns.
     x = x[np.logical_and(x > clip[0], x < clip[1])]
 

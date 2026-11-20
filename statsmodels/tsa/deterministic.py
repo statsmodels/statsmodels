@@ -376,8 +376,10 @@ class Seasonality(DeterministicTerm):
 
         Parameters
         ----------
-        index : DatetimeIndex or PeriodIndex
-            An index with its frequency (`freq`) set.
+        index : DatetimeIndex, PeriodIndex, or index_like
+            An index with its frequency (`freq`) set, or with a frequency
+            that can be inferred. If not an index, it is converted to an
+            index.
 
         Returns
         -------
@@ -470,7 +472,8 @@ class Fourier(FourierDeterministicTerm):
     period : float
         The length of a full cycle. Must be >= 2.
     order : int
-        The number of Fourier components to include. Must be <= 2*period.
+        The number of Fourier components to include. Must satisfy
+        ``2 * order <= period``.
 
     See Also
     --------
@@ -614,7 +617,7 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
     freq : str
         A string convertible to a pandas frequency.
     order : int
-        The number of Fourier components to include. Must be <= 2*period.
+        The number of Fourier components to include.
 
     See Also
     --------
@@ -732,7 +735,7 @@ class CalendarSeasonality(CalendarDeterministicTerm):
     >>> index = pd.DatetimeIndex(pd.to_datetime(times))
 
     >>> from statsmodels.tsa.deterministic import CalendarSeasonality
-    >>> cal_seas_gen = CalendarSeasonality("H", "D")
+    >>> cal_seas_gen = CalendarSeasonality("h", "D")
     >>> cal_seas_gen.in_sample(index)
     """
 
@@ -1097,34 +1100,34 @@ class DeterministicProcess:
     --------
     >>> from statsmodels.tsa.deterministic import DeterministicProcess
     >>> from pandas import date_range
-    >>> index = date_range("2000-1-1", freq="M", periods=240)
+    >>> index = date_range("2000-1-1", freq="MS", periods=240)
 
     First a deterministic process with a constant and quadratic time trend.
 
     >>> dp = DeterministicProcess(index, constant=True, order=2)
     >>> dp.in_sample().head(3)
                 const  trend  trend_squared
-    2000-01-31    1.0    1.0            1.0
-    2000-02-29    1.0    2.0            4.0
-    2000-03-31    1.0    3.0            9.0
+    2000-01-01    1.0    1.0            1.0
+    2000-02-01    1.0    2.0            4.0
+    2000-03-01    1.0    3.0            9.0
 
     Seasonal dummies are included by setting seasonal to True.
 
     >>> dp = DeterministicProcess(index, constant=True, seasonal=True)
     >>> dp.in_sample().iloc[:3,:5]
                 const  s(2,12)  s(3,12)  s(4,12)  s(5,12)
-    2000-01-31    1.0      0.0      0.0      0.0      0.0
-    2000-02-29    1.0      1.0      0.0      0.0      0.0
-    2000-03-31    1.0      0.0      1.0      0.0      0.0
+    2000-01-01    1.0      0.0      0.0      0.0      0.0
+    2000-02-01    1.0      1.0      0.0      0.0      0.0
+    2000-03-01    1.0      0.0      1.0      0.0      0.0
 
     Fourier components can be used to alternatively capture seasonal patterns,
 
     >>> dp = DeterministicProcess(index, constant=True, fourier=2)
     >>> dp.in_sample().head(3)
                 const  sin(1,12)  cos(1,12)  sin(2,12)  cos(2,12)
-    2000-01-31    1.0   0.000000   1.000000   0.000000        1.0
-    2000-02-29    1.0   0.500000   0.866025   0.866025        0.5
-    2000-03-31    1.0   0.866025   0.500000   0.866025       -0.5
+    2000-01-01    1.0   0.000000   1.000000   0.000000        1.0
+    2000-02-01    1.0   0.500000   0.866025   0.866025        0.5
+    2000-03-01    1.0   0.866025   0.500000   0.866025       -0.5
 
     Multiple Seasonalities can be captured using additional terms.
 
@@ -1241,8 +1244,16 @@ you can pass additional components using the additional_terms input.""")
             terms = terms.loc[:, ~surplus_consts]
         return terms
 
-    @Appender(DeterministicTerm.in_sample.__doc__)
     def in_sample(self) -> pd.DataFrame:
+        """
+        Produce deterministic trends for in-sample fitting
+
+        Returns
+        -------
+        DataFrame
+            A DataFrame containing the deterministic terms, with the index
+            of the process.
+        """
         if self._cached_in_sample is not None:
             return self._cached_in_sample
         index = self._index
@@ -1280,12 +1291,29 @@ you can pass additional components using the additional_terms input.""")
         self._cached_in_sample = terms
         return terms
 
-    @Appender(DeterministicTerm.out_of_sample.__doc__)
     def out_of_sample(
         self,
         steps: int,
         forecast_index: Sequence[Hashable] | pd.Index | None = None,
     ) -> pd.DataFrame:
+        """
+        Produce deterministic trends for out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int
+            The number of steps to forecast.
+        forecast_index : index_like, optional
+            An Index or index-like object to use for the forecasts. If
+            provided must have steps elements. If not provided, the index of
+            the process is extended.
+
+        Returns
+        -------
+        DataFrame
+            A DataFrame containing the deterministic terms, with ``steps``
+            rows and the columns of ``in_sample``.
+        """
         steps = required_int_like(steps, "steps")
         if self._retain_cols is None:
             self.in_sample()
