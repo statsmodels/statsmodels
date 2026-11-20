@@ -1,9 +1,4 @@
-from statsmodels.compat.pandas import (
-    QUARTER_END,
-    assert_frame_equal,
-    assert_index_equal,
-    make_dataframe,
-)
+from statsmodels.compat.pandas import QUARTER_END, assert_index_equal
 
 from datetime import datetime
 from pathlib import Path
@@ -19,7 +14,6 @@ from pandas import DataFrame, concat, date_range, read_csv
 import pytest
 
 from statsmodels.datasets import macrodata
-from statsmodels.tsa.filters._utils import pandas_wrapper
 from statsmodels.tsa.filters.bk_filter import bkfilter
 from statsmodels.tsa.filters.cf_filter import cffilter
 from statsmodels.tsa.filters.filtertools import (
@@ -1175,37 +1169,6 @@ class TestFilters:
         np.testing.assert_almost_equal(res.values.squeeze(), expected, 4)
         assert res.index[0] == start
         assert res.index[-1] == end
-
-
-def dummy_func(x):
-    return x
-
-
-def dummy_func_array(x):
-    return x.values
-
-
-def dummy_func_pandas_columns(x):
-    return x.values
-
-
-def dummy_func_pandas_series(x):
-    return x["A"]
-
-
-def test_pandas_freq_decorator():
-    x = make_dataframe()
-    # in x, get a function back that returns an x with the same columns
-    func = pandas_wrapper(dummy_func)
-
-    np.testing.assert_equal(func(x.values), x)
-
-    func = pandas_wrapper(dummy_func_array)
-    assert_frame_equal(func(x), x)
-
-    expected = x.rename(columns=dict(zip("ABCD", "EFGH", strict=True)))
-    func = pandas_wrapper(dummy_func_array, names=list("EFGH"))
-    assert_frame_equal(func(x), expected)
 
 
 @pytest.mark.parametrize("mode", ["full", "same", "valid"])
