@@ -1435,6 +1435,14 @@ Documentation
 - Add an example to ``cohens_kappa`` showing that kappa depends on class
   prevalence: with the same rater accuracy and raw agreement, kappa is much
   smaller when one class is rare. :issue:`9680`, :pr:`10806`
+- Correct docstrings in ``statsmodels.tsa.stattools``: the default ``nlags``
+  and result shape of ``pacf_ols``, the result shape of ``pacf_yw``, the
+  ``"legacy"`` lags of ``kpss``, the default ``maxlag`` and ``icbest`` of
+  ``adfuller``, the default ``maxlag`` of ``zivot_andrews``, the unused
+  ``return_results`` of ``coint`` and its critical values for ``trend="n"``,
+  the two columns of ``x`` and ``addconst`` in ``grangercausalitytests``, and
+  the fit advice of ``arma_order_select_ic``, which suggested a method that
+  makes every fit fail. :pr:`10836`
 - Correct docstrings in ``statsmodels.tsa.tsatools``, ``arima_process``,
   ``deterministic`` and the BDS test: ``detrend`` returns pandas objects for
   pandas input, the parameters of ``DeterministicProcess.in_sample`` and
