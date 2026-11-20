@@ -1150,6 +1150,12 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- :func:`~statsmodels.tsa.stattools.zivot_andrews` did not skip the candidate
+  break periods whose dummies are collinear with the constant and the trend,
+  which happens when the number of lags is not smaller than the number of
+  trimmed observations, or with ``trim=0``. It then returned a NaN or wrong
+  statistic and break period, or raised. These periods are skipped, and a
+  ``ValueError`` is raised if no candidate period is left. :pr:`10850`
 
 Statistics and tests
 --------------------
