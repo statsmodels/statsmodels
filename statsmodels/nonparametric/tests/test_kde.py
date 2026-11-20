@@ -725,3 +725,16 @@ def test_kdensityfft_dtype(dtype):
     npt.assert_allclose(density, expected[0], rtol=1e-12)
     npt.assert_allclose(grid, expected[1], rtol=1e-12)
     assert bw == expected[2]
+
+
+@pytest.mark.filterwarnings("ignore:the matrix subclass:PendingDeprecationWarning")
+@pytest.mark.parametrize("shape", ["row", "column"])
+def test_kdensityfft_matrix(shape):
+    # np.matrix input worked before the conversion in #10795 kept subclasses
+    x = np.random.default_rng(10770).standard_normal(100)
+    xm = np.matrix(x) if shape == "row" else np.matrix(x).T
+    density, grid, bw = kdensityfft(xm)
+    expected = kdensityfft(x)
+    npt.assert_allclose(density, expected[0], rtol=1e-12)
+    npt.assert_allclose(grid, expected[1], rtol=1e-12)
+    assert bw == expected[2]
