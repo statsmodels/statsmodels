@@ -1,6 +1,7 @@
 from statsmodels.compat.pandas import (
     MONTH_END,
     PD_LT_2_2_0,
+    PD_LT_3,
     QUARTER_END,
     YEAR_END,
     is_int_index,
@@ -222,14 +223,22 @@ def test_unknown_freq():
         CalendarTimeTrend("unknown", True, order=3)
 
 
+# pandas 2.2 and 2.3 make periods of start-anchored freqs, as the end-anchored
+# freqs (and "QS-FEB" as "QE-DEC"). Earlier and later versions have none.
+PD_START_ANCHORED_PERIODS = not PD_LT_2_2_0 and PD_LT_3
+_START_ANCHORED_SKIP = pytest.mark.skipif(
+    PD_START_ANCHORED_PERIODS, reason="pandas has periods for start-anchored freqs"
+)
+
+
 @pytest.mark.parametrize(
     "freq",
     [
-        "MS",
-        "2MS",
-        "QS",
-        "QS-FEB",
-        "YS",
+        pytest.param("MS", marks=_START_ANCHORED_SKIP),
+        pytest.param("2MS", marks=_START_ANCHORED_SKIP),
+        pytest.param("QS", marks=_START_ANCHORED_SKIP),
+        pytest.param("QS-FEB", marks=_START_ANCHORED_SKIP),
+        pytest.param("YS", marks=_START_ANCHORED_SKIP),
         "BMS",
         "SMS",
         "WOM-1MON",
@@ -248,10 +257,30 @@ def test_unknown_freq():
     ],
 )
 def test_calendar_term_freq_without_periods(freq, term, kwargs):
-    # pandas has no periods with these freqs, such as the start-anchored ones,
-    # so an AttributeError was raised when the terms were computed
+    # pandas has no periods with these freqs, so an error from pandas, usually
+    # an AttributeError, was raised when the terms were computed
     with pytest.raises(ValueError, match=f'freq "{freq}" is not supported by'):
         term(freq, **kwargs)
+
+
+@pytest.mark.skipif(
+    not PD_START_ANCHORED_PERIODS,
+    reason="pandas has no periods for start-anchored freqs",
+)
+@pytest.mark.parametrize(
+    "freq, end_freq", [("MS", MONTH_END), ("QS", QUARTER_END), ("YS", YEAR_END)]
+)
+@pytest.mark.parametrize(
+    "term, kwargs",
+    [(CalendarFourier, {"order": 2}), (CalendarTimeTrend, {"order": 1})],
+)
+def test_calendar_term_start_anchored_freq_supported(freq, end_freq, term, kwargs):
+    # Where pandas has periods for start-anchored freqs, they are accepted and
+    # give the terms of the end-anchored freq
+    index = pd.date_range("2000-01-01", periods=400, freq="D")
+    terms = term(freq, **kwargs).in_sample(index)
+    expected = term(end_freq, **kwargs).in_sample(index)
+    np.testing.assert_allclose(terms, expected, rtol=1e-12)
 
 
 @pytest.mark.parametrize("term", [CalendarFourier, CalendarTimeTrend])

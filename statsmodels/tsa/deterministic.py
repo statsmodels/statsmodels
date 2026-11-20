@@ -605,8 +605,8 @@ class CalendarDeterministicTerm(DeterministicTerm, ABC):
                 "terms are computed from periods, so freq must be a frequency "
                 "that pandas supports for periods, for example "
                 f'"D", "W", "{MONTH_END}", "{QUARTER_END}" or "{YEAR_END}". '
-                'Start-anchored frequencies, such as "MS", "QS" and "YS", are '
-                "not supported."
+                'Start-anchored frequencies, such as "MS", "QS" and "YS", have '
+                "periods only in pandas 2.2 and 2.3."
             ) from exc
 
     @property
@@ -660,7 +660,8 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
     freq : str
         A string convertible to a pandas frequency that pandas supports for
         periods, for example "D", "W", "ME", "QE" or "YE". Start-anchored
-        frequencies, such as "MS", "QS" and "YS", are not supported.
+        frequencies, such as "MS", "QS" and "YS", have periods only in
+        pandas 2.2 and 2.3, which treat them as the end-anchored ones.
 
         .. versionchanged:: 0.15.1
 
@@ -940,7 +941,8 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     freq : str
         A string convertible to a pandas frequency that pandas supports for
         periods, for example "D", "W", "ME", "QE" or "YE". Start-anchored
-        frequencies, such as "MS", "QS" and "YS", are not supported.
+        frequencies, such as "MS", "QS" and "YS", have periods only in
+        pandas 2.2 and 2.3, which treat them as the end-anchored ones.
 
         .. versionchanged:: 0.15.1
 
