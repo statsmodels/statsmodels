@@ -2821,11 +2821,11 @@ def grangercausalitytests(x, maxlag, addconst=True):
         lags = np.arange(1, maxlag + 1)
     except TypeError as exc:
         lags = np.array([int(lag) for lag in maxlag])
-        maxlag = lags.max()
-        if lags.min() <= 0 or lags.size == 0:
+        if lags.size == 0 or lags.min() <= 0:
             raise ValueError(
                 "maxlag must be a non-empty list containing only positive integers"
             ) from exc
+        maxlag = lags.max()
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
         raise ValueError(
