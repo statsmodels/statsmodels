@@ -1608,14 +1608,24 @@ def test_coint_perfect_collinearity():
     assert np.isneginf(c.coint_t)
 
 
+@pytest.mark.filterwarnings("error:return_results has no effect:FutureWarning")
 @pytest.mark.parametrize("return_results", [None, True, False])
-def test_coint_return_results_not_used(return_results):
+def test_coint_return_results_deprecated(return_results):
     # A CointResult, which also unpacks as a tuple, is returned for every
-    # value of return_results
+    # value of return_results. Any value other than None warns that the
+    # argument has no effect.
     rng = np.random.default_rng(20261119)
     y1 = rng.standard_normal(200).cumsum()
     y0 = 0.5 * y1 + rng.standard_normal(200)
-    res = coint(y0, y1, maxlag=2, autolag=None, return_results=return_results)
+    if return_results is None:
+        res = coint(y0, y1, maxlag=2, autolag=None, return_results=None)
+    else:
+        with pytest.warns(
+            FutureWarning, match="return_results has no effect"
+        ) as record:
+            res = coint(y0, y1, maxlag=2, autolag=None, return_results=return_results)
+        # the warning points at the caller
+        assert record[0].filename == __file__
     assert isinstance(res, CointResult)
     coint_t, pvalue, crit = res
     # The test statistic is the ADF statistic of the residuals of the
@@ -4219,7 +4229,6 @@ def test_coint_auto_tstat():
         method="aeg",
         maxlag=0,
         autolag="t-stat",
-        return_results=False,
     )
     assert np.abs(res.coint_t) < 1.65
 

@@ -3065,6 +3065,12 @@ def coint(
         named tuple, so it also unpacks as the tuple
         ``coint_t, pvalue, critical_values``.
 
+        .. deprecated:: 0.15.1
+
+            ``return_results`` has no effect and will be removed after
+            statsmodels 0.17 is released. Passing any value other than
+            None issues a ``FutureWarning``.
+
     Returns
     -------
     CointResult
@@ -3123,6 +3129,15 @@ def coint(
         autolag, "autolag", optional=True, options=("aic", "bic", "t-stat")
     )
     return_results = bool_like(return_results, "return_results", optional=True)
+    if return_results is not None:
+        warnings.warn(
+            "return_results has no effect and will be removed after "
+            "statsmodels 0.17 is released. coint always returns a "
+            "CointResult. Remove the return_results argument to silence "
+            "this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     nobs, k_vars = y1.shape
     k_vars += 1  # add 1 for y0
