@@ -945,8 +945,11 @@ def test_detrend_input_forms(form):
 
 
 def test_lagmat_negative_maxlag():
-    with pytest.raises(ValueError, match="maxlag"):
-        tools.lagmat(np.arange(10.0), -1)
+    # The message said that maxlag must be greater than 0, but 0 is allowed
+    x = np.arange(10.0)
+    with pytest.raises(ValueError, match=r"`maxlag` must be non-negative\. Got -1\."):
+        tools.lagmat(x, -1)
+    np.testing.assert_allclose(tools.lagmat(x, 0, original="in"), x[:, None])
 
 
 @pytest.mark.parametrize("form", SERIES_FORMS)

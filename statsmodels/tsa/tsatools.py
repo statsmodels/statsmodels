@@ -443,7 +443,7 @@ def lagmat(
     if np.isscalar(maxlag):
         maxlag = int_like(maxlag, "maxlag")
         if maxlag < 0:
-            raise ValueError(f"`maxlag` must be greater than 0. Got {maxlag}.")
+            raise ValueError(f"`maxlag` must be non-negative. Got {maxlag}.")
         # Convert to array to simplify and use only array path
         lag_indices = np.arange(1, maxlag + 1, dtype=int)
     else:
