@@ -566,6 +566,14 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace", signif=0.05):
     rank : :class:`CointRankResults`
         A :class:`CointRankResults` object containing the cointegration rank suggested
         by the test and allowing a summary to be printed.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       The test statistics, and so the rank, were wrong for ``k_ar_diff=0``
+       before, because the levels were not lagged. The results for
+       ``k_ar_diff`` of 1 or more are unchanged.
     """
     method = string_like(method, "method", options=("trace", "maxeig"), lower=False)
 
@@ -644,6 +652,12 @@ def coint_johansen(endog, det_order, k_ar_diff):
     use is larger than if only the moment matrices were stored. A
     ``LinAlgError`` is raised if these columns are linearly dependent, for
     example if ``endog`` contains a duplicated series.
+
+    .. versionchanged:: 0.15.1
+
+       The eigenvalues, the eigenvectors and the test statistics were wrong
+       for ``k_ar_diff=0`` before, because the levels were not lagged. The
+       results for ``k_ar_diff`` of 1 or more are unchanged.
 
     References
     ----------
