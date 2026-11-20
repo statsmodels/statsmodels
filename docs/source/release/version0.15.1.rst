@@ -999,7 +999,7 @@ Time series analysis
 - ``DeterministicProcess.out_of_sample`` without any deterministic terms
   returned the in-sample rows on the in-sample index instead of ``steps``
   rows on the forecast index, and ``DeterministicProcess.range`` beyond the
-  sample returned the wrong rows. :pr:`10834`
+  sample returned the wrong rows in that case. :pr:`10834`
 
 Statistics and tests
 --------------------
