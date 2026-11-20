@@ -261,6 +261,28 @@ class TestZiNBP:
         assert_allclose(nb_m2, zinb_m2, rtol=1e-10)
 
 
+@pytest.mark.parametrize(
+    "dist, args",
+    [
+        (zipoisson, (2.0, 0.3)),
+        (zipoisson, (3.5, 0.0)),
+        (zipoisson, (2.0, 1.0)),
+        (zinegbin, (2.0, 0.5, 2, 0.2)),
+        (zinegbin, (4.0, 1.0, 1, 0.25)),
+    ],
+)
+def test_zero_inflated_ppf(dist, args):
+    # ppf(q) is the smallest k with cdf(k) >= q. Rescaling q to remove the
+    # zero inflation could round past a cdf value, and q == w returned -1.
+    k = np.arange(100)
+    cdf = dist.cdf(k, *args)
+    near = cdf[:20]
+    mid = (near[:-1] + near[1:]) / 2
+    q = np.concatenate([near, np.nextafter(near, 0), mid, [args[-1]]])
+    q = q[(q > 0) & (q < 1)]
+    assert_equal(dist.ppf(q, *args), np.searchsorted(cdf, q))
+
+
 class CheckDiscretized:
 
     def convert_params(self, params):

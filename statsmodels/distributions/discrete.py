@@ -63,10 +63,12 @@ class zipoisson_gen(rv_discrete):
         # we just translated and stretched q to remove zi
         q_mod = (q - w) / (1 - w)
         x = poisson(mu=mu).ppf(q_mod)
+        # q_mod can round past a cdf value, then the cdf at x - 1 reaches q
+        x = x - (self._cdf(x - 1, mu, w) >= q)
         # set to zero if in the zi range
         if isinstance(x, np.ndarray):
-            x[q < w] = 0
-        elif np.isscalar(x) and q < w:
+            x[q <= w] = 0
+        elif np.isscalar(x) and q <= w:
             return 0.0
         return x
 
@@ -149,10 +151,12 @@ class zinegativebinomial_gen(rv_discrete):
         # we just translated and stretched q to remove zi
         q_mod = (q - w) / (1 - w)
         x = nbinom.ppf(q_mod, s, p)
+        # q_mod can round past a cdf value, then the cdf at x - 1 reaches q
+        x = x - (w + nbinom.cdf(x - 1, s, p) * (1 - w) >= q)
         # set to zero if in the zi range
         if isinstance(x, np.ndarray):
-            x[q < w] = 0
-        elif np.isscalar(x) and q < w:
+            x[q <= w] = 0
+        elif np.isscalar(x) and q <= w:
             return 0.0
         return x
 
