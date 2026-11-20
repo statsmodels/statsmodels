@@ -67,6 +67,10 @@ Deprecations
   ``NotImplementedError``, will be removed after statsmodels 0.16. Use
   ``statsmodels.tsa.arima.model.ARIMA`` or
   ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
+- The ``return_results`` argument of :func:`~statsmodels.tsa.stattools.coint`
+  is deprecated. It has no effect, issues a ``FutureWarning`` when it is not
+  ``None``, and will be removed after statsmodels 0.17 is released.
+  :pr:`10848`
 
 Behavior changes
 ----------------
@@ -1150,6 +1154,8 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- ``coint`` returned ``critical_values`` as a list for ``trend="n"``. It is an
+  ndarray of NaN values, as for the other trends. :pr:`10848`
 
 Statistics and tests
 --------------------
