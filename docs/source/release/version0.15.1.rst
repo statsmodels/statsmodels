@@ -1002,6 +1002,10 @@ Time series analysis
   of 0. For a ``det_order`` of -1 and 0 the statistics now equal the
   likelihood ratio statistics of ``VECM``. Results with ``k_ar_diff`` of 1 or
   more do not change. :issue:`7459`, :pr:`10807`
+- ``TsaDescriptive.periodogram`` and ``TsaDescriptive.plot4`` (deprecated)
+  raised an ``AttributeError`` since 0.12.0, because they called a function
+  that was removed then. They compute the periodogram again, as before 0.12.0.
+  :pr:`10821`
 - ``_Var.covmat`` (deprecated) scaled the covariance of the coefficients by
   the residual sum of squares instead of the residual variance, so it was too
   large by the residual degrees of freedom. :pr:`10823`
