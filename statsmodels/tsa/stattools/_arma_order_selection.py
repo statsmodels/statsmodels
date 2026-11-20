@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 
 import numpy as np
-from numpy.linalg import LinAlgError
 import pandas as pd
 
 from statsmodels.tools.sm_exceptions import EstimationWarning
@@ -18,7 +17,11 @@ from statsmodels.tools.validation import (
 ArrayLike1D = np.ndarray | pd.Series | list[float]
 
 
-def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
+_INFO_CRITERIA = ("aic", "aicc", "bic", "hqic")
+
+
+def _safe_arma_fit(y, order, model_kw, trend, fit_kw):
+    """Return (results, None), or (None, error) if the fit raises error."""
     from statsmodels.tsa.arima.model import ARIMA
 
     try:
@@ -27,27 +30,15 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
             warnings.filterwarnings(
                 "ignore", message="Non-invertible starting MA", category=EstimationWarning
             )
-            return ARIMA(y, order=order, **model_kw, trend=trend).fit(
-                start_params=start_params, **fit_kw
-            )
-    except LinAlgError:
-        # SVD convergence failure on badly misspecified models
-        return None
-
-    except ValueError as error:
-        if start_params is not None:  # do not recurse again
-            # user supplied start_params only get one chance
-            return None
-        # try a little harder, should be handled in fit really
-        elif "initial" not in error.args[0] or "initial" in str(error):
-            start_params = [0.1] * sum(order)
-            if trend == "c":
-                start_params = [0.1] + start_params
-            return _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params)
-        else:
-            return None
-    except Exception:  # no idea what happened
-        return None
+            return ARIMA(y, order=order, **model_kw, trend=trend).fit(**fit_kw), None
+    except TypeError:
+        # Comes from the arguments, for example a mistyped keyword in
+        # model_kw or fit_kw, and not from a model that cannot be fitted
+        raise
+    except Exception as error:
+        # For example a LinAlgError or a ValueError from a badly misspecified
+        # model, or a ValueError from an estimator that cannot fit this order
+        return None, error
 
 
 def arma_order_select_ic(
@@ -65,14 +56,24 @@ def arma_order_select_ic(
     max_ma : int, optional
         Maximum number of MA lags to use. Default 2.
     ic : str or sequence of str, optional
-        Information criteria to report. Either a single string or a list
-        of different criteria is possible.
+        Information criteria to report, from "aic", "aicc", "bic" and
+        "hqic". Either a single name or a sequence of names.
+
+        .. versionchanged:: 0.15.1
+
+           An unknown name raises a ValueError before any model is fitted.
+           It used to raise an AttributeError from the first fitted model.
     trend : {'n', 'c'}, optional
         The trend to use when fitting the ARMA models.
     model_kw : dict, optional
         Keyword arguments to be passed to the ``ARIMA`` model.
     fit_kw : dict, optional
         Keyword arguments to be passed to ``ARIMA.fit``.
+
+        .. versionchanged:: 0.15.1
+
+           A TypeError from ``model_kw`` or ``fit_kw``, such as one for a
+           mistyped keyword, is raised. It used to make every fit fail.
 
     Returns
     -------
@@ -92,8 +93,19 @@ def arma_order_select_ic(
     Raises
     ------
     ValueError
-        If the fit of every model fails, or if no model has a non-NaN value
-        of a criterion in ``ic``.
+        If ``ic`` contains an unknown name, if the fit of every model fails,
+        or if no model has a non-NaN value of a criterion in ``ic``.
+    TypeError
+        If ``model_kw`` or ``fit_kw`` are not valid arguments of ``ARIMA``
+        or ``ARIMA.fit``, for example because of a mistyped keyword.
+
+    Warns
+    -----
+    EstimationWarning
+        If the fits of some, but not all, models fail. The warning lists their
+        orders and the error raised by the first.
+
+        .. versionadded:: 0.15.1
 
     Notes
     -----
@@ -152,26 +164,44 @@ def arma_order_select_ic(
             raise ValueError(msg)
         # Elements of an ndarray are np.str_
         ic = [str(name) for name in ic]
+    unknown = [name for name in ic if name not in _INFO_CRITERIA]
+    if unknown:
+        raise ValueError(
+            f"Unknown information criteria in ic: {unknown}. The valid names "
+            f"are {list(_INFO_CRITERIA)}."
+        )
 
     results = np.zeros((len(ic), max_ar + 1, max_ma + 1))
     model_kw = {} if model_kw is None else model_kw
     fit_kw = {} if fit_kw is None else fit_kw
     y_arr = array_like(y, "y", contiguous=True)
-    nfailed = 0
+    failed = []
     for ar in ar_range:
         for ma in ma_range:
-            mod = _safe_arma_fit(y_arr, (ar, 0, ma), model_kw, trend, fit_kw)
+            mod, error = _safe_arma_fit(y_arr, (ar, 0, ma), model_kw, trend, fit_kw)
             if mod is None:
-                nfailed += 1
+                failed.append(((ar, ma), error))
                 results[:, ar, ma] = np.nan
                 continue
 
             for i, criteria in enumerate(ic):
                 results[i, ar, ma] = getattr(mod, criteria)
-    if nfailed == len(ar_range) * len(ma_range):
-        raise ValueError(
-            "No ARMA model could be fitted: the fit failed for every order "
-            f"(p, q) with p <= {max_ar} and q <= {max_ma}."
+    if failed:
+        order, error = failed[0]
+        first = f"The first, order {order}, raised {type(error).__name__}: {error}"
+        nmodels = len(ar_range) * len(ma_range)
+        if len(failed) == nmodels:
+            raise ValueError(
+                "No ARMA model could be fitted: the fit failed for every order "
+                f"(p, q) with p <= {max_ar} and q <= {max_ma}. {first}"
+            ) from error
+        orders = ", ".join(str(pq) for pq, _ in failed)
+        warnings.warn(
+            f"The fits of {len(failed)} of {nmodels} ARMA models failed, and "
+            f"their information criteria are NaN. Orders (p, q): {orders}. "
+            f"{first}",
+            EstimationWarning,
+            stacklevel=2,
         )
 
     dfs = [pd.DataFrame(res, columns=ma_range, index=ar_range) for res in results]
