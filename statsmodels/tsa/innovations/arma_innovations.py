@@ -22,6 +22,8 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     ----------
     endog : array_like
         The observed time-series process, may be univariate or multivariate.
+        If 2-d, each column is filtered separately using the same ARMA
+        process.
     ar_params : array_like, optional
         Autoregressive parameters.
     ma_params : array_like, optional
@@ -39,11 +41,13 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     -------
     innovations : ndarray
         Innovations (one-step-ahead prediction errors) for the given `endog`
-        series with predictions based on the given ARMA process. If
-        `normalize=True`, then the returned innovations have been "whitened" by
-        dividing through by the square root of the mean square error.
+        series with predictions based on the given ARMA process, with the
+        same shape as `endog`. If `normalize=True`, then the returned
+        innovations have been "whitened" by dividing through by the square
+        root of `innovations_mse`, so that they have variance `sigma2`.
     innovations_mse : ndarray
-        Mean square error for the innovations.
+        Mean square error for the innovations divided by `sigma2`. The mean
+        square error is ``sigma2 * innovations_mse``.
     """
     # Parameters
     endog = np.require(endog,  requirements="W")
@@ -207,7 +211,9 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
     Returns
     -------
     ndarray
-        Score, evaluated at the given parameters.
+        Score, evaluated at the given parameters. The elements are the
+        derivatives with respect to `ar_params`, `ma_params` and `sigma2`, in
+        that order.
 
     Notes
     -----
@@ -255,12 +261,14 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
     Returns
     -------
     ndarray
-        Score per observation, evaluated at the given parameters.
+        Score per observation, evaluated at the given parameters, with one
+        row per observation. The columns are the derivatives with respect to
+        `ar_params`, `ma_params` and `sigma2`, in that order.
 
     Notes
     -----
     This is a numerical approximation, calculated using first-order complex
-    step differentiation on the `arma_loglike` method.
+    step differentiation on the `arma_loglikeobs` method.
     """
     ar_params = [] if ar_params is None else ar_params
     ma_params = [] if ma_params is None else ma_params
