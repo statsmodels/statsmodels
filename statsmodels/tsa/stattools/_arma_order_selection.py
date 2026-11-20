@@ -80,7 +80,20 @@ def arma_order_select_ic(
         Dict-like object with attribute access. Each ic is an attribute with a
         DataFrame for the results. The AR order used is the row index. The ma
         order used is the column index. The minimum orders are available as
-        ``ic_min_order``.
+        ``ic_min_order``, a tuple ``(p, q)`` with the AR and MA orders of the
+        model with the smallest criterion. Models with a NaN criterion, such
+        as those whose fit failed, are ignored.
+
+        .. versionchanged:: 0.15.1
+
+           The minimum orders ignore models with a NaN criterion. They used
+           to point at the first such model whenever a fit had failed.
+
+    Raises
+    ------
+    ValueError
+        If the fit of every model fails, or if no model has a non-NaN value
+        of a criterion in ``ic``.
 
     Notes
     -----
@@ -91,7 +104,8 @@ def arma_order_select_ic(
     ``ARIMA.fit`` can be selected with fit_kw, for example
     ``fit_kw={"method": "hannan_rissanen"}``.
 
-    A model whose fit fails has NaN information criteria.
+    A model whose fit fails has NaN information criteria, and the minimum
+    orders ignore it.
 
     Examples
     --------
@@ -143,26 +157,39 @@ def arma_order_select_ic(
     model_kw = {} if model_kw is None else model_kw
     fit_kw = {} if fit_kw is None else fit_kw
     y_arr = array_like(y, "y", contiguous=True)
+    nfailed = 0
     for ar in ar_range:
         for ma in ma_range:
             mod = _safe_arma_fit(y_arr, (ar, 0, ma), model_kw, trend, fit_kw)
             if mod is None:
+                nfailed += 1
                 results[:, ar, ma] = np.nan
                 continue
 
             for i, criteria in enumerate(ic):
                 results[i, ar, ma] = getattr(mod, criteria)
+    if nfailed == len(ar_range) * len(ma_range):
+        raise ValueError(
+            "No ARMA model could be fitted: the fit failed for every order "
+            f"(p, q) with p <= {max_ar} and q <= {max_ma}."
+        )
 
     dfs = [pd.DataFrame(res, columns=ma_range, index=ar_range) for res in results]
 
     res = dict(zip(ic, dfs, strict=True))
 
-    # add the minimums to the results dict
+    # add the minimums to the results dict, ignoring the NaN criteria of
+    # failed fits
     min_res = {}
     for i, result in res.items():
-        delta = np.ascontiguousarray(np.abs(result.min().min() - result))
-        ncols = delta.shape[1]
-        loc = np.argmin(delta)
+        values = result.to_numpy()
+        if np.isnan(values).all():
+            raise ValueError(
+                f"No fitted ARMA model has a non-NaN {i}, so {i}_min_order "
+                "is undefined."
+            )
+        ncols = values.shape[1]
+        loc = np.nanargmin(values)
         min_res.update({i + "_min_order": (loc // ncols, loc % ncols)})
     res.update(min_res)
 

@@ -3230,19 +3230,23 @@ def test_arma_order_select_ic_failed_fits_are_nan(trend):
             for p in range(3)
         ]
         assert_allclose(frame[0], expected, rtol=1e-12)
+        # The minimum ignores the failed fits, it used to point at the first
+        assert res[f"{ic}_min_order"] == (np.argmin(expected), 0)
 
 
 @pytest.mark.parametrize(
-    "fit_kw, max_ma, trend",
+    "fit_kw, max_ma, trend, match",
     [
-        ({}, 0, "c"),
-        ({"method": "yule_walker"}, 1, "n"),
-        ({"method": "yule_walker"}, 1, "c"),
+        # The white noise model has a NaN log-likelihood and the AR(1) fails
+        ({}, 0, "c", "No fitted ARMA model has a non-NaN aic"),
+        # Every fit fails
+        ({"method": "yule_walker"}, 1, "n", "No ARMA model could be fitted"),
+        ({"method": "yule_walker"}, 1, "c", "No ARMA model could be fitted"),
     ],
 )
-def test_arma_order_select_ic_infinite_value(fit_kw, max_ma, trend):
+def test_arma_order_select_ic_infinite_value(fit_kw, max_ma, trend, match):
     # No information criterion is finite for a series with an infinite
-    # value. Some of the fits raise and the others give NaN.
+    # value, so there is no minimum order. It used to be (0, 0).
     y = np.random.default_rng(20261119).standard_normal(100)
     y[-1] = np.inf
     with warnings.catch_warnings():
@@ -3250,11 +3254,10 @@ def test_arma_order_select_ic_infinite_value(fit_kw, max_ma, trend):
         # infinite value and does not converge
         warnings.simplefilter("ignore", ConvergenceWarning)
         warnings.simplefilter("ignore", RuntimeWarning)
-        res = arma_order_select_ic(
-            y, max_ar=1, max_ma=max_ma, ic="aic", trend=trend, fit_kw=fit_kw
-        )
-    assert res.aic.shape == (2, max_ma + 1)
-    assert np.all(np.isnan(res.aic))
+        with pytest.raises(ValueError, match=match):
+            arma_order_select_ic(
+                y, max_ar=1, max_ma=max_ma, ic="aic", trend=trend, fit_kw=fit_kw
+            )
 
 
 def test_acf_fft_dataframe():
