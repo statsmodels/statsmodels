@@ -14,6 +14,7 @@ from statsmodels.tsa.forecasting.theta import ThetaModel
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import acf
 from statsmodels.tsa.tests._contract import series_forms
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 SMOKE_PARAMS = list(product(["array", "dataframe", "series"], [True, False]))
 SMOKE_IDS = [f"type: {typ}, exponential: {exp}" for typ, exp in SMOKE_PARAMS]
@@ -461,3 +462,35 @@ def test_forecast_trend_closed_form(alpha):
     np.testing.assert_allclose(comp.ses, one_step, rtol=1e-12)
     expected_forecast = 0.5 * expected + one_step
     np.testing.assert_allclose(res.forecast(7), expected_forecast, rtol=1e-12)
+
+
+@pytest.mark.parametrize("use_mle", [True, False])
+@pytest.mark.parametrize("deseasonalize", [True, False])
+def test_prediction_intervals_ima_variance(use_mle, deseasonalize):
+    # The Theta model is an IMA(1,1) with drift whose moving average
+    # coefficient is alpha - 1, so the psi weights after the first are alpha
+    # and the h-step forecast variance is sigma2 * (1 + (h - 1) * alpha**2).
+    # The drift does not change the variance. The reference is the forecast
+    # variance of SARIMAX at the parameters of the Theta model, which has
+    # reached its steady state after 300 observations
+    rng = np.random.default_rng(1129)
+    e = rng.standard_normal(301)
+    y = 10 + np.cumsum(0.1 + e[1:] - 0.6 * e[:-1])
+    res = ThetaModel(
+        y, period=4, deseasonalize=deseasonalize, use_test=False
+    ).fit(use_mle=use_mle)
+    b0, alpha = res.params
+    steps = 6
+    pi = res.prediction_intervals(steps)
+    half_width = (pi["upper"] - pi["lower"]) / 2
+    variance = (half_width / stats.norm.ppf(0.975)) ** 2
+
+    ima = SARIMAX(y, order=(0, 1, 1), trend="c")
+    ima_res = ima.filter([b0, alpha - 1, res.sigma2])
+    expected = ima_res.get_forecast(steps).var_pred_mean
+    np.testing.assert_allclose(variance, expected, rtol=1e-8)
+    closed_form = res.sigma2 * (1 + np.arange(steps) * alpha**2)
+    np.testing.assert_allclose(variance, closed_form, rtol=1e-8)
+    # The intervals are centered on the forecast
+    center = (pi["upper"] + pi["lower"]) / 2
+    np.testing.assert_allclose(center, res.forecast(steps), rtol=1e-12)
