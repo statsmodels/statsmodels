@@ -268,6 +268,19 @@ def test_forecast_closed_form(seasonal_y, theta):
     assert_allclose(res.forecast(18, theta=theta), expected, rtol=1e-9)
 
 
+def test_forecast_closed_form_short_series():
+    # In a long series (1 - alpha) ** T is negligible, so the drift term is
+    # also checked on a short series where it is not
+    rng = np.random.default_rng([20261120, 30])
+    nobs = 14
+    y = np.round(10 * (20 + 0.4 * np.arange(nobs) + 2 * rng.standard_normal(nobs)))
+    res = ThetaModel(y, deseasonalize=False).fit()
+    alpha = res.params["alpha"]
+    assert (1 - alpha) ** nobs / alpha > 1e-3
+    expected, _ = _theta_closed_form(y, res.params, 6, theta=3.0)
+    assert_allclose(res.forecast(6, theta=3.0), expected, rtol=1e-9)
+
+
 @pytest.mark.parametrize("method", ["additive", "add", "multiplicative", "mul"])
 def test_forecast_deseasonalized_closed_form(seasonal_y, method):
     full = "additive" if method.startswith("add") else "multiplicative"
