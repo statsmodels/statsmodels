@@ -67,6 +67,10 @@ Deprecations
   ``NotImplementedError``, will be removed after statsmodels 0.16. Use
   ``statsmodels.tsa.arima.model.ARIMA`` or
   ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
+- 2-D lag polynomials that the functions of ``statsmodels.tsa.arima_process``
+  accepted, for example a column in ``arma_periodogram`` or a row in
+  ``index2lpol``, are deprecated. They give the same result as before with a
+  ``FutureWarning``, and will raise after statsmodels 0.17. :pr:`10861`
 
 Behavior changes
 ----------------
@@ -1150,6 +1154,10 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- Lag polynomials with more than one dimension in the functions of
+  ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
+  SciPy errors that did not name the argument. They raise a ``ValueError``
+  that does. :pr:`10861`
 
 Statistics and tests
 --------------------
