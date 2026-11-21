@@ -565,12 +565,17 @@ def _end_anchored(offset: pd.DateOffset) -> pd.DateOffset:
     The end-anchored offset with the same periods as a start-anchored one
 
     "MS" -> "ME", "QS-m" -> "QE-(m - 1)" and "YS-m" -> "YE-(m - 1)", where the
-    month before January is December. Other offsets are returned unchanged.
+    month before January is December. The calendar quarters, "QS-m" for m in
+    JAN, APR, JUL and OCT, are "QE-DEC", as in pandas 2.2 and 2.3. Other
+    offsets are returned unchanged.
     """
     if type(offset) is pd.offsets.MonthBegin:
         return pd.offsets.MonthEnd(offset.n)
     if type(offset) is pd.offsets.QuarterBegin:
         month = (offset.startingMonth - 2) % 12 + 1
+        if month % 3 == 0:
+            # The calendar quarters
+            month = 12
         return pd.offsets.QuarterEnd(offset.n, startingMonth=month)
     if type(offset) is pd.offsets.YearBegin:
         return pd.offsets.YearEnd(offset.n, month=(offset.month - 2) % 12 + 1)
@@ -679,15 +684,16 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
         Whether to compute the terms of a start-anchored freq from the periods
         of the end-anchored freq with the same periods. The default is True.
         "MS" is mapped to "ME", "QS-m" to "QE" anchored in the month before
-        m (so "QS" and "QS-JAN" to "QE-DEC", and "QS-FEB" to "QE-JAN"),
-        "YS-m" to "YE" anchored in the month before m (so "YS" to "YE-DEC",
-        and "YS-JUL" to "YE-JUN"), keeping the multiple ("2MS" to "2ME").
-        Older aliases such as "AS-JUL" are mapped as "YS-JUL". "BMS", "SMS",
-        "BQS" and "BYS" have no end-anchored equivalent and are not mapped.
-        If False, freq is passed to pandas as given. pandas supports periods
-        of start-anchored frequencies only in versions 2.2 and 2.3, which
-        anchor the periods of "QS-m" and "YS-m" in December for every m, so
-        that, for example, "QS-FEB" has the quarters of "QE-DEC".
+        m (so "QS-FEB" to "QE-JAN"), except that the calendar quarters, "QS"
+        and "QS-m" for m in JAN, APR, JUL and OCT, are mapped to "QE-DEC",
+        and "YS-m" to "YE" anchored in the month before m (so "YS" to
+        "YE-DEC", and "YS-JUL" to "YE-JUN"), keeping the multiple ("2MS" to
+        "2ME"). Older aliases such as "AS-JUL" are mapped as "YS-JUL". "BMS",
+        "SMS", "BQS" and "BYS" have no end-anchored equivalent and are not
+        mapped. If False, freq is passed to pandas as given. pandas supports
+        periods of start-anchored frequencies only in versions 2.2 and 2.3,
+        which anchor the periods of "QS-m" and "YS-m" in December for every
+        m, so that, for example, "QS-FEB" has the quarters of "QE-DEC".
 
         .. versionadded:: 0.15.1
 
@@ -986,16 +992,17 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         Whether to compute the terms of a start-anchored freq from the periods
         of the end-anchored freq with the same periods. The default is True.
         "MS" is mapped to "ME", "QS-m" to "QE" anchored in the month before
-        m (so "QS" and "QS-JAN" to "QE-DEC", and "QS-FEB" to "QE-JAN"),
-        "YS-m" to "YE" anchored in the month before m (so "YS" to "YE-DEC",
-        and "YS-JUL" to "YE-JUN"), keeping the multiple ("2MS" to "2ME").
-        Older aliases such as "AS-JUL" are mapped as "YS-JUL". "BMS", "SMS",
-        "BQS" and "BYS" have no end-anchored equivalent and are not mapped.
-        If False, freq is passed to pandas as given. pandas supports periods
-        of start-anchored frequencies only in versions 2.2 and 2.3, which
-        anchor the periods of "QS-m" and "YS-m" in December for every m, so
-        that, for example, "QS-FEB" has the quarters of "QE-DEC", and which
-        cannot use a base_period with them.
+        m (so "QS-FEB" to "QE-JAN"), except that the calendar quarters, "QS"
+        and "QS-m" for m in JAN, APR, JUL and OCT, are mapped to "QE-DEC",
+        and "YS-m" to "YE" anchored in the month before m (so "YS" to
+        "YE-DEC", and "YS-JUL" to "YE-JUN"), keeping the multiple ("2MS" to
+        "2ME"). Older aliases such as "AS-JUL" are mapped as "YS-JUL". "BMS",
+        "SMS", "BQS" and "BYS" have no end-anchored equivalent and are not
+        mapped. If False, freq is passed to pandas as given. pandas supports
+        periods of start-anchored frequencies only in versions 2.2 and 2.3,
+        which anchor the periods of "QS-m" and "YS-m" in December for every
+        m, so that, for example, "QS-FEB" has the quarters of "QE-DEC", and
+        which cannot use a base_period with them.
 
         .. versionadded:: 0.15.1
 
