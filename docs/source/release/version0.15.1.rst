@@ -1230,9 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- :class:`~statsmodels.tsa.seasonal.STL` and
-  :class:`~statsmodels.tsa.seasonal.MSTL` could not determine the period of
-  data with a PeriodIndex. :pr:`10897`
 
 Statistics and tests
 --------------------
