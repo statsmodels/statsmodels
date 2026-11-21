@@ -4777,6 +4777,9 @@ def test_zivot_andrews_singular(kind, regression):
         warnings.simplefilter("ignore", SingularMatrixWarning)
         with pytest.raises(ValueError, match="not full rank"):
             zivot_andrews(x, maxlag=3, regression=regression, autolag=None)
+        # also when the first periods inside the trim are skipped
+        with pytest.raises(ValueError, match="not full rank"):
+            zivot_andrews(x, trim=0.05, maxlag=8, regression=regression, autolag=None)
 
 
 def _za_outcome(za, x, **kwargs):
@@ -4788,34 +4791,141 @@ def _za_outcome(za, x, **kwargs):
             return type(exc)
 
 
+def _za_deterministic(t, p, regression):
+    # The constant, the trend and the break dummies of break period p. The
+    # level shift is 1(t >= p). The trend shift is (t - p + 2) from t = p - 1
+    # on for "t", and from t = p on for "ct".
+    cols = [np.ones_like(t), t]
+    if regression != "t":
+        cols.append((t >= p).astype(float))
+    if regression == "t":
+        cols.append(np.maximum(t - p + 2, 0.0))
+    elif regression == "ct":
+        cols.append(np.where(t >= p, t - p + 2, 0.0))
+    return cols
+
+
+def _za_direct(x, lags, regression, periods):
+    # The statistic and break index from one OLS fit per break period, with
+    # the regressors built directly: Delta x_t, t = lags + 1, ..., nobs - 1,
+    # on the deterministic terms, x_{t-1} and the lagged differences
+    nobs = x.shape[0]
+    dx = np.diff(x)
+    t = np.arange(lags + 1, nobs, dtype=float)
+    lagged = [dx[lags - j : nobs - 1 - j] for j in range(1, lags + 1)]
+    tvalues = []
+    for p in periods:
+        cols = _za_deterministic(t, p, regression)
+        exog = np.column_stack(cols + [x[lags : nobs - 1]] + lagged)
+        tvalues.append(OLS(dx[lags:], exog).fit().tvalues[len(cols)])
+    loc = int(np.argmin(tvalues))
+    return tvalues[loc], periods[loc] - 1
+
+
+class _ZivotAndrewsPeriods(ZivotAndrewsUnitRoot):
+    # records the candidate break periods
+    def _break_tvalues(self, endog, exog, regression, periods, *args):
+        self.periods = periods
+        return super()._break_tvalues(endog, exog, regression, periods, *args)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_candidate_periods(regression):
+    # The candidate break periods are the periods inside the trim whose
+    # deterministic terms have full column rank over the rows of the
+    # regression. The terms are integers, so the rank is not borderline.
+    nobs = 40
+    x = np.random.default_rng(24).standard_normal(nobs).cumsum()
+    for trim, lags in [(0.0, 0), (0.0, 3), (0.05, 8), (0.15, 8)]:
+        za = _ZivotAndrewsPeriods()
+        za(x, trim=trim, maxlag=lags, regression=regression, autolag=None)
+        t = np.arange(lags + 1, nobs, dtype=float)
+        trimcnt = int(nobs * trim)
+        expected = []
+        for p in range(trimcnt + 1, nobs - trimcnt + 1):
+            cols = _za_deterministic(t, p, regression)
+            if np.linalg.matrix_rank(np.column_stack(cols)) == len(cols):
+                expected.append(p)
+        assert_equal(za.periods, expected)
+
+
+# The break periods whose dummies are not collinear with the constant and
+# the trend in the regression, which starts at period lags + 1
+_ZA_VALID = {
+    "c": lambda nobs, lags: (lags + 2, nobs - 1),
+    "t": lambda nobs, lags: (lags + 4, nobs),
+    "ct": lambda nobs, lags: (lags + 3, nobs - 2),
+}
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_direct_regressions(regression):
+    # The direct regressions give the statistic and break period of an
+    # ordinary case, where no candidate break period is skipped
+    rng = np.random.default_rng(10583)
+    x = _za_series("random_walk", 200, rng)
+    res = zivot_andrews(x, maxlag=4, regression=regression, autolag=None)
+    periods = np.arange(31, 171)
+    statistic, bpidx = _za_direct(x, 4, regression, periods)
+    assert_allclose(res[0], statistic, rtol=1e-8)
+    assert res[4] == bpidx
+
+
+def _za_check_skipped(x, trim, lags, regression):
+    # The candidate periods whose dummies are collinear are skipped: the
+    # statistic is the minimum over the others, and the per-period loop agrees
+    nobs = x.shape[0]
+    trimcnt = int(nobs * trim)
+    first, last = _ZA_VALID[regression](nobs, lags)
+    periods = np.arange(max(trimcnt + 1, first), min(nobs - trimcnt, last) + 1)
+    kwargs = dict(trim=trim, maxlag=lags, regression=regression, autolag=None)
+    res = zivot_andrews(x, **kwargs)
+    statistic, bpidx = _za_direct(x, lags, regression, periods)
+    assert_allclose(res[0], statistic, rtol=1e-8)
+    assert res[4] == bpidx
+    expected = _ZivotAndrewsLoop()(x, **kwargs)
+    assert_allclose(res[0], expected[0], rtol=1e-8)
+    assert res[4] == expected[4]
+
+
 @pytest.mark.parametrize("regression", ["c", "t", "ct"])
 def test_zivot_andrews_dummies_wrap_around(regression):
     # With trim=0, or more lags than trimmed observations, the dummies of the
     # first or last periods are zero or wrap around the start of the sample.
-    # The per-period loop is used.
+    # These periods used to give a NaN or meaningless statistic, or raise.
     rng = np.random.default_rng(10583)
     x = _za_series("random_walk", 100, rng)
     for trim, lags in [(0.0, 0), (0.05, 8)]:
         tvalues, _ = _za_break_tvalues(x, lags, regression, trim)
         assert tvalues is None
-        kwargs = dict(trim=trim, maxlag=lags, regression=regression, autolag=None)
-        res = _za_outcome(zivot_andrews, x, **kwargs)
-        expected = _za_outcome(_ZivotAndrewsLoop(), x, **kwargs)
-        assert_equal(res, expected)
+        _za_check_skipped(x, trim, lags, regression)
 
 
 @pytest.mark.parametrize("regression, lags", [("c", 5), ("t", 4), ("t", 3), ("ct", 4)])
 def test_zivot_andrews_dummy_collinear(regression, lags):
     # The dummies of the first period are collinear with the constant and
-    # the trend. The per-period loop is used.
+    # the trend, and the period is skipped
     rng = np.random.default_rng(10583)
     x = _za_series("random_walk", 100, rng)
     tvalues, _ = _za_break_tvalues(x, lags, regression, 0.05)
     assert tvalues is None
-    kwargs = dict(trim=0.05, maxlag=lags, regression=regression, autolag=None)
-    res = _za_outcome(zivot_andrews, x, **kwargs)
-    expected = _za_outcome(_ZivotAndrewsLoop(), x, **kwargs)
-    assert_equal(res, expected)
+    _za_check_skipped(x, 0.05, lags, regression)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_lags_beyond_trim(regression):
+    # 8 lags and 3 trimmed observations of 24: the first periods are
+    # degenerate. The statistic was NaN for "c" (with a RuntimeWarning).
+    x = np.random.default_rng(24).standard_normal(24).cumsum()
+    _za_check_skipped(x, 0.15, 8, regression)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_no_break_period_left(regression):
+    # 20 lags of 24 observations leave no period with full rank dummies
+    x = np.random.default_rng(24).standard_normal(24).cumsum()
+    with pytest.raises(ValueError, match="No break period is left: with 20 lags"):
+        zivot_andrews(x, maxlag=20, regression=regression, autolag=None)
 
 
 @pytest.mark.parametrize("regression", ["c", "ct"])
