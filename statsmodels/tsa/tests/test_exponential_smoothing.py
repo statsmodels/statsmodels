@@ -3182,3 +3182,37 @@ def test_get_prediction_endog_dynamic(use_pandas, start, end, dynamic):
         pd.testing.assert_index_equal(
             pred.endog.index, pred.predicted_mean.index, exact=False
         )
+
+
+@pytest.mark.parametrize("start", [49, 47])
+def test_prediction_simulation_results(oildata, start):
+    # The wrapper of PredictionResults labelled simulation_results with the
+    # name of endog as the only column, which raised a TypeError for a
+    # DataFrame of more than one simulation
+    reps = 20
+    res = ETSModel(oildata).smooth([0.3, 110.0])
+    end = 51
+    pred = res.get_prediction(
+        start=start,
+        end=end,
+        method="simulated",
+        simulate_repetitions=reps,
+        rng=np.random.default_rng(0),
+    )
+    sims = pred.simulation_results
+    assert isinstance(sims, pd.DataFrame)
+    assert_array_equal(sims.index, pred.predicted_mean.index)
+    assert list(sims.columns) == [f"simulation.{i}" for i in range(reps)]
+    # the in-sample periods are simulated one step ahead, then the forecasts
+    # from the end of the sample, from the same generator
+    rng = np.random.default_rng(0)
+    expected = [
+        res.simulate(1, anchor=t - 1, repetitions=reps, rng=rng)
+        for t in range(start, res.nobs)
+    ]
+    expected.append(res.simulate(end - res.nobs + 1, anchor="end", repetitions=reps, rng=rng))
+    expected = pd.concat(expected)
+    assert_allclose(sims.to_numpy(), expected.to_numpy(), rtol=1e-12)
+    assert_allclose(
+        pred.summary_frame()["mean_numerical"], expected.mean(axis=1), rtol=1e-12
+    )

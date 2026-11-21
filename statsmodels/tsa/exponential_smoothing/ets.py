@@ -2813,7 +2813,6 @@ class PredictionResults:
 class PredictionResultsWrapper(wrap.ResultsWrapper):
     _attrs = {
         "predicted_mean": "dates",
-        "simulation_results": "dates",
         "endog": "dates",
     }
     _wrap_attrs = wrap.union_dicts(_attrs)
