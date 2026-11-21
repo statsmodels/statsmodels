@@ -71,6 +71,9 @@ Deprecations
   accepted, for example a column in ``arma_periodogram`` or a row in
   ``index2lpol``, are deprecated. They give the same result as before with a
   ``FutureWarning``, and will raise after statsmodels 0.17. :pr:`10861`
+- An invalid ``mode`` in ``fftconvolveinv`` and ``fftconvolve3`` returned
+  None. It warns with a ``FutureWarning`` and will raise a ``ValueError`` in
+  statsmodels 0.17. :pr:`10894`
 
 Behavior changes
 ----------------
@@ -1158,6 +1161,9 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- ``fftconvolveinv`` and ``fftconvolve3`` in ``statsmodels.tsa.filters``
+  raised for a list, tuple, Series or DataFrame, and ``fftconvolve3`` raised
+  when given ``in3`` without ``in2``. :pr:`10894`
 
 Statistics and tests
 --------------------
