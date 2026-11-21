@@ -2193,3 +2193,24 @@ def test_miso_lfilter_useic_extra_values_ignored(nlags):
     expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, useic[:nlags])
     assert_allclose(inp, expected_inp, rtol=1e-12)
     assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("nlags", [0, 1, 2])
+@pytest.mark.parametrize("form", ["float", "int", "numpy-float", "ndarray-0d"])
+def test_miso_lfilter_scalar_useic(form, nlags):
+    # a scalar useic raised an IndexError for one AR lag, and a ValueError
+    # for two or more with scipy >= 1.16. It is y[-1], with zero for the
+    # further lags, as lfiltic of scipy < 1.16 treated it for two or more.
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5, 0.2])[: nlags + 1]
+    useic = {
+        "float": 1.5,
+        "int": 2,
+        "numpy-float": np.float64(1.5),
+        "ndarray-0d": np.array(1.5),
+    }[form]
+    y, inp = miso_lfilter(ar, ma, x, useic=useic)
+    past = [float(useic)] + [0.0] * (nlags - 1) if nlags else None
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, past)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)

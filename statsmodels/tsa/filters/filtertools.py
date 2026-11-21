@@ -475,7 +475,10 @@ def miso_lfilter(ar, ma, x, useic=False):
 
            Without AR lags, ``ar = [1.0]``, there are no initial conditions,
            and a non-zero ``useic`` is ignored, as values beyond
-           ``ar.shape[0] - 1`` are, where it raised a ValueError.
+           ``ar.shape[0] - 1`` are, where it raised a ValueError. A scalar
+           ``useic`` is the initial value ``y[-1]``, with zero for any
+           further lags, where it raised an IndexError for one AR lag (and
+           a ValueError for any number of lags with scipy 1.16 or later).
 
     Returns
     -------
@@ -544,9 +547,8 @@ def miso_lfilter(ar, ma, x, useic=False):
     # useic can be an ndarray; all-zero values are the default zero values
     if np.any(useic):
         # b = [1.0] as in lfilter, so that zi has len(ar) - 1 values, also
-        # for ar = [1.0]
-        return signal.lfilter([1], ar, inp,
-                              zi=signal.lfiltic([1.0], ar,
-                                                useic))[0][:nobs], inp[:nobs]
+        # for ar = [1.0]. A scalar useic is y[-1], and lfiltic needs it 1-d.
+        zi = signal.lfiltic([1.0], ar, np.atleast_1d(useic))
+        return signal.lfilter([1], ar, inp, zi=zi)[0][:nobs], inp[:nobs]
     else:
         return signal.lfilter([1], ar, inp)[:nobs], inp[:nobs]
