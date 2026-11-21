@@ -2,7 +2,7 @@ import numpy as np
 from numpy import asarray, diag, diag_indices, dot, ones, r_, zeros
 from numpy.linalg import solve
 
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import int_like, string_like
 
 # def denton(indicator, benchmark, freq="aq", **kwargs):
 #    """
@@ -183,8 +183,11 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         k = 3
     else:  # freq == "other"
         k = kwargs.get("k")
-        if not k:
+        if k is None:
             raise ValueError('k must be supplied with freq="other"')
+        k = int_like(k, "k")
+        if k < 1:
+            raise ValueError(f"k must be a positive integer, got {k}")
 
     n = k*m  # number of indicator series with a benchmark for back-series
     if n > N:
