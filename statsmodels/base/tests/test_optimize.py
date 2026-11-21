@@ -4,6 +4,7 @@ import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_almost_equal
 import pytest
 
+from statsmodels.base.model import GenericLikelihoodModel
 from statsmodels.base.optimizer import (
     _fit_basinhopping,
     _fit_bfgs,
@@ -303,6 +304,51 @@ def test_lbfgs_disp_false_no_output(capsys):
     )
     captured = capsys.readouterr()
     assert captured.out == ""
+
+
+class _ShiftedLeastSquares(GenericLikelihoodModel):
+    # The Gaussian loglikelihood of endog - shift, up to a constant. The shift
+    # is a required argument of the loglikelihood, the score and the Hessian,
+    # so that a solver that calls one of them without fargs raises. The fits
+    # skip the Hessian after the optimization, which is computed without fargs.
+    def loglike(self, params, shift):
+        resid = self.endog - shift - self.exog @ params
+        return -0.5 * (resid @ resid)
+
+    def score(self, params, shift):
+        return self.exog.T @ (self.endog - shift - self.exog @ params)
+
+    def hessian(self, params, shift):
+        return -self.exog.T @ self.exog
+
+
+@pytest.mark.parametrize(
+    "method", ["nm", "bfgs", "lbfgs", "powell", "cg", "ncg", "basinhopping", "minimize"]
+)
+def test_fit_fargs(method):
+    # cg did not pass fargs to the objective and the score
+    rng = np.random.default_rng(12345)
+    exog = np.column_stack((np.ones(50), rng.standard_normal(50)))
+    endog = exog @ [1.0, 0.5] + rng.standard_normal(50)
+    shift = 3.0
+    # The maximizer is least squares of endog - shift on exog. Without the
+    # shift, the intercept would be larger by 3.
+    desired = np.linalg.lstsq(exog, endog - shift, rcond=None)[0]
+    # The default tolerances of Nelder-Mead stop at a change of 1e-4 in the
+    # parameters. Those of the other solvers reach the maximizer to about 2e-8.
+    options = {
+        "nm": {"xtol": 1e-8, "ftol": 1e-10},
+        "basinhopping": {"niter": 5, "seed": 32839013},
+    }
+    res = _ShiftedLeastSquares(endog, exog).fit(
+        method=method,
+        fargs=(shift,),
+        disp=0,
+        skip_hessian=True,
+        **options.get(method, {}),
+    )
+    assert res.mle_retvals["converged"]
+    assert_allclose(res.params, desired, rtol=1e-6)
 
 
 def _newton_funcs(region, curvature):
