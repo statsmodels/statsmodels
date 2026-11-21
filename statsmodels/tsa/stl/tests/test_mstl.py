@@ -241,7 +241,7 @@ def test_infer_period_from_index():
     # freq_to_period: 12 for monthly data
     index = pd.date_range("2000-01-01", periods=72, freq="MS")
     y = pd.Series(_monthly_series(), index=index)
-    assert freq_to_period(index.inferred_freq) == 12
+    assert freq_to_period(index.freqstr) == 12
     mod = MSTL(y)
     assert list(mod.periods) == [12]
     res = mod.fit()
