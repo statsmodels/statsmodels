@@ -1750,3 +1750,60 @@ def test_ardl_select_order_nan(data):
     error = SystemError if NP_LT_1_24 else np.linalg.LinAlgError
     with pytest.raises(error):
         ardl_select_order(y, 2, data.x, 2, "c")
+
+
+def _ardl_uecm_regressors(y, x, model, lags, order, hold_back):
+    # The regressors of an ARDL or a UECM with a constant, built by hand
+    n = y.shape[0]
+    lags = lags or 0
+    t = np.arange(hold_back, n)
+    cols = [np.ones(t.shape[0])]
+    if model == "ARDL":
+        cols += [y[t - j] for j in range(1, lags + 1)]
+        cols += [x[t - j] for j in range(order + 1)]
+        return y[t], np.column_stack(cols)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.r_[np.nan, np.diff(x)]
+    cols += [y[t - 1], x[t - 1]]
+    cols += [dy[t - j] for j in range(1, lags)]
+    cols += [dx[t - j] for j in range(order)]
+    return dy[t], np.column_stack(cols)
+
+
+@pytest.mark.parametrize(
+    "model, lags, order, hold_back, nobs",
+    [
+        ("ARDL", 1, 4, None, 96),
+        ("ARDL", None, 3, None, 97),
+        ("ARDL", 1, 4, 6, 94),
+        ("ARDL", 4, 1, None, 96),
+        ("UECM", 1, 3, None, 97),
+        ("UECM", 3, 1, None, 97),
+    ],
+)
+def test_ardl_nobs_exog_lag_hold_back(model, lags, order, hold_back, nobs):
+    # When the largest exog lag exceeded the endog lag and hold_back was
+    # None, nobs counted the observations dropped by the exog lags, and
+    # llf, the ICs, sigma2, df_resid and the p-values used it
+    rng = np.random.default_rng(20261124)
+    y = np.cumsum(rng.standard_normal(100))
+    x = np.cumsum(rng.standard_normal(100))
+    mod_cls = ARDL if model == "ARDL" else UECM
+    res = mod_cls(y, lags, x[:, None], order, hold_back=hold_back).fit()
+
+    hb = hold_back if hold_back is not None else 100 - nobs
+    dep, reg = _ardl_uecm_regressors(y, x, model, lags, order, hb)
+    ols = OLS(dep, reg).fit()
+    k = reg.shape[1]
+    assert res.nobs == nobs == dep.shape[0]
+    assert res.df_resid == nobs - k
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.llf, ols.llf, rtol=1e-10)
+    assert_allclose(res.sigma2, ols.ssr / nobs, rtol=1e-10)
+    # The ICs count the variance as a parameter
+    assert_allclose(res.aic, -2 * ols.llf + 2 * (k + 1), rtol=1e-10)
+    assert_allclose(res.bic, -2 * ols.llf + np.log(nobs) * (k + 1), rtol=1e-10)
+    hqic = -2 * ols.llf + 2 * np.log(np.log(nobs)) * (k + 1)
+    assert_allclose(res.hqic, hqic, rtol=1e-10)
+    assert_allclose(res.pvalues, ols.pvalues, rtol=1e-8)
+    assert_allclose(res.conf_int(), ols.conf_int(), rtol=1e-8)
