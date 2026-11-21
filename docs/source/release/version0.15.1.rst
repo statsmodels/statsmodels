@@ -1150,9 +1150,11 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
-- ``DeterministicProcess.out_of_sample`` ignored the inferred frequency of an
-  index without one, such as a list of dates, so the forecasts had integer
-  labels, with warnings, and calendar terms raised. :pr:`10855`
+- ``DeterministicProcess.out_of_sample`` and the ``out_of_sample`` of the
+  deterministic terms ignored the inferred frequency of an index without one,
+  such as a list of dates, so the forecasts had integer labels, with warnings,
+  and calendar terms raised. They use the inferred frequency, so the forecast
+  index of ``ThetaModel`` for such data is dates too. :pr:`10855`
 
 Statistics and tests
 --------------------
