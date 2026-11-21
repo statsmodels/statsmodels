@@ -302,8 +302,8 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
 
         # Step 3.2: bias correction
         if unbiased is True:
-            if mod is None:
-                raise ValueError("Must have free parameters to use unbiased")
+            # There are no fixed parameters (step 3.1), so mod is the OLS
+            # model of step 2.2
             Z = np.zeros_like(endog)
 
             ar_coef = p.ar_poly.coef
@@ -482,7 +482,7 @@ def _package_fixed_and_free_params_info(fixed_params, spec_ar_lags,
         lag = int(key.split(".")[-1].lstrip("L"))
         if key.startswith("ar"):
             fixed_ar_lags_and_params.append((lag, val))
-        elif key.startswith("ma"):
+        else:  # ma, since sigma2 cannot be fixed
             fixed_ma_lags_and_params.append((lag, val))
 
     fixed_ar_lags_and_params.sort()
