@@ -1509,6 +1509,12 @@ Documentation
   ``TsaDescriptive.fit`` (p, d, q) and its return type, the shapes of the
   ``_Var`` coefficient arrays, and a runnable ``_Var`` example in place of one
   that used undefined names. :pr:`10815`
+- Correct docstrings of :class:`~statsmodels.tsa.holtwinters.ExponentialSmoothing`
+  and its results: ``initialization_method`` no longer lists ``None``;
+  ``initial_level``, ``initial_trend`` and ``initial_seasonal`` cannot be set
+  with "estimated" or "heuristic" (use ``fix_params`` with "estimated");
+  ``bounds``, ``fix_params``, ``initial_values``, ``Holt.exponential``, and the
+  return types of ``forecast`` and ``predict``. :pr:`10875`
 
 Stricter Input Validation
 =========================
