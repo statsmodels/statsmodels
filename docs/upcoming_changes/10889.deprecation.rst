@@ -1,0 +1,4 @@
+- The ``prefix`` argument of ``arma_score`` and ``arma_scoreobs`` in
+  ``statsmodels.tsa.innovations`` was never used. Passing it warns with a
+  ``FutureWarning``, and it will be removed after statsmodels 0.17.
+  :pr:`10889`
