@@ -76,6 +76,9 @@ Deprecations
   the filter of a misaligned part of ``x``, is deprecated. It gives the same
   result as before with a ``FutureWarning``, and will raise a ``ValueError``
   in statsmodels 0.17. :pr:`10870`
+- ``useic=True`` in :func:`~statsmodels.tsa.filters.filtertools.miso_lfilter`
+  with two or more AR lags, which set the last presample value to 1, warns
+  with a ``FutureWarning`` and will raise in statsmodels 0.17. :pr:`10895`
 
 Behavior changes
 ----------------
@@ -1167,6 +1170,9 @@ Time series analysis
   or tuple ``x``, a column ``ar``, a 1-d ``x`` or ``ma``, and an ndarray
   ``useic``, although they are documented as array_like. They are accepted;
   a 1-d ``x`` or ``ma`` is a single column. :pr:`10870`
+- :func:`~statsmodels.tsa.filters.filtertools.miso_lfilter` raised for a
+  non-zero ``useic`` without AR lags, and for a scalar ``useic`` with one AR lag
+  or with SciPy 1.16 or later. :pr:`10895`
 
 Statistics and tests
 --------------------
