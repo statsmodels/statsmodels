@@ -183,7 +183,7 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     ma_params = np.require(ma_params, dtype=dtype, requirements=["F", "W"])
     sigma2 = dtype(sigma2).item()
 
-    func =getattr(_arma_innovations, prefix + "arma_loglikeobs_fast")
+    func = getattr(_arma_innovations, prefix + "arma_loglikeobs_fast")
     return func(endog, ar_params, ma_params, sigma2)
 
 
