@@ -71,6 +71,9 @@ Deprecations
   accepted, for example a column in ``arma_periodogram`` or a row in
   ``index2lpol``, are deprecated. They give the same result as before with a
   ``FutureWarning``, and will raise after statsmodels 0.17. :pr:`10861`
+- Keyword arguments of :func:`~statsmodels.tsa.interp.denton.dentonm` other
+  than ``k`` were ignored. They warn with a ``FutureWarning`` and will raise a
+  ``TypeError`` after statsmodels 0.17. :pr:`10891`
 
 Behavior changes
 ----------------
@@ -1158,6 +1161,9 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- :func:`~statsmodels.tsa.interp.denton.dentonm` raised NumPy errors for an
+  invalid ``k`` and a benchmark with several columns. They raise a
+  ``ValueError``, and an integer-valued float ``k`` is accepted. :pr:`10891`
 
 Statistics and tests
 --------------------
