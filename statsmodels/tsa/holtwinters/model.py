@@ -174,8 +174,9 @@ class ExponentialSmoothing(TimeSeriesModel):
            value that makes the average effect zero: minus the sum of the
            others for an additive seasonal component, and `seasonal_periods`
            minus their sum, so that the mean is 1, for a multiplicative one.
-           It raised before, except with ``seasonal_periods=2``, where the
-           single value was used for both seasons.
+           It raised before. With ``seasonal_periods=2``, a single value is
+           still used for both seasons, with a FutureWarning; after 0.16 it
+           will be completed too.
     use_boxcox : {True, False, 'log', float}, optional
         Should the Box-Cox transform be applied to the data first? If 'log'
         then apply the log. If float then use the value as lambda.
@@ -480,6 +481,18 @@ class ExponentialSmoothing(TimeSeriesModel):
         m = self.seasonal_periods
         seasonal = self._initial_seasonal
         if self.has_seasonal and seasonal.ndim == 1 and seasonal.shape[0] == m - 1:
+            if m == 2:
+                # A single value was broadcast to both seasons before
+                warnings.warn(
+                    "initial_seasonal has one value and seasonal_periods is "
+                    "2, so the value is used for both seasons. After 0.16, "
+                    "the second value will be computed to make the average "
+                    "effect zero, as for longer seasons. Pass both values to "
+                    "keep the current result.",
+                    FutureWarning,
+                    stacklevel=4,
+                )
+                return
             # The last value makes the average effect zero: the values sum
             # to 0 if additive and to m, a mean of 1, if multiplicative
             total = m if self.seasonal == "mul" else 0.0
