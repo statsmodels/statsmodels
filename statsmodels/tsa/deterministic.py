@@ -179,6 +179,8 @@ class TimeTrendDeterministicTerm(DeterministicTerm, ABC):
     def __init__(self, constant: bool = True, order: int = 0) -> None:
         self._constant = bool_like(constant, "constant")
         self._order = required_int_like(order, "order")
+        if self._order < 0:
+            raise ValueError(f"order must be non-negative, got {self._order}.")
 
     @property
     def constant(self) -> bool:
@@ -216,7 +218,7 @@ class TimeTrendDeterministicTerm(DeterministicTerm, ABC):
         if self._constant:
             terms.append("Constant")
         if self._order:
-            terms.append(f"Powers 1 to {self._order + 1}")
+            terms.append(f"Powers 1 to {self._order}")
         if not terms:
             terms = ["Empty"]
         terms_str = ",".join(terms)
@@ -233,6 +235,11 @@ class TimeTrend(TimeTrendDeterministicTerm):
         Flag indicating whether a constant should be included.
     order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
+
+        .. versionchanged:: 0.15.1
+
+           A negative order raises a ``ValueError``. Before, an error was
+           raised when the terms were computed.
 
     See Also
     --------
@@ -889,6 +896,11 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         Flag indicating whether a constant should be included.
     order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
+
+        .. versionchanged:: 0.15.1
+
+           A negative order raises a ``ValueError``. Before, an error was
+           raised when the terms were computed.
     base_period : str, datetime.datetime, pd.Timestamp, or numpy.datetime64, optional
         The base period to use when computing the time stamps. This value is
         treated as 1 and so all other time indices are defined as the number
@@ -1083,6 +1095,11 @@ class DeterministicProcess:
     order : int, optional
         The order of the time trend to include. For example, 2 will include
         both linear and quadratic terms. 0 excludes time trend terms.
+
+        .. versionchanged:: 0.15.1
+
+           A negative order raises a ``ValueError``. Before, an error was
+           raised when the terms were computed.
     seasonal : bool, optional
         Whether to include seasonal dummies
     fourier : int, optional
