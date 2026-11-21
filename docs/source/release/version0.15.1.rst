@@ -338,6 +338,13 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- :func:`~statsmodels.tsa.stattools.zivot_andrews` with ``regression="t"``
+  returned as ``bpidx`` the first observation after the break, one later than
+  for ``"c"`` and ``"ct"`` and than ``urca::ur.za``, and its trimmed candidate
+  breaks were one observation earlier. ``bpidx`` is now the last observation
+  before the break for every model, and the candidate breaks are the same, so
+  ``bpidx`` for ``"t"`` is one smaller, and the statistic changes when the
+  minimum is at the edge of the trimmed range. :pr:`10885`
 
 New Features and Enhancements
 =============================
