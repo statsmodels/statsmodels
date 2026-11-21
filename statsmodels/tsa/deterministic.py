@@ -1351,7 +1351,8 @@ you can pass additional components using the additional_terms input.""")
 
     def _range_from_range_index(self, start: int, stop: int) -> pd.DataFrame:
         index = self._index
-        is_int64_index = is_int_index(index)
+        # A RangeIndex also has an integer dtype
+        is_int64_index = is_int_index(index) and not isinstance(index, pd.RangeIndex)
         assert isinstance(index, pd.RangeIndex) or is_int64_index
         if start < index[0]:
             raise ValueError(START_BEFORE_INDEX_ERR)
@@ -1446,6 +1447,13 @@ you can pass additional components using the additional_terms input.""")
         -------
         DataFrame
             A data frame of deterministic terms
+
+            .. versionchanged:: 0.15.1
+
+               With a ``RangeIndex`` whose step is not 1, the rows are those
+               of the labels ``start``, ``start + step``, ... up to ``stop``.
+               Before, the step was ignored, so the rows were wrong or a
+               ``KeyError`` was raised.
         """
         if not self._extendable:
             raise TypeError("""The index in the deterministic process does not \
