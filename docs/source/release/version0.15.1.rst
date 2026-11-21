@@ -1230,11 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- ``DeterministicProcess`` and the ``out_of_sample`` of the deterministic
-  terms extended an integer ``Index`` only if it started at 0 with step 1, so
-  ``range`` raised a ``TypeError`` and forecasts had wrong labels for an index
-  that a ``RangeIndex`` with the same values handles. An integer ``Index`` with
-  a constant step is extended like that ``RangeIndex``. :pr:`10886`
 
 Statistics and tests
 --------------------
