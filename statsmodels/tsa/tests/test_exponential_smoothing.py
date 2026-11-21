@@ -3326,3 +3326,26 @@ def test_endog_not_single_column(austourists, shape):
     endog = np.resize(austourists.to_numpy(), shape)
     with pytest.raises(ValueError, match="endog must be 1-dimensional"):
         ETSModel(endog)
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize("index", ["numpy", "range", "irregular dates"])
+def test_seasonal_periods_required(austourists, seasonal, index):
+    # Without seasonal_periods and without a date frequency to infer it
+    # from, a seasonal model raised a bare AssertionError
+    from statsmodels.tools.sm_exceptions import ValueWarning
+
+    if index == "numpy":
+        endog = austourists.to_numpy()
+    elif index == "range":
+        endog = austourists.reset_index(drop=True)
+    else:
+        dates = austourists.index.to_numpy().copy()
+        dates[-1] = dates[-1] + np.timedelta64(1, "D")
+        endog = pd.Series(austourists.to_numpy(), index=pd.DatetimeIndex(dates))
+    with pytest.raises(ValueError, match="seasonal_periods must be given"):
+        if index == "irregular dates":
+            with pytest.warns(ValueWarning, match="no associated frequency"):
+                ETSModel(endog, seasonal=seasonal)
+        else:
+            ETSModel(endog, seasonal=seasonal)

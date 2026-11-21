@@ -520,6 +520,11 @@ class ETSModel(base.StateSpaceMLEModel):
                 seasonal_periods, "seasonal_periods", optional=True
             )
             if seasonal_periods is None:
+                if self._index_freq is None:
+                    raise ValueError(
+                        "seasonal_periods must be given for a seasonal model if "
+                        "endog has no date index with a frequency."
+                    )
                 self.seasonal_periods = freq_to_period(self._index_freq)
             if self.seasonal_periods <= 1:
                 raise ValueError("seasonal_periods must be larger than 1.")
