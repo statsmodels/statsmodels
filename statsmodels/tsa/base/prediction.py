@@ -36,6 +36,12 @@ class PredictionResults:
        A single column was kept as 2-d, which gave a confidence interval
        with 2 * nobs columns for an (nobs, 1) array and raised for a
        one-column DataFrame.
+
+    .. versionchanged:: 0.15.1
+
+       ``predicted_mean`` and ``se_mean`` of a DataFrame predicted mean with
+       several columns keep its column names. They had the columns 0, ...,
+       k - 1.
     """
 
     def __init__(
@@ -91,6 +97,11 @@ class PredictionResults:
             return value
         if value.ndim == 1:
             return pd.Series(value, index=self._row_labels, name=name)
+        if columns is None and self._columns is not None:
+            if len(self._columns) == value.shape[1]:
+                # The columns of a DataFrame predicted mean, so that the
+                # mean, its standard error and the t-values align
+                columns = self._columns
         return pd.DataFrame(value, index=self._row_labels, columns=columns)
 
     @property

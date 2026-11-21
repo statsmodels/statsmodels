@@ -291,6 +291,30 @@ def test_multi_column_mean_labels(kind):
     )
 
 
+def test_multi_column_frame_keeps_names():
+    # A DataFrame predicted mean keeps its column names in predicted_mean
+    # and se_mean (it had columns 0..k-1), so the t-values align
+    rng = np.random.default_rng(20261121)
+    nobs, k = 4, 2
+    values = rng.standard_normal((nobs, k))
+    a = rng.standard_normal((nobs, k, k))
+    var = a @ a.transpose(0, 2, 1) + np.eye(k)
+    index = pd.date_range("2000-01-01", periods=nobs, freq="MS")
+    mean = pd.DataFrame(values, index=index, columns=["a", "b"])
+    pred = PredictionResults(mean, var)
+    se = np.sqrt(np.column_stack([var[:, 0, 0], var[:, 1, 1]]))
+    pd.testing.assert_frame_equal(pred.predicted_mean, mean)
+    expected_se = pd.DataFrame(se, index=index, columns=["a", "b"])
+    pd.testing.assert_frame_equal(pred.se_mean, expected_se)
+    expected_t = pd.DataFrame(values / se, index=index, columns=["a", "b"])
+    pd.testing.assert_frame_equal(pred.tvalues, expected_t, rtol=1e-14)
+    stat, pvalue = pred.t_test()
+    pd.testing.assert_frame_equal(stat, expected_t, rtol=1e-14)
+    np.testing.assert_allclose(
+        pvalue, 2 * stats.norm.sf(np.abs(values / se)), rtol=1e-12
+    )
+
+
 def test_t_dist_requires_df():
     with pytest.raises(ValueError, match='df must be given when dist is "t"'):
         PredictionResults(np.zeros(3), np.ones(3), dist="t")
