@@ -1,0 +1,3 @@
+- :class:`~statsmodels.tsa.ardl.ARDL`, :class:`~statsmodels.tsa.ardl.UECM` and
+  :func:`~statsmodels.tsa.ardl.ardl_select_order` raised a ``TypeError`` for an
+  ``order`` dict with numpy integer values. :pr:`10910`
