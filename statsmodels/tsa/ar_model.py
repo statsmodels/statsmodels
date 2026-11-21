@@ -1263,13 +1263,19 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         model_df : int, optional
             The model degree of freedom to use when adjusting computing the
             test statistic to account for parameter estimation. If None, uses
-            the number of AR lags included in the model.
+            ``df_model``, the number of estimated parameters, which includes
+            the deterministic terms and any exogenous regressors.
 
         Returns
         -------
         output : DataFrame
             DataFrame containing three columns: the test statistic, the
             p-value of the test, and the degree of freedom used in the test.
+
+            .. versionchanged:: 0.15.1
+
+                The test statistics, p-values and degrees of freedom are
+                returned. Since statsmodels 0.14.0 every value was NaN.
 
         See Also
         --------
@@ -1305,8 +1311,9 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             df = np.clip(np.arange(1, lags + 1) - model_df, 0, np.inf)
             df = df.astype(int)
         test_stats["df"] = df
-        index = pd.RangeIndex(1, lags + 1, name="Lag")
-        return pd.DataFrame(test_stats, columns=cols, index=index)
+        test_stats.columns = cols
+        test_stats.index = pd.RangeIndex(1, lags + 1, name="Lag")
+        return test_stats
 
     def test_normality(self):
         """
@@ -1380,6 +1387,12 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             A summary instance with panels for serial correlation tests,
             normality tests and heteroskedasticity tests.
 
+            .. versionchanged:: 0.15.1
+
+                The serial correlation panel is shown for the lags with a
+                positive test degree of freedom. Since statsmodels 0.14.0 it
+                was always missing.
+
         See Also
         --------
         test_serial_correlation
@@ -1395,7 +1408,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         smry = Summary()
         sc = self.test_serial_correlation()
         sc = sc.loc[sc.DF > 0]
-        values = [[i + 1] + row for i, row in enumerate(sc.values.tolist())]
+        values = sc.reset_index().values.tolist()
         data_fmts = ("%10d", "%10.3f", "%10.3f", "%10d")
         if sc.shape[0]:
             tab = SimpleTable(

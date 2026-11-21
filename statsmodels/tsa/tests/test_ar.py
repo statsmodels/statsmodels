@@ -16,10 +16,12 @@ import pandas as pd
 from pandas import Index, Series, date_range, period_range
 from pandas.testing import assert_series_equal
 import pytest
+from scipy import stats
 
 from statsmodels.datasets import macrodata, sunspots
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
+from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.tools.sm_exceptions import (
     EstimationWarning,
     SpecificationWarning,
@@ -1754,3 +1756,67 @@ def test_autoreg_range_index_plot_predict(index, close_figures):
     assert len(ax.collections) == 0
     with pytest.raises(ValueError, match="in_sample is False but there are no"):
         res.plot_predict(in_sample=False)
+
+
+def _ljung_box_reference(resid, nlags, model_df):
+    # The Ljung-Box statistic, its test degree of freedom and p-value
+    lb = acorr_ljungbox(resid, lags=nlags, model_df=model_df)
+    df = np.maximum(np.arange(1, nlags + 1) - model_df, 0)
+    pvalue = np.full(nlags, np.nan)
+    pvalue[df > 0] = stats.chi2.sf(lb["lb_stat"].to_numpy()[df > 0], df[df > 0])
+    return lb["lb_stat"].to_numpy(), pvalue, df
+
+
+@pytest.mark.parametrize("lags", [None, 1, 6])
+@pytest.mark.parametrize("model_df", [None, 0, 2])
+def test_test_serial_correlation_ljung_box(lags, model_df):
+    # The statistics were all NaN since 0.14.0
+    rng = np.random.default_rng(20261121)
+    nobs = 250
+    y = np.zeros(nobs)
+    e = rng.standard_normal(nobs)
+    for t in range(2, nobs):
+        y[t] = 0.4 * y[t - 1] - 0.3 * y[t - 2] + e[t]
+    res = AutoReg(y, 2, trend="c").fit()
+    sc = res.test_serial_correlation(lags=lags, model_df=model_df)
+
+    # The residuals of the regression on a constant and two lags
+    x = np.column_stack([np.ones(nobs - 2), y[1:-1], y[:-2]])
+    resid = OLS(y[2:], x).fit().resid
+    # Default lags: min(10, nobs // 5) of the 248 residuals. The default
+    # model_df is df_model, the three parameters.
+    nlags = 10 if lags is None else lags
+    mdf = 3 if model_df is None else model_df
+    stat, pvalue, df = _ljung_box_reference(resid, nlags, mdf)
+
+    assert list(sc.columns) == ["Ljung-Box", "LB P-value", "DF"]
+    assert sc.index.name == "Lag"
+    assert_allclose(sc.index, np.arange(1, nlags + 1))
+    assert_allclose(sc["Ljung-Box"], stat, rtol=1e-8)
+    assert_allclose(sc["LB P-value"], pvalue, rtol=1e-8)
+    assert_allclose(sc["DF"], df)
+    assert np.isfinite(sc["LB P-value"]).sum() == np.sum(df > 0)
+
+
+def test_diagnostic_summary_serial_correlation():
+    # The serial correlation table was missing since 0.14.0; its rows are
+    # the lags with a positive test degree of freedom
+    rng = np.random.default_rng(20261122)
+    nobs = 300
+    y = np.zeros(nobs)
+    e = rng.standard_normal(nobs)
+    for t in range(1, nobs):
+        y[t] = 0.6 * y[t - 1] + e[t]
+    res = AutoReg(y, 1, trend="ct").fit()
+    tab = res.diagnostic_summary().tables[0]
+    assert tab.title == "Test of No Serial Correlation"
+    rows = np.array([[cell.data for cell in row] for row in tab[1:]], dtype=float)
+
+    x = np.column_stack([np.ones(nobs - 1), np.arange(2, nobs + 1), y[:-1]])
+    resid = OLS(y[1:], x).fit().resid
+    # Ten lags (299 // 5 > 10) and three parameters: lags 4, ..., 10
+    stat, pvalue, df = _ljung_box_reference(resid, 10, 3)
+    assert_allclose(rows[:, 0], np.arange(4, 11))
+    assert_allclose(rows[:, 1], stat[3:], rtol=1e-8)
+    assert_allclose(rows[:, 2], pvalue[3:], rtol=1e-8)
+    assert_allclose(rows[:, 3], df[3:])
