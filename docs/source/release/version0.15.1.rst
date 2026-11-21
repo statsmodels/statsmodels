@@ -1230,10 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- ``arma_innovations``, ``arma_loglike`` and ``arma_loglikeobs`` in
-  ``statsmodels.tsa.innovations`` raised "buffer source array is read-only"
-  for read-only parameter arrays, which includes a Series with pandas 3.
-  :pr:`10887`
 
 Statistics and tests
 --------------------
