@@ -809,3 +809,54 @@ def test_invalid_estimator():
     spec = specification.SARIMAXSpecification()
     with pytest.raises(ValueError):
         spec.validate_estimator("not_an_estimator")
+
+
+@pytest.mark.parametrize("component", ["autoregressive", "moving average"])
+def test_duplicate_seasonal_lags(component):
+    # A lag in both the seasonal and non-seasonal polynomials is invalid,
+    # unless the specification is not validated
+    if component == "autoregressive":
+        kwargs = {"ar_order": [1, 4], "seasonal_ar_order": 1}
+    else:
+        kwargs = {"ma_order": [1, 4], "seasonal_ma_order": 1}
+    # NumPy 2 shows the lag as np.int64(4), or np.int32(4) where the default
+    # integer has 32 bits (Pyodide); older NumPy shows 4
+    match = rf"{component} lag\(s\) \{{(np\.int(32|64)\()?4\)?\}} are in both"
+    with pytest.raises(ValueError, match=match):
+        specification.SARIMAXSpecification(seasonal_periods=4, **kwargs)
+    spec = specification.SARIMAXSpecification(
+        seasonal_periods=4, validate_specification=False, **kwargs
+    )
+    # The reduced polynomial has degree 4 + 1 * 4
+    assert spec.max_reduced_ar_order + spec.max_reduced_ma_order == 8
+
+
+@pytest.mark.parametrize("estimator", ["hannan_rissanen", "innovations"])
+def test_validate_estimator_enforce_invertibility(estimator):
+    spec = specification.SARIMAXSpecification(ma_order=1, enforce_invertibility=True)
+    with pytest.raises(ValueError, match="cannot enforce an invertible"):
+        spec.validate_estimator(estimator)
+
+
+@pytest.mark.parametrize(
+    "trend, names, powers",
+    [
+        ("n", [], []),
+        ("t", ["drift"], [1]),
+        ("ctt", ["const", "drift", "trend.2"], [0, 1, 2]),
+        ([0, 0, 0, 1], ["trend.3"], [3]),
+    ],
+    ids=str,
+)
+def test_construct_trend_data_and_names(trend, names, powers):
+    # The trend terms are the powers of t = offset, offset + 1, ...
+    endog = np.zeros(10)
+    spec = specification.SARIMAXSpecification(endog, trend=trend)
+    assert spec.construct_trend_names() == names
+    data = spec.construct_trend_data(5, offset=3)
+    if not powers:
+        assert data is None
+    else:
+        t = np.arange(3.0, 8.0)
+        expected = np.column_stack([t**p for p in powers])
+        assert_allclose(data, expected, rtol=1e-12)

@@ -30,9 +30,9 @@ def hannan_rissanen(endog, ar_order=0, ma_order=0,
     ----------
     endog : array_like
         Input time series array, assumed to be stationary.
-    ar_order : int or list of int
+    ar_order : int or sequence of int, optional
         Autoregressive order
-    ma_order : int or list of int
+    ma_order : int or sequence of int, optional
         Moving average order
     seasonal_order : tuple, optional
         The (P,D,Q,s) order of the seasonal component of the model for the
