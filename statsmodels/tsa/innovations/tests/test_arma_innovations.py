@@ -125,7 +125,9 @@ def test_innovations_explicit_prefix(arma_data):
     )
     assert u.dtype == np.complex128
     assert_allclose(u.real, kf.forecasts_error[0], rtol=1e-8, atol=1e-9)
-    assert_allclose(u.imag, np.zeros_like(arma_data))
+    # Some platforms (Linux, wasm) leave imaginary rounding noise of about
+    # 1e-16 relative to the real parts, so atol is set from their scale
+    assert_allclose(u.imag, 0.0, atol=1e-12 * np.abs(u.real).max())
     assert_allclose(SIGMA2 * v.real, kf.forecasts_error_cov[0, 0], rtol=1e-9)
 
 
@@ -143,7 +145,9 @@ def test_loglikeobs_explicit_prefix(arma_data, prefix, dtype, rtol):
     )
     assert llf_obs.dtype == dtype
     assert_allclose(llf_obs.real, expected, rtol=rtol)
-    assert_allclose(llf_obs.imag, np.zeros_like(arma_data))
+    # Some platforms (Linux, wasm) leave imaginary rounding noise of about
+    # 1e-16 relative to the real parts, so atol is set from their scale
+    assert_allclose(llf_obs.imag, 0.0, atol=1e-12 * np.abs(llf_obs.real).max())
 
 
 def test_innovations_nonfinite_params(arma_data):
@@ -276,7 +280,10 @@ def test_white_noise_defaults(arma_data):
     assert_allclose(llf_obs, expected, rtol=1e-12)
     llf = arma_innovations.arma_loglike(arma_data, sigma2=SIGMA2)
     assert_allclose(llf, expected.sum(), rtol=1e-12)
-    # d loglike / d sigma2 = sum(x ** 2 / sigma2 - 1) / (2 sigma2)
+    # d loglike / d sigma2 = sum(x ** 2 / sigma2 - 1) / (2 sigma2). The score
+    # is a complex-step derivative: the imaginary rounding noise that some
+    # platforms (Linux, wasm) leave, about 1e-16 per observation, is divided
+    # by the step of about 1e-8, so it is accurate to about 1e-8 there.
     score = arma_innovations.arma_score(arma_data, sigma2=SIGMA2)
     expected = np.sum(arma_data**2 / SIGMA2 - 1) / (2 * SIGMA2)
-    assert_allclose(score, [expected], rtol=1e-10)
+    assert_allclose(score, [expected], rtol=1e-7)
