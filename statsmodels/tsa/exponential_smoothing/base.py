@@ -201,7 +201,13 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
 
     @property
     def param_names(self):
-        """List of human readable parameter names (for parameters actually included in the model)"""
+        """
+        List of human readable parameter names (for parameters actually included in the model)
+
+        Subclasses define them in ``_param_names``. Otherwise they are
+        "param.0", "param.1", ..., one for each of the `start_params`, or
+        an empty list if the model has no `start_params`.
+        """
         if hasattr(self, "_param_names"):
             return self._param_names
         else:
@@ -334,7 +340,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
     ----------
     model : Model instance
         A reference to the model that was fit.
-    nobs : float
+    nobs : int
         The number of observations used to fit the model.
     params : ndarray
         The parameters of the model.
@@ -519,7 +525,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         method : {'ljungbox', 'boxpierce', None}
             The statistical test for serial correlation. If None, an attempt is
             made to select an appropriate test.
-        lags : int, array_like of int, or None, optional
+        lags : int or array_like of int, optional
             If lags is an integer then this is taken to be the largest lag
             that is included, the test result is reported for all smaller lag
             length.
@@ -661,16 +667,17 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         .. math::
 
             H(h) = \sum_{t=T-h+1}^T  \tilde v_t^2
-            \Bigg / \sum_{t=d+1}^{d+1+h} \tilde v_t^2
+            \Bigg / \sum_{t=d+1}^{d+h} \tilde v_t^2
 
         where :math:`d` = max(loglikelihood_burn, nobs_diffuse) (usually
         corresponding to diffuse initialization under either the approximate
-        or exact approach).
+        or exact approach) and :math:`h` is :math:`(T - d) / 3` rounded to
+        the nearest integer.
 
         This statistic can be tested against an :math:`F(h,h)` distribution.
         Alternatively, :math:`h H(h)` is asymptotically distributed according
         to :math:`\chi_h^2`; this second test can be applied by passing
-        `asymptotic=True` as an argument.
+        ``use_f=False`` as an argument.
 
         See section 5.4 of [1]_ for the above formula and discussion, as well
         as additional details.
@@ -802,8 +809,10 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             Integer of the start observation. Default is 0.
         title : str, optional
             The title used for the summary table.
-        model_name : str, optional
+        model_name : str or list of str, optional
             The name of the model used. Default is to use model class name.
+            The names after the first in a list are shown on separate lines,
+            prefixed by "+".
         display_params : bool, optional
             Whether or not to display the parameters table. Default is True.
 
