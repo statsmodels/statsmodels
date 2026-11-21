@@ -543,3 +543,94 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+def _start_params_model(fixed):
+    import contextlib
+
+    rng = np.random.default_rng(20261135)
+    e = rng.standard_normal(100)
+    y = np.empty(100)
+    y[0] = e[0]
+    for t in range(1, 100):
+        y[t] = 0.5 * y[t - 1] + e[t]
+    mod = ARIMA(10 + y, order=(1, 0, 0))
+    if fixed:
+        return mod, mod.fix_params({"const": 10.0})
+    return mod, contextlib.nullcontext()
+
+
+@pytest.mark.parametrize(
+    "fixed, includes_fixed, start_params",
+    [
+        (False, False, [0.5]),
+        (False, False, [10.0, 0.5]),
+        (False, True, [10.0, 0.5]),
+        (True, True, [10.0, 0.5]),
+        (True, False, []),
+        (True, False, [0.5, 1.0, 1.0]),
+        (True, False, [10.0, 0.5, 1.0, 1.0]),
+    ],
+)
+def test_fit_start_params_wrong_length(fixed, includes_fixed, start_params):
+    # These lengths raised an IndexError or a ValueError from numpy, or
+    # are too long for the free parameters
+    mod, fix = _start_params_model(fixed)
+    n_params = 2 if fixed and not includes_fixed else 3
+    msg = f"start_params has {len(start_params)} elements, but the model has"
+    with fix, pytest.raises(ValueError, match=f"{msg} {n_params} "):
+        mod.fit(start_params=start_params, includes_fixed=includes_fixed)
+
+
+@pytest.mark.parametrize("includes_fixed", [False, True])
+def test_fit_start_params_too_long_deprecated(includes_fixed):
+    # Extra elements returned a result with as many parameters as elements.
+    # They are deprecated and the result is unchanged
+    from statsmodels.tsa.statespace import sarimax
+
+    mod, _ = _start_params_model(False)
+    start_params = [10.0, 0.5, 1.0, 9.0, 9.0]
+    with pytest.warns(FutureWarning, match="start_params has 5 elements, but"):
+        res = mod.fit(start_params=start_params, includes_fixed=includes_fixed)
+    expected = sarimax.SARIMAX.fit(
+        mod, start_params=start_params, includes_fixed=includes_fixed, disp=0
+    )
+    assert res.params.shape == (5,)
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+    assert_allclose(res.forecast(3), expected.forecast(3), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "includes_fixed, start_params, expected_start",
+    [(True, [10.0, 0.5, 1.0, 9.0], [10.0, 0.5, 1.0]), (False, [0.5], [0.5, 0.5])],
+)
+def test_fit_start_params_fixed_deprecated(includes_fixed, start_params, expected_start):
+    # With fixed parameters, extra elements were ignored and a single
+    # element was used for every free parameter
+    mod, fix = _start_params_model(True)
+    with fix:
+        with pytest.warns(FutureWarning, match="This is deprecated and will raise"):
+            res = mod.fit(start_params=start_params, includes_fixed=includes_fixed)
+        expected = mod.fit(start_params=expected_start, includes_fixed=includes_fixed)
+    assert res.params.shape == (3,)
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "fixed, includes_fixed, start_params",
+    [
+        (False, False, [10.0, 0.5, 1.0]),
+        (False, True, [10.0, 0.5, 1.0]),
+        (True, False, [0.5, 1.0]),
+        (True, True, [10.0, 0.5, 1.0]),
+    ],
+)
+def test_fit_start_params_right_length(fixed, includes_fixed, start_params):
+    # The right number of elements does not warn
+    import warnings
+
+    mod, fix = _start_params_model(fixed)
+    with fix, warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        res = mod.fit(start_params=start_params, includes_fixed=includes_fixed)
+    assert res.params.shape == (3,)
