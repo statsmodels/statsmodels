@@ -792,7 +792,11 @@ Generalized linear models and discrete models
   ``ValueError``. :issue:`9562` :pr:`10752`
 - ``cov_type`` of ``GEE.fit``, ``OrdinalGEE.fit`` and ``NominalGEE.fit`` is
   case-insensitive. A value such as ``"Bias_Reduced"`` raised an
-  ``UnboundLocalError``. :pr:`10791`
+  ``UnboundLocalError``. If the expansion of the ``"bias_reduced"`` or
+  ``"kauermann_carroll"`` covariance of a constrained fit fails, ``fit`` now
+  returns ``None`` with a ``ConvergenceWarning``. It used to return results
+  without that covariance, which raised a ``ValueError`` when it was used.
+  :pr:`10791`
 - ``GEE.fit`` with ``cov_type="bias_reduced"`` or ``"kauermann_carroll"``
   raises a ``ValueError`` that names the group if a group has leverage 1, for
   example a single observation with its own dummy variable. It raised a bare
