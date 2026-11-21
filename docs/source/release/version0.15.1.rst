@@ -1158,6 +1158,11 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- ``statsmodels.tsa.innovations.arma_innovations`` reported non-stationary
+  parameters, with a ``RuntimeWarning``, for a ``sigma2`` that is not positive,
+  and the innovations functions raised a bare ``KeyError`` for an unknown
+  ``prefix``. Both raise a ``ValueError`` that names the argument.
+  :pr:`10890`
 
 Statistics and tests
 --------------------
