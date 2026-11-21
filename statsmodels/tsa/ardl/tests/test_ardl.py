@@ -1750,3 +1750,39 @@ def test_ardl_select_order_nan(data):
     error = SystemError if NP_LT_1_24 else np.linalg.LinAlgError
     with pytest.raises(error):
         ardl_select_order(y, 2, data.x, 2, "c")
+
+
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_uecm_excluded_exog_by_hand(use_pandas):
+    # An exog variable excluded with None has no level, no differences and no
+    # term in the cointegrating relationship
+    rng = np.random.default_rng(20261132)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal((nobs, 3)), axis=0)
+    if use_pandas:
+        endog = pd.Series(y, name="y")
+        exog = pd.DataFrame(x, columns=["a", "b", "c"])
+        order = {"a": 2, "b": None, "c": 1}
+    else:
+        endog, exog = y, x
+        order = {0: 2, 1: None, 2: 1}
+    res = UECM(endog, 1, exog, order).fit()
+
+    a, c = ("a", "c") if use_pandas else ("x0", "x2")
+    names = ["const", "y.L1", f"{a}.L1", f"{c}.L1", f"D.{a}.L0", f"D.{a}.L1"]
+    names.append(f"D.{c}.L0")
+    assert res.model.exog_names == names
+    t = np.arange(2, nobs)
+    dx = np.r_[np.full((1, 3), np.nan), np.diff(x, axis=0)]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 2]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 2]]
+    params = OLS(y[t] - y[t - 1], np.column_stack(reg)).fit().params
+    assert_allclose(res.params, params, rtol=1e-8)
+    # The relationship is normalized by the coefficient of y.L1
+    ci_params = params[:4] / params[1]
+    assert_allclose(res.ci_params, ci_params, rtol=1e-8)
+    ci_resids = np.column_stack([np.ones(nobs), y, x[:, 0], x[:, 2]]) @ ci_params
+    assert_allclose(res.ci_resids, ci_resids, rtol=1e-8)
+    if use_pandas:
+        assert list(res.ci_params.index) == ["const", "y", "a", "c"]
