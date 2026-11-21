@@ -170,6 +170,13 @@ cdef class STL(object):
     used in the robust weighting. This version matches the fixed version that
     uses a correct partitioned sort to determine the median.
 
+    .. versionchanged:: 0.15.1
+
+       A list or tuple ``endog`` is stored as an ndarray, so the ``observed``
+       data of the results is an ndarray, as for ndarray input. It was the
+       list or tuple, and ``nobs`` and ``plot`` of the results raised an
+       AttributeError.
+
     See the notebook `Seasonal Decomposition
     <../examples/notebooks/generated/stl_decomposition.html>`__ for an overview.
 
@@ -213,6 +220,10 @@ cdef class STL(object):
     def __init__(self, endog, period=None, seasonal=7, trend=None, low_pass=None,
                  seasonal_deg=1, trend_deg=1, low_pass_deg=1,
                  robust=False, seasonal_jump=1, trend_jump=1, low_pass_jump=1):
+        if not isinstance(endog, (pd.Series, pd.DataFrame)):
+            # the results hold endog as the observed data, so a list or
+            # tuple is stored as an ndarray, as for ndarray input
+            endog = np.asarray(endog)
         self.endog = endog
         y = array_like(endog, "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
         self._ya = y
