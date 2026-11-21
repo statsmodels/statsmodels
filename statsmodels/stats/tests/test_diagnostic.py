@@ -2624,12 +2624,17 @@ def test_acorr_ljungbox_lags_exceed_nobs():
 
 
 @pytest.mark.parametrize("v", [101.37, 123.456])
-def test_acorr_ljungbox_constant(v):
-    # GH10647: A constant series carries no autocorrelation information.
+@pytest.mark.parametrize("kwargs", [{}, {"boxpierce": True}, {"auto_lag": True}])
+def test_acorr_ljungbox_constant(v, kwargs):
+    # GH10647: A constant series carries no autocorrelation information,
+    # whether or not its mean is exactly representable in floating point.
     x = np.full(100, v)
-    res = smsdia.acorr_ljungbox(x)
+    res = smsdia.acorr_ljungbox(x, **kwargs)
     assert np.all(np.isnan(res["lb_stat"]))
     assert np.all(np.isnan(res["lb_pvalue"]))
+    if kwargs.get("boxpierce"):
+        assert np.all(np.isnan(res["bp_stat"]))
+        assert np.all(np.isnan(res["bp_pvalue"]))
 
 
 def test_compare_cox_j_mismatched_nobs():
