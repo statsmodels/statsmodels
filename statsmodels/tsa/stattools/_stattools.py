@@ -5026,8 +5026,14 @@ class ZivotAndrewsUnitRoot:
         baselag : int
             The number of lags used for period regressions.
         bpidx : int
-            The index of x corresponding to endogenously calculated break period
-            with values in the range [0..nobs-1].
+            The index of x of the last observation before the endogenously
+            calculated break, for all three models.
+
+            .. versionchanged:: 0.15.1
+
+               With ``regression="t"``, ``bpidx`` is the last observation
+               before the break, as with "c" and "ct". It used to be the
+               observation after it, one larger. The statistic is unchanged.
 
         Notes
         -----
@@ -5042,6 +5048,29 @@ class ZivotAndrewsUnitRoot:
         significant run time reduction but also slightly more pessimistic test
         statistics than the original Zivot-Andrews method, although no attempt
         has been made to characterize the size/power trade-off.
+
+        A candidate break is skipped if its dummies are collinear with the
+        constant and the trend over the rows of the regression, which start
+        at observation ``baselag + 1``, since it then has no test statistic.
+        A level shift needs at least one row before the break and one after
+        it, and a trend shift two rows before it (and, next to a level
+        shift, two after it). So the last observation before the break, the
+        returned ``bpidx``, is at least ``baselag + 1`` ("c") or
+        ``baselag + 2`` ("t" and "ct"), and at most ``nobs - 2`` ("c" and
+        "t") or ``nobs - 3`` ("ct"). A ValueError is raised if no candidate
+        break is left. Within these bounds, ``bpidx`` is between ``trimcnt``
+        and ``nobs - trimcnt - 1`` for all three models, where
+        ``trimcnt = int(trim * nobs)``.
+
+        .. versionchanged:: 0.15.1
+
+           These break periods are skipped. They used to give a NaN or
+           meaningless statistic, or raise, when the number of lags was not
+           smaller than the number of trimmed observations, or with
+           ``trim=0``. With ``regression="t"``, the trimmed candidate breaks
+           are the same as for "c" and "ct"; they used to be one observation
+           earlier, so the statistic and break can differ when the minimum
+           is at the edge of the trimmed range.
 
         References
         ----------
@@ -5086,6 +5115,35 @@ class ZivotAndrewsUnitRoot:
         trimcnt = int(nobs * trim)
         start_period = trimcnt
         end_period = nobs - trimcnt
+        # The regressions start at period baselags + 1. For a break period
+        # whose dummies are zero, constant or a linear trend over those rows,
+        # the dummies are collinear with the constant and the trend, so the
+        # period has no t-statistic and is skipped. The level shift needs a
+        # zero and a nonzero row, the trend shift two zero rows and, next to
+        # the level shift ("ct"), two nonzero rows. The shifts of period p
+        # start at observation p for "c" and "ct" but at p - 1 for "t" (see
+        # _update_regression_exog), so the first valid period of "t" is one
+        # larger than that of "ct" although both need two zero rows.
+        if regression == "c":
+            first_valid, last_valid = baselags + 2, nobs - 1
+        elif regression == "t":
+            first_valid, last_valid = baselags + 4, nobs
+        else:
+            first_valid, last_valid = baselags + 3, nobs - 2
+        # The break of period p is after observation p - 1 for "c" and "ct"
+        # but after p - 2 for "t", so the trimmed periods of "t" are shifted
+        # by one to give all three models the same candidate breaks
+        shift = int(regression == "t")
+        periods = np.arange(
+            max(start_period + 1 + shift, first_valid),
+            min(end_period + shift, last_valid) + 1,
+        )
+        if periods.shape[0] == 0:
+            raise ValueError(
+                f"No break period is left: with {baselags} lags and trim={trim}, "
+                "the break dummies of every candidate period are collinear with "
+                "the constant and the trend. Use fewer lags or a smaller trim."
+            )
         if regression == "ct":
             basecols = 5
         else:
@@ -5098,8 +5156,7 @@ class ZivotAndrewsUnitRoot:
         endog, exog = self._format_regression_data(
             x, nobs, c_const, t_const, basecols, baselags
         )
-        stats = np.full(end_period + 1, np.inf)
-        periods = np.arange(start_period + 1, end_period + 1)
+        stats = np.full(end_period + 2, np.inf)
         tvalues = self._break_tvalues(
             endog[baselags:],
             exog,
@@ -5115,7 +5172,7 @@ class ZivotAndrewsUnitRoot:
             stats[periods] = tvalues
         else:
             # iterate through the time periods
-            for bp in range(start_period + 1, end_period + 1):
+            for bp in periods:
                 # update intercept dummy / trend / trend dummy
                 exog = self._update_regression_exog(
                     exog,
@@ -5128,7 +5185,7 @@ class ZivotAndrewsUnitRoot:
                     baselags,
                 )
                 # check exog rank on first iteration
-                if bp == start_period + 1:
+                if bp == periods[0]:
                     o = OLS(endog[baselags:], exog, hasconst=1).fit()
                     if o.df_model < exog.shape[1] - 1:
                         raise ValueError(
@@ -5139,9 +5196,11 @@ class ZivotAndrewsUnitRoot:
                     stats[bp] = o.tvalues[basecols - 1]
                 else:
                     stats[bp] = self._quick_ols(endog[baselags:], exog)[basecols - 1]
-        # return best seen
+        # return best seen. bpidx is the last observation before the break,
+        # where the dummies are still zero: p - 1 for "c" and "ct", but
+        # p - 2 for "t", whose trend shift starts at p - 1.
         zastat = np.min(stats)
-        bpidx = np.argmin(stats) - 1
+        bpidx = np.argmin(stats) - (2 if regression == "t" else 1)
         crit = self._za_crit(zastat, regression)
         pval = crit[0]
         cvdict = crit[1]
