@@ -394,7 +394,7 @@ def test_single_column_endog_keeps_dtype():
 
 
 @pytest.mark.parametrize("func", FUNCTIONS)
-def test_scalar_params(func):
+def test_scalar_params_all_functions(func):
     # The score functions called len() on the parameters, so scalars raised a
     # TypeError, although the other functions accept them
     rng = np.random.default_rng(20261121)
