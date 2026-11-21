@@ -1,0 +1,3 @@
+- ``fftconvolveinv`` and ``fftconvolve3`` in ``statsmodels.tsa.filters``
+  raised for a list, tuple, Series or DataFrame, and ``fftconvolve3`` raised
+  when given ``in3`` without ``in2``. :pr:`10894`
