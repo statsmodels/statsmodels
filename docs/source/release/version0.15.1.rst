@@ -1230,9 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- :class:`~statsmodels.tsa.forecasting.theta.ThetaModel` raised an
-  ``AttributeError`` in ``fit`` for a list or tuple ``endog``, and its error for
-  an invalid ``method`` named another argument. :pr:`10881`
 
 Statistics and tests
 --------------------
