@@ -71,6 +71,11 @@ Deprecations
   accepted, for example a column in ``arma_periodogram`` or a row in
   ``index2lpol``, are deprecated. They give the same result as before with a
   ``FutureWarning``, and will raise after statsmodels 0.17. :pr:`10861`
+- A single ``initial_seasonal`` value in
+  :class:`~statsmodels.tsa.holtwinters.ExponentialSmoothing` with
+  ``seasonal_periods=2`` is used for both seasons with a ``FutureWarning``;
+  after statsmodels 0.17 the second value will be computed to make the
+  average effect zero. :pr:`10877`
 
 Behavior changes
 ----------------
@@ -1158,6 +1163,10 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- :class:`~statsmodels.tsa.holtwinters.ExponentialSmoothing` with an
+  ``initial_seasonal`` of length ``seasonal_periods - 1``, which is
+  documented, raised in ``fit``. The last value is computed to make the
+  average effect zero. :pr:`10877`
 
 Statistics and tests
 --------------------
