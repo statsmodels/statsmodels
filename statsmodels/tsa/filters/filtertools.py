@@ -80,6 +80,16 @@ def _pad_nans(x, head=None, tail=None):
 # from numpy import product,array
 
 
+def _warn_invalid_fft_mode(mode):
+    warnings.warn(
+        f"mode must be 'full', 'same' or 'valid', but is {mode!r}. An "
+        "invalid mode returns None, but this is deprecated and will raise a "
+        "ValueError in statsmodels 0.17.0.",
+        FutureWarning,
+        stacklevel=3,
+    )
+
+
 # previous location in sandbox.tsa.try_var_convolve
 def fftconvolveinv(in1, in2, mode="full"):
     """
@@ -100,10 +110,21 @@ def fftconvolveinv(in1, in2, mode="full"):
     mode : str, optional
         Convolution mode, one of 'full', 'same', or 'valid'.
 
+        .. deprecated:: 0.15.1
+
+           Any other mode returns None, which is deprecated and will raise a
+           ValueError in statsmodels 0.17.0.
+
     Returns
     -------
     ndarray
         The convolved array.
+
+    Warns
+    -----
+    FutureWarning
+        If ``mode`` is not 'full', 'same' or 'valid'. None is returned, but
+        this is deprecated and will raise a ValueError in statsmodels 0.17.0.
 
     Notes
     -----
@@ -147,6 +168,8 @@ def fftconvolveinv(in1, in2, mode="full"):
         return trim_centered(ret, osize)
     elif mode == "valid":
         return trim_centered(ret, abs(s2-s1)+1)
+    _warn_invalid_fft_mode(mode)
+    return None
 
 
 # code duplication with fftconvolveinv
@@ -177,10 +200,21 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     mode : str, optional
         Convolution mode, one of 'full', 'same', or 'valid'.
 
+        .. deprecated:: 0.15.1
+
+           Any other mode returns None, which is deprecated and will raise a
+           ValueError in statsmodels 0.17.0.
+
     Returns
     -------
     ndarray
         The convolved array.
+
+    Warns
+    -----
+    FutureWarning
+        If ``mode`` is not 'full', 'same' or 'valid'. None is returned, but
+        this is deprecated and will raise a ValueError in statsmodels 0.17.0.
 
     Notes
     -----
@@ -245,6 +279,8 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
         return trim_centered(ret, osize)
     elif mode == "valid":
         return trim_centered(ret, abs(s2-s1)+1)
+    _warn_invalid_fft_mode(mode)
+    return None
 
 
 # original changes and examples in sandbox.tsa.try_var_convolve

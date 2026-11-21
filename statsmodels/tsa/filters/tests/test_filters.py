@@ -2164,3 +2164,15 @@ def test_fftconvolve3_in3_without_in2_matches_lfilter(mode, is_complex):
     assert res.shape == {"full": (201,), "same": (200,), "valid": (199,)}[mode]
     # atol for values near zero: the FFT rounding error is absolute
     assert_allclose(res[: expected.shape[0]], expected, rtol=1e-10, atol=1e-12)
+
+
+@pytest.mark.parametrize("mode", ["bogus", "FULL", None])
+@pytest.mark.parametrize("func", [fftconvolveinv, fftconvolve3])
+def test_fftconvolve_invalid_mode_deprecated(func, mode):
+    # an invalid mode silently returned None. It still does, with a warning
+    # that points at the caller.
+    x = np.random.default_rng(20261121).standard_normal(20)
+    with pytest.warns(FutureWarning, match="mode must be 'full', 'same' or") as rec:
+        res = func(x, np.array([1.0, -0.5]), mode=mode)
+    assert res is None
+    assert rec[0].filename == __file__
