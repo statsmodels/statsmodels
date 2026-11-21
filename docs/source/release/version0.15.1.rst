@@ -1230,11 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- The string of ``TimeTrend`` and ``CalendarTimeTrend`` gave a highest power
-  one too large, and a negative trend ``order`` failed later with an unrelated
-  error; it raises a ``ValueError`` when the term is created. The ``lagmat``
-  error said that ``maxlag`` must be greater than 0, although 0 is allowed.
-  :pr:`10856`
 
 Statistics and tests
 --------------------
