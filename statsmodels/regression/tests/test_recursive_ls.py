@@ -761,3 +761,6 @@ def test_get_prediction_dynamic_key_covers_several_dates():
     assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
     assert_allclose(pred.var_pred_mean, expected.var_pred_mean, rtol=1e-12)
     pd.testing.assert_index_equal(pred.predicted_mean.index, index)
+    # A key of a single date gives its location
+    pred = res.get_prediction(dynamic="2001-04-01")
+    assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
