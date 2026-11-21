@@ -3443,3 +3443,43 @@ def test_use_boxcox_numpy_bool(austourists, use_boxcox, expected):
     ref = ExponentialSmoothing(austourists, use_boxcox=expected, **kwargs).fit()
     assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-10)
     assert res.params["use_boxcox"] is expected
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize(
+    "fixed",
+    [
+        {"initial_seasonal.0": 1.5},
+        {"smoothing_level": 0.3, "initial_seasonal.0": 1.5, "initial_seasonal.5": 0.8},
+    ],
+)
+def test_fix_params_initial_seasonal_leaves_model_unchanged(seasonal, fixed):
+    # A fit with fixed initial seasonal values wrote them into the initial
+    # values stored on the model, so later fits of the same model differed
+    # from fits of a fresh model
+    rng = np.random.default_rng(20261121)
+    t = np.arange(72)
+    y = 50 + 0.2 * t + 5 * np.sin(2 * np.pi * t / 12) + rng.standard_normal(72)
+    spec = {"trend": "add", "seasonal": seasonal, "seasonal_periods": 12}
+    mod = ExponentialSmoothing(y, **spec)
+    fresh = ExponentialSmoothing(y, **spec)
+    with mod.fix_params(fixed):
+        res = mod.fit()
+    seasons = res.params["initial_seasons"]
+    for key, value in fixed.items():
+        if key.startswith("initial_seasonal."):
+            assert_allclose(seasons[int(key.split(".")[1])], value, rtol=1e-12)
+
+    for value, expected in zip(
+        mod.initial_values(), fresh.initial_values(), strict=True
+    ):
+        assert_allclose(value, expected, rtol=1e-12)
+    smoothing = {
+        "smoothing_level": 0.3,
+        "smoothing_trend": 0.1,
+        "smoothing_seasonal": 0.2,
+    }
+    res = mod.fit(**smoothing, optimized=False)
+    ref = fresh.fit(**smoothing, optimized=False)
+    assert_allclose(res.fittedvalues, ref.fittedvalues, rtol=1e-12)
+    assert_allclose(res.sse, ref.sse, rtol=1e-12)
