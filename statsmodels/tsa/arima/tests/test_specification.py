@@ -860,3 +860,31 @@ def test_construct_trend_data_and_names(trend, names, powers):
         t = np.arange(3.0, 8.0)
         expected = np.column_stack([t**p for p in powers])
         assert_allclose(data, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("trend", ["c", "t", "ct", [0, 0, 1]])
+@pytest.mark.parametrize("endog", [None, []])
+def test_trend_without_observations(trend, endog):
+    # A trend without observations raised "zero-size array to reduction
+    # operation maximum" when the trend data, which then has no rows, was
+    # checked for a constant column. The trend data is now left out, and the
+    # trend is described as for a specification with data.
+    spec = specification.SARIMAXSpecification(endog, order=(1, 0, 1), trend=trend)
+    nobs = 10
+    ref = specification.SARIMAXSpecification(
+        np.arange(1.0, nobs + 1) ** 0.5, order=(1, 0, 1), trend=trend
+    )
+    assert spec.exog is None
+    assert spec.k_exog == 0
+    assert_equal(spec.trend_terms, ref.trend_terms)
+    assert_equal(spec.k_trend, ref.k_trend)
+    assert_equal(spec.trend_order, ref.trend_order)
+    assert_equal(spec.trend_degree, ref.trend_degree)
+    # The trend data are the powers of t = 1, ..., nobs in trend_terms
+    time = np.arange(1.0, nobs + 1)[:, None]
+    expected = time ** ref.trend_terms.astype(float)
+    assert_allclose(spec.construct_trend_data(nobs), expected, rtol=1e-12)
+    assert_allclose(ref.exog, expected, rtol=1e-12)
+    # One observation is enough for the trend data
+    one = specification.SARIMAXSpecification([2.0], order=(1, 0, 1), trend=trend)
+    assert_allclose(one.exog, expected[:1], rtol=1e-12)
