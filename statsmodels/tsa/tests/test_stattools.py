@@ -1608,14 +1608,24 @@ def test_coint_perfect_collinearity():
     assert np.isneginf(c.coint_t)
 
 
+@pytest.mark.filterwarnings("error:return_results has no effect:FutureWarning")
 @pytest.mark.parametrize("return_results", [None, True, False])
-def test_coint_return_results_not_used(return_results):
+def test_coint_return_results_deprecated(return_results):
     # A CointResult, which also unpacks as a tuple, is returned for every
-    # value of return_results
+    # value of return_results. Any value other than None warns that the
+    # argument has no effect.
     rng = np.random.default_rng(20261119)
     y1 = rng.standard_normal(200).cumsum()
     y0 = 0.5 * y1 + rng.standard_normal(200)
-    res = coint(y0, y1, maxlag=2, autolag=None, return_results=return_results)
+    if return_results is None:
+        res = coint(y0, y1, maxlag=2, autolag=None, return_results=None)
+    else:
+        with pytest.warns(
+            FutureWarning, match="return_results has no effect"
+        ) as record:
+            res = coint(y0, y1, maxlag=2, autolag=None, return_results=return_results)
+        # the warning points at the caller
+        assert record[0].filename == __file__
     assert isinstance(res, CointResult)
     coint_t, pvalue, crit = res
     # The test statistic is the ADF statistic of the residuals of the
@@ -1628,14 +1638,23 @@ def test_coint_return_results_not_used(return_results):
     assert_allclose(crit, default.critical_values, rtol=1e-12)
 
 
-def test_coint_no_trend_critical_values_nan():
-    # MacKinnon (2010) has no critical values without a constant
+@pytest.mark.parametrize("trend", ["c", "ct", "ctt", "n"])
+def test_coint_critical_values_ndarray(trend):
+    # critical_values is an ndarray of the 1%, 5% and 10% critical values for
+    # every trend. MacKinnon (2010) has no critical values without a
+    # constant, so they are NaN with trend="n". Otherwise a smaller size has
+    # a more negative critical value.
     rng = np.random.default_rng(20261119)
     y1 = rng.standard_normal(200).cumsum()
     y0 = 0.5 * y1 + rng.standard_normal(200)
-    res = coint(y0, y1, trend="n", maxlag=2, autolag=None)
-    assert np.all(np.isnan(res.critical_values))
-    assert len(res.critical_values) == 3
+    crit = coint(y0, y1, trend=trend, maxlag=2, autolag=None).critical_values
+    assert isinstance(crit, np.ndarray)
+    assert crit.shape == (3,)
+    assert crit.dtype == np.float64
+    if trend == "n":
+        assert np.all(np.isnan(crit))
+    else:
+        assert np.all(np.diff(crit) > 0)
 
 
 class TestGrangerCausality:
@@ -4210,7 +4229,6 @@ def test_coint_auto_tstat():
         method="aeg",
         maxlag=0,
         autolag="t-stat",
-        return_results=False,
     )
     assert np.abs(res.coint_t) < 1.65
 
