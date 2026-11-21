@@ -207,3 +207,33 @@ def test_output_invariant_to_period_order(
     assert_equal(res1.trend, res2.trend)
     assert_equal(res1.seasonal, res2.seasonal)
     assert_equal(res1.resid, res2.resid)
+
+
+@pytest.mark.parametrize("container", ["series", "dataframe"])
+@pytest.mark.parametrize("index_type", ["period", "datetime"])
+@pytest.mark.parametrize(
+    "freq, datetime_freq, period",
+    [("M", "MS", 12), ("Q", "QS", 4), ("W", "W", 52), ("D", "D", 7)],
+)
+def test_periods_from_index(freq, datetime_freq, period, index_type, container):
+    # a PeriodIndex has no inferred_freq, so without periods MSTL raised
+    # "Unable to determine period from endog". The period is that of the
+    # frequency of the index, as in seasonal_decompose, and the result is the
+    # decomposition with that period. A DatetimeIndex gives the period of its
+    # inferred frequency, as before.
+    y = np.random.default_rng(20261121).standard_normal(3 * period)
+    if index_type == "period":
+        index = pd.period_range("2000-01-01", periods=y.shape[0], freq=freq)
+    else:
+        index = pd.date_range("2000-01-01", periods=y.shape[0], freq=datetime_freq)
+    if container == "series":
+        endog = pd.Series(y, index=index)
+    else:
+        endog = pd.DataFrame({"y": y}, index=index)
+    mod = MSTL(endog)
+    assert list(mod.periods) == [period]
+    res = mod.fit()
+    expected = MSTL(y, periods=period).fit()
+    assert_allclose(res.seasonal, expected.seasonal, rtol=1e-12)
+    assert_allclose(res.trend, expected.trend, rtol=1e-12)
+    assert res.seasonal.index.equals(index)
