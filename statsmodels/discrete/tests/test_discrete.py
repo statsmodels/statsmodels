@@ -4127,7 +4127,9 @@ def test_negbin_alpha_outside_fit(loglike_method, state):
     if state == "new":
         model = NegativeBinomial(endog, exog, loglike_method=loglike_method)
     else:
-        model = pickle.loads(pickle.dumps(res)).model
+        # pickled before llf is computed and cached
+        res_unpickled = pickle.loads(pickle.dumps(res))
+        model = res_unpickled.model
 
     params = res.params
     alpha = params[-1]
@@ -4144,6 +4146,10 @@ def test_negbin_alpha_outside_fit(loglike_method, state):
     assert_allclose(model.loglike(params), res.llf, rtol=1e-12)
     assert_allclose(model.score(params), model_p.score(params), atol=1e-8)
     assert_allclose(model.hessian(params), model_p.hessian(params), rtol=1e-8)
+    if state == "unpickled":
+        assert_allclose(res_unpickled.llf, llf_scipy, rtol=1e-12)
+        assert_allclose(res_unpickled.aic, res.aic, rtol=1e-12)
+        assert_allclose(res_unpickled.llr, res.llr, rtol=1e-10)
 
 
 def test_unchanging_degrees_of_freedom():
