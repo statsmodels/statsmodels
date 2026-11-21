@@ -283,19 +283,18 @@ def _theta_closed_form(y, params, steps, theta=2.0, method=None):
     """
     nobs = y.shape[0]
     adj = y
+    dec = None
     if method is not None:
         dec = seasonal_decompose(y, model=method, period=PERIOD)
         adj = y - dec.seasonal if method == "additive" else y / dec.seasonal
-        season = dec.seasonal[(nobs + np.arange(steps)) % PERIOD]
     b0, alpha = params
     h = np.arange(1, steps + 1)
     drift = b0 * (h - 1 + 1 / alpha - (1 - alpha) ** nobs / alpha)
     weight = 1.0 if np.isinf(theta) else (theta - 1) / theta
     fcast = weight * drift + _ses_level(adj, alpha)
-    if method == "additive":
-        fcast = fcast + season
-    elif method == "multiplicative":
-        fcast = fcast * season
+    if dec is not None:
+        season = dec.seasonal[(nobs + np.arange(steps)) % PERIOD]
+        fcast = fcast + season if method == "additive" else fcast * season
     return fcast, adj
 
 
