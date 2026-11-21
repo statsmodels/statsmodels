@@ -479,11 +479,16 @@ def test_parameterless_autoreg(close_figures):
             "append",
         ):
             continue
-        attr = getattr(res, attr)
-        if callable(attr):
-            attr()
+        value = getattr(res, attr)
+        if callable(value):
+            if attr == "test_serial_correlation":
+                # The default model_df will change
+                with pytest.warns(FutureWarning, match="default model_df"):
+                    value()
+            else:
+                value()
         else:
-            assert isinstance(attr, object)
+            assert isinstance(value, object)
 
 
 def test_predict_errors():
@@ -1768,7 +1773,7 @@ def _ljung_box_reference(resid, nlags, model_df):
 
 
 @pytest.mark.parametrize("lags", [None, 1, 6])
-@pytest.mark.parametrize("model_df", [None, 0, 2])
+@pytest.mark.parametrize("model_df", [None, "regressors", "ar", 0, 2])
 def test_test_serial_correlation_ljung_box(lags, model_df):
     # The statistics were all NaN since 0.14.0
     rng = np.random.default_rng(20261121)
@@ -1778,15 +1783,20 @@ def test_test_serial_correlation_ljung_box(lags, model_df):
     for t in range(2, nobs):
         y[t] = 0.4 * y[t - 1] - 0.3 * y[t - 2] + e[t]
     res = AutoReg(y, 2, trend="c").fit()
-    sc = res.test_serial_correlation(lags=lags, model_df=model_df)
+    if model_df is None:
+        with pytest.warns(FutureWarning, match="default model_df will change"):
+            sc = res.test_serial_correlation(lags=lags)
+    else:
+        sc = res.test_serial_correlation(lags=lags, model_df=model_df)
 
     # The residuals of the regression on a constant and two lags
     x = np.column_stack([np.ones(nobs - 2), y[1:-1], y[:-2]])
     resid = OLS(y[2:], x).fit().resid
     # Default lags: min(10, nobs // 5) of the 248 residuals. The default
-    # model_df is df_model, the three parameters.
+    # model_df, "regressors", is df_model, the three parameters; "ar" is the
+    # two autoregressive lags.
     nlags = 10 if lags is None else lags
-    mdf = 3 if model_df is None else model_df
+    mdf = {None: 3, "regressors": 3, "ar": 2}.get(model_df, model_df)
     stat, pvalue, df = _ljung_box_reference(resid, nlags, mdf)
 
     assert list(sc.columns) == ["Ljung-Box", "LB P-value", "DF"]
@@ -1796,6 +1806,34 @@ def test_test_serial_correlation_ljung_box(lags, model_df):
     assert_allclose(sc["LB P-value"], pvalue, rtol=1e-8)
     assert_allclose(sc["DF"], df)
     assert np.isfinite(sc["LB P-value"]).sum() == np.sum(df > 0)
+
+
+def test_test_serial_correlation_model_df_options():
+    # The FutureWarning for the default points at the caller, "ar" without
+    # autoregressive lags is 0, and other strings raise
+    rng = np.random.default_rng(20261124)
+    y = rng.standard_normal(120)
+    res = AutoReg(y, [1, 3], trend="c").fit()
+    with pytest.warns(FutureWarning, match="default model_df will change") as rec:
+        res.test_serial_correlation(lags=6)
+    assert rec[0].filename == __file__
+    resid = res.resid
+    lb = acorr_ljungbox(resid, lags=6, model_df=2)
+    assert_allclose(
+        res.test_serial_correlation(lags=6, model_df="ar")["Ljung-Box"],
+        lb["lb_stat"],
+        rtol=1e-12,
+    )
+    assert_allclose(
+        res.test_serial_correlation(lags=6, model_df="ar")["DF"],
+        np.maximum(np.arange(1, 7) - 2, 0),
+    )
+    res0 = AutoReg(y, 0, trend="c").fit()
+    sc_ar = res0.test_serial_correlation(lags=6, model_df="ar")
+    sc_zero = res0.test_serial_correlation(lags=6, model_df=0)
+    pd.testing.assert_frame_equal(sc_ar, sc_zero)
+    with pytest.raises(ValueError, match="model_df"):
+        res.test_serial_correlation(model_df="lags")
 
 
 def test_diagnostic_summary_serial_correlation():

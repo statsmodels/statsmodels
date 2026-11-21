@@ -2638,10 +2638,13 @@ def test_ardl_test_serial_correlation():
     for t in range(1, nobs):
         y[t] = 0.5 * y[t - 1] + x[t] - 0.5 * x[t - 1] + e[t]
     res = ARDL(y, 1, x[:, None], 1, trend="c").fit()
-    sc = res.test_serial_correlation(lags=8)
+    sc = res.test_serial_correlation(lags=8, model_df="regressors")
 
     reg = np.column_stack([np.ones(nobs - 1), y[:-1], x[1:], x[:-1]])
     resid = OLS(y[1:], reg).fit().resid
+    # "ar" counts the one lag of y
+    sc_ar = res.test_serial_correlation(lags=8, model_df="ar")
+    assert_allclose(sc_ar["DF"], np.maximum(np.arange(1, 9) - 1, 0))
     lb = acorr_ljungbox(resid, lags=8, model_df=4)
     df = np.maximum(np.arange(1, 9) - 4, 0)
     assert_allclose(sc["Ljung-Box"], lb["lb_stat"], rtol=1e-8)
