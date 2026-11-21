@@ -67,6 +67,19 @@ Deprecations
   ``NotImplementedError``, will be removed after statsmodels 0.16. Use
   ``statsmodels.tsa.arima.model.ARIMA`` or
   ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
+- The ``return_results`` argument of :func:`~statsmodels.tsa.stattools.coint`
+  is deprecated. It has no effect, issues a ``FutureWarning`` when it is not
+  ``None``, and will be removed after statsmodels 0.17 is released.
+  :pr:`10848`
+- 2-D lag polynomials that the functions of ``statsmodels.tsa.arima_process``
+  accepted, for example a column in ``arma_periodogram`` or a row in
+  ``index2lpol``, are deprecated. They give the same result as before with a
+  ``FutureWarning``, and will raise after statsmodels 0.17. :pr:`10861`
+- ``arma_periodogram`` and ``ArmaProcess.periodogram`` divide by
+  ``sqrt(2 * pi)`` instead of ``2 * pi``. A new ``normalization`` argument
+  selects ``"2pi"`` (the spectral density) or ``"sqrt(2pi)"`` (the current
+  result). Without it, a ``FutureWarning`` is issued, and the default will
+  change to ``"2pi"`` after statsmodels 0.17. :pr:`10863`
 
 Behavior changes
 ----------------
@@ -334,6 +347,15 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- ``ArmaProcess.generate_sample`` uses the ``nobs`` of the process as the
+  default sample size, as documented, instead of 100. Processes created with
+  another ``nobs``, including those from ``ArmaProcess.from_estimation``, now
+  generate ``nobs`` values when ``nsample`` is not given. :pr:`10862`
+- ``levinson_durbin`` with ``isacov=True`` and
+  :func:`~statsmodels.tsa.stattools.diebold_mariano_test` treat an (nobs, 1)
+  column, such as a one-column ``DataFrame``, as the 1-D series instead of
+  raising, and raise a ``ValueError`` for input with more than one column.
+  Results for 1-D input are unchanged. :pr:`10849`
 
 New Features and Enhancements
 =============================
@@ -1153,6 +1175,14 @@ Time series analysis
 - ``DeterministicProcess.range`` ignored the step of a ``RangeIndex`` whose
   step is not 1, so it returned the wrong rows or raised a ``KeyError``.
   :pr:`10852`
+- ``coint`` returned ``critical_values`` as a list for ``trend="n"``. It is an
+  ndarray of NaN values, as for the other trends. :pr:`10848`
+- ``coint`` returned ``critical_values`` as a list for ``trend="n"``. It is now
+  an ndarray, as it is for the other trends. :pr:`10848`
+- Lag polynomials with more than one dimension in the functions of
+  ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
+  SciPy errors that did not name the argument. They raise a ``ValueError``
+  that does. :pr:`10861`
 
 Statistics and tests
 --------------------

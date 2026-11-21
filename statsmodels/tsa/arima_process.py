@@ -19,6 +19,8 @@ License: BSD
 """
 from statsmodels.compat.numpy import ComplexWarning
 
+import functools
+import inspect
 import textwrap
 import warnings
 
@@ -27,7 +29,7 @@ from scipy import linalg, optimize, signal
 
 from statsmodels.tools.docstring import Docstring, Parameter
 from statsmodels.tools.docstring_helpers import Appender
-from statsmodels.tools.validation import array_like, int_like
+from statsmodels.tools.validation import array_like, int_like, string_like
 
 __all__ = [
     "arma2ar",
@@ -48,6 +50,80 @@ The model's autoregressive parameters (ar) indicate that the process
 """
 
 
+def _validate_lags(value, name):
+    # The number of values to return must be a positive integer. 0 used to
+    # raise an IndexError in the module level functions, and to select the
+    # default in the ArmaProcess methods.
+    value = int_like(value, name)
+    if value < 1:
+        raise ValueError(f"{name} must be a positive integer, got {value}")
+    return value
+
+
+# The start of the FutureWarning of _require_1d
+_NOT_1D_DEPRECATED = r"\w+ must be 1-D\. Passing an array with"
+
+
+def _require_1d(*names):
+    """
+    Check that the lag polynomial arguments of a function are 1-D
+
+    Parameters
+    ----------
+    *names : str
+        The names of the arguments that must be 1-D.
+
+    Returns
+    -------
+    callable
+        A decorator. The decorated function runs as before for 1-D input.
+        For input with more than one dimension, it is run in the same way.
+        If it returns, the result is returned with a FutureWarning, as this
+        input is deprecated. If it raises, a ValueError that names the
+        argument is raised instead.
+    """
+
+    def decorator(func):
+        params = list(inspect.signature(func).parameters)
+        positions = {name: params.index(name) for name in names}
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            not_1d = []
+            for name, pos in positions.items():
+                value = args[pos] if pos < len(args) else kwargs.get(name)
+                if np.ndim(value) > 1:
+                    not_1d.append((name, np.shape(value)))
+            if not not_1d:
+                return func(*args, **kwargs)
+            try:
+                with warnings.catch_warnings():
+                    # The functions that this one calls would warn again
+                    warnings.filterwarnings(
+                        "ignore", _NOT_1D_DEPRECATED, FutureWarning
+                    )
+                    result = func(*args, **kwargs)
+            except Exception as exc:
+                name, shape = not_1d[0]
+                raise ValueError(
+                    f"{name} must be 1-D, got an array with shape {shape}"
+                ) from exc
+            for name, shape in not_1d:
+                warnings.warn(
+                    f"{name} must be 1-D. Passing an array with {len(shape)} "
+                    "dimensions is deprecated and will raise a ValueError after "
+                    "statsmodels 0.17 is released.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+@_require_1d("ar", "ma")
 def arma_generate_sample(
     ar, ma, nsample, scale=1, distrvs=None, axis=0, burnin=0
 ):
@@ -58,8 +134,10 @@ def arma_generate_sample(
     ----------
     ar : array_like
         The coefficient for autoregressive lag polynomial, including zero lag.
+        Must be 1-D.
     ma : array_like
         The coefficient for moving-average lag polynomial, including zero lag.
+        Must be 1-D.
     nsample : int or tuple of ints
         If nsample is an integer, then this creates a 1d timeseries of
         length size. If nsample is a tuple, creates a len(nsample)
@@ -123,16 +201,31 @@ def arma_generate_sample(
     return signal.lfilter(ma, ar, eta, axis=axis)[fslice]
 
 
+@_require_1d("ar", "ma")
 def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
     """
     Theoretical autocovariances of stationary ARMA processes
 
     Parameters
     ----------
-    ar : array_like, 1d
+    ar : array_like
         The coefficients for autoregressive lag polynomial, including zero lag.
-    ma : array_like, 1d
+        Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result is deprecated and will raise a
+           ValueError after statsmodels 0.17 is released. Other 2-D input
+           raises a ValueError.
+    ma : array_like
         The coefficients for moving-average lag polynomial, including zero lag.
+        Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result is deprecated and will raise a
+           ValueError after statsmodels 0.17 is released. Other 2-D input
+           raises a ValueError.
     nobs : int, optional
         The number of terms (lags plus zero lag) to include in returned acovf.
     sigma2 : float, optional
@@ -208,6 +301,7 @@ def arma_acovf(ar, ma, nobs=10, sigma2=1, dtype=None):
     return acovf[:nobs]
 
 
+@_require_1d("ar", "ma")
 def arma_acf(ar, ma, lags=10):
     """
     Theoretical autocorrelation function of an ARMA process
@@ -216,8 +310,22 @@ def arma_acf(ar, ma, lags=10):
     ----------
     ar : array_like
         Coefficients for autoregressive lag polynomial, including zero lag.
+        Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result is deprecated and will raise a
+           ValueError after statsmodels 0.17 is released. Other 2-D input
+           raises a ValueError.
     ma : array_like
         Coefficients for moving-average lag polynomial, including zero lag.
+        Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result is deprecated and will raise a
+           ValueError after statsmodels 0.17 is released. Other 2-D input
+           raises a ValueError.
     lags : int, optional
         The number of terms (lags plus zero lag) to include in returned acf.
 
@@ -236,18 +344,39 @@ def arma_acf(ar, ma, lags=10):
     return acovf / acovf[0]
 
 
+@_require_1d("ar", "ma")
 def arma_pacf(ar, ma, lags=10):
     """
     Theoretical partial autocorrelation function of an ARMA process
 
     Parameters
     ----------
-    ar : array_like, 1d
+    ar : array_like
         The coefficients for autoregressive lag polynomial, including zero lag.
-    ma : array_like, 1d
+        Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result is deprecated and will raise a
+           ValueError after statsmodels 0.17 is released. Other 2-D input
+           raises a ValueError.
+    ma : array_like
         The coefficients for moving-average lag polynomial, including zero lag.
+        Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result is deprecated and will raise a
+           ValueError after statsmodels 0.17 is released. Other 2-D input
+           raises a ValueError.
     lags : int, optional
         The number of terms (lags plus zero lag) to include in returned pacf.
+        Must be a positive integer.
+
+        .. versionchanged:: 0.15.1
+
+           ``lags=0`` raises a ``ValueError``. It used to raise an
+           ``IndexError``. An integral float such as 7.0 is accepted.
 
     Returns
     -------
@@ -258,6 +387,7 @@ def arma_pacf(ar, ma, lags=10):
     -----
     Solves the Yule-Walker equation for each lag order up to ``lags``.
     """
+    lags = _validate_lags(lags, "lags")
     # TODO: Should use rank 1 inverse update
     apacf = np.zeros(lags)
     acov = arma_acf(ar, ma, lags=lags + 1)
@@ -269,7 +399,37 @@ def arma_pacf(ar, ma, lags=10):
     return apacf
 
 
-def arma_periodogram(ar, ma, worN=None, whole=0):
+# The values of normalization in arma_periodogram. Omitting it gives
+# "sqrt(2pi)" with a FutureWarning; the default will be "2pi" after 0.17.
+_PERIODOGRAM_NORMALIZATIONS = ("sqrt(2pi)", "2pi")
+
+
+def _periodogram_normalization(normalization, func, stacklevel):
+    # Validate normalization, and warn if it is omitted. stacklevel is the
+    # stacklevel of the warning in the caller of this function.
+    normalization = string_like(
+        normalization,
+        "normalization",
+        optional=True,
+        options=_PERIODOGRAM_NORMALIZATIONS,
+    )
+    if normalization is None:
+        warnings.warn(
+            f"The spectral density returned by {func} is divided by "
+            "sqrt(2 * pi), not by 2 * pi as in the usual definition. The "
+            "default will change to 2 * pi after statsmodels 0.17 is "
+            'released. Set normalization="2pi" to switch now, or '
+            'normalization="sqrt(2pi)" to keep the current result and '
+            "silence this warning.",
+            FutureWarning,
+            stacklevel=stacklevel + 1,
+        )
+        normalization = "sqrt(2pi)"
+    return normalization
+
+
+@_require_1d("ar", "ma")
+def arma_periodogram(ar, ma, worN=None, whole=0, *, normalization=None):
     """
     Periodogram for ARMA process given by lag-polynomials ar and ma
 
@@ -277,17 +437,53 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
     ----------
     ar : array_like
         The autoregressive lag-polynomial with leading 1 and lhs sign.
+        Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result, such as a column with shape
+           (n, 1), is deprecated and will raise a ValueError after
+           statsmodels 0.17 is released. Other 2-D input raises a
+           ValueError.
     ma : array_like
-        The moving average lag-polynomial with leading 1.
+        The moving average lag-polynomial with leading 1. Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result, such as a column with shape
+           (n, 1), is deprecated and will raise a ValueError after
+           statsmodels 0.17 is released. Other 2-D input raises a
+           ValueError.
     worN : int or array_like, optional
         An option for scipy.signal.freqz (read "w or N").
         If None, then compute at 512 frequencies around the unit circle.
         If a single integer, the compute at that many frequencies.
         Otherwise, compute the response at frequencies given in worN.
+        An integer must be positive.
+
+        .. versionchanged:: 0.15.1
+
+           ``worN=0`` raises a ``ValueError``. It used to return empty
+           arrays. A negative integer raises the same ``ValueError``.
     whole : bool, optional
         An option for scipy.signal.freqz.
         Normally, frequencies are computed from 0 to pi (upper-half of
         unit-circle.  If whole is non-zero compute frequencies from 0 to 2*pi.
+    normalization : {"sqrt(2pi)", "2pi"}, optional
+        The constant that ``abs(ma(z)) ** 2 / abs(ar(z)) ** 2`` is divided
+        by, see the Notes. "2pi" gives the spectral density of the process.
+        "sqrt(2pi)" divides by ``sqrt(2 * pi)`` instead, which is the result
+        of earlier versions. If not given, "sqrt(2pi)" is used and a
+        ``FutureWarning`` is issued.
+
+        .. versionadded:: 0.15.1
+
+        .. deprecated:: 0.15.1
+
+           The default will change to "2pi" after statsmodels 0.17 is
+           released. Set ``normalization="2pi"`` to switch now, or
+           ``normalization="sqrt(2pi)"`` to keep the current result and
+           silence the warning.
 
     Returns
     -------
@@ -298,18 +494,28 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
 
     Notes
     -----
-    The spectral density is computed as
-    ``abs(ma(z)) ** 2 / abs(ar(z)) ** 2 / sqrt(2 * pi)`` with
+    With ``normalization="2pi"``, the spectral density is computed as
+    ``abs(ma(z)) ** 2 / abs(ar(z)) ** 2 / (2 * pi)`` with
     ``z = exp(-1j * w)``, where ``ar(z)`` and ``ma(z)`` are the lag
-    polynomials. This assumes a unit innovation variance and divides by
-    ``sqrt(2 * pi)``, while the usual definition of the spectral density
-    divides by ``2 * pi``.
+    polynomials. This is the spectral density of the process with a unit
+    innovation variance, whose integral over ``[-pi, pi]`` is the variance
+    of the process. ``normalization="sqrt(2pi)"`` divides by
+    ``sqrt(2 * pi)`` instead.
 
     This uses signal.freqz, which does not use fft. There is a fft version
     somewhere.
     """
+    # An integer is the number of frequencies, as in signal.freqz. A float is
+    # a frequency.
+    if isinstance(worN, (int, np.integer)) and worN < 1:
+        raise ValueError(f"worN must be a positive integer, got {worN}")
     w, h = signal.freqz(ma, ar, worN=worN, whole=whole)
-    sd = np.abs(h) ** 2 / np.sqrt(2 * np.pi)
+    # The caller is 3 frames up, as _require_1d wraps this function
+    normalization = _periodogram_normalization(
+        normalization, "arma_periodogram", stacklevel=3
+    )
+    scale = 2 * np.pi if normalization == "2pi" else np.sqrt(2 * np.pi)
+    sd = np.abs(h) ** 2 / scale
     if np.any(np.isnan(h)):
         # this happens with unit root or seasonal unit root'
         import warnings
@@ -317,23 +523,31 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
         warnings.warn(
             "Warning: nan in frequency response h, maybe a unit root",
             RuntimeWarning,
-            stacklevel=2,
+            # 3 skips the wrapper of _require_1d
+            stacklevel=3,
         )
     return w, sd
 
 
+@_require_1d("ar", "ma")
 def arma_impulse_response(ar, ma, leads=100):
     """
     Compute the impulse response function (MA representation) for ARMA process
 
     Parameters
     ----------
-    ar : array_like, 1d
-        The auto regressive lag polynomial.
-    ma : array_like, 1d
-        The moving average lag polynomial.
+    ar : array_like
+        The auto regressive lag polynomial. Must be 1-D.
+    ma : array_like
+        The moving average lag polynomial. Must be 1-D.
     leads : int, optional
         The number of observations to calculate.
+        Must be a positive integer.
+
+        .. versionchanged:: 0.15.1
+
+           ``leads=0`` raises a ``ValueError``. It used to raise an
+           ``IndexError``. An integral float such as 7.0 is accepted.
 
     Returns
     -------
@@ -376,6 +590,7 @@ def arma_impulse_response(ar, ma, leads=100):
     array([ 1.        ,  1.3       ,  1.24      ,  0.992     ,  0.7936    ,
             0.63488   ,  0.507904  ,  0.4063232 ,  0.32505856,  0.26004685])
     """
+    leads = _validate_lags(leads, "leads")
     impulse = np.zeros(leads)
     impulse[0] = 1.0
     return signal.lfilter(ma, ar, impulse)
@@ -388,11 +603,17 @@ def arma2ma(ar, ma, lags=100):
     Parameters
     ----------
     ar : array_like
-        The auto regressive lag polynomial.
+        The auto regressive lag polynomial. Must be 1-D.
     ma : array_like
-        The moving average lag polynomial.
+        The moving average lag polynomial. Must be 1-D.
     lags : int, optional
         The number of coefficients to calculate.
+        Must be a positive integer.
+
+        .. versionchanged:: 0.15.1
+
+           ``lags=0`` raises a ``ValueError``. It used to raise an
+           ``IndexError``. An integral float such as 7.0 is accepted.
 
     Returns
     -------
@@ -403,9 +624,11 @@ def arma2ma(ar, ma, lags=100):
     -----
     Equivalent to ``arma_impulse_response(ar, ma, leads=lags)``
     """
+    lags = _validate_lags(lags, "lags")
     return arma_impulse_response(ar, ma, leads=lags)
 
 
+@_require_1d("ar", "ma")
 def arma2ar(ar, ma, lags=100):
     """
     A finite-lag AR approximation of an ARMA process
@@ -413,11 +636,17 @@ def arma2ar(ar, ma, lags=100):
     Parameters
     ----------
     ar : array_like
-        The auto regressive lag polynomial.
+        The auto regressive lag polynomial. Must be 1-D.
     ma : array_like
-        The moving average lag polynomial.
+        The moving average lag polynomial. Must be 1-D.
     lags : int, optional
         The number of coefficients to calculate.
+        Must be a positive integer.
+
+        .. versionchanged:: 0.15.1
+
+           ``lags=0`` raises a ``ValueError``. It used to raise an
+           ``IndexError``. An integral float such as 7.0 is accepted.
 
     Returns
     -------
@@ -428,10 +657,12 @@ def arma2ar(ar, ma, lags=100):
     -----
     Equivalent to ``arma_impulse_response(ma, ar, leads=lags)``
     """
+    lags = _validate_lags(lags, "lags")
     return arma_impulse_response(ma, ar, leads=lags)
 
 
 # moved from sandbox.tsa.try_fi
+@_require_1d("ar_des")
 def ar2arma(ar_des, p, q, n=20, mse="ar", start=None):
     """
     Find arma approximation to ar process
@@ -448,6 +679,7 @@ def ar2arma(ar_des, p, q, n=20, mse="ar", start=None):
         The target impulse response/AR-representation to approximate,
         including lag zero, e.g. the (zero-padded or truncated) coefficients
         of the original AR lag polynomial. Must have ``n`` elements.
+        Must be 1-D.
     p : int
         The length of desired AR lag polynomials.
     q : int
@@ -499,6 +731,7 @@ def ar2arma(ar_des, p, q, n=20, mse="ar", start=None):
 _arma_docs = {"ar": arma2ar.__doc__, "ma": arma2ma.__doc__}
 
 
+@_require_1d("ar")
 def lpol2index(ar):
     """
     Remove zeros from lag polynomial
@@ -506,7 +739,13 @@ def lpol2index(ar):
     Parameters
     ----------
     ar : array_like
-        coefficients of lag polynomial
+        coefficients of lag polynomial. Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input is deprecated and will raise a ValueError after
+           statsmodels 0.17 is released. It returns the rows with a
+           non-zero element and their index.
 
     Returns
     -------
@@ -523,6 +762,7 @@ def lpol2index(ar):
     return coeffs, index
 
 
+@_require_1d("coeffs", "index")
 def index2lpol(coeffs, index):
     """
     Expand coefficients to lag poly
@@ -530,9 +770,22 @@ def index2lpol(coeffs, index):
     Parameters
     ----------
     coeffs : array_like
-        non-zero coefficients of lag polynomial
-    index : array_like
-        index (lags) of lag polynomial with non-zero elements
+        non-zero coefficients of lag polynomial. Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result, such as a row with shape
+           (1, n), is deprecated and will raise a ValueError after
+           statsmodels 0.17 is released. Other 2-D input raises a
+           ValueError.
+    index : array_like of int
+        index (lags) of lag polynomial with non-zero elements. Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result is deprecated and will raise a
+           ValueError after statsmodels 0.17 is released. Other 2-D input
+           raises a ValueError.
 
     Returns
     -------
@@ -618,6 +871,7 @@ def lpol_sdiff(s):
     return [1] + [0] * (s - 1) + [-1]
 
 
+@_require_1d("num", "den")
 def deconvolve(num, den, n=None):
     """
     Deconvolves divisor out of signal, division of polynomials for n terms
@@ -627,9 +881,21 @@ def deconvolve(num, den, n=None):
     Parameters
     ----------
     num : array_like
-        signal or lag polynomial
+        signal or lag polynomial. Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result is deprecated and will raise a
+           ValueError after statsmodels 0.17 is released. Other 2-D input
+           raises a ValueError.
     den : array_like
-        coefficients of lag polynomial (linear filter)
+        coefficients of lag polynomial (linear filter). Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           2-D input that returned a result is deprecated and will raise a
+           ValueError after statsmodels 0.17 is released. Other 2-D input
+           raises a ValueError.
     n : int, optional
         number of terms of quotient
 
@@ -670,7 +936,7 @@ def deconvolve(num, den, n=None):
     return quot, rem
 
 
-def _arma_lags_method_doc(func, name, description, changes=()):
+def _arma_lags_method_doc(func, name, description, changes=(), keep=()):
     """
     Build the docstring of an ArmaProcess method from a module level function
 
@@ -679,20 +945,23 @@ def _arma_lags_method_doc(func, name, description, changes=()):
     func : callable
         The module level function that the method calls.
     name : str
-        The name of the only parameter of the method, which sets the number
-        of values that it returns.
+        The name of the parameter of the method that sets the number of
+        values that it returns.
     description : str
         The description of the parameter.
     changes : sequence of str, optional
         Earlier changes of the parameter, for its versionchanged note.
+    keep : sequence of str, optional
+        The parameters of func that the method also takes. They are
+        documented after the parameter, as in func.
 
     Returns
     -------
     str
-        The docstring of func with the parameter of the method in place of
-        the parameters of func. The description of the parameter states the
-        default value, that the value must be positive, and the behavior
-        changes.
+        The docstring of func with the parameter of the method, and the
+        parameters in keep, in place of the parameters of func. The
+        description of the parameter states the default value, that the
+        value must be positive, and the behavior changes.
     """
     if func.__doc__ is None:
         return None
@@ -713,12 +982,34 @@ def _arma_lags_method_doc(func, name, description, changes=()):
         subsequent_indent="    ",
     )
     desc += ["", ".. versionchanged:: 0.15.1", "", *note]
-    ds.replace_block("Parameters", [Parameter(name, "int, optional", desc)])
+    params = [Parameter(name, "int, optional", desc)]
+    params += [param for param in ds._ds["Parameters"] if param.name in keep]
+    ds.replace_block("Parameters", params)
     return str(ds)
 
 
 _generate_sample_doc = Docstring(arma_generate_sample.__doc__)
-_generate_sample_doc.remove_parameters(["ar", "ma"])
+_generate_sample_doc.remove_parameters(["ar", "ma", "nsample"])
+_generate_sample_doc.insert_parameters(
+    None,
+    Parameter(
+        "nsample",
+        "int or tuple of int, optional",
+        [
+            "If nsample is an integer, then this creates a 1d timeseries of",
+            "length size. If nsample is a tuple, creates a len(nsample)",
+            "dimensional time series where time is indexed along the input",
+            "variable ``axis``. All series are independent unless ``distrvs``",
+            "generates dependent data. If not given, the ``nobs`` attribute",
+            "of the process is used.",
+            "",
+            ".. versionchanged:: 0.15.1",
+            "",
+            "    The default is the ``nobs`` attribute of the process. It used",
+            "    to be 100, whatever the value of ``nobs``.",
+        ],
+    ),
+)
 _generate_sample_doc.replace_block("Notes", [])
 _generate_sample_doc.replace_block("Examples", [])
 
@@ -733,10 +1024,10 @@ class ArmaProcess:
         Coefficient for autoregressive lag polynomial, including zero lag.
         Must be entered using the signs from the lag polynomial representation.
         See the notes for more information about the sign. If not provided,
-        defaults to ``[1.0]``.
+        defaults to ``[1.0]``. Must be 1-D.
     ma : array_like, optional
         Coefficient for moving-average lag polynomial, including zero lag.
-        If not provided, defaults to ``[1.0]``.
+        If not provided, defaults to ``[1.0]``. Must be 1-D.
     nobs : int, optional
         Length of simulated time series. Used, for example, if a sample is
         generated. See example.
@@ -795,6 +1086,7 @@ class ArmaProcess:
     """
 
     # TODO: Check unit root behavior
+    @_require_1d("ar", "ma")
     def __init__(self, ar=None, ma=None, nobs=100):
         if ar is None:
             ar = np.array([1.0])
@@ -811,6 +1103,7 @@ class ArmaProcess:
         self.nobs = nobs
 
     @classmethod
+    @_require_1d("maroots", "arroots")
     def from_roots(cls, maroots=None, arroots=None, nobs=100):
         """
         Create ArmaProcess from AR and MA polynomial roots
@@ -819,10 +1112,12 @@ class ArmaProcess:
         ----------
         maroots : array_like, optional
             Roots for the MA polynomial
-            1 + theta_1*z + theta_2*z^2 + ..... + theta_n*z^n
+            1 + theta_1*z + theta_2*z^2 + ..... + theta_n*z^n.
+            Must be 1-D.
         arroots : array_like, optional
             Roots for the AR polynomial
-            1 - phi_1*z - phi_2*z^2 - ..... - phi_n*z^n
+            1 - phi_1*z - phi_2*z^2 - ..... - phi_n*z^n.
+            Must be 1-D.
         nobs : int, optional
             Length of simulated time series. Used, for example, if a sample
             is generated.
@@ -861,6 +1156,7 @@ class ArmaProcess:
         return cls(np.r_[1, arcoefs], np.r_[1, macoefs], nobs=nobs)
 
     @classmethod
+    @_require_1d("arcoefs", "macoefs")
     def from_coeffs(cls, arcoefs=None, macoefs=None, nobs=100):
         """
         Create ArmaProcess from an ARMA representation
@@ -871,9 +1167,10 @@ class ArmaProcess:
             Coefficient for autoregressive lag polynomial, not including zero
             lag. The sign is inverted to conform to the usual time series
             representation of an ARMA process in statistics. See the class
-            docstring for more information.
+            docstring for more information. Must be 1-D.
         macoefs : array_like, optional
             Coefficient for moving-average lag polynomial, excluding zero lag.
+            Must be 1-D.
         nobs : int, optional
             Length of simulated time series. Used, for example, if a sample
             is generated.
@@ -913,6 +1210,12 @@ class ArmaProcess:
         nobs : int, optional
             If None, nobs is taken from the results.
 
+            .. versionchanged:: 0.15.1
+
+               ``nobs=0`` is used as given, as in the constructor. It used
+               to select the nobs of the results, as omitting the value
+               does.
+
         Returns
         -------
         ArmaProcess
@@ -923,7 +1226,8 @@ class ArmaProcess:
         statsmodels.tsa.arima.model.ARIMA
             The models class used to create the ArmaProcess
         """
-        nobs = nobs or model_results.nobs
+        if nobs is None:
+            nobs = model_results.nobs
         return cls(
             model_results.polynomial_reduced_ar,
             model_results.polynomial_reduced_ma,
@@ -959,10 +1263,7 @@ class ArmaProcess:
         # also selected nobs for 0.
         if value is None:
             return self.nobs
-        value = int_like(value, name)
-        if value < 1:
-            raise ValueError(f"{name} must be a positive integer, got {value}")
-        return value
+        return _validate_lags(value, name)
 
     @Appender(
         _arma_lags_method_doc(
@@ -1005,11 +1306,17 @@ class ArmaProcess:
             "nobs",
             "The number of frequencies, equally spaced on [0, pi), at which the "
             "periodogram is computed.",
+            keep=["normalization"],
         )
     )
-    def periodogram(self, nobs=None):
+    def periodogram(self, nobs=None, *, normalization=None):
         nobs = self._check_lags(nobs, "nobs")
-        return arma_periodogram(self.ar, self.ma, worN=nobs)
+        normalization = _periodogram_normalization(
+            normalization, "ArmaProcess.periodogram", stacklevel=2
+        )
+        return arma_periodogram(
+            self.ar, self.ma, worN=nobs, normalization=normalization
+        )
 
     @Appender(
         _arma_lags_method_doc(
@@ -1117,8 +1424,11 @@ class ArmaProcess:
 
     @Appender(str(_generate_sample_doc))
     def generate_sample(
-        self, nsample=100, scale=1.0, distrvs=None, axis=0, burnin=0
+        self, nsample=None, scale=1.0, distrvs=None, axis=0, burnin=0
     ):
+        # The default used to be 100, whatever the value of nobs
+        if nsample is None:
+            nsample = self.nobs
         return arma_generate_sample(
             self.ar, self.ma, nsample, scale, distrvs, axis=axis, burnin=burnin
         )
