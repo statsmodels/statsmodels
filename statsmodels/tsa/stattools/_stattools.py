@@ -249,6 +249,64 @@ def _adf_autolag(x, maxlag, regression, method):
     return crit[bestlag], int(bestlag)
 
 
+def _adf_max_maxlag(nobs, regression):
+    """
+    The largest number of lagged differences of the ADF regression
+
+    Parameters
+    ----------
+    nobs : int
+        The number of observations of the series.
+    regression : {"c", "ct", "ctt", "n"}
+        Constant and trend order included in the regression.
+
+    Returns
+    -------
+    int
+        The largest maxlag, ``min(nobs // 2 - ntrend - 1,
+        (nobs - ntrend - 3) // 2)``, where ntrend is the number of trend
+        terms. It is negative if the sample is too short for any lag.
+    """
+    ntrend = len(regression) if regression != "n" else 0
+    # The regression with maxlag lags has nobs - 1 - maxlag rows and
+    # 1 + ntrend + maxlag columns. The second bound keeps at least one
+    # residual degree of freedom; it is only binding when ntrend is 0 and
+    # nobs is even, where nobs // 2 - 1 lags would give an exact fit.
+    return min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
+
+
+def _adf_default_maxlag(nobs, regression):
+    """
+    The default maxlag of adfuller
+
+    Parameters
+    ----------
+    nobs : int
+        The number of observations of the series.
+    regression : {"c", "ct", "ctt", "n"}
+        Constant and trend order included in the regression.
+
+    Returns
+    -------
+    int
+        ``ceil(12 * (nobs / 100) ** (1 / 4))`` (Schwert, 1989), or the
+        largest maxlag of the regression if that is smaller.
+
+    Raises
+    ------
+    ValueError
+        If the sample is too short for the regression.
+    """
+    # from Greene referencing Schwert 1989
+    maxlag = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
+    maxlag = min(_adf_max_maxlag(nobs, regression), maxlag)
+    if maxlag < 0:
+        raise ValueError(
+            "sample size is too short to use selected regression component"
+        )
+    return maxlag
+
+
 @dataclass(frozen=True, slots=True, repr=False)
 class ADFullerResult(LimitedIterationMixin[float]):
     """
@@ -451,20 +509,9 @@ def adfuller(
 
     nobs = x.shape[0]
 
-    ntrend = len(regression) if regression != "n" else 0
-    # The regression with maxlag lags has nobs - 1 - maxlag rows and
-    # 1 + ntrend + maxlag columns. The second bound keeps at least one
-    # residual degree of freedom; it is only binding when ntrend is 0 and
-    # nobs is even, where nobs // 2 - 1 lags would give an exact fit.
-    max_maxlag = min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
+    max_maxlag = _adf_max_maxlag(nobs, regression)
     if maxlag is None:
-        # from Greene referencing Schwert 1989
-        maxlag = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
-        maxlag = min(max_maxlag, maxlag)
-        if maxlag < 0:
-            raise ValueError(
-                "sample size is too short to use selected regression component"
-            )
+        maxlag = _adf_default_maxlag(nobs, regression)
     elif maxlag > max_maxlag:
         raise ValueError(
             f"maxlag must be less than or equal to {max_maxlag} when nobs is "
@@ -4993,11 +5040,18 @@ class ZivotAndrewsUnitRoot:
             The percentage of series at begin/end to exclude from break-period
             calculation in range [0, 0.333] (default=0.15).
         maxlag : int, optional
-            The maximum lag which is included in test. If None, the lag
-            search uses the default of ``adfuller`` with ``regression="ct"``,
-            ceil(12 * (nobs / 100) ** (1 / 4)) (Schwert, 1989), and
-            int(12 * (nobs / 100) ** (1 / 4)) lags are used when autolag is
-            None. Use 0 for a test without lagged differences.
+            The maximum lag which is included in test. If None, the default
+            of ``adfuller`` with ``regression="ct"`` is used,
+            ceil(12 * (nobs / 100) ** (1 / 4)) (Schwert, 1989), or
+            nobs // 2 - 3 if that is smaller. It is the largest lag of the
+            lag search, or the number of lags if autolag is None. Use 0 for
+            a test without lagged differences.
+
+            .. versionchanged:: 0.15.1
+
+               With autolag=None, the default is the same as with a lag
+               search. It was int(12 * (nobs / 100) ** (1 / 4)), which is
+               one lag fewer for most nobs, and was not capped.
         regression : {"c","t","ct"}, optional
             Constant and trend order to include in regression.
 
@@ -5082,7 +5136,8 @@ class ZivotAndrewsUnitRoot:
         elif maxlag is not None:
             baselags = maxlag
         else:
-            baselags = int(12.0 * np.power(nobs / 100.0, 1 / 4.0))
+            # the largest lag of the lag search above
+            baselags = _adf_default_maxlag(nobs, "ct")
         trimcnt = int(nobs * trim)
         start_period = trimcnt
         end_period = nobs - trimcnt

@@ -3701,6 +3701,8 @@ def test_adfuller_no_trend_even_nobs_maxlag_too_large():
         # min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
         (20, "c", 8),
         (20, "ct", 7),
+        # ceil(12 * 0.21 ** (1 / 4)) = ceil(8.12) is the bound, as ntrend = 0
+        (21, "n", 9),
     ],
 )
 def test_adfuller_default_maxlag(nobs, regression, maxlag):
@@ -3711,6 +3713,21 @@ def test_adfuller_default_maxlag(nobs, regression, maxlag):
         x, maxlag=maxlag, regression=regression, autolag=None, result_object=True
     )
     assert_allclose(res.statistic, expected.statistic, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "regression, max_maxlag", [("n", 8), ("c", 8), ("ct", 7), ("ctt", 6)]
+)
+def test_adfuller_maxlag_bound(regression, max_maxlag):
+    # min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2) for nobs = 20
+    x = np.random.default_rng(20).standard_normal(20).cumsum()
+    match = f"maxlag must be less than or equal to {max_maxlag} "
+    with pytest.raises(ValueError, match=match):
+        adfuller(x, maxlag=max_maxlag + 1, regression=regression, autolag=None)
+    res = adfuller(
+        x, maxlag=max_maxlag, regression=regression, autolag=None, result_object=True
+    )
+    assert res.lags == max_maxlag
 
 
 def test_coint_short_even_sample():
@@ -4710,7 +4727,37 @@ def test_zivot_andrews_maxlag_zero(regression):
     assert res[2] == expected[2]
     assert res[4] == expected[4]
     default = zivot_andrews(x, regression=regression, autolag=None)
-    assert default[3] == int(12.0 * (x.shape[0] / 100.0) ** 0.25)
+    assert default[3] == int(np.ceil(12.0 * (x.shape[0] / 100.0) ** 0.25))
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+@pytest.mark.parametrize("nobs", [100, 250])
+def test_zivot_andrews_default_maxlag(regression, nobs):
+    # Without autolag the default number of lags is the default maxlag of
+    # adfuller with regression="ct", the largest lag of the lag search:
+    # ceil(12 * (nobs / 100) ** (1 / 4)), or nobs // 2 - 3 if smaller. It is
+    # an integer for nobs=100, and 15.09 for nobs=250.
+    expected_lags = min(int(np.ceil(12 * (nobs / 100) ** 0.25)), nobs // 2 - 3)
+    rng = np.random.default_rng(20261120)
+    x = _za_series("trend_break", nobs, rng)
+    adf = adfuller(x, regression="ct", autolag=None, result_object=True)
+    assert adf.lags == expected_lags
+    res = zivot_andrews(x, regression=regression, autolag=None)
+    assert res[3] == expected_lags
+    explicit = zivot_andrews(
+        x, maxlag=expected_lags, regression=regression, autolag=None
+    )
+    assert_allclose(res[0], explicit[0], rtol=1e-12)
+    assert res[4] == explicit[4]
+
+
+@pytest.mark.parametrize("autolag", [None, "AIC"])
+def test_zivot_andrews_default_maxlag_too_short(autolag):
+    # adfuller with regression="ct" allows no lags for 5 observations,
+    # nobs // 2 - 3 < 0, with or without a lag search
+    x = np.random.default_rng(5).standard_normal(5).cumsum()
+    with pytest.raises(ValueError, match="sample size is too short"):
+        zivot_andrews(x, autolag=autolag)
 
 
 @pytest.mark.parametrize("autolag", [None, "AIC"])
