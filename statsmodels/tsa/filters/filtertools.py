@@ -355,10 +355,33 @@ def convolution_filter(x, filt, nsides=2):
         Linear filter coefficients in reverse time-order. Should have the
         same number of dimensions as x though if 1d and ``x`` is 2d will be
         coerced to 2d.
+
+        .. versionchanged:: 0.15.1
+
+           A filt with one row and one column per column of ``x``, shape
+           (1, nvars), filters each column of ``x`` with its own coefficient,
+           as any 2d filt with one column per column of ``x`` does.
+           Previously its coefficients were convolved across the columns of
+           ``x``, which returned one column of different values. A filt with
+           more than one row, and more than one but fewer columns than
+           ``x``, raises a ValueError instead of an IndexError.
+
+        .. deprecated:: 0.15.1
+
+           A filt with more than one column, but not one column per column of
+           ``x``, warns and returns the same result as before: the first
+           nvars columns of filt if it has more than one row, and a
+           convolution across the columns of ``x`` if it has one row. This
+           will raise a ValueError in statsmodels 0.17.0.
     nsides : int, optional
         If 2, a centered moving average is computed using the filter
         coefficients. If 1, the filter coefficients are for past values only.
         Both methods use scipy.signal.convolve.
+
+        .. versionchanged:: 0.15.1
+
+           nsides=1 works with a 2d filter, and with 2d x and a filter of
+           length one, where it raised a ValueError.
 
     Returns
     -------
@@ -366,6 +389,24 @@ def convolution_filter(x, filt, nsides=2):
         Filtered array, number of columns determined by x and filt. If a
         pandas object is given, a pandas object is returned. The index of
         the return is the exact same as the time period in ``x``
+
+    Raises
+    ------
+    ValueError
+        If filt has more than one column, but not one column per column of
+        ``x``, and either has more than one row and fewer columns than
+        ``x``, or has one row and more columns than ``x`` while ``x`` has
+        more than one row.
+
+    Warns
+    -----
+    FutureWarning
+        If filt has more than one column, but not one column per column of
+        ``x``, and either has more than one row and more columns than ``x``,
+        or has one row and fewer columns than ``x`` (or ``x`` has one row).
+        The result does not filter each column of ``x`` with its own column
+        of filt. This is deprecated and will raise a ValueError in
+        statsmodels 0.17.0.
 
     Notes
     -----
@@ -395,7 +436,7 @@ def convolution_filter(x, filt, nsides=2):
     # for nsides shift the index instead of using 0 for 0 lag this
     # allows correct handling of NaNs
     if nsides == 1:
-        trim_head = len(filt) - 1
+        trim_head = len(filt) - 1 or None
         trim_tail = None
     elif nsides == 2:
         trim_head = int(np.ceil(len(filt)/2.) - 1) or None
@@ -407,21 +448,40 @@ def convolution_filter(x, filt, nsides=2):
     x = array_like(x, "x", maxdim=2)
     filt = array_like(filt, "filt", ndim=x.ndim)
 
-    if filt.ndim == 1 or min(filt.shape) == 1:
+    # a 2d filt with more than one column has a lag polynomial per column
+    by_column = filt.ndim == 2 and filt.shape[1] > 1
+    if by_column and filt.shape[1] != x.shape[1]:
+        nobs, nvar = x.shape
+        nlags, ncols = filt.shape
+        msg = (
+            "filt must have one column, or one column per column of x, but "
+            f"filt has {ncols} columns and x has {nvar}"
+        )
+        if nlags == 1 and (ncols < nvar or nobs == 1):
+            # a filt with one row was convolved across the columns of x
+            by_column = False
+        elif nlags == 1 or ncols < nvar:
+            # these raised a ValueError from scipy or an IndexError
+            raise ValueError(msg)
+        # the loop below ignores the extra columns of a filt with more rows
+        warnings.warn(
+            f"{msg}. The result does not filter each column of x with its "
+            "own column of filt. This is deprecated and will raise a "
+            "ValueError in statsmodels 0.17.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
+    if not by_column:
         result = signal.convolve(x, filt, mode="valid")
-    else:  # filt.ndim == 2
+    else:
         nlags = filt.shape[0]
         nvar = x.shape[1]
         result = np.zeros((x.shape[0] - nlags + 1, nvar))
-        if nsides == 2:
-            for i in range(nvar):
-                # could also use np.convolve, but easier for swiching to fft
-                result[:, i] = signal.convolve(x[:, i], filt[:, i],
-                                               mode="valid")
-        elif nsides == 1:
-            for i in range(nvar):
-                result[:, i] = signal.convolve(x[:, i], np.r_[0, filt[:, i]],
-                                               mode="valid")
+        # nsides only sets the NaN padding, as for a 1d filter
+        for i in range(nvar):
+            # could also use np.convolve, but easier for swiching to fft
+            result[:, i] = signal.convolve(x[:, i], filt[:, i], mode="valid")
     result = _pad_nans(result, trim_head, trim_tail)
     return pw.wrap(result)
 

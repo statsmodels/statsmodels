@@ -1,0 +1,5 @@
+- :func:`~statsmodels.tsa.filters.filtertools.convolution_filter` with a
+  ``filt`` of shape (1, nvars), one coefficient per column of ``x``, convolved
+  across the columns and returned one column. Each column is filtered with its
+  own coefficient, as the docstring says, so the values and the shape change.
+  :pr:`10892`
