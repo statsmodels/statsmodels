@@ -31,8 +31,11 @@ def cffilter(x, low=6, high=32, drift=True):
         filtered out. Default is 32 for quarterly data, giving an 8 year
         periodicity.
     drift : bool, optional
-        Whether or not to remove a trend from the data. The trend is estimated
-        as np.arange(nobs)*(x[-1] - x[0])/(len(x)-1).
+        Whether to remove the drift line
+        ``np.arange(nobs) * (x[-1] - x[0]) / (nobs - 1)``, where nobs is the
+        number of observations, from x before filtering. The default is True.
+        The drift line is zero at the first observation and ``x[-1] - x[0]``
+        at the last.
 
     Returns
     -------
@@ -42,9 +45,10 @@ def cffilter(x, low=6, high=32, drift=True):
         cycle : ndarray, Series, or DataFrame
             The features of x between the periodicities low and high.
         trend : ndarray, Series, or DataFrame
-            The trend in the data with the cycles removed. If drift is True,
-            it is the trend of x less the drift line, so cycle + trend is x
-            less the drift line.
+            The series that is filtered less the cycle. If drift is True, the
+            series that is filtered is x less the drift line, so the trend
+            does not contain the drift line, and cycle + trend + drift line
+            is x. If drift is False, cycle + trend is x.
 
     See Also
     --------
