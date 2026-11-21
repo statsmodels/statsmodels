@@ -3188,3 +3188,58 @@ def test_bounds_on_estimated_initial_values(name, bound):
     res = mod.fit()
     lower = -np.inf if bound[0] is None else bound[0]
     assert lower <= res.params[name] <= bound[1]
+
+
+@pytest.mark.parametrize("trend", [None, "add", "mul"])
+def test_ses_holt_default_initialization_is_estimated(trend):
+    # SimpleExpSmoothing and Holt defaulted to initialization_method=None,
+    # which raised a TypeError, although the documented default is
+    # "estimated". With "estimated" and at least 10 observations, the
+    # starting values are those of the heuristic: the intercept and slope
+    # of a regression of the first 10 observations on 1, ..., 10.
+    rng = np.random.default_rng(20261121)
+    y = 20 + 0.5 * np.arange(40) + rng.standard_normal(40)
+    slope, intercept = np.polyfit(np.arange(1.0, 11.0), y[:10], 1)
+    if trend is None:
+        mod = SimpleExpSmoothing(y)
+        b0 = None
+    else:
+        mod = Holt(y, exponential=trend == "mul")
+        b0 = slope if trend == "add" else 1 + slope / intercept
+    level, initial_trend, _ = mod.initial_values()
+    assert_allclose(level, intercept, rtol=1e-10)
+    if b0 is None:
+        assert initial_trend is None
+    else:
+        assert_allclose(initial_trend, b0, rtol=1e-10)
+
+    # The recursions of Hyndman and Athanasopoulos at fixed parameters,
+    # starting from the heuristic values
+    alpha, beta = 0.3, 0.1
+    lvl, b = intercept, b0
+    expected = np.empty_like(y)
+    for t in range(y.shape[0]):
+        if trend is None:
+            expected[t] = lvl
+            lvl = alpha * y[t] + (1 - alpha) * lvl
+        elif trend == "add":
+            expected[t] = lvl + b
+            new = alpha * y[t] + (1 - alpha) * (lvl + b)
+            b = beta * (new - lvl) + (1 - beta) * b
+            lvl = new
+        else:
+            expected[t] = lvl * b
+            new = alpha * y[t] + (1 - alpha) * lvl * b
+            b = beta * new / lvl + (1 - beta) * b
+            lvl = new
+    if trend is None:
+        res = mod.fit(smoothing_level=alpha, optimized=False)
+    else:
+        res = mod.fit(smoothing_level=alpha, smoothing_trend=beta, optimized=False)
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+
+    # The initial values are estimated
+    optimized = mod.fit().params_formatted["optimized"]
+    assert optimized["initial_level"]
+    if trend is not None:
+        assert optimized["initial_trend"]
