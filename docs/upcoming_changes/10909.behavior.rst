@@ -1,0 +1,4 @@
+- :class:`~statsmodels.tsa.ardl.UECM` with an integer ``endog`` truncated the
+  lagged levels of exog to integers, and a float32 ``endog`` rounded them to
+  single precision. The regressors are float64, so the estimates for such
+  data change. :pr:`10909`
