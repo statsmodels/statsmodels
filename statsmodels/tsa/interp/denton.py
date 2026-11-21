@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from numpy import asarray, diag, diag_indices, dot, ones, r_, zeros
 from numpy.linalg import solve
@@ -109,6 +111,12 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
         it: an int, the number of high-frequency observations that sum to
         one low-frequency observation. Other keyword arguments are ignored.
 
+        .. deprecated:: 0.15.1
+
+           Keyword arguments other than `k` are ignored. Passing them is
+           deprecated, and they will raise a TypeError after statsmodels 0.17
+           is released.
+
     Returns
     -------
     transformed : ndarray
@@ -159,6 +167,17 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
 #        D4 - sum((X[t]/I[t] - X[t-1]/I[t-1])**2)
 #        D5 - sum((X[t]/I[t] / X[t-1]/I[t-1] - 1)**2)
 # NOTE: only D4 is the only one implemented, see IMF chapter 6.
+
+    unknown = sorted(set(kwargs) - {"k"})
+    if unknown:
+        names = ", ".join(repr(name) for name in unknown)
+        warnings.warn(
+            f"Unknown keyword arguments are ignored: {names}. This is "
+            "deprecated, and they will raise a TypeError after statsmodels "
+            "0.17 is released.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     # check arrays and make 2d
     indicator = asarray(indicator)
