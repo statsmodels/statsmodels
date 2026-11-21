@@ -2507,3 +2507,20 @@ def test_label_key_without_row_labels(key):
         tsa_model.get_prediction_index(key, None, 8, mod._index, data=mod.data)
     with pytest.raises(KeyError, match="The `end` argument could not"):
         tsa_model.get_prediction_index(0, key, 8, mod._index, data=mod.data)
+
+
+@pytest.mark.parametrize(
+    "dates, freq",
+    [
+        # pd.date_range("2000-01-01", "2000-01-05", freq="D") has 5 dates
+        (["2000-01-01", "2000-01-02", "2000-01-05"], "D"),
+        (pd.DatetimeIndex(["2000-01-01", "2000-01-02", "2000-01-05"]), "D"),
+        # pd.date_range("2000-01-01", "2000-01-03", freq="2D") has 2 dates
+        (["2000-01-01", "2000-01-02", "2000-01-03"], "2D"),
+        # As many dates, but not the same ones
+        (["2000-01-01", "2000-01-02", "2000-01-05"], "2D"),
+    ],
+)
+def test_freq_not_matching_dates(dates, freq):
+    with pytest.raises(ValueError, match="The given frequency argument could not"):
+        tsa_model.TimeSeriesModel(np.arange(3.0), dates=dates, freq=freq)
