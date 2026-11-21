@@ -468,6 +468,10 @@ class ETSModel(base.StateSpaceMLEModel):
     ):
 
         super().__init__(endog, exog=None, dates=dates, freq=freq, missing=missing)
+        if not self.nobs >= 1:
+            # The smoothers write the states of the last observation, which
+            # would be outside the state array without observations
+            raise ValueError("endog must contain at least one observation.")
 
         # MODEL DEFINITION
         # ================

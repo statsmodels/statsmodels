@@ -1620,3 +1620,13 @@ def test_forecast_steps_at_least_one(oildata, steps):
     for value in oildata:
         level = 0.3 * value + 0.7 * level
     assert_allclose(res.forecast(1).iloc[0], level, rtol=1e-12)
+
+
+@pytest.mark.parametrize("initialization_method", ["known", "estimated", "heuristic"])
+def test_no_observations(initialization_method):
+    # A model without observations could be created with known initial
+    # values, and smoothing it wrote the states of the last observation out
+    # of bounds. Only the constructor is called here.
+    kwargs = {"initial_level": 1.0} if initialization_method == "known" else {}
+    with pytest.raises(ValueError, match="at least one observation"):
+        ETSModel(np.array([]), initialization_method=initialization_method, **kwargs)
