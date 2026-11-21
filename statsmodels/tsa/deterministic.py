@@ -586,19 +586,21 @@ def _end_anchored(offset: pd.DateOffset) -> pd.DateOffset:
 
     "MS" -> "ME", "QS-m" -> "QE-(m - 1)" and "YS-m" -> "YE-(m - 1)", where the
     month before January is December. The calendar quarters, "QS-m" for m in
-    JAN, APR, JUL and OCT, are "QE-DEC", as in pandas 2.2 and 2.3. Other
-    offsets are returned unchanged.
+    JAN, APR, JUL and OCT, are "QE-DEC", as in pandas 2.2 and 2.3. The
+    business-day freqs "BMS", "BQS-m" and "BYS-m" are mapped as "MS", "QS-m"
+    and "YS-m". Other offsets are returned unchanged.
     """
-    if type(offset) is pd.offsets.MonthBegin:
-        return pd.offsets.MonthEnd(offset.n)
-    if type(offset) is pd.offsets.QuarterBegin:
+    offsets = pd.offsets
+    if type(offset) in (offsets.MonthBegin, offsets.BusinessMonthBegin):
+        return offsets.MonthEnd(offset.n)
+    if type(offset) in (offsets.QuarterBegin, offsets.BQuarterBegin):
         month = (offset.startingMonth - 2) % 12 + 1
         if month % 3 == 0:
             # The calendar quarters
             month = 12
-        return pd.offsets.QuarterEnd(offset.n, startingMonth=month)
-    if type(offset) is pd.offsets.YearBegin:
-        return pd.offsets.YearEnd(offset.n, month=(offset.month - 2) % 12 + 1)
+        return offsets.QuarterEnd(offset.n, startingMonth=month)
+    if type(offset) in (offsets.YearBegin, offsets.BYearBegin):
+        return offsets.YearEnd(offset.n, month=(offset.month - 2) % 12 + 1)
     return offset
 
 
@@ -632,9 +634,9 @@ class CalendarDeterministicTerm(DeterministicTerm, ABC):
                 "terms are computed from periods, so freq must be a frequency "
                 "that pandas supports for periods, for example "
                 f'"D", "W", "{MONTH_END}", "{QUARTER_END}" or "{YEAR_END}", or '
-                'one of the start-anchored frequencies "MS", "QS" and "YS", '
-                "which are mapped to end-anchored ones unless "
-                "map_start_anchored is False."
+                'one of the start-anchored frequencies "MS", "QS" and "YS" (or '
+                '"BMS", "BQS" and "BYS"), which are mapped to end-anchored ones '
+                "unless map_start_anchored is False."
             ) from exc
 
     @property
@@ -688,9 +690,9 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
     freq : str
         A string convertible to a pandas frequency that pandas supports for
         periods, for example "D", "W", "ME", "QE" or "YE", or a
-        start-anchored frequency, "MS", "QS-m" or "YS-m", which is mapped to
-        the end-anchored frequency with the same periods (see
-        ``map_start_anchored``).
+        start-anchored frequency ("MS", "QS-m", "YS-m", "BMS", "BQS-m" or
+        "BYS-m"), which is mapped to the end-anchored frequency with the same
+        periods (see ``map_start_anchored``).
 
         .. versionchanged:: 0.15.1
 
@@ -708,11 +710,13 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
         and "QS-m" for m in JAN, APR, JUL and OCT, are mapped to "QE-DEC",
         and "YS-m" to "YE" anchored in the month before m (so "YS" to
         "YE-DEC", and "YS-JUL" to "YE-JUN"), keeping the multiple ("2MS" to
-        "2ME"). Older aliases such as "AS-JUL" are mapped as "YS-JUL". "BMS",
-        "SMS", "BQS" and "BYS" have no end-anchored equivalent and are not
-        mapped. If False, freq is passed to pandas as given. pandas supports
-        periods of start-anchored frequencies only in versions 2.2 and 2.3,
-        which anchor the periods of "QS-m" and "YS-m" in December for every
+        "2ME"). The business-day frequencies "BMS", "BQS-m" and "BYS-m" are
+        mapped as "MS", "QS-m" and "YS-m", and older aliases such as "AS-JUL"
+        and "BAS-JUL" as "YS-JUL" and "BYS-JUL". "SMS" has no end-anchored
+        equivalent and is not mapped. If False, freq is passed to pandas as
+        given. pandas supports periods of start-anchored frequencies, except
+        "BMS", only in versions 2.2 and 2.3, which anchor the periods of
+        "QS-m", "YS-m", "BQS-m" and "BYS-m" in December for every
         m, so that, for example, "QS-FEB" has the quarters of "QE-DEC".
 
         .. versionadded:: 0.15.1
@@ -989,9 +993,9 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     freq : str
         A string convertible to a pandas frequency that pandas supports for
         periods, for example "D", "W", "ME", "QE" or "YE", or a
-        start-anchored frequency, "MS", "QS-m" or "YS-m", which is mapped to
-        the end-anchored frequency with the same periods (see
-        ``map_start_anchored``).
+        start-anchored frequency ("MS", "QS-m", "YS-m", "BMS", "BQS-m" or
+        "BYS-m"), which is mapped to the end-anchored frequency with the same
+        periods (see ``map_start_anchored``).
 
         .. versionchanged:: 0.15.1
 
@@ -1021,11 +1025,13 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         and "QS-m" for m in JAN, APR, JUL and OCT, are mapped to "QE-DEC",
         and "YS-m" to "YE" anchored in the month before m (so "YS" to
         "YE-DEC", and "YS-JUL" to "YE-JUN"), keeping the multiple ("2MS" to
-        "2ME"). Older aliases such as "AS-JUL" are mapped as "YS-JUL". "BMS",
-        "SMS", "BQS" and "BYS" have no end-anchored equivalent and are not
-        mapped. If False, freq is passed to pandas as given. pandas supports
-        periods of start-anchored frequencies only in versions 2.2 and 2.3,
-        which anchor the periods of "QS-m" and "YS-m" in December for every
+        "2ME"). The business-day frequencies "BMS", "BQS-m" and "BYS-m" are
+        mapped as "MS", "QS-m" and "YS-m", and older aliases such as "AS-JUL"
+        and "BAS-JUL" as "YS-JUL" and "BYS-JUL". "SMS" has no end-anchored
+        equivalent and is not mapped. If False, freq is passed to pandas as
+        given. pandas supports periods of start-anchored frequencies, except
+        "BMS", only in versions 2.2 and 2.3, which anchor the periods of
+        "QS-m", "YS-m", "BQS-m" and "BYS-m" in December for every
         m, so that, for example, "QS-FEB" has the quarters of "QE-DEC", and
         which cannot use a base_period with them.
 
