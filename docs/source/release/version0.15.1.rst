@@ -88,10 +88,6 @@ Deprecations
   selects ``"2pi"`` (the spectral density) or ``"sqrt(2pi)"`` (the current
   result). Without it, a ``FutureWarning`` is issued, and the default will
   change to ``"2pi"`` after statsmodels 0.17. :pr:`10863`
-- The ``prefix`` argument of ``arma_score`` and ``arma_scoreobs`` in
-  ``statsmodels.tsa.innovations`` was never used. Passing it warns with a
-  ``FutureWarning``, and it will be removed after statsmodels 0.17.
-  :pr:`10889`
 
 Behavior changes
 ----------------
@@ -1234,9 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- ``statsmodels.tsa.innovations.arma_innovations`` raised "Buffer dtype
-  mismatch" for ``prefix`` ``"s"``, ``"c"`` or ``"z"`` with double-precision
-  parameters, and for float32 data. :pr:`10889`
 
 Statistics and tests
 --------------------
