@@ -3294,6 +3294,29 @@ def test_levinson_durbin_acov():
     assert_allclose(pacf, np.array([1, rho] + [0] * (m - 1)), atol=1e-8)
 
 
+@pytest.mark.parametrize("form", ["column", "dataframe"])
+def test_levinson_durbin_acov_column(form):
+    # s is 1-D: the autocovariances of an AR(1) as an (n, 1) column give the
+    # AR(1) coefficient and innovation variance, as the 1-D array does
+    rho = 0.9
+    m = 20
+    acov = rho ** np.arange(200)
+    res = levinson_durbin(series_forms(acov)[form], m, isacov=True)
+    assert_allclose(res.sigma_v, 1 - rho**2, rtol=1e-12)
+    # atol: the coefficients beyond lag 1 are zero up to rounding
+    assert_allclose(res.arcoefs, np.array([rho] + [0] * (m - 1)), atol=1e-8)
+    expected = levinson_durbin(acov, m, isacov=True)
+    for value, expected_value in zip(res, expected, strict=True):
+        assert_allclose(value, expected_value, rtol=1e-12)
+
+
+@pytest.mark.parametrize("isacov", [False, True])
+def test_levinson_durbin_two_columns_raises(isacov):
+    s = np.column_stack([0.9 ** np.arange(20), 0.5 ** np.arange(20)])
+    with pytest.raises(ValueError, match="s is required to have ndim 1"):
+        levinson_durbin(s, 5, isacov=isacov)
+
+
 def test_levinson_durbin_nlags_too_long():
     # requesting more lags than the supplied autocovariances cover used to
     # raise a bare IndexError from the recursion; it should report the
@@ -5129,11 +5152,12 @@ def test_stattools_integer_input(name):
     assert_allclose(_numeric_leaves(func(x_int)), expected, rtol=1e-12)
 
 
-@pytest.mark.parametrize("form", ["list", "tuple", "series"])
+@pytest.mark.parametrize("form", SERIES_FORMS)
 @pytest.mark.parametrize("position", [0, 1, 2])
 @pytest.mark.parametrize("test", [diebold_mariano_test, clark_west_test])
 def test_forecast_comparison_input_forms(test, position, form):
-    # y and the two forecasts are documented as array_like
+    # y and the two forecasts are documented as 1-D array_like: every form,
+    # including an (n, 1) column, gives the result of the ndarray
     rng = np.random.default_rng(20261122)
     y = rng.standard_normal(100)
     args = [y, y + 0.5 * rng.standard_normal(100), y + 0.8 * rng.standard_normal(100)]
@@ -5143,6 +5167,22 @@ def test_forecast_comparison_input_forms(test, position, form):
     assert_allclose(
         [res.statistic, res.pvalue], [expected.statistic, expected.pvalue], rtol=1e-12
     )
+
+
+@pytest.mark.parametrize("position", [0, 1, 2])
+@pytest.mark.parametrize("test", [diebold_mariano_test, clark_west_test])
+def test_forecast_comparison_two_columns_raises(test, position):
+    rng = np.random.default_rng(20261122)
+    y = rng.standard_normal(100)
+    args = [y, y + 0.5 * rng.standard_normal(100), y + 0.8 * rng.standard_normal(100)]
+    args[position] = np.column_stack([args[position], args[position]])
+    names = {
+        diebold_mariano_test: ("y", "forecast_a", "forecast_b"),
+        clark_west_test: ("y", "forecast_restricted", "forecast_unrestricted"),
+    }
+    name = names[test][position]
+    with pytest.raises(ValueError, match=f"^{name} is required to have ndim 1"):
+        test(*args)
 
 
 @pytest.mark.parametrize("form", ["dataframe", "list", "int"])

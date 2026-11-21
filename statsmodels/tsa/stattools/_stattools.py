@@ -2430,7 +2430,15 @@ def levinson_durbin(s, nlags=10, isacov=False):
     ----------
     s : array_like
         If isacov is False, then this is the time series. If isacov is true
-        then this is interpreted as autocovariance starting with lag 0.
+        then this is interpreted as autocovariance starting with lag 0. The
+        array is 1-D; a column with shape (n, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           With isacov=True, a column with shape (n, 1) now gives the same
+           result as the 1-D array, as it did with isacov=False. Input with
+           more than one column raises a ValueError that says that s must
+           be 1-D.
     nlags : int, optional
         The largest lag to include in recursion or order of the autoregressive
         process.
@@ -2466,7 +2474,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
     sample autocovariance function is calculated with the default options
     (biased, no fft).
     """
-    s = array_like(s, "s")
+    s = array_like(s, "s", ndim=1)
     nlags = int_like(nlags, "nlags")
     isacov = bool_like(isacov, "isacov")
 
@@ -3317,11 +3325,20 @@ def diebold_mariano_test(
     Parameters
     ----------
     y : array_like
-        Array of the observed variable.
+        Array of the observed variable. The array is 1-D; a column with
+        shape (nobs, 1) is also accepted.
     forecast_a : array_like
-        Array of forecasted values from the first model.
+        Array of forecasted values from the first model. The array is 1-D;
+        a column with shape (nobs, 1) is also accepted.
     forecast_b : array_like
-        Array of forecasted values from the second model.
+        Array of forecasted values from the second model. The array is 1-D;
+        a column with shape (nobs, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1), such as a one-column DataFrame,
+           in y, forecast_a or forecast_b now gives the same result as the
+           1-D array. It raised ValueError.
     lags : int, optional
         The number of lags to include in the HAC variance estimator used for
         the loss differential. Must be non-negative if provided. If not
@@ -3542,9 +3559,9 @@ def diebold_mariano_test(
     >>> res.statistic, res.pvalue  # doctest: +SKIP
     """
 
-    y = array_like(y, "y", ndim=1, maxdim=1, dtype=float)
-    forecast_a = array_like(forecast_a, "forecast_a", ndim=1, maxdim=1, dtype=float)
-    forecast_b = array_like(forecast_b, "forecast_b", ndim=1, maxdim=1, dtype=float)
+    y = array_like(y, "y", ndim=1, dtype=float)
+    forecast_a = array_like(forecast_a, "forecast_a", ndim=1, dtype=float)
+    forecast_b = array_like(forecast_b, "forecast_b", ndim=1, dtype=float)
     lags = int_like(lags, "lags", optional=True)
     harvey_adj = bool_like(harvey_adj, "harvey_adj")
     power = float_like(power, "power", optional=True)
@@ -3702,13 +3719,16 @@ def clark_west_test(
     Parameters
     ----------
     y : array_like
-        The observed values of the forecast variable.
+        The observed values of the forecast variable. The array is 1-D; a
+        column with shape (nobs, 1) is also accepted.
     forecast_restricted : array_like
         The forecasts of ``y`` from the restricted model, for example the
-        historical mean or a random walk.
+        historical mean or a random walk. The array is 1-D; a column with
+        shape (nobs, 1) is also accepted.
     forecast_unrestricted : array_like
         The forecasts of ``y`` from the unrestricted model, which nests the
-        restricted model.
+        restricted model. The array is 1-D; a column with shape (nobs, 1) is
+        also accepted.
     lags : int, optional
         The number of lags to include in the HAC variance estimator used for
         the adjusted loss differential. Must be non-negative if provided. If
@@ -3830,12 +3850,12 @@ def clark_west_test(
     >>> print(f"{dm.statistic:.3f}, {dm.pvalue:.4f}")
     1.251, 0.1056
     """
-    y = array_like(y, "y", ndim=1, maxdim=1, dtype=float)
+    y = array_like(y, "y", ndim=1, dtype=float)
     forecast_restricted = array_like(
-        forecast_restricted, "forecast_restricted", ndim=1, maxdim=1, dtype=float
+        forecast_restricted, "forecast_restricted", ndim=1, dtype=float
     )
     forecast_unrestricted = array_like(
-        forecast_unrestricted, "forecast_unrestricted", ndim=1, maxdim=1, dtype=float
+        forecast_unrestricted, "forecast_unrestricted", ndim=1, dtype=float
     )
     lags = int_like(lags, "lags", optional=True)
     horizon = int_like(horizon, "horizon")
