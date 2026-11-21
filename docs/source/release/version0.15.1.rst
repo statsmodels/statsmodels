@@ -1158,6 +1158,9 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- :class:`~statsmodels.tsa.seasonal.STL` with a list or tuple ``endog`` stored
+  it as the observed data of the results, so ``nobs`` and ``plot`` raised.
+  :pr:`10896`
 
 Statistics and tests
 --------------------
