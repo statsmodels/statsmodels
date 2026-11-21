@@ -295,7 +295,7 @@ def acf_to_acorr(acf):
 
     Parameters
     ----------
-    acf : ndarray
+    acf : array_like
         Autocovariance function, of shape (nlags, neqs, neqs).
 
     Returns
@@ -457,7 +457,7 @@ def eigval_decomp(sym_array):
 
     Parameters
     ----------
-    sym_array : ndarray
+    sym_array : array_like
         A symmetric array.
 
     Returns
