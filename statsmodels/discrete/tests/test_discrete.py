@@ -4113,6 +4113,39 @@ def test_negbinp_bse_p15(p):
     assert_allclose(res.bse, bse_num, rtol=1e-5)
 
 
+@pytest.mark.parametrize("loglike_method", ["nb1", "nb2"])
+@pytest.mark.parametrize("state", ["new", "unpickled"])
+def test_negbin_alpha_outside_fit(loglike_method, state):
+    # outside of fit, the last parameter is alpha, not log(alpha), both in a
+    # new model instance and in the model of unpickled results
+    rng = np.random.default_rng(3214)
+    nobs = 200
+    exog = sm.add_constant(rng.normal(size=(nobs, 2)))
+    mu = np.exp(exog @ [0.5, 0.3, -0.2])
+    endog = rng.negative_binomial(2, 2 / (2 + mu))
+    res = NegativeBinomial(endog, exog, loglike_method=loglike_method).fit(disp=0)
+    if state == "new":
+        model = NegativeBinomial(endog, exog, loglike_method=loglike_method)
+    else:
+        model = pickle.loads(pickle.dumps(res)).model
+
+    params = res.params
+    alpha = params[-1]
+    mu = np.exp(exog @ params[:-1])
+    if loglike_method == "nb2":
+        size = 1 / alpha
+        model_p = NegativeBinomialP(endog, exog, p=2)
+    else:
+        size = mu / alpha
+        model_p = NegativeBinomialP(endog, exog, p=1)
+    llf_scipy = nbinom.logpmf(endog, size, size / (size + mu)).sum()
+
+    assert_allclose(model.loglike(params), llf_scipy, rtol=1e-12)
+    assert_allclose(model.loglike(params), res.llf, rtol=1e-12)
+    assert_allclose(model.score(params), model_p.score(params), atol=1e-8)
+    assert_allclose(model.hessian(params), model_p.hessian(params), rtol=1e-8)
+
+
 def test_unchanging_degrees_of_freedom():
     data = load_randhie()
     # see GH3734
