@@ -27,6 +27,7 @@ from pandas import (
 )
 from pandas.tseries.frequencies import to_offset
 
+from statsmodels.base.covtype import _stacklevel_outside_statsmodels
 from statsmodels.base.data import PandasData
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -73,6 +74,15 @@ def get_index_loc(key, index):
         The key for which to find the location if the underlying index is
         a DateIndex or a location if the underlying index is a RangeIndex
         or an Index with an integer dtype.
+
+        .. deprecated:: 0.15.1
+
+           A partial date string that matches no date of the index but lies
+           between two of its dates, such as "2000-02" for quarterly dates
+           starting on 2000-01-01, gives an empty slice, so that prediction
+           starts at the next date or ends at the previous one. This is
+           deprecated and will raise a KeyError after statsmodels 0.17 is
+           released.
     index : pd.Index
         The index to search.
 
@@ -229,6 +239,16 @@ def get_index_loc(key, index):
 
     # Return the index through the end of the loc / slice
     if isinstance(loc, slice):
+        if loc.start == loc.stop:
+            # pandas gives an empty slice for a partial date string that lies
+            # between two dates of the index
+            warnings.warn(
+                f"No date of the index matches the key {key!r}. Keys that "
+                "match no date are deprecated and will raise a KeyError "
+                "after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=_stacklevel_outside_statsmodels(),
+            )
         end = loc.stop - 1
     else:
         end = loc
