@@ -1,0 +1,4 @@
+- A 2-d ``filt`` in :func:`~statsmodels.tsa.filters.filtertools.convolution_filter`
+  with more than one column but not one column per column of ``x`` is
+  deprecated. Where it ran, it gives the same result with a ``FutureWarning``,
+  and it will raise a ``ValueError`` in statsmodels 0.17. :pr:`10892`

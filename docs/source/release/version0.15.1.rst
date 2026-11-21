@@ -88,10 +88,6 @@ Deprecations
   selects ``"2pi"`` (the spectral density) or ``"sqrt(2pi)"`` (the current
   result). Without it, a ``FutureWarning`` is issued, and the default will
   change to ``"2pi"`` after statsmodels 0.17. :pr:`10863`
-- A 2-d ``filt`` in :func:`~statsmodels.tsa.filters.filtertools.convolution_filter`
-  with more than one column but not one column per column of ``x`` is
-  deprecated. Where it ran, it gives the same result with a ``FutureWarning``,
-  and it will raise a ``ValueError`` in statsmodels 0.17. :pr:`10892`
 
 Behavior changes
 ----------------
@@ -383,11 +379,6 @@ Behavior changes
   observations. It counted the NaNs, so it could return more lags, or raise
   when ``nlags`` was not given. The values at each lag are unchanged.
   :pr:`10847`
-- :func:`~statsmodels.tsa.filters.filtertools.convolution_filter` with a
-  ``filt`` of shape (1, nvars), one coefficient per column of ``x``, convolved
-  across the columns and returned one column. Each column is filtered with its
-  own coefficient, as the docstring says, so the values and the shape change.
-  :pr:`10892`
 
 New Features and Enhancements
 =============================
@@ -1239,10 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- :func:`~statsmodels.tsa.filters.filtertools.convolution_filter` with
-  ``nsides=1`` raised for a 2-d filter, and for 2-d ``x`` with a filter of
-  length one. Each column of ``x`` is filtered as a 1-d ``x`` is.
-  :pr:`10871`
 
 Statistics and tests
 --------------------
