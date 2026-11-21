@@ -1748,7 +1748,13 @@ class ETSResults(base.StateSpaceMLEResults):
         Parameters
         ----------
         nsimulations : int
-            The number of simulation steps.
+            The number of simulation steps. Must be at least 1.
+
+            .. versionchanged:: 0.15.1
+
+               ``nsimulations=0`` raises a ``ValueError``. It used to write
+               outside of an internal array, which could crash the Python
+               process.
         anchor : int, str, or datetime, optional
             First period for simulation. The simulation will be conditional on
             all existing datapoints prior to the `anchor`.  Type depends on the
@@ -1912,6 +1918,10 @@ class ETSResults(base.StateSpaceMLEResults):
            principles and practice*, 2nd edition, OTexts: Melbourne,
            Australia. OTexts.com/fpp2. Accessed on February 28th 2020.
         """
+        # The smoother writes the initial states into the last row of x, so
+        # x must have at least one row
+        if not nsimulations >= 1:
+            raise ValueError(f"nsimulations must be at least 1, got {nsimulations}")
         # Get the starting location
         start_idx = self._get_prediction_start_index(anchor)
 
@@ -2039,7 +2049,13 @@ class ETSResults(base.StateSpaceMLEResults):
             If an integer, the number of steps to forecast from the end of the
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency, steps
-            must be an integer. Default is 1.
+            must be an integer. Default is 1. An integer must be at least 1.
+
+            .. versionchanged:: 0.15.1
+
+               ``steps=0`` raises a ``ValueError``. It used to write outside
+               of an internal array, which could crash the Python process,
+               and otherwise returned NaN values.
 
         Returns
         -------
@@ -2059,6 +2075,8 @@ class ETSResults(base.StateSpaceMLEResults):
         anchor : int, str, or datetime
             The anchor point relative to which the forecast is simulated.
         """
+        if not steps >= 1:
+            raise ValueError(f"steps must be at least 1, got {steps}")
         # forecast is the same as simulation without errors
         return self.simulate(steps, anchor=anchor, random_errors=np.zeros((steps, 1)))
 
