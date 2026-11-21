@@ -919,6 +919,15 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     The time stamp, :math:`\tau_t`, is the number of periods that have elapsed
     since the base_period. :math:`\tau_t` may be fractional.
 
+    .. versionchanged:: 0.15.1
+
+       The terms have the index that is passed in. Before, a
+       ``DatetimeIndex`` was converted to a ``PeriodIndex``, so the terms did
+       not align with the other terms of a ``DeterministicProcess``. The
+       periods of a ``PeriodIndex`` with a frequency other than ``freq`` are
+       now counted in units of ``freq``. Before, they were counted in units
+       of the frequency of the index, which gave wrong values.
+
     Examples
     --------
     Here we simulate irregularly spaced hourly data and construct the calendar
@@ -1011,10 +1020,12 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     def _terms(
         self, index: pd.DatetimeIndex | pd.PeriodIndex, ratio: np.ndarray
     ) -> pd.DataFrame:
-        if isinstance(index, pd.DatetimeIndex):
-            index = index.to_period(self._freq)
-
-        index_i8 = index.asi8
+        # Count the periods in the freq of the term, from the start of each
+        # period of a PeriodIndex as in _compute_ratio
+        timestamps = index
+        if isinstance(index, pd.PeriodIndex):
+            timestamps = index.to_timestamp()
+        index_i8 = timestamps.to_period(self._freq).asi8
         index_i8 = index_i8 - self._ref_i8 + 1
         time = index_i8.astype(np.double) + ratio
         time = time[:, None]
@@ -1368,7 +1379,8 @@ you can pass additional components using the additional_terms input.""")
 
     def _range_from_range_index(self, start: int, stop: int) -> pd.DataFrame:
         index = self._index
-        is_int64_index = is_int_index(index)
+        # A RangeIndex also has an integer dtype
+        is_int64_index = is_int_index(index) and not isinstance(index, pd.RangeIndex)
         assert isinstance(index, pd.RangeIndex) or is_int64_index
         if start < index[0]:
             raise ValueError(START_BEFORE_INDEX_ERR)
@@ -1463,6 +1475,13 @@ you can pass additional components using the additional_terms input.""")
         -------
         DataFrame
             A data frame of deterministic terms
+
+            .. versionchanged:: 0.15.1
+
+               With a ``RangeIndex`` whose step is not 1, the rows are those
+               of the labels ``start``, ``start + step``, ... up to ``stop``.
+               Before, the step was ignored, so the rows were wrong or a
+               ``KeyError`` was raised.
         """
         if not self._extendable:
             raise TypeError("""The index in the deterministic process does not \

@@ -681,6 +681,41 @@ def test_non_unit_range():
         dp.range(11, 900)
 
 
+@pytest.mark.parametrize("index", [pd.RangeIndex(0, 20, 2), pd.RangeIndex(1, 31, 3)])
+@pytest.mark.parametrize(
+    "first, last",
+    [(2, 5), (10, 13), (11, 13), (8, 12)],
+    ids=["in-sample", "next-out-of-sample", "later-out-of-sample", "both"],
+)
+def test_range_non_unit_step(index, first, last):
+    # The step of the index was ignored. The labels start, start + step, ...,
+    # stop are at positions first, ..., last.
+    start = index[0] + first * index.step
+    stop = index[0] + last * index.step
+    kwargs = {"constant": True, "order": 1, "seasonal": True, "period": 3}
+    dp = DeterministicProcess(index, **kwargs)
+    terms = dp.range(start, stop)
+    expected_index = pd.RangeIndex(start, stop + 1, index.step)
+    pd.testing.assert_index_equal(terms.index, expected_index, exact=False)
+    full = pd.concat([dp.in_sample(), dp.out_of_sample(4)], axis=0)
+    pd.testing.assert_frame_equal(terms, full.iloc[first : last + 1])
+    trend = np.arange(first + 1.0, last + 2.0)
+    np.testing.assert_allclose(terms["trend"], trend, rtol=1e-15)
+
+
+def test_range_int_index_non_unit_step():
+    # An integer Index with a step other than 1 cannot be extended, so range
+    # raises instead of using the step. int64, as the RangeIndex below, since
+    # np.arange gives int32 where the default integer has 32 bits (Pyodide).
+    index = pd.Index(np.arange(0, 20, 2, dtype=np.int64))
+    kwargs = {"constant": True, "order": 1}
+    dp = DeterministicProcess(index, **kwargs)
+    expected = DeterministicProcess(pd.RangeIndex(0, 20, 2), **kwargs)
+    pd.testing.assert_frame_equal(dp.in_sample(), expected.in_sample())
+    with pytest.raises(TypeError, match="does not support extension"):
+        dp.range(4, 10)
+
+
 def test_additional_terms(time_index):
     add_terms = [TimeTrend(True, order=1)]
     dp = DeterministicProcess(time_index, additional_terms=add_terms)
@@ -811,6 +846,61 @@ def test_calendar_time_trend_period_index():
     np.testing.assert_allclose(fcast, np.column_stack([t**0, t, t**2]), rtol=1e-15)
     expected_index = pd.period_range("2002-01", periods=3, freq="M")
     pd.testing.assert_index_equal(fcast.index, expected_index)
+
+
+def test_calendar_time_trend_datetime_index():
+    # A DatetimeIndex was converted to a PeriodIndex, so the terms did not
+    # align with the other terms of a DeterministicProcess
+    index = pd.date_range("2000-01-31", periods=27, freq=MONTH_END)
+    # The months since base_period plus the part of the month elapsed at the
+    # time stamp, which is the start of the last day
+    trend = np.arange(1.0, 28.0) + (index.day - 1) / index.days_in_month
+    trend = np.asarray(trend)
+    ct = CalendarTimeTrend(MONTH_END, True, order=1, base_period="2000-01-01")
+    terms = ct.in_sample(index[:24])
+    pd.testing.assert_index_equal(terms.index, index[:24])
+    np.testing.assert_allclose(terms["trend"], trend[:24], rtol=1e-15)
+    fcast = ct.out_of_sample(3, index[:24])
+    pd.testing.assert_index_equal(fcast.index, index[24:])
+    np.testing.assert_allclose(fcast["trend"], trend[24:], rtol=1e-15)
+
+    dp = DeterministicProcess(index[:24], seasonal=True, additional_terms=[ct])
+    seasonal = Seasonality(12).in_sample(index).iloc[:, 1:]
+    expected = pd.concat(
+        [seasonal, pd.DataFrame({"const": 1.0, "trend": trend}, index=index)],
+        axis=1,
+    )
+    pd.testing.assert_frame_equal(dp.in_sample(), expected.iloc[:24])
+    pd.testing.assert_frame_equal(dp.out_of_sample(3), expected.iloc[24:])
+
+
+@pytest.mark.parametrize(
+    "freq, term_freq, trend",
+    [
+        # Each quarter has three months
+        ("Q", MONTH_END, [1, 4, 7, 10, 13, 16]),
+        # The first two quarters of 2000 have 91 days each
+        ("M", QUARTER_END, [1, 1 + 31 / 91, 1 + 60 / 91, 2, 2 + 30 / 91, 2 + 61 / 91]),
+        # The days from Jan 29, 2000; January has 31 days, February 29
+        (
+            "D",
+            MONTH_END,
+            [1 + 28 / 31, 1 + 29 / 31, 1 + 30 / 31, 2, 2 + 1 / 29, 2 + 2 / 29],
+        ),
+    ],
+)
+def test_calendar_time_trend_period_index_other_freq(freq, term_freq, trend):
+    # The periods were counted in units of the freq of the index, not of the
+    # freq of the term
+    start = "2000-01-29" if freq == "D" else "2000-01-01"
+    index = pd.period_range(start, periods=6, freq=freq)
+    ct = CalendarTimeTrend(term_freq, True, order=1, base_period="2000-01-01")
+    terms = ct.in_sample(index[:4])
+    pd.testing.assert_index_equal(terms.index, index[:4])
+    np.testing.assert_allclose(terms["trend"], trend[:4], rtol=1e-14)
+    fcast = ct.out_of_sample(2, index[:4])
+    pd.testing.assert_index_equal(fcast.index, index[4:])
+    np.testing.assert_allclose(fcast["trend"], trend[4:], rtol=1e-14)
 
 
 def test_calendar_fourier_period_index():
