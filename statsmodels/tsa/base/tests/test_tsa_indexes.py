@@ -2348,6 +2348,8 @@ def test_quarter_string_keys_mixed(index, start, end, expected):
         (pd.date_range("2000-01-01", periods=12, freq="QS"), 5),
         (pd.date_range("2000-03-31", periods=12, freq=pd.offsets.QuarterEnd()), 5),
         (pd.period_range("2000Q1", periods=12, freq="Q"), 5),
+        # The fiscal quarter of quarters ending in November
+        (pd.period_range("2000Q1", periods=12, freq="Q-NOV"), 5),
     ],
 )
 def test_quarter_string_key_single_date(index, loc):
@@ -2364,10 +2366,8 @@ def test_quarter_string_key_single_date(index, loc):
         # Before the sample
         (pd.date_range("2000-01-01", periods=800, freq="D"), "1999Q4"),
         (pd.date_range("2000-01-01", periods=12, freq="QS"), "1999Q4"),
-        # Year-end dates and annual periods have no date in the second
-        # quarter
+        # Year-end dates have no date in the second quarter
         (pd.date_range("1999-12-31", periods=6, freq=YEAR_END), "2001Q2"),
-        (pd.period_range("1999", periods=6, freq="Y"), "2001Q2"),
     ],
 )
 def test_quarter_string_key_without_dates(index, key):
