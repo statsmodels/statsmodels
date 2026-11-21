@@ -403,7 +403,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             valid_keys += tuple([f"initial_seasonal.{i}" for i in range(m)])
         if self.damped_trend:
             valid_keys += ("damping_trend",)
-        if self._initialization_method in ("estimated", None):
+        if self._initialization_method == "estimated":
             extra_keys = [
                 key.replace("smoothing_", "initial_")
                 for key in valid_keys
@@ -1210,7 +1210,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         seasonal component is added the initialization adapts to account for
         the modified structure.
         """
-        if self._initialization_method is not None and not force:
+        if not force:
             return (
                 self._initial_level,
                 self._initial_trend,
