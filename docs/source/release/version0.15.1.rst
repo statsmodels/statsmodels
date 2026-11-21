@@ -1158,6 +1158,9 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- :func:`~statsmodels.tsa.seasonal.seasonal_mean` raised for a list, tuple,
+  Series or DataFrame, although ``x`` is documented as array_like.
+  :pr:`10893`
 
 Statistics and tests
 --------------------
