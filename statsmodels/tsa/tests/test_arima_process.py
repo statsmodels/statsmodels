@@ -16,6 +16,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.sandbox.tsa.fftarma import ArmaFft
+from statsmodels.tools.docstring import NumpyDocString
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.arima_process import (
     ArmaProcess,
@@ -483,15 +484,16 @@ class TestArmaProcess:
     @pytest.mark.parametrize("method", LAGS_METHODS)
     def test_lags_default(self, method):
         process = ArmaProcess.from_coeffs([0.6], [0.3], nobs=7)
-        default = np.asarray(getattr(process, method)())
+        kwargs = {"normalization": "2pi"} if method == "periodogram" else {}
+        default = np.asarray(getattr(process, method)(**kwargs))
         assert default.shape[-1] == 7
         # Any integer value, including an integral float, is accepted
         for value in (7, np.int64(7), 7.0):
-            res = np.asarray(getattr(process, method)(value))
+            res = np.asarray(getattr(process, method)(value, **kwargs))
             assert_allclose(res, default, rtol=1e-15)
         for value in (7.5, True):
             with pytest.raises(TypeError, match="must be integer_like"):
-                getattr(process, method)(value)
+                getattr(process, method)(value, **kwargs)
 
     def test_lags_one(self):
         # One value, against the closed forms of an ARMA(1, 1) with unit
@@ -502,7 +504,7 @@ class TestArmaProcess:
         assert_allclose(process.acovf(1), [gamma0], rtol=1e-12)
         for method in ("acf", "pacf", "impulse_response", "arma2ma", "arma2ar"):
             assert_allclose(getattr(process, method)(1), [1.0], rtol=1e-15)
-        freq, sd = process.periodogram(1)
+        freq, sd = process.periodogram(1, normalization="sqrt(2pi)")
         assert_allclose(freq, [0.0], rtol=1e-15)
         expected = (1 + theta) ** 2 / (1 - phi) ** 2 / np.sqrt(2 * np.pi)
         assert_allclose(sd, [expected], rtol=1e-12)
@@ -571,6 +573,54 @@ class TestArmaProcess:
         sample = process.generate_sample(nsample=(100, 5), distrvs=rs.standard_normal)
         assert_equal(sample.shape, (100, 5))
 
+    @pytest.mark.parametrize(
+        "make",
+        [
+            lambda nobs: ArmaProcess([1.0, -0.9], nobs=nobs),
+            lambda nobs: ArmaProcess.from_coeffs([0.9], nobs=nobs),
+            lambda nobs: ArmaProcess.from_roots(arroots=[1 / 0.9], nobs=nobs),
+        ],
+        ids=["init", "from_coeffs", "from_roots"],
+    )
+    @pytest.mark.parametrize("nsample", [{}, {"nsample": None}])
+    def test_generate_sample_default_nobs(self, make, nsample):
+        # The default sample size is nobs. It used to be 100, whatever nobs
+        process = make(37)
+        rng = np.random.default_rng(12345)
+        sample = process.generate_sample(distrvs=rng.standard_normal, **nsample)
+        # The AR(1) recursion with the same innovations
+        expected = np.random.default_rng(12345).standard_normal(37)
+        for i in range(1, 37):
+            expected[i] += 0.9 * expected[i - 1]
+        assert sample.shape == (37,)
+        assert_allclose(sample, expected, rtol=1e-12)
+
+        rng = np.random.default_rng(12345)
+        sample = process.generate_sample(
+            burnin=5, distrvs=rng.standard_normal, **nsample
+        )
+        expected = np.random.default_rng(12345).standard_normal(42)
+        for i in range(1, 42):
+            expected[i] += 0.9 * expected[i - 1]
+        assert sample.shape == (37,)
+        assert_allclose(sample, expected[5:], rtol=1e-12)
+
+    def test_generate_sample_default_nobs_from_estimation(self):
+        # from_estimation takes nobs from the results
+        rng = np.random.default_rng(0)
+        data = arma_generate_sample([1.0, -0.6], [1.0, 0.3], 80, distrvs=rng.normal)
+        res = ARIMA(data, order=(1, 0, 1), trend="n").fit()
+        process = ArmaProcess.from_estimation(res)
+        sample = process.generate_sample(distrvs=np.random.default_rng(1).normal)
+        expected = arma_generate_sample(
+            res.polynomial_reduced_ar,
+            res.polynomial_reduced_ma,
+            80,
+            distrvs=np.random.default_rng(1).normal,
+        )
+        assert sample.shape == (80,)
+        assert_allclose(sample, expected, rtol=1e-15)
+
     def test_impulse_response(self):
         process = ArmaProcess.from_coeffs([0.9])
         ir = process.impulse_response(10)
@@ -578,7 +628,7 @@ class TestArmaProcess:
 
     def test_periodogram(self):
         process = ArmaProcess()
-        pg = process.periodogram()
+        pg = process.periodogram(normalization="sqrt(2pi)")
         assert_almost_equal(pg[0], np.linspace(0, np.pi, 100, False))
         assert_almost_equal(pg[1], np.sqrt(2 / np.pi) / 2 * np.ones(100))
 
@@ -859,24 +909,132 @@ def test_arma_periodogram_closed_form():
     # division by sqrt(2 pi)
     phi, theta = 0.5, 0.4
     w = np.linspace(0, np.pi, 7)
-    freq, sd = arma_periodogram([1.0, -phi], [1.0, theta], worN=w)
+    freq, sd = arma_periodogram(
+        [1.0, -phi], [1.0, theta], worN=w, normalization="sqrt(2pi)"
+    )
     num = 1 + 2 * theta * np.cos(w) + theta**2
     den = 1 - 2 * phi * np.cos(w) + phi**2
     assert_allclose(freq, w, rtol=1e-15)
     assert_allclose(sd, num / den / np.sqrt(2 * np.pi), rtol=1e-12)
     process = ArmaProcess([1.0, -phi], [1.0, theta])
-    freq, sd = process.periodogram(7)
+    freq, sd = process.periodogram(7, normalization="sqrt(2pi)")
     assert_allclose(freq, np.linspace(0, np.pi, 7, endpoint=False), rtol=1e-15)
     den = 1 - 2 * phi * np.cos(freq) + phi**2
     num = 1 + 2 * theta * np.cos(freq) + theta**2
     assert_allclose(sd, num / den / np.sqrt(2 * np.pi), rtol=1e-12)
 
 
+# AR(1), MA(1), ARMA(1, 1) and ARMA(2, 2), all stationary
+PERIODOGRAM_PROCESSES = [
+    ([1.0, -0.5], [1.0]),
+    ([1.0], [1.0, 0.4]),
+    ([1.0, -0.5], [1.0, 0.4]),
+    ([1.0, -0.75, 0.25], [1.0, 0.65, 0.35]),
+]
+
+
+@pytest.mark.parametrize("ar, ma", PERIODOGRAM_PROCESSES)
+def test_arma_periodogram_normalization_2pi(ar, ma):
+    # The spectral density of an ARMA process with unit innovation variance,
+    # f(w) = |ma(exp(-iw))|^2 / |ar(exp(-iw))|^2 / (2 pi)
+    w = np.linspace(0, np.pi, 9)
+    z = np.exp(-1j * w)
+    poly = np.polynomial.polynomial.polyval
+    expected = np.abs(poly(z, ma)) ** 2 / np.abs(poly(z, ar)) ** 2 / (2 * np.pi)
+    freq, sd = arma_periodogram(ar, ma, worN=w, normalization="2pi")
+    assert_allclose(freq, w, rtol=1e-15)
+    assert_allclose(sd, expected, rtol=1e-12)
+
+    process = ArmaProcess(ar, ma)
+    freq, sd = process.periodogram(8, normalization="2pi")
+    assert_allclose(freq, np.linspace(0, np.pi, 8, endpoint=False), rtol=1e-15)
+    z = np.exp(-1j * freq)
+    expected = np.abs(poly(z, ma)) ** 2 / np.abs(poly(z, ar)) ** 2 / (2 * np.pi)
+    assert_allclose(sd, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("ar, ma", PERIODOGRAM_PROCESSES)
+def test_arma_periodogram_normalization_2pi_autocovariance(ar, ma):
+    # The autocovariances are the Fourier coefficients of the spectral
+    # density, gamma(k) = int_{-pi}^{pi} f(w) cos(k w) dw. The mean over n
+    # equally spaced frequencies on [0, 2 pi) integrates the periodic,
+    # smooth integrand with an error that decays geometrically in n.
+    n = 512
+    w, sd = arma_periodogram(ar, ma, worN=n, whole=True, normalization="2pi")
+    lags = np.arange(5)
+    gamma = 2 * np.pi * np.mean(sd * np.cos(np.outer(lags, w)), axis=1)
+    # atol: the autocovariances of the MA(1) after lag 1 are zero
+    assert_allclose(gamma, arma_acovf(ar, ma, nobs=5), rtol=1e-10, atol=1e-14)
+
+
+@pytest.mark.parametrize("method", [False, True])
+def test_arma_periodogram_normalization_default_deprecated(method):
+    # Omitting normalization keeps the division by sqrt(2 pi), with a warning
+    # that points to the caller
+    ar, ma = [1.0, -0.5], [1.0, 0.4]
+    process = ArmaProcess(ar, ma)
+
+    def periodogram(**kwargs):
+        if method:
+            return process.periodogram(8, **kwargs)
+        return arma_periodogram(ar, ma, 8, **kwargs)
+
+    name = "ArmaProcess.periodogram" if method else "arma_periodogram"
+    match = (
+        f"^The spectral density returned by {name} is divided by "
+        r"sqrt\(2 \* pi\), not by 2 \* pi as in the usual definition\. The "
+        r"default will change to 2 \* pi after statsmodels 0\.17 is released\."
+    )
+    with pytest.warns(FutureWarning, match=match) as record:
+        w, sd = periodogram()
+    assert len(record) == 1
+    assert record[0].filename == __file__
+    z = np.exp(-1j * w)
+    poly = np.polynomial.polynomial.polyval
+    expected = np.abs(poly(z, ma)) ** 2 / np.abs(poly(z, ar)) ** 2
+    assert_allclose(sd, expected / np.sqrt(2 * np.pi), rtol=1e-12)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert_allclose(periodogram(normalization="sqrt(2pi)")[1], sd, rtol=1e-15)
+        sd_2pi = periodogram(normalization="2pi")[1]
+    assert_allclose(sd_2pi, expected / (2 * np.pi), rtol=1e-12)
+
+
+@pytest.mark.parametrize("method", [False, True])
+def test_arma_periodogram_normalization_invalid(method):
+    process = ArmaProcess([1.0, -0.5], [1.0, 0.4])
+
+    def periodogram(normalization):
+        if method:
+            return process.periodogram(8, normalization=normalization)
+        return arma_periodogram(process.ar, process.ma, 8, normalization=normalization)
+
+    with pytest.raises(ValueError, match="normalization must be one of"):
+        periodogram("pi")
+    with pytest.raises(TypeError, match="normalization must be a string"):
+        periodogram(2.0)
+
+
+@pytest.mark.skipif(
+    ArmaProcess.periodogram.__doc__ is None, reason="docstrings are stripped"
+)
+def test_arma_process_periodogram_docstring():
+    # The method documents normalization as the function does
+    def parameters(func):
+        return {param.name: param for param in NumpyDocString(func.__doc__)["Parameters"]}
+
+    method = parameters(ArmaProcess.periodogram)
+    assert list(method) == ["nobs", "normalization"]
+    assert method["normalization"] == parameters(arma_periodogram)["normalization"]
+
+
 def test_arma_periodogram_unit_root():
     # The frequency response of a unit root is not defined at frequency 0
     with np.errstate(divide="ignore", invalid="ignore"):
         with pytest.warns(RuntimeWarning, match="nan in frequency response") as rec:
-            w, sd = arma_periodogram([1.0, -1.0], [1.0], worN=8)
+            w, sd = arma_periodogram(
+                [1.0, -1.0], [1.0], worN=8, normalization="sqrt(2pi)"
+            )
     # The warning points at the caller, not at the wrapper of _require_1d
     assert [r.filename for r in rec if r.category is RuntimeWarning] == [__file__]
     expected = 1 / (2 - 2 * np.cos(w[1:])) / np.sqrt(2 * np.pi)
@@ -894,7 +1052,9 @@ def test_arma_periodogram_worn_not_positive(worN):
 def test_arma_periodogram_worn_float_is_frequency():
     # A float is a frequency, 0.0 too, not the number of frequencies
     phi, theta = 0.6, 0.3
-    w, sd = arma_periodogram([1.0, -phi], [1.0, theta], worN=0.0)
+    w, sd = arma_periodogram(
+        [1.0, -phi], [1.0, theta], worN=0.0, normalization="sqrt(2pi)"
+    )
     assert_allclose(w, [0.0], rtol=1e-15)
     expected = (1 + theta) ** 2 / (1 - phi) ** 2 / np.sqrt(2 * np.pi)
     assert_allclose(sd, [expected], rtol=1e-12)
@@ -1079,7 +1239,9 @@ def test_arma_periodogram_2d_deprecated(name, arg, shape):
     one_d = {"ar": [1.0, -0.5, 0.25], "ma": [1.0] if shape == "1x1" else [1.0, 0.4]}
     polynomials[arg] = _as_2d(polynomials[arg], shape)
     with pytest.warns(FutureWarning, match=_warns_2d(arg)):
-        w, sd = arma_periodogram(polynomials["ar"], polynomials["ma"], 8)
+        w, sd = arma_periodogram(
+            polynomials["ar"], polynomials["ma"], 8, normalization="sqrt(2pi)"
+        )
     assert_allclose(w, np.linspace(0, np.pi, 8, endpoint=False), rtol=1e-15)
     assert_allclose(sd, _spectral_density(one_d["ar"], one_d["ma"], w), rtol=1e-12)
 
@@ -1114,7 +1276,9 @@ def test_white_noise_column_raises(func, arg):
 def test_lag_polynomial_2d_keyword():
     ar, ma = [1.0, -0.5], [1.0, 0.4]
     with pytest.warns(FutureWarning, match=_warns_2d("ma")):
-        w, sd = arma_periodogram(ar=ar, ma=_as_2d(ma, "column"), worN=4)
+        w, sd = arma_periodogram(
+            ar=ar, ma=_as_2d(ma, "column"), worN=4, normalization="sqrt(2pi)"
+        )
     assert_allclose(sd, _spectral_density(ar, ma, w), rtol=1e-12)
     with pytest.raises(ValueError, match=_raises_2d("ma", (2, 1))):
         arma_impulse_response(ar=ar, ma=_as_2d(ma, "column"), leads=4)
@@ -1127,7 +1291,9 @@ def test_lag_polynomial_2d_both():
     with pytest.raises(ValueError, match=_raises_2d("ar", (1, 2))):
         arma_impulse_response(_as_2d(ar, "row"), _as_2d(ma, "column"), 4)
     with pytest.warns(FutureWarning) as record:
-        w, sd = arma_periodogram(_as_2d(ar, "column"), _as_2d(ma, "column"), 4)
+        w, sd = arma_periodogram(
+            _as_2d(ar, "column"), _as_2d(ma, "column"), 4, normalization="sqrt(2pi)"
+        )
     assert [str(item.message)[:2] for item in record] == ["ar", "ma"]
     assert_allclose(sd, _spectral_density(ar, ma, w), rtol=1e-12)
 
@@ -1151,8 +1317,9 @@ def test_arma_process_input_forms(form):
         assert_allclose(process.ma, ma, rtol=1e-12)
         assert_allclose(process.acf(8), expected.acf(8), rtol=1e-12)
     ar_form, ma_form = _coefficient_form(ar, form), _coefficient_form(ma, form)
-    _, sd = arma_periodogram(ar_form, ma_form, 8)
-    assert_allclose(sd, arma_periodogram(ar, ma, 8)[1], rtol=1e-14)
+    _, sd = arma_periodogram(ar_form, ma_form, 8, normalization="2pi")
+    expected_sd = arma_periodogram(ar, ma, 8, normalization="2pi")[1]
+    assert_allclose(sd, expected_sd, rtol=1e-14)
     rng = np.random.default_rng(0)
     sample = arma_generate_sample(ar_form, ma_form, 20, distrvs=rng.standard_normal)
     rng = np.random.default_rng(0)
