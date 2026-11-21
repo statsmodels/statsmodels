@@ -350,3 +350,44 @@ def test_read_only_inputs(func, form):
     )
     expected = _kalman_filter_reference(func, endog, ar_params, ma_params, sigma2)
     assert_allclose(res, expected, rtol=RTOL[func])
+
+
+# arma_innovations filters each column of a 2-d endog, the others need one
+# series
+@pytest.mark.parametrize("func", FUNCTIONS[1:])
+@pytest.mark.parametrize(
+    "form", [lambda y: y[:, None], pd.DataFrame], ids=["column", "DataFrame"]
+)
+def test_single_column_endog(func, form):
+    # A single column raised "Buffer has wrong number of dimensions"
+    rng = np.random.default_rng(20261121)
+    endog = rng.standard_normal(60)
+    ar_params, ma_params, sigma2 = [0.5], [0.3], 1.7
+    res = getattr(arma_innovations, func)(
+        form(endog), ar_params, ma_params, sigma2=sigma2
+    )
+    expected = _kalman_filter_reference(func, endog, ar_params, ma_params, sigma2)
+    assert_allclose(res, expected, rtol=RTOL[func])
+
+
+@pytest.mark.parametrize("func", FUNCTIONS[1:])
+def test_multiple_column_endog_raises(func):
+    endog = np.zeros((10, 2))
+    with pytest.raises(ValueError, match="endog is required to have ndim 1"):
+        getattr(arma_innovations, func)(endog, [0.5], [0.3])
+
+
+def test_single_column_endog_keeps_dtype():
+    # endog is converted without changing its dtype, so that float32 data and
+    # parameters are still evaluated in single precision
+    rng = np.random.default_rng(20261121)
+    endog = rng.standard_normal(60).astype(np.float32)
+    res = arma_innovations.arma_loglikeobs(
+        endog[:, None], np.float32([0.5]), np.float32([0.3]), np.float32(1.7)
+    )
+    assert res.dtype == np.float32
+    expected = _kalman_filter_reference(
+        "arma_loglikeobs", endog.astype(float), [0.5], [0.3], 1.7
+    )
+    # Single precision
+    assert_allclose(res, expected, rtol=1e-4)
