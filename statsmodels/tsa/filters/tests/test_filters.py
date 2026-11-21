@@ -26,6 +26,7 @@ from statsmodels.tsa.filters.filtertools import (
     recursive_filter,
 )
 from statsmodels.tsa.filters.hp_filter import hpfilter
+from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 
 CURR_DIR = Path(__file__).resolve().parent
 
@@ -1542,3 +1543,426 @@ def test_recursive_filter_3d_raises(shape, init):
     # (n, 1, 1) and (1, n, 1) arrays used to be returned unchanged
     with pytest.raises(ValueError, match=r"x must be 1-D or an \(n, 1\) column"):
         recursive_filter(np.ones(shape), [0.5], init=init)
+
+
+def test_recursive_filter_init_reverse_time_order():
+    # init holds the values before the first observation in reverse time
+    # order, init[0] is y[-1]. R 4.6.2:
+    # filter(rep(0, 3), c(0.5, 0.25), method="recursive", init=c(1, 2))
+    res = recursive_filter(np.zeros(3), [0.5, 0.25], init=[1.0, 2.0])
+    assert_allclose(res, [1.0, 0.75, 0.625], rtol=1e-12)
+
+
+@pytest.mark.parametrize("form", ["list", "tuple", "series"])
+@pytest.mark.parametrize("arg", ["ar_coeff", "init"])
+def test_recursive_filter_coefficient_forms(arg, form):
+    # ar_coeff and init are documented as array_like
+    x = _recursive_filter_data()
+    kwargs = {"ar_coeff": RF_AR_COEFF, "init": RF_INIT}
+    kwargs[arg] = series_forms(kwargs[arg])[form]
+    res = recursive_filter(x, **kwargs)
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, RF_INIT)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("init", [None, RF_INIT], ids=["zero-init", "init"])
+@pytest.mark.parametrize("form", ["tuple", "int"])
+def test_recursive_filter_tuple_and_int_input(form, init):
+    x = _recursive_filter_data()
+    if form == "tuple":
+        x_form = tuple(x.tolist())
+    else:
+        x = np.round(10 * x)
+        x_form = x.astype(np.int64)
+    res = recursive_filter(x_form, RF_AR_COEFF, init=init)
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, init)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+# R 4.6.2, stats::filter(1:10, filt, sides=nsides) with the default
+# method="convolution"
+R_CONVOLUTION_FILTER = {
+    (2, (1.0, 2.0, 3.0)): [np.nan, 10, 16, 22, 28, 34, 40, 46, 52, np.nan],
+    (2, (1.0, 2.0, 3.0, 4.0)): [np.nan, 20, 30, 40, 50, 60, 70, 80, np.nan, np.nan],
+    (1, (1.0, 2.0, 3.0)): [np.nan, np.nan, 10, 16, 22, 28, 34, 40, 46, 52],
+    (1, (1.0, 2.0)): [np.nan, 4, 7, 10, 13, 16, 19, 22, 25, 28],
+}
+
+
+@pytest.mark.parametrize("nsides, filt", list(R_CONVOLUTION_FILTER))
+def test_convolution_filter_matches_r(nsides, filt):
+    res = convolution_filter(np.arange(1.0, 11.0), np.array(filt), nsides=nsides)
+    assert_allclose(res, R_CONVOLUTION_FILTER[(nsides, filt)], rtol=1e-12)
+
+
+def _convolution_filter_reference(x, filt, nsides):
+    # The convolution filter of stats::filter in R, evaluated directly. With
+    # sides=1, y[n] = filt[0] * x[n] + ... + filt[k-1] * x[n-k+1]; with
+    # sides=2 the filter is shifted forward by m = k // 2, so filt[0]
+    # multiplies x[n+m]. Values that need an observation outside x are NaN.
+    nobs, nfilt = x.shape[0], len(filt)
+    shift = 0 if nsides == 1 else nfilt // 2
+    y = np.full(x.shape, np.nan)
+    for n in range(nobs):
+        if n + shift - nfilt + 1 >= 0 and n + shift < nobs:
+            y[n] = sum(filt[j] * x[n + shift - j] for j in range(nfilt))
+    return y
+
+
+CONVOLUTION_DEFINITION_CASES = [
+    (nsides, nfilt, ndim)
+    for nsides in (1, 2)
+    for nfilt in (1, 2, 3, 4, 5)
+    for ndim in (1, 2)
+    # 2-d x with nsides=1 and a filter of length one raises, a separate bug
+    if not (nsides == 1 and nfilt == 1 and ndim == 2)
+]
+
+
+@pytest.mark.parametrize("nsides, nfilt, ndim", CONVOLUTION_DEFINITION_CASES)
+def test_convolution_filter_matches_definition(nsides, nfilt, ndim):
+    # odd and even filter lengths, including one, give the documented NaN
+    # padding for 1-d x and for each column of 2-d x
+    rng = np.random.default_rng(20261120)
+    shape = (30, 2) if ndim == 2 else (30,)
+    x = rng.integers(-9, 10, size=shape).astype(float)
+    filt = rng.integers(-5, 6, size=nfilt).astype(float)
+    res = convolution_filter(x, filt, nsides=nsides)
+    assert res.shape == x.shape
+    expected = _convolution_filter_reference(x, filt, nsides)
+    # integer data give exact sums by direct convolution; atol keeps a sum
+    # that cancels to zero from failing if scipy convolves by FFT
+    assert_allclose(res, expected, rtol=1e-12, atol=1e-10)
+
+
+@pytest.mark.parametrize("nsides", [0, 3])
+def test_convolution_filter_nsides_invalid(nsides):
+    with pytest.raises(ValueError, match="nsides must be 1 or 2"):
+        convolution_filter(np.arange(10.0), [0.5, 0.5], nsides=nsides)
+
+
+def _contract_forms(x):
+    # the forms of series_forms, and integer data
+    forms = series_forms(x)
+    forms["int"] = np.round(10 * x).astype(np.int64)
+    return forms
+
+
+def _contract_series(nobs=60):
+    rng = np.random.default_rng(20261124)
+    t = np.arange(nobs)
+    return 10 + 0.1 * t + np.sin(2 * np.pi * t / 12) + 0.3 * rng.standard_normal(nobs)
+
+
+def _as_float_1d(x_form):
+    # the 1-d float ndarray with the values of an input form
+    return np.asarray(x_form, dtype=float).squeeze()
+
+
+def _check_pandas_form(res, x_form, trim=0):
+    # pandas input gives pandas output with the index of the input, without
+    # the first and last trim values; other input gives an ndarray
+    if isinstance(x_form, (Series, DataFrame)):
+        assert isinstance(res, (Series, DataFrame))
+        assert_index_equal(res.index, x_form.index[trim : x_form.shape[0] - trim])
+    else:
+        assert isinstance(res, np.ndarray)
+
+
+def _contract_2d():
+    x = _contract_series()
+    nobs = x.shape[0]
+    index = date_range("2000-01-01", periods=nobs, freq="MS")
+    other = x[::-1] + 0.5 * np.cos(np.arange(nobs))
+    return DataFrame({"a": x, "b": other}, index=index)
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_bkfilter_input_forms(form):
+    x_form = _contract_forms(_contract_series())[form]
+    res = bkfilter(x_form, 6, 32, 12)
+    expected = bkfilter(_as_float_1d(x_form), 6, 32, 12)
+    # atol: the cycle is a difference of FFT convolutions of values of order
+    # ten, so values near zero carry absolute rounding
+    assert_allclose(np.asarray(res).squeeze(), expected, rtol=1e-12, atol=1e-12)
+    _check_pandas_form(res, x_form, trim=12)
+    if form in ("column", "dataframe"):
+        assert res.shape == (expected.shape[0], 1)
+
+
+def test_bkfilter_two_column_dataframe():
+    df = _contract_2d()
+    res = bkfilter(df, 6, 32, 12)
+    for col in ("a", "b"):
+        expected = bkfilter(df[col].to_numpy(), 6, 32, 12)
+        actual = res[f"{col}_cycle"].to_numpy()
+        # atol: values near zero carry the absolute rounding of the FFT
+        assert_allclose(actual, expected, rtol=1e-12, atol=1e-12)
+    assert list(res.columns) == ["a_cycle", "b_cycle"]
+    assert_index_equal(res.index, df.index[12:-12])
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_cffilter_input_forms(form):
+    x_form = _contract_forms(_contract_series())[form]
+    res = cffilter(x_form)
+    expected = cffilter(_as_float_1d(x_form))
+    for actual, desired in zip(res, expected, strict=True):
+        assert_allclose(np.asarray(actual), desired, rtol=1e-12)
+        _check_pandas_form(actual, x_form)
+
+
+def test_cffilter_two_column_dataframe():
+    df = _contract_2d()
+    res = cffilter(df)
+    for col in ("a", "b"):
+        expected = cffilter(df[col].to_numpy())
+        cycle = res.cycle[f"{col}_cycle"].to_numpy()
+        assert_allclose(cycle, expected.cycle, rtol=1e-12)
+        trend = res.trend[f"{col}_trend"].to_numpy()
+        assert_allclose(trend, expected.trend, rtol=1e-12)
+    assert_index_equal(res.cycle.index, df.index)
+
+
+def test_cffilter_low_below_two():
+    with pytest.raises(ValueError, match="low must be >= 2"):
+        cffilter(np.arange(50.0), low=1.5, high=32)
+
+
+def test_cffilter_drift():
+    # drift=True removes the line t * (x[-1] - x[0]) / (nobs - 1) before
+    # filtering, so removing it by hand and filtering with drift=False gives
+    # the same cycle (both are checked against fixed reference values in
+    # test_cffilter_reference_values). The trend is the filtered series less
+    # its cycle.
+    dta = macrodata.load_pandas().data[["tbilrate", "infl"]].values[1:]
+    nobs = dta.shape[0]
+    line = np.arange(nobs)[:, None] * (dta[-1] - dta[0]) / (nobs - 1)
+    res_drift = cffilter(dta)
+    res = cffilter(dta - line, drift=False)
+    assert_allclose(res.cycle, res_drift.cycle, rtol=1e-10)
+    assert_allclose(res.cycle + res.trend, dta - line, rtol=1e-12)
+    assert_allclose(res_drift.cycle + res_drift.trend, dta - line, rtol=1e-12)
+    res_raw = cffilter(dta, drift=False)
+    assert_allclose(res_raw.cycle + res_raw.trend, dta, rtol=1e-12)
+    assert not np.allclose(res_raw.cycle, res_drift.cycle)
+
+
+@pytest.mark.parametrize("drift", [True, False])
+def test_cffilter_reference_values(drift):
+    # Fixed reference values of the cycle and the trend of a random walk with
+    # drift, 80 observations, low=6 and high=32, in results/cffilter.csv.
+    # With drift=True the drift line is removed before filtering and the
+    # trend is the drift-removed series less the cycle, so the trend does not
+    # contain the drift line.
+    ref = read_csv(CURR_DIR / "results" / "cffilter.csv", float_precision="round_trip")
+    x = ref["x"].to_numpy()
+    suffix = "drift" if drift else "no_drift"
+    ref_cycle = ref[f"cycle_{suffix}"].to_numpy()
+    ref_trend = ref[f"trend_{suffix}"].to_numpy()
+    res = cffilter(x, low=6, high=32, drift=drift)
+    # The smallest cycle value is 6e-4, and the cycle has an absolute rounding
+    # error of about 2e-15 from sums of terms of order 1 to 10, so the
+    # relative error reaches 2e-12 there
+    assert_allclose(res.cycle, ref_cycle, rtol=1e-10)
+    assert_allclose(res.trend, ref_trend, rtol=1e-12)
+    # cycle + trend + drift line = x, where the drift line is zero without
+    # drift. The reference values have the same identity.
+    nobs = x.shape[0]
+    line = drift * np.arange(nobs) * (x[-1] - x[0]) / (nobs - 1)
+    assert_allclose(res.cycle + res.trend + line, x, rtol=1e-12)
+    assert_allclose(ref_cycle + ref_trend + line, x, rtol=1e-12)
+
+
+@pytest.mark.parametrize("one_sided", [False, True])
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_hpfilter_input_forms(form, one_sided):
+    x_form = _contract_forms(_contract_series())[form]
+    res = hpfilter(x_form, 1600, one_sided=one_sided)
+    expected = hpfilter(_as_float_1d(x_form), 1600, one_sided=one_sided)
+    for actual, desired in zip(res, expected, strict=True):
+        assert_allclose(np.asarray(actual), desired, rtol=1e-10)
+        _check_pandas_form(actual, x_form)
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_convolution_filter_input_forms(form):
+    x_form = _contract_forms(_contract_series())[form]
+    filt = [0.25, 0.5, 0.25]
+    for nsides in (1, 2):
+        res = convolution_filter(x_form, filt, nsides=nsides)
+        expected = convolution_filter(_as_float_1d(x_form), filt, nsides=nsides)
+        assert_allclose(np.asarray(res).squeeze(), expected, rtol=1e-12)
+        _check_pandas_form(res, x_form)
+        assert np.ndim(res) == np.ndim(x_form)
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_convolution_filter_filt_forms(form):
+    # a 1-d filt in any form, including an (n, 1) column, filters 1-d x
+    x = _contract_series()
+    filt = np.array([0.1, 0.4, 0.3, 0.2])
+    filt_form = _contract_forms(filt)[form]
+    expected = convolution_filter(x, _as_float_1d(filt_form))
+    assert_allclose(convolution_filter(x, filt_form), expected, rtol=1e-12)
+
+
+def test_convolution_filter_two_column_dataframe():
+    df = _contract_2d()
+    filt = [0.25, 0.5, 0.25]
+    res = convolution_filter(df, filt)
+    for col in ("a", "b"):
+        expected = convolution_filter(df[col].to_numpy(), filt)
+        assert_allclose(res[col].to_numpy(), expected, rtol=1e-12)
+    assert list(res.columns) == ["a", "b"]
+    assert_index_equal(res.index, df.index)
+
+
+def _miso_lfilter_reference(ar, ma, x, useic):
+    # ar(L) y_t = ma(L) x_t evaluated directly: the combined input is
+    # inp_t = sum_lag ma[lag] . x[t - lag] with x zero before t = 0, and
+    # y_t = inp_t - ar[1] * y[t-1] - ... with y[-1], y[-2], ... = useic
+    nobs = x.shape[0]
+    inp = np.zeros(nobs)
+    for t in range(nobs):
+        for lag in range(ma.shape[0]):
+            if t - lag >= 0:
+                inp[t] += ma[lag] @ x[t - lag]
+    past = list(useic)
+    y = np.zeros(nobs)
+    for t in range(nobs):
+        y[t] = inp[t] - sum(ar[j + 1] * past[j] for j in range(len(past)))
+        past = [y[t]] + past[:-1]
+    return y, inp
+
+
+def test_miso_lfilter_useic_reverse_time_order():
+    # useic holds the values of y before the first observation in reverse
+    # time order, useic[0] is y[-1]
+    rng = np.random.default_rng(3)
+    nobs, nlags, nvars = 10, 2, 2
+    x = rng.standard_normal((nobs, nvars))
+    ma = rng.standard_normal((nlags, nvars))
+    ar = array([1.0, -0.5, 0.1])
+    useic = [1.5, -2.0]
+    y, inp = miso_lfilter(ar, ma, x, useic=useic)
+    expected_y, expected_inp = _miso_lfilter_reference(ar, ma, x, useic)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+    y0, _ = miso_lfilter(ar, ma, x)
+    assert not np.allclose(y, y0)
+
+
+@pytest.mark.parametrize(
+    "arg, form",
+    [
+        ("x", "dataframe"),
+        ("x", "int"),
+        ("ma", "list"),
+        ("ma", "dataframe"),
+        ("ar", "list"),
+        ("ar", "tuple"),
+        ("ar", "series"),
+        ("ar", "int"),
+    ],
+)
+def test_miso_lfilter_input_forms(arg, form):
+    rng = np.random.default_rng(4)
+    args = {
+        # integer coefficients, so that the int form has the same values
+        "ar": array([1.0, -1.0, 0.0]),
+        "ma": rng.standard_normal((3, 2)),
+        "x": np.round(10 * rng.standard_normal((20, 2))),
+    }
+    expected = _miso_lfilter_reference(args["ar"], args["ma"], args["x"], [0.0, 0.0])
+    value = args[arg]
+    if form == "int":
+        args[arg] = value.astype(np.int64)
+    elif form == "dataframe":
+        args[arg] = DataFrame(value, columns=["a", "b"])
+    elif form == "list":
+        args[arg] = value.tolist()
+    else:
+        args[arg] = series_forms(value)[form]
+    y, inp = miso_lfilter(args["ar"], args["ma"], args["x"])
+    assert_allclose(y, expected[0], rtol=1e-10)
+    assert_allclose(inp, expected[1], rtol=1e-12)
+
+
+def test_fftconvolve3_requires_in2_or_in3():
+    with pytest.raises(ValueError, match="at least one of in2 and in3"):
+        fftconvolve3(np.ones(5))
+
+
+@pytest.mark.parametrize("order", ["long-short", "short-long"])
+@pytest.mark.parametrize("mode", ["full", "same", "valid"])
+def test_fftconvolve3_without_in3_is_convolution(mode, order):
+    # without the inverse filter in3, the result is the convolution of in1
+    # and in2, with the modes of np.convolve: "same" has the length of the
+    # longer input and "valid" the difference of the lengths plus one
+    rng = np.random.default_rng(5)
+    x = rng.standard_normal(20)
+    filt = array([1.0, 0.5, 0.25, 0.1])
+    in1, in2 = (x, filt) if order == "long-short" else (filt, x)
+    res = fftconvolve3(in1, in2, mode=mode)
+    # atol: FFT rounding on values of order one
+    assert_allclose(res, np.convolve(in1, in2, mode=mode), rtol=1e-10, atol=1e-12)
+
+
+def test_fftconvolve3_int_input():
+    x = np.arange(-5, 15)
+    filt = np.array([2, -1, 1])
+    res = fftconvolve3(x, filt)
+    # atol: FFT rounding on values of order ten
+    assert_allclose(res, np.convolve(x, filt).astype(float), rtol=1e-10, atol=1e-10)
+
+
+@pytest.mark.parametrize("dtype", [float, complex])
+def test_fftconvolveinv_modes(dtype):
+    # in1 = np.convolve(x, filt) divided by filt in the frequency domain is
+    # x, so the full result is x followed by 2 * (len(filt) - 1) zeros.
+    # "same" keeps the centered len(in1) values and "valid" the centered
+    # len(in1) - len(filt) + 1 values, which are x.
+    rng = np.random.default_rng(6)
+    x = rng.standard_normal(20)
+    if dtype is complex:
+        x = x + 1j * rng.standard_normal(20)
+    filt = array([1.0, 0.5, 0.25, 0.1])
+    nfilt = filt.shape[0]
+    in1 = np.convolve(x, filt)
+    full = np.r_[x, np.zeros(2 * nfilt - 2)]
+    start = (nfilt - 1) // 2
+    expected = {
+        "full": full,
+        "same": full[start : start + in1.shape[0]],
+        "valid": full[nfilt - 1 : nfilt - 1 + x.shape[0]],
+    }
+    for mode, desired in expected.items():
+        res = fftconvolveinv(in1, filt, mode=mode)
+        assert np.iscomplexobj(res) == (dtype is complex)
+        # atol: the zeros are zero up to FFT rounding
+        assert_allclose(res, desired, rtol=1e-10, atol=1e-12)
+
+
+def test_fftconvolveinv_int_input():
+    # integer input gives the result of the same values as floats
+    res = fftconvolveinv(np.convolve(np.arange(6), [2, 1]), np.array([2, 1]))
+    # atol: the zeros are zero up to FFT rounding
+    assert_allclose(res, np.r_[np.arange(6.0), 0.0, 0.0], rtol=1e-10, atol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "mode, start, stop", [("full", 0, 6), ("same", 0, 5), ("valid", 1, 5)]
+)
+def test_fftconvolveinv_longer_in2(mode, start, stop):
+    # in1 is a unit impulse, so the result is the inverse of in2 = 1 - a L on
+    # the FFT grid of size 8, the circular geometric series a**j / (1 - a**8).
+    # The full result has len(in1) + len(in2) - 1 = 6 values, "same" keeps
+    # the centered len(in2) = 5 and "valid" the centered
+    # len(in2) - len(in1) + 1 = 4.
+    a = 0.6
+    geometric = a ** np.arange(8) / (1 - a**8)
+    in1 = array([1.0, 0.0])
+    in2 = array([1.0, -a, 0.0, 0.0, 0.0])
+    res = fftconvolveinv(in1, in2, mode=mode)
+    assert_allclose(res, geometric[start:stop], rtol=1e-12)

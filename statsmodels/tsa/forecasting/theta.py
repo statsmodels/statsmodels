@@ -14,6 +14,8 @@ The optimized theta method. arXiv preprint arXiv:1503.03529.
 """
 from __future__ import annotations
 
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -177,7 +179,8 @@ class ThetaModel:
             if idx is not None:
                 pfreq = getattr(idx, "freq", None)
                 if pfreq is None:
-                    pfreq = getattr(idx, "inferred_freq", None)
+                    with _infer_freq_returns_offset():
+                        pfreq = getattr(idx, "inferred_freq", None)
             if pfreq is not None:
                 self._period = freq_to_period(pfreq)
             else:
