@@ -13,6 +13,7 @@ docs/source/examples/index.rst
 docs/source/examples/notebooks/generated
 docs/source/datasets/statsmodels.datasets.*
 docs/source/savefig
+docs/source/release/_upcoming_changes.rst
 docs/gettingstarted_0.png
 examples/executed
 # Data downloaded for notebooks, not needed for source distribution
