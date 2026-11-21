@@ -2802,3 +2802,81 @@ def test_ill_conditioned_full_rank_not_flagged(method):
         warnings.simplefilter("error", SingularMatrixWarning)
         mod.fit(method=method)
     assert mod.rank == k
+
+
+@pytest.mark.parametrize("constant", [101.37, 123.456, 0.0, -5.5])
+def test_ols_rsquared_constant_endog(constant):
+    # GH10647: a constant dependent variable has a zero total sum of
+    # squares, so R-squared is undefined. It must be NaN (with a
+    # RuntimeWarning), not -inf or a misleading negative number, whether
+    # or not the constant is exactly representable as the sample mean.
+    endog = np.full(250, constant)
+    exog = add_constant(np.arange(250.0))
+    res = OLS(endog, exog).fit()
+    assert res.centered_tss == 0.0
+    with pytest.warns(RuntimeWarning, match="R-squared is undefined"):
+        rsquared = res.rsquared
+    assert np.isnan(rsquared)
+    # rsquared is cached, so rsquared_adj propagates the NaN without
+    # issuing the warning a second time
+    assert np.isnan(res.rsquared_adj)
+    # summary must still render, showing nan
+    assert "R-squared:" in str(res.summary())
+
+
+@pytest.mark.parametrize("constant", [101.37, 123.456])
+def test_wls_rsquared_constant_endog(constant):
+    # GH10647: same as OLS for weighted least squares
+    nobs = 100
+    endog = np.full(nobs, constant)
+    exog = add_constant(np.arange(float(nobs)))
+    weights = np.linspace(0.5, 1.5, nobs)
+    res = WLS(endog, exog, weights=weights).fit()
+    assert res.centered_tss == 0.0
+    with pytest.warns(RuntimeWarning, match="R-squared is undefined"):
+        assert np.isnan(res.rsquared)
+
+
+@pytest.mark.parametrize("constant", [101.37, 123.456])
+def test_gls_rsquared_constant_endog(constant):
+    # GH10647: same as OLS for GLS with a diagonal covariance
+    nobs = 100
+    endog = np.full(nobs, constant)
+    exog = add_constant(np.arange(float(nobs)))
+    res = GLS(endog, exog, sigma=np.ones(nobs)).fit()
+    assert res.centered_tss == 0.0
+    with pytest.warns(RuntimeWarning, match="R-squared is undefined"):
+        assert np.isnan(res.rsquared)
+
+
+def test_ols_rsquared_zero_endog_no_constant():
+    # GH10647: without a constant, R-squared uses the uncentered total sum
+    # of squares, which is zero when endog is identically zero
+    res = OLS(np.zeros(50), np.arange(50.0)).fit()
+    assert res.uncentered_tss == 0.0
+    with pytest.warns(RuntimeWarning, match="R-squared is undefined"):
+        assert np.isnan(res.rsquared)
+
+
+def test_ols_rsquared_constant_up_to_rounding():
+    # GH10647: a series that differs only by one ulp is constant up to
+    # floating-point rounding and must not yield a confident R-squared
+    endog = np.full(250, 123.456)
+    endog[0] = np.nextafter(endog[0], np.inf)
+    res = OLS(endog, add_constant(np.arange(250.0))).fit()
+    assert res.centered_tss == 0.0
+    with pytest.warns(RuntimeWarning, match="R-squared is undefined"):
+        assert np.isnan(res.rsquared)
+
+
+def test_ols_rsquared_genuine_variation_not_flagged():
+    # GH10647: genuine variation must not be flagged as constant, even
+    # when it is tiny relative to the level of the series
+    rng = np.random.default_rng(20261121)
+    endog = 1e6 + 1e-3 * rng.standard_normal(250)
+    res = OLS(endog, add_constant(np.arange(250.0))).fit()
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        rsquared = res.rsquared
+    assert np.isfinite(rsquared)
+    assert not any("R-squared is undefined" in str(x.message) for x in w)

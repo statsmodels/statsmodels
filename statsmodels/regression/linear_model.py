@@ -265,6 +265,36 @@ def _get_sigma(sigma, nobs):
     return sigma, cholsigmainv
 
 
+def _is_constant(x):
+    """
+    Check whether an array is constant up to floating-point rounding.
+
+    A series whose range is at most ``eps`` times its largest magnitude
+    carries no variation information: subtracting its mean leaves only
+    rounding residue, which must not be interpreted as data (GH10647).
+
+    Parameters
+    ----------
+    x : array_like
+        The array to check.
+
+    Returns
+    -------
+    bool
+        True if all values in `x` are (numerically) identical.
+    """
+    x = np.asarray(x)
+    if x.size == 0:
+        return False
+    if x.dtype.kind == "f":
+        eps = np.finfo(x.dtype).eps
+    else:
+        eps = np.finfo(np.double).eps
+    # np.ptp is 0 for an exactly constant array, and the comparison also
+    # covers 0 <= 0 when every value is 0
+    return bool(np.ptp(x) <= eps * np.max(np.abs(x)))
+
+
 class RegressionModel(base.LikelihoodModel):
     """
     Base class for linear regression models. Should not be directly called.
@@ -2354,6 +2384,11 @@ class RegressionResults(base.LikelihoodModelResults):
     def centered_tss(self):
         """The total (weighted) sum of squares centered about the mean"""
         model = self.model
+        if _is_constant(model.endog):
+            # A constant dependent variable has a zero centered sum of
+            # squares. Return exact 0.0 so that the rounding residue left
+            # behind by x - x.mean() is not misread as variation (GH10647).
+            return 0.0
         weights = model.weights
         sigma = model.sigma
         if weights is not None:
@@ -2404,11 +2439,35 @@ class RegressionResults(base.LikelihoodModelResults):
         This is defined here as 1 - `ssr`/`centered_tss` if the constant is
         included in the model and 1 - `ssr`/`uncentered_tss` if the constant is
         omitted.
+
+        .. versionchanged:: 0.15.1
+
+           Returns NaN and raises a ``RuntimeWarning`` when the dependent
+           variable is constant, because the total sum of squares is then
+           zero and R-squared is undefined (GH10647).
         """
         if self.k_constant:
-            return 1 - self.ssr / self.centered_tss
+            tss = self.centered_tss
         else:
-            return 1 - self.ssr / self.uncentered_tss
+            tss = self.uncentered_tss
+        # tss is a scalar for a single regression and an array of per-window
+        # values for rolling regression results
+        zero_tss = np.asarray(tss) == 0
+        if np.any(zero_tss):
+            warnings.warn(
+                "R-squared is undefined because the dependent variable is "
+                "constant, so the total sum of squares is zero. Returning NaN.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            if np.ndim(tss) == 0:
+                return np.nan
+        with np.errstate(divide="ignore", invalid="ignore"):
+            rsquared = 1 - self.ssr / tss
+        if np.any(zero_tss):
+            # a zero total sum of squares makes R-squared undefined
+            rsquared = np.where(zero_tss, np.nan, rsquared)
+        return rsquared
 
     @cache_readonly
     def rsquared_adj(self):
