@@ -49,6 +49,8 @@ class CycleTrendResult(NamedTuple):
 
 
 def _pad_nans(x, head=None, tail=None):
+    # convolution_filter, the only caller, passes 1-d or 2-d x, and a head
+    # and a tail that are both positive when both are given
     if np.ndim(x) == 1:
         if head is None and tail is None:
             return x
@@ -56,20 +58,18 @@ def _pad_nans(x, head=None, tail=None):
             return np.r_[[np.nan] * head, x, [np.nan] * tail]
         elif tail is None:
             return np.r_[[np.nan] * head, x]
-        elif head is None:
+        else:  # head is None
             return np.r_[x, [np.nan] * tail]
-    elif np.ndim(x) == 2:
-        if head is None and tail is None:
-            return x
-        elif head and tail:
-            return np.r_[[[np.nan] * x.shape[1]] * head, x,
-                         [[np.nan] * x.shape[1]] * tail]
-        elif tail is None:
-            return np.r_[[[np.nan] * x.shape[1]] * head, x]
-        elif head is None:
-            return np.r_[x, [[np.nan] * x.shape[1]] * tail]
-    else:
-        raise ValueError("Nan-padding for ndim > 2 not implemented")
+    # x is 2-d
+    if head is None and tail is None:
+        return x
+    elif head and tail:
+        return np.r_[[[np.nan] * x.shape[1]] * head, x,
+                     [[np.nan] * x.shape[1]] * tail]
+    elif tail is None:
+        return np.r_[[[np.nan] * x.shape[1]] * head, x]
+    else:  # head is None
+        return np.r_[x, [[np.nan] * x.shape[1]] * tail]
 
 # original changes and examples in sandbox.tsa.try_var_convolve
 
