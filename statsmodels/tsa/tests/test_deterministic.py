@@ -230,8 +230,10 @@ PD_START_ANCHORED_PERIODS = not PD_LT_2_2_0 and PD_LT_3
 _START_ANCHORED_SKIP = pytest.mark.skipif(
     PD_START_ANCHORED_PERIODS, reason="pandas has periods for start-anchored freqs"
 )
-# "YS-JUL" and "YE-JUN" are "AS-JUL" and "A-JUN" before pandas 2.2
+# "YS-JUL", "BYS-JUL" and "YE-JUN" are "AS-JUL", "BAS-JUL" and "A-JUN" before
+# pandas 2.2
 YEAR_START_JUL = "AS-JUL" if PD_LT_2_2_0 else "YS-JUL"
+BUSINESS_YEAR_START_JUL = "BAS-JUL" if PD_LT_2_2_0 else "BYS-JUL"
 YEAR_END_JUN = "A-JUN" if PD_LT_2_2_0 else "YE-JUN"
 CALENDAR_TERMS = [
     (CalendarFourier, {"order": 2}),
@@ -250,11 +252,8 @@ def _calendar_term_id(param):
 @pytest.mark.parametrize(
     "freq",
     [
-        "BMS",
         "SMS",
         "WOM-1MON",
-        pytest.param("BQS", marks=_START_ANCHORED_SKIP),
-        pytest.param("BYS", marks=_START_ANCHORED_SKIP),
         pytest.param(
             "C",
             marks=pytest.mark.skipif(PD_LT_2_2_0, reason="pandas has C periods"),
@@ -286,6 +285,13 @@ def test_calendar_term_freq_without_periods(freq, map_start_anchored, term, kwar
         ("2QS-APR", f"2{QUARTER_END}-DEC"),
         ("YS", YEAR_END),
         (YEAR_START_JUL, YEAR_END_JUN),
+        ("BMS", MONTH_END),
+        ("2BMS", f"2{MONTH_END}"),
+        ("BQS", f"{QUARTER_END}-DEC"),
+        ("BQS-APR", f"{QUARTER_END}-DEC"),
+        ("BQS-FEB", f"{QUARTER_END}-JAN"),
+        ("BYS", YEAR_END),
+        (BUSINESS_YEAR_START_JUL, YEAR_END_JUN),
     ],
 )
 @pytest.mark.parametrize("term, kwargs", CALENDAR_TERMS, ids=_calendar_term_id)
@@ -293,6 +299,7 @@ def test_calendar_term_start_anchored_mapped(freq, end_freq, term, kwargs):
     # A start-anchored freq gives the terms of the end-anchored freq with the
     # same periods, on every pandas version, and keeps its name. The calendar
     # quarters ("QS-APR" etc.) are those of "QE-DEC", as in pandas 2.2 and 2.3.
+    # The business-day freqs have the periods of their calendar twins.
     index = pd.date_range("1999-12-01", "2002-03-31", freq="D")
     created = term(freq, **kwargs)
     assert created.freq == pd.tseries.frequencies.to_offset(freq).freqstr
@@ -312,6 +319,9 @@ def test_calendar_term_start_anchored_mapped(freq, end_freq, term, kwargs):
         ("QS-FEB", 3, 2),
         ("QS-APR", 3, 4),
         (YEAR_START_JUL, 12, 7),
+        ("BMS", 1, 1),
+        ("BQS-FEB", 3, 2),
+        (BUSINESS_YEAR_START_JUL, 12, 7),
     ],
 )
 def test_calendar_term_start_anchored_periods(freq, months, first_month):
@@ -344,12 +354,20 @@ def test_calendar_term_start_anchored_periods(freq, months, first_month):
     np.testing.assert_allclose(np.asarray(trend)[:, 0], expected, rtol=1e-12)
 
 
-@_START_ANCHORED_SKIP
-@pytest.mark.parametrize("freq", ["MS", "2MS", "QS", "QS-FEB", "YS", YEAR_START_JUL])
+@pytest.mark.parametrize(
+    "freq",
+    [
+        pytest.param(freq, marks=_START_ANCHORED_SKIP)
+        for freq in ["MS", "2MS", "QS", "QS-FEB", "YS", YEAR_START_JUL]
+        + ["BQS", "BQS-FEB", "BYS", BUSINESS_YEAR_START_JUL]
+    ]
+    + ["BMS"],
+)
 @pytest.mark.parametrize("term, kwargs", CALENDAR_TERMS, ids=_calendar_term_id)
 def test_calendar_term_start_anchored_not_mapped_raises(freq, term, kwargs):
     # Without the map, freq is passed to pandas, which has no periods for
-    # start-anchored freqs except in versions 2.2 and 2.3
+    # start-anchored freqs except in versions 2.2 and 2.3, and none for "BMS"
+    # in any version
     with pytest.raises(ValueError, match=f'freq "{freq}" is not supported by'):
         term(freq, map_start_anchored=False, **kwargs)
 
@@ -366,6 +384,9 @@ def test_calendar_term_start_anchored_not_mapped_raises(freq, term, kwargs):
         ("QS-FEB", QUARTER_END),
         ("YS", YEAR_END),
         ("YS-JUL", YEAR_END),
+        ("BQS", QUARTER_END),
+        ("BQS-FEB", QUARTER_END),
+        ("BYS-JUL", YEAR_END),
     ],
 )
 @pytest.mark.parametrize(
@@ -376,8 +397,8 @@ def test_calendar_term_start_anchored_not_mapped_raises(freq, term, kwargs):
 def test_calendar_term_start_anchored_not_mapped(freq, pandas_freq, term, kwargs):
     # Without the map, freq is passed to pandas, and pandas 2.2 and 2.3 make
     # periods of start-anchored freqs as the end-anchored ones anchored in
-    # December, so "QS-FEB" and "YS-JUL" get the quarters and years of
-    # "QE-DEC" and "YE-DEC"
+    # December, so "QS-FEB" and "YS-JUL" (and "BQS-FEB" and "BYS-JUL") get the
+    # quarters and years of "QE-DEC" and "YE-DEC"
     index = pd.date_range("1999-12-01", "2002-03-31", freq="D")
     created = term(freq, map_start_anchored=False, **kwargs)
     terms = created.in_sample(index)
@@ -392,7 +413,8 @@ def test_calendar_term_start_anchored_not_mapped(freq, pandas_freq, term, kwargs
 )
 @pytest.mark.parametrize(
     "freq",
-    ["MS", "2MS", "QS", "QS-JAN", "QS-APR", "QS-JUL", "QS-OCT", "2QS-APR", "YS"],
+    ["MS", "2MS", "QS", "QS-JAN", "QS-APR", "QS-JUL", "QS-OCT", "2QS-APR", "YS"]
+    + ["BQS", "BQS-APR", "BYS"],
 )
 @pytest.mark.parametrize(
     "term, kwargs",
