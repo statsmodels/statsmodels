@@ -1230,9 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- :func:`~statsmodels.tsa.seasonal.seasonal_mean` raised for a list, tuple,
-  Series or DataFrame, although ``x`` is documented as array_like.
-  :pr:`10893`
 
 Statistics and tests
 --------------------
