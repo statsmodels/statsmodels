@@ -1,0 +1,3 @@
+- :func:`~statsmodels.tsa.filters.filtertools.miso_lfilter` raised for a
+  non-zero ``useic`` without AR lags, and for a scalar ``useic`` with one AR lag
+  or with SciPy 1.16 or later. :pr:`10895`

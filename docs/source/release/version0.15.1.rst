@@ -88,14 +88,6 @@ Deprecations
   selects ``"2pi"`` (the spectral density) or ``"sqrt(2pi)"`` (the current
   result). Without it, a ``FutureWarning`` is issued, and the default will
   change to ``"2pi"`` after statsmodels 0.17. :pr:`10863`
-- A 2-d ``ma`` without one column per column of a 2-d ``x`` in
-  :func:`~statsmodels.tsa.filters.filtertools.miso_lfilter`, which returned
-  the filter of a misaligned part of ``x``, is deprecated. It gives the same
-  result as before with a ``FutureWarning``, and will raise a ``ValueError``
-  in statsmodels 0.17. :pr:`10870`
-- ``useic=True`` in :func:`~statsmodels.tsa.filters.filtertools.miso_lfilter`
-  with two or more AR lags, which set the last presample value to 1, warns
-  with a ``FutureWarning`` and will raise in statsmodels 0.17. :pr:`10895`
 
 Behavior changes
 ----------------
@@ -1238,13 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- :func:`~statsmodels.tsa.filters.filtertools.miso_lfilter` raised for a list
-  or tuple ``x``, a column ``ar``, a 1-d ``x`` or ``ma``, and an ndarray
-  ``useic``, although they are documented as array_like. They are accepted;
-  a 1-d ``x`` or ``ma`` is a single column. :pr:`10870`
-- :func:`~statsmodels.tsa.filters.filtertools.miso_lfilter` raised for a
-  non-zero ``useic`` without AR lags, and for a scalar ``useic`` with one AR lag
-  or with SciPy 1.16 or later. :pr:`10895`
 
 Statistics and tests
 --------------------
