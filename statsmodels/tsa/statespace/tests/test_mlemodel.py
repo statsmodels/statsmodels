@@ -481,6 +481,34 @@ def test_fit_attrs_in_dir(name):
     assert name in dir(res._results)
 
 
+@pytest.mark.parametrize("name", ["sarimax", "llevel"])
+def test_fit_cg_optimum(name):
+    # cg did not pass the flags of `fit` to the loglikelihood and the score,
+    # so that it maximized the loglikelihood as a function of the constrained
+    # parameters at the values of the unconstrained ones. It stopped far from
+    # the optimum, and for the local level model with converged True. The
+    # transformations of the parameters of these models have diagonal
+    # Jacobians, so that the test does not depend on the chain rule of
+    # MLEModel.score with transformed=False. Nelder-Mead, which does not use
+    # the score, is the reference.
+    infl = macrodata.load_pandas().data["infl"].to_numpy()
+    if name == "sarimax":
+        mod = sarimax.SARIMAX(infl, order=(1, 0, 1), trend="c")
+    else:
+        mod = structural.UnobservedComponents(infl, "llevel")
+    res = mod.fit(method="cg", disp=0)
+    desired = mod.fit(method="nm", maxiter=5000, xtol=1e-8, ftol=1e-10, disp=0)
+    assert desired.mle_retvals["converged"]
+    assert res.mle_retvals["converged"]
+    # The loglikelihood is flat at the optimum, so that it agrees to second
+    # order in the difference of the parameters. The parameters agree to the
+    # accuracy of the solvers, about 1e-4: cg stops when the gradient of the
+    # loglikelihood divided by nobs is below 1e-5. Without the flags, the
+    # loglikelihood was lower by 6 and 38.
+    assert_allclose(res.llf, desired.llf, rtol=1e-8)
+    assert_allclose(res.params, desired.params, rtol=1e-3)
+
+
 @pytest.mark.smoke
 def test_score_misc():
     mod, res = get_dummy_mod()
