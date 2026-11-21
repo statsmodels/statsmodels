@@ -67,6 +67,10 @@ Deprecations
   ``NotImplementedError``, will be removed after statsmodels 0.16. Use
   ``statsmodels.tsa.arima.model.ARIMA`` or
   ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
+- ``distance_indicators`` with ``x`` of more than one dimension issues a
+  ``FutureWarning`` and returns the same result as before. After statsmodels
+  0.17, a column will give the result of the 1-D series and other input will
+  raise. :pr:`10858`
 - A bool ``p`` in ``c_sja`` and ``c_sjt``, and so ``det_order=True`` in
   :func:`~statsmodels.tsa.vector_ar.vecm.coint_johansen`, is deprecated. It is
   still used as 0 or 1, with a ``FutureWarning``, and will raise after
@@ -370,6 +374,11 @@ Behavior changes
   column, such as a one-column ``DataFrame``, as the 1-D series instead of
   raising, and raise a ``ValueError`` for input with more than one column.
   Results for 1-D input are unchanged. :pr:`10849`
+- The default ``nlags`` of :func:`~statsmodels.tsa.stattools.acf` with
+  ``missing="drop"`` or ``"conservative"`` counts only the non-missing
+  observations. It counted the NaNs, so it could return more lags, or raise
+  when ``nlags`` was not given. The values at each lag are unchanged.
+  :pr:`10847`
 - With ``autolag=None`` and no ``maxlag``,
   :func:`~statsmodels.tsa.stattools.zivot_andrews` uses the default number of
   lags of ``adfuller`` with ``regression="ct"``, as its lag search already
@@ -1192,6 +1201,16 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- ``fit(method="cg")`` did not pass its extra arguments to the objective and
+  the score. State space models and Markov switching models pass
+  ``transformed=False`` this way, so the conjugate gradient solver
+  optimized the log-likelihood with the parameters taken as constrained and
+  stopped far from the optimum, often reporting convergence, for example
+  after one iteration at an llf of -698.8 where the optimum is -456.0.
+  Results of models that do not use extra arguments are unchanged.
+  :pr:`10819`
+- ``index2lpol`` raised an ``IndexError`` for a tuple ``index``, and ``ar2arma``
+  raised a ``TypeError`` for a tuple ``ar_des``. :pr:`10858`
 - ``c_sja`` and ``c_sjt`` raised unrelated errors for a non-integer ``p`` and
   returned a view of their table, so changing a result changed later calls.
   A non-integer ``p`` raises a ``ValueError``, and a copy is returned.
@@ -1212,6 +1231,11 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` raised NumPy or
+  SciPy errors for an ``ar_coeff`` or ``init`` given as an (n, 1) column, and
+  a misleading length error for a row ``init``. A column is accepted, and
+  other 2-d input raises a ``ValueError`` that names the argument.
+  :pr:`10872`
 
 Statistics and tests
 --------------------

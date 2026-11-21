@@ -1032,6 +1032,16 @@ def acf(
         Number of lags to return autocorrelation for. If not provided,
         uses min(10 * np.log10(nobs), nobs - 1). The returned value
         includes lag 0 (ie., 1) so size of the acf vector is (nlags + 1,).
+        When missing is "drop" or "conservative", nobs is the number of
+        non-missing observations.
+
+        .. versionchanged:: 0.15.1
+
+           The default counts only the non-missing observations when
+           missing is "drop" or "conservative". It used to count the NaNs
+           as observations, so it could give more lags, or raise because
+           the default was not smaller than the number of non-missing
+           observations.
     qstat : bool, optional
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
@@ -1167,8 +1177,6 @@ def acf(
     )
     x = array_like(x, "x")
     nobs = x.shape[0]
-    if nlags is None:
-        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
     if missing in ("drop", "conservative"):
         # "drop" removes the NaNs and "conservative" zeroes them out, and
         # acovf uses the non-missing count as the divisor in both cases
@@ -1176,6 +1184,8 @@ def acf(
         nobs = int(np.sum(~np.isnan(x)))
         if nobs == 0:
             raise ValueError("All observations are missing after dropping.")
+    if nlags is None:
+        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
     if nlags < 0:
         raise ValueError(f"nlags must be non-negative, got {nlags}")
     if nlags >= nobs:
