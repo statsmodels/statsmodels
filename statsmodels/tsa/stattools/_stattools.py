@@ -4976,8 +4976,14 @@ class ZivotAndrewsUnitRoot:
         baselag : int
             The number of lags used for period regressions.
         bpidx : int
-            The index of x corresponding to endogenously calculated break period
-            with values in the range [0..nobs-1].
+            The index of x of the last observation before the endogenously
+            calculated break, for all three models.
+
+            .. versionchanged:: 0.15.1
+
+               With ``regression="t"``, ``bpidx`` is the last observation
+               before the break, as with "c" and "ct". It used to be the
+               observation after it, one larger. The statistic is unchanged.
 
         Notes
         -----
@@ -4998,14 +5004,14 @@ class ZivotAndrewsUnitRoot:
         at observation ``baselag + 1``, since it then has no test statistic.
         A level shift needs at least one row before the break and one after
         it, and a trend shift two rows before it (and, next to a level
-        shift, two after it). So the last observation before the break is at
-        least ``baselag + 1`` ("c") or ``baselag + 2`` ("t" and "ct"), and at
-        most ``nobs - 2`` ("c") or ``nobs - 3`` ("ct"). The returned
-        ``bpidx`` is that observation for "c" and "ct", but the first
-        observation of the trend shift, one later, for "t", so the smallest
-        ``bpidx`` is ``baselag + 1`` ("c"), ``baselag + 3`` ("t") or
-        ``baselag + 2`` ("ct"). A ValueError is raised if no candidate break
-        is left.
+        shift, two after it). So the last observation before the break, the
+        returned ``bpidx``, is at least ``baselag + 1`` ("c") or
+        ``baselag + 2`` ("t" and "ct"), and at most ``nobs - 2`` ("c" and
+        "t") or ``nobs - 3`` ("ct"). A ValueError is raised if no candidate
+        break is left. Within these bounds, ``bpidx`` is between ``trimcnt``
+        and ``nobs - trimcnt - 1`` for "c" and "ct", and one observation
+        earlier, between ``trimcnt - 1`` and ``nobs - trimcnt - 2``, for
+        "t", where ``trimcnt = int(trim * nobs)``.
 
         .. versionchanged:: 0.15.1
 
@@ -5133,9 +5139,11 @@ class ZivotAndrewsUnitRoot:
                     stats[bp] = o.tvalues[basecols - 1]
                 else:
                     stats[bp] = self._quick_ols(endog[baselags:], exog)[basecols - 1]
-        # return best seen
+        # return best seen. bpidx is the last observation before the break,
+        # where the dummies are still zero: p - 1 for "c" and "ct", but
+        # p - 2 for "t", whose trend shift starts at p - 1.
         zastat = np.min(stats)
-        bpidx = np.argmin(stats) - 1
+        bpidx = np.argmin(stats) - (2 if regression == "t" else 1)
         crit = self._za_crit(zastat, regression)
         pval = crit[0]
         cvdict = crit[1]
