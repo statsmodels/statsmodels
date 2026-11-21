@@ -1,3 +1,6 @@
+from statsmodels.compat.pandas import MONTH_END
+from statsmodels.compat.pytest import pytest_warns
+
 from itertools import product
 
 import numpy as np
@@ -202,3 +205,27 @@ def test_theta_invalid_period_raises():
         ThetaModel(y, period=-3)
     with pytest.raises(ValueError, match="period must be >= 2"):
         ThetaModel(y, period=1)
+
+
+def test_forecast_inferred_freq():
+    # A regular DatetimeIndex without a freq is extended with the inferred
+    # freq, as the same index with the freq. The forecasts used to have
+    # integer labels, with a warning.
+    rng = np.random.default_rng(20261121)
+    y = np.exp(np.cumsum(0.01 + 0.01 * rng.standard_normal(120)))
+    index = pd.date_range("2000-01-31", periods=120, freq=MONTH_END)
+    no_freq = pd.DatetimeIndex(list(index))
+    assert no_freq.freq is None
+    res = ThetaModel(pd.Series(y, index=no_freq)).fit()
+    expected = ThetaModel(pd.Series(y, index=index)).fit()
+    assert res.model.period == 12
+    fcast_index = pd.date_range(index[-1], periods=8, freq=MONTH_END)[1:]
+    with pytest_warns(None):
+        fcast = res.forecast(7)
+        components = res.forecast_components(7)
+    pd.testing.assert_index_equal(fcast.index, fcast_index)
+    pd.testing.assert_series_equal(fcast, expected.forecast(7), rtol=1e-12)
+    pd.testing.assert_index_equal(components.index, fcast_index)
+    pd.testing.assert_frame_equal(
+        components, expected.forecast_components(7), rtol=1e-12
+    )
