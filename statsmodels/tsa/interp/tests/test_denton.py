@@ -131,3 +131,26 @@ def test_denton_invalid_k(k, error, match):
     # allowed"
     with pytest.raises(error, match=match):
         dentonm(np.arange(1.0, 9.0), [10.0, 26.0], freq="other", k=k)
+
+
+@pytest.mark.parametrize(
+    "benchmark",
+    [np.ones((2, 2)), np.ones((1, 2)), np.ones((2, 1, 1)), np.float64(10.0)],
+    ids=["two-columns", "row", "3-d", "scalar"],
+)
+def test_denton_benchmark_not_single_series(benchmark):
+    # Only one series is benchmarked. Several columns, a row or 3-d input
+    # raised a numpy broadcasting error, and a scalar "len() of unsized object"
+    with pytest.raises(ValueError, match="benchmark must be a single series"):
+        dentonm(np.arange(1.0, 9.0), benchmark)
+
+
+@pytest.mark.parametrize(
+    "form", [np.asarray, lambda b: np.asarray(b)[:, None]], ids=["1-d", "column"]
+)
+def test_denton_benchmark_single_series(form):
+    indicator = np.array([10.0, 12.0, 11.0, 9.0, 13.0, 14.0, 15.0, 16.0, 12.0, 11.0])
+    benchmark = [40.0, 50.0]
+    res = dentonm(indicator, form(benchmark), freq="other", k=4)
+    expected = _denton_null_space_solution(indicator, benchmark, 4)
+    assert_allclose(res, expected, rtol=1e-10)
