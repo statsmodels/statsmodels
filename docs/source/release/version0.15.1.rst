@@ -1230,9 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- The ARMA likelihood functions of ``statsmodels.tsa.innovations`` raised for
-  an (n, 1) or one-column DataFrame ``endog``, and ``arma_score`` and
-  ``arma_scoreobs`` raised for scalar parameters. :pr:`10888`
 
 Statistics and tests
 --------------------
