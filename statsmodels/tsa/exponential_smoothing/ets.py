@@ -245,8 +245,10 @@ class ETSModel(base.StateSpaceMLEModel):
     seasonal_periods : int, optional
         The number of periods in a complete seasonal cycle for seasonal
         (Holt-Winters) models. For example, 4 for quarterly data with an
-        annual cycle or 7 for daily data with a weekly cycle. Required if
-        `seasonal` is not None.
+        annual cycle or 7 for daily data with a weekly cycle. Must be larger
+        than 1. Only used if `seasonal` is not None. If None, it is inferred
+        from the frequency of the date index of `endog`, so it is required
+        if `endog` has no date index with a frequency.
     initialization_method : {"estimated", "heuristic", "known"}, optional
         Method for initialization of the state space model. One of:
 
@@ -290,7 +292,7 @@ class ETSModel(base.StateSpaceMLEModel):
     initial_seasonal : array_like, optional
         The initial seasonal component. An array of length `seasonal_periods`.
         Only used if initialization is 'known'.
-    bounds : dict or None, optional
+    bounds : dict, optional
         A dictionary with parameter names as keys and the respective bounds
         intervals as values (lists/tuples/arrays).
         The available parameter names are, depending on the model and
@@ -306,6 +308,18 @@ class ETSModel(base.StateSpaceMLEModel):
 
         The default option is ``None``, in which case the traditional
         (nonlinear) bounds as described in [1]_ are used.
+    dates : array_like of datetime, optional
+        The dates of the observations, used as the index if `endog` is not
+        a pandas object. Date strings and datetimes can then be used for
+        `start`, `end`, `dynamic` and `anchor` in prediction and
+        simulation, but the results are still ndarrays.
+    freq : str, optional
+        The frequency of the time series, a pandas offset alias. Only needed
+        if `dates` or the index of `endog` have no frequency of their own.
+    missing : {"none", "drop", "raise"}, optional
+        How observations with NaN in `endog` are handled. "none" (default)
+        does not check for NaN, "drop" drops these observations and "raise"
+        raises a MissingDataError.
 
     Notes
     -----
@@ -550,10 +564,10 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Parameters
         ----------
-        initialization_method : {"estimated", "heuristic", "known"}, optional
+        initialization_method : {"estimated", "heuristic", "known"}
             Method for initialization of the state space model. One of:
 
-            * 'estimated' (default)
+            * 'estimated'
             * 'heuristic'
             * 'known'
 
@@ -563,7 +577,7 @@ class ETSModel(base.StateSpaceMLEModel):
             'heuristic' uses a heuristic based on the data to estimate initial
             level, trend, and seasonal state. 'estimated' uses the same
             heuristic as initial guesses, but then estimates the initial states
-            as part of the fitting process. Default is 'estimated'.
+            as part of the fitting process.
         initial_level : float, optional
             The initial level component. Only used if initialization is
             'known'.
@@ -653,12 +667,12 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Parameters
         ----------
-        bounds : dict or None, optional
+        bounds : dict or None
             A dictionary with parameter names as keys and the respective bounds
             intervals as values (lists/tuples/arrays).
             The available parameter names are in ``self.param_names``.
-            The default option is ``None``, in which case the traditional
-            (nonlinear) bounds as described in [1]_ are used.
+            If ``None`` or an empty dictionary, the traditional (nonlinear)
+            bounds as described in [1]_ are used.
 
         References
         ----------
@@ -679,7 +693,21 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @staticmethod
     def prepare_data(data):
-        """Prepare data for use in the state space representation"""
+        """
+        Prepare data for use in the state space representation
+
+        Parameters
+        ----------
+        data : ModelData
+            The data of the model.
+
+        Returns
+        -------
+        endog : ndarray
+            The observations as a writeable, C-contiguous float64 array.
+        exog : None
+            ETS models have no exogenous variables.
+        """
         endog = np.require(data.orig_endog, requirements="WC")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
@@ -689,14 +717,17 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @property
     def nobs_effective(self):
+        """The number of observations used in the log-likelihood"""
         return self.nobs
 
     @property
     def k_endog(self):
+        """The number of endogenous variables, always 1"""
         return 1
 
     @property
     def short_name(self):
+        """The model as a string such as "AAdA" (error, trend, seasonal)"""
         name = "".join(
             [str(s)[0].upper() for s in [self.error, self.trend, self.seasonal]]
         )
@@ -727,6 +758,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @property
     def state_names(self):
+        """The names of the states of the model"""
         names = ["level"]
         if self.has_trend:
             names += ["trend"]
@@ -736,6 +768,7 @@ class ETSModel(base.StateSpaceMLEModel):
 
     @property
     def initial_state_names(self):
+        """The names of the initial states of the model"""
         names = ["initial_level"]
         if self.has_trend:
             names += ["initial_trend"]
@@ -1052,8 +1085,9 @@ class ETSModel(base.StateSpaceMLEModel):
 
         Returns
         -------
-        results : ETSResults
-            The fitted model results.
+        results : ETSResults or ndarray
+            The fitted model results, or the array of fitted parameters if
+            `return_params` is True.
         """
 
         if start_params is None:
@@ -1259,6 +1293,12 @@ class ETSModel(base.StateSpaceMLEModel):
         **kwargs
             Additional keyword arguments, unused.
 
+        Returns
+        -------
+        float
+            The value of the log-likelihood at `params`, with the variance
+            of the errors concentrated out.
+
         Notes
         -----
         The log-likelihood of a exponential smoothing model is [1]_:
@@ -1266,16 +1306,18 @@ class ETSModel(base.StateSpaceMLEModel):
         .. math::
 
            l(\theta, x_0|y) = - \frac{n}{2}(\log(2\pi s^2) + 1)
-                              - \sum\limits_{t=1}^n \log(k_t)
+                              - \sum\limits_{t=1}^n \log|k_t|
 
         with
 
         .. math::
 
-           s^2 = \frac{1}{n}\sum\limits_{t=1}^n \frac{(\hat{y}_t - y_t)^2}{k_t}
+           s^2 = \frac{1}{n}\sum\limits_{t=1}^n
+                 \left(\frac{y_t - \hat{y}_t}{k_t}\right)^2
 
-        where :math:`k_t = 1` for the additive error model and
-        :math:`k_t = y_t` for the multiplicative error model.
+        where :math:`\hat{y}_t` is the one-step-ahead prediction of
+        :math:`y_t`, :math:`k_t = 1` for the additive error model and
+        :math:`k_t = \hat{y}_t` for the multiplicative error model.
 
         References
         ----------
@@ -1390,11 +1432,14 @@ class ETSModel(base.StateSpaceMLEModel):
         Returns
         -------
         hessian : ndarray
-            Hessian matrix evaluated at `params`
+            Hessian matrix evaluated at `params`, divided by the number of
+            observations (`nobs_effective`).
 
         Notes
         -----
-        This is a numerical approximation.
+        This is a numerical approximation. The finite difference
+        approximation (``approx_complex_step=False``) warns that it can have
+        a large approximation error.
         """
         method = kwargs.get("method", "approx")
 
@@ -1459,6 +1504,16 @@ class ETSModel(base.StateSpaceMLEModel):
 class ETSResults(base.StateSpaceMLEResults):
     """
     Results from an error, trend, seasonal (ETS) exponential smoothing model
+
+    Parameters
+    ----------
+    model : ETSModel
+        The model instance.
+    params : ndarray
+        The model parameters, in the order of ``model.param_names``.
+    results : tuple
+        The fitted values and the states of the model at `params`, as
+        returned by ``model.smooth(params, return_raw=True)``.
     """
 
     def __init__(self, model, params, results):
@@ -1618,14 +1673,20 @@ class ETSResults(base.StateSpaceMLEResults):
 
     @cache_readonly
     def nobs_effective(self):
+        """The number of observations used in the log-likelihood"""
         return self.nobs
 
     @cache_readonly
     def fittedvalues(self):
+        """The one-step-ahead predictions of the observations"""
         return self._fittedvalues
 
     @cache_readonly
     def resid(self):
+        """
+        The residuals: the one-step-ahead prediction errors, divided by the
+        predictions for multiplicative errors
+        """
         return self._residuals
 
     @cache_readonly
@@ -2043,8 +2104,10 @@ class ETSResults(base.StateSpaceMLEResults):
 
         Returns
         -------
-        forecast : ndarray
-            Array of out of sample forecasts. A (steps x k_endog) array.
+        forecast : Series or ndarray
+            The out of sample forecasts, of shape (steps,). A Series indexed
+            by the forecast periods if `endog` is a pandas object, otherwise
+            an ndarray.
         """
         return self._forecast(steps, "end")
 
@@ -2154,7 +2217,7 @@ class ETSResults(base.StateSpaceMLEResults):
 
         Returns
         -------
-        forecast : ndarray or Series.
+        forecast : ndarray or Series
             Array of out of in-sample predictions and / or out-of-sample
             forecasts. An (npredict,) array. If original data was a Series
             or DataFrame, a Series is returned.
@@ -2232,11 +2295,13 @@ class ETSResults(base.StateSpaceMLEResults):
             from the model's index or model's row labels.
         method : {"exact", "simulated"} or None, optional
             Method to use for calculating prediction intervals. 'exact'
-            (default, if available) or 'simulated'.
+            (default, if available) or 'simulated'. 'exact' is available
+            for the models with additive errors and no multiplicative
+            components, "ANN", "AAN", "AAdN", "ANA", "AAA" and "AAdA".
         simulate_repetitions : int, optional
             Number of simulation repetitions for calculating prediction
             intervals when ``method='simulated'``. Default is 1000.
-        **simulate_kwargs :
+        **simulate_kwargs
             Additional arguments passed to the ``simulate`` method.
 
         Returns
@@ -2357,11 +2422,13 @@ class PredictionResults:
         from the model's index or model's row labels.
     method : {"exact", "simulated"} or None, optional
         Method to use for calculating prediction intervals. 'exact' (default,
-        if available) or 'simulated'.
+        if available) or 'simulated'. 'exact' is available for the models
+        with additive errors and no multiplicative components, "ANN", "AAN",
+        "AAdN", "ANA", "AAA" and "AAdA".
     simulate_repetitions : int, optional
         Number of simulation repetitions for calculating prediction intervals.
         Default is 1000.
-    **simulate_kwargs :
+    **simulate_kwargs
         Additional arguments passed to the ``simulate`` method.
     """
 
