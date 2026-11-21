@@ -934,7 +934,27 @@ def _arma_lags_method_doc(func, name, description, changes=()):
 
 
 _generate_sample_doc = Docstring(arma_generate_sample.__doc__)
-_generate_sample_doc.remove_parameters(["ar", "ma"])
+_generate_sample_doc.remove_parameters(["ar", "ma", "nsample"])
+_generate_sample_doc.insert_parameters(
+    None,
+    Parameter(
+        "nsample",
+        "int or tuple of int, optional",
+        [
+            "If nsample is an integer, then this creates a 1d timeseries of",
+            "length size. If nsample is a tuple, creates a len(nsample)",
+            "dimensional time series where time is indexed along the input",
+            "variable ``axis``. All series are independent unless ``distrvs``",
+            "generates dependent data. If not given, the ``nobs`` attribute",
+            "of the process is used.",
+            "",
+            ".. versionchanged:: 0.15.1",
+            "",
+            "    The default is the ``nobs`` attribute of the process. It used",
+            "    to be 100, whatever the value of ``nobs``.",
+        ],
+    ),
+)
 _generate_sample_doc.replace_block("Notes", [])
 _generate_sample_doc.replace_block("Examples", [])
 
@@ -1343,8 +1363,11 @@ class ArmaProcess:
 
     @Appender(str(_generate_sample_doc))
     def generate_sample(
-        self, nsample=100, scale=1.0, distrvs=None, axis=0, burnin=0
+        self, nsample=None, scale=1.0, distrvs=None, axis=0, burnin=0
     ):
+        # The default used to be 100, whatever the value of nobs
+        if nsample is None:
+            nsample = self.nobs
         return arma_generate_sample(
             self.ar, self.ma, nsample, scale, distrvs, axis=axis, burnin=burnin
         )

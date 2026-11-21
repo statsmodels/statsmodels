@@ -338,6 +338,10 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- ``ArmaProcess.generate_sample`` uses the ``nobs`` of the process as the
+  default sample size, as documented, instead of 100. Processes created with
+  another ``nobs``, including those from ``ArmaProcess.from_estimation``, now
+  generate ``nobs`` values when ``nsample`` is not given. :pr:`10862`
 
 New Features and Enhancements
 =============================
