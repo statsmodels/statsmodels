@@ -86,7 +86,15 @@ class DeterministicTerm(ABC):
             index.
         forecast_index : index_like, optional
             An Index or index-like object to use for the forecasts. If
-            provided must have steps elements.
+            provided must have steps elements. If not provided, index is
+            extended.
+
+            .. versionchanged:: 0.15.1
+
+               A ``DatetimeIndex`` without a ``freq`` is extended with the
+               inferred freq, as in ``DeterministicProcess``. Before, the
+               forecasts had integer labels, with a warning, and calendar
+               terms raised.
 
         Returns
         -------
@@ -132,11 +140,16 @@ class DeterministicTerm(ABC):
                     f"({forecast_index.shape[0]}) must match steps ({steps})."
                 )
             return forecast_index
+        freq = None
+        if isinstance(index, pd.DatetimeIndex):
+            # The freq of the index, else the inferred freq
+            with _infer_freq_returns_offset():
+                freq = index.freq or index.inferred_freq
         if isinstance(index, pd.PeriodIndex):
             return pd.period_range(index[-1] + 1, periods=steps, freq=index.freq)
-        elif isinstance(index, pd.DatetimeIndex) and index.freq is not None:
-            next_obs = pd.date_range(index[-1], freq=index.freq, periods=2)[1]
-            return pd.date_range(next_obs, freq=index.freq, periods=steps)
+        elif freq is not None:
+            next_obs = pd.date_range(index[-1], freq=freq, periods=2)[1]
+            return pd.date_range(next_obs, freq=freq, periods=steps)
         elif isinstance(index, pd.RangeIndex):
             step = index.step
             start = index.stop
@@ -149,8 +162,8 @@ class DeterministicTerm(ABC):
         import warnings
 
         warnings.warn(
-            "Only PeriodIndexes, DatetimeIndexes with a frequency set, "
-            "RangesIndexes, and Index with a unit increment support "
+            "Only PeriodIndexes, DatetimeIndexes with a frequency set or "
+            "inferred, RangesIndexes, and Index with a unit increment support "
             "extending. The index is set will contain the position relative "
             "to the data length.",
             UserWarning,
