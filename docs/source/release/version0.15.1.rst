@@ -67,6 +67,10 @@ Deprecations
   ``NotImplementedError``, will be removed after statsmodels 0.16. Use
   ``statsmodels.tsa.arima.model.ARIMA`` or
   ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
+- A bool ``p`` in ``c_sja`` and ``c_sjt``, and so ``det_order=True`` in
+  :func:`~statsmodels.tsa.vector_ar.vecm.coint_johansen`, is deprecated. It is
+  still used as 0 or 1, with a ``FutureWarning``, and will raise after
+  statsmodels 0.17. :pr:`10859`
 - The ``return_results`` argument of :func:`~statsmodels.tsa.stattools.coint`
   is deprecated. It has no effect, issues a ``FutureWarning`` when it is not
   ``None``, and will be removed after statsmodels 0.17 is released.
@@ -1182,6 +1186,10 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- ``c_sja`` and ``c_sjt`` raised unrelated errors for a non-integer ``p`` and
+  returned a view of their table, so changing a result changed later calls.
+  A non-integer ``p`` raises a ``ValueError``, and a copy is returned.
+  :pr:`10859`
 - ``CalendarTimeTrend`` returned its terms on a ``PeriodIndex`` for a
   ``DatetimeIndex``, so a ``DeterministicProcess`` that combined it with other
   terms gave misaligned frames with NaN, and on a ``PeriodIndex`` with a
