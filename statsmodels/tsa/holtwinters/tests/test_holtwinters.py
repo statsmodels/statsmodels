@@ -952,6 +952,61 @@ def test_use_boxcox_fit_override():
     ), f"Expected fitted lambda, got {res.params['lamda']}"
 
 
+@pytest.mark.parametrize(
+    "initialization_method", ["estimated", "heuristic", "legacy-heuristic", "known"]
+)
+@pytest.mark.parametrize("use_boxcox", [0, 1, 2])
+def test_int_use_boxcox_is_bool(initialization_method, use_boxcox):
+    # fit and forecast use an int use_boxcox as a bool: 0 does not transform
+    # the data and any other int estimates lambda. The initial values must
+    # come from the same transform. They were computed with the int as a
+    # fixed lambda, so "heuristic" and "legacy-heuristic" smoothed the data
+    # from initial states on another scale, and "estimated" started there.
+    flag = bool(use_boxcox)
+    kwargs = {}
+    if initialization_method == "known":
+        heuristic = ExponentialSmoothing(
+            housing_data,
+            trend="add",
+            seasonal="add",
+            initialization_method="heuristic",
+            use_boxcox=flag,
+        ).initial_values()
+        names = ("initial_level", "initial_trend", "initial_seasonal")
+        kwargs = dict(zip(names, heuristic, strict=True))
+    models = [
+        ExponentialSmoothing(
+            housing_data,
+            trend="add",
+            seasonal="add",
+            initialization_method=initialization_method,
+            use_boxcox=value,
+            **kwargs,
+        )
+        for value in (use_boxcox, flag)
+    ]
+    results = [mod.fit() for mod in models]
+    initial = [mod.initial_values() for mod in models]
+    for actual, expected in zip(initial[0], initial[1], strict=True):
+        assert_allclose(actual, expected, rtol=1e-14)
+    res_int, res_bool = results
+    assert res_int.params["use_boxcox"] == use_boxcox
+    names = ["smoothing_level", "smoothing_trend", "smoothing_seasonal"]
+    names += ["initial_level", "initial_trend"]
+    for name in names:
+        assert_allclose(res_int.params[name], res_bool.params[name], rtol=1e-12)
+    assert_allclose(res_int.fittedvalues, res_bool.fittedvalues, rtol=1e-12)
+    assert_allclose(res_int.forecast(12), res_bool.forecast(12), rtol=1e-12)
+    y = np.squeeze(np.asarray(housing_data))
+    if flag:
+        # The maximum likelihood lambda of the data
+        assert_allclose(res_int.params["lamda"], scipy.stats.boxcox(y)[1], rtol=1e-12)
+    else:
+        assert res_int.params["lamda"] is None
+        resid = y - np.asarray(res_int.fittedvalues)
+        assert_allclose(res_int.sse, resid @ resid, rtol=1e-12)
+
+
 HW_TWIN_CASES = [
     (trend, seasonal, damped)
     for trend in TRENDS
