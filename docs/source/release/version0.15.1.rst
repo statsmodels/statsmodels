@@ -379,12 +379,6 @@ Behavior changes
   observations. It counted the NaNs, so it could return more lags, or raise
   when ``nlags`` was not given. The values at each lag are unchanged.
   :pr:`10847`
-- Without MLE, ``sigma2`` of
-  :class:`~statsmodels.tsa.forecasting.theta.ThetaModel` results was estimated
-  on the original data, including the seasonal pattern, while the forecasts
-  use the deseasonalized data. It is estimated on the deseasonalized data,
-  so ``sigma2`` and the prediction intervals of seasonal models change.
-  :pr:`10880`
 
 New Features and Enhancements
 =============================
