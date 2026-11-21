@@ -379,12 +379,6 @@ Behavior changes
   observations. It counted the NaNs, so it could return more lags, or raise
   when ``nlags`` was not given. The values at each lag are unchanged.
   :pr:`10847`
-- The prediction intervals of
-  :class:`~statsmodels.tsa.forecasting.theta.ThetaModel` used the forecast
-  variance ``sigma2 * (1 + (h - 1) * (1 + (alpha - 1) ** 2))``, which is too
-  large after the first step. They use the variance of the IMA(1,1) model,
-  ``sigma2 * (1 + (h - 1) * alpha ** 2)``, so the intervals are narrower.
-  :pr:`10879`
 
 New Features and Enhancements
 =============================
