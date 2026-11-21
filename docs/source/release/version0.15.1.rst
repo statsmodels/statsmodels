@@ -88,11 +88,6 @@ Deprecations
   selects ``"2pi"`` (the spectral density) or ``"sqrt(2pi)"`` (the current
   result). Without it, a ``FutureWarning`` is issued, and the default will
   change to ``"2pi"`` after statsmodels 0.17. :pr:`10863`
-- A single ``initial_seasonal`` value in
-  :class:`~statsmodels.tsa.holtwinters.ExponentialSmoothing` with
-  ``seasonal_periods=2`` is used for both seasons with a ``FutureWarning``;
-  after statsmodels 0.17 the second value will be computed to make the
-  average effect zero. :pr:`10877`
 
 Behavior changes
 ----------------
@@ -1235,10 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- :class:`~statsmodels.tsa.holtwinters.ExponentialSmoothing` with an
-  ``initial_seasonal`` of length ``seasonal_periods - 1``, which is
-  documented, raised in ``fit``. The last value is computed to make the
-  average effect zero. :pr:`10877`
 
 Statistics and tests
 --------------------
