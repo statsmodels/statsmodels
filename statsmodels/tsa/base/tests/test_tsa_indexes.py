@@ -2215,3 +2215,74 @@ def test_oos_end_key_models(model):
     assert_allclose(
         np.asarray(pred), np.asarray(res.predict(start=34, end=41)), rtol=1e-12
     )
+
+
+ROW_LABEL_DATES = pd.DatetimeIndex(
+    ["2000-01-03", "2000-01-10", "2000-01-24", "2000-03-06", "2000-03-27"]
+)
+
+
+@pytest.mark.parametrize(
+    "start, end, expected_start, expected_end",
+    [
+        # All dates of January, not only the first one
+        (0, "2000-01", 0, 2),
+        (1, "2000-01", 1, 2),
+        ("2000-01", "2000-03", 0, 4),
+        ("2000-01", "2000", 0, 4),
+        # No date in February: the end is the last date before it
+        (0, "2000-02", 0, 2),
+        # Without an end, prediction runs from the first date of the start key
+        ("2000-03", None, 3, 4),
+    ],
+)
+def test_row_label_partial_date_keys(start, end, expected_start, expected_end):
+    # Dates without a frequency are only row labels, and a partial date string
+    # that matches several of them gives a slice
+    endog = pd.Series(np.zeros(5), index=ROW_LABEL_DATES)
+    with pytest.warns(ValueWarning, match="no associated frequency"):
+        mod = tsa_model.TimeSeriesModel(endog)
+    start_loc, end_loc, out_of_sample, prediction_index = (
+        tsa_model.get_prediction_index(
+            start,
+            end,
+            5,
+            mod._index,
+            index_generated=mod._index_generated,
+            data=mod.data,
+        )
+    )
+    assert (start_loc, end_loc, out_of_sample) == (expected_start, expected_end, 0)
+    expected = ROW_LABEL_DATES[expected_start : expected_end + 1]
+    assert prediction_index.equals(expected)
+
+
+def test_row_label_repeated_key():
+    # A key that matches consecutive row labels covers all of them as the end
+    endog = pd.Series(np.zeros(4), index=pd.Index(["a", "b", "b", "c"]))
+    with pytest.warns(ValueWarning, match="An unsupported index was provided"):
+        # pandas >= 2 warns that it cannot infer the format of strings
+        with warns_or_none(UserWarning, match="Could not infer format"):
+            mod = tsa_model.TimeSeriesModel(endog)
+    start, end, _, prediction_index = tsa_model.get_prediction_index(
+        0, "b", 4, mod._index, index_generated=mod._index_generated, data=mod.data
+    )
+    assert (start, end) == (0, 2)
+    assert prediction_index.equals(pd.Index(["a", "b", "b"]))
+    start, end, _, prediction_index = tsa_model.get_prediction_index(
+        "b", None, 4, mod._index, index_generated=mod._index_generated, data=mod.data
+    )
+    assert (start, end) == (1, 3)
+    assert prediction_index.equals(pd.Index(["b", "b", "c"]))
+
+
+def test_get_index_label_loc_row_label_slice():
+    endog = pd.Series(np.zeros(5), index=ROW_LABEL_DATES)
+    with pytest.warns(ValueWarning, match="no associated frequency"):
+        mod = tsa_model.TimeSeriesModel(endog)
+    loc, index, expanded = tsa_model.get_index_label_loc(
+        "2000-01", mod._index, mod.data.row_labels
+    )
+    assert loc == slice(0, 3)
+    assert index.equals(ROW_LABEL_DATES[:3])
+    assert not expanded

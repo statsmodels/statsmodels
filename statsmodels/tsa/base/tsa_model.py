@@ -290,12 +290,18 @@ def get_index_label_loc(key, index, row_labels):
     row_labels : pd.Index
         Row labels to search if key not found in index
 
+        .. versionchanged:: 0.15.1
+
+           A key that matches several consecutive row labels, such as
+           "2000-01" for dates without a frequency, gives the slice of all of
+           them, as in `index`. Previously it gave the location of the first
+           one, so that prediction with this key as `end` stopped there.
+
     Returns
     -------
     loc : int or slice
         The location of the key. A slice if `key` is a partial date string
-        found in `index`. If `key` is only found in `row_labels`, the first
-        matching location.
+        that matches several dates, for example "2000-03" for daily dates.
     index : pd.Index
         The index including the key; this is a copy of the original index
         unless the index had to be expanded to accommodate `key`.
@@ -330,12 +336,13 @@ def get_index_label_loc(key, index, row_labels):
             loc = row_labels.get_loc(key)
         else:
             raise
-        # Require scalar
         # Pandas may return a slice if there are multiple matching
         # locations that are monotonic increasing (otherwise it may
-        # return an array of integer locations, see below).
+        # return an array of integer locations, see below). Keep the slice,
+        # as get_index_loc does, so that a key such as "2000-01" covers all
+        # of its dates as the end of prediction.
         if isinstance(loc, slice):
-            loc = loc.start
+            return loc, row_labels[: loc.stop], False
         if isinstance(loc, np.ndarray):
             # Pandas may return a mask (boolean array), for e.g.:
             # pd.Index(list('abcb')).get_loc('b')
@@ -466,6 +473,10 @@ def get_prediction_index(
             "The `start` argument could not be matched to a"
             " location related to the index of the data."
         ) from exc
+    # A key that covers more than one date (e.g. "2000-02" for a daily index)
+    # gives a slice, of which prediction starts at the first date
+    if isinstance(start, slice):
+        start = start.start
     if end is None:
         end = max(start, len(base_index) - 1)
     try:
@@ -479,8 +490,6 @@ def get_prediction_index(
         ) from exc
 
     # Handle slices (if the given index keys cover more than one date)
-    if isinstance(start, slice):
-        start = start.start
     if isinstance(end, slice):
         end = end.stop - 1
 
