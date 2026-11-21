@@ -205,3 +205,27 @@ def test_no_var_pred(sunspots, not_implemented, close_figures):
     with pytest.warns(UserWarning, match="The variance of"):
         pred = stl_res.get_prediction()
     assert np.all(np.isnan(pred.var_pred_mean))
+
+
+def test_summary_stl_configuration(data):
+    # The STL configuration table lists the period, seasonal and robust
+    # settings on the left and the trend and low pass settings on the right,
+    # with the values of STL.config. The left column has one entry fewer, so
+    # its last row is blank
+    res = STLForecast(data, AutoReg, model_kwargs={"lags": 2}).fit()
+    config = res.stl.config
+    left = ["period", "seasonal", "seasonal_deg", "seasonal_jump", "robust"]
+    right = ["trend", "trend_deg", "trend_jump"]
+    right += ["low_pass", "low_pass_deg", "low_pass_jump"]
+    table = res.summary().tables[-1]
+    rows = [[str(cell.data).strip() for cell in row] for row in table]
+    assert len(rows) == len(right)
+    for row, key in zip(rows, left + [None], strict=True):
+        if key is None:
+            assert row[:2] == ["", ""]
+        else:
+            assert row[0].lower() == key.replace("_", " ") + ":"
+            assert row[1] == str(config[key])
+    for row, key in zip(rows, right, strict=True):
+        assert row[2].lower().startswith(key.replace("_", " "))
+        assert row[3] == str(config[key])
