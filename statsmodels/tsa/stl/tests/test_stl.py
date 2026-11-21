@@ -395,3 +395,34 @@ def test_list_endog(default_kwargs, form, close_figures):
     fig = res.plot()
     # observed, trend, seasonal and residual
     assert len(fig.axes) == 4
+
+
+@pytest.mark.parametrize("container", ["series", "dataframe"])
+@pytest.mark.parametrize("freq, period", [("M", 12), ("Q", 4), ("W", 52), ("D", 7)])
+def test_period_from_period_index(freq, period, container):
+    # a PeriodIndex has no inferred_freq, so without period STL raised
+    # "Unable to determine period from endog". The period is that of the
+    # frequency of the index, as in seasonal_decompose.
+    y = np.random.default_rng(20261121).standard_normal(3 * period)
+    index = pd.period_range("2000-01-01", periods=y.shape[0], freq=freq)
+    if container == "series":
+        endog = pd.Series(y, index=index)
+    else:
+        endog = pd.DataFrame({"y": y}, index=index)
+    assert STL(endog).period == period
+
+
+def test_period_index_baseline(default_kwargs):
+    # with a monthly PeriodIndex and no period, the decomposition is the
+    # baseline, which has period 12, and keeps the index
+    class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)
+    del class_kwargs["period"]
+    y = class_kwargs["endog"]
+    index = pd.period_range("1959-01", periods=y.shape[0], freq="M")
+    class_kwargs["endog"] = pd.Series(y, index=index)
+    res = STL(**class_kwargs).fit(outer_iter=outer, inner_iter=inner)
+    expected = results.loc["baseline"].sort_index()
+    assert_allclose(res.trend, expected.trend)
+    assert_allclose(res.seasonal, expected.season)
+    assert_allclose(res.weights, expected.rw)
+    assert res.trend.index.equals(index)
