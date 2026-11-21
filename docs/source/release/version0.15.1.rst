@@ -379,12 +379,6 @@ Behavior changes
   observations. It counted the NaNs, so it could return more lags, or raise
   when ``nlags`` was not given. The values at each lag are unchanged.
   :pr:`10847`
-- With ``autolag=None`` and no ``maxlag``,
-  :func:`~statsmodels.tsa.stattools.zivot_andrews` uses the default number of
-  lags of ``adfuller`` with ``regression="ct"``, as its lag search already
-  did: ``ceil(12 * (nobs / 100) ** (1 / 4))``, capped at ``nobs // 2 - 3``. It
-  used the floor of the same formula, without the cap, which is one lag fewer
-  for most sample sizes, so the results of such calls change. :pr:`10851`
 
 New Features and Enhancements
 =============================
