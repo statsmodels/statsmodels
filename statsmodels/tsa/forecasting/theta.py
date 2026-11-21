@@ -469,8 +469,7 @@ class ThetaModelResults:
         b0 = self._b0
         nobs = self._nobs
         h = np.arange(1, steps + 1, dtype=np.float64) - 1
-        if alpha > 0:
-            h += 1 / alpha - ((1 - alpha) ** nobs / alpha)
+        h += 1 / alpha - ((1 - alpha) ** nobs / alpha)
         trend = b0 * h
         ses = self._one_step * np.ones(steps)
         if self.model.method.startswith("add"):

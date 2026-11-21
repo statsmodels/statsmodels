@@ -202,3 +202,27 @@ def test_theta_invalid_period_raises():
         ThetaModel(y, period=-3)
     with pytest.raises(ValueError, match="period must be >= 2"):
         ThetaModel(y, period=1)
+
+
+@pytest.mark.parametrize("alpha", [0.3, 1.0])
+def test_forecast_trend_closed_form(alpha):
+    # At fixed parameters, the trend component is
+    # b0 * (h - 1 + 1 / alpha - (1 - alpha)**T / alpha). T = 12 is short
+    # enough that (1 - alpha)**T matters for alpha = 0.3, and alpha = 1 gives
+    # b0 * h. The forecast is (theta - 1) / theta times the trend plus the
+    # one-step SES forecast
+    from statsmodels.tsa.forecasting.theta import ThetaModelResults
+
+    y = np.arange(1.0, 13.0)
+    model = ThetaModel(y, deseasonalize=False)
+    b0, one_step = 0.4, 12.5
+    res = ThetaModelResults(b0, alpha, 1.0, one_step, np.empty(0), False, model)
+    h = np.arange(1, 8)
+    expected = b0 * (h - 1 + 1 / alpha - (1 - alpha) ** 12 / alpha)
+    if alpha == 1.0:
+        np.testing.assert_allclose(expected, b0 * h, rtol=1e-12)
+    comp = res.forecast_components(7)
+    np.testing.assert_allclose(comp.trend, expected, rtol=1e-12)
+    np.testing.assert_allclose(comp.ses, one_step, rtol=1e-12)
+    expected_forecast = 0.5 * expected + one_step
+    np.testing.assert_allclose(res.forecast(7), expected_forecast, rtol=1e-12)
