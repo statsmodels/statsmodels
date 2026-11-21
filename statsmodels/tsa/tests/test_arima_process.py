@@ -719,6 +719,41 @@ def test_deconvolve_den_longer_than_num():
     assert_array_equal(rem, num)
 
 
+@pytest.mark.parametrize(
+    "num_dtype, den_dtype, expected",
+    [
+        (int, int, np.float64),
+        (np.float32, np.float32, np.float64),
+        (np.float64, np.float64, np.float64),
+        (np.complex64, np.complex64, np.complex128),
+        (np.complex128, np.complex128, np.complex128),
+        (np.float64, np.complex128, np.complex128),
+    ],
+)
+@pytest.mark.parametrize("form", ["ndarray", "list"])
+def test_deconvolve_den_longer_than_num_empty_ndarray(
+    num_dtype, den_dtype, expected, form
+):
+    # The empty quotient was a list, and the remainder was num with its
+    # dtype, the same object for an ndarray. Both now have the dtype of the
+    # other case, n given, and the remainder is a copy.
+    num = np.array([1, 2], dtype=num_dtype)
+    den = np.array([1, 2, 3, 4], dtype=den_dtype)
+    num_arg = num if form == "ndarray" else num.tolist()
+    quot, rem = deconvolve(num_arg, den)
+    assert isinstance(quot, np.ndarray)
+    assert quot.shape == np.array([]).shape
+    assert quot.dtype == expected
+    assert isinstance(rem, np.ndarray)
+    assert rem.dtype == expected
+    assert_array_equal(rem, num)
+    assert not np.shares_memory(rem, num)
+    # The dtypes of the other case
+    quot_n, rem_n = deconvolve(num_arg, den, n=1)
+    assert quot_n.dtype == expected
+    assert rem_n.dtype == expected
+
+
 def test_ar2arma_recovers_correctly_specified_ar():
     # When the fitted ARMA(p, 1) nests the true AR(p-1) process exactly
     # (trivial MA), ar2arma should recover it (near) exactly, and the
@@ -1393,6 +1428,23 @@ def test_deconvolve_den_2d_deprecated():
         quot, rem = deconvolve([2.0], _as_2d([1.0, -0.5], "column"))
     assert quot == []
     assert_allclose(rem, [2.0], rtol=1e-15)
+
+
+@pytest.mark.parametrize("arg", ["num", "den"])
+def test_deconvolve_2d_result_unchanged(arg):
+    # The deprecated 2-D input still returns an empty list and num itself,
+    # with its dtype, while 1-D input returns float arrays
+    num = np.array([2, 0, 0, -1])
+    den = np.array([1, 2, 3, 4, 5])
+    if arg == "num":
+        num = num[None, :]
+    else:
+        den = den[:, None]
+    with pytest.warns(FutureWarning, match=_warns_2d(arg)):
+        quot, rem = deconvolve(num, den)
+    assert isinstance(quot, list)
+    assert quot == []
+    assert rem is num
 
 
 @pytest.mark.parametrize(

@@ -71,6 +71,10 @@ Deprecations
   ``FutureWarning`` and returns the same result as before. After statsmodels
   0.17, a column will give the result of the 1-D series and other input will
   raise. :pr:`10858`
+- A bool ``p`` in ``c_sja`` and ``c_sjt``, and so ``det_order=True`` in
+  :func:`~statsmodels.tsa.vector_ar.vecm.coint_johansen`, is deprecated. It is
+  still used as 0 or 1, with a ``FutureWarning``, and will raise after
+  statsmodels 0.17. :pr:`10859`
 - The ``return_results`` argument of :func:`~statsmodels.tsa.stattools.coint`
   is deprecated. It has no effect, issues a ``FutureWarning`` when it is not
   ``None``, and will be removed after statsmodels 0.17 is released.
@@ -351,6 +355,16 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- When ``den`` is longer than ``num``, ``deconvolve`` returns an empty ndarray
+  instead of a list as the quotient, and a float (or complex) copy of ``num``
+  as the remainder instead of ``num`` itself. The values are unchanged.
+  :pr:`10864`
+- ``arma_pacf``, ``arma_impulse_response``, ``arma2ma`` and ``arma2ar`` raise
+  a ``ValueError`` for ``lags`` below 1, as the ``ArmaProcess`` methods do since
+  :pr:`10835`, instead of NumPy errors, and ``arma_periodogram`` raises for an
+  integer ``worN`` below 1 instead of returning empty arrays.
+  ``ArmaProcess.from_estimation`` no longer replaces ``nobs=0`` with the number
+  of observations of the results. :pr:`10860`
 - ``ArmaProcess.generate_sample`` uses the ``nobs`` of the process as the
   default sample size, as documented, instead of 100. Processes created with
   another ``nobs``, including those from ``ArmaProcess.from_estimation``, now
@@ -1178,6 +1192,10 @@ Time series analysis
   array was promoted to double precision. :pr:`10857`
 - ``index2lpol`` raised an ``IndexError`` for a tuple ``index``, and ``ar2arma``
   raised a ``TypeError`` for a tuple ``ar_des``. :pr:`10858`
+- ``c_sja`` and ``c_sjt`` raised unrelated errors for a non-integer ``p`` and
+  returned a view of their table, so changing a result changed later calls.
+  A non-integer ``p`` raises a ``ValueError``, and a copy is returned.
+  :pr:`10859`
 - ``CalendarTimeTrend`` returned its terms on a ``PeriodIndex`` for a
   ``DatetimeIndex``, so a ``DeterministicProcess`` that combined it with other
   terms gave misaligned frames with NaN, and on a ``PeriodIndex`` with a
