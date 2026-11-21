@@ -1001,13 +1001,27 @@ def test_seasonal_decompose_plot(
             184,
         ]
     )
-    x -= x.min() + 1
+    # a minimum of 1, since the multiplicative model needs positive data
+    x -= x.min() - 1
     x2 = np.r_[x[12:], x[:12]]
     x = np.c_[x, x2]
     res = seasonal_decompose(
-        x, period=period, two_sided=two_sided, extrapolate_trend=extrapolate_trend
+        x,
+        model=model,
+        period=period,
+        two_sided=two_sided,
+        extrapolate_trend=extrapolate_trend,
+    )
+    # the seasonal component of a cycle averages to 0 for the additive and
+    # to 1 for the multiplicative model, in each column. atol since the
+    # additive average is zero up to rounding of values of order 100.
+    expected = 0.0 if model == "additive" else 1.0
+    assert_allclose(
+        res.seasonal[:period].mean(axis=0), [expected, expected], atol=1e-10
     )
     fig = res.plot()
+    # observed, trend, one seasonal panel per column and residual
+    assert len(fig.axes) == 5
 
     import matplotlib.pyplot as plt
 
