@@ -1230,11 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- ``DeterministicProcess.out_of_sample`` and the ``out_of_sample`` of the
-  deterministic terms ignored the inferred frequency of an index without one,
-  such as a list of dates, so the forecasts had integer labels, with warnings,
-  and calendar terms raised. They use the inferred frequency, so the forecast
-  index of ``ThetaModel`` for such data is dates too. :pr:`10855`
 
 Statistics and tests
 --------------------
