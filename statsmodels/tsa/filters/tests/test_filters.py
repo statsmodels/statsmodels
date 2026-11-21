@@ -1196,8 +1196,6 @@ CONVOLUTION_2D_CASES = [
     for kind in ("1d", "column", "2d")
     for nlags in (1, 2, 3, 4)
     for nsides in (1, 2)
-    # a (1, nvar) filter is not a separate lag polynomial per column
-    if not (kind == "2d" and nlags == 1)
 ]
 
 
@@ -2163,3 +2161,39 @@ def test_fftconvolveinv_longer_in2(mode, start, stop):
     in2 = array([1.0, -a, 0.0, 0.0, 0.0])
     res = fftconvolveinv(in1, in2, mode=mode)
     assert_allclose(res, geometric[start:stop], rtol=1e-12)
+
+
+@pytest.mark.parametrize("nsides", [1, 2])
+@pytest.mark.parametrize("nvar", [1, 2, 3])
+def test_convolution_filter_row_filter(nvar, nsides):
+    # a (1, nvar) filter has one coefficient per column of x. It was
+    # convolved across the columns instead, which returned one column, 3 * x0
+    # + 2 * x1 = [[23], [46], ...] for nvar = 2. Each column of x is
+    # multiplied by its own coefficient, with no NaN padding for one lag.
+    t = np.arange(1.0, 7.0)
+    x = t[:, None] * np.array([1.0, 10.0, 100.0])[:nvar]
+    filt = np.array([[2.0, 3.0, 4.0][:nvar]])
+    expected = t[:, None] * np.array([2.0, 30.0, 400.0])[:nvar]
+    res = convolution_filter(x, filt, nsides=nsides)
+    assert isinstance(res, np.ndarray)
+    assert_allclose(res, expected, rtol=1e-12)
+    # a DataFrame raised, since the result had one column
+    columns = ["a", "b", "c"][:nvar]
+    index = date_range("2000-01-01", periods=6)
+    res_df = convolution_filter(
+        DataFrame(x, columns=columns, index=index), filt, nsides=nsides
+    )
+    assert isinstance(res_df, DataFrame)
+    assert list(res_df.columns) == columns
+    assert_index_equal(res_df.index, index)
+    assert_allclose(res_df.to_numpy(), expected, rtol=1e-12)
+
+
+def test_convolution_filter_row_filter_fewer_columns():
+    # a filter with one row and fewer columns than x, but more than one, is
+    # not one coefficient per column, and is convolved across the columns as
+    # before: column c of the result is 3 * x[:, c] + 2 * x[:, c + 1]
+    t = np.arange(1.0, 7.0)
+    x = t[:, None] * np.array([1.0, 10.0, 100.0])
+    res = convolution_filter(x, [[2.0, 3.0]])
+    assert_allclose(res, t[:, None] * np.array([23.0, 230.0]), rtol=1e-12)

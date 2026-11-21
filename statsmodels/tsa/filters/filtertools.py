@@ -360,6 +360,14 @@ def convolution_filter(x, filt, nsides=2):
         Linear filter coefficients in reverse time-order. Should have the
         same number of dimensions as x though if 1d and ``x`` is 2d will be
         coerced to 2d.
+
+        .. versionchanged:: 0.15.1
+
+           A filt with one row and one column per column of ``x``, shape
+           (1, nvars), filters each column of ``x`` with its own coefficient,
+           as any 2d filt with one column per column of ``x`` does.
+           Previously its coefficients were convolved across the columns of
+           ``x``, which returned one column of different values.
     nsides : int, optional
         If 2, a centered moving average is computed using the filter
         coefficients. If 1, the filter coefficients are for past values only.
@@ -423,9 +431,15 @@ def convolution_filter(x, filt, nsides=2):
     x = array_like(x, "x", maxdim=2)
     filt = array_like(filt, "filt", ndim=x.ndim)
 
-    if filt.ndim == 1 or min(filt.shape) == 1:
+    # a 2d filt with more than one column has a lag polynomial per column
+    by_column = filt.ndim == 2 and filt.shape[1] > 1
+    if by_column and filt.shape[0] == 1 and filt.shape[1] != x.shape[1]:
+        # a filt with one row is convolved across the columns of x
+        by_column = False
+
+    if not by_column:
         result = signal.convolve(x, filt, mode="valid")
-    else:  # filt.ndim == 2
+    else:
         nlags = filt.shape[0]
         nvar = x.shape[1]
         result = np.zeros((x.shape[0] - nlags + 1, nvar))
