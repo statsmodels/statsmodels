@@ -308,6 +308,11 @@ class ETSModel(base.StateSpaceMLEModel):
            A single value, which is used for all initial seasonal states, is
            deprecated and will raise a ValueError after statsmodels 0.17 is
            released. Other lengths raise a ValueError.
+
+        .. versionchanged:: 0.15.1
+
+           A single row or column is used as a 1-d array. A row was used in
+           reverse order.
     bounds : dict, optional
         A dictionary with parameter names as keys and the respective bounds
         intervals as values (lists/tuples/arrays).
@@ -618,6 +623,11 @@ class ETSModel(base.StateSpaceMLEModel):
                A single value, which is used for all initial seasonal states,
                is deprecated and will raise a ValueError after statsmodels
                0.17 is released. Other lengths raise a ValueError.
+
+            .. versionchanged:: 0.15.1
+
+               A single row or column is used as a 1-d array. A row was used
+               in reverse order.
         """
         self.initialization_method = string_like(
             initialization_method,
@@ -659,6 +669,10 @@ class ETSModel(base.StateSpaceMLEModel):
                         FutureWarning,
                         stacklevel=3,
                     )
+                elif seasonal.shape in ((1, m), (m, 1)):
+                    # A single row or column is used as a 1-d array (a row
+                    # was used in reverse order)
+                    initial_seasonal = seasonal.ravel()
                 elif seasonal.shape != (m,):
                     raise ValueError(
                         "initial_seasonal must have length seasonal_periods "

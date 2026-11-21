@@ -3378,12 +3378,11 @@ def test_initial_seasonal_single_value(austourists, initial_seasonal):
 
 @pytest.mark.parametrize(
     "initial_seasonal",
-    [[1.0, 2.0], [1.0, 2.0, 3.0, 4.0, 5.0], np.ones((4, 1)), np.ones((1, 4)), np.array(5.0)],
-    ids=["2", "5", "(4, 1)", "(1, 4)", "0-d"],
+    [[1.0, 2.0], [1.0, 2.0, 3.0, 4.0, 5.0], np.ones((2, 2)), np.array(5.0)],
+    ids=["2", "5", "(2, 2)", "0-d"],
 )
 def test_initial_seasonal_wrong_length(austourists, initial_seasonal):
-    # Other lengths raised a numpy error when the model was used, except a
-    # (1, 4) row, which was used in reverse order
+    # Other lengths raised a numpy error when the model was used
     with pytest.raises(ValueError, match="initial_seasonal must have length"):
         ETSModel(
             austourists,
@@ -3414,3 +3413,25 @@ def test_initial_seasonal_forms(austourists, form, recwarn):
     # the first prediction is the initial level plus the seasonal of the
     # first observation, the first value of initial_seasonal
     assert_allclose(res.fittedvalues.iloc[0], 40.0 + 3.0, rtol=1e-12)
+
+
+@pytest.mark.parametrize("shape", [(1, 4), (4, 1)], ids=["row", "column"])
+def test_initial_seasonal_row_or_column(austourists, shape, recwarn):
+    # A single row was used in reverse order and a column raised when the
+    # model was used. Both are used as the 1-d array.
+    seasonal = [3.0, -1.0, -4.0, 2.0]
+    kwargs = dict(
+        seasonal="add",
+        seasonal_periods=4,
+        initialization_method="known",
+        initial_level=40.0,
+    )
+    model = ETSModel(
+        austourists, initial_seasonal=np.reshape(seasonal, shape), **kwargs
+    )
+    expected = ETSModel(austourists, initial_seasonal=seasonal, **kwargs)
+    res = model.smooth([0.3, 0.1])
+    assert len(recwarn) == 0
+    assert_allclose(res.initial_seasonal, seasonal, rtol=1e-12)
+    assert_allclose(res.fittedvalues.iloc[0], 40.0 + 3.0, rtol=1e-12)
+    assert_allclose(res.llf, expected.smooth([0.3, 0.1]).llf, rtol=1e-12)
