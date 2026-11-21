@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from statsmodels.compat.pandas import (
+    MONTH_END,
     PD_LT_2_2_0,
     PD_LT_3_1_0,
+    QUARTER_END,
+    YEAR_END,
     _infer_freq_returns_offset,
     is_int_index,
     to_numpy,
@@ -11,6 +14,7 @@ from statsmodels.compat.pandas import (
 from abc import ABC, abstractmethod
 import datetime as dt
 from typing import TYPE_CHECKING
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -556,15 +560,64 @@ class Fourier(FourierDeterministicTerm):
         return f"Fourier(period={self._period}, order={self._order})"
 
 
+def _end_anchored(offset: pd.DateOffset) -> pd.DateOffset:
+    """
+    The end-anchored offset with the same periods as a start-anchored one
+
+    "MS" -> "ME", "QS-m" -> "QE-(m - 1)" and "YS-m" -> "YE-(m - 1)", where the
+    month before January is December. The calendar quarters, "QS-m" for m in
+    JAN, APR, JUL and OCT, are "QE-DEC", as in pandas 2.2 and 2.3. The
+    business-day freqs "BMS", "BQS-m" and "BYS-m" are mapped as "MS", "QS-m"
+    and "YS-m". Other offsets are returned unchanged.
+    """
+    offsets = pd.offsets
+    if type(offset) in (offsets.MonthBegin, offsets.BusinessMonthBegin):
+        return offsets.MonthEnd(offset.n)
+    if type(offset) in (offsets.QuarterBegin, offsets.BQuarterBegin):
+        month = (offset.startingMonth - 2) % 12 + 1
+        if month % 3 == 0:
+            # The calendar quarters
+            month = 12
+        return offsets.QuarterEnd(offset.n, startingMonth=month)
+    if type(offset) in (offsets.YearBegin, offsets.BYearBegin):
+        return offsets.YearEnd(offset.n, month=(offset.month - 2) % 12 + 1)
+    return offset
+
+
 class CalendarDeterministicTerm(DeterministicTerm, ABC):
     """Abstract Base Class for calendar deterministic terms"""
 
-    def __init__(self, freq: str) -> None:
+    # Set _uses_periods to False if the terms do not use periods of freq
+    _uses_periods = True
+
+    def __init__(self, freq: str, *, map_start_anchored: bool = True) -> None:
+        map_start_anchored = bool_like(map_start_anchored, "map_start_anchored")
         try:
             index = pd.date_range("2020-01-01", freq=freq, periods=1)
             self._freq = index.freq
         except ValueError as exc:
             raise ValueError("freq is not understood by pandas") from exc
+        # The freq of the periods that the terms are computed from
+        self._period_freq = self._freq
+        if map_start_anchored:
+            self._period_freq = _end_anchored(self._freq)
+        if not self._uses_periods:
+            return
+        try:
+            with warnings.catch_warnings():
+                # Periods with freq "B" are deprecated in pandas, but work
+                warnings.simplefilter("ignore", FutureWarning)
+                index.to_period(self._period_freq)
+        except (AttributeError, ValueError) as exc:
+            raise ValueError(
+                f'freq "{freq}" is not supported by {type(self).__name__}. Its '
+                "terms are computed from periods, so freq must be a frequency "
+                "that pandas supports for periods, for example "
+                f'"D", "W", "{MONTH_END}", "{QUARTER_END}" or "{YEAR_END}", or '
+                'one of the start-anchored frequencies "MS", "QS" and "YS" (or '
+                '"BMS", "BQS" and "BYS"), which are mapped to end-anchored ones '
+                "unless map_start_anchored is False."
+            ) from exc
 
     @property
     def freq(self) -> str:
@@ -576,8 +629,8 @@ class CalendarDeterministicTerm(DeterministicTerm, ABC):
     ) -> np.ndarray:
         if isinstance(index, pd.PeriodIndex):
             index = index.to_timestamp()
-        delta = index - index.to_period(self._freq).to_timestamp()
-        pi = index.to_period(self._freq)
+        delta = index - index.to_period(self._period_freq).to_timestamp()
+        pi = index.to_period(self._period_freq)
         gap = (pi + 1).to_timestamp() - pi.to_timestamp()
         return to_numpy(delta) / to_numpy(gap)
 
@@ -615,9 +668,38 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
     Parameters
     ----------
     freq : str
-        A string convertible to a pandas frequency.
+        A string convertible to a pandas frequency that pandas supports for
+        periods, for example "D", "W", "ME", "QE" or "YE", or a
+        start-anchored frequency ("MS", "QS-m", "YS-m", "BMS", "BQS-m" or
+        "BYS-m"), which is mapped to the end-anchored frequency with the same
+        periods (see ``map_start_anchored``).
+
+        .. versionchanged:: 0.15.1
+
+           A frequency that pandas does not support for periods raises a
+           ``ValueError``. Before, an error, usually an ``AttributeError``, was
+           raised when the terms were computed. Start-anchored frequencies are
+           mapped to end-anchored ones.
     order : int
         The number of Fourier components to include.
+    map_start_anchored : bool, optional
+        Whether to compute the terms of a start-anchored freq from the periods
+        of the end-anchored freq with the same periods. The default is True.
+        "MS" is mapped to "ME", "QS-m" to "QE" anchored in the month before
+        m (so "QS-FEB" to "QE-JAN"), except that the calendar quarters, "QS"
+        and "QS-m" for m in JAN, APR, JUL and OCT, are mapped to "QE-DEC",
+        and "YS-m" to "YE" anchored in the month before m (so "YS" to
+        "YE-DEC", and "YS-JUL" to "YE-JUN"), keeping the multiple ("2MS" to
+        "2ME"). The business-day frequencies "BMS", "BQS-m" and "BYS-m" are
+        mapped as "MS", "QS-m" and "YS-m", and older aliases such as "AS-JUL"
+        and "BAS-JUL" as "YS-JUL" and "BYS-JUL". "SMS" has no end-anchored
+        equivalent and is not mapped. If False, freq is passed to pandas as
+        given. pandas supports periods of start-anchored frequencies, except
+        "BMS", only in versions 2.2 and 2.3, which anchor the periods of
+        "QS-m", "YS-m", "BQS-m" and "BYS-m" in December for every
+        m, so that, for example, "QS-FEB" has the quarters of "QE-DEC".
+
+        .. versionadded:: 0.15.1
 
     See Also
     --------
@@ -657,8 +739,10 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
     >>> cal_fourier_gen.in_sample(index)
     """
 
-    def __init__(self, freq: str, order: int) -> None:
-        super().__init__(freq)
+    def __init__(
+        self, freq: str, order: int, *, map_start_anchored: bool = True
+    ) -> None:
+        super().__init__(freq, map_start_anchored=map_start_anchored)
         FourierDeterministicTerm.__init__(self, order)
         self._order = required_int_like(order, "terms")
 
@@ -697,7 +781,7 @@ class CalendarFourier(CalendarDeterministicTerm, FourierDeterministicTerm):
 
     @property
     def _eq_attr(self) -> tuple[Hashable, ...]:
-        return self._freq.freqstr, self._order
+        return self._freq.freqstr, self._order, self._period_freq.freqstr
 
     def __str__(self) -> str:
         return f"Fourier(freq={self._freq.freqstr}, order={self._order})"
@@ -740,6 +824,9 @@ class CalendarSeasonality(CalendarDeterministicTerm):
     """
 
     _is_dummy = True
+    # The dummies are computed from the fields of the time stamps, so "MS"
+    # can be used
+    _uses_periods = False
 
     # out_of: freq
     if PD_LT_2_2_0:
@@ -884,7 +971,18 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
     Parameters
     ----------
     freq : str
-        A string convertible to a pandas frequency.
+        A string convertible to a pandas frequency that pandas supports for
+        periods, for example "D", "W", "ME", "QE" or "YE", or a
+        start-anchored frequency ("MS", "QS-m", "YS-m", "BMS", "BQS-m" or
+        "BYS-m"), which is mapped to the end-anchored frequency with the same
+        periods (see ``map_start_anchored``).
+
+        .. versionchanged:: 0.15.1
+
+           A frequency that pandas does not support for periods raises a
+           ``ValueError``. Before, an error, usually an ``AttributeError``, was
+           raised when the terms were computed. Start-anchored frequencies are
+           mapped to end-anchored ones.
     constant : bool, optional
         Flag indicating whether a constant should be included.
     order : int, optional
@@ -894,6 +992,25 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         treated as 1 and so all other time indices are defined as the number
         of periods since or before this time stamp. If not provided, defaults
         to pandas base period for a PeriodIndex.
+    map_start_anchored : bool, optional
+        Whether to compute the terms of a start-anchored freq from the periods
+        of the end-anchored freq with the same periods. The default is True.
+        "MS" is mapped to "ME", "QS-m" to "QE" anchored in the month before
+        m (so "QS-FEB" to "QE-JAN"), except that the calendar quarters, "QS"
+        and "QS-m" for m in JAN, APR, JUL and OCT, are mapped to "QE-DEC",
+        and "YS-m" to "YE" anchored in the month before m (so "YS" to
+        "YE-DEC", and "YS-JUL" to "YE-JUN"), keeping the multiple ("2MS" to
+        "2ME"). The business-day frequencies "BMS", "BQS-m" and "BYS-m" are
+        mapped as "MS", "QS-m" and "YS-m", and older aliases such as "AS-JUL"
+        and "BAS-JUL" as "YS-JUL" and "BYS-JUL". "SMS" has no end-anchored
+        equivalent and is not mapped. If False, freq is passed to pandas as
+        given. pandas supports periods of start-anchored frequencies, except
+        "BMS", only in versions 2.2 and 2.3, which anchor the periods of
+        "QS-m", "YS-m", "BQS-m" and "BYS-m" in December for every
+        m, so that, for example, "QS-FEB" has the quarters of "QE-DEC", and
+        which cannot use a base_period with them.
+
+        .. versionadded:: 0.15.1
 
     See Also
     --------
@@ -947,12 +1064,13 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         order: int = 0,
         *,
         base_period: str | DateLike | None = None,
+        map_start_anchored: bool = True,
     ) -> None:
-        super().__init__(freq)
+        super().__init__(freq, map_start_anchored=map_start_anchored)
         TimeTrendDeterministicTerm.__init__(self, constant=constant, order=order)
         self._ref_i8 = 0
         if base_period is not None:
-            pr = pd.period_range(base_period, periods=1, freq=self._freq)
+            pr = pd.period_range(base_period, periods=1, freq=self._period_freq)
             self._ref_i8 = pr.asi8[0]
         self._base_period = None if base_period is None else str(base_period)
 
@@ -967,6 +1085,8 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         freq: str,
         trend: str,
         base_period: str | DateLike | None = None,
+        *,
+        map_start_anchored: bool = True,
     ) -> CalendarTimeTrend:
         """
         Create a TimeTrend from a string description.
@@ -976,7 +1096,10 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         Parameters
         ----------
         freq : str
-            A string convertible to a pandas frequency.
+            A string convertible to a pandas frequency that pandas supports
+            for periods, or a start-anchored frequency, "MS", "QS-m" or
+            "YS-m", which is mapped to the end-anchored frequency with the
+            same periods (see ``map_start_anchored``).
         trend : {"n", "c", "t", "ct", "ctt"}
             The string representation of the time trend. The terms are:
 
@@ -990,6 +1113,12 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
             is treated as 1 and so all other time indices are defined as the
             number of periods since or before this time stamp. If not
             provided, defaults to pandas base period for a PeriodIndex.
+        map_start_anchored : bool, optional
+            Whether to compute the terms of a start-anchored freq from the
+            periods of the end-anchored freq with the same periods. The
+            default is True. See ``CalendarTimeTrend``.
+
+            .. versionadded:: 0.15.1
 
         Returns
         -------
@@ -1003,17 +1132,23 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
             order = 2
         elif "t" in trend:
             order = 1
-        return cls(freq, constant, order, base_period=base_period)
+        return cls(
+            freq,
+            constant,
+            order,
+            base_period=base_period,
+            map_start_anchored=map_start_anchored,
+        )
 
     def _terms(
         self, index: pd.DatetimeIndex | pd.PeriodIndex, ratio: np.ndarray
     ) -> pd.DataFrame:
-        # Count the periods in the freq of the term, from the start of each
-        # period of a PeriodIndex as in _compute_ratio
+        # Count the periods in the (end-anchored) freq of the term, from the
+        # start of each period of a PeriodIndex as in _compute_ratio
         timestamps = index
         if isinstance(index, pd.PeriodIndex):
             timestamps = index.to_timestamp()
-        index_i8 = timestamps.to_period(self._freq).asi8
+        index_i8 = timestamps.to_period(self._period_freq).asi8
         index_i8 = index_i8 - self._ref_i8 + 1
         time = index_i8.astype(np.double) + ratio
         time = time[:, None]
@@ -1047,6 +1182,7 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
             self._constant,
             self._order,
             self._freq.freqstr,
+            self._period_freq.freqstr,
         )
         if self._base_period is not None:
             attr += (self._base_period,)
