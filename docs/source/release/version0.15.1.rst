@@ -1158,6 +1158,10 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- ``arma_innovations``, ``arma_loglike`` and ``arma_loglikeobs`` in
+  ``statsmodels.tsa.innovations`` raised "buffer source array is read-only"
+  for read-only parameter arrays, which includes a Series with pandas 3.
+  :pr:`10887`
 
 Statistics and tests
 --------------------
