@@ -1,4 +1,5 @@
 from itertools import product
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -202,3 +203,17 @@ def test_theta_invalid_period_raises():
         ThetaModel(y, period=-3)
     with pytest.raises(ValueError, match="period must be >= 2"):
         ThetaModel(y, period=1)
+
+
+def test_period_from_inferred_freq():
+    # A DatetimeIndex without a freq gives the period of its inferred freq,
+    # without the warning pandas 3.1 gives when inferred_freq is read
+    rng = np.random.default_rng(20261121)
+    dates = pd.date_range("2000-01-01", periods=96, freq="MS")
+    y = pd.Series(100 + rng.standard_normal(96).cumsum(), index=list(dates))
+    assert y.index.freq is None
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        mod = ThetaModel(y)
+    assert [str(w.message) for w in record] == []
+    assert mod.period == 12
