@@ -1230,11 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- :class:`~statsmodels.tsa.forecasting.stl.STLForecast` failed for a list or
-  tuple ``endog``, an index whose values cannot be dates (such as a
-  MultiIndex), and an (n, 1) or one-column DataFrame ``endog`` in
-  ``get_prediction``, and it leaked pandas' "Could not infer format" warning
-  for an index of non-dates. :pr:`10882`
 
 Statistics and tests
 --------------------
