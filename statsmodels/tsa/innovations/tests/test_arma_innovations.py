@@ -497,3 +497,11 @@ def test_innovations_sigma2_not_positive(sigma2):
         warnings.simplefilter("error")
         with pytest.raises(ValueError, match=match):
             arma_innovations.arma_innovations(endog, [0.5], [0.3], sigma2=sigma2)
+
+
+# The score functions do not use prefix
+@pytest.mark.parametrize("func", FUNCTIONS[:3])
+def test_unknown_prefix(func):
+    # An unknown prefix raised a bare KeyError
+    with pytest.raises(ValueError, match='prefix must be one of "s", "d", "c", "z"'):
+        getattr(arma_innovations, func)(np.zeros(10), [0.5], [0.3], prefix="x")
