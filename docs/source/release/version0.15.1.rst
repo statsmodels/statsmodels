@@ -1158,6 +1158,11 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- :class:`~statsmodels.tsa.forecasting.stl.STLForecast` failed for a list or
+  tuple ``endog``, an index whose values cannot be dates (such as a
+  MultiIndex), and an (n, 1) or one-column DataFrame ``endog`` in
+  ``get_prediction``, and it leaked pandas' "Could not infer format" warning
+  for an index of non-dates. :pr:`10882`
 
 Statistics and tests
 --------------------
