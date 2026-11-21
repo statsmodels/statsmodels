@@ -3288,21 +3288,21 @@ def test_arma_order_select_ic_infinite_value_all_fail(trend):
 
 
 def test_arma_order_select_ic_infinite_value():
-    # The white noise model fitted to a series with an infinite value has a
-    # NaN log-likelihood and the fit of the AR(1) model fails, so there is no
-    # minimum order. It used to be (0, 0).
+    # The models fitted to a series with an infinite value have a NaN
+    # log-likelihood, or their fit fails, so there is no minimum order. It
+    # used to be (0, 0). Whether the fit of the AR(1) model fails (and is
+    # listed in an EstimationWarning) or gives a NaN log-likelihood depends
+    # on the platform, so only the error is checked here; the warning is
+    # checked by the tests with failing fits above and below.
     y = np.random.default_rng(20261119).standard_normal(100)
     y[-1] = np.inf
-    match = r"Orders \(p, q\): \(1, 0\)\. The first, order \(1, 0\), raised"
     with warnings.catch_warnings():
-        # The maximum likelihood fit of the white noise model runs on the
-        # infinite value and does not converge
+        # The maximum likelihood fits run on the infinite value and do not
+        # converge
         warnings.simplefilter("ignore", ConvergenceWarning)
+        warnings.simplefilter("ignore", EstimationWarning)
         warnings.simplefilter("ignore", RuntimeWarning)
-        with (
-            pytest.warns(EstimationWarning, match=match),
-            pytest.raises(ValueError, match="No fitted ARMA model has a non-NaN aic"),
-        ):
+        with pytest.raises(ValueError, match="No fitted ARMA model has a non-NaN aic"):
             arma_order_select_ic(y, max_ar=1, max_ma=0, ic="aic", trend="c")
 
 
