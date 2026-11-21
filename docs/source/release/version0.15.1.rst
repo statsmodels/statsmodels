@@ -1158,6 +1158,9 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- :class:`~statsmodels.tsa.forecasting.theta.ThetaModel` raised an
+  ``AttributeError`` in ``fit`` for a list or tuple ``endog``, and its error for
+  an invalid ``method`` named another argument. :pr:`10881`
 
 Statistics and tests
 --------------------
