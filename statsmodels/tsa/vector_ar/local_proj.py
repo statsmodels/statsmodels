@@ -84,6 +84,15 @@ class LocalProjectionsResults:
     """
     Results from a fitted :class:`LocalProjections` model.
 
+    Parameters
+    ----------
+    model : LocalProjections
+        The model instance.
+    irfs : ndarray
+        The estimated impulse responses, shape (H+1, n_endog, n_shock).
+    stderr : ndarray
+        The standard errors of `irfs`, with the same shape.
+
     Attributes
     ----------
     irfs : ndarray, shape (H+1, n_endog, n_shock)
@@ -142,17 +151,22 @@ class LocalProjectionsResults:
 
         Parameters
         ----------
-        impulse : int or str or None, optional
-            Index or name of the shock variable.  Plots all shocks if None.
-        response : int or str or None, optional
-            Index or name of the response variable.  Plots all responses
-            if None.
+        impulse : int or str, optional
+            Name of the shock variable, or its position in ``shock_idx``
+            (from 0 to n_shock - 1, not the column of ``endog``).  Plots
+            all shocks if None.
+        response : int or str, optional
+            Name or column index of the response variable.  Plots all
+            responses if None.
         alpha : float, optional
-            Significance level for confidence bands.
-        figsize : tuple or None, optional
-            Figure size passed to :func:`matplotlib.pyplot.subplots`.
-        n_cols : int or None, optional
-            Number of subplot columns.  If None, chosen automatically.
+            Significance level for confidence bands.  The default is 0.1,
+            giving 90% bands.
+        figsize : tuple of float, optional
+            Figure size passed to :func:`matplotlib.pyplot.subplots`.  If
+            None, 4 inches wide and 3 inches high per subplot.
+        n_cols : int, optional
+            Number of subplot columns.  If None, the number of plots, up to
+            3.
 
         Returns
         -------
@@ -253,17 +267,39 @@ class LocalProjections:
     horizons : int, optional
         Maximum IRF horizon :math:`H`.  Regressions are run for
         :math:`h = 0, 1, \ldots, H`.  Defaults to ``12``.
-    exog : array_like or None, optional
+    exog : array_like, optional
         Additional exogenous controls (e.g. time dummies, external
-        instruments), of shape (T, k).  Do **not** include a constant; it
-        is added automatically.
+        instruments), of shape (T, k), or (T,) for a single control.  Do
+        **not** include a constant or a time trend; set ``trend`` instead.
     trend : {"n", "c", "ct"}, optional
         Deterministic trend: 'n' adds no trend, 'c' adds a constant
         (default), and 'ct' adds a constant plus linear trend.
-    nw_lags : int or None, optional
+    nw_lags : int, optional
         Override the automatic Newey-West bandwidth.  When *None* (default)
         the bandwidth at horizon :math:`h` is
         ``max(h, ceil(4*(max(h,1)/100)^{2/9}))``.
+
+    Attributes
+    ----------
+    endog : ndarray
+        The endogenous variables as a float array of shape (T, n).
+    exog : ndarray or None
+        The exogenous controls as a float array of shape (T, k), or None.
+    shock_idx : list of int
+        The columns of ``endog`` used as shocks.
+    lags : int
+        The number of lags of ``endog`` used as controls.
+    horizons : int
+        The maximum horizon :math:`H`.
+    trend : str
+        The deterministic trend.
+    nw_lags : int or None
+        The Newey-West bandwidth override, or None for the automatic one.
+    endog_names : list of str
+        The column names if ``endog`` is a DataFrame, and "y0", "y1", ...
+        otherwise.
+    shock_names : list of str
+        The names of the shock variables.
 
     See Also
     --------
