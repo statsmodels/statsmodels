@@ -88,9 +88,6 @@ Deprecations
   selects ``"2pi"`` (the spectral density) or ``"sqrt(2pi)"`` (the current
   result). Without it, a ``FutureWarning`` is issued, and the default will
   change to ``"2pi"`` after statsmodels 0.17. :pr:`10863`
-- An invalid ``mode`` in ``fftconvolveinv`` and ``fftconvolve3`` returned
-  None. It warns with a ``FutureWarning`` and will raise a ``ValueError`` in
-  statsmodels 0.17. :pr:`10894`
 
 Behavior changes
 ----------------
@@ -1233,9 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- ``fftconvolveinv`` and ``fftconvolve3`` in ``statsmodels.tsa.filters``
-  raised for a list, tuple, Series or DataFrame, and ``fftconvolve3`` raised
-  when given ``in3`` without ``in2``. :pr:`10894`
 
 Statistics and tests
 --------------------
