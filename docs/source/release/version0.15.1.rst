@@ -379,13 +379,6 @@ Behavior changes
   observations. It counted the NaNs, so it could return more lags, or raise
   when ``nlags`` was not given. The values at each lag are unchanged.
   :pr:`10847`
-- ``arma_order_select_ic`` warns with an ``EstimationWarning`` that lists the
-  orders whose fit failed, and raises a ``ValueError`` if every fit fails or no
-  model has a non-NaN criterion, instead of returning tables of NaN. A
-  ``TypeError`` from ``model_kw`` or ``fit_kw``, such as one for a mistyped
-  keyword, is raised instead of making every fit fail, and ``start_params`` in
-  ``fit_kw`` now works. ``ic`` accepts only ``"aic"``, ``"aicc"``, ``"bic"`` and
-  ``"hqic"``, checked before any model is fitted. :pr:`10845`
 
 New Features and Enhancements
 =============================
@@ -1237,9 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- ``arma_order_select_ic`` returned minimum orders (``aic_min_order`` and the
-  others) that could point at a model whose fit had failed, because failed fits
-  have NaN criteria. The minimum orders now ignore them. :pr:`10845`
 
 Statistics and tests
 --------------------
