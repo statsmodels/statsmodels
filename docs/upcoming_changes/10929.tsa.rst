@@ -1,0 +1,4 @@
+- ``ETSResults`` ``simulate`` and ``forecast`` with zero steps, and
+  :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSModel` without observations and with known initial values, wrote
+  outside an array in compiled code, which could crash Python. They
+  raise a ``ValueError``. :pr:`10929`
