@@ -1230,11 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- ``statsmodels.tsa.innovations.arma_innovations`` reported non-stationary
-  parameters, with a ``RuntimeWarning``, for a ``sigma2`` that is not positive,
-  and the innovations functions raised a bare ``KeyError`` for an unknown
-  ``prefix``. Both raise a ``ValueError`` that names the argument.
-  :pr:`10890`
 
 Statistics and tests
 --------------------
