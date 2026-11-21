@@ -484,3 +484,16 @@ def test_score_prefix_deprecated(func, prefix):
     assert res.dtype == np.float64
     expected = _kalman_filter_reference(func, endog, [0.5], [0.3], 1.7)
     assert_allclose(res, expected, rtol=RTOL[func])
+
+
+@pytest.mark.parametrize("sigma2", [0, -1.0, np.nan])
+def test_innovations_sigma2_not_positive(sigma2):
+    # sigma2 = 0 or NaN gave a RuntimeWarning and the misleading error that
+    # the autoregressive parameters are non-stationary
+    rng = np.random.default_rng(20261121)
+    endog = rng.standard_normal(20)
+    match = "sigma2 must be a positive innovation variance"
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with pytest.raises(ValueError, match=match):
+            arma_innovations.arma_innovations(endog, [0.5], [0.3], sigma2=sigma2)

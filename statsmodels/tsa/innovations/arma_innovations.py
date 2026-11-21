@@ -32,7 +32,7 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     ma_params : array_like, optional
         Moving average parameters.
     sigma2 : float, optional
-        The ARMA innovation variance. Default is 1.
+        The ARMA innovation variance, which must be positive. Default is 1.
     normalize : bool, optional
         Whether or not to normalize the returned innovations. Default is False.
     prefix : str, optional
@@ -76,6 +76,11 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     ar_params = np.require(ar_params, dtype=dtype, requirements=["F", "W"])
     ma_params = np.require(ma_params, dtype=dtype, requirements=["F", "W"])
     sigma2 = dtype(sigma2).item()
+    if not sigma2.real > 0:
+        # 0 or NaN would give a misleading "non-stationary" error below
+        raise ValueError(
+            f"sigma2 must be a positive innovation variance, got {sigma2}."
+        )
     # The lag polynomials are built from the converted parameters, so that
     # they have the dtype that matches the prefix
     ar = np.r_[1, -ar_params]
