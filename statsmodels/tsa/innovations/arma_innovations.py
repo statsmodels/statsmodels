@@ -221,8 +221,8 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
     This is a numerical approximation, calculated using first-order complex
     step differentiation on the `arma_loglike` method.
     """
-    ar_params = [] if ar_params is None else ar_params
-    ma_params = [] if ma_params is None else ma_params
+    ar_params = np.atleast_1d([] if ar_params is None else ar_params)
+    ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
     p = len(ar_params)
     q = len(ma_params)
@@ -269,8 +269,8 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
     This is a numerical approximation, calculated using first-order complex
     step differentiation on the `arma_loglike` method.
     """
-    ar_params = [] if ar_params is None else ar_params
-    ma_params = [] if ma_params is None else ma_params
+    ar_params = np.atleast_1d([] if ar_params is None else ar_params)
+    ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
     p = len(ar_params)
     q = len(ma_params)

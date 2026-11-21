@@ -154,3 +154,14 @@ def test_single_column_endog_keeps_dtype():
     )
     # Single precision
     assert_allclose(res, expected, rtol=1e-4)
+
+
+@pytest.mark.parametrize("func", FUNCTIONS)
+def test_scalar_params(func):
+    # The score functions called len() on the parameters, so scalars raised a
+    # TypeError, although the other functions accept them
+    rng = np.random.default_rng(20261121)
+    endog = rng.standard_normal(60)
+    res = getattr(arma_innovations, func)(endog, 0.5, 0.3, sigma2=1.7)
+    expected = _kalman_filter_reference(func, endog, [0.5], [0.3], 1.7)
+    assert_allclose(res, expected, rtol=RTOL[func])
