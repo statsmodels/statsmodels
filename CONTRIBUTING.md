@@ -60,9 +60,11 @@ software a shared effort.
   Check that the build output does not have *any* warnings due to your
   changes.
 
-- Finally, please add your changes to the release notes. Open the
-  `docs/source/release/versionX.Y.Z.rst` file that has the version number
-  of the next release and add your changes to the appropriate section.
+- Finally, please add your changes to the release notes. Add a fragment file
+  `docs/upcoming_changes/<PR number>.<section>.rst` with your bullets, as
+  described in `docs/upcoming_changes/README.rst`. The fragments are collected
+  into `docs/source/release/versionX.Y.Z.rst` at release time, so pull
+  requests do not conflict there.
 
 ## Linting
 
