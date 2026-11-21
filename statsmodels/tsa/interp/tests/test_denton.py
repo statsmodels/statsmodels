@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
@@ -152,5 +154,30 @@ def test_denton_benchmark_single_series(form):
     indicator = np.array([10.0, 12.0, 11.0, 9.0, 13.0, 14.0, 15.0, 16.0, 12.0, 11.0])
     benchmark = [40.0, 50.0]
     res = dentonm(indicator, form(benchmark), freq="other", k=4)
+    expected = _denton_null_space_solution(indicator, benchmark, 4)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "kwargs, names",
+    [({}, None), ({"penalty": "D4"}, "'penalty'"), ({"z": 1, "a": 2}, "'a', 'z'")],
+    ids=["none", "one", "two"],
+)
+def test_denton_unknown_keywords_deprecated(kwargs, names):
+    # Keyword arguments other than k were silently ignored. They still are,
+    # with a FutureWarning, and the result does not change.
+    indicator = np.array([10.0, 12.0, 11.0, 9.0, 13.0, 14.0, 15.0, 16.0, 12.0, 11.0])
+    benchmark = np.array([40.0, 50.0])
+    if names is None:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            res = dentonm(indicator, benchmark, freq="other", k=4)
+    else:
+        match = f"Unknown keyword arguments are ignored: {names}"
+        with pytest.warns(FutureWarning, match=match) as record:
+            res = dentonm(indicator, benchmark, freq="other", k=4, **kwargs)
+        assert len(record) == 1
+        # The warning points to the caller
+        assert record[0].filename == __file__
     expected = _denton_null_space_solution(indicator, benchmark, 4)
     assert_allclose(res, expected, rtol=1e-10)
