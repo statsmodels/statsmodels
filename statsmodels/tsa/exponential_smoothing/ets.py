@@ -302,6 +302,12 @@ class ETSModel(base.StateSpaceMLEModel):
     initial_seasonal : array_like, optional
         The initial seasonal component. An array of length `seasonal_periods`.
         Only used if initialization is 'known'.
+
+        .. deprecated:: 0.15.1
+
+           A single value, which is used for all initial seasonal states, is
+           deprecated and will raise a ValueError after statsmodels 0.17 is
+           released. Other lengths raise a ValueError.
     bounds : dict, optional
         A dictionary with parameter names as keys and the respective bounds
         intervals as values (lists/tuples/arrays).
@@ -606,6 +612,12 @@ class ETSModel(base.StateSpaceMLEModel):
         initial_seasonal : array_like, optional
             The initial seasonal component. An array of length
             `seasonal_periods`. Only used if initialization is 'known'.
+
+            .. deprecated:: 0.15.1
+
+               A single value, which is used for all initial seasonal states,
+               is deprecated and will raise a ValueError after statsmodels
+               0.17 is released. Other lengths raise a ValueError.
         """
         self.initialization_method = string_like(
             initialization_method,
@@ -630,6 +642,28 @@ class ETSModel(base.StateSpaceMLEModel):
                     " for models with a seasonal component when"
                     ' initialization method is set to "known".'
                 )
+            if self.has_seasonal:
+                m = self.seasonal_periods
+                seasonal = np.asarray(initial_seasonal)
+                # A scalar or any array with a single value is broadcast to
+                # all seasonal states (a 0-d array raised an IndexError)
+                if seasonal.size == 1 and (
+                    seasonal.ndim > 0 or np.isscalar(initial_seasonal)
+                ):
+                    warnings.warn(
+                        "initial_seasonal has a single value, which is used "
+                        f"for all {m} initial seasonal states. This is "
+                        "deprecated and will raise a ValueError after "
+                        "statsmodels 0.17 is released. Pass an array of "
+                        "length seasonal_periods instead.",
+                        FutureWarning,
+                        stacklevel=3,
+                    )
+                elif seasonal.shape != (m,):
+                    raise ValueError(
+                        "initial_seasonal must have length seasonal_periods "
+                        f"({m}), got an array of shape {seasonal.shape}."
+                    )
         elif self.initialization_method == "heuristic":
             (
                 initial_level,

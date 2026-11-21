@@ -3349,3 +3349,68 @@ def test_seasonal_periods_required(austourists, seasonal, index):
                 ETSModel(endog, seasonal=seasonal)
         else:
             ETSModel(endog, seasonal=seasonal)
+
+
+@pytest.mark.parametrize(
+    "initial_seasonal",
+    [[5.0], 5.0, np.float64(5.0), np.array([[5.0]])],
+    ids=["list", "float", "float64", "(1, 1) array"],
+)
+def test_initial_seasonal_single_value(austourists, initial_seasonal):
+    # A single value was broadcast silently to all seasonal states; it still
+    # is, with a FutureWarning
+    kwargs = dict(
+        seasonal="add",
+        seasonal_periods=4,
+        initialization_method="known",
+        initial_level=40.0,
+    )
+    expected = ETSModel(austourists, initial_seasonal=[5.0] * 4, **kwargs)
+    expected = expected.smooth([0.3, 0.1])
+    with pytest.warns(FutureWarning, match="initial_seasonal has a single") as rec:
+        model = ETSModel(austourists, initial_seasonal=initial_seasonal, **kwargs)
+    assert rec[0].filename == __file__
+    res = model.smooth([0.3, 0.1])
+    assert_allclose(res.initial_seasonal, np.full(4, 5.0), rtol=1e-12)
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+    assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "initial_seasonal",
+    [[1.0, 2.0], [1.0, 2.0, 3.0, 4.0, 5.0], np.ones((4, 1)), np.ones((1, 4)), np.array(5.0)],
+    ids=["2", "5", "(4, 1)", "(1, 4)", "0-d"],
+)
+def test_initial_seasonal_wrong_length(austourists, initial_seasonal):
+    # Other lengths raised a numpy error when the model was used, except a
+    # (1, 4) row, which was used in reverse order
+    with pytest.raises(ValueError, match="initial_seasonal must have length"):
+        ETSModel(
+            austourists,
+            seasonal="add",
+            seasonal_periods=4,
+            initialization_method="known",
+            initial_level=40.0,
+            initial_seasonal=initial_seasonal,
+        )
+
+
+@pytest.mark.parametrize(
+    "form", [list, tuple, np.asarray, pd.Series], ids=["list", "tuple", "array", "Series"]
+)
+def test_initial_seasonal_forms(austourists, form, recwarn):
+    seasonal = [3.0, -1.0, -4.0, 2.0]
+    model = ETSModel(
+        austourists,
+        seasonal="add",
+        seasonal_periods=4,
+        initialization_method="known",
+        initial_level=40.0,
+        initial_seasonal=form(seasonal),
+    )
+    res = model.smooth([0.3, 0.1])
+    assert len(recwarn) == 0
+    assert_allclose(res.initial_seasonal, seasonal, rtol=1e-12)
+    # the first prediction is the initial level plus the seasonal of the
+    # first observation, the first value of initial_seasonal
+    assert_allclose(res.fittedvalues.iloc[0], 40.0 + 3.0, rtol=1e-12)
