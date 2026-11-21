@@ -1,10 +1,15 @@
 from itertools import product
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
+from scipy import stats
 
 from statsmodels.tsa.forecasting.theta import ThetaModel
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.stattools import acf
+from statsmodels.tsa.tests._contract import series_forms
 
 SMOKE_PARAMS = list(product(["array", "dataframe", "series"], [True, False]))
 SMOKE_IDS = [f"type: {typ}, exponential: {exp}" for typ, exp in SMOKE_PARAMS]
@@ -202,3 +207,192 @@ def test_theta_invalid_period_raises():
         ThetaModel(y, period=-3)
     with pytest.raises(ValueError, match="period must be >= 2"):
         ThetaModel(y, period=1)
+
+
+NOBS = 96
+PERIOD = 12
+
+
+@pytest.fixture(scope="module")
+def seasonal_y():
+    # Positive, trending and seasonal. Integer-valued so that the int dtype
+    # form holds the same values.
+    rng = np.random.default_rng([20261120, 3])
+    t = np.arange(NOBS)
+    y = 50 + 0.3 * t + 5 * np.sin(2 * np.pi * t / PERIOD)
+    return np.round(10 * (y + rng.standard_normal(NOBS)))
+
+
+def _ses_level(y, alpha):
+    # The SES level after the last observation, starting from the first one
+    level = y[0]
+    for obs in y:
+        level = alpha * obs + (1 - alpha) * level
+    return level
+
+
+def _theta_closed_form(y, params, steps, theta=2.0, method=None):
+    """
+    The Theta forecast at fixed b0 and alpha
+
+    SES of the (deseasonalized) data plus (theta - 1) / theta times the drift
+    term of Hyndman and Billah (2003), reseasonalized when method is given.
+    Also returns the data the SES and the OLS trend are fit to.
+    """
+    nobs = y.shape[0]
+    adj = y
+    if method is not None:
+        dec = seasonal_decompose(y, model=method, period=PERIOD)
+        adj = y - dec.seasonal if method == "additive" else y / dec.seasonal
+        season = dec.seasonal[(nobs + np.arange(steps)) % PERIOD]
+    b0, alpha = params
+    h = np.arange(1, steps + 1)
+    drift = b0 * (h - 1 + 1 / alpha - (1 - alpha) ** nobs / alpha)
+    weight = 1.0 if np.isinf(theta) else (theta - 1) / theta
+    fcast = weight * drift + _ses_level(adj, alpha)
+    if method == "additive":
+        fcast = fcast + season
+    elif method == "multiplicative":
+        fcast = fcast * season
+    return fcast, adj
+
+
+@pytest.mark.parametrize("theta", [1.0, 2.0, 3.5, np.inf])
+def test_forecast_closed_form(seasonal_y, theta):
+    # b0 is the OLS slope on 0, ..., T-1. theta=1 gives the SES forecast and
+    # theta=inf the full drift.
+    res = ThetaModel(seasonal_y, deseasonalize=False).fit()
+    slope = np.polyfit(np.arange(NOBS), seasonal_y, 1)[0]
+    assert_allclose(res.params["b0"], slope, rtol=1e-9)
+    expected, _ = _theta_closed_form(seasonal_y, res.params, 18, theta=theta)
+    assert_allclose(res.forecast(18, theta=theta), expected, rtol=1e-9)
+
+
+def test_forecast_closed_form_short_series():
+    # In a long series (1 - alpha) ** T is negligible, so the drift term is
+    # also checked on a short series where it is not
+    rng = np.random.default_rng([20261120, 30])
+    nobs = 14
+    y = np.round(10 * (20 + 0.4 * np.arange(nobs) + 2 * rng.standard_normal(nobs)))
+    res = ThetaModel(y, deseasonalize=False).fit()
+    alpha = res.params["alpha"]
+    assert (1 - alpha) ** nobs / alpha > 1e-3
+    expected, _ = _theta_closed_form(y, res.params, 6, theta=3.0)
+    assert_allclose(res.forecast(6, theta=3.0), expected, rtol=1e-9)
+
+
+@pytest.mark.parametrize("method", ["additive", "add", "multiplicative", "mul"])
+def test_forecast_deseasonalized_closed_form(seasonal_y, method):
+    full = "additive" if method.startswith("add") else "multiplicative"
+    res = ThetaModel(seasonal_y, period=PERIOD, use_test=False, method=method).fit()
+    expected, adj = _theta_closed_form(seasonal_y, res.params, 18, method=full)
+    slope = np.polyfit(np.arange(NOBS), adj, 1)[0]
+    assert_allclose(res.params["b0"], slope, rtol=1e-9)
+    assert_allclose(res.forecast(18), expected, rtol=1e-9)
+
+    comp = res.forecast_components(18)
+    assert list(comp.columns) == ["trend", "ses", "seasonal"]
+    dec = seasonal_decompose(seasonal_y, model=full, period=PERIOD)
+    season = dec.seasonal[(NOBS + np.arange(18)) % PERIOD]
+    assert_allclose(comp["seasonal"], season, rtol=1e-12)
+    assert_allclose(comp["ses"], _ses_level(adj, res.params["alpha"]), rtol=1e-9)
+
+
+@pytest.mark.parametrize("difference,reject", [(False, True), (True, False)])
+def test_seasonality_test_decision(difference, reject):
+    # The data are deseasonalized only if the period-th autocorrelation is
+    # significant at 10%, using the differences if difference is True
+    rng = np.random.default_rng([20261120, 5])
+    y = 100 + np.cumsum(rng.standard_normal(NOBS))
+    x = np.diff(y) if difference else y
+    rho = acf(x, nlags=PERIOD, fft=True)
+    stat = x.shape[0] * rho[-1] ** 2 / np.sum(rho[:-1] ** 2)
+    assert bool(stat > stats.chi2.ppf(0.9, 1)) is reject
+
+    mod = ThetaModel(y, period=PERIOD, difference=difference, method="additive")
+    res = mod.fit()
+    assert mod.difference is difference
+    season = res.forecast_components(PERIOD)["seasonal"]
+    if reject:
+        dec = seasonal_decompose(y, model="additive", period=PERIOD)
+        expected = dec.seasonal[(NOBS + np.arange(PERIOD)) % PERIOD]
+        assert_allclose(season, expected, rtol=1e-12)
+    else:
+        # Not deseasonalized, so the additive seasonal component is zero
+        assert_allclose(season, np.zeros(PERIOD))
+
+
+# list and tuple are left out: ThetaModel.fit raises AttributeError for them
+@pytest.mark.parametrize("form", ["ndarray", "int", "series", "column", "dataframe"])
+def test_input_forms_and_index(seasonal_y, form):
+    if form == "ndarray":
+        x = seasonal_y
+    elif form == "int":
+        x = seasonal_y.astype(np.int64)
+    else:
+        x = series_forms(seasonal_y)[form]
+    res = ThetaModel(x, period=PERIOD, use_test=False, method="additive").fit()
+    expected, _ = _theta_closed_form(seasonal_y, res.params, 18, method="additive")
+    fcast = res.forecast(18)
+    assert isinstance(fcast, pd.Series)
+    assert fcast.name == "forecast"
+    assert_allclose(fcast, expected, rtol=1e-9)
+    # pandas input continues its index, other input continues the positions
+    if form in ("series", "dataframe"):
+        index = x.index
+        expected_index = pd.date_range(
+            index[-1] + index.freq, periods=18, freq=index.freq
+        )
+    else:
+        expected_index = pd.RangeIndex(NOBS, NOBS + 18)
+    pd.testing.assert_index_equal(fcast.index, expected_index)
+    pd.testing.assert_index_equal(res.forecast_components(18).index, expected_index)
+    pd.testing.assert_index_equal(res.prediction_intervals(18).index, expected_index)
+
+
+@pytest.mark.parametrize("form", ["series", "dataframe"])
+def test_period_from_index(seasonal_y, form):
+    x = series_forms(seasonal_y)[form]
+    assert ThetaModel(x).period == 12
+    x.index = pd.date_range("2000-01-01", periods=NOBS, freq="QS")
+    assert ThetaModel(x).period == 4
+
+
+def test_ndarray_needs_period(seasonal_y):
+    with pytest.raises(ValueError, match="You must specify a period"):
+        ThetaModel(seasonal_y)
+    # The period is not needed when the data are not deseasonalized
+    mod = ThetaModel(seasonal_y, deseasonalize=False)
+    assert mod.period is None
+    assert not mod.deseasonalize
+    assert not mod.use_test
+
+
+def test_invalid_method(seasonal_y):
+    with pytest.raises(ValueError, match="must be one of"):
+        ThetaModel(seasonal_y, period=PERIOD, method="geometric")
+
+
+@pytest.mark.parametrize("use_mle", [True, False])
+def test_prediction_interval_one_step(seasonal_y, use_mle):
+    res = ThetaModel(seasonal_y, period=PERIOD, use_test=False).fit(use_mle=use_mle)
+    fcast = res.forecast(12, theta=3)
+    pi = res.prediction_intervals(12, theta=3, alpha=0.1)
+    assert list(pi.columns) == ["lower", "upper"]
+    # Symmetric about the forecast, and the one-step variance is sigma2
+    assert_allclose((pi["lower"] + pi["upper"]) / 2, fcast, rtol=1e-12)
+    half_width = stats.norm.ppf(0.95) * np.sqrt(res.sigma2)
+    assert_allclose(pi["upper"].iloc[0] - fcast.iloc[0], half_width, rtol=1e-10)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_plot_predict_in_sample_ndarray(seasonal_y, close_figures):
+    res = ThetaModel(seasonal_y, period=PERIOD, use_test=False).fit()
+    fig = res.plot_predict(steps=12, alpha=None, in_sample=True)
+    in_sample, forecast = fig.axes[0].get_lines()
+    # An ndarray is plotted against its positions, followed by the forecast
+    assert_allclose(in_sample.get_xdata(), np.arange(NOBS))
+    assert_allclose(in_sample.get_ydata(), seasonal_y)
+    assert_allclose(forecast.get_xdata(), np.arange(NOBS, NOBS + 12))
+    assert_allclose(forecast.get_ydata(), res.forecast(12), rtol=1e-12)
