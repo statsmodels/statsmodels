@@ -1,0 +1,2 @@
+- ``forecast`` of ``ETSResults`` raised a ``TypeError`` for a date as
+  ``steps``, although dates are documented. :pr:`10933`
