@@ -166,6 +166,16 @@ class ExponentialSmoothing(TimeSeriesModel):
         ValueError. Use ``initialization_method="estimated"`` and
         :meth:`fix_params` to fix some initial values and estimate the other
         parameters.
+
+        .. versionchanged:: 0.15.1
+
+           An array of length ``seasonal_periods - 1`` is completed with the
+           value that makes the average effect zero: minus the sum of the
+           others for an additive seasonal component, and `seasonal_periods`
+           minus their sum, so that the mean is 1, for a multiplicative one.
+           It raised before. With ``seasonal_periods=2``, a single value is
+           still used for both seasons, with a FutureWarning; after
+           statsmodels 0.17 it will be completed too.
     use_boxcox : {True, False, 'log', float}, optional
         Should the Box-Cox transform be applied to the data first? If True,
         lambda is estimated by maximum likelihood. If 'log' then apply the
@@ -488,6 +498,31 @@ class ExponentialSmoothing(TimeSeriesModel):
             raise ValueError(msg.format("seasonal"))
         elif not self.has_seasonal and self._initial_seasonal is not None:
             raise ValueError(excess.format("seasonal"))
+        m = self.seasonal_periods
+        seasonal = self._initial_seasonal
+        if self.has_seasonal and seasonal.ndim == 1 and seasonal.shape[0] == m - 1:
+            if m == 2:
+                # A single value was broadcast to both seasons before
+                warnings.warn(
+                    "initial_seasonal has one value and seasonal_periods is "
+                    "2, so the value is used for both seasons. After "
+                    "statsmodels 0.17, the second value will be computed to "
+                    "make the average effect zero, as for longer seasons. "
+                    "Pass both values to keep the current result.",
+                    FutureWarning,
+                    stacklevel=4,
+                )
+                return
+            # The last value makes the average effect zero: the values sum
+            # to 0 if additive and to m, a mean of 1, if multiplicative
+            total = m if self.seasonal == "mul" else 0.0
+            last = total - seasonal.sum()
+            if self.seasonal == "mul" and last <= 0:
+                raise ValueError(
+                    "A multiplicative initial_seasonal with seasonal_periods "
+                    "- 1 values must sum to less than seasonal_periods."
+                )
+            self._initial_seasonal = np.r_[seasonal, last]
 
     def predict(self, params, start=None, end=None):
         """
