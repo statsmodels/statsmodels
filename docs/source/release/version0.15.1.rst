@@ -67,10 +67,27 @@ Deprecations
   ``NotImplementedError``, will be removed after statsmodels 0.16. Use
   ``statsmodels.tsa.arima.model.ARIMA`` or
   ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
+- ``distance_indicators`` with ``x`` of more than one dimension issues a
+  ``FutureWarning`` and returns the same result as before. After statsmodels
+  0.17, a column will give the result of the 1-D series and other input will
+  raise. :pr:`10858`
+- A bool ``p`` in ``c_sja`` and ``c_sjt``, and so ``det_order=True`` in
+  :func:`~statsmodels.tsa.vector_ar.vecm.coint_johansen`, is deprecated. It is
+  still used as 0 or 1, with a ``FutureWarning``, and will raise after
+  statsmodels 0.17. :pr:`10859`
+- The ``return_results`` argument of :func:`~statsmodels.tsa.stattools.coint`
+  is deprecated. It has no effect, issues a ``FutureWarning`` when it is not
+  ``None``, and will be removed after statsmodels 0.17 is released.
+  :pr:`10848`
 - 2-D lag polynomials that the functions of ``statsmodels.tsa.arima_process``
   accepted, for example a column in ``arma_periodogram`` or a row in
   ``index2lpol``, are deprecated. They give the same result as before with a
   ``FutureWarning``, and will raise after statsmodels 0.17. :pr:`10861`
+- ``arma_periodogram`` and ``ArmaProcess.periodogram`` divide by
+  ``sqrt(2 * pi)`` instead of ``2 * pi``. A new ``normalization`` argument
+  selects ``"2pi"`` (the spectral density) or ``"sqrt(2pi)"`` (the current
+  result). Without it, a ``FutureWarning`` is issued, and the default will
+  change to ``"2pi"`` after statsmodels 0.17. :pr:`10863`
 
 Behavior changes
 ----------------
@@ -338,6 +355,30 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- When ``den`` is longer than ``num``, ``deconvolve`` returns an empty ndarray
+  instead of a list as the quotient, and a float (or complex) copy of ``num``
+  as the remainder instead of ``num`` itself. The values are unchanged.
+  :pr:`10864`
+- ``arma_pacf``, ``arma_impulse_response``, ``arma2ma`` and ``arma2ar`` raise
+  a ``ValueError`` for ``lags`` below 1, as the ``ArmaProcess`` methods do since
+  :pr:`10835`, instead of NumPy errors, and ``arma_periodogram`` raises for an
+  integer ``worN`` below 1 instead of returning empty arrays.
+  ``ArmaProcess.from_estimation`` no longer replaces ``nobs=0`` with the number
+  of observations of the results. :pr:`10860`
+- ``ArmaProcess.generate_sample`` uses the ``nobs`` of the process as the
+  default sample size, as documented, instead of 100. Processes created with
+  another ``nobs``, including those from ``ArmaProcess.from_estimation``, now
+  generate ``nobs`` values when ``nsample`` is not given. :pr:`10862`
+- ``levinson_durbin`` with ``isacov=True`` and
+  :func:`~statsmodels.tsa.stattools.diebold_mariano_test` treat an (nobs, 1)
+  column, such as a one-column ``DataFrame``, as the 1-D series instead of
+  raising, and raise a ``ValueError`` for input with more than one column.
+  Results for 1-D input are unchanged. :pr:`10849`
+- The default ``nlags`` of :func:`~statsmodels.tsa.stattools.acf` with
+  ``missing="drop"`` or ``"conservative"`` counts only the non-missing
+  observations. It counted the NaNs, so it could return more lags, or raise
+  when ``nlags`` was not given. The values at each lag are unchanged.
+  :pr:`10847`
 
 New Features and Enhancements
 =============================
@@ -1154,10 +1195,41 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- ``fit(method="cg")`` did not pass its extra arguments to the objective and
+  the score. State space models and Markov switching models pass
+  ``transformed=False`` this way, so the conjugate gradient solver
+  optimized the log-likelihood with the parameters taken as constrained and
+  stopped far from the optimum, often reporting convergence, for example
+  after one iteration at an llf of -698.8 where the optimum is -456.0.
+  Results of models that do not use extra arguments are unchanged.
+  :pr:`10819`
+- ``index2lpol`` raised an ``IndexError`` for a tuple ``index``, and ``ar2arma``
+  raised a ``TypeError`` for a tuple ``ar_des``. :pr:`10858`
+- ``c_sja`` and ``c_sjt`` raised unrelated errors for a non-integer ``p`` and
+  returned a view of their table, so changing a result changed later calls.
+  A non-integer ``p`` raises a ``ValueError``, and a copy is returned.
+  :pr:`10859`
+- ``CalendarTimeTrend`` returned its terms on a ``PeriodIndex`` for a
+  ``DatetimeIndex``, so a ``DeterministicProcess`` that combined it with other
+  terms gave misaligned frames with NaN, and on a ``PeriodIndex`` with a
+  frequency other than ``freq`` it counted time in the wrong unit.
+  :pr:`10853`
+- ``DeterministicProcess.range`` ignored the step of a ``RangeIndex`` whose
+  step is not 1, so it returned the wrong rows or raised a ``KeyError``.
+  :pr:`10852`
+- ``coint`` returned ``critical_values`` as a list for ``trend="n"``. It is an
+  ndarray of NaN values, as for the other trends. :pr:`10848`
+- ``coint`` returned ``critical_values`` as a list for ``trend="n"``. It is now
+  an ndarray, as it is for the other trends. :pr:`10848`
 - Lag polynomials with more than one dimension in the functions of
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` raised NumPy or
+  SciPy errors for an ``ar_coeff`` or ``init`` given as an (n, 1) column, and
+  a misleading length error for a row ``init``. A column is accepted, and
+  other 2-d input raises a ``ValueError`` that names the argument.
+  :pr:`10872`
 - :func:`~statsmodels.tsa.stattools.zivot_andrews` did not skip the candidate
   break periods whose dummies are collinear with the constant and the trend,
   which happens when the number of lags is not smaller than the number of

@@ -1194,6 +1194,7 @@ def _fit_cg(
         f,
         start_params,
         score,
+        args=fargs,
         gtol=gtol,
         norm=norm,
         epsilon=epsilon,

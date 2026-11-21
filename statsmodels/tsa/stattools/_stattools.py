@@ -985,6 +985,16 @@ def acf(
         Number of lags to return autocorrelation for. If not provided,
         uses min(10 * np.log10(nobs), nobs - 1). The returned value
         includes lag 0 (ie., 1) so size of the acf vector is (nlags + 1,).
+        When missing is "drop" or "conservative", nobs is the number of
+        non-missing observations.
+
+        .. versionchanged:: 0.15.1
+
+           The default counts only the non-missing observations when
+           missing is "drop" or "conservative". It used to count the NaNs
+           as observations, so it could give more lags, or raise because
+           the default was not smaller than the number of non-missing
+           observations.
     qstat : bool, optional
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
@@ -1120,8 +1130,6 @@ def acf(
     )
     x = array_like(x, "x")
     nobs = x.shape[0]
-    if nlags is None:
-        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
     if missing in ("drop", "conservative"):
         # "drop" removes the NaNs and "conservative" zeroes them out, and
         # acovf uses the non-missing count as the divisor in both cases
@@ -1129,6 +1137,8 @@ def acf(
         nobs = int(np.sum(~np.isnan(x)))
         if nobs == 0:
             raise ValueError("All observations are missing after dropping.")
+    if nlags is None:
+        nlags = min(int(10 * np.log10(nobs)), nobs - 1)
     if nlags < 0:
         raise ValueError(f"nlags must be non-negative, got {nlags}")
     if nlags >= nobs:
@@ -2430,7 +2440,15 @@ def levinson_durbin(s, nlags=10, isacov=False):
     ----------
     s : array_like
         If isacov is False, then this is the time series. If isacov is true
-        then this is interpreted as autocovariance starting with lag 0.
+        then this is interpreted as autocovariance starting with lag 0. The
+        array is 1-D; a column with shape (n, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           With isacov=True, a column with shape (n, 1) now gives the same
+           result as the 1-D array, as it did with isacov=False. Input with
+           more than one column raises a ValueError that says that s must
+           be 1-D.
     nlags : int, optional
         The largest lag to include in recursion or order of the autoregressive
         process.
@@ -2466,7 +2484,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
     sample autocovariance function is calculated with the default options
     (biased, no fft).
     """
-    s = array_like(s, "s")
+    s = array_like(s, "s", ndim=1)
     nlags = int_like(nlags, "nlags")
     isacov = bool_like(isacov, "isacov")
 
@@ -3065,6 +3083,12 @@ def coint(
         named tuple, so it also unpacks as the tuple
         ``coint_t, pvalue, critical_values``.
 
+        .. deprecated:: 0.15.1
+
+            ``return_results`` has no effect and will be removed after
+            statsmodels 0.17 is released. Passing any value other than
+            None issues a ``FutureWarning``.
+
     Returns
     -------
     CointResult
@@ -3080,6 +3104,11 @@ def coint(
             10 % levels based on regression curve. This depends on the
             number of observations. For trend "n" they are not available
             and are NaN.
+
+            .. versionchanged:: 0.15.1
+
+               With trend "n", critical_values is an ndarray, as it is for
+               the other trends. It was a list.
 
     Notes
     -----
@@ -3118,6 +3147,15 @@ def coint(
         autolag, "autolag", optional=True, options=("aic", "bic", "t-stat")
     )
     return_results = bool_like(return_results, "return_results", optional=True)
+    if return_results is not None:
+        warnings.warn(
+            "return_results has no effect and will be removed after "
+            "statsmodels 0.17 is released. coint always returns a "
+            "CointResult. Remove the return_results argument to silence "
+            "this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     nobs, k_vars = y1.shape
     k_vars += 1  # add 1 for y0
@@ -3149,7 +3187,7 @@ def coint(
 
     # no constant or trend, see egranger in Stata and MacKinnon
     if trend == "n":
-        crit = [np.nan] * 3  # 2010 critical values not available
+        crit = np.full(3, np.nan)  # 2010 critical values not available
     else:
         crit = mackinnoncrit(N=k_vars, regression=trend, nobs=nobs - 1)
         #  nobs - 1, the -1 is to match egranger in Stata, I do not know why.
@@ -3297,11 +3335,20 @@ def diebold_mariano_test(
     Parameters
     ----------
     y : array_like
-        Array of the observed variable.
+        Array of the observed variable. The array is 1-D; a column with
+        shape (nobs, 1) is also accepted.
     forecast_a : array_like
-        Array of forecasted values from the first model.
+        Array of forecasted values from the first model. The array is 1-D;
+        a column with shape (nobs, 1) is also accepted.
     forecast_b : array_like
-        Array of forecasted values from the second model.
+        Array of forecasted values from the second model. The array is 1-D;
+        a column with shape (nobs, 1) is also accepted.
+
+        .. versionchanged:: 0.15.1
+
+           A column with shape (nobs, 1), such as a one-column DataFrame,
+           in y, forecast_a or forecast_b now gives the same result as the
+           1-D array. It raised ValueError.
     lags : int, optional
         The number of lags to include in the HAC variance estimator used for
         the loss differential. Must be non-negative if provided. If not
@@ -3522,9 +3569,9 @@ def diebold_mariano_test(
     >>> res.statistic, res.pvalue  # doctest: +SKIP
     """
 
-    y = array_like(y, "y", ndim=1, maxdim=1, dtype=float)
-    forecast_a = array_like(forecast_a, "forecast_a", ndim=1, maxdim=1, dtype=float)
-    forecast_b = array_like(forecast_b, "forecast_b", ndim=1, maxdim=1, dtype=float)
+    y = array_like(y, "y", ndim=1, dtype=float)
+    forecast_a = array_like(forecast_a, "forecast_a", ndim=1, dtype=float)
+    forecast_b = array_like(forecast_b, "forecast_b", ndim=1, dtype=float)
     lags = int_like(lags, "lags", optional=True)
     harvey_adj = bool_like(harvey_adj, "harvey_adj")
     power = float_like(power, "power", optional=True)
@@ -3682,13 +3729,16 @@ def clark_west_test(
     Parameters
     ----------
     y : array_like
-        The observed values of the forecast variable.
+        The observed values of the forecast variable. The array is 1-D; a
+        column with shape (nobs, 1) is also accepted.
     forecast_restricted : array_like
         The forecasts of ``y`` from the restricted model, for example the
-        historical mean or a random walk.
+        historical mean or a random walk. The array is 1-D; a column with
+        shape (nobs, 1) is also accepted.
     forecast_unrestricted : array_like
         The forecasts of ``y`` from the unrestricted model, which nests the
-        restricted model.
+        restricted model. The array is 1-D; a column with shape (nobs, 1) is
+        also accepted.
     lags : int, optional
         The number of lags to include in the HAC variance estimator used for
         the adjusted loss differential. Must be non-negative if provided. If
@@ -3810,12 +3860,12 @@ def clark_west_test(
     >>> print(f"{dm.statistic:.3f}, {dm.pvalue:.4f}")
     1.251, 0.1056
     """
-    y = array_like(y, "y", ndim=1, maxdim=1, dtype=float)
+    y = array_like(y, "y", ndim=1, dtype=float)
     forecast_restricted = array_like(
-        forecast_restricted, "forecast_restricted", ndim=1, maxdim=1, dtype=float
+        forecast_restricted, "forecast_restricted", ndim=1, dtype=float
     )
     forecast_unrestricted = array_like(
-        forecast_unrestricted, "forecast_unrestricted", ndim=1, maxdim=1, dtype=float
+        forecast_unrestricted, "forecast_unrestricted", ndim=1, dtype=float
     )
     lags = int_like(lags, "lags", optional=True)
     horizon = int_like(horizon, "horizon")
