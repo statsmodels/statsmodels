@@ -2,6 +2,8 @@
 Tests for ARMA innovations algorithm wrapper
 """
 
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
@@ -459,3 +461,26 @@ def test_innovations_single_precision_input(sigma2, dtype, rtol):
         "arma_innovations", endog.astype(float), [0.5], [0.3], 1.0
     )
     assert_allclose((u, v), expected, rtol=rtol)
+
+
+@pytest.mark.parametrize("func", ["arma_score", "arma_scoreobs"])
+@pytest.mark.parametrize("prefix", [None, "s", "d", "c", "z"])
+def test_score_prefix_deprecated(func, prefix):
+    # The score functions never used prefix. Passing it warns, and the result
+    # does not change.
+    rng = np.random.default_rng(20261121)
+    endog = rng.standard_normal(60)
+    score = getattr(arma_innovations, func)
+    if prefix is None:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            res = score(endog, [0.5], [0.3], sigma2=1.7)
+    else:
+        match = f"prefix is not used by {func}"
+        with pytest.warns(FutureWarning, match=match) as record:
+            res = score(endog, [0.5], [0.3], sigma2=1.7, prefix=prefix)
+        # The warning points to the caller
+        assert record[0].filename == __file__
+    assert res.dtype == np.float64
+    expected = _kalman_filter_reference(func, endog, [0.5], [0.3], 1.7)
+    assert_allclose(res, expected, rtol=RTOL[func])

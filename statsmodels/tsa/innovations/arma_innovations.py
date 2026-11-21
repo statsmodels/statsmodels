@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from scipy.linalg.blas import find_best_blas_type
 
@@ -193,6 +195,18 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     return func(endog, ar_params, ma_params, sigma2)
 
 
+def _warn_unused_prefix(prefix, func_name):
+    # The score is the complex-step derivative of the loglikelihood, which is
+    # always evaluated in double precision (complex128), so prefix is not used
+    if prefix is not None:
+        warnings.warn(
+            f"prefix is not used by {func_name} and is deprecated. It will be "
+            "removed after statsmodels 0.17 is released.",
+            FutureWarning,
+            stacklevel=3,
+        )
+
+
 def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
                prefix=None):
     """
@@ -213,9 +227,12 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
     sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
     prefix : str, optional
-        The BLAS prefix associated with the datatype. Default is to find the
-        best datatype based on given input. This argument is typically only
-        used internally.
+        Not used. The score is always computed in double precision.
+
+        .. deprecated:: 0.15.1
+
+           `prefix` has no effect. It is deprecated and will be removed after
+           statsmodels 0.17 is released.
 
     Returns
     -------
@@ -229,6 +246,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
     This is a numerical approximation, calculated using first-order complex
     step differentiation on the `arma_loglike` method.
     """
+    _warn_unused_prefix(prefix, "arma_score")
     ar_params = np.atleast_1d([] if ar_params is None else ar_params)
     ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
@@ -263,9 +281,12 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
     sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
     prefix : str, optional
-        The BLAS prefix associated with the datatype. Default is to find the
-        best datatype based on given input. This argument is typically only
-        used internally.
+        Not used. The score is always computed in double precision.
+
+        .. deprecated:: 0.15.1
+
+           `prefix` has no effect. It is deprecated and will be removed after
+           statsmodels 0.17 is released.
 
     Returns
     -------
@@ -279,6 +300,7 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
     This is a numerical approximation, calculated using first-order complex
     step differentiation on the `arma_loglikeobs` method.
     """
+    _warn_unused_prefix(prefix, "arma_scoreobs")
     ar_params = np.atleast_1d([] if ar_params is None else ar_params)
     ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
