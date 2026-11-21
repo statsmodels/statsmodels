@@ -71,6 +71,10 @@ Deprecations
   accepted, for example a column in ``arma_periodogram`` or a row in
   ``index2lpol``, are deprecated. They give the same result as before with a
   ``FutureWarning``, and will raise after statsmodels 0.17. :pr:`10861`
+- A 2-d ``filt`` in :func:`~statsmodels.tsa.filters.filtertools.convolution_filter`
+  with more than one column but not one column per column of ``x`` is
+  deprecated. Where it ran, it gives the same result with a ``FutureWarning``,
+  and it will raise a ``ValueError`` in statsmodels 0.17. :pr:`10892`
 
 Behavior changes
 ----------------
@@ -338,6 +342,11 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- :func:`~statsmodels.tsa.filters.filtertools.convolution_filter` with a
+  ``filt`` of shape (1, nvars), one coefficient per column of ``x``, convolved
+  across the columns and returned one column. Each column is filtered with its
+  own coefficient, as the docstring says, so the values and the shape change.
+  :pr:`10892`
 
 New Features and Enhancements
 =============================
