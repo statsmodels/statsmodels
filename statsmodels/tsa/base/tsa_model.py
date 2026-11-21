@@ -76,6 +76,11 @@ def get_index_loc(key, index):
     index : pd.Index
         The index to search.
 
+        .. versionchanged:: 0.15.1
+
+           An Index with dtype uint64 is extended with uint64 labels
+           instead of float labels.
+
     Returns
     -------
     loc : int or slice
@@ -138,7 +143,9 @@ def get_index_loc(key, index):
             key = nobs + key
         # Out-of-sample (note that we include key itself in the new index)
         elif key > base_index[-1]:
-            index = Index(np.arange(base_index[0], int(key + 1)))
+            # np.arange(np.uint64(0), int) gives floats, so keep the dtype
+            dtype = base_index.dtype if base_index.dtype == np.uint64 else None
+            index = Index(np.arange(base_index[0], int(key + 1), dtype=dtype))
 
     # Special handling for date indexes
     if date_index:
