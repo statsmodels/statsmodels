@@ -71,6 +71,11 @@ Deprecations
   accepted, for example a column in ``arma_periodogram`` or a row in
   ``index2lpol``, are deprecated. They give the same result as before with a
   ``FutureWarning``, and will raise after statsmodels 0.17. :pr:`10861`
+- ``arma_periodogram`` and ``ArmaProcess.periodogram`` divide by
+  ``sqrt(2 * pi)`` instead of ``2 * pi``. A new ``normalization`` argument
+  selects ``"2pi"`` (the spectral density) or ``"sqrt(2pi)"`` (the current
+  result). Without it, a ``FutureWarning`` is issued, and the default will
+  change to ``"2pi"`` after statsmodels 0.17. :pr:`10863`
 
 Behavior changes
 ----------------
