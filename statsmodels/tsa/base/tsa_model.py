@@ -183,7 +183,11 @@ def get_index_loc(key, index):
                 )
                 key = index[-1]
             else:
-                key = index[key]
+                try:
+                    key = index[key]
+                except IndexError as exc:
+                    # A negative location before the start of the sample
+                    raise KeyError(str(exc)) from exc
         # Other key types (i.e., string date or some datetime-like object)
         else:
             # Convert the key to the appropriate date-like object

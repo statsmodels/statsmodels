@@ -2469,3 +2469,27 @@ def test_quarter_string_keys_autoreg():
         res.predict(start=2, dynamic=3),
         rtol=1e-13,
     )
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.date_range("2000-01-01", periods=8, freq="MS"),
+        pd.period_range("2000-01", periods=8, freq="M"),
+        pd.RangeIndex(8),
+        pd.Index(np.arange(8, dtype=np.int64)),
+    ],
+    ids=["datetime", "period", "range", "integer"],
+)
+def test_negative_location_before_start(index):
+    # A negative location before the start raises a KeyError for every
+    # index, while -nobs is the first location
+    with pytest.raises(KeyError):
+        tsa_model.get_index_loc(-9, index)
+    loc, prediction_index, _ = tsa_model.get_index_loc(-8, index)
+    assert loc == 0
+    assert prediction_index.equals(index[:1])
+
+    mod = tsa_model.TimeSeriesModel(pd.Series(np.zeros(8), index=index))
+    with pytest.raises(KeyError, match="The `start` argument could not"):
+        tsa_model.get_prediction_index(-20, None, 8, mod._index, data=mod.data)
