@@ -2306,6 +2306,78 @@ def test_all_initial_values():
     assert_allclose(fit2.params["initial_seasons"], seas)
 
 
+def _known_seasonal_kwargs(seasonal, m):
+    model_kwargs = {
+        "trend": "add",
+        "seasonal": seasonal,
+        "seasonal_periods": m,
+        "initialization_method": "known",
+        "initial_level": 38.0,
+        "initial_trend": 0.5,
+    }
+    fit_kwargs = {
+        "smoothing_level": 0.3,
+        "smoothing_trend": 0.1,
+        "smoothing_seasonal": 0.2,
+        "optimized": False,
+    }
+    return model_kwargs, fit_kwargs
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize("m", [3, 4])
+def test_initial_seasonal_without_last_value(seasonal, m):
+    # A known initial_seasonal of length seasonal_periods - 1 is completed so
+    # that the average effect is zero: the values sum to 0 if additive and to
+    # m, a mean of 1, if multiplicative. The model then equals the one given
+    # the complete values.
+    full = {
+        ("add", 3): [3.0, -1.0, -2.0],
+        ("add", 4): [4.0, -14.0, -5.0, 15.0],
+        ("mul", 3): [1.25, 0.5, 1.25],
+        ("mul", 4): [1.25, 0.5, 0.75, 1.5],
+    }[(seasonal, m)]
+    kwargs, fit_kwargs = _known_seasonal_kwargs(seasonal, m)
+    short = ExponentialSmoothing(aust, initial_seasonal=full[:-1], **kwargs)
+    assert_allclose(short.initial_values()[2], full, rtol=1e-15)
+    res = short.fit(**fit_kwargs)
+    expected = ExponentialSmoothing(aust, initial_seasonal=full, **kwargs)
+    expected = expected.fit(**fit_kwargs)
+    assert_allclose(res.params["initial_seasons"], full, rtol=1e-15)
+    assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-15)
+    assert_allclose(res.forecast(2 * m), expected.forecast(2 * m), rtol=1e-15)
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+def test_initial_seasonal_one_value_two_periods(seasonal):
+    # With seasonal_periods=2 a single value was broadcast to both seasons.
+    # That is kept for now, with a FutureWarning. For "mul", the completed
+    # value would be 2 - 3.5 < 0.
+    value = 3.5 if seasonal == "mul" else 3.0
+    kwargs, fit_kwargs = _known_seasonal_kwargs(seasonal, 2)
+    with pytest.warns(FutureWarning, match="used for both seasons") as record:
+        mod = ExponentialSmoothing(aust, initial_seasonal=[value], **kwargs)
+    assert Path(record[0].filename) == Path(__file__)
+    res = mod.fit(**fit_kwargs)
+    expected = ExponentialSmoothing(aust, initial_seasonal=[value, value], **kwargs)
+    expected = expected.fit(**fit_kwargs)
+    assert_allclose(res.params["initial_seasons"], [value, value], rtol=1e-15)
+    assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-15)
+
+
+def test_initial_seasonal_without_last_value_not_positive():
+    # The completed multiplicative seasonal would be 4 - (1.5 + 1.5 + 1) = 0
+    with pytest.raises(ValueError, match="must sum to less than seasonal_periods"):
+        ExponentialSmoothing(
+            aust,
+            seasonal="mul",
+            seasonal_periods=4,
+            initialization_method="known",
+            initial_level=38.0,
+            initial_seasonal=[1.5, 1.5, 1.0],
+        )
+
+
 @pytest.mark.parametrize("trend", [None, "add"])
 @pytest.mark.parametrize("seasonal", ["add", "mul"])
 def test_seasonal_forecast_uses_final_season(trend, seasonal):
