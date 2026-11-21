@@ -168,8 +168,17 @@ class ExponentialSmoothing(TimeSeriesModel):
         deferring to the heuristic for others or estimating the unset
         parameters.
     use_boxcox : {True, False, 'log', float}, optional
-        Should the Box-Cox transform be applied to the data first? If 'log'
-        then apply the log. If float then use the value as lambda.
+        Should the Box-Cox transform be applied to the data first? If True,
+        lambda is estimated by maximum likelihood. If 'log' then apply the
+        log. If float then use the value as lambda. False and None apply no
+        transform. An int is used as a bool: 0 applies no transform and any
+        other int estimates lambda. Pass a float, such as 1.0, to fix lambda.
+
+        .. versionchanged:: 0.15.1
+
+           With an int `use_boxcox`, the initial values are computed from
+           the same transform as the fit. They were computed with the int as
+           a fixed lambda, while fitting and forecasting used it as a bool.
     bounds : dict of str to tuple of float, optional
         A dictionary containing bounds for the parameters in the model,
         excluding the initial values if estimated. The keys of the dictionary
@@ -322,17 +331,22 @@ class ExponentialSmoothing(TimeSeriesModel):
         return bounds
 
     def _boxcox(self):
-        if self._use_boxcox is None or self._use_boxcox is False:
+        use_boxcox = self._use_boxcox
+        if isinstance(use_boxcox, int) and not isinstance(use_boxcox, bool):
+            # fit and _predict use an int as a bool, so the initial values
+            # must come from the same transformation
+            use_boxcox = bool(use_boxcox)
+        if use_boxcox is None or use_boxcox is False:
             self._lambda = np.nan
             return self._y
-        if self._use_boxcox is True:
+        if use_boxcox is True:
             y, self._lambda = boxcox(self._y)
-        elif self._use_boxcox == "log":
+        elif use_boxcox == "log":
             self._lambda = 0.0
             y = boxcox(self._y, 0.0)
-        elif isinstance(self._use_boxcox, (int, float)):
-            self._lambda = float(self._use_boxcox)
-            y = boxcox(self._y, self._use_boxcox)
+        elif isinstance(use_boxcox, float):
+            self._lambda = float(use_boxcox)
+            y = boxcox(self._y, use_boxcox)
         else:
             raise TypeError("use_boxcox must be True, False, 'log' or a float.")
         return y
