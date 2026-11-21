@@ -1158,6 +1158,9 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- ``STLForecastResults.forecast`` raised a ``TypeError`` for a str or
+  datetime ``steps``, although they are documented.
+  :pr:`10883`
 
 Statistics and tests
 --------------------
