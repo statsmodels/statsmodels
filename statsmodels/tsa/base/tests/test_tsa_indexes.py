@@ -1873,3 +1873,59 @@ def test_integer_index_forecast_labels(dtype):
     assert out_of_sample == 3
     np.testing.assert_array_equal(prediction_index.to_numpy(), np.arange(3, 8))
     assert prediction_index.dtype == labels.dtype
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.date_range("2000-01-01", periods=5, freq="YS"),
+        pd.date_range("2000-01-01", periods=8, freq="2QS"),
+        # Dates in the second quarter of 2002 and in 2001, but not in 2001Q2
+        pd.date_range("2000-01-01", periods=8, freq="3QS"),
+    ],
+)
+@pytest.mark.parametrize("which", ["start", "end"])
+def test_quarter_key_without_date(index, which):
+    # The row labels are the model's own dates, so a quarter without a date is
+    # not looked up again with pandas' quarter parsing, which found a date of
+    # another quarter, e.g. 2000-07-01 for 2001Q2 with semiannual dates
+    assert not ((index >= "2001-04-01") & (index < "2001-07-01")).any()
+    endog = pd.Series(np.zeros(len(index)), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    start, end = ("2001Q2", None) if which == "start" else (0, "2001Q2")
+    with pytest.raises(KeyError, match=f"The `{which}` argument could not"):
+        tsa_model.get_prediction_index(
+            start, end, len(index), mod._index, data=mod.data
+        )
+
+
+def test_quarter_key_row_label_retry_other_keys():
+    # Row labels that differ from the dates are still searched for a quarter
+    # key that has dates
+    dates = pd.date_range("2000-01-01", periods=12, freq="QS")
+    labels = pd.Index(
+        [f"{year}Q{q}" for year in (2000, 2001, 2002) for q in range(1, 5)]
+    )
+    endog = pd.Series(np.zeros(12), index=labels)
+    mod = tsa_model.TimeSeriesModel(endog, dates=dates)
+    start, end, _, _ = tsa_model.get_prediction_index(
+        "2001Q2", None, 12, mod._index, data=mod.data
+    )
+    assert dates[start] == pd.Timestamp("2001-04-01")
+    assert end == 11
+    # A key that is not a quarter string is looked up in the row labels even
+    # if no date lies in its quarter
+    years = pd.date_range("2000-01-01", periods=3, freq="YS")
+    endog = pd.Series(np.zeros(3), index=["2000-06-30", "2001-06-30", "2002-06-30"])
+    mod = tsa_model.TimeSeriesModel(endog, dates=years)
+    loc, _, _ = tsa_model.get_index_label_loc(
+        "2001-06-30", mod._index, mod.data.row_labels
+    )
+    assert loc == 1
+    # Keys that are not quarter strings, or other indexes, raise as before
+    with pytest.raises(KeyError):
+        tsa_model.get_index_label_loc(pd.Timestamp("2000-01-15"), dates, dates)
+    endog = pd.Series(np.zeros(12))
+    mod = tsa_model.TimeSeriesModel(endog)
+    with pytest.raises(KeyError, match="The `start` argument could not"):
+        tsa_model.get_prediction_index("2001Q2", None, 12, mod._index, data=mod.data)
