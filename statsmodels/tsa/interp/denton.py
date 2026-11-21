@@ -167,6 +167,11 @@ def dentonm(indicator, benchmark, freq="aq", **kwargs):
     benchmark = asarray(benchmark)
     if benchmark.ndim == 1:
         benchmark = benchmark[:, None]
+    if benchmark.ndim != 2 or benchmark.shape[1] != 1:
+        raise ValueError(
+            "benchmark must be a single series, 1-d or a single column, but "
+            f"has shape {benchmark.shape}"
+        )
 
     # get dimensions
     N = len(indicator)  # total number of high-freq
