@@ -1230,10 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- :func:`~statsmodels.tsa.filters.filtertools.convolution_filter` with
-  ``nsides=1`` raised for a 2-d filter, and for 2-d ``x`` with a filter of
-  length one. Each column of ``x`` is filtered as a 1-d ``x`` is.
-  :pr:`10871`
 
 Statistics and tests
 --------------------
