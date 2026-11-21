@@ -1581,12 +1581,6 @@ Documentation
   ``TsaDescriptive.fit`` (p, d, q) and its return type, the shapes of the
   ``_Var`` coefficient arrays, and a runnable ``_Var`` example in place of one
   that used undefined names. :pr:`10815`
-- Correct docstrings in ``statsmodels.tsa.ar_model``, ``ardl`` and ``arima``:
-  the order-selection result classes, ``ARDLResults.apply``, the ``order`` of
-  ``UECM``, ``use_t`` and the ``ci_*`` methods of ``UECMResults``, the return
-  value of ``ARIMA.fit``, the ``endog`` type of the Burg, Durbin-Levinson,
-  innovations and Yule-Walker estimators, and the order types of
-  ``hannan_rissanen``. :pr:`10873`
 
 Stricter Input Validation
 =========================
