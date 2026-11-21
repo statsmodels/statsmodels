@@ -1153,6 +1153,11 @@ Time series analysis
 - ``DeterministicProcess.range`` ignored the step of a ``RangeIndex`` whose
   step is not 1, so it returned the wrong rows or raised a ``KeyError``.
   :pr:`10852`
+- ``DeterministicProcess`` and the ``out_of_sample`` of the deterministic
+  terms extended an integer ``Index`` only if it started at 0 with step 1, so
+  ``range`` raised a ``TypeError`` and forecasts had wrong labels for an index
+  that a ``RangeIndex`` with the same values handles. An integer ``Index`` with
+  a constant step is extended like that ``RangeIndex``. :pr:`10886`
 
 Statistics and tests
 --------------------
