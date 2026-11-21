@@ -819,8 +819,9 @@ def test_duplicate_seasonal_lags(component):
         kwargs = {"ar_order": [1, 4], "seasonal_ar_order": 1}
     else:
         kwargs = {"ma_order": [1, 4], "seasonal_ma_order": 1}
-    # The lag is shown as np.int64(4) by NumPy 2
-    match = rf"{component} lag\(s\) \{{(np\.int64\()?4\)?\}} are in both"
+    # NumPy 2 shows the lag as np.int64(4), or np.int32(4) where the default
+    # integer has 32 bits (Pyodide); older NumPy shows 4
+    match = rf"{component} lag\(s\) \{{(np\.int(32|64)\()?4\)?\}} are in both"
     with pytest.raises(ValueError, match=match):
         specification.SARIMAXSpecification(seasonal_periods=4, **kwargs)
     spec = specification.SARIMAXSpecification(
