@@ -1158,6 +1158,9 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- The ARMA likelihood functions of ``statsmodels.tsa.innovations`` raised for
+  an (n, 1) or one-column DataFrame ``endog``, and ``arma_score`` and
+  ``arma_scoreobs`` raised for scalar parameters. :pr:`10888`
 
 Statistics and tests
 --------------------
