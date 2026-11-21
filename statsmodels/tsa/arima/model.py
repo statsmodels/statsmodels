@@ -329,7 +329,9 @@ class ARIMA(sarimax.SARIMAX):
 
         Returns
         -------
-        ARIMAResults
+        ARIMAResults or ndarray
+            The estimation results, or the array of estimated parameters if
+            `return_params` is True.
 
         Examples
         --------

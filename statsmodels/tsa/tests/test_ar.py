@@ -1470,3 +1470,197 @@ def test_no_obs_for_adjustment():
         # The scale divides by the zero residual degrees of freedom
         with warns_or_none(RuntimeWarning, match="divide by zero encountered"):
             mod.fit()
+
+
+@pytest.mark.parametrize("trend, n_trend, n_seasonal", [("c", 1, 11), ("n", 0, 12)])
+def test_autoreg_seasonal_too_few_observations(trend, n_trend, n_seasonal):
+    # The error counts the seasonal dummies, one fewer when there is a constant
+    y = np.random.default_rng(20261120).standard_normal(12)
+    n_reg = n_trend + n_seasonal + 1
+    msg = (
+        rf"The model contains {n_reg} regressors \({n_trend} trend, "
+        rf"{n_seasonal} seasonal, 1 lags\).*only 11 data points"
+    )
+    with pytest.raises(ValueError, match=msg):
+        AutoReg(y, 1, trend=trend, seasonal=True, period=12)
+
+
+def _arch_lm_by_hand(resid, lag):
+    # Engle's LM test: nobs * R2 of resid**2 on a constant and lag lags of it
+    e2 = resid**2
+    y = e2[lag:]
+    x = np.column_stack([np.ones_like(y)] + [e2[lag - j : -j] for j in range(1, lag + 1)])
+    beta = np.linalg.lstsq(x, y, rcond=None)[0]
+    u = y - x @ beta
+    r2 = 1 - (u @ u) / np.sum((y - y.mean()) ** 2)
+    return y.shape[0] * r2
+
+
+@pytest.mark.parametrize("lags", [1, 3])
+def test_autoreg_test_heteroskedasticity_lags(lags):
+    from scipy import stats
+
+    rng = np.random.default_rng(20261121)
+    e = rng.standard_normal(250) * np.sqrt(1 + 0.5 * np.sin(np.arange(250)) ** 2)
+    res = AutoReg(e, 2).fit()
+    out = res.test_heteroskedasticity(lags=lags)
+    resid = np.asarray(res.resid)
+    expected = np.array([_arch_lm_by_hand(resid, lag) for lag in range(1, lags + 1)])
+    assert_allclose(out["ARCH-LM"], expected, rtol=1e-8)
+    assert_allclose(
+        out["P-value"], stats.chi2.sf(expected, np.arange(1, lags + 1)), rtol=1e-8
+    )
+    assert list(out.index) == list(range(1, lags + 1))
+    assert list(out["DF"]) == list(range(1, lags + 1))
+
+
+def _contract_ar_data(n=120):
+    rng = np.random.default_rng(20261122)
+    e = rng.standard_normal(n)
+    y = np.zeros(n)
+    for t in range(2, n):
+        y[t] = 0.5 * y[t - 1] - 0.2 * y[t - 2] + e[t]
+    return 10 + y, rng.standard_normal((n, 2))
+
+
+def _contract_endog_forms(y):
+    from statsmodels.tsa.tests._contract import series_forms
+
+    forms = dict(series_forms(y))
+    forms["period"] = Series(y, index=period_range("2000-01", periods=y.shape[0], freq="M"))
+    forms["range"] = Series(y, index=pd.RangeIndex(y.shape[0]))
+    return forms
+
+
+@pytest.mark.parametrize(
+    "form", ["list", "tuple", "series", "column", "dataframe", "period", "range"]
+)
+def test_autoreg_endog_input_forms(form):
+    # endog is documented as array_like: every form of a 1-D series gives the
+    # OLS estimates of the ndarray, and pandas input gives pandas forecasts
+    # that continue the index
+    y, _ = _contract_ar_data()
+    x = np.column_stack([np.ones(118), y[1:-1], y[:-2]])
+    expected = np.linalg.lstsq(x, y[2:], rcond=None)[0]
+    endog = _contract_endog_forms(y)[form]
+    res = AutoReg(endog, 2).fit()
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+    fcast = res.forecast(2)
+    first = expected[0] + expected[1] * y[-1] + expected[2] * y[-2]
+    assert_allclose(np.asarray(fcast)[0], first, rtol=1e-10)
+    if isinstance(endog, (pd.Series, pd.DataFrame)):
+        index = endog.index
+        if isinstance(index, pd.RangeIndex):
+            expected_index = [120, 121]
+        elif isinstance(index, pd.PeriodIndex):
+            expected_index = list(period_range("2010-01", periods=2, freq="M"))
+        else:
+            expected_index = list(date_range("2010-01-01", periods=2, freq="MS"))
+        assert isinstance(fcast, pd.Series)
+        assert list(fcast.index) == expected_index
+    else:
+        assert isinstance(fcast, np.ndarray)
+
+
+def test_autoreg_endog_integer():
+    # Integer endog gives the result of the same values as floats
+    y, _ = _contract_ar_data()
+    y_int = np.round(4 * y).astype(np.int64)
+    res = AutoReg(y_int, 2).fit()
+    expected = AutoReg(y_int.astype(float), 2).fit()
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+
+
+@pytest.mark.parametrize("form", ["ndarray", "list", "dataframe", "integer"])
+def test_autoreg_exog_input_forms(form):
+    # exog is documented as array_like
+    y, x = _contract_ar_data()
+    if form == "integer":
+        x = np.round(4 * x).astype(np.int64)
+    exog = {
+        "ndarray": x,
+        "list": x.tolist(),
+        "dataframe": pd.DataFrame(x, columns=["a", "b"]),
+        "integer": x,
+    }[form]
+    res = AutoReg(y, 2, exog=exog).fit()
+    reg = np.column_stack([np.ones(118), y[1:-1], y[:-2], x[2:]])
+    expected = np.linalg.lstsq(reg, y[2:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "lags", [[1, 3], (1, 3), np.array([1, 3]), range(1, 4, 2)], ids=str
+)
+def test_autoreg_lags_sequence_forms(lags):
+    # lags is documented as a sequence of int
+    y, _ = _contract_ar_data()
+    res = AutoReg(y, lags).fit()
+    reg = np.column_stack([np.ones(117), y[2:-1], y[:-3]])
+    expected = np.linalg.lstsq(reg, y[3:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+    assert res.ar_lags == [1, 3]
+
+
+@pytest.mark.parametrize(
+    "trend, names",
+    [
+        ("n", ["y.L1"]),
+        ("c", ["const", "y.L1"]),
+        ("t", ["trend", "y.L1"]),
+        ("ct", ["const", "trend", "y.L1"]),
+        ("ctt", ["const", "trend", "trend_squared", "y.L1"]),
+    ],
+)
+def test_autoreg_trend_values(trend, names):
+    # Each documented trend adds its terms, with the time trend 1, 2, ..., nobs
+    y, _ = _contract_ar_data()
+    res = AutoReg(y, 1, trend=trend).fit()
+    assert res.model.exog_names == names
+    t = np.arange(2, 121, dtype=float)
+    terms = {"n": [], "c": [1.0], "t": [t], "ct": [1.0, t], "ctt": [1.0, t, t**2]}
+    reg = [np.broadcast_to(term, (119,)) for term in terms[trend]]
+    reg = np.column_stack(reg + [y[:-1]])
+    expected = np.linalg.lstsq(reg, y[1:], rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-8)
+
+
+@pytest.mark.parametrize("func", ["AutoReg", "ar_select_order"])
+def test_autoreg_invalid_trend(func):
+    y, _ = _contract_ar_data()
+    with pytest.raises(ValueError, match="trend must be one of"):
+        if func == "AutoReg":
+            AutoReg(y, 1, trend="x")
+        else:
+            ar_select_order(y, 2, trend="x")
+
+
+def test_autoreg_missing_values():
+    # missing="drop" drops the observations with NaNs, "raise" raises
+    from statsmodels.tools.sm_exceptions import MissingDataError
+
+    y, _ = _contract_ar_data()
+    y_nan = y.copy()
+    y_nan[5] = np.nan
+    res = AutoReg(y_nan, 1, missing="drop").fit()
+    expected = AutoReg(np.delete(y, 5), 1).fit()
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+    assert res.nobs == 118
+    with pytest.raises(MissingDataError):
+        AutoReg(y_nan, 1, missing="raise")
+    with pytest.raises(ValueError, match="missing must be one of"):
+        AutoReg(y_nan, 1, missing="x")
+
+
+@pytest.mark.parametrize(
+    "form", ["list", "tuple", "series", "column", "dataframe", "period", "range"]
+)
+def test_ar_select_order_endog_input_forms(form):
+    # endog is documented as array_like: every form selects the same model
+    # with the same criteria
+    y, _ = _contract_ar_data()
+    expected = ar_select_order(y, 4, ic="aic")
+    res = ar_select_order(_contract_endog_forms(y)[form], 4, ic="aic")
+    assert res.ar_lags == expected.ar_lags
+    assert list(res.aic) == list(expected.aic)
+    assert_allclose(list(res.aic.values()), list(expected.aic.values()), rtol=1e-10)

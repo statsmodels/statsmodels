@@ -2238,6 +2238,20 @@ class AROrderSelectionResults:
     Results from an AR order selection
 
     Contains the information criteria for all fitted model orders.
+
+    Parameters
+    ----------
+    model : AutoReg
+        The model selected using the chosen information criterion.
+    ics : list of tuple
+        The lags of each model fit, an int or a tuple of int, and its
+        ``InformationCriteria``.
+    trend : {"n", "c", "t", "ct", "ctt"}
+        The trend included in the model selection.
+    seasonal : bool
+        Flag indicating if a seasonal component is included.
+    period : int or None
+        The period of the seasonal component.
     """
 
     def __init__(

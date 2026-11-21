@@ -1013,7 +1013,7 @@ class ARDLResults(AutoRegResults):
         The fitted parameters from the AR Model.
     cov_params : ndarray
         The estimated covariance matrix of the model parameters.
-    normalized_cov_params : ndarray
+    normalized_cov_params : ndarray, optional
         The array inv(dot(x.T,x)) where x contains the regressors in the
         model.
     scale : float, optional
@@ -1130,7 +1130,6 @@ class ARDLResults(AutoRegResults):
 
         Parameters
         ----------
-
         endog : array_like
             New observations from the modeled time-series process.
         exog : array_like, optional
@@ -1487,6 +1486,29 @@ class ARDLOrderSelectionResults(AROrderSelectionResults):
     Results from an ARDL order selection
 
     Contains the information criteria for all fitted model orders.
+
+    Parameters
+    ----------
+    model : ARDL
+        The model selected using the chosen information criterion.
+    ics : dict
+        The information criteria of each model fit, an
+        ``InformationCriteria``, keyed by its lags. A key is a tuple whose
+        first element is the lags of the endogenous variable, and whose other
+        elements are pairs of an exog variable and its lags.
+    trend : {"n", "c", "t", "ct", "ctt"}
+        The trend included in the model selection.
+    seasonal : bool
+        Flag indicating if a seasonal component is included.
+    period : int or None
+        The period of the seasonal component.
+
+    Notes
+    -----
+    Unlike ``AROrderSelectionResults``, ``aic``, ``bic`` and ``hqic`` are
+    Series indexed by the value of the criterion, sorted from the lowest
+    value. Each value is a tuple of the lags of the endogenous variable and a
+    dict of the lags of the exog variables.
     """
 
     def __init__(self, model, ics, trend, seasonal, period):
@@ -1897,11 +1919,14 @@ class UECM(ARDL):
     exog : array_like, optional
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
-    order : int, sequence of intdict, or None, optional
+    order : int or dict, optional
         If int, uses lags 0, 1, ..., order for all exog variables. If a
         dict, applies the lags series by series. If ``exog`` is anything
         other than a DataFrame, the keys are the column index of exog
-        (e.g., 0, 1, ...). If a DataFrame, keys are column names.
+        (e.g., 0, 1, ...). If a DataFrame, keys are column names. The values
+        of the dict are int, or None to exclude the variable. Each included
+        variable must have an order of at least 1, and at least one variable
+        must be included.
     fixed : array_like, optional
         Additional fixed regressors that are not lagged.
     causal : bool, optional
@@ -2393,11 +2418,13 @@ class UECMResults(ARDLResults):
         The fitted parameters from the AR Model.
     cov_params : ndarray
         The estimated covariance matrix of the model parameters.
-    normalized_cov_params : ndarray
+    normalized_cov_params : ndarray, optional
         The array inv(dot(x.T,x)) where x contains the regressors in the
         model.
     scale : float, optional
         An estimate of the scale of the model.
+    use_t : bool, optional
+        Whether use_t was set in fit
     """
 
     _cache: dict[str, Any] = {}  # for scale setter
@@ -2458,6 +2485,21 @@ class UECMResults(ARDLResults):
         return self._ci_wrap(pvalues, "ci_pvalues")
 
     def ci_conf_int(self, alpha: float = 0.05) -> Float64Array | pd.DataFrame:
+        """
+        Confidence intervals of the normalized cointegrating relationship
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The intervals have coverage 1 - alpha. The default is 0.05.
+
+        Returns
+        -------
+        ndarray or DataFrame
+            The lower and upper bounds, one row for each term of the
+            relationship. A DataFrame with columns "lower" and "upper" if the
+            model was constructed with pandas data.
+        """
         alpha = float_like(alpha, "alpha")
 
         if self.use_t:
@@ -2476,6 +2518,22 @@ class UECMResults(ARDLResults):
         return df
 
     def ci_summary(self, alpha: float = 0.05) -> Summary:
+        """
+        Summarize the normalized cointegrating relationship
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level of the confidence intervals. The default is
+            0.05.
+
+        Returns
+        -------
+        Summary
+            A table of the parameters of the relationship with their
+            standard errors, t-values, p-values and confidence intervals.
+        """
+
         def _ci(alpha=alpha):
             return np.asarray(self.ci_conf_int(alpha))
 
@@ -2503,6 +2561,14 @@ class UECMResults(ARDLResults):
 
     @cache_readonly
     def ci_resids(self) -> np.ndarray | pd.Series:
+        """
+        Residuals of the normalized cointegrating relationship
+
+        The deterministic terms, the endogenous variable and the levels of
+        the included exog variables, for all observations, times
+        ``ci_params``. A Series with the index of endog if the model was
+        constructed with pandas data, an ndarray otherwise.
+        """
         d = self.model._blocks["deterministic"]
         exog = self.model.data.orig_exog
         is_pandas = isinstance(exog, pd.DataFrame)
