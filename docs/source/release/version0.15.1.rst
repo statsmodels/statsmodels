@@ -1,5 +1,10 @@
 :orphan:
 
+..
+   New release-note bullets are added as fragments in docs/upcoming_changes/
+   and moved into this file at release time with
+   tools/releasing/collect_release_notes.py.
+
 ==============
 Release 0.15.1
 ==============
