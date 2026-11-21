@@ -2026,3 +2026,102 @@ def test_fftconvolveinv_longer_in2(mode, start, stop):
     in2 = array([1.0, -a, 0.0, 0.0, 0.0])
     res = fftconvolveinv(in1, in2, mode=mode)
     assert_allclose(res, geometric[start:stop], rtol=1e-12)
+
+
+def _fft_input_form(value, form):
+    if form == "list":
+        return value.tolist()
+    elif form == "tuple":
+        return tuple(value)
+    elif form == "series":
+        return Series(value, index=date_range("2000-01-01", periods=value.shape[0]))
+    # integers as a list
+    return np.round(10 * value).astype(int).tolist()
+
+
+FFT_FORMS = ["list", "tuple", "series", "int-list"]
+
+
+@pytest.mark.parametrize("form", FFT_FORMS)
+@pytest.mark.parametrize("arg", ["in1", "in2"])
+def test_fftconvolveinv_array_like(arg, form):
+    # a list, tuple or Series raised an AttributeError or a KeyError. The
+    # inverse filter is the recursion of lfilter: the FFT wraps around after
+    # 256 values, which changes the first 200 by less than 0.5 ** 56.
+    from scipy import signal
+
+    x = np.random.default_rng(20261121).standard_normal(200)
+    args = {"in1": x, "in2": np.array([1.0, 0.5, 0.25])}
+    args[arg] = _fft_input_form(args[arg], form)
+    expected = signal.lfilter([1.0], np.asarray(args["in2"], float), args["in1"])
+    res = fftconvolveinv(args["in1"], args["in2"], mode="full")
+    assert isinstance(res, np.ndarray)
+    assert res.shape == (202,)
+    # atol for values near zero: the FFT rounding error is absolute
+    assert_allclose(res[:200], expected, rtol=1e-10, atol=1e-12)
+
+
+@pytest.mark.parametrize("form", FFT_FORMS)
+@pytest.mark.parametrize("arg", ["in1", "in2", "in3"])
+def test_fftconvolve3_array_like(arg, form):
+    # a list, tuple or Series raised an AttributeError or a KeyError.
+    # fftconvolve3(x, ma, ar) is the ARMA filter of lfilter, up to the FFT
+    # wrap-around after 256 values (below 0.5 ** 56 for the first 200).
+    from scipy import signal
+
+    x = np.random.default_rng(20261121).standard_normal(200)
+    args = {"in1": x, "in2": np.array([1.0, 0.4]), "in3": np.array([1.0, -0.5])}
+    args[arg] = _fft_input_form(args[arg], form)
+    in1, in2, in3 = (args[key] for key in ("in1", "in2", "in3"))
+    expected = signal.lfilter(np.asarray(in2, float), np.asarray(in3, float), in1)
+    res = fftconvolve3(in1, in2, in3, mode="full")
+    assert isinstance(res, np.ndarray)
+    assert res.shape == (201,)
+    # atol for values near zero: the FFT rounding error is absolute
+    assert_allclose(res[:200], expected, rtol=1e-10, atol=1e-12)
+
+
+def test_fftconvolve_dataframe():
+    # a DataFrame raised an AttributeError. It is 2-d, so it is filtered
+    # with 2-d filters, along its rows.
+    from scipy import signal
+
+    x = np.random.default_rng(20261121).standard_normal(200)
+    df = DataFrame({"x": x}, index=date_range("2000-01-01", periods=200))
+    ma, ar = np.array([1.0, 0.4]), np.array([1.0, -0.5])
+    res = fftconvolveinv(df, ar[:, None], mode="full")
+    assert res.shape == (201, 1)
+    # atol for values near zero: the FFT rounding error is absolute
+    expected = signal.lfilter([1.0], ar, x)
+    assert_allclose(res[:200, 0], expected, rtol=1e-10, atol=1e-12)
+    # without in3, the convolution with in2
+    res = fftconvolve3(df, DataFrame(ma), mode="full")
+    assert res.shape == (201, 1)
+    assert_allclose(res[:, 0], np.convolve(x, ma), rtol=1e-10, atol=1e-12)
+
+
+@pytest.mark.parametrize("complex_arg", ["in1", "in2", "in1-in3"])
+def test_fftconvolve_complex_list(complex_arg):
+    # complex lists stay complex, and the result is the complex filter of
+    # lfilter
+    from scipy import signal
+
+    rng = np.random.default_rng(20261121)
+    x = rng.standard_normal(200)
+    ma, ar = np.array([1.0, 0.4]), np.array([1.0, -0.5])
+    if "in1" in complex_arg:
+        x = x + 1j * rng.standard_normal(200)
+    if complex_arg == "in2":
+        ma, ar = np.array([1.0, 0.4j]), np.array([1.0, -0.5j])
+    elif complex_arg == "in1-in3":
+        ar = np.array([1.0, -0.5j])
+    # fftconvolveinv has no third input, so it uses ar as in2
+    res = fftconvolveinv(x.tolist(), ar.tolist(), mode="full")
+    assert np.iscomplexobj(res)
+    # atol for values near zero: the FFT rounding error is absolute
+    expected = signal.lfilter([1.0], ar, x)
+    assert_allclose(res[:200], expected, rtol=1e-10, atol=1e-12)
+    res = fftconvolve3(x.tolist(), ma.tolist(), ar.tolist(), mode="full")
+    assert np.iscomplexobj(res)
+    expected = signal.lfilter(ma, ar, x)
+    assert_allclose(res[:200], expected, rtol=1e-10, atol=1e-12)
