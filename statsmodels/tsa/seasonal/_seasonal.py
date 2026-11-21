@@ -1,6 +1,8 @@
 """
 Seasonal Decomposition by Moving Averages
 """
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 import warnings
 
 import numpy as np
@@ -178,9 +180,10 @@ def seasonal_decompose(
             if isinstance(index, pd.PeriodIndex):
                 pfreq = index.freq
             else:
-                pfreq = getattr(index, "freq", None) or getattr(
-                    index, "inferred_freq", None
-                )
+                with _infer_freq_returns_offset():
+                    pfreq = getattr(index, "freq", None) or getattr(
+                        index, "inferred_freq", None
+                    )
 
     x = array_like(x, "x", maxdim=2)
     nobs = len(x)

@@ -1,5 +1,6 @@
 import contextlib
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -318,3 +319,20 @@ def test_input_forms(form):
     combined = np.asarray(res.trend) + seasonal + np.asarray(res.resid)
     assert_allclose(combined, y_float, rtol=1e-12)
     assert_allclose(np.asarray(res.observed), y_float, rtol=1e-15)
+
+
+def test_period_from_inferred_freq():
+    # A DatetimeIndex without a freq gives the period of its inferred freq,
+    # without the warning pandas 3.1 gives when inferred_freq is read
+    rng = np.random.default_rng(20261121)
+    dates = pd.date_range("2000-01-01", periods=72, freq="MS")
+    t = np.arange(72)
+    y = 10 + np.sin(2 * np.pi * t / 12) + 0.1 * rng.standard_normal(72)
+    endog = pd.Series(y, index=list(dates))
+    assert endog.index.freq is None
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        mod = MSTL(endog)
+    assert [str(w.message) for w in record] == []
+    expected = MSTL(y, periods=12)
+    assert_allclose(mod.fit().seasonal, expected.fit().seasonal, rtol=1e-10)

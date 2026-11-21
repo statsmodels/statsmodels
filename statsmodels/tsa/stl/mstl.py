@@ -18,6 +18,8 @@ https://arxiv.org/pdf/2107.13462.pdf
 """
 from __future__ import annotations
 
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 from typing import TYPE_CHECKING
 import warnings
 
@@ -256,7 +258,8 @@ class MSTL:
     def _infer_period(self) -> int:
         freq = None
         if isinstance(self.endog, (pd.Series, pd.DataFrame)):
-            freq = getattr(self.endog.index, "inferred_freq", None)
+            with _infer_freq_returns_offset():
+                freq = getattr(self.endog.index, "inferred_freq", None)
         if freq is None:
             raise ValueError("Unable to determine period from endog")
         period = freq_to_period(freq)

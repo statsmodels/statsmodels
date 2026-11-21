@@ -1348,6 +1348,52 @@ def test_recursive_filter_1d_matches_reference(init):
     assert_allclose(res, expected, rtol=1e-10)
 
 
+@pytest.mark.parametrize("form", ["column", "dataframe", "nested-list"])
+@pytest.mark.parametrize("arg", ["ar_coeff", "init"])
+def test_recursive_filter_coefficient_column(arg, form):
+    # ar_coeff or init as an (n_coeff, 1) column raised a ValueError from
+    # NumPy or scipy.signal.lfiltic; it gives the result of the 1-d values
+    x = _recursive_filter_data()
+    kwargs = {"ar_coeff": np.array(RF_AR_COEFF), "init": np.array(RF_INIT)}
+    value = kwargs[arg]
+    if form == "column":
+        kwargs[arg] = value[:, None]
+    elif form == "dataframe":
+        kwargs[arg] = DataFrame({arg: value})
+    else:
+        kwargs[arg] = [[v] for v in value]
+    res = recursive_filter(x, **kwargs)
+    expected = _recursive_filter_reference(x, RF_AR_COEFF, RF_INIT)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+def test_recursive_filter_coefficient_column_zero_init():
+    # a column of AR coefficients without init
+    x = _recursive_filter_data()
+    res = recursive_filter(x, np.array(RF_AR_COEFF)[:, None])
+    expected = _recursive_filter_reference(x, RF_AR_COEFF)
+    assert_allclose(res, expected, rtol=1e-10)
+
+
+def test_recursive_filter_one_coefficient_nested_init():
+    # init=[[2.0]] with one AR coefficient raised "setting an array element
+    # with a sequence"; y[-1] is 2
+    x = np.array([1.0, 0.0, 0.0])
+    res = recursive_filter(x, [0.5], init=[[2.0]])
+    assert_allclose(res, [2.0, 1.0, 0.5], rtol=1e-12)
+
+
+@pytest.mark.parametrize("shape", [(1, 3), (3, 2)], ids=["row", "two-columns"])
+@pytest.mark.parametrize("arg", ["ar_coeff", "init"])
+def test_recursive_filter_coefficient_not_1d_raises(arg, shape):
+    # these raised unclear errors, or for a row init that its length differs
+    # from that of ar_coeff
+    kwargs = {"ar_coeff": RF_AR_COEFF, "init": RF_INIT}
+    kwargs[arg] = np.ones(shape)
+    with pytest.raises(ValueError, match=f"{arg} is required to have ndim 1"):
+        recursive_filter(_recursive_filter_data(), **kwargs)
+
+
 def _rf_index():
     return date_range("2000-01-01", periods=RF_NOBS, freq="D")
 
