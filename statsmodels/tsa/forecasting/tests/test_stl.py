@@ -480,3 +480,23 @@ def test_non_date_index_no_warning():
     expected_forecast, expected_predicted = _stl_ar_reference(y, 100, 14)
     assert_allclose(forecast, expected_forecast, rtol=1e-10)
     assert_allclose(pred.predicted_mean, expected_predicted, rtol=1e-10)
+
+
+@pytest.mark.parametrize("kind", ["multiindex", "tuples", "bool"])
+def test_index_values_not_dates(kind):
+    # pandas raises a TypeError, not a ValueError, for index values that
+    # cannot be dates; the index is replaced by a RangeIndex
+    y = _seasonal_data()
+    loc = np.arange(120)
+    if kind == "multiindex":
+        index = pd.MultiIndex.from_arrays([loc // 12, loc % 12])
+    elif kind == "tuples":
+        index = pd.Index([(i // 12, i % 12) for i in loc], tupleize_cols=False)
+    else:
+        index = pd.Index(loc % 2 == 0)
+    endog = pd.Series(y, index=index)
+    res = STLForecast(endog, _ValuesAR, period=12).fit()
+    expected_forecast, expected_predicted = _stl_ar_reference(y, 100, 14)
+    assert_allclose(res.forecast(14), expected_forecast, rtol=1e-10)
+    pred = res.get_prediction(100, 133)
+    assert_allclose(pred.predicted_mean, expected_predicted, rtol=1e-10)

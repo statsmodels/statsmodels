@@ -262,7 +262,8 @@ class STLForecastResults:
                         "ignore", "Could not infer format", UserWarning
                     )
                     self._index = pd.to_datetime(self._index)
-            except ValueError:
+            except (TypeError, ValueError):
+                # TypeError for values that cannot be dates, e.g. tuples
                 self._index = pd.RangeIndex(self._nobs)
 
     @property
