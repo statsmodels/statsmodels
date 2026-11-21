@@ -1212,6 +1212,11 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` raised NumPy or
+  SciPy errors for an ``ar_coeff`` or ``init`` given as an (n, 1) column, and
+  a misleading length error for a row ``init``. A column is accepted, and
+  other 2-d input raises a ``ValueError`` that names the argument.
+  :pr:`10872`
 
 Statistics and tests
 --------------------
