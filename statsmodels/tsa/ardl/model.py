@@ -193,8 +193,8 @@ def _format_order(
         if value is None:
             continue
         assert value is not None
-        if isinstance(value, int):
-            final_order[key] = list(range(int(causal), value + 1))
+        if isinstance(value, _INT_TYPES):
+            final_order[key] = list(range(int(causal), int(value) + 1))
         else:
             final_order[key] = [int(lag) for lag in value]
 
@@ -223,6 +223,11 @@ class ARDL(AutoReg):
         applies the lags series by series. If ``exog`` is anything other
         than a DataFrame, the keys are the column index of exog (e.g., 0,
         1, ...). If a DataFrame, keys are column names.
+
+        .. versionchanged:: 0.15.1
+
+            The int values of a dict can be numpy integers. They raised a
+            TypeError.
     fixed : array_like, optional
         Additional fixed regressors that are not lagged.
     causal : bool, optional
