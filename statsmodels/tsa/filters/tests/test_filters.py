@@ -2163,3 +2163,33 @@ def test_fftconvolveinv_longer_in2(mode, start, stop):
     in2 = array([1.0, -a, 0.0, 0.0, 0.0])
     res = fftconvolveinv(in1, in2, mode=mode)
     assert_allclose(res, geometric[start:stop], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "useic",
+    [[1.0], [1.5, -2.0], np.array([2.0])],
+    ids=["list", "list-2", "ndarray"],
+)
+def test_miso_lfilter_nonzero_useic_without_ar_lags(useic):
+    # without AR lags there are no initial conditions. A non-zero useic
+    # raised "Unexpected shape for parameter zi" because lfiltic was called
+    # with b = [1, 0]. It is ignored, as values beyond len(ar) - 1 are, and
+    # the result is the combined input.
+    _, ma, x = _miso_lfilter_data()
+    y, inp = miso_lfilter(array([1.0]), ma, x, useic=useic)
+    expected_y, expected_inp = _miso_lfilter_recursion(array([1.0]), ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-12)
+
+
+@pytest.mark.parametrize("nlags", [1, 2, 3])
+def test_miso_lfilter_useic_extra_values_ignored(nlags):
+    # useic values beyond len(ar) - 1 are ignored: y[-1], ..., y[-nlags] are
+    # the first nlags values
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5, 0.2, 0.1])[: nlags + 1]
+    useic = [1.5, -2.0, 0.5, 3.0]
+    y, inp = miso_lfilter(ar, ma, x, useic=useic)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, useic[:nlags])
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)

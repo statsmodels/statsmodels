@@ -471,6 +471,12 @@ def miso_lfilter(ar, ma, x, useic=False):
         ``y[-1]``), of length ``ar.shape[0] - 1``. Use the default, False,
         for zero initial conditions.
 
+        .. versionchanged:: 0.15.1
+
+           Without AR lags, ``ar = [1.0]``, there are no initial conditions,
+           and a non-zero ``useic`` is ignored, as values beyond
+           ``ar.shape[0] - 1`` are, where it raised a ValueError.
+
     Returns
     -------
     y : ndarray
@@ -537,8 +543,10 @@ def miso_lfilter(ar, ma, x, useic=False):
     # TODO: initialize also x for correlate
     # useic can be an ndarray; all-zero values are the default zero values
     if np.any(useic):
+        # b = [1.0] as in lfilter, so that zi has len(ar) - 1 values, also
+        # for ar = [1.0]
         return signal.lfilter([1], ar, inp,
-                              zi=signal.lfiltic(np.array([1., 0.]), ar,
+                              zi=signal.lfiltic([1.0], ar,
                                                 useic))[0][:nobs], inp[:nobs]
     else:
         return signal.lfilter([1], ar, inp)[:nobs], inp[:nobs]
