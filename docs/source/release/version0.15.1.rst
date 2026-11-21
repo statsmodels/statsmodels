@@ -71,6 +71,10 @@ Deprecations
   accepted, for example a column in ``arma_periodogram`` or a row in
   ``index2lpol``, are deprecated. They give the same result as before with a
   ``FutureWarning``, and will raise after statsmodels 0.17. :pr:`10861`
+- The ``prefix`` argument of ``arma_score`` and ``arma_scoreobs`` in
+  ``statsmodels.tsa.innovations`` was never used. Passing it warns with a
+  ``FutureWarning``, and it will be removed after statsmodels 0.17.
+  :pr:`10889`
 
 Behavior changes
 ----------------
@@ -1158,6 +1162,9 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
+- ``statsmodels.tsa.innovations.arma_innovations`` raised "Buffer dtype
+  mismatch" for ``prefix`` ``"s"``, ``"c"`` or ``"z"`` with double-precision
+  parameters, and for float32 data. :pr:`10889`
 
 Statistics and tests
 --------------------
