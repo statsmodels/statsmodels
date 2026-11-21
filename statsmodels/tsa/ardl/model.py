@@ -2130,15 +2130,15 @@ class UECM(ARDL):
         orig_exog = self.data.orig_exog
         exog_pandas = isinstance(orig_exog, pd.DataFrame)
         dexog_names = []
+        # _order only holds the included exog, whose lags are lists
         for key, val in self._order.items():
-            if val is not None:
-                if exog_pandas:
-                    x_name = f"{key}.L1"
-                else:
-                    x_name = f"x{key}.L1"
-                x_names.append(x_name)
-                lag_base = x_name[:-1]
-                dexog_names.extend(f"D.{lag_base}{lag}" for lag in val[:-1])
+            if exog_pandas:
+                x_name = f"{key}.L1"
+            else:
+                x_name = f"x{key}.L1"
+            x_names.append(x_name)
+            lag_base = x_name[:-1]
+            dexog_names.extend(f"D.{lag_base}{lag}" for lag in val[:-1])
         # 3. Lagged endog
         y_lags = max(self._lags) if self._lags else 0
         dendog_names = [f"{y_name}.L{lag}" for lag in range(1, y_lags)]
@@ -2166,14 +2166,13 @@ class UECM(ARDL):
         lvl = np.full_like(self.data.endog, np.nan)
         lvl[1:] = self.data.endog[:-1]
         lvls = [lvl.copy()]
-        for key, val in self._order.items():
-            if val is not None:
-                if exog_pandas:
-                    loc = orig_exog.columns.get_loc(key)
-                else:
-                    loc = key
-                lvl[1:] = self.data.exog[:-1, loc]
-                lvls.append(lvl.copy())
+        for key in self._order:
+            if exog_pandas:
+                loc = orig_exog.columns.get_loc(key)
+            else:
+                loc = key
+            lvl[1:] = self.data.exog[:-1, loc]
+            lvls.append(lvl.copy())
         self._levels = np.column_stack(lvls)
 
         # 4. exog Lags
@@ -2437,10 +2436,9 @@ class UECMResults(ARDLResults):
         ndet = self.model._blocks["deterministic"].shape[1]
         nlvl = self.model._blocks["levels"].shape[1]
         lbls = self.model.exog_names[: (ndet + nlvl)]
+        # The names of the levels all end with ".L1"
         for i in range(ndet, ndet + nlvl):
-            lbl = lbls[i]
-            if lbl.endswith(".L1"):
-                lbls[i] = lbl[:-3]
+            lbls[i] = lbls[i][:-3]
         if val.ndim == 2:
             return pd.DataFrame(val, columns=lbls, index=lbls)
         return pd.Series(val, index=lbls, name=name)
@@ -2574,12 +2572,12 @@ class UECMResults(ARDLResults):
         is_pandas = isinstance(exog, pd.DataFrame)
         exog = exog if is_pandas else self.model.exog
         cols = [np.asarray(d), self.model.endog]
-        for key, value in self.model.dl_lags.items():
-            if value is not None:
-                if is_pandas:
-                    cols.append(np.asarray(exog[key]))
-                else:
-                    cols.append(exog[:, key])
+        # dl_lags only holds the included exog
+        for key in self.model.dl_lags:
+            if is_pandas:
+                cols.append(np.asarray(exog[key]))
+            else:
+                cols.append(exog[:, key])
         ci_x = np.column_stack(cols)
         resids = ci_x @ self.ci_params
         if not isinstance(self.model.data, PandasData):
