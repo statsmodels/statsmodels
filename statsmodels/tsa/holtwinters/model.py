@@ -175,8 +175,8 @@ class ExponentialSmoothing(TimeSeriesModel):
            others for an additive seasonal component, and `seasonal_periods`
            minus their sum, so that the mean is 1, for a multiplicative one.
            It raised before. With ``seasonal_periods=2``, a single value is
-           still used for both seasons, with a FutureWarning; after 0.16 it
-           will be completed too.
+           still used for both seasons, with a FutureWarning; after
+           statsmodels 0.17 it will be completed too.
     use_boxcox : {True, False, 'log', float}, optional
         Should the Box-Cox transform be applied to the data first? If 'log'
         then apply the log. If float then use the value as lambda.
@@ -485,10 +485,10 @@ class ExponentialSmoothing(TimeSeriesModel):
                 # A single value was broadcast to both seasons before
                 warnings.warn(
                     "initial_seasonal has one value and seasonal_periods is "
-                    "2, so the value is used for both seasons. After 0.16, "
-                    "the second value will be computed to make the average "
-                    "effect zero, as for longer seasons. Pass both values to "
-                    "keep the current result.",
+                    "2, so the value is used for both seasons. After "
+                    "statsmodels 0.17, the second value will be computed to "
+                    "make the average effect zero, as for longer seasons. "
+                    "Pass both values to keep the current result.",
                     FutureWarning,
                     stacklevel=4,
                 )
