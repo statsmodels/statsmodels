@@ -67,6 +67,15 @@ Deprecations
   ``NotImplementedError``, will be removed after statsmodels 0.16. Use
   ``statsmodels.tsa.arima.model.ARIMA`` or
   ``statsmodels.tsa.statespace.sarimax.SARIMAX``. :pr:`10828`
+- 2-D lag polynomials that the functions of ``statsmodels.tsa.arima_process``
+  accepted, for example a column in ``arma_periodogram`` or a row in
+  ``index2lpol``, are deprecated. They give the same result as before with a
+  ``FutureWarning``, and will raise after statsmodels 0.17. :pr:`10861`
+- ``arma_periodogram`` and ``ArmaProcess.periodogram`` divide by
+  ``sqrt(2 * pi)`` instead of ``2 * pi``. A new ``normalization`` argument
+  selects ``"2pi"`` (the spectral density) or ``"sqrt(2pi)"`` (the current
+  result). Without it, a ``FutureWarning`` is issued, and the default will
+  change to ``"2pi"`` after statsmodels 0.17. :pr:`10863`
 
 Behavior changes
 ----------------
@@ -334,6 +343,10 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- ``ArmaProcess.generate_sample`` uses the ``nobs`` of the process as the
+  default sample size, as documented, instead of 100. Processes created with
+  another ``nobs``, including those from ``ArmaProcess.from_estimation``, now
+  generate ``nobs`` values when ``nsample`` is not given. :pr:`10862`
 - The default ``nlags`` of :func:`~statsmodels.tsa.stattools.acf` with
   ``missing="drop"`` or ``"conservative"`` counts only the non-missing
   observations. It counted the NaNs, so it could return more lags, or raise
@@ -1155,6 +1168,10 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- Lag polynomials with more than one dimension in the functions of
+  ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
+  SciPy errors that did not name the argument. They raise a ``ValueError``
+  that does. :pr:`10861`
 
 Statistics and tests
 --------------------
