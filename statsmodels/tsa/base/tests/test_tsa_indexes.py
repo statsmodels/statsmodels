@@ -1809,3 +1809,43 @@ def test_dates_list_with_freq(freq, dates, expected):
     assert isinstance(pred, np.ndarray)
     assert_allclose(pred, np.full(5, 2.5))
     assert res.model.data.predict_dates.equals(expected)
+
+
+@pytest.mark.parametrize(
+    "index_freq, freq",
+    [
+        # Period aliases, which pandas 3 does not accept as offset aliases
+        ("M", "M"),
+        ("Q", "Q"),
+        ("Q", "Q-DEC"),
+        ("2Q", "2Q"),
+        ("Y", "Y"),
+        # Offset aliases and offsets, which were already accepted
+        ("Y", YEAR_END),
+        ("M", pd.offsets.MonthEnd()),
+        ("D", "D"),
+        ("W", "W"),
+    ],
+)
+def test_period_index_with_freq(index_freq, freq):
+    # The frequency of a PeriodIndex can be given as its period alias
+    index = pd.period_range("2000-01-01", periods=5, freq=index_freq)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        mod = tsa_model.TimeSeriesModel(np.arange(5.0), dates=index, freq=freq)
+    assert mod.data.freq == index.freqstr
+    assert mod._index.equals(index)
+
+    _, _, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        3, 6, 5, mod._index, data=mod.data
+    )
+    assert out_of_sample == 2
+    expected = pd.period_range(index[3], periods=4, freq=index.freq)
+    assert prediction_index.equals(expected)
+
+
+@pytest.mark.parametrize("freq", ["Q", "D", pd.offsets.QuarterEnd()])
+def test_period_index_with_other_freq(freq):
+    index = pd.period_range("2000-01", periods=5, freq="M")
+    with pytest.raises(ValueError, match="incompatible with the given index"):
+        tsa_model.TimeSeriesModel(np.arange(5.0), dates=index, freq=freq)
