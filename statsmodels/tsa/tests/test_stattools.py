@@ -23,6 +23,7 @@ from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
     ConvergenceWarning,
+    EstimationWarning,
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
@@ -3233,14 +3234,23 @@ def test_arma_order_select_ic_failure():
 @pytest.mark.parametrize("trend", ["n", "c"])
 def test_arma_order_select_ic_failed_fits_are_nan(trend):
     # The Yule-Walker estimator only fits pure AR models, so the models with
-    # an MA term fail, and are retried once before they are given NaN
+    # an MA term fail and are given NaN, with one warning that lists them
     from statsmodels.tsa.arima.model import ARIMA
 
     y = np.random.default_rng(20261119).standard_normal(100)
     fit_kw = {"method": "yule_walker"}
-    res = arma_order_select_ic(
-        y, max_ar=2, max_ma=1, ic=["aic", "bic"], trend=trend, fit_kw=fit_kw
+    match = (
+        r"The fits of 3 of 6 ARMA models failed, and their information "
+        r"criteria are NaN. Orders \(p, q\): \(0, 1\), \(1, 1\), \(2, 1\). "
+        r"The first, order \(0, 1\), raised ValueError: Yule-Walker"
     )
+    with pytest.warns(EstimationWarning, match=match) as record:
+        res = arma_order_select_ic(
+            y, max_ar=2, max_ma=1, ic=["aic", "bic"], trend=trend, fit_kw=fit_kw
+        )
+    assert len(record) == 1
+    # The warning points at the caller
+    assert record[0].filename == __file__
     for ic in ("aic", "bic"):
         frame = res[ic]
         assert np.all(np.isnan(frame[1]))
@@ -3249,31 +3259,131 @@ def test_arma_order_select_ic_failed_fits_are_nan(trend):
             for p in range(3)
         ]
         assert_allclose(frame[0], expected, rtol=1e-12)
+        # The minimum ignores the failed fits, it used to point at the first
+        assert res[f"{ic}_min_order"] == (np.argmin(expected), 0)
 
 
-@pytest.mark.parametrize(
-    "fit_kw, max_ma, trend",
-    [
-        ({}, 0, "c"),
-        ({"method": "yule_walker"}, 1, "n"),
-        ({"method": "yule_walker"}, 1, "c"),
-    ],
-)
-def test_arma_order_select_ic_infinite_value(fit_kw, max_ma, trend):
-    # No information criterion is finite for a series with an infinite
-    # value. Some of the fits raise and the others give NaN.
+@pytest.mark.parametrize("trend", ["n", "c"])
+def test_arma_order_select_ic_infinite_value_all_fail(trend):
+    # Every Yule-Walker fit fails for a series with an infinite value. The
+    # minimum order used to be (0, 0).
+    y = np.random.default_rng(20261119).standard_normal(100)
+    y[-1] = np.inf
+    match = r"No ARMA model could be fitted.*The first, order \(0, 0\), raised"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        with pytest.raises(ValueError, match=match) as excinfo:
+            arma_order_select_ic(
+                y,
+                max_ar=1,
+                max_ma=1,
+                ic="aic",
+                trend=trend,
+                fit_kw={"method": "yule_walker"},
+            )
+    # The error of the first fit is chained and its message included
+    cause = excinfo.value.__cause__
+    assert cause is not None
+    assert str(cause) in str(excinfo.value)
+
+
+def test_arma_order_select_ic_infinite_value():
+    # The models fitted to a series with an infinite value have a NaN
+    # log-likelihood, or their fit fails, so there is no minimum order. It
+    # used to be (0, 0). Whether the fit of the AR(1) model fails (and is
+    # listed in an EstimationWarning) or gives a NaN log-likelihood depends
+    # on the platform, so only the error is checked here; the warning is
+    # checked by the tests with failing fits above and below.
     y = np.random.default_rng(20261119).standard_normal(100)
     y[-1] = np.inf
     with warnings.catch_warnings():
-        # The maximum likelihood fit of the white noise model runs on the
-        # infinite value and does not converge
+        # The maximum likelihood fits run on the infinite value and do not
+        # converge
         warnings.simplefilter("ignore", ConvergenceWarning)
+        warnings.simplefilter("ignore", EstimationWarning)
         warnings.simplefilter("ignore", RuntimeWarning)
+        with pytest.raises(ValueError, match="No fitted ARMA model has a non-NaN aic"):
+            arma_order_select_ic(y, max_ar=1, max_ma=0, ic="aic", trend="c")
+
+
+def _arma_ic_table(y, max_ar, max_ma, trend, fit_kw, name):
+    # The criterion of each ARIMA model fitted directly, NaN if the fit raises
+    from statsmodels.tsa.arima.model import ARIMA
+
+    table = np.full((max_ar + 1, max_ma + 1), np.nan)
+    failed = []
+    for p in range(max_ar + 1):
+        for q in range(max_ma + 1):
+            try:
+                fit = ARIMA(y, order=(p, 0, q), trend=trend).fit(**fit_kw)
+            except (IndexError, ValueError):
+                failed.append((p, q))
+                continue
+            table[p, q] = getattr(fit, name)
+    return table, failed
+
+
+def test_arma_order_select_ic_start_params():
+    # start_params in fit_kw used to clash with the start_params argument of
+    # the internal retry, so every fit failed. Now only the fits of models
+    # with more parameters than start_params fail. Which fits fail is taken
+    # from the direct fits, since ARIMA.fit currently also accepts too long
+    # start_params.
+    y = np.random.default_rng(20261119).standard_normal(100)
+    fit_kw = {"start_params": [0.1, 0.2, 0.5]}
+    expected, failed = _arma_ic_table(y, 3, 2, "n", fit_kw, "aic")
+    # The models with more than 3 parameters fail
+    assert {(1, 2), (2, 1), (2, 2), (3, 0), (3, 1), (3, 2)} <= set(failed)
+    orders = ", ".join(rf"\({p}, {q}\)" for p, q in failed)
+    match = (
+        rf"The fits of {len(failed)} of 12 ARMA models failed, and their "
+        rf"information criteria are NaN. Orders \(p, q\): {orders}\."
+    )
+    with pytest.warns(EstimationWarning, match=match):
         res = arma_order_select_ic(
-            y, max_ar=1, max_ma=max_ma, ic="aic", trend=trend, fit_kw=fit_kw
+            y, max_ar=3, max_ma=2, ic="aic", trend="n", fit_kw=fit_kw
         )
-    assert res.aic.shape == (2, max_ma + 1)
-    assert np.all(np.isnan(res.aic))
+    assert_allclose(res.aic, expected, rtol=1e-10)
+    loc = np.nanargmin(expected)
+    assert res.aic_min_order == np.unravel_index(loc, expected.shape)
+    # The minimum is in neither the first row nor the first column, of a grid
+    # that is not square
+    assert all(res.aic_min_order)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{"fit_kw": {"bogus": 1}}, {"model_kw": {"bogus": 1}}],
+    ids=["fit_kw", "model_kw"],
+)
+def test_arma_order_select_ic_type_error(kwargs):
+    # A TypeError from the arguments, such as a mistyped keyword, used to
+    # make every fit fail silently
+    y = np.random.default_rng(20261119).standard_normal(100)
+    with pytest.raises(TypeError, match="bogus"):
+        arma_order_select_ic(y, max_ar=1, max_ma=0, **kwargs)
+
+
+def test_arma_order_select_ic_error_without_message(monkeypatch):
+    # An error without arguments used to crash the internal retry of a failed
+    # fit with an IndexError
+    from statsmodels.tsa.arima.model import ARIMA
+
+    fit = ARIMA.fit
+
+    def fit_without_ma(self, *args, **kwargs):
+        if self.model_orders["ma"]:
+            raise ValueError
+        return fit(self, *args, **kwargs)
+
+    monkeypatch.setattr(ARIMA, "fit", fit_without_ma)
+    y = np.random.default_rng(20261119).standard_normal(100)
+    match = r"Orders \(p, q\): \(0, 1\), \(1, 1\)\. .* raised ValueError: $"
+    with pytest.warns(EstimationWarning, match=match):
+        res = arma_order_select_ic(y, max_ar=1, max_ma=1, ic="aic", trend="n")
+    expected = [fit(ARIMA(y, order=(p, 0, 0), trend="n")).aic for p in range(2)]
+    assert_allclose(res.aic[0], expected, rtol=1e-12)
+    assert np.isnan(res.aic[1]).all()
 
 
 def test_acf_fft_dataframe():
@@ -5060,6 +5170,19 @@ def test_arma_order_select_ic_sequence(ic):
         assert res[f"{name}_min_order"] == (np.argmin(expected), 0)
 
 
+def test_arma_order_select_ic_all_criteria():
+    # Every valid name is accepted and gives the criterion of a direct fit
+    from statsmodels.tsa.arima.model import ARIMA
+
+    y = np.random.default_rng(20261127).standard_normal(100)
+    names = ["aic", "aicc", "bic", "hqic"]
+    res = arma_order_select_ic(y, max_ar=1, max_ma=0, ic=names, trend="n")
+    fits = [ARIMA(y, order=(p, 0, 0), trend="n").fit() for p in range(2)]
+    for name in names:
+        expected = [getattr(fit, name) for fit in fits]
+        assert_allclose(res[name][0], expected, rtol=1e-10)
+
+
 @pytest.mark.parametrize(
     "ic",
     [5, [5], ["aic", 5], np.array([1, 2])],
@@ -5072,13 +5195,20 @@ def test_arma_order_select_ic_invalid_type(ic):
 
 
 @pytest.mark.parametrize(
-    "ic",
-    ["bogus", ["aic", "bogus"], np.array(["bogus"])],
-    ids=["str", "list", "ndarray"],
+    "ic, unknown",
+    [
+        ("bogus", "bogus"),
+        (["aic", "bogus"], "bogus"),
+        (np.array(["bogus"]), "bogus"),
+        ("AIC", "AIC"),
+    ],
+    ids=["str", "list", "ndarray", "upper"],
 )
-def test_arma_order_select_ic_unknown_criterion(ic):
+def test_arma_order_select_ic_unknown_criterion(ic, unknown):
+    # An unknown name used to raise an AttributeError from the first fit
     y = np.random.default_rng(20261127).standard_normal(100)
-    with pytest.raises(AttributeError, match="bogus"):
+    match = rf"Unknown information criteria in ic: \['{unknown}'\]"
+    with pytest.raises(ValueError, match=match):
         arma_order_select_ic(y, max_ar=0, max_ma=0, ic=ic)
 
 
