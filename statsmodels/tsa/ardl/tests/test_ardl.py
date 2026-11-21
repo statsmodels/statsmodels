@@ -1750,3 +1750,26 @@ def test_ardl_select_order_nan(data):
     error = SystemError if NP_LT_1_24 else np.linalg.LinAlgError
     with pytest.raises(error):
         ardl_select_order(y, 2, data.x, 2, "c")
+
+
+def _dane_uecm_res():
+    exog = dane_data[["lry", "ibo", "ide"]]
+    return UECM(dane_data.lrm, 3, exog, {"lry": 1, "ibo": 3, "ide": 2}).fit()
+
+
+@pytest.mark.parametrize("case", [0, 6, -1, 2.5, "3", None])
+def test_bounds_test_invalid_case(case):
+    # Values outside 1, ..., 5 raised UnboundLocalError
+    res = _dane_uecm_res()
+    with pytest.raises(ValueError, match="case must be one of 1, 2, 3, 4 or 5"):
+        res.bounds_test(case)
+
+
+@pytest.mark.parametrize("case", [1, 2, 3, 4, 5])
+@pytest.mark.parametrize("to_case", [np.int64, float])
+def test_bounds_test_case_types(case, to_case):
+    # Integer values of other types keep working; the statistics of
+    # test_bounds_test, given to 7 significant digits
+    expected = {1: 0.7109023, 2: 5.116768, 3: 6.205875, 4: 5.430622, 5: 6.785325}
+    bounds_result = _dane_uecm_res().bounds_test(to_case(case))
+    assert_allclose(bounds_result.statistic, expected[case], rtol=1e-6)
