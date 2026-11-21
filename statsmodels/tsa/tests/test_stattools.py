@@ -4067,6 +4067,40 @@ def test_acf_default_nlags(nobs, nlags):
     assert_allclose(res, acf(x, nlags=nlags), rtol=1e-12)
 
 
+def _nan_acf(x, nlags):
+    # Sample autocorrelations that leave out the products with a NaN
+    resid = x - np.nanmean(x)
+    n = x.shape[0]
+    acov = [np.nansum(resid[k:] * resid[: n - k]) for k in range(nlags + 1)]
+    return np.array(acov) / acov[0]
+
+
+@pytest.mark.parametrize("missing", ["drop", "conservative"])
+@pytest.mark.parametrize(
+    "nobs, nmissing, nlags",
+    # min(10 * log10(nobs - nmissing), nobs - nmissing - 1); both bounds bind
+    [(200, 100, 20), (20, 12, 7)],
+)
+def test_acf_default_nlags_missing(missing, nobs, nmissing, nlags):
+    # The default used to count the NaNs as observations, which gave 23 lags
+    # for the first case and raised for the second
+    rng = np.random.default_rng(20261120)
+    x = rng.standard_normal(nobs)
+    x[rng.choice(nobs, nmissing, replace=False)] = np.nan
+    res = acf(x, missing=missing)
+    assert res.shape == (nlags + 1,)
+    # "drop" treats the non-missing values as contiguous
+    data = x[~np.isnan(x)] if missing == "drop" else x
+    assert_allclose(res, _nan_acf(data, nlags), rtol=1e-10)
+
+
+def test_acf_default_nlags_missing_none():
+    # missing="none" counts every observation, NaN or not
+    x = np.random.default_rng(20261120).standard_normal(200)
+    x[::2] = np.nan
+    assert acf(x, missing="none").shape == (24,)
+
+
 def test_pacf_nlags_error():
     rs = np.random.RandomState(12487)
     e = rs.standard_normal(99)
