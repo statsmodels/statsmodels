@@ -338,6 +338,12 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- :class:`~statsmodels.tsa.holtwinters.ExponentialSmoothing` with an int
+  ``use_boxcox`` computed the initial values with the int as a fixed lambda
+  (1 as lambda 1, 0 as the log), while fitting and forecasting used it as a
+  bool (0 as no transform, other ints as an estimated lambda). The initial
+  values now use the same transform, so the fits change and equal the fits
+  with ``True`` or ``False``. :pr:`10876`
 
 New Features and Enhancements
 =============================
