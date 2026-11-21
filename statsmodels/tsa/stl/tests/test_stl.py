@@ -338,3 +338,31 @@ def test_squezable_to_1d():
     res = STL(data).fit()
     assert isinstance(res, DecomposeResult)
     assert res.nobs == data.shape[0]
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("form", ["list", "tuple", "nested-list"])
+def test_list_endog(default_kwargs, form, close_figures):
+    # a list or tuple endog was stored as the observed data of the results,
+    # so their nobs and plot raised an AttributeError. It is stored as an
+    # ndarray, as ndarray input is, and the decomposition is the baseline.
+    class_kwargs, outer, inner = _to_class_kwargs(default_kwargs)
+    y = class_kwargs["endog"]
+    if form == "list":
+        class_kwargs["endog"] = y.tolist()
+    elif form == "tuple":
+        class_kwargs["endog"] = tuple(y)
+    else:
+        class_kwargs["endog"] = [[v] for v in y]
+    res = STL(**class_kwargs).fit(outer_iter=outer, inner_iter=inner)
+    assert isinstance(res.observed, np.ndarray)
+    assert_allclose(np.squeeze(res.observed), y, rtol=1e-12)
+    assert res.nobs == y.shape[0]
+    expected = results.loc["baseline"].sort_index()
+    assert_allclose(res.trend, expected.trend)
+    assert_allclose(res.seasonal, expected.season)
+    assert_allclose(res.weights, expected.rw)
+    fig = res.plot()
+    # observed, trend, seasonal and residual
+    assert len(fig.axes) == 4
