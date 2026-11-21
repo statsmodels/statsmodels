@@ -68,6 +68,12 @@ def get_index_loc(key, index):
     """
     Get the location of a specific key in an index
 
+    .. versionchanged:: 0.15.1
+
+       A key within one period of a PeriodIndex, such as a day of quarterly
+       periods, is the location of that period in the sample, as it already
+       was after the end of the sample, instead of raising a KeyError.
+
     Parameters
     ----------
     key : label
@@ -193,6 +199,14 @@ def get_index_loc(key, index):
             # Convert the key to the appropriate date-like object
             if index_class is PeriodIndex:
                 date_key = Period(key, freq=base_index.freq)
+                # A key within one period, such as a day of quarterly data,
+                # is that period, as it is after the end of the sample
+                # (date_key is the period that contains the start of key)
+                if (
+                    isinstance(key, (str, Period))
+                    and Period(key).end_time <= date_key.end_time
+                ):
+                    key = date_key
             elif isinstance(key, str) and re.fullmatch("[0-9]*Q[1-4]", key):
                 # Special case dates with a format like
                 # 2026Q2
