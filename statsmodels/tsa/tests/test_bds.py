@@ -206,6 +206,43 @@ def test_distance_indicators(form):
     np.testing.assert_array_equal(distance_indicators(x, distance=distance), expected)
 
 
+@pytest.mark.parametrize(
+    "form", ["column", "dataframe", "two columns", "row", "1x1", "3d"]
+)
+def test_distance_indicators_2d_deprecated(form):
+    # Input with more than one dimension returned the indicators of each
+    # column along a last axis, and for a row those of each element with
+    # itself. It is deprecated, and gives the same result with a warning.
+    x = np.array([0.0, 0.5, 2.0, 2.2])
+    near = np.array(
+        [
+            [True, True, False, False],
+            [True, True, False, False],
+            [False, False, True, True],
+            [False, False, True, True],
+        ]
+    )
+    # 2 * x: only 2.0 and 2.2 are closer than 1.0
+    near2 = np.eye(4, dtype=bool)
+    near2[2, 3] = near2[3, 2] = True
+    column = "a column with shape \\(nobs, 1\\) will give the \\(nobs, nobs\\)"
+    other = "It will raise a ValueError after statsmodels 0.17"
+    value, expected, future = {
+        "column": (x[:, None], near[:, :, None], column),
+        "dataframe": (pd.DataFrame({"x": x}), near[:, :, None], column),
+        "two columns": (np.c_[x, 2 * x], np.stack([near, near2], axis=-1), other),
+        "row": (x[None, :], np.ones((1, 1, 4), dtype=bool), other),
+        "1x1": (np.array([[1.0]]), np.ones((1, 1, 1), dtype=bool), column),
+        "3d": (x[:, None, None], near[:, :, None, None], other),
+    }[form]
+    ndim = np.ndim(value)
+    match = f"^x must be 1-D. Passing an array with {ndim} dimensions .*{future}"
+    with pytest.warns(FutureWarning, match=match):
+        res = distance_indicators(value, epsilon=1.0)
+    assert res.dtype == bool
+    np.testing.assert_array_equal(res, expected)
+
+
 def test_distance_indicators_errors():
     x = np.arange(5.0)
     with pytest.raises(ValueError, match="epsilon"):
