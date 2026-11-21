@@ -2,6 +2,7 @@ import numpy as np
 from scipy.linalg.blas import find_best_blas_type
 
 from statsmodels.tools.numdiff import _get_epsilon, approx_fprime_cs
+from statsmodels.tools.validation import array_like
 from statsmodels.tsa import arima_process
 from statsmodels.tsa.statespace.tools import prefix_dtype_map
 
@@ -117,7 +118,7 @@ def arma_loglike(endog, ar_params=None, ma_params=None, sigma2=1, prefix=None):
     Parameters
     ----------
     endog : array_like
-        The observed time-series process.
+        The observed time-series process, 1-d or a single column.
     ar_params : array_like, optional
         Autoregressive parameters.
     ma_params : array_like, optional
@@ -147,7 +148,7 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     Parameters
     ----------
     endog : array_like
-        The observed time-series process.
+        The observed time-series process, 1-d or a single column.
     ar_params : array_like, optional
         Autoregressive parameters.
     ma_params : array_like, optional
@@ -164,7 +165,9 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     ndarray
         Array of loglikelihood values for each observation.
     """
-    endog = np.array(endog)
+    # A single column is squeezed to 1-d. The dtype is kept, so that the BLAS
+    # prefix is found from the data.
+    endog = array_like(endog, "endog", dtype=None, ndim=1)
     ar_params = np.atleast_1d([] if ar_params is None else ar_params)
     ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
@@ -192,7 +195,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
     Parameters
     ----------
     endog : array_like
-        The observed time-series process.
+        The observed time-series process, 1-d or a single column.
     ar_params : array_like, optional
         Autoregressive coefficients, not including the zero lag.
     ma_params : array_like, optional
@@ -240,7 +243,7 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
     Parameters
     ----------
     endog : array_like
-        The observed time-series process.
+        The observed time-series process, 1-d or a single column.
     ar_params : array_like, optional
         Autoregressive coefficients, not including the zero lag.
     ma_params : array_like, optional
