@@ -3259,3 +3259,30 @@ def test_ets_predict_dynamic_numpy_bool(dynamic, expected):
     assert_allclose(pred, res.predict(start=20, end=60, dynamic=expected), rtol=1e-12)
     other = res.predict(start=20, end=60, dynamic=not expected)
     assert np.max(np.abs(pred - other)) > 1e-3
+
+
+@pytest.mark.parametrize("method", ["foo", "Simulated", "EXACT", 1])
+def test_get_prediction_unknown_method(oildata, method):
+    # An unknown method was accepted silently and treated as "exact"; it
+    # still is, with a FutureWarning
+    res = ETSModel(oildata).smooth([0.3, 110.0])
+    expected = res.get_prediction(start=46, end=51, method="exact")
+    with pytest.warns(FutureWarning, match='method must be "exact"') as record:
+        pred = res.get_prediction(start=46, end=51, method=method)
+    assert record[0].filename == __file__
+    assert pred.method == method
+    assert_allclose(
+        pred.summary_frame().to_numpy(),
+        expected.summary_frame().to_numpy(),
+        rtol=1e-12,
+    )
+
+
+@pytest.mark.parametrize("method", [None, "exact", "simulated"])
+def test_get_prediction_known_method_no_warning(oildata, method, recwarn):
+    res = ETSModel(oildata).smooth([0.3, 110.0])
+    pred = res.get_prediction(
+        start=46, end=51, method=method, rng=np.random.default_rng(0)
+    )
+    assert len(recwarn) == 0
+    assert pred.method == ("exact" if method is None else method)

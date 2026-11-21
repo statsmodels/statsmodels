@@ -2440,6 +2440,12 @@ class ETSResults(base.StateSpaceMLEResults):
             (default, if available) or 'simulated'. 'exact' is available
             for the models with additive errors and no multiplicative
             components, "ANN", "AAN", "AAdN", "ANA", "AAA" and "AAdA".
+
+            .. deprecated:: 0.15.1
+
+               Other values are treated as "exact". This is deprecated and
+               they will raise a ValueError after statsmodels 0.17 is
+               released.
         simulate_repetitions : int, optional
             Number of simulation repetitions for calculating prediction
             intervals when ``method='simulated'``, at least 2. Default is
@@ -2611,6 +2617,11 @@ class PredictionResults:
         if available) or 'simulated'. 'exact' is available for the models
         with additive errors and no multiplicative components, "ANN", "AAN",
         "AAdN", "ANA", "AAA" and "AAdA".
+
+        .. deprecated:: 0.15.1
+
+           Other values are treated as "exact". This is deprecated and they
+           will raise a ValueError after statsmodels 0.17 is released.
     simulate_repetitions : int, optional
         Number of simulation repetitions for calculating prediction intervals
         when ``method='simulated'``, at least 2. Default is 1000.
@@ -2637,6 +2648,20 @@ class PredictionResults:
                 method = "exact"
             else:
                 method = "simulated"
+        else:
+            try:
+                string_like(
+                    method, "method", options=("exact", "simulated"), lower=False
+                )
+            except (TypeError, ValueError):
+                warnings.warn(
+                    'method must be "exact", "simulated" or None, got '
+                    f'{method!r}. Other values are treated as "exact". This is '
+                    "deprecated and will raise a ValueError after statsmodels "
+                    "0.17 is released.",
+                    FutureWarning,
+                    stacklevel=3,
+                )
         self.method = method
 
         (
