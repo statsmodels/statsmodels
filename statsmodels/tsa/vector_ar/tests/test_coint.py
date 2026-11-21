@@ -758,7 +758,66 @@ def test_coint_tables_out_of_range(func, n, p):
     assert np.all(np.isnan(func(n, p)))
 
 
-def test_c_sjt_invalid_p():
-    # p is not one of -1, 0 and 1, but is within their range
-    with pytest.raises(ValueError, match="invalid p"):
-        c_sjt(3, 0.5)
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [0.5, -0.5, 1.5, -1.5])
+def test_coint_tables_invalid_p(func, p):
+    # p is not an integer. Between -1 and 1, c_sja raised an
+    # UnboundLocalError and c_sjt "invalid p"; outside, both returned NaN.
+    with pytest.raises(ValueError, match="p must be an integer, got"):
+        func(3, p)
+
+
+# Rows n = 3 of the tables, MacKinnon, Haug and Michelis (1996)
+COINT_TABLES_N3 = {
+    (c_sja, -1): [15.7175, 17.7961, 22.2519],
+    (c_sja, 0): [18.8928, 21.1314, 25.8650],
+    (c_sja, 1): [21.8731, 24.2522, 29.2631],
+    (c_sjt, -1): [21.7781, 24.2761, 29.5147],
+    (c_sjt, 0): [27.0669, 29.7961, 35.4628],
+    (c_sjt, 1): [32.0645, 35.0116, 41.0815],
+}
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [-1, 0, 1])
+def test_coint_tables_integral_p(func, p):
+    expected = COINT_TABLES_N3[func, p]
+    for value in (p, float(p), np.float64(p), np.int64(p), np.array(p)):
+        assert_allclose(func(3, value), expected, rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [True, False, np.True_, np.False_])
+def test_coint_tables_bool_p_deprecated(func, p):
+    # A bool selected the table of 0 or 1. It is deprecated.
+    with pytest.warns(FutureWarning, match="^p must be an integer. Passing a bool"):
+        res = func(3, p)
+    assert_allclose(res, COINT_TABLES_N3[func, int(p)], rtol=1e-15)
+
+
+def test_coint_johansen_bool_det_order_deprecated():
+    # det_order=True was used as 1 by coint_johansen and the tables
+    endog = np.cumsum(np.random.default_rng(0).standard_normal((100, 2)), axis=0)
+    expected = coint_johansen(endog, 1, 1)
+    with pytest.warns(FutureWarning, match="^p must be an integer. Passing a bool"):
+        res = coint_johansen(endog, True, 1)
+    assert_allclose(res.lr1, expected.lr1, rtol=1e-12)
+    assert_allclose(res.cvt, expected.cvt, rtol=1e-15)
+    assert_allclose(res.cvm, expected.cvm, rtol=1e-15)
+    # The critical values of 2 and 1 variables with a trend
+    assert_allclose(res.cvt[:, 1], [18.3985, 3.8415], rtol=1e-15)
+
+
+@pytest.mark.parametrize("func", [c_sja, c_sjt])
+@pytest.mark.parametrize("p", [-1, 0, 1])
+def test_coint_tables_return_copy(func, p):
+    # The result was a view of the table, so changing it changed the
+    # values returned by later calls
+    expected = COINT_TABLES_N3[func, p]
+    res = func(3, p)
+    try:
+        res[:] = 0.0
+        assert_allclose(func(3, p), expected, rtol=1e-15)
+    finally:
+        # Restore the table if the result is a view
+        res[:] = expected
