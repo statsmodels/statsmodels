@@ -1195,6 +1195,14 @@ Time series analysis
   ``transform_variance=False`` raised ``ValueError: Buffer dtype mismatch`` on
   NumPy < 2 when ``order + k_endog`` is at least 4, because an intermediate
   array was promoted to double precision. :pr:`10857`
+- ``fit(method="cg")`` did not pass its extra arguments to the objective and
+  the score. State space models and Markov switching models pass
+  ``transformed=False`` this way, so the conjugate gradient solver
+  optimized the log-likelihood with the parameters taken as constrained and
+  stopped far from the optimum, often reporting convergence, for example
+  after one iteration at an llf of -698.8 where the optimum is -456.0.
+  Results of models that do not use extra arguments are unchanged.
+  :pr:`10819`
 - ``index2lpol`` raised an ``IndexError`` for a tuple ``index``, and ``ar2arma``
   raised a ``TypeError`` for a tuple ``ar_des``. :pr:`10858`
 - ``c_sja`` and ``c_sjt`` raised unrelated errors for a non-integer ``p`` and
