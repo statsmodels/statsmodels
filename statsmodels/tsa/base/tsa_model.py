@@ -466,6 +466,10 @@ def get_prediction_index(
             "The `start` argument could not be matched to a"
             " location related to the index of the data."
         ) from exc
+    # A key that covers more than one date (e.g. "2000-02" for a daily index)
+    # gives a slice, of which prediction starts at the first date
+    if isinstance(start, slice):
+        start = start.start
     if end is None:
         end = max(start, len(base_index) - 1)
     try:
@@ -479,8 +483,6 @@ def get_prediction_index(
         ) from exc
 
     # Handle slices (if the given index keys cover more than one date)
-    if isinstance(start, slice):
-        start = start.start
     if isinstance(end, slice):
         end = end.stop - 1
 

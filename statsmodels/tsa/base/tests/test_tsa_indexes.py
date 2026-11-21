@@ -2215,3 +2215,40 @@ def test_oos_end_key_models(model):
     assert_allclose(
         np.asarray(pred), np.asarray(res.predict(start=34, end=41)), rtol=1e-12
     )
+
+
+@pytest.mark.parametrize(
+    "index, start, expected",
+    [
+        # A month of daily dates and daily periods
+        (
+            pd.date_range("2000-01-01", periods=100, freq="D"),
+            "2000-02",
+            pd.date_range("2000-02-01", "2000-04-09", freq="D"),
+        ),
+        (
+            pd.period_range("2000-01-01", periods=100, freq="D"),
+            "2000-02",
+            pd.period_range("2000-02-01", "2000-04-09", freq="D"),
+        ),
+        # pandas also gives a slice for a month of a month-start index
+        (
+            pd.date_range("2000-01-01", periods=12, freq="MS"),
+            "2000-03",
+            pd.date_range("2000-03-01", "2000-12-01", freq="MS"),
+        ),
+    ],
+)
+def test_partial_date_start_without_end(index, start, expected):
+    # A start key that covers several dates, without an end, predicts from
+    # the first of these dates to the end of the sample
+    endog = pd.Series(np.zeros(len(index)), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    nobs = len(index)
+    start, end, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        start, None, nobs, mod._index, data=mod.data
+    )
+    assert start == nobs - len(expected)
+    assert end == nobs - 1
+    assert out_of_sample == 0
+    assert prediction_index.equals(expected)
