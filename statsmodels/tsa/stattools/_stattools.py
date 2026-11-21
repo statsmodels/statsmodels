@@ -5097,6 +5097,27 @@ class ZivotAndrewsUnitRoot:
         statistics than the original Zivot-Andrews method, although no attempt
         has been made to characterize the size/power trade-off.
 
+        A candidate break is skipped if its dummies are collinear with the
+        constant and the trend over the rows of the regression, which start
+        at observation ``baselag + 1``, since it then has no test statistic.
+        A level shift needs at least one row before the break and one after
+        it, and a trend shift two rows before it (and, next to a level
+        shift, two after it). So the last observation before the break is at
+        least ``baselag + 1`` ("c") or ``baselag + 2`` ("t" and "ct"), and at
+        most ``nobs - 2`` ("c") or ``nobs - 3`` ("ct"). The returned
+        ``bpidx`` is that observation for "c" and "ct", but the first
+        observation of the trend shift, one later, for "t", so the smallest
+        ``bpidx`` is ``baselag + 1`` ("c"), ``baselag + 3`` ("t") or
+        ``baselag + 2`` ("ct"). A ValueError is raised if no candidate break
+        is left.
+
+        .. versionchanged:: 0.15.1
+
+           These break periods are skipped. They used to give a NaN or
+           meaningless statistic, or raise, when the number of lags was not
+           smaller than the number of trimmed observations, or with
+           ``trim=0``.
+
         References
         ----------
         .. [1] Baum, C.F. (2004). "ZANDREWS: Stata module to calculate
@@ -5141,6 +5162,30 @@ class ZivotAndrewsUnitRoot:
         trimcnt = int(nobs * trim)
         start_period = trimcnt
         end_period = nobs - trimcnt
+        # The regressions start at period baselags + 1. For a break period
+        # whose dummies are zero, constant or a linear trend over those rows,
+        # the dummies are collinear with the constant and the trend, so the
+        # period has no t-statistic and is skipped. The level shift needs a
+        # zero and a nonzero row, the trend shift two zero rows and, next to
+        # the level shift ("ct"), two nonzero rows. The shifts of period p
+        # start at observation p for "c" and "ct" but at p - 1 for "t" (see
+        # _update_regression_exog), so the first valid period of "t" is one
+        # larger than that of "ct" although both need two zero rows.
+        if regression == "c":
+            first_valid, last_valid = baselags + 2, nobs - 1
+        elif regression == "t":
+            first_valid, last_valid = baselags + 4, nobs
+        else:
+            first_valid, last_valid = baselags + 3, nobs - 2
+        periods = np.arange(
+            max(start_period + 1, first_valid), min(end_period, last_valid) + 1
+        )
+        if periods.shape[0] == 0:
+            raise ValueError(
+                f"No break period is left: with {baselags} lags and trim={trim}, "
+                "the break dummies of every candidate period are collinear with "
+                "the constant and the trend. Use fewer lags or a smaller trim."
+            )
         if regression == "ct":
             basecols = 5
         else:
@@ -5154,7 +5199,6 @@ class ZivotAndrewsUnitRoot:
             x, nobs, c_const, t_const, basecols, baselags
         )
         stats = np.full(end_period + 1, np.inf)
-        periods = np.arange(start_period + 1, end_period + 1)
         tvalues = self._break_tvalues(
             endog[baselags:],
             exog,
@@ -5170,7 +5214,7 @@ class ZivotAndrewsUnitRoot:
             stats[periods] = tvalues
         else:
             # iterate through the time periods
-            for bp in range(start_period + 1, end_period + 1):
+            for bp in periods:
                 # update intercept dummy / trend / trend dummy
                 exog = self._update_regression_exog(
                     exog,
@@ -5183,7 +5227,7 @@ class ZivotAndrewsUnitRoot:
                     baselags,
                 )
                 # check exog rank on first iteration
-                if bp == start_period + 1:
+                if bp == periods[0]:
                     o = OLS(endog[baselags:], exog, hasconst=1).fit()
                     if o.df_model < exog.shape[1] - 1:
                         raise ValueError(
