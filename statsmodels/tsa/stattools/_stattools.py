@@ -5113,16 +5113,18 @@ class ZivotAndrewsUnitRoot:
         ``baselag + 2`` ("t" and "ct"), and at most ``nobs - 2`` ("c" and
         "t") or ``nobs - 3`` ("ct"). A ValueError is raised if no candidate
         break is left. Within these bounds, ``bpidx`` is between ``trimcnt``
-        and ``nobs - trimcnt - 1`` for "c" and "ct", and one observation
-        earlier, between ``trimcnt - 1`` and ``nobs - trimcnt - 2``, for
-        "t", where ``trimcnt = int(trim * nobs)``.
+        and ``nobs - trimcnt - 1`` for all three models, where
+        ``trimcnt = int(trim * nobs)``.
 
         .. versionchanged:: 0.15.1
 
            These break periods are skipped. They used to give a NaN or
            meaningless statistic, or raise, when the number of lags was not
            smaller than the number of trimmed observations, or with
-           ``trim=0``.
+           ``trim=0``. With ``regression="t"``, the trimmed candidate breaks
+           are the same as for "c" and "ct"; they used to be one observation
+           earlier, so the statistic and break can differ when the minimum
+           is at the edge of the trimmed range.
 
         References
         ----------
@@ -5183,8 +5185,13 @@ class ZivotAndrewsUnitRoot:
             first_valid, last_valid = baselags + 4, nobs
         else:
             first_valid, last_valid = baselags + 3, nobs - 2
+        # The break of period p is after observation p - 1 for "c" and "ct"
+        # but after p - 2 for "t", so the trimmed periods of "t" are shifted
+        # by one to give all three models the same candidate breaks
+        shift = int(regression == "t")
         periods = np.arange(
-            max(start_period + 1, first_valid), min(end_period, last_valid) + 1
+            max(start_period + 1 + shift, first_valid),
+            min(end_period + shift, last_valid) + 1,
         )
         if periods.shape[0] == 0:
             raise ValueError(
@@ -5204,7 +5211,7 @@ class ZivotAndrewsUnitRoot:
         endog, exog = self._format_regression_data(
             x, nobs, c_const, t_const, basecols, baselags
         )
-        stats = np.full(end_period + 1, np.inf)
+        stats = np.full(end_period + 2, np.inf)
         tvalues = self._break_tvalues(
             endog[baselags:],
             exog,

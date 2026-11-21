@@ -4998,13 +4998,16 @@ def test_zivot_andrews_candidate_periods(regression):
     # regression. The terms are integers, so the rank is not borderline.
     nobs = 40
     x = np.random.default_rng(24).standard_normal(nobs).cumsum()
+    # the break of period p is after observation p - 2 for "t", one earlier
+    # than for "c" and "ct", so its trimmed periods are one later
+    shift = int(regression == "t")
     for trim, lags in [(0.0, 0), (0.0, 3), (0.05, 8), (0.15, 8)]:
         za = _ZivotAndrewsPeriods()
         za(x, trim=trim, maxlag=lags, regression=regression, autolag=None)
         t = np.arange(lags + 1, nobs, dtype=float)
         trimcnt = int(nobs * trim)
         expected = []
-        for p in range(trimcnt + 1, nobs - trimcnt + 1):
+        for p in range(trimcnt + 1 + shift, min(nobs - trimcnt + shift, nobs) + 1):
             cols = _za_deterministic(t, p, regression)
             if np.linalg.matrix_rank(np.column_stack(cols)) == len(cols):
                 expected.append(p)
@@ -5027,7 +5030,8 @@ def test_zivot_andrews_direct_regressions(regression):
     rng = np.random.default_rng(10583)
     x = _za_series("random_walk", 200, rng)
     res = zivot_andrews(x, maxlag=4, regression=regression, autolag=None)
-    periods = np.arange(31, 171)
+    shift = int(regression == "t")
+    periods = np.arange(31 + shift, 171 + shift)
     statistic, bpidx = _za_direct(x, 4, regression, periods)
     assert_allclose(res[0], statistic, rtol=1e-8)
     assert res[4] == bpidx
@@ -5039,7 +5043,10 @@ def _za_check_skipped(x, trim, lags, regression):
     nobs = x.shape[0]
     trimcnt = int(nobs * trim)
     first, last = _ZA_VALID[regression](nobs, lags)
-    periods = np.arange(max(trimcnt + 1, first), min(nobs - trimcnt, last) + 1)
+    shift = int(regression == "t")
+    periods = np.arange(
+        max(trimcnt + 1 + shift, first), min(nobs - trimcnt + shift, last) + 1
+    )
     kwargs = dict(trim=trim, maxlag=lags, regression=regression, autolag=None)
     res = zivot_andrews(x, **kwargs)
     statistic, bpidx = _za_direct(x, lags, regression, periods)
@@ -5080,6 +5087,21 @@ def test_zivot_andrews_lags_beyond_trim(regression):
     # degenerate. The statistic was NaN for "c" (with a RuntimeWarning).
     x = np.random.default_rng(24).standard_normal(24).cumsum()
     _za_check_skipped(x, 0.15, 8, regression)
+
+
+@pytest.mark.parametrize("trim", [0.1, 0.15, 0.25])
+def test_zivot_andrews_same_trimmed_breaks(trim):
+    # The three models consider the same trimmed candidate breaks, from
+    # observation trimcnt to nobs - trimcnt - 1 (the last observation before
+    # the break), when the lags are too few to make any of them collinear
+    nobs = 62
+    x = np.random.default_rng(24).standard_normal(nobs).cumsum()
+    trimcnt = int(nobs * trim)
+    expected = np.arange(trimcnt, nobs - trimcnt)
+    for regression, before in (("c", 1), ("t", 2), ("ct", 1)):
+        za = _ZivotAndrewsPeriods()
+        za(x, trim=trim, maxlag=1, regression=regression, autolag=None)
+        assert_equal(np.asarray(za.periods) - before, expected)
 
 
 @pytest.mark.parametrize("regression", ["c", "t", "ct"])
