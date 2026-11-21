@@ -1686,8 +1686,9 @@ def test_cffilter_low_below_two():
 def test_cffilter_drift():
     # drift=True removes the line t * (x[-1] - x[0]) / (nobs - 1) before
     # filtering, so removing it by hand and filtering with drift=False gives
-    # the same cycle (drift=True is checked against R in test_cfitz_filter).
-    # The trend is the filtered series less its cycle.
+    # the same cycle (both are checked against fixed reference values in
+    # test_cffilter_reference_values). The trend is the filtered series less
+    # its cycle.
     dta = macrodata.load_pandas().data[["tbilrate", "infl"]].values[1:]
     nobs = dta.shape[0]
     line = np.arange(nobs)[:, None] * (dta[-1] - dta[0]) / (nobs - 1)
@@ -1699,6 +1700,32 @@ def test_cffilter_drift():
     res_raw = cffilter(dta, drift=False)
     assert_allclose(res_raw.cycle + res_raw.trend, dta, rtol=1e-12)
     assert not np.allclose(res_raw.cycle, res_drift.cycle)
+
+
+@pytest.mark.parametrize("drift", [True, False])
+def test_cffilter_reference_values(drift):
+    # Fixed reference values of the cycle and the trend of a random walk with
+    # drift, 80 observations, low=6 and high=32, in results/cffilter.csv.
+    # With drift=True the drift line is removed before filtering and the
+    # trend is the drift-removed series less the cycle, so the trend does not
+    # contain the drift line.
+    ref = read_csv(CURR_DIR / "results" / "cffilter.csv", float_precision="round_trip")
+    x = ref["x"].to_numpy()
+    suffix = "drift" if drift else "no_drift"
+    ref_cycle = ref[f"cycle_{suffix}"].to_numpy()
+    ref_trend = ref[f"trend_{suffix}"].to_numpy()
+    res = cffilter(x, low=6, high=32, drift=drift)
+    # The smallest cycle value is 6e-4, and the cycle has an absolute rounding
+    # error of about 2e-15 from sums of terms of order 1 to 10, so the
+    # relative error reaches 2e-12 there
+    assert_allclose(res.cycle, ref_cycle, rtol=1e-10)
+    assert_allclose(res.trend, ref_trend, rtol=1e-12)
+    # cycle + trend + drift line = x, where the drift line is zero without
+    # drift. The reference values have the same identity.
+    nobs = x.shape[0]
+    line = drift * np.arange(nobs) * (x[-1] - x[0]) / (nobs - 1)
+    assert_allclose(res.cycle + res.trend + line, x, rtol=1e-12)
+    assert_allclose(ref_cycle + ref_trend + line, x, rtol=1e-12)
 
 
 @pytest.mark.parametrize("one_sided", [False, True])
