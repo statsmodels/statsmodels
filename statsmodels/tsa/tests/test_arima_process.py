@@ -289,6 +289,16 @@ def test_lpol2index_index2lpol():
     assert_equal(process.arcoefs, ar)
 
 
+@pytest.mark.parametrize("form", ["list", "tuple", "series"])
+@pytest.mark.parametrize("arg", ["coeffs", "index"])
+def test_index2lpol_input_forms(arg, form):
+    # A tuple index used to raise an IndexError
+    kwargs = {"coeffs": [0.8, -0.1], "index": [2, 5]}
+    kwargs[arg] = _coefficient_form(kwargs[arg], form)
+    res = index2lpol(**kwargs)
+    assert_allclose(res, [0.0, 0.0, 0.8, 0.0, 0.0, -0.1], rtol=1e-15)
+
+
 class TestArmaProcess:
     def test_empty_coeff(self):
         process = ArmaProcess()
@@ -1070,6 +1080,21 @@ def test_ar2arma_start():
     assert_allclose(ar_app, ar_true, rtol=1e-6)
     # atol: the MA coefficient of the process is zero
     assert_allclose(ma_app, [1.0, 0.0], rtol=1e-6, atol=1e-6)
+
+
+@pytest.mark.parametrize("form", ["list", "tuple", "series"])
+def test_ar2arma_input_forms(form):
+    # A tuple used to be unpacked into the arguments of the objective and
+    # raised a TypeError
+    n = 40
+    ar_true = [1.0, -0.8]
+    ar_des = np.r_[ar_true, np.zeros(n - 2)]
+    ar_app, ma_app, _ = ar2arma(_coefficient_form(ar_des, form), p=2, q=1, n=n)
+    expected_ar, expected_ma, _ = ar2arma(ar_des, p=2, q=1, n=n)
+    assert_allclose(ar_app, expected_ar, rtol=1e-12)
+    assert_allclose(ma_app, expected_ma, rtol=1e-12)
+    # The AR(1) is correctly specified, so it is recovered
+    assert_allclose(ar_app, ar_true, rtol=1e-5)
 
 
 def test_deconvolve_n_terms():
