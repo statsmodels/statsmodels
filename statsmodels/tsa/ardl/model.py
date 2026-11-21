@@ -254,6 +254,14 @@ class ARDL(AutoReg):
         lags=1, set hold_back=3 which ensures that both models are estimated
         using observations 3,...,nobs. hold_back must be >= the maximum lag in
         the model.
+
+        .. versionchanged:: 0.15.1
+
+            With hold_back None and a largest exog lag above the largest
+            endog lag, ``nobs`` of the model and its results is the number of
+            observations used in estimation. It counted the observations
+            excluded by the extra exog lags, so ``llf``, the information
+            criteria, ``sigma2``, ``df_resid`` and the p-values were wrong.
     period : int, optional
         The period of the data. Only used if seasonal is True. This parameter
         can be omitted if using a pandas object for endog that contains a
@@ -395,6 +403,8 @@ class ARDL(AutoReg):
         self._order = self._check_order(order)
         # 2. Construct Regressors
         self._y, self._x = self._construct_regressors(hold_back)
+        # hold_back can increase to the largest exog lag
+        self.nobs = self._y.shape[0]
         self._set_k_constant()
         # 3. Construct variable names
         self._endog_name, self._exog_names = self._construct_variable_names()
@@ -1933,6 +1943,14 @@ class UECM(ARDL):
         lags=1, set hold_back=3 which ensures that both models are estimated
         using observations 3,...,nobs. hold_back must be >= the maximum lag in
         the model.
+
+        .. versionchanged:: 0.15.1
+
+            With hold_back None and a largest exog lag above the largest
+            endog lag, ``nobs`` of the model and its results is the number of
+            observations used in estimation. It counted the observations
+            excluded by the extra exog lags, so ``llf``, the information
+            criteria, ``sigma2``, ``df_resid`` and the p-values were wrong.
     period : int, optional
         The period of the data. Only used if seasonal is True. This parameter
         can be omitted if using a pandas object for endog that contains a
