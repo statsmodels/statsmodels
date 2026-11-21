@@ -575,6 +575,31 @@ def test_arima_integrated_non_statespace_method():
     assert_allclose(res.params, _yule_walker_by_hand(np.diff(y), 2), rtol=1e-10)
 
 
+@pytest.mark.parametrize(
+    "order, seasonal_order",
+    [((1, 1, 0), (0, 0, 0, 0)), ((1, 0, 0), (1, 1, 0, 4)), ((1, 1, 0), (0, 1, 0, 4))],
+)
+def test_arima_integrated_innovations_mle(order, seasonal_order):
+    # innovations_mle, the only one of these methods that is given the whole
+    # order, receives the differenced endog and the orders without the
+    # differencing, so the result equals the estimator applied to the
+    # differenced series with d = D = 0
+    from statsmodels.tsa.statespace.tools import diff
+
+    y, _ = _contract_arima_data()
+    y = np.cumsum(y)
+    mod = ARIMA(y, order=order, seasonal_order=seasonal_order)
+    with pytest.warns(UserWarning, match="has been differenced"):
+        res = mod.fit(method="innovations_mle")
+    p, d, q = order
+    sp, sd, sq, s = seasonal_order
+    dy = diff(y, k_diff=d, k_seasonal_diff=sd, seasonal_periods=s)
+    expected, _ = innovations_mle(
+        dy, order=(p, 0, q), seasonal_order=(sp, 0, sq, s), demean=False
+    )
+    assert_allclose(res.params, expected.params, rtol=1e-10)
+
+
 def test_arima_return_params_non_statespace_method():
     y, _ = _contract_arima_data()
     params = ARIMA(y, order=(2, 0, 0), trend="n").fit(
