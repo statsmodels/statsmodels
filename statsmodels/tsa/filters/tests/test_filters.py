@@ -1595,3 +1595,42 @@ def test_fftconvolve_complex_list(complex_arg):
     assert np.iscomplexobj(res)
     expected = signal.lfilter(ma, ar, x)
     assert_allclose(res[:200], expected, rtol=1e-10, atol=1e-12)
+
+
+@pytest.mark.parametrize("mode", ["full", "same", "valid"])
+def test_fftconvolve3_in3_without_in2(mode):
+    # in3 without in2 raised an AttributeError. It filters in1 with the
+    # inverse of in3. With in1 = [1, 0] and in3 = 1 - a L padded to 5 values,
+    # the FFT has 8 points, and the circular inverse of 1 - a L is
+    # a ** k / (1 - a ** 8), k = 0, ..., 7. "full" is the first
+    # 2 + 5 - 1 = 6 values, "same" the centered 5 and "valid" the centered
+    # 5 - 2 + 1 = 4.
+    a = 0.6
+    geo = a ** np.arange(8) / (1 - a**8)
+    expected = {"full": geo[:6], "same": geo[:5], "valid": geo[1:5]}[mode]
+    in3 = np.array([1.0, -a, 0.0, 0.0, 0.0])
+    res = fftconvolve3(np.array([1.0, 0.0]), in3=in3, mode=mode)
+    assert_allclose(res, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("mode", ["full", "same", "valid"])
+@pytest.mark.parametrize("is_complex", [False, True])
+def test_fftconvolve3_in3_without_in2_matches_lfilter(mode, is_complex):
+    # the inverse filter is the recursion of lfilter, up to the FFT
+    # wrap-around after 256 values (below 0.5 ** 56 for the first 200).
+    # "same" is the first 200 of the 201 values and "valid" the 199 after
+    # the first.
+    from scipy import signal
+
+    rng = np.random.default_rng(20261121)
+    x = rng.standard_normal(200)
+    if is_complex:
+        x = x + 1j * rng.standard_normal(200)
+    ar = np.array([1.0, -0.5])
+    expected = signal.lfilter([1.0], ar, x)
+    expected = {"full": expected, "same": expected, "valid": expected[1:]}[mode]
+    res = fftconvolve3(x, in3=ar, mode=mode)
+    assert np.iscomplexobj(res) is is_complex
+    assert res.shape == {"full": (201,), "same": (200,), "valid": (199,)}[mode]
+    # atol for values near zero: the FFT rounding error is absolute
+    assert_allclose(res[: expected.shape[0]], expected, rtol=1e-10, atol=1e-12)
