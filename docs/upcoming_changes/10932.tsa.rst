@@ -1,0 +1,2 @@
+- ``simulation_results`` of a simulated ETS prediction raised a
+  ``TypeError`` for pandas data. :pr:`10932`
