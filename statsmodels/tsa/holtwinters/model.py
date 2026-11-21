@@ -352,10 +352,11 @@ class ExponentialSmoothing(TimeSeriesModel):
             ub = bound[1] if bound[1] is not None else np.inf
             if len(bound) != 2 or lb >= ub:
                 raise ValueError(msg)
-            if ("smoothing" in key or "damp" in key) and (
-                bound[0] < 0.0 or bound[1] > 1.0
-            ):
-                raise ValueError(f"{key} must have a lower bound >= 0.0 and <= 1.0")
+            if ("smoothing" in key or "damp" in key) and (lb < 0.0 or ub > 1.0):
+                raise ValueError(
+                    f"{key} must have a lower bound >= 0.0 and an upper bound "
+                    f"<= 1.0. None is not a valid bound for {key}."
+                )
         return bounds
 
     def _boxcox(self):

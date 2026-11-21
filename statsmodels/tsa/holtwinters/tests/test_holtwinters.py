@@ -3494,3 +3494,16 @@ def test_fit_not_optimized_fixed_smoothing_level():
         expected[t] = level
         level = 0.3 * y[t] + 0.7 * level
     assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("key", ["smoothing_level", "damping_trend"])
+@pytest.mark.parametrize(
+    "bound", [(0.1, None), (None, 0.5), (None, None), (-0.1, 0.5), (0.1, 1.5)]
+)
+def test_bounds_outside_unit_interval(key, bound):
+    # The bounds of the smoothing and damping parameters must lie in [0, 1].
+    # None, which means no bound for the initial values, raised a TypeError.
+    with pytest.raises(ValueError, match=f"{key} must have a lower bound >= 0.0"):
+        ExponentialSmoothing(
+            _trend_seasonal_data(), trend="add", damped_trend=True, bounds={key: bound}
+        )
