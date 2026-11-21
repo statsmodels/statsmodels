@@ -1888,6 +1888,12 @@ class UECM(ARDL):
     ----------
     endog : array_like
         A 1-d endogenous response variable. The dependent variable.
+
+        .. versionchanged:: 0.15.1
+
+            The regressors are floating point when endog is an integer array.
+            The lagged levels of exog were truncated to integers (and rounded
+            to single precision for a float32 endog).
     lags : int or None
         The number of lags p of the endogenous variable in the equivalent
         ARDL, so that the model contains p - 1 lagged differences of the
@@ -2128,7 +2134,7 @@ class UECM(ARDL):
         """Construct and format model regressors"""
         # 1. Endogenous and endogenous lags
         self._maxlag = max(self._lags) if self._lags else 0
-        dendog = np.full_like(self.data.endog, np.nan)
+        dendog = np.full(self.data.endog.shape, np.nan)
         dendog[1:] = np.diff(self.data.endog, axis=0)
         dlag = max(0, self._maxlag - 1)
         _lagmat_result = lagmat(dendog, dlag, original="sep")
@@ -2138,7 +2144,7 @@ class UECM(ARDL):
         # 3. Levels
         orig_exog = self.data.orig_exog
         exog_pandas = isinstance(orig_exog, pd.DataFrame)
-        lvl = np.full_like(self.data.endog, np.nan)
+        lvl = np.full(self.data.endog.shape, np.nan)
         lvl[1:] = self.data.endog[:-1]
         lvls = [lvl.copy()]
         for key, val in self._order.items():
@@ -2155,7 +2161,7 @@ class UECM(ARDL):
         if exog_pandas:
             dexog = orig_exog.diff()
         else:
-            dexog = np.full_like(self.data.exog, np.nan)
+            dexog = np.full(self.data.exog.shape, np.nan)
             dexog[1:] = np.diff(orig_exog, axis=0)
         adj_order = {}
         for key, val in self._order.items():
