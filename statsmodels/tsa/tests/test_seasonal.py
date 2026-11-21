@@ -1,5 +1,7 @@
 from statsmodels.compat.pandas import MONTH_END, QUARTER_END, YEAR_END
 
+import warnings
+
 import numpy as np
 from numpy.testing import (
     assert_allclose,
@@ -1022,3 +1024,18 @@ def test_seasonal_decompose_period_validation():
     # a float period with an integral value is still tolerated
     res = seasonal_decompose(x, period=12.0)
     assert_equal(res.trend.shape[0], 48)
+
+
+def test_period_from_inferred_freq():
+    # A DatetimeIndex without a freq gives the period of its inferred freq,
+    # without the warning pandas 3.1 gives when inferred_freq is read
+    rng = np.random.default_rng(20261121)
+    dates = pd.date_range("2000-01-01", periods=48, freq="QS")
+    x = pd.Series(10 + rng.standard_normal(48), index=list(dates))
+    assert x.index.freq is None
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        res = seasonal_decompose(x)
+    assert [str(w.message) for w in record] == []
+    expected = seasonal_decompose(x.to_numpy(), period=4)
+    assert_allclose(res.seasonal, expected.seasonal, rtol=1e-12)
