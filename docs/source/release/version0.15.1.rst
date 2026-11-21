@@ -338,6 +338,12 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- The prediction intervals of
+  :class:`~statsmodels.tsa.forecasting.theta.ThetaModel` used the forecast
+  variance ``sigma2 * (1 + (h - 1) * (1 + (alpha - 1) ** 2))``, which is too
+  large after the first step. They use the variance of the IMA(1,1) model,
+  ``sigma2 * (1 + (h - 1) * alpha ** 2)``, so the intervals are narrower.
+  :pr:`10879`
 
 New Features and Enhancements
 =============================
