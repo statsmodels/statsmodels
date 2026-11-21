@@ -636,6 +636,41 @@ def test_non_unit_range():
         dp.range(11, 900)
 
 
+@pytest.mark.parametrize("index", [pd.RangeIndex(0, 20, 2), pd.RangeIndex(1, 31, 3)])
+@pytest.mark.parametrize(
+    "first, last",
+    [(2, 5), (10, 13), (11, 13), (8, 12)],
+    ids=["in-sample", "next-out-of-sample", "later-out-of-sample", "both"],
+)
+def test_range_non_unit_step(index, first, last):
+    # The step of the index was ignored. The labels start, start + step, ...,
+    # stop are at positions first, ..., last.
+    start = index[0] + first * index.step
+    stop = index[0] + last * index.step
+    kwargs = {"constant": True, "order": 1, "seasonal": True, "period": 3}
+    dp = DeterministicProcess(index, **kwargs)
+    terms = dp.range(start, stop)
+    expected_index = pd.RangeIndex(start, stop + 1, index.step)
+    pd.testing.assert_index_equal(terms.index, expected_index, exact=False)
+    full = pd.concat([dp.in_sample(), dp.out_of_sample(4)], axis=0)
+    pd.testing.assert_frame_equal(terms, full.iloc[first : last + 1])
+    trend = np.arange(first + 1.0, last + 2.0)
+    np.testing.assert_allclose(terms["trend"], trend, rtol=1e-15)
+
+
+def test_range_int_index_non_unit_step():
+    # An integer Index with a step other than 1 cannot be extended, so range
+    # raises instead of using the step. int64, as the RangeIndex below, since
+    # np.arange gives int32 where the default integer has 32 bits (Pyodide).
+    index = pd.Index(np.arange(0, 20, 2, dtype=np.int64))
+    kwargs = {"constant": True, "order": 1}
+    dp = DeterministicProcess(index, **kwargs)
+    expected = DeterministicProcess(pd.RangeIndex(0, 20, 2), **kwargs)
+    pd.testing.assert_frame_equal(dp.in_sample(), expected.in_sample())
+    with pytest.raises(TypeError, match="does not support extension"):
+        dp.range(4, 10)
+
+
 def test_additional_terms(time_index):
     add_terms = [TimeTrend(True, order=1)]
     dp = DeterministicProcess(time_index, additional_terms=add_terms)
