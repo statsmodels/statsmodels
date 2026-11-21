@@ -259,6 +259,12 @@ def recursive_filter(x, ar_coeff, init=None):
         Initial values of the time-series prior to the first value of y.
         The default is zero.
 
+        .. versionchanged:: 0.15.1
+
+           ``ar_coeff`` and ``init`` can be (n_coeff, 1) columns, which
+           raised a ValueError from NumPy or SciPy. Other 2-d input raises a
+           ValueError that names the argument.
+
     Returns
     -------
     ndarray, Series or DataFrame
@@ -270,7 +276,8 @@ def recursive_filter(x, ar_coeff, init=None):
     ------
     ValueError
         If ``x`` is not 1-D, an (n, 1) column, a row with shape (1, n) or
-        (1, ..., 1, n), or a single observation with shape (1, ..., 1), or if
+        (1, ..., 1, n), or a single observation with shape (1, ..., 1), if
+        ``ar_coeff`` or ``init`` is not 1-D or an (n_coeff, 1) column, or if
         ``init`` and ``ar_coeff`` have different lengths.
 
     Warns
@@ -313,10 +320,10 @@ def recursive_filter(x, ar_coeff, init=None):
         # lfilter works along the last axis, so filter x as 1-D and give the
         # result the shape of x
         x = x.ravel()
-    ar_coeff = array_like(ar_coeff, "ar_coeff")
+    ar_coeff = array_like(ar_coeff, "ar_coeff", ndim=1)
 
     if init is not None:  # integer init are treated differently in lfiltic
-        init = array_like(init, "init")
+        init = array_like(init, "init", ndim=1)
         if len(init) != len(ar_coeff):
             raise ValueError("ar_coeff must be the same length as init")
 
