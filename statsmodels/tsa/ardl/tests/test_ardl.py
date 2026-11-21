@@ -3,6 +3,7 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 from itertools import combinations
 from typing import NamedTuple
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -2369,3 +2370,36 @@ def test_bounds_test_case_types(case, to_case):
     expected = {1: 0.7109023, 2: 5.116768, 3: 6.205875, 4: 5.430622, 5: 6.785325}
     bounds_result = _dane_uecm_res().bounds_test(to_case(case))
     assert_allclose(bounds_result.statistic, expected[case], rtol=1e-6)
+
+
+@pytest.mark.parametrize("endog_int", [True, False])
+@pytest.mark.parametrize("exog_int", [True, False])
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_uecm_integer_data(endog_int, exog_int, use_pandas):
+    # The levels of exog were truncated to integers when endog was an integer
+    # array, and integer data warned about casting NaN to an integer
+    rng = np.random.default_rng(20261127)
+    nobs = 120
+    y = np.round(4 * np.cumsum(rng.standard_normal(nobs)))
+    x = np.cumsum(rng.standard_normal(nobs))
+    if exog_int:
+        x = np.round(3 * x)
+    endog = y.astype(np.int64) if endog_int else y
+    exog = x.astype(np.int64) if exog_int else x
+    if use_pandas:
+        endog = pd.Series(endog, name="y")
+        exog = pd.DataFrame({"x": exog})
+    else:
+        exog = exog[:, None]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = UECM(endog, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, x.L1, D.y.L1, D.x.L0 and D.x.L1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.r_[np.nan, np.diff(x)]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1], dy[t - 1], dx[t], dx[t - 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
