@@ -374,6 +374,11 @@ Behavior changes
   column, such as a one-column ``DataFrame``, as the 1-D series instead of
   raising, and raise a ``ValueError`` for input with more than one column.
   Results for 1-D input are unchanged. :pr:`10849`
+- The default ``nlags`` of :func:`~statsmodels.tsa.stattools.acf` with
+  ``missing="drop"`` or ``"conservative"`` counts only the non-missing
+  observations. It counted the NaNs, so it could return more lags, or raise
+  when ``nlags`` was not given. The values at each lag are unchanged.
+  :pr:`10847`
 
 New Features and Enhancements
 =============================
