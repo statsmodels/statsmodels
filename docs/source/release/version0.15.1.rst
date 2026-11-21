@@ -88,12 +88,6 @@ Deprecations
   selects ``"2pi"`` (the spectral density) or ``"sqrt(2pi)"`` (the current
   result). Without it, a ``FutureWarning`` is issued, and the default will
   change to ``"2pi"`` after statsmodels 0.17. :pr:`10863`
-- ``start_params`` in :meth:`~statsmodels.tsa.arima.model.ARIMA.fit` with more
-  elements than parameters, or one element for several free parameters, is
-  deprecated. It gives the same result as before with a ``FutureWarning``,
-  and will raise a ``ValueError`` after statsmodels 0.17. With extra
-  elements, ``summary()`` raised and the information criteria counted them.
-  :pr:`10874`
 
 Behavior changes
 ----------------
@@ -1236,10 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- :meth:`~statsmodels.tsa.arima.model.ARIMA.fit` did not check the length of
-  ``start_params``: too few elements raised an ``IndexError`` or a NumPy
-  error. They raise a ``ValueError`` that states the expected length.
-  :pr:`10874`
 
 Statistics and tests
 --------------------
