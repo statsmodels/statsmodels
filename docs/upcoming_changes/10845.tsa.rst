@@ -1,0 +1,3 @@
+- ``arma_order_select_ic`` returned minimum orders (``aic_min_order`` and the
+  others) that could point at a model whose fit had failed, because failed fits
+  have NaN criteria. The minimum orders now ignore them. :pr:`10845`
