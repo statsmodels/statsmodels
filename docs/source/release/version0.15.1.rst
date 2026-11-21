@@ -338,6 +338,12 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
+- Without MLE, ``sigma2`` of
+  :class:`~statsmodels.tsa.forecasting.theta.ThetaModel` results was estimated
+  on the original data, including the seasonal pattern, while the forecasts
+  use the deseasonalized data. It is estimated on the deseasonalized data,
+  so ``sigma2`` and the prediction intervals of seasonal models change.
+  :pr:`10880`
 
 New Features and Enhancements
 =============================
