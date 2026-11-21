@@ -8,6 +8,7 @@ from statsmodels.compat.platform import PLATFORM_32, PLATFORM_LINUX32
 from itertools import product
 import json
 import pathlib
+import re
 
 import numpy as np
 from numpy.testing import (
@@ -20,15 +21,26 @@ import pytest
 import scipy.stats
 
 from statsmodels.iolib.summary import Summary
+from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.numdiff import approx_hess_cs
-from statsmodels.tools.sm_exceptions import ConvergenceWarning, PrecisionWarning
+from statsmodels.tools.sm_exceptions import (
+    ConvergenceWarning,
+    MissingDataError,
+    PrecisionWarning,
+)
+from statsmodels.tools.tools import Bunch
 from statsmodels.tsa import holtwinters
+from statsmodels.tsa.exponential_smoothing.base import (
+    StateSpaceMLEModel,
+    StateSpaceMLEResults,
+)
 from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 from statsmodels.tsa.exponential_smoothing.initialization import (
     _initialization_heuristic,
     _initialization_simple,
 )
 import statsmodels.tsa.statespace.exponential_smoothing as statespace
+from statsmodels.tsa.tests._contract import series_forms
 
 # This contains tests for the exponential smoothing implementation in
 # tsa/exponential_smoothing/ets.py.
@@ -1596,3 +1608,867 @@ def test_params_dtype_int(austourists_model):
     assert np.isfinite(fitted).all()
     assert_allclose(model.loglike(params), llf, rtol=1e-12)
     assert_allclose(model.smooth(params).fittedvalues, fitted, rtol=1e-12)
+
+
+#
+# CONTRACTS OF THE PUBLIC API
+#
+
+# The tests below compare with closed forms, identities and R at these
+# smoothing parameters, not at estimated ones
+FIXED_SMOOTHING = {
+    "smoothing_level": 0.3,
+    "smoothing_trend": 0.1,
+    "smoothing_seasonal": 0.2,
+    "damping_trend": 0.9,
+}
+
+
+def fixed_params(model):
+    # the start parameters of the model with the smoothing parameters above
+    params = np.array(model.start_params, dtype=float)
+    for i, name in enumerate(model.param_names):
+        if name in FIXED_SMOOTHING:
+            params[i] = FIXED_SMOOTHING[name]
+    return params
+
+
+def ljung_box(x, lags, boxpierce=False):
+    # Ljung-Box (or Box-Pierce) statistics of lags 1, ..., lags and their
+    # chi2(lag) p-values
+    x = x - x.mean()
+    n = x.shape[0]
+    k = np.arange(1, lags + 1)
+    acf = np.array([x[j:] @ x[:-j] for j in k]) / (x @ x)
+    if boxpierce:
+        stat = n * np.cumsum(acf**2)
+    else:
+        stat = n * (n + 2) * np.cumsum(acf**2 / (n - k))
+    return np.vstack([stat, scipy.stats.chi2.sf(stat, k)])
+
+
+def breakvar(x, h):
+    # the sum of squares of the last h values over that of the first h, and
+    # its two-sided F(h, h) p-value
+    stat = np.sum(x[-h:] ** 2) / np.sum(x[:h] ** 2)
+    dist = scipy.stats.f(h, h)
+    return np.array([stat, 2 * min(dist.cdf(stat), dist.sf(stat))])
+
+
+def jarque_bera(x):
+    # the Jarque-Bera statistic, its chi2(2) p-value, skewness and kurtosis
+    dev = x - x.mean()
+    m2, m3, m4 = (np.mean(dev**p) for p in (2, 3, 4))
+    skew = m3 / m2**1.5
+    kurtosis = m4 / m2**2
+    stat = x.shape[0] / 6 * (skew**2 + (kurtosis - 3) ** 2 / 4)
+    return np.array([stat, scipy.stats.chi2.sf(stat, 2), skew, kurtosis])
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        ({"error": "mul"}, "strictly positive"),
+        ({"trend": "mul"}, "strictly positive"),
+        ({"seasonal": "mul", "seasonal_periods": 4}, "strictly positive"),
+        ({"damped_trend": True}, "Can only dampen"),
+        ({"seasonal": "add", "seasonal_periods": 1}, "larger than 1"),
+        ({"error": "none"}, "error must be one of"),
+        ({"trend": "damped"}, "trend must be one of"),
+        ({"seasonal": "seasonal"}, "seasonal must be one of"),
+        ({"initialization_method": "simple"}, "initialization_method must be"),
+        ({"initialization_method": "known"}, "`initial_level` argument"),
+        (
+            {"initialization_method": "known", "initial_level": 30.0, "trend": "add"},
+            "`initial_trend` argument",
+        ),
+        (
+            {
+                "initialization_method": "known",
+                "initial_level": 30.0,
+                "seasonal": "add",
+                "seasonal_periods": 4,
+            },
+            "`initial_seasonal` argument",
+        ),
+        ({"bounds": [(0.1, 0.5)]}, "bounds must be a dictionary"),
+        ({"bounds": {"smoothing_trend": (0.1, 0.5)}}, "Invalid key: smoothing_trend"),
+        ({"bounds": {"smoothing_level": (0.1, 0.2, 0.5)}}, r"bounds\[smoothing_level\]"),
+    ],
+)
+def test_invalid_arguments_raise(austourists, kwargs, match):
+    # a zero observation is only invalid with a multiplicative component
+    endog = austourists.copy()
+    endog.iloc[10] = 0.0
+    with pytest.raises(ValueError, match=match):
+        ETSModel(endog, **kwargs)
+
+
+def test_endog_two_columns_raises(austourists):
+    with pytest.raises(ValueError, match="endog must be 1-dimensional"):
+        ETSModel(np.column_stack([austourists, austourists]))
+
+
+def endog_form(values, form):
+    if form in ("list", "tuple", "series"):
+        return series_forms(values)[form]
+    elif form == "int":
+        return values.astype(np.int64)
+    elif form == "period":
+        index = pd.period_range("1999Q1", periods=values.shape[0], freq="Q")
+        return pd.Series(values, index=index)
+    return pd.Series(values)
+
+
+def extended_index(index, steps):
+    # the index of the `steps` periods after the end of `index`
+    n = len(index)
+    if isinstance(index, pd.PeriodIndex):
+        return pd.period_range(index[0], periods=n + steps, freq=index.freq)[n:]
+    elif isinstance(index, pd.DatetimeIndex):
+        return pd.date_range(index[0], periods=n + steps, freq=index.freq)[n:]
+    return pd.RangeIndex(n, n + steps)
+
+
+@pytest.mark.parametrize("form", ["list", "tuple", "series", "int", "period", "range"])
+def test_endog_forms(austourists, form):
+    # endog is documented as array_like: each form gives the results of the
+    # float ndarray, and pandas input gives pandas output indexed by the
+    # predicted periods. An (n, 1) column and a one-column DataFrame are
+    # rejected as not 1-dimensional, so they are not tested here.
+    values = np.round(austourists.to_numpy())  # integer values, for "int"
+    n = values.shape[0]
+    kwargs = dict(error="add", trend="add", seasonal="add", seasonal_periods=4)
+    ref_model = ETSModel(values, **kwargs)
+    params = fixed_params(ref_model)
+    ref = ref_model.smooth(params)
+    endog = endog_form(values, form)
+    res = ETSModel(endog, **kwargs).smooth(params)
+    errors = np.array([[0.5], [-1.0], [2.0]])
+    outputs = {
+        "fittedvalues": (res.fittedvalues, ref.fittedvalues),
+        "forecast": (res.forecast(6), ref.forecast(6)),
+        "predict": (
+            res.predict(start=n - 2, end=n + 3),
+            ref.predict(start=n - 2, end=n + 3),
+        ),
+        "simulate": (
+            res.simulate(3, anchor="end", random_errors=errors),
+            ref.simulate(3, anchor="end", random_errors=errors),
+        ),
+    }
+
+    assert_allclose(res.llf, ref.llf, rtol=1e-12)
+    for actual, expected in outputs.values():
+        assert_allclose(np.asarray(actual), expected, rtol=1e-12)
+    if not isinstance(endog, pd.Series):
+        for actual, _ in outputs.values():
+            assert isinstance(actual, np.ndarray)
+    else:
+        index = endog.index
+        future = extended_index(index, 6)
+        expected_index = {
+            "fittedvalues": index,
+            "forecast": future,
+            "predict": index[n - 2 :].append(future[:4]),
+            "simulate": future[:3],
+        }
+        for key, (actual, _) in outputs.items():
+            assert isinstance(actual, pd.Series)
+            assert actual.index.equals(expected_index[key])
+        frame = res.get_prediction(start=n - 2, end=n + 3).summary_frame()
+        expected = ETSModel(pd.Series(values), **kwargs).smooth(params)
+        expected = expected.get_prediction(start=n - 2, end=n + 3).summary_frame()
+        assert_allclose(frame, expected, rtol=1e-12)
+        assert frame.index.equals(expected_index["predict"])
+
+
+@pytest.mark.parametrize(
+    "error, trend, damped, seasonal, form",
+    [
+        ("add", None, False, None, None),
+        ("add", "add", False, None, None),
+        ("add", None, False, "add", list),
+        ("add", "add", True, "add", tuple),
+        ("add", "add", False, "add", np.asarray),
+        ("mul", "mul", False, "mul", pd.Series),
+    ],
+)
+def test_known_initialization(austourists, error, trend, damped, seasonal, form):
+    # With initialization_method="known", the results are those of the model
+    # with estimated initial states at these states. The parameter vector
+    # holds the initial seasonals as s[-1], ..., s[-m], while
+    # initial_seasonal starts with s[-m] (GH 7893).
+    kwargs = dict(
+        error=error,
+        trend=trend,
+        damped_trend=damped,
+        seasonal=seasonal,
+        seasonal_periods=4 if seasonal else None,
+    )
+    estimated = ETSModel(austourists, **kwargs)
+    params = fixed_params(estimated)
+    names = estimated.param_names
+    initial_seasonal = params[-4:][::-1]
+    known_kwargs = dict(
+        initial_level=params[names.index("initial_level")],
+        initial_trend=params[names.index("initial_trend")] if trend else None,
+        initial_seasonal=form(initial_seasonal.tolist()) if seasonal else None,
+    )
+    known = ETSModel(
+        austourists, initialization_method="known", **known_kwargs, **kwargs
+    )
+    k = known.k_params
+    assert known.param_names == names[:k]
+    assert known.initial_state_names == names[k:]
+
+    res = known.smooth(params[:k])
+    expected = estimated.smooth(params)
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+    assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-12)
+    assert_allclose(res.states, expected.states, rtol=1e-12)
+    assert_allclose(res.initial_state, expected.initial_state, rtol=1e-12)
+    if seasonal:
+        assert_allclose(res.initial_seasonal, initial_seasonal, rtol=1e-12)
+
+    # set_initialization_method changes an existing model into the same one
+    switched = ETSModel(austourists, **kwargs)
+    switched.set_initialization_method("known", **known_kwargs)
+    assert switched.param_names == known.param_names
+    assert_allclose(
+        switched.smooth(params[:k]).fittedvalues, expected.fittedvalues, rtol=1e-12
+    )
+
+    # the summary has a table of the initial states
+    text = res.summary().as_text()
+    assert "initialization method: known" in text
+    for name in known.initial_state_names:
+        assert name in text
+
+
+def test_fit_return_params(oildata):
+    model = ETSModel(oildata, error="add", trend="add")
+    params = model.fit(disp=False, return_params=True)
+    assert isinstance(params, np.ndarray)
+    # the parameters of the same optimization as a fit that returns results
+    assert_allclose(params, model.fit(disp=False).params, rtol=1e-12)
+
+    # with all parameters fixed, the fixed values in the order of param_names
+    # whatever the order of the dictionary
+    values = [0.3, 0.1, 110.0, 5.0]
+    fixed = dict(zip(model.param_names, values, strict=True))
+    with model.fix_params(dict(reversed(fixed.items()))):
+        params = model.fit(disp=False, return_params=True)
+        res = model.fit(disp=False)
+    assert_allclose(params, values, rtol=1e-12)
+    assert_allclose(res.params, values, rtol=1e-12)
+    assert res.fixed_params == model.param_names
+    assert res.mle_retvals is None
+
+
+@pytest.mark.parametrize("trend", ["add", "mul"])
+def test_estimated_initialization_short_nonseasonal(austourists, trend):
+    # With fewer than 10 observations, the start values of the initial level
+    # and trend are the first observation and the first difference or ratio
+    # (Hyndman and Athanasopoulos, Section 7.6)
+    y = austourists.to_numpy()[:8]
+    model = ETSModel(y, trend=trend)
+    slope = y[1] - y[0] if trend == "add" else y[1] / y[0]
+    assert_allclose(model.start_params[-2:], [y[0], slope], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "nobs, seasonal_periods, method, match",
+    [
+        (7, 4, "estimated", "two full seasonal cycles"),
+        (9, None, "heuristic", "less than 10 observations"),
+        (15, 8, "heuristic", "two full seasonal cycles"),
+        (12, 4, "heuristic", r"10 \+ 2 \* \(seasonal_periods // 2\)"),
+    ],
+)
+def test_initialization_too_few_observations(
+    austourists, nobs, seasonal_periods, method, match
+):
+    with pytest.raises(ValueError, match=match):
+        ETSModel(
+            austourists.iloc[:nobs],
+            seasonal="add" if seasonal_periods else None,
+            seasonal_periods=seasonal_periods,
+            initialization_method=method,
+        )
+
+
+@pytest.mark.parametrize(
+    "random_errors, match",
+    [
+        (np.zeros((4, 2)), "must have shape"),
+        (np.zeros(4), "must have shape"),
+        ("normal", "unexpected value"),
+        ([0.0, 0.0, 0.0, 0.0], "unexpected value"),
+    ],
+)
+def test_simulate_invalid_random_errors(austourists_model, random_errors, match):
+    res = austourists_model.smooth(fixed_params(austourists_model))
+    with pytest.raises(ValueError, match=match):
+        res.simulate(4, random_errors=random_errors)
+
+
+def test_simulate_anchor(austourists_model):
+    res = austourists_model.smooth(fixed_params(austourists_model))
+    fitted = res.fittedvalues
+    zero = np.zeros((1, 1))
+    # the simulation starts after the anchor: without errors, one step from
+    # anchor t is the one-step prediction of observation t + 1
+    for t in [0, 30, res.nobs - 2]:
+        sim = res.simulate(1, anchor=t, random_errors=zero)
+        assert_allclose(sim, fitted.iloc[t + 1 : t + 2], rtol=1e-12)
+        assert sim.index.equals(fitted.index[t + 1 : t + 2])
+    sim = res.simulate(1, anchor="start", random_errors=zero)
+    assert_allclose(sim, fitted.iloc[:1], rtol=1e-12)
+
+    # a partial date anchors at its first period, here 2005-03-31
+    zeros = np.zeros((4, 1))
+    sim = res.simulate(4, anchor="2005", random_errors=zeros)
+    expected = res.simulate(4, anchor="2005-03-31", random_errors=zeros)
+    assert_allclose(sim, expected, rtol=1e-12)
+    assert sim.index[0] == pd.Timestamp("2005-06-30")
+    assert_allclose(sim.iloc[0], fitted["2005-06-30"], rtol=1e-12)
+
+    # the last anchor in the sample, nobs - 1, is "end"
+    with pytest.raises(ValueError, match="outside of the sample"):
+        res.simulate(1, anchor=res.nobs)
+
+
+def test_predict_dynamic_date(austourists, austourists_model):
+    # dynamic can be a date, which is not an offset from start: before it the
+    # predictions are one-step predictions, from it on they are forecasts
+    # from the period before it
+    res = austourists_model.smooth(fixed_params(austourists_model))
+    start, dynamic, end = 40, 48, 70
+    expected = res.predict(start=start, end=end, dynamic=dynamic - start)
+    assert_allclose(
+        expected.iloc[: dynamic - start],
+        res.fittedvalues.iloc[start:dynamic],
+        rtol=1e-12,
+    )
+    steps = end - dynamic + 1
+    forecast = res.simulate(
+        steps, anchor=dynamic - 1, random_errors=np.zeros((steps, 1))
+    )
+    assert_allclose(expected.iloc[dynamic - start :], forecast, rtol=1e-12)
+    date = austourists.index[dynamic]
+    for key in [str(date.date()), date, date.to_pydatetime()]:
+        pred = res.predict(start=start, end=end, dynamic=key)
+        assert_allclose(pred, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("start, dynamic", [(10, False), (10, 5), (0, 5)])
+def test_get_prediction_simulated_ann(austourists, start, dynamic):
+    # For the ANN model with additive errors e, y[t] = l[t-1] + e[t] and
+    # l[t] = l[t-1] + alpha e[t]. The non-dynamic part is simulated one step
+    # at a time from the smoothed level (the initial level for t = 0), the
+    # dynamic part from the level of the period before it. The errors are
+    # sigma times the standard normal draws from rng, one row per call of
+    # simulate.
+    smoothing_level, reps, seed = 0.3, 6, 1234
+    res = ETSModel(austourists).smooth([smoothing_level, 30.0])
+    end = 20
+    npred = end - start + 1
+    nsmooth = npred if dynamic is False else dynamic
+    pred = res.get_prediction(
+        start=start,
+        end=end,
+        dynamic=dynamic,
+        method="simulated",
+        simulate_repetitions=reps,
+        rng=np.random.default_rng(seed),
+    )
+
+    errors = np.random.default_rng(seed).standard_normal((npred, reps))
+    errors *= np.sqrt(res.scale)
+    fitted = res.fittedvalues.to_numpy()[start:]
+    sims = fitted[:nsmooth, None] + errors[:nsmooth]
+    mean = fitted[:npred].copy()
+    if nsmooth < npred:
+        level = res.level.iloc[start + nsmooth - 1]
+        dyn_errors = errors[nsmooth:]
+        past = np.cumsum(dyn_errors, axis=0) - dyn_errors
+        sims = np.vstack([sims, level + smoothing_level * past + dyn_errors])
+        mean[nsmooth:] = level
+
+    frame = pred.summary_frame(alpha=0.1)
+    assert frame.index.equals(austourists.index[start : end + 1])
+    assert_allclose(frame["mean"], mean, rtol=1e-12)
+    assert_allclose(frame["mean_numerical"], sims.mean(1), rtol=1e-10)
+    lower_upper = np.quantile(sims, [0.05, 0.95], axis=1).T
+    assert_allclose(frame[["pi_lower", "pi_upper"]], lower_upper, rtol=1e-10)
+    assert_allclose(pred.var_pred_mean, sims.var(1, ddof=1), rtol=1e-10)
+
+
+EXACT_MODELS = {
+    "ANN": (None, False, None),
+    "AAN": ("add", False, None),
+    "AAdN": ("add", True, None),
+    "ANA": (None, False, "add"),
+    "AAA": ("add", False, "add"),
+    "AAdA": ("add", True, "add"),
+}
+
+# Relative variance of the h-step forecast error, h = 1, ..., 10, of the
+# models with additive errors, at FIXED_SMOOTHING and m = 4. Computed by
+# forecast:::class1 of R's forecast package 9.0.2 (R 4.6.2) with sigma2 = 1,
+# as 1 + sum_j c_j^2 with c_j = H F^(j-1) G from the state space matrices,
+# not from the closed forms. class1 puts gamma into the third state whatever
+# the trend, which is the newest seasonal only in the models with a trend, so
+# the values of ANA are those of the equivalent AAA model with beta = 0.
+R_RELATIVE_FORECAST_VARIANCE = {
+    "ANN": [1, 1.09, 1.18, 1.27, 1.36, 1.45, 1.54, 1.63, 1.72, 1.81],
+    "AAN": [1, 1.16, 1.41, 1.77, 2.26, 2.9, 3.71, 4.71, 5.92, 7.36],
+    "AAdN": [
+        1, 1.1521, 1.373941, 1.66976821, 2.0412706501, 2.4882417865810003,
+        3.0090971511306104, 3.6012778660157942, 4.2615633277127936,
+        4.9863117260633629,
+    ],
+    "ANA": [1, 1.09, 1.18, 1.27, 1.52, 1.61, 1.7, 1.79, 2.04, 2.13],
+    "AAA": [1, 1.16, 1.41, 1.77, 2.58, 3.22, 4.03, 5.03, 6.72, 8.16],
+    "AAdA": [
+        1, 1.1521, 1.373941, 1.66976821, 2.3250746500999999, 2.7720457865810002,
+        3.2929011511306103, 3.8850818660157942, 4.9103991321127936,
+        5.6351475304633629,
+    ],
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("name", list(EXACT_MODELS))
+def test_get_prediction_exact(austourists, name):
+    # The prediction error variance of the exact method is mse times the
+    # relative variance: 1 for the one-step (in-sample) predictions, and that
+    # of R's forecast package for the h-step forecasts
+    trend, damped, seasonal = EXACT_MODELS[name]
+    model = ETSModel(
+        austourists,
+        trend=trend,
+        damped_trend=damped,
+        seasonal=seasonal,
+        seasonal_periods=4 if seasonal else None,
+    )
+    res = model.smooth(fixed_params(model))
+    n = res.nobs
+    q = scipy.stats.norm.ppf(0.95)
+
+    pred = res.get_prediction(start=10, end=20)
+    assert pred.method == "exact"
+    assert_allclose(pred.var_pred_mean, np.full(11, res.mse), rtol=1e-12)
+    fitted = res.fittedvalues.iloc[10:21]
+    pred_int = pred.pred_int(alpha=0.1)
+    assert pred_int.index.equals(fitted.index)
+    half_width = q * np.sqrt(res.mse)
+    assert_allclose(pred_int.iloc[:, 0], fitted - half_width, rtol=1e-12)
+    assert_allclose(pred_int.iloc[:, 1], fitted + half_width, rtol=1e-12)
+
+    pred = res.get_prediction(start=n, end=n + 9)
+    relative = pred.var_pred_mean / res.mse
+    assert_allclose(relative, R_RELATIVE_FORECAST_VARIANCE[name], rtol=1e-12)
+    frame = pred.summary_frame(alpha=0.1)
+    half_width = q * np.sqrt(pred.var_pred_mean)
+    assert_allclose(frame["pi_upper"] - frame["mean"], half_width, rtol=1e-10)
+    assert_allclose(frame["mean"] - frame["pi_lower"], half_width, rtol=1e-10)
+
+
+def test_forecast_closed_form(setup_model):
+    # The point forecasts of Hyndman et al. (2008), Table 2.1, from the last
+    # states: l + phi_h b (additive trend) or l b^phi_h (multiplicative), with
+    # phi_h = phi + ... + phi^h (h without damping), and the seasonal of the
+    # same season in the last cycle, s[n + h - m (k + 1)] with
+    # k = (h - 1) // m, added or multiplied.
+    model_class, model_args, model_kwargs, params, _ = setup_model
+    res = model_class(*model_args, **model_kwargs).smooth(params)
+    h = np.arange(1, 11)
+    level = res.level.iloc[-1]
+    expected = np.full(h.shape, level)
+    if res.has_trend:
+        slope = res.slope.iloc[-1]
+        phi = res.damping_trend if res.damped_trend else 1.0
+        phi_h = np.cumsum(phi**h)
+        if res.trend == "add":
+            expected = level + phi_h * slope
+        else:
+            expected = level * slope**phi_h
+    if res.has_seasonal:
+        m = res.seasonal_periods
+        season = res.season.to_numpy()[-m:][(h - 1) % m]
+        if res.seasonal == "add":
+            expected = expected + season
+        else:
+            expected = expected * season
+    assert_allclose(res.forecast(10), expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("error", ["add", "mul"])
+def test_loglike_formula(austourists, error):
+    # The log-likelihood of the docstring, with k = 1 (additive errors) or
+    # k = yhat (multiplicative errors), at the one-step predictions yhat that
+    # the tests against R check
+    model = ETSModel(
+        austourists, error=error, trend="add", seasonal="mul", seasonal_periods=4
+    )
+    params = fixed_params(model)
+    res = model.smooth(params)
+    y = austourists.to_numpy()
+    yhat = res.fittedvalues.to_numpy()
+    k = yhat if error == "mul" else np.ones_like(y)
+    n = y.shape[0]
+    s2 = np.mean(((y - yhat) / k) ** 2)
+    expected = -n / 2 * (np.log(2 * np.pi * s2) + 1) - np.sum(np.log(np.abs(k)))
+    assert_allclose(model.loglike(params), expected, rtol=1e-12)
+    assert_allclose(res.llf, expected, rtol=1e-12)
+    assert_allclose(res.resid, (y - yhat) / k, rtol=1e-12)
+    assert_allclose(res.scale, s2, rtol=1e-12)
+
+
+def test_information_criteria(austourists):
+    model = ETSModel(austourists, trend="add", seasonal="add", seasonal_periods=4)
+    params = fixed_params(model)
+    with model.fix_params({"smoothing_trend": 0.1}):
+        res = model.smooth(params)
+    n = res.nobs
+    llf = res.llf
+    # the free parameters and the variance of the errors
+    df = (len(params) - 1) + 1
+    assert res.df_model == df
+    assert res.df_resid == n - df
+    assert_allclose(res.aic, -2 * llf + 2 * df, rtol=1e-12)
+    assert_allclose(res.aicc, -2 * llf + 2 * df * n / (n - df - 1), rtol=1e-12)
+    assert_allclose(res.bic, -2 * llf + np.log(n) * df, rtol=1e-12)
+    assert_allclose(res.hqic, -2 * llf + 2 * np.log(np.log(n)) * df, rtol=1e-12)
+    resid = austourists.to_numpy() - res.fittedvalues.to_numpy()
+    assert_allclose(res.sse, np.sum(resid**2), rtol=1e-12)
+    assert_allclose(res.mse, np.mean(resid**2), rtol=1e-12)
+    assert_allclose(res.mae, np.mean(np.abs(resid)), rtol=1e-12)
+
+    # the fixed parameter has no standard error, z-statistic or p-value
+    bse = np.asarray(res.bse)
+    zvalues = np.asarray(res.zvalues)
+    pvalues = np.asarray(res.pvalues)
+    assert np.isnan(bse[1])
+    assert np.isnan(zvalues[1])
+    assert np.isnan(pvalues[1])
+    free = np.arange(len(params)) != 1
+    assert_allclose(zvalues[free], params[free] / bse[free], rtol=1e-12)
+    expected = 2 * scipy.stats.norm.sf(np.abs(zvalues[free]))
+    assert_allclose(pvalues[free], expected, rtol=1e-12)
+
+
+def test_diagnostics_vs_formulas(austourists_model):
+    res = austourists_model.smooth(fixed_params(austourists_model))
+    resid = np.asarray(res.resid)
+    errors = np.asarray(res.standardized_forecasts_error)
+    expected = (resid - resid.mean()) / resid.std(ddof=1)
+    assert_allclose(errors, expected, rtol=1e-12)
+
+    # method=None selects the only test; the default number of lags of a
+    # seasonal model is min(2 m, nobs // 5) = 8
+    lb = res.test_serial_correlation(None)
+    assert lb.shape == (1, 2, 8)
+    assert_allclose(lb[0], ljung_box(errors, 8), rtol=1e-10)
+    bp = res.test_serial_correlation("boxpierce", lags=5)
+    assert_allclose(bp[0], ljung_box(errors, 5, boxpierce=True), rtol=1e-10)
+    # a list of lags reports only these lags
+    lb = res.test_serial_correlation("ljungbox", lags=[2, 5])
+    assert_allclose(lb[0], ljung_box(errors, 5)[:, [1, 4]], rtol=1e-10)
+
+    # h = round(68 / 3) = 23
+    het = res.test_heteroskedasticity(None)
+    assert_allclose(het[0], breakvar(errors, 23), rtol=1e-10)
+    # use_f=False refers h H(h) to chi2(h)
+    het = res.test_heteroskedasticity("breakvar", use_f=False)
+    stat = het[0, 0] * 23
+    expected = 2 * min(scipy.stats.chi2.cdf(stat, 23), scipy.stats.chi2.sf(stat, 23))
+    assert_allclose(het[0, 1], expected, rtol=1e-10)
+    assert_allclose(res.test_normality(None)[0], jarque_bera(errors), rtol=1e-10)
+
+
+def test_summary_sample(austourists):
+    # The sample is shown as dates for a date index, else as observation
+    # numbers, and start changes its first period
+    res = ETSModel(austourists).smooth([0.3, 30.0])
+    text = res.summary(start=4).as_text()
+    assert re.search(r"Sample:\s+03-31-2000\s", text)
+    assert "- 12-31-2015" in text
+    res = ETSModel(austourists.to_numpy()).smooth([0.3, 30.0])
+    text = res.summary().as_text()
+    assert re.search(r"Sample:\s+0\s", text)
+    assert "- 68" in text
+
+
+def test_dates_freq_missing(austourists):
+    values = austourists.to_numpy()
+    params = [0.3, 30.0]
+    ref = ETSModel(austourists).smooth(params)
+    # with dates, predictions can use date strings, but they are ndarrays
+    res = ETSModel(values, dates=austourists.index).smooth(params)
+    pred = res.predict(start="2014-03-31", end="2016-12-31")
+    expected = ref.predict(start="2014-03-31", end="2016-12-31")
+    assert isinstance(pred, np.ndarray)
+    assert_allclose(pred, expected, rtol=1e-12)
+
+    # freq is the frequency of an index without one
+    index = pd.DatetimeIndex(austourists.index.tolist())
+    assert index.freq is None
+    res = ETSModel(pd.Series(values, index=index), freq=QUARTER_END)
+    assert res.smooth(params).forecast(4).index.equals(ref.forecast(4).index)
+
+    # "drop" drops the observations with NaN, "raise" raises
+    with_nan = values.copy()
+    with_nan[5] = np.nan
+    res = ETSModel(with_nan, missing="drop").smooth(params)
+    expected = ETSModel(np.delete(values, 5)).smooth(params)
+    assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-12)
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+    with pytest.raises(MissingDataError):
+        ETSModel(with_nan, missing="raise")
+
+
+def test_hessian_scaled_by_nobs(austourists):
+    # ETSModel.hessian is the Hessian of loglike divided by nobs, here checked
+    # against central second differences of loglike for the ANN model
+    model = ETSModel(austourists)
+    params = np.array([0.3, 30.0])
+    steps = np.diag([1e-4, 1e-2])
+    expected = np.empty((2, 2))
+    for i, j in product(range(2), range(2)):
+        d_i, d_j = steps[i], steps[j]
+        expected[i, j] = (
+            model.loglike(params + d_i + d_j)
+            - model.loglike(params + d_i - d_j)
+            - model.loglike(params - d_i + d_j)
+            + model.loglike(params - d_i - d_j)
+        ) / (4 * steps[i, i] * steps[j, j] * model.nobs)
+    assert_allclose(model.hessian(params), expected, rtol=1e-5)
+    # The finite difference approximations are numerical differences of
+    # numerical scores, first order accurate (forward) or second order
+    # (centered). Their error is relative to the scale of the whole matrix,
+    # not to each element, hence atol.
+    atol = 0.02 * np.abs(expected).max()
+    with pytest.warns(PrecisionWarning, match="Calculation of the Hessian"):
+        centered = model.hessian(
+            params, approx_complex_step=False, approx_centered=True
+        )
+    assert_allclose(centered, expected, rtol=0, atol=atol / 2)
+    with pytest.warns(PrecisionWarning, match="Calculation of the Hessian"):
+        forward = model.hessian(params, approx_complex_step=False)
+    assert_allclose(forward, expected, rtol=0, atol=atol)
+
+
+#
+# THE PUBLIC BASE CLASSES
+#
+
+
+class MeanModel(StateSpaceMLEModel):
+    """
+    Normal observations with an unknown mean, a minimal subclass of the
+    public base class StateSpaceMLEModel
+
+    The variance is concentrated out of the log-likelihood. The second
+    parameter does not enter it, so that the Hessian is exactly singular. The
+    parameter names are the defaults of the base class.
+    """
+
+    def __init__(self, endog, **kwargs):
+        super().__init__(endog, **kwargs)
+        # StateSpaceMLEResults labels the parameters with these
+        self.data.param_names = self.param_names
+
+    @staticmethod
+    def prepare_data(data):
+        return np.asarray(data.orig_endog, dtype=float), None
+
+    @property
+    def _start_params(self):
+        return np.zeros(2)
+
+    @property
+    def nobs_effective(self):
+        return self.nobs
+
+    @property
+    def k_endog(self):
+        return 1
+
+    def loglike(self, params, **kwargs):
+        resid = self.endog - params[0]
+        return -self.nobs / 2 * (np.log(2 * np.pi * np.mean(resid**2)) + 1)
+
+    def hessian(self, params, **kwargs):
+        return self._hessian_complex_step(params, **kwargs)
+
+    def update(self, params, **kwargs):
+        pass
+
+    def fit(self, start_params=None, **kwargs):
+        # the maximum likelihood estimate of the mean; the second parameter
+        # does not enter the likelihood and is set to 1
+        params = np.array([np.mean(self.endog), 1.0])
+        if self._has_fixed_params:
+            params[self._fixed_params_index] = list(self._fixed_params.values())
+        return MeanResults(self, params)
+
+
+class MeanResults(StateSpaceMLEResults):
+    """Results of MeanModel, with the covariance computed as by ETSResults"""
+
+    def __init__(self, model, params):
+        resid = model.endog - params[0]
+        super().__init__(model, params, scale=np.mean(resid**2))
+        self._resid = resid
+        self.df_model = self.k_params - len(self.fixed_params) + 1
+        self.standardized_forecasts_error = (resid - resid.mean()) / resid.std(
+            ddof=1
+        )
+        self._cov_approx_complex_step = True
+        self._cov_approx_centered = False
+        self.cov_params_default = self.cov_params_approx
+
+    @cache_readonly
+    def nobs_effective(self):
+        return self.nobs
+
+    @cache_readonly
+    def llf(self):
+        return self.model.loglike(self.params)
+
+    @cache_readonly
+    def resid(self):
+        return self._resid
+
+
+class EmptyModel(StateSpaceMLEModel):
+    """A subclass of StateSpaceMLEModel without parameters"""
+
+    @staticmethod
+    def prepare_data(data):
+        return np.asarray(data.orig_endog, dtype=float), None
+
+
+@pytest.fixture
+def mean_data():
+    return 10 + np.random.default_rng(10583).standard_normal(60)
+
+
+def test_base_model_param_names_and_k_params(mean_data):
+    # Without _param_names, the parameters are named after start_params, and
+    # k_params counts them
+    model = MeanModel(mean_data)
+    assert model.param_names == ["param.0", "param.1"]
+    assert model.k_params == 2
+    model = EmptyModel(mean_data)
+    assert model.param_names == []
+    assert model.k_params == 0
+    with pytest.raises(NotImplementedError):
+        _ = model.start_params
+
+
+def test_base_results_covariance_and_summary(mean_data):
+    # The variance of the estimated mean is sigma2 / nobs. The second
+    # parameter does not enter the likelihood, so its row of the Hessian is
+    # exactly zero, the covariance matrix is singular and the summary says so.
+    # Its standard error is zero, so its z-statistic divides by zero.
+    model = MeanModel(mean_data)
+    res = model.fit()
+    n = mean_data.shape[0]
+    sigma2 = np.mean((mean_data - mean_data.mean()) ** 2)
+    assert_allclose(res.cov_params(), [[sigma2 / n, 0.0], [0.0, 0.0]], rtol=1e-8)
+    assert res.df_resid == n - 3
+    with np.errstate(divide="ignore", invalid="ignore"):
+        text = res.summary().as_text()
+    assert "Statespace Model Results" in text
+    assert re.search(r"Model:\s+MeanModel\s", text)
+    assert "Covariance Type" not in text
+    assert "param.1" in text
+    assert "Covariance matrix is singular or near-singular" in text
+
+    # with the mean fixed, the free parameter has a zero Hessian
+    res = model.fit_constrained({"param.0": 10.0})
+    assert res.param_names == ["param.0 (fixed)", "param.1"]
+    cov = res.cov_params()
+    assert np.isnan(cov[0]).all()
+    assert np.isnan(cov[:, 0]).all()
+    with np.errstate(divide="ignore", invalid="ignore"):
+        summary = res.summary(
+            title="Mean model", model_name=["Mean", "Unused"], display_params=False
+        )
+    text = summary.as_text()
+    assert "Mean model" in text
+    assert re.search(r"Model:\s+Mean\s", text)
+    assert "+ Unused" in text
+    assert "param.1" not in text
+    assert "Covariance matrix is singular or near-singular" in text
+
+    # with the second parameter fixed, the covariance matrix of the free
+    # parameter is not singular and the summary has no warnings
+    res = model.fit_constrained({"param.1": 1.0})
+    assert_allclose(res.cov_params()[0, 0], sigma2 / n, rtol=1e-8)
+    text = res.summary().as_text()
+    assert "param.1 (fixed)" in text
+    assert "Warnings" not in text
+
+
+def test_base_results_without_standardized_errors(mean_data):
+    res = MeanModel(mean_data).fit()
+    res.standardized_forecasts_error = None
+    tests = [
+        (res.test_serial_correlation, "ljungbox"),
+        (res.test_heteroskedasticity, "breakvar"),
+        (res.test_normality, "jarquebera"),
+    ]
+    for test, method in tests:
+        with pytest.raises(ValueError, match="standardized forecast errors"):
+            test(method)
+    # the summary shows the diagnostics as nan
+    with np.errstate(divide="ignore", invalid="ignore"):
+        text = res.summary().as_text()
+    for label in ["Ljung-Box (Q):", "Prob(H) (two-sided):", "Jarque-Bera (JB):"]:
+        assert re.search(re.escape(label) + r"\s+nan", text)
+
+
+def test_base_results_heteroskedasticity_2d(mean_data):
+    # standardized errors of shape (k_endog, nobs); h = 60 / 3 = 20
+    res = MeanModel(mean_data).fit()
+    errors = np.asarray(res.standardized_forecasts_error)
+    expected = breakvar(errors, 20)
+    assert_allclose(res.test_heteroskedasticity("breakvar")[0], expected, rtol=1e-10)
+    res.standardized_forecasts_error = errors[None, :]
+    assert_allclose(res.test_heteroskedasticity("breakvar")[0], expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("concentrated", [True, False])
+def test_base_results_statespace_attributes(mean_data, concentrated):
+    # Results with the attributes of the statespace MLEResults: the
+    # diagnostics leave out the first d = max(loglikelihood_burn,
+    # nobs_diffuse) = 4 standardized errors of filter_results, and the
+    # summary shows the scale only if the filter concentrated it out
+    res = MeanModel(mean_data).fit()
+    errors = np.random.default_rng(2045).standard_normal(mean_data.shape[0])
+    res.loglikelihood_burn = 4
+    res.nobs_diffuse = 2
+    res.filter_results = Bunch(
+        standardized_forecasts_error=errors[None, :],
+        filter_concentrated=concentrated,
+    )
+    res.rsquared = 0.25
+    used = errors[4:]
+    # the default lags, min(10, (nobs - d) // 5), as the model has no
+    # seasonal_periods
+    lb = res.test_serial_correlation("ljungbox")
+    assert lb.shape == (1, 2, 10)
+    assert_allclose(lb[0], ljung_box(used, 10), rtol=1e-10)
+    # h = round((60 - 4) / 3) = 19
+    het = res.test_heteroskedasticity("breakvar")
+    assert_allclose(het[0], breakvar(used, 19), rtol=1e-10)
+    assert_allclose(res.test_normality("jarquebera")[0], jarque_bera(used), rtol=1e-10)
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        text = res.summary().as_text()
+    assert re.search(r"R-squared:\s+0\.250", text)
+    assert ("Scale" in text) == concentrated
