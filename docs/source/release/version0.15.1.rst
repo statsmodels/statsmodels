@@ -1230,9 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- :class:`~statsmodels.tsa.seasonal.STL` with a list or tuple ``endog`` stored
-  it as the observed data of the results, so ``nobs`` and ``plot`` raised.
-  :pr:`10896`
 
 Statistics and tests
 --------------------
