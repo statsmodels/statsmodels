@@ -2924,22 +2924,32 @@ def test_cov_type_case_weights_naive():
 
 @pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
 def test_constraint_small_sample_cov_fails(cov_type, monkeypatch):
-    # the third _handle_constraint call expands the small-sample covariance
+    # The expansion fails only for the small-sample covariance. That call is
+    # found by its argument (the matrix returned by _bc_covmat), not by its
+    # position among the calls of fit.
     endog, exog, groups = _small_cluster_data()
     constraint = (np.array([[0.0, 1.0, 1.0]]), np.zeros(1))
     mod = gee.GEE(endog, exog, groups, constraint=constraint)
     handle = mod._handle_constraint
-    calls = []
+    bc_covmat = mod._bc_covmat
+    small_sample_covs = []
 
-    def fail_third(mean_params, bcov):
-        calls.append(1)
-        if len(calls) == 3:
+    def record_small_sample_cov(*args, **kwargs):
+        cov = bc_covmat(*args, **kwargs)
+        small_sample_covs.append(cov)
+        return cov
+
+    def fail_small_sample_cov(mean_params, bcov):
+        if any(bcov is cov for cov in small_sample_covs):
             return None, None
         return handle(mean_params, bcov)
 
-    monkeypatch.setattr(mod, "_handle_constraint", fail_third)
+    monkeypatch.setattr(mod, "_bc_covmat", record_small_sample_cov)
+    monkeypatch.setattr(mod, "_handle_constraint", fail_small_sample_cov)
     with pytest.warns(ConvergenceWarning, match="constrained GEE"):
         assert mod.fit(cov_type=cov_type) is None
+    # the failing call was reached
+    assert len(small_sample_covs) == 1
 
 
 @pytest.mark.parametrize("cov_type", ["bias_reduced", "kauermann_carroll"])
