@@ -2932,3 +2932,30 @@ def test_predict_dynamic_key_covers_several_dates():
     expected = res.predict(start=10, dynamic=loc - 10)
     assert_allclose(pred, expected, rtol=1e-12)
     pd.testing.assert_index_equal(pred.index, index[10:])
+
+
+@pytest.mark.parametrize("method", ["exact", "simulated"])
+@pytest.mark.parametrize("dates", [False, True])
+def test_get_prediction_numpy(oildata, method, dates):
+    # get_prediction raised AttributeError for numpy data (it read the index
+    # of the predicted mean). The numpy path must give the pandas values;
+    # the variance of the simulations uses ddof=1, the default of pandas.
+    res = ETSModel(oildata).smooth([0.3, 110.0])
+    kwargs = {"dates": oildata.index} if dates else {}
+    res_np = ETSModel(oildata.to_numpy(), **kwargs).smooth([0.3, 110.0])
+    pred_kwargs = dict(start=46, end=51, method=method, simulate_repetitions=20)
+    pred = res.get_prediction(rng=np.random.default_rng(0), **pred_kwargs)
+    pred_np = res_np.get_prediction(rng=np.random.default_rng(0), **pred_kwargs)
+
+    assert isinstance(pred_np.predicted_mean, np.ndarray)
+    assert_allclose(
+        pred_np.predicted_mean, pred.predicted_mean.to_numpy(), rtol=1e-12
+    )
+    assert_allclose(pred_np.var_pred_mean, np.asarray(pred.var_pred_mean), rtol=1e-12)
+    pred_int = pred_np.pred_int()
+    assert isinstance(pred_int, np.ndarray)
+    assert_allclose(pred_int, pred.pred_int().to_numpy(), rtol=1e-12)
+    frame_np = pred_np.summary_frame()
+    frame = pred.summary_frame()
+    assert list(frame_np.columns) == list(frame.columns)
+    assert_allclose(frame_np.to_numpy(), frame.to_numpy(), rtol=1e-12)

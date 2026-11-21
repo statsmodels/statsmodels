@@ -2600,7 +2600,8 @@ class PredictionResults:
         self.predicted_mean = results.predict(
             start=start, end=end_dynamic, dynamic=dynamic, index=index
         )
-        self.row_labels = self.predicted_mean.index
+        # None for numpy data
+        self.row_labels = getattr(self.predicted_mean, "index", None)
         self.endog = np.empty(nsmooth + ndynamic) * np.nan
         if nsmooth > 0:
             self.endog[0 : (end - start + 1)] = results.data.endog[start : (end + 1)]
@@ -2644,7 +2645,8 @@ class PredictionResults:
                 self.simulation_results = pd.concat(sim_results, axis=0)
             else:
                 self.simulation_results = np.concatenate(sim_results, axis=0)
-            self.forecast_variance = self.simulation_results.var(axis=1)
+            # ddof=1 is the default of pandas, but not of numpy
+            self.forecast_variance = self.simulation_results.var(axis=1, ddof=1)
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
