@@ -232,7 +232,12 @@ class ETSModel(base.StateSpaceMLEModel):
     Parameters
     ----------
     endog : array_like
-        The observed time-series process :math:`y`
+        The observed time-series process :math:`y`. A single column, an
+        (nobs, 1) array or a one-column DataFrame, is used as the series.
+
+        .. versionchanged:: 0.15.1
+
+           A single column is accepted. It used to raise a ValueError.
     error : {"add", "additive", "mul", "multiplicative"}, optional
         The error model. "add" (default) or "mul". "additive" and
         "multiplicative" are accepted as aliases for "add" and "mul".
@@ -718,10 +723,13 @@ class ETSModel(base.StateSpaceMLEModel):
             ETS models have no exogenous variables.
         """
         endog = np.require(data.orig_endog, requirements="WC")
+        if endog.ndim == 2 and endog.shape[1] == 1:
+            # a single column: an (nobs, 1) array or a one-column DataFrame
+            endog = np.require(endog[:, 0], requirements="WC")
         if endog.ndim != 1:
             raise ValueError("endog must be 1-dimensional")
         if endog.dtype != np.double:
-            endog = np.require(data.orig_endog, requirements="WC", dtype=float)
+            endog = np.require(endog, requirements="WC", dtype=float)
         return endog, None
 
     @property

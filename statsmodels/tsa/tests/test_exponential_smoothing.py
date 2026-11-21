@@ -3286,3 +3286,43 @@ def test_get_prediction_known_method_no_warning(oildata, method, recwarn):
     )
     assert len(recwarn) == 0
     assert pred.method == ("exact" if method is None else method)
+
+
+@pytest.mark.parametrize("form", ["frame", "column", "int column"])
+def test_endog_single_column(austourists, form):
+    # A single column raised "endog must be 1-dimensional"; it is used as
+    # the series, so the results equal those of the 1-d data
+    if form == "frame":
+        series = austourists
+        endog = austourists.to_frame()
+    elif form == "column":
+        series = austourists.to_numpy()
+        endog = series[:, None]
+    else:
+        series = np.round(austourists.to_numpy()).astype(np.int64)
+        endog = series[:, None]
+    kwargs = dict(error="add", trend="add", seasonal="add", seasonal_periods=4)
+    model = ETSModel(endog, **kwargs)
+    expected_model = ETSModel(series, **kwargs)
+    assert model.endog.shape == (len(series),)
+    params = expected_model.start_params
+    assert_allclose(model.start_params, params, rtol=1e-12)
+    res = model.smooth(params)
+    expected = expected_model.smooth(params)
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+    assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-12)
+    assert_allclose(res.forecast(4), expected.forecast(4), rtol=1e-12)
+    if form == "frame":
+        assert_array_equal(res.forecast(4).index, expected.forecast(4).index)
+        assert_allclose(
+            res.get_prediction(start=60, end=71).summary_frame(),
+            expected.get_prediction(start=60, end=71).summary_frame(),
+            rtol=1e-12,
+        )
+
+
+@pytest.mark.parametrize("shape", [(68, 2), (1, 68)])
+def test_endog_not_single_column(austourists, shape):
+    endog = np.resize(austourists.to_numpy(), shape)
+    with pytest.raises(ValueError, match="endog must be 1-dimensional"):
+        ETSModel(endog)
