@@ -2214,3 +2214,30 @@ def test_miso_lfilter_scalar_useic(form, nlags):
     expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, past)
     assert_allclose(inp, expected_inp, rtol=1e-12)
     assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("useic", [True, np.True_], ids=["bool", "numpy-bool"])
+@pytest.mark.parametrize("nlags", [0, 1])
+def test_miso_lfilter_useic_true_raises(nlags, useic):
+    # useic=True is not a set of initial values. With no or one AR lag it
+    # raised an error from scipy (zi shape, IndexError)
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5])[: nlags + 1]
+    with pytest.raises(ValueError, match="useic must be False or the initial"):
+        miso_lfilter(ar, ma, x, useic=useic)
+
+
+@pytest.mark.parametrize("useic", [True, np.True_], ids=["bool", "numpy-bool"])
+@pytest.mark.parametrize("nlags", [2, 3])
+def test_miso_lfilter_useic_true_deprecated(nlags, useic):
+    # with two or more AR lags, lfiltic of scipy < 1.16 used True as
+    # y[-1] = 1, with zero for the further lags. That result is kept, with a
+    # warning.
+    _, ma, x = _miso_lfilter_data()
+    ar = array([1.0, -0.5, 0.2, 0.1])[: nlags + 1]
+    with pytest.warns(FutureWarning, match="useic must be False or the initial"):
+        y, inp = miso_lfilter(ar, ma, x, useic=useic)
+    past = [1.0] + [0.0] * (nlags - 1)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, past)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)

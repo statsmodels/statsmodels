@@ -480,6 +480,14 @@ def miso_lfilter(ar, ma, x, useic=False):
            further lags, where it raised an IndexError for one AR lag (and
            a ValueError for any number of lags with scipy 1.16 or later).
 
+        .. deprecated:: 0.15.1
+
+           ``useic=True`` is not a set of initial values. With two or more
+           AR lags it is used as ``y[-1] = 1``, with zero for the further
+           lags, as before, but this is deprecated and will raise a
+           ValueError in statsmodels 0.17.0. With no or one AR lag, where it
+           raised an error from scipy, it raises a ValueError.
+
     Returns
     -------
     y : ndarray
@@ -491,7 +499,8 @@ def miso_lfilter(ar, ma, x, useic=False):
     ------
     ValueError
         If ``ma`` or ``x`` is 1-d and ``ma`` does not have one column per
-        column of ``x``.
+        column of ``x``, or if ``useic`` is True and ``ar`` has no or one AR
+        lag.
 
     Warns
     -----
@@ -500,6 +509,10 @@ def miso_lfilter(ar, ma, x, useic=False):
         column of ``x``. The result does not filter each column of ``x`` with
         its own column of ``ma``. This is deprecated and will raise a
         ValueError in statsmodels 0.17.0.
+    FutureWarning
+        If ``useic`` is True and ``ar`` has two or more AR lags. True is used
+        as ``y[-1] = 1``, with zero for the further lags. This is deprecated
+        and will raise a ValueError in statsmodels 0.17.0.
 
     Notes
     -----
@@ -533,6 +546,21 @@ def miso_lfilter(ar, ma, x, useic=False):
             f"{msg}. The result does not filter each column of x with its "
             "own column of ma. This is deprecated and will raise a "
             "ValueError in statsmodels 0.17.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    if isinstance(useic, (bool, np.bool_)) and useic:
+        msg = (
+            "useic must be False or the initial values of the filtered "
+            "series, not True"
+        )
+        if ar.shape[0] <= 2:
+            # this raised an error from scipy
+            raise ValueError(msg)
+        warnings.warn(
+            f"{msg}. True is used as y[-1] = 1, with zero for the further "
+            "lags. This is deprecated and will raise a ValueError in "
+            "statsmodels 0.17.0.",
             FutureWarning,
             stacklevel=2,
         )
