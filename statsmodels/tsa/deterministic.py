@@ -86,7 +86,15 @@ class DeterministicTerm(ABC):
             index.
         forecast_index : index_like, optional
             An Index or index-like object to use for the forecasts. If
-            provided must have steps elements.
+            provided must have steps elements. If not provided, index is
+            extended.
+
+            .. versionchanged:: 0.15.1
+
+               A ``DatetimeIndex`` without a ``freq`` is extended with the
+               inferred freq, as in ``DeterministicProcess``. Before, the
+               forecasts had integer labels, with a warning, and calendar
+               terms raised.
 
         Returns
         -------
@@ -132,11 +140,16 @@ class DeterministicTerm(ABC):
                     f"({forecast_index.shape[0]}) must match steps ({steps})."
                 )
             return forecast_index
+        freq = None
+        if isinstance(index, pd.DatetimeIndex):
+            # The freq of the index, else the inferred freq
+            with _infer_freq_returns_offset():
+                freq = index.freq or index.inferred_freq
         if isinstance(index, pd.PeriodIndex):
             return pd.period_range(index[-1] + 1, periods=steps, freq=index.freq)
-        elif isinstance(index, pd.DatetimeIndex) and index.freq is not None:
-            next_obs = pd.date_range(index[-1], freq=index.freq, periods=2)[1]
-            return pd.date_range(next_obs, freq=index.freq, periods=steps)
+        elif freq is not None:
+            next_obs = pd.date_range(index[-1], freq=freq, periods=2)[1]
+            return pd.date_range(next_obs, freq=freq, periods=steps)
         elif isinstance(index, pd.RangeIndex):
             step = index.step
             start = index.stop
@@ -149,8 +162,8 @@ class DeterministicTerm(ABC):
         import warnings
 
         warnings.warn(
-            "Only PeriodIndexes, DatetimeIndexes with a frequency set, "
-            "RangesIndexes, and Index with a unit increment support "
+            "Only PeriodIndexes, DatetimeIndexes with a frequency set or "
+            "inferred, RangesIndexes, and Index with a unit increment support "
             "extending. The index is set will contain the position relative "
             "to the data length.",
             UserWarning,
@@ -179,6 +192,8 @@ class TimeTrendDeterministicTerm(DeterministicTerm, ABC):
     def __init__(self, constant: bool = True, order: int = 0) -> None:
         self._constant = bool_like(constant, "constant")
         self._order = required_int_like(order, "order")
+        if self._order < 0:
+            raise ValueError(f"order must be non-negative, got {self._order}.")
 
     @property
     def constant(self) -> bool:
@@ -216,7 +231,7 @@ class TimeTrendDeterministicTerm(DeterministicTerm, ABC):
         if self._constant:
             terms.append("Constant")
         if self._order:
-            terms.append(f"Powers 1 to {self._order + 1}")
+            terms.append(f"Powers 1 to {self._order}")
         if not terms:
             terms = ["Empty"]
         terms_str = ",".join(terms)
@@ -233,6 +248,11 @@ class TimeTrend(TimeTrendDeterministicTerm):
         Flag indicating whether a constant should be included.
     order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
+
+        .. versionchanged:: 0.15.1
+
+           A negative order raises a ``ValueError``. Before, an error was
+           raised when the terms were computed.
 
     See Also
     --------
@@ -889,6 +909,11 @@ class CalendarTimeTrend(CalendarDeterministicTerm, TimeTrendDeterministicTerm):
         Flag indicating whether a constant should be included.
     order : int, optional
         A non-negative int containing the powers to include (1, 2, ..., order).
+
+        .. versionchanged:: 0.15.1
+
+           A negative order raises a ``ValueError``. Before, an error was
+           raised when the terms were computed.
     base_period : str, datetime.datetime, pd.Timestamp, or numpy.datetime64, optional
         The base period to use when computing the time stamps. This value is
         treated as 1 and so all other time indices are defined as the number
@@ -1083,6 +1108,11 @@ class DeterministicProcess:
     order : int, optional
         The order of the time trend to include. For example, 2 will include
         both linear and quadratic terms. 0 excludes time trend terms.
+
+        .. versionchanged:: 0.15.1
+
+           A negative order raises a ``ValueError``. Before, an error was
+           raised when the terms were computed.
     seasonal : bool, optional
         Whether to include seasonal dummies
     fourier : int, optional
@@ -1319,6 +1349,12 @@ you can pass additional components using the additional_terms input.""")
             provided must have steps elements. If not provided, the index of
             the process is extended.
 
+            .. versionchanged:: 0.15.1
+
+               A ``DatetimeIndex`` without a ``freq`` is extended with the
+               inferred freq, as in ``range``. Before, the forecasts had
+               integer labels, with a warning, and calendar terms raised.
+
         Returns
         -------
         DataFrame
@@ -1335,6 +1371,16 @@ you can pass additional components using the additional_terms input.""")
         if self._retain_cols is None:
             self.in_sample()
         index = self._index
+        if (
+            forecast_index is None
+            and isinstance(index, pd.DatetimeIndex)
+            and self._index_freq is not None
+        ):
+            # Extend with the freq of the process, which may have been
+            # inferred, since the terms can only use the freq of the index
+            forecast_index = pd.date_range(
+                index[-1], freq=self._index_freq, periods=steps + 1
+            )[1:]
         if not self._deterministic_terms:
             # The forecast index that the terms would have, with no columns
             fcast_index = DeterministicTerm._extend_index(

@@ -23,6 +23,7 @@ from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.sm_exceptions import (
     CollinearityWarning,
     ConvergenceWarning,
+    EstimationWarning,
     InfeasibleTestError,
     InterpolationWarning,
     MissingDataError,
@@ -3233,14 +3234,23 @@ def test_arma_order_select_ic_failure():
 @pytest.mark.parametrize("trend", ["n", "c"])
 def test_arma_order_select_ic_failed_fits_are_nan(trend):
     # The Yule-Walker estimator only fits pure AR models, so the models with
-    # an MA term fail, and are retried once before they are given NaN
+    # an MA term fail and are given NaN, with one warning that lists them
     from statsmodels.tsa.arima.model import ARIMA
 
     y = np.random.default_rng(20261119).standard_normal(100)
     fit_kw = {"method": "yule_walker"}
-    res = arma_order_select_ic(
-        y, max_ar=2, max_ma=1, ic=["aic", "bic"], trend=trend, fit_kw=fit_kw
+    match = (
+        r"The fits of 3 of 6 ARMA models failed, and their information "
+        r"criteria are NaN. Orders \(p, q\): \(0, 1\), \(1, 1\), \(2, 1\). "
+        r"The first, order \(0, 1\), raised ValueError: Yule-Walker"
     )
+    with pytest.warns(EstimationWarning, match=match) as record:
+        res = arma_order_select_ic(
+            y, max_ar=2, max_ma=1, ic=["aic", "bic"], trend=trend, fit_kw=fit_kw
+        )
+    assert len(record) == 1
+    # The warning points at the caller
+    assert record[0].filename == __file__
     for ic in ("aic", "bic"):
         frame = res[ic]
         assert np.all(np.isnan(frame[1]))
@@ -3249,31 +3259,131 @@ def test_arma_order_select_ic_failed_fits_are_nan(trend):
             for p in range(3)
         ]
         assert_allclose(frame[0], expected, rtol=1e-12)
+        # The minimum ignores the failed fits, it used to point at the first
+        assert res[f"{ic}_min_order"] == (np.argmin(expected), 0)
 
 
-@pytest.mark.parametrize(
-    "fit_kw, max_ma, trend",
-    [
-        ({}, 0, "c"),
-        ({"method": "yule_walker"}, 1, "n"),
-        ({"method": "yule_walker"}, 1, "c"),
-    ],
-)
-def test_arma_order_select_ic_infinite_value(fit_kw, max_ma, trend):
-    # No information criterion is finite for a series with an infinite
-    # value. Some of the fits raise and the others give NaN.
+@pytest.mark.parametrize("trend", ["n", "c"])
+def test_arma_order_select_ic_infinite_value_all_fail(trend):
+    # Every Yule-Walker fit fails for a series with an infinite value. The
+    # minimum order used to be (0, 0).
+    y = np.random.default_rng(20261119).standard_normal(100)
+    y[-1] = np.inf
+    match = r"No ARMA model could be fitted.*The first, order \(0, 0\), raised"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        with pytest.raises(ValueError, match=match) as excinfo:
+            arma_order_select_ic(
+                y,
+                max_ar=1,
+                max_ma=1,
+                ic="aic",
+                trend=trend,
+                fit_kw={"method": "yule_walker"},
+            )
+    # The error of the first fit is chained and its message included
+    cause = excinfo.value.__cause__
+    assert cause is not None
+    assert str(cause) in str(excinfo.value)
+
+
+def test_arma_order_select_ic_infinite_value():
+    # The models fitted to a series with an infinite value have a NaN
+    # log-likelihood, or their fit fails, so there is no minimum order. It
+    # used to be (0, 0). Whether the fit of the AR(1) model fails (and is
+    # listed in an EstimationWarning) or gives a NaN log-likelihood depends
+    # on the platform, so only the error is checked here; the warning is
+    # checked by the tests with failing fits above and below.
     y = np.random.default_rng(20261119).standard_normal(100)
     y[-1] = np.inf
     with warnings.catch_warnings():
-        # The maximum likelihood fit of the white noise model runs on the
-        # infinite value and does not converge
+        # The maximum likelihood fits run on the infinite value and do not
+        # converge
         warnings.simplefilter("ignore", ConvergenceWarning)
+        warnings.simplefilter("ignore", EstimationWarning)
         warnings.simplefilter("ignore", RuntimeWarning)
+        with pytest.raises(ValueError, match="No fitted ARMA model has a non-NaN aic"):
+            arma_order_select_ic(y, max_ar=1, max_ma=0, ic="aic", trend="c")
+
+
+def _arma_ic_table(y, max_ar, max_ma, trend, fit_kw, name):
+    # The criterion of each ARIMA model fitted directly, NaN if the fit raises
+    from statsmodels.tsa.arima.model import ARIMA
+
+    table = np.full((max_ar + 1, max_ma + 1), np.nan)
+    failed = []
+    for p in range(max_ar + 1):
+        for q in range(max_ma + 1):
+            try:
+                fit = ARIMA(y, order=(p, 0, q), trend=trend).fit(**fit_kw)
+            except (IndexError, ValueError):
+                failed.append((p, q))
+                continue
+            table[p, q] = getattr(fit, name)
+    return table, failed
+
+
+def test_arma_order_select_ic_start_params():
+    # start_params in fit_kw used to clash with the start_params argument of
+    # the internal retry, so every fit failed. Now only the fits of models
+    # with more parameters than start_params fail. Which fits fail is taken
+    # from the direct fits, since ARIMA.fit currently also accepts too long
+    # start_params.
+    y = np.random.default_rng(20261119).standard_normal(100)
+    fit_kw = {"start_params": [0.1, 0.2, 0.5]}
+    expected, failed = _arma_ic_table(y, 3, 2, "n", fit_kw, "aic")
+    # The models with more than 3 parameters fail
+    assert {(1, 2), (2, 1), (2, 2), (3, 0), (3, 1), (3, 2)} <= set(failed)
+    orders = ", ".join(rf"\({p}, {q}\)" for p, q in failed)
+    match = (
+        rf"The fits of {len(failed)} of 12 ARMA models failed, and their "
+        rf"information criteria are NaN. Orders \(p, q\): {orders}\."
+    )
+    with pytest.warns(EstimationWarning, match=match):
         res = arma_order_select_ic(
-            y, max_ar=1, max_ma=max_ma, ic="aic", trend=trend, fit_kw=fit_kw
+            y, max_ar=3, max_ma=2, ic="aic", trend="n", fit_kw=fit_kw
         )
-    assert res.aic.shape == (2, max_ma + 1)
-    assert np.all(np.isnan(res.aic))
+    assert_allclose(res.aic, expected, rtol=1e-10)
+    loc = np.nanargmin(expected)
+    assert res.aic_min_order == np.unravel_index(loc, expected.shape)
+    # The minimum is in neither the first row nor the first column, of a grid
+    # that is not square
+    assert all(res.aic_min_order)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{"fit_kw": {"bogus": 1}}, {"model_kw": {"bogus": 1}}],
+    ids=["fit_kw", "model_kw"],
+)
+def test_arma_order_select_ic_type_error(kwargs):
+    # A TypeError from the arguments, such as a mistyped keyword, used to
+    # make every fit fail silently
+    y = np.random.default_rng(20261119).standard_normal(100)
+    with pytest.raises(TypeError, match="bogus"):
+        arma_order_select_ic(y, max_ar=1, max_ma=0, **kwargs)
+
+
+def test_arma_order_select_ic_error_without_message(monkeypatch):
+    # An error without arguments used to crash the internal retry of a failed
+    # fit with an IndexError
+    from statsmodels.tsa.arima.model import ARIMA
+
+    fit = ARIMA.fit
+
+    def fit_without_ma(self, *args, **kwargs):
+        if self.model_orders["ma"]:
+            raise ValueError
+        return fit(self, *args, **kwargs)
+
+    monkeypatch.setattr(ARIMA, "fit", fit_without_ma)
+    y = np.random.default_rng(20261119).standard_normal(100)
+    match = r"Orders \(p, q\): \(0, 1\), \(1, 1\)\. .* raised ValueError: $"
+    with pytest.warns(EstimationWarning, match=match):
+        res = arma_order_select_ic(y, max_ar=1, max_ma=1, ic="aic", trend="n")
+    expected = [fit(ARIMA(y, order=(p, 0, 0), trend="n")).aic for p in range(2)]
+    assert_allclose(res.aic[0], expected, rtol=1e-12)
+    assert np.isnan(res.aic[1]).all()
 
 
 def test_acf_fft_dataframe():
@@ -3701,6 +3811,8 @@ def test_adfuller_no_trend_even_nobs_maxlag_too_large():
         # min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
         (20, "c", 8),
         (20, "ct", 7),
+        # ceil(12 * 0.21 ** (1 / 4)) = ceil(8.12) is the bound, as ntrend = 0
+        (21, "n", 9),
     ],
 )
 def test_adfuller_default_maxlag(nobs, regression, maxlag):
@@ -3711,6 +3823,21 @@ def test_adfuller_default_maxlag(nobs, regression, maxlag):
         x, maxlag=maxlag, regression=regression, autolag=None, result_object=True
     )
     assert_allclose(res.statistic, expected.statistic, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "regression, max_maxlag", [("n", 8), ("c", 8), ("ct", 7), ("ctt", 6)]
+)
+def test_adfuller_maxlag_bound(regression, max_maxlag):
+    # min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2) for nobs = 20
+    x = np.random.default_rng(20).standard_normal(20).cumsum()
+    match = f"maxlag must be less than or equal to {max_maxlag} "
+    with pytest.raises(ValueError, match=match):
+        adfuller(x, maxlag=max_maxlag + 1, regression=regression, autolag=None)
+    res = adfuller(
+        x, maxlag=max_maxlag, regression=regression, autolag=None, result_object=True
+    )
+    assert res.lags == max_maxlag
 
 
 def test_coint_short_even_sample():
@@ -4710,7 +4837,37 @@ def test_zivot_andrews_maxlag_zero(regression):
     assert res[2] == expected[2]
     assert res[4] == expected[4]
     default = zivot_andrews(x, regression=regression, autolag=None)
-    assert default[3] == int(12.0 * (x.shape[0] / 100.0) ** 0.25)
+    assert default[3] == int(np.ceil(12.0 * (x.shape[0] / 100.0) ** 0.25))
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+@pytest.mark.parametrize("nobs", [100, 250])
+def test_zivot_andrews_default_maxlag(regression, nobs):
+    # Without autolag the default number of lags is the default maxlag of
+    # adfuller with regression="ct", the largest lag of the lag search:
+    # ceil(12 * (nobs / 100) ** (1 / 4)), or nobs // 2 - 3 if smaller. It is
+    # an integer for nobs=100, and 15.09 for nobs=250.
+    expected_lags = min(int(np.ceil(12 * (nobs / 100) ** 0.25)), nobs // 2 - 3)
+    rng = np.random.default_rng(20261120)
+    x = _za_series("trend_break", nobs, rng)
+    adf = adfuller(x, regression="ct", autolag=None, result_object=True)
+    assert adf.lags == expected_lags
+    res = zivot_andrews(x, regression=regression, autolag=None)
+    assert res[3] == expected_lags
+    explicit = zivot_andrews(
+        x, maxlag=expected_lags, regression=regression, autolag=None
+    )
+    assert_allclose(res[0], explicit[0], rtol=1e-12)
+    assert res[4] == explicit[4]
+
+
+@pytest.mark.parametrize("autolag", [None, "AIC"])
+def test_zivot_andrews_default_maxlag_too_short(autolag):
+    # adfuller with regression="ct" allows no lags for 5 observations,
+    # nobs // 2 - 3 < 0, with or without a lag search
+    x = np.random.default_rng(5).standard_normal(5).cumsum()
+    with pytest.raises(ValueError, match="sample size is too short"):
+        zivot_andrews(x, autolag=autolag)
 
 
 @pytest.mark.parametrize("autolag", [None, "AIC"])
@@ -4777,6 +4934,9 @@ def test_zivot_andrews_singular(kind, regression):
         warnings.simplefilter("ignore", SingularMatrixWarning)
         with pytest.raises(ValueError, match="not full rank"):
             zivot_andrews(x, maxlag=3, regression=regression, autolag=None)
+        # also when the first periods inside the trim are skipped
+        with pytest.raises(ValueError, match="not full rank"):
+            zivot_andrews(x, trim=0.05, maxlag=8, regression=regression, autolag=None)
 
 
 def _za_outcome(za, x, **kwargs):
@@ -4788,34 +4948,141 @@ def _za_outcome(za, x, **kwargs):
             return type(exc)
 
 
+def _za_deterministic(t, p, regression):
+    # The constant, the trend and the break dummies of break period p. The
+    # level shift is 1(t >= p). The trend shift is (t - p + 2) from t = p - 1
+    # on for "t", and from t = p on for "ct".
+    cols = [np.ones_like(t), t]
+    if regression != "t":
+        cols.append((t >= p).astype(float))
+    if regression == "t":
+        cols.append(np.maximum(t - p + 2, 0.0))
+    elif regression == "ct":
+        cols.append(np.where(t >= p, t - p + 2, 0.0))
+    return cols
+
+
+def _za_direct(x, lags, regression, periods):
+    # The statistic and break index from one OLS fit per break period, with
+    # the regressors built directly: Delta x_t, t = lags + 1, ..., nobs - 1,
+    # on the deterministic terms, x_{t-1} and the lagged differences
+    nobs = x.shape[0]
+    dx = np.diff(x)
+    t = np.arange(lags + 1, nobs, dtype=float)
+    lagged = [dx[lags - j : nobs - 1 - j] for j in range(1, lags + 1)]
+    tvalues = []
+    for p in periods:
+        cols = _za_deterministic(t, p, regression)
+        exog = np.column_stack(cols + [x[lags : nobs - 1]] + lagged)
+        tvalues.append(OLS(dx[lags:], exog).fit().tvalues[len(cols)])
+    loc = int(np.argmin(tvalues))
+    return tvalues[loc], periods[loc] - 1
+
+
+class _ZivotAndrewsPeriods(ZivotAndrewsUnitRoot):
+    # records the candidate break periods
+    def _break_tvalues(self, endog, exog, regression, periods, *args):
+        self.periods = periods
+        return super()._break_tvalues(endog, exog, regression, periods, *args)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_candidate_periods(regression):
+    # The candidate break periods are the periods inside the trim whose
+    # deterministic terms have full column rank over the rows of the
+    # regression. The terms are integers, so the rank is not borderline.
+    nobs = 40
+    x = np.random.default_rng(24).standard_normal(nobs).cumsum()
+    for trim, lags in [(0.0, 0), (0.0, 3), (0.05, 8), (0.15, 8)]:
+        za = _ZivotAndrewsPeriods()
+        za(x, trim=trim, maxlag=lags, regression=regression, autolag=None)
+        t = np.arange(lags + 1, nobs, dtype=float)
+        trimcnt = int(nobs * trim)
+        expected = []
+        for p in range(trimcnt + 1, nobs - trimcnt + 1):
+            cols = _za_deterministic(t, p, regression)
+            if np.linalg.matrix_rank(np.column_stack(cols)) == len(cols):
+                expected.append(p)
+        assert_equal(za.periods, expected)
+
+
+# The break periods whose dummies are not collinear with the constant and
+# the trend in the regression, which starts at period lags + 1
+_ZA_VALID = {
+    "c": lambda nobs, lags: (lags + 2, nobs - 1),
+    "t": lambda nobs, lags: (lags + 4, nobs),
+    "ct": lambda nobs, lags: (lags + 3, nobs - 2),
+}
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_direct_regressions(regression):
+    # The direct regressions give the statistic and break period of an
+    # ordinary case, where no candidate break period is skipped
+    rng = np.random.default_rng(10583)
+    x = _za_series("random_walk", 200, rng)
+    res = zivot_andrews(x, maxlag=4, regression=regression, autolag=None)
+    periods = np.arange(31, 171)
+    statistic, bpidx = _za_direct(x, 4, regression, periods)
+    assert_allclose(res[0], statistic, rtol=1e-8)
+    assert res[4] == bpidx
+
+
+def _za_check_skipped(x, trim, lags, regression):
+    # The candidate periods whose dummies are collinear are skipped: the
+    # statistic is the minimum over the others, and the per-period loop agrees
+    nobs = x.shape[0]
+    trimcnt = int(nobs * trim)
+    first, last = _ZA_VALID[regression](nobs, lags)
+    periods = np.arange(max(trimcnt + 1, first), min(nobs - trimcnt, last) + 1)
+    kwargs = dict(trim=trim, maxlag=lags, regression=regression, autolag=None)
+    res = zivot_andrews(x, **kwargs)
+    statistic, bpidx = _za_direct(x, lags, regression, periods)
+    assert_allclose(res[0], statistic, rtol=1e-8)
+    assert res[4] == bpidx
+    expected = _ZivotAndrewsLoop()(x, **kwargs)
+    assert_allclose(res[0], expected[0], rtol=1e-8)
+    assert res[4] == expected[4]
+
+
 @pytest.mark.parametrize("regression", ["c", "t", "ct"])
 def test_zivot_andrews_dummies_wrap_around(regression):
     # With trim=0, or more lags than trimmed observations, the dummies of the
     # first or last periods are zero or wrap around the start of the sample.
-    # The per-period loop is used.
+    # These periods used to give a NaN or meaningless statistic, or raise.
     rng = np.random.default_rng(10583)
     x = _za_series("random_walk", 100, rng)
     for trim, lags in [(0.0, 0), (0.05, 8)]:
         tvalues, _ = _za_break_tvalues(x, lags, regression, trim)
         assert tvalues is None
-        kwargs = dict(trim=trim, maxlag=lags, regression=regression, autolag=None)
-        res = _za_outcome(zivot_andrews, x, **kwargs)
-        expected = _za_outcome(_ZivotAndrewsLoop(), x, **kwargs)
-        assert_equal(res, expected)
+        _za_check_skipped(x, trim, lags, regression)
 
 
 @pytest.mark.parametrize("regression, lags", [("c", 5), ("t", 4), ("t", 3), ("ct", 4)])
 def test_zivot_andrews_dummy_collinear(regression, lags):
     # The dummies of the first period are collinear with the constant and
-    # the trend. The per-period loop is used.
+    # the trend, and the period is skipped
     rng = np.random.default_rng(10583)
     x = _za_series("random_walk", 100, rng)
     tvalues, _ = _za_break_tvalues(x, lags, regression, 0.05)
     assert tvalues is None
-    kwargs = dict(trim=0.05, maxlag=lags, regression=regression, autolag=None)
-    res = _za_outcome(zivot_andrews, x, **kwargs)
-    expected = _za_outcome(_ZivotAndrewsLoop(), x, **kwargs)
-    assert_equal(res, expected)
+    _za_check_skipped(x, 0.05, lags, regression)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_lags_beyond_trim(regression):
+    # 8 lags and 3 trimmed observations of 24: the first periods are
+    # degenerate. The statistic was NaN for "c" (with a RuntimeWarning).
+    x = np.random.default_rng(24).standard_normal(24).cumsum()
+    _za_check_skipped(x, 0.15, 8, regression)
+
+
+@pytest.mark.parametrize("regression", ["c", "t", "ct"])
+def test_zivot_andrews_no_break_period_left(regression):
+    # 20 lags of 24 observations leave no period with full rank dummies
+    x = np.random.default_rng(24).standard_normal(24).cumsum()
+    with pytest.raises(ValueError, match="No break period is left: with 20 lags"):
+        zivot_andrews(x, maxlag=20, regression=regression, autolag=None)
 
 
 @pytest.mark.parametrize("regression", ["c", "ct"])
@@ -5060,6 +5327,19 @@ def test_arma_order_select_ic_sequence(ic):
         assert res[f"{name}_min_order"] == (np.argmin(expected), 0)
 
 
+def test_arma_order_select_ic_all_criteria():
+    # Every valid name is accepted and gives the criterion of a direct fit
+    from statsmodels.tsa.arima.model import ARIMA
+
+    y = np.random.default_rng(20261127).standard_normal(100)
+    names = ["aic", "aicc", "bic", "hqic"]
+    res = arma_order_select_ic(y, max_ar=1, max_ma=0, ic=names, trend="n")
+    fits = [ARIMA(y, order=(p, 0, 0), trend="n").fit() for p in range(2)]
+    for name in names:
+        expected = [getattr(fit, name) for fit in fits]
+        assert_allclose(res[name][0], expected, rtol=1e-10)
+
+
 @pytest.mark.parametrize(
     "ic",
     [5, [5], ["aic", 5], np.array([1, 2])],
@@ -5072,13 +5352,20 @@ def test_arma_order_select_ic_invalid_type(ic):
 
 
 @pytest.mark.parametrize(
-    "ic",
-    ["bogus", ["aic", "bogus"], np.array(["bogus"])],
-    ids=["str", "list", "ndarray"],
+    "ic, unknown",
+    [
+        ("bogus", "bogus"),
+        (["aic", "bogus"], "bogus"),
+        (np.array(["bogus"]), "bogus"),
+        ("AIC", "AIC"),
+    ],
+    ids=["str", "list", "ndarray", "upper"],
 )
-def test_arma_order_select_ic_unknown_criterion(ic):
+def test_arma_order_select_ic_unknown_criterion(ic, unknown):
+    # An unknown name used to raise an AttributeError from the first fit
     y = np.random.default_rng(20261127).standard_normal(100)
-    with pytest.raises(AttributeError, match="bogus"):
+    match = rf"Unknown information criteria in ic: \['{unknown}'\]"
+    with pytest.raises(ValueError, match=match):
         arma_order_select_ic(y, max_ar=0, max_ma=0, ic=ic)
 
 

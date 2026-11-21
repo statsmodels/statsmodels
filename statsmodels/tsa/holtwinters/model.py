@@ -130,54 +130,74 @@ class ExponentialSmoothing(TimeSeriesModel):
     seasonal_periods : int, optional
         The number of periods in a complete seasonal cycle, e.g., 4 for
         quarterly data or 7 for daily data with a weekly cycle.
-    initialization_method : str, optional
-        Method for initialize the recursions. One of:
+    initialization_method : {"estimated", "heuristic", "legacy-heuristic", "known"}, optional
+        Method used to initialize the recursions:
 
-        * None
-        * 'estimated'
-        * 'heuristic'
-        * 'legacy-heuristic'
-        * 'known'
+        * "estimated" estimates the initial values together with the other
+          parameters, starting from the "heuristic" values, or from simpler
+          ones if there are fewer than ``10 + 2 * (seasonal_periods // 2)``
+          observations.
+        * "heuristic" computes the initial values from the data with a
+          heuristic and holds them fixed.
+        * "legacy-heuristic" holds them fixed at the values that statsmodels
+          0.11 and earlier used.
+        * "known" uses `initial_level`, and `initial_trend` and
+          `initial_seasonal` if the model has these components. They must
+          then be given.
 
-        None defaults to the pre-0.12 behavior where initial values
-        are passed as part of ``fit``. If any of the other values are
-        passed, then the initial values must also be set when constructing
-        the model. If 'known' initialization is used, then `initial_level`
-        must be passed, as well as `initial_trend` and `initial_seasonal` if
-        applicable. Default is 'estimated'. "legacy-heuristic" uses the same
-        values that were used in statsmodels 0.11 and earlier.
+        Default is "estimated".
     initial_level : float, optional
-        The initial level component. Required if estimation method is "known".
-        If set using either "estimated" or "heuristic" this value is used.
-        This allows one or more of the initial values to be set while
-        deferring to the heuristic for others or estimating the unset
-        parameters.
+        The initial level component. Required if the initialization method
+        is "known"; setting it with any other method raises a ValueError.
+        To fix some initial values and estimate the others, use
+        ``initialization_method="estimated"`` and :meth:`fix_params`.
     initial_trend : float, optional
-        The initial trend component. Required if estimation method is "known".
-        If set using either "estimated" or "heuristic" this value is used.
-        This allows one or more of the initial values to be set while
-        deferring to the heuristic for others or estimating the unset
-        parameters.
+        The initial trend component. Required if the initialization method
+        is "known" and the model has a trend; setting it with any other
+        method raises a ValueError. To fix some initial values and estimate
+        the others, use ``initialization_method="estimated"`` and
+        :meth:`fix_params`.
     initial_seasonal : array_like, optional
-        The initial seasonal component. An array of length `seasonal`
-        or length `seasonal - 1` (in which case the last initial value
-        is computed to make the average effect zero). Only used if
-        initialization is 'known'. Required if estimation method is "known".
-        If set using either "estimated" or "heuristic" this value is used.
-        This allows one or more of the initial values to be set while
-        deferring to the heuristic for others or estimating the unset
+        The initial seasonal component. An array of length
+        `seasonal_periods` or length ``seasonal_periods - 1`` (in which case
+        the last initial value is computed to make the average effect zero).
+        Required if the initialization method is "known" and the model has a
+        seasonal component; setting it with any other method raises a
+        ValueError. Use ``initialization_method="estimated"`` and
+        :meth:`fix_params` to fix some initial values and estimate the other
         parameters.
+
+        .. versionchanged:: 0.15.1
+
+           An array of length ``seasonal_periods - 1`` is completed with the
+           value that makes the average effect zero: minus the sum of the
+           others for an additive seasonal component, and `seasonal_periods`
+           minus their sum, so that the mean is 1, for a multiplicative one.
+           It raised before. With ``seasonal_periods=2``, a single value is
+           still used for both seasons, with a FutureWarning; after
+           statsmodels 0.17 it will be completed too.
     use_boxcox : {True, False, 'log', float}, optional
-        Should the Box-Cox transform be applied to the data first? If 'log'
-        then apply the log. If float then use the value as lambda.
+        Should the Box-Cox transform be applied to the data first? If True,
+        lambda is estimated by maximum likelihood. If 'log' then apply the
+        log. If float then use the value as lambda. False and None apply no
+        transform. An int is used as a bool: 0 applies no transform and any
+        other int estimates lambda. Pass a float, such as 1.0, to fix lambda.
+
+        .. versionchanged:: 0.15.1
+
+           With an int `use_boxcox`, the initial values are computed from
+           the same transform as the fit. They were computed with the int as
+           a fixed lambda, while fitting and forecasting used it as a bool.
     bounds : dict of str to tuple of float, optional
         A dictionary containing bounds for the parameters in the model,
-        excluding the initial values if estimated. The keys of the dictionary
-        are the variable names, e.g., smoothing_level or initial_slope.
-        The initial seasonal variables are labeled initial_seasonal.<j>
-        for j=0,...,m-1 where m is the number of period in a full season.
-        Use None to indicate a non-binding constraint, e.g., (0, None)
-        constrains a parameter to be non-negative.
+        including the initial values when they are estimated. The keys of
+        the dictionary are the variable names, e.g., smoothing_level or
+        initial_trend. The initial seasonal variables are labeled
+        initial_seasonal.<j> for j=0,...,m-1 where m is the number of
+        periods in a full season. The bounds of the smoothing and damping
+        parameters must lie in [0, 1]. For the initial values, use None to
+        indicate a non-binding constraint, e.g., (0, None) constrains a
+        parameter to be non-negative.
     dates : array_like of datetime, optional
         An array-like object of datetime objects. If a Pandas object is given
         for endog, it is assumed to have a DateIndex.
@@ -322,17 +342,22 @@ class ExponentialSmoothing(TimeSeriesModel):
         return bounds
 
     def _boxcox(self):
-        if self._use_boxcox is None or self._use_boxcox is False:
+        use_boxcox = self._use_boxcox
+        if isinstance(use_boxcox, int) and not isinstance(use_boxcox, bool):
+            # fit and _predict use an int as a bool, so the initial values
+            # must come from the same transformation
+            use_boxcox = bool(use_boxcox)
+        if use_boxcox is None or use_boxcox is False:
             self._lambda = np.nan
             return self._y
-        if self._use_boxcox is True:
+        if use_boxcox is True:
             y, self._lambda = boxcox(self._y)
-        elif self._use_boxcox == "log":
+        elif use_boxcox == "log":
             self._lambda = 0.0
             y = boxcox(self._y, 0.0)
-        elif isinstance(self._use_boxcox, (int, float)):
-            self._lambda = float(self._use_boxcox)
-            y = boxcox(self._y, self._use_boxcox)
+        elif isinstance(use_boxcox, float):
+            self._lambda = float(use_boxcox)
+            y = boxcox(self._y, use_boxcox)
         else:
             raise TypeError("use_boxcox must be True, False, 'log' or a float.")
         return y
@@ -344,9 +369,14 @@ class ExponentialSmoothing(TimeSeriesModel):
 
         Parameters
         ----------
-        values : dict
+        values : dict of str to float
             Values to fix. The key is the parameter name and the value is the
-            fixed value.
+            fixed value. The names are "smoothing_level", and
+            "smoothing_trend", "smoothing_seasonal" and "damping_trend" if the
+            model has these components. If `initialization_method` is
+            "estimated", the initial values "initial_level", and
+            "initial_trend" and "initial_seasonal.<j>" for
+            j=0,...,m-1, where m is `seasonal_periods`, can be fixed too.
 
         Yields
         ------
@@ -373,7 +403,7 @@ class ExponentialSmoothing(TimeSeriesModel):
             valid_keys += tuple([f"initial_seasonal.{i}" for i in range(m)])
         if self.damped_trend:
             valid_keys += ("damping_trend",)
-        if self._initialization_method in ("estimated", None):
+        if self._initialization_method == "estimated":
             extra_keys = [
                 key.replace("smoothing_", "initial_")
                 for key in valid_keys
@@ -468,6 +498,31 @@ class ExponentialSmoothing(TimeSeriesModel):
             raise ValueError(msg.format("seasonal"))
         elif not self.has_seasonal and self._initial_seasonal is not None:
             raise ValueError(excess.format("seasonal"))
+        m = self.seasonal_periods
+        seasonal = self._initial_seasonal
+        if self.has_seasonal and seasonal.ndim == 1 and seasonal.shape[0] == m - 1:
+            if m == 2:
+                # A single value was broadcast to both seasons before
+                warnings.warn(
+                    "initial_seasonal has one value and seasonal_periods is "
+                    "2, so the value is used for both seasons. After "
+                    "statsmodels 0.17, the second value will be computed to "
+                    "make the average effect zero, as for longer seasons. "
+                    "Pass both values to keep the current result.",
+                    FutureWarning,
+                    stacklevel=4,
+                )
+                return
+            # The last value makes the average effect zero: the values sum
+            # to 0 if additive and to m, a mean of 1, if multiplicative
+            total = m if self.seasonal == "mul" else 0.0
+            last = total - seasonal.sum()
+            if self.seasonal == "mul" and last <= 0:
+                raise ValueError(
+                    "A multiplicative initial_seasonal with seasonal_periods "
+                    "- 1 values must sum to less than seasonal_periods."
+                )
+            self._initial_seasonal = np.r_[seasonal, last]
 
     def predict(self, params, start=None, end=None):
         """
@@ -1117,20 +1172,29 @@ class ExponentialSmoothing(TimeSeriesModel):
         Parameters
         ----------
         initial_level : float, optional
-            The initial value used for the level component.
+            The initial value used for the level component. Only used if
+            `force` is True.
         initial_trend : float, optional
-            The initial value used for the trend component.
+            The initial value used for the trend component. Only used if
+            `force` is True.
         force : bool, optional
-            Force the calculation even if initial values exist.
+            Compute the initial values from the data as described in the
+            notes, ignoring the initial values of the model. If False, the
+            default, the initial values of the model are returned; they are
+            the starting values if the initial values are estimated.
 
         Returns
         -------
         initial_level : float
             The initial value used for the level component.
         initial_trend : float or None
-            The initial value used for the trend component.
-        initial_seasons : list of float
-            The initial values used for the seasonal components.
+            The initial value used for the trend component, or None if the
+            model has no trend.
+        initial_seasons : ndarray, list of float or None
+            The initial values used for the seasonal components. If `force`
+            is True, a list that is empty if the model has no seasonal
+            component. Otherwise an ndarray, or None if the model has no
+            seasonal component.
 
         Notes
         -----
@@ -1146,7 +1210,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         seasonal component is added the initialization adapts to account for
         the modified structure.
         """
-        if self._initialization_method is not None and not force:
+        if not force:
             return (
                 self._initial_level,
                 self._initial_trend,
@@ -1438,28 +1502,24 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     ----------
     endog : array_like
         The time series to model.
-    initialization_method : str, optional
-        Method for initialize the recursions. One of:
+    initialization_method : {"estimated", "heuristic", "legacy-heuristic", "known"}, optional
+        Method used to initialize the recursions:
 
-        * None
-        * 'estimated'
-        * 'heuristic'
-        * 'legacy-heuristic'
-        * 'known'
+        * "estimated" estimates the initial level together with the
+          smoothing parameter, starting from the "heuristic" value, or from
+          a simpler one if there are fewer than 10 observations.
+        * "heuristic" computes the initial level from the data with a
+          heuristic and holds it fixed.
+        * "legacy-heuristic" holds it fixed at the value that statsmodels
+          0.11 and earlier used.
+        * "known" uses `initial_level`, which must then be given.
 
-        None defaults to the pre-0.12 behavior where initial values
-        are passed as part of ``fit``. If any of the other values are
-        passed, then the initial values must also be set when constructing
-        the model. If 'known' initialization is used, then `initial_level`
-        must be passed, as well as `initial_trend` and `initial_seasonal` if
-        applicable. Default is 'estimated'. "legacy-heuristic" uses the same
-        values that were used in statsmodels 0.11 and earlier.
+        Default is "estimated".
     initial_level : float, optional
-        The initial level component. Required if estimation method is "known".
-        If set using either "estimated" or "heuristic" this value is used.
-        This allows one or more of the initial values to be set while
-        deferring to the heuristic for others or estimating the unset
-        parameters.
+        The initial level component. Required if the initialization method
+        is "known"; setting it with any other method raises a ValueError.
+        To fix the initial level and estimate the smoothing parameter, use
+        ``initialization_method="estimated"`` and :meth:`fix_params`.
 
     See Also
     --------
@@ -1575,37 +1635,34 @@ class Holt(ExponentialSmoothing):
     endog : array_like
         The time series to model.
     exponential : bool, optional
-        Type of trend component.
+        Type of trend component: multiplicative if True, additive if False
+        (the default).
     damped_trend : bool, optional
         Should the trend component be damped.
-    initialization_method : str, optional
-        Method for initialize the recursions. One of:
+    initialization_method : {"estimated", "heuristic", "legacy-heuristic", "known"}, optional
+        Method used to initialize the recursions:
 
-        * None
-        * 'estimated'
-        * 'heuristic'
-        * 'legacy-heuristic'
-        * 'known'
+        * "estimated" estimates the initial values together with the other
+          parameters, starting from the "heuristic" values, or from simpler
+          ones if there are fewer than 10 observations.
+        * "heuristic" computes the initial values from the data with a
+          heuristic and holds them fixed.
+        * "legacy-heuristic" holds them fixed at the values that statsmodels
+          0.11 and earlier used.
+        * "known" uses `initial_level` and `initial_trend`, which must then
+          be given.
 
-        None defaults to the pre-0.12 behavior where initial values
-        are passed as part of ``fit``. If any of the other values are
-        passed, then the initial values must also be set when constructing
-        the model. If 'known' initialization is used, then `initial_level`
-        must be passed, as well as `initial_trend` and `initial_seasonal` if
-        applicable. Default is 'estimated'. "legacy-heuristic" uses the same
-        values that were used in statsmodels 0.11 and earlier.
+        Default is "estimated".
     initial_level : float, optional
-        The initial level component. Required if estimation method is "known".
-        If set using either "estimated" or "heuristic" this value is used.
-        This allows one or more of the initial values to be set while
-        deferring to the heuristic for others or estimating the unset
-        parameters.
+        The initial level component. Required if the initialization method
+        is "known"; setting it with any other method raises a ValueError.
+        To fix some initial values and estimate the others, use
+        ``initialization_method="estimated"`` and :meth:`fix_params`.
     initial_trend : float, optional
-        The initial trend component. Required if estimation method is "known".
-        If set using either "estimated" or "heuristic" this value is used.
-        This allows one or more of the initial values to be set while
-        deferring to the heuristic for others or estimating the unset
-        parameters.
+        The initial trend component. Required if the initialization method
+        is "known"; setting it with any other method raises a ValueError.
+        To fix some initial values and estimate the others, use
+        ``initialization_method="estimated"`` and :meth:`fix_params`.
 
     See Also
     --------

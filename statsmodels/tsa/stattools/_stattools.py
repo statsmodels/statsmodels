@@ -249,6 +249,64 @@ def _adf_autolag(x, maxlag, regression, method):
     return crit[bestlag], int(bestlag)
 
 
+def _adf_max_maxlag(nobs, regression):
+    """
+    The largest number of lagged differences of the ADF regression
+
+    Parameters
+    ----------
+    nobs : int
+        The number of observations of the series.
+    regression : {"c", "ct", "ctt", "n"}
+        Constant and trend order included in the regression.
+
+    Returns
+    -------
+    int
+        The largest maxlag, ``min(nobs // 2 - ntrend - 1,
+        (nobs - ntrend - 3) // 2)``, where ntrend is the number of trend
+        terms. It is negative if the sample is too short for any lag.
+    """
+    ntrend = len(regression) if regression != "n" else 0
+    # The regression with maxlag lags has nobs - 1 - maxlag rows and
+    # 1 + ntrend + maxlag columns. The second bound keeps at least one
+    # residual degree of freedom; it is only binding when ntrend is 0 and
+    # nobs is even, where nobs // 2 - 1 lags would give an exact fit.
+    return min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
+
+
+def _adf_default_maxlag(nobs, regression):
+    """
+    The default maxlag of adfuller
+
+    Parameters
+    ----------
+    nobs : int
+        The number of observations of the series.
+    regression : {"c", "ct", "ctt", "n"}
+        Constant and trend order included in the regression.
+
+    Returns
+    -------
+    int
+        ``ceil(12 * (nobs / 100) ** (1 / 4))`` (Schwert, 1989), or the
+        largest maxlag of the regression if that is smaller.
+
+    Raises
+    ------
+    ValueError
+        If the sample is too short for the regression.
+    """
+    # from Greene referencing Schwert 1989
+    maxlag = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
+    maxlag = min(_adf_max_maxlag(nobs, regression), maxlag)
+    if maxlag < 0:
+        raise ValueError(
+            "sample size is too short to use selected regression component"
+        )
+    return maxlag
+
+
 @dataclass(frozen=True, slots=True, repr=False)
 class ADFullerResult(LimitedIterationMixin[float]):
     """
@@ -451,20 +509,9 @@ def adfuller(
 
     nobs = x.shape[0]
 
-    ntrend = len(regression) if regression != "n" else 0
-    # The regression with maxlag lags has nobs - 1 - maxlag rows and
-    # 1 + ntrend + maxlag columns. The second bound keeps at least one
-    # residual degree of freedom; it is only binding when ntrend is 0 and
-    # nobs is even, where nobs // 2 - 1 lags would give an exact fit.
-    max_maxlag = min(nobs // 2 - ntrend - 1, (nobs - ntrend - 3) // 2)
+    max_maxlag = _adf_max_maxlag(nobs, regression)
     if maxlag is None:
-        # from Greene referencing Schwert 1989
-        maxlag = int(np.ceil(12.0 * np.power(nobs / 100.0, 1 / 4.0)))
-        maxlag = min(max_maxlag, maxlag)
-        if maxlag < 0:
-            raise ValueError(
-                "sample size is too short to use selected regression component"
-            )
+        maxlag = _adf_default_maxlag(nobs, regression)
     elif maxlag > max_maxlag:
         raise ValueError(
             f"maxlag must be less than or equal to {max_maxlag} when nobs is "
@@ -4993,11 +5040,18 @@ class ZivotAndrewsUnitRoot:
             The percentage of series at begin/end to exclude from break-period
             calculation in range [0, 0.333] (default=0.15).
         maxlag : int, optional
-            The maximum lag which is included in test. If None, the lag
-            search uses the default of ``adfuller`` with ``regression="ct"``,
-            ceil(12 * (nobs / 100) ** (1 / 4)) (Schwert, 1989), and
-            int(12 * (nobs / 100) ** (1 / 4)) lags are used when autolag is
-            None. Use 0 for a test without lagged differences.
+            The maximum lag which is included in test. If None, the default
+            of ``adfuller`` with ``regression="ct"`` is used,
+            ceil(12 * (nobs / 100) ** (1 / 4)) (Schwert, 1989), or
+            nobs // 2 - 3 if that is smaller. It is the largest lag of the
+            lag search, or the number of lags if autolag is None. Use 0 for
+            a test without lagged differences.
+
+            .. versionchanged:: 0.15.1
+
+               With autolag=None, the default is the same as with a lag
+               search. It was int(12 * (nobs / 100) ** (1 / 4)), which is
+               one lag fewer for most nobs, and was not capped.
         regression : {"c","t","ct"}, optional
             Constant and trend order to include in regression.
 
@@ -5043,6 +5097,27 @@ class ZivotAndrewsUnitRoot:
         statistics than the original Zivot-Andrews method, although no attempt
         has been made to characterize the size/power trade-off.
 
+        A candidate break is skipped if its dummies are collinear with the
+        constant and the trend over the rows of the regression, which start
+        at observation ``baselag + 1``, since it then has no test statistic.
+        A level shift needs at least one row before the break and one after
+        it, and a trend shift two rows before it (and, next to a level
+        shift, two after it). So the last observation before the break is at
+        least ``baselag + 1`` ("c") or ``baselag + 2`` ("t" and "ct"), and at
+        most ``nobs - 2`` ("c") or ``nobs - 3`` ("ct"). The returned
+        ``bpidx`` is that observation for "c" and "ct", but the first
+        observation of the trend shift, one later, for "t", so the smallest
+        ``bpidx`` is ``baselag + 1`` ("c"), ``baselag + 3`` ("t") or
+        ``baselag + 2`` ("ct"). A ValueError is raised if no candidate break
+        is left.
+
+        .. versionchanged:: 0.15.1
+
+           These break periods are skipped. They used to give a NaN or
+           meaningless statistic, or raise, when the number of lags was not
+           smaller than the number of trimmed observations, or with
+           ``trim=0``.
+
         References
         ----------
         .. [1] Baum, C.F. (2004). "ZANDREWS: Stata module to calculate
@@ -5082,10 +5157,35 @@ class ZivotAndrewsUnitRoot:
         elif maxlag is not None:
             baselags = maxlag
         else:
-            baselags = int(12.0 * np.power(nobs / 100.0, 1 / 4.0))
+            # the largest lag of the lag search above
+            baselags = _adf_default_maxlag(nobs, "ct")
         trimcnt = int(nobs * trim)
         start_period = trimcnt
         end_period = nobs - trimcnt
+        # The regressions start at period baselags + 1. For a break period
+        # whose dummies are zero, constant or a linear trend over those rows,
+        # the dummies are collinear with the constant and the trend, so the
+        # period has no t-statistic and is skipped. The level shift needs a
+        # zero and a nonzero row, the trend shift two zero rows and, next to
+        # the level shift ("ct"), two nonzero rows. The shifts of period p
+        # start at observation p for "c" and "ct" but at p - 1 for "t" (see
+        # _update_regression_exog), so the first valid period of "t" is one
+        # larger than that of "ct" although both need two zero rows.
+        if regression == "c":
+            first_valid, last_valid = baselags + 2, nobs - 1
+        elif regression == "t":
+            first_valid, last_valid = baselags + 4, nobs
+        else:
+            first_valid, last_valid = baselags + 3, nobs - 2
+        periods = np.arange(
+            max(start_period + 1, first_valid), min(end_period, last_valid) + 1
+        )
+        if periods.shape[0] == 0:
+            raise ValueError(
+                f"No break period is left: with {baselags} lags and trim={trim}, "
+                "the break dummies of every candidate period are collinear with "
+                "the constant and the trend. Use fewer lags or a smaller trim."
+            )
         if regression == "ct":
             basecols = 5
         else:
@@ -5099,7 +5199,6 @@ class ZivotAndrewsUnitRoot:
             x, nobs, c_const, t_const, basecols, baselags
         )
         stats = np.full(end_period + 1, np.inf)
-        periods = np.arange(start_period + 1, end_period + 1)
         tvalues = self._break_tvalues(
             endog[baselags:],
             exog,
@@ -5115,7 +5214,7 @@ class ZivotAndrewsUnitRoot:
             stats[periods] = tvalues
         else:
             # iterate through the time periods
-            for bp in range(start_period + 1, end_period + 1):
+            for bp in periods:
                 # update intercept dummy / trend / trend dummy
                 exog = self._update_regression_exog(
                     exog,
@@ -5128,7 +5227,7 @@ class ZivotAndrewsUnitRoot:
                     baselags,
                 )
                 # check exog rank on first iteration
-                if bp == start_period + 1:
+                if bp == periods[0]:
                     o = OLS(endog[baselags:], exog, hasconst=1).fit()
                     if o.df_model < exog.shape[1] - 1:
                         raise ValueError(

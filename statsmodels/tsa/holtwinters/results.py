@@ -215,8 +215,10 @@ class HoltWintersResults(Results):
 
         Returns
         -------
-        forecast : ndarray
-            Array of out of sample forecasts.
+        forecast : ndarray or Series
+            The in-sample predictions and out-of-sample forecasts from
+            `start` to `end`: a Series with the matching index if `endog` is
+            a pandas object, otherwise an ndarray.
         """
         return self.model.predict(self.params, start, end)
 
@@ -232,8 +234,10 @@ class HoltWintersResults(Results):
 
         Returns
         -------
-        forecast : ndarray
-            Array of out of sample forecasts
+        forecast : ndarray or Series
+            The out-of-sample forecasts: a Series with the index continued
+            past the sample if `endog` is a pandas object, otherwise an
+            ndarray.
         """
         try:
             freq = getattr(self.model._index, "freq", 1)

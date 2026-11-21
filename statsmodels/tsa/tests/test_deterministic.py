@@ -276,6 +276,51 @@ def test_time_trend(index):
     pd.testing.assert_frame_equal(combined, final, check_index_type=False)
 
 
+@pytest.mark.parametrize(
+    "term, expected",
+    [
+        (TimeTrend(True, 0), "TimeTrend(Constant)"),
+        (TimeTrend(False, 0), "TimeTrend(Empty)"),
+        (TimeTrend(True, 1), "TimeTrend(Constant,Powers 1 to 1)"),
+        (TimeTrend(False, 2), "TimeTrend(Powers 1 to 2)"),
+        (TimeTrend(True, 3), "TimeTrend(Constant,Powers 1 to 3)"),
+        (
+            CalendarTimeTrend("D", True, 2),
+            "CalendarTimeTrend(Constant,Powers 1 to 2, freq=D)",
+        ),
+    ],
+)
+def test_time_trend_str(term, expected):
+    # The highest power was given as order + 1
+    assert str(term) == expected
+    # The terms have the powers 1, ..., order of the time trend
+    index = pd.date_range("2000-01-01", periods=5, freq="D")
+    trends = term.in_sample(index).iloc[:, int(term.constant) :].to_numpy()
+    assert trends.shape[1] == term.order
+    powers = np.arange(1, term.order + 1)
+    np.testing.assert_allclose(trends, trends[:, :1] ** powers, rtol=1e-14)
+
+
+@pytest.mark.parametrize("order", [-1, -3])
+@pytest.mark.parametrize("constant", [True, False])
+@pytest.mark.parametrize(
+    "create",
+    [
+        TimeTrend,
+        lambda constant, order: CalendarTimeTrend("D", constant, order),
+        lambda constant, order: DeterministicProcess(
+            pd.RangeIndex(10), constant=constant, order=order
+        ),
+    ],
+    ids=["TimeTrend", "CalendarTimeTrend", "DeterministicProcess"],
+)
+def test_time_trend_negative_order(create, constant, order):
+    # A negative order was accepted, and computing the terms raised an
+    # unrelated error, or gave "Powers 1 to 0" in the string
+    with pytest.raises(ValueError, match=f"order must be non-negative, got {order}"):
+        create(constant, order)
+
+
 def test_seasonality(index):
     s = Seasonality(period=12)
     exog = s.in_sample(index)
@@ -956,6 +1001,94 @@ def test_deterministic_process_index_forms(form):
     pd.testing.assert_frame_equal(
         dp.range(25, 34), expected.range(25, 34), check_freq=False
     )
+
+
+@pytest.mark.parametrize("form", list(INDEX_FORMS) + ["no-freq"])
+def test_deterministic_process_out_of_sample_inferred_freq(form):
+    # range used the inferred freq, but out_of_sample warned and gave the
+    # forecasts integer labels, and calendar terms raised
+    index = pd.date_range("2000-01-31", periods=30, freq=MONTH_END)
+    if form == "no-freq":
+        value = pd.DatetimeIndex(list(index))
+    else:
+        value = INDEX_FORMS[form](index)
+    kwargs = {
+        "constant": True,
+        "order": 1,
+        "seasonal": True,
+        "additional_terms": [CalendarFourier(YEAR_END, 1)],
+    }
+    dp = DeterministicProcess(value, **kwargs)
+    assert dp.index.freq is None
+    with pytest_warns(None):
+        fcast = dp.out_of_sample(3)
+    fcast_index = pd.date_range("2002-07-31", periods=3, freq=MONTH_END)
+    pd.testing.assert_index_equal(fcast.index, fcast_index)
+    expected = DeterministicProcess(index, **kwargs).out_of_sample(3)
+    pd.testing.assert_frame_equal(fcast, expected)
+    np.testing.assert_allclose(fcast["trend"], [31.0, 32.0, 33.0], rtol=1e-15)
+    pd.testing.assert_frame_equal(fcast, dp.range(30, 32), check_freq=False)
+    # A process without terms
+    with pytest_warns(None):
+        empty = DeterministicProcess(value).out_of_sample(3)
+    pd.testing.assert_index_equal(empty.index, fcast_index)
+
+
+def test_deterministic_process_out_of_sample_irregular_dates():
+    # No freq can be inferred, so the forecasts have integer labels
+    index = pd.date_range("2000-01-31", periods=30, freq=MONTH_END).delete(5)
+    dp = DeterministicProcess(index, constant=True, order=1)
+    with pytest_warns(UserWarning):
+        fcast = dp.out_of_sample(3)
+    assert is_int_index(fcast.index)
+    np.testing.assert_allclose(fcast["trend"], [30.0, 31.0, 32.0], rtol=1e-15)
+
+
+NO_FREQ_FORMS = {
+    "DatetimeIndex": lambda idx: pd.DatetimeIndex(list(idx)),
+    "list": list,
+}
+
+
+@pytest.mark.parametrize("form", list(NO_FREQ_FORMS))
+@pytest.mark.parametrize("freq", [MONTH_END, "D", "B", "W-WED"])
+@pytest.mark.parametrize(
+    "term",
+    [
+        TimeTrend(True, 2),
+        Seasonality(12),
+        Fourier(12, 2),
+        CalendarTimeTrend(MONTH_END, True, 2),
+        CalendarFourier(YEAR_END, 2),
+        CalendarSeasonality(MONTH_END, "Y"),
+    ],
+    ids=str,
+)
+def test_term_out_of_sample_inferred_freq(term, freq, form):
+    # A DatetimeIndex without a freq is extended with the inferred freq, as
+    # the same index with the freq. The forecasts used to have integer
+    # labels, with a warning, and calendar terms raised.
+    index = pd.date_range("2000-01-31", periods=30, freq=freq)
+    value = NO_FREQ_FORMS[form](index)
+    assert pd.Index(value).freq is None
+    with pytest_warns(None):
+        fcast = term.out_of_sample(7, value)
+    pd.testing.assert_frame_equal(fcast, term.out_of_sample(7, index))
+    # The forecasts are those of the dates that continue the index
+    fcast_index = pd.date_range(index[-1], periods=8, freq=freq)[1:]
+    explicit = term.out_of_sample(7, value, forecast_index=fcast_index)
+    pd.testing.assert_frame_equal(fcast, explicit)
+
+
+@pytest.mark.parametrize(
+    "term", [TimeTrend(True, 1), Seasonality(12), Fourier(12, 1)], ids=str
+)
+def test_term_out_of_sample_irregular_dates(term):
+    # No freq can be inferred, so the forecasts have integer labels
+    index = pd.date_range("2000-01-31", periods=30, freq=MONTH_END).delete(5)
+    with pytest.warns(UserWarning, match="with a frequency set or inferred"):
+        fcast = term.out_of_sample(3, index)
+    pd.testing.assert_index_equal(fcast.index, pd.RangeIndex(30, 33))
 
 
 def test_apply():
