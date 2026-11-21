@@ -89,6 +89,12 @@ def fftconvolveinv(in1, in2, mode="full"):
     ----------
     in1 : array_like
         First input array.
+
+        .. versionchanged:: 0.15.1
+
+           ``in1`` and ``in2`` are converted with ``array_like``, keeping
+           their dtype, so a list, tuple, Series or DataFrame works where it
+           raised.
     in2 : array_like
         Second input array, used as the inverse filter.
     mode : str, optional
@@ -110,6 +116,9 @@ def fftconvolveinv(in1, in2, mode="full"):
     but it does not work for multidimensional inverse filter (fftn)
     original signal.fftconvolve also uses fftn
     """
+    # dtype=None keeps complex input complex
+    in1 = array_like(in1, "in1", dtype=None)
+    in2 = array_like(in2, "in2", dtype=None)
     s1 = np.array(in1.shape)
     s2 = np.array(in2.shape)
     complex_result = (np.issubdtype(in1.dtype, np.complexfloating) or
@@ -149,6 +158,12 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     ----------
     in1 : array_like
         First input array.
+
+        .. versionchanged:: 0.15.1
+
+           ``in1``, ``in2`` and ``in3`` are converted with ``array_like``,
+           keeping their dtype, so a list, tuple, Series or DataFrame works
+           where it raised.
     in2 : array_like, optional
         Second input array. At least one of `in2` and `in3` must be given.
     in3 : array_like, optional
@@ -180,6 +195,10 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
     """
     if (in2 is None) and (in3 is None):
         raise ValueError("at least one of in2 and in3 needs to be given")
+    # dtype=None keeps complex input complex
+    in1 = array_like(in1, "in1", dtype=None)
+    in2 = array_like(in2, "in2", dtype=None, optional=True)
+    in3 = array_like(in3, "in3", dtype=None, optional=True)
     s1 = np.array(in1.shape)
     if in2 is not None:
         s2 = np.array(in2.shape)
