@@ -379,12 +379,6 @@ Behavior changes
   observations. It counted the NaNs, so it could return more lags, or raise
   when ``nlags`` was not given. The values at each lag are unchanged.
   :pr:`10847`
-- With pandas 2.2 and 2.3, ``CalendarFourier`` and ``CalendarTimeTrend``
-  used quarters and years anchored in December for start-anchored frequencies
-  such as ``"QS-FEB"`` and ``"YS-JUL"`` (and their business-day versions).
-  They now use the quarters and years that start in the given month, so their
-  values change on those pandas versions. ``"MS"``, ``"QS"``, the calendar
-  quarters and ``"YS"`` are unchanged. :pr:`10854`
 
 New Features and Enhancements
 =============================
@@ -1236,14 +1230,6 @@ Time series analysis
   a misleading length error for a row ``init``. A column is accepted, and
   other 2-d input raises a ``ValueError`` that names the argument.
   :pr:`10872`
-- ``CalendarFourier`` and ``CalendarTimeTrend`` failed with an internal pandas
-  error for start-anchored frequencies such as ``"MS"``, ``"QS-FEB"``,
-  ``"YS"`` and ``"BQS"``, except with pandas 2.2 and 2.3. They are mapped to
-  the end-anchored frequency with the same periods (``"MS"`` to ``"ME"``,
-  ``"QS-FEB"`` to ``"QE-JAN"``) on every pandas version; the new keyword-only
-  ``map_start_anchored=False`` turns this off. Frequencies without periods,
-  such as ``"SMS"``, raise a ``ValueError`` when the term is created.
-  :pr:`10854`
 
 Statistics and tests
 --------------------
