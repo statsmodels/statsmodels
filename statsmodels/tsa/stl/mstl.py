@@ -70,6 +70,14 @@ class MSTL:
     --------
     statsmodels.tsa.seasonal.STL
 
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       Without ``periods``, a pandas endog with a PeriodIndex has the period
+       of the frequency of its index, for example 12 for monthly periods,
+       where it raised a ValueError.
+
     References
     ----------
     .. [1] K. Bandara, R.J. Hyndman, and C. Bergmeir (2021)
@@ -256,7 +264,11 @@ class MSTL:
     def _infer_period(self) -> int:
         freq = None
         if isinstance(self.endog, (pd.Series, pd.DataFrame)):
-            freq = getattr(self.endog.index, "inferred_freq", None)
+            if isinstance(self.endog.index, pd.PeriodIndex):
+                # a PeriodIndex has a freq but no inferred_freq
+                freq = self.endog.index.freq
+            else:
+                freq = getattr(self.endog.index, "inferred_freq", None)
         if freq is None:
             raise ValueError("Unable to determine period from endog")
         period = freq_to_period(freq)
