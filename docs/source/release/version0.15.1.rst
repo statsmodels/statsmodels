@@ -355,13 +355,6 @@ Behavior changes
   ``nan`` on every platform; before, they depended on rounding, and the lag
   computed just before could be dropped. Results for other input change only
   by rounding. :pr:`10843`
-- :func:`~statsmodels.tsa.stattools.zivot_andrews` with ``regression="t"``
-  returned as ``bpidx`` the first observation after the break, one later than
-  for ``"c"`` and ``"ct"`` and than ``urca::ur.za``, and its trimmed candidate
-  breaks were one observation earlier. ``bpidx`` is now the last observation
-  before the break for every model, and the candidate breaks are the same, so
-  ``bpidx`` for ``"t"`` is one smaller, and the statistic changes when the
-  minimum is at the edge of the trimmed range. :pr:`10885`
 - When ``den`` is longer than ``num``, ``deconvolve`` returns an empty ndarray
   instead of a list as the quotient, and a float (or complex) copy of ``num``
   as the remainder instead of ``num`` itself. The values are unchanged.
@@ -1232,12 +1225,6 @@ Time series analysis
   ``statsmodels.tsa.arima_process`` and in ``ArmaProcess`` raised NumPy or
   SciPy errors that did not name the argument. They raise a ``ValueError``
   that does. :pr:`10861`
-- :func:`~statsmodels.tsa.stattools.zivot_andrews` did not skip the candidate
-  break periods whose dummies are collinear with the constant and the trend,
-  which happens when the number of lags is not smaller than the number of
-  trimmed observations, or with ``trim=0``. It then returned a NaN or wrong
-  statistic and break period, or raised. These periods are skipped, and a
-  ``ValueError`` is raised if no candidate period is left. :pr:`10850`
 - :func:`~statsmodels.tsa.filters.filtertools.recursive_filter` raised NumPy or
   SciPy errors for an ``ar_coeff`` or ``init`` given as an (n, 1) column, and
   a misleading length error for a row ``init``. A column is accepted, and
