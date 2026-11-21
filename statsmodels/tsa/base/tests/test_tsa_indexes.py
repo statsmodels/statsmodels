@@ -2493,3 +2493,17 @@ def test_negative_location_before_start(index):
     mod = tsa_model.TimeSeriesModel(pd.Series(np.zeros(8), index=index))
     with pytest.raises(KeyError, match="The `start` argument could not"):
         tsa_model.get_prediction_index(-20, None, 8, mod._index, data=mod.data)
+
+
+@pytest.mark.parametrize("key", ["2000-01-01", "a"])
+def test_label_key_without_row_labels(key):
+    # A label key for numpy data, which have no row labels, raises a KeyError
+    with pytest.raises(KeyError):
+        tsa_model.get_index_label_loc(key, pd.RangeIndex(8), None)
+
+    mod = tsa_model.TimeSeriesModel(np.arange(8.0))
+    assert mod.data.row_labels is None
+    with pytest.raises(KeyError, match="The `start` argument could not"):
+        tsa_model.get_prediction_index(key, None, 8, mod._index, data=mod.data)
+    with pytest.raises(KeyError, match="The `end` argument could not"):
+        tsa_model.get_prediction_index(0, key, 8, mod._index, data=mod.data)

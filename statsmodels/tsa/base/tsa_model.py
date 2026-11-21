@@ -355,7 +355,8 @@ def get_index_label_loc(key, index, row_labels):
             )
             if not in_quarter.any():
                 raise
-        if not isinstance(key, (int, np.integer)):
+        # Without row labels (e.g. numpy data) there is nothing else to search
+        if not isinstance(key, (int, np.integer)) and row_labels is not None:
             loc = row_labels.get_loc(key)
         else:
             raise
