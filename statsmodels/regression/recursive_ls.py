@@ -567,6 +567,9 @@ class RecursiveLSResults(MLEResults):
         # Handle `dynamic`
         if isinstance(dynamic, (bytes, str)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
+            # A key that covers several dates gives a slice of locations
+            if isinstance(dynamic, slice):
+                dynamic = dynamic.start
 
         if self.model._r_matrix is not None and (out_of_sample or dynamic):
             raise NotImplementedError("Cannot yet perform out-of-sample or"

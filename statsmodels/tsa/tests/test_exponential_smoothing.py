@@ -2798,3 +2798,19 @@ def test_forecast_date(oildata, steps, use_pandas):
         assert_array_equal(fcast.index, expected_index)
     else:
         assert isinstance(fcast, np.ndarray)
+
+
+def test_predict_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    y = pd.Series(10 + rng.standard_normal(500).cumsum(), index=index)
+    res = ETSModel(y).smooth([0.5, 10.0])
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    pred = res.predict(start=10, dynamic="2001-04")
+    expected = res.predict(start=10, dynamic=loc - 10)
+    assert_allclose(pred, expected, rtol=1e-12)
+    pd.testing.assert_index_equal(pred.index, index[10:])

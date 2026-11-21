@@ -742,3 +742,22 @@ def test_forecast_exog_formula():
     )
     with pytest.raises(ValueError, match="not of the appropriate shape"):
         res.forecast(3, exog=new[["x1", "x2"]])
+
+
+def test_get_prediction_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    x = rng.standard_normal(500)
+    y = pd.Series(1.0 + 0.5 * x + rng.standard_normal(500), index=index)
+    res = RecursiveLS(y, add_constant(x)).fit()
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    # start is the first observation, so the location is also the offset
+    pred = res.get_prediction(dynamic="2001-04")
+    expected = res.get_prediction(dynamic=loc)
+    assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, expected.var_pred_mean, rtol=1e-12)
+    pd.testing.assert_index_equal(pred.predicted_mean.index, index)

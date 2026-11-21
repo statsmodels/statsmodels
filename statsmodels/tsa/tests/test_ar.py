@@ -1754,3 +1754,19 @@ def test_autoreg_range_index_plot_predict(index, close_figures):
     assert len(ax.collections) == 0
     with pytest.raises(ValueError, match="in_sample is False but there are no"):
         res.plot_predict(in_sample=False)
+
+
+def test_predict_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    y = pd.Series(rng.standard_normal(500).cumsum(), index=index)
+    res = AutoReg(y, 1).fit()
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    pred = res.predict(start=10, dynamic="2001-04")
+    expected = res.predict(start=10, dynamic=loc - 10)
+    assert_allclose(pred, expected, rtol=1e-12)
+    pd.testing.assert_index_equal(pred.index, index[10:])
