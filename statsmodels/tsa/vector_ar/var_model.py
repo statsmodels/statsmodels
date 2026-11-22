@@ -875,7 +875,9 @@ class VAR(TimeSeriesModel):
         trend = string_like(
             trend, "trend", options=("c", "ct", "ctt", "n"), lower=False
         )
-        if method != "ols":
+        if method is not None and not (
+            isinstance(method, str) and method.lower() == "ols"
+        ):
             warnings.warn(
                 f'method={method!r} is ignored and the model is estimated by '
                 'OLS. Values other than "ols" are deprecated and will raise a '

@@ -2570,9 +2570,10 @@ def test_seasonal_dummies_negative_raises(centered):
     assert_allclose(actual, expected, rtol=1e-14)
 
 
-@pytest.mark.parametrize("method", ["mle", "OLS", None])
+@pytest.mark.parametrize("method", ["mle", "gls", 1])
 def test_var_fit_method_deprecated(method):
-    # Only "ols" is implemented, other values were ignored
+    # Only "ols" is implemented, other values were ignored; "ols" in any
+    # case and None (the default) do not warn
     data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
     y = np.diff(np.log(data.to_numpy()), axis=0)
     with pytest.warns(FutureWarning, match="is ignored and the model is estimated"):
@@ -2582,7 +2583,9 @@ def test_var_fit_method_deprecated(method):
     assert_allclose(res.params, ols, rtol=1e-10)
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        assert_allclose(VAR(y).fit(2, method="ols").params, ols, rtol=1e-10)
+        for quiet in ("ols", "OLS", None):
+            res = VAR(y).fit(2, method=quiet)
+            assert_allclose(res.params, ols, rtol=1e-10)
 
 
 def _fevd_written_out(res, periods):
