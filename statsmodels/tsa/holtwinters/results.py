@@ -239,20 +239,16 @@ class HoltWintersResults(Results):
             past the sample if `endog` is a pandas object, otherwise an
             ndarray.
         """
-        try:
-            freq = getattr(self.model._index, "freq", 1)
-            if not isinstance(freq, int) and isinstance(
-                self.model._index, (pd.DatetimeIndex, pd.PeriodIndex)
-            ):
-                start = self.model._index[-1] + freq
-                end = self.model._index[-1] + steps * freq
-            else:
-                start = self.model._index.shape[0]
-                end = start + steps - 1
-            return self.model.predict(self.params, start=start, end=end)
-        except AttributeError:
-            # May occur when the index does not have a freq
-            return self.model._predict(h=steps, **self.params).fcastvalues
+        freq = getattr(self.model._index, "freq", 1)
+        if not isinstance(freq, int) and isinstance(
+            self.model._index, (pd.DatetimeIndex, pd.PeriodIndex)
+        ):
+            start = self.model._index[-1] + freq
+            end = self.model._index[-1] + steps * freq
+        else:
+            start = self.model._index.shape[0]
+            end = start + steps - 1
+        return self.model.predict(self.params, start=start, end=end)
 
     def summary(self):
         """
@@ -557,11 +553,10 @@ class HoltWintersResults(Results):
         elif anchor == "start":
             start_idx = 0
         else:
+            # A negative location has been converted by _get_index_loc
             start_idx, _, _ = self.model._get_index_loc(anchor)
             if isinstance(start_idx, slice):
                 start_idx = start_idx.start
-        if start_idx < 0:
-            start_idx += self.model.nobs
         if start_idx > self.model.nobs:
             raise ValueError("Cannot anchor simulation outside of the sample.")
 
