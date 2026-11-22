@@ -100,6 +100,14 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     regression effects) and the variance of the error term may be switching
     across regimes.
 
+    .. versionchanged:: 0.15.1
+
+       With a trend, the coefficients of a pandas `exog` are named after its
+       columns, and the time trend is named "trend" (the columns of an
+       ndarray `exog` are "x1", "x2", ... after it). Before, a pandas
+       `exog` lost its column names, and the time trend was named like an
+       exog column, such as "x1".
+
     The `trend` is accommodated by prepending columns to the `exog` array. Thus
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
