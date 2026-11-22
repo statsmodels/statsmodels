@@ -2572,7 +2572,7 @@ def test_get_prediction_simulated_one_step(austourists, error, seasonal, start, 
         seasonal=seasonal,
         seasonal_periods=4 if seasonal else None,
     )
-    res = model.smooth(model.start_params)
+    res = model.smooth(model.start_params, param_index="integer")
     reps = 50
     pred = res.get_prediction(
         start=start,
