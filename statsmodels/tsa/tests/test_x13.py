@@ -900,3 +900,25 @@ def test_output_file_removed_by_other_process(gdp_res, tmp_path, monkeypatch):
 
     assert list(tmp_path.iterdir()) == []
     assert_allclose(res.seasadj.to_numpy(), gdp_res.seasadj.to_numpy(), rtol=1e-12)
+
+
+@pytest.mark.parametrize("func", [x13_arima_analysis, x13_arima_select_order])
+def test_print_stdout(func, capsys, tmp_path):
+    res = func(quarterly_data.realgdp, print_stdout=True, tempdir=str(tmp_path))
+
+    printed = capsys.readouterr().out
+    # X-13 names itself and the spec file that it reads, which is in tempdir
+    assert "X-13ARIMA-SEATS Seasonal Adjustment Program" in printed
+    assert f"Reading input spec file from {tmp_path}" in printed
+    # what is printed is the stdout that is returned
+    assert printed == res.stdout.decode() + "\n"
+
+
+def test_subprocess_pipe_closed():
+    # A pipe that is not closed gives a ResourceWarning when it is collected
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always", ResourceWarning)
+        x13_arima_analysis(quarterly_data.realgdp)
+
+    leaked = [str(w.message) for w in record if w.category is ResourceWarning]
+    assert leaked == []
