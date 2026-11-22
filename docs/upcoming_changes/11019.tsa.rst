@@ -1,0 +1,2 @@
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` with ``maxdiff=None`` and no ``diff`` raise a ``ValueError``
+  that asks for ``diff``; they raised a ``TypeError``. :pr:`11019`
