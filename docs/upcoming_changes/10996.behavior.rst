@@ -1,0 +1,5 @@
+- ``predict`` and ``fittedvalues`` of Markov switching models of data with a
+  ``RangeIndex`` that does not start at 0, which includes every
+  :class:`~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression` of a Series with the default index, left out the first
+  predictions, and ``resid`` raised. The predictions are complete.
+  :pr:`10996`
