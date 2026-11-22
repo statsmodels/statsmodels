@@ -225,3 +225,32 @@ def test_output_file_not_deleted_warns(stub_run_spec, tmp_path, monkeypatch):
         )
 
     assert [path.suffix for path in tmp_path.iterdir()] == [".d11"]
+
+
+@pytest.mark.parametrize(
+    "exog, names, data",
+    [
+        (
+            pd.DataFrame({"name": [0.0, 1.0, 2.0], "x": [10.0, 11.0, 12.0]}),
+            "name x",
+            "0.0 10.0 1.0 11.0 2.0 12.0",
+        ),
+        (
+            pd.DataFrame({"x": [10.0, 11.0, 12.0], "name": [0.0, 1.0, 2.0]}),
+            "x name",
+            "10.0 0.0 11.0 1.0 12.0 2.0",
+        ),
+        (pd.Series([0.0, 1.0, 2.0], name="name"), "name", "0.0 1.0 2.0"),
+        (pd.Series([0.0, 1.0, 2.0], name="shock"), "shock", "0.0 1.0 2.0"),
+    ],
+    ids=["frame_name_first", "frame_name_last", "series_name", "series"],
+)
+def test_spec_exog_column_called_name(no_x12, exog, names, data):
+    spec = x13.x13_arima_analysis(_monthly_endog(), exog=exog, speconly=True)
+
+    # the user regressors are named by the columns, and their values are
+    # given observation by observation
+    tokens = spec.split()
+    start = tokens.index("regression{")
+    expected = f"regression{{ user = ({names}) data = ({data}) }}"
+    assert tokens[start : tokens.index("}", start) + 1] == expected.split()

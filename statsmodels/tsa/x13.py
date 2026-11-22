@@ -171,10 +171,11 @@ def _make_automdl_options(maxorder, maxdiff, diff):
 
 
 def _make_var_names(exog):
-    if hasattr(exog, "name"):
-        var_names = [exog.name]
-    elif hasattr(exog, "columns"):
+    # A DataFrame with a column called "name" also has a name attribute
+    if hasattr(exog, "columns"):
         var_names = exog.columns
+    elif hasattr(exog, "name"):
+        var_names = [exog.name]
     else:
         raise ValueError("exog is not a Series or DataFrame or is unnamed.")
     try:
@@ -466,6 +467,12 @@ def x13_arima_analysis(
         ``diff`` is ignored.
     exog : Series or DataFrame, optional
         Exogenous variables.
+
+        .. versionchanged:: 0.15.1
+
+           The columns of a DataFrame that has a column called "name" are
+           used as the names of the variables. They used to be replaced by
+           x1, x2, ...
     log : bool or None, optional
         If None, it is automatically determined whether to log the series or
         not. If False, logs are not taken. If True, logs are taken.
@@ -768,6 +775,12 @@ def x13_arima_select_order(
         ``diff`` is ignored.
     exog : Series or DataFrame, optional
         Exogenous variables.
+
+        .. versionchanged:: 0.15.1
+
+           The columns of a DataFrame that has a column called "name" are
+           used as the names of the variables. They used to be replaced by
+           x1, x2, ...
     log : bool or None, optional
         If None, it is automatically determined whether to log the series or
         not. If False, logs are not taken. If True, logs are taken.
