@@ -1637,6 +1637,12 @@ class MLEModel(tsbase.TimeSeriesModel):
         Both args and kwargs are necessary because the optimizer from
         `fit` must call this function and only supports passing arguments via
         args (for example `scipy.optimize.fmin_l_bfgs`).
+
+        .. versionchanged:: 0.15.1
+
+           With the "harvey" method and finite differences,
+           ``approx_centered=True`` was ignored and forward differences were
+           used.
         """
         (
             transformed,
@@ -1677,7 +1683,10 @@ class MLEModel(tsbase.TimeSeriesModel):
         if method == "harvey":
             kwargs["includes_fixed"] = True
             score = self._score_harvey(
-                params, approx_complex_step=approx_complex_step, **kwargs
+                params,
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered,
+                **kwargs,
             )
         elif method == "approx" and approx_complex_step:
             kwargs["includes_fixed"] = True
@@ -1761,6 +1770,10 @@ class MLEModel(tsbase.TimeSeriesModel):
            parameters, and the default complex step differentiation was applied
            through `transform_params`, which gave wrong values for models whose
            transformation is not complex differentiable, such as VARMAX.
+
+           With the "harvey" method and finite differences,
+           ``approx_centered=True`` was ignored and forward differences were
+           used.
         """
         method = string_like(method, "method", options=("approx", "harvey"))
 
@@ -1810,7 +1823,10 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         if method == "harvey":
             score = self._score_obs_harvey(
-                params, approx_complex_step=approx_complex_step, **kwargs
+                params,
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered,
+                **kwargs,
             )
         elif method == "approx" and approx_complex_step:
             # the default epsilon can be too small
