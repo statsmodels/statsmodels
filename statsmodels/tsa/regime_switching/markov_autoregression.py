@@ -69,6 +69,13 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         Whether or not there is regime-specific heteroskedasticity, i.e.
         whether or not the error term has a switching variance. Default is
         False.
+
+        .. versionchanged:: 0.15.1
+
+           With ``order`` of 2 or more, the error variance is that of the
+           current regime. Before, the variance of the regime ``order - 1``
+           periods earlier was used, so the log-likelihood, the estimates
+           and the regime probabilities were wrong.
     dates : array_like, optional
         An array-like object of datetime objects. If a pandas object is given
         for endog or exog, it is assumed to have a DateIndex.
@@ -252,7 +259,9 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         # Compute the conditional likelihoods
         variance = params[self.parameters["variance"]].squeeze()
         if self.switching_variance:
-            variance = np.reshape(variance, (self.k_regimes, 1, 1))
+            # The variance depends on the current regime S_t, the first axis
+            variance = np.reshape(
+                variance, (self.k_regimes,) + (1,) * (self.order + 1))
 
         conditional_loglikelihoods = (
             -0.5 * resid**2 / variance - 0.5 * np.log(2 * np.pi * variance))

@@ -1418,3 +1418,102 @@ def test_exog_tvtp_forms(form):
     params = np.r_[2.0, -1.0, 0.5, 0.8, 0.5, 2.0, 1.1, 0.4, -0.2]
 
     assert_allclose(mod.loglikeobs(params), ref.loglikeobs(params), rtol=1e-12)
+
+
+def msar_reference_loglikeobs(endog, mu, phi, sigma2, transition, order):
+    """
+    Hamilton (1989) filter written out over the joint state
+    (S_t, ..., S_{t-order}) of the Markov switching AR model
+
+        y_t - mu[S_t] = sum_j phi[S_t, j - 1] (y_{t-j} - mu[S_{t-j}]) + e_t,
+        e_t ~ N(0, sigma2[S_t]),
+
+    with transition[i, j] = Pr[S_t = i | S_{t-1} = j]. The first `order`
+    observations are presample; the regimes before the first observation
+    have the stationary distribution.
+    """
+    k_regimes = transition.shape[0]
+    nobs = endog.shape[0]
+    states = list(itertools.product(range(k_regimes), repeat=order + 1))
+    # Stationary distribution: transition @ pi = pi with sum(pi) = 1
+    lhs = np.vstack([np.eye(k_regimes) - transition, np.ones((1, k_regimes))])
+    pi = np.linalg.lstsq(lhs, np.r_[np.zeros(k_regimes), 1.0], rcond=None)[0]
+    log_filtered = {
+        s: np.log(pi[s[-1]])
+        + sum(np.log(transition[s[j], s[j + 1]]) for j in range(order))
+        for s in states
+    }
+    llf_obs = np.empty(nobs - order)
+    for t in range(order, nobs):
+        log_joint = {}
+        for s in states:
+            # log Pr[S_t, ..., S_{t-order} | Y_{t-1}]
+            log_predicted = np.log(transition[s[0], s[1]]) + logsumexp(
+                [log_filtered[s[1:] + (r,)] for r in range(k_regimes)]
+            )
+            mean = mu[s[0]] + sum(
+                phi[s[0], j - 1] * (endog[t - j] - mu[s[j]])
+                for j in range(1, order + 1)
+            )
+            variance = sigma2[s[0]]
+            log_joint[s] = (
+                log_predicted
+                - 0.5 * (endog[t] - mean) ** 2 / variance
+                - 0.5 * np.log(2 * np.pi * variance)
+            )
+        llf_obs[t - order] = logsumexp(list(log_joint.values()))
+        log_filtered = {s: v - llf_obs[t - order] for s, v in log_joint.items()}
+    return llf_obs
+
+
+def heteroskedastic_ar_data():
+    # The second half of the sample has three times the standard deviation
+    rng = np.random.default_rng(0)
+    return rng.standard_normal(60) * np.repeat([1.0, 3.0], 30)
+
+
+@pytest.mark.parametrize("order", [1, 2, 3])
+def test_switching_variance_against_hamilton_filter(order):
+    # The error variance is that of the current regime S_t for every order
+    endog = heteroskedastic_ar_data()
+    transition = np.array([[0.9, 0.2], [0.1, 0.8]])
+    mu = np.array([0.3, -0.5])
+    sigma2 = np.array([1.0, 9.0])
+    phi = np.array([[0.5, 0.2, -0.1], [-0.3, 0.1, 0.05]])[:, :order]
+    mod = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=order, switching_variance=True
+    )
+    # p[0->0], p[1->0], const[0], const[1], sigma2[0], sigma2[1],
+    # ar.L1[0], ar.L1[1], ..., ar.Lp[0], ar.Lp[1]
+    params = np.r_[transition[0], mu, sigma2, phi.T.ravel()]
+    llf_obs = msar_reference_loglikeobs(endog, mu, phi, sigma2, transition, order)
+    assert_allclose(mod.loglikeobs(params), llf_obs, rtol=1e-10)
+    assert_allclose(mod.loglike(params), llf_obs.sum(), rtol=1e-10)
+
+
+@pytest.mark.parametrize("trend", ["n", "c"])
+@pytest.mark.parametrize("switching_variance", [False, True])
+def test_ar2_with_zero_second_lag_equals_ar1(trend, switching_variance):
+    # An AR(2) with phi_2 = 0 in both regimes is the AR(1) on endog[1:]: both
+    # explain endog[2:] by its first lag, and both start from the
+    # stationary distribution of the regimes
+    endog = heteroskedastic_ar_data()
+    var = [1.0, 9.0] if switching_variance else [1.0]
+    const = [0.3, -0.5] if trend == "c" else []
+    kwargs = {"trend": trend, "switching_variance": switching_variance}
+    ar1 = markov_autoregression.MarkovAutoregression(
+        endog[1:], k_regimes=2, order=1, **kwargs
+    )
+    ar2 = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=2, **kwargs
+    )
+    params1 = np.r_[0.9, 0.2, const, var, 0.5, -0.3]
+    params2 = np.r_[params1, 0.0, 0.0]
+    assert_allclose(ar2.loglikeobs(params2), ar1.loglikeobs(params1), rtol=1e-10)
+    res1 = ar1.smooth(params1, cov_type="none")
+    res2 = ar2.smooth(params2, cov_type="none")
+    assert_allclose(
+        res2.smoothed_marginal_probabilities,
+        res1.smoothed_marginal_probabilities,
+        rtol=1e-8,
+    )
