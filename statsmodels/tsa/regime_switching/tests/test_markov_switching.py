@@ -844,3 +844,61 @@ def test_model_k_params_is_python_int():
     # 2 transition probabilities, 2 switching constants and 1 variance
     assert mod.k_params == 5
     assert type(mod.k_params) is int
+
+
+def two_regime_mean_data():
+    # Four blocks of ten observations that alternate between two means
+    rng = np.random.default_rng(20261122)
+    return rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+
+
+@pytest.mark.parametrize("start, end", [(0, 39), (0, 9), (1, 39), (10, 20), (7, 7)])
+@pytest.mark.parametrize("conditional", [True, 1])
+def test_predict_conditional_start_end_regression(start, end, conditional):
+    # Conditional on S_t = i, the prediction is the regime mean mu_i
+    mod = markov_regression.MarkovRegression(two_regime_mean_data(), k_regimes=2)
+    mu = np.array([0.2, 2.8])
+    params = np.r_[0.9, 0.2, mu, 1.0]
+    predict = mod.predict(params, start=start, end=end, conditional=conditional)
+    expected = np.repeat(mu[:, None], end - start + 1, axis=1)
+    assert_allclose(predict, expected, rtol=1e-13)
+
+
+def test_predict_conditional_date_keys():
+    # Date keys select the same periods as their integer locations, 10 to 17
+    index = pd.date_range("2000-01-01", periods=40, freq="MS")
+    endog = pd.Series(two_regime_mean_data(), index=index)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    mu = np.array([0.2, 2.8])
+    params = np.r_[0.9, 0.2, mu, 1.0]
+    predict = mod.predict(
+        params, start="2000-11-01", end="2001-06-01", conditional=True
+    )
+    assert_allclose(predict, np.repeat(mu[:, None], 8, axis=1), rtol=1e-13)
+
+
+@pytest.mark.parametrize("start, end", [(0, 38), (0, 9), (1, 38), (10, 20), (7, 7)])
+def test_predict_conditional_start_end_autoregression(start, end):
+    endog = two_regime_mean_data()
+    mod = markov_autoregression.MarkovAutoregression(endog, k_regimes=2, order=1)
+    mu = np.array([0.2, 2.8])
+    phi = np.array([0.5, -0.2])
+    params = np.r_[0.9, 0.2, mu, 1.0, phi]
+
+    # Conditional on (S_t, S_{t-1}) = (i, j): mu_i + phi_i (y_{t-1} - mu_j).
+    # The first observation is presample, so prediction n is for endog[n + 1]
+    # and its lag is endog[n]
+    lagged = endog[start : end + 1]
+    expected = mu[:, None, None] + phi[:, None, None] * (
+        lagged - mu[None, :, None]
+    )
+    predict = mod.predict(params, start=start, end=end, conditional=2)
+    assert_allclose(predict, expected, rtol=1e-13)
+
+    # With fewer conditioning regimes, the selected periods of the
+    # predictions for the full sample
+    for conditional in [False, 1]:
+        full = mod.predict(params, conditional=conditional)
+        assert full.shape[-1] == mod.nobs
+        predict = mod.predict(params, start=start, end=end, conditional=conditional)
+        assert_allclose(predict, full[..., start : end + 1], rtol=1e-13)
