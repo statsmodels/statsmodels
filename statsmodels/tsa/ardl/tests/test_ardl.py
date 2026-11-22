@@ -1,6 +1,7 @@
 from statsmodels.compat.numpy import NP_LT_1_24
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
+from itertools import combinations
 from typing import NamedTuple
 
 import numpy as np
@@ -2227,3 +2228,64 @@ def test_uecm_excluded_exog_by_hand(use_pandas):
     assert_allclose(res.ci_resids, ci_resids, rtol=1e-8)
     if use_pandas:
         assert list(res.ci_params.index) == ["const", "y", "a", "c"]
+
+
+def _bic_by_hand(y, reg):
+    # BIC as ARDLResults computes it, with the variance counted as a parameter
+    nobs, k = reg.shape
+    resid = y - reg @ np.linalg.lstsq(reg, y, rcond=None)[0]
+    ssr = resid @ resid
+    llf = -nobs / 2 * (np.log(2 * np.pi * ssr / nobs) + 1)
+    return -2 * llf + np.log(nobs) * (k + 1)
+
+
+@pytest.mark.parametrize("singular", [False, True])
+def test_ardl_select_order_glob_all_subsets(singular):
+    # glob=True never fitted the model with all candidate lags, which is the
+    # true model here
+    rng = np.random.default_rng(20261125)
+    nobs = 300
+    x = rng.standard_normal(nobs)
+    e = rng.standard_normal(nobs)
+    y = np.zeros(nobs)
+    for t in range(2, nobs):
+        y[t] = 0.5 * y[t - 1] + 0.3 * y[t - 2] + x[t] + 0.8 * x[t - 1] + e[t]
+    # A second constant makes the regressors singular, so that the models
+    # are fitted one by one
+    fixed = np.ones((nobs, 1)) if singular else None
+    res = ardl_select_order(y, 2, x[:, None], 1, "c", fixed=fixed, glob=True)
+
+    # All 2**4 subsets of the candidate lags, on the sample after 2 lags
+    t = np.arange(2, nobs)
+    always = [np.ones(nobs - 2)] * (2 if singular else 1)
+    cands = {
+        ("y", 1): y[t - 1],
+        ("y", 2): y[t - 2],
+        ("x", 0): x[t],
+        ("x", 1): x[t - 1],
+    }
+    bics = {}
+    for size in range(len(cands) + 1):
+        for subset in combinations(cands, size):
+            reg = np.column_stack(always + [cands[c] for c in subset])
+            bics[subset] = _bic_by_hand(y[t], reg)
+    assert len(res.bic) == 16
+    assert_allclose(res.bic.index, np.sort(list(bics.values())), rtol=1e-8)
+    best = min(bics, key=bics.get)
+    assert best == tuple(cands)
+    assert res.model.ar_lags == [1, 2]
+    assert res.model.dl_lags == {0: [0, 1]}
+
+
+@pytest.mark.parametrize("singular", [False, True])
+def test_ardl_select_order_glob_no_candidates(singular):
+    # With no candidate lags, glob=True fitted no model and raised
+    # UnboundLocalError
+    rng = np.random.default_rng(20261126)
+    y = 1.0 + rng.standard_normal(80)
+    fixed = np.ones((80, 1)) if singular else None
+    res = ardl_select_order(y, 0, None, 0, "c", fixed=fixed, glob=True)
+    reg = np.ones((80, 2 if singular else 1))
+    assert_allclose(res.bic.index, [_bic_by_hand(y, reg)], rtol=1e-8)
+    assert res.model.ar_lags is None
+    assert res.model.dl_lags == {}
