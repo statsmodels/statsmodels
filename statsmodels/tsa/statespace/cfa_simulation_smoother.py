@@ -130,6 +130,19 @@ class CFASimulationSmoother:
             return self._simulation_smoothers[prefix]
         return None
 
+    def _posterior_simulation_smoother(self):
+        # The posterior moments are computed by `simulate`; before it is
+        # called, compute them for the current model (without simulating)
+        sim = self._simulation_smoother
+        if sim is None:
+            prefix, _, _ = self.model._initialize_representation()
+            self.model._initialize_state(prefix=prefix)
+            cls = self.prefix_simulation_smoother_map[prefix]
+            sim = cls(self.model._statespaces[prefix])
+            self._simulation_smoothers[prefix] = sim
+            sim.update_sparse_posterior_moments()
+        return sim
+
     @property
     def posterior_mean(self):
         r"""
@@ -140,21 +153,26 @@ class CFASimulationSmoother:
             \hat \alpha_t = E[\alpha_t \mid Y^n ]
 
         This posterior mean is identical to the `smoothed_state` computed by
-        the Kalman smoother.
+        the Kalman smoother. If `simulate` has not been called, the posterior
+        moments are computed for the current model.
         """
         if self._posterior_mean is None:
             self._posterior_mean = np.array(
-                self._simulation_smoother.posterior_mean, copy=True)
+                self._posterior_simulation_smoother().posterior_mean, copy=True)
         return self._posterior_mean
 
     @property
     def posterior_cov_inv_chol_sparse(self):
         r"""
         Sparse Cholesky factor of inverse posterior covariance matrix
+
+        If `simulate` has not been called, the posterior moments are computed
+        for the current model.
         """
         if self._posterior_cov_inv_chol is None:
             self._posterior_cov_inv_chol = np.array(
-                self._simulation_smoother.posterior_cov_inv_chol, copy=True)
+                self._posterior_simulation_smoother().posterior_cov_inv_chol,
+                copy=True)
         return self._posterior_cov_inv_chol
 
     @property
