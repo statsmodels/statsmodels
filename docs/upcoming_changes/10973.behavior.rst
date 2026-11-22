@@ -1,0 +1,3 @@
+- A :class:`~statsmodels.tsa.vector_ar.var_model.VAR` with ``missing="drop"`` counted the observations before
+  dropping, so ``nobs`` was too large and ``fit`` raised with exog.
+  :pr:`10973`
