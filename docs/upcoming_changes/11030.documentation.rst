@@ -1,0 +1,4 @@
+- The notes of ``GLM.estimate_scale`` called the default scale of the
+  families other than Binomial, Poisson and NegativeBinomial Pearson's
+  chi-square estimate. It is Pearson's chi-square divided by ``df_resid``, as
+  in the ``fit`` docstring and in the code. :issue:`6673`, :pr:`11030`
