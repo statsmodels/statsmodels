@@ -5005,7 +5005,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             # `exog` arguments are meant to apply to the `comparison` dataset
             # or to this extension)
             if comparison_dataset and (exog is not None or len(kwargs) > 0):
-                if comparison is updated:
+                # `comparison` is the updated dataset if `self` is previous
+                if previous is self:
                     raise ValueError(
                         "If providing an updated dataset as the"
                         " `comparison` with a time-varying model,"
