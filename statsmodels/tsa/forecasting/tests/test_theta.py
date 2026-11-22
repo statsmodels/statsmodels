@@ -464,6 +464,34 @@ def test_forecast_trend_closed_form(alpha):
     np.testing.assert_allclose(res.forecast(7), expected_forecast, rtol=1e-12)
 
 
+@pytest.mark.parametrize("method", ["additive", "multiplicative", None])
+def test_sigma2_deseasonalized(method):
+    # Without MLE, sigma2 is estimated from an IMA(1,1) with drift fit to the
+    # deseasonalized data, which the forecasts and the MLE estimates use.
+    # method=None does not deseasonalize. The data are an IMA(1,1) with drift
+    # plus a seasonal pattern
+    rng = np.random.default_rng(20261120)
+    e = rng.standard_normal(121)
+    t = np.arange(120)
+    y = 50 + np.cumsum(0.3 + e[1:] - 0.5 * e[:-1])
+    y = y + 5 * np.sin(2 * np.pi * t / 12)
+    if method is None:
+        model = ThetaModel(y, deseasonalize=False)
+        deseasonalized = y
+    else:
+        model = ThetaModel(y, period=12, use_test=False, method=method)
+        seasonal = seasonal_decompose(y, model=method, period=12).seasonal
+        if method == "multiplicative":
+            deseasonalized = y / seasonal
+        else:
+            deseasonalized = y - seasonal
+    res = model.fit(use_mle=False)
+    # The same estimator on the same data, so only rounding can differ
+    ima = SARIMAX(deseasonalized, order=(0, 1, 1), trend="c")
+    expected = ima.fit(disp=False).params[-1]
+    np.testing.assert_allclose(res.sigma2, expected, rtol=1e-8)
+
+
 @pytest.mark.parametrize("use_mle", [True, False])
 @pytest.mark.parametrize("deseasonalize", [True, False])
 def test_prediction_intervals_ima_variance(use_mle, deseasonalize):
