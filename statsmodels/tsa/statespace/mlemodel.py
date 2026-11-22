@@ -1994,6 +1994,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         Hessian matrix computed by second-order complex-step differentiation
         on the `loglike` function
         """
+        params = np.array(params, ndmin=1)
         # the default epsilon can be too small
         epsilon = _get_epsilon(params, 3.0, None, len(params))
         kwargs["transformed"] = True
@@ -2062,6 +2063,7 @@ class MLEModel(tsbase.TimeSeriesModel):
         guaranteed that the `transform_params` method is a real function (e.g.
         if Cholesky decomposition is used).
         """
+        unconstrained = np.array(unconstrained, ndmin=1)
         return approx_fprime(
             unconstrained, self.transform_params, centered=approx_centered
         )
