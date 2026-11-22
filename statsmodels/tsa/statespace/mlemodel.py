@@ -1406,6 +1406,16 @@ class MLEModel(tsbase.TimeSeriesModel):
         because it uses the analytic formula for the information matrix, with
         numerically computed elements of the gradient.
 
+        If `transformed` is False, the information matrix is with respect to
+        the untransformed parameters, and if parameters are fixed and
+        `includes_fixed` is False, it is with respect to the free parameters.
+
+        .. versionchanged:: 0.15.1
+
+           With ``transformed=False``, the parameters were transformed twice
+           in the numerical derivatives, which gave wrong values, and with
+           fixed parameters it raised unless ``includes_fixed`` was True.
+
         References
         ----------
         .. [Harvey1989] Harvey, Andrew C. 1989. Forecasting, Structural Time Series Models
@@ -1427,12 +1437,14 @@ class MLEModel(tsbase.TimeSeriesModel):
                 " with untransformed parameters."
             )
 
-        # Get values at the params themselves
-        params = self.handle_params(
+        # Get values at the params themselves. The derivatives below are with
+        # respect to `params` as given, untransformed or without the fixed
+        # parameters
+        constrained = self.handle_params(
             params, transformed=transformed, includes_fixed=includes_fixed
         )
         self.update(
-            params,
+            constrained,
             transformed=True,
             includes_fixed=True,
             complex_step=approx_complex_step,

@@ -3368,3 +3368,72 @@ def test_positional_flag_also_by_keyword_raises(func):
         match = f"^got multiple values for keyword argument '{name}'$"
     with pytest.raises(TypeError, match=match):
         getattr(mod, func)([0.5, 4.0], value, **{name: value})
+
+
+def _oim_model(order):
+    # AR(1) with a fixed AR coefficient, and AR(2), whose transformation of the
+    # AR coefficients is not diagonal, with a fixed intercept
+    infl = macrodata.load_pandas().data["infl"].to_numpy()
+    mod = sarimax.SARIMAX(infl, order=order, trend="c")
+    if order == (1, 0, 0):
+        params, fixed = np.array([1.0, 0.5, 4.0]), {"ar.L1": 0.5}
+    else:
+        params, fixed = np.array([1.0, 0.5, 0.2, 4.0]), {"intercept": 1.0}
+    free = [i for i, name in enumerate(mod.param_names) if name not in fixed]
+    return mod, params, fixed, free
+
+
+def _assert_matrix_close(actual, desired, rtol):
+    # The off-diagonal elements for the intercept and the variance are zero in
+    # theory and of the order of the approximation error in the
+    # approximations, so atol is relative to the largest element
+    assert_allclose(actual, desired, rtol=rtol, atol=rtol * np.abs(desired).max())
+
+
+@pytest.mark.parametrize("order", [(1, 0, 0), (2, 0, 0)])
+@pytest.mark.parametrize("approx_centered", [False, True])
+def test_observed_information_matrix_untransformed(order, approx_centered):
+    # With respect to the untransformed parameters u, the information matrix
+    # is J' I(p) J, where I(p) is the information matrix at p = T(u) and J is
+    # the Jacobian of T (both accurate to about 1e-11 here). The finite
+    # differences of the Harvey partial derivatives have a relative error of
+    # 3e-8 (forward) and 3e-11 (centered).
+    mod, params, _, _ = _oim_model(order)
+    unconstrained = mod.untransform_params(params)
+    jacobian = approx_fprime(unconstrained, mod.transform_params, centered=True)
+    desired = jacobian.T @ mod.observed_information_matrix(params) @ jacobian
+    actual = mod.observed_information_matrix(
+        unconstrained, transformed=False, approx_centered=approx_centered
+    )
+    _assert_matrix_close(actual, desired, rtol=1e-5 if approx_centered else 1e-4)
+
+
+@pytest.mark.parametrize("order", [(1, 0, 0), (2, 0, 0)])
+@pytest.mark.parametrize("transformed", [True, False])
+def test_observed_information_matrix_fixed_params(order, transformed):
+    # With fixed parameters, the information matrix of the free parameters is
+    # that of the model without fixed parameters, at the same values,
+    # restricted to the free parameters
+    mod, params, fixed, free = _oim_model(order)
+    unconstrained = mod.untransform_params(params)
+    desired = mod.observed_information_matrix(params)
+    if not transformed:
+        jacobian = approx_fprime(unconstrained, mod.transform_params, centered=True)
+        desired = jacobian.T @ desired @ jacobian
+    desired = desired[np.ix_(free, free)]
+    with mod.fix_params(fixed):
+        actual = mod.observed_information_matrix(
+            (params if transformed else unconstrained)[free],
+            transformed=transformed,
+            approx_centered=not transformed,
+        )
+    _assert_matrix_close(actual, desired, rtol=1e-8 if transformed else 1e-5)
+
+
+@pytest.mark.parametrize("order", [(1, 0, 0), (2, 0, 0)])
+def test_hessian_oim_fixed_params(order):
+    mod, params, fixed, free = _oim_model(order)
+    desired = -mod.observed_information_matrix(params)[np.ix_(free, free)]
+    with mod.fix_params(fixed):
+        actual = mod.hessian(params[free], method="oim")
+    _assert_matrix_close(actual, desired, rtol=1e-8)
