@@ -1090,9 +1090,11 @@ def test_against_hamilton_filter(
     llf_obs, cond_means = hamilton_ar_filter(
         endog, coeffs @ design, ar_coeffs, variances, TRANSITION, order
     )
+    predicted = mod.predict_conditional(params)
+    assert predicted.shape == (2,) * (order + 1) + (nobs - order,)
     # The conditional means are sums of terms of order one that can nearly
     # cancel, so rtol allows for another summation order
-    assert_allclose(mod.predict_conditional(params), cond_means, rtol=1e-10)
+    assert_allclose(predicted, cond_means, rtol=1e-10)
     assert_allclose(mod.loglikeobs(params), llf_obs, rtol=1e-10)
     assert_allclose(mod.loglike(params), llf_obs.sum(), rtol=1e-10)
 

@@ -3854,7 +3854,9 @@ def test_trend_against_hamilton_filter(trend, switching_trend, switching_varianc
     )
     means = coeffs @ design
 
-    assert_allclose(mod.predict_conditional(params)[:, 0, :], means, rtol=1e-12)
+    predicted = mod.predict_conditional(params)
+    assert predicted.shape == (2, 1, nobs)
+    assert_allclose(predicted[:, 0, :], means, rtol=1e-12)
     desired = hamilton_loglikeobs(endog, means, variances, TRANSITION)
     assert_allclose(mod.loglikeobs(params), desired, rtol=1e-10)
     assert_allclose(mod.loglike(params), desired.sum(), rtol=1e-10)
