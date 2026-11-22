@@ -13,6 +13,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 import contextlib
+import itertools
 from pathlib import Path
 import warnings
 
@@ -2296,3 +2297,180 @@ def test_smoothed_decomposition_signal_state_index_partition():
     assert_allclose(
         signal, (res.design[..., 0] @ res.smoothed_state).T, rtol=1e-10, atol=1e-12
     )
+
+
+# Results attributes of each smoother output
+SUBSET_ATTRIBUTES = {
+    kalman_smoother.SMOOTHER_STATE: ["smoothed_state", "scaled_smoothed_estimator"],
+    kalman_smoother.SMOOTHER_STATE_COV: [
+        "smoothed_state_cov",
+        "scaled_smoothed_estimator_cov",
+    ],
+    kalman_smoother.SMOOTHER_STATE_AUTOCOV: ["smoothed_state_autocov"],
+    kalman_smoother.SMOOTHER_DISTURBANCE: [
+        "scaled_smoothed_estimator",
+        "smoothing_error",
+        "smoothed_measurement_disturbance",
+        "smoothed_state_disturbance",
+    ],
+    kalman_smoother.SMOOTHER_DISTURBANCE_COV: [
+        "scaled_smoothed_estimator_cov",
+        "smoothed_measurement_disturbance_cov",
+        "smoothed_state_disturbance_cov",
+    ],
+}
+SUBSET_FLAGS = {
+    "smoother_state": kalman_smoother.SMOOTHER_STATE,
+    "smoother_state_cov": kalman_smoother.SMOOTHER_STATE_COV,
+    "smoother_state_autocov": kalman_smoother.SMOOTHER_STATE_AUTOCOV,
+    "smoother_disturbance": kalman_smoother.SMOOTHER_DISTURBANCE,
+    "smoother_disturbance_cov": kalman_smoother.SMOOTHER_DISTURBANCE_COV,
+}
+# All subsets, including no output (0)
+SUBSET_MASKS = [
+    sum(subset)
+    for r in range(6)
+    for subset in itertools.combinations(SUBSET_FLAGS.values(), r)
+]
+
+
+def _output_subset_model(smooth_method, diffuse):
+    # Bivariate model with intercepts, correlated states, a diagonal
+    # observation covariance and missing data
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal((40, 2)).cumsum(0) * 0.1 + rng.standard_normal((40, 2))
+    endog[10, 0] = np.nan
+    endog[20] = np.nan
+    mod = mlemodel.MLEModel(endog, k_states=2, k_posdef=2)
+    mod["design"] = np.array([[1.0, 0.0], [0.5, 1.0]])
+    mod["obs_intercept"] = np.array([0.1, -0.2])
+    mod["obs_cov"] = np.diag([1.0, 0.7])
+    mod["transition"] = np.array([[0.9, 0.1], [0.0, 0.8]])
+    mod["state_intercept"] = np.array([0.05, 0.02])
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.array([[0.5, 0.2], [0.2, 0.4]])
+    if diffuse:
+        mod.ssm.initialize_diffuse()
+    else:
+        mod.ssm.initialize_known(np.array([0.3, -0.1]), np.eye(2))
+    if smooth_method == SMOOTH_UNIVARIATE:
+        mod.ssm.filter_univariate = True
+    mod.ssm.smooth_method = smooth_method
+    return mod
+
+
+def _expected_smoother_output(smoother_output, smooth_method):
+    # The documented dependencies of the smoother output
+    expected = smoother_output
+    if expected & kalman_smoother.SMOOTHER_STATE_AUTOCOV:
+        expected |= kalman_smoother.SMOOTHER_STATE_COV
+    if expected & kalman_smoother.SMOOTHER_DISTURBANCE_COV:
+        expected |= kalman_smoother.SMOOTHER_DISTURBANCE
+        if smooth_method == SMOOTH_CLASSICAL:
+            expected |= kalman_smoother.SMOOTHER_STATE_COV
+    if smooth_method == SMOOTH_CLASSICAL and (
+        expected & kalman_smoother.SMOOTHER_DISTURBANCE
+    ):
+        expected |= kalman_smoother.SMOOTHER_STATE
+    return expected
+
+
+def _check_smoother_output(res, desired, expected_output, rtol=1e-12):
+    assert res.smoother_output == expected_output
+    for name, flag in SUBSET_FLAGS.items():
+        assert getattr(res, name) is bool(expected_output & flag)
+    # smoother_all is set if any output is computed
+    assert res.smoother_all is bool(expected_output)
+    computed = set()
+    for flag, names in SUBSET_ATTRIBUTES.items():
+        if expected_output & flag:
+            computed.update(names)
+    for names in SUBSET_ATTRIBUTES.values():
+        for name in names:
+            actual = getattr(res, name)
+            if name in computed:
+                # atol: entries that are zero in the full run (for example
+                # the smoothing error of missing observations)
+                assert_allclose(actual, getattr(desired, name), rtol=rtol, atol=1e-14)
+            else:
+                assert actual is None
+    presample = {
+        "scaled_smoothed_estimator_presample": "scaled_smoothed_estimator",
+        "scaled_smoothed_estimator_cov_presample": "scaled_smoothed_estimator_cov",
+    }
+    for name, attribute in presample.items():
+        if attribute in computed:
+            assert_allclose(getattr(res, name), getattr(desired, name), rtol=rtol)
+        else:
+            assert not hasattr(res, name)
+
+
+@pytest.mark.parametrize("via", ["argument", "option"])
+@pytest.mark.parametrize("diffuse", [False, True])
+@pytest.mark.parametrize(
+    "smooth_method",
+    [
+        kalman_smoother.SMOOTH_CONVENTIONAL,
+        SMOOTH_ALTERNATIVE,
+        SMOOTH_CLASSICAL,
+        SMOOTH_UNIVARIATE,
+    ],
+)
+def test_smoother_output_dependencies(smooth_method, diffuse, via):
+    # Every subset of the smoother output agrees with the full smoother run,
+    # with the output it depends on computed as well; the results report the
+    # computed output and have None for output that was not computed
+    desired = _output_subset_model(smooth_method, diffuse).ssm.smooth()
+    assert desired.smoother_output == kalman_smoother.SMOOTHER_ALL
+    if diffuse:
+        assert desired.nobs_diffuse > 0
+    for smoother_output in SUBSET_MASKS:
+        mod = _output_subset_model(smooth_method, diffuse)
+        if via == "argument":
+            res = mod.ssm.smooth(smoother_output=smoother_output)
+            # The options of the model do not change
+            assert mod.ssm.smoother_output == kalman_smoother.SMOOTHER_ALL
+        else:
+            mod.ssm.smoother_output = smoother_output
+            res = mod.ssm.smooth()
+            assert mod.ssm.smoother_output == smoother_output
+        expected = _expected_smoother_output(smoother_output, smooth_method)
+        _check_smoother_output(res, desired, expected)
+
+
+def test_smoother_output_dependencies_concentrated_scale():
+    # With a concentrated scale the computed covariances and scaled smoothed
+    # estimators are rescaled to those of the model with that scale, and
+    # output that was not computed is None
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(60).cumsum() * 0.1 + rng.standard_normal(60)
+    mod = sarimax.SARIMAX(
+        endog, order=(1, 0, 1), measurement_error=True, concentrate_scale=True
+    )
+    # The measurement variance is relative to the concentrated scale
+    assert mod.param_names == ["ar.L1", "ma.L1", "snr.measurement_error"]
+    params = [0.5, 0.2, 0.4]
+    scale = mod.smooth(params).scale
+    ref_mod = sarimax.SARIMAX(endog, order=(1, 0, 1), measurement_error=True)
+    desired = ref_mod.smooth([0.5, 0.2, 0.4 * scale, scale])
+    for smoother_output in SUBSET_MASKS:
+        res = mod.smooth(params, smoother_output=smoother_output)
+        assert res.smoother_results.filter_concentrated
+        expected = _expected_smoother_output(
+            smoother_output, kalman_smoother.SMOOTH_CONVENTIONAL
+        )
+        # rtol: the two models compute the output in different orders
+        _check_smoother_output(
+            res.smoother_results, desired.smoother_results, expected, rtol=1e-10
+        )
+        if expected & kalman_smoother.SMOOTHER_STATE_COV:
+            # atol: the second state of the ARMA(1, 1) has covariances that
+            # are zero up to rounding
+            assert_allclose(
+                res.smoothed_state_cov,
+                desired.smoothed_state_cov,
+                rtol=1e-10,
+                atol=1e-14,
+            )
+        else:
+            assert res.smoothed_state_cov is None

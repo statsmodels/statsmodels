@@ -41,6 +41,25 @@ SMOOTH_ALTERNATIVE = 0x04
 SMOOTH_UNIVARIATE = 0x08
 
 
+def _add_smoother_output_dependencies(smoother_output, smooth_method):
+    # The smoother computes some output from other output, which it only
+    # computes if that is requested as well
+    # - the state autocovariances need N_t, computed with the state covariances
+    # - the disturbance covariances are computed with the disturbances
+    if smoother_output & SMOOTHER_STATE_AUTOCOV:
+        smoother_output |= SMOOTHER_STATE_COV
+    if smoother_output & SMOOTHER_DISTURBANCE_COV:
+        smoother_output |= SMOOTHER_DISTURBANCE
+    # The classical smoother computes r_t (N_t) from the smoothed state (state
+    # covariance) of the next period
+    if smooth_method & SMOOTH_CLASSICAL:
+        if smoother_output & SMOOTHER_DISTURBANCE:
+            smoother_output |= SMOOTHER_STATE
+        if smoother_output & SMOOTHER_DISTURBANCE_COV:
+            smoother_output |= SMOOTHER_STATE_COV
+    return smoother_output
+
+
 class KalmanSmoother(KalmanFilter):
     r"""
     State space representation of a time series process, with Kalman filter
@@ -161,6 +180,8 @@ class KalmanSmoother(KalmanFilter):
             smoother_output = self.smoother_output
         if smooth_method is None:
             smooth_method = self.smooth_method
+        smoother_output = _add_smoother_output_dependencies(
+            smoother_output, smooth_method)
 
         # Make sure we have the required Kalman filter (for the prefix of the
         # current representation matrices)
@@ -248,7 +269,11 @@ class KalmanSmoother(KalmanFilter):
         be specified as any results that are not specified will not be
         calculated. For example, if the smoother output is set to only include
         SMOOTHER_STATE, the smoother operates much more quickly than if all
-        output is required.
+        output is required. Output that the requested output is computed from
+        is calculated as well: the smoothed state autocovariances need the
+        smoothed state covariances, the disturbance covariances need the
+        disturbances, and the classical smoother computes the disturbances
+        (disturbance covariances) from the smoothed state (state covariances).
 
         Examples
         --------
@@ -405,7 +430,19 @@ class KalmanSmoother(KalmanFilter):
         ----------
         smoother_output : int, optional
             Determines which Kalman smoother output to calculate. Default is
-            all (including state, disturbances, and all covariances).
+            all (including state, disturbances, and all covariances). The
+            output that the requested output is computed from is calculated
+            as well, and the results contain None for output that is not
+            calculated.
+
+            .. versionchanged:: 0.15.1
+
+               The output that the requested output depends on is calculated
+               and the results report the calculated output. Before, some
+               subsets gave wrong values (for example the state
+               autocovariances without the state covariances), and the
+               results took the output from the options of the model, so that
+               output that was not calculated had stale values.
         smooth_method : int, optional
             Determines which Kalman smoothing approach to use. Default is
             the smoother method specified by `smooth_method` in the current
@@ -742,9 +779,21 @@ class SmootherResults(FilterResults):
         # Copy the appropriate output
         attributes = []
 
-        # Since update_representation will already have been called, we can
-        # use the boolean options smoother_* and know they match the smoother
-        # itself
+        # The output computed by the smoother can differ from the options of
+        # the model (it is set by smooth(smoother_output=...), and includes the
+        # output that the requested output depends on), so take it from the
+        # smoother
+        self.smoother_output = smoother.smoother_output
+        self.smoother_state = bool(self.smoother_output & SMOOTHER_STATE)
+        self.smoother_state_cov = bool(self.smoother_output & SMOOTHER_STATE_COV)
+        self.smoother_state_autocov = bool(
+            self.smoother_output & SMOOTHER_STATE_AUTOCOV)
+        self.smoother_disturbance = bool(
+            self.smoother_output & SMOOTHER_DISTURBANCE)
+        self.smoother_disturbance_cov = bool(
+            self.smoother_output & SMOOTHER_DISTURBANCE_COV)
+        self.smoother_all = bool(self.smoother_output & SMOOTHER_ALL)
+
         if self.smoother_state or self.smoother_disturbance:
             attributes.append("scaled_smoothed_estimator")
         if self.smoother_state_cov or self.smoother_disturbance_cov:
@@ -858,16 +907,22 @@ class SmootherResults(FilterResults):
         # Note: if we concentrated out the scale, need to adjust the
         # loglikelihood values and all of the covariance matrices and the
         # values that depend on the covariance matrices
+        # (in place; output that was not computed is None, and the presample
+        # estimators are then not set)
         if self.filter_concentrated and self.model._scale is None:
-            self.smoothed_state_cov *= self.scale
-            self.smoothed_state_autocov *= self.scale
-            self.smoothed_state_disturbance_cov *= self.scale
-            self.smoothed_measurement_disturbance_cov *= self.scale
-            self.scaled_smoothed_estimator_presample /= self.scale
-            self.scaled_smoothed_estimator /= self.scale
-            self.scaled_smoothed_estimator_cov_presample /= self.scale
-            self.scaled_smoothed_estimator_cov /= self.scale
-            self.smoothing_error /= self.scale
+            for name in ["smoothed_state_cov", "smoothed_state_autocov",
+                         "smoothed_state_disturbance_cov",
+                         "smoothed_measurement_disturbance_cov"]:
+                value = getattr(self, name)
+                if value is not None:
+                    value *= self.scale
+            for name in ["scaled_smoothed_estimator_presample",
+                         "scaled_smoothed_estimator",
+                         "scaled_smoothed_estimator_cov_presample",
+                         "scaled_smoothed_estimator_cov", "smoothing_error"]:
+                value = getattr(self, name, None)
+                if value is not None:
+                    value /= self.scale
 
         # Cache
         self.__smoothed_state_autocovariance = {}
