@@ -6054,6 +6054,14 @@ class PredictionResults(pred.PredictionResults):
         # Get required values
         k_endog, nobs = prediction_results.endog.shape
         res = self.prediction_results.results
+        no_smoothed_state = getattr(res, "smoothed_state", None) is None
+        if information_set == "smoothed" and no_smoothed_state:
+            raise ValueError(
+                'Predictions with information_set="smoothed" require the'
+                " output of the Kalman smoother, which these results do not"
+                " have. Use the results of `smooth`, or of `fit` without"
+                " `low_memory=True`."
+            )
         if information_set == "predicted" and not res.memory_no_forecast_mean:
             if not signal_only:
                 predicted_mean = self.prediction_results.forecasts
