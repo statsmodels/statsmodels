@@ -975,7 +975,9 @@ def test_prediction_results_vs_statespace(statespace_comparison):
 def test_prediction_results_slow_AAN(oildata, close_figures):
     # slow test with high number of simulation repetitions for comparison
     # Note: runs succesfull with specified tolerance
-    fit = ETSModel(oildata, error="add", trend="add").fit(disp=False)
+    fit = ETSModel(oildata, error="add", trend="add").fit(
+        disp=False, param_index="integer"
+    )
 
     pred_exact = fit.get_prediction(start=40, end=55)
     summary_exact = pred_exact.summary_frame()
@@ -1040,7 +1042,7 @@ def test_prediction_results_slow_AAdA(austourists, close_figures):
         seasonal="add",
         damped_trend=True,
         seasonal_periods=4,
-    ).fit(disp=False)
+    ).fit(disp=False, param_index="integer")
     pred_exact = fit.get_prediction(start=60, end=75)
     summary_exact = pred_exact.summary_frame()
 
