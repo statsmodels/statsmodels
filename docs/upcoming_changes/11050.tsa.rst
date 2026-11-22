@@ -1,0 +1,3 @@
+- ``companion_matrix`` in ``statsmodels.tsa.statespace.tools`` raised an error for a matrix
+  polynomial given as a list or tuple with an ndarray leading matrix, or
+  as a three-dimensional array. :pr:`11050`
