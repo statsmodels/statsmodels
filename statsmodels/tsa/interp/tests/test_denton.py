@@ -1,8 +1,11 @@
 import numpy as np
 from numpy.testing import assert_allclose
+import pandas as pd
 import pytest
+from scipy.linalg import null_space
 
 from statsmodels.tsa.interp import dentonm
+from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 
 
 def test_denton_quarterly():
@@ -78,3 +81,90 @@ def test_denton_too_few_indicators():
     res = dentonm(np.ones(6), [10.0, 20.0], freq="qm")
     assert_allclose(res[:3].sum(axis=0), [10.0])
     assert_allclose(res[3:].sum(axis=0), [20.0])
+
+
+def _denton_by_minimisation(indicator, benchmark, k):
+    """
+    Minimise the proportionate first-difference objective directly
+
+    With r = X / I, minimise sum(diff(r) ** 2) subject to each block of k
+    values of X summing to its benchmark, by solving the least-squares
+    problem in the null space of the constraints. The values after the last
+    benchmarked block are extrapolated with the last ratio X / I.
+    """
+    indicator = np.asarray(indicator, dtype=float)
+    benchmark = np.asarray(benchmark, dtype=float)
+    m = benchmark.shape[0]
+    n = k * m
+    ind = indicator[:n]
+    constraints = np.kron(np.eye(m), np.ones((1, k))) * ind
+    r0 = np.linalg.lstsq(constraints, benchmark, rcond=None)[0]
+    null = null_space(constraints)
+    diff = np.diff(np.eye(n), axis=0)
+    z = np.linalg.lstsq(diff @ null, -diff @ r0, rcond=None)[0]
+    x = ind * (r0 + null @ z)
+    return np.r_[x, x[-1] / ind[-1] * indicator[n:]]
+
+
+@pytest.mark.parametrize(
+    "freq,kwargs,k",
+    [("aq", {}, 4), ("qm", {}, 3), ("other", {"k": 2}, 2), ("other", {"k": 5}, 5)],
+)
+@pytest.mark.parametrize("extra", [0, 3])
+@pytest.mark.parametrize("two_dim", [False, True])
+def test_denton_minimises_objective(freq, kwargs, k, extra, two_dim):
+    rng = np.random.default_rng([20261120, 6])
+    m = 4
+    indicator = 100 + np.cumsum(rng.standard_normal(k * m + extra))
+    benchmark = k * 110 + 10 * rng.standard_normal(m)
+    expected = _denton_by_minimisation(indicator, benchmark, k)
+    if two_dim:
+        # (n, 1) and (m, 1) columns give the same result as 1-d input
+        indicator = indicator[:, None]
+        benchmark = benchmark[:, None]
+    x = dentonm(indicator, benchmark, freq=freq, **kwargs)
+    assert x.shape == (k * m + extra,)
+    assert_allclose(x, expected, rtol=1e-9)
+    block_sums = x[: k * m].reshape(m, k).sum(1)
+    assert_allclose(block_sums, np.squeeze(benchmark), rtol=1e-12)
+
+
+INDICATOR = np.array(
+    [98.2, 100.8, 102.2, 100.8, 99.0, 101.6, 102.7, 101.5, 100.5, 103.0, 103.5,
+     101.5, 102.0, 104.0]
+)
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_denton_indicator_forms(form):
+    indicator = np.round(INDICATOR)
+    benchmark = np.array([4000.0, 4161.4])
+    expected = dentonm(indicator, benchmark)
+    if form == "int":
+        x = indicator.astype(np.int64)
+    else:
+        x = series_forms(indicator)[form]
+    res = dentonm(x, benchmark)
+    assert isinstance(res, np.ndarray)
+    assert res.shape == (INDICATOR.shape[0],)
+    assert_allclose(res, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "form", ["list", "tuple", "series", "column", "dataframe", "int"]
+)
+def test_denton_benchmark_forms(form):
+    benchmark = np.array([4000.0, 4161.0])
+    expected = dentonm(INDICATOR, benchmark)
+    index = pd.date_range("2000-01-01", periods=2, freq="YS")
+    forms = {
+        "list": benchmark.tolist(),
+        "tuple": tuple(benchmark.tolist()),
+        "series": pd.Series(benchmark, index=index),
+        "column": benchmark[:, None],
+        "dataframe": pd.DataFrame({"benchmark": benchmark}, index=index),
+        "int": benchmark.astype(np.int64),
+    }
+    res = dentonm(INDICATOR, forms[form])
+    assert isinstance(res, np.ndarray)
+    assert_allclose(res, expected, rtol=1e-12)
