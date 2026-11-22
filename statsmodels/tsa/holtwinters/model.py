@@ -1547,7 +1547,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     def __init__(
         self,
         endog,
-        initialization_method=None,  # Future: 'estimated',
+        initialization_method="estimated",
         initial_level=None,
     ):
         super().__init__(
@@ -1691,7 +1691,7 @@ class Holt(ExponentialSmoothing):
         endog,
         exponential=False,
         damped_trend=False,
-        initialization_method=None,  # Future: 'estimated',
+        initialization_method="estimated",
         initial_level=None,
         initial_trend=None,
     ):
