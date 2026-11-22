@@ -2423,3 +2423,42 @@ def test_vecm_coint_rank_negative(coint_rank):
     y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
     with pytest.raises(ValueError, match="coint_rank must be between 0 and neqs"):
         VECM(y, k_ar_diff=1, coint_rank=coint_rank)
+
+
+@pytest.mark.parametrize(
+    "deterministic, equivalent",
+    [("cico", "co"), ("xyz", "n"), ("c", "n"), ("ct", "n"), ("lilo", "lo")],
+)
+def test_select_order_deterministic_deprecated(deterministic, equivalent):
+    # select_order did not check deterministic: a value that VECM does not
+    # accept used the terms whose names it contains. This is deprecated, and
+    # the orders are unchanged.
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with pytest.warns(FutureWarning, match="deterministic must be one of"):
+        res = select_order(y, 3, deterministic=deterministic)
+    expected = select_order(y, 3, deterministic=equivalent)
+    assert res.selected_orders == expected.selected_orders
+    for ic in ("aic", "bic", "hqic", "fpe"):
+        assert_allclose(res.ics[ic], expected.ics[ic], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "deterministic, equivalent",
+    [("nc", "n"), ("", "n"), ("CO", "co"), ("CiLi", "cili"), ("colo", "colo")],
+)
+def test_select_order_deterministic_valid(deterministic, equivalent):
+    # the values of VECM, its aliases of "n" and any case do not warn
+    import warnings
+
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = select_order(y, 3, deterministic=deterministic)
+        expected = select_order(y, 3, deterministic=equivalent)
+    assert res.selected_orders == expected.selected_orders
+    for ic in ("aic", "bic", "hqic", "fpe"):
+        assert_allclose(res.ics[ic], expected.ics[ic], rtol=1e-12)

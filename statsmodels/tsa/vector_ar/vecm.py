@@ -33,6 +33,11 @@ from statsmodels.tsa.vector_ar.var_model import (
     test_normality,
 )
 
+# The values of deterministic in VECM, "" and "nc" are aliases of "n"
+_DETERMINISTIC_OPTIONS = (
+    "", "n", "nc", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"
+)
+
 
 def select_order(
     data,
@@ -63,6 +68,13 @@ def select_order(
         Combinations of these are possible (e.g., ``"cili"`` or ``"colo"`` for
         linear trend with intercept). See the docstring of the
         :class:`VECM`-class for more information.
+
+        .. deprecated:: 0.15.1
+
+           Other values, which VECM does not accept, are deprecated and will
+           raise a ValueError after statsmodels 0.17 is released. They add a
+           constant if they contain "co" or "ci", and a linear trend if they
+           contain "lo" or "li".
     seasons : int, optional
         Number of periods in a seasonal cycle. 0 means no seasons.
     exog : ndarray (nobs_tot x #det_terms), optional
@@ -84,6 +96,16 @@ def select_order(
     """
     ic = defaultdict(list)
     deterministic = string_like(deterministic, "deterministic")
+    if deterministic not in _DETERMINISTIC_OPTIONS:
+        documented = [v for v in _DETERMINISTIC_OPTIONS if v not in ("", "nc")]
+        options = ", ".join(f'"{v}"' for v in documented)
+        warnings.warn(
+            f"deterministic must be one of {options}, got {deterministic!r}. "
+            "Other values are deprecated and will raise a ValueError after "
+            "statsmodels 0.17 is released.",
+            FutureWarning,
+            stacklevel=2,
+        )
     maxlags = int_like(maxlags, "maxlags", optional=False)
     if maxlags < 0:
         raise ValueError(f"maxlags must be non-negative, got {maxlags}")
@@ -1070,9 +1092,7 @@ class VECM(tsbase.TimeSeriesModel):
             )
         self.coint_rank = coint_rank
         deterministic = string_like(
-            deterministic,
-            "deterministic",
-            options=("", "n", "nc", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"),
+            deterministic, "deterministic", options=_DETERMINISTIC_OPTIONS
         )
         deterministic = "n" if deterministic == "nc" else deterministic
 
