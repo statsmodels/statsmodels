@@ -1,0 +1,9 @@
+- :class:`~statsmodels.tsa.base.prediction.PredictionResults` with an
+  (nobs, 1) predicted mean or an (nobs, 1, 1) variance broadcast them to
+  (nobs, nobs), so ``conf_int``, ``tvalues`` and ``t_test`` returned
+  arrays of the wrong shape. They are treated as one series, so these
+  results change. :pr:`10922`
+- ``predicted_mean`` and ``se_mean`` of
+  :class:`~statsmodels.tsa.base.prediction.PredictionResults` with a
+  DataFrame predicted mean of several columns keep its column names
+  instead of the columns 0, ..., k - 1. :pr:`10922`
