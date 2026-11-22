@@ -2,6 +2,7 @@ from statsmodels.compat.pandas import MONTH_END
 
 import contextlib
 from pathlib import Path
+import shutil
 import tempfile
 import warnings
 
@@ -359,3 +360,44 @@ def test_exog_column_called_name():
     for name, effect in effects.items():
         # within about 3 standard errors (about 100) of the effect
         np.testing.assert_allclose(estimates[name], effect, rtol=0.1)
+
+
+def _copy_binary(directory):
+    """Copy the binary that the default lookup finds into directory"""
+    found = Path(shutil.which(str(x13path)))
+    # shutil.which can give the name in another case than on disk on Windows
+    name = next(
+        path.name
+        for path in found.parent.iterdir()
+        if path.name.lower() == found.name.lower()
+    )
+    shutil.copy2(found.parent / name, directory / name)
+    return directory / name
+
+
+@pytest.mark.parametrize(
+    "kind", ["upper_case", "upper_extension", "path_directory", "path_binary"]
+)
+def test_x12path_case_and_path(kind, tmp_path, monkeypatch):
+    binary_dir = tmp_path / "binary"
+    binary_dir.mkdir()
+    binary = _copy_binary(binary_dir)
+    # the environment variables do not lead to a binary
+    monkeypatch.setenv("X13PATH", str(tmp_path))
+    monkeypatch.setenv("X12PATH", str(tmp_path))
+    if kind == "upper_case":
+        x12path = str(binary.with_name(binary.name.upper()))
+    elif kind == "upper_extension":
+        # x13as_ascii.EXE, as shutil.which gives it on Windows
+        x12path = str(binary.with_suffix(binary.suffix.upper()))
+    elif kind == "path_directory":
+        x12path = binary_dir
+    else:
+        x12path = binary
+    expected = x13_arima_analysis(quarterly_data.realgdp, x12path=str(binary_dir))
+
+    res = x13_arima_analysis(quarterly_data.realgdp, x12path=x12path)
+
+    np.testing.assert_allclose(
+        res.seasadj.to_numpy(), expected.seasadj.to_numpy(), rtol=1e-12
+    )
