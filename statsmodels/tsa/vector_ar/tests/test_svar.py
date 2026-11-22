@@ -689,3 +689,60 @@ def test_svar_solver_invalid():
     model = SVAR(_macro_data(), svar_type="A", A=_LOWER)
     with pytest.raises(ValueError, match="method must be one of"):
         model.fit(maxlags=3, solver="gradient-descent")
+
+
+def _macro_dlog():
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    return np.diff(np.log(mdata[["realgdp", "realcons", "realinv"]].values), axis=0)
+
+
+def _ic_order(y, maxlags, trend, ic):
+    # The lag order that minimizes the criterion of Lütkepohl (2005), Section
+    # 4.3, computed on the sample of the largest model
+    nobs, k = y.shape
+    k_trend = int(trend == "c")
+    t = nobs - maxlags
+    values = {}
+    for p in range(1 - k_trend, maxlags + 1):
+        x = [np.ones((t, 1))] if k_trend else []
+        x += [y[maxlags - i : nobs - i] for i in range(1, p + 1)]
+        x = np.column_stack(x)
+        resid = y[maxlags:] - x @ np.linalg.lstsq(x, y[maxlags:], rcond=None)[0]
+        logdet = np.linalg.slogdet(resid.T @ resid / t)[1]
+        n_params = k * (k * p + k_trend)
+        penalty = 2 if ic == "aic" else np.log(t)
+        values[p] = logdet + penalty * n_params / t
+    return min(values, key=values.get)
+
+
+@pytest.mark.parametrize(
+    "trend, maxlags, ic",
+    [("n", 6, "aic"), ("n", 6, "bic"), ("c", 6, "aic"), ("c", None, "aic")],
+)
+def test_fit_ic_selects_order(trend, maxlags, ic):
+    # fit(ic=...) raised an AttributeError (SVAR has no select_order)
+    data = _macro_dlog()
+    A = np.asarray([[1, 0, 0], ["E", 1, 0], ["E", "E", 1]], dtype="U")
+    B = np.asarray([["E", 0, 0], [0, "E", 0], [0, 0, "E"]], dtype="U")
+    start = {"A_guess": [-0.5, -5.5, 3.0], "B_guess": [0.0075, 0.005, 0.02]}
+    model = SVAR(data, "AB", A=A, B=B)
+    res = model.fit(maxlags=maxlags, ic=ic, trend=trend, **start)
+    # None is 12 * (nobs / 100) ** (1 / 4) lags, 14 for these data
+    expected = _ic_order(data, 14 if maxlags is None else maxlags, trend, ic)
+    assert res.k_ar == expected
+    direct = SVAR(data, "AB", A=A, B=B).fit(maxlags=expected, trend=trend, **start)
+    assert_allclose(res.params, direct.params, rtol=1e-12)
+    assert_allclose(res.A, direct.A, rtol=1e-12)
+    assert_allclose(res.B, direct.B, rtol=1e-12)
+
+
+def test_fit_ic_verbose_and_unknown(capsys):
+    data = _macro_dlog()[:, :2]
+    B = np.asarray([["E", 0], ["E", "E"]], dtype="U")
+    res = SVAR(data, "B", B=B).fit(maxlags=6, ic="bic", trend="n", verbose=True)
+    assert res.k_ar == _ic_order(data, 6, "n", "bic")
+    out = capsys.readouterr().out
+    assert "Selected orders are" in out
+    assert f"Using {res.k_ar} based on bic criterion" in out
+    with pytest.raises(ValueError, match="sic not recognized"):
+        SVAR(data, "B", B=B).fit(maxlags=6, ic="sic")
