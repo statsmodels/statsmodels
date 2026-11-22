@@ -1133,3 +1133,87 @@ def test_x13_not_found_environment(tmp_path, monkeypatch, variable):
 
     with pytest.raises(X13NotFoundError, match="x12a and x13as not found"):
         x13.x13_arima_analysis(_quarterly_endog())
+
+
+NO_DATES = {
+    "range_index": pd.Series,
+    "int_index": lambda values: pd.Series(values, index=range(10, 34)),
+    "float_index": lambda values: pd.Series(values, index=np.arange(24.0)),
+    "str_index": lambda values: pd.Series(values, index=[f"t{i}" for i in range(24)]),
+    "dataframe": lambda values: pd.DataFrame({0: values}),
+}
+
+
+@pytest.mark.parametrize("form", list(NO_DATES))
+@pytest.mark.parametrize(
+    "start, freq, period, first",
+    [("1990-01-01", "QS", 4, "1990.1"), ("1990-05-01", "MS", 12, "1990.5")],
+    ids=["quarterly", "monthly"],
+)
+def test_spec_endog_without_dates(no_x12, form, start, freq, period, first):
+    values = [float(i) for i in range(24)]
+    endog = NO_DATES[form](values)
+
+    spec = x13.x13_arima_analysis(endog, start=start, freq=freq, speconly=True)
+
+    # the same spec as for the values without an index
+    expected = x13.x13_arima_analysis(
+        np.array(values), start=start, freq=freq, speconly=True
+    )
+    assert spec == expected
+    data = " ".join(str(value) for value in values)
+    series = f"""
+    Series {{
+        data=({data})
+        appendbcst=no
+        appendfcst=no
+        period={period}
+        start={first}
+        title="Unnamed Series"
+        name="Unnamed Series"
+    }}
+    """
+    assert spec[: spec.index("}") + 1].split() == series.split()
+
+
+def test_spec_endog_without_dates_named(no_x12):
+    values = [float(i) for i in range(24)]
+    endog = pd.Series(values, name="gdp")
+
+    spec = x13.x13_arima_analysis(endog, start="1990-01-01", freq="QS", speconly=True)
+
+    expected = x13.x13_arima_analysis(
+        np.array(values), start="1990-01-01", freq="QS", speconly=True
+    )
+    assert spec == expected.replace('"Unnamed Series"', '"gdp"')
+
+
+@pytest.mark.parametrize(
+    "kwargs", [{}, {"start": "1990-01-01"}, {"freq": "QS"}], ids=["none", "start", "freq"]
+)
+def test_endog_without_dates_needs_start_and_freq(no_x12, kwargs):
+    with pytest.raises(ValueError, match="start and freq cannot be none"):
+        x13.x13_arima_analysis(pd.Series(range(24)), speconly=True, **kwargs)
+
+
+_DATES = pd.date_range("2000-01-01", periods=24, freq="MS")
+WITH_DATES = {
+    "datetime_index": _DATES,
+    "period_index": _DATES.to_period("M"),
+    "object_timestamps": pd.Index(list(_DATES), dtype=object),
+    "object_dates": pd.Index([date.date() for date in _DATES], dtype=object),
+    "categorical": pd.CategoricalIndex(_DATES),
+}
+
+
+@pytest.mark.parametrize("index", list(WITH_DATES))
+def test_spec_endog_dates_used_with_start_and_freq(no_x12, index):
+    endog = pd.Series([float(i) for i in range(24)], index=WITH_DATES[index])
+
+    spec = x13.x13_arima_analysis(endog, start="1990-01-01", freq="QS", speconly=True)
+
+    # start and freq are not used if the index has the dates
+    assert spec == x13.x13_arima_analysis(endog, speconly=True)
+    tokens = spec[: spec.index("}") + 1].split()
+    assert "period=12" in tokens
+    assert "start=2000.1" in tokens

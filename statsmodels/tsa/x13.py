@@ -642,13 +642,24 @@ def x13_arima_analysis(
     directory, invoking X12/X13 in a subprocess, and reading the output
     back in.
     """
-    if not isinstance(endog, (pd.DataFrame, pd.Series)):
+    is_pandas = isinstance(endog, (pd.DataFrame, pd.Series))
+    # Index types that can hold dates keep their index, as before. Others, such
+    # as a RangeIndex, cannot give the period and the start of the series.
+    has_dates = is_pandas and endog.index.inferred_type in (
+        "datetime64",
+        "datetime",
+        "date",
+        "period",
+        "categorical",
+    )
+    if not has_dates:
         if start is None or freq is None:
             raise ValueError(
-                "start and freq cannot be none if endog is not a pandas object"
+                "start and freq cannot be none if endog is not a pandas object "
+                "with dates in its index"
             )
         idx = pd.date_range(start=start, periods=len(endog), freq=freq)
-        endog = pd.Series(endog, index=idx)
+        endog = endog.set_axis(idx) if is_pandas else pd.Series(endog, index=idx)
 
     spec_obj = pandas_to_series_spec(endog)
     spec = spec_obj.create_spec()
