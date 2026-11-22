@@ -11,6 +11,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
+from scipy.special import logsumexp
 
 from statsmodels.tsa.regime_switching import markov_regression, markov_switching
 
@@ -3727,3 +3728,496 @@ def test_hessian_respects_transformed():
     # transform_params is not the identity for this model, so the two
     # Hessians must differ if the flag is forwarded to loglike.
     assert np.max(np.abs(hess_transformed - hess_untransformed)) > 1e-8
+
+
+# Tests at fixed parameters against references written out independently of
+# the model code: the Hamilton (1989) filter, least squares and closed forms.
+
+# transition[i, j] = Pr[S_t = i | S_{t-1} = j]; the parameters are
+# p[0->0] = transition[0, 0] and p[1->0] = transition[0, 1]
+TRANSITION = np.array([[0.9, 0.2], [0.1, 0.8]])
+
+
+def two_regime_data(nobs=60, seed=20261122):
+    rng = np.random.default_rng(seed)
+    regime = (np.arange(nobs) // 12) % 2
+    exog = rng.standard_normal((nobs, 2))
+    endog = (
+        np.where(regime == 0, 0.5, 2.0)
+        + exog @ np.array([0.4, -0.3])
+        + rng.standard_normal(nobs)
+    )
+    return endog, exog
+
+
+def ergodic_probabilities(transition):
+    # Solve transition @ pi = pi subject to sum(pi) = 1
+    k_regimes = transition.shape[0]
+    lhs = np.vstack([np.eye(k_regimes) - transition, np.ones((1, k_regimes))])
+    rhs = np.r_[np.zeros(k_regimes), 1.0]
+    return np.linalg.lstsq(lhs, rhs, rcond=None)[0]
+
+
+def hamilton_loglikeobs(endog, means, variances, transition):
+    """
+    Hamilton (1989) filter written out for y_t | S_t = i ~ N(means[i, t],
+    variances[i]), started from the ergodic probabilities of the first
+    transition matrix. `transition` is (k, k) or, if time-varying, (k, k, nobs).
+    """
+    if transition.ndim == 2:
+        transition = np.repeat(transition[:, :, None], len(endog), axis=2)
+    prob = ergodic_probabilities(transition[..., 0])
+    llf_obs = np.empty(len(endog))
+    for t, value in enumerate(endog):
+        log_density = -0.5 * (value - means[:, t]) ** 2 / variances - 0.5 * np.log(
+            2 * np.pi * variances
+        )
+        log_joint = np.log(transition[..., t] @ prob) + log_density
+        llf_obs[t] = logsumexp(log_joint)
+        prob = np.exp(log_joint - llf_obs[t])
+    return llf_obs
+
+
+def stack_params(transition, coeffs, switching, variances, switching_variance):
+    """
+    Parameters in the documented order: transition probabilities, then each
+    coefficient (one value per regime if it switches), then the variance(s).
+    """
+    params = [transition[0, 0], transition[0, 1]]
+    for j, switches in enumerate(switching):
+        params.extend(coeffs[:, j] if switches else coeffs[:1, j])
+    params.extend(variances if switching_variance else variances[:1])
+    return np.array(params)
+
+
+def em_update(mod, params):
+    # One EM iteration and no optimizer iteration, so fit returns the EM update
+    return mod.fit(
+        start_params=params,
+        em_iter=1,
+        maxiter=0,
+        return_params=True,
+        warn_convergence=False,
+    )
+
+
+def wls(endog, exog, weights):
+    # Weighted least squares through the normal equations
+    weighted = exog * weights[:, None]
+    return np.linalg.solve(weighted.T @ exog, weighted.T @ endog)
+
+
+@pytest.mark.parametrize(
+    "trend, switching_trend",
+    [
+        ("n", True),
+        ("c", True),
+        ("c", False),
+        ("t", True),
+        ("t", False),
+        ("ct", True),
+        ("ct", False),
+        ("ct", [True, False]),
+        ("ct", (False, True)),
+        ("ct", np.array([False, True])),
+    ],
+)
+@pytest.mark.parametrize("switching_variance", [False, True])
+def test_trend_against_hamilton_filter(trend, switching_trend, switching_variance):
+    endog, _ = two_regime_data()
+    nobs = endog.shape[0]
+    mod = markov_regression.MarkovRegression(
+        endog,
+        k_regimes=2,
+        trend=trend,
+        switching_trend=switching_trend,
+        switching_variance=switching_variance,
+    )
+
+    # The trend columns: a constant and the time trend t = 1, ..., nobs
+    columns = {"c": np.ones(nobs), "t": np.arange(1.0, nobs + 1)}
+    values = {"c": [0.5, 2.0], "t": [0.03, 0.05]}  # regime 0, regime 1
+    design = np.array([columns[name] for name in trend if name in columns])
+    coeffs = np.array([values[name] for name in trend if name in values])
+    design = design.reshape(-1, nobs)
+    coeffs = coeffs.reshape(-1, 2).T
+    k_trend = coeffs.shape[1]
+    if isinstance(switching_trend, bool):
+        switching = np.array([switching_trend] * k_trend, dtype=bool)
+    else:
+        switching = np.asarray(switching_trend, dtype=bool)
+    # A non-switching coefficient takes the same value in both regimes
+    coeffs[1, ~switching] = coeffs[0, ~switching]
+    variances = np.array([0.7, 1.5]) if switching_variance else np.array([1.1, 1.1])
+    params = stack_params(
+        TRANSITION, coeffs, switching, variances, switching_variance
+    )
+    means = coeffs @ design
+
+    predicted = mod.predict_conditional(params)
+    assert predicted.shape == (2, 1, nobs)
+    assert_allclose(predicted[:, 0, :], means, rtol=1e-12)
+    desired = hamilton_loglikeobs(endog, means, variances, TRANSITION)
+    assert_allclose(mod.loglikeobs(params), desired, rtol=1e-10)
+    assert_allclose(mod.loglike(params), desired.sum(), rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "switching_exog", [True, False, [True, False], (False, True)]
+)
+def test_exog_against_hamilton_filter(switching_exog):
+    endog, exog = two_regime_data()
+    nobs = endog.shape[0]
+    mod = markov_regression.MarkovRegression(
+        endog, k_regimes=2, exog=exog, switching_exog=switching_exog
+    )
+    if isinstance(switching_exog, bool):
+        switching_exog = [switching_exog] * 2
+    switching = np.r_[True, switching_exog]
+    coeffs = np.array([[0.5, 0.4, -0.3], [2.0, 0.1, -0.6]])
+    coeffs[1, ~switching] = coeffs[0, ~switching]
+    variances = np.array([1.1, 1.1])
+    params = stack_params(TRANSITION, coeffs, switching, variances, False)
+    means = coeffs @ np.column_stack([np.ones(nobs), exog]).T
+
+    desired = hamilton_loglikeobs(endog, means, variances, TRANSITION)
+    assert_allclose(mod.loglikeobs(params), desired, rtol=1e-10)
+
+
+def test_exog_tvtp_against_hamilton_filter():
+    endog, exog = two_regime_data()
+    nobs = endog.shape[0]
+    exog_tvtp = np.column_stack([np.ones(nobs), exog[:, 0]])
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2, exog_tvtp=exog_tvtp)
+    # Pr[S_t = 0 | S_{t-1} = j] = logistic(exog_tvtp[t] @ gamma[j])
+    gamma = np.array([[2.0, 0.5], [-1.0, 0.8]])
+    params = np.r_[gamma[0, 0], gamma[1, 0], gamma[0, 1], gamma[1, 1], 0.5, 2.0, 1.1]
+    stay = 1 / (1 + np.exp(-(exog_tvtp @ gamma.T)))
+    transition = np.array([stay.T, 1 - stay.T])
+    means = np.array([np.full(nobs, 0.5), np.full(nobs, 2.0)])
+
+    desired = hamilton_loglikeobs(endog, means, np.array([1.1, 1.1]), transition)
+    assert_allclose(mod.loglikeobs(params), desired, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "trend, k_exog, kwargs, name",
+    [
+        ("ct", 0, {"switching_trend": [True]}, "switching_trend"),
+        ("n", 0, {"switching_trend": [True]}, "switching_trend"),
+        ("c", 2, {"switching_exog": [True]}, "switching_exog"),
+        ("c", 0, {"switching_exog": (False,)}, "switching_exog"),
+    ],
+)
+def test_invalid_switching_length(trend, k_exog, kwargs, name):
+    endog, exog = two_regime_data()
+    exog = exog[:, :k_exog] if k_exog else None
+    with pytest.raises(ValueError, match=f"Invalid iterable passed to `{name}`"):
+        markov_regression.MarkovRegression(
+            endog, k_regimes=2, trend=trend, exog=exog, **kwargs
+        )
+
+
+@pytest.mark.parametrize("switching_variance", [False, True])
+def test_em_update_without_regressors(switching_variance):
+    # trend="n" and no exog: the EM update of the variance has a closed form
+    endog, _ = two_regime_data()
+    mod = markov_regression.MarkovRegression(
+        endog, k_regimes=2, trend="n", switching_variance=switching_variance
+    )
+    variances = [0.5, 4.0] if switching_variance else [2.0]
+    params = np.r_[0.9, 0.2, variances]
+
+    actual = em_update(mod, params)
+    weights = mod.smooth(params).smoothed_marginal_probabilities
+    if switching_variance:
+        # sigma2_i = sum_t w_it y_t^2 / sum_t w_it
+        desired = (weights * endog[:, None] ** 2).sum(0) / weights.sum(0)
+    else:
+        # The regime weights sum to one in each period
+        desired = [np.mean(endog**2)]
+    assert_allclose(actual[2:], desired, rtol=1e-10)
+
+
+def test_em_update_no_switching_coefficients():
+    # With no switching coefficients and one variance, the M-step is OLS
+    endog, exog = two_regime_data()
+    nobs = endog.shape[0]
+    mod = markov_regression.MarkovRegression(
+        endog, k_regimes=2, exog=exog, switching_trend=False, switching_exog=False
+    )
+    params = np.r_[0.9, 0.2, 1.0, 0.3, -0.2, 1.5]
+
+    actual = em_update(mod, params)
+    design = np.column_stack([np.ones(nobs), exog])
+    beta = np.linalg.lstsq(design, endog, rcond=None)[0]
+    resid = endog - design @ beta
+    assert_allclose(actual[2:5], beta, rtol=1e-10)
+    assert_allclose(actual[5], resid @ resid / nobs, rtol=1e-10)
+
+
+def test_em_update_mixed_switching():
+    # Switching constant and non-switching exog. The EM update first fits
+    # the non-switching coefficients by OLS on their own regressors, then the
+    # switching ones by weighted least squares on what is left. (This is the
+    # exact M-step only if the two sets of regressors are orthogonal.)
+    endog, exog = two_regime_data()
+    nobs = endog.shape[0]
+    mod = markov_regression.MarkovRegression(
+        endog, k_regimes=2, exog=exog, switching_exog=False
+    )
+    params = np.r_[0.9, 0.2, 0.5, 2.0, 0.3, -0.2, 1.2]
+
+    actual = em_update(mod, params)
+    weights = mod.smooth(params).smoothed_marginal_probabilities.T
+    beta = np.linalg.lstsq(exog, endog, rcond=None)[0]
+    remainder = endog - exog @ beta
+    const = np.array([np.sum(w * remainder) / np.sum(w) for w in weights])
+    sigma2 = sum(
+        np.sum(w * (remainder - c) ** 2) for w, c in zip(weights, const, strict=True)
+    )
+    assert_allclose(actual[2:4], const, rtol=1e-10)
+    assert_allclose(actual[4:6], beta, rtol=1e-10)
+    assert_allclose(actual[6], sigma2 / nobs, rtol=1e-10)
+
+
+def test_em_update_switching_variance():
+    # All coefficients and the variance switch: the M-step is weighted least
+    # squares in each regime
+    endog, exog = two_regime_data()
+    nobs = endog.shape[0]
+    mod = markov_regression.MarkovRegression(
+        endog, k_regimes=2, exog=exog[:, 0], switching_variance=True
+    )
+    params = np.r_[0.9, 0.2, 0.5, 2.0, 0.3, 0.1, 0.8, 1.5]
+
+    actual = em_update(mod, params)
+    weights = mod.smooth(params).smoothed_marginal_probabilities.T
+    design = np.column_stack([np.ones(nobs), exog[:, 0]])
+    for i, w in enumerate(weights):
+        beta = wls(endog, design, w)
+        resid = endog - design @ beta
+        assert_allclose(actual[[2 + i, 4 + i]], beta, rtol=1e-10)
+        assert_allclose(actual[6 + i], np.sum(w * resid**2) / np.sum(w), rtol=1e-10)
+
+
+@pytest.mark.parametrize("switching_variance", [False, True])
+def test_start_params_without_regressors(switching_variance):
+    endog, _ = two_regime_data()
+    mod = markov_regression.MarkovRegression(
+        endog, k_regimes=3, trend="n", switching_variance=switching_variance
+    )
+    variance = np.mean((endog - endog.mean()) ** 2)
+    if switching_variance:
+        variances = np.linspace(variance / 10, variance, 3)
+    else:
+        variances = [variance]
+    # Equal transition probabilities 1 / k_regimes
+    desired = np.r_[np.full(6, 1 / 3), variances]
+    assert_allclose(mod.start_params, desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("switching", [True, False])
+def test_start_params_regression(switching):
+    endog, exog = two_regime_data()
+    nobs = endog.shape[0]
+    mod = markov_regression.MarkovRegression(
+        endog,
+        k_regimes=2,
+        exog=exog,
+        switching_trend=switching,
+        switching_exog=switching,
+    )
+    design = np.column_stack([np.ones(nobs), exog])
+    beta = np.linalg.lstsq(design, endog, rcond=None)[0]
+    resid = endog - design @ beta
+    variance = np.mean((resid - resid.mean()) ** 2)
+    if switching:
+        # Regime i interpolates between zero and OLS: beta * i / k_regimes
+        coeffs = np.column_stack([0 * beta, beta / 2]).ravel()
+    else:
+        coeffs = beta
+    assert_allclose(mod.start_params, np.r_[0.5, 0.5, coeffs, variance], rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "trend, use_exog, switching, switching_variance, desired",
+    [
+        ("n", False, True, False, ["sigma2"]),
+        ("n", False, True, True, ["sigma2[0]", "sigma2[1]"]),
+        (
+            "c",
+            True,
+            True,
+            False,
+            ["const[0]", "const[1]", "x1[0]", "x1[1]", "x2[0]", "x2[1]", "sigma2"],
+        ),
+        ("c", True, False, False, ["const", "x1", "x2", "sigma2"]),
+        ("c", True, False, True, ["const", "x1", "x2", "sigma2[0]", "sigma2[1]"]),
+        ("n", "pandas", False, False, ["xa", "xb", "sigma2"]),
+        ("n", "pandas", True, False, ["xa[0]", "xa[1]", "xb[0]", "xb[1]", "sigma2"]),
+    ],
+)
+def test_param_names(trend, use_exog, switching, switching_variance, desired):
+    endog, exog = two_regime_data()
+    if use_exog == "pandas":
+        exog = pd.DataFrame(exog, columns=["xa", "xb"])
+    elif not use_exog:
+        exog = None
+    mod = markov_regression.MarkovRegression(
+        endog,
+        k_regimes=2,
+        trend=trend,
+        exog=exog,
+        switching_trend=switching,
+        switching_exog=switching,
+        switching_variance=switching_variance,
+    )
+    assert mod.param_names == ["p[0->0]", "p[1->0]"] + desired
+
+
+def test_transform_params_round_trip():
+    endog, exog = two_regime_data()
+    mod = markov_regression.MarkovRegression(
+        endog, k_regimes=2, exog=exog[:, 0], switching_variance=True
+    )
+    unconstrained = np.r_[1.5, -0.4, 0.5, 2.0, 0.3, -0.1, 0.8, -1.2]
+    constrained = mod.transform_params(unconstrained)
+    # Transition probabilities through the logistic function, coefficients
+    # unchanged, variances squared
+    desired = np.r_[
+        1 / (1 + np.exp(-unconstrained[:2])),
+        unconstrained[2:6],
+        unconstrained[6:] ** 2,
+    ]
+    assert isinstance(constrained, np.ndarray)
+    assert_allclose(constrained, desired, rtol=1e-12)
+    # The variances are recovered up to sign
+    desired_unconstrained = np.r_[unconstrained[:6], np.abs(unconstrained[6:])]
+    assert_allclose(
+        mod.untransform_params(constrained), desired_unconstrained, rtol=1e-10
+    )
+
+
+ENDOG_FORMS = [
+    "list",
+    "tuple",
+    "column",
+    "int",
+    "series_dates",
+    "series_periods",
+    "series_range",
+    "dataframe",
+    "dates_argument",
+]
+
+
+def endog_in_form(values, form):
+    """Return `values` in the given input form, its index and model kwargs"""
+    nobs = values.shape[0]
+    index = {
+        "series_dates": pd.date_range("2000-01-01", periods=nobs, freq="MS"),
+        "dates_argument": pd.date_range("2000-01-01", periods=nobs, freq="MS"),
+        "series_periods": pd.period_range("2000-01", periods=nobs, freq="M"),
+        "series_range": pd.RangeIndex(nobs),
+        "dataframe": pd.date_range("2000-01-01", periods=nobs, freq="QS"),
+    }.get(form)
+    kwargs = {}
+    if form == "list":
+        endog = values.tolist()
+    elif form == "tuple":
+        endog = tuple(values.tolist())
+    elif form == "column":
+        endog = values[:, None]
+    elif form == "int":
+        endog = values.astype(np.int64)
+    elif form == "dataframe":
+        endog = pd.DataFrame({"y": values}, index=index)
+    elif form == "dates_argument":
+        endog = values
+        kwargs["dates"] = index
+    else:
+        endog = pd.Series(values, index=index, name="y")
+    return endog, index, kwargs
+
+
+@pytest.mark.parametrize("form", ENDOG_FORMS)
+def test_endog_forms(form):
+    rng = np.random.default_rng(5)
+    # Integer values, so that the int64 form holds exactly the same data
+    values = rng.integers(-3, 5, size=40).astype(float)
+    endog, index, kwargs = endog_in_form(values, form)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2, **kwargs)
+    ref = markov_regression.MarkovRegression(values, k_regimes=2)
+    params = np.r_[0.9, 0.2, -0.5, 1.5, 2.0]
+    res = mod.smooth(params)
+    res_ref = ref.smooth(params)
+
+    assert_allclose(res.llf, res_ref.llf, rtol=1e-12)
+    smoothed = res.smoothed_marginal_probabilities
+    assert_allclose(
+        np.asarray(smoothed), res_ref.smoothed_marginal_probabilities, rtol=1e-10
+    )
+    predicted = res.predict()
+    assert_allclose(np.asarray(predicted), res_ref.predict(), rtol=1e-12)
+    if isinstance(endog, (pd.Series, pd.DataFrame)):
+        assert isinstance(predicted, pd.Series)
+        assert predicted.index.equals(index)
+        assert isinstance(smoothed, pd.DataFrame)
+        assert smoothed.index.equals(index)
+    else:
+        assert isinstance(predicted, np.ndarray)
+        assert isinstance(smoothed, np.ndarray)
+    if form == "dates_argument":
+        # The dates are used to locate the prediction period
+        assert_allclose(
+            res.predict(start=index[5]), res_ref.predict()[5:], rtol=1e-12
+        )
+
+
+@pytest.mark.parametrize("form", ["list", "ndarray", "column", "series", "dataframe"])
+def test_exog_forms(form):
+    endog, exog = two_regime_data()
+    nobs = endog.shape[0]
+    index = pd.date_range("2000-01-01", periods=nobs, freq="MS")
+    values = exog[:, 0]
+    name = "x1"
+    if form == "list":
+        exog = values.tolist()
+    elif form == "ndarray":
+        exog = values
+    elif form == "column":
+        exog = values[:, None]
+    else:
+        endog = pd.Series(endog, index=index)
+        name = "xa"
+        exog = pd.Series(values, index=index, name=name)
+        if form == "dataframe":
+            exog = exog.to_frame()
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2, trend="n", exog=exog)
+    params = np.r_[0.9, 0.2, 0.3, 1.2, 1.1]
+    means = np.array([0.3 * values, 1.2 * values])
+
+    desired = hamilton_loglikeobs(
+        np.asarray(endog), means, np.array([1.1, 1.1]), TRANSITION
+    )
+    assert_allclose(mod.loglikeobs(params), desired, rtol=1e-10)
+    assert mod.param_names[2:4] == [f"{name}[0]", f"{name}[1]"]
+
+
+@pytest.mark.parametrize("form", ["list", "ndarray", "dataframe"])
+def test_exog_tvtp_forms(form):
+    endog, exog = two_regime_data()
+    nobs = endog.shape[0]
+    exog_tvtp = np.column_stack([np.ones(nobs), exog[:, 0]])
+    ref = markov_regression.MarkovRegression(endog, k_regimes=2, exog_tvtp=exog_tvtp)
+    if form == "list":
+        exog_tvtp = exog_tvtp.tolist()
+    elif form == "dataframe":
+        index = pd.date_range("2000-01-01", periods=nobs, freq="MS")
+        endog = pd.Series(endog, index=index)
+        exog_tvtp = pd.DataFrame(exog_tvtp, index=index, columns=["c", "z"])
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2, exog_tvtp=exog_tvtp)
+    params = np.r_[2.0, -1.0, 0.5, 0.8, 0.5, 2.0, 1.1]
+
+    assert_allclose(mod.loglikeobs(params), ref.loglikeobs(params), rtol=1e-12)

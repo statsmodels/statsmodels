@@ -1809,3 +1809,67 @@ def test_dates_list_with_freq(freq, dates, expected):
     assert isinstance(pred, np.ndarray)
     assert_allclose(pred, np.full(5, 2.5))
     assert res.model.data.predict_dates.equals(expected)
+
+
+@pytest.mark.parametrize(
+    "index_freq, freq",
+    [
+        # Period aliases, which pandas 3 does not accept as offset aliases
+        ("M", "M"),
+        ("Q", "Q"),
+        ("Q", "Q-DEC"),
+        ("2Q", "2Q"),
+        ("Y", "Y"),
+        # Offset aliases and offsets, which were already accepted
+        ("Y", YEAR_END),
+        ("M", pd.offsets.MonthEnd()),
+        ("D", "D"),
+        ("W", "W"),
+    ],
+)
+def test_period_index_with_freq(index_freq, freq):
+    # The frequency of a PeriodIndex can be given as its period alias
+    index = pd.period_range("2000-01-01", periods=5, freq=index_freq)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        mod = tsa_model.TimeSeriesModel(np.arange(5.0), dates=index, freq=freq)
+    assert mod.data.freq == index.freqstr
+    assert mod._index.equals(index)
+
+    _, _, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        3, 6, 5, mod._index, data=mod.data
+    )
+    assert out_of_sample == 2
+    expected = pd.period_range(index[3], periods=4, freq=index.freq)
+    assert prediction_index.equals(expected)
+
+
+@pytest.mark.parametrize("freq", ["Q", "D", pd.offsets.QuarterEnd()])
+def test_period_index_with_other_freq(freq):
+    index = pd.period_range("2000-01", periods=5, freq="M")
+    with pytest.raises(ValueError, match="incompatible with the given index"):
+        tsa_model.TimeSeriesModel(np.arange(5.0), dates=index, freq=freq)
+
+
+@pytest.mark.parametrize("dtype", [np.uint64, np.uint32, np.int32, np.int64])
+def test_integer_index_forecast_labels(dtype):
+    # An integer index 0, ..., nobs - 1 is extended with integer labels
+    index = pd.Index(np.arange(5, dtype=dtype))
+    loc, labels, expanded = tsa_model.get_index_loc(7, index)
+    assert loc == 7
+    assert expanded
+    np.testing.assert_array_equal(labels.to_numpy(), np.arange(8))
+    if index.dtype == np.uint64:
+        # uint64 labels instead of float labels
+        assert labels.dtype == np.uint64
+    else:
+        # signed integer labels, as before
+        assert labels.dtype.kind == "i"
+
+    mod = tsa_model.TimeSeriesModel(pd.Series(np.zeros(5), index=index))
+    _, _, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        3, 7, 5, mod._index, data=mod.data
+    )
+    assert out_of_sample == 3
+    np.testing.assert_array_equal(prediction_index.to_numpy(), np.arange(3, 8))
+    assert prediction_index.dtype == labels.dtype

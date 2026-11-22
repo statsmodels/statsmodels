@@ -11,6 +11,7 @@ import pandas as pd
 from pandas import testing
 from pandas.api.types import is_numeric_dtype
 from pandas.tseries import offsets as frequencies
+from pandas.tseries.frequencies import to_offset
 from pandas.util._decorators import (
     cache_readonly,
     deprecate_kwarg as pd_deprecate_kwarg,
@@ -50,6 +51,7 @@ __all__ = [
     "make_dataframe",
     "testing",
     "to_numpy",
+    "to_period_offset",
 ]
 
 version = parse(pd.__version__)
@@ -294,6 +296,31 @@ MONTH_END = "M" if PD_LT_2_2_0 else "ME"
 QUARTER_END = "Q" if PD_LT_2_2_0 else "QE"
 YEAR_END = "Y" if PD_LT_2_2_0 else "YE"
 FUTURE_STACK = {} if PD_LT_2_1_0 else {"future_stack": True}
+
+
+def to_period_offset(freq):
+    """
+    Convert the frequency of a PeriodIndex to a DateOffset
+
+    Parameters
+    ----------
+    freq : str, datetime.timedelta, or DateOffset
+        The frequency. A string is a period alias, such as "M" or "Q-DEC".
+
+    Returns
+    -------
+    DateOffset
+        The offset of the frequency.
+
+    Notes
+    -----
+    pandas 2.2 deprecates period aliases such as "M" as offset aliases, and
+    pandas 3 rejects them, unless ``is_period=True`` is passed to
+    ``to_offset``, which older pandas does not have.
+    """
+    if PD_LT_2_2_0:
+        return to_offset(freq)
+    return to_offset(freq, is_period=True)
 
 
 def deprecate_kwarg(

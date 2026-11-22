@@ -1759,3 +1759,39 @@ def test_hypothesis_test_table(statistic, df, signif, conclusion, signif_text):
     assert lines[6] == null_hyp
     expected = f"Conclusion: {conclusion} H_0 at {signif_text} significance level"
     assert lines[7] == expected
+
+
+@pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
+@pytest.mark.parametrize("k_exog", [0, 1, 2])
+@pytest.mark.parametrize("by_name", [False, True])
+def test_reorder_trend_exog(trend, k_exog, by_name):
+    # reorder must give the VAR estimated on the reordered data
+    names = ["realgdp", "realcons", "realinv"]
+    data = macrodata.load_pandas().data[names]
+    y = pd.DataFrame(np.diff(np.log(data.to_numpy()), axis=0), columns=names)
+    rng = np.random.default_rng(20261122)
+    exog = None
+    if k_exog:
+        exog = pd.DataFrame(
+            rng.standard_normal((y.shape[0], k_exog)), columns=["x", "z"][:k_exog]
+        )
+    order = [2, 0, 1]
+    res = VAR(y, exog=exog).fit(2, trend=trend)
+    reordered = res.reorder([names[i] for i in order] if by_name else order)
+    expected = VAR(y.iloc[:, order], exog=exog).fit(2, trend=trend)
+
+    assert reordered.names == [names[i] for i in order]
+    assert reordered.trend == trend
+    assert reordered.k_trend == expected.k_trend
+    assert reordered.k_exog_user == k_exog
+    assert reordered.exog_names == expected.exog_names
+    assert_allclose(reordered.params, expected.params, rtol=1e-10)
+    assert_allclose(reordered.coefs, expected.coefs, rtol=1e-10)
+    assert_allclose(reordered.sigma_u, expected.sigma_u, rtol=1e-10)
+    assert_allclose(reordered.resid, expected.resid, rtol=1e-10)
+    exog_future = None if exog is None else rng.standard_normal((4, k_exog))
+    assert_allclose(
+        reordered.forecast(y.iloc[-2:, order].to_numpy(), 4, exog_future),
+        expected.forecast(y.iloc[-2:, order].to_numpy(), 4, exog_future),
+        rtol=1e-10,
+    )

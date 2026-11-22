@@ -25,6 +25,23 @@ class PredictionResults:
     row_labels : sequence of hashable or pandas.Index, optional
         Row labels to use for the summary frame. If None, attempts to read
         the index of ``predicted_mean``.
+
+    Notes
+    -----
+    A predicted mean with a single column, such as a one-column DataFrame,
+    is treated as 1-d, and so is a variance with shape (nobs, 1, 1).
+
+    .. versionchanged:: 0.15.1
+
+       A single column was kept as 2-d, which gave a confidence interval
+       with 2 * nobs columns for an (nobs, 1) array and raised for a
+       one-column DataFrame.
+
+    .. versionchanged:: 0.15.1
+
+       ``predicted_mean`` and ``se_mean`` of a DataFrame predicted mean with
+       several columns keep its column names. They had the columns 0, ...,
+       k - 1.
     """
 
     def __init__(
@@ -37,6 +54,14 @@ class PredictionResults:
     ):
         self._predicted_mean = np.asarray(predicted_mean)
         self._var_pred_mean = np.asarray(var_pred_mean)
+        # Names of the columns of a 2-d predicted mean
+        self._columns = getattr(predicted_mean, "columns", None)
+        # A single column and its (nobs, 1, 1) variance are 1-d
+        mean_shape = self._predicted_mean.shape
+        if len(mean_shape) == 2 and mean_shape[1] == 1:
+            self._predicted_mean = self._predicted_mean[:, 0]
+        if self._var_pred_mean.shape[1:] == (1, 1):
+            self._var_pred_mean = self._var_pred_mean[:, 0, 0]
         self._df = df
         self._row_labels = row_labels
         if row_labels is None:
@@ -45,6 +70,8 @@ class PredictionResults:
 
         if dist != "t" and df is not None:
             raise ValueError('df must be None when dist is not "t"')
+        if dist == "t" and df is None:
+            raise ValueError('df must be given when dist is "t"')
 
         if dist is None or dist == "norm":
             self.dist = stats.norm
@@ -58,11 +85,23 @@ class PredictionResults:
         else:
             raise ValueError('dist must be a None, "norm", "t" or a callable.')
 
+    def _column_names(self, prefix):
+        # Labels of statistics of the columns of a 2-d predicted mean
+        names = self._columns
+        if names is None:
+            names = range(self._predicted_mean.shape[1])
+        return [f"{prefix} {name}" for name in names]
+
     def _wrap_pandas(self, value, name=None, columns=None):
         if not self._use_pandas:
             return value
         if value.ndim == 1:
             return pd.Series(value, index=self._row_labels, name=name)
+        if columns is None and self._columns is not None:
+            if len(self._columns) == value.shape[1]:
+                # The columns of a DataFrame predicted mean, so that the
+                # mean, its standard error and the t-values align
+                columns = self._columns
         return pd.DataFrame(value, index=self._row_labels, columns=columns)
 
     @property
@@ -142,7 +181,7 @@ class PredictionResults:
             pvalue = self.dist.sf(np.abs(stat), *self.dist_args) * 2
         elif alternative == "larger":
             pvalue = self.dist.sf(stat, *self.dist_args)
-        elif alternative == "smaller":
+        else:  # smaller
             pvalue = self.dist.cdf(stat, *self.dist_args)
         return stat, pvalue
 
@@ -162,7 +201,16 @@ class PredictionResults:
         -------
         pi : ndarray or DataFrame
             The array has the lower and the upper limit of the prediction
-            interval in the columns.
+            interval in the columns. For a predicted mean with several
+            columns, the lower limits of all columns come first, labelled
+            "lower <name>" in a DataFrame, and then the upper limits,
+            labelled "upper <name>", where <name> is the column name of the
+            predicted mean, or its position if it has none.
+
+            .. versionchanged:: 0.15.1
+
+               The interval of a predicted mean with several columns is
+               labelled in a DataFrame instead of raising.
         """
         se = self.se_mean
         q = self.dist.ppf(1 - alpha / 2.0, *self.dist_args)
@@ -170,7 +218,11 @@ class PredictionResults:
         upper = self.predicted_mean + q * se
         ci = np.column_stack((lower, upper))
         if self._use_pandas:
-            return self._wrap_pandas(ci, columns=["lower", "upper"])
+            if self._predicted_mean.ndim == 1:
+                columns = ["lower", "upper"]
+            else:
+                columns = self._column_names("lower") + self._column_names("upper")
+            return self._wrap_pandas(ci, columns=columns)
         return ci
 
     def summary_frame(self, alpha=0.05):
@@ -192,8 +244,30 @@ class PredictionResults:
             * mean_se
             * mean_ci_lower
             * mean_ci_upper
+
+            For a predicted mean with several columns, it has these four
+            columns for each column of the predicted mean, labelled for
+            example "mean <name>", where <name> is the column name of the
+            predicted mean, or its position if it has none. All "mean"
+            columns come first, then all "mean_se" columns and so on.
+
+            .. versionchanged:: 0.15.1
+
+               A predicted mean with several columns is supported instead
+               of raising.
         """
         ci_mean = np.asarray(self.conf_int(alpha=alpha))
+        if self._predicted_mean.ndim == 2:
+            values = np.column_stack(
+                (self._predicted_mean, np.asarray(self.se_mean), ci_mean)
+            )
+            columns = (
+                self._column_names("mean")
+                + self._column_names("mean_se")
+                + self._column_names("mean_ci_lower")
+                + self._column_names("mean_ci_upper")
+            )
+            return pd.DataFrame(values, index=self._row_labels, columns=columns)
         lower, upper = ci_mean[:, 0], ci_mean[:, 1]
         to_include = {
             "mean": self.predicted_mean,

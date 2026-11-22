@@ -1742,3 +1742,5 @@ Time series
   :pr:`10309`, :pr:`10359`, :pr:`10323`, :pr:`10305`, :pr:`10304`
 - The smoothing and damping parameters of ``ExponentialSmoothing.fit`` have to
   be in [0, 1]. :pr:`10387`
+
+.. include:: _upcoming_changes.rst

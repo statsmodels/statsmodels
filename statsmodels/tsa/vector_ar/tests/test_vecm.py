@@ -3,20 +3,28 @@ from numpy.testing import (
     assert_allclose,
     assert_array_equal,
 )
+import pandas as pd
 import pytest
-from scipy import special
+from scipy import linalg, special, stats
 
+from statsmodels.datasets import danish_data
 import statsmodels.datasets.interest_inflation.data as e6
+from statsmodels.tools.sm_exceptions import MissingDataError
 from statsmodels.tools.testing import assert_equal
+from statsmodels.tsa.vector_ar.hypothesis_test_results import (
+    CausalityTestResults,
+)
 from statsmodels.tsa.vector_ar.tests.JMulTi_results.parse_jmulti_vecm_output import (
     dt_s_tup_to_string,
     load_results_jmulti,
     sublists,
 )
+from statsmodels.tsa.vector_ar.tests.results import results_vecm_urca
 from statsmodels.tsa.vector_ar.util import seasonal_dummies
-from statsmodels.tsa.vector_ar.var_model import VARProcess
+from statsmodels.tsa.vector_ar.var_model import VAR, VARProcess
 from statsmodels.tsa.vector_ar.vecm import (
     VECM,
+    coint_johansen,
     select_coint_rank,
     select_order,
 )
@@ -1788,3 +1796,548 @@ def test_pvalues_large_tvalues(n, alpha, drift, c_coint, deterministic, names):
         # 2 * norm.sf(t) = erfc(t / sqrt(2))
         assert_allclose(pvalues, special.erfc(tvalues / np.sqrt(2)), rtol=1e-10)
         assert np.all(pvalues[lost] > 0)
+
+
+DETERMINISTIC = ["n", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"]
+
+
+def _danish():
+    return danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+
+
+def _det_terms(deterministic, nobs_tot, seasons=0, first_season=0):
+    # The deterministic terms D_t of the docstring of VECM at the observations
+    # t = 1, ..., nobs_tot: a constant, the linear trend t and centered
+    # seasonal dummies. The terms inside the relation enter as D_{t-1}.
+    one = np.ones((nobs_tot, 1))
+    trend = np.arange(1, nobs_tot + 1, dtype=float)[:, None]
+    coint, outside = [np.empty((nobs_tot, 0))], [np.empty((nobs_tot, 0))]
+    if "ci" in deterministic:
+        coint.append(one)
+    if "li" in deterministic:
+        coint.append(trend)
+    if "co" in deterministic:
+        outside.append(one)
+    if seasons > 0:
+        season = (np.arange(nobs_tot) + first_season) % seasons
+        outside.append((season[:, None] == np.arange(seasons - 1)) - 1 / seasons)
+    if "lo" in deterministic:
+        outside.append(trend)
+    return np.column_stack(coint), np.column_stack(outside)
+
+
+def _regressors(y, k_ar_diff, coint_det, det):
+    # Delta y_t, (y_{t-1}, D^co_{t-1}) and (Delta y_{t-1}, ...,
+    # Delta y_{t-k_ar_diff}, D_t) for t = k_ar_diff + 1, ..., nobs_tot - 1
+    # (Luetkepohl 2005, p. 286 and p. 299)
+    p = k_ar_diff + 1
+    dy = np.diff(y, axis=0)  # dy[t - 1] = y[t] - y[t - 1]
+    z0 = dy[p - 1 :]
+    z1 = np.column_stack([y[p - 1 : -1], coint_det[p - 1 : -1]])
+    lags = [dy[p - 1 - i : -i] for i in range(1, p)]
+    z2 = np.column_stack([*lags, det[p:]])
+    return z0, z1, z2
+
+
+def _johansen_rrr(y, k_ar_diff, coint_rank, coint_det, det):
+    # The reduced rank regression of Johansen as the generalized symmetric
+    # eigenvalue problem |lambda S11 - S10 S00^{-1} S01| = 0 (Luetkepohl 2005,
+    # Section 7.2.3), a second method next to the matrix square root and the
+    # non-symmetric eigenvalue problem of VECM
+    z0, z1, z2 = _regressors(y, k_ar_diff, coint_det, det)
+    nobs, neqs = z0.shape
+
+    def partial_out(z):
+        if z2.shape[1] == 0:
+            return z
+        return z - z2 @ np.linalg.lstsq(z2, z, rcond=None)[0]
+
+    r0, r1 = partial_out(z0), partial_out(z1)
+    s00 = r0.T @ r0 / nobs
+    s01 = r0.T @ r1 / nobs
+    s11 = r1.T @ r1 / nobs
+    lam, vec = linalg.eigh(s01.T @ np.linalg.solve(s00, s01), s11)
+    lam, vec = lam[::-1], vec[:, ::-1]
+    beta = vec[:, :coint_rank] @ np.linalg.inv(vec[:coint_rank, :coint_rank])
+    x = np.column_stack([z1 @ beta, z2])
+    coef = np.linalg.lstsq(x, z0, rcond=None)[0].T
+    resid = z0 - x @ coef.T
+    log_det = np.linalg.slogdet(s00)[1] + np.sum(np.log(1 - lam[:coint_rank]))
+    llf = -nobs / 2 * (neqs * np.log(2 * np.pi) + log_det + neqs)
+    alpha, gamma = coef[:, :coint_rank], coef[:, coint_rank:]
+    return beta, alpha, gamma, resid.T @ resid / nobs, llf
+
+
+@pytest.mark.parametrize(
+    "case, deterministic, seasons",
+    [
+        ("co", "co", 0),
+        ("ci", "ci", 0),
+        ("coli", "coli", 0),
+        ("co_seasons", "co", 4),
+    ],
+)
+def test_vecm_urca_vars(case, deterministic, seasons):
+    # References from tests/results/results_vecm_urca.R (urca::ca.jo,
+    # urca::cajorls and vars::vec2var). R solves the eigenvalue problem with
+    # a pivoted Cholesky factor and eigen(), VECM with a matrix square root
+    # and eig(), so the estimates agree to about 1e-8, not to the precision
+    # of the machine.
+    ref = results_vecm_urca.results[case]
+    rank = ref["coint_rank"]
+    res = VECM(
+        _danish(),
+        k_ar_diff=ref["k_ar_diff"],
+        coint_rank=rank,
+        deterministic=deterministic,
+        seasons=seasons,
+    ).fit()
+    rtol = 1e-6
+    # both normalize the first rank rows of beta to the identity; atol
+    # because the off-diagonal zeros are zero up to rounding
+    assert_allclose(res.beta[:rank], np.eye(rank), atol=1e-12)
+    beta = np.vstack((res.beta, res.det_coef_coint))
+    assert_allclose(beta[rank:], ref["beta"][rank:], rtol=rtol)
+    assert_allclose(res.alpha, ref["alpha"], rtol=rtol)
+    assert_allclose(res.gamma, ref["gamma"], rtol=rtol)
+    if "const" in ref:
+        assert_allclose(res.const[:, 0], ref["const"], rtol=rtol)
+    else:
+        assert res.const.shape == (4, 0)
+    if "seasonal" in ref:
+        assert_allclose(res.seasonal, ref["seasonal"], rtol=rtol)
+    else:
+        assert res.seasonal.shape == (4, 0)
+    assert_allclose(res.var_rep, ref["var_rep"], rtol=rtol)
+    assert_allclose(res.sigma_u, ref["sigma_u"], rtol=rtol)
+    assert_allclose(res.llf, ref["llf"], rtol=1e-10)
+    assert_allclose(res.ma_rep(5), ref["ma_rep"], rtol=rtol)
+    # P defaults to the Cholesky factor of sigma_u, as in vars::Psi
+    assert_allclose(res.orth_ma_rep(5), ref["orth_ma_rep"], rtol=rtol)
+    chol = np.linalg.cholesky(res.sigma_u)
+    assert_allclose(res.orth_ma_rep(5, P=chol), ref["orth_ma_rep"], rtol=rtol)
+    irf = res.irf(5)
+    assert_allclose(irf.irfs, ref["ma_rep"], rtol=rtol)
+    assert_allclose(irf.orth_irfs, ref["orth_ma_rep"], rtol=rtol)
+    assert_allclose(res.predict(5), ref["fcst"], rtol=rtol)
+    fcst = res.predict(5, alpha=0.05)
+    assert_allclose(fcst.point_forecast, ref["fcst"], rtol=rtol)
+    assert_allclose(fcst.forc_lower, ref["lower"], rtol=rtol)
+    assert_allclose(fcst.forc_upper, ref["upper"], rtol=rtol)
+
+
+@pytest.mark.parametrize("deterministic", DETERMINISTIC)
+@pytest.mark.parametrize(
+    "k_ar_diff, coint_rank, seasons, first_season",
+    [(0, 1, 0, 0), (1, 1, 0, 0), (2, 2, 4, 1)],
+)
+def test_vecm_deterministic_rrr(
+    deterministic, k_ar_diff, coint_rank, seasons, first_season
+):
+    # Every deterministic string against the reduced rank regression with
+    # the deterministic terms D_t (constant 1, trend t) built here
+    y = _danish().to_numpy()
+    res = VECM(
+        y,
+        k_ar_diff=k_ar_diff,
+        coint_rank=coint_rank,
+        deterministic=deterministic,
+        seasons=seasons,
+        first_season=first_season,
+    ).fit()
+    coint_det, det = _det_terms(deterministic, len(y), seasons, first_season)
+    beta, alpha, gamma, sigma_u, llf = _johansen_rrr(
+        y, k_ar_diff, coint_rank, coint_det, det
+    )
+    # the two eigenvalue methods agree to about 1e-8 (relative)
+    rtol = 1e-6
+    res_beta = np.vstack((res.beta, res.det_coef_coint))
+    assert res_beta.shape == beta.shape
+    assert_allclose(res_beta[coint_rank:], beta[coint_rank:], rtol=rtol)
+    assert_allclose(res.alpha, alpha, rtol=rtol)
+    res_gamma = np.hstack((res.gamma, res.det_coef))
+    assert res_gamma.shape == gamma.shape
+    assert_allclose(res_gamma, gamma, rtol=rtol)
+    assert_allclose(res.sigma_u, sigma_u, rtol=rtol)
+    assert_allclose(res.llf, llf, rtol=1e-9)
+    # The log-likelihood from the eigenvalues (Luetkepohl 2005, eq. 7.2.20) is
+    # the Gaussian log-likelihood at the estimates
+    nobs, neqs = res.resid.shape
+    sigma_resid = res.resid.T @ res.resid / nobs
+    log_det = np.linalg.slogdet(sigma_resid)[1]
+    gauss = -nobs / 2 * (neqs * np.log(2 * np.pi) + log_det + neqs)
+    assert_allclose(res.llf, gauss, rtol=1e-9)
+    assert_allclose(res.resid + res.fittedvalues, y[k_ar_diff + 1 :], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "alias, deterministic",
+    [("nc", "n"), ("", "n"), ("CO", "co"), ("CiLi", "cili")],
+)
+def test_vecm_deterministic_alias(alias, deterministic):
+    # "nc" and "" are accepted for "n", and the string is not case sensitive
+    y = _danish().to_numpy()
+    res = VECM(y, k_ar_diff=1, deterministic=alias).fit()
+    expected = VECM(y, k_ar_diff=1, deterministic=deterministic).fit()
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+    assert_allclose(res.det_coef_coint, expected.det_coef_coint, rtol=1e-12)
+    assert_allclose(res.det_coef, expected.det_coef, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "deterministic, trend", [("n", "n"), ("co", "c"), ("colo", "ct")]
+)
+def test_vecm_full_rank_is_var_in_levels(deterministic, trend):
+    # With coint_rank equal to neqs the rank restriction is void and the VECM
+    # is the VAR in levels estimated by OLS
+    y = _danish().to_numpy()
+    neqs = y.shape[1]
+    res = VECM(y, k_ar_diff=1, coint_rank=neqs, deterministic=deterministic).fit()
+    var = VAR(y).fit(2, trend=trend)
+    assert_allclose(res.var_rep, var.coefs, rtol=1e-8)
+    assert_allclose(res.sigma_u, var.sigma_u_mle, rtol=1e-8)
+    assert_allclose(res.llf, var.llf, rtol=1e-10)
+    if trend == "c":
+        assert_allclose(res.const[:, 0], var.params[0], rtol=1e-8)
+    # beta is the identity (atol: zero up to rounding), so it has no estimated
+    # element and no standard error
+    assert_allclose(res.beta, np.eye(neqs), atol=1e-12)
+    assert_array_equal(res.stderr_beta, np.zeros((neqs, neqs)))
+    assert_array_equal(res.tvalues_beta, np.zeros((neqs, neqs)))
+    assert_array_equal(res.pvalues_beta, np.zeros((neqs, neqs)))
+
+
+@pytest.mark.parametrize("deterministic", DETERMINISTIC)
+def test_vecm_inference_arrays(deterministic):
+    # t-values, p-values and confidence intervals of every parameter group,
+    # including the empty groups of deterministic terms
+    res = VECM(
+        _danish(), k_ar_diff=1, coint_rank=2, deterministic=deterministic
+    ).fit()
+    neqs, rank = 4, 2
+    n_coint = ("ci" in deterministic) + ("li" in deterministic)
+    n_outside = ("co" in deterministic) + ("lo" in deterministic)
+    shapes = {
+        "alpha": (neqs, rank),
+        "gamma": (neqs, neqs),
+        "det_coef_coint": (n_coint, rank),
+        "det_coef": (neqs, n_outside),
+    }
+    signif = 0.1
+    crit = stats.norm.ppf(1 - signif / 2)
+    for name, shape in shapes.items():
+        est = getattr(res, name)
+        stderr = getattr(res, f"stderr_{name}")
+        tvalues = getattr(res, f"tvalues_{name}")
+        pvalues = getattr(res, f"pvalues_{name}")
+        conf_int = getattr(res, f"conf_int_{name}")(alpha=signif)
+        for arr in (est, stderr, tvalues, pvalues, conf_int):
+            assert arr.shape == shape
+        assert np.all(stderr > 0)
+        assert_allclose(tvalues, est / stderr, rtol=1e-12)
+        erfc = special.erfc(np.abs(tvalues) / np.sqrt(2))
+        assert_allclose(pvalues, erfc, rtol=1e-10)
+        assert_allclose(conf_int["lower"], est - crit * stderr, rtol=1e-12)
+        assert_allclose(conf_int["upper"], est + crit * stderr, rtol=1e-12)
+    # the first rank rows of beta are normalized, not estimated
+    assert_array_equal(res.stderr_beta[:rank], np.zeros((rank, rank)))
+    assert_array_equal(res.tvalues_beta[:rank], np.zeros((rank, rank)))
+    assert_array_equal(res.pvalues_beta[:rank], np.zeros((rank, rank)))
+    beta, stderr = res.beta[rank:], res.stderr_beta[rank:]
+    assert_allclose(res.tvalues_beta[rank:], beta / stderr, rtol=1e-12)
+    conf_int = res.conf_int_beta(alpha=signif)
+    assert_allclose(conf_int["lower"][rank:], beta - crit * stderr, rtol=1e-12)
+
+
+@pytest.mark.parametrize("deterministic", ["n", "ci", "colo"])
+@pytest.mark.parametrize("k_ar_diff", [0, 2])
+def test_vecm_cov_var_repr(deterministic, k_ar_diff):
+    # cov_params_default is eq. (7.2.21) of Luetkepohl (2005) at the
+    # estimated beta and cov_var_repr maps it to A_1 = I + Pi + Gamma_1,
+    # A_i = Gamma_i - Gamma_{i-1} and A_p = -Gamma_{p-1}
+    y = _danish().to_numpy()
+    neqs, rank = y.shape[1], 1
+    res = VECM(
+        y, k_ar_diff=k_ar_diff, coint_rank=rank, deterministic=deterministic
+    ).fit()
+    coint_det, det = _det_terms(deterministic, len(y))
+    _, z1, z2 = _regressors(y, k_ar_diff, coint_det, det)
+    beta = np.vstack((res.beta, res.det_coef_coint))
+    x = np.column_stack([z1 @ beta, z2])
+    b = linalg.block_diag(beta, np.eye(z2.shape[1]))
+    cov = np.kron(b @ np.linalg.inv(x.T @ x) @ b.T, res.sigma_u)
+    # x'x is ill-conditioned (levels, trend and differences), so another order
+    # of the sums changes the small elements at about 1e-10 (relative)
+    assert_allclose(res.cov_params_default, cov, rtol=1e-7)
+    # vec(Pi) and vec(Gamma_1), ..., vec(Gamma_{k_ar_diff}); the coefficients
+    # of the deterministic terms are not part of the VAR coefficients
+    k2 = neqs**2
+    start = neqs * z1.shape[1]
+    keep = np.r_[0:k2, start : start + k2 * k_ar_diff]
+    cov_pi_gamma = cov[np.ix_(keep, keep)]
+    assert_allclose(res.cov_params_wo_det, cov_pi_gamma, rtol=1e-7)
+    p = k_ar_diff + 1
+    jac = np.zeros((k2 * p, k2 * p))
+    eye = np.eye(k2)
+    jac[:k2, :k2] = eye
+    for i in range(p):
+        if i < p - 1:
+            jac[i * k2 : (i + 1) * k2, (i + 1) * k2 : (i + 2) * k2] = eye
+        if i > 0:
+            jac[i * k2 : (i + 1) * k2, i * k2 : (i + 1) * k2] = -eye
+    assert_allclose(res.cov_var_repr, jac @ cov_pi_gamma @ jac.T, rtol=1e-7)
+
+
+def test_granger_causality_causing_default():
+    # causing=None tests the remaining variables of the system
+    res = VECM(_danish(), k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    for caused, causing in [(0, [1, 2, 3]), ("ibo", ["lrm", "lry", "ide"])]:
+        default = res.test_granger_causality(caused)
+        explicit = res.test_granger_causality(caused, causing)
+        names = [res.names[c] if isinstance(c, int) else c for c in causing]
+        assert default.causing == names
+        assert_allclose(default.test_statistic, explicit.test_statistic, rtol=1e-12)
+        assert_allclose(default.pvalue, explicit.pvalue, rtol=1e-12)
+        assert default.df == explicit.df
+        assert default == explicit
+    two = res.test_granger_causality([0, 3])
+    assert two.causing == ["lry", "ibo"]
+    assert two.caused == ["lrm", "ide"]
+
+
+def test_granger_causality_invalid_types():
+    res = VECM(_danish(), k_ar_diff=1, coint_rank=1).fit()
+    with pytest.raises(TypeError, match="caused has to be"):
+        res.test_granger_causality([0.5])
+    with pytest.raises(TypeError, match="causing has to be"):
+        res.test_granger_causality(0, [0.5])
+    with pytest.raises(TypeError, match="causing has to be"):
+        res.test_granger_causality(0, [1, None])
+
+
+def test_causality_results_eq():
+    res = VECM(_danish(), k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    # instantaneous causality is symmetric: the statistic is the same with
+    # causing and caused swapped, and so are the results
+    inst = res.test_inst_causality(0)
+    swapped = res.test_inst_causality([1, 2, 3])
+    assert inst.causing == swapped.caused
+    assert inst.caused == swapped.causing
+    assert_allclose(inst.test_statistic, swapped.test_statistic, rtol=1e-10)
+    assert inst == swapped
+    # Granger causality is not
+    granger = res.test_granger_causality([1, 2, 3], 0)
+    granger_swapped = res.test_granger_causality(0, [1, 2, 3])
+    assert granger != granger_swapped
+    assert res.test_granger_causality(0, 1) != res.test_granger_causality(0, 2)
+    # results of a different class are never equal
+    assert inst != res.test_normality()
+    assert res.test_normality() != res.test_whiteness(5)
+    assert res.test_whiteness(5) != 1.0
+
+
+@pytest.mark.parametrize("method", [None, "lr"])
+def test_causality_results_method(method):
+    with pytest.raises(ValueError, match="must not be None"):
+        CausalityTestResults(
+            ["y1"], ["y2"], 3.0, 3.84, 0.08, 1, 0.05, method=method
+        )
+
+
+@pytest.mark.parametrize("signif", [0.01, 0.05, 0.1])
+def test_hypothesis_test_results_conclusion(signif):
+    # reject if and only if the p-value is below the significance level
+    res = VECM(_danish(), k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    results = [
+        res.test_granger_causality(0, signif=signif),
+        res.test_granger_causality(2, signif=signif),
+        res.test_inst_causality(0, signif=signif),
+        res.test_normality(signif=signif),
+        res.test_whiteness(5, signif=signif),
+        res.test_whiteness(8, signif=signif, adjusted=True),
+    ]
+    for result in results:
+        expected = "reject" if result.pvalue < signif else "fail to reject"
+        assert result.conclusion == expected
+        assert result.signif == signif
+        # the summary prints four significant digits
+        row = result.summary().data[1]
+        assert_allclose(float(row[0]), result.test_statistic, rtol=1e-3)
+        assert_allclose(float(row[1]), result.crit_value, rtol=1e-3)
+        assert row[3] == str(result.df)
+
+
+@pytest.mark.parametrize("deterministic", ["n", "co", "ci", "colo"])
+@pytest.mark.parametrize("k_ar_diff", [0, 1])
+def test_summary_tables(deterministic, k_ar_diff):
+    res = VECM(
+        _danish(), k_ar_diff=k_ar_diff, coint_rank=1, deterministic=deterministic
+    ).fit()
+    neqs = 4
+    tables = res.summary(alpha=0.1).tables
+    n_outside = ("co" in deterministic) + ("lo" in deterministic)
+    lagged = neqs if n_outside + k_ar_diff > 0 else 0
+    assert len(tables) == lagged + neqs + 1
+    # coefficients are printed with four decimals (atol 5e-5)
+    for i in range(lagged):
+        rows = tables[i].data[1:]
+        names = [row[0].strip() for row in rows]
+        expected = ["const"] * ("co" in deterministic)
+        expected += ["lin_trend"] * ("lo" in deterministic)
+        expected += [f"L1.{n}" for n in res.names] * k_ar_diff
+        assert names == expected
+        params = np.r_[res.det_coef[i], res.gamma[i]]
+        assert_allclose([float(row[1]) for row in rows], params, atol=5e-5)
+    for i in range(neqs):
+        rows = tables[lagged + i].data[1:]
+        assert [row[0].strip() for row in rows] == ["ec1"]
+        assert_allclose(float(rows[0][1]), res.alpha[i, 0], atol=5e-5)
+    rows = tables[-1].data[1:]
+    coint = np.r_[res.beta[:, 0], res.det_coef_coint[:, 0]]
+    assert_allclose([float(row[1]) for row in rows], coint, atol=5e-5)
+
+
+def test_coint_rank_results_str():
+    endog = _danish()
+    johansen = coint_johansen(endog, 0, 1)
+    for method, stat, crit in [
+        ("trace", johansen.lr1, johansen.cvt),
+        ("maxeig", johansen.lr2, johansen.cvm),
+    ]:
+        result = select_coint_rank(endog, 0, 1, method=method, signif=0.05)
+        rank = result.rank
+        # the first test that is not rejected at 5% gives the rank
+        assert np.all(stat[:rank] > crit[:rank, 1])
+        assert stat[rank] < crit[rank, 1]
+        assert_allclose(result.test_stats, stat[: rank + 1], rtol=1e-12)
+        assert_allclose(result.crit_vals, crit[: rank + 1, 1], rtol=1e-12)
+        text = str(result)
+        assert text == result.summary().as_text()
+        for value in result.test_stats:
+            assert f"{value:#0.4g}" in text
+
+
+@pytest.mark.parametrize(
+    "form", ["list", "tuple", "datetime", "period", "range", "int64", "int32"]
+)
+def test_vecm_endog_forms(form):
+    # endog is array_like: every form gives the estimates of the float ndarray
+    data = _danish()
+    endog = data.to_numpy()
+    expected_names = ["y1", "y2", "y3", "y4"]
+    if form == "list":
+        data = endog.tolist()
+    elif form == "tuple":
+        data = tuple(map(tuple, endog))
+    elif form == "period":
+        index = pd.period_range("1974Q1", periods=len(data), freq="Q")
+        data = data.set_axis(index)
+        expected_names = list(data.columns)
+    elif form == "range":
+        data = data.reset_index(drop=True)
+        expected_names = list(data.columns)
+    elif form == "datetime":
+        expected_names = list(data.columns)
+    else:
+        # integer data: the series in units of 0.01
+        endog = np.round(100 * endog)
+        data = endog.astype(form)
+    res = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    expected = VECM(endog, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    assert res.names == expected_names
+    for name in ("alpha", "beta", "gamma", "det_coef", "sigma_u"):
+        assert getattr(res, name).dtype == np.float64
+        assert_allclose(getattr(res, name), getattr(expected, name), rtol=1e-8)
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+    assert_allclose(res.predict(3), expected.predict(3), rtol=1e-10)
+    if form == "datetime":
+        assert res.dates.equals(data.index)
+        assert res.model.data.freq == data.index.freqstr
+    elif form == "period":
+        assert res.dates.equals(data.index)
+    else:
+        assert res.dates is None
+
+
+def test_vecm_dates_freq():
+    endog = _danish().to_numpy()
+    dates = pd.date_range("1974-01-01", periods=len(endog), freq="QS")
+    res = VECM(endog, dates=dates, freq="QS", k_ar_diff=1).fit()
+    expected = VECM(endog, k_ar_diff=1).fit()
+    assert res.dates.equals(dates)
+    assert res.model.data.freq == dates.freqstr
+    assert_allclose(res.alpha, expected.alpha, rtol=1e-12)
+
+
+@pytest.mark.parametrize("form", ["list", "1d", "dataframe"])
+def test_vecm_exog_forms(form):
+    # exog is array_like: a list, a 1-d array and a DataFrame for one column
+    data = _danish()
+    endog = data.to_numpy()
+    exog = np.sqrt(np.arange(1.0, len(endog) + 1))[:, None]
+    if form == "list":
+        exog_arg = exog.tolist()
+    elif form == "1d":
+        exog_arg = exog[:, 0]
+    else:
+        exog_arg = pd.DataFrame(exog, index=data.index, columns=["sqrt_t"])
+    res = VECM(endog, exog=exog_arg, k_ar_diff=1, deterministic="co").fit()
+    expected = VECM(endog, exog=exog, k_ar_diff=1, deterministic="co").fit()
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+    assert_allclose(res.exog_coefs, expected.exog_coefs, rtol=1e-10)
+    # exog is a deterministic term outside the relation, as D_t
+    coint_det, det = _det_terms("co", len(endog))
+    det = np.column_stack([det, exog])
+    _, alpha, gamma, _, llf = _johansen_rrr(endog, 1, 1, coint_det, det)
+    assert_allclose(res.alpha, alpha, rtol=1e-7)
+    assert_allclose(np.hstack((res.gamma, res.det_coef)), gamma, rtol=1e-7)
+    assert_allclose(res.llf, llf, rtol=1e-9)
+    exog_fc = np.sqrt(np.arange(len(endog) + 1.0, len(endog) + 4))[:, None]
+    fcst = res.predict(3, exog_fc=exog_fc)
+    assert_allclose(fcst, expected.predict(3, exog_fc=exog_fc), rtol=1e-10)
+    assert len(res.summary().tables) == 4 + 4 + 1
+
+
+@pytest.mark.parametrize("first_season", [1, 2, 3, 5, -1])
+def test_vecm_first_season(first_season):
+    # With centered dummies the seasonal terms span the same space for any
+    # first season, so only the labels of the seasonal coefficients change:
+    # the other estimates and the forecasts are the same. first_season is
+    # taken modulo seasons.
+    endog = _danish().to_numpy()
+    res = VECM(
+        endog, k_ar_diff=1, deterministic="co", seasons=4, first_season=first_season
+    ).fit()
+    expected = VECM(endog, k_ar_diff=1, deterministic="co", seasons=4).fit()
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+    assert_allclose(res.alpha, expected.alpha, rtol=1e-8)
+    assert_allclose(res.predict(9), expected.predict(9), rtol=1e-10)
+    coint_det, det = _det_terms("co", len(endog), 4, first_season)
+    _, _, gamma, _, _ = _johansen_rrr(endog, 1, 1, coint_det, det)
+    assert_allclose(np.hstack((res.gamma, res.det_coef)), gamma, rtol=1e-7)
+
+
+def test_vecm_missing():
+    endog = _danish().to_numpy()
+    with_nan = endog.copy()
+    with_nan[20, 1] = np.nan
+    with pytest.raises(MissingDataError):
+        VECM(with_nan, k_ar_diff=1, missing="raise")
+    res = VECM(with_nan, k_ar_diff=1, missing="drop").fit()
+    keep = np.isfinite(with_nan).all(axis=1)
+    expected = VECM(endog[keep], k_ar_diff=1).fit()
+    assert res.nobs == expected.nobs == len(endog) - 1 - 2
+    assert_allclose(res.alpha, expected.alpha, rtol=1e-12)
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+
+
+@pytest.mark.parametrize("form", ["list", "dataframe"])
+def test_select_order_data_forms(form):
+    data = _danish()
+    endog = data.to_numpy()
+    data = endog.tolist() if form == "list" else data
+    res = select_order(data, 3, deterministic="co", seasons=4)
+    expected = select_order(endog, 3, deterministic="co", seasons=4)
+    assert res.selected_orders == expected.selected_orders
+    for ic in ("aic", "bic", "hqic", "fpe"):
+        assert_allclose(res.ics[ic], expected.ics[ic], rtol=1e-12)
