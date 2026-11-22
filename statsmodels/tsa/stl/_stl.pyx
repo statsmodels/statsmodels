@@ -121,6 +121,12 @@ cdef class STL(object):
         Periodicity of the sequence. If None and endog is a pandas Series or
         DataFrame, attempts to determine from endog. If endog is a ndarray,
         period must be provided.
+
+        .. versionchanged:: 0.15.1
+
+           Without ``period``, a pandas endog with a PeriodIndex has the
+           period of the frequency of its index, for example 12 for monthly
+           periods, where it raised a ValueError.
     seasonal : int, optional
         Length of the seasonal smoother. Must be an odd integer, and should
         normally be >= 7 (default).
@@ -171,6 +177,13 @@ cdef class STL(object):
     used in the robust weighting. This version matches the fixed version that
     uses a correct partitioned sort to determine the median.
 
+    .. versionchanged:: 0.15.1
+
+       A list or tuple ``endog`` is stored as an ndarray, so the ``observed``
+       data of the results is an ndarray, as for ndarray input. It was the
+       list or tuple, and ``nobs`` and ``plot`` of the results raised an
+       AttributeError.
+
     See the notebook `Seasonal Decomposition
     <../examples/notebooks/generated/stl_decomposition.html>`__ for an overview.
 
@@ -214,6 +227,10 @@ cdef class STL(object):
     def __init__(self, endog, period=None, seasonal=7, trend=None, low_pass=None,
                  seasonal_deg=1, trend_deg=1, low_pass_deg=1,
                  robust=False, seasonal_jump=1, trend_jump=1, low_pass_jump=1):
+        if not isinstance(endog, (pd.Series, pd.DataFrame)):
+            # the results hold endog as the observed data, so a list or
+            # tuple is stored as an ndarray, as for ndarray input
+            endog = np.asarray(endog)
         self.endog = endog
         y = array_like(endog, "endog", dtype=np.double, contiguous=True, writeable=True, ndim=1)
         self._ya = y
@@ -221,8 +238,12 @@ cdef class STL(object):
         if period is None:
             freq = None
             if isinstance(endog, (pd.Series, pd.DataFrame)):
-                with _infer_freq_returns_offset():
-                    freq = getattr(endog.index, 'inferred_freq', None)
+                if isinstance(endog.index, pd.PeriodIndex):
+                    # a PeriodIndex has a freq but no inferred_freq
+                    freq = endog.index.freq
+                else:
+                    with _infer_freq_returns_offset():
+                        freq = getattr(endog.index, 'inferred_freq', None)
             if freq is None:
                 raise ValueError('Unable to determine period from endog')
             period = freq_to_period(freq)
