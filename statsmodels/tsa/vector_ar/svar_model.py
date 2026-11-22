@@ -140,7 +140,7 @@ class SVAR(tsbase.TimeSeriesModel):
         solver="bfgs",
         override=False,
         maxiter=500,
-        maxfun=500,
+        maxfun=None,
     ):
         """
         Fit the SVAR model and solve for structural parameters
@@ -160,6 +160,12 @@ class SVAR(tsbase.TimeSeriesModel):
             the maximum number of lags to check for order selection.
         method : {'ols'}, optional
             Estimation method to use
+
+            .. deprecated:: 0.15.1
+
+               Other values were ignored and the VAR was estimated by OLS.
+               They issue a FutureWarning and will raise a ValueError after
+               statsmodels 0.17 is released.
         ic : {'aic', 'fpe', 'hqic', 'bic', None}, optional
             Information criterion to use for VAR order selection.
             aic : Akaike
@@ -181,6 +187,13 @@ class SVAR(tsbase.TimeSeriesModel):
             Note that these are prepended to the columns of the dataset.
         s_method : {'mle'}, optional
             Estimation method for structural parameters
+
+            .. deprecated:: 0.15.1
+
+               Other values were ignored and the structural parameters were
+               estimated by maximum likelihood. They issue a FutureWarning
+               and will raise a ValueError after statsmodels 0.17 is
+               released.
         solver : {'bfgs', 'newton', 'nm', 'lbfgs', 'powell', 'cg', 'ncg', 'basinhopping', 'minimize'}, optional
             The optimizer that maximizes the log-likelihood of the structural
             parameters, see the method argument of
@@ -192,7 +205,13 @@ class SVAR(tsbase.TimeSeriesModel):
         maxiter : int, optional
             Number of iterations to perform in solution method
         maxfun : int, optional
-            Number of function evaluations to perform
+            Unused.
+
+            .. deprecated:: 0.15.1
+
+               maxfun was ignored. Passing it issues a FutureWarning, and it
+               will be removed after statsmodels 0.17 is released. Use
+               maxiter.
 
         Returns
         -------
@@ -210,6 +229,34 @@ class SVAR(tsbase.TimeSeriesModel):
         Lütkepohl pp. 146-153
         Hamilton pp. 324-336
         """
+        if method is not None and not (
+            isinstance(method, str) and method.lower() == "ols"
+        ):
+            warnings.warn(
+                f"method={method!r} is ignored and the VAR is estimated by OLS. "
+                'Values other than "ols" are deprecated and will raise a '
+                "ValueError after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if s_method is not None and not (
+            isinstance(s_method, str) and s_method.lower() == "mle"
+        ):
+            warnings.warn(
+                f"s_method={s_method!r} is ignored and the structural "
+                "parameters are estimated by maximum likelihood. Values other "
+                'than "mle" are deprecated and will raise a ValueError after '
+                "statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
+        if maxfun is not None:
+            warnings.warn(
+                "maxfun is ignored and deprecated, and will be removed after "
+                "statsmodels 0.17 is released. Use maxiter.",
+                FutureWarning,
+                stacklevel=2,
+            )
         lags = maxlags
         if ic is not None:
             selections = VAR(self.endog).select_order(maxlags=maxlags, trend=trend)
@@ -885,6 +932,12 @@ class SVARResults(SVARProcess, VARResults):
         ----------
         orth : bool, optional
             Compute orthogonalized impulse response error bands
+
+            .. deprecated:: 0.15.1
+
+               True was ignored and gave the bands of the structural
+               responses. It issues a FutureWarning and will raise a
+               ValueError after statsmodels 0.17 is released.
         repl : int, optional
             number of Monte Carlo replications to perform
         steps : int, optional
@@ -930,6 +983,14 @@ class SVARResults(SVARProcess, VARResults):
         -----
         Lütkepohl (2005) Appendix D
         """
+        if orth:
+            warnings.warn(
+                "orth=True is ignored and the error bands are those of the "
+                "structural responses. It is deprecated and will raise a "
+                "ValueError after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=3,
+            )
         neqs = self.neqs
         k_ar = self.k_ar
         coefs = self.coefs

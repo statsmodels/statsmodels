@@ -746,3 +746,62 @@ def test_fit_ic_verbose_and_unknown(capsys):
     assert f"Using {res.k_ar} based on bic criterion" in out
     with pytest.raises(ValueError, match="sic not recognized"):
         SVAR(data, "B", B=B).fit(maxlags=6, ic="sic")
+
+
+def _svar_lower_b():
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    data = np.diff(np.log(mdata[["realgdp", "realcons"]].values), axis=0)
+    B = np.asarray([["E", 0], ["E", "E"]], dtype="U")
+    return SVAR(data, "B", B=B)
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        ({"method": "gls"}, "method='gls' is ignored"),
+        ({"s_method": "scoring"}, "s_method='scoring' is ignored"),
+        ({"maxfun": 100}, "maxfun is ignored"),
+    ],
+)
+def test_fit_ignored_arguments_deprecated(kwargs, match):
+    # these arguments were ignored silently
+    expected = _svar_lower_b().fit(maxlags=1)
+    with pytest.warns(FutureWarning, match=match):
+        res = _svar_lower_b().fit(maxlags=1, **kwargs)
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+    assert_allclose(res.B, expected.B, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{"method": "OLS"}, {"method": None}, {"s_method": "MLE"}, {"s_method": None}],
+)
+def test_fit_default_arguments_no_warning(kwargs):
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        _svar_lower_b().fit(maxlags=1, **kwargs)
+
+
+def test_sirf_errband_mc_orth_deprecated():
+    # orth was ignored silently: the bands are those of the structural
+    # responses
+    import warnings
+
+    res = _svar_lower_b().fit(maxlags=1)
+    kwargs = {"repl": 5, "steps": 3, "burn": 10, "signif": 0.5}
+    # the ML fits of the replications may not converge, depending on the platform
+    with (
+        warnings.catch_warnings(),
+        warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"),
+    ):
+        warnings.simplefilter("error", FutureWarning)
+        expected = res.sirf_errband_mc(rng=np.random.default_rng(0), **kwargs)
+    with (
+        pytest.warns(FutureWarning, match="orth=True is ignored"),
+        warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"),
+    ):
+        band = res.sirf_errband_mc(orth=True, rng=np.random.default_rng(0), **kwargs)
+    assert_allclose(band.lower, expected.lower, rtol=1e-12)
+    assert_allclose(band.upper, expected.upper, rtol=1e-12)
