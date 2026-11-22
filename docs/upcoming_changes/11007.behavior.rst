@@ -1,0 +1,4 @@
+- With a ``trend``, :class:`~statsmodels.tsa.regime_switching.markov_regression.MarkovRegression` and :class:`~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression` named the coefficients of a pandas
+  ``exog`` ``"x1"``, ``"x2"``, ..., and named the time trend like an
+  exog column. The exog columns keep their names, and the trend
+  columns are named ``"const"`` and ``"trend"``. :pr:`11007`
