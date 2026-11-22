@@ -1610,6 +1610,38 @@ def test_params_dtype_int(austourists_model):
     assert_allclose(model.smooth(params).fittedvalues, fitted, rtol=1e-12)
 
 
+@pytest.mark.parametrize("nsimulations", [0, np.int64(0), -1])
+@pytest.mark.parametrize("anchor", [None, "end"])
+def test_simulate_nsimulations_at_least_one(oildata, nsimulations, anchor):
+    # simulate(0) wrote the initial states outside of a zero-row array in
+    # the compiled smoother; a negative number raised from np.zeros
+    res = ETSModel(oildata).smooth([0.3, 110.0])
+    with pytest.raises(ValueError, match="nsimulations must be at least 1"):
+        res.simulate(nsimulations, anchor=anchor, rng=np.random.default_rng(0))
+
+
+@pytest.mark.parametrize("steps", [0, np.int64(0), -2])
+def test_forecast_steps_at_least_one(oildata, steps):
+    # forecast(0) simulated zero steps, which wrote outside of an array
+    res = ETSModel(oildata).smooth([0.3, 110.0])
+    with pytest.raises(ValueError, match="steps must be at least 1"):
+        res.forecast(steps)
+    # one step is the smallest valid horizon: the level after the last
+    # observation, from the simple exponential smoothing recursion
+    level = 110.0
+    for value in oildata:
+        level = 0.3 * value + 0.7 * level
+    assert_allclose(res.forecast(1).iloc[0], level, rtol=1e-12)
+
+
+@pytest.mark.parametrize("initialization_method", ["known", "estimated", "heuristic"])
+def test_no_observations(initialization_method):
+    # A model without observations could be created with known initial
+    # values, and smoothing it wrote the states of the last observation out
+    # of bounds. Only the constructor is called here.
+    kwargs = {"initial_level": 1.0} if initialization_method == "known" else {}
+    with pytest.raises(ValueError, match="at least one observation"):
+        ETSModel(np.array([]), initialization_method=initialization_method, **kwargs)
 #
 # CONTRACTS OF THE PUBLIC API
 #
