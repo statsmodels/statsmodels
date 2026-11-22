@@ -17,13 +17,14 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
+from scipy import stats
 
 from statsmodels.datasets import macrodata
 import statsmodels.tools.data as data_util
-from statsmodels.tools.sm_exceptions import ValueWarning
+from statsmodels.tools.sm_exceptions import SingularMatrixWarning, ValueWarning
 from statsmodels.tsa.base.datetools import dates_from_str
 from statsmodels.tsa.stattools import acovf
-from statsmodels.tsa.vector_ar import util, var_model
+from statsmodels.tsa.vector_ar import output, util, var_model
 from statsmodels.tsa.vector_ar.hypothesis_test_results import (
     ErrorBand,
     ForecastInterval,
@@ -721,6 +722,84 @@ def test_var_fit_invalid_trend_raises():
     data = get_macrodata().view((float, 3), type=np.ndarray)
     with pytest.raises(ValueError, match="trend"):
         VAR(data).fit(2, trend="not-a-trend")
+
+
+def test_var_fit_perfectly_collinear_warns():
+    # see GH#10646: two identical series make the design matrix
+    # rank-deficient, so the parameters are not uniquely determined, just
+    # as with a rank-deficient OLS design matrix.
+    r = np.random.default_rng(0).normal(0, 0.01, 60)
+    data = pd.DataFrame({"a": r, "b": r})
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient") as record:
+        VAR(data).fit(1)
+    # the warning points at the line of the user, not at the library
+    assert record[0].filename == __file__
+
+
+def test_var_fit_ic_warns_once_at_user_line():
+    # fit(maxlags, ic) selects the lag order with select_order, which would
+    # warn for every singular lag order; only the final fit warns
+    rng = np.random.default_rng(1)
+    y = np.cumsum(rng.standard_normal((100, 2)), axis=0)
+    exog = np.ones((100, 1))
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient") as record:
+        VAR(y, exog=exog).fit(maxlags=4, ic="aic")
+    assert len(record) == 1
+    assert record[0].filename == __file__
+    # the design is full rank without the constant: no warning for any order
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SingularMatrixWarning)
+        VAR(y, exog=exog).fit(maxlags=4, ic="bic", trend="n")
+
+
+def test_var_fit_near_collinear_minimum_norm():
+    # The second series equals the first up to 1e-14 noise: the smallest
+    # singular value of the design is below the cutoff of the rank rule, so
+    # the design is rank-deficient and the minimum-norm solution is returned.
+    # The cutoff 1e-15 of lstsq gave coefficients of the order of 1e12.
+    rng = np.random.default_rng(3)
+    a = rng.standard_normal(1000)
+    y = np.column_stack([a, a + 1e-14 * rng.standard_normal(1000)])
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res = VAR(y).fit(1)
+    assert np.abs(res.params).max() < 1
+    # the two lag columns have the same coefficient in the minimum-norm solution
+    assert_allclose(res.params[1, :], res.params[2, :], rtol=1e-3, atol=1e-3)
+
+
+def test_var_fit_full_rank_does_not_warn():
+    rng = np.random.default_rng(0)
+    data = pd.DataFrame({"a": rng.normal(0, 0.01, 60), "b": rng.normal(0, 0.01, 60)})
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        VAR(data).fit(1)
+    singular = [x for x in w if issubclass(x.category, SingularMatrixWarning)]
+    assert len(singular) == 0
+
+
+@pytest.mark.parametrize("nobs", [1000, 3000, 6000])
+@pytest.mark.parametrize(
+    "trend,expect_singular",
+    [("n", False), ("c", True), ("ct", True), ("ctt", True)],
+)
+def test_var_fit_large_nobs_exog_constant_singular(nobs, trend, expect_singular):
+    # Regression test for GH#10646: the exog column is an exact multiple
+    # of the constant trends "c"/"ct"/"ctt" add (but not "n"). The near-
+    # zero singular value of such a design does not grow with nobs, so a
+    # fixed cutoff like the old rcond=1e-15 misses it from about 1000
+    # observations on for trend "c" -- this is what default_rcond fixes.
+    rng = np.random.default_rng(6)
+    endog = rng.standard_normal((nobs, 2))
+    exog = np.ones((nobs, 1))
+    if expect_singular:
+        with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+            VAR(endog, exog=exog).fit(1, trend=trend)
+    else:
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            VAR(endog, exog=exog).fit(1, trend=trend)
+        singular = [x for x in w if issubclass(x.category, SingularMatrixWarning)]
+        assert len(singular) == 0
 
 
 def test_irf_trend():
@@ -1544,16 +1623,21 @@ def test_select_order_qr_fallback():
     # Constant in exog and trend: singular regressors
     exog = np.column_stack([np.ones(200), rng.standard_normal(200)])
     assert var_model._var_order_ics(y, exog, 6, "c", 0) is None
-    res = VAR(y, exog=exog).select_order(6, trend="c")
-    expected = _select_order_loop(VAR(y, exog=exog), 6, "c")
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        res = VAR(y, exog=exog).select_order(6, trend="c")
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient"):
+        expected = _select_order_loop(VAR(y, exog=exog), 6, "c")
     _assert_lag_orders_equal(res, expected, rtol=0)
 
-    # Almost perfect fit of the third series
+    # Almost perfect fit of the third series: ill-conditioned but not
+    # exactly singular, so no warning is expected here.
     y_fit = y.copy()
     y_fit[:, 2] = y[:, 0] + y[:, 1] + 1e-6 * rng.standard_normal(200)
     assert var_model._var_order_ics(y_fit, None, 6, "c", 0) is None
-    res = VAR(y_fit).select_order(6, trend="c")
-    expected = _select_order_loop(VAR(y_fit), 6, "c")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SingularMatrixWarning)
+        res = VAR(y_fit).select_order(6, trend="c")
+        expected = _select_order_loop(VAR(y_fit), 6, "c")
     _assert_lag_orders_equal(res, expected, rtol=0)
 
     # Non-finite data
@@ -1576,3 +1660,102 @@ def test_select_order_qr_fallback():
     res = VAR(y_short, exog=exog_many).select_order(3, trend="c")
     expected = _select_order_loop(VAR(y_short, exog=exog_many), 3, "c")
     _assert_lag_orders_equal(res, expected, rtol=0)
+
+
+def test_select_order_qr_fallback_singular_warns_once():
+    # The constant exog column duplicates the trend constant for every lag
+    # order considered by the fallback loop; select_order should collapse
+    # that into a single warning instead of one per lag order (GH#10646).
+    rng = np.random.default_rng(5)
+    y = np.cumsum(rng.standard_normal((100, 2)), axis=0)
+    exog = np.ones((100, 1))
+    assert var_model._var_order_ics(y, exog, 6, "c", 0) is None
+    with pytest.warns(SingularMatrixWarning, match="rank-deficient") as record:
+        VAR(y, exog=exog).select_order(6, trend="c")
+    singular = [w for w in record.list if issubclass(w.category, SingularMatrixWarning)]
+    assert len(singular) == 1
+    assert singular[0].filename == __file__
+
+
+TABLE_HEADER = ["Test", "statistic", "Critical", "Value", "p-value", "df"]
+
+
+def test_normality_summary():
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    res = VAR(np.log(data).diff().dropna()).fit(2)
+    norm = res.test_normality(signif=0.05)
+    results = {
+        "statistic": norm.test_statistic,
+        "crit_value": norm.crit_value,
+        "pvalue": norm.pvalue,
+        "df": norm.df,
+        "conclusion": norm.conclusion,
+        "signif": norm.signif,
+    }
+    with pytest.warns(FutureWarning, match=r"output\.normality_summary is") as record:
+        text = output.normality_summary(results)
+    # The deprecated hypothesis_test_table does not warn a second time
+    assert sum(issubclass(w.category, FutureWarning) for w in record) == 1
+
+    lines = text.split("\n")
+    assert len(lines) == 8
+    assert lines[0] == "Normality skew/kurtosis Chi^2-test"
+    assert lines[2].split() == TABLE_HEADER
+    assert lines[4].split() == [
+        f"{norm.test_statistic:.6f}",
+        f"{norm.crit_value:.6f}",
+        f"{norm.pvalue:.3f}",
+        "6",
+    ]
+    assert lines[6] == "H_0: data generated by normally-distributed process"
+    # The statistic, 27.3, is far above the critical value, 12.6
+    assert lines[7] == "Conclusion: reject H_0 at 5.00% significance level"
+    # The printed critical value is the chi-square quantile for the printed
+    # df, to the six decimals printed
+    stat, crit, _, df = lines[4].split()
+    assert_allclose(float(crit), stats.chi2.ppf(0.95, int(df)), rtol=1e-6)
+    assert float(stat) > float(crit)
+
+
+@pytest.mark.parametrize(
+    "statistic, df, signif, conclusion, signif_text",
+    [
+        (13.2, 3, 0.05, "reject", "5.00%"),
+        (1.7, 2, 0.1, "fail to reject", "10.00%"),
+    ],
+)
+def test_hypothesis_test_table(statistic, df, signif, conclusion, signif_text):
+    crit_value = stats.chi2.ppf(1 - signif, df)
+    pvalue = stats.chi2.sf(statistic, df)
+    results = {
+        "statistic": statistic,
+        "crit_value": crit_value,
+        "pvalue": pvalue,
+        "df": df,
+        "conclusion": conclusion,
+        "signif": signif,
+    }
+    title = "Chi-square test"
+    null_hyp = "H_0: the restrictions hold"
+    with pytest.warns(
+        FutureWarning, match=r"output\.hypothesis_test_table is"
+    ) as record:
+        text = output.hypothesis_test_table(results, title, null_hyp)
+    assert sum(issubclass(w.category, FutureWarning) for w in record) == 1
+
+    lines = text.split("\n")
+    assert len(lines) == 8
+    assert lines[0] == title
+    assert set(lines[1]) == {"="}
+    assert lines[2].split() == TABLE_HEADER
+    assert set(lines[3]) == {"-"}
+    assert lines[4].split() == [
+        f"{statistic:.6f}",
+        f"{crit_value:.6f}",
+        f"{pvalue:.3f}",
+        str(df),
+    ]
+    assert set(lines[5]) == {"="}
+    assert lines[6] == null_hyp
+    expected = f"Conclusion: {conclusion} H_0 at {signif_text} significance level"
+    assert lines[7] == expected

@@ -1936,8 +1936,30 @@ class MixedLM(base.LikelihoodModel):
         the parameterization defined by this model instance's
         `use_sqrt` attribute.
 
+        If `use_sqrt` is True, the packed entries are the Cholesky factor
+        of the random effects covariance matrix and the square roots of
+        the variance components. Their signs matter: the score is the
+        derivative at exactly the vector that is passed in. If a
+        MixedLMParams is passed instead, the Cholesky factor with a
+        nonnegative diagonal is used. If `cov_re` is singular, for example
+        ``[[1, 1], [1, 1]]``, the packing falls back to the square roots of
+        its diagonal, so the packed vector does not reproduce `cov_re` and
+        the returned score is not the derivative at a Cholesky factor of
+        `cov_re`.
+
+        .. versionchanged:: 0.15.1
+
+           If `use_sqrt` is True, the score is the derivative at the packed
+           vector with the signs of its entries. The signs of the diagonal
+           of the Cholesky factor and of the square roots of the variance
+           components used to be dropped.
+
         """
+        signed_params = None
         if type(params) is not MixedLMParams:
+            if self.use_sqrt:
+                # from_packed squares the square roots, so keep their signs
+                signed_params = params
             params = MixedLMParams.from_packed(
                 params, self.k_fe, self.k_re, self.use_sqrt, has_fe=False
             )
@@ -1950,8 +1972,11 @@ class MixedLM(base.LikelihoodModel):
                 warnings.warn(msg, SingularMatrixWarning, stacklevel=2)
 
         if self.use_sqrt:
-            score_fe, score_re, score_vc = self.score_sqrt(
-                params, calc_fe=not profile_fe
+            if signed_params is None:
+                signed_params = params.get_packed(use_sqrt=True, has_fe=False)
+            score_fe, score_re, score_vc = self._score_sqrt(
+                np.concatenate((params.fe_params, signed_params)),
+                calc_fe=not profile_fe,
             )
         else:
             score_fe, score_re, score_vc = self.score_full(
@@ -2128,7 +2153,7 @@ class MixedLM(base.LikelihoodModel):
 
         return score_fe, score_re, score_vc
 
-    def score_sqrt(self, params, calc_fe=True):
+    def _score_sqrt(self, signed_params, calc_fe=True):
         """
         Return the score with respect to transformed parameters
 
@@ -2138,9 +2163,11 @@ class MixedLM(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : MixedLMParams or array_like
-            The model parameters.  If array-like must contain packed
-            parameters that are compatible with this model instance.
+        signed_params : ndarray
+            The packed parameters, including `fe_params`, with the Cholesky
+            factor of `cov_re` and the square roots of `vcomp`.  The score
+            depends on their signs, which repacking from `cov_re` and `vcomp`
+            does not preserve.
         calc_fe : bool, optional
             If True, calculate the score vector for the fixed effects
             parameters.  If False, this vector is not calculated, and
@@ -2159,13 +2186,15 @@ class MixedLM(base.LikelihoodModel):
             parameters.
 
         """
-        score_fe, score_re, score_vc = self.score_full(params, calc_fe=calc_fe)
-        params_vec = params.get_packed(use_sqrt=True, has_fe=True)
+        params_obj = MixedLMParams.from_packed(
+            signed_params, self.k_fe, self.k_re, use_sqrt=True, has_fe=True
+        )
+        score_fe, score_re, score_vc = self.score_full(params_obj, calc_fe=calc_fe)
 
         score_full = np.concatenate((score_fe, score_re, score_vc))
         scr = 0.0
-        for i in range(len(params_vec)):
-            v = self._lin[i] + 2 * np.dot(self._quad[i], params_vec)
+        for i in range(len(signed_params)):
+            v = self._lin[i] + 2 * np.dot(self._quad[i], signed_params)
             scr += score_full[i] * v
         score_fe = scr[0 : self.k_fe]
         score_re = scr[self.k_fe : self.k_fe + self.k_re2]

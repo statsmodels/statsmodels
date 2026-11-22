@@ -1,0 +1,6 @@
+- ``start_params`` in :meth:`~statsmodels.tsa.arima.model.ARIMA.fit` with more
+  elements than parameters, or one element for several free parameters, is
+  deprecated. It gives the same result as before with a ``FutureWarning``,
+  and will raise a ``ValueError`` after statsmodels 0.17. With extra
+  elements, ``summary()`` raised and the information criteria counted them.
+  :pr:`10874`

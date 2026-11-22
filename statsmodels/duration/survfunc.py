@@ -409,6 +409,7 @@ class SurvfuncRight:
         _checkargs(time, status, entry, freq_weights, exog)
         time = self.time = np.asarray(time)
         status = self.status = np.asarray(status)
+        self.freq_weights = None
         if freq_weights is not None:
             freq_weights = self.freq_weights = np.asarray(freq_weights)
 
@@ -683,6 +684,28 @@ class SurvfuncRight:
         ucb : ndarray
             The upper confidence limits corresponding to the points
             in `surv_times`.
+
+        Notes
+        -----
+        The band follows Hall and Wellner (1980) and Klein and
+        Moeschberger (2003), eqs. 4.4.4-4.4.5, with the total sample size
+        ``n`` (the sum of ``freq_weights`` if given), the Greenwood
+        variance and the critical value 1.3581.  It agrees with the
+        Hall-Wellner helper functions of the R package ``km.ci`` at
+        ``k = 1.3581``.  ``km.ci(..., method="loghall")`` uses a critical
+        value that depends on the range of times covered by the band
+        (1.3364 for the ``bmt`` ALL group), so its limits differ slightly.
+
+        With left truncation (``entry`` is given), ``n`` is still the
+        number of records (the sum of ``freq_weights`` if given), which
+        includes subjects that enter after the early event times, and not
+        the number at risk at any time.
+
+        .. versionchanged:: 0.15.1
+
+           The band uses the total sample size ``n`` instead of the number
+           at risk at each time, and the Greenwood variance also when
+           ``freq_weights`` are given. All limits change.
         """
 
         _ = string_like(method, "method", options=("hw",))
@@ -691,8 +714,22 @@ class SurvfuncRight:
             raise ValueError("alpha must be set to 0.05")
 
         transform = string_like(transform, "transform", options=("log", "arcsin"))
-        s2 = self.surv_prob_se**2 / self.surv_prob**2
-        nn = self.n_risk
+        # Greenwood sum.  surv_prob_se uses Tsiatis' formula when
+        # freq_weights are given, so it is not used here.
+        n_risk = np.asarray(self.n_risk, dtype=np.float64)
+        n_events = np.asarray(self.n_events, dtype=np.float64)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            s2 = n_events / (n_risk * (n_risk - n_events))
+        s2[(n_risk == n_events) | (n_risk == 0)] = np.nan
+        s2 = np.cumsum(s2)
+        # Hall and Wellner (1980); Klein and Moeschberger (2003), eqs.
+        # 4.4.3-4.4.5: ``n`` is the total sample size, not the number at
+        # risk at each time point.
+        freq_weights = self.freq_weights
+        if freq_weights is not None:
+            nn = float(np.sum(freq_weights))
+        else:
+            nn = float(len(self.time))
         if transform == "log":
             denom = np.sqrt(nn) * np.log(self.surv_prob)
             theta = 1.3581 * (1 + nn * s2) / denom

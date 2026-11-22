@@ -17,6 +17,8 @@ LeBaron, Blake. 1997.
 Studies in Nonlinear Dynamics & Econometrics 2 (2) (January 1).
 """
 
+import warnings
+
 import numpy as np
 from scipy import stats
 
@@ -31,7 +33,14 @@ def distance_indicators(x, epsilon=None, distance=1.5):
     ----------
     x : array_like
         observations of time series for which heaviside distance indicators
-        are calculated
+        are calculated. Must be 1-D.
+
+        .. deprecated:: 0.15.1
+
+           Input with more than one dimension is deprecated. After
+           statsmodels 0.17 is released, a column with shape (nobs, 1)
+           will give the result of the 1-D series, and other input with
+           more than one dimension will raise a ValueError.
     epsilon : float, optional
         the threshold distance to use in calculating the heaviside
         indicators. If not provided, computed as ``distance`` times the
@@ -42,14 +51,33 @@ def distance_indicators(x, epsilon=None, distance=1.5):
 
     Returns
     -------
-    indicators : 2d array
-        matrix of distance threshold indicators
+    indicators : ndarray
+        The (nobs, nobs) boolean matrix of distance threshold indicators,
+        which is True where the absolute difference of two observations is
+        less than ``epsilon``.
 
     Notes
     -----
-    Since this can be a very large matrix, use np.int8 to save some space.
+    Since this can be a very large matrix, it is stored as bool to save
+    some space.
     """
     x = array_like(x, "x")
+    if x.ndim > 1:
+        # A column gives an (nobs, nobs, 1) array, and k columns the
+        # indicators of each column with one epsilon, (nobs, nobs, k)
+        if x.ndim == 2 and x.shape[1] == 1:
+            future = (
+                "After statsmodels 0.17 is released, a column with shape "
+                "(nobs, 1) will give the (nobs, nobs) result of the 1-D series."
+            )
+        else:
+            future = "It will raise a ValueError after statsmodels 0.17 is released."
+        warnings.warn(
+            f"x must be 1-D. Passing an array with {x.ndim} dimensions is "
+            f"deprecated. {future}",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     if epsilon is not None and epsilon <= 0:
         raise ValueError("Threshold distance must be positive if specified."
@@ -117,7 +145,8 @@ def correlation_sums(indicators, max_dim):
     Returns
     -------
     corrsums : ndarray
-        Correlation sums
+        The correlation sums for the embedding dimensions 1, ..., max_dim,
+        of shape (1, max_dim).
     """
 
     corrsums = np.zeros((1, max_dim))
@@ -188,11 +217,12 @@ def bds(x, max_dim=2, epsilon=None, distance=1.5):
 
     Returns
     -------
-    bds_stat : float or ndarray
-        The BDS statistic. An ndarray is returned if max_dim > 2.
-    pvalue : float or ndarray
-        The p-values associated with the BDS statistic. An ndarray is
-        returned if max_dim > 2.
+    bds_stat : ndarray
+        The BDS statistic for each embedding dimension 2, ..., max_dim, of
+        shape (max_dim - 1,). It is 0-dimensional if max_dim is 2.
+    pvalue : ndarray
+        The p-values associated with the BDS statistic, of the same shape
+        as ``bds_stat``.
 
     Notes
     -----

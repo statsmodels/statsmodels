@@ -14,6 +14,8 @@ The optimized theta method. arXiv preprint arXiv:1503.03529.
 """
 from __future__ import annotations
 
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -81,11 +83,12 @@ class ThetaModel:
         Whether to test the period-th autocorrelation. If this test
         rejects using a size of 10%, then decomposition is used. Set to
         False to skip the test.
-    method : {"auto", "additive", "multiplicative"}, optional
+    method : {"auto", "additive", "multiplicative", "add", "mul"}, optional
         The model used for the seasonal decomposition. "auto" uses a
-        multiplicative decomposition if y is non-negative and all
+        multiplicative decomposition if y is strictly positive and all
         estimated seasonal components are positive. If either of these
-        conditions is False, then it uses an additive decomposition.
+        conditions is False, then it uses an additive decomposition. "add"
+        and "mul" are short forms of "additive" and "multiplicative".
     difference : bool, optional
         Whether to difference the data before testing for seasonality.
 
@@ -177,7 +180,8 @@ class ThetaModel:
             if idx is not None:
                 pfreq = getattr(idx, "freq", None)
                 if pfreq is None:
-                    pfreq = getattr(idx, "inferred_freq", None)
+                    with _infer_freq_returns_offset():
+                        pfreq = getattr(idx, "inferred_freq", None)
             if pfreq is not None:
                 self._period = freq_to_period(pfreq)
             else:
@@ -382,7 +386,7 @@ class ThetaModelResults:
             The number of steps ahead to compute the forecast components.
         theta : float, optional
             The theta value to use when computing the weight to combine
-            the trend and the SES forecasts.
+            the trend and the SES forecasts. Must be at least 1.
 
         Returns
         -------
@@ -469,8 +473,7 @@ class ThetaModelResults:
         b0 = self._b0
         nobs = self._nobs
         h = np.arange(1, steps + 1, dtype=np.float64) - 1
-        if alpha > 0:
-            h += 1 / alpha - ((1 - alpha) ** nobs / alpha)
+        h += 1 / alpha - ((1 - alpha) ** nobs / alpha)
         trend = b0 * h
         ses = self._one_step * np.ones(steps)
         if self.model.method.startswith("add"):
@@ -582,7 +585,7 @@ class ThetaModelResults:
             The number of steps ahead to compute the forecast components.
         theta : float, optional
             The theta value to use when computing the weight to combine
-            the trend and the SES forecasts.
+            the trend and the SES forecasts. Must be at least 1.
         alpha : float, optional
             Significance level for the confidence intervals.
 
@@ -630,7 +633,7 @@ class ThetaModelResults:
             The number of steps ahead to compute the forecast components.
         theta : float, optional
             The theta value to use when computing the weight to combine
-            the trend and the SES forecasts.
+            the trend and the SES forecasts. Must be at least 1.
         alpha : float or None, optional
             The tail probability not covered by the confidence interval. Must
             be in (0, 1). Confidence interval is constructed assuming normally

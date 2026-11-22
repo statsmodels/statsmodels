@@ -363,8 +363,10 @@ def test_plot_month_locale(close_figures, locale_name, may_oct_dec):
         # month_plot and strftime get the names from the same place, so the
         # comparison above does not show that the locale was applied. Three
         # months have the same name in every variant of the locale (March is
-        # "Mär" or "Mrz").
-        assert_equal([labels[4], labels[9], labels[11]], may_oct_dec)
+        # "Mär" or "Mrz"). Newer macOS releases end some abbreviations with a
+        # period ("Okt.").
+        names = [labels[i].rstrip(".") for i in (4, 9, 11)]
+        assert_equal(names, may_oct_dec)
 
 
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")

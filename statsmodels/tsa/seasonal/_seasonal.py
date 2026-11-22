@@ -1,6 +1,8 @@
 """
 Seasonal Decomposition by Moving Averages
 """
+from statsmodels.compat.pandas import _infer_freq_returns_offset
+
 import warnings
 
 import numpy as np
@@ -110,6 +112,12 @@ def seasonal_decompose(
     x : array_like
         Time series. If 2d, individual series are in columns. x must contain 2
         complete cycles.
+
+        .. versionchanged:: 0.15.1
+
+           A DataFrame with more than one column is decomposed column by
+           column, as a 2d ndarray is, and the components are DataFrames with
+           the index and columns of x. It used to raise a TypeError.
     model : {"additive", "multiplicative"}, optional
         Type of seasonal component. The abbreviations "add" and "mul" are accepted.
     filt : array_like, optional
@@ -132,9 +140,9 @@ def seasonal_decompose(
         If set to 'period', use `period` closest points. Setting this parameter
         results in no NaN values in trend or resid components. The default is 0.
 
-        .. deprecated: 0.14
-            `extrapolate_trend="freq"` is deprecated and will be removed,
-            use `extrapolate_trend=period` instead.
+        .. deprecated:: 0.14
+            ``extrapolate_trend="freq"`` is deprecated and will be removed
+            in 0.16, use ``extrapolate_trend="period"`` instead.
 
     Returns
     -------
@@ -150,7 +158,7 @@ def seasonal_decompose(
     statsmodels.tsa.filters.hp_filter.hpfilter
         Hodrick-Prescott filter.
     statsmodels.tsa.filters.hamilton_filter.hamilton_filter
-        Hanilton's autoregression-based filter.
+        Hamilton's autoregression-based filter.
     statsmodels.tsa.filters.convolution_filter
         Linear filtering via convolution.
     statsmodels.tsa.seasonal.STL
@@ -178,9 +186,10 @@ def seasonal_decompose(
             if isinstance(index, pd.PeriodIndex):
                 pfreq = index.freq
             else:
-                pfreq = getattr(index, "freq", None) or getattr(
-                    index, "inferred_freq", None
-                )
+                with _infer_freq_returns_offset():
+                    pfreq = getattr(index, "freq", None) or getattr(
+                        index, "inferred_freq", None
+                    )
 
     x = array_like(x, "x", maxdim=2)
     nobs = len(x)
@@ -271,7 +280,9 @@ def seasonal_decompose(
     for s, name in zip(
         (seasonal, trend, resid, x), ("seasonal", "trend", "resid", None), strict=True,
     ):
-        results.append(pw.wrap(s.squeeze(), columns=name))
+        s = s.squeeze()
+        # a 1-d component is named, a 2-d component keeps the columns of x
+        results.append(pw.wrap(s, columns=name if s.ndim == 1 else None))
     return DecomposeResult(
         seasonal=results[0],
         trend=results[1],
@@ -379,13 +390,12 @@ class DecomposeResult:
 
         if self.seasonal.ndim == 1:
             series += [(self.seasonal, "seasonal")] if seasonal else []
-        elif self.seasonal.ndim > 1:
-            if isinstance(self.seasonal, pd.DataFrame):
-                for col in self.seasonal.columns:
-                    series += [(self.seasonal[col], "seasonal")] if seasonal else []
-            else:
-                for i in range(self.seasonal.shape[1]):
-                    series += [(self.seasonal[:, i], "seasonal")] if seasonal else []
+        elif isinstance(self.seasonal, pd.DataFrame):
+            for col in self.seasonal.columns:
+                series += [(self.seasonal[col], "seasonal")] if seasonal else []
+        else:
+            for i in range(self.seasonal.shape[1]):
+                series += [(self.seasonal[:, i], "seasonal")] if seasonal else []
 
         series += [(self.resid, "residual")] if resid else []
         series += [(self.weights, "weights")] if weights else []

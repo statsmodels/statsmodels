@@ -15,6 +15,7 @@ import pandas as pd
 import pytest
 from scipy.linalg import block_diag
 
+from statsmodels.formula._manager import FormulaManager
 from statsmodels.gam.gam_cross_validation.cross_validators import KFold
 from statsmodels.gam.gam_cross_validation.gam_cross_validation import (
     MultivariateGAMCV,
@@ -881,3 +882,66 @@ def test_glmgam_results_hat_matrix_cv_gcv_test_significance():
         idx = start + np.nonzero(mask)[0][0]
         k_constraints = mask.sum()
         assert_allclose(wt.df_denom, res.edf[idx:idx + k_constraints].sum())
+
+
+def _fit_gam_with_formula_exog():
+    mgr = FormulaManager()
+    rng = np.random.default_rng(4212)
+    nobs = 40
+    week = np.linspace(1.0, 17.0, nobs)
+    plot_treat = np.where(np.arange(nobs) % 2, "Drought", "Ambient")
+    endog = np.sin(week / 3) + (plot_treat == "Drought") + rng.normal(0, 0.05, nobs)
+    data = pd.DataFrame({"Week": week, "Plot_treat": plot_treat, "y": endog})
+
+    smoother = BSplines(
+        data["Week"].values,
+        df=5,
+        degree=3,
+        variable_names=["Week"],
+        constraints="center",
+        include_intercept=True,
+    )
+    exog = mgr.get_matrices("Plot_treat", data=data, pandas=True)
+    res = GLMGam(data["y"], exog=exog, smoother=smoother).fit(
+        method="newton", use_t=True
+    )
+    return mgr, data, res, exog
+
+
+@pytest.mark.parametrize("exog_smooth_kind", ["array", "series", "frame"])
+def test_predict_with_design_matrix_exog(exog_smooth_kind):
+    mgr, data, res, exog = _fit_gam_with_formula_exog()
+    new = pd.DataFrame({"Week": np.linspace(1.5, 16.5, 10)})
+    new["Plot_treat"] = "Ambient"
+    exog_new = mgr.get_matrices(mgr.get_model_spec(exog), new, pandas=True)
+    exog_smooth = {
+        "array": new["Week"].values,
+        "series": new["Week"],
+        "frame": new[["Week"]],
+    }[exog_smooth_kind]
+
+    expected = res.predict(exog=new, exog_smooth=new["Week"].values)
+
+    pred = res.get_prediction(exog=exog_new, exog_smooth=exog_smooth)
+    assert pred.predicted.shape == (len(new),)
+    assert np.isfinite(pred.predicted).all()
+    assert_allclose(pred.predicted, expected, rtol=1e-12)
+
+    predicted = res.predict(exog=exog_new, exog_smooth=exog_smooth)
+    assert predicted.shape == (len(new),)
+    assert_allclose(predicted, expected, rtol=1e-12)
+
+    # A design matrix without attached metadata is recognized by its column
+    # names and is not transformed a second time.
+    exog_plain = pd.DataFrame(
+        np.asarray(exog_new), columns=list(exog_new.columns), index=new.index
+    )
+    predicted = res.predict(exog=exog_plain, exog_smooth=exog_smooth)
+    assert_allclose(predicted, expected, rtol=1e-12)
+
+
+def test_predict_with_mismatched_design_matrix_exog():
+    mgr, data, res, _ = _fit_gam_with_formula_exog()
+    exog_other = mgr.get_matrices("Plot_treat + Week", data=data, pandas=True)
+    with pytest.raises(ValueError, match="different model specification"):
+        res.predict(exog=exog_other, exog_smooth=data["Week"].values)

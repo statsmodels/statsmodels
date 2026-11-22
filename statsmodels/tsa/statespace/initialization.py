@@ -248,6 +248,14 @@ class Initialization:
                 stationary_cov=stationary_cov,
             )
 
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        # A compiled initialization object copies `constant` and
+        # `stationary_cov` when it is pickled or deep-copied, so afterwards it
+        # would not see later changes to them. Drop the compiled objects;
+        # they are rebuilt on first use.
+        self._initializations = {}
+
     @classmethod
     def from_components(
         cls, k_states, a=None, Pstar=None, Pinf=None, A=None, R0=None, Q0=None
@@ -716,6 +724,21 @@ class Initialization:
         if self.initialization_type == "stationary":
             return True
         return any(block._uses_stationary() for block in self.blocks.values())
+
+    def _stationary_blocks(self):
+        """
+        Indices of the blocks of states that are initialized as stationary
+
+        The initial covariance of each block solves its own discrete Lyapunov
+        equation.
+        """
+        if self.initialization_type == "stationary":
+            return [np.arange(self.k_states)]
+        blocks = []
+        for block_index, block in self.blocks.items():
+            block_index = np.asarray(block_index, dtype=int)
+            blocks += [block_index[index] for index in block._stationary_blocks()]
+        return blocks
 
     @property
     def initialized(self):

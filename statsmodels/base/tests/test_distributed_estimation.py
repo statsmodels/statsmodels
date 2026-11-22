@@ -13,9 +13,12 @@ from statsmodels.base.distributed_estimation import (
     _join_debiased,
     _join_naive,
 )
+from statsmodels.genmod.cov_struct import Exchangeable
 from statsmodels.genmod.families import Binomial
+from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
+from statsmodels.robust.robust_linear_model import RLM
 
 
 def _data_gen(endog, exog, partitions):
@@ -571,3 +574,120 @@ def test_debiased_v_average():
     glmn = np.linalg.norm(fitGLMn.params - beta)
 
     assert_(glmdb < glmn)
+
+
+def _gee_data(n_groups=100, m=4, partitions=2):
+    rs = np.random.RandomState(8734)
+    groups = np.repeat(np.arange(n_groups), m)
+    n = n_groups * m
+    X = np.column_stack((np.ones(n), rs.normal(size=(n, 2))))
+    y = X.dot([0.5, 1.0, -0.5]) + np.repeat(rs.normal(size=n_groups), m)
+    y += rs.normal(size=n)
+    blocks = np.array_split(np.arange(n_groups), partitions)
+    masks = [np.isin(groups, b) for b in blocks]
+    return y, X, groups, masks
+
+
+def test_gee_unregularized_naive():
+    # GH 10778
+    y, X, groups, masks = _gee_data()
+
+    mod = DistributedModel(
+        len(masks),
+        model_class=GEE,
+        init_kwds={"cov_struct": Exchangeable()},
+        estimation_method=_est_unregularized_naive,
+        join_method=_join_naive,
+    )
+    fit = mod.fit(
+        ((y[k], X[k]) for k in masks),
+        init_kwds_generator=({"groups": groups[k]} for k in masks),
+    )
+
+    params_l = [
+        GEE(y[k], X[k], groups=groups[k], cov_struct=Exchangeable()).fit().params
+        for k in masks
+    ]
+    assert_allclose(fit.params, np.mean(params_l, axis=0), rtol=1e-10)
+    assert_allclose(fit.predict(X[:5]), X[:5].dot(fit.params), rtol=1e-10)
+
+
+def test_gee_debiased_raises_before_fitting():
+    # GH 10778
+    y, X, groups, masks = _gee_data()
+    consumed = []
+
+    def data_gen():
+        for k in masks:
+            consumed.append(k)
+            yield y[k], X[k]
+
+    mod = DistributedModel(
+        len(masks), model_class=GEE, init_kwds={"cov_struct": Exchangeable()}
+    )
+    with pytest.raises(NotImplementedError, match="GEE"):
+        mod.fit(
+            data_gen(),
+            fit_kwds={"alpha": 0.1},
+            init_kwds_generator=({"groups": groups[k]} for k in masks),
+        )
+    assert_equal(len(consumed), 0)
+
+
+class _OLSKeywordFit(OLS):
+    # alpha reaches fit_regularized only through **kwargs
+    def fit_regularized(self, **kwargs):
+        return super().fit_regularized(**kwargs)
+
+
+class _OLSNoAlpha(OLS):
+    # neither an alpha parameter nor **kwargs
+    def fit_regularized(self, method="elastic_net"):
+        return super().fit_regularized(method=method)
+
+
+@pytest.mark.parametrize(
+    "model_class, raises",
+    [
+        (OLS, False),
+        (_OLSKeywordFit, False),
+        (_OLSNoAlpha, True),
+        (GEE, True),
+        (RLM, True),  # no fit_regularized at all
+    ],
+)
+def test_check_estimation_method_signature(model_class, raises):
+    # GH 10778
+    mod = DistributedModel(2, model_class=model_class)
+    if raises:
+        with pytest.raises(NotImplementedError, match=model_class.__name__):
+            mod._check_estimation_method()
+    else:
+        mod._check_estimation_method()
+
+
+def test_fit_regularized_with_keywords_only():
+    # GH 10778, the signature check accepts fit_regularized(**kwargs)
+    rs = np.random.RandomState(435265)
+    X = rs.normal(size=(50, 3))
+    y = rs.randint(0, 2, size=50)
+
+    fits = [
+        DistributedModel(2, model_class=model_class).fit(
+            _data_gen(y, X, 2), fit_kwds={"alpha": 0.5}
+        )
+        for model_class in (OLS, _OLSKeywordFit)
+    ]
+    assert_allclose(fits[1].params, fits[0].params, rtol=1e-12)
+    assert_allclose(
+        fits[1].params, np.array([-0.157416, -0.029643, -0.471653]), atol=1e-6, rtol=0
+    )
+
+
+@pytest.mark.parametrize("init_groups, expected", [(None, [0]), (np.array([3]), [3])])
+def test_dummy_model_groups(init_groups, expected):
+    # GH 10778, groups is required by GEE: the placeholder model uses the
+    # groups of init_kwds if there are any and one group otherwise
+    init_kwds = {} if init_groups is None else {"groups": init_groups}
+    mod = DistributedModel(2, model_class=GEE, init_kwds=init_kwds)
+    assert_equal(mod._dummy_model().groups, expected)

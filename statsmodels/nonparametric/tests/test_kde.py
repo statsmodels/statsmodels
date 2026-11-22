@@ -656,6 +656,15 @@ def test_cdf_entropy_bounded_kernels(kernel, location, weighted):
     npt.assert_allclose(entropy, expected, rtol=1e-3)
 
 
+def test_kdensityfft_big_endian_input():
+    # https://github.com/statsmodels/statsmodels/issues/10770
+    x = np.array([-1.5, -0.5, 0.0, 0.5, 1.5], dtype=">f8")
+    native = kdensityfft(x.astype(np.float64), result_object=True)
+    big_endian = kdensityfft(x, result_object=True)
+    npt.assert_allclose(big_endian.density, native.density)
+    assert big_endian.bw == native.bw
+
+
 @pytest.mark.parametrize("func", [kdensity, kdensityfft])
 def test_kdensity_result_object_default(func):
     # retgrid=True (the default) yields a KDEResult with the same length and
@@ -705,3 +714,27 @@ def test_kde_univariate_negative_bw_raises():
         KDE(x).fit(bw=0)
     dens = KDE(x).fit(bw=0.3).evaluate([0.0])
     assert dens[0] > 0
+
+
+@pytest.mark.parametrize("dtype", [np.int64, np.float32, ">f8", "<f8"])
+def test_kdensityfft_dtype(dtype):
+    # GH 10770: fast_linbin only takes native float64
+    x = np.random.default_rng(10770).integers(-5, 6, 100).astype(dtype)
+    density, grid, bw = kdensityfft(x)
+    expected = kdensityfft(x.astype(np.float64))
+    npt.assert_allclose(density, expected[0], rtol=1e-12)
+    npt.assert_allclose(grid, expected[1], rtol=1e-12)
+    assert bw == expected[2]
+
+
+@pytest.mark.filterwarnings("ignore:the matrix subclass:PendingDeprecationWarning")
+@pytest.mark.parametrize("shape", ["row", "column"])
+def test_kdensityfft_matrix(shape):
+    # np.matrix input worked before the conversion in #10795 kept subclasses
+    x = np.random.default_rng(10770).standard_normal(100)
+    xm = np.matrix(x) if shape == "row" else np.matrix(x).T
+    density, grid, bw = kdensityfft(xm)
+    expected = kdensityfft(x)
+    npt.assert_allclose(density, expected[0], rtol=1e-12)
+    npt.assert_allclose(grid, expected[1], rtol=1e-12)
+    assert bw == expected[2]

@@ -647,16 +647,16 @@ class AutoReg(tsa_model.TimeSeriesModel):
         # Out-of-sample observations have no true values to use before dynamic
         dynamic = min(dynamic, max(end + 1 - start, 0))
 
-        if (start - hold_back) <= self.nobs:
-            # _x is missing hold_back observations, which is why
-            # it is shifted by this amount
-            is_loc = slice(start - hold_back, end + 1 - hold_back)
-            x = self._x[is_loc]
-            if exog is not None:
-                x = x.copy()
-                # Replace final columns
-                x[:, -exog.shape[1] :] = exog[start : end + 1]
-            reg.append(x)
+        # _x is missing hold_back observations, which is why
+        # it is shifted by this amount. start <= nobs + hold_back, so the
+        # slice is empty when the prediction starts out of sample.
+        is_loc = slice(start - hold_back, end + 1 - hold_back)
+        x = self._x[is_loc]
+        if exog is not None:
+            x = x.copy()
+            # Replace final columns
+            x[:, -exog.shape[1] :] = exog[start : end + 1]
+        reg.append(x)
         if num_oos > 0:
             reg.append(self._setup_oos_forecast(num_oos, exog_oos))
         _reg = np.vstack(reg)
@@ -2238,6 +2238,20 @@ class AROrderSelectionResults:
     Results from an AR order selection
 
     Contains the information criteria for all fitted model orders.
+
+    Parameters
+    ----------
+    model : AutoReg
+        The model selected using the chosen information criterion.
+    ics : list of tuple
+        The lags of each model fit, an int or a tuple of int, and its
+        ``InformationCriteria``.
+    trend : {"n", "c", "t", "ct", "ctt"}
+        The trend included in the model selection.
+    seasonal : bool
+        Flag indicating if a seasonal component is included.
+    period : int or None
+        The period of the seasonal component.
     """
 
     def __init__(

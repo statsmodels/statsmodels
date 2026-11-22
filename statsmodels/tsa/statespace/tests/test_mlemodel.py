@@ -6,6 +6,7 @@ License: Simplified-BSD
 """
 from statsmodels.compat.pandas import MONTH_END
 
+import inspect
 from pathlib import Path
 import re
 import warnings
@@ -18,17 +19,21 @@ from numpy.testing import (
 )
 import pandas as pd
 import pytest
+from scipy.linalg import solve_discrete_lyapunov
 
-from statsmodels.datasets import nile
+from statsmodels.datasets import macrodata, nile
 from statsmodels.iolib.summary import Summary
+from statsmodels.tools.numdiff import approx_fprime, approx_hess3
 from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.statespace import (
     dynamic_factor,
     kalman_filter,
     kalman_smoother,
     sarimax,
+    structural,
     varmax,
 )
+from statsmodels.tsa.statespace.initialization import Initialization
 from statsmodels.tsa.statespace.mlemodel import MLEModel, MLEResultsWrapper
 from statsmodels.tsa.statespace.tests.results import (
     results_sarimax,
@@ -296,6 +301,170 @@ def test_fit_misc():
     assert_almost_equal(res_params, [0, 0], 5)
 
 
+def _newton_model(name):
+    data = macrodata.load_pandas().data
+    if name == "sarimax_lgdp":
+        # With the approximate diffuse initialization, the loglikelihood of this
+        # model has a rounding error that is large compared with its curvature
+        # near the optimum. Newton reaches the optimum but cannot meet its
+        # tolerance then, so that the exact diffuse initialization is used.
+        endog = np.log(data["realgdp"].to_numpy())
+        return sarimax.SARIMAX(endog, order=(1, 1, 0), use_exact_diffuse=True)
+    elif name.startswith("sarimax_infl"):
+        return sarimax.SARIMAX(data["infl"].to_numpy(), order=(1, 0, 1), trend="c")
+    else:  # "uc_infl"
+        return structural.UnobservedComponents(data["infl"].to_numpy(), "llevel")
+
+
+@pytest.mark.parametrize(
+    "name, optim_hessian",
+    [
+        ("sarimax_lgdp", None),
+        ("sarimax_infl", None),
+        ("sarimax_infl", "oim"),
+        ("sarimax_infl", "opg"),
+        ("sarimax_infl_fixed", None),
+        ("uc_infl", None),
+    ],
+)
+def test_fit_newton_optimum(name, optim_hessian):
+    # Newton evaluated the score and the Hessian without the flags of `fit`,
+    # that is, as functions of the constrained parameters at the values of the
+    # unconstrained ones, and it stopped before the optimum or failed. L-BFGS
+    # with the complex-step score, which does not use the Hessian, is the
+    # reference. Its default tolerances bound the agreement of the parameters
+    # at about 1e-5.
+    mod = _newton_model(name)
+    fit_kwargs = {"disp": 0}
+    if name.endswith("_fixed"):
+        res = mod.fit_constrained(
+            {"ar.L1": 0.6}, method="newton", optim_hessian=optim_hessian, **fit_kwargs
+        )
+        desired = mod.fit_constrained(
+            {"ar.L1": 0.6}, method="lbfgs", optim_score="approx", **fit_kwargs
+        )
+    else:
+        res = mod.fit(method="newton", optim_hessian=optim_hessian, **fit_kwargs)
+        desired = mod.fit(method="lbfgs", optim_score="approx", **fit_kwargs)
+    assert res.mle_retvals["converged"]
+    assert desired.mle_retvals["converged"]
+    assert_allclose(res.llf, desired.llf, rtol=1e-8)
+    assert_allclose(res.params, desired.params, rtol=1e-4)
+
+
+def test_fit_newton_derivatives_at_start():
+    # Newton minimizes -loglike(params, transformed=False) / nobs over the
+    # unconstrained parameters. Its score and Hessian at the start are the
+    # derivatives of that objective, here computed by finite differences with
+    # steps that are far above the rounding error of the loglikelihood.
+    mod = _newton_model("sarimax_lgdp")
+    start = mod.untransform_params(mod.start_params)
+    res = mod.fit(method="newton", maxiter=0, disp=0, warn_convergence=False)
+    assert_allclose(res.mle_settings["start_params"], start, rtol=1e-12)
+
+    def objective(params):
+        return -mod.loglike(params, transformed=False) / mod.nobs
+
+    score = approx_fprime(start, objective, epsilon=1e-5 * np.abs(start), centered=True)
+    hessian = approx_hess3(start, objective, epsilon=1e-3 * np.abs(start))
+    assert_allclose(res.mle_retvals["score"], score, rtol=1e-6)
+    assert_allclose(res.mle_retvals["Hessian"], hessian, rtol=1e-4)
+
+
+def _ar2_model():
+    # The transformation of the AR(2) parameters has a Jacobian that is not
+    # diagonal, and the burned observations make nobs - loglikelihood_burn
+    # differ from nobs.
+    endog = macrodata.load_pandas().data["infl"].to_numpy()
+    return sarimax.SARIMAX(endog, order=(2, 0, 1), trend="c", loglikelihood_burn=3)
+
+
+@pytest.mark.parametrize("average", [True, False])
+def test_hessian_untransformed(average):
+    # The Hessian of the loglikelihood with respect to the unconstrained
+    # parameters, at the start, where the score is not zero, so that the second
+    # derivatives of the transformation matter. The finite differences agree to
+    # about 1e-6 here.
+    mod = _ar2_model()
+    params = mod.untransform_params(mod.start_params)
+
+    def loglike(params):
+        return mod.loglike(params, transformed=False)
+
+    epsilon = 1e-4 * np.maximum(np.abs(params), 0.1)
+    desired = approx_hess3(params, loglike, epsilon=epsilon)
+    if average:
+        desired /= mod.nobs - mod.loglikelihood_burn
+    actual = mod.hessian(params, transformed=False, average=average)
+    assert_allclose(actual, desired, rtol=1e-5)
+
+
+def test_hessian_untransformed_opg():
+    # The outer product of the scores with respect to the unconstrained
+    # parameters, which are here computed by differentiating loglikeobs
+    # through the transformation
+    mod = _ar2_model()
+    params = mod.untransform_params(mod.start_params)
+    score_obs = mod.score_obs(
+        params, transformed=False, approx_complex_step=False, approx_centered=True
+    )
+    desired = -score_obs.T @ score_obs / (mod.nobs - mod.loglikelihood_burn)
+    actual = mod.hessian(params, transformed=False, method="opg")
+    assert_allclose(actual, desired, rtol=1e-7)
+
+
+@pytest.mark.parametrize("method", ["approx", "oim", "opg"])
+def test_hessian_average(method):
+    # The Hessian of the loglikelihood is its average times the number of
+    # observations that are not burned
+    mod = _ar2_model()
+    params = mod.start_params
+    average = mod.hessian(params, method=method)
+    total = mod.hessian(params, method=method, average=False)
+    assert_allclose(total, average * (mod.nobs - mod.loglikelihood_burn), rtol=1e-14)
+
+
+def test_hessian_positional_flags():
+    # The four flags can be passed positionally, as before `average` was added.
+    # `average` is keyword-only, so that a fifth positional flag is one too many.
+    mod = _ar2_model()
+    params = mod.start_params
+    desired = mod.hessian(
+        params,
+        transformed=True,
+        method="approx",
+        approx_complex_step=None,
+        approx_centered=False,
+    )
+    actual = mod.hessian(params, True, "approx", None, False)
+    assert_allclose(actual, desired, rtol=1e-14)
+    with pytest.raises(ValueError, match="zip"):
+        mod.hessian(params, True, "approx", None, False, False)
+    kind = inspect.signature(MLEModel.hessian).parameters["average"].kind
+    assert kind is inspect.Parameter.KEYWORD_ONLY
+
+
+def test_hessian_fit_flags_average():
+    # fit passes the same dictionary of flags, with average False, to
+    # loglike, score and hessian. Only hessian uses average.
+    mod = _newton_model("sarimax_infl")
+    res = mod.fit(method="newton", maxiter=0, disp=0, warn_convergence=False)
+    (flags,) = res.mle_settings["fargs"]
+    assert flags["average"] is False
+    params = mod.untransform_params(mod.start_params)
+    assert_allclose(
+        mod.loglike(params, flags), mod.loglike(params, transformed=False), rtol=1e-14
+    )
+    assert_allclose(
+        mod.score(params, flags), mod.score(params, transformed=False), rtol=1e-14
+    )
+    desired = mod.hessian(params, transformed=False, average=False)
+    assert_allclose(mod.hessian(params, flags), desired, rtol=1e-14)
+    # without an entry in the dictionary, the keyword is used
+    actual = mod.hessian(params, {"transformed": False}, average=False)
+    assert_allclose(actual, desired, rtol=1e-14)
+
+
 @pytest.mark.parametrize("name", ["mlefit", "mle_retvals", "mle_settings"])
 def test_fit_attrs_in_dir(name):
     # GH#9271: mlefit, mle_retvals and mle_settings were attached to the
@@ -310,6 +479,34 @@ def test_fit_attrs_in_dir(name):
     assert name in dir(res)
     # Because they now live on the underlying results instance
     assert name in dir(res._results)
+
+
+@pytest.mark.parametrize("name", ["sarimax", "llevel"])
+def test_fit_cg_optimum(name):
+    # cg did not pass the flags of `fit` to the loglikelihood and the score,
+    # so that it maximized the loglikelihood as a function of the constrained
+    # parameters at the values of the unconstrained ones. It stopped far from
+    # the optimum, and for the local level model with converged True. The
+    # transformations of the parameters of these models have diagonal
+    # Jacobians, so that the test does not depend on the chain rule of
+    # MLEModel.score with transformed=False. Nelder-Mead, which does not use
+    # the score, is the reference.
+    infl = macrodata.load_pandas().data["infl"].to_numpy()
+    if name == "sarimax":
+        mod = sarimax.SARIMAX(infl, order=(1, 0, 1), trend="c")
+    else:
+        mod = structural.UnobservedComponents(infl, "llevel")
+    res = mod.fit(method="cg", disp=0)
+    desired = mod.fit(method="nm", maxiter=5000, xtol=1e-8, ftol=1e-10, disp=0)
+    assert desired.mle_retvals["converged"]
+    assert res.mle_retvals["converged"]
+    # The loglikelihood is flat at the optimum, so that it agrees to second
+    # order in the difference of the parameters. The parameters agree to the
+    # accuracy of the solvers, about 1e-4: cg stops when the gradient of the
+    # loglikelihood divided by nobs is below 1e-5. Without the flags, the
+    # loglikelihood was lower by 6 and 38.
+    assert_allclose(res.llf, desired.llf, rtol=1e-8)
+    assert_allclose(res.params, desired.params, rtol=1e-3)
 
 
 @pytest.mark.smoke
@@ -481,6 +678,141 @@ def test_score_analytic_ar1():
         assert_allclose(
             mod._hessian_finite_difference(params) * 2, analytic_hessian, atol=1e-1
         )
+
+
+def _score_model(name):
+    data = macrodata.load_pandas().data
+    infl = data["infl"].to_numpy()
+    levels = data[["realgdp", "realcons", "realinv"]].to_numpy()
+    growth = 100 * np.diff(np.log(levels), axis=0)
+    if name == "sarimax_arma21":
+        return sarimax.SARIMAX(infl, order=(2, 0, 1), trend="c")
+    elif name == "sarimax_seasonal":
+        return sarimax.SARIMAX(infl, order=(1, 0, 0), seasonal_order=(2, 0, 0, 4))
+    elif name == "var1":
+        return varmax.VARMAX(growth[:, :2], order=(1, 0), trend="c")
+    elif name == "var2":
+        return varmax.VARMAX(growth[:, :2], order=(2, 0), trend="c")
+    elif name == "dynamic_factor":
+        return dynamic_factor.DynamicFactor(growth, k_factors=1, factor_order=2)
+    else:  # "sarimax_ar1"
+        return sarimax.SARIMAX(infl, order=(1, 0, 0))
+
+
+def _centered_gradient(func, x):
+    # Centered finite differences, with the step that balances the truncation
+    # and the rounding errors
+    step = np.finfo(float).eps ** (1 / 3) * np.maximum(np.abs(x), 0.1)
+    grad = np.zeros_like(x)
+    for i in range(len(x)):
+        dx = np.zeros_like(x)
+        dx[i] = step[i]
+        grad[i] = (func(x + dx) - func(x - dx)) / (2 * step[i])
+    return grad
+
+
+_score_methods = [
+    pytest.param("approx", True, False, id="approx-cs"),
+    pytest.param("approx", False, False, id="approx-fd"),
+    pytest.param("approx", False, True, id="approx-fd-centered"),
+    pytest.param("harvey", True, False, id="harvey-cs"),
+    pytest.param("harvey", False, False, id="harvey-fd"),
+]
+
+
+@pytest.mark.parametrize("method, approx_complex_step, approx_centered", _score_methods)
+@pytest.mark.parametrize(
+    "name",
+    ["sarimax_arma21", "sarimax_seasonal", "var2", "dynamic_factor", "sarimax_ar1"],
+)
+def test_score_untransformed(name, method, approx_complex_step, approx_centered):
+    # The score with respect to the unconstrained parameters u is J' g, where g
+    # is the score with respect to the constrained parameters and J is the
+    # Jacobian of the transformation. It was J g, which is wrong unless J is
+    # symmetric. In the autoregressive parts of the first four models it is
+    # not; in the AR(1) it is diagonal. The reference is the gradient of the
+    # loglikelihood as a function of u, at a point away from the optimum.
+    mod = _score_model(name)
+    uparams = mod.untransform_params(mod.start_params) + 0.1
+    actual = mod.score(
+        uparams,
+        transformed=False,
+        method=method,
+        approx_complex_step=approx_complex_step,
+        approx_centered=approx_centered,
+    )
+    desired = _centered_gradient(
+        lambda params: mod.loglike(params, transformed=False), uparams
+    )
+    # The errors of numerical derivatives scale with the largest element of
+    # the gradient, not with each element
+    assert_allclose(actual, desired, rtol=1e-5, atol=1e-4 * np.max(np.abs(desired)))
+
+
+@pytest.mark.parametrize("method, approx_complex_step, approx_centered", _score_methods)
+@pytest.mark.parametrize(
+    "name, includes_fixed",
+    [("sarimax_arma21", False), ("var1", False), ("var1", True)],
+)
+def test_score_untransformed_fixed_params(
+    name, includes_fixed, method, approx_complex_step, approx_centered
+):
+    # Fixed parameters are set after the transformation, so that they do not
+    # depend on the free parameters, unless `includes_fixed` is True, when all
+    # of the parameters passed are transformed. In the VAR(1), the transformed
+    # autoregressive coefficients depend on the error covariance, so that the
+    # rows of J of the fixed coefficients must be left out.
+    mod = _score_model(name)
+    if name == "sarimax_arma21":
+        fixed = ["ma.L1"]
+    else:
+        fixed = [param for param in mod.param_names if param.startswith("L1.")]
+    start_params = dict(zip(mod.param_names, mod.start_params, strict=True))
+    uparams = mod.untransform_params(mod.start_params) + 0.1
+    if not includes_fixed:
+        free = np.array(
+            [i for i, param in enumerate(mod.param_names) if param not in fixed],
+            dtype=int,
+        )
+        uparams = uparams[free]
+
+    with mod.fix_params({param: start_params[param] for param in fixed}):
+        actual = mod.score(
+            uparams,
+            transformed=False,
+            includes_fixed=includes_fixed,
+            method=method,
+            approx_complex_step=approx_complex_step,
+            approx_centered=approx_centered,
+        )
+        desired = _centered_gradient(
+            lambda params: mod.loglike(
+                params, transformed=False, includes_fixed=includes_fixed
+            ),
+            uparams,
+        )
+    # The errors of numerical derivatives scale with the largest element of
+    # the gradient, not with each element
+    assert_allclose(actual, desired, rtol=1e-5, atol=1e-4 * np.max(np.abs(desired)))
+
+
+@pytest.mark.parametrize("method", ["bfgs", "lbfgs"])
+def test_fit_untransformed_score_optimum(method):
+    # With the wrong score, BFGS and L-BFGS stopped far from the optimum.
+    # Nelder-Mead, which does not use the score, is the reference, with tight
+    # tolerances. BFGS and L-BFGS stop when the score is below their default
+    # tolerances, which leaves errors of about 1e-4 in the parameters. The
+    # loglikelihood is flat at the optimum, so that its error is quadratic in
+    # those and much smaller.
+    mod = _score_model("sarimax_arma21")
+    desired = mod.fit(
+        method="nm", maxiter=20000, maxfun=40000, xtol=1e-10, ftol=1e-12, disp=0
+    )
+    res = mod.fit(method=method, optim_score="approx", disp=0)
+    assert desired.mle_retvals["converged"]
+    assert res.mle_retvals["converged"]
+    assert_allclose(res.llf, desired.llf, rtol=1e-8)
+    assert_allclose(res.params, desired.params, rtol=1e-3)
 
 
 def test_cov_params():
@@ -1456,3 +1788,113 @@ def test_loglike_unconstrained_stationary_boundary(scale, sign):
     # other initializations do not use the stationary covariance
     mod.ssm.initialize_approximate_diffuse()
     assert np.isfinite(mod.loglike(params, transformed=False))
+
+
+def test_loglike_stationary_init_unit_root_ar1():
+    # GH#5459: at a unit root the Lyapunov solver may not raise but return a
+    # negative initial state variance (-4.99e291 here). The filter then gave
+    # a loglikelihood of 0.0, above that of any stationary model.
+    mod = sarimax.SARIMAX(np.zeros(10))
+    assert mod.loglike([1.0, 1.0]) == -np.inf
+    with pytest.raises(np.linalg.LinAlgError, match="not stationary to numerical"):
+        mod.filter([1.0, 1.0])
+    with pytest.raises(np.linalg.LinAlgError, match="not stationary to numerical"):
+        mod.ssm.loglike()
+
+    # An explosive root is not changed here: the Lyapunov equation has a
+    # solution, 1 / (1 - 1.2**2) = -1 / 0.44, although it is not a covariance
+    # matrix
+    res = mod.filter([1.2, 1.0])
+    desired = 1 / (1 - 1.2**2)
+    assert_allclose(res.filter_results.initial_state_cov, [[desired]], rtol=1e-12)
+
+
+@pytest.mark.parametrize("gap", [1e-4, 1e-8, 1e-12, 1e-15])
+def test_stationary_init_near_unit_root_ar1(gap):
+    # Close to the unit root the stationary covariance is still computed. The
+    # variance of a stationary AR(1) process with unit innovation variance is
+    # 1 / (1 - phi**2), which is exact for the double precision phi. The
+    # relative error of the solver was at most 2.2e-16 for these gaps (scipy
+    # 1.8.1 and 1.18.1), the tolerance leaves room for other LAPACK builds.
+    phi = 1 - gap
+    mod = sarimax.SARIMAX(np.zeros(10))
+    res = mod.filter([phi, 1.0])
+    desired = 1 / ((1 - phi) * (1 + phi))
+    assert_allclose(res.filter_results.initial_state_cov, [[desired]], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "ar_params",
+    [
+        [0.5, 0.5],
+        [1.0, 0.0],
+        [2.0, -1.0],
+        # a complex pair of roots on the unit circle
+        [2 * np.cos(0.7), -1.0],
+        # roots 2 and 0.5, which are not unit roots, but their product is 1
+        [2.5, -1.0],
+    ],
+)
+def test_loglike_stationary_init_unit_root_ar2(ar_params):
+    # GH#5459: loglike returned 0.0 for these AR(2) parameters, with initial
+    # state variances of about -3e14 to -2e15, instead of failing. The
+    # Lyapunov equation is singular if the product of two eigenvalues of the
+    # transition matrix is 1.
+    rng = np.random.default_rng(5459)
+    mod = sarimax.SARIMAX(rng.standard_normal(200), order=(2, 0, 0))
+    assert mod.loglike(np.r_[ar_params, 1.0]) == -np.inf
+    with pytest.raises(np.linalg.LinAlgError, match="not stationary to numerical"):
+        mod.filter(np.r_[ar_params, 1.0])
+
+    # the loglikelihood of a stationary model is unchanged, and matches the
+    # one with the initial covariance from scipy as a known initialization
+    params = [0.5, 0.3, 1.0]
+    llf = mod.loglike(params)
+    transition = np.array([[0.5, 1.0], [0.3, 0.0]])
+    cov = solve_discrete_lyapunov(transition, np.diag([1.0, 0.0]))
+    mod_known = sarimax.SARIMAX(mod.endog, order=(2, 0, 0))
+    mod_known.ssm.initialize_known(np.zeros(2), cov)
+    assert_allclose(llf, mod_known.loglike(params), rtol=1e-12)
+
+
+@pytest.mark.parametrize("gap", [1e-2, 1e-4, 1e-6])
+def test_stationary_init_near_unit_root_ar2(gap):
+    # The covariance of the state (y_t, phi_2 y_{t-1}) of a stationary AR(2)
+    # process with unit innovation variance, from the autocovariances
+    # gamma_0 = (1 - phi_2) / ((1 + phi_2) ((1 - phi_2)**2 - phi_1**2)) and
+    # gamma_1 = phi_1 gamma_0 / (1 - phi_2). With phi_2 = 0.5 - gap, gamma_0 is
+    # about 0.33 / gap. The relative error of the solver was at most 5.1e-10
+    # for these gaps (scipy 1.8.1 and 1.18.1), and it grows as the gap shrinks:
+    # it is 5.3e-8 for a gap of 1e-8.
+    phi1, phi2 = 0.5, 0.5 - gap
+    gamma0 = (1 - phi2) / ((1 + phi2) * ((1 - phi2) ** 2 - phi1**2))
+    gamma1 = phi1 * gamma0 / (1 - phi2)
+    desired = np.array(
+        [[gamma0, phi2 * gamma1], [phi2 * gamma1, phi2**2 * gamma0]]
+    )
+    mod = sarimax.SARIMAX(np.zeros(10), order=(2, 0, 0))
+    res = mod.filter([phi1, phi2, 1.0])
+    assert_allclose(res.filter_results.initial_state_cov, desired, rtol=1e-8)
+    assert np.isfinite(mod.loglike([phi1, phi2, 1.0]))
+
+
+def test_loglike_stationary_init_unit_root_block():
+    # Only the states with a stationary initialization are checked: here the
+    # first state is a diffuse random walk and the second is an AR(1)
+    endog = np.random.default_rng(5459).standard_normal(50)
+    mod = MLEModel(endog, k_states=2, k_posdef=2)
+    mod["design"] = [1.0, 1.0]
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.eye(2)
+    mod["obs_cov"] = [[1.0]]
+    init = Initialization(2)
+    init.set(0, "diffuse")
+    init.set(1, "stationary")
+    mod.ssm.initialization = init
+
+    mod["transition"] = np.diag([1.0, 0.5])
+    assert np.isfinite(mod.ssm.loglike())
+
+    mod["transition"] = np.diag([1.0, 1.0])
+    with pytest.raises(np.linalg.LinAlgError, match="not stationary to numerical"):
+        mod.ssm.loglike()

@@ -528,10 +528,51 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     weights = [0, 1, 2, 3] and wt = 'quadratic' is the same as squaring these
     weights and using wt = 'toeplitz'.
 
+    If one rater uses a single category, then kappa is 0, its standard
+    errors and confidence limits are 0, and the z statistic and the p-values
+    are nan. If both raters use the same single category, which includes a
+    table with a single row and column, then kappa and all other statistics
+    are nan.
+
+    .. versionchanged:: 0.15.1
+
+       The results if a rater uses a single category are set explicitly.
+       Before, they depended on rounding errors, and NumPy emitted a
+       ``RuntimeWarning``.
+
+    Kappa depends on the prevalence of the categories, not only on the
+    accuracy of the raters. Chance agreement is computed from the margins of
+    the table. If one category is rare, both raters mostly assign the common
+    category, chance agreement is close to the observed agreement, and kappa
+    is small even if raw agreement is high. See the example below.
+
     References
     ----------
     Wikipedia
     SAS Manual
+
+    Examples
+    --------
+    Two raters each have sensitivity and specificity of 0.9, and their errors
+    are independent given the true class. The expected tables for 10000
+    subjects (rows: rater 1 positive, negative; columns: rater 2) differ only
+    in the proportion of positive subjects.
+
+    >>> from statsmodels.stats.inter_rater import cohens_kappa
+
+    With 50% positive subjects, observed agreement is 0.82 and chance
+    agreement is 0.50.
+
+    >>> table_balanced = [[4100, 900], [900, 4100]]
+    >>> print(f"{cohens_kappa(table_balanced, return_results=False):.4f}")
+    0.6400
+
+    With 1% positive subjects, observed agreement is still 0.82, but chance
+    agreement from the margins is 0.8073, so kappa is much smaller.
+
+    >>> table_rare = [[180, 900], [900, 8020]]
+    >>> print(f"{cohens_kappa(table_rare, return_results=False):.4f}")
+    0.0658
     '''
     table = np.asarray(table, float)  # avoid integer division
     if table.ndim != 2 or table.shape[0] != table.shape[1]:
@@ -540,22 +581,41 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         raise ValueError(
             f"table must be a square 2-d array, got shape {table.shape}"
         )
+    if not np.isfinite(table).all():
+        raise ValueError("table must contain only finite counts")
     agree = np.diag(table).sum()
     nobs = table.sum()
+    if not np.isfinite(nobs):
+        raise ValueError("the sum of the table must be finite")
+    if nobs == 0:
+        raise ValueError("table must have a positive number of observations")
     probs = table / nobs
     freqs = probs  # TODO: rename to use freqs instead of probs for observed
     probs_diag = np.diag(probs)
     freq_row = table.sum(1) / nobs
     freq_col = table.sum(0) / nobs
     prob_exp = freq_col * freq_row[:, None]
-    assert np.allclose(prob_exp.sum(), 1)
-    # print prob_exp.sum()
     agree_exp = np.diag(prob_exp).sum()  # need for kappa_max
+    # If a rater uses a single category, then kappa and its variances are 0,
+    # and if both raters use the same single category, then they are 0 / 0.
+    # The computation below gives rounding errors or 0 / 0 in these cases.
+    rows_used = np.flatnonzero(table.sum(1))
+    cols_used = np.flatnonzero(table.sum(0))
+    one_category = len(rows_used) == 1 or len(cols_used) == 1
+    same_category = (
+        len(rows_used) == 1 and len(cols_used) == 1 and rows_used[0] == cols_used[0]
+    )
+    one_category_value = np.nan if same_category else 0.0
     if weights is None and wt is None:
         kind = "Simple"
-        kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
+        if one_category:
+            kappa = one_category_value
+        else:
+            kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
 
-        if return_results:
+        if return_results and one_category:
+            var_kappa = var_kappa0 = one_category_value
+        elif return_results:
             # variance
             term_a = probs_diag * (1 - (freq_row + freq_col) * (1 - kappa))**2
             term_a = term_a.sum()
@@ -596,9 +656,14 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             if (table.shape != weights.shape):
                 raise ValueError("weights are not square")
         # this is formula from Wikipedia
-        kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
+        if one_category:
+            kappa = one_category_value
+        else:
+            kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
         # TODO: add var_kappa for weighted version
-        if return_results:
+        if return_results and one_category:
+            var_kappa = var_kappa0 = one_category_value
+        elif return_results:
             var_kappa = np.nan
             var_kappa0 = np.nan
             # switch to SAS manual weights, problem if user specifies weights
@@ -618,8 +683,11 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             var_kappa0 -= agree_wexp**2
             var_kappa0 *= fac
 
-    kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / \
-                (1 - agree_exp)
+    if same_category:
+        kappa_max = np.nan
+    else:
+        kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / \
+                    (1 - agree_exp)
 
     if return_results:
         res = KappaResults(
@@ -725,7 +793,11 @@ class KappaResults(ResultsBunch):
         self["std_kappa"] = np.sqrt(self["var_kappa"])
         self["std_kappa0"] = np.sqrt(self["var_kappa0"])
 
-        self["z_value"] = self["kappa"] / self["std_kappa0"]
+        if self["std_kappa0"] > 0:
+            self["z_value"] = self["kappa"] / self["std_kappa0"]
+        else:
+            # kappa is 0 or nan if its variance under H0 is 0 or nan
+            self["z_value"] = np.nan
 
         self["pvalue_one_sided"] = stats.norm.sf(self["z_value"])
         self["pvalue_two_sided"] = stats.norm.sf(np.abs(self["z_value"])) * 2

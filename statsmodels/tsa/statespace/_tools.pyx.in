@@ -459,7 +459,12 @@ cpdef _{{prefix}}compute_coefficients_from_multivariate_pacf({{cython_type}} [::
         # exceptions from the Cholesky decompositions.
         # Note that this will still not always ensure positive definiteness,
         # and for k_endog, order large enough an exception may still be raised
-        error_variance = np.asfortranarray(np.eye(k_endog, dtype={{dtype}}) * (order + k_endog)**10)
+        # dtype keeps single precision on NumPy < 2, where multiplying by a
+        # Python int above 65535 promotes float32 to float64 (and complex64 to
+        # complex128)
+        error_variance = np.asfortranarray(
+            np.eye(k_endog, dtype={{dtype}}) * (order + k_endog)**10, dtype={{dtype}}
+        )
 
     # Initialize matrices
     dim2[0] = k_endog; dim2[1] = k_endog;
