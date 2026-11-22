@@ -116,7 +116,8 @@ def date_range_str(start, end=None, length=None):
     Parameters
     ----------
     start : str
-        The first abbreviated date, for instance, '1965q1' or '1965m1'
+        The first abbreviated date, for instance, '1965q1', '1965m1' or
+        '1965' for annual dates.
     end : str, optional
         The last abbreviated date if length is None.
     length : int, optional
@@ -190,12 +191,15 @@ def dates_from_str(dates):
 
 def dates_from_range(start, end=None, length=None):
     """
-    Turns a sequence of date strings and returns a list of datetime
+    Returns a list of datetime for a range of abbreviated dates
+
+    The datetime dates are at the end of each period.
 
     Parameters
     ----------
     start : str
-        The first abbreviated date, for instance, '1965q1' or '1965m1'
+        The first abbreviated date, for instance, '1965q1', '1965m1' or
+        '1965' for annual dates.
     end : str, optional
         The last abbreviated date if length is None.
     length : int, optional

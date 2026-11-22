@@ -23,12 +23,11 @@ ds.insert_parameters(
     "endog",
     Parameter(
         "model",
-        "Model",
+        "type",
         [
-            (
-                "The model used to forecast endog after the seasonality has been "
-                "removed using STL"
-            )
+            "The model class, for example ARIMA, used to forecast endog after",
+            "the seasonality has been removed using STL. It is initialized with",
+            "the deseasonalized data, endog minus the STL seasonal component.",
         ],
     ),
 )
@@ -38,10 +37,8 @@ ds.insert_parameters(
         "model_kwargs",
         "dict, optional",
         [
-            (
-                "Any additional arguments needed to initialized the model using "
-                "the residuals produced by subtracting the seasonality."
-            )
+            "Any additional arguments needed to initialize the model using the",
+            "deseasonalized data.",
         ],
     ),
 )
@@ -201,7 +198,7 @@ class STLForecast:
         ----------\n%(fit_params)s
         fit_kwargs : dict, optional
             Any additional keyword arguments to pass to ``model``'s ``fit``
-            method when estimating the model on the decomposed residuals.
+            method when estimating the model on the deseasonalized data.
 
         Returns
         -------
@@ -324,16 +321,11 @@ class STLForecastResults:
             else:
                 right_stubs.append(" " * 6 + stub)
                 right_data.append([val])
-        delta = len(left_data) - len(right_data)
-        adelta = abs(delta)
-        if delta < 0:
-            left_data += [[" " * len(left_data[0][0])] * adelta]
-            left_stubs += [" " * len(left_stubs[0])] * adelta
-        elif delta > 0:
-            right_data += [[" " * len(right_data[0][0])] * adelta]
-            right_stubs += [" " * len(right_stubs[0])] * adelta
+        # STL.config has 5 entries in the left column and 6 in the right
+        npad = len(right_data) - len(left_data)
+        left_data += [[" " * len(left_data[0][0])]] * npad
+        left_stubs += [" " * len(left_stubs[0])] * npad
         tab = SimpleTable(left_data, stubs=tuple(left_stubs), title="STL Configuration")
-        right_data += [[""]] * (len(left_data) - len(right_data))
         tab.extend_right(SimpleTable(right_data, stubs=right_stubs))
         summary.tables.append(tab)
         return summary

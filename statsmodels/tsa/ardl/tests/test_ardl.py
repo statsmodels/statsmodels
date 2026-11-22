@@ -2139,3 +2139,91 @@ def test_uecm_results_ci_types():
     expected = np.column_stack([np.ones(120), y, x]) @ (params / params[1])
     assert_allclose(np.asarray(resids), expected, rtol=1e-10)
     assert_allclose(res_np.ci_resids, expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("to_int", [int, np.int64, np.int32])
+@pytest.mark.parametrize("causal", [False, True])
+def test_ardl_order_dict_numpy_int(to_int, causal):
+    # numpy integer values in an order dict raised TypeError
+    rng = np.random.default_rng(20261128)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal((nobs, 2)), axis=0)
+    order = {0: to_int(2), 1: to_int(1)}
+    res = ARDL(y, 1, x, order, causal=causal).fit()
+
+    first = int(causal)
+    assert res.model.dl_lags == {0: list(range(first, 3)), 1: list(range(first, 2))}
+    t = np.arange(2, nobs)
+    reg = [np.ones(nobs - 2), y[t - 1]]
+    reg += [x[t - j, 0] for j in range(first, 3)]
+    reg += [x[t - j, 1] for j in range(first, 2)]
+    ols = OLS(y[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("to_int", [int, np.int64, np.int32])
+def test_uecm_order_dict_numpy_int(to_int):
+    # numpy integer values in an order dict raised TypeError
+    rng = np.random.default_rng(20261129)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal((nobs, 2)), axis=0)
+    res = UECM(y, 1, x, {0: to_int(2), 1: to_int(1)}).fit()
+
+    # D.y on const, y.L1, x0.L1, x1.L1, D.x0.L0, D.x0.L1 and D.x1.L0
+    t = np.arange(2, nobs)
+    dx = np.r_[np.full((1, 2), np.nan), np.diff(x, axis=0)]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1]]
+    ols = OLS(y[t] - y[t - 1], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("to_int", [np.int64, np.int32])
+def test_ardl_select_order_maxorder_dict_numpy_int(to_int):
+    # The same selection as with int values, which raised TypeError
+    rng = np.random.default_rng(20261130)
+    y = np.cumsum(rng.standard_normal(150))
+    x = np.cumsum(rng.standard_normal((150, 2)), axis=0)
+    res = ardl_select_order(y, 2, x, {0: to_int(2), 1: to_int(1)})
+    expected = ardl_select_order(y, 2, x, {0: 2, 1: 1})
+    assert_allclose(res.bic.index, expected.bic.index, rtol=1e-12)
+    assert list(res.bic) == list(expected.bic)
+    assert res.model.ardl_order == expected.model.ardl_order
+
+
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_uecm_excluded_exog_by_hand(use_pandas):
+    # An exog variable excluded with None has no level, no differences and no
+    # term in the cointegrating relationship
+    rng = np.random.default_rng(20261132)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal((nobs, 3)), axis=0)
+    if use_pandas:
+        endog = pd.Series(y, name="y")
+        exog = pd.DataFrame(x, columns=["a", "b", "c"])
+        order = {"a": 2, "b": None, "c": 1}
+    else:
+        endog, exog = y, x
+        order = {0: 2, 1: None, 2: 1}
+    res = UECM(endog, 1, exog, order).fit()
+
+    a, c = ("a", "c") if use_pandas else ("x0", "x2")
+    names = ["const", "y.L1", f"{a}.L1", f"{c}.L1", f"D.{a}.L0", f"D.{a}.L1"]
+    names.append(f"D.{c}.L0")
+    assert res.model.exog_names == names
+    t = np.arange(2, nobs)
+    dx = np.r_[np.full((1, 3), np.nan), np.diff(x, axis=0)]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 2]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 2]]
+    params = OLS(y[t] - y[t - 1], np.column_stack(reg)).fit().params
+    assert_allclose(res.params, params, rtol=1e-8)
+    # The relationship is normalized by the coefficient of y.L1
+    ci_params = params[:4] / params[1]
+    assert_allclose(res.ci_params, ci_params, rtol=1e-8)
+    ci_resids = np.column_stack([np.ones(nobs), y, x[:, 0], x[:, 2]]) @ ci_params
+    assert_allclose(res.ci_resids, ci_resids, rtol=1e-8)
+    if use_pandas:
+        assert list(res.ci_params.index) == ["const", "y", "a", "c"]

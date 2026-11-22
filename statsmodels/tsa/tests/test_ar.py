@@ -1664,3 +1664,29 @@ def test_ar_select_order_endog_input_forms(form):
     assert res.ar_lags == expected.ar_lags
     assert list(res.aic) == list(expected.aic)
     assert_allclose(list(res.aic.values()), list(expected.aic.values()), rtol=1e-10)
+
+
+@pytest.mark.parametrize("start", [0, 1, 2, 60, 99, 100, 103])
+def test_autoreg_dynamic_predict_start_by_hand(start):
+    # Dynamic predictions that start before hold_back, in the sample, at
+    # the first out-of-sample observation and after it
+    rng = np.random.default_rng(20261131)
+    nobs = 100
+    e = rng.standard_normal(nobs)
+    y = np.zeros(nobs)
+    for t in range(2, nobs):
+        y[t] = 0.5 + 0.6 * y[t - 1] - 0.3 * y[t - 2] + e[t]
+    res = AutoReg(y, 2, trend="c").fit()
+    const, phi1, phi2 = res.params
+    end = 107
+    pred = res.predict(start=start, end=end, dynamic=True)
+
+    # The recursion begins at start, but not before hold_back and not after
+    # the first out-of-sample observation; earlier lags are data
+    first = min(max(start, 2), nobs)
+    path = np.r_[y, np.zeros(end + 1 - nobs)]
+    for t in range(first, end + 1):
+        path[t] = const + phi1 * path[t - 1] + phi2 * path[t - 2]
+    expected = path[start : end + 1].copy()
+    expected[: max(2 - start, 0)] = np.nan
+    assert_allclose(pred, expected, rtol=1e-10)

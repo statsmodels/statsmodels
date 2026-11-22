@@ -115,20 +115,21 @@ cdef class STL(object):
     Parameters
     ----------
     endog : array_like
-        Data to be decomposed. Must be squeezable to 1-d.
-    period : {int, None}, optional
+        Data to be decomposed. Must be 1-d or an (n, 1) column, such as a
+        one-column DataFrame.
+    period : int, optional
         Periodicity of the sequence. If None and endog is a pandas Series or
         DataFrame, attempts to determine from endog. If endog is a ndarray,
         period must be provided.
     seasonal : int, optional
         Length of the seasonal smoother. Must be an odd integer, and should
         normally be >= 7 (default).
-    trend : {int, None}, optional
+    trend : int, optional
         Length of the trend smoother. Must be an odd integer. If not provided
         uses the smallest odd integer greater than
         1.5 * period / (1 - 1.5 / seasonal), following the suggestion in
         the original implementation.
-    low_pass : {int, None}, optional
+    low_pass : int, optional
         Length of the low-pass filter. Must be an odd integer >=3. If not
         provided, uses the smallest odd integer > period.
     seasonal_deg : int, optional
@@ -296,7 +297,7 @@ cdef class STL(object):
 
         Returns
         -------
-        dict[str, Union[int, bool]]
+        dict of str to int or bool
             The values used in the STL decomposition.
         """
         return dict(period=self._period,
@@ -319,10 +320,10 @@ cdef class STL(object):
 
         Parameters
         ----------
-        inner_iter : {int, None}, optional
+        inner_iter : int, optional
             Number of iterations to perform in the inner loop. If not provided
             uses 2 if ``robust`` is True, or 5 if not.
-        outer_iter : {int, None}, optional
+        outer_iter : int, optional
             Number of iterations to perform in the outer loop. If not provided
             uses 15 if ``robust`` is True, or 0 if not.
 
