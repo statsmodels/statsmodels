@@ -2296,3 +2296,34 @@ def test_smoothed_decomposition_signal_state_index_partition():
     assert_allclose(
         signal, (res.design[..., 0] @ res.smoothed_state).T, rtol=1e-10, atol=1e-12
     )
+
+
+@pytest.mark.parametrize("tvp", [False, True])
+def test_news_design_deprecated(tvp):
+    # design has no effect (the news for periods outside of the sample of a
+    # time-varying model raise, and otherwise the design matrix of the results
+    # is used): passing it warns, and the impacts still equal the change in the
+    # smoothed forecasts
+    mod, res = get_acov_model(None, False, tvp)
+    params = [] if tvp else mod.start_params
+    append = np.zeros((10, 2)) * np.nan
+    append[0] = [0.1, -0.2]
+    endog2 = np.concatenate((mod.endog, append), axis=0)
+    res2 = mod.clone(endog2).smooth(params, return_ssm=True)
+    endog3 = endog2.copy()
+    endog3[-10:] = np.nan
+    res3 = mod.clone(endog3).smooth(params, return_ssm=True)
+
+    t = mod.nobs - 1
+    desired = res2.smoothed_forecasts[..., t] - res3.smoothed_forecasts[..., t]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        out = res2.news(res, t=t)
+    # atol: the impacts on some variables are close to zero
+    assert_allclose(out.update_impacts, desired, rtol=1e-10, atol=1e-14)
+
+    design = 2 * res2.design[..., t if tvp else 0]
+    with pytest.warns(FutureWarning, match="design has no effect") as record:
+        out = res2.news(res, t=t, design=design)
+    assert record[0].filename == __file__
+    assert_allclose(out.update_impacts, desired, rtol=1e-10, atol=1e-14)

@@ -1231,10 +1231,15 @@ class SmootherResults(FilterResults):
             large models, setting this to be near the beginning of the sample
             can cause this function to be slow.
         design : ndarray, optional
-            Design matrix for the period `t` in time-varying models. If this
-            model has a time-varying design matrix, and the argument `t` is out
-            of this model's sample, then a new design matrix for period `t`
-            must be provided. Unused otherwise.
+            Not used. The impacts on periods outside of the sample of a
+            time-varying model cannot be computed (they raise a
+            RuntimeError), and otherwise the design matrix of this results
+            object is used.
+
+            .. deprecated:: 0.15.1
+
+               `design` has no effect. It is deprecated and will be removed
+               after statsmodels 0.17 is released.
         state_index : array_like, optional
             An optional index specifying a subset of states to use when
             constructing the impacts of revisions and news. For example, if
@@ -1322,6 +1327,15 @@ class SmootherResults(FilterResults):
                Journal of Applied Econometrics 29, no. 1 (2014): 133-160.
 
         """
+        if design is not None:
+            warnings.warn(
+                "design has no effect in SmootherResults.news and is"
+                " deprecated. It will be removed after statsmodels 0.17 is"
+                " released.",
+                FutureWarning,
+                stacklevel=2,
+            )
+
         # Handle `t`
         if t is not None and (start is not None or end is not None):
             raise ValueError("Cannot specify both `t` and `start` or `end`.")
@@ -1614,21 +1628,13 @@ class SmootherResults(FilterResults):
             update_forecasts = forecasts[ix_t, update_k]
             update_forecasts_error = forecasts_error[ix_t, update_k]
 
-            # Get the gains associated with each of the periods
+            # Get the gains associated with each of the periods (with a
+            # time-varying design matrix, end <= nobs, since periods outside
+            # of the sample raise above)
             if self.design.shape[2] == 1:
                 design = self.design[..., 0][None, ...]
-            elif end <= self.nobs:
-                design = self.design[..., start:end].transpose(2, 0, 1)
-            # Note: this case is no longer possible, since above we raise
-            # ValueError for time-varying case with end > self.nobs
-            elif design is None:
-                raise ValueError("Model has time-varying design matrix, so"
-                                 " an updated time-varying matrix for"
-                                 " period `t` is required.")
-            elif design.ndim == 2:
-                design = design[None, ...]
             else:
-                design = design.transpose(2, 0, 1)
+                design = self.design[..., start:end].transpose(2, 0, 1)
 
             state_gain = previous.smoothed_state_gain(
                 updates_ix, start=start, end=end, extend_kwargs=extend_kwargs)
