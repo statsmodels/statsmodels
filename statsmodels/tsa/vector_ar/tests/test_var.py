@@ -1795,3 +1795,21 @@ def test_reorder_trend_exog(trend, k_exog, by_name):
         expected.forecast(y.iloc[-2:, order].to_numpy(), 4, exog_future),
         rtol=1e-10,
     )
+
+
+def test_pprint_matrix_text():
+    values = np.array([[1.5, -0.25], [12.0, 3e-7]])
+    text = output.pprint_matrix(values, ["a", "bbb"], ["x", "a_long_label"])
+    # Rows labels in 3 + 2 characters, columns in max(len(label) + 2, 10),
+    # floats with six decimals
+    expected = [
+        "     " + " " * 9 + "x" + "  a_long_label",
+        "a    " + "  1.500000" + "     -0.250000",
+        "bbb  " + " 12.000000" + "      0.000000",
+        "",
+    ]
+    assert text.split("\n") == expected
+    # Other values are converted with str, and labels are truncated to a
+    # given column width
+    text = output.pprint_matrix(np.array([[1, 22]]), [0], ["abcdefgh", 1], col_space=5)
+    assert text.split("\n") == ["   " + "abcde" + "    1", "0  " + "    1" + "   22", ""]
