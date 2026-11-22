@@ -259,6 +259,14 @@ class ARDL(AutoReg):
         lags=1, set hold_back=3 which ensures that both models are estimated
         using observations 3,...,nobs. hold_back must be >= the maximum lag in
         the model.
+
+        .. versionchanged:: 0.15.1
+
+            With hold_back None and a largest exog lag above the largest
+            endog lag, ``nobs`` of the model and its results is the number of
+            observations used in estimation. It counted the observations
+            excluded by the extra exog lags, so ``llf``, the information
+            criteria, ``sigma2``, ``df_resid`` and the p-values were wrong.
     period : int, optional
         The period of the data. Only used if seasonal is True. This parameter
         can be omitted if using a pandas object for endog that contains a
@@ -400,6 +408,8 @@ class ARDL(AutoReg):
         self._order = self._check_order(order)
         # 2. Construct Regressors
         self._y, self._x = self._construct_regressors(hold_back)
+        # hold_back can increase to the largest exog lag
+        self.nobs = self._y.shape[0]
         self._set_k_constant()
         # 3. Construct variable names
         self._endog_name, self._exog_names = self._construct_variable_names()
@@ -1571,7 +1581,7 @@ def _ardl_select_ssr(y, always, select, glob):
         regressors from the blocks. If glob is False, the model that
         includes the first ``i_j`` columns of block ``j`` is at
         ``[i_0, i_1, ...]``. If glob is True, the models are in the order of
-        ``combinations(range(ncols), i) for i in range(ncols)``. None if
+        ``combinations(range(ncols), i) for i in range(ncols + 1)``. None if
         the regressors are close to singular, the largest model fits
         (almost) perfectly, or the data are not finite.
 
@@ -1603,7 +1613,7 @@ def _ardl_select_ssr(y, always, select, glob):
         ssr = []
         nreg = []
         ncols = x.shape[1]
-        for i in range(ncols):
+        for i in range(ncols + 1):
             perms = list(combinations(range(ncols), i))
             perms = np.array(perms, dtype=int).reshape(len(perms), i)
             # Batches of models with i regressors each
@@ -1615,8 +1625,6 @@ def _ardl_select_ssr(y, always, select, glob):
                 r = np.linalg.qr(design, mode="r")
                 ssr.append(r[:, i, i] ** 2)
             nreg.append(np.full(perms.shape[0], i))
-        if not ssr:
-            return np.empty(0), np.empty(0, dtype=int)
         return np.concatenate(ssr), np.concatenate(nreg)
 
     offsets = np.cumsum([0] + widths)
@@ -1689,6 +1697,13 @@ def ardl_select_order(
         If False, the number of model considered is of the order
         maxlag*maxorder**k which may also be substantial when k and maxorder
         are large.
+
+        .. versionchanged:: 0.15.1
+
+            If True, the model that includes all candidate lags is
+            considered. It was left out, so a different model could be
+            selected, and an UnboundLocalError was raised when there were
+            no candidate lags.
     seasonal : bool, optional
         Flag indicating whether to include seasonal dummies in the model. If
         seasonal is True and trend includes 'c', then the first period
@@ -1819,7 +1834,7 @@ def ardl_select_order(
         x = np.column_stack(list(select))
         all_columns = list(range(x.shape[1]))
         loc = 0
-        for i in range(x.shape[1]):
+        for i in range(x.shape[1] + 1):
             for perm in combinations(all_columns, i):
                 key = perm_to_tuple(keys, perm)
                 if fast_ics is not None:
@@ -1963,6 +1978,14 @@ class UECM(ARDL):
         lags=1, set hold_back=3 which ensures that both models are estimated
         using observations 3,...,nobs. hold_back must be >= the maximum lag in
         the model.
+
+        .. versionchanged:: 0.15.1
+
+            With hold_back None and a largest exog lag above the largest
+            endog lag, ``nobs`` of the model and its results is the number of
+            observations used in estimation. It counted the observations
+            excluded by the extra exog lags, so ``llf``, the information
+            criteria, ``sigma2``, ``df_resid`` and the p-values were wrong.
     period : int, optional
         The period of the data. Only used if seasonal is True. This parameter
         can be omitted if using a pandas object for endog that contains a

@@ -1,0 +1,3 @@
+- Forecasts of time series models whose data has a ``uint64`` integer
+  index were labelled with floats. They are labelled with ``uint64``
+  integers. :pr:`10926`

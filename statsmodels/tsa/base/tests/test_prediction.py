@@ -194,3 +194,127 @@ def test_covariance_var_pred_mean(row_labels):
     else:
         assert isinstance(pred.se_mean, pd.DataFrame)
         assert pred.se_mean.index.equals(row_labels)
+
+
+SINGLE_INDEX = pd.date_range("2000-01-01", periods=3, freq="MS")
+SINGLE_MEAN = np.array([1.0, -2.0, 3.0])
+SINGLE_VAR = np.array([1.0, 4.0, 0.25])
+
+
+@pytest.mark.parametrize(
+    "mean, var",
+    [
+        (SINGLE_MEAN[:, None], SINGLE_VAR),
+        (SINGLE_MEAN, SINGLE_VAR[:, None, None]),
+        (SINGLE_MEAN[:, None], SINGLE_VAR[:, None, None]),
+        (
+            pd.DataFrame({"y": SINGLE_MEAN}, index=SINGLE_INDEX),
+            pd.Series(SINGLE_VAR, index=SINGLE_INDEX),
+        ),
+        (
+            pd.DataFrame({"y": SINGLE_MEAN}, index=SINGLE_INDEX),
+            SINGLE_VAR[:, None, None],
+        ),
+    ],
+    ids=["column", "cov", "column-cov", "frame", "frame-cov"],
+)
+def test_single_column_mean(mean, var):
+    # A single column and an (nobs, 1, 1) variance are those of a 1-d mean
+    pred = PredictionResults(mean, var)
+    se = np.sqrt(SINGLE_VAR)
+    q = stats.norm.ppf(0.975)
+    lower, upper = SINGLE_MEAN - q * se, SINGLE_MEAN + q * se
+
+    assert np.shape(pred.predicted_mean) == (3,)
+    np.testing.assert_allclose(pred.predicted_mean, SINGLE_MEAN, rtol=1e-15)
+    np.testing.assert_allclose(pred.var_pred_mean, SINGLE_VAR, rtol=1e-15)
+    np.testing.assert_allclose(pred.se_mean, se, rtol=1e-15)
+    np.testing.assert_allclose(pred.tvalues, SINGLE_MEAN / se, rtol=1e-15)
+    stat, pvalue = pred.t_test()
+    np.testing.assert_allclose(pvalue, 2 * stats.norm.sf(np.abs(SINGLE_MEAN / se)))
+
+    ci = pred.conf_int()
+    np.testing.assert_allclose(np.asarray(ci), np.column_stack([lower, upper]))
+    frame = pred.summary_frame()
+    assert list(frame.columns) == ["mean", "mean_se", "mean_ci_lower", "mean_ci_upper"]
+    np.testing.assert_allclose(
+        frame.to_numpy(), np.column_stack([SINGLE_MEAN, se, lower, upper])
+    )
+    if isinstance(mean, pd.DataFrame):
+        assert list(ci.columns) == ["lower", "upper"]
+        assert ci.index.equals(SINGLE_INDEX)
+        assert frame.index.equals(SINGLE_INDEX)
+    else:
+        assert isinstance(ci, np.ndarray)
+
+
+@pytest.mark.parametrize("kind", ["frame", "labels", "array"])
+def test_multi_column_mean_labels(kind):
+    # The statistics of each column are labelled with the column name, or
+    # with its position if it has none
+    rng = np.random.default_rng(20261121)
+    nobs, k = 4, 2
+    values = rng.standard_normal((nobs, k))
+    a = rng.standard_normal((nobs, k, k))
+    var = a @ a.transpose(0, 2, 1) + np.eye(k)
+    index = pd.date_range("2000-01-01", periods=nobs, freq="MS")
+    if kind == "frame":
+        mean = pd.DataFrame(values, index=index, columns=["a", "b"])
+        pred = PredictionResults(mean, var)
+        names = ["a", "b"]
+    elif kind == "labels":
+        pred = PredictionResults(values, var, row_labels=index)
+        names = ["0", "1"]
+    else:
+        pred = PredictionResults(values, var)
+        names = ["0", "1"]
+        index = pd.RangeIndex(nobs)
+
+    se = np.sqrt(np.column_stack([var[:, 0, 0], var[:, 1, 1]]))
+    q = stats.norm.ppf(0.95)
+    lower, upper = values - q * se, values + q * se
+    ci = pred.conf_int(alpha=0.1)
+    np.testing.assert_allclose(np.asarray(ci), np.hstack([lower, upper]))
+    if kind == "array":
+        assert isinstance(ci, np.ndarray)
+    else:
+        expected = [f"{stat} {name}" for stat in ("lower", "upper") for name in names]
+        assert list(ci.columns) == expected
+        assert ci.index.equals(index)
+
+    frame = pred.summary_frame(alpha=0.1)
+    stats_names = ("mean", "mean_se", "mean_ci_lower", "mean_ci_upper")
+    assert list(frame.columns) == [f"{s} {name}" for s in stats_names for name in names]
+    assert frame.index.equals(index)
+    np.testing.assert_allclose(
+        frame.to_numpy(), np.hstack([values, se, lower, upper]), rtol=1e-14
+    )
+
+
+def test_multi_column_frame_keeps_names():
+    # A DataFrame predicted mean keeps its column names in predicted_mean
+    # and se_mean (it had columns 0..k-1), so the t-values align
+    rng = np.random.default_rng(20261121)
+    nobs, k = 4, 2
+    values = rng.standard_normal((nobs, k))
+    a = rng.standard_normal((nobs, k, k))
+    var = a @ a.transpose(0, 2, 1) + np.eye(k)
+    index = pd.date_range("2000-01-01", periods=nobs, freq="MS")
+    mean = pd.DataFrame(values, index=index, columns=["a", "b"])
+    pred = PredictionResults(mean, var)
+    se = np.sqrt(np.column_stack([var[:, 0, 0], var[:, 1, 1]]))
+    pd.testing.assert_frame_equal(pred.predicted_mean, mean)
+    expected_se = pd.DataFrame(se, index=index, columns=["a", "b"])
+    pd.testing.assert_frame_equal(pred.se_mean, expected_se)
+    expected_t = pd.DataFrame(values / se, index=index, columns=["a", "b"])
+    pd.testing.assert_frame_equal(pred.tvalues, expected_t, rtol=1e-14)
+    t_test = pred.t_test()
+    pd.testing.assert_frame_equal(t_test[0], expected_t, rtol=1e-14)
+    np.testing.assert_allclose(
+        t_test[1], 2 * stats.norm.sf(np.abs(values / se)), rtol=1e-12
+    )
+
+
+def test_t_dist_requires_df():
+    with pytest.raises(ValueError, match='df must be given when dist is "t"'):
+        PredictionResults(np.zeros(3), np.ones(3), dist="t")

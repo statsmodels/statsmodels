@@ -407,12 +407,13 @@ def _reordered(self, order):
     names_new = []
 
     # Rearrange elements and fill in new arrays
-    k = self.k_trend
+    # The deterministic terms, trend and exog, come first
+    k = self.k_exog
     for i, c in enumerate(order):
         endog_new[:, i] = self.endog[:, c]
         if k > 0:
-            params_new_inc[0, i] = params[0, i]
-            endog_lagged_new[:, 0] = endog_lagged[:, 0]
+            params_new_inc[:k, i] = params[:k, i]
+            endog_lagged_new[:, :k] = endog_lagged[:, :k]
         for j in range(k_ar):
             params_new_inc[i + j * num_end + k, :] = self.params[c + j * num_end + k, :]
             endog_lagged_new[:, i + j * num_end + k] = endog_lagged[
@@ -431,9 +432,10 @@ def _reordered(self, order):
         sigma_u=sigma_u_new,
         lag_order=self.k_ar,
         model=self.model,
-        trend="c",
+        trend=self.trend,
         names=names_new,
         dates=self.dates,
+        exog=self.exog,
     )
 
 
@@ -2281,6 +2283,15 @@ class VARResults(VARProcess):
         -------
         VARResults
             A new results instance with the variables reordered.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           Results with any trend and with exog can be reordered. With
+           ``trend="n"`` and one exog variable the coefficients of the
+           reordered results were wrong; other trends than "c", and exog,
+           raised an error.
         """
         if len(order) != len(self.params[0, :]):
             raise ValueError(
