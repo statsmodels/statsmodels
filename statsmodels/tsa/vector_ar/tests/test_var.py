@@ -2583,3 +2583,27 @@ def test_var_fit_method_deprecated(method):
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         assert_allclose(VAR(y).fit(2, method="ols").params, ols, rtol=1e-10)
+
+
+def _fevd_written_out(res, periods):
+    # decomp[j, h - 1, k] = sum_{i<h} Theta_i[j, k] ** 2 / MSE_h[j, j] with
+    # Theta_i = Phi_i P, P the Cholesky factor of Sigma_u and the MA weights
+    # Phi_0 = I, Phi_i = sum_{l=1}^{min(i, p)} Phi_{i-l} A_l
+    k, p = res.neqs, res.k_ar
+    phis = [np.eye(k)]
+    for i in range(1, periods):
+        lags = range(1, min(i, p) + 1)
+        phis.append(sum(phis[i - lag] @ res.coefs[lag - 1] for lag in lags))
+    thetas = np.array([phi @ np.linalg.cholesky(res.sigma_u) for phi in phis])
+    num = np.cumsum(thetas**2, axis=0)
+    return (num / num.sum(2, keepdims=True)).swapaxes(0, 1)
+
+
+def test_fevd_default_periods():
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    expected = _fevd_written_out(res, 10)
+    for fevd in (var_model.FEVD(res), res.fevd(None)):
+        assert fevd.periods == 10
+        assert_allclose(fevd.decomp, expected, rtol=1e-10)

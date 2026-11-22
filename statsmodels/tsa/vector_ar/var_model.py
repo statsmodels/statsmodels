@@ -2904,7 +2904,11 @@ class FEVD:
         Matrix such that Sigma_u = PP', used to orthogonalize the impulse
         responses. Defaults to the Cholesky decomposition of Sigma_u.
     periods : int, optional
-        Number of periods to compute the FEVD for.
+        Number of periods to compute the FEVD for. The default is 10.
+
+        .. versionchanged:: 0.15.1
+
+           None gives the default. It raised a TypeError.
 
     Attributes
     ----------
@@ -2921,6 +2925,8 @@ class FEVD:
     """
 
     def __init__(self, model, P=None, periods=None):
+        if periods is None:
+            periods = 10
         self.periods = periods
 
         self.model = model
