@@ -1834,3 +1834,13 @@ def test_var_loglike_resid_deprecated():
     with pytest.warns(FutureWarning, match="resid has no effect"):
         value = var_model.var_loglike(resid, sigma_mle, nobs)
     assert_allclose(value, expected, rtol=1e-10)
+
+
+def test_forecast_cov_auto_warning_text():
+    from statsmodels.tools.sm_exceptions import OutputWarning
+
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    with pytest.warns(OutputWarning, match="parameter uncertainty into account$"):
+        res.forecast_cov(2, method="auto")

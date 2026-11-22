@@ -2015,7 +2015,7 @@ class VARResults(VARProcess):
                 import warnings
 
                 warnings.warn(
-                    "forecast cov takes parameter uncertainty intoaccount",
+                    "forecast cov takes parameter uncertainty into account",
                     OutputWarning,
                     stacklevel=2,
                 )
