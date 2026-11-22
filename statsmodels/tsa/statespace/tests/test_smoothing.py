@@ -1636,3 +1636,46 @@ def test_news_invalid(missing, filter_univariate, tvp):
         msg = "time-varying design while `previous` does not"
     with pytest.raises(ValueError, match=msg):
         res2.news(res, t=mod.nobs - 1)
+
+
+@pytest.mark.parametrize("extend_first", [False, True])
+@pytest.mark.parametrize("lag", [-2, -3])
+def test_smoothed_state_autocovariances_cache_extend_kwargs(lag, extend_first):
+    # For lag < -1 the default end depends on whether extend_kwargs is given
+    # (nobs + lag + 1 without, nobs with), also for a time-invariant model,
+    # and the cached results do not depend on the order of the calls
+    rng = np.random.default_rng(20261122)
+    nobs = 30
+    mod = mlemodel.MLEModel(rng.standard_normal((nobs, 2)), k_states=2, k_posdef=2)
+    mod["design"] = np.array([[1.0, 0.0], [0.5, 1.0]])
+    mod["obs_cov"] = np.diag([1.0, 0.7])
+    mod["transition"] = np.array([[0.9, 0.1], [0.0, 0.8]])
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.array([[0.5, 0.2], [0.2, 0.4]])
+    mod.ssm.initialize_known(np.zeros(2), np.eye(2))
+    res = mod.ssm.smooth()
+    if extend_first:
+        extended = res.smoothed_state_autocovariance(lag, extend_kwargs={})
+        default = res.smoothed_state_autocovariance(lag)
+    else:
+        default = res.smoothed_state_autocovariance(lag)
+        extended = res.smoothed_state_autocovariance(lag, extend_kwargs={})
+    assert default.shape == (2, 2, nobs + lag + 1)
+    assert extended.shape == (2, 2, nobs)
+
+    # Reference: Cov(alpha_t, alpha_s) from the joint posterior covariance of
+    # the states (CFA simulation smoother) in the sample and, beyond it, from
+    # the transition: Cov(alpha_t, alpha_{s + 1}) = Cov(alpha_t, alpha_s) T'
+    cfa = mod.simulation_smoother(method="cfa")
+    cfa.simulate(variates=np.zeros((2, nobs)))
+    posterior_cov = cfa.posterior_cov
+    desired = np.zeros((2, 2, nobs))
+    for t in range(nobs):
+        s = t - lag
+        last = min(s, nobs - 1)
+        block = posterior_cov[2 * t : 2 * t + 2, 2 * last : 2 * last + 2]
+        transition = np.linalg.matrix_power(mod["transition"].T, s - last)
+        desired[..., t] = block @ transition
+    # atol: some autocovariances are close to zero
+    assert_allclose(extended, desired, rtol=1e-8, atol=1e-12)
+    assert_allclose(default, desired[..., : nobs + lag + 1], rtol=1e-8, atol=1e-12)

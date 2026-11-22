@@ -961,6 +961,13 @@ class SmootherResults(FilterResults):
             for handling out-of-sample autocovariance computations in
             time-varying state space models.
 
+            .. versionchanged:: 0.15.1
+
+               The result does not depend on earlier calls. Before, a cached
+               result computed without `extend_kwargs` was returned for
+               `extend_kwargs={}`, and the reverse, although their default
+               `end` differs if `lag < -1`.
+
         Returns
         -------
         acov : ndarray
@@ -981,20 +988,19 @@ class SmootherResults(FilterResults):
               Cov(2, 2-lag), ..., Cov(lag, 0). Thus the first `lag` entries
               have all values set to NaN.
 
-            - If the model is time-invariant and `lag < -1` or if `lag` is
-              0 or -1, and the model is either time-invariant or time-varying,
-              then the returned array is shaped `(*, *, nobs)` and each
-              entry [:, :, t] contains Cov(t, t+j). Moreover, all entries are
-              available (i.e., there are no NaNs).
+            - If `lag` is 0 or -1 (and the model is either time-varying or
+              time-invariant), then the returned array is shaped
+              `(*, *, nobs)` and each entry [:, :, t] contains Cov(t, t+j).
+              Moreover, all entries are available (i.e., there are no NaNs).
 
-            - If the model is time-varying and `lag < -1` and `extend_kwargs`
-              is not provided, then the returned array is shaped
-              `(*, *, nobs - lag + 1)`.
+            - If `lag < -1` and `extend_kwargs` is not provided (and the
+              model is either time-varying or time-invariant), then the
+              returned array is shaped `(*, *, nobs + lag + 1)`.
 
-            - However, if the model is time-varying and `lag < -1`, then
-              `extend_kwargs` can be provided with `lag - 1` additional
-              matrices so that the returned array is shaped `(*, *, nobs)` as
-              usual.
+            - If `lag < -1` and `extend_kwargs` is provided, then the returned
+              array is shaped `(*, *, nobs)` as usual. For a time-invariant
+              model, `extend_kwargs={}` is enough, while a time-varying model
+              needs `-lag - 1` additional matrices.
 
             More generally, the dimension of the last axis will be
             `end - start`.
@@ -1017,13 +1023,13 @@ class SmootherResults(FilterResults):
 
         Based only on the "current" results object (i.e., the Kalman smoother
         applied to the sample), there is not enough information to compute
-        Cov(t, t+j) for the last `lag - 1` observations of the sample. However,
-        the values can be computed for these time points using the transition
-        equation of the state space representation, and so for time-invariant
-        state space models we do compute these values. For time-varying models,
-        this can also be done, but updated state space matrices for the
-        out-of-sample time points must be provided via the `extend_kwargs`
-        argument.
+        Cov(t, t+j) for the last `-lag - 1` observations of the sample.
+        However, the values can be computed for these time points using the
+        transition equation of the state space representation, which is done
+        if `extend_kwargs` is provided. For time-invariant state space models
+        an empty dictionary is enough, while for time-varying models updated
+        state space matrices for the out-of-sample time points must be
+        provided.
 
         See [1]_, Chapter 4.7, for all details about how these autocovariances
         are computed.
@@ -1040,10 +1046,11 @@ class SmootherResults(FilterResults):
                Time Series Analysis by State Space Methods: Second Edition.
                Oxford University Press.
         """
-        # We can cache the results for time-invariant models
+        # We can cache the results for time-invariant models (the default end
+        # depends on whether extend_kwargs is None)
         cache_key = None
         if extend_kwargs is None or len(extend_kwargs) == 0:
-            cache_key = (lag, t, start, end)
+            cache_key = (lag, t, start, end, extend_kwargs is None)
 
         # Short-circuit for a cache-hit
         if (cache_key is not None and
