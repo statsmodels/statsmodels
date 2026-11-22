@@ -429,6 +429,29 @@ def test_svar_lag_order_default_is_one():
     assert_allclose(res.B, np.linalg.cholesky(var_res.sigma_u), rtol=1e-6)
 
 
+@pytest.mark.parametrize("trend", ["n", "c"])
+def test_intercept_as_var(trend):
+    # With trend "n", the intercept was params[0], the coefficients of the
+    # first lag, which mean, intercept_longrun and simulate_var used
+    from statsmodels.tsa.vector_ar.var_model import VAR
+
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    data = np.diff(np.log(mdata[["realgdp", "realcons", "realinv"]].values), axis=0)
+    A = np.asarray([[1, 0, 0], ["E", 1, 0], ["E", "E", 1]], dtype="U")
+    B = np.asarray([["E", 0, 0], [0, "E", 0], [0, 0, "E"]], dtype="U")
+    start = {"A_guess": [-0.5, -5.5, 3.0], "B_guess": [0.0075, 0.005, 0.02]}
+    # the ML fit may not converge, depending on the platform
+    with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+        res = SVAR(data, "AB", A=A, B=B).fit(maxlags=2, trend=trend, **start)
+    var_res = VAR(data).fit(2, trend=trend)
+    assert_allclose(res.intercept, var_res.intercept, rtol=1e-8)
+    assert_allclose(res.mean(), var_res.mean(), rtol=1e-8)
+    assert_allclose(res.intercept_longrun(), var_res.intercept_longrun(), rtol=1e-8)
+    sim = res.simulate_var(steps=50, rng=np.random.default_rng(0))
+    var_sim = var_res.simulate_var(steps=50, rng=np.random.default_rng(0))
+    assert_allclose(sim, var_sim, rtol=1e-8)
+
+
 @pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
 def test_svar_trend(trend):
     res, var_res = _fit_b_model(_macro_data(), maxlags=2, trend=trend)
