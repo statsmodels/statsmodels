@@ -1958,8 +1958,8 @@ class VARResults(VARProcess):
         fig = plotting.plot_var_forc(
             self.endog,
             mid,
-            lower,
             upper,
+            lower,
             names=self.names,
             plot_stderr=plot_stderr,
         )

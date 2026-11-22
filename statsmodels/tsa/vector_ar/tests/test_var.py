@@ -515,6 +515,40 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_almost_equal(res2.stderr, res3.stderr)
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("plot_stderr", [True, False])
+def test_plot_forecast_lines(close_figures, plot_stderr):
+    # The bands are point +/- q * sqrt(diag(mse(h))); the legend entry
+    # "Forc 2 STD err" belongs to the upper band
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    steps, alpha = 4, 0.1
+    fig = res.plot_forecast(steps, alpha=alpha, plot_stderr=plot_stderr)
+    point = res.forecast(data[-2:], steps)
+    se = np.sqrt(np.diagonal(res.mse(steps), axis1=1, axis2=2))
+    q = stats.norm.ppf(1 - alpha / 2)
+    nobs = data.shape[0]
+    assert len(fig.axes) == 3
+    for j, ax in enumerate(fig.axes):
+        assert ax.get_title() == res.names[j]
+        lines = ax.lines
+        assert_allclose(lines[0].get_ydata(), data[:, j], rtol=1e-12)
+        assert_allclose(lines[1].get_xdata(), np.arange(nobs - 1, nobs + steps))
+        assert_allclose(lines[1].get_ydata()[1:], point[:, j], rtol=1e-10)
+        handles, labels = ax.get_legend_handles_labels()
+        if plot_stderr:
+            assert len(lines) == 4
+            upper, lower = lines[2], lines[3]
+            assert_allclose(upper.get_ydata(), point[:, j] + q * se[:, j], rtol=1e-10)
+            assert_allclose(lower.get_ydata(), point[:, j] - q * se[:, j], rtol=1e-10)
+            assert labels == ["Observed", "Forecast", "Forc 2 STD err"]
+            assert handles[2] is upper
+        else:
+            assert len(lines) == 2
+            assert labels == ["Observed", "Forecast"]
+
+
 def test_pickle():
     # Removed from class to allow thread safe testing
     fh = BytesIO()
