@@ -805,3 +805,22 @@ def test_sirf_errband_mc_orth_deprecated():
         band = res.sirf_errband_mc(orth=True, rng=np.random.default_rng(0), **kwargs)
     assert_allclose(band.lower, expected.lower, rtol=1e-12)
     assert_allclose(band.upper, expected.upper, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "svar_type, A, B",
+    [
+        ("B", [[1, 0], ["E", 1]], [["E", 0], [0, "E"]]),
+        ("B", [[1, 0], ["e", 1]], [["E", 0], ["E", "E"]]),
+        ("A", [[1, 0], ["E", 1]], [["E", 0], [0, "E"]]),
+    ],
+)
+def test_e_entries_not_estimated_raise(svar_type, A, B):
+    # svar_type="B" estimated the "E" entries of A too, with the free entries
+    # of B tied to one value, or raised in fit; svar_type="A" raised in fit
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    data = np.diff(np.log(mdata[["realgdp", "realcons"]].values), axis=0)
+    other = "A" if svar_type == "B" else "B"
+    match = f'svar_type="{svar_type}" does not estimate {other}'
+    with pytest.raises(ValueError, match=match):
+        SVAR(data, svar_type, A=np.array(A, dtype="U"), B=np.array(B, dtype="U"))

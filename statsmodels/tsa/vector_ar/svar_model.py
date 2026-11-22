@@ -47,6 +47,14 @@ class SVAR(tsbase.TimeSeriesModel):
         "A" - estimate structural parameters of A matrix, B assumed = I
         "B" - estimate structural parameters of B matrix, A assumed = I
         "AB" - estimate structural parameters indicated in both A and B matrix
+
+        .. versionchanged:: 0.15.1
+
+           "E" entries in the matrix that svar_type does not estimate raise a
+           ValueError. For "B" with "E" in A, fit raised an error or
+           estimated another model, in which the entries of A were estimated
+           too and those of B were tied to one value; for "A" with "E" in B,
+           fit raised an error.
     dates : array_like, optional
         must match number of rows of endog
     freq : str, optional
@@ -109,6 +117,14 @@ class SVAR(tsbase.TimeSeriesModel):
             B = B.astype("U")
             B_mask = np.logical_or(B == "E", B == "e")
             self.B_mask = B_mask
+        # Only the matrices that svar_type names are estimated
+        for name, mask in (("A", A_mask), ("B", B_mask)):
+            if name not in svar_type and mask.any():
+                raise ValueError(
+                    f'svar_type="{svar_type}" does not estimate {name}, but '
+                    f'{name} has entries "E" to estimate. Use svar_type="AB" to '
+                    "estimate A and B."
+                )
 
         # convert A and B to numeric
         # TODO: change this when masked support is better or with formula
