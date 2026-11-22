@@ -484,3 +484,93 @@ def test_smooth_univariate_option():
     desired = get_model(filter_univariate=True).smooth()
     assert_allclose(res.smoothed_state, desired.smoothed_state, rtol=1e-14)
     assert_allclose(res.smoothed_state_cov, desired.smoothed_state_cov, rtol=1e-14)
+
+
+def _option_flags_model(k_endog=2, diffuse=False, concentrated=False):
+    # Two states and up to three observed series (three for the collapsed
+    # filter, which needs k_endog > k_states)
+    rng = np.random.default_rng(97531)
+    endog = rng.standard_normal((50, 3)).cumsum(0) * 0.1
+    endog += rng.standard_normal((50, 3))
+    model = KalmanSmoother(np.ascontiguousarray(endog[:, :k_endog]), k_states=2)
+    model["design"] = np.array([[1.0, 0.2], [0.3, 1.0], [0.5, 0.5]])[:k_endog]
+    model["transition"] = np.array([[0.5, 0.1], [0.0, 0.3]])
+    model["selection"] = np.eye(2)
+    model["state_cov"] = np.array([[1.0, 0.2], [0.2, 0.5]])
+    model["obs_cov"] = np.diag([1.0, 2.0, 1.5])[:k_endog, :k_endog]
+    if diffuse:
+        # A random walk first state, initialized as diffuse
+        model["transition", 0, 0] = 1.0
+        model.initialize_diffuse()
+    else:
+        model.initialize_known(np.zeros(2), np.eye(2))
+    model.filter_concentrated = concentrated
+    return model
+
+
+# The scale is concentrated out by the call, also with a diffuse
+# initialization, or no longer concentrated out
+CONCENTRATED_CASES = [
+    ("filter_method", FILTER_CONVENTIONAL | FILTER_CONCENTRATED, {}),
+    ("filter_method", FILTER_CONVENTIONAL | FILTER_CONCENTRATED, {"diffuse": True}),
+    ("filter_method", FILTER_CONVENTIONAL, {"concentrated": True}),
+]
+OPTION_FLAG_CASES = [
+    ("inversion_method", INVERT_LU, {}),
+    ("inversion_method", SOLVE_LU, {}),
+    *CONCENTRATED_CASES,
+    ("filter_method", FILTER_CONVENTIONAL | FILTER_COLLAPSED, {"k_endog": 3}),
+]
+
+
+def _set_option(model, name, value):
+    setattr(model, name, value)
+    return model
+
+
+# `smooth(filter_method=...)` raises TypeError (filter_method is also passed
+# positionally to `_initialize_filter`), so `smooth` is checked only for the
+# inversion method
+@pytest.mark.parametrize(
+    "method, name, value, model_kwargs",
+    [("filter", *case) for case in OPTION_FLAG_CASES]
+    + [("smooth", *case) for case in OPTION_FLAG_CASES if case[0] != "filter_method"],
+)
+def test_filter_option_arguments_results(method, name, value, model_kwargs):
+    # The results of an option given for one call match those of the option
+    # set on the model, also for output that depends on the boolean option
+    # flags: the concentrated scale (FILTER_CONCENTRATED), the standardized
+    # forecast errors (computed in Python for LU) and the forecasts of the
+    # observed series (rebuilt from the collapsed ones)
+    actual = getattr(_option_flags_model(**model_kwargs), method)(**{name: value})
+    model = _set_option(_option_flags_model(**model_kwargs), name, value)
+    desired = getattr(model, method)()
+
+    for flag in desired._filter_options:
+        assert getattr(actual, flag) == getattr(desired, flag), flag
+    assert_allclose(actual.llf, desired.llf, rtol=1e-12)
+    assert_allclose(actual.scale, desired.scale, rtol=1e-12)
+    for attr in [
+        "filtered_state",
+        "filtered_state_cov",
+        "forecasts",
+        "forecasts_error",
+        "forecasts_error_cov",
+        "standardized_forecasts_error",
+    ]:
+        assert_allclose(getattr(actual, attr), getattr(desired, attr), rtol=1e-12)
+    if method == "smooth":
+        assert_allclose(actual.smoothed_state_cov, desired.smoothed_state_cov, rtol=1e-12)
+
+
+@pytest.mark.parametrize("method", ["loglike", "loglikeobs"])
+@pytest.mark.parametrize("name, value, model_kwargs", CONCENTRATED_CASES)
+def test_filter_option_arguments_loglike(method, name, value, model_kwargs):
+    actual = getattr(_option_flags_model(**model_kwargs), method)(**{name: value})
+    model = _set_option(_option_flags_model(**model_kwargs), name, value)
+    desired = getattr(model, method)()
+    assert_allclose(actual, desired, rtol=1e-12)
+    # The loglikelihood of the filter output, as an independent check of the
+    # concentrated scale adjustment
+    llf_obs = model.filter().llf_obs
+    assert_allclose(desired, llf_obs.sum() if method == "loglike" else llf_obs, rtol=1e-12)

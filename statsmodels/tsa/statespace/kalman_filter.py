@@ -938,6 +938,16 @@ class KalmanFilter(Representation):
            passed to `loglike`, `loglikeobs` and `smooth`). Before, they were
            swapped, so that `filter_timing=1` ran with the model's timing and
            a tolerance of 1, and a given `tolerance` was used as the timing.
+
+           The boolean options of the results (for example
+           `filter_concentrated` or `invert_lu`) are those used by the
+           filter, also for options given here or to `smooth`, and `loglike`
+           and `loglikeobs` concentrate the scale out if their
+           `filter_method` includes FILTER_CONCENTRATED. Before, they were
+           those of the model, so that, for example, FILTER_CONCENTRATED
+           given here gave a loglikelihood without the scale terms, and
+           ``inversion_method=INVERT_LU`` standardized forecast errors of
+           zero.
         """
         # Handle memory conservation
         if conserve_memory is None:
@@ -987,7 +997,7 @@ class KalmanFilter(Representation):
 
         # Need to modify the computed log-likelihood to incorporate the
         # MLE scale.
-        if self.filter_method & FILTER_CONCENTRATED:
+        if kfilter.filter_method & FILTER_CONCENTRATED:
             # Exact diffuse periods can also contain finite innovations. Keep
             # their individual scale terms, and, when burn ends inside the
             # diffuse period, the diffuse forecast covariances needed to count
@@ -1061,7 +1071,10 @@ class KalmanFilter(Representation):
         if self.memory_no_likelihood:
             raise RuntimeError("Cannot compute loglikelihood if"
                                " MEMORY_NO_LIKELIHOOD option is selected.")
-        if not self.filter_method & FILTER_CONCENTRATED:
+        filter_method = kwargs.get("filter_method")
+        if filter_method is None:
+            filter_method = self.filter_method
+        if not filter_method & FILTER_CONCENTRATED:
             kwargs.setdefault("conserve_memory",
                               MEMORY_CONSERVE ^ MEMORY_NO_LIKELIHOOD)
         else:
@@ -1082,7 +1095,7 @@ class KalmanFilter(Representation):
         # Also note that we need to adjust the nobs and k_endog in both the
         # denominator of the scale computation and in the llf_obs adjustment
         # to take into account missing values.
-        if self.filter_method & FILTER_CONCENTRATED:
+        if kfilter.filter_method & FILTER_CONCENTRATED:
             d = max(loglikelihood_burn, kfilter.nobs_diffuse)
             nmissing = np.array(self._statespace.nmissing)
             nobs_k_endog = np.sum(self.k_endog - nmissing[d:])
@@ -1586,6 +1599,12 @@ class FilterResults(FrozenRepresentation):
         self.filter_timing = kalman_filter.filter_timing
         self.tolerance = kalman_filter.tolerance
         self.loglikelihood_burn = kalman_filter.loglikelihood_burn
+        # Set the boolean options from these bitmasks, which include options
+        # given for one call (e.g. to `filter`) that the model does not have.
+        # The combined memory options follow their parts in `memory_options`.
+        for name in self._filter_options:
+            option = vars(KalmanFilter)[name]
+            setattr(self, name, option.__get__(self, type(self)))
 
         # Save Kalman filter output
         self.converged = bool(kalman_filter.converged)
