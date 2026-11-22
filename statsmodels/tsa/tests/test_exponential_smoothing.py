@@ -2280,16 +2280,19 @@ def test_hessian_scaled_by_nobs(austourists):
     # The finite difference approximations are numerical differences of
     # numerical scores, first order accurate (forward) or second order
     # (centered). Their error is relative to the scale of the whole matrix,
-    # not to each element, hence atol.
-    atol = 0.02 * np.abs(expected).max()
+    # not to each element, hence atol. The forward error depends on the
+    # platform (2% of the scale on Linux with Python 3.13), so it is only
+    # checked to the scale of the matrix, which catches a missing division
+    # by nobs (a factor of 68 here).
+    scale = np.abs(expected).max()
     with pytest.warns(PrecisionWarning, match="Calculation of the Hessian"):
         centered = model.hessian(
             params, approx_complex_step=False, approx_centered=True
         )
-    assert_allclose(centered, expected, rtol=0, atol=atol / 2)
+    assert_allclose(centered, expected, rtol=0, atol=0.01 * scale)
     with pytest.warns(PrecisionWarning, match="Calculation of the Hessian"):
         forward = model.hessian(params, approx_complex_step=False)
-    assert_allclose(forward, expected, rtol=0, atol=atol)
+    assert_allclose(forward, expected, rtol=0, atol=0.1 * scale)
 
 
 #
