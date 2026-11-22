@@ -551,3 +551,42 @@ def test_scalar_switching_flags(flag, expected, name):
     assert mod.param_names == mod_bool.param_names
     params = mod_bool.start_params
     assert_allclose(mod.loglikeobs(params), mod_bool.loglikeobs(params), rtol=1e-13)
+
+
+@pytest.mark.parametrize("order", [0, 1])
+def test_results_predict_conditional_with_pandas_data(order):
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    index = pd.date_range("2000-01-01", periods=40, freq="MS")
+    mu = np.array([0.2, 2.8])
+    phi = np.array([0.5, -0.2])
+    if order == 0:
+        model, kwargs = markov_regression.MarkovRegression, {}
+        params = np.r_[0.9, 0.2, mu, 1.0]
+        # Conditional on S_t = i, the prediction is mu_i
+        conditional = True
+        expected = np.repeat(mu[:, None], 40, axis=1)
+    else:
+        model, kwargs = markov_autoregression.MarkovAutoregression, {"order": 1}
+        params = np.r_[0.9, 0.2, mu, 1.0, phi]
+        # Conditional on (S_t, S_{t-1}) = (i, j): mu_i + phi_i (y_{t-1} - mu_j)
+        conditional = 2
+        expected = mu[:, None, None] + phi[:, None, None] * (
+            endog[:-1] - mu[None, :, None]
+        )
+    res = model(pd.Series(endog, index=index), k_regimes=2, **kwargs).smooth(
+        params, cov_type="none"
+    )
+
+    # Conditional predictions are an ndarray, as for an ndarray endog
+    predict = res.predict(conditional=conditional)
+    assert type(predict) is np.ndarray
+    assert_allclose(predict, expected, rtol=1e-13)
+
+    # Unconditional predictions are a Series indexed by the dates, with the
+    # values for an ndarray endog
+    res_array = model(endog, k_regimes=2, **kwargs).smooth(params, cov_type="none")
+    predict = res.predict()
+    assert isinstance(predict, pd.Series)
+    pd.testing.assert_index_equal(predict.index, index[order:])
+    assert_allclose(predict, res_array.predict(), rtol=1e-13)
