@@ -361,6 +361,13 @@ def var_loglike(resid, omega, nobs):
     Parameters
     ----------
     resid : ndarray (T x K)
+        Not used.
+
+        .. deprecated:: 0.15.1
+
+           ``resid`` has no effect and will be removed after statsmodels
+           0.17 is released. Passing any value other than None issues a
+           FutureWarning.
     omega : ndarray
         Sigma hat matrix.  Each element i,j is the average product of the
         OLS residual for variable i and the OLS residual for variable j or
@@ -382,6 +389,13 @@ def var_loglike(resid, omega, nobs):
         -\left(\frac{T}{2}\right)
         \left(\ln\left|\Omega\right|-K\ln\left(2\pi\right)-K\right)
     """
+    if resid is not None:
+        warnings.warn(
+            "resid has no effect and will be removed after statsmodels 0.17 "
+            "is released. Pass resid=None to silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
     logdet = logdet_symm(np.asarray(omega))
     neqs = len(omega)
     part1 = -(nobs * neqs / 2) * np.log(2 * np.pi)
@@ -1867,7 +1881,7 @@ class VARResults(VARProcess):
     @cache_readonly
     def llf(self):
         "Compute VAR(p) loglikelihood"
-        return var_loglike(self.resid, self.sigma_u_mle, self.nobs)
+        return var_loglike(None, self.sigma_u_mle, self.nobs)
 
     @cache_readonly
     def stderr(self):

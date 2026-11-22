@@ -1813,3 +1813,24 @@ def test_pprint_matrix_text():
     # given column width
     text = output.pprint_matrix(np.array([[1, 22]]), [0], ["abcdefgh", 1], col_space=5)
     assert text.split("\n") == ["   " + "abcde" + "    1", "0  " + "    1" + "   22", ""]
+
+
+def test_var_loglike_resid_deprecated():
+    # With Sigma = U'U / T, the Gaussian log-likelihood of the residuals U is
+    # -(T / 2) (K log(2 pi) + log|Sigma| + K), which var_loglike computes
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    resid = res.resid
+    nobs = resid.shape[0]
+    sigma_mle = resid.T @ resid / nobs
+    expected = stats.multivariate_normal(np.zeros(3), sigma_mle).logpdf(resid).sum()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert_allclose(res.llf, expected, rtol=1e-10)
+        assert_allclose(
+            var_model.var_loglike(None, sigma_mle, nobs), expected, rtol=1e-10
+        )
+    with pytest.warns(FutureWarning, match="resid has no effect"):
+        value = var_model.var_loglike(resid, sigma_mle, nobs)
+    assert_allclose(value, expected, rtol=1e-10)
