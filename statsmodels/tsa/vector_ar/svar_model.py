@@ -22,7 +22,13 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
-from statsmodels.tsa.vector_ar.var_model import VAR, VARProcess, VARResults
+from statsmodels.tsa.vector_ar.var_model import (
+    FEVD,
+    VAR,
+    VARProcess,
+    VARResults,
+    forecast,
+)
 
 
 def svar_ckerr(svar_type, A, B):
@@ -709,6 +715,51 @@ class SVARProcess(VARProcess):
         self.A_solve = A_solve
         self.B_solve = B_solve
         self.names = names
+        # The deterministic terms that the methods of VARProcess use: the
+        # intercept and no exog. SVARResults sets those of its trend.
+        self.coefs_exog = intercept
+        self.k_trend = 1
+        self.k_exog_user = 0
+
+    def forecast(self, y, steps, exog_future=None):
+        """
+        Produce linear minimum MSE forecasts for desired number of steps
+        ahead, using prior values y
+
+        Parameters
+        ----------
+        y : ndarray (p x k)
+            The values of the process before the forecast period, at least
+            the last p.
+        steps : int
+            The number of steps to forecast.
+        exog_future : None, optional
+            Must be None, since an SVAR has no exog.
+
+        Returns
+        -------
+        forecasts : ndarray (steps x neqs)
+
+        Notes
+        -----
+        Lütkepohl pp 37-38
+
+        The deterministic terms of SVARResults continue those of the
+        estimation sample.
+
+        .. versionchanged:: 0.15.1
+
+           Forecasts are available. They raised an AttributeError.
+        """
+        if exog_future is not None:
+            raise ValueError("An SVAR has no exog, so exog_future must be None.")
+        trend_coefs = self.coefs_exog.T if self.k_trend else None
+        exog = None
+        if self.k_trend > 1:
+            # The time trend continues that of the estimation sample
+            time = self.endog_lagged[-1, 1] + np.arange(1.0, steps + 1)
+            exog = np.vander(time, self.k_trend, increasing=True)
+        return forecast(y, self.coefs, trend_coefs, steps, exog)
 
     def orth_ma_rep(self, maxn=10, P=None):
         """
@@ -876,9 +927,6 @@ class SVARResults(SVARProcess, VARResults):
             trendorder = k_trend - 1
         else:
             trendorder = None
-        self.k_trend = k_trend
-        self.k_exog = k_trend  # now (0.9) required by VARProcess
-        self.k_exog_user = 0
         self.trendorder = trendorder
 
         self.exog_names = util.make_lag_names(names, lag_order, k_trend)
@@ -886,7 +934,7 @@ class SVARResults(SVARProcess, VARResults):
         self.sigma_u = sigma_u
 
         # Each matrix needs to be transposed
-        reshaped = self.params[self.k_trend :]
+        reshaped = self.params[k_trend:]
         reshaped = reshaped.reshape((lag_order, self.neqs, self.neqs))
 
         # Need to transpose each coefficient matrix
@@ -902,6 +950,14 @@ class SVARResults(SVARProcess, VARResults):
         self.B_mask = B_mask
 
         super().__init__(coefs, intercept, sigma_u, A, B, names=names)
+
+        # The deterministic terms that the methods of VARResults use, which
+        # replace those of a known process set by SVARProcess (no exog)
+        self.trend = trend
+        self.exog = None
+        self.coefs_exog = self.params[:k_trend].T
+        self.k_trend = k_trend
+        self.k_exog = k_trend  # now (0.9) required by VARProcess
 
     def irf(self, periods=10, var_order=None):
         """
@@ -935,6 +991,32 @@ class SVARResults(SVARProcess, VARResults):
         P = np.dot(npl.inv(A), B)
 
         return IRAnalysis(self, P=P, periods=periods, svar=True)
+
+    def fevd(self, periods=10):
+        """
+        Compute the forecast error variance decomposition of the structural shocks
+
+        Parameters
+        ----------
+        periods : int, optional
+            The number of forecast horizons, 10 by default.
+
+        Returns
+        -------
+        FEVD
+            The shares of the structural shocks in the forecast error
+            variances, computed from the structural responses
+            Phi_h A^{-1} B. The variances are those of the structural model,
+            the sums of the squared structural responses, as in R's vars, so
+            that the shares sum to one also for an over-identified model.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           The decomposition is available. It raised a TypeError.
+        """
+        return _SVARFEVD(self, periods)
 
     @deprecate_kwarg("seed", "rng")
     def sirf_errband_mc(
@@ -1093,3 +1175,30 @@ class SVARResults(SVARProcess, VARResults):
         lower = ma_sort[index[0], :, :, :]
         upper = ma_sort[index[1], :, :, :]
         return ErrorBand(lower, upper)
+
+
+class _SVARFEVD(FEVD):
+    """
+    Forecast error variance decomposition of the structural shocks of an SVAR
+
+    Parameters
+    ----------
+    model : SVARResults
+        The SVAR results.
+    periods : int
+        The number of forecast horizons.
+    """
+
+    def __init__(self, model, periods):
+        self.periods = periods
+        self.model = model
+        self.neqs = model.neqs
+        self.names = model.model.endog_names
+        self.irfobj = model.irf(periods=periods)
+        # squared structural responses, cumulated over the horizons, of shape
+        # (periods, neqs, neqs): horizon x response x shock
+        cum = (self.irfobj.svar_irfs[:periods] ** 2).cumsum(axis=0)
+        # their sums over the shocks are the forecast error variances
+        fevd = cum / cum.sum(axis=2, keepdims=True)
+        # switch to response x horizon x shock
+        self.decomp = fevd.swapaxes(0, 1)
