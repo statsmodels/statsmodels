@@ -29,9 +29,13 @@ from scipy.linalg.blas import find_best_blas_type
 
 from statsmodels.tsa.statespace import _kalman_filter, _representation
 from statsmodels.tsa.statespace.kalman_filter import (
+    FILTER_CONVENTIONAL,
+    FILTER_UNIVARIATE,
     MEMORY_CONSERVE,
     MEMORY_NO_FORECAST,
+    MEMORY_NO_GAIN,
     MEMORY_NO_PREDICTED,
+    SOLVE_LU,
 )
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 
@@ -931,3 +935,74 @@ def test_prediction_results_clear():
     for attr in cached_attrs:
         assert_allclose(getattr(pred, attr), values_before[attr])
         assert hasattr(pred, "_" + attr)
+
+
+def _timing_tolerance_model():
+    # An AR(1) state observed with noise: the predicted state variance
+    # converges geometrically, so that the tolerance sets the period of
+    # convergence, and the timing convention changes the loglikelihood
+    rng = np.random.default_rng(13579)
+    endog = rng.standard_normal(40).cumsum() * 0.5 + rng.standard_normal(40)
+    mod = MLEModel(endog, k_states=1)
+    mod["design"] = [[1.0]]
+    mod["transition"] = [[0.9]]
+    mod["selection"] = [[1.0]]
+    mod["obs_cov"] = [[1.0]]
+    mod["state_cov"] = [[0.5]]
+    mod.ssm.initialize_known([0.0], [[2.0]])
+    return mod
+
+
+@pytest.mark.parametrize(
+    "name, value",
+    [
+        ("filter_method", FILTER_CONVENTIONAL | FILTER_UNIVARIATE),
+        ("inversion_method", SOLVE_LU),
+        ("stability_method", 0),
+        ("conserve_memory", MEMORY_NO_GAIN),
+        ("filter_timing", 1),
+        ("tolerance", 1e-4),
+        ("loglikelihood_burn", 5),
+    ],
+)
+def test_filter_arguments_used_as_given(name, value):
+    # Each option passed to `filter` is used by the compiled filter (the
+    # results report its options), and gives the output of the filter with
+    # the option set on the model
+    actual = _timing_tolerance_model().ssm.filter(**{name: value})
+    mod = _timing_tolerance_model()
+    setattr(mod.ssm, name, value)
+    desired = mod.ssm.filter()
+    assert_allclose(getattr(actual, name), value, rtol=1e-12)
+    assert actual.period_converged == desired.period_converged
+    assert_allclose(actual.llf, desired.llf, rtol=1e-12)
+    assert_allclose(actual.filtered_state, desired.filtered_state, rtol=1e-12)
+
+
+@pytest.mark.parametrize("name, value", [("filter_timing", 1), ("tolerance", 1e-4)])
+@pytest.mark.parametrize("method", ["filter", "smooth", "loglike", "loglikeobs"])
+def test_filter_timing_tolerance_arguments(method, name, value):
+    # `filter_timing` and `tolerance` passed for one call give the output of
+    # the filter with the option set on the model
+    default = getattr(_timing_tolerance_model().ssm, method)()
+    actual = getattr(_timing_tolerance_model().ssm, method)(**{name: value})
+    mod = _timing_tolerance_model()
+    setattr(mod.ssm, name, value)
+    desired = getattr(mod.ssm, method)()
+
+    if method in ("loglike", "loglikeobs"):
+        assert_allclose(actual, desired, rtol=1e-12)
+        # The option changes the loglikelihood
+        assert np.max(np.abs(desired - default)) > 1e-4
+        return
+
+    assert_allclose(getattr(actual, name), value, rtol=1e-12)
+    assert actual.period_converged == desired.period_converged
+    if name == "tolerance":
+        # A looser tolerance stops updating the covariance earlier
+        assert actual.period_converged < default.period_converged
+    assert_allclose(actual.llf, desired.llf, rtol=1e-12)
+    assert abs(desired.llf - default.llf) > 1e-4
+    assert_allclose(actual.filtered_state, desired.filtered_state, rtol=1e-12)
+    if method == "smooth":
+        assert_allclose(actual.smoothed_state, desired.smoothed_state, rtol=1e-12)
