@@ -79,7 +79,7 @@ def _initialization_simple(endog, trend=False, seasonal=False,
 
         if seasonal == "add":
             initial_seasonal = endog[:m] - initial_level
-        elif seasonal == "mul":
+        else:  # "mul"
             initial_seasonal = endog[:m] / initial_level
 
     return initial_level, initial_trend, initial_seasonal
@@ -177,7 +177,7 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
         # Detrend
         if seasonal == "add":
             detrended = series - initial_trend
-        elif seasonal == "mul":
+        else:  # "mul"
             detrended = series / initial_trend
 
         # Average seasonal effect
@@ -189,7 +189,7 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
         # Normalize the seasonals
         if seasonal == "add":
             initial_seasonal -= np.mean(initial_seasonal)
-        elif seasonal == "mul":
+        else:  # "mul"
             initial_seasonal /= np.mean(initial_seasonal)
 
         # Replace the data with the trend
@@ -197,8 +197,7 @@ def _initialization_heuristic(endog, trend=False, seasonal=False,
 
     # Trend / Level
     exog = np.c_[np.ones(10), np.arange(10) + 1]
-    if endog.ndim == 1:
-        endog = np.atleast_2d(endog).T
+    endog = np.atleast_2d(endog).T
     beta = np.squeeze(np.linalg.pinv(exog).dot(endog[:10]))
     initial_level = beta[0]
 

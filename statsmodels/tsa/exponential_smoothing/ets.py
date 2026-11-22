@@ -622,29 +622,29 @@ class ETSModel(base.StateSpaceMLEModel):
                 seasonal=self.seasonal,
                 seasonal_periods=self.seasonal_periods,
             )
-        elif self.initialization_method == "estimated":
-            if self.nobs < 10 + 2 * (self.seasonal_periods // 2):
-                (
-                    initial_level,
-                    initial_trend,
-                    initial_seasonal,
-                ) = _initialization_simple(
-                    self.endog,
-                    trend=self.trend,
-                    seasonal=self.seasonal,
-                    seasonal_periods=self.seasonal_periods,
-                )
-            else:
-                (
-                    initial_level,
-                    initial_trend,
-                    initial_seasonal,
-                ) = _initialization_heuristic(
-                    self.endog,
-                    trend=self.trend,
-                    seasonal=self.seasonal,
-                    seasonal_periods=self.seasonal_periods,
-                )
+        # "estimated": the start values of a short series are simple ones
+        elif self.nobs < 10 + 2 * (self.seasonal_periods // 2):
+            (
+                initial_level,
+                initial_trend,
+                initial_seasonal,
+            ) = _initialization_simple(
+                self.endog,
+                trend=self.trend,
+                seasonal=self.seasonal,
+                seasonal_periods=self.seasonal_periods,
+            )
+        else:
+            (
+                initial_level,
+                initial_trend,
+                initial_seasonal,
+            ) = _initialization_heuristic(
+                self.endog,
+                trend=self.trend,
+                seasonal=self.seasonal,
+                seasonal_periods=self.seasonal_periods,
+            )
         if not self.has_trend:
             initial_trend = 0
         if not self.has_seasonal:
@@ -1589,8 +1589,7 @@ class ETSResults(base.StateSpaceMLEResults):
 
         # Setup covariance matrix notes dictionary
         # For now, only support "approx"
-        if not hasattr(self, "cov_kwds"):
-            self.cov_kwds = {}
+        self.cov_kwds = {}
         self.cov_type = "approx"
 
         # Setup the cache
@@ -1606,15 +1605,10 @@ class ETSResults(base.StateSpaceMLEResults):
         approx_type_str = "complex-step"
         try:
             self._rank = None
-            if self.k_params == 0:
-                self.cov_params_default = np.zeros((0, 0))
-                self._rank = 0
-                self.cov_kwds["description"] = "No parameters estimated."
-            else:
-                self.cov_params_default = self.cov_params_approx
-                self.cov_kwds["description"] = descriptions["approx"].format(
-                    approx_type=approx_type_str
-                )
+            self.cov_params_default = self.cov_params_approx
+            self.cov_kwds["description"] = descriptions["approx"].format(
+                approx_type=approx_type_str
+            )
         except np.linalg.LinAlgError:
             self._rank = 0
             k_params = len(self.params)
@@ -1666,9 +1660,8 @@ class ETSResults(base.StateSpaceMLEResults):
         neg_cov = np.zeros_like(evaluated_hessian) * np.nan
         mask = np.ix_(free, free)
         neg_cov[mask] = (jac @ neg_cov_reduced @ jac.T)[mask]
-        if self._rank is None:
-            # the derived seasonal does not add to the rank deficiency
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values)) + 1
+        # the derived seasonal does not add to the rank deficiency
+        self._rank = np.linalg.matrix_rank(np.diag(singular_values)) + 1
         return -neg_cov
 
     @cache_readonly
@@ -2134,9 +2127,7 @@ class ETSResults(base.StateSpaceMLEResults):
             start, end, index
         )
         # if end was outside of the sample, it is now the last point in the
-        # sample
-        if start > end + out_of_sample + 1:
-            raise ValueError("Prediction start cannot lie outside of the sample.")
+        # sample (_get_prediction_index raises if end lies before start)
 
         # Handle `dynamic`
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
@@ -2354,8 +2345,6 @@ class ETSResults(base.StateSpaceMLEResults):
 
         if self.model.initialization_method != "estimated":
             params = np.array(self.initial_state)
-            if params.ndim > 1:
-                params = params[0]
             names = self.model.initial_state_names
             param_header = [
                 f"initialization method: {self.model.initialization_method}"

@@ -234,40 +234,18 @@ class StateSpaceMLEModel(tsbase.TimeSeriesModel):
         if data.ndim > 1 and data.shape[1] == 1:
             data = np.squeeze(data, axis=1)
         if self.use_pandas:
-            if data.shape[0]:
-                _, _, _, index = self._get_prediction_index(start_idx, end_idx)
-            else:
-                index = None
+            _, _, _, index = self._get_prediction_index(start_idx, end_idx)
             if data.ndim < 2:
                 data = pd.Series(data, index=index, name=names)
             else:
                 data = pd.DataFrame(data, index=index, columns=names)
         return data
 
-    def _wrap_results(
-        self,
-        params,
-        result,
-        return_raw,
-        cov_type=None,
-        cov_kwds=None,
-        results_class=None,
-        wrapper_class=None,
-    ):
+    def _wrap_results(self, params, result, return_raw):
         if not return_raw:
             # Wrap in a results object
-            result_kwargs = {}
-            if cov_type is not None:
-                result_kwargs["cov_type"] = cov_type
-            if cov_kwds is not None:
-                result_kwargs["cov_kwds"] = cov_kwds
-
-            if results_class is None:
-                results_class = self._res_classes["fit"][0]
-            if wrapper_class is None:
-                wrapper_class = self._res_classes["fit"][1]
-
-            res = results_class(self, params, result, **result_kwargs)
+            results_class, wrapper_class = self._res_classes["fit"]
+            res = results_class(self, params, result)
             result = wrapper_class(res)
         return result
 
@@ -468,8 +446,6 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
                 iloc = iloc.start
             iloc += 1  # anchor is one before start of prediction/simulation
 
-        if iloc < 0:
-            iloc = self.nobs + iloc
         if iloc > self.nobs:
             raise ValueError("Cannot anchor simulation outside of the sample.")
         return iloc
@@ -500,8 +476,7 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+        self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return -neg_cov
 
     @cache_readonly
