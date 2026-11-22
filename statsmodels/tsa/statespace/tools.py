@@ -171,7 +171,8 @@ def companion_matrix(polynomial):
         polynomial, where the polynomial coefficients are initialized to zeros.
         If a matrix polynomial is passed, :math:`C_0` may be set to the scalar
         value 1 to indicate an identity matrix (doing so will improve the speed
-        of the companion matrix creation).
+        of the companion matrix creation). A three-dimensional array holds the
+        coefficient matrices along its first axis.
 
     Returns
     -------
@@ -253,13 +254,19 @@ def companion_matrix(polynomial):
                 polynomial = np.asanyarray(polynomial)
             # Check if 1 was passed as the first argument (indicating an
             # identity matrix)
-            elif polynomial[0] == 1:
+            elif np.ndim(polynomial[0]) == 0 and polynomial[0] == 1:
                 # Replace C_0 with the identity matrix on a copy: mutating the
                 # caller's list (or crashing on a tuple) is a side effect the
                 # caller does not expect.
                 polynomial = list(polynomial)
                 polynomial[0] = np.eye(m)
                 identity_matrix = True
+        elif np.ndim(polynomial) == 3:
+            # Coefficient matrices stacked along the first axis
+            polynomial = np.asarray(polynomial)
+            m = polynomial.shape[1]
+            if m == 1:
+                polynomial = polynomial[:, 0, 0]
         else:
             m = 1
             polynomial = np.asanyarray(polynomial)

@@ -1168,3 +1168,52 @@ def test_missing_index_values(make_mask):
         _mask_results(make_mask(mask)), _mask_results(mask), strict=True
     ):
         assert_equal(actual, expected)
+
+
+COMPANION_C0 = np.array([[2.0, 0.5], [0.0, 1.0]])
+COMPANION_C1 = np.array([[0.3, 0.1], [0.2, 0.4]])
+COMPANION_C2 = np.array([[-0.1, 0.05], [0.0, 0.2]])
+
+
+@pytest.mark.parametrize(
+    "polynomial, desired",
+    [
+        # An ndarray leading matrix in a list or tuple (it raised "truth value
+        # is ambiguous"), against nested lists
+        (
+            [COMPANION_C0, COMPANION_C1, COMPANION_C2],
+            [COMPANION_C0.tolist(), COMPANION_C1, COMPANION_C2],
+        ),
+        ((COMPANION_C0, COMPANION_C1), [COMPANION_C0.tolist(), COMPANION_C1]),
+        ([np.eye(2), COMPANION_C1], [1, COMPANION_C1]),
+        # A 3-dimensional array (it raised a broadcasting error)
+        (
+            np.array([COMPANION_C0, COMPANION_C1, COMPANION_C2]),
+            [COMPANION_C0.tolist(), COMPANION_C1, COMPANION_C2],
+        ),
+        (np.array([np.eye(2), COMPANION_C1]), [1, COMPANION_C1]),
+        (np.array([[[2.0]], [[-0.6]], [[0.4]]]), [2.0, -0.6, 0.4]),
+    ],
+)
+def test_companion_matrix_arrays(polynomial, desired):
+    actual = tools.companion_matrix(polynomial)
+    assert_allclose(actual, tools.companion_matrix(desired), rtol=1e-15)
+
+    # The eigenvalues z of the companion matrix solve
+    # det(C_0 z^p + C_1 z^(p-1) + ... + C_p) = 0
+    coefficients = np.asarray(desired[1:], dtype=float)
+    leading = desired[0]
+    order = len(coefficients)
+    for z in np.linalg.eigvals(actual):
+        if np.ndim(coefficients) == 1:
+            value = leading * z**order + np.polyval(coefficients, z)
+            scale = abs(leading * z**order)
+        else:
+            c0 = np.eye(2) if np.ndim(leading) == 0 else np.asarray(leading)
+            value = np.linalg.det(
+                c0 * z**order
+                + sum(c * z ** (order - 1 - i) for i, c in enumerate(coefficients))
+            )
+            scale = abs(np.linalg.det(c0 * z**order))
+        # atol: the determinant is zero up to rounding
+        assert_allclose(abs(value), 0, atol=1e-12 * max(scale, 1.0))
