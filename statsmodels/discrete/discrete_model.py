@@ -3832,6 +3832,9 @@ class NegativeBinomial(CountModel):
             **kwargs,
         )
         self.loglike_method = loglike_method
+        # params hold alpha, not log(alpha); fit switches this on while it
+        # optimizes over log(alpha) and off again before it returns
+        self._transparams = False
         self._initialize()
         if loglike_method in ["nb2", "nb1"]:
             self.exog_names.append("alpha")
@@ -3847,12 +3850,10 @@ class NegativeBinomial(CountModel):
             self.hessian = self._hessian_nb2
             self.score = self._score_nbin
             self.loglikeobs = self._ll_nb2
-            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == "nb1":
             self.hessian = self._hessian_nb1
             self.score = self._score_nb1
             self.loglikeobs = self._ll_nb1
-            self._transparams = True  # transform lnalpha -> alpha in fit
         elif self.loglike_method == "geometric":
             self.hessian = self._hessian_geom
             self.score = self._score_geom
