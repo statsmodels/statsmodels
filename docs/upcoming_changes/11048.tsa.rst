@@ -1,0 +1,3 @@
+- ``compute_smoothed_state_weights`` in ``statsmodels.tsa.statespace.tools`` raised an
+  ``AttributeError`` for the results of ``filter`` of a model that had
+  not been smoothed. It reruns the filter and smoother. :pr:`11048`
