@@ -1,0 +1,5 @@
+- ``diff_endog`` of the state space ``Representation`` with a
+  one-dimensional ``new_endog`` for a model with one observed series
+  compared each value with every observation and reported nearly all of
+  them as revisions. It compares observation by observation, so its
+  results change for that input. :pr:`11040`

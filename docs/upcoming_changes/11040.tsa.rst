@@ -1,0 +1,4 @@
+- ``diff_endog`` accepts lists and pandas objects and raises a
+  ``ValueError`` if ``new_endog`` does not have ``k_endog`` columns, and
+  ``clone`` of the state space ``Representation`` accepts an ``endog``
+  that is not an ndarray. :pr:`11040`
