@@ -225,3 +225,37 @@ def test_output_file_not_deleted_warns(stub_run_spec, tmp_path, monkeypatch):
         )
 
     assert [path.suffix for path in tmp_path.iterdir()] == [".d11"]
+
+
+@pytest.mark.parametrize(
+    "exog, names, data",
+    [
+        (
+            pd.DataFrame([[0.0, 10.0], [1.0, 12.0], [2.0, 11.0]]),
+            "x1 x2",
+            "0.0 10.0 1.0 12.0 2.0 11.0",
+        ),
+        # a constant column is named const
+        (
+            pd.DataFrame({3: [0.0, 1.0, 2.0], 5: [1.0, 1.0, 1.0]}),
+            "x1 const",
+            "0.0 1.0 1.0 1.0 2.0 1.0",
+        ),
+        # names that are not all str
+        (
+            pd.DataFrame({"a": [0.0, 1.0, 2.0], 1: [10.0, 12.0, 11.0]}),
+            "x1 x2",
+            "0.0 10.0 1.0 12.0 2.0 11.0",
+        ),
+    ],
+    ids=["int_columns", "constant", "mixed_columns"],
+)
+# DataFrame.var with positional arguments warns on pandas 3
+@pytest.mark.filterwarnings("error")
+def test_spec_exog_columns_not_str(no_x12, exog, names, data):
+    spec = x13.x13_arima_analysis(_monthly_endog(), exog=exog, speconly=True)
+
+    tokens = spec.split()
+    start = tokens.index("regression{")
+    expected = f"regression{{ user = ({names}) data = ({data}) }}"
+    assert tokens[start : tokens.index("}", start) + 1] == expected.split()

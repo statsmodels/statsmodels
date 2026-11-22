@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 from warnings import warn
 
+import numpy as np
 import pandas as pd
 
 from statsmodels.tools.sm_exceptions import (
@@ -189,7 +190,7 @@ def _make_var_names(exog):
         if exog.ndim == 1:
             var_names = "x1"
         else:
-            var_names = " ".join(_make_exog_names(exog))
+            var_names = " ".join(_make_exog_names(np.asarray(exog)))
     return var_names
 
 
