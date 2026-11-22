@@ -163,11 +163,10 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         if self.data.row_labels is not None:
             self.data._cache["row_labels"] = (
                 self.data.row_labels[self.order:])
-        if self._index is not None:
-            if self._index_generated:
-                self._index = self._index[:-self.order]
-            else:
-                self._index = self._index[self.order:]
+        if self._index_generated:
+            self._index = self._index[:-self.order]
+        else:
+            self._index = self._index[self.order:]
 
         # Parameters
         self.parameters["autoregressive"] = self.switching_ar
@@ -297,22 +296,19 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
         return result, params1
 
-    def _em_autoregressive(self, result, betas, tmp=None):
+    def _em_autoregressive(self, result, betas):
         """EM step for autoregressive coefficients and variances"""
-        if tmp is None:
-            tmp = np.sqrt(result.smoothed_marginal_probabilities)
+        tmp = np.sqrt(result.smoothed_marginal_probabilities)
 
         resid = np.zeros((self.k_regimes, self.nobs + self.order))
         resid[:] = self.orig_endog
-        if self._k_exog > 0:
-            for i in range(self.k_regimes):
-                resid[i] -= np.dot(self.orig_exog, betas[i])
+        for i in range(self.k_regimes):
+            resid[i] -= np.dot(self.orig_exog, betas[i])
 
         # The difference between this and `_em_exog` is that here we have a
         # different endog and exog for each regime
         coeffs = np.zeros((self.k_regimes,) + (self.order,))
         variance = np.zeros((self.k_regimes,))
-        exog = np.zeros((self.nobs, self.order))
         for i in range(self.k_regimes):
             endog = resid[i, self.order:]
             exog = lagmat(resid[i], self.order)[self.order:]

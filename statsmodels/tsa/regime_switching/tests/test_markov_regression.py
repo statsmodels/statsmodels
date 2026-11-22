@@ -1794,9 +1794,12 @@ class MarkovRegression:
     @pytest.mark.smoke
     def test_fit_em(self, **kwargs):
         # Test EM fitting (smoke test)
-        res_em = self.model._fit_em(**kwargs)
+        params_em = self.model._fit_em(**kwargs)
         assert_allclose(
-            res_em.llf, self.true["llf_fit_em"], atol=self.atol, rtol=self.rtol
+            self.model.loglike(params_em),
+            self.true["llf_fit_em"],
+            atol=self.atol,
+            rtol=self.rtol,
         )
 
 

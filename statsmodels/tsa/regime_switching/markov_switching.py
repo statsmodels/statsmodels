@@ -60,61 +60,6 @@ prefix_kim_smoother_log_map = {
 }
 
 
-def _logistic(x):
-    """Note that this is not a vectorized function"""
-    x = np.array(x)
-    # np.exp(x) / (1 + np.exp(x))
-    if x.ndim == 0:
-        y = np.reshape(x, (1, 1, 1))
-    # np.exp(x[i]) / (1 + np.sum(np.exp(x[:])))
-    elif x.ndim == 1:
-        y = np.reshape(x, (len(x), 1, 1))
-    # np.exp(x[i,t]) / (1 + np.sum(np.exp(x[:,t])))
-    elif x.ndim == 2:
-        y = np.reshape(x, (x.shape[0], 1, x.shape[1]))
-    # np.exp(x[i,j,t]) / (1 + np.sum(np.exp(x[:,j,t])))
-    elif x.ndim == 3:
-        y = x
-    else:
-        raise NotImplementedError
-
-    tmp = np.c_[np.zeros((y.shape[-1], y.shape[1], 1)), y.T].T
-    evaluated = np.reshape(np.exp(y - logsumexp(tmp, axis=0)), x.shape)
-
-    return evaluated
-
-
-def _partials_logistic(x):
-    """Note that this is not a vectorized function"""
-    tmp = _logistic(x)
-
-    # k
-    if tmp.ndim == 0:
-        return tmp - tmp**2
-    # k x k
-    elif tmp.ndim == 1:
-        partials = np.diag(tmp - tmp**2)
-    # k x k x t
-    elif tmp.ndim == 2:
-        partials = [np.diag(tmp[:, t] - tmp[:, t] ** 2) for t in range(tmp.shape[1])]
-        shape = tmp.shape[1], tmp.shape[0], tmp.shape[0]
-        partials = np.concatenate(partials).reshape(shape).transpose((1, 2, 0))
-    # k x k x j x t
-    else:
-        partials = [
-            [np.diag(tmp[:, j, t] - tmp[:, j, t] ** 2) for t in range(tmp.shape[2])]
-            for j in range(tmp.shape[1])
-        ]
-        shape = tmp.shape[1], tmp.shape[2], tmp.shape[0], tmp.shape[0]
-        partials = np.concatenate(partials).reshape(shape).transpose((2, 3, 0, 1))
-
-    for i in range(tmp.shape[0]):
-        for j in range(i):
-            partials[i, j, ...] = -tmp[i, ...] * tmp[j, ...]
-            partials[j, i, ...] = partials[i, j, ...]
-    return partials
-
-
 def cy_hamilton_filter_log(
     initial_probabilities, regime_transition, conditional_loglikelihoods, model_order
 ):
@@ -708,10 +653,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 raise RuntimeError(
                     "Steady-state probabilities could not be constructed."
                 ) from exc
-        elif self._initialization == "known":
-            probabilities = self._initial_probabilities
         else:
-            raise RuntimeError("Invalid initialization method selected.")
+            # Known initialization
+            probabilities = self._initial_probabilities
 
         # Slightly bound probabilities away from zero (for filters in log
         # space)
@@ -914,10 +858,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         """
         raise NotImplementedError
 
-    def _filter(self, params, regime_transition=None):
-        # Get the regime transition matrix if not provided
-        if regime_transition is None:
-            regime_transition = self.regime_transition_matrix(params)
+    def _filter(self, params):
+        # Get the regime transition matrix
+        regime_transition = self.regime_transition_matrix(params)
         # Get the initial probabilities
         initial_probabilities = self.initial_probabilities(params, regime_transition)
 
@@ -1017,11 +960,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         params,
         predicted_joint_probabilities_log,
         filtered_joint_probabilities_log,
-        regime_transition=None,
     ):
         # Get the regime transition matrix
-        if regime_transition is None:
-            regime_transition = self.regime_transition_matrix(params)
+        regime_transition = self.regime_transition_matrix(params)
 
         # Apply the smoother
         return cy_kim_smoother_log(
@@ -1370,7 +1311,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 transformed=transformed,
                 maxiter=em_iter,
                 tolerance=0,
-                return_params=True,
             )
             transformed = True
 
@@ -1410,13 +1350,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         self,
         start_params=None,
         transformed=True,
-        cov_type="none",
-        cov_kwds=None,
         maxiter=50,
         tolerance=1e-6,
-        full_output=True,
-        return_params=False,
-        **kwargs,
     ):
         """
         Fits the model using the Expectation-Maximization (EM) algorithm
@@ -1429,29 +1364,16 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         transformed : bool, optional
             Whether or not `start_params` is already transformed. Default is
             True.
-        cov_type : str, optional
-            The type of covariance matrix estimator to use. Can be one of
-            'approx', 'opg', 'robust', or 'none'. Default is 'none'.
-        cov_kwds : dict, optional
-            Keywords for alternative covariance estimators
         maxiter : int, optional
             The maximum number of iterations to perform.
         tolerance : float, optional
             The iteration stops when the difference between subsequent
             loglikelihood values is less than this tolerance.
-        full_output : bool, optional
-            Set to True to have all available output in the Results object's
-            mle_retvals attribute. This includes all intermediate values for
-            parameters and loglikelihood values
-        return_params : bool, optional
-            Whether or not to return only the array of maximizing parameters.
-            Default is False.
-        **kwargs
-            Additional keyword arguments to pass to the optimizer.
 
         Returns
         -------
-        MarkovSwitchingResults
+        params : ndarray
+            The (constrained) parameters after the last EM iteration.
 
         Notes
         -----
@@ -1483,27 +1405,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 delta = 2 * (llf[-1] - llf[-2]) / np.abs(llf[-1] + llf[-2])
             i += 1
 
-        # Just return the fitted parameters if requested
-        if return_params:
-            result = params[-1]
-        # Otherwise construct the results class if desired
-        else:
-            result = self.filter(
-                params[-1], transformed=True, cov_type=cov_type, cov_kwds=cov_kwds
-            )
-
-            # Save the output
-            if full_output:
-                em_retvals = Bunch(params=np.array(params), llf=np.array(llf), iter=i)
-                em_settings = Bunch(tolerance=tolerance, maxiter=maxiter)
-            else:
-                em_retvals = None
-                em_settings = None
-
-            result.mle_retvals = em_retvals
-            result.mle_settings = em_settings
-
-        return result
+        return params[-1]
 
     def _em_iteration(self, params0):
         """
@@ -1573,7 +1475,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
     def _start_params_search(
         self,
         reps,
-        start_params=None,
+        start_params,
         transformed=True,
         em_iter=5,
         scale=1.0,
@@ -1586,12 +1488,11 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         ----------
         reps : int
             Number of random permutations to try.
-        start_params : array_like, optional
-            Starting parameter vector. If not given, class-level start
-            parameters are used.
+        start_params : array_like
+            Starting parameter vector.
         transformed : bool, optional
-            If `start_params` was provided, whether or not those parameters
-            are already transformed. Default is True.
+            Whether or not `start_params` are already transformed. Default
+            is True.
         em_iter : int, optional
             Number of EM iterations to apply to each random permutation.
         scale : float or array_like, optional
@@ -1610,11 +1511,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         This is a private method for finding good starting parameters for MLE
         by scoring, where the defaults have been set heuristically.
         """
-        if start_params is None:
-            start_params = self.start_params
-            transformed = True
-        else:
-            start_params = np.array(start_params, ndmin=1)
+        start_params = np.array(start_params, ndmin=1)
 
         # Random search is over untransformed space
         if transformed:
@@ -1648,7 +1545,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                         start_params + variates[i],
                         transformed=False,
                         maxiter=em_iter,
-                        return_params=True,
                     )
                     proposed_llf = self.loglike(proposed_params)
 
@@ -2017,8 +1913,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         self.k_regimes = model.k_regimes
 
         # Setup covariance matrix notes dictionary
-        if not hasattr(self, "cov_kwds"):
-            self.cov_kwds = {}
+        self.cov_kwds = {}
         self.cov_type = cov_type
 
         # Setup the cache
@@ -2097,12 +1992,6 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             res = self
         else:
             raise NotImplementedError
-            res = self.__class__(
-                self.model,
-                self.params,
-                normalized_cov_params=self.normalized_cov_params,
-                scale=self.scale,
-            )
 
         # Set the new covariance type
         res.cov_type = cov_type
@@ -2117,11 +2006,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         # Calculate the new covariance matrix
         k_params = len(self.params)
-        if k_params == 0:
-            res.cov_params_default = np.zeros((0, 0))
-            res._rank = 0
-            res.cov_kwds["description"] = "No parameters estimated."
-        elif cov_type == "custom":
+        if cov_type == "custom":
             res.cov_type = kwargs["custom_cov_type"]
             res.cov_params_default = kwargs["custom_cov_params"]
             res.cov_kwds["description"] = kwargs["custom_description"]
@@ -2219,12 +2104,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         """
         cov_opg = self.cov_params_opg
         evaluated_hessian = self._hessian()
-        cov_params, singular_values = pinv_extended(
+        cov_params, _ = pinv_extended(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
-
-        if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
 
         return cov_params
 
@@ -2419,8 +2301,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             ("HQIC", [f"{self.hqic:#5.3f}"]),
         ]
 
-        if hasattr(self, "cov_type"):
-            top_left.append(("Covariance Type:", [self.cov_type]))
+        top_left.append(("Covariance Type:", [self.cov_type]))
 
         summary = Summary()
         summary.add_table_2cols(self, gleft=top_left, gright=top_right, title=title)
@@ -2491,7 +2372,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         # Add warnings/notes, added to text format only
         etext = []
-        if hasattr(self, "cov_type") and "description" in self.cov_kwds:
+        if "description" in self.cov_kwds:
             etext.append(self.cov_kwds["description"])
 
         if self._rank < len(self.params):
@@ -2501,10 +2382,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                 " unstable."
             )
 
-        if etext:
-            etext = [f"[{i + 1}] {text}" for i, text in enumerate(etext)]
-            etext.insert(0, "Warnings:")
-            summary.add_extra_txt(etext)
+        etext = [f"[{i + 1}] {text}" for i, text in enumerate(etext)]
+        etext.insert(0, "Warnings:")
+        summary.add_extra_txt(etext)
 
         return summary
 

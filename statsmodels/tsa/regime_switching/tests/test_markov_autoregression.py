@@ -249,9 +249,9 @@ class MarkovAutoregression:
     @pytest.mark.smoke
     def test_fit_em(self, **kwargs):
         # Test EM fitting (smoke test)
-        res_em = self.model._fit_em(**kwargs)
-        assert_allclose(res_em.llf, self.true["llf_fit_em"], atol=self.atol,
-                        rtol=self.rtol)
+        params_em = self.model._fit_em(**kwargs)
+        assert_allclose(self.model.loglike(params_em), self.true["llf_fit_em"],
+                        atol=self.atol, rtol=self.rtol)
 
 
 hamilton_ar2_short_filtered_joint_probabilities = np.array([
