@@ -1184,6 +1184,16 @@ def test_bse_re_units(case):
     assert_allclose(out[1][1], 10 * out[0][1], rtol=1e-3)
 
 
+def test_bse_re_negative_variance_warns():
+    # a variance that is not positive gives a nan, with the warning of sqrt
+    data = _bse_re_units_data()
+    result = MixedLM.from_formula("y ~ x", data, groups="g").fit()
+    result._results._cov_vparams = -np.eye(1)
+    with pytest.warns(RuntimeWarning, match="invalid value"):
+        bse_re = result.bse_re
+    assert np.all(np.isnan(bse_re))
+
+
 def test_random_effects():
 
     rs = np.random.RandomState(23429)

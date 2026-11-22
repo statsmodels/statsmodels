@@ -2963,9 +2963,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
            The standard errors were off by about a factor of the square
            root of `scale` and did not include the uncertainty of `scale`.
         """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
-            return np.sqrt(np.diag(self._cov_vparams))
+        return np.sqrt(np.diag(self._cov_vparams))
 
     def _expand_re_names(self, group_ix):
         names = list(self.model.data.exog_re_names)
