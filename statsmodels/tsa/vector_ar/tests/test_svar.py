@@ -433,14 +433,10 @@ def test_svar_lag_order_default_is_one():
 def test_svar_trend(trend):
     res, var_res = _fit_b_model(_macro_data(), maxlags=2, trend=trend)
     k_trend = {"n": 0, "c": 1, "ct": 2, "ctt": 3}[trend]
-    # VAR counts the time trend from the first observation, SVAR from the
-    # first observation of the estimation sample, so that only the lag
-    # coefficients are comparable with a trend
-    assert_allclose(res.params[k_trend:], var_res.params[k_trend:], rtol=1e-10)
-    if trend in ("n", "c"):
-        assert_allclose(res.params, var_res.params, rtol=1e-10)
-    # residuals near zero differ at the rounding level of the fitted values,
-    # which are computed from differently scaled trend columns
+    # SVAR counts the time trend from the first observation, as VAR does, so
+    # that the trend coefficients are comparable too
+    assert_allclose(res.params, var_res.params, rtol=1e-10)
+    # residuals near zero may differ at the rounding level of the fitted values
     resid_scale = np.max(np.abs(var_res.resid))
     assert_allclose(res.resid, var_res.resid, rtol=1e-10, atol=1e-10 * resid_scale)
     assert_allclose(res.sigma_u, var_res.sigma_u, rtol=1e-10)
@@ -451,6 +447,51 @@ def test_svar_trend(trend):
     expected = _ma_coefs(res.coefs, 4) @ res.B
     # zero entries of the triangular Theta_0 are at rounding level
     assert_allclose(res.svar_ma_rep(4), expected, rtol=1e-10, atol=1e-15)
+
+
+def _svar_ab_trend(trend):
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    data = np.diff(np.log(mdata[["realgdp", "realcons", "realinv"]].values), axis=0)
+    A = np.asarray([[1, 0, 0], ["E", 1, 0], ["E", "E", 1]], dtype="U")
+    B = np.asarray([["E", 0, 0], [0, "E", 0], [0, 0, "E"]], dtype="U")
+    start = {"A_guess": [-0.5, -5.5, 3.0], "B_guess": [0.0075, 0.005, 0.02]}
+    # the ML fit may not converge, depending on the platform
+    with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+        res = SVAR(data, "AB", A=A, B=B).fit(maxlags=3, trend=trend, **start)
+    return data, res
+
+
+@pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
+def test_trend_params_as_var(trend):
+    # With "ct" and "ctt", SVAR counted the time trend from the first
+    # observation after the lags, so its constant (and linear term) differed
+    # from VAR's for the same data
+    from statsmodels.tsa.vector_ar.var_model import VAR
+
+    data, res = _svar_ab_trend(trend)
+    var_res = VAR(data).fit(3, trend=trend)
+    assert_allclose(res.params, var_res.params, rtol=1e-8)
+    assert_allclose(res.endog_lagged, var_res.endog_lagged, rtol=1e-12)
+    assert_allclose(res.sigma_u, var_res.sigma_u, rtol=1e-8)
+
+
+@pytest.mark.parametrize("trend", ["n", "ct"])
+def test_sirf_errband_mc_refits_with_trend(trend, monkeypatch):
+    # The replications were fitted with trend "c" whatever the trend of the
+    # results
+    _, res = _svar_ab_trend(trend)
+    fit = SVAR.fit
+    trends = []
+
+    def fit_recording_trend(self, **kwds):
+        trends.append(kwds.get("trend", "c"))
+        return fit(self, **kwds)
+
+    monkeypatch.setattr(SVAR, "fit", fit_recording_trend)
+    # the ML fits of the replications may not converge, depending on the platform
+    with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+        res.sirf_errband_mc(repl=3, steps=2, burn=10, rng=np.random.default_rng(0))
+    assert trends == [trend] * 3
 
 
 @pytest.mark.parametrize(
