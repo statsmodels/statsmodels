@@ -546,3 +546,32 @@ def test_spec_endog_name(no_x12, make_endog, name):
     }}
     """
     assert spec[: spec.index("}") + 1].split() == expected.split()
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["GDP\\new", "GDP\\data", "GDP\\tab", "GDP\\\\x", "GDP\\g<0>"],
+    ids=["newline_escape", "bad_escape", "tab_escape", "double", "group"],
+)
+def test_rawspec_name_with_backslash(no_x12, name):
+    endog = _monthly_endog().rename(name)
+
+    spec = x13.x13_arima_analysis(endog, rawspec="series{}", speconly=True)
+
+    # the name is copied as it is, as in the spec without rawspec
+    data = " ".join(str(value) for value in range(24))
+    expected = f"""
+    Series {{
+        data=({data})
+        appendbcst=no
+        appendfcst=no
+        period=12
+        start=2000.1
+        title="{name}"
+        name="{name}"
+    }}
+    x11 {{save=(d11 d12 d13)}}
+    """
+    assert spec.split() == expected.split()
+    plain = x13.x13_arima_analysis(endog, speconly=True)
+    assert f'title="{name}"' in plain.split()

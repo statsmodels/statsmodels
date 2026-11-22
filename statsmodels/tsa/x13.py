@@ -527,6 +527,12 @@ def x13_arima_analysis(
         are spliced into spec file before it is passed to x12/x13. Spec
         file must not contain `series{data=()}` or `series{file="" format=""}`
         parameters. See tests/x13_test.py for example test files.
+
+        .. versionchanged:: 0.15.1
+
+           A backslash in the name of ``endog`` is copied into the series
+           spec as it is. It used to be read as a regular expression escape,
+           which changed the name or raised an error.
     print_stdout : bool, optional
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True.
@@ -637,10 +643,13 @@ def x13_arima_analysis(
                     "rawspec argument provided but not valid path or spec string"
                 ) from os_err
 
-        # merge series {} properties created above into raw spec file
+        # merge series {} properties created above into raw spec file. A
+        # function is used as the replacement, so that backslashes in the
+        # series spec (in the name of endog) are not read as escapes.
+        series_spec = spec.replace("}\n", "")
         spec = re.sub(
             r"series\s*\{\s*",
-            spec.replace("}\n", ""),
+            lambda match: series_spec,
             rawspec_text,
             flags=re.IGNORECASE,
         )
