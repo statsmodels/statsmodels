@@ -70,8 +70,10 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
 
     # Make arrays contiguous for BLAS calls
     endog = np.asfortranarray(endog, dtype=dtype)
-    ar_params = np.asfortranarray(ar_params, dtype=dtype)
-    ma_params = np.asfortranarray(ma_params, dtype=dtype)
+    # The Cython routines need writable arrays, so read-only parameters (for
+    # example a pandas Series under copy-on-write) are copied
+    ar_params = np.require(ar_params, dtype=dtype, requirements=["F", "W"])
+    ma_params = np.require(ma_params, dtype=dtype, requirements=["F", "W"])
     sigma2 = dtype(sigma2).item()
 
     # Get the appropriate functions
@@ -176,8 +178,10 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     dtype = prefix_dtype_map[prefix]
 
     endog = np.ascontiguousarray(endog, dtype=dtype)
-    ar_params = np.asfortranarray(ar_params, dtype=dtype)
-    ma_params = np.asfortranarray(ma_params, dtype=dtype)
+    # The Cython routines need writable arrays, so read-only parameters (for
+    # example a pandas Series under copy-on-write) are copied
+    ar_params = np.require(ar_params, dtype=dtype, requirements=["F", "W"])
+    ma_params = np.require(ma_params, dtype=dtype, requirements=["F", "W"])
     sigma2 = dtype(sigma2).item()
 
     func = getattr(_arma_innovations, prefix + "arma_loglikeobs_fast")
