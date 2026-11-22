@@ -90,6 +90,11 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     if `trend='c'`, the passed `exog` array should not already have a column of
     ones.
 
+    .. versionchanged:: 0.15.1
+
+       `trend` is case-insensitive. Before, an uppercase `trend` such as
+       `'C'` was accepted, but no trend was added to the model.
+
     See the notebook `Markov switching dynamic regression
     <../examples/notebooks/generated/markov_regression.html>`__ for an
     overview.
@@ -122,13 +127,13 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         self.k_trend = 0
         self._k_exog = self.k_exog
         trend_exog = None
-        if trend == "c":
+        if self.trend == "c":
             trend_exog = np.ones((nobs, 1))
             self.k_trend = 1
-        elif trend == "t":
+        elif self.trend == "t":
             trend_exog = (np.arange(nobs) + 1)[:, np.newaxis]
             self.k_trend = 1
-        elif trend == "ct":
+        elif self.trend == "ct":
             trend_exog = np.c_[np.ones((nobs, 1)),
                                (np.arange(nobs) + 1)[:, np.newaxis]]
             self.k_trend = 2
