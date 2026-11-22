@@ -390,13 +390,12 @@ class DecomposeResult:
 
         if self.seasonal.ndim == 1:
             series += [(self.seasonal, "seasonal")] if seasonal else []
-        elif self.seasonal.ndim > 1:
-            if isinstance(self.seasonal, pd.DataFrame):
-                for col in self.seasonal.columns:
-                    series += [(self.seasonal[col], "seasonal")] if seasonal else []
-            else:
-                for i in range(self.seasonal.shape[1]):
-                    series += [(self.seasonal[:, i], "seasonal")] if seasonal else []
+        elif isinstance(self.seasonal, pd.DataFrame):
+            for col in self.seasonal.columns:
+                series += [(self.seasonal[col], "seasonal")] if seasonal else []
+        else:
+            for i in range(self.seasonal.shape[1]):
+                series += [(self.seasonal[:, i], "seasonal")] if seasonal else []
 
         series += [(self.resid, "residual")] if resid else []
         series += [(self.weights, "weights")] if weights else []
