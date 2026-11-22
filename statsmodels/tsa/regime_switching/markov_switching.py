@@ -1625,8 +1625,9 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                     proposed_llf = self.loglike(proposed_params)
 
                     if proposed_llf > llf:
-                        llf = proposed_llf
+                        # Keep llf in step with params if this raises
                         params = self.untransform_params(proposed_params)
+                        llf = proposed_llf
                 except Exception:  # FIXME: catch something specific
                     pass
 

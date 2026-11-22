@@ -844,3 +844,50 @@ def test_model_k_params_is_python_int():
     # 2 transition probabilities, 2 switching constants and 1 variance
     assert mod.k_params == 5
     assert type(mod.k_params) is int
+
+
+class UntransformFails(markov_regression.MarkovRegression):
+    # A model whose untransform_params fails for regime-0 constants above
+    # -0.2, as the root finder of models with three or more regimes can fail
+    def untransform_params(self, constrained):
+        if np.asarray(constrained)[2] > -0.2:
+            raise ValueError("Could not untransform parameters.")
+        return super().untransform_params(constrained)
+
+
+# With seeds 0, 3 and 13 the best candidate cannot be untransformed; with seed
+# 38 a usable candidate that is worse than the best one comes after it
+@pytest.mark.parametrize("seed, best_fails", [(0, True), (3, True), (13, True), (38, False)])
+def test_fit_search_skips_candidates_that_cannot_be_untransformed(seed, best_fails):
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    mod = UntransformFails(endog, k_regimes=2)
+    start = np.r_[0.9, 0.2, -1.0, 2.8, 1.0]
+    # Only the regime-0 constant is searched, without EM steps
+    scale = np.r_[0.0, 0.0, 4.0, 0.0, 0.0]
+    reps = 6
+    params = mod.fit(
+        start_params=start,
+        search_reps=reps,
+        search_iter=0,
+        search_scale=scale,
+        em_iter=0,
+        maxiter=0,
+        return_params=True,
+        rng=seed,
+        warn_convergence=False,
+    )
+
+    # The candidates are the start plus uniform(-scale / 2, scale / 2)
+    # variates, drawn parameter by parameter; the constant is not
+    # transformed. The best candidate that can be untransformed is kept, or
+    # the start if none improves on it.
+    draws = np.random.default_rng(seed)
+    variates = np.column_stack([s * draws.uniform(-0.5, 0.5, size=reps) for s in scale])
+    candidates = start + variates
+    usable = [c for c in candidates if c[2] <= -0.2]
+    best = max(usable, key=mod.loglike)
+    best_overall = max(candidates, key=mod.loglike)
+    assert bool(mod.loglike(best_overall) > mod.loglike(best)) is best_fails
+    expected = best if mod.loglike(best) > mod.loglike(start) else start
+    assert_allclose(params, expected, rtol=1e-12)
