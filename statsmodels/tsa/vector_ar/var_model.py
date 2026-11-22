@@ -831,6 +831,12 @@ class VAR(TimeSeriesModel):
             12 * (nobs/100.)**(1./4), see select_order function
         method : {'ols'}, optional
             Estimation method to use
+
+            .. deprecated:: 0.15.1
+
+               Other values were ignored and the model was estimated by OLS.
+               They issue a FutureWarning and will raise a ValueError after
+               statsmodels 0.17 is released.
         ic : {'aic', 'fpe', 'hqic', 'bic', None}, optional
             Information criterion to use for VAR order selection.
             aic : Akaike
@@ -869,6 +875,14 @@ class VAR(TimeSeriesModel):
         trend = string_like(
             trend, "trend", options=("c", "ct", "ctt", "n"), lower=False
         )
+        if method != "ols":
+            warnings.warn(
+                f'method={method!r} is ignored and the model is estimated by '
+                'OLS. Values other than "ols" are deprecated and will raise a '
+                "ValueError after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
         if maxlags is not None:
             if maxlags < 0:
                 raise ValueError(f"maxlags must be non-negative, got {maxlags}")

@@ -2568,3 +2568,18 @@ def test_seasonal_dummies_negative_raises(centered):
         expected -= 1 / 4
     actual = util.seasonal_dummies(4, 6, first_period=1, centered=centered)
     assert_allclose(actual, expected, rtol=1e-14)
+
+
+@pytest.mark.parametrize("method", ["mle", "OLS", None])
+def test_var_fit_method_deprecated(method):
+    # Only "ols" is implemented, other values were ignored
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    with pytest.warns(FutureWarning, match="is ignored and the model is estimated"):
+        res = VAR(y).fit(2, method=method)
+    z = np.column_stack([np.ones(y.shape[0] - 2), y[1:-1], y[:-2]])
+    ols = np.linalg.lstsq(z, y[2:], rcond=None)[0]
+    assert_allclose(res.params, ols, rtol=1e-10)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert_allclose(VAR(y).fit(2, method="ols").params, ols, rtol=1e-10)
