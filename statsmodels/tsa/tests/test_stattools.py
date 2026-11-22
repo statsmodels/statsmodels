@@ -3327,11 +3327,13 @@ def test_arma_order_select_ic_start_params():
     # start_params in fit_kw used to clash with the start_params argument of
     # the internal retry, so every fit failed. Now only the fits of models
     # with more parameters than start_params fail. Which fits fail is taken
-    # from the direct fits, since ARIMA.fit currently also accepts too long
-    # start_params.
+    # from the direct fits, since ARIMA.fit also accepts too long
+    # start_params, with a FutureWarning (deprecated).
     y = np.random.default_rng(20261119).standard_normal(100)
     fit_kw = {"start_params": [0.1, 0.2, 0.5]}
-    expected, failed = _arma_ic_table(y, 3, 2, "n", fit_kw, "aic")
+    too_long = "start_params has 3 elements, but the model has"
+    with pytest.warns(FutureWarning, match=too_long):
+        expected, failed = _arma_ic_table(y, 3, 2, "n", fit_kw, "aic")
     # The models with more than 3 parameters fail
     assert {(1, 2), (2, 1), (2, 2), (3, 0), (3, 1), (3, 2)} <= set(failed)
     orders = ", ".join(rf"\({p}, {q}\)" for p, q in failed)
@@ -3339,10 +3341,11 @@ def test_arma_order_select_ic_start_params():
         rf"The fits of {len(failed)} of 12 ARMA models failed, and their "
         rf"information criteria are NaN. Orders \(p, q\): {orders}\."
     )
-    with pytest.warns(EstimationWarning, match=match):
-        res = arma_order_select_ic(
-            y, max_ar=3, max_ma=2, ic="aic", trend="n", fit_kw=fit_kw
-        )
+    with pytest.warns(FutureWarning, match=too_long):
+        with pytest.warns(EstimationWarning, match=match):
+            res = arma_order_select_ic(
+                y, max_ar=3, max_ma=2, ic="aic", trend="n", fit_kw=fit_kw
+            )
     assert_allclose(res.aic, expected, rtol=1e-10)
     loc = np.nanargmin(expected)
     assert res.aic_min_order == np.unravel_index(loc, expected.shape)
