@@ -13,7 +13,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
-from scipy import stats
+from scipy import linalg, stats
 
 from statsmodels.datasets import danish_data, macrodata
 from statsmodels.tools.sm_exceptions import HypothesisTestWarning
@@ -727,6 +727,35 @@ def test_johansen_too_few_observations(shape, det_order, k_ar_diff):
     endog = np.cumsum(np.random.default_rng(0).standard_normal(shape), axis=0)
     with pytest.raises(ValueError, match="too few observations"):
         coint_johansen(endog, det_order, k_ar_diff)
+
+
+@pytest.mark.parametrize("det_order", [-1, 0, 1])
+def test_johansen_more_than_12_variables(det_order):
+    # The statistics are computed for any number of variables, but the tables
+    # of critical values end at 12 variables: the critical values of the
+    # first test (13 variables) are NaN and the others are tabulated
+    rng = np.random.default_rng(20261122)
+    endog = np.cumsum(rng.standard_normal((200, 13)), axis=0)
+    with pytest.warns(HypothesisTestWarning, match="12 variables at most"):
+        res = coint_johansen(endog, det_order, 1)
+    assert np.all(np.isnan(res.cvt[0]))
+    assert np.all(np.isnan(res.cvm[0]))
+    for i in range(1, 13):
+        assert_allclose(res.cvt[i], c_sjt(13 - i, det_order), rtol=1e-15)
+        assert_allclose(res.cvm[i], c_sja(13 - i, det_order), rtol=1e-15)
+    # The eigenvalues of the generalized symmetric eigenvalue problem of the
+    # residual moment matrices (Luetkepohl 2005, p. 295) and the statistics
+    # from them
+    nobs = res.r0t.shape[0]
+    s00 = res.r0t.T @ res.r0t / nobs
+    s0k = res.r0t.T @ res.rkt / nobs
+    skk = res.rkt.T @ res.rkt / nobs
+    eig = linalg.eigh(s0k.T @ np.linalg.solve(s00, s0k), skk, eigvals_only=True)
+    eig = eig[::-1]
+    assert_allclose(res.eig, eig, rtol=1e-10)
+    log_1m_eig = np.log(1 - eig)
+    assert_allclose(res.lr1, -nobs * np.cumsum(log_1m_eig[::-1])[::-1], rtol=1e-10)
+    assert_allclose(res.lr2, -nobs * log_1m_eig, rtol=1e-10)
 
 
 @pytest.mark.parametrize("p", [-1, 0, 1])

@@ -142,7 +142,7 @@ class PredictionResults:
             pvalue = self.dist.sf(np.abs(stat), *self.dist_args) * 2
         elif alternative == "larger":
             pvalue = self.dist.sf(stat, *self.dist_args)
-        elif alternative == "smaller":
+        else:  # smaller
             pvalue = self.dist.cdf(stat, *self.dist_args)
         return stat, pvalue
 

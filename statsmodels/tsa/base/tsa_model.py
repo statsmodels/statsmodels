@@ -8,7 +8,6 @@ from statsmodels.compat.pandas import (
     to_period_offset,
 )
 
-import numbers
 import re
 import warnings
 
@@ -77,6 +76,11 @@ def get_index_loc(key, index):
     index : pd.Index
         The index to search.
 
+        .. versionchanged:: 0.15.1
+
+           An Index with dtype uint64 is extended with uint64 labels
+           instead of float labels.
+
     Returns
     -------
     loc : int or slice
@@ -115,16 +119,9 @@ def get_index_loc(key, index):
             key = nobs + key
         # Out-of-sample (note that we include key itself in the new index)
         elif key > nobs - 1:
-            # See gh5835. Remove the except after pandas 0.25 required.
-            try:
-                base_index_start = base_index.start
-                base_index_step = base_index.step
-            except AttributeError:
-                base_index_start = base_index._start
-                base_index_step = base_index._step
-            stop = base_index_start + (key + 1) * base_index_step
+            stop = base_index.start + (key + 1) * base_index.step
             index = RangeIndex(
-                start=base_index_start, stop=stop, step=base_index_step
+                start=base_index.start, stop=stop, step=base_index.step
             )
 
     # Special handling for NumericIndex
@@ -139,7 +136,9 @@ def get_index_loc(key, index):
             key = nobs + key
         # Out-of-sample (note that we include key itself in the new index)
         elif key > base_index[-1]:
-            index = Index(np.arange(base_index[0], int(key + 1)))
+            # np.arange(np.uint64(0), int) gives floats, so keep the dtype
+            dtype = base_index.dtype if base_index.dtype == np.uint64 else None
+            index = Index(np.arange(base_index[0], int(key + 1), dtype=dtype))
 
     # Special handling for date indexes
     if date_index:
@@ -301,8 +300,6 @@ def get_index_label_loc(key, index, row_labels):
             # pandas.Index.get_loc as of 0.23.4)
             else:
                 loc = loc[0]
-        if not isinstance(loc, numbers.Integral):
-            raise
 
         index = row_labels[: loc + 1]
         index_was_expanded = False
@@ -614,17 +611,16 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # If we got an inferred frequncy, alert the user
                     if freq is not None:
                         inferred_freq = True
-                        if freq is not None:
-                            if isinstance(freq, pd.tseries.offsets.BaseOffset):
-                                freqstr = freq.freqstr
-                            else:
-                                freqstr = str(freq)
-                            warnings.warn(
-                                "No frequency information was provided, so inferred "
-                                f"frequency {freqstr} will be used.",
-                                ValueWarning,
-                                stacklevel=2,
-                            )
+                        if isinstance(freq, pd.tseries.offsets.BaseOffset):
+                            freqstr = freq.freqstr
+                        else:
+                            freqstr = str(freq)
+                        warnings.warn(
+                            "No frequency information was provided, so inferred "
+                            f"frequency {freqstr} will be used.",
+                            ValueWarning,
+                            stacklevel=2,
+                        )
 
                 # Convert the passed freq to a pandas offset object
                 if freq is not None and isinstance(index, PeriodIndex):
@@ -772,7 +768,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         self.data.dates = self._index if self._index_dates else None
         self.data.freq = self._index.freqstr if self._index_dates else None
 
-    def _get_index_loc(self, key, base_index=None):
+    def _get_index_loc(self, key):
         """
         Get the location of a specific key in an index
 
@@ -782,9 +778,6 @@ class TimeSeriesModel(base.LikelihoodModel):
             The key for which to find the location if the underlying index is
             a DateIndex or a location if the underlying index is a RangeIndex
             or a NumericIndex.
-        base_index : pd.Index, optional
-            Optionally the base index to search. If None, the model's index is
-            searched.
 
         Returns
         -------
@@ -802,12 +795,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         a NumericIndex or a date index, this function extends the index up to
         and including key, and then returns the location in the new index.
         """
+        return get_index_loc(key, self._index)
 
-        if base_index is None:
-            base_index = self._index
-        return get_index_loc(key, base_index)
-
-    def _get_index_label_loc(self, key, base_index=None):
+    def _get_index_label_loc(self, key):
         """
         Get the location of a specific key in an index or model row labels
 
@@ -817,9 +807,6 @@ class TimeSeriesModel(base.LikelihoodModel):
             The key for which to find the location if the underlying index is
             a DateIndex or is only being used as row labels, or a location if
             the underlying index is a RangeIndex or a NumericIndex.
-        base_index : pd.Index, optional
-            Optionally the base index to search. If None, the model's index is
-            searched.
 
         Returns
         -------
@@ -833,14 +820,11 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Notes
         -----
-        This method expands on `_get_index_loc` by first trying the given
-        base index (or the model's index if the base index was not given) and
-        then falling back to try again with the model row labels as the base
-        index.
+        This method expands on `_get_index_loc` by first trying the model's
+        index and then falling back to try again with the model row labels as
+        the base index.
         """
-        if base_index is None:
-            base_index = self._index
-        return get_index_label_loc(key, base_index, self.data.row_labels)
+        return get_index_label_loc(key, self._index, self.data.row_labels)
 
     def _get_prediction_index(
         self, start, end, index=None, silent=False
