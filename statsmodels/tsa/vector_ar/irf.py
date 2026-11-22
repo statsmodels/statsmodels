@@ -1055,6 +1055,12 @@ class IRAnalysis(BaseIRAnalysis):
         orth : bool, optional
             Compute orthogonalized impulse responses. The default is False.
 
+            .. versionchanged:: 0.15.1
+
+               The term from the estimate of sigma_u is divided by the
+               number of observations, as in `cum_effect_cov`. It was
+               not, so the orthogonalized covariance was too large.
+
         Returns
         -------
         ndarray
@@ -1068,7 +1074,8 @@ class IRAnalysis(BaseIRAnalysis):
             Binf = np.dot(np.kron(self.P.T, np.eye(self.neqs)), Finfty)
             Binfbar = np.dot(np.kron(Ik, lre), self.H)
 
-            return Binf @ self.cov_a @ Binf.T + Binfbar @ self.cov_sig @ Binfbar.T
+            bpiece = (Binfbar @ self.cov_sig @ Binfbar.T) / self.T
+            return Binf @ self.cov_a @ Binf.T + bpiece
         else:
             return Finfty @ self.cov_a @ Finfty.T
 
