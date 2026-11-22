@@ -1,0 +1,3 @@
+- ``filtered_forecasts_error_cov`` and ``smoothed_forecasts_error_cov`` of
+  the state space ``PredictionResults`` returned None if read before the
+  forecasts, and ``npredictions`` was negative. :pr:`11037`
