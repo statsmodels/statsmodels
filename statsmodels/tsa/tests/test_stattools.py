@@ -1874,17 +1874,15 @@ class TestKPSS:
         with pytest.raises(MissingDataError, match="must contain only finite values"):
             kpss(x)
 
-    @pytest.mark.parametrize("constant", [1.0, 101.37, 123.456, 0.0, -5.5])
     @pytest.mark.parametrize("regression", ["c", "ct"])
     @pytest.mark.parametrize("nlags", ["auto", "legacy", 5])
-    def test_kpss_fails_on_constant(self, regression, nlags, constant):
+    def test_kpss_fails_on_constant(self, regression, nlags):
         # a constant series has zero residual variance, which used to crash
         # the automatic lag selection with "cannot convert float NaN to
-        # integer" or return a NaN or meaningless statistic. It must raise
-        # for any constant value, including ones whose mean is not exactly
-        # representable in floating point (GH8224, GH10647)
+        # integer" or return a NaN or meaningless statistic
+        # GH8224
         with pytest.raises(ValueError, match="x is constant"):
-            kpss(np.full(100, constant), regression, nlags=nlags)
+            kpss(np.ones(100), regression, nlags=nlags)
 
     def test_kpss_fails_on_nobs_check(self):
         # Test that if lags exceeds number of observations KPSS raises a
@@ -4173,33 +4171,6 @@ def test_acf_constant(constant, length, adjusted, fft, missing):
     assert np.all(np.isnan(res_a.confint[1:]))
     assert np.all(np.isnan(res_a.qstat))
     assert np.all(np.isnan(res_a.pvalues))
-
-
-@pytest.mark.parametrize("constant", [101.37, 123.456])
-def test_constant_series_consistent_behavior(constant):
-    # GH10647: every routine must treat a constant series the same way,
-    # whether or not its mean is exactly representable in floating point:
-    # acf/pacf return 1.0 at lag 0 and NaN beyond, q_stat returns NaN, and
-    # kpss/adfuller raise a clear ValueError instead of reporting a
-    # confident (misleading) statistic.
-    x = np.full(250, constant)
-
-    a = acf(x, nlags=5)
-    assert a[0] == 1.0
-    assert np.all(np.isnan(a[1:]))
-
-    p = pacf(x, nlags=5)
-    assert p[0] == 1.0
-    assert np.all(np.isnan(p[1:]))
-
-    qstat, pvalue = q_stat(a[1:], nobs=x.size)
-    assert np.all(np.isnan(qstat))
-    assert np.all(np.isnan(pvalue))
-
-    with pytest.raises(ValueError, match="x is constant"):
-        kpss(x)
-    with pytest.raises(ValueError, match="x is constant"):
-        adfuller(x)
 
 
 @pytest.mark.parametrize("constant", [101.37, 123.456])

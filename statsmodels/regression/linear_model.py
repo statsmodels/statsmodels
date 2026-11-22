@@ -286,10 +286,12 @@ def _is_constant(x):
     x = np.asarray(x)
     if x.size == 0:
         return False
-    if x.dtype.kind == "f":
-        eps = np.finfo(x.dtype).eps
-    else:
-        eps = np.finfo(np.double).eps
+    if x.dtype.kind != "f":
+        # np.ptp is not defined for every dtype (it raises TypeError for
+        # bool, for example), so integer, bool and other non-float input
+        # is checked as float64 (GH10901 review).
+        x = x.astype(np.float64)
+    eps = np.finfo(x.dtype).eps
     # np.ptp is 0 for an exactly constant array, and the comparison also
     # covers 0 <= 0 when every value is 0
     return bool(np.ptp(x) <= eps * np.max(np.abs(x)))

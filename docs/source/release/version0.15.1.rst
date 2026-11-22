@@ -600,14 +600,6 @@ Regression and linear models
 - ``compare_lm_test`` with ``cov_type="cluster"`` returned a Lagrange
   multiplier statistic that was too small by a factor of ``nobs``.
   :issue:`10284`, :pr:`10286`
-- ``rsquared`` and ``rsquared_adj`` of ``OLS``, ``WLS`` and ``GLS`` results
-  are now ``nan``, with a ``RuntimeWarning``, when the dependent variable is
-  constant (up to floating-point rounding), because the total sum of squares
-  is then zero and R-squared is undefined. Before, they returned ``-inf``
-  when the constant was exactly representable as the sample mean and a
-  misleading finite value, for example -28.6, otherwise.
-  ``centered_tss`` is now exactly 0.0 for a constant dependent variable.
-  :issue:`10647`
 - ``get_prediction(weights=...)`` of regression results raised "weights has
   wrong shape" if the number of rows of ``exog`` was equal to the number of
   parameters, and did not check the length of ``weights`` against the number

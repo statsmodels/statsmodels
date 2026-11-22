@@ -2880,3 +2880,30 @@ def test_ols_rsquared_genuine_variation_not_flagged():
         rsquared = res.rsquared
     assert np.isfinite(rsquared)
     assert not any("R-squared is undefined" in str(x.message) for x in w)
+
+
+def test_ols_rsquared_bool_endog():
+    # GH10901 review: a bool endog (linear probability model) worked on
+    # main; _is_constant must not raise TypeError on it (np.ptp is not
+    # defined for bool). A varying bool series gets a finite R-squared.
+    nobs = 100
+    rng = np.random.default_rng(20261122)
+    endog = rng.random(nobs) > 0.5
+    exog = add_constant(np.arange(float(nobs)))
+    res = OLS(endog, exog).fit()
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        rsquared = res.rsquared
+    assert np.isfinite(rsquared)
+    assert not any("R-squared is undefined" in str(x.message) for x in w)
+
+
+def test_ols_rsquared_constant_bool_endog():
+    # GH10901 review: a constant bool endog is constant, so R-squared is
+    # undefined and must be NaN with a RuntimeWarning, not a TypeError
+    endog = np.ones(250, dtype=bool)
+    exog = add_constant(np.arange(250.0))
+    res = OLS(endog, exog).fit()
+    assert res.centered_tss == 0.0
+    with pytest.warns(RuntimeWarning, match="R-squared is undefined"):
+        assert np.isnan(res.rsquared)
