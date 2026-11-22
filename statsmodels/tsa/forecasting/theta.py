@@ -597,14 +597,20 @@ class ThetaModelResults:
         Notes
         -----
         The variance of the h-step forecast is assumed to follow from the
-        integrated Moving Average structure of the Theta model, and so is
-        :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`. The prediction interval
+        integrated Moving Average structure of the Theta model, an IMA(1,1)
+        with moving average coefficient :math:`\alpha-1`, and so is
+        :math:`\sigma^2(1 + (h-1)\alpha^2)`. The prediction interval
         assumes that innovations are normally distributed.
+
+        .. versionchanged:: 0.15.1
+
+           The variance is :math:`\sigma^2(1 + (h-1)\alpha^2)`. It used to
+           be :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`, which is larger
+           whenever :math:`\alpha < 1`, so the intervals were too wide after
+           the first step.
         """
         model_alpha = self.params.iloc[1]
-        sigma2_h = (
-            1 + np.arange(steps) * (1 + (model_alpha - 1) ** 2)
-        ) * self.sigma2
+        sigma2_h = (1 + np.arange(steps) * model_alpha**2) * self.sigma2
         sigma_h = np.sqrt(sigma2_h)
         quantile = stats.norm.ppf(alpha / 2)
         predictions = self.forecast(steps, theta)
@@ -656,9 +662,17 @@ class ThetaModelResults:
         Notes
         -----
         The variance of the h-step forecast is assumed to follow from the
-        integrated Moving Average structure of the Theta model, and so is
-        :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`. The prediction interval
+        integrated Moving Average structure of the Theta model, an IMA(1,1)
+        with moving average coefficient :math:`\alpha-1`, and so is
+        :math:`\sigma^2(1 + (h-1)\alpha^2)`. The prediction interval
         assumes that innovations are normally distributed.
+
+        .. versionchanged:: 0.15.1
+
+           The variance is :math:`\sigma^2(1 + (h-1)\alpha^2)`. It used to
+           be :math:`\sigma^2(1 + (h-1)(1 + (\alpha-1)^2))`, which is larger
+           whenever :math:`\alpha < 1`, so the intervals were too wide after
+           the first step.
         """
         from statsmodels.graphics.utils import _import_mpl, create_mpl_fig
 
