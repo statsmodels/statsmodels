@@ -60,7 +60,7 @@ def _find_x12(x12path=None, prefer_x13=True):
 
     Parameters
     ----------
-    x12path : str, optional
+    x12path : str or Path, optional
         The path to the x12 or x13 binary, or to the directory containing
         it. If None, the X12PATH or X13PATH environmental variable is used.
     prefer_x13 : bool, optional
@@ -74,7 +74,11 @@ def _find_x12(x12path=None, prefer_x13=True):
         The full path to the located binary, or False if none was found.
     """
     _binary_names = BINARY_NAMES
-    if x12path is not None and x12path.endswith(_binary_names):
+    if x12path is not None:
+        x12path = os.fspath(x12path)
+    # Windows file names are not case sensitive, and shutil.which gives the
+    # extension in the case used by PATHEXT (.EXE)
+    if x12path is not None and x12path.lower().endswith(_binary_names):
         # remove binary from path if path is not a directory
         if not Path(x12path).is_dir():
             x12path = Path(x12path).parent
@@ -500,7 +504,7 @@ def x13_arima_analysis(
     print_stdout : bool, optional
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True.
-    x12path : str, optional
+    x12path : str or Path, optional
         The path to x12 or x13 binary. If None, the program will attempt
         to find x13as or x12a on the PATH or by looking at X13PATH or
         X12PATH depending on the value of prefer_x13.
@@ -786,7 +790,7 @@ def x13_arima_select_order(
     print_stdout : bool, optional
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True.
-    x12path : str, optional
+    x12path : str or Path, optional
         The path to x12 or x13 binary. If None, the program will attempt
         to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
         depending on the value of prefer_x13.
