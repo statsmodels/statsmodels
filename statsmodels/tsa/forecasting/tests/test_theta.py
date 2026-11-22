@@ -12,9 +12,9 @@ from scipy import stats
 
 from statsmodels.tsa.forecasting.theta import ThetaModel
 from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.stattools import acf
 from statsmodels.tsa.tests._contract import series_forms
-from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 SMOKE_PARAMS = list(product(["array", "dataframe", "series"], [True, False]))
 SMOKE_IDS = [f"type: {typ}, exponential: {exp}" for typ, exp in SMOKE_PARAMS]
