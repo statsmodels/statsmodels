@@ -308,10 +308,10 @@ def test_multi_column_frame_keeps_names():
     pd.testing.assert_frame_equal(pred.se_mean, expected_se)
     expected_t = pd.DataFrame(values / se, index=index, columns=["a", "b"])
     pd.testing.assert_frame_equal(pred.tvalues, expected_t, rtol=1e-14)
-    stat, pvalue = pred.t_test()
-    pd.testing.assert_frame_equal(stat, expected_t, rtol=1e-14)
+    t_test = pred.t_test()
+    pd.testing.assert_frame_equal(t_test[0], expected_t, rtol=1e-14)
     np.testing.assert_allclose(
-        pvalue, 2 * stats.norm.sf(np.abs(values / se)), rtol=1e-12
+        t_test[1], 2 * stats.norm.sf(np.abs(values / se)), rtol=1e-12
     )
 
 
