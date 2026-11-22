@@ -351,3 +351,66 @@ def test_partials_logistic():
             desired = np.diag(evaluated[:, j, t] - evaluated[:, j, t] ** 2)
             desired[0, 1] = desired[1, 0] = -np.multiply(*evaluated[:, j, t])
             assert_allclose(partials[..., j, t], desired)
+
+
+def hamilton_filter_log_reference(log_densities, transition):
+    """
+    Hamilton (1989) filter written out for a likelihood that depends only on
+    the current regime: log_densities[i, t] = log f(y_t | S_t = i, Y_{t-1})
+    and transition[i, j] = Pr[S_t = i | S_{t-1} = j]. The regime before the
+    first observation has the stationary distribution. Each log f(y_t |
+    Y_{t-1}) is a log-sum-exp shifted by its largest term.
+    """
+    k_regimes, nobs = log_densities.shape
+    lhs = np.vstack([np.eye(k_regimes) - transition, np.ones((1, k_regimes))])
+    filtered = np.linalg.lstsq(lhs, np.r_[np.zeros(k_regimes), 1.0], rcond=None)[0]
+    llf_obs = np.empty(nobs)
+    filtered_probabilities = np.empty((k_regimes, nobs))
+    for t in range(nobs):
+        log_joint = np.log(transition @ filtered) + log_densities[:, t]
+        largest = log_joint.max()
+        llf_obs[t] = largest + np.log(np.exp(log_joint - largest).sum())
+        filtered = np.exp(log_joint - llf_obs[t])
+        filtered_probabilities[:, t] = filtered
+    return llf_obs, filtered_probabilities
+
+
+class GivenLoglikelihoods(markov_switching.MarkovSwitching):
+    # A model whose log-likelihood depends only on the current regime
+    # (order 0), given as an array shaped (k_regimes, nobs)
+    def __init__(self, conditional_loglikelihoods):
+        self._given = conditional_loglikelihoods
+        super().__init__(np.zeros(conditional_loglikelihoods.shape[1]), k_regimes=2)
+
+    def _conditional_loglikelihoods(self, params):
+        return self._given
+
+
+@pytest.mark.parametrize("model", ["regression", "order 0"])
+def test_hamilton_filter_extreme_observation(model):
+    # Observation 10 is about 200 standard deviations from both regime means,
+    # so its log density is about -2e4 in both regimes: the filter must not
+    # underflow to a log-likelihood of -inf
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(20) + np.repeat([0.0, 3.0], 10)
+    endog[10] = 200.0
+    transition = np.array([[0.9, 0.2], [0.1, 0.8]])
+    mu = np.array([0.2, 2.8])
+    log_densities = -0.5 * (endog - mu[:, None]) ** 2 - 0.5 * np.log(2 * np.pi)
+    if model == "regression":
+        mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+        params = np.r_[transition[0], mu, 1.0]
+    else:
+        mod = GivenLoglikelihoods(log_densities)
+        params = transition[0]
+    llf_obs, filtered = hamilton_filter_log_reference(log_densities, transition)
+    assert llf_obs[10] < -1.9e4
+
+    res = mod.smooth(params, cov_type="none")
+    assert_allclose(res.llf_obs, llf_obs, rtol=1e-12)
+    assert_allclose(res.llf, llf_obs.sum(), rtol=1e-12)
+    assert_allclose(res.filtered_marginal_probabilities, filtered.T, rtol=1e-10)
+    # The smoothed probabilities are probabilities
+    smoothed = res.smoothed_marginal_probabilities
+    assert np.all((smoothed >= 0) & (smoothed <= 1))
+    assert_allclose(smoothed.sum(axis=1), 1.0, rtol=1e-12)
