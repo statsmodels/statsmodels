@@ -32,9 +32,12 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
     trend : {'n', 'c', 't', 'ct'}, optional
         Whether or not to include a trend. To include a constant, time trend,
         or both, set `trend='c'`, `trend='t'`, or `trend='ct'`. For no trend,
-        set `trend='n'`. Default is a constant.
+        set `trend='n'`. Default is a constant. The time trend counts every
+        observation of `endog` from 1, including the first `order`
+        observations, which only provide the initial lags.
     exog : array_like, optional
-        Array of exogenous regressors, shaped nobs x k.
+        Array of exogenous regressors, shaped (nobs, k), or (nobs,) for a
+        single regressor.
     exog_tvtp : array_like, optional
         Array of exogenous or lagged variables to use in calculating
         time-varying transition probabilities (TVTP). TVTP is only used if this
@@ -183,8 +186,11 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         Returns
         -------
         predict : ndarray
-            Array of predictions conditional on current, and possibly past,
-            regimes
+            Array of predictions conditional on the current regime and the
+            regimes of the previous `order` periods, shaped
+            (k_regimes,) * (order + 1) + (nobs,). The first axis is the
+            current regime, the next one the regime one period earlier, and
+            so on.
         """
         params = np.array(params, ndmin=1)
 
@@ -468,11 +474,13 @@ class MarkovAutoregressionResults(markov_regression.MarkovRegressionResults):
         The fitted model instance
     params : ndarray
         Fitted parameters
-    filter_results : HamiltonFilterResults or KimSmootherResults instance
+    results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
     cov_type : str, optional
         The type of covariance matrix estimator to use. Can be one of 'approx',
-        'opg', 'robust', or 'none'.
+        'opg', 'robust', or 'none'. Default is 'opg'.
+    cov_kwds : dict, optional
+        Keywords for alternative covariance estimators.
 
     Attributes
     ----------
@@ -480,8 +488,9 @@ class MarkovAutoregressionResults(markov_regression.MarkovRegressionResults):
         A reference to the model that was fit.
     filter_results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
-    nobs : float
-        The number of observations used to fit the model.
+    nobs : int
+        The number of observations used to fit the model, excluding the
+        first `order` observations, which only provide the initial lags.
     params : ndarray
         The parameters of the model.
     scale : float
