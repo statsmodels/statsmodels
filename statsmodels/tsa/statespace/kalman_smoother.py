@@ -380,12 +380,6 @@ class KalmanSmoother(KalmanFilter):
                 smoother_output, smooth_method, **kwargs
             ))
 
-        # Check that the filter and statespace weren't just recreated
-        if create_filter or create_statespace:
-            raise ValueError("Passed settings forced re-creation of the"
-                             " Kalman filter. Please run `_filter` before"
-                             " running `_smooth`.")
-
         # Get the appropriate smoother
         smoother = self._kalman_smoothers[prefix]
 
@@ -873,7 +867,7 @@ class SmootherResults(FilterResults):
         self.__smoothed_state_autocovariance = {}
 
     def _smoothed_state_autocovariance(self, shift, start, end,
-                                       extend_kwargs=None):
+                                       extend_kwargs):
         """
         Compute "forward" autocovariances, Cov(t, t+j)
 
@@ -890,7 +884,7 @@ class SmootherResults(FilterResults):
             The end of the interval (exclusive) autocovariances to compute and
             return. Note that since it is an exclusive endpoint, the returned
             autocovariances do not include the value at this index.
-        extend_kwargs : dict, optional
+        extend_kwargs : dict
             Keyword arguments containing updated state space system matrices
             for handling out-of-sample autocovariance computations in
             time-varying state space models.
@@ -901,9 +895,6 @@ class SmootherResults(FilterResults):
             Array of autocovariance matrices, shaped `(n, k_states, k_states)`
             where `n = end - start`.
         """
-        if extend_kwargs is None:
-            extend_kwargs = {}
-
         # Size of returned array in the time dimension
         n = end - start
 
@@ -1579,15 +1570,10 @@ class SmootherResults(FilterResults):
                     revision_weights = revision_weights[0]
                     revision_detailed_impacts = revision_detailed_impacts[0]
 
-            # Get total revision impacts
+            # Get total revision impacts (the revision model extends through
+            # `end`)
             revised_impact_forecasts = (
                 revision_results.smoothed_forecasts[..., start:end])
-            if end > revision_results.nobs:
-                predict_start = max(start, revision_results.nobs)
-                p = revision_results.predict(
-                    start=predict_start, end=end, **extend_kwargs)
-                revised_impact_forecasts = np.concatenate(
-                    (revised_impact_forecasts, p.forecasts), axis=1)
 
             revision_impacts = (revised_impact_forecasts -
                                 prev_impacted_forecasts).T
