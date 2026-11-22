@@ -204,6 +204,7 @@ def get_index_loc(key, index):
                 # (date_key is the period that contains the start of key)
                 if (
                     isinstance(key, (str, Period))
+                    and pd.notna(date_key)
                     and Period(key).end_time <= date_key.end_time
                 ):
                     key = date_key

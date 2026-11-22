@@ -2592,3 +2592,19 @@ def test_period_index_coarser_key():
     index = pd.period_range("2000-01", periods=24, freq="M")
     loc, _, _ = tsa_model.get_index_loc("2001", index)
     assert index[loc].equals(pd.period_range("2001-01", "2001-12", freq="M"))
+
+
+@pytest.mark.parametrize("key", ["", "NaT"])
+@pytest.mark.parametrize("which", ["start", "end"])
+def test_period_index_nat_key_raises_key_error(key, which):
+    # A key that pandas parses as NaT on a PeriodIndex raises the KeyError
+    # of an unmatched key, not an AttributeError from NaT
+    from statsmodels.tsa.ar_model import AutoReg
+
+    index = pd.period_range("2000-01", periods=24, freq="M")
+    y = pd.Series(np.arange(24.0) + np.sin(np.arange(24.0)), index=index)
+    res = AutoReg(y, 1).fit()
+    kwargs = {"start": 1, "end": 30}
+    kwargs[which] = key
+    with pytest.raises(KeyError, match="could not be matched"):
+        res.predict(**kwargs)
