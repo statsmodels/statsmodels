@@ -442,3 +442,19 @@ def test_rawspec_name_with_backslash(name):
     lines = [line.strip() for line in res.results.splitlines()]
     assert f"Series Title- {name}" in lines
     assert f"Series Name- {name}" in lines
+
+
+def test_rawspec_endog_not_pandas():
+    gdp = quarterly_data.realgdp
+    rawspec = "series{}\nx11{mode=mult}"
+    expected = x13_arima_analysis(gdp, rawspec=rawspec)
+
+    res = x13_arima_analysis(
+        gdp.to_numpy(), start="1959-01-01", freq="QS", rawspec=rawspec
+    )
+
+    index = pd.date_range("1959-01-01", periods=gdp.shape[0], freq="QS")
+    pd.testing.assert_index_equal(res.seasadj.index, index)
+    np.testing.assert_allclose(
+        res.seasadj.to_numpy(), expected.seasadj.to_numpy(), rtol=1e-12
+    )

@@ -650,3 +650,61 @@ def test_x12path_named_binary_missing(tmp_path):
     res = x13.x13_arima_analysis(_monthly_endog(), x12path=directory / "x13as_ascii")
 
     assert res.stdout.decode().strip() == str(directory / "x12a")
+
+
+@pytest.mark.parametrize(
+    "endog", [list(range(24)), tuple(range(24))], ids=["list", "tuple"]
+)
+def test_rawspec_endog_not_pandas(no_x12, endog):
+    rawspec = "series{}\nx11{mode=add}"
+
+    spec = x13.x13_arima_analysis(
+        endog, start="1990-04-01", freq="QS", rawspec=rawspec, speconly=True
+    )
+
+    # start and freq give the dates of the series spec, which is spliced into
+    # the series spec of rawspec; save is added to the x11 spec
+    data = " ".join(str(value) for value in range(24))
+    expected = f"""
+    Series {{
+        data=({data})
+        appendbcst=no
+        appendfcst=no
+        period=4
+        start=1990.2
+        title="Unnamed Series"
+        name="Unnamed Series"
+    }}
+    x11{{
+        save=(d11 d12 d13)
+        mode=add}}
+    """
+    assert spec.split() == expected.split()
+
+
+def test_rawspec_start_freq_with_dates_ignored(no_x12):
+    endog = _monthly_endog()
+
+    spec = x13.x13_arima_analysis(
+        endog, start="1990-04-01", freq="QS", rawspec="series{}", speconly=True
+    )
+
+    # the dates of the index are used, as without rawspec
+    assert spec == x13.x13_arima_analysis(endog, rawspec="series{}", speconly=True)
+    assert "start=2000.1" in spec.split()
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"diff": (1, 1)},
+        {"exog": pd.Series(range(36), name="x")},
+        {"exog": pd.DataFrame({"x": range(36), "y": range(36, 72)})},
+    ],
+    ids=["diff", "exog_series", "exog_dataframe"],
+)
+def test_rawspec_diff_exog_raise(no_x12, kwargs):
+    with pytest.raises(ValueError, match="other arguments not allowed for diff and exog"):
+        x13.x13_arima_analysis(
+            _monthly_endog(), rawspec="series{}", speconly=True, **kwargs
+        )

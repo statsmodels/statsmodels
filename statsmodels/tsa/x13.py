@@ -636,10 +636,10 @@ def x13_arima_analysis(
     # if specfile string (or path) is passed
     else:
 
-        if any([diff, exog, start, freq]):
+        if diff is not None or exog is not None:
 
             raise ValueError(
-                "other arguments not allowed for diff, exog, start, freq "
+                "other arguments not allowed for diff and exog "
                 "when rawspec is specified"
             )
 
