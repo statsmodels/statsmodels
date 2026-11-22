@@ -1,0 +1,4 @@
+- :class:`~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression` with ``order`` below 1 raises a ``ValueError``. With
+  ``order=0`` the model could not be fit, and a negative order failed
+  later with unrelated errors; :class:`~statsmodels.tsa.regime_switching.markov_regression.MarkovRegression` is the model without
+  autoregressive lags. :pr:`11008`
