@@ -8,6 +8,8 @@ from statsmodels.compat.numpy import inplace_reshape
 
 import numpy as np
 
+from statsmodels.tools.validation import array_like
+
 from . import tools
 from .initialization import Initialization, _StationaryInitializationError
 from .tools import find_best_blas_type, validate_matrix_shape, validate_vector_shape
@@ -557,9 +559,15 @@ class Representation:
 
         Parameters
         ----------
-        endog : ndarray
-            An observed time-series process :math:`y`, in a form accepted by
-            `bind`.
+        endog : array_like
+            An observed time-series process :math:`y`. An ndarray is bound as
+            given (see `bind`); other input (such as a list or a pandas
+            object) is read as shaped (`nobs`, `k_endog`), or (`nobs`,) for a
+            single series.
+
+            .. versionchanged:: 0.15.1
+
+               Input other than an ndarray is accepted. It raised ValueError.
         **kwargs
             Keyword arguments to pass to the new state space representation
             model constructor. Those that are not specified are copied from
@@ -574,6 +582,8 @@ class Representation:
         If some system matrices are time-varying, then new time-varying
         matrices *must* be provided.
         """
+        if not isinstance(endog, np.ndarray):
+            endog = np.ascontiguousarray(endog)
         kwargs = self._clone_kwargs(endog, **kwargs)
         mod = self.__class__(**kwargs)
         mod.bind(endog)
@@ -730,9 +740,19 @@ class Representation:
 
         Parameters
         ----------
-        new_endog : ndarray
-            New observation data, shaped (`nobs`, `k_endog`), to compare
-            against the currently bound endogenous data.
+        new_endog : array_like
+            New observation data, shaped (`nobs`, `k_endog`), or (`nobs`,)
+            for a single series, to compare against the currently bound
+            endogenous data.
+
+            .. versionchanged:: 0.15.1
+
+               A 1-dimensional `new_endog` of a model with a single series
+               is compared observation by observation. Each of its values
+               was compared with every observation, so that nearly all of
+               them were reported as revisions. A list is accepted (it
+               raised if longer than the data), and a number of columns
+               other than `k_endog` raises ValueError.
         tolerance : float, optional
             Tolerance used when comparing values to determine whether a
             change represents a revision. Default is 1e-10.
@@ -749,6 +769,9 @@ class Representation:
             was previously missing).
         """
         # TODO: move this function to tools?
+        new_endog = array_like(
+            new_endog, "new_endog", dtype=None, ndim=2, shape=(None, self.k_endog)
+        )
         endog = self.endog.T
         if len(new_endog) < len(endog):
             raise ValueError(
