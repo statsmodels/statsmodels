@@ -2083,6 +2083,12 @@ class GEE(GLM):
         When using the QIC for models with unknown scale parameter, use a
         common estimate of the scale parameter for all models being compared.
 
+        .. versionchanged:: 0.15.1
+
+           The penalty of the QIC uses the model-based information under
+           independence, which includes the inverse of the variance function
+           of the family.  It was only correct for the Gaussian family.
+
         References
         ----------
         .. [Pan2001] W. Pan (2001).  Akaike's information criterion in generalized
@@ -2093,13 +2099,14 @@ class GEE(GLM):
 
         means = []
         omega = 0.0
-        # omega^-1 is the model-based covariance assuming independence
+        # omega^-1 is the model-based covariance assuming independence,
+        # omega = D' V^-1 D with V = scale * diag(varfunc(mean))
 
         for i in range(self.num_group):
             expval, lpr = self.cached_means[i]
             means.append(expval)
             dmat = self.mean_deriv(self.exog_li[i], lpr)
-            omega += np.dot(dmat.T, dmat) / scale
+            omega += np.dot(dmat.T, dmat / varfunc(expval)[:, None]) / scale
 
         means = np.concatenate(means)
 
