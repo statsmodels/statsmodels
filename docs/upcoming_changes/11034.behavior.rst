@@ -1,0 +1,5 @@
+- The penalty of ``GEE.qic``, and so the QIC of ``GEE`` results, used a
+  model-based information without the inverse of the variance function of the
+  family, which is right only for the Gaussian family. The QIC of results of
+  other families, such as the Binomial and the Poisson, changes; the
+  quasi-likelihood and ``qicu`` do not. :pr:`11034`
