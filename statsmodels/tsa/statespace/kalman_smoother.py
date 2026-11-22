@@ -13,7 +13,11 @@ import numpy as np
 from statsmodels.tools.sm_exceptions import OutputWarning
 from statsmodels.tools.validation import string_like
 from statsmodels.tsa.statespace import initialization, tools
-from statsmodels.tsa.statespace.kalman_filter import FilterResults, KalmanFilter
+from statsmodels.tsa.statespace.kalman_filter import (
+    FILTER_UNIVARIATE,
+    FilterResults,
+    KalmanFilter,
+)
 from statsmodels.tsa.statespace.representation import OptionWrapper
 from statsmodels.tsa.statespace.tools import (
     copy_index_matrix,
@@ -152,15 +156,16 @@ class KalmanSmoother(KalmanFilter):
         return None
 
     def _initialize_smoother(self, smoother_output=None, smooth_method=None,
-                             prefix=None, **kwargs):
+                             **kwargs):
         if smoother_output is None:
             smoother_output = self.smoother_output
         if smooth_method is None:
             smooth_method = self.smooth_method
 
-        # Make sure we have the required Kalman filter
+        # Make sure we have the required Kalman filter (for the prefix of the
+        # current representation matrices)
         prefix, dtype, create_filter, create_statespace = (
-            self._initialize_filter(prefix, **kwargs)
+            self._initialize_filter(**kwargs)
         )
 
         # Determine if we need to (re-)create the smoother
@@ -376,12 +381,11 @@ class KalmanSmoother(KalmanFilter):
                     continue
                 setattr(self, name, kwargs[name])
 
-    def _smooth(self, smoother_output=None, smooth_method=None, prefix=None,
-                complex_step=False, results=None, **kwargs):
+    def _smooth(self, smoother_output=None, smooth_method=None, **kwargs):
         # Initialize the smoother
         prefix, dtype, create_smoother, create_filter, create_statespace = (
             self._initialize_smoother(
-                smoother_output, smooth_method, prefix=prefix, **kwargs
+                smoother_output, smooth_method, **kwargs
             ))
 
         # Check that the filter and statespace weren't just recreated
@@ -399,7 +403,7 @@ class KalmanSmoother(KalmanFilter):
         return smoother
 
     def smooth(self, smoother_output=None, smooth_method=None, results=None,
-               run_filter=True, prefix=None, complex_step=False,
+               run_filter=None, prefix=None, complex_step=False,
                update_representation=True, update_filter=True,
                update_smoother=True, **kwargs):
         """
@@ -414,20 +418,47 @@ class KalmanSmoother(KalmanFilter):
             Determines which Kalman smoothing approach to use. Default is
             the smoother method specified by `smooth_method` in the current
             state space model.
+
+            .. versionchanged:: 0.15.1
+
+               `smooth_method` is used. Before, it was ignored and the
+               smoothing method of the model was always used. A method that
+               cannot be used with the filter method (univariate smoothing
+               without univariate filtering, or the reverse) is still
+               ignored, with a FutureWarning.
         results : type or object, optional
-            If a type, then that type is instantiated and returned with the
-            result of both filtering and smoothing.
-            If an object, then that object is updated with the smoothing data.
-            If None, then a SmootherResults object is returned with both
-            filtering and smoothing results.
+            Not used. A new object of the model's results class is always
+            returned.
+
+            .. deprecated:: 0.15.1
+
+               `results` has no effect. It is deprecated and will be removed
+               after statsmodels 0.17 is released.
         run_filter : bool, optional
-            Whether or not to run the Kalman filter prior to smoothing. Default
-            is True.
-        prefix : str
-            The prefix of the datatype. Usually only used internally.
+            Not used. The Kalman filter is always run before smoothing.
+
+            .. deprecated:: 0.15.1
+
+               `run_filter` has no effect. It is deprecated and will be
+               removed after statsmodels 0.17 is released.
+        prefix : str, optional
+            Not used. The prefix of the current representation matrices is
+            always used.
+
+            .. deprecated:: 0.15.1
+
+               `prefix` has no effect. It is deprecated and will be removed
+               after statsmodels 0.17 is released.
         complex_step : bool, optional
             Whether or not to compute the complex-step derivative. Default is
             False.
+
+            .. versionchanged:: 0.15.1
+
+               `complex_step` is passed to the Kalman filter. Before, it was
+               ignored, so that a stationary initialization of the state was
+               computed as for real parameters, which gave a wrong
+               complex-step derivative.
         update_representation : bool, optional
             Whether or not to update the state space representation with the
             current model's parameters. Default is True.
@@ -445,9 +476,38 @@ class KalmanSmoother(KalmanFilter):
         -------
         SmootherResults object
         """
+        unused = {"results": results, "run_filter": run_filter,
+                  "prefix": prefix}
+        for name, value in unused.items():
+            if value is not None:
+                warnings.warn(
+                    f"{name} has no effect in KalmanSmoother.smooth and is"
+                    " deprecated. It will be removed after statsmodels 0.17"
+                    " is released.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
 
         # Run the filter
-        kfilter = self._filter(**kwargs)
+        kfilter = self._filter(complex_step=complex_step, **kwargs)
+
+        # smooth_method was ignored, so smoothing used the model's method. A
+        # method that cannot smooth the output of this filter (the univariate
+        # smoother needs the univariate filter, and the univariate filter
+        # needs it) is still ignored.
+        if smooth_method:
+            univariate_filter = bool(kfilter.filter_method & FILTER_UNIVARIATE)
+            if bool(smooth_method & SMOOTH_UNIVARIATE) != univariate_filter:
+                warnings.warn(
+                    "smooth_method cannot be used with the filter method of "
+                    "this model (univariate smoothing requires univariate "
+                    "filtering, and univariate filtering requires univariate "
+                    "smoothing), and it is ignored. After statsmodels 0.17 "
+                    "is released, this will raise a ValueError.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+                smooth_method = None
 
         # Create the results object
         results = self.results_class(self)
@@ -463,7 +523,7 @@ class KalmanSmoother(KalmanFilter):
         # Run the smoother
         if smoother_output is None:
             smoother_output = self.smoother_output
-        smoother = self._smooth(smoother_output, results=results, **kwargs)
+        smoother = self._smooth(smoother_output, smooth_method, **kwargs)
 
         # Update the results
         if update_smoother:

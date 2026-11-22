@@ -14,6 +14,7 @@ License: Simplified-BSD
 """
 import contextlib
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
@@ -22,8 +23,12 @@ import pytest
 
 from statsmodels import datasets
 from statsmodels.tools.sm_exceptions import OutputWarning
-from statsmodels.tsa.statespace import mlemodel, sarimax, varmax
-from statsmodels.tsa.statespace.kalman_filter import FILTER_UNIVARIATE
+from statsmodels.tsa.statespace import kalman_smoother, mlemodel, sarimax, varmax
+from statsmodels.tsa.statespace.kalman_filter import (
+    FILTER_UNIVARIATE,
+    INVERT_UNIVARIATE,
+    SOLVE_LU,
+)
 from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTH_ALTERNATIVE,
     SMOOTH_CLASSICAL,
@@ -1679,3 +1684,185 @@ def test_smoothed_state_autocovariances_cache_extend_kwargs(lag, extend_first):
     # atol: some autocovariances are close to zero
     assert_allclose(extended, desired, rtol=1e-8, atol=1e-12)
     assert_allclose(default, desired[..., : nobs + lag + 1], rtol=1e-8, atol=1e-12)
+
+
+SMOOTH_ARGUMENTS_RESULTS = [
+    "scaled_smoothed_estimator",
+    "scaled_smoothed_estimator_cov",
+    "smoothing_error",
+    "smoothed_state",
+    "smoothed_state_cov",
+    "smoothed_state_autocov",
+    "smoothed_measurement_disturbance",
+    "smoothed_state_disturbance",
+    "smoothed_measurement_disturbance_cov",
+    "smoothed_state_disturbance_cov",
+]
+
+
+def _smooth_arguments_model():
+    # Bivariate model with correlated states and a diagonal observation
+    # covariance (so the univariate filter does not diagonalize it)
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal((40, 2)).cumsum(0) * 0.1 + rng.standard_normal((40, 2))
+    mod = mlemodel.MLEModel(endog, k_states=2, k_posdef=2)
+    mod["design"] = np.array([[1.0, 0.0], [0.5, 1.0]])
+    mod["obs_intercept"] = np.array([0.1, -0.2])
+    mod["obs_cov"] = np.diag([1.0, 0.7])
+    mod["transition"] = np.array([[0.9, 0.1], [0.0, 0.8]])
+    mod["state_intercept"] = np.array([0.05, 0.02])
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.array([[0.5, 0.2], [0.2, 0.4]])
+    mod.ssm.initialize_known(np.array([0.3, -0.1]), np.eye(2))
+    return mod
+
+
+@pytest.mark.parametrize("use_ssm", [True, False])
+def test_smooth_complex_step(use_ssm):
+    # complex_step is passed on to the Kalman filter, so the stationary
+    # initialization of the AR(2) is complex-step safe and the derivative of
+    # the loglikelihood and of the smoothed state agree with central finite
+    # differences (the loglikelihood derivative also with filter())
+    rng = np.random.default_rng(20261122)
+    mod = sarimax.SARIMAX(rng.standard_normal(50), order=(2, 0, 0))
+    params = np.array([0.5, 0.2, 1.0])
+    h = 1e-20
+    cs_params = params + np.array([h * 1j, 0, 0])
+    if use_ssm:
+        # As in MLEModel.smooth, the complex step needs an inversion method
+        # without the (conjugating) Cholesky factorization
+        mod.update(cs_params, complex_step=True)
+        res = mod.ssm.smooth(
+            complex_step=True, inversion_method=INVERT_UNIVARIATE | SOLVE_LU
+        )
+    else:
+        res = mod.smooth(cs_params, complex_step=True)
+    llf_derivative = np.imag(res.llf) / h
+    state_derivative = np.imag(res.smoothed_state) / h
+
+    filtered = mod.filter(cs_params, complex_step=True)
+    assert_allclose(llf_derivative, np.imag(filtered.llf) / h, rtol=1e-10)
+
+    # Central differences; their error is about 1e-9 relative here, so the
+    # tolerance catches a wrong derivative (it was 11% off) but not rounding
+    eps = 1e-6
+    step = np.array([eps, 0, 0])
+    llf_fd = (mod.loglike(params + step) - mod.loglike(params - step)) / (2 * eps)
+    assert_allclose(llf_derivative, llf_fd, rtol=1e-6)
+    state_plus = mod.smooth(params + step).smoothed_state
+    state_minus = mod.smooth(params - step).smoothed_state
+    state_fd = (state_plus - state_minus) / (2 * eps)
+    # atol: some derivatives are close to zero, so scale by the largest one.
+    # The first period is left out: the results re-initialize the state
+    # without the complex step before smoothing, and the smoother reads the
+    # initial state covariance again in the first period (a separate problem).
+    atol = 1e-6 * np.max(np.abs(state_fd))
+    assert_allclose(state_derivative[:, 1:], state_fd[:, 1:], rtol=1e-6, atol=atol)
+
+
+def test_smooth_smooth_method_argument():
+    # smooth_method selects the smoothing method for this call only. The
+    # univariate smoother needs the univariate filter, and the univariate
+    # filter needs it: a method that cannot be used was ignored on main (the
+    # model's method was used), and still is, with a FutureWarning
+    conventional = _smooth_arguments_model().ssm.smooth()
+    mod = _smooth_arguments_model()
+    with pytest.warns(FutureWarning, match="smooth_method cannot be used"):
+        res = mod.ssm.smooth(smooth_method=SMOOTH_UNIVARIATE)
+    for name in SMOOTH_ARGUMENTS_RESULTS:
+        assert_allclose(
+            getattr(res, name), getattr(conventional, name), rtol=1e-13
+        )
+    univariate = _smooth_arguments_model()
+    univariate.ssm.filter_univariate = True
+    with pytest.warns(FutureWarning, match="smooth_method cannot be used"):
+        res = univariate.ssm.smooth(
+            smooth_method=kalman_smoother.SMOOTH_CONVENTIONAL
+        )
+    desired = _smooth_arguments_model()
+    desired.ssm.filter_univariate = True
+    desired = desired.ssm.smooth()
+    for name in SMOOTH_ARGUMENTS_RESULTS:
+        assert_allclose(getattr(res, name), getattr(desired, name), rtol=1e-13)
+
+    # The methods that can be used do not warn
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        for method in [0, SMOOTH_ALTERNATIVE, SMOOTH_CLASSICAL]:
+            res = _smooth_arguments_model().ssm.smooth(smooth_method=method)
+            assert_allclose(
+                res.smoothed_state, conventional.smoothed_state, rtol=1e-10
+            )
+        for method in [0, SMOOTH_UNIVARIATE]:
+            univariate = _smooth_arguments_model()
+            univariate.ssm.filter_univariate = True
+            res = univariate.ssm.smooth(smooth_method=method)
+            assert_allclose(
+                res.smoothed_state, desired.smoothed_state, rtol=1e-13
+            )
+
+    # A model set to the conventional smoother cannot smooth the output of the
+    # univariate filter, unless the argument selects the univariate smoother
+    mod = _smooth_arguments_model()
+    mod.ssm.filter_univariate = True
+    mod.ssm.smooth_method = kalman_smoother.SMOOTH_CONVENTIONAL
+    with pytest.raises(ValueError, match="Invalid smoothing method"):
+        mod.ssm.smooth()
+    res = mod.ssm.smooth(smooth_method=SMOOTH_UNIVARIATE)
+    assert mod.ssm.smooth_method == kalman_smoother.SMOOTH_CONVENTIONAL
+
+    # The default method for the univariate filter is the univariate smoother
+    default = _smooth_arguments_model()
+    default.ssm.filter_univariate = True
+    desired = default.ssm.smooth()
+    for name in SMOOTH_ARGUMENTS_RESULTS:
+        assert_allclose(getattr(res, name), getattr(desired, name), rtol=1e-13)
+
+    # and it agrees with the conventional (multivariate) filter and smoother
+    conventional = _smooth_arguments_model().ssm.smooth()
+    assert_allclose(res.smoothed_state, conventional.smoothed_state, rtol=1e-10)
+    assert_allclose(
+        res.smoothed_state_cov, conventional.smoothed_state_cov, rtol=1e-10
+    )
+
+
+def test_smooth_filter_method_argument():
+    # filter_method is passed to the Kalman filter, as the other keyword
+    # arguments are (it raised a TypeError: multiple values for filter_method)
+    mod = _smooth_arguments_model()
+    res = mod.ssm.smooth(filter_method=FILTER_UNIVARIATE)
+    assert np.all(res.univariate_filter == 1)
+
+    desired_mod = _smooth_arguments_model()
+    desired_mod.ssm.filter_univariate = True
+    desired = desired_mod.ssm.smooth()
+    for name in SMOOTH_ARGUMENTS_RESULTS:
+        assert_allclose(getattr(res, name), getattr(desired, name), rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"results": kalman_smoother.SmootherResults},
+        {"run_filter": False},
+        {"run_filter": True},
+        {"prefix": "d"},
+        {"prefix": "s"},
+    ],
+)
+def test_smooth_unused_arguments_deprecated(kwargs):
+    # results, run_filter and prefix have no effect: they warn and the output
+    # is that of a call without them
+    mod = _smooth_arguments_model()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        desired = mod.ssm.smooth()
+    name = next(iter(kwargs))
+    with pytest.warns(FutureWarning, match=f"{name} has no effect") as record:
+        res = mod.ssm.smooth(**kwargs)
+    # The warning points to the caller
+    assert record[0].filename == __file__
+    assert type(res) is kalman_smoother.SmootherResults
+    assert res.smoothed_state.dtype == np.float64
+    for name in SMOOTH_ARGUMENTS_RESULTS:
+        assert_allclose(getattr(res, name), getattr(desired, name), rtol=1e-14)
