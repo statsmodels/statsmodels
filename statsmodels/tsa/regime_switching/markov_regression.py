@@ -341,7 +341,16 @@ class MarkovRegression(markov_switching.MarkovSwitching):
 
     @property
     def param_names(self):
-        """(list of str) List of human readable parameter names (for parameters actually included in the model)"""
+        """
+        (list of str) List of human readable parameter names (for parameters
+        actually included in the model)
+
+        .. versionchanged:: 0.15.1
+
+           A coefficient that does not switch has no regime suffix, also when
+           other coefficients switch. Before, it had the suffix of the last
+           regime, such as `x2[1]`.
+        """
         # Inherited parameters
         param_names = np.array(
             markov_switching.MarkovSwitching.param_names.fget(self),
@@ -351,7 +360,9 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         if np.any(self.switching_coeffs):
             for i in range(self.k_regimes):
                 param_names[self.parameters[i, "exog"]] = [
-                    f"{exog_name}[{i:d}]" for exog_name in self.exog_names]
+                    f"{exog_name}[{i:d}]" if switching else exog_name
+                    for exog_name, switching in zip(
+                        self.exog_names, self.switching_coeffs, strict=True)]
         else:
             param_names[self.parameters["exog"]] = self.exog_names
 
