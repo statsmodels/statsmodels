@@ -2757,3 +2757,71 @@ def test_summary_no_parameters(deterministic):
     assert res.det_coef.size == res.gamma.size == res.alpha.size == 0
     with pytest.raises(ValueError, match="no estimated parameters"):
         res.summary()
+
+
+@pytest.mark.parametrize("nan_in", ["endog", "exog", "exog_coint"])
+@pytest.mark.parametrize("pandas", [False, True])
+def test_vecm_missing_drop_exog_coint(nan_in, pandas):
+    # missing="drop" dropped the rows of endog and exog but not those of
+    # exog_coint, so that the rows of endog before a dropped row were used
+    # with the next row of exog_coint. The estimates must be those of the
+    # model fitted to the data without the rows that have a missing value.
+    from contextlib import nullcontext
+
+    import pandas as pd
+
+    from statsmodels.datasets import danish_data
+    from statsmodels.tools.sm_exceptions import ValueWarning
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    t = np.arange(1.0, len(data) + 1)
+    clean = {
+        "endog": data.to_numpy(),
+        "exog": np.sqrt(t)[:, None],
+        "exog_coint": np.column_stack((t, np.log(t))),
+    }
+    arrays = {key: value.copy() for key, value in clean.items()}
+    arrays[nan_in][10, -1] = np.nan
+    if pandas:
+        arrays = {key: pd.DataFrame(value) for key, value in arrays.items()}
+    kwargs = {"k_ar_diff": 1, "coint_rank": 1, "deterministic": "co"}
+    # the index without the dropped row is not supported for forecasting
+    warns = pytest.warns(ValueWarning, match="unsupported index")
+    with warns if pandas else nullcontext():
+        model = VECM(
+            arrays["endog"],
+            exog=arrays["exog"],
+            exog_coint=arrays["exog_coint"],
+            missing="drop",
+            **kwargs,
+        )
+    res = model.fit()
+    keep = np.arange(len(data)) != 10
+    expected = VECM(
+        clean["endog"][keep],
+        exog=clean["exog"][keep],
+        exog_coint=clean["exog_coint"][keep],
+        **kwargs,
+    ).fit()
+    assert res.nobs == expected.nobs == len(data) - 1 - 2
+    for name in ("alpha", "beta", "det_coef_coint", "gamma", "det_coef", "sigma_u"):
+        assert_allclose(getattr(res, name), getattr(expected, name), rtol=1e-10)
+    assert_allclose(res.llf, expected.llf, rtol=1e-12)
+
+
+def test_vecm_missing_exog_coint_raise_and_length():
+    from statsmodels.datasets import danish_data
+    from statsmodels.tools.sm_exceptions import MissingDataError
+
+    endog = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    exog_coint = np.arange(1.0, len(endog) + 1)
+    exog_coint[5] = np.nan
+    # a missing value in exog_coint is missing data, as in endog and exog
+    with pytest.raises(MissingDataError):
+        VECM(endog, exog_coint=exog_coint, missing="raise")
+    # without missing values "raise" changes nothing
+    res = VECM(endog[6:], exog_coint=exog_coint[6:], missing="raise").fit()
+    expected = VECM(endog[6:], exog_coint=exog_coint[6:]).fit()
+    assert_allclose(res.det_coef_coint, expected.det_coef_coint, rtol=1e-12)
+    with pytest.raises(ValueError, match="exog_coint must have as many rows"):
+        VECM(endog, exog_coint=exog_coint[1:], missing="drop")
