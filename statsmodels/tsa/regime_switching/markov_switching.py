@@ -852,6 +852,13 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                ``MarkovAutoregression`` with `conditional` at least
                ``order``.
 
+               A ``MarkovAutoregression`` prediction conditional on the
+               current regime and fewer than ``order`` past regimes (True or
+               1 to ``order``) is the expected value given those regimes.
+               Before, it was multiplied by their probability, so it was
+               shrunk toward zero where that probability was below one.
+               Where the probability is zero, the prediction is NaN.
+
         Returns
         -------
         predict : ndarray
@@ -891,10 +898,17 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                 results = self.filter(params, return_raw=True)
                 probabilities = results.predicted_joint_probabilities
 
-            # Compute weighted average
+            # Compute weighted average over the regimes that are not conditioned
+            # on, with weights that sum to one given the conditioning regimes
+            weights = probabilities
             predict = predict * probabilities
             for _ in range(predict.ndim - 1 - int(conditional)):
                 predict = np.sum(predict, axis=-2)
+                weights = np.sum(weights, axis=-2)
+            # Undefined (NaN) where the conditioning regimes have probability 0
+            predict = np.divide(
+                predict, weights, out=np.full_like(predict, np.nan), where=weights != 0
+            )
         else:
             predict = squeezed
 
@@ -2280,6 +2294,13 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                (and so in ``fittedvalues`` and ``resid``), for
                ``MarkovAutoregression`` with `conditional` at least
                ``order``.
+
+               A ``MarkovAutoregression`` prediction conditional on the
+               current regime and fewer than ``order`` past regimes (True or
+               1 to ``order``) is the expected value given those regimes.
+               Before, it was multiplied by their probability, so it was
+               shrunk toward zero where that probability was below one.
+               Where the probability is zero, the prediction is NaN.
 
         Returns
         -------
