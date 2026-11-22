@@ -38,6 +38,19 @@ PERCENTILES = (1, 5, 10, 25, 50, 75, 90, 95, 99)
 QUANTILES = np.array(PERCENTILES) / 100.0
 
 
+def _percentile_labels(percentiles):
+    if np.all(np.floor(percentiles) == percentiles):
+        return [f"{int(val)}%" for val in percentiles]
+    for decimals in range(1, 5):
+        if np.all(np.round(percentiles, decimals) == percentiles):
+            break
+    else:
+        decimals = 1
+        while len({f"{val:.{decimals}f}" for val in percentiles}) < len(percentiles):
+            decimals += 1
+    return [f"{val:.{decimals}f}%" for val in percentiles]
+
+
 def pd_ptp(df):
     return df.max() - df.min()
 
@@ -532,21 +545,7 @@ class Description:
             perc = _df.quantile(self._percentiles / 100).astype(float)
         else:
             perc = pd.DataFrame(index=self._percentiles / 100, dtype=float)
-        if np.all(np.floor(100 * perc.index) == (100 * perc.index)):
-            perc.index = [f"{int(100 * idx)}%" for idx in perc.index]
-        else:
-            dupe = True
-            scale = 100
-            index = perc.index
-            while dupe:
-                scale *= 10
-                idx = np.floor(scale * perc.index)
-                if np.all(np.diff(idx) > 0):
-                    dupe = False
-            index = np.floor(scale * index) / (scale / 100)
-            fmt = f"0.{len(str(scale//100))-1}f"
-            output = f"{{0:{fmt}}}%"
-            perc.index = [output.format(val) for val in index]
+        perc.index = _percentile_labels(self._percentiles)
 
         # Add in the names of the percentiles to the output
         self._stats = self._stats + perc.index.tolist()
