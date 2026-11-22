@@ -2426,7 +2426,7 @@ def test_finite_data_unchanged():
     [(1, 1.0, False), (2, 1.0, False), (1, 1e6, False), (1, 1.0, True)],
 )
 def test_hc_leverage_one(cov_type, n_dummies, scale, weighted):
-    # GH-10659: observations with leverage one gave arbitrary or inf HC2/HC3
+    # GH#10659: observations with leverage one gave arbitrary or inf HC2/HC3
     # standard errors. They do not affect the other parameters, so those
     # parameters must have the robust covariance of the regression without
     # these observations and dummies, and the dummies get nan.
@@ -2474,6 +2474,133 @@ def test_hc_leverage_below_one_unchanged(cov_type):
     pinv_x = np.linalg.pinv(exog)
     expected = pinv_x @ np.diag(res.resid**2 / (1 - h) ** power) @ pinv_x.T
     assert_allclose(cov, expected, rtol=1e-12)
+
+
+def _issue_10659_data(seed):
+    # Example of GH#10659: a dummy for a single observation has leverage one
+    rng = np.random.default_rng(seed)
+    nobs = 50
+    x = rng.normal(size=nobs)
+    d = np.zeros(nobs)
+    d[7] = 1.0
+    y = 1 + 2 * x + 3 * d + rng.normal(size=nobs)
+    return y, add_constant(np.column_stack([x, d]))
+
+
+@pytest.mark.parametrize("cov_type", ["HC2", "HC3"])
+@pytest.mark.parametrize("seed", range(6))
+def test_hc_leverage_one_issue(seed, cov_type):
+    # GH#10659: the result depended on rounding (finite, inf, or a negative
+    # 1 - h). It must be nan for the dummy for every seed, and the other
+    # parameters must have the robust covariance without observation 7.
+    y, exog = _issue_10659_data(seed)
+    keep = np.arange(len(y)) != 7
+    res = OLS(y, exog).fit()
+    with pytest.warns(ValueWarning, match=r"Observations \[7\] have leverage one"):
+        res_rob = res.get_robustcov_results(cov_type)
+    res_drop = OLS(y[keep], exog[keep, :2]).fit(cov_type=cov_type)
+
+    assert np.isnan(res_rob.bse[2])
+    assert_allclose(res_rob.bse[:2], res_drop.bse, rtol=1e-10)
+    assert_allclose(res_rob.cov_params()[:2, :2], res_drop.cov_params(), rtol=1e-10)
+
+
+@pytest.mark.parametrize("cov_type", ["HC2", "HC3"])
+def test_hc_leverage_one_warning_location(cov_type):
+    # The warning points at the caller, not into statsmodels
+    y, exog = _issue_10659_data(1)
+    res = OLS(y, exog).fit()
+    with pytest.warns(ValueWarning, match="leverage one") as record:
+        res.get_robustcov_results(cov_type)
+    assert all(w.filename == __file__ for w in record)
+
+
+@pytest.mark.parametrize("cov_type", ["HC2", "HC3"])
+@pytest.mark.parametrize("seed", range(10))
+def test_hc_leverage_one_ill_conditioned(seed, cov_type):
+    # Constant, calendar year and year**2 make the design ill-conditioned, so
+    # that x_i (X'X)^{-1} x_i' of the dummy can be 1e-7 away from one. The
+    # leverage-one observation must still be found for every seed.
+    rng = np.random.default_rng(seed)
+    nobs = 40
+    year = np.arange(1980.0, 1980.0 + nobs)
+    d = np.zeros(nobs)
+    idx = rng.integers(nobs)
+    d[idx] = 1.0
+    exog = np.column_stack([np.ones(nobs), year, year**2, d])
+    y = rng.standard_normal(nobs)
+    keep = np.arange(nobs) != idx
+    res = OLS(y, exog).fit()
+    with pytest.warns(ValueWarning, match="leverage one"):
+        res_rob = res.get_robustcov_results(cov_type)
+    res_drop = OLS(y[keep], exog[keep, :3]).fit(cov_type=cov_type)
+
+    assert np.isnan(res_rob.bse[3])
+    assert_allclose(res_rob.bse[:3], res_drop.bse, rtol=1e-6)
+
+
+@pytest.mark.parametrize("cov_type", ["HC2", "HC3"])
+def test_hc_high_leverage_below_one_finite(cov_type):
+    # A legitimate high-leverage observation with 1 - h of about 1e-6 is not
+    # leverage one. It keeps its HC2/HC3 weight and all variances are finite.
+    rng = np.random.default_rng(10659)
+    nobs = 50
+    x = rng.standard_normal(nobs)
+    x[7] = 7000.0
+    exog = add_constant(x)
+    y = 1 + 2 * x + rng.standard_normal(nobs)
+    q, _ = np.linalg.qr(exog)
+    h = (q**2).sum(1)
+    assert 1e-7 < 1 - h[7] < 1e-5
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res_rob = OLS(y, exog).fit().get_robustcov_results(cov_type)
+    resid = res_rob.resid
+    power = 1 if cov_type == "HC2" else 2
+    pinv_x = np.linalg.pinv(exog)
+    expected = pinv_x @ np.diag(resid**2 / (1 - h) ** power) @ pinv_x.T
+    assert np.all(np.isfinite(res_rob.bse))
+    assert_allclose(res_rob.cov_params(), expected, rtol=1e-6)
+
+
+def test_hc_leverage_one_cov_params_r_matrix():
+    # nan of the dummy only propagates to restrictions that use it, and
+    # 1-D r_matrix and other give the same shapes as without nan
+    y, exog = _issue_10659_data(0)
+    with pytest.warns(ValueWarning, match="leverage one"):
+        res = OLS(y, exog).fit(cov_type="HC3")
+    cov = res.cov_params()
+
+    c1 = res.cov_params(r_matrix=[0, 1, 0])
+    assert np.ndim(c1) == 0
+    assert_allclose(c1, cov[1, 1], rtol=1e-12)
+    assert np.isnan(res.cov_params(r_matrix=[0, 0, 1]))
+
+    c2 = res.cov_params(r_matrix=[[1, 0, 0], [0, 1, 0]], other=[0, 1, 0])
+    assert c2.shape == (2,)
+    assert_allclose(c2, cov[:2, 1], rtol=1e-12)
+    c3 = res.cov_params(r_matrix=[0, 1, 0], other=[[1, 0, 0], [0, 0, 1]])
+    assert c3.shape == (2,)
+    assert_allclose(c3[0], cov[1, 0], rtol=1e-12)
+    assert np.isnan(c3[1])
+
+
+@pytest.mark.parametrize("cov_type", ["HC2", "HC3"])
+def test_hc_leverage_one_sandwich_covariance(cov_type):
+    # The functions in sandwich_covariance use the same leverage-one rule
+    import statsmodels.stats.sandwich_covariance as sw
+
+    y, exog = _issue_10659_data(1)
+    res = OLS(y, exog).fit()
+    func = sw.cov_hc2 if cov_type == "HC2" else sw.cov_hc3
+    with pytest.warns(ValueWarning, match="leverage one"):
+        cov = func(res)
+    with pytest.warns(ValueWarning, match="leverage one"):
+        expected = res.get_robustcov_results(cov_type).cov_params()
+    assert np.all(np.isnan(cov[2, :]))
+    assert np.all(np.isnan(cov[:, 2]))
+    assert_allclose(cov[:2, :2], expected[:2, :2], rtol=1e-12)
 
 
 def _duplicated_constant_data(nobs, seed):

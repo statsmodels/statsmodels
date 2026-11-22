@@ -1793,8 +1793,17 @@ class LikelihoodModelResults(Results):
             else:
                 other = np.asarray(other)
             if np.isnan(np.asarray(cov_p)).any():
-                # nan only propagates to restrictions that use the parameter
-                dot_fun = nan_dot
+                # nan only propagates to restrictions that use the parameter.
+                # nan_dot requires 2-D arrays, reshape to the np.dot result.
+                tmp = nan_dot(
+                    np.atleast_2d(r_matrix),
+                    nan_dot(cov_p, np.atleast_2d(other).T),
+                )
+                if other.ndim == 1:
+                    tmp = tmp[:, 0]
+                if r_matrix.ndim == 1:
+                    tmp = tmp[0]
+                return tmp
             tmp = dot_fun(r_matrix, dot_fun(cov_p, np.transpose(other)))
             return tmp
         else:  # if r_matrix is None and column is None:
