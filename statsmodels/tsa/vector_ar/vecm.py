@@ -52,7 +52,7 @@ def select_order(
     maxlags : int
         All orders until maxlag will be compared according to the information
         criteria listed in the Results-section of this docstring.
-    deterministic : {"n", "co", "ci", "lo", "li"}, optional
+    deterministic : {"n", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"}, optional
         * ``"n"`` - no deterministic terms
         * ``"co"`` - constant outside the cointegration relation
         * ``"ci"`` - constant within the cointegration relation
@@ -516,6 +516,16 @@ class CointRankResults:
         self.signif = signif
 
     def summary(self):
+        """
+        Summary table of the tests.
+
+        Returns
+        -------
+        SimpleTable
+            One row for each test with the rank in the null hypothesis
+            (``r_0``), the rank in the alternative (``r_1``), the test
+            statistic and the critical value.
+        """
         headers = ["r_0", "r_1", "test statistic", "critical value"]
         title = (
             "Johansen cointegration test using "
@@ -822,12 +832,27 @@ class JohansenTestResult:
 
     @property
     def eig(self):
-        """Eigenvalues of VECM coefficient matrix"""
+        """
+        Eigenvalues of the Johansen problem, in decreasing order.
+
+        The squared canonical correlations of `r0t` and `rkt`, the
+        eigenvalues :math:`\\lambda` of
+        :math:`|\\lambda S_{kk} - S_{k0} S_{00}^{-1} S_{0k}| = 0` with the
+        moment matrices :math:`S_{ij}` of the residuals divided by the number
+        of observations (Lütkepohl 2005, p. 295).
+        """
         return self._eig
 
     @property
     def evec(self):
-        """Eigenvectors of VECM coefficient matrix"""
+        """
+        Eigenvectors of the Johansen problem, in the columns.
+
+        Normalized so that :math:`v' S_{kk} v = I`. The signs of the columns
+        are not normalized, except that the matrix is multiplied by -1 if
+        needed so that its first nonzero element (in general ``evec[0, 0]``)
+        is positive.
+        """
         return self._evec
 
     @property
@@ -899,8 +924,9 @@ class VECM(tsbase.TimeSeriesModel):
     ----------
     endog : array_like (nobs_tot x neqs)
         2-d endogenous response variable.
-    exog : ndarray (nobs_tot x #det_terms), optional
-        Deterministic terms outside the cointegration relation.
+    exog : array_like (nobs_tot x #det_terms), optional
+        Deterministic terms outside the cointegration relation. A 1-d array
+        is a single term.
     exog_coint : ndarray (nobs_tot x #det_terms_coint), optional
         Deterministic terms inside the cointegration relation.
     dates : array_like of datetime, optional
@@ -917,7 +943,7 @@ class VECM(tsbase.TimeSeriesModel):
     coint_rank : int, optional
         Cointegration rank, equals the rank of the matrix :math:`\\Pi` and the
         number of columns of :math:`\\alpha` and :math:`\\beta`.
-    deterministic : {"n", "co", "ci", "lo", "li"}, optional
+    deterministic : {"n", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"}, optional
         * ``"n"`` - no deterministic terms
         * ``"co"`` - constant outside the cointegration relation
         * ``"ci"`` - constant within the cointegration relation
@@ -929,11 +955,13 @@ class VECM(tsbase.TimeSeriesModel):
         choose whether you want to restrict it to the cointegration relation
         (i.e., ``"ci"``) or leave it unrestricted (i.e., ``"co"``). Do not use
         both ``"ci"`` and ``"co"``. The same applies for ``"li"`` and ``"lo"``
-        when using a linear term. See the Notes-section for more information.
+        when using a linear term. The string is not case sensitive. See the
+        Notes-section for more information.
     seasons : int, optional
         Number of periods in a seasonal cycle. 0 means no seasons.
     first_season : int, optional
-        Season of the first observation.
+        Season of the first observation, 0 for the first season up to
+        ``seasons - 1`` for the last. Other values are taken modulo `seasons`.
 
     Notes
     -----
@@ -962,6 +990,12 @@ class VECM(tsbase.TimeSeriesModel):
     we again have the possibility to use `deterministic` alternatively. For
     an intercept we pass ``"co"`` and for a linear trend we pass ``"lo"`` where
     the `o` stands for `outside`.
+
+    The linear trend of ``"li"`` and ``"lo"`` is :math:`t = 1, 2, \\ldots`,
+    counted from the first row of `endog` (the presample included), so
+    ``"li"`` equals ``1 + np.arange(len(data))`` as `exog_coint` and ``"lo"``
+    equals the same array as `exog`. The seasonal dummies are centered and
+    enter :math:`D_t`.
 
     The following table shows the five cases considered in [2]_. The last
     column indicates which string to pass to the `deterministic` argument for
@@ -1257,7 +1291,7 @@ class VECMResults:
         `det_coef` attributes.
     sigma_u : ndarray (neqs x neqs)
         Estimate of white noise process covariance matrix :math:`\\Sigma_u`.
-    deterministic : {"n", "co", "ci", "lo", "li"}, optional
+    deterministic : {"n", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"}, optional
         * ``"n"`` - no deterministic terms
         * ``"co"`` - constant outside the cointegration relation
         * ``"ci"`` - constant within the cointegration relation
@@ -1369,11 +1403,14 @@ class VECMResults:
         number of columns of :math:`\\alpha` and :math:`\\beta`.
     llf : float
         The model's log-likelihood.
-    cov_params : ndarray (d x d)
+    cov_params_default : ndarray (d x d)
         Covariance matrix of the parameters. The number of rows and columns, d
         (used in the dimension specification of this argument),
         is equal to neqs * (neqs+num_det_coef_coint + neqs*(k_ar-1)+number of
-        deterministic dummy variables outside the cointegration relation). For
+        deterministic dummy variables outside the cointegration relation),
+        in the order of
+        :math:`vec([\\alpha (\\beta', \\eta'), \\Gamma_1, \\ldots, \\Gamma_{k_{ar}-1}, C])`.
+        For
         the case with no deterministic terms this matrix is defined on p. 287
         in [1]_ as :math:`\\Sigma_{co}` and its relationship to the
         ML-estimators can be seen in eq. (7.2.21) on p. 296 in [1]_.
@@ -1381,7 +1418,7 @@ class VECMResults:
         Covariance matrix of the parameters
         :math:`\\tilde{\\Pi}, \\tilde{\\Gamma}` where
         :math:`\\tilde{\\Pi} = \\tilde{\\alpha} \\tilde{\\beta'}`.
-        Equals `cov_params` without the rows and columns related to
+        Equals `cov_params_default` without the rows and columns related to
         deterministic terms. This matrix is defined as :math:`\\Sigma_{co}` on
         p. 287 in [1]_.
     stderr_params : ndarray (d)
@@ -1731,20 +1768,91 @@ class VECMResults:
         return struct_arr
 
     def conf_int_alpha(self, alpha=0.05):
+        """
+        Confidence intervals of the loading coefficients alpha.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level, 0 < `alpha` < 1. The intervals are the
+            estimates plus and minus ``norm.ppf(1 - alpha / 2)`` standard
+            errors.
+
+        Returns
+        -------
+        ndarray (neqs x `coint_rank`)
+            A structured array with the fields ``"lower"`` and ``"upper"``.
+        """
         return self._make_conf_int(self.alpha, self.stderr_alpha, alpha)
 
     def conf_int_beta(self, alpha=0.05):
+        """
+        Confidence intervals of the cointegration matrix beta.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level, 0 < `alpha` < 1.
+
+        Returns
+        -------
+        ndarray (neqs x `coint_rank`)
+            A structured array with the fields ``"lower"`` and ``"upper"``.
+            The first `coint_rank` rows are normalized to the identity and
+            have intervals of width zero.
+        """
         return self._make_conf_int(self.beta, self.stderr_beta, alpha)
 
     def conf_int_det_coef_coint(self, alpha=0.05):
+        """
+        Confidence intervals of the deterministic terms inside the relation.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level, 0 < `alpha` < 1.
+
+        Returns
+        -------
+        ndarray (#det. terms inside the coint. relation x `coint_rank`)
+            A structured array with the fields ``"lower"`` and ``"upper"``,
+            with no rows if the model has no such terms.
+        """
         return self._make_conf_int(
             self.det_coef_coint, self.stderr_det_coef_coint, alpha
         )
 
     def conf_int_gamma(self, alpha=0.05):
+        """
+        Confidence intervals of the short-run parameters Gamma.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level, 0 < `alpha` < 1.
+
+        Returns
+        -------
+        ndarray (neqs x neqs*(k_ar-1))
+            A structured array with the fields ``"lower"`` and ``"upper"``.
+        """
         return self._make_conf_int(self.gamma, self.stderr_gamma, alpha)
 
     def conf_int_det_coef(self, alpha=0.05):
+        """
+        Confidence intervals of the deterministic terms outside the relation.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Significance level, 0 < `alpha` < 1.
+
+        Returns
+        -------
+        ndarray (neqs x #det. terms outside the coint. relation)
+            A structured array with the fields ``"lower"`` and ``"upper"``,
+            with no columns if the model has no such terms.
+        """
         return self._make_conf_int(self.det_coef, self.stderr_det_coef, alpha)
 
     @cache_readonly
@@ -1815,6 +1923,19 @@ class VECMResults:
         return vvt @ self.cov_params_wo_det @ vvt.T
 
     def ma_rep(self, maxn=10):
+        """
+        Compute the MA coefficient matrices of the VAR representation.
+
+        Parameters
+        ----------
+        maxn : int, optional
+            Number of coefficient matrices to compute after the identity.
+
+        Returns
+        -------
+        ndarray (maxn + 1 x neqs x neqs)
+            The matrices :math:`\\Phi_0 = I, \\Phi_1, \\ldots, \\Phi_{maxn}`.
+        """
         return ma_rep(self.var_rep, maxn)
 
     @cache_readonly
@@ -1838,7 +1959,7 @@ class VECMResults:
 
         Returns
         -------
-        coefs : ndarray (maxn x neqs x neqs)
+        coefs : ndarray (maxn + 1 x neqs x neqs)
         """
         return orth_ma_rep(self, maxn, P)
 
@@ -1853,26 +1974,34 @@ class VECMResults:
         alpha : float or None, optional
             If None, compute point forecast only. If float, compute
             confidence intervals too. In this case the argument (which must
-            satisfy 0 < `alpha` < 1) stands for the confidence level.
+            satisfy 0 < `alpha` < 1) is the significance level, so that
+            ``alpha=0.05`` gives 95% intervals.
         exog_fc : ndarray (steps x self.exog.shape[1]), optional
             If self.exog is not None, then information about the future values
             of exog have to be passed via this parameter. The ndarray may be
             larger in it's first dimension. In this case only the first steps
             rows will be considered.
-        exog_coint_fc : ndarray (steps x self.exog_coint.shape[1]), optional
+        exog_coint_fc : ndarray (steps - 1 x self.exog_coint.shape[1]), optional
             If self.exog_coint is not None, then information about the future
             values of exog_coint have to be passed via this parameter. The
-            ndarray may be larger in it's first dimension. In this case only
-            the first steps rows will be considered.
+            terms inside the cointegration relation enter lagged once, so the
+            forecast of the first period uses the last row of exog_coint and
+            only ``steps - 1`` future values are needed. The ndarray may be
+            larger in it's first dimension. In this case only the first
+            ``steps - 1`` rows will be considered. A 1-d array is a single
+            term.
 
         Returns
         -------
-        forecast : ndarray (steps x neqs) or three ndarrays
+        forecast : ndarray (steps x neqs) or ForecastInterval
             In case of a point forecast: each row of the returned ndarray
             represents the forecast of the neqs variables for a specific
             period. The first row (index [0]) is the forecast for the next
             period, the last row (index [steps-1]) is the steps-periods-ahead-
-            forecast.
+            forecast. If `alpha` is not None, a
+            :class:`~statsmodels.tsa.vector_ar.hypothesis_test_results.ForecastInterval`
+            with the point forecast and the lower and upper bounds, each an
+            ndarray (steps x neqs).
         """
         if self.exog is not None and exog_fc is None:
             raise ValueError(
@@ -1988,7 +2117,8 @@ class VECMResults:
         steps : int
             Prediction horizon.
         alpha : float, 0 < `alpha` < 1, optional
-            The confidence level.
+            The significance level of the confidence intervals, so that
+            ``alpha=0.05`` gives 95% intervals.
         plot_conf_int : bool, optional
             If True, plot bounds of confidence intervals.
         n_last_obs : int or None, optional
@@ -2229,6 +2359,20 @@ class VECMResults:
         return var_results.test_inst_causality(causing=causing, signif=signif)
 
     def irf(self, periods=10):
+        """
+        Analyze the impulse responses of the VAR representation.
+
+        Parameters
+        ----------
+        periods : int, optional
+            Number of periods after the impulse.
+
+        Returns
+        -------
+        :class:`statsmodels.tsa.vector_ar.irf.IRAnalysis`
+            The impulse responses, with `irfs` from :meth:`ma_rep` and
+            `orth_irfs` from :meth:`orth_ma_rep`.
+        """
         return irf.IRAnalysis(self, periods=periods, vecm=True)
 
     @cache_readonly
@@ -2295,8 +2439,15 @@ class VECMResults:
         Parameters
         ----------
         nlags : int > 0, optional
+            Number of autocovariances of the residuals in the statistic. The
+            test has ``neqs**2 * (nlags - k_ar + 1) - neqs * coint_rank``
+            degrees of freedom.
         signif : float, 0 < `signif` < 1, optional
+            Significance level of the critical value and the conclusion.
         adjusted : bool, optional
+            If True, compute the adjusted (small sample) Portmanteau
+            statistic, which weights the autocovariance of lag i with
+            ``1 / (nobs - i)``.
 
         Returns
         -------

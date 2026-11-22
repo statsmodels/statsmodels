@@ -1,0 +1,7 @@
+- Correct docstrings in ``statsmodels.tsa.vector_ar.vecm``: ``VECM`` accepts
+  array_like ``exog`` and lists the accepted ``deterministic`` strings,
+  ``VECMResults`` has ``cov_params_default``, ``alpha`` of ``predict`` and
+  ``plot_forecast`` is the significance level, ``predict`` returns a
+  ``ForecastInterval``, ``orth_ma_rep`` returns ``maxn + 1`` matrices, and
+  ``JohansenTestResult.eig`` and ``evec`` describe the Johansen problem.
+  :pr:`10952`
