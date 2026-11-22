@@ -42,7 +42,7 @@ class SVAR(tsbase.TimeSeriesModel):
     Parameters
     ----------
     endog : array_like
-        2-d endogenous response variable. The independent variable.
+        2-d endogenous response variable, nobs x neqs.
     svar_type : {"A", "B", "AB"}
         "A" - estimate structural parameters of A matrix, B assumed = I
         "B" - estimate structural parameters of B matrix, A assumed = I
@@ -53,9 +53,13 @@ class SVAR(tsbase.TimeSeriesModel):
         The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
         'M', 'A', or 'Q'. This is optional if dates are given.
     A : ndarray, optional
-        neqs x neqs with unknown parameters marked with 'E' for estimate
+        neqs x neqs array with the unknown parameters marked "E" (or "e") for
+        estimate and numbers (or strings of numbers) for the fixed entries.
+        Required if `svar_type` is "A" or "AB". The identity if not given.
     B : ndarray, optional
-        neqs x neqs with unknown parameters marked with 'E' for estimate
+        neqs x neqs array with the unknown parameters marked "E" (or "e") for
+        estimate and numbers (or strings of numbers) for the fixed entries.
+        Required if `svar_type` is "B" or "AB". The identity if not given.
     missing : {"none", "drop", "raise"}, optional
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
@@ -145,13 +149,15 @@ class SVAR(tsbase.TimeSeriesModel):
         ----------
         A_guess : array_like, optional
             A vector of starting values for all parameters to be estimated
-            in A.
+            in A, in the row-major order of the "E" entries of A. Defaults
+            to 0.1 for every parameter.
         B_guess : array_like, optional
             A vector of starting values for all parameters to be estimated
-            in B.
+            in B, in the row-major order of the "E" entries of B. Defaults
+            to 0.1 for every parameter.
         maxlags : int, optional
-            Maximum number of lags to check for order selection, defaults to
-            12 * (nobs/100.)**(1./4), see select_order function
+            The number of lags of the VAR, 1 if not given. If `ic` is given,
+            the maximum number of lags to check for order selection.
         method : {'ols'}, optional
             Estimation method to use
         ic : {'aic', 'fpe', 'hqic', 'bic', None}, optional
@@ -170,9 +176,11 @@ class SVAR(tsbase.TimeSeriesModel):
             Note that these are prepended to the columns of the dataset.
         s_method : {'mle'}, optional
             Estimation method for structural parameters
-        solver : {'nm', 'newton', 'bfgs', 'cg', 'ncg', 'powell'}, optional
-            Solution method
-            See statsmodels.base for details
+        solver : {'bfgs', 'newton', 'nm', 'lbfgs', 'powell', 'cg', 'ncg', 'basinhopping', 'minimize'}, optional
+            The optimizer that maximizes the log-likelihood of the structural
+            parameters, see the method argument of
+            statsmodels.base.model.LikelihoodModel.fit. The default is
+            'bfgs'.
         override : bool, optional
             If True, returns estimates of A and B without checking
             order or rank condition
@@ -184,6 +192,13 @@ class SVAR(tsbase.TimeSeriesModel):
         Returns
         -------
         est : SVARResults
+
+        Raises
+        ------
+        ValueError
+            If the length of `A_guess` or `B_guess` is not the number of
+            parameters to estimate in A or B, or, unless `override` is True,
+            if the order or rank condition for identification is not met.
 
         Notes
         -----
@@ -331,13 +346,21 @@ class SVAR(tsbase.TimeSeriesModel):
         Parameters
         ----------
         params : array_like
-            The concatenated unknown parameters of the A and B matrices.
+            The concatenated unknown parameters of the A and B matrices, the
+            "E" entries of A and then those of B, each in row-major order.
+
+        Returns
+        -------
+        float
+            The log-likelihood of the structural parameters, concentrated
+            with respect to the autoregressive parameters.
 
         Notes
         -----
         This method assumes that the autoregressive parameters are
         first estimated, then likelihood with structural parameters
-        is estimated
+        is estimated. It uses the residual covariance and the number of
+        observations of the last call to `fit`.
         """
 
         # TODO: this does not look robust if A or B is None
@@ -382,7 +405,13 @@ class SVAR(tsbase.TimeSeriesModel):
         Parameters
         ----------
         AB_mask : ndarray
-            Concatenated unknown values of the A and B matrices.
+            Concatenated unknown values of the A and B matrices, in the order
+            of `loglike`.
+
+        Returns
+        -------
+        ndarray
+            The gradient, 1-d with one entry per unknown value.
 
         Notes
         -----
@@ -405,7 +434,13 @@ class SVAR(tsbase.TimeSeriesModel):
         Parameters
         ----------
         AB_mask : ndarray
-            Concatenated unknown values of the A and B matrices.
+            Concatenated unknown values of the A and B matrices, in the order
+            of `loglike`.
+
+        Returns
+        -------
+        ndarray
+            The Hessian of `loglike`, square with one row per unknown value.
         """
         loglike = self.loglike
         if AB_mask.ndim > 1:
@@ -537,10 +572,40 @@ class SVAR(tsbase.TimeSeriesModel):
         return J
 
     def check_order(self, J):
+        """
+        Check the order condition for identification
+
+        Parameters
+        ----------
+        J : ndarray
+            The Jacobian of the distinct entries of the residual covariance
+            with respect to the unknown parameters, with neqs * (neqs + 1) / 2
+            rows and one column per unknown parameter.
+
+        Raises
+        ------
+        ValueError
+            If there are more unknown parameters than rows of `J`.
+        """
         if np.size(J, axis=0) < np.size(J, axis=1):
             raise ValueError("Order condition not met: solution may not be unique")
 
     def check_rank(self, J):
+        """
+        Check the rank condition for identification
+
+        Parameters
+        ----------
+        J : ndarray
+            The Jacobian of the distinct entries of the residual covariance
+            with respect to the unknown parameters, with neqs * (neqs + 1) / 2
+            rows and one column per unknown parameter.
+
+        Raises
+        ------
+        ValueError
+            If the rank of `J` is less than the number of unknown parameters.
+        """
         rank = np.linalg.matrix_rank(J)
         if rank < np.size(J, axis=1):
             raise ValueError("Rank condition not met: solution may not be unique.")
@@ -553,8 +618,11 @@ class SVARProcess(VARProcess):
     Parameters
     ----------
     coefs : ndarray (p x k x k)
+        The lag coefficient matrices A_1, ..., A_p.
     intercept : ndarray (length k)
+        The intercept.
     sigma_u : ndarray (k x k)
+        The covariance of the reduced-form residuals.
     A_solve : ndarray
         neqs x neqs array of estimated structural parameters for the A
         matrix.
@@ -576,7 +644,21 @@ class SVARProcess(VARProcess):
         self.names = names
 
     def orth_ma_rep(self, maxn=10, P=None):
-        """Unavailable for SVAR"""
+        """
+        Unavailable for SVAR, use `svar_ma_rep`
+
+        Parameters
+        ----------
+        maxn : int, optional
+            Unused.
+        P : ndarray, optional
+            Unused.
+
+        Raises
+        ------
+        NotImplementedError
+            Always.
+        """
         raise NotImplementedError
 
     def svar_ma_rep(self, maxn=10, P=None):
@@ -587,7 +669,7 @@ class SVARProcess(VARProcess):
         ----------
         maxn : int, optional
             Number of MA matrices to compute.
-        P : ndarray, optional
+        P : array_like, optional
             Solved A^{-1}B coefficient matrix used to orthogonalize the MA
             representation. If not provided, it is computed from the
             estimated A and B matrices.
@@ -595,7 +677,9 @@ class SVARProcess(VARProcess):
         Returns
         -------
         ndarray
-            The structural MA coefficient matrices.
+            The structural MA coefficient matrices Phi_h P, h = 0, ..., maxn,
+            with shape (maxn + 1, k, k), where Phi_h are the coefficient
+            matrices of `ma_rep`.
         """
         if P is None:
             A_solve = self.A_solve
@@ -608,15 +692,20 @@ class SVARProcess(VARProcess):
 
 class SVARResults(SVARProcess, VARResults):
     """
-    Estimate VAR(p) process with fixed number of lags
+    Results of the estimation of an SVAR(p) process
 
     Parameters
     ----------
     endog : ndarray
+        The endogenous variables, nobs x neqs.
     endog_lagged : ndarray
+        The regressors of the VAR: the deterministic terms and the lags.
     params : ndarray
+        The estimated VAR coefficients, one column per equation.
     sigma_u : ndarray
+        The estimated covariance of the reduced-form residuals.
     lag_order : int
+        The number of lags of the VAR.
     A : ndarray, optional
         neqs x neqs array of estimated structural parameters for the A
         matrix.
@@ -632,19 +721,29 @@ class SVARResults(SVARProcess, VARResults):
     model : SVAR, optional
         The SVAR model instance used to produce the results.
     trend : {"n", "c", "ct", "ctt"}, optional
+        The deterministic terms of the VAR.
     names : sequence of str, optional
         List of names of the endogenous variables in order of appearance in `endog`.
     dates : array_like, optional
+        The date index of `endog`.
 
     Attributes
     ----------
+    A : ndarray
+        The estimated A matrix, neqs x neqs.
+    A_mask : ndarray of bool
+        True where the corresponding entry of `A` is estimated.
     aic : float
+    B : ndarray
+        The estimated B matrix, neqs x neqs.
+    B_mask : ndarray of bool
+        True where the corresponding entry of `B` is estimated.
     bic : float
     bse : ndarray
     coefs : ndarray (p x K x K)
         Estimated A_i matrices, A_i = coefs[i-1]
-    cov_params
-    dates : array_like
+    dates : pandas.Index or None
+        The date index of `endog`, None if it has none.
     detomega : float
     df_model : int
     df_resid : int
@@ -665,8 +764,10 @@ class SVARResults(SVARProcess, VARResults):
         Number of variables (equations)
     nobs : int
     n_totobs : int
-    params : ndarray ((Kp + 1) x K)
-        A_i matrices and intercept in stacked form [int A_1 ... A_p]
+    params : ndarray ((k_trend + Kp) x K)
+        The coefficients of the deterministic terms and the transposed A_i
+        matrices in stacked form [deterministic terms, A_1', ..., A_p'], one
+        column per equation.
     pvalues : ndarray
     resid : ndarray
     sigma_u : ndarray (K x K)
@@ -742,6 +843,7 @@ class SVARResults(SVARProcess, VARResults):
         Parameters
         ----------
         periods : int, optional
+            The number of periods after the shock, 10 by default.
         var_order : sequence, optional
             Alternate variable order for the structural impulse matrix. Not
             implemented, and so must be None.
@@ -749,6 +851,7 @@ class SVARResults(SVARProcess, VARResults):
         Returns
         -------
         irf : IRAnalysis
+            The structural responses Phi_h A^{-1} B are in its `svar_irfs`.
 
         Raises
         ------
@@ -814,8 +917,10 @@ class SVARResults(SVARProcess, VARResults):
         Returns
         -------
         ErrorBand
-            A result object with fields ``lower`` and ``upper``, arrays of
-            ma_rep Monte Carlo standard errors.
+            A result object with fields ``lower`` and ``upper``, the
+            ``signif / 2`` and ``1 - signif / 2`` quantiles of the structural
+            MA coefficient matrices (see `svar_ma_rep`, cumulated if `cum`) of
+            the replications, each with shape (steps + 1, neqs, neqs).
 
         Warns
         -----
