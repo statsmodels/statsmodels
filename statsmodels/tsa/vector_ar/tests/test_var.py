@@ -2607,3 +2607,42 @@ def test_fevd_default_periods():
     for fevd in (var_model.FEVD(res), res.fevd(None)):
         assert fevd.periods == 10
         assert_allclose(fevd.decomp, expected, rtol=1e-10)
+
+
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("periods", [4, 10, None])
+def test_fevd_plot_periods(periods, close_figures):
+    # The bars of variable i stack the shares of the shocks for the first
+    # periods horizons
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    fig = res.fevd(10).plot(periods=periods)
+    n_periods = 10 if periods is None else periods
+    expected = _fevd_written_out(res, n_periods)
+    assert len(fig.axes) == 3
+    for i, ax in enumerate(fig.axes):
+        assert len(ax.patches) == 3 * n_periods
+        heights = np.array([p.get_height() for p in ax.patches])
+        bottoms = np.array([p.get_y() for p in ax.patches])
+        centers = np.array([p.get_x() + p.get_width() / 2 for p in ax.patches])
+        shares = expected[i].T
+        assert_allclose(heights.reshape(3, n_periods), shares, rtol=1e-10)
+        stacked = np.vstack([np.zeros(n_periods), np.cumsum(shares, axis=0)[:-1]])
+        assert_allclose(bottoms.reshape(3, n_periods), stacked, rtol=1e-10)
+        # The centers are x - width / 2 + width / 2, exact up to the rounding
+        # of width = 0.8, which atol allows for at the center 0
+        ticks = np.tile(np.arange(n_periods), (3, 1))
+        assert_allclose(centers.reshape(3, n_periods), ticks, rtol=0, atol=1e-12)
+
+
+@pytest.mark.matplotlib
+def test_fevd_plot_periods_invalid(close_figures):
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    fevd = VAR(y).fit(2).fevd(5)
+    for periods in (6, 0, -1):
+        with pytest.raises(ValueError, match="periods must be between 1 and 5"):
+            fevd.plot(periods=periods)
+    with pytest.raises(TypeError, match="periods must be integer_like"):
+        fevd.plot(periods=2.5)

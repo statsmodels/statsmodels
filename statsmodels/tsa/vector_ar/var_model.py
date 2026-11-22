@@ -2973,7 +2973,13 @@ class FEVD:
         Parameters
         ----------
         periods : int, optional
-            Defaults to number originally specified. Can be at most that number
+            Defaults to number originally specified. Can be at most that number.
+            The first periods horizons are plotted.
+
+            .. versionchanged:: 0.15.1
+
+               A smaller number plots the first periods horizons. It raised
+               a ValueError. 0 raises a ValueError. It plotted all horizons.
         figsize : tuple of float, optional
             Figure size (width, height in inches), passed to
             `matplotlib.pyplot.subplots`. The default is (10, 10).
@@ -2983,7 +2989,13 @@ class FEVD:
         plt = _import_mpl()
 
         k = self.neqs
-        periods = periods or self.periods
+        if periods is None:
+            periods = self.periods
+        periods = int_like(periods, "periods")
+        if not 1 <= periods <= self.periods:
+            raise ValueError(
+                f"periods must be between 1 and {self.periods}, got {periods}"
+            )
 
         fig, axes = plt.subplots(nrows=k, figsize=figsize)
 
@@ -2992,7 +3004,7 @@ class FEVD:
         colors = [str(c) for c in np.arange(k, dtype=float) / k]
         ticks = np.arange(periods)
 
-        limits = self.decomp.cumsum(2)
+        limits = self.decomp[:, :periods].cumsum(2)
         ax = axes[0]
         for i in range(k):
             ax = axes[i]
