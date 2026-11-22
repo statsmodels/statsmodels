@@ -1178,7 +1178,7 @@ class KalmanFilter(Representation):
                                   " the simulation smoother.")
 
     def impulse_responses(self, steps=10, impulse=0, orthogonalized=False,
-                          cumulative=False, direct=False):
+                          cumulative=False, direct=None):
         r"""
         Impulse response function
 
@@ -1206,6 +1206,13 @@ class KalmanFilter(Representation):
         cumulative : bool, optional
             Whether or not to return cumulative impulse responses. Default is
             False.
+        direct : bool, optional
+            Not used.
+
+            .. deprecated:: 0.15.1
+
+               `direct` has no effect. It is deprecated and will be removed
+               after statsmodels 0.17 is released.
 
         Returns
         -------
@@ -1225,6 +1232,14 @@ class KalmanFilter(Representation):
         responses from arbitrary time points, it is necessary to clone a new
         model with the appropriate system matrices.
         """
+        if direct is not None:
+            warn(
+                "direct is not used by impulse_responses and is deprecated. It"
+                " will be removed after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
+
         # We need to add an additional step, since the first simulated value
         # will always be zeros (note that we take this value out at the end).
         steps += 1

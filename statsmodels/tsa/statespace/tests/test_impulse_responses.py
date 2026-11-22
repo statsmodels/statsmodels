@@ -963,3 +963,17 @@ def test_impulse_invalid_index(impulse):
     match = "Invalid impulse vector" if impulse is True else "Invalid value for `impulse`"
     with pytest.raises(ValueError, match=match):
         mod.ssm.impulse_responses(steps=3, impulse=impulse)
+
+
+@pytest.mark.parametrize("direct", [True, False])
+def test_impulse_responses_direct_deprecated(direct):
+    mod = BivariateSSM()
+    with pytest.warns(FutureWarning, match="direct is not used") as record:
+        actual = mod.ssm.impulse_responses(steps=3, direct=direct)
+    # The warning points to the caller
+    assert record[0].filename == __file__
+    assert_allclose(actual, _bivariate_irf(0, 3), rtol=1e-12)
+    # No warning if direct is not given
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        mod.ssm.impulse_responses(steps=3)
