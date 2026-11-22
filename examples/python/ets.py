@@ -135,14 +135,14 @@ plt.ylabel("Annual oil production in Saudi Arabia (Mt)")
 
 
 model = ETSModel(oil)
-fit = model.fit(maxiter=10000)
+fit = model.fit(maxiter=10000, param_index="names")
 oil.plot(label="data")
 fit.fittedvalues.plot(label="statsmodels fit")
 plt.ylabel("Annual oil production in Saudi Arabia (Mt)")
 
 # obtained from R
 params_R = [0.99989969, 0.11888177503085334, 0.80000197, 36.46466837, 34.72584983]
-yhat = model.smooth(params_R).fittedvalues
+yhat = model.smooth(params_R, param_index="names").fittedvalues
 yhat.plot(label="R fit", linestyle="--")
 
 plt.legend()
@@ -154,7 +154,7 @@ plt.legend()
 
 
 model_heuristic = ETSModel(oil, initialization_method="heuristic")
-fit_heuristic = model_heuristic.fit()
+fit_heuristic = model_heuristic.fit(param_index="names")
 oil.plot(label="data")
 fit.fittedvalues.plot(label="estimated")
 fit_heuristic.fittedvalues.plot(label="heuristic", linestyle="--")
@@ -162,7 +162,7 @@ plt.ylabel("Annual oil production in Saudi Arabia (Mt)")
 
 # obtained from R
 params = [0.99989969, 0.11888177503085334, 0.80000197, 36.46466837, 34.72584983]
-yhat = model.smooth(params).fittedvalues
+yhat = model.smooth(params, param_index="names").fittedvalues
 yhat.plot(label="with R params", linestyle=":")
 
 plt.legend()
@@ -282,7 +282,7 @@ model = ETSModel(
     damped_trend=True,
     seasonal_periods=4,
 )
-fit = model.fit()
+fit = model.fit(param_index="names")
 
 # fit with R params
 params_R = [
@@ -297,7 +297,7 @@ params_R = [
     -6.61171798,
     5.34956637,
 ]
-fit_R = model.smooth(params_R)
+fit_R = model.smooth(params_R, param_index="names")
 
 austourists.plot(label="data")
 plt.ylabel("Australian Tourists")
