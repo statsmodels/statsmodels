@@ -2,6 +2,8 @@
 
 from statsmodels.compat.pandas import deprecate_kwarg
 
+import warnings
+
 import numpy as np
 import numpy.linalg as la
 import scipy.linalg as L
@@ -13,6 +15,26 @@ from statsmodels.tsa.vector_ar import plotting, util
 from statsmodels.tsa.vector_ar.hypothesis_test_results import ErrorBand
 
 mat = np.array
+
+
+def _check_component(component, n_components):
+    # The indices of the eigenvalues used by the Sims-Zha bands must be in
+    # [0, n_components); negative indices count from the end and are deprecated
+    component = np.asarray(component)
+    if np.any(component >= n_components) or np.any(component < -n_components):
+        raise ValueError(
+            "At least one of the components does not exist. Components must be "
+            f"between 0 and {n_components - 1}."
+        )
+    if np.any(component < 0):
+        warnings.warn(
+            "Negative values in component select eigenvalues from the end. They "
+            "are deprecated and will raise a ValueError after statsmodels 0.17 "
+            "is released.",
+            FutureWarning,
+            stacklevel=4,
+        )
+    return component
 
 
 class BaseIRAnalysis:
@@ -586,12 +608,19 @@ class IRAnalysis(BaseIRAnalysis):
                rng for passing a random number generator or seed.
         burn : int, optional
             Number of initial simulated obs to discard. The default is 100.
-        component : ndarray of int, optional
+        component : array_like of int, optional
             Array of shape (neqs, neqs) giving the index of the
             column of eigenvector/value to use for each error band. Note:
             the period of impulse (t=0) is not included when computing the
             principal component. If None, the column of the largest
             eigenvalue is used for each element.
+
+            .. versionchanged:: 0.15.1
+
+               Each value must be between 0 and periods - 1. A valid
+               component could be rejected and a value of periods or more
+               could pass the check. Negative values select eigenvalues
+               from the end; they are deprecated and issue a FutureWarning.
 
         Returns
         -------
@@ -620,10 +649,7 @@ class IRAnalysis(BaseIRAnalysis):
                 raise ValueError(
                     "Component array must be " + str(neqs) + " x " + str(neqs)
                 )
-            if np.argmax(component) >= neqs * periods:
-                raise ValueError("Atleast one of the components does not exist")
-            else:
-                k = component
+            k = _check_component(component, periods)
 
         # here take the kth column of W, which we determine by finding the largest eigenvalue of the covaraince matrix
         lower = np.copy(irfs)
@@ -682,12 +708,19 @@ class IRAnalysis(BaseIRAnalysis):
                rng for passing a random number generator or seed.
         burn : int, optional
             Number of initial simulated obs to discard. The default is 100.
-        component : ndarray of int, optional
+        component : array_like of int, optional
             Array of shape (neqs, neqs) giving the index of the
             column of eigenvector/value to use for each error band. Note:
             the period of impulse (t=0) is not included when computing the
             principal component. If None, the column of the largest
             eigenvalue is used for each element.
+
+            .. versionchanged:: 0.15.1
+
+               Each value must be between 0 and periods - 1. A valid
+               component could be rejected and a value of periods or more
+               could pass the check. Negative values select eigenvalues
+               from the end; they are deprecated and issue a FutureWarning.
 
         Returns
         -------
@@ -714,10 +747,7 @@ class IRAnalysis(BaseIRAnalysis):
                 raise ValueError(
                     "Component array must be " + str(neqs) + " x " + str(neqs)
                 )
-            if np.argmax(component) >= neqs * periods:
-                raise ValueError("Atleast one of the components does not exist")
-            else:
-                k = component
+            k = _check_component(component, periods)
 
         gamma = np.zeros((repl, periods + 1, neqs, neqs))
         for p in range(repl):
@@ -786,6 +816,13 @@ class IRAnalysis(BaseIRAnalysis):
             component. If None, the column of the largest eigenvalue is
             used for each element.
 
+            .. versionchanged:: 0.15.1
+
+               Each value must be between 0 and neqs * periods - 1. Values
+               of neqs * periods or more were not checked. Negative values
+               select eigenvalues from the end; they are deprecated and
+               issue a FutureWarning.
+
         Returns
         -------
         ErrorBand
@@ -820,10 +857,7 @@ class IRAnalysis(BaseIRAnalysis):
         if component is not None:
             if np.size(component) != (neqs):
                 raise ValueError("Component array must be of length " + str(neqs))
-            if np.argmax(component) >= neqs * periods:
-                raise ValueError("Atleast one of the components does not exist")
-            else:
-                k = component
+            k = _check_component(component, neqs * periods)
 
         # compute for eigen decomp for each stack
         for i in range(neqs):

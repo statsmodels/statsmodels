@@ -1184,6 +1184,73 @@ def test_irf_err_bands():
         assert res[1] is res.upper
 
 
+@pytest.mark.parametrize("method", ["err_band_sz1", "err_band_sz2", "err_band_sz3"])
+def test_irf_err_band_component_range(method):
+    # component holds indices of eigenvalues: 0, ..., periods - 1 for sz1 and
+    # sz2, 0, ..., neqs * periods - 1 for sz3 (the stacked responses)
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    periods = 2
+    irf = res.irf(periods)
+    if method == "err_band_sz3":
+        shape, n_comp = (3,), 3 * periods
+    else:
+        shape, n_comp = (3, 3), periods
+
+    def band(value):
+        rng = np.random.default_rng(1)
+        component = np.full(shape, value)
+        return getattr(irf, method)(repl=30, rng=rng, component=component)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        first = band(0)
+        last = band(n_comp - 1)
+    # a nested list gives the same bands as an array
+    as_list = getattr(irf, method)(
+        repl=30,
+        rng=np.random.default_rng(1),
+        component=np.full(shape, n_comp - 1).tolist(),
+    )
+    assert_allclose(as_list.lower, last.lower, rtol=1e-12)
+    assert_allclose(as_list.upper, last.upper, rtol=1e-12)
+    for value in (n_comp, -n_comp - 1):
+        with pytest.raises(ValueError, match="components does not exist"):
+            band(value)
+    # Negative values count from the end, as in numpy indexing; deprecated
+    for value, expected in ((-1, last), (-n_comp, first)):
+        with pytest.warns(FutureWarning, match="Negative values in comp") as rec:
+            wrapped = band(value)
+        assert rec[0].filename == __file__
+        assert_allclose(wrapped.lower, expected.lower, rtol=1e-12)
+        assert_allclose(wrapped.upper, expected.upper, rtol=1e-12)
+
+
+@pytest.mark.parametrize("method", ["err_band_sz1", "err_band_sz2"])
+def test_irf_err_band_component_max_last_row(method):
+    # A valid component with its largest value in the last row was rejected:
+    # the check compared the position of the maximum with neqs * periods
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    irf = res.irf(2)
+
+    def band(component):
+        rng = np.random.default_rng(2)
+        return getattr(irf, method)(repl=30, rng=rng, component=component)
+
+    component = np.zeros((3, 3), dtype=int)
+    component[2, 0] = 1
+    mixed = band(component)
+    zeros = band(np.zeros((3, 3), dtype=int))
+    ones = band(np.ones((3, 3), dtype=int))
+    # each band uses only its own element of component
+    for attr in ("lower", "upper"):
+        expected = getattr(zeros, attr).copy()
+        expected[:, 2, 0] = getattr(ones, attr)[:, 2, 0]
+        assert_allclose(getattr(mixed, attr), expected, rtol=1e-12)
+    assert not np.allclose(ones.lower[1:, 2, 0], zeros.lower[1:, 2, 0])
+
+
 @pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
