@@ -549,6 +549,48 @@ def test_plot_forecast_lines(close_figures, plot_stderr):
             assert labels == ["Observed", "Forecast"]
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+def test_plotting_helpers_default_axes(close_figures):
+    # Without axes (or names), the helpers in plotting draw on the current
+    # axes (and leave the subplots without titles)
+    import matplotlib.pyplot as plt
+
+    from statsmodels.tsa.vector_ar import plotting
+
+    y = np.array([1.0, 2.0, 0.5, -0.5])
+    error = np.array([0.1, 0.2, 0.3, 0.4])
+    q = stats.norm.ppf(1 - 0.1 / 2)
+    fig, ax = plt.subplots()
+    plotting.plot_with_error(y, error, alpha=0.1)
+    plotting.plot_with_error(y, (y - 1, y + 2), stderr_type="mc")
+    drawn = [line.get_ydata() for line in ax.lines]
+    expected = [y, y - q * error, y + q * error, y, y - 1, y + 2]
+    assert len(drawn) == len(expected)
+    for actual, value in zip(drawn, expected, strict=True):
+        assert_allclose(actual, value, rtol=1e-12)
+    assert_allclose(ax.lines[0].get_xdata(), np.arange(4))
+
+    acorr = np.array([1.0, 0.5, -0.25])
+    fig, ax = plt.subplots()
+    plotting.acorr_plot(acorr)
+    segments = ax.collections[0].get_segments()
+    for lag, segment in enumerate(segments):
+        assert_allclose(segment, [[lag, 0.0], [lag, acorr[lag]]])
+    assert_allclose(ax.get_xlim(), [-1, 3])
+    assert_allclose(ax.get_ylim(), [-1, 1])
+
+    prior = np.column_stack([np.arange(5.0), np.arange(5.0) ** 2])
+    forc = np.array([[5.0, 25.0], [6.0, 36.0]])
+    fig = plotting.plot_var_forc(prior, forc, forc + 1, forc - 1)
+    assert len(fig.axes) == 2
+    for j, ax in enumerate(fig.axes):
+        assert ax.get_title() == ""
+        assert_allclose(ax.lines[0].get_ydata(), prior[:, j])
+        assert_allclose(ax.lines[2].get_ydata(), forc[:, j] + 1)
+        assert_allclose(ax.lines[3].get_ydata(), forc[:, j] - 1)
+
+
 def test_pickle():
     # Removed from class to allow thread safe testing
     fh = BytesIO()
