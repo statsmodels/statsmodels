@@ -1,0 +1,5 @@
+- ``MarkovSwitchingResults`` removed ``approx_complex_step`` and ``approx_centered`` from
+  the ``cov_kwds`` dict passed to ``fit``, ``filter`` or ``smooth``
+  and then ignored them. The dict is left unchanged, and
+  ``approx_complex_step=False`` computes the covariance by finite
+  differences, so these covariance matrices change. :pr:`11002`
