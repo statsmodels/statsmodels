@@ -23,13 +23,17 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     trend : {'n', 'c', 't', 'ct'}, optional
         Whether or not to include a trend. To include an intercept, time trend,
         or both, set `trend='c'`, `trend='t'`, or `trend='ct'`. For no trend,
-        set `trend='n'`. Default is an intercept.
+        set `trend='n'`. Default is an intercept. The time trend is
+        1, 2, ..., nobs.
     exog : array_like, optional
-        Array of exogenous regressors, shaped nobs x k.
+        Array of exogenous regressors, shaped (nobs, k), or (nobs,) for a
+        single regressor.
     order : int, optional
         The order of the model describes the dependence of the likelihood on
-        previous regimes. This depends on the model in question and should be
-        set appropriately by subclasses.
+        previous regimes. It is used by subclasses such as
+        `MarkovAutoregression`. The likelihood of a Markov switching
+        regression depends only on the current regime, so `order` should be
+        left at its default of 0.
     exog_tvtp : array_like, optional
         Array of exogenous or lagged variables to use in calculating
         time-varying transition probabilities (TVTP). TVTP is only used if this
@@ -167,8 +171,9 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         Returns
         -------
         predict : ndarray
-            Array of predictions conditional on current, and possibly past,
-            regimes
+            Array of predictions conditional on the current regime, shaped
+            (k_regimes, 1, nobs). The second axis has length one because the
+            prediction does not depend on the previous regime.
         """
         params = np.array(params, ndmin=1)
 
@@ -431,11 +436,13 @@ class MarkovRegressionResults(markov_switching.MarkovSwitchingResults):
         The fitted model instance
     params : ndarray
         Fitted parameters
-    filter_results : HamiltonFilterResults or KimSmootherResults instance
+    results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
     cov_type : str, optional
         The type of covariance matrix estimator to use. Can be one of 'approx',
-        'opg', 'robust', or 'none'.
+        'opg', 'robust', or 'none'. Default is 'opg'.
+    cov_kwds : dict, optional
+        Keywords for alternative covariance estimators.
 
     Attributes
     ----------
@@ -443,7 +450,7 @@ class MarkovRegressionResults(markov_switching.MarkovSwitchingResults):
         A reference to the model that was fit.
     filter_results : HamiltonFilterResults or KimSmootherResults instance
         The underlying filter and, optionally, smoother output
-    nobs : float
+    nobs : int
         The number of observations used to fit the model.
     params : ndarray
         The parameters of the model.

@@ -4,6 +4,7 @@ Tests for Markov Autoregression models
 Author: Chad Fulton
 License: BSD-3
 """
+import itertools
 from pathlib import Path
 import warnings
 
@@ -11,6 +12,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
+from scipy.special import logsumexp
 
 from statsmodels.tools import add_constant
 from statsmodels.tsa.regime_switching import markov_autoregression
@@ -901,3 +903,518 @@ class TestFilardoPandas(MarkovAutoregression):
         assert_allclose(self.result.expected_durations,
                         self.mar_filardo[["duration0", "duration1"]].iloc[5:],
                         rtol=1e-5, atol=1e-7)
+
+
+# Tests at fixed parameters against references written out independently of
+# the model code: the Hamilton (1989) filter, least squares and closed forms.
+
+# transition[i, j] = Pr[S_t = i | S_{t-1} = j]; the parameters are
+# p[0->0] = transition[0, 0] and p[1->0] = transition[0, 1]
+TRANSITION = np.array([[0.9, 0.2], [0.1, 0.8]])
+
+
+def two_regime_ar_data(nobs=50, seed=20261122):
+    rng = np.random.default_rng(seed)
+    regime = (np.arange(nobs) // 10) % 2
+    exog = rng.standard_normal(nobs)
+    mean = np.where(regime == 0, 0.5, 2.0)
+    endog = np.zeros(nobs)
+    for t in range(nobs):
+        lag = endog[t - 1] - mean[t - 1] if t else 0.0
+        endog[t] = mean[t] + 0.3 * exog[t] + 0.4 * lag + rng.standard_normal()
+    return endog, exog
+
+
+def ergodic_probabilities(transition):
+    # Solve transition @ pi = pi subject to sum(pi) = 1
+    k_regimes = transition.shape[0]
+    lhs = np.vstack([np.eye(k_regimes) - transition, np.ones((1, k_regimes))])
+    rhs = np.r_[np.zeros(k_regimes), 1.0]
+    return np.linalg.lstsq(lhs, rhs, rcond=None)[0]
+
+
+def lags_of(series, order):
+    # Columns y_{t-1}, ..., y_{t-order} for t = order, ..., nobs - 1
+    nobs = series.shape[0]
+    return np.column_stack([series[order - j : nobs - j] for j in range(1, order + 1)])
+
+
+def hamilton_ar_filter(endog, means, ar_coeffs, variances, transition, order):
+    """
+    Hamilton (1989) filter written out for the Markov switching AR model
+
+        y_t = m_t(S_t) + sum_j phi_j(S_t) (y_{t-j} - m_{t-j}(S_{t-j})) + e_t,
+        e_t ~ N(0, variances[S_t]),
+
+    over the joint state (S_t, ..., S_{t-order}). `means` is (k, nobs) and
+    `ar_coeffs` is (k, order); the first `order` observations are presample.
+    `transition` is (k, k), or (k, k, nobs) if it is time-varying, where
+    transition[..., t] governs the move from S_{t-1} to S_t. The regime at
+    t = -1 has the ergodic distribution of transition[..., 0].
+
+    Returns the log-likelihood contributions and the conditional means,
+    shaped (k,) * (order + 1) + (nobs - order,).
+    """
+    k_regimes = transition.shape[0]
+    nobs = len(endog)
+    if transition.ndim == 2:
+        transition = np.repeat(transition[:, :, None], nobs, axis=2)
+    states = list(itertools.product(range(k_regimes), repeat=order + 1))
+    position = {state: n for n, state in enumerate(states)}
+
+    # Joint distribution of (S_{order-1}, ..., S_{-1}) before any data
+    ergodic = ergodic_probabilities(transition[..., 0])
+    filtered = np.array(
+        [
+            ergodic[s[-1]]
+            * np.prod(
+                [transition[s[j], s[j + 1], order - 1 - j] for j in range(order)]
+            )
+            for s in states
+        ]
+    )
+
+    llf_obs = np.empty(nobs - order)
+    cond_means = np.empty((k_regimes,) * (order + 1) + (nobs - order,))
+    for t in range(order, nobs):
+        predicted = np.zeros(len(states))
+        for n, s in enumerate(states):
+            for new in range(k_regimes):
+                target = position[(new,) + s[:-1]]
+                predicted[target] += transition[new, s[0], t] * filtered[n]
+        log_joint = np.empty(len(states))
+        for n, s in enumerate(states):
+            i = s[0]
+            mean = means[i, t] + sum(
+                ar_coeffs[i, j - 1] * (endog[t - j] - means[s[j], t - j])
+                for j in range(1, order + 1)
+            )
+            cond_means[s + (t - order,)] = mean
+            log_joint[n] = (
+                np.log(predicted[n])
+                - 0.5 * (endog[t] - mean) ** 2 / variances[i]
+                - 0.5 * np.log(2 * np.pi * variances[i])
+            )
+        llf_obs[t - order] = logsumexp(log_joint)
+        filtered = np.exp(log_joint - llf_obs[t - order])
+    return llf_obs, cond_means
+
+
+def em_update(mod, params):
+    # One EM iteration and no optimizer iteration, so fit returns the EM update
+    return mod.fit(
+        start_params=params,
+        em_iter=1,
+        maxiter=0,
+        return_params=True,
+        warn_convergence=False,
+    )
+
+
+def wls(endog, exog, weights):
+    # Weighted least squares through the normal equations
+    weighted = exog * weights[:, None]
+    return np.linalg.solve(weighted.T @ exog, weighted.T @ endog)
+
+
+def stack(coeffs, switching):
+    # One value per regime for a switching coefficient, else a single value
+    out = []
+    for j, switches in enumerate(switching):
+        out.extend(coeffs[:, j] if switches else coeffs[:1, j])
+    return out
+
+
+@pytest.mark.parametrize(
+    "order, trend, switching_ar, switching_variance, use_exog",
+    [
+        (1, "n", True, False, False),
+        (1, "c", True, True, False),
+        (2, "c", False, False, False),
+        (2, "c", [True, False], False, False),
+        (2, "ct", (False, True), False, False),
+        (1, "t", np.array([True]), False, True),
+        (3, "c", True, False, True),
+    ],
+)
+def test_against_hamilton_filter(
+    order, trend, switching_ar, switching_variance, use_exog
+):
+    endog, exog = two_regime_ar_data()
+    nobs = endog.shape[0]
+    mod = markov_autoregression.MarkovAutoregression(
+        endog,
+        k_regimes=2,
+        order=order,
+        trend=trend,
+        exog=exog if use_exog else None,
+        switching_ar=switching_ar,
+        switching_variance=switching_variance,
+    )
+
+    # Mean regressors over the whole sample, presample included: a constant,
+    # the time trend t = 1, ..., nobs, and the exog column. The trend
+    # coefficients switch (the default), the exog coefficient does not.
+    design = []
+    coeffs = []  # regime 0, regime 1
+    if "c" in trend:
+        design.append(np.ones(nobs))
+        coeffs.append([0.5, 2.0])
+    if "t" in trend:
+        design.append(np.arange(1.0, nobs + 1))
+        coeffs.append([0.01, -0.01])
+    switching_coeffs = [True] * len(design)
+    if use_exog:
+        design.append(exog)
+        coeffs.append([0.3, 0.3])
+        switching_coeffs.append(False)
+    design = np.array(design).reshape(-1, nobs)
+    coeffs = np.array(coeffs).reshape(-1, 2).T
+
+    if isinstance(switching_ar, bool):
+        switching = np.array([switching_ar] * order, dtype=bool)
+    else:
+        switching = np.asarray(switching_ar, dtype=bool)
+    ar_coeffs = np.array([[0.4, 0.1, -0.1], [-0.2, 0.25, 0.05]])[:, :order]
+    # A non-switching coefficient takes the same value in both regimes
+    ar_coeffs[1, ~switching] = ar_coeffs[0, ~switching]
+    variances = np.array([0.7, 1.5]) if switching_variance else np.array([1.1, 1.1])
+    params = np.r_[
+        TRANSITION[0, 0],
+        TRANSITION[0, 1],
+        stack(coeffs, switching_coeffs),
+        variances if switching_variance else variances[:1],
+        stack(ar_coeffs, switching),
+    ]
+
+    llf_obs, cond_means = hamilton_ar_filter(
+        endog, coeffs @ design, ar_coeffs, variances, TRANSITION, order
+    )
+    predicted = mod.predict_conditional(params)
+    assert predicted.shape == (2,) * (order + 1) + (nobs - order,)
+    # The conditional means are sums of terms of order one that can nearly
+    # cancel, so rtol allows for another summation order
+    assert_allclose(predicted, cond_means, rtol=1e-10)
+    assert_allclose(mod.loglikeobs(params), llf_obs, rtol=1e-10)
+    assert_allclose(mod.loglike(params), llf_obs.sum(), rtol=1e-10)
+
+
+def test_exog_tvtp_against_hamilton_filter():
+    endog, exog = two_regime_ar_data()
+    nobs = endog.shape[0]
+    order = 2
+    # exog_tvtp has a row for every observation, presample included
+    exog_tvtp = np.column_stack([np.ones(nobs), exog])
+    mod = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=order, exog_tvtp=exog_tvtp
+    )
+    # Pr[S_t = 0 | S_{t-1} = j] = logistic(exog_tvtp[t] @ gamma[j])
+    gamma = np.array([[2.0, 0.5], [-1.0, 0.8]])
+    ar_coeffs = np.array([[0.4, 0.1], [-0.2, 0.25]])
+    params = np.r_[gamma.T.ravel(), 0.5, 2.0, 1.1, ar_coeffs.T.ravel()]
+    stay = 1 / (1 + np.exp(-(exog_tvtp @ gamma.T)))
+    transition = np.array([stay.T, 1 - stay.T])
+    means = np.array([np.full(nobs, 0.5), np.full(nobs, 2.0)])
+
+    llf_obs, _ = hamilton_ar_filter(
+        endog, means, ar_coeffs, np.array([1.1, 1.1]), transition, order
+    )
+    assert_allclose(mod.loglikeobs(params), llf_obs, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "order, switching_ar",
+    [(2, [True]), (1, (True, False)), (3, np.ones(2, dtype=bool))],
+)
+def test_invalid_switching_ar_length(order, switching_ar):
+    endog, _ = two_regime_ar_data()
+    with pytest.raises(ValueError, match="Invalid iterable passed to `switching_ar`"):
+        markov_autoregression.MarkovAutoregression(
+            endog, k_regimes=2, order=order, switching_ar=switching_ar
+        )
+
+
+@pytest.mark.parametrize("nobs", [2, 3])
+def test_too_few_observations(nobs):
+    endog, _ = two_regime_ar_data()
+    with pytest.raises(ValueError, match="Must have more observations than the"):
+        markov_autoregression.MarkovAutoregression(endog[:nobs], k_regimes=2, order=3)
+
+
+@pytest.mark.parametrize("order", [1, 2])
+@pytest.mark.parametrize("switching_variance", [False, True])
+def test_em_update_without_trend(order, switching_variance):
+    # With no mean terms the density depends only on the current regime, and
+    # the M-step for the AR coefficients is weighted least squares
+    endog, _ = two_regime_ar_data()
+    mod = markov_autoregression.MarkovAutoregression(
+        endog,
+        k_regimes=2,
+        order=order,
+        trend="n",
+        switching_variance=switching_variance,
+    )
+    variances = [0.8, 2.0] if switching_variance else [1.2]
+    ar_coeffs = np.array([[0.5, 0.1], [0.2, -0.1]])[:, :order]
+    params = np.r_[0.9, 0.2, variances, ar_coeffs.T.ravel()]
+
+    actual = em_update(mod, params)
+    weights = mod.smooth(params).smoothed_marginal_probabilities.T
+    y = endog[order:]
+    lags = lags_of(endog, order)
+    phi = np.array([wls(y, lags, w) for w in weights])
+    ssr = np.array(
+        [np.sum(w * (y - lags @ p) ** 2) for w, p in zip(weights, phi, strict=True)]
+    )
+    if switching_variance:
+        sigma2 = ssr / weights.sum(1)
+    else:
+        sigma2 = [ssr.sum() / y.shape[0]]
+    k_var = len(variances)
+    assert_allclose(actual[2 : 2 + k_var], sigma2, rtol=1e-10)
+    assert_allclose(actual[2 + k_var :], phi.T.ravel(), rtol=1e-10)
+
+
+@pytest.mark.parametrize("order", [1, 2])
+def test_em_update_switching_variance_with_trend(order):
+    # The EM update takes the regime means as weighted means of y_t, then
+    # regresses y_t - mu_i on its own lags, demeaned with the same mu_i, by
+    # weighted least squares in each regime
+    endog, _ = two_regime_ar_data()
+    nobs = endog.shape[0] - order
+    mod = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=order, switching_variance=True
+    )
+    mod_common = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=order
+    )
+    ar_coeffs = np.array([[0.5, 0.1], [0.2, -0.1]])[:, :order].T.ravel()
+    # Equal variances, so that both models have the same smoothed regimes
+    params = np.r_[0.9, 0.2, 0.5, 2.0, 1.2, 1.2, ar_coeffs]
+    params_common = np.r_[0.9, 0.2, 0.5, 2.0, 1.2, ar_coeffs]
+
+    actual = em_update(mod, params)
+    actual_common = em_update(mod_common, params_common)
+    weights = mod.smooth(params).smoothed_marginal_probabilities.T
+    mu = weights @ endog[order:] / weights.sum(1)
+    phi = []
+    sigma2 = []
+    for w, m in zip(weights, mu, strict=True):
+        resid = endog - m
+        lags = lags_of(resid, order)
+        coeffs = wls(resid[order:], lags, w)
+        phi.append(coeffs)
+        sigma2.append(np.sum(w * (resid[order:] - lags @ coeffs) ** 2) / np.sum(w))
+    assert_allclose(actual[2:4], mu, rtol=1e-10)
+    assert_allclose(actual[4:6], sigma2, rtol=1e-10)
+    assert_allclose(actual[6:], np.array(phi).T.ravel(), rtol=1e-10)
+
+    # With one variance, it is the average of the regime variances weighted
+    # by the expected number of periods in each regime; the rest is the same
+    assert_allclose(actual_common[2:4], actual[2:4], rtol=1e-12)
+    assert_allclose(actual_common[4], weights.sum(1) @ actual[4:6] / nobs, rtol=1e-10)
+    assert_allclose(actual_common[5:], actual[6:], rtol=1e-12)
+
+
+@pytest.mark.parametrize("switching_ar", [True, False])
+@pytest.mark.parametrize("switching_variance", [False, True])
+def test_start_params_without_trend(switching_ar, switching_variance):
+    endog, _ = two_regime_ar_data()
+    order = 2
+    mod = markov_autoregression.MarkovAutoregression(
+        endog,
+        k_regimes=2,
+        order=order,
+        trend="n",
+        switching_ar=switching_ar,
+        switching_variance=switching_variance,
+    )
+    lags = lags_of(endog, order)
+    beta = np.linalg.lstsq(lags, endog[order:], rcond=None)[0]
+    resid = endog[order:] - lags @ beta
+    variance = np.mean((resid - resid.mean()) ** 2)
+    variances = [variance / 10, variance] if switching_variance else [variance]
+    # Regime i interpolates between zero and OLS: beta * i / k_regimes
+    ar = np.column_stack([0 * beta, beta / 2]).ravel() if switching_ar else beta
+    desired = np.r_[0.5, 0.5, variances, ar]
+    assert_allclose(mod.start_params, desired, rtol=1e-10)
+
+
+def test_start_params_nonswitching_trend():
+    endog, _ = two_regime_ar_data()
+    mod = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=1, switching_trend=False
+    )
+    design = np.column_stack([np.ones(endog.shape[0] - 1), endog[:-1]])
+    beta = np.linalg.lstsq(design, endog[1:], rcond=None)[0]
+    resid = endog[1:] - design @ beta
+    variance = np.mean((resid - resid.mean()) ** 2)
+    desired = np.r_[0.5, 0.5, beta[0], variance, 0, beta[1] / 2]
+    assert_allclose(mod.start_params, desired, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "switching_ar, desired",
+    [
+        (True, ["ar.L1[0]", "ar.L1[1]", "ar.L2[0]", "ar.L2[1]"]),
+        (False, ["ar.L1", "ar.L2"]),
+    ],
+)
+def test_param_names(switching_ar, desired):
+    endog, _ = two_regime_ar_data()
+    mod = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=2, switching_ar=switching_ar
+    )
+    names = ["p[0->0]", "p[1->0]", "const[0]", "const[1]", "sigma2"] + desired
+    assert mod.param_names == names
+
+
+def test_transform_params_round_trip():
+    endog, _ = two_regime_ar_data()
+    mod = markov_autoregression.MarkovAutoregression(endog, k_regimes=2, order=2)
+    unconstrained = np.r_[1.5, -0.4, 0.5, 2.0, -1.1, 3.0, -2.0, 1.0, 4.0]
+    constrained = mod.transform_params(unconstrained)
+    assert isinstance(constrained, np.ndarray)
+    assert_allclose(constrained[:2], 1 / (1 + np.exp(-unconstrained[:2])), rtol=1e-12)
+    assert_allclose(constrained[2:4], unconstrained[2:4], rtol=1e-15)
+    assert_allclose(constrained[4], unconstrained[4] ** 2, rtol=1e-15)
+    # Each regime's AR polynomial 1 - phi_1 z - phi_2 z^2 is stationary
+    for i in range(2):
+        phi = constrained[[5 + i, 7 + i]]
+        roots = np.roots(np.r_[-phi[::-1], 1])
+        assert np.all(np.abs(roots) > 1)
+    desired = np.r_[unconstrained[:4], np.abs(unconstrained[4]), unconstrained[5:]]
+    assert_allclose(mod.untransform_params(constrained), desired, rtol=1e-10)
+
+
+ENDOG_FORMS = [
+    "list",
+    "tuple",
+    "column",
+    "int",
+    "series_dates",
+    "series_periods",
+    "dataframe",
+    "dates_argument",
+]
+
+
+def endog_in_form(values, form):
+    """Return `values` in the given input form, its index and model kwargs"""
+    nobs = values.shape[0]
+    index = {
+        "series_dates": pd.date_range("2000-01-01", periods=nobs, freq="MS"),
+        "dates_argument": pd.date_range("2000-01-01", periods=nobs, freq="MS"),
+        "series_periods": pd.period_range("2000-01", periods=nobs, freq="M"),
+        "dataframe": pd.date_range("2000-01-01", periods=nobs, freq="QS"),
+    }.get(form)
+    kwargs = {}
+    if form == "list":
+        endog = values.tolist()
+    elif form == "tuple":
+        endog = tuple(values.tolist())
+    elif form == "column":
+        endog = values[:, None]
+    elif form == "int":
+        endog = values.astype(np.int64)
+    elif form == "dataframe":
+        endog = pd.DataFrame({"y": values}, index=index)
+    elif form == "dates_argument":
+        endog = values
+        kwargs["dates"] = index
+    else:
+        endog = pd.Series(values, index=index, name="y")
+    return endog, index, kwargs
+
+
+@pytest.mark.parametrize("form", ENDOG_FORMS)
+def test_endog_forms(form):
+    rng = np.random.default_rng(5)
+    order = 2
+    # Integer values, so that the int64 form holds exactly the same data
+    values = rng.integers(-3, 5, size=40).astype(float)
+    endog, index, kwargs = endog_in_form(values, form)
+    mod = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=order, **kwargs
+    )
+    ref = markov_autoregression.MarkovAutoregression(values, k_regimes=2, order=order)
+    params = np.r_[0.9, 0.2, -0.5, 1.5, 2.0, 0.3, -0.2, 0.1, 0.05]
+    res = mod.smooth(params)
+    res_ref = ref.smooth(params)
+
+    assert mod.nobs == values.shape[0] - order
+    assert_allclose(res.llf, res_ref.llf, rtol=1e-12)
+    smoothed = res.smoothed_marginal_probabilities
+    assert_allclose(
+        np.asarray(smoothed), res_ref.smoothed_marginal_probabilities, rtol=1e-10
+    )
+    predicted = res.predict()
+    assert_allclose(np.asarray(predicted), res_ref.predict(), rtol=1e-12)
+    if isinstance(endog, (pd.Series, pd.DataFrame)):
+        # The first `order` observations are presample
+        assert isinstance(predicted, pd.Series)
+        assert predicted.index.equals(index[order:])
+        assert isinstance(smoothed, pd.DataFrame)
+        assert smoothed.index.equals(index[order:])
+    else:
+        assert isinstance(predicted, np.ndarray)
+        assert isinstance(smoothed, np.ndarray)
+    if form == "dates_argument":
+        # The dates, less the presample, locate the prediction period
+        assert_allclose(
+            res.predict(start=index[order + 5]), res_ref.predict()[5:], rtol=1e-12
+        )
+
+
+@pytest.mark.parametrize("form", ["list", "ndarray", "column", "series", "dataframe"])
+def test_exog_forms(form):
+    endog, exog = two_regime_ar_data()
+    nobs = endog.shape[0]
+    index = pd.date_range("2000-01-01", periods=nobs, freq="MS")
+    values = exog
+    name = "x1"
+    if form == "list":
+        exog = values.tolist()
+    elif form == "column":
+        exog = values[:, None]
+    elif form in ("series", "dataframe"):
+        endog = pd.Series(endog, index=index)
+        name = "xa"
+        exog = pd.Series(values, index=index, name=name)
+        if form == "dataframe":
+            exog = exog.to_frame()
+    mod = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=1, trend="n", exog=exog
+    )
+    ar_coeffs = np.array([[0.4], [-0.2]])
+    params = np.r_[0.9, 0.2, 0.3, 1.1, ar_coeffs.ravel()]
+    means = np.array([0.3 * values, 0.3 * values])
+
+    llf_obs, _ = hamilton_ar_filter(
+        np.asarray(endog), means, ar_coeffs, np.array([1.1, 1.1]), TRANSITION, 1
+    )
+    assert_allclose(mod.loglikeobs(params), llf_obs, rtol=1e-10)
+    # The exog coefficient does not switch by default
+    assert mod.param_names[2] == name
+
+
+@pytest.mark.parametrize("form", ["list", "ndarray", "dataframe"])
+def test_exog_tvtp_forms(form):
+    endog, exog = two_regime_ar_data()
+    nobs = endog.shape[0]
+    exog_tvtp = np.column_stack([np.ones(nobs), exog])
+    ref = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=1, exog_tvtp=exog_tvtp
+    )
+    if form == "list":
+        exog_tvtp = exog_tvtp.tolist()
+    elif form == "dataframe":
+        index = pd.date_range("2000-01-01", periods=nobs, freq="MS")
+        endog = pd.Series(endog, index=index)
+        exog_tvtp = pd.DataFrame(exog_tvtp, index=index, columns=["c", "z"])
+    mod = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=1, exog_tvtp=exog_tvtp
+    )
+    params = np.r_[2.0, -1.0, 0.5, 0.8, 0.5, 2.0, 1.1, 0.4, -0.2]
+
+    assert_allclose(mod.loglikeobs(params), ref.loglikeobs(params), rtol=1e-12)
