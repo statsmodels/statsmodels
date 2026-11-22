@@ -11,7 +11,7 @@ import pandas as pd
 import pytest
 
 from statsmodels import datasets
-from statsmodels.tsa.statespace import sarimax, varmax
+from statsmodels.tsa.statespace import mlemodel, sarimax, varmax
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 
 dta = datasets.macrodata.load_pandas().data
@@ -721,3 +721,50 @@ def test_get_prediction_dynamic_numpy_bool(dynamic, expected):
     assert_allclose(pred, ref, rtol=1e-12)
     other = res.get_prediction(start=20, end=80, dynamic=not expected)
     assert np.max(np.abs(pred - other.predicted_mean)) > 1e-3
+
+
+def _bivariate_ssm():
+    # Two observed series, two states, an observation intercept and
+    # correlated observation disturbances
+    rng = np.random.default_rng(86420)
+    endog = rng.standard_normal((40, 2)).cumsum(0) * 0.1
+    endog += rng.standard_normal((40, 2))
+    mod = mlemodel.MLEModel(endog, k_states=2, k_posdef=2)
+    mod["design"] = np.array([[1.0, 0.2], [0.3, 1.0]])
+    mod["obs_intercept"] = np.array([0.5, -0.2])
+    mod["transition"] = np.array([[0.5, 0.1], [0.0, 0.3]])
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.array([[1.0, 0.2], [0.2, 0.5]])
+    mod["obs_cov"] = np.array([[1.0, 0.3], [0.3, 2.0]])
+    mod.ssm.initialize_known(np.zeros(2), np.eye(2))
+    return mod
+
+
+@pytest.mark.parametrize("information_set", ["filtered", "smoothed"])
+@pytest.mark.parametrize("means_first", [True, False])
+@pytest.mark.parametrize("end", [35, 46])
+def test_prediction_results_forecasts_error_cov(information_set, means_first, end):
+    # The forecasts and forecast error covariance matrices from the filtered
+    # or smoothed states are d + Z a and Z P Z' + H, whichever is read first,
+    # in sample (end=35) and with forecasts after the sample (end=46)
+    mod = _bivariate_ssm()
+    start = 5
+    pred = mod.ssm.smooth().predict(start=start, end=end)
+    assert pred.npredictions == end - start
+
+    if means_first:
+        forecasts = getattr(pred, f"{information_set}_forecasts")
+        cov = getattr(pred, f"{information_set}_forecasts_error_cov")
+    else:
+        cov = getattr(pred, f"{information_set}_forecasts_error_cov")
+        forecasts = getattr(pred, f"{information_set}_forecasts")
+
+    state = getattr(pred, f"{information_set}_state")
+    state_cov = getattr(pred, f"{information_set}_state_cov")
+    assert state.shape[-1] == end - start
+    design, obs_intercept = mod["design"], mod["obs_intercept"]
+    desired = obs_intercept[:, None] + design @ state
+    assert_allclose(forecasts, desired, rtol=1e-12)
+    desired_cov = np.einsum("ij,jkt,lk->ilt", design, state_cov, design)
+    desired_cov += mod["obs_cov"][:, :, None]
+    assert_allclose(cov, desired_cov, rtol=1e-12)
