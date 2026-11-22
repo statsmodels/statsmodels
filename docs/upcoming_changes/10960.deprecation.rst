@@ -1,0 +1,4 @@
+- A ``coint_rank`` larger than the number of variables in :class:`~statsmodels.tsa.vector_ar.vecm.VECM`,
+  and values of ``deterministic`` that ``VECM`` rejects in
+  ``select_order``, are deprecated and will raise a ``ValueError``
+  after statsmodels 0.17 is released. :pr:`10960`
