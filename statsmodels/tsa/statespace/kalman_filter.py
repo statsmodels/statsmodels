@@ -1194,6 +1194,11 @@ class KalmanFilter(Representation):
             space model. Alternatively, a custom impulse vector may be
             provided; must be a column vector with shape `(k_posdef, 1)`.
             Default is 0.
+
+            .. versionchanged:: 0.15.1
+
+               NumPy integers are accepted as the index of the state
+               innovation. They raised ValueError.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
@@ -1232,8 +1237,8 @@ class KalmanFilter(Representation):
                 self._selection.shape[2] == 1):
             steps += 1
 
-        # Check for what kind of impulse we want
-        if type(impulse) is int:
+        # Check for what kind of impulse we want (an index, but not a bool)
+        if isinstance(impulse, (int, np.integer)) and not isinstance(impulse, bool):
             if impulse >= self.k_posdef or impulse < 0:
                 raise ValueError("Invalid value for `impulse`. Must be the"
                                  " index of one of the state innovations.")
