@@ -1960,3 +1960,140 @@ def test_append_unnamed_series():
     forecast = actual.forecast(2)
     assert forecast.index.equals(desired.forecast(2).index)
     assert_allclose(forecast, desired.forecast(2), rtol=1e-12)
+
+
+def _centered_jacobian(func, x):
+    # Centered finite differences of a vector-valued function, with the step
+    # that balances the truncation and the rounding errors
+    step = np.finfo(float).eps ** (1 / 3) * np.maximum(np.abs(x), 0.1)
+    columns = []
+    for i in range(len(x)):
+        dx = np.zeros_like(x)
+        dx[i] = step[i]
+        columns.append((func(x + dx) - func(x - dx)) / (2 * step[i]))
+    return np.column_stack(columns)
+
+
+@pytest.mark.parametrize(
+    "method, approx_complex_step",
+    [
+        pytest.param("approx", None, id="approx-default"),
+        pytest.param("approx", False, id="approx-fd"),
+        pytest.param("harvey", None, id="harvey-default"),
+        pytest.param("harvey", False, id="harvey-fd"),
+    ],
+)
+@pytest.mark.parametrize(
+    "name", ["sarimax_arma21", "var2", "dynamic_factor", "sarimax_ar1"]
+)
+def test_score_obs_untransformed(name, method, approx_complex_step):
+    # The scores of the observations with respect to the unconstrained
+    # parameters u. The "harvey" method returned the scores with respect to
+    # the constrained parameters, evaluated at u. By default, complex-step
+    # differentiation was applied through transform_params, which is wrong
+    # for the VAR(2) and the dynamic factor model, whose transformations are
+    # not complex differentiable. The reference is the derivative of the
+    # loglikelihood of each observation as a function of u, at a point away
+    # from the optimum, and their sum is the score.
+    mod = _score_model(name)
+    uparams = mod.untransform_params(mod.start_params) + 0.1
+    actual = mod.score_obs(
+        uparams,
+        method=method,
+        transformed=False,
+        approx_complex_step=approx_complex_step,
+    )
+    desired = _centered_jacobian(
+        lambda params: mod.loglikeobs(params, transformed=False), uparams
+    )
+    # The errors of numerical derivatives scale with the largest element, not
+    # with each element
+    atol = 1e-4 * np.max(np.abs(desired))
+    assert_allclose(actual, desired, rtol=1e-5, atol=atol)
+    score = mod.score(
+        uparams,
+        method=method,
+        transformed=False,
+        approx_complex_step=approx_complex_step,
+    )
+    assert_allclose(actual.sum(0), score, rtol=1e-5, atol=1e-4 * np.max(np.abs(score)))
+
+
+@pytest.mark.parametrize(
+    "method, approx_complex_step",
+    [
+        pytest.param("approx", None, id="approx-default"),
+        pytest.param("harvey", None, id="harvey-default"),
+        pytest.param("harvey", False, id="harvey-fd"),
+    ],
+)
+@pytest.mark.parametrize("name", ["sarimax_arma21", "var2"])
+def test_score_obs_untransformed_chain_rule(name, method, approx_complex_step):
+    # The derivatives with respect to the constrained parameters are those of
+    # transformed=True, by default complex-step derivatives, and the chain
+    # rule gives the scores with respect to u to the accuracy of the Jacobian
+    # of the transformation (centered differences, about 1e-10 here). For the
+    # SARIMAX model, whose transformation is complex differentiable, the
+    # default "approx" result is that of statsmodels 0.15.0, to about 1e-10.
+    mod = _score_model(name)
+    uparams = mod.untransform_params(mod.start_params) + 0.1
+    params = mod.transform_params(uparams)
+    jacobian = _centered_jacobian(mod.transform_params, uparams)
+    desired = mod.score_obs(
+        params, method=method, approx_complex_step=approx_complex_step is None
+    )
+    desired = desired @ jacobian
+    actual = mod.score_obs(
+        uparams,
+        method=method,
+        transformed=False,
+        approx_complex_step=approx_complex_step,
+    )
+    assert_allclose(actual, desired, rtol=1e-8, atol=1e-8 * np.max(np.abs(desired)))
+
+
+@pytest.mark.parametrize("approx_centered", [False, True])
+def test_score_obs_untransformed_finite_difference(approx_centered):
+    # With finite differences and the "approx" method, the loglikelihoods of
+    # the observations are differentiated through the transformation, as
+    # before, which does not need complex values
+    mod = _score_model("var2")
+    uparams = mod.untransform_params(mod.start_params) + 0.1
+    desired = approx_fprime(
+        uparams,
+        lambda params: mod.loglikeobs(params, transformed=False),
+        centered=approx_centered,
+    )
+    actual = mod.score_obs(
+        uparams,
+        transformed=False,
+        approx_complex_step=False,
+        approx_centered=approx_centered,
+    )
+    assert_allclose(actual, desired, rtol=1e-10, atol=1e-10 * np.max(np.abs(desired)))
+
+
+@pytest.mark.parametrize(
+    "method, approx_complex_step",
+    [
+        pytest.param("approx", None, id="approx-default"),
+        pytest.param("harvey", None, id="harvey-default"),
+        pytest.param("harvey", False, id="harvey-fd"),
+    ],
+)
+def test_score_obs_untransformed_includes_fixed(method, approx_complex_step):
+    # With includes_fixed=True, all of the parameters passed are used and
+    # transformed, also those that are fixed, so that the scores are those of
+    # the model without fixed parameters
+    mod = _score_model("sarimax_arma21")
+    uparams = mod.untransform_params(mod.start_params) + 0.1
+    kwds = {
+        "method": method,
+        "transformed": False,
+        "approx_complex_step": approx_complex_step,
+    }
+    desired = mod.score_obs(uparams, **kwds)
+    start_params = dict(zip(mod.param_names, mod.start_params, strict=True))
+    with mod.fix_params({"ma.L1": start_params["ma.L1"]}):
+        actual = mod.score_obs(uparams, includes_fixed=True, **kwds)
+    assert_allclose(actual, desired, rtol=1e-10, atol=1e-10 * np.max(np.abs(desired)))
