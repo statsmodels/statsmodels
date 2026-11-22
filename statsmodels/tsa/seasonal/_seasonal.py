@@ -112,6 +112,12 @@ def seasonal_decompose(
     x : array_like
         Time series. If 2d, individual series are in columns. x must contain 2
         complete cycles.
+
+        .. versionchanged:: 0.15.1
+
+           A DataFrame with more than one column is decomposed column by
+           column, as a 2d ndarray is, and the components are DataFrames with
+           the index and columns of x. It used to raise a TypeError.
     model : {"additive", "multiplicative"}, optional
         Type of seasonal component. The abbreviations "add" and "mul" are accepted.
     filt : array_like, optional
@@ -274,7 +280,9 @@ def seasonal_decompose(
     for s, name in zip(
         (seasonal, trend, resid, x), ("seasonal", "trend", "resid", None), strict=True,
     ):
-        results.append(pw.wrap(s.squeeze(), columns=name))
+        s = s.squeeze()
+        # a 1-d component is named, a 2-d component keeps the columns of x
+        results.append(pw.wrap(s, columns=name if s.ndim == 1 else None))
     return DecomposeResult(
         seasonal=results[0],
         trend=results[1],

@@ -957,6 +957,64 @@ def test_seasonal_decompose_multiple():
     assert_allclose(res.resid[:, 0], res.resid[:, 1])
 
 
+def _dataframe_to_decompose(ncols):
+    rng = np.random.default_rng(20261130)
+    index = pd.date_range("2000-01-01", periods=48, freq="MS")
+    t = np.arange(48)[:, None]
+    x = 10 + 0.1 * t + np.sin(2 * np.pi * t / 12) + rng.standard_normal((48, ncols))
+    columns = ["a", "b", "c"][:ncols]
+    return pd.DataFrame(x, index=index, columns=columns)
+
+
+@pytest.mark.parametrize("extrapolate_trend", [0, "period"])
+@pytest.mark.parametrize("model", ["additive", "multiplicative"])
+@pytest.mark.parametrize("ncols", [1, 2, 3])
+def test_seasonal_decompose_dataframe(ncols, model, extrapolate_trend):
+    # A DataFrame with more than one column raised a TypeError when the
+    # components were wrapped. Each column is decomposed on its own, as for a
+    # 2-d ndarray, and the components keep the index and columns of x. A
+    # one-column DataFrame still gives Series named after the component.
+    df = _dataframe_to_decompose(ncols)
+    kwargs = {"model": model, "extrapolate_trend": extrapolate_trend}
+    res = seasonal_decompose(df, **kwargs)
+    names = {
+        "observed": None,
+        "seasonal": "seasonal",
+        "trend": "trend",
+        "resid": "resid",
+    }
+    for attr, name in names.items():
+        component = getattr(res, attr)
+        pd.testing.assert_index_equal(component.index, df.index)
+        if ncols == 1:
+            assert isinstance(component, pd.Series)
+            assert component.name == name
+        else:
+            assert isinstance(component, pd.DataFrame)
+            pd.testing.assert_index_equal(component.columns, df.columns)
+        values = np.asarray(component).reshape(48, ncols)
+        for i, col in enumerate(df.columns):
+            # the period, 12, comes from the monthly index
+            single = seasonal_decompose(df[col].to_numpy(), period=12, **kwargs)
+            # atol: seasonal and resid are differences of values of order
+            # ten, so values near zero carry absolute rounding
+            expected = getattr(single, attr)
+            assert_allclose(values[:, i], expected, rtol=1e-12, atol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+def test_seasonal_decompose_dataframe_plot(close_figures):
+    # a DataFrame result has one seasonal panel per column
+    df = _dataframe_to_decompose(2)
+    res = seasonal_decompose(df)
+    fig = res.plot()
+    assert len(fig.axes) == 5
+    for ax, col in zip(fig.axes[2:4], df.columns, strict=True):
+        ydata = np.asarray(ax.lines[0].get_ydata(), dtype=float)
+        assert_allclose(ydata, res.seasonal[col].to_numpy(), rtol=1e-12)
+
+
 @pytest.mark.thread_unsafe(reason="Uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("model", ["additive", "multiplicative"])
