@@ -2562,8 +2562,8 @@ class VARResults(VARProcess):
         sig_mask = np.zeros(sigma_u.shape)
         # set =1 twice to ensure, that all the ones needed are below the main
         # diagonal:
-        sig_mask[causing_ind, caused_ind] = 1
-        sig_mask[caused_ind, causing_ind] = 1
+        sig_mask[np.ix_(causing_ind, caused_ind)] = 1
+        sig_mask[np.ix_(caused_ind, causing_ind)] = 1
         vech_sig_mask = util.vech(sig_mask)
         inds = np.nonzero(vech_sig_mask)[0]
 
