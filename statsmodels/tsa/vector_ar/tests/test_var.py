@@ -1795,3 +1795,52 @@ def test_reorder_trend_exog(trend, k_exog, by_name):
         expected.forecast(y.iloc[-2:, order].to_numpy(), 4, exog_future),
         rtol=1e-10,
     )
+
+
+def test_pprint_matrix_text():
+    values = np.array([[1.5, -0.25], [12.0, 3e-7]])
+    text = output.pprint_matrix(values, ["a", "bbb"], ["x", "a_long_label"])
+    # Rows labels in 3 + 2 characters, columns in max(len(label) + 2, 10),
+    # floats with six decimals
+    expected = [
+        "     " + " " * 9 + "x" + "  a_long_label",
+        "a    " + "  1.500000" + "     -0.250000",
+        "bbb  " + " 12.000000" + "      0.000000",
+        "",
+    ]
+    assert text.split("\n") == expected
+    # Other values are converted with str, and labels are truncated to a
+    # given column width
+    text = output.pprint_matrix(np.array([[1, 22]]), [0], ["abcdefgh", 1], col_space=5)
+    assert text.split("\n") == ["   " + "abcde" + "    1", "0  " + "    1" + "   22", ""]
+
+
+def test_var_loglike_resid_deprecated():
+    # With Sigma = U'U / T, the Gaussian log-likelihood of the residuals U is
+    # -(T / 2) (K log(2 pi) + log|Sigma| + K), which var_loglike computes
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    resid = res.resid
+    nobs = resid.shape[0]
+    sigma_mle = resid.T @ resid / nobs
+    expected = stats.multivariate_normal(np.zeros(3), sigma_mle).logpdf(resid).sum()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert_allclose(res.llf, expected, rtol=1e-10)
+        assert_allclose(
+            var_model.var_loglike(None, sigma_mle, nobs), expected, rtol=1e-10
+        )
+    with pytest.warns(FutureWarning, match="resid has no effect"):
+        value = var_model.var_loglike(resid, sigma_mle, nobs)
+    assert_allclose(value, expected, rtol=1e-10)
+
+
+def test_forecast_cov_auto_warning_text():
+    from statsmodels.tools.sm_exceptions import OutputWarning
+
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    with pytest.warns(OutputWarning, match="parameter uncertainty into account$"):
+        res.forecast_cov(2, method="auto")
