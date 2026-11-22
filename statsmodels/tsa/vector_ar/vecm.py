@@ -1,4 +1,5 @@
 from collections import defaultdict
+import warnings
 
 import numpy as np
 from numpy import hstack, vstack
@@ -1013,6 +1014,14 @@ class VECM(tsbase.TimeSeriesModel):
     V     :math:`\\neq 0`                   :math:`\\neq 0`                       ``"colo"``
     ====  ===============================  ===================================  =============
 
+    .. deprecated:: 0.15.1
+
+       A `coint_rank` larger than the number of variables is deprecated and
+       will raise a ValueError after statsmodels 0.17 is released. Such a
+       model is estimated with the rank equal to the number of variables,
+       but the larger rank is kept in the results (for example in the
+       degrees of freedom of ``test_whiteness``).
+
     References
     ----------
     .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
@@ -1045,6 +1054,20 @@ class VECM(tsbase.TimeSeriesModel):
         self.neqs = self.endog.shape[1]
         self.k_ar = k_ar_diff + 1
         self.k_ar_diff = k_ar_diff
+        if coint_rank < 0:
+            raise ValueError(
+                f"coint_rank must be between 0 and neqs ({self.neqs}), got "
+                f"{coint_rank}."
+            )
+        if coint_rank > self.neqs:
+            warnings.warn(
+                f"coint_rank must be between 0 and neqs ({self.neqs}), got "
+                f"{coint_rank}. The model is estimated with rank {self.neqs}. "
+                "A coint_rank larger than neqs is deprecated and will raise a "
+                "ValueError after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
         self.coint_rank = coint_rank
         deterministic = string_like(
             deterministic,

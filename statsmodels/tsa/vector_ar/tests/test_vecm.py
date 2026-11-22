@@ -2377,3 +2377,49 @@ def test_llf_real(deterministic, k_ar_diff, coint_rank, seasons, expected):
     log_det = np.linalg.slogdet(res.resid.T @ res.resid / nobs)[1]
     gauss = -nobs / 2 * (neqs * np.log(2 * np.pi) + log_det + neqs)
     assert_allclose(res.llf, gauss, rtol=1e-9)
+
+
+@pytest.mark.parametrize("coint_rank", [5, 7])
+def test_vecm_coint_rank_above_neqs(coint_rank):
+    # A coint_rank above neqs was accepted silently: the model is the one
+    # with rank neqs, the VAR in levels estimated by OLS, but the given rank
+    # is kept and used in the degrees of freedom of test_whiteness. This is
+    # deprecated.
+    from statsmodels.datasets import danish_data
+    from statsmodels.tsa.vector_ar.var_model import VAR
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    neqs = y.shape[1]
+    with pytest.warns(FutureWarning, match="coint_rank must be between 0 and neqs"):
+        model = VECM(y, k_ar_diff=1, coint_rank=coint_rank)
+    res = model.fit()
+    var = VAR(y).fit(2, trend="n")
+    assert_allclose(res.var_rep, var.coefs, rtol=1e-8)
+    assert_allclose(res.llf, var.llf, rtol=1e-10)
+    assert res.coint_rank == coint_rank
+    nlags = 6
+    assert res.test_whiteness(nlags).df == neqs**2 * (nlags - 1) - neqs * coint_rank
+
+
+@pytest.mark.parametrize("coint_rank", [0, 4])
+def test_vecm_coint_rank_bounds(coint_rank):
+    # 0 and neqs are valid ranks
+    import warnings
+
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = VECM(y, k_ar_diff=1, coint_rank=coint_rank).fit()
+    assert res.alpha.shape == (4, coint_rank)
+
+
+@pytest.mark.parametrize("coint_rank", [-1, -4])
+def test_vecm_coint_rank_negative(coint_rank):
+    # A negative coint_rank raised "negative dimensions are not allowed" in fit
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with pytest.raises(ValueError, match="coint_rank must be between 0 and neqs"):
+        VECM(y, k_ar_diff=1, coint_rank=coint_rank)
