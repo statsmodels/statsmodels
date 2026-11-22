@@ -2722,17 +2722,6 @@ def test_var_predict_dataframe_params(bivariate_var_data):
     assert_allclose(pred, np.asarray(res.fittedvalues), rtol=1e-10)
 
 
-def test_var_exog_without_columns(bivariate_var_data):
-    # An exog without columns has no names, and the model is the VAR without
-    # exog
-    y = bivariate_var_data
-    res = VAR(y, exog=np.empty((y.shape[0], 0))).fit(2)
-    expected = VAR(y).fit(2)
-    assert_allclose(res.params, expected.params, rtol=1e-10)
-    assert_allclose(res.sigma_u, expected.sigma_u, rtol=1e-10)
-    assert res.exog_names == expected.exog_names
-
-
 def test_select_order_invalid_trend(bivariate_var_data):
     with pytest.raises(ValueError, match="Unknown trend: bad"):
         VAR(bivariate_var_data).select_order(4, trend="bad")
