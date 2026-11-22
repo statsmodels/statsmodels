@@ -4163,6 +4163,30 @@ def _negbin_alpha_data():
 
 
 @pytest.mark.parametrize("loglike_method", ["nb1", "nb2"])
+@pytest.mark.parametrize("failure", ["callback", "start_params"])
+def test_negbin_alpha_after_failed_fit(loglike_method, failure):
+    # a fit that raises must not leave the model reading log(alpha)
+    endog, exog = _negbin_alpha_data()
+    model = NegativeBinomial(endog, exog, loglike_method=loglike_method)
+    res = model.fit(disp=0)
+    llf = res.llf  # llf is computed from the model, read it before the failure
+
+    def stop(xk):
+        raise RuntimeError("stop the optimizer")
+
+    if failure == "callback":
+        with pytest.raises(RuntimeError, match="stop the optimizer"):
+            model.fit(callback=stop, disp=0)
+    else:
+        # one parameter too few
+        with pytest.raises(ValueError):
+            model.fit(start_params=res.params[:-1], disp=0)
+    assert_allclose(model.loglike(res.params), llf, rtol=1e-12)
+    # the same instance can be fit again
+    assert_allclose(model.fit(disp=0).params, res.params, rtol=1e-6)
+
+
+@pytest.mark.parametrize("loglike_method", ["nb1", "nb2"])
 def test_negbin_save_load(loglike_method, tmp_path):
     # llf is computed from the loaded model after load, summary included
     endog, exog = _negbin_alpha_data()

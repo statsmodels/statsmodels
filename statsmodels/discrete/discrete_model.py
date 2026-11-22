@@ -4226,11 +4226,12 @@ class NegativeBinomial(CountModel):
 
         # Note: do not let super handle robust covariance because it has
         # transformed params
+        # newton and ncg step in alpha space, the other methods in log(alpha)
+        use_lnalpha = self.loglike_method.startswith("nb") and method not in [
+            "newton",
+            "ncg",
+        ]
         self._transparams = False  # always define attribute
-        if self.loglike_method.startswith("nb") and method not in ["newton", "ncg"]:
-            self._transparams = True  # in case same Model instance is refit
-        elif self.loglike_method.startswith("nb"):  # method is newton/ncg
-            self._transparams = False  # because we need to step in alpha space
 
         if start_params is None:
             # Use poisson fit as first guess.
@@ -4255,7 +4256,7 @@ class NegativeBinomial(CountModel):
                     res_poi.predict(), res_poi.resid, df_resid=res_poi.df_resid
                 )
                 start_params = np.append(start_params, max(0.05, a))
-        elif self._transparams is True:
+        elif use_lnalpha:
             # transform user provided start_params dispersion, see #3918
             start_params = np.array(start_params, copy=True)
             start_params[-1] = np.log(start_params[-1])
@@ -4265,21 +4266,25 @@ class NegativeBinomial(CountModel):
             def callback(*x):
                 return x
 
-        mlefit = super().fit(
-            start_params=start_params,
-            maxiter=maxiter,
-            method=method,
-            disp=disp,
-            full_output=full_output,
-            callback=callback,
-            **kwargs,
-        )
+        try:
+            self._transparams = use_lnalpha
+            mlefit = super().fit(
+                start_params=start_params,
+                maxiter=maxiter,
+                method=method,
+                disp=disp,
+                full_output=full_output,
+                callback=callback,
+                **kwargs,
+            )
+        finally:
+            # params hold alpha outside of the optimization, also if it raised
+            self._transparams = False
         if optim_kwds_prelim is not None:
             mlefit.mle_settings["optim_kwds_prelim"] = optim_kwds_prelim
         # TODO: Fix NBin _check_perfect_pred
         if self.loglike_method.startswith("nb"):
             # mlefit is a wrapped counts results
-            self._transparams = False  # do not need to transform anymore now
             # change from lnalpha to alpha
             if method not in ["newton", "ncg"]:
                 mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
