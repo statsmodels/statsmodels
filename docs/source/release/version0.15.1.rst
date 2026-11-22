@@ -823,6 +823,20 @@ Generalized linear models and discrete models
   raised. :pr:`10792`
 - ``summary`` of the marginal effects of ``GEE`` results raised a
   ``ValueError``. :pr:`10792`
+- ``exposure`` is used correctly in ``TruncatedLFPoisson``,
+  ``TruncatedLFNegativeBinomialP`` and ``TruncatedLFGeneralizedPoisson``, and
+  in ``predict(which="prob")`` of ``ZeroInflatedPoisson``,
+  ``ZeroInflatedNegativeBinomialP`` and ``ZeroInflatedGeneralizedPoisson``.
+  The log of the exposure was taken twice, which gave a ``nan``
+  log-likelihood or wrong parameters if an exposure is smaller than 1 and
+  raised a ``ValueError`` for an array exposure in the negative binomial and
+  generalized Poisson versions. ``ZeroInflatedPoisson`` ignored the exposure
+  in ``predict(which="prob")``. A model with ``exposure=e`` now gives the
+  same results as with ``offset=np.log(e)``.
+  ``predict`` of ``NegativeBinomialP`` and ``GeneralizedPoisson`` always takes
+  the log of an ``exposure`` that is passed, as ``Poisson`` does, so an
+  explicit ``exposure=0`` now gives ``log(0)`` instead of being treated as no
+  exposure. :issue:`8842`, :pr:`10505`
 
 Mixed models and imputation
 ---------------------------
