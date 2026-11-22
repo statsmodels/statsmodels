@@ -2657,6 +2657,11 @@ class UECMResults(ARDLResults):
         ----------
         case : {1, 2, 3, 4, 5}
             One of the cases covered in the PSS test.
+
+            .. versionchanged:: 0.15.1
+
+                Any other value raises a ValueError. It raised an
+                UnboundLocalError.
         cov_type : str, optional
             The covariance estimator to use. The asymptotic distribution of
             the PSS test has only been established in the homoskedastic case,
@@ -2800,6 +2805,8 @@ class UECMResults(ARDLResults):
                 "DeterministicProcess without ambiguity. Use trend, seasonal and "
                 "fixed to specify the deterministic terms."
             )
+        if case not in (1, 2, 3, 4, 5):
+            raise ValueError(f"case must be one of 1, 2, 3, 4 or 5, got {case!r}")
         trend: Literal["n", "c", "ct"]
         if case == 1:
             trend = "n"
@@ -2832,7 +2839,7 @@ class UECMResults(ARDLResults):
             rest = levels
         elif case == 2:
             rest = np.r_[0, levels]
-        elif case == 4:
+        else:
             rest = np.r_[1, levels]
         r = np.zeros((rest.shape[0], cov.shape[1]))
         for i, loc in enumerate(rest):
