@@ -430,6 +430,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
             Array of constrained parameters which may be used in likelihood
             evaluation.
         """
+        unconstrained = np.asarray(unconstrained)
         # Inherited parameters
         constrained = super().transform_params(
             unconstrained)
@@ -460,6 +461,7 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
         """
+        constrained = np.asarray(constrained)
         # Inherited parameters
         unconstrained = super().untransform_params(
             constrained)
