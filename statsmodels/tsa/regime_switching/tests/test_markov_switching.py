@@ -844,3 +844,51 @@ def test_model_k_params_is_python_int():
     # 2 transition probabilities, 2 switching constants and 1 variance
     assert mod.k_params == 5
     assert type(mod.k_params) is int
+
+
+def test_cov_kwds_not_changed():
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    params = np.r_[0.9, 0.2, 0.2, 2.8, 1.0]
+    cov_kwds = {"approx_complex_step": True, "approx_centered": False}
+    res = mod.smooth(params, cov_type="approx", cov_kwds=cov_kwds)
+    assert cov_kwds == {"approx_complex_step": True, "approx_centered": False}
+    # The defaults: complex-step differentiation
+    assert_allclose(res.cov_params(), mod.smooth(params).cov_params_approx)
+    assert "complex-step" in res.cov_kwds["description"]
+
+
+@pytest.mark.parametrize("cov_type", ["approx", "opg", "robust"])
+@pytest.mark.parametrize("centered", [False, True])
+def test_cov_kwds_finite_differences(cov_type, centered):
+    from statsmodels.tools.numdiff import approx_fprime, approx_hess1, approx_hess3
+
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    params = np.r_[0.9, 0.2, 0.2, 2.8, 1.0]
+    cov_kwds = {"approx_complex_step": False, "approx_centered": centered}
+    res = mod.smooth(params, cov_type=cov_type, cov_kwds=cov_kwds)
+    assert cov_kwds == {"approx_complex_step": False, "approx_centered": centered}
+
+    # The covariance matrix from finite-difference derivatives: forward
+    # differences, or centered ones
+    approx_hess = approx_hess3 if centered else approx_hess1
+    hessian = approx_hess(params, mod.loglike)
+    scores = approx_fprime(params, mod.loglikeobs, centered=centered)
+    opg = np.linalg.pinv(scores.T @ scores)
+    expected = {
+        "approx": -np.linalg.pinv(hessian),
+        "opg": opg,
+        "robust": np.linalg.pinv(hessian @ opg @ hessian),
+    }[cov_type]
+    assert_allclose(res.cov_params(), expected, rtol=1e-8)
+    method = "centered finite differences" if centered else "finite differences"
+    assert f"({method})" in res.cov_kwds["description"]
+
+    # The finite differences approximate the complex-step derivatives, up to
+    # their truncation error
+    cov_cs = mod.smooth(params, cov_type=cov_type).cov_params()
+    scale = np.sqrt(np.abs(np.outer(np.diag(cov_cs), np.diag(cov_cs))))
+    assert_allclose(res.cov_params() / scale, cov_cs / scale, atol=1e-2)

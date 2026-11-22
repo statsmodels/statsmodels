@@ -15,7 +15,13 @@ from statsmodels.base.data import PandasData
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.eval_measures import aic, bic, hqic
-from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
+from statsmodels.tools.numdiff import (
+    approx_fprime,
+    approx_fprime_cs,
+    approx_hess1,
+    approx_hess3,
+    approx_hess_cs,
+)
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import EstimationWarning, MissingDataError
 from statsmodels.tools.tools import Bunch, pinv_extended
@@ -1259,7 +1265,20 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             The type of covariance matrix estimator to use. Can be one of
             'approx', 'opg', 'robust', or 'none'. Default is 'approx'.
         cov_kwds : dict, optional
-            Keywords for alternative covariance estimators
+            Keywords for alternative covariance estimators:
+
+            - 'approx_complex_step' : bool, optional - If True (the default),
+              the numerical derivatives of the 'approx', 'opg' and 'robust'
+              covariance matrices are computed by complex-step
+              differentiation, otherwise by finite differences.
+            - 'approx_centered' : bool, optional - If True, the finite
+              differences are centered. Default is False.
+
+            .. versionchanged:: 0.15.1
+
+               'approx_complex_step' and 'approx_centered' are used, and the
+               dict is not changed. Before, both keys were removed from the
+               dict and ignored.
         method : str, optional
             The `method` determines which solver from `scipy.optimize`
             is used, and it can be chosen from among the following strings:
@@ -2005,9 +2024,9 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         # Setup the cache
         self._cache = {}
 
-        # Handle covariance matrix calculation
-        if cov_kwds is None:
-            cov_kwds = {}
+        # Handle covariance matrix calculation; copy cov_kwds so that the
+        # caller's dict does not change
+        cov_kwds = {} if cov_kwds is None else dict(cov_kwds)
         self._cov_approx_complex_step = cov_kwds.pop("approx_complex_step", True)
         self._cov_approx_centered = cov_kwds.pop("approx_centered", False)
         try:
@@ -2089,7 +2108,12 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         res.cov_type = cov_type
         res.cov_kwds = {}
 
-        approx_type_str = "complex-step"
+        if self._cov_approx_complex_step:
+            approx_type_str = "complex-step"
+        elif self._cov_approx_centered:
+            approx_type_str = "centered finite differences"
+        else:
+            approx_type_str = "finite differences"
 
         # Calculate the new covariance matrix
         k_params = len(self.params)
@@ -2126,6 +2150,23 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         return res
 
+    def _hessian(self):
+        # The Hessian of the loglikelihood at params, by the method that
+        # cov_kwds selects
+        if self._cov_approx_complex_step:
+            return self.model.hessian(self.params, transformed=True)
+        approx_hess = approx_hess3 if self._cov_approx_centered else approx_hess1
+        return approx_hess(self.params, self.model.loglike)
+
+    def _score_obs(self):
+        # The score of each observation at params, by the method that
+        # cov_kwds selects
+        if self._cov_approx_complex_step:
+            return self.model.score_obs(self.params, transformed=True)
+        return approx_fprime(
+            self.params, self.model.loglikeobs, centered=self._cov_approx_centered
+        )
+
     @cache_readonly
     def aic(self):
         """
@@ -2148,7 +2189,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the numerical
         Hessian approximated by complex step or finite differences methods.
         """
-        evaluated_hessian = self.model.hessian(self.params, transformed=True)
+        evaluated_hessian = self._hessian()
         neg_cov, singular_values = pinv_extended(evaluated_hessian)
 
         if self._rank is None:
@@ -2162,7 +2203,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         (array) The variance / covariance matrix. Computed using the outer
         product of gradients method.
         """
-        score_obs = self.model.score_obs(self.params, transformed=True).T
+        score_obs = self._score_obs().T
         cov_params, singular_values = pinv_extended(np.inner(score_obs, score_obs))
 
         if self._rank is None:
@@ -2177,7 +2218,7 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         numerical Hessian as the evaluated hessian.
         """
         cov_opg = self.cov_params_opg
-        evaluated_hessian = self.model.hessian(self.params, transformed=True)
+        evaluated_hessian = self._hessian()
         cov_params, singular_values = pinv_extended(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
