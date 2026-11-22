@@ -1418,3 +1418,14 @@ def test_exog_tvtp_forms(form):
     params = np.r_[2.0, -1.0, 0.5, 0.8, 0.5, 2.0, 1.1, 0.4, -0.2]
 
     assert_allclose(mod.loglikeobs(params), ref.loglikeobs(params), rtol=1e-12)
+
+
+@pytest.mark.parametrize("order", [0, -1])
+@pytest.mark.parametrize("switching_ar", [True, False, []])
+def test_order_below_one(order, switching_ar):
+    # An autoregression needs at least one lag
+    endog, _ = two_regime_ar_data()
+    with pytest.raises(ValueError, match="order of the autoregression must be at"):
+        markov_autoregression.MarkovAutoregression(
+            endog, k_regimes=2, order=order, switching_ar=switching_ar
+        )
