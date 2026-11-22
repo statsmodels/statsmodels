@@ -2554,3 +2554,36 @@ def test_causality_bool_float(value, call):
             res.test_causality([value])
         else:
             res.test_inst_causality(value)
+
+
+@pytest.mark.parametrize("use_pandas", [False, True])
+@pytest.mark.parametrize("trend", ["c", "ct"])
+def test_var_refit_exog_names(use_pandas, trend):
+    # Each fit of a model with exog uses the original exog names
+    names = ["realgdp", "realcons", "realinv"]
+    data = macrodata.load_pandas().data[names]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    exog = np.random.default_rng(7).standard_normal((y.shape[0], 1))
+    if use_pandas:
+        y = pd.DataFrame(y, columns=names)
+        exog = pd.DataFrame(exog, columns=["x"])
+        endog_names, exog_name = names, "x"
+    else:
+        endog_names, exog_name = ["y1", "y2", "y3"], "x1"
+    mod = VAR(y, exog=exog)
+    trend_names = ["const", "trend"][: len(trend)]
+    for lags in (1, 2, 2, 1):
+        res = mod.fit(lags, trend=trend)
+        lag_names = [f"L{i}.{name}" for i in range(1, lags + 1) for name in endog_names]
+        expected = trend_names + [exog_name] + lag_names
+        assert mod.exog_names == expected
+        assert list(mod.data.cov_names) == [
+            (xname, yname) for xname in expected for yname in endog_names
+        ]
+        fresh = VAR(y, exog=exog).fit(lags, trend=trend)
+        assert_allclose(np.asarray(res.params), np.asarray(fresh.params), rtol=1e-12)
+        if use_pandas:
+            assert list(res.params.index) == expected
+            assert list(res.cov_params().index.get_level_values(0)) == [
+                name for name in expected for _ in range(3)
+            ]
