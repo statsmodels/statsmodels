@@ -2341,3 +2341,39 @@ def test_select_order_data_forms(form):
     assert res.selected_orders == expected.selected_orders
     for ic in ("aic", "bic", "hqic", "fpe"):
         assert_allclose(res.ics[ic], expected.ics[ic], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "deterministic, k_ar_diff, coint_rank, seasons, expected",
+    [
+        ("co", 1, 1, 0, 6.4475421068456012e02),
+        ("ci", 1, 1, 0, 6.4385197559552034e02),
+        ("coli", 2, 2, 0, 6.5056586141151206e02),
+        ("co", 1, 1, 4, 6.7010675372892763e02),
+    ],
+)
+def test_llf_real(deterministic, k_ar_diff, coint_rank, seasons, expected):
+    # llf was complex on NumPy 2.5 and later, where np.linalg.eig returns
+    # complex eigenvalues also when they are real. The references are
+    # logLik(vars::vec2var(ca.jo, r = coint_rank)) for
+    # urca::ca.jo(y, ecdet = "none", "const" or "trend", K = k_ar_diff + 1,
+    # spec = "transitory", season = NULL or 4) on the same data (R 4.6.2,
+    # urca 1.3.4, vars 1.6.1).
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(
+        data,
+        k_ar_diff=k_ar_diff,
+        coint_rank=coint_rank,
+        deterministic=deterministic,
+        seasons=seasons,
+    ).fit()
+    assert isinstance(res.llf, float)
+    assert_allclose(res.llf, expected, rtol=1e-10)
+    # eq. (7.2.20) of Luetkepohl (2005) is the Gaussian log-likelihood at
+    # the estimates
+    nobs, neqs = res.resid.shape
+    log_det = np.linalg.slogdet(res.resid.T @ res.resid / nobs)[1]
+    gauss = -nobs / 2 * (neqs * np.log(2 * np.pi) + log_det + neqs)
+    assert_allclose(res.llf, gauss, rtol=1e-9)
