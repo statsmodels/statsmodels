@@ -23,6 +23,7 @@ from statsmodels.tools.sm_exceptions import (
 )
 from statsmodels.tsa.x13 import (
     _find_x12,
+    run_spec,
     x13_arima_analysis,
     x13_arima_select_order,
 )
@@ -947,3 +948,51 @@ def test_subprocess_pipe_closed():
 
     leaked = [str(w.message) for w in record if w.category is ResourceWarning]
     assert leaked == []
+
+
+def _write_gdp_spec(directory):
+    """Write the default spec of realgdp, return its path without .spc"""
+    spec = x13_arima_analysis(quarterly_data.realgdp, speconly=True)
+    (directory / "gdp.spc").write_text(spec, encoding="utf-8")
+    return str(directory / "gdp")
+
+
+@pytest.mark.parametrize("outname", [None, "out"])
+def test_run_spec(outname, tmp_path):
+    specpath = _write_gdp_spec(tmp_path)
+    if outname is not None:
+        outname = str(tmp_path / outname)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        with run_spec(x13path, specpath, outname) as process:
+            stdout, _ = process.communicate()
+
+    # without outname, X-13 writes the output files next to the spec file
+    outpath = specpath if outname is None else outname
+    assert f"Storing any program output into {outpath}.out" in stdout.decode()
+    for extension in (".out", ".err", ".d11", ".d12", ".d13"):
+        assert Path(outpath + extension).exists()
+
+
+@pytest.mark.parametrize(
+    "kwargs, option",
+    [({"meta": True}, "-m"), ({"datameta": True}, "-d"), ({"meta": False}, None)],
+    ids=["meta", "datameta", "meta_false"],
+)
+def test_run_spec_meta_deprecated(kwargs, option, tmp_path):
+    specpath = _write_gdp_spec(tmp_path)
+
+    with pytest.warns(FutureWarning, match="meta and datameta arguments of run_spec"):
+        process = run_spec(x13path, specpath, **kwargs)
+    with process:
+        stdout, _ = process.communicate()
+
+    if option is None:
+        # the spec file is run as without meta
+        assert f"Reading input spec file from {specpath}.spc" in stdout.decode()
+    else:
+        # the option and the file name are passed as one argument, which
+        # X-13 does not accept
+        message = f"Program option {option} {specpath} not defined"
+        assert message in " ".join(stdout.decode().split())

@@ -170,7 +170,48 @@ def _clean_order(order):
     return order, sorder
 
 
-def run_spec(x12path, specpath, outname=None, meta=False, datameta=False):
+def run_spec(x12path, specpath, outname=None, meta=None, datameta=None):
+    """
+    Run X-12/X-13 on a spec file
+
+    Parameters
+    ----------
+    x12path : str or Path
+        The path to the X-12/X-13 binary.
+    specpath : str
+        The path to the spec file, without its .spc extension.
+    outname : str, optional
+        The path of the output files, without an extension. If None, the
+        output files are written next to the spec file.
+    meta : bool, optional
+        Whether ``specpath`` is a metafile, passed to X-12/X-13 as
+        ``"-m " + specpath``.
+
+        .. deprecated:: 0.15.1
+           ``meta`` is deprecated and will be removed after statsmodels
+           0.17 is released. X-13ARIMA-SEATS does not accept the option and
+           the file name as a single argument.
+    datameta : bool, optional
+        Whether ``specpath`` is a data metafile, passed to X-12/X-13 as
+        ``"-d " + specpath``.
+
+        .. deprecated:: 0.15.1
+           ``datameta`` is deprecated and will be removed after statsmodels
+           0.17 is released. X-13ARIMA-SEATS does not accept the option and
+           the file name as a single argument.
+
+    Returns
+    -------
+    subprocess.Popen
+        The process, with stdout and stderr in the pipe ``stdout``.
+    """
+    if meta is not None or datameta is not None:
+        warn(
+            "The meta and datameta arguments of run_spec are deprecated and "
+            "will be removed after statsmodels 0.17 is released.",
+            FutureWarning,
+            stacklevel=2,
+        )
     if meta and datameta:
         raise ValueError("Cannot specify both meta and datameta.")
     if meta:
@@ -446,10 +487,7 @@ def pandas_to_series_spec(x):
             "this extended."
         )
 
-    if hasattr(x, "name"):
-        name = str(x.name or "Unnamed Series")
-    else:
-        name = "Unnamed Series"
+    name = str(x.name or "Unnamed Series")
     series_spec = SeriesSpec(
         data=data, name=name, period=period, title=name, start=f"{year}.{stperiod}"
     )
