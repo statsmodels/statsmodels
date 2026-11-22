@@ -1,5 +1,7 @@
 from statsmodels.compat.pandas import (
     MONTH_END,
+    PD_LT_2_2_0,
+    PD_LT_3,
     QUARTER_END,
     YEAR_END,
     is_int_index,
@@ -7,6 +9,7 @@ from statsmodels.compat.pandas import (
 from statsmodels.compat.pytest import pytest_warns
 
 from collections.abc import Hashable
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -218,6 +221,257 @@ def test_check_index_type():
 def test_unknown_freq():
     with pytest.raises(ValueError, match="freq is not understood by pandas"):
         CalendarTimeTrend("unknown", True, order=3)
+
+
+# pandas 2.2 and 2.3 make periods of start-anchored freqs, as the end-anchored
+# freqs anchored in December ("QS-FEB" as "QE-DEC"). Earlier and later
+# versions have none.
+PD_START_ANCHORED_PERIODS = not PD_LT_2_2_0 and PD_LT_3
+_START_ANCHORED_SKIP = pytest.mark.skipif(
+    PD_START_ANCHORED_PERIODS, reason="pandas has periods for start-anchored freqs"
+)
+# "YS-JUL", "BYS-JUL" and "YE-JUN" are "AS-JUL", "BAS-JUL" and "A-JUN" before
+# pandas 2.2
+YEAR_START_JUL = "AS-JUL" if PD_LT_2_2_0 else "YS-JUL"
+BUSINESS_YEAR_START_JUL = "BAS-JUL" if PD_LT_2_2_0 else "BYS-JUL"
+YEAR_END_JUN = "A-JUN" if PD_LT_2_2_0 else "YE-JUN"
+CALENDAR_TERMS = [
+    (CalendarFourier, {"order": 2}),
+    (CalendarTimeTrend, {"order": 1}),
+    (CalendarTimeTrend, {"order": 2, "base_period": "2000-02-15"}),
+    (CalendarTimeTrend.from_string, {"trend": "ctt"}),
+]
+
+
+def _calendar_term_id(param):
+    if isinstance(param, dict):
+        return "-".join(f"{key}={value}" for key, value in param.items())
+    return param.__qualname__
+
+
+@pytest.mark.parametrize(
+    "freq",
+    [
+        "SMS",
+        "WOM-1MON",
+        pytest.param(
+            "C",
+            marks=pytest.mark.skipif(PD_LT_2_2_0, reason="pandas has C periods"),
+        ),
+    ],
+)
+@pytest.mark.parametrize("map_start_anchored", [True, False])
+@pytest.mark.parametrize("term, kwargs", CALENDAR_TERMS, ids=_calendar_term_id)
+def test_calendar_term_freq_without_periods(freq, map_start_anchored, term, kwargs):
+    # pandas has no periods with these freqs, and they have no end-anchored
+    # equivalent, so an error from pandas, usually an AttributeError, was
+    # raised when the terms were computed
+    with pytest.raises(ValueError, match=f'freq "{freq}" is not supported by'):
+        term(freq, map_start_anchored=map_start_anchored, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "freq, end_freq",
+    [
+        ("MS", MONTH_END),
+        ("2MS", f"2{MONTH_END}"),
+        ("QS", f"{QUARTER_END}-DEC"),
+        ("QS-JAN", f"{QUARTER_END}-DEC"),
+        ("QS-FEB", f"{QUARTER_END}-JAN"),
+        ("QS-DEC", f"{QUARTER_END}-NOV"),
+        ("QS-APR", f"{QUARTER_END}-DEC"),
+        ("QS-JUL", f"{QUARTER_END}-DEC"),
+        ("QS-OCT", f"{QUARTER_END}-DEC"),
+        ("2QS-APR", f"2{QUARTER_END}-DEC"),
+        ("YS", YEAR_END),
+        (YEAR_START_JUL, YEAR_END_JUN),
+        ("BMS", MONTH_END),
+        ("2BMS", f"2{MONTH_END}"),
+        ("BQS", f"{QUARTER_END}-DEC"),
+        ("BQS-APR", f"{QUARTER_END}-DEC"),
+        ("BQS-FEB", f"{QUARTER_END}-JAN"),
+        ("BYS", YEAR_END),
+        (BUSINESS_YEAR_START_JUL, YEAR_END_JUN),
+    ],
+)
+@pytest.mark.parametrize("term, kwargs", CALENDAR_TERMS, ids=_calendar_term_id)
+def test_calendar_term_start_anchored_mapped(freq, end_freq, term, kwargs):
+    # A start-anchored freq gives the terms of the end-anchored freq with the
+    # same periods, on every pandas version, and keeps its name. The calendar
+    # quarters ("QS-APR" etc.) are those of "QE-DEC", as in pandas 2.2 and 2.3.
+    # The business-day freqs have the periods of their calendar twins.
+    index = pd.date_range("1999-12-01", "2002-03-31", freq="D")
+    created = term(freq, **kwargs)
+    assert created.freq == pd.tseries.frequencies.to_offset(freq).freqstr
+    terms = created.in_sample(index)
+    expected = term(end_freq, **kwargs).in_sample(index)
+    np.testing.assert_allclose(np.asarray(terms), np.asarray(expected), rtol=1e-12)
+    assert terms.index.equals(expected.index)
+    assert created == term(freq, **kwargs)
+    assert created != term(end_freq, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "freq, months, first_month",
+    [
+        ("MS", 1, 1),
+        ("QS", 3, 1),
+        ("QS-FEB", 3, 2),
+        ("QS-APR", 3, 4),
+        (YEAR_START_JUL, 12, 7),
+        ("BMS", 1, 1),
+        ("BQS-FEB", 3, 2),
+        (BUSINESS_YEAR_START_JUL, 12, 7),
+    ],
+)
+def test_calendar_term_start_anchored_periods(freq, months, first_month):
+    # The periods of a start-anchored freq start on the first day of
+    # first_month and every months months after it. tau is the fraction of the
+    # period that has elapsed, and the time trend is the number of periods
+    # since the base period plus 1 + tau.
+    index = pd.date_range("1999-12-01 05:00", "2002-03-31", freq="17h")
+
+    def period_start(month):
+        # month counts the months since January of year 0
+        start = (month - (first_month - 1)) // months * months + first_month - 1
+        parts = {"year": start // 12, "month": start % 12 + 1, "day": 1}
+        return start, pd.to_datetime(pd.DataFrame(parts)).to_numpy()
+
+    month = np.asarray(12 * index.year + index.month - 1, dtype=np.int64)
+    start, start_date = period_start(month)
+    _, next_date = period_start(start + months)
+    tau = (index.to_numpy() - start_date) / (next_date - start_date)
+    assert np.all((tau >= 0) & (tau < 1))
+    fourier = CalendarFourier(freq, 1).in_sample(index)
+    expected = np.column_stack([np.sin(2 * np.pi * tau), np.cos(2 * np.pi * tau)])
+    # sin and cos are zero, or close to it, at some points of each period, so
+    # atol
+    np.testing.assert_allclose(np.asarray(fourier), expected, rtol=1e-12, atol=1e-12)
+
+    base_start, _ = period_start(np.array([12 * 2000 + 1], dtype=np.int64))
+    trend = CalendarTimeTrend(freq, False, 1, base_period="2000-02-15").in_sample(index)
+    expected = (start - base_start[0]) // months + 1 + tau
+    np.testing.assert_allclose(np.asarray(trend)[:, 0], expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "freq",
+    [
+        pytest.param(freq, marks=_START_ANCHORED_SKIP)
+        for freq in ["MS", "2MS", "QS", "QS-FEB", "YS", YEAR_START_JUL]
+        + ["BQS", "BQS-FEB", "BYS", BUSINESS_YEAR_START_JUL]
+    ]
+    + ["BMS"],
+)
+@pytest.mark.parametrize("term, kwargs", CALENDAR_TERMS, ids=_calendar_term_id)
+def test_calendar_term_start_anchored_not_mapped_raises(freq, term, kwargs):
+    # Without the map, freq is passed to pandas, which has no periods for
+    # start-anchored freqs except in versions 2.2 and 2.3, and none for "BMS"
+    # in any version
+    with pytest.raises(ValueError, match=f'freq "{freq}" is not supported by'):
+        term(freq, map_start_anchored=False, **kwargs)
+
+
+@pytest.mark.skipif(
+    not PD_START_ANCHORED_PERIODS,
+    reason="pandas has no periods for start-anchored freqs",
+)
+@pytest.mark.parametrize(
+    "freq, pandas_freq",
+    [
+        ("MS", MONTH_END),
+        ("QS", QUARTER_END),
+        ("QS-FEB", QUARTER_END),
+        ("YS", YEAR_END),
+        ("YS-JUL", YEAR_END),
+        ("BQS", QUARTER_END),
+        ("BQS-FEB", QUARTER_END),
+        ("BYS-JUL", YEAR_END),
+    ],
+)
+@pytest.mark.parametrize(
+    "term, kwargs",
+    [term for term in CALENDAR_TERMS if "base_period" not in term[1]],
+    ids=_calendar_term_id,
+)
+def test_calendar_term_start_anchored_not_mapped(freq, pandas_freq, term, kwargs):
+    # Without the map, freq is passed to pandas, and pandas 2.2 and 2.3 make
+    # periods of start-anchored freqs as the end-anchored ones anchored in
+    # December, so "QS-FEB" and "YS-JUL" (and "BQS-FEB" and "BYS-JUL") get the
+    # quarters and years of "QE-DEC" and "YE-DEC"
+    index = pd.date_range("1999-12-01", "2002-03-31", freq="D")
+    created = term(freq, map_start_anchored=False, **kwargs)
+    terms = created.in_sample(index)
+    expected = term(pandas_freq, **kwargs).in_sample(index)
+    np.testing.assert_allclose(np.asarray(terms), np.asarray(expected), rtol=1e-12)
+    assert created != term(freq, **kwargs)
+
+
+@pytest.mark.skipif(
+    not PD_START_ANCHORED_PERIODS,
+    reason="pandas has no periods for start-anchored freqs",
+)
+@pytest.mark.parametrize(
+    "freq",
+    ["MS", "2MS", "QS", "QS-JAN", "QS-APR", "QS-JUL", "QS-OCT", "2QS-APR", "YS"]
+    + ["BQS", "BQS-APR", "BYS"],
+)
+@pytest.mark.parametrize(
+    "term, kwargs",
+    [term for term in CALENDAR_TERMS if "base_period" not in term[1]],
+    ids=_calendar_term_id,
+)
+def test_calendar_term_start_anchored_map_unchanged(freq, term, kwargs):
+    # pandas 2.2 and 2.3 already give these freqs the periods of the map, so
+    # the map does not change their terms, index or columns there
+    index = pd.date_range("1999-12-01 05:00", "2002-03-31", freq="17h")
+    terms = term(freq, **kwargs).in_sample(index)
+    expected = term(freq, map_start_anchored=False, **kwargs).in_sample(index)
+    pd.testing.assert_frame_equal(terms, expected, rtol=1e-15)
+
+
+@pytest.mark.skipif(
+    not PD_START_ANCHORED_PERIODS,
+    reason="pandas has no periods for start-anchored freqs",
+)
+@pytest.mark.parametrize("freq", ["MS", "QS-FEB", "YS-JUL"])
+def test_calendar_time_trend_start_anchored_not_mapped_base_period(freq):
+    # Without the map, pandas 2.2 and 2.3 have periods of start-anchored freqs
+    # but no period range, which the base period needs, and raise
+    with pytest.raises(ValueError, match="period frequency"):
+        CalendarTimeTrend(freq, base_period="2000-02-15", map_start_anchored=False)
+    created = CalendarTimeTrend(freq, base_period="2000-02-15")
+    assert created.base_period == "2000-02-15"
+
+
+@pytest.mark.parametrize("term, kwargs", CALENDAR_TERMS, ids=_calendar_term_id)
+def test_calendar_term_map_start_anchored_other_freq(term, kwargs):
+    # The map does not change other freqs
+    index = pd.date_range("1999-12-01", "2002-03-31", freq="D")
+    created = term(MONTH_END, map_start_anchored=False, **kwargs)
+    assert created == term(MONTH_END, **kwargs)
+    terms = created.in_sample(index)
+    expected = term(MONTH_END, **kwargs).in_sample(index)
+    np.testing.assert_allclose(np.asarray(terms), np.asarray(expected), rtol=1e-15)
+
+
+@pytest.mark.parametrize("term", [CalendarFourier, CalendarTimeTrend])
+def test_calendar_term_business_day_freq(term):
+    # Periods with freq "B" are deprecated in recent pandas, but still
+    # supported, so checking the freq does not warn
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        created = term("B", order=1)
+    assert created.freq == "B"
+
+
+def test_calendar_seasonality_month_start():
+    # The dummies are computed without periods, so "MS" is supported
+    index = pd.date_range("2000-01-01", periods=24, freq="MS")
+    terms = CalendarSeasonality("MS", "Y").in_sample(index)
+    expected = CalendarSeasonality(MONTH_END, "Y").in_sample(index)
+    np.testing.assert_allclose(terms, expected, rtol=1e-15)
+    np.testing.assert_allclose(terms, np.tile(np.eye(12), (2, 1)), rtol=1e-15)
 
 
 def test_invalid_formcast_index(index):

@@ -10,6 +10,7 @@ import pytest
 
 from statsmodels.datasets import co2
 from statsmodels.tsa.seasonal import STL, DecomposeResult
+from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 
 cur_dir = Path(__file__).resolve().parent
 file_path = Path(cur_dir).joinpath("results", "stl_test_results.csv")
@@ -338,3 +339,31 @@ def test_squezable_to_1d():
     res = STL(data).fit()
     assert isinstance(res, DecomposeResult)
     assert res.nobs == data.shape[0]
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_stl_input_forms(form):
+    # endog is documented as array_like: every form of a 1-d series gives the
+    # values of the ndarray, and pandas input gives Series with its index
+    rng = np.random.default_rng(20261129)
+    t = np.arange(72)
+    y = 10 + 0.05 * t + np.sin(2 * np.pi * t / 12) + 0.2 * rng.standard_normal(72)
+    forms = series_forms(y)
+    forms["int"] = np.round(10 * y).astype(np.int64)
+    y_form = forms[form]
+    y_float = np.asarray(y_form, dtype=float).squeeze()
+    res = STL(y_form, period=12).fit()
+    expected = STL(y_float, period=12).fit()
+    for attr in ("seasonal", "trend", "resid", "weights"):
+        actual = getattr(res, attr)
+        assert_allclose(np.asarray(actual), getattr(expected, attr), rtol=1e-12)
+        if isinstance(y_form, (pd.Series, pd.DataFrame)):
+            assert isinstance(actual, pd.Series)
+            pd.testing.assert_index_equal(actual.index, y_form.index)
+        else:
+            assert isinstance(actual, np.ndarray)
+    # the components make up the series
+    combined = res.trend + res.seasonal + res.resid
+    assert_allclose(np.asarray(combined), y_float, rtol=1e-12)
+    observed = np.asarray(res.observed, dtype=float).squeeze()
+    assert_allclose(observed, y_float, rtol=1e-15)

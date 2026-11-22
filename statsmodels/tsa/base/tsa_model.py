@@ -35,16 +35,26 @@ from statsmodels.tools.sm_exceptions import ValueWarning
 _tsa_doc = """
     %(model)s
 
-    Parameters
-    ----------
     %(params)s
     dates : array_like, optional
-        An array-like object of datetime objects. If a pandas object is given
-        for endog or exog, it is assumed to have a DateIndex.
-    freq : str, optional
-        The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
-        'M', 'A', or 'Q'. This is optional if dates are given.
+        The dates of the observations, used instead of the index of `endog`
+        or `exog`. A DatetimeIndex or a PeriodIndex, or anything that
+        ``pandas.to_datetime`` converts to a DatetimeIndex, such as a list
+        of datetime objects or date strings. A ValueError is raised if the
+        dates cannot be converted.
+    freq : str, datetime.timedelta, or DateOffset, optional
+        The frequency of the time series, as a pandas offset, a timedelta or
+        an offset alias such as 'B', 'D', 'W', 'MS' or 'QS'. If it is not
+        given and the dates have no frequency, it is inferred from the
+        dates, with a ValueWarning. If none can be inferred, `dates` raise a
+        ValueError, while a date index of `endog` or `exog` is ignored for
+        forecasting, with a ValueWarning. If the dates have a frequency,
+        `freq` must match it. A frequency cannot be given without dates or a
+        pandas index.
     %(extra_params)s
+    **kwargs
+        Extra arguments passed to the base model, for example ``hasconst``,
+        or used to set model properties when using the formula interface.
     %(extra_sections)s"""
 
 _model_doc = "Timeseries model base class"
@@ -68,8 +78,9 @@ def get_index_loc(key, index):
 
     Returns
     -------
-    loc : int
-        The location of the key
+    loc : int or slice
+        The location of the key. A slice if `key` is a partial date string,
+        for example "2000-03" for a daily index.
     index : pd.Index
         The index including the key; this is a copy of the original index
         unless the index had to be expanded to accommodate `key`.
@@ -82,6 +93,10 @@ def get_index_loc(key, index):
     an Index with an integral dtype or a date index, this function extends
     the index up to and including key, and then returns the location in the
     new index.
+
+    An Index with an integer dtype (other than a RangeIndex) must have the
+    values 0, 1, ..., nobs - 1 to be extended to an out-of-sample `key`.
+    This is the only such index that a `TimeSeriesModel` uses.
     """
     base_index = index
 
@@ -238,8 +253,10 @@ def get_index_label_loc(key, index, row_labels):
 
     Returns
     -------
-    loc : int
-        The location of the key
+    loc : int or slice
+        The location of the key. A slice if `key` is a partial date string
+        found in `index`. If `key` is only found in `row_labels`, the first
+        matching location.
     index : pd.Index
         The index including the key; this is a copy of the original index
         unless the index had to be expanded to accommodate `key`.
@@ -324,10 +341,10 @@ def get_prediction_index(
     base_index : pd.Index
         The base index of the model, against which `start` and `end` are
         resolved.
-    index : pd.Index, optional
-        Optionally an index to associate the predicted results to. If None,
-        an attempt is made to create an index for the predicted results
-        from the model's index or model's row labels.
+    index : array_like, optional
+        Optionally an index to associate the predicted results to, converted
+        to a pandas Index. If None, an attempt is made to create an index for
+        the predicted results from the model's index or model's row labels.
     silent : bool, optional
         Argument to silence warnings.
     index_none : bool, optional
@@ -337,9 +354,10 @@ def get_prediction_index(
     index_generated : bool, optional
         Whether the model's underlying index was internally generated
         rather than taken directly from `endog` / `exog`. Default is None.
-    data : statsmodels.base.data.ModelData, optional
+    data : statsmodels.base.data.ModelData
         The model's data object, used to obtain row labels and to set the
-        `predict_start`, `predict_end`, and `predict_dates` attributes.
+        `predict_start`, `predict_end`, and `predict_dates` attributes. It
+        is required even though it has a default of None.
 
     Returns
     -------
@@ -487,7 +505,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         ----------
         dates : array_like, optional
             An array like object containing dates.
-        freq : str, tuple, datetime.timedelta, or DateOffset, optional
+        freq : str, datetime.timedelta, or DateOffset, optional
             A frequency specification for either `dates` or the row labels from
             the endog / exog data.
 

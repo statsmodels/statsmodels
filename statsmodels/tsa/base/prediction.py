@@ -13,14 +13,15 @@ class PredictionResults:
     ----------
     predicted_mean : ndarray, Series, or DataFrame
         The predicted mean values.
-    var_pred_mean : ndarray, Series, or DataFrame
-        The variance of the predicted mean values.
-    dist : "norm", "t", or rv_frozen, optional
+    var_pred_mean : ndarray or Series
+        The variance of the predicted mean values. Either 1-d, or 3-d with
+        shape (nobs, k, k) holding the covariance matrix of each prediction.
+    dist : {"norm", "t"} or rv_frozen, optional
         The distribution to use when constructing prediction intervals.
         Default is the normal distribution.
-    df : int, optional
-        The degrees of freedom parameter for the t distribution. Not used
-        if dist is "norm" or an rv_frozen distribution.
+    df : float, optional
+        The degrees of freedom parameter for the t distribution. Required
+        if dist is "t", and must be None otherwise.
     row_labels : sequence of hashable or pandas.Index, optional
         Row labels to use for the summary frame. If None, attempts to read
         the index of ``predicted_mean``.
