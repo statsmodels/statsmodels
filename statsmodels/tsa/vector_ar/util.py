@@ -513,6 +513,10 @@ def seasonal_dummies(n_seasons, len_endog, first_period=0, centered=False):
     n_seasons : int
         Number of seasons (e.g., 12 for monthly data and 4 for quarterly
         data). Must be non-negative.
+
+        .. versionchanged:: 0.15.1
+
+           A negative value raises a ValueError. It returned None.
     len_endog : int
         Total number of observations. Must be non-negative.
     first_period : int, optional
@@ -532,13 +536,14 @@ def seasonal_dummies(n_seasons, len_endog, first_period=0, centered=False):
     ndarray
         Seasonal dummy variables, of shape (len_endog, n_seasons - 1).
     """
+    if n_seasons < 0:
+        raise ValueError(f"n_seasons must be non-negative, got {n_seasons}")
     if n_seasons == 0:
         return np.empty((len_endog, 0))
-    if n_seasons > 0:
-        season_exog = np.zeros((len_endog, n_seasons - 1))
-        for i in range(n_seasons - 1):
-            season_exog[(i - first_period) % n_seasons :: n_seasons, i] = 1
+    season_exog = np.zeros((len_endog, n_seasons - 1))
+    for i in range(n_seasons - 1):
+        season_exog[(i - first_period) % n_seasons :: n_seasons, i] = 1
 
-        if centered:
-            season_exog -= 1 / n_seasons
-        return season_exog
+    if centered:
+        season_exog -= 1 / n_seasons
+    return season_exog

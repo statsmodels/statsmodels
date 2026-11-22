@@ -2554,3 +2554,17 @@ def test_causality_bool_float(value, call):
             res.test_causality([value])
         else:
             res.test_inst_causality(value)
+
+
+@pytest.mark.parametrize("centered", [False, True])
+def test_seasonal_dummies_negative_raises(centered):
+    with pytest.raises(ValueError, match="n_seasons must be non-negative"):
+        util.seasonal_dummies(-1, 5, centered=centered)
+    # Observations in the seasons 1, 2, 3, 0, 1, 2 of 4; one column for each
+    # of the seasons 0, 1, 2
+    expected = np.zeros((6, 3))
+    expected[[3, 0, 1, 4, 5], [0, 1, 2, 1, 2]] = 1
+    if centered:
+        expected -= 1 / 4
+    actual = util.seasonal_dummies(4, 6, first_period=1, centered=centered)
+    assert_allclose(actual, expected, rtol=1e-14)
