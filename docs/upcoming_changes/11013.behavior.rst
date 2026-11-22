@@ -7,4 +7,4 @@
   units of the dependent variable. For the ``dietox`` random intercept model
   in the documentation, the standard error of the group variance is 6.94
   instead of 2.15. The standard errors of the fixed effects do not change.
-  :pr:`11013`
+  :issue:`2231`, :pr:`11013`
