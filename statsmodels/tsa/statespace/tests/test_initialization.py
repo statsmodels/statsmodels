@@ -512,3 +512,29 @@ def test_stationary_single_precision(dtype):
         assert_allclose(actual.imag, 0, atol=atol)
     assert_allclose(res.initial_state.real, initial_state, rtol=rtol)
     assert_allclose(res.initial_state_cov.real, initial_state_cov, rtol=rtol)
+
+
+@pytest.mark.parametrize("dtype", [np.float64, np.complex128])
+@pytest.mark.parametrize("scale", [1.0, 1e295, 1e300])
+def test_stationary_cov_large_state_cov(scale, dtype):
+    # For a state covariance of about 1e295 or more, LAPACK's Sylvester
+    # solver scales its solution down to avoid overflow. The compiled
+    # stationary initialization multiplied by that factor instead of
+    # dividing, which gave a stationary covariance of about zero.
+    transition = np.array([[0.5, 0.1], [0.0, 0.3]])
+    kf = KalmanFilter(k_endog=1, k_states=2, dtype=dtype)
+    kf.bind(np.zeros(5, dtype=dtype))
+    kf["design"] = np.array([[1.0, 0.0]], dtype=dtype)
+    kf["transition"] = transition.astype(dtype)
+    kf["selection"] = np.eye(2, dtype=dtype)
+    kf["state_cov"] = np.eye(2, dtype=dtype) * scale
+    kf["obs_cov"] = np.eye(1, dtype=dtype)
+    kf.initialize_stationary()
+    res = kf.filter()
+
+    # vec(P) = (I - T kron T)^{-1} vec(Q), here with Q = scale * I
+    vec_cov = np.linalg.solve(
+        np.eye(4) - np.kron(transition, transition), np.eye(2).ravel(order="F")
+    )
+    desired = vec_cov.reshape(2, 2, order="F")
+    assert_allclose(res.initial_state_cov / scale, desired, rtol=1e-10)
