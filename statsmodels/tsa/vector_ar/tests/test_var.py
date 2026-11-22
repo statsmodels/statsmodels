@@ -2268,3 +2268,46 @@ def test_is_stable_unit_root(diag, stable):
     coefs = np.diag(diag)[None, :, :]
     assert bool(var_model.is_stable(coefs)) is stable
     assert bool(VARProcess(coefs, None, np.eye(2)).is_stable()) is stable
+
+
+def test_forecast_interval_y_none():
+    # y=None forecasts from the last k_ar observations: the recursion
+    # y_{T+h} = nu + A_1 y_{T+h-1} + A_2 y_{T+h-2} and the bounds
+    # +/- z sqrt(diag(sum_{i<h} Phi_i Sigma_u Phi_i'))
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    a1, a2 = res.coefs
+    path = [y[-2], y[-1]]
+    phis = [np.eye(3), a1]
+    for _ in range(4):
+        path.append(res.intercept + a1 @ path[-1] + a2 @ path[-2])
+    for _ in range(2):
+        phis.append(a1 @ phis[-1] + a2 @ phis[-2])
+    point = np.array(path[2:])
+    mse = np.cumsum([phi @ res.sigma_u @ phi.T for phi in phis], axis=0)
+    half_width = stats.norm.ppf(0.95) * np.sqrt(np.diagonal(mse, axis1=1, axis2=2))
+    interval = res.forecast_interval(None, 4, alpha=0.1)
+    assert_allclose(interval.point_forecast, point, rtol=1e-12)
+    assert_allclose(interval.forc_lower, point - half_width, rtol=1e-12)
+    assert_allclose(interval.forc_upper, point + half_width, rtol=1e-12)
+
+
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_forecast_interval_y_none_exog(use_pandas):
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    exog = np.random.default_rng(11).standard_normal((y.shape[0], 1))
+    exog_future = np.random.default_rng(12).standard_normal((3, 1))
+    endog = pd.DataFrame(y, columns=data.columns) if use_pandas else y
+    res = VAR(endog, exog=exog).fit(3, trend="ct")
+    interval = res.forecast_interval(None, 3, exog_future=exog_future)
+    expected = res.forecast_interval(y[-3:], 3, exog_future=exog_future)
+    for actual, desired in zip(interval, expected, strict=True):
+        assert_allclose(actual, desired, rtol=1e-14)
+
+
+def test_forecast_interval_y_none_process_raises():
+    process = VARProcess(np.array([[[0.5, 0.1], [0.2, 0.3]]]), None, np.eye(2))
+    with pytest.raises(ValueError, match="y is required"):
+        process.forecast_interval(None, 3)

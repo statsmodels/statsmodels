@@ -1539,7 +1539,12 @@ steps ({steps}) observations.
         y : ndarray or None
             The initial values to use for the forecasts. If None,
             the last k_ar values of the original endogenous variables are
-            used.
+            used. A VARProcess that is not estimation results needs y.
+
+            .. versionchanged:: 0.15.1
+
+               None uses the last k_ar observations. It raised an
+               AttributeError.
         steps : int
             Number of steps ahead to forecast
         alpha : float, optional
@@ -1568,6 +1573,13 @@ steps ({steps}) observations.
         if not 0 < alpha < 1:
             raise ValueError("alpha must be between 0 and 1")
         q = util.norm_signif_level(alpha)
+        if y is None:
+            if getattr(self, "endog", None) is None:
+                raise ValueError(
+                    "y is required, since a VARProcess that is not estimation "
+                    "results has no observations."
+                )
+            y = self.endog[-self.k_ar :]
 
         point_forecast = self.forecast(y, steps, exog_future=exog_future)
         sigma = np.sqrt(self._forecast_vars(steps))
