@@ -1670,29 +1670,34 @@ def test_get_index_loc_missing_label():
 
 
 @pytest.mark.parametrize(
-    "row_labels, key, first",
+    "row_labels, key, first, stop",
     [
         # pandas.Index.get_loc returns a slice, a boolean mask and integer
         # locations for these
-        (pd.Index(list("abbcd")), "b", 1),
-        (pd.Index(list("abcbd")), "b", 1),
+        (pd.Index(list("abbcd")), "b", 1, 3),
+        (pd.Index(list("abcbd")), "b", 1, None),
         (
             pd.DatetimeIndex(
                 ["2001-02-01", "2001-01-01", "2002-01-01", "2001-03-01", "2003-01-01"]
             ),
             "2001",
             0,
+            None,
         ),
     ],
 )
-def test_repeated_row_label_first_location(row_labels, key, first):
+def test_repeated_row_label_first_location(row_labels, key, first, stop):
     # A key that is found more than once in the row labels gives its first
-    # location
+    # location, or the slice of all of them if they are consecutive
     loc, index, expanded = tsa_model.get_index_label_loc(
         key, pd.RangeIndex(5), row_labels
     )
-    assert loc == first
-    assert index.equals(row_labels[: first + 1])
+    if stop is None:
+        assert loc == first
+        assert index.equals(row_labels[: first + 1])
+    else:
+        assert loc == slice(first, stop)
+        assert index.equals(row_labels[:stop])
     assert expanded is False
 
     endog = pd.Series(np.arange(5.0), index=row_labels)
