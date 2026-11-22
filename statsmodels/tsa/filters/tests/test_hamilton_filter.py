@@ -14,6 +14,7 @@ import pytest
 
 from statsmodels.tsa.filters.filtertools import CycleTrendResult
 from statsmodels.tsa.filters.hamilton_filter import hamilton_filter
+from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 
 # ---------------------------------------------------------------------------
 # DGP helpers
@@ -310,3 +311,23 @@ def test_hamilton_filter_2d(use_pandas):
     assert_allclose(trend[:, 0], trend[:, 1])
     assert not np.allclose(cycle[:, 0], cycle[:, 2])
     assert not np.allclose(trend[:, 0], trend[:, 2])
+
+
+@pytest.mark.parametrize("form", SERIES_FORMS + ("int",))
+def test_hamilton_filter_input_forms(form):
+    # x is documented as array_like: every form of a 1-d series gives the
+    # values of the ndarray, and pandas input keeps its index
+    x = _QUARTERLY[:80].cumsum()
+    forms = series_forms(x)
+    forms["int"] = np.round(10 * x).astype(np.int64)
+    x_form = forms[form]
+    res = hamilton_filter(x_form, h=8, p=4)
+    expected = hamilton_filter(np.asarray(x_form, dtype=float).squeeze(), h=8, p=4)
+    for actual, desired in zip(res, expected, strict=True):
+        assert_allclose(np.asarray(actual).squeeze(), desired, rtol=1e-10)
+        if isinstance(x_form, (pd.Series, pd.DataFrame)):
+            assert type(actual) is type(x_form)
+            pd.testing.assert_index_equal(actual.index, x_form.index)
+        else:
+            assert isinstance(actual, np.ndarray)
+            assert actual.ndim == np.ndim(x_form)
