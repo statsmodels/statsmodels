@@ -811,6 +811,14 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
+
+            .. versionchanged:: 0.15.1
+
+               The default is the zeroth observation also for data with a
+               ``RangeIndex`` that does not start at zero, such as a
+               ``MarkovAutoregression`` of a Series with the default index.
+               Before, the first label of the index was used as a location,
+               so the first predictions were missing and ``resid`` raised.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
@@ -843,7 +851,8 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             forecasts.
         """
         if start is None:
-            start = self._index[0]
+            # An integer is a location, also for a RangeIndex
+            start = 0
 
         # Handle start, end
         start, end, out_of_sample, prediction_index = self._get_prediction_index(
@@ -2220,6 +2229,14 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             Zero-indexed observation number at which to start forecasting,
             i.e., the first forecast is start. Can also be a date string to
             parse or a datetime type. Default is the zeroth observation.
+
+            .. versionchanged:: 0.15.1
+
+               The default is the zeroth observation also for data with a
+               ``RangeIndex`` that does not start at zero, such as a
+               ``MarkovAutoregression`` of a Series with the default index.
+               Before, the first label of the index was used as a location,
+               so the first predictions were missing and ``resid`` raised.
         end : int, str, or datetime, optional
             Zero-indexed observation number at which to end forecasting, i.e.,
             the last forecast is end. Can also be a date string to
