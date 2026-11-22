@@ -189,6 +189,15 @@ class SVAR(tsbase.TimeSeriesModel):
         override : bool, optional
             If True, returns estimates of A and B without checking
             order or rank condition
+
+            .. versionchanged:: 0.15.1
+
+               The rank condition uses the derivatives of the covariance of
+               the model, A^-1 B B' A^-1', at the starting values. The
+               derivatives with respect to B and the covariance were wrong,
+               so some identified models raised and some models that are
+               not identified, with free entries at the same position in A
+               and B, were estimated.
         maxiter : int, optional
             Number of iterations to perform in solution method
         maxfun : int, optional
@@ -368,6 +377,13 @@ class SVAR(tsbase.TimeSeriesModel):
         first estimated, then likelihood with structural parameters
         is estimated. It uses the residual covariance and the number of
         observations of the last call to `fit`.
+
+        .. versionchanged:: 0.15.1
+
+           The term of B is log(det(B) ** 2). It was the log of the
+           determinant of the elementwise square of B, which differs when B
+           is not triangular, so the log-likelihood and the estimates of
+           such models were wrong.
         """
 
         # TODO: this does not look robust if A or B is None
@@ -387,18 +403,14 @@ class SVAR(tsbase.TimeSeriesModel):
 
         W = np.dot(npl.inv(B), A)
         trc_in = np.dot(np.dot(W.T, W), sigma_u)
-        sign, b_logdet = slogdet(B**2)  # numpy 1.4 compat
-        b_slogdet = sign * b_logdet
+        # log(det(A) ** 2) and log(det(B) ** 2)
+        a_logdet = 2 * slogdet(A)[1]
+        b_logdet = 2 * slogdet(B)[1]
 
         likl = (
             -nobs
             / 2.0
-            * (
-                neqs * np.log(2 * np.pi)
-                - np.log(npl.det(A) ** 2)
-                + b_slogdet
-                + np.trace(trc_in)
-            )
+            * (neqs * np.log(2 * np.pi) - a_logdet + b_logdet + np.trace(trc_in))
         )
 
         return likl
@@ -517,7 +529,6 @@ class SVAR(tsbase.TimeSeriesModel):
         # while the rest follows Hamilton (1994)
 
         neqs = self.neqs
-        sigma_u = self.sigma_u
         A_mask = self.A_mask
         B_mask = self.B_mask
 
@@ -558,11 +569,15 @@ class SVAR(tsbase.TimeSeriesModel):
                     S_D[k, j_d] = 1
                     j_d += 1
 
-        # now compute J
+        # now compute J, the derivative of vech(sigma) with respect to the
+        # free entries of A and B, at the covariance of the model,
+        # sigma = A^-1 B B' A^-1'
         invA = npl.inv(A_solve)
-        J_p1i = np.dot(np.dot(D_pl, np.kron(sigma_u, invA)), S_B)
+        invA_B = np.dot(invA, B_solve)
+        sigma = np.dot(invA_B, invA_B.T)
+        J_p1i = np.dot(np.dot(D_pl, np.kron(sigma, invA)), S_B)
         J_p1 = -2.0 * J_p1i
-        J_p2 = np.dot(np.dot(D_pl, np.kron(invA, invA)), S_D)
+        J_p2 = 2.0 * np.dot(np.dot(D_pl, np.kron(invA_B, invA)), S_D)
 
         J = np.append(J_p1, J_p2, axis=1)
 

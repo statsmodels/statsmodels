@@ -746,3 +746,122 @@ def test_fit_ic_verbose_and_unknown(capsys):
     assert f"Using {res.k_ar} based on bic criterion" in out
     with pytest.raises(ValueError, match="sic not recognized"):
         SVAR(data, "B", B=B).fit(maxlags=6, ic="sic")
+
+
+def _gdp_cons_dlog():
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    return np.diff(np.log(mdata[["realgdp", "realcons"]].values), axis=0)
+
+
+def _svar_gaussian_loglike(res, A, B):
+    # The Gaussian log-likelihood of the residuals, scaled so that their cross
+    # product is nobs * sigma_u, with the covariance A^-1 B B' A^-1' of the SVAR
+    from scipy import stats
+
+    invA_B = np.linalg.solve(A, B)
+    resid = res.resid * np.sqrt(res.nobs / res.df_resid)
+    return stats.multivariate_normal(cov=invA_B @ invA_B.T).logpdf(resid).sum()
+
+
+def _fit_may_not_converge(model, **kwargs):
+    # the ML fit may not converge, depending on the platform
+    with warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"):
+        return model.fit(maxlags=1, **kwargs)
+
+
+# R vars 1.6.1, realgdp and realcons of macrodata, VAR(1) with a constant:
+#   v <- VAR(y, p = 1, type = "const")
+#   s <- SVAR(v, Bmat = matrix(c(NA, NA, NA, 0), 2, 2), estmethod = "scoring",
+#             start = c(0.005, 0.004, 0.003), max.iter = 500,
+#             conv.crit = 1e-12, lrtest = FALSE)
+# and the log-likelihood of vars' "direct" method at B and at
+# B = [[0.006, 0.003], [0.004, 0]],
+#   -K obs / 2 log(2 pi) + obs / 2 log(det(A)^2) - obs / 2 log(det(B)^2)
+#   - obs / 2 tr(A' B'^-1 B^-1 A sigma), sigma = crossprod(resid(v)) / df
+R_NONTRI_B = np.array(
+    [[0.0048113950519561872, 0.0061513028826717508], [0.0066167894394091285, 0.0]]
+)
+R_NONTRI_LLF = 1461.5432209010482
+R_NONTRI_BFIX = np.array([[0.006, 0.003], [0.004, 0.0]])
+R_NONTRI_LLF_BFIX = 918.48509778844698
+
+
+@pytest.mark.parametrize(
+    "B, llf_r",
+    [(R_NONTRI_B, R_NONTRI_LLF), (R_NONTRI_BFIX, R_NONTRI_LLF_BFIX)],
+    ids=["estimate", "fixed"],
+)
+def test_loglike_nontriangular_b(B, llf_r):
+    # loglike used log det(B ** 2) of the elementwise square of B
+    mask = np.array([["E", "E"], ["E", 0]], dtype="U")
+    model = SVAR(_gdp_cons_dlog(), "B", B=mask)
+    res = _fit_may_not_converge(model, B_guess=[0.005, 0.006, 0.006])
+    llf = model.loglike(B[mask == "E"])
+    assert_allclose(llf, llf_r, rtol=1e-12)
+    assert_allclose(llf, _svar_gaussian_loglike(res, np.eye(2), B), rtol=1e-12)
+
+
+def test_loglike_a_with_determinant():
+    # an A-model whose A does not have a unit determinant
+    mask = np.array([["E", "E"], [0, "E"]], dtype="U")
+    model = SVAR(_gdp_cons_dlog(), "A", A=mask)
+    res = _fit_may_not_converge(model, A_guess=[160.0, -120.0, 150.0])
+    A = np.array([[150.0, -100.0], [0.0, 140.0]])
+    llf = model.loglike(A[mask == "E"])
+    assert_allclose(llf, _svar_gaussian_loglike(res, A, np.eye(2)), rtol=1e-12)
+
+
+def test_fit_nontriangular_b():
+    # The rank check rejected this identified model, and the wrong
+    # log-likelihood had no maximum near the estimate
+    mask = np.array([["E", "E"], ["E", 0]], dtype="U")
+    model = SVAR(_gdp_cons_dlog(), "B", B=mask)
+    res = _fit_may_not_converge(model, B_guess=[0.005, 0.006, 0.006])
+    # Unique up to the signs of the columns, to a tolerance for where the
+    # optimizer stops
+    assert_allclose(np.abs(res.B), R_NONTRI_B, rtol=1e-3)
+    # The model is just identified, so B B' is sigma_u at the estimate
+    assert_allclose(res.B @ res.B.T, res.sigma_u, rtol=1e-3)
+
+
+def test_fit_nontriangular_b_three_variables():
+    # A just-identified B-model that the rank check rejected, since B[0, 1]
+    # and B[1, 0] are both free
+    mdata = statsmodels.datasets.macrodata.load_pandas().data
+    data = np.diff(np.log(mdata[["realgdp", "realcons", "realinv"]].values), axis=0)
+    mask = np.array([["E", "E", "E"], ["E", "E", 0], [0, "E", 0]], dtype="U")
+    res = _fit_may_not_converge(SVAR(data, "B", B=mask))
+    # to a tolerance for where the optimizer stops
+    assert_allclose(res.B @ res.B.T, res.sigma_u, rtol=1e-3)
+
+
+@pytest.mark.parametrize(
+    "A, B, params, scale",
+    [
+        (
+            np.array([["E", 0], [0, 1]], dtype="U"),
+            np.array([["E", 0], [0, "E"]], dtype="U"),
+            [1.5, 0.006, 0.004],
+            [3.0, 3.0, 1.0],
+        ),
+        (
+            np.array([["E", 0], [0, 1]], dtype="U"),
+            np.array([["E", 0], ["E", 1]], dtype="U"),
+            [1.5, 0.006, 0.004],
+            [3.0, 3.0, 1.0],
+        ),
+    ],
+    ids=["diagonal-b", "lower-b"],
+)
+def test_fit_not_identified_free_a_and_b_entry(A, B, params, scale):
+    # Scaling A[0, 0] and B[0, 0] by the same factor leaves A^-1 B, and so the
+    # covariance, unchanged: the model is not identified (vars rejects it:
+    # "Free parameters at the same positions in Amat and Bmat"). The rank
+    # check accepted it.
+    model = SVAR(_gdp_cons_dlog(), "AB", A=A, B=B)
+    with pytest.raises(ValueError, match="Rank condition not met"):
+        model.fit(maxlags=1)
+    # the log-likelihood is flat along that direction
+    params = np.array(params)
+    scaled = params * np.array(scale)
+    assert_allclose(model.loglike(scaled), model.loglike(params), rtol=1e-12)
