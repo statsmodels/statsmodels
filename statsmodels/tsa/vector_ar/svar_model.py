@@ -371,10 +371,8 @@ class SVAR(tsbase.TimeSeriesModel):
         A_len = len(A[A_mask])
         B_len = len(B[B_mask])
 
-        if A is not None:
-            A[A_mask] = params[:A_len]
-        if B is not None:
-            B[B_mask] = params[A_len : A_len + B_len]
+        A[A_mask] = params[:A_len]
+        B[B_mask] = params[A_len : A_len + B_len]
 
         nobs = self.nobs
         neqs = self.neqs
@@ -489,23 +487,15 @@ class SVAR(tsbase.TimeSeriesModel):
         else:  # TODO: change to a warning?
             print("Order/rank conditions have not been checked")
 
-        if solver == "bfgs":
-            kwargs = {"gtol": 1e-5}
-        else:
-            kwargs = {}
         mlefit = super().fit(
             start_params=start_params,
             method=solver,
             maxiter=maxiter,
             disp=False,
-            **kwargs,
         )
         # used by sirf_errband_mc to count the fits that did not converge
         self.mle_retvals = mlefit.mle_retvals
         retvals = mlefit.params
-
-        if retvals.ndim > 1:
-            retvals = retvals.ravel()
         A[A_mask] = retvals[:A_len]
         B[B_mask] = retvals[A_len:]
 
