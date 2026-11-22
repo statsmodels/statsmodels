@@ -1,0 +1,6 @@
+- ``predict`` of :class:`~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression` and of ``MarkovSwitchingResults`` with ``conditional`` True or 1
+  to ``order`` (conditional on the current regime and fewer than
+  ``order`` past regimes) returned the predictions multiplied by the
+  probability of the conditioning regimes. They are the expected values
+  given those regimes, and NaN where that probability is zero, so
+  results change. :pr:`11012`
