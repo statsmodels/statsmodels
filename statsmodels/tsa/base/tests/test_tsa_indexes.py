@@ -1809,3 +1809,27 @@ def test_dates_list_with_freq(freq, dates, expected):
     assert isinstance(pred, np.ndarray)
     assert_allclose(pred, np.full(5, 2.5))
     assert res.model.data.predict_dates.equals(expected)
+
+
+@pytest.mark.parametrize("dtype", [np.uint64, np.uint32, np.int32, np.int64])
+def test_integer_index_forecast_labels(dtype):
+    # An integer index 0, ..., nobs - 1 is extended with integer labels
+    index = pd.Index(np.arange(5, dtype=dtype))
+    loc, labels, expanded = tsa_model.get_index_loc(7, index)
+    assert loc == 7
+    assert expanded
+    np.testing.assert_array_equal(labels.to_numpy(), np.arange(8))
+    if index.dtype == np.uint64:
+        # uint64 labels instead of float labels
+        assert labels.dtype == np.uint64
+    else:
+        # signed integer labels, as before
+        assert labels.dtype.kind == "i"
+
+    mod = tsa_model.TimeSeriesModel(pd.Series(np.zeros(5), index=index))
+    _, _, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        3, 7, 5, mod._index, data=mod.data
+    )
+    assert out_of_sample == 3
+    np.testing.assert_array_equal(prediction_index.to_numpy(), np.arange(3, 8))
+    assert prediction_index.dtype == labels.dtype
