@@ -25,12 +25,17 @@ import pandas as pd
 import pytest
 
 from statsmodels.tsa.statespace import sarimax, tools
+from statsmodels.tsa.statespace.initialization import Initialization
 from statsmodels.tsa.statespace.kalman_filter import (
     FilterResults,
     KalmanFilter,
     PredictionResults,
 )
-from statsmodels.tsa.statespace.representation import Representation
+from statsmodels.tsa.statespace.kalman_smoother import KalmanSmoother
+from statsmodels.tsa.statespace.representation import (
+    FrozenRepresentation,
+    Representation,
+)
 from statsmodels.tsa.statespace.simulation_smoother import SimulationSmoother
 
 from .results import results_kalman_filter
@@ -1562,3 +1567,297 @@ def test_initialize_components_pstar_and_r0q0_raises():
         mod.initialize_components(
             a=[0.0, 0.0], Pstar=np.eye(2), R0=np.eye(2), Q0=np.eye(2)
         )
+
+
+def _bivariate_endog(nobs=40):
+    rng = np.random.default_rng(97531)
+    level = rng.standard_normal((nobs, 2)).cumsum(0) * 0.1
+    return level + rng.standard_normal((nobs, 2))
+
+
+def _bivariate_model(cls=KalmanFilter, endog=None, nobs=40):
+    # Two observed series and two states, with correlated observation and
+    # state disturbances, initialized with a known distribution
+    if endog is None:
+        endog = _bivariate_endog(nobs)
+    mod = cls(np.ascontiguousarray(endog), k_states=2)
+    mod["design"] = np.array([[1.0, 0.2], [0.3, 1.0]])
+    mod["transition"] = np.array([[0.5, 0.1], [0.0, 0.3]])
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.array([[1.0, 0.2], [0.2, 0.5]])
+    mod["obs_cov"] = np.array([[1.0, 0.3], [0.3, 2.0]])
+    mod.initialize_known(np.zeros(2), np.eye(2))
+    return mod
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        ({}, "Initial state must be provided"),
+        ({"constant": [0.0]}, "Initial state covariance matrix must be provided"),
+        ({"initial_state": [0.0]}, "Initial state covariance matrix must be"),
+    ],
+)
+def test_known_initialization_requires_mean_and_cov(kwargs, match):
+    with pytest.raises(ValueError, match=match):
+        Representation(1, k_states=1, initialization="known", **kwargs)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"constant": [1.5], "stationary_cov": [[2.0]]},
+        {"initial_state": [1.5], "initial_state_cov": [[2.0]]},
+    ],
+)
+def test_known_initialization_keywords(kwargs):
+    # Both spellings give the initial state distribution N(1.5, 2)
+    mod = Representation(1, k_states=1, initialization="known", **kwargs)
+    mean, _, stationary_cov = mod.initialization()
+    assert_allclose(mean, [1.5])
+    assert_allclose(stationary_cov, [[2.0]])
+
+
+def test_invalid_initialization_method():
+    match = "Invalid state space initialization method"
+    with pytest.raises(ValueError, match=match):
+        Representation(1, k_states=1, initialization="unknown")
+    mod = Representation(1, k_states=1)
+    with pytest.raises(ValueError, match=match):
+        mod.initialize("unknown")
+    assert mod.initialization is None
+
+
+def test_clone_dimensions_and_time_varying_matrices():
+    mod = _bivariate_model()
+    endog = np.arange(10.0).reshape(5, 2)
+    # Passing the current dimensions is allowed
+    clone = mod.clone(endog, k_states=2, k_posdef=2)
+    assert_allclose(clone.endog, endog.T)
+    for name in ["design", "obs_cov", "transition", "selection", "state_cov"]:
+        assert_allclose(clone[name], mod[name])
+
+    with pytest.raises(ValueError, match="Cannot change the dimension of k_states"):
+        mod.clone(endog, k_states=3)
+    with pytest.raises(ValueError, match="Cannot change the dimension of k_posdef"):
+        mod.clone(endog, k_posdef=1)
+
+    mod["obs_intercept"] = np.zeros((2, mod.nobs))
+    with pytest.raises(ValueError, match="The `obs_intercept` matrix is time-varying"):
+        mod.clone(endog)
+
+
+def test_extend_ranges():
+    mod = _bivariate_model(nobs=10)
+    new = np.arange(6.0).reshape(3, 2) + 100
+    # By default the whole sample is kept and the new data are appended
+    ext = mod.extend(new)
+    assert_allclose(ext.endog, np.r_[mod.endog.T, new].T)
+    assert_allclose(ext["transition"], mod["transition"])
+    # Negative start and end count from the end of the sample
+    ext = mod.extend(new, start=-3, end=-1)
+    assert_allclose(ext.endog, np.r_[mod.endog.T[7:9], new].T)
+
+    # A 1-dim array is a univariate series
+    mod = KalmanFilter(np.arange(10.0).reshape(10, 1), k_states=1)
+    ext = mod.extend(np.array([20.0, 21.0]))
+    assert_allclose(ext.endog, [np.r_[np.arange(10.0), 20.0, 21.0]])
+
+
+@pytest.mark.parametrize(
+    "nobs_new, kwargs, match",
+    [
+        (3, {"start": 11}, "The `start` argument .* after the end of the base"),
+        (3, {"end": 11}, "The `end` argument .* after the end of the base"),
+        (3, {"start": 5, "end": 3}, "cannot be after the `end` argument"),
+        (
+            0,
+            {"obs_intercept": np.zeros((2, 3))},
+            "Extension is being performed within-sample",
+        ),
+    ],
+)
+def test_extend_invalid(nobs_new, kwargs, match):
+    mod = _bivariate_model(nobs=10)
+    with pytest.raises(ValueError, match=match):
+        mod.extend(np.ones((nobs_new, 2)), **kwargs)
+
+
+def test_diff_endog_too_short():
+    mod = _bivariate_model(nobs=10)
+    with pytest.raises(ValueError, match=r"Given data \(length 5\) is too short"):
+        mod.diff_endog(np.zeros((5, 2)))
+
+
+def test_bind_one_dimensional_observation():
+    # A 1-dim array with k_endog elements is a single observation, as is the
+    # same values as one row-ordered row
+    mod = Representation(2, k_states=1)
+    mod.bind(np.array([1.0, 2.0]))
+    desired = Representation(2, k_states=1)
+    desired.bind(np.array([[1.0, 2.0]]))
+    assert mod.nobs == desired.nobs == 1
+    assert_allclose(mod.endog, desired.endog)
+    assert_allclose(mod.endog, [[1.0], [2.0]])
+    with pytest.raises(ValueError, match="must have first axis shape of `k_endog`"):
+        mod.bind(np.arange(6.0))
+
+
+def test_bind_non_contiguous():
+    mod = Representation(2, k_states=1)
+    with pytest.raises(ValueError, match="must be ordered in contiguous memory"):
+        mod.bind(np.zeros((10, 4))[:, ::2])
+
+
+def test_filter_incomplete_initialization():
+    mod = _bivariate_model()
+    init = Initialization(2)
+    init.set(0, "diffuse")
+    mod.initialize(init)
+    with pytest.raises(RuntimeError, match="Initialization is incomplete"):
+        mod.filter()
+
+
+def test_frozen_representation_without_initialization():
+    mod = _bivariate_model()
+    # Filtering creates the compiled representation that is frozen below
+    mod.filter()
+    mod.initialization = None
+    frozen = FrozenRepresentation(mod)
+    assert frozen.initialization is None
+    assert frozen.initial_state is None
+    assert frozen.initial_state_cov is None
+    assert_allclose(frozen.endog, mod.endog)
+    for name in ["design", "obs_cov", "transition", "selection", "state_cov"]:
+        assert_allclose(getattr(frozen, name), getattr(mod, name))
+
+
+def test_update_representation_only_options():
+    mod = _bivariate_model()
+    res = mod.filter()
+    obs_cov = mod["obs_cov"].copy()
+    mod.filter_univariate = True
+    mod["obs_cov"] = 5 * np.eye(2)
+    # Only the options are taken from the model
+    res.update_representation(mod, only_options=True)
+    assert res.filter_univariate
+    assert_allclose(res.obs_cov[..., 0], obs_cov)
+    # Otherwise the system matrices are updated too
+    res.update_representation(mod)
+    assert_allclose(res.obs_cov[..., 0], 5 * np.eye(2))
+
+
+@pytest.mark.parametrize("missing", ["none", "partial", "entire"])
+def test_kalman_gain_not_stored(missing):
+    # Without a stored gain, `kalman_gain` computes K_t = T P_t Z' F_t^{-1}
+    # from the stored covariances; the filter's own gain is the reference
+    endog = _bivariate_endog()
+    if missing == "partial":
+        endog[3, 0] = np.nan
+    elif missing == "entire":
+        endog[5] = np.nan
+    desired = _bivariate_model(endog=endog).filter().kalman_gain
+    mod = _bivariate_model(endog=endog)
+    mod.memory_no_gain = True
+    actual = mod.filter().kalman_gain
+    # atol: the gain columns of missing observations are zero in both
+    assert_allclose(actual, desired, rtol=1e-8, atol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "option", ["memory_no_forecast_mean", "memory_no_forecast_cov"]
+)
+def test_partially_missing_forecasts_memory_options(option):
+    # For a partially missing observation, the forecasts and their covariance
+    # are rebuilt for all series from the predicted state, Z a_t + d and
+    # Z P_t Z' + H, unless they are not stored
+    endog = _bivariate_endog()
+    endog[3, 0] = np.nan
+    mod = _bivariate_model(endog=endog)
+    setattr(mod, option, True)
+    res = mod.filter()
+    design = mod["design"]
+    if option == "memory_no_forecast_cov":
+        forecast = design @ res.predicted_state[:, 3]
+        assert_allclose(res.forecasts[:, 3], forecast)
+        # The filter stores the forecast of the observed series first
+        assert_allclose(res.forecasts[1, 3], res.missing_forecasts[0, 3])
+        assert np.isnan(res.forecasts_error[0, 3])
+        assert_allclose(res.forecasts_error[1, 3], endog[3, 1] - forecast[1])
+    else:
+        P = res.predicted_state_cov[:, :, 3]
+        desired = design @ P @ design.T + mod["obs_cov"]
+        assert_allclose(res.forecasts_error_cov[:, :, 3], desired)
+        assert_allclose(
+            res.forecasts_error_cov[1, 1, 3], res.missing_forecasts_error_cov[0, 0, 3]
+        )
+
+
+def test_impulse_responses_column_impulse():
+    mod = _bivariate_model(cls=SimulationSmoother)
+    design, transition = mod["design"], mod["transition"]
+    impulse = np.array([0.5, -1.0])
+    # Response h periods after the impulse: Z T^h R impulse
+    desired = np.array(
+        [
+            design @ np.linalg.matrix_power(transition, h) @ mod["selection"] @ impulse
+            for h in range(4)
+        ]
+    )
+    actual = mod.impulse_responses(steps=3, impulse=impulse[:, None])
+    assert_allclose(actual, desired)
+
+    mod["design"] = np.repeat(design[:, :, None], mod.nobs, axis=2)
+    match = "In a time-varying model, cannot create more impulse responses"
+    with pytest.raises(ValueError, match=match):
+        mod.impulse_responses(steps=mod.nobs)
+
+
+def _quadratic_form(design, cov):
+    # Z P_t Z' for each period t of cov
+    return np.einsum("ij,jkt,lk->ilt", design, cov, design)
+
+
+def test_prediction_results_signal_cov_before_signal():
+    mod = _bivariate_model(cls=KalmanSmoother)
+    obs_intercept = np.array([0.5, -0.5])
+    mod["obs_intercept"] = obs_intercept
+    res = mod.smooth()
+    design = mod["design"]
+    for name in ["predicted", "filtered", "smoothed"]:
+        pred = res.predict(start=0, end=mod.nobs + 5)
+        states = getattr(pred, f"{name}_state")
+        states_cov = getattr(pred, f"{name}_state_cov")
+        # The covariance first, then the mean
+        assert_allclose(
+            getattr(pred, f"{name}_signal_cov"), _quadratic_form(design, states_cov)
+        )
+        assert_allclose(getattr(pred, f"{name}_signal"), design @ states)
+        if name == "predicted":
+            continue
+        forecasts = obs_intercept[:, None] + design @ states
+        forecasts_cov = _quadratic_form(design, states_cov) + mod["obs_cov"][..., None]
+        assert_allclose(getattr(pred, f"{name}_forecasts"), forecasts)
+        assert_allclose(getattr(pred, f"{name}_forecasts_error_cov"), forecasts_cov)
+        # A second access returns the stored values
+        assert_allclose(getattr(pred, f"{name}_forecasts"), forecasts)
+
+
+def test_prediction_results_time_varying_dynamic():
+    mod = _bivariate_model()
+    nobs = mod.nobs
+    obs_intercept = np.linspace(-1, 1, 2 * nobs).reshape(2, nobs)
+    mod["obs_intercept"] = obs_intercept
+    res = mod.filter()
+    # Static, dynamic and out-of-sample periods, with the intercept of the
+    # out-of-sample periods given
+    new_intercept = np.linspace(2, 3, 2 * 5).reshape(2, 5)
+    pred = res.predict(
+        start=0, end=nobs + 5, dynamic=nobs - 10, obs_intercept=new_intercept
+    )
+    assert (pred.ndynamic, pred.nforecast) == (10, 5)
+    desired = np.c_[obs_intercept, new_intercept]
+    assert_allclose(pred.obs_intercept, desired)
+    # Each forecast uses the intercept of its period
+    forecasts = mod["design"] @ pred.predicted_state + desired
+    assert_allclose(pred.forecasts, forecasts)

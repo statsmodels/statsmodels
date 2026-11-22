@@ -9,7 +9,8 @@ License: Simplified-BSD
 """
 
 import numpy as np
-from numpy.testing import assert_equal
+from numpy.testing import assert_allclose, assert_equal
+import pytest
 
 from statsmodels.tsa.statespace.kalman_filter import (
     FILTER_AUGMENTED,
@@ -37,6 +38,8 @@ from statsmodels.tsa.statespace.kalman_filter import (
     SOLVE_CHOLESKY,
     SOLVE_LU,
     STABILITY_FORCE_SYMMETRY,
+    TIMING_INIT_FILTERED,
+    TIMING_INIT_PREDICTED,
 )
 from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTHER_ALL,
@@ -45,6 +48,7 @@ from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTHER_STATE,
     SMOOTHER_STATE_AUTOCOV,
     SMOOTHER_STATE_COV,
+    KalmanSmoother,
 )
 from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_ALL,
@@ -276,3 +280,137 @@ def test_simulation_outputs():
         model.get_simulation_output(simulate_state=True, simulate_disturbance=True),
         SIMULATION_ALL,
     )
+
+
+@pytest.mark.parametrize(
+    "kwargs, desired",
+    [
+        ({"timing_init_filtered": True}, TIMING_INIT_FILTERED),
+        ({"timing_init_filtered": False}, TIMING_INIT_PREDICTED),
+        ({"timing_init_predicted": True}, TIMING_INIT_PREDICTED),
+        ({"timing_init_predicted": False}, TIMING_INIT_FILTERED),
+    ],
+)
+def test_filter_timing_keywords(kwargs, desired):
+    model = setup_model(**kwargs)
+    assert_equal(model.filter_timing, desired)
+    model = setup_model()
+    model.set_filter_timing(**kwargs)
+    assert_equal(model.filter_timing, desired)
+
+
+def test_fixed_scale_requires_concentrated_filter():
+    model = setup_model()
+    with pytest.raises(ValueError, match="Cannot provide scale if filter method"):
+        with model.fixed_scale(2.0):
+            pass
+
+
+def filter_model(k_endog=2, nobs=60):
+    # Up to two observed series and two states, with correlated observation
+    # and state disturbances
+    rng = np.random.default_rng(24680)
+    endog = rng.standard_normal((nobs, 2)).cumsum(0) * 0.1
+    endog += rng.standard_normal((nobs, 2))
+    model = KalmanSmoother(np.ascontiguousarray(endog[:, :k_endog]), k_states=2)
+    model["design"] = np.array([[1.0, 0.2], [0.3, 1.0]])[:k_endog]
+    model["transition"] = np.array([[0.5, 0.1], [0.0, 0.3]])
+    model["selection"] = np.eye(2)
+    model["state_cov"] = np.array([[1.0, 0.2], [0.2, 0.5]])
+    model["obs_cov"] = np.array([[1.0, 0.3], [0.3, 2.0]])[:k_endog, :k_endog]
+    model.initialize_known(np.zeros(2), np.eye(2))
+    return model
+
+
+INVERSIONS = [(INVERT_CHOLESKY, SOLVE_CHOLESKY), (INVERT_LU, SOLVE_LU)]
+
+
+@pytest.mark.parametrize("k_endog", [1, 2])
+@pytest.mark.parametrize("method, reference", INVERSIONS)
+def test_inversion_methods_agree(k_endog, method, reference):
+    # Inverting F_t, or solving with the same Cholesky or LU factorization,
+    # must give the same filter and smoother output. Set alone, the inversion
+    # is used also for a single series.
+    results = {}
+    for inversion_method in (method, reference):
+        model = filter_model(k_endog)
+        model.inversion_method = inversion_method
+        results[inversion_method] = model.smooth()
+    actual, desired = results[method], results[reference]
+    assert_allclose(actual.llf, desired.llf, rtol=1e-12)
+    for name in [
+        "filtered_state",
+        "filtered_state_cov",
+        "standardized_forecasts_error",
+        "kalman_gain",
+        "smoothed_state",
+        "smoothed_state_cov",
+    ]:
+        # atol: entries near zero differ by rounding (about 1e-15) between the
+        # two computations
+        assert_allclose(
+            getattr(actual, name), getattr(desired, name), rtol=1e-10, atol=1e-13
+        )
+
+
+@pytest.mark.parametrize(
+    "conserve_memory", [MEMORY_CONSERVE, MEMORY_CONSERVE | MEMORY_NO_STD_FORECAST]
+)
+@pytest.mark.parametrize("k_endog", [1, 2])
+@pytest.mark.parametrize("method, reference", INVERSIONS)
+def test_inversion_methods_conserve_memory(conserve_memory, k_endog, method, reference):
+    desired = filter_model(k_endog).filter()
+    for inversion_method in (method, reference):
+        model = filter_model(k_endog)
+        model.inversion_method = inversion_method
+        model.set_conserve_memory(conserve_memory)
+        res = model.filter()
+        assert_allclose(res.llf, desired.llf, rtol=1e-12)
+        assert_allclose(res.filtered_state[:, -1], desired.filtered_state[:, -1])
+        assert_allclose(model.loglike(), desired.llf, rtol=1e-12)
+
+
+def test_invalid_inversion_method():
+    model = filter_model()
+    model.inversion_method = 0
+    with pytest.raises(NotImplementedError, match="Invalid inversion method"):
+        model.filter()
+
+
+def test_invalid_filter_method():
+    # The concentrated likelihood is an addition to a filtering method
+    model = filter_model()
+    model.filter_method = FILTER_CONCENTRATED
+    with pytest.raises(NotImplementedError, match="Invalid filtering method"):
+        model.filter()
+
+
+@pytest.mark.parametrize(
+    "name, value",
+    [
+        ("filter_method", FILTER_CONVENTIONAL | FILTER_UNIVARIATE),
+        ("stability_method", 0),
+        ("loglikelihood_burn", 5),
+    ],
+)
+def test_filter_arguments(name, value):
+    # An option passed to `filter` is used for that call only, and gives the
+    # output of the filter with that option set on the model
+    model = filter_model()
+    default = model.filter()
+    actual = model.filter(**{name: value})
+    assert_equal(getattr(actual, name), value)
+    assert_equal(getattr(model, name), getattr(default, name))
+
+    setattr(model, name, value)
+    desired = model.filter()
+    assert_allclose(actual.llf, desired.llf, rtol=1e-12)
+    assert_allclose(actual.filtered_state, desired.filtered_state, rtol=1e-12)
+    assert_equal(actual.period_converged, desired.period_converged)
+    if name == "loglikelihood_burn":
+        # The first `value` periods are left out of the loglikelihood
+        assert_allclose(actual.llf, default.llf_obs[value:].sum(), rtol=1e-12)
+    else:
+        # Univariate filtering and the symmetry step change the output only by
+        # rounding
+        assert_allclose(actual.llf, default.llf, rtol=1e-10)
