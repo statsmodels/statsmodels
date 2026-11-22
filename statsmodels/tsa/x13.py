@@ -191,8 +191,10 @@ def _make_automdl_options(maxorder, maxdiff, diff):
     options += f"maxorder = ({maxorder[0]} {maxorder[1]})\n"
     if maxdiff is not None:  # maxdiff always takes precedence
         options += f"maxdiff = ({maxdiff[0]} {maxdiff[1]})\n"
-    else:
+    elif diff is not None:
         options += f"diff = ({diff[0]} {diff[1]})\n"
+    else:
+        raise ValueError("diff must be given if maxdiff is None")
     return options
 
 
