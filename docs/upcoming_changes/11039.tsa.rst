@@ -1,0 +1,2 @@
+- ``impulse_responses`` of ``KalmanFilter``, ``MLEModel`` and ``MLEResults``
+  raised a ``ValueError`` for a NumPy integer ``impulse``. :pr:`11039`
