@@ -1,0 +1,4 @@
+- ``solve_discrete_lyapunov`` and ``prepare_trend_data`` in ``statsmodels.tsa.statespace.tools``
+  raised an ``AttributeError`` for a list or tuple ``a`` or
+  ``polynomial_trend``, which are documented as array_like.
+  :pr:`11053`
