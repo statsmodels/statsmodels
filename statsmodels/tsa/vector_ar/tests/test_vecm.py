@@ -2462,3 +2462,51 @@ def test_select_order_deterministic_valid(deterministic, equivalent):
     assert res.selected_orders == expected.selected_orders
     for ic in ("aic", "bic", "hqic", "fpe"):
         assert_allclose(res.ics[ic], expected.ics[ic], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "caused, causing",
+    [
+        (np.int64(0), np.int32(2)),
+        (np.array([0, 1], dtype=np.int32), np.int64(3)),
+        ([np.intp(3)], [np.int16(0), np.uint8(1), np.intc(2)]),
+    ],
+)
+def test_causality_numpy_integer_indices(caused, causing):
+    # numpy integers are indices of the variables as int is: a scalar raised
+    # "object is not iterable" and an element of a sequence raised "has to be
+    # of type string or int"
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+
+    def names(value):
+        return [data.columns[int(v)] for v in np.atleast_1d(value)]
+
+    granger = res.test_granger_causality(caused, causing)
+    expected = res.test_granger_causality(names(caused), names(causing))
+    assert granger.caused == expected.caused == names(caused)
+    assert granger.causing == expected.causing == names(causing)
+    assert_allclose(granger.test_statistic, expected.test_statistic, rtol=1e-12)
+    assert granger.df == expected.df
+    inst = res.test_inst_causality(causing)
+    expected = res.test_inst_causality(names(causing))
+    assert inst.causing == expected.causing == names(causing)
+    assert_allclose(inst.test_statistic, expected.test_statistic, rtol=1e-12)
+
+
+def test_causality_float_index():
+    # A float is not an index: a scalar raised "object is not iterable"
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    with pytest.raises(TypeError, match="caused has to be of type string or int"):
+        res.test_granger_causality(0.5)
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_granger_causality(0, 1.0)
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_inst_causality(0.5)
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_inst_causality([0, 1.0])

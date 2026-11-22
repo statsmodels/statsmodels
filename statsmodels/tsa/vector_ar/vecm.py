@@ -1,4 +1,5 @@
 from collections import defaultdict
+import numbers
 import warnings
 
 import numpy as np
@@ -2236,28 +2237,36 @@ class VECMResults:
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
-        allowed_types = (str, int)
+        allowed_types = (str, numbers.Integral)
 
         if isinstance(caused, allowed_types):
             caused = [caused]
-        if not all(isinstance(c, allowed_types) for c in caused):
+        if not np.iterable(caused) or not all(
+            isinstance(c, allowed_types) for c in caused
+        ):
             raise TypeError(
                 "caused has to be of type string or int (or a "
                 "sequence of these types)."
             )
-        caused = [self.names[c] if type(c) is int else c for c in caused]
+        caused = [
+            self.names[c] if isinstance(c, numbers.Integral) else c for c in caused
+        ]
         caused_ind = [get_index(self.names, c) for c in caused]
 
         if causing is not None:
 
             if isinstance(causing, allowed_types):
                 causing = [causing]
-            if not all(isinstance(c, allowed_types) for c in causing):
+            if not np.iterable(causing) or not all(
+                isinstance(c, allowed_types) for c in causing
+            ):
                 raise TypeError(
                     "causing has to be of type string or int (or "
                     "a sequence of these types) or None."
                 )
-            causing = [self.names[c] if type(c) is int else c for c in causing]
+            causing = [
+                self.names[c] if isinstance(c, numbers.Integral) else c for c in causing
+            ]
             causing_ind = [get_index(self.names, c) for c in causing]
 
         if causing is None:
@@ -2386,6 +2395,21 @@ class VECMResults:
 
         .. |H1| replace:: H\ :sub:`1`
         """
+        allowed_types = (str, numbers.Integral)
+        if isinstance(causing, allowed_types):
+            causing = [causing]
+        if not np.iterable(causing) or not all(
+            isinstance(c, allowed_types) for c in causing
+        ):
+            raise TypeError(
+                "causing has to be of type string or int (or a sequence of "
+                "these types)."
+            )
+        # pass the names, which also covers integer indices of numpy types
+        causing = [
+            self.names[c] if isinstance(c, numbers.Integral) else c for c in causing
+        ]
+
         exog = _deterministic_to_exog(
             self.deterministic,
             self.seasons,
