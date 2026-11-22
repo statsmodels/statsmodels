@@ -1,0 +1,6 @@
+- With pandas 2.2 and 2.3, ``CalendarFourier`` and ``CalendarTimeTrend``
+  used quarters and years anchored in December for start-anchored frequencies
+  such as ``"QS-FEB"`` and ``"YS-JUL"`` (and their business-day versions).
+  They now use the quarters and years that start in the given month, so their
+  values change on those pandas versions. ``"MS"``, ``"QS"``, the calendar
+  quarters and ``"YS"`` are unchanged. :pr:`10854`

@@ -1,0 +1,6 @@
+- Correct docstrings of :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSModel`
+  and its results: the undocumented ``dates``, ``freq`` and ``missing``, the
+  log-likelihood formula for multiplicative errors, the scaling of
+  ``hessian``, the return types of ``fit`` and ``forecast``, the malformed
+  ``**simulate_kwargs`` entries, and the diagnostics of the state space base
+  results. :pr:`10904`

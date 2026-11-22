@@ -80,10 +80,9 @@ PY_SMOOTHERS = {
 
 def opt_wrapper(func):
     def f(*args, **kwargs):
+        # The smoothers return the array of residuals
         err = func(*args, **kwargs)
-        if isinstance(err, np.ndarray):
-            return err.T @ err
-        return err
+        return err.T @ err
 
     return f
 
@@ -453,11 +452,11 @@ class ExponentialSmoothing(TimeSeriesModel):
             return self._initialize_legacy()
         elif self._initialization_method == "heuristic":
             return self._initialize_heuristic()
-        elif self._initialization_method == "estimated":
-            if self.nobs < 10 + 2 * (self.seasonal_periods // 2):
-                return self._initialize_simple()
-            else:
-                return self._initialize_heuristic()
+        # Otherwise the method is "estimated"
+        elif self.nobs < 10 + 2 * (self.seasonal_periods // 2):
+            return self._initialize_simple()
+        else:
+            return self._initialize_heuristic()
 
     def _initialize_simple(self):
         trend = self.trend if self.has_trend else False
@@ -634,7 +633,9 @@ class ExponentialSmoothing(TimeSeriesModel):
                 b_ub = min(b_bounds[1], a)
                 g_lb = g_bounds[0]
                 g_ub = min(g_bounds[1], 1 - a)
-                if b_lb > b_ub or g_lb > g_ub:
+                # g_lb <= g_ub, since _check_bound_feasibility ensures that
+                # g_lb <= 1 - a for every a in points
+                if b_lb > b_ub:
                     # infeasible point
                     continue
                 nb = int(np.ceil(ns * np.sqrt(a)))
@@ -662,9 +663,6 @@ class ExponentialSmoothing(TimeSeriesModel):
             for a in points:
                 g_lb = g_bounds[0]
                 g_ub = min(g_bounds[1], 1 - a)
-                if g_lb > g_ub:
-                    # infeasible point
-                    continue
                 ng = int(np.ceil(ns * np.sqrt(1 - a)))
                 final = np.empty((ng, 2))
                 final[:, 1] = np.linspace(g_lb, g_ub, ng)
@@ -1547,7 +1545,7 @@ class SimpleExpSmoothing(ExponentialSmoothing):
     def __init__(
         self,
         endog,
-        initialization_method=None,  # Future: 'estimated',
+        initialization_method="estimated",
         initial_level=None,
     ):
         super().__init__(
@@ -1691,7 +1689,7 @@ class Holt(ExponentialSmoothing):
         endog,
         exponential=False,
         damped_trend=False,
-        initialization_method=None,  # Future: 'estimated',
+        initialization_method="estimated",
         initial_level=None,
         initial_trend=None,
     ):
