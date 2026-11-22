@@ -157,6 +157,11 @@ class BaseIRAnalysis:
         plot_stderr : bool, optional
             Plot standard impulse response error bands. The default is
             True.
+
+            .. versionchanged:: 0.15.1
+
+               Any false value, such as ``numpy.False_``, turns the error
+               bands off. Only ``False`` did.
         stderr_type : {"asym", "mc", "sz1", "sz2", "sz3"}, optional
             The method used to compute the error bands. "asym" computes
             asymptotic standard errors and is the default. "mc" computes
@@ -212,7 +217,7 @@ class BaseIRAnalysis:
             lower=False,
         )
 
-        if plot_stderr is False:
+        if not plot_stderr:
             stderr = None
         elif err_bands is not None:
             if isinstance(err_bands, ErrorBand):
@@ -224,6 +229,9 @@ class BaseIRAnalysis:
                     f"{expected_shape} (2, periods+1, neqs, neqs)."
                 )
             stderr = err_bands
+            if stderr_type == "asym":
+                # the bands are plotted as given
+                stderr_type = "mc"
         elif stderr_type == "asym":
             stderr = self.cov(orth=orth)
         elif stderr_type == "mc":
@@ -376,6 +384,9 @@ class BaseIRAnalysis:
                     f"{expected_shape} (2, periods+1, neqs, neqs)."
                 )
             stderr = err_bands
+            if stderr_type == "asym":
+                # the bands are plotted as given
+                stderr_type = "mc"
         else:
             stderr_type = string_like(
                 stderr_type, "stderr_type", options=("asym", "mc"), lower=False
