@@ -1292,3 +1292,41 @@ def test_companion_matrix_bool_size(size):
     # A bool is not a size: True was the size 1
     with pytest.raises(TypeError):
         tools.companion_matrix(size)
+
+
+@pytest.mark.parametrize("use_list", [False, True])
+@pytest.mark.parametrize("transform_variance", [False, True])
+@pytest.mark.parametrize(
+    "func",
+    ["constrain_stationary_multivariate", "constrain_stationary_multivariate_python"],
+)
+def test_constrain_stationary_multivariate_variance(
+    func, transform_variance, use_list
+):
+    # The returned variance is the variance of the constrained VAR: with it
+    # unconstrain_stationary_multivariate recovers the unconstrained matrices.
+    # Without the transformation it is the input variance (it was an internal
+    # scaled variance), and the input is not changed.
+    rng = np.random.default_rng(20261122)
+    k_endog, order = 2, 2
+    unconstrained = rng.standard_normal((k_endog, k_endog * order))
+    variance = np.array([[1.0, 0.3], [0.3, 2.0]])
+    original = variance.copy()
+    if use_list:
+        blocks = [
+            unconstrained[:, i * k_endog : (i + 1) * k_endog] for i in range(order)
+        ]
+        constrained, actual = getattr(tools, func)(blocks, variance, transform_variance)
+        constrained = np.concatenate(constrained, axis=1)
+    else:
+        constrained, actual = getattr(tools, func)(
+            unconstrained, variance, transform_variance
+        )
+
+    recovered, _ = tools.unconstrain_stationary_multivariate(constrained, actual)
+    assert_allclose(recovered, unconstrained, rtol=1e-10)
+    assert_allclose(variance, original, rtol=1e-15)
+    if not transform_variance:
+        assert_allclose(actual, original, rtol=1e-15)
+        # A copy, as the transformed variance is a new array
+        assert not np.shares_memory(actual, variance)
