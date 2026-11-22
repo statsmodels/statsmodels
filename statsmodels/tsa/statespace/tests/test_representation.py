@@ -1861,3 +1861,47 @@ def test_prediction_results_time_varying_dynamic():
     # Each forecast uses the intercept of its period
     forecasts = mod["design"] @ pred.predicted_state + desired
     assert_allclose(pred.forecasts, forecasts)
+
+
+def _initial_values_model(**kwargs):
+    mod = KalmanFilter(np.arange(10.0)[:, None].copy(), k_states=2, **kwargs)
+    mod["design"] = [[1.0, 0.5]]
+    mod["transition"] = [[0.5, 0.1], [0.0, 0.3]]
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.eye(2)
+    mod["obs_cov"] = [[1.0]]
+    return mod
+
+
+@pytest.mark.parametrize("initial_variance", [None, 123.0])
+def test_filter_results_initial_variance(initial_variance):
+    # The results hold the `initial_variance` of the model (1e6 unless
+    # given), which is the variance of the approximate diffuse initialization
+    kwargs = {}
+    desired = 1e6
+    if initial_variance is not None:
+        kwargs["initial_variance"] = initial_variance
+        desired = initial_variance
+    mod = _initial_values_model(**kwargs)
+    mod.initialize_approximate_diffuse()
+    res = mod.filter()
+    assert_allclose(res.initial_variance, desired, rtol=1e-12)
+    assert_allclose(res.initial_state_cov, desired * np.eye(2), rtol=1e-12)
+
+
+def test_frozen_representation_initial_diffuse_state_cov():
+    # Without an initialization the initial values are None, as documented
+    mod = _initial_values_model()
+    mod.initialize_diffuse()
+    # Filtering creates the compiled representation that is read
+    mod.filter()
+    frozen = FrozenRepresentation(mod)
+    assert_allclose(frozen.initial_diffuse_state_cov, np.eye(2), rtol=1e-12)
+
+    mod.initialization = None
+    frozen = FrozenRepresentation(mod)
+    assert frozen.initialization is None
+    assert frozen.initial_state is None
+    assert frozen.initial_state_cov is None
+    assert frozen.initial_diffuse_state_cov is None
+    assert_allclose(frozen.initial_variance, 1e6, rtol=1e-12)
