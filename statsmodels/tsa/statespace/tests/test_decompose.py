@@ -14,7 +14,7 @@ import pytest
 
 from statsmodels import datasets
 from statsmodels.tools.sm_exceptions import OutputWarning
-from statsmodels.tsa.statespace import dynamic_factor_mq, sarimax, varmax
+from statsmodels.tsa.statespace import dynamic_factor_mq, mlemodel, sarimax, varmax
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 
 dta = datasets.macrodata.load_pandas().data
@@ -351,3 +351,47 @@ def test_smoothed_decomposition_TVSS(univariate):
     csf = cs_sig + mod["obs_intercept"].T
 
     assert_allclose(csf, sf)
+
+
+@pytest.mark.parametrize(
+    "partition",
+    [[[0], [1], [2]], [[0, 2], [1]], [[1], [2, 0]], [[2, 0, 1]]],
+)
+def test_smoothed_signal_decomposition_state_index(partition):
+    # The decompositions of the smoothed signal for a partition of the states
+    # add up to the full decomposition, including the state intercept
+    # contributions. Each equals the design columns of its states times the
+    # decomposition of those smoothed states.
+    rng = np.random.default_rng(20261122)
+    mod = mlemodel.MLEModel(rng.standard_normal((20, 2)), k_states=3, k_posdef=3)
+    mod["design"] = np.array([[1.0, 0.5, 0.2], [0.3, 1.0, -0.4]])
+    mod["obs_intercept"] = np.array([0.1, -0.2])
+    mod["obs_cov"] = np.diag([1.0, 0.5])
+    mod["transition"] = np.array([[0.5, 0.1, 0.0], [0.0, 0.4, 0.2], [0.1, 0.0, 0.3]])
+    mod["state_intercept"] = np.array([0.1, 0.2, 0.3])
+    mod["selection"] = np.eye(3)
+    mod["state_cov"] = np.array([[0.5, 0.1, 0.0], [0.1, 0.4, 0.1], [0.0, 0.1, 0.3]])
+    mod.ssm.initialize_known(np.array([0.2, -0.1, 0.4]), np.eye(3))
+    res = mod.ssm.smooth()
+    design = mod["design"]
+
+    full = res.get_smoothed_decomposition("smoothed_signal")
+    states = res.get_smoothed_decomposition("smoothed_state")
+    # The full decomposition adds up to the smoothed signal (the weights are
+    # computed separately, so the sum of the contributions has rounding error)
+    total = sum(c.sum(axis=tuple(range(2, c.ndim))) for c in full)
+    assert_allclose(total, (design @ res.smoothed_state).T, rtol=1e-9)
+
+    totals = [np.zeros_like(c) for c in full]
+    for index in partition:
+        parts = res.get_smoothed_decomposition("smoothed_signal", state_index=index)
+        for i, (part, state) in enumerate(zip(parts, states, strict=True)):
+            if state.ndim == 4:
+                expected = np.einsum("km,tmjp->tkjp", design[:, index], state[:, index])
+            else:
+                expected = np.einsum("km,tml->tkl", design[:, index], state[:, index])
+            # atol: some contributions are zero up to rounding
+            assert_allclose(part, expected, rtol=1e-12, atol=1e-15)
+            totals[i] += part
+    for actual, desired in zip(totals, full, strict=True):
+        assert_allclose(actual, desired, rtol=1e-12, atol=1e-15)
