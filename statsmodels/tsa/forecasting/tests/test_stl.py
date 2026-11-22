@@ -2,8 +2,6 @@ from statsmodels.compat.pandas import MONTH_END
 
 import datetime as dt
 import re
-
-
 import warnings
 
 import numpy as np
