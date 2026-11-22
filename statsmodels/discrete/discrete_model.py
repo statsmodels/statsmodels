@@ -3934,6 +3934,12 @@ class NegativeBinomial(CountModel):
 
         where :math`Q=0` for NB2 and geometric and :math:`Q=1` for NB1.
         For the geometric, :math:`\alpha=0` as well.
+
+        .. versionchanged:: 0.15.1
+
+           Outside of `fit`, the last element of `params` is :math:`\alpha` for
+           ``loglike_method`` nb1 and nb2. It was read as :math:`\ln\alpha` in
+           a new model instance and in the model of unpickled results.
         """
         llf = np.sum(self.loglikeobs(params))
         return llf
