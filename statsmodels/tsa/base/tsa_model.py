@@ -5,6 +5,7 @@ from statsmodels.compat.pandas import (
     is_float_index,
     is_int_index,
     is_numeric_dtype,
+    to_period_offset,
 )
 
 import re
@@ -622,7 +623,15 @@ class TimeSeriesModel(base.LikelihoodModel):
                         )
 
                 # Convert the passed freq to a pandas offset object
-                if freq is not None:
+                if freq is not None and isinstance(index, PeriodIndex):
+                    # Accept the period alias of the index (e.g. "M"), which
+                    # pandas 3 does not accept as an offset alias, as well as
+                    # an offset alias (e.g. "ME")
+                    try:
+                        freq = to_period_offset(freq)
+                    except ValueError:
+                        freq = to_offset(freq)
+                elif freq is not None:
                     freq = to_offset(freq)
 
                 # Now, if no frequency information is available from the index
