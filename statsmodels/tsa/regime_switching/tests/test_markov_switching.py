@@ -351,3 +351,29 @@ def test_partials_logistic():
             desired = np.diag(evaluated[:, j, t] - evaluated[:, j, t] ** 2)
             desired[0, 1] = desired[1, 0] = -np.multiply(*evaluated[:, j, t])
             assert_allclose(partials[..., j, t], desired)
+
+
+@pytest.mark.parametrize("display_params", [True, False])
+def test_summary_display_params(display_params):
+    # Switching constant, common variance: two regime tables, one table of
+    # non-switching parameters and one of transition parameters
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    res = mod.smooth(np.r_[0.9, 0.2, 0.2, 2.8, 1.0])
+    summary = res.summary(display_params=display_params)
+    titles = [table.title for table in summary.tables]
+    expected = ["Markov Switching Model Results"]
+    if display_params:
+        expected += [
+            "Regime 0 parameters",
+            "Regime 1 parameters",
+            "Non-switching parameters",
+            "Regime transition parameters",
+        ]
+    assert titles == expected
+    text = summary.as_text()
+    for name in ["const", "sigma2", "p[0->0]", "p[1->0]"]:
+        assert (name in text) is display_params
+    # The covariance note is kept
+    assert "Covariance matrix calculated using the outer product" in text

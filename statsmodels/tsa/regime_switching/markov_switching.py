@@ -2251,6 +2251,11 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             Whether or not to display tables of estimated parameters. Default
             is True. Usually only used internally.
 
+            .. versionchanged:: 0.15.1
+
+               ``display_params=False`` leaves out the parameter tables.
+               Before, it was ignored.
+
         Returns
         -------
         summary : Summary instance
@@ -2359,21 +2364,22 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
 
         for i in range(self.k_regimes):
             mask = regime_masks[i]
-            if len(mask) > 0:
+            if display_params and len(mask) > 0:
                 table = make_table(self, mask, f"Regime {i:d} parameters")
                 summary.tables.append(table)
 
         mask = []
         for _mask in other_masks.values():
             mask.extend(_mask)
-        if len(mask) > 0:
+        if display_params and len(mask) > 0:
             table = make_table(self, mask, "Non-switching parameters")
             summary.tables.append(table)
 
         # Transition parameters
-        mask = params["regime_transition"]
-        table = make_table(self, mask, "Regime transition parameters")
-        summary.tables.append(table)
+        if display_params:
+            mask = params["regime_transition"]
+            table = make_table(self, mask, "Regime transition parameters")
+            summary.tables.append(table)
 
         # Add warnings/notes, added to text format only
         etext = []
