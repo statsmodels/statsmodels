@@ -2510,3 +2510,24 @@ def test_causality_float_index():
         res.test_inst_causality(0.5)
     with pytest.raises(TypeError, match="causing has to be of type string or int"):
         res.test_inst_causality([0, 1.0])
+
+
+@pytest.mark.parametrize("form", ["list", "tuple"])
+def test_vecm_list_endog_exog_coint(form):
+    # endog is array_like, but VECM read endog.shape to check the number of
+    # rows of exog_coint, so a list with exog_coint raised an AttributeError
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    endog = y.tolist() if form == "list" else tuple(map(tuple, y))
+    # the trend 1, 2, ... in the relation is deterministic="li"
+    trend = np.arange(1.0, len(y) + 1)
+    res = VECM(endog, exog_coint=trend, k_ar_diff=1, coint_rank=1).fit()
+    expected = VECM(y, k_ar_diff=1, coint_rank=1, deterministic="li").fit()
+    assert_allclose(res.alpha, expected.alpha, rtol=1e-8)
+    assert_allclose(res.beta, expected.beta, rtol=1e-8)
+    assert_allclose(res.exog_coint_coefs, expected.lin_trend_coint, rtol=1e-8)
+    assert_allclose(res.gamma, expected.gamma, rtol=1e-8)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+    with pytest.raises(ValueError, match="exog_coint must have as many rows as endog"):
+        VECM(endog, exog_coint=trend[1:])
