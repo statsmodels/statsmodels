@@ -1,4 +1,4 @@
-from statsmodels.compat.pandas import QUARTER_END, assert_index_equal
+from statsmodels.compat.pandas import PD_LT_3_1_0, QUARTER_END, assert_index_equal
 
 from datetime import datetime
 from pathlib import Path
@@ -1815,7 +1815,9 @@ def test_cffilter_reference_values(drift):
     # With drift=True the drift line is removed before filtering and the
     # trend is the drift-removed series less the cycle, so the trend does not
     # contain the drift line.
-    ref = read_csv(CURR_DIR / "results" / "cffilter.csv", float_precision="round_trip")
+    # float_precision is deprecated in pandas 3.1; its default parser is used
+    kwargs = {"float_precision": "round_trip"} if PD_LT_3_1_0 else {}
+    ref = read_csv(CURR_DIR / "results" / "cffilter.csv", **kwargs)
     x = ref["x"].to_numpy()
     suffix = "drift" if drift else "no_drift"
     ref_cycle = ref[f"cycle_{suffix}"].to_numpy()

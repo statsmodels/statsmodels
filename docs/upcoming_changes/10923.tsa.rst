@@ -1,0 +1,3 @@
+- With pandas 3, time series models given a
+  :class:`~pandas.PeriodIndex` and its period alias as ``freq`` (for
+  example ``"M"`` or ``"Q"``) raised "Invalid frequency". :pr:`10923`

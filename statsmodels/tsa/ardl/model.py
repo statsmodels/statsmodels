@@ -1581,7 +1581,7 @@ def _ardl_select_ssr(y, always, select, glob):
         regressors from the blocks. If glob is False, the model that
         includes the first ``i_j`` columns of block ``j`` is at
         ``[i_0, i_1, ...]``. If glob is True, the models are in the order of
-        ``combinations(range(ncols), i) for i in range(ncols)``. None if
+        ``combinations(range(ncols), i) for i in range(ncols + 1)``. None if
         the regressors are close to singular, the largest model fits
         (almost) perfectly, or the data are not finite.
 
@@ -1613,7 +1613,7 @@ def _ardl_select_ssr(y, always, select, glob):
         ssr = []
         nreg = []
         ncols = x.shape[1]
-        for i in range(ncols):
+        for i in range(ncols + 1):
             perms = list(combinations(range(ncols), i))
             perms = np.array(perms, dtype=int).reshape(len(perms), i)
             # Batches of models with i regressors each
@@ -1625,8 +1625,6 @@ def _ardl_select_ssr(y, always, select, glob):
                 r = np.linalg.qr(design, mode="r")
                 ssr.append(r[:, i, i] ** 2)
             nreg.append(np.full(perms.shape[0], i))
-        if not ssr:
-            return np.empty(0), np.empty(0, dtype=int)
         return np.concatenate(ssr), np.concatenate(nreg)
 
     offsets = np.cumsum([0] + widths)
@@ -1699,6 +1697,13 @@ def ardl_select_order(
         If False, the number of model considered is of the order
         maxlag*maxorder**k which may also be substantial when k and maxorder
         are large.
+
+        .. versionchanged:: 0.15.1
+
+            If True, the model that includes all candidate lags is
+            considered. It was left out, so a different model could be
+            selected, and an UnboundLocalError was raised when there were
+            no candidate lags.
     seasonal : bool, optional
         Flag indicating whether to include seasonal dummies in the model. If
         seasonal is True and trend includes 'c', then the first period
@@ -1829,7 +1834,7 @@ def ardl_select_order(
         x = np.column_stack(list(select))
         all_columns = list(range(x.shape[1]))
         loc = 0
-        for i in range(x.shape[1]):
+        for i in range(x.shape[1] + 1):
             for perm in combinations(all_columns, i):
                 key = perm_to_tuple(keys, perm)
                 if fast_ics is not None:
