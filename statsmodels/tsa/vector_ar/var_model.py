@@ -2365,6 +2365,12 @@ class VARResults(VARProcess):
             variables are Granger-causing the variable(s) specified by
             `caused`.
             If None, `causing` is assumed to be the complement of `caused`.
+
+            .. versionchanged:: 0.15.1
+
+               With None, the results name the complement of `caused` as
+               `causing`; they named `caused`. Unless `caused` held half of
+               the variables, the test raised an error.
         kind : {'f', 'wald'}, optional
             Perform F-test or Wald (chi-sq) test
         signif : float, optional
@@ -2421,7 +2427,7 @@ class VARResults(VARProcess):
             causing_ind = [util.get_index(self.names, c) for c in causing]
         else:
             causing_ind = [i for i in range(self.neqs) if i not in caused_ind]
-            causing = [self.names[c] for c in caused_ind]
+            causing = [self.names[c] for c in causing_ind]
 
         k, p = self.neqs, self.k_ar
         if p == 0:
