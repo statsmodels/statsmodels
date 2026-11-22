@@ -19,7 +19,7 @@ from statsmodels.compat.pandas import (
 )
 
 import contextlib
-import datetime
+import datetime as dt
 import warnings
 
 import numpy as np
@@ -1558,7 +1558,7 @@ ME_INDEX = pd.date_range("2000-01-31", periods=6, freq=MONTH_END)
         ),
         (
             ME_INDEX,
-            datetime.datetime(2000, 2, 29),
+            dt.datetime(2000, 2, 29),
             pd.Timestamp("2000-07-31"),
             pd.date_range("2000-02-29", "2000-07-31", freq=MONTH_END),
         ),
@@ -1782,17 +1782,17 @@ def test_dates_errors(dates, freq, match):
     [
         (
             "MS",
-            [datetime.datetime(2000, month, 1) for month in (1, 2, 3)],
+            [dt.datetime(2000, month, 1) for month in (1, 2, 3)],
             pd.date_range("2000-01-01", periods=5, freq="MS"),
         ),
         (
             pd.offsets.MonthBegin(),
-            [datetime.datetime(2000, month, 1) for month in (1, 2, 3)],
+            [dt.datetime(2000, month, 1) for month in (1, 2, 3)],
             pd.date_range("2000-01-01", periods=5, freq="MS"),
         ),
         (
-            datetime.timedelta(days=1),
-            [datetime.datetime(2000, 1, day) for day in (1, 2, 3)],
+            dt.timedelta(days=1),
+            [dt.datetime(2000, 1, day) for day in (1, 2, 3)],
             pd.date_range("2000-01-01", periods=5, freq="D"),
         ),
     ],
