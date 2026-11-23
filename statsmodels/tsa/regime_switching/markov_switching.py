@@ -789,6 +789,12 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             prediction as a weighted average. If a string, can be 'predicted',
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
+
+            .. versionchanged:: 0.15.1
+
+               An ndarray of joint probabilities, shaped like the
+               ``smoothed_joint_probabilities`` of the results, is accepted.
+               Before, an ndarray raised ValueError.
         conditional : bool or int, optional
             Whether or not to return predictions conditional on current or
             past regimes. If False, returns a single vector of weighted
@@ -819,14 +825,16 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         # Check if we need to do weighted averaging
         if squeezed.ndim - 1 > conditional:
-            # Determine in-sample weighting probabilities
-            if probabilities is None or probabilities == "smoothed":
+            # Determine in-sample weighting probabilities; an array is used
+            # as given
+            is_str = isinstance(probabilities, str)
+            if probabilities is None or (is_str and probabilities == "smoothed"):
                 results = self.smooth(params, return_raw=True)
                 probabilities = results.smoothed_joint_probabilities
-            elif probabilities == "filtered":
+            elif is_str and probabilities == "filtered":
                 results = self.filter(params, return_raw=True)
                 probabilities = results.filtered_joint_probabilities
-            elif probabilities == "predicted":
+            elif is_str and probabilities == "predicted":
                 results = self.filter(params, return_raw=True)
                 probabilities = results.predicted_joint_probabilities
 
@@ -2188,6 +2196,12 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
             prediction as a weighted average. If a string, can be 'predicted',
             'filtered', or 'smoothed'. Otherwise can be an array of
             probabilities to use. Default is smoothed.
+
+            .. versionchanged:: 0.15.1
+
+               An ndarray of joint probabilities, shaped like the
+               ``smoothed_joint_probabilities`` of the results, is accepted.
+               Before, an ndarray raised ValueError.
         conditional : bool or int, optional
             Whether or not to return predictions conditional on current or
             past regimes. If False, returns a single vector of weighted
