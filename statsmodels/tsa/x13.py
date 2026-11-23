@@ -499,6 +499,11 @@ def x13_arima_analysis(
     speconly : bool, optional
         Whether to create the specification file and then return it without
         performing the analysis. Can be useful for debugging.
+
+        .. versionchanged:: 0.15.1
+
+           The X12/X13 binary is not needed. It was looked up first, and
+           X13NotFoundError was raised if it was not found.
     start : str or datetime, optional
         Must be given if ``endog`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
@@ -574,8 +579,6 @@ def x13_arima_analysis(
     directory, invoking X12/X13 in a subprocess, and reading the output
     back in.
     """
-    x12path = _check_x12(x12path, prefer_x13)
-
     if not isinstance(endog, (pd.DataFrame, pd.Series)):
         if start is None or freq is None:
             raise ValueError(
@@ -654,6 +657,8 @@ def x13_arima_analysis(
 
     if speconly:
         return spec
+
+    x12path = _check_x12(x12path, prefer_x13)
 
     # write it to a tempfile
     # TODO: make this more robust - give the user some control?
