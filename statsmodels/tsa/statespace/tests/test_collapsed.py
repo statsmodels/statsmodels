@@ -737,3 +737,53 @@ def test_dfm_missing():
     res2 = mod.smooth(mod.start_params)
 
     assert_allclose(res.llf, res2.llf)
+
+
+COLLAPSED_RANK_MSG = "Collapsed filtering requires a design matrix of full column rank"
+
+
+def test_collapsed_dfm_lagged_factor_raises():
+    # With factor_order=2, the lagged factor is a state with a zero column in
+    # the design matrix, so Z' H^{-1} Z is singular
+    endog = np.random.default_rng(0).standard_normal((50, 3))
+    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=2)
+    mod.ssm.filter_collapsed = True
+    with pytest.raises(ValueError, match=COLLAPSED_RANK_MSG + ".* period 0"):
+        mod.loglike(mod.start_params)
+
+
+def collapsed_rank_model(endog):
+    # Two local levels; the second loads only on the second series, so the
+    # design matrix of the other series alone has rank 1
+    mod = MLEModel(endog, k_states=2, k_posdef=2)
+    mod["design"] = np.array([[1.0, 0.0], [0.0, 1.0], [1.0, 0.0], [0.5, 0.0]])
+    mod["obs_cov"] = np.diag([1.0, 1.5, 2.0, 0.5])
+    mod["transition"] = np.eye(2)
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.diag([0.3, 0.7])
+    mod.ssm.initialize_known(np.zeros(2), np.eye(2))
+    return mod
+
+
+def test_collapsed_rank_deficient_observed_design_raises():
+    # Without the second series in period 10, three series are observed but
+    # the design matrix of those has rank 1 < k_states
+    endog = np.random.default_rng(1).standard_normal((30, 4))
+    endog[10, 1] = np.nan
+    mod = collapsed_rank_model(endog)
+    mod.ssm.filter_collapsed = True
+    with pytest.raises(ValueError, match=COLLAPSED_RANK_MSG + ".* period 10"):
+        mod.ssm.loglike()
+
+
+def test_collapsed_full_rank_design():
+    # Periods with no more observed series than states are not collapsed, so
+    # the design matrix of the observed series need not have full column rank
+    # there (period 10); the loglikelihood is that of the conventional filter
+    endog = np.random.default_rng(1).standard_normal((30, 4))
+    endog[10, 1:3] = np.nan
+    endog[20, 2:] = np.nan
+    mod = collapsed_rank_model(endog)
+    desired = mod.ssm.loglike()
+    mod.ssm.filter_collapsed = True
+    assert_allclose(mod.ssm.loglike(), desired, rtol=1e-12)

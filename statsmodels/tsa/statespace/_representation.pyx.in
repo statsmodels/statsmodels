@@ -935,9 +935,14 @@ cdef class {{prefix}}Statespace(object):
 
             # Calculate $(Z_t' H_t^{-1} Z_t)^{-1}$ via Cholesky inversion
             lapack.{{prefix}}potrf("U", &k_states, &self.collapse_cholesky[0,0], &k_states, &info)
-            # Check for errors
+            # Check for errors (with H_t positive definite, Z_t' H_t^{-1} Z_t
+            # is positive definite if Z_t has full column rank)
             if info > 0:
-                raise np.linalg.LinAlgError('Non-positive-definite ZHZ matrix encountered at period %d' % t)
+                raise np.linalg.LinAlgError(
+                    'Collapsed filtering requires a design matrix of full'
+                    ' column rank, but the design matrix of the observed'
+                    ' series is not of full column rank (Z\' H^{-1} Z is not'
+                    ' positive definite) at period %d' % t)
             elif info < 0:
                 raise np.linalg.LinAlgError('Invalid value in ZHZ matrix encountered at period %d' % t)
             lapack.{{prefix}}potri("U", &k_states, &self.collapse_cholesky[0,0], &k_states, &info)
