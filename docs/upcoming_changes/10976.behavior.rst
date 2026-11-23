@@ -1,0 +1,4 @@
+- A partial date such as ``"2002Q2"`` as the ``end`` of a prediction
+  after the sample ended at the first date of its period. It ends at
+  the last date of the period, as in the sample, so predictions with
+  such keys are longer. :pr:`10976`
