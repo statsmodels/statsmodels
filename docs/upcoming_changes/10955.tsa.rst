@@ -1,0 +1,2 @@
+- ``llf`` of ``VECMResults`` was a complex number with NumPy 2.5.
+  :pr:`10955`

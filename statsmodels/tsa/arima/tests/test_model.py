@@ -402,6 +402,73 @@ def test_extend_with_exog_constant_over_window():
     assert_allclose(res_e.llf_obs, res2.llf_obs[50:])
 
 
+@pytest.mark.parametrize(
+    "order, trend", [((1, 0, 0), "ct"), ((1, 1, 0), "t"), ((1, 0, 0), [0, 1, 0, 1])]
+)
+@pytest.mark.parametrize("trend_offset", [1, 0, 50])
+@pytest.mark.parametrize("use_exog", [False, True])
+def test_extend_append_apply_with_time_trend(order, trend, trend_offset, use_exog):
+    # ARIMA keeps its trend_offset, so the time trend of forecasts and of
+    # extended results continues from the end of the sample. Before,
+    # trend_offset was not stored on the model, so the trend restarted at 1
+    # in every out-of-sample period.
+    endog = dta["infl"].iloc[:100].values + 0.1 * np.arange(100)
+    exog = np.cos(np.arange(100.0)) if use_exog else None
+
+    def model(start, end, offset=trend_offset):
+        return ARIMA(
+            endog[start:end],
+            exog=None if exog is None else exog[start:end],
+            order=order,
+            trend=trend,
+            trend_offset=offset,
+        )
+
+    params = model(0, 100).start_params
+    res_full = model(0, 100).filter(params)
+    res = model(0, 50).filter(params)
+    assert_equal(res.model.trend_offset, trend_offset)
+
+    res_ext = res.extend(
+        endog[50:70], exog=None if exog is None else exog[50:70]
+    ).extend(endog[70:], exog=None if exog is None else exog[70:])
+    assert_equal(res_ext.model.trend_offset, trend_offset + 70)
+    assert_allclose(res_ext.llf_obs, res_full.llf_obs[70:])
+
+    res_app = res.append(endog[50:], exog=None if exog is None else exog[50:])
+    assert_allclose(res_app.llf, res_full.llf)
+
+    fcast_exog = np.ones(5) if use_exog else None
+    desired = res_full.get_forecast(5, exog=fcast_exog)
+    for actual in [
+        res_ext.get_forecast(5, exog=fcast_exog),
+        res_app.get_forecast(5, exog=fcast_exog),
+    ]:
+        assert_allclose(actual.predicted_mean, desired.predicted_mean)
+        assert_allclose(actual.conf_int(), desired.conf_int())
+
+    # apply uses the same trend_offset on the new data
+    res_apply = res.apply(endog[50:], exog=None if exog is None else exog[50:])
+    res_new = model(50, 100).filter(params)
+    assert_allclose(res_apply.llf, res_new.llf)
+    assert_allclose(
+        res_apply.forecast(5, exog=fcast_exog), res_new.forecast(5, exog=fcast_exog)
+    )
+
+
+def test_forecast_with_trend_offset():
+    # With trend_offset=0 the time trend is 0, ..., nobs - 1 in the sample, so
+    # the one-step forecast of a regression on a linear trend with AR(1)
+    # errors is c + b * nobs + phi * (y[-1] - c - b * (nobs - 1))
+    endog = 10 + 0.5 * np.arange(100.0) + np.sin(np.arange(100.0))
+    c, b, phi = 10.0, 0.5, 0.5
+    mod = ARIMA(endog, order=(1, 0, 0), trend="ct", trend_offset=0)
+    res = mod.filter([c, b, phi, 1.0])
+
+    desired = c + b * 100 + phi * (endog[-1] - c - b * 99)
+    assert_allclose(res.forecast(1), desired)
+
+
 def test_cov_type_none():
     endog = dta["infl"].iloc[:100].values
     mod = ARIMA(endog[:50], trend="c")
@@ -597,7 +664,11 @@ def test_arima_integrated_innovations_mle(order, seasonal_order):
     expected, _ = innovations_mle(
         dy, order=(p, 0, q), seasonal_order=(sp, 0, sq, s), demean=False
     )
-    assert_allclose(res.params, expected.params, rtol=1e-10)
+    # Both are the results of an optimizer, on objectives that agree up to
+    # rounding. Where it stops depends on the platform (up to 4.9e-6 relative
+    # on macOS), while differencing the wrong number of times changes the
+    # estimates completely.
+    assert_allclose(res.params, expected.params, rtol=1e-4)
 
 
 def test_arima_return_params_non_statespace_method():

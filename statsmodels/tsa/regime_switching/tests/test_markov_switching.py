@@ -402,3 +402,127 @@ def test_param_names_mixed_switching_ar(switching_ar, ar_names):
     )
     expected = ["p[0->0]", "p[1->0]", "const[0]", "const[1]", "sigma2", *ar_names]
     assert mod.param_names == expected
+
+
+def hamilton_filter_log_reference(log_densities, transition):
+    """
+    Hamilton (1989) filter written out for a likelihood that depends only on
+    the current regime: log_densities[i, t] = log f(y_t | S_t = i, Y_{t-1})
+    and transition[i, j] = Pr[S_t = i | S_{t-1} = j]. The regime before the
+    first observation has the stationary distribution. Each log f(y_t |
+    Y_{t-1}) is a log-sum-exp shifted by its largest term.
+    """
+    k_regimes, nobs = log_densities.shape
+    lhs = np.vstack([np.eye(k_regimes) - transition, np.ones((1, k_regimes))])
+    filtered = np.linalg.lstsq(lhs, np.r_[np.zeros(k_regimes), 1.0], rcond=None)[0]
+    llf_obs = np.empty(nobs)
+    filtered_probabilities = np.empty((k_regimes, nobs))
+    for t in range(nobs):
+        log_joint = np.log(transition @ filtered) + log_densities[:, t]
+        largest = log_joint.max()
+        llf_obs[t] = largest + np.log(np.exp(log_joint - largest).sum())
+        filtered = np.exp(log_joint - llf_obs[t])
+        filtered_probabilities[:, t] = filtered
+    return llf_obs, filtered_probabilities
+
+
+class GivenLoglikelihoods(markov_switching.MarkovSwitching):
+    # A model whose log-likelihood depends only on the current regime
+    # (order 0), given as an array shaped (k_regimes, nobs)
+    def __init__(self, conditional_loglikelihoods):
+        self._given = conditional_loglikelihoods
+        super().__init__(np.zeros(conditional_loglikelihoods.shape[1]), k_regimes=2)
+
+    def _conditional_loglikelihoods(self, params):
+        return self._given
+
+
+@pytest.mark.parametrize("model", ["regression", "order 0"])
+def test_hamilton_filter_extreme_observation(model):
+    # Observation 10 is about 200 standard deviations from both regime means,
+    # so its log density is about -2e4 in both regimes: the filter must not
+    # underflow to a log-likelihood of -inf
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(20) + np.repeat([0.0, 3.0], 10)
+    endog[10] = 200.0
+    transition = np.array([[0.9, 0.2], [0.1, 0.8]])
+    mu = np.array([0.2, 2.8])
+    log_densities = -0.5 * (endog - mu[:, None]) ** 2 - 0.5 * np.log(2 * np.pi)
+    if model == "regression":
+        mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+        params = np.r_[transition[0], mu, 1.0]
+    else:
+        mod = GivenLoglikelihoods(log_densities)
+        params = transition[0]
+    llf_obs, filtered = hamilton_filter_log_reference(log_densities, transition)
+    assert llf_obs[10] < -1.9e4
+
+    res = mod.smooth(params, cov_type="none")
+    assert_allclose(res.llf_obs, llf_obs, rtol=1e-12)
+    assert_allclose(res.llf, llf_obs.sum(), rtol=1e-12)
+    assert_allclose(res.filtered_marginal_probabilities, filtered.T, rtol=1e-10)
+    # The smoothed probabilities are probabilities
+    smoothed = res.smoothed_marginal_probabilities
+    assert np.all((smoothed >= 0) & (smoothed <= 1))
+    assert_allclose(smoothed.sum(axis=1), 1.0, rtol=1e-12)
+
+
+@pytest.mark.parametrize("display_params", [True, False])
+def test_summary_display_params(display_params):
+    # Switching constant, common variance: two regime tables, one table of
+    # non-switching parameters and one of transition parameters
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    res = mod.smooth(np.r_[0.9, 0.2, 0.2, 2.8, 1.0])
+    summary = res.summary(display_params=display_params)
+    titles = [table.title for table in summary.tables]
+    expected = ["Markov Switching Model Results"]
+    if display_params:
+        expected += [
+            "Regime 0 parameters",
+            "Regime 1 parameters",
+            "Non-switching parameters",
+            "Regime transition parameters",
+        ]
+    assert titles == expected
+    text = summary.as_text()
+    for name in ["const", "sigma2", "p[0->0]", "p[1->0]"]:
+        assert (name in text) is display_params
+    # The covariance note is kept
+    assert "Covariance matrix calculated using the outer product" in text
+
+
+@pytest.mark.parametrize("kind", ["smoothed", "filtered", "predicted"])
+@pytest.mark.parametrize("as_list", [False, True])
+def test_predict_with_probabilities_array(kind, as_list):
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    mu = np.array([0.2, 2.8])
+    phi = np.array([0.5, -0.2])
+
+    # MarkovRegression: sum_i mu_i Pr[S_t = i]
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    params = np.r_[0.9, 0.2, mu, 1.0]
+    res = mod.smooth(params, cov_type="none")
+    joint = getattr(res, f"{kind}_joint_probabilities")
+    marginal = getattr(res, f"{kind}_marginal_probabilities")
+    probabilities = joint.tolist() if as_list else joint
+    predict = mod.predict(params, probabilities=probabilities)
+    assert_allclose(predict, marginal @ mu, rtol=1e-12)
+    assert_allclose(predict, mod.predict(params, probabilities=kind), rtol=1e-13)
+
+    # AR(1) MarkovAutoregression: the weighted average over (S_t, S_{t-1})
+    # = (i, j) of mu_i + phi_i (y_{t-1} - mu_j); prediction n is for
+    # endog[n + 1], so its lag is endog[n]
+    mod = markov_autoregression.MarkovAutoregression(endog, k_regimes=2, order=1)
+    params = np.r_[0.9, 0.2, mu, 1.0, phi]
+    res = mod.smooth(params, cov_type="none")
+    joint = getattr(res, f"{kind}_joint_probabilities")
+    means = mu[:, None, None] + phi[:, None, None] * (
+        endog[:-1] - mu[None, :, None]
+    )
+    probabilities = joint.tolist() if as_list else joint
+    predict = mod.predict(params, probabilities=probabilities)
+    assert_allclose(predict, (means * joint).sum(axis=(0, 1)), rtol=1e-12)
+    assert_allclose(predict, mod.predict(params, probabilities=kind), rtol=1e-13)

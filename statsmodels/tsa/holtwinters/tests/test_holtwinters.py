@@ -3243,3 +3243,83 @@ def test_ses_holt_default_initialization_is_estimated(trend):
     assert optimized["initial_level"]
     if trend is not None:
         assert optimized["initial_trend"]
+
+
+def _seasonal_data():
+    rng = np.random.default_rng(20261121)
+    t = np.arange(72)
+    return 50 + 5 * np.sin(2 * np.pi * t / 12) + rng.standard_normal(72)
+
+
+def _seasonal_recursions(y, seasonal, alpha, gamma, level, initial_seasonal):
+    # The Holt-Winters recursions without a trend, Hyndman and
+    # Athanasopoulos (2014), section 7.5. season[t] is s[t - m], the
+    # seasonal term of the prediction of y[t].
+    season = list(initial_seasonal)
+    fitted = np.empty_like(y)
+    for t in range(y.shape[0]):
+        s = season[t]
+        if seasonal == "add":
+            fitted[t] = level + s
+            new_level = alpha * (y[t] - s) + (1 - alpha) * level
+            season.append(gamma * (y[t] - level) + (1 - gamma) * s)
+        else:
+            fitted[t] = level * s
+            new_level = alpha * y[t] / s + (1 - alpha) * level
+            season.append(gamma * y[t] / level + (1 - gamma) * s)
+        level = new_level
+    return fitted
+
+
+@pytest.mark.parametrize("seasonal", ["add", "mul"])
+@pytest.mark.parametrize("fix_level", [False, True])
+def test_fix_params_initial_seasonal_not_optimized(seasonal, fix_level):
+    # With optimized=False, the fixed initial_seasonal.<j> values were
+    # ignored and the starting values of the model were used instead
+    y = _seasonal_data()
+    mod = ExponentialSmoothing(y, seasonal=seasonal, seasonal_periods=12)
+    level, _, initial_seasonal = mod.initial_values()
+    initial_seasonal = np.array(initial_seasonal, dtype=float)
+    fixed = {"smoothing_level": 0.3, "smoothing_seasonal": 0.2}
+    values = (3.0, -2.0) if seasonal == "add" else (1.05, 0.95)
+    for j, value in zip((0, 7), values, strict=True):
+        fixed[f"initial_seasonal.{j}"] = value
+        initial_seasonal[j] = value
+    if fix_level:
+        fixed["initial_level"] = level = 48.0
+    with mod.fix_params(fixed):
+        res = mod.fit(optimized=False)
+    expected = _seasonal_recursions(y, seasonal, 0.3, 0.2, level, initial_seasonal)
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+    assert_allclose(res.params["initial_seasons"], initial_seasonal, rtol=1e-12)
+    assert_allclose(res.params["initial_level"], level, rtol=1e-12)
+
+
+def test_fix_params_plain_initial_seasonal_deprecated():
+    # The key "initial_seasonal" is accepted, used with optimized=False and
+    # ignored by optimized fits. It is deprecated, and does what it did.
+    y = _seasonal_data()
+    mod = ExponentialSmoothing(y, seasonal="add", seasonal_periods=12)
+    level, _, _ = mod.initial_values()
+    initial_seasonal = np.linspace(-3.0, 3.0, 12)
+    fixed = {
+        "smoothing_level": 0.3,
+        "smoothing_seasonal": 0.2,
+        "initial_seasonal": initial_seasonal,
+    }
+    match = 'The key "initial_seasonal" is deprecated'
+    with pytest.warns(FutureWarning, match=match) as record:
+        with mod.fix_params(fixed):
+            res = mod.fit(optimized=False)
+    assert record[0].filename == __file__
+    expected = _seasonal_recursions(y, "add", 0.3, 0.2, level, initial_seasonal)
+    assert_allclose(res.fittedvalues, expected, rtol=1e-10)
+
+    with pytest.warns(FutureWarning, match=match):
+        with mod.fix_params({"initial_seasonal": initial_seasonal}):
+            res = mod.fit()
+    # The same optimization from the same starting values as without the key
+    ref = ExponentialSmoothing(y, seasonal="add", seasonal_periods=12).fit()
+    assert_allclose(
+        res.params_formatted["param"], ref.params_formatted["param"], rtol=1e-8
+    )

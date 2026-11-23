@@ -1,0 +1,5 @@
+- The key ``"initial_seasonal"`` of
+  :meth:`~statsmodels.tsa.holtwinters.ExponentialSmoothing.fix_params`
+  is deprecated and will raise a ``KeyError`` after statsmodels 0.17
+  is released. Optimized fits ignore it. Use
+  ``"initial_seasonal.<j>"``. :pr:`10916`

@@ -471,7 +471,9 @@ def _sij(delta_x, delta_y_1_T, y_lag1):
     # p. 295:
     s01_s11_ = np.dot(s01, s11_)
     eig = np.linalg.eig(s01_s11_.T @ inv(s00) @ s01_s11_)
-    lambd = eig[0]
+    # NumPy 2.5 and later return complex arrays even for real eigenvalues. The
+    # eigenvectors are made real where they are used (beta in VECM.fit).
+    lambd = np.real_if_close(eig[0])
     v = eig[1]
     # reorder eig_vals to make them decreasing (and order eig_vecs accordingly)
     lambd_order = np.argsort(lambd)[::-1]
