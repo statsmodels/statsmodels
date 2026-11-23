@@ -160,6 +160,11 @@ def _format_order(
     if order is None:
         exog_order = dict.fromkeys(keys)
     elif isinstance(order, Mapping):
+        # Column indices can be numpy integers
+        order = {
+            int(key) if isinstance(key, np.integer) else key: value
+            for key, value in order.items()
+        }
         exog_order = order
         missing = set(keys).difference(order.keys())
         extra = set(order.keys()).difference(keys)
@@ -227,7 +232,8 @@ class ARDL(AutoReg):
         .. versionchanged:: 0.15.1
 
             The int values of a dict can be numpy integers. They raised a
-            TypeError.
+            TypeError. If ``exog`` is not a DataFrame, the keys can be numpy
+            integers too. They raised an AssertionError.
     fixed : array_like, optional
         Additional fixed regressors that are not lagged.
     causal : bool, optional
@@ -1671,6 +1677,11 @@ def ardl_select_order(
         If int, sets a common max lag length for all exog variables. If
         a dict, then sets individual lag length. They keys are column names
         if exog is a DataFrame or column indices otherwise.
+
+        .. versionchanged:: 0.15.1
+
+            Column indices can be numpy integers. They raised an
+            AssertionError.
     trend : {'n', 'c', 't', 'ct', 'ctt'}, optional
         The trend to include in the model:
 
@@ -1947,6 +1958,11 @@ class UECM(ARDL):
         of the dict are int, or None to exclude the variable. Each included
         variable must have an order of at least 1, and at least one variable
         must be included.
+
+        .. versionchanged:: 0.15.1
+
+            If ``exog`` is not a DataFrame, the keys of a dict can be numpy
+            integers. They raised an AssertionError.
     fixed : array_like, optional
         Additional fixed regressors that are not lagged.
     causal : bool, optional
