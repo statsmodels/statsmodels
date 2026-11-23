@@ -27,6 +27,7 @@ from pandas import (
 )
 from pandas.tseries.frequencies import to_offset
 
+from statsmodels.base.covtype import _stacklevel_outside_statsmodels
 from statsmodels.base.data import PandasData
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -73,6 +74,15 @@ def get_index_loc(key, index):
         The key for which to find the location if the underlying index is
         a DateIndex or a location if the underlying index is a RangeIndex
         or an Index with an integer dtype.
+
+        .. deprecated:: 0.15.1
+
+           A partial date string that matches no date of the index but lies
+           between two of its dates, such as "2000-02" for quarterly dates
+           starting on 2000-01-01, gives an empty slice, so that prediction
+           starts at the next date or ends at the previous one. This is
+           deprecated and will raise a KeyError after statsmodels 0.17 is
+           released.
     index : pd.Index
         The index to search.
 
@@ -136,9 +146,12 @@ def get_index_loc(key, index):
             key = nobs + key
         # Out-of-sample (note that we include key itself in the new index)
         elif key > base_index[-1]:
-            # np.arange(np.uint64(0), int) gives floats, so keep the dtype
-            dtype = base_index.dtype if base_index.dtype == np.uint64 else None
-            index = Index(np.arange(base_index[0], int(key + 1), dtype=dtype))
+            # NumPy computes the range in the dtype of a small integer index,
+            # such as int8, which cannot hold the new labels, and
+            # np.arange(np.uint64(0), int) gives floats, so keep uint64 and
+            # use int64 otherwise
+            dtype = np.uint64 if base_index.dtype == np.uint64 else np.int64
+            index = Index(np.arange(int(base_index[0]), int(key + 1), dtype=dtype))
 
     # Special handling for date indexes
     if date_index:
@@ -174,6 +187,14 @@ def get_index_loc(key, index):
                 date_key = pd.Period(key).to_timestamp()
             else:
                 date_key = Timestamp(key)
+            # A date string is a local time of a tz-aware index, as in
+            # pandas' string indexing (a no-op for a tz-naive index)
+            if (
+                isinstance(key, str)
+                and index_class is DatetimeIndex
+                and date_key.tz is None
+            ):
+                date_key = date_key.tz_localize(base_index.tz)
 
             # Out-of-sample
             if date_key > base_index[-1]:
@@ -229,6 +250,16 @@ def get_index_loc(key, index):
 
     # Return the index through the end of the loc / slice
     if isinstance(loc, slice):
+        if loc.start == loc.stop:
+            # pandas gives an empty slice for a partial date string that lies
+            # between two dates of the index
+            warnings.warn(
+                f"No date of the index matches the key {key!r}. Keys that "
+                "match no date are deprecated and will raise a KeyError "
+                "after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=_stacklevel_outside_statsmodels(),
+            )
         end = loc.stop - 1
     else:
         end = loc
@@ -246,6 +277,14 @@ def get_index_label_loc(key, index, row_labels):
         The key for which to find the location if the underlying index is
         a DateIndex or is only being used as row labels, or a location if
         the underlying index is a RangeIndex or a NumericIndex.
+
+        .. versionchanged:: 0.15.1
+
+           A quarter string such as "2001Q2" for which a DatetimeIndex
+           `index` has no date raises a KeyError. Previously it was looked
+           up in `row_labels` with pandas' quarter parsing, which could
+           match a date of another quarter, such as 2000-07-01 for
+           semiannual dates starting on 2000-01-01.
     index : pd.Index
         The index to search.
     row_labels : pd.Index
@@ -273,6 +312,20 @@ def get_index_label_loc(key, index, row_labels):
     try:
         loc, index, index_was_expanded = get_index_loc(key, index)
     except KeyError:
+        # A quarter string such as "2001Q2" for which a date index has no
+        # date is not looked up in the row labels, where pandas' deprecated
+        # quarter parsing can find a date of another quarter
+        if (
+            isinstance(index, DatetimeIndex)
+            and isinstance(key, str)
+            and re.fullmatch("[0-9]*Q[1-4]", key)
+        ):
+            period = Period(key)
+            in_quarter = (index.year == period.year) & (
+                index.quarter == period.quarter
+            )
+            if not in_quarter.any():
+                raise
         if not isinstance(key, (int, np.integer)):
             loc = row_labels.get_loc(key)
         else:
@@ -333,7 +386,19 @@ def get_prediction_index(
         *included* in prediction). Depending on the underlying
         model's index, may be an integer, a date (string, datetime object,
         pd.Timestamp, or pd.Period object), or some other object in the
-        model's row labels.
+        model's row labels. A date string that covers several dates of a
+        date index with a frequency, such as "2002Q2" or "2002" for monthly
+        data, ends prediction at the last of them in the index, or, if its
+        period is after the sample, at the last date of the period in the
+        frequency of the index.
+
+        .. versionchanged:: 0.15.1
+
+           A date string whose period is after the sample, such as "2002Q2"
+           for monthly data that end in 2001, ends prediction at the last
+           date of the period in the frequency of the index (2002-06).
+           Previously prediction ended at the first date of the period
+           (2002-04).
     nobs : int
         The number of observations in the model.
     base_index : pd.Index
@@ -405,7 +470,7 @@ def get_prediction_index(
         end = max(start, len(base_index) - 1)
     try:
         end, end_index, end_oos = get_index_label_loc(
-            end, base_index, data.row_labels
+            _period_end(end, base_index), base_index, data.row_labels
         )
     except KeyError as exc:
         raise KeyError(
@@ -477,6 +542,45 @@ def get_prediction_index(
     end -= out_of_sample
 
     return start, end, out_of_sample, prediction_index
+
+
+def _period_end(key, index):
+    """
+    The last date of the period of a date string key that is after index
+
+    A date string such as "2002Q2" covers several dates of a monthly index.
+    In the sample, partial-string indexing selects all of them. If the
+    period starts after the index, this returns its last date in the
+    frequency of the index, so that prediction can end there. Other keys,
+    keys whose period starts in the index, and keys of a period without a
+    date of the frequency are returned unchanged.
+    """
+    if not (
+        isinstance(key, str)
+        and isinstance(index, (DatetimeIndex, PeriodIndex))
+        and index.freq is not None
+    ):
+        return key
+    try:
+        # The period of the resolution of the string, e.g. a quarter
+        period = Period(key)
+    except ValueError:
+        period = None
+    if not isinstance(period, Period):
+        # Not a date of pandas' parser, e.g. "now", or NaT, e.g. ""
+        return key
+    if isinstance(index, PeriodIndex):
+        if period.asfreq(index.freq, how="start") <= index[-1]:
+            return key
+        return period.asfreq(index.freq, how="end")
+    start = period.start_time.tz_localize(index.tz)
+    if start <= index[-1]:
+        return key
+    end = period.end_time.tz_localize(index.tz)
+    last = date_range(start=index[0], end=end, freq=index.freq)[-1]
+    # A period without a date, e.g. "2002-02" of quarterly dates, is left to
+    # get_index_loc, which uses the first date after it
+    return last if last >= start else key
 
 
 class TimeSeriesModel(base.LikelihoodModel):

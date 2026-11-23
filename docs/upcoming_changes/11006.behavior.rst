@@ -1,0 +1,4 @@
+- When only some coefficients switch, :class:`~statsmodels.tsa.regime_switching.markov_regression.MarkovRegression` and :class:`~statsmodels.tsa.regime_switching.markov_autoregression.MarkovAutoregression` named the
+  coefficients that do not switch with the suffix of the last regime.
+  They have no suffix, for example ``"xb"`` instead of ``"xb[1]"``.
+  :pr:`11006`

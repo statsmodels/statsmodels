@@ -1260,6 +1260,73 @@ def test_irf_err_bands():
         assert res[1] is res.upper
 
 
+@pytest.mark.parametrize("method", ["err_band_sz1", "err_band_sz2", "err_band_sz3"])
+def test_irf_err_band_component_range(method):
+    # component holds indices of eigenvalues: 0, ..., periods - 1 for sz1 and
+    # sz2, 0, ..., neqs * periods - 1 for sz3 (the stacked responses)
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    periods = 2
+    irf = res.irf(periods)
+    if method == "err_band_sz3":
+        shape, n_comp = (3,), 3 * periods
+    else:
+        shape, n_comp = (3, 3), periods
+
+    def band(value):
+        rng = np.random.default_rng(1)
+        component = np.full(shape, value)
+        return getattr(irf, method)(repl=30, rng=rng, component=component)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        first = band(0)
+        last = band(n_comp - 1)
+    # a nested list gives the same bands as an array
+    as_list = getattr(irf, method)(
+        repl=30,
+        rng=np.random.default_rng(1),
+        component=np.full(shape, n_comp - 1).tolist(),
+    )
+    assert_allclose(as_list.lower, last.lower, rtol=1e-12)
+    assert_allclose(as_list.upper, last.upper, rtol=1e-12)
+    for value in (n_comp, -n_comp - 1):
+        with pytest.raises(ValueError, match="components does not exist"):
+            band(value)
+    # Negative values count from the end, as in numpy indexing; deprecated
+    for value, expected in ((-1, last), (-n_comp, first)):
+        with pytest.warns(FutureWarning, match="Negative values in comp") as rec:
+            wrapped = band(value)
+        assert rec[0].filename == __file__
+        assert_allclose(wrapped.lower, expected.lower, rtol=1e-12)
+        assert_allclose(wrapped.upper, expected.upper, rtol=1e-12)
+
+
+@pytest.mark.parametrize("method", ["err_band_sz1", "err_band_sz2"])
+def test_irf_err_band_component_max_last_row(method):
+    # A valid component with its largest value in the last row was rejected:
+    # the check compared the position of the maximum with neqs * periods
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    irf = res.irf(2)
+
+    def band(component):
+        rng = np.random.default_rng(2)
+        return getattr(irf, method)(repl=30, rng=rng, component=component)
+
+    component = np.zeros((3, 3), dtype=int)
+    component[2, 0] = 1
+    mixed = band(component)
+    zeros = band(np.zeros((3, 3), dtype=int))
+    ones = band(np.ones((3, 3), dtype=int))
+    # each band uses only its own element of component
+    for attr in ("lower", "upper"):
+        expected = getattr(zeros, attr).copy()
+        expected[:, 2, 0] = getattr(ones, attr)[:, 2, 0]
+        assert_allclose(getattr(mixed, attr), expected, rtol=1e-12)
+    assert not np.allclose(ones.lower[1:, 2, 0], zeros.lower[1:, 2, 0])
+
+
 @pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
@@ -1376,6 +1443,59 @@ def test_irf_plot_err_bands_kwarg(close_figures):
     cum_err_bands = irf.cum_errband_mc(repl=10)
     fig2 = irf.plot_cum_effects(err_bands=cum_err_bands, stderr_type="mc")
     assert fig2 is not None
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
+@pytest.mark.parametrize("form", ["errorband", "tuple", "array"])
+@pytest.mark.parametrize("stderr_type", [None, "asym", "mc"])
+def test_irf_plot_err_bands_default_stderr_type(
+    bivariate_var_result, close_figures, method, form, stderr_type
+):
+    # The given bands are plotted whatever stderr_type is; with the default
+    # "asym" they were read as a covariance array
+    irf = bivariate_var_result.irf(3)
+    rng = np.random.default_rng(0)
+    lower = rng.standard_normal((4, 2, 2))
+    upper = lower + rng.uniform(0.5, 1.0, size=(4, 2, 2))
+    bands = {
+        "errorband": ErrorBand(lower, upper),
+        "tuple": (lower, upper),
+        "array": np.stack([lower, upper]),
+    }[form]
+    kwargs = {} if stderr_type is None else {"stderr_type": stderr_type}
+    fig = getattr(irf, method)(err_bands=bands, **kwargs)
+    values = irf.irfs if method == "plot" else irf.cum_effects
+    assert len(fig.axes) == 4
+    for i in range(2):
+        for j in range(2):
+            lines = [line.get_ydata() for line in fig.axes[2 * i + j].lines]
+            assert_allclose(lines[0], values[:, i, j], rtol=1e-12)
+            assert_allclose(lines[1], lower[:, i, j], rtol=1e-12)
+            assert_allclose(lines[2], upper[:, i, j], rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
+@pytest.mark.parametrize("plot_stderr", [False, np.False_, 0])
+def test_irf_plot_stderr_false_values(
+    bivariate_var_result, close_figures, method, plot_stderr
+):
+    # Any false value turns the bands off; plot drew them for numpy.False_
+    irf = bivariate_var_result.irf(3)
+    fig = getattr(irf, method)(plot_stderr=plot_stderr)
+    if method == "plot":
+        values, n_lines = irf.irfs, 2  # the responses and the zero line
+    else:
+        values, n_lines = irf.cum_effects, 3  # and the long-run effect
+    for i in range(2):
+        for j in range(2):
+            lines = fig.axes[2 * i + j].lines
+            assert len(lines) == n_lines
+            assert_allclose(lines[0].get_ydata(), values[:, i, j], rtol=1e-12)
+            assert_allclose(lines[1].get_ydata(), [0, 0])
 
 
 def test_irf_invalid_stderr_type_raises(bivariate_var_result):
