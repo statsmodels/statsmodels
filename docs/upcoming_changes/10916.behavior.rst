@@ -1,0 +1,4 @@
+- :meth:`~statsmodels.tsa.holtwinters.ExponentialSmoothing.fit`
+  with ``optimized=False`` ignored initial seasonal values fixed with
+  ``fix_params({"initial_seasonal.<j>": value})``. It uses them now,
+  so its results change when such values are fixed. :pr:`10916`
