@@ -1878,6 +1878,29 @@ def test_integer_index_forecast_labels(dtype):
 
 
 @pytest.mark.parametrize(
+    "dtype, key",
+    [("int8", 300), ("uint8", 300), ("int16", 70000), ("uint16", 70000)],
+)
+def test_small_int_index_extended_past_dtype_max(dtype, key):
+    # Extending an index 0, ..., n - 1 of a small integer dtype past the
+    # largest value of the dtype raised "Maximum allowed size exceeded"
+    index = pd.Index(np.arange(5, dtype=dtype))
+    loc, new_index, expanded = tsa_model.get_index_loc(key, index)
+    assert loc == key
+    assert expanded
+    assert new_index.equals(pd.Index(np.arange(key + 1, dtype=np.int64)))
+    assert new_index.dtype == np.int64
+
+    endog = pd.Series(np.zeros(5), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    start, end, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        3, key, 5, mod._index, data=mod.data
+    )
+    assert (start, end, out_of_sample) == (3, 4, key - 4)
+    assert prediction_index.equals(pd.Index(np.arange(3, key + 1, dtype=np.int64)))
+
+
+@pytest.mark.parametrize(
     "index",
     [
         pd.date_range("2000-01-01", periods=5, freq="YS"),

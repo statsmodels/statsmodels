@@ -136,9 +136,12 @@ def get_index_loc(key, index):
             key = nobs + key
         # Out-of-sample (note that we include key itself in the new index)
         elif key > base_index[-1]:
-            # np.arange(np.uint64(0), int) gives floats, so keep the dtype
-            dtype = base_index.dtype if base_index.dtype == np.uint64 else None
-            index = Index(np.arange(base_index[0], int(key + 1), dtype=dtype))
+            # NumPy computes the range in the dtype of a small integer index,
+            # such as int8, which cannot hold the new labels, and
+            # np.arange(np.uint64(0), int) gives floats, so keep uint64 and
+            # use int64 otherwise
+            dtype = np.uint64 if base_index.dtype == np.uint64 else np.int64
+            index = Index(np.arange(int(base_index[0]), int(key + 1), dtype=dtype))
 
     # Special handling for date indexes
     if date_index:
