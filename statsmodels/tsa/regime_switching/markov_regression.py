@@ -342,12 +342,11 @@ class MarkovRegression(markov_switching.MarkovSwitching):
     @property
     def param_names(self):
         """
-        (list of str) List of human readable parameter names (for parameters
-        actually included in the model)
+        List of human-readable parameter names for parameters included in the model
 
         .. versionchanged:: 0.15.1
 
-           A coefficient that does not switch has no regime suffix, also when
+           A coefficient that does not switch has no regime suffix, even when
            other coefficients switch. Before, it had the suffix of the last
            regime, such as `x2[1]`.
         """
