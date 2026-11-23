@@ -35,7 +35,7 @@ _mask_map = {
     3: "deterministic constant",
     6: "random walk",
     7: "local level",
-    8: "fixed slope",
+    10: "fixed slope",
     11: "deterministic trend",
     14: "random walk with drift",
     15: "local linear deterministic trend",
