@@ -54,10 +54,10 @@ def _find_x12(x12path=None, prefer_x13=True):
     """
     Locate the x12 or x13 binary
 
-    If x12path is not given, then either x13as[.exe] or x12a[.exe] must
-    be found on the PATH. Otherwise, the environmental variable X12PATH or
-    X13PATH must be defined. If prefer_x13 is True, only X13PATH is searched
-    for. If it is False, only X12PATH is searched for.
+    If x12path is not given, the directory in the environmental variable
+    X13PATH, or in X12PATH if X13PATH is not set, is searched (X12PATH first
+    if prefer_x13 is False). If neither is set, the binary must be on the
+    PATH.
 
     Parameters
     ----------
@@ -65,9 +65,9 @@ def _find_x12(x12path=None, prefer_x13=True):
         The path to the x12 or x13 binary, or to the directory containing
         it. If None, the X12PATH or X13PATH environmental variable is used.
     prefer_x13 : bool, optional
-        If True, search for x13as (and the X13PATH environmental variable)
-        first. If False, search for x12a (and the X12PATH environmental
-        variable) first.
+        Only used if x12path is None. If True, search X13PATH before X12PATH
+        and x13as before x12a. If False, search X12PATH before X13PATH and
+        x12a before the x13as binaries.
 
     Returns
     -------
@@ -84,10 +84,10 @@ def _find_x12(x12path=None, prefer_x13=True):
         if not Path(x12path).is_dir():
             x12path = Path(x12path).parent
 
-    if not prefer_x13:  # search for x12 first
-        _binary_names = _binary_names[::-1]
-        if x12path is None:
-            x12path = os.getenv("X12PATH", "")
+    if x12path is None and not prefer_x13:  # search for x12 first
+        # x12a, then the x13as binaries in the usual order
+        _binary_names = sorted(_binary_names, key=lambda name: not name.startswith("x12a"))
+        x12path = os.getenv("X12PATH", "")
         if not x12path:
             x12path = os.getenv("X13PATH", "")
     elif x12path is None:
@@ -106,8 +106,8 @@ def _find_x12(x12path=None, prefer_x13=True):
     return False
 
 
-def _check_x12(x12path=None):
-    x12path = _find_x12(x12path)
+def _check_x12(x12path=None, prefer_x13=True):
+    x12path = _find_x12(x12path, prefer_x13)
     if not x12path:
         raise X13NotFoundError(
             "x12a and x13as not found on path. Give the "
@@ -521,6 +521,12 @@ def x13_arima_analysis(
         environmental variable. If False, will look for x12a first and will
         fallback to the X12PATH environmental variable. If x12path points
         to the path for the X12/X13 binary, it does nothing.
+
+        .. versionchanged:: 0.15.1
+
+           ``prefer_x13`` is used. It was ignored, so that X13PATH was
+           searched before X12PATH, and x13as before x12a, also if
+           ``prefer_x13`` was False.
     log_diagnostics : bool, optional
         If True, returns D8 F-Test, M07, and Q diagnostics from the X13
         savelog.
@@ -561,7 +567,7 @@ def x13_arima_analysis(
     directory, invoking X12/X13 in a subprocess, and reading the output
     back in.
     """
-    x12path = _check_x12(x12path)
+    x12path = _check_x12(x12path, prefer_x13)
 
     if not isinstance(endog, (pd.DataFrame, pd.Series)):
         if start is None or freq is None:
@@ -813,6 +819,12 @@ def x13_arima_select_order(
         environmental variable. If False, will look for x12a first and will
         fallback to the X12PATH environmental variable. If x12path points
         to the path for the X12/X13 binary, it does nothing.
+
+        .. versionchanged:: 0.15.1
+
+           ``prefer_x13`` is used. It was ignored, so that X13PATH was
+           searched before X12PATH, and x13as before x12a, also if
+           ``prefer_x13`` was False.
     tempdir : str, optional
         The path to where temporary files are created by the function.
         If None, files are created in the default temporary file location.
