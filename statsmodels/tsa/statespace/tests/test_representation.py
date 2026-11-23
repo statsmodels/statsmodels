@@ -65,16 +65,18 @@ class Clark1987:
         )
         data["lgdp"] = np.log(data["GDP"])
 
-        # Construct the statespace representation
+        # Construct the statespace representation, with the data and every
+        # matrix in dtype (the matrices below are set in place)
         k_states = 4
-        cls.model = KalmanFilter(k_endog=1, k_states=k_states, **kwargs)
-        cls.model.bind(data["lgdp"].values)
+        cls.dtype = np.dtype(dtype)
+        cls.model = KalmanFilter(k_endog=1, k_states=k_states, dtype=dtype, **kwargs)
+        cls.model.bind(data["lgdp"].values.astype(dtype))
 
         cls.model.design[:, :, 0] = [1, 1, 0, 0]
         cls.model.transition[
             ([0, 0, 1, 1, 2, 3], [0, 3, 1, 2, 1, 3], [0, 0, 0, 0, 0, 0])
         ] = [1, 1, 0, 0, 1, 1]
-        cls.model.selection = np.eye(cls.model.k_states)
+        cls.model.selection = np.eye(cls.model.k_states, dtype=dtype)
 
         # Update matrices with given parameters
         sigma_v, sigma_e, sigma_w, phi_1, phi_2 = np.array(cls.true["parameters"])
@@ -99,6 +101,19 @@ class Clark1987:
         # Filter the data
         return cls.model.filter()
 
+    def test_dtype(self):
+        # The model and the filter output use the dtype of the class
+        assert self.model.dtype == self.dtype
+        assert self.results.prefix == self.model.prefix
+        assert self.results.llf_obs.dtype == self.dtype
+        state = self.results.filtered_state
+        assert state.dtype == self.dtype
+        if np.iscomplexobj(state):
+            # The imaginary part is zero in exact arithmetic; allow rounding
+            # errors relative to the size of the states
+            atol = 100 * np.finfo(self.dtype).eps * np.abs(state.real).max()
+            assert_allclose(state.imag, 0, atol=atol)
+
     def test_loglike(self):
         assert_almost_equal(
             self.results.llf_obs[self.true["start"] :].sum(), self.true["loglike"], 5
@@ -122,14 +137,39 @@ class Clark1987:
         )
 
 
-class TestClark1987Single(Clark1987):
+class Clark1987SinglePrecision(Clark1987):
+    """
+    Tolerances for single precision
+
+    In single precision the loglikelihood differs from the published value by
+    1.8e-4 (relative) and the filtered states by at most 9.1e-4 (absolute),
+    as in test_kalman.py, whose single precision tolerances these are.
+    """
+
+    def test_loglike(self):
+        assert_allclose(
+            self.results.llf_obs[self.true["start"] :].sum(),
+            self.true["loglike"],
+            rtol=1e-3,
+        )
+
+    def test_filtered_state(self):
+        start = self.true["start"]
+        for i, j in [(0, 0), (1, 1), (3, 2)]:
+            assert_allclose(
+                self.results.filtered_state[i][start:],
+                self.true_states.iloc[:, j],
+                atol=1e-2,
+            )
+
+
+class TestClark1987Single(Clark1987SinglePrecision):
     """
     Basic single precision test for the loglikelihood and filtered states.
     """
 
     @classmethod
     def setup_class(cls):
-        pytest.skip("Not implemented")
         super().setup_class(dtype=np.float32, conserve_memory=0)
         cls.results = cls.run_filter()
 
@@ -145,8 +185,7 @@ class TestClark1987Double(Clark1987):
         cls.results = cls.run_filter()
 
 
-@pytest.mark.skip("Not implemented")
-class TestClark1987SingleComplex(Clark1987):
+class TestClark1987SingleComplex(Clark1987SinglePrecision):
     """
     Basic single precision complex test for the loglikelihood and filtered
     states.
