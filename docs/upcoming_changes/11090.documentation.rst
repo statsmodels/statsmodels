@@ -1,0 +1,9 @@
+- Correct docstrings of ``DynamicFactorMQ`` and its results: the
+  ``standardize=False`` option in the Notes (not
+  ``standardization``), the example with a ``factors``
+  dictionary, ``obs_cov_diag`` with ``idiosyncratic_ar1=False``,
+  the return values of ``fit``, ``fit_em``, ``smooth``, ``filter``,
+  ``get_prediction``, ``news`` and ``impulse_responses``, the
+  contents of ``factors`` (no ``offset``) and
+  ``coefficients_of_determination`` (a DataFrame of R-squared
+  values of each variable regressed on one factor). :pr:`11090`
