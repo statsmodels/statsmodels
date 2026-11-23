@@ -1919,8 +1919,11 @@ def test_date_keys_tz_aware_index_other_keys():
     assert tsa_model.get_index_loc("2001-04", periods)[0] == 15
     assert tsa_model.get_index_loc("2002-03", periods)[0] == 26
     index = pd.date_range("2000-01-01", periods=24, freq="MS", tz="US/Eastern")
-    # A string with a UTC offset is already tz-aware: 2001-04-01 is in EST
-    loc, new_index, expanded = tsa_model.get_index_loc("2001-04-01T00:00-05:00", index)
+    # A string with a UTC offset is already tz-aware: 2001-04-01 is in EST.
+    # The seconds are given since pandas < 2.2 cannot look up such a string
+    # without them (KeyError: 14)
+    key = "2001-04-01T00:00:00-05:00"
+    loc, new_index, expanded = tsa_model.get_index_loc(key, index)
     assert loc == 15
     assert not expanded
     assert new_index.equals(index[:16])
