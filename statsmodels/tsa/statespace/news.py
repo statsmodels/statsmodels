@@ -974,7 +974,7 @@ class NewsResults:
         elif groupby != "impact date":
             raise ValueError('Invalid groupby for impacts table. Valid options'
                              ' are "impact date" or "impacted variable".'
-                             f'Got "{groupby}".')
+                             f' Got "{groupby}".')
         impacts = impacts.sort_index()
 
         # Drop the non-groupby level if there's only one value
@@ -1186,7 +1186,7 @@ class NewsResults:
         elif groupby != "impact date":
             raise ValueError('Invalid groupby for details table. Valid options'
                              ' are "update date", "updated variable",'
-                             ' "impact date",or "impacted variable".'
+                             ' "impact date", or "impacted variable".'
                              f' Got "{groupby}".')
         details.index = (details.index.reorder_levels(levels_order)
                                       .remove_unused_levels())

@@ -2686,3 +2686,20 @@ def test_summary_date_within_tolerance(multivariate):
         desired.append(news.summary_revisions())
     assert_equal([str(table) for table in summary.tables[1:]],
                  [str(table) for table in desired])
+
+
+@pytest.mark.parametrize("method", ["summary_impacts", "summary_details"])
+def test_summary_invalid_groupby_message(method):
+    # The words of the error message are separated by spaces (they missed a
+    # space before "Got", and after the comma before "or")
+    news = bivariate_news()
+    if method == "summary_impacts":
+        desired = ('Invalid groupby for impacts table. Valid options are '
+                   '"impact date" or "impacted variable". Got "revision date".')
+    else:
+        desired = ('Invalid groupby for details table. Valid options are '
+                   '"update date", "updated variable", "impact date", or '
+                   '"impacted variable". Got "revision date".')
+    with pytest.raises(ValueError) as excinfo:
+        getattr(news, method)(groupby="Revision_Date")
+    assert_equal(str(excinfo.value), desired)
