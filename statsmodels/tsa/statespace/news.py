@@ -21,8 +21,8 @@ class NewsResults:
 
     Parameters
     ----------
-    news_results : SimpleNamespace instance
-        Results from `KalmanSmoother.news`.
+    news_results : SimpleNamespace
+        Results from `SmootherResults.news`.
     model : MLEResults
         The results object associated with the model from which the NewsResults
         was generated.
@@ -336,6 +336,14 @@ class NewsResults:
 
     @property
     def impacted_variable(self):
+        """
+        The impacted variable(s) shown in the details and impacts tables
+
+        Observation variable label, list of labels or slice of labels that
+        selects the rows of `details_by_impact`, `details_by_update`,
+        `revision_details_by_impact`, `revision_details_by_update` and
+        `impacts`. If None, all impacted variables are shown. It can be set.
+        """
         return self._impacted_variable
 
     @impacted_variable.setter
@@ -344,6 +352,15 @@ class NewsResults:
 
     @property
     def tolerance(self):
+        """
+        The numerical threshold for determining zero impact
+
+        Rows of `details_by_impact`, `details_by_update`,
+        `revision_details_by_impact` and `revision_details_by_update` whose
+        absolute impact is not larger than the tolerance, and rows of
+        `impacts` whose absolute impacts of revisions and of news are both
+        not larger than the tolerance, are left out. It can be set.
+        """
         return self._tolerance
 
     @tolerance.setter
@@ -361,10 +378,10 @@ class NewsResults:
             Index is as MultiIndex consisting of `revision date` and
             `revised variable`. The columns are:
 
-            - `observed (prev)`: the value of the data as it was observed
-              in the previous dataset.
             - `revised`: the revised value of the data, as it is observed
               in the new dataset
+            - `observed (prev)`: the value of the data as it was observed
+              in the previous dataset.
             - `detailed impacts computed`: whether or not detailed impacts have
               been computed in these NewsResults for this revision
 
@@ -392,12 +409,12 @@ class NewsResults:
             Index is as MultiIndex consisting of `update date` and
             `updated variable`. The columns are:
 
+            - `observed`: the value of the new entry, as it is observed in the
+              new dataset
             - `forecast (prev)`: the previous forecast of the new entry,
               based on the information available in the previous dataset
               (recall that for these updated data points, the previous dataset
               had no observed value for them at all)
-            - `observed`: the value of the new entry, as it is observed in the
-              new dataset
 
         See Also
         --------
@@ -428,16 +445,20 @@ class NewsResults:
 
             The columns are:
 
-            - `forecast (prev)`: the previous forecast of the new entry,
-              based on the information available in the previous dataset
             - `observed`: the value of the new entry, as it is observed in the
               new dataset
+            - `forecast (prev)`: the previous forecast of the new entry,
+              based on the information available in the previous dataset
             - `news`: the news associated with the update (this is just the
               forecast error: `observed` - `forecast (prev)`)
             - `weight`: the weight describing how the `news` affects the
               forecast of the variable of interest
             - `impact`: the impact of the `news` on the forecast of the
               variable of interest
+
+            Only the rows with an absolute impact larger than `tolerance`
+            and, if `impacted_variable` is set, of the impacted variables it
+            selects are included.
 
         See Also
         --------
@@ -518,19 +539,23 @@ class NewsResults:
             - `revision date`: the date of the data revision, that results in
               `revision` that impacts the forecast of variables of interest
             - `revised variable`: the variable being revised, that results in
-              `news` that impacts the forecast of variables of interest
+              `revision` that impacts the forecast of variables of interest
 
             The columns are:
 
-            - `observed (prev)`: the previous value of the observation, as it
-              was given in the previous dataset
             - `revised`: the value of the revised entry, as it is observed in
               the new dataset
+            - `observed (prev)`: the previous value of the observation, as it
+              was given in the previous dataset
             - `revision`: the revision (this is `revised` - `observed (prev)`)
             - `weight`: the weight describing how the `revision` affects the
               forecast of the variable of interest
             - `impact`: the impact of the `revision` on the forecast of the
               variable of interest
+
+            Only the rows with an absolute impact larger than `tolerance`
+            and, if `impacted_variable` is set, of the impacted variables it
+            selects are included.
 
         See Also
         --------
@@ -604,10 +629,10 @@ class NewsResults:
               `news` that impacts the forecast of variables of interest
             - `updated variable`: the variable being updated, that results in
               `news` that impacts the forecast of variables of interest
-            - `forecast (prev)`: the previous forecast of the new entry,
-              based on the information available in the previous dataset
             - `observed`: the value of the new entry, as it is observed in the
               new dataset
+            - `forecast (prev)`: the previous forecast of the new entry,
+              based on the information available in the previous dataset
             - `impact date`: the date of the impact on the variable of interest
             - `impacted variable`: the variable that is being impacted
 
@@ -619,6 +644,10 @@ class NewsResults:
               forecast of the variable of interest
             - `impact`: the impact of the `news` on the forecast of the
               variable of interest
+
+            Only the rows with an absolute impact larger than `tolerance`
+            and, if `impacted_variable` is set, of the impacted variables it
+            selects are included.
 
         See Also
         --------
@@ -687,11 +716,11 @@ class NewsResults:
             - `revision date`: the date of the data revision, that results in
               `revision` that impacts the forecast of variables of interest
             - `revised variable`: the variable being revised, that results in
-              `news` that impacts the forecast of variables of interest
-            - `observed (prev)`: the previous value of the observation, as it
-              was given in the previous dataset
+              `revision` that impacts the forecast of variables of interest
             - `revised`: the value of the revised entry, as it is observed in
               the new dataset
+            - `observed (prev)`: the previous value of the observation, as it
+              was given in the previous dataset
             - `impact date`: the date of the impact on the variable of interest
             - `impacted variable`: the variable that is being impacted
 
@@ -702,6 +731,10 @@ class NewsResults:
               forecast of the variable of interest
             - `impact`: the impact of the `revision` on the forecast of the
               variable of interest
+
+            Only the rows with an absolute impact larger than `tolerance`
+            and, if `impacted_variable` is set, of the impacted variables it
+            selects are included.
 
         See Also
         --------
@@ -792,6 +825,10 @@ class NewsResults:
             - `estimate (new)`: the new estimate / forecast of the
               date / variable of interest after taking into account the effects
               of the revisions and news.
+
+            Only the rows with an absolute impact of revisions or of news
+            larger than `tolerance` and, if `impacted_variable` is set, of the
+            impacted variables it selects are included.
 
         See Also
         --------
@@ -999,18 +1036,22 @@ class NewsResults:
             Observation index label or slice of labels specifying particular
             updated periods to display. The updated date(s) describe the
             periods in which the new data points were available that generated
-            the news). See the note on `impact_date` for details about what
+            the news. With `source="revisions"`, they are the revision dates
+            instead. See the note on `impact_date` for details about what
             these labels are.
         updated_variable : str, list, array, or slice, optional
             Observation variable label or slice of labels specifying particular
             updated variables to display. The updated variable(s) describe the
-            variables that were *affected* by the news. If you do not know the
-            labels for the variables, check the `endog_names` attribute of the
-            model instance.
+            variables that were newly added in the updated dataset and which
+            generated the news. With `source="revisions"`, they are the revised
+            variables instead. If you do not know the labels for the
+            variables, check the `endog_names` attribute of the model instance.
         groupby : {"update date", "updated variable", "impact date",
             "impacted variable"}, optional
             The primary variable for grouping results in the details table. The
-            default is to group by update date.
+            default is to group by update date. With `source="revisions"`,
+            "update date" and "updated variable" group by the revision date
+            and the revised variable.
         sparsify : bool, optional
             Set to False for the table to include every one of the multiindex
             keys at each row. Default is True.
@@ -1055,7 +1096,7 @@ class NewsResults:
             - `impact date` : A date associated with an impact.
             - `impacted variable` : A variable that was impacted by the news.
             - `weight` : The weight of news from a given `update date` and
-              `update variable` on a given `impacted variable` at a given
+              `updated variable` on a given `impacted variable` at a given
               `impact date`.
             - `impact` : The revision to the smoothed estimate / forecast of
               the impacted variable at the impact date based specifically on
@@ -1320,10 +1361,12 @@ class NewsResults:
             - `update date` : date associated with a new data point.
             - `updated variable` : variable for which new data was added at
               `update date`.
+            - `observed` : the observed value of the new datapoint.
             - `forecast (prev)` : the forecast value for the updated variable
               at the update date in the previous results object (i.e., prior to
               the data being available).
-            - `observed` : the observed value of the new datapoint.
+            - `news` : the news associated with the update (`observed` -
+              `forecast (prev)`).
 
         See Also
         --------
@@ -1402,15 +1445,16 @@ class NewsResults:
             variables, check the `endog_names` attribute of the model instance.
         revision_date : int, str, datetime, list, array, or slice, optional
             Observation index label or slice of labels specifying particular
-            revision periods to display. The revision date(s) describe the
-            periods in which the data points were revised. See the note on
-            `impact_date` for details about what these labels are.
+            revision periods to display in the details tables of revisions.
+            The revision date(s) describe the periods in which the data points
+            were revised. See the note on `impact_date` for details about what
+            these labels are.
         revised_variable : str, list, array, or slice, optional
             Observation variable label or slice of labels specifying particular
-            revised variables to display. The updated variable(s) describe the
-            variables that were *revised*. If you do not know the labels for
-            the variables, check the `endog_names` attribute of the model
-            instance.
+            revised variables to display in the details tables of revisions.
+            The revised variable(s) describe the variables that were
+            *revised*. If you do not know the labels for the variables, check
+            the `endog_names` attribute of the model instance.
         impacts_groupby : {"impact date", "impacted variable"}, optional
             The primary variable for grouping results in the impacts table. The
             default is to group by impact date.
@@ -1434,9 +1478,10 @@ class NewsResults:
             were many updates and in multivariate models. The default is to
             show detailed tables only for univariate models.
         include_revisions_tables : bool, optional
-            If set to True, the summary will show tables describing the
-            revisions and updates that lead to impacts on variables of
-            interest.
+            If set to True and the data were revised, the summary will show a
+            table of the revisions and, if the details tables are included,
+            tables describing the details of how the revisions translate into
+            impacts on variables of interest. Default is False.
         float_format : str, optional
             Formatter format string syntax for converting numbers to strings.
             Default is '%.2f'.
@@ -1448,8 +1493,10 @@ class NewsResults:
 
             - A table with general information about the sample.
             - A table describing the impacts of revisions and news.
+            - A table describing the news from the updated observations (if
+              there are any).
             - Tables describing revisions in the dataset since the previous
-              results set (unless `include_revisions_tables=False`).
+              results set (if `include_revisions_tables=True`).
 
             In univariate models or if `include_details_tables=True`, one or
             more tables will additionally be included describing the details
@@ -1584,8 +1631,12 @@ class NewsResults:
             that both sets of details can be concatenated together. The
             `revision_details_by_impact` columns `revised`,
             `observed (prev)`, and `revision` are renamed to `observed`,
-            `previous`, and `news`, respectively, and the `details_by_impact`
-            column `forecast (prev)` is renamed to `previous`.
+            `previous`, and `news`, respectively, and its index levels
+            `revision date` and `revised variable` to `update date` and
+            `updated variable`. The `details_by_impact` column
+            `forecast (prev)` is renamed to `previous`. If both
+            `include_revisions` and `include_updates` are False, the table is
+            empty.
 
         See Also
         --------
@@ -1618,10 +1669,14 @@ class NewsResults:
 
         Parameters
         ----------
-        groupby : str, list of str, or callable, optional
-            Argument passed to the `groupby` method of the combined details
-            table (see `get_details`) to group impacts by, e.g., by the
-            update date. If not specified, no grouping is performed.
+        groupby : dict, callable, str, or list of str, optional
+            Argument passed to the `groupby` method of a table of the impacts
+            whose rows are the updated (or revised) variables, to group the
+            updated variables, e.g., a dict or a function that maps each
+            variable name to its group. The impacts of the variables in a
+            group are summed separately for each update (or revision) date;
+            the update dates themselves cannot be grouped. If not specified,
+            no grouping is performed.
         include_revisions : bool, optional
             Whether to include the impacts from data revisions. Default is
             True.
@@ -1632,9 +1687,13 @@ class NewsResults:
         Returns
         -------
         impacts : DataFrame
-            Impacts on variables of interest, indexed by (grouped) update /
-            revision date and columns given by the impact date / impacted
-            variable.
+            Impacts on variables of interest. The index has the levels
+            `update date` and `updated variable` (the revision date and the
+            revised variable for impacts of revisions), with the groups in
+            place of the updated variables if `groupby` is given, and the
+            columns have the levels `impact date` and `impacted variable`. If
+            both `include_revisions` and `include_updates` are False, the
+            table is empty.
 
         See Also
         --------
