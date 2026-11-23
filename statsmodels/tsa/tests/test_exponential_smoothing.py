@@ -2798,3 +2798,59 @@ def test_forecast_date(oildata, steps, use_pandas):
         assert_array_equal(fcast.index, expected_index)
     else:
         assert isinstance(fcast, np.ndarray)
+
+
+@pytest.mark.parametrize(
+    "end, dynamic",
+    [
+        (20, 11),
+        (20, 12),
+        (20, 15),
+        (20, "2005-06-30"),
+        (75, 58),
+        (75, 59),
+        (75, 65),
+        (75, 70),
+        (75, "2016-06-30"),
+    ],
+)
+def test_predict_dynamic_after_end_or_sample(austourists, end, dynamic):
+    # Dynamic prediction begins at start + dynamic, and the forecasts after
+    # the sample are dynamic anyway, so a dynamic after the end of the
+    # prediction or after the sample has no effect. Both raised a ValueError
+    # (a broadcast error, or "Cannot anchor simulation outside of the
+    # sample"); start + dynamic = end + 1 (here 21) or nobs (68) worked. The
+    # date keys are the periods 25 and 69. The predictions are the one-step
+    # predictions in the sample followed by the forecasts from its end, with
+    # the variances of the exact method: mse in the sample, and mse times
+    # the relative variances of R's forecast package after it.
+    model = ETSModel(austourists)
+    res = model.smooth(fixed_params(model))
+    n, start = res.nobs, 10
+    nforecast = max(end - n + 1, 0)
+    expected = res.fittedvalues.to_numpy()[start : end + 1]
+    variance = np.full(expected.shape[0], res.mse)
+    if nforecast:
+        expected = np.r_[expected, res.forecast(nforecast).to_numpy()]
+        relative = R_RELATIVE_FORECAST_VARIANCE["ANN"][:nforecast]
+        variance = np.r_[variance, res.mse * np.asarray(relative)]
+    index = austourists.index
+    index = pd.date_range(index[0], periods=end + 1, freq=index.freq)[start:]
+
+    pred = res.predict(start=start, end=end, dynamic=dynamic)
+    assert pred.index.equals(index)
+    assert_allclose(pred, expected, rtol=1e-12)
+
+    pred = res.get_prediction(start=start, end=end, dynamic=dynamic)
+    frame = pred.summary_frame()
+    assert frame.index.equals(index)
+    assert_allclose(frame["mean"], expected, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, variance, rtol=1e-12)
+
+    # the simulated intervals are those of the prediction without dynamic
+    kwargs = dict(start=start, end=end, method="simulated", simulate_repetitions=5)
+    pred = res.get_prediction(dynamic=dynamic, rng=np.random.default_rng(0), **kwargs)
+    expected = res.get_prediction(rng=np.random.default_rng(0), **kwargs)
+    assert_allclose(
+        pred.summary_frame(), expected.summary_frame(), rtol=1e-12
+    )
