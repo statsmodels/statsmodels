@@ -1,0 +1,7 @@
+- ``prefer_x13=False`` of ``x13_arima_analysis`` and
+  ``x13_arima_select_order`` was ignored. It is used when the binary is
+  looked up through the environment (``x12path`` is None): X12PATH is
+  searched before X13PATH, and x12a before the x13as binaries, so with
+  both X13PATH and X12PATH set, the binary in X12PATH is used. If no
+  binary is found that way, the binary found before is used.
+  :pr:`11067`
