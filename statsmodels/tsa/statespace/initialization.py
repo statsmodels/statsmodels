@@ -500,14 +500,17 @@ class Initialization:
             'approximate_diffuse', or 'stationary'. Alternatively, a
             previously created `Initialization` object may be given, in which
             case it is used directly as the initialization for the selected
-            block of states.
+            block of states. It must have as many states as the block.
 
             .. versionchanged:: 0.15.1
 
                An `Initialization` object is also accepted for all the
                states (`index` None); it raised ValueError. A call that
                raises leaves the initialization unchanged; a failed call for
-               all the states left `initialization_type` set.
+               all the states left `initialization_type` set. An
+               `Initialization` object with a different number of states than
+               the block raises ValueError; it was accepted and gave a wrong
+               initialization of the block.
         constant : array_like, optional
             A vector of constant values, denoted :math:`a`. Most often used
             with 'known' initialization, but may also be used with
@@ -566,6 +569,16 @@ class Initialization:
                 " re-initialize the entire block as a whole or"
                 " else unset the entire block before"
                 " re-initializing the subset."
+            )
+        # Make sure that an initialization object fits the block
+        if (
+            isinstance(initialization_type, Initialization)
+            and initialization_type.k_states != len(index)
+        ):
+            raise ValueError(
+                "Invalid initialization object; it has"
+                f" {initialization_type.k_states} states, but the block of"
+                f" states {index!s} has {len(index)}."
             )
 
         # If setting for all states, set this object's initialization
