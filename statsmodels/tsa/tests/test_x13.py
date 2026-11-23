@@ -570,7 +570,7 @@ def test_binary_lookup_order(lookup, tmp_path, monkeypatch):
         monkeypatch.setenv("PATH", os.pathsep.join([binary_dir, path]))
 
     with pytest.raises(X13NotFoundError):
-        x13_arima_analysis(gdp, speconly=True, **kwargs)
+        x13_arima_analysis(gdp, **kwargs)
 
 
 def test_x13_warning_relayed():

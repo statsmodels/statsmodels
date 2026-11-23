@@ -1069,4 +1069,4 @@ def test_x13_not_found_environment(tmp_path, monkeypatch, variable):
     monkeypatch.setenv(variable, str(tmp_path))
 
     with pytest.raises(X13NotFoundError, match="x12a and x13as not found"):
-        x13.x13_arima_analysis(_quarterly_endog(), speconly=True)
+        x13.x13_arima_analysis(_quarterly_endog())
