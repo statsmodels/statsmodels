@@ -27,7 +27,9 @@ def _debye(alpha):
         return np.squeeze(t / (np.exp(t) - 1))
 
     _alpha = np.squeeze(alpha)
-    debye_value = integrate.quad(integrand, EPSILON, _alpha)[0] / _alpha
+    # The integral from 50 to infinity is less than 1e-20.
+    upper = min(_alpha, 50)
+    debye_value = integrate.quad(integrand, EPSILON, upper)[0] / _alpha
     return debye_value
 
 
@@ -53,7 +55,7 @@ def _debyem1_expansion(x):
 def tau_frank(theta):
     """Kendall's tau for Frank Copula
 
-    This uses Taylor series expansion for theta <= 1.
+    This uses a Taylor series for abs(theta) <= 1.
 
     Parameters
     ----------
@@ -66,13 +68,14 @@ def tau_frank(theta):
         Kendall's tau for given theta.
     """
 
-    if theta <= 1:
-        tau = _tau_frank_expansion(theta)
-    else:
-        debye_value = _debye(theta)
-        tau = 1 + 4 * (debye_value - 1) / theta
+    if -1 <= theta <= 1:
+        return _tau_frank_expansion(theta)
 
-    return tau
+    # D_1(-x) = D_1(x) + x/2, so Kendall's tau is odd in theta.
+    magnitude = np.fabs(theta)
+    debye_value = _debye(magnitude)
+    tau = 1 + 4 * (debye_value - 1) / magnitude
+    return np.copysign(tau, theta)
 
 
 def _tau_frank_expansion(x):
@@ -692,6 +695,10 @@ class FrankCopula(ArchimedeanCopula):
         """Kendall's tau as a function of the copula parameter theta.
 
         Joe (2014), p. 166.
+
+        .. versionchanged:: 0.15.1
+           Corrected the evaluation for negative parameters below -1 and
+           avoided overflow for large-magnitude parameters.
 
         Parameters
         ----------

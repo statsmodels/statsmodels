@@ -517,6 +517,45 @@ class TestFrank:
         taud = 1 + 4 * _debyem1_expansion(theta) / theta
         assert_allclose(taud, tau_cop, rtol=1e-5)
 
+    @pytest.mark.parametrize(
+        "theta, expected",
+        [
+            (1e-12, 1.1111111111111111e-13),
+            (0.01, 0.0011111100000018898),
+            (1.0, 0.1100185364489931),
+            (1.00000001, 0.11001853752769064),
+            (2.0, 0.21389456921962013),
+            (8.0, 0.6026196515511075),
+            (10.0, 0.6657773862719784),
+            (50.0, 0.9226318945069572),
+            (700.0, 0.994299142318913),
+            (1000.0, 0.9960065797362674),
+            (20000.0, 0.9998000164493407),
+            (1e8, 0.9999999600000007),
+        ],
+    )
+    def test_tau_signed(self, theta, expected):
+        # References use mpmath at 100 decimal digits. For x > 0, the
+        # Debye integral equals pi**2/6 + x*log1p(-exp(-x)) - Li_2(exp(-x)).
+        copula = FrankCopula()
+        with np.errstate(over="raise", invalid="raise"):
+            positive = copula.tau(theta)
+            negative = copula.tau(-theta)
+        # The existing Taylor expansion at theta=1 errs by about 3.2e-11
+        # relative to the reference. Use no absolute tolerance near zero.
+        assert_allclose(positive, expected, rtol=5e-11, atol=0)
+        assert_allclose(negative, -expected, rtol=5e-11, atol=0)
+        assert negative == -positive
+        assert -1 < negative < 0 < positive < 1
+
+    def test_negative_tau_frozen_and_inverse(self):
+        copula = FrankCopula(theta=-10)
+        expected = -0.6657773862719784
+        assert_allclose(copula.tau(), expected, rtol=5e-11, atol=0)
+        assert_allclose(copula.theta_from_tau(expected), -10, rtol=1e-7, atol=0)
+        # theta=0 denotes the independence limit when passed to tau().
+        assert copula.tau(theta=0) == 0
+
 
 # The reference results are coming from the R package Copula.
 # See ``copula_r_tests.rst`` for more details.
