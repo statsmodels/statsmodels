@@ -1138,3 +1138,79 @@ def test_fixed_slope_boolean_specification(kwargs, params):
         mod_clone = mod.clone(endog)
     assert_equal(mod_clone.trend_specification, "fixed slope")
     assert_allclose(mod_clone.loglike(params), res.llf, rtol=1e-12)
+
+
+def _summary_model_rows(res):
+    # The "Model:" row of the summary and its continuation rows
+    rows = res.summary().tables[0].data
+    start = [row[0].strip() for row in rows].index("Model:")
+    names = [rows[start][1].strip()]
+    for row in rows[start + 1 :]:
+        if row[0].strip():
+            break
+        names.append(row[1].strip())
+    return names
+
+
+STOCHASTIC_LEVEL_TREND = dict(
+    level=True, stochastic_level=True, trend=True, stochastic_trend=True
+)
+
+
+@pytest.mark.parametrize(
+    "kwargs, mask, desired",
+    [
+        (dict(autoregressive=1), 0, ["AR(1)"]),
+        (dict(seasonal=4), 0, ["stochastic seasonal(4)"]),
+        (
+            dict(cycle=True, stochastic_cycle=True, damped_cycle=True),
+            0,
+            ["damped stochastic cycle"],
+        ),
+        (STOCHASTIC_LEVEL_TREND, 30, ["stochastic level", "+ stochastic trend"]),
+        (
+            dict(seasonal=4, **STOCHASTIC_LEVEL_TREND),
+            30,
+            ["stochastic level", "+ stochastic trend", "+ stochastic seasonal(4)"],
+        ),
+    ],
+    ids=["ar", "seasonal", "cycle", "level-trend", "level-trend-seasonal"],
+)
+def test_summary_model_name_unnamed_trend(kwargs, mask, desired):
+    # Combinations of the level and trend components without a name (no
+    # level or trend component, or a stochastic level and a stochastic trend
+    # without an irregular component) show their components in the summary
+    # (the model name started with "None")
+    rng = np.random.default_rng(20261202)
+    mod = UnobservedComponents(rng.standard_normal(40).cumsum(), **kwargs)
+    assert_equal(mod.trend_mask, mask)
+    assert mod.trend_specification is None
+    res = mod.smooth(mod.start_params)
+    assert_equal(_summary_model_rows(res), desired)
+
+
+@pytest.mark.parametrize(
+    "level",
+    [
+        "irregular",
+        "fixed intercept",
+        "deterministic constant",
+        "local level",
+        "random walk",
+        "fixed slope",
+        "deterministic trend",
+        "local linear deterministic trend",
+        "random walk with drift",
+        "local linear trend",
+        "smooth trend",
+        "random trend",
+    ],
+)
+def test_summary_model_name_named_trend(level):
+    # A named trend specification is shown by its name, followed by the other
+    # components
+    rng = np.random.default_rng(20261202)
+    mod = UnobservedComponents(rng.standard_normal(40).cumsum(), level,
+                               autoregressive=1)
+    res = mod.smooth(mod.start_params)
+    assert_equal(_summary_model_rows(res), [level, "+ AR(1)"])
