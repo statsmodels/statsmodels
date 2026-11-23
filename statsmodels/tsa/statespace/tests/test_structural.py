@@ -897,7 +897,7 @@ def test_invalid_freq_seasonal(kwargs, match):
 @pytest.mark.parametrize(
     "freq, bounds, start",
     [
-        ("YS", (1.5, 12), None),
+        ("YS", (1.5, 12), 2 * np.pi / 3),
         ("QS", (6, 48), 2 * np.pi / 12),
         ("MS", (18, 144), 2 * np.pi / 36),
         ("D", (2, np.inf), np.pi / 2),
@@ -908,8 +908,7 @@ def test_cycle_frequency_bounds(freq, bounds, start):
     # The default periods of the cycle are 1.5 to 12 years for annual,
     # quarterly and monthly data, otherwise at least 2 periods. The cycle
     # frequency starts at that of a three-year cycle, or in the middle of the
-    # bounds (the annual start is not checked: it depends on the pandas
-    # version)
+    # bounds
     rng = np.random.default_rng(20261123)
     index = pd.date_range("2000-01-01", periods=60, freq=freq)
     endog = pd.Series(rng.standard_normal(60), index=index)
@@ -919,9 +918,8 @@ def test_cycle_frequency_bounds(freq, bounds, start):
         (2 * np.pi / bounds[1], 2 * np.pi / bounds[0]),
         rtol=1e-12,
     )
-    if start is not None:
-        start_params = dict(zip(mod.param_names, mod.start_params, strict=True))
-        assert_allclose(start_params["frequency.cycle"], start, rtol=1e-12)
+    start_params = dict(zip(mod.param_names, mod.start_params, strict=True))
+    assert_allclose(start_params["frequency.cycle"], start, rtol=1e-12)
 
 
 def test_undamped_cycle_transform():
@@ -1177,3 +1175,28 @@ def test_start_params_missing_without_level(kwargs):
         res = mod.fit(disp=False)
         assert np.all(np.isfinite(res.params))
         assert np.isfinite(res.llf)
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.date_range("1950-01-01", periods=60, freq=pd.offsets.YearEnd()),
+        pd.date_range("1950-01-01", periods=60, freq=pd.offsets.YearBegin(month=7)),
+        pd.date_range("1950-01-01", periods=60, freq=pd.offsets.YearEnd(month=6)),
+        pd.period_range("1950", periods=60, freq="Y"),
+    ],
+    ids=["year-end", "year-start-jul", "year-end-jun", "period"],
+)
+def test_cycle_start_annual(index):
+    # For annual data, the frequency of the cycle starts at that of a
+    # three-year cycle (inside the default bounds of 1.5 to 12 years) with
+    # the frequency strings of every pandas version: they start with "A"
+    # before pandas 2.2 and with "Y" from pandas 2.2
+    rng = np.random.default_rng(20261203)
+    endog = pd.Series(rng.standard_normal(60), index=index)
+    mod = UnobservedComponents(endog, "llevel", cycle=True, stochastic_cycle=True)
+    assert_allclose(
+        mod.cycle_frequency_bound, (2 * np.pi / 12, 2 * np.pi / 1.5), rtol=1e-12
+    )
+    start_params = dict(zip(mod.param_names, mod.start_params, strict=True))
+    assert_allclose(start_params["frequency.cycle"], 2 * np.pi / 3, rtol=1e-12)
