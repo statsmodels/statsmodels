@@ -14,9 +14,6 @@ from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.statespace import sarimax, varmax
 from statsmodels.tsa.statespace.initialization import Initialization
 from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
-
-
-from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 from statsmodels.tsa.statespace.representation import Representation
 
 
