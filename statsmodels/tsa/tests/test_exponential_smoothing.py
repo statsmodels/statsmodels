@@ -3266,7 +3266,7 @@ def test_predict_index(oildata, start, end):
     # predict checked the length of `index` and then ignored it
     from statsmodels.tools.sm_exceptions import ValueWarning
 
-    res = ETSModel(oildata).smooth([0.3, 110.0])
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
     index = pd.RangeIndex(100, 100 + end - start + 1)
     expected = res.predict(start=start, end=end)
     actual = res.predict(start=start, end=end, index=index)
@@ -3274,7 +3274,7 @@ def test_predict_index(oildata, start, end):
     assert_array_equal(actual.index, index)
     assert_allclose(actual.to_numpy(), expected.to_numpy(), rtol=1e-12)
     # numpy data: the index can only be used internally, as before
-    res_np = ETSModel(oildata.to_numpy()).smooth([0.3, 110.0])
+    res_np = ETSModel(oildata.to_numpy()).smooth([0.3, 110.0], param_index="integer")
     with pytest.warns(ValueWarning, match="only be used internally"):
         actual_np = res_np.predict(start=start, end=end, index=index)
     assert isinstance(actual_np, np.ndarray)
@@ -3284,7 +3284,7 @@ def test_predict_index(oildata, start, end):
 @pytest.mark.parametrize("method", ["exact", "simulated"])
 def test_get_prediction_index(oildata, method):
     # get_prediction checked the length of `index` and then ignored it
-    res = ETSModel(oildata).smooth([0.3, 110.0])
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
     start, end = 46, 51
     index = pd.Index([f"p{i}" for i in range(end - start + 1)])
     kwargs = dict(start=start, end=end, method=method, simulate_repetitions=20)
