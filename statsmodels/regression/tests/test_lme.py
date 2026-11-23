@@ -1,5 +1,6 @@
 """Tests for linear mixed effects models."""
 from statsmodels.compat.platform import PLATFORM_OSX
+from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 import csv
 from pathlib import Path
@@ -1184,6 +1185,9 @@ def test_bse_re_units(case):
     assert_allclose(out[1][1], 10 * out[0][1], rtol=1e-3)
 
 
+@pytest.mark.skipif(
+    PYTHON_IMPL_WASM, reason="np.sqrt does not warn for a negative value on WASM"
+)
 def test_bse_re_negative_variance_warns():
     # a variance that is not positive gives a nan, with the warning of sqrt
     data = _bse_re_units_data()
