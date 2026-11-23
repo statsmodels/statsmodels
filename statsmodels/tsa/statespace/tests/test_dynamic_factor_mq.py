@@ -3913,3 +3913,69 @@ def test_bool_factor_arguments(value, arg):
     endog = _int_like_dfm_endog()
     with pytest.raises(ValueError, match=f"`{arg}` argument must"):
         dynamic_factor_mq.DynamicFactorMQ(endog, **{arg: value})
+
+
+@pytest.mark.parametrize(
+    "kwargs, match",
+    [
+        ({"factor_orders": -1}, "non-negative"),
+        ({"factor_orders": {"0": -2}}, "non-negative"),
+        ({"factor_orders": -1, "quarterly": True}, "non-negative"),
+        ({"factor_orders": 0}, "requires quarterly variables"),
+        ({"factors": 2, "factor_orders": {"0": 0, "1": 2}},
+         "requires quarterly variables"),
+        ({"factor_orders": 0, "factor_multiplicities": 2},
+         "requires quarterly variables"),
+    ],
+    ids=["negative", "negative-dict", "negative-quarterly", "zero-monthly",
+         "zero-block-monthly", "zero-multiplicity-monthly"],
+)
+def test_factor_orders_invalid(kwargs, match):
+    # Negative orders, and blocks of order 0 with only monthly variables
+    # (whose factors would have no states), raise a clear error. They raised
+    # other errors when the model was created or used.
+    kwargs = dict(kwargs)
+    endog = _ar1_factor_data(nobs=30, k_endog=4)
+    if kwargs.pop("quarterly", False):
+        kwargs["endog_quarterly"] = _quarterly_series(np.arange(10.0) % 3)
+    with pytest.raises(ValueError, match=match):
+        dynamic_factor_mq.DynamicFactorMQ(endog, **kwargs)
+
+
+@pytest.mark.parametrize("idiosyncratic_ar1", [True, False])
+def test_factor_orders_zero_quarterly(idiosyncratic_ar1):
+    # With quarterly variables, the factors have five lags in the state
+    # vector, and a block of order 0 is a factor without autoregression: the
+    # model of order 1 with an autoregressive coefficient of 0
+    endog = _ar1_factor_data(nobs=30, k_endog=3)
+    quarterly = _quarterly_series(np.sin(np.arange(10.0)))
+    kwargs = {"endog_quarterly": quarterly,
+              "idiosyncratic_ar1": idiosyncratic_ar1}
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, factor_orders=0, **kwargs)
+    mod1 = dynamic_factor_mq.DynamicFactorMQ(endog, factor_orders=1, **kwargs)
+    assert_equal(mod.k_states, mod1.k_states)
+    assert "L1.0->0" in mod1.param_names
+    assert "L1.0->0" not in mod.param_names
+    params = pd.Series(0.5, index=mod.param_names)
+    params1 = params.reindex(mod1.param_names).fillna(0.0)
+
+    llf = mod.loglike(params.to_numpy())
+    assert_allclose(llf, mod1.loglike(params1.to_numpy()), rtol=1e-12)
+    res = mod.smooth(params.to_numpy())
+    res1 = mod1.smooth(params1.to_numpy())
+    assert_allclose(res.llf, llf, rtol=1e-12)
+    assert_allclose(res.smoothed_state, res1.smoothed_state, rtol=1e-10,
+                    atol=1e-12)  # some smoothed states are zero
+    # EM with given starting parameters: from the same smoothed states, an
+    # EM iteration gives the loadings and idiosyncratic parameters of the
+    # model of order 1 (only the factor transition and error variance are
+    # estimated differently)
+    with pytest.warns(ConvergenceWarning, match="EM reached maximum"):
+        res_em = mod.fit(params.to_numpy(), maxiter=1, disp=False)
+    with pytest.warns(ConvergenceWarning, match="EM reached maximum"):
+        res1_em = mod1.fit(params1.to_numpy(), maxiter=1, disp=False)
+    names = [name for name in mod.param_names
+             if name.startswith(("loading", "L1.eps", "sigma2"))]
+    assert_allclose(res_em.params[names], res1_em.params[names], rtol=1e-10)
+    # The iteration changed the parameters, so that the test discriminates
+    assert_(np.abs(res_em.params[names] - params[names]).max() > 0.1)

@@ -172,6 +172,8 @@ class DynamicFactorMQStates(dict):
         If a dictionary, this defines the order of the factor blocks in the
         state vector. Otherwise, factors are ordered so that factors that load
         on more variables come first (and then alphabetically, to break ties).
+        The orders must be non-negative, and an order of 0 requires quarterly
+        variables (`k_endog_Q` > 0).
     factor_multiplicities : int or dict
         This argument provides a convenient way to specify multiple factors
         that load identically on variables. For example, one may want two
@@ -456,6 +458,21 @@ class DynamicFactorMQStates(dict):
                              " block of factors in `factor_orders`."
                              f" Duplicate entries for {duplicate_names}")
         self.factor_names = factor_names.tolist()
+
+        # Validate the orders. A block of order 0 has states only for the
+        # lags of its factors that the quarterly variables load on.
+        orders = self.factor_block_orders
+        negative = {block: int(order) for block, order in orders.items()
+                    if order < 0}
+        if negative:
+            raise ValueError("The order of each factor block must be"
+                             f" non-negative. Got {negative}.")
+        zero = [block for block, order in orders.items() if order == 0]
+        if zero and self.k_endog_Q == 0:
+            raise ValueError("A factor block of order 0 requires quarterly"
+                             " variables: with only monthly variables, the"
+                             " order of each factor block must be at least 1."
+                             f" Got order 0 for the block(s) {zero}.")
         self.max_factor_order = np.max(self.factor_block_orders)
 
         # Re-order the columns of the endog factor mapping to reflect the
@@ -750,6 +767,14 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         If a dictionary, this defines the order of the factor blocks in the
         state vector. Otherwise, factors are ordered so that factors that load
         on more variables come first (and then alphabetically, to break ties).
+        The orders must be non-negative, and an order of 0 (factors without
+        autoregression) requires quarterly variables.
+
+        .. versionchanged:: 0.15.1
+
+           A negative order, or an order of 0 with only monthly variables,
+           raises a ValueError. Such models could not be used, and raised
+           other errors when they were created or used.
     factor_multiplicities : int or dict, optional
         This argument provides a convenient way to specify multiple factors
         that load identically on variables. For example, one may want two
