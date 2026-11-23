@@ -1,0 +1,7 @@
+- With missing data, the starting parameters of ``UnobservedComponents``
+  models without a level were computed from the series with the missing
+  values, so they were NaN (and ``fit`` returned NaN parameters and
+  log-likelihood with only a ``ConvergenceWarning``), or computing them
+  raised an error (with an autoregressive or a cycle component, or with
+  ``exog``). The missing observations are dropped, as with a level, so
+  starting parameters and fits of such models change. :pr:`11087`
