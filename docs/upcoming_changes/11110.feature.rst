@@ -1,0 +1,6 @@
+- ``PHReg`` and ``PHReg.from_formula`` accept case weights with ``weights``,
+  for example inverse probability of treatment weights. The partial
+  likelihood, the robust covariance, the residuals and the baseline hazard
+  increments are weighted as in R's ``coxph``, for both ``ties`` methods and
+  with strata, offsets and entry times. Before, ``weights`` was ignored with a
+  ``ValueWarning``. :issue:`2717`, :pr:`11110`
