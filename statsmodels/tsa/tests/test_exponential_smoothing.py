@@ -2946,7 +2946,7 @@ def test_get_prediction_simulate_repetitions_at_least_two(austourists, method, r
     # errors.
     error = "add" if method == "simulated" else "mul"
     model = ETSModel(austourists, error=error)
-    res = model.smooth(fixed_params(model))
+    res = model.smooth(fixed_params(model), param_index="integer")
     n = res.nobs
     with pytest.raises(ValueError, match="simulate_repetitions must be at least 2"):
         res.get_prediction(
@@ -2956,7 +2956,7 @@ def test_get_prediction_simulate_repetitions_at_least_two(austourists, method, r
 
 def test_get_prediction_simulate_repetitions(austourists):
     model = ETSModel(austourists)
-    res = model.smooth(fixed_params(model))
+    res = model.smooth(fixed_params(model), param_index="integer")
     n = res.nobs
     # the exact intervals do not use simulate_repetitions
     expected = res.get_prediction(start=n - 3, end=n + 2).summary_frame()
