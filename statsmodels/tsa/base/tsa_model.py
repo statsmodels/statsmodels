@@ -246,6 +246,14 @@ def get_index_label_loc(key, index, row_labels):
         The key for which to find the location if the underlying index is
         a DateIndex or is only being used as row labels, or a location if
         the underlying index is a RangeIndex or a NumericIndex.
+
+        .. versionchanged:: 0.15.1
+
+           A quarter string such as "2001Q2" for which a DatetimeIndex
+           `index` has no date raises a KeyError. Previously it was looked
+           up in `row_labels` with pandas' quarter parsing, which could
+           match a date of another quarter, such as 2000-07-01 for
+           semiannual dates starting on 2000-01-01.
     index : pd.Index
         The index to search.
     row_labels : pd.Index
@@ -273,6 +281,20 @@ def get_index_label_loc(key, index, row_labels):
     try:
         loc, index, index_was_expanded = get_index_loc(key, index)
     except KeyError:
+        # A quarter string such as "2001Q2" for which a date index has no
+        # date is not looked up in the row labels, where pandas' deprecated
+        # quarter parsing can find a date of another quarter
+        if (
+            isinstance(index, DatetimeIndex)
+            and isinstance(key, str)
+            and re.fullmatch("[0-9]*Q[1-4]", key)
+        ):
+            period = Period(key)
+            in_quarter = (index.year == period.year) & (
+                index.quarter == period.quarter
+            )
+            if not in_quarter.any():
+                raise
         if not isinstance(key, (int, np.integer)):
             loc = row_labels.get_loc(key)
         else:
