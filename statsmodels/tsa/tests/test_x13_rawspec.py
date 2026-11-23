@@ -379,3 +379,21 @@ def test_prefer_x13_not_used_with_x12path(tmp_path, monkeypatch, binary, prefer_
     )
 
     assert res.stdout.decode().strip() == str(directory / "x13as")
+
+
+@fake_binaries
+def test_prefer_x13_false_falls_back(tmp_path, monkeypatch):
+    # Without a binary in X12PATH, prefer_x13=False runs the binary in X13PATH,
+    # which it ran before prefer_x13 was honoured
+    x13_dir = _fake_binaries(tmp_path / "x13", "x13as")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    monkeypatch.setenv("X13PATH", str(x13_dir))
+    monkeypatch.setenv("X12PATH", str(empty))
+
+    res = x13.x13_arima_analysis(_monthly_endog(), prefer_x13=False)
+
+    assert res.stdout.decode().strip() == str(x13_dir / "x13as")
+    # but not if x12path is given
+    with pytest.raises(x13.X13NotFoundError, match="x12a and x13as not found"):
+        x13.x13_arima_analysis(_monthly_endog(), x12path=empty, prefer_x13=False)

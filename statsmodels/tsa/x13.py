@@ -57,7 +57,8 @@ def _find_x12(x12path=None, prefer_x13=True):
     If x12path is not given, the directory in the environmental variable
     X13PATH, or in X12PATH if X13PATH is not set, is searched (X12PATH first
     if prefer_x13 is False). If neither is set, the binary must be on the
-    PATH.
+    PATH. If prefer_x13 is False and no binary is found, the search of
+    prefer_x13=True follows.
 
     Parameters
     ----------
@@ -84,7 +85,8 @@ def _find_x12(x12path=None, prefer_x13=True):
         if not Path(x12path).is_dir():
             x12path = Path(x12path).parent
 
-    if x12path is None and not prefer_x13:  # search for x12 first
+    search_x12 = x12path is None and not prefer_x13
+    if search_x12:  # search for x12 first
         # x12a, then the x13as binaries in the usual order
         _binary_names = sorted(_binary_names, key=lambda name: not name.startswith("x12a"))
         x12path = os.getenv("X12PATH", "")
@@ -103,6 +105,10 @@ def _find_x12(x12path=None, prefer_x13=True):
         except OSError:
             pass
 
+    if search_x12:
+        # The search of prefer_x13=True, which was used before prefer_x13 was
+        # honoured, so that a binary found then is still found
+        return _find_x12(prefer_x13=True)
     return False
 
 
@@ -526,7 +532,8 @@ def x13_arima_analysis(
 
            ``prefer_x13`` is used. It was ignored, so that X13PATH was
            searched before X12PATH, and x13as before x12a, also if
-           ``prefer_x13`` was False.
+           ``prefer_x13`` was False. If no binary is found with
+           ``prefer_x13=False``, the search of ``prefer_x13=True`` follows.
     log_diagnostics : bool, optional
         If True, returns D8 F-Test, M07, and Q diagnostics from the X13
         savelog.
@@ -824,7 +831,8 @@ def x13_arima_select_order(
 
            ``prefer_x13`` is used. It was ignored, so that X13PATH was
            searched before X12PATH, and x13as before x12a, also if
-           ``prefer_x13`` was False.
+           ``prefer_x13`` was False. If no binary is found with
+           ``prefer_x13=False``, the search of ``prefer_x13=True`` follows.
     tempdir : str, optional
         The path to where temporary files are created by the function.
         If None, files are created in the default temporary file location.
