@@ -1,0 +1,2 @@
+- ``predict`` of Markov switching models raised for ``probabilities`` given as an
+  ndarray. :pr:`10997`

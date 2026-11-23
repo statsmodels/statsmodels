@@ -1704,6 +1704,12 @@ def ardl_select_order(
             considered. It was left out, so a different model could be
             selected, and an UnboundLocalError was raised when there were
             no candidate lags.
+
+            If True, the model without any of the candidate lags is listed
+            with no lags of the exog variables (None) and, if it has the
+            smallest criterion, selected without them. It was listed with
+            order 0, so the selected model included lag 0 of every exog
+            variable (and a ValueError was raised if causal is True).
     seasonal : bool, optional
         Flag indicating whether to include seasonal dummies in the model. If
         seasonal is True and trend includes 'c', then the first period
@@ -1801,9 +1807,6 @@ def ardl_select_order(
         y = y - always @ (pinv_always @ y)
 
     def perm_to_tuple(keys, perm):
-        if perm == ():
-            d = {k: 0 for k, _ in keys if k is not None}
-            return (0,) + tuple((k, v) for k, v in d.items())
         d = defaultdict(list)
         y_lags = []
         for v in perm:
