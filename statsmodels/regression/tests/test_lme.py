@@ -1082,6 +1082,67 @@ def test_bse_re_numpy_data(with_exog_re):
     assert_equal(bse_re, result._results.bse_re)
 
 
+@pytest.mark.parametrize("reml", [True, False])
+@pytest.mark.parametrize("unit", [1, 1000])
+def test_bse_re_balanced_closed_form(reml, unit):
+    # In a balanced one-way model the likelihood depends on the variances
+    # through lam1 = scale + m * var and scale, whose estimates are
+    # independent scaled chi-squares, which gives a closed form.  The
+    # standard error of the variance is in the units of y squared.
+    n_groups, m = 30, 6
+    rng = np.random.default_rng(1234)
+    groups = np.repeat(np.arange(n_groups), m)
+    y = 2 + np.repeat(rng.normal(size=n_groups), m) + rng.normal(size=n_groups * m)
+    y *= unit
+    gmean = np.bincount(groups, y) / m
+    msw = ((y - gmean[groups]) ** 2).sum() / (n_groups * (m - 1))
+    df1 = n_groups - 1 if reml else n_groups
+    lam1 = m * ((gmean - y.mean()) ** 2).sum() / df1
+    se = np.sqrt(2 * lam1**2 / df1 + 2 * msw**2 / (n_groups * (m - 1))) / m
+
+    result = MixedLM(y, np.ones((len(y), 1)), groups).fit(reml=reml)
+    assert_allclose(result.cov_re[0, 0], (lam1 - msw) / m, rtol=1e-4)
+    assert_allclose(result.bse_re, [se], rtol=1e-4)
+    std_err = result.summary().tables[1]["Std.Err."].iloc[-1]
+    assert std_err == f"{result.bse_re[0]:.3f}"
+
+
+# nlme 3.1.164, results/mixedlm_bse_re.R: the delta method applied to the
+# inverse numerical Hessian.  The last element is the standard error of scale.
+_bse_re_nlme = {
+    ("dietox", True): [6.93892, 0.572654],
+    ("dietox", False): [6.79487, 0.571566],
+    ("dietox_slope", True): [3.65815, 0.375361, 0.0769966, 0.318847],
+    ("dietox_slope", False): [3.58228, 0.367594, 0.0754, 0.318846],
+    ("pastes", True): [2.34932, 2.77545, 0.175059],
+    ("pastes", False): [2.06273, 2.77539, 0.175059],
+}
+
+
+@pytest.mark.parametrize("case, reml", sorted(_bse_re_nlme))
+def test_bse_re_nlme(case, reml):
+    rdir = Path(__file__).resolve().parent.joinpath("results")
+    if case == "pastes":
+        data = pd.read_csv(rdir.joinpath("pastes.csv"))
+        model = MixedLM.from_formula(
+            "strength ~ 1",
+            data,
+            groups="batch",
+            re_formula="1",
+            vc_formula={"cask": "0 + cask"},
+        )
+    else:
+        data = pd.read_csv(rdir.joinpath("dietox.csv"))
+        re_formula = "1 + Time" if case == "dietox_slope" else "1"
+        model = MixedLM.from_formula(
+            "Weight ~ Time", data, groups="Pig", re_formula=re_formula
+        )
+    result = model.fit(reml=reml)
+    assert_allclose(result.bse_re, _bse_re_nlme[case, reml][:-1], rtol=1e-3)
+    std_err = result.summary().tables[1]["Std.Err."].iloc[model.k_fe :]
+    assert std_err.tolist() == [f"{x:.3f}" for x in result.bse_re]
+
+
 def test_random_effects():
 
     rs = np.random.RandomState(23429)

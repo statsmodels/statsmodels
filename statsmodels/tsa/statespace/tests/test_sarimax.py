@@ -2893,6 +2893,58 @@ def test_extend_constant_exog_with_trend():
         res2.extend(endog[50:], exog=exog[50:], validate_exog=True)
 
 
+@pytest.mark.parametrize("trend", ["t", "ct", [1, 1, 0, 1]])
+@pytest.mark.parametrize("trend_offset", [1, 0, 50])
+@pytest.mark.parametrize("use_exog", [False, True])
+def test_extend_twice_with_time_trend(trend, trend_offset, use_exog):
+    # The time trend of an extended model continues from the end of the
+    # previous sample, also when the results were already extended. Before,
+    # the second extension restarted the trend at its own nobs + 1 and
+    # ignored trend_offset.
+    endog = 10 + 0.5 * np.arange(100.0) + np.sin(np.arange(100.0))
+    exog = np.cos(np.arange(100.0)) if use_exog else None
+    k_trend = 3 if isinstance(trend, list) else len(trend)
+    params = [1.0] + [0.1] * (k_trend - 1) + [0.5] * use_exog + [0.5, 1.0]
+
+    def model(start, end):
+        return sarimax.SARIMAX(
+            endog[start:end],
+            exog=None if exog is None else exog[start:end],
+            order=(1, 0, 0),
+            trend=trend,
+            trend_offset=trend_offset,
+        )
+
+    res_full = model(0, 100).filter(params)
+    res = model(0, 50).filter(params)
+    for start, end in [(50, 70), (70, 71), (71, 100)]:
+        res = res.extend(
+            endog[start:end], exog=None if exog is None else exog[start:end]
+        )
+        assert_equal(res.model.trend_offset, trend_offset + start)
+        assert_allclose(res.llf_obs, res_full.llf_obs[start:end])
+        assert_allclose(res.fittedvalues, res_full.fittedvalues[start:end])
+
+    fcast_exog = np.ones(5) if use_exog else None
+    desired = res_full.get_forecast(5, exog=fcast_exog)
+    actual = res.get_forecast(5, exog=fcast_exog)
+    assert_allclose(actual.predicted_mean, desired.predicted_mean)
+    assert_allclose(actual.conf_int(), desired.conf_int())
+
+
+def test_extend_rolling_forecasts_with_time_trend():
+    # Rolling one-step forecasts with extend, as in the cross-validation
+    # example of the forecasting docs, match re-filtering each sample
+    endog = 10 + 0.5 * np.arange(110.0) + np.sin(np.arange(110.0))
+    params = [1.0, 0.1, 0.5, 1.0]
+
+    res = sarimax.SARIMAX(endog[:100], order=(1, 0, 0), trend="ct").filter(params)
+    for t in range(100, 110):
+        mod_t = sarimax.SARIMAX(endog[:t], order=(1, 0, 0), trend="ct")
+        assert_allclose(res.forecast(1), mod_t.filter(params).forecast(1))
+        res = res.extend(endog[t : t + 1])
+
+
 def test_apply_results():
     endog = np.arange(100)
     exog = np.ones_like(endog)
