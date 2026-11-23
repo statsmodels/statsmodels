@@ -104,7 +104,11 @@ def _find_x12(x12path=None, prefer_x13=True):
     for binary in _binary_names:
         x12 = Path(x12path).joinpath(binary)
         try:
-            subprocess.check_call(x12, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # The output is not read, so it must not go to a pipe: a binary
+            # that prints more than the pipe holds would wait forever
+            subprocess.check_call(
+                x12, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
             return x12
         except OSError:
             pass
