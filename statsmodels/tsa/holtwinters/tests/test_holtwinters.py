@@ -3318,8 +3318,12 @@ def test_fix_params_plain_initial_seasonal_deprecated():
     with pytest.warns(FutureWarning, match=match):
         with mod.fix_params({"initial_seasonal": initial_seasonal}):
             res = mod.fit()
-    # The same optimization from the same starting values as without the key
+    # The same optimization from the same starting values as without the key.
+    # Where it stops depends on the platform: on macOS (Accelerate) the two
+    # fits differ by up to 1.3e-7 relative, and noise of a few ulps in the data
+    # moves the estimates by up to 2.4e-6. Using the fixed values in the
+    # optimized fit would change the initial seasonal values completely.
     ref = ExponentialSmoothing(y, seasonal="add", seasonal_periods=12).fit()
     assert_allclose(
-        res.params_formatted["param"], ref.params_formatted["param"], rtol=1e-8
+        res.params_formatted["param"], ref.params_formatted["param"], rtol=1e-4
     )
