@@ -1877,6 +1877,54 @@ def test_integer_index_forecast_labels(dtype):
     assert prediction_index.dtype == labels.dtype
 
 
+@pytest.mark.parametrize("tz", ["UTC", "US/Eastern", "Asia/Tokyo"])
+@pytest.mark.parametrize(
+    "freq, start, end, expected_start, expected_end",
+    [
+        # In the sample, also a month that covers several days
+        ("MS", "2001-04", "2001-06", "2001-04-01", "2001-06-01"),
+        ("D", "2001-04", "2001-04-03", "2001-04-01", "2001-04-03"),
+        # The end after the sample
+        ("MS", "2001-10-01", "2002-03", "2001-10-01", "2002-03-01"),
+        ("D", "2001-05-10", "2001-05-20", "2001-05-10", "2001-05-20"),
+    ],
+)
+def test_string_keys_tz_aware_index(tz, freq, start, end, expected_start, expected_end):
+    # Date strings are local times of a tz-aware index; comparing them with
+    # the index as naive timestamps raised a TypeError
+    nobs = 24 if freq == "MS" else 500
+    index = pd.date_range("2000-01-01", periods=nobs, freq=freq, tz=tz)
+    endog = pd.Series(np.zeros(nobs), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    start_loc, end_loc, out_of_sample, prediction_index = (
+        tsa_model.get_prediction_index(start, end, nobs, mod._index, data=mod.data)
+    )
+    expected = pd.date_range(expected_start, expected_end, freq=freq, tz=tz)
+    assert prediction_index.equals(expected)
+    assert index[start_loc] == expected[0]
+    assert end_loc == min(nobs - 1, start_loc + len(expected) - 1)
+    assert end_loc + out_of_sample - start_loc + 1 == len(expected)
+
+
+def test_date_keys_tz_aware_index_other_keys():
+    # Only naive date strings of a DatetimeIndex are localized. The string
+    # keys of a PeriodIndex are periods, which have no time zone.
+    periods = pd.period_range("2000-01", periods=24, freq="M")
+    assert tsa_model.get_index_loc("2001-04", periods)[0] == 15
+    assert tsa_model.get_index_loc("2002-03", periods)[0] == 26
+    index = pd.date_range("2000-01-01", periods=24, freq="MS", tz="US/Eastern")
+    # A string with a UTC offset is already tz-aware: 2001-04-01 is in EST
+    loc, new_index, expanded = tsa_model.get_index_loc("2001-04-01T00:00-05:00", index)
+    assert loc == 15
+    assert not expanded
+    assert new_index.equals(index[:16])
+    # Naive datetime objects are not taken as local times, as pandas does not
+    # do either
+    for key in (pd.Timestamp("2001-04-01"), pd.Timestamp("2002-03-01")):
+        with pytest.raises(TypeError, match="tz-naive and tz-aware"):
+            tsa_model.get_index_loc(key, index)
+
+
 @pytest.mark.parametrize(
     "start, end, expected_start, expected_end",
     [

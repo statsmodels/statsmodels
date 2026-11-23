@@ -187,6 +187,14 @@ def get_index_loc(key, index):
                 date_key = pd.Period(key).to_timestamp()
             else:
                 date_key = Timestamp(key)
+            # A date string is a local time of a tz-aware index, as in
+            # pandas' string indexing (a no-op for a tz-naive index)
+            if (
+                isinstance(key, str)
+                and index_class is DatetimeIndex
+                and date_key.tz is None
+            ):
+                date_key = date_key.tz_localize(base_index.tz)
 
             # Out-of-sample
             if date_key > base_index[-1]:
