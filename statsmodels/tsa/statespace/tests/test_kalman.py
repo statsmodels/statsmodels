@@ -64,6 +64,10 @@ class Clark1987:
     See `results.results_kalman_filter` for more information.
     """
 
+    # Tolerance for the pickled and the copied filter, which repeat the same
+    # computations
+    copy_rtol = 1e-7
+
     @classmethod
     def setup_class(cls, dtype=float, conserve_memory=0, loglikelihood_burn=0):
         cls.true = results_kalman_filter.uc_uni
@@ -215,10 +219,14 @@ class Clark1987:
 
         assert id(filter) != id(pickled)
         assert_allclose(
-            np.array(self.filter.filtered_state), np.array(pickled.filtered_state)
+            np.array(self.filter.filtered_state),
+            np.array(pickled.filtered_state),
+            rtol=self.copy_rtol,
         )
         assert_allclose(
-            np.array(self.filter.loglikelihood), np.array(pickled.loglikelihood)
+            np.array(self.filter.loglikelihood),
+            np.array(pickled.loglikelihood),
+            rtol=self.copy_rtol,
         )
 
     def test_copied_filter(self):
@@ -232,26 +240,44 @@ class Clark1987:
 
         assert id(filter) != id(copied)
         assert_allclose(
-            np.array(self.filter.filtered_state), np.array(copied.filtered_state)
+            np.array(self.filter.filtered_state),
+            np.array(copied.filtered_state),
+            rtol=self.copy_rtol,
         )
 
         assert_allclose(
-            np.array(self.filter.loglikelihood), np.array(copied.loglikelihood)
+            np.array(self.filter.loglikelihood),
+            np.array(copied.loglikelihood),
+            rtol=self.copy_rtol,
         )
 
 
 class TestClark1987Single(Clark1987):
     """
     Basic single precision test for the loglikelihood and filtered states.
+
+    In single precision the loglikelihood differs from the published value by
+    about 2e-4 (relative) and the filtered states by about 1e-3 (absolute),
+    hence the tolerances of test_loglike and test_filtered_state.
     """
+
+    # Allow a few units in the last place for the pickled and copied filters,
+    # whose arrays are new allocations (the summation order of some BLAS
+    # libraries depends on the memory alignment)
+    copy_rtol = 1e-5
 
     @classmethod
     def setup_class(cls):
-        # TODO: Can we be more specific?  How can a contributor help?
-        pytest.skip("Not implemented")
         super().setup_class(dtype=np.float32, conserve_memory=0)
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
+
+    def test_dtype(self):
+        # The single precision routines are used
+        assert isinstance(self.model, _representation.sStatespace)
+        assert isinstance(self.filter, _kalman_filter.sKalmanFilter)
+        assert self.result["state"].dtype == np.float32
+        assert np.asarray(self.filter.loglikelihood).dtype == np.float32
 
     def test_loglike(self):
         assert_allclose(
@@ -292,15 +318,28 @@ class TestClark1987SingleComplex(Clark1987):
     """
     Basic single precision complex test for the loglikelihood and filtered
     states.
+
+    The tolerances are those of TestClark1987Single.
     """
+
+    copy_rtol = 1e-5
 
     @classmethod
     def setup_class(cls):
-        # TODO: Can we be more specific?  How can a contributor help?
-        pytest.skip("Not implemented")
         super().setup_class(dtype=np.complex64, conserve_memory=0)
         cls.model, cls.filter = cls.init_filter()
         cls.result = cls.run_filter()
+
+    def test_dtype(self):
+        # The single precision complex routines are used
+        assert isinstance(self.model, _representation.cStatespace)
+        assert isinstance(self.filter, _kalman_filter.cKalmanFilter)
+        assert self.result["state"].dtype == np.complex64
+        assert np.asarray(self.filter.loglikelihood).dtype == np.complex64
+        # The imaginary part is zero in exact arithmetic; allow single
+        # precision rounding errors relative to the size of the states
+        state = self.result["state"]
+        assert_allclose(state.imag, 0, atol=1e-6 * np.abs(state.real).max())
 
     def test_loglike(self):
         assert_allclose(
