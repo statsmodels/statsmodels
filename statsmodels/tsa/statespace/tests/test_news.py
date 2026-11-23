@@ -2801,3 +2801,38 @@ def test_get_impacts_groupby_rows(include_revisions, include_updates):
         assert_allclose(grouped.to_numpy(),
                         impacts.loc[rows, grouped.columns].to_numpy(),
                         rtol=1e-12)
+
+
+@pytest.mark.parametrize("revisions_group", ["all prior revisions",
+                                             "revisions"])
+def test_get_impacts_groupby_dict_grouped_revisions(revisions_group):
+    # The revisions of 2009Q2 are all grouped ("all prior revisions"). A dict
+    # that does not map them keeps them as a group of their own (their row
+    # was dropped); a dict that maps them puts them in that group.
+    groupby = {"realgdp": "output", "unemp": "labor"}
+    if revisions_group != "all prior revisions":
+        groupby["all prior revisions"] = revisions_group
+    original = dict(groupby)
+    news = bivariate_news(revisions_details_start=False)
+    assert_equal(news.n_revisions_grouped, 2)
+    q2, q3 = pd.Period("2009Q2", freq="Q"), pd.Period("2009Q3", freq="Q")
+    grouped = news.get_impacts(groupby=groupby)
+    assert_equal(grouped.index.tolist(),
+                 [(q2, revisions_group), (q3, "labor"), (q3, "output")])
+    # The dict is not changed
+    assert_equal(groupby, original)
+    # The grouped revisions have the impacts of all revisions
+    desired = news.revision_impacts.stack(**FUTURE_STACK)
+    assert_allclose(grouped.loc[(q2, revisions_group), desired.index],
+                    desired, rtol=1e-12)
+    # Each news group has the impacts of its variable
+    impacts = news.get_impacts()
+    for variable, group in [("realgdp", "output"), ("unemp", "labor")]:
+        assert_allclose(grouped.loc[(q3, group)],
+                        impacts.loc[(q3, variable), grouped.columns],
+                        rtol=1e-12)
+    # Nothing is dropped: the sum over the rows is the total impact (atol
+    # as in test_get_details_and_impacts)
+    desired = news.total_impacts.stack(**FUTURE_STACK)
+    assert_allclose(grouped.sum()[desired.index], desired,
+                    rtol=1e-10, atol=1e-12)

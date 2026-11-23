@@ -1717,8 +1717,15 @@ class NewsResults:
             updated variables, e.g., a dict or a function that maps each
             variable name to its group. The impacts of the variables in a
             group are summed separately for each update (or revision) date;
-            the update dates themselves cannot be grouped. If not specified,
-            no grouping is performed.
+            the update dates themselves cannot be grouped. The grouped
+            revisions ("all prior revisions") are a group of their own if a
+            dict does not map them. If not specified, no grouping is
+            performed.
+
+            .. versionchanged:: 0.15.1
+
+               The impacts of the grouped revisions were dropped if a dict
+               did not map them.
         include_revisions : bool, optional
             Whether to include the impacts from data revisions. Default is
             True.
@@ -1749,6 +1756,13 @@ class NewsResults:
 
         # An empty table has nothing to group, and pandas < 2 cannot stack it
         if groupby is not None and not impacts.empty:
+            # groupby drops the rows that a dict does not map. The grouped
+            # revisions ("all prior revisions") are not a variable of the
+            # model, so a dict that does not map them keeps them as a group
+            # of their own
+            revisions = "all prior revisions"
+            if isinstance(groupby, dict) and revisions not in groupby:
+                groupby = {**groupby, revisions: revisions}
             # Drop the all-NaN rows, as stack did before pandas 3
             impacts = (impacts.unstack("update date")
                               .groupby(groupby).sum(min_count=1)
