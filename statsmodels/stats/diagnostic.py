@@ -1735,10 +1735,10 @@ def het_goldfeldquandt(
     fval = resols2.mse_resid / resols1.mse_resid
     # if fval>1:
     if alternative == "increasing":
-        fpval = stats.f.sf(fval, resols1.df_resid, resols2.df_resid)
+        fpval = stats.f.sf(fval, resols2.df_resid, resols1.df_resid)
         ordering = "increasing"
     elif alternative == "decreasing":
-        fpval = stats.f.sf(1.0 / fval, resols2.df_resid, resols1.df_resid)
+        fpval = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
         ordering = "decreasing"
     elif alternative == "two-sided":
         fpval_sm = stats.f.cdf(fval, resols2.df_resid, resols1.df_resid)
