@@ -1204,7 +1204,7 @@ class KalmanFilter(Representation):
                                   " the simulation smoother.")
 
     def impulse_responses(self, steps=10, impulse=0, orthogonalized=False,
-                          cumulative=False, direct=False):
+                          cumulative=False, direct=None):
         r"""
         Impulse response function
 
@@ -1220,6 +1220,11 @@ class KalmanFilter(Representation):
             space model. Alternatively, a custom impulse vector may be
             provided; must be a column vector with shape `(k_posdef, 1)`.
             Default is 0.
+
+            .. versionchanged:: 0.15.1
+
+               NumPy integers are accepted as the index of the state
+               innovation. They raised ValueError.
         orthogonalized : bool, optional
             Whether or not to perform impulse using orthogonalized innovations.
             Note that this will also affect custum `impulse` vectors. Default
@@ -1227,6 +1232,13 @@ class KalmanFilter(Representation):
         cumulative : bool, optional
             Whether or not to return cumulative impulse responses. Default is
             False.
+        direct : bool, optional
+            Not used.
+
+            .. deprecated:: 0.15.1
+
+               `direct` has no effect. It is deprecated and will be removed
+               after statsmodels 0.17 is released.
 
         Returns
         -------
@@ -1246,6 +1258,14 @@ class KalmanFilter(Representation):
         responses from arbitrary time points, it is necessary to clone a new
         model with the appropriate system matrices.
         """
+        if direct is not None:
+            warn(
+                "direct is not used by impulse_responses and is deprecated. It"
+                " will be removed after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
+
         # We need to add an additional step, since the first simulated value
         # will always be zeros (note that we take this value out at the end).
         steps += 1
@@ -1258,8 +1278,8 @@ class KalmanFilter(Representation):
                 self._selection.shape[2] == 1):
             steps += 1
 
-        # Check for what kind of impulse we want
-        if type(impulse) is int:
+        # Check for what kind of impulse we want (an index, but not a bool)
+        if isinstance(impulse, (int, np.integer)) and not isinstance(impulse, bool):
             if impulse >= self.k_posdef or impulse < 0:
                 raise ValueError("Invalid value for `impulse`. Must be the"
                                  " index of one of the state innovations.")
