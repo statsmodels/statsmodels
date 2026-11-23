@@ -38,6 +38,13 @@ PERCENTILES = (1, 5, 10, 25, 50, 75, 90, 95, 99)
 QUANTILES = np.array(PERCENTILES) / 100.0
 
 
+def _rounded_labels_are_valid(percentiles, decimals):
+    labels = [f"{val:.{decimals}f}" for val in percentiles]
+    distinct = len(set(labels)) == len(labels)
+    inside_bounds = all(0 < float(label) < 100 for label in labels)
+    return distinct and inside_bounds
+
+
 def _percentile_labels(percentiles):
     if np.all(np.floor(percentiles) == percentiles):
         return [f"{int(val)}%" for val in percentiles]
@@ -46,7 +53,7 @@ def _percentile_labels(percentiles):
             break
     else:
         decimals = 1
-        while len({f"{val:.{decimals}f}" for val in percentiles}) < len(percentiles):
+        while not _rounded_labels_are_valid(percentiles, decimals):
             decimals += 1
     return [f"{val:.{decimals}f}%" for val in percentiles]
 
@@ -264,6 +271,12 @@ class Description:
     percentiles : Sequence[float], optional
         A distinct sequence of floating point values all between 0 and 100.
         The default percentiles are 1, 5, 10, 25, 50, 75, 90, 95, 99.
+
+        .. versionchanged:: 0.15.1
+
+           Non-integer percentiles are labeled with rounded values that show
+           enough decimals to be distinct and to lie strictly between 0% and
+           100%, instead of truncated values.
     ntop : int, default 5
         The number of top categorical labels to report. Default is 5.
 

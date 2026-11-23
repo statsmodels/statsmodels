@@ -1,3 +1,0 @@
-- ``Description`` and ``describe`` label non-integer percentiles exactly (for
-  example ``33.3%`` instead of ``33.2%``) and no longer give integer percentiles
-  such as 29 a decimal label. :pr:`10954`
