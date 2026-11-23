@@ -743,8 +743,7 @@ def combine_effects(
 
     # random effects computation
 
-    q = (weights_fe * eff**2).sum(axis=0)
-    q -= (weights_fe * eff).sum() ** 2 / w_total_fe
+    q = (weights_fe * (eff - mean_effect_fe) ** 2).sum(axis=0)
     df = k - 1
     method = string_like(
         method_re, "method_re", options=("iterated", "pm", "chi2", "dl"), lower=True
