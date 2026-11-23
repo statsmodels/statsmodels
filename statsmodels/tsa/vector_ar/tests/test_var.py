@@ -1445,6 +1445,59 @@ def test_irf_plot_err_bands_kwarg(close_figures):
     assert fig2 is not None
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
+@pytest.mark.parametrize("form", ["errorband", "tuple", "array"])
+@pytest.mark.parametrize("stderr_type", [None, "asym", "mc"])
+def test_irf_plot_err_bands_default_stderr_type(
+    bivariate_var_result, close_figures, method, form, stderr_type
+):
+    # The given bands are plotted whatever stderr_type is; with the default
+    # "asym" they were read as a covariance array
+    irf = bivariate_var_result.irf(3)
+    rng = np.random.default_rng(0)
+    lower = rng.standard_normal((4, 2, 2))
+    upper = lower + rng.uniform(0.5, 1.0, size=(4, 2, 2))
+    bands = {
+        "errorband": ErrorBand(lower, upper),
+        "tuple": (lower, upper),
+        "array": np.stack([lower, upper]),
+    }[form]
+    kwargs = {} if stderr_type is None else {"stderr_type": stderr_type}
+    fig = getattr(irf, method)(err_bands=bands, **kwargs)
+    values = irf.irfs if method == "plot" else irf.cum_effects
+    assert len(fig.axes) == 4
+    for i in range(2):
+        for j in range(2):
+            lines = [line.get_ydata() for line in fig.axes[2 * i + j].lines]
+            assert_allclose(lines[0], values[:, i, j], rtol=1e-12)
+            assert_allclose(lines[1], lower[:, i, j], rtol=1e-12)
+            assert_allclose(lines[2], upper[:, i, j], rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
+@pytest.mark.parametrize("plot_stderr", [False, np.False_, 0])
+def test_irf_plot_stderr_false_values(
+    bivariate_var_result, close_figures, method, plot_stderr
+):
+    # Any false value turns the bands off; plot drew them for numpy.False_
+    irf = bivariate_var_result.irf(3)
+    fig = getattr(irf, method)(plot_stderr=plot_stderr)
+    if method == "plot":
+        values, n_lines = irf.irfs, 2  # the responses and the zero line
+    else:
+        values, n_lines = irf.cum_effects, 3  # and the long-run effect
+    for i in range(2):
+        for j in range(2):
+            lines = fig.axes[2 * i + j].lines
+            assert len(lines) == n_lines
+            assert_allclose(lines[0].get_ydata(), values[:, i, j], rtol=1e-12)
+            assert_allclose(lines[1].get_ydata(), [0, 0])
+
+
 def test_irf_invalid_stderr_type_raises(bivariate_var_result):
     irf = bivariate_var_result.irf()
     with pytest.raises(ValueError, match="stderr_type"):
