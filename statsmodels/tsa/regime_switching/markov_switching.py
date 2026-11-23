@@ -2101,12 +2101,24 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
         """
         (array) The QMLE variance / covariance matrix. Computed using the
         numerical Hessian as the evaluated hessian.
+
+        .. versionchanged:: 0.15.1
+
+           For results with ``cov_type="robust"``, the rank of this matrix
+           decides whether ``summary`` warns that the covariance matrix is
+           singular. The rank of the outer product of gradients matrix was
+           used.
         """
+        # If this is the covariance matrix of the results, the rank is that of
+        # this matrix, not that of the OPG matrix, which sets it first
+        set_rank = self._rank is None
         cov_opg = self.cov_params_opg
         evaluated_hessian = self._hessian()
-        cov_params, _ = pinv_extended(
+        cov_params, singular_values = pinv_extended(
             np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
         )
+        if set_rank:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
 
         return cov_params
 

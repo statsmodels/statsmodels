@@ -4397,3 +4397,31 @@ def test_fit_zero_transition_start_params(excess):
     # The unconstrained values of p[0->0] and p[0->1] are near 708 when
     # p[0->2] is zero, accurate to about 1e-13
     assert_allclose(res, params, rtol=1e-11)
+
+
+@pytest.mark.parametrize(
+    "nobs, cov_type, expected_rank",
+    [(10, "robust", 3), (10, "opg", 5), (10, "approx", 5), (None, "robust", 5)],
+)
+def test_summary_singular_warning_follows_cov_type(nobs, cov_type, expected_rank):
+    # At the parameters of TestFedFundsConstShort, the smoothed probability of
+    # regime 1 in the last 10 observations is below 4e-5 in every period, so
+    # its constant is hardly identified. The OPG and Hessian matrices still
+    # have full rank, but the robust matrix, inv(H inv(OPG) H), squares their
+    # conditioning and has rank 3 of 5. With all observations, it has full
+    # rank.
+    endog = fedfunds if nobs is None else fedfunds[-nobs:]
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    params = np.r_[0.9820939, 0.0503587, 3.70877, 9.556793, 2.107562**2]
+    res = mod.smooth(params, cov_type=cov_type)
+    rank = np.linalg.matrix_rank(res.cov_params())
+    # Also computed for the OPG and approx results, which keep the rank of
+    # their own matrix
+    rank_robust = np.linalg.matrix_rank(res.cov_params_robust)
+
+    summary = res.summary().as_text()
+
+    assert rank == expected_rank
+    assert rank_robust == (3 if nobs == 10 else 5)
+    singular = "Covariance matrix is singular or near-singular" in summary
+    assert singular is bool(rank < len(params))
