@@ -1255,10 +1255,11 @@ class VARMAXResults(MLEResults):
                         offset + np.arange(i * k_exog, (i + 1) * k_exog))
                     offset += k_endog * k_exog
 
-                # 5. Measurement error variance terms
+                # 5. Measurement error variance terms (the last k_endog
+                # parameters, in the order of the equations)
                 if self.model.measurement_error:
                     masks.append(
-                        np.array(self.model.k_params - i - 1, ndmin=1))
+                        np.array(self.model.k_params - k_endog + i, ndmin=1))
 
                 # Create the table
                 mask = np.concatenate(masks)
