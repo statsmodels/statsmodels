@@ -1,0 +1,9 @@
+- ``DynamicFactorMQResults.news`` with ``state_index="common"``
+  used the first ``k_states - k_endog`` states, which are the
+  factor states only for monthly data with idiosyncratic AR(1)
+  terms. In other models, they included idiosyncratic states or
+  left out factor states, or ``news`` raised an ``IndexError``.
+  ``"common"`` selects the factor states (the factors and their
+  lags), so the impacts and weights of the news with
+  ``state_index="common"`` change for all other models.
+  :pr:`11092`
