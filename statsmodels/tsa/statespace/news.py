@@ -964,20 +964,17 @@ class NewsResults:
                     lambda num: "" if pd.isna(num) else float_format % num)
             impacts = impacts.reset_index()
             try:
-                impacts.iloc[:, 0] = impacts.iloc[:, 0].map(str)
+                impacts[impacts.columns[0]] = impacts.iloc[:, 0].map(str)
             except AttributeError:
                 impacts.iloc[:, 0] = impacts.iloc[:, 0].applymap(str)
         else:
             impacts = impacts.reset_index()
-            try:
-                impacts.iloc[:, :2] = impacts.iloc[:, :2].map(str)
-                for col in impacts.columns[2:]:
-                    impacts[col] = impacts[col].map(
-                        lambda num: "" if pd.isna(num) else float_format % num
-                    )
-            except AttributeError:
-                impacts.iloc[:, :2] = impacts.iloc[:, :2].applymap(str)
-                impacts.iloc[:, 2:] = impacts.iloc[:, 2:].applymap(
+            # Replace each column: setting strings into the date (or integer)
+            # columns would convert them back to dates (or fail)
+            for col in impacts.columns[:2]:
+                impacts[col] = impacts[col].map(str)
+            for col in impacts.columns[2:]:
+                impacts[col] = impacts[col].map(
                     lambda num: "" if pd.isna(num) else float_format % num
                 )
         # Sparsify the groupby column

@@ -2209,3 +2209,75 @@ def test_get_impacts_groupby():
                                         "unemp": "unemp"})
     assert_allclose(grouped, impacts.loc[grouped.index, grouped.columns],
                     rtol=1e-12)
+
+
+# - Index types and selections of the NewsResults tables ----------------------
+
+
+def indexed_news(index_type, multivariate):
+    # The models of univariate_news (the AR(1) of infl) and bivariate_news
+    # with the dates given as a PeriodIndex, a DatetimeIndex or integers (the
+    # data given as ndarrays). The last previous value is revised and the
+    # last updated one is new; the impact dates are the last two dates and
+    # the next one (two for the bivariate model).
+    if multivariate:
+        endog = dta[["realgdp", "unemp"]].copy()
+        endog["realgdp"] = np.log(endog["realgdp"]).diff() * 400
+        endog = endog.iloc[1:]
+        mod = varmax.VARMAX
+        params = np.r_[0.5, 0.1, 0.2, 0.9, 1.0, 0.1, 1.1]
+        kwargs = {"trend": "n"}
+    else:
+        endog = dta["infl"]
+        mod = sarimax.SARIMAX
+        params = [0.5, 1.0]
+        kwargs = {}
+    previous = endog.iloc[:-1].copy()
+    previous.iloc[-1] = 0.0
+    if index_type == "datetime":
+        index = pd.date_range(endog.index[0].to_timestamp(),
+                              periods=len(endog), freq="QS")
+        endog = endog.set_axis(index)
+        previous = previous.set_axis(index[:-1])
+    elif index_type == "int":
+        endog = endog.to_numpy()
+        previous = previous.to_numpy()
+    res = mod(previous, **kwargs).smooth(params)
+    nobs = len(endog)
+    end = nobs + 1 if multivariate else nobs
+    return res.news(endog, start=nobs - 2, end=end,
+                    revisions_details_start=True)
+
+
+@pytest.mark.parametrize("index_type", ["period", "datetime", "int"])
+@pytest.mark.parametrize("multivariate", [True, False])
+@pytest.mark.parametrize("sparsify", [True, False])
+def test_summary_impacts_index_types(index_type, multivariate, sparsify):
+    # Every cell of the impacts table is that of the impacts DataFrame, with
+    # the impact dates blanked where they repeat if sparsified (they were NaT
+    # for dates, and integer dates raised a TypeError on pandas 3)
+    news = indexed_news(index_type, multivariate)
+    impacts = news.impacts
+    table = news.summary_impacts(sparsify=sparsify, float_format="%.4f")
+    values = table_values(table)
+    # The single impacted variable of a univariate model is moved to the
+    # title if sparsified
+    keys = ["impact date", "impacted variable"]
+    if sparsify and not multivariate:
+        keys = ["impact date"]
+    assert_equal(values[0], keys + IMPACTS_COLUMNS)
+    dates = [str(date) for date in impacts.index.get_level_values(0)]
+    if multivariate:
+        # Each date has a row for each variable
+        assert_equal(len(set(dates)), len(dates) // 2)
+    assert_equal([row[0] for row in values[1:]],
+                 sparsified(dates) if sparsify else dates)
+    if len(keys) == 2:
+        assert_equal([row[1] for row in values[1:]],
+                     impacts.index.get_level_values(1).tolist())
+    # atol for the rounding to 4 digits
+    numbers = np.array([row[len(keys):] for row in values[1:]], dtype=float)
+    assert_allclose(numbers, impacts.to_numpy(), rtol=0, atol=5e-5)
+    # summary shows the same table
+    summary = news.summary(sparsify=sparsify, float_format="%.4f")
+    assert_equal(str(summary.tables[1]), str(table))
