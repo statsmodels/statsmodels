@@ -1820,8 +1820,9 @@ def test_dates_list_with_freq(freq, dates, expected):
         ("Q", "Q-DEC"),
         ("2Q", "2Q"),
         ("Y", "Y"),
-        # Offset aliases and offsets, which were already accepted
-        ("Y", YEAR_END),
+        # Offset aliases and offsets, which were already accepted. YEAR_END
+        # is "Y" before pandas 2.2, which would repeat the ID of the case above
+        pytest.param("Y", YEAR_END, id="Y-YEAR_END"),
         ("M", pd.offsets.MonthEnd()),
         ("D", "D"),
         ("W", "W"),
