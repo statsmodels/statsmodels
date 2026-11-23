@@ -12,6 +12,7 @@ License: BSD-3
 
 from statsmodels.compat.pandas import (
     MONTH_END,
+    PD_LT_2,
     PD_LT_2_2_0,
     QUARTER_END,
     YEAR_END,
@@ -2160,7 +2161,12 @@ def test_oos_end_key_no_date(kind, key):
     else:
         index = pd.period_range("2000-01", periods=24, freq="M")
     res = constant_mean_results(pd.Series(np.zeros(24), index=index))
-    with pytest.raises(KeyError, match="The `end` argument could not be"):
+    error, match = KeyError, "The `end` argument could not be"
+    if PD_LT_2 and kind == "period" and key == "":
+        # pandas < 2 cannot parse "" as a period (pandas >= 2 gives NaT), so
+        # its DateParseError, a ValueError, is raised there, as before
+        error, match = ValueError, "Unable to parse datetime string"
+    with pytest.raises(error, match=match):
         res.predict(start=0, end=key)
 
 
