@@ -2976,7 +2976,7 @@ def test_get_prediction_simulated_start_after_sample(austourists, error, data):
     n = austourists.shape[0]
     endog = austourists if data == "pandas" else austourists.to_numpy()
     model = ETSModel(endog, error=error)
-    res = model.smooth(fixed_params(model))
+    res = model.smooth(fixed_params(model), param_index="integer")
     reps, start, end = 20, n + 2, n + 5
     pred = res.get_prediction(
         start=start,
@@ -3016,7 +3016,7 @@ def test_get_prediction_endog_start_after_sample(austourists, method, start):
     # the sample it also had one for each forecast before start, so reading
     # it raised "Length of values (8) does not match length of index (6)".
     model = ETSModel(austourists)
-    res = model.smooth(fixed_params(model))
+    res = model.smooth(fixed_params(model), param_index="integer")
     n, end = res.nobs, 75
     pred = res.get_prediction(
         start=start,
