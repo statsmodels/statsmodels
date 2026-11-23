@@ -3913,3 +3913,26 @@ def test_bool_factor_arguments(value, arg):
     endog = _int_like_dfm_endog()
     with pytest.raises(ValueError, match=f"`{arg}` argument must"):
         dynamic_factor_mq.DynamicFactorMQ(endog, **{arg: value})
+
+
+def test_results_summary_quasi_newton_fit():
+    # The summary of a fit with another optimizer than the EM algorithm (whose
+    # mle_settings are a dict) has no "EM Iterations" entry, and its tables
+    # of parameters are those of the results at the same parameters
+    endog = _ar1_factor_data(nobs=12)
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, idiosyncratic_ar1=False)
+    msg = "Maximum Likelihood optimization failed to converge"
+    with pytest.warns(ConvergenceWarning, match=msg):
+        res = mod.fit(method="lbfgs", maxiter=2, disp=False)
+    assert isinstance(res.mle_settings, dict)
+    assert_equal(res.mle_settings["optimizer"], "lbfgs")
+
+    summary = res.summary()
+    assert "EM Iterations" not in str(summary)
+    llf = re.search(r"Log Likelihood\s+(\S+)", str(summary.tables[0])).group(1)
+    # atol: the summary shows the loglikelihood with three decimals
+    assert_allclose(float(llf), mod.loglike(res.params), rtol=0, atol=5e-4)
+    desired = mod.smooth(res.params).summary()
+    assert_equal(len(summary.tables), len(desired.tables))
+    for table, desired_table in zip(summary.tables[1:], desired.tables[1:], strict=True):
+        assert_equal(str(table), str(desired_table))
