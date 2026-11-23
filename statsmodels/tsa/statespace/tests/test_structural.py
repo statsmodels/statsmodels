@@ -1138,3 +1138,42 @@ def test_fixed_slope_boolean_specification(kwargs, params):
         mod_clone = mod.clone(endog)
     assert_equal(mod_clone.trend_specification, "fixed slope")
     assert_allclose(mod_clone.loglike(params), res.llf, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        dict(level="irregular", seasonal=4),
+        dict(level="irregular", freq_seasonal=[{"period": 4}]),
+        dict(level="ntrend", autoregressive=1),
+        dict(level="irregular", cycle=True, stochastic_cycle=True, damped_cycle=True),
+        dict(level="irregular", exog=True),
+        dict(autoregressive=1, exog=True),
+    ],
+    ids=["seasonal", "freq_seasonal", "autoregressive", "cycle", "exog", "exog-ar"],
+)
+def test_start_params_missing_without_level(kwargs):
+    # Without a level, the starting parameters also ignore missing
+    # observations: they are those of the model of the data without them (as
+    # with a level, test_start_params_missing)
+    rng = np.random.default_rng(20261202)
+    endog = rng.standard_normal(60)
+    endog[1:] += 0.5 * endog[:-1]
+    exog = rng.standard_normal((60, 1))
+    endog += exog[:, 0]
+    endog[[5, 20, 21]] = np.nan
+    keep = ~np.isnan(endog)
+    kwargs = kwargs.copy()
+    use_exog = kwargs.pop("exog", False)
+    mod = UnobservedComponents(endog, exog=exog if use_exog else None, **kwargs)
+    mod_dropped = UnobservedComponents(
+        endog[keep], exog=exog[keep] if use_exog else None, **kwargs
+    )
+    assert_allclose(mod.start_params, mod_dropped.start_params, rtol=1e-12)
+    if "seasonal" in kwargs or "freq_seasonal" in kwargs:
+        # Every variance starts at the variance of the observed data, and the
+        # fit is finite (it was NaN)
+        assert_allclose(mod.start_params, np.var(endog[keep]), rtol=1e-12)
+        res = mod.fit(disp=False)
+        assert np.all(np.isfinite(res.params))
+        assert np.isfinite(res.llf)

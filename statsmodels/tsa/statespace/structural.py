@@ -925,6 +925,19 @@ class UnobservedComponents(MLEModel):
 
     @property
     def start_params(self):
+        """
+        (list) Starting parameters for maximum likelihood estimation.
+
+        Missing observations are dropped before the starting parameters are
+        computed.
+
+        .. versionchanged:: 0.15.1
+
+           Missing observations are also dropped in models without a level.
+           Before, the starting parameters of such a model with missing data
+           were NaN, so ``fit`` returned NaN parameters, or computing them
+           raised an error.
+        """
         if not hasattr(self, "parameters"):
             return []
 
@@ -953,7 +966,7 @@ class UnobservedComponents(MLEModel):
             elif self.stochastic_level:
                 _start_params["level_var"] = np.std(trend1) ** 2
         else:
-            resid = self.ssm.endog[0]
+            resid = endog[:, 0]
 
         # Regression
         if self.regression and self.mle_regression:
