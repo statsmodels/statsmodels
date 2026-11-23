@@ -3190,7 +3190,7 @@ def test_prediction_simulation_results(oildata, start):
     # name of endog as the only column, which raised a TypeError for a
     # DataFrame of more than one simulation
     reps = 20
-    res = ETSModel(oildata).smooth([0.3, 110.0])
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
     end = 51
     pred = res.get_prediction(
         start=start,
