@@ -2807,7 +2807,7 @@ def test_predict_dynamic_key_covers_several_dates():
     rng = np.random.default_rng(20261121)
     index = pd.date_range("2000-01-01", periods=500, freq="D")
     y = pd.Series(10 + rng.standard_normal(500).cumsum(), index=index)
-    res = ETSModel(y).smooth([0.5, 10.0])
+    res = ETSModel(y).smooth([0.5, 10.0], param_index="integer")
     loc = 366 + 31 + 28 + 31
     assert index[loc] == pd.Timestamp("2001-04-01")
     pred = res.predict(start=10, dynamic="2001-04")
