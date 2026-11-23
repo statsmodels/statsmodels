@@ -7,6 +7,7 @@ License: BSD-3
 from statsmodels.compat.pandas import MONTH_END, QUARTER_END
 
 from collections import OrderedDict
+from copy import deepcopy
 from warnings import warn
 
 import numpy as np
@@ -2638,7 +2639,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             non-stationary parameters for states with a stationary
             initialization, these states are switched to a diffuse
             initialization (with an `EstimationWarning`) and the EM
-            iterations restart.
+            iterations restart. The switched initialization is used for
+            this fit only; the model keeps its initialization.
 
             .. versionchanged:: 0.15.1
 
@@ -2652,7 +2654,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                block of quarterly idiosyncratic AR(1) terms, is
                non-stationary if an eigenvalue of its transition matrix has
                a modulus of one or more; a negative or complex eigenvalue
-               with a modulus above one was not detected.
+               with a modulus above one was not detected. After a restart,
+               the model's initialization was replaced by the default
+               initialization, and an initialization set by block was
+               changed in place (the switched states were diffuse).
         mstep_method : {'missing', 'nonmissing'}, optional
             The EM algorithm maximization step. If there are no NaN values
             in the dataset, this can be set to "nonmissing" (which is slightly
@@ -2743,7 +2748,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 self.update(out[1])
                 switch_init = []
                 T = self["transition"]
-                init = self.ssm.initialization
+                # States are switched in a copy, so that the model's
+                # initialization (which can be the user's object) is kept
+                init = deepcopy(self.ssm.initialization)
                 iloc = np.arange(self.k_states)
 
                 # A global initialization applies to every block of states. A
@@ -2803,6 +2810,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                          " switched to diffuse for the following: "
                          f" {switch_init}, and fitting was restarted.",
                          EstimationWarning, stacklevel=2)
+                    # The model's initialization is restored after the restart
+                    base_init = self.ssm.initialization
                     self.ssm.initialization = init
                     # The parameters in `params` are transformed
                     results = self.fit_em(
@@ -2815,7 +2824,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                         low_memory=low_memory,
                         llf_decrease_action=llf_decrease_action,
                         llf_decrease_tolerance=llf_decrease_tolerance)
-                    self.ssm.initialize(self._default_initialization())
+                    self.ssm.initialization = base_init
                     return results
 
             # Check for decrease in the log-likelihood

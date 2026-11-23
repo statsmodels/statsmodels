@@ -4138,3 +4138,55 @@ def test_fit_em_nonstationary_restart_eigenvalue_modulus(case):
 
     assert_allclose(res.params, res_diffuse.params, rtol=1e-10)
     assert_allclose(res.llf, res_diffuse.llf, rtol=1e-10)
+
+
+@pytest.mark.parametrize("case", ["by_block", "global"])
+def test_fit_em_nonstationary_restart_keeps_initialization(case):
+    # A restart (the factor block of the trending data is switched to
+    # diffuse after the first EM step) uses the switched initialization for
+    # the fit only: the model keeps its initialization object, which is not
+    # changed. (The model's initialization was replaced by the default
+    # initialization, and an initialization set by block was changed in
+    # place.)
+    endog = _trend_data()
+    kwargs = {"standardize": False}
+    if case == "global":
+        kwargs["initialization"] = "stationary"
+
+    def model():
+        # A new model with the initialization of the case: by block, with the
+        # idiosyncratic AR(1) of y2 diffuse, or global stationary
+        mod = dynamic_factor_mq.DynamicFactorMQ(endog, **kwargs)
+        if case == "by_block":
+            mod.ssm.initialization.set(mod.state_names.index("eps_M.y2"), "diffuse")
+        return mod
+
+    mod = model()
+    init = mod.ssm.initialization
+    start_params = mod.start_params
+    desired = model().loglike(start_params)
+
+    msg = re.escape(repr(["factor block: ('0',)"])) + ", and fitting was restarted"
+    msg_maxiter = "EM reached maximum number of iterations"
+    with pytest.warns(EstimationWarning, match=msg):
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            res = mod.fit(start_params, maxiter=2, em_initialization=False)
+
+    assert_(mod.ssm.initialization is init)
+    assert_equal(init.initialization_type,
+                 "stationary" if case == "global" else None)
+    assert_allclose(mod.loglike(start_params), desired, rtol=1e-12)
+
+    if case == "by_block":
+        # The fit is that with the factor block also diffuse from the start
+        # (see test_fit_em_nonstationary_restart)
+        mod_diffuse = model()
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            mod_diffuse.fit_em(start_params, maxiter=1, return_params=True)
+        mod_diffuse.ssm.initialization.set((0, 1), "diffuse")
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            res_diffuse = mod_diffuse.fit(
+                start_params, maxiter=2, em_initialization=False
+            )
+        assert_allclose(res.params, res_diffuse.params, rtol=1e-10)
+        assert_allclose(res.llf, res_diffuse.llf, rtol=1e-10)
