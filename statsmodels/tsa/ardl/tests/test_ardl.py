@@ -2369,3 +2369,43 @@ def test_bounds_test_case_types(case, to_case):
     expected = {1: 0.7109023, 2: 5.116768, 3: 6.205875, 4: 5.430622, 5: 6.785325}
     bounds_result = _dane_uecm_res().bounds_test(to_case(case))
     assert_allclose(bounds_result.statistic, expected[case], rtol=1e-6)
+
+
+@pytest.mark.parametrize("singular", [False, True])
+@pytest.mark.parametrize("causal", [False, True])
+def test_ardl_select_order_glob_no_lags_label(causal, singular):
+    # With glob=True, the model without any candidate lags was listed with
+    # exog order 0, so the selected model included lag 0 of every exog
+    # variable (causal=True raised ValueError) when that model had the
+    # smallest BIC, as it does here
+    rng = np.random.default_rng(20261123)
+    nobs = 100
+    y = rng.standard_normal(nobs)
+    x = rng.standard_normal((nobs, 2))
+    fixed = np.ones((nobs, 1)) if singular else None
+    res = ardl_select_order(
+        y, 1, x, int(causal), "c", fixed=fixed, causal=causal, glob=True
+    )
+
+    def lags_of(order, first):
+        # The lags that an ARDL order includes
+        if order is None:
+            return []
+        if isinstance(order, int):
+            return list(range(first, order + 1))
+        return list(order)
+
+    # Each listed order against the regression on the lags it includes, on
+    # the sample after 1 lag
+    t = np.arange(1, nobs)
+    always = [np.ones(nobs - 1)] * (2 if singular else 1)
+    assert len(res.bic) == 8
+    for value, (lags, order) in res.bic.items():
+        cols = [y[t - lag] for lag in lags_of(lags, 1)]
+        for key, exog_order in order.items():
+            cols += [x[t - lag, key] for lag in lags_of(exog_order, int(causal))]
+        reg = np.column_stack(always + cols)
+        assert_allclose(value, _bic_by_hand(y[t], reg), rtol=1e-8)
+    assert res.bic.iloc[0] == (0, {0: None, 1: None})
+    assert res.model.ar_lags is None
+    assert res.model.dl_lags == {}
