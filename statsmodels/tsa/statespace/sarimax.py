@@ -14,7 +14,7 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.tools.docstring_helpers import Appender
-from statsmodels.tools.sm_exceptions import EstimationWarning
+from statsmodels.tools.sm_exceptions import EstimationWarning, SpecificationWarning
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.arima.params import SARIMAXParams
 from statsmodels.tsa.arima.specification import SARIMAXSpecification
@@ -77,7 +77,15 @@ class SARIMAX(MLEModel):
     time_varying_regression : bool, optional
         Used when an explanatory variables, `exog`, are provided
         to select whether or not coefficients on the exogenous regressors are
-        allowed to vary over time. Default is False.
+        allowed to vary over time. Default is False. Without `exog` it has no
+        effect: it is set to False, with a ``SpecificationWarning``.
+
+        .. versionchanged:: 0.15.1
+
+           Without `exog`, the model is the one without time-varying
+           regression. Before, a model without autoregressive or moving
+           average terms, such as ``order=(0, 1, 0)``, had no error term,
+           no parameters and a log-likelihood of 0.
     mle_regression : bool, optional
         Whether or not to use estimate the regression coefficients for the
         exogenous variables as part of maximum likelihood estimation or through
@@ -380,6 +388,12 @@ class SARIMAX(MLEModel):
                              " must integrate the coefficients as part of the"
                              " state vector, so that `mle_regression` must"
                              " be set to False.")
+        # Without exogenous regressors there are no coefficients to vary, so
+        # the model is the one without time-varying regression
+        if self.time_varying_regression and self._spec.k_exog == 0:
+            warn("time_varying_regression has no effect without exog and is"
+                 " set to False.", SpecificationWarning, stacklevel=2)
+            self.time_varying_regression = False
 
         # Lag polynomials
         self._params.ar_params = -1
