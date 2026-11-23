@@ -1,0 +1,3 @@
+- Negative ``component`` values in the Sims-Zha bands of ``IRAnalysis`` are
+  deprecated and will raise a ``ValueError`` after statsmodels 0.17 is
+  released. :pr:`10990`

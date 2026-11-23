@@ -385,7 +385,16 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
 
     @property
     def param_names(self):
-        """(list of str) List of human readable parameter names (for parameters actually included in the model)"""
+        """
+        (list of str) List of human readable parameter names (for parameters
+        actually included in the model)
+
+        .. versionchanged:: 0.15.1
+
+           A coefficient that does not switch has no regime suffix, also when
+           other coefficients switch. Before, it had the suffix of the last
+           regime, such as `ar.L2[1]`.
+        """
         # Inherited parameters
         param_names = np.array(
             markov_regression.MarkovRegression.param_names.fget(self),
@@ -395,7 +404,8 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         if np.any(self.switching_ar):
             for i in range(self.k_regimes):
                 param_names[self.parameters[i, "autoregressive"]] = [
-                    f"ar.L{j+1:d}[{i:d}]" for j in range(self.order)]
+                    f"ar.L{j+1:d}[{i:d}]" if switching else f"ar.L{j+1:d}"
+                    for j, switching in enumerate(self.switching_ar)]
         else:
             param_names[self.parameters["autoregressive"]] = [
                 f"ar.L{j+1:d}" for j in range(self.order)]

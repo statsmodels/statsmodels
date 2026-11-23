@@ -1715,6 +1715,12 @@ def ardl_select_order(
             considered. It was left out, so a different model could be
             selected, and an UnboundLocalError was raised when there were
             no candidate lags.
+
+            If True, the model without any of the candidate lags is listed
+            with no lags of the exog variables (None) and, if it has the
+            smallest criterion, selected without them. It was listed with
+            order 0, so the selected model included lag 0 of every exog
+            variable (and a ValueError was raised if causal is True).
     seasonal : bool, optional
         Flag indicating whether to include seasonal dummies in the model. If
         seasonal is True and trend includes 'c', then the first period
@@ -1812,9 +1818,6 @@ def ardl_select_order(
         y = y - always @ (pinv_always @ y)
 
     def perm_to_tuple(keys, perm):
-        if perm == ():
-            d = {k: 0 for k, _ in keys if k is not None}
-            return (0,) + tuple((k, v) for k, v in d.items())
         d = defaultdict(list)
         y_lags = []
         for v in perm:
@@ -1941,6 +1944,12 @@ class UECM(ARDL):
     ----------
     endog : array_like
         A 1-d endogenous response variable. The dependent variable.
+
+        .. versionchanged:: 0.15.1
+
+            The regressors are floating point when endog is an integer array.
+            The lagged levels of exog were truncated to integers (and rounded
+            to single precision for a float32 endog).
     lags : int or None
         The number of lags p of the endogenous variable in the equivalent
         ARDL, so that the model contains p - 1 lagged differences of the
@@ -1950,6 +1959,12 @@ class UECM(ARDL):
     exog : array_like, optional
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
+
+        .. versionchanged:: 0.15.1
+
+            Bool variables are differenced as 0 and 1. The differences were
+            their absolute values, so a change from True to False was 1
+            instead of -1.
     order : int or dict, optional
         If int, uses lags 0, 1, ..., order for all exog variables. If a
         dict, applies the lags series by series. If ``exog`` is anything
@@ -2197,7 +2212,7 @@ class UECM(ARDL):
         """Construct and format model regressors"""
         # 1. Endogenous and endogenous lags
         self._maxlag = max(self._lags) if self._lags else 0
-        dendog = np.full_like(self.data.endog, np.nan)
+        dendog = np.full(self.data.endog.shape, np.nan)
         dendog[1:] = np.diff(self.data.endog, axis=0)
         dlag = max(0, self._maxlag - 1)
         _lagmat_result = lagmat(dendog, dlag, original="sep")
@@ -2207,7 +2222,7 @@ class UECM(ARDL):
         # 3. Levels
         orig_exog = self.data.orig_exog
         exog_pandas = isinstance(orig_exog, pd.DataFrame)
-        lvl = np.full_like(self.data.endog, np.nan)
+        lvl = np.full(self.data.endog.shape, np.nan)
         lvl[1:] = self.data.endog[:-1]
         lvls = [lvl.copy()]
         for key in self._order:
@@ -2220,10 +2235,16 @@ class UECM(ARDL):
         self._levels = np.column_stack(lvls)
 
         # 4. exog Lags
+        # np.diff and DataFrame.diff take the xor of bool values, so bool
+        # variables are differenced as float
         if exog_pandas:
-            dexog = orig_exog.diff()
+            bool_dtype = np.dtype(bool)
+            bool_cols = [c for c, dt in orig_exog.dtypes.items() if dt == bool_dtype]
+            dexog = orig_exog.astype(dict.fromkeys(bool_cols, float)).diff()
         else:
-            dexog = np.full_like(self.data.exog, np.nan)
+            if orig_exog.dtype == bool:
+                orig_exog = orig_exog.astype(float)
+            dexog = np.full(self.data.exog.shape, np.nan)
             dexog[1:] = np.diff(orig_exog, axis=0)
         adj_order = {}
         for key, val in self._order.items():

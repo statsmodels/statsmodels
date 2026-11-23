@@ -3,6 +3,7 @@ from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 from itertools import combinations
 from typing import NamedTuple
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -2423,3 +2424,107 @@ def test_ardl_select_order_maxorder_dict_numpy_int_keys(to_int):
     assert_allclose(res.bic.index, expected.bic.index, rtol=1e-12)
     assert list(res.bic) == list(expected.bic)
     assert res.model.ardl_order == expected.model.ardl_order
+
+
+@pytest.mark.parametrize("endog_int", [True, False])
+@pytest.mark.parametrize("exog_int", [True, False])
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_uecm_integer_data(endog_int, exog_int, use_pandas):
+    # The levels of exog were truncated to integers when endog was an integer
+    # array, and integer data warned about casting NaN to an integer
+    rng = np.random.default_rng(20261127)
+    nobs = 120
+    y = np.round(4 * np.cumsum(rng.standard_normal(nobs)))
+    x = np.cumsum(rng.standard_normal(nobs))
+    if exog_int:
+        x = np.round(3 * x)
+    endog = y.astype(np.int64) if endog_int else y
+    exog = x.astype(np.int64) if exog_int else x
+    if use_pandas:
+        endog = pd.Series(endog, name="y")
+        exog = pd.DataFrame({"x": exog})
+    else:
+        exog = exog[:, None]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = UECM(endog, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, x.L1, D.y.L1, D.x.L0 and D.x.L1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.r_[np.nan, np.diff(x)]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1], dy[t - 1], dx[t], dx[t - 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
+
+
+@pytest.mark.parametrize("kind", ["ndarray", "dataframe", "mixed"])
+def test_uecm_bool_exog(kind):
+    # np.diff and DataFrame.diff take the xor of bool values, so the
+    # differences of bool exog were their absolute values
+    rng = np.random.default_rng(20261128)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    xb = rng.standard_normal((nobs, 2)) > 0
+    x = xb.astype(float)
+    if kind == "ndarray":
+        exog = xb
+    else:
+        exog = pd.DataFrame(xb, columns=["a", "b"])
+        if kind == "mixed":
+            # A float column next to the bool one
+            x[:, 1] = rng.standard_normal(nobs)
+            exog["b"] = x[:, 1]
+    res = UECM(y, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, the levels x.L1 and the differences D.y.L1, D.x.L0
+    # and D.x.L1, with the bool values as 0 and 1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.vstack([np.full((1, 2), np.nan), np.diff(x, axis=0)])
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1], dy[t - 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1], dx[t - 1, 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
+
+
+@pytest.mark.parametrize("singular", [False, True])
+@pytest.mark.parametrize("causal", [False, True])
+def test_ardl_select_order_glob_no_lags_label(causal, singular):
+    # With glob=True, the model without any candidate lags was listed with
+    # exog order 0, so the selected model included lag 0 of every exog
+    # variable (causal=True raised ValueError) when that model had the
+    # smallest BIC, as it does here
+    rng = np.random.default_rng(20261123)
+    nobs = 100
+    y = rng.standard_normal(nobs)
+    x = rng.standard_normal((nobs, 2))
+    fixed = np.ones((nobs, 1)) if singular else None
+    res = ardl_select_order(
+        y, 1, x, int(causal), "c", fixed=fixed, causal=causal, glob=True
+    )
+
+    def lags_of(order, first):
+        # The lags that an ARDL order includes
+        if order is None:
+            return []
+        if isinstance(order, int):
+            return list(range(first, order + 1))
+        return list(order)
+
+    # Each listed order against the regression on the lags it includes, on
+    # the sample after 1 lag
+    t = np.arange(1, nobs)
+    always = [np.ones(nobs - 1)] * (2 if singular else 1)
+    assert len(res.bic) == 8
+    for value, (lags, order) in res.bic.items():
+        cols = [y[t - lag] for lag in lags_of(lags, 1)]
+        for key, exog_order in order.items():
+            cols += [x[t - lag, key] for lag in lags_of(exog_order, int(causal))]
+        reg = np.column_stack(always + cols)
+        assert_allclose(value, _bic_by_hand(y[t], reg), rtol=1e-8)
+    assert res.bic.iloc[0] == (0, {0: None, 1: None})
+    assert res.model.ar_lags is None
+    assert res.model.dl_lags == {}
