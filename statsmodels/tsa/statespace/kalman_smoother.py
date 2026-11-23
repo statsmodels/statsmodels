@@ -1247,6 +1247,11 @@ class SmootherResults(FilterResults):
             observed variables arising from the impacts to the first two
             states will be returned.
 
+            .. versionchanged:: 0.15.1
+
+               `revision_impacts` is restricted to these states as well. It
+               was the impact of the revisions through all states.
+
         Returns
         -------
         news_results : SimpleNamespace
@@ -1296,7 +1301,8 @@ class SmootherResults(FilterResults):
             - `revision_results`: results object that updates the `previous`
               results to take into account data revisions
             - `revision_impacts`: total impacts from all revisions (both
-              grouped and detailed)
+              grouped and detailed), through the states of `state_index` if
+              it is given
             - `revisions_ix`: list of `(t, i)` positions of revisions in endog
             - `revisions_details`: list of `(t, i)` positions of revisions to
               endog for which details of impacts were computed
@@ -1591,6 +1597,21 @@ class SmootherResults(FilterResults):
 
             revision_impacts = (revised_impact_forecasts -
                                 prev_impacted_forecasts).T
+
+            # Subset the states used for the impacts if applicable: the
+            # design matrix times the revisions of those smoothed states
+            if state_index is not None:
+                prev_state = previous.predict(
+                    start=start, end=end, **extend_kwargs).smoothed_state
+                state_revisions = (
+                    revision_results.smoothed_state[:, start:end] - prev_state)
+                ZT = rev_mod.design.T
+                if ZT.shape[0] > 1:
+                    ZT = ZT[start:end]
+                revision_impacts = np.sum(
+                    ZT[:, state_index, :]
+                    * state_revisions[state_index].T[:, :, None], axis=1)
+
             if t is not None:
                 revision_impacts = revision_impacts[0]
 
