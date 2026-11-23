@@ -2244,7 +2244,8 @@ class ETSResults(base.StateSpaceMLEResults):
             start_smooth = None
             end_smooth = None
             nsmooth = 0
-            start_dynamic = start
+            # a start after the sample is forecast from the end of the sample
+            start_dynamic = min(start, end + 1)
         else:
             # dynamic simulations from start + dynamic
             start_smooth = start

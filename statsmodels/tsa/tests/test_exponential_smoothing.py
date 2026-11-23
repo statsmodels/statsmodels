@@ -2854,3 +2854,35 @@ def test_predict_dynamic_after_end_or_sample(austourists, end, dynamic):
     assert_allclose(
         pred.summary_frame(), expected.summary_frame(), rtol=1e-12
     )
+
+
+@pytest.mark.parametrize("dynamic", [True, 0, 1, 3, "date", "later date"])
+@pytest.mark.parametrize("start", [68, 70])
+def test_predict_dynamic_start_after_sample(austourists, start, dynamic):
+    # With a start after the end of the sample (nobs = 68), the predictions
+    # are the forecasts from the end of the sample whatever dynamic is. A
+    # dynamic at start (True, 0, or the date of start) began the forecasts
+    # at start, and a later one after it, so these raised "Cannot anchor
+    # simulation outside of the sample", except for start = nobs with
+    # dynamic at start. The exact variances are mse times the relative
+    # variances of R's forecast package.
+    model = ETSModel(austourists)
+    res = model.smooth(fixed_params(model))
+    n, end = res.nobs, 75
+    index = austourists.index
+    index = pd.date_range(index[0], periods=end + 1, freq=index.freq)
+    if dynamic in ("date", "later date"):
+        dynamic = str(index[start + 2 * (dynamic == "later date")].date())
+    index = index[start:]
+    expected = res.forecast(end - n + 1).to_numpy()[start - n :]
+    relative = R_RELATIVE_FORECAST_VARIANCE["ANN"][start - n : end - n + 1]
+
+    pred = res.predict(start=start, end=end, dynamic=dynamic)
+    assert pred.index.equals(index)
+    assert_allclose(pred, expected, rtol=1e-12)
+
+    pred = res.get_prediction(start=start, end=end, dynamic=dynamic)
+    frame = pred.summary_frame()
+    assert frame.index.equals(index)
+    assert_allclose(frame["mean"], expected, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, res.mse * np.asarray(relative), rtol=1e-12)
