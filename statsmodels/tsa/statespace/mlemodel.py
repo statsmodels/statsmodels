@@ -3478,6 +3478,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         return self.cov_params_robust_oim
 
     def _cov_params_robust_oim(self, approx_complex_step=True, approx_centered=False):
+        # If this is the covariance matrix of the results, the rank is that of
+        # this matrix, not that of the OPG matrix, which sets it first
+        set_rank = self._rank is None
         cov_opg = self._cov_params_opg(
             approx_complex_step=approx_complex_step, approx_centered=approx_centered
         )
@@ -3509,6 +3512,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             )
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
+        if set_rank:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return cov_params
 
     @cache_readonly
@@ -3516,6 +3521,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (array) The QMLE variance / covariance matrix. Computed using the
         method from Harvey (1989) as the evaluated hessian.
+
+        .. versionchanged:: 0.15.1
+
+           For results with ``cov_type="robust"`` or ``"robust_oim"``, the
+           rank of this matrix decides whether ``summary`` warns that the
+           covariance matrix is singular. The rank of the outer product of
+           gradients matrix was used.
         """
         return self._cov_params_robust_oim(
             self._cov_approx_complex_step, self._cov_approx_centered
@@ -3524,6 +3536,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
     def _cov_params_robust_approx(
         self, approx_complex_step=True, approx_centered=False
     ):
+        # If this is the covariance matrix of the results, the rank is that of
+        # this matrix, not that of the OPG matrix, which sets it first
+        set_rank = self._rank is None
         cov_opg = self._cov_params_opg(
             approx_complex_step=approx_complex_step, approx_centered=approx_centered
         )
@@ -3556,6 +3571,8 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             )
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
+        if set_rank:
+            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
         return cov_params
 
     @cache_readonly
@@ -3563,6 +3580,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         """
         (array) The QMLE variance / covariance matrix. Computed using the
         numerical Hessian as the evaluated hessian.
+
+        .. versionchanged:: 0.15.1
+
+           For results with ``cov_type="robust_approx"``, the rank of this
+           matrix decides whether ``summary`` warns that the covariance matrix
+           is singular. The rank of the outer product of gradients matrix was
+           used.
         """
         return self._cov_params_robust_approx(
             self._cov_approx_complex_step, self._cov_approx_centered

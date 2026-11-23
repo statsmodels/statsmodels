@@ -3404,3 +3404,50 @@ def test_simulate_negative_anchor_is_from_the_end(func, use_dates):
     desired = simulate(15)
     assert_allclose(simulate(-5), desired, rtol=1e-14)
     assert not np.allclose(simulate(14), desired)
+
+
+@pytest.mark.parametrize(
+    "cov_type, rank_at_mle, rank_singular",
+    [
+        ("opg", 2, 2),
+        ("oim", 2, 2),
+        ("approx", 2, 1),
+        ("robust", 2, 2),
+        ("robust_oim", 2, 2),
+        ("robust_approx", 2, 1),
+    ],
+)
+@pytest.mark.parametrize("at_mle", [True, False])
+def test_summary_singular_warning_follows_robust_cov_type(
+    cov_type, rank_at_mle, rank_singular, at_mle
+):
+    # White noise with a regressor, at the OLS coefficient b. With the
+    # residuals e and s2 = 2 * mean(e**2), the derivatives of the
+    # loglikelihood with respect to b and s2, -sum(x * e) / s2**2, and twice
+    # with respect to s2, nobs / (2 * s2**2) - sum(e**2) / s2**3, are zero, so
+    # the Hessian is diag(-sum(x**2) / s2, 0), of rank 1. Harvey's OIM matrix
+    # is diag(sum(x**2) / s2, nobs / (2 * s2**2)) and the scores
+    # x * e / s2 and (e**2 / s2 - 1) / (2 * s2) are not collinear, so the OIM
+    # and OPG matrices have rank 2. The robust matrix inv(H inv(OPG) H) has
+    # the rank of H: 2 with Harvey's OIM matrix as H ("robust"), 1 with the
+    # numerical Hessian ("robust_approx"). At the MLE, s2 = mean(e**2), the
+    # Hessian is diag(-sum(x**2) / s2, -nobs / (2 * s2**2)), of rank 2.
+    rng = np.random.default_rng(1234)
+    nobs = 50
+    x = rng.standard_normal(nobs)
+    y = 0.5 * x + rng.standard_normal(nobs)
+    beta = (x @ y) / (x @ x)
+    resid = y - beta * x
+    sigma2 = (1 if at_mle else 2) * (resid @ resid) / nobs
+    mod = sarimax.SARIMAX(y, exog=x, order=(0, 0, 0))
+    res = mod.smooth([beta, sigma2], cov_type=cov_type)
+    # The other robust matrices (rank 2 and 1 here) do not change the rank of
+    # the results' own matrix
+    for name in ["cov_params_robust_oim", "cov_params_robust_approx"]:
+        getattr(res, name)
+
+    expected_rank = rank_at_mle if at_mle else rank_singular
+    assert np.linalg.matrix_rank(res.cov_params()) == expected_rank
+    summary = res.summary().as_text()
+    singular = "Covariance matrix is singular or near-singular" in summary
+    assert singular is (expected_rank < 2)
