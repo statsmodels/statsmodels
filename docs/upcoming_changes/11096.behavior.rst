@@ -1,0 +1,11 @@
+- ``DynamicFactorMQResults.get_smoothed_decomposition`` with
+  ``original_scale=True`` (the default) computed the contributions
+  of the observations from the standardized data and those of the
+  observation intercept from the means without dividing them by the
+  standard deviations, so for data with nonzero means the
+  contributions did not add up to the smoothed state or signal. The
+  contributions are those of the model of the data in the original
+  scale: they add up to the smoothed state and, with the means, to
+  the smoothed signal. The contributions of the observations and of
+  the observation intercept change for standardized data with
+  nonzero means. :pr:`11096`
