@@ -844,6 +844,15 @@ class NewsResults:
         dates / variables. That information can be found in the
         `details_by_impact` and `details_by_update` tables.
         """
+        return self._get_impacts()
+
+    def _get_impacts(self, key=None):
+        # The impacts table. The rows of `key` (a tuple of impact dates and
+        # impacted variables, as for MultiIndex.get_locs) are selected before
+        # the rows within the tolerance are left out, so that a date or
+        # variable whose impacts are all within the tolerance selects no rows
+        # rather than raising a KeyError
+
         # Summary of impacts
         impacts = pd.concat([
             self.prev_impacted_forecasts.unstack().rename("estimate (prev)"),
@@ -864,6 +873,11 @@ class NewsResults:
 
         if self.impacted_variable is not None:
             impacts = impacts.loc[np.s_[:, self.impacted_variable], :]
+
+        if key is not None:
+            # Positions of the rows, so that a single impact date and a
+            # single impacted variable give a table rather than a Series
+            impacts = impacts.iloc[impacts.index.get_locs(key)]
 
         tmp = np.abs(impacts[["impact of revisions", "impact of news"]])
         mask = (tmp > self.tolerance).any(axis=1)
@@ -931,9 +945,7 @@ class NewsResults:
         if impacted_variable is not None:
             s[1] = np.s_[impacted_variable]
         s = tuple(s)
-        # Positions of the rows, so that a single impact date and a single
-        # impacted variable give a table rather than a Series
-        impacts = self.impacts.iloc[self.impacts.index.get_locs(s)]
+        impacts = self._get_impacts(key=s)
 
         # Make the first index level the groupby level
         groupby = groupby.lower().replace("_", " ")

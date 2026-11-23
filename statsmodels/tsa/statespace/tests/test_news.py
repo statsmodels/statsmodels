@@ -2527,3 +2527,74 @@ def test_univariate_defaults_without_variable_rows(name, case):
     actual = actual.reindex(revision_impacts.index, fill_value=0.0)
     # atol for the rounding to 6 digits
     assert_allclose(actual, revision_impacts, rtol=0, atol=1e-5)
+
+
+# - Selections without impacts above the tolerance ----------------------------
+
+
+@pytest.mark.parametrize("model, tolerance, kwargs", [
+    # The observed 2009Q2 has no impact of the news (no revision)
+    ("univariate", None, {"impact_date": "2009Q2"}),
+    ("univariate", None, {"impact_date": "2009Q2", "impacted_variable": "infl"}),
+    # A tolerance above every impact
+    ("univariate", 1e6, {"impacted_variable": "infl"}),
+    ("bivariate", 1e6, {"impact_date": "2009Q3"}),
+    ("bivariate", 1e6, {"impacted_variable": "unemp"}),
+    ("bivariate", 1e6, {"impact_date": "2009Q3", "impacted_variable": "unemp"}),
+], ids=["uni-date", "uni-date-variable", "uni-variable", "bi-date",
+        "bi-variable", "bi-date-variable"])
+def test_summary_impacts_selection_within_tolerance(model, tolerance, kwargs):
+    # An impact date or impacted variable whose impacts are all within the
+    # tolerance selects no rows, so the table has only the header (it raised
+    # a KeyError: the label was looked up in impacts, which leaves out these
+    # rows). A label that is not an impact date or variable still raises.
+    news_kwargs = {} if tolerance is None else {"tolerance": tolerance}
+    if model == "univariate":
+        news = univariate_news(revision=False, **news_kwargs)
+        columns = ["estimate (prev)", "impact of news", "estimate (new)"]
+    else:
+        news = bivariate_news(**news_kwargs)
+        columns = IMPACTS_COLUMNS
+    # The labels are those of an impact date and an impacted variable, but
+    # impacts has no row for them
+    dates = news.post_impacted_forecasts.index.astype(str)
+    assert_("impact_date" not in kwargs or kwargs["impact_date"] in dates)
+    assert_("impacted_variable" not in kwargs
+            or kwargs["impacted_variable"] in news.post_impacted_forecasts)
+    impacts = news.impacts
+    mask = np.ones(len(impacts), dtype=bool)
+    if "impact_date" in kwargs:
+        mask &= (impacts.index.get_level_values(0).astype(str)
+                 == kwargs["impact_date"])
+    if "impacted_variable" in kwargs:
+        mask &= (impacts.index.get_level_values(1)
+                 == kwargs["impacted_variable"])
+    assert_equal(mask.sum(), 0)
+
+    table = news.summary_impacts(**kwargs)
+    assert_equal(table_values(table),
+                 [["impact date", "impacted variable"] + columns])
+
+    with pytest.raises(KeyError):
+        news.summary_impacts(**{**kwargs, "impact_date": "2010Q4"})
+    with pytest.raises(KeyError):
+        news.summary_impacts(**{**kwargs, "impacted_variable": "cpi"})
+
+
+def test_summary_impacts_list_within_tolerance():
+    # A list with an impact date without impacts above the tolerance (the
+    # observed 2009Q2) selects the rows of the other dates
+    news = univariate_news(revision=False)
+    impacts = news.impacts
+    assert_equal(impacts.index.get_level_values(0).astype(str).tolist(),
+                 ["2009Q3", "2009Q4"])
+    table = news.summary_impacts(impact_date=["2009Q2", "2009Q3"],
+                                 float_format="%.4f")
+    values = table_values(table)
+    columns = ["estimate (prev)", "impact of news", "estimate (new)"]
+    assert_equal(values[0], ["impact date"] + columns)
+    assert_equal([row[0] for row in values[1:]], ["2009Q3"])
+    # atol for the rounding to 4 digits
+    assert_allclose(np.array(values[1][1:], dtype=float),
+                    impacts.loc["2009Q3", columns].to_numpy().ravel(),
+                    rtol=0, atol=5e-5)
