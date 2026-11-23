@@ -3933,3 +3933,55 @@ def test_news_state_index_ndarray():
     assert_allclose(news.total_impacts, desired.total_impacts)
     assert_allclose(news.weights, desired.weights)
     assert not np.allclose(news.update_impacts, news_all.update_impacts)
+
+
+@pytest.mark.parametrize(
+    "layout", ["monthly_ar1", "monthly_iid", "mixed_ar1", "mixed_iid"]
+)
+def test_news_common_states_layouts(layout):
+    # state_index="common" selects the factor states (the factors and their
+    # lags, which come first in the state vector) and none of the
+    # idiosyncratic states, for monthly and mixed-frequency data, with and
+    # without idiosyncratic AR(1) terms
+    endog_M = _ar1_factor_data()
+    endog_Q = _quarterly_series(np.linspace(-1.0, 1.0, 10) ** 2)
+    kwargs = {"idiosyncratic_ar1": layout.endswith("_ar1")}
+    if layout.startswith("monthly"):
+        # Without idiosyncratic AR(1) terms, the two factor states are all
+        # of the states (fewer than the three variables)
+        kwargs["factor_orders"] = 2
+        mod =dynamic_factor_mq.DynamicFactorMQ(endog_M.iloc[:-1], **kwargs)
+        mod_new = mod.clone(endog_M, retain_standardization=True)
+    else:
+        mod = dynamic_factor_mq.DynamicFactorMQ(
+            endog_M.iloc[:-1], endog_quarterly=endog_Q.iloc[:-1], **kwargs
+        )
+        mod_new = mod.clone(
+            endog_M, endog_quarterly=endog_Q, retain_standardization=True
+        )
+    params = mod.start_params
+    res = mod.smooth(params)
+    res_new = mod_new.smooth(params)
+
+    common = [i for i, name in enumerate(mod.state_names) if "eps_" not in name]
+    desired_common = {
+        "monthly_ar1": [0, 1],
+        "monthly_iid": [0, 1],
+        "mixed_ar1": [0, 1, 2, 3, 4],
+        "mixed_iid": [0, 1, 2, 3, 4],
+    }[layout]
+    assert_equal(common, desired_common)
+
+    kwargs = {"impact_date": endog_M.index[-1], "comparison_type": "previous"}
+    news = res_new.news(res, state_index="common", **kwargs)
+    desired = res_new.news(res, state_index=common, **kwargs)
+    assert_allclose(news.update_impacts, desired.update_impacts)
+    assert_allclose(news.total_impacts, desired.total_impacts)
+    assert_allclose(news.weights, desired.weights)
+    news_all = res_new.news(res, **kwargs)
+    if layout == "monthly_iid":
+        # All of the states are factor states
+        assert_equal(len(common), mod.k_states)
+        assert_allclose(news.update_impacts, news_all.update_impacts)
+    else:
+        assert not np.allclose(news.update_impacts, news_all.update_impacts)
