@@ -1140,7 +1140,7 @@ class GLM(base.LikelihoodModel):
         -----
         The default scale for Binomial, Poisson and Negative Binomial
         families is 1.  The default for the other families is Pearson's
-        Chi-Square estimate.
+        Chi-Square estimate divided by ``df_resid``.
         """
         if not self.scaletype:
             if isinstance(

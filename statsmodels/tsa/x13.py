@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 from warnings import warn
 
+import numpy as np
 import pandas as pd
 
 from statsmodels.tools.sm_exceptions import (
@@ -60,7 +61,7 @@ def _find_x12(x12path=None, prefer_x13=True):
 
     Parameters
     ----------
-    x12path : str, optional
+    x12path : str or Path, optional
         The path to the x12 or x13 binary, or to the directory containing
         it. If None, the X12PATH or X13PATH environmental variable is used.
     prefer_x13 : bool, optional
@@ -74,7 +75,11 @@ def _find_x12(x12path=None, prefer_x13=True):
         The full path to the located binary, or False if none was found.
     """
     _binary_names = BINARY_NAMES
-    if x12path is not None and x12path.endswith(_binary_names):
+    if x12path is not None:
+        x12path = os.fspath(x12path)
+    # Windows file names are not case sensitive, and shutil.which gives the
+    # extension in the case used by PATHEXT (.EXE)
+    if x12path is not None and x12path.lower().endswith(_binary_names):
         # remove binary from path if path is not a directory
         if not Path(x12path).is_dir():
             x12path = Path(x12path).parent
@@ -171,10 +176,11 @@ def _make_automdl_options(maxorder, maxdiff, diff):
 
 
 def _make_var_names(exog):
-    if hasattr(exog, "name"):
-        var_names = [exog.name]
-    elif hasattr(exog, "columns"):
+    # A DataFrame with a column called "name" also has a name attribute
+    if hasattr(exog, "columns"):
         var_names = exog.columns
+    elif hasattr(exog, "name"):
+        var_names = [exog.name]
     else:
         raise ValueError("exog is not a Series or DataFrame or is unnamed.")
     try:
@@ -185,7 +191,7 @@ def _make_var_names(exog):
         if exog.ndim == 1:
             var_names = "x1"
         else:
-            var_names = " ".join(_make_exog_names(exog))
+            var_names = " ".join(_make_exog_names(np.asarray(exog)))
     return var_names
 
 
@@ -466,6 +472,12 @@ def x13_arima_analysis(
         ``diff`` is ignored.
     exog : Series or DataFrame, optional
         Exogenous variables.
+
+        .. versionchanged:: 0.15.1
+
+           The columns of a DataFrame that has a column called "name" are
+           used as the names of the variables. They used to be replaced by
+           x1, x2, ...
     log : bool or None, optional
         If None, it is automatically determined whether to log the series or
         not. If False, logs are not taken. If True, logs are taken.
@@ -500,7 +512,7 @@ def x13_arima_analysis(
     print_stdout : bool, optional
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True.
-    x12path : str, optional
+    x12path : str or Path, optional
         The path to x12 or x13 binary. If None, the program will attempt
         to find x13as or x12a on the PATH or by looking at X13PATH or
         X12PATH depending on the value of prefer_x13.
@@ -768,6 +780,12 @@ def x13_arima_select_order(
         ``diff`` is ignored.
     exog : Series or DataFrame, optional
         Exogenous variables.
+
+        .. versionchanged:: 0.15.1
+
+           The columns of a DataFrame that has a column called "name" are
+           used as the names of the variables. They used to be replaced by
+           x1, x2, ...
     log : bool or None, optional
         If None, it is automatically determined whether to log the series or
         not. If False, logs are not taken. If True, logs are taken.
@@ -786,7 +804,7 @@ def x13_arima_select_order(
     print_stdout : bool, optional
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True.
-    x12path : str, optional
+    x12path : str or Path, optional
         The path to x12 or x13 binary. If None, the program will attempt
         to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
         depending on the value of prefer_x13.

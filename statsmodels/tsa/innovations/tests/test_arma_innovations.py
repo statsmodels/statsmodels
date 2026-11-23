@@ -2,6 +2,8 @@
 Tests for ARMA innovations algorithm wrapper
 """
 
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
@@ -400,5 +402,85 @@ def test_scalar_params_all_functions(func):
     rng = np.random.default_rng(20261121)
     endog = rng.standard_normal(60)
     res = getattr(arma_innovations, func)(endog, 0.5, 0.3, sigma2=1.7)
+    expected = _kalman_filter_reference(func, endog, [0.5], [0.3], 1.7)
+    assert_allclose(res, expected, rtol=RTOL[func])
+
+
+# Single precision (eps 1.2e-7), with rounding errors that accumulate over the
+# recursions
+RTOL_SINGLE = 1e-4
+
+
+@pytest.mark.parametrize(
+    "prefix, dtype, rtol",
+    [
+        ("s", np.float32, RTOL_SINGLE),
+        ("d", np.float64, RTOL["arma_innovations"]),
+        ("c", np.complex64, RTOL_SINGLE),
+        ("z", np.complex128, RTOL["arma_innovations"]),
+    ],
+    ids=["s", "d", "c", "z"],
+)
+def test_innovations_prefix(prefix, dtype, rtol):
+    # The lag polynomials were built before the parameters were converted to
+    # the dtype of the prefix, so a prefix other than the one found from the
+    # input raised "Buffer dtype mismatch"
+    rng = np.random.default_rng(20261121)
+    endog = rng.standard_normal(60)
+    u, v = arma_innovations.arma_innovations(
+        endog, [0.5], [0.3], sigma2=1.7, prefix=prefix
+    )
+    assert u.dtype == dtype
+    assert v.dtype == dtype
+    expected = _kalman_filter_reference(
+        "arma_innovations", endog, [0.5], [0.3], 1.7
+    )
+    assert_allclose((u, v), expected, rtol=rtol)
+
+
+@pytest.mark.parametrize(
+    "sigma2, dtype, rtol",
+    [
+        (1, np.float64, RTOL["arma_innovations"]),
+        (np.float32(1), np.float32, RTOL_SINGLE),
+    ],
+    ids=["int-sigma2", "float32-sigma2"],
+)
+def test_innovations_single_precision_input(sigma2, dtype, rtol):
+    # float32 parameters gave float32 lag polynomials, which raised "Buffer
+    # dtype mismatch" when the prefix found from all of the input was another
+    # one. A Python int sigma2 gives double precision.
+    rng = np.random.default_rng(20261121)
+    endog = rng.standard_normal(60).astype(np.float32)
+    u, v = arma_innovations.arma_innovations(
+        endog, np.float32([0.5]), np.float32([0.3]), sigma2=sigma2
+    )
+    assert u.dtype == dtype
+    assert v.dtype == dtype
+    expected = _kalman_filter_reference(
+        "arma_innovations", endog.astype(float), [0.5], [0.3], 1.0
+    )
+    assert_allclose((u, v), expected, rtol=rtol)
+
+
+@pytest.mark.parametrize("func", ["arma_score", "arma_scoreobs"])
+@pytest.mark.parametrize("prefix", [None, "s", "d", "c", "z"])
+def test_score_prefix_deprecated(func, prefix):
+    # The score functions never used prefix. Passing it warns, and the result
+    # does not change.
+    rng = np.random.default_rng(20261121)
+    endog = rng.standard_normal(60)
+    score = getattr(arma_innovations, func)
+    if prefix is None:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            res = score(endog, [0.5], [0.3], sigma2=1.7)
+    else:
+        match = f"prefix is not used by {func}"
+        with pytest.warns(FutureWarning, match=match) as record:
+            res = score(endog, [0.5], [0.3], sigma2=1.7, prefix=prefix)
+        # The warning points to the caller
+        assert record[0].filename == __file__
+    assert res.dtype == np.float64
     expected = _kalman_filter_reference(func, endog, [0.5], [0.3], 1.7)
     assert_allclose(res, expected, rtol=RTOL[func])
