@@ -3265,7 +3265,7 @@ def test_ets_predict_dynamic_numpy_bool(dynamic, expected):
 def test_get_prediction_unknown_method(oildata, method):
     # An unknown method was accepted silently and treated as "exact"; it
     # still is, with a FutureWarning
-    res = ETSModel(oildata).smooth([0.3, 110.0])
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
     expected = res.get_prediction(start=46, end=51, method="exact")
     with pytest.warns(FutureWarning, match='method must be "exact"') as record:
         pred = res.get_prediction(start=46, end=51, method=method)
@@ -3280,7 +3280,7 @@ def test_get_prediction_unknown_method(oildata, method):
 
 @pytest.mark.parametrize("method", [None, "exact", "simulated"])
 def test_get_prediction_known_method_no_warning(oildata, method, recwarn):
-    res = ETSModel(oildata).smooth([0.3, 110.0])
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
     pred = res.get_prediction(
         start=46, end=51, method=method, rng=np.random.default_rng(0)
     )
@@ -3307,8 +3307,8 @@ def test_endog_single_column(austourists, form):
     assert model.endog.shape == (len(series),)
     params = expected_model.start_params
     assert_allclose(model.start_params, params, rtol=1e-12)
-    res = model.smooth(params)
-    expected = expected_model.smooth(params)
+    res = model.smooth(params, param_index="integer")
+    expected = expected_model.smooth(params, param_index="integer")
     assert_allclose(res.llf, expected.llf, rtol=1e-12)
     assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-12)
     assert_allclose(res.forecast(4), expected.forecast(4), rtol=1e-12)
@@ -3366,11 +3366,11 @@ def test_initial_seasonal_single_value(austourists, initial_seasonal):
         initial_level=40.0,
     )
     expected = ETSModel(austourists, initial_seasonal=[5.0] * 4, **kwargs)
-    expected = expected.smooth([0.3, 0.1])
+    expected = expected.smooth([0.3, 0.1], param_index="integer")
     with pytest.warns(FutureWarning, match="initial_seasonal has a single") as rec:
         model = ETSModel(austourists, initial_seasonal=initial_seasonal, **kwargs)
     assert rec[0].filename == __file__
-    res = model.smooth([0.3, 0.1])
+    res = model.smooth([0.3, 0.1], param_index="integer")
     assert_allclose(res.initial_seasonal, np.full(4, 5.0), rtol=1e-12)
     assert_allclose(res.llf, expected.llf, rtol=1e-12)
     assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-12)
@@ -3407,7 +3407,7 @@ def test_initial_seasonal_forms(austourists, form, recwarn):
         initial_level=40.0,
         initial_seasonal=form(seasonal),
     )
-    res = model.smooth([0.3, 0.1])
+    res = model.smooth([0.3, 0.1], param_index="integer")
     assert len(recwarn) == 0
     assert_allclose(res.initial_seasonal, seasonal, rtol=1e-12)
     # the first prediction is the initial level plus the seasonal of the
@@ -3430,7 +3430,7 @@ def test_initial_seasonal_row_or_column(austourists, shape, recwarn):
         austourists, initial_seasonal=np.reshape(seasonal, shape), **kwargs
     )
     expected = ETSModel(austourists, initial_seasonal=seasonal, **kwargs)
-    res = model.smooth([0.3, 0.1])
+    res = model.smooth([0.3, 0.1], param_index="integer")
     assert len(recwarn) == 0
     assert_allclose(res.initial_seasonal, seasonal, rtol=1e-12)
     assert_allclose(res.fittedvalues.iloc[0], 40.0 + 3.0, rtol=1e-12)
