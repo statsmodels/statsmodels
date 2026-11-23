@@ -664,7 +664,11 @@ def test_arima_integrated_innovations_mle(order, seasonal_order):
     expected, _ = innovations_mle(
         dy, order=(p, 0, q), seasonal_order=(sp, 0, sq, s), demean=False
     )
-    assert_allclose(res.params, expected.params, rtol=1e-10)
+    # Both are the results of an optimizer, on objectives that agree up to
+    # rounding. Where it stops depends on the platform (up to 4.9e-6 relative
+    # on macOS), while differencing the wrong number of times changes the
+    # estimates completely.
+    assert_allclose(res.params, expected.params, rtol=1e-4)
 
 
 def test_arima_return_params_non_statespace_method():
