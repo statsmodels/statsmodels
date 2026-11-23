@@ -405,6 +405,9 @@ def concat(series, axis=0, allow_mix=False):
                     s.columns = base_columns[:1]
                 s_columns = s.columns
             else:
+                # The same for two series to concatenate along the rows
+                if axis == 0 and s.name is None:
+                    s = series[i] = s.rename(base_columns[0])
                 s_columns = pd.Index([s.name])
 
             if axis == 0 and not base_columns.equals(s_columns):

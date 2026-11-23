@@ -1249,3 +1249,27 @@ def test_prepare_trend_data_array_like(container):
     time = np.arange(2.0, 7.0)
     desired = np.column_stack([np.ones(5), time, time**3])
     assert_allclose(actual, desired, rtol=1e-15)
+
+
+def test_concat_unnamed_series():
+    # Along the rows, a Series without a name takes the name of the first
+    # series, as an unnamed column of a DataFrame does; it raised "Columns
+    # must match to concatenate along rows"
+    first = pd.Series([1.0, 2.0], index=[0, 1], name="y")
+    second = pd.Series([3.0, 4.0], index=[2, 3])
+    actual = tools.concat([first, second])
+    assert actual.name == "y"
+    assert_allclose(actual.to_numpy(), [1.0, 2.0, 3.0, 4.0], rtol=1e-15)
+    assert_equal(actual.index.to_numpy(), np.arange(4, dtype=np.int64))
+    # The given series keeps its name
+    assert second.name is None
+
+    # A Series with another name still raises
+    with pytest.raises(ValueError, match="Columns must match"):
+        tools.concat([first, second.rename("z")])
+
+    # Along the columns, the unnamed series keeps its default column name
+    second.index = first.index
+    actual = tools.concat([first, second], axis=1)
+    assert list(actual.columns) == ["y", 0]
+    assert_allclose(actual.to_numpy(), [[1.0, 3.0], [2.0, 4.0]], rtol=1e-15)
