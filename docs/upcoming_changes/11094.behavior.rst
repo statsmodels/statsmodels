@@ -1,0 +1,5 @@
+- ``DynamicFactorMQ.filter`` ignored ``low_memory=True``, so the
+  results kept the full output of the Kalman filter. The option is
+  used as in the other state space models: the results keep the
+  filter output only for the last periods and have no ``llf_obs``.
+  :pr:`11094`
