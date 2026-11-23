@@ -18,9 +18,6 @@ from statsmodels.tsa.statespace.simulation_smoother import (
     SIMULATION_DISTURBANCE,
     SIMULATION_STATE,
     SimulationSmoother,
-
-
-    SimulationSmoother,
     SimulationSmoothResults,
 )
 
