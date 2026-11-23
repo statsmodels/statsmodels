@@ -1878,6 +1878,44 @@ def test_integer_index_forecast_labels(dtype):
 
 
 @pytest.mark.parametrize(
+    "start, end, expected_start, expected_end",
+    [
+        # No date in February 2000: prediction starts at the next date
+        ("2000-02", "2000-10", "2000-04-01", "2000-10-01"),
+        # No date in May 2000: prediction ends at the previous date
+        (0, "2000-05", "2000-01-01", "2000-04-01"),
+    ],
+)
+def test_empty_partial_date_key_deprecated(start, end, expected_start, expected_end):
+    # pandas gives an empty slice for a partial date string between two dates
+    # of the index, which was used silently
+    index = pd.date_range("2000-01-01", periods=8, freq="QS")
+    endog = pd.Series(np.zeros(8), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    with pytest.warns(FutureWarning, match="No date of the index matches") as rec:
+        start_loc, end_loc, out_of_sample, prediction_index = (
+            tsa_model.get_prediction_index(start, end, 8, mod._index, data=mod.data)
+        )
+    # The warning points at the caller outside statsmodels
+    assert rec[0].filename == __file__
+    expected = pd.date_range(expected_start, expected_end, freq="QS")
+    assert prediction_index.equals(expected)
+    assert index[start_loc] == expected[0]
+    assert index[end_loc] == expected[-1]
+    assert out_of_sample == 0
+
+
+def test_partial_date_key_with_dates_not_deprecated():
+    # A partial date string that matches dates gives a non-empty slice
+    index = pd.date_range("2000-01-01", periods=8, freq="QS")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        loc, new_index, _ = tsa_model.get_index_loc("2000-04", index)
+    assert loc == slice(1, 2)
+    assert new_index.equals(index[:2])
+
+
+@pytest.mark.parametrize(
     "dtype, key",
     [("int8", 300), ("uint8", 300), ("int16", 70000), ("uint16", 70000)],
 )
