@@ -2825,7 +2825,7 @@ def test_predict_dynamic_after_end_or_sample(austourists, end, dynamic):
     # the variances of the exact method: mse in the sample, and mse times
     # the relative variances of R's forecast package after it.
     model = ETSModel(austourists)
-    res = model.smooth(fixed_params(model))
+    res = model.smooth(fixed_params(model), param_index="integer")
     n, start = res.nobs, 10
     nforecast = max(end - n + 1, 0)
     expected = res.fittedvalues.to_numpy()[start : end + 1]
@@ -2867,7 +2867,7 @@ def test_predict_dynamic_start_after_sample(austourists, start, dynamic):
     # dynamic at start. The exact variances are mse times the relative
     # variances of R's forecast package.
     model = ETSModel(austourists)
-    res = model.smooth(fixed_params(model))
+    res = model.smooth(fixed_params(model), param_index="integer")
     n, end = res.nobs, 75
     index = austourists.index
     index = pd.date_range(index[0], periods=end + 1, freq=index.freq)
