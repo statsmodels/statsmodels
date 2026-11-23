@@ -515,6 +515,82 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_almost_equal(res2.stderr, res3.stderr)
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("plot_stderr", [True, False])
+def test_plot_forecast_lines(close_figures, plot_stderr):
+    # The bands are point +/- q * sqrt(diag(mse(h))); the legend entry
+    # "Forc 2 STD err" belongs to the upper band
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    steps, alpha = 4, 0.1
+    fig = res.plot_forecast(steps, alpha=alpha, plot_stderr=plot_stderr)
+    point = res.forecast(data[-2:], steps)
+    se = np.sqrt(np.diagonal(res.mse(steps), axis1=1, axis2=2))
+    q = stats.norm.ppf(1 - alpha / 2)
+    nobs = data.shape[0]
+    assert len(fig.axes) == 3
+    for j, ax in enumerate(fig.axes):
+        assert ax.get_title() == res.names[j]
+        lines = ax.lines
+        assert_allclose(lines[0].get_ydata(), data[:, j], rtol=1e-12)
+        assert_allclose(lines[1].get_xdata(), np.arange(nobs - 1, nobs + steps))
+        assert_allclose(lines[1].get_ydata()[1:], point[:, j], rtol=1e-10)
+        handles, labels = ax.get_legend_handles_labels()
+        if plot_stderr:
+            assert len(lines) == 4
+            upper, lower = lines[2], lines[3]
+            assert_allclose(upper.get_ydata(), point[:, j] + q * se[:, j], rtol=1e-10)
+            assert_allclose(lower.get_ydata(), point[:, j] - q * se[:, j], rtol=1e-10)
+            assert labels == ["Observed", "Forecast", "Forc 2 STD err"]
+            assert handles[2] is upper
+        else:
+            assert len(lines) == 2
+            assert labels == ["Observed", "Forecast"]
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+def test_plotting_helpers_default_axes(close_figures):
+    # Without axes (or names), the helpers in plotting draw on the current
+    # axes (and leave the subplots without titles)
+    import matplotlib.pyplot as plt
+
+    from statsmodels.tsa.vector_ar import plotting
+
+    y = np.array([1.0, 2.0, 0.5, -0.5])
+    error = np.array([0.1, 0.2, 0.3, 0.4])
+    q = stats.norm.ppf(1 - 0.1 / 2)
+    fig, ax = plt.subplots()
+    plotting.plot_with_error(y, error, alpha=0.1)
+    plotting.plot_with_error(y, (y - 1, y + 2), stderr_type="mc")
+    drawn = [line.get_ydata() for line in ax.lines]
+    expected = [y, y - q * error, y + q * error, y, y - 1, y + 2]
+    assert len(drawn) == len(expected)
+    for actual, value in zip(drawn, expected, strict=True):
+        assert_allclose(actual, value, rtol=1e-12)
+    assert_allclose(ax.lines[0].get_xdata(), np.arange(4))
+
+    acorr = np.array([1.0, 0.5, -0.25])
+    fig, ax = plt.subplots()
+    plotting.acorr_plot(acorr)
+    segments = ax.collections[0].get_segments()
+    for lag, segment in enumerate(segments):
+        assert_allclose(segment, [[lag, 0.0], [lag, acorr[lag]]])
+    assert_allclose(ax.get_xlim(), [-1, 3])
+    assert_allclose(ax.get_ylim(), [-1, 1])
+
+    prior = np.column_stack([np.arange(5.0), np.arange(5.0) ** 2])
+    forc = np.array([[5.0, 25.0], [6.0, 36.0]])
+    fig = plotting.plot_var_forc(prior, forc, forc + 1, forc - 1)
+    assert len(fig.axes) == 2
+    for j, ax in enumerate(fig.axes):
+        assert ax.get_title() == ""
+        assert_allclose(ax.lines[0].get_ydata(), prior[:, j])
+        assert_allclose(ax.lines[2].get_ydata(), forc[:, j] + 1)
+        assert_allclose(ax.lines[3].get_ydata(), forc[:, j] - 1)
+
+
 def test_pickle():
     # Removed from class to allow thread safe testing
     fh = BytesIO()
