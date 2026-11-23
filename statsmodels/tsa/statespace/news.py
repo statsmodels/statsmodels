@@ -940,10 +940,10 @@ class NewsResults:
         impacts = self.impacts.iloc[self.impacts.index.get_locs(s)]
 
         # Make the first index level the groupby level
-        groupby = groupby.lower()
-        if groupby in ["impacted variable", "impacted_variable"]:
+        groupby = groupby.lower().replace("_", " ")
+        if groupby == "impacted variable":
             impacts.index = impacts.index.swaplevel(1, 0)
-        elif groupby not in ["impact date", "impact_date"]:
+        elif groupby != "impact date":
             raise ValueError('Invalid groupby for impacts table. Valid options'
                              ' are "impact date" or "impacted variable".'
                              f'Got "{groupby}".')
@@ -996,7 +996,7 @@ class NewsResults:
 
         title = "Impacts"
         if removed_level is not None:
-            join = "on" if groupby == "date" else "for"
+            join = "on" if groupby == "impact date" else "for"
             title += f" {join} [{removed_level}]"
         impacts_table = SimpleTable(
             params_data, params_header, params_stubs,

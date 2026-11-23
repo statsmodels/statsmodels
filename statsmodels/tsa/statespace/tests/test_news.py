@@ -2327,3 +2327,38 @@ def test_summary_impacts_single_date_and_variable(
     with pytest.raises(KeyError):
         news.summary_impacts(impact_date="2010Q4",
                              impacted_variable=variable)
+
+
+@pytest.mark.parametrize("groupby", ["impact date", "impact_date",
+                                     "Impact_Date", "impacted variable",
+                                     "impacted_variable"])
+def test_summary_impacts_groupby_spellings(groupby):
+    # Every spelling of groupby sparsifies the first column (the underscore
+    # spellings did not), and a single value of the other key is moved to
+    # the title, "on" an impacted variable and "for" an impact date
+    news = bivariate_news()
+    key = groupby.lower().replace("_", " ")
+    other = "impacted variable" if key == "impact date" else "impact date"
+    impacts = news.impacts
+    if key == "impacted variable":
+        impacts = impacts.swaplevel().sort_index()
+    table = news.summary_impacts(groupby=groupby, float_format="%.4f")
+    assert_equal(table.title, "Impacts")
+    values = table_values(table)
+    assert_equal(values[0], [key, other] + IMPACTS_COLUMNS)
+    first = [str(x) for x in impacts.index.get_level_values(0)]
+    assert_equal([row[0] for row in values[1:]], sparsified(first))
+    assert_equal([row[1] for row in values[1:]],
+                 [str(x) for x in impacts.index.get_level_values(1)])
+    # atol for the rounding to 4 digits
+    numbers = np.array([row[2:] for row in values[1:]], dtype=float)
+    assert_allclose(numbers, impacts.to_numpy(), rtol=0, atol=5e-5)
+
+    if key == "impact date":
+        table = news.summary_impacts(groupby=groupby,
+                                     impacted_variable="unemp")
+        assert_equal(table.title, "Impacts on [impacted variable = unemp]")
+    else:
+        table = news.summary_impacts(groupby=groupby, impact_date="2009Q3")
+        assert_equal(table.title, "Impacts for [impact date = 2009Q3]")
+    assert_equal(table_values(table)[0], [key] + IMPACTS_COLUMNS)
