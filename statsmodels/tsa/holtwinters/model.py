@@ -382,6 +382,20 @@ class ExponentialSmoothing(TimeSeriesModel):
         None
             No value returned.
 
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           A fit with ``optimized=False`` uses fixed ``initial_seasonal.<j>``
+           values. It previously ignored them.
+
+        .. deprecated:: 0.15.1
+
+           The key ``"initial_seasonal"`` is deprecated and will raise a
+           KeyError after statsmodels 0.17 is released. Optimized fits ignore
+           it. Use ``"initial_seasonal.<j>"`` to fix the initial seasonal
+           values.
+
         Examples
         --------
         >>> from statsmodels.datasets.macrodata import load_pandas
@@ -417,6 +431,16 @@ class ExponentialSmoothing(TimeSeriesModel):
                     f"{key} if not allowed. Only {valid} are supported in "
                     "this specification."
                 )
+        if "initial_seasonal" in values:
+            warnings.warn(
+                'The key "initial_seasonal" is deprecated and will raise a '
+                "KeyError after statsmodels 0.17 is released. It is ignored "
+                "when the parameters are optimized. Use "
+                '"initial_seasonal.<j>" for j=0,...,m-1, where m is '
+                "seasonal_periods, to fix the initial seasonal values.",
+                FutureWarning,
+                stacklevel=3,
+            )
 
         if "smoothing_level" in values:
             alpha = values["smoothing_level"]
@@ -1146,6 +1170,10 @@ class ExponentialSmoothing(TimeSeriesModel):
                 res.level = fp.get("initial_level", res.level)
                 res.trend = fp.get("initial_trend", res.trend)
                 res.seasonal = fp.get("initial_seasonal", res.seasonal)
+                res.seasonal = [
+                    fp.get(f"initial_seasonal.{i}", res.seasonal[i])
+                    for i in range(self.seasonal_periods)
+                ]
 
         hwfit = self._predict(
             h=0,

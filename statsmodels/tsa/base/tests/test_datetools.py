@@ -179,3 +179,64 @@ def test_dates_from_str_sequence(container):
         datetime(1999, 4, 15),
     ]
     assert dates == expected
+
+
+def _abbreviated_labels(periods):
+    # Labels of pandas periods in the format of date_range_str, e.g. "1959q3"
+    freq = periods.freqstr[0]
+    if freq == "Q":
+        return [f"{p.year}q{p.quarter}" for p in periods]
+    if freq == "M":
+        return [f"{p.year}m{p.month}" for p in periods]
+    return [str(p.year) for p in periods]
+
+
+@pytest.mark.parametrize(
+    "start, end, length, expected",
+    [
+        # Ranges within one year
+        ("1959q1", "1959q3", None, pd.period_range("1959Q1", "1959Q3", freq="Q")),
+        ("1959m2", "1959m11", None, pd.period_range("1959-02", "1959-11", freq="M")),
+        ("1965", "1965", None, pd.period_range("1965", "1965", freq="Y")),
+        ("1959q3", None, 2, pd.period_range("1959Q3", periods=2, freq="Q")),
+        ("1959m5", None, 1, pd.period_range("1959-05", periods=1, freq="M")),
+        # A length that continues into the next year
+        ("1959q4", None, 6, pd.period_range("1959Q4", periods=6, freq="Q")),
+        ("1959m12", None, 14, pd.period_range("1959-12", periods=14, freq="M")),
+        ("1959m8", None, 30, pd.period_range("1959-08", periods=30, freq="M")),
+        # Ranges that were already supported
+        ("1959q3", "1962q2", None, pd.period_range("1959Q3", "1962Q2", freq="Q")),
+        ("1959m3", None, 31, pd.period_range("1959-03", periods=31, freq="M")),
+        ("1965", "1968", None, pd.period_range("1965", "1968", freq="Y")),
+    ],
+)
+def test_date_range_str_ranges(start, end, length, expected):
+    assert date_range_str(start, end, length) == _abbreviated_labels(expected)
+
+
+@pytest.mark.parametrize(
+    "start, end, length",
+    [
+        ("1959q3", "1959q1", None),
+        ("1959m3", "1958m12", None),
+        ("1965", "1964", None),
+        ("1959q3", None, -2),
+        ("1965", None, -2),
+    ],
+)
+def test_date_range_str_end_before_start(start, end, length):
+    with pytest.raises(ValueError, match="end must not be before start"):
+        date_range_str(start, end, length)
+
+
+@pytest.mark.parametrize(
+    "start, length, expected",
+    [
+        ("1959m12", 14, pd.period_range("1959-12", periods=14, freq="M")),
+        ("1959q4", 6, pd.period_range("1959Q4", periods=6, freq="Q")),
+    ],
+)
+def test_dates_from_range_next_year(start, length, expected):
+    # The dates are at the end of each period
+    dates = dates_from_range(start, length=length)
+    assert dates == [p.end_time.normalize().to_pydatetime() for p in expected]
