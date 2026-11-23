@@ -2940,9 +2940,11 @@ def test_get_prediction_numpy(oildata, method, dates):
     # get_prediction raised AttributeError for numpy data (it read the index
     # of the predicted mean). The numpy path must give the pandas values;
     # the variance of the simulations uses ddof=1, the default of pandas.
-    res = ETSModel(oildata).smooth([0.3, 110.0])
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
     kwargs = {"dates": oildata.index} if dates else {}
-    res_np = ETSModel(oildata.to_numpy(), **kwargs).smooth([0.3, 110.0])
+    res_np = ETSModel(oildata.to_numpy(), **kwargs).smooth(
+        [0.3, 110.0], param_index="integer"
+    )
     pred_kwargs = dict(start=46, end=51, method=method, simulate_repetitions=20)
     pred = res.get_prediction(rng=np.random.default_rng(0), **pred_kwargs)
     pred_np = res_np.get_prediction(rng=np.random.default_rng(0), **pred_kwargs)
