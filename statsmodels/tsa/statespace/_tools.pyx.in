@@ -205,8 +205,8 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
 
     dim1[0] = n;
     wr = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
-    {{if prefix == 's'}}
-    wi = np.PyArray_ZEROS(1, dim1, {{typenum}}, FORTRAN)
+    {{if prefix == 's' or prefix == 'c'}}
+    wi = np.PyArray_ZEROS(1, dim1, np.NPY_FLOAT32, FORTRAN)
     {{else}}
     wi = np.PyArray_ZEROS(1, dim1, np.NPY_FLOAT64, FORTRAN)
     {{endif}}

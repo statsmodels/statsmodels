@@ -12,6 +12,7 @@ from scipy.linalg import solve_discrete_lyapunov
 
 from statsmodels.tsa.statespace import sarimax, varmax
 from statsmodels.tsa.statespace.initialization import Initialization
+from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 
 
 def check_initialization(mod, init, a_true, Pinf_true, Pstar_true):
@@ -455,3 +456,59 @@ def test_stationary_blocks():
     nested.set((1, 3), init_inner)
     nested.set((3, 5), "stationary")
     assert blocks(nested) == [[2], [3, 4]]
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.complex64])
+def test_stationary_single_precision(dtype):
+    # The stationary initialization of a single precision model solves the
+    # discrete Lyapunov equation with the "s" or "c" Cython routines. The
+    # complex64 version raised "Buffer dtype mismatch, expected 'float32_t'
+    # but got 'double'".
+    def build(dtype):
+        endog = np.random.default_rng(1234).standard_normal((15, 2))
+        kf = KalmanFilter(k_endog=2, k_states=2, dtype=dtype)
+        kf.bind(endog.astype(dtype))
+        kf["design"] = np.array([[1.0, 0.0], [0.5, 1.0]], dtype=dtype)
+        kf["obs_intercept"] = np.array([[0.1], [0.3]], dtype=dtype)
+        kf["obs_cov"] = np.array([[0.8, 0.2], [0.2, 0.5]], dtype=dtype)
+        kf["transition"] = transition.astype(dtype)
+        kf["state_intercept"] = state_intercept.astype(dtype)
+        kf["selection"] = np.eye(2, dtype=dtype)
+        kf["state_cov"] = state_cov.astype(dtype)
+        kf.initialize_stationary()
+        return kf
+
+    transition = np.array([[0.5, 0.1], [-0.2, 0.3]])
+    state_intercept = np.array([[0.2], [-0.1]])
+    state_cov = np.array([[1.0, 0.3], [0.3, 0.6]])
+    kf = build(dtype)
+    res = kf.filter()
+    desired = build(np.float64).filter()
+    assert kf.prefix == {np.float32: "s", np.complex64: "c"}[dtype]
+    assert res.prefix == kf.prefix
+
+    # Single precision: the float64 results agree to about 4e-6 (relative)
+    rtol = 1e-4
+    initial_state = np.linalg.solve(np.eye(2) - transition, state_intercept[:, 0])
+    initial_state_cov = solve_discrete_lyapunov(transition, state_cov)
+    names = [
+        "initial_state",
+        "initial_state_cov",
+        "llf_obs",
+        "filtered_state",
+        "filtered_state_cov",
+        "forecasts",
+        "forecasts_error_cov",
+    ]
+    for name in names:
+        actual = getattr(res, name)
+        assert actual.dtype == dtype
+        assert_allclose(actual.real, getattr(desired, name), rtol=rtol)
+        # The imaginary part is zero in exact arithmetic. The complex Schur
+        # decomposition in the Lyapunov solver leaves rounding errors of the
+        # order of the single precision epsilon times the size of the values
+        # (6e-8 here), hence the atol relative to the real part.
+        atol = 1e-5 * np.abs(actual.real).max()
+        assert_allclose(actual.imag, 0, atol=atol)
+    assert_allclose(res.initial_state.real, initial_state, rtol=rtol)
+    assert_allclose(res.initial_state_cov.real, initial_state_cov, rtol=rtol)
