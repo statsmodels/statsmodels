@@ -8,7 +8,6 @@ import warnings
 
 import numpy as np
 
-from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.statespace import initialization, mlemodel
 from statsmodels.tsa.statespace.kalman_smoother import (
     SMOOTHER_STATE,
@@ -60,11 +59,6 @@ class QuarterlyAR1(mlemodel.MLEModel):
         self["selection", 0, 0] = 1.
 
     @property
-    def param_names(self):
-        """(list of str) Names of the model parameters"""
-        return ["phi", "sigma2"]
-
-    @property
     def start_params(self):
         """(array) Starting parameters for maximum likelihood estimation"""
         return np.array([0, np.nanvar(self.endog) / 19])
@@ -96,78 +90,48 @@ class QuarterlyAR1(mlemodel.MLEModel):
             out = super().fit(*args, **kwargs)
         return out
 
-    def fit_em(self, start_params=None, transformed=True, cov_type="none",
-               cov_kwds=None, maxiter=500, tolerance=1e-6,
-               em_initialization=True, mstep_method=None, full_output=True,
-               return_params=False, low_memory=False):
+    def fit_em(self, start_params, maxiter=500, tolerance=1e-6,
+               return_params=True):
         """
         Fit the model by maximum likelihood via the EM algorithm
 
+        Only the options that DynamicFactorMQ uses for its starting
+        parameters are supported.
+
         Parameters
         ----------
-        start_params : array_like, optional
-            Initial guess of the solution for the loglikelihood maximization.
-            If None, the default is given by `start_params`.
-        transformed : bool, optional
-            Whether or not `start_params` is already transformed. Default is
-            True.
-        cov_type : str, optional
-            The `cov_type` keyword governs the method for calculating the
-            covariance matrix of parameter estimates. Default is 'none', in
-            which case no covariance matrix is estimated.
-        cov_kwds : dict, optional
-            A dictionary of arguments affecting covariance matrix computation.
+        start_params : array_like
+            Initial guess of the (transformed) parameters `[phi, sigma2]`.
         maxiter : int, optional
             The maximum number of EM iterations to perform. Default is 500.
         tolerance : float, optional
             Parameter governing convergence of the EM algorithm, based on the
             relative change in the loglikelihood between iterations. Default
             is 1e-6.
-        em_initialization : bool, optional
-            Whether or not to also update the Kalman filter initialization
-            using the results of the EM algorithm. Default is True.
-        mstep_method : str, optional
-            Method to use for the M step of the EM algorithm, passed through
-            to `_em_maximization_step`.
-        full_output : bool, optional
-            Whether or not to also return the loglikelihood values obtained
-            during the EM iterations, in the `mle_retvals` attribute of the
-            returned results object. Default is True.
         return_params : bool, optional
-            Whether or not to return only the array of maximizing parameters.
-            Default is False.
-        low_memory : bool, optional
-            This option is not supported by this model, and passing True
-            will raise a `ValueError`.
+            Has no effect: the array of fitted parameters is always returned.
+            DynamicFactorMQ passes True, as for `fit`.
 
         Returns
         -------
-        MLEResults or ndarray
-            The fitted results object, or, if `return_params=True`, the
-            array of fitted parameters.
+        ndarray
+            The array of fitted parameters `[phi, sigma2]`.
 
         Raises
         ------
         NotImplementedError
             If some parameters are held fixed via `fix_params`.
-        ValueError
-            If `low_memory=True` is passed.
+
+        Notes
+        -----
+        The Kalman filter initialization of each iteration after the first is
+        updated using the results of the previous iteration.
         """
         if self._has_fixed_params:
             raise NotImplementedError("Cannot fit using the EM algorithm while"
                                       " holding some parameters fixed.")
-        if low_memory:
-            raise ValueError("Cannot fit using the EM algorithm when using"
-                             " low_memory option.")
 
-        if start_params is None:
-            start_params = self.start_params
-            transformed = True
-        else:
-            start_params = np.array(start_params, ndmin=1)
-
-        if not transformed:
-            start_params = self.transform_params(start_params)
+        start_params = np.array(start_params, ndmin=1)
 
         # Perform expectation-maximization
         llf = []
@@ -176,47 +140,21 @@ class QuarterlyAR1(mlemodel.MLEModel):
         i = 0
         delta = 0
         while i < maxiter and (i < 2 or (delta > tolerance)):
-            out = self._em_iteration(params[-1], init=init,
-                                     mstep_method=mstep_method)
+            out = self._em_iteration(params[-1], init=init)
             llf.append(out[0].llf_obs.sum())
             params.append(out[1])
-            if em_initialization:
-                init = initialization.Initialization(
-                    self.k_states, "known",
-                    constant=out[0].smoothed_state[..., 0],
-                    stationary_cov=out[0].smoothed_state_cov[..., 0])
+            init = initialization.Initialization(
+                self.k_states, "known",
+                constant=out[0].smoothed_state[..., 0],
+                stationary_cov=out[0].smoothed_state_cov[..., 0])
             if i > 0:
                 delta = (2 * (llf[-1] - llf[-2]) /
                          (np.abs(llf[-1]) + np.abs(llf[-2])))
             i += 1
 
-        # Just return the fitted parameters if requested
-        if return_params:
-            result = params[-1]
-        # Otherwise construct the results class if desired
-        else:
-            if em_initialization:
-                base_init = self.ssm.initialization
-                self.ssm.initialization = init
-            result = self.smooth(params[-1], transformed=True,
-                                 cov_type=cov_type, cov_kwds=cov_kwds)
-            if em_initialization:
-                self.ssm.initialization = base_init
+        return params[-1]
 
-            # Save the output
-            if full_output:
-                em_retvals = Bunch(params=np.array(params), llf=np.array(llf), iter=i)
-                em_settings = Bunch(tolerance=tolerance, maxiter=maxiter)
-            else:
-                em_retvals = None
-                em_settings = None
-
-            result.mle_retvals = em_retvals
-            result.mle_settings = em_settings
-
-        return result
-
-    def _em_iteration(self, params0, init=None, mstep_method=None):
+    def _em_iteration(self, params0, init=None):
         """
         Perform one EM iteration
 
@@ -227,9 +165,6 @@ class QuarterlyAR1(mlemodel.MLEModel):
         init : Initialization, optional
             State initialization to use for the expectation step. If None,
             the model's existing initialization is used.
-        mstep_method : str, optional
-            Method to use for the M step, passed to
-            `_em_maximization_step`.
 
         Returns
         -------
@@ -242,8 +177,7 @@ class QuarterlyAR1(mlemodel.MLEModel):
         res = self._em_expectation_step(params0, init=init)
 
         # (M)aximization step
-        params1 = self._em_maximization_step(res, params0,
-                                             mstep_method=mstep_method)
+        params1 = self._em_maximization_step(res, params0)
 
         return res, params1
 
@@ -283,7 +217,7 @@ class QuarterlyAR1(mlemodel.MLEModel):
 
         return res
 
-    def _em_maximization_step(self, res, params0, mstep_method=None):
+    def _em_maximization_step(self, res, params0):
         """
         Perform the maximization step of the EM algorithm
 
@@ -294,9 +228,6 @@ class QuarterlyAR1(mlemodel.MLEModel):
         params0 : ndarray
             Parameter vector at the start of this iteration, used only to
             determine the shape and dtype of the returned array.
-        mstep_method : str, optional
-            Unused. Present for compatibility with other models' EM
-            maximization steps.
 
         Returns
         -------
