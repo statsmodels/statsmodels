@@ -1,0 +1,6 @@
+- For annual data, the frequency of the cycle of ``UnobservedComponents``
+  started in the middle of its bounds on pandas 2.2 and later, instead
+  of at a three-year cycle as on earlier pandas, because the frequency
+  strings of annual data start with "Y" there. It starts at a
+  three-year cycle, so starting parameters and fits of models with a
+  cycle on annual data change on pandas 2.2 and later. :pr:`11089`
