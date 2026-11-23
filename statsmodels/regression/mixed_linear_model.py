@@ -1408,7 +1408,7 @@ class MixedLM(base.LikelihoodModel):
 
         # Get the Hessian including only the nonzero fixed effects,
         # then blow back up to the full size after inverting.
-        hess, sing = self.hessian(params_prof)
+        hess, sing, scale_grad = self._hessian(params_prof)
         if sing:
             warnings.warn(_warn_cov_sing, SingularMatrixWarning, stacklevel=2)
 
@@ -1422,6 +1422,9 @@ class MixedLM(base.LikelihoodModel):
         params_object = MixedLMParams.from_components(fe_params, cov_re=cov_re)
 
         results = MixedLMResults(self, params_prof, pcov / scale)
+        results._cov_vparams = self._cov_vparams(
+            pcov, params_prof[self.k_fe :], scale, scale_grad
+        )
         results.params_object = params_object
         results.fe_params = fe_params
         results.cov_re = cov_re
@@ -2229,6 +2232,17 @@ class MixedLM(base.LikelihoodModel):
             dropped from the covariance of the observations.
 
         """
+        hess, sing, _ = self._hessian(params)
+        return hess, sing
+
+    def _hessian(self, params):
+        """
+        Return the Hessian, see `hessian`, and the gradient of the scale
+
+        The gradient of the scale is the derivative of the profiled error
+        variance with respect to the variance parameters. It is the total
+        derivative if the fixed effects in `params` are their GLS estimates.
+        """
         if type(params) is not MixedLMParams:
             params = MixedLMParams.from_packed(
                 params, self.k_fe, self.k_re, use_sqrt=self.use_sqrt, has_fe=True
@@ -2380,7 +2394,34 @@ class MixedLM(base.LikelihoodModel):
         hess[self.k_fe :, 0 : self.k_fe] = hess_fere
         hess[self.k_fe :, self.k_fe :] = hess_re
 
-        return hess, sing
+        # The profiled scale is rvir / fac and B is minus the derivative of
+        # rvir with respect to the variance parameters
+        scale_grad = -B / fac
+
+        return hess, sing, scale_grad
+
+    def _cov_vparams(self, pcov, vparams, scale, scale_grad):
+        """
+        Return the covariance of the variance parameters in their own units
+
+        `pcov` is the inverse of the negative profile Hessian, in which the
+        variance parameters `vparams` are divided by `scale`. The returned
+        covariance is that of `scale * vparams`, the lower triangle of
+        `cov_re` followed by `vcomp`, by the delta method. It includes the
+        uncertainty of `scale`, which needs only the second derivative of the
+        log-likelihood in `scale` and `scale_grad`.
+        """
+        fac = self.n_totobs
+        if self.reml:
+            fac -= self.k_fe
+        cov_vv = pcov[self.k_fe :, self.k_fe :]
+        # Given the variance parameters, the inverse information of scale is
+        # 2 * scale**2 / fac; the profiled scale depends on them through
+        # scale_grad.
+        cov_vs = cov_vv @ scale_grad
+        var_s = 2 * scale**2 / fac + scale_grad @ cov_vs
+        cross = scale * np.outer(cov_vs, vparams)
+        return scale**2 * cov_vv + cross + cross.T + var_s * np.outer(vparams, vparams)
 
     def get_scale(self, fe_params, cov_re, vcomp):
         """
@@ -2640,7 +2681,7 @@ class MixedLM(base.LikelihoodModel):
         # Hessian with respect to the random effects covariance matrix
         # (not its square root).  It is used for obtaining standard
         # errors, not for optimization.
-        hess, sing = self.hessian(params)
+        hess, sing, scale_grad = self._hessian(params)
         if sing:
             warnings.warn(_warn_cov_sing, SingularMatrixWarning, stacklevel=2)
 
@@ -2665,6 +2706,9 @@ class MixedLM(base.LikelihoodModel):
         # Prepare a results class instance
         params_packed = params.get_packed(use_sqrt=False, has_fe=True)
         results = MixedLMResults(self, params_packed, pcov / scale)
+        results._cov_vparams = self._cov_vparams(
+            pcov, params_packed[self.k_fe :], scale, scale_grad
+        )
         results.params_object = params
         results.fe_params = fe_params
         results.cov_re = cov_re
@@ -2905,15 +2949,23 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         The first `k_re x (k_re + 1) / 2` elements of the returned array
         are the standard errors of the lower triangle of `cov_re`.
         The remaining elements are the standard errors of the variance
-        components.
+        components. They are in the units of `cov_re` and `vcomp`, unlike
+        the variance parameters in `params`, and include the uncertainty
+        of `scale`.
 
         Note that the sampling distribution of variance parameters is
         strongly skewed unless the sample size is large, so these
         standard errors may not give meaningful confidence intervals
         or p-values if used in the usual way.
+
+        .. versionchanged:: 0.15.1
+
+           The standard errors were off by about a factor of the square
+           root of `scale` and did not include the uncertainty of `scale`.
         """
-        p = self.model.exog.shape[1]
-        return np.sqrt(self.scale * np.diag(self.cov_params())[p:])
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            return np.sqrt(np.diag(self._cov_vparams))
 
     def _expand_re_names(self, group_ix):
         names = list(self.model.data.exog_re_names)
@@ -3162,14 +3214,14 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         for i in range(self.k_re):
             for j in range(i + 1):
                 sdf[jj, 0] = self.cov_re[i, j]
-                sdf[jj, 1] = np.sqrt(self.scale) * self.bse[jj]
                 jj += 1
 
         # Variance components
         for i in range(self.k_vc):
             sdf[jj, 0] = self.vcomp[i]
-            sdf[jj, 1] = np.sqrt(self.scale) * self.bse[jj]
             jj += 1
+
+        sdf[self.k_fe :, 1] = self.bse_re
 
         sdf = pd.DataFrame(index=param_names, data=sdf)
         sdf.columns = [

@@ -1,0 +1,3 @@
+- :class:`~statsmodels.tsa.forecasting.theta.ThetaModel` raised an
+  ``AttributeError`` in ``fit`` for a list or tuple ``endog``, and its error for
+  an invalid ``method`` named another argument. :pr:`10881`

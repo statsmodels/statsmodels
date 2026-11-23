@@ -1,0 +1,2 @@
+- ``plot(plot_stderr=np.False_)`` (or 0) of ``IRAnalysis`` drew the error bands.
+  :pr:`10991`

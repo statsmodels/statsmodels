@@ -1,0 +1,6 @@
+- ``date_range_str`` and ``dates_from_range`` in
+  ``statsmodels.tsa.base.datetools`` raised for quarterly and monthly
+  ranges within one year, and gave invalid labels such as
+  ``"1960m13"`` for ranges given by a length that crosses a year end.
+  They return the periods of the range, and an end before the start or
+  a negative length raises a ``ValueError``. :pr:`10924`
