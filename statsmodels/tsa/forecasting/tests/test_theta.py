@@ -486,10 +486,14 @@ def test_sigma2_deseasonalized(method):
         else:
             deseasonalized = y - seasonal
     res = model.fit(use_mle=False)
-    # The same estimator on the same data, so only rounding can differ
+    # The same estimator on the same data. Both are the results of an
+    # optimizer, and where it stops depends on the platform: on macOS
+    # (Accelerate) the two differ by 3e-7 relative, and noise of a few ulps
+    # in the data moves sigma2 by up to 7e-7. Fitting to the seasonal data,
+    # the bug the test guards against, makes sigma2 3.6 to 4.5 times larger.
     ima = SARIMAX(deseasonalized, order=(0, 1, 1), trend="c")
     expected = ima.fit(disp=False).params[-1]
-    np.testing.assert_allclose(res.sigma2, expected, rtol=1e-8)
+    np.testing.assert_allclose(res.sigma2, expected, rtol=1e-4)
 
 
 @pytest.mark.parametrize("use_mle", [True, False])
