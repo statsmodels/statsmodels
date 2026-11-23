@@ -1090,3 +1090,168 @@ def test_summary_after_remove_data():
     assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
+
+
+# - Options and results of DynamicFactor --------------------------------------
+
+
+def explosive_endog(nobs=40, k_endog=3):
+    # Every series grows by 10% each period
+    rng = np.random.default_rng(20261123)
+    endog = np.zeros((nobs, k_endog))
+    endog[0] = np.arange(1, k_endog + 1)
+    for t in range(1, nobs):
+        endog[t] = 1.1 * endog[t - 1] + 0.1 * rng.standard_normal(k_endog)
+    return endog
+
+
+@pytest.mark.parametrize("k_factors", [1, 2])
+def test_start_params_nonstationary_factors(k_factors):
+    # The AR(1) (one factor) or VAR(1) (two factors) fitted to the principal
+    # components of growing series is explosive: an error if stationarity is
+    # enforced, otherwise the starting parameters
+    endog = explosive_endog()
+    mod = dynamic_factor.DynamicFactor(endog, k_factors=k_factors, factor_order=1)
+    with pytest.raises(ValueError, match="Non-stationary starting autoregressive"):
+        _ = mod.start_params
+    mod = dynamic_factor.DynamicFactor(
+        endog, k_factors=k_factors, factor_order=1, enforce_stationarity=False
+    )
+    coefficients = mod.start_params[mod._params_factor_transition]
+    eigenvalues = np.linalg.eigvals(coefficients.reshape(k_factors, k_factors))
+    assert np.max(np.abs(eigenvalues)) > 1
+
+
+def test_start_params_nonstationary_error_var():
+    endog = explosive_endog()
+    kwargs = dict(k_factors=0, factor_order=0, error_order=1, error_var=True)
+    mod = dynamic_factor.DynamicFactor(endog, **kwargs)
+    with pytest.raises(ValueError, match="Non-stationary starting error autoregr"):
+        _ = mod.start_params
+    mod = dynamic_factor.DynamicFactor(endog, enforce_stationarity=False, **kwargs)
+    coefficients = mod.start_params[mod._params_error_transition]
+    assert np.max(np.abs(np.linalg.eigvals(coefficients.reshape(3, 3)))) > 1
+
+
+def test_start_params_error_var_scalar():
+    # With VAR errors, the scalar error variance starts at the mean of the
+    # diagonal variances, and the other starting parameters are the same
+    rng = np.random.default_rng(20261124)
+    endog = rng.standard_normal((50, 3))
+    kwargs = dict(k_factors=1, factor_order=1, error_order=1, error_var=True)
+    mod_scalar = dynamic_factor.DynamicFactor(endog, error_cov_type="scalar", **kwargs)
+    mod_diag = dynamic_factor.DynamicFactor(endog, error_cov_type="diagonal", **kwargs)
+    scalar = mod_scalar.start_params
+    diag = mod_diag.start_params
+    assert_allclose(
+        scalar[mod_scalar._params_error_cov],
+        diag[mod_diag._params_error_cov].mean(),
+        rtol=1e-12,
+    )
+    others = np.r_[0:3, 4:len(scalar)]
+    assert_allclose(scalar[others], np.r_[diag[0:3], diag[6:]], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "error_var, error_order, error_params, partial_allowed",
+    [
+        (True, 1, (0.2 * np.eye(3) + 0.05).ravel(), False),
+        (False, 2, [0.2, 0.1, 0.3, -0.1, 0.1, 0.1], False),
+        (False, 1, [0.2, 0.3, 0.4], True),
+    ],
+    ids=["var1", "ar2", "ar1"],
+)
+def test_fix_params_error_transition(
+    error_var, error_order, error_params, partial_allowed
+):
+    # With enforce_stationarity, the error transition parameters are fixed all
+    # or none, unless each error is a separate AR(1); fixing parameters gives
+    # the likelihood at the full parameter vector
+    rng = np.random.default_rng(20261125)
+    endog = rng.standard_normal((50, 3))
+    mod = dynamic_factor.DynamicFactor(
+        endog,
+        k_factors=1,
+        factor_order=1,
+        error_order=error_order,
+        error_var=error_var,
+    )
+    params = np.r_[0.5, 0.3, 0.2, 1.0, 1.0, 1.0, 0.5, error_params]
+    res = mod.smooth(params)
+    names = mod.param_names[7:]
+    if partial_allowed:
+        with mod.fix_params({names[0]: params[7]}):
+            res_fixed = mod.smooth(np.r_[params[:7], params[8:]])
+        assert_allclose(res_fixed.llf, res.llf, rtol=1e-12)
+    else:
+        with pytest.raises(ValueError, match="Cannot fix individual error"):
+            with mod.fix_params({names[0]: params[7]}):
+                pass
+    with mod.fix_params(dict(zip(names, params[7:], strict=True))):
+        res_fixed = mod.smooth(params[:7])
+    assert_allclose(res_fixed.llf, res.llf, rtol=1e-12)
+
+
+def test_factors():
+    # The factors are the first states; they have no smoothed estimates in
+    # filter results, and there are none in a model without factors
+    rng = np.random.default_rng(20261126)
+    endog = rng.standard_normal((50, 3))
+    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
+    params = np.r_[0.5, 0.3, 0.2, 1.0, 1.0, 1.0, 0.5]
+    res = mod.filter(params)
+    factors = res.factors
+    assert factors.smoothed is None
+    assert factors.smoothed_cov is None
+    assert_allclose(factors.filtered, res.filtered_state[:1], rtol=1e-12)
+    res = mod.smooth(params)
+    assert_allclose(res.factors.smoothed, res.smoothed_state[:1], rtol=1e-12)
+    assert_allclose(
+        res.factors.smoothed_cov, res.smoothed_state_cov[:1, :1], rtol=1e-12
+    )
+    exog = rng.standard_normal((50, 1))
+    mod = dynamic_factor.DynamicFactor(endog, k_factors=0, factor_order=0, exog=exog)
+    res = mod.smooth(np.r_[0.1, 0.2, 0.3, 1.0, 1.0, 1.0])
+    assert res.factors is None
+
+
+@pytest.mark.thread_unsafe(reason="Uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("endog_labels", [True, False])
+def test_plot_coefficients_of_determination(close_figures, endog_labels):
+    # The R^2 of the regression of a series on a constant and a factor is the
+    # squared correlation of the two; the bars show them, labelled by the
+    # series or not
+    rng = np.random.default_rng(20261127)
+    endog = rng.standard_normal((50, 3))
+    endog[:, 1:] += endog[:, :1]
+    mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=1)
+    res = mod.smooth(np.r_[0.5, 0.3, 0.2, 1.0, 1.0, 1.0, 0.5])
+    factor = res.factors.smoothed[0]
+    expected = [np.corrcoef(endog[:, i], factor)[0, 1] ** 2 for i in range(3)]
+    assert_allclose(res.coefficients_of_determination[:, 0], expected, rtol=1e-10)
+    fig = res.plot_coefficients_of_determination(endog_labels=endog_labels)
+    ax = fig.axes[0]
+    heights = [patch.get_height() for patch in ax.patches]
+    assert_allclose(heights, expected, rtol=1e-10)
+    if endog_labels:
+        labels = [label.get_text() for label in ax.get_xticklabels()]
+        assert_equal(labels, ["y1", "y2", "y3"])
+    else:
+        assert_equal(ax.get_xlabel(), "Endogenous variables")
+        assert_equal(len(ax.get_xticks()), 0)
+
+
+def test_summary_combined_params():
+    # separate_params=False shows a single table of all parameters
+    rng = np.random.default_rng(20261128)
+    mod = dynamic_factor.DynamicFactor(
+        rng.standard_normal((50, 3)), k_factors=1, factor_order=1
+    )
+    res = mod.smooth(np.r_[0.5, 0.3, 0.2, 1.0, 1.0, 1.0, 0.5])
+    summary = res.summary(separate_params=False)
+    titles = [str(table.title) for table in summary.tables]
+    assert not any(title.startswith("Results for") for title in titles)
+    params_table = str(summary.tables[1])
+    for name in mod.param_names:
+        assert f"{name} " in params_table
