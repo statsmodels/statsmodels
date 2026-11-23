@@ -2403,3 +2403,34 @@ def test_uecm_integer_data(endog_int, exog_int, use_pandas):
     ols = OLS(dy[t], np.column_stack(reg)).fit()
     assert_allclose(res.params, ols.params, rtol=1e-8)
     assert_allclose(res.bse, ols.bse, rtol=1e-8)
+
+
+@pytest.mark.parametrize("kind", ["ndarray", "dataframe", "mixed"])
+def test_uecm_bool_exog(kind):
+    # np.diff and DataFrame.diff take the xor of bool values, so the
+    # differences of bool exog were their absolute values
+    rng = np.random.default_rng(20261128)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    xb = rng.standard_normal((nobs, 2)) > 0
+    x = xb.astype(float)
+    if kind == "ndarray":
+        exog = xb
+    else:
+        exog = pd.DataFrame(xb, columns=["a", "b"])
+        if kind == "mixed":
+            # A float column next to the bool one
+            x[:, 1] = rng.standard_normal(nobs)
+            exog["b"] = x[:, 1]
+    res = UECM(y, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, the levels x.L1 and the differences D.y.L1, D.x.L0
+    # and D.x.L1, with the bool values as 0 and 1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.vstack([np.full((1, 2), np.nan), np.diff(x, axis=0)])
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1], dy[t - 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1], dx[t - 1, 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)

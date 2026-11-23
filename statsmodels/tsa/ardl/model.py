@@ -1945,6 +1945,12 @@ class UECM(ARDL):
     exog : array_like, optional
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
+
+        .. versionchanged:: 0.15.1
+
+            Bool variables are differenced as 0 and 1. The differences were
+            their absolute values, so a change from True to False was 1
+            instead of -1.
     order : int or dict, optional
         If int, uses lags 0, 1, ..., order for all exog variables. If a
         dict, applies the lags series by series. If ``exog`` is anything
@@ -2210,9 +2216,15 @@ class UECM(ARDL):
         self._levels = np.column_stack(lvls)
 
         # 4. exog Lags
+        # np.diff and DataFrame.diff take the xor of bool values, so bool
+        # variables are differenced as float
         if exog_pandas:
-            dexog = orig_exog.diff()
+            bool_dtype = np.dtype(bool)
+            bool_cols = [c for c, dt in orig_exog.dtypes.items() if dt == bool_dtype]
+            dexog = orig_exog.astype(dict.fromkeys(bool_cols, float)).diff()
         else:
+            if orig_exog.dtype == bool:
+                orig_exog = orig_exog.astype(float)
             dexog = np.full(self.data.exog.shape, np.nan)
             dexog[1:] = np.diff(orig_exog, axis=0)
         adj_order = {}
