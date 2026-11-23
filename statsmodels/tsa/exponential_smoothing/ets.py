@@ -2602,7 +2602,9 @@ class PredictionResults:
         )
         # None for numpy data
         self.row_labels = getattr(self.predicted_mean, "index", None)
-        self.endog = np.empty(nsmooth + ndynamic) * np.nan
+        # one value per prediction: with a start after the sample, the
+        # forecasts before start are not predictions
+        self.endog = np.empty(end_dynamic - start + 1) * np.nan
         if nsmooth > 0:
             self.endog[0 : (end - start + 1)] = results.data.endog[start : (end + 1)]
         self.model = Bunch(
@@ -2641,10 +2643,13 @@ class PredictionResults:
                         **simulate_kwargs,
                     )
                 )
+            # when we are doing out of sample only prediction, start > end + 1,
+            # and we only keep the simulations from start on, as in predict
+            ndiscard = max(start - (end + 1), 0)
             if sim_results and isinstance(sim_results[0], pd.DataFrame):
-                self.simulation_results = pd.concat(sim_results, axis=0)
+                self.simulation_results = pd.concat(sim_results, axis=0).iloc[ndiscard:]
             else:
-                self.simulation_results = np.concatenate(sim_results, axis=0)
+                self.simulation_results = np.concatenate(sim_results, axis=0)[ndiscard:]
             # ddof=1 is the default of pandas, but not of numpy
             self.forecast_variance = self.simulation_results.var(axis=1, ddof=1)
         else:  # method == 'exact'

@@ -2961,3 +2961,72 @@ def test_get_prediction_numpy(oildata, method, dates):
     frame = pred.summary_frame()
     assert list(frame_np.columns) == list(frame.columns)
     assert_allclose(frame_np.to_numpy(), frame.to_numpy(), rtol=1e-12)
+
+
+@pytest.mark.parametrize("data", ["pandas", "numpy"])
+@pytest.mark.parametrize("error", ["add", "mul"])
+def test_get_prediction_simulated_start_after_sample(austourists, error, data):
+    # With a start after the end of the sample, the predictions are the
+    # forecasts from the end of the sample without those before start. The
+    # simulations kept those, so pred_int and summary_frame raised "Shape of
+    # passed values is (6, 2), indices imply (4, 2)" (summary_frame "All
+    # arrays must be of the same length" for numpy data) and var_pred_mean
+    # had a value for each of them. The simulations are those of simulate from
+    # the end of the sample, drawn from the same generator, from start on.
+    n = austourists.shape[0]
+    endog = austourists if data == "pandas" else austourists.to_numpy()
+    model = ETSModel(endog, error=error)
+    res = model.smooth(fixed_params(model))
+    reps, start, end = 20, n + 2, n + 5
+    pred = res.get_prediction(
+        start=start,
+        end=end,
+        method="simulated",
+        simulate_repetitions=reps,
+        rng=np.random.default_rng(0),
+    )
+    steps = end - n + 1
+    sims = res.simulate(
+        steps, anchor="end", repetitions=reps, rng=np.random.default_rng(0)
+    )
+    sims = np.asarray(sims)[start - n :]
+    forecast = np.asarray(res.forecast(steps))[start - n :]
+
+    frame = pred.summary_frame(alpha=0.1)
+    assert_allclose(frame["mean"], forecast, rtol=1e-12)
+    # rtol: pandas and numpy may sum in another order
+    assert_allclose(frame["mean_numerical"], sims.mean(1), rtol=1e-10)
+    assert_allclose(frame["pi_lower"], np.quantile(sims, 0.05, axis=1), rtol=1e-12)
+    assert_allclose(frame["pi_upper"], np.quantile(sims, 0.95, axis=1), rtol=1e-12)
+    pred_int = pred.pred_int(alpha=0.1)
+    assert_allclose(pred_int, frame[["pi_lower", "pi_upper"]], rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, sims.var(1, ddof=1), rtol=1e-10)
+    if data == "pandas":
+        index = extended_index(austourists.index, steps)[start - n :]
+        assert frame.index.equals(index)
+        assert pred_int.index.equals(index)
+        assert pred.var_pred_mean.index.equals(index)
+
+
+@pytest.mark.parametrize("start", [66, 70])
+@pytest.mark.parametrize("method", ["exact", "simulated"])
+def test_get_prediction_endog_start_after_sample(austourists, method, start):
+    # endog of the prediction results has one value per prediction, the
+    # observation or NaN after the sample (nobs = 68). With a start after
+    # the sample it also had one for each forecast before start, so reading
+    # it raised "Length of values (8) does not match length of index (6)".
+    model = ETSModel(austourists)
+    res = model.smooth(fixed_params(model))
+    n, end = res.nobs, 75
+    pred = res.get_prediction(
+        start=start,
+        end=end,
+        method=method,
+        simulate_repetitions=5,
+        rng=np.random.default_rng(0),
+    )
+    expected = np.r_[austourists.to_numpy(), np.full(end + 1 - n, np.nan)]
+    index = austourists.index
+    index = pd.date_range(index[0], periods=end + 1, freq=index.freq)[start:]
+    assert pred.endog.index.equals(index)
+    assert_allclose(pred.endog, expected[start:], rtol=1e-12)
