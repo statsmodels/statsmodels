@@ -353,6 +353,57 @@ def test_partials_logistic():
             assert_allclose(partials[..., j, t], desired)
 
 
+@pytest.mark.parametrize(
+    "trend, switching_trend, switching_exog, coefficients",
+    [
+        # Only the coefficients that switch have a regime suffix
+        ("n", True, [True, False], ["xa[0]", "xa[1]", "xb"]),
+        ("n", True, [False, True], ["xa", "xb[0]", "xb[1]"]),
+        ("c", False, [True], ["const", "x1[0]", "x1[1]"]),
+        ("c", True, [False], ["const[0]", "const[1]", "x1"]),
+        ("n", True, [True, True], ["xa[0]", "xa[1]", "xb[0]", "xb[1]"]),
+        ("c", False, [False], ["const", "x1"]),
+    ],
+)
+def test_param_names_mixed_switching_exog(
+    trend, switching_trend, switching_exog, coefficients
+):
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40)
+    if trend == "n":
+        exog = pd.DataFrame(rng.standard_normal((40, 2)), columns=["xa", "xb"])
+    else:
+        exog = rng.standard_normal(40)
+    mod = markov_regression.MarkovRegression(
+        endog,
+        k_regimes=2,
+        trend=trend,
+        exog=exog,
+        switching_trend=switching_trend,
+        switching_exog=switching_exog,
+    )
+    assert mod.param_names == ["p[0->0]", "p[1->0]", *coefficients, "sigma2"]
+
+
+@pytest.mark.parametrize(
+    "switching_ar, ar_names",
+    [
+        ([True, False], ["ar.L1[0]", "ar.L1[1]", "ar.L2"]),
+        ([False, True], ["ar.L1", "ar.L2[0]", "ar.L2[1]"]),
+        ([True, False, True], ["ar.L1[0]", "ar.L1[1]", "ar.L2", "ar.L3[0]", "ar.L3[1]"]),
+        ([True, True], ["ar.L1[0]", "ar.L1[1]", "ar.L2[0]", "ar.L2[1]"]),
+        ([False, False], ["ar.L1", "ar.L2"]),
+    ],
+)
+def test_param_names_mixed_switching_ar(switching_ar, ar_names):
+    endog = np.random.default_rng(20261122).standard_normal(40)
+    mod = markov_autoregression.MarkovAutoregression(
+        endog, k_regimes=2, order=len(switching_ar), switching_ar=switching_ar
+    )
+    expected = ["p[0->0]", "p[1->0]", "const[0]", "const[1]", "sigma2", *ar_names]
+    assert mod.param_names == expected
+
+
 def hamilton_filter_log_reference(log_densities, transition):
     """
     Hamilton (1989) filter written out for a likelihood that depends only on
