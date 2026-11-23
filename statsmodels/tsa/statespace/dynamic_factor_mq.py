@@ -1325,6 +1325,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 endog = endog.to_frame()
         elif np.ndim(endog) < 2:
             endog = np.atleast_2d(endog).T
+        else:
+            endog = np.asarray(endog)
 
         if k_endog_monthly is None:
             k_endog_monthly = endog.shape[1]
@@ -1552,7 +1554,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             value is placed in the last month of its quarter, and a column name
             that occurs more than once gets the suffixes 1, 2, ... in the order
             of the columns. Otherwise it is a copy of the input
-            `endog_monthly` dataset.
+            `endog_monthly` dataset, as an ndarray if it is not a Pandas
+            object.
         k_endog_monthly : int
             The number of monthly variables (which are ordered first) in the
             returned `endog` dataset.
@@ -1625,9 +1628,11 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                     mask = columns == name
                     columns[mask] = [f"{name}{i + 1}" for i in range(count)]
                 endog.columns = columns
-        else:
+        elif _is_using_pandas(endog_monthly, None):
             endog = endog_monthly.copy()
-        shape = endog_monthly.shape
+        else:
+            endog = np.array(endog_monthly)
+        shape = np.shape(endog_monthly)
         k_endog_monthly = shape[1] if len(shape) == 2 else 1
 
         return endog, k_endog_monthly
@@ -2057,12 +2062,21 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Array of unconstrained parameters used by the optimizer, to be
             transformed.
 
+            .. versionchanged:: 0.15.1
+
+               Integer values are converted to float. The transformed values
+               of an integer array were truncated to integers.
+
         Returns
         -------
         constrained : ndarray
             Array of constrained parameters which may be used in likelihood
             evaluation.
         """
+        # Integer input would truncate the transformed values
+        unconstrained = np.asarray(unconstrained)
+        if not np.issubdtype(unconstrained.dtype, np.inexact):
+            unconstrained = unconstrained.astype(float)
         constrained = unconstrained.copy()
 
         # Stationary factor VAR
@@ -2107,11 +2121,20 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Array of constrained parameters used in likelihood evaluation, to
             be transformed.
 
+            .. versionchanged:: 0.15.1
+
+               Integer values are converted to float. The transformed values
+               of an integer array were truncated to integers.
+
         Returns
         -------
         unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
         """
+        # Integer input would truncate the transformed values
+        constrained = np.asarray(constrained)
+        if not np.issubdtype(constrained.dtype, np.inexact):
+            constrained = constrained.astype(float)
         unconstrained = constrained.copy()
 
         # Stationary factor VAR

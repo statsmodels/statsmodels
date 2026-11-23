@@ -3753,3 +3753,56 @@ def test_init_t0_datetime_index_without_freq():
     endog.index = pd.DatetimeIndex(dates.delete(5))
     with pytest.raises(ValueError, match="requires a date index with a frequency"):
         dynamic_factor_mq.DynamicFactorMQ(endog, init_t0=True)
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_endog_array_like(container):
+    # A 2-D list or tuple of the data gives the model of the ndarray, and
+    # construct_endog returns it as an ndarray
+    endog = _ar1_factor_data(nobs=12, use_pandas=False)
+    data = container(container(row) for row in endog)
+    mod = dynamic_factor_mq.DynamicFactorMQ(data)
+    desired = dynamic_factor_mq.DynamicFactorMQ(endog)
+    assert_allclose(mod.endog, desired.endog, rtol=1e-12)
+    assert_equal(mod.endog_names, ["y1", "y2", "y3"])
+    params = desired.start_params
+    assert_allclose(mod.loglike(params), desired.loglike(params), rtol=1e-12)
+
+    construct_endog = dynamic_factor_mq.DynamicFactorMQ.construct_endog
+    out, k_endog_monthly = construct_endog(data, None)
+    assert isinstance(out, np.ndarray)
+    assert_allclose(out, endog)
+    assert_equal(k_endog_monthly, 3)
+    out, k_endog_monthly = construct_endog(container(endog[:, 0]), None)
+    assert isinstance(out, np.ndarray)
+    assert_allclose(out, endog[:, 0])
+    assert_equal(k_endog_monthly, 1)
+
+
+@pytest.mark.parametrize("method", ["transform_params", "untransform_params"])
+@pytest.mark.parametrize("case", ["list", "tuple", "series", "int_ndarray", "int_list"])
+def test_transform_params_array_like(method, case):
+    # Parameters given as a list, tuple or Series, or with integer values,
+    # are transformed as the ndarray of the same (float) values. The values
+    # are loadings, the factor AR(1) coefficient and standard deviation, the
+    # idiosyncratic AR(1) coefficients and variances; those for
+    # untransform_params are valid constrained values, and in both cases
+    # some transformed values are not integers
+    mod = dynamic_factor_mq.DynamicFactorMQ(_ar1_factor_data(nobs=12))
+    if method == "transform_params":
+        values = np.array([1, -1, 2, 1, 1, 1, -1, 2, 2, 3, 5])
+    else:
+        values = np.array([1, -1, 2, 0, 1, 0, 0, 0, 2, 3, 5])
+    floats = values.astype(float)
+    params = {
+        "list": floats.tolist(),
+        "tuple": tuple(floats),
+        "series": pd.Series(floats, index=mod.param_names),
+        "int_ndarray": values,
+        "int_list": values.tolist(),
+    }[case]
+    actual = getattr(mod, method)(params)
+    desired = getattr(mod, method)(floats)
+    assert isinstance(actual, np.ndarray)
+    assert_allclose(actual, desired, rtol=1e-12)
+    assert not np.allclose(desired, np.round(desired))
