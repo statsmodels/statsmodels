@@ -458,7 +458,10 @@ class KalmanSmoother(KalmanFilter):
                `complex_step` is passed to the Kalman filter. Before, it was
                ignored, so that a stationary initialization of the state was
                computed as for real parameters, which gave a wrong
-               complex-step derivative.
+               complex-step derivative. The results no longer initialize the
+               state again, without complex step, after the filter has run,
+               which made the derivatives of the first period of the smoothed
+               state and of `initial_state_cov` wrong.
         update_representation : bool, optional
             Whether or not to update the state space representation with the
             current model's parameters. Default is True.
