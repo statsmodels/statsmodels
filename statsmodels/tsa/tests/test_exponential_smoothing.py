@@ -2950,7 +2950,7 @@ def test_t_test_wald_test_constraints(use_pandas):
     assert model.param_names[0] == "smoothing_level"
     assert model.param_names[2] == "damping_trend"
     # Close to the MLE, so that the covariance is positive definite
-    res = model.smooth([0.23, 0.09, 0.98, 99.29, 0.92])
+    res = model.smooth([0.23, 0.09, 0.98, 99.29, 0.92], param_index="integer")
     cov_before = res.cov_params()
     params = np.asarray(res.params)
     cov = np.asarray(cov_before)
