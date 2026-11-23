@@ -20,6 +20,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
+from scipy import linalg
 
 from statsmodels import datasets
 from statsmodels.tools.sm_exceptions import OutputWarning
@@ -1758,11 +1759,11 @@ def test_smooth_complex_step(use_ssm):
     state_minus = mod.smooth(params - step).smoothed_state
     state_fd = (state_plus - state_minus) / (2 * eps)
     # atol: some derivatives are close to zero, so scale by the largest one.
-    # The first period is left out: the results re-initialize the state
+    # The first period is included: the results re-initialized the state
     # without the complex step before smoothing, and the smoother reads the
-    # initial state covariance again in the first period (a separate problem).
+    # initial state covariance again in the first period.
     atol = 1e-6 * np.max(np.abs(state_fd))
-    assert_allclose(state_derivative[:, 1:], state_fd[:, 1:], rtol=1e-6, atol=atol)
+    assert_allclose(state_derivative, state_fd, rtol=1e-6, atol=atol)
 
 
 def test_smooth_smooth_method_argument():
@@ -1871,3 +1872,68 @@ def test_smooth_unused_arguments_deprecated(kwargs):
     assert res.smoothed_state.dtype == np.float64
     for name in SMOOTH_ARGUMENTS_RESULTS:
         assert_allclose(getattr(res, name), getattr(desired, name), rtol=1e-14)
+
+
+@pytest.mark.parametrize("method", ["filter", "smooth"])
+def test_complex_step_initial_state_cov(method):
+    # The results re-initialized the state without the complex step after
+    # filtering, so the complex-step derivative of their initial state
+    # covariance was wrong (and of the first period of the smoothed state
+    # covariance, which the smoother computes from it). With measurement
+    # error, the first observation does not pin down the state
+    rng = np.random.default_rng(20261122)
+    mod = sarimax.SARIMAX(
+        rng.standard_normal(50), order=(2, 0, 0), measurement_error=True
+    )
+    params = np.array([0.5, 0.2, 0.5, 1.0])
+    h = 1e-20
+    cs_params = params + np.array([h * 1j, 0, 0, 0])
+    res = getattr(mod, method)(cs_params, complex_step=True)
+    results = res.smoother_results if method == "smooth" else res.filter_results
+
+    # The stationary covariance of the AR(2) state from scipy, and its central
+    # differences (error about 1e-10 relative here; the derivative was wrong
+    # in every element, by up to 100%)
+    def stationary_cov(phi1):
+        transition = np.array([[phi1, 1.0], [params[1], 0.0]])
+        selected_cov = np.array([[params[3], 0.0], [0.0, 0.0]])
+        return linalg.solve_discrete_lyapunov(transition, selected_cov)
+
+    eps = 1e-6
+    cov_plus = stationary_cov(params[0] + eps)
+    cov_minus = stationary_cov(params[0] - eps)
+    assert_allclose(
+        np.real(results.initial_state_cov), stationary_cov(params[0]), rtol=1e-12
+    )
+    assert_allclose(
+        np.imag(results.initial_state_cov) / h,
+        (cov_plus - cov_minus) / (2 * eps),
+        rtol=1e-6,
+    )
+
+    if method == "smooth":
+        step = np.array([eps, 0, 0, 0])
+        plus = mod.smooth(params + step).smoothed_state_cov[:, :, 0]
+        minus = mod.smooth(params - step).smoothed_state_cov[:, :, 0]
+        assert_allclose(
+            np.imag(res.smoothed_state_cov[:, :, 0]) / h,
+            (plus - minus) / (2 * eps),
+            rtol=1e-6,
+        )
+
+
+def test_results_of_uninitialized_statespace():
+    # A results object for a model whose compiled statespace object exists
+    # (simulation_smoother creates it) but has not been initialized yet still
+    # initializes it, and stores the stationary covariance of the AR(2) state
+    rng = np.random.default_rng(20261122)
+    mod = sarimax.SARIMAX(rng.standard_normal(50), order=(2, 0, 0))
+    params = np.array([0.5, 0.2, 1.0])
+    mod.update(params)
+    mod.simulation_smoother()
+    res = mod.ssm.results_class(mod.ssm)
+
+    transition = np.array([[params[0], 1.0], [params[1], 0.0]])
+    selected_cov = np.array([[params[2], 0.0], [0.0, 0.0]])
+    desired = linalg.solve_discrete_lyapunov(transition, selected_cov)
+    assert_allclose(res.initial_state_cov, desired, rtol=1e-12)
