@@ -210,7 +210,8 @@ def multipletests(
 
     ntests = len(pvals)
     if ntests > 0:
-        alphacSidak = 1 - np.power((1.0 - alphaf), 1.0 / ntests)
+        with np.errstate(divide="ignore"):
+            alphacSidak = -np.expm1(np.log1p(-alphaf) / ntests)
         alphacBonf = alphaf / float(ntests)
     else:
         # Nothing to correct. Skip the division by zero above and let the
@@ -227,7 +228,10 @@ def multipletests(
         pvals_corrected = -np.expm1(ntests * np.log1p(-pvals))
 
     elif method.lower() in ["hs", "holm-sidak"]:
-        alphacSidak_all = 1 - np.power((1.0 - alphaf), 1.0 / np.arange(ntests, 0, -1))
+        with np.errstate(divide="ignore"):
+            alphacSidak_all = -np.expm1(
+                np.log1p(-alphaf) / np.arange(ntests, 0, -1)
+            )
         notreject = pvals > alphacSidak_all
         del alphacSidak_all
 
