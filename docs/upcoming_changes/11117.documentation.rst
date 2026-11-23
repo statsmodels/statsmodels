@@ -1,0 +1,4 @@
+- The ``end`` argument of ``predict`` of the filter results of state
+  space models, and ``end`` of their ``PredictionResults``, is
+  excluded, as the end of a slice; the docstrings said that the last
+  prediction is at ``end``. :pr:`11117`
