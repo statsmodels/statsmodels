@@ -621,3 +621,32 @@ def test_datetime_index_frequency_inferred(no_x12, dates, period, start):
 
     assert f"period={period}" in spec.split()
     assert f"start={start}" in spec.split()
+
+
+@fake_binaries
+@pytest.mark.parametrize("ext", ["", ".exe"], ids=["posix_names", "windows_names"])
+@pytest.mark.parametrize("name", ["x13as", "x12a", "x13as_ascii", "x13as_html"])
+def test_x12path_names_binary(tmp_path, monkeypatch, name, ext):
+    # x12path that names a binary runs that binary, also if its directory has
+    # binaries that come before it in the search order
+    names = [binary + ext for binary in ("x13as", "x12a", "x13as_ascii", "x13as_html")]
+    directory = _fake_binaries(tmp_path / "bin", *names)
+    other = _fake_binaries(tmp_path / "other", *names)
+    monkeypatch.setenv("X13PATH", str(other))
+    monkeypatch.setenv("X12PATH", str(other))
+    binary = directory / f"{name}{ext}"
+
+    res = x13.x13_arima_analysis(_monthly_endog(), x12path=binary)
+
+    assert res.stdout.decode().strip() == str(binary)
+
+
+@fake_binaries
+def test_x12path_named_binary_missing(tmp_path):
+    # If the named binary is not there, the other binaries in its directory are
+    # tried in the usual order, as before
+    directory = _fake_binaries(tmp_path, "x12a", "x13as_html")
+
+    res = x13.x13_arima_analysis(_monthly_endog(), x12path=directory / "x13as_ascii")
+
+    assert res.stdout.decode().strip() == str(directory / "x12a")
