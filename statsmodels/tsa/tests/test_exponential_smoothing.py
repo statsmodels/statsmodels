@@ -2786,7 +2786,7 @@ def test_forecast_date(oildata, steps, use_pandas):
     # interpreted as an integer"; a date forecasts until and including it
     endog = oildata if use_pandas else oildata.to_numpy()
     kwargs = {} if use_pandas else {"dates": oildata.index}
-    res = ETSModel(endog, **kwargs).smooth([0.3, 110.0])
+    res = ETSModel(endog, **kwargs).smooth([0.3, 110.0], param_index="integer")
     # the forecasts of simple exponential smoothing are the last level
     level = 110.0
     for value in oildata:
