@@ -665,3 +665,25 @@ def test_lookup_binary_with_long_output(tmp_path, stream):
     if "exc" in outcome:
         raise outcome["exc"]
     assert outcome["res"].stdout.decode().strip() == str(binary)
+
+
+def _failing_binary(path):
+    # A binary that exits with an error status, which X-13 does not do when it
+    # is run without arguments
+    path.write_text("#!/bin/sh\nexit 1\n", encoding="ascii", newline="\n")
+    path.chmod(0o755)
+
+
+@fake_binaries
+def test_lookup_skips_failing_binary(tmp_path):
+    # A binary that exits with an error status is not used: the next name is
+    # tried, and without a binary that works, none is found
+    directory = _fake_binaries(tmp_path, "x12a")
+    _failing_binary(directory / "x13as")
+
+    res = x13.x13_arima_analysis(_monthly_endog(), x12path=directory)
+
+    assert res.stdout.decode().strip() == str(directory / "x12a")
+    _failing_binary(directory / "x12a")
+    with pytest.raises(x13.X13NotFoundError, match="x12a and x13as not found"):
+        x13.x13_arima_analysis(_monthly_endog(), x12path=directory)
