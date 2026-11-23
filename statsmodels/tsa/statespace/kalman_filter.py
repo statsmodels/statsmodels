@@ -495,6 +495,17 @@ class KalmanFilter(Representation):
 
         The default filtering method is FILTER_CONVENTIONAL.
 
+        Univariate filtering first diagonalizes a non-diagonal observation
+        covariance matrix with an LDL decomposition. A positive semi-definite
+        matrix gives a warning, and a matrix that is not positive
+        semi-definite raises a ``LinAlgError``.
+
+        .. versionchanged:: 0.15.1
+
+           An observation covariance matrix that is not positive
+           semi-definite raises a ``LinAlgError`` with univariate filtering.
+           It could give a meaningless loglikelihood without an error.
+
         Examples
         --------
         >>> mod = sm.tsa.statespace.SARIMAX(range(10))
