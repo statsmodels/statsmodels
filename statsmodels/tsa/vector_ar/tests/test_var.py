@@ -515,6 +515,82 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_almost_equal(res2.stderr, res3.stderr)
 
 
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("plot_stderr", [True, False])
+def test_plot_forecast_lines(close_figures, plot_stderr):
+    # The bands are point +/- q * sqrt(diag(mse(h))); the legend entry
+    # "Forc 2 STD err" belongs to the upper band
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    steps, alpha = 4, 0.1
+    fig = res.plot_forecast(steps, alpha=alpha, plot_stderr=plot_stderr)
+    point = res.forecast(data[-2:], steps)
+    se = np.sqrt(np.diagonal(res.mse(steps), axis1=1, axis2=2))
+    q = stats.norm.ppf(1 - alpha / 2)
+    nobs = data.shape[0]
+    assert len(fig.axes) == 3
+    for j, ax in enumerate(fig.axes):
+        assert ax.get_title() == res.names[j]
+        lines = ax.lines
+        assert_allclose(lines[0].get_ydata(), data[:, j], rtol=1e-12)
+        assert_allclose(lines[1].get_xdata(), np.arange(nobs - 1, nobs + steps))
+        assert_allclose(lines[1].get_ydata()[1:], point[:, j], rtol=1e-10)
+        handles, labels = ax.get_legend_handles_labels()
+        if plot_stderr:
+            assert len(lines) == 4
+            upper, lower = lines[2], lines[3]
+            assert_allclose(upper.get_ydata(), point[:, j] + q * se[:, j], rtol=1e-10)
+            assert_allclose(lower.get_ydata(), point[:, j] - q * se[:, j], rtol=1e-10)
+            assert labels == ["Observed", "Forecast", "Forc 2 STD err"]
+            assert handles[2] is upper
+        else:
+            assert len(lines) == 2
+            assert labels == ["Observed", "Forecast"]
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+def test_plotting_helpers_default_axes(close_figures):
+    # Without axes (or names), the helpers in plotting draw on the current
+    # axes (and leave the subplots without titles)
+    import matplotlib.pyplot as plt
+
+    from statsmodels.tsa.vector_ar import plotting
+
+    y = np.array([1.0, 2.0, 0.5, -0.5])
+    error = np.array([0.1, 0.2, 0.3, 0.4])
+    q = stats.norm.ppf(1 - 0.1 / 2)
+    fig, ax = plt.subplots()
+    plotting.plot_with_error(y, error, alpha=0.1)
+    plotting.plot_with_error(y, (y - 1, y + 2), stderr_type="mc")
+    drawn = [line.get_ydata() for line in ax.lines]
+    expected = [y, y - q * error, y + q * error, y, y - 1, y + 2]
+    assert len(drawn) == len(expected)
+    for actual, value in zip(drawn, expected, strict=True):
+        assert_allclose(actual, value, rtol=1e-12)
+    assert_allclose(ax.lines[0].get_xdata(), np.arange(4))
+
+    acorr = np.array([1.0, 0.5, -0.25])
+    fig, ax = plt.subplots()
+    plotting.acorr_plot(acorr)
+    segments = ax.collections[0].get_segments()
+    for lag, segment in enumerate(segments):
+        assert_allclose(segment, [[lag, 0.0], [lag, acorr[lag]]])
+    assert_allclose(ax.get_xlim(), [-1, 3])
+    assert_allclose(ax.get_ylim(), [-1, 1])
+
+    prior = np.column_stack([np.arange(5.0), np.arange(5.0) ** 2])
+    forc = np.array([[5.0, 25.0], [6.0, 36.0]])
+    fig = plotting.plot_var_forc(prior, forc, forc + 1, forc - 1)
+    assert len(fig.axes) == 2
+    for j, ax in enumerate(fig.axes):
+        assert ax.get_title() == ""
+        assert_allclose(ax.lines[0].get_ydata(), prior[:, j])
+        assert_allclose(ax.lines[2].get_ydata(), forc[:, j] + 1)
+        assert_allclose(ax.lines[3].get_ydata(), forc[:, j] - 1)
+
+
 def test_pickle():
     # Removed from class to allow thread safe testing
     fh = BytesIO()
@@ -1184,6 +1260,73 @@ def test_irf_err_bands():
         assert res[1] is res.upper
 
 
+@pytest.mark.parametrize("method", ["err_band_sz1", "err_band_sz2", "err_band_sz3"])
+def test_irf_err_band_component_range(method):
+    # component holds indices of eigenvalues: 0, ..., periods - 1 for sz1 and
+    # sz2, 0, ..., neqs * periods - 1 for sz3 (the stacked responses)
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    periods = 2
+    irf = res.irf(periods)
+    if method == "err_band_sz3":
+        shape, n_comp = (3,), 3 * periods
+    else:
+        shape, n_comp = (3, 3), periods
+
+    def band(value):
+        rng = np.random.default_rng(1)
+        component = np.full(shape, value)
+        return getattr(irf, method)(repl=30, rng=rng, component=component)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        first = band(0)
+        last = band(n_comp - 1)
+    # a nested list gives the same bands as an array
+    as_list = getattr(irf, method)(
+        repl=30,
+        rng=np.random.default_rng(1),
+        component=np.full(shape, n_comp - 1).tolist(),
+    )
+    assert_allclose(as_list.lower, last.lower, rtol=1e-12)
+    assert_allclose(as_list.upper, last.upper, rtol=1e-12)
+    for value in (n_comp, -n_comp - 1):
+        with pytest.raises(ValueError, match="components does not exist"):
+            band(value)
+    # Negative values count from the end, as in numpy indexing; deprecated
+    for value, expected in ((-1, last), (-n_comp, first)):
+        with pytest.warns(FutureWarning, match="Negative values in comp") as rec:
+            wrapped = band(value)
+        assert rec[0].filename == __file__
+        assert_allclose(wrapped.lower, expected.lower, rtol=1e-12)
+        assert_allclose(wrapped.upper, expected.upper, rtol=1e-12)
+
+
+@pytest.mark.parametrize("method", ["err_band_sz1", "err_band_sz2"])
+def test_irf_err_band_component_max_last_row(method):
+    # A valid component with its largest value in the last row was rejected:
+    # the check compared the position of the maximum with neqs * periods
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    irf = res.irf(2)
+
+    def band(component):
+        rng = np.random.default_rng(2)
+        return getattr(irf, method)(repl=30, rng=rng, component=component)
+
+    component = np.zeros((3, 3), dtype=int)
+    component[2, 0] = 1
+    mixed = band(component)
+    zeros = band(np.zeros((3, 3), dtype=int))
+    ones = band(np.ones((3, 3), dtype=int))
+    # each band uses only its own element of component
+    for attr in ("lower", "upper"):
+        expected = getattr(zeros, attr).copy()
+        expected[:, 2, 0] = getattr(ones, attr)[:, 2, 0]
+        assert_allclose(getattr(mixed, attr), expected, rtol=1e-12)
+    assert not np.allclose(ones.lower[1:, 2, 0], zeros.lower[1:, 2, 0])
+
+
 @pytest.mark.thread_unsafe(reason="uses matplotlib")
 @pytest.mark.matplotlib
 @pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
@@ -1300,6 +1443,59 @@ def test_irf_plot_err_bands_kwarg(close_figures):
     cum_err_bands = irf.cum_errband_mc(repl=10)
     fig2 = irf.plot_cum_effects(err_bands=cum_err_bands, stderr_type="mc")
     assert fig2 is not None
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
+@pytest.mark.parametrize("form", ["errorband", "tuple", "array"])
+@pytest.mark.parametrize("stderr_type", [None, "asym", "mc"])
+def test_irf_plot_err_bands_default_stderr_type(
+    bivariate_var_result, close_figures, method, form, stderr_type
+):
+    # The given bands are plotted whatever stderr_type is; with the default
+    # "asym" they were read as a covariance array
+    irf = bivariate_var_result.irf(3)
+    rng = np.random.default_rng(0)
+    lower = rng.standard_normal((4, 2, 2))
+    upper = lower + rng.uniform(0.5, 1.0, size=(4, 2, 2))
+    bands = {
+        "errorband": ErrorBand(lower, upper),
+        "tuple": (lower, upper),
+        "array": np.stack([lower, upper]),
+    }[form]
+    kwargs = {} if stderr_type is None else {"stderr_type": stderr_type}
+    fig = getattr(irf, method)(err_bands=bands, **kwargs)
+    values = irf.irfs if method == "plot" else irf.cum_effects
+    assert len(fig.axes) == 4
+    for i in range(2):
+        for j in range(2):
+            lines = [line.get_ydata() for line in fig.axes[2 * i + j].lines]
+            assert_allclose(lines[0], values[:, i, j], rtol=1e-12)
+            assert_allclose(lines[1], lower[:, i, j], rtol=1e-12)
+            assert_allclose(lines[2], upper[:, i, j], rtol=1e-12)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("method", ["plot", "plot_cum_effects"])
+@pytest.mark.parametrize("plot_stderr", [False, np.False_, 0])
+def test_irf_plot_stderr_false_values(
+    bivariate_var_result, close_figures, method, plot_stderr
+):
+    # Any false value turns the bands off; plot drew them for numpy.False_
+    irf = bivariate_var_result.irf(3)
+    fig = getattr(irf, method)(plot_stderr=plot_stderr)
+    if method == "plot":
+        values, n_lines = irf.irfs, 2  # the responses and the zero line
+    else:
+        values, n_lines = irf.cum_effects, 3  # and the long-run effect
+    for i in range(2):
+        for j in range(2):
+            lines = fig.axes[2 * i + j].lines
+            assert len(lines) == n_lines
+            assert_allclose(lines[0].get_ydata(), values[:, i, j], rtol=1e-12)
+            assert_allclose(lines[1].get_ydata(), [0, 0])
 
 
 def test_irf_invalid_stderr_type_raises(bivariate_var_result):
@@ -1795,3 +1991,52 @@ def test_reorder_trend_exog(trend, k_exog, by_name):
         expected.forecast(y.iloc[-2:, order].to_numpy(), 4, exog_future),
         rtol=1e-10,
     )
+
+
+def test_pprint_matrix_text():
+    values = np.array([[1.5, -0.25], [12.0, 3e-7]])
+    text = output.pprint_matrix(values, ["a", "bbb"], ["x", "a_long_label"])
+    # Rows labels in 3 + 2 characters, columns in max(len(label) + 2, 10),
+    # floats with six decimals
+    expected = [
+        "     " + " " * 9 + "x" + "  a_long_label",
+        "a    " + "  1.500000" + "     -0.250000",
+        "bbb  " + " 12.000000" + "      0.000000",
+        "",
+    ]
+    assert text.split("\n") == expected
+    # Other values are converted with str, and labels are truncated to a
+    # given column width
+    text = output.pprint_matrix(np.array([[1, 22]]), [0], ["abcdefgh", 1], col_space=5)
+    assert text.split("\n") == ["   " + "abcde" + "    1", "0  " + "    1" + "   22", ""]
+
+
+def test_var_loglike_resid_deprecated():
+    # With Sigma = U'U / T, the Gaussian log-likelihood of the residuals U is
+    # -(T / 2) (K log(2 pi) + log|Sigma| + K), which var_loglike computes
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    resid = res.resid
+    nobs = resid.shape[0]
+    sigma_mle = resid.T @ resid / nobs
+    expected = stats.multivariate_normal(np.zeros(3), sigma_mle).logpdf(resid).sum()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert_allclose(res.llf, expected, rtol=1e-10)
+        assert_allclose(
+            var_model.var_loglike(None, sigma_mle, nobs), expected, rtol=1e-10
+        )
+    with pytest.warns(FutureWarning, match="resid has no effect"):
+        value = var_model.var_loglike(resid, sigma_mle, nobs)
+    assert_allclose(value, expected, rtol=1e-10)
+
+
+def test_forecast_cov_auto_warning_text():
+    from statsmodels.tools.sm_exceptions import OutputWarning
+
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(y).fit(2)
+    with pytest.warns(OutputWarning, match="parameter uncertainty into account$"):
+        res.forecast_cov(2, method="auto")

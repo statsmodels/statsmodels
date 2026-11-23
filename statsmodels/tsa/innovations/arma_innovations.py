@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from scipy.linalg.blas import find_best_blas_type
 
@@ -60,8 +62,6 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
     nobs, k_endog = endog.shape
-    ar = np.r_[1, -ar_params]
-    ma = np.r_[1, ma_params]
 
     # Get BLAS prefix
     if prefix is None:
@@ -76,6 +76,10 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
     ar_params = np.require(ar_params, dtype=dtype, requirements=["F", "W"])
     ma_params = np.require(ma_params, dtype=dtype, requirements=["F", "W"])
     sigma2 = dtype(sigma2).item()
+    # The lag polynomials are built from the converted parameters, so that
+    # they have the dtype that matches the prefix
+    ar = np.r_[1, -ar_params]
+    ma = np.r_[1, ma_params]
 
     # Get the appropriate functions
     arma_transformed_acovf_fast = getattr(
@@ -86,8 +90,8 @@ def arma_innovations(endog, ar_params=None, ma_params=None, sigma2=1,
         _arma_innovations, prefix + "arma_innovations_filter")
 
     # Run the innovations algorithm for ARMA coefficients
-    arma_acovf = arima_process.arma_acovf(ar, ma,
-                                          sigma2=sigma2, nobs=nobs) / sigma2
+    arma_acovf = arima_process.arma_acovf(
+        ar, ma, sigma2=sigma2, nobs=nobs, dtype=dtype) / sigma2
     acovf, acovf2 = arma_transformed_acovf_fast(ar, ma, arma_acovf)
     theta, v = arma_innovations_algo_fast(nobs, ar_params, ma_params,
                                           acovf, acovf2)
@@ -191,6 +195,18 @@ def arma_loglikeobs(endog, ar_params=None, ma_params=None, sigma2=1,
     return func(endog, ar_params, ma_params, sigma2)
 
 
+def _warn_unused_prefix(prefix, func_name):
+    # The score is the complex-step derivative of the loglikelihood, which is
+    # always evaluated in double precision (complex128), so prefix is not used
+    if prefix is not None:
+        warnings.warn(
+            f"prefix is not used by {func_name} and is deprecated. It will be "
+            "removed after statsmodels 0.17 is released.",
+            FutureWarning,
+            stacklevel=3,
+        )
+
+
 def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
                prefix=None):
     """
@@ -211,9 +227,12 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
     sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
     prefix : str, optional
-        The BLAS prefix associated with the datatype. Default is to find the
-        best datatype based on given input. This argument is typically only
-        used internally.
+        Not used. The score is always computed in double precision.
+
+        .. deprecated:: 0.15.1
+
+           `prefix` has no effect. It is deprecated and will be removed after
+           statsmodels 0.17 is released.
 
     Returns
     -------
@@ -227,6 +246,7 @@ def arma_score(endog, ar_params=None, ma_params=None, sigma2=1,
     This is a numerical approximation, calculated using first-order complex
     step differentiation on the `arma_loglike` method.
     """
+    _warn_unused_prefix(prefix, "arma_score")
     ar_params = np.atleast_1d([] if ar_params is None else ar_params)
     ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
@@ -261,9 +281,12 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
     sigma2 : float, optional
         The ARMA innovation variance. Default is 1.
     prefix : str, optional
-        The BLAS prefix associated with the datatype. Default is to find the
-        best datatype based on given input. This argument is typically only
-        used internally.
+        Not used. The score is always computed in double precision.
+
+        .. deprecated:: 0.15.1
+
+           `prefix` has no effect. It is deprecated and will be removed after
+           statsmodels 0.17 is released.
 
     Returns
     -------
@@ -277,6 +300,7 @@ def arma_scoreobs(endog, ar_params=None, ma_params=None, sigma2=1,
     This is a numerical approximation, calculated using first-order complex
     step differentiation on the `arma_loglikeobs` method.
     """
+    _warn_unused_prefix(prefix, "arma_scoreobs")
     ar_params = np.atleast_1d([] if ar_params is None else ar_params)
     ma_params = np.atleast_1d([] if ma_params is None else ma_params)
 
