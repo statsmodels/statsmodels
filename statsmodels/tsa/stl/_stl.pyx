@@ -97,10 +97,7 @@ def _is_pos_int(x, odd):
     valid = (isinstance(x, (int, np.integer))
              and not isinstance(x, np.timedelta64))
     valid = valid and not isinstance(x, (float, np.floating))
-    try:
-        valid = valid and x > 0
-    except Exception:
-        valid = False
+    valid = valid and x > 0
     if valid and odd:
         valid = valid & (x % 2) == 1
     return valid

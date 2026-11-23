@@ -42,7 +42,6 @@ import pandas as pd
 
 from statsmodels.tsa import x13
 
-x13._check_x12 = lambda x12path=None: "x12dummy"
 endog = pd.Series(
     range(24), index=pd.period_range("2000-01", periods=24, freq="M")
 )
@@ -58,7 +57,7 @@ def _monthly_endog():
 
 @pytest.fixture
 def no_x12(monkeypatch):
-    monkeypatch.setattr(x13, "_check_x12", lambda x12path=None: "x12dummy")
+    monkeypatch.setattr(x13, "_check_x12", lambda *args, **kwargs: "x12dummy")
 
 
 @pytest.mark.skipif(PYTHON_IMPL_WASM, reason="Emscripten does not support processes")
@@ -97,14 +96,14 @@ def test_rawspec_file_utf8_in_non_utf8_locale(tmp_path):
     assert f'title="{NON_ASCII_TITLE}"' in spec
 
 
-def test_rawspec_invalid_path(no_x12, tmp_path):
+def test_rawspec_invalid_path(tmp_path):
     missing = tmp_path / "missing.spc"
 
     with pytest.raises(ValueError, match="not valid path or spec string"):
         x13.x13_arima_analysis(_monthly_endog(), rawspec=str(missing), speconly=True)
 
 
-def test_rawspec_path_object(no_x12, tmp_path):
+def test_rawspec_path_object(tmp_path):
     specfile = tmp_path / "custom.spc"
     specfile.write_bytes((SPEC_TEMPLATE % NON_ASCII_TITLE).encode("utf-8"))
 
@@ -122,7 +121,7 @@ def test_rawspec_path_object(no_x12, tmp_path):
         )
 
 
-def test_rawspec_file_utf8_bom(no_x12, tmp_path):
+def test_rawspec_file_utf8_bom(tmp_path):
     specfile = tmp_path / "bom.spc"
     specfile.write_bytes(b"\xef\xbb\xbf" + (SPEC_TEMPLATE % "bom").encode("utf-8"))
 
@@ -134,7 +133,7 @@ def test_rawspec_file_utf8_bom(no_x12, tmp_path):
     assert 'title="bom"' in spec
 
 
-def test_rawspec_file_not_utf8(no_x12, tmp_path):
+def test_rawspec_file_not_utf8(tmp_path):
     specfile = tmp_path / "latin1.spc"
     specfile.write_bytes((SPEC_TEMPLATE % NON_ASCII_TITLE).encode("latin-1"))
 
@@ -252,7 +251,7 @@ def test_output_file_not_deleted_warns(stub_run_spec, tmp_path, monkeypatch):
 )
 # DataFrame.var with positional arguments warns on pandas 3
 @pytest.mark.filterwarnings("error")
-def test_spec_exog_columns_not_str(no_x12, exog, names, data):
+def test_spec_exog_columns_not_str(exog, names, data):
     spec = x13.x13_arima_analysis(_monthly_endog(), exog=exog, speconly=True)
 
     tokens = spec.split()
@@ -279,7 +278,7 @@ def test_spec_exog_columns_not_str(no_x12, exog, names, data):
     ],
     ids=["frame_name_first", "frame_name_last", "series_name", "series"],
 )
-def test_spec_exog_column_called_name(no_x12, exog, names, data):
+def test_spec_exog_column_called_name(exog, names, data):
     spec = x13.x13_arima_analysis(_monthly_endog(), exog=exog, speconly=True)
 
     # the user regressors are named by the columns, and their values are
@@ -288,3 +287,154 @@ def test_spec_exog_column_called_name(no_x12, exog, names, data):
     start = tokens.index("regression{")
     expected = f"regression{{ user = ({names}) data = ({data}) }}"
     assert tokens[start : tokens.index("}", start) + 1] == expected.split()
+
+
+# A stand-in for the X-13 binary. The lookup runs it without arguments, and
+# x13_arima_analysis with the spec and the name of the output files, for which
+# it writes the files that are read back. It prints its own path, which is
+# returned as stdout, so a test can tell which binary was used.
+FAKE_X13 = r"""#!/bin/sh
+if [ "$#" -eq 2 ]; then
+    : > "$2.err"
+    echo "Final automatic model choice : (0 1 1)(0 1 1)" > "$2.out"
+    for table in d11 d12 d13; do
+        printf 'date\tvalue\n----\t-----\n' > "$2.$table"
+        i=0
+        while [ "$i" -lt 24 ]; do
+            printf '%s\t%s.0\n' "$i" "$i" >> "$2.$table"
+            i=$((i + 1))
+        done
+    done
+fi
+echo "$0"
+"""
+
+fake_binaries = pytest.mark.skipif(
+    sys.platform == "win32" or PYTHON_IMPL_WASM,
+    reason="The stand-in binaries are shell scripts",
+)
+
+
+def _fake_binaries(directory, *names):
+    directory.mkdir(exist_ok=True)
+    for name in names:
+        binary = directory / name
+        binary.write_text(FAKE_X13, encoding="ascii", newline="\n")
+        binary.chmod(0o755)
+    return directory
+
+
+@fake_binaries
+@pytest.mark.parametrize("ext", ["", ".exe"], ids=["posix_names", "windows_names"])
+@pytest.mark.parametrize("prefer_x13", [True, False])
+@pytest.mark.parametrize(
+    "func", [x13.x13_arima_analysis, x13.x13_arima_select_order]
+)
+def test_prefer_x13_environment(tmp_path, monkeypatch, func, prefer_x13, ext):
+    # Each variable names a directory with one binary; prefer_x13 decides which
+    # variable is used
+    x13_dir = _fake_binaries(tmp_path / "x13", f"x13as{ext}")
+    x12_dir = _fake_binaries(tmp_path / "x12", f"x12a{ext}")
+    monkeypatch.setenv("X13PATH", str(x13_dir))
+    monkeypatch.setenv("X12PATH", str(x12_dir))
+
+    res = func(_monthly_endog(), prefer_x13=prefer_x13)
+
+    expected = x13_dir / f"x13as{ext}" if prefer_x13 else x12_dir / f"x12a{ext}"
+    assert res.stdout.decode().strip() == str(expected)
+
+
+@fake_binaries
+@pytest.mark.parametrize("ext", ["", ".exe"], ids=["posix_names", "windows_names"])
+@pytest.mark.parametrize("x13_name", ["x13as", "x13as_ascii", "x13as_html"])
+@pytest.mark.parametrize("variable", ["X12PATH", "X13PATH"])
+def test_prefer_x13_false_binary_order(tmp_path, monkeypatch, variable, x13_name, ext):
+    # With prefer_x13=False, x12a is used if the directory also has an x13as
+    # binary, also if only X13PATH is set
+    directory = _fake_binaries(tmp_path, f"{x13_name}{ext}", f"x12a{ext}")
+    monkeypatch.delenv("X13PATH", raising=False)
+    monkeypatch.delenv("X12PATH", raising=False)
+    monkeypatch.setenv(variable, str(directory))
+
+    res = x13.x13_arima_analysis(_monthly_endog(), prefer_x13=False)
+
+    assert res.stdout.decode().strip() == str(directory / f"x12a{ext}")
+
+
+@fake_binaries
+@pytest.mark.parametrize("prefer_x13", [True, False])
+@pytest.mark.parametrize("binary", [False, True], ids=["directory", "binary"])
+def test_prefer_x13_not_used_with_x12path(tmp_path, monkeypatch, binary, prefer_x13):
+    # prefer_x13 does nothing if x12path is given, as documented, and the
+    # environment variables are not used
+    directory = _fake_binaries(tmp_path / "bin", "x13as", "x12a")
+    other = _fake_binaries(tmp_path / "other", "x13as", "x12a")
+    monkeypatch.setenv("X13PATH", str(other))
+    monkeypatch.setenv("X12PATH", str(other))
+    x12path = directory / "x13as" if binary else directory
+
+    res = x13.x13_arima_analysis(
+        _monthly_endog(), x12path=x12path, prefer_x13=prefer_x13
+    )
+
+    assert res.stdout.decode().strip() == str(directory / "x13as")
+
+
+@fake_binaries
+def test_prefer_x13_false_falls_back(tmp_path, monkeypatch):
+    # Without a binary in X12PATH, prefer_x13=False runs the binary in X13PATH,
+    # which it ran before prefer_x13 was honoured
+    x13_dir = _fake_binaries(tmp_path / "x13", "x13as")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    monkeypatch.setenv("X13PATH", str(x13_dir))
+    monkeypatch.setenv("X12PATH", str(empty))
+
+    res = x13.x13_arima_analysis(_monthly_endog(), prefer_x13=False)
+
+    assert res.stdout.decode().strip() == str(x13_dir / "x13as")
+    # but not if x12path is given
+    with pytest.raises(x13.X13NotFoundError, match="x12a and x13as not found"):
+        x13.x13_arima_analysis(_monthly_endog(), x12path=empty, prefer_x13=False)
+
+
+@pytest.mark.parametrize("lookup", ["environment", "x12path"])
+def test_speconly_without_binary(tmp_path, monkeypatch, lookup):
+    # speconly returns the spec without looking up the binary, so neither the
+    # environment variables nor x12path need to lead to one. The spec is
+    # written out by hand from the X-13ARIMA-SEATS syntax; X-13 reads specs in
+    # free format, so the comparison ignores the whitespace between tokens.
+    monkeypatch.setenv("X13PATH", str(tmp_path))
+    monkeypatch.setenv("X12PATH", str(tmp_path))
+    kwargs = {"x12path": tmp_path / "x13as"} if lookup == "x12path" else {}
+    endog = pd.Series(
+        [1.5, 2.25, 3.0, 3.75, 4.5, 5.25, 6.0, 6.75],
+        index=pd.period_range("1959Q3", periods=8, freq="Q"),
+        name="gdp",
+    )
+
+    spec = x13.x13_arima_analysis(endog, speconly=True, **kwargs)
+
+    expected = """
+    Series {
+        data=(1.5 2.25 3.0 3.75 4.5 5.25 6.0 6.75)
+        appendbcst=no
+        appendfcst=no
+        period=4
+        start=1959.3
+        title="gdp"
+        name="gdp"
+    }
+    transform{function=auto}
+    outlier{}
+    automdl{
+        maxorder = (2 1)
+        maxdiff = (2 1)
+    }
+    x11{ save=(d11 d12 d13)
+         savelog=(fd8 m7 q)}
+    """
+    assert spec.split() == expected.split()
+    # the lookup still happens when the analysis is run
+    with pytest.raises(x13.X13NotFoundError, match="x12a and x13as not found"):
+        x13.x13_arima_analysis(endog, **kwargs)

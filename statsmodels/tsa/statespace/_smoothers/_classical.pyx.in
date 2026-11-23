@@ -112,9 +112,9 @@ cdef int {{prefix}}smoothed_estimators_measurement_classical({{prefix}}KalmanSmo
     lapack.{{prefix}}potrf("L", &kf_k_states, smoother._tmpL, &kf_k_states, &info)
 
     if info < 0:
-        raise np.linalg.LinAlgError('Illegal value in predicted state'
+        raise np.linalg.LinAlgError('Illegal value in predicted state'  # pragma: no cover
                                     ' covariance matrix encountered at'
-                                    ' period %d' % smoother.t)
+                                    ' period %d' % smoother.t)  # pragma: no cover
     if info > 0:
         raise np.linalg.LinAlgError('Singular predicted state covariance'
                                     ' matrix encountered at period %d' %
@@ -135,9 +135,9 @@ cdef int {{prefix}}smoothed_estimators_measurement_classical({{prefix}}KalmanSmo
                                                              smoother._input_scaled_smoothed_estimator, &kf_k_states, &info)
 
         if info < 0:
-            raise np.linalg.LinAlgError('Illegal value in predicted state'
+            raise np.linalg.LinAlgError('Illegal value in predicted state'  # pragma: no cover
                                         ' covariance matrix encountered at'
-                                        ' period %d' % smoother.t)
+                                        ' period %d' % smoother.t)  # pragma: no cover
 
     # Scaled smoothed estimator covariance matrix
     # $N_t = P_{t+1}^{-1} (P_{t+1} - V_{t+1}) P_{t+1}^{-1}
@@ -154,9 +154,9 @@ cdef int {{prefix}}smoothed_estimators_measurement_classical({{prefix}}KalmanSmo
                                                              smoother._input_scaled_smoothed_estimator_cov, &kf_k_states, &info)
 
         if info < 0:
-            raise np.linalg.LinAlgError('Illegal value in predicted state'
+            raise np.linalg.LinAlgError('Illegal value in predicted state'  # pragma: no cover
                                         ' covariance matrix encountered at'
-                                        ' period %d' % smoother.t)
+                                        ' period %d' % smoother.t)  # pragma: no cover
 
         # transpose
         for i in range(kfilter.k_states):
@@ -171,9 +171,9 @@ cdef int {{prefix}}smoothed_estimators_measurement_classical({{prefix}}KalmanSmo
                                                              smoother._input_scaled_smoothed_estimator_cov, &kf_k_states, &info)
 
         if info < 0:
-            raise np.linalg.LinAlgError('Illegal value in predicted state'
+            raise np.linalg.LinAlgError('Illegal value in predicted state'  # pragma: no cover
                                         ' covariance matrix encountered at'
-                                        ' period %d' % smoother.t)
+                                        ' period %d' % smoother.t)  # pragma: no cover
 
     # Smoothing error
     # $u_t = \\#_2 - K_t' r_t$

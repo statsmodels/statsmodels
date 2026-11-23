@@ -1,0 +1,3 @@
+- A prediction ``start`` that covers several dates, such as
+  ``"2001-04"`` on daily data, raised a ``TypeError`` when no ``end``
+  was given. :pr:`10921`

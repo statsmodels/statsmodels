@@ -162,7 +162,10 @@ class KalmanFilter(Representation):
     filter_univariate = OptionWrapper("filter_method", FILTER_UNIVARIATE)
     """(bool) Flag for univariate filtering of multivariate observation vector"""
     filter_collapsed = OptionWrapper("filter_method", FILTER_COLLAPSED)
-    """(bool) Flag for Kalman filtering with collapsed observation vector"""
+    """(bool) Flag for Kalman filtering with collapsed observation vector
+
+    It requires a design matrix of full column rank, see `set_filter_method`.
+    """
     filter_extended = OptionWrapper("filter_method", FILTER_EXTENDED)
     """(bool) Flag for extended Kalman filtering. Not implemented"""
     filter_unscented = OptionWrapper("filter_method", FILTER_UNSCENTED)
@@ -474,7 +477,19 @@ class KalmanFilter(Representation):
             method if both are specified.
         FILTER_COLLAPSED
             Collapsed approach to Kalman filtering. Will be used *in addition*
-            to conventional or univariate filtering.
+            to conventional or univariate filtering. It requires more
+            observed series than states and a design matrix of full column
+            rank: in each period with more observed series than states, the
+            rows of the design matrix that belong to the observed series
+            must form a matrix of full column rank, otherwise filtering
+            raises a ``LinAlgError`` that says so. For example, the design
+            matrix of a dynamic factor model with lagged factors in the state
+            vector has zero columns.
+
+            .. versionchanged:: 0.15.1
+
+               The error for a design matrix that is not of full column rank
+               names this requirement.
         FILTER_CONCENTRATED
             Use the concentrated log-likelihood function. Will be used
             *in addition* to the other options.
@@ -494,6 +509,17 @@ class KalmanFilter(Representation):
         arguments.
 
         The default filtering method is FILTER_CONVENTIONAL.
+
+        Univariate filtering first diagonalizes a non-diagonal observation
+        covariance matrix with an LDL decomposition. A positive semi-definite
+        matrix gives a warning, and a matrix that is not positive
+        semi-definite raises a ``LinAlgError``.
+
+        .. versionchanged:: 0.15.1
+
+           An observation covariance matrix that is not positive
+           semi-definite raises a ``LinAlgError`` with univariate filtering.
+           It could give a meaningless loglikelihood without an error.
 
         Examples
         --------

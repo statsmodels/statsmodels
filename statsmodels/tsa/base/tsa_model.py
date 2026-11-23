@@ -83,6 +83,14 @@ def get_index_loc(key, index):
            starts at the next date or ends at the previous one. This is
            deprecated and will raise a KeyError after statsmodels 0.17 is
            released.
+
+        .. versionchanged:: 0.15.1
+
+           A quarter string such as "2001Q2" matches all dates of the
+           quarter in a DatetimeIndex, and all periods of the quarter in a
+           PeriodIndex with a finer frequency, as pandas' partial-string
+           indexing does for e.g. "2001-03". Previously it was taken as the
+           last day of the quarter, or did not match periods.
     index : pd.Index
         The index to search.
 
@@ -218,12 +226,23 @@ def get_index_loc(key, index):
     # Get the location
     if date_index:
         # (note that get_loc will throw a KeyError if key is invalid)
-        if isinstance(key, str) and re.fullmatch("[0-9]*Q[1-4]", key):
-            # Handle future changes in pandas 4
-            key = pd.Period(key)
-            if isinstance(index, pd.DatetimeIndex):
-                key = key.to_timestamp(freq="Q")
-        loc = index.get_loc(key)
+        if (
+            isinstance(index, DatetimeIndex)
+            and isinstance(key, str)
+            and re.fullmatch("[0-9]*Q[1-4]", key)
+        ):
+            # pandas deprecates parsing quarter strings as dates, so select
+            # the dates in the quarter as its partial-string indexing does,
+            # e.g. for "2001-03" on a daily index
+            period = Period(key)
+            loc = index.slice_indexer(period.start_time, period.end_time)
+            if loc.start == loc.stop:
+                raise KeyError(key)
+            if loc.stop - loc.start == 1:
+                # A single date, e.g. of quarterly data, is an exact match
+                loc = loc.start
+        else:
+            loc = index.get_loc(key)
     elif int_index or range_index:
         # For NumericIndex and RangeIndex, key is assumed to be the location
         # and not an index value (this assumption is required to support
@@ -460,6 +479,12 @@ def get_prediction_index(
     is because integers for a RangeIndex could refer either to index values
     or to index locations in an ambiguous way (while for `NumericIndex`,
     since we have required them to be full indexes, there is no ambiguity).
+
+    .. versionchanged:: 0.15.1
+
+       A quarter string such as "2001Q2" as `start` or `end` covers the
+       whole quarter of a date index, so that prediction starts at its first
+       date or ends at its last date in the sample.
     """
 
     # Convert index keys (start, end) to index locations and get associated

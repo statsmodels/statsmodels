@@ -936,7 +936,6 @@ cdef class {{prefix}}KalmanFilter(object):
 
             # Perform the prediction step
             self.prediction(self, self.model)
-            # self._prediction()
 
             # Aids to numerical stability
             self.numerical_stability()
@@ -954,7 +953,6 @@ cdef class {{prefix}}KalmanFilter(object):
 
         # Form forecasts
         self.forecasting(self, self.model)
-        # self._forecasting()
 
         # Perform `forecast_error_cov` inversion (or decomposition)
         try:
@@ -962,9 +960,7 @@ cdef class {{prefix}}KalmanFilter(object):
         except np.linalg.LinAlgError:
             # If the multivariate filter fails here due to a singular forecast
             # error covariance matrix, then we can try to fall back to the
-            # univariate filter
-            # If we were already using the univariate filter, raise the
-            # exception
+            # univariate filter (the univariate inversion does not raise)
             if not ((self.inversion_method & INVERT_UNIVARIATE) or
                     (self.inversion_method & SOLVE_CHOLESKY)):
                 raise NotImplementedError(
@@ -972,24 +968,19 @@ cdef class {{prefix}}KalmanFilter(object):
                     ' multivariate filter cannot fall back to univariate'
                     ' filter when the inversion method is set to anything'
                     ' other than INVERT_UNIVARIATE or SOLVE_CHOLESKY.')
-            elif self.univariate_filter[self.t]:
-                raise
             else:
                 self.univariate_filter[self.t] = 1
                 next(self)
                 return
-        # self.determinant = self._inversion()
 
         # Updating step
         self.updating(self, self.model)
-        # self._updating()
 
         # Retrieve the loglikelihood
         if not self.conserve_memory & MEMORY_NO_LIKELIHOOD or self.t >= self.loglikelihood_burn:
             self._loglikelihood[0] = (
                 self._loglikelihood[0] +
                 self.calculate_loglikelihood(self, self.model, self.determinant) +
-                # self._calculate_loglikelihood() +
                 self.model.collapse_loglikelihood
             )
             if self.filter_method & FILTER_CONCENTRATED:
@@ -998,7 +989,6 @@ cdef class {{prefix}}KalmanFilter(object):
         # Prediction step (default timing)
         if self.filter_timing == TIMING_INIT_PREDICTED:
             self.prediction(self, self.model)
-            # self._prediction()
 
             # Aids to numerical stability
             self.numerical_stability()
@@ -1018,21 +1008,6 @@ cdef class {{prefix}}KalmanFilter(object):
 
         # Advance the time
         self.t += 1
-
-    cdef void _forecasting(self):
-        {{prefix}}forecast_univariate(self, self.model)
-
-    cdef {{cython_type}} _inversion(self):
-        {{prefix}}inverse_noop_univariate(self, self.model, self.determinant)
-
-    cdef void _updating(self):
-        {{prefix}}updating_univariate(self, self.model)
-
-    cdef {{cython_type}} _calculate_loglikelihood(self):
-        return {{prefix}}loglikelihood_univariate(self, self.model, self.determinant)
-
-    cdef void _prediction(self):
-        {{prefix}}prediction_univariate(self, self.model)
 
     cdef void initialize_statespace_object_pointers(self) except *:
         cdef:
@@ -1333,11 +1308,10 @@ cdef class {{prefix}}KalmanFilter(object):
             if self.filter_timing == TIMING_INIT_PREDICTED:
                 blas.{{prefix}}copy(&k_states2, self._input_state_cov, &inc, self._tmp0, &inc)
                 blas.{{prefix}}axpy(&k_states2, &gamma, self._predicted_state_cov, &inc, self._tmp0, &inc)
-            elif self.t > 0:
+            else:
+                # t >= nobs_diffuse + 1 > 0 here
                 blas.{{prefix}}copy(&k_states2, &self.predicted_state_cov[0,0,predicted_cov_t], &inc, self._tmp0, &inc)
                 blas.{{prefix}}axpy(&k_states2, &gamma, &self.predicted_state_cov[0,0,predicted_cov_t-1], &inc, self._tmp0, &inc)
-            else:
-                return
 
 
             {{if combined_prefix == 'd'}}
