@@ -1,0 +1,8 @@
+- ``summary_impacts``, ``summary_details`` and ``summary`` of the news
+  of state space models (``NewsResults``) raised a ``KeyError`` for an
+  impact date, impacted variable, update date or updated variable
+  whose impacts were all within the tolerance (for example the last
+  observed date of the previous data, or any date with a large
+  ``tolerance``), although a range of such dates gave a table without
+  rows. Such a selection gives a table without rows, and a list with
+  such a date gives the rows of the other dates. :pr:`11118`
