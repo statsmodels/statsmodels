@@ -4002,3 +4002,41 @@ def test_fit_em_global_nonstationary_initialization():
         desired = mod.fit_em(maxiter=1, return_params=True)
     assert_allclose(params, desired, rtol=1e-12)
     assert_equal(mod.ssm.initialization.initialization_type, "approximate_diffuse")
+
+
+def test_fit_em_nonstationary_restart_untransformed_start_params():
+    # With transformed=False, the start parameters are transformed once, also
+    # for the EM iterations after a restart (here the idiosyncratic AR(1) of
+    # y3 is switched to diffuse after the first step), so the result is that
+    # of the transformed start parameters
+    rng = np.random.default_rng(3)
+    trend = _trend_data()["y1"]
+    factor = rng.standard_normal(20)
+    noise = 0.1 * rng.standard_normal((20, 2))
+    endog = pd.DataFrame(
+        {"y1": factor + noise[:, 0], "y2": factor + noise[:, 1], "y3": trend},
+        index=trend.index,
+    )
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, standardize=False)
+    params = mod.start_params
+    unconstrained = mod.untransform_params(params)
+
+    msg = "idiosyncratic AR(1) for monthly variable: y3'], and fitting was restarted"
+    msg_maxiter = "EM reached maximum number of iterations"
+    with pytest.warns(EstimationWarning, match=re.escape(msg)):
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            desired = mod.fit_em(
+                params, maxiter=3, em_initialization=False, return_params=True
+            )
+    with pytest.warns(EstimationWarning, match=re.escape(msg)):
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            actual = mod.fit_em(
+                unconstrained,
+                transformed=False,
+                maxiter=3,
+                em_initialization=False,
+                return_params=True,
+            )
+    # rtol: the start parameters agree only up to the rounding of the
+    # transformation and its inverse
+    assert_allclose(actual, desired, rtol=1e-7)

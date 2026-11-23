@@ -2580,6 +2580,13 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         transformed : bool, optional
             Whether or not `start_params` is already transformed. Default is
             True.
+
+            .. versionchanged:: 0.15.1
+
+               With ``transformed=False``, the start parameters are
+               transformed once. When the EM iterations restarted (see
+               `em_initialization`), they restarted from the transformed
+               start parameters transformed a second time.
         cov_type : str, optional
             The `cov_type` keyword governs the method for calculating the
             covariance matrix of parameter estimates. Can be one of:
@@ -2793,8 +2800,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                          f" {switch_init}, and fitting was restarted.",
                          EstimationWarning, stacklevel=2)
                     self.ssm.initialization = init
+                    # The parameters in `params` are transformed
                     results = self.fit_em(
-                        start_params=params[-1], transformed=transformed,
+                        start_params=params[-1], transformed=True,
                         cov_type=cov_type, cov_kwds=cov_kwds,
                         maxiter=maxiter, tolerance=tolerance,
                         em_initialization=em_initialization,
