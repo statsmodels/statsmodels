@@ -1976,11 +1976,15 @@ def test_small_int_index_extended_past_dtype_max(dtype, key):
     # Extending an index 0, ..., n - 1 of a small integer dtype past the
     # largest value of the dtype raised "Maximum allowed size exceeded"
     index = pd.Index(np.arange(5, dtype=dtype))
+    # pandas < 2 has no index of a small integer dtype: it stores int8 and
+    # int16 as int64 and uint8 and uint16 as uint64, and an index of dtype
+    # uint64 is extended with uint64 labels
+    expected_dtype = np.uint64 if index.dtype == np.uint64 else np.int64
     loc, new_index, expanded = tsa_model.get_index_loc(key, index)
     assert loc == key
     assert expanded
-    assert new_index.equals(pd.Index(np.arange(key + 1, dtype=np.int64)))
-    assert new_index.dtype == np.int64
+    assert new_index.equals(pd.Index(np.arange(key + 1, dtype=expected_dtype)))
+    assert new_index.dtype == expected_dtype
 
     endog = pd.Series(np.zeros(5), index=index)
     mod = tsa_model.TimeSeriesModel(endog)
@@ -1988,7 +1992,8 @@ def test_small_int_index_extended_past_dtype_max(dtype, key):
         3, key, 5, mod._index, data=mod.data
     )
     assert (start, end, out_of_sample) == (3, 4, key - 4)
-    assert prediction_index.equals(pd.Index(np.arange(3, key + 1, dtype=np.int64)))
+    expected = pd.Index(np.arange(3, key + 1, dtype=expected_dtype))
+    assert prediction_index.equals(expected)
 
 
 @pytest.mark.parametrize(
