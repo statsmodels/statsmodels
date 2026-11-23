@@ -40,7 +40,7 @@ cdef validate_matrix_shape(str name, Py_ssize_t *shape, int nrows, int ncols, no
                          ' got %d' % (name, nrows, shape[0]))
     if not shape[1] == ncols:
         raise ValueError('Invalid shape for %s matrix: requires %d columns,'
-                         'got %d' % (name, shape[1], shape[1]))
+                         ' got %d' % (name, ncols, shape[1]))
     if nobs is not None and shape[2] not in [1, nobs]:
         raise ValueError('Invalid time-varying dimension for %s matrix:'
                          ' requires 1 or %d, got %d' % (name, nobs, shape[2]))
@@ -147,10 +147,10 @@ if prefix == 's':
 
 
 cdef blas_bint _{{prefix}}select1({{cython_type}} * a):
-    return 0
+    return 0  # pragma: no cover
 
 cdef blas_bint _{{prefix}}select2({{cython_type}} * a, {{cython_type}} * b):
-    return 0
+    return 0  # pragma: no cover
 
 cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}} * q, int n, int complex_step=False) except *:
     # Note: some of this code (esp. the Sylvester solving part) cribbed from
@@ -255,7 +255,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
                                a, &n_, &info)
 
     if not info == 0:
-        raise np.linalg.LinAlgError('LU solver error.')
+        raise np.linalg.LinAlgError('LU solver error.')  # pragma: no cover
 
     # Now we have b^H; we could take the conjugate transpose to get b, except
     # that the input to the continuous Lyapunov equation is exactly
@@ -281,7 +281,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
                                         q, &n_, &info)
 
     if not info == 0:
-        raise np.linalg.LinAlgError('LU solver error.')
+        raise np.linalg.LinAlgError('LU solver error.')  # pragma: no cover
 
     # Replace the result (stored in q) with its (conjugate) transpose
     for j in range(1, n):
@@ -300,7 +300,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
                                         q, &n_, &info)
 
     if not info == 0:
-        raise np.linalg.LinAlgError('LU solver error.')
+        raise np.linalg.LinAlgError('LU solver error.')  # pragma: no cover
 
     # q -> -2.0 * q
     blas.{{prefix}}scal(&n2, &delta, q, &inc)
@@ -343,7 +343,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
     {{endif}}
 
     if not info == 0:
-        raise np.linalg.LinAlgError('Schur decomposition solver error.')
+        raise np.linalg.LinAlgError('Schur decomposition solver error.')  # pragma: no cover
 
     # Get v (so that in the complex step case we can take the conjugate)
     copy(n2, &u[0, 0], &v[0, 0])
@@ -837,9 +837,6 @@ cdef int _{{prefix}}ldl({{cython_type}} * A, int n) except *:
             A[i + j*n] = A[i + j*n] / v[j]
 
     return info
-
-cpdef int {{prefix}}ldl({{cython_type}} [::1, :] A) except *:
-    _{{prefix}}ldl(&A[0,0], A.shape[0])
 
 cdef int _{{prefix}}reorder_missing_diagonal({{cython_type}} * a, int * missing, int n):
     """
