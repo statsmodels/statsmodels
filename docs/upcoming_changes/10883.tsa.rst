@@ -1,0 +1,3 @@
+- ``STLForecastResults.forecast`` raised a ``TypeError`` for a str or
+  datetime ``steps``, although they are documented.
+  :pr:`10883`

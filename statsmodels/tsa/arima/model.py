@@ -206,8 +206,9 @@ class ARIMA(sarimax.SARIMAX):
             seasonal_order=seasonal_order,
             enforce_stationarity=enforce_stationarity,
             enforce_invertibility=enforce_invertibility,
-            concentrate_scale=concentrate_scale, dates=dates, freq=freq,
-            missing=missing, validate_specification=validate_specification,
+            concentrate_scale=concentrate_scale, trend_offset=trend_offset,
+            dates=dates, freq=freq, missing=missing,
+            validate_specification=validate_specification,
             validate_exog=validate_exog)
         self.trend = trend
 

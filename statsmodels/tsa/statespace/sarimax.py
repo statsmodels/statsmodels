@@ -1954,7 +1954,10 @@ class SARIMAXResults(MLEResults):
         self._data_attr_model.extend(["orig_endog", "orig_exog"])
 
     def extend(self, endog, exog=None, **kwargs):
-        kwargs.setdefault("trend_offset", self.nobs + 1)
+        # The time trend continues from the end of this sample, which starts
+        # at the model's trend_offset (itself shifted if the results were
+        # extended before)
+        kwargs.setdefault("trend_offset", self.model.trend_offset + self.nobs)
         # GH 8991. The specification was already validated when the original
         # model was created, and `extend` cannot change it. Only the constant-
         # `exog` check can misfire when re-run on the new data alone: `exog`

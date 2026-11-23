@@ -1,0 +1,3 @@
+- The ARMA likelihood functions of ``statsmodels.tsa.innovations`` raised for
+  an (n, 1) or one-column DataFrame ``endog``, and ``arma_score`` and
+  ``arma_scoreobs`` raised for scalar parameters. :pr:`10888`

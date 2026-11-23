@@ -5,9 +5,9 @@ from statsmodels.compat.pandas import (
     is_float_index,
     is_int_index,
     is_numeric_dtype,
+    to_period_offset,
 )
 
-import numbers
 import re
 import warnings
 
@@ -27,6 +27,7 @@ from pandas import (
 )
 from pandas.tseries.frequencies import to_offset
 
+from statsmodels.base.covtype import _stacklevel_outside_statsmodels
 from statsmodels.base.data import PandasData
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
@@ -73,8 +74,22 @@ def get_index_loc(key, index):
         The key for which to find the location if the underlying index is
         a DateIndex or a location if the underlying index is a RangeIndex
         or an Index with an integer dtype.
+
+        .. deprecated:: 0.15.1
+
+           A partial date string that matches no date of the index but lies
+           between two of its dates, such as "2000-02" for quarterly dates
+           starting on 2000-01-01, gives an empty slice, so that prediction
+           starts at the next date or ends at the previous one. This is
+           deprecated and will raise a KeyError after statsmodels 0.17 is
+           released.
     index : pd.Index
         The index to search.
+
+        .. versionchanged:: 0.15.1
+
+           An Index with dtype uint64 is extended with uint64 labels
+           instead of float labels.
 
     Returns
     -------
@@ -114,16 +129,9 @@ def get_index_loc(key, index):
             key = nobs + key
         # Out-of-sample (note that we include key itself in the new index)
         elif key > nobs - 1:
-            # See gh5835. Remove the except after pandas 0.25 required.
-            try:
-                base_index_start = base_index.start
-                base_index_step = base_index.step
-            except AttributeError:
-                base_index_start = base_index._start
-                base_index_step = base_index._step
-            stop = base_index_start + (key + 1) * base_index_step
+            stop = base_index.start + (key + 1) * base_index.step
             index = RangeIndex(
-                start=base_index_start, stop=stop, step=base_index_step
+                start=base_index.start, stop=stop, step=base_index.step
             )
 
     # Special handling for NumericIndex
@@ -138,7 +146,12 @@ def get_index_loc(key, index):
             key = nobs + key
         # Out-of-sample (note that we include key itself in the new index)
         elif key > base_index[-1]:
-            index = Index(np.arange(base_index[0], int(key + 1)))
+            # NumPy computes the range in the dtype of a small integer index,
+            # such as int8, which cannot hold the new labels, and
+            # np.arange(np.uint64(0), int) gives floats, so keep uint64 and
+            # use int64 otherwise
+            dtype = np.uint64 if base_index.dtype == np.uint64 else np.int64
+            index = Index(np.arange(int(base_index[0]), int(key + 1), dtype=dtype))
 
     # Special handling for date indexes
     if date_index:
@@ -174,6 +187,14 @@ def get_index_loc(key, index):
                 date_key = pd.Period(key).to_timestamp()
             else:
                 date_key = Timestamp(key)
+            # A date string is a local time of a tz-aware index, as in
+            # pandas' string indexing (a no-op for a tz-naive index)
+            if (
+                isinstance(key, str)
+                and index_class is DatetimeIndex
+                and date_key.tz is None
+            ):
+                date_key = date_key.tz_localize(base_index.tz)
 
             # Out-of-sample
             if date_key > base_index[-1]:
@@ -229,6 +250,16 @@ def get_index_loc(key, index):
 
     # Return the index through the end of the loc / slice
     if isinstance(loc, slice):
+        if loc.start == loc.stop:
+            # pandas gives an empty slice for a partial date string that lies
+            # between two dates of the index
+            warnings.warn(
+                f"No date of the index matches the key {key!r}. Keys that "
+                "match no date are deprecated and will raise a KeyError "
+                "after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=_stacklevel_outside_statsmodels(),
+            )
         end = loc.stop - 1
     else:
         end = loc
@@ -246,6 +277,14 @@ def get_index_label_loc(key, index, row_labels):
         The key for which to find the location if the underlying index is
         a DateIndex or is only being used as row labels, or a location if
         the underlying index is a RangeIndex or a NumericIndex.
+
+        .. versionchanged:: 0.15.1
+
+           A quarter string such as "2001Q2" for which a DatetimeIndex
+           `index` has no date raises a KeyError. Previously it was looked
+           up in `row_labels` with pandas' quarter parsing, which could
+           match a date of another quarter, such as 2000-07-01 for
+           semiannual dates starting on 2000-01-01.
     index : pd.Index
         The index to search.
     row_labels : pd.Index
@@ -273,6 +312,20 @@ def get_index_label_loc(key, index, row_labels):
     try:
         loc, index, index_was_expanded = get_index_loc(key, index)
     except KeyError:
+        # A quarter string such as "2001Q2" for which a date index has no
+        # date is not looked up in the row labels, where pandas' deprecated
+        # quarter parsing can find a date of another quarter
+        if (
+            isinstance(index, DatetimeIndex)
+            and isinstance(key, str)
+            and re.fullmatch("[0-9]*Q[1-4]", key)
+        ):
+            period = Period(key)
+            in_quarter = (index.year == period.year) & (
+                index.quarter == period.quarter
+            )
+            if not in_quarter.any():
+                raise
         if not isinstance(key, (int, np.integer)):
             loc = row_labels.get_loc(key)
         else:
@@ -300,8 +353,6 @@ def get_index_label_loc(key, index, row_labels):
             # pandas.Index.get_loc as of 0.23.4)
             else:
                 loc = loc[0]
-        if not isinstance(loc, numbers.Integral):
-            raise
 
         index = row_labels[: loc + 1]
         index_was_expanded = False
@@ -335,7 +386,19 @@ def get_prediction_index(
         *included* in prediction). Depending on the underlying
         model's index, may be an integer, a date (string, datetime object,
         pd.Timestamp, or pd.Period object), or some other object in the
-        model's row labels.
+        model's row labels. A date string that covers several dates of a
+        date index with a frequency, such as "2002Q2" or "2002" for monthly
+        data, ends prediction at the last of them in the index, or, if its
+        period is after the sample, at the last date of the period in the
+        frequency of the index.
+
+        .. versionchanged:: 0.15.1
+
+           A date string whose period is after the sample, such as "2002Q2"
+           for monthly data that end in 2001, ends prediction at the last
+           date of the period in the frequency of the index (2002-06).
+           Previously prediction ended at the first date of the period
+           (2002-04).
     nobs : int
         The number of observations in the model.
     base_index : pd.Index
@@ -407,7 +470,7 @@ def get_prediction_index(
         end = max(start, len(base_index) - 1)
     try:
         end, end_index, end_oos = get_index_label_loc(
-            end, base_index, data.row_labels
+            _period_end(end, base_index), base_index, data.row_labels
         )
     except KeyError as exc:
         raise KeyError(
@@ -479,6 +542,45 @@ def get_prediction_index(
     end -= out_of_sample
 
     return start, end, out_of_sample, prediction_index
+
+
+def _period_end(key, index):
+    """
+    The last date of the period of a date string key that is after index
+
+    A date string such as "2002Q2" covers several dates of a monthly index.
+    In the sample, partial-string indexing selects all of them. If the
+    period starts after the index, this returns its last date in the
+    frequency of the index, so that prediction can end there. Other keys,
+    keys whose period starts in the index, and keys of a period without a
+    date of the frequency are returned unchanged.
+    """
+    if not (
+        isinstance(key, str)
+        and isinstance(index, (DatetimeIndex, PeriodIndex))
+        and index.freq is not None
+    ):
+        return key
+    try:
+        # The period of the resolution of the string, e.g. a quarter
+        period = Period(key)
+    except ValueError:
+        period = None
+    if not isinstance(period, Period):
+        # Not a date of pandas' parser, e.g. "now", or NaT, e.g. ""
+        return key
+    if isinstance(index, PeriodIndex):
+        if period.asfreq(index.freq, how="start") <= index[-1]:
+            return key
+        return period.asfreq(index.freq, how="end")
+    start = period.start_time.tz_localize(index.tz)
+    if start <= index[-1]:
+        return key
+    end = period.end_time.tz_localize(index.tz)
+    last = date_range(start=index[0], end=end, freq=index.freq)[-1]
+    # A period without a date, e.g. "2002-02" of quarterly dates, is left to
+    # get_index_loc, which uses the first date after it
+    return last if last >= start else key
 
 
 class TimeSeriesModel(base.LikelihoodModel):
@@ -613,20 +715,27 @@ class TimeSeriesModel(base.LikelihoodModel):
                     # If we got an inferred frequncy, alert the user
                     if freq is not None:
                         inferred_freq = True
-                        if freq is not None:
-                            if isinstance(freq, pd.tseries.offsets.BaseOffset):
-                                freqstr = freq.freqstr
-                            else:
-                                freqstr = str(freq)
-                            warnings.warn(
-                                "No frequency information was provided, so inferred "
-                                f"frequency {freqstr} will be used.",
-                                ValueWarning,
-                                stacklevel=2,
-                            )
+                        if isinstance(freq, pd.tseries.offsets.BaseOffset):
+                            freqstr = freq.freqstr
+                        else:
+                            freqstr = str(freq)
+                        warnings.warn(
+                            "No frequency information was provided, so inferred "
+                            f"frequency {freqstr} will be used.",
+                            ValueWarning,
+                            stacklevel=2,
+                        )
 
                 # Convert the passed freq to a pandas offset object
-                if freq is not None:
+                if freq is not None and isinstance(index, PeriodIndex):
+                    # Accept the period alias of the index (e.g. "M"), which
+                    # pandas 3 does not accept as an offset alias, as well as
+                    # an offset alias (e.g. "ME")
+                    try:
+                        freq = to_period_offset(freq)
+                    except ValueError:
+                        freq = to_offset(freq)
+                elif freq is not None:
                     freq = to_offset(freq)
 
                 # Now, if no frequency information is available from the index
@@ -763,7 +872,7 @@ class TimeSeriesModel(base.LikelihoodModel):
         self.data.dates = self._index if self._index_dates else None
         self.data.freq = self._index.freqstr if self._index_dates else None
 
-    def _get_index_loc(self, key, base_index=None):
+    def _get_index_loc(self, key):
         """
         Get the location of a specific key in an index
 
@@ -773,9 +882,6 @@ class TimeSeriesModel(base.LikelihoodModel):
             The key for which to find the location if the underlying index is
             a DateIndex or a location if the underlying index is a RangeIndex
             or a NumericIndex.
-        base_index : pd.Index, optional
-            Optionally the base index to search. If None, the model's index is
-            searched.
 
         Returns
         -------
@@ -793,12 +899,9 @@ class TimeSeriesModel(base.LikelihoodModel):
         a NumericIndex or a date index, this function extends the index up to
         and including key, and then returns the location in the new index.
         """
+        return get_index_loc(key, self._index)
 
-        if base_index is None:
-            base_index = self._index
-        return get_index_loc(key, base_index)
-
-    def _get_index_label_loc(self, key, base_index=None):
+    def _get_index_label_loc(self, key):
         """
         Get the location of a specific key in an index or model row labels
 
@@ -808,9 +911,6 @@ class TimeSeriesModel(base.LikelihoodModel):
             The key for which to find the location if the underlying index is
             a DateIndex or is only being used as row labels, or a location if
             the underlying index is a RangeIndex or a NumericIndex.
-        base_index : pd.Index, optional
-            Optionally the base index to search. If None, the model's index is
-            searched.
 
         Returns
         -------
@@ -824,14 +924,11 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         Notes
         -----
-        This method expands on `_get_index_loc` by first trying the given
-        base index (or the model's index if the base index was not given) and
-        then falling back to try again with the model row labels as the base
-        index.
+        This method expands on `_get_index_loc` by first trying the model's
+        index and then falling back to try again with the model row labels as
+        the base index.
         """
-        if base_index is None:
-            base_index = self._index
-        return get_index_label_loc(key, base_index, self.data.row_labels)
+        return get_index_label_loc(key, self._index, self.data.row_labels)
 
     def _get_prediction_index(
         self, start, end, index=None, silent=False

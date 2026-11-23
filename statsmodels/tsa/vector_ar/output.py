@@ -346,23 +346,18 @@ def pprint_matrix(values, rlabels, clabels, col_space=None):
     return buf.getvalue()
 
 
-def _pfixed(s, space, nanRep=None, float_format=None):
+def _pfixed(s, space):
     """
     Format a single value right-justified to a fixed width
 
     Parameters
     ----------
     s : object
-        The value to format. If a float, `float_format` (or a default
-        format) is applied before justifying; otherwise it is converted
-        with ``str`` and truncated to `space` characters.
+        The value to format. If a float, it is formatted with six decimals
+        before justifying; otherwise it is converted with ``str`` and
+        truncated to `space` characters.
     space : int
         The fixed field width to justify to.
-    nanRep : optional
-        Currently unused.
-    float_format : callable, optional
-        Callable used to format `s` when it is a float. If None, uses
-        a default format.
 
     Returns
     -------
@@ -370,11 +365,6 @@ def _pfixed(s, space, nanRep=None, float_format=None):
         The right-justified, fixed-width string.
     """
     if isinstance(s, float):
-        if float_format:
-            formatted = float_format(s)
-        else:
-            formatted = f"{s:#8.6F}"
-
-        return formatted.rjust(space)
+        return f"{s:#8.6F}".rjust(space)
     else:
         return (f"{s}")[:space].rjust(space)

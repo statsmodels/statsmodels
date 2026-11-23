@@ -2280,16 +2280,19 @@ def test_hessian_scaled_by_nobs(austourists):
     # The finite difference approximations are numerical differences of
     # numerical scores, first order accurate (forward) or second order
     # (centered). Their error is relative to the scale of the whole matrix,
-    # not to each element, hence atol.
-    atol = 0.02 * np.abs(expected).max()
+    # not to each element, hence atol. The forward error depends on the
+    # platform (2% of the scale on Linux with Python 3.13), so it is only
+    # checked to the scale of the matrix, which catches a missing division
+    # by nobs (a factor of 68 here).
+    scale = np.abs(expected).max()
     with pytest.warns(PrecisionWarning, match="Calculation of the Hessian"):
         centered = model.hessian(
             params, approx_complex_step=False, approx_centered=True
         )
-    assert_allclose(centered, expected, rtol=0, atol=atol / 2)
+    assert_allclose(centered, expected, rtol=0, atol=0.01 * scale)
     with pytest.warns(PrecisionWarning, match="Calculation of the Hessian"):
         forward = model.hessian(params, approx_complex_step=False)
-    assert_allclose(forward, expected, rtol=0, atol=atol)
+    assert_allclose(forward, expected, rtol=0, atol=0.1 * scale)
 
 
 #
@@ -2504,3 +2507,53 @@ def test_base_results_statespace_attributes(mean_data, concentrated):
         text = res.summary().as_text()
     assert re.search(r"R-squared:\s+0\.250", text)
     assert ("Scale" in text) == concentrated
+
+
+@pytest.mark.parametrize(
+    "error, seasonal, start, end",
+    [
+        ("add", None, 10, 10),
+        ("add", None, 0, 0),
+        ("add", None, 67, 71),
+        ("mul", "mul", 67, 71),
+    ],
+)
+def test_get_prediction_simulated_one_step(austourists, error, seasonal, start, end):
+    # With exactly one in-sample prediction, its one-step simulation was
+    # skipped (`if nsmooth > 1`), so get_prediction raised "need at least
+    # one array to concatenate", or the simulations missed the first period
+    # and the prediction intervals raised a shape error
+    model = ETSModel(
+        austourists,
+        error=error,
+        seasonal=seasonal,
+        seasonal_periods=4 if seasonal else None,
+    )
+    res = model.smooth(model.start_params)
+    reps = 50
+    pred = res.get_prediction(
+        start=start,
+        end=end,
+        method="simulated",
+        simulate_repetitions=reps,
+        rng=np.random.default_rng(1),
+    )
+    frame = pred.summary_frame()
+    assert frame.shape[0] == end - start + 1
+
+    # The simulation of the first period is the one-step prediction with a
+    # simulated error, drawn first from the generator; the out-of-sample
+    # periods are simulated from the end of the sample after it
+    rng = np.random.default_rng(1)
+    eps = rng.standard_normal(reps) * np.sqrt(res.scale)
+    fitted = np.asarray(res.fittedvalues)[start]
+    first = fitted + eps if error == "add" else fitted * (1 + eps)
+    expected = [first]
+    if end > start:
+        sims = res.simulate(end - start, anchor="end", repetitions=reps, rng=rng)
+        expected += list(np.asarray(sims))
+    expected = np.asarray(expected)
+    assert_allclose(frame["mean"].iloc[0], fitted, rtol=1e-12)
+    assert_allclose(frame["mean_numerical"], expected.mean(1), rtol=1e-12)
+    assert_allclose(frame["pi_lower"], np.quantile(expected, 0.025, axis=1), rtol=1e-12)
+    assert_allclose(frame["pi_upper"], np.quantile(expected, 0.975, axis=1), rtol=1e-12)

@@ -1,0 +1,3 @@
+- :class:`~statsmodels.tsa.seasonal.STL` and
+  :class:`~statsmodels.tsa.seasonal.MSTL` could not determine the period of
+  data with a PeriodIndex. :pr:`10897`

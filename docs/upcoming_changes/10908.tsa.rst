@@ -1,0 +1,2 @@
+- ``UECMResults.bounds_test`` raised ``UnboundLocalError`` for a ``case``
+  other than 1 to 5. It raises a ``ValueError``. :pr:`10908`

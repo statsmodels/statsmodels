@@ -1,7 +1,9 @@
 from statsmodels.compat.numpy import NP_LT_1_24
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
+from itertools import combinations
 from typing import NamedTuple
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose
@@ -2227,3 +2229,352 @@ def test_uecm_excluded_exog_by_hand(use_pandas):
     assert_allclose(res.ci_resids, ci_resids, rtol=1e-8)
     if use_pandas:
         assert list(res.ci_params.index) == ["const", "y", "a", "c"]
+
+
+def _ardl_uecm_regressors(y, x, model, lags, order, hold_back):
+    # The regressors of an ARDL or a UECM with a constant, built by hand
+    n = y.shape[0]
+    lags = lags or 0
+    t = np.arange(hold_back, n)
+    cols = [np.ones(t.shape[0])]
+    if model == "ARDL":
+        cols += [y[t - j] for j in range(1, lags + 1)]
+        cols += [x[t - j] for j in range(order + 1)]
+        return y[t], np.column_stack(cols)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.r_[np.nan, np.diff(x)]
+    cols += [y[t - 1], x[t - 1]]
+    cols += [dy[t - j] for j in range(1, lags)]
+    cols += [dx[t - j] for j in range(order)]
+    return dy[t], np.column_stack(cols)
+
+
+@pytest.mark.parametrize(
+    "model, lags, order, hold_back, nobs",
+    [
+        ("ARDL", 1, 4, None, 96),
+        ("ARDL", None, 3, None, 97),
+        ("ARDL", 1, 4, 6, 94),
+        ("ARDL", 4, 1, None, 96),
+        ("UECM", 1, 3, None, 97),
+        ("UECM", 3, 1, None, 97),
+    ],
+)
+def test_ardl_nobs_exog_lag_hold_back(model, lags, order, hold_back, nobs):
+    # When the largest exog lag exceeded the endog lag and hold_back was
+    # None, nobs counted the observations dropped by the exog lags, and
+    # llf, the ICs, sigma2, df_resid and the p-values used it
+    rng = np.random.default_rng(20261124)
+    y = np.cumsum(rng.standard_normal(100))
+    x = np.cumsum(rng.standard_normal(100))
+    mod_cls = ARDL if model == "ARDL" else UECM
+    res = mod_cls(y, lags, x[:, None], order, hold_back=hold_back).fit()
+
+    hb = hold_back if hold_back is not None else 100 - nobs
+    dep, reg = _ardl_uecm_regressors(y, x, model, lags, order, hb)
+    ols = OLS(dep, reg).fit()
+    k = reg.shape[1]
+    assert res.nobs == nobs == dep.shape[0]
+    assert res.df_resid == nobs - k
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.llf, ols.llf, rtol=1e-10)
+    assert_allclose(res.sigma2, ols.ssr / nobs, rtol=1e-10)
+    # The ICs count the variance as a parameter
+    assert_allclose(res.aic, -2 * ols.llf + 2 * (k + 1), rtol=1e-10)
+    assert_allclose(res.bic, -2 * ols.llf + np.log(nobs) * (k + 1), rtol=1e-10)
+    hqic = -2 * ols.llf + 2 * np.log(np.log(nobs)) * (k + 1)
+    assert_allclose(res.hqic, hqic, rtol=1e-10)
+    assert_allclose(res.pvalues, ols.pvalues, rtol=1e-8)
+    assert_allclose(res.conf_int(), ols.conf_int(), rtol=1e-8)
+
+
+def _bic_by_hand(y, reg):
+    # BIC as ARDLResults computes it, with the variance counted as a parameter
+    nobs, k = reg.shape
+    resid = y - reg @ np.linalg.lstsq(reg, y, rcond=None)[0]
+    ssr = resid @ resid
+    llf = -nobs / 2 * (np.log(2 * np.pi * ssr / nobs) + 1)
+    return -2 * llf + np.log(nobs) * (k + 1)
+
+
+@pytest.mark.parametrize("singular", [False, True])
+def test_ardl_select_order_glob_all_subsets(singular):
+    # glob=True never fitted the model with all candidate lags, which is the
+    # true model here
+    rng = np.random.default_rng(20261125)
+    nobs = 300
+    x = rng.standard_normal(nobs)
+    e = rng.standard_normal(nobs)
+    y = np.zeros(nobs)
+    for t in range(2, nobs):
+        y[t] = 0.5 * y[t - 1] + 0.3 * y[t - 2] + x[t] + 0.8 * x[t - 1] + e[t]
+    # A second constant makes the regressors singular, so that the models
+    # are fitted one by one
+    fixed = np.ones((nobs, 1)) if singular else None
+    res = ardl_select_order(y, 2, x[:, None], 1, "c", fixed=fixed, glob=True)
+
+    # All 2**4 subsets of the candidate lags, on the sample after 2 lags
+    t = np.arange(2, nobs)
+    always = [np.ones(nobs - 2)] * (2 if singular else 1)
+    cands = {
+        ("y", 1): y[t - 1],
+        ("y", 2): y[t - 2],
+        ("x", 0): x[t],
+        ("x", 1): x[t - 1],
+    }
+    bics = {}
+    for size in range(len(cands) + 1):
+        for subset in combinations(cands, size):
+            reg = np.column_stack(always + [cands[c] for c in subset])
+            bics[subset] = _bic_by_hand(y[t], reg)
+    assert len(res.bic) == 16
+    assert_allclose(res.bic.index, np.sort(list(bics.values())), rtol=1e-8)
+    best = min(bics, key=bics.get)
+    assert best == tuple(cands)
+    assert res.model.ar_lags == [1, 2]
+    assert res.model.dl_lags == {0: [0, 1]}
+
+
+@pytest.mark.parametrize("singular", [False, True])
+def test_ardl_select_order_glob_no_candidates(singular):
+    # With no candidate lags, glob=True fitted no model and raised
+    # UnboundLocalError
+    rng = np.random.default_rng(20261126)
+    y = 1.0 + rng.standard_normal(80)
+    fixed = np.ones((80, 1)) if singular else None
+    res = ardl_select_order(y, 0, None, 0, "c", fixed=fixed, glob=True)
+    reg = np.ones((80, 2 if singular else 1))
+    assert_allclose(res.bic.index, [_bic_by_hand(y, reg)], rtol=1e-8)
+    assert res.model.ar_lags is None
+    assert res.model.dl_lags == {}
+
+
+def _dane_uecm_res():
+    exog = dane_data[["lry", "ibo", "ide"]]
+    return UECM(dane_data.lrm, 3, exog, {"lry": 1, "ibo": 3, "ide": 2}).fit()
+
+
+@pytest.mark.parametrize("case", [0, 6, -1, 2.5, "3", None])
+def test_bounds_test_invalid_case(case):
+    # Values outside 1, ..., 5 raised UnboundLocalError
+    res = _dane_uecm_res()
+    with pytest.raises(ValueError, match="case must be one of 1, 2, 3, 4 or 5"):
+        res.bounds_test(case)
+
+
+@pytest.mark.parametrize("case", [1, 2, 3, 4, 5])
+@pytest.mark.parametrize("to_case", [np.int64, float])
+def test_bounds_test_case_types(case, to_case):
+    # Integer values of other types keep working; the statistics of
+    # test_bounds_test, given to 7 significant digits
+    expected = {1: 0.7109023, 2: 5.116768, 3: 6.205875, 4: 5.430622, 5: 6.785325}
+    bounds_result = _dane_uecm_res().bounds_test(to_case(case))
+    assert_allclose(bounds_result.statistic, expected[case], rtol=1e-6)
+
+
+@pytest.mark.parametrize(
+    "index",
+    [pd.RangeIndex(2, 42), pd.RangeIndex(10, 90, 2), pd.RangeIndex(40, 0, -1)],
+    ids=["start", "step", "decreasing"],
+)
+def test_ardl_uecm_range_index_labels(index):
+    # The default end was the last label of the index used as a location, so
+    # fittedvalues and get_prediction raised (or UECM.predict stopped early),
+    # and forecasts were labelled as if the index were 0, 1, ..., nobs - 1
+    rng = np.random.default_rng(20261206)
+    nobs = 40
+    y = rng.standard_normal(nobs).cumsum()
+    x = rng.standard_normal((nobs + 3, 1))
+    start = index.start + nobs * index.step
+    oos_index = pd.RangeIndex(start, start + 3 * index.step, index.step)
+    endog = pd.Series(y, index=index)
+    exog = pd.DataFrame(x[:nobs], index=index, columns=["x"])
+    exog_oos = pd.DataFrame(x[nobs:], index=oos_index, columns=["x"])
+    # The same models on the default index
+    default_exog = pd.DataFrame(x[:nobs], columns=["x"])
+    default_exog_oos = pd.DataFrame(x[nobs:], columns=["x"])
+
+    res = ARDL(endog, 2, exog, 1, trend="ct").fit()
+    expected = ARDL(pd.Series(y), 2, default_exog, 1, trend="ct").fit()
+    fitted = res.fittedvalues
+    assert_index_equal(fitted.index, index[2:])
+    assert_allclose(fitted.to_numpy(), expected.fittedvalues.to_numpy(), rtol=1e-10)
+    pred = res.predict()
+    assert_index_equal(pred.index, index)
+    assert_allclose(pred.to_numpy(), expected.predict().to_numpy(), rtol=1e-10)
+    pred_res = res.get_prediction()
+    assert_index_equal(pred_res.predicted_mean.index, index)
+    expected_var = expected.get_prediction().var_pred_mean.to_numpy()
+    assert_allclose(pred_res.var_pred_mean.to_numpy(), expected_var, rtol=1e-10)
+    fcast = res.forecast(3, exog=exog_oos)
+    assert_index_equal(fcast.index, oos_index)
+    expected_fcast = expected.forecast(3, exog=default_exog_oos).to_numpy()
+    assert_allclose(fcast.to_numpy(), expected_fcast, rtol=1e-10)
+
+    # UECM predicts in sample only; its hold back is 2
+    res = UECM(endog, 2, exog, 1).fit()
+    expected = UECM(pd.Series(y), 2, default_exog, 1).fit()
+    fitted = res.fittedvalues
+    assert_index_equal(fitted.index, index[2:])
+    assert_allclose(fitted.to_numpy(), expected.fittedvalues.to_numpy(), rtol=1e-10)
+    pred = res.predict()
+    assert_index_equal(pred.index, index)
+    assert_allclose(pred.to_numpy(), expected.predict().to_numpy(), rtol=1e-10)
+
+
+@pytest.mark.parametrize("to_int", [np.int64, np.int32])
+@pytest.mark.parametrize("causal", [False, True])
+def test_ardl_order_dict_numpy_int_keys(to_int, causal):
+    # numpy integer keys of an order dict raised AssertionError for ndarray
+    # exog
+    rng = np.random.default_rng(20261201)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal((nobs, 2)), axis=0)
+    res = ARDL(y, 1, x, {to_int(0): 2, to_int(1): [1]}, causal=causal).fit()
+
+    first = int(causal)
+    assert res.model.dl_lags == {0: list(range(first, 3)), 1: [1]}
+    assert all(type(key) is int for key in res.model.dl_lags)
+    t = np.arange(2, nobs)
+    reg = [np.ones(nobs - 2), y[t - 1]]
+    reg += [x[t - j, 0] for j in range(first, 3)]
+    reg += [x[t - 1, 1]]
+    ols = OLS(y[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("to_int", [np.int64, np.int32])
+def test_uecm_order_dict_numpy_int_keys(to_int):
+    # numpy integer keys of an order dict raised AssertionError for ndarray
+    # exog
+    rng = np.random.default_rng(20261202)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal((nobs, 2)), axis=0)
+    res = UECM(y, 1, x, {to_int(0): 2, to_int(1): 1}).fit()
+
+    # D.y on const, y.L1, x0.L1, x1.L1, D.x0.L0, D.x0.L1 and D.x1.L0
+    t = np.arange(2, nobs)
+    dx = np.r_[np.full((1, 2), np.nan), np.diff(x, axis=0)]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1]]
+    ols = OLS(y[t] - y[t - 1], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("to_int", [np.int64, np.int32])
+def test_ardl_select_order_maxorder_dict_numpy_int_keys(to_int):
+    # The same selection as with int keys, which raised AssertionError
+    rng = np.random.default_rng(20261203)
+    y = np.cumsum(rng.standard_normal(150))
+    x = np.cumsum(rng.standard_normal((150, 2)), axis=0)
+    res = ardl_select_order(y, 2, x, {to_int(0): 2, to_int(1): 1})
+    expected = ardl_select_order(y, 2, x, {0: 2, 1: 1})
+    assert_allclose(res.bic.index, expected.bic.index, rtol=1e-12)
+    assert list(res.bic) == list(expected.bic)
+    assert res.model.ardl_order == expected.model.ardl_order
+
+
+@pytest.mark.parametrize("endog_int", [True, False])
+@pytest.mark.parametrize("exog_int", [True, False])
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_uecm_integer_data(endog_int, exog_int, use_pandas):
+    # The levels of exog were truncated to integers when endog was an integer
+    # array, and integer data warned about casting NaN to an integer
+    rng = np.random.default_rng(20261127)
+    nobs = 120
+    y = np.round(4 * np.cumsum(rng.standard_normal(nobs)))
+    x = np.cumsum(rng.standard_normal(nobs))
+    if exog_int:
+        x = np.round(3 * x)
+    endog = y.astype(np.int64) if endog_int else y
+    exog = x.astype(np.int64) if exog_int else x
+    if use_pandas:
+        endog = pd.Series(endog, name="y")
+        exog = pd.DataFrame({"x": exog})
+    else:
+        exog = exog[:, None]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = UECM(endog, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, x.L1, D.y.L1, D.x.L0 and D.x.L1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.r_[np.nan, np.diff(x)]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1], dy[t - 1], dx[t], dx[t - 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
+
+
+@pytest.mark.parametrize("kind", ["ndarray", "dataframe", "mixed"])
+def test_uecm_bool_exog(kind):
+    # np.diff and DataFrame.diff take the xor of bool values, so the
+    # differences of bool exog were their absolute values
+    rng = np.random.default_rng(20261128)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    xb = rng.standard_normal((nobs, 2)) > 0
+    x = xb.astype(float)
+    if kind == "ndarray":
+        exog = xb
+    else:
+        exog = pd.DataFrame(xb, columns=["a", "b"])
+        if kind == "mixed":
+            # A float column next to the bool one
+            x[:, 1] = rng.standard_normal(nobs)
+            exog["b"] = x[:, 1]
+    res = UECM(y, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, the levels x.L1 and the differences D.y.L1, D.x.L0
+    # and D.x.L1, with the bool values as 0 and 1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.vstack([np.full((1, 2), np.nan), np.diff(x, axis=0)])
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1], dy[t - 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1], dx[t - 1, 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
+
+
+@pytest.mark.parametrize("singular", [False, True])
+@pytest.mark.parametrize("causal", [False, True])
+def test_ardl_select_order_glob_no_lags_label(causal, singular):
+    # With glob=True, the model without any candidate lags was listed with
+    # exog order 0, so the selected model included lag 0 of every exog
+    # variable (causal=True raised ValueError) when that model had the
+    # smallest BIC, as it does here
+    rng = np.random.default_rng(20261123)
+    nobs = 100
+    y = rng.standard_normal(nobs)
+    x = rng.standard_normal((nobs, 2))
+    fixed = np.ones((nobs, 1)) if singular else None
+    res = ardl_select_order(
+        y, 1, x, int(causal), "c", fixed=fixed, causal=causal, glob=True
+    )
+
+    def lags_of(order, first):
+        # The lags that an ARDL order includes
+        if order is None:
+            return []
+        if isinstance(order, int):
+            return list(range(first, order + 1))
+        return list(order)
+
+    # Each listed order against the regression on the lags it includes, on
+    # the sample after 1 lag
+    t = np.arange(1, nobs)
+    always = [np.ones(nobs - 1)] * (2 if singular else 1)
+    assert len(res.bic) == 8
+    for value, (lags, order) in res.bic.items():
+        cols = [y[t - lag] for lag in lags_of(lags, 1)]
+        for key, exog_order in order.items():
+            cols += [x[t - lag, key] for lag in lags_of(exog_order, int(causal))]
+        reg = np.column_stack(always + cols)
+        assert_allclose(value, _bic_by_hand(y[t], reg), rtol=1e-8)
+    assert res.bic.iloc[0] == (0, {0: None, 1: None})
+    assert res.model.ar_lags is None
+    assert res.model.dl_lags == {}

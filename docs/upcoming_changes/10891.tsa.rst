@@ -1,0 +1,3 @@
+- :func:`~statsmodels.tsa.interp.denton.dentonm` raised NumPy errors for an
+  invalid ``k`` and a benchmark with several columns. They raise a
+  ``ValueError``, and an integer-valued float ``k`` is accepted. :pr:`10891`

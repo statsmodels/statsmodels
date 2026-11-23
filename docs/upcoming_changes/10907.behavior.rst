@@ -1,0 +1,4 @@
+- :func:`~statsmodels.tsa.ardl.ardl_select_order` with ``glob=True`` never fitted
+  the model with all candidate lags, so it could select another model, and
+  it raised ``UnboundLocalError`` with no candidate lags. The full model is
+  included, so the selected model can change. :pr:`10907`

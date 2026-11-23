@@ -2495,7 +2495,7 @@ class PredictionResults:
             sim_results = []
             # first, perform "non-dynamic" simulations, i.e., simulations of
             # only one step, based on the previous step
-            if nsmooth > 1:
+            if nsmooth > 0:
                 if start_smooth == 0:
                     anchor = "start"
                 else:

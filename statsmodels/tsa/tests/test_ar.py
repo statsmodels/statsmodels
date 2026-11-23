@@ -1690,3 +1690,67 @@ def test_autoreg_dynamic_predict_start_by_hand(start):
     expected = path[start : end + 1].copy()
     expected[: max(2 - start, 0)] = np.nan
     assert_allclose(pred, expected, rtol=1e-10)
+
+
+RANGE_INDEXES = [pd.RangeIndex(2, 42), pd.RangeIndex(10, 90, 2), pd.RangeIndex(40, 0, -1)]
+RANGE_INDEX_IDS = ["start", "step", "decreasing"]
+
+
+def _range_index_oos(index, nobs, steps):
+    # The RangeIndex extended by steps observations
+    start = index.start + nobs * index.step
+    return pd.RangeIndex(start, start + steps * index.step, index.step)
+
+
+@pytest.mark.parametrize("index", RANGE_INDEXES, ids=RANGE_INDEX_IDS)
+def test_autoreg_range_index_labels(index):
+    # The default end was the last label of the index used as a location, so
+    # fittedvalues and get_prediction raised, predict() included forecasts
+    # (with shifted values) or stopped early, and forecasts were labelled as
+    # if the index were 0, 1, ..., nobs - 1
+    rng = np.random.default_rng(20261204)
+    nobs = 40
+    y = rng.standard_normal(nobs).cumsum()
+    res = AutoReg(pd.Series(y, index=index), 2, trend="ct").fit()
+    # The same model on the default index
+    expected = AutoReg(pd.Series(y), 2, trend="ct").fit()
+    oos_index = _range_index_oos(index, nobs, 3)
+
+    fitted = res.fittedvalues
+    pd.testing.assert_index_equal(fitted.index, index[2:])
+    assert_allclose(fitted.to_numpy(), expected.fittedvalues.to_numpy(), rtol=1e-10)
+    pred = res.predict()
+    pd.testing.assert_index_equal(pred.index, index)
+    assert_allclose(pred.to_numpy(), expected.predict().to_numpy(), rtol=1e-10)
+    pred_res = res.get_prediction()
+    pd.testing.assert_index_equal(pred_res.predicted_mean.index, index)
+    expected_var = expected.get_prediction().var_pred_mean.to_numpy()
+    assert_allclose(pred_res.var_pred_mean.to_numpy(), expected_var, rtol=1e-10)
+    fcast = res.forecast(3)
+    pd.testing.assert_index_equal(fcast.index, oos_index)
+    assert_allclose(fcast.to_numpy(), expected.forecast(3).to_numpy(), rtol=1e-10)
+    # In and out of sample
+    pred = res.predict(start=nobs - 2, end=nobs + 2)
+    pd.testing.assert_index_equal(pred.index, index[-2:].append(oos_index))
+    expected_pred = expected.predict(start=nobs - 2, end=nobs + 2).to_numpy()
+    assert_allclose(pred.to_numpy(), expected_pred, rtol=1e-10)
+
+
+@pytest.mark.matplotlib
+@pytest.mark.parametrize("index", RANGE_INDEXES, ids=RANGE_INDEX_IDS)
+def test_autoreg_range_index_plot_predict(index, close_figures):
+    # The default end was the last label of the index used as a location
+    rng = np.random.default_rng(20261205)
+    nobs = 40
+    y = rng.standard_normal(nobs).cumsum()
+    res = AutoReg(pd.Series(y, index=index), 2).fit()
+    expected = AutoReg(pd.Series(y), 2).fit()
+    fig = res.plot_predict()
+    ax = fig.axes[0]
+    line = ax.get_lines()[0]
+    np.testing.assert_array_equal(line.get_xdata(), index.to_numpy())
+    assert_allclose(line.get_ydata(), expected.predict().to_numpy(), rtol=1e-10)
+    # Without forecasts, there is no confidence band
+    assert len(ax.collections) == 0
+    with pytest.raises(ValueError, match="in_sample is False but there are no"):
+        res.plot_predict(in_sample=False)
