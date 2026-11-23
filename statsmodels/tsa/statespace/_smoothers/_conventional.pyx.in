@@ -108,7 +108,7 @@ cdef int {{prefix}}smoothed_estimators_missing_conventional({{prefix}}KalmanSmoo
     # T+1 of them (r_{T-1} to r_{-1} -> r_T to r_0)
     if smoother.smoother_output & (SMOOTHER_STATE | SMOOTHER_DISTURBANCE):
         if model.identity_transition:
-            blas.{{prefix}}copy(&m_k_states, smoother._input_scaled_smoothed_estimator, &inc, smoother._scaled_smoothed_estimator, &inc)
+            blas.{{prefix}}copy(&m_k_states, smoother._input_scaled_smoothed_estimator, &inc, smoother._scaled_smoothed_estimator, &inc)  # pragma: no cover
         else:
             blas.{{prefix}}gemv("T", &m_k_states, &m_k_states,
                     &alpha, model._transition, &m_k_states,
@@ -123,7 +123,7 @@ cdef int {{prefix}}smoothed_estimators_missing_conventional({{prefix}}KalmanSmoo
     # need to store T+1 of them (N_{T-1} to N_{-1} -> N_T to N_0)
     if smoother.smoother_output & (SMOOTHER_STATE_COV | SMOOTHER_DISTURBANCE_COV):
         if model.identity_transition:
-            blas.{{prefix}}copy(&m_k_states2, smoother._input_scaled_smoothed_estimator_cov, &inc, smoother._scaled_smoothed_estimator_cov, &inc)
+            blas.{{prefix}}copy(&m_k_states2, smoother._input_scaled_smoothed_estimator_cov, &inc, smoother._scaled_smoothed_estimator_cov, &inc)  # pragma: no cover
         else:
             blas.{{prefix}}gemm("N", "N", &m_k_states, &m_k_states, &m_k_states,
                       &alpha, smoother._input_scaled_smoothed_estimator_cov, &kf_k_states,

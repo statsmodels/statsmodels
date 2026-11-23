@@ -240,7 +240,7 @@ cdef class {{prefix}}CFASimulationSmoother(object):
             if info > 0:
                 raise np.linalg.LinAlgError('Non-positive-definite initial state covariance matrix.')
             elif info < 0:
-                raise np.linalg.LinAlgError('Invalid value in initial state covariance matrix.')
+                raise np.linalg.LinAlgError('Invalid value in initial state covariance matrix.')  # pragma: no cover
             lapack.{{prefix}}potri("L", &k_states, self._initial_state_cov_inv, &k_states, &info)
 
         # Iterate over periods
@@ -263,7 +263,7 @@ cdef class {{prefix}}CFASimulationSmoother(object):
                 if info > 0:
                     raise np.linalg.LinAlgError('Non-positive-definite selected state covariance matrix encountered at period %d' % t)
                 elif info < 0:
-                    raise np.linalg.LinAlgError('Invalid value in selected state covariance matrix encountered at period %d' % t)
+                    raise np.linalg.LinAlgError('Invalid value in selected state covariance matrix encountered at period %d' % t)  # pragma: no cover
                 lapack.{{prefix}}potri("L", &k_states, self._selected_state_cov_inv, &k_states, &info)
 
             # T(RQRi)T + (RQRi)
@@ -301,7 +301,7 @@ cdef class {{prefix}}CFASimulationSmoother(object):
                     if info > 0:
                         raise np.linalg.LinAlgError('Non-positive-definite observation covariance matrix encountered at period %d' % t)
                     elif info < 0:
-                        raise np.linalg.LinAlgError('Invalid value in observation covariance matrix encountered at period %d' % t)
+                        raise np.linalg.LinAlgError('Invalid value in observation covariance matrix encountered at period %d' % t)  # pragma: no cover
 
                 # HiZ = Hi Z
                 _k_endog = self.model._k_endog
@@ -392,9 +392,9 @@ cdef class {{prefix}}CFASimulationSmoother(object):
                                &self.posterior_cov_inv_chol[0, 0], &ld,
                                &info)
         if info > 0:
-            raise np.linalg.LinAlgError('Non-positive-definite joint posterior covariance matrix encountered.')
+            raise np.linalg.LinAlgError('Non-positive-definite joint posterior covariance matrix encountered.')  # pragma: no cover
         elif info < 0:
-            raise np.linalg.LinAlgError('Invalid value in joint posterior covariance matrix encountered.')
+            raise np.linalg.LinAlgError('Invalid value in joint posterior covariance matrix encountered.')  # pragma: no cover
 
         # Compute the posterior mean
         # posterior_mean = P^{-1} (K prior_mean + ZHimd)
