@@ -1,0 +1,6 @@
+- ``observed_information_matrix`` of state space models with
+  ``transformed=False`` transformed the parameters a second time in its
+  numerical derivatives, which gave wrong values (too large by a factor
+  of up to 1e16 with the default forward differences). It is the
+  information matrix with respect to the untransformed parameters, so
+  results of such calls change. :pr:`11055`

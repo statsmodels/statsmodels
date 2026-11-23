@@ -1,0 +1,4 @@
+- ``observed_information_matrix`` and ``hessian(..., method="oim")`` of
+  state space models with fixed parameters (``fix_params``) raised a
+  ``ValueError`` (shape mismatch) unless ``includes_fixed=True``. They
+  return the matrix of the free parameters. :pr:`11055`
