@@ -715,6 +715,8 @@ Status: experimental, API might change, added in 0.12
    anova_oneway
    anova_generic
    AnovaResult
+   icc_oneway
+   IccOnewayResult
    equivalence_oneway
    equivalence_oneway_generic
    EquivalenceOnewayResult

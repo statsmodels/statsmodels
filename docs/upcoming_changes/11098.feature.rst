@@ -1,0 +1,5 @@
+- Add :func:`~statsmodels.stats.oneway.icc_oneway`, the intraclass
+  correlation of the oneway random effects model, with its F-based confidence
+  interval and the F test of zero correlation, and its result class
+  ``IccOnewayResult``. Groups can have different sizes. The function is
+  available from ``statsmodels.stats.api``. :issue:`9666`, :pr:`11098`

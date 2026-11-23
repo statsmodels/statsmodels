@@ -10,6 +10,7 @@ from dataclasses import dataclass, fields
 from typing import ClassVar, NamedTuple
 
 import numpy as np
+import pandas as pd
 from scipy import stats
 from scipy.special import ncfdtrinc
 
@@ -19,7 +20,7 @@ from statsmodels.stats.base import LimitedIterationMixin
 from statsmodels.stats.power import ncf_cdf, ncf_ppf
 from statsmodels.stats.robust_compare import TrimmedMean, scale_transform
 from statsmodels.tools.rng_qrng import check_random_state
-from statsmodels.tools.validation import float_like, string_like
+from statsmodels.tools.validation import array_like, float_like, string_like
 
 
 def effectsize_oneway(means, vars_, nobs, use_var="unequal", ddof_between=0):
@@ -889,6 +890,238 @@ def anova_oneway(
     )
 
     return res
+
+
+@dataclass(frozen=True, slots=True)
+class IccOnewayResult:
+    """
+    Result of :func:`icc_oneway`.
+
+    .. versionadded:: 0.15.1
+
+    Parameters
+    ----------
+    icc : float
+        Estimate of the intraclass correlation coefficient.
+    conf_int : tuple
+        Lower and upper limit of the ``1 - alpha`` confidence interval for
+        the intraclass correlation coefficient.
+    statistic : float
+        F statistic of the oneway Anova, the ratio of the mean squares
+        between and within groups.
+    pvalue : float
+        The p-value of the F test of the null hypothesis that the intraclass
+        correlation is zero against the alternative that it is positive.
+    df : tuple
+        Degrees of freedom ``(df_num, df_denom)`` of the F distribution.
+    var_between : float
+        Estimate of the variance of the random group effects.
+    var_within : float
+        Estimate of the variance within groups, the mean square within
+        groups.
+    nobs_mean : float
+        Group size ``k0`` that is used in the estimate of the variance
+        between groups. It is the common group size if all groups have the
+        same size.
+    n_groups : int
+        Number of groups.
+    nobs_total : int
+        Total number of observations.
+    alpha : float
+        Significance level of the confidence interval.
+    """
+
+    icc: float
+    conf_int: tuple
+    statistic: float
+    pvalue: float
+    df: tuple
+    var_between: float
+    var_within: float
+    nobs_mean: float
+    n_groups: int
+    nobs_total: int
+    alpha: float
+
+
+def icc_oneway(data, groups=None, alpha=0.05):
+    r"""
+    Compute the intraclass correlation of the oneway random effects model.
+
+    .. versionadded:: 0.15.1
+
+    Parameters
+    ----------
+    data : tuple of array_like or array_like
+        Data for two or more groups, either as a tuple or list of
+        one-dimensional arrays, one for each group, or in long format with
+        all observations in ``data`` and the group of each observation in
+        ``groups``. If ``groups`` is None, then a two-dimensional array or
+        DataFrame has one row for each group, for example the ratings of a
+        subject in each row.
+    groups : array_like, optional
+        Group of each observation if ``data`` is in long format.
+    alpha : float, optional
+        Significance level for the confidence interval, default is 0.05.
+
+    Returns
+    -------
+    IccOnewayResult
+        See :class:`IccOnewayResult` for a description of the attributes.
+
+    Raises
+    ------
+    ValueError
+        If there are fewer than two groups, if a group has no observation,
+        if no group has two or more observations, if the data are not finite,
+        if ``groups`` has missing values, if the data of a group are not
+        one-dimensional, if ``data`` and ``groups`` do not have the same
+        length, or if ``alpha`` is not in (0, 1).
+
+    See Also
+    --------
+    anova_oneway : Oneway Anova with the same F statistic if
+        ``use_var="equal"``.
+
+    Notes
+    -----
+    In the oneway random effects model, the observation ``j`` of group ``i``
+    is :math:`y_{ij} = \mu + a_i + e_{ij}`, where the group effects
+    :math:`a_i` and the errors :math:`e_{ij}` are independent with variances
+    :math:`\sigma_a^2` and :math:`\sigma_e^2`. The intraclass correlation
+    is the correlation of two observations of the same group,
+    :math:`\sigma_a^2 / (\sigma_a^2 + \sigma_e^2)`.
+
+    The variances are estimated with the mean squares between groups,
+    :math:`MSB`, and within groups, :math:`MSW`, of the oneway Anova
+    (Donner 1986),
+
+    .. math::
+
+        \hat\sigma_e^2 = MSW, \quad
+        \hat\sigma_a^2 = (MSB - MSW) / k_0, \quad
+        k_0 = \frac{1}{g - 1} \left(N - \sum_i n_i^2 / N\right)
+
+    where :math:`g` is the number of groups, :math:`n_i` the size of group
+    :math:`i` and :math:`N` the total number of observations. The estimate of
+    the variance between groups and of the intraclass correlation is negative
+    if :math:`MSB < MSW`. It is not truncated at zero.
+
+    The confidence interval is based on the F distribution of
+    :math:`F = MSB / MSW`. With :math:`F_L = F / f_{1 - \alpha / 2}(g - 1,
+    N - g)` and :math:`F_U = F \, f_{1 - \alpha / 2}(N - g, g - 1)`, where
+    :math:`f_q` is the :math:`q` quantile of the F distribution, the limits
+    are :math:`(F_L - 1) / (F_L + k_0 - 1)` and
+    :math:`(F_U - 1) / (F_U + k_0 - 1)`. If all groups have the same size,
+    then these are the exact limits under normality of Searle (1971). If the
+    groups have different sizes, then :math:`k_0` replaces the common group
+    size and the interval is approximate.
+
+    If there is no variation within groups but some between groups, then
+    the intraclass correlation and both limits are 1, the F statistic is
+    ``inf`` and the p-value is 0. If all observations are equal, then the
+    intraclass correlation, the F statistic, the p-value and the limits are
+    ``nan``.
+
+    References
+    ----------
+    .. [*] Donner, Allan. 1986. "A Review of Inference Procedures for the
+       Intraclass Correlation Coefficient in the One-Way Random Effects
+       Model." International Statistical Review 54 (1): 67-82.
+       https://doi.org/10.2307/1403259
+    .. [*] Searle, S. R. 1971. Linear Models. New York: Wiley.
+
+    Examples
+    --------
+    Six subjects are rated four times each.
+
+    >>> import numpy as np
+    >>> from statsmodels.stats.oneway import icc_oneway
+    >>> ratings = np.array([[9, 2, 5, 8], [6, 1, 3, 2], [8, 4, 6, 8],
+    ...                     [7, 1, 2, 6], [10, 5, 6, 9], [6, 2, 4, 7]])
+    >>> res = icc_oneway(ratings)
+    >>> round(res.icc, 4)
+    0.1657
+    >>> [round(v, 4) for v in res.conf_int]
+    [-0.1329, 0.7226]
+    """
+    alpha = float_like(alpha, "alpha")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in the range (0, 1), got {alpha}")
+    if groups is not None:
+        data = array_like(data, "data", ndim=1)
+        groups = array_like(groups, "groups", ndim=1, dtype=None)
+        if groups.shape != data.shape:
+            raise ValueError("data and groups must have the same length")
+        if pd.isna(groups).any():
+            raise ValueError("groups must not have missing values")
+        args = [data[groups == uni] for uni in np.unique(groups)]
+    else:
+        if getattr(data, "ndim", None) == 2:
+            # DataFrame or 2-d array, one row for each group
+            data = np.asarray(data, dtype=float)
+        args = [array_like(x, "data of a group", ndim=1) for x in data]
+    nobs = np.array([len(x) for x in args])
+    n_groups = len(args)
+    nobs_total = int(nobs.sum())
+    if n_groups < 2:
+        raise ValueError("at least two groups are required")
+    if np.any(nobs == 0):
+        raise ValueError("each group needs at least one observation")
+    if nobs_total == n_groups:
+        raise ValueError("at least one group needs two or more observations")
+    if not all(np.all(np.isfinite(x)) for x in args):
+        raise ValueError("data must be finite")
+
+    df_num = n_groups - 1
+    df_denom = nobs_total - n_groups
+    nobs_mean = (nobs_total - (nobs**2).sum() / nobs_total) / df_num
+    means = np.array([x.mean() for x in args])
+    mean_total = np.concatenate(args).mean()
+    ms_between = (nobs * (means - mean_total) ** 2).sum() / df_num
+
+    # The cases without variation are detected from the data, because the
+    # sums of squares can have rounding errors if all values are equal.
+    if np.ptp(np.concatenate(args)) == 0:
+        # all observations are equal, the correlation is 0 / 0
+        var_between = var_within = 0.0
+        icc = f_stat = pvalue = np.nan
+        conf_int = (np.nan, np.nan)
+    elif all(np.ptp(x) == 0 for x in args):
+        # no variation within groups
+        var_within = 0.0
+        var_between = ms_between / nobs_mean
+        icc = 1.0
+        f_stat = np.inf
+        pvalue = 0.0
+        conf_int = (1.0, 1.0)
+    else:
+        ss_within = sum(((x - m) ** 2).sum() for x, m in zip(args, means, strict=True))
+        var_within = ss_within / df_denom
+        var_between = (ms_between - var_within) / nobs_mean
+        icc = var_between / (var_between + var_within)
+        f_stat = ms_between / var_within
+        pvalue = stats.f.sf(f_stat, df_num, df_denom)
+        f_low = f_stat / stats.f.isf(alpha / 2, df_num, df_denom)
+        f_upp = f_stat * stats.f.isf(alpha / 2, df_denom, df_num)
+        conf_int = (
+            (f_low - 1) / (f_low + nobs_mean - 1),
+            (f_upp - 1) / (f_upp + nobs_mean - 1),
+        )
+
+    return IccOnewayResult(
+        icc=float(icc),
+        conf_int=tuple(float(v) for v in conf_int),
+        statistic=float(f_stat),
+        pvalue=float(pvalue),
+        df=(df_num, df_denom),
+        var_between=float(var_between),
+        var_within=float(var_within),
+        nobs_mean=float(nobs_mean),
+        n_groups=n_groups,
+        nobs_total=nobs_total,
+        alpha=alpha,
+    )
 
 
 @dataclass(frozen=True, slots=True)
