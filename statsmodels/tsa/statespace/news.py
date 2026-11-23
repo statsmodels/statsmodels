@@ -935,7 +935,9 @@ class NewsResults:
         if impacted_variable is not None:
             s[1] = np.s_[impacted_variable]
         s = tuple(s)
-        impacts = self.impacts.loc[s, :]
+        # Positions of the rows, so that a single impact date and a single
+        # impacted variable give a table rather than a Series
+        impacts = self.impacts.iloc[self.impacts.index.get_locs(s)]
 
         # Make the first index level the groupby level
         groupby = groupby.lower()

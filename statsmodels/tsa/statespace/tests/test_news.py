@@ -2281,3 +2281,49 @@ def test_summary_impacts_index_types(index_type, multivariate, sparsify):
     # summary shows the same table
     summary = news.summary(sparsify=sparsify, float_format="%.4f")
     assert_equal(str(summary.tables[1]), str(table))
+
+
+@pytest.mark.parametrize("multivariate, select_variable",
+                         [(True, True), (False, True), (False, False)])
+@pytest.mark.parametrize("impact_date, year, quarters", [
+    ("2009Q3", 2009, [3]),
+    (pd.Period("2009Q3", freq="Q"), 2009, [3]),
+    # A partial date string selects several dates
+    ("2009", 2009, [1, 2, 3, 4]),
+])
+def test_summary_impacts_single_date_and_variable(
+        multivariate, select_variable, impact_date, year, quarters):
+    # A single impact date and a single impacted variable select the rows of
+    # the impacts DataFrame (they raised an AttributeError). Univariate
+    # models select their variable by default.
+    if multivariate:
+        news = bivariate_news()
+        variable = "unemp"
+    else:
+        news = univariate_news()
+        variable = news.endog_names
+    impacts = news.impacts
+    dates = impacts.index.get_level_values(0)
+    mask = ((impacts.index.get_level_values(1) == variable)
+            & (dates.year == year) & np.isin(dates.quarter, quarters))
+    desired = impacts[mask]
+    assert_(len(desired) > 0)
+    kwargs = {"impact_date": impact_date, "float_format": "%.4f"}
+    if select_variable:
+        kwargs["impacted_variable"] = variable
+    table = news.summary_impacts(**kwargs)
+    assert_(f"[impacted variable = {variable}]" in table.title)
+    values = table_values(table)
+    assert_equal(values[0], ["impact date"] + IMPACTS_COLUMNS)
+    assert_equal([row[0] for row in values[1:]],
+                 [str(date) for date in desired.index.get_level_values(0)])
+    # atol for the rounding to 4 digits
+    numbers = np.array([row[1:] for row in values[1:]], dtype=float)
+    assert_allclose(numbers, desired.to_numpy(), rtol=0, atol=5e-5)
+    # The impacts table of summary
+    summary = news.summary(**kwargs)
+    assert_equal(str(summary.tables[1]), str(table))
+    # A date without impacts raises
+    with pytest.raises(KeyError):
+        news.summary_impacts(impact_date="2010Q4",
+                             impacted_variable=variable)
