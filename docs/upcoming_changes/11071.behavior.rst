@@ -1,0 +1,13 @@
+- Univariate filtering of state space models (``filter_univariate=True``,
+  the exact diffuse periods, and the fallback of the conventional filter
+  when the forecast error covariance matrix is singular) did not detect
+  an observation covariance matrix that is not positive semi-definite:
+  it gave a meaningless loglikelihood without an error (a negative first
+  variance was taken as valid, and a matrix such as ``[[0, 1], [1, 1]]``
+  only warned that it is positive semi-definite). Such matrices raise a
+  ``LinAlgError``. A positive semi-definite matrix of reduced rank gives
+  the documented warning, and an exactly singular one such as ``u u'``
+  with ``u = (1, 2, 3)`` no longer raises ``ZeroDivisionError``. Positive
+  definite matrices keep their results, but a nearly singular one
+  (condition number above about 1e10) can now give the positive
+  semi-definite warning. :pr:`11071`
