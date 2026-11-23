@@ -2815,7 +2815,7 @@ def test_serial_correlation_default_lags(oildata, austourists, data, seasonal, l
     model = ETSModel(
         endog, trend="add", seasonal=seasonal, seasonal_periods=seasonal_periods
     )
-    res = model.smooth(model.start_params)
+    res = model.smooth(model.start_params, param_index="integer")
     resid = np.asarray(res.resid)
     std_resid = (resid - resid.mean()) / resid.std(ddof=1)
     expected = acorr_ljungbox(std_resid, lags=lags)
