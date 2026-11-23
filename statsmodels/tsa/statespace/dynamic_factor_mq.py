@@ -4133,6 +4133,15 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             to return contributions in the original scale of the data (i.e.
             before it was standardized by the model). Default is True.
 
+            .. versionchanged:: 0.15.1
+
+               The contributions in the original scale are those of the model
+               of the data in the original scale. The contributions of the
+               observations were those of the standardized data, and those of
+               the observation intercept used the means without dividing them
+               by the standard deviations, so for data with nonzero means the
+               contributions did not add up to the smoothed state or signal.
+
         Returns
         -------
         data_contributions : DataFrame
@@ -4186,14 +4195,25 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         Denote the smoothed state at time :math:`t` by :math:`\alpha_t`. Then
         the smoothed signal is :math:`Z_t \alpha_t`, where :math:`Z_t` is the
         design matrix operative at time :math:`t`.
+
+        If the model standardized the data with the means :math:`\mu` and the
+        standard deviations :math:`\sigma` and `original_scale` is True, the
+        smoothed signal in the original scale is
+        :math:`\mu + \sigma Z_t \alpha_t`, and the contributions add up to
+        :math:`\sigma Z_t \alpha_t`: with the mean of each variable, they add
+        up to the smoothed signal (the prediction from `get_prediction` with
+        ``information_set="smoothed"`` and ``signal_only=True``).
         """
-        # De-meaning the data is like putting the mean into the observation
-        # intercept. To compute the decomposition correctly in the original
-        # scale, we need to account for this, so we fill in the observation
-        # intercept temporarily
+        # The model of the data in the original scale, y = mean + std * y_s,
+        # has the observation intercept mean, and its weights of y are those
+        # of the standardized data y_s divided by std. So the contribution of
+        # its intercept is that of the intercept mean / std in the model of
+        # y_s, which we fill in temporarily, and the contribution of y is
+        # that of y_s + mean / std
         if self.model.standardize and original_scale:
             cache_obs_intercept = self.model["obs_intercept"]
-            self.model["obs_intercept"] = self.model._endog_mean
+            self.model["obs_intercept"] = (
+                self.model._endog_mean / self.model._endog_std)
 
         # Compute the contributions
         (data_contributions, obs_intercept_contributions,
@@ -4204,6 +4224,8 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         # Replace the original observation intercept
         if self.model.standardize and original_scale:
             self.model["obs_intercept"] = cache_obs_intercept
+            data_contributions = (
+                data_contributions - obs_intercept_contributions.to_numpy())
 
         # Reverse the effect of dividing by the standard deviation
         if (decomposition_of == "smoothed_signal"

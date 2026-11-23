@@ -3913,3 +3913,75 @@ def test_bool_factor_arguments(value, arg):
     endog = _int_like_dfm_endog()
     with pytest.raises(ValueError, match=f"`{arg}` argument must"):
         dynamic_factor_mq.DynamicFactorMQ(endog, **{arg: value})
+
+
+def _nonzero_mean_results(idiosyncratic_ar1, standardize=True):
+    endog = _ar1_factor_data(nobs=12, k_endog=2) + [3.0, -2.0]
+    mod = dynamic_factor_mq.DynamicFactorMQ(
+        endog, idiosyncratic_ar1=idiosyncratic_ar1, standardize=standardize
+    )
+    return endog, mod.smooth(mod.start_params)
+
+
+@pytest.mark.parametrize("decomposition_of", ["smoothed_state", "smoothed_signal"])
+@pytest.mark.parametrize("idiosyncratic_ar1", [False, True])
+def test_smoothed_decomposition_original_scale(idiosyncratic_ar1, decomposition_of):
+    # In the original scale, the decomposition is that of the model of the
+    # data in the original scale, y = mean + std * y_s: the model of the
+    # standardized data y_s with the observation intercept mean, the design
+    # multiplied by std and the observation covariance by std**2 (as in
+    # test_standardized_monthly), whose decomposition is computed by
+    # MLEResults
+    endog, res = _nonzero_mean_results(idiosyncratic_ar1)
+    params = res.params
+    mean = endog.mean().to_numpy()
+    std = endog.std().to_numpy()
+    mod2 = dynamic_factor_mq.DynamicFactorMQ(
+        endog, idiosyncratic_ar1=idiosyncratic_ar1, standardize=False
+    )
+    mod2.update(params)
+    mod2["obs_intercept"] = mean
+    mod2["design"] *= std[:, None]
+    mod2["obs_cov"] *= std[:, None] ** 2
+    # Prevent the model from overwriting these changes
+    mod2.update = lambda params, **kwargs: params
+    res2 = mod2.smooth(params)
+    assert_allclose(res2.llf, res.llf + np.log(std).sum() * -endog.shape[0])
+
+    actual = res.get_smoothed_decomposition(decomposition_of=decomposition_of)
+    desired = res2.get_smoothed_decomposition(decomposition_of=decomposition_of)
+    for actual_part, desired_part in zip(actual, desired, strict=True):
+        assert actual_part.index.equals(desired_part.index)
+        assert actual_part.columns.equals(desired_part.columns)
+        # atol: the contributions of the prior and the state intercept are
+        # zero, and the others are of order 1
+        assert_allclose(actual_part, desired_part, rtol=1e-10, atol=1e-12)
+
+
+@pytest.mark.parametrize("idiosyncratic_ar1", [False, True])
+@pytest.mark.parametrize("original_scale", [True, False])
+def test_smoothed_decomposition_sums_nonzero_mean(original_scale, idiosyncratic_ar1):
+    # For data with nonzero means, the contributions add up to the smoothed
+    # state and, with the mean of each variable in the original scale, to the
+    # smoothed signal
+    endog, res = _nonzero_mean_results(idiosyncratic_ar1)
+    mod = res.model
+
+    contributions = res.get_smoothed_decomposition(
+        decomposition_of="smoothed_state", original_scale=original_scale
+    )
+    total = sum(contribution.sum(axis=1) for contribution in contributions)
+    total = total.unstack(level="state_to")[mod.state_names]
+    assert_allclose(total, res.smoothed_state.T, rtol=1e-10)
+
+    contributions = res.get_smoothed_decomposition(
+        decomposition_of="smoothed_signal", original_scale=original_scale
+    )
+    total = sum(contribution.sum(axis=1) for contribution in contributions)
+    total = total.unstack(level="variable_to")[mod.endog_names]
+    signal = res.get_prediction(
+        information_set="smoothed", signal_only=True, original_scale=original_scale
+    ).predicted_mean
+    if original_scale:
+        total += endog.mean()
+    assert_allclose(total, signal, rtol=1e-10)
