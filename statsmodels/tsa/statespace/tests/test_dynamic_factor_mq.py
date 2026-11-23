@@ -3913,3 +3913,23 @@ def test_bool_factor_arguments(value, arg):
     endog = _int_like_dfm_endog()
     with pytest.raises(ValueError, match=f"`{arg}` argument must"):
         dynamic_factor_mq.DynamicFactorMQ(endog, **{arg: value})
+
+
+def test_news_state_index_ndarray():
+    # An ndarray state_index (more than one element) selects the same states
+    # as the list with the same elements
+    endog = _ar1_factor_data()
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog.iloc[:-1], factor_orders=2)
+    params = mod.start_params
+    res = mod.smooth(params)
+    res_new = mod.clone(endog, retain_standardization=True).smooth(params)
+    assert_equal(mod.state_names[:3], ["0", "L1.0", "eps_M.y1"])
+
+    kwargs = {"impact_date": endog.index[-1], "comparison_type": "previous"}
+    news = res_new.news(res, state_index=np.array([0, 1, 2]), **kwargs)
+    desired = res_new.news(res, state_index=[0, 1, 2], **kwargs)
+    news_all = res_new.news(res, **kwargs)
+    assert_allclose(news.update_impacts, desired.update_impacts)
+    assert_allclose(news.total_impacts, desired.total_impacts)
+    assert_allclose(news.weights, desired.weights)
+    assert not np.allclose(news.update_impacts, news_all.update_impacts)

@@ -4026,7 +4026,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
                In Handbook of economic forecasting, vol. 2, pp. 195-237.
                Elsevier, 2013.
         """
-        if state_index == "common":
+        if isinstance(state_index, str) and state_index == "common":
             state_index = (
                 np.arange(self.model.k_states - self.model.k_endog))
 
