@@ -1476,13 +1476,10 @@ def test_news_summary_methods():
 # - Tables, summaries and options of NewsResults ------------------------------
 
 
-def univariate_news(revision=True, **kwargs):
+def univariate_news(revision=True, name="infl", **kwargs):
     # AR(1) with phi = 0.5 and sigma2 = 1. The previous dataset ends in 2009Q2,
     # where its value is 0 if `revision`; the updated dataset adds 2009Q3.
-    # The series has a one-letter name: NewsResults.k_endog is the length of
-    # the name of the series of a univariate model, and the univariate
-    # summaries are only used if it is 1.
-    endog = dta["infl"].rename("y")
+    endog = dta["infl"].rename(name)
     previous = endog.loc[:"2009Q2"].copy()
     if revision:
         previous.iloc[-1] = 0.0
@@ -1651,7 +1648,7 @@ def test_summary_impacts_univariate(revision, show_revisions_columns):
     table = news.summary_impacts(
         show_revisions_columns=show_revisions_columns, float_format="%.4f")
     # The impacted variable is a single one, shown in the title
-    assert_("[impacted variable = y]" in table.title)
+    assert_("[impacted variable = infl]" in table.title)
     columns = IMPACTS_COLUMNS
     if not (show_revisions_columns or
             (show_revisions_columns is None and revision)):
@@ -1727,8 +1724,8 @@ def test_summary_details_univariate_closed_form():
         return f"{x:.4f}"
 
     table = news.summary_details(float_format="%.4f")
-    assert_equal(table.title, "Details of news for [updated variable = y, "
-                              "impacted variable = y]")
+    assert_equal(table.title, "Details of news for [updated variable = "
+                              "infl, impacted variable = infl]")
     assert_equal(table_values(table), [
         ["update date", "observed", "forecast (prev)", "impact date", "news",
          "weight", "impact"],
@@ -1739,7 +1736,7 @@ def test_summary_details_univariate_closed_form():
 
     table = news.summary_details(source="revisions", float_format="%.4f")
     assert_equal(table.title, "Details of revisions for [revised variable = "
-                              "y, impacted variable = y]")
+                              "infl, impacted variable = infl]")
     assert_equal(table_values(table), [
         ["revision date", "revised", "observed (prev)", "impact date",
          "revision", "weight", "impact"],
@@ -1753,7 +1750,8 @@ def test_summary_details_univariate_closed_form():
     tables = news.summary_details(multiple_tables=True)
     assert_equal(len(tables), 1)
     assert_equal(tables[0].title, "Details of news for [update date = 2009Q3, "
-                                  "updated variable = y, impacted variable = y]")
+                                  "updated variable = infl, impacted variable = "
+                                  "infl]")
     assert_equal(table_values(tables[0])[0], [
         "observed", "forecast (prev)", "impact date", "news", "weight",
         "impact"])
@@ -1761,8 +1759,8 @@ def test_summary_details_univariate_closed_form():
     # Selecting the single variable explicitly gives the same table, and a
     # single impact date leaves a single row
     desired = table_values(news.summary_details())
-    for kwargs in [{"impacted_variable": "y"},
-                   {"updated_variable": "y"}]:
+    for kwargs in [{"impacted_variable": "infl"},
+                   {"updated_variable": "infl"}]:
         assert_equal(table_values(news.summary_details(**kwargs)), desired)
     table = news.summary_details(impact_date="2009Q4", float_format="%.4f")
     assert_("impact date = 2009Q4" in table.title)
@@ -1868,7 +1866,7 @@ def test_summary_details_update_date():
     # AR(1) with phi = 0.5 and two updates, I2 and I3 (the forecast errors of
     # 2009Q2 and 2009Q3 given the data through 2009Q1). I2 only has an impact
     # on 2009Q2 and I3 has weights 1 and phi on 2009Q3 and 2009Q4.
-    endog = dta["infl"].rename("y")
+    endog = dta["infl"]
     res = sarimax.SARIMAX(endog.loc[:"2009Q1"]).smooth([0.5, 1.0])
     news = res.news(endog, start="2009Q2", end="2009Q4")
     y1, y2, y3 = endog.loc["2009Q1":"2009Q3"]
@@ -1898,7 +1896,7 @@ def test_summary_revision_selection():
     # revision_date and revised_variable select the details of revisions. In
     # the AR(1) model, the revisions of 2009Q1 and 2009Q2 have impacts on
     # 2009Q1 and on 2009Q2-2009Q4.
-    endog = dta["infl"].rename("y")
+    endog = dta["infl"]
     previous = endog.loc[:"2009Q2"].copy()
     previous.loc["2009Q1":"2009Q2"] = 0.0
     res = sarimax.SARIMAX(previous).smooth([0.5, 1.0])
@@ -2051,8 +2049,10 @@ def summary_header(summary):
 
 @pytest.mark.parametrize("include_details_tables", [None, True, False])
 @pytest.mark.parametrize("include_revisions_tables", [True, False])
-def test_summary_univariate(include_details_tables, include_revisions_tables):
-    news = univariate_news()
+@pytest.mark.parametrize("name", ["infl", "y"])
+def test_summary_univariate(include_details_tables, include_revisions_tables,
+                            name):
+    news = univariate_news(name=name)
     summary = news.summary(include_details_tables=include_details_tables,
                            include_revisions_tables=include_revisions_tables)
     header = summary_header(summary)
@@ -2406,3 +2406,124 @@ def test_summary_details_multiple_tables_by_impact(source, groupby):
                                     multiple_tables=True)
     assert_equal([str(table) for table in summary.tables[1:]],
                  [str(table) for table in desired])
+
+
+@pytest.mark.parametrize("name", ["infl", "y"])
+def test_univariate_defaults(name):
+    # The univariate defaults apply whatever the name of the series (k_endog
+    # was the length of the name, so they applied only to one-letter names)
+    news = univariate_news(name=name)
+    assert_equal(news.k_endog, 1)
+    # summary shows a single details table of the news and of the
+    # revisions by default, for each grouping
+    for groupby in ["update date", "impact date"]:
+        summary = news.summary(include_revisions_tables=True,
+                               details_groupby=groupby)
+        desired = [news.summary_impacts(), news.summary_news(),
+                   news.summary_details(groupby=groupby),
+                   news.summary_revisions(),
+                   news.summary_details(source="revisions", groupby=groupby)]
+        assert_equal([str(table) for table in summary.tables[1:]],
+                     [str(table) for table in desired])
+    # Details tables with a single row are shown
+    summary = news.summary(include_revisions_tables=True,
+                           impact_date="2009Q3")
+    desired = [news.summary_impacts(impact_date="2009Q3"),
+               news.summary_news(),
+               news.summary_details(impact_date="2009Q3"),
+               news.summary_revisions(),
+               news.summary_details(source="revisions", impact_date="2009Q3")]
+    assert_equal(len(table_values(desired[2])), 2)
+    assert_equal(len(table_values(desired[4])), 2)
+    assert_equal([str(table) for table in summary.tables[1:]],
+                 [str(table) for table in desired])
+    # In multiple tables, the variable is in the title, not in columns
+    for source, variable in [("news", "updated variable"),
+                             ("revisions", "revised variable")]:
+        tables = news.summary_details(source=source, multiple_tables=True)
+        assert_equal(len(tables), 1)
+        assert_(tables[0].title.endswith(
+            f"{variable} = {name}, impacted variable = {name}]"))
+        header = table_values(tables[0])[0]
+        assert_(variable not in header)
+        assert_("impacted variable" not in header)
+
+
+def test_summary_details_multiple_tables_single_variable():
+    # A multivariate model keeps a single updated variable in a column of
+    # multiple tables unless it is selected; only univariate models move it
+    # to the title by default
+    news = bivariate_news(update=[1.0, np.nan])
+    tables = news.summary_details(multiple_tables=True)
+    assert_equal(len(tables), 1)
+    assert_("updated variable" in table_values(tables[0])[0])
+    assert_equal(tables[0].title, "Details of news for [update date = 2009Q3]")
+    tables = news.summary_details(multiple_tables=True,
+                                  updated_variable="realgdp")
+    assert_("updated variable" not in table_values(tables[0])[0])
+    assert_equal(tables[0].title, "Details of news for [update date = "
+                                  "2009Q3, updated variable = realgdp]")
+
+
+@pytest.mark.parametrize("name", ["infl", "y"])
+@pytest.mark.parametrize("case", ["revisions only", "mixed revisions",
+                                  "below tolerance"])
+def test_univariate_defaults_without_variable_rows(name, case):
+    # The univariate defaults do not select the rows of the details tables:
+    # selecting the variable raised a KeyError for an empty table (no news,
+    # or no impact above the tolerance) and for revisions that are all
+    # grouped, and dropped the grouped revisions ("all prior revisions")
+    # otherwise. A single details table without rows is left out.
+    endog = dta["infl"].rename(name)
+    kwargs = {"start": "2009Q1", "end": "2009Q4"}
+    if case == "revisions only":
+        # All revisions grouped (the default)
+        previous = endog.copy()
+        kwargs["comparison_type"] = "updated"
+    else:
+        previous = endog.loc[:"2009Q2"].copy()
+    if case == "mixed revisions":
+        kwargs["revisions_details_start"] = "2009Q2"
+    elif case == "below tolerance":
+        kwargs["tolerance"] = 1e6
+    previous.loc["2009Q1":"2009Q2"] = 0.0
+    res = sarimax.SARIMAX(previous).smooth([0.5, 1.0])
+    news = res.news(endog, **kwargs)
+
+    summary = news.summary(include_revisions_tables=True)
+    desired = [news.summary_impacts()]
+    if case == "below tolerance":
+        assert_equal(len(news.impacts), 0)
+        assert_equal(len(news.details_by_impact), 0)
+        assert_equal(len(news.revision_details_by_impact), 0)
+        desired += [news.summary_news(), news.summary_revisions()]
+    else:
+        if case == "mixed revisions":
+            desired += [news.summary_news(), news.summary_details()]
+        else:
+            assert_equal(len(news.details_by_impact), 0)
+        desired += [news.summary_revisions(),
+                    news.summary_details(source="revisions")]
+    assert_equal([str(table) for table in summary.tables[1:]],
+                 [str(table) for table in desired])
+    if case == "below tolerance":
+        return
+
+    # The details of the revisions sum to the impacts of the revisions
+    table = news.summary_details(source="revisions", sparsify=False,
+                                 float_format="%.6f")
+    values = table_values(table)
+    header = values[0]
+    variables = [row[header.index("revised variable")] for row in values[1:]]
+    assert_("all prior revisions" in variables)
+    dates = [row[header.index("impact date")] for row in values[1:]]
+    impacts = [float(row[header.index("impact")]) for row in values[1:]]
+    actual = pd.Series(impacts).groupby(dates).sum()
+    revision_impacts = pd.Series(
+        news.revision_impacts[name].to_numpy(),
+        index=news.revision_impacts.index.astype(str))
+    # The dates without rows have no impact (the observed 2009Q3, and its
+    # forecast 2009Q4, if there are no news)
+    actual = actual.reindex(revision_impacts.index, fill_value=0.0)
+    # atol for the rounding to 6 digits
+    assert_allclose(actual, revision_impacts, rtol=0, atol=1e-5)
