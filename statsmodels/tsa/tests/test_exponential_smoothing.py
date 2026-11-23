@@ -3272,9 +3272,11 @@ def test_fit_after_fit_with_fixed_params(oildata, how, user_bounds):
     model = ETSModel(oildata, trend="add", bounds=bounds)
     if how == "fix_params":
         with model.fix_params({"smoothing_trend": 0.05}):
-            res_fixed = model.fit(disp=False)
+            res_fixed = model.fit(disp=False, param_index="integer")
     else:
-        res_fixed = model.fit_constrained({"smoothing_trend": 0.05}, disp=False)
+        res_fixed = model.fit_constrained(
+            {"smoothing_trend": 0.05}, disp=False, param_index="integer"
+        )
     assert res_fixed.fixed_params == ["smoothing_trend"]
     assert_allclose(res_fixed.params.iloc[1], 0.05, rtol=1e-12)
 
@@ -3288,8 +3290,8 @@ def test_fit_after_fit_with_fixed_params(oildata, how, user_bounds):
         assert list(bounds) == ["smoothing_level"]
         assert bounds["smoothing_level"] is level_bounds
 
-    res = model.fit(disp=False)
-    expected = fresh.fit(disp=False)
+    res = model.fit(disp=False, param_index="integer")
+    expected = fresh.fit(disp=False, param_index="integer")
     assert res.fixed_params == []
     # The same optimization from the same start; the tolerance only allows
     # for rounding. The bug kept smoothing_trend at 0.05 instead of 1e-4.
@@ -3303,11 +3305,11 @@ def test_fit_after_initialization_method_change(austourists):
     # at their heuristic values
     kwargs = dict(error="add", trend="add", seasonal="add", seasonal_periods=4)
     model = ETSModel(austourists, initialization_method="heuristic", **kwargs)
-    model.fit(disp=False)
+    model.fit(disp=False, param_index="integer")
     assert model.bounds == {}
     model.set_initialization_method("estimated")
-    res = model.fit(disp=False)
-    expected = ETSModel(austourists, **kwargs).fit(disp=False)
+    res = model.fit(disp=False, param_index="integer")
+    expected = ETSModel(austourists, **kwargs).fit(disp=False, param_index="integer")
     # the same optimization from the same start, see above
     assert_allclose(res.params, expected.params, rtol=1e-6)
     assert_allclose(res.llf, expected.llf, rtol=1e-10)
