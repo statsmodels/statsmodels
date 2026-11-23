@@ -1,0 +1,5 @@
+- The stationary initialization of state space models gave an initial
+  state covariance of about zero when the state covariance was of order
+  1e294 or larger, because the scale factor of LAPACK's Sylvester
+  solver was applied the wrong way round. Results change only in that
+  case. :pr:`11027`

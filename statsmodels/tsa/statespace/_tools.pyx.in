@@ -169,6 +169,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
         {{else}}
         np.float64_t scale = 0.0
         {{endif}}
+        {{cython_type}} inv_scale
         {{cython_type}} tmp = 0.0
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
@@ -382,9 +383,11 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
                            q, &n_,
                            &scale, &info)
 
-    # Scale q by scale
+    # ?trsyl returns X with r*X + X*r = scale*q, where scale <= 1 avoids
+    # overflow, so the solution for q is X / scale
     if not scale == 1.0:
-        blas.{{prefix}}scal(&n2, <{{cython_type}}*> &scale, q, &inc)
+        inv_scale = 1.0 / scale
+        blas.{{prefix}}scal(&n2, &inv_scale, q, &inc)
 
     # Calculate the solution: u * q * v^H (results overwrite q)
     # In the usual case, v = u
