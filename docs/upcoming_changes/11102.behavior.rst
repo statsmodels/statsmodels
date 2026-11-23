@@ -1,0 +1,12 @@
+- :class:`~statsmodels.tsa.ar_model.AutoReg`,
+  :class:`~statsmodels.tsa.ardl.ARDL` and
+  :class:`~statsmodels.tsa.ardl.UECM` with a ``RangeIndex`` that does
+  not start at 0 or has a step other than 1 used the last label of
+  the index as the location of the default ``end`` of ``predict``,
+  ``get_prediction`` and ``plot_predict``: ``predict()`` included
+  out-of-sample predictions (with shifted values) or stopped early,
+  and ``fittedvalues`` and ``get_prediction()`` raised. Out-of-sample
+  predictions were labelled as if the index were 0, 1, ..., nobs - 1.
+  The default ``end`` is the last observation, and out-of-sample
+  predictions extend the ``RangeIndex`` with its start and step.
+  :pr:`11102`

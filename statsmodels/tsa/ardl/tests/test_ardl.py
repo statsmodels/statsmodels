@@ -2372,6 +2372,56 @@ def test_bounds_test_case_types(case, to_case):
     assert_allclose(bounds_result.statistic, expected[case], rtol=1e-6)
 
 
+@pytest.mark.parametrize(
+    "index",
+    [pd.RangeIndex(2, 42), pd.RangeIndex(10, 90, 2), pd.RangeIndex(40, 0, -1)],
+    ids=["start", "step", "decreasing"],
+)
+def test_ardl_uecm_range_index_labels(index):
+    # The default end was the last label of the index used as a location, so
+    # fittedvalues and get_prediction raised (or UECM.predict stopped early),
+    # and forecasts were labelled as if the index were 0, 1, ..., nobs - 1
+    rng = np.random.default_rng(20261206)
+    nobs = 40
+    y = rng.standard_normal(nobs).cumsum()
+    x = rng.standard_normal((nobs + 3, 1))
+    start = index.start + nobs * index.step
+    oos_index = pd.RangeIndex(start, start + 3 * index.step, index.step)
+    endog = pd.Series(y, index=index)
+    exog = pd.DataFrame(x[:nobs], index=index, columns=["x"])
+    exog_oos = pd.DataFrame(x[nobs:], index=oos_index, columns=["x"])
+    # The same models on the default index
+    default_exog = pd.DataFrame(x[:nobs], columns=["x"])
+    default_exog_oos = pd.DataFrame(x[nobs:], columns=["x"])
+
+    res = ARDL(endog, 2, exog, 1, trend="ct").fit()
+    expected = ARDL(pd.Series(y), 2, default_exog, 1, trend="ct").fit()
+    fitted = res.fittedvalues
+    assert_index_equal(fitted.index, index[2:])
+    assert_allclose(fitted.to_numpy(), expected.fittedvalues.to_numpy(), rtol=1e-10)
+    pred = res.predict()
+    assert_index_equal(pred.index, index)
+    assert_allclose(pred.to_numpy(), expected.predict().to_numpy(), rtol=1e-10)
+    pred_res = res.get_prediction()
+    assert_index_equal(pred_res.predicted_mean.index, index)
+    expected_var = expected.get_prediction().var_pred_mean.to_numpy()
+    assert_allclose(pred_res.var_pred_mean.to_numpy(), expected_var, rtol=1e-10)
+    fcast = res.forecast(3, exog=exog_oos)
+    assert_index_equal(fcast.index, oos_index)
+    expected_fcast = expected.forecast(3, exog=default_exog_oos).to_numpy()
+    assert_allclose(fcast.to_numpy(), expected_fcast, rtol=1e-10)
+
+    # UECM predicts in sample only; its hold back is 2
+    res = UECM(endog, 2, exog, 1).fit()
+    expected = UECM(pd.Series(y), 2, default_exog, 1).fit()
+    fitted = res.fittedvalues
+    assert_index_equal(fitted.index, index[2:])
+    assert_allclose(fitted.to_numpy(), expected.fittedvalues.to_numpy(), rtol=1e-10)
+    pred = res.predict()
+    assert_index_equal(pred.index, index)
+    assert_allclose(pred.to_numpy(), expected.predict().to_numpy(), rtol=1e-10)
+
+
 @pytest.mark.parametrize("to_int", [np.int64, np.int32])
 @pytest.mark.parametrize("causal", [False, True])
 def test_ardl_order_dict_numpy_int_keys(to_int, causal):

@@ -588,6 +588,10 @@ class AutoReg(tsa_model.TimeSeriesModel):
                     index = pd.period_range(index[0], freq=freq, periods=end)
                 else:
                     index = pd.date_range(index[0], freq=freq, periods=end)
+            elif isinstance(index, pd.RangeIndex):
+                # Extend with the start and the step of the index
+                stop = index.start + end * index.step
+                index = pd.RangeIndex(index.start, stop, index.step)
             else:
                 index = pd.RangeIndex(end)
         index = index[start - pad : end]
@@ -782,7 +786,7 @@ class AutoReg(tsa_model.TimeSeriesModel):
         else:
             _exog_oos = array_like(exog_oos, "exog_oos", ndim=2, optional=True)
         start = 0 if start is None else start
-        end = self._index[-1] if end is None else end
+        end = self.endog.shape[0] - 1 if end is None else end
         start, end, num_oos, _ = self._get_prediction_index(start, end)
         return params, _exog, _exog_oos, start, end, num_oos
 
@@ -837,6 +841,15 @@ class AutoReg(tsa_model.TimeSeriesModel):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
+
+            .. versionchanged:: 0.15.1
+
+               With a RangeIndex that does not start at 0 or has a step
+               other than 1, the default is the last observation. It was
+               the last label of the index used as a location.
+               Out-of-sample predictions extend the RangeIndex with its
+               start and step. They were labelled as if it started at 0
+               with a step of 1.
         dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
@@ -1453,6 +1466,12 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
+
+            .. versionchanged:: 0.15.1
+
+               With a RangeIndex that does not start at 0 or has a step
+               other than 1, the default is the last observation. It was
+               the last label of the index used as a location.
         dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
@@ -1484,7 +1503,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         mean_var = np.full_like(mean, self.sigma2)
         mean_var[np.isnan(mean)] = np.nan
         start = 0 if start is None else start
-        end = self.model._index[-1] if end is None else end
+        end = self.model.endog.shape[0] - 1 if end is None else end
         _, _, oos, _ = self.model._get_prediction_index(start, end)
         if oos > 0:
             ar_params = self._lag_repr()
@@ -1547,7 +1566,7 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         _import_mpl()
         fig = create_mpl_fig(fig, figsize)
         start = 0 if start is None else start
-        end = self.model._index[-1] if end is None else end
+        end = self.model.endog.shape[0] - 1 if end is None else end
         _, _, oos, _ = self.model._get_prediction_index(start, end)
 
         ax = fig.add_subplot(111)

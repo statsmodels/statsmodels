@@ -749,6 +749,15 @@ class ARDL(AutoReg):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
+
+            .. versionchanged:: 0.15.1
+
+               With a RangeIndex that does not start at 0 or has a step
+               other than 1, the default is the last observation. It was
+               the last label of the index used as a location.
+               Out-of-sample predictions extend the RangeIndex with its
+               start and step. They were labelled as if it started at 0
+               with a step of 1.
         dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
@@ -1318,6 +1327,12 @@ class ARDLResults(AutoRegResults):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
+
+            .. versionchanged:: 0.15.1
+
+               With a RangeIndex that does not start at 0 or has a step
+               other than 1, the default is the last observation. It was
+               the last label of the index used as a location.
         dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
@@ -1363,7 +1378,7 @@ class ARDLResults(AutoRegResults):
         mean_var = np.full_like(mean, fill_value=self.sigma2)
         mean_var[np.isnan(mean)] = np.nan
         start = 0 if start is None else start
-        end = self.model._index[-1] if end is None else end
+        end = self.model.endog.shape[0] - 1 if end is None else end
         _, _, oos, _ = self.model._get_prediction_index(start, end)
         if oos > 0:
             ar_params = self._lag_repr()
@@ -2396,6 +2411,12 @@ class UECM(ARDL):
             the sample. Unlike standard python slices, end is inclusive so
             that all the predictions [start, start+1, ..., end-1, end] are
             returned.
+
+            .. versionchanged:: 0.15.1
+
+               With a RangeIndex that does not start at 0 or has a step
+               other than 1, the default is the last observation. It was
+               the last label of the index used as a location.
         dynamic : bool, int, str, datetime, or Timestamp, optional
             Integer offset relative to `start` at which to begin dynamic
             prediction. Prior to this observation, true endogenous values
