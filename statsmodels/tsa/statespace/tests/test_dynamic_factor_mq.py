@@ -4040,3 +4040,101 @@ def test_fit_em_nonstationary_restart_untransformed_start_params():
     # rtol: the start parameters agree only up to the rounding of the
     # transformation and its inverse
     assert_allclose(actual, desired, rtol=1e-7)
+
+
+def _oscillating_data(case, seed=0):
+    # Two series of one factor whose autoregression is explosive with
+    # roots that are negative (alternating signs) or complex (an AR(2) with
+    # a modulus of 1.1), plus noise
+    rng = np.random.default_rng(seed)
+    t = np.arange(20)
+    if case.startswith("complex"):
+        factor = np.ones(20)
+        for i in range(2, 20):
+            factor[i] = 1.1 * factor[i - 1] - 1.21 * factor[i - 2]
+    else:
+        factor = (-1.0) ** t * (1 + 0.1 * t)
+    noise = 0.1 * rng.standard_normal((20, 2))
+    index = pd.period_range(start="2000-01", periods=20, freq="M")
+    return pd.DataFrame(
+        {"y1": factor + noise[:, 0], "y2": 0.5 * factor + noise[:, 1]}, index=index
+    )
+
+
+@pytest.mark.parametrize(
+    "case", ["negative", "complex", "negative_mixed_frequency", "quarterly"]
+)
+def test_fit_em_nonstationary_restart_eigenvalue_modulus(case):
+    # As in test_fit_em_nonstationary_restart, for blocks whose transition
+    # matrix has, after the first EM step, a negative or complex eigenvalue
+    # outside the unit circle, while the real parts of all eigenvalues are
+    # smaller than one. The block is switched to diffuse (the eigenvalues
+    # were compared with one instead of their modulus, so the block kept
+    # its stationary initialization) and the result is that of a fit with
+    # this block diffuse from the start
+    rng = np.random.default_rng(1)
+    kwargs = {"standardize": False}
+    switched = "factor block: ('0',)"
+    if case == "quarterly":
+        # Noise for the monthly variables, and a quarterly variable with
+        # alternating signs that grows
+        endog = pd.DataFrame(
+            np.random.default_rng(0).standard_normal((20, 2)),
+            index=pd.period_range(start="2000-01", periods=20, freq="M"),
+            columns=["m1", "m2"],
+        )
+        values = (-1.0) ** np.arange(6) * (1 + np.arange(6.0)) ** 2
+        kwargs["endog_quarterly"] = _quarterly_series(values)
+        switched = "idiosyncratic AR(1) for the block of quarterly variables"
+    else:
+        endog = _oscillating_data(case)
+        kwargs["idiosyncratic_ar1"] = False
+        if case == "complex":
+            kwargs["factor_orders"] = 2
+        elif case == "negative_mixed_frequency":
+            kwargs["endog_quarterly"] = _quarterly_series(rng.standard_normal(6))
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, **kwargs)
+    msg_start = "Non-stationary starting autoregressive parameters"
+    if case == "quarterly":
+        start_params = mod.start_params
+    else:
+        with pytest.warns(EstimationWarning, match=msg_start):
+            start_params = mod.start_params
+    names = mod.state_names
+    if case == "quarterly":
+        start = names.index("eps_Q.q")
+        diffuse = (start, start + 5)
+    else:
+        diffuse = (0, sum("eps_" not in name for name in names))
+
+    # The eigenvalues of the block after one EM step with the model's
+    # initialization
+    msg_maxiter = "EM reached maximum number of iterations"
+    mod_step = dynamic_factor_mq.DynamicFactorMQ(endog, **kwargs)
+    with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+        params1 = mod_step.fit_em(start_params, maxiter=1, return_params=True)
+    mod_step.update(params1)
+    block = slice(*diffuse)
+    eigenvalues = np.linalg.eigvals(mod_step["transition", block, block])
+    assert_(np.abs(eigenvalues).max() > 1.01)
+    assert_(eigenvalues.real.max() < 0.99)
+    if case == "complex":
+        assert_(np.abs(eigenvalues.imag).max() > 0.5)
+
+    msg = re.escape(repr([switched])) + ", and fitting was restarted"
+    with pytest.warns(EstimationWarning, match=msg):
+        with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+            res = mod.fit(start_params, maxiter=2, em_initialization=False)
+
+    # The same steps by hand (see test_fit_em_nonstationary_restart)
+    mod_diffuse = dynamic_factor_mq.DynamicFactorMQ(endog, **kwargs)
+    with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+        mod_diffuse.fit_em(start_params, maxiter=1, return_params=True)
+    mod_diffuse.ssm.initialization.set(diffuse, "diffuse")
+    with pytest.warns(ConvergenceWarning, match=msg_maxiter):
+        res_diffuse = mod_diffuse.fit(
+            start_params, maxiter=2, em_initialization=False
+        )
+
+    assert_allclose(res.params, res_diffuse.params, rtol=1e-10)
+    assert_allclose(res.llf, res_diffuse.llf, rtol=1e-10)

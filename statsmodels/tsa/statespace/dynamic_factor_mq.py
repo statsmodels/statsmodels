@@ -2648,7 +2648,11 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                checked, and only with a global initialization, so a
                non-stationary block could keep its stationary initialization
                (with a loglikelihood of 0). In other models, a global
-               initialization raised an error.
+               initialization raised an error. A block of factors, and the
+               block of quarterly idiosyncratic AR(1) terms, is
+               non-stationary if an eigenvalue of its transition matrix has
+               a modulus of one or more; a negative or complex eigenvalue
+               with a modulus above one was not detected.
         mstep_method : {'missing', 'nonmissing'}, optional
             The EM algorithm maximization step. If there are no NaN values
             in the dataset, this can be set to "nonmissing" (which is slightly
@@ -2759,7 +2763,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                     init_type = global_type or init.blocks[b].initialization_type
                     if init_type == "stationary":
                         Tb = T[block["factors"], block["factors"]]
-                        if not np.all(np.linalg.eigvals(Tb) < (1 - 1e-10)):
+                        if not np.all(np.abs(np.linalg.eigvals(Tb)) < (1 - 1e-10)):
                             init.set(block["factors"], "diffuse")
                             switch_init.append(
                                 "factor block:"
@@ -2786,7 +2790,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                             global_type or init.blocks[b].initialization_type)
                         if init_type == "stationary":
                             Tb = T[s["idio_ar_Q"], s["idio_ar_Q"]]
-                            if not np.all(np.linalg.eigvals(Tb) < (1 - 1e-10)):
+                            if not np.all(np.abs(np.linalg.eigvals(Tb)) < (1 - 1e-10)):
                                 init.set(s["idio_ar_Q"], "diffuse")
                                 switch_init.append(
                                     "idiosyncratic AR(1) for the"
