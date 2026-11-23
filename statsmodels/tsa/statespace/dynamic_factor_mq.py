@@ -3208,6 +3208,11 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             memory usage. If used, some features of the results object will
             not be available (including in-sample prediction), although
             out-of-sample forecasting is possible. Default is False.
+
+            .. versionchanged:: 0.15.1
+
+               The option is used. It was ignored, so the results always
+               kept the full output of the Kalman filter.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
@@ -3222,7 +3227,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             params, transformed=transformed, includes_fixed=includes_fixed,
             complex_step=complex_step, cov_type=cov_type, cov_kwds=cov_kwds,
             return_ssm=return_ssm, results_class=results_class,
-            results_wrapper_class=results_wrapper_class, **kwargs)
+            results_wrapper_class=results_wrapper_class,
+            low_memory=low_memory, **kwargs)
 
     def simulate(self, params, nsimulations, measurement_shocks=None,
                  state_shocks=None, initial_state=None, anchor=None,
