@@ -2215,3 +2215,181 @@ def test_oos_end_key_models(model):
     assert_allclose(
         np.asarray(pred), np.asarray(res.predict(start=34, end=41)), rtol=1e-12
     )
+
+
+@pytest.mark.parametrize(
+    "index, start, expected",
+    [
+        # A month of daily dates and daily periods
+        (
+            pd.date_range("2000-01-01", periods=100, freq="D"),
+            "2000-02",
+            pd.date_range("2000-02-01", "2000-04-09", freq="D"),
+        ),
+        (
+            pd.period_range("2000-01-01", periods=100, freq="D"),
+            "2000-02",
+            pd.period_range("2000-02-01", "2000-04-09", freq="D"),
+        ),
+        # pandas also gives a slice for a month of a month-start index
+        (
+            pd.date_range("2000-01-01", periods=12, freq="MS"),
+            "2000-03",
+            pd.date_range("2000-03-01", "2000-12-01", freq="MS"),
+        ),
+    ],
+)
+def test_partial_date_start_without_end(index, start, expected):
+    # A start key that covers several dates, without an end, predicts from
+    # the first of these dates to the end of the sample
+    endog = pd.Series(np.zeros(len(index)), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    nobs = len(index)
+    start, end, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        start, None, nobs, mod._index, data=mod.data
+    )
+    assert start == nobs - len(expected)
+    assert end == nobs - 1
+    assert out_of_sample == 0
+    assert prediction_index.equals(expected)
+
+
+QUARTER_KEY_CASES = {
+    "daily": (
+        pd.date_range("2000-01-01", periods=800, freq="D"),
+        pd.date_range("2001-04-01", "2001-09-30", freq="D"),
+    ),
+    "month-start": (
+        pd.date_range("2000-01-01", periods=36, freq="MS"),
+        pd.date_range("2001-04-01", "2001-09-01", freq="MS"),
+    ),
+    "quarter-start": (
+        pd.date_range("2000-01-01", periods=12, freq="QS"),
+        pd.date_range("2001-04-01", "2001-07-01", freq="QS"),
+    ),
+    "quarter-end": (
+        pd.date_range("2000-03-31", periods=12, freq=pd.offsets.QuarterEnd()),
+        pd.date_range("2001-06-30", "2001-09-30", freq=pd.offsets.QuarterEnd()),
+    ),
+    "monthly-periods": (
+        pd.period_range("2000-01", periods=36, freq="M"),
+        pd.period_range("2001-04", "2001-09", freq="M"),
+    ),
+    "quarterly-periods": (
+        pd.period_range("2000Q1", periods=12, freq="Q"),
+        pd.period_range("2001Q2", "2001Q3", freq="Q"),
+    ),
+}
+
+
+@pytest.mark.parametrize("case", list(QUARTER_KEY_CASES))
+def test_quarter_string_keys_in_sample(case):
+    # A quarter string selects the dates or periods of the whole quarter, as
+    # pandas' partial-string indexing does for e.g. "2001-04"
+    index, expected = QUARTER_KEY_CASES[case]
+    endog = pd.Series(np.zeros(len(index)), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    nobs = len(index)
+    start, end, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        "2001Q2", "2001Q3", nobs, mod._index, data=mod.data
+    )
+    assert prediction_index.equals(expected)
+    assert out_of_sample == 0
+    assert end - start + 1 == len(expected)
+    assert index[start] == expected[0]
+
+    # Without an end, prediction runs from the start of the quarter to the
+    # end of the sample
+    start, end, _, prediction_index = tsa_model.get_prediction_index(
+        "2001Q2", None, nobs, mod._index, data=mod.data
+    )
+    assert index[start] == expected[0]
+    assert end == nobs - 1
+
+
+@pytest.mark.parametrize(
+    "index, start, end, expected",
+    [
+        # A month as the start and a quarter as the end
+        (
+            pd.date_range("2000-01-01", periods=36, freq="MS"),
+            "2001-01",
+            "2001Q2",
+            pd.date_range("2001-01-01", "2001-06-01", freq="MS"),
+        ),
+        # A quarter that is only partly in the sample
+        (
+            pd.date_range("2000-01-01", periods=17, freq="MS"),
+            "2001Q1",
+            "2001Q2",
+            pd.date_range("2001-01-01", "2001-05-01", freq="MS"),
+        ),
+        (
+            pd.date_range("2000-01-01", periods=500, freq="D"),
+            "2001Q2",
+            "2001-05-14",
+            pd.date_range("2001-04-01", "2001-05-14", freq="D"),
+        ),
+    ],
+)
+def test_quarter_string_keys_mixed(index, start, end, expected):
+    endog = pd.Series(np.zeros(len(index)), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    out = tsa_model.get_prediction_index(
+        start, end, len(index), mod._index, data=mod.data
+    )
+    assert out[3].equals(expected)
+    assert out[2] == 0
+
+
+@pytest.mark.parametrize(
+    "index, loc",
+    [
+        (pd.date_range("2000-01-01", periods=12, freq="QS"), 5),
+        (pd.date_range("2000-03-31", periods=12, freq=pd.offsets.QuarterEnd()), 5),
+        (pd.period_range("2000Q1", periods=12, freq="Q"), 5),
+        # The fiscal quarter of quarters ending in November
+        (pd.period_range("2000Q1", periods=12, freq="Q-NOV"), 5),
+    ],
+)
+def test_quarter_string_key_single_date(index, loc):
+    # A quarter with one observation gives its location, not a slice
+    result, _, _ = tsa_model.get_index_loc("2001Q2", index)
+    assert not isinstance(result, slice)
+    assert result == loc
+    assert (index[loc].year, index[loc].quarter) == (2001, 2)
+
+
+@pytest.mark.parametrize(
+    "index, key",
+    [
+        # Before the sample
+        (pd.date_range("2000-01-01", periods=800, freq="D"), "1999Q4"),
+        (pd.date_range("2000-01-01", periods=12, freq="QS"), "1999Q4"),
+        # Year-end dates have no date in the second quarter
+        (pd.date_range("1999-12-31", periods=6, freq=YEAR_END), "2001Q2"),
+    ],
+)
+def test_quarter_string_key_without_dates(index, key):
+    with pytest.raises(KeyError):
+        tsa_model.get_index_loc(key, index)
+
+
+def test_quarter_string_keys_autoreg():
+    from statsmodels.tsa.ar_model import AutoReg
+
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=36, freq="MS")
+    res = AutoReg(pd.Series(rng.standard_normal(36), index=index), 1).fit()
+    pred = res.predict(start="2001-01", end="2001Q2")
+    assert pred.index.equals(pd.date_range("2001-01-01", "2001-06-01", freq="MS"))
+    np.testing.assert_allclose(pred, res.predict(start=12, end=17), rtol=1e-13)
+
+    # Dynamic prediction from a quarter of quarterly data
+    index = pd.date_range("2000-03-31", periods=12, freq=pd.offsets.QuarterEnd())
+    res = AutoReg(pd.Series(rng.standard_normal(12), index=index), 1).fit()
+    np.testing.assert_allclose(
+        res.predict(start=2, dynamic="2001Q2"),
+        res.predict(start=2, dynamic=3),
+        rtol=1e-13,
+    )
