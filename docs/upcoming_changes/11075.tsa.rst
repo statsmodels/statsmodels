@@ -1,0 +1,5 @@
+- ``simulate`` of the simulation smoother of a ``SimulationSmoother``
+  created with ``dtype=np.float32``, ``np.complex64`` or ``complex``
+  raised a ``ValueError`` ("Buffer dtype mismatch") unless all of the
+  variates were given. The variates drawn from ``rng`` are converted
+  to the dtype of the model. :pr:`11075`
