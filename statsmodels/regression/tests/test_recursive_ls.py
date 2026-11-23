@@ -764,3 +764,41 @@ def test_get_prediction_dynamic_key_covers_several_dates():
     # A key of a single date gives its location
     pred = res.get_prediction(dynamic="2001-04-01")
     assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
+
+
+@pytest.mark.parametrize("start", [10, "2000-01-11"])
+@pytest.mark.parametrize(
+    "dynamic",
+    [
+        "2000-03-01",
+        "2000-03",
+        pd.Timestamp("2000-03-01"),
+        pd.Timestamp("2000-03-01").to_pydatetime(),
+    ],
+    ids=["str", "str-month", "timestamp", "datetime"],
+)
+def test_get_prediction_dynamic_date_with_start(start, dynamic):
+    # A dynamic date is the absolute date at which dynamic prediction begins,
+    # also when start is not the first observation. A date string was used as
+    # an offset relative to start, and a Timestamp or datetime raised.
+    rng = np.random.default_rng(20261123)
+    index = pd.date_range("2000-01-01", periods=100, freq="D")
+    exog = add_constant(rng.standard_normal(100))
+    endog = pd.Series(exog @ [1.0, 0.5] + rng.standard_normal(100), index=index)
+    res = RecursiveLS(endog, exog).fit()
+    loc = 31 + 29
+    assert index[loc] == pd.Timestamp("2000-03-01")
+    pred = res.get_prediction(start=start, dynamic=dynamic)
+    # Static predictions use the coefficients estimated through the previous
+    # period, dynamic ones those estimated through the period before loc
+    beta = res.filter_results.filtered_state
+    expected = np.r_[
+        np.sum(exog[10:loc] * beta[:, 9 : loc - 1].T, axis=1),
+        exog[loc:] @ beta[:, loc - 1],
+    ]
+    assert_allclose(pred.predicted_mean, expected, rtol=1e-10)
+    pd.testing.assert_index_equal(pred.predicted_mean.index, index[10:])
+    # The same as the integer offset relative to start
+    offset = res.get_prediction(start=10, dynamic=loc - 10)
+    assert_allclose(pred.predicted_mean, offset.predicted_mean, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, offset.var_pred_mean, rtol=1e-12)
