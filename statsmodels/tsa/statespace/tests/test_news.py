@@ -2362,3 +2362,47 @@ def test_summary_impacts_groupby_spellings(groupby):
         table = news.summary_impacts(groupby=groupby, impact_date="2009Q3")
         assert_equal(table.title, "Impacts for [impact date = 2009Q3]")
     assert_equal(table_values(table)[0], [key] + IMPACTS_COLUMNS)
+
+
+@pytest.mark.parametrize("source", ["news", "revisions"])
+@pytest.mark.parametrize("groupby", ["impact date", "impacted variable"])
+def test_summary_details_multiple_tables_by_impact(source, groupby):
+    # One table for each impact date or impacted variable (they raised a
+    # KeyError), with the rows of the details DataFrame for that key
+    news = bivariate_news()
+    tables = news.summary_details(source=source, groupby=groupby,
+                                  multiple_tables=True, sparsify=False,
+                                  float_format="%.4f")
+    columns, keys, desired = details_rows(news, source, groupby)
+    groups = desired[groupby].unique()
+    assert_(len(groups) > 1)
+    assert_equal(len(tables), len(groups))
+    columns.remove(groupby)
+    is_key = np.isin(columns, keys)
+    for table, group in zip(tables, groups, strict=True):
+        assert_equal(table.title, f"Details of {source} for [{groupby} = "
+                                  f"{group}]")
+        values = table_values(table)
+        assert_equal(values[0], columns)
+        subset = desired.loc[desired[groupby] == group, columns]
+        assert_equal(len(values) - 1, len(subset))
+        for row, (_, value) in zip(values[1:], subset.iterrows(),
+                                   strict=True):
+            row = np.array(row)
+            assert_equal(row[is_key], [str(x) for x in value[is_key]])
+            # The weights are rounded to 1.0 when they are within the
+            # tolerance of 1 (atol for the rounding to 4 digits)
+            assert_allclose(row[~is_key].astype(float),
+                            value[~is_key].astype(float), rtol=0, atol=5e-5)
+
+    # summary shows these tables (sparsified)
+    summary = news.summary(include_details_tables=True,
+                           include_revisions_tables=True,
+                           details_groupby=groupby)
+    desired = [news.summary_impacts(), news.summary_news()]
+    desired += news.summary_details(groupby=groupby, multiple_tables=True)
+    desired.append(news.summary_revisions())
+    desired += news.summary_details(source="revisions", groupby=groupby,
+                                    multiple_tables=True)
+    assert_equal([str(table) for table in summary.tables[1:]],
+                 [str(table) for table in desired])

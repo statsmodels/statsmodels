@@ -1135,6 +1135,8 @@ class NewsResults:
                 "update date": "update date",
                 "updated variable": "updated variable",
                 "news": "news",
+                "impact date": "impact date",
+                "impacted variable": "impacted variable",
             }
         else:  # source == "revisions"
             details = self.revision_details_by_impact.loc[s, :]
@@ -1144,6 +1146,8 @@ class NewsResults:
                 "update date": "revision date",
                 "updated variable": "revised variable",
                 "news": "revision",
+                "impact date": "impact date",
+                "impacted variable": "impacted variable",
             }
 
         # Make the first index level the groupby level
