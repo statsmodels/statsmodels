@@ -489,6 +489,15 @@ class NewsResults:
         At the same time, `details_by_update` is less convenient for
         subsetting.
         """
+        return self._get_details_by_impact()
+
+    def _get_details_by_impact(self, key=None):
+        # The details_by_impact table. The rows of `key` (a tuple of impact
+        # dates, impacted variables, update dates and updated variables, as
+        # for DataFrame.loc) are selected before the rows within the
+        # tolerance are left out, so that a date or variable whose impacts
+        # are all within the tolerance selects no rows rather than raising a
+        # KeyError
         s = self.weights.stack(level=[0, 1], **FUTURE_STACK)
         df = s.rename("weight").to_frame()
         if len(self.updates_iloc):
@@ -506,6 +515,9 @@ class NewsResults:
 
         if self.impacted_variable is not None and len(df) > 0:
             df = df.loc[np.s_[:, self.impacted_variable], :]
+
+        if key is not None:
+            df = df.loc[key, :]
 
         mask = np.abs(df["impact"]) > self.tolerance
         return df[mask]
@@ -591,6 +603,11 @@ class NewsResults:
         of detailed revisions. At the same time, `revision_details_by_update`
         is less convenient for subsetting.
         """
+        return self._get_revision_details_by_impact()
+
+    def _get_revision_details_by_impact(self, key=None):
+        # The revision_details_by_impact table, with the rows of `key`
+        # selected as in _get_details_by_impact
         weights = self.revision_weights.stack(level=[0, 1], **FUTURE_STACK)
         df = pd.concat([
             self.revised.reindex(weights.index),
@@ -611,6 +628,9 @@ class NewsResults:
 
         if self.impacted_variable is not None and len(df) > 0:
             df = df.loc[np.s_[:, self.impacted_variable], :]
+
+        if key is not None:
+            df = df.loc[key, :]
 
         mask = np.abs(df["impact"]) > self.tolerance
         return df[mask]
@@ -1129,7 +1149,7 @@ class NewsResults:
 
         source = string_like(source, "source", options=("news", "revisions"))
         if source == "news":
-            details = self.details_by_impact.loc[s, :]
+            details = self._get_details_by_impact(key=s)
             columns = {
                 "current": "observed",
                 "prev": "forecast (prev)",
@@ -1140,7 +1160,7 @@ class NewsResults:
                 "impacted variable": "impacted variable",
             }
         else:  # source == "revisions"
-            details = self.revision_details_by_impact.loc[s, :]
+            details = self._get_revision_details_by_impact(key=s)
             columns = {
                 "current": "revised",
                 "prev": "observed (prev)",

@@ -2598,3 +2598,91 @@ def test_summary_impacts_list_within_tolerance():
     assert_allclose(np.array(values[1][1:], dtype=float),
                     impacts.loc["2009Q3", columns].to_numpy().ravel(),
                     rtol=0, atol=5e-5)
+
+
+@pytest.mark.parametrize("source", ["news", "revisions"])
+@pytest.mark.parametrize("key", ["impact_date", "impacted_variable",
+                                 "update_date", "updated_variable"])
+def test_summary_details_selection_within_tolerance(source, key):
+    # A date or variable whose impacts are all within the tolerance (here
+    # above every impact) selects no rows, so the details table has only
+    # the header (it raised a KeyError: the label was looked up in the
+    # details table, which leaves out these rows). A label that is not in
+    # the details still raises.
+    news = bivariate_news(tolerance=1e6)
+    if source == "news":
+        updates = news.updates_ix
+        date_name, variable_name = "update date", "updated variable"
+    else:
+        updates = news.revisions_ix
+        date_name, variable_name = "revision date", "revised variable"
+    # Update (revision) date and variable of the data, impact date of the
+    # news
+    labels = {
+        "impact_date": "2009Q3",
+        "impacted_variable": "unemp",
+        "update_date": str(updates[date_name].iloc[0]),
+        "updated_variable": updates[variable_name].iloc[0],
+    }
+    assert_equal(len(news.impacts), 0)
+    assert_equal(len(news.details_by_impact), 0)
+    assert_equal(len(news.revision_details_by_impact), 0)
+    columns, _, desired = details_rows(news, source, "update date")
+    assert_equal(len(desired), 0)
+
+    table = news.summary_details(source=source, **{key: labels[key]})
+    assert_equal(table.title, f"Details of {source}")
+    assert_equal(table_values(table), [columns])
+
+    missing = "cpi" if key.endswith("variable") else "2010Q4"
+    with pytest.raises(KeyError):
+        news.summary_details(source=source, **{key: missing})
+
+
+def test_summary_details_date_within_tolerance():
+    # The observed 2009Q2 has no impact of the news (no revision): the
+    # details table of this impact date has only the header, and a list
+    # with it gives the rows of the other dates
+    news = univariate_news(revision=False)
+    columns, _, desired = details_rows(news, "news", "update date")
+    impact_dates = desired["impact date"].astype(str)
+    assert_equal(impact_dates.tolist(), ["2009Q3", "2009Q4"])
+    table = news.summary_details(impact_date="2009Q2", sparsify=False)
+    assert_equal(table_values(table), [columns])
+
+    table = news.summary_details(impact_date=["2009Q2", "2009Q3"],
+                                 float_format="%.4f")
+    assert_("impact date = 2009Q3" in table.title)
+    desired = desired[impact_dates == "2009Q3"]
+    values = table_values(table)
+    assert_equal(len(values) - 1, 1)
+    row = dict(zip(values[0], values[1], strict=True))
+    assert_equal(row["update date"], "2009Q3")
+    # The weight 1 of an update on its own date is shown as "1.0" (atol for
+    # the rounding to 4 digits)
+    for name in ["observed", "forecast (prev)", "news", "weight", "impact"]:
+        assert_allclose(float(row[name]), desired[name].iloc[0], rtol=0,
+                        atol=5e-5)
+
+
+@pytest.mark.parametrize("multivariate", [True, False])
+def test_summary_date_within_tolerance(multivariate):
+    # summary of an impact date whose impacts are all within the tolerance
+    # (it raised a KeyError from summary_impacts and summary_details): the
+    # impacts table has only the header, and the details tables without rows
+    # are left out
+    if multivariate:
+        news = bivariate_news(tolerance=1e6)
+        date = "2009Q3"
+    else:
+        news = univariate_news(revision=False)
+        date = "2009Q2"
+    summary = news.summary(impact_date=date, include_details_tables=True,
+                           include_revisions_tables=True)
+    impacts = news.summary_impacts(impact_date=date)
+    assert_equal(len(table_values(impacts)), 1)
+    desired = [impacts, news.summary_news()]
+    if multivariate:
+        desired.append(news.summary_revisions())
+    assert_equal([str(table) for table in summary.tables[1:]],
+                 [str(table) for table in desired])
