@@ -3701,3 +3701,55 @@ def test_filter_low_memory():
     assert_equal(res_full.filter_results.filtered_state.shape[1], mod.nobs)
     assert_allclose(res.llf, res_full.llf)
     assert_allclose(res.forecast(2), res_full.forecast(2))
+
+
+@pytest.mark.parametrize("case", ["ndarray", "period", "datetime", "range", "labels"])
+def test_init_t0_standardize(case):
+    # With init_t0=True and standardize=True, the data are standardized with
+    # their own statistics (ddof=0 for an ndarray, ddof=1 for pandas data),
+    # not with those of the data with the prepended missing period, so the
+    # model is the model without init_t0 of the data with an explicit missing
+    # first period, standardized with these statistics. With a date index,
+    # the prepended period is the one before the first date; otherwise the
+    # data get an integer index
+    endog = _ar1_factor_data(nobs=12)
+    values = endog.to_numpy()
+    values_t0 = np.r_[np.full((1, 3), np.nan), values]
+    if case == "ndarray":
+        data, data_t0 = values, values_t0
+        standardize = (values.mean(axis=0), values.std(axis=0))
+    else:
+        index_t0 = pd.RangeIndex(13)
+        if case == "period":
+            index = endog.index
+            index_t0 = pd.period_range(start="1999-12", periods=13, freq="M")
+        elif case == "datetime":
+            index = pd.date_range(start="2000-01-31", periods=12, freq=MONTH_END)
+            index_t0 = pd.date_range(start="1999-12-31", periods=13, freq=MONTH_END)
+        elif case == "range":
+            index = pd.RangeIndex(12)
+        else:
+            index = pd.Index([f"t{i}" for i in range(12)])
+        data = pd.DataFrame(values, index=index, columns=endog.columns)
+        data_t0 = pd.DataFrame(values_t0, index=index_t0, columns=endog.columns)
+        standardize = (data.mean(), data.std())
+    mod = dynamic_factor_mq.DynamicFactorMQ(data, init_t0=True)
+    desired = dynamic_factor_mq.DynamicFactorMQ(data_t0, standardize=standardize)
+
+    assert_equal(mod.nobs, 13)
+    assert np.isnan(mod.endog[0]).all()
+    assert not np.isnan(mod.endog[1:]).any()
+    assert_allclose(mod.endog, desired.endog, rtol=1e-12)
+    assert_allclose(mod.data.orig_endog, values_t0, rtol=1e-12)
+    if case != "ndarray":
+        assert mod.data.row_labels.equals(index_t0)
+    params = desired.start_params
+    assert_allclose(mod.loglike(params), desired.loglike(params), rtol=1e-12)
+
+
+def test_init_t0_datetime_index_without_freq():
+    endog = _ar1_factor_data(nobs=12)
+    dates = pd.date_range(start="2000-01-31", periods=13, freq=MONTH_END)
+    endog.index = pd.DatetimeIndex(dates.delete(5))
+    with pytest.raises(ValueError, match="requires a date index with a frequency"):
+        dynamic_factor_mq.DynamicFactorMQ(endog, init_t0=True)

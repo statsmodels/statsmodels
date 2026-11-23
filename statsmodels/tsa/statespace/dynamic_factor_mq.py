@@ -789,6 +789,15 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         distribution for :math:`\alpha_0` rather than :math:`\alpha_1`. See
         the "Notes" section for more details. This option is rarely used except
         for testing. Default is False.
+
+        .. versionchanged:: 0.15.1
+
+           The data are standardized with the statistics of the data, without
+           the prepended period, and a DatetimeIndex with a frequency or an
+           index without dates can be used. With an ndarray and
+           ``standardize=True``, every value of the standardized data was NaN
+           (and the loglikelihood 0), and indexes other than a PeriodIndex
+           raised an error.
     obs_cov_diag : bool, optional
         If True, then this option puts small positive values (1e-4) on the
         diagonal of the observation disturbance covariance matrix. If
@@ -961,7 +970,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
       initializing the model with :math:`\alpha_1 \sim N(a_1, P_1)`. Other
       implementations sometimes initialize instead with
       :math:`\alpha_0 \sim N(a_0, P_0)`. We can accommodate this by prepending
-      a row of NaNs to the observed dataset.
+      a row of NaNs to the observed dataset. With a date index, the prepended
+      row is labelled with the period before the first date (a DatetimeIndex
+      must have a frequency); otherwise the dataset gets an integer index.
     - `obs_cov_diag`: the state space form in [1]_ incorporates non-zero (but
       very small) diagonal elements for the observation disturbance covariance
       matrix.
@@ -1348,15 +1359,6 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         self.init_t0 = init_t0
         self.obs_cov_diag = obs_cov_diag
 
-        if self.init_t0:
-            # TODO: test each of these options
-            if endog_is_pandas:
-                ix = pd.period_range(endog.index[0] - 1, endog.index[-1],
-                                     freq=endog.index.freq)
-                endog = endog.reindex(ix)
-            else:
-                endog = np.c_[[np.nan] * endog.shape[1], endog.T].T
-
         # Standardize endog, if requested
         # Note: endog_mean and endog_std will always each be 1-dimensional with
         # length equal to the number of endog variables
@@ -1410,6 +1412,27 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
         if self.standardize:
             endog = (endog - self._endog_mean) / self._endog_std
+
+        # Prepend a period in which every value is missing (after the
+        # standardization, which uses the statistics of the data)
+        if self.init_t0:
+            if endog_is_pandas:
+                index = endog.index
+                if isinstance(index, pd.PeriodIndex):
+                    ix = pd.period_range(index[0] - 1, index[-1], freq=index.freq)
+                elif isinstance(index, pd.DatetimeIndex):
+                    if index.freq is None:
+                        raise ValueError("`init_t0=True` requires a date index"
+                                         " with a frequency.")
+                    ix = pd.date_range(index[0] - index.freq, index[-1],
+                                       freq=index.freq)
+                else:
+                    # Without dates, the data get an integer index
+                    ix = pd.RangeIndex(len(index) + 1)
+                    endog = endog.set_axis(ix[1:], axis=0)
+                endog = endog.reindex(ix)
+            else:
+                endog = np.c_[[np.nan] * endog.shape[1], endog.T].T
 
         # Observation / states slices
         o = self._o = {
