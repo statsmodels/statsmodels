@@ -2372,6 +2372,60 @@ def test_bounds_test_case_types(case, to_case):
     assert_allclose(bounds_result.statistic, expected[case], rtol=1e-6)
 
 
+@pytest.mark.parametrize("to_int", [np.int64, np.int32])
+@pytest.mark.parametrize("causal", [False, True])
+def test_ardl_order_dict_numpy_int_keys(to_int, causal):
+    # numpy integer keys of an order dict raised AssertionError for ndarray
+    # exog
+    rng = np.random.default_rng(20261201)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal((nobs, 2)), axis=0)
+    res = ARDL(y, 1, x, {to_int(0): 2, to_int(1): [1]}, causal=causal).fit()
+
+    first = int(causal)
+    assert res.model.dl_lags == {0: list(range(first, 3)), 1: [1]}
+    assert all(type(key) is int for key in res.model.dl_lags)
+    t = np.arange(2, nobs)
+    reg = [np.ones(nobs - 2), y[t - 1]]
+    reg += [x[t - j, 0] for j in range(first, 3)]
+    reg += [x[t - 1, 1]]
+    ols = OLS(y[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("to_int", [np.int64, np.int32])
+def test_uecm_order_dict_numpy_int_keys(to_int):
+    # numpy integer keys of an order dict raised AssertionError for ndarray
+    # exog
+    rng = np.random.default_rng(20261202)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal((nobs, 2)), axis=0)
+    res = UECM(y, 1, x, {to_int(0): 2, to_int(1): 1}).fit()
+
+    # D.y on const, y.L1, x0.L1, x1.L1, D.x0.L0, D.x0.L1 and D.x1.L0
+    t = np.arange(2, nobs)
+    dx = np.r_[np.full((1, 2), np.nan), np.diff(x, axis=0)]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1]]
+    ols = OLS(y[t] - y[t - 1], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+
+
+@pytest.mark.parametrize("to_int", [np.int64, np.int32])
+def test_ardl_select_order_maxorder_dict_numpy_int_keys(to_int):
+    # The same selection as with int keys, which raised AssertionError
+    rng = np.random.default_rng(20261203)
+    y = np.cumsum(rng.standard_normal(150))
+    x = np.cumsum(rng.standard_normal((150, 2)), axis=0)
+    res = ardl_select_order(y, 2, x, {to_int(0): 2, to_int(1): 1})
+    expected = ardl_select_order(y, 2, x, {0: 2, 1: 1})
+    assert_allclose(res.bic.index, expected.bic.index, rtol=1e-12)
+    assert list(res.bic) == list(expected.bic)
+    assert res.model.ardl_order == expected.model.ardl_order
+
+
 @pytest.mark.parametrize("endog_int", [True, False])
 @pytest.mark.parametrize("exog_int", [True, False])
 @pytest.mark.parametrize("use_pandas", [True, False])
