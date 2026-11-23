@@ -1,0 +1,4 @@
+- The integer index of the parameter results of :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSModel` for pandas
+  data is deprecated: after statsmodels 0.17 is released the default
+  ``param_index`` is ``"names"``. Leaving it unset issues a
+  ``FutureWarning``. :pr:`10975`
