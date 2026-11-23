@@ -1,0 +1,5 @@
+- With ``cov_type="robust"``, the summary of Markov switching models decided
+  whether to warn that the covariance matrix is singular from the rank
+  of the outer product of gradients matrix. It uses the rank of the robust
+  covariance matrix, which can be lower, so the warning can appear for
+  such results. :pr:`11068`
