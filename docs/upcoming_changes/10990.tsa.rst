@@ -1,0 +1,5 @@
+- ``err_band_sz1``, ``err_band_sz2`` and ``err_band_sz3`` of ``IRAnalysis``
+  checked the position of the largest ``component`` value instead of
+  the values: valid components were rejected and out-of-range values
+  raised an ``IndexError`` or were ignored. Values outside the valid
+  range raise a ``ValueError``, and a list is accepted. :pr:`10990`

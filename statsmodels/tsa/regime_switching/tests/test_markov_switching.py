@@ -377,3 +377,38 @@ def test_summary_display_params(display_params):
         assert (name in text) is display_params
     # The covariance note is kept
     assert "Covariance matrix calculated using the outer product" in text
+
+
+@pytest.mark.parametrize("kind", ["smoothed", "filtered", "predicted"])
+@pytest.mark.parametrize("as_list", [False, True])
+def test_predict_with_probabilities_array(kind, as_list):
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    mu = np.array([0.2, 2.8])
+    phi = np.array([0.5, -0.2])
+
+    # MarkovRegression: sum_i mu_i Pr[S_t = i]
+    mod = markov_regression.MarkovRegression(endog, k_regimes=2)
+    params = np.r_[0.9, 0.2, mu, 1.0]
+    res = mod.smooth(params, cov_type="none")
+    joint = getattr(res, f"{kind}_joint_probabilities")
+    marginal = getattr(res, f"{kind}_marginal_probabilities")
+    probabilities = joint.tolist() if as_list else joint
+    predict = mod.predict(params, probabilities=probabilities)
+    assert_allclose(predict, marginal @ mu, rtol=1e-12)
+    assert_allclose(predict, mod.predict(params, probabilities=kind), rtol=1e-13)
+
+    # AR(1) MarkovAutoregression: the weighted average over (S_t, S_{t-1})
+    # = (i, j) of mu_i + phi_i (y_{t-1} - mu_j); prediction n is for
+    # endog[n + 1], so its lag is endog[n]
+    mod = markov_autoregression.MarkovAutoregression(endog, k_regimes=2, order=1)
+    params = np.r_[0.9, 0.2, mu, 1.0, phi]
+    res = mod.smooth(params, cov_type="none")
+    joint = getattr(res, f"{kind}_joint_probabilities")
+    means = mu[:, None, None] + phi[:, None, None] * (
+        endog[:-1] - mu[None, :, None]
+    )
+    probabilities = joint.tolist() if as_list else joint
+    predict = mod.predict(params, probabilities=probabilities)
+    assert_allclose(predict, (means * joint).sum(axis=(0, 1)), rtol=1e-12)
+    assert_allclose(predict, mod.predict(params, probabilities=kind), rtol=1e-13)

@@ -1,0 +1,4 @@
+- Date strings as ``start``, ``end`` or ``dynamic`` of time series models
+  with a tz-aware :class:`~pandas.DatetimeIndex` raised "Cannot compare
+  tz-naive and tz-aware timestamps". They are local times of the index's
+  time zone. :pr:`10941`

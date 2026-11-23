@@ -32,6 +32,7 @@ from statsmodels.tools.testing import warns_or_none
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.base import tsa_model
+from statsmodels.tsa.exponential_smoothing.ets import ETSModel
 
 nobs = 5
 base_dta = np.arange(nobs)
@@ -1820,8 +1821,9 @@ def test_dates_list_with_freq(freq, dates, expected):
         ("Q", "Q-DEC"),
         ("2Q", "2Q"),
         ("Y", "Y"),
-        # Offset aliases and offsets, which were already accepted
-        ("Y", YEAR_END),
+        # Offset aliases and offsets, which were already accepted. YEAR_END
+        # is "Y" before pandas 2.2, which would repeat the ID of the case above
+        pytest.param("Y", YEAR_END, id="Y-YEAR_END"),
         ("M", pd.offsets.MonthEnd()),
         ("D", "D"),
         ("W", "W"),
@@ -1873,3 +1875,343 @@ def test_integer_index_forecast_labels(dtype):
     assert out_of_sample == 3
     np.testing.assert_array_equal(prediction_index.to_numpy(), np.arange(3, 8))
     assert prediction_index.dtype == labels.dtype
+
+
+@pytest.mark.parametrize("tz", ["UTC", "US/Eastern", "Asia/Tokyo"])
+@pytest.mark.parametrize(
+    "freq, start, end, expected_start, expected_end",
+    [
+        # In the sample, also a month that covers several days
+        ("MS", "2001-04", "2001-06", "2001-04-01", "2001-06-01"),
+        ("D", "2001-04", "2001-04-03", "2001-04-01", "2001-04-03"),
+        # The end after the sample
+        ("MS", "2001-10-01", "2002-03", "2001-10-01", "2002-03-01"),
+        ("D", "2001-05-10", "2001-05-20", "2001-05-10", "2001-05-20"),
+    ],
+)
+def test_string_keys_tz_aware_index(tz, freq, start, end, expected_start, expected_end):
+    # Date strings are local times of a tz-aware index; comparing them with
+    # the index as naive timestamps raised a TypeError
+    nobs = 24 if freq == "MS" else 500
+    index = pd.date_range("2000-01-01", periods=nobs, freq=freq, tz=tz)
+    endog = pd.Series(np.zeros(nobs), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    start_loc, end_loc, out_of_sample, prediction_index = (
+        tsa_model.get_prediction_index(start, end, nobs, mod._index, data=mod.data)
+    )
+    expected = pd.date_range(expected_start, expected_end, freq=freq, tz=tz)
+    assert prediction_index.equals(expected)
+    assert index[start_loc] == expected[0]
+    assert end_loc == min(nobs - 1, start_loc + len(expected) - 1)
+    assert end_loc + out_of_sample - start_loc + 1 == len(expected)
+
+
+def test_date_keys_tz_aware_index_other_keys():
+    # Only naive date strings of a DatetimeIndex are localized. The string
+    # keys of a PeriodIndex are periods, which have no time zone.
+    periods = pd.period_range("2000-01", periods=24, freq="M")
+    assert tsa_model.get_index_loc("2001-04", periods)[0] == 15
+    assert tsa_model.get_index_loc("2002-03", periods)[0] == 26
+    index = pd.date_range("2000-01-01", periods=24, freq="MS", tz="US/Eastern")
+    # A string with a UTC offset is already tz-aware: 2001-04-01 is in EST
+    loc, new_index, expanded = tsa_model.get_index_loc("2001-04-01T00:00-05:00", index)
+    assert loc == 15
+    assert not expanded
+    assert new_index.equals(index[:16])
+    # Naive datetime objects are not taken as local times, as pandas does not
+    # do either
+    for key in (pd.Timestamp("2001-04-01"), pd.Timestamp("2002-03-01")):
+        with pytest.raises(TypeError, match="tz-naive and tz-aware"):
+            tsa_model.get_index_loc(key, index)
+
+
+@pytest.mark.parametrize(
+    "start, end, expected_start, expected_end",
+    [
+        # No date in February 2000: prediction starts at the next date
+        ("2000-02", "2000-10", "2000-04-01", "2000-10-01"),
+        # No date in May 2000: prediction ends at the previous date
+        (0, "2000-05", "2000-01-01", "2000-04-01"),
+    ],
+)
+def test_empty_partial_date_key_deprecated(start, end, expected_start, expected_end):
+    # pandas gives an empty slice for a partial date string between two dates
+    # of the index, which was used silently
+    index = pd.date_range("2000-01-01", periods=8, freq="QS")
+    endog = pd.Series(np.zeros(8), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    with pytest.warns(FutureWarning, match="No date of the index matches") as rec:
+        start_loc, end_loc, out_of_sample, prediction_index = (
+            tsa_model.get_prediction_index(start, end, 8, mod._index, data=mod.data)
+        )
+    # The warning points at the caller outside statsmodels
+    assert rec[0].filename == __file__
+    expected = pd.date_range(expected_start, expected_end, freq="QS")
+    assert prediction_index.equals(expected)
+    assert index[start_loc] == expected[0]
+    assert index[end_loc] == expected[-1]
+    assert out_of_sample == 0
+
+
+def test_partial_date_key_with_dates_not_deprecated():
+    # A partial date string that matches dates gives a non-empty slice
+    index = pd.date_range("2000-01-01", periods=8, freq="QS")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        loc, new_index, _ = tsa_model.get_index_loc("2000-04", index)
+    assert loc == slice(1, 2)
+    assert new_index.equals(index[:2])
+
+
+@pytest.mark.parametrize(
+    "dtype, key",
+    [("int8", 300), ("uint8", 300), ("int16", 70000), ("uint16", 70000)],
+)
+def test_small_int_index_extended_past_dtype_max(dtype, key):
+    # Extending an index 0, ..., n - 1 of a small integer dtype past the
+    # largest value of the dtype raised "Maximum allowed size exceeded"
+    index = pd.Index(np.arange(5, dtype=dtype))
+    loc, new_index, expanded = tsa_model.get_index_loc(key, index)
+    assert loc == key
+    assert expanded
+    assert new_index.equals(pd.Index(np.arange(key + 1, dtype=np.int64)))
+    assert new_index.dtype == np.int64
+
+    endog = pd.Series(np.zeros(5), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    start, end, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        3, key, 5, mod._index, data=mod.data
+    )
+    assert (start, end, out_of_sample) == (3, 4, key - 4)
+    assert prediction_index.equals(pd.Index(np.arange(3, key + 1, dtype=np.int64)))
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.date_range("2000-01-01", periods=5, freq="YS"),
+        pd.date_range("2000-01-01", periods=8, freq="2QS"),
+        # Dates in the second quarter of 2002 and in 2001, but not in 2001Q2
+        pd.date_range("2000-01-01", periods=8, freq="3QS"),
+    ],
+)
+@pytest.mark.parametrize("which", ["start", "end"])
+def test_quarter_key_without_date(index, which):
+    # The row labels are the model's own dates, so a quarter without a date is
+    # not looked up again with pandas' quarter parsing, which found a date of
+    # another quarter, e.g. 2000-07-01 for 2001Q2 with semiannual dates
+    assert not ((index >= "2001-04-01") & (index < "2001-07-01")).any()
+    endog = pd.Series(np.zeros(len(index)), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    start, end = ("2001Q2", None) if which == "start" else (0, "2001Q2")
+    with pytest.raises(KeyError, match=f"The `{which}` argument could not"):
+        tsa_model.get_prediction_index(
+            start, end, len(index), mod._index, data=mod.data
+        )
+
+
+def test_quarter_key_row_label_retry_other_keys():
+    # Row labels that differ from the dates are still searched for a quarter
+    # key that has dates
+    dates = pd.date_range("2000-01-01", periods=12, freq="QS")
+    labels = pd.Index(
+        [f"{year}Q{q}" for year in (2000, 2001, 2002) for q in range(1, 5)]
+    )
+    endog = pd.Series(np.zeros(12), index=labels)
+    mod = tsa_model.TimeSeriesModel(endog, dates=dates)
+    start, end, _, _ = tsa_model.get_prediction_index(
+        "2001Q2", None, 12, mod._index, data=mod.data
+    )
+    assert dates[start] == pd.Timestamp("2001-04-01")
+    assert end == 11
+    # A key that is not a quarter string is looked up in the row labels even
+    # if no date lies in its quarter
+    years = pd.date_range("2000-01-01", periods=3, freq="YS")
+    endog = pd.Series(np.zeros(3), index=["2000-06-30", "2001-06-30", "2002-06-30"])
+    mod = tsa_model.TimeSeriesModel(endog, dates=years)
+    loc, _, _ = tsa_model.get_index_label_loc(
+        "2001-06-30", mod._index, mod.data.row_labels
+    )
+    assert loc == 1
+    # Keys that are not quarter strings, or other indexes, raise as before
+    with pytest.raises(KeyError):
+        tsa_model.get_index_label_loc(pd.Timestamp("2000-01-15"), dates, dates)
+    endog = pd.Series(np.zeros(12))
+    mod = tsa_model.TimeSeriesModel(endog)
+    with pytest.raises(KeyError, match="The `start` argument could not"):
+        tsa_model.get_prediction_index("2001Q2", None, 12, mod._index, data=mod.data)
+
+
+# An out-of-sample date string as `end` covers its period: the kind and the
+# frequency of the index, its first date and its length, the key, and the
+# last date of prediction, written out
+OOS_END_KEYS = [
+    # monthly data that end on 2001-12: a quarter or a year ends at its last
+    # month, a month is a single date
+    ("date", "MS", "2000-01-01", 24, "2002Q2", "2002-06-01"),
+    ("date", "MS", "2000-01-01", 24, "2002", "2002-12-01"),
+    ("date", "MS", "2000-01-01", 24, "2002-03", "2002-03-01"),
+    ("date", MONTH_END, "2000-01-31", 24, "2002Q2", "2002-06-30"),
+    ("date", MONTH_END, "2000-01-31", 24, "2002-03", "2002-03-31"),
+    # daily data that end on 2002-09-26
+    ("date", "D", "2000-01-01", 1000, "2003-06", "2003-06-30"),
+    ("date", "D", "2000-01-01", 1000, "2002Q4", "2002-12-31"),
+    ("date", "D", "2000-01-01", 1000, "2003-06-30", "2003-06-30"),
+    # business days that end on 2003-01-24; 2003-05-31 is a Saturday
+    ("date", "B", "2000-01-03", 800, "2003-05", "2003-05-30"),
+    # Sundays that end on 2002-11-10
+    ("date", "W", "2000-01-02", 150, "2003-06", "2003-06-29"),
+    # quarterly data that end on 2002-10-01 or 2002-12-31: a quarter is a
+    # single date, and a month without a date keeps the next date
+    ("date", "QS", "2000-01-01", 12, "2003", "2003-10-01"),
+    ("date", "QS", "2000-01-01", 12, "2003Q2", "2003-04-01"),
+    ("date", "QS", "2000-01-01", 12, "2003-05", "2003-07-01"),
+    ("date", QUARTER_END, "2000-03-31", 12, "2003", "2003-12-31"),
+    ("date", QUARTER_END, "2000-03-31", 12, "2003Q2", "2003-06-30"),
+    # periods: a finer key is the period that contains it
+    ("period", "M", "2000-01", 24, "2002Q2", "2002-06"),
+    ("period", "M", "2000-01", 24, "2002", "2002-12"),
+    ("period", "Q", "2000Q1", 12, "2003", "2003Q4"),
+    ("period", "Q", "2000Q1", 12, "2003-05", "2003Q2"),
+    ("period", "D", "2000-01-01", 1000, "2003-06", "2003-06-30"),
+]
+
+
+@pytest.mark.parametrize("kind, freq, first, nobs, key, last", OOS_END_KEYS)
+def test_oos_end_key_covers_period(kind, freq, first, nobs, key, last):
+    # Before, prediction ended at the first date of the period
+    if kind == "date":
+        index = pd.date_range(first, periods=nobs, freq=freq)
+        expected = pd.date_range(index[-2], last, freq=freq)
+    else:
+        index = pd.period_range(first, periods=nobs, freq=freq)
+        expected = pd.period_range(index[-2], last, freq=freq)
+    res = constant_mean_results(pd.Series(np.zeros(nobs), index=index))
+    pred = res.predict(start=nobs - 2, end=key)
+    assert pred.index.equals(expected)
+    assert_allclose(pred, np.full(len(expected), 2.5))
+
+
+@pytest.mark.parametrize("kind", ["date", "period"])
+def test_oos_end_key_start(kind):
+    # A start key keeps the first date of its period
+    if kind == "date":
+        index = pd.date_range("2000-01-01", periods=24, freq="MS")
+        half = pd.date_range("2002-01-01", "2002-06-01", freq="MS")
+        year = pd.date_range("2002-01-01", "2002-12-01", freq="MS")
+    else:
+        index = pd.period_range("2000-01", periods=24, freq="M")
+        half = pd.period_range("2002-01", "2002-06", freq="M")
+        year = pd.period_range("2002-01", "2002-12", freq="M")
+    res = constant_mean_results(pd.Series(np.zeros(24), index=index))
+    pred = res.predict(start="2002Q1", end="2002Q2")
+    assert pred.index.equals(half)
+    pred = res.predict(start="2002", end="2002")
+    assert pred.index.equals(year)
+
+
+@pytest.mark.parametrize("kind", ["date", "period"])
+@pytest.mark.parametrize("nobs", [24, 23, 22])
+@pytest.mark.parametrize("key", ["2001Q2", "2001Q4", "2001", "2001-03"])
+def test_in_sample_end_key_unchanged(kind, nobs, key):
+    # A key whose period starts in the sample, also one that ends after it
+    # (e.g. "2001Q4" for 23 or 22 months), ends prediction at the last date
+    # that the index lookup gives for it
+    if kind == "date":
+        index = pd.date_range("2000-01-01", periods=nobs, freq="MS")
+    else:
+        index = pd.period_range("2000-01", periods=nobs, freq="M")
+    res = constant_mean_results(pd.Series(np.zeros(nobs), index=index))
+    loc, _, _ = tsa_model.get_index_label_loc(key, index, index)
+    last = loc.stop - 1 if isinstance(loc, slice) else loc
+    pred = res.predict(start=0, end=key)
+    assert pred.index.equals(index[: last + 1])
+
+
+@pytest.mark.parametrize(
+    "key, last", [("2002Q2", "2002-06-01"), ("2002-03", "2002-03-01")]
+)
+def test_oos_end_key_tz_aware(key, last):
+    # The period of the key is a local time of the index; this raised a
+    # TypeError (comparison of tz-naive and tz-aware dates)
+    index = pd.date_range("2000-01-01", periods=24, freq="MS", tz="US/Eastern")
+    res = constant_mean_results(pd.Series(np.zeros(24), index=index))
+    pred = res.predict(start=22, end=key)
+    expected = pd.date_range("2001-11-01", last, freq="MS", tz="US/Eastern")
+    assert pred.index.equals(expected)
+
+
+@pytest.mark.parametrize("kind", ["date", "period"])
+@pytest.mark.parametrize("key", ["1999", "NaT", ""])
+def test_oos_end_key_no_date(kind, key):
+    # A key before the sample or a missing date raises as before
+    if kind == "date":
+        index = pd.date_range("2000-01-01", periods=24, freq="MS")
+    else:
+        index = pd.period_range("2000-01", periods=24, freq="M")
+    res = constant_mean_results(pd.Series(np.zeros(24), index=index))
+    with pytest.raises(KeyError, match="The `end` argument could not be"):
+        res.predict(start=0, end=key)
+
+
+def test_oos_end_key_errors_and_no_freq():
+    # A string that is not a date raises as before, "today", which pandas
+    # parses as a date but not as a period, is the current date as before,
+    # and without a frequency a string is its first date as before
+    index = pd.date_range("2000-01-01", periods=24, freq="MS")
+    res = constant_mean_results(pd.Series(np.zeros(24), index=index))
+    # pandas' message depends on its version
+    with pytest.raises(ValueError, match="string"):
+        res.predict(start=0, end="abc")
+    by_string = res.predict(start=0, end="today")
+    by_date = res.predict(start=0, end=pd.Timestamp("today"))
+    assert by_string.index.equals(by_date.index)
+
+    no_freq = pd.DatetimeIndex(index.tolist())
+    assert no_freq.freq is None
+    data = res.model.data
+    by_string = tsa_model.get_prediction_index(0, "2002Q2", 24, no_freq, data=data)
+    by_date = tsa_model.get_prediction_index(
+        0, pd.Timestamp("2002-04-01"), 24, no_freq, data=data
+    )
+    assert by_string[:3] == by_date[:3]
+    assert by_string[3].equals(by_date[3])
+
+
+def test_end_key_not_a_date_string():
+    # An integer is a location, also if it reads as a year, and a string is
+    # a row label if the dates have no frequency
+    index = pd.date_range("2000-01-01", periods=1000, freq="D")
+    res = constant_mean_results(pd.Series(np.zeros(1000), index=index))
+    pred = res.predict(start=998, end=2005)
+    assert pred.index.equals(pd.date_range(index[998], periods=1008, freq="D"))
+
+    dates = pd.DatetimeIndex(["2000-01-01", "2000-01-02", "2000-01-04", "2000-01-07"])
+    with pytest.warns(ValueWarning, match="no associated frequency"):
+        res = constant_mean_results(pd.Series(np.zeros(4), index=dates))
+    pred = res.predict(start=0, end="2000-01-04")
+    assert pred.index.equals(dates[:3])
+
+
+@pytest.mark.parametrize("model", ["AutoReg", "ARIMA", "ETSModel"])
+def test_oos_end_key_models(model):
+    # Through the predict methods of the models, with the predictions at the
+    # integer locations of the same dates
+    rng = np.random.default_rng(20261122)
+    index = pd.date_range("2000-01-01", periods=36, freq="MS")
+    y = pd.Series(10 + rng.standard_normal(36), index=index)
+    if model == "AutoReg":
+        res = AutoReg(y, 2, trend="c").fit()
+    elif model == "ARIMA":
+        res = ARIMA(y, order=(1, 0, 0)).smooth([10.0, 0.5, 1.0])
+    else:
+        # ndarray data with dates; predictions are ndarrays
+        res = ETSModel(y.to_numpy(), dates=index).smooth([0.3, 10.0])
+    pred = res.predict(start="2002-11", end="2003Q2")
+    expected_index = pd.date_range("2002-11-01", "2003-06-01", freq="MS")
+    assert res.model.data.predict_dates.equals(expected_index)
+    if model != "ETSModel":
+        assert pred.index.equals(expected_index)
+    assert_allclose(
+        np.asarray(pred), np.asarray(res.predict(start=34, end=41)), rtol=1e-12
+    )

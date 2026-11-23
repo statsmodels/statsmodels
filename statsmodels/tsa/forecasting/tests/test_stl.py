@@ -498,3 +498,51 @@ def test_index_values_not_dates(kind):
     assert_allclose(res.forecast(14), expected_forecast, rtol=1e-10)
     pred = res.get_prediction(100, 133)
     assert_allclose(pred.predicted_mean, expected_predicted, rtol=1e-10)
+
+
+@pytest.mark.parametrize("index_type", ["datetime", "period", "no_freq"])
+@pytest.mark.parametrize("date_type", ["str", "datetime", "timestamp", "datetime64"])
+def test_forecast_date_steps(index_type, date_type):
+    # A date gives the forecasts up to and including it: those of the model
+    # fit to the deseasonalized data plus the seasonal component of the last
+    # period repeated. The model infers the frequency of an index without
+    # one, so the number of steps is taken from its forecast
+    rng = np.random.default_rng(20261120)
+    t = np.arange(120)
+    y = 10 + 0.05 * t + 2 * np.sin(2 * np.pi * t / 12)
+    y = y + rng.standard_normal(120)
+    if index_type == "period":
+        index = pd.period_range("2000-01", periods=120, freq="M")
+    else:
+        index = pd.date_range("2000-01-01", periods=120, freq="MS")
+        if index_type == "no_freq":
+            index = pd.DatetimeIndex(index.to_list())
+    date = pd.Timestamp("2010-03-01")
+    if date_type == "str":
+        date = "2010-03-01"
+    elif date_type == "datetime":
+        date = date.to_pydatetime()
+    elif date_type == "datetime64":
+        date = date.to_datetime64()
+    model_kwargs = {"order": (1, 0, 0), "trend": "c"}
+    stlf = STLForecast(
+        pd.Series(y, index=index), ARIMA, model_kwargs=model_kwargs, period=12
+    )
+    if index_type == "no_freq":
+        with pytest.warns(ValueWarning, match="No frequency information"):
+            res = stlf.fit()
+    else:
+        res = stlf.fit()
+    forecast = res.forecast(date)
+
+    stl_res = STL(y, period=12).fit()
+    seasonal = np.asarray(stl_res.seasonal)
+    deseasonalized = np.asarray(stl_res.trend + stl_res.resid)
+    ar = ARIMA(deseasonalized, order=(1, 0, 0), trend="c")
+    ar_res = ar.filter(np.asarray(res.model_result.params))
+    expected = ar_res.forecast(3) + seasonal[-12:-9]
+    assert_allclose(forecast, expected, rtol=1e-10)
+    if index_type == "period":
+        assert forecast.index[-1] == pd.Period("2010-03", freq="M")
+    else:
+        assert forecast.index[-1] == pd.Timestamp("2010-03-01")
