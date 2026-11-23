@@ -3706,7 +3706,7 @@ def test_filter_low_memory():
 @pytest.mark.parametrize("case", ["ndarray", "period", "datetime", "range", "labels"])
 def test_init_t0_standardize(case):
     # With init_t0=True and standardize=True, the data are standardized with
-    # their own statistics (ddof=0 for an ndarray, ddof=1 for pandas data),
+    # their own statistics (the standard deviation with ddof=1),
     # not with those of the data with the prepended missing period, so the
     # model is the model without init_t0 of the data with an explicit missing
     # first period, standardized with these statistics. With a date index,
@@ -3717,7 +3717,7 @@ def test_init_t0_standardize(case):
     values_t0 = np.r_[np.full((1, 3), np.nan), values]
     if case == "ndarray":
         data, data_t0 = values, values_t0
-        standardize = (values.mean(axis=0), values.std(axis=0))
+        standardize = (values.mean(axis=0), values.std(axis=0, ddof=1))
     else:
         index_t0 = pd.RangeIndex(13)
         if case == "period":
@@ -3806,3 +3806,66 @@ def test_transform_params_array_like(method, case):
     assert isinstance(actual, np.ndarray)
     assert_allclose(actual, desired, rtol=1e-12)
     assert not np.allclose(desired, np.round(desired))
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_standardize_ndarray_like_dataframe(missing):
+    # The data are standardized with the mean and the standard deviation
+    # (ddof=1) of the observed values of each variable, for an ndarray as
+    # for a DataFrame, so that both give the same model. With a missing
+    # value, the other values of that variable are not missing.
+    endog = _ar1_factor_data(nobs=40)
+    if missing:
+        endog.iloc[[3, 17], 1] = np.nan
+    values = endog.to_numpy()
+    mod_df = dynamic_factor_mq.DynamicFactorMQ(endog)
+    mod = dynamic_factor_mq.DynamicFactorMQ(values)
+
+    desired_mean = np.nanmean(values, axis=0)
+    desired_std = np.nanstd(values, axis=0, ddof=1)
+    for model in [mod, mod_df]:
+        assert_allclose(np.asarray(model._endog_mean), desired_mean,
+                        rtol=1e-12)
+        assert_allclose(np.asarray(model._endog_std), desired_std,
+                        rtol=1e-12)
+    assert_allclose(mod.endog, (values - desired_mean) / desired_std,
+                    rtol=1e-12)
+    assert_equal(np.isnan(mod.endog).sum(), 2 if missing else 0)
+    assert_allclose(mod.endog, mod_df.endog, rtol=1e-12)
+
+    params = mod_df.start_params
+    assert_allclose(mod.start_params, params, rtol=1e-10)
+    assert_allclose(mod.loglike(params), mod_df.loglike(params), rtol=1e-12)
+    # Two EM iterations from the same start (the same data give the same
+    # iterations; rtol for the rounding differences of the two inputs)
+    with pytest.warns(ConvergenceWarning, match="EM reached maximum"):
+        res = mod.fit(params, maxiter=2, disp=False)
+    with pytest.warns(ConvergenceWarning, match="EM reached maximum"):
+        res_df = mod_df.fit(params, maxiter=2, disp=False)
+    assert_allclose(res.params, res_df.params, rtol=1e-8)
+    assert_allclose(res.llf, res_df.llf, rtol=1e-10)
+    # The original-scale predictions and simulations use the same statistics
+    assert_allclose(res.predict(), res_df.predict(), rtol=1e-8)
+    rng = np.random.default_rng(4321)
+    kwargs = {
+        "measurement_shocks": rng.standard_normal((4, mod.k_endog)),
+        "state_shocks": rng.standard_normal((4, mod.ssm.k_posdef)),
+        "initial_state": np.zeros(mod.k_states),
+    }
+    sim_df = res_df.simulate(4, **kwargs)
+    assert_(sim_df.columns.equals(endog.columns))
+    assert_allclose(res.simulate(4, **kwargs), sim_df, rtol=1e-8)
+
+    # The same for a single variable (a Series or a 1-dim ndarray)
+    mod_df = dynamic_factor_mq.DynamicFactorMQ(endog["y1"])
+    mod = dynamic_factor_mq.DynamicFactorMQ(values[:, 0])
+    params = mod_df.start_params
+    assert_allclose(mod.start_params, params, rtol=1e-10)
+    kwargs = {
+        "measurement_shocks": rng.standard_normal((4, 1)),
+        "state_shocks": rng.standard_normal((4, mod.ssm.k_posdef)),
+        "initial_state": np.zeros(mod.k_states),
+    }
+    sim_df = mod_df.smooth(params).simulate(4, **kwargs)
+    assert_allclose(mod.smooth(params).simulate(4, **kwargs), sim_df,
+                    rtol=1e-8)

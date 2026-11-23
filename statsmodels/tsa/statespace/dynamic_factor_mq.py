@@ -779,6 +779,14 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         one value for each endogenous variable. The first element
         should contain the mean values and the second element should contain
         the standard deviations. Default is True.
+
+        .. versionchanged:: 0.15.1
+
+           With an ndarray, the data are standardized with the mean and the
+           standard deviation (with ddof=1) of the observed values of each
+           variable, as with pandas data. The standard deviation used ddof=0,
+           and every standardized value of a variable with a missing value
+           was missing.
     endog_quarterly : pandas.Series or pandas.DataFrame, optional
         Observed quarterly variables. If provided, must be a Pandas Series or
         DataFrame with a DatetimeIndex or PeriodIndex at the quarterly
@@ -937,7 +945,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         x_{i, t} = (y_{i, t} - \bar y_i) / s_i
 
     where :math:`\bar y_i` is the sample mean and :math:`s_i` is the sample
-    standard deviation.
+    standard deviation (with ddof=1) of the observed values of variable
+    :math:`i`.
 
     By default, if standardization is applied prior to estimation, results such
     as in-sample predictions, out-of-sample forecasts, and the computation of
@@ -1395,8 +1404,14 @@ class DynamicFactorMQ(mlemodel.MLEModel):
                 endog_std = pd.Series(endog_std, index=endog_names)
 
         elif standardize in [1, True]:
-            endog_mean = endog.mean(axis=0)
-            endog_std = endog.std(axis=0)
+            # The mean and the standard deviation (ddof=1) of the observed
+            # values of each variable, computed by pandas for an ndarray too
+            stats = pd.DataFrame(endog)
+            endog_mean = stats.mean(axis=0)
+            endog_std = stats.std(axis=0)
+            if not endog_is_pandas:
+                endog_mean = endog_mean.to_numpy()
+                endog_std = endog_std.to_numpy()
         elif standardize in [0, False]:
             endog_mean = np.zeros(endog.shape[1])
             endog_std = np.ones(endog.shape[1])
