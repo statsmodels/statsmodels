@@ -788,26 +788,31 @@ class ARDL(AutoReg):
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created. If that
             exog was a DataFrame, a DataFrame with the same columns, which
-            are selected by name.
+            are selected by name. If it was a 1-d array or a Series, a 1-d
+            array, a Series or an array with one column.
 
             .. versionchanged:: 0.15.1
 
                The columns of a replacement DataFrame are selected by name.
                They were used by position, so that a DataFrame with the
-               columns in another order gave wrong predictions.
+               columns in another order gave wrong predictions. A
+               replacement for a 1-d array or Series exog raised an
+               IndexError.
         exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous
             variables. Must have the same number of columns as the exog
             used when the model was created, and at least as many rows as
             the number of out-of-sample forecasts. If that exog was a
             DataFrame, a DataFrame with the same columns, which are selected
-            by name.
+            by name. If it was a 1-d array or a Series, a 1-d array, a Series
+            or an array with one column.
 
             .. versionchanged:: 0.15.1
 
                The columns of a DataFrame are selected by name. They were
                used by position, so that a DataFrame with the columns in
-               another order gave wrong forecasts.
+               another order gave wrong forecasts. Values for a 1-d array
+               or Series exog raised an IndexError.
         fixed : array_like, optional
             A replacement fixed array.  Must have the same shape as the
             fixed data array used when the model was created.
@@ -845,10 +850,13 @@ class ARDL(AutoReg):
                 arr = arr[orig.columns]
             else:
                 arr = array_like(arr, name, ndim=2, optional=False)
-            if arr.ndim != 2 or arr.shape[1] != orig.shape[1]:
+            # A 1-d exog (an array or a Series) is a single column, as when
+            # the model was created
+            ncol = orig.shape[1] if orig.ndim == 2 else 1
+            if arr.ndim != 2 or arr.shape[1] != ncol:
                 raise ValueError(
                     f"{name} must have the same number of columns as the "
-                    f"original data, {orig.shape[1]}"
+                    f"original data, {ncol}"
                 )
             if exact and arr.shape[0] != orig.shape[0]:
                 raise ValueError(
@@ -1151,13 +1159,15 @@ class ARDLResults(AutoRegResults):
             Exogenous values to use out-of-sample. Must have same number of
             columns as original exog data and at least `steps` rows. If the
             original exog was a DataFrame, a DataFrame with the same columns,
-            which are selected by name.
+            which are selected by name. If it was a 1-d array or a Series, a
+            1-d array, a Series or an array with one column.
 
             .. versionchanged:: 0.15.1
 
                The columns of a DataFrame are selected by name. They were
                used by position, so that a DataFrame with the columns in
-               another order gave wrong forecasts.
+               another order gave wrong forecasts. Values for a 1-d array
+               or Series exog raised an IndexError.
         fixed : array_like, optional
             Fixed values to use out-of-sample. Must have same number of
             columns as original fixed data and at least `steps` rows
@@ -1389,25 +1399,31 @@ class ARDLResults(AutoRegResults):
             A replacement exogenous array.  Must have the same shape as the
             exogenous data array used when the model was created. If that
             exog was a DataFrame, a DataFrame with the same columns, which
-            are selected by name.
+            are selected by name. If it was a 1-d array or a Series, a 1-d
+            array, a Series or an array with one column.
 
             .. versionchanged:: 0.15.1
 
                The columns of a replacement DataFrame are selected by name.
                They were used by position, so that a DataFrame with the
-               columns in another order gave wrong predictions.
+               columns in another order gave wrong predictions. A
+               replacement for a 1-d array or Series exog raised an
+               IndexError.
         exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous variable.
             Must have the same number of columns as the exog used when the
             model was created, and at least as many rows as the number of
             out-of-sample forecasts. If that exog was a DataFrame, a
-            DataFrame with the same columns, which are selected by name.
+            DataFrame with the same columns, which are selected by name. If
+            it was a 1-d array or a Series, a 1-d array, a Series or an array
+            with one column.
 
             .. versionchanged:: 0.15.1
 
                The columns of a DataFrame are selected by name. They were
                used by position, so that a DataFrame with the columns in
-               another order gave wrong forecasts.
+               another order gave wrong forecasts. Values for a 1-d array
+               or Series exog raised an IndexError.
         fixed : array_like, optional
             A replacement fixed array.  Must have the same shape as the
             fixed data array used when the model was created.
