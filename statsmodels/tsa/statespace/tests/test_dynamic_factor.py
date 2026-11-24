@@ -1388,8 +1388,7 @@ def test_error_cov_start_invalid():
             dynamic_factor.DynamicFactor(
                 endog, k_factors=1, factor_order=1, error_cov_start=value
             )
-    # It is keyword only
-    with pytest.raises(TypeError):
-        dynamic_factor.DynamicFactor(
-            endog, 1, 1, None, 1, True, "unstructured", True, "cholesky"
-        )
+    # It is keyword only: a ninth positional argument raises
+    args = [endog, 1, 1, None, 1, True, "unstructured", True, "cholesky"]
+    with pytest.raises(TypeError, match="positional argument"):
+        dynamic_factor.DynamicFactor(*args)
