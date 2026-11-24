@@ -1017,7 +1017,13 @@ class VAR(TimeSeriesModel):
         Parameters
         ----------
         maxlags : int, optional
-            if None, defaults to 12 * (nobs/100.)**(1./4)
+            if None, defaults to 12 * (nobs/100.)**(1./4). Must be at least
+            1 with trend "n" and no exog, otherwise a ValueError is raised.
+
+            .. versionchanged:: 0.15.1
+
+               maxlags=0 with trend "n" and no exog raises a ValueError. It
+               raised a KeyError.
         trend : {"n", "c", "ct", "ctt"}, optional
             * "n" - no deterministic terms
             * "c" - constant term
@@ -1055,6 +1061,12 @@ class VAR(TimeSeriesModel):
 
         ics = defaultdict(list)
         p_min = 0 if self.exog is not None or trend != "n" else 1
+        if maxlags < p_min:
+            # VAR(0) without deterministic terms or exog has no parameters
+            raise ValueError(
+                'maxlags must be at least 1 with trend="n" and no exog, got '
+                f"{maxlags}"
+            )
         fast_ics = None
         if trend in ("n", "c", "ct", "ctt"):
             fast_ics = _var_order_ics(self.endog, self.exog, maxlags, trend, p_min)

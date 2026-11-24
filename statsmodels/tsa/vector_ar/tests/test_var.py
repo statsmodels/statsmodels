@@ -2074,3 +2074,41 @@ def test_var_missing_drop(k_exog, trend):
     )
     for key in ("aic", "bic", "hqic", "fpe"):
         assert_allclose(sel.ics[key], sel_expected.ics[key], rtol=1e-10)
+
+
+@pytest.mark.parametrize("call", ["select_order", "fit", "default"])
+def test_select_order_zero_lags_no_regressors(call):
+    # VAR(0) without a trend or exog has no parameters, so maxlags=0 has no
+    # lag order to select (it raised a KeyError)
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    msg = 'maxlags must be at least 1 with trend="n" and no exog'
+    with pytest.raises(ValueError, match=msg):
+        if call == "select_order":
+            VAR(y).select_order(0, trend="n")
+        elif call == "fit":
+            VAR(y).fit(0, ic="aic", trend="n")
+        else:
+            # The default maxlags is 0 for 6 observations of 3 variables
+            VAR(y[:6]).select_order(trend="n")
+
+
+@pytest.mark.parametrize("trend, use_exog", [("n", True), ("c", False)])
+def test_select_order_zero_lags(trend, use_exog):
+    # VAR(0) is the regression on the deterministic terms. Its criteria are
+    # log det(Sigma_mle) plus the penalty for neqs * k_det parameters
+    # (Lütkepohl pp. 146-150)
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    nobs = y.shape[0]
+    exog = np.random.default_rng(0).standard_normal((nobs, 1)) if use_exog else None
+    sel = VAR(y, exog=exog).select_order(0, trend=trend)
+    x = exog if use_exog else np.ones((nobs, 1))
+    resid = y - x @ np.linalg.lstsq(x, y, rcond=None)[0]
+    logdet = np.linalg.slogdet(resid.T @ resid / nobs)[1]
+    free_params = 3 * 1
+    assert_allclose(sel.ics["aic"], [logdet + 2 * free_params / nobs], rtol=1e-10)
+    assert_allclose(
+        sel.ics["bic"], [logdet + np.log(nobs) * free_params / nobs], rtol=1e-10
+    )
+    assert sel.selected_orders == {"aic": 0, "bic": 0, "hqic": 0, "fpe": 0}
