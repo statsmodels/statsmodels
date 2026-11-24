@@ -834,6 +834,11 @@ class IRAnalysis(BaseIRAnalysis):
                select eigenvalues from the end; they are deprecated and
                issue a FutureWarning.
 
+               `component` is used and no longer overwritten. It was
+               ignored: the largest eigenvalue was always used, and the
+               indices of the largest eigenvalues were written into the
+               array passed.
+
         Returns
         -------
         ErrorBand
@@ -873,7 +878,9 @@ class IRAnalysis(BaseIRAnalysis):
         # compute for eigen decomp for each stack
         for i in range(neqs):
             stack_cov[i] = np.cov(stack[i], rowvar=0)
-            W[i], eigva[i], k[i] = util.eigval_decomp(stack_cov[i])
+            W[i], eigva[i], k_max = util.eigval_decomp(stack_cov[i])
+            if component is None:
+                k[i] = k_max
 
         gamma = np.zeros((repl, periods + 1, neqs, neqs))
         for p in range(repl):

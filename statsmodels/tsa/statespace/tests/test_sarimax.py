@@ -3291,3 +3291,20 @@ def test_start_params_0d_endog():
     with pytest.warns(EstimationWarning, match="Too few observations"):
         start_params = mod.start_params
     assert np.all(np.isfinite(start_params))
+
+
+def test_predict_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    y = pd.Series(rng.standard_normal(500).cumsum(), index=index)
+    res = sarimax.SARIMAX(y, order=(1, 0, 0)).smooth([0.9, 1.0])
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    pred = res.get_prediction(start=10, dynamic="2001-04")
+    expected = res.get_prediction(start=10, dynamic=loc - 10)
+    assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, expected.var_pred_mean, rtol=1e-12)
+    pd.testing.assert_index_equal(pred.predicted_mean.index, index[10:])
