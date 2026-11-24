@@ -5154,6 +5154,16 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         for the new data. To retrieve results for both the new data and the
         original data, see the `append` method.
 
+        The new model is initialized with the predicted state of the first new
+        period, so it uses the predicted timing convention.
+
+        .. versionchanged:: 0.15.1
+
+           With the filtered timing convention (``timing_init_filtered``),
+           the new results were one period late: the new model treated the
+           predicted state of the first new period as the filtered state of
+           the period before.
+
         Examples
         --------
         >>> index = pd.period_range(start='2000', periods=2, freq='Y')
@@ -5200,6 +5210,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             endog = pd.DataFrame(endog, index=extend_ix, columns=columns)
         # Extend the current fit result to additional data
         mod = self.model.clone(endog, exog=exog, **kwargs)
+        # The initial state is the predicted state of the first new period,
+        # so the new model uses the predicted timing convention (with the
+        # filtered timing, it would treat it as the filtered state of the
+        # period before and be one period late)
+        mod.ssm.timing_init_filtered = False
         mod.ssm.initialization = Initialization(
             mod.k_states,
             "known",
