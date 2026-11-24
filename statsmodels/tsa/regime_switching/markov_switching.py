@@ -843,6 +843,15 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
                regime axis, so the result had every period and the wrong
                regimes (none if `start` was at least ``k_regimes``).
 
+               With a single observation (``nobs`` 1), predictions are
+               computed as with more observations. Before, the last regime
+               axis was taken for the time axis, so only the predictions for
+               the first regime of that axis were returned, without a time
+               axis: for ``MarkovRegression`` also with `conditional` False
+               (and so in ``fittedvalues`` and ``resid``), for
+               ``MarkovAutoregression`` with `conditional` at least
+               ``order``.
+
         Returns
         -------
         predict : ndarray
@@ -860,9 +869,12 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         if out_of_sample > 0:
             raise NotImplementedError
 
-        # Perform in-sample prediction
+        # Perform in-sample prediction. Drop the regime axes of length one
+        # (predictions that do not depend on that regime), never the last
+        # (time) axis, which has length one if nobs is 1
         predict = self.predict_conditional(params)
-        squeezed = np.squeeze(predict)
+        regime_axes = tuple(i for i, n in enumerate(predict.shape[:-1]) if n == 1)
+        squeezed = np.squeeze(predict, axis=regime_axes)
 
         # Check if we need to do weighted averaging
         if squeezed.ndim - 1 > conditional:
@@ -2259,6 +2271,15 @@ class MarkovSwitchingResults(tsbase.TimeSeriesModelResults):
                along the time axis. Before, the selection was applied to the
                regime axis, so the result had every period and the wrong
                regimes (none if `start` was at least ``k_regimes``).
+
+               With a single observation (``nobs`` 1), predictions are
+               computed as with more observations. Before, the last regime
+               axis was taken for the time axis, so only the predictions for
+               the first regime of that axis were returned, without a time
+               axis: for ``MarkovRegression`` also with `conditional` False
+               (and so in ``fittedvalues`` and ``resid``), for
+               ``MarkovAutoregression`` with `conditional` at least
+               ``order``.
 
         Returns
         -------
