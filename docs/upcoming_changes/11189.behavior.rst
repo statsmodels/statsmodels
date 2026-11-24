@@ -1,0 +1,10 @@
+- :meth:`~statsmodels.tsa.statespace.mlemodel.MLEResults.simulate`
+  with ``pretransformed_initial_state=False`` and an ``anchor`` after
+  the start of the sample transformed the standard Normal draws in
+  ``initial_state`` with the mean and covariance matrix of the
+  initialization of the model, instead of the predicted state at the
+  anchor from which an unspecified initial state is drawn, so that
+  zero draws with zero shocks did not give the forecasts. The draws
+  are transformed with the predicted state mean and the Cholesky
+  factor of the predicted state covariance matrix at the anchor.
+  :pr:`11189`
