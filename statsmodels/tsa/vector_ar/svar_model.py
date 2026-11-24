@@ -1190,15 +1190,16 @@ class _SVARFEVD(FEVD):
     """
 
     def __init__(self, model, periods):
-        self.periods = periods
-        self.model = model
-        self.neqs = model.neqs
-        self.names = model.model.endog_names
-        self.irfobj = model.irf(periods=periods)
+        super().__init__(model, periods=periods)
+
+    def _decompose(self, P):
+        # The structural responses are those of A and B, so P (None) is unused
+        periods = self.periods
+        self.irfobj = self.model.irf(periods=periods)
         # squared structural responses, cumulated over the horizons, of shape
         # (periods, neqs, neqs): horizon x response x shock
         cum = (self.irfobj.svar_irfs[:periods] ** 2).cumsum(axis=0)
         # their sums over the shocks are the forecast error variances
         fevd = cum / cum.sum(axis=2, keepdims=True)
         # switch to response x horizon x shock
-        self.decomp = fevd.swapaxes(0, 1)
+        return fevd.swapaxes(0, 1)

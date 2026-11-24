@@ -2981,7 +2981,13 @@ class FEVD:
         self.neqs = model.neqs
         self.names = model.model.endog_names
 
-        self.irfobj = model.irf(var_decomp=P, periods=periods)
+        self.decomp = self._decompose(P)
+
+    def _decompose(self, P):
+        # The decomposition by the orthogonalized shocks, which sets irfobj.
+        # The FEVD of the structural shocks of an SVAR overrides it.
+        periods = self.periods
+        self.irfobj = self.model.irf(var_decomp=P, periods=periods)
         self.orth_irfs = self.irfobj.orth_irfs
 
         # cumulative impulse responses
@@ -2997,7 +3003,7 @@ class FEVD:
             fevd[i] = (irfs[i].T / mse[i]).T
 
         # switch to equation x lag x component
-        self.decomp = fevd.swapaxes(0, 1)
+        return fevd.swapaxes(0, 1)
 
     def summary(self):
         """
