@@ -4651,3 +4651,21 @@ def test_glm_formula_categorical_endog_coded_levels():
     res_rev = GLM.from_formula("C(y, levels=[1, 0]) ~ x", data, family=family).fit()
     assert_allclose(res_c.params.values, res.params.values, rtol=1e-10)
     assert_allclose(res_rev.params.values, -res.params.values, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "endog, params",
+    [([2.0, 5.0], [np.log(2.0), np.log(2.5)]), ([1.0, 1.0], [0.0, 0.0])],
+    ids=["divide", "exact"],
+)
+def test_glm_saturated_no_runtime_warning(endog, params):
+    # The scale of the WLS step of IRLS divides by the residual degrees of
+    # freedom, which are 0 in a saturated model; it warned "divide by zero"
+    # (or "invalid value" when the residuals are exactly 0) in every
+    # iteration. GLM only warns that the fit is perfect.
+    exog = add_constant(np.array([0.0, 1.0]))
+    with pytest.warns(PerfectSeparationWarning) as record:
+        res = GLM(np.array(endog), exog, family=sm.families.Poisson()).fit()
+    assert not [w for w in record if issubclass(w.category, RuntimeWarning)]
+    # The fitted means are the observations; atol for the zero parameters
+    assert_allclose(res.params, params, rtol=1e-8, atol=1e-12)
