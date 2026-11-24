@@ -430,3 +430,15 @@ def test_endog_name_not_str(endog):
     lines = [line.strip() for line in res.results.splitlines()]
     assert "Series Title- 5" in lines
     assert "Series Name- 5" in lines
+
+
+@pytest.mark.parametrize("name", ["GDP\\new", "GDP\\tab"], ids=["newline", "tab"])
+def test_rawspec_name_with_backslash(name):
+    res = x13_arima_analysis(
+        quarterly_data.realgdp.rename(name), rawspec="series{}\nx11{mode=mult}"
+    )
+
+    # X-13 prints the title and the name of the series as they are
+    lines = [line.strip() for line in res.results.splitlines()]
+    assert f"Series Title- {name}" in lines
+    assert f"Series Name- {name}" in lines
