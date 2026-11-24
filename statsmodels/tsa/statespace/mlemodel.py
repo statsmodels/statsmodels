@@ -2405,8 +2405,14 @@ class MLEModel(tsbase.TimeSeriesModel):
             If `initial_state` is provided, this flag indicates whether it
             should be directly used as the initial_state. If False, then it is
             assumed to contain draws from the standard Normal distribution that
-            must be transformed using the `initial_state_cov` covariance
-            matrix. Default is True.
+            are transformed with the mean and covariance matrix of the
+            initialization of the model (`initial_state` and
+            `initial_state_cov` of the state space representation), also when
+            `anchor` is after the start of the sample: the mean plus the
+            product of the lower triangular Cholesky factor of the covariance
+            matrix and the draws. (`MLEResults.simulate` uses the predicted
+            state mean and covariance matrix at `anchor` instead.) Default is
+            True.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or
@@ -4209,12 +4215,13 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             must be shaped `nsimulations` x `k_posdef` where `k_posdef` is the
             same as in the state space model.
         initial_state : array_like, optional
-            If specified, this is the initial state vector to use in
-            simulation, which should be shaped (`k_states` x 1), where
-            `k_states` is the same as in the state space model. If unspecified,
-            but the model has been initialized, then that initialization is
-            used. This must be specified if `anchor` is anything other than
-            "start" or 0.
+            If specified, this is the state vector of the first simulated
+            period (the period at `anchor`), shaped (`k_states` x 1), or
+            (`k_states` x `repetitions`) for a different initial state in each
+            repetition, where `k_states` is the same as in the state space
+            model. If unspecified, it is drawn for each repetition from the
+            Normal distribution with the predicted state mean and covariance
+            matrix at `anchor` (`predicted_state` and `predicted_state_cov`).
         anchor : int, str, or datetime, optional
             Starting point from which to begin the simulations; type depends on
             the index of the given `endog` model. Two special cases are the
@@ -4251,9 +4258,23 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         pretransformed_initial_state : bool, optional
             If `initial_state` is provided, this flag indicates whether it
             should be directly used as the initial_state. If False, then it is
-            assumed to contain draws from the standard Normal distribution that
-            must be transformed using the `initial_state_cov` covariance
-            matrix. Default is True.
+            assumed to contain draws from the standard Normal distribution.
+            When `anchor` is after the start of the sample, they are
+            transformed into draws from the distribution that an unspecified
+            `initial_state` is drawn from: the predicted state mean at
+            `anchor` plus the product of the lower triangular Cholesky factor
+            of the predicted state covariance matrix at `anchor` and the
+            draws (for a singular matrix, a column of the factor whose pivot
+            is not positive is zero). When the simulation starts at the
+            start of the sample, the mean and the Cholesky factor of the
+            covariance matrix of the initialization of the model are used
+            instead, as in `MLEModel.simulate`. Default is True.
+
+            .. versionchanged:: 0.15.1
+
+               With `anchor` after the start of the sample, the draws were
+               transformed with the mean and covariance matrix of the
+               initialization of the model.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             If `rng` is None, a new ``Generator`` is created using fresh
             entropy from the operating system. If `rng` is an int or
@@ -4308,6 +4329,26 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             initial_state = rng.multivariate_normal(
                 *initial_state_moments, size=_repetitions
             ).T
+        elif not pretransformed_initial_state and iloc > 0:
+            # Transform the standard Normal draws with the predicted state mean
+            # and covariance matrix at the anchor (the model would use its
+            # initialization): mean + L z, with L the lower triangular Cholesky
+            # factor, where a pivot that is not positive (a singular matrix,
+            # e.g. with states known exactly) gives a zero column
+            initial_state = np.array(initial_state)
+            if initial_state.ndim < 2:
+                initial_state = np.atleast_2d(initial_state).T
+            cov = self.predicted_state_cov[:, :, iloc]
+            chol = np.zeros_like(cov)
+            for j in range(len(cov)):
+                pivot = cov[j, j] - chol[j, :j] @ chol[j, :j]
+                if pivot > 0:
+                    chol[j, j] = np.sqrt(pivot)
+                    chol[j + 1 :, j] = (
+                        cov[j + 1 :, j] - chol[j + 1 :, :j] @ chol[j, :j]
+                    ) / chol[j, j]
+            initial_state = self.predicted_state[:, iloc, None] + chol @ initial_state
+            pretransformed_initial_state = True
 
         scale = self.scale if self.filter_results.filter_concentrated else None
         with self.model.ssm.fixed_scale(scale):
