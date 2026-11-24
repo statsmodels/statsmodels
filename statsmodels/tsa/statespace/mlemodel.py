@@ -4119,6 +4119,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
 
+            .. deprecated:: 0.15.1
+
+               Keyword arguments that the state space model does not use
+               raise a TypeError in dynamic prediction and out-of-sample
+               forecasting, but in-sample prediction ignored them. There,
+               they are deprecated and will raise a TypeError after
+               statsmodels 0.17 is released.
+
         Returns
         -------
         predictions : PredictionResults
@@ -4303,6 +4311,14 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         **kwargs
             Additional arguments may be required for forecasting beyond the end
             of the sample. See ``FilterResults.predict`` for more details.
+
+            .. deprecated:: 0.15.1
+
+               Keyword arguments that the state space model does not use
+               raise a TypeError in dynamic prediction and out-of-sample
+               forecasting, but in-sample prediction ignored them. There,
+               they are deprecated and will raise a TypeError after
+               statsmodels 0.17 is released.
 
         Returns
         -------

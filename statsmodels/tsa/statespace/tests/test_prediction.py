@@ -5,13 +5,18 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import re
+import warnings
+
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
 from statsmodels import datasets
+from statsmodels.regression.recursive_ls import RecursiveLS
 from statsmodels.tsa.statespace import sarimax, varmax
+from statsmodels.tsa.statespace.structural import UnobservedComponents
 from statsmodels.tsa.statespace.tests.test_impulse_responses import TVSS
 
 dta = datasets.macrodata.load_pandas().data
@@ -721,3 +726,115 @@ def test_get_prediction_dynamic_numpy_bool(dynamic, expected):
     assert_allclose(pred, ref, rtol=1e-12)
     other = res.get_prediction(start=20, end=80, dynamic=not expected)
     assert np.max(np.abs(pred - other.predicted_mean)) > 1e-3
+
+
+def unknown_kwargs_results(model):
+    rng = np.random.default_rng(20261124)
+    endog = rng.standard_normal(30)
+    if model == "sarimax":
+        return sarimax.SARIMAX(endog, order=(1, 0, 0)).smooth([0.5, 1.0])
+    elif model == "uc":
+        return UnobservedComponents(endog, "llevel").smooth([1.0, 0.5])
+    elif model == "varmax":
+        endog = np.column_stack([endog, rng.standard_normal(30)])
+        mod = varmax.VARMAX(endog, order=(1, 0), trend="n")
+        return mod.smooth(mod.start_params)
+    exog = np.column_stack([np.ones(30), rng.standard_normal(30)])
+    return RecursiveLS(endog, exog).fit()
+
+
+UNKNOWN_KWARGS_MODELS = ["sarimax", "uc", "varmax", "recursive_ls"]
+
+
+@pytest.mark.parametrize("model", UNKNOWN_KWARGS_MODELS)
+@pytest.mark.parametrize("method", ["get_prediction", "predict"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        "typo",
+        # The observed data is not an argument of the state space model
+        "obs",
+        # Only used with a known initialization and without "constant"
+        "initial_state",
+        # Keyword arguments used by the extended model, with an unknown one
+        "k_endog",
+        "k_states",
+        "k_posdef",
+        "initialization",
+        "design",
+    ],
+)
+def test_in_sample_prediction_unknown_kwargs(model, method, case):
+    # Unknown keyword arguments were ignored by in-sample prediction, while
+    # dynamic prediction raises a TypeError for them
+    res = unknown_kwargs_results(model)
+    if case in ("obs", "initial_state"):
+        kwargs = {case: np.zeros(1)}
+    else:
+        kwargs = {"typo_keyword": 1}
+        if case in ("k_endog", "k_states", "k_posdef"):
+            kwargs[case] = getattr(res.model.ssm, case)
+        elif case == "initialization":
+            kwargs[case] = "known"
+        elif case == "design":
+            # Of no use in sample, and of the wrong shape for these models
+            kwargs[case] = np.ones((1, 1, 2))
+    unknown = re.escape(f"Unknown keyword arguments: {list(kwargs)[:1]}.")
+    desired = res.get_prediction()
+    with pytest.warns(FutureWarning, match=unknown + " .* after statsmodels 0.17"):
+        out = getattr(res, method)(**kwargs)
+    if method == "get_prediction":
+        assert_allclose(out.var_pred_mean, desired.var_pred_mean, rtol=1e-12)
+        out = out.predicted_mean
+    assert_allclose(out, desired.predicted_mean, rtol=1e-12)
+
+    if case != "design":
+        # A system matrix for in-sample dynamic prediction raises a ValueError
+        with pytest.raises(TypeError, match=unknown):
+            res.get_prediction(dynamic=10, **kwargs)
+
+
+@pytest.mark.parametrize("model", UNKNOWN_KWARGS_MODELS)
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"conserve_memory": 0},
+        {"tolerance": 1e-10},
+        {"constant": np.zeros(1), "stationary_cov": np.eye(1)},
+        # Invalid values of known options, which raise other errors when the
+        # filter is rerun
+        {"alternate_timing": "abc"},
+        {"timing_init_filtered": None},
+    ],
+    ids=["conserve_memory", "tolerance", "constant", "alternate_timing", "timing"],
+)
+def test_in_sample_prediction_known_kwargs(model, kwargs):
+    res = unknown_kwargs_results(model)
+    desired = res.get_prediction()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        out = res.get_prediction(**kwargs)
+    assert_allclose(out.predicted_mean, desired.predicted_mean, rtol=1e-12)
+    assert_allclose(out.var_pred_mean, desired.var_pred_mean, rtol=1e-12)
+
+
+def test_in_sample_prediction_kwargs_recursive_ls():
+    # A time-varying design matrix for the extension is used by forecasting,
+    # and ignored in sample without a warning
+    res = unknown_kwargs_results("recursive_ls")
+    desired = res.get_prediction()
+    design = np.ones((1, 2, 3))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        out = res.get_prediction(design=design)
+    assert_allclose(out.predicted_mean, desired.predicted_mean, rtol=1e-12)
+    # The forecasts with both regressors equal to one are the sum of the
+    # coefficients
+    forecast = res.get_prediction(end=32, design=design).predicted_mean[-3:]
+    assert_allclose(forecast, np.full(3, res.params.sum()), rtol=1e-12)
+
+    # extend_model is not an argument of RecursiveLSResults.get_prediction
+    with pytest.warns(FutureWarning, match=re.escape("['extend_model']")):
+        res.get_prediction(extend_model=True)
+    with pytest.warns(FutureWarning, match=re.escape("['typo_keyword']")):
+        res.filter_results.predict(typo_keyword=1)
