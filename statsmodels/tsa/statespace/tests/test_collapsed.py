@@ -748,7 +748,7 @@ def test_collapsed_dfm_lagged_factor_raises():
     endog = np.random.default_rng(0).standard_normal((50, 3))
     mod = dynamic_factor.DynamicFactor(endog, k_factors=1, factor_order=2)
     mod.ssm.filter_collapsed = True
-    with pytest.raises(ValueError, match=COLLAPSED_RANK_MSG + ".* period 0"):
+    with pytest.raises(np.linalg.LinAlgError, match=COLLAPSED_RANK_MSG + ".* period 0"):
         mod.loglike(mod.start_params)
 
 
@@ -772,7 +772,7 @@ def test_collapsed_rank_deficient_observed_design_raises():
     endog[10, 1] = np.nan
     mod = collapsed_rank_model(endog)
     mod.ssm.filter_collapsed = True
-    with pytest.raises(ValueError, match=COLLAPSED_RANK_MSG + ".* period 10"):
+    with pytest.raises(np.linalg.LinAlgError, match=COLLAPSED_RANK_MSG + ".* period 10"):
         mod.ssm.loglike()
 
 

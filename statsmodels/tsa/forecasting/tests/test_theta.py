@@ -486,10 +486,14 @@ def test_sigma2_deseasonalized(method):
         else:
             deseasonalized = y - seasonal
     res = model.fit(use_mle=False)
-    # The same estimator on the same data, so only rounding can differ
+    # The same estimator on the same data. Both are the results of an
+    # optimizer, and where it stops depends on the platform: on macOS
+    # (Accelerate) the two differ by 3e-7 relative, and noise of a few ulps
+    # in the data moves sigma2 by up to 7e-7. Fitting to the seasonal data,
+    # the bug the test guards against, makes sigma2 3.6 to 4.5 times larger.
     ima = SARIMAX(deseasonalized, order=(0, 1, 1), trend="c")
     expected = ima.fit(disp=False).params[-1]
-    np.testing.assert_allclose(res.sigma2, expected, rtol=1e-8)
+    np.testing.assert_allclose(res.sigma2, expected, rtol=1e-4)
 
 
 @pytest.mark.parametrize("use_mle", [True, False])
@@ -527,31 +531,47 @@ def test_prediction_intervals_ima_variance(use_mle, deseasonalize):
 @pytest.mark.parametrize("container", [list, tuple])
 @pytest.mark.parametrize("use_mle", [True, False])
 def test_sequence_endog(container, use_mle):
-    # A list or a tuple gives the results of the same data in an ndarray
+    # A list or a tuple gives the results of the same data in an ndarray. The
+    # data are an IMA(1,1) with drift plus a seasonal pattern, so that the MLE
+    # of the moving average coefficient is inside the invertible region and
+    # determined to more than a few digits
     rng = np.random.default_rng(20261120)
-    t = np.arange(96)
-    y = 50 + 0.3 * t + 5 * np.sin(2 * np.pi * t / 12)
-    y = y + rng.standard_normal(96)
+    e = rng.standard_normal(121)
+    t = np.arange(120)
+    y = 50 + np.cumsum(0.3 + e[1:] - 0.5 * e[:-1])
+    y = y + 5 * np.sin(2 * np.pi * t / 12)
     expected = ThetaModel(y, period=12).fit(use_mle=use_mle)
     res = ThetaModel(container(y.tolist()), period=12).fit(use_mle=use_mle)
-    np.testing.assert_allclose(res.params, expected.params, rtol=1e-12)
+    # alpha, the MLE estimates and sigma2 are the results of optimizers, and
+    # where they stop depends on the memory layout of the data on macOS
+    # (Accelerate): alpha differed by 5e-10 relative without MLE there. Noise
+    # of a few ulps in these data moves the results by up to 9e-7 relative. A
+    # wrong conversion of the input changes the index, the number of
+    # observations or the values completely.
+    rtol = 1e-4
+    np.testing.assert_allclose(res.params, expected.params, rtol=rtol)
     pd.testing.assert_frame_equal(
-        res.forecast_components(15), expected.forecast_components(15), rtol=1e-12
+        res.forecast_components(15), expected.forecast_components(15), rtol=rtol
     )
     pd.testing.assert_series_equal(
-        res.forecast(15), expected.forecast(15), rtol=1e-12
+        res.forecast(15), expected.forecast(15), rtol=rtol
     )
     pd.testing.assert_frame_equal(
         res.prediction_intervals(15),
         expected.prediction_intervals(15),
-        rtol=1e-12,
+        rtol=rtol,
     )
 
-    def without_time(smry):
-        lines = smry.as_text().splitlines()
+    # The table of the parameter estimates prints them to full precision, so
+    # only the model table, with the sample and the number of observations,
+    # is compared as text
+    def without_time(table):
+        lines = table.as_text().splitlines()
         return [ln for ln in lines if "Date:" not in ln and "Time:" not in ln]
 
-    assert without_time(res.summary()) == without_time(expected.summary())
+    assert without_time(res.summary().tables[0]) == without_time(
+        expected.summary().tables[0]
+    )
 
 
 @pytest.mark.parametrize(
