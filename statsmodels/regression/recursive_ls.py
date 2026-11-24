@@ -332,6 +332,9 @@ _get_prediction_doc.replace_block(
         ],
     ),
 )
+# The out-of-sample design comes from exog or the design keyword; the model
+# is not extended
+_get_prediction_doc.remove_parameters(["extend_model", "extend_kwargs"])
 
 
 class RecursiveLSResults(MLEResults):

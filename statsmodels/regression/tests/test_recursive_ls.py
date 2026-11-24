@@ -867,3 +867,24 @@ def test_get_prediction_constrained_pandas():
     predict = res.predict(start=10)
     assert_allclose(predict, pred.predicted_mean, rtol=1e-12)
     pd.testing.assert_index_equal(predict.index, index[10:])
+
+
+def test_get_prediction_docstring_parameters():
+    # The docstring documented extend_model and extend_kwargs, which
+    # get_prediction does not take
+    import inspect
+
+    from statsmodels.regression.recursive_ls import RecursiveLSResults
+    from statsmodels.tools.docstring import NumpyDocString
+
+    func = RecursiveLSResults.get_prediction
+    if func.__doc__ is None:
+        pytest.skip("No docstrings (python -OO)")
+    documented = [param.name for param in NumpyDocString(func.__doc__)["Parameters"]]
+    expected = []
+    for name, param in inspect.signature(func).parameters.items():
+        if param.kind == param.VAR_KEYWORD:
+            expected.append("**" + name)
+        elif name != "self":
+            expected.append(name)
+    assert documented == expected
