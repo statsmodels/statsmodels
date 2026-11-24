@@ -2615,6 +2615,9 @@ def test_period_index_nat_key_raises_key_error(key, which):
     # of an unmatched key, not an AttributeError from NaT
     from statsmodels.tsa.ar_model import AutoReg
 
+    if key == "" and PD_LT_2:
+        # pandas < 2 raises a parse error for "" instead of returning NaT
+        pytest.skip('pandas < 2 does not parse "" as NaT')
     index = pd.period_range("2000-01", periods=24, freq="M")
     y = pd.Series(np.arange(24.0) + np.sin(np.arange(24.0)), index=index)
     res = AutoReg(y, 1).fit()
