@@ -93,8 +93,11 @@ def test_skewt():
         ]
     )
     pdf_st = skewt.pdf(x, 1000000, 10)
-    np.allclose(pdf_st, pdf_r, rtol=0, atol=1e-6)
-    np.allclose(pdf_st, pdf_r, rtol=1e-1, atol=0)
+    # R's values are for df = inf: with df = 1e6 the relative difference
+    # reaches 4% at -2
+    assert_allclose(pdf_st, pdf_r, rtol=1e-1)
+    # atol: the absolute difference too, as for the cdf below
+    assert_allclose(pdf_st, pdf_r, rtol=0, atol=1e-6)
 
     # noquote(sprintf("%.15e,", pst(c(-2,-1, -0.5,0,1,2), shape=10)))
     cdf_r = np.array(
@@ -111,9 +114,11 @@ def test_skewt():
         # The t pdf of scipy 1.8 overflows to a pdf of 0 for large |x| in the
         # integration when df is large
         cdf_st = skewt.cdf(x, 1000000, 10)
-    np.allclose(cdf_st, cdf_r, rtol=0, atol=1e-6)
-    np.allclose(cdf_st, cdf_r, rtol=1e-1, atol=0)
-    # assert_(np.allclose(cdf_st, cdf_r, rtol=1e-13, atol=1e-15))
+    # atol: R gives 0 at -2 and -1, where the skew normal cdf is 1.5e-92 and
+    # 3.6e-26
+    assert_allclose(cdf_st, cdf_r, rtol=0, atol=1e-6)
+    # Relative to scipy's skew normal, which has these tail values
+    assert_allclose(cdf_st, stats.skewnorm.cdf(x, 10), rtol=1e-1)
 
     # noquote(sprintf("%.15e,", dst(c(-2,-1, -0.5,0,1,2), shape=10, df=5)))
     pdf_r = np.array(
