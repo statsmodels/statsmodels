@@ -834,7 +834,10 @@ def test_in_sample_prediction_kwargs_recursive_ls():
     assert_allclose(forecast, np.full(3, res.params.sum()), rtol=1e-12)
 
     # extend_model is not an argument of RecursiveLSResults.get_prediction
-    with pytest.warns(FutureWarning, match=re.escape("['extend_model']")):
+    with pytest.warns(FutureWarning, match=re.escape("['extend_model']")) as record:
         res.get_prediction(extend_model=True)
-    with pytest.warns(FutureWarning, match=re.escape("['typo_keyword']")):
+    # The warning points at the caller, not at statsmodels
+    assert record[0].filename == __file__
+    with pytest.warns(FutureWarning, match=re.escape("['typo_keyword']")) as record:
         res.filter_results.predict(typo_keyword=1)
+    assert record[0].filename == __file__
