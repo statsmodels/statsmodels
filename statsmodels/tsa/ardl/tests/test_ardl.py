@@ -2623,3 +2623,36 @@ def test_ardl_order_dict_float_column_labels():
     reg += [x[t, 1], x[t - 1, 1], x[t - 2, 1]]
     ols = OLS(y[t], np.column_stack(reg)).fit()
     assert_allclose(res.params, ols.params, rtol=1e-10)
+
+
+@pytest.mark.parametrize("glob", [False, True])
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_ardl_select_order_maxorder_none_no_warning(use_pandas, glob):
+    # A variable that maxorder excludes with None is excluded from the
+    # selected model without a warning that it is missing from the order
+    rng = np.random.default_rng(20261124)
+    nobs = 200
+    x = rng.standard_normal((nobs, 2))
+    e = rng.standard_normal(nobs)
+    y = np.zeros(nobs)
+    for t in range(1, nobs):
+        y[t] = 0.5 * y[t - 1] + x[t, 0] + 0.8 * x[t - 1, 0] + x[t, 1] + e[t]
+    if use_pandas:
+        exog = pd.DataFrame(x, columns=["a", "b"])
+        maxorder = {"a": 1, "b": None}
+        key = "a"
+    else:
+        exog = x
+        maxorder = {0: 1, 1: None}
+        key = 0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SpecificationWarning)
+        sel = ardl_select_order(y, 1, exog, maxorder, glob=glob)
+    assert sel.model.ar_lags == [1]
+    assert sel.model.dl_lags == {key: [0, 1]}
+
+    # y on const, y.L1, x0.L0 and x0.L1, without the excluded x1
+    t = np.arange(1, nobs)
+    reg = np.column_stack([np.ones(nobs - 1), y[t - 1], x[t, 0], x[t - 1, 0]])
+    ols = OLS(y[t], reg).fit()
+    assert_allclose(sel.model.fit().params, ols.params, rtol=1e-10)
