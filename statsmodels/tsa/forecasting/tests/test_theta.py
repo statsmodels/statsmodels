@@ -566,3 +566,25 @@ def test_invalid_method_message(method, error, match):
     y = np.arange(1.0, 49.0)
     with pytest.raises(error, match=match):
         ThetaModel(y, period=12, method=method)
+
+
+@pytest.mark.parametrize("use_mle", [False, True])
+def test_summary_parameter_table(use_mle):
+    # Each estimate is in the row of its own parameter (0.15.0 showed the
+    # first value in a row labelled "Parameters", the second in the row of
+    # the first parameter, and dropped the label of the last), with four
+    # significant digits
+    rng = np.random.default_rng(20261124)
+    index = pd.date_range("2000-01-01", periods=60, freq="MS")
+    y = pd.Series(50 + np.cumsum(rng.standard_normal(60)), index=index)
+    res = ThetaModel(y, deseasonalize=False).fit(use_mle=use_mle)
+    lines = res.summary().tables[1].as_text().splitlines()
+    # title, ====, header, ----, one row per parameter, ----
+    assert lines[2].split() == ["Estimate"]
+    rows = [line.split() for line in lines[4:-1]]
+    assert [row[0] for row in rows] == list(res.params.index)
+    values = np.array([float(row[1]) for row in rows])
+    # four significant digits: relative rounding error below 5e-4
+    assert_allclose(values, res.params.to_numpy(), rtol=5e-4)
+    digits = [len(row[1].replace("-", "").replace(".", "").lstrip("0")) for row in rows]
+    assert max(digits) <= 4
