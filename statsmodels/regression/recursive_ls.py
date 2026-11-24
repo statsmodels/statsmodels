@@ -314,6 +314,27 @@ _get_prediction_doc.insert_parameters(
         ],
     ),
 )
+_get_prediction_doc.replace_block(
+    "Returns",
+    Parameter(
+        "predictions",
+        "PredictionResults",
+        [
+            "PredictionResults instance containing in-sample predictions /",
+            "out-of-sample forecasts and results including confidence intervals.",
+            "",
+            ".. versionchanged:: 0.15.1",
+            "",
+            "    With constraints, the predictions are those of the dependent",
+            "    variable only. Before, they also held those of the extra",
+            "    variables through which the constraints are imposed, as a",
+            "    second column, and pandas data raised a TypeError.",
+        ],
+    ),
+)
+# The out-of-sample design comes from exog or the design keyword; the model
+# is not extended
+_get_prediction_doc.remove_parameters(["extend_model", "extend_kwargs"])
 
 
 class RecursiveLSResults(MLEResults):
@@ -623,6 +644,19 @@ class RecursiveLSResults(MLEResults):
         # case of npredictions = 1
         prediction_results = self.filter_results.predict(
             start, end + out_of_sample + 1, dynamic, **kwargs)
+
+        # The constraints are imposed through extra endog variables. Keep
+        # only the regression's own endog, as in the results: the prediction
+        # results cache each array under its name with a leading underscore,
+        # and compute the filtered and smoothed forecasts from these
+        if self.model._r_matrix is not None:
+            for name in ["endog", "design", "obs_intercept", "forecasts",
+                         "forecasts_error"]:
+                value = getattr(prediction_results, name)
+                setattr(prediction_results, "_" + name, value[:1])
+            for name in ["obs_cov", "forecasts_error_cov"]:
+                value = getattr(prediction_results, name)
+                setattr(prediction_results, "_" + name, value[:1, :1])
 
         # Return a new mlemodel.PredictionResults object
         res_obj = PredictionResults(self, prediction_results,
