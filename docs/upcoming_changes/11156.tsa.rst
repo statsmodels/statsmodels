@@ -1,0 +1,6 @@
+- With every parameter of a state space model fixed (``fix_params``),
+  the ``"oim"``, ``"approx"``, ``"robust"``, ``"robust_oim"`` and
+  ``"robust_approx"`` covariance matrices raised "zero-size array to
+  reduction operation maximum" (in ``fit``, ``smooth`` and the
+  ``cov_params_*`` attributes). As for ``"opg"``, the covariance
+  matrix is NaN. :pr:`11156`
