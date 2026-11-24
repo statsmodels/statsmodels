@@ -193,6 +193,19 @@ def test_percentile_labels(percentiles, labels):
     assert_equal(res.frame.index[-len(labels) :].tolist(), labels)
 
 
+@pytest.mark.parametrize("numeric", [True, False])
+@pytest.mark.parametrize("percentiles", [[np.nan], [np.nan, 50.0]])
+def test_percentiles_nan(percentiles, numeric):
+    # NaN passed the range check. For data without a numeric column nothing
+    # else rejected it, and the search for labels then never ended.
+    if numeric:
+        data = pd.Series(np.arange(10.0))
+    else:
+        data = pd.DataFrame({"c": pd.Series(list("abcab")).astype("category")})
+    with pytest.raises(ValueError, match="strictly between 0 and 100"):
+        Description(data, percentiles=percentiles)
+
+
 def test_large_ntop(df):
     res = Description(df, ntop=15)
     assert "top_15" in res.frame.index

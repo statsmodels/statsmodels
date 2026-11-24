@@ -1,0 +1,3 @@
+- The docstring of ``RecursiveLSResults.get_prediction`` documented the
+  ``extend_model`` and ``extend_kwargs`` parameters, which it does not
+  take. :pr:`11147`

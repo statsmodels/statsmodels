@@ -1239,6 +1239,63 @@ def test_eigval_decomp_real():
     assert eigva[k] == eigva.max()
 
 
+def test_irf_err_band_sz3_component():
+    # component[j] selects the eigenvector used for the bands of the responses
+    # to a shock in variable j; the array passed is not modified
+    from scipy import linalg
+
+    data = get_macrodata().view((float, 3), type=np.ndarray)
+    res = VAR(data).fit(2)
+    # With these settings the largest eigenvalue for shock 0 is not the first
+    # one returned by scipy.linalg.eig (with OpenBLAS)
+    periods, repl = 3, 50
+    irf = res.irf(periods)
+
+    def band(component):
+        rng = np.random.default_rng(0)
+        return irf.err_band_sz3(
+            orth=True, repl=repl, signif=0.1, rng=rng, component=component
+        )
+
+    default = band(None)
+    # The default is the largest eigenvalue of the covariance of the stacked
+    # responses to each shock at horizons 1 to periods, in the order of
+    # scipy.linalg.eig; the second largest is used for shock 1 below
+    sims = res.irf_resim(
+        orth=True, repl=repl, steps=periods, rng=np.random.default_rng(0)
+    )
+    largest, second = [], []
+    for j in range(3):
+        stacked = sims[:, 1:, :, j].transpose(0, 2, 1).reshape(repl, -1)
+        cov = np.cov(stacked, rowvar=False)
+        eigvals = linalg.eig(cov, left=True, right=False)[0].real
+        order = np.argsort(eigvals)
+        largest.append(order[-1])
+        second.append(order[-2])
+    same = band(np.array(largest))
+    assert_allclose(same.lower, default.lower, rtol=1e-12)
+    assert_allclose(same.upper, default.upper, rtol=1e-12)
+
+    component = np.array(largest)
+    component[1] = second[1]
+    passed = component.copy()
+    changed = band(component)
+    assert_equal(component, passed)
+    for other in (0, 2):
+        lower, upper = changed.lower[..., other], changed.upper[..., other]
+        assert_allclose(lower, default.lower[..., other], rtol=1e-12)
+        assert_allclose(upper, default.upper[..., other], rtol=1e-12)
+    assert not np.allclose(changed.lower[1:, :, 1], default.lower[1:, :, 1])
+    assert not np.allclose(changed.upper[1:, :, 1], default.upper[1:, :, 1])
+    # the impact period is not perturbed
+    assert_allclose(changed.lower[0], irf.orth_irfs[0], rtol=1e-12)
+    assert_allclose(changed.upper[0], irf.orth_irfs[0], rtol=1e-12)
+    # a tuple gives the same bands
+    from_tuple = band(tuple(int(c) for c in component))
+    assert_allclose(from_tuple.lower, changed.lower, rtol=1e-12)
+    assert_allclose(from_tuple.upper, changed.upper, rtol=1e-12)
+
+
 @pytest.mark.slow
 def test_irf_err_bands():
     # smoke tests
@@ -2194,3 +2251,20 @@ def test_test_causality_default_causing_r():
     assert_allclose(result.test_statistic, 19.035317569398131, rtol=1e-8)
     assert_allclose(result.pvalue, 1.2944585403573683e-08, rtol=1e-8)
     assert "H_0: realcons does not Granger-cause realgdp" in str(result.summary())
+
+
+@pytest.mark.parametrize(
+    "diag, stable",
+    [
+        ([1.0, 0.5], False),  # a unit root
+        ([-1.0, 0.3], False),  # a root of -1
+        ([0.999, 0.5], True),
+        ([1.001, 0.5], False),
+    ],
+)
+def test_is_stable_unit_root(diag, stable):
+    # The eigenvalues of a diagonal VAR(1) are its diagonal. Stability needs
+    # all of them inside the unit circle, a unit root is not stable.
+    coefs = np.diag(diag)[None, :, :]
+    assert bool(var_model.is_stable(coefs)) is stable
+    assert bool(VARProcess(coefs, None, np.eye(2)).is_stable()) is stable

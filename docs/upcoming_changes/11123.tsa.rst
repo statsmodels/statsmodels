@@ -1,0 +1,5 @@
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` raised ``AttributeError: 'NoneType' object has no attribute
+  'startswith'`` for an ``endog`` with a DatetimeIndex whose frequency
+  pandas cannot infer, for example month starts with a month missing
+  or the 15th of each month. They raise a ``ValueError`` that says
+  so. :pr:`11123`

@@ -2229,6 +2229,9 @@ class ETSResults(base.StateSpaceMLEResults):
         # Handle `dynamic`
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
+            # A key that covers several dates gives a slice of locations
+            if isinstance(dynamic, slice):
+                dynamic = dynamic.start
             # Convert to offset relative to start
             dynamic = dynamic - start
         elif isinstance(dynamic, bool):

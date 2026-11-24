@@ -1,0 +1,4 @@
+- ``compute_smoothed_state_weights`` of pickled or deep-copied state
+  space results gave wrong weights unless ``resmooth=True``: the copied
+  compiled Kalman smoother held the smoothed state autocovariance in
+  place of the innovations transition matrices. :pr:`11154`

@@ -2272,9 +2272,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         # Get the appropriate exog for the extended sample
         exog = self._validate_out_of_sample_exog(exog, out_of_sample)
 
-        # Create extended model
-        if extend_kwargs is None:
-            extend_kwargs = {}
+        # Create extended model (from a copy of `extend_kwargs`, so that the
+        # defaults set below do not change the caller's dict)
+        extend_kwargs = {} if extend_kwargs is None else dict(extend_kwargs)
 
         # Handle trend offset for extended model
         if getattr(self, "k_trend", 0) > 0 and hasattr(self, "trend_offset"):
@@ -3920,6 +3920,12 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             could be used to pass the `concentrate_scale=True` keyword
             argument. Any arguments that are not explicitly set in this
             dictionary will be copied from the current model instance.
+
+            .. versionchanged:: 0.15.1
+
+               The dictionary is not changed. Defaults of the extended
+               model, such as its trend offset, were added to it, so
+               reusing it with another model gave wrong forecasts.
         **kwargs
             Additional arguments may required for forecasting beyond the end
             of the sample. See `FilterResults.predict` for more details.
@@ -3950,6 +3956,9 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         # Handle `dynamic`
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
+            # A key that covers several dates gives a slice of locations
+            if isinstance(dynamic, slice):
+                dynamic = dynamic.start
             # Convert to offset relative to start
             dynamic = dynamic - start
 
@@ -4974,6 +4983,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ----------
         endog : array_like
             New observations from the modeled time-series process.
+
+            .. versionchanged:: 0.15.1
+
+               A pandas Series without a name is accepted when the model's
+               `endog` is a named Series; it raised ValueError.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
         refit : bool, optional
