@@ -1264,16 +1264,32 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             The maximum number of lags to use in the test. Jointly tests that
             all autocorrelations up to and including lag j are zero for
             j = 1, 2, ..., lags. If None, uses min(10, nobs // 5).
-        model_df : int, optional
-            The model degree of freedom to use when adjusting computing the
-            test statistic to account for parameter estimation. If None, uses
-            the number of AR lags included in the model.
+        model_df : int or {"ar", "regressors"}, optional
+            The model degrees of freedom subtracted from the degrees of
+            freedom of the test to account for parameter estimation. "ar"
+            uses the number of autoregressive lags, the usual correction of
+            the Ljung-Box test. "regressors" uses ``df_model``, the number
+            of estimated parameters, which includes the deterministic terms
+            and any exogenous regressors. If None, uses "regressors" and
+            warns that the default will change to "ar" after statsmodels
+            0.17 is released.
+
+            .. versionchanged:: 0.15.1
+
+               "ar" and "regressors" are accepted. The default will change
+               from "regressors" to "ar"; leaving `model_df` unset issues a
+               FutureWarning. Pass "ar" to use the future default now.
 
         Returns
         -------
         output : DataFrame
             DataFrame containing three columns: the test statistic, the
             p-value of the test, and the degree of freedom used in the test.
+
+            .. versionchanged:: 0.15.1
+
+                The test statistics, p-values and degrees of freedom are
+                returned. Since statsmodels 0.14.0 every value was NaN.
 
         See Also
         --------
@@ -1291,8 +1307,27 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
         from statsmodels.stats.diagnostic import acorr_ljungbox
 
         lags = int_like(lags, "lags", optional=True)
-        model_df = int_like(model_df, "df_model", optional=True)
-        model_df = self.df_model if model_df is None else model_df
+        if model_df is None:
+            warnings.warn(
+                'The default model_df will change from "regressors" (df_model, '
+                "the number of estimated parameters) to \"ar\" (the number of "
+                "autoregressive lags) after statsmodels 0.17 is released. Pass "
+                'model_df="ar" to use the future default now, or '
+                'model_df="regressors" to keep the current one and silence '
+                "this warning.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            model_df = "regressors"
+        if isinstance(model_df, str):
+            model_df = string_like(
+                model_df, "model_df", options=("ar", "regressors"), lower=False
+            )
+            if model_df == "ar":
+                model_df = len(self._ar_lags) if self._ar_lags else 0
+            else:
+                model_df = self.df_model
+        model_df = int_like(model_df, "model_df")
         nobs_effective = self.resid.shape[0]
         if lags is None:
             lags = min(nobs_effective // 5, 10)
@@ -1309,8 +1344,9 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             df = np.clip(np.arange(1, lags + 1) - model_df, 0, np.inf)
             df = df.astype(int)
         test_stats["df"] = df
-        index = pd.RangeIndex(1, lags + 1, name="Lag")
-        return pd.DataFrame(test_stats, columns=cols, index=index)
+        test_stats.columns = cols
+        test_stats.index = pd.RangeIndex(1, lags + 1, name="Lag")
+        return test_stats
 
     def test_normality(self):
         """
@@ -1384,6 +1420,12 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
             A summary instance with panels for serial correlation tests,
             normality tests and heteroskedasticity tests.
 
+            .. versionchanged:: 0.15.1
+
+                The serial correlation panel is shown for the lags with a
+                positive test degree of freedom. Since statsmodels 0.14.0 it
+                was always missing.
+
         See Also
         --------
         test_serial_correlation
@@ -1397,9 +1439,11 @@ class AutoRegResults(tsa_model.TimeSeriesModelResults):
 
         spacer = SimpleTable([""])
         smry = Summary()
-        sc = self.test_serial_correlation()
+        # The current default of test_serial_correlation, without its
+        # FutureWarning; use "ar" when that default changes
+        sc = self.test_serial_correlation(model_df="regressors")
         sc = sc.loc[sc.DF > 0]
-        values = [[i + 1] + row for i, row in enumerate(sc.values.tolist())]
+        values = sc.reset_index().values.tolist()
         data_fmts = ("%10d", "%10.3f", "%10.3f", "%10d")
         if sc.shape[0]:
             tab = SimpleTable(
