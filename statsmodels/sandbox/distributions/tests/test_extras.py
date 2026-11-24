@@ -16,17 +16,21 @@ from statsmodels.sandbox.distributions.extras import (
     ExpTransf_gen,
     LogTransf_gen,
     NormExpan_gen,
+    absnormalg,
     get_u_argskwargs,
     invdnormalg,
     loggammaexpg,
     lognormalg,
     mvnormcdf,
     mvstdnormcdf,
+    negsquarenormalg,
     pdf_moments,
     pdf_moments_st,
     pdf_mvsk,
     skewnorm,
     skewnorm2,
+    squarenormalg,
+    squaretg,
 )
 from statsmodels.stats.moment_helpers import mvsk2mc
 
@@ -409,5 +413,36 @@ def test_transf_gen_rvs(name):
         def cdf(c):
             return stats.norm.sf(1 / c - 10)
 
+    assert_allclose(draws, expected, rtol=1e-13)
+    assert stats.kstest(draws, cdf).pvalue > 0.01
+
+
+@pytest.mark.parametrize(
+    "name", ["squarenormalg", "squaretg", "absnormalg", "negsquarenormalg"]
+)
+def test_transftwo_gen_rvs(name):
+    # _rvs did not take the size and random_state keywords: rvs raised
+    # TypeError with scipy >= 1.9
+    nobs = 2000
+    rng = np.random.default_rng(0)
+    if name == "squaretg":
+        draws = squaretg.rvs(10, size=nobs, random_state=rng)
+        x = stats.t.rvs(10, size=nobs, random_state=np.random.default_rng(0))
+    else:
+        dist = {
+            "squarenormalg": squarenormalg,
+            "absnormalg": absnormalg,
+            "negsquarenormalg": negsquarenormalg,
+        }[name]
+        draws = dist.rvs(size=nobs, random_state=rng)
+        x = stats.norm.rvs(size=nobs, random_state=np.random.default_rng(0))
+    # The square of a standard normal is chi2(1), the square of a t(10) is
+    # F(1, 10), the absolute value of a standard normal is half-normal
+    expected, cdf = {
+        "squarenormalg": (x**2, stats.chi2(1).cdf),
+        "squaretg": (x**2, stats.f(1, 10).cdf),
+        "absnormalg": (np.abs(x), stats.halfnorm.cdf),
+        "negsquarenormalg": (-(x**2), lambda c: stats.chi2(1).sf(-c)),
+    }[name]
     assert_allclose(draws, expected, rtol=1e-13)
     assert stats.kstest(draws, cdf).pvalue > 0.01

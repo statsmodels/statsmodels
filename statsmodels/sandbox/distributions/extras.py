@@ -820,9 +820,10 @@ class TransfTwo_gen(distributions.rv_continuous):
             )
         )
 
-    def _rvs(self, *args):
-        self.kls._size = self._size  # size attached to self, not function argument
-        return self.func(self.kls._rvs(*args))
+    def _rvs(self, *args, size=None, random_state=None):
+        return self.func(
+            self.kls._rvs(*args, size=size, random_state=random_state)
+        )
 
     def _pdf(self, x, *args, **kwargs):
         # print args
