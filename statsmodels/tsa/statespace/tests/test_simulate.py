@@ -2164,9 +2164,10 @@ def test_time_varying_selection():
     mod.simulate([], 10)
 
 
-def _ar2_zero_shock_path(phi, initial_state, nsimulations):
-    # Observations of an AR(2) (SARIMAX state vector) without shocks
-    transition = np.array([[phi[0], 1.0], [phi[1], 0.0]])
+def _ar_zero_shock_path(phi, initial_state, nsimulations):
+    # Observations of an AR(p) (SARIMAX state vector) without shocks
+    transition = np.eye(len(phi), k=1)
+    transition[:, 0] = phi
     states = [np.asarray(initial_state)]
     for _ in range(nsimulations - 1):
         states.append(transition @ states[-1])
@@ -2183,9 +2184,9 @@ def test_simulate_standardized_initial_state_anchor(anchor, iloc):
     # the forecasts. The initial state is the predicted state mean plus the
     # lower triangular Cholesky factor of its covariance matrix times the
     # draws, also with one column of draws for each repetition.
-    phi = np.array([0.5, 0.2])
+    phi = np.array([0.5, 0.2, -0.1])
     endog = np.random.default_rng(1913).standard_normal(12)
-    mod = sarimax.SARIMAX(endog, order=(2, 0, 0), measurement_error=True)
+    mod = sarimax.SARIMAX(endog, order=(3, 0, 0), measurement_error=True)
     res = mod.smooth(np.r_[phi, 0.5, 1.0])
     mean = res.predicted_state[:, iloc]
     chol = np.linalg.cholesky(res.predicted_state_cov[:, :, iloc])
@@ -2194,18 +2195,18 @@ def test_simulate_standardized_initial_state_anchor(anchor, iloc):
     kwargs = {"anchor": anchor, "measurement_shocks": zero, "state_shocks": zero}
 
     sim = res.simulate(
-        nsim, initial_state=np.zeros(2), pretransformed_initial_state=False, **kwargs
+        nsim, initial_state=np.zeros(3), pretransformed_initial_state=False, **kwargs
     )
-    assert_allclose(sim, _ar2_zero_shock_path(phi, mean, nsim), rtol=1e-10)
+    assert_allclose(sim, _ar_zero_shock_path(phi, mean, nsim), rtol=1e-10)
     if anchor == "end":
         assert_allclose(sim, res.forecast(nsim), rtol=1e-10)
-    z = np.array([0.8, -1.3])
+    z = np.array([0.8, -1.3, 0.6])
     sim = res.simulate(
         nsim, initial_state=z, pretransformed_initial_state=False, **kwargs
     )
-    desired = _ar2_zero_shock_path(phi, mean + chol @ z, nsim)
+    desired = _ar_zero_shock_path(phi, mean + chol @ z, nsim)
     assert_allclose(sim, desired, rtol=1e-10)
-    z = np.array([[0.8, 0.1, -0.5], [-1.3, 0.9, 0.4]])
+    z = np.array([[0.8, 0.1, -0.5], [-1.3, 0.9, 0.4], [0.6, -0.2, 1.1]])
     sim = res.simulate(
         nsim,
         initial_state=z,
@@ -2214,11 +2215,11 @@ def test_simulate_standardized_initial_state_anchor(anchor, iloc):
         **kwargs,
     )
     for i in range(3):
-        desired = _ar2_zero_shock_path(phi, mean + chol @ z[:, i], nsim)
+        desired = _ar_zero_shock_path(phi, mean + chol @ z[:, i], nsim)
         assert_allclose(sim[:, 0, i], desired, rtol=1e-10)
     # A pretransformed initial state is used as it is
     sim = res.simulate(nsim, initial_state=z[:, 0], **kwargs)
-    assert_allclose(sim, _ar2_zero_shock_path(phi, z[:, 0], nsim), rtol=1e-10)
+    assert_allclose(sim, _ar_zero_shock_path(phi, z[:, 0], nsim), rtol=1e-10)
 
 
 @pytest.mark.parametrize("filtered_timing", [False, True])
@@ -2228,23 +2229,23 @@ def test_simulate_standardized_initial_state_start(filtered_timing):
     # results and the model (unchanged). The model uses them also with a later
     # anchor. With the filtered timing they are not the predicted state of the
     # first period.
-    phi = np.array([0.5, 0.2])
+    phi = np.array([0.5, 0.2, -0.1])
     params = np.r_[phi, 0.5, 1.0]
     endog = np.random.default_rng(1913).standard_normal(12)
     mod = sarimax.SARIMAX(
         endog,
-        order=(2, 0, 0),
+        order=(3, 0, 0),
         measurement_error=True,
         timing_init_filtered=filtered_timing,
     )
-    init_mean = np.array([0.3, -0.2])
-    init_cov = np.array([[2.0, 0.3], [0.3, 1.0]])
+    init_mean = np.array([0.3, -0.2, 0.1])
+    init_cov = np.array([[2.0, 0.3, 0.1], [0.3, 1.0, -0.2], [0.1, -0.2, 0.5]])
     mod.ssm.initialize_known(init_mean, init_cov)
     res = mod.smooth(params)
     nsim = 3
     zero = np.zeros((nsim, 1))
-    z = np.array([0.8, -1.3])
-    desired = _ar2_zero_shock_path(
+    z = np.array([0.8, -1.3, 0.6])
+    desired = _ar_zero_shock_path(
         phi, init_mean + np.linalg.cholesky(init_cov) @ z, nsim
     )
     kwargs = {
