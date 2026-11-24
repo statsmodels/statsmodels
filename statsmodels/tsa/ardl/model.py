@@ -176,6 +176,21 @@ def _format_order(
             msg += " Extra keys: "
             msg += ", ".join(sorted([str(v) for v in extra])) + "."
             raise ValueError(msg)
+        if not isinstance(exog, pd.DataFrame):
+            # A float or bool key equal to a column index passes the check
+            # above, but cannot select the column
+            non_int = [
+                key
+                for key in order
+                if not isinstance(key, int) or isinstance(key, bool)
+            ]
+            if non_int:
+                raise TypeError(
+                    "order dictionary keys must be integer column indices when "
+                    "exog is not a DataFrame. Keys that are not integers: "
+                    + ", ".join(str(key) for key in non_int)
+                    + "."
+                )
         if missing:
             msg = (
                 "exog contains variables that are missing from the order "
