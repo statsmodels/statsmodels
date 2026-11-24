@@ -3469,3 +3469,35 @@ def test_summary_singular_warning_follows_robust_cov_type(
     summary = res.summary().as_text()
     singular = "Covariance matrix is singular or near-singular" in summary
     assert singular is (rank < 2)
+
+
+@pytest.mark.parametrize(
+    "cov_type, attribute",
+    [
+        ("oim", "cov_params_oim"),
+        ("approx", "cov_params_approx"),
+        ("robust", "cov_params_robust"),
+        ("robust_oim", "cov_params_robust_oim"),
+        ("robust_approx", "cov_params_robust_approx"),
+    ],
+)
+def test_cov_params_every_param_fixed(cov_type, attribute):
+    # With every parameter fixed, these covariance matrices raised "zero-size
+    # array to reduction operation maximum" from the pseudo-inverse of the
+    # empty matrix of the free parameters. As for "opg", the covariance matrix
+    # is NaN, and the summary does not warn that it is singular.
+    endog = np.random.default_rng(2077).standard_normal(50)
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0))
+    with mod.fix_params({"ar.L1": 0.5, "sigma2": 1.0}):
+        res = mod.fit(cov_type=cov_type, disp=False)
+        desired = mod.fit(cov_type="opg", disp=False)
+    assert_allclose(res.llf, desired.llf, rtol=1e-12)
+    assert res.cov_params().shape == (2, 2)
+    assert np.isnan(res.cov_params()).all()
+    assert np.isnan(desired.cov_params()).all()
+    assert np.isnan(res.bse).all()
+    summary = res.summary().as_text()
+    assert "Covariance matrix is singular or near-singular" not in summary
+    assert "(fixed)" in summary
+    # The same matrix as an attribute of results with another type
+    assert np.isnan(getattr(desired, attribute)).all()

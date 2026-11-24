@@ -101,6 +101,16 @@ def _check_index(desired_index, dta, title="data"):
             )
 
 
+def _pinv_rank(matrix):
+    # The pseudo-inverse of a matrix and its rank. The matrix of the free
+    # parameters is empty if every parameter is fixed (pinv_extended raises
+    # for it): its pseudo-inverse is empty and its rank 0.
+    if matrix.size == 0:
+        return np.zeros_like(matrix), 0
+    pinv, singular_values = pinv_extended(matrix)
+    return pinv, np.linalg.matrix_rank(np.diag(singular_values))
+
+
 class MLEModel(tsbase.TimeSeriesModel):
     r"""
     State space model for maximum likelihood estimation
@@ -3373,15 +3383,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if len(self.fixed_params) > 0:
             mask = np.ix_(self._free_params_index, self._free_params_index)
-            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            (tmp, rank) = _pinv_rank(evaluated_hessian[mask])
             neg_cov = np.zeros_like(evaluated_hessian) * np.nan
             neg_cov[mask] = tmp
         else:
-            (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+            (neg_cov, rank) = _pinv_rank(evaluated_hessian)
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+            self._rank = rank
         return -neg_cov
 
     @cache_readonly
@@ -3406,15 +3416,15 @@ class MLEResults(tsbase.TimeSeriesModelResults):
 
         if len(self.fixed_params) > 0:
             mask = np.ix_(self._free_params_index, self._free_params_index)
-            (tmp, singular_values) = pinv_extended(evaluated_hessian[mask])
+            (tmp, rank) = _pinv_rank(evaluated_hessian[mask])
             neg_cov = np.zeros_like(evaluated_hessian) * np.nan
             neg_cov[mask] = tmp
         else:
-            (neg_cov, singular_values) = pinv_extended(evaluated_hessian)
+            (neg_cov, rank) = _pinv_rank(evaluated_hessian)
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
         if self._rank is None:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+            self._rank = rank
         return -neg_cov
 
     @cache_readonly
@@ -3501,19 +3511,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             cov_opg = cov_opg[mask]
             evaluated_hessian = evaluated_hessian[mask]
 
-            tmp, singular_values = pinv_extended(
+            tmp, rank = _pinv_rank(
                 np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
             )
 
             cov_params[mask] = tmp
         else:
-            (cov_params, singular_values) = pinv_extended(
+            (cov_params, rank) = _pinv_rank(
                 np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
             )
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
         if set_rank:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+            self._rank = rank
         return cov_params
 
     @cache_readonly
@@ -3560,19 +3570,19 @@ class MLEResults(tsbase.TimeSeriesModelResults):
             cov_opg = cov_opg[mask]
             evaluated_hessian = evaluated_hessian[mask]
 
-            tmp, singular_values = pinv_extended(
+            tmp, rank = _pinv_rank(
                 np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
             )
 
             cov_params[mask] = tmp
         else:
-            (cov_params, singular_values) = pinv_extended(
+            (cov_params, rank) = _pinv_rank(
                 np.dot(np.dot(evaluated_hessian, cov_opg), evaluated_hessian)
             )
 
         self.model.update(self.params, transformed=True, includes_fixed=True)
         if set_rank:
-            self._rank = np.linalg.matrix_rank(np.diag(singular_values))
+            self._rank = rank
         return cov_params
 
     @cache_readonly
