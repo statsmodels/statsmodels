@@ -4529,7 +4529,7 @@ def test_glm_formula_two_column_numeric_endog():
     counts = np.column_stack([[3, 1, 4, 1, 5, 2], [2, 4, 1, 3, 1, 3]])
     x = np.arange(6.0)
     family = sm.families.Binomial()
-    res = GLM.from_formula("counts ~ x", {"x": x}, family=family).fit()
+    res = GLM.from_formula("counts ~ x", pd.DataFrame({"x": x}), family=family).fit()
     expected = GLM(counts, add_constant(x), family=family).fit()
     assert_allclose(res.params.values, expected.params, rtol=1e-10)
 

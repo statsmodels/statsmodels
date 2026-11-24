@@ -107,7 +107,10 @@ def test_skewt():
             9.544997361036416e-01,
         ]
     )
-    cdf_st = skewt.cdf(x, 1000000, 10)
+    with np.errstate(over="ignore"):
+        # The t pdf of scipy 1.8 overflows to a pdf of 0 for large |x| in the
+        # integration when df is large
+        cdf_st = skewt.cdf(x, 1000000, 10)
     np.allclose(cdf_st, cdf_r, rtol=0, atol=1e-6)
     np.allclose(cdf_st, cdf_r, rtol=1e-1, atol=0)
     # assert_(np.allclose(cdf_st, cdf_r, rtol=1e-13, atol=1e-15))
