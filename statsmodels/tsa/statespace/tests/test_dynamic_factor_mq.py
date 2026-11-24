@@ -3668,3 +3668,33 @@ def test_results_summary_options(case):
         assert "A title" in text
         assert re.search(r"Model:\s+A model name\s", text)
         assert "Dynamic Factor Results" not in text
+
+
+def test_filter_low_memory():
+    # filter(low_memory=True) conserves memory as MLEModel.filter does: the
+    # filter output is kept only for the last periods and the loglikelihood
+    # of each period is not stored, while the loglikelihood and the
+    # forecasts are those of the full filter
+    endog = _ar1_factor_data(nobs=12)
+    mod = dynamic_factor_mq.DynamicFactorMQ(endog, idiosyncratic_ar1=False)
+    params = mod.start_params
+    res = mod.filter(params, low_memory=True)
+    # MLEModel.filter
+    desired = super(dynamic_factor_mq.DynamicFactorMQ, mod).filter(
+        params, low_memory=True
+    )
+    res_full = mod.filter(params)
+
+    conserve_memory = res.filter_results.conserve_memory
+    assert_equal(conserve_memory, desired.filter_results.conserve_memory)
+    assert conserve_memory != res_full.filter_results.conserve_memory
+    assert res.filter_results.memory_no_filtered
+    assert res.filter_results.memory_no_likelihood
+    filtered_state = res.filter_results.filtered_state
+    assert_equal(filtered_state.shape, desired.filter_results.filtered_state.shape)
+    assert filtered_state.shape[1] < mod.nobs
+    assert_allclose(filtered_state, desired.filter_results.filtered_state)
+    assert res.llf_obs is None
+    assert_equal(res_full.filter_results.filtered_state.shape[1], mod.nobs)
+    assert_allclose(res.llf, res_full.llf)
+    assert_allclose(res.forecast(2), res_full.forecast(2))
