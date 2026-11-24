@@ -936,8 +936,10 @@ def test_filter_smoother_tvtp_fixed_params(use_pandas):
     res = mod.smooth(params)
 
     x = np.asarray(exog_tvtp)
-    stay0 = 1 / (1 + np.exp(-(x @ params[[0, 2]])))
-    move1 = 1 / (1 + np.exp(-(x @ params[[1, 3]])))
+    # The coefficients of p[0->0] are params[0] and params[2], those of
+    # p[1->0] params[1] and params[3]
+    stay0 = 1 / (1 + np.exp(-(x @ params[0:4:2])))
+    move1 = 1 / (1 + np.exp(-(x @ params[1:4:2])))
     transition = np.array([[stay0, move1], [1 - stay0, 1 - move1]])
     assert_allclose(mod.regime_transition_matrix(params), transition, rtol=1e-10)
 
