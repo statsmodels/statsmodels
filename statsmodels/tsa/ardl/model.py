@@ -1994,7 +1994,11 @@ class UECM(ARDL):
 
             Bool variables are differenced as 0 and 1. The differences were
             their absolute values, so a change from True to False was 1
-            instead of -1.
+            instead of -1. Integer variables are differenced as float. The
+            differences of unsigned integer variables, and of integer arrays
+            whose differences do not fit in their type (int8 values -100 and
+            100, for example), wrapped around, so that a change from 3 to 1
+            of a uint8 variable was 254 instead of -2.
     order : int or dict, optional
         If int, uses lags 0, 1, ..., order for all exog variables. If a
         dict, applies the lags series by series. If ``exog`` is anything
@@ -2265,18 +2269,21 @@ class UECM(ARDL):
         self._levels = np.column_stack(lvls)
 
         # 4. exog Lags
-        # np.diff and DataFrame.diff take the xor of bool values, so bool
+        # np.diff and DataFrame.diff take the xor of bool values and wrap
+        # around for unsigned integers (np.diff also when the difference of
+        # signed integers does not fit in their type), so bool and integer
         # variables are differenced as float
         if exog_pandas:
-            # Also the nullable "boolean" dtype, whose diff is not numeric
+            # Also the nullable "boolean" dtype, whose diff is not numeric,
+            # and the nullable integer dtypes
             bool_cols = [
                 c
                 for c, dt in orig_exog.dtypes.items()
-                if pd.api.types.is_bool_dtype(dt)
+                if pd.api.types.is_bool_dtype(dt) or pd.api.types.is_integer_dtype(dt)
             ]
             dexog = orig_exog.astype(dict.fromkeys(bool_cols, float)).diff()
         else:
-            if orig_exog.dtype == bool:
+            if orig_exog.dtype.kind in "biu":
                 orig_exog = orig_exog.astype(float)
             dexog = np.full(self.data.exog.shape, np.nan)
             dexog[1:] = np.diff(orig_exog, axis=0)

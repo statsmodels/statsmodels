@@ -2651,3 +2651,40 @@ def test_uecm_nullable_bool_exog(mixed):
     ols = OLS(dy[t], np.column_stack(reg)).fit()
     assert_allclose(res.params, ols.params, rtol=1e-8)
     assert_allclose(res.bse, ols.bse, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "kind", ["ndarray-uint8", "ndarray-int8", "frame-uint8", "frame-UInt8"]
+)
+def test_uecm_integer_exog(kind):
+    # np.diff and DataFrame.diff wrap around for unsigned integers (np.diff
+    # also when the difference of signed integers does not fit in their type),
+    # so a change from 3 to 1 of a uint8 exog was differenced as 254
+    rng = np.random.default_rng(20261125)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    if kind == "ndarray-int8":
+        # Differences of -200 and 200 do not fit in int8
+        x = np.where(rng.standard_normal((nobs, 2)) > 0, 100.0, -100.0)
+    else:
+        x = rng.integers(0, 5, size=(nobs, 2)).astype(float)
+    if kind == "ndarray-uint8":
+        exog = x.astype(np.uint8)
+    elif kind == "ndarray-int8":
+        exog = x.astype(np.int8)
+    elif kind == "frame-uint8":
+        exog = pd.DataFrame(x.astype(np.uint8), columns=["a", "b"])
+    else:
+        exog = pd.DataFrame(x, columns=["a", "b"]).astype("UInt8")
+    res = UECM(y, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, the levels x.L1 and the differences D.y.L1, D.x.L0
+    # and D.x.L1, with the differences of the float64 values
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.vstack([np.full((1, 2), np.nan), np.diff(x, axis=0)])
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1], dy[t - 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1], dx[t - 1, 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
