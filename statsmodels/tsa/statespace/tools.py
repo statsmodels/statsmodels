@@ -2274,6 +2274,13 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
     performance boost if they are sure that the attributes have not changed;
     see the `resmooth` argument.
 
+    .. versionchanged:: 0.15.1
+
+       The weights of copied (pickled or deep-copied) results are right
+       without ``resmooth=True``. The copied Kalman smoother held the smoothed
+       state autocovariance in place of the matrices :math:`L_t`, so the
+       weights were wrong unless the model was smoothed again.
+
     References
     ----------
     .. [1] Durbin, James, and Siem Jan Koopman. 2012.
