@@ -1,0 +1,8 @@
+- ``ssm.simulator(nsimulations)`` and ``ssm.simulate(nsimulations)``
+  of a state space model with missing data read past the end of the
+  observations when ``nsimulations`` was larger than the number of
+  observations (allowed for a time-invariant model), which could crash
+  the interpreter. With fewer simulations than observations, a
+  time-varying model raised "Invalid time-varying dimension"; the
+  simulation uses the first ``nsimulations`` periods of the system
+  matrices. :pr:`11138`
