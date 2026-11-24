@@ -414,20 +414,25 @@ cdef int {{prefix}}smoothed_estimators_time_univariate_diffuse({{prefix}}KalmanS
         blas_int kf_k_states = kfilter.k_states
         blas_int kf_k_states2 = kfilter.k_states2
         blas_int m_k_states = model._k_states
+        {{cython_type}} * _transition
 
     if smoother.t == 0:
         return 1
 
-    # TODO check that this is the right transition matrix to use in the case
-    # of time-varying matrices
+    # The time step uses T_{t-1}: r_{t-1,p} = T_{t-1}' r_{t,0} and
+    # N_{t-1,p} = T_{t-1}' N_{t,0} T_{t-1} (also for the diffuse terms)
+    if model.transition.shape[2] > 1:
+        _transition = &model.transition[0, 0, smoother.t-1]
+    else:
+        _transition = &model.transition[0, 0, 0]
     # rt1[:] = np.dot(T1.T, rt)
     blas.{{prefix}}gemv("T", &m_k_states, &m_k_states,
-                             &alpha, model._transition, &m_k_states,
+                             &alpha, _transition, &m_k_states,
                                      smoother._scaled_smoothed_estimator, &inc,
                              &beta, &smoother.scaled_smoothed_estimator[0, smoother.t-1], &inc)
     # rt1_inf[:] = np.dot(T1.T, rt_inf)
     blas.{{prefix}}gemv("T", &m_k_states, &m_k_states,
-                             &alpha, model._transition, &m_k_states,
+                             &alpha, _transition, &m_k_states,
                                      smoother._scaled_smoothed_diffuse_estimator, &inc,
                              &beta, &smoother.scaled_smoothed_diffuse_estimator[0, smoother.t-1], &inc)
 
@@ -435,34 +440,34 @@ cdef int {{prefix}}smoothed_estimators_time_univariate_diffuse({{prefix}}KalmanS
     blas.{{prefix}}copy(&kf_k_states2, smoother._scaled_smoothed_estimator_cov, &inc,
                                              &smoother.scaled_smoothed_estimator_cov[0, 0, smoother.t-1], &inc)
     blas.{{prefix}}gemm("T", "N", &m_k_states, &m_k_states, &m_k_states,
-                                  &alpha, model._transition, &m_k_states,
+                                  &alpha, _transition, &m_k_states,
                                           smoother._scaled_smoothed_estimator_cov, &kf_k_states,
                                   &beta, smoother._tmp0, &kf_k_states)
     blas.{{prefix}}gemm("N", "N", &m_k_states, &m_k_states, &m_k_states,
                                   &alpha, smoother._tmp0, &kf_k_states,
-                                          model._transition, &m_k_states,
+                                          _transition, &m_k_states,
                                   &beta, &smoother.scaled_smoothed_estimator_cov[0, 0, smoother.t-1], &kf_k_states)
     # Nt1_inf1 = np.dot(np.dot(T1.T, Nt1_inf1), T1)
     blas.{{prefix}}copy(&kf_k_states2, smoother._scaled_smoothed_diffuse1_estimator_cov, &inc,
                                              &smoother.scaled_smoothed_diffuse1_estimator_cov[0, 0, smoother.t-1], &inc)
     blas.{{prefix}}gemm("T", "N", &m_k_states, &m_k_states, &m_k_states,
-                                  &alpha, model._transition, &m_k_states,
+                                  &alpha, _transition, &m_k_states,
                                           smoother._scaled_smoothed_diffuse1_estimator_cov, &kf_k_states,
                                   &beta, smoother._tmp0, &kf_k_states)
     blas.{{prefix}}gemm("N", "N", &m_k_states, &m_k_states, &m_k_states,
                                   &alpha, smoother._tmp0, &kf_k_states,
-                                          model._transition, &m_k_states,
+                                          _transition, &m_k_states,
                                   &beta, &smoother.scaled_smoothed_diffuse1_estimator_cov[0, 0, smoother.t-1], &kf_k_states)
     # Nt1_inf2 = np.dot(np.dot(T1.T, Nt1_inf2), T1)
     blas.{{prefix}}copy(&kf_k_states2, smoother._scaled_smoothed_diffuse2_estimator_cov, &inc,
                                              &smoother.scaled_smoothed_diffuse2_estimator_cov[0, 0, smoother.t-1], &inc)
     blas.{{prefix}}gemm("T", "N", &m_k_states, &m_k_states, &m_k_states,
-                                  &alpha, model._transition, &m_k_states,
+                                  &alpha, _transition, &m_k_states,
                                           smoother._scaled_smoothed_diffuse2_estimator_cov, &kf_k_states,
                                   &beta, smoother._tmp0, &kf_k_states)
     blas.{{prefix}}gemm("N", "N", &m_k_states, &m_k_states, &m_k_states,
                                   &alpha, smoother._tmp0, &kf_k_states,
-                                          model._transition, &m_k_states,
+                                          _transition, &m_k_states,
                                   &beta, &smoother.scaled_smoothed_diffuse2_estimator_cov[0, 0, smoother.t-1], &kf_k_states)
 
 cdef int {{prefix}}smoothed_state_univariate_diffuse({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):

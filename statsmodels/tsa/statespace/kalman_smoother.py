@@ -417,6 +417,17 @@ class KalmanSmoother(KalmanFilter):
         Returns
         -------
         SmootherResults object
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           With an exact diffuse initialization and a time-varying transition
+           matrix, the backward recursion in the diffuse periods uses the
+           transition matrix of the previous period, :math:`T_{t-1}`, as it
+           does in the other periods. It used :math:`T_t`, so the smoothed
+           state, its covariance matrix and the smoothed disturbances were
+           wrong in every diffuse period but the last.
         """
 
         # Run the filter

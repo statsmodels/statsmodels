@@ -1199,3 +1199,108 @@ def test_smoothed_state_autocov_diffuse_periods(case):
         ]
     ).transpose(1, 2, 0)
     assert_allclose(res.smoothed_state_cov, smoothed_state_cov, rtol=1e-8, atol=atol)
+
+
+def _exact_diffuse_posterior_mean(mod, diffuse):
+    # Posterior means of the states and of the state disturbances, with the
+    # states written as linear functions of theta = (alpha_1, eta_1, ...,
+    # eta_{n-1}) as in _exact_diffuse_posterior_cov: the states in `diffuse`
+    # have prior precision zero, the others the known initial mean and
+    # covariance matrix (no state or observation intercepts)
+    ssm = mod.ssm
+    nobs, k_states, k_posdef = mod.nobs, mod.k_states, ssm.k_posdef
+
+    def matrix(name, t):
+        value = getattr(ssm, name)
+        return value[..., t if value.shape[-1] > 1 else 0]
+
+    n_theta = k_states + (nobs - 1) * k_posdef
+    states = np.zeros((nobs, k_states, n_theta))
+    states[0, :, :k_states] = np.eye(k_states)
+    for t in range(nobs - 1):
+        start = k_states + t * k_posdef
+        states[t + 1] = matrix("transition", t) @ states[t]
+        states[t + 1, :, start : start + k_posdef] += matrix("selection", t)
+    precision = np.zeros((n_theta, n_theta))
+    known = [i for i in range(k_states) if i not in diffuse]
+    init_mean, _, init_cov = ssm.initialization(model=ssm)
+    prior_precision = np.linalg.inv(init_cov[np.ix_(known, known)])
+    precision[np.ix_(known, known)] = prior_precision
+    score = np.zeros(n_theta)
+    score[known] = prior_precision @ init_mean[known]
+    for t in range(nobs - 1):
+        start = k_states + t * k_posdef
+        block = slice(start, start + k_posdef)
+        precision[block, block] = np.linalg.inv(matrix("state_cov", t))
+    for t in range(nobs):
+        observed = ~np.isnan(mod.endog[t])
+        design = matrix("design", t)[observed] @ states[t]
+        obs_cov = matrix("obs_cov", t)[np.ix_(observed, observed)]
+        precision += design.T @ np.linalg.solve(obs_cov, design)
+        score += design.T @ np.linalg.solve(obs_cov, mod.endog[t, observed])
+    theta = np.linalg.solve(precision, score)
+    smoothed_state = (states @ theta).T
+    smoothed_state_disturbance = theta[k_states:].reshape(nobs - 1, k_posdef).T
+    return smoothed_state, smoothed_state_disturbance
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "diffuse",
+        "partly-diffuse",
+        "missing",
+        "time-varying",
+        "bivariate",
+        "factor-lags",
+    ],
+)
+def test_smoothed_state_diffuse_time_varying_transition(case):
+    # The time step of the exact diffuse smoother, r_{t-1} = T_{t-1}' r_t
+    # (and likewise for N_t and the diffuse terms), used T_t instead of
+    # T_{t-1}, so with a time-varying transition matrix the smoothed state,
+    # its covariance matrix and the smoothed disturbances were wrong in every
+    # diffuse period but the last. They equal the posterior moments under
+    # the exact diffuse prior.
+    mod, diffuse = _diffuse_autocov_model(case)
+    nobs = mod.nobs
+    transition = np.repeat(np.asarray(mod["transition"])[..., None], nobs, axis=2)
+    if case == "factor-lags":
+        transition[0, 0] = np.linspace(0.2, 0.8, nobs)
+    else:
+        transition[0, 1] = np.linspace(0.5, 1.5, nobs)
+        transition[2, 2] = np.linspace(0.3, 0.9, nobs)
+    mod["transition"] = transition
+    res = mod.ssm.smooth()
+    assert res.nobs_diffuse > 1
+
+    k = mod.k_states
+    posterior_cov = _exact_diffuse_posterior_cov(mod, diffuse)
+    smoothed_state_cov = np.array(
+        [
+            posterior_cov[t * k : (t + 1) * k, t * k : (t + 1) * k]
+            for t in range(nobs)
+        ]
+    ).transpose(1, 2, 0)
+    autocov = np.array(
+        [
+            posterior_cov[(t + 1) * k : (t + 2) * k, t * k : (t + 1) * k]
+            for t in range(nobs - 1)
+        ]
+    ).transpose(1, 2, 0)
+    smoothed_state, smoothed_state_disturbance = _exact_diffuse_posterior_mean(
+        mod, diffuse
+    )
+    # atol: some elements are zero in theory or several orders of magnitude
+    # smaller than the largest, and carry its rounding error (about 1e-12)
+    atol = 1e-10 * np.abs(smoothed_state_cov).max()
+    assert_allclose(res.smoothed_state_cov, smoothed_state_cov, rtol=1e-8, atol=atol)
+    assert_allclose(res.smoothed_state_autocov[..., :-1], autocov, rtol=1e-8, atol=atol)
+    atol = 1e-10 * np.abs(smoothed_state).max()
+    assert_allclose(res.smoothed_state, smoothed_state, rtol=1e-8, atol=atol)
+    assert_allclose(
+        res.smoothed_state_disturbance[:, :-1],
+        smoothed_state_disturbance,
+        rtol=1e-8,
+        atol=atol,
+    )
