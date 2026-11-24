@@ -2887,7 +2887,9 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
         matrix and variance components.  The first `k_re * (k_re + 1) / 2`
         parameters are the standard errors for the lower triangle of
         `cov_re`, the remaining elements are the standard errors for
-        the variance components.
+        the variance components.  They are in the units of `cov_re` and
+        `vcomp`, not of the variance parameters in `params`, and include
+        the uncertainty of `scale`.
 
     See Also
     --------
@@ -2963,9 +2965,7 @@ class MixedLMResults(base.LikelihoodModelResults, base.ResultMixin):
            The standard errors were off by about a factor of the square
            root of `scale` and did not include the uncertainty of `scale`.
         """
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)
-            return np.sqrt(np.diag(self._cov_vparams))
+        return np.sqrt(np.diag(self._cov_vparams))
 
     def _expand_re_names(self, group_ix):
         names = list(self.model.data.exog_re_names)

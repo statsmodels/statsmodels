@@ -410,7 +410,14 @@ def pandas_to_series_spec(x):
     except (AttributeError, ValueError):
         from statsmodels.compat.pandas import infer_freq
 
-        period = _freq_to_period[infer_freq(x.index)]
+        freq = infer_freq(x.index)
+        if freq is None:
+            raise ValueError(
+                "The frequency of the index of endog could not be inferred. Use "
+                "an index with a monthly or quarterly frequency, such as a "
+                "PeriodIndex, or pass the values with start and freq."
+            ) from None
+        period = _freq_to_period[freq]
     start_date = x.index[0]
     if isinstance(start_date, dt.date):
         # datetime.date and datetime.datetime in an object index have no quarter

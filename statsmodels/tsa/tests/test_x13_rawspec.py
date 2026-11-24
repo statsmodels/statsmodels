@@ -546,3 +546,49 @@ def test_spec_endog_name(no_x12, make_endog, name):
     }}
     """
     assert spec[: spec.index("}") + 1].split() == expected.split()
+
+
+@pytest.mark.parametrize(
+    "dates",
+    [
+        # month starts without June 2000
+        pd.date_range("2000-01-01", periods=25, freq="MS").delete(5),
+        # the 15th of each month
+        [pd.Timestamp(2000 + i // 12, i % 12 + 1, 15) for i in range(24)],
+        # quarter starts without the third quarter of 2001
+        pd.date_range("2000-01-01", periods=25, freq="QS").delete(6),
+    ],
+    ids=["month_missing", "mid_month", "quarter_missing"],
+)
+@pytest.mark.parametrize("func", [x13.x13_arima_analysis, x13.x13_arima_select_order])
+def test_datetime_index_without_freq(no_x12, func, dates):
+    # pandas cannot infer a frequency from these dates, so neither the period
+    # nor the start of the series is known
+    index = pd.DatetimeIndex(dates)
+    assert index.freq is None
+    endog = pd.Series(range(len(index)), index=index, dtype=float, name="y")
+
+    with pytest.raises(ValueError, match="frequency of the index of endog could not"):
+        func(endog)
+
+
+MONTH_STARTS = [pd.Timestamp(2000 + i // 12, i % 12 + 1, 1) for i in range(24)]
+QUARTER_ENDS = [pd.Timestamp(1959, 7, 1) + pd.offsets.QuarterEnd(i) for i in range(1, 9)]
+
+
+@pytest.mark.parametrize(
+    "dates, period, start",
+    [(MONTH_STARTS, 12, "2000.1"), (QUARTER_ENDS, 4, "1959.3")],
+    ids=["month_starts", "quarter_ends"],
+)
+def test_datetime_index_frequency_inferred(no_x12, dates, period, start):
+    # Without a freq of its own, the period of the index is inferred from the
+    # dates, and the start is the year and month or quarter of the first date
+    index = pd.DatetimeIndex(dates)
+    assert index.freq is None
+    endog = pd.Series(range(len(index)), index=index, dtype=float, name="y")
+
+    spec = x13.x13_arima_analysis(endog, speconly=True)
+
+    assert f"period={period}" in spec.split()
+    assert f"start={start}" in spec.split()

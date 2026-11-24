@@ -1,0 +1,4 @@
+- :class:`~statsmodels.tsa.ardl.UECM` raised a ``TypeError`` for a
+  DataFrame exog with a column of the pandas nullable ``"boolean"``
+  dtype. Such columns are differenced as 0 and 1, like numpy bool
+  columns. :pr:`11145`

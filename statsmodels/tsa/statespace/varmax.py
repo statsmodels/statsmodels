@@ -1061,7 +1061,7 @@ class VARMAXResults(MLEResults):
     @Appender(MLEResults.get_prediction.__doc__)
     def get_prediction(self, start=None, end=None, dynamic=False,
                        information_set="predicted", index=None, exog=None,
-                       **kwargs):
+                       extend_kwargs=None, **kwargs):
         if start is None:
             start = 0
 
@@ -1072,13 +1072,8 @@ class VARMAXResults(MLEResults):
         # Normalize `exog`
         exog = self.model._validate_out_of_sample_exog(exog, out_of_sample)
 
-        # Handle trend offset for extended model
-        extend_kwargs = {}
-        if self.model.k_trend > 0:
-            extend_kwargs["trend_offset"] = (
-                self.model.trend_offset + self.nobs)
-
-        # Get the prediction
+        # Get the prediction (the trend offset of the extended model defaults
+        # to the period after the sample, unless `extend_kwargs` sets it)
         with (
             self._set_final_exog(exog),
             self._set_final_predicted_state(exog, out_of_sample),

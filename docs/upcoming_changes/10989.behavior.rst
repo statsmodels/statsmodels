@@ -1,0 +1,3 @@
+- ``err_band_sz3`` of ``IRAnalysis`` ignored ``component``, used the largest
+  eigenvalue instead and overwrote the caller's array. Bands with a
+  given ``component`` change. :pr:`10989`

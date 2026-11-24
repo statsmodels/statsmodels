@@ -105,6 +105,13 @@ def is_stable(coefs, verbose=False):
     Returns
     -------
     is_stable : bool
+        True if all eigenvalues of the VAR(1) representation are inside the
+        unit circle.
+
+        .. versionchanged:: 0.15.1
+
+           An eigenvalue on the unit circle (a unit root) makes the process
+           not stable. It counted as stable.
     """
     A_var1 = util.comp_matrix(coefs)
     eigs = np.linalg.eigvals(A_var1)
@@ -114,7 +121,7 @@ def is_stable(coefs, verbose=False):
         for val in np.abs(eigs):
             print(val)
 
-    return (np.abs(eigs) <= 1).all()
+    return (np.abs(eigs) < 1).all()
 
 
 def var_acf(coefs, sig_u, nlags=None):
@@ -2365,6 +2372,12 @@ class VARResults(VARProcess):
             variables are Granger-causing the variable(s) specified by
             `caused`.
             If None, `causing` is assumed to be the complement of `caused`.
+
+            .. versionchanged:: 0.15.1
+
+               With None, the results name the complement of `caused` as
+               `causing`; they named `caused`. Unless `caused` held half of
+               the variables, the test raised an error.
         kind : {'f', 'wald'}, optional
             Perform F-test or Wald (chi-sq) test
         signif : float, optional
@@ -2421,7 +2434,7 @@ class VARResults(VARProcess):
             causing_ind = [util.get_index(self.names, c) for c in causing]
         else:
             causing_ind = [i for i in range(self.neqs) if i not in caused_ind]
-            causing = [self.names[c] for c in caused_ind]
+            causing = [self.names[c] for c in causing_ind]
 
         k, p = self.neqs, self.k_ar
         if p == 0:
