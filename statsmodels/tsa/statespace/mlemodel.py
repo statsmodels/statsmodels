@@ -1790,14 +1790,12 @@ class MLEModel(tsbase.TimeSeriesModel):
             # differentiable. So the score with respect to the untransformed
             # parameters u is s(T(u)) J by the chain rule, where J is the
             # Jacobian of the transformation T
-            def constrain(unconstrained):
-                return self.handle_params(
-                    unconstrained, transformed=False, includes_fixed=True
-                )
-
-            jacobian = approx_fprime(params, constrain, centered=True)
+            constrain_kwargs = {"transformed": False, "includes_fixed": True}
+            jacobian = approx_fprime(
+                params, self.handle_params, kwargs=constrain_kwargs, centered=True
+            )
             score = self.score_obs(
-                constrain(params),
+                self.handle_params(params, **constrain_kwargs),
                 method=method,
                 transformed=True,
                 includes_fixed=True,

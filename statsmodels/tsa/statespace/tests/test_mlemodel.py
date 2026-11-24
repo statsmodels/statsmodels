@@ -2061,7 +2061,8 @@ def test_score_obs_untransformed_finite_difference(approx_centered):
     uparams = mod.untransform_params(mod.start_params) + 0.1
     desired = approx_fprime(
         uparams,
-        lambda params: mod.loglikeobs(params, transformed=False),
+        mod.loglikeobs,
+        kwargs={"transformed": False},
         centered=approx_centered,
     )
     actual = mod.score_obs(
