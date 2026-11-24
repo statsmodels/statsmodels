@@ -743,7 +743,29 @@ def combine_effects(
 
     # random effects computation
 
-    q = (weights_fe * (eff - mean_effect_fe) ** 2).sum(axis=0)
+    # Form deviations before the weighted mean can round away small
+    # differences at a large common offset. Leave reported effect means alone.
+    eff_values = np.asarray(eff)
+    weight_values = np.asarray(weights_fe)
+    if (
+        eff_values.ndim == 1
+        and eff_values.size
+        and eff_values.dtype.kind == "f"
+        and np.isfinite(eff_values).all()
+        and np.isfinite(w_total_fe)
+        and np.isfinite(weight_values).all()
+        and (weight_values > 0).all()
+    ):
+        lo, hi = eff_values.min(), eff_values.max()
+        # For opposite signs, the midpoint keeps the first subtraction
+        # from overflowing. The sum is safe here because the signs differ.
+        anchor = (lo + hi) / 2 if lo < 0 < hi else eff_values[0]
+        centered = eff - anchor
+        centered_mean = (weights_rel_fe * centered).sum()
+        residual = centered - centered_mean
+    else:
+        residual = eff - mean_effect_fe
+    q = (weights_fe * residual**2).sum(axis=0)
     df = k - 1
     method = string_like(
         method_re, "method_re", options=("iterated", "pm", "chi2", "dl"), lower=True
