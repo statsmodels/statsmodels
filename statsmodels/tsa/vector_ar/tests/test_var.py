@@ -2043,3 +2043,34 @@ def test_forecast_cov_auto_warning_text():
     res = VAR(y).fit(2)
     with pytest.warns(OutputWarning, match="parameter uncertainty into account$"):
         res.forecast_cov(2, method="auto")
+
+
+@pytest.mark.parametrize("k_exog", [0, 1])
+@pytest.mark.parametrize("trend", ["c", "ct"])
+def test_var_missing_drop(k_exog, trend):
+    # missing="drop" gives the VAR of the data without the dropped rows
+    data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    exog = None
+    if k_exog:
+        exog = np.random.default_rng(15).standard_normal((y.shape[0], k_exog))
+    y_nan = y.copy()
+    y_nan[5, 1] = np.nan
+    y_nan[40, 0] = np.nan
+    keep = np.ones(y.shape[0], dtype=bool)
+    keep[[5, 40]] = False
+    mod = VAR(y_nan, exog=exog, missing="drop")
+    res = mod.fit(2, trend=trend)
+    expected = VAR(y[keep], exog=None if exog is None else exog[keep]).fit(
+        2, trend=trend
+    )
+    assert mod.n_totobs == y.shape[0] - 2
+    assert mod.nobs == res.nobs == y.shape[0] - 2 - 2
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+    assert_allclose(res.sigma_u, expected.sigma_u, rtol=1e-12)
+    sel = mod.select_order(4, trend=trend)
+    sel_expected = VAR(y[keep], exog=None if exog is None else exog[keep]).select_order(
+        4, trend=trend
+    )
+    for key in ("aic", "bic", "hqic", "fpe"):
+        assert_allclose(sel.ics[key], sel_expected.ics[key], rtol=1e-10)
