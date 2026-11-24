@@ -957,17 +957,105 @@ def test_range_non_unit_step(index, first, last):
     np.testing.assert_allclose(terms["trend"], trend, rtol=1e-15)
 
 
-def test_range_int_index_non_unit_step():
-    # An integer Index with a step other than 1 cannot be extended, so range
-    # raises instead of using the step. int64, as the RangeIndex below, since
-    # np.arange gives int32 where the default integer has 32 bits (Pyodide).
-    index = pd.Index(np.arange(0, 20, 2, dtype=np.int64))
-    kwargs = {"constant": True, "order": 1}
-    dp = DeterministicProcess(index, **kwargs)
-    expected = DeterministicProcess(pd.RangeIndex(0, 20, 2), **kwargs)
+# Integer indexes with a constant step. int64, as a RangeIndex, since np.arange
+# gives int32 where the default integer has 32 bits (Pyodide).
+INT_INDEXES = {
+    "step-2": np.arange(0, 20, 2, dtype=np.int64),
+    "step-3-from-1": np.arange(1, 31, 3, dtype=np.int64),
+    "step-1-from-5": np.arange(5, 15, dtype=np.int64),
+    "step-1": np.arange(0, 10, dtype=np.int64),
+}
+
+
+def _equal_range_index(values):
+    step = int(values[1] - values[0])
+    return pd.RangeIndex(values[0], values[-1] + step, step), step
+
+
+@pytest.mark.parametrize("values", list(INT_INDEXES.values()), ids=list(INT_INDEXES))
+@pytest.mark.parametrize(
+    "first, last",
+    [(2, 5), (10, 13), (11, 13), (8, 12)],
+    ids=["in-sample", "next-out-of-sample", "later-out-of-sample", "both"],
+)
+def test_range_int_index_constant_step(values, first, last):
+    # An integer Index with a constant step is extended like the RangeIndex
+    # with the same values. Only one that starts at 0 with step 1 could be
+    # extended, and range raised a TypeError for the others.
+    range_index, step = _equal_range_index(values)
+    start = int(values[0]) + first * step
+    stop = int(values[0]) + last * step
+    kwargs = {"constant": True, "order": 1, "seasonal": True, "period": 3}
+    dp = DeterministicProcess(pd.Index(values), **kwargs)
+    expected = DeterministicProcess(range_index, **kwargs)
     pd.testing.assert_frame_equal(dp.in_sample(), expected.in_sample())
+    terms = dp.range(start, stop)
+    expected_terms = expected.range(start, stop)
+    pd.testing.assert_frame_equal(terms, expected_terms, check_index_type=False)
+    np.testing.assert_array_equal(terms.index, np.arange(start, stop + 1, step))
+    trend = np.arange(first + 1.0, last + 2.0)
+    np.testing.assert_allclose(terms["trend"], trend, rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "values",
+    list(INT_INDEXES.values()) + [np.arange(20, 0, -2, dtype=np.int64)],
+    ids=list(INT_INDEXES) + ["step-minus-2"],
+)
+@pytest.mark.parametrize(
+    "term", [TimeTrend(True, 2), Seasonality(3), Fourier(3, 1)], ids=str
+)
+def test_term_out_of_sample_int_index_constant_step(term, values):
+    # The labels of the forecasts continue the values with their step, as the
+    # RangeIndex with the same values. The forecasts used to have labels
+    # counted from the number of observations, with a warning, unless the
+    # step was 1.
+    range_index, step = _equal_range_index(values)
+    with pytest_warns(None):
+        fcast = term.out_of_sample(5, pd.Index(values))
+    expected = term.out_of_sample(5, range_index)
+    pd.testing.assert_frame_equal(fcast, expected, check_index_type=False)
+    np.testing.assert_array_equal(fcast.index, values[-1] + step * np.arange(1, 6))
+    # An integer Index, as before for step 1, and not a RangeIndex (an
+    # Int64Index, a subclass of Index, on pandas < 2)
+    assert isinstance(fcast.index, pd.Index)
+    assert not isinstance(fcast.index, pd.RangeIndex)
+    assert fcast.index.dtype == np.int64
+    dp = DeterministicProcess(pd.Index(values), additional_terms=[term])
+    expected = DeterministicProcess(range_index, additional_terms=[term])
+    pd.testing.assert_frame_equal(
+        dp.out_of_sample(5), expected.out_of_sample(5), check_index_type=False
+    )
+
+
+def test_int_index_one_value():
+    # One value has step 1, as the RangeIndex with the same value
+    index = pd.Index(np.array([5], dtype=np.int64))
+    fcast = TimeTrend(True, 1).out_of_sample(3, index)
+    np.testing.assert_array_equal(fcast.index, [6, 7, 8])
+    np.testing.assert_allclose(fcast["trend"], [2.0, 3.0, 4.0], rtol=1e-15)
+    dp = DeterministicProcess(index, constant=True, order=1)
+    expected = DeterministicProcess(pd.RangeIndex(5, 6), constant=True, order=1)
+    pd.testing.assert_frame_equal(
+        dp.range(5, 7), expected.range(5, 7), check_index_type=False
+    )
+
+
+@pytest.mark.parametrize(
+    "values",
+    [[0, 1, 3, 4], [0, 2, 4, 5], [3, 3, 3, 3]],
+    ids=["gap", "step-change", "step-0"],
+)
+def test_int_index_irregular_not_extended(values):
+    # An integer Index without a constant step still cannot be extended
+    index = pd.Index(np.array(values, dtype=np.int64))
+    dp = DeterministicProcess(index, constant=True, order=1)
+    np.testing.assert_allclose(dp.in_sample()["trend"], np.arange(1.0, 5.0))
     with pytest.raises(TypeError, match="does not support extension"):
-        dp.range(4, 10)
+        dp.range(0, 6)
+    with pytest.warns(UserWarning, match="integer Indexes with a constant step"):
+        fcast = TimeTrend(True, 1).out_of_sample(2, index)
+    pd.testing.assert_index_equal(fcast.index, pd.RangeIndex(5, 7))
 
 
 def test_additional_terms(time_index):

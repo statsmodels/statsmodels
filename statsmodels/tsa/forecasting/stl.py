@@ -387,6 +387,9 @@ class STLForecastResults:
 
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = get_index_loc(dynamic, self._index)
+            # A key that covers several dates gives a slice of locations
+            if isinstance(dynamic, slice):
+                dynamic = dynamic.start
             dynamic = dynamic - start
         elif dynamic is True:
             dynamic = 0
