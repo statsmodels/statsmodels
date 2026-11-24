@@ -1,0 +1,8 @@
+- ``extend`` of the results of state space models with the filtered
+  timing convention (``timing_init_filtered=True``) was one period
+  late: the new model treated the predicted state of the first new
+  period as the filtered state of the period before, so the fitted
+  values, log-likelihood and states of the extension were wrong. The
+  new model uses the predicted timing convention, and the extension
+  equals the last periods of the model of the whole sample.
+  :pr:`11162`
