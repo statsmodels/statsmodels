@@ -1,0 +1,9 @@
+- :meth:`~statsmodels.tsa.ardl.ARDL.predict`, and so ``predict``,
+  ``forecast``, ``get_prediction`` and ``plot_predict`` of
+  :class:`~statsmodels.tsa.ardl.ARDLResults`, used the columns of a
+  replacement ``exog`` or ``exog_oos`` DataFrame by position,
+  although they must have the names of the columns of the exog
+  DataFrame used to create the model. A DataFrame with the columns
+  in another order gave wrong predictions and forecasts. The
+  columns are selected by name, so that such predictions change.
+  :pr:`11181`

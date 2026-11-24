@@ -1,0 +1,7 @@
+- The default ``model_df`` of
+  :meth:`~statsmodels.tsa.ar_model.AutoRegResults.test_serial_correlation`
+  (also of ARDL and UECM results) will change from the number of estimated
+  parameters to the number of autoregressive lags, the usual Ljung-Box
+  correction, after statsmodels 0.17 is released. Leaving it unset issues a
+  ``FutureWarning``; pass ``model_df="ar"`` to use the future default now or
+  ``model_df="regressors"`` to keep the current one. :pr:`10905`
