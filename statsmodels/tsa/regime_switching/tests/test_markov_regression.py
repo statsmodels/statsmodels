@@ -4313,19 +4313,33 @@ def test_untransform_params_round_trip_transition(k_regimes, tiny):
 @pytest.mark.parametrize("k_regimes", [2, 3])
 def test_untransform_params_zero_transition(k_regimes):
     mod, k_trans = transition_model(k_regimes)
+    # Zero probabilities are replaced by the smallest positive normal float
+    log_tiny = np.log(2.2250738585072014e-308)
     if k_regimes == 2:
         # p[0->0] = 0, and p[1->0] = 1 so that p[1->1] = 0
         probs = np.r_[0.0, 1.0]
         desired = probs
+        # log(p[i->0]) - log(p[i->1])
+        desired_unconstrained = np.r_[log_tiny, -log_tiny]
     else:
         # Out of regime 0: p[0->0] = 0; out of regime 1: p[1->2] = 0;
         # out of regime 2: the sum exceeds one by 1e-9 (rounding is accepted)
         probs = np.r_[0.0, 0.3, 0.5, 0.4, 0.7, 0.5 + 1e-9]
         desired = probs.copy()
         desired[[2, 5]] /= 1 + 1e-9
+        # log(p[i->j]) - log(p[i->2]), in the order p[0->0], p[1->0], p[2->0],
+        # p[0->1], p[1->1], p[2->1]
+        desired_unconstrained = np.r_[
+            log_tiny - np.log(0.6),
+            np.log(0.3) - log_tiny,
+            np.log(0.5) - log_tiny,
+            np.log(0.4) - np.log(0.6),
+            np.log(0.7) - log_tiny,
+            np.log(0.5 + 1e-9) - log_tiny,
+        ]
     constrained = np.r_[probs, np.arange(k_regimes, dtype=float), 1.0]
     unconstrained = mod.untransform_params(constrained)
-    assert np.all(np.isfinite(unconstrained))
+    assert_allclose(unconstrained[:k_trans], desired_unconstrained, rtol=1e-12)
     # A zero probability comes back as about 2.2e-308 (the smallest positive
     # normal float), hence the atol. Unconstrained values near 708 are
     # accurate to about 1e-13, hence the rtol.
