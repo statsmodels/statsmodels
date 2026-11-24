@@ -8,6 +8,7 @@ from statsmodels.compat.platform import PLATFORM_32, PLATFORM_LINUX32
 from itertools import product
 import json
 import pathlib
+import pickle
 import re
 
 import numpy as np
@@ -393,7 +394,7 @@ def fit_austourists_with_R_params(model, results_R, set_state=False):
     """
     params = get_params_from_R(results_R)
     with model.fix_params(dict(zip(model.param_names, params, strict=True))):
-        fit = model.fit(disp=False)
+        fit = model.fit(disp=False, param_index="integer")
 
     if set_state:
         states_R = get_states_from_R(results_R, model._k_states)
@@ -427,7 +428,7 @@ def get_states_from_R(results_R, k_states):
 def test_fit_model_austouritsts(setup_model):
     model_class, model_args, model_kwargs, params, results_R = setup_model
     model = model_class(*model_args, **model_kwargs)
-    model.fit(disp=False)
+    model.fit(disp=False, param_index="integer")
 
 
 #
@@ -507,7 +508,7 @@ def test_fit_vs_R(setup_model):
         start = params
     else:
         start = None
-    fit = model.fit(disp=True, pgtol=1e-8, start_params=start)
+    fit = model.fit(disp=True, pgtol=1e-8, start_params=start, param_index="integer")
 
     # check log likelihood: we want to have a fit that is better, i.e., a fit
     # that has a **higher** log-likelihood
@@ -592,8 +593,8 @@ def test_initialization_heuristic(oildata):
         damped_trend=True,
         initialization_method="heuristic",
     )
-    fit_estimated = model_estimated.fit(disp=False)
-    fit_heuristic = model_heuristic.fit(disp=False)
+    fit_estimated = model_estimated.fit(disp=False, param_index="integer")
+    fit_heuristic = model_heuristic.fit(disp=False, param_index="integer")
     yhat_estimated = fit_estimated.fittedvalues.values
     yhat_heuristic = fit_heuristic.fittedvalues.values
 
@@ -611,7 +612,7 @@ def test_bounded_fit(oildata):
         damped_trend=True,
         bounds={"smoothing_trend": beta},
     )
-    fit1 = model1.fit(disp=False)
+    fit1 = model1.fit(disp=False, param_index="integer")
     assert fit1.smoothing_trend == 0.99
 
     # same using with fix_params semantic
@@ -622,13 +623,13 @@ def test_bounded_fit(oildata):
         damped_trend=True,
     )
     with model2.fix_params({"smoothing_trend": 0.99}):
-        fit2 = model2.fit(disp=False)
+        fit2 = model2.fit(disp=False, param_index="integer")
     assert fit2.smoothing_trend == 0.99
     assert_allclose(fit1.params, fit2.params)
     fit2.summary()  # check if summary runs without failing
 
     # using fit_constrained
-    fit3 = model2.fit_constrained({"smoothing_trend": 0.99})
+    fit3 = model2.fit_constrained({"smoothing_trend": 0.99}, param_index="integer")
     assert fit3.smoothing_trend == 0.99
     assert_allclose(fit1.params, fit3.params)
     fit3.summary()
@@ -651,7 +652,9 @@ def test_simulate_keywords(austourists_model_fit):
     check whether all keywords are accepted and work without throwing errors.
     """
     model_class, model_args, model_kwargs = austourists_model_fit
-    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+    fit = model_class(*model_args, **model_kwargs).fit(
+        disp=False, param_index="integer"
+    )
 
     rs = np.random.RandomState(3232912)
     # smoke test different random error options
@@ -668,7 +671,9 @@ def test_simulate_keywords_warnings(austourists_model_fit):
     check whether all keywords are accepted and work without throwing errors.
     """
     model_class, model_args, model_kwargs = austourists_model_fit
-    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+    fit = model_class(*model_args, **model_kwargs).fit(
+        disp=False, param_index="integer"
+    )
 
     # test anchor
     with pytest.warns(FutureWarning, match="After statsmodels 0.15 is released"):
@@ -692,7 +697,9 @@ def test_simulate_keywords_warnings(austourists_model_fit):
 def test_predict_ranges(austourists_model_fit):
     # in total 68 observations
     model_class, model_args, model_kwargs = austourists_model_fit
-    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+    fit = model_class(*model_args, **model_kwargs).fit(
+        disp=False, param_index="integer"
+    )
 
     # first prediction is 0, last is 10 -> 11 predictions
     pred = fit.predict(start=0, end=10)
@@ -718,24 +725,28 @@ def test_predict_ranges(austourists_model_fit):
 def test_summary(austourists_model_fit):
     # just try to run summary to see if it works
     model_class, model_args, model_kwargs = austourists_model_fit
-    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+    fit = model_class(*model_args, **model_kwargs).fit(
+        disp=False, param_index="integer"
+    )
     fit.summary()
 
     # now without estimated initial states
     ets_model = model_class(*model_args, **model_kwargs)
     ets_model.set_initialization_method("heuristic")
-    fit = ets_model.fit(disp=False)
+    fit = ets_model.fit(disp=False, param_index="integer")
     fit.summary()
 
     # and with fixed params
     ets_model = model_class(*model_args, **model_kwargs)
-    fit = ets_model.fit_constrained({"smoothing_trend": 0.9})
+    fit = ets_model.fit_constrained({"smoothing_trend": 0.9}, param_index="integer")
     fit.summary()
 
 
 def test_score(austourists_model_fit):
     model_class, model_args, model_kwargs = austourists_model_fit
-    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+    fit = model_class(*model_args, **model_kwargs).fit(
+        disp=False, param_index="integer"
+    )
 
     score_cs = fit.model.score(fit.params)
     score_fd = fit.model.score(
@@ -750,7 +761,9 @@ def test_hessian(austourists_model_fit):
     # The hessian approximations are not very consistent, but the test makes
     # sure they run
     model_class, model_args, model_kwargs = austourists_model_fit
-    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+    fit = model_class(*model_args, **model_kwargs).fit(
+        disp=False, param_index="integer"
+    )
 
     fit.model.hessian(fit.params)
     # The finite difference hessian always warns about its approximation error
@@ -764,7 +777,9 @@ def test_hessian(austourists_model_fit):
 
 def test_diagnostics_invalid_method_raises(austourists_model_fit):
     model_class, model_args, model_kwargs = austourists_model_fit
-    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+    fit = model_class(*model_args, **model_kwargs).fit(
+        disp=False, param_index="integer"
+    )
 
     with pytest.raises(ValueError, match="method"):
         fit.test_serial_correlation(method="not-a-method")
@@ -777,7 +792,9 @@ def test_diagnostics_invalid_method_raises(austourists_model_fit):
 def test_prediction_results(austourists_model_fit):
     # simple test case starting at 0
     model_class, model_args, model_kwargs = austourists_model_fit
-    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+    fit = model_class(*model_args, **model_kwargs).fit(
+        disp=False, param_index="integer"
+    )
 
     pred = fit.get_prediction(
         start=0,
@@ -841,7 +858,7 @@ def statespace_comparison(austourists):
         seasonal="add",
         damped_trend=True,
     )
-    ets_results = ets_model.fit(disp=False)
+    ets_results = ets_model.fit(disp=False, param_index="integer")
 
     statespace_model = statespace.ExponentialSmoothing(
         austourists,
@@ -958,7 +975,9 @@ def test_prediction_results_vs_statespace(statespace_comparison):
 def test_prediction_results_slow_AAN(oildata, close_figures):
     # slow test with high number of simulation repetitions for comparison
     # Note: runs succesfull with specified tolerance
-    fit = ETSModel(oildata, error="add", trend="add").fit(disp=False)
+    fit = ETSModel(oildata, error="add", trend="add").fit(
+        disp=False, param_index="integer"
+    )
 
     pred_exact = fit.get_prediction(start=40, end=55)
     summary_exact = pred_exact.summary_frame()
@@ -1023,7 +1042,7 @@ def test_prediction_results_slow_AAdA(austourists, close_figures):
         seasonal="add",
         damped_trend=True,
         seasonal_periods=4,
-    ).fit(disp=False)
+    ).fit(disp=False, param_index="integer")
     pred_exact = fit.get_prediction(start=60, end=75)
     summary_exact = pred_exact.summary_frame()
 
@@ -1104,7 +1123,9 @@ def test_convergence_simple():
 
 def test_exact_prediction_intervals(austourists_model_fit):
     model_class, model_args, model_kwargs = austourists_model_fit
-    fit = model_class(*model_args, **model_kwargs).fit(disp=False)
+    fit = model_class(*model_args, **model_kwargs).fit(
+        disp=False, param_index="integer"
+    )
     fit = fit._results
 
     class DummyModel:
@@ -1143,7 +1164,7 @@ def test_one_step_ahead(setup_model):
         seasonal=model.seasonal,
         damped_trend=model.damped_trend,
     )
-    res = model2.smooth(params)
+    res = model2.smooth(params, param_index="integer")
     fcast1 = res.forecast(steps=1)
     fcast2 = res.forecast(steps=2)
     assert_allclose(fcast1.iloc[0], fcast2.iloc[0])
@@ -1170,7 +1191,7 @@ def test_estimated_initialization_short_data(oildata, trend, seasonal, nobs):
         seasonal=seasonal,
         seasonal_periods=4,
         initialization_method="estimated",
-    ).fit()
+    ).fit(param_index="integer")
     assert ~np.any(np.isnan(res.params))
 
 
@@ -1223,7 +1244,7 @@ def test_aicc_0_dof():
 def test_summary_after_remove_data(oildata):
     # summary() must still work after remove_data() has been called
     model = ETSModel(oildata, error="add", trend="add", damped_trend=True)
-    res = model.fit(disp=False)
+    res = model.fit(disp=False, param_index="integer")
 
     assert isinstance(res.summary(), Summary)
     res.remove_data()
@@ -1283,8 +1304,8 @@ def test_estimated_start_params_are_heuristic_states(
         model_heuristic.loglike(smoothing_params),
         rtol=1e-12,
     )
-    res = model.smooth(start_params)
-    res_heuristic = model_heuristic.smooth(smoothing_params)
+    res = model.smooth(start_params, param_index="integer")
+    res_heuristic = model_heuristic.smooth(smoothing_params, param_index="integer")
     assert_allclose(res.initial_seasonal, model_heuristic.initial_seasonal)
     assert_allclose(res.initial_state, res_heuristic.initial_state)
     assert_allclose(res.fittedvalues, res_heuristic.fittedvalues)
@@ -1377,7 +1398,7 @@ def test_estimated_initial_seasonal_normalized(austourists, error, trend, season
         initialization_method="estimated",
     )
     start_params = model.start_params
-    res = model.fit(disp=False)
+    res = model.fit(disp=False, param_index="integer")
     assert_allclose(res.llf, model.loglike(res.params))
 
     params = np.asarray(res.params)
@@ -1397,7 +1418,7 @@ def test_estimated_initial_seasonal_fixed_or_bounded_other(austourists, seasonal
     model = ETSModel(austourists, **kwargs)
     value = model.start_params[-3] + (0.05 if seasonal == "mul" else 1.0)
     with model.fix_params({"initial_seasonal.1": value}):
-        res = model.fit(disp=False)
+        res = model.fit(disp=False, param_index="integer")
     params = np.asarray(res.params)
     assert params[-3] == value
     assert_allclose(params[-1], total - np.sum(params[-4:-1]), rtol=1e-12)
@@ -1406,7 +1427,7 @@ def test_estimated_initial_seasonal_fixed_or_bounded_other(austourists, seasonal
     model = ETSModel(austourists, **kwargs)
     bounds = (value - 0.01, value) if seasonal == "mul" else (value - 0.1, value)
     model.set_bounds({"initial_seasonal.2": bounds})
-    res = model.fit(disp=False)
+    res = model.fit(disp=False, param_index="integer")
     params = np.asarray(res.params)
     assert bounds[0] <= params[-2] <= bounds[1]
     assert_allclose(params[-1], total - np.sum(params[-4:-1]), rtol=1e-12)
@@ -1419,7 +1440,7 @@ def test_estimated_initial_seasonal_fixed_last(austourists):
     kwargs = dict(error="add", trend="add", seasonal="add", seasonal_periods=4)
     model = ETSModel(austourists, **kwargs)
     with model.fix_params({"initial_seasonal.3": 0.0}):
-        res = model.fit(disp=False)
+        res = model.fit(disp=False, param_index="integer")
     assert np.asarray(res.params)[-1] == 0.0
     assert np.isfinite(res.llf)
     assert "initial_seasonal.3 (fixed)" in res.param_names
@@ -1430,7 +1451,7 @@ def test_estimated_initial_seasonal_fixed_last(austourists):
     # of the model) use the same parametrization for the covariance
     model = ETSModel(austourists, **kwargs)
     with model.fix_params({"initial_seasonal.3": 0.0}):
-        res_smooth = model.smooth(res.params)
+        res_smooth = model.smooth(res.params, param_index="integer")
     assert_allclose(res_smooth.cov_params(), res.cov_params(), rtol=1e-10)
 
 
@@ -1442,7 +1463,7 @@ def test_estimated_initial_seasonal_bounded_last(austourists):
     kwargs = dict(error="add", trend="add", seasonal="add", seasonal_periods=4)
     model = ETSModel(austourists, **kwargs)
     model.set_bounds({"initial_seasonal.3": (20.0, 21.0)})
-    res = model.fit(disp=False)
+    res = model.fit(disp=False, param_index="integer")
     params = np.asarray(res.params)
     assert 20.0 <= params[-1] <= 21.0
     assert_allclose(res.llf, model.loglike(params), rtol=1e-12)
@@ -1551,7 +1572,7 @@ def test_estimated_initial_seasonal_cov(
         seasonal=seasonal,
         seasonal_periods=4,
     )
-    res = model.smooth(params)
+    res = model.smooth(params, param_index="integer")
     cov = np.asarray(res.cov_params())
     k = len(params)
     jac = np.eye(k)[:, :-1]
@@ -1584,11 +1605,13 @@ def test_params_dtype(austourists_model, dtype):
     native = params.astype(np.float64)
     # the reference has to be a valid fit, or NaN would compare equal to NaN
     llf = model.loglike(native)
-    fitted = model.smooth(native).fittedvalues
+    fitted = model.smooth(native, param_index="integer").fittedvalues
     assert np.isfinite(llf)
     assert np.isfinite(fitted).all()
     assert_allclose(model.loglike(params), llf, rtol=1e-12)
-    assert_allclose(model.smooth(params).fittedvalues, fitted, rtol=1e-12)
+    assert_allclose(
+        model.smooth(params, param_index="integer").fittedvalues, fitted, rtol=1e-12
+    )
 
 
 def test_params_dtype_int(austourists_model):
@@ -1603,11 +1626,13 @@ def test_params_dtype_int(austourists_model):
     params = np.array([2, 0, 0, 1, 26, 1, 2, -1, -7, 6], dtype=np.int64)
     native = params.astype(np.float64)
     llf = model.loglike(native)
-    fitted = model.smooth(native).fittedvalues
+    fitted = model.smooth(native, param_index="integer").fittedvalues
     assert np.isfinite(llf)
     assert np.isfinite(fitted).all()
     assert_allclose(model.loglike(params), llf, rtol=1e-12)
-    assert_allclose(model.smooth(params).fittedvalues, fitted, rtol=1e-12)
+    assert_allclose(
+        model.smooth(params, param_index="integer").fittedvalues, fitted, rtol=1e-12
+    )
 
 
 @pytest.mark.parametrize("nsimulations", [0, np.int64(0), -1])
@@ -1615,7 +1640,7 @@ def test_params_dtype_int(austourists_model):
 def test_simulate_nsimulations_at_least_one(oildata, nsimulations, anchor):
     # simulate(0) wrote the initial states outside of a zero-row array in
     # the compiled smoother; a negative number raised from np.zeros
-    res = ETSModel(oildata).smooth([0.3, 110.0])
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
     with pytest.raises(ValueError, match="nsimulations must be at least 1"):
         res.simulate(nsimulations, anchor=anchor, rng=np.random.default_rng(0))
 
@@ -1623,7 +1648,7 @@ def test_simulate_nsimulations_at_least_one(oildata, nsimulations, anchor):
 @pytest.mark.parametrize("steps", [0, np.int64(0), -2])
 def test_forecast_steps_at_least_one(oildata, steps):
     # forecast(0) simulated zero steps, which wrote outside of an array
-    res = ETSModel(oildata).smooth([0.3, 110.0])
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
     with pytest.raises(ValueError, match="steps must be at least 1"):
         res.forecast(steps)
     # one step is the smallest valid horizon: the level after the last
@@ -1775,7 +1800,7 @@ def test_endog_forms(austourists, form):
     params = fixed_params(ref_model)
     ref = ref_model.smooth(params)
     endog = endog_form(values, form)
-    res = ETSModel(endog, **kwargs).smooth(params)
+    res = ETSModel(endog, **kwargs).smooth(params, param_index="integer")
     errors = np.array([[0.5], [-1.0], [2.0]])
     outputs = {
         "fittedvalues": (res.fittedvalues, ref.fittedvalues),
@@ -1809,7 +1834,9 @@ def test_endog_forms(austourists, form):
             assert isinstance(actual, pd.Series)
             assert actual.index.equals(expected_index[key])
         frame = res.get_prediction(start=n - 2, end=n + 3).summary_frame()
-        expected = ETSModel(pd.Series(values), **kwargs).smooth(params)
+        expected = ETSModel(pd.Series(values), **kwargs).smooth(
+            params, param_index="integer"
+        )
         expected = expected.get_prediction(start=n - 2, end=n + 3).summary_frame()
         assert_allclose(frame, expected, rtol=1e-12)
         assert frame.index.equals(expected_index["predict"])
@@ -1854,8 +1881,8 @@ def test_known_initialization(austourists, error, trend, damped, seasonal, form)
     assert known.param_names == names[:k]
     assert known.initial_state_names == names[k:]
 
-    res = known.smooth(params[:k])
-    expected = estimated.smooth(params)
+    res = known.smooth(params[:k], param_index="integer")
+    expected = estimated.smooth(params, param_index="integer")
     assert_allclose(res.llf, expected.llf, rtol=1e-12)
     assert_allclose(res.fittedvalues, expected.fittedvalues, rtol=1e-12)
     assert_allclose(res.states, expected.states, rtol=1e-12)
@@ -1868,7 +1895,9 @@ def test_known_initialization(austourists, error, trend, damped, seasonal, form)
     switched.set_initialization_method("known", **known_kwargs)
     assert switched.param_names == known.param_names
     assert_allclose(
-        switched.smooth(params[:k]).fittedvalues, expected.fittedvalues, rtol=1e-12
+        switched.smooth(params[:k], param_index="integer").fittedvalues,
+        expected.fittedvalues,
+        rtol=1e-12,
     )
 
     # the summary has a table of the initial states
@@ -1883,7 +1912,9 @@ def test_fit_return_params(oildata):
     params = model.fit(disp=False, return_params=True)
     assert isinstance(params, np.ndarray)
     # the parameters of the same optimization as a fit that returns results
-    assert_allclose(params, model.fit(disp=False).params, rtol=1e-12)
+    assert_allclose(
+        params, model.fit(disp=False, param_index="integer").params, rtol=1e-12
+    )
 
     # with all parameters fixed, the fixed values in the order of param_names
     # whatever the order of the dictionary
@@ -1891,7 +1922,7 @@ def test_fit_return_params(oildata):
     fixed = dict(zip(model.param_names, values, strict=True))
     with model.fix_params(dict(reversed(fixed.items()))):
         params = model.fit(disp=False, return_params=True)
-        res = model.fit(disp=False)
+        res = model.fit(disp=False, param_index="integer")
     assert_allclose(params, values, rtol=1e-12)
     assert_allclose(res.params, values, rtol=1e-12)
     assert res.fixed_params == model.param_names
@@ -1940,13 +1971,17 @@ def test_initialization_too_few_observations(
     ],
 )
 def test_simulate_invalid_random_errors(austourists_model, random_errors, match):
-    res = austourists_model.smooth(fixed_params(austourists_model))
+    res = austourists_model.smooth(
+        fixed_params(austourists_model), param_index="integer"
+    )
     with pytest.raises(ValueError, match=match):
         res.simulate(4, random_errors=random_errors)
 
 
 def test_simulate_anchor(austourists_model):
-    res = austourists_model.smooth(fixed_params(austourists_model))
+    res = austourists_model.smooth(
+        fixed_params(austourists_model), param_index="integer"
+    )
     fitted = res.fittedvalues
     zero = np.zeros((1, 1))
     # the simulation starts after the anchor: without errors, one step from
@@ -1975,7 +2010,9 @@ def test_predict_dynamic_date(austourists, austourists_model):
     # dynamic can be a date, which is not an offset from start: before it the
     # predictions are one-step predictions, from it on they are forecasts
     # from the period before it
-    res = austourists_model.smooth(fixed_params(austourists_model))
+    res = austourists_model.smooth(
+        fixed_params(austourists_model), param_index="integer"
+    )
     start, dynamic, end = 40, 48, 70
     expected = res.predict(start=start, end=end, dynamic=dynamic - start)
     assert_allclose(
@@ -2003,7 +2040,7 @@ def test_get_prediction_simulated_ann(austourists, start, dynamic):
     # sigma times the standard normal draws from rng, one row per call of
     # simulate.
     smoothing_level, reps, seed = 0.3, 6, 1234
-    res = ETSModel(austourists).smooth([smoothing_level, 30.0])
+    res = ETSModel(austourists).smooth([smoothing_level, 30.0], param_index="integer")
     end = 20
     npred = end - start + 1
     nsmooth = npred if dynamic is False else dynamic
@@ -2084,7 +2121,7 @@ def test_get_prediction_exact(austourists, name):
         seasonal=seasonal,
         seasonal_periods=4 if seasonal else None,
     )
-    res = model.smooth(fixed_params(model))
+    res = model.smooth(fixed_params(model), param_index="integer")
     n = res.nobs
     q = scipy.stats.norm.ppf(0.95)
 
@@ -2114,7 +2151,7 @@ def test_forecast_closed_form(setup_model):
     # same season in the last cycle, s[n + h - m (k + 1)] with
     # k = (h - 1) // m, added or multiplied.
     model_class, model_args, model_kwargs, params, _ = setup_model
-    res = model_class(*model_args, **model_kwargs).smooth(params)
+    res = model_class(*model_args, **model_kwargs).smooth(params, param_index="integer")
     h = np.arange(1, 11)
     level = res.level.iloc[-1]
     expected = np.full(h.shape, level)
@@ -2145,7 +2182,7 @@ def test_loglike_formula(austourists, error):
         austourists, error=error, trend="add", seasonal="mul", seasonal_periods=4
     )
     params = fixed_params(model)
-    res = model.smooth(params)
+    res = model.smooth(params, param_index="integer")
     y = austourists.to_numpy()
     yhat = res.fittedvalues.to_numpy()
     k = yhat if error == "mul" else np.ones_like(y)
@@ -2162,7 +2199,7 @@ def test_information_criteria(austourists):
     model = ETSModel(austourists, trend="add", seasonal="add", seasonal_periods=4)
     params = fixed_params(model)
     with model.fix_params({"smoothing_trend": 0.1}):
-        res = model.smooth(params)
+        res = model.smooth(params, param_index="integer")
     n = res.nobs
     llf = res.llf
     # the free parameters and the variance of the errors
@@ -2192,7 +2229,9 @@ def test_information_criteria(austourists):
 
 
 def test_diagnostics_vs_formulas(austourists_model):
-    res = austourists_model.smooth(fixed_params(austourists_model))
+    res = austourists_model.smooth(
+        fixed_params(austourists_model), param_index="integer"
+    )
     resid = np.asarray(res.resid)
     errors = np.asarray(res.standardized_forecasts_error)
     expected = (resid - resid.mean()) / resid.std(ddof=1)
@@ -2223,7 +2262,7 @@ def test_diagnostics_vs_formulas(austourists_model):
 def test_summary_sample(austourists):
     # The sample is shown as dates for a date index, else as observation
     # numbers, and start changes its first period
-    res = ETSModel(austourists).smooth([0.3, 30.0])
+    res = ETSModel(austourists).smooth([0.3, 30.0], param_index="integer")
     text = res.summary(start=4).as_text()
     assert re.search(r"Sample:\s+03-31-2000\s", text)
     assert "- 12-31-2015" in text
@@ -2236,7 +2275,7 @@ def test_summary_sample(austourists):
 def test_dates_freq_missing(austourists):
     values = austourists.to_numpy()
     params = [0.3, 30.0]
-    ref = ETSModel(austourists).smooth(params)
+    ref = ETSModel(austourists).smooth(params, param_index="integer")
     # with dates, predictions can use date strings, but they are ndarrays
     res = ETSModel(values, dates=austourists.index).smooth(params)
     pred = res.predict(start="2014-03-31", end="2016-12-31")
@@ -2248,7 +2287,11 @@ def test_dates_freq_missing(austourists):
     index = pd.DatetimeIndex(austourists.index.tolist())
     assert index.freq is None
     res = ETSModel(pd.Series(values, index=index), freq=QUARTER_END)
-    assert res.smooth(params).forecast(4).index.equals(ref.forecast(4).index)
+    assert (
+        res.smooth(params, param_index="integer")
+        .forecast(4)
+        .index.equals(ref.forecast(4).index)
+    )
 
     # "drop" drops the observations with NaN, "raise" raises
     with_nan = values.copy()
@@ -2529,7 +2572,7 @@ def test_get_prediction_simulated_one_step(austourists, error, seasonal, start, 
         seasonal=seasonal,
         seasonal_periods=4 if seasonal else None,
     )
-    res = model.smooth(model.start_params)
+    res = model.smooth(model.start_params, param_index="integer")
     reps = 50
     pred = res.get_prediction(
         start=start,
@@ -2557,3 +2600,201 @@ def test_get_prediction_simulated_one_step(austourists, error, seasonal, start, 
     assert_allclose(frame["mean_numerical"], expected.mean(1), rtol=1e-12)
     assert_allclose(frame["pi_lower"], np.quantile(expected, 0.025, axis=1), rtol=1e-12)
     assert_allclose(frame["pi_upper"], np.quantile(expected, 0.975, axis=1), rtol=1e-12)
+
+
+#
+# THE INDEX OF THE RESULTS INDEXED BY PARAMETER (param_index)
+#
+
+PARAM_INDEX_WARNING = 'The default param_index will change from "integer"'
+
+
+def param_results(res):
+    # The results that are indexed by parameter
+    return {
+        "params": res.params,
+        "bse": res.bse,
+        "tvalues": res.tvalues,
+        "pvalues": res.pvalues,
+        "conf_int": res.conf_int(alpha=0.1),
+        "cov_params": res.cov_params(),
+    }
+
+
+def param_index_warnings(record):
+    return [w for w in record if PARAM_INDEX_WARNING in str(w.message)]
+
+
+def param_index_call(model, method):
+    # The methods that return results, with fixed parameters for smooth
+    params = fixed_params(model)
+    return {
+        "fit": lambda **kwargs: model.fit(disp=False, **kwargs),
+        "fit_constrained": lambda **kwargs: model.fit_constrained(
+            {"smoothing_trend": 0.1}, **kwargs
+        ),
+        "smooth": lambda **kwargs: model.smooth(params, **kwargs),
+    }[method]
+
+
+@pytest.mark.parametrize("method", ["fit", "fit_constrained", "smooth"])
+def test_param_index_default_warns(austourists_model, method):
+    # Unset, param_index is "integer" with one FutureWarning that points at
+    # the caller and says how to opt in or out
+    call = param_index_call(austourists_model, method)
+    with pytest.warns(FutureWarning, match=PARAM_INDEX_WARNING) as rec:
+        res = call()
+    found = param_index_warnings(rec)
+    assert len(found) == 1
+    assert found[0].filename == __file__
+    message = str(found[0].message)
+    assert "after statsmodels 0.17 is released" in message
+    assert 'param_index="names"' in message
+    assert 'param_index="integer"' in message
+
+    k = len(austourists_model.param_names)
+    for key, value in param_results(res).items():
+        assert value.index.equals(pd.RangeIndex(k)), key
+    expected = param_results(call(param_index="integer"))
+    for key, value in param_results(res).items():
+        assert type(value) is type(expected[key])
+        assert_allclose(value, expected[key], rtol=1e-12)
+
+
+@pytest.mark.parametrize("param_index", ["names", "integer"])
+def test_param_index_options(austourists_model, param_index, recwarn):
+    # "names" labels every result indexed by parameter with the parameter
+    # names of the model, "integer" with 0, 1, ...; the values are those of
+    # the other option, and neither warns
+    params = fixed_params(austourists_model)
+    res = austourists_model.smooth(params, param_index=param_index)
+    other = "integer" if param_index == "names" else "names"
+    expected = param_results(austourists_model.smooth(params, param_index=other))
+    names = austourists_model.param_names
+    labels = pd.Index(names) if param_index == "names" else pd.RangeIndex(len(names))
+    for key, value in param_results(res).items():
+        assert value.index.equals(labels), key
+        assert_allclose(value.to_numpy(), expected[key].to_numpy(), rtol=1e-12)
+    assert res.cov_params().columns.equals(labels)
+    assert list(res.conf_int().columns) == [0, 1]
+    # the lower and upper bounds of a 90% interval
+    q = scipy.stats.norm.ppf(0.95)
+    assert_allclose(
+        res.conf_int(alpha=0.1)[0], res.params - q * res.bse, rtol=1e-12
+    )
+    assert_allclose(
+        res.conf_int(alpha=0.1)[1], res.params + q * res.bse, rtol=1e-12
+    )
+    assert not param_index_warnings(recwarn)
+
+
+def test_param_index_names_fit(austourists_model, recwarn):
+    # The names of a fit: the values, the summary and the predictions are
+    # those of the integer index, they survive pickling, and the results of
+    # another fit of the same model keep their own index
+    res = austourists_model.fit(disp=False, param_index="names")
+    expected = austourists_model.fit(disp=False, param_index="integer")
+    names = pd.Index(austourists_model.param_names)
+    assert res.params.index.equals(names)
+    assert expected.params.index.equals(pd.RangeIndex(len(names)))
+    assert_allclose(res.params.to_numpy(), expected.params.to_numpy(), rtol=1e-12)
+    # the parameter table, from the same numbers
+    table = res.summary().tables[1].as_text()
+    assert table == expected.summary().tables[1].as_text()
+    assert all(name in table for name in names)
+    frame = res.get_prediction(start=60, end=72).summary_frame()
+    assert_allclose(
+        frame,
+        expected.get_prediction(start=60, end=72).summary_frame(),
+        rtol=1e-12,
+    )
+    restored = pickle.loads(pickle.dumps(res))
+    assert restored.params.index.equals(names)
+    assert restored.cov_params().columns.equals(names)
+    assert_allclose(restored.bse, res.bse, rtol=1e-12)
+    assert not param_index_warnings(recwarn)
+
+
+def test_param_index_fixed_params(austourists_model):
+    # Fixed parameters are labelled with their names in the model, without
+    # the " (fixed)" of res.param_names, and keep their value
+    params = fixed_params(austourists_model)
+    with austourists_model.fix_params({"smoothing_trend": 0.1}):
+        res = austourists_model.smooth(params, param_index="names")
+        expected = austourists_model.smooth(params, param_index="integer")
+        fitted = austourists_model.fit(disp=False, param_index="names")
+    names = austourists_model.param_names
+    assert "smoothing_trend (fixed)" in res.param_names
+    for key, value in param_results(res).items():
+        assert list(value.index) == names, key
+        assert_allclose(value.to_numpy(), param_results(expected)[key], rtol=1e-12)
+    assert list(fitted.params.index) == names
+    assert_allclose(fitted.params["smoothing_trend"], 0.1, rtol=1e-12)
+    assert np.isnan(fitted.bse["smoothing_trend"])
+
+
+@pytest.mark.parametrize("param_index", [None, "names", "integer"])
+def test_param_index_ndarray(austourists, param_index, recwarn):
+    # With ndarray data, the results are ndarrays whatever param_index, and
+    # the default does not warn
+    kwargs = dict(trend="add", seasonal="add", seasonal_periods=4)
+    model = ETSModel(austourists.to_numpy(), **kwargs)
+    params = fixed_params(model)
+    res = model.smooth(params, param_index=param_index)
+    expected = param_results(
+        ETSModel(austourists, **kwargs).smooth(params, param_index="integer")
+    )
+    for key, value in param_results(res).items():
+        assert isinstance(value, np.ndarray), key
+        assert_allclose(value, expected[key].to_numpy(), rtol=1e-12)
+    assert not param_index_warnings(recwarn)
+
+
+def test_param_index_no_results_no_warning(austourists_model, recwarn):
+    # Without a results object, the default does not warn
+    params = fixed_params(austourists_model)
+    fitted = austourists_model.fit(disp=False, return_params=True)
+    assert isinstance(fitted, np.ndarray)
+    yhat, _ = austourists_model.smooth(params, return_raw=True)
+    assert isinstance(yhat, pd.Series)
+    assert not param_index_warnings(recwarn)
+
+
+@pytest.mark.parametrize("method", ["fit", "smooth"])
+@pytest.mark.parametrize("param_index", ["Names", "labels"])
+def test_param_index_invalid(austourists_model, method, param_index):
+    call = param_index_call(austourists_model, method)
+    with pytest.raises(ValueError, match="param_index"):
+        call(param_index=param_index)
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [
+        "2016-01-01",
+        pd.Timestamp("2016-01-01"),
+        pd.Timestamp("2016-01-01").to_pydatetime(),
+        3,
+        np.int64(3),
+        np.array(3),
+    ],
+    ids=["str", "Timestamp", "datetime", "int", "int64", "0-d array"],
+)
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_forecast_date(oildata, steps, use_pandas):
+    # forecast with a date raised "TypeError: 'str' object cannot be
+    # interpreted as an integer"; a date forecasts until and including it
+    endog = oildata if use_pandas else oildata.to_numpy()
+    kwargs = {} if use_pandas else {"dates": oildata.index}
+    res = ETSModel(endog, **kwargs).smooth([0.3, 110.0], param_index="integer")
+    # the forecasts of simple exponential smoothing are the last level
+    level = 110.0
+    for value in oildata:
+        level = 0.3 * value + 0.7 * level
+    fcast = res.forecast(steps)
+    assert_allclose(np.asarray(fcast), np.full(3, level), rtol=1e-12)
+    if use_pandas:
+        expected_index = pd.date_range("2014-01-01", periods=3, freq="YS")
+        assert_array_equal(fcast.index, expected_index)
+    else:
+        assert isinstance(fcast, np.ndarray)

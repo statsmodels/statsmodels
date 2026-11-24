@@ -268,14 +268,10 @@ cpdef {{prefix}}arma_innovations_algo_fast(int nobs,
     for n in range(nobs - 1):
         _n = n + 1
 
+        # See Brockwell and Davis, p. 100-101: for n >= m, theta_{n,j} = 0
+        # for j > q
         start = 0 if n < m else n + 1 - q
         for k in range(start, n + 1):
-            # See Brockwell and Davis, p. 100-101
-            # (here we have weak rather than strict inequality due to Python's
-            # zero indexing)
-            if n >= m and n - k >= q:
-                continue
-
             if n + 1 < m2 and k < m:
                 theta[_n, n - k] = acovf[n + 1, k]
             else:

@@ -2515,8 +2515,10 @@ def test_proportions_2indep(
     p1 = count1 / nobs1
     p2 = count2 / nobs2
     diff = p1 - p2
-    ratio = p1 / p2
-    odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
+    # The estimates are inf (or nan) if a count is 0 or equal to nobs
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ratio = p1 / p2
+        odds_ratio = p1 / (1 - p1) / p2 * (1 - p2)
     res = None
 
     if compare == "diff":
@@ -3337,7 +3339,9 @@ def _confint_riskratio_koopman(
     p_roots = p_roots_[:2][::-1]
 
     # equ 5
-    ci = (1 - (n1 - x1) * (1 - p_roots) / (x0 + n1 - n * p_roots)) / p_roots
+    # If count2 is 0, a root is 0 and the upper limit is inf
+    with np.errstate(divide="ignore"):
+        ci = (1 - (n1 - x1) * (1 - p_roots) / (x0 + n1 - n * p_roots)) / p_roots
 
     return KoopmanConfintResult(confint=ci, p_roots=p_roots_)
 

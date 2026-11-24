@@ -916,3 +916,64 @@ def test_pandas_anchor():
     actual = res.impulse_responses(2, anchor=-9)
     assert_allclose(actual, desired)
     assert_(actual.index.equals(desired.index))
+
+
+class BivariateSSM(mlemodel.MLEModel):
+    # Two observed series and two states with a non-diagonal design,
+    # transition and selection, and no parameters
+    def __init__(self):
+        super().__init__(np.zeros((10, 2)), k_states=2, k_posdef=2)
+        self["design"] = np.array([[1.0, 0.2], [0.3, 1.0]])
+        self["transition"] = np.array([[0.5, 0.1], [0.2, 0.3]])
+        self["selection"] = np.array([[1.0, 0.0], [0.4, 1.0]])
+        self["state_cov"] = np.eye(2)
+        self["obs_cov"] = np.eye(2)
+        self.ssm.initialize_known(np.zeros(2), np.eye(2))
+
+
+def _bivariate_irf(impulse, steps):
+    # Z T^h R e_j for h = 0, ..., steps
+    mod = BivariateSSM()
+    design, transition = mod["design"], mod["transition"]
+    shock = mod["selection"][:, impulse]
+    return np.array(
+        [design @ np.linalg.matrix_power(transition, h) @ shock for h in range(steps + 1)]
+    )
+
+
+@pytest.mark.parametrize("dtype", [np.int64, np.int32, np.uint8])
+@pytest.mark.parametrize("impulse", [0, 1])
+def test_impulse_numpy_integer(dtype, impulse):
+    # A NumPy integer selects the state innovation, as a Python int does
+    desired = _bivariate_irf(impulse, 3)
+    mod = BivariateSSM()
+    actual = mod.ssm.impulse_responses(steps=3, impulse=dtype(impulse))
+    assert_allclose(actual, desired, rtol=1e-12)
+    res = mod.filter([])
+    actual = res.impulse_responses(steps=3, impulse=dtype(impulse))
+    assert_allclose(actual, desired, rtol=1e-12)
+    assert_allclose(mod.ssm.impulse_responses(steps=3, impulse=impulse), desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("impulse", [True, np.int64(2), np.int64(-1)])
+def test_impulse_invalid_index(impulse):
+    # A bool is not an index (as on earlier versions it is read as a vector),
+    # and an index must select one of the state innovations
+    mod = BivariateSSM()
+    match = "Invalid impulse vector" if impulse is True else "Invalid value for `impulse`"
+    with pytest.raises(ValueError, match=match):
+        mod.ssm.impulse_responses(steps=3, impulse=impulse)
+
+
+@pytest.mark.parametrize("direct", [True, False])
+def test_impulse_responses_direct_deprecated(direct):
+    mod = BivariateSSM()
+    with pytest.warns(FutureWarning, match="direct is not used") as record:
+        actual = mod.ssm.impulse_responses(steps=3, direct=direct)
+    # The warning points to the caller
+    assert record[0].filename == __file__
+    assert_allclose(actual, _bivariate_irf(0, 3), rtol=1e-12)
+    # No warning if direct is not given
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        mod.ssm.impulse_responses(steps=3)

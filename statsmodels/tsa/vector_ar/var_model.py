@@ -702,6 +702,14 @@ class VAR(TimeSeriesModel):
     missing : str, optional
         See :class:`statsmodels.base.model.Model` for more information.
 
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       With ``missing="drop"``, the number of observations is that after
+       dropping. It was the number before, so ``nobs`` was too large and a
+       model with exog could not be fit.
+
     References
     ----------
     Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
@@ -712,7 +720,7 @@ class VAR(TimeSeriesModel):
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VAR")
         self.neqs = self.endog.shape[1]
-        self.n_totobs = len(endog)
+        self.n_totobs = self.endog.shape[0]
         # Set by fit()/_estimate_var(), once the lag order is known
         self.nobs = None
         self.k_trend = None
@@ -1009,7 +1017,13 @@ class VAR(TimeSeriesModel):
         Parameters
         ----------
         maxlags : int, optional
-            if None, defaults to 12 * (nobs/100.)**(1./4)
+            if None, defaults to 12 * (nobs/100.)**(1./4). Must be at least
+            1 with trend "n" and no exog, otherwise a ValueError is raised.
+
+            .. versionchanged:: 0.15.1
+
+               maxlags=0 with trend "n" and no exog raises a ValueError. It
+               raised a KeyError.
         trend : {"n", "c", "ct", "ctt"}, optional
             * "n" - no deterministic terms
             * "c" - constant term
@@ -1047,6 +1061,12 @@ class VAR(TimeSeriesModel):
 
         ics = defaultdict(list)
         p_min = 0 if self.exog is not None or trend != "n" else 1
+        if maxlags < p_min:
+            # VAR(0) without deterministic terms or exog has no parameters
+            raise ValueError(
+                'maxlags must be at least 1 with trend="n" and no exog, got '
+                f"{maxlags}"
+            )
         fast_ics = None
         if trend in ("n", "c", "ct", "ctt"):
             fast_ics = _var_order_ics(self.endog, self.exog, maxlags, trend, p_min)

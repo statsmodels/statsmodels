@@ -1,0 +1,6 @@
+- A state space model whose compiled representation had been created
+  but not initialized, as by ``simulation_smoother()`` or by a
+  ``loglike`` call that failed because the initialization was
+  incomplete, raised a ``ValueError`` from ``loglike``, ``filter``,
+  ``smooth`` and ``fit`` once it was pickled or copied with
+  ``copy.deepcopy``. :pr:`11112`

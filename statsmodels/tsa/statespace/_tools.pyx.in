@@ -15,6 +15,7 @@ import numpy as np
 
 np.import_array()
 
+from libc.math cimport sqrt
 from statsmodels.includes.math cimport *
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
@@ -39,7 +40,7 @@ cdef validate_matrix_shape(str name, Py_ssize_t *shape, int nrows, int ncols, no
                          ' got %d' % (name, nrows, shape[0]))
     if not shape[1] == ncols:
         raise ValueError('Invalid shape for %s matrix: requires %d columns,'
-                         'got %d' % (name, shape[1], shape[1]))
+                         ' got %d' % (name, ncols, shape[1]))
     if nobs is not None and shape[2] not in [1, nobs]:
         raise ValueError('Invalid time-varying dimension for %s matrix:'
                          ' requires 1 or %d, got %d' % (name, nobs, shape[2]))
@@ -146,10 +147,10 @@ if prefix == 's':
 
 
 cdef blas_bint _{{prefix}}select1({{cython_type}} * a):
-    return 0
+    return 0  # pragma: no cover
 
 cdef blas_bint _{{prefix}}select2({{cython_type}} * a, {{cython_type}} * b):
-    return 0
+    return 0  # pragma: no cover
 
 cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}} * q, int n, int complex_step=False) except *:
     # Note: some of this code (esp. the Sylvester solving part) cribbed from
@@ -255,7 +256,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
                                a, &n_, &info)
 
     if not info == 0:
-        raise np.linalg.LinAlgError('LU solver error.')
+        raise np.linalg.LinAlgError('LU solver error.')  # pragma: no cover
 
     # Now we have b^H; we could take the conjugate transpose to get b, except
     # that the input to the continuous Lyapunov equation is exactly
@@ -281,7 +282,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
                                         q, &n_, &info)
 
     if not info == 0:
-        raise np.linalg.LinAlgError('LU solver error.')
+        raise np.linalg.LinAlgError('LU solver error.')  # pragma: no cover
 
     # Replace the result (stored in q) with its (conjugate) transpose
     for j in range(1, n):
@@ -300,7 +301,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
                                         q, &n_, &info)
 
     if not info == 0:
-        raise np.linalg.LinAlgError('LU solver error.')
+        raise np.linalg.LinAlgError('LU solver error.')  # pragma: no cover
 
     # q -> -2.0 * q
     blas.{{prefix}}scal(&n2, &delta, q, &inc)
@@ -343,7 +344,7 @@ cdef int _{{prefix}}solve_discrete_lyapunov({{cython_type}} * a, {{cython_type}}
     {{endif}}
 
     if not info == 0:
-        raise np.linalg.LinAlgError('Schur decomposition solver error.')
+        raise np.linalg.LinAlgError('Schur decomposition solver error.')  # pragma: no cover
 
     # Get v (so that in the complex step case we can take the conjugate)
     copy(n2, &u[0, 0], &v[0, 0])
@@ -772,45 +773,73 @@ cpdef _{{prefix}}constrain_sv_less_than_one({{cython_type}} [::1,:] unconstraine
 
 cdef int _{{prefix}}ldl({{cython_type}} * A, int n) except *:
     # See Golub and Van Loan, Algorithm 4.1.2
+    # Returns 0 if A is positive definite, 1 if it is positive semi-definite
+    # (zero pivots), and -(j + 1) if it is indefinite, detected at column j.
+    # Pivots are compared with the original diagonal element, with the
+    # relative tolerance rtol.
     cdef:
         int info = 0
-        int j, i, k
+        int j, i, k, zero_column
         np.npy_intp dim[1]
-        np.float64_t tol = 1e-15
+        np.float64_t rtol = 1e-10
+        np.float64_t diag, tol
+        {{cython_type}} w
         {{cython_type}} [:] v
 
     dim[0] = n
     v = np.PyArray_ZEROS(1, dim, {{typenum}}, FORTRAN)
 
     for j in range(n):
-        # Compute v(1:j)
+        # A(j:n,j:n) still holds the original diagonal elements
+        diag = A[j + j*n].real
+        tol = rtol * abs(diag)
+
+        # Compute v(1:j), with the pivot d(j) = v(j)
         v[j] = A[j + j*n]
+        for i in range(j):
+            v[i] = A[j + i*n] * A[i + i*n]
+            v[j] = v[j] - A[j + i*n] * v[i]
 
-        # Positive definite element: use Golub and Van Loan algorithm
-        if v[j].real < -tol:
-            info = -j
+        # Negative diagonal element or pivot: indefinite
+        if diag < 0 or v[j].real < -tol:
+            info = -(j + 1)
             break
-        elif v[j].real > tol:
-            for i in range(j):
-                v[i] = A[j + i*n] * A[i + i*n]
-                v[j] = v[j] - A[j + i*n] * v[i]
 
-            # Store d(j) and compute L(j+1:n,j)
-            A[j + j*n] = v[j]
+        # Pivot within the tolerance of zero: positive semi-definite if the
+        # rest of the column is zero, too
+        if not v[j].real > tol:
+            zero_column = 1
             for i in range(j+1, n):
+                w = A[i + j*n]
                 for k in range(j):
-                    A[i + j*n] = A[i + j*n] - A[i + k*n] * v[k]
-                A[i + j*n] = A[i + j*n] / v[j]
-        # Positive semi-definite element: zero the appropriate column
-        else:
-            info = 1
-            for i in range(j, n):
-                A[i + j*n]
+                    w = w - A[i + k*n] * v[k]
+                if abs(w.real) > rtol * sqrt(abs(A[i + i*n].real)) * sqrt(diag):
+                    zero_column = 0
+                    break
+            if zero_column:
+                # Zero the column below the pivot, and keep a positive pivot
+                info = 1
+                if v[j].real > 0:
+                    A[j + j*n] = v[j]
+                else:
+                    A[j + j*n] = 0
+                for i in range(j+1, n):
+                    A[i + j*n] = 0
+                continue
+            # With a nonzero column, a zero pivot means an indefinite matrix,
+            # and a positive one an ill-conditioned positive definite matrix
+            if not v[j].real > 0:
+                info = -(j + 1)
+                break
+
+        # Positive pivot: store d(j) and compute L(j+1:n,j)
+        A[j + j*n] = v[j]
+        for i in range(j+1, n):
+            for k in range(j):
+                A[i + j*n] = A[i + j*n] - A[i + k*n] * v[k]
+            A[i + j*n] = A[i + j*n] / v[j]
 
     return info
-
-cpdef int {{prefix}}ldl({{cython_type}} [::1, :] A) except *:
-    _{{prefix}}ldl(&A[0,0], A.shape[0])
 
 cdef int _{{prefix}}reorder_missing_diagonal({{cython_type}} * a, int * missing, int n):
     """

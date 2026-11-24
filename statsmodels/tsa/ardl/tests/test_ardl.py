@@ -2578,3 +2578,48 @@ def test_ardl_select_order_glob_no_lags_label(causal, singular):
     assert res.bic.iloc[0] == (0, {0: None, 1: None})
     assert res.model.ar_lags is None
     assert res.model.dl_lags == {}
+
+
+@pytest.mark.parametrize(
+    "order",
+    [
+        {0.0: 1, 1.0: 1},
+        {np.float64(0): 1, np.float64(1): 1},
+        {0: 1, 1.0: 2},
+        {True: 1, 0: 1},
+        {np.True_: 1, 0: 1},
+    ],
+    ids=["float", "np.float64", "one-float", "bool", "np.bool"],
+)
+@pytest.mark.parametrize("func", ["ARDL", "UECM", "select"])
+def test_ardl_order_dict_non_integer_keys(func, order):
+    # Float and bool keys equal to a column index raised AssertionError,
+    # IndexError or ValueError from the construction of the regressors
+    rng = np.random.default_rng(20261124)
+    y = rng.standard_normal(100).cumsum()
+    x = rng.standard_normal((100, 2)).cumsum(0)
+    with pytest.raises(TypeError, match="order dictionary keys must be integer"):
+        if func == "ARDL":
+            ARDL(y, 1, x, order)
+        elif func == "UECM":
+            UECM(y, 1, x, order)
+        else:
+            ardl_select_order(y, 1, x, order)
+
+
+def test_ardl_order_dict_float_column_labels():
+    # Float keys select the columns of a DataFrame with float labels
+    rng = np.random.default_rng(20261124)
+    nobs = 100
+    y = rng.standard_normal(nobs)
+    x = rng.standard_normal((nobs, 2))
+    exog = pd.DataFrame(x, columns=[0.0, 1.0])
+    res = ARDL(y, 1, exog, {0.0: 1, 1.0: 2}).fit()
+    assert res.model.dl_lags == {0.0: [0, 1], 1.0: [0, 1, 2]}
+
+    # y on const, y.L1, x0.L0, x0.L1, x1.L0, x1.L1 and x1.L2
+    t = np.arange(2, nobs)
+    reg = [np.ones(nobs - 2), y[t - 1], x[t, 0], x[t - 1, 0]]
+    reg += [x[t, 1], x[t - 1, 1], x[t - 2, 1]]
+    ols = OLS(y[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-10)

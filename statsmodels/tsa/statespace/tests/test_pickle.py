@@ -26,6 +26,7 @@ from statsmodels.tsa.statespace import (
     sarimax,
     varmax,
 )
+from statsmodels.tsa.statespace.initialization import Initialization
 from statsmodels.tsa.statespace.kalman_filter import KalmanFilter
 from statsmodels.tsa.statespace.mlemodel import MLEResults
 from statsmodels.tsa.statespace.representation import Representation
@@ -254,3 +255,45 @@ def test_fitted_results_pickled():
     params1 = USED_MODEL_PARAMS["sarimax"][1]
     fresh = _make_model("sarimax")
     assert_allclose(res2.model.loglike(params1), fresh.loglike(params1), rtol=1e-10)
+
+
+def _roundtrip(mod, roundtrip):
+    if roundtrip == "pickle":
+        return pickle.loads(pickle.dumps(mod))
+    return copy.deepcopy(mod)
+
+
+@pytest.mark.parametrize("roundtrip", ["pickle", "deepcopy"])
+@pytest.mark.parametrize("name", list(USED_MODEL_PARAMS))
+def test_model_copied_before_initialization(name, roundtrip):
+    # simulation_smoother creates the compiled statespace object without
+    # initializing it. A copy of the model restored it without its arrays for
+    # the initial state, so the copy could not compute the loglikelihood
+    params0, params1 = USED_MODEL_PARAMS[name]
+    mod = _make_model(name)
+    mod.update(params0)
+    mod.simulation_smoother()
+    copied = _roundtrip(mod, roundtrip)
+
+    fresh = _make_model(name)
+    assert_allclose(copied.loglike(params1), fresh.loglike(params1), rtol=1e-10)
+    smoothed2 = copied.smooth(params1)
+    smoothed = fresh.smooth(params1)
+    assert_allclose(smoothed2.smoothed_state, smoothed.smoothed_state, rtol=1e-10)
+
+
+@pytest.mark.parametrize("roundtrip", ["pickle", "deepcopy"])
+def test_model_copied_after_incomplete_initialization(roundtrip):
+    # The compiled statespace object also stays uninitialized when filtering
+    # fails because the initialization is incomplete
+    params0, params1 = USED_MODEL_PARAMS["sarimax"]
+    mod = _make_model("sarimax")
+    mod.ssm.initialization = Initialization(mod.k_states)
+    with pytest.raises(RuntimeError, match="Initialization is incomplete"):
+        mod.loglike(params0)
+    mod.ssm.initialize_stationary()
+    copied = _roundtrip(mod, roundtrip)
+
+    fresh = _make_model("sarimax")
+    fresh.ssm.initialize_stationary()
+    assert_allclose(copied.loglike(params1), fresh.loglike(params1), rtol=1e-10)

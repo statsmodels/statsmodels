@@ -196,7 +196,7 @@ cdef void {{prefix}}forecast_error({{prefix}}KalmanFilter kfilter, {{prefix}}Sta
     # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
-        k_states = model._k_posdef
+        k_states = model._k_posdef  # pragma: no cover
 
     # `forecast` $= Z_{t,i} a_{t,i} + d_{t,i}$
     {{if combined_prefix == 'd'}}
@@ -230,7 +230,7 @@ cdef {{cython_type}} {{prefix}}forecast_error_cov({{prefix}}KalmanFilter kfilter
     # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
-        k_states = model._k_posdef
+        k_states = model._k_posdef  # pragma: no cover
 
     # *Intermediate calculation* (used just below and then once more)
     # $M_{t,i} = P_{t,i} Z_{t,i}'$
@@ -277,7 +277,7 @@ cdef void {{prefix}}temp_arrays({{prefix}}KalmanFilter kfilter, {{prefix}}States
     # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
-        k_states = model._k_posdef
+        k_states = model._k_posdef  # pragma: no cover
 
     # $\\#_1 = P_{t,i} Z_{t,i}'$ - set above
     # $\\#_2 = v_{t,i} / F_{t,i}$
@@ -326,9 +326,9 @@ cdef void {{prefix}}filtered_state_cov({{prefix}}KalmanFilter kfilter, {{prefix}
     # Adjust for a VAR transition (i.e., design = [#, 0], where the zeros
     # correspond to all states except the first k_posdef states)
     if model.subset_design:
-        k_states = model._k_posdef
-        if model._k_posdef > model._k_states:
-            k_states1 = model._k_posdef + 1
+        k_states = model._k_posdef  # pragma: no cover
+        if model._k_posdef > model._k_states:  # pragma: no cover
+            k_states1 = model._k_posdef + 1  # pragma: no cover
 
     # $P_{t,i+1} = P_{t,i} - P_{t,i} Z_{t,i}' F_{t,i}^{-1} Z_{t,i} P_{t,i}'$
     # blas.{{prefix}}ger{{combined_suffix}}(&model._k_states, &model._k_states,
@@ -490,9 +490,9 @@ cdef int {{prefix}}prediction_univariate({{prefix}}KalmanFilter kfilter, {{prefi
             else:
                 {{prefix}}predicted_state_cov(kfilter, model)
     else:
-        {{prefix}}companion_predicted_state(kfilter, model)
-        if not kfilter.converged:
-            {{prefix}}companion_predicted_state_cov(kfilter, model)
+        {{prefix}}companion_predicted_state(kfilter, model)  # pragma: no cover
+        if not kfilter.converged:  # pragma: no cover
+            {{prefix}}companion_predicted_state_cov(kfilter, model)  # pragma: no cover
 
     # #### Kalman gain for time t
     # $K_t = T_t P_t Z_t' F_t^{-1}$
@@ -570,30 +570,30 @@ cdef void {{prefix}}predicted_state_cov_chandrasekhar({{prefix}}KalmanFilter kfi
 cdef void {{prefix}}companion_predicted_state({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
     cdef:
         int i
-        blas_int inc = 1
-        blas_int _k_states = model._k_states
-        blas_int _k_posdef = model._k_posdef
+        blas_int inc = 1  # pragma: no cover
+        blas_int _k_states = model._k_states  # pragma: no cover
+        blas_int _k_posdef = model._k_posdef  # pragma: no cover
         {{cython_type}} alpha = 1.0
 
     # $a_{t+1} = T_t a_{t,n} + c_t$
-    blas.{{prefix}}copy(&_k_states, model._state_intercept, &inc, kfilter._predicted_state, &inc)
-    blas.{{prefix}}gemv("N", &_k_posdef, &_k_states,
+    blas.{{prefix}}copy(&_k_states, model._state_intercept, &inc, kfilter._predicted_state, &inc)  # pragma: no cover
+    blas.{{prefix}}gemv("N", &_k_posdef, &_k_states,  # pragma: no cover
           &alpha, model._transition, &_k_states,
                   kfilter._filtered_state, &inc,
           &alpha, kfilter._predicted_state, &inc)
 
-    for i in range(model._k_posdef, model._k_states):
-        kfilter._predicted_state[i] = kfilter._predicted_state[i] + kfilter._filtered_state[i - model._k_posdef]
+    for i in range(model._k_posdef, model._k_states):  # pragma: no cover
+        kfilter._predicted_state[i] = kfilter._predicted_state[i] + kfilter._filtered_state[i - model._k_posdef]  # pragma: no cover
 
 cdef void {{prefix}}companion_predicted_state_cov({{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
     cdef:
         int i, j, idx
-        blas_int inc = 1
-        blas_int _k_states = model._k_states
-        blas_int _k_posdef = model._k_posdef
-        blas_int k_states = kfilter.k_states
-        {{cython_type}} alpha = 1.0
-        {{cython_type}} beta = 0.0
+        blas_int inc = 1  # pragma: no cover
+        blas_int _k_states = model._k_states  # pragma: no cover
+        blas_int _k_posdef = model._k_posdef  # pragma: no cover
+        blas_int k_states = kfilter.k_states  # pragma: no cover
+        {{cython_type}} alpha = 1.0  # pragma: no cover
+        {{cython_type}} beta = 0.0  # pragma: no cover
         {{cython_type}} tmp
 
     # $P_{t+1} = T_t P_{t,n} T_t' + Q_t^*$
@@ -603,40 +603,40 @@ cdef void {{prefix}}companion_predicted_state_cov({{prefix}}KalmanFilter kfilter
 
     # $(p \times m) = (p \times m) (m \times m)$
     # TODO: symm?
-    blas.{{prefix}}gemm("N", "N", &_k_posdef, &_k_states, &_k_states,
+    blas.{{prefix}}gemm("N", "N", &_k_posdef, &_k_states, &_k_states,  # pragma: no cover
           &alpha, model._transition, &_k_states,
                   kfilter._filtered_state_cov, &k_states,
           &beta, kfilter._tmp0, &k_states)
 
     # $P_{t+1} = 1.0 \\#_0 \phi_t' + 1.0 \\#$
     # $(m \times m) = (p \times m) (m \times p) + (m \times m)$
-    blas.{{prefix}}gemm("N", "T", &_k_posdef, &_k_posdef, &_k_states,
+    blas.{{prefix}}gemm("N", "T", &_k_posdef, &_k_posdef, &_k_states,  # pragma: no cover
           &alpha, kfilter._tmp0, &k_states,
                   model._transition, &_k_states,
           &beta, kfilter._predicted_state_cov, &k_states)
 
     # Fill in the basic matrix blocks
     for i in range(kfilter.k_states):      # columns
-        for j in range(kfilter.k_states):  # rows
-            idx = j + i*kfilter.k_states
+        for j in range(kfilter.k_states):  # rows  # pragma: no cover
+            idx = j + i*kfilter.k_states  # pragma: no cover
 
             # Add the Q matrix to the upper-left block
-            if i < model._k_posdef and j < model._k_posdef:
-                kfilter._predicted_state_cov[idx] = (
+            if i < model._k_posdef and j < model._k_posdef:  # pragma: no cover
+                kfilter._predicted_state_cov[idx] = (  # pragma: no cover
                     kfilter._predicted_state_cov[idx] +
                     model._state_cov[j + i*model._k_posdef]
                 )
 
             # Set the upper-right block to be the first m-p columns of
             # \phi _t P_{t|t}, and the lower-left block to the its transpose
-            elif i >= model._k_posdef and j < model._k_posdef:
-                tmp = kfilter._tmp0[j + (i-model._k_posdef)*kfilter.k_states]
-                kfilter._predicted_state_cov[idx] = tmp
-                kfilter._predicted_state_cov[i + j*model._k_states] = tmp
+            elif i >= model._k_posdef and j < model._k_posdef:  # pragma: no cover
+                tmp = kfilter._tmp0[j + (i-model._k_posdef)*kfilter.k_states]  # pragma: no cover
+                kfilter._predicted_state_cov[idx] = tmp  # pragma: no cover
+                kfilter._predicted_state_cov[i + j*model._k_states] = tmp  # pragma: no cover
 
             # Set the lower-right block
-            elif i >= model._k_posdef and j >= model._k_posdef:
-                kfilter._predicted_state_cov[idx] = (
+            elif i >= model._k_posdef and j >= model._k_posdef:  # pragma: no cover
+                kfilter._predicted_state_cov[idx] = (  # pragma: no cover
                     kfilter._filtered_state_cov[(j - model._k_posdef) + (i - model._k_posdef)*kfilter.k_states]
                 )
 

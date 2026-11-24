@@ -1,4 +1,6 @@
 from collections import defaultdict
+import numbers
+import warnings
 
 import numpy as np
 from numpy import hstack, vstack
@@ -32,6 +34,11 @@ from statsmodels.tsa.vector_ar.var_model import (
     test_normality,
 )
 
+# The values of deterministic in VECM, "" and "nc" are aliases of "n"
+_DETERMINISTIC_OPTIONS = (
+    "", "n", "nc", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"
+)
+
 
 def select_order(
     data,
@@ -62,6 +69,13 @@ def select_order(
         Combinations of these are possible (e.g., ``"cili"`` or ``"colo"`` for
         linear trend with intercept). See the docstring of the
         :class:`VECM`-class for more information.
+
+        .. deprecated:: 0.15.1
+
+           Other values, which VECM does not accept, are deprecated and will
+           raise a ValueError after statsmodels 0.17 is released. They add a
+           constant if they contain "co" or "ci", and a linear trend if they
+           contain "lo" or "li".
     seasons : int, optional
         Number of periods in a seasonal cycle. 0 means no seasons.
     exog : ndarray (nobs_tot x #det_terms), optional
@@ -83,6 +97,16 @@ def select_order(
     """
     ic = defaultdict(list)
     deterministic = string_like(deterministic, "deterministic")
+    if deterministic not in _DETERMINISTIC_OPTIONS:
+        documented = [v for v in _DETERMINISTIC_OPTIONS if v not in ("", "nc")]
+        options = ", ".join(f'"{v}"' for v in documented)
+        warnings.warn(
+            f"deterministic must be one of {options}, got {deterministic!r}. "
+            "Other values are deprecated and will raise a ValueError after "
+            "statsmodels 0.17 is released.",
+            FutureWarning,
+            stacklevel=2,
+        )
     maxlags = int_like(maxlags, "maxlags", optional=False)
     if maxlags < 0:
         raise ValueError(f"maxlags must be non-negative, got {maxlags}")
@@ -610,6 +634,7 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace", signif=0.05):
     if signif not in possible_signif_values:
         raise ValueError("Please choose a significance level from 0.1, 0.05, or 0.01")
 
+    endog = np.asarray(endog)
     coint_result = coint_johansen(endog, det_order, k_ar_diff)
     test_stat = coint_result.lr1 if method == "trace" else coint_result.lr2
     crit_vals = coint_result.cvt if method == "trace" else coint_result.cvm
@@ -689,6 +714,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     """
     import warnings
 
+    endog = np.asarray(endog)
     if det_order not in [-1, 0, 1]:
         warnings.warn(
             "Critical values are only available for a det_order of -1, 0, or 1.",
@@ -710,7 +736,6 @@ def coint_johansen(endog, det_order, k_ar_diff):
             return y
         return OLS(y, np.vander(np.linspace(-1, 1, len(y)), order + 1)).fit().resid
 
-    endog = np.asarray(endog)
     nobs, neqs = endog.shape
 
     # why this?  f is detrend transformed series, det_order is detrend data
@@ -775,10 +800,10 @@ def coint_johansen(endog, det_order, k_ar_diff):
     d = np.sqrt(rkt.shape[0]) * scipy.linalg.solve_triangular(r11, u)
     aind = np.arange(neqs)
     # Normalize by first non-zero element of d, usually [0, 0]
-    # GH 5517
+    # GH 5517. d is nonsingular (r11 is checked above and u is orthogonal),
+    # so it has a non-zero element.
     non_zero_d = d.flat != 0
-    if np.any(non_zero_d):
-        d *= np.sign(d.flat[non_zero_d][0])
+    d *= np.sign(d.flat[non_zero_d][0])
 
     #  Compute the trace and max eigenvalue statistics
     lr1 = np.zeros(neqs)
@@ -1013,6 +1038,14 @@ class VECM(tsbase.TimeSeriesModel):
     V     :math:`\\neq 0`                   :math:`\\neq 0`                       ``"colo"``
     ====  ===============================  ===================================  =============
 
+    .. deprecated:: 0.15.1
+
+       A `coint_rank` larger than the number of variables is deprecated and
+       will raise a ValueError after statsmodels 0.17 is released. Such a
+       model is estimated with the rank equal to the number of variables,
+       but the larger rank is kept in the results (for example in the
+       degrees of freedom of ``test_whiteness``).
+
     References
     ----------
     .. [1] Lütkepohl, H. 2005. *New Introduction to Multiple Time Series Analysis*. Springer.
@@ -1036,8 +1069,8 @@ class VECM(tsbase.TimeSeriesModel):
         first_season=0,
     ):
         super().__init__(endog, exog, dates, freq, missing=missing)
-        if exog_coint is not None and not exog_coint.shape[0] == endog.shape[0]:
-            raise ValueError("exog_coint must have as many rows as enodg_tot!")
+        if exog_coint is not None and not exog_coint.shape[0] == len(endog):
+            raise ValueError("exog_coint must have as many rows as endog")
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VECM")
         self.y = self.endog.T
@@ -1045,11 +1078,23 @@ class VECM(tsbase.TimeSeriesModel):
         self.neqs = self.endog.shape[1]
         self.k_ar = k_ar_diff + 1
         self.k_ar_diff = k_ar_diff
+        if coint_rank < 0:
+            raise ValueError(
+                f"coint_rank must be between 0 and neqs ({self.neqs}), got "
+                f"{coint_rank}."
+            )
+        if coint_rank > self.neqs:
+            warnings.warn(
+                f"coint_rank must be between 0 and neqs ({self.neqs}), got "
+                f"{coint_rank}. The model is estimated with rank {self.neqs}. "
+                "A coint_rank larger than neqs is deprecated and will raise a "
+                "ValueError after statsmodels 0.17 is released.",
+                FutureWarning,
+                stacklevel=2,
+            )
         self.coint_rank = coint_rank
         deterministic = string_like(
-            deterministic,
-            "deterministic",
-            options=("", "n", "nc", "co", "ci", "lo", "li", "coli", "cili", "colo", "cilo"),
+            deterministic, "deterministic", options=_DETERMINISTIC_OPTIONS
         )
         deterministic = "n" if deterministic == "nc" else deterministic
 
@@ -1505,12 +1550,6 @@ class VECMResults:
         self.first_season = first_season
 
         self.coint_rank = coint_rank
-        if alpha.dtype == np.complex128 and np.all(np.imag(alpha) == 0):
-            alpha = np.real_if_close(alpha)
-        if beta.dtype == np.complex128 and np.all(np.imag(beta) == 0):
-            beta = np.real_if_close(beta)
-        if gamma.dtype == np.complex128 and np.all(np.imag(gamma) == 0):
-            gamma = np.real_if_close(gamma)
 
         self.alpha = alpha
         self.beta, self.det_coef_coint = np.vsplit(beta, [self.neqs])
@@ -2193,28 +2232,36 @@ class VECMResults:
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
-        allowed_types = (str, int)
+        allowed_types = (str, numbers.Integral)
 
         if isinstance(caused, allowed_types):
             caused = [caused]
-        if not all(isinstance(c, allowed_types) for c in caused):
+        if not np.iterable(caused) or not all(
+            isinstance(c, allowed_types) for c in caused
+        ):
             raise TypeError(
                 "caused has to be of type string or int (or a "
                 "sequence of these types)."
             )
-        caused = [self.names[c] if type(c) is int else c for c in caused]
+        caused = [
+            self.names[c] if isinstance(c, numbers.Integral) else c for c in caused
+        ]
         caused_ind = [get_index(self.names, c) for c in caused]
 
         if causing is not None:
 
             if isinstance(causing, allowed_types):
                 causing = [causing]
-            if not all(isinstance(c, allowed_types) for c in causing):
+            if not np.iterable(causing) or not all(
+                isinstance(c, allowed_types) for c in causing
+            ):
                 raise TypeError(
                     "causing has to be of type string or int (or "
                     "a sequence of these types) or None."
                 )
-            causing = [self.names[c] if type(c) is int else c for c in causing]
+            causing = [
+                self.names[c] if isinstance(c, numbers.Integral) else c for c in causing
+            ]
             causing_ind = [get_index(self.names, c) for c in causing]
 
         if causing is None:
@@ -2343,6 +2390,21 @@ class VECMResults:
 
         .. |H1| replace:: H\ :sub:`1`
         """
+        allowed_types = (str, numbers.Integral)
+        if isinstance(causing, allowed_types):
+            causing = [causing]
+        if not np.iterable(causing) or not all(
+            isinstance(c, allowed_types) for c in causing
+        ):
+            raise TypeError(
+                "causing has to be of type string or int (or a sequence of "
+                "these types)."
+            )
+        # pass the names, which also covers integer indices of numpy types
+        causing = [
+            self.names[c] if isinstance(c, numbers.Integral) else c for c in causing
+        ]
+
         exog = _deterministic_to_exog(
             self.deterministic,
             self.seasons,
@@ -2471,8 +2533,6 @@ class VECMResults:
         # the calculation of autocovariances with lag > 0. (used in the
         # argument of trace() four rows below this comment.)
         c0_inv = inv(self.sigma_u)  # instead of inv(cov(0))
-        if c0_inv.dtype == np.complex128 and np.all(np.imag(c0_inv) == 0):
-            c0_inv = np.real(c0_inv)
         for t in range(1, nlags + 1):
             ct = acov_list[t]
             to_add = np.trace(ct.T @ c0_inv @ ct @ c0_inv)
@@ -2713,11 +2773,10 @@ class VECMResults:
             offset = 0
 
             # 1. Cointegration matrix (beta)
-            if self.coint_rank > 0:
-                start = i * self.neqs
-                end = start + self.neqs
-                masks.append(offset + np.arange(start, end))
-                offset += self.neqs * self.coint_rank
+            start = i * self.neqs
+            end = start + self.neqs
+            masks.append(offset + np.arange(start, end))
+            offset += self.neqs * self.coint_rank
 
             # 2. Deterministic terms inside cointegration relation
             if "ci" in self.deterministic:

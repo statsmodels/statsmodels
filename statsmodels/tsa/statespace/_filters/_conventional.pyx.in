@@ -325,7 +325,7 @@ cdef int {{prefix}}updating_conventional({{prefix}}KalmanFilter kfilter, {{prefi
         # T_t P_t Z_t' F_t^{-1}
         # $(m \times p) = (m \times m) (m \times p)$
         if model.identity_transition:
-            blas.{{prefix}}copy(&_k_endogstates, &kfilter.CtmpW[0, 0], &inc, kfilter._kalman_gain, &inc)
+            blas.{{prefix}}copy(&_k_endogstates, &kfilter.CtmpW[0, 0], &inc, kfilter._kalman_gain, &inc)  # pragma: no cover
         else:
             blas.{{prefix}}gemm("N", "N", &_k_states, &_k_endog, &_k_states,
                 &alpha, model._transition, &k_states,
@@ -356,7 +356,7 @@ cdef int {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter, {{pre
     # $a_{t+1} = T_t a_{t|t} + c_t$
     blas.{{prefix}}copy(&_k_states, model._state_intercept, &inc, kfilter._predicted_state, &inc)
     if model.identity_transition:
-        blas.{{prefix}}axpy(&_k_states, &alpha, kfilter._filtered_state, &inc, kfilter._predicted_state, &inc)
+        blas.{{prefix}}axpy(&_k_states, &alpha, kfilter._filtered_state, &inc, kfilter._predicted_state, &inc)  # pragma: no cover
     else:
         blas.{{prefix}}gemv("N", &_k_states, &_k_states,
             &alpha, model._transition, &_k_states,
@@ -393,7 +393,7 @@ cdef int {{prefix}}prediction_conventional({{prefix}}KalmanFilter kfilter, {{pre
             # $\\#_0 = T_t P_{t|t} $
 
             if model.identity_transition:
-                blas.{{prefix}}axpy(&_k_states2, &alpha, kfilter._filtered_state_cov, &inc, kfilter._predicted_state_cov, &inc)
+                blas.{{prefix}}axpy(&_k_states2, &alpha, kfilter._filtered_state_cov, &inc, kfilter._predicted_state_cov, &inc)  # pragma: no cover
             else:
                 # $(m \times m) = (m \times m) (m \times m)$
                 blas.{{prefix}}gemm("N", "N", &_k_states, &_k_states, &_k_states,

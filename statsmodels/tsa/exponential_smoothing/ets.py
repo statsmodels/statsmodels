@@ -143,13 +143,16 @@ References
 from collections import OrderedDict
 import contextlib
 import datetime as dt
+import functools
+import operator
+import warnings
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm, rv_continuous, rv_discrete
 from scipy.stats.distributions import rv_frozen
 
-from statsmodels.base.covtype import descriptions
+from statsmodels.base.covtype import _stacklevel_outside_statsmodels, descriptions
 import statsmodels.base.wrapper as wrap
 from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
@@ -1023,6 +1026,7 @@ class ETSModel(base.StateSpaceMLEModel):
         disp=True,
         callback=None,
         return_params=False,
+        param_index=None,
         **kwargs,
     ):
         r"""
@@ -1084,6 +1088,21 @@ class ETSModel(base.StateSpaceMLEModel):
         return_params : bool, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
+        param_index : {"names", "integer"}, optional
+            The index of ``params``, ``bse``, ``tvalues``, ``pvalues``,
+            ``conf_int()`` and ``cov_params()`` of the results if the data
+            are pandas objects. "names" uses the parameter names,
+            ``param_names``; "integer" uses 0, 1, ..., k - 1. If None, uses
+            "integer" and warns that the default will change to "names"
+            after statsmodels 0.17 is released. Not used for ndarray data,
+            whose results are ndarrays, or if `return_params` is True.
+
+            .. versionadded:: 0.15.1
+
+            .. deprecated:: 0.15.1
+
+               The default "integer" index is deprecated and will change to
+               "names". Pass "names" to use the future default now.
         **kwargs
             Additional keyword arguments to pass to the optimizer.
 
@@ -1093,6 +1112,7 @@ class ETSModel(base.StateSpaceMLEModel):
             The fitted model results, or the array of fitted parameters if
             `return_params` is True.
         """
+        param_index = self._check_param_index(param_index, not return_params)
 
         if start_params is None:
             start_params = self.start_params
@@ -1187,7 +1207,7 @@ class ETSModel(base.StateSpaceMLEModel):
         if return_params:
             return final_params
         else:
-            result = self.smooth(final_params)
+            result = self.smooth(final_params, param_index=param_index)
             result.mlefit = mlefit
             result.mle_retvals = mlefit.mle_retvals
             result.mle_settings = mlefit.mle_settings
@@ -1386,7 +1406,7 @@ class ETSModel(base.StateSpaceMLEModel):
             states = pd.DataFrame(states, index=index, columns=statenames)
         return yhat, states
 
-    def smooth(self, params, return_raw=False):
+    def smooth(self, params, return_raw=False, param_index=None):
         """
         Exponential smoothing with given parameters
 
@@ -1397,6 +1417,21 @@ class ETSModel(base.StateSpaceMLEModel):
         return_raw : bool, optional
             Whether to return only the state space results or the full results
             object. Default is ``False``.
+        param_index : {"names", "integer"}, optional
+            The index of ``params``, ``bse``, ``tvalues``, ``pvalues``,
+            ``conf_int()`` and ``cov_params()`` of the results if the data
+            are pandas objects. "names" uses the parameter names,
+            ``param_names``; "integer" uses 0, 1, ..., k - 1. If None, uses
+            "integer" and warns that the default will change to "names"
+            after statsmodels 0.17 is released. Not used for ndarray data,
+            whose results are ndarrays, or if `return_raw` is True.
+
+            .. versionadded:: 0.15.1
+
+            .. deprecated:: 0.15.1
+
+               The default "integer" index is deprecated and will change to
+               "names". Pass "names" to use the future default now.
 
         Returns
         -------
@@ -1405,9 +1440,44 @@ class ETSModel(base.StateSpaceMLEModel):
             object. Otherwise a tuple of arrays or pandas objects, depending on
             the format of the endog data.
         """
+        param_index = self._check_param_index(param_index, not return_raw)
         params = np.asarray(params)
         results = self._smooth(params)
-        return self._wrap_results(params, results, return_raw)
+        results = self._wrap_results(params, results, return_raw)
+        if not return_raw:
+            # Read by ETSResultsWrapper, which attaches the names
+            results._results._named_params = (
+                self.use_pandas and param_index == "names"
+            )
+        return results
+
+    def _check_param_index(self, param_index, warn):
+        """
+        Validate param_index; if warn, None is "integer" with a FutureWarning
+        for pandas data
+        """
+        param_index = string_like(
+            param_index,
+            "param_index",
+            optional=True,
+            options=("names", "integer"),
+            lower=False,
+        )
+        if param_index is None and warn:
+            if self.use_pandas:
+                warnings.warn(
+                    'The default param_index will change from "integer" '
+                    "(params, bse and the other results indexed by parameter "
+                    'use 0, 1, ...) to "names" (they use the parameter names, '
+                    "model.param_names) after statsmodels 0.17 is released. "
+                    'Pass param_index="names" to use the future default now, '
+                    'or param_index="integer" to keep the current one and '
+                    "silence this warning.",
+                    FutureWarning,
+                    stacklevel=_stacklevel_outside_statsmodels(),
+                )
+            param_index = "integer"
+        return param_index
 
     @property
     def _res_classes(self):
@@ -2122,6 +2192,11 @@ class ETSResults(base.StateSpaceMLEResults):
             by the forecast periods if `endog` is a pandas object, otherwise
             an ndarray.
         """
+        try:
+            steps = operator.index(steps)
+        except TypeError:
+            # a date: forecast until it
+            return self.predict(start=self.nobs, end=steps)
         return self._forecast(steps, "end")
 
     def _forecast(self, steps, anchor):
@@ -2395,6 +2470,45 @@ class ETSResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods
     )
+
+    def __getattribute__(self, attr):
+        # The base class labels the results with the model data, which all
+        # fits of a model share, so the parameter names of a fit with
+        # param_index="names" are attached here
+        how = _PARAM_INDEXED.get(attr)
+        if how is not None:
+            results = object.__getattribute__(self, "_results")
+            if getattr(results, "_named_params", False):
+                names = results.model.param_names
+                return _attach_param_names(getattr(results, attr), names, how)
+        return super().__getattribute__(attr)
+
+
+# The results indexed by parameter and how they are labelled
+_PARAM_INDEXED = {
+    "params": "columns",
+    "bse": "columns",
+    "tvalues": "columns",
+    "pvalues": "columns",
+    "conf_int": "columns",
+    "cov_params": "cov",
+}
+
+
+def _attach_param_names(value, names, how):
+    """Label a result or the output of a method with the parameter names"""
+    if callable(value):
+
+        @functools.wraps(value)
+        def method(*args, **kwargs):
+            return _attach_param_names(value(*args, **kwargs), names, how)
+
+        return method
+    if how == "cov":
+        return pd.DataFrame(value, index=names, columns=names)
+    if value.ndim == 1:
+        return pd.Series(value, index=names)
+    return pd.DataFrame(value, index=names)
 
 
 wrap.populate_wrapper(ETSResultsWrapper, ETSResults)

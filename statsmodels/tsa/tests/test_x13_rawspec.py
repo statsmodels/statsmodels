@@ -474,3 +474,75 @@ def test_object_index_of_dates(dates, freq, start):
     assert f"period={period}" in spec.split()
     assert f"start={start}" in spec.split()
     assert spec == x13.x13_arima_analysis(periods, speconly=True)
+
+
+@pytest.mark.parametrize(
+    "offset, freq",
+    [
+        (pd.offsets.BMonthEnd(), "M"),
+        (pd.offsets.BMonthBegin(), "M"),
+        (pd.offsets.BQuarterEnd(startingMonth=12), "Q"),
+        (pd.offsets.BQuarterBegin(startingMonth=1), "Q"),
+    ],
+    ids=["BME", "BMS", "BQE", "BQS"],
+)
+def test_business_month_quarter_freq(offset, freq):
+    # Business month and quarter frequencies raised "Only monthly and
+    # quarterly periods are supported". The spec is that of the same values
+    # with a monthly or quarterly PeriodIndex
+    values = [float(v) for v in range(1, 25)]
+    index = pd.date_range("2000-01-01", periods=24, freq=offset)
+    endog = pd.Series(values, index=index, name="y")
+    periods = pd.period_range(index[0], periods=24, freq=freq)
+    expected = x13.x13_arima_analysis(
+        pd.Series(values, index=periods, name="y"), speconly=True
+    )
+    spec = x13.x13_arima_analysis(endog, speconly=True)
+    assert spec.split() == expected.split()
+    assert f"period={12 if freq == 'M' else 4}" in spec.split()
+
+
+@pytest.mark.parametrize(
+    "offset",
+    [
+        pd.offsets.Week(weekday=6),
+        pd.offsets.Day(),
+        pd.offsets.BDay(),
+        pd.offsets.BYearEnd(),
+    ],
+    ids=["W", "D", "B", "BYE"],
+)
+def test_freq_not_monthly_or_quarterly(offset):
+    index = pd.date_range("2000-01-01", periods=24, freq=offset)
+    endog = pd.Series([float(v) for v in range(24)], index=index)
+    with pytest.raises(ValueError, match="Only monthly and quarterly periods"):
+        x13.x13_arima_analysis(endog, speconly=True)
+
+
+@pytest.mark.parametrize(
+    "make_endog, name",
+    [
+        (lambda: _monthly_endog().rename(5), "5"),
+        (lambda: _monthly_endog().rename(2.5), "2.5"),
+        (lambda: pd.DataFrame({7: _monthly_endog()}), "7"),
+        (lambda: _monthly_endog().rename("gdp"), "gdp"),
+        (lambda: _monthly_endog().rename(None), "Unnamed Series"),
+    ],
+    ids=["int", "float", "dataframe_int_column", "str", "none"],
+)
+def test_spec_endog_name(no_x12, make_endog, name):
+    spec = x13.x13_arima_analysis(make_endog(), speconly=True)
+
+    data = " ".join(str(value) for value in range(24))
+    expected = f"""
+    Series {{
+        data=({data})
+        appendbcst=no
+        appendfcst=no
+        period=12
+        start=2000.1
+        title="{name}"
+        name="{name}"
+    }}
+    """
+    assert spec[: spec.index("}") + 1].split() == expected.split()

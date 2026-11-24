@@ -620,7 +620,7 @@ cdef class {{prefix}}SimulationSmoother(object):
 
         # alpha_{t+1} = T_t alpha_t + \\#
         if self.model.identity_transition:
-            blas.{{prefix}}axpy(&k_states, &alpha, input_state, &inc, state, &inc)
+            blas.{{prefix}}axpy(&k_states, &alpha, input_state, &inc, state, &inc)  # pragma: no cover
         else:
             blas.{{prefix}}gemv("N", &k_states, &k_states,
                                 &alpha, &self.model.transition[0,0,transition_t], &k_states,

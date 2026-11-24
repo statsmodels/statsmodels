@@ -84,6 +84,7 @@ def test_equivalence_forecast(data, config, horizon, close_figures):
     fit_kwarg = {}
     if model is ETSModel:
         fit_kwarg["disp"] = False
+        fit_kwarg["param_index"] = "integer"
     res = mod.fit(**fit_kwarg)
     stlf = STLForecast(data, model, model_kwargs=kwargs).fit(fit_kwargs=fit_kwarg)
 

@@ -90,11 +90,13 @@ class SkewNorm_gen(distributions.rv_continuous):
     def _argcheck(self, alpha):
         return 1  # (alpha >= 0)
 
-    def _rvs(self, alpha):
+    def _rvs(self, alpha, size=None, random_state=None):
         # see http://azzalini.stat.unipd.it/SN/faq.html
         delta = alpha / np.sqrt(1 + alpha**2)
-        u0 = stats.norm.rvs(size=self._size)
-        u1 = delta * u0 + np.sqrt(1 - delta**2) * stats.norm.rvs(size=self._size)
+        u0 = stats.norm.rvs(size=size, random_state=random_state)
+        u1 = delta * u0 + np.sqrt(1 - delta**2) * stats.norm.rvs(
+            size=size, random_state=random_state
+        )
         return np.where(u0 > 0, u1, -u1)
 
     def _munp(self, n, alpha):
@@ -180,11 +182,11 @@ class ACSkewT_gen(distributions.rv_continuous):
     #    def _argcheck(self, alpha):
     #        return np.where(alpha>=0, 1, 0)
 
-    def _rvs(self, df, alpha):
+    def _rvs(self, df, alpha, size=None, random_state=None):
         # see http://azzalini.stat.unipd.it/SN/faq.html
         # delta = alpha/np.sqrt(1+alpha**2)
-        V = stats.chi2.rvs(df, size=self._size)
-        z = skewnorm.rvs(alpha, size=self._size)
+        V = stats.chi2.rvs(df, size=size, random_state=random_state)
+        z = skewnorm.rvs(alpha, size=size, random_state=random_state)
         return z / np.sqrt(V / df)
 
     def _munp(self, n, df, alpha):

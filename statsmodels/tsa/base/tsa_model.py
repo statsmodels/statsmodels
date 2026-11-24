@@ -68,6 +68,12 @@ def get_index_loc(key, index):
     """
     Get the location of a specific key in an index
 
+    .. versionchanged:: 0.15.1
+
+       A key within one period of a PeriodIndex, such as a day of quarterly
+       periods, is the location of that period in the sample, as it already
+       was after the end of the sample, instead of raising a KeyError.
+
     Parameters
     ----------
     key : label
@@ -83,6 +89,14 @@ def get_index_loc(key, index):
            starts at the next date or ends at the previous one. This is
            deprecated and will raise a KeyError after statsmodels 0.17 is
            released.
+
+        .. versionchanged:: 0.15.1
+
+           A quarter string such as "2001Q2" matches all dates of the
+           quarter in a DatetimeIndex, and all periods of the quarter in a
+           PeriodIndex with a finer frequency, as pandas' partial-string
+           indexing does for e.g. "2001-03". Previously it was taken as the
+           last day of the quarter, or did not match periods.
     index : pd.Index
         The index to search.
 
@@ -175,12 +189,25 @@ def get_index_loc(key, index):
                 )
                 key = index[-1]
             else:
-                key = index[key]
+                try:
+                    key = index[key]
+                except IndexError as exc:
+                    # A negative location before the start of the sample
+                    raise KeyError(str(exc)) from exc
         # Other key types (i.e., string date or some datetime-like object)
         else:
             # Convert the key to the appropriate date-like object
             if index_class is PeriodIndex:
                 date_key = Period(key, freq=base_index.freq)
+                # A key within one period, such as a day of quarterly data,
+                # is that period, as it is after the end of the sample
+                # (date_key is the period that contains the start of key)
+                if (
+                    isinstance(key, (str, Period))
+                    and pd.notna(date_key)
+                    and Period(key).end_time <= date_key.end_time
+                ):
+                    key = date_key
             elif isinstance(key, str) and re.fullmatch("[0-9]*Q[1-4]", key):
                 # Special case dates with a format like
                 # 2026Q2
@@ -198,6 +225,10 @@ def get_index_loc(key, index):
 
             # Out-of-sample
             if date_key > base_index[-1]:
+                # date_range needs a tz-aware key in the time zone of the
+                # index, so convert a key with another time zone or offset
+                if index_class is DatetimeIndex and date_key.tz is not None:
+                    date_key = date_key.tz_convert(base_index.tz)
                 # First create an index that may not always include `key`
                 index = index_fn(
                     start=base_index[0], end=date_key, freq=base_index.freq
@@ -218,12 +249,23 @@ def get_index_loc(key, index):
     # Get the location
     if date_index:
         # (note that get_loc will throw a KeyError if key is invalid)
-        if isinstance(key, str) and re.fullmatch("[0-9]*Q[1-4]", key):
-            # Handle future changes in pandas 4
-            key = pd.Period(key)
-            if isinstance(index, pd.DatetimeIndex):
-                key = key.to_timestamp(freq="Q")
-        loc = index.get_loc(key)
+        if (
+            isinstance(index, DatetimeIndex)
+            and isinstance(key, str)
+            and re.fullmatch("[0-9]*Q[1-4]", key)
+        ):
+            # pandas deprecates parsing quarter strings as dates, so select
+            # the dates in the quarter as its partial-string indexing does,
+            # e.g. for "2001-03" on a daily index
+            period = Period(key)
+            loc = index.slice_indexer(period.start_time, period.end_time)
+            if loc.start == loc.stop:
+                raise KeyError(key)
+            if loc.stop - loc.start == 1:
+                # A single date, e.g. of quarterly data, is an exact match
+                loc = loc.start
+        else:
+            loc = index.get_loc(key)
     elif int_index or range_index:
         # For NumericIndex and RangeIndex, key is assumed to be the location
         # and not an index value (this assumption is required to support
@@ -290,12 +332,18 @@ def get_index_label_loc(key, index, row_labels):
     row_labels : pd.Index
         Row labels to search if key not found in index
 
+        .. versionchanged:: 0.15.1
+
+           A key that matches several consecutive row labels, such as
+           "2000-01" for dates without a frequency, gives the slice of all of
+           them, as in `index`. Previously it gave the location of the first
+           one, so that prediction with this key as `end` stopped there.
+
     Returns
     -------
     loc : int or slice
         The location of the key. A slice if `key` is a partial date string
-        found in `index`. If `key` is only found in `row_labels`, the first
-        matching location.
+        that matches several dates, for example "2000-03" for daily dates.
     index : pd.Index
         The index including the key; this is a copy of the original index
         unless the index had to be expanded to accommodate `key`.
@@ -326,16 +374,18 @@ def get_index_label_loc(key, index, row_labels):
             )
             if not in_quarter.any():
                 raise
-        if not isinstance(key, (int, np.integer)):
+        # Without row labels (e.g. numpy data) there is nothing else to search
+        if not isinstance(key, (int, np.integer)) and row_labels is not None:
             loc = row_labels.get_loc(key)
         else:
             raise
-        # Require scalar
         # Pandas may return a slice if there are multiple matching
         # locations that are monotonic increasing (otherwise it may
-        # return an array of integer locations, see below).
+        # return an array of integer locations, see below). Keep the slice,
+        # as get_index_loc does, so that a key such as "2000-01" covers all
+        # of its dates as the end of prediction.
         if isinstance(loc, slice):
-            loc = loc.start
+            return loc, row_labels[: loc.stop], False
         if isinstance(loc, np.ndarray):
             # Pandas may return a mask (boolean array), for e.g.:
             # pd.Index(list('abcb')).get_loc('b')
@@ -453,6 +503,12 @@ def get_prediction_index(
     is because integers for a RangeIndex could refer either to index values
     or to index locations in an ambiguous way (while for `NumericIndex`,
     since we have required them to be full indexes, there is no ambiguity).
+
+    .. versionchanged:: 0.15.1
+
+       A quarter string such as "2001Q2" as `start` or `end` covers the
+       whole quarter of a date index, so that prediction starts at its first
+       date or ends at its last date in the sample.
     """
 
     # Convert index keys (start, end) to index locations and get associated
@@ -466,6 +522,10 @@ def get_prediction_index(
             "The `start` argument could not be matched to a"
             " location related to the index of the data."
         ) from exc
+    # A key that covers more than one date (e.g. "2000-02" for a daily index)
+    # gives a slice, of which prediction starts at the first date
+    if isinstance(start, slice):
+        start = start.start
     if end is None:
         end = max(start, len(base_index) - 1)
     try:
@@ -479,8 +539,6 @@ def get_prediction_index(
         ) from exc
 
     # Handle slices (if the given index keys cover more than one date)
-    if isinstance(start, slice):
-        start = start.start
     if isinstance(end, slice):
         end = end.stop - 1
 
@@ -756,7 +814,10 @@ class TimeSeriesModel(base.LikelihoodModel):
                     resampled_index = date_range(
                         start=index[0], end=index[-1], freq=freq
                     )
-                    if not inferred_freq and not (resampled_index == index).all():
+                    if not inferred_freq and (
+                        len(resampled_index) != len(index)
+                        or not (resampled_index == index).all()
+                    ):
                         raise ValueError(
                             "The given frequency argument could"
                             " not be matched to the given index."

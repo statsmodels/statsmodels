@@ -735,3 +735,19 @@ def test_batched_full_sample_window(method, expanding):
     assert_results_equal(res, expected, rtol=1e-9, robust=True)
     assert np.isfinite(res.params[-1]).all()
     assert np.isfinite(res.params[5]).all() == expanding
+
+
+def test_lstsq_window_equal_to_k_no_rcond_warning():
+    # A window with as many rows as columns is estimated one window at a time.
+    # lstsq was called without rcond, which warns on NumPy < 2.
+    rs = np.random.default_rng(5150)
+    n, k = 20, 3
+    x = np.column_stack([np.ones(n), rs.standard_normal((n, 2))])
+    y = rs.standard_normal(n)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", FutureWarning)
+        res = RollingOLS(y, x, window=k).fit(method="lstsq", params_only=True)
+    # Each window is a square system with a unique solution
+    expected = [np.linalg.solve(x[i - k : i], y[i - k : i]) for i in range(k, n + 1)]
+    assert np.all(np.isnan(res.params[: k - 1]))
+    assert_allclose(res.params[k - 1 :], expected, rtol=1e-8)

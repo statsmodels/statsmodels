@@ -33,6 +33,9 @@ BINARY_NAMES += tuple(f"{name}.exe" for name in BINARY_NAMES)  # windows
 
 class _freq_to_period:
     def __getitem__(self, key):
+        # Business month and quarter frequencies, such as BME and BQE-DEC, are
+        # monthly and quarterly
+        key = key.removeprefix("B")
         if key.startswith("M"):
             return 12
         elif key.startswith("Q"):
@@ -416,7 +419,7 @@ def pandas_to_series_spec(x):
         year, stperiod = start_date.year, start_date.month
     elif period == 4:
         year, stperiod = start_date.year, start_date.quarter
-    else:  # pragma: no cover
+    else:
         raise ValueError(
             "Only monthly and quarterly periods are supported."
             " Please report or send a pull request if you want "
@@ -424,7 +427,7 @@ def pandas_to_series_spec(x):
         )
 
     if hasattr(x, "name"):
-        name = x.name or "Unnamed Series"
+        name = str(x.name or "Unnamed Series")
     else:
         name = "Unnamed Series"
     series_spec = SeriesSpec(

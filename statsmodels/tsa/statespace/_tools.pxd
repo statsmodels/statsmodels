@@ -44,11 +44,6 @@ cdef int _dldl(np.float64_t * A, int n) except *
 cdef int _cldl(np.complex64_t * A, int n) except *
 cdef int _zldl(np.complex128_t * A, int n) except *
 
-cpdef int sldl(np.float32_t [::1, :] A) except *
-cpdef int dldl(np.float64_t [::1, :] A) except *
-cpdef int cldl(np.complex64_t [::1, :] A) except *
-cpdef int zldl(np.complex128_t [::1, :] A) except *
-
 cpdef int sreorder_missing_matrix(np.float32_t [::1, :, :] A, int [::1, :] missing, int reorder_rows, int reorder_cols, int diagonal) except *
 cpdef int dreorder_missing_matrix(np.float64_t [::1, :, :] A, int [::1, :] missing, int reorder_rows, int reorder_cols, int diagonal) except *
 cpdef int creorder_missing_matrix(np.complex64_t [::1, :, :] A, int [::1, :] missing, int reorder_rows, int reorder_cols, int diagonal) except *

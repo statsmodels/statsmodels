@@ -1,0 +1,4 @@
+- With scipy 1.8, ``pdf_kernel_asym`` with the ``"beta"`` and
+  ``"beta2"`` kernels warned "divide by zero" at points near 1,
+  where the beta densities underflow to 0. Results are unchanged.
+  :pr:`11174`

@@ -1025,3 +1025,37 @@ def test_nondiagonal_obs_cov():
     assert_allclose(
         res1.smoothed_state_cov, res2.smoothed_state_cov, rtol=rtol, atol=atol
     )
+
+
+def _bivariate_diffuse_model(obs_cov):
+    # Two observed series and two states, both states exact diffuse
+    rng = np.random.default_rng(86420)
+    endog = rng.standard_normal((20, 2))
+    mod = KalmanSmoother(np.ascontiguousarray(endog), k_states=2)
+    mod["design"] = np.array([[1.0, 0.2], [0.3, 1.0]])
+    mod["transition"] = np.array([[0.5, 0.1], [0.0, 0.3]])
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.eye(2)
+    mod["obs_cov"] = obs_cov
+    mod.initialize_diffuse()
+    return mod
+
+
+def test_filtered_timing_exact_diffuse_raises():
+    mod = _bivariate_diffuse_model(np.eye(2))
+    mod.timing_init_filtered = True
+    match = 'Cannot use alternate \\("filtered"\\) timing with exact diffuse'
+    with pytest.raises(NotImplementedError, match=match):
+        mod.filter()
+
+
+def test_exact_diffuse_negative_forecast_variance_clipped():
+    # In the first period P_* = 0, so the non-diffuse forecast variance of the
+    # first series is F_* = Z_1 P_* Z_1' + H_11 = -1. It is set to zero, so
+    # the update leaves P_* = 0 and the second series has F_* = H_22.
+    mod = _bivariate_diffuse_model(np.diag([-1.0, 1.0]))
+    res = mod.filter()
+    assert res.nobs_diffuse == 1
+    # atol: zero by construction; without the clipping it would be -1
+    assert_allclose(res.forecasts_error_cov[0, 0, 0], 0.0, atol=1e-12)
+    assert_allclose(res.forecasts_error_cov[1, 1, 0], 1.0)

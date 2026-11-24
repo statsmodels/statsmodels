@@ -12,6 +12,7 @@ License: BSD-3
 
 from statsmodels.compat.pandas import (
     MONTH_END,
+    PD_LT_2,
     PD_LT_2_2_0,
     QUARTER_END,
     YEAR_END,
@@ -1670,29 +1671,34 @@ def test_get_index_loc_missing_label():
 
 
 @pytest.mark.parametrize(
-    "row_labels, key, first",
+    "row_labels, key, first, stop",
     [
         # pandas.Index.get_loc returns a slice, a boolean mask and integer
         # locations for these
-        (pd.Index(list("abbcd")), "b", 1),
-        (pd.Index(list("abcbd")), "b", 1),
+        (pd.Index(list("abbcd")), "b", 1, 3),
+        (pd.Index(list("abcbd")), "b", 1, None),
         (
             pd.DatetimeIndex(
                 ["2001-02-01", "2001-01-01", "2002-01-01", "2001-03-01", "2003-01-01"]
             ),
             "2001",
             0,
+            None,
         ),
     ],
 )
-def test_repeated_row_label_first_location(row_labels, key, first):
+def test_repeated_row_label_first_location(row_labels, key, first, stop):
     # A key that is found more than once in the row labels gives its first
-    # location
+    # location, or the slice of all of them if they are consecutive
     loc, index, expanded = tsa_model.get_index_label_loc(
         key, pd.RangeIndex(5), row_labels
     )
-    assert loc == first
-    assert index.equals(row_labels[: first + 1])
+    if stop is None:
+        assert loc == first
+        assert index.equals(row_labels[: first + 1])
+    else:
+        assert loc == slice(first, stop)
+        assert index.equals(row_labels[:stop])
     assert expanded is False
 
     endog = pd.Series(np.arange(5.0), index=row_labels)
@@ -1913,8 +1919,11 @@ def test_date_keys_tz_aware_index_other_keys():
     assert tsa_model.get_index_loc("2001-04", periods)[0] == 15
     assert tsa_model.get_index_loc("2002-03", periods)[0] == 26
     index = pd.date_range("2000-01-01", periods=24, freq="MS", tz="US/Eastern")
-    # A string with a UTC offset is already tz-aware: 2001-04-01 is in EST
-    loc, new_index, expanded = tsa_model.get_index_loc("2001-04-01T00:00-05:00", index)
+    # A string with a UTC offset is already tz-aware: 2001-04-01 is in EST.
+    # The seconds are given since pandas < 2.2 cannot look up such a string
+    # without them (KeyError: 14)
+    key = "2001-04-01T00:00:00-05:00"
+    loc, new_index, expanded = tsa_model.get_index_loc(key, index)
     assert loc == 15
     assert not expanded
     assert new_index.equals(index[:16])
@@ -1971,11 +1980,15 @@ def test_small_int_index_extended_past_dtype_max(dtype, key):
     # Extending an index 0, ..., n - 1 of a small integer dtype past the
     # largest value of the dtype raised "Maximum allowed size exceeded"
     index = pd.Index(np.arange(5, dtype=dtype))
+    # pandas < 2 has no index of a small integer dtype: it stores int8 and
+    # int16 as int64 and uint8 and uint16 as uint64, and an index of dtype
+    # uint64 is extended with uint64 labels
+    expected_dtype = np.uint64 if index.dtype == np.uint64 else np.int64
     loc, new_index, expanded = tsa_model.get_index_loc(key, index)
     assert loc == key
     assert expanded
-    assert new_index.equals(pd.Index(np.arange(key + 1, dtype=np.int64)))
-    assert new_index.dtype == np.int64
+    assert new_index.equals(pd.Index(np.arange(key + 1, dtype=expected_dtype)))
+    assert new_index.dtype == expected_dtype
 
     endog = pd.Series(np.zeros(5), index=index)
     mod = tsa_model.TimeSeriesModel(endog)
@@ -1983,7 +1996,8 @@ def test_small_int_index_extended_past_dtype_max(dtype, key):
         3, key, 5, mod._index, data=mod.data
     )
     assert (start, end, out_of_sample) == (3, 4, key - 4)
-    assert prediction_index.equals(pd.Index(np.arange(3, key + 1, dtype=np.int64)))
+    expected = pd.Index(np.arange(3, key + 1, dtype=expected_dtype))
+    assert prediction_index.equals(expected)
 
 
 @pytest.mark.parametrize(
@@ -2150,7 +2164,12 @@ def test_oos_end_key_no_date(kind, key):
     else:
         index = pd.period_range("2000-01", periods=24, freq="M")
     res = constant_mean_results(pd.Series(np.zeros(24), index=index))
-    with pytest.raises(KeyError, match="The `end` argument could not be"):
+    error, match = KeyError, "The `end` argument could not be"
+    if PD_LT_2 and kind == "period" and key == "":
+        # pandas < 2 cannot parse "" as a period (pandas >= 2 gives NaT), so
+        # its DateParseError, a ValueError, is raised there, as before
+        error, match = ValueError, "Unable to parse datetime string"
+    with pytest.raises(error, match=match):
         res.predict(start=0, end=key)
 
 
@@ -2215,3 +2234,430 @@ def test_oos_end_key_models(model):
     assert_allclose(
         np.asarray(pred), np.asarray(res.predict(start=34, end=41)), rtol=1e-12
     )
+
+
+ROW_LABEL_DATES = pd.DatetimeIndex(
+    ["2000-01-03", "2000-01-10", "2000-01-24", "2000-03-06", "2000-03-27"]
+)
+
+
+@pytest.mark.parametrize(
+    "start, end, expected_start, expected_end",
+    [
+        # All dates of January, not only the first one
+        (0, "2000-01", 0, 2),
+        (1, "2000-01", 1, 2),
+        ("2000-01", "2000-03", 0, 4),
+        ("2000-01", "2000", 0, 4),
+        # No date in February: the end is the last date before it
+        (0, "2000-02", 0, 2),
+        # Without an end, prediction runs from the first date of the start key
+        ("2000-03", None, 3, 4),
+    ],
+)
+def test_row_label_partial_date_keys(start, end, expected_start, expected_end):
+    # Dates without a frequency are only row labels, and a partial date string
+    # that matches several of them gives a slice
+    endog = pd.Series(np.zeros(5), index=ROW_LABEL_DATES)
+    with pytest.warns(ValueWarning, match="no associated frequency"):
+        mod = tsa_model.TimeSeriesModel(endog)
+    start_loc, end_loc, out_of_sample, prediction_index = (
+        tsa_model.get_prediction_index(
+            start,
+            end,
+            5,
+            mod._index,
+            index_generated=mod._index_generated,
+            data=mod.data,
+        )
+    )
+    assert (start_loc, end_loc, out_of_sample) == (expected_start, expected_end, 0)
+    expected = ROW_LABEL_DATES[expected_start : expected_end + 1]
+    assert prediction_index.equals(expected)
+
+
+def test_row_label_repeated_key():
+    # A key that matches consecutive row labels covers all of them as the end
+    endog = pd.Series(np.zeros(4), index=pd.Index(["a", "b", "b", "c"]))
+    with pytest.warns(ValueWarning, match="An unsupported index was provided"):
+        # pandas >= 2 warns that it cannot infer the format of strings
+        with warns_or_none(UserWarning, match="Could not infer format"):
+            mod = tsa_model.TimeSeriesModel(endog)
+    start, end, _, prediction_index = tsa_model.get_prediction_index(
+        0, "b", 4, mod._index, index_generated=mod._index_generated, data=mod.data
+    )
+    assert (start, end) == (0, 2)
+    assert prediction_index.equals(pd.Index(["a", "b", "b"]))
+    start, end, _, prediction_index = tsa_model.get_prediction_index(
+        "b", None, 4, mod._index, index_generated=mod._index_generated, data=mod.data
+    )
+    assert (start, end) == (1, 3)
+    assert prediction_index.equals(pd.Index(["b", "b", "c"]))
+
+
+def test_get_index_label_loc_row_label_slice():
+    endog = pd.Series(np.zeros(5), index=ROW_LABEL_DATES)
+    with pytest.warns(ValueWarning, match="no associated frequency"):
+        mod = tsa_model.TimeSeriesModel(endog)
+    loc, index, expanded = tsa_model.get_index_label_loc(
+        "2000-01", mod._index, mod.data.row_labels
+    )
+    assert loc == slice(0, 3)
+    assert index.equals(ROW_LABEL_DATES[:3])
+    assert not expanded
+
+
+@pytest.mark.parametrize(
+    "index, start, expected",
+    [
+        # A month of daily dates and daily periods
+        (
+            pd.date_range("2000-01-01", periods=100, freq="D"),
+            "2000-02",
+            pd.date_range("2000-02-01", "2000-04-09", freq="D"),
+        ),
+        (
+            pd.period_range("2000-01-01", periods=100, freq="D"),
+            "2000-02",
+            pd.period_range("2000-02-01", "2000-04-09", freq="D"),
+        ),
+        # pandas also gives a slice for a month of a month-start index
+        (
+            pd.date_range("2000-01-01", periods=12, freq="MS"),
+            "2000-03",
+            pd.date_range("2000-03-01", "2000-12-01", freq="MS"),
+        ),
+    ],
+)
+def test_partial_date_start_without_end(index, start, expected):
+    # A start key that covers several dates, without an end, predicts from
+    # the first of these dates to the end of the sample
+    endog = pd.Series(np.zeros(len(index)), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    nobs = len(index)
+    start, end, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        start, None, nobs, mod._index, data=mod.data
+    )
+    assert start == nobs - len(expected)
+    assert end == nobs - 1
+    assert out_of_sample == 0
+    assert prediction_index.equals(expected)
+
+
+QUARTER_KEY_CASES = {
+    "daily": (
+        pd.date_range("2000-01-01", periods=800, freq="D"),
+        pd.date_range("2001-04-01", "2001-09-30", freq="D"),
+    ),
+    "month-start": (
+        pd.date_range("2000-01-01", periods=36, freq="MS"),
+        pd.date_range("2001-04-01", "2001-09-01", freq="MS"),
+    ),
+    "quarter-start": (
+        pd.date_range("2000-01-01", periods=12, freq="QS"),
+        pd.date_range("2001-04-01", "2001-07-01", freq="QS"),
+    ),
+    "quarter-end": (
+        pd.date_range("2000-03-31", periods=12, freq=pd.offsets.QuarterEnd()),
+        pd.date_range("2001-06-30", "2001-09-30", freq=pd.offsets.QuarterEnd()),
+    ),
+    "monthly-periods": (
+        pd.period_range("2000-01", periods=36, freq="M"),
+        pd.period_range("2001-04", "2001-09", freq="M"),
+    ),
+    "quarterly-periods": (
+        pd.period_range("2000Q1", periods=12, freq="Q"),
+        pd.period_range("2001Q2", "2001Q3", freq="Q"),
+    ),
+}
+
+
+@pytest.mark.parametrize("case", list(QUARTER_KEY_CASES))
+def test_quarter_string_keys_in_sample(case):
+    # A quarter string selects the dates or periods of the whole quarter, as
+    # pandas' partial-string indexing does for e.g. "2001-04"
+    index, expected = QUARTER_KEY_CASES[case]
+    endog = pd.Series(np.zeros(len(index)), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    nobs = len(index)
+    start, end, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        "2001Q2", "2001Q3", nobs, mod._index, data=mod.data
+    )
+    assert prediction_index.equals(expected)
+    assert out_of_sample == 0
+    assert end - start + 1 == len(expected)
+    assert index[start] == expected[0]
+
+    # Without an end, prediction runs from the start of the quarter to the
+    # end of the sample
+    start, end, _, prediction_index = tsa_model.get_prediction_index(
+        "2001Q2", None, nobs, mod._index, data=mod.data
+    )
+    assert index[start] == expected[0]
+    assert end == nobs - 1
+
+
+@pytest.mark.parametrize(
+    "index, start, end, expected",
+    [
+        # A month as the start and a quarter as the end
+        (
+            pd.date_range("2000-01-01", periods=36, freq="MS"),
+            "2001-01",
+            "2001Q2",
+            pd.date_range("2001-01-01", "2001-06-01", freq="MS"),
+        ),
+        # A quarter that is only partly in the sample
+        (
+            pd.date_range("2000-01-01", periods=17, freq="MS"),
+            "2001Q1",
+            "2001Q2",
+            pd.date_range("2001-01-01", "2001-05-01", freq="MS"),
+        ),
+        (
+            pd.date_range("2000-01-01", periods=500, freq="D"),
+            "2001Q2",
+            "2001-05-14",
+            pd.date_range("2001-04-01", "2001-05-14", freq="D"),
+        ),
+    ],
+)
+def test_quarter_string_keys_mixed(index, start, end, expected):
+    endog = pd.Series(np.zeros(len(index)), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    out = tsa_model.get_prediction_index(
+        start, end, len(index), mod._index, data=mod.data
+    )
+    assert out[3].equals(expected)
+    assert out[2] == 0
+
+
+@pytest.mark.parametrize(
+    "index, loc",
+    [
+        (pd.date_range("2000-01-01", periods=12, freq="QS"), 5),
+        (pd.date_range("2000-03-31", periods=12, freq=pd.offsets.QuarterEnd()), 5),
+        (pd.period_range("2000Q1", periods=12, freq="Q"), 5),
+        # The fiscal quarter of quarters ending in November
+        (pd.period_range("2000Q1", periods=12, freq="Q-NOV"), 5),
+    ],
+)
+def test_quarter_string_key_single_date(index, loc):
+    # A quarter with one observation gives its location, not a slice
+    result, _, _ = tsa_model.get_index_loc("2001Q2", index)
+    assert not isinstance(result, slice)
+    assert result == loc
+    assert (index[loc].year, index[loc].quarter) == (2001, 2)
+
+
+@pytest.mark.parametrize(
+    "index, key",
+    [
+        # Before the sample
+        (pd.date_range("2000-01-01", periods=800, freq="D"), "1999Q4"),
+        (pd.date_range("2000-01-01", periods=12, freq="QS"), "1999Q4"),
+        # Year-end dates have no date in the second quarter
+        (pd.date_range("1999-12-31", periods=6, freq=YEAR_END), "2001Q2"),
+    ],
+)
+def test_quarter_string_key_without_dates(index, key):
+    with pytest.raises(KeyError):
+        tsa_model.get_index_loc(key, index)
+
+
+def test_quarter_string_keys_autoreg():
+    from statsmodels.tsa.ar_model import AutoReg
+
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=36, freq="MS")
+    res = AutoReg(pd.Series(rng.standard_normal(36), index=index), 1).fit()
+    pred = res.predict(start="2001-01", end="2001Q2")
+    assert pred.index.equals(pd.date_range("2001-01-01", "2001-06-01", freq="MS"))
+    np.testing.assert_allclose(pred, res.predict(start=12, end=17), rtol=1e-13)
+
+    # Dynamic prediction from a quarter of quarterly data
+    index = pd.date_range("2000-03-31", periods=12, freq=pd.offsets.QuarterEnd())
+    res = AutoReg(pd.Series(rng.standard_normal(12), index=index), 1).fit()
+    np.testing.assert_allclose(
+        res.predict(start=2, dynamic="2001Q2"),
+        res.predict(start=2, dynamic=3),
+        rtol=1e-13,
+    )
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.date_range("2000-01-01", periods=8, freq="MS"),
+        pd.period_range("2000-01", periods=8, freq="M"),
+        pd.RangeIndex(8),
+        pd.Index(np.arange(8, dtype=np.int64)),
+    ],
+    ids=["datetime", "period", "range", "integer"],
+)
+def test_negative_location_before_start(index):
+    # A negative location before the start raises a KeyError for every
+    # index, while -nobs is the first location
+    with pytest.raises(KeyError):
+        tsa_model.get_index_loc(-9, index)
+    loc, prediction_index, _ = tsa_model.get_index_loc(-8, index)
+    assert loc == 0
+    assert prediction_index.equals(index[:1])
+
+    mod = tsa_model.TimeSeriesModel(pd.Series(np.zeros(8), index=index))
+    with pytest.raises(KeyError, match="The `start` argument could not"):
+        tsa_model.get_prediction_index(-20, None, 8, mod._index, data=mod.data)
+
+
+@pytest.mark.parametrize("key", ["2000-01-01", "a"])
+def test_label_key_without_row_labels(key):
+    # A label key for numpy data, which have no row labels, raises a KeyError
+    with pytest.raises(KeyError):
+        tsa_model.get_index_label_loc(key, pd.RangeIndex(8), None)
+
+    mod = tsa_model.TimeSeriesModel(np.arange(8.0))
+    assert mod.data.row_labels is None
+    with pytest.raises(KeyError, match="The `start` argument could not"):
+        tsa_model.get_prediction_index(key, None, 8, mod._index, data=mod.data)
+    with pytest.raises(KeyError, match="The `end` argument could not"):
+        tsa_model.get_prediction_index(0, key, 8, mod._index, data=mod.data)
+
+
+@pytest.mark.parametrize(
+    "dates, freq",
+    [
+        # pd.date_range("2000-01-01", "2000-01-05", freq="D") has 5 dates
+        (["2000-01-01", "2000-01-02", "2000-01-05"], "D"),
+        (pd.DatetimeIndex(["2000-01-01", "2000-01-02", "2000-01-05"]), "D"),
+        # pd.date_range("2000-01-01", "2000-01-03", freq="2D") has 2 dates
+        (["2000-01-01", "2000-01-02", "2000-01-03"], "2D"),
+        # As many dates, but not the same ones
+        (["2000-01-01", "2000-01-02", "2000-01-05"], "2D"),
+    ],
+)
+def test_freq_not_matching_dates(dates, freq):
+    with pytest.raises(ValueError, match="The given frequency argument could not"):
+        tsa_model.TimeSeriesModel(np.arange(3.0), dates=dates, freq=freq)
+
+
+FINER_KEY_CASES = [
+    # Keys within one period, which raised a KeyError in the sample
+    (pd.period_range("2000Q1", periods=8, freq="Q"), "2001-05-15", "2001Q2"),
+    (pd.period_range("2000Q1", periods=8, freq="Q"), "2001-05", "2001Q2"),
+    # The last month of a quarter
+    (pd.period_range("2000Q1", periods=8, freq="Q"), "2001-06", "2001Q2"),
+    (
+        pd.period_range("2000Q1", periods=8, freq="Q"),
+        pd.Period("2001-05", freq="M"),
+        "2001Q2",
+    ),
+    (pd.period_range("2000-01", periods=24, freq="M"), "2001-05-15 10:00", "2001-05"),
+    (pd.period_range("1998", periods=6, freq="Y"), "2001Q2", "2001"),
+    (
+        pd.period_range("2000-01-01", periods=60, freq="D"),
+        "2000-02-09 10:00",
+        "2000-02-09",
+    ),
+    (pd.period_range("2000-01-02", periods=60, freq="W"), "2000-02-09", "2000-02-09"),
+    # Keys that were already located
+    (pd.period_range("2000Q1", periods=8, freq="Q"), "2001Q2", "2001Q2"),
+    (
+        pd.period_range("2000Q1", periods=8, freq="Q"),
+        pd.Timestamp("2001-05-15"),
+        "2001Q2",
+    ),
+    (pd.period_range("2000-01", periods=24, freq="M"), "2001-05", "2001-05"),
+]
+
+
+@pytest.mark.parametrize("index, key, period", FINER_KEY_CASES)
+def test_period_index_key_within_period(index, key, period):
+    # A key within one period of a PeriodIndex is that period, in the sample
+    # as after its end
+    expected = pd.Period(period, freq=index.freq)
+    loc, _, expanded = tsa_model.get_index_loc(key, index)
+    assert not isinstance(loc, slice)
+    assert index[loc] == expected
+    assert not expanded
+
+    # The same key one year after the end of the sample
+    if isinstance(key, str):
+        later = key.replace(str(expected.year), str(expected.year + 6))
+        loc, extended, expanded = tsa_model.get_index_loc(later, index)
+        assert expanded
+        assert extended[loc] == pd.Period(
+            period.replace(str(expected.year), str(expected.year + 6)),
+            freq=index.freq,
+        )
+
+
+def test_period_index_finer_keys_prediction():
+    index = pd.period_range("2000Q1", periods=8, freq="Q")
+    mod = tsa_model.TimeSeriesModel(pd.Series(np.zeros(8), index=index))
+    out = tsa_model.get_prediction_index(
+        "2001-05-15", "2002-11-30", 8, mod._index, data=mod.data
+    )
+    assert out[3].equals(pd.period_range("2001Q2", "2002Q4", freq="Q"))
+    assert out[2] == 4
+
+
+def test_period_index_coarser_key():
+    # A key that covers several periods is a slice of them
+    index = pd.period_range("2000-01", periods=24, freq="M")
+    loc, _, _ = tsa_model.get_index_loc("2001", index)
+    assert index[loc].equals(pd.period_range("2001-01", "2001-12", freq="M"))
+
+
+@pytest.mark.parametrize("key", ["", "NaT"])
+@pytest.mark.parametrize("which", ["start", "end"])
+def test_period_index_nat_key_raises_key_error(key, which):
+    # A key that pandas parses as NaT on a PeriodIndex raises the KeyError
+    # of an unmatched key, not an AttributeError from NaT
+    from statsmodels.tsa.ar_model import AutoReg
+
+    if key == "" and PD_LT_2:
+        # pandas < 2 raises a parse error for "" instead of returning NaT
+        pytest.skip('pandas < 2 does not parse "" as NaT')
+    index = pd.period_range("2000-01", periods=24, freq="M")
+    y = pd.Series(np.arange(24.0) + np.sin(np.arange(24.0)), index=index)
+    res = AutoReg(y, 1).fit()
+    kwargs = {"start": 1, "end": 30}
+    kwargs[which] = key
+    with pytest.raises(KeyError, match="could not be matched"):
+        res.predict(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "key, loc",
+    [
+        ("2002-03-01T00:00-05:00", 26),
+        ("2002-03-01T05:00Z", 26),
+        (pd.Timestamp("2002-03-01T05:00", tz="UTC"), 26),
+        (pd.Timestamp("2002-03-01T14:00", tz="Asia/Tokyo"), 26),
+        # Not a date of the index: extended through the next one
+        (pd.Timestamp("2002-01-15", tz="UTC"), 25),
+    ],
+    ids=["str-offset", "str-utc", "utc", "other-tz", "utc-between-dates"],
+)
+def test_get_index_loc_tz_aware_key_after_sample(key, loc):
+    # A key after the end of a tz-aware index in another time zone, or with
+    # a UTC offset, is the same date as the key converted to the time zone of
+    # the index; date_range raised a TypeError for it
+    tz = "US/Eastern"
+    index = pd.date_range("2000-01-01", periods=24, freq="MS", tz=tz)
+    expected = pd.date_range("2000-01-01", periods=loc + 1, freq="MS", tz=tz)
+    result = tsa_model.get_index_loc(key, index)
+    assert result[0] == loc
+    assert result[1].equals(expected)
+    assert result[2] is True
+    converted = tsa_model.get_index_loc(pd.Timestamp(key).tz_convert(tz), index)
+    assert converted[0] == loc
+    assert converted[1].equals(expected)
+
+    endog = pd.Series(np.zeros(24), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    start, end, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        20, key, 24, mod._index, data=mod.data
+    )
+    assert (start, end, out_of_sample) == (20, 23, loc - 23)
+    assert prediction_index.equals(expected[20:])

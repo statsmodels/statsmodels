@@ -1,0 +1,3 @@
+- ``select_order(0)`` and ``fit(0, ic=...)`` of :class:`~statsmodels.tsa.vector_ar.var_model.VAR` without a trend
+  or exog raised a ``KeyError``. They raise a ``ValueError`` that says
+  why. :pr:`10967`
