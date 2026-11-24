@@ -621,7 +621,18 @@ class DynamicFactor(MLEModel):
                 error_cov_params += res_error.params[-1:].tolist()
 
             params[self._params_error_transition] = np.r_[error_ar_params]
-            params[self._params_error_cov] = np.r_[error_cov_params]
+            # The innovation variances of the autoregressions, as in the
+            # other cases: their mean ("scalar"), themselves ("diagonal") or
+            # the Cholesky factor of their diagonal matrix ("unstructured")
+            error_cov_params = np.r_[error_cov_params]
+            if self.error_cov_type == "scalar":
+                params[self._params_error_cov] = error_cov_params.mean()
+            elif self.error_cov_type == "diagonal":
+                params[self._params_error_cov] = error_cov_params
+            else:
+                cov_factor = np.diag(error_cov_params**0.5)
+                params[self._params_error_cov] = (
+                    cov_factor[self._idx_lower_error_cov].ravel())
 
         return params
 
