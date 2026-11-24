@@ -1861,3 +1861,47 @@ def test_prediction_results_time_varying_dynamic():
     # Each forecast uses the intercept of its period
     forecasts = mod["design"] @ pred.predicted_state + desired
     assert_allclose(pred.forecasts, forecasts)
+
+
+@pytest.mark.parametrize("nobs", [12, 15, 9])
+def test_bind_new_data_after_run(nobs):
+    # A compiled statespace object holds a copy of the data and the pattern of
+    # missing values in it from when it was created. Binding new data to a
+    # model that had already run kept them: with data of the same shape, the
+    # results silently used the old data (here with other missing values);
+    # with more observations, filtering raised IndexError. The results equal
+    # those of a model created with the new data.
+    rng = np.random.default_rng(4101)
+    endog = rng.standard_normal((12, 2))
+    endog[[1, 5], 0] = np.nan
+    new_endog = rng.standard_normal((nobs, 2))
+    new_endog[[2, 7], 1] = np.nan
+
+    def build(data):
+        mod = KalmanSmoother(2, 2, k_posdef=2)
+        mod.bind(data)
+        mod["design"] = [[1.0, 0.0], [0.5, 1.0]]
+        mod["obs_cov"] = np.diag([0.5, 0.8])
+        mod["transition"] = [[0.6, 0.2], [0.0, 0.4]]
+        mod["selection"] = np.eye(2)
+        mod["state_cov"] = [[1.0, 0.3], [0.3, 0.7]]
+        mod.initialize_known(np.zeros(2), np.eye(2))
+        return mod
+
+    mod = build(endog)
+    first = mod.smooth()
+    # The same data (a copy) keep the compiled objects, as in test_cython
+    kfilter = mod._kalman_filter
+    mod.bind(endog.copy())
+    assert_allclose(mod.smooth().llf_obs, first.llf_obs, rtol=1e-12)
+    assert mod._kalman_filter is kfilter
+
+    mod.bind(new_endog)
+    res = mod.smooth()
+    desired = build(new_endog).smooth()
+
+    assert res.nobs == nobs
+    assert_equal(res.nmissing, desired.nmissing)
+    assert_allclose(res.llf_obs, desired.llf_obs, rtol=1e-12)
+    assert_allclose(res.forecasts, desired.forecasts, rtol=1e-12)
+    assert_allclose(res.smoothed_state, desired.smoothed_state, rtol=1e-12)

@@ -851,6 +851,13 @@ class Representation:
 
         Although this class (Representation) has stringent `bind` requirements,
         it is assumed that it will rarely be used directly.
+
+        .. versionchanged:: 0.15.1
+
+           New data bound to a model that has already been filtered is used
+           by the next run. The filter kept using the data, and its missing
+           values, from the first run, or raised an error if there were more
+           observations.
         """
         if not isinstance(endog, np.ndarray):
             raise ValueError("Invalid endogenous array; must be an ndarray.")
@@ -908,6 +915,17 @@ class Representation:
         # Set the data
         self.endog = endog
         self.nobs = self.endog.shape[1]
+
+        # A compiled statespace object holds a copy of the data and the
+        # pattern of missing values in it from when it was created: if the
+        # data changed, drop it (and the copies of the system matrices it
+        # shares), so that the next run creates it from the new data
+        for prefix in list(getattr(self, "_representations", {})):
+            if not np.array_equal(
+                self._representations[prefix]["obs"], endog, equal_nan=True
+            ):
+                del self._representations[prefix]
+                self._statespaces.pop(prefix, None)
 
         # Reset shapes
         if hasattr(self, "shapes"):
