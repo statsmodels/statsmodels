@@ -402,7 +402,7 @@ class Description:
         self._percentiles = np.sort(self._percentiles)
         if np.unique(self._percentiles).shape[0] != self._percentiles.shape[0]:
             raise ValueError("percentiles must be distinct")
-        if np.any(self._percentiles >= 100) or np.any(self._percentiles <= 0):
+        if not np.all((self._percentiles > 0) & (self._percentiles < 100)):
             raise ValueError("percentiles must be strictly between 0 and 100")
         self._alpha = float_like(alpha, "alpha")
         if not 0 < self._alpha < 1:

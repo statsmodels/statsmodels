@@ -1800,9 +1800,9 @@ class SARIMAX(MLEModel):
             tmp_endog = np.zeros((out_of_sample, self.k_endog))
             tmp_exog = exog
 
-        # Create extended model
-        if extend_kwargs is None:
-            extend_kwargs = {}
+        # Create extended model (from a copy of `extend_kwargs`, so that the
+        # defaults set below do not change the caller's dict)
+        extend_kwargs = {} if extend_kwargs is None else dict(extend_kwargs)
         if not self.simple_differencing and self.k_trend > 0:
             extend_kwargs.setdefault(
                 "trend_offset", self.trend_offset + self.nobs)

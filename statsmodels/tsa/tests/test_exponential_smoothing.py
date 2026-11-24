@@ -2886,3 +2886,49 @@ def test_predict_dynamic_start_after_sample(austourists, start, dynamic):
     assert frame.index.equals(index)
     assert_allclose(frame["mean"], expected, rtol=1e-12)
     assert_allclose(pred.var_pred_mean, res.mse * np.asarray(relative), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "data, seasonal, lags",
+    [("oildata", None, 9), ("austourists", None, 10), ("austourists", "add", 8)],
+)
+def test_serial_correlation_default_lags(oildata, austourists, data, seasonal, lags):
+    # Non-seasonal models store seasonal_periods = 1, so the default number
+    # of lags was min(2, nobs // 5) instead of min(10, nobs // 5). The
+    # cases are min(10, 49 // 5), min(10, 68 // 5) and min(2 * 4, 68 // 5).
+    from statsmodels.stats.diagnostic import acorr_ljungbox
+
+    endog = oildata if data == "oildata" else austourists
+    seasonal_periods = 4 if seasonal else None
+    model = ETSModel(
+        endog, trend="add", seasonal=seasonal, seasonal_periods=seasonal_periods
+    )
+    res = model.smooth(model.start_params, param_index="integer")
+    resid = np.asarray(res.resid)
+    std_resid = (resid - resid.mean()) / resid.std(ddof=1)
+    expected = acorr_ljungbox(std_resid, lags=lags)
+
+    actual = res.test_serial_correlation("ljungbox")
+    assert actual.shape == (1, 2, lags)
+    assert_allclose(actual[0, 0], expected["lb_stat"], rtol=1e-10)
+    assert_allclose(actual[0, 1], expected["lb_pvalue"], rtol=1e-10)
+    # the summary shows the statistic at the largest lag, with two decimals
+    row = res.summary().tables[2][0]
+    assert str(row[0]) == "Ljung-Box (Q):"
+    assert_allclose(float(str(row[1])), expected["lb_stat"].iloc[-1], atol=0.005
+
+
+def test_predict_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    y = pd.Series(10 + rng.standard_normal(500).cumsum(), index=index)
+    res = ETSModel(y).smooth([0.5, 10.0], param_index="integer")
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    pred = res.predict(start=10, dynamic="2001-04")
+    expected = res.predict(start=10, dynamic=loc - 10)
+    assert_allclose(pred, expected, rtol=1e-12)
+    pd.testing.assert_index_equal(pred.index, index[10:])
