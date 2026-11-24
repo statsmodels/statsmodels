@@ -1,0 +1,3 @@
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` raised an ``AttributeError`` for quarterly data whose index
+  holds ``datetime.date`` (or ``datetime.datetime``) objects, an index
+  of object dtype. Monthly data with such an index worked. :pr:`11124`

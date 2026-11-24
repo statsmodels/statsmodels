@@ -440,6 +440,42 @@ def test_speconly_without_binary(tmp_path, monkeypatch, lookup):
         x13.x13_arima_analysis(endog, **kwargs)
 
 
+QUARTER_STARTS = list(pd.date_range("2000-01-01", periods=8, freq="QS"))
+QUARTER_ENDS = [pd.Timestamp(1959, 7, 1) + pd.offsets.QuarterEnd(i) for i in range(1, 9)]
+MONTH_ENDS = [pd.Timestamp(2000, 5, 1) + pd.offsets.MonthEnd(i) for i in range(1, 25)]
+
+
+@pytest.mark.parametrize(
+    "dates, freq, start",
+    [
+        ([ts.date() for ts in QUARTER_STARTS], "Q", "2000.1"),
+        ([ts.date() for ts in QUARTER_ENDS], "Q", "1959.3"),
+        ([ts.to_pydatetime() for ts in QUARTER_ENDS], "Q", "1959.3"),
+        ([ts.date() for ts in MONTH_ENDS], "M", "2000.5"),
+    ],
+    ids=[
+        "date_quarter_starts",
+        "date_quarter_ends",
+        "datetime_quarter_ends",
+        "date_month_ends",
+    ],
+)
+def test_object_index_of_dates(dates, freq, start):
+    # An object index of datetime.date or datetime.datetime gives the period
+    # and the start of the series, the same spec as a PeriodIndex of the dates
+    index = pd.Index(dates, dtype=object)
+    assert index.dtype == object
+    endog = pd.Series(range(len(dates)), index=index, dtype=float, name="y")
+    periods = endog.set_axis(pd.PeriodIndex(dates, freq=freq))
+
+    spec = x13.x13_arima_analysis(endog, speconly=True)
+
+    period = {"Q": 4, "M": 12}[freq]
+    assert f"period={period}" in spec.split()
+    assert f"start={start}" in spec.split()
+    assert spec == x13.x13_arima_analysis(periods, speconly=True)
+
+
 @pytest.mark.parametrize(
     "offset, freq",
     [

@@ -403,6 +403,21 @@ def test_x12path_case_and_path(kind, tmp_path, monkeypatch):
     )
 
 
+def test_object_index_of_dates_quarterly():
+    # An object index of datetime.date gives the results of the PeriodIndex of
+    # the same quarters, with the index of endog
+    gdp = quarterly_data.realgdp
+    dates = pd.Index(gdp.index.to_timestamp().date, dtype=object)
+    expected = x13_arima_analysis(gdp)
+
+    res = x13_arima_analysis(gdp.set_axis(dates))
+
+    assert res.seasadj.index.equals(dates)
+    np.testing.assert_allclose(
+        res.seasadj.to_numpy(), expected.seasadj.to_numpy(), rtol=1e-12
+    )
+
+
 @pytest.mark.parametrize(
     "endog",
     [quarterly_data.realgdp.rename(5), quarterly_data[["realgdp"]].set_axis([5], axis=1)],
