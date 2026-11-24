@@ -793,6 +793,10 @@ class AutoReg(tsa_model.TimeSeriesModel):
     def _parse_dynamic(self, dynamic, start):
         if isinstance(dynamic, (str, bytes, pd.Timestamp, dt.datetime, pd.Period)):
             dynamic_loc, _, _ = self._get_index_loc(dynamic)
+            # A key that covers several dates, e.g. "2001-04" for daily data,
+            # gives a slice; dynamic prediction begins at its first date
+            if isinstance(dynamic_loc, slice):
+                dynamic_loc = dynamic_loc.start
             # Adjust since relative to start
             dynamic_loc -= start
         elif dynamic is True:

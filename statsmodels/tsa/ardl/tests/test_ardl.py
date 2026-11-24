@@ -2627,6 +2627,23 @@ def test_ardl_order_dict_float_column_labels():
     assert_allclose(res.params, ols.params, rtol=1e-10)
 
 
+def test_predict_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    y = pd.Series(rng.standard_normal(500).cumsum(), index=index)
+    x = pd.Series(rng.standard_normal(500), index=index, name="x")
+    res = ARDL(y, 1, x, 1).fit()
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    pred = res.predict(start=10, dynamic="2001-04")
+    expected = res.predict(start=10, dynamic=loc - 10)
+    assert_allclose(pred, expected, rtol=1e-12)
+    assert_index_equal(pred.index, index[10:])
+
+
 def test_ardl_test_serial_correlation():
     # Inherited from AutoRegResults, whose statistics were all NaN since
     # 0.14.0
