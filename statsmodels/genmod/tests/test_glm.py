@@ -4646,14 +4646,19 @@ def test_glm_formula_categorical_endog_coded_levels():
     assert_allclose(res_rev.params.values, -res.params.values, rtol=1e-8)
 
 
-def test_glm_saturated_no_runtime_warning():
+@pytest.mark.parametrize(
+    "endog, params",
+    [([2.0, 5.0], [np.log(2.0), np.log(2.5)]), ([1.0, 1.0], [0.0, 0.0])],
+    ids=["divide", "exact"],
+)
+def test_glm_saturated_no_runtime_warning(endog, params):
     # The scale of the WLS step of IRLS divides by the residual degrees of
-    # freedom, which are 0 in a saturated model; it warned "divide by zero" in
-    # every iteration. GLM only warns that the fit is perfect.
+    # freedom, which are 0 in a saturated model; it warned "divide by zero"
+    # (or "invalid value" when the residuals are exactly 0) in every
+    # iteration. GLM only warns that the fit is perfect.
     exog = add_constant(np.array([0.0, 1.0]))
-    endog = np.array([2.0, 5.0])
     with pytest.warns(PerfectSeparationWarning) as record:
-        res = GLM(endog, exog, family=sm.families.Poisson()).fit()
+        res = GLM(np.array(endog), exog, family=sm.families.Poisson()).fit()
     assert not [w for w in record if issubclass(w.category, RuntimeWarning)]
-    # The fitted means are the observations, 2 at x = 0 and 5 at x = 1
-    assert_allclose(res.params, [np.log(2.0), np.log(2.5)], rtol=1e-8)
+    # The fitted means are the observations; atol for the zero parameters
+    assert_allclose(res.params, params, rtol=1e-8, atol=1e-12)
