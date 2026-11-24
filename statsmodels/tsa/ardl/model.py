@@ -1908,6 +1908,12 @@ def ardl_select_order(
             lowest = val
             selected_order = key
     exog_order = dict(selected_order[1:])
+    if isinstance(maxorder, Mapping):
+        # The variables that maxorder excludes (None) are not in the selected
+        # order: exclude them explicitly, so that ARDL does not warn that
+        # they are missing
+        for key in maxorder:
+            exog_order.setdefault(key, None)
     model = ARDL(
         endog,
         selected_order[0],
