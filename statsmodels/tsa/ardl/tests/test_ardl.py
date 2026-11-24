@@ -10,10 +10,12 @@ from numpy.testing import assert_allclose
 import pandas as pd
 from pandas.testing import assert_index_equal
 import pytest
+from scipy import stats
 
 from statsmodels.datasets import danish_data, longley
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
+from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.ardl import model as ardl_model
@@ -2623,3 +2625,30 @@ def test_ardl_order_dict_float_column_labels():
     reg += [x[t, 1], x[t - 1, 1], x[t - 2, 1]]
     ols = OLS(y[t], np.column_stack(reg)).fit()
     assert_allclose(res.params, ols.params, rtol=1e-10)
+
+
+def test_ardl_test_serial_correlation():
+    # Inherited from AutoRegResults, whose statistics were all NaN since
+    # 0.14.0
+    rng = np.random.default_rng(20261123)
+    nobs = 200
+    x = rng.standard_normal(nobs)
+    e = rng.standard_normal(nobs)
+    y = np.zeros(nobs)
+    for t in range(1, nobs):
+        y[t] = 0.5 * y[t - 1] + x[t] - 0.5 * x[t - 1] + e[t]
+    res = ARDL(y, 1, x[:, None], 1, trend="c").fit()
+    sc = res.test_serial_correlation(lags=8, model_df="regressors")
+
+    reg = np.column_stack([np.ones(nobs - 1), y[:-1], x[1:], x[:-1]])
+    resid = OLS(y[1:], reg).fit().resid
+    # "ar" counts the one lag of y
+    sc_ar = res.test_serial_correlation(lags=8, model_df="ar")
+    assert_allclose(sc_ar["DF"], np.maximum(np.arange(1, 9) - 1, 0))
+    lb = acorr_ljungbox(resid, lags=8, model_df=4)
+    df = np.maximum(np.arange(1, 9) - 4, 0)
+    assert_allclose(sc["Ljung-Box"], lb["lb_stat"], rtol=1e-8)
+    assert_allclose(sc["DF"], df)
+    pvalue = stats.chi2.sf(lb["lb_stat"].to_numpy()[4:], df[4:])
+    assert_allclose(sc["LB P-value"].iloc[4:], pvalue, rtol=1e-8)
+    assert np.all(np.isnan(sc["LB P-value"].iloc[:4]))
