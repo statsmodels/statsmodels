@@ -2169,3 +2169,20 @@ def test_select_order_zero_lags(trend, use_exog):
         sel.ics["bic"], [logdet + np.log(nobs) * free_params / nobs], rtol=1e-10
     )
     assert sel.selected_orders == {"aic": 0, "bic": 0, "hqic": 0, "fpe": 0}
+
+
+@pytest.mark.parametrize(
+    "diag, stable",
+    [
+        ([1.0, 0.5], False),  # a unit root
+        ([-1.0, 0.3], False),  # a root of -1
+        ([0.999, 0.5], True),
+        ([1.001, 0.5], False),
+    ],
+)
+def test_is_stable_unit_root(diag, stable):
+    # The eigenvalues of a diagonal VAR(1) are its diagonal. Stability needs
+    # all of them inside the unit circle, a unit root is not stable.
+    coefs = np.diag(diag)[None, :, :]
+    assert bool(var_model.is_stable(coefs)) is stable
+    assert bool(VARProcess(coefs, None, np.eye(2)).is_stable()) is stable
