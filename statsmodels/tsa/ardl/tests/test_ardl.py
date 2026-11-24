@@ -2627,6 +2627,85 @@ def test_ardl_order_dict_float_column_labels():
     assert_allclose(res.params, ols.params, rtol=1e-10)
 
 
+def _ardl_columns_res(columns, seed):
+    # An ARDL with a constant, 2 lags of y, lags 0-2 of the first exog column
+    # and lag 0 of the second
+    rng = np.random.default_rng(seed)
+    nobs = 60
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal((nobs, 2)), axis=0)
+    a, b = columns
+    res = ARDL(y, 2, pd.DataFrame(x, columns=columns), {a: 2, b: 0}).fit()
+    names = ["const", "y.L1", "y.L2", f"{a}.L0", f"{a}.L1", f"{a}.L2", f"{b}.L0"]
+    assert res.model.exog_names == names
+    return rng, y, x, res
+
+
+@pytest.mark.parametrize("columns", [["a", "b"], [1, 0]], ids=["str", "int"])
+def test_ardl_predict_replacement_exog_columns_by_name(columns):
+    # The columns of a replacement exog DataFrame were used by position, so
+    # that a DataFrame with the columns in another order gave wrong
+    # predictions
+    rng, y, x, res = _ardl_columns_res(columns, 20261201)
+    nobs = y.shape[0]
+    x2 = x + rng.standard_normal((nobs, 2))
+    exog2 = pd.DataFrame(x2, columns=columns)
+    a, b = columns
+    pred = np.asarray(res.predict(exog=exog2[[b, a]]))
+
+    # The regressors const, y.L1, y.L2, a.L0, a.L1, a.L2 and b.L0 built from
+    # the replacement x2
+    t = np.arange(2, nobs)
+    reg = [np.ones(nobs - 2), y[t - 1], y[t - 2]]
+    reg += [x2[t, 0], x2[t - 1, 0], x2[t - 2, 0], x2[t, 1]]
+    expected = np.column_stack(reg) @ np.asarray(res.params)
+    assert np.all(np.isnan(pred[:2]))
+    assert_allclose(pred[2:], expected, rtol=1e-10)
+    # The same as with the columns in the original order
+    assert_allclose(res.predict(exog=exog2), pred, rtol=1e-12)
+    prediction = res.get_prediction(exog=exog2[[b, a]])
+    assert_allclose(prediction.predicted_mean, pred, rtol=1e-12)
+
+
+@pytest.mark.parametrize("columns", [["a", "b"], [1, 0]], ids=["str", "int"])
+def test_ardl_forecast_exog_oos_columns_by_name(columns):
+    # The columns of an exog_oos DataFrame (and of a replacement exog) were
+    # used by position, so that a DataFrame with the columns in another order
+    # gave wrong forecasts
+    rng, y, x, res = _ardl_columns_res(columns, 20261202)
+    nobs = y.shape[0]
+    x_oos = rng.standard_normal((3, 2))
+    x2 = x + rng.standard_normal((nobs, 2))
+    a, b = columns
+    oos = pd.DataFrame(x_oos, columns=columns)[[b, a]]
+    exog2 = pd.DataFrame(x2, columns=columns)[[b, a]]
+
+    def forecasts(x_in):
+        # y[t] = c + p1 y[t-1] + p2 y[t-2] + a0 xa[t] + a1 xa[t-1]
+        #        + a2 xa[t-2] + b0 xb[t]
+        c, p1, p2, a0, a1, a2, b0 = np.asarray(res.params)
+        xa = np.r_[x_in[:, 0], x_oos[:, 0]]
+        xb = np.r_[x_in[:, 1], x_oos[:, 1]]
+        path = list(y)
+        for t in range(nobs, nobs + 3):
+            path.append(
+                c + p1 * path[t - 1] + p2 * path[t - 2] + a0 * xa[t]
+                + a1 * xa[t - 1] + a2 * xa[t - 2] + b0 * xb[t]
+            )
+        return np.array(path[nobs:])
+
+    expected = forecasts(x)
+    fcast = np.asarray(res.forecast(3, exog=oos))
+    assert_allclose(fcast, expected, rtol=1e-10)
+    # The same as with the columns in the original order
+    assert_allclose(res.forecast(3, exog=oos[columns]), fcast, rtol=1e-12)
+    pred = res.predict(start=nobs + 1, end=nobs + 2, exog_oos=oos)
+    assert_allclose(pred, expected[1:], rtol=1e-10)
+    # With a replacement exog, the lags of a in the forecasts come from it
+    pred = res.predict(start=nobs, end=nobs + 2, exog=exog2, exog_oos=oos)
+    assert_allclose(pred, forecasts(x2), rtol=1e-10)
+
+
 @pytest.mark.parametrize("mixed", [False, True])
 def test_uecm_nullable_bool_exog(mixed):
     # The differences of a nullable "boolean" column were not numeric (the

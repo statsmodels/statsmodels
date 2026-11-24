@@ -786,12 +786,28 @@ class ARDL(AutoReg):
             the first out-of-sample observation.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
-            exogenous data array used when the model was created.
+            exogenous data array used when the model was created. If that
+            exog was a DataFrame, a DataFrame with the same columns, which
+            are selected by name.
+
+            .. versionchanged:: 0.15.1
+
+               The columns of a replacement DataFrame are selected by name.
+               They were used by position, so that a DataFrame with the
+               columns in another order gave wrong predictions.
         exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous
             variables. Must have the same number of columns as the exog
             used when the model was created, and at least as many rows as
-            the number of out-of-sample forecasts.
+            the number of out-of-sample forecasts. If that exog was a
+            DataFrame, a DataFrame with the same columns, which are selected
+            by name.
+
+            .. versionchanged:: 0.15.1
+
+               The columns of a DataFrame are selected by name. They were
+               used by position, so that a DataFrame with the columns in
+               another order gave wrong forecasts.
         fixed : array_like, optional
             A replacement fixed array.  Must have the same shape as the
             fixed data array used when the model was created.
@@ -825,6 +841,8 @@ class ARDL(AutoReg):
                     raise ValueError(
                         f"{name} must have the same columns as the original exog"
                     )
+                # The values are used by position from here on
+                arr = arr[orig.columns]
             else:
                 arr = array_like(arr, name, ndim=2, optional=False)
             if arr.ndim != 2 or arr.shape[1] != orig.shape[1]:
@@ -1131,7 +1149,15 @@ class ARDLResults(AutoRegResults):
             steps must be an integer. The default is 1.
         exog : array_like, optional
             Exogenous values to use out-of-sample. Must have same number of
-            columns as original exog data and at least `steps` rows
+            columns as original exog data and at least `steps` rows. If the
+            original exog was a DataFrame, a DataFrame with the same columns,
+            which are selected by name.
+
+            .. versionchanged:: 0.15.1
+
+               The columns of a DataFrame are selected by name. They were
+               used by position, so that a DataFrame with the columns in
+               another order gave wrong forecasts.
         fixed : array_like, optional
             Fixed values to use out-of-sample. Must have same number of
             columns as original fixed data and at least `steps` rows
@@ -1361,12 +1387,27 @@ class ARDLResults(AutoRegResults):
             the first out-of-sample observation.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
-            exogenous data array used when the model was created.
+            exogenous data array used when the model was created. If that
+            exog was a DataFrame, a DataFrame with the same columns, which
+            are selected by name.
+
+            .. versionchanged:: 0.15.1
+
+               The columns of a replacement DataFrame are selected by name.
+               They were used by position, so that a DataFrame with the
+               columns in another order gave wrong predictions.
         exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous variable.
             Must have the same number of columns as the exog used when the
             model was created, and at least as many rows as the number of
-            out-of-sample forecasts.
+            out-of-sample forecasts. If that exog was a DataFrame, a
+            DataFrame with the same columns, which are selected by name.
+
+            .. versionchanged:: 0.15.1
+
+               The columns of a DataFrame are selected by name. They were
+               used by position, so that a DataFrame with the columns in
+               another order gave wrong forecasts.
         fixed : array_like, optional
             A replacement fixed array.  Must have the same shape as the
             fixed data array used when the model was created.
