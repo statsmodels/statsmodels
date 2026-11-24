@@ -2721,3 +2721,40 @@ def test_uecm_categorical_exog(dtype, categories):
     # The UECM is a reparametrization of the ARDL with the same lags
     ardl_res = ARDL(y, 2, exog, 2).fit()
     assert_allclose(res.ssr, ardl_res.ssr, rtol=1e-10)
+
+
+@pytest.mark.parametrize("kind", ["ndarray", "list", "series", "series-category"])
+def test_uecm_1d_exog(kind):
+    # A 1-d exog or a Series raised "could not broadcast input array from
+    # shape (n-1,) into shape (n-1,1)"; ARDL treats it as the variable 0
+    rng = np.random.default_rng(20261127)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    if kind == "series-category":
+        x = rng.choice([10.0, 20.0, 50.0], size=nobs)
+        exog = pd.Series(pd.Categorical(x.astype(int)), name="x")
+    else:
+        x = rng.standard_normal(nobs)
+        exog = {"ndarray": x, "list": list(x), "series": pd.Series(x, name="x")}[
+            kind
+        ]
+    res = UECM(y, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, the level x.L1 and the differences D.y.L1, D.x.L0
+    # and D.x.L1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.r_[np.nan, np.diff(x)]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1], dy[t - 1], dx[t], dx[t - 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
+    # The names of the variable 0 in ARDL: x0 for an array, 0 for a Series
+    base = "0" if kind.startswith("series") else "x0"
+    expected = ["const", "y.L1", f"{base}.L1", "D.y.L1"]
+    expected += [f"D.{base}.L0", f"D.{base}.L1"]
+    assert res.model.exog_names == expected
+    ardl_res = ARDL(y, 2, exog, 2).fit()
+    assert ardl_res.model.exog_names[3:] == [f"{base}.L{i}" for i in range(3)]
+    # The UECM is a reparametrization of the ARDL with the same lags
+    assert_allclose(res.ssr, ardl_res.ssr, rtol=1e-10)
