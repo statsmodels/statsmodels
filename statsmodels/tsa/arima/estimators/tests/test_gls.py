@@ -2,14 +2,16 @@ from contextlib import nullcontext
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+import pandas as pd
 import pytest
 from scipy.linalg import toeplitz
 from scipy.signal import lfilter
 
 from statsmodels.tools.sm_exceptions import SpecificationWarning
-from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake, oshorts
+from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import lake, oshorts, sbl
 from statsmodels.tsa.arima.estimators.gls import gls
 from statsmodels.tsa.arima_process import arma_acovf
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 
 @pytest.mark.parametrize("arma_estimator", ["innovations_mle", "statespace"])
@@ -226,6 +228,35 @@ def test_brockwell_davis_example_662():
     assert_allclose(res.exog_params, [10.091, -0.0216], atol=1e-3)
     assert_allclose(res.ar_params, [1.005, -0.291], atol=1e-3)
     assert_allclose(res.sigma2, 0.4571, atol=1e-3)
+
+
+@pytest.mark.low_precision(
+    "Test against Example 6.6.3 in Brockwell and Davis (2016)"
+)
+def test_brockwell_davis_example_663():
+    endog = sbl.diff(12).iloc[12:]
+    exog = (sbl.index > "1983-01-01").astype(float)
+    exog = pd.Series(exog, index=sbl.index).diff(12).iloc[12:]
+
+    book_exog = -328.45
+    book_exog_se = 49.41
+    book_ma = [0.219, 0.098, 0.031, 0.064, 0.069, 0.111,
+               0.081, 0.057, 0.092, -0.028, 0.183, -0.627]
+    book_sigma2 = 12581
+
+    res, other = gls(
+        endog, exog, order=(0, 0, 12), include_constant=False, max_iter=100
+    )
+    assert other.converged
+
+    assert_allclose(res.exog_params, book_exog, atol=0.2 * book_exog_se)
+    assert_allclose(res.ma_params, book_ma, atol=2e-2)
+    assert_allclose(res.sigma2, book_sigma2, rtol=5e-3)
+
+    mod = SARIMAX(endog, exog=exog, order=(0, 0, 12))
+    llf_gls = mod.loglike(np.r_[res.exog_params, res.ma_params, res.sigma2])
+    llf_book = mod.loglike(np.r_[book_exog, book_ma, book_sigma2])
+    assert llf_gls >= llf_book
 
 
 def test_integrated():
