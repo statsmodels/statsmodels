@@ -3411,7 +3411,7 @@ def test_simulate_negative_anchor_is_from_the_end(func, use_dates):
     [
         ("opg", 2, 2),
         ("oim", 2, 2),
-        ("approx", 2, 1),
+        ("approx", 2, None),
         ("robust", 2, 2),
         ("robust_oim", 2, 2),
         ("robust_approx", 2, 1),
@@ -3432,6 +3432,15 @@ def test_summary_singular_warning_follows_robust_cov_type(
     # the rank of H: 2 with Harvey's OIM matrix as H ("robust"), 1 with the
     # numerical Hessian ("robust_approx"). At the MLE, s2 = mean(e**2), the
     # Hessian is diag(-sum(x**2) / s2, -nobs / (2 * s2**2)), of rank 2.
+    #
+    # The zero entry of the numerical Hessian is the difference of two
+    # complex-step evaluations that agree to within about one ulp, so it is 0
+    # or a multiple of about 3e-11 (1e-12 relative to the other entry),
+    # depending on the platform's rounding. The numerical rank of the "approx"
+    # matrix is then 1 or 2 (None below). The robust matrix squares that
+    # relative size (1e-24; it stays below the rank tolerance of 2 * eps
+    # unless the entry is off by about 3000 ulps), so the rank of
+    # "robust_approx" is 1.
     rng = np.random.default_rng(1234)
     nobs = 50
     x = rng.standard_normal(nobs)
@@ -3446,8 +3455,17 @@ def test_summary_singular_warning_follows_robust_cov_type(
     for name in ["cov_params_robust_oim", "cov_params_robust_approx"]:
         getattr(res, name)
 
+    cov_params = res.cov_params()
+    rank = int(np.linalg.matrix_rank(cov_params))
     expected_rank = rank_at_mle if at_mle else rank_singular
-    assert np.linalg.matrix_rank(res.cov_params()) == expected_rank
+    if expected_rank is None:
+        # Singular to the accuracy of the finite differences: the ratio of
+        # the singular values is 0 or about 1e-12, and 0.3 at the MLE
+        singular_values = np.linalg.svd(cov_params, compute_uv=False)
+        assert singular_values.min() < 1e-8 * singular_values.max()
+    else:
+        assert rank == expected_rank
+    # The warning follows the rank of the results' own matrix
     summary = res.summary().as_text()
     singular = "Covariance matrix is singular or near-singular" in summary
-    assert singular is (expected_rank < 2)
+    assert singular is (rank < 2)
