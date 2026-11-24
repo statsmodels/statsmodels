@@ -2171,6 +2171,88 @@ def test_select_order_zero_lags(trend, use_exog):
     assert sel.selected_orders == {"aic": 0, "bic": 0, "hqic": 0, "fpe": 0}
 
 
+def _granger_wald_ols(y, lags, caused, causing):
+    # Wald statistic of "the lags of `causing` are zero in the equations of
+    # `caused`" from the residual cross products of the unrestricted and the
+    # restricted OLS regressions, which have the same regressors in every
+    # equation: W = tr(Sigma_cc^-1 (E_r'E_r - E_u'E_u))
+    nobs, k = y.shape[0] - lags, y.shape[1]
+    lagged = [y[lags - j : y.shape[0] - j] for j in range(1, lags + 1)]
+    z = np.column_stack([np.ones(nobs)] + lagged)
+    keep = [0] + [
+        1 + j * k + i for j in range(lags) for i in range(k) if i not in causing
+    ]
+    yc = y[lags:, caused]
+    e_u = yc - z @ np.linalg.lstsq(z, yc, rcond=None)[0]
+    e_r = yc - z[:, keep] @ np.linalg.lstsq(z[:, keep], yc, rcond=None)[0]
+    df_resid = nobs - z.shape[1]
+    sigma = e_u.T @ e_u / df_resid
+    wald = np.trace(np.linalg.solve(sigma, e_r.T @ e_r - e_u.T @ e_u))
+    return wald, df_resid
+
+
+@pytest.mark.parametrize(
+    "caused, caused_ind, causing_ind",
+    [
+        (0, [0], [1, 2]),
+        ("realinv", [2], [0, 1]),
+        ([0, 1], [0, 1], [2]),
+        (["realinv", "realgdp"], [2, 0], [1]),
+    ],
+)
+@pytest.mark.parametrize("kind", ["f", "wald"])
+def test_test_causality_default_causing(caused, caused_ind, causing_ind, kind):
+    # causing=None is the complement of caused
+    names = ["realgdp", "realcons", "realinv"]
+    data = macrodata.load_pandas().data[names]
+    y = np.diff(np.log(data.to_numpy()), axis=0)
+    res = VAR(pd.DataFrame(y, columns=names)).fit(2)
+    result = res.test_causality(caused, kind=kind)
+
+    assert result.causing == [names[i] for i in causing_ind]
+    assert result.caused == [names[i] for i in caused_ind]
+    wald, df_resid = _granger_wald_ols(y, 2, caused_ind, causing_ind)
+    num_restr = 2 * len(caused_ind) * len(causing_ind)
+    if kind == "f":
+        expected = wald / num_restr
+        df = (num_restr, 3 * df_resid)
+        pvalue = stats.f.sf(expected, *df)
+    else:
+        expected = wald
+        df = num_restr
+        pvalue = stats.chi2.sf(expected, df)
+    assert_allclose(result.test_statistic, expected, rtol=1e-10)
+    assert_equal(result.df, df)
+    assert_allclose(result.pvalue, pvalue, rtol=1e-8)
+    explicit = res.test_causality(caused, causing_ind, kind=kind)
+    assert_allclose(result.test_statistic, explicit.test_statistic, rtol=1e-14)
+    assert result.summary().as_text() == explicit.summary().as_text()
+
+
+def test_test_causality_default_causing_r():
+    # R vars 1.6.1 (R 4.6.2), y the log differences of realgdp, realcons and
+    # realinv of macrodata:
+    # est <- VAR(y, p = 2, type = "const")
+    # causality(est, cause = "realinv")$Granger
+    # causality(VAR(y[, 1:2], p = 2, type = "const"),
+    #           cause = "realcons")$Granger
+    names = ["realgdp", "realcons", "realinv"]
+    data = macrodata.load_pandas().data[names]
+    y = pd.DataFrame(np.diff(np.log(data.to_numpy()), axis=0), columns=names)
+    result = VAR(y).fit(2).test_causality(["realgdp", "realcons"])
+    assert result.causing == ["realinv"]
+    assert_allclose(result.test_statistic, 1.1067248090187003, rtol=1e-8)
+    assert_allclose(result.pvalue, 0.35242200414558367, rtol=1e-8)
+    assert_equal(result.df, (4, 579))
+
+    result = VAR(y.iloc[:, :2]).fit(2).test_causality("realgdp")
+    assert result.causing == ["realcons"]
+    assert result.caused == ["realgdp"]
+    assert_allclose(result.test_statistic, 19.035317569398131, rtol=1e-8)
+    assert_allclose(result.pvalue, 1.2944585403573683e-08, rtol=1e-8)
+    assert "H_0: realcons does not Granger-cause realgdp" in str(result.summary())
+
+
 @pytest.mark.parametrize(
     "diag, stable",
     [

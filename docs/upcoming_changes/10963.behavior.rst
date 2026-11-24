@@ -1,0 +1,5 @@
+- ``test_causality`` of ``VARResults`` without ``causing`` used ``caused`` as
+  the causing variables instead of the other variables, so it raised
+  unless ``caused`` held half of the variables and otherwise named the
+  wrong variables. It uses the other variables, as documented.
+  :pr:`10963`
