@@ -4669,3 +4669,73 @@ def test_glm_saturated_no_runtime_warning(endog, params):
     assert not [w for w in record if issubclass(w.category, RuntimeWarning)]
     # The fitted means are the observations; atol for the zero parameters
     assert_allclose(res.params, params, rtol=1e-8, atol=1e-12)
+
+
+# GH 9058, endog outside of the support of the family
+_x_domain = np.column_stack((np.ones(8), np.arange(8.0)))
+_endog_outside = [
+    (sm.families.Binomial(), [0, 1, 2, 0, 1, 1, 0, 3], 2, "in the interval"),
+    (sm.families.Binomial(), [0, 1, -0.5, 0, 1, 1, 0, 1], 1, "in the interval"),
+    (sm.families.Poisson(), [0, 1, -2, 3, 1, 0, 2, 4], 1, "nonnegative"),
+    (
+        sm.families.NegativeBinomial(alpha=1.0),
+        [0, 1, 2, -3, 1, -1, 2, 4],
+        2,
+        "nonnegative",
+    ),
+    (sm.families.Gamma(sm.families.links.Log()), [1, 2, 0, 3, 1, 2, 2, 4], 1, "positive"),
+    (
+        sm.families.InverseGaussian(sm.families.links.Log()),
+        [1, 2, -1, 3, 0, 2, 2, 4],
+        2,
+        "positive",
+    ),
+]
+
+
+@pytest.mark.parametrize("family, endog, n_outside, support", _endog_outside)
+def test_endog_outside_support(family, endog, n_outside, support):
+    msg = f"endog has {n_outside} values outside of the support of the"
+    with pytest.warns(DomainWarning, match=msg) as record:
+        GLM(np.asarray(endog, dtype=float), _x_domain, family=family)
+    messages = [str(w.message) for w in record if w.category is DomainWarning]
+    assert len(messages) == 1
+    assert support in messages[0]
+
+
+_endog_inside = [
+    (sm.families.Binomial(), [0, 1, 1, 0, 1, 0, 0, 1]),
+    (sm.families.Binomial(), [0, 0.25, 0.5, 1, 0.75, 0, 1, 0.1]),
+    (
+        sm.families.Binomial(),
+        [[0, 3], [1, 2], [3, 0], [2, 1], [1, 1], [0, 2], [2, 0], [1, 3]],
+    ),
+    (sm.families.Poisson(), [0, 1, 0, 3, 1, 0, 2, 4]),
+    (sm.families.Poisson(), [0, 0.5, 0.2, 3, 1, 0, 2, 4.5]),
+    (sm.families.NegativeBinomial(alpha=1.0), [0, 1, 0, 3, 1, 0, 2, 4]),
+    (sm.families.Gamma(sm.families.links.Log()), [0.1, 2, 1e-8, 3, 1, 2, 2, 4]),
+    (sm.families.InverseGaussian(sm.families.links.Log()), [1, 2, 0.5, 3, 1, 2, 2, 4]),
+    (sm.families.Gaussian(), [-1, 2, 0, 3, -5, 2, 2, 4]),
+    (sm.families.Tweedie(var_power=1.5), [0, 2, 0, 3, 1, 2, 2, 4]),
+    (sm.families.Poisson(), [0, 1, np.nan, 3, 1, 0, 2, 4]),
+]
+
+
+@pytest.mark.parametrize("family, endog", _endog_inside)
+def test_endog_inside_support(family, endog):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        GLM(np.asarray(endog, dtype=float), _x_domain, family=family)
+
+
+def test_endog_outside_support_binomial_counts():
+    # the example of GH 9058, counts instead of proportions without n_trials
+    endog = np.array([4.0, 10, 3, 2, 4, 3, 18, 7, 9, 12, 36])
+    exog = add_constant(np.arange(11.0))
+    with pytest.warns(DomainWarning, match="endog has 11 values outside"):
+        GLM(endog, exog, family=sm.families.Binomial())
+    # the same counts as successes and failures are valid
+    endog2 = np.column_stack((endog, 40 - endog))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        GLM(endog2, exog, family=sm.families.Binomial())

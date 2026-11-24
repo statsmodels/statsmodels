@@ -36,6 +36,7 @@ from statsmodels.iolib.summary import Summary
 import statsmodels.regression.linear_model as lm
 from statsmodels.tools.sm_exceptions import (
     ConvergenceWarning,
+    DomainWarning,
     SingularMatrixWarning,
     SpecificationWarning,
 )
@@ -755,7 +756,9 @@ class TestGEE:
         # Mismatched family
         mod_sub = gee.GEE(endog, exog_sub, group, family=families.Gaussian())
         res_sub = mod_sub.fit()
-        mod = gee.GEE(endog, exog, group, family=families.Poisson())
+        # endog has negative values, which are outside of the Poisson support
+        with pytest.warns(DomainWarning, match="support of the Poisson"):
+            mod = gee.GEE(endog, exog, group, family=families.Poisson())
         with pytest.warns(SpecificationWarning, match="Model and submodel have"):
             mod.compare_score_test(res_sub)  # smoketest
 
