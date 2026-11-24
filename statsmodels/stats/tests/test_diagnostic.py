@@ -280,6 +280,23 @@ class TestDiagnosticG:
         assert_equal(gq[-1], "two-sided")
         # TODO other options ???
 
+    def test_het_goldfeldquandt_unequal_df(self):
+        # > gq = gqtest(fm, point=80, alternative='greater')  # df1 = 119, df2 = 77
+        # > gq = gqtest(fm, point=80, alternative='less')
+        res = smsdia.het_goldfeldquandt(
+            self.endog, self.exog, split=80, result_object=True
+        )
+        assert_allclose(res.fval, 0.65566048877998839, rtol=1e-10)
+        assert_allclose(res.pval, 0.98095490518697237, rtol=1e-10)
+        res = smsdia.het_goldfeldquandt(
+            self.endog,
+            self.exog,
+            split=80,
+            alternative="decreasing",
+            result_object=True,
+        )
+        assert_allclose(res.pval, 0.019045094813027602, rtol=1e-10)
+
     def test_het_breusch_pagan(self):
         res = self.res
 
@@ -2589,7 +2606,7 @@ def test_het_goldfeldquandt_smallest_subsample(split):
     res1 = OLS(y[:split], x[:split]).fit()
     res2 = OLS(y[split:], x[split:]).fit()
     assert_allclose(fval, (res2.ssr / res2.df_resid) / (res1.ssr / res1.df_resid))
-    assert_allclose(pval, stats.f.sf(fval, res1.df_resid, res2.df_resid))
+    assert_allclose(pval, stats.f.sf(fval, res2.df_resid, res1.df_resid))
     assert np.isfinite(fval)
 
 
@@ -2607,7 +2624,7 @@ def test_het_goldfeldquandt_rank_deficient_subsample():
     res2 = OLS(y[3:], x[3:]).fit()
     assert res1.df_resid == 1
     assert_allclose(fval, (res2.ssr / res2.df_resid) / (res1.ssr / res1.df_resid))
-    assert_allclose(pval, stats.f.sf(fval, res1.df_resid, res2.df_resid))
+    assert_allclose(pval, stats.f.sf(fval, res2.df_resid, res1.df_resid))
 
 
 def test_acorr_ljungbox_lags_exceed_nobs():
