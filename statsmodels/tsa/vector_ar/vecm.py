@@ -634,6 +634,7 @@ def select_coint_rank(endog, det_order, k_ar_diff, method="trace", signif=0.05):
     if signif not in possible_signif_values:
         raise ValueError("Please choose a significance level from 0.1, 0.05, or 0.01")
 
+    endog = np.asarray(endog)
     coint_result = coint_johansen(endog, det_order, k_ar_diff)
     test_stat = coint_result.lr1 if method == "trace" else coint_result.lr2
     crit_vals = coint_result.cvt if method == "trace" else coint_result.cvm
@@ -713,6 +714,7 @@ def coint_johansen(endog, det_order, k_ar_diff):
     """
     import warnings
 
+    endog = np.asarray(endog)
     if det_order not in [-1, 0, 1]:
         warnings.warn(
             "Critical values are only available for a det_order of -1, 0, or 1.",
@@ -734,7 +736,6 @@ def coint_johansen(endog, det_order, k_ar_diff):
             return y
         return OLS(y, np.vander(np.linspace(-1, 1, len(y)), order + 1)).fit().resid
 
-    endog = np.asarray(endog)
     nobs, neqs = endog.shape
 
     # why this?  f is detrend transformed series, det_order is detrend data
@@ -1068,8 +1069,8 @@ class VECM(tsbase.TimeSeriesModel):
         first_season=0,
     ):
         super().__init__(endog, exog, dates, freq, missing=missing)
-        if exog_coint is not None and not exog_coint.shape[0] == endog.shape[0]:
-            raise ValueError("exog_coint must have as many rows as enodg_tot!")
+        if exog_coint is not None and not exog_coint.shape[0] == len(endog):
+            raise ValueError("exog_coint must have as many rows as endog")
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VECM")
         self.y = self.endog.T
