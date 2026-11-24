@@ -4178,8 +4178,9 @@ def test_negbin_alpha_after_failed_fit(loglike_method, failure):
         with pytest.raises(RuntimeError, match="stop the optimizer"):
             model.fit(callback=stop, disp=0)
     else:
-        # one parameter too few
-        with pytest.raises(ValueError):
+        # one parameter too few; its last value, a negative coefficient, is
+        # taken for alpha and its log is NaN before the error
+        with np.errstate(invalid="ignore"), pytest.raises(ValueError):
             model.fit(start_params=res.params[:-1], disp=0)
     assert_allclose(model.loglike(res.params), llf, rtol=1e-12)
     # the same instance can be fit again
