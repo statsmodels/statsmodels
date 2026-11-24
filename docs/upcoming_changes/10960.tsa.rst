@@ -1,0 +1,3 @@
+- ``test_granger_causality`` and ``test_inst_causality`` of ``VECMResults``
+  raised for numpy integer variable indices, and a negative
+  ``coint_rank`` raised an unclear error in ``fit``. :pr:`10960`
