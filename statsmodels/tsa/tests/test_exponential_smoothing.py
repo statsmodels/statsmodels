@@ -2801,6 +2801,94 @@ def test_forecast_date(oildata, steps, use_pandas):
 
 
 @pytest.mark.parametrize(
+    "end, dynamic",
+    [
+        (20, 11),
+        (20, 12),
+        (20, 15),
+        (20, "2005-06-30"),
+        (75, 58),
+        (75, 59),
+        (75, 65),
+        (75, 70),
+        (75, "2016-06-30"),
+    ],
+)
+def test_predict_dynamic_after_end_or_sample(austourists, end, dynamic):
+    # Dynamic prediction begins at start + dynamic, and the forecasts after
+    # the sample are dynamic anyway, so a dynamic after the end of the
+    # prediction or after the sample has no effect. Both raised a ValueError
+    # (a broadcast error, or "Cannot anchor simulation outside of the
+    # sample"); start + dynamic = end + 1 (here 21) or nobs (68) worked. The
+    # date keys are the periods 25 and 69. The predictions are the one-step
+    # predictions in the sample followed by the forecasts from its end, with
+    # the variances of the exact method: mse in the sample, and mse times
+    # the relative variances of R's forecast package after it.
+    model = ETSModel(austourists)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    n, start = res.nobs, 10
+    nforecast = max(end - n + 1, 0)
+    expected = res.fittedvalues.to_numpy()[start : end + 1]
+    variance = np.full(expected.shape[0], res.mse)
+    if nforecast:
+        expected = np.r_[expected, res.forecast(nforecast).to_numpy()]
+        relative = R_RELATIVE_FORECAST_VARIANCE["ANN"][:nforecast]
+        variance = np.r_[variance, res.mse * np.asarray(relative)]
+    index = austourists.index
+    index = pd.date_range(index[0], periods=end + 1, freq=index.freq)[start:]
+
+    pred = res.predict(start=start, end=end, dynamic=dynamic)
+    assert pred.index.equals(index)
+    assert_allclose(pred, expected, rtol=1e-12)
+
+    pred = res.get_prediction(start=start, end=end, dynamic=dynamic)
+    frame = pred.summary_frame()
+    assert frame.index.equals(index)
+    assert_allclose(frame["mean"], expected, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, variance, rtol=1e-12)
+
+    # the simulated intervals are those of the prediction without dynamic
+    kwargs = dict(start=start, end=end, method="simulated", simulate_repetitions=5)
+    pred = res.get_prediction(dynamic=dynamic, rng=np.random.default_rng(0), **kwargs)
+    expected = res.get_prediction(rng=np.random.default_rng(0), **kwargs)
+    assert_allclose(
+        pred.summary_frame(), expected.summary_frame(), rtol=1e-12
+    )
+
+
+@pytest.mark.parametrize("dynamic", [True, 0, 1, 3, "date", "later date"])
+@pytest.mark.parametrize("start", [68, 70])
+def test_predict_dynamic_start_after_sample(austourists, start, dynamic):
+    # With a start after the end of the sample (nobs = 68), the predictions
+    # are the forecasts from the end of the sample whatever dynamic is. A
+    # dynamic at start (True, 0, or the date of start) began the forecasts
+    # at start, and a later one after it, so these raised "Cannot anchor
+    # simulation outside of the sample", except for start = nobs with
+    # dynamic at start. The exact variances are mse times the relative
+    # variances of R's forecast package.
+    model = ETSModel(austourists)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    n, end = res.nobs, 75
+    index = austourists.index
+    index = pd.date_range(index[0], periods=end + 1, freq=index.freq)
+    if dynamic in ("date", "later date"):
+        dynamic = str(index[start + 2 * (dynamic == "later date")].date())
+    index = index[start:]
+    expected = res.forecast(end - n + 1).to_numpy()[start - n :]
+    relative = R_RELATIVE_FORECAST_VARIANCE["ANN"][start - n : end - n + 1]
+
+    pred = res.predict(start=start, end=end, dynamic=dynamic)
+    assert pred.index.equals(index)
+    assert_allclose(pred, expected, rtol=1e-12)
+
+    pred = res.get_prediction(start=start, end=end, dynamic=dynamic)
+    frame = pred.summary_frame()
+    assert frame.index.equals(index)
+    assert_allclose(frame["mean"], expected, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, res.mse * np.asarray(relative), rtol=1e-12)
+
+
+@pytest.mark.parametrize(
     "data, seasonal, lags",
     [("oildata", None, 9), ("austourists", None, 10), ("austourists", "add", 8)],
 )
