@@ -1682,11 +1682,9 @@ class MLEModel(tsbase.TimeSeriesModel):
 
         if method == "harvey":
             kwargs["includes_fixed"] = True
+            kwargs["approx_centered"] = approx_centered
             score = self._score_harvey(
-                params,
-                approx_complex_step=approx_complex_step,
-                approx_centered=approx_centered,
-                **kwargs,
+                params, approx_complex_step=approx_complex_step, **kwargs
             )
         elif method == "approx" and approx_complex_step:
             kwargs["includes_fixed"] = True
