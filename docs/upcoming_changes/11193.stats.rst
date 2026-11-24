@@ -1,0 +1,3 @@
+- ``Description`` and ``describe`` raise a ``ValueError`` for a NaN percentile
+  for all data, as for any other value outside 0 and 100. Before, data without
+  a numeric column gave the label ``nan%``. :pr:`11193`
