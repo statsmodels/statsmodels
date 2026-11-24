@@ -404,6 +404,16 @@ class Representation:
 
     def __setstate__(self, state):
         self.__dict__.update(state)
+        # A compiled statespace object that was not initialized is restored
+        # without its arrays for the initial state, so it cannot be
+        # initialized any more. Drop it; it is re-created on first use.
+        uninitialized = [
+            prefix
+            for prefix, statespace in self._statespaces.items()
+            if not statespace.initialized
+        ]
+        for prefix in uninitialized:
+            del self._statespaces[prefix]
         # A compiled statespace object copies its matrices when it is pickled
         # or deep-copied, so afterwards it no longer shares memory with the
         # arrays in `_representations`, and new parameters written to those

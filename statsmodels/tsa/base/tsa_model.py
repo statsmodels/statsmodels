@@ -68,6 +68,12 @@ def get_index_loc(key, index):
     """
     Get the location of a specific key in an index
 
+    .. versionchanged:: 0.15.1
+
+       A key within one period of a PeriodIndex, such as a day of quarterly
+       periods, is the location of that period in the sample, as it already
+       was after the end of the sample, instead of raising a KeyError.
+
     Parameters
     ----------
     key : label
@@ -183,12 +189,25 @@ def get_index_loc(key, index):
                 )
                 key = index[-1]
             else:
-                key = index[key]
+                try:
+                    key = index[key]
+                except IndexError as exc:
+                    # A negative location before the start of the sample
+                    raise KeyError(str(exc)) from exc
         # Other key types (i.e., string date or some datetime-like object)
         else:
             # Convert the key to the appropriate date-like object
             if index_class is PeriodIndex:
                 date_key = Period(key, freq=base_index.freq)
+                # A key within one period, such as a day of quarterly data,
+                # is that period, as it is after the end of the sample
+                # (date_key is the period that contains the start of key)
+                if (
+                    isinstance(key, (str, Period))
+                    and pd.notna(date_key)
+                    and Period(key).end_time <= date_key.end_time
+                ):
+                    key = date_key
             elif isinstance(key, str) and re.fullmatch("[0-9]*Q[1-4]", key):
                 # Special case dates with a format like
                 # 2026Q2
@@ -351,7 +370,8 @@ def get_index_label_loc(key, index, row_labels):
             )
             if not in_quarter.any():
                 raise
-        if not isinstance(key, (int, np.integer)):
+        # Without row labels (e.g. numpy data) there is nothing else to search
+        if not isinstance(key, (int, np.integer)) and row_labels is not None:
             loc = row_labels.get_loc(key)
         else:
             raise
@@ -790,7 +810,10 @@ class TimeSeriesModel(base.LikelihoodModel):
                     resampled_index = date_range(
                         start=index[0], end=index[-1], freq=freq
                     )
-                    if not inferred_freq and not (resampled_index == index).all():
+                    if not inferred_freq and (
+                        len(resampled_index) != len(index)
+                        or not (resampled_index == index).all()
+                    ):
                         raise ValueError(
                             "The given frequency argument could"
                             " not be matched to the given index."

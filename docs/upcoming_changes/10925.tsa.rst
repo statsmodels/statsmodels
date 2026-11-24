@@ -1,0 +1,7 @@
+- In the prediction methods of time series models, a key finer than
+  the frequency of a :class:`~pandas.PeriodIndex` (for example
+  ``"2001-05-15"`` on quarterly data) raised a ``KeyError`` in the
+  sample. It is the period that contains it, as after the sample. A
+  negative location before the start of a date index, a label key for
+  a model of numpy data and a ``freq`` that does not match ``dates``
+  raise clear errors. :pr:`10925`
