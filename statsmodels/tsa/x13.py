@@ -6,7 +6,7 @@ Notes
 Many of the functions are called x12. However, they are also intended to work
 for x13. If this is not the case, it's a bug.
 """
-import datetime
+import datetime as dt
 import os
 from pathlib import Path
 import re
@@ -409,7 +409,7 @@ def pandas_to_series_spec(x):
 
         period = _freq_to_period[infer_freq(x.index)]
     start_date = x.index[0]
-    if isinstance(start_date, datetime.date):
+    if isinstance(start_date, dt.date):
         # datetime.date and datetime.datetime in an object index have no quarter
         start_date = pd.Timestamp(start_date)
     if period == 12:
