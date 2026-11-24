@@ -2045,7 +2045,9 @@ class UECM(ARDL):
             differences of unsigned integer variables, and of integer arrays
             whose differences do not fit in their type (int8 values -100 and
             100, for example), wrapped around, so that a change from 3 to 1
-            of a uint8 variable was 254 instead of -2.
+            of a uint8 variable was 254 instead of -2. A 1-d array or a
+            Series is a single variable with the key 0, as in ARDL. They
+            raised a ValueError.
     order : int or dict, optional
         If int, uses lags 0, 1, ..., order for all exog variables. If a
         dict, applies the lags series by series. If ``exog`` is anything
@@ -2268,7 +2270,8 @@ class UECM(ARDL):
         # 2. Levels
         x_names.append(f"{y_base}.L1")
         orig_exog = self.data.orig_exog
-        exog_pandas = isinstance(orig_exog, pd.DataFrame)
+        # A Series is the variable 0, named as in ARDL
+        exog_pandas = isinstance(orig_exog, (pd.DataFrame, pd.Series))
         dexog_names = []
         # _order only holds the included exog, whose lags are lists
         for key, val in self._order.items():
@@ -2302,6 +2305,9 @@ class UECM(ARDL):
         self._deterministic_reg = self._deterministics.in_sample()
         # 3. Levels
         orig_exog = self.data.orig_exog
+        if isinstance(orig_exog, pd.Series):
+            # A Series is the variable 0, as in ARDL
+            orig_exog = orig_exog.to_frame(0)
         exog_pandas = isinstance(orig_exog, pd.DataFrame)
         lvl = np.full(self.data.endog.shape, np.nan)
         lvl[1:] = self.data.endog[:-1]
@@ -2335,6 +2341,9 @@ class UECM(ARDL):
         else:
             if orig_exog.dtype.kind in "biu":
                 orig_exog = orig_exog.astype(float)
+            if orig_exog.ndim == 1:
+                # A 1-d array is the variable 0, as in ARDL
+                orig_exog = orig_exog[:, None]
             dexog = np.full(self.data.exog.shape, np.nan)
             dexog[1:] = np.diff(orig_exog, axis=0)
         adj_order = {}
