@@ -728,12 +728,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         the columns with quarterly variables should come afterwards. See the
         "Notes" section for details on how to set up a model with
         monthly/quarterly mixed frequency data.
-    factors : int, list of str, or dict, optional
-        Integer giving the number of (global) factors, a list with the names of
-        (global) factors, or a dictionary with:
+    factors : int, list or tuple of str, or dict, optional
+        Integer giving the number of (global) factors, a list (or tuple) with
+        the names of (global) factors, or a dictionary with:
 
         - keys : names of endogenous variables
-        - values : lists of factor names.
+        - values : lists (or tuples) of factor names.
 
         If this is an integer, then the factor names will be 0, 1, .... The
         default is a single factor that loads on all variables. Note that there
@@ -775,7 +775,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         "Notes" for details about how this option works with postestimation
         output. If a tuple (usually only used internally), then the tuple must
         have length 2, with each element containing a Pandas series with index
-        equal to the names of the endogenous variables. The first element
+        equal to the names of the endogenous variables, or an array_like with
+        one value for each endogenous variable. The first element
         should contain the mean values and the second element should contain
         the standard deviations. Default is True.
     endog_quarterly : pandas.Series or pandas.DataFrame, optional
@@ -789,14 +790,21 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         the "Notes" section for more details. This option is rarely used except
         for testing. Default is False.
     obs_cov_diag : bool, optional
-        If True and if `idiosyncratic_ar1 is True`, then this option puts small
-        positive values in the observation disturbance covariance matrix. This
+        If True, then this option puts small positive values (1e-4) on the
+        diagonal of the observation disturbance covariance matrix. If
+        `idiosyncratic_ar1=False`, the values for the monthly variables are
+        then replaced by their idiosyncratic variances, so that only those for
+        the quarterly variables are affected. This
         is not required for estimation and is rarely used except for testing.
         (It is sometimes used to prevent numerical errors, for example those
         associated with a positive semi-definite forecast error covariance
         matrix at the first time step when using EM initialization, but state
         space models in Statsmodels switch to the univariate approach in those
         cases, and so do not need to use this trick). Default is False.
+    **kwargs
+        Keyword arguments passed to `MLEModel` and the state space
+        representation, for example `initialization` (by default each block
+        of states is initialized with its stationary distribution).
 
     Notes
     -----
@@ -928,7 +936,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     output has the reverse transformation applied before it is returned to the
     user).
 
-    Standardization can be disabled by passing `standardization=False` to the
+    Standardization can be disabled by passing `standardize=False` to the
     model constructor.
 
     **Identification of factors and loadings**
@@ -1132,7 +1140,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
     *Monthly / Quarterly mixed frequency*
 
-    To specify a monthly / quarterly mixed frequency model see the (Notes
+    To specify a monthly / quarterly mixed frequency model (see the Notes
     section for more details about these models):
 
     >>> mod = sm.tsa.DynamicFactorMQ(endog, endog_quarterly=endog_Q)
@@ -1166,11 +1174,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
     certain factors, it is possible to pass a dictionary to the `factors`
     argument.
 
-    >>> factors = {'infl': ['global']
-    ...            'tbilrate': ['global']
-    ...            'realgdp': ['global', 'real']
+    >>> factors = {'infl': ['global'],
+    ...            'tbilrate': ['global'],
+    ...            'realgdp': ['global', 'real'],
     ...            'realcons': ['global', 'real']}
-    >>> mod = sm.tsa.DynamicFactorMQ(endog, endog_quarterly=endog_Q)
+    >>> mod = sm.tsa.DynamicFactorMQ(endog, endog_quarterly=endog_Q,
+    ...                              factors=factors)
     >>> print(mod.summary())
                         Model Specification: Dynamic Factor Model
     ==========================================================================
@@ -1506,18 +1515,21 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Monthly dataset. If a quarterly dataset is given, then this must
             be a Pandas object with a PeriodIndex or DatetimeIndex at a monthly
             frequency.
-        endog_quarterly : array_like or None
+        endog_quarterly : pandas.Series, pandas.DataFrame or None
             Quarterly dataset. If not None, then this must be a Pandas object
             with a PeriodIndex or DatetimeIndex at a quarterly frequency.
 
         Returns
         -------
-        endog : array_like
+        endog : DataFrame, Series or ndarray
             If both endog_monthly and endog_quarterly were given, this is a
             Pandas DataFrame with a PeriodIndex at the monthly frequency, with
             all of the columns from `endog_monthly` ordered first and the
-            columns from `endog_quarterly` ordered afterwards. Otherwise it is
-            simply the input `endog_monthly` dataset.
+            columns from `endog_quarterly` ordered afterwards. Each quarterly
+            value is placed in the last month of its quarter, and a column name
+            that occurs more than once gets the suffixes 1, 2, ... in the order
+            of the columns. Otherwise it is a copy of the input
+            `endog_monthly` dataset.
         k_endog_monthly : int
             The number of monthly variables (which are ordered first) in the
             returned `endog` dataset.
@@ -1618,13 +1630,14 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         retain_standardization : bool, optional
             Whether or not to use the mean and standard deviation from the
             original model to standardize the new data. Default is False.
-        kwargs
+        **kwargs
             Keyword arguments to pass to the new model class to change the
             model specification.
 
         Returns
         -------
-        model : DynamicFactorMQ instance
+        DynamicFactorMQ
+            The new model instance.
         """
         if retain_standardization and self.standardize:
             kwargs["standardize"] = (self._endog_mean, self._endog_std)
@@ -1695,7 +1708,14 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         truncate_endog_names : int, optional
             The number of characters to show for names of observed variables.
             Default is 24 if there is more than one observed variable, or
-            an unlimited number of there is only one.
+            an unlimited number if there is only one.
+
+        Returns
+        -------
+        Summary
+            The tables of the model specification: the dimensions, the
+            loadings of the observed variables on the factors and the orders
+            of the factor blocks.
         """
         # Get endog names
         endog_names = self._get_endog_names(truncate=truncate_endog_names,
@@ -2016,7 +2036,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
         Returns
         -------
-        constrained : array_like
+        constrained : ndarray
             Array of constrained parameters which may be used in likelihood
             evaluation.
         """
@@ -2066,7 +2086,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
         Returns
         -------
-        unconstrained : array_like
+        unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
         """
         unconstrained = constrained.copy()
@@ -2108,10 +2128,11 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         ----------
         params : array_like
             Array of new parameters.
-        transformed : bool, optional
-            Whether or not `params` is already transformed. If set to False,
-            `transform_params` is called. Default is True.
-
+        **kwargs
+            Keyword arguments passed to `MLEModel.update`: `transformed`
+            (whether or not `params` is already transformed; if False,
+            `transform_params` is called; default True), `includes_fixed`
+            and `complex_step`.
         """
         params = super().update(params, **kwargs)
 
@@ -2204,6 +2225,11 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Constraint matrix, shaped `(k_constraints, k_factors * 5)`.
         q : ndarray
             Constraint values, shaped `(k_constraints,)`.
+
+        Raises
+        ------
+        ValueError
+            If `i` is the index of a monthly variable (`i < k_endog_monthly`).
 
         Notes
         -----
@@ -2361,7 +2387,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Whether or not to also update the Kalman filter initialization
             using the EM algorithm, if the EM algorithm is used for fitting.
             Default is True.
-        mstep_method : {None, 'missing', 'nonmissing'}, optional
+        mstep_method : {'missing', 'nonmissing'}, optional
             The EM algorithm maximization step, if the EM algorithm is used
             for fitting. If there are no NaN values in the dataset, this can
             be set to "nonmissing" (which is slightly faster) or "missing",
@@ -2371,8 +2397,10 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             Set to True to have all available output in the Results object's
             mle_retvals attribute. The output is dependent on the solver.
             See LikelihoodModelResults notes section for more information.
-        disp : bool, optional
-            Set to True to print convergence messages.
+        disp : int or bool, optional
+            Set to True to print convergence messages. With the EM algorithm,
+            an integer prints the progress every `disp` iterations (see
+            `fit_em`).
         callback : callable callback(xk), optional
             Called after each iteration, as callback(xk), where xk is the
             current parameter vector.
@@ -2423,16 +2451,28 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             may be caused by numerical issues. If set to zero, then any
             decrease will trigger the `llf_decrease_action`. Default is 1e-4.
         **kwargs
-            Additional keyword arguments to pass to the optimizer.
+            Additional keyword arguments to pass to the optimizer. Not allowed
+            with the EM algorithm.
 
         Returns
         -------
-        MLEResults
+        DynamicFactorMQResults or ndarray
+            The results, or the array of estimated parameters if
+            `return_params=True`.
 
         See Also
         --------
         statsmodels.base.model.LikelihoodModel.fit
         statsmodels.tsa.statespace.mlemodel.MLEResults
+
+        Notes
+        -----
+        With the EM algorithm (``method="em"``, the default), `fit` calls
+        `fit_em`; `includes_fixed`, `callback`, `optim_score`,
+        `optim_complex_step`, `optim_hessian` and `flags` are then not used.
+        `tolerance`, `em_initialization`, `mstep_method`,
+        `llf_decrease_action` and `llf_decrease_tolerance` are used only with
+        the EM algorithm.
         """
         if method == "em":
             return self.fit_em(
@@ -2517,8 +2557,13 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             printed).
         em_initialization : bool, optional
             Whether or not to also update the Kalman filter initialization
-            using the EM algorithm. Default is True.
-        mstep_method : {None, 'missing', 'nonmissing'}, optional
+            using the EM algorithm. Default is True. If False, the model's
+            initialization is used; if an EM iteration then gives
+            non-stationary parameters for states with a stationary
+            initialization, these states are switched to a diffuse
+            initialization (with an `EstimationWarning`) and the EM
+            iterations restart.
+        mstep_method : {'missing', 'nonmissing'}, optional
             The EM algorithm maximization step. If there are no NaN values
             in the dataset, this can be set to "nonmissing" (which is slightly
             faster) or "missing", otherwise it must be "missing". Default is
@@ -2526,7 +2571,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         full_output : bool, optional
             Set to True to have all available output from EM iterations in
             the Results object's mle_retvals attribute, including whether the
-            iterations converged.
+            iterations converged. If False, the `mle_retvals` and
+            `mle_settings` attributes of the results are None.
         return_params : bool, optional
             Whether or not to return only the array of maximizing parameters.
             Default is False.
@@ -2547,7 +2593,17 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
         Returns
         -------
-        DynamicFactorMQResults
+        DynamicFactorMQResults or ndarray
+            The results, or the array of estimated parameters if
+            `return_params=True`.
+
+        Raises
+        ------
+        NotImplementedError
+            If some parameters are held fixed with `fix_params`.
+        ValueError
+            If `low_memory=True`, or if `mstep_method="nonmissing"` and the
+            data have missing values.
 
         See Also
         --------
@@ -3079,24 +3135,30 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         complex_step : bool, optional
             Whether or not to compute the smoothed output using complex step
             differentiation. Default is False.
-        return_ssm : bool, optional
-            Whether or not to return only the state space output or a full
-            results object. Default is to return a full results object.
         cov_type : str, optional
             See `MLEResults.fit` for a description of covariance matrix types
-            for results object. Default is None.
+            for results object. Default is 'none'.
         cov_kwds : dict, optional
             See `MLEResults.get_robustcov_results` for a description of required
             keywords for alternative covariance estimators
+        return_ssm : bool, optional
+            Whether or not to return only the state space output or a full
+            results object. Default is to return a full results object.
         results_class : type, optional
             A results class to use for results object. Default is
-            `MLEResults`.
+            `DynamicFactorMQResults`.
         results_wrapper_class : type, optional
             A results wrapper class to use for the results object. Default is
             `MLEResultsWrapper`.
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
+
+        Returns
+        -------
+        DynamicFactorMQResults or SmootherResults
+            The results object, or the state space output if
+            `return_ssm=True`.
         """
         return super().smooth(
             params, transformed=transformed, includes_fixed=includes_fixed,
@@ -3126,18 +3188,18 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         complex_step : bool, optional
             Whether or not to compute the filtered output using complex step
             differentiation. Default is False.
-        return_ssm : bool, optional
-            Whether or not to return only the state space output or a full
-            results object. Default is to return a full results object.
         cov_type : str, optional
             See `MLEResults.fit` for a description of covariance matrix types
             for results object. Default is 'none'.
         cov_kwds : dict, optional
             See `MLEResults.get_robustcov_results` for a description of required
             keywords for alternative covariance estimators
+        return_ssm : bool, optional
+            Whether or not to return only the state space output or a full
+            results object. Default is to return a full results object.
         results_class : type, optional
             A results class to use for results object. Default is
-            `MLEResults`.
+            `DynamicFactorMQResults`.
         results_wrapper_class : type, optional
             A results wrapper class to use for the results object. Default is
             `MLEResultsWrapper`.
@@ -3149,6 +3211,12 @@ class DynamicFactorMQ(mlemodel.MLEModel):
         **kwargs
             Additional keyword arguments to pass to the Kalman filter. See
             `KalmanFilter.filter` for more details.
+
+        Returns
+        -------
+        DynamicFactorMQResults or SmootherResults
+            The results object, or the state space output if
+            `return_ssm=True`.
         """
         return super().filter(
             params, transformed=transformed, includes_fixed=includes_fixed,
@@ -3230,6 +3298,9 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             If the model specification standardized the data, whether or not
             to return simulations in the original scale of the data (i.e.
             before it was standardized by the model). Default is True.
+        **kwargs
+            Additional keyword arguments passed to `MLEModel.simulate`, for
+            example `rng`, or new values of time-varying state space matrices.
 
         Returns
         -------
@@ -3355,7 +3426,7 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 
         Returns
         -------
-        impulse_responses : ndarray
+        impulse_responses : ndarray, Series or DataFrame
             Responses for each endogenous variable due to the impulse
             given by the `impulse` argument. For a time-invariant model, the
             impulse responses are given for `steps + 1` elements (this gives
@@ -3363,7 +3434,8 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             important cases of VAR and SARIMAX models), while for time-varying
             models the impulse responses are only given for `steps` elements
             (to avoid having to unexpectedly provide updated time-varying
-            matrices).
+            matrices). A Pandas Series (one endogenous variable) or DataFrame
+            if the model was given Pandas data.
 
         """
         # Get usual simulations (in the possibly-standardized scale)
@@ -3398,6 +3470,27 @@ class DynamicFactorMQ(mlemodel.MLEModel):
 class DynamicFactorMQResults(mlemodel.MLEResults):
     """
     Results from fitting a dynamic factor model
+
+    Parameters
+    ----------
+    model : DynamicFactorMQ instance
+        The fitted model instance
+    params : ndarray
+        Fitted parameters
+    filter_results : FilterResults or SmootherResults
+        The underlying state space model and Kalman filter (and smoother)
+        output
+    cov_type : str, optional
+        The method for calculating the covariance matrix of parameter
+        estimates. See `MLEModel.fit` for a description of available options.
+    **kwargs
+        Additional keyword arguments used to initialize the results object,
+        for example `cov_kwds`.
+
+    See Also
+    --------
+    statsmodels.tsa.statespace.kalman_filter.FilterResults
+    statsmodels.tsa.statespace.mlemodel.MLEResults
     """
     def __init__(self, model, params, filter_results, cov_type=None, **kwargs):
         super().__init__(
@@ -3413,16 +3506,17 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         out : Bunch
             A bunch with the following attributes:
 
-            - `filtered`: a time series array with the filtered estimate of
-              the component
-            - `filtered_cov`: a time series array with the filtered estimate
-              of the variance/covariance of the component
-            - `smoothed`: a time series array with the smoothed estimate of
-              the component
-            - `smoothed_cov`: a time series array with the smoothed estimate
-              of the variance/covariance of the component
-            - `offset`: an integer giving the offset in the state vector
-              where this component begins
+            - `filtered`: a DataFrame with the filtered estimates of the
+              factors, with the factor names as the columns
+            - `filtered_cov`: a DataFrame with the filtered estimates of the
+              covariance matrix of the factors, with a (factor, period)
+              MultiIndex as the rows and the factor names as the columns
+            - `smoothed`: a DataFrame with the smoothed estimates of the
+              factors, or None if the results do not include smoothed output
+              (for example results from `filter`)
+            - `smoothed_cov`: a DataFrame with the smoothed estimates of the
+              covariance matrix of the factors, or None if the results do not
+              include smoothed output
         """
         out = None
         if self.model.k_factors > 0:
@@ -3447,13 +3541,13 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         Parameters
         ----------
         method : {'individual', 'joint', 'cumulative'}, optional
-            The type of R-squared values to generate. "individual" plots
-            the R-squared of each variable on each factor; "joint" plots the
+            The type of R-squared values to generate. "individual" gives
+            the R-squared of each variable on each factor; "joint" gives the
             R-squared of each variable on each factor that it loads on;
-            "cumulative" plots the successive R-squared values as each
+            "cumulative" gives the successive R-squared values as each
             additional factor is added to the regression, for each variable.
             Default is 'individual'.
-        which : {None, 'filtered', 'smoothed'}, optional
+        which : {'filtered', 'smoothed'}, optional
             Whether to compute R-squared values based on filtered or smoothed
             estimates of the factors. Default is 'smoothed' if smoothed results
             are available and 'filtered' otherwise.
@@ -3462,11 +3556,12 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         -------
         rsquared : DataFrame or Series
             The R-squared values from regressions of observed variables on
-            one or more of the factors. If method='individual' or
-            method='cumulative', this will be a Pandas DataFrame with observed
-            variables as the index and factors as the columns . If
-            method='joint', will be a Pandas Series with observed variables as
-            the index.
+            one or more of the factors (and a constant). If
+            method='individual' or method='cumulative', this will be a Pandas
+            DataFrame with observed variables as the index and factors as the
+            columns, with NaN for the factors that a variable does not load
+            on. If method='joint', will be a Pandas Series with observed
+            variables as the index.
 
         See Also
         --------
@@ -3542,11 +3637,12 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
         Returns
         -------
-        coefficients_of_determination : ndarray
-            A `k_endog` x `k_factors` array, where
-            `coefficients_of_determination[i, j]` represents the :math:`R^2`
-            value from a regression of factor `j` and a constant on endogenous
-            variable `i`.
+        coefficients_of_determination : DataFrame
+            A `k_endog` x `k_factors` DataFrame, with the observed variables as
+            the index and the factors as the columns, where the entry in row
+            `i` and column `j` is the :math:`R^2` value from a regression of
+            endogenous variable `i` on factor `j` (smoothed if available) and
+            a constant, or NaN if variable `i` does not load on factor `j`.
 
         See Also
         --------
@@ -3570,7 +3666,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             "cumulative" plots the successive R-squared values as each
             additional factor is added to the regression, for each variable.
             Default is 'individual'.
-        which : {None, 'filtered', 'smoothed'}, optional
+        which : {'filtered', 'smoothed'}, optional
             Whether to compute R-squared values based on filtered or smoothed
             estimates of the factors. Default is 'smoothed' if smoothed results
             are available and 'filtered' otherwise.
@@ -3585,6 +3681,13 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         figsize : tuple, optional
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
+
+        Returns
+        -------
+        Figure
+            The figure, with one bar chart for each factor ("individual" and
+            "cumulative") or a single bar chart ("joint"). Only the last chart
+            labels the endogenous variables.
 
         See Also
         --------
@@ -3705,9 +3808,10 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
         Returns
         -------
-        forecast : ndarray
-            Array of out of in-sample predictions and / or out-of-sample
-            forecasts. An (npredict x k_endog) array.
+        PredictionResults
+            In-sample predictions and / or out-of-sample forecasts, with
+            their variances and confidence intervals (in the original scale
+            of the data if `original_scale=True`).
         """
         # Get usual predictions (in the possibly-standardized scale)
         res = super().get_prediction(start=start, end=end, dynamic=dynamic,
@@ -3824,6 +3928,13 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
         **kwargs
             Keyword arguments to pass to the base `news` method, and/or to
             construct `comparison` if it is not already a results object.
+
+        Returns
+        -------
+        NewsResults
+            Impacts of data revisions and news on estimates. If
+            `return_raw=True`, the raw output of the computation is returned
+            instead (not converted to the original scale).
 
         References
         ----------
@@ -3944,7 +4055,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
             signal. Default is to use all states.
         original_scale : bool, optional
             If the model specification standardized the data, whether or not
-            to return simulations in the original scale of the data (i.e.
+            to return contributions in the original scale of the data (i.e.
             before it was standardized by the model). Default is True.
 
         Returns
@@ -4076,7 +4187,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
         Returns
         -------
-        results
+        DynamicFactorMQResults
             Updated Results object, that includes results from both the
             original dataset and the new dataset.
 
@@ -4148,7 +4259,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
         Returns
         -------
-        results
+        DynamicFactorMQResults
             Updated Results object, that includes results only for the new
             dataset.
 
@@ -4229,7 +4340,7 @@ class DynamicFactorMQResults(mlemodel.MLEResults):
 
         Returns
         -------
-        results
+        DynamicFactorMQResults
             Updated Results object, that includes results only for the new
             dataset.
 
