@@ -464,9 +464,16 @@ class TestGlmGaussianGradient(TestGlmGaussian):
         cls.data.endog = np.require(cls.data.endog, requirements="W")
         cls.data.exog = np.require(cls.data.exog, requirements="W")
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
-        cls.res1 = GLM(
-            cls.data.endog, cls.data.exog, family=sm.families.Gaussian()
-        ).fit(method="newton")
+        with warnings.catch_warnings():
+            # With the badly conditioned Longley design, rounding error can
+            # change the intercept (about -3.5e6) by 1e-7 in every Newton
+            # step, more than the absolute tolerance of 1e-8, after the
+            # parameters agree with OLS to 1e-11: newton can stop at maxiter
+            # and warn
+            warnings.simplefilter("ignore", ConvergenceWarning)
+            cls.res1 = GLM(
+                cls.data.endog, cls.data.exog, family=sm.families.Gaussian()
+            ).fit(method="newton")
         from .results.results_glm import Longley
 
         cls.res2 = Longley()
