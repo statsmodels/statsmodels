@@ -4,12 +4,12 @@ Created on Sun Apr 17 22:13:36 2011
 @author: josef
 """
 
-from statsmodels.compat.scipy import SP_LT_19, SP_LT_116
+from statsmodels.compat.scipy import SP_LT_116
 
 import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_almost_equal
 import pytest
-from scipy import stats
+from scipy import special, stats
 
 from statsmodels.sandbox.distributions.extras import (
     ACSkewT_gen,
@@ -169,37 +169,34 @@ def test_skewt():
     assert_(np.allclose(cdf_st, cdf_r, rtol=1e-13, atol=1e-25))
 
 
-@pytest.mark.singleton_randomstate
-@pytest.mark.xfail(
-    condition=not SP_LT_19,
-    reason=(
-        "BUG: SkewNorm_gen._rvs(self, alpha) does not accept the `size` "
-        "keyword argument that scipy.stats.rv_continuous.rvs() always "
-        "passes to _rvs on modern scipy (it instead relies on the "
-        "legacy self._size instance attribute set before calling _rvs). "
-        "skewnorm.rvs(...) therefore always raises TypeError."
-    ),
-    raises=TypeError,
-    strict=True,
-)
-def test_skewnorm_rvs():
-    skewnorm.rvs(5, size=100, random_state=np.random.RandomState(0))
+@pytest.mark.parametrize("alpha", [5.0, -2.0])
+def test_skewnorm_rvs(alpha):
+    # _rvs did not take the size and random_state keywords: rvs raised
+    # TypeError with scipy >= 1.9, and warned and ignored random_state before
+    draws = skewnorm.rvs(alpha, size=2000, random_state=np.random.default_rng(0))
+    assert draws.shape == (2000,)
+    # scipy's skew normal is the same distribution
+    assert stats.kstest(draws, stats.skewnorm(alpha).cdf).pvalue > 0.01
+    again = skewnorm.rvs(alpha, size=2000, random_state=np.random.default_rng(0))
+    assert_allclose(again, draws, rtol=1e-15)
 
 
-@pytest.mark.singleton_randomstate
-@pytest.mark.xfail(
-    condition=not SP_LT_19,
-    reason=(
-        "BUG: same root cause as test_skewnorm_rvs -- "
-        "ACSkewT_gen._rvs(self, df, alpha) does not accept the `size` "
-        "keyword argument scipy passes to _rvs, so ACSkewT_gen().rvs(...) "
-        "always raises TypeError."
-    ),
-    raises=TypeError,
-    strict=False,
-)
 def test_acskewt_rvs():
-    ACSkewT_gen().rvs(5, 10, size=100, random_state=np.random.RandomState(0))
+    # _rvs did not take the size and random_state keywords: rvs raised
+    # TypeError with scipy >= 1.9, and warned and ignored random_state before
+    df, alpha, nobs = 10.0, 5.0, 4000
+    dist = ACSkewT_gen()
+    draws = dist.rvs(df, alpha, size=nobs, random_state=np.random.default_rng(0))
+    assert draws.shape == (nobs,)
+    # Mean and variance of the skew t of Azzalini and Capitanio (2003)
+    delta = alpha / np.sqrt(1 + alpha**2)
+    log_ratio = special.gammaln((df - 1) / 2) - special.gammaln(df / 2)
+    mean = delta * np.sqrt(df / np.pi) * np.exp(log_ratio)
+    var = df / (df - 2) - mean**2
+    assert abs(draws.mean() - mean) < 4 * np.sqrt(var / nobs)
+    assert_allclose(draws.var(), var, rtol=0.1)
+    again = dist.rvs(df, alpha, size=nobs, random_state=np.random.default_rng(0))
+    assert_allclose(again, draws, rtol=1e-15)
 
 
 def test_pdf_mvsk_matches_pdf_moments():
