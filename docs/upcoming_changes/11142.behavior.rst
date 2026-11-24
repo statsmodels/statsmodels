@@ -1,0 +1,7 @@
+- The smoothed state autocovariance (``smoothed_state_autocov``) of
+  state space models was not computed in the periods of an exact
+  diffuse initialization: it kept zeros, or the values of an earlier
+  smoothing run of the same model. It is computed in those periods
+  too. This changes the EM estimates of ``DynamicFactorMQ`` after the
+  EM algorithm switches a block to a diffuse initialization, which
+  depended on what had run before. :pr:`11142`
