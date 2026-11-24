@@ -2018,6 +2018,12 @@ class FilterResults(FrozenRepresentation):
 
         Out-of-sample prediction first applies the Kalman filter to missing
         data for the number of periods desired to obtain the predicted states.
+
+        .. versionchanged:: 0.15.1
+
+           With the filtered timing convention (``timing_init_filtered``),
+           out-of-sample forecasts and dynamic predictions were one period
+           late. They equal those with the predicted timing convention.
         """
         # Get the start and the end of the entire prediction range
         if start is None:
@@ -2131,9 +2137,14 @@ class FilterResults(FrozenRepresentation):
                 constant = self.predicted_state[..., kf_start]
                 stationary_cov = self.predicted_state_cov[..., kf_start]
 
+            # The initial state is the predicted state of period kf_start, so
+            # the new filter uses the predicted timing convention (with the
+            # filtered timing, it would treat it as the filtered state of the
+            # period before and predict one period late)
             kwargs.update({"initialization": "known",
                            "constant": constant,
-                           "stationary_cov": stationary_cov})
+                           "stationary_cov": stationary_cov,
+                           "alternate_timing": False})
 
             # Construct the new endogenous array.
             endog = np.zeros((nforecast, self.k_endog)) * np.nan

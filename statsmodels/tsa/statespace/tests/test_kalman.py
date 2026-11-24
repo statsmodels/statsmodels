@@ -972,3 +972,56 @@ def test_filtered_timing_converged_last_predicted_state_cov(k_states, filter_uni
     assert_allclose(
         res.predicted_state[..., -1], desired.predicted_state[..., -1], rtol=1e-8
     )
+
+
+@pytest.mark.parametrize("dynamic", [None, 2])
+def test_filtered_timing_prediction(dynamic):
+    # FilterResults.predict (forecasts, dynamic prediction, and so
+    # get_forecast and get_prediction) runs a filter on missing data that
+    # starts from the predicted state of its first period. With filtered
+    # timing that filter treated it as the filtered state of the period before,
+    # so the predictions were one period late. They equal those with the
+    # predicted timing and the closed form of an AR(1) observed with noise.
+    phi, sigma2, obs_var = 0.5, 1.0, 0.8
+    endog = np.random.default_rng(3029).standard_normal((20, 1))
+
+    def predict(filtered_timing):
+        kf = KalmanFilter(1, 1, k_posdef=1)
+        kf.bind(endog)
+        kf["design"] = [[1.0]]
+        kf["obs_cov"] = [[obs_var]]
+        kf["transition"] = [[phi]]
+        kf["selection"] = [[1.0]]
+        kf["state_cov"] = [[sigma2]]
+        # The stationary distribution, the same for alpha_0 and alpha_1
+        kf.initialize_known(np.zeros(1), [[sigma2 / (1 - phi**2)]])
+        kf.timing_init_filtered = filtered_timing
+        res = kf.filter()
+        if dynamic is None:
+            start, end = kf.nobs, kf.nobs + 3
+        else:
+            start, end = 10, 15
+        return res, res.predict(start=start, end=end, dynamic=dynamic)
+
+    res, pred = predict(True)
+    _, desired = predict(False)
+    assert_allclose(pred.forecasts, desired.forecasts, rtol=1e-10)
+    assert_allclose(pred.forecasts_error_cov, desired.forecasts_error_cov, rtol=1e-10)
+
+    # Closed form: from the filtered state a_{t|t} and its variance P_{t|t}
+    # of the last observed period t, the h-step prediction has mean
+    # phi^h a_{t|t} and variance phi^(2h) P_{t|t} + sigma2 (1 + phi^2 + ...
+    # + phi^(2(h-1))) + obs_var
+    last = res.nobs - 1 if dynamic is None else 11
+    steps = np.arange(1, 4)
+    mean = phi**steps * res.filtered_state[0, last]
+    var = (
+        phi ** (2 * steps) * res.filtered_state_cov[0, 0, last]
+        + sigma2 * (1 - phi ** (2 * steps)) / (1 - phi**2)
+        + obs_var
+    )
+    assert_allclose(pred.forecasts[0, -3:], mean, rtol=1e-10)
+    assert_allclose(pred.forecasts_error_cov[0, 0, -3:], var, rtol=1e-10)
+    if dynamic is not None:
+        # The first two periods are one-step-ahead predictions
+        assert_allclose(pred.forecasts[0, :2], res.forecasts[0, 10:12], rtol=1e-10)
