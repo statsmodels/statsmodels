@@ -1,0 +1,5 @@
+- ``DynamicFactorMQ`` raises a clear ``ValueError`` for a negative factor
+  order, and for a block of factors of order 0 with only monthly
+  variables. Such models could not be used, and raised other errors when
+  they were created or used. Blocks of order 0 with quarterly variables
+  work as before. :pr:`11136`
