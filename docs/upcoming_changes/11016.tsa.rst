@@ -1,0 +1,2 @@
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` raised a ``TypeError`` or an ``IndexError`` for an ``endog``
+  whose name is not a str, such as a Series named 5. :pr:`11016`
