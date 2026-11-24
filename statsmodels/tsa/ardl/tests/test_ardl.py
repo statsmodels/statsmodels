@@ -2706,6 +2706,79 @@ def test_ardl_forecast_exog_oos_columns_by_name(columns):
     assert_allclose(pred, forecasts(x2), rtol=1e-10)
 
 
+def _as_exog_form(values, form):
+    # A 1-d exog in the given form
+    if form == "1d":
+        return values
+    if form == "series":
+        return pd.Series(values, name="x")
+    return values[:, None]
+
+
+@pytest.mark.parametrize("repl", ["1d", "series", "column"])
+@pytest.mark.parametrize("form", ["1d", "series"])
+def test_ardl_predict_1d_exog(form, repl):
+    # With a 1-d array or a Series exog, predict and forecast with a
+    # replacement exog or exog_oos raised IndexError
+    rng = np.random.default_rng(20261203)
+    nobs = 60
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal(nobs))
+    x2 = x + rng.standard_normal(nobs)
+    x_oos = rng.standard_normal(3)
+    res = ARDL(y, 2, _as_exog_form(x, form), 2).fit()
+    # The single variable has the key 0
+    base = "0" if form == "series" else "x0"
+    assert res.model.exog_names[3:] == [f"{base}.L{i}" for i in range(3)]
+    params = np.asarray(res.params)
+
+    # The replacement equal to the original exog gives the predictions
+    pred = res.predict(exog=_as_exog_form(x, repl))
+    assert_allclose(pred, res.predict(), rtol=1e-12)
+    # The regressors const, y.L1, y.L2, x.L0, x.L1 and x.L2 built from the
+    # replacement x2
+    pred = np.asarray(res.predict(exog=_as_exog_form(x2, repl)))
+    t = np.arange(2, nobs)
+    reg = [np.ones(nobs - 2), y[t - 1], y[t - 2], x2[t], x2[t - 1], x2[t - 2]]
+    assert np.all(np.isnan(pred[:2]))
+    assert_allclose(pred[2:], np.column_stack(reg) @ params, rtol=1e-10)
+
+    def forecasts(x_in):
+        # y[t] = c + p1 y[t-1] + p2 y[t-2] + b0 x[t] + b1 x[t-1] + b2 x[t-2]
+        c, p1, p2, b0, b1, b2 = params
+        xx = np.r_[x_in, x_oos]
+        path = list(y)
+        for t in range(nobs, nobs + 3):
+            path.append(
+                c + p1 * path[t - 1] + p2 * path[t - 2] + b0 * xx[t]
+                + b1 * xx[t - 1] + b2 * xx[t - 2]
+            )
+        return np.array(path[nobs:])
+
+    oos = _as_exog_form(x_oos, repl)
+    fcast = np.asarray(res.forecast(3, exog=oos))
+    assert_allclose(fcast, forecasts(x), rtol=1e-10)
+    pred = res.predict(start=nobs + 1, end=nobs + 2, exog_oos=oos)
+    assert_allclose(pred, forecasts(x)[1:], rtol=1e-10)
+    exog2 = _as_exog_form(x2, repl)
+    pred = res.predict(start=nobs, end=nobs + 2, exog=exog2, exog_oos=oos)
+    assert_allclose(pred, forecasts(x2), rtol=1e-10)
+
+
+@pytest.mark.parametrize("form", ["1d", "series"])
+def test_ardl_predict_1d_exog_wrong_columns(form):
+    rng = np.random.default_rng(20261204)
+    nobs = 40
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal(nobs))
+    res = ARDL(y, 2, _as_exog_form(x, form), 2).fit()
+    msg = "must have the same number of columns as the original data, 1"
+    with pytest.raises(ValueError, match="exog " + msg):
+        res.predict(exog=np.column_stack([x, x]))
+    with pytest.raises(ValueError, match="exog_oos " + msg):
+        res.forecast(2, exog=np.ones((2, 2)))
+
+
 @pytest.mark.parametrize("mixed", [False, True])
 def test_uecm_nullable_bool_exog(mixed):
     # The differences of a nullable "boolean" column were not numeric (the
