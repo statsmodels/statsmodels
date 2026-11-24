@@ -125,8 +125,9 @@ class MarkovAutoregression(markov_regression.MarkovRegression):
         self.switching_ar = switching_ar
 
         # Switching options
-        if self.switching_ar is True or self.switching_ar is False:
-            self.switching_ar = [self.switching_ar] * order
+        # A scalar (bool, numpy bool or 0/1) applies to every coefficient
+        if np.ndim(self.switching_ar) == 0:
+            self.switching_ar = [bool(self.switching_ar)] * order
         elif len(self.switching_ar) != order:
             raise ValueError("Invalid iterable passed to `switching_ar`.")
 
