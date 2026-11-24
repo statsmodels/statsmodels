@@ -1056,6 +1056,62 @@ class SVARResults(SVARProcess, VARResults):
         """
         return _SVARFEVD(self, periods)
 
+    def _sirf_resim(self, repl, steps, rng, burn):
+        """
+        Simulated structural impulse responses, for the Sims-Zha error bands
+
+        Each replication simulates a sample of the size of the data from the
+        estimated VAR with normal errors, after `burn` initial values, fits
+        the SVAR with the same restrictions, lag order and trend to it,
+        starting from the estimated A and B, and computes its structural
+        responses Phi_h A^{-1} B (see `svar_ma_rep`), as `sirf_errband_mc`
+        does. Returns an array of shape (repl, steps + 1, neqs, neqs).
+        """
+        rng = check_random_state(rng, deprecated=True)
+        start_A = self.A[self.A_mask]
+        start_B = self.B[self.B_mask]
+        ma_coll = np.zeros((repl, steps + 1, self.neqs, self.neqs))
+        n_not_converged = 0
+        for i in range(repl):
+            sim = util.varsim(
+                self.coefs,
+                self.intercept,
+                self.sigma_u,
+                rng=rng,
+                steps=self.nobs + burn,
+            )
+            smod = SVAR(
+                sim[burn:],
+                svar_type=self.model.svar_type,
+                A=self.model.A_original,
+                B=self.model.B_original,
+            )
+            # one warning below reports all the fits that did not converge
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore",
+                    message="Maximum Likelihood optimization failed",
+                    category=ConvergenceWarning,
+                )
+                sres = smod.fit(
+                    maxlags=self.k_ar,
+                    trend=self.trend,
+                    A_guess=start_A,
+                    B_guess=start_B,
+                )
+            n_not_converged += not smod.mle_retvals["converged"]
+            ma_coll[i] = sres.svar_ma_rep(maxn=steps)
+
+        if n_not_converged:
+            warnings.warn(
+                "Maximum Likelihood optimization failed to converge in "
+                f"{n_not_converged} of {repl} Monte Carlo replications. The "
+                "error bands include these replications.",
+                ConvergenceWarning,
+                stacklevel=4,
+            )
+        return ma_coll
+
     @deprecate_kwarg("seed", "rng")
     def sirf_errband_mc(
         self,

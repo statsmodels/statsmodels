@@ -597,7 +597,16 @@ class IRAnalysis(BaseIRAnalysis):
         orth : bool, optional
             Compute orthogonalized impulse responses. The default is False.
         svar : bool, optional
-            Use structural IRFs. The default is False.
+            Use structural IRFs. The default is False. The simulated
+            responses are then the structural responses of the SVARs fitted
+            to samples simulated from the estimated VAR, as for
+            ``sirf_errband_mc``.
+
+            .. versionchanged:: 0.15.1
+
+               The bands of the structural responses of SVAR results use
+               simulated structural responses. They raised an
+               AttributeError.
         repl : int, optional
             Number of MC replications. The default is 1000.
         signif : float, optional
@@ -648,9 +657,13 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(
-            orth=orth, repl=repl, steps=periods, rng=rng, burn=burn
-        )
+        if svar:
+            # the structural responses of the SVARs fitted to the simulations
+            irf_resim = model._sirf_resim(repl, periods, rng, burn)
+        else:
+            irf_resim = model.irf_resim(
+                orth=orth, repl=repl, steps=periods, rng=rng, burn=burn
+            )
         q = util.norm_signif_level(signif)
 
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
@@ -697,7 +710,16 @@ class IRAnalysis(BaseIRAnalysis):
         orth : bool, optional
             Compute orthogonalized impulse responses. The default is False.
         svar : bool, optional
-            Use structural IRFs. The default is False.
+            Use structural IRFs. The default is False. The simulated
+            responses are then the structural responses of the SVARs fitted
+            to samples simulated from the estimated VAR, as for
+            ``sirf_errband_mc``.
+
+            .. versionchanged:: 0.15.1
+
+               The bands of the structural responses of SVAR results use
+               simulated structural responses. They raised an
+               AttributeError.
         repl : int, optional
             Number of MC replications. The default is 1000.
         signif : float, optional
@@ -747,9 +769,13 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(
-            orth=orth, repl=repl, steps=periods, rng=rng, burn=burn
-        )
+        if svar:
+            # the structural responses of the SVARs fitted to the simulations
+            irf_resim = model._sirf_resim(repl, periods, rng, burn)
+        else:
+            irf_resim = model.irf_resim(
+                orth=orth, repl=repl, steps=periods, rng=rng, burn=burn
+            )
 
         W, eigva, k = self._eigval_decomp_SZ(irf_resim)
 
@@ -798,7 +824,16 @@ class IRAnalysis(BaseIRAnalysis):
         orth : bool, optional
             Compute orthogonalized impulse responses. The default is False.
         svar : bool, optional
-            Use structural IRFs. The default is False.
+            Use structural IRFs. The default is False. The simulated
+            responses are then the structural responses of the SVARs fitted
+            to samples simulated from the estimated VAR, as for
+            ``sirf_errband_mc``.
+
+            .. versionchanged:: 0.15.1
+
+               The bands of the structural responses of SVAR results use
+               simulated structural responses. They raised an
+               AttributeError.
         repl : int, optional
             Number of MC replications. The default is 1000.
         signif : float, optional
@@ -854,9 +889,13 @@ class IRAnalysis(BaseIRAnalysis):
         periods = self.periods
         irfs = self._choose_irfs(orth, svar)
         neqs = self.neqs
-        irf_resim = model.irf_resim(
-            orth=orth, repl=repl, steps=periods, rng=rng, burn=burn
-        )
+        if svar:
+            # the structural responses of the SVARs fitted to the simulations
+            irf_resim = model._sirf_resim(repl, periods, rng, burn)
+        else:
+            irf_resim = model.irf_resim(
+                orth=orth, repl=repl, steps=periods, rng=rng, burn=burn
+            )
         stack = np.zeros((neqs, repl, periods * neqs))
 
         # stack left to right, up and down
