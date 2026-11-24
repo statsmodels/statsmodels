@@ -1428,3 +1428,28 @@ def test_integer_endog(trend, k_exog):
     mod_int = varmax.VARMAX(endog, order=(1, 0), trend=trend, exog=exog)
     mod_float = varmax.VARMAX(endog.astype(float), order=(1, 0), trend=trend, exog=exog)
     assert_allclose(mod_int.start_params, mod_float.start_params)
+
+
+@pytest.mark.parametrize("k_exog", [0, 1])
+def test_simulate_anchor_covers_several_dates(k_exog):
+    # A date key that covers several dates ("2000-02" on daily data) anchors
+    # the simulation at its first date, as the integer location of that date
+    # does; with exog, the simulation runs one period past the sample
+    rng = np.random.default_rng(20261123)
+    index = pd.date_range("2000-01-01", periods=60, freq="D")
+    endog = pd.DataFrame(rng.standard_normal((60, 2)), index=index)
+    exog = pd.Series(rng.standard_normal(60), index=index) if k_exog else None
+    mod = varmax.VARMAX(endog, exog=exog, order=(1, 0), trend="c")
+    params = np.r_[0.1, -0.1, 0.5, 0.1, 0.0, 0.3, [0.2, -0.2] * k_exog]
+    res = mod.smooth(np.r_[params, 1.0, 0.1, 1.0])
+    loc = index.get_loc(pd.Timestamp("2000-02-01"))
+    nsimulations = 60 - loc + 1
+    kwargs = dict(
+        measurement_shocks=rng.standard_normal((nsimulations, 2)),
+        state_shocks=rng.standard_normal((nsimulations, 2)),
+        initial_state=rng.standard_normal(2),
+        exog=rng.standard_normal((1, 1)) if k_exog else None,
+    )
+    expected = res.simulate(nsimulations, anchor=loc, **kwargs)
+    actual = res.simulate(nsimulations, anchor="2000-02", **kwargs)
+    assert_allclose(actual, expected, rtol=1e-12)
