@@ -24,7 +24,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 import pandas as pd
 import pytest
-from scipy.linalg import solve_discrete_lyapunov
+from scipy.linalg import solve_discrete_are, solve_discrete_lyapunov
 from scipy.linalg.blas import find_best_blas_type
 
 from statsmodels.tsa.statespace import _kalman_filter, _representation
@@ -32,6 +32,7 @@ from statsmodels.tsa.statespace.kalman_filter import (
     MEMORY_CONSERVE,
     MEMORY_NO_FORECAST,
     MEMORY_NO_PREDICTED,
+    KalmanFilter,
 )
 from statsmodels.tsa.statespace.mlemodel import MLEModel
 
@@ -931,3 +932,43 @@ def test_prediction_results_clear():
     for attr in cached_attrs:
         assert_allclose(getattr(pred, attr), values_before[attr])
         assert hasattr(pred, "_" + attr)
+
+
+@pytest.mark.parametrize("filter_univariate", [False, True])
+@pytest.mark.parametrize("k_states", [1, 2])
+def test_filtered_timing_converged_last_predicted_state_cov(k_states, filter_univariate):
+    # With filtered timing, the predicted state covariance matrix for the
+    # period after the sample (the last column of predicted_state_cov) was
+    # left at zero once the filter had converged, since a converged filter
+    # does not compute it. It is the converged matrix, as without convergence
+    # (tolerance=0) and as the solution of the Riccati equation.
+    endog = np.random.default_rng(5820).standard_normal((50, k_states))
+    design = np.eye(k_states)
+    obs_cov = np.diag([1.0, 0.6][:k_states])
+    transition = np.array([[0.5, 0.1], [0.0, 0.3]])[:k_states, :k_states]
+    state_cov = np.array([[1.0, 0.2], [0.2, 0.5]])[:k_states, :k_states]
+    kf = KalmanFilter(k_states, k_states, k_posdef=k_states)
+    kf.bind(endog)
+    kf["design"] = design
+    kf["obs_cov"] = obs_cov
+    kf["transition"] = transition
+    kf["selection"] = np.eye(k_states)
+    kf["state_cov"] = state_cov
+    kf.initialize_known(np.zeros(k_states), np.eye(k_states))
+    kf.timing_init_filtered = True
+    kf.filter_univariate = filter_univariate
+
+    res = kf.filter()
+    assert res.converged
+    assert res.period_converged < kf.nobs - 1
+    kf.tolerance = 0
+    desired = kf.filter()
+    assert not desired.converged
+    riccati = solve_discrete_are(transition.T, design.T, state_cov, obs_cov)
+
+    actual = res.predicted_state_cov[..., -1]
+    assert_allclose(actual, desired.predicted_state_cov[..., -1], rtol=1e-8)
+    assert_allclose(actual, riccati, rtol=1e-8)
+    assert_allclose(
+        res.predicted_state[..., -1], desired.predicted_state[..., -1], rtol=1e-8
+    )
