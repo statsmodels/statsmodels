@@ -568,9 +568,11 @@ class Transf_gen(distributions.rv_continuous):
         super().__init__(a=a, b=b, name=name, longname=longname)
         # extradoc = extradoc
 
-    def _rvs(self, *args, **kwargs):
-        self.kls._size = self._size
-        return self.funcinv(self.kls._rvs(*args))
+    def _rvs(self, *args, size=None, random_state=None):
+        # The variable is func of the underlying one, as in _cdf and _ppf
+        return self.func(
+            self.kls._rvs(*args, size=size, random_state=random_state)
+        )
 
     def _cdf(self, x, *args, **kwargs):
         # print args

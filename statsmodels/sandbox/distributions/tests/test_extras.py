@@ -387,3 +387,27 @@ class TestMvstdnormcdf:
         corr = np.array([[1.0, 0.3], [0.3, 1.0]])
         result_std = mvstdnormcdf([-np.inf, -np.inf], [1.0, 1.0], corr, abseps=1e-6)
         assert_allclose(result, result_std, atol=1e-6)
+
+
+@pytest.mark.parametrize("name", ["lognormalg", "invdnormalg"])
+def test_transf_gen_rvs(name):
+    # _rvs read a size attribute that scipy does not set (AttributeError with
+    # every supported scipy) and applied funcinv instead of func
+    nobs = 2000
+    dist = {"lognormalg": lognormalg, "invdnormalg": invdnormalg}[name]
+    draws = dist.rvs(size=nobs, random_state=np.random.default_rng(0))
+    x = stats.norm.rvs(size=nobs, random_state=np.random.default_rng(0))
+    if name == "lognormalg":
+        # y = exp(x) for x standard normal: scipy's lognorm with s=1
+        expected = np.exp(x)
+        cdf = stats.lognorm(1).cdf
+    else:
+        # y = 1 / (1 + mux + x * stdx) with mux = 9 and stdx = 1 is
+        # decreasing in x, so that P(y <= c) = P(x >= 1 / c - 10) for c > 0
+        expected = 1 / (10 + x)
+
+        def cdf(c):
+            return stats.norm.sf(1 / c - 10)
+
+    assert_allclose(draws, expected, rtol=1e-13)
+    assert stats.kstest(draws, cdf).pvalue > 0.01
