@@ -3678,6 +3678,12 @@ def test_innovations_errors():
         innovations_algo(acovf, rtol="none")
 
 
+def test_innovations_algo_negative_rtol():
+    acovf = np.array([1.81, -0.9])
+    with pytest.raises(ValueError, match="rtol must be a non-negative float"):
+        innovations_algo(acovf, rtol=-1.0)
+
+
 def test_innovations_filter_brockwell_davis():
     ma = -0.9
     acovf = np.array([1 + ma**2, ma])

@@ -1,0 +1,7 @@
+- Correct docstrings of the statespace representation, Kalman filter and
+  initialization: the shapes of ``k_endog``, ``k_posdef`` (the transition
+  equation), ``clone``, ``extend`` and ``diff_endog``, the examples of the
+  ``KalmanFilter.set_*`` methods, the defaults and return value of
+  ``KalmanFilter.filter``, the impulse response shapes, the attributes of
+  ``FilterResults`` and ``PredictionResults``, and the examples of
+  ``Initialization``. :pr:`11028`

@@ -97,13 +97,16 @@ class Representation:
     Parameters
     ----------
     k_endog : ndarray or int
-        The observed time-series process :math:`y` if array like or the
-        number of variables in the process if an integer.
+        The observed time-series process :math:`y` if an ndarray, or the
+        number of variables in the process if an integer. An ndarray is read
+        as shaped (`nobs`, `k_endog`) if C-ordered and (`k_endog`, `nobs`) if
+        Fortran-ordered (see `bind`); a 1-dimensional array is a single
+        observation of `len(k_endog)` variables.
     k_states : int
         The dimension of the unobserved state process.
     k_posdef : int, optional
         The dimension of a guaranteed positive definite covariance matrix
-        describing the shocks in the measurement equation. Must be less than
+        describing the shocks in the transition equation. Must be less than
         or equal to `k_states`. Default is `k_states`.
     initial_variance : float, optional
         Initial variance used when approximate diffuse initialization is
@@ -113,10 +116,10 @@ class Representation:
         of {'diffuse', 'approximate_diffuse', 'stationary', 'known'}.
     initial_state : array_like, optional
         If `initialization='known'` is used, the mean of the initial state's
-        distribution.
+        distribution. May also be given as `constant`.
     initial_state_cov : array_like, optional
         If `initialization='known'` is used, the covariance matrix of the
-        initial state's distribution.
+        initial state's distribution. May also be given as `stationary_cov`.
     nobs : int, optional
         If an endogenous vector is not given (i.e., `k_endog` is an integer),
         the number of observations can optionally be specified. If not
@@ -143,6 +146,9 @@ class Representation:
     state_cov : array_like, optional
         The covariance matrix for the state equation :math:`Q`. Default is set
         to zeros.
+    statespace_classes : dict, optional
+        Dictionary mapping BLAS prefixes to Cython statespace classes. Default
+        is the classes defined in `statsmodels.tsa.statespace.tools`.
     **kwargs
         Additional keyword arguments. Not used directly. It is present to
         improve compatibility with subclasses, so that they can use `**kwargs`
@@ -161,7 +167,7 @@ class Representation:
     k_posdef : int
         The dimension of a guaranteed positive
         definite covariance matrix describing
-        the shocks in the measurement equation.
+        the shocks in the transition equation.
     shapes : dict of str to tuple
         A dictionary recording the initial shapes
         of each of the representation matrices as
@@ -551,8 +557,9 @@ class Representation:
 
         Parameters
         ----------
-        endog : array_like
-            An observed time-series process :math:`y`.
+        endog : ndarray
+            An observed time-series process :math:`y`, in a form accepted by
+            `bind`.
         **kwargs
             Keyword arguments to pass to the new state space representation
             model constructor. Those that are not specified are copied from
@@ -581,13 +588,14 @@ class Representation:
         endog : array_like
             An observed time-series process :math:`y`.
         start : int, optional
-            The first period of a time-varying state space model to include in
-            the new model. Has no effect if the state space model is
-            time-invariant. Default is the initial period.
+            The first period of the current sample to include in the new
+            model, for the observed data and for any time-varying system
+            matrices. Default is the initial period. A negative value counts
+            from the end of the sample.
         end : int, optional
-            The last period of a time-varying state space model to include in
-            the new model. Has no effect if the state space model is
-            time-invariant. Default is the final period.
+            The end of the current sample to include in the new model,
+            excluded as in a slice. Default is the end of the sample. A
+            negative value counts from the end of the sample.
         **kwargs
             Keyword arguments to pass to the new state space representation
             model constructor. Those that are not specified are copied from
@@ -722,9 +730,9 @@ class Representation:
 
         Parameters
         ----------
-        new_endog : array_like
-            New observation data to compare against the currently bound
-            endogenous data.
+        new_endog : ndarray
+            New observation data, shaped (`nobs`, `k_endog`), to compare
+            against the currently bound endogenous data.
         tolerance : float, optional
             Tolerance used when comparing values to determine whether a
             change represents a revision. Default is 1e-10.
@@ -1268,7 +1276,7 @@ class FrozenRepresentation:
     k_posdef : int
         The dimension of a guaranteed positive definite
         covariance matrix describing the shocks in the
-        measurement equation.
+        transition equation.
     dtype : dtype
         Datatype of representation matrices
     prefix : str

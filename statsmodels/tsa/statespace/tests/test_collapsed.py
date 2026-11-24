@@ -787,3 +787,73 @@ def test_collapsed_full_rank_design():
     desired = mod.ssm.loglike()
     mod.ssm.filter_collapsed = True
     assert_allclose(mod.ssm.loglike(), desired, rtol=1e-12)
+
+
+def _three_series_model(k_endog=3):
+    # Three observed series and two states, so the observation vector can be
+    # collapsed to the dimension of the state
+    rng = np.random.default_rng(13579)
+    endog = rng.standard_normal((50, 3)).cumsum(0) * 0.1
+    endog += rng.standard_normal((50, 3))
+    mod = MLEModel(endog[:, :k_endog], k_states=2, k_posdef=2)
+    mod["design"] = np.array([[1.0, 0.0], [0.5, 1.0], [0.2, 0.4]])[:k_endog]
+    mod["obs_cov"] = np.diag([1.0, 0.5, 2.0])[:k_endog, :k_endog]
+    mod["transition"] = np.array([[0.5, 0.1], [0.0, 0.3]])
+    mod["selection"] = np.eye(2)
+    mod["state_cov"] = np.array([[1.0, 0.2], [0.2, 0.5]])
+    mod.ssm.initialize_known(np.zeros(2), np.eye(2))
+    return mod
+
+
+@pytest.mark.parametrize(
+    "option",
+    [
+        "memory_no_forecast_mean",
+        "memory_no_predicted_mean",
+        "memory_no_forecast_cov",
+        "memory_no_predicted_cov",
+    ],
+)
+def test_collapsed_forecasts_memory_options(option):
+    # The forecasts of the original series and their covariance are rebuilt
+    # from the predicted state, the mean or covariance only if both it and
+    # the forecast one are stored; the conventional filter of the uncollapsed
+    # series is the reference
+    desired = _three_series_model().ssm.filter()
+    mod = _three_series_model()
+    mod.ssm.filter_collapsed = True
+    setattr(mod.ssm, option, True)
+    actual = mod.ssm.filter()
+    assert_allclose(actual.llf, desired.llf)
+    if option.endswith("_cov"):
+        assert_allclose(actual.forecasts, desired.forecasts)
+        assert_allclose(actual.forecasts_error, desired.forecasts_error)
+    else:
+        assert_allclose(actual.forecasts_error_cov, desired.forecasts_error_cov)
+
+
+@pytest.mark.parametrize(
+    "case, error, match",
+    [
+        ("two_series", RuntimeError, "Cannot collapse observation vector if"),
+        ("concentrated", RuntimeError, "Cannot apply a concentrated likelihood"),
+        ("obs_intercept", RuntimeError, "does not currently support an obs"),
+        (
+            "negative_variance",
+            np.linalg.LinAlgError,
+            "Non-positive-definite observation covariance matrix",
+        ),
+    ],
+)
+def test_collapsed_filter_errors(case, error, match):
+    # Two series cannot be collapsed to two states
+    mod = _three_series_model(k_endog=2 if case == "two_series" else 3)
+    mod.ssm.filter_collapsed = True
+    if case == "concentrated":
+        mod.ssm.filter_concentrated = True
+    elif case == "obs_intercept":
+        mod["obs_intercept"] = np.ones(3)
+    elif case == "negative_variance":
+        mod["obs_cov"] = np.diag([1.0, -0.5, 2.0])
+    with pytest.raises(error, match=match):
+        mod.ssm.filter()
