@@ -450,11 +450,20 @@ def miso_lfilter(ar, ma, x, useic=False):
         The coefficients of autoregressive lag polynomial including lag zero,
         ar(L) in the expression ar(L)y_t.
     ma : array_like
-        The coefficient of the moving average lag polynomial, ma(L) in
-        ma(L)x_t. Must have the same number of dimensions as ``x``;
-        currently only 2d is supported.
+        The coefficients of the moving average lag polynomial, ma(L) in
+        ma(L)x_t, with one row per lag and one column per column of ``x``.
+        A 1-d ``ma`` is a single column.
     x : array_like
-        The 2-d input data series, time in rows, variables in columns.
+        The input data series, time in rows, variables in columns. A 1-d
+        ``x`` is a single variable.
+
+        .. versionchanged:: 0.15.1
+
+           ``x``, ``ar`` and ``ma`` are converted with ``array_like``, so a
+           list or tuple ``x``, a column ``ar`` and a 1-d ``x`` or ``ma``
+           work where they raised, and ``useic`` can be an ndarray. A 2-d
+           ``ma`` without one column per column of a 2-d ``x`` is
+           deprecated.
     useic : array_like or bool, optional
         Initial conditions for the AR filter, as accepted by
         ``scipy.signal.lfiltic``: the values of the filtered series before
@@ -469,9 +478,23 @@ def miso_lfilter(ar, ma, x, useic=False):
     inp : ndarray, 1d
         The combined input series.
 
+    Raises
+    ------
+    ValueError
+        If ``ma`` or ``x`` is 1-d and ``ma`` does not have one column per
+        column of ``x``.
+
+    Warns
+    -----
+    FutureWarning
+        If ``ma`` and ``x`` are 2-d and ``ma`` does not have one column per
+        column of ``x``. The result does not filter each column of ``x`` with
+        its own column of ``ma``. This is deprecated and will raise a
+        ValueError in statsmodels 0.17.0.
+
     Notes
     -----
-    currently for 2d inputs only, no choice of axis
+    x is filtered along its rows, there is no choice of axis
     Use of signal.lfilter requires that ar lag polynomial contains
     floating point numbers
     does not cut off invalid starting and final values
@@ -483,8 +506,27 @@ def miso_lfilter(ar, ma, x, useic=False):
     with shapes y (nobs,), x (nobs, nvars), ar (narlags,), and
     ma (narlags, nvars).
     """
-    ma = array_like(ma, "ma")
-    ar = array_like(ar, "ar")
+    # a 2-d ma and x with different numbers of columns ran before, so they
+    # are deprecated rather than rejected
+    both_2d = np.ndim(ma) == 2 and np.ndim(x) == 2
+    ma = array_like(ma, "ma", ndim=2)
+    ar = array_like(ar, "ar", ndim=1)
+    # dtype=None keeps complex x complex, as before
+    x = array_like(x, "x", ndim=2, dtype=None)
+    if ma.shape[1] != x.shape[1]:
+        msg = (
+            "ma must have one column per column of x, but ma has "
+            f"{ma.shape[1]} columns and x has {x.shape[1]}"
+        )
+        if not both_2d:
+            raise ValueError(msg)
+        warnings.warn(
+            f"{msg}. The result does not filter each column of x with its "
+            "own column of ma. This is deprecated and will raise a "
+            "ValueError in statsmodels 0.17.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
     inp = signal.correlate(x, ma[::-1, :])[:, x.shape[1] - 1]
     # for testing 2d equivalence between convolve and correlate
     #  inp2 = signal.convolve(x, ma[:,::-1])[:, x.shape[1]-1]
@@ -493,7 +535,8 @@ def miso_lfilter(ar, ma, x, useic=False):
     # cut of extra values at end
 
     # TODO: initialize also x for correlate
-    if useic:
+    # useic can be an ndarray; all-zero values are the default zero values
+    if np.any(useic):
         return signal.lfilter([1], ar, inp,
                               zi=signal.lfiltic(np.array([1., 0.]), ar,
                                                 useic))[0][:nobs], inp[:nobs]
