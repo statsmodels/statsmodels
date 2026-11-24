@@ -1453,3 +1453,61 @@ def test_simulate_anchor_covers_several_dates(k_exog):
     expected = res.simulate(nsimulations, anchor=loc, **kwargs)
     actual = res.simulate(nsimulations, anchor="2000-02", **kwargs)
     assert_allclose(actual, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("k_exog", [0, 1])
+@pytest.mark.parametrize("trend_offset", [None, 101])
+def test_prediction_extend_kwargs(k_exog, trend_offset):
+    # extend_kwargs raised "got multiple values for keyword argument
+    # 'extend_kwargs'" in get_prediction, get_forecast, forecast and predict.
+    # It is passed to the constructor of the model of the forecast periods: a
+    # trend_offset there is the trend value of the first of them (the default
+    # is the period after the sample).
+    rng = np.random.default_rng(20261124)
+    nobs = 30
+    endog = rng.standard_normal((nobs, 2))
+    exog = rng.standard_normal((nobs + 3, 1))
+    if not k_exog:
+        exog[:] = 0
+    c = np.array([0.5, -0.3])
+    d = np.array([0.02, 0.01])
+    ar = np.array([[0.5, 0.1], [-0.2, 0.3]])
+    b = np.array([0.4, -0.6])
+    reg = b if k_exog else []
+    params = np.r_[c[0], d[0], c[1], d[1], ar.ravel(), reg, 1.0, 2.0]
+    mod = varmax.VARMAX(
+        endog,
+        order=(1, 0),
+        trend="ct",
+        exog=exog[:nobs] if k_exog else None,
+        error_cov_type="diagonal",
+    )
+    res = mod.smooth(params)
+
+    # y_t = c + d * tau_t + ar @ y_{t-1} + b * x_t with tau_t = t + 1 in the
+    # sample (trend_offset is 1); the forecasts after the first one use the
+    # trend values of the extended model, trend_offset + 1, trend_offset + 2
+    offset = nobs + 1 if trend_offset is None else trend_offset
+    taus = [nobs + 1, offset + 1, offset + 2]
+    expected = np.empty((3, 2))
+    prev = endog[-1]
+    for h in range(3):
+        prev = c + d * taus[h] + ar @ prev + b * exog[nobs + h, 0]
+        expected[h] = prev
+
+    def kwargs():
+        extend_kwargs = {}
+        if trend_offset is not None:
+            extend_kwargs["trend_offset"] = trend_offset
+        out = {"extend_kwargs": extend_kwargs}
+        if k_exog:
+            out["exog"] = exog[nobs:]
+        return out
+
+    fcast = res.get_forecast(3, **kwargs())
+    assert_allclose(fcast.predicted_mean, expected, rtol=1e-12)
+    assert_allclose(res.forecast(3, **kwargs()), expected, rtol=1e-12)
+    pred = res.predict(start=nobs, end=nobs + 2, **kwargs())
+    assert_allclose(pred, expected, rtol=1e-12)
+    pred = res.get_prediction(start=nobs - 1, end=nobs + 2, **kwargs())
+    assert_allclose(pred.predicted_mean[1:], expected, rtol=1e-12)
