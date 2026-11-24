@@ -2841,6 +2841,98 @@ def test_uecm_1d_exog(kind):
     assert_allclose(res.ssr, ardl_res.ssr, rtol=1e-10)
 
 
+@pytest.mark.parametrize(
+    "kind", ["ndarray", "ndarray-frame", "frame", "frame-bool", "series"]
+)
+def test_uecm_predict_replacement_exog(kind):
+    # The replacement exog was ignored: predict(exog=x2) equalled predict()
+    rng = np.random.default_rng(20261128)
+    nobs = 80
+    y = np.cumsum(rng.standard_normal(nobs))
+    k = 1 if kind == "series" else 2
+    if kind == "frame-bool":
+        x = (rng.standard_normal((nobs, k)) > 0).astype(float)
+        x2 = (rng.standard_normal((nobs, k)) > 0).astype(float)
+    else:
+        x = np.cumsum(rng.standard_normal((nobs, k)), axis=0)
+        x2 = x + rng.standard_normal((nobs, k))
+    if kind == "ndarray":
+        exog, exog2 = x, x2
+    elif kind == "ndarray-frame":
+        # A DataFrame replaces an array by position
+        exog, exog2 = x, pd.DataFrame(x2)
+    elif kind == "series":
+        exog, exog2 = pd.Series(x[:, 0], name="a"), pd.Series(x2[:, 0], name="a")
+    else:
+        dtype = bool if kind == "frame-bool" else float
+        exog = pd.DataFrame(x.astype(dtype), columns=["a", "b"])
+        # The columns are matched by name
+        exog2 = pd.DataFrame(x2.astype(dtype), columns=["a", "b"])[["b", "a"]]
+    res = UECM(y, 2, exog, 2).fit()
+    pred = np.asarray(res.predict(exog=exog2))
+
+    # The regressors const, y.L1, x.L1, D.y.L1, D.x.L0 and D.x.L1 with the
+    # replacement x2, the bool values as 0 and 1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx2 = np.vstack([np.full((1, k), np.nan), np.diff(x2, axis=0)])
+    reg = [np.ones(nobs - 2), y[t - 1]] + [x2[t - 1, i] for i in range(k)]
+    reg += [dy[t - 1]]
+    for i in range(k):
+        reg += [dx2[t, i], dx2[t - 1, i]]
+    expected = np.column_stack(reg) @ np.asarray(res.params)
+    assert np.all(np.isnan(pred[:2]))
+    assert_allclose(pred[2:], expected, rtol=1e-10)
+    # The UECM is a reparametrization of the ARDL with the same lags, so its
+    # predicted differences are those of the ARDL's predicted levels
+    ardl_pred = ARDL(y, 2, x, 2).fit().predict(exog=x2)
+    assert_allclose(pred[2:], ardl_pred[2:] - y[1:-1], rtol=1e-8)
+    assert_allclose(res.get_prediction(exog=exog2).predicted_mean, pred, rtol=1e-12)
+
+
+def test_uecm_predict_replacement_fixed():
+    # The replacement fixed was ignored: predict(fixed=z2) equalled predict()
+    rng = np.random.default_rng(20261129)
+    nobs = 80
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal((nobs, 1)), axis=0)
+    z = rng.standard_normal((nobs, 2))
+    z2 = rng.standard_normal((nobs, 2))
+    res = UECM(y, 2, x, 2, fixed=z).fit()
+    pred = res.predict(fixed=z2.tolist())
+
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.r_[np.nan, np.diff(x[:, 0])]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], dy[t - 1], dx[t], dx[t - 1]]
+    reg += [z2[t, 0], z2[t, 1]]
+    expected = np.column_stack(reg) @ res.params
+    assert_allclose(pred[2:], expected, rtol=1e-10)
+    # With both replaced, the levels and differences use the replacement exog
+    x2 = x + 1.0
+    both = res.predict(exog=x2, fixed=z2)
+    assert_allclose(both[2:], expected + res.params[2], rtol=1e-10)
+
+
+def test_uecm_predict_replacement_errors():
+    rng = np.random.default_rng(20261130)
+    nobs = 50
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = pd.DataFrame(rng.standard_normal((nobs, 2)), columns=["a", "b"])
+    res = UECM(y, 2, x, 2, fixed=rng.standard_normal((nobs, 1))).fit()
+    with pytest.raises(TypeError, match="exog must be a DataFrame"):
+        res.predict(exog=np.asarray(x))
+    with pytest.raises(ValueError, match="exog must have the same columns"):
+        res.predict(exog=x.rename(columns={"b": "c"}))
+    with pytest.raises(ValueError, match="exog must have the same shape"):
+        res.predict(exog=x.iloc[:-2])
+    with pytest.raises(ValueError, match="fixed must have the same shape"):
+        res.predict(fixed=np.ones((nobs, 2)))
+    res = UECM(y, 2, np.asarray(x), 2).fit()
+    with pytest.raises(ValueError, match="exog must have the same shape"):
+        res.predict(exog=np.asarray(x)[:, :1])
+
+
 @pytest.mark.parametrize("glob", [False, True])
 @pytest.mark.parametrize("use_pandas", [False, True])
 def test_ardl_select_order_maxorder_none_no_warning(use_pandas, glob):
