@@ -332,6 +332,15 @@ def get_index_label_loc(key, index, row_labels):
            up in `row_labels` with pandas' quarter parsing, which could
            match a date of another quarter, such as 2000-07-01 for
            semiannual dates starting on 2000-01-01.
+
+        .. deprecated:: 0.15.1
+
+           A partial date string that matches no row label but lies between
+           two of them, such as "2000-02" for dates without a frequency on
+           2000-01-24 and 2000-03-06, gives an empty slice, so that
+           prediction starts at the next date or ends at the previous one.
+           This is deprecated and will raise a KeyError after statsmodels
+           0.17 is released.
     index : pd.Index
         The index to search.
     row_labels : pd.Index
@@ -390,6 +399,16 @@ def get_index_label_loc(key, index, row_labels):
         # as get_index_loc does, so that a key such as "2000-01" covers all
         # of its dates as the end of prediction.
         if isinstance(loc, slice):
+            if loc.start == loc.stop:
+                # pandas gives an empty slice for a partial date string that
+                # lies between two dates of the row labels
+                warnings.warn(
+                    f"No date of the index matches the key {key!r}. Keys that "
+                    "match no date are deprecated and will raise a KeyError "
+                    "after statsmodels 0.17 is released.",
+                    FutureWarning,
+                    stacklevel=_stacklevel_outside_statsmodels(),
+                )
             return loc, row_labels[: loc.stop], False
         if isinstance(loc, np.ndarray):
             # Pandas may return a mask (boolean array), for e.g.:
