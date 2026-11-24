@@ -1134,11 +1134,12 @@ class KalmanFilter(Representation):
         initial_state : array_like, optional
             If specified, this is the state vector at time zero, which should
             be shaped (`k_states` x 1), where `k_states` is the same as in the
-            state space model. If unspecified, but the model has been
-            initialized, then that initialization is used. If unspecified and
-            the model has not been initialized, then a vector of zeros is used.
-            Note that this is not included in the returned `simulated_states`
-            array.
+            state space model. If unspecified, it is drawn from the
+            distribution of the initial state given by the initialization of
+            the model. The initial state is the state of the first simulated
+            period: the first row of the returned `simulated_states` array.
+            The model must be initialized (otherwise RuntimeError is raised),
+            also if `initial_state` is specified.
         pretransformed_measurement_shocks : bool, optional
             If `measurement_shocks` is provided, this flag indicates whether it
             should be directly used as the shocks. If False, then it is assumed
