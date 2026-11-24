@@ -1,0 +1,7 @@
+- The exact diffuse smoother of state space models used the
+  transition matrix of period t instead of t-1 in its backward time
+  step. With a time-varying transition matrix and an exact diffuse
+  initialization, the smoothed state, its covariance matrix and
+  autocovariance, and the smoothed disturbances were wrong in every
+  diffuse period but the last. Models with a time-invariant
+  transition matrix are not affected. :pr:`11151`
