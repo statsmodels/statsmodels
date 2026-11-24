@@ -2625,3 +2625,39 @@ def test_period_index_nat_key_raises_key_error(key, which):
     kwargs[which] = key
     with pytest.raises(KeyError, match="could not be matched"):
         res.predict(**kwargs)
+
+
+@pytest.mark.parametrize(
+    "key, loc",
+    [
+        ("2002-03-01T00:00-05:00", 26),
+        ("2002-03-01T05:00Z", 26),
+        (pd.Timestamp("2002-03-01T05:00", tz="UTC"), 26),
+        (pd.Timestamp("2002-03-01T14:00", tz="Asia/Tokyo"), 26),
+        # Not a date of the index: extended through the next one
+        (pd.Timestamp("2002-01-15", tz="UTC"), 25),
+    ],
+    ids=["str-offset", "str-utc", "utc", "other-tz", "utc-between-dates"],
+)
+def test_get_index_loc_tz_aware_key_after_sample(key, loc):
+    # A key after the end of a tz-aware index in another time zone, or with
+    # a UTC offset, is the same date as the key converted to the time zone of
+    # the index; date_range raised a TypeError for it
+    tz = "US/Eastern"
+    index = pd.date_range("2000-01-01", periods=24, freq="MS", tz=tz)
+    expected = pd.date_range("2000-01-01", periods=loc + 1, freq="MS", tz=tz)
+    result = tsa_model.get_index_loc(key, index)
+    assert result[0] == loc
+    assert result[1].equals(expected)
+    assert result[2] is True
+    converted = tsa_model.get_index_loc(pd.Timestamp(key).tz_convert(tz), index)
+    assert converted[0] == loc
+    assert converted[1].equals(expected)
+
+    endog = pd.Series(np.zeros(24), index=index)
+    mod = tsa_model.TimeSeriesModel(endog)
+    start, end, out_of_sample, prediction_index = tsa_model.get_prediction_index(
+        20, key, 24, mod._index, data=mod.data
+    )
+    assert (start, end, out_of_sample) == (20, 23, loc - 23)
+    assert prediction_index.equals(expected[20:])
