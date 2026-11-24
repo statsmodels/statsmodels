@@ -143,6 +143,18 @@ if prefix == 's':
     combined_cython_type = 'np.float64_t'
 }}
 
+cdef void {{prefix}}seek_transition_matrices({{prefix}}Statespace model, int t):
+    # Point the time-varying matrices that the prediction step reads (the
+    # transition matrix, the state intercept and the selected state covariance
+    # matrix R Q R') at period t, the transition from period t to t + 1, as
+    # `model.seek(t)` does (which has computed R Q R' for period t)
+    if model.transition.shape[2] > 1:
+        model._transition = &model.transition[0, 0, t]
+    if model.state_intercept.shape[1] > 1:
+        model._state_intercept = &model.state_intercept[0, t]
+    if model.selected_state_cov.shape[2] > 1:
+        model._selected_state_cov = &model.selected_state_cov[0, 0, t]
+
 # ## Kalman filter
 cdef class {{prefix}}KalmanFilter(object):
     """
@@ -934,9 +946,17 @@ cdef class {{prefix}}KalmanFilter(object):
             else:
                 self._filtered_state = &self.filtered_state[0, filtered_mean_t-1]
                 self._filtered_state_cov = &self.filtered_state_cov[0, 0, filtered_cov_t-1]
+                # Period t is predicted from period t-1 with the matrices of
+                # period t-1, as with the default timing (period 0 is
+                # predicted from the initialization with those of period 0)
+                {{prefix}}seek_transition_matrices(self.model, self.t - 1)
 
             # Perform the prediction step
             self.prediction(self, self.model)
+
+            # The updating step (Kalman gain) and, after the last period, the
+            # prediction of the period after the sample use those of period t
+            {{prefix}}seek_transition_matrices(self.model, self.t)
 
             # Aids to numerical stability
             self.numerical_stability()

@@ -809,6 +809,23 @@ class KalmanFilter(Representation):
         **kwargs
             The boolean flags `timing_init_predicted` and
             `timing_init_filtered` may be used to set the timing convention.
+
+        Notes
+        -----
+        With either convention, the time-varying matrices of the transition
+        equation of period :math:`t` (:math:`T_t, c_t, R_t, Q_t`) describe the
+        transition from period :math:`t` to period :math:`t+1`. With the
+        alternate timing, the initialization describes the filtered state
+        before the first period, and the state of the first period is
+        predicted from it with the matrices of the first period.
+
+        .. versionchanged:: 0.15.1
+
+           With the alternate timing and time-varying matrices, the state of
+           period :math:`t \geq 1` was predicted with the matrices of period
+           :math:`t` instead of period :math:`t-1`, inconsistent with the
+           smoother, prediction and the models that set time-varying
+           matrices (for example VARMAX with exog or a time trend).
         """
         if alternate_timing is not None:
             self.filter_timing = int(alternate_timing)

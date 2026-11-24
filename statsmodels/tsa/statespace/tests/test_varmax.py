@@ -1670,3 +1670,82 @@ def test_univariate():
     assert_allclose(res.llf, res_sarimax.llf, rtol=1e-12)
     titles = [table.title for table in res.summary().tables]
     assert "Results for equation inv" in titles
+
+
+@pytest.mark.parametrize("measurement_error", [False, True])
+@pytest.mark.parametrize("spec", ["exog", "ct"])
+def test_filtered_timing_exog_trend(spec, measurement_error):
+    # VARMAX puts the exog and trend terms of period t + 1 in column t of the
+    # state intercept (the transition from period t to t + 1). With the
+    # filtered timing (timing_init_filtered), the compiled filter predicted
+    # period t with column t: with exog it raised ("array must not contain
+    # infs or NaNs", from the NaN last column), and with a time trend it
+    # silently used the trend of the next period. Without measurement error,
+    # the one-step-ahead predictions and the forecasts are those of the VAR
+    # recursion. With it, the results equal those of the model with the
+    # predicted timing whose initial state is the initialization pushed
+    # through period 0's transition (forecasts with exog also need the
+    # predicted state of the period after the sample, set by a model with the
+    # predicted timing).
+    rng = np.random.default_rng(1729)
+    nobs = 30
+    endog = rng.standard_normal((nobs, 2))
+    exog = rng.standard_normal((nobs + 3, 1))
+    ar = np.array([[0.5, 0.1], [-0.2, 0.3]])
+    if spec == "exog":
+        kwargs = {"exog": exog[:nobs], "trend": "n"}
+        beta = np.array([1.0, -0.5])
+        params = np.r_[ar.ravel(), beta]
+        forecast_kwargs = {"exog": exog[nobs:]}
+        # The exog term of each period
+        terms = exog * beta
+    else:
+        kwargs = {"trend": "ct"}
+        const, drift = np.array([0.2, -0.1]), np.array([0.05, 0.02])
+        params = np.r_[np.c_[const, drift].ravel(), ar.ravel()]
+        forecast_kwargs = {}
+        # The trend term of each period (the time trend is 1 in period 0)
+        terms = const + drift * np.arange(1, nobs + 4)[:, None]
+    chol = np.array([[1.0, 0.0], [0.2, 0.8]])
+    params = np.r_[params, chol[0, 0], chol[1, 0], chol[1, 1]]
+    if measurement_error:
+        params = np.r_[params, 0.3, 0.4]
+
+    def model(filtered_timing):
+        return varmax.VARMAX(
+            endog,
+            order=(1, 0),
+            measurement_error=measurement_error,
+            timing_init_filtered=filtered_timing,
+            **kwargs,
+        )
+
+    if not measurement_error:
+        res = model(True).smooth(params)
+        desired = endog[:-1] @ ar.T + terms[1:nobs]
+        assert_allclose(res.fittedvalues[1:], desired, rtol=1e-10)
+        desired = [ar @ endog[-1] + terms[nobs]]
+        for h in range(1, 3):
+            desired.append(ar @ desired[-1] + terms[nobs + h])
+        assert_allclose(res.forecast(3, **forecast_kwargs), desired, rtol=1e-10)
+        return
+
+    initial_state = np.array([0.5, -0.5])
+    initial_state_cov = np.array([[2.0, 0.3], [0.3, 1.0]])
+    mod = model(True)
+    mod.ssm.initialize_known(initial_state, initial_state_cov)
+    res = mod.smooth(params)
+    mod = model(False)
+    mod.ssm.initialize_known(
+        ar @ initial_state + terms[1],
+        ar @ initial_state_cov @ ar.T + chol @ chol.T,
+    )
+    desired = mod.smooth(params)
+    assert_allclose(res.llf, desired.llf, rtol=1e-10)
+    assert_allclose(res.fittedvalues, desired.fittedvalues, rtol=1e-10)
+    assert_allclose(res.smoothed_state, desired.smoothed_state, rtol=1e-10)
+    assert_allclose(res.smoothed_state_cov, desired.smoothed_state_cov, rtol=1e-10)
+    fcast = res.get_forecast(3, **forecast_kwargs)
+    desired = desired.get_forecast(3, **forecast_kwargs)
+    assert_allclose(fcast.predicted_mean, desired.predicted_mean, rtol=1e-10)
+    assert_allclose(fcast.var_pred_mean, desired.var_pred_mean, rtol=1e-10)
