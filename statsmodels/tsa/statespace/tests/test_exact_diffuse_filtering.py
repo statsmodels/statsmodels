@@ -43,6 +43,7 @@ License: Simplified-BSD
 from statsmodels.compat.platform import PLATFORM_WIN
 
 from pathlib import Path
+import warnings
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
@@ -1199,3 +1200,87 @@ def test_smoothed_state_autocov_diffuse_periods(case):
         ]
     ).transpose(1, 2, 0)
     assert_allclose(res.smoothed_state_cov, smoothed_state_cov, rtol=1e-8, atol=atol)
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "diffuse",
+        "partly-diffuse",
+        "missing",
+        "time-varying",
+        "bivariate",
+        "factor-lags",
+    ],
+)
+def test_diffuse_smoother_resets_diffuse_terms(case):
+    # The exact diffuse smoother starts its recursions for the diffuse terms
+    # (r^(1), N^(1), N^(2)) in the last diffuse period from the values in its
+    # arrays, which it did not reset: values of an earlier run of the same
+    # model stayed there. After a run with NaN in the state covariance matrix,
+    # the smoothed state covariance matrix (and autocovariance) of later runs
+    # with valid values were NaN in the diffuse periods. They equal those of a
+    # new model and the exact diffuse posterior.
+    mod, diffuse = _diffuse_autocov_model(case)
+    initialization = mod.ssm.initialization
+    state_cov = mod["state_cov"].copy()
+    mod.ssm.initialize_diffuse()
+    mod["state_cov"] = state_cov * np.nan
+    with warnings.catch_warnings():
+        # NaN values in the filter
+        warnings.simplefilter("ignore", RuntimeWarning)
+        mod.ssm.smooth()
+    mod["state_cov"] = state_cov
+    mod.ssm.initialization = initialization
+    res = mod.ssm.smooth()
+    assert res.nobs_diffuse > 1
+
+    desired = _diffuse_autocov_model(case)[0].ssm.smooth()
+    assert_allclose(res.smoothed_state, desired.smoothed_state, rtol=1e-12)
+    assert_allclose(res.smoothed_state_cov, desired.smoothed_state_cov, rtol=1e-12)
+    assert_allclose(
+        res.smoothed_state_autocov, desired.smoothed_state_autocov, rtol=1e-12
+    )
+    k = mod.k_states
+    posterior_cov = _exact_diffuse_posterior_cov(mod, diffuse)
+    smoothed_state_cov = np.array(
+        [
+            posterior_cov[t * k : (t + 1) * k, t * k : (t + 1) * k]
+            for t in range(mod.nobs)
+        ]
+    ).transpose(1, 2, 0)
+    # atol: as in test_smoothed_state_autocov_diffuse_periods
+    atol = 1e-10 * np.abs(smoothed_state_cov).max()
+    assert_allclose(res.smoothed_state_cov, smoothed_state_cov, rtol=1e-8, atol=atol)
+
+
+def test_diffuse_smoother_earlier_run_finite_values():
+    # Finite values left in the arrays of the diffuse terms by an earlier run
+    # also changed the results when the filtered diffuse state covariance
+    # matrix of the last diffuse period is not zero (only the predicted one
+    # of the next period is): here the second state is diffuse, never
+    # observed and has no effect on the next period. The results equal those
+    # of a new model.
+    endog = np.random.default_rng(3305).standard_normal(10)
+
+    def build():
+        mod = MLEModel(endog, k_states=2, k_posdef=2)
+        mod["design"] = [[1.0, 0.0]]
+        mod["obs_cov"] = [[0.5]]
+        mod["transition"] = [[0.5, 0.0], [0.0, 0.0]]
+        mod["selection"] = np.eye(2)
+        mod["state_cov"] = np.eye(2)
+        mod.ssm.initialize_diffuse()
+        return mod
+
+    mod = build()
+    # An earlier run in which the second state is observed
+    mod["design"] = [[1.0, 0.3]]
+    mod.ssm.smooth()
+    mod["design"] = [[1.0, 0.0]]
+    res = mod.ssm.smooth()
+    assert res.nobs_diffuse == 1
+
+    desired = build().ssm.smooth()
+    assert_allclose(res.smoothed_state, desired.smoothed_state, rtol=1e-12)
+    assert_allclose(res.smoothed_state_cov, desired.smoothed_state_cov, rtol=1e-12)

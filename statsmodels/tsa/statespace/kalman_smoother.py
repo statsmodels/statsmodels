@@ -564,6 +564,13 @@ class SmootherResults(FilterResults):
         The smoothing error covariance matrices at each time period.
     smoothed_state : ndarray
         The smoothed state at each time period.
+
+        .. versionchanged:: 0.15.1
+
+           In the periods of an exact diffuse initialization, the smoothed
+           state, its covariance matrix and its autocovariance no longer
+           depend on earlier smoothing runs of the same model. After a run
+           with NaN values in the state space matrices, they were NaN.
     smoothed_state_cov : ndarray
         The smoothed state covariance matrices at each time period.
     smoothed_state_autocov : ndarray

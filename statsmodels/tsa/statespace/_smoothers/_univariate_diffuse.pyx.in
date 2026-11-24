@@ -103,9 +103,15 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate_diffuse({{prefix}}
         smoother.scaled_smoothed_estimator[:, model.nobs-1] = 0
         smoother.scaled_smoothed_estimator_cov[:, :, model.nobs-1] = 0
 
-        smoother.scaled_smoothed_diffuse_estimator[:, model.nobs-1] = 0
-        smoother.scaled_smoothed_diffuse1_estimator_cov[:, :, model.nobs-1] = 0
-        smoother.scaled_smoothed_diffuse2_estimator_cov[:, :, model.nobs-1] = 0
+    # The diffuse terms are zero after the diffuse periods, so clear them in
+    # the last diffuse period (the first one reached), where they may hold
+    # values of an earlier run: those of period t, which the recursions below
+    # update, and N^(1) of period t+1, used for the smoothed state
+    # autocovariance
+    if smoother.t == kfilter.nobs_diffuse - 1:
+        smoother.scaled_smoothed_diffuse_estimator[:, smoother.t] = 0
+        smoother.scaled_smoothed_diffuse1_estimator_cov[:, :, smoother.t:smoother.t+2] = 0
+        smoother.scaled_smoothed_diffuse2_estimator_cov[:, :, smoother.t] = 0
 
     # Smoothing error
     # (not used in the univariate approach)
