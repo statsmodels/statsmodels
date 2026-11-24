@@ -6,12 +6,15 @@ License: Simplified-BSD
 """
 
 
+import datetime as dt
+
 import numpy as np
 import pandas as pd
 
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools._decorators import cache_readonly
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.tools.docstring import Docstring, Parameter
 from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.tools import Bunch
 from statsmodels.tsa.statespace.mlemodel import (
@@ -286,6 +289,33 @@ class RecursiveLS(MLEModel):
         """
 
 
+_get_prediction_doc = Docstring(MLEResults.get_prediction.__doc__)
+_get_prediction_doc.remove_parameters("dynamic")
+_get_prediction_doc.insert_parameters(
+    "end",
+    Parameter(
+        "dynamic",
+        "bool, int, str, or datetime, optional",
+        [
+            "Integer offset relative to `start` at which to begin dynamic",
+            "prediction. Can also be an absolute date string to parse or a",
+            "datetime type (these are not interpreted as offsets).",
+            "Prior to this observation, true endogenous values will be used for",
+            "prediction; starting with this observation and continuing through",
+            "the end of prediction, forecasted endogenous values will be used",
+            "instead.",
+            "",
+            ".. versionchanged:: 0.15.1",
+            "",
+            "    A date string is the date at which dynamic prediction begins.",
+            "    Its location was used as an offset relative to `start`, so",
+            "    dynamic prediction began late unless `start` was the first",
+            "    observation. A datetime raised a TypeError.",
+        ],
+    ),
+)
+
+
 class RecursiveLSResults(MLEResults):
     """
     Class to hold results from fitting a recursive least squares model
@@ -551,7 +581,7 @@ class RecursiveLSResults(MLEResults):
                 f"{shape}. Note that this is the transpose of `design`."
             )
 
-    @Appender(MLEResults.get_prediction.__doc__)
+    @Appender(str(_get_prediction_doc))
     def get_prediction(self, start=None, end=None, dynamic=False,
                        information_set="predicted", signal_only=False,
                        index=None, exog=None, **kwargs):
@@ -565,11 +595,14 @@ class RecursiveLSResults(MLEResults):
             self.model._get_prediction_index(start, end, index))
 
         # Handle `dynamic`
-        if isinstance(dynamic, (bytes, str)):
+        # A Timestamp is a datetime
+        if isinstance(dynamic, (bytes, str, dt.datetime)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
             # A key that covers several dates gives a slice of locations
             if isinstance(dynamic, slice):
                 dynamic = dynamic.start
+            # Convert to offset relative to start
+            dynamic = dynamic - start
 
         if self.model._r_matrix is not None and (out_of_sample or dynamic):
             raise NotImplementedError("Cannot yet perform out-of-sample or"
