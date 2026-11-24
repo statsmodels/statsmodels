@@ -104,7 +104,9 @@ cdef class {{prefix}}SimulationSmoother(object):
                              ' positive.')
 
         self.nobs = nobs
-        nobs_endog = self.nobs * model.k_endog
+        # A simulation can be longer than the model: copy the observations
+        # (below) only for the periods that the model has
+        nobs_endog = min(self.nobs, model.nobs) * model.k_endog
 
         self.pretransformed_measurement_disturbance_variates = False
         self.pretransformed_state_disturbance_variates = False
@@ -132,13 +134,16 @@ cdef class {{prefix}}SimulationSmoother(object):
         # )
 
         # Simulated model objects
+        # A simulation shorter than the model uses the first nobs periods of
+        # the time-varying matrices (only a time-invariant model, whose
+        # matrices have a single period, allows a longer one)
+        matrices = [np.asarray(matrix)[..., :self.nobs] for matrix in (
+            model.design, model.obs_intercept, model.obs_cov,
+            model.transition, model.state_intercept, model.selection,
+            model.state_cov)]
         dim2[0] = model.k_endog; dim2[1] = self.nobs;
         obs = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
-        self.simulated_model = {{prefix}}Statespace(
-            obs, model.design, model.obs_intercept, model.obs_cov,
-            model.transition, model.state_intercept, model.selection,
-            model.state_cov
-        )
+        self.simulated_model = {{prefix}}Statespace(obs, *matrices)
         self.simulated_model.identity_transition = self.model.identity_transition
         if not self.simulate_only:
             self.simulated_model.has_missing = model.has_missing
@@ -166,10 +171,7 @@ cdef class {{prefix}}SimulationSmoother(object):
             secondary_obs = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
             blas.{{prefix}}copy(&nobs_endog, &model.obs[0,0], &inc, &secondary_obs[0,0], &inc)
             self.secondary_simulated_model = {{prefix}}Statespace(
-                secondary_obs, model.design, model.obs_intercept, model.obs_cov,
-                model.transition, model.state_intercept, model.selection,
-                model.state_cov
-            )
+                secondary_obs, *matrices)
             self.secondary_simulated_model.identity_transition = self.model.identity_transition
             if not self.simulate_only:
                 self.secondary_simulated_model.has_missing = model.has_missing
