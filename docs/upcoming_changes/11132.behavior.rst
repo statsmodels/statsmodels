@@ -1,0 +1,7 @@
+- With ``state_index``, the news of state space models computed the
+  impacts of the revisions (``revision_impacts``, the "impact of
+  revisions" and "total impact" columns of ``impacts``, and the impacts of
+  the grouped revisions, "all prior revisions") through all states,
+  while the impacts of the news and the detailed impacts of the
+  revisions used only the given states. All of them use only the given
+  states, as documented, so results of such calls change. :pr:`11132`
