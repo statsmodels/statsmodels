@@ -2193,7 +2193,7 @@ class VECMResults:
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
-        allowed_types = (str, int)
+        allowed_types = (str, int, np.integer)
 
         if isinstance(caused, allowed_types):
             caused = [caused]
@@ -2202,7 +2202,10 @@ class VECMResults:
                 "caused has to be of type string or int (or a "
                 "sequence of these types)."
             )
-        caused = [self.names[c] if type(c) is int else c for c in caused]
+        caused = [
+            self.names[c] if isinstance(c, (int, np.integer)) else c
+            for c in caused
+        ]
         caused_ind = [get_index(self.names, c) for c in caused]
 
         if causing is not None:
@@ -2214,7 +2217,10 @@ class VECMResults:
                     "causing has to be of type string or int (or "
                     "a sequence of these types) or None."
                 )
-            causing = [self.names[c] if type(c) is int else c for c in causing]
+            causing = [
+                self.names[c] if isinstance(c, (int, np.integer)) else c
+                for c in causing
+            ]
             causing_ind = [get_index(self.names, c) for c in causing]
 
         if causing is None:

@@ -435,14 +435,14 @@ class MarkovSwitchingParams:
         if _type is str:
             return self.slices_purpose[key]
         # Get a slice for a block of parameters by regime
-        elif _type is int:
+        elif isinstance(key, (int, np.integer)) and not isinstance(key, bool):
             return self.index_regime[key]
         elif _type is tuple:
             if not len(key) == 2:
                 raise IndexError("Invalid index")
-            if type(key[1]) is str and type(key[0]) is int:
+            if type(key[1]) is str and isinstance(key[0], (int, np.integer)):
                 return self.index_regime_purpose[key[0]][key[1]]
-            elif type(key[0]) is str and type(key[1]) is int:
+            elif type(key[0]) is str and isinstance(key[1], (int, np.integer)):
                 return self.index_regime_purpose[key[1]][key[0]]
             else:
                 raise IndexError("Invalid index")

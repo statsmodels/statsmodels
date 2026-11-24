@@ -2376,7 +2376,7 @@ class VARResults(VARProcess):
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
-        allowed_types = (str, int)
+        allowed_types = (str, int, np.integer)
 
         if isinstance(caused, allowed_types):
             caused = [caused]
@@ -2385,7 +2385,10 @@ class VARResults(VARProcess):
                 "caused has to be of type string or int (or a "
                 "sequence of these types)."
             )
-        caused = [self.names[c] if type(c) is int else c for c in caused]
+        caused = [
+            self.names[c] if isinstance(c, (int, np.integer)) else c
+            for c in caused
+        ]
         caused_ind = [util.get_index(self.names, c) for c in caused]
 
         if causing is not None:
@@ -2397,7 +2400,10 @@ class VARResults(VARProcess):
                     "causing has to be of type string or int (or "
                     "a sequence of these types) or None."
                 )
-            causing = [self.names[c] if type(c) is int else c for c in causing]
+            causing = [
+                self.names[c] if isinstance(c, (int, np.integer)) else c
+                for c in causing
+            ]
             causing_ind = [util.get_index(self.names, c) for c in causing]
         else:
             causing_ind = [i for i in range(self.neqs) if i not in caused_ind]
@@ -2518,7 +2524,7 @@ class VARResults(VARProcess):
         if not (0 < signif < 1):
             raise ValueError("signif has to be between 0 and 1")
 
-        allowed_types = (str, int)
+        allowed_types = (str, int, np.integer)
         if isinstance(causing, allowed_types):
             causing = [causing]
         if not all(isinstance(c, allowed_types) for c in causing):
@@ -2526,7 +2532,10 @@ class VARResults(VARProcess):
                 "causing has to be of type string or int (or a "
                 "a sequence of these types)."
             )
-        causing = [self.names[c] if type(c) is int else c for c in causing]
+        causing = [
+            self.names[c] if isinstance(c, (int, np.integer)) else c
+            for c in causing
+        ]
         causing_ind = [util.get_index(self.names, c) for c in causing]
 
         caused_ind = [i for i in range(self.neqs) if i not in causing_ind]
