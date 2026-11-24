@@ -4983,6 +4983,11 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         ----------
         endog : array_like
             New observations from the modeled time-series process.
+
+            .. versionchanged:: 0.15.1
+
+               A pandas Series without a name is accepted when the model's
+               `endog` is a named Series; it raised ValueError.
         exog : array_like, optional
             New observations of exogenous regressors, if applicable.
         refit : bool, optional
