@@ -118,7 +118,6 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate_diffuse({{prefix}}
     smoother.tmpL2[:] = 0
     for i in range(kfilter.k_states):
         smoother.tmpL[i, i] = 1
-        smoother.tmpL2[i, i] = 1
 
     # Iterate
     for i in range(kfilter.k_endog-1,-1,-1):
@@ -173,18 +172,24 @@ cdef int {{prefix}}smoothed_estimators_measurement_univariate_diffuse({{prefix}}
             for j in range(kfilter.k_states):
                 kfilter._tmpL0[j + j*kfilter.k_states] = 1
 
-        # Cumulate L0 and L1
+        # Cumulate L0 and L1, the terms of order 1 and 1 / kappa of the
+        # product of the L_{t,i} (with a diffuse initial state covariance
+        # kappa P_inf + P_*): L1 <- L1 L0_i + L0 L1_i, then L0 <- L0 L0_i
+        blas.{{prefix}}copy(&kf_k_states2, smoother._tmpL2, &inc, smoother._tmp0, &inc)
+        blas.{{prefix}}gemm("N", "N", &m_k_states, &m_k_states, &m_k_states,
+                  &alpha, smoother._tmp0, &kf_k_states,
+                          kfilter._tmpL0, &kf_k_states,
+                  &beta, smoother._tmpL2, &kf_k_states)
+        if {{combined_prefix}}abs(forecast_error_diffuse_cov) > kfilter.tolerance_diffuse:
+            blas.{{prefix}}gemm("N", "N", &m_k_states, &m_k_states, &m_k_states,
+                      &alpha, smoother._tmpL, &kf_k_states,
+                              kfilter._tmpL1, &kf_k_states,
+                      &alpha, smoother._tmpL2, &kf_k_states)
         blas.{{prefix}}copy(&kf_k_states2, smoother._tmpL, &inc, smoother._tmp0, &inc)
         blas.{{prefix}}gemm("N", "N", &m_k_states, &m_k_states, &m_k_states,
                   &alpha, smoother._tmp0, &kf_k_states,
                           kfilter._tmpL0, &kf_k_states,
                   &beta, smoother._tmpL, &kf_k_states)
-        if {{combined_prefix}}abs(forecast_error_diffuse_cov) > kfilter.tolerance_diffuse:
-            blas.{{prefix}}copy(&kf_k_states2, smoother._tmpL2, &inc, smoother._tmp0, &inc)
-            blas.{{prefix}}gemm("N", "N", &m_k_states, &m_k_states, &m_k_states,
-                      &alpha, smoother._tmp0, &kf_k_states,
-                              kfilter._tmpL1, &kf_k_states,
-                      &beta, smoother._tmpL2, &kf_k_states)
 
         # Store values for measurement disturbance smoothing
         # np.dot(K0.T, rt)
@@ -611,86 +616,60 @@ cdef int {{prefix}}smoothed_disturbances_univariate_diffuse({{prefix}}KalmanSmoo
 
 cdef int {{prefix}}smoothed_state_autocov_univariate_diffuse({{prefix}}KalmanSmoother smoother, {{prefix}}KalmanFilter kfilter, {{prefix}}Statespace model):
     cdef:
-        int i
-        blas_int inc = 1
         blas_int kf_k_states = kfilter.k_states
-        blas_int kf_k_states2 = kfilter.k_states2
         blas_int mod_k_states = model.k_states
         {{cython_type}} alpha = 1.0
         {{cython_type}} beta = 0.0
         {{cython_type}} gamma = -1.0
-    # The below code was a test to see if the diffuse autocov could be
-    # relatively simply computed (i.e., which required certain terms to cancel
-    # out), but it appears that it cannot (i.e., it requires the computation of
-    # L2, which is nontrivial and not described by Durbin and Koopman).
-    return 0
+    # This function computes Cov(alpha_{t+1}, alpha_t) in the diffuse periods.
+    # The formula used in the other periods, (I - P_{t+1} N_t) L_t P_t, would
+    # need the term of order 1 / kappa^2 of L_t (with a diffuse initial state
+    # covariance kappa P_inf + P_*). Instead, from alpha_{t+1} = c_t + T_t
+    # alpha_t + R_t eta_t and Cov(eta_t, alpha_t) = -Q_t R_t' N_t L_t P_t
+    # (Durbin and Koopman, 2012, Chapter 4.7),
+    #   Cov(alpha_{t+1}, alpha_t) = T_t V_t - R_t Q_t R_t' N_t L_t P_t,
+    # where, with the expansions of Chapter 5.3, N_t L_t P_t converges to
+    #   N0_t (L0_t P_*,t + L1_t P_inf,t) + N1_t' L0_t P_inf,t
+    # (N0_t L0_t P_inf,t is zero). L0_t and L1_t are the terms of order 1 and
+    # 1 / kappa of L_t (in kfilter.tmpL0 and kfilter.tmpL1, see
+    # smoothed_estimators_measurement_univariate_diffuse), and N0_t and N1_t
+    # those of N_t, as given by the recursions of Chapter 5.3. N1_t is not
+    # symmetric and enters transposed (with N1_t itself the limit is wrong).
 
-    # -P_t1 N0t -> tmp0
-    blas.{{prefix}}gemm("N", "N", &mod_k_states, &mod_k_states, &mod_k_states,
-                  &gamma, &kfilter.predicted_state_cov[0,0,smoother.t+1], &kf_k_states,
-                          smoother._input_scaled_smoothed_estimator_cov, &kf_k_states,
-                  &beta, smoother._tmp0, &kf_k_states)
-
-    # - P_t1_inf N2t - P_t1 N0t -> tmpL
-    blas.{{prefix}}copy(&kf_k_states2, smoother._tmp0, &inc, smoother._tmpL, &inc)
-    blas.{{prefix}}gemm("N", "N", &mod_k_states, &mod_k_states, &mod_k_states,
-                  &gamma, &kfilter.predicted_diffuse_state_cov[0,0,smoother.t+1], &kf_k_states,
-                          smoother._input_scaled_smoothed_diffuse2_estimator_cov, &kf_k_states,
-                  &alpha, smoother._tmpL, &kf_k_states)
-
-    # I - P_t1_inf N1t - P_t1 N0t -> tmp0
-    blas.{{prefix}}gemm("N", "N", &mod_k_states, &mod_k_states, &mod_k_states,
-                  &gamma, &kfilter.predicted_diffuse_state_cov[0,0,smoother.t+1], &kf_k_states,
-                          smoother._input_scaled_smoothed_diffuse1_estimator_cov, &kf_k_states,
-                  &alpha, smoother._tmp0, &kf_k_states)
-    for i in range(kfilter.k_states):
-        smoother.tmp0[i,i] = 1 + smoother.tmp0[i,i]
-
-    # L0t P_t -> tmpL2
+    # L0_t P_*,t + L1_t P_inf,t -> tmpL2
     blas.{{prefix}}gemm("N", "N", &mod_k_states, &mod_k_states, &mod_k_states,
                   &alpha, kfilter._tmpL0, &kf_k_states,
                           &kfilter.predicted_state_cov[0, 0, smoother.t], &kf_k_states,
                   &beta, smoother._tmpL2, &kf_k_states)
-    # L0t P_t + L1t P_t_inf -> tmpL2
     blas.{{prefix}}gemm("N", "N", &mod_k_states, &mod_k_states, &mod_k_states,
                   &alpha, kfilter._tmpL1, &kf_k_states,
                           &kfilter.predicted_diffuse_state_cov[0, 0, smoother.t], &kf_k_states,
                   &alpha, smoother._tmpL2, &kf_k_states)
-
-    # [I - P_t1_inf N1t - P_t1 N0t] (L1t P_t_inf + L0t P_t) -> smoothed_state_autocov
+    # N0_t (L0_t P_*,t + L1_t P_inf,t) -> tmpL
     blas.{{prefix}}gemm("N", "N", &mod_k_states, &mod_k_states, &mod_k_states,
-                  &alpha, smoother._tmp0, &kf_k_states,
+                  &alpha, smoother._input_scaled_smoothed_estimator_cov, &kf_k_states,
                           smoother._tmpL2, &kf_k_states,
-                  &beta, smoother._smoothed_state_autocov, &kf_k_states)
-
-    # L0t P_t_inf -> tmp0
+                  &beta, smoother._tmpL, &kf_k_states)
+    # L0_t P_inf,t -> tmp0
+    # (zero in the last diffuse period, where P_inf,t+1 is zero)
     blas.{{prefix}}gemm("N", "N", &mod_k_states, &mod_k_states, &mod_k_states,
                   &alpha, kfilter._tmpL0, &kf_k_states,
                           &kfilter.predicted_diffuse_state_cov[0, 0, smoother.t], &kf_k_states,
                   &beta, smoother._tmp0, &kf_k_states)
-
-    # [- P_t1_inf N2t - P_t1 N0t] L0t P_t_inf +-> smoothed_state_autocov
-    blas.{{prefix}}gemm("N", "N", &mod_k_states, &mod_k_states, &mod_k_states,
-                  &alpha, smoother._tmpL, &kf_k_states,
+    # + N1_t' L0_t P_inf,t -> tmpL
+    blas.{{prefix}}gemm("T", "N", &mod_k_states, &mod_k_states, &mod_k_states,
+                  &alpha, smoother._input_scaled_smoothed_diffuse1_estimator_cov, &kf_k_states,
                           smoother._tmp0, &kf_k_states,
-                  &alpha, smoother._smoothed_state_autocov, &kf_k_states)
-
-    # [- P_t1_inf N0t ] -> tmpL
+                  &alpha, smoother._tmpL, &kf_k_states)
+    # T_t V_t -> smoothed_state_autocov
     blas.{{prefix}}gemm("N", "N", &mod_k_states, &mod_k_states, &mod_k_states,
-                  &gamma, &kfilter.predicted_diffuse_state_cov[0,0,smoother.t+1], &kf_k_states,
-                          smoother._input_scaled_smoothed_estimator_cov, &kf_k_states,
-                  &beta, smoother._tmpL, &kf_k_states)
-
-    # L1t P_t -> tmp0
+                  &alpha, model._transition, &kf_k_states,
+                          smoother._smoothed_state_cov, &kf_k_states,
+                  &beta, smoother._smoothed_state_autocov, &kf_k_states)
+    # - R_t Q_t R_t' tmpL +-> smoothed_state_autocov
     blas.{{prefix}}gemm("N", "N", &mod_k_states, &mod_k_states, &mod_k_states,
-                  &alpha, kfilter._tmpL1, &kf_k_states,
-                          &kfilter.predicted_state_cov[0, 0, smoother.t], &kf_k_states,
-                  &beta, smoother._tmp0, &kf_k_states)
-
-    # [- P_t1_inf N0t ] L1t P_t +-> smoothed_state_autocov
-    blas.{{prefix}}gemm("N", "N", &mod_k_states, &mod_k_states, &mod_k_states,
-                  &alpha, smoother._tmpL, &kf_k_states,
-                          smoother._tmp0, &kf_k_states,
+                  &gamma, model._selected_state_cov, &kf_k_states,
+                          smoother._tmpL, &kf_k_states,
                   &alpha, smoother._smoothed_state_autocov, &kf_k_states)
 
 {{endfor}}
