@@ -1100,6 +1100,9 @@ class VARMAXResults(MLEResults):
             iloc = self.nobs
         else:
             iloc, _, _ = self.model._get_index_loc(anchor)
+            # A key that covers several dates gives a slice of locations
+            if isinstance(iloc, slice):
+                iloc = iloc.start
 
         if iloc < 0:
             iloc = self.nobs + iloc

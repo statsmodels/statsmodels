@@ -481,3 +481,32 @@ def test_freq_not_monthly_or_quarterly(offset):
     endog = pd.Series([float(v) for v in range(24)], index=index)
     with pytest.raises(ValueError, match="Only monthly and quarterly periods"):
         x13.x13_arima_analysis(endog, speconly=True)
+
+
+@pytest.mark.parametrize(
+    "make_endog, name",
+    [
+        (lambda: _monthly_endog().rename(5), "5"),
+        (lambda: _monthly_endog().rename(2.5), "2.5"),
+        (lambda: pd.DataFrame({7: _monthly_endog()}), "7"),
+        (lambda: _monthly_endog().rename("gdp"), "gdp"),
+        (lambda: _monthly_endog().rename(None), "Unnamed Series"),
+    ],
+    ids=["int", "float", "dataframe_int_column", "str", "none"],
+)
+def test_spec_endog_name(no_x12, make_endog, name):
+    spec = x13.x13_arima_analysis(make_endog(), speconly=True)
+
+    data = " ".join(str(value) for value in range(24))
+    expected = f"""
+    Series {{
+        data=({data})
+        appendbcst=no
+        appendfcst=no
+        period=12
+        start=2000.1
+        title="{name}"
+        name="{name}"
+    }}
+    """
+    assert spec[: spec.index("}") + 1].split() == expected.split()

@@ -1217,3 +1217,35 @@ def test_companion_matrix_arrays(polynomial, desired):
             scale = abs(np.linalg.det(c0 * z**order))
         # atol: the determinant is zero up to rounding
         assert_allclose(abs(value), 0, atol=1e-12 * max(scale, 1.0))
+
+
+@pytest.mark.parametrize("complex_step", [False, True])
+@pytest.mark.parametrize("container", [list, tuple])
+def test_solve_discrete_lyapunov_array_like(container, complex_step):
+    # a and q can be nested lists or tuples (a raised AttributeError); the
+    # solution solves X = a X a' + q, with the non-conjugating transpose and
+    # complex a for the complex step, and agrees with SciPy for real a
+    a = [[0.5, 0.2], [-0.1, 0.3]]
+    if complex_step:
+        a[0][0] += 1e-3j
+    q = [[1.0, 0.4], [0.4, 2.0]]
+    actual = tools.solve_discrete_lyapunov(
+        container(map(container, a)), container(map(container, q)), complex_step
+    )
+    a_arr = np.array(a)
+    assert_allclose(actual, a_arr @ actual @ a_arr.T + np.array(q), rtol=1e-12)
+    if complex_step:
+        assert np.abs(actual.imag).max() > 1e-4
+    else:
+        desired = solve_discrete_lyapunov(a_arr, np.array(q))
+        assert_allclose(actual, desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_prepare_trend_data_array_like(container):
+    # The polynomial can be a list or tuple (it raised AttributeError): a
+    # constant, a linear and a cubic trend in time
+    actual = tools.prepare_trend_data(container([1, 1, 0, 1]), 3, 5, offset=2)
+    time = np.arange(2.0, 7.0)
+    desired = np.column_stack([np.ones(5), time, time**3])
+    assert_allclose(actual, desired, rtol=1e-15)

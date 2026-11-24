@@ -1340,6 +1340,141 @@ def test_miso_lfilter_useic_zero_matches_default():
     assert_allclose(inp_ic, inp_false)
 
 
+def _miso_lfilter_recursion(ar, ma, x, past=None):
+    # ar(L) y_t = ma(L) x_t evaluated directly: the combined input is
+    # inp_t = sum_lag ma[lag] . x[t - lag] with x zero before t = 0, and
+    # y_t = inp_t - ar[1] y[t-1] - ... with y[-1], y[-2], ... = past (or zero)
+    nobs = x.shape[0]
+    inp = np.zeros(nobs)
+    for t in range(nobs):
+        for lag in range(ma.shape[0]):
+            if t - lag >= 0:
+                inp[t] += ma[lag] @ x[t - lag]
+    past = [0.0] * (len(ar) - 1) if past is None else list(past)
+    y = np.zeros(nobs)
+    for t in range(nobs):
+        y[t] = inp[t] - sum(ar[j + 1] * past[j] for j in range(len(past)))
+        past = ([y[t]] + past)[:-1]
+    return y, inp
+
+
+def _miso_lfilter_data(nvars=2):
+    rng = np.random.default_rng(20261131)
+    x = rng.standard_normal((12, nvars))
+    ma = rng.standard_normal((3, nvars))
+    return array([1.0, -0.5, 0.2]), ma, x
+
+
+@pytest.mark.parametrize("form", ["list", "tuple"])
+def test_miso_lfilter_x_list(form):
+    # x is documented as array_like, but a list or tuple raised an
+    # AttributeError because x.shape was read before x was converted
+    ar, ma, x = _miso_lfilter_data()
+    x_form = x.tolist() if form == "list" else tuple(map(tuple, x))
+    y, inp = miso_lfilter(ar, ma, x_form)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("form", ["column", "dataframe"])
+def test_miso_lfilter_ar_column(form):
+    # a column of AR coefficients raised in scipy.signal.lfilter
+    ar, ma, x = _miso_lfilter_data()
+    ar_form = ar[:, None] if form == "column" else DataFrame({"ar": ar})
+    y, inp = miso_lfilter(ar_form, ma, x)
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+
+
+@pytest.mark.parametrize("x_1d", [True, False], ids=["x-1d", "x-column"])
+@pytest.mark.parametrize("ma_1d", [True, False], ids=["ma-1d", "ma-column"])
+def test_miso_lfilter_one_variable(ma_1d, x_1d):
+    # one input variable as a 1-d array or a column, which raised for a 1-d
+    # x or ma, is the ARMA filter ma(L) / ar(L) of scipy.signal.lfilter
+    from scipy import signal
+
+    ar, ma, x = _miso_lfilter_data(nvars=1)
+    y, inp = miso_lfilter(ar, ma[:, 0] if ma_1d else ma, x[:, 0] if x_1d else x)
+    assert_allclose(inp, signal.lfilter(ma[:, 0], [1.0], x[:, 0]), rtol=1e-12)
+    assert_allclose(y, signal.lfilter(ma[:, 0], ar, x[:, 0]), rtol=1e-10)
+
+
+@pytest.mark.parametrize("ma_shape", [(3, 1), (3, 3)])
+def test_miso_lfilter_ma_columns_mismatch_deprecated(ma_shape):
+    # a 2-d ma without one column per column of a 2-d x silently returned the
+    # filter of a misaligned part of x. It warns and keeps that result: the
+    # middle column of the full 2-d correlation, filtered by ar.
+    from scipy import signal
+
+    rng = np.random.default_rng(0)
+    ma = rng.standard_normal(ma_shape)
+    x = rng.standard_normal((12, 2))
+    ar = array([1.0, -0.5])
+    with pytest.warns(FutureWarning, match="ma must have one column per column"):
+        y, inp = miso_lfilter(ar, ma, x)
+    expected_inp = signal.correlate(x, ma[::-1, :])[:12, 1]
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, signal.lfilter([1.0], ar, expected_inp), rtol=1e-12)
+
+
+@pytest.mark.parametrize("ma_shape, x_shape", [((3,), (12, 2)), ((3, 2), (12,))])
+def test_miso_lfilter_ma_columns_mismatch_1d(ma_shape, x_shape):
+    # a 1-d ma or x is a single column, which raised before; a mismatch with
+    # the other argument raises
+    rng = np.random.default_rng(0)
+    ma = rng.standard_normal(ma_shape)
+    x = rng.standard_normal(x_shape)
+    with pytest.raises(ValueError, match="ma must have one column per column of x"):
+        miso_lfilter(array([1.0, -0.5]), ma, x)
+
+
+def test_miso_lfilter_complex_x():
+    # the filter is linear with real coefficients, so a complex x gives the
+    # filter of its real part plus i times the filter of its imaginary part
+    ar, ma, x = _miso_lfilter_data()
+    x_imag = np.random.default_rng(1).standard_normal(x.shape)
+    y, inp = miso_lfilter(ar, ma, x + 1j * x_imag)
+    y_real, inp_real = _miso_lfilter_recursion(ar, ma, x)
+    y_imag, inp_imag = _miso_lfilter_recursion(ar, ma, x_imag)
+    assert np.iscomplexobj(y)
+    assert_allclose(inp, inp_real + 1j * inp_imag, rtol=1e-12)
+    assert_allclose(y, y_real + 1j * y_imag, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "useic", [[1.5, -2.0], [0.0, 0.0], []], ids=["values", "zeros", "empty"]
+)
+def test_miso_lfilter_useic_ndarray(useic):
+    # an ndarray of initial conditions raised "The truth value of an array
+    # ... is ambiguous". The values before the first observation are useic in
+    # reverse time order, y[-1] = useic[0], and zero if useic is empty.
+    ar, ma, x = _miso_lfilter_data()
+    y, inp = miso_lfilter(ar, ma, x, useic=np.array(useic))
+    expected_y, expected_inp = _miso_lfilter_recursion(ar, ma, x, useic or None)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-10)
+    # a list gives the same result
+    assert_allclose(miso_lfilter(ar, ma, x, useic=useic)[0], y, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "useic",
+    [False, None, 0, [], [0.0], np.array([0.0])],
+    ids=["false", "none", "zero", "empty", "list-zero", "ndarray-zero"],
+)
+def test_miso_lfilter_zero_useic_without_ar_lags(useic):
+    # without AR lags there are no initial conditions; zero or empty useic
+    # gives the combined input, as False, None, 0 and [] did before
+    _, ma, x = _miso_lfilter_data()
+    y, inp = miso_lfilter(array([1.0]), ma, x, useic=useic)
+    expected_y, expected_inp = _miso_lfilter_recursion(array([1.0]), ma, x)
+    assert_allclose(inp, expected_inp, rtol=1e-12)
+    assert_allclose(y, expected_y, rtol=1e-12)
+    assert_allclose(y, inp, rtol=1e-12)
+
+
 def test_bkfilter_too_short_series():
     # shorter than the 2K + 1 weights of the centered moving average, the
     # convolution silently produced garbage; it must report the shortfall

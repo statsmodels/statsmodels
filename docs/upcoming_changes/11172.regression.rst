@@ -1,0 +1,7 @@
+- :class:`~statsmodels.regression.rolling.RollingWLS` and
+  :class:`~statsmodels.regression.rolling.RollingOLS` with
+  ``method="lstsq"`` warned a ``FutureWarning`` about ``rcond`` with
+  NumPy < 2 for the windows estimated one at a time. ``lstsq`` is
+  called with ``rcond=None``, the default of NumPy >= 2 and the
+  cutoff of the batched estimator, so results are unchanged with
+  NumPy >= 2. :pr:`11172`

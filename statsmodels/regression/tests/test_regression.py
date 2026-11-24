@@ -2062,7 +2062,11 @@ def _fit_gls_for_summary():
 def test_summary_after_remove_data(fit_func):
     # summary() must still work after remove_data() has been called
     res = fit_func()
-    assert isinstance(res.summary(), Summary)
+    with warnings.catch_warnings():
+        # scipy < 1.16 warns that kurtosistest needs 20 observations (16 here)
+        msg = "kurtosistest only valid for n>=20"
+        warnings.filterwarnings("ignore", message=msg, category=UserWarning)
+        assert isinstance(res.summary(), Summary)
     res.remove_data()
     assert isinstance(res.summary(), Summary)
 

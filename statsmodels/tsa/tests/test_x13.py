@@ -401,3 +401,17 @@ def test_x12path_case_and_path(kind, tmp_path, monkeypatch):
     np.testing.assert_allclose(
         res.seasadj.to_numpy(), expected.seasadj.to_numpy(), rtol=1e-12
     )
+
+
+@pytest.mark.parametrize(
+    "endog",
+    [quarterly_data.realgdp.rename(5), quarterly_data[["realgdp"]].set_axis([5], axis=1)],
+    ids=["series", "dataframe"],
+)
+def test_endog_name_not_str(endog):
+    res = x13_arima_analysis(endog)
+
+    # X-13 prints the title and the name of the series
+    lines = [line.strip() for line in res.results.splitlines()]
+    assert "Series Title- 5" in lines
+    assert "Series Name- 5" in lines

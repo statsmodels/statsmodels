@@ -464,9 +464,16 @@ class TestGlmGaussianGradient(TestGlmGaussian):
         cls.data.endog = np.require(cls.data.endog, requirements="W")
         cls.data.exog = np.require(cls.data.exog, requirements="W")
         cls.data.exog = add_constant(cls.data.exog, prepend=False)
-        cls.res1 = GLM(
-            cls.data.endog, cls.data.exog, family=sm.families.Gaussian()
-        ).fit(method="newton")
+        with warnings.catch_warnings():
+            # With the badly conditioned Longley design, rounding error can
+            # change the intercept (about -3.5e6) by 1e-7 in every Newton
+            # step, more than the absolute tolerance of 1e-8, after the
+            # parameters agree with OLS to 1e-11: newton can stop at maxiter
+            # and warn
+            warnings.simplefilter("ignore", ConvergenceWarning)
+            cls.res1 = GLM(
+                cls.data.endog, cls.data.exog, family=sm.families.Gaussian()
+            ).fit(method="newton")
         from .results.results_glm import Longley
 
         cls.res2 = Longley()
@@ -4529,7 +4536,7 @@ def test_glm_formula_two_column_numeric_endog():
     counts = np.column_stack([[3, 1, 4, 1, 5, 2], [2, 4, 1, 3, 1, 3]])
     x = np.arange(6.0)
     family = sm.families.Binomial()
-    res = GLM.from_formula("counts ~ x", {"x": x}, family=family).fit()
+    res = GLM.from_formula("counts ~ x", pd.DataFrame({"x": x}), family=family).fit()
     expected = GLM(counts, add_constant(x), family=family).fit()
     assert_allclose(res.params.values, expected.params, rtol=1e-10)
 
@@ -4644,3 +4651,21 @@ def test_glm_formula_categorical_endog_coded_levels():
     res_rev = GLM.from_formula("C(y, levels=[1, 0]) ~ x", data, family=family).fit()
     assert_allclose(res_c.params.values, res.params.values, rtol=1e-10)
     assert_allclose(res_rev.params.values, -res.params.values, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "endog, params",
+    [([2.0, 5.0], [np.log(2.0), np.log(2.5)]), ([1.0, 1.0], [0.0, 0.0])],
+    ids=["divide", "exact"],
+)
+def test_glm_saturated_no_runtime_warning(endog, params):
+    # The scale of the WLS step of IRLS divides by the residual degrees of
+    # freedom, which are 0 in a saturated model; it warned "divide by zero"
+    # (or "invalid value" when the residuals are exactly 0) in every
+    # iteration. GLM only warns that the fit is perfect.
+    exog = add_constant(np.array([0.0, 1.0]))
+    with pytest.warns(PerfectSeparationWarning) as record:
+        res = GLM(np.array(endog), exog, family=sm.families.Poisson()).fit()
+    assert not [w for w in record if issubclass(w.category, RuntimeWarning)]
+    # The fitted means are the observations; atol for the zero parameters
+    assert_allclose(res.params, params, rtol=1e-8, atol=1e-12)

@@ -526,3 +526,28 @@ def test_predict_with_probabilities_array(kind, as_list):
     predict = mod.predict(params, probabilities=probabilities)
     assert_allclose(predict, (means * joint).sum(axis=(0, 1)), rtol=1e-12)
     assert_allclose(predict, mod.predict(params, probabilities=kind), rtol=1e-13)
+
+
+@pytest.mark.parametrize(
+    "flag, expected", [(np.True_, True), (np.False_, False), (1, True), (0, False)]
+)
+@pytest.mark.parametrize("name", ["switching_trend", "switching_exog", "switching_ar"])
+def test_scalar_switching_flags(flag, expected, name):
+    # A numpy bool or a 0/1 integer is the same as the Python bool
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40)
+    exog = rng.standard_normal((40, 2))
+    if name == "switching_ar":
+        model = markov_autoregression.MarkovAutoregression
+        kwargs = {"order": 2}
+    else:
+        model = markov_regression.MarkovRegression
+        kwargs = {"exog": exog}
+    mod = model(endog, k_regimes=2, **{name: flag}, **kwargs)
+    mod_bool = model(endog, k_regimes=2, **{name: expected}, **kwargs)
+    assert getattr(mod, name) == getattr(mod_bool, name)
+    # The flags are stored as Python bools, as for the bool argument
+    assert all(value is expected for value in getattr(mod, name))
+    assert mod.param_names == mod_bool.param_names
+    params = mod_bool.start_params
+    assert_allclose(mod.loglikeobs(params), mod_bool.loglikeobs(params), rtol=1e-13)

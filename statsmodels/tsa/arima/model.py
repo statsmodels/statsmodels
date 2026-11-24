@@ -497,7 +497,7 @@ class ARIMA(sarimax.SARIMAX):
                 # innovations computes estimates through the given order, so
                 # we want to take the estimate associated with the given order
                 p = p[-1]
-            elif method == "innovations_mle":
+            else:  # innovations_mle, validated above
                 p, fit_details = innovations_mle(
                     endog,
                     order=order,

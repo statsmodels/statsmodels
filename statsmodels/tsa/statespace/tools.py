@@ -524,6 +524,7 @@ def solve_discrete_lyapunov(a, q, complex_step=False):
     (usually the transition matrix) in order to allow complex step
     differentiation.
     """
+    a = np.asarray(a)
     eye = np.eye(a.shape[0], dtype=a.dtype)
     if not complex_step:
         aH = a.conj().transpose()
@@ -2036,6 +2037,7 @@ def prepare_trend_data(polynomial_trend, k_trend, nobs, offset=1):
         Array shaped `(nobs, k_trend)` containing the trend regressors
         associated with `polynomial_trend`.
     """
+    polynomial_trend = np.asarray(polynomial_trend)
     # Cache the arrays for calculating the intercept from the trend
     # components
     time_trend = np.arange(offset, nobs + offset)

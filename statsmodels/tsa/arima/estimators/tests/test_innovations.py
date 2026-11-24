@@ -1,7 +1,10 @@
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
 
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tsa.arima.datasets.brockwell_davis_2002 import (
     dowj,
     lake,
@@ -207,7 +210,11 @@ def test_innovations_mle_statespace():
     # Test MLE fitting
     # To avoid small numerical differences with MLE fitting, start at the
     # parameters found from innovations_mle
-    res2 = mod.fit(start_params=p.params, disp=0)
+    with warnings.catch_warnings():
+        # Started at the MLE, the line search of L-BFGS-B can fail to improve
+        # on the start parameters (with scipy 1.8), which warns
+        warnings.simplefilter("ignore", ConvergenceWarning)
+        res2 = mod.fit(start_params=p.params, disp=0)
 
     # Test that the state space approach confirms the MLE values found by
     # innovations_mle

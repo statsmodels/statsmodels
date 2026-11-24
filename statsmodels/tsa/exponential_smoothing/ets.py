@@ -144,6 +144,7 @@ from collections import OrderedDict
 import contextlib
 import datetime as dt
 import functools
+import operator
 import warnings
 
 import numpy as np
@@ -2191,6 +2192,11 @@ class ETSResults(base.StateSpaceMLEResults):
             by the forecast periods if `endog` is a pandas object, otherwise
             an ndarray.
         """
+        try:
+            steps = operator.index(steps)
+        except TypeError:
+            # a date: forecast until it
+            return self.predict(start=self.nobs, end=steps)
         return self._forecast(steps, "end")
 
     def _forecast(self, steps, anchor):

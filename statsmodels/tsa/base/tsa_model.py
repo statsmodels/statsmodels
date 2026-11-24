@@ -225,6 +225,10 @@ def get_index_loc(key, index):
 
             # Out-of-sample
             if date_key > base_index[-1]:
+                # date_range needs a tz-aware key in the time zone of the
+                # index, so convert a key with another time zone or offset
+                if index_class is DatetimeIndex and date_key.tz is not None:
+                    date_key = date_key.tz_convert(base_index.tz)
                 # First create an index that may not always include `key`
                 index = index_fn(
                     start=base_index[0], end=date_key, freq=base_index.freq

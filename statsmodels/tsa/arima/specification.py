@@ -455,9 +455,9 @@ class SARIMAXSpecification:
         if endog is None:
             endog = [] if exog is None else np.zeros(len(exog)) * np.nan
 
-        # Add trend data into exog
+        # Add trend data into exog, unless there are no observations
         nobs = len(endog) if exog is None else len(exog)
-        if self.trend_order is not None:
+        if self.trend_order is not None and nobs > 0:
             # Add in the data
             trend_data = self.construct_trend_data(nobs, trend_offset)
             if exog is None:

@@ -850,3 +850,26 @@ def test_coint_tables_return_copy(func, p):
     finally:
         # Restore the table if the result is a view
         res[:] = expected
+
+
+@pytest.mark.parametrize("form", ["list", "tuple"])
+def test_johansen_list_endog(form):
+    # endog is array_like, but coint_johansen and select_coint_rank read
+    # endog.shape before converting it, so a list raised an AttributeError.
+    # urca 1.3.4, R 4.6.1: ca.jo(y, ecdet="none", K=2), as in
+    # test_johansen_urca_danish
+    trace = [48.8037309574590878, 17.2901719813015191, 7.1448883768914024]
+    trace += [0.5560157618986894]
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    endog = y.tolist() if form == "list" else tuple(map(tuple, y))
+    res = coint_johansen(endog, 0, 1)
+    assert_allclose(res.lr1, trace, rtol=1e-8)
+    rank = select_coint_rank(endog, 0, 1, method="trace", signif=0.05)
+    # the first statistic is above its 5% critical value, the second is not
+    crit = [c_sjt(4, 0)[1], c_sjt(3, 0)[1]]
+    assert trace[0] > crit[0]
+    assert trace[1] < crit[1]
+    assert rank.rank == 1
+    assert rank.neqs == 4
+    assert_allclose(rank.test_stats, trace[:2], rtol=1e-8)
+    assert_allclose(rank.crit_vals, crit, rtol=1e-15)

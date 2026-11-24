@@ -2766,3 +2766,35 @@ def test_param_index_invalid(austourists_model, method, param_index):
     call = param_index_call(austourists_model, method)
     with pytest.raises(ValueError, match="param_index"):
         call(param_index=param_index)
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [
+        "2016-01-01",
+        pd.Timestamp("2016-01-01"),
+        pd.Timestamp("2016-01-01").to_pydatetime(),
+        3,
+        np.int64(3),
+        np.array(3),
+    ],
+    ids=["str", "Timestamp", "datetime", "int", "int64", "0-d array"],
+)
+@pytest.mark.parametrize("use_pandas", [True, False])
+def test_forecast_date(oildata, steps, use_pandas):
+    # forecast with a date raised "TypeError: 'str' object cannot be
+    # interpreted as an integer"; a date forecasts until and including it
+    endog = oildata if use_pandas else oildata.to_numpy()
+    kwargs = {} if use_pandas else {"dates": oildata.index}
+    res = ETSModel(endog, **kwargs).smooth([0.3, 110.0], param_index="integer")
+    # the forecasts of simple exponential smoothing are the last level
+    level = 110.0
+    for value in oildata:
+        level = 0.3 * value + 0.7 * level
+    fcast = res.forecast(steps)
+    assert_allclose(np.asarray(fcast), np.full(3, level), rtol=1e-12)
+    if use_pandas:
+        expected_index = pd.date_range("2014-01-01", periods=3, freq="YS")
+        assert_array_equal(fcast.index, expected_index)
+    else:
+        assert isinstance(fcast, np.ndarray)

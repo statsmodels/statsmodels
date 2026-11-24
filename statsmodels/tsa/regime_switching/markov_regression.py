@@ -142,12 +142,13 @@ class MarkovRegression(markov_switching.MarkovSwitching):
             dates=dates, freq=freq, missing=missing)
 
         # Switching options
-        if self.switching_trend is True or self.switching_trend is False:
-            self.switching_trend = [self.switching_trend] * self.k_trend
+        # A scalar (bool, numpy bool or 0/1) applies to every coefficient
+        if np.ndim(self.switching_trend) == 0:
+            self.switching_trend = [bool(self.switching_trend)] * self.k_trend
         elif len(self.switching_trend) != self.k_trend:
             raise ValueError("Invalid iterable passed to `switching_trend`.")
-        if self.switching_exog is True or self.switching_exog is False:
-            self.switching_exog = [self.switching_exog] * self.k_exog
+        if np.ndim(self.switching_exog) == 0:
+            self.switching_exog = [bool(self.switching_exog)] * self.k_exog
         elif len(self.switching_exog) != self.k_exog:
             raise ValueError("Invalid iterable passed to `switching_exog`.")
 

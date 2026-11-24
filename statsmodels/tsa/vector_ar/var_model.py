@@ -702,6 +702,14 @@ class VAR(TimeSeriesModel):
     missing : str, optional
         See :class:`statsmodels.base.model.Model` for more information.
 
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       With ``missing="drop"``, the number of observations is that after
+       dropping. It was the number before, so ``nobs`` was too large and a
+       model with exog could not be fit.
+
     References
     ----------
     Lütkepohl (2005) New Introduction to Multiple Time Series Analysis
@@ -712,7 +720,7 @@ class VAR(TimeSeriesModel):
         if self.endog.ndim == 1:
             raise ValueError("Only gave one variable to VAR")
         self.neqs = self.endog.shape[1]
-        self.n_totobs = len(endog)
+        self.n_totobs = self.endog.shape[0]
         # Set by fit()/_estimate_var(), once the lag order is known
         self.nobs = None
         self.k_trend = None

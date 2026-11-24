@@ -1898,3 +1898,42 @@ def test_loglike_stationary_init_unit_root_block():
     mod["transition"] = np.diag([1.0, 1.0])
     with pytest.raises(np.linalg.LinAlgError, match="not stationary to numerical"):
         mod.ssm.loglike()
+
+
+@pytest.mark.parametrize("kind", [list, tuple])
+@pytest.mark.parametrize(
+    "kwds",
+    [{}, {"method": "oim"}, {"method": "opg"}, {"transformed": False}],
+    ids=["approx", "oim", "opg", "untransformed"],
+)
+def test_hessian_array_like_params(kind, kwds):
+    # params is array_like. A list or tuple raised an AttributeError with the
+    # default, complex-step differentiation.
+    infl = macrodata.load_pandas().data["infl"].to_numpy()
+    mod = sarimax.SARIMAX(infl, order=(1, 0, 0))
+    params = np.array([0.5, 4.0])
+    desired = mod.hessian(params, **kwds)
+    actual = mod.hessian(kind(params.tolist()), **kwds)
+    assert_allclose(actual, desired, rtol=1e-13)
+    if not kwds:
+        # Centered second differences of the loglikelihood agree to about
+        # 1e-7 here
+        epsilon = 1e-4 * np.maximum(np.abs(params), 0.1)
+        approx = approx_hess3(params, mod.loglike, epsilon=epsilon)
+        assert_allclose(actual, approx / mod.nobs, rtol=1e-5)
+
+
+@pytest.mark.parametrize("kind", [list, tuple, np.array])
+@pytest.mark.parametrize("approx_centered", [False, True])
+def test_transform_jacobian_array_like(kind, approx_centered):
+    # The transformations of SARIMAX are phi = -u / sqrt(1 + u**2) and
+    # sigma2 = u**2, with derivatives -(1 + u**2)**-1.5 and 2 u. The
+    # transformations of the two parameters are separate, so the
+    # off-diagonal elements are exactly zero. A list or tuple raised an
+    # AttributeError.
+    mod = sarimax.SARIMAX(np.zeros(10), order=(1, 0, 0))
+    unconstrained = [0.3, 2.0]
+    desired = np.diag([-((1 + 0.3**2) ** -1.5), 4.0])
+    actual = mod.transform_jacobian(kind(unconstrained), approx_centered=approx_centered)
+    # Forward differences are accurate to about 1e-8, centered ones to 1e-10
+    assert_allclose(actual, desired, rtol=1e-7 if approx_centered else 1e-5)

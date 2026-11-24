@@ -274,7 +274,9 @@ class RollingWLS:
             else:
                 _, wy, wx, _, _ = self._get_data(idx)
                 if method == "lstsq":
-                    params = np.linalg.lstsq(wx, wy)[0]
+                    # rcond=None, the default of NumPy >= 2, is the cutoff
+                    # that _batched_lstsq uses; NumPy < 2 warns without it
+                    params = np.linalg.lstsq(wx, wy, rcond=None)[0]
                 else:  # 'pinv'
                     wxpwxiwxp = np.linalg.pinv(wx)
                     params = wxpwxiwxp @ wy

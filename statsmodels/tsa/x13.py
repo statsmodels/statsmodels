@@ -423,7 +423,7 @@ def pandas_to_series_spec(x):
         )
 
     if hasattr(x, "name"):
-        name = x.name or "Unnamed Series"
+        name = str(x.name or "Unnamed Series")
     else:
         name = "Unnamed Series"
     series_spec = SeriesSpec(

@@ -2377,3 +2377,157 @@ def test_llf_real(deterministic, k_ar_diff, coint_rank, seasons, expected):
     log_det = np.linalg.slogdet(res.resid.T @ res.resid / nobs)[1]
     gauss = -nobs / 2 * (neqs * np.log(2 * np.pi) + log_det + neqs)
     assert_allclose(res.llf, gauss, rtol=1e-9)
+
+
+@pytest.mark.parametrize("coint_rank", [5, 7])
+def test_vecm_coint_rank_above_neqs(coint_rank):
+    # A coint_rank above neqs was accepted silently: the model is the one
+    # with rank neqs, the VAR in levels estimated by OLS, but the given rank
+    # is kept and used in the degrees of freedom of test_whiteness. This is
+    # deprecated.
+    from statsmodels.datasets import danish_data
+    from statsmodels.tsa.vector_ar.var_model import VAR
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    neqs = y.shape[1]
+    with pytest.warns(FutureWarning, match="coint_rank must be between 0 and neqs"):
+        model = VECM(y, k_ar_diff=1, coint_rank=coint_rank)
+    res = model.fit()
+    var = VAR(y).fit(2, trend="n")
+    assert_allclose(res.var_rep, var.coefs, rtol=1e-8)
+    assert_allclose(res.llf, var.llf, rtol=1e-10)
+    assert res.coint_rank == coint_rank
+    nlags = 6
+    assert res.test_whiteness(nlags).df == neqs**2 * (nlags - 1) - neqs * coint_rank
+
+
+@pytest.mark.parametrize("coint_rank", [0, 4])
+def test_vecm_coint_rank_bounds(coint_rank):
+    # 0 and neqs are valid ranks
+    import warnings
+
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = VECM(y, k_ar_diff=1, coint_rank=coint_rank).fit()
+    assert res.alpha.shape == (4, coint_rank)
+
+
+@pytest.mark.parametrize("coint_rank", [-1, -4])
+def test_vecm_coint_rank_negative(coint_rank):
+    # A negative coint_rank raised "negative dimensions are not allowed" in fit
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with pytest.raises(ValueError, match="coint_rank must be between 0 and neqs"):
+        VECM(y, k_ar_diff=1, coint_rank=coint_rank)
+
+
+@pytest.mark.parametrize(
+    "deterministic, equivalent",
+    [("cico", "co"), ("xyz", "n"), ("c", "n"), ("ct", "n"), ("lilo", "lo")],
+)
+def test_select_order_deterministic_deprecated(deterministic, equivalent):
+    # select_order did not check deterministic: a value that VECM does not
+    # accept used the terms whose names it contains. This is deprecated, and
+    # the orders are unchanged.
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with pytest.warns(FutureWarning, match="deterministic must be one of"):
+        res = select_order(y, 3, deterministic=deterministic)
+    expected = select_order(y, 3, deterministic=equivalent)
+    assert res.selected_orders == expected.selected_orders
+    for ic in ("aic", "bic", "hqic", "fpe"):
+        assert_allclose(res.ics[ic], expected.ics[ic], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "deterministic, equivalent",
+    [("nc", "n"), ("", "n"), ("CO", "co"), ("CiLi", "cili"), ("colo", "colo")],
+)
+def test_select_order_deterministic_valid(deterministic, equivalent):
+    # the values of VECM, its aliases of "n" and any case do not warn
+    import warnings
+
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        res = select_order(y, 3, deterministic=deterministic)
+        expected = select_order(y, 3, deterministic=equivalent)
+    assert res.selected_orders == expected.selected_orders
+    for ic in ("aic", "bic", "hqic", "fpe"):
+        assert_allclose(res.ics[ic], expected.ics[ic], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "caused, causing",
+    [
+        (np.int64(0), np.int32(2)),
+        (np.array([0, 1], dtype=np.int32), np.int64(3)),
+        ([np.intp(3)], [np.int16(0), np.uint8(1), np.intc(2)]),
+    ],
+)
+def test_causality_numpy_integer_indices(caused, causing):
+    # numpy integers are indices of the variables as int is: a scalar raised
+    # "object is not iterable" and an element of a sequence raised "has to be
+    # of type string or int"
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+
+    def names(value):
+        return [data.columns[int(v)] for v in np.atleast_1d(value)]
+
+    granger = res.test_granger_causality(caused, causing)
+    expected = res.test_granger_causality(names(caused), names(causing))
+    assert granger.caused == expected.caused == names(caused)
+    assert granger.causing == expected.causing == names(causing)
+    assert_allclose(granger.test_statistic, expected.test_statistic, rtol=1e-12)
+    assert granger.df == expected.df
+    inst = res.test_inst_causality(causing)
+    expected = res.test_inst_causality(names(causing))
+    assert inst.causing == expected.causing == names(causing)
+    assert_allclose(inst.test_statistic, expected.test_statistic, rtol=1e-12)
+
+
+def test_causality_float_index():
+    # A float is not an index: a scalar raised "object is not iterable"
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    with pytest.raises(TypeError, match="caused has to be of type string or int"):
+        res.test_granger_causality(0.5)
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_granger_causality(0, 1.0)
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_inst_causality(0.5)
+    with pytest.raises(TypeError, match="causing has to be of type string or int"):
+        res.test_inst_causality([0, 1.0])
+
+
+@pytest.mark.parametrize("form", ["list", "tuple"])
+def test_vecm_list_endog_exog_coint(form):
+    # endog is array_like, but VECM read endog.shape to check the number of
+    # rows of exog_coint, so a list with exog_coint raised an AttributeError
+    from statsmodels.datasets import danish_data
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    endog = y.tolist() if form == "list" else tuple(map(tuple, y))
+    # the trend 1, 2, ... in the relation is deterministic="li"
+    trend = np.arange(1.0, len(y) + 1)
+    res = VECM(endog, exog_coint=trend, k_ar_diff=1, coint_rank=1).fit()
+    expected = VECM(y, k_ar_diff=1, coint_rank=1, deterministic="li").fit()
+    assert_allclose(res.alpha, expected.alpha, rtol=1e-8)
+    assert_allclose(res.beta, expected.beta, rtol=1e-8)
+    assert_allclose(res.exog_coint_coefs, expected.lin_trend_coint, rtol=1e-8)
+    assert_allclose(res.gamma, expected.gamma, rtol=1e-8)
+    assert_allclose(res.llf, expected.llf, rtol=1e-10)
+    with pytest.raises(ValueError, match="exog_coint must have as many rows as endog"):
+        VECM(endog, exog_coint=trend[1:])
