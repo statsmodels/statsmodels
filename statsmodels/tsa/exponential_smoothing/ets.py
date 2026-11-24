@@ -2547,6 +2547,12 @@ class PredictionResults:
         prediction; starting with this observation and continuing through
         the end of prediction, forecasted endogenous values will be used
         instead.
+
+        .. versionchanged:: 0.15.1
+
+           The ``endog`` attribute holds the observed values of the
+           in-sample periods also when all predictions are dynamic
+           (`dynamic` True or 0). They were NaN.
     index : pd.Index, optional
         Optionally an index to associate the predicted results to. If None,
         an attempt is made to create an index for the predicted results
@@ -2605,7 +2611,9 @@ class PredictionResults:
         # one value per prediction: with a start after the sample, the
         # forecasts before start are not predictions
         self.endog = np.empty(end_dynamic - start + 1) * np.nan
-        if nsmooth > 0:
+        # the observed values of the in-sample periods, also of those that
+        # are predicted dynamically
+        if start <= end:
             self.endog[0 : (end - start + 1)] = results.data.endog[start : (end + 1)]
         self.model = Bunch(
             data=results.model.data.__class__(

@@ -3030,3 +3030,36 @@ def test_get_prediction_endog_start_after_sample(austourists, method, start):
     index = pd.date_range(index[0], periods=end + 1, freq=index.freq)[start:]
     assert pred.endog.index.equals(index)
     assert_allclose(pred.endog, expected[start:], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "start, end, dynamic",
+    [
+        (10, 14, True),
+        (10, 14, 0),
+        (10, 14, 2),
+        (38, 42, True),
+        (38, 42, 0),
+        (38, 42, 1),
+        (39, 42, True),
+        (45, 50, False),
+    ],
+)
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_get_prediction_endog_dynamic(use_pandas, start, end, dynamic):
+    # With all predictions dynamic (True or 0), endog was NaN also in the
+    # sample. It holds the observed values of the in-sample periods
+    rng = np.random.default_rng(20261124)
+    y = 10 + 0.3 * rng.standard_normal(40).cumsum()
+    index = pd.date_range("2000-01-01", periods=40, freq="MS")
+    data = pd.Series(y, index=index) if use_pandas else y
+    res = ETSModel(data).smooth([0.4, 10.0], param_index="integer")
+    pred = res.get_prediction(start=start, end=end, dynamic=dynamic)
+    expected = np.full(end - start + 1, np.nan)
+    nobs_in = max(min(end, 39) - start + 1, 0)
+    expected[:nobs_in] = y[start : start + nobs_in]
+    assert_allclose(np.asarray(pred.endog), expected, rtol=1e-15)
+    if use_pandas:
+        pd.testing.assert_index_equal(
+            pred.endog.index, pred.predicted_mean.index, exact=False
+        )
