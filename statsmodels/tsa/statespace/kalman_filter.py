@@ -2021,8 +2021,8 @@ class FilterResults(FrozenRepresentation):
             end = self.nobs
 
         # Prediction and forecasting is performed by iterating the Kalman
-        # Kalman filter through the entire range [0, end]
-        # Then, everything is returned corresponding to the range [start, end].
+        # filter through the entire range [0, end) (`end` is excluded).
+        # Then, everything is returned corresponding to the range [start, end).
         # In order to perform the calculations, the range is separately split
         # up into the following categories:
         # - static:   (in-sample) the Kalman filter is run as usual
@@ -2488,7 +2488,11 @@ def _check_dynamic(dynamic, start, end, nobs):
     start : int
         The location of the first forecast.
     end : int
-        The location after the final forecast (exclusive).
+        The end of the forecasts. ``FilterResults.predict`` passes the
+        location after the final forecast (exclusive, out-of-sample forecasts
+        included), and ``STLForecastResults`` the location of the final
+        in-sample forecast (inclusive). Dynamic prediction that begins after
+        `end` has no effect.
     nobs : int
         The number of observations in the time series.
 
@@ -2498,7 +2502,9 @@ def _check_dynamic(dynamic, start, end, nobs):
         The start location of the first dynamic forecast. None if there
         are no in-sample dynamic forecasts.
     ndynamic : int
-        The number of dynamic forecasts
+        The number of in-sample dynamic forecasts, ``min(end, nobs) -
+        dynamic``, for an exclusive `end` (``STLForecastResults`` does not
+        use it).
     """
     if dynamic is None:
         return dynamic, 0
