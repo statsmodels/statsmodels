@@ -1665,6 +1665,19 @@ def het_goldfeldquandt(
     in the second sample is larger than in the first, or decreasing or
     two-sided.
 
+    The F statistic is the ratio of the residual variance of the second
+    subsample to that of the first. Under the null hypothesis it has an F
+    distribution with the residual degrees of freedom of the second and of the
+    first subsample as numerator and denominator degrees of freedom, in this
+    order.
+
+    .. versionchanged:: 0.15.1
+
+       The p-values for ``alternative="increasing"`` and ``"decreasing"`` use
+       the degrees of freedom in this order. Before, the order was reversed,
+       and the p-values were wrong if the two subsamples had different
+       residual degrees of freedom.
+
     Results are identical to R, but the drop option is defined differently.
     (sorting by idx not tested yet)
     """
