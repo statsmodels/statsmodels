@@ -7,7 +7,8 @@ License: BSD-3
 
 Notes
 -----
-Contains fleiss_kappa, cohens_kappa and krippendorff_alpha.
+Contains fleiss_kappa, cohens_kappa, krippendorff_alpha and
+krippendorff_alpha_bootstrap.
 
 aggregate_raters:
     helper function to get data into fleiss_kappa format
@@ -32,10 +33,20 @@ SAS-Manual : formulas for cohens_kappa, especially variances
 see also R package irr
 """
 
+from dataclasses import dataclass
+from typing import ClassVar
+
 import numpy as np
 from scipy import stats  # get rid of this? need only norm.sf
 
-from statsmodels.tools.validation import array_like, string_like
+from statsmodels.stats.base import LimitedIterationMixin
+from statsmodels.tools.rng_qrng import check_random_state
+from statsmodels.tools.validation import (
+    array_like,
+    float_like,
+    int_like,
+    string_like,
+)
 
 
 class ResultsBunch(dict):
@@ -281,6 +292,83 @@ def fleiss_kappa(table, method="fleiss"):
     return kappa
 
 
+def _krippendorff_prepare(data, level):
+    """
+    Validate the ratings and count them by subject and value.
+
+    Returns ``(counts, n_ratings, values)`` for the subjects with at least
+    two ratings, or None if alpha is undefined because there are no such
+    subjects or their ratings take a single value.
+    """
+    data = array_like(data, "data", maxdim=2)
+    if data.ndim != 2:
+        raise ValueError(
+            f"data must be a 2-d array of subjects by raters, got a {data.ndim}-d array"
+        )
+    if np.isinf(data).any():
+        raise ValueError("data must not contain inf; code missing ratings as nan")
+    if level == "ratio" and (data < 0).any():
+        raise ValueError("ratings must be nonnegative for level='ratio'")
+
+    observed = ~np.isnan(data)
+    n_ratings = observed.sum(1)
+    # a subject with fewer than two ratings has no pair of ratings to compare
+    pairable = n_ratings >= 2
+    data = data[pairable]
+    observed = observed[pairable]
+    n_ratings = n_ratings[pairable]
+    if data.shape[0] == 0:
+        return None
+
+    values, codes = np.unique(data[observed], return_inverse=True)
+    if len(values) < 2:
+        return None
+    # counts[u, c]: number of ratings of subject u equal to values[c]
+    counts = np.zeros((data.shape[0], len(values)))
+    np.add.at(counts, (np.nonzero(observed)[0], codes), 1)
+    return counts, n_ratings, values
+
+
+def _krippendorff_from_counts(counts, n_ratings, values, level, freq=None):
+    """
+    Krippendorff's alpha from the counts of ``_krippendorff_prepare``.
+
+    ``freq`` gives the number of times each subject is used, as in a
+    bootstrap sample of the subjects. The default uses each subject once.
+    """
+    # coincidence matrix: sum over subjects of
+    # (n_uc * n_uk - [c == k] * n_uc) / (m_u - 1)
+    weights = counts / (n_ratings - 1)[:, None]
+    if freq is not None:
+        weights = weights * freq[:, None]
+    coincidence = counts.T @ weights - np.diag(weights.sum(0))
+    n_c = coincidence.sum(1)
+    n = n_c.sum()
+
+    if level == "nominal":
+        delta2 = 1.0 - np.eye(len(values))
+    elif level == "ordinal":
+        # with midpoints cumsum(n)_c - n_c / 2, the difference of two
+        # midpoints is sum_{g=c}^{k} n_g - (n_c + n_k) / 2
+        midpoint = np.cumsum(n_c) - n_c / 2
+        delta2 = np.subtract.outer(midpoint, midpoint) ** 2
+    elif level == "interval":
+        delta2 = np.subtract.outer(values, values) ** 2
+    else:
+        diff = np.subtract.outer(values, values)
+        total = np.add.outer(values, values)
+        # c + k is 0 only for c = k = 0, where the difference is 0
+        ratio = np.divide(diff, total, out=np.zeros_like(diff), where=total > 0)
+        delta2 = ratio**2
+
+    d_observed = (coincidence * delta2).sum()
+    d_expected = (np.outer(n_c, n_c) * delta2).sum()
+    if d_expected == 0:
+        # a bootstrap sample can contain a single value
+        return np.nan
+    return float(1.0 - (n - 1) * d_observed / d_expected)
+
+
 def krippendorff_alpha(data, level="nominal"):
     r"""
     Compute Krippendorff's alpha reliability coefficient.
@@ -395,62 +483,188 @@ def krippendorff_alpha(data, level="nominal"):
     >>> round(krippendorff_alpha(ratings.T), 3)
     -0.112
     """
-    data = array_like(data, "data", maxdim=2)
-    if data.ndim != 2:
-        raise ValueError(
-            f"data must be a 2-d array of subjects by raters, got a {data.ndim}-d array"
-        )
     level = string_like(
         level, "level", options=("nominal", "ordinal", "interval", "ratio")
     )
-    if np.isinf(data).any():
-        raise ValueError("data must not contain inf; code missing ratings as nan")
-    if level == "ratio" and (data < 0).any():
-        raise ValueError("ratings must be nonnegative for level='ratio'")
-
-    observed = ~np.isnan(data)
-    n_ratings = observed.sum(1)
-    # a subject with fewer than two ratings has no pair of ratings to compare
-    pairable = n_ratings >= 2
-    data = data[pairable]
-    observed = observed[pairable]
-    n_ratings = n_ratings[pairable]
-    if data.shape[0] == 0:
+    prepared = _krippendorff_prepare(data, level)
+    if prepared is None:
         return np.nan
+    return _krippendorff_from_counts(*prepared, level=level)
 
-    values, codes = np.unique(data[observed], return_inverse=True)
-    if len(values) < 2:
-        return np.nan
-    # counts[u, c]: number of ratings of subject u equal to values[c]
-    counts = np.zeros((data.shape[0], len(values)))
-    np.add.at(counts, (np.nonzero(observed)[0], codes), 1)
 
-    # coincidence matrix: sum over subjects of
-    # (n_uc * n_uk - [c == k] * n_uc) / (m_u - 1)
-    weights = counts / (n_ratings - 1)[:, None]
-    coincidence = counts.T @ weights - np.diag(weights.sum(0))
-    n_c = coincidence.sum(1)
-    n = n_c.sum()
+@dataclass(frozen=True, slots=True)
+class KrippendorffAlphaBootstrapResult(LimitedIterationMixin[float]):
+    """
+    Result of :func:`krippendorff_alpha_bootstrap`.
 
-    if level == "nominal":
-        delta2 = 1.0 - np.eye(len(values))
-    elif level == "ordinal":
-        # with midpoints cumsum(n)_c - n_c / 2, the difference of two
-        # midpoints is sum_{g=c}^{k} n_g - (n_c + n_k) / 2
-        midpoint = np.cumsum(n_c) - n_c / 2
-        delta2 = np.subtract.outer(midpoint, midpoint) ** 2
-    elif level == "interval":
-        delta2 = np.subtract.outer(values, values) ** 2
+    Parameters
+    ----------
+    statistic : float
+        Krippendorff's alpha of the data, as returned by
+        :func:`krippendorff_alpha`.
+    ci_low : float
+        Lower limit of the percentile bootstrap confidence interval.
+    ci_upp : float
+        Upper limit of the percentile bootstrap confidence interval.
+    bootstrap : ndarray
+        Alpha of each bootstrap sample. It is ``nan`` for a sample in which
+        alpha is undefined, for example because all its ratings are equal.
+    nboot_valid : int
+        Number of bootstrap samples with a defined alpha, which are the ones
+        used for the confidence interval.
+    alpha : float
+        Significance level; the coverage of the interval is ``1 - alpha``.
+
+    Notes
+    -----
+    Unpacks as ``statistic, ci_low, ci_upp = result``. Other values are only
+    accessible using attributes.
+    """
+
+    _iter_fields: ClassVar[tuple[str, ...]] = ("statistic", "ci_low", "ci_upp")
+
+    statistic: float
+    ci_low: float
+    ci_upp: float
+    bootstrap: np.ndarray
+    nboot_valid: int
+    alpha: float
+
+
+def krippendorff_alpha_bootstrap(
+    data, level="nominal", nboot=1000, alpha=0.05, rng=None
+):
+    r"""
+    Krippendorff's alpha with a bootstrap confidence interval.
+
+    The subjects are resampled with replacement, keeping all ratings of a
+    subject together, and alpha is computed for each sample. The interval
+    is given by the ``alpha / 2`` and ``1 - alpha / 2`` quantiles of these
+    values.
+
+    .. versionadded:: 0.15.1
+
+    Parameters
+    ----------
+    data : array_like
+        Numeric ratings in a 2-D array with subjects in rows and raters in
+        columns, with missing ratings coded as ``nan``, as in
+        :func:`krippendorff_alpha`.
+    level : {"nominal", "ordinal", "interval", "ratio"}, optional
+        Level of measurement of the ratings, as in :func:`krippendorff_alpha`.
+        The default is "nominal".
+    nboot : int, optional
+        Number of bootstrap samples. The default is 1000.
+    alpha : float, optional
+        Significance level of the confidence interval, which has coverage
+        ``1 - alpha``. The default 0.05 gives a 95% interval. This is not
+        Krippendorff's alpha, which is the attribute ``statistic`` of the
+        result.
+    rng : int, array_like of int, numpy.random.Generator, numpy.random.RandomState, optional
+        Random number generator or seed for the bootstrap samples, passed to
+        :func:`statsmodels.tools.rng_qrng.check_random_state`. If None, a new
+        generator is seeded from the operating system, so the interval
+        differs between calls.
+
+    Returns
+    -------
+    KrippendorffAlphaBootstrapResult
+        Krippendorff's alpha, the limits of the confidence interval and the
+        bootstrap values. Unpacks as ``statistic, ci_low, ci_upp``.
+
+    See Also
+    --------
+    krippendorff_alpha : Krippendorff's alpha without a confidence interval.
+
+    Notes
+    -----
+    Only the subjects with at least two ratings are resampled, because the
+    others do not enter alpha. The units of the bootstrap are the subjects,
+    so the interval reflects the variation from the sample of subjects for
+    the given raters. This is the interval that Zapf et al. (2016) studied
+    and recommend for Krippendorff's alpha. In their simulations for
+    nominal data its coverage was close to the nominal level.
+
+    Bootstrap samples in which alpha is undefined are left out of the
+    interval; their number is ``nboot - nboot_valid``. If there is no valid
+    sample, or alpha of the data is undefined, the limits are ``nan``.
+
+    With few subjects the percentile interval is too narrow, and the values
+    of alpha in the bootstrap samples are discrete. The interval is
+    approximate and depends on the random samples; increase ``nboot`` for
+    stable limits.
+
+    Hayes and Krippendorff (2007) describe a different bootstrap, which
+    draws from the coincidence matrix instead of the subjects and keeps the
+    expected disagreement fixed. This function does not implement it. In
+    the simulations of Zapf et al. (2016) its coverage was far below the
+    nominal level, which is why they resampled the subjects instead.
+
+    References
+    ----------
+    Zapf, Antonia, Stefanie Castell, Lars Morawietz, and André Karch. 2016.
+    "Measuring Inter-Rater Reliability for Nominal Data -- Which Coefficients
+    and Confidence Intervals Are Appropriate?" BMC Medical Research
+    Methodology 16: 93. https://doi.org/10.1186/s12874-016-0200-9
+
+    Hayes, Andrew F., and Klaus Krippendorff. 2007. "Answering the Call for a
+    Standard Reliability Measure for Coding Data." Communication Methods and
+    Measures 1 (1): 77-89. https://doi.org/10.1080/19312450709336664
+
+    Examples
+    --------
+    The example of Krippendorff (2011), see :func:`krippendorff_alpha`.
+
+    >>> import numpy as np
+    >>> from statsmodels.stats.inter_rater import krippendorff_alpha_bootstrap
+    >>> nan = np.nan
+    >>> data = [[1, 1, nan, 1], [2, 2, 3, 2], [3, 3, 3, 3], [3, 3, 3, 3],
+    ...         [2, 2, 2, 2], [1, 2, 3, 4], [4, 4, 4, 4], [1, 1, 2, 1],
+    ...         [2, 2, 2, 2], [nan, 5, 5, 5], [nan, nan, 1, 1],
+    ...         [nan, 3, nan, nan]]
+    >>> res = krippendorff_alpha_bootstrap(data, nboot=2000, rng=0)
+    >>> round(res.statistic, 3)
+    0.743
+    >>> res.ci_low < res.statistic < res.ci_upp
+    True
+    """
+    level = string_like(
+        level, "level", options=("nominal", "ordinal", "interval", "ratio")
+    )
+    nboot = int_like(nboot, "nboot")
+    if nboot < 1:
+        raise ValueError(f"nboot must be a positive integer, got {nboot}")
+    alpha = float_like(alpha, "alpha")
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be between 0 and 1, got {alpha}")
+    rng = check_random_state(rng)
+
+    prepared = _krippendorff_prepare(data, level)
+    if prepared is None:
+        nan_boot = np.full(nboot, np.nan)
+        return KrippendorffAlphaBootstrapResult(
+            np.nan, np.nan, np.nan, nan_boot, 0, alpha
+        )
+    statistic = _krippendorff_from_counts(*prepared, level=level)
+
+    n_subjects = prepared[0].shape[0]
+    # check_random_state returns a RandomState unchanged, which has randint
+    # instead of integers
+    draw = rng.integers if isinstance(rng, np.random.Generator) else rng.randint
+    bootstrap = np.empty(nboot)
+    for i in range(nboot):
+        sample = draw(n_subjects, size=n_subjects)
+        freq = np.bincount(sample, minlength=n_subjects)
+        bootstrap[i] = _krippendorff_from_counts(*prepared, level=level, freq=freq)
+
+    valid = bootstrap[~np.isnan(bootstrap)]
+    if valid.size == 0:
+        ci_low = ci_upp = np.nan
     else:
-        diff = np.subtract.outer(values, values)
-        total = np.add.outer(values, values)
-        # c + k is 0 only for c = k = 0, where the difference is 0
-        ratio = np.divide(diff, total, out=np.zeros_like(diff), where=total > 0)
-        delta2 = ratio**2
-
-    d_observed = (coincidence * delta2).sum()
-    d_expected = (np.outer(n_c, n_c) * delta2).sum()
-    return float(1.0 - (n - 1) * d_observed / d_expected)
+        ci_low, ci_upp = np.quantile(valid, [alpha / 2, 1 - alpha / 2])
+    return KrippendorffAlphaBootstrapResult(
+        statistic, float(ci_low), float(ci_upp), bootstrap, int(valid.size), alpha
+    )
 
 
 def cohens_kappa(table, weights=None, return_results=True, wt=None):

@@ -60,7 +60,12 @@ from .diagnostic import (
     spec_white,
 )
 from .gof import chisquare_effectsize, gof_chisquare_discrete, powerdiscrepancy
-from .inter_rater import cohens_kappa, fleiss_kappa, krippendorff_alpha
+from .inter_rater import (
+    cohens_kappa,
+    fleiss_kappa,
+    krippendorff_alpha,
+    krippendorff_alpha_bootstrap,
+)
 from .mediation import Mediation
 from .meta_analysis import (
     combine_effects,
@@ -277,6 +282,7 @@ __all__ = [
     "jarque_bera",
     "jonckheere_terpstra",
     "krippendorff_alpha",
+    "krippendorff_alpha_bootstrap",
     "lilliefors",
     "linear_harvey_collier",
     "linear_lm",
