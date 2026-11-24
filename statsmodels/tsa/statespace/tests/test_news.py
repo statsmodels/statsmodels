@@ -2765,3 +2765,67 @@ def test_revisions_details_start_float():
     res_upd = res_prev.apply(y)
     with pytest.raises(ValueError):
         res_upd.news(res_prev, comparison_type="previous", revisions_details_start=36.0)
+
+
+def news_without_updates():
+    # An "updated" comparison with the same observations: the last value is
+    # revised from 0, there are no new observations and so no news
+    endog = dta["infl"]
+    previous = endog.copy()
+    previous.iloc[-1] = 0.0
+    res = sarimax.SARIMAX(previous).smooth([0.5, 1.0])
+    return res.news(endog, start="2009Q2", end="2009Q4",
+                    comparison_type="updated")
+
+
+@pytest.mark.parametrize("source", ["news", "revisions"])
+@pytest.mark.parametrize("key", ["impact_date", "impacted_variable",
+                                 "update_date", "updated_variable"])
+def test_summary_details_selection_no_rows(source, key):
+    # Without news (or without revisions), the details table has no rows
+    # at all, and a selection raised a KeyError (the label is not in the
+    # index of the empty table). The table has only the header, as without
+    # a selection.
+    if source == "news":
+        news = news_without_updates()
+        assert_equal(len(news.updates_ix), 0)
+    else:
+        news = univariate_news(revision=False)
+        assert_equal(news.n_revisions, 0)
+    columns, _, desired = details_rows(news, source, "update date")
+    assert_equal(len(desired), 0)
+    labels = {
+        "impact_date": "2009Q3",
+        "impacted_variable": "infl",
+        "update_date": "2009Q3",
+        "updated_variable": "infl",
+    }
+    table = news.summary_details(source=source, **{key: labels[key]})
+    assert_equal(table.title, f"Details of {source}")
+    assert_equal(table_values(table), [columns])
+    assert_equal(table_values(table),
+                 table_values(news.summary_details(source=source)))
+
+
+def test_summary_impact_date_no_news():
+    # summary of an impact date without news raised a KeyError from the
+    # empty details table of the news. It has the impacts, the revisions and
+    # the details of the revisions of that date.
+    news = news_without_updates()
+    date = "2009Q3"
+    summary = news.summary(impact_date=date, include_details_tables=True,
+                           include_revisions_tables=True)
+    desired = [
+        news.summary_impacts(impact_date=date),
+        news.summary_revisions(),
+        news.summary_details(source="revisions", impact_date=date),
+    ]
+    assert_equal([str(table) for table in summary.tables[1:]],
+                 [str(table) for table in desired])
+    # The impact of the revision of 2009Q3 from 0 to its observed value on
+    # that date (observed) and on the forecast of 2009Q4 (phi = 0.5)
+    impacts = news.impacts
+    assert_equal([str(ix[0]) for ix in impacts.index], ["2009Q3", "2009Q4"])
+    assert_allclose(impacts["impact of revisions"],
+                    [dta["infl"].iloc[-1], 0.5 * dta["infl"].iloc[-1]],
+                    rtol=1e-12)
