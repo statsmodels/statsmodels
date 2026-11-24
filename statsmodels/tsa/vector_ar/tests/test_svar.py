@@ -1282,3 +1282,16 @@ def test_err_band_sz_svar_one_convergence_warning(monkeypatch):
         irf.err_band_sz1(svar=True, repl=3, rng=np.random.default_rng(0), burn=10)
     assert len(record) == 1
     assert record[0].filename == __file__
+
+
+def test_err_band_sz_svar_int_seed():
+    # An int seed creates one generator for all the replications (deprecated)
+    _, res, _ = _svar_and_var("c")
+    irf = res.irf(2)
+    with (
+        pytest.warns(FutureWarning),
+        warns_or_none(ConvergenceWarning, match="Maximum Likelihood optim"),
+    ):
+        band = irf.err_band_sz2(svar=True, repl=10, signif=0.2, rng=0, burn=10)
+    # identical replications would give lower == upper
+    assert not np.allclose(band.lower[1:], band.upper[1:])
