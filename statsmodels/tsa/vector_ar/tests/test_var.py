@@ -1878,7 +1878,10 @@ TABLE_HEADER = ["Test", "statistic", "Critical", "Value", "p-value", "df"]
 
 def test_normality_summary():
     data = macrodata.load_pandas().data[["realgdp", "realcons", "realinv"]]
-    res = VAR(np.log(data).diff().dropna()).fit(2)
+    # Drop the first (NaN) row by position, which keeps the RangeIndex. With
+    # dropna, pandas < 2 gives an Int64Index starting at 1, for which VAR
+    # warns that the index is not supported.
+    res = VAR(np.log(data).diff().iloc[1:]).fit(2)
     norm = res.test_normality(signif=0.05)
     results = {
         "statistic": norm.test_statistic,
