@@ -136,11 +136,17 @@ cdef class {{prefix}}SimulationSmoother(object):
         # Simulated model objects
         # A simulation shorter than the model uses the first nobs periods of
         # the time-varying matrices (only a time-invariant model, whose
-        # matrices have a single period, allows a longer one)
-        matrices = [np.asarray(matrix)[..., :self.nobs] for matrix in (
-            model.design, model.obs_intercept, model.obs_cov,
-            model.transition, model.state_intercept, model.selection,
-            model.state_cov)]
+        # matrices have a single period, allows a longer one). Each memoryview
+        # is converted on its own: Cython 3.3 rejects a tuple of them.
+        matrices = [
+            np.asarray(model.design)[..., :self.nobs],
+            np.asarray(model.obs_intercept)[..., :self.nobs],
+            np.asarray(model.obs_cov)[..., :self.nobs],
+            np.asarray(model.transition)[..., :self.nobs],
+            np.asarray(model.state_intercept)[..., :self.nobs],
+            np.asarray(model.selection)[..., :self.nobs],
+            np.asarray(model.state_cov)[..., :self.nobs],
+        ]
         dim2[0] = model.k_endog; dim2[1] = self.nobs;
         obs = np.PyArray_ZEROS(2, dim2, {{typenum}}, FORTRAN)
         self.simulated_model = {{prefix}}Statespace(obs, *matrices)
