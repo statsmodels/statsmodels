@@ -1,0 +1,6 @@
+- ``RecursiveLSResults.get_prediction`` and ``predict`` of a
+  :class:`~statsmodels.regression.recursive_ls.RecursiveLS` model with
+  constraints returned the predictions of the extra variables through
+  which the constraints are imposed as additional columns with numpy
+  data, and raised a ``TypeError`` with pandas data. They return the
+  predictions of the dependent variable only. :pr:`11147`
