@@ -2688,3 +2688,36 @@ def test_uecm_integer_exog(kind):
     ols = OLS(dy[t], np.column_stack(reg)).fit()
     assert_allclose(res.params, ols.params, rtol=1e-8)
     assert_allclose(res.bse, ols.bse, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "dtype, categories", [(int, None), (int, [50, 10, 20]), (float, None)]
+)
+def test_uecm_categorical_exog(dtype, categories):
+    # A categorical column has no diff, so UECM raised TypeError; ARDL uses
+    # the values of the categories (not their codes) as the levels
+    rng = np.random.default_rng(20261126)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.column_stack(
+        [rng.choice([10.0, 20.0, 50.0], size=nobs), rng.standard_normal(nobs)]
+    )
+    exog = pd.DataFrame(
+        {"a": pd.Categorical(x[:, 0].astype(dtype), categories=categories)}
+    )
+    exog["b"] = x[:, 1]
+    res = UECM(y, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, the levels x.L1 and the differences D.y.L1, D.x.L0
+    # and D.x.L1, with the differences of the values of the categories
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.vstack([np.full((1, 2), np.nan), np.diff(x, axis=0)])
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1], dy[t - 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1], dx[t - 1, 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
+    # The UECM is a reparametrization of the ARDL with the same lags
+    ardl_res = ARDL(y, 2, exog, 2).fit()
+    assert_allclose(res.ssr, ardl_res.ssr, rtol=1e-10)

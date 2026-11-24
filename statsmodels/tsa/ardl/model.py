@@ -2275,11 +2275,14 @@ class UECM(ARDL):
         # variables are differenced as float
         if exog_pandas:
             # Also the nullable "boolean" dtype, whose diff is not numeric,
-            # and the nullable integer dtypes
+            # the nullable integer dtypes, and categorical columns, which have
+            # no diff (their values, as float, are the levels, as in ARDL)
             bool_cols = [
                 c
                 for c, dt in orig_exog.dtypes.items()
-                if pd.api.types.is_bool_dtype(dt) or pd.api.types.is_integer_dtype(dt)
+                if pd.api.types.is_bool_dtype(dt)
+                or pd.api.types.is_integer_dtype(dt)
+                or isinstance(dt, pd.CategoricalDtype)
             ]
             dexog = orig_exog.astype(dict.fromkeys(bool_cols, float)).diff()
         else:
