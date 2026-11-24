@@ -296,6 +296,34 @@ class TestDiagnosticG:
             result_object=True,
         )
         assert_allclose(res.pval, 0.019045094813027602, rtol=1e-10)
+        # > gq = gqtest(fm, point=80, alternative='two.sided')
+        res = smsdia.het_goldfeldquandt(
+            self.endog,
+            self.exog,
+            split=80,
+            alternative="two-sided",
+            result_object=True,
+        )
+        assert_allclose(res.pval, 0.038090189626055204, rtol=1e-10)
+
+    @pytest.mark.parametrize("split", [30, 80, 101, 140])
+    def test_het_goldfeldquandt_alternatives(self, split):
+        # The one-sided p-values add to one and the two-sided p-value is twice
+        # the smaller one, also if the subsamples have different degrees of
+        # freedom.
+        pval = {
+            alt: smsdia.het_goldfeldquandt(
+                self.endog,
+                self.exog,
+                split=split,
+                alternative=alt,
+                result_object=True,
+            ).pval
+            for alt in ("increasing", "decreasing", "two-sided")
+        }
+        assert_allclose(pval["increasing"] + pval["decreasing"], 1.0, rtol=1e-12)
+        smaller = min(pval["increasing"], pval["decreasing"])
+        assert_allclose(pval["two-sided"], 2 * smaller, rtol=1e-12)
 
     def test_het_breusch_pagan(self):
         res = self.res
