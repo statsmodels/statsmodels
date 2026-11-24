@@ -800,10 +800,10 @@ def coint_johansen(endog, det_order, k_ar_diff):
     d = np.sqrt(rkt.shape[0]) * scipy.linalg.solve_triangular(r11, u)
     aind = np.arange(neqs)
     # Normalize by first non-zero element of d, usually [0, 0]
-    # GH 5517
+    # GH 5517. d is nonsingular (r11 is checked above and u is orthogonal),
+    # so it has a non-zero element.
     non_zero_d = d.flat != 0
-    if np.any(non_zero_d):
-        d *= np.sign(d.flat[non_zero_d][0])
+    d *= np.sign(d.flat[non_zero_d][0])
 
     #  Compute the trace and max eigenvalue statistics
     lr1 = np.zeros(neqs)
@@ -1550,12 +1550,6 @@ class VECMResults:
         self.first_season = first_season
 
         self.coint_rank = coint_rank
-        if alpha.dtype == np.complex128 and np.all(np.imag(alpha) == 0):
-            alpha = np.real_if_close(alpha)
-        if beta.dtype == np.complex128 and np.all(np.imag(beta) == 0):
-            beta = np.real_if_close(beta)
-        if gamma.dtype == np.complex128 and np.all(np.imag(gamma) == 0):
-            gamma = np.real_if_close(gamma)
 
         self.alpha = alpha
         self.beta, self.det_coef_coint = np.vsplit(beta, [self.neqs])
@@ -2539,8 +2533,6 @@ class VECMResults:
         # the calculation of autocovariances with lag > 0. (used in the
         # argument of trace() four rows below this comment.)
         c0_inv = inv(self.sigma_u)  # instead of inv(cov(0))
-        if c0_inv.dtype == np.complex128 and np.all(np.imag(c0_inv) == 0):
-            c0_inv = np.real(c0_inv)
         for t in range(1, nlags + 1):
             ct = acov_list[t]
             to_add = np.trace(ct.T @ c0_inv @ ct @ c0_inv)
@@ -2781,11 +2773,10 @@ class VECMResults:
             offset = 0
 
             # 1. Cointegration matrix (beta)
-            if self.coint_rank > 0:
-                start = i * self.neqs
-                end = start + self.neqs
-                masks.append(offset + np.arange(start, end))
-                offset += self.neqs * self.coint_rank
+            start = i * self.neqs
+            end = start + self.neqs
+            masks.append(offset + np.arange(start, end))
+            offset += self.neqs * self.coint_rank
 
             # 2. Deterministic terms inside cointegration relation
             if "ci" in self.deterministic:
