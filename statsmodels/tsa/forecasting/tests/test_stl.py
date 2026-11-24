@@ -547,3 +547,22 @@ def test_forecast_date_steps(index_type, date_type):
         assert forecast.index[-1] == pd.Period("2010-03", freq="M")
     else:
         assert forecast.index[-1] == pd.Timestamp("2010-03-01")
+
+
+def test_get_prediction_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    seasonal = np.tile([1.0, 2.0, 0.0, -1.0, -2.0, 0.5, -0.5], 72)[:500]
+    y = pd.Series(seasonal + rng.standard_normal(500).cumsum(), index=index)
+    mod = STLForecast(y, ARIMA, model_kwargs={"order": (1, 0, 0)}, period=7)
+    res = mod.fit(fit_kwargs={"method": "yule_walker"})
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    pred = res.get_prediction(start=10, dynamic="2001-04")
+    expected = res.get_prediction(start=10, dynamic=loc - 10)
+    assert_allclose(pred.predicted_mean, expected.predicted_mean, rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, expected.var_pred_mean, rtol=1e-12)
+    pd.testing.assert_index_equal(pred.predicted_mean.index, index[10:])

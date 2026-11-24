@@ -1949,6 +1949,12 @@ def ardl_select_order(
             lowest = val
             selected_order = key
     exog_order = dict(selected_order[1:])
+    if isinstance(maxorder, Mapping):
+        # The variables that maxorder excludes (None) are not in the selected
+        # order: exclude them explicitly, so that ARDL does not warn that
+        # they are missing
+        for key in maxorder:
+            exog_order.setdefault(key, None)
     model = ARDL(
         endog,
         selected_order[0],
@@ -2309,8 +2315,12 @@ class UECM(ARDL):
         # np.diff and DataFrame.diff take the xor of bool values, so bool
         # variables are differenced as float
         if exog_pandas:
-            bool_dtype = np.dtype(bool)
-            bool_cols = [c for c, dt in orig_exog.dtypes.items() if dt == bool_dtype]
+            # Also the nullable "boolean" dtype, whose diff is not numeric
+            bool_cols = [
+                c
+                for c, dt in orig_exog.dtypes.items()
+                if pd.api.types.is_bool_dtype(dt)
+            ]
             dexog = orig_exog.astype(dict.fromkeys(bool_cols, float)).diff()
         else:
             if orig_exog.dtype == bool:
