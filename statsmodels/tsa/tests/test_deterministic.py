@@ -762,8 +762,10 @@ def test_term_out_of_sample_int_index_constant_step(term, values):
     expected = term.out_of_sample(5, range_index)
     pd.testing.assert_frame_equal(fcast, expected, check_index_type=False)
     np.testing.assert_array_equal(fcast.index, values[-1] + step * np.arange(1, 6))
-    # An integer Index, as before for step 1, and not a RangeIndex
-    assert type(fcast.index) is pd.Index
+    # An integer Index, as before for step 1, and not a RangeIndex (an
+    # Int64Index, a subclass of Index, on pandas < 2)
+    assert isinstance(fcast.index, pd.Index)
+    assert not isinstance(fcast.index, pd.RangeIndex)
     assert fcast.index.dtype == np.int64
     dp = DeterministicProcess(pd.Index(values), additional_terms=[term])
     expected = DeterministicProcess(range_index, additional_terms=[term])
