@@ -2627,6 +2627,34 @@ def test_ardl_order_dict_float_column_labels():
     assert_allclose(res.params, ols.params, rtol=1e-10)
 
 
+@pytest.mark.parametrize("mixed", [False, True])
+def test_uecm_nullable_bool_exog(mixed):
+    # The differences of a nullable "boolean" column were not numeric (the
+    # first one is NA), so UECM raised TypeError; ARDL worked
+    rng = np.random.default_rng(20261124)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    xb = rng.standard_normal((nobs, 2)) > 0
+    x = xb.astype(float)
+    exog = pd.DataFrame(xb, columns=["a", "b"]).astype("boolean")
+    if mixed:
+        # A float column next to the nullable bool one
+        x[:, 1] = rng.standard_normal(nobs)
+        exog["b"] = x[:, 1]
+    res = UECM(y, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, the levels x.L1 and the differences D.y.L1, D.x.L0
+    # and D.x.L1, with the bool values as 0 and 1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.vstack([np.full((1, 2), np.nan), np.diff(x, axis=0)])
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1], dy[t - 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1], dx[t - 1, 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
+
+
 @pytest.mark.parametrize("glob", [False, True])
 @pytest.mark.parametrize("use_pandas", [False, True])
 def test_ardl_select_order_maxorder_none_no_warning(use_pandas, glob):

@@ -2274,8 +2274,12 @@ class UECM(ARDL):
         # np.diff and DataFrame.diff take the xor of bool values, so bool
         # variables are differenced as float
         if exog_pandas:
-            bool_dtype = np.dtype(bool)
-            bool_cols = [c for c, dt in orig_exog.dtypes.items() if dt == bool_dtype]
+            # Also the nullable "boolean" dtype, whose diff is not numeric
+            bool_cols = [
+                c
+                for c, dt in orig_exog.dtypes.items()
+                if pd.api.types.is_bool_dtype(dt)
+            ]
             dexog = orig_exog.astype(dict.fromkeys(bool_cols, float)).diff()
         else:
             if orig_exog.dtype == bool:
