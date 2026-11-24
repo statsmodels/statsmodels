@@ -10,10 +10,12 @@ from numpy.testing import assert_allclose
 import pandas as pd
 from pandas.testing import assert_index_equal
 import pytest
+from scipy import stats
 
 from statsmodels.datasets import danish_data, longley
 from statsmodels.iolib.summary import Summary
 from statsmodels.regression.linear_model import OLS
+from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.tools.sm_exceptions import SpecificationWarning
 from statsmodels.tsa.ar_model import AutoReg
 from statsmodels.tsa.ardl import model as ardl_model
@@ -2775,3 +2777,307 @@ def test_ardl_predict_1d_exog_wrong_columns(form):
         res.predict(exog=np.column_stack([x, x]))
     with pytest.raises(ValueError, match="exog_oos " + msg):
         res.forecast(2, exog=np.ones((2, 2)))
+
+
+@pytest.mark.parametrize("mixed", [False, True])
+def test_uecm_nullable_bool_exog(mixed):
+    # The differences of a nullable "boolean" column were not numeric (the
+    # first one is NA), so UECM raised TypeError; ARDL worked
+    rng = np.random.default_rng(20261124)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    xb = rng.standard_normal((nobs, 2)) > 0
+    x = xb.astype(float)
+    exog = pd.DataFrame(xb, columns=["a", "b"]).astype("boolean")
+    if mixed:
+        # A float column next to the nullable bool one
+        x[:, 1] = rng.standard_normal(nobs)
+        exog["b"] = x[:, 1]
+    res = UECM(y, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, the levels x.L1 and the differences D.y.L1, D.x.L0
+    # and D.x.L1, with the bool values as 0 and 1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.vstack([np.full((1, 2), np.nan), np.diff(x, axis=0)])
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1], dy[t - 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1], dx[t - 1, 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "kind", ["ndarray-uint8", "ndarray-int8", "frame-uint8", "frame-UInt8"]
+)
+def test_uecm_integer_exog(kind):
+    # np.diff and DataFrame.diff wrap around for unsigned integers (np.diff
+    # also when the difference of signed integers does not fit in their type),
+    # so a change from 3 to 1 of a uint8 exog was differenced as 254
+    rng = np.random.default_rng(20261125)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    if kind == "ndarray-int8":
+        # Differences of -200 and 200 do not fit in int8
+        x = np.where(rng.standard_normal((nobs, 2)) > 0, 100.0, -100.0)
+    else:
+        x = rng.integers(0, 5, size=(nobs, 2)).astype(float)
+    if kind == "ndarray-uint8":
+        exog = x.astype(np.uint8)
+    elif kind == "ndarray-int8":
+        exog = x.astype(np.int8)
+    elif kind == "frame-uint8":
+        exog = pd.DataFrame(x.astype(np.uint8), columns=["a", "b"])
+    else:
+        exog = pd.DataFrame(x, columns=["a", "b"]).astype("UInt8")
+    res = UECM(y, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, the levels x.L1 and the differences D.y.L1, D.x.L0
+    # and D.x.L1, with the differences of the float64 values
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.vstack([np.full((1, 2), np.nan), np.diff(x, axis=0)])
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1], dy[t - 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1], dx[t - 1, 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
+
+
+@pytest.mark.parametrize(
+    "dtype, categories", [(int, None), (int, [50, 10, 20]), (float, None)]
+)
+def test_uecm_categorical_exog(dtype, categories):
+    # A categorical column has no diff, so UECM raised TypeError; ARDL uses
+    # the values of the categories (not their codes) as the levels
+    rng = np.random.default_rng(20261126)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.column_stack(
+        [rng.choice([10.0, 20.0, 50.0], size=nobs), rng.standard_normal(nobs)]
+    )
+    exog = pd.DataFrame(
+        {"a": pd.Categorical(x[:, 0].astype(dtype), categories=categories)}
+    )
+    exog["b"] = x[:, 1]
+    res = UECM(y, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, the levels x.L1 and the differences D.y.L1, D.x.L0
+    # and D.x.L1, with the differences of the values of the categories
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.vstack([np.full((1, 2), np.nan), np.diff(x, axis=0)])
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], x[t - 1, 1], dy[t - 1]]
+    reg += [dx[t, 0], dx[t - 1, 0], dx[t, 1], dx[t - 1, 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
+    # The UECM is a reparametrization of the ARDL with the same lags
+    ardl_res = ARDL(y, 2, exog, 2).fit()
+    assert_allclose(res.ssr, ardl_res.ssr, rtol=1e-10)
+
+
+@pytest.mark.parametrize("kind", ["ndarray", "list", "series", "series-category"])
+def test_uecm_1d_exog(kind):
+    # A 1-d exog or a Series raised "could not broadcast input array from
+    # shape (n-1,) into shape (n-1,1)"; ARDL treats it as the variable 0
+    rng = np.random.default_rng(20261127)
+    nobs = 150
+    y = np.cumsum(rng.standard_normal(nobs))
+    if kind == "series-category":
+        x = rng.choice([10.0, 20.0, 50.0], size=nobs)
+        exog = pd.Series(pd.Categorical(x.astype(int)), name="x")
+    else:
+        x = rng.standard_normal(nobs)
+        exog = {"ndarray": x, "list": list(x), "series": pd.Series(x, name="x")}[
+            kind
+        ]
+    res = UECM(y, 2, exog, 2).fit()
+
+    # D.y on const, y.L1, the level x.L1 and the differences D.y.L1, D.x.L0
+    # and D.x.L1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.r_[np.nan, np.diff(x)]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1], dy[t - 1], dx[t], dx[t - 1]]
+    ols = OLS(dy[t], np.column_stack(reg)).fit()
+    assert_allclose(res.params, ols.params, rtol=1e-8)
+    assert_allclose(res.bse, ols.bse, rtol=1e-8)
+    # The names of the variable 0 in ARDL: x0 for an array, 0 for a Series
+    base = "0" if kind.startswith("series") else "x0"
+    expected = ["const", "y.L1", f"{base}.L1", "D.y.L1"]
+    expected += [f"D.{base}.L0", f"D.{base}.L1"]
+    assert res.model.exog_names == expected
+    ardl_res = ARDL(y, 2, exog, 2).fit()
+    assert ardl_res.model.exog_names[3:] == [f"{base}.L{i}" for i in range(3)]
+    # The UECM is a reparametrization of the ARDL with the same lags
+    assert_allclose(res.ssr, ardl_res.ssr, rtol=1e-10)
+
+
+@pytest.mark.parametrize(
+    "kind", ["ndarray", "ndarray-frame", "frame", "frame-bool", "series"]
+)
+def test_uecm_predict_replacement_exog(kind):
+    # The replacement exog was ignored: predict(exog=x2) equalled predict()
+    rng = np.random.default_rng(20261128)
+    nobs = 80
+    y = np.cumsum(rng.standard_normal(nobs))
+    k = 1 if kind == "series" else 2
+    if kind == "frame-bool":
+        x = (rng.standard_normal((nobs, k)) > 0).astype(float)
+        x2 = (rng.standard_normal((nobs, k)) > 0).astype(float)
+    else:
+        x = np.cumsum(rng.standard_normal((nobs, k)), axis=0)
+        x2 = x + rng.standard_normal((nobs, k))
+    if kind == "ndarray":
+        exog, exog2 = x, x2
+    elif kind == "ndarray-frame":
+        # A DataFrame replaces an array by position
+        exog, exog2 = x, pd.DataFrame(x2)
+    elif kind == "series":
+        exog, exog2 = pd.Series(x[:, 0], name="a"), pd.Series(x2[:, 0], name="a")
+    else:
+        dtype = bool if kind == "frame-bool" else float
+        exog = pd.DataFrame(x.astype(dtype), columns=["a", "b"])
+        # The columns are matched by name
+        exog2 = pd.DataFrame(x2.astype(dtype), columns=["a", "b"])[["b", "a"]]
+    res = UECM(y, 2, exog, 2).fit()
+    pred = np.asarray(res.predict(exog=exog2))
+
+    # The regressors const, y.L1, x.L1, D.y.L1, D.x.L0 and D.x.L1 with the
+    # replacement x2, the bool values as 0 and 1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx2 = np.vstack([np.full((1, k), np.nan), np.diff(x2, axis=0)])
+    reg = [np.ones(nobs - 2), y[t - 1]] + [x2[t - 1, i] for i in range(k)]
+    reg += [dy[t - 1]]
+    for i in range(k):
+        reg += [dx2[t, i], dx2[t - 1, i]]
+    expected = np.column_stack(reg) @ np.asarray(res.params)
+    assert np.all(np.isnan(pred[:2]))
+    assert_allclose(pred[2:], expected, rtol=1e-10)
+    # The UECM is a reparametrization of the ARDL with the same lags, so its
+    # predicted differences are those of the ARDL's predicted levels
+    ardl_pred = ARDL(y, 2, x, 2).fit().predict(exog=x2)
+    assert_allclose(pred[2:], ardl_pred[2:] - y[1:-1], rtol=1e-8)
+    assert_allclose(res.get_prediction(exog=exog2).predicted_mean, pred, rtol=1e-12)
+
+
+def test_uecm_predict_replacement_fixed():
+    # The replacement fixed was ignored: predict(fixed=z2) equalled predict()
+    rng = np.random.default_rng(20261129)
+    nobs = 80
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal((nobs, 1)), axis=0)
+    z = rng.standard_normal((nobs, 2))
+    z2 = rng.standard_normal((nobs, 2))
+    res = UECM(y, 2, x, 2, fixed=z).fit()
+    pred = res.predict(fixed=z2.tolist())
+
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.r_[np.nan, np.diff(x[:, 0])]
+    reg = [np.ones(nobs - 2), y[t - 1], x[t - 1, 0], dy[t - 1], dx[t], dx[t - 1]]
+    reg += [z2[t, 0], z2[t, 1]]
+    expected = np.column_stack(reg) @ res.params
+    assert_allclose(pred[2:], expected, rtol=1e-10)
+    # With both replaced, the levels and differences use the replacement exog
+    x2 = x + 1.0
+    both = res.predict(exog=x2, fixed=z2)
+    assert_allclose(both[2:], expected + res.params[2], rtol=1e-10)
+
+
+def test_uecm_predict_replacement_errors():
+    rng = np.random.default_rng(20261130)
+    nobs = 50
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = pd.DataFrame(rng.standard_normal((nobs, 2)), columns=["a", "b"])
+    res = UECM(y, 2, x, 2, fixed=rng.standard_normal((nobs, 1))).fit()
+    with pytest.raises(TypeError, match="exog must be a DataFrame"):
+        res.predict(exog=np.asarray(x))
+    with pytest.raises(ValueError, match="exog must have the same columns"):
+        res.predict(exog=x.rename(columns={"b": "c"}))
+    with pytest.raises(ValueError, match="exog must have the same shape"):
+        res.predict(exog=x.iloc[:-2])
+    with pytest.raises(ValueError, match="fixed must have the same shape"):
+        res.predict(fixed=np.ones((nobs, 2)))
+    res = UECM(y, 2, np.asarray(x), 2).fit()
+    with pytest.raises(ValueError, match="exog must have the same shape"):
+        res.predict(exog=np.asarray(x)[:, :1])
+
+
+@pytest.mark.parametrize("glob", [False, True])
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_ardl_select_order_maxorder_none_no_warning(use_pandas, glob):
+    # A variable that maxorder excludes with None is excluded from the
+    # selected model without a warning that it is missing from the order
+    rng = np.random.default_rng(20261124)
+    nobs = 200
+    x = rng.standard_normal((nobs, 2))
+    e = rng.standard_normal(nobs)
+    y = np.zeros(nobs)
+    for t in range(1, nobs):
+        y[t] = 0.5 * y[t - 1] + x[t, 0] + 0.8 * x[t - 1, 0] + x[t, 1] + e[t]
+    if use_pandas:
+        exog = pd.DataFrame(x, columns=["a", "b"])
+        maxorder = {"a": 1, "b": None}
+        key = "a"
+    else:
+        exog = x
+        maxorder = {0: 1, 1: None}
+        key = 0
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SpecificationWarning)
+        sel = ardl_select_order(y, 1, exog, maxorder, glob=glob)
+    assert sel.model.ar_lags == [1]
+    assert sel.model.dl_lags == {key: [0, 1]}
+
+    # y on const, y.L1, x0.L0 and x0.L1, without the excluded x1
+    t = np.arange(1, nobs)
+    reg = np.column_stack([np.ones(nobs - 1), y[t - 1], x[t, 0], x[t - 1, 0]])
+    ols = OLS(y[t], reg).fit()
+    assert_allclose(sel.model.fit().params, ols.params, rtol=1e-10)
+
+
+def test_predict_dynamic_key_covers_several_dates():
+    # A dynamic date key that covers several dates (all of April 2001 in daily
+    # data) gives a slice of locations, which raised a TypeError. Dynamic
+    # prediction begins at the first date of the key.
+    rng = np.random.default_rng(20261121)
+    index = pd.date_range("2000-01-01", periods=500, freq="D")
+    y = pd.Series(rng.standard_normal(500).cumsum(), index=index)
+    x = pd.Series(rng.standard_normal(500), index=index, name="x")
+    res = ARDL(y, 1, x, 1).fit()
+    loc = 366 + 31 + 28 + 31
+    assert index[loc] == pd.Timestamp("2001-04-01")
+    pred = res.predict(start=10, dynamic="2001-04")
+    expected = res.predict(start=10, dynamic=loc - 10)
+    assert_allclose(pred, expected, rtol=1e-12)
+    assert_index_equal(pred.index, index[10:])
+
+
+def test_ardl_test_serial_correlation():
+    # Inherited from AutoRegResults, whose statistics were all NaN since
+    # 0.14.0
+    rng = np.random.default_rng(20261123)
+    nobs = 200
+    x = rng.standard_normal(nobs)
+    e = rng.standard_normal(nobs)
+    y = np.zeros(nobs)
+    for t in range(1, nobs):
+        y[t] = 0.5 * y[t - 1] + x[t] - 0.5 * x[t - 1] + e[t]
+    res = ARDL(y, 1, x[:, None], 1, trend="c").fit()
+    sc = res.test_serial_correlation(lags=8, model_df="regressors")
+
+    reg = np.column_stack([np.ones(nobs - 1), y[:-1], x[1:], x[:-1]])
+    resid = OLS(y[1:], reg).fit().resid
+    # "ar" counts the one lag of y
+    sc_ar = res.test_serial_correlation(lags=8, model_df="ar")
+    assert_allclose(sc_ar["DF"], np.maximum(np.arange(1, 9) - 1, 0))
+    lb = acorr_ljungbox(resid, lags=8, model_df=4)
+    df = np.maximum(np.arange(1, 9) - 4, 0)
+    assert_allclose(sc["Ljung-Box"], lb["lb_stat"], rtol=1e-8)
+    assert_allclose(sc["DF"], df)
+    pvalue = stats.chi2.sf(lb["lb_stat"].to_numpy()[4:], df[4:])
+    assert_allclose(sc["LB P-value"].iloc[4:], pvalue, rtol=1e-8)
+    assert np.all(np.isnan(sc["LB P-value"].iloc[:4]))
