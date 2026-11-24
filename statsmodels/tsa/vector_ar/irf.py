@@ -189,7 +189,14 @@ class BaseIRAnalysis:
             asymptotic standard errors and is the default. "mc" computes
             Monte Carlo standard errors using ``repl`` replications.
             "sz1", "sz2", and "sz3" compute Sims-Zha error bands using
-            replications and, optionally, ``component``.
+            replications and, optionally, ``component``. The "sz1" bands
+            (``err_band_sz1``) are symmetric around the impulse responses.
+            The "sz2" and "sz3" bands (``err_band_sz2``, ``err_band_sz3``)
+            add to the impulse responses the quantiles of the simulated
+            responses weighted elementwise by a row of the eigenvector
+            matrix of their covariance, of each response ("sz2") or of the
+            responses of all variables to a shock ("sz3"), so they need not
+            contain the impulse responses.
         repl : int, optional
             Number of replications for Monte Carlo and Sims-Zha standard
             errors. The default is 1000.
@@ -638,6 +645,20 @@ class IRAnalysis(BaseIRAnalysis):
         ErrorBand
             A result object with fields ``lower`` and ``upper``.
 
+        Notes
+        -----
+        For the response of variable i to a shock in variable j, ``V`` is
+        the covariance matrix of the `repl` simulated responses (from
+        ``irf_resim``) in periods 1 to `periods`, and ``W[:, k]`` is the
+        eigenvector of its largest eigenvalue ``lam[k]`` (or of the one
+        that `component` selects). The bands are the point estimate plus
+        (``lower``) and minus (``upper``) ``z * sqrt(lam[k]) * W[:, k]``,
+        with ``z`` the ``1 - signif / 2`` quantile of the standard normal
+        distribution, and both equal the point estimate in period 0. They
+        are symmetric around the point estimate. The sign of an eigenvector
+        is arbitrary, so ``lower`` is above ``upper`` in the periods where
+        the element of ``W[:, k]`` is positive.
+
         References
         ----------
         Sims, Christopher A., and Tao Zha. 1999. "Error Bands for Impulse
@@ -737,6 +758,30 @@ class IRAnalysis(BaseIRAnalysis):
         -------
         ErrorBand
             A result object with fields ``lower`` and ``upper``.
+
+        Notes
+        -----
+        For the response of variable i to a shock in variable j, ``V`` is
+        the covariance matrix of the `repl` simulated responses ``c`` (from
+        ``irf_resim``) in periods 1 to `periods`, and the columns of ``W``
+        are its eigenvectors, in the unsorted order of
+        :func:`scipy.linalg.eig`. With ``k`` the index of the largest
+        eigenvalue (or the one that `component` selects), the ``k``-th row
+        of ``W``, not the ``k``-th eigenvector (its ``k``-th column),
+        multiplies each simulated response elementwise,
+        ``g = W[k, :] * c``. In each period, ``lower`` and ``upper`` are the
+        point estimate plus the ``round(signif / 2 * repl)``-th and the
+        ``round((1 - signif / 2) * repl)``-th smallest of the `repl` values
+        of ``g``; in period 0 both equal the point estimate.
+
+        So in period t the band is the point estimate plus the quantiles of
+        the simulated responses scaled by ``W[k, t]``, the ``k``-th element
+        of the t-th eigenvector, whose sign is arbitrary. Eq. (9) of Sims and
+        Zha (1999) instead adds to the mean ``m`` of the simulated responses
+        ``W[:, k]`` times the quantiles of the component
+        ``W[:, k]' (c - m)`` of their deviations from the mean. As the
+        simulated responses here are not centered and are weighted by a row
+        of ``W``, the band need not contain the point estimate.
 
         References
         ----------
@@ -838,6 +883,27 @@ class IRAnalysis(BaseIRAnalysis):
         -------
         ErrorBand
             A result object with fields ``lower`` and ``upper``.
+
+        Notes
+        -----
+        For a shock in variable j, the simulated responses (from
+        ``irf_resim``) of all variables in periods 1 to `periods` are stacked
+        variable by variable into vectors of length ``neqs * periods``.
+        ``V`` is their covariance matrix over the `repl` replications and the
+        columns of ``W`` are its eigenvectors, in the unsorted order of
+        :func:`scipy.linalg.eig`. With ``k`` the index of the largest
+        eigenvalue (or the one that `component` selects for the shock), the
+        ``k``-th row of ``W`` is split into ``neqs`` blocks of length
+        `periods`, and block i multiplies each simulated response ``c`` of
+        variable i elementwise,
+        ``g = W[k, i * periods:(i + 1) * periods] * c``. In each period,
+        ``lower`` and ``upper`` are the point estimate plus the
+        ``round(signif / 2 * repl)``-th and the
+        ``round((1 - signif / 2) * repl)``-th smallest of the `repl` values
+        of ``g``; in period 0 both equal the point estimate. As for
+        ``err_band_sz2``, the simulated responses are not centered and are
+        weighted by a row of ``W``, not by an eigenvector as in eq. (9) of
+        Sims and Zha (1999), so the band need not contain the point estimate.
 
         References
         ----------
