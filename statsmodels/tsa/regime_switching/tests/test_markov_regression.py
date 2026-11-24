@@ -3680,12 +3680,9 @@ def test_exog_tvtp():
 
     params = np.r_[0.98209618, 0.05036498, 3.70877542, 9.55676298, 4.44181911]
     params_tvtp = params.copy()
-    params_tvtp[0] = np.squeeze(
-        mod2._untransform_logistic(np.r_[0.0], np.r_[1 - params[0]])
-    )
-    params_tvtp[1] = np.squeeze(
-        mod2._untransform_logistic(np.r_[0.0], np.r_[1 - params[1]])
-    )
+    # With a constant exog_tvtp, the coefficients are the logits of the
+    # transition probabilities
+    params_tvtp[:2] = np.log(params[:2] / (1 - params[:2]))
 
     res1 = mod1.smooth(params)
     res2 = mod2.smooth(params_tvtp)
@@ -4279,3 +4276,105 @@ def test_em_transition_m_step(k_regimes, params):
         for j in range(k_regimes - 1):
             idx = mod.param_names.index(f"p[{i}->{j}]")
             assert_allclose(params_em[idx], numerator[j, i] / denominator[i], rtol=1e-10)
+
+
+def transition_model(k_regimes):
+    endog, _ = two_regime_data()
+    mod = markov_regression.MarkovRegression(endog, k_regimes=k_regimes)
+    k_trans = k_regimes * (k_regimes - 1)
+    return mod, k_trans
+
+
+@pytest.mark.parametrize("k_regimes", [2, 3, 4])
+@pytest.mark.parametrize("tiny", [False, True], ids=["ordinary", "tiny"])
+def test_untransform_params_round_trip_transition(k_regimes, tiny):
+    mod, k_trans = transition_model(k_regimes)
+    rng = np.random.default_rng(20261124)
+    unconstrained = np.r_[
+        rng.standard_normal(k_trans), rng.standard_normal(k_regimes), 1.5
+    ]
+    if tiny:
+        # Probabilities of about 1e-22 and 1e-304 out of the first two regimes
+        unconstrained[0] = -50.0
+        unconstrained[1] = -700.0
+    constrained = mod.transform_params(unconstrained)
+    if tiny:
+        assert constrained[0] < 1e-21
+        assert constrained[1] < 1e-300
+    assert_allclose(mod.untransform_params(constrained), unconstrained, rtol=1e-12)
+    # and back to the probabilities
+    assert_allclose(
+        mod.transform_params(mod.untransform_params(constrained)),
+        constrained,
+        rtol=1e-12,
+    )
+
+
+@pytest.mark.parametrize("k_regimes", [2, 3])
+def test_untransform_params_zero_transition(k_regimes):
+    mod, k_trans = transition_model(k_regimes)
+    if k_regimes == 2:
+        # p[0->0] = 0, and p[1->0] = 1 so that p[1->1] = 0
+        probs = np.r_[0.0, 1.0]
+        desired = probs
+    else:
+        # Out of regime 0: p[0->0] = 0; out of regime 1: p[1->2] = 0;
+        # out of regime 2: the sum exceeds one by 1e-9 (rounding is accepted)
+        probs = np.r_[0.0, 0.3, 0.5, 0.4, 0.7, 0.5 + 1e-9]
+        desired = probs.copy()
+        desired[[2, 5]] /= 1 + 1e-9
+    constrained = np.r_[probs, np.arange(k_regimes, dtype=float), 1.0]
+    unconstrained = mod.untransform_params(constrained)
+    assert np.all(np.isfinite(unconstrained))
+    # A zero probability comes back as about 2.2e-308 (the smallest positive
+    # normal float), hence the atol. Unconstrained values near 708 are
+    # accurate to about 1e-13, hence the rtol.
+    assert_allclose(
+        mod.transform_params(unconstrained)[:k_trans], desired, rtol=1e-11, atol=1e-300
+    )
+
+
+@pytest.mark.parametrize("k_regimes", [2, 3])
+@pytest.mark.parametrize("case", ["negative", "nan", "sum"])
+def test_untransform_params_invalid_transition(k_regimes, case):
+    mod, k_trans = transition_model(k_regimes)
+    constrained = mod.start_params
+    if case == "negative":
+        constrained[0] = -1e-3
+    elif case == "nan":
+        constrained[0] = np.nan
+    elif k_regimes == 2:
+        constrained[0] = 1 + 1e-7
+    else:
+        constrained[[0, 3]] = [0.5, 0.5 + 1e-7]
+    with pytest.raises(ValueError, match="non-negative and sum to at most one"):
+        mod.untransform_params(constrained)
+
+
+def three_regime_data(seed):
+    rng = np.random.default_rng(seed)
+    # Column j holds the probabilities of moving out of regime j
+    transition = np.array([[0.95, 0.05, 0.05], [0.05, 0.9, 0.05], [0.0, 0.05, 0.9]])
+    states = [0]
+    for _ in range(1, 100):
+        states.append(rng.choice(3, p=transition[:, states[-1]]))
+    return np.array([0.0, 4.0, 8.0])[np.array(states)] + rng.standard_normal(100)
+
+
+@pytest.mark.parametrize("seed", [6, 10])
+def test_fit_em_zero_transition(seed):
+    # 20 EM iterations drive p[0->2] to zero: p[0->0] + p[0->1] is one up to
+    # 8e-13 (seed 6) or exactly one (seed 10). untransform_params raised
+    # "Could not untransform parameters." for such start parameters.
+    mod = markov_regression.MarkovRegression(three_regime_data(seed), k_regimes=3)
+    params_em = mod._fit_em(
+        mod.start_params, transformed=True, maxiter=20, tolerance=0, return_params=True
+    )
+    assert 1 - params_em[0] - params_em[3] < 1e-12
+
+    # No optimization after the EM steps, so the parameters are the EM ones
+    with pytest.warns(ConvergenceWarning):
+        params = mod.fit(em_iter=20, maxiter=0, return_params=True, disp=False)
+    # The unconstrained values of p[0->0] and p[0->1] are near 708 with
+    # seed 10, accurate to about 1e-13
+    assert_allclose(params, params_em, rtol=1e-11)

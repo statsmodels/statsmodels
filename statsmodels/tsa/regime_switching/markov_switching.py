@@ -1728,22 +1728,6 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
 
         return constrained
 
-    def _untransform_logistic(self, unconstrained, constrained):
-        """
-        Function to allow using a numerical root-finder to reverse the
-        logistic transform.
-        """
-        resid = np.zeros(unconstrained.shape, dtype=unconstrained.dtype)
-        exp = np.exp(unconstrained)
-        sum_exp = np.sum(exp)
-        for i in range(len(unconstrained)):
-            resid[i] = (
-                unconstrained[i]
-                - np.log(1 + sum_exp - exp[i])
-                + np.log(1 / constrained[i] - 1)
-            )
-        return resid
-
     def untransform_params(self, constrained):
         """
         Transform constrained parameters used in likelihood evaluation
@@ -1760,10 +1744,34 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
 
+        Raises
+        ------
+        ValueError
+            If a transition probability is negative or NaN, or the
+            transition probabilities out of a regime sum to more than one by
+            more than 1e-8.
+
         Notes
         -----
         In the base class, this only untransforms the transition-probability-
         related parameters.
+
+        Without time-varying transition probabilities, the transition
+        probabilities ``p[i->j]`` out of each regime ``i`` are untransformed
+        with the closed-form inverse of the logistic transform of
+        `transform_params`, ``log(p[i->j]) - log(p[i->k-1])``, where the
+        probability of moving to the last regime, ``p[i->k-1]``, is one minus
+        the sum of the others. A probability of zero, including a
+        ``p[i->k-1]`` that is zero or slightly negative after rounding, is
+        replaced by the smallest positive normal float
+        (``np.finfo(np.float64).tiny``, about 2.2e-308), so that the
+        unconstrained parameters are finite.
+
+        .. versionchanged:: 0.15.1
+
+           The closed-form inverse replaces a numerical root finder, which
+           failed for tiny or zero transition probabilities with more than
+           two regimes.
         """
         constrained = np.asarray(constrained)
         unconstrained = np.array(constrained, copy=True)
@@ -1778,21 +1786,21 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             ]
         # Otherwise reverse logistic transformation
         else:
+            floor = np.finfo(np.float64).tiny
             for i in range(self.k_regimes):
                 s = self.parameters[i, "regime_transition"]
-                if self.k_regimes == 2:
-                    unconstrained[s] = -np.log(1.0 / constrained[s] - 1)
-                else:
-                    from scipy.optimize import root
-
-                    out = root(
-                        self._untransform_logistic,
-                        np.zeros(unconstrained[s].shape, unconstrained.dtype),
-                        args=(constrained[s],),
+                probs = constrained[s]
+                # The probability of the last regime is implied
+                last = 1 - np.sum(probs)
+                if not (np.all(probs >= 0) and last >= -1e-8):
+                    raise ValueError(
+                        "Could not untransform parameters: the transition "
+                        "probabilities must be non-negative and sum to at "
+                        "most one."
                     )
-                    if not out["success"]:
-                        raise ValueError("Could not untransform parameters.")
-                    unconstrained[s] = out["x"]
+                unconstrained[s] = np.log(np.maximum(probs, floor)) - np.log(
+                    max(last, floor)
+                )
 
         # Do not do anything for the rest of the parameters
 
