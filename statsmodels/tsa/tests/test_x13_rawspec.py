@@ -438,3 +438,46 @@ def test_speconly_without_binary(tmp_path, monkeypatch, lookup):
     # the lookup still happens when the analysis is run
     with pytest.raises(x13.X13NotFoundError, match="x12a and x13as not found"):
         x13.x13_arima_analysis(endog, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "offset, freq",
+    [
+        (pd.offsets.BMonthEnd(), "M"),
+        (pd.offsets.BMonthBegin(), "M"),
+        (pd.offsets.BQuarterEnd(startingMonth=12), "Q"),
+        (pd.offsets.BQuarterBegin(startingMonth=1), "Q"),
+    ],
+    ids=["BME", "BMS", "BQE", "BQS"],
+)
+def test_business_month_quarter_freq(offset, freq):
+    # Business month and quarter frequencies raised "Only monthly and
+    # quarterly periods are supported". The spec is that of the same values
+    # with a monthly or quarterly PeriodIndex
+    values = [float(v) for v in range(1, 25)]
+    index = pd.date_range("2000-01-01", periods=24, freq=offset)
+    endog = pd.Series(values, index=index, name="y")
+    periods = pd.period_range(index[0], periods=24, freq=freq)
+    expected = x13.x13_arima_analysis(
+        pd.Series(values, index=periods, name="y"), speconly=True
+    )
+    spec = x13.x13_arima_analysis(endog, speconly=True)
+    assert spec.split() == expected.split()
+    assert f"period={12 if freq == 'M' else 4}" in spec.split()
+
+
+@pytest.mark.parametrize(
+    "offset",
+    [
+        pd.offsets.Week(weekday=6),
+        pd.offsets.Day(),
+        pd.offsets.BDay(),
+        pd.offsets.BYearEnd(),
+    ],
+    ids=["W", "D", "B", "BYE"],
+)
+def test_freq_not_monthly_or_quarterly(offset):
+    index = pd.date_range("2000-01-01", periods=24, freq=offset)
+    endog = pd.Series([float(v) for v in range(24)], index=index)
+    with pytest.raises(ValueError, match="Only monthly and quarterly periods"):
+        x13.x13_arima_analysis(endog, speconly=True)
