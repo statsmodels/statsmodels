@@ -3259,3 +3259,43 @@ def test_ets_predict_dynamic_numpy_bool(dynamic, expected):
     assert_allclose(pred, res.predict(start=20, end=60, dynamic=expected), rtol=1e-12)
     other = res.predict(start=20, end=60, dynamic=not expected)
     assert np.max(np.abs(pred - other)) > 1e-3
+
+
+def _dynamic_results(use_pandas):
+    rng = np.random.default_rng(20261124)
+    y = 10 + 0.3 * rng.standard_normal(40).cumsum()
+    if use_pandas:
+        y = pd.Series(y, index=pd.date_range("2000-01-01", periods=40, freq="MS"))
+    return ETSModel(y).smooth([0.4, 10.0], param_index="integer")
+
+
+@pytest.mark.parametrize("end", [20, 45])
+@pytest.mark.parametrize("dynamic", [-1, -3, -10, -11])
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_dynamic_before_start(use_pandas, dynamic, end):
+    # A dynamic before start gave more predictions than the periods from
+    # start to end with numpy data, and pandas data raised a ValueError
+    # about their number
+    res = _dynamic_results(use_pandas)
+    match = "Dynamic prediction cannot begin before start"
+    with pytest.raises(ValueError, match=match):
+        res.predict(start=10, end=end, dynamic=dynamic)
+    with pytest.raises(ValueError, match=match):
+        res.get_prediction(start=10, end=end, dynamic=dynamic)
+
+
+def test_dynamic_date_before_start():
+    res = _dynamic_results(True)
+    with pytest.raises(ValueError, match="Dynamic prediction cannot begin"):
+        res.predict(start=10, end=20, dynamic="2000-08-01")
+    # Controls: the date of start is dynamic=True, and dynamic=False with a
+    # start after the sample gives the forecasts from start on
+    assert_allclose(
+        res.predict(start=10, end=20, dynamic="2000-11-01"),
+        res.predict(start=10, end=20, dynamic=True),
+        rtol=1e-13,
+    )
+    forecast = res.forecast(11)
+    predict = res.predict(start=45, end=50, dynamic=False)
+    assert_allclose(predict, forecast.iloc[5:], rtol=1e-13)
+    pd.testing.assert_index_equal(predict.index, forecast.index[5:])

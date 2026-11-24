@@ -2275,6 +2275,8 @@ class ETSResults(base.StateSpaceMLEResults):
         # Handle `dynamic`
         if is_bool_like(dynamic, strict=True):
             dynamic = bool(dynamic)
+        # (False is negative below if start is after the sample)
+        check_dynamic = not isinstance(dynamic, bool)
         if isinstance(dynamic, (str, dt.datetime, pd.Timestamp)):
             dynamic, _, _ = self.model._get_index_loc(dynamic)
             # A key that covers several dates gives a slice of locations
@@ -2287,6 +2289,12 @@ class ETSResults(base.StateSpaceMLEResults):
                 dynamic = 0
             else:
                 dynamic = end + 1 - start
+        if check_dynamic and dynamic < 0:
+            raise ValueError(
+                "Dynamic prediction cannot begin before start: dynamic must be "
+                "a non-negative offset relative to start, or a date not "
+                "before start."
+            )
 
         # start : index of first predicted value
         # dynamic : offset to first dynamically predicted value
@@ -2352,6 +2360,13 @@ class ETSResults(base.StateSpaceMLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+
+            .. versionchanged:: 0.15.1
+
+               A `dynamic` before `start`, a negative offset or an earlier
+               date, raises a ValueError that says so. With numpy data, it
+               gave more predictions than the periods from `start` to `end`,
+               and pandas data raised a ValueError about their number.
         index : pd.Index, optional
             Optionally an index to associate the predicted results to. If None,
             an attempt is made to create an index for the predicted results
@@ -2431,6 +2446,13 @@ class ETSResults(base.StateSpaceMLEResults):
             prediction; starting with this observation and continuing through
             the end of prediction, forecasted endogenous values will be used
             instead.
+
+            .. versionchanged:: 0.15.1
+
+               A `dynamic` before `start`, a negative offset or an earlier
+               date, raises a ValueError that says so. With numpy data, it
+               gave more predictions than the periods from `start` to `end`,
+               and pandas data raised a ValueError about their number.
         index : pd.Index, optional
             Optionally an index to associate the predicted results to. If None,
             an attempt is made to create an index for the predicted results
