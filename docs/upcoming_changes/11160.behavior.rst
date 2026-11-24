@@ -1,0 +1,11 @@
+- Without a formula, ``wald_test_terms`` of models that name their
+  parameters (state space models such as ``SARIMAX`` and
+  ``UnobservedComponents``, and Markov switching models) used the
+  positions of the exog columns as the positions of the parameters:
+  the tests were labelled with the exog names, and were the tests of
+  other parameters when the coefficients of exog were not the first
+  parameters (for example, the test of the intercept of
+  ``SARIMAX(..., trend="c")`` was labelled with the name of exog).
+  Models without exog raised a ``TypeError``. The table has one test
+  per parameter, labelled with ``param_names``. Regression, GLM and
+  discrete models are not affected. :pr:`11160`
