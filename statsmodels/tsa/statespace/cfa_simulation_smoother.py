@@ -73,12 +73,22 @@ class CFASimulationSmoother:
     factor and stochastic volatility models, which satisfy the restrictions
     described above.
 
+    An exact diffuse initialization of the whole state vector, or of some of
+    its blocks (see `Initialization`), gives the diffuse states prior
+    precision zero, so that the posterior mean and covariance matrix are those
+    of the exact diffuse Kalman smoother.
+
+    .. versionchanged:: 0.15.1
+
+       A block initialization in which only some blocks are diffuse is
+       supported. Depending on which block was set last, it raised
+       ``LinAlgError`` or treated the whole initial state as diffuse.
+
     **Not-yet-implemented**:
 
     There are several features that are not yet available with this simulation
     smoother:
 
-    - It does not yet allow diffuse initialization of the state vector.
     - It produces simulated states only for exactly the observations in the
       model (i.e., it cannot produce simulations for a subset of the model
       observations or for observations outside the model).
