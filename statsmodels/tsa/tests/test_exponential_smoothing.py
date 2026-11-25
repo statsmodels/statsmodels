@@ -2915,7 +2915,7 @@ def test_serial_correlation_default_lags(oildata, austourists, data, seasonal, l
     # the summary shows the statistic at the largest lag, with two decimals
     row = res.summary().tables[2][0]
     assert str(row[0]) == "Ljung-Box (Q):"
-    assert_allclose(float(str(row[1])), expected["lb_stat"].iloc[-1], atol=0.005
+    assert_allclose(float(str(row[1])), expected["lb_stat"].iloc[-1], atol=0.005)
 
 
 def test_predict_dynamic_key_covers_several_dates():
