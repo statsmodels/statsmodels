@@ -37,20 +37,15 @@ class DynamicFactor(MLEModel):
     Parameters
     ----------
     endog : array_like
-        The observed time-series process :math:`y`
+        The observed time-series process :math:`y`, shaped nobs x k_endog
+        with k_endog > 1.
+    k_factors : int
+        The number of unobserved factors, less than k_endog.
+    factor_order : int
+        The order of the vector autoregression followed by the factors.
     exog : array_like, optional
         Array of exogenous regressors for the observation equation, shaped
         nobs x k_exog.
-    k_factors : int
-        The number of unobserved factors.
-    factor_order : int
-        The order of the vector autoregression followed by the factors.
-    error_cov_type : {'scalar', 'diagonal', 'unstructured'}, optional
-        The structure of the covariance matrix of the observation error term,
-        where "unstructured" puts no restrictions on the matrix, "diagonal"
-        requires it to be any diagonal matrix (uncorrelated errors), and
-        "scalar" requires it to be a scalar times the identity matrix. Default
-        is "diagonal".
     error_order : int, optional
         The order of the vector autoregression followed by the observation
         error component. Default is 0, corresponding to white noise errors.
@@ -58,9 +53,25 @@ class DynamicFactor(MLEModel):
         Whether or not to model the errors jointly via a vector autoregression,
         rather than as individual autoregressions. Has no effect unless
         `error_order` is set. Default is False.
+    error_cov_type : {'scalar', 'diagonal', 'unstructured'}, optional
+        The structure of the covariance matrix of the observation error term,
+        where "unstructured" puts no restrictions on the matrix, "diagonal"
+        requires it to be any diagonal matrix (uncorrelated errors), and
+        "scalar" requires it to be a scalar times the identity matrix. Default
+        is "diagonal".
     enforce_stationarity : bool, optional
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. Default is True.
+    error_cov_start : {"scaled_identity", "cholesky"}, optional
+        The starting parameters of the error covariance with VAR errors
+        (`error_order` > 0 and `error_var=True`) and
+        `error_cov_type="unstructured"`, from a VAR fitted to the errors: the
+        identity matrix times the square root of the mean residual variance
+        ("scaled_identity", the default), or the Cholesky factor of the
+        residual covariance matrix ("cholesky"; the scaled identity if the
+        factorization fails). Has no effect otherwise. Keyword only.
+
+        .. versionadded:: 0.15.1
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -68,7 +79,7 @@ class DynamicFactor(MLEModel):
 
     Attributes
     ----------
-    exog : array_like
+    exog : ndarray or None
         Array of exogenous regressors for the observation equation, shaped
         nobs x k_exog.
     k_factors : int
@@ -90,6 +101,11 @@ class DynamicFactor(MLEModel):
     enforce_stationarity : bool
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model.
+    error_cov_start : {"scaled_identity", "cholesky"}
+        The starting parameters of an unstructured error covariance with VAR
+        errors.
+
+        .. versionadded:: 0.15.1
 
     Notes
     -----
@@ -146,7 +162,8 @@ class DynamicFactor(MLEModel):
 
     def __init__(self, endog, k_factors, factor_order, exog=None,
                  error_order=0, error_var=False, error_cov_type="diagonal",
-                 enforce_stationarity=True, **kwargs):
+                 enforce_stationarity=True, *,
+                 error_cov_start="scaled_identity", **kwargs):
 
         # Model properties
         self.enforce_stationarity = enforce_stationarity
@@ -208,6 +225,12 @@ class DynamicFactor(MLEModel):
             options=("scalar", "diagonal", "unstructured"),
             lower=False,
         )
+        self.error_cov_start = string_like(
+            error_cov_start,
+            "error_cov_start",
+            options=("scaled_identity", "cholesky"),
+            lower=False,
+        )
 
         # By default, initialize as stationary
         kwargs.setdefault("initialization", "stationary")
@@ -249,7 +272,8 @@ class DynamicFactor(MLEModel):
         # Update _init_keys attached by super
         self._init_keys += ["k_factors", "factor_order", "error_order",
                             "error_var", "error_cov_type",
-                            "enforce_stationarity"] + list(kwargs.keys())
+                            "enforce_stationarity",
+                            "error_cov_start"] + list(kwargs.keys())
 
     def _initialize_loadings(self):
         # Initialize the parameters
@@ -439,6 +463,24 @@ class DynamicFactor(MLEModel):
         self._idx_error_transition = np.s_["transition", idx[0], idx[1]]
 
     def clone(self, endog, exog=None, **kwargs):
+        """
+        Clone state space model with new data and optionally new specification
+
+        Parameters
+        ----------
+        endog : array_like
+            The observed time-series process :math:`y`.
+        exog : array_like, optional
+            Array of exogenous regressors, shaped nobs x k_exog.
+        **kwargs
+            Keyword arguments to pass to the new model constructor. Those
+            that are not specified are copied from the specification of the
+            current model.
+
+        Returns
+        -------
+        DynamicFactor
+        """
         return self._clone_from_init_kwds(endog, exog=exog, **kwargs)
 
     @property
@@ -447,6 +489,12 @@ class DynamicFactor(MLEModel):
 
     @property
     def start_params(self):
+        """
+        (ndarray) Starting parameters for maximum likelihood estimation.
+
+        The start of an unstructured error covariance with VAR errors depends
+        on `error_cov_start`.
+        """
         params = np.zeros(self.k_params, dtype=np.float64)
 
         endog = self.endog.copy()
@@ -557,8 +605,9 @@ class DynamicFactor(MLEModel):
                 except np.linalg.LinAlgError:
                     cov_factor = np.eye(res_errors.sigma_u.shape[0]) * (
                         res_errors.sigma_u.diagonal().mean()**0.5)
-                cov_factor = np.eye(res_errors.sigma_u.shape[0]) * (
-                    res_errors.sigma_u.diagonal().mean()**0.5)
+                if self.error_cov_start == "scaled_identity":
+                    cov_factor = np.eye(res_errors.sigma_u.shape[0]) * (
+                        res_errors.sigma_u.diagonal().mean()**0.5)
                 params[self._params_error_cov] = (
                     cov_factor[self._idx_lower_error_cov].ravel())
         else:
@@ -672,14 +721,15 @@ class DynamicFactor(MLEModel):
 
         Returns
         -------
-        constrained : array_like
+        constrained : ndarray
             Array of constrained parameters which may be used in likelihood
             evaluation.
 
         Notes
         -----
-        Constrains the factor transition to be stationary and variances to be
-        positive.
+        Constrains the factor transition and the error transition to be
+        stationary if `enforce_stationarity` is True, and the variances (with
+        scalar or diagonal error covariance) to be positive.
         """
         unconstrained = np.array(unconstrained, ndmin=1)
         dtype = unconstrained.dtype
@@ -771,7 +821,7 @@ class DynamicFactor(MLEModel):
 
         Returns
         -------
-        unconstrained : array_like
+        unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
         """
         constrained = np.array(constrained, ndmin=1)
@@ -882,7 +932,7 @@ class DynamicFactor(MLEModel):
 
     def update(self, params, transformed=True, includes_fixed=False,
                complex_step=False):
-        """
+        r"""
         Update the parameters of the model
 
         Updates the representation matrices to fill in the new parameter
@@ -905,33 +955,36 @@ class DynamicFactor(MLEModel):
             differentiation approximation of the derivative. Default is
             False.
 
-        Returns
-        -------
-        params : array_like
-            Array of parameters.
-
         Notes
         -----
-        Let `n = k_endog`, `m = k_factors`, and `p = factor_order`. Then the
-        `params` vector has length
-        :math:`[n \times m] + [n] + [m^2 \times p]`.
-        It is expanded in the following way:
+        Let `n = k_endog`, `m = k_factors`, `k = k_exog`, `p = factor_order`
+        and `q = error_order`. The `params` vector is expanded in the
+        following way:
 
         - The first :math:`n \times m` parameters fill out the factor loading
           matrix, starting from the [0,0] entry and then proceeding along rows.
           These parameters are not modified in `transform_params`.
-        - The next :math:`n` parameters provide variances for the error_cov
-          errors in the observation equation. They fill in the diagonal of the
-          observation covariance matrix, and are constrained to be positive by
-          `transform_params`.
+        - The next :math:`n \times k` parameters are the regression
+          coefficients, ordered by equation (`beta.x1.y1`, `beta.x2.y1`, ...,
+          `beta.x1.y2`, ...). They are not modified in `transform_params`.
+        - The next parameters give the covariance matrix of the observation
+          error (of its innovations if `error_order` > 0): one variance if
+          `error_cov_type` is "scalar", :math:`n` variances if it is
+          "diagonal" (both constrained to be positive by `transform_params`),
+          or the :math:`n (n + 1) / 2` elements of the lower triangular
+          Cholesky factor of the covariance matrix if it is "unstructured".
         - The next :math:`m^2 \times p` parameters are used to create the `p`
           coefficient matrices for the vector autoregression describing the
           factor transition. They are transformed in `transform_params` to
-          enforce stationarity of the VAR(p). They are placed so as to make
-          the transition matrix a companion matrix for the VAR. In particular,
-          we assume that the first :math:`m^2` parameters fill the first
-          coefficient matrix (starting at [0,0] and filling along rows), the
-          second :math:`m^2` parameters fill the second matrix, etc.
+          enforce stationarity of the VAR(p) if `enforce_stationarity` is
+          True. They fill the first :math:`m` rows of the companion transition
+          matrix along rows, so that the first :math:`m \times p` parameters
+          are the first rows of the `p` coefficient matrices (the equation of
+          the first factor), and so on.
+        - The last parameters are the coefficients of the error
+          autoregressions: :math:`n^2 \times q` coefficients of a VAR(q),
+          ordered in the same way, if `error_var` is True, otherwise the
+          :math:`q` coefficients of the AR(q) of each error in turn.
         """
         params = self.handle_params(params, transformed=transformed,
                                     includes_fixed=includes_fixed)
@@ -983,20 +1036,33 @@ class DynamicFactorResults(MLEResults):
     ----------
     model : DynamicFactor instance
         The fitted model instance
+    params : ndarray
+        Fitted parameters
+    filter_results : FilterResults or SmootherResults
+        The underlying state space model and Kalman filter (and smoother)
+        output
+    cov_type : str, optional
+        The method for calculating the covariance matrix of parameter
+        estimates. See `MLEModel.fit` for a description of available options.
+    **kwargs
+        Additional keyword arguments used to initialize the results object,
+        for example `cov_kwds`.
 
     Attributes
     ----------
-    specification : dictionary
+    specification : Bunch
         Dictionary including all attributes from the DynamicFactor model
         instance.
-    coefficient_matrices_var : ndarray
+    coefficient_matrices_var : ndarray or None
         Array containing autoregressive lag polynomial coefficient matrices
         for the factor transition equation, ordered from lowest degree to
-        highest.
-    coefficient_matrices_error : ndarray
+        highest, shaped (factor_order, k_factors, k_factors). None if
+        `factor_order` is 0.
+    coefficient_matrices_error : ndarray or None
         Array containing autoregressive lag polynomial coefficient matrices
         for the error transition equation, ordered from lowest degree to
-        highest.
+        highest, shaped (error_order, k_endog, k_endog). None if
+        `error_order` is 0.
 
     See Also
     --------
@@ -1060,17 +1126,19 @@ class DynamicFactorResults(MLEResults):
 
         Returns
         -------
-        out : Bunch
-            A bunch with the following attributes:
+        out : Bunch or None
+            None if the model has no factors, otherwise a bunch with the
+            following attributes:
 
             - `filtered`: a time series array with the filtered estimate of
               the component
             - `filtered_cov`: a time series array with the filtered estimate
               of the variance/covariance of the component
             - `smoothed`: a time series array with the smoothed estimate of
-              the component
+              the component, or None without smoother output
             - `smoothed_cov`: a time series array with the smoothed estimate
-              of the variance/covariance of the component
+              of the variance/covariance of the component, or None without
+              smoother output
             - `offset`: an integer giving the offset in the state vector
               where this component begins
         """
@@ -1097,15 +1165,16 @@ class DynamicFactorResults(MLEResults):
     def coefficients_of_determination(self):
         """
         Coefficients of determination (:math:`R^2`) from regressions of
-        individual estimated factors on endogenous variables
+        endogenous variables on individual estimated factors
 
         Returns
         -------
         coefficients_of_determination : ndarray
             A `k_endog` x `k_factors` array, where
             `coefficients_of_determination[i, j]` represents the :math:`R^2`
-            value from a regression of factor `j` and a constant on endogenous
-            variable `i`.
+            value from a regression of endogenous variable `i` on factor `j`
+            and a constant. The smoothed factors are used if available,
+            otherwise the filtered factors.
 
         See Also
         --------
@@ -1142,6 +1211,11 @@ class DynamicFactorResults(MLEResults):
         figsize : tuple, optional
             If a figure is created, this argument allows specifying a size.
             The tuple is (width, height).
+
+        Returns
+        -------
+        Figure
+            The figure with the plots.
 
         See Also
         --------
