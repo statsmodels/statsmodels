@@ -408,18 +408,18 @@ class FormulaManager:
             return formula
         if isinstance(context, int):
             context += 1
-        mm = formulaic.model_matrix(formula, data, context=context)
         feature_flags = formulaic.parser.DefaultFormulaParser.FeatureFlags.TWOSIDED
         parser = formulaic.parser.DefaultFormulaParser(feature_flags=feature_flags)
         _formula = formulaic.Formula(formula, _parser=parser, _ordering="none")
-        if isinstance(mm, formulaic.ModelMatrices):
-            rhs = mm.rhs
+        if hasattr(_formula, "rhs"):
             rhs_formula = _formula.rhs
             lhs_formula = _formula.lhs
         else:
-            rhs = mm
             rhs_formula = _formula
             lhs_formula = None
+        # Only the right-hand side is materialized: the left-hand side does not
+        # affect the order, and it is not in the data when predicting
+        rhs = formulaic.model_matrix(rhs_formula, data, context=context)
         include_intercept = any(
             (term.degree == 0 and str(term) == "1") for term in rhs_formula
         )
@@ -492,7 +492,15 @@ class FormulaManager:
             The action to take on missing values.
         prediction : bool, optional
             True if using the formula for prediction. In this case, only the
-            rhs is evaluated using data.
+            right-hand side is evaluated using data, and only its design
+            matrix is returned.
+
+            .. versionchanged:: 0.15.1
+
+               The left-hand side of a formula is no longer evaluated, so it
+               need not be in data. Previously, patsy evaluated it and
+               returned both matrices, and formulaic raised when it was
+               missing.
 
         Returns
         -------
@@ -519,6 +527,11 @@ class FormulaManager:
                 _eval_env = eval_env
                 if isinstance(eval_env, patsy.eval.EvalEnvironment):
                     warnings.warn(EVAL_ENV_WARNING, FutureWarning, stacklevel=2)
+            if prediction and not isinstance(formula, patsy.design_info.DesignInfo):
+                # Only the right-hand side is evaluated when predicting
+                if not isinstance(formula, patsy.desc.ModelDesc):
+                    formula = patsy.ModelDesc.from_formula(formula)
+                formula = patsy.ModelDesc([], formula.rhs_termlist)
             if (
                 isinstance(
                     formula, (patsy.design_info.DesignInfo, patsy.desc.ModelDesc)
