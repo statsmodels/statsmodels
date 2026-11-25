@@ -606,6 +606,45 @@ def test_pickle():
     assert type(res_unpickled) is type(res)
 
 
+@pytest.mark.parametrize(
+    "model, causing, statistic, df, pvalue",
+    [
+        ("var", ["lrm", "lry"], 9.912316048202, 4, 0.0419308947994),
+        ("var", [0, 2], 16.616263763054, 4, 0.0022944927874),
+        ("var", ["lrm"], 16.726178260626, 3, 0.000804549633518),
+        ("var", [0, 1, 2], 3.736943485999, 3, 0.291306347447),
+        ("var5", [0, 1], 13.894373834716, 6, 0.0308385811695),
+        ("vecm", [0, 1], 9.912316048202, 4, 0.0419308947994),
+    ],
+)
+def test_inst_causality_several_causing_and_caused(
+    model, causing, statistic, df, pvalue
+):
+    # All covariances between the causing and the caused variables are
+    # restricted (Lütkepohl 2005, Section 3.6.3). Reference values from the
+    # R package vars 1.6.1 (R 4.6.2) on the Danish data:
+    #   fit <- VAR(y, p = 2, type = "const")
+    #   causality(fit, cause = c("lrm", "lry"))$Instant
+    # "var5" adds the series sin(t / 3) + 0.01 t, t = 0, 1, ..., to the four
+    # variables and uses p = 1, so 2 causing variables face 3 caused ones.
+    # The VECM test uses the VAR(2) with a constant, as "var" does.
+    from statsmodels.datasets import danish_data
+    from statsmodels.tsa.vector_ar.vecm import VECM
+
+    y = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    if model == "var":
+        res = VAR(y).fit(2)
+    elif model == "var5":
+        t = np.arange(y.shape[0], dtype=float)
+        res = VAR(y.assign(x5=np.sin(t / 3.0) + 0.01 * t)).fit(1)
+    else:
+        res = VECM(y, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    result = res.test_inst_causality(causing)
+    assert_allclose(result.test_statistic, statistic, rtol=1e-9)
+    assert result.df == df
+    assert_allclose(result.pvalue, pvalue, rtol=1e-9)
+
+
 class E1_Results:
     """
     Results from Lütkepohl (2005) using E2 dataset
