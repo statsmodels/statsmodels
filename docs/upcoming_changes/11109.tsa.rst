@@ -1,0 +1,7 @@
+- ``get_prediction`` of
+  :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSResults` with simulated
+  prediction intervals raised an ``AxisError`` for
+  ``simulate_repetitions=1`` and a ``TypeError`` for 0. Values below 2
+  raise a ``ValueError``, since a single simulated path gives no
+  interval, and an integral float such as 1000.0 is accepted.
+  :pr:`11109`

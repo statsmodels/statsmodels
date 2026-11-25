@@ -1,0 +1,5 @@
+- ``simulation_smoother(method="cfa", rng=...)`` of state space models
+  ignored ``rng``: every draw of the CFA simulation smoother used a new
+  generator seeded with fresh entropy, so the draws could not be
+  reproduced. The draws use ``rng`` (a new ``rng`` parameter of
+  ``CFASimulationSmoother``). :pr:`11139`

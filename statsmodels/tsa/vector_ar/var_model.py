@@ -1449,7 +1449,24 @@ class VARProcess:
         Notes
         -----
         Lütkepohl pp 37-38
+
+        A VARProcess that is not estimation results has no values of the
+        trend or exog in the forecast period. Its only deterministic term
+        can be the intercept, and `exog_future` must be None.
+
+        .. versionchanged:: 0.15.1
+
+           Forecasts of a VARProcess with at most an intercept work. They
+           raised an AttributeError.
         """
+        if not isinstance(self, VARResults):
+            if exog_future is not None or self.k_trend > 1 or self.k_exog_user:
+                raise ValueError(
+                    "A VARProcess can only forecast with an intercept as the "
+                    "only deterministic term and exog_future=None."
+                )
+            # The intercept is zero without a constant
+            return forecast(y, self.coefs, self.intercept, steps)
         if self.exog is None and exog_future is not None:
             raise ValueError(
                 "No exog in model, so no exog_future supported in forecast method."
@@ -1539,7 +1556,12 @@ steps ({steps}) observations.
         y : ndarray or None
             The initial values to use for the forecasts. If None,
             the last k_ar values of the original endogenous variables are
-            used.
+            used. A VARProcess that is not estimation results needs y.
+
+            .. versionchanged:: 0.15.1
+
+               None uses the last k_ar observations. It raised an
+               AttributeError.
         steps : int
             Number of steps ahead to forecast
         alpha : float, optional
@@ -1568,6 +1590,13 @@ steps ({steps}) observations.
         if not 0 < alpha < 1:
             raise ValueError("alpha must be between 0 and 1")
         q = util.norm_signif_level(alpha)
+        if y is None:
+            if getattr(self, "endog", None) is None:
+                raise ValueError(
+                    "y is required, since a VARProcess that is not estimation "
+                    "results has no observations."
+                )
+            y = self.endog[-self.k_ar :]
 
         point_forecast = self.forecast(y, steps, exog_future=exog_future)
         sigma = np.sqrt(self._forecast_vars(steps))
@@ -2575,8 +2604,8 @@ class VARResults(VARProcess):
         sig_mask = np.zeros(sigma_u.shape)
         # set =1 twice to ensure, that all the ones needed are below the main
         # diagonal:
-        sig_mask[causing_ind, caused_ind] = 1
-        sig_mask[caused_ind, causing_ind] = 1
+        sig_mask[np.ix_(causing_ind, caused_ind)] = 1
+        sig_mask[np.ix_(caused_ind, causing_ind)] = 1
         vech_sig_mask = util.vech(sig_mask)
         inds = np.nonzero(vech_sig_mask)[0]
 
