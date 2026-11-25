@@ -2997,12 +2997,17 @@ class DynamicFactorMQ(mlemodel.MLEModel):
             nobs = Eaa.shape[0] - 1
 
             # want: x = B A^{-1}, so solve: x A = B or solve: A' x' = B'
-            try:
-                f_A = cho_solve(cho_factor(A), B.T).T
-            except LinAlgError:
-                # Fall back to general solver if there are problems with
-                # positive-definiteness
-                f_A = np.linalg.solve(A, B.T).T
+            if A.size == 0:
+                # A block of order 0 has no autoregressive coefficients (SciPy
+                # 1.8 cannot solve with an empty matrix)
+                f_A = np.zeros(B.shape)
+            else:
+                try:
+                    f_A = cho_solve(cho_factor(A), B.T).T
+                except LinAlgError:
+                    # Fall back to general solver if there are problems with
+                    # positive-definiteness
+                    f_A = np.linalg.solve(A, B.T).T
 
             f_Q = (C - f_A @ B.T) / nobs
             factor_ar += f_A.ravel().tolist()
