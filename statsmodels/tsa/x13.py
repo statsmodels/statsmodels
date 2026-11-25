@@ -545,8 +545,9 @@ def x13_arima_analysis(
         Path, is the name of a spec file, which must be encoded as UTF-8.
         The other options for the spec file (``maxorder``, ``maxdiff``,
         ``log``, ``outlier``, ``trading`` and ``forecast_periods``) are
-        ignored, and ``diff``, ``exog``, ``start`` and ``freq`` raise a
-        ValueError.
+        ignored, and ``diff`` and ``exog`` raise a ValueError. ``start``
+        and ``freq`` give the dates of array_like input, as without a
+        spec.
         Series data and required output formats (``x11{save=(d11 d12 d13)}``)
         are spliced into spec file before it is passed to x12/x13. The spec
         must contain a series spec, which can be empty (``series{}``), but

@@ -1008,15 +1008,12 @@ def test_endog_not_pandas_needs_start_and_freq(no_x12, kwargs):
         x13.x13_arima_analysis(QUARTERLY_VALUES, speconly=True, **kwargs)
 
 
-@pytest.mark.parametrize(
-    "kwargs",
-    [{"diff": (1, 1)}, {"start": "1959-07-01"}, {"freq": "QS"}],
-    ids=["diff", "start", "freq"],
-)
-def test_rawspec_other_arguments_raise(no_x12, kwargs):
+def test_rawspec_other_arguments_raise(no_x12):
+    # diff raises with a spec (start and freq give the dates of array_like
+    # input, see the tests of the rawspec argument checks)
     with pytest.raises(ValueError, match="other arguments not allowed"):
         x13.x13_arima_analysis(
-            _quarterly_endog(), rawspec="series{}", speconly=True, **kwargs
+            _quarterly_endog(), rawspec="series{}", speconly=True, diff=(1, 1)
         )
 
 
