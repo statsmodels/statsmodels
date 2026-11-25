@@ -46,18 +46,10 @@ class ExponentialSmoothing(MLEModel):
         (Holt-Winters) models. For example, 4 for quarterly data with an
         annual cycle or 7 for daily data with a weekly cycle. Default is
         no seasonal effects.
-    initialization_method : str, optional
-        Method for initialize the recursions. One of:
-
-        * 'estimated'
-        * 'concentrated'
-        * 'simple'
-        * 'heuristic'
-        * 'known'
-
-        If 'known' initialization is used, then `initial_level` must be
-        passed, as well as `initial_slope` and `initial_seasonal` if
-        applicable. Default is 'estimated'.
+    initialization_method : {'estimated', 'concentrated', 'simple', 'heuristic', 'known'}, optional
+        Method for initialize the recursions. If 'known' initialization is
+        used, then `initial_level` must be passed, as well as `initial_trend`
+        and `initial_seasonal` if applicable. Default is 'estimated'.
     initial_level : float, optional
         The initial level component. Only used if initialization is 'known'.
     initial_trend : float, optional
@@ -67,8 +59,8 @@ class ExponentialSmoothing(MLEModel):
         or length `seasonal - 1` (in which case the last initial value
         is computed to make the average effect zero). Only used if
         initialization is 'known'.
-    bounds : iterable of tuple, optional
-        An iterable containing bounds for the parameters. Must contain four
+    bounds : sequence of tuple, optional
+        A sequence containing bounds for the parameters. Must contain four
         elements, where each element is a tuple of the form (lower, upper).
         Default is (0.0001, 0.9999) for the level, trend, and seasonal
         smoothing parameters and (0.8, 0.98) for the trend damping parameter.
@@ -324,6 +316,24 @@ class ExponentialSmoothing(MLEModel):
                         ExponentialSmoothingResultsWrapper)}
 
     def clone(self, endog, exog=None, **kwargs):
+        """
+        Clone state space model with new data and optionally new specification
+
+        Parameters
+        ----------
+        endog : array_like
+            The observed time-series process :math:`y`.
+        exog : None
+            Not supported; giving `exog` raises NotImplementedError.
+        **kwargs
+            Keyword arguments to pass to the new model constructor. Those
+            that are not specified are copied from the specification of the
+            current model.
+
+        Returns
+        -------
+        ExponentialSmoothing
+        """
         if exog is not None:
             raise NotImplementedError(
                 "ExponentialSmoothing does not support `exog`.")
@@ -675,7 +685,33 @@ class ExponentialSmoothing(MLEModel):
 
 
 class ExponentialSmoothingResults(MLEResults):
-    """Results from fitting a linear exponential smoothing model"""
+    """
+    Results from fitting a linear exponential smoothing model
+
+    Parameters
+    ----------
+    model : ExponentialSmoothing instance
+        The fitted model instance
+    params : ndarray
+        Fitted parameters
+    filter_results : FilterResults or SmootherResults
+        The underlying state space model and Kalman filter (and smoother)
+        output
+    cov_type : str, optional
+        The method for calculating the covariance matrix of parameter
+        estimates. See `MLEModel.fit` for a description of available options.
+    **kwargs
+        Additional keyword arguments used to initialize the results object,
+        for example `cov_kwds`.
+
+    Attributes
+    ----------
+    initial_state : ndarray or DataFrame
+        The initial (filtered, at time t=0) values of the level, trend and
+        seasonal states. A one-row DataFrame, with the state names as columns,
+        if the data are pandas objects (indexed by the period before the
+        sample if the data have a date index with a frequency).
+    """
     def __init__(self, model, params, filter_results, cov_type=None,
                  **kwargs):
         super().__init__(model, params, filter_results, cov_type, **kwargs)

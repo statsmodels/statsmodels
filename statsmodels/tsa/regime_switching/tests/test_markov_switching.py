@@ -551,3 +551,152 @@ def test_scalar_switching_flags(flag, expected, name):
     assert mod.param_names == mod_bool.param_names
     params = mod_bool.start_params
     assert_allclose(mod.loglikeobs(params), mod_bool.loglikeobs(params), rtol=1e-13)
+
+
+@pytest.mark.parametrize("order", [0, 1])
+def test_results_predict_conditional_with_pandas_data(order):
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40) + np.repeat([0.0, 3.0, 0.0, 3.0], 10)
+    index = pd.date_range("2000-01-01", periods=40, freq="MS")
+    mu = np.array([0.2, 2.8])
+    phi = np.array([0.5, -0.2])
+    if order == 0:
+        model, kwargs = markov_regression.MarkovRegression, {}
+        params = np.r_[0.9, 0.2, mu, 1.0]
+        # Conditional on S_t = i, the prediction is mu_i
+        conditional = True
+        expected = np.repeat(mu[:, None], 40, axis=1)
+    else:
+        model, kwargs = markov_autoregression.MarkovAutoregression, {"order": 1}
+        params = np.r_[0.9, 0.2, mu, 1.0, phi]
+        # Conditional on (S_t, S_{t-1}) = (i, j): mu_i + phi_i (y_{t-1} - mu_j)
+        conditional = 2
+        expected = mu[:, None, None] + phi[:, None, None] * (
+            endog[:-1] - mu[None, :, None]
+        )
+    res = model(pd.Series(endog, index=index), k_regimes=2, **kwargs).smooth(
+        params, cov_type="none"
+    )
+
+    # Conditional predictions are an ndarray, as for an ndarray endog
+    predict = res.predict(conditional=conditional)
+    assert type(predict) is np.ndarray
+    assert_allclose(predict, expected, rtol=1e-13)
+
+    # Unconditional predictions are a Series indexed by the dates, with the
+    # values for an ndarray endog
+    res_array = model(endog, k_regimes=2, **kwargs).smooth(params, cov_type="none")
+    predict = res.predict()
+    assert isinstance(predict, pd.Series)
+    pd.testing.assert_index_equal(predict.index, index[order:])
+    assert_allclose(predict, res_array.predict(), rtol=1e-13)
+
+
+def transform_params_models():
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40)
+    exog_tvtp = np.column_stack([np.ones(40), rng.standard_normal(40)])
+    return {
+        "base": markov_switching.MarkovSwitching(endog, k_regimes=2),
+        "base-3": markov_switching.MarkovSwitching(endog, k_regimes=3),
+        "base-tvtp": markov_switching.MarkovSwitching(
+            endog, k_regimes=2, exog_tvtp=exog_tvtp
+        ),
+        "regression": markov_regression.MarkovRegression(
+            endog, k_regimes=2, switching_variance=True
+        ),
+        "autoregression": markov_autoregression.MarkovAutoregression(
+            endog, k_regimes=2, order=1
+        ),
+    }
+
+
+def transform_params_reference(name, unconstrained):
+    # Closed forms of the transformations: the multinomial logistic for the
+    # transition probabilities (unless they are time-varying), the identity
+    # for regression coefficients, squares for variances and -u / sqrt(1 + u^2)
+    # for an AR(1) coefficient (constrain_stationary_univariate)
+    u = np.asarray(unconstrained, dtype=float)
+    if name == "base-tvtp":
+        return u.copy()
+    if name == "base-3":
+        # p[j->0], p[j->1] of regime j are u[j] and u[3 + j]
+        out = u.copy()
+        for j in range(3):
+            idx = [j, 3 + j]
+            out[idx] = np.exp(u[idx]) / (1 + np.exp(u[idx]).sum())
+        return out
+    out = u.copy()
+    out[:2] = np.exp(u[:2]) / (1 + np.exp(u[:2]))
+    if name == "regression":
+        # p[0->0], p[1->0], const[0], const[1], sigma2[0], sigma2[1]
+        out[4:6] = u[4:6] ** 2
+    elif name == "autoregression":
+        # p[0->0], p[1->0], const[0], const[1], sigma2, ar.L1[0], ar.L1[1]
+        out[4] = u[4] ** 2
+        out[5:7] = -u[5:7] / np.sqrt(1 + u[5:7] ** 2)
+    return out
+
+
+@pytest.mark.parametrize(
+    "name", ["base", "base-3", "base-tvtp", "regression", "autoregression"]
+)
+@pytest.mark.parametrize("form", [list, tuple, pd.Series, np.asarray])
+def test_transform_params_array_like(name, form):
+    mod = transform_params_models()[name]
+    unconstrained = np.linspace(-1.2, 0.9, mod.k_params)
+    expected = transform_params_reference(name, unconstrained)
+    constrained = mod.transform_params(form(unconstrained.tolist()))
+    assert type(constrained) is np.ndarray
+    assert_allclose(constrained, expected, rtol=1e-13)
+    # untransform_params is the inverse; the root finder used with three
+    # regimes is accurate to its own tolerance
+    rtol = 1e-6 if name == "base-3" else 1e-12
+    restored = mod.untransform_params(form(constrained.tolist()))
+    assert type(restored) is np.ndarray
+    assert_allclose(restored, unconstrained, rtol=rtol)
+class ParamsFreeLoglikelihoods(markov_switching.MarkovSwitching):
+    # Conditional log-likelihoods that do not depend on the parameters, so
+    # they stay real when complex-step differentiation makes the parameters,
+    # and so the transition probabilities, complex
+    def __init__(self, conditional_loglikelihoods):
+        self._given = conditional_loglikelihoods
+        nobs = conditional_loglikelihoods.shape[-1]
+        super().__init__(np.zeros(nobs), k_regimes=2)
+
+    def _conditional_loglikelihoods(self, params):
+        return self._given
+
+
+@pytest.mark.parametrize("lagged", [False, True])
+def test_complex_transition_with_real_loglikelihoods(lagged):
+    from statsmodels.tools.numdiff import approx_fprime, approx_hess3
+
+    # Log-likelihoods that depend on the current regime only, shaped
+    # (k_regimes, nobs), or also on the previous one, (k_regimes,) * 2 + (nobs,)
+    rng = np.random.default_rng(20261122)
+    shape = (2, 2, 30) if lagged else (2, 30)
+    mod = ParamsFreeLoglikelihoods(np.log(rng.uniform(0.1, 1.0, shape)))
+    params = np.r_[0.9, 0.2]
+
+    # Complex-step derivatives against central differences of the real
+    # log-likelihood, to the accuracy of the central differences
+    score_obs = approx_fprime(params, mod.loglikeobs, centered=True)
+    assert_allclose(mod.score_obs(params), score_obs, rtol=1e-6)
+    assert_allclose(mod.score(params), score_obs.sum(0), rtol=1e-6)
+    hessian = approx_hess3(params, mod.loglike)
+    assert_allclose(mod.hessian(params), hessian, rtol=1e-4)
+
+    # The default covariance matrix of smooth, the outer product of gradients
+    res = mod.smooth(params)
+    assert_allclose(
+        res.cov_params(), np.linalg.inv(score_obs.T @ score_obs), rtol=1e-5
+    )
+    assert np.isrealobj(res.filtered_marginal_probabilities)
+
+    # Complex log-likelihoods with real transition probabilities give the
+    # same values, with a zero imaginary part
+    complex_mod = ParamsFreeLoglikelihoods(mod._given.astype(complex))
+    llf_obs = complex_mod.loglikeobs(params)
+    assert np.iscomplexobj(llf_obs)
+    assert_allclose(llf_obs, mod.loglikeobs(params), rtol=1e-13)

@@ -1,0 +1,2 @@
+- ``predict`` of ``MarkovSwitchingResults`` with ``conditional`` raised a ``TypeError``
+  for a model of pandas data. It returns an ndarray. :pr:`10998`
