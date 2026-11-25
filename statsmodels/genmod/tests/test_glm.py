@@ -2666,6 +2666,73 @@ def test_tweedie_EQL_upper_limit():
         assert_allclose(result1.params, np.r_[4, 1, 1], atol=1e-3, rtol=1e-1)
 
 
+def _gen_tweedie_zeros(p, phi=2.0, n=400, seed=8136):
+    # Compound Poisson-gamma data with exact zeros (9% to 43% for p in
+    # 1.2 to 1.8 with the defaults)
+    rng = np.random.default_rng(seed)
+    x = np.column_stack([np.ones(n), rng.normal(size=n)])
+    mu = np.exp(x @ np.r_[0.3, 0.5])
+    lam = mu ** (2 - p) / (phi * (2 - p))
+    alp = (2 - p) / (p - 1)
+    gscale = phi * (p - 1) * mu ** (p - 1)
+    counts = rng.poisson(lam)
+    y = np.zeros(n)
+    for i in range(n):
+        y[i] = rng.gamma(alp, gscale[i], counts[i]).sum()
+    return y, x
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8])
+def test_tweedie_EQL_zeros_finite(p):
+    # GH 8136: the EQL log-likelihood was +inf when endog has zeros
+    y, x = _gen_tweedie_zeros(p)
+    assert (y == 0).sum() >= 30
+
+    res_eql = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=True)).fit()
+    res_ll = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=False)).fit()
+
+    assert np.isfinite(res_eql.llf)
+    assert np.isfinite(res_eql.aic)
+    assert np.isfinite(res_eql.bic_llf)
+    assert_allclose(res_eql.params, res_ll.params, rtol=1e-10)
+
+
+@pytest.mark.parametrize("p", [1.2, 1.5, 1.8])
+@pytest.mark.parametrize("var_weights", [1.0, np.array([0.5, 1.0, 2.0])])
+def test_tweedie_EQL_zeros_exact(p, var_weights):
+    # At y = 0 the EQL equals the exact log probability of a zero,
+    # log P(Y = 0) = -var_weights * mu**(2 - p) / (scale * (2 - p)),
+    # which is also what the full Tweedie likelihood (eql=False) returns.
+    mu = np.array([0.5, 1.0, 3.0])
+    scale = 1.7
+    endog = np.zeros(3)
+    fam_eql = sm.families.Tweedie(var_power=p, eql=True)
+    fam_ll = sm.families.Tweedie(var_power=p, eql=False)
+
+    expected = -var_weights * mu ** (2 - p) / (scale * (2 - p))
+    ll_eql = fam_eql.loglike_obs(endog, mu, var_weights=var_weights, scale=scale)
+    ll_ll = fam_ll.loglike_obs(endog, mu, var_weights=var_weights, scale=scale)
+    assert_allclose(ll_eql, expected, rtol=1e-12)
+    assert_allclose(ll_ll, expected, rtol=1e-12)
+
+
+def test_tweedie_EQL_positive_unchanged():
+    # positive observations keep the EQL value with V(y) = y**p
+    p = 1.5
+    y, x = _gen_tweedie_zeros(p)
+    mod = GLM(y, x, family=sm.families.Tweedie(var_power=p, eql=True))
+    res = mod.fit()
+    mu = res.fittedvalues
+    pos = y > 0
+    ll_pos = mod.family.loglike_obs(y[pos], mu[pos], scale=res.scale)
+    expected = -0.5 * np.log(2 * np.pi * res.scale * y[pos] ** p) - (
+        mod.family.resid_dev(y[pos], mu[pos]) ** 2 / (2 * res.scale)
+    )
+    assert_allclose(ll_pos, expected, rtol=1e-10)
+    ll_all = mod.family.loglike_obs(y, mu, scale=res.scale)
+    assert_allclose(ll_all[pos], ll_pos, rtol=1e-12)
+
+
 def testTweediePowerEstimate():
     # Test the Pearson estimate of the Tweedie variance and scale parameters.
     #
