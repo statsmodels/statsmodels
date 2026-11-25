@@ -2630,8 +2630,10 @@ def test_period_index_nat_key_raises_key_error(key, which):
 @pytest.mark.parametrize(
     "key, loc",
     [
-        ("2002-03-01T00:00-05:00", 26),
-        ("2002-03-01T05:00Z", 26),
+        # The strings give the seconds since pandas < 2.2 cannot parse a date
+        # string with a UTC offset without them (KeyError: 14)
+        ("2002-03-01T00:00:00-05:00", 26),
+        ("2002-03-01T05:00:00Z", 26),
         (pd.Timestamp("2002-03-01T05:00", tz="UTC"), 26),
         (pd.Timestamp("2002-03-01T14:00", tz="Asia/Tokyo"), 26),
         # Not a date of the index: extended through the next one
