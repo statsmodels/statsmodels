@@ -18,12 +18,16 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
 
     Parameters
     ----------
-    Y : array_like
-        Either endog (the LHS) of a model specification or all of the data.
-        Y must define __getitem__ for now.
-    X : array_like
-        Either exog or None. If all the data for the formula is provided in
-        Y then you must explicitly set X to None.
+    Y : DataFrame
+        The data used to evaluate the formula. A dict or a recarray is
+        accepted but deprecated.
+    X : None
+        Must be None: all of the data are passed in ``Y``.
+
+        .. versionchanged:: 0.15.1
+
+           Other values raise a ValueError. They never worked: the formula
+           engine could not look variables up in the pair ``(Y, X)``.
     formula : str or ModelDesc
         You can pass a handler by import formula_handler and adding a
         key-value pair where the key is the formula object class and
@@ -50,30 +54,25 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
     if isinstance(formula, tuple(formula_handler.keys())):
         return formula_handler[type(formula)]
 
+    if X is not None:
+        raise ValueError(
+            "X must be None. Pass all of the variables used in the formula in Y."
+        )
+
     na_action = FormulaManager().get_na_action(action=missing)
     mgr = FormulaManager()
-    if X is not None:
-        result = mgr.get_matrices(
-            formula,
-            (Y, X),
-            eval_env=depth,
-            pandas=True,
-            na_action=na_action,
-            attach_spec=True,
-        )
-    else:
-        # Objects that support the dataframe API should be converted to a
-        # dataframe to avoid problems with patsy. (This also works for
-        # dataframes themselves.)
-        # _to_pandas converts Polars DataFrames/Series to pandas
-        Y = _to_pandas(Y)
-        result = mgr.get_matrices(
-            formula,
-            Y,
-            eval_env=depth,
-            pandas=True,
-            na_action=na_action,
-        )
+    # Objects that support the dataframe API should be converted to a
+    # dataframe to avoid problems with patsy. (This also works for
+    # dataframes themselves.)
+    # _to_pandas converts Polars DataFrames/Series to pandas
+    Y = _to_pandas(Y)
+    result = mgr.get_matrices(
+        formula,
+        Y,
+        eval_env=depth,
+        pandas=True,
+        na_action=na_action,
+    )
 
     missing_mask = mgr.missing_mask
     if not np.any(missing_mask):
