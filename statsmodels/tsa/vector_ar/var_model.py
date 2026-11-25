@@ -1449,7 +1449,24 @@ class VARProcess:
         Notes
         -----
         Lütkepohl pp 37-38
+
+        A VARProcess that is not estimation results has no values of the
+        trend or exog in the forecast period. Its only deterministic term
+        can be the intercept, and `exog_future` must be None.
+
+        .. versionchanged:: 0.15.1
+
+           Forecasts of a VARProcess with at most an intercept work. They
+           raised an AttributeError.
         """
+        if not isinstance(self, VARResults):
+            if exog_future is not None or self.k_trend > 1 or self.k_exog_user:
+                raise ValueError(
+                    "A VARProcess can only forecast with an intercept as the "
+                    "only deterministic term and exog_future=None."
+                )
+            # The intercept is zero without a constant
+            return forecast(y, self.coefs, self.intercept, steps)
         if self.exog is None and exog_future is not None:
             raise ValueError(
                 "No exog in model, so no exog_future supported in forecast method."
