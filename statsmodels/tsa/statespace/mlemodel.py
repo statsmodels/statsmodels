@@ -1748,6 +1748,19 @@ class MLEModel(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation, calculated using first-order complex
         step differentiation on the `loglikeobs` method.
+
+        If `transformed` is False and `method` is "harvey" or complex step
+        differentiation is used, the score with respect to the untransformed
+        parameters is computed from the score with respect to the transformed
+        parameters by the chain rule.
+
+        .. versionchanged:: 0.15.1
+
+           With ``transformed=False``, the "harvey" method returned the score
+           with respect to the transformed parameters, at the untransformed
+           parameters, and the default complex step differentiation was applied
+           through `transform_params`, which gave wrong values for models whose
+           transformation is not complex differentiable, such as VARMAX.
         """
         method = string_like(method, "method", options=("approx", "harvey"))
 
@@ -1769,6 +1782,29 @@ class MLEModel(tsbase.TimeSeriesModel):
         params = self.handle_params(
             params, transformed=True, includes_fixed=includes_fixed
         )
+
+        if not transformed and (method == "harvey" or approx_complex_step):
+            # The Harvey method differentiates with respect to the transformed
+            # parameters, and complex-step differentiation cannot be applied
+            # through `transform_params`, which need not be complex
+            # differentiable. So the score with respect to the untransformed
+            # parameters u is s(T(u)) J by the chain rule, where J is the
+            # Jacobian of the transformation T
+            constrain_kwargs = {"transformed": False, "includes_fixed": True}
+            jacobian = approx_fprime(
+                params, self.handle_params, kwargs=constrain_kwargs, centered=True
+            )
+            score = self.score_obs(
+                self.handle_params(params, **constrain_kwargs),
+                method=method,
+                transformed=True,
+                includes_fixed=True,
+                approx_complex_step=approx_complex_step,
+                approx_centered=approx_centered,
+                **kwargs,
+            )
+            return score @ jacobian
+
         kwargs["transformed"] = transformed
         kwargs["includes_fixed"] = True
 
