@@ -1,0 +1,7 @@
+- ``DynamicFactorMQ`` with ``standardize=True`` (the default) standardized
+  ndarray data with the standard deviation with ddof=0 (ddof=1 for pandas
+  data), and a missing value in ndarray data made every standardized
+  value of its variable missing. ndarray data are standardized with the
+  mean and standard deviation (ddof=1) of the observed values of each
+  variable, as pandas data, so results for ndarray data change.
+  :pr:`11134`
