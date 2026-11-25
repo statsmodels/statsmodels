@@ -2100,6 +2100,40 @@ def test_score_obs_untransformed_includes_fixed(method, approx_complex_step):
     assert_allclose(actual, desired, rtol=1e-10, atol=1e-10 * np.max(np.abs(desired)))
 
 
+@pytest.mark.parametrize(
+    "func, transformed",
+    [("score", True), ("score_obs", True), ("score_obs", False)],
+)
+def test_score_harvey_approx_centered(func, transformed):
+    # With finite differences, the "harvey" method ignored approx_centered
+    # and used forward differences. The reference is the centered difference
+    # of the loglikelihood (of each observation, for score_obs). For this
+    # model the errors relative to the largest element are 3e-6 to 3e-5 with
+    # forward differences and at most 4e-8 with centered ones.
+    mod = _score_model("sarimax_seasonal")
+    if transformed:
+        params = mod.start_params * 1.05
+    else:
+        params = mod.untransform_params(mod.start_params) + 0.1
+    if func == "score":
+        desired = _centered_gradient(
+            lambda x: mod.loglike(x, transformed=transformed), params
+        )
+    else:
+        desired = _centered_jacobian(
+            lambda x: mod.loglikeobs(x, transformed=transformed), params
+        )
+    actual = getattr(mod, func)(
+        params,
+        method="harvey",
+        transformed=transformed,
+        approx_complex_step=False,
+        approx_centered=True,
+    )
+    tol = 3e-7
+    assert_allclose(actual, desired, rtol=tol, atol=tol * np.max(np.abs(desired)))
+
+
 @pytest.mark.parametrize("method", ["forecast", "get_forecast"])
 @pytest.mark.parametrize(
     "nobs, steps, dtype",
