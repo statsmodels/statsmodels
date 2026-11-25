@@ -1150,6 +1150,33 @@ def test_x13_not_found_environment(tmp_path, monkeypatch, variable):
         x13.x13_arima_analysis(_quarterly_endog())
 
 
+@pytest.mark.parametrize(
+    "func", [x13.x13_arima_analysis, x13.x13_arima_select_order]
+)
+def test_maxdiff_none_needs_diff(no_x12, func):
+    with pytest.raises(ValueError, match="diff must be given if maxdiff is None"):
+        func(_monthly_endog(), maxdiff=None)
+
+
+@pytest.mark.parametrize(
+    "maxdiff, diff, automdl",
+    [
+        (None, (2, 1), "automdl{ maxorder = (2 1) diff = (2 1) }"),
+        # maxdiff takes precedence over diff
+        ((1, 1), (2, 0), "automdl{ maxorder = (2 1) maxdiff = (1 1) }"),
+    ],
+    ids=["diff", "maxdiff"],
+)
+def test_spec_automdl_diff(no_x12, maxdiff, diff, automdl):
+    spec = x13.x13_arima_analysis(
+        _monthly_endog(), maxdiff=maxdiff, diff=diff, speconly=True
+    )
+
+    tokens = spec.split()
+    start = tokens.index("automdl{")
+    assert tokens[start : tokens.index("}", start) + 1] == automdl.split()
+
+
 NO_DATES = {
     "range_index": pd.Series,
     "int_index": lambda values: pd.Series(values, index=range(10, 34)),
