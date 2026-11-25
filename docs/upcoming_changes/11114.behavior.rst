@@ -1,0 +1,8 @@
+- ``score_obs`` of state space models with parameters fixed by
+  ``fix_params`` had a column for every parameter, also the fixed
+  ones, and with ``transformed=False`` it evaluated the scores with the
+  fixed values transformed as if they were unconstrained, which gave
+  the scores at other parameters. It returns the scores of the free
+  parameters, as ``score`` does, so ``opg_information_matrix`` and
+  ``hessian(method="opg")`` with fixed parameters change too.
+  :pr:`11114`

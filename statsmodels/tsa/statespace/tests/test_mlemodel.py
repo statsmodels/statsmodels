@@ -2134,6 +2134,73 @@ def test_score_harvey_approx_centered(func, transformed):
     assert_allclose(actual, desired, rtol=tol, atol=tol * np.max(np.abs(desired)))
 
 
+FIXED_PARAMS_SCORE_METHODS = [
+    pytest.param("approx", None, id="approx-default"),
+    pytest.param("approx", False, id="approx-fd"),
+    pytest.param("harvey", None, id="harvey-default"),
+]
+
+
+def _fixed_params_score_model():
+    # ARMA(2, 1) with the MA coefficient fixed at its starting value
+    mod = _score_model("sarimax_arma21")
+    names = mod.param_names
+    fixed = {"ma.L1": mod.start_params[names.index("ma.L1")]}
+    free = [i for i, name in enumerate(names) if name not in fixed]
+    return mod, fixed, free
+
+
+@pytest.mark.parametrize("method, approx_complex_step", FIXED_PARAMS_SCORE_METHODS)
+def test_score_obs_fixed_params(method, approx_complex_step):
+    # With fixed parameters, score_obs had a column for every parameter, as
+    # with includes_fixed=True, although score has one for each free
+    # parameter. The scores are those of the model without fixed parameters,
+    # at the same values, for the free parameters, and they sum to the score
+    mod, fixed, free = _fixed_params_score_model()
+    params = mod.start_params
+    kwds = {"method": method, "approx_complex_step": approx_complex_step}
+    desired = mod.score_obs(params, **kwds)[:, free]
+    desired_opg = mod.opg_information_matrix(params)[np.ix_(free, free)]
+    with mod.fix_params(fixed):
+        actual = mod.score_obs(params[free], **kwds)
+        score = mod.score(params[free], **kwds)
+        opg = mod.opg_information_matrix(params[free])
+        hessian = mod.hessian(params[free], method="opg")
+    assert_allclose(actual, desired, rtol=1e-12)
+    # The score differentiates the sum of the loglikelihoods instead
+    assert_allclose(actual.sum(0), score, rtol=1e-6)
+    assert_allclose(opg, desired_opg, rtol=1e-12)
+    assert_allclose(hessian, -desired_opg, rtol=1e-12)
+
+
+@pytest.mark.parametrize("method, approx_complex_step", FIXED_PARAMS_SCORE_METHODS)
+def test_score_obs_fixed_params_untransformed(method, approx_complex_step):
+    # With transformed=False, the fixed value (a constrained parameter) was
+    # also transformed, as if it were unconstrained, so that the scores were
+    # those at other parameters. The reference is the derivative of the
+    # loglikelihood of each observation with respect to the unconstrained
+    # free parameters, and their sum is the score
+    mod, fixed, free = _fixed_params_score_model()
+    uparams = mod.untransform_params(mod.start_params)[free] + 0.1
+    kwds = {"method": method, "approx_complex_step": approx_complex_step}
+    with mod.fix_params(fixed):
+        actual = mod.score_obs(uparams, transformed=False, **kwds)
+        score = mod.score(uparams, transformed=False, **kwds)
+        desired = _centered_jacobian(
+            lambda params: mod.loglikeobs(params, transformed=False), uparams
+        )
+        opg = mod.opg_information_matrix(
+            uparams, transformed=False, approx_complex_step=False
+        )
+    # The errors of numerical derivatives scale with the largest element, not
+    # with each element
+    atol = 1e-4 * np.max(np.abs(desired))
+    assert_allclose(actual, desired, rtol=1e-5, atol=atol)
+    assert_allclose(actual.sum(0), score, rtol=1e-5)
+    desired_opg = desired.T @ desired / mod.nobs
+    assert_allclose(opg, desired_opg, rtol=1e-4)
+
+
 @pytest.mark.parametrize("method", ["forecast", "get_forecast"])
 @pytest.mark.parametrize(
     "nobs, steps, dtype",

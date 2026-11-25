@@ -1749,7 +1749,9 @@ class MLEModel(tsbase.TimeSeriesModel):
         Returns
         -------
         score : ndarray
-            Score per observation, evaluated at `params`.
+            Score per observation, evaluated at `params`. If parameters were
+            fixed with the `fix_params` method and `includes_fixed` is False,
+            it has a column for each free parameter only, as `score`.
 
         Notes
         -----
@@ -1772,6 +1774,11 @@ class MLEModel(tsbase.TimeSeriesModel):
            With the "harvey" method and finite differences,
            ``approx_centered=True`` was ignored and forward differences were
            used.
+
+           With fixed parameters and ``includes_fixed=False``, the score has a
+           column for each free parameter only. It also had columns for the
+           fixed parameters, and with ``transformed=False`` it was evaluated
+           with the fixed values transformed as if they were unconstrained.
         """
         method = string_like(method, "method", options=("approx", "harvey"))
 
@@ -1793,6 +1800,11 @@ class MLEModel(tsbase.TimeSeriesModel):
         params = self.handle_params(
             params, transformed=True, includes_fixed=includes_fixed
         )
+        # With fixed parameters, the score is with respect to the free
+        # parameters (unless `includes_fixed`), as given in `params`
+        free_index = slice(None)
+        if self._has_fixed_params and not includes_fixed:
+            free_index = self._free_params_index
 
         if not transformed and (method == "harvey" or approx_complex_step):
             # The Harvey method differentiates with respect to the transformed
@@ -1800,13 +1812,15 @@ class MLEModel(tsbase.TimeSeriesModel):
             # through `transform_params`, which need not be complex
             # differentiable. So the score with respect to the untransformed
             # parameters u is s(T(u)) J by the chain rule, where J is the
-            # Jacobian of the transformation T
-            constrain_kwargs = {"transformed": False, "includes_fixed": True}
+            # Jacobian of the transformation T. Fixed parameters are set after
+            # the transformation, so they are not transformed
+            constrain_kwargs = {"transformed": False, "includes_fixed": includes_fixed}
+            unconstrained = params[free_index]
             jacobian = approx_fprime(
-                params, self.handle_params, kwargs=constrain_kwargs, centered=True
+                unconstrained, self.handle_params, kwargs=constrain_kwargs, centered=True
             )
             score = self.score_obs(
-                self.handle_params(params, **constrain_kwargs),
+                self.handle_params(unconstrained, **constrain_kwargs),
                 method=method,
                 transformed=True,
                 includes_fixed=True,
@@ -1834,11 +1848,17 @@ class MLEModel(tsbase.TimeSeriesModel):
                 params, self.loglikeobs, epsilon=epsilon, kwargs=kwargs
             )
         else:  # method == "approx"
-            score = approx_fprime(
-                params, self.loglikeobs, kwargs=kwargs, centered=approx_centered
+            # Differentiate with respect to the parameters as given, so that
+            # fixed parameters are set after any transformation
+            kwargs["includes_fixed"] = includes_fixed
+            return approx_fprime(
+                params[free_index],
+                self.loglikeobs,
+                kwargs=kwargs,
+                centered=approx_centered,
             )
 
-        return score
+        return score[:, free_index]
 
     _hessian_param_names = [
         "transformed",
