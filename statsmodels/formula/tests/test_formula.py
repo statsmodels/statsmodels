@@ -25,6 +25,13 @@ try:
 except ImportError:
     PATSY_MISSING = True
 
+try:
+    import formulaic  # noqa: F401
+
+    FORMULAIC_MISSING = False
+except ImportError:
+    FORMULAIC_MISSING = True
+
 
 longley_formula = "TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR"
 
@@ -194,6 +201,35 @@ def test_formula_predict_series():
         result = results.predict({"x": [1, 2, 3]})
     expected = pd.Series([1.0, 2.0, 3.0], index=[0, 1, 2])
     assert_series_equal(result, expected, check_index_type=False)
+
+
+@pytest.mark.skipif(FORMULAIC_MISSING, reason="formulaic is required")
+@pytest.mark.thread_unsafe(reason="changes global formula options")
+@pytest.mark.parametrize("ordering", ["degree", "sort", "none", "legacy"])
+def test_formula_predict_formulaic_ordering(ordering, monkeypatch):
+    # predict and get_prediction raised unless the ordering was legacy
+    monkeypatch.setattr(statsmodels.formula.options, "formula_engine", "formulaic")
+    monkeypatch.setattr(statsmodels.formula.options, "ordering", ordering)
+    data = pd.DataFrame(
+        {
+            "y": [1.0, 3.0, 2.0, 5.0, 4.0, 7.0, 6.5, 8.0],
+            "x": [0.5, 1.0, 2.0, 2.5, 3.0, 4.5, 5.0, 6.0],
+            "c": ["a", "b", "a", "b", "b", "a", "b", "a"],
+        }
+    )
+    res = ols("y ~ x + c", data).fit()
+    new = pd.DataFrame(
+        {"x": [1.5, 7.0, -2.0], "c": ["b", "a", "b"]}, index=[10, 11, 12]
+    )
+    params = res.params
+    expected = (
+        params["Intercept"]
+        + params["x"] * new["x"]
+        + params["c[T.b]"] * (new["c"] == "b")
+    )
+    npt.assert_allclose(res.predict(new), expected, rtol=1e-12)
+    pred = res.get_prediction(new)
+    npt.assert_allclose(pred.predicted_mean, expected, rtol=1e-12)
 
 
 def test_patsy_lazy_dict():
