@@ -93,10 +93,11 @@ def get_index_loc(key, index):
         .. versionchanged:: 0.15.1
 
            A quarter string such as "2001Q2" matches all dates of the
-           quarter in a DatetimeIndex, and all periods of the quarter in a
-           PeriodIndex with a finer frequency, as pandas' partial-string
-           indexing does for e.g. "2001-03". Previously it was taken as the
-           last day of the quarter, or did not match periods.
+           quarter in a DatetimeIndex (in its time zone if it is tz-aware),
+           and all periods of the quarter in a PeriodIndex with a finer
+           frequency, as pandas' partial-string indexing does for e.g.
+           "2001-03". Previously it was taken as the last day of the quarter,
+           or did not match periods.
     index : pd.Index
         The index to search.
 
@@ -256,9 +257,13 @@ def get_index_loc(key, index):
         ):
             # pandas deprecates parsing quarter strings as dates, so select
             # the dates in the quarter as its partial-string indexing does,
-            # e.g. for "2001-03" on a daily index
+            # e.g. for "2001-03" on a daily index (in local time if the index
+            # is tz-aware)
             period = Period(key)
-            loc = index.slice_indexer(period.start_time, period.end_time)
+            loc = index.slice_indexer(
+                period.start_time.tz_localize(index.tz),
+                period.end_time.tz_localize(index.tz),
+            )
             if loc.start == loc.stop:
                 raise KeyError(key)
             if loc.stop - loc.start == 1:
