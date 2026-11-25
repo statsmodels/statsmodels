@@ -154,7 +154,7 @@ class NewsResults:
         self.params = []  # required for `summary` to work
 
         self.endog_names = self.updated.model.endog_names
-        self.k_endog = len(self.endog_names)
+        self.k_endog = self.updated.model.k_endog
 
         self.n_revisions = len(self.news_results.revisions_ix)
         self.n_revisions_detailed = len(self.news_results.revisions_details)
@@ -919,10 +919,6 @@ class NewsResults:
         --------
         impacts
         """
-        # Squeeze for univariate models
-        if impacted_variable is None and self.k_endog == 1:
-            impacted_variable = self.endog_names[0]
-
         # Default is to only show the revisions columns if there were any
         # revisions (otherwise it would just be a column of zeros)
         if show_revisions_columns is None:
@@ -935,13 +931,15 @@ class NewsResults:
         if impacted_variable is not None:
             s[1] = np.s_[impacted_variable]
         s = tuple(s)
-        impacts = self.impacts.loc[s, :]
+        # Positions of the rows, so that a single impact date and a single
+        # impacted variable give a table rather than a Series
+        impacts = self.impacts.iloc[self.impacts.index.get_locs(s)]
 
         # Make the first index level the groupby level
-        groupby = groupby.lower()
-        if groupby in ["impacted variable", "impacted_variable"]:
+        groupby = groupby.lower().replace("_", " ")
+        if groupby == "impacted variable":
             impacts.index = impacts.index.swaplevel(1, 0)
-        elif groupby not in ["impact date", "impact_date"]:
+        elif groupby != "impact date":
             raise ValueError('Invalid groupby for impacts table. Valid options'
                              ' are "impact date" or "impacted variable".'
                              f'Got "{groupby}".')
@@ -964,20 +962,17 @@ class NewsResults:
                     lambda num: "" if pd.isna(num) else float_format % num)
             impacts = impacts.reset_index()
             try:
-                impacts.iloc[:, 0] = impacts.iloc[:, 0].map(str)
+                impacts[impacts.columns[0]] = impacts.iloc[:, 0].map(str)
             except AttributeError:
                 impacts.iloc[:, 0] = impacts.iloc[:, 0].applymap(str)
         else:
             impacts = impacts.reset_index()
-            try:
-                impacts.iloc[:, :2] = impacts.iloc[:, :2].map(str)
-                for col in impacts.columns[2:]:
-                    impacts[col] = impacts[col].map(
-                        lambda num: "" if pd.isna(num) else float_format % num
-                    )
-            except AttributeError:
-                impacts.iloc[:, :2] = impacts.iloc[:, :2].applymap(str)
-                impacts.iloc[:, 2:] = impacts.iloc[:, 2:].applymap(
+            # Replace each column: setting strings into the date (or integer)
+            # columns would convert them back to dates (or fail)
+            for col in impacts.columns[:2]:
+                impacts[col] = impacts[col].map(str)
+            for col in impacts.columns[2:]:
+                impacts[col] = impacts[col].map(
                     lambda num: "" if pd.isna(num) else float_format % num
                 )
         # Sparsify the groupby column
@@ -997,7 +992,7 @@ class NewsResults:
 
         title = "Impacts"
         if removed_level is not None:
-            join = "on" if groupby == "date" else "for"
+            join = "on" if groupby == "impact date" else "for"
             title += f" {join} [{removed_level}]"
         impacts_table = SimpleTable(
             params_data, params_header, params_stubs,
@@ -1108,13 +1103,6 @@ class NewsResults:
         details_by_impact
         details_by_update
         """
-        # Squeeze for univariate models
-        if self.k_endog == 1:
-            if impacted_variable is None:
-                impacted_variable = self.endog_names[0]
-            if updated_variable is None:
-                updated_variable = self.endog_names[0]
-
         # Select only the variables / dates of interest
         s = list(np.s_[:, :, :, :, :, :])
         if impact_date is not None:
@@ -1136,6 +1124,8 @@ class NewsResults:
                 "update date": "update date",
                 "updated variable": "updated variable",
                 "news": "news",
+                "impact date": "impact date",
+                "impacted variable": "impacted variable",
             }
         else:  # source == "revisions"
             details = self.revision_details_by_impact.loc[s, :]
@@ -1145,6 +1135,8 @@ class NewsResults:
                 "update date": "revision date",
                 "updated variable": "revised variable",
                 "news": "revision",
+                "impact date": "impact date",
+                "impacted variable": "impacted variable",
             }
 
         # Make the first index level the groupby level
@@ -1183,6 +1175,10 @@ class NewsResults:
         n_levels = len(tmp_index.levels)
         k_level_values = [len(tmp_index.levels[i]) for i in range(n_levels)]
         removed_levels = []
+        # The single variable of a univariate model is moved to the title of
+        # multiple tables as if it was selected. (Selecting it would raise
+        # for an empty table and drop the grouped revisions.)
+        univariate = self.k_endog == 1
         if sparsify:
             for i in sorted(base_levels)[::-1][:-1]:
                 if k_level_values[i] == 1:
@@ -1192,12 +1188,14 @@ class NewsResults:
                         (name == columns["update date"]
                             and update_date is not None) or
                         (name == columns["updated variable"]
-                            and updated_variable is not None) or
+                            and (updated_variable is not None or
+                                 univariate)) or
                         (name == "impact date"
                             and impact_date is not None) or
                         (name == "impacted variable"
                             and (impacted_variable is not None or
-                                 self.impacted_variable is not None)))
+                                 self.impacted_variable is not None or
+                                 univariate)))
                     if can_drop or not multiple_tables:
                         removed_levels.insert(0, f"{name} = {value}")
                         details.index = tmp_index = tmp_index.droplevel(i)
@@ -1477,6 +1475,14 @@ class NewsResults:
             These tables can be very long, particularly in cases where there
             were many updates and in multivariate models. The default is to
             show detailed tables only for univariate models.
+
+            .. versionchanged:: 0.15.1
+
+               The default and the other univariate defaults (a single
+               details table, the variable in the titles) apply to every
+               univariate model. They applied only if the name of the series
+               had a single character. A single details table without rows
+               is left out.
         include_revisions_tables : bool, optional
             If set to True and the data were revised, the summary will show a
             table of the revisions and, if the details tables are included,
@@ -1580,7 +1586,9 @@ class NewsResults:
             groupby=details_groupby, sparsify=sparsify,
             float_format=float_format, multiple_tables=multiple_tables)
         if not multiple_tables:
-            details_tables = [details_tables]
+            # A single table without rows (only the header) is left out, as
+            # multiple tables would be
+            details_tables = [details_tables] if len(details_tables) > 1 else []
 
         if include_details_tables:
             for table in details_tables:
@@ -1601,7 +1609,9 @@ class NewsResults:
                 groupby=details_groupby, sparsify=sparsify,
                 float_format=float_format, multiple_tables=multiple_tables)
             if not multiple_tables:
-                revision_details_tables = [revision_details_tables]
+                revision_details_tables = (
+                    [revision_details_tables]
+                    if len(revision_details_tables) > 1 else [])
 
             if include_details_tables:
                 for table in revision_details_tables:
