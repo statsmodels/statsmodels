@@ -489,6 +489,15 @@ class NewsResults:
         At the same time, `details_by_update` is less convenient for
         subsetting.
         """
+        return self._get_details_by_impact()
+
+    def _get_details_by_impact(self, key=None):
+        # The details_by_impact table. The rows of `key` (a tuple of impact
+        # dates, impacted variables, update dates and updated variables, as
+        # for DataFrame.loc) are selected before the rows within the
+        # tolerance are left out, so that a date or variable whose impacts
+        # are all within the tolerance selects no rows rather than raising a
+        # KeyError
         s = self.weights.stack(level=[0, 1], **FUTURE_STACK)
         df = s.rename("weight").to_frame()
         if len(self.updates_iloc):
@@ -506,6 +515,9 @@ class NewsResults:
 
         if self.impacted_variable is not None and len(df) > 0:
             df = df.loc[np.s_[:, self.impacted_variable], :]
+
+        if key is not None:
+            df = df.loc[key, :]
 
         mask = np.abs(df["impact"]) > self.tolerance
         return df[mask]
@@ -591,6 +603,11 @@ class NewsResults:
         of detailed revisions. At the same time, `revision_details_by_update`
         is less convenient for subsetting.
         """
+        return self._get_revision_details_by_impact()
+
+    def _get_revision_details_by_impact(self, key=None):
+        # The revision_details_by_impact table, with the rows of `key`
+        # selected as in _get_details_by_impact
         weights = self.revision_weights.stack(level=[0, 1], **FUTURE_STACK)
         df = pd.concat([
             self.revised.reindex(weights.index),
@@ -611,6 +628,9 @@ class NewsResults:
 
         if self.impacted_variable is not None and len(df) > 0:
             df = df.loc[np.s_[:, self.impacted_variable], :]
+
+        if key is not None:
+            df = df.loc[key, :]
 
         mask = np.abs(df["impact"]) > self.tolerance
         return df[mask]
@@ -844,6 +864,15 @@ class NewsResults:
         dates / variables. That information can be found in the
         `details_by_impact` and `details_by_update` tables.
         """
+        return self._get_impacts()
+
+    def _get_impacts(self, key=None):
+        # The impacts table. The rows of `key` (a tuple of impact dates and
+        # impacted variables, as for MultiIndex.get_locs) are selected before
+        # the rows within the tolerance are left out, so that a date or
+        # variable whose impacts are all within the tolerance selects no rows
+        # rather than raising a KeyError
+
         # Summary of impacts
         impacts = pd.concat([
             self.prev_impacted_forecasts.unstack().rename("estimate (prev)"),
@@ -864,6 +893,11 @@ class NewsResults:
 
         if self.impacted_variable is not None:
             impacts = impacts.loc[np.s_[:, self.impacted_variable], :]
+
+        if key is not None:
+            # Positions of the rows, so that a single impact date and a
+            # single impacted variable give a table rather than a Series
+            impacts = impacts.iloc[impacts.index.get_locs(key)]
 
         tmp = np.abs(impacts[["impact of revisions", "impact of news"]])
         mask = (tmp > self.tolerance).any(axis=1)
@@ -931,9 +965,7 @@ class NewsResults:
         if impacted_variable is not None:
             s[1] = np.s_[impacted_variable]
         s = tuple(s)
-        # Positions of the rows, so that a single impact date and a single
-        # impacted variable give a table rather than a Series
-        impacts = self.impacts.iloc[self.impacts.index.get_locs(s)]
+        impacts = self._get_impacts(key=s)
 
         # Make the first index level the groupby level
         groupby = groupby.lower().replace("_", " ")
@@ -942,7 +974,7 @@ class NewsResults:
         elif groupby != "impact date":
             raise ValueError('Invalid groupby for impacts table. Valid options'
                              ' are "impact date" or "impacted variable".'
-                             f'Got "{groupby}".')
+                             f' Got "{groupby}".')
         impacts = impacts.sort_index()
 
         # Drop the non-groupby level if there's only one value
@@ -1117,7 +1149,7 @@ class NewsResults:
 
         source = string_like(source, "source", options=("news", "revisions"))
         if source == "news":
-            details = self.details_by_impact.loc[s, :]
+            details = self._get_details_by_impact(key=s)
             columns = {
                 "current": "observed",
                 "prev": "forecast (prev)",
@@ -1128,7 +1160,7 @@ class NewsResults:
                 "impacted variable": "impacted variable",
             }
         else:  # source == "revisions"
-            details = self.revision_details_by_impact.loc[s, :]
+            details = self._get_revision_details_by_impact(key=s)
             columns = {
                 "current": "revised",
                 "prev": "observed (prev)",
@@ -1154,7 +1186,7 @@ class NewsResults:
         elif groupby != "impact date":
             raise ValueError('Invalid groupby for details table. Valid options'
                              ' are "update date", "updated variable",'
-                             ' "impact date",or "impacted variable".'
+                             ' "impact date", or "impacted variable".'
                              f' Got "{groupby}".')
         details.index = (details.index.reorder_levels(levels_order)
                                       .remove_unused_levels())
