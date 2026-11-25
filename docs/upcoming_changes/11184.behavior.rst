@@ -1,0 +1,7 @@
+- :meth:`~statsmodels.tsa.ardl.UECM.predict` returns a Series with the
+  index of the data for pandas data, as
+  :meth:`~statsmodels.tsa.ardl.ARDL.predict` does, so that
+  ``get_prediction`` of :class:`~statsmodels.tsa.ardl.UECMResults`
+  returns ``predicted_mean`` and ``var_pred_mean`` with that index, and
+  ``summary_frame`` and ``plot_predict`` use it. They were arrays with
+  the index 0, 1, .... The values do not change. :pr:`11184`
