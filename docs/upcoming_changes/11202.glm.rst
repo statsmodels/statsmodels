@@ -1,0 +1,2 @@
+- The extended quasi-likelihood (``eql=True``) log-likelihood of :class:`~statsmodels.genmod.families.family.Tweedie` is now finite when ``endog`` contains zeros.
+  :issue:`8136`, :pr:`11202`
