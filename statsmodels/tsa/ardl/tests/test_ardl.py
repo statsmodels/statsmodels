@@ -3081,3 +3081,54 @@ def test_ardl_test_serial_correlation():
     pvalue = stats.chi2.sf(lb["lb_stat"].to_numpy()[4:], df[4:])
     assert_allclose(sc["LB P-value"].iloc[4:], pvalue, rtol=1e-8)
     assert np.all(np.isnan(sc["LB P-value"].iloc[:4]))
+
+
+@pytest.mark.parametrize("index_kind", ["dates", "periods", "range", "numpy"])
+def test_uecm_get_prediction_pandas_index(index_kind):
+    # UECM.predict returned an ndarray, so that get_prediction returned arrays
+    # and summary_frame had the index 0, 1, ... for pandas data
+    rng = np.random.default_rng(20261124)
+    nobs = 40
+    y = np.cumsum(rng.standard_normal(nobs))
+    x = np.cumsum(rng.standard_normal(nobs))
+    if index_kind == "dates":
+        index = pd.date_range("2000-01-01", periods=nobs, freq="MS")
+    elif index_kind == "periods":
+        index = pd.period_range("2000-01", periods=nobs, freq="M")
+    else:
+        index = pd.RangeIndex(10, 10 + 2 * nobs, 2)
+    if index_kind == "numpy":
+        endog, exog = y, x[:, None]
+    else:
+        endog = pd.Series(y, index=index, name="y")
+        exog = pd.DataFrame({"x": x}, index=index)
+    res = UECM(endog, 2, exog, 2).fit()
+
+    # The regressors const, y.L1, x.L1, D.y.L1, D.x.L0 and D.x.L1
+    t = np.arange(2, nobs)
+    dy = np.r_[np.nan, np.diff(y)]
+    dx = np.r_[np.nan, np.diff(x)]
+    reg = np.column_stack(
+        [np.ones(nobs - 2), y[t - 1], x[t - 1], dy[t - 1], dx[t], dx[t - 1]]
+    )
+    expected = np.r_[np.nan, np.nan, reg @ np.asarray(res.params)]
+    expected_var = np.where(np.isnan(expected), np.nan, res.sigma2)
+
+    for start, end in [(None, None), (5, 30)]:
+        loc = slice(start, None if end is None else end + 1)
+        pred = res.get_prediction(start=start, end=end)
+        model_pred = res.model.predict(res.params, start=start, end=end)
+        frame = pred.summary_frame()
+        assert_allclose(np.asarray(pred.predicted_mean), expected[loc], rtol=1e-10)
+        assert_allclose(np.asarray(pred.var_pred_mean), expected_var[loc], rtol=1e-10)
+        assert_allclose(np.asarray(model_pred), expected[loc], rtol=1e-10)
+        assert_allclose(frame["mean"].to_numpy(), expected[loc], rtol=1e-10)
+        if index_kind == "numpy":
+            assert isinstance(pred.predicted_mean, np.ndarray)
+            assert isinstance(model_pred, np.ndarray)
+            assert_index_equal(frame.index, pd.RangeIndex(expected[loc].shape[0]))
+        else:
+            for value in (pred.predicted_mean, pred.var_pred_mean, model_pred):
+                assert isinstance(value, pd.Series)
+                assert_index_equal(value.index, index[loc])
+            assert_index_equal(frame.index, index[loc])

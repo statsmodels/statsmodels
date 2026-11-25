@@ -7,6 +7,8 @@ License: BSD-3
 
 import numpy as np
 
+from statsmodels.tools.rng_qrng import check_random_state
+
 from . import tools
 
 
@@ -23,6 +25,15 @@ class CFASimulationSmoother:
         prefix ("s", "d", "c", or "z")) and values equal to the corresponding
         Cython CFA simulation smoother class. See `tools.py` for more
         information.
+    rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
+        The random number generator that `simulate` draws the variates
+        with when none are given. If `rng` is None, a new ``Generator`` is
+        created using fresh entropy from the operating system. If `rng` is
+        an int or array of ints, a new ``Generator`` is created, seeded
+        with `rng`. If `rng` is already a ``Generator`` or ``RandomState``
+        instance, that instance is used.
+
+        .. versionadded:: 0.15.1
 
     Notes
     -----
@@ -85,8 +96,9 @@ class CFASimulationSmoother:
            Optimisation 1, no. 1-2 (2009): 101-120.
     """
 
-    def __init__(self, model, cfa_simulation_smoother_classes=None):
+    def __init__(self, model, cfa_simulation_smoother_classes=None, rng=None):
         self.model = model
+        self.rng = check_random_state(rng)
 
         # Get the simulation smoother classes
         self.prefix_simulation_smoother_map = (
@@ -168,8 +180,13 @@ class CFASimulationSmoother:
         variates : ndarray, optional
             Random variates, distributed standard Normal. Usually only
             specified if results are to be replicated (e.g., to enforce a seed)
-            or for testing. If not specified, random variates are drawn. Must
-            be shaped (k_states, nobs).
+            or for testing. If not specified, random variates are drawn with
+            the simulation smoother's `rng`. Must be shaped (k_states, nobs).
+
+            .. versionchanged:: 0.15.1
+
+               The variates are drawn with `rng`. They were drawn from a new
+               generator seeded with fresh entropy on every call.
         update_posterior : bool, optional
             Whether to update the posterior mean and covariance matrix (held
             in the `posterior_mean` and `posterior_cov_inv_chol_sparse`
@@ -238,4 +255,4 @@ class CFASimulationSmoother:
             self._posterior_cov = None
 
         # Perform simulation smoothing
-        self.simulated_state = sim.simulate(variates=variates)
+        self.simulated_state = sim.simulate(variates=variates, rng=self.rng)

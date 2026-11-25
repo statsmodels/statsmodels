@@ -1,0 +1,6 @@
+- The ``endog`` of the prediction results of
+  ``ETSResults.get_prediction`` of
+  :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSModel` was NaN
+  in every period when all predictions were dynamic (``dynamic`` True
+  or 0). It holds the observed values of the in-sample periods.
+  :pr:`11149`
