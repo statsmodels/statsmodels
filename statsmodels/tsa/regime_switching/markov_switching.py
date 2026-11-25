@@ -1666,6 +1666,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         In the base class, this only transforms the transition-probability-
         related parameters.
         """
+        unconstrained = np.asarray(unconstrained)
         constrained = np.array(unconstrained, copy=True)
         constrained = constrained.astype(
             np.promote_types(np.float64, constrained.dtype)
@@ -1727,6 +1728,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         In the base class, this only untransforms the transition-probability-
         related parameters.
         """
+        constrained = np.asarray(constrained)
         unconstrained = np.array(constrained, copy=True)
         unconstrained = unconstrained.astype(
             np.promote_types(np.float64, unconstrained.dtype)

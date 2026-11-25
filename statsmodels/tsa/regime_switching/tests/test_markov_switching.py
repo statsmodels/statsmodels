@@ -553,6 +553,69 @@ def test_scalar_switching_flags(flag, expected, name):
     assert_allclose(mod.loglikeobs(params), mod_bool.loglikeobs(params), rtol=1e-13)
 
 
+def transform_params_models():
+    rng = np.random.default_rng(20261122)
+    endog = rng.standard_normal(40)
+    exog_tvtp = np.column_stack([np.ones(40), rng.standard_normal(40)])
+    return {
+        "base": markov_switching.MarkovSwitching(endog, k_regimes=2),
+        "base-3": markov_switching.MarkovSwitching(endog, k_regimes=3),
+        "base-tvtp": markov_switching.MarkovSwitching(
+            endog, k_regimes=2, exog_tvtp=exog_tvtp
+        ),
+        "regression": markov_regression.MarkovRegression(
+            endog, k_regimes=2, switching_variance=True
+        ),
+        "autoregression": markov_autoregression.MarkovAutoregression(
+            endog, k_regimes=2, order=1
+        ),
+    }
+
+
+def transform_params_reference(name, unconstrained):
+    # Closed forms of the transformations: the multinomial logistic for the
+    # transition probabilities (unless they are time-varying), the identity
+    # for regression coefficients, squares for variances and -u / sqrt(1 + u^2)
+    # for an AR(1) coefficient (constrain_stationary_univariate)
+    u = np.asarray(unconstrained, dtype=float)
+    if name == "base-tvtp":
+        return u.copy()
+    if name == "base-3":
+        # p[j->0], p[j->1] of regime j are u[j] and u[3 + j]
+        out = u.copy()
+        for j in range(3):
+            idx = [j, 3 + j]
+            out[idx] = np.exp(u[idx]) / (1 + np.exp(u[idx]).sum())
+        return out
+    out = u.copy()
+    out[:2] = np.exp(u[:2]) / (1 + np.exp(u[:2]))
+    if name == "regression":
+        # p[0->0], p[1->0], const[0], const[1], sigma2[0], sigma2[1]
+        out[4:6] = u[4:6] ** 2
+    elif name == "autoregression":
+        # p[0->0], p[1->0], const[0], const[1], sigma2, ar.L1[0], ar.L1[1]
+        out[4] = u[4] ** 2
+        out[5:7] = -u[5:7] / np.sqrt(1 + u[5:7] ** 2)
+    return out
+
+
+@pytest.mark.parametrize(
+    "name", ["base", "base-3", "base-tvtp", "regression", "autoregression"]
+)
+@pytest.mark.parametrize("form", [list, tuple, pd.Series, np.asarray])
+def test_transform_params_array_like(name, form):
+    mod = transform_params_models()[name]
+    unconstrained = np.linspace(-1.2, 0.9, mod.k_params)
+    expected = transform_params_reference(name, unconstrained)
+    constrained = mod.transform_params(form(unconstrained.tolist()))
+    assert type(constrained) is np.ndarray
+    assert_allclose(constrained, expected, rtol=1e-13)
+    # untransform_params is the inverse; the root finder used with three
+    # regimes is accurate to its own tolerance
+    rtol = 1e-6 if name == "base-3" else 1e-12
+    restored = mod.untransform_params(form(constrained.tolist()))
+    assert type(restored) is np.ndarray
+    assert_allclose(restored, unconstrained, rtol=rtol)
 class ParamsFreeLoglikelihoods(markov_switching.MarkovSwitching):
     # Conditional log-likelihoods that do not depend on the parameters, so
     # they stay real when complex-step differentiation makes the parameters,
