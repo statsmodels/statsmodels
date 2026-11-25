@@ -1886,7 +1886,9 @@ def test_complex_step_initial_state_cov(method):
         rng.standard_normal(50), order=(2, 0, 0), measurement_error=True
     )
     params = np.array([0.5, 0.2, 0.5, 1.0])
-    h = 1e-20
+    # The step of MLEModel.score (a tiny step is dominated by rounding; see
+    # test_smooth_complex_step)
+    h = 1e-8
     cs_params = params + np.array([h * 1j, 0, 0, 0])
     res = getattr(mod, method)(cs_params, complex_step=True)
     results = res.smoother_results if method == "smooth" else res.filter_results
