@@ -62,6 +62,16 @@ class DynamicFactor(MLEModel):
     enforce_stationarity : bool, optional
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model. Default is True.
+    error_cov_start : {"scaled_identity", "cholesky"}, optional
+        The starting parameters of the error covariance with VAR errors
+        (`error_order` > 0 and `error_var=True`) and
+        `error_cov_type="unstructured"`, from a VAR fitted to the errors: the
+        identity matrix times the square root of the mean residual variance
+        ("scaled_identity", the default), or the Cholesky factor of the
+        residual covariance matrix ("cholesky"; the scaled identity if the
+        factorization fails). Has no effect otherwise. Keyword only.
+
+        .. versionadded:: 0.15.1
     **kwargs
         Keyword arguments may be used to provide default values for state space
         matrices or for Kalman filtering options. See `Representation`, and
@@ -91,6 +101,11 @@ class DynamicFactor(MLEModel):
     enforce_stationarity : bool
         Whether or not to transform the AR parameters to enforce stationarity
         in the autoregressive component of the model.
+    error_cov_start : {"scaled_identity", "cholesky"}
+        The starting parameters of an unstructured error covariance with VAR
+        errors.
+
+        .. versionadded:: 0.15.1
 
     Notes
     -----
@@ -147,7 +162,8 @@ class DynamicFactor(MLEModel):
 
     def __init__(self, endog, k_factors, factor_order, exog=None,
                  error_order=0, error_var=False, error_cov_type="diagonal",
-                 enforce_stationarity=True, **kwargs):
+                 enforce_stationarity=True, *,
+                 error_cov_start="scaled_identity", **kwargs):
 
         # Model properties
         self.enforce_stationarity = enforce_stationarity
@@ -209,6 +225,12 @@ class DynamicFactor(MLEModel):
             options=("scalar", "diagonal", "unstructured"),
             lower=False,
         )
+        self.error_cov_start = string_like(
+            error_cov_start,
+            "error_cov_start",
+            options=("scaled_identity", "cholesky"),
+            lower=False,
+        )
 
         # By default, initialize as stationary
         kwargs.setdefault("initialization", "stationary")
@@ -250,7 +272,8 @@ class DynamicFactor(MLEModel):
         # Update _init_keys attached by super
         self._init_keys += ["k_factors", "factor_order", "error_order",
                             "error_var", "error_cov_type",
-                            "enforce_stationarity"] + list(kwargs.keys())
+                            "enforce_stationarity",
+                            "error_cov_start"] + list(kwargs.keys())
 
     def _initialize_loadings(self):
         # Initialize the parameters
@@ -466,6 +489,12 @@ class DynamicFactor(MLEModel):
 
     @property
     def start_params(self):
+        """
+        (ndarray) Starting parameters for maximum likelihood estimation.
+
+        The start of an unstructured error covariance with VAR errors depends
+        on `error_cov_start`.
+        """
         params = np.zeros(self.k_params, dtype=np.float64)
 
         endog = self.endog.copy()
@@ -576,8 +605,9 @@ class DynamicFactor(MLEModel):
                 except np.linalg.LinAlgError:
                     cov_factor = np.eye(res_errors.sigma_u.shape[0]) * (
                         res_errors.sigma_u.diagonal().mean()**0.5)
-                cov_factor = np.eye(res_errors.sigma_u.shape[0]) * (
-                    res_errors.sigma_u.diagonal().mean()**0.5)
+                if self.error_cov_start == "scaled_identity":
+                    cov_factor = np.eye(res_errors.sigma_u.shape[0]) * (
+                        res_errors.sigma_u.diagonal().mean()**0.5)
                 params[self._params_error_cov] = (
                     cov_factor[self._idx_lower_error_cov].ravel())
         else:

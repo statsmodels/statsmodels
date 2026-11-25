@@ -5,6 +5,7 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 from pathlib import Path
+import pickle
 import re
 import warnings
 
@@ -14,6 +15,7 @@ import pandas as pd
 import pytest
 
 from statsmodels.iolib.summary import Summary, forg
+from statsmodels.multivariate.pca import PCA
 from statsmodels.tsa.statespace import dynamic_factor
 
 from .results import results_dynamic_factor, results_varmax
@@ -1255,3 +1257,138 @@ def test_summary_combined_params():
     params_table = str(summary.tables[1])
     for name in mod.param_names:
         assert f"{name} " in params_table
+
+
+def error_var_data():
+    rng = np.random.default_rng(20261205)
+    endog = rng.standard_normal((60, 3))
+    endog[:, 1] += 0.6 * endog[:, 0]
+    endog[:, 2] -= 0.4 * endog[:, 1]
+    return endog
+
+
+def var_residual_cov(endog, k_factors, error_order):
+    # The residual covariance of a VAR without trend (nobs - lags - k_endog *
+    # lags degrees of freedom) fitted to the data, or to the residuals of the
+    # principal components with factors
+    resid = endog
+    if k_factors > 0:
+        res_pca = PCA(endog, ncomp=k_factors)
+        resid = endog - res_pca.factors @ res_pca.loadings.T
+    nobs = resid.shape[0] - error_order
+    lags = np.hstack(
+        [resid[error_order - j : -j] for j in range(1, error_order + 1)]
+    )
+    coef = np.linalg.lstsq(lags, resid[error_order:], rcond=None)[0]
+    u = resid[error_order:] - lags @ coef
+    return u.T @ u / (nobs - 3 * error_order)
+
+
+@pytest.mark.parametrize("error_cov_start", [None, "scaled_identity", "cholesky"])
+@pytest.mark.parametrize(
+    "k_factors, error_order",
+    [(0, 1), (0, 2), (1, 1)],
+    ids=["no-factor-var1", "no-factor-var2", "one-factor-var1"],
+)
+def test_start_params_error_var_unstructured(
+    k_factors, error_order, error_cov_start
+):
+    # With VAR errors, the unstructured error covariance starts at the
+    # identity matrix times the square root of the mean residual variance of
+    # the VAR (the default), or at the Cholesky factor of its residual
+    # covariance
+    endog = error_var_data()
+    kwargs = {}
+    if error_cov_start is not None:
+        kwargs["error_cov_start"] = error_cov_start
+    mod = dynamic_factor.DynamicFactor(
+        endog,
+        k_factors=k_factors,
+        factor_order=k_factors,
+        error_order=error_order,
+        error_var=True,
+        error_cov_type="unstructured",
+        **kwargs,
+    )
+    sigma_u = var_residual_cov(endog, k_factors, error_order)
+    if error_cov_start == "cholesky":
+        cov_factor = np.linalg.cholesky(sigma_u)
+    else:
+        cov_factor = np.eye(3) * np.diag(sigma_u).mean() ** 0.5
+    start_params = mod.start_params
+    assert_allclose(
+        start_params[mod._params_error_cov],
+        cov_factor[np.tril_indices(3)],
+        rtol=1e-10,
+    )
+    assert_equal(mod.error_cov_start, error_cov_start or "scaled_identity")
+    # The other starting parameters do not depend on error_cov_start
+    other = dynamic_factor.DynamicFactor(
+        endog,
+        k_factors=k_factors,
+        factor_order=k_factors,
+        error_order=error_order,
+        error_var=True,
+        error_cov_type="unstructured",
+        error_cov_start="cholesky",
+    ).start_params
+    mask = np.ones(mod.k_params, dtype=bool)
+    mask[mod._params_error_cov] = False
+    assert_allclose(start_params[mask], other[mask], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"error_order": 0, "error_cov_type": "unstructured"},
+        {"error_order": 1, "error_var": True, "error_cov_type": "diagonal"},
+        {"error_order": 1, "error_var": True, "error_cov_type": "scalar"},
+    ],
+    ids=["white-noise-unstructured", "var-diagonal", "var-scalar"],
+)
+def test_start_params_error_cov_start_no_effect(kwargs):
+    # Without VAR errors or with a diagonal or scalar covariance, the start
+    # does not depend on error_cov_start
+    endog = error_var_data()
+    params = [
+        dynamic_factor.DynamicFactor(
+            endog, k_factors=1, factor_order=1, error_cov_start=value, **kwargs
+        ).start_params
+        for value in ["scaled_identity", "cholesky"]
+    ]
+    assert_allclose(params[0], params[1], rtol=1e-12)
+
+
+def test_error_cov_start_clone_pickle():
+    # The option is kept by clone and pickling
+    endog = error_var_data()
+    mod = dynamic_factor.DynamicFactor(
+        endog,
+        k_factors=1,
+        factor_order=1,
+        error_order=1,
+        error_var=True,
+        error_cov_type="unstructured",
+        error_cov_start="cholesky",
+    )
+    desired = mod.start_params
+    for other in [mod.clone(endog), pickle.loads(pickle.dumps(mod))]:
+        assert_equal(other.error_cov_start, "cholesky")
+        assert_allclose(other.start_params, desired, rtol=1e-12)
+    # It can be changed when cloning
+    clone = mod.clone(endog, error_cov_start="scaled_identity")
+    assert_equal(clone.error_cov_start, "scaled_identity")
+
+
+def test_error_cov_start_invalid():
+    endog = error_var_data()
+    # Only the exact options are accepted (as for error_cov_type)
+    for value in ["Cholesky", "identity"]:
+        with pytest.raises(ValueError, match="error_cov_start"):
+            dynamic_factor.DynamicFactor(
+                endog, k_factors=1, factor_order=1, error_cov_start=value
+            )
+    # It is keyword only: a ninth positional argument raises
+    args = [endog, 1, 1, None, 1, True, "unstructured", True, "cholesky"]
+    with pytest.raises(TypeError, match="positional argument"):
+        dynamic_factor.DynamicFactor(*args)
