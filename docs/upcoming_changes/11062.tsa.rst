@@ -1,0 +1,2 @@
+- ``fit`` of state space models added its own entries to the dictionary
+  given as ``flags``. The dictionary is left unchanged. :pr:`11062`

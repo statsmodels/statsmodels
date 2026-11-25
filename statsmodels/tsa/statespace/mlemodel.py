@@ -749,8 +749,8 @@ class MLEModel(tsbase.TimeSeriesModel):
             )
             kwargs = {k: v for k, v in kwargs.items() if k not in disallow}
             # Maximum likelihood estimation
-            if flags is None:
-                flags = {}
+            # A copy, so that the dictionary of the caller is not changed
+            flags = {} if flags is None else dict(flags)
             flags.update(
                 {
                     "transformed": False,
