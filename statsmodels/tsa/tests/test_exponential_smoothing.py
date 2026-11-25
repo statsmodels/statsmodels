@@ -2934,6 +2934,56 @@ def test_predict_dynamic_key_covers_several_dates():
     pd.testing.assert_index_equal(pred.index, index[10:])
 
 
+@pytest.mark.parametrize(
+    "reps", [1, 0, np.int64(1), 1.0], ids=["one", "zero", "int64", "float"]
+)
+@pytest.mark.parametrize("method", ["simulated", None])
+def test_get_prediction_simulate_repetitions_at_least_two(austourists, method, reps):
+    # A single simulated path has no variance and gives no prediction
+    # interval. simulate returns it as a Series, so get_prediction raised
+    # "axis 1 is out of bounds for array of dimension 1" (and a TypeError
+    # for 0). None is the simulated method for a model with multiplicative
+    # errors.
+    error = "add" if method == "simulated" else "mul"
+    model = ETSModel(austourists, error=error)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    n = res.nobs
+    with pytest.raises(ValueError, match="simulate_repetitions must be at least 2"):
+        res.get_prediction(
+            start=n - 3, end=n + 2, method=method, simulate_repetitions=reps
+        )
+
+
+def test_get_prediction_simulate_repetitions(austourists):
+    model = ETSModel(austourists)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    n = res.nobs
+    # the exact intervals do not use simulate_repetitions
+    expected = res.get_prediction(start=n - 3, end=n + 2).summary_frame()
+    pred = res.get_prediction(start=n - 3, end=n + 2, simulate_repetitions=1)
+    assert_allclose(pred.summary_frame(), expected, rtol=1e-12)
+
+    # two paths are enough, and an integral float is their number; the
+    # forecasts are simulate from the end of the sample with the same
+    # generator
+    sims = res.simulate(3, anchor="end", repetitions=2, rng=np.random.default_rng(0))
+    sims = np.asarray(sims)
+    for reps in [2, 2.0]:
+        pred = res.get_prediction(
+            start=n,
+            end=n + 2,
+            method="simulated",
+            simulate_repetitions=reps,
+            rng=np.random.default_rng(0),
+        )
+        frame = pred.summary_frame(alpha=0.5)
+        # rtol: pandas and numpy may sum in another order
+        assert_allclose(frame["mean_numerical"], sims.mean(1), rtol=1e-10)
+        assert_allclose(pred.var_pred_mean, sims.var(1, ddof=1), rtol=1e-10)
+        lower_upper = np.quantile(sims, [0.25, 0.75], axis=1).T
+        assert_allclose(frame[["pi_lower", "pi_upper"]], lower_upper, rtol=1e-12)
+
+
 @pytest.mark.parametrize("use_pandas", [True, False], ids=["pandas", "ndarray"])
 def test_t_test_wald_test_constraints(use_pandas):
     # t_test, wald_test and f_test raised a TypeError for any constraint,

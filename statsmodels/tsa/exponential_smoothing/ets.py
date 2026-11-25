@@ -2434,7 +2434,8 @@ class ETSResults(base.StateSpaceMLEResults):
             components, "ANN", "AAN", "AAdN", "ANA", "AAA" and "AAdA".
         simulate_repetitions : int, optional
             Number of simulation repetitions for calculating prediction
-            intervals when ``method='simulated'``. Default is 1000.
+            intervals when ``method='simulated'``, at least 2. Default is
+            1000.
         **simulate_kwargs
             Additional arguments passed to the ``simulate`` method.
 
@@ -2603,8 +2604,8 @@ class PredictionResults:
         with additive errors and no multiplicative components, "ANN", "AAN",
         "AAdN", "ANA", "AAA" and "AAdA".
     simulate_repetitions : int, optional
-        Number of simulation repetitions for calculating prediction intervals.
-        Default is 1000.
+        Number of simulation repetitions for calculating prediction intervals
+        when ``method='simulated'``, at least 2. Default is 1000.
     **simulate_kwargs
         Additional arguments passed to the ``simulate`` method.
     """
@@ -2662,6 +2663,15 @@ class PredictionResults:
         )
 
         if self.method == "simulated":
+            # a single path has no variance (ddof=1) and gives no interval
+            simulate_repetitions = int_like(
+                simulate_repetitions, "simulate_repetitions"
+            )
+            if not simulate_repetitions >= 2:
+                raise ValueError(
+                    "simulate_repetitions must be at least 2 for simulated "
+                    f"prediction intervals, got {simulate_repetitions}"
+                )
 
             sim_results = []
             # first, perform "non-dynamic" simulations, i.e., simulations of
