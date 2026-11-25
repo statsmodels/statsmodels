@@ -1408,7 +1408,9 @@ def test_concat_invalid(series, axis, match):
 def test_python_twin_helpers_default_dimensions(k_endog, order, transform_variance):
     # The private helpers of the pure-Python twin take `order` and `k_endog`
     # from the list of matrices when they are not given; together they give
-    # the result of the compiled constrain_stationary_multivariate
+    # the coefficients of the compiled constrain_stationary_multivariate, and
+    # its variance with transform_variance=True (with False it returns the
+    # input variance, the helper that of its internal recursion)
     rng = np.random.default_rng([k_endog, order, transform_variance])
     unconstrained = rng.standard_normal((k_endog, k_endog * order))
     factor = rng.standard_normal((k_endog, k_endog))
@@ -1427,7 +1429,8 @@ def test_python_twin_helpers_default_dimensions(k_endog, order, transform_varian
         unconstrained, variance, transform_variance
     )
     _assert_twins_agree(np.concatenate(coefficients, axis=1), expected, 1e-10)
-    _assert_twins_agree(actual_variance, expected_variance, 1e-10)
+    if transform_variance:
+        _assert_twins_agree(actual_variance, expected_variance, 1e-10)
 
 
 def test_constrain_stationary_multivariate_prefix():
