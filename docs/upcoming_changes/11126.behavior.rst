@@ -1,0 +1,5 @@
+- ``x13_arima_analysis`` and ``x13_arima_select_order`` with an ``x12path`` that names a binary ran another binary
+  in the same directory if one came earlier in the search order
+  x13as, x12a, x13as_ascii, x13as_html (for example x12a for
+  ``x12path=<dir>/x13as_ascii``). The named binary is run; the others
+  are still tried if it cannot be run. :pr:`11126`

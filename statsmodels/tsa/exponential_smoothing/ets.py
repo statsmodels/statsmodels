@@ -158,6 +158,7 @@ from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.tools import Bunch, pinv_extended
 from statsmodels.tools.validation import (
@@ -1761,6 +1762,45 @@ class ETSResults(base.StateSpaceMLEResults):
         """Log-likelihood function evaluated at the fitted params"""
         return self._llf
 
+    @contextlib.contextmanager
+    def _constraint_names(self):
+        # The constraint parser of t_test and wald_test reads the parameter
+        # names from the model data, which has none since ETS has no exog.
+        # They are set only during the test, as the data also labels the
+        # results of pandas data.
+        data = self.model.data
+        cov_names = data._cov_names
+        data.cov_names = self.model.param_names
+        try:
+            yield
+        finally:
+            data.cov_names = cov_names
+
+    @Appender(base.StateSpaceMLEResults.t_test.__doc__)
+    def t_test(self, r_matrix, cov_p=None, use_t=None):
+        with self._constraint_names():
+            return super().t_test(r_matrix, cov_p=cov_p, use_t=use_t)
+
+    @Appender(base.StateSpaceMLEResults.wald_test.__doc__)
+    def wald_test(
+        self,
+        r_matrix,
+        cov_p=None,
+        invcov=None,
+        use_f=None,
+        df_constraints=None,
+        scalar=True,
+    ):
+        with self._constraint_names():
+            return super().wald_test(
+                r_matrix,
+                cov_p=cov_p,
+                invcov=invcov,
+                use_f=use_f,
+                df_constraints=df_constraints,
+                scalar=scalar,
+            )
+
     def _get_prediction_params(self, start_idx):
         """Returns internal parameter representation of smoothing parameters and "initial" states for prediction/simulation, that is the states just before the first prediction/simulation step"""
         internal_params = self.model._internal_params(self.params)
@@ -2548,6 +2588,12 @@ class PredictionResults:
         prediction; starting with this observation and continuing through
         the end of prediction, forecasted endogenous values will be used
         instead.
+
+        .. versionchanged:: 0.15.1
+
+           The ``endog`` attribute holds the observed values of the
+           in-sample periods also when all predictions are dynamic
+           (`dynamic` True or 0). They were NaN.
     index : pd.Index, optional
         Optionally an index to associate the predicted results to. If None,
         an attempt is made to create an index for the predicted results
@@ -2601,9 +2647,14 @@ class PredictionResults:
         self.predicted_mean = results.predict(
             start=start, end=end_dynamic, dynamic=dynamic, index=index
         )
-        self.row_labels = self.predicted_mean.index
-        self.endog = np.empty(nsmooth + ndynamic) * np.nan
-        if nsmooth > 0:
+        # None for numpy data
+        self.row_labels = getattr(self.predicted_mean, "index", None)
+        # one value per prediction: with a start after the sample, the
+        # forecasts before start are not predictions
+        self.endog = np.empty(end_dynamic - start + 1) * np.nan
+        # the observed values of the in-sample periods, also of those that
+        # are predicted dynamically
+        if start <= end:
             self.endog[0 : (end - start + 1)] = results.data.endog[start : (end + 1)]
         self.model = Bunch(
             data=results.model.data.__class__(
@@ -2650,11 +2701,15 @@ class PredictionResults:
                         **simulate_kwargs,
                     )
                 )
+            # when we are doing out of sample only prediction, start > end + 1,
+            # and we only keep the simulations from start on, as in predict
+            ndiscard = max(start - (end + 1), 0)
             if sim_results and isinstance(sim_results[0], pd.DataFrame):
-                self.simulation_results = pd.concat(sim_results, axis=0)
+                self.simulation_results = pd.concat(sim_results, axis=0).iloc[ndiscard:]
             else:
-                self.simulation_results = np.concatenate(sim_results, axis=0)
-            self.forecast_variance = self.simulation_results.var(axis=1)
+                self.simulation_results = np.concatenate(sim_results, axis=0)[ndiscard:]
+            # ddof=1 is the default of pandas, but not of numpy
+            self.forecast_variance = self.simulation_results.var(axis=1, ddof=1)
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:
