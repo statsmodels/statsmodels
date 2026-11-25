@@ -96,6 +96,7 @@ Other Models
    ~statsmodels.regression.quantile_regression.QuantReg
    ~statsmodels.robust.robust_linear_model.RLM
    ~statsmodels.othermod.betareg.BetaModel
+   ~statsmodels.extremes.generalized_pareto.GeneralizedParetoModel
 
 Graphics
 ~~~~~~~~
