@@ -62,7 +62,8 @@ def _find_x12(x12path=None, prefer_x13=True):
     X13PATH, or in X12PATH if X13PATH is not set, is searched (X12PATH first
     if prefer_x13 is False). If neither is set, the binary must be on the
     PATH. If prefer_x13 is False and no binary is found, the search of
-    prefer_x13=True follows.
+    prefer_x13=True follows. A binary is found if it can be run without
+    arguments and exits with status 0, as X-13 does.
 
     Parameters
     ----------
@@ -108,9 +109,15 @@ def _find_x12(x12path=None, prefer_x13=True):
     for binary in _binary_names:
         x12 = Path(x12path).joinpath(binary)
         try:
-            subprocess.check_call(x12, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # The output is not read, so it must not go to a pipe: a binary
+            # that prints more than the pipe holds would wait forever
+            subprocess.check_call(
+                x12, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
             return x12
-        except OSError:
+        except (OSError, subprocess.CalledProcessError):
+            # not there, cannot be run, or exits with an error status: try
+            # the next name
             pass
 
     if search_x12:

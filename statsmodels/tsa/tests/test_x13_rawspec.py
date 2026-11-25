@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import threading
 
 import pandas as pd
 import pytest
@@ -37,6 +38,7 @@ SPEC_TEMPLATE = 'series{title="%s"}\n'
 CHILD_CODE = """
 import json
 import sys
+import threading
 
 import pandas as pd
 
@@ -621,6 +623,70 @@ def test_datetime_index_frequency_inferred(no_x12, dates, period, start):
 
     assert f"period={period}" in spec.split()
     assert f"start={start}" in spec.split()
+
+
+def _loud_binary(path, stream):
+    # FAKE_X13, which first prints 1 MiB to stdout or stderr when it is run
+    # without arguments, as the lookup does (X-13 prints a short message),
+    # more than an operating system pipe holds
+    redirect = " >&2" if stream == "stderr" else ""
+    noise = (
+        'if [ "$#" -eq 0 ]; then\n'
+        f"    {{ dd if=/dev/zero bs=1024 count=1024 2>/dev/null; }}{redirect}\n"
+        "fi\n"
+    )
+    script = FAKE_X13.replace("#!/bin/sh\n", "#!/bin/sh\n" + noise, 1)
+    path.write_text(script, encoding="ascii", newline="\n")
+    path.chmod(0o755)
+    return path
+
+
+@fake_binaries
+@pytest.mark.parametrize("stream", ["stdout", "stderr"])
+def test_lookup_binary_with_long_output(tmp_path, stream):
+    # The lookup does not read what the binary prints. Sent to a pipe, the
+    # output would fill it, and the binary would wait for it to be read and
+    # the lookup for the binary to exit, forever. The analysis runs in a
+    # thread, so that the test fails instead of hanging.
+    binary = _loud_binary(tmp_path / "x13as", stream)
+    outcome = {}
+
+    def analysis():
+        try:
+            outcome["res"] = x13.x13_arima_analysis(_monthly_endog(), x12path=tmp_path)
+        except Exception as exc:  # raised again below
+            outcome["exc"] = exc
+
+    thread = threading.Thread(target=analysis, daemon=True)
+    thread.start()
+    thread.join(60)
+
+    assert not thread.is_alive(), "the lookup of the binary did not return"
+    if "exc" in outcome:
+        raise outcome["exc"]
+    assert outcome["res"].stdout.decode().strip() == str(binary)
+
+
+def _failing_binary(path):
+    # A binary that exits with an error status, which X-13 does not do when it
+    # is run without arguments
+    path.write_text("#!/bin/sh\nexit 1\n", encoding="ascii", newline="\n")
+    path.chmod(0o755)
+
+
+@fake_binaries
+def test_lookup_skips_failing_binary(tmp_path):
+    # A binary that exits with an error status is not used: the next name is
+    # tried, and without a binary that works, none is found
+    directory = _fake_binaries(tmp_path, "x12a")
+    _failing_binary(directory / "x13as")
+
+    res = x13.x13_arima_analysis(_monthly_endog(), x12path=directory)
+
+    assert res.stdout.decode().strip() == str(directory / "x12a")
+    _failing_binary(directory / "x12a")
+    with pytest.raises(x13.X13NotFoundError, match="x12a and x13as not found"):
+        x13.x13_arima_analysis(_monthly_endog(), x12path=directory)
 
 
 @fake_binaries
