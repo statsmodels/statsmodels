@@ -15,6 +15,7 @@ import numpy as np
 from numpy.testing import assert_, assert_allclose, assert_almost_equal, assert_equal
 import pandas as pd
 import pytest
+from scipy.stats import norm
 
 import statsmodels.iolib.summary
 from statsmodels.iolib.summary import Summary
@@ -3272,6 +3273,197 @@ def test_model_latex_names_matches_model_names_structure():
     assert latex_names["ma"] == [r"$\theta_1$"]
     assert names["variance"] == ["sigma2"]
     assert latex_names["variance"] == [r"$\sigma_\zeta^2$"]
+
+
+# - Options and results of SARIMAX --------------------------------------------
+
+
+def test_hamilton_representation_differencing_raises():
+    # The Hamilton representation cannot integrate differencing into the state
+    # vector; with simple differencing an AR(1) of the differences has a
+    # single state and the first observation is dropped
+    endog = np.arange(20.0) ** 1.5
+    with pytest.raises(ValueError, match="Hamilton representation is only"):
+        sarimax.SARIMAX(endog, order=(1, 1, 0), hamilton_representation=True)
+    mod = sarimax.SARIMAX(
+        endog,
+        order=(1, 1, 0),
+        hamilton_representation=True,
+        simple_differencing=True,
+    )
+    assert_equal(mod.k_states, 1)
+    assert_equal(mod.nobs, 19)
+
+
+@pytest.mark.parametrize("index_type", ["int64", "range"])
+def test_simple_differencing_integer_index(index_type):
+    # Simple differencing drops the first observation. An int64 index
+    # 0, ..., nobs - 1 is replaced by a RangeIndex that starts from one (see
+    # the Notes of SARIMAX) and a RangeIndex keeps its remaining labels, so
+    # the forecasts continue at nobs. They are the forecasts of the AR(1) of
+    # the differences: phi**h times the last difference.
+    nobs = 20
+    if index_type == "int64":
+        index = pd.Index(np.arange(nobs, dtype=np.int64))
+    else:
+        index = pd.RangeIndex(nobs)
+    rng = np.random.default_rng(20261123)
+    endog = pd.Series(rng.standard_normal(nobs).cumsum(), index=index)
+    mod = sarimax.SARIMAX(endog, order=(1, 1, 0), simple_differencing=True)
+    res = mod.smooth([0.5, 1.0])
+    assert_equal(res.fittedvalues.index.to_numpy(), np.arange(1, nobs))
+    fcast = res.forecast(2)
+    assert_equal(fcast.index.to_numpy(), np.array([nobs, nobs + 1]))
+    last_diff = endog.iloc[-1] - endog.iloc[-2]
+    assert_allclose(fcast, last_diff * np.array([0.5, 0.25]), rtol=1e-12)
+
+
+def test_initialize_default_approximate_diffuse_variance():
+    # ARIMA(0, 1, 0) has a diffuse differencing state and a white noise
+    # state, so the first observation has mean 0 and variance v + sigma2,
+    # where v is the given approximate diffuse variance
+    rng = np.random.default_rng(20261124)
+    endog = rng.standard_normal(10).cumsum() + 1.0
+    mod = sarimax.SARIMAX(endog, order=(0, 1, 0), loglikelihood_burn=0)
+    mod.initialize_default(approximate_diffuse_variance=10.0)
+    llf_obs = mod.loglikeobs([2.0])
+    assert_allclose(llf_obs[0], norm.logpdf(endog[0], scale=np.sqrt(12.0)), rtol=1e-12)
+    # The differencing state is known after the first observation
+    assert_allclose(
+        llf_obs[1], norm.logpdf(endog[1] - endog[0], scale=np.sqrt(2.0)), rtol=1e-10
+    )
+
+
+@pytest.mark.parametrize(
+    "seasonal_order, match",
+    [
+        ((1, 0, 0, 4), "Non-stationary starting seasonal autoregressive"),
+        ((0, 0, 1, 4), "Non-invertible starting seasonal moving average"),
+    ],
+    ids=["seasonal_ar", "seasonal_ma"],
+)
+def test_start_params_invalid_seasonal(seasonal_order, match):
+    # A seasonal pattern that grows by 10% each year: the conditional sum of
+    # squares estimate of the seasonal AR coefficient is about 1.1 and the
+    # seasonal MA root is inside the unit circle, so they are replaced by zero
+    rng = np.random.default_rng(20261125)
+    endog = np.zeros(40)
+    endog[:4] = [1.0, 2.0, -1.0, 0.5]
+    for t in range(4, 40):
+        endog[t] = 1.1 * endog[t - 4] + 0.01 * rng.standard_normal()
+    mod = sarimax.SARIMAX(endog, order=(0, 0, 0), seasonal_order=seasonal_order)
+    with pytest.warns(EstimationWarning, match=match):
+        start_params = mod.start_params
+    # atol: the coefficient is set to exactly zero, which rtol cannot compare
+    assert_allclose(start_params[0], 0.0, atol=1e-15)
+    assert start_params[1] > 0
+
+
+@pytest.mark.parametrize("concentrate_scale", [False, True])
+def test_time_varying_regression_variance_names(concentrate_scale):
+    # The variances of time-varying coefficients are named var.x, or snr.x
+    # (relative to the scale) if the scale is concentrated out
+    rng = np.random.default_rng(20261126)
+    endog = rng.standard_normal(30)
+    exog = pd.DataFrame(rng.standard_normal((30, 2)), columns=["x1", "x2"])
+    mod = sarimax.SARIMAX(
+        endog,
+        exog=exog,
+        order=(1, 0, 0),
+        time_varying_regression=True,
+        mle_regression=False,
+        concentrate_scale=concentrate_scale,
+    )
+    if concentrate_scale:
+        names = ["ar.L1", "snr.x1", "snr.x2"]
+        latex = r"$\sigma_\text{x1}^2 / \sigma_\zeta^2$"
+    else:
+        names = ["ar.L1", "var.x1", "var.x2", "sigma2"]
+        latex = r"$\sigma_\text{x1}^2$"
+    assert_equal(mod.param_names, names)
+    assert_equal(mod.model_latex_names["exog_variance"][0], latex)
+
+
+def test_time_varying_regression_concentrated_scale():
+    # snr.x is relative to the scale: the concentrated likelihood at
+    # (phi, q1, q2) is the likelihood at (phi, q1 * s2, q2 * s2, s2), where s2
+    # is the concentrated scale. The approximate diffuse prior of the
+    # coefficients (variance 1e10) is not scaled, which changes the
+    # loglikelihood by about 1e-6.
+    rng = np.random.default_rng(20261127)
+    exog = rng.standard_normal((60, 2))
+    beta = 0.1 * rng.standard_normal((60, 2)).cumsum(axis=0)
+    endog = (exog * beta).sum(axis=1) + rng.standard_normal(60)
+    kwargs = dict(
+        exog=exog, order=(1, 0, 0), time_varying_regression=True, mle_regression=False
+    )
+    res_c = sarimax.SARIMAX(endog, concentrate_scale=True, **kwargs).smooth(
+        [0.5, 0.1, 0.2]
+    )
+    s2 = res_c.scale
+    res = sarimax.SARIMAX(endog, **kwargs).smooth([0.5, 0.1 * s2, 0.2 * s2, s2])
+    assert_allclose(res_c.llf, res.llf, rtol=1e-6)
+
+
+def test_forecast_extend_kwargs_trend_offset():
+    # Drift only: y_t = c_{t-1} + e_t with the state intercept
+    # c_t = drift * (trend_offset + t), so the in-sample intercept gives the
+    # first forecast and the following ones continue the time trend from
+    # trend_offset = nobs + 1 (the default for the extended model), or from
+    # the trend_offset given in extend_kwargs
+    nobs = 10
+    endog = np.arange(nobs, dtype=float)
+    res = sarimax.SARIMAX(endog, order=(0, 0, 0), trend="t").smooth([2.0, 1.0])
+    expected = 2.0 * np.arange(nobs, nobs + 4)
+    assert_allclose(res.forecast(4), expected, rtol=1e-12)
+    fcast = res.forecast(4, extend_kwargs={"trend_offset": nobs + 1})
+    assert_allclose(fcast, expected, rtol=1e-12)
+    fcast = res.forecast(4, extend_kwargs={"trend_offset": nobs + 6})
+    assert_allclose(fcast, expected + 2.0 * np.r_[0, 5, 5, 5], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "order, params, arroots, maroots",
+    [
+        ((1, 0, 0), [0.5, 1.0], [2.0], []),
+        ((0, 0, 1), [0.5, 1.0], [], [-2.0]),
+        ((0, 0, 0), [1.0], [], []),
+    ],
+    ids=["ar", "ma", "white_noise"],
+)
+def test_arfreq_mafreq(order, params, arroots, maroots):
+    # The root of 1 - 0.5 L is 2 (frequency 0) and the root of 1 + 0.5 L is -2
+    # (frequency 0.5); without roots the frequencies are None
+    res = sarimax.SARIMAX(np.arange(10.0), order=order).smooth(params)
+    assert_allclose(res.arroots, arroots, rtol=1e-12)
+    assert_allclose(res.maroots, maroots, rtol=1e-12)
+    if arroots:
+        # atol: the frequency of a positive real root is 0
+        assert_allclose(res.arfreq, [0.0], atol=1e-15)
+    else:
+        assert res.arfreq is None
+    if maroots:
+        assert_allclose(res.mafreq, [0.5], rtol=1e-12)
+    else:
+        assert res.mafreq is None
+
+
+def test_summary_model_name_lag_lists():
+    # Orders given as lists of lags are shown as those lists in the model
+    # name of the summary (the seasonal lags are in units of the period)
+    rng = np.random.default_rng(20261128)
+    mod = sarimax.SARIMAX(
+        rng.standard_normal(60),
+        order=([1, 3], 0, [2]),
+        seasonal_order=([2], 0, [1, 3], 4),
+    )
+    assert_equal(
+        mod.param_names,
+        ["ar.L1", "ar.L3", "ma.L2", "ar.S.L8", "ma.S.L4", "ma.S.L12", "sigma2"],
+    )
+    res = mod.smooth(np.r_[[0.1] * 6, 1.0])
+    model_name = "SARIMAX([1, 3], 0, [2])x([2], 0, [1, 3], 4)"
+    assert model_name in str(res.summary().tables[0])
 
 
 def test_start_params_0d_endog():
