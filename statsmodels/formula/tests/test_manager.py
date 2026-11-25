@@ -386,6 +386,65 @@ def test_na_action(engine, data):
     assert rhs.shape[0] == missing.shape[0]
 
 
+@pytest.mark.parametrize("formula", ["y ~ 1 + x + z", "1 + x + z"])
+@pytest.mark.parametrize("pandas", [True, False])
+@pytest.mark.parametrize("dropped", [True, False])
+def test_na_action_drop_keeps_labels(engine, data, formula, pandas, dropped):
+    # Rows dropped for missing values: the rows left keep their labels and
+    # the mask marks the dropped rows, for one- and two-sided formulas
+    mgr = FormulaManager(engine=engine)
+    frame = data.copy()
+    frame.index = [20, 21, 22, 23, 24, 25, 26]
+    if dropped:
+        frame.loc[[21, 24], "x"] = np.nan
+    dropper = mgr.get_na_action("drop")
+    out = mgr.get_matrices(formula, frame, pandas=pandas, na_action=dropper)
+    kept = frame.index[frame["x"].notna()]
+    np.testing.assert_equal(np.asarray(mgr.missing_mask), frame["x"].isna())
+    rhs = out[1] if isinstance(out, tuple) else out
+    assert mgr.get_column_names(rhs) == ["Intercept", "x", "z"]
+    expected = np.column_stack(
+        [np.ones(len(kept)), frame.loc[kept, "x"], frame.loc[kept, "z"]]
+    )
+    np.testing.assert_allclose(np.asarray(rhs, dtype=float), expected)
+    if isinstance(out, tuple):
+        lhs_values = np.asarray(out[0], dtype=float)[:, 0]
+        np.testing.assert_allclose(lhs_values, frame.loc[kept, "y"])
+    if pandas:
+        assert list(rhs.index) == list(kept)
+        if isinstance(out, tuple):
+            assert list(out[0].index) == list(kept)
+    else:
+        assert isinstance(rhs, np.ndarray)
+        assert not isinstance(rhs, pd.DataFrame)
+    if engine == "formulaic":
+        assert list(mgr.missing_mask.index) == list(frame.index)
+        # The spec records the output type, as without missing values
+        assert mgr.spec.output == ("pandas" if pandas else "numpy")
+
+
+@pytest.mark.parametrize("formula", ["y ~ 1 + x + z", "1 + x + z"])
+def test_na_action_drop_keeps_index_freq(engine, data, formula):
+    # Without missing values, the index of the data is kept with its freq
+    mgr = FormulaManager(engine=engine)
+    frame = data.copy()
+    frame.index = pd.date_range("2000-01-01", periods=7, freq="QS-JAN")
+    dropper = mgr.get_na_action("drop")
+    out = mgr.get_matrices(formula, frame, na_action=dropper)
+    for mat in out if isinstance(out, tuple) else (out,):
+        assert mat.index.equals(frame.index)
+        assert mat.index.freq == frame.index.freq
+
+
+@require_formulaic
+def test_na_action_drop_unsupported_structure(data):
+    # Only a left- and a right-hand side are supported, also when dropping
+    mgr = FormulaManager(engine="formulaic")
+    formula = formulaic.Formula(lhs="y", rhs="x", other="z")
+    with pytest.raises(ValueError, match="not currently supported"):
+        mgr.get_matrices(formula, data, na_action=mgr.get_na_action("drop"))
+
+
 def test_get_term_name_slices(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z + c"

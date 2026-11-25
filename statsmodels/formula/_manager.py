@@ -122,6 +122,31 @@ def _maybe_convert_data(data):
     return data
 
 
+def _restore_rows(matrix, index, pandas):
+    """
+    Label the rows of a formulaic pandas ModelMatrix, or convert it to NumPy.
+
+    Parameters
+    ----------
+    matrix : ModelMatrix
+        A model matrix with pandas output.
+    index : Index
+        The labels of its rows.
+    pandas : bool
+        Keep pandas output if True, otherwise convert to NumPy.
+
+    Returns
+    -------
+    ModelMatrix
+        The relabeled pandas matrix, or a NumPy matrix with the same spec.
+    """
+    if pandas:
+        matrix.index = index
+        return matrix
+    spec = matrix.model_spec.update(output="numpy")
+    return formulaic.ModelMatrix(matrix.to_numpy(), spec=spec)
+
+
 class _FormulaOption:
     """
     Container for the global formula-related options.
@@ -601,32 +626,29 @@ class FormulaManager:
             if na_drop:
                 _data = _data.copy(deep=False)
                 _data.index = pd.RangeIndex(_data.shape[0])
+                # The rows kept are read from the index of pandas output,
+                # which is converted to NumPy afterwards if requested
+                kwargs["output"] = "pandas"
 
             output = formulaic.model_matrix(
                 _formula, _data, context=_eval_env, **kwargs
             )
             if na_drop:
-                if isinstance(output, formulaic.ModelMatrices):
-                    rhs = output.rhs
-                else:
-                    rhs = output
-                if rhs.shape[0] == _data.shape[0]:
-                    replacement_index = original_index
-                    empty_mask = np.full(rhs.shape[0], False)
-                    self._missing_mask = pd.Series(
-                        empty_mask, index=original_index, name=None
+                single = isinstance(output, formulaic.ModelMatrix)
+                rhs = output if single else output.rhs
+                kept = np.asarray(rhs.index)
+                is_missing = np.ones(_data.shape[0], dtype=bool)
+                is_missing[kept] = False
+                self._missing_mask = pd.Series(is_missing, index=original_index)
+                # Selecting rows would drop the freq of a DatetimeIndex
+                index = original_index[kept] if is_missing.any() else original_index
+                if single:
+                    output = _restore_rows(output, index, pandas)
+                elif hasattr(output, "lhs") and len(output) == 2:
+                    output = formulaic.ModelMatrices(
+                        lhs=_restore_rows(output.lhs, index, pandas),
+                        rhs=_restore_rows(output.rhs, index, pandas),
                     )
-                else:
-                    replacement_index = original_index[rhs.index]
-                    self._missing_mask = (
-                        pd.Series(rhs.index, index=rhs.index)
-                        .reindex(pd.RangeIndex(_data.shape[0]))
-                        .isna()
-                    )
-                for key in ("lhs", "rhs", "root"):
-                    if hasattr(output, key):
-                        df = getattr(output, key)
-                        df.index = replacement_index
             if not isinstance(output, formulaic.ModelMatrix):
                 if (
                     len(output) == 2
