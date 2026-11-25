@@ -902,6 +902,31 @@ def test_output_file_removed_by_other_process(gdp_res, tmp_path, monkeypatch):
     assert_allclose(res.seasadj.to_numpy(), gdp_res.seasadj.to_numpy(), rtol=1e-12)
 
 
+@pytest.mark.parametrize("form", ["series", "dataframe"])
+def test_endog_without_dates(form):
+    gdp = quarterly_data.realgdp
+    endog = gdp.reset_index(drop=True)
+    if form == "dataframe":
+        endog = endog.to_frame()
+    expected = x13_arima_analysis(gdp.to_numpy(), start="1959-01-01", freq="QS")
+
+    res = x13_arima_analysis(endog, start="1959-01-01", freq="QS")
+
+    # the same results as for the values without an index, with the dates
+    # built from start and freq
+    index = pd.date_range("1959-01-01", periods=gdp.shape[0], freq="QS")
+    pd.testing.assert_index_equal(res.observed.index, index)
+    np.testing.assert_allclose(
+        np.squeeze(res.observed.to_numpy()), gdp.to_numpy(), rtol=1e-12
+    )
+    for name in ("seasadj", "trend", "irregular"):
+        table = getattr(res, name)
+        pd.testing.assert_index_equal(table.index, index)
+        np.testing.assert_allclose(
+            table.to_numpy(), getattr(expected, name).to_numpy(), rtol=1e-12
+        )
+
+
 @pytest.mark.parametrize("func", [x13_arima_analysis, x13_arima_select_order])
 def test_print_stdout(func, capsys, tmp_path):
     res = func(quarterly_data.realgdp, print_stdout=True, tempdir=str(tmp_path))
