@@ -359,6 +359,45 @@ def test_get_model_spec(engine, data):
     assert result is None
 
 
+@pytest.mark.parametrize(
+    "method",
+    [
+        "get_term_names",
+        "get_column_names",
+        "get_term_name_slices",
+        "get_description",
+        "get_factors",
+        "is_categorical",
+    ],
+)
+def test_spec_or_frame_without_spec_raises(engine, data, method):
+    mgr = FormulaManager(engine=engine)
+    func = getattr(mgr, method)
+    # The spec and a frame that carries it are accepted
+    rhs = mgr.get_matrices("x + c", data)
+    expected = func(mgr.spec)
+    assert func(rhs) == expected
+    match = "spec_or_frame must be a"
+    with pytest.raises(TypeError, match=match):
+        func(np.ones((3, 2)))
+    # A DataFrame without a model specification attached
+    with pytest.raises(TypeError, match=match):
+        func(data)
+    # A column with the attribute's name is not a model specification
+    attr = "design_info" if engine == "patsy" else "model_spec"
+    with pytest.raises(TypeError, match=match):
+        func(data.assign(**{attr: 1.0}))
+    others = [eng for eng in ENGINES if eng != engine]
+    for other in others:
+        # A design or a spec from the other engine
+        other_mgr = FormulaManager(engine=other)
+        other_rhs = other_mgr.get_matrices("x + c", data)
+        with pytest.raises(TypeError, match=match):
+            func(other_rhs)
+        with pytest.raises(TypeError, match=match):
+            func(other_mgr.spec)
+
+
 def test_na_action(engine, data):
     mgr = FormulaManager(engine=engine)
     fmla = "y ~ 1 + x + z"
