@@ -1,15 +1,29 @@
+import warnings
+
 import numpy as np
 
 from statsmodels.formula._manager import FormulaManager
 from statsmodels.tools.data import _to_pandas
 
-# if users want to pass in a different formula framework, they can
-# add their handler here. how to do it interactively?
-
 __all__ = ["advance_eval_env", "formula_handler", "handle_formula_data"]
 
-# this is a mutable object, so editing it should show up in the below
+# Deprecated: maps the class of a formula object to a function that
+# handle_formula_data calls instead of the formula engine
 formula_handler = {}
+
+FORMULA_HANDLER_WARNING = """\
+formula_handler is deprecated and will be removed after 0.17. Pass a formula
+string, or a formula object of the formula engine in use (patsy or formulaic).
+"""
+
+
+def _get_formula_handler(formula):
+    handler = formula_handler.get(type(formula))
+    if handler is None:
+        for cls, func in formula_handler.items():
+            if isinstance(formula, cls):
+                return func
+    return handler
 
 
 def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
@@ -28,15 +42,25 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
 
            Other values raise a ValueError. They never worked: the formula
            engine could not look variables up in the pair ``(Y, X)``.
-    formula : str or ModelDesc
-        You can pass a handler by import formula_handler and adding a
-        key-value pair where the key is the formula object class and
-        the value is a function that returns endog, exog, formula object.
-    depth : int, optional
-        The number of stack frames to go up when evaluating variables that
-        are not found in Y or X.
-    missing : str, optional
-        The action to take on missing values, e.g., "drop" or "raise".
+    formula : str, ModelDesc or Formula
+        The formula, as a string or as a formula object of the formula engine
+        in use (a patsy ``ModelDesc`` or a formulaic ``Formula``).
+
+        .. deprecated:: 0.15.1
+
+           A formula object of another type can be handled by a function
+           registered in ``formula_handler``, a dict that maps the class of
+           the formula object to the function. It is called with
+           ``(Y, X, formula, depth=depth, missing=missing)`` and must return
+           what this function returns. The registry is deprecated and will
+           be removed after 0.17. Before 0.15.1, the registered function was
+           returned instead of called.
+    depth : int or dict, optional
+        The number of stack frames to go up from this function to the
+        namespace in which variables that are not in ``Y`` are looked up (1
+        is the caller's namespace), or a dict that maps names to values.
+    missing : {"drop", "raise"}, optional
+        The action to take on missing values.
 
     Returns
     -------
@@ -54,9 +78,10 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
            It is also returned for data with a single row, which returned
            None.
     """
-    # half ass attempt to handle other formula objects
-    if isinstance(formula, tuple(formula_handler.keys())):
-        return formula_handler[type(formula)]
+    handler = _get_formula_handler(formula)
+    if handler is not None:
+        warnings.warn(FORMULA_HANDLER_WARNING, FutureWarning, stacklevel=2)
+        return handler(Y, X, formula, depth=depth, missing=missing)
 
     if X is not None:
         raise ValueError(
