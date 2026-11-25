@@ -652,18 +652,32 @@ class FormulaManager:
 
         Parameters
         ----------
-        constraints : ndarray, str, list[str]
-            The constraints either as an array, a string, or a list of strings.
-            Single strings can be comma-separated so that multiple constraints
-            can be passed in this format.
-        variable_names : list[str]
+        constraints : str, list of str, dict, array_like or tuple
+            The constraints. A string can hold several constraints separated
+            by commas, and a list can hold one constraint per string. A dict
+            maps variable names to the values they are constrained to. An
+            array_like is the constraint matrix, with one row per constraint
+            and one column per variable, and constrains each row to 0. A
+            tuple holds the constraint matrix and the constraint values.
+        variable_names : sequence of str
             The ordered list of variable names.
 
         Returns
         -------
         LinearConstraintValues
-            The constraint matrix, constraint values, and variable names.
+            The constraint matrix, constraint values, and variable names. The
+            matrix is a float array with one row per constraint, and the
+            values are a float array with one row and one column per
+            constraint.
+
+            .. versionchanged:: 0.15.1
+
+               With formulaic, the matrix and the values are always float
+               arrays, as with patsy. They were integer arrays when the
+               input was integer.
         """
+        if isinstance(constraints, list) and len(constraints) == 0:
+            raise ValueError("Constraints must be non-empty")
         if self._using_patsy:
             from patsy.design_info import DesignInfo
 
@@ -676,9 +690,6 @@ class FormulaManager:
         else:  # self._engine == "formulaic"
             # Handle list of constraints, which is not supported by formulaic
             if isinstance(constraints, list):
-                if len(constraints) == 0:
-                    raise ValueError("Constraints must be non-empty")
-
                 if isinstance(constraints[0], str):
                     if not all(isinstance(c, str) for c in constraints):
                         raise ValueError(
@@ -697,9 +708,10 @@ class FormulaManager:
             lc_f = formulaic.utils.constraints.LinearConstraints.from_spec(
                 _constraints, variable_names=list(variable_names)
             )
+            values = np.asarray(lc_f.constraint_values, dtype=float)
             return LinearConstraintValues(
-                constraint_matrix=lc_f.constraint_matrix,
-                constraint_values=np.atleast_2d(lc_f.constraint_values).T,
+                constraint_matrix=np.asarray(lc_f.constraint_matrix, dtype=float),
+                constraint_values=np.atleast_2d(values).T,
                 variable_names=lc_f.variable_names,
             )
 

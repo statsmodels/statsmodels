@@ -432,6 +432,50 @@ def test_bad_constraint(engine, data):
         mgr.get_linear_constraints(["x = 0", 7], ["Intercept", "x", "z", "c"])
 
 
+@pytest.mark.parametrize(
+    "constraint, matrix, values",
+    [
+        ("x1 = 0, x2 = 2*x1 + 1", [[0, 1, 0], [0, -2, 1]], [0, 1]),
+        (["x1 = 0", "x2 = 1"], [[0, 1, 0], [0, 0, 1]], [0, 1]),
+        ({"x1": 0, "x2": 1.5}, [[0, 1, 0], [0, 0, 1]], [0, 1.5]),
+        (np.array([[0, 1, 0], [0, 0, 1]]), [[0, 1, 0], [0, 0, 1]], [0, 0]),
+        ([[0, 1, 0]], [[0, 1, 0]], [0]),
+        ((np.array([[0, 1, 0]]), np.array([2])), [[0, 1, 0]], [2]),
+        (
+            (np.array([[0, 1, 0], [0, 0, 1]]), np.array([[2], [3]])),
+            [[0, 1, 0], [0, 0, 1]],
+            [2, 3],
+        ),
+    ],
+    ids=[
+        "str",
+        "list-of-str",
+        "dict",
+        "int-matrix",
+        "list-of-lists",
+        "matrix-and-values",
+        "matrix-and-column-values",
+    ],
+)
+def test_get_linear_constraints_values(engine, constraint, matrix, values):
+    names = ["Intercept", "x1", "x2"]
+    lc = FormulaManager(engine=engine).get_linear_constraints(constraint, names)
+    # Both engines return float arrays, values as a column
+    assert lc.constraint_matrix.dtype == np.float64
+    assert lc.constraint_values.dtype == np.float64
+    np.testing.assert_allclose(lc.constraint_matrix, matrix)
+    np.testing.assert_allclose(
+        lc.constraint_values, np.asarray(values, dtype=float)[:, None]
+    )
+    assert list(lc.variable_names) == names
+
+
+def test_get_linear_constraints_empty_list(engine):
+    mgr = FormulaManager(engine=engine)
+    with pytest.raises(ValueError, match="Constraints must be non-empty"):
+        mgr.get_linear_constraints([], ["Intercept", "x1"])
+
+
 @no_formulaic
 def test_formula_manager_no_formulaic():
     with pytest.raises(ImportError):
