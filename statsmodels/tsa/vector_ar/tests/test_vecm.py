@@ -2533,6 +2533,94 @@ def test_vecm_list_endog_exog_coint(form):
         VECM(endog, exog_coint=trend[1:])
 
 
+@pytest.mark.parametrize(
+    "deterministic, k_ar_diff, seasons, first_season, exog, exog_coint",
+    [
+        ("n", 1, 0, 0, False, False),
+        ("ci", 0, 0, 0, False, False),
+        ("colo", 2, 4, 1, False, False),
+        ("cili", 1, 4, 3, True, True),
+        ("co", 1, 0, 0, True, False),
+        ("n", 2, 0, 0, False, True),
+    ],
+)
+def test_vecm_results_without_auxiliary_arrays(
+    deterministic, k_ar_diff, seasons, first_season, exog, exog_coint
+):
+    # VECMResults computes delta_y_1_T, y_lag1 and delta_x when they are not
+    # given. This raised "deterministic must be a string" because the
+    # arguments were passed in the wrong positions.
+    from statsmodels.datasets import danish_data
+    from statsmodels.tsa.vector_ar.vecm import VECMResults
+
+    endog = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]].to_numpy()
+    nobs_tot = endog.shape[0]
+    t = np.arange(1.0, nobs_tot + 1)
+    res = VECM(
+        endog,
+        exog=np.sqrt(t)[:, None] if exog else None,
+        exog_coint=np.log(t)[:, None] if exog_coint else None,
+        k_ar_diff=k_ar_diff,
+        coint_rank=1,
+        deterministic=deterministic,
+        seasons=seasons,
+        first_season=first_season,
+    ).fit()
+    rebuilt = VECMResults(
+        res.y_all,
+        res.exog,
+        res.exog_coint,
+        res.k_ar,
+        res.coint_rank,
+        res.alpha,
+        np.vstack((res.beta, res.det_coef_coint)),
+        np.hstack((res.gamma, res.det_coef)),
+        res.sigma_u,
+        deterministic=deterministic,
+        seasons=seasons,
+        first_season=first_season,
+    )
+    assert rebuilt.nobs == res.nobs == nobs_tot - k_ar_diff - 1
+    # the fitted values plus the residuals are the data without the presample
+    assert_allclose(
+        rebuilt.fittedvalues + rebuilt.resid, endog[k_ar_diff + 1 :], rtol=1e-12
+    )
+    assert_allclose(rebuilt.fittedvalues, res.fittedvalues, rtol=1e-10)
+    # the residual covariance of the estimates is sigma_u, and llf is the
+    # Gaussian log-likelihood at the estimates
+    nobs, neqs = rebuilt.resid.shape
+    assert_allclose(rebuilt.resid.T @ rebuilt.resid / nobs, res.sigma_u, rtol=1e-8)
+    log_det = np.linalg.slogdet(res.sigma_u)[1]
+    gauss = -nobs / 2 * (neqs * np.log(2 * np.pi) + log_det + neqs)
+    assert_allclose(rebuilt.llf, gauss, rtol=1e-9)
+    assert_allclose(rebuilt.stderr_params, res.stderr_params, rtol=1e-10)
+    whiteness = rebuilt.test_whiteness(6)
+    expected = res.test_whiteness(6).test_statistic
+    assert_allclose(whiteness.test_statistic, expected, rtol=1e-10)
+
+
+def test_vecm_results_without_auxiliary_arrays_co_and_ci():
+    # The check of _endog_matrices for "co" and "ci" together is reached when
+    # VECMResults computes the auxiliary arrays (VECM does not accept "coci")
+    from statsmodels.tsa.vector_ar.vecm import VECMResults
+
+    rng = np.random.default_rng(20261122)
+    endog = np.cumsum(rng.standard_normal((40, 2)), axis=0).T
+    with pytest.raises(ValueError, match="Both 'co' and 'ci'"):
+        VECMResults(
+            endog,
+            None,
+            None,
+            2,
+            1,
+            np.zeros((2, 1)),
+            np.ones((3, 1)),
+            np.zeros((2, 3)),
+            np.eye(2),
+            deterministic="coci",
+        )
+
+
 def test_hypothesis_test_results_str():
     # __str__ had a stray ">" after the critical value
     from statsmodels.datasets import danish_data

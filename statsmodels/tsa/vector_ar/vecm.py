@@ -1593,7 +1593,15 @@ class VECMResults:
                 self._delta_y_1_T,
                 self._y_lag1,
                 self._delta_x,
-            ) = _endog_matrices(endog, self.exog, k_ar, deterministic, seasons)
+            ) = _endog_matrices(
+                endog,
+                self.exog,
+                self.exog_coint,
+                k_ar - 1,
+                deterministic,
+                seasons,
+                first_season,
+            )
         self.nobs = self._y_lag1.shape[1]
 
     @cache_readonly
