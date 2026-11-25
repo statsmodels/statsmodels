@@ -1,0 +1,5 @@
+- :func:`~statsmodels.tsa.ardl.ardl_select_order` with a ``maxorder``
+  dict that excludes a variable with ``None`` warned that exog contains
+  variables that are missing from the order dictionary when it built the
+  selected model. It no longer warns; the selected model is unchanged.
+  :pr:`11144`

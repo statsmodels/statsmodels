@@ -8,6 +8,8 @@ Author: Chad Fulton
 License: Simplified-BSD
 """
 
+import warnings
+
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 import pytest
@@ -42,6 +44,8 @@ from statsmodels.tsa.statespace.kalman_filter import (
     TIMING_INIT_PREDICTED,
 )
 from statsmodels.tsa.statespace.kalman_smoother import (
+    SMOOTH_ALTERNATIVE,
+    SMOOTH_UNIVARIATE,
     SMOOTHER_ALL,
     SMOOTHER_DISTURBANCE,
     SMOOTHER_DISTURBANCE_COV,
@@ -414,3 +418,69 @@ def test_filter_arguments(name, value):
         # Univariate filtering and the symmetry step change the output only by
         # rounding
         assert_allclose(actual.llf, default.llf, rtol=1e-10)
+
+
+def test_smooth_univariate_option():
+    # set_smooth_method(smooth_univariate=True) and the constructor argument
+    # set the univariate smoothing flag if univariate filtering is used, as
+    # setting the attribute does (the former had no effect and the latter
+    # raised a TypeError)
+    attribute = setup_model(filter_univariate=True)
+    attribute.smooth_univariate = True
+    assert_equal(attribute.smooth_method, SMOOTH_UNIVARIATE)
+
+    model = setup_model(filter_univariate=True)
+    model.set_smooth_method(smooth_univariate=True)
+    assert_equal(model.smooth_method, SMOOTH_UNIVARIATE)
+    assert model.smooth_univariate
+    model.set_smooth_method(smooth_univariate=False)
+    assert_equal(model.smooth_method, 0)
+
+    model = setup_model(filter_univariate=True, smooth_univariate=True)
+    assert_equal(model.smooth_method, SMOOTH_UNIVARIATE)
+
+    # Without univariate filtering, the flag is still ignored (smoothing runs
+    # with the default method), with a FutureWarning
+    with pytest.warns(FutureWarning, match="smooth_univariate=True has no"):
+        model = setup_model(smooth_univariate=True)
+    assert_equal(model.smooth_method, 0)
+    model = setup_model()
+    with pytest.warns(FutureWarning, match="smooth_univariate=True has no"):
+        model.set_smooth_method(smooth_univariate=True)
+    assert_equal(model.smooth_method, 0)
+    assert not model.smooth_univariate
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        model.set_smooth_method(smooth_univariate=False)
+        model.set_smooth_method(smooth_alternative=True)
+    assert_equal(model.smooth_method, SMOOTH_ALTERNATIVE)
+
+    # The univariate smoother is used: it requires the univariate filter, and
+    # with it gives the output of the default (univariate) smoothing method
+    def get_model(**kwargs):
+        model = setup_model(**kwargs)
+        model["design"] = [[1.0]]
+        model["obs_cov"] = [[0.5]]
+        model["transition"] = [[0.8]]
+        model["selection"] = [[1.0]]
+        model["state_cov"] = [[1.2]]
+        model.initialize_known(np.array([0.3]), np.array([[2.0]]))
+        return model
+
+    model = get_model()
+    with pytest.warns(FutureWarning, match="smooth_univariate=True has no"):
+        model.set_smooth_method(smooth_univariate=True)
+    res = model.smooth()
+    desired = get_model().smooth()
+    assert_allclose(res.smoothed_state, desired.smoothed_state, rtol=1e-14)
+    model = get_model()
+    model.smooth_univariate = True
+    with pytest.raises(ValueError, match="Invalid smoothing method"):
+        model.smooth()
+    model = get_model(filter_univariate=True)
+    model.set_smooth_method(smooth_univariate=True)
+    assert model.smooth_univariate
+    res = model.smooth()
+    desired = get_model(filter_univariate=True).smooth()
+    assert_allclose(res.smoothed_state, desired.smoothed_state, rtol=1e-14)
+    assert_allclose(res.smoothed_state_cov, desired.smoothed_state_cov, rtol=1e-14)

@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
+import pytest
 from scipy.linalg import cho_solve_banded
 
 from statsmodels import datasets
@@ -191,3 +192,38 @@ def test_dfm():
     # Test zero variates
     sim_cfa.simulate(np.zeros((mod.k_states, mod.nobs)))
     assert_allclose(sim_cfa.simulated_state, res.smoothed_state)
+
+
+def _ar1_measurement_error():
+    endog = np.random.default_rng(7123).standard_normal(20)
+    mod = sarimax.SARIMAX(endog, order=(1, 0, 0), measurement_error=True)
+    mod.update([0.5, 0.5, 1.0])
+    return mod
+
+
+@pytest.mark.parametrize("kind", ["int", "generator", "random_state"])
+def test_cfa_rng(kind):
+    # The CFA simulation smoother ignored `rng`: every simulate() drew its
+    # variates from a new generator seeded with fresh entropy. The draws use
+    # `rng`, so they equal draws with explicit variates from the same
+    # generator, and successive draws continue it.
+    mod = _ar1_measurement_error()
+
+    def make_rng():
+        if kind == "int":
+            return 2943
+        elif kind == "generator":
+            return np.random.default_rng(2943)
+        return np.random.RandomState(2943)
+
+    sim = mod.simulation_smoother(method="cfa", rng=make_rng())
+    same_seed = mod.simulation_smoother(method="cfa", rng=make_rng())
+    explicit = mod.simulation_smoother(method="cfa")
+    rng = np.random.default_rng(2943) if kind == "int" else make_rng()
+    for _ in range(2):
+        sim.simulate()
+        same_seed.simulate()
+        variates = rng.normal(size=mod.k_states * mod.nobs)
+        explicit.simulate(variates.reshape(mod.k_states, mod.nobs, order="F"))
+        assert_allclose(sim.simulated_state, same_seed.simulated_state, rtol=1e-13)
+        assert_allclose(sim.simulated_state, explicit.simulated_state, rtol=1e-13)

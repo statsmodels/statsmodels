@@ -1,0 +1,5 @@
+- Since statsmodels 0.14.0,
+  :meth:`~statsmodels.tsa.ar_model.AutoRegResults.test_serial_correlation`
+  returned only NaN, also for ARDL and UECM results, and ``diagnostic_summary``
+  left out the serial correlation table. It returns the Ljung-Box statistics,
+  p-values and degrees of freedom again. :pr:`10905`

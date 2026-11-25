@@ -1567,7 +1567,7 @@ def test_exceptions():
     # ##### exog_coint_fc is too short:
     exog_coint_fc = np.ones(STEPS)
     with pytest.raises(
-        ValueError, match=r".*exog_coint_fc must have at least steps elements.*"
+        ValueError, match=r".*exog_coint_fc must have at least steps - 1 elements.*"
     ):
         vecm_res.predict(
             5,
@@ -2619,3 +2619,38 @@ def test_vecm_results_without_auxiliary_arrays_co_and_ci():
             np.eye(2),
             deterministic="coci",
         )
+
+
+def test_hypothesis_test_results_str():
+    # __str__ had a stray ">" after the critical value
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    res = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="co").fit()
+    for result in (res.test_normality(), res.test_whiteness(6)):
+        expected = (
+            f"<statsmodels.tsa.vector_ar.hypothesis_test_results."
+            f"{type(result).__name__} object. {result.h0}: {result.conclusion} "
+            f"at 5% significance level. Test statistic: "
+            f"{result.test_statistic:.3f}, critical value: "
+            f"{result.crit_value:.3f}, p-value: {result.pvalue:.3f}>"
+        )
+        assert str(result) == expected
+
+
+def test_predict_exog_coint_fc_rows():
+    # exog_coint enters lagged once, so steps - 1 future rows are needed;
+    # the message said "at least steps"
+    from statsmodels.datasets import danish_data
+
+    data = danish_data.load_pandas().data[["lrm", "lry", "ibo", "ide"]]
+    nobs_tot = len(data)
+    trend = np.arange(1.0, nobs_tot + 1)
+    res = VECM(data, exog_coint=trend, k_ar_diff=1, coint_rank=1).fit()
+    steps = 5
+    future = np.arange(nobs_tot + 1.0, nobs_tot + steps)
+    with pytest.raises(ValueError, match="at least steps - 1 elements"):
+        res.predict(steps, exog_coint_fc=future[:-1])
+    # the trend 1, 2, ... as exog_coint is deterministic="li"
+    li = VECM(data, k_ar_diff=1, coint_rank=1, deterministic="li").fit()
+    assert_allclose(res.predict(steps, exog_coint_fc=future), li.predict(steps), rtol=1e-8)

@@ -1,0 +1,12 @@
+- Correct docstrings of the state space models ``SARIMAX``,
+  ``VARMAX``, ``DynamicFactor``, ``UnobservedComponents`` and
+  ``ExponentialSmoothing`` and their results: the default cycle
+  periods of ``UnobservedComponents`` without annual, quarterly or
+  monthly data (at least 2), the confidence intervals of
+  ``plot_components`` (only for the observed series), components
+  that are None when not in the model, the parameter vector of
+  ``DynamicFactor.update``, the constraints of
+  ``VARMAX.transform_params``, the values of
+  ``initialization_method`` of ``ExponentialSmoothing``, and
+  docstrings for ``clone``, ``initialize_default`` and
+  ``SARIMAXResults.extend``. :pr:`11083`

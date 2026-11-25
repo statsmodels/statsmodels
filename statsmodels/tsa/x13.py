@@ -62,13 +62,16 @@ def _find_x12(x12path=None, prefer_x13=True):
     X13PATH, or in X12PATH if X13PATH is not set, is searched (X12PATH first
     if prefer_x13 is False). If neither is set, the binary must be on the
     PATH. If prefer_x13 is False and no binary is found, the search of
-    prefer_x13=True follows.
+    prefer_x13=True follows. A binary is found if it can be run without
+    arguments and exits with status 0, as X-13 does.
 
     Parameters
     ----------
     x12path : str or Path, optional
         The path to the x12 or x13 binary, or to the directory containing
-        it. If None, the X12PATH or X13PATH environmental variable is used.
+        it. A binary named by x12path is tried before the other binaries in
+        its directory. If None, the X12PATH or X13PATH environmental
+        variable is used.
     prefer_x13 : bool, optional
         Only used if x12path is None. If True, search X13PATH before X12PATH
         and x13as before x12a. If False, search X12PATH before X13PATH and
@@ -87,6 +90,8 @@ def _find_x12(x12path=None, prefer_x13=True):
     if x12path is not None and x12path.lower().endswith(_binary_names):
         # remove binary from path if path is not a directory
         if not Path(x12path).is_dir():
+            # the named binary first, then the others in its directory
+            _binary_names = (Path(x12path).name, *_binary_names)
             x12path = Path(x12path).parent
 
     search_x12 = x12path is None and not prefer_x13
@@ -104,9 +109,15 @@ def _find_x12(x12path=None, prefer_x13=True):
     for binary in _binary_names:
         x12 = Path(x12path).joinpath(binary)
         try:
-            subprocess.check_call(x12, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # The output is not read, so it must not go to a pipe: a binary
+            # that prints more than the pipe holds would wait forever
+            subprocess.check_call(
+                x12, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
             return x12
-        except OSError:
+        except (OSError, subprocess.CalledProcessError):
+            # not there, cannot be run, or exits with an error status: try
+            # the next name
             pass
 
     if search_x12:
@@ -410,7 +421,14 @@ def pandas_to_series_spec(x):
     except (AttributeError, ValueError):
         from statsmodels.compat.pandas import infer_freq
 
-        period = _freq_to_period[infer_freq(x.index)]
+        freq = infer_freq(x.index)
+        if freq is None:
+            raise ValueError(
+                "The frequency of the index of endog could not be inferred. Use "
+                "an index with a monthly or quarterly frequency, such as a "
+                "PeriodIndex, or pass the values with start and freq."
+            ) from None
+        period = _freq_to_period[freq]
     start_date = x.index[0]
     if isinstance(start_date, dt.date):
         # datetime.date and datetime.datetime in an object index have no quarter
@@ -527,6 +545,12 @@ def x13_arima_analysis(
         are spliced into spec file before it is passed to x12/x13. Spec
         file must not contain `series{data=()}` or `series{file="" format=""}`
         parameters. See tests/x13_test.py for example test files.
+
+        .. versionchanged:: 0.15.1
+
+           A backslash in the name of ``endog`` is copied into the series
+           spec as it is. It used to be read as a regular expression escape,
+           which changed the name or raised an error.
     print_stdout : bool, optional
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True.
@@ -534,6 +558,14 @@ def x13_arima_analysis(
         The path to x12 or x13 binary. If None, the program will attempt
         to find x13as or x12a on the PATH or by looking at X13PATH or
         X12PATH depending on the value of prefer_x13.
+
+        .. versionchanged:: 0.15.1
+
+           A binary named by ``x12path`` is used. The binaries in its
+           directory were tried in the order x13as, x12a, x13as_ascii,
+           x13as_html, so that another binary in the directory was used if
+           it came first. If the named binary cannot be run, the others
+           are tried, as before.
     prefer_x13 : bool, optional
         If True, will look for x13as first and will fallback to the X13PATH
         environmental variable. If False, will look for x12a first and will
@@ -637,10 +669,13 @@ def x13_arima_analysis(
                     "rawspec argument provided but not valid path or spec string"
                 ) from os_err
 
-        # merge series {} properties created above into raw spec file
+        # merge series {} properties created above into raw spec file. A
+        # function is used as the replacement, so that backslashes in the
+        # series spec (in the name of endog) are not read as escapes.
+        series_spec = spec.replace("}\n", "")
         spec = re.sub(
             r"series\s*\{\s*",
-            spec.replace("}\n", ""),
+            lambda match: series_spec,
             rawspec_text,
             flags=re.IGNORECASE,
         )
@@ -833,6 +868,14 @@ def x13_arima_select_order(
         The path to x12 or x13 binary. If None, the program will attempt
         to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
         depending on the value of prefer_x13.
+
+        .. versionchanged:: 0.15.1
+
+           A binary named by ``x12path`` is used. The binaries in its
+           directory were tried in the order x13as, x12a, x13as_ascii,
+           x13as_html, so that another binary in the directory was used if
+           it came first. If the named binary cannot be run, the others
+           are tried, as before.
     prefer_x13 : bool, optional
         If True, will look for x13as first and will fallback to the X13PATH
         environmental variable. If False, will look for x12a first and will

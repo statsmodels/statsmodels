@@ -85,7 +85,8 @@ class KalmanSmoother(KalmanFilter):
     smoother_all = OptionWrapper("smoother_output", SMOOTHER_ALL)
 
     smooth_methods = [
-        "smooth_conventional", "smooth_alternative", "smooth_classical"
+        "smooth_conventional", "smooth_alternative", "smooth_classical",
+        "smooth_univariate"
     ]
 
     smooth_conventional = OptionWrapper("smooth_method", SMOOTH_CONVENTIONAL)
@@ -279,6 +280,13 @@ class KalmanSmoother(KalmanFilter):
             Keyword arguments may be used to influence the filter method by
             setting individual boolean flags. See notes for details.
 
+            .. versionchanged:: 0.15.1
+
+               `smooth_univariate` sets the univariate smoothing flag if
+               univariate filtering is used. Before, it was ignored. Without
+               univariate filtering, it is still ignored and raises a
+               FutureWarning.
+
         Notes
         -----
         The smoothing method is defined by a collection of boolean flags, and
@@ -347,6 +355,25 @@ class KalmanSmoother(KalmanFilter):
             self.smooth_method = smooth_method
         for name in KalmanSmoother.smooth_methods:
             if name in kwargs:
+                # smooth_univariate was ignored here, so smoothing ran with
+                # the conventional filter; the univariate smoother needs the
+                # univariate filter
+                if (
+                    name == "smooth_univariate"
+                    and kwargs[name]
+                    and not self.filter_univariate
+                ):
+                    warnings.warn(
+                        "smooth_univariate=True has no effect unless univariate "
+                        "filtering is used (filter_univariate=True), and it is "
+                        "ignored. After statsmodels 0.17 is released, the flag "
+                        "will be set, and smoothing without univariate "
+                        "filtering will raise a ValueError, as it does when "
+                        "the smooth_univariate attribute is set.",
+                        FutureWarning,
+                        stacklevel=2,
+                    )
+                    continue
                 setattr(self, name, kwargs[name])
 
     def _smooth(self, smoother_output=None, smooth_method=None, prefix=None,
