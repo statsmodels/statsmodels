@@ -3158,3 +3158,22 @@ def test_forecast_numpy_integer_steps(method, nobs, steps, dtype):
     if method == "get_forecast":
         actual = actual.predicted_mean
     assert_allclose(actual, desired, rtol=1e-12)
+
+
+@pytest.mark.parametrize("flags", [{}, {"approx_centered": True}])
+def test_fit_flags_not_changed(flags):
+    # fit added its own entries to the dictionary of flags of the caller. It
+    # passes a copy with those entries to the optimizer.
+    infl = macrodata.load_pandas().data["infl"].to_numpy()
+    mod = sarimax.SARIMAX(infl, order=(1, 0, 0))
+    original = dict(flags)
+    res = mod.fit(disp=0, flags=flags)
+    assert flags == original
+    (used,) = res.mle_settings["fargs"]
+    assert used is not flags
+    assert used["transformed"] is False
+    assert used.get("approx_centered") is original.get("approx_centered")
+    # the flags do not change the estimates here (the score is computed by
+    # complex-step differentiation, so approx_centered has no effect)
+    desired = mod.fit(disp=0)
+    assert_allclose(res.params, desired.params, rtol=1e-10)
