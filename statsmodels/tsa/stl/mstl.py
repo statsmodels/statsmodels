@@ -244,7 +244,7 @@ class MSTL:
     ) -> Sequence[int]:
         if periods is None:
             periods = (self._infer_period(),)
-        elif isinstance(periods, int):
+        elif isinstance(periods, (int, np.integer)):
             periods = (periods,)
         else:
             pass
@@ -257,7 +257,7 @@ class MSTL:
     ) -> Sequence[int]:
         if windows is None:
             windows = self._default_seasonal_windows(num_seasons)
-        elif isinstance(windows, int):
+        elif isinstance(windows, (int, np.integer)):
             windows = (windows,)
         else:
             pass

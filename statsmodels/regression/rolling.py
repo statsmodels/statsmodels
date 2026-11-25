@@ -1105,14 +1105,14 @@ class RollingRegressionResults:
         if variables is None:
             variable_idx = list(range(k_variables))
         else:
-            if isinstance(variables, (int, str)):
+            if isinstance(variables, (int, np.integer, str)):
                 variables = [variables]
             variable_idx = []
             for i in range(len(variables)):
                 variable = variables[i]
                 if variable in param_names:
                     variable_idx.append(param_names.index(variable))
-                elif isinstance(variable, int):
+                elif isinstance(variable, (int, np.integer)):
                     variable_idx.append(variable)
                 else:
                     msg = (

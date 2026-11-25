@@ -2066,6 +2066,17 @@ def test_reset_smoke(power, test_type, use_f, cov):
     smsdia.linear_reset(res, power=power, test_type=test_type, use_f=use_f, **cov)
 
 
+def test_reset_numpy_integer_power():
+    rs = np.random.RandomState(32320967)
+    x = add_constant(rs.standard_normal((200, 2)))
+    y = x @ np.ones(3) + x[:, 1] ** 2 + rs.standard_normal(200)
+    res = OLS(y, x).fit()
+    expected = smsdia.linear_reset(res, power=3)
+    actual = smsdia.linear_reset(res, power=np.int64(3))
+    assert_allclose(actual.statistic, expected.statistic)
+    assert_allclose(actual.pvalue, expected.pvalue)
+
+
 @pytest.mark.smoke
 @pytest.mark.parametrize("store", [True, False])
 @pytest.mark.parametrize("ddof", [0, 2])

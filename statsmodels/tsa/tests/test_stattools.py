@@ -5167,6 +5167,12 @@ class TestLeybourneMcCabe:
         with pytest.raises(ValueError):
             leybourne(fail_mdl, arlags="error")
 
+    def test_numpy_integer_arlags(self):
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("BAA.csv")))
+        res = leybourne(mdl, regression="ct", arlags=3)
+        res_np = leybourne(mdl, regression="ct", arlags=np.int64(3))
+        assert_allclose(res_np[0:3], res[0:3])
+
     # the following tests use data sets from Schwert (1987)
     # and were verified against Matlab 9.13
     def test_baa_results(self):
