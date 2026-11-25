@@ -1,0 +1,4 @@
+- ``t_test``, ``wald_test`` and ``f_test`` of
+  :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSResults` raised
+  a ``TypeError`` for every constraint. String constraints refer to the
+  parameter names, ``model.param_names``. :pr:`11106`

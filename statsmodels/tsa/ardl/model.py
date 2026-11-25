@@ -2503,7 +2503,7 @@ class UECM(ARDL):
         exog_oos: NDArray | pd.DataFrame | None = None,
         fixed: NDArray | pd.DataFrame | None = None,
         fixed_oos: NDArray | pd.DataFrame | None = None,
-    ) -> np.ndarray:
+    ) -> np.ndarray | pd.Series:
         """
         In-sample prediction and out-of-sample forecasting.
 
@@ -2573,7 +2573,16 @@ class UECM(ARDL):
         -------
         predictions : ndarray or Series
             Array of out of in-sample predictions and / or out-of-sample
-            forecasts.
+            forecasts. A Series with the index of the data if the endog is
+            a pandas Series or DataFrame.
+
+            .. versionchanged:: 0.15.1
+
+               The predictions are a Series for pandas data, as those of
+               ``ARDL.predict``. They were an ndarray, so that
+               ``UECMResults.get_prediction`` returned arrays and its
+               ``summary_frame`` had the index 0, 1, ..., instead of the
+               index of the data.
         """
         if dynamic is not False:
             raise NotImplementedError("dynamic forecasts are not supported")
@@ -2587,7 +2596,7 @@ class UECM(ARDL):
             x = self._prediction_x(exog, fixed)
         pred = np.full(self.endog.shape[0], np.nan)
         pred[-x.shape[0] :] = x @ params
-        return pred[start : end + 1]
+        return self._wrap_prediction(pred[start : end + 1], start, end + 1, 0)
 
     def _prediction_x(
         self,

@@ -4229,9 +4229,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         get_prediction
             In-sample predictions / out-of-sample forecasts and results
             including confidence intervals.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           A NumPy integer `steps` is the number of steps, as an int is.
+           Before, it was used as the index of the last forecast, which
+           raised or gave the wrong number of forecasts.
         """
-        if isinstance(steps, int):
-            end = self.nobs + steps - 1
+        if isinstance(steps, (int, np.integer)):
+            end = self.nobs + int(steps) - 1
         else:
             end = steps
         return self.get_prediction(
@@ -4362,9 +4370,17 @@ class MLEResults(tsbase.TimeSeriesModelResults):
         get_prediction
             In-sample predictions / out-of-sample forecasts and results
             including confidence intervals.
+
+        Notes
+        -----
+        .. versionchanged:: 0.15.1
+
+           A NumPy integer `steps` is the number of steps, as an int is.
+           Before, it was used as the index of the last forecast, which
+           raised or gave the wrong number of forecasts.
         """
-        if isinstance(steps, int):
-            end = self.nobs + steps - 1
+        if isinstance(steps, (int, np.integer)):
+            end = self.nobs + int(steps) - 1
         else:
             end = steps
         return self.predict(start=self.nobs, end=end, signal_only=signal_only, **kwargs)
