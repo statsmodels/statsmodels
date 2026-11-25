@@ -2934,6 +2934,75 @@ def test_predict_dynamic_key_covers_several_dates():
     pd.testing.assert_index_equal(pred.index, index[10:])
 
 
+@pytest.mark.parametrize("use_pandas", [True, False], ids=["pandas", "ndarray"])
+def test_t_test_wald_test_constraints(use_pandas):
+    # t_test, wald_test and f_test raised a TypeError for any constraint,
+    # because the model data have no parameter names. The constraints refer
+    # to model.param_names.
+    rng = np.random.default_rng(20261123)
+    trend = 0.5 + np.cumsum(0.1 * rng.standard_normal(80))
+    level = 100 + np.cumsum(trend + rng.standard_normal(80))
+    index = pd.date_range("2000-01-01", periods=80, freq="MS")
+    data = pd.Series(level + 2 * rng.standard_normal(80), index=index)
+    if not use_pandas:
+        data = data.to_numpy()
+    model = ETSModel(data, error="add", trend="add", damped_trend=True)
+    assert model.param_names[0] == "smoothing_level"
+    assert model.param_names[2] == "damping_trend"
+    # Close to the MLE, so that the covariance is positive definite
+    res = model.smooth([0.23, 0.09, 0.98, 99.29, 0.92], param_index="integer")
+    cov_before = res.cov_params()
+    params = np.asarray(res.params)
+    cov = np.asarray(cov_before)
+    r_matrix = np.eye(5)[[0, 2]]
+    q = np.array([0.25, 0.95])
+    effect = r_matrix @ params
+    sd = np.sqrt(np.diag(r_matrix @ cov @ r_matrix.T))
+    diff = effect - q
+    wald = diff @ np.linalg.solve(r_matrix @ cov @ r_matrix.T, diff)
+
+    for constraint in [
+        "smoothing_level = 0.25, damping_trend = 0.95",
+        (r_matrix, q),
+    ]:
+        t_test = res.t_test(constraint)
+        assert_allclose(t_test.effect, effect, rtol=1e-12)
+        assert_allclose(t_test.sd, sd, rtol=1e-12)
+        assert_allclose(t_test.statistic, diff / sd, rtol=1e-12)
+        assert_allclose(
+            t_test.pvalue, 2 * scipy.stats.norm.sf(np.abs(diff / sd)), rtol=1e-10
+        )
+        wald_test = res.wald_test(constraint, scalar=True)
+        assert_allclose(wald_test.statistic, wald, rtol=1e-10)
+        assert_allclose(wald_test.pvalue, scipy.stats.chi2.sf(wald, 2), rtol=1e-10)
+        f_test = res.f_test(constraint)
+        assert_allclose(f_test.fvalue, wald / 2, rtol=1e-10)
+
+    # An array without q tests that the parameters are zero
+    t_test = res.t_test(r_matrix)
+    assert_allclose(t_test.statistic, effect / sd, rtol=1e-12)
+    # The other arguments are passed on
+    constraint = (r_matrix, q)
+    t_test = res.t_test(constraint, cov_p=4 * cov, use_t=True)
+    assert_allclose(t_test.statistic, diff / (2 * sd), rtol=1e-12)
+    expected = 2 * scipy.stats.t.sf(np.abs(diff / (2 * sd)), res.df_resid)
+    assert_allclose(t_test.pvalue, expected, rtol=1e-10)
+    wald_test = res.wald_test(
+        constraint, cov_p=4 * cov, use_f=True, df_constraints=4, scalar=False
+    )
+    assert np.shape(wald_test.fvalue) == (1, 1)
+    assert_allclose(wald_test.fvalue, wald / 16, rtol=1e-10)
+    wald_test = res.wald_test(constraint, invcov=np.eye(2))
+    # A scalar statistic by default
+    assert np.ndim(wald_test.statistic) == 0
+    assert_allclose(wald_test.statistic, diff @ diff, rtol=1e-12)
+    # The names are only used for the tests: the results keep their labels
+    cov_after = res.cov_params()
+    if use_pandas:
+        pd.testing.assert_frame_equal(cov_after, cov_before)
+    assert res.model.data.cov_names is None
+
+
 @pytest.mark.parametrize("method", ["exact", "simulated"])
 @pytest.mark.parametrize("dates", [False, True])
 def test_get_prediction_numpy(oildata, method, dates):

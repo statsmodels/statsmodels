@@ -158,6 +158,7 @@ from statsmodels.iolib.summary import forg
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import fmt_params
 from statsmodels.tools._decorators import cache_readonly
+from statsmodels.tools.docstring_helpers import Appender
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.tools import Bunch, pinv_extended
 from statsmodels.tools.validation import (
@@ -1760,6 +1761,45 @@ class ETSResults(base.StateSpaceMLEResults):
     def llf(self):
         """Log-likelihood function evaluated at the fitted params"""
         return self._llf
+
+    @contextlib.contextmanager
+    def _constraint_names(self):
+        # The constraint parser of t_test and wald_test reads the parameter
+        # names from the model data, which has none since ETS has no exog.
+        # They are set only during the test, as the data also labels the
+        # results of pandas data.
+        data = self.model.data
+        cov_names = data._cov_names
+        data.cov_names = self.model.param_names
+        try:
+            yield
+        finally:
+            data.cov_names = cov_names
+
+    @Appender(base.StateSpaceMLEResults.t_test.__doc__)
+    def t_test(self, r_matrix, cov_p=None, use_t=None):
+        with self._constraint_names():
+            return super().t_test(r_matrix, cov_p=cov_p, use_t=use_t)
+
+    @Appender(base.StateSpaceMLEResults.wald_test.__doc__)
+    def wald_test(
+        self,
+        r_matrix,
+        cov_p=None,
+        invcov=None,
+        use_f=None,
+        df_constraints=None,
+        scalar=True,
+    ):
+        with self._constraint_names():
+            return super().wald_test(
+                r_matrix,
+                cov_p=cov_p,
+                invcov=invcov,
+                use_f=use_f,
+                df_constraints=df_constraints,
+                scalar=scalar,
+            )
 
     def _get_prediction_params(self, start_idx):
         """Returns internal parameter representation of smoothing parameters and "initial" states for prediction/simulation, that is the states just before the first prediction/simulation step"""
