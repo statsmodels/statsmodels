@@ -1,0 +1,7 @@
+- ``predict`` and ``get_prediction`` of
+  :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSResults`
+  raised a ``ValueError`` for a ``dynamic`` after the end of the
+  prediction or after the end of the sample, and for a ``start``
+  after the end of the sample with ``dynamic=True``. ``dynamic``
+  has no effect in these cases: the predictions are those without
+  it. :pr:`11108`

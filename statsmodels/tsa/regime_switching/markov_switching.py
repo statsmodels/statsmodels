@@ -162,7 +162,11 @@ def cy_hamilton_filter_log(
     k_regimes = len(initial_probabilities)
     nobs = conditional_loglikelihoods.shape[-1]
     order = conditional_loglikelihoods.ndim - 2
-    dtype = conditional_loglikelihoods.dtype
+    # The outputs and every input of the compiled filter share one dtype
+    dtype = np.result_type(
+        initial_probabilities, regime_transition, conditional_loglikelihoods
+    )
+    conditional_loglikelihoods = conditional_loglikelihoods.astype(dtype, copy=False)
 
     # Check for compatible shapes.
     incompatible_shapes = (
@@ -175,7 +179,9 @@ def cy_hamilton_filter_log(
 
     # Convert to log space
     initial_probabilities = np.log(initial_probabilities)
-    regime_transition = np.log(np.maximum(regime_transition, 1e-20))
+    regime_transition = np.log(np.maximum(regime_transition, 1e-20)).astype(
+        dtype, copy=False
+    )
 
     # Storage
     # Pr[S_t = s_t | Y_t]

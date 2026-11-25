@@ -616,3 +616,48 @@ def test_transform_params_array_like(name, form):
     restored = mod.untransform_params(form(constrained.tolist()))
     assert type(restored) is np.ndarray
     assert_allclose(restored, unconstrained, rtol=rtol)
+class ParamsFreeLoglikelihoods(markov_switching.MarkovSwitching):
+    # Conditional log-likelihoods that do not depend on the parameters, so
+    # they stay real when complex-step differentiation makes the parameters,
+    # and so the transition probabilities, complex
+    def __init__(self, conditional_loglikelihoods):
+        self._given = conditional_loglikelihoods
+        nobs = conditional_loglikelihoods.shape[-1]
+        super().__init__(np.zeros(nobs), k_regimes=2)
+
+    def _conditional_loglikelihoods(self, params):
+        return self._given
+
+
+@pytest.mark.parametrize("lagged", [False, True])
+def test_complex_transition_with_real_loglikelihoods(lagged):
+    from statsmodels.tools.numdiff import approx_fprime, approx_hess3
+
+    # Log-likelihoods that depend on the current regime only, shaped
+    # (k_regimes, nobs), or also on the previous one, (k_regimes,) * 2 + (nobs,)
+    rng = np.random.default_rng(20261122)
+    shape = (2, 2, 30) if lagged else (2, 30)
+    mod = ParamsFreeLoglikelihoods(np.log(rng.uniform(0.1, 1.0, shape)))
+    params = np.r_[0.9, 0.2]
+
+    # Complex-step derivatives against central differences of the real
+    # log-likelihood, to the accuracy of the central differences
+    score_obs = approx_fprime(params, mod.loglikeobs, centered=True)
+    assert_allclose(mod.score_obs(params), score_obs, rtol=1e-6)
+    assert_allclose(mod.score(params), score_obs.sum(0), rtol=1e-6)
+    hessian = approx_hess3(params, mod.loglike)
+    assert_allclose(mod.hessian(params), hessian, rtol=1e-4)
+
+    # The default covariance matrix of smooth, the outer product of gradients
+    res = mod.smooth(params)
+    assert_allclose(
+        res.cov_params(), np.linalg.inv(score_obs.T @ score_obs), rtol=1e-5
+    )
+    assert np.isrealobj(res.filtered_marginal_probabilities)
+
+    # Complex log-likelihoods with real transition probabilities give the
+    # same values, with a zero imaginary part
+    complex_mod = ParamsFreeLoglikelihoods(mod._given.astype(complex))
+    llf_obs = complex_mod.loglikeobs(params)
+    assert np.iscomplexobj(llf_obs)
+    assert_allclose(llf_obs, mod.loglikeobs(params), rtol=1e-13)

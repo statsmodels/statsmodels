@@ -511,6 +511,11 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
             non-seasonal time series and min (2*m, nobs//5) for seasonal time
             series.
 
+            .. versionchanged:: 0.15.1
+
+               The default for non-seasonal models is min(10, nobs//5). It
+               was min(2, nobs//5), as if they had a season of length 1.
+
         Returns
         -------
         output : ndarray
@@ -560,7 +565,8 @@ class StateSpaceMLEResults(tsbase.TimeSeriesModelResults):
         # that many observations
         if lags is None:
             seasonal_periods = getattr(self.model, "seasonal_periods", 0)
-            if seasonal_periods:
+            # non-seasonal ETS models have seasonal_periods = 1
+            if seasonal_periods > 1:
                 lags = min(2 * seasonal_periods, nobs_effective // 5)
             else:
                 lags = min(10, nobs_effective // 5)
