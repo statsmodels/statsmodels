@@ -1108,3 +1108,33 @@ def test_plot_components_without_observed(close_figures, which):
         assert_equal(line.get_xdata(), np.arange(llb, 30))
         expected = getattr(res, name)[which][llb:]
         assert_allclose(line.get_ydata(), expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "kwargs, params",
+    [(dict(seasonal=4), [1.5]), (dict(autoregressive=1), [1.5, 0.5])],
+    ids=["seasonal", "autoregressive"],
+)
+def test_fixed_slope_boolean_specification(kwargs, params):
+    # level=True and trend=True, neither stochastic, without an irregular is
+    # the "fixed slope" trend of the documentation (y_t = mu_t,
+    # mu_t = mu_{t-1} + beta), the same model as the string specification
+    rng = np.random.default_rng(20261201)
+    endog = rng.standard_normal(40)
+    mod = UnobservedComponents(endog, level=True, trend=True, **kwargs)
+    mod_str = UnobservedComponents(endog, "fixed slope", **kwargs)
+    assert_equal(mod.trend_mask, mod_str.trend_mask)
+    assert_equal(mod.param_names, mod_str.param_names)
+    res = mod.smooth(params)
+    assert_allclose(res.llf, mod_str.loglike(params), rtol=1e-12)
+    assert_equal(mod.trend_specification, "fixed slope")
+    assert_equal(res.specification.trend_specification, "fixed slope")
+    header = res.summary().tables[0].data
+    (model_row,) = [row for row in header if row[0].strip() == "Model:"]
+    assert_equal(model_row[1].strip(), "fixed slope")
+    # The clone uses the string specification, which gives the same model
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        mod_clone = mod.clone(endog)
+    assert_equal(mod_clone.trend_specification, "fixed slope")
+    assert_allclose(mod_clone.loglike(params), res.llf, rtol=1e-12)
