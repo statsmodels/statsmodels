@@ -68,7 +68,9 @@ def _find_x12(x12path=None, prefer_x13=True):
     ----------
     x12path : str or Path, optional
         The path to the x12 or x13 binary, or to the directory containing
-        it. If None, the X12PATH or X13PATH environmental variable is used.
+        it. A binary named by x12path is tried before the other binaries in
+        its directory. If None, the X12PATH or X13PATH environmental
+        variable is used.
     prefer_x13 : bool, optional
         Only used if x12path is None. If True, search X13PATH before X12PATH
         and x13as before x12a. If False, search X12PATH before X13PATH and
@@ -87,6 +89,8 @@ def _find_x12(x12path=None, prefer_x13=True):
     if x12path is not None and x12path.lower().endswith(_binary_names):
         # remove binary from path if path is not a directory
         if not Path(x12path).is_dir():
+            # the named binary first, then the others in its directory
+            _binary_names = (Path(x12path).name, *_binary_names)
             x12path = Path(x12path).parent
 
     search_x12 = x12path is None and not prefer_x13
@@ -547,6 +551,14 @@ def x13_arima_analysis(
         The path to x12 or x13 binary. If None, the program will attempt
         to find x13as or x12a on the PATH or by looking at X13PATH or
         X12PATH depending on the value of prefer_x13.
+
+        .. versionchanged:: 0.15.1
+
+           A binary named by ``x12path`` is used. The binaries in its
+           directory were tried in the order x13as, x12a, x13as_ascii,
+           x13as_html, so that another binary in the directory was used if
+           it came first. If the named binary cannot be run, the others
+           are tried, as before.
     prefer_x13 : bool, optional
         If True, will look for x13as first and will fallback to the X13PATH
         environmental variable. If False, will look for x12a first and will
@@ -849,6 +861,14 @@ def x13_arima_select_order(
         The path to x12 or x13 binary. If None, the program will attempt
         to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
         depending on the value of prefer_x13.
+
+        .. versionchanged:: 0.15.1
+
+           A binary named by ``x12path`` is used. The binaries in its
+           directory were tried in the order x13as, x12a, x13as_ascii,
+           x13as_html, so that another binary in the directory was used if
+           it came first. If the named binary cannot be run, the others
+           are tried, as before.
     prefer_x13 : bool, optional
         If True, will look for x13as first and will fallback to the X13PATH
         environmental variable. If False, will look for x12a first and will
