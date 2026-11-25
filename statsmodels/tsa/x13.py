@@ -62,13 +62,16 @@ def _find_x12(x12path=None, prefer_x13=True):
     X13PATH, or in X12PATH if X13PATH is not set, is searched (X12PATH first
     if prefer_x13 is False). If neither is set, the binary must be on the
     PATH. If prefer_x13 is False and no binary is found, the search of
-    prefer_x13=True follows.
+    prefer_x13=True follows. A binary is found if it can be run without
+    arguments and exits with status 0, as X-13 does.
 
     Parameters
     ----------
     x12path : str or Path, optional
         The path to the x12 or x13 binary, or to the directory containing
-        it. If None, the X12PATH or X13PATH environmental variable is used.
+        it. A binary named by x12path is tried before the other binaries in
+        its directory. If None, the X12PATH or X13PATH environmental
+        variable is used.
     prefer_x13 : bool, optional
         Only used if x12path is None. If True, search X13PATH before X12PATH
         and x13as before x12a. If False, search X12PATH before X13PATH and
@@ -87,6 +90,8 @@ def _find_x12(x12path=None, prefer_x13=True):
     if x12path is not None and x12path.lower().endswith(_binary_names):
         # remove binary from path if path is not a directory
         if not Path(x12path).is_dir():
+            # the named binary first, then the others in its directory
+            _binary_names = (Path(x12path).name, *_binary_names)
             x12path = Path(x12path).parent
 
     search_x12 = x12path is None and not prefer_x13
@@ -104,9 +109,15 @@ def _find_x12(x12path=None, prefer_x13=True):
     for binary in _binary_names:
         x12 = Path(x12path).joinpath(binary)
         try:
-            subprocess.check_call(x12, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # The output is not read, so it must not go to a pipe: a binary
+            # that prints more than the pipe holds would wait forever
+            subprocess.check_call(
+                x12, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
             return x12
-        except OSError:
+        except (OSError, subprocess.CalledProcessError):
+            # not there, cannot be run, or exits with an error status: try
+            # the next name
             pass
 
     if search_x12:
@@ -470,16 +481,17 @@ def x13_arima_analysis(
     Parameters
     ----------
     endog : array_like, Series, or DataFrame
-        The series to model. It is best to use a pandas object with a
-        DatetimeIndex or PeriodIndex. However, you can pass an array-like
-        object. If your object does not have a dates index then ``start`` and
-        ``freq`` are not optional.
+        The monthly or quarterly series to model. It is best to use a pandas
+        object with a DatetimeIndex or PeriodIndex. However, you can pass a
+        1-dimensional array-like object. If your object does not have a dates
+        index then ``start`` and ``freq`` are not optional. A DataFrame must
+        have a single column.
     maxorder : tuple of int, optional
         The maximum order of the regular and seasonal ARMA polynomials to
         examine during the model identification. The order for the regular
         polynomial must be greater than zero and no larger than 4. The
         order for the seasonal polynomial may be 1 or 2.
-    maxdiff : tuple of int, optional
+    maxdiff : tuple of int or None, optional
         The maximum orders for regular and seasonal differencing in the
         automatic differencing procedure. Acceptable inputs for regular
         differencing are 1 and 2. The maximum order for seasonal differencing
@@ -491,7 +503,13 @@ def x13_arima_analysis(
         differencing may be 0 or 1. ``maxdiff`` must be None, otherwise
         ``diff`` is ignored.
     exog : Series or DataFrame, optional
-        Exogenous variables.
+        Exogenous variables, used as user-defined regression variables. The
+        values are read in order from the first observation of ``endog``; the
+        index is not used. As X12/X13 forecasts the series, the values must
+        also cover the forecast horizon: ``forecast_periods`` observations
+        after the end of ``endog``, or one year if ``forecast_periods`` is
+        None. The variables are named by the Series name or the DataFrame
+        columns; names that are not str are replaced by x1, x2, ...
 
         .. versionchanged:: 0.15.1
 
@@ -504,9 +522,12 @@ def x13_arima_analysis(
     outlier : bool, optional
         Whether or not outliers are tested for and corrected, if detected.
     trading : bool, optional
-        Whether or not trading day effects are tested for.
+        Whether or not trading day regressors (the X12/X13 ``td`` variables)
+        are included in the regression model.
     forecast_periods : int, optional
-        Number of forecasts produced.
+        Number of forecasts produced. If None, X12/X13 forecasts one year.
+        The forecasts extend the series for the seasonal adjustment and are
+        included in ``results``. They are not returned as a series.
     retspec : bool, optional
         Whether to return the created specification file. Can be useful for
         debugging.
@@ -521,19 +542,24 @@ def x13_arima_analysis(
     start : str or datetime, optional
         Must be given if ``endog`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
-    freq : str, optional
+    freq : str or DateOffset, optional
         Must be given if ``endog`` does not have date information in its
         index. Anything accepted by pandas.DatetimeIndex for the freq value.
     rawspec : str or Path, optional
         As this wrapper does not provide all the available parameter
         options, users can provide a full spec file instead.
-        If valid Path, will read in contents of file, which must be encoded as
-        UTF-8, otherwise string will be treated as a valid spec file. Other
-        parameters for the spec file will be IGNORED.
-        Series data and required output formats (`x11{save=(d11 d12 d13)}`)
-        are spliced into spec file before it is passed to x12/x13. Spec
-        file must not contain `series{data=()}` or `series{file="" format=""}`
-        parameters. See tests/x13_test.py for example test files.
+        A str that contains ``{`` is used as the spec. Any other str, or a
+        Path, is the name of a spec file, which must be encoded as UTF-8.
+        The other options for the spec file (``maxorder``, ``maxdiff``,
+        ``log``, ``outlier``, ``trading`` and ``forecast_periods``) are
+        ignored, and ``diff`` and ``exog`` raise a ValueError. ``start``
+        and ``freq`` give the dates of array_like input, as without a
+        spec.
+        Series data and required output formats (``x11{save=(d11 d12 d13)}``)
+        are spliced into spec file before it is passed to x12/x13. The spec
+        must contain a series spec, which can be empty (``series{}``), but
+        not its ``data``, ``file`` or ``format`` arguments. See
+        ``statsmodels/tsa/tests/test_x13.py`` for examples.
 
         .. versionchanged:: 0.15.1
 
@@ -544,9 +570,20 @@ def x13_arima_analysis(
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True.
     x12path : str or Path, optional
-        The path to x12 or x13 binary. If None, the program will attempt
-        to find x13as or x12a on the PATH or by looking at X13PATH or
-        X12PATH depending on the value of prefer_x13.
+        The path to the x12 or x13 binary, or to the directory that contains
+        it. The binary must be named x13as, x12a, x13as_ascii or x13as_html
+        (with .exe on Windows). If None, the program will attempt to find
+        x13as or x12a in the directory given by X13PATH or X12PATH,
+        depending on the value of prefer_x13, or on the PATH if neither
+        environment variable is set.
+
+        .. versionchanged:: 0.15.1
+
+           A binary named by ``x12path`` is used. The binaries in its
+           directory were tried in the order x13as, x12a, x13as_ascii,
+           x13as_html, so that another binary in the directory was used if
+           it came first. If the named binary cannot be run, the others
+           are tried, as before.
     prefer_x13 : bool, optional
         If True, will look for x13as first and will fallback to the X13PATH
         environmental variable. If False, will look for x12a first and will
@@ -562,7 +599,7 @@ def x13_arima_analysis(
     log_diagnostics : bool, optional
         If True, returns D8 F-Test, M07, and Q diagnostics from the X13
         savelog.
-    tempdir : str, optional
+    tempdir : str or Path, optional
         The path to where temporary files are created by the function.
         If None, files are created in the default temporary file location.
         The files, including those written by X-12/X-13, are removed again
@@ -575,23 +612,29 @@ def x13_arima_analysis(
         as a string. Otherwise, an object containing the listed attributes
         is returned.
 
-        - observed : pandas.Series
-          The original ``endog`` series.
+        - observed : pandas.Series or pandas.DataFrame
+          The original ``endog``, or a Series indexed by the dates built from
+          ``start`` and ``freq`` if ``endog`` is not a pandas object.
         - results : str
           The full output from the X12/X13 run.
         - seasadj : pandas.Series
-          The final seasonally adjusted ``endog``.
+          The final seasonally adjusted ``endog`` (table D 11), with the index
+          of ``observed``.
         - trend : pandas.Series
-          The trend-cycle component of ``endog``.
+          The trend-cycle component of ``endog`` (table D 12).
         - irregular : pandas.Series
-          The final irregular component of ``endog``.
-        - stdout : str
+          The final irregular component of ``endog`` (table D 13), which is
+          ``seasadj / trend`` for a multiplicative and ``seasadj - trend``
+          for an additive decomposition.
+        - stdout : bytes
           The captured stdout produced by x12/x13.
         - spec : str, optional
           Returned if ``retspec`` is True.
         - x13_diagnostic : dict
-          Returns F-D8, M07, and Q metrics if True. Returns dict with no
-          metrics if False.
+          The F-test for stable seasonality of table D 8 (key "F-D8") and
+          the M7 ("M07") and Q ("Q") statistics as float if
+          ``log_diagnostics`` is True. Otherwise, the three keys map to the
+          str "Log diagnostics not retrieved.".
 
     Notes
     -----
@@ -624,10 +667,10 @@ def x13_arima_analysis(
     # if specfile string (or path) is passed
     else:
 
-        if any([diff, exog, start, freq]):
+        if diff is not None or exog is not None:
 
             raise ValueError(
-                "other arguments not allowed for diff, exog, start, freq "
+                "other arguments not allowed for diff and exog "
                 "when rawspec is specified"
             )
 
@@ -799,16 +842,17 @@ def x13_arima_select_order(
     Parameters
     ----------
     endog : array_like, Series, or DataFrame
-        The series to model. It is best to use a pandas object with a
-        DatetimeIndex or PeriodIndex. However, you can pass an array-like
-        object. If your object does not have a dates index then ``start`` and
-        ``freq`` are not optional.
+        The monthly or quarterly series to model. It is best to use a pandas
+        object with a DatetimeIndex or PeriodIndex. However, you can pass a
+        1-dimensional array-like object. If your object does not have a dates
+        index then ``start`` and ``freq`` are not optional. A DataFrame must
+        have a single column.
     maxorder : tuple of int, optional
         The maximum order of the regular and seasonal ARMA polynomials to
         examine during the model identification. The order for the regular
         polynomial must be greater than zero and no larger than 4. The
         order for the seasonal polynomial may be 1 or 2.
-    maxdiff : tuple of int, optional
+    maxdiff : tuple of int or None, optional
         The maximum orders for regular and seasonal differencing in the
         automatic differencing procedure. Acceptable inputs for regular
         differencing are 1 and 2. The maximum order for seasonal differencing
@@ -820,7 +864,13 @@ def x13_arima_select_order(
         differencing may be 0 or 1. ``maxdiff`` must be None, otherwise
         ``diff`` is ignored.
     exog : Series or DataFrame, optional
-        Exogenous variables.
+        Exogenous variables, used as user-defined regression variables. The
+        values are read in order from the first observation of ``endog``; the
+        index is not used. As X12/X13 forecasts the series, the values must
+        also cover the forecast horizon: ``forecast_periods`` observations
+        after the end of ``endog``, or one year if ``forecast_periods`` is
+        None. The variables are named by the Series name or the DataFrame
+        columns; names that are not str are replaced by x1, x2, ...
 
         .. versionchanged:: 0.15.1
 
@@ -833,22 +883,35 @@ def x13_arima_select_order(
     outlier : bool, optional
         Whether or not outliers are tested for and corrected, if detected.
     trading : bool, optional
-        Whether or not trading day effects are tested for.
+        Whether or not trading day regressors (the X12/X13 ``td`` variables)
+        are included in the regression model.
     forecast_periods : int, optional
-        Number of forecasts produced.
+        Number of forecasts produced. If None, X12/X13 forecasts one year.
+        The forecasts are included in ``results``.
     start : str or datetime, optional
         Must be given if ``endog`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
-    freq : str, optional
+    freq : str or DateOffset, optional
         Must be given if ``endog`` does not have date information in its
         index. Anything accepted by pandas.DatetimeIndex for the freq value.
     print_stdout : bool, optional
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True.
     x12path : str or Path, optional
-        The path to x12 or x13 binary. If None, the program will attempt
-        to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
-        depending on the value of prefer_x13.
+        The path to the x12 or x13 binary, or to the directory that contains
+        it. The binary must be named x13as, x12a, x13as_ascii or x13as_html
+        (with .exe on Windows). If None, the program will attempt to find
+        x13as or x12a in the directory given by X13PATH or X12PATH,
+        depending on the value of prefer_x13, or on the PATH if neither
+        environment variable is set.
+
+        .. versionchanged:: 0.15.1
+
+           A binary named by ``x12path`` is used. The binaries in its
+           directory were tried in the order x13as, x12a, x13as_ascii,
+           x13as_html, so that another binary in the directory was used if
+           it came first. If the named binary cannot be run, the others
+           are tried, as before.
     prefer_x13 : bool, optional
         If True, will look for x13as first and will fallback to the X13PATH
         environmental variable. If False, will look for x12a first and will
@@ -861,7 +924,7 @@ def x13_arima_select_order(
            searched before X12PATH, and x13as before x12a, also if
            ``prefer_x13`` was False. If no binary is found with
            ``prefer_x13=False``, the search of ``prefer_x13=True`` follows.
-    tempdir : str, optional
+    tempdir : str or Path, optional
         The path to where temporary files are created by the function.
         If None, files are created in the default temporary file location.
         The files, including those written by X-12/X-13, are removed again
@@ -873,14 +936,15 @@ def x13_arima_select_order(
         A bunch object containing the listed attributes.
 
         - order : tuple of int
-          The regular order.
+          The regular order (p, d, q) of the selected model.
         - sorder : tuple of int
-          The seasonal order.
+          The seasonal order (P, D, Q) of the selected model, (0, 0, 0) for a
+          nonseasonal model.
         - include_mean : bool
-          Whether to include a mean or not.
+          Whether the selected model includes a mean (constant).
         - results : str
           The full results from the X12/X13 analysis.
-        - stdout : str
+        - stdout : bytes
           The captured stdout from the X12/X13 analysis.
 
     Notes
@@ -926,11 +990,49 @@ def x13_arima_select_order(
 
 
 class X13ArimaAnalysisResult:
+    """
+    Results of x13_arima_analysis
+
+    Attributes
+    ----------
+    observed : Series or DataFrame
+        The original ``endog``, or a Series indexed by the dates built from
+        ``start`` and ``freq`` if ``endog`` is not a pandas object.
+    results : str
+        The full output from the X12/X13 run.
+    seasadj : Series
+        The final seasonally adjusted series (table D 11).
+    trend : Series
+        The trend-cycle component (table D 12).
+    irregular : Series
+        The final irregular component (table D 13).
+    stdout : bytes
+        The captured stdout produced by x12/x13.
+    spec : str
+        The specification file. Only set if ``retspec`` is True.
+    x13_diagnostic : dict
+        The F-D8, M07 and Q diagnostics, see ``log_diagnostics``.
+
+    See Also
+    --------
+    x13_arima_analysis
+        Creates these results.
+    """
+
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
     def plot(self):
+        """
+        Plot the observed series and its components
+
+        Returns
+        -------
+        Figure
+            A figure with four subplots that share the x-axis: ``observed``,
+            ``seasadj``, ``trend`` and ``irregular``.
+        """
         from statsmodels.graphics.utils import _import_mpl
 
         plt = _import_mpl()

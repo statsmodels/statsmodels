@@ -2132,3 +2132,24 @@ def test_score_harvey_approx_centered(func, transformed):
     )
     tol = 3e-7
     assert_allclose(actual, desired, rtol=tol, atol=tol * np.max(np.abs(desired)))
+
+
+@pytest.mark.parametrize("method", ["forecast", "get_forecast"])
+@pytest.mark.parametrize(
+    "nobs, steps, dtype",
+    [(11, 3, np.int64), (11, 15, np.int64), (11, 15, np.int32), (300, 3, np.uint8)],
+)
+def test_forecast_numpy_integer_steps(method, nobs, steps, dtype):
+    # A NumPy integer `steps` is the number of steps, as an int is. It was
+    # used as the index of the last forecast, so that 3 raised and 15 gave 5
+    # forecasts for 11 observations. With 300 observations, the number of
+    # observations does not fit in a uint8. The forecasts of a zero-mean
+    # AR(1) are phi**h y_T.
+    endog = np.random.default_rng(2468).standard_normal(nobs)
+    phi = 0.5
+    res = sarimax.SARIMAX(endog, order=(1, 0, 0)).smooth([phi, 1.0])
+    desired = phi ** np.arange(1, steps + 1) * endog[-1]
+    actual = getattr(res, method)(dtype(steps))
+    if method == "get_forecast":
+        actual = actual.predicted_mean
+    assert_allclose(actual, desired, rtol=1e-12)

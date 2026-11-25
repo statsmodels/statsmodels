@@ -392,6 +392,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
             Array of constrained parameters which may be used in likelihood
             evaluation.
         """
+        unconstrained = np.asarray(unconstrained)
         # Inherited parameters
         constrained = super().transform_params(
             unconstrained)
@@ -422,6 +423,7 @@ class MarkovRegression(markov_switching.MarkovSwitching):
         unconstrained : ndarray
             Array of unconstrained parameters used by the optimizer.
         """
+        constrained = np.asarray(constrained)
         # Inherited parameters
         unconstrained = super().untransform_params(
             constrained)

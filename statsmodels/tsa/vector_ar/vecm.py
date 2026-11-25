@@ -1593,7 +1593,15 @@ class VECMResults:
                 self._delta_y_1_T,
                 self._y_lag1,
                 self._delta_x,
-            ) = _endog_matrices(endog, self.exog, k_ar, deterministic, seasons)
+            ) = _endog_matrices(
+                endog,
+                self.exog,
+                self.exog_coint,
+                k_ar - 1,
+                deterministic,
+                seasons,
+                first_season,
+            )
         self.nobs = self._y_lag1.shape[1]
 
     @cache_readonly
@@ -2077,7 +2085,7 @@ class VECMResults:
         if exog_coint_fc is not None and exog_coint_fc.shape[0] < steps - 1:
             raise ValueError(
                 "The argument exog_coint_fc must have at least "
-                "steps elements in its first dimension"
+                "steps - 1 elements in its first dimension"
             )
 
         last_observations = self.y_all.T[-self.k_ar :]
