@@ -3243,18 +3243,21 @@ def test_fit_em_untransformed_start_params():
     mod = dynamic_factor_mq.DynamicFactorMQ(endog)
     params = mod.start_params
     unconstrained = mod.untransform_params(params)
-    assert_allclose(mod.transform_params(unconstrained), params)
+    transformed = mod.transform_params(unconstrained)
+    assert_allclose(transformed, params)
 
+    # The EM iterations start from exactly the transformed parameters. From
+    # parameters that differ by rounding (e.g. `params`), the second iteration
+    # can differ by 1e-3 since the forecast error covariance of the first
+    # period is singular with the EM initialization of this model.
     msg = "EM reached maximum number of iterations"
     with pytest.warns(ConvergenceWarning, match=msg):
-        desired = mod.fit_em(params, maxiter=2, return_params=True)
+        desired = mod.fit_em(transformed, maxiter=2, return_params=True)
     with pytest.warns(ConvergenceWarning, match=msg):
         actual = mod.fit_em(
             unconstrained, transformed=False, maxiter=2, return_params=True
         )
-    # rtol: the start parameters agree only up to the rounding of the
-    # transformation and its inverse
-    assert_allclose(actual, desired, rtol=1e-7)
+    assert_allclose(actual, desired, rtol=1e-12)
 
 
 @pytest.mark.parametrize("mstep_method", ["nonmissing", "missing"])
