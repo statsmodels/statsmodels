@@ -3701,3 +3701,108 @@ def test_filter_low_memory():
     assert_equal(res_full.filter_results.filtered_state.shape[1], mod.nobs)
     assert_allclose(res.llf, res_full.llf)
     assert_allclose(res.forecast(2), res_full.forecast(2))
+
+
+@pytest.mark.parametrize("case", ["ndarray", "period", "datetime", "range", "labels"])
+def test_init_t0_standardize(case):
+    # With init_t0=True and standardize=True, the data are standardized with
+    # their own statistics (ddof=0 for an ndarray, ddof=1 for pandas data),
+    # not with those of the data with the prepended missing period, so the
+    # model is the model without init_t0 of the data with an explicit missing
+    # first period, standardized with these statistics. With a date index,
+    # the prepended period is the one before the first date; otherwise the
+    # data get an integer index
+    endog = _ar1_factor_data(nobs=12)
+    values = endog.to_numpy()
+    values_t0 = np.r_[np.full((1, 3), np.nan), values]
+    if case == "ndarray":
+        data, data_t0 = values, values_t0
+        standardize = (values.mean(axis=0), values.std(axis=0))
+    else:
+        index_t0 = pd.RangeIndex(13)
+        if case == "period":
+            index = endog.index
+            index_t0 = pd.period_range(start="1999-12", periods=13, freq="M")
+        elif case == "datetime":
+            index = pd.date_range(start="2000-01-31", periods=12, freq=MONTH_END)
+            index_t0 = pd.date_range(start="1999-12-31", periods=13, freq=MONTH_END)
+        elif case == "range":
+            index = pd.RangeIndex(12)
+        else:
+            index = pd.Index([f"t{i}" for i in range(12)])
+        data = pd.DataFrame(values, index=index, columns=endog.columns)
+        data_t0 = pd.DataFrame(values_t0, index=index_t0, columns=endog.columns)
+        standardize = (data.mean(), data.std())
+    mod = dynamic_factor_mq.DynamicFactorMQ(data, init_t0=True)
+    desired = dynamic_factor_mq.DynamicFactorMQ(data_t0, standardize=standardize)
+
+    assert_equal(mod.nobs, 13)
+    assert np.isnan(mod.endog[0]).all()
+    assert not np.isnan(mod.endog[1:]).any()
+    assert_allclose(mod.endog, desired.endog, rtol=1e-12)
+    assert_allclose(mod.data.orig_endog, values_t0, rtol=1e-12)
+    if case != "ndarray":
+        assert mod.data.row_labels.equals(index_t0)
+    params = desired.start_params
+    assert_allclose(mod.loglike(params), desired.loglike(params), rtol=1e-12)
+
+
+def test_init_t0_datetime_index_without_freq():
+    endog = _ar1_factor_data(nobs=12)
+    dates = pd.date_range(start="2000-01-31", periods=13, freq=MONTH_END)
+    endog.index = pd.DatetimeIndex(dates.delete(5))
+    with pytest.raises(ValueError, match="requires a date index with a frequency"):
+        dynamic_factor_mq.DynamicFactorMQ(endog, init_t0=True)
+
+
+@pytest.mark.parametrize("container", [list, tuple])
+def test_endog_array_like(container):
+    # A 2-D list or tuple of the data gives the model of the ndarray, and
+    # construct_endog returns it as an ndarray
+    endog = _ar1_factor_data(nobs=12, use_pandas=False)
+    data = container(container(row) for row in endog)
+    mod = dynamic_factor_mq.DynamicFactorMQ(data)
+    desired = dynamic_factor_mq.DynamicFactorMQ(endog)
+    assert_allclose(mod.endog, desired.endog, rtol=1e-12)
+    assert_equal(mod.endog_names, ["y1", "y2", "y3"])
+    params = desired.start_params
+    assert_allclose(mod.loglike(params), desired.loglike(params), rtol=1e-12)
+
+    construct_endog = dynamic_factor_mq.DynamicFactorMQ.construct_endog
+    out, k_endog_monthly = construct_endog(data, None)
+    assert isinstance(out, np.ndarray)
+    assert_allclose(out, endog)
+    assert_equal(k_endog_monthly, 3)
+    out, k_endog_monthly = construct_endog(container(endog[:, 0]), None)
+    assert isinstance(out, np.ndarray)
+    assert_allclose(out, endog[:, 0])
+    assert_equal(k_endog_monthly, 1)
+
+
+@pytest.mark.parametrize("method", ["transform_params", "untransform_params"])
+@pytest.mark.parametrize("case", ["list", "tuple", "series", "int_ndarray", "int_list"])
+def test_transform_params_array_like(method, case):
+    # Parameters given as a list, tuple or Series, or with integer values,
+    # are transformed as the ndarray of the same (float) values. The values
+    # are loadings, the factor AR(1) coefficient and standard deviation, the
+    # idiosyncratic AR(1) coefficients and variances; those for
+    # untransform_params are valid constrained values, and in both cases
+    # some transformed values are not integers
+    mod = dynamic_factor_mq.DynamicFactorMQ(_ar1_factor_data(nobs=12))
+    if method == "transform_params":
+        values = np.array([1, -1, 2, 1, 1, 1, -1, 2, 2, 3, 5])
+    else:
+        values = np.array([1, -1, 2, 0, 1, 0, 0, 0, 2, 3, 5])
+    floats = values.astype(float)
+    params = {
+        "list": floats.tolist(),
+        "tuple": tuple(floats),
+        "series": pd.Series(floats, index=mod.param_names),
+        "int_ndarray": values,
+        "int_list": values.tolist(),
+    }[case]
+    actual = getattr(mod, method)(params)
+    desired = getattr(mod, method)(floats)
+    assert isinstance(actual, np.ndarray)
+    assert_allclose(actual, desired, rtol=1e-12)
+    assert not np.allclose(desired, np.round(desired))
