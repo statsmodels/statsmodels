@@ -10,7 +10,6 @@ everywhere.
 from statsmodels.compat.pandas import MONTH_END, QUARTER_END, YEAR_END
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
-import io
 import json
 import os
 from pathlib import Path
@@ -155,18 +154,32 @@ OUTPUT_EXTENSIONS = ("err", "out", "log", "d11", "d12", "d13", "mdl", "udg", "ht
 
 
 class _FinishedProcess:
-    def __init__(self):
-        self.stdout = io.BytesIO(b"")
+    def __init__(self, stdout=b"", communicate_error=None):
+        self.stdout = stdout
+        self.communicate_error = communicate_error
+        self.exited = False
 
-    def wait(self):
-        return 0
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        # Popen closes its pipes and waits for the process here
+        self.exited = True
+        return False
+
+    def communicate(self):
+        if self.communicate_error is not None:
+            raise self.communicate_error
+        # stderr is redirected to stdout
+        return self.stdout, None
 
 
 @pytest.fixture
 def stub_run_spec(monkeypatch, no_x12):
     """Replace run_spec by a stub that writes the files x12/x13 writes."""
+    processes = []
 
-    def install(error=""):
+    def install(error="", stdout=b"", communicate_error=None):
         # two header lines, then the date and the value
         table = "date\tvalue\n----\t-----\n" + "".join(
             f"{2000 + i // 12}{i % 12 + 1:02d}\t{i}.0\n" for i in range(24)
@@ -178,9 +191,11 @@ def stub_run_spec(monkeypatch, no_x12):
                 if extension == "err":
                     content = error
                 Path(f"{outname}.{extension}").write_text(content, encoding="utf-8")
-            return _FinishedProcess()
+            processes.append(_FinishedProcess(stdout, communicate_error))
+            return processes[-1]
 
         monkeypatch.setattr(x13, "run_spec", run_spec)
+        return processes
 
     return install
 
@@ -1217,3 +1232,35 @@ def test_spec_endog_dates_used_with_start_and_freq(no_x12, index):
     tokens = spec[: spec.index("}") + 1].split()
     assert "period=12" in tokens
     assert "start=2000.1" in tokens
+
+
+@pytest.mark.parametrize(
+    "stdout, printed",
+    [
+        (b"\r\n X-13 output\r\n", "\r\n X-13 output\r\n\n"),
+        # bytes that are not UTF-8, such as a path in a Windows code page, are
+        # escaped
+        (b"C:\\caf\xe9\\spec", "C:\\caf\\xe9\\spec\n"),
+    ],
+    ids=["ascii", "not_utf8"],
+)
+def test_print_stdout_text(stub_run_spec, tmp_path, capsys, stdout, printed):
+    stub_run_spec(stdout=stdout)
+
+    res = x13.x13_arima_analysis(
+        _monthly_endog(), tempdir=str(tmp_path), print_stdout=True
+    )
+
+    assert capsys.readouterr().out == printed
+    assert res.stdout == stdout
+
+
+def test_process_closed_on_error(stub_run_spec, tmp_path):
+    processes = stub_run_spec(communicate_error=OSError("stub read error"))
+
+    with pytest.raises(OSError, match="stub read error"):
+        x13.x13_arima_analysis(_monthly_endog(), tempdir=str(tmp_path))
+
+    # the process is closed and waited for, and its files are removed
+    assert [process.exited for process in processes] == [True]
+    assert list(tmp_path.iterdir()) == []

@@ -750,11 +750,10 @@ def x13_arima_analysis(
             ftempin.close()
             ftempout.close()
             # call x12 arima
-            p = run_spec(x12path, ftempin.name[:-4], ftempout.name)
-            p.wait()
-            stdout = p.stdout.read()
+            with run_spec(x12path, ftempin.name[:-4], ftempout.name) as p:
+                stdout, _ = p.communicate()
             if print_stdout:
-                print(p.stdout.read())
+                print(stdout.decode(errors="backslashreplace"))
             # check for errors
             errors = _open_and_read(ftempout.name + ".err")
             _check_errors(errors, rawspec)
