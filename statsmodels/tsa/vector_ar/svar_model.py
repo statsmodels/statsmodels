@@ -14,7 +14,7 @@ import numpy as np
 import numpy.linalg as npl
 from numpy.linalg import slogdet
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.tools.numdiff import approx_hess
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.tools.validation import string_like
@@ -416,7 +416,7 @@ class SVAR(tsbase.TimeSeriesModel):
         return likl
 
     def score(self, AB_mask):
-        """
+        r"""
         Return the gradient of the loglike at AB_mask
 
         Parameters
@@ -432,17 +432,40 @@ class SVAR(tsbase.TimeSeriesModel):
 
         Notes
         -----
-        Return numerical gradient
-        """
-        loglike = self.loglike
-        if AB_mask.ndim > 1:
-            AB_mask = AB_mask.ravel()
-        grad = approx_fprime(AB_mask, loglike, epsilon=1e-8)
+        The gradient of the log-likelihood with respect to A and B is
 
-        # workaround shape of grad if only one parameter #9302
-        if AB_mask.size == 1 and grad.ndim == 2:
-            grad = grad.ravel()
-        return grad
+        .. math::
+
+           n (A^{-T} - B^{-T} W \Sigma_u), \quad
+           n B^{-T} (W \Sigma_u W^T - I), \quad W = B^{-1} A,
+
+        of which the entries of the unknown values are returned.
+
+        .. versionchanged:: 0.15.1
+
+           The gradient is computed analytically. It was computed with
+           forward differences with a step of 1e-8, whose error (about 1e-5
+           relative for the entries of a B of order 0.01) exceeded the
+           tolerance of the solvers of `fit` at the maximum: the default
+           "bfgs" solver could warn that the optimization did not converge,
+           depending on rounding, and "newton" stopped about 3e-5 (relative)
+           from the maximum. The estimates of `fit` change accordingly.
+        """
+        params = np.asarray(AB_mask, dtype=float).ravel()
+        A = np.array(self.A, dtype=float)
+        B = np.array(self.B, dtype=float)
+        A_len = int(self.A_mask.sum())
+        A[self.A_mask] = params[:A_len]
+        B[self.B_mask] = params[A_len:]
+
+        inv_A = npl.inv(A)
+        inv_B = npl.inv(B)
+        W = inv_B @ A
+        sigma_u = self.sigma_u
+        nobs = self.nobs
+        grad_A = nobs * (inv_A.T - inv_B.T @ W @ sigma_u)
+        grad_B = nobs * inv_B.T @ (W @ sigma_u @ W.T - np.eye(self.neqs))
+        return np.r_[grad_A[self.A_mask], grad_B[self.B_mask]]
 
     def hessian(self, AB_mask):
         """

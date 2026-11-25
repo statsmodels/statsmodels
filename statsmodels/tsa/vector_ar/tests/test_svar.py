@@ -270,8 +270,7 @@ def _fit_vars_model(name):
     ref = getattr(results_svar_vars, name)
     model = SVAR(_macro_data(), svar_type, A=A, B=B)
     # statsmodels does not normalize the signs as vars does, so start near the
-    # estimate of vars; newton's numerical derivatives stop it within about
-    # 2e-5 of the optimum
+    # estimate of vars
     res = model.fit(
         maxlags=3,
         solver="newton",
@@ -314,10 +313,9 @@ def test_vars_var_coefficients():
 def test_vars_estimates(name):
     model, res, ref = _fit_vars_model(name)
     _, A, B = VARS_MODELS[name]
-    # newton stops within about 2e-5 of the optimum (numerical derivatives)
-    # (where it stops depends on the platform)
-    assert_allclose(res.A, ref["A"], rtol=2e-3)
-    assert_allclose(res.B, ref["B"], rtol=2e-3)
+    # newton with the analytic score converges to the optimum (1e-11 here)
+    assert_allclose(res.A, ref["A"], rtol=1e-6)
+    assert_allclose(res.B, ref["B"], rtol=1e-6)
     a_mask = np.zeros((3, 3), dtype=bool) if A is None else A == "E"
     b_mask = np.zeros((3, 3), dtype=bool) if B is None else B == "E"
     assert_equal(res.A_mask, a_mask)
@@ -340,12 +338,9 @@ def test_vars_score(name):
     model, _, ref = _fit_vars_model(name)
     theta_fixed = _theta(model, ref["A_fixed"], ref["B_fixed"])
     expected = _theta(model, ref["score_A_fixed"], ref["score_B_fixed"])
-    # forward differences with a step of 1e-8 lose about
-    # eps * |loglike| / 1e-8 to rounding; the margin allows for other
-    # platforms, and a wrong score is off by much more
-    atol = 40 * np.finfo(float).eps * abs(ref["loglike_fixed"]) / 1e-8
+    # The score is analytic (agrees with vars to 4e-14 here)
     score = model.score(theta_fixed)
-    assert_allclose(score, expected, rtol=1e-3, atol=atol)
+    assert_allclose(score, expected, rtol=1e-10)
     # a column vector is accepted
     assert_allclose(model.score(theta_fixed[:, None]), score, rtol=1e-15)
 
@@ -430,9 +425,8 @@ def test_svar_lag_order_default_is_one():
     assert res.k_ar == 1
     assert_allclose(res.params, var_res.params, rtol=1e-10)
     assert_allclose(res.sigma_u, var_res.sigma_u, rtol=1e-10)
-    # newton stops within about 2e-5 of the Cholesky factor
-    # (where it stops depends on the platform)
-    assert_allclose(res.B, np.linalg.cholesky(var_res.sigma_u), rtol=2e-3)
+    # newton with the analytic score converges to the Cholesky factor
+    assert_allclose(res.B, np.linalg.cholesky(var_res.sigma_u), rtol=1e-6)
 
 
 @pytest.mark.parametrize("trend", ["n", "c", "ct", "ctt"])
@@ -452,9 +446,8 @@ def test_svar_trend(trend):
     assert_allclose(res.sigma_u, var_res.sigma_u, rtol=1e-10)
     assert res.k_trend == k_trend
     assert res.trendorder == {"n": None, "c": 0, "ct": 1, "ctt": 2}[trend]
-    # newton stops within about 2e-5 of the Cholesky factor
-    # (where it stops depends on the platform)
-    assert_allclose(res.B, np.linalg.cholesky(var_res.sigma_u), rtol=2e-3)
+    # newton with the analytic score converges to the Cholesky factor
+    assert_allclose(res.B, np.linalg.cholesky(var_res.sigma_u), rtol=1e-6)
     expected = _ma_coefs(res.coefs, 4) @ res.B
     # zero entries of the triangular Theta_0 are at rounding level
     assert_allclose(res.svar_ma_rep(4), expected, rtol=1e-10, atol=1e-15)
@@ -582,9 +575,8 @@ def test_svar_endog_forms(form):
     # the memory layout of endog can change the rounding
     assert_allclose(res.params, expected.params, rtol=1e-10)
     assert_allclose(res.sigma_u, expected.sigma_u, rtol=1e-10)
-    # newton stops within about 2e-5 of the optimum
-    # (where it stops depends on the platform)
-    assert_allclose(res.B, expected.B, rtol=2e-3)
+    # newton with the analytic score converges to the optimum
+    assert_allclose(res.B, expected.B, rtol=1e-6)
     if form in ("list", "tuple"):
         assert res.names == ["y1", "y2", "y3"]
         assert res.dates is None
@@ -615,9 +607,8 @@ def test_svar_int_endog():
     assert res.params.dtype == np.float64
     assert_allclose(res.params, expected.params, rtol=1e-10)
     assert_allclose(res.sigma_u, expected.sigma_u, rtol=1e-10)
-    # newton stops within about 2e-5 of the optimum
-    # (where it stops depends on the platform)
-    assert_allclose(res.B, expected.B, rtol=2e-3)
+    # newton with the analytic score converges to the optimum
+    assert_allclose(res.B, expected.B, rtol=1e-6)
 
 
 def test_svar_missing():
@@ -631,9 +622,8 @@ def test_svar_missing():
     start = 1.01 * np.linalg.cholesky(var_res.sigma_u)[dropped.B_mask]
     res_drop = dropped.fit(maxlags=2, solver="newton", B_guess=start)
     assert_allclose(res_drop.params, res.params, rtol=1e-10)
-    # newton stops within about 2e-5 of the optimum
-    # (where it stops depends on the platform)
-    assert_allclose(res_drop.B, res.B, rtol=2e-3)
+    # newton with the analytic score converges to the optimum
+    assert_allclose(res_drop.B, res.B, rtol=1e-6)
     with pytest.raises(MissingDataError):
         SVAR(with_nan, svar_type="B", B=_LOWER, missing="raise")
 
