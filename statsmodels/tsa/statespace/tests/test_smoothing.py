@@ -1726,7 +1726,12 @@ def test_smooth_complex_step(use_ssm):
     rng = np.random.default_rng(20261122)
     mod = sarimax.SARIMAX(rng.standard_normal(50), order=(2, 0, 0))
     params = np.array([0.5, 0.2, 1.0])
-    h = 1e-20
+    # The step of MLEModel.score. The stationary initialization uses a
+    # complex Schur decomposition, whose intermediate results can have
+    # imaginary parts of order one (depending on the LAPACK library, e.g. on
+    # macOS), so their rounding error (1e-16) dominates a tiny step such as
+    # 1e-20; with this step it is 1e-8 relative
+    h = 1e-8
     cs_params = params + np.array([h * 1j, 0, 0])
     if use_ssm:
         # As in MLEModel.smooth, the complex step needs an inversion method
