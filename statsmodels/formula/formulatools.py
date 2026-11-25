@@ -40,15 +40,19 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
 
     Returns
     -------
-    result : DataFrame, ndarray, or tuple of DataFrame or ndarray
-        endog and exog (or just endog if X is None), preserving the input
-        type of Y, X.
+    result : DataFrame or tuple of DataFrame
+        The design matrices: ``(endog, exog)`` for a two-sided formula, or
+        the design matrix of a one-sided formula.
     missing_mask : ndarray, Series, or None
-        Boolean mask indicating observations dropped due to missing values,
-        or None if no values were dropped.
-    model_spec : ModelSpec, DesignInfo, or None
-        The right-hand-side model specification, or None if there is no
-        RHS design.
+        Boolean mask that is True for the observations dropped because of
+        missing values, or None if none were dropped.
+    model_spec : ModelSpec or DesignInfo
+        The model specification of the right-hand side.
+
+        .. versionchanged:: 0.15.1
+
+           It is also returned for data with a single row, which returned
+           None.
     """
     # half ass attempt to handle other formula objects
     if isinstance(formula, tuple(formula_handler.keys())):
@@ -77,11 +81,9 @@ def handle_formula_data(Y, X, formula, depth=0, missing="drop"):
     missing_mask = mgr.missing_mask
     if not np.any(missing_mask):
         missing_mask = None
-    if len(result) > 1:  # have RHS design
-        model_spec = mgr.spec  # detach it from DataFrame
-    else:
-        model_spec = None
-    # NOTE: is there ever a case where we'd need LHS's model_spec?
+    # The spec of the right-hand side, which is the only matrix of a
+    # one-sided formula
+    model_spec = mgr.spec
     return result, missing_mask, model_spec
 
 
