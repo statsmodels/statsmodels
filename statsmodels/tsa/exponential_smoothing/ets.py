@@ -2587,6 +2587,12 @@ class PredictionResults:
         prediction; starting with this observation and continuing through
         the end of prediction, forecasted endogenous values will be used
         instead.
+
+        .. versionchanged:: 0.15.1
+
+           The ``endog`` attribute holds the observed values of the
+           in-sample periods also when all predictions are dynamic
+           (`dynamic` True or 0). They were NaN.
     index : pd.Index, optional
         Optionally an index to associate the predicted results to. If None,
         an attempt is made to create an index for the predicted results
@@ -2640,9 +2646,14 @@ class PredictionResults:
         self.predicted_mean = results.predict(
             start=start, end=end_dynamic, dynamic=dynamic, index=index
         )
-        self.row_labels = self.predicted_mean.index
-        self.endog = np.empty(nsmooth + ndynamic) * np.nan
-        if nsmooth > 0:
+        # None for numpy data
+        self.row_labels = getattr(self.predicted_mean, "index", None)
+        # one value per prediction: with a start after the sample, the
+        # forecasts before start are not predictions
+        self.endog = np.empty(end_dynamic - start + 1) * np.nan
+        # the observed values of the in-sample periods, also of those that
+        # are predicted dynamically
+        if start <= end:
             self.endog[0 : (end - start + 1)] = results.data.endog[start : (end + 1)]
         self.model = Bunch(
             data=results.model.data.__class__(
@@ -2680,11 +2691,15 @@ class PredictionResults:
                         **simulate_kwargs,
                     )
                 )
+            # when we are doing out of sample only prediction, start > end + 1,
+            # and we only keep the simulations from start on, as in predict
+            ndiscard = max(start - (end + 1), 0)
             if sim_results and isinstance(sim_results[0], pd.DataFrame):
-                self.simulation_results = pd.concat(sim_results, axis=0)
+                self.simulation_results = pd.concat(sim_results, axis=0).iloc[ndiscard:]
             else:
-                self.simulation_results = np.concatenate(sim_results, axis=0)
-            self.forecast_variance = self.simulation_results.var(axis=1)
+                self.simulation_results = np.concatenate(sim_results, axis=0)[ndiscard:]
+            # ddof=1 is the default of pandas, but not of numpy
+            self.forecast_variance = self.simulation_results.var(axis=1, ddof=1)
         else:  # method == 'exact'
             steps = np.ones(ndynamic + nsmooth)
             if ndynamic > 0:

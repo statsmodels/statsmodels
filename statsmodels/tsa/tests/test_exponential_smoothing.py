@@ -3001,3 +3001,134 @@ def test_t_test_wald_test_constraints(use_pandas):
     if use_pandas:
         pd.testing.assert_frame_equal(cov_after, cov_before)
     assert res.model.data.cov_names is None
+
+
+@pytest.mark.parametrize("method", ["exact", "simulated"])
+@pytest.mark.parametrize("dates", [False, True])
+def test_get_prediction_numpy(oildata, method, dates):
+    # get_prediction raised AttributeError for numpy data (it read the index
+    # of the predicted mean). The numpy path must give the pandas values;
+    # the variance of the simulations uses ddof=1, the default of pandas.
+    res = ETSModel(oildata).smooth([0.3, 110.0], param_index="integer")
+    kwargs = {"dates": oildata.index} if dates else {}
+    res_np = ETSModel(oildata.to_numpy(), **kwargs).smooth(
+        [0.3, 110.0], param_index="integer"
+    )
+    pred_kwargs = dict(start=46, end=51, method=method, simulate_repetitions=20)
+    pred = res.get_prediction(rng=np.random.default_rng(0), **pred_kwargs)
+    pred_np = res_np.get_prediction(rng=np.random.default_rng(0), **pred_kwargs)
+
+    assert isinstance(pred_np.predicted_mean, np.ndarray)
+    assert_allclose(
+        pred_np.predicted_mean, pred.predicted_mean.to_numpy(), rtol=1e-12
+    )
+    assert_allclose(pred_np.var_pred_mean, np.asarray(pred.var_pred_mean), rtol=1e-12)
+    pred_int = pred_np.pred_int()
+    assert isinstance(pred_int, np.ndarray)
+    assert_allclose(pred_int, pred.pred_int().to_numpy(), rtol=1e-12)
+    frame_np = pred_np.summary_frame()
+    frame = pred.summary_frame()
+    assert list(frame_np.columns) == list(frame.columns)
+    assert_allclose(frame_np.to_numpy(), frame.to_numpy(), rtol=1e-12)
+
+
+@pytest.mark.parametrize("data", ["pandas", "numpy"])
+@pytest.mark.parametrize("error", ["add", "mul"])
+def test_get_prediction_simulated_start_after_sample(austourists, error, data):
+    # With a start after the end of the sample, the predictions are the
+    # forecasts from the end of the sample without those before start. The
+    # simulations kept those, so pred_int and summary_frame raised "Shape of
+    # passed values is (6, 2), indices imply (4, 2)" (summary_frame "All
+    # arrays must be of the same length" for numpy data) and var_pred_mean
+    # had a value for each of them. The simulations are those of simulate from
+    # the end of the sample, drawn from the same generator, from start on.
+    n = austourists.shape[0]
+    endog = austourists if data == "pandas" else austourists.to_numpy()
+    model = ETSModel(endog, error=error)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    reps, start, end = 20, n + 2, n + 5
+    pred = res.get_prediction(
+        start=start,
+        end=end,
+        method="simulated",
+        simulate_repetitions=reps,
+        rng=np.random.default_rng(0),
+    )
+    steps = end - n + 1
+    sims = res.simulate(
+        steps, anchor="end", repetitions=reps, rng=np.random.default_rng(0)
+    )
+    sims = np.asarray(sims)[start - n :]
+    forecast = np.asarray(res.forecast(steps))[start - n :]
+
+    frame = pred.summary_frame(alpha=0.1)
+    assert_allclose(frame["mean"], forecast, rtol=1e-12)
+    # rtol: pandas and numpy may sum in another order
+    assert_allclose(frame["mean_numerical"], sims.mean(1), rtol=1e-10)
+    assert_allclose(frame["pi_lower"], np.quantile(sims, 0.05, axis=1), rtol=1e-12)
+    assert_allclose(frame["pi_upper"], np.quantile(sims, 0.95, axis=1), rtol=1e-12)
+    pred_int = pred.pred_int(alpha=0.1)
+    assert_allclose(pred_int, frame[["pi_lower", "pi_upper"]], rtol=1e-12)
+    assert_allclose(pred.var_pred_mean, sims.var(1, ddof=1), rtol=1e-10)
+    if data == "pandas":
+        index = extended_index(austourists.index, steps)[start - n :]
+        assert frame.index.equals(index)
+        assert pred_int.index.equals(index)
+        assert pred.var_pred_mean.index.equals(index)
+
+
+@pytest.mark.parametrize("start", [66, 70])
+@pytest.mark.parametrize("method", ["exact", "simulated"])
+def test_get_prediction_endog_start_after_sample(austourists, method, start):
+    # endog of the prediction results has one value per prediction, the
+    # observation or NaN after the sample (nobs = 68). With a start after
+    # the sample it also had one for each forecast before start, so reading
+    # it raised "Length of values (8) does not match length of index (6)".
+    model = ETSModel(austourists)
+    res = model.smooth(fixed_params(model), param_index="integer")
+    n, end = res.nobs, 75
+    pred = res.get_prediction(
+        start=start,
+        end=end,
+        method=method,
+        simulate_repetitions=5,
+        rng=np.random.default_rng(0),
+    )
+    expected = np.r_[austourists.to_numpy(), np.full(end + 1 - n, np.nan)]
+    index = austourists.index
+    index = pd.date_range(index[0], periods=end + 1, freq=index.freq)[start:]
+    assert pred.endog.index.equals(index)
+    assert_allclose(pred.endog, expected[start:], rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "start, end, dynamic",
+    [
+        (10, 14, True),
+        (10, 14, 0),
+        (10, 14, 2),
+        (38, 42, True),
+        (38, 42, 0),
+        (38, 42, 1),
+        (39, 42, True),
+        (45, 50, False),
+    ],
+)
+@pytest.mark.parametrize("use_pandas", [False, True])
+def test_get_prediction_endog_dynamic(use_pandas, start, end, dynamic):
+    # With all predictions dynamic (True or 0), endog was NaN also in the
+    # sample. It holds the observed values of the in-sample periods
+    rng = np.random.default_rng(20261124)
+    y = 10 + 0.3 * rng.standard_normal(40).cumsum()
+    index = pd.date_range("2000-01-01", periods=40, freq="MS")
+    data = pd.Series(y, index=index) if use_pandas else y
+    res = ETSModel(data).smooth([0.4, 10.0], param_index="integer")
+    pred = res.get_prediction(start=start, end=end, dynamic=dynamic)
+    expected = np.full(end - start + 1, np.nan)
+    nobs_in = max(min(end, 39) - start + 1, 0)
+    expected[:nobs_in] = y[start : start + nobs_in]
+    assert_allclose(np.asarray(pred.endog), expected, rtol=1e-15)
+    if use_pandas:
+        pd.testing.assert_index_equal(
+            pred.endog.index, pred.predicted_mean.index, exact=False
+        )

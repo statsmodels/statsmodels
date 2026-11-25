@@ -1,0 +1,8 @@
+- ``get_prediction`` of
+  :class:`~statsmodels.tsa.exponential_smoothing.ets.ETSResults` with a
+  ``start`` after the end of the sample raised a ``ValueError`` from
+  ``pred_int`` and ``summary_frame`` with simulated prediction
+  intervals, whose ``var_pred_mean`` also had values for the
+  forecasts before ``start``, and from ``endog`` of the prediction
+  results with either method. The forecasts before ``start`` are
+  dropped, as from the predicted mean. :pr:`11107`
