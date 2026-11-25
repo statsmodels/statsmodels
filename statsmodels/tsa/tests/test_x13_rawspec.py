@@ -2,10 +2,12 @@
 
 ``test_x13`` skips its whole module when x12a/x13as is absent. These checks only
 exercise the spec-building path (``speconly=True`` returns before the binary is
-called) and the clean-up of the temporary files with ``run_spec`` replaced by a
-stub, so they live here and run everywhere.
+called), the clean-up of the temporary files with ``run_spec`` replaced by a
+stub, and the errors raised when no binary is found, so they live here and run
+everywhere.
 """
 
+from statsmodels.compat.pandas import MONTH_END, QUARTER_END, YEAR_END
 from statsmodels.compat.python import PYTHON_IMPL_WASM
 
 import io
@@ -16,11 +18,12 @@ import subprocess
 import sys
 import threading
 
+import numpy as np
 import pandas as pd
 import pytest
 
 import statsmodels
-from statsmodels.tools.sm_exceptions import IOWarning, X13Error
+from statsmodels.tools.sm_exceptions import IOWarning, X13Error, X13NotFoundError
 from statsmodels.tsa import x13
 
 # Non-ASCII text that is not valid in an ASCII locale. The capital A with acute
@@ -774,3 +777,359 @@ def test_rawspec_diff_exog_raise(no_x12, kwargs):
         x13.x13_arima_analysis(
             _monthly_endog(), rawspec="series{}", speconly=True, **kwargs
         )
+
+
+# The spec that x13_arima_analysis writes, compared with the spec written out
+# by hand from the X-13ARIMA-SEATS syntax. X-13 reads specs in free format, so
+# the comparison ignores the amount and kind of whitespace between the tokens,
+# but not whether there is any.
+def _normalize(spec):
+    return " ".join(spec.split())
+
+
+QUARTERLY_VALUES = [1.5, 2.25, 3.0, 3.75, 4.5, 5.25, 6.0, 6.75]
+QUARTERLY_DATA = "1.5 2.25 3.0 3.75 4.5 5.25 6.0 6.75"
+
+
+def _quarterly_endog(name="gdp"):
+    index = pd.period_range("1959Q3", periods=8, freq="Q")
+    return pd.Series(QUARTERLY_VALUES, index=index, name=name)
+
+
+def _series_spec(period=4, start="1959.3", name="gdp", title=None, data=None):
+    title = name if title is None else title
+    data = QUARTERLY_DATA if data is None else data
+    return f"""
+    Series {{
+        data=({data})
+        appendbcst=no
+        appendfcst=no
+        period={period}
+        start={start}
+        title="{title}"
+        name="{name}"
+    }}
+    """
+
+
+DEFAULT_OPTIONS = """
+transform{function=auto}
+outlier{}
+automdl{
+    maxorder = (2 1)
+    maxdiff = (2 1)
+}
+x11{ save=(d11 d12 d13)
+     savelog=(fd8 m7 q)}
+"""
+
+
+def test_spec_default(no_x12):
+    spec = x13.x13_arima_analysis(_quarterly_endog(), speconly=True)
+
+    assert _normalize(spec) == _normalize(_series_spec() + DEFAULT_OPTIONS)
+
+
+AUTO = "transform{function=auto} outlier{}"
+AUTOMDL = "automdl{ maxorder = (2 1) maxdiff = (2 1) }"
+X11 = "x11{ save=(d11 d12 d13) savelog=(fd8 m7 q)}"
+
+
+@pytest.mark.parametrize(
+    "kwargs, options",
+    [
+        ({"log": True}, f"transform{{function=log}} outlier{{}} {AUTOMDL} {X11}"),
+        ({"log": False}, f"transform{{function=none}} outlier{{}} {AUTOMDL} {X11}"),
+        ({"log": None}, f"{AUTO} {AUTOMDL} {X11}"),
+        ({"outlier": False}, f"transform{{function=auto}} {AUTOMDL} {X11}"),
+        (
+            {"maxorder": (3, 2), "maxdiff": (1, 0)},
+            f"{AUTO} automdl{{ maxorder = (3 2) maxdiff = (1 0) }} {X11}",
+        ),
+        (
+            {"maxdiff": None, "diff": (1, 0)},
+            f"{AUTO} automdl{{ maxorder = (2 1) diff = (1 0) }} {X11}",
+        ),
+        # maxdiff takes precedence over diff
+        ({"diff": (1, 0)}, f"{AUTO} {AUTOMDL} {X11}"),
+        (
+            {"trading": True},
+            f"{AUTO} {AUTOMDL} regression{{ variables = (td) }} {X11}",
+        ),
+        ({"forecast_periods": 6}, f"{AUTO} {AUTOMDL} forecast{{ maxlead = (6) }} {X11}"),
+        ({"forecast_periods": 0}, f"{AUTO} {AUTOMDL} forecast{{ maxlead = (0) }} {X11}"),
+    ],
+    ids=[
+        "log",
+        "no_log",
+        "auto_log",
+        "no_outlier",
+        "maxorder_maxdiff",
+        "diff",
+        "diff_ignored",
+        "trading",
+        "forecast",
+        "no_forecast",
+    ],
+)
+def test_spec_options(no_x12, kwargs, options):
+    spec = x13.x13_arima_analysis(_quarterly_endog(), speconly=True, **kwargs)
+
+    assert _normalize(spec) == _normalize(_series_spec() + options)
+
+
+def _exog_frame():
+    index = _quarterly_endog().index
+    return pd.DataFrame(
+        {"a": np.arange(8.0), "b": np.arange(10.0, 18.0)}, index=index
+    )
+
+
+# X-13 reads the user regressors observation by observation, with the values
+# of all variables for one date before those of the next date
+FRAME_DATA = "0.0 10.0 1.0 11.0 2.0 12.0 3.0 13.0 4.0 14.0 5.0 15.0 6.0 16.0 7.0 17.0"
+REORDERED_DATA = (
+    "10.0 0.0 11.0 1.0 12.0 2.0 13.0 3.0 14.0 4.0 15.0 5.0 16.0 6.0 17.0 7.0"
+)
+SERIES_DATA = "0.0 1.0 2.0 3.0 4.0 5.0 6.0 7.0"
+
+
+@pytest.mark.parametrize(
+    "make_exog, names, data",
+    [
+        (_exog_frame, "a b", FRAME_DATA),
+        (lambda: _exog_frame()[["b", "a"]], "b a", REORDERED_DATA),
+        (lambda: _exog_frame()["a"].rename("shock"), "shock", SERIES_DATA),
+        # names that are not str are replaced by generated names
+        (lambda: _exog_frame()["a"].rename(None), "x1", SERIES_DATA),
+        (lambda: _exog_frame()["a"].rename(3), "x1", SERIES_DATA),
+    ],
+    ids=["frame", "frame_reordered", "series", "unnamed", "int_name"],
+)
+@pytest.mark.parametrize("trading", [False, True])
+def test_spec_exog(no_x12, make_exog, names, data, trading):
+    spec = x13.x13_arima_analysis(
+        _quarterly_endog(), exog=make_exog(), trading=trading, speconly=True
+    )
+
+    variables = "variables = (td)" if trading else ""
+    regression = f"regression{{ {variables} user = ({names}) data = ({data}) }}"
+    options = f"{AUTO} {AUTOMDL} {regression} {X11}"
+    assert _normalize(spec) == _normalize(_series_spec() + options)
+
+
+@pytest.mark.parametrize("exog", [np.arange(8.0), list(range(8))])
+def test_spec_exog_not_pandas(no_x12, exog):
+    with pytest.raises(ValueError, match="exog is not a Series or DataFrame"):
+        x13.x13_arima_analysis(_quarterly_endog(), exog=exog, speconly=True)
+
+
+ENDOG_FORMS = {
+    "period_quarterly": (_quarterly_endog, {}, 4, "1959.3", "gdp"),
+    "datetime_quarter_start": (
+        lambda: _quarterly_endog().set_axis(
+            pd.date_range("1959-07-01", periods=8, freq="QS")
+        ),
+        {},
+        4,
+        "1959.3",
+        "gdp",
+    ),
+    "datetime_quarter_end": (
+        lambda: _quarterly_endog().set_axis(
+            pd.date_range("1959-09-30", periods=8, freq=QUARTER_END)
+        ),
+        {},
+        4,
+        "1959.3",
+        "gdp",
+    ),
+    "period_monthly": (
+        lambda: _quarterly_endog().set_axis(
+            pd.period_range("1959-07", periods=8, freq="M")
+        ),
+        {},
+        12,
+        "1959.7",
+        "gdp",
+    ),
+    "datetime_month_start": (
+        lambda: _quarterly_endog().set_axis(
+            pd.date_range("1959-07-01", periods=8, freq="MS")
+        ),
+        {},
+        12,
+        "1959.7",
+        "gdp",
+    ),
+    "datetime_month_end": (
+        lambda: _quarterly_endog().set_axis(
+            pd.date_range("1959-07-31", periods=8, freq=MONTH_END)
+        ),
+        {},
+        12,
+        "1959.7",
+        "gdp",
+    ),
+    # no freq on the index: it is inferred from the dates
+    "datetime_no_freq": (
+        lambda: _quarterly_endog().set_axis(
+            pd.DatetimeIndex(
+                ["2000-07-31", "2000-08-31", "2000-09-30", "2000-10-31"]
+                + ["2000-11-30", "2000-12-31", "2001-01-31", "2001-02-28"]
+            )
+        ),
+        {},
+        12,
+        "2000.7",
+        "gdp",
+    ),
+    "dataframe": (lambda: _quarterly_endog().to_frame(), {}, 4, "1959.3", "gdp"),
+    "dataframe_int_column": (
+        lambda: _quarterly_endog().to_frame().set_axis([0], axis=1),
+        {},
+        4,
+        "1959.3",
+        "Unnamed Series",
+    ),
+    "list": (
+        lambda: list(QUARTERLY_VALUES),
+        {"start": "1959-07-01", "freq": "QS"},
+        4,
+        "1959.3",
+        "Unnamed Series",
+    ),
+    "tuple": (
+        lambda: tuple(QUARTERLY_VALUES),
+        {"start": "1959-07-01", "freq": "MS"},
+        12,
+        "1959.7",
+        "Unnamed Series",
+    ),
+    "ndarray": (
+        lambda: np.array(QUARTERLY_VALUES),
+        {"start": pd.Timestamp("1959-09-30"), "freq": pd.offsets.QuarterEnd()},
+        4,
+        "1959.3",
+        "Unnamed Series",
+    ),
+}
+
+
+@pytest.mark.parametrize("form", list(ENDOG_FORMS))
+def test_spec_endog_forms(no_x12, form):
+    make_endog, kwargs, period, start, name = ENDOG_FORMS[form]
+
+    spec = x13.x13_arima_analysis(make_endog(), speconly=True, **kwargs)
+
+    expected = _series_spec(period=period, start=start, name=name)
+    assert _normalize(spec) == _normalize(expected + DEFAULT_OPTIONS)
+
+
+def test_spec_endog_int_and_long_name(no_x12):
+    # X-13 limits the series name to 64 and the title to 79 characters
+    name = "".join(chr(ord("a") + i % 26) for i in range(100))
+    endog = pd.Series(
+        np.arange(1, 9), index=_quarterly_endog().index, name=name
+    )
+
+    spec = x13.x13_arima_analysis(endog, speconly=True)
+
+    expected = _series_spec(
+        name=name[:64], title=name[:79], data="1 2 3 4 5 6 7 8"
+    )
+    assert _normalize(spec) == _normalize(expected + DEFAULT_OPTIONS)
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.date_range("2000-01-02", periods=8, freq="W"),
+        pd.period_range("2000-01-02", periods=8, freq="W"),
+        pd.date_range("2000-01-01", periods=8, freq="D"),
+        pd.date_range("2000-12-31", periods=8, freq=YEAR_END),
+        pd.period_range("2000", periods=8, freq="Y"),
+    ],
+    ids=["weekly", "weekly_period", "daily", "annual", "annual_period"],
+)
+def test_endog_frequency_not_supported(no_x12, index):
+    endog = pd.Series(QUARTERLY_VALUES, index=index)
+
+    with pytest.raises(ValueError, match="Only monthly and quarterly periods"):
+        x13.x13_arima_analysis(endog, speconly=True)
+
+
+def test_endog_dataframe_two_columns(no_x12):
+    endog = _exog_frame()
+
+    with pytest.raises(ValueError, match="more than one column"):
+        x13.x13_arima_analysis(endog, speconly=True)
+
+
+@pytest.mark.parametrize(
+    "kwargs", [{}, {"start": "1959-07-01"}, {"freq": "QS"}], ids=["none", "start", "freq"]
+)
+def test_endog_not_pandas_needs_start_and_freq(no_x12, kwargs):
+    with pytest.raises(ValueError, match="start and freq cannot be none"):
+        x13.x13_arima_analysis(QUARTERLY_VALUES, speconly=True, **kwargs)
+
+
+def test_rawspec_other_arguments_raise(no_x12):
+    # diff raises with a spec (start and freq give the dates of array_like
+    # input, see the tests of the rawspec argument checks)
+    with pytest.raises(ValueError, match="other arguments not allowed"):
+        x13.x13_arima_analysis(
+            _quarterly_endog(), rawspec="series{}", speconly=True, diff=(1, 1)
+        )
+
+
+@pytest.mark.parametrize(
+    "rawspec, expected",
+    [
+        # the output tables are added to the list that is saved
+        (
+            "series{\n  modelspan=(,)\n}\nx11{ save=(d10) mode=mult }",
+            "modelspan=(,) } x11{ save=( d11 d12 d13 d10) mode=mult }",
+        ),
+        # a save argument is added to an x11 spec without one; any case
+        (
+            "SERIES { }\ntransform{function=log}\nX11 {mode=add}",
+            "} transform{function=log} X11 { save=(d11 d12 d13) mode=add}",
+        ),
+        # an x11 spec is added if there is none
+        (
+            "series {span=(1960.1,)}\narima{model=(0 1 1)}",
+            "span=(1960.1,)} arima{model=(0 1 1)} x11 {save=(d11 d12 d13)}",
+        ),
+    ],
+    ids=["x11_save", "x11_no_save", "no_x11"],
+)
+def test_rawspec_spliced(no_x12, rawspec, expected):
+    spec = x13.x13_arima_analysis(_quarterly_endog(), rawspec=rawspec, speconly=True)
+
+    # the series data and attributes come first in the series spec of rawspec
+    series = _normalize(_series_spec())
+    assert _normalize(spec) == series[: -len(" }")] + " " + expected
+
+
+@pytest.mark.parametrize(
+    "x12path", ["", "x13as", "x13as.exe"], ids=["directory", "binary", "binary_exe"]
+)
+@pytest.mark.parametrize(
+    "func", [x13.x13_arima_analysis, x13.x13_arima_select_order]
+)
+def test_x13_not_found_x12path(tmp_path, x12path, func):
+    # a directory without the binary, or a binary in it that does not exist;
+    # the environment variables are not used when x12path is given
+    with pytest.raises(X13NotFoundError, match="x12a and x13as not found"):
+        func(_quarterly_endog(), x12path=str(tmp_path / x12path))
+
+
+@pytest.mark.parametrize("variable", ["X13PATH", "X12PATH"])
+def test_x13_not_found_environment(tmp_path, monkeypatch, variable):
+    monkeypatch.delenv("X13PATH", raising=False)
+    monkeypatch.delenv("X12PATH", raising=False)
+    monkeypatch.setenv(variable, str(tmp_path))
+
+    with pytest.raises(X13NotFoundError, match="x12a and x13as not found"):
+        x13.x13_arima_analysis(_quarterly_endog())
