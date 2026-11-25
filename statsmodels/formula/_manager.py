@@ -480,12 +480,19 @@ class FormulaManager:
 
         Parameters
         ----------
-        formula : str, Formula
-            The formula to use.
-        data : DataFrame, dict, list, recarray
-            The data to use when evaluating the formula.
+        formula : str, Formula, ModelDesc, ModelSpec or DesignInfo
+            The formula, as a string or an engine-specific formula object, or
+            the model specification of an existing design (a formulaic
+            ``ModelSpec`` or a patsy ``DesignInfo``), which is applied to data.
+        data : DataFrame, dict or recarray
+            The data to use when evaluating the formula. A Polars DataFrame is
+            converted to pandas. Data structures other than a DataFrame are
+            deprecated.
         eval_env : int or dict, optional
-            Additional context to use when evaluating the formula.
+            Additional context to use when evaluating the formula: the number
+            of stack frames above the caller in which variables are looked
+            up, or a dict that maps names to values. A patsy
+            ``EvalEnvironment`` is accepted but deprecated.
         pandas : bool, optional
             Return a DataFrame if true, otherwise return a numpy array.
         na_action : NAAction or str, optional
@@ -504,9 +511,14 @@ class FormulaManager:
 
         Returns
         -------
-        tuple[DataFrame, ...], tuple[ndarray, ...], tuple[DesignMatrix, ...]
-            If pandas is True, returns one or more DataFrames. If False,
-            returns a NumPy ndarray (formulaic) or a DesignMatrix (patsy).
+        DataFrame, ndarray, or tuple of DataFrame or ndarray
+            The design matrix of a one-sided formula or of a model
+            specification, or a tuple of the left-hand-side and
+            right-hand-side matrices of a two-sided formula (only the
+            right-hand side if prediction is True). DataFrames if pandas is
+            True, otherwise NumPy arrays: patsy returns a ``DesignMatrix``
+            (an ndarray subclass), and formulaic wraps either type in a
+            ``ModelMatrix``.
         """
         # Convert Polars objects to pandas
         data = _to_pandas(data)
