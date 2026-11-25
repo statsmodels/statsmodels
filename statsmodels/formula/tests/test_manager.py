@@ -587,3 +587,15 @@ def test_is_categorical(engine, lhs, expected):
     mgr = FormulaManager(engine=engine)
     lhs_mat, _ = mgr.get_matrices(f"{lhs} ~ x", df)
     assert mgr.is_categorical(lhs_mat) is expected
+
+
+def test_engine_options_err_message():
+    allowed = " or ".join(ENGINES)
+    with pytest.raises(ValueError, match=f"Must be {allowed}\\.$"):
+        statsmodels.formula.options.formula_engine = "unknown"
+
+
+def test_engine_options_order_err_message():
+    match = "Must be 'degree', 'sort', 'none', or 'legacy'\\.$"
+    with pytest.raises(ValueError, match=match):
+        statsmodels.formula.options.ordering = "unknown"

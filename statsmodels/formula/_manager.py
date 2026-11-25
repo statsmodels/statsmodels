@@ -160,17 +160,8 @@ class _FormulaOption:
     @formula_engine.setter
     def formula_engine(self, value: Literal["patsy", "formulaic"]) -> None:
         if value not in self._allowed_options:
-            msg = "Invalid formula engine option. Must be "
-            if len(self._allowed_options) == 1:
-                msg += f"{self._allowed_options[0]}"
-            else:
-                allowed = list(self._allowed_options)
-                allowed[-1] = f"or {allowed[-1]}"
-                if len(allowed) > 2:
-                    msg += ", ".join(allowed)
-                else:
-                    msg += " ".join(allowed)
-            raise ValueError(f"{msg}.")
+            allowed = " or ".join(self._allowed_options)
+            raise ValueError(f"Invalid formula engine option. Must be {allowed}.")
 
         self._formula_engine = value
 
@@ -190,7 +181,7 @@ class _FormulaOption:
     def ordering(self, value: str):
         if value not in ("degree", "sort", "none", "legacy"):
             raise ValueError(
-                "Invalid ordering option. Must be 'degree', 'sort', 'none', or 'legacy."
+                "Invalid ordering option. Must be 'degree', 'sort', 'none', or 'legacy'."
             )
         self._ordering = value
 
