@@ -405,6 +405,9 @@ def concat(series, axis=0, allow_mix=False):
                     s.columns = base_columns[:1]
                 s_columns = s.columns
             else:
+                # The same for two series to concatenate along the rows
+                if axis == 0 and s.name is None:
+                    s = series[i] = s.rename(base_columns[0])
                 s_columns = pd.Index([s.name])
 
             if axis == 0 and not base_columns.equals(s_columns):
@@ -2275,6 +2278,13 @@ def compute_smoothed_state_weights(results, compute_t=None, compute_j=None,
     to the `res` object. This can be overridden by the user for a small
     performance boost if they are sure that the attributes have not changed;
     see the `resmooth` argument.
+
+    .. versionchanged:: 0.15.1
+
+       The weights of copied (pickled or deep-copied) results are right
+       without ``resmooth=True``. The copied Kalman smoother held the smoothed
+       state autocovariance in place of the matrices :math:`L_t`, so the
+       weights were wrong unless the model was smoothed again.
 
     References
     ----------

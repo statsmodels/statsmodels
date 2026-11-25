@@ -1,0 +1,2 @@
+- ``is_stable`` of VAR processes counted an eigenvalue of modulus 1 (a
+  unit root) as stable. :pr:`10972`

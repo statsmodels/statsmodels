@@ -46,3 +46,40 @@ def test_append_multistep(data):
     print(res3.model.endog)
     assert_allclose(res3.model.endog[:, 0], [1., 0.5, 1.5, 0.9, 0.2, 0.34])
     assert_allclose(res3.forecast(1), 0.17)
+
+
+@pytest.mark.parametrize("model", ["sarimax", "varmax"])
+def test_extend_kwargs_not_modified(model):
+    # The defaults of the extension model (the trend offset, and for SARIMAX
+    # validate_specification) are not written into the caller's
+    # extend_kwargs, so reusing the dict with another model gives the
+    # forecasts of that model
+    from statsmodels.tsa.statespace.varmax import VARMAX
+
+    rng = np.random.default_rng(1234)
+    exog = rng.standard_normal((43, 1))
+    if model == "sarimax":
+        endog = 0.1 * np.arange(1, 44) + 0.5 * exog[:, 0]
+        endog += rng.standard_normal(43)
+
+        def results(nobs):
+            mod = sarimax.SARIMAX(
+                endog[:nobs], exog=exog[:nobs], order=(1, 0, 0), trend="t"
+            )
+            return mod.smooth([0.1, 0.5, 0.3, 1.0])
+
+    else:
+        endog = 0.1 * np.arange(1, 44)[:, None] + 0.5 * exog
+        endog = endog + rng.standard_normal((43, 2))
+
+        def results(nobs):
+            mod = VARMAX(endog[:nobs], order=(1, 0), trend="ct", exog=exog[:nobs])
+            return mod.smooth(mod.start_params)
+
+    extend_kwargs = {}
+    results(40).get_forecast(3, exog=exog[40:], extend_kwargs=extend_kwargs)
+    assert extend_kwargs == {}
+    res = results(30)
+    actual = res.forecast(3, exog=exog[30:33], extend_kwargs=extend_kwargs)
+    assert extend_kwargs == {}
+    assert_allclose(actual, res.forecast(3, exog=exog[30:33]), rtol=1e-12)

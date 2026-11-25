@@ -1,0 +1,5 @@
+- ``UnobservedComponents`` with ``level=True`` and ``trend=True``,
+  neither stochastic and without an irregular, had no
+  ``trend_specification``, so its summary showed "Model: None". It is
+  the "fixed slope" trend, as with the string specification.
+  :pr:`11086`

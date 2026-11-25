@@ -786,12 +786,33 @@ class ARDL(AutoReg):
             the first out-of-sample observation.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
-            exogenous data array used when the model was created.
+            exogenous data array used when the model was created. If that
+            exog was a DataFrame, a DataFrame with the same columns, which
+            are selected by name. If it was a 1-d array or a Series, a 1-d
+            array, a Series or an array with one column.
+
+            .. versionchanged:: 0.15.1
+
+               The columns of a replacement DataFrame are selected by name.
+               They were used by position, so that a DataFrame with the
+               columns in another order gave wrong predictions. A
+               replacement for a 1-d array or Series exog raised an
+               IndexError.
         exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous
             variables. Must have the same number of columns as the exog
             used when the model was created, and at least as many rows as
-            the number of out-of-sample forecasts.
+            the number of out-of-sample forecasts. If that exog was a
+            DataFrame, a DataFrame with the same columns, which are selected
+            by name. If it was a 1-d array or a Series, a 1-d array, a Series
+            or an array with one column.
+
+            .. versionchanged:: 0.15.1
+
+               The columns of a DataFrame are selected by name. They were
+               used by position, so that a DataFrame with the columns in
+               another order gave wrong forecasts. Values for a 1-d array
+               or Series exog raised an IndexError.
         fixed : array_like, optional
             A replacement fixed array.  Must have the same shape as the
             fixed data array used when the model was created.
@@ -825,12 +846,17 @@ class ARDL(AutoReg):
                     raise ValueError(
                         f"{name} must have the same columns as the original exog"
                     )
+                # The values are used by position from here on
+                arr = arr[orig.columns]
             else:
                 arr = array_like(arr, name, ndim=2, optional=False)
-            if arr.ndim != 2 or arr.shape[1] != orig.shape[1]:
+            # A 1-d exog (an array or a Series) is a single column, as when
+            # the model was created
+            ncol = orig.shape[1] if orig.ndim == 2 else 1
+            if arr.ndim != 2 or arr.shape[1] != ncol:
                 raise ValueError(
                     f"{name} must have the same number of columns as the "
-                    f"original data, {orig.shape[1]}"
+                    f"original data, {ncol}"
                 )
             if exact and arr.shape[0] != orig.shape[0]:
                 raise ValueError(
@@ -1131,7 +1157,17 @@ class ARDLResults(AutoRegResults):
             steps must be an integer. The default is 1.
         exog : array_like, optional
             Exogenous values to use out-of-sample. Must have same number of
-            columns as original exog data and at least `steps` rows
+            columns as original exog data and at least `steps` rows. If the
+            original exog was a DataFrame, a DataFrame with the same columns,
+            which are selected by name. If it was a 1-d array or a Series, a
+            1-d array, a Series or an array with one column.
+
+            .. versionchanged:: 0.15.1
+
+               The columns of a DataFrame are selected by name. They were
+               used by position, so that a DataFrame with the columns in
+               another order gave wrong forecasts. Values for a 1-d array
+               or Series exog raised an IndexError.
         fixed : array_like, optional
             Fixed values to use out-of-sample. Must have same number of
             columns as original fixed data and at least `steps` rows
@@ -1361,12 +1397,33 @@ class ARDLResults(AutoRegResults):
             the first out-of-sample observation.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
-            exogenous data array used when the model was created.
+            exogenous data array used when the model was created. If that
+            exog was a DataFrame, a DataFrame with the same columns, which
+            are selected by name. If it was a 1-d array or a Series, a 1-d
+            array, a Series or an array with one column.
+
+            .. versionchanged:: 0.15.1
+
+               The columns of a replacement DataFrame are selected by name.
+               They were used by position, so that a DataFrame with the
+               columns in another order gave wrong predictions. A
+               replacement for a 1-d array or Series exog raised an
+               IndexError.
         exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous variable.
             Must have the same number of columns as the exog used when the
             model was created, and at least as many rows as the number of
-            out-of-sample forecasts.
+            out-of-sample forecasts. If that exog was a DataFrame, a
+            DataFrame with the same columns, which are selected by name. If
+            it was a 1-d array or a Series, a 1-d array, a Series or an array
+            with one column.
+
+            .. versionchanged:: 0.15.1
+
+               The columns of a DataFrame are selected by name. They were
+               used by position, so that a DataFrame with the columns in
+               another order gave wrong forecasts. Values for a 1-d array
+               or Series exog raised an IndexError.
         fixed : array_like, optional
             A replacement fixed array.  Must have the same shape as the
             fixed data array used when the model was created.
@@ -1908,6 +1965,12 @@ def ardl_select_order(
             lowest = val
             selected_order = key
     exog_order = dict(selected_order[1:])
+    if isinstance(maxorder, Mapping):
+        # The variables that maxorder excludes (None) are not in the selected
+        # order: exclude them explicitly, so that ARDL does not warn that
+        # they are missing
+        for key in maxorder:
+            exog_order.setdefault(key, None)
     model = ARDL(
         endog,
         selected_order[0],
@@ -1994,7 +2057,13 @@ class UECM(ARDL):
 
             Bool variables are differenced as 0 and 1. The differences were
             their absolute values, so a change from True to False was 1
-            instead of -1.
+            instead of -1. Integer variables are differenced as float. The
+            differences of unsigned integer variables, and of integer arrays
+            whose differences do not fit in their type (int8 values -100 and
+            100, for example), wrapped around, so that a change from 3 to 1
+            of a uint8 variable was 254 instead of -2. A 1-d array or a
+            Series is a single variable with the key 0, as in ARDL. They
+            raised a ValueError.
     order : int or dict, optional
         If int, uses lags 0, 1, ..., order for all exog variables. If a
         dict, applies the lags series by series. If ``exog`` is anything
@@ -2217,7 +2286,8 @@ class UECM(ARDL):
         # 2. Levels
         x_names.append(f"{y_base}.L1")
         orig_exog = self.data.orig_exog
-        exog_pandas = isinstance(orig_exog, pd.DataFrame)
+        # A Series is the variable 0, named as in ARDL
+        exog_pandas = isinstance(orig_exog, (pd.DataFrame, pd.Series))
         dexog_names = []
         # _order only holds the included exog, whose lags are lists
         for key, val in self._order.items():
@@ -2249,38 +2319,13 @@ class UECM(ARDL):
         self._endog_reg, self._endog = _lagmat_result.lags, _lagmat_result.leads
         # 2. Deterministics
         self._deterministic_reg = self._deterministics.in_sample()
-        # 3. Levels
-        orig_exog = self.data.orig_exog
-        exog_pandas = isinstance(orig_exog, pd.DataFrame)
+        # 3. Levels and 4. exog Lags
         lvl = np.full(self.data.endog.shape, np.nan)
         lvl[1:] = self.data.endog[:-1]
-        lvls = [lvl.copy()]
-        for key in self._order:
-            if exog_pandas:
-                loc = orig_exog.columns.get_loc(key)
-            else:
-                loc = key
-            lvl[1:] = self.data.exog[:-1, loc]
-            lvls.append(lvl.copy())
-        self._levels = np.column_stack(lvls)
-
-        # 4. exog Lags
-        # np.diff and DataFrame.diff take the xor of bool values, so bool
-        # variables are differenced as float
-        if exog_pandas:
-            bool_dtype = np.dtype(bool)
-            bool_cols = [c for c, dt in orig_exog.dtypes.items() if dt == bool_dtype]
-            dexog = orig_exog.astype(dict.fromkeys(bool_cols, float)).diff()
-        else:
-            if orig_exog.dtype == bool:
-                orig_exog = orig_exog.astype(float)
-            dexog = np.full(self.data.exog.shape, np.nan)
-            dexog[1:] = np.diff(orig_exog, axis=0)
-        adj_order = {}
-        for key, val in self._order.items():
-            adj_val = None if (val is None or val == [1]) else val[:-1]
-            adj_order[key] = adj_val
-        self._exog = self._format_exog(dexog, adj_order)
+        exog_lvls, self._exog = self._exog_regressors(
+            self.data.orig_exog, self.data.exog
+        )
+        self._levels = np.column_stack([lvl] + exog_lvls)
 
         self._blocks = {
             "deterministic": self._deterministic_reg,
@@ -2319,6 +2364,59 @@ class UECM(ARDL):
                 f"for estimation ({reg.shape[0]})."
             )
         return np.squeeze(y)[self._hold_back :], reg
+
+    def _exog_regressors(
+        self, orig_exog: ArrayLike2D | pd.Series, exog: np.ndarray
+    ) -> tuple[list[np.ndarray], dict[Hashable, np.ndarray]]:
+        """
+        Lagged levels and lagged differences of the exogenous variables
+
+        orig_exog has the form of the exog used to create the model and exog
+        holds its values in a 2-d array.
+        """
+        if isinstance(orig_exog, pd.Series):
+            # A Series is the variable 0, as in ARDL
+            orig_exog = orig_exog.to_frame(0)
+        exog_pandas = isinstance(orig_exog, pd.DataFrame)
+        lvls = []
+        for key in self._order:
+            if exog_pandas:
+                loc = orig_exog.columns.get_loc(key)
+            else:
+                loc = key
+            lvl = np.full(exog.shape[0], np.nan)
+            lvl[1:] = exog[:-1, loc]
+            lvls.append(lvl)
+
+        # np.diff and DataFrame.diff take the xor of bool values and wrap
+        # around for unsigned integers (np.diff also when the difference of
+        # signed integers does not fit in their type), so bool and integer
+        # variables are differenced as float
+        if exog_pandas:
+            # Also the nullable "boolean" dtype, whose diff is not numeric,
+            # the nullable integer dtypes, and categorical columns, which have
+            # no diff (their values, as float, are the levels, as in ARDL)
+            bool_cols = [
+                c
+                for c, dt in orig_exog.dtypes.items()
+                if pd.api.types.is_bool_dtype(dt)
+                or pd.api.types.is_integer_dtype(dt)
+                or isinstance(dt, pd.CategoricalDtype)
+            ]
+            dexog = orig_exog.astype(dict.fromkeys(bool_cols, float)).diff()
+        else:
+            if orig_exog.dtype.kind in "biu":
+                orig_exog = orig_exog.astype(float)
+            if orig_exog.ndim == 1:
+                # A 1-d array is the variable 0, as in ARDL
+                orig_exog = orig_exog[:, None]
+            dexog = np.full(exog.shape, np.nan)
+            dexog[1:] = np.diff(orig_exog, axis=0)
+        adj_order = {}
+        for key, val in self._order.items():
+            adj_val = None if (val is None or val == [1]) else val[:-1]
+            adj_order[key] = adj_val
+        return lvls, self._format_exog(dexog, adj_order)
 
     @Appender(str(fit_doc))
     def fit(
@@ -2405,7 +2503,7 @@ class UECM(ARDL):
         exog_oos: NDArray | pd.DataFrame | None = None,
         fixed: NDArray | pd.DataFrame | None = None,
         fixed_oos: NDArray | pd.DataFrame | None = None,
-    ) -> np.ndarray:
+    ) -> np.ndarray | pd.Series:
         """
         In-sample prediction and out-of-sample forecasting.
 
@@ -2442,7 +2540,15 @@ class UECM(ARDL):
             location of `dynamic` which is then used to compute the offset.
         exog : array_like, optional
             A replacement exogenous array.  Must have the same shape as the
-            exogenous data array used when the model was created.
+            exogenous data array used when the model was created. If that
+            exog was a DataFrame, a DataFrame with the same columns, which
+            are selected by name.
+
+            .. versionchanged:: 0.15.1
+
+               The lagged levels and the differences of the replacement exog
+               are used. It was ignored, so that the predictions were those
+               of the exog used when the model was created.
         exog_oos : array_like, optional
             An array containing out-of-sample values of the exogenous
             variables. Must have the same number of columns as the exog
@@ -2451,6 +2557,12 @@ class UECM(ARDL):
         fixed : array_like, optional
             A replacement fixed array.  Must have the same shape as the
             fixed data array used when the model was created.
+
+            .. versionchanged:: 0.15.1
+
+               The replacement fixed is used. It was ignored, so that the
+               predictions were those of the fixed used when the model was
+               created.
         fixed_oos : array_like, optional
             An array containing out-of-sample values of the fixed variables.
             Must have the same number of columns as the fixed used when the
@@ -2461,7 +2573,16 @@ class UECM(ARDL):
         -------
         predictions : ndarray or Series
             Array of out of in-sample predictions and / or out-of-sample
-            forecasts.
+            forecasts. A Series with the index of the data if the endog is
+            a pandas Series or DataFrame.
+
+            .. versionchanged:: 0.15.1
+
+               The predictions are a Series for pandas data, as those of
+               ``ARDL.predict``. They were an ndarray, so that
+               ``UECMResults.get_prediction`` returned arrays and its
+               ``summary_frame`` had the index 0, 1, ..., instead of the
+               index of the data.
         """
         if dynamic is not False:
             raise NotImplementedError("dynamic forecasts are not supported")
@@ -2470,9 +2591,58 @@ class UECM(ARDL):
         )
         if num_oos != 0:
             raise NotImplementedError("Out-of-sample forecasts are not supported")
+        x = self._x
+        if exog is not None or fixed is not None:
+            x = self._prediction_x(exog, fixed)
         pred = np.full(self.endog.shape[0], np.nan)
-        pred[-self._x.shape[0] :] = self._x @ params
-        return pred[start : end + 1]
+        pred[-x.shape[0] :] = x @ params
+        return self._wrap_prediction(pred[start : end + 1], start, end + 1, 0)
+
+    def _prediction_x(
+        self,
+        exog: NDArray | pd.DataFrame | None,
+        fixed: ArrayLike2D | None,
+    ) -> np.ndarray:
+        """Regressors with a replacement exog or fixed"""
+        blocks = dict(self._blocks)
+        if exog is not None:
+            orig_exog = self.data.orig_exog
+            if isinstance(orig_exog, pd.DataFrame):
+                if not isinstance(exog, pd.DataFrame):
+                    raise TypeError(
+                        "exog must be a DataFrame when the original exog was a "
+                        "DataFrame"
+                    )
+                if sorted(exog.columns) != sorted(orig_exog.columns):
+                    raise ValueError(
+                        "exog must have the same columns as the original exog"
+                    )
+                # _exog_regressors selects the columns by name
+                exog_values = np.asarray(exog)
+            else:
+                exog = exog_values = array_like(exog, "exog", ndim=2)
+            if exog_values.shape != self.data.exog.shape:
+                raise ValueError(
+                    "exog must have the same shape as the original exog, "
+                    f"{self.data.exog.shape}"
+                )
+            exog_lvls, blocks["exog"] = self._exog_regressors(exog, exog_values)
+            blocks["levels"] = np.column_stack([self._levels[:, 0]] + exog_lvls)
+        if fixed is not None:
+            fixed = array_like(fixed, "fixed", ndim=2)
+            if fixed.shape != self._fixed.shape:
+                raise ValueError(
+                    "fixed must have the same shape as the original fixed, "
+                    f"{self._fixed.shape}"
+                )
+            blocks["fixed"] = fixed
+        x = []
+        for key, val in blocks.items():
+            if key != "exog":
+                x.append(np.asarray(val))
+            else:
+                x.extend(np.asarray(subval) for subval in val.values())
+        return np.column_stack(x)[self._hold_back :]
 
     @classmethod
     @Appender(from_formula_doc.__str__().replace("ARDL", "UECM"))

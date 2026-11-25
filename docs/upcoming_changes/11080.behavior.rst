@@ -1,0 +1,13 @@
+- The univariate defaults of the news of state space models
+  (``NewsResults``) applied only to series with a one-letter name,
+  because ``k_endog`` was the length of the name. For univariate
+  models with a longer series name, ``summary`` shows the details
+  tables by default, as documented, and a single details table for
+  any ``details_groupby``, ``summary_details(multiple_tables=True)``
+  shows the variable in the title, and ``k_endog`` is 1. For a
+  one-letter name, ``summary`` no longer raises a ``KeyError`` without
+  new observations, without impacts above the tolerance or with only
+  grouped revisions, and the details of the revisions include the
+  grouped revisions ("all prior revisions"), which were dropped. A
+  details table without rows is left out of the summary.
+  :pr:`11080`

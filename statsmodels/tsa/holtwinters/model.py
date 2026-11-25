@@ -208,6 +208,14 @@ class ExponentialSmoothing(TimeSeriesModel):
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none'.
 
+        .. versionchanged:: 0.15.1
+
+           With 'drop', the initial values, the Box-Cox transformation, the
+           parameter estimates and ``simulate`` use the data with the nans
+           dropped. They previously used the data including the nans, which
+           made the estimates wrong, and a model with a multiplicative
+           component raised.
+
     Notes
     -----
     This is a full implementation of the holt winters exponential smoothing as
@@ -244,8 +252,9 @@ class ExponentialSmoothing(TimeSeriesModel):
         missing="none",
     ):
         super().__init__(endog, None, dates, freq, missing=missing)
+        # self.endog holds the data after missing values are handled
         self._y = self._data = array_like(
-            endog, "endog", ndim=1, contiguous=True, order="C"
+            self.endog, "endog", ndim=1, contiguous=True, order="C"
         )
         options = ("add", "mul", "additive", "multiplicative")
         trend = string_like(trend, "trend", options=options, optional=True)

@@ -1,0 +1,7 @@
+- ``get_prediction``, ``get_forecast``, ``forecast`` and ``predict``
+  of state space models (``SARIMAX`` and ``VARMAX``) added the
+  defaults of the extended model, such as its trend offset, to the
+  ``extend_kwargs`` dict passed to them. Reusing that dict with another
+  model, or with the same model after ``append`` or ``extend``, gave
+  wrong forecasts for models with a time trend. The dict is no longer
+  changed. :pr:`11169`

@@ -264,6 +264,11 @@ class SimulationSmoother(KalmanSmoother):
             array of ints, a new ``Generator`` is created, seeded with
             `rng`. If `rng` is already a ``Generator`` or ``RandomState``
             instance, that instance is used.
+
+            .. versionchanged:: 0.15.1
+
+               With ``method="cfa"``, the simulations use `rng`. It was
+               ignored.
         rng : int, array_like of int, numpy.random.Generator, or numpy.random.RandomState, optional
             .. deprecated:: 0.15
 
@@ -287,7 +292,7 @@ class SimulationSmoother(KalmanSmoother):
                     "Can only retrieve simulations of the state"
                     " vector using the CFA simulation smoother."
                 )
-            return CFASimulationSmoother(self)
+            return CFASimulationSmoother(self, rng=rng)
 
         # Set the class to be the default results class, if None provided
         if results_class is None:

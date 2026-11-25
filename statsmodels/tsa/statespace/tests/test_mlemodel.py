@@ -1937,3 +1937,26 @@ def test_transform_jacobian_array_like(kind, approx_centered):
     actual = mod.transform_jacobian(kind(unconstrained), approx_centered=approx_centered)
     # Forward differences are accurate to about 1e-8, centered ones to 1e-10
     assert_allclose(actual, desired, rtol=1e-7 if approx_centered else 1e-5)
+
+
+def test_append_unnamed_series():
+    # A Series without a name raised "Columns must match to concatenate along
+    # rows" for a model of a named Series. It is appended as the same Series
+    # with the name of the model's endog
+    rng = np.random.default_rng(20261123)
+    index = pd.date_range("2000-01-01", periods=14, freq="MS")
+    data = rng.standard_normal(14)
+    endog = pd.Series(data[:11], index=index[:11], name="y")
+    new = pd.Series(data[11:], index=index[11:])
+    res = sarimax.SARIMAX(endog, order=(1, 0, 0)).smooth([0.5, 1.0])
+
+    actual = res.append(new)
+    desired = res.append(new.rename("y"))
+    assert new.name is None
+    assert actual.model.endog_names == "y"
+    assert_allclose(actual.model.endog[:, 0], data, rtol=1e-15)
+    assert_allclose(actual.llf, desired.llf, rtol=1e-12)
+    assert_allclose(actual.smoothed_state, desired.smoothed_state, rtol=1e-12)
+    forecast = actual.forecast(2)
+    assert forecast.index.equals(desired.forecast(2).index)
+    assert_allclose(forecast, desired.forecast(2), rtol=1e-12)

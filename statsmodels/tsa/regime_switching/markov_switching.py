@@ -162,7 +162,11 @@ def cy_hamilton_filter_log(
     k_regimes = len(initial_probabilities)
     nobs = conditional_loglikelihoods.shape[-1]
     order = conditional_loglikelihoods.ndim - 2
-    dtype = conditional_loglikelihoods.dtype
+    # The outputs and every input of the compiled filter share one dtype
+    dtype = np.result_type(
+        initial_probabilities, regime_transition, conditional_loglikelihoods
+    )
+    conditional_loglikelihoods = conditional_loglikelihoods.astype(dtype, copy=False)
 
     # Check for compatible shapes.
     incompatible_shapes = (
@@ -175,7 +179,9 @@ def cy_hamilton_filter_log(
 
     # Convert to log space
     initial_probabilities = np.log(initial_probabilities)
-    regime_transition = np.log(np.maximum(regime_transition, 1e-20))
+    regime_transition = np.log(np.maximum(regime_transition, 1e-20)).astype(
+        dtype, copy=False
+    )
 
     # Storage
     # Pr[S_t = s_t | Y_t]
@@ -1660,6 +1666,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         In the base class, this only transforms the transition-probability-
         related parameters.
         """
+        unconstrained = np.asarray(unconstrained)
         constrained = np.array(unconstrained, copy=True)
         constrained = constrained.astype(
             np.promote_types(np.float64, constrained.dtype)
@@ -1721,6 +1728,7 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
         In the base class, this only untransforms the transition-probability-
         related parameters.
         """
+        constrained = np.asarray(constrained)
         unconstrained = np.array(constrained, copy=True)
         unconstrained = unconstrained.astype(
             np.promote_types(np.float64, unconstrained.dtype)
