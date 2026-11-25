@@ -2437,6 +2437,17 @@ class MarkovSwitchingResultsWrapper(wrap.ResultsWrapper):
     _wrap_methods = wrap.union_dicts(
         tsbase.TimeSeriesResultsWrapper._wrap_methods, _methods
     )
+    # Conditional predictions are not indexed by dates, see predict below
+    del _wrap_methods["predict"]
+
+    def predict(self, *args, **kwargs):
+        results = object.__getattribute__(self, "_results")
+        predict = results.predict(*args, **kwargs)
+        if predict.ndim == 1:
+            predict = results.model.data.wrap_output(predict, how="dates")
+        return predict
+
+    predict.__doc__ = MarkovSwitchingResults.predict.__doc__
 
 
 wrap.populate_wrapper(MarkovSwitchingResultsWrapper, MarkovSwitchingResults)
