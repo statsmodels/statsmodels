@@ -4375,20 +4375,22 @@ def three_regime_data(seed):
     return np.array([0.0, 4.0, 8.0])[np.array(states)] + rng.standard_normal(100)
 
 
-@pytest.mark.parametrize("seed", [6, 10])
-def test_fit_em_zero_transition(seed):
-    # 20 EM iterations drive p[0->2] to zero: p[0->0] + p[0->1] is one up to
-    # 8e-13 (seed 6) or exactly one (seed 10). untransform_params raised
-    # "Could not untransform parameters." for such start parameters.
-    mod = markov_regression.MarkovRegression(three_regime_data(seed), k_regimes=3)
-    params_em = mod._fit_em(
-        mod.start_params, transformed=True, maxiter=20, tolerance=0, return_params=True
-    )
-    assert 1 - params_em[0] - params_em[3] < 1e-12
-
-    # No optimization after the EM steps, so the parameters are the EM ones
+@pytest.mark.parametrize("excess", [0.0, 8e-13], ids=["exactly-one", "near-one"])
+def test_fit_zero_transition_start_params(excess):
+    # Start parameters with p[0->2] zero: p[0->0] + p[0->1] is exactly one,
+    # or one up to 8e-13 (20 EM iterations give such parameters for some
+    # data, depending on the platform). untransform_params raised "Could not
+    # untransform parameters." for them.
+    mod = markov_regression.MarkovRegression(three_regime_data(6), k_regimes=3)
+    params = mod.start_params.copy()
+    params[0] = 0.6
+    params[3] = 0.4 - excess
+    # No EM steps and no optimization, so fit returns the start parameters,
+    # through untransform_params and transform_params
     with pytest.warns(ConvergenceWarning):
-        params = mod.fit(em_iter=20, maxiter=0, return_params=True, disp=False)
-    # The unconstrained values of p[0->0] and p[0->1] are near 708 with
-    # seed 10, accurate to about 1e-13
-    assert_allclose(params, params_em, rtol=1e-11)
+        res = mod.fit(
+            start_params=params, em_iter=0, maxiter=0, return_params=True, disp=False
+        )
+    # The unconstrained values of p[0->0] and p[0->1] are near 708 when
+    # p[0->2] is zero, accurate to about 1e-13
+    assert_allclose(res, params, rtol=1e-11)
