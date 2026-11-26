@@ -3,6 +3,7 @@ from decimal import Decimal
 from enum import IntEnum
 from fractions import Fraction
 from types import MappingProxyType
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -79,7 +80,7 @@ class TestArrayLike:
         assert a.shape == (20, 10)
         with pytest.raises(
             ValueError,
-            match=r"Provided shape \(20,\) does not have the correct dimension",
+            match="a must have 1 dimension, but has 2",
         ):
             array_like(data, "a", ndim=2, shape=(20,))
         assert a.shape == (20, 10)
@@ -120,7 +121,7 @@ class TestArrayLike:
         assert a.shape == (5, 6, 7, 1, 1)
         with pytest.raises(
             ValueError,
-            match=r"Provided shape \(10,\) does not have the correct dimension",
+            match="a must have 1 dimension, but has 3",
         ):
             array_like(data, "a", ndim=3, shape=(10,))
         with pytest.raises(ValueError, match="a is required to have shape"):
@@ -648,3 +649,56 @@ def test_array_like_mindim():
     y = [1, 2]
     arr = array_like(y, "y", mindim=2)
     assert arr.shape == (2, 1)
+
+
+class _Subclass(np.ndarray):
+    pass
+
+
+def _matrix(data):
+    # np.matrix warns that it is not recommended, which the test suite raises
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", PendingDeprecationWarning)
+        return np.asmatrix(data)
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        lambda: _matrix([[1.0, 2.0], [3.0, 4.0]]),
+        lambda: np.ma.masked_array([[1.0, 2.0], [3.0, 4.0]], mask=[[0, 1], [0, 0]]),
+        lambda: np.array([[1.0, 2.0], [3.0, 4.0]]).view(_Subclass),
+    ],
+    ids=["matrix", "masked", "subclass"],
+)
+@pytest.mark.parametrize("writeable", [True, False])
+def test_array_like_returns_base_ndarray(make, writeable):
+    # array_like returned subclasses unchanged, unlike np.asarray: a matrix
+    # kept matrix semantics and a masked array kept its mask
+    obj = make()
+    arr = array_like(obj, "obj", ndim=2, writeable=writeable)
+    assert type(arr) is np.ndarray
+    np.testing.assert_array_equal(arr, np.asarray(obj))
+
+
+def test_array_like_matrix_column_squeezed():
+    # a matrix is always 2-d, so a column could not be squeezed to 1-d
+    arr = array_like(_matrix([[1.0], [2.0], [3.0]]), "x", ndim=1)
+    assert type(arr) is np.ndarray
+    np.testing.assert_array_equal(arr, [1.0, 2.0, 3.0])
+
+
+@pytest.mark.parametrize(
+    "obj, shape, expected",
+    [
+        (3.0, (None, None), "x must have 2 dimensions, but has 0"),
+        ([1.0, 2.0], (None, None), "x must have 2 dimensions, but has 1"),
+        (np.ones((2, 2, 2)), (None, None), "x must have 2 dimensions, but has 3"),
+        (np.ones((2, 2)), (None,), "x must have 1 dimension, but has 2"),
+    ],
+)
+def test_array_like_shape_length_message(obj, shape, expected):
+    # the message reports the dimensions of the input, before a scalar is
+    # padded to 1-d by mindim
+    with pytest.raises(ValueError, match=expected):
+        array_like(obj, "x", shape=shape)

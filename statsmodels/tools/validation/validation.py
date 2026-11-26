@@ -93,7 +93,17 @@ def array_like(
     Returns
     -------
     ndarray
-        The converted input.
+        The converted input, always a base-class ndarray: a subclass such as
+        ``np.matrix`` or a masked array is converted, as ``np.asarray`` does,
+        and the mask of a masked array is dropped.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       Subclasses of ndarray are converted to ndarray. They were returned
+       unchanged, so ``np.matrix`` input kept matrix semantics and the mask
+       of a masked array was kept.
 
     Examples
     --------
@@ -148,12 +158,14 @@ def array_like(
         if optional:
             return None
         raise TypeError(f"{name} must be array_like, not None")
-    reqs = ["W"] if writeable else []
+    # "E" makes np.require return a base-class ndarray, as np.asarray does
+    reqs = ["E", "W"] if writeable else ["E"]
     if order == "C" or contiguous:
         reqs += ["C"]
     elif order == "F":
         reqs += ["F"]
     arr = np.require(obj, dtype=dtype, requirements=reqs)
+    input_ndim = arr.ndim
     if maxdim is not None:
         if arr.ndim > maxdim:
             msg = f"{name} must have ndim <= {maxdim}"
@@ -170,10 +182,8 @@ def array_like(
             raise ValueError(msg.format(name, ndim, arr.ndim))
     if shape is not None:
         if len(shape) != arr.ndim:
-            msg = (
-                f"Provided shape {shape} does not have the correct dimension for "
-                f"{name}, which is dimension {arr.ndim}"
-            )
+            unit = "dimension" if len(shape) == 1 else "dimensions"
+            msg = f"{name} must have {len(shape)} {unit}, but has {input_ndim}"
             raise ValueError(msg)
         for actual, req in zip(arr.shape, shape, strict=True):
             if req is not None and actual != req:
