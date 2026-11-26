@@ -19,7 +19,7 @@ from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import EstimationWarning, MissingDataError
 from statsmodels.tools.tools import Bunch, pinv_extended
-from statsmodels.tools.validation import is_int_like
+from statsmodels.tools.validation import array_like, is_int_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.regime_switching._hamilton_filter import (
     chamilton_filter_log,
@@ -642,7 +642,10 @@ class MarkovSwitching(tsbase.TimeSeriesModel):
             one. Default is 1e-8.
         """
         self._initialization = "known"
-        probabilities = np.array(probabilities, ndmin=1)
+        # copy, so that the model does not share the caller's array
+        probabilities = array_like(
+            probabilities, "probabilities", dtype=None, shape=(None,)
+        ).copy()
         if not probabilities.shape == (self.k_regimes,):
             raise ValueError(
                 "Initial probabilities must be a vector of shape (k_regimes,)."

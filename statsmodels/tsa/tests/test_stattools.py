@@ -5246,6 +5246,39 @@ class TestLeybourneMcCabe:
         res = leybourne(y, method="ols", varest="var99")
         assert res[2] == 0
 
+    @pytest.mark.parametrize(
+        "convert",
+        [
+            lambda x: x[:, 0],
+            lambda x: x[:, 0].tolist(),
+            lambda x: pd.Series(x[:, 0]),
+            pd.DataFrame,
+        ],
+        ids=["1d", "list", "series", "dataframe"],
+    )
+    def test_array_like_inputs(self, convert):
+        mdl = np.asarray(pd.read_csv(Path(self.run_dir).joinpath("BAA.csv")))
+        res = leybourne(convert(mdl), regression="ct")
+        # verified against Matlab 9.13, as in test_baa_results
+        assert_allclose(res[0:3], [5.4757, 0.0000, 3], rtol=1e-4, atol=1e-4)
+        res_col = leybourne(mdl, regression="ct")
+        assert_allclose(res[0], res_col[0], rtol=1e-10)
+        assert res[2] == res_col[2]
+
+    @pytest.mark.parametrize(
+        "shape, match",
+        [
+            ((60, 2), r"x is required to have shape \(\*, 1\)"),
+            ((1, 60), r"x is required to have shape \(\*, 1\)"),
+            ((60, 1, 1), "x must have ndim <= 2"),
+        ],
+        ids=["two-columns", "row", "3d"],
+    )
+    def test_not_one_column_raises(self, shape, match):
+        x = np.random.default_rng(0).standard_normal(shape)
+        with pytest.raises(ValueError, match=match):
+            leybourne(x)
+
 
 def test_acovf_all_missing():
     x = np.full(100, np.nan)

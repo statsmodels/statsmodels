@@ -259,9 +259,7 @@ def forecast(y, coefs, trend_coefs, steps, exog=None):
     -----
     Lütkepohl p. 37
     """
-    coefs = np.asarray(coefs)
-    if coefs.ndim != 3:
-        raise ValueError("coefs must be an array with 3 dimensions")
+    coefs = array_like(coefs, "coefs", dtype=None, shape=(None, None, None))
     p, k = coefs.shape[:2]
     if y.shape[0] < p:
         raise ValueError(

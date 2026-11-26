@@ -239,6 +239,47 @@ def test_initial_probabilities():
         mod.initialize_steady_state()
 
 
+@pytest.mark.parametrize("convert", [list, tuple, pd.Series, np.asarray])
+def test_initialize_known_array_like(convert):
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=3)
+    mod.initialize_known(convert([0.2, 0.3, 0.5]))
+    # Known initial probabilities do not depend on the parameters
+    params = np.full(6, 0.3)
+    assert_allclose(mod.initial_probabilities(params), [0.2, 0.3, 0.5], rtol=1e-15)
+
+
+def test_initialize_known_copies_probabilities():
+    # Changing the array afterwards does not change the model
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    probabilities = np.array([0.2, 0.8])
+    mod.initialize_known(probabilities)
+    probabilities[:] = [0.9, 0.1]
+    params = np.r_[0.5, 0.5]
+    assert_allclose(mod.initial_probabilities(params), [0.2, 0.8], rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "probabilities, ndim",
+    [([[0.2], [0.8]], 2), ([[0.2, 0.8]], 2), ([[[0.2, 0.8]]], 3)],
+    ids=["column", "row", "3d"],
+)
+def test_initialize_known_not_1d_raises(probabilities, ndim):
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    match = f"probabilities must have 1 dimension, but has {ndim}"
+    with pytest.raises(ValueError, match=match):
+        mod.initialize_known(probabilities)
+
+
+@pytest.mark.parametrize(
+    "probabilities", [1.0, [0.2, 0.2, 0.6]], ids=["scalar", "too-long"]
+)
+def test_initialize_known_wrong_length_raises(probabilities):
+    # A scalar is a vector with one element, which is too short
+    mod = markov_switching.MarkovSwitching(np.ones(10), k_regimes=2)
+    with pytest.raises(ValueError, match=r"a vector of shape \(k_regimes,\)"):
+        mod.initialize_known(probabilities)
+
+
 def test_logistic():
     logistic = markov_switching._logistic
 

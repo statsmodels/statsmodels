@@ -31,7 +31,7 @@ from statsmodels.tools.numdiff import (
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import ModelWarning, PrecisionWarning, ValueWarning
 from statsmodels.tools.tools import Bunch, pinv_extended
-from statsmodels.tools.validation import is_int_like, string_like
+from statsmodels.tools.validation import array_like, is_int_like, string_like
 import statsmodels.tsa.base.prediction as pred
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.stattools._stattools import breakvar_heteroskedasticity_test
@@ -4705,10 +4705,10 @@ class MLEResults(tsbase.TimeSeriesModelResults):
                     start=0, end=nobs_exog - 1
                 )
                 # TODO: check that the index of `comparison` matches the model
-                comparison = np.asarray(comparison)
-                if comparison.ndim < 2:
-                    comparison = np.atleast_2d(comparison).T
-                if comparison.ndim != 2 or comparison.shape[1] != self.model.k_endog:
+                comparison = array_like(
+                    comparison, "comparison", dtype=None, maxdim=2, ndim=2
+                )
+                if comparison.shape[1] != self.model.k_endog:
                     raise ValueError(
                         "Invalid shape for `comparison`. Must"
                         f" contain {self.model.k_endog} columns."

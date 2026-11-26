@@ -8,6 +8,8 @@ from statsmodels.compat.numpy import inplace_reshape
 
 import numpy as np
 
+from statsmodels.tools.validation import array_like
+
 from . import tools
 from .initialization import Initialization, _StationaryInitializationError
 from .tools import find_best_blas_type, validate_matrix_shape, validate_vector_shape
@@ -1002,8 +1004,12 @@ class Representation:
         stationary_cov : array_like
             Known covariance matrix of the initial state vector.
         """
-        constant = np.asarray(constant, order="F")
-        stationary_cov = np.asarray(stationary_cov, order="F")
+        constant = array_like(
+            constant, "constant", dtype=None, mindim=0, shape=(None,), order="F"
+        )
+        stationary_cov = array_like(
+            stationary_cov, "stationary_cov", dtype=None, shape=(None, None), order="F"
+        )
 
         if not constant.shape == (self.k_states,):
             raise ValueError(
