@@ -7,7 +7,7 @@ from numpy.testing import assert_allclose, assert_equal
 import pandas as pd
 import pytest
 
-from statsmodels.tsa.seasonal import MSTL
+from statsmodels.tsa.seasonal import MSTL, STL
 from statsmodels.tsa.tests._contract import SERIES_FORMS, series_forms
 from statsmodels.tsa.tsatools import freq_to_period
 
@@ -373,3 +373,25 @@ def test_periods_from_index(freq, datetime_freq, period, index_type, container):
     assert_allclose(res.seasonal, expected.seasonal, rtol=1e-12)
     assert_allclose(res.trend, expected.trend, rtol=1e-12)
     assert res.seasonal.index.equals(index)
+
+
+@pytest.mark.parametrize(
+    "convert", [np.int64, np.array, float], ids=["int64", "0d-array", "float"]
+)
+def test_int_like_periods_and_windows(data, convert):
+    # A 0-d integer array or an integral float is a single period or window,
+    # as an int is. They raised a TypeError. With one period, MSTL is STL.
+    res = MSTL(endog=data, periods=convert(5), windows=convert(7)).fit()
+    assert res.seasonal.ndim == 1
+    expected = STL(data, period=5, seasonal=7).fit()
+    assert_allclose(res.seasonal, expected.seasonal, rtol=1e-12)
+    assert_allclose(res.trend, expected.trend, rtol=1e-12)
+
+
+@pytest.mark.parametrize("value", [True, np.True_], ids=["True", "np.True_"])
+@pytest.mark.parametrize("arg", ["periods", "windows"])
+def test_bool_periods_and_windows(data, value, arg):
+    # A bool is neither a period nor a window
+    kwargs = {"periods": 5, "windows": 7, arg: value}
+    with pytest.raises(TypeError):
+        MSTL(endog=data, **kwargs)

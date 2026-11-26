@@ -19,6 +19,7 @@ from statsmodels.tools.numdiff import approx_fprime_cs, approx_hess_cs
 from statsmodels.tools.rng_qrng import check_random_state
 from statsmodels.tools.sm_exceptions import EstimationWarning, MissingDataError
 from statsmodels.tools.tools import Bunch, pinv_extended
+from statsmodels.tools.validation import is_int_like
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.regime_switching._hamilton_filter import (
     chamilton_filter_log,
@@ -421,6 +422,13 @@ class MarkovSwitchingParams:
     4
     >>> parameters.k_parameters['exog']
     3
+
+    .. versionchanged:: 0.15.1
+
+       A 0-d integer array is a regime number, as an int is. It raised an
+       IndexError. A bool is not a regime number, so that a tuple key such
+       as ``(True, 'exog')`` raises an IndexError, as ``True`` alone did.
+       It was regime 1.
     """
 
     def __init__(self, k_regimes):
@@ -441,15 +449,15 @@ class MarkovSwitchingParams:
         if _type is str:
             return self.slices_purpose[key]
         # Get a slice for a block of parameters by regime
-        elif isinstance(key, (int, np.integer)) and not isinstance(key, bool):
-            return self.index_regime[key]
+        elif is_int_like(key, strict=True):
+            return self.index_regime[int(key)]
         elif _type is tuple:
             if not len(key) == 2:
                 raise IndexError("Invalid index")
-            if type(key[1]) is str and isinstance(key[0], (int, np.integer)):
-                return self.index_regime_purpose[key[0]][key[1]]
-            elif type(key[0]) is str and isinstance(key[1], (int, np.integer)):
-                return self.index_regime_purpose[key[1]][key[0]]
+            if type(key[1]) is str and is_int_like(key[0], strict=True):
+                return self.index_regime_purpose[int(key[0])][key[1]]
+            elif type(key[0]) is str and is_int_like(key[1], strict=True):
+                return self.index_regime_purpose[int(key[1])][key[0]]
             else:
                 raise IndexError("Invalid index")
         else:

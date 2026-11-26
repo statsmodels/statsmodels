@@ -656,3 +656,39 @@ def test_stationary_initialization_without_state_disturbance():
 
     mod.initialize_known(mean, np.zeros((2, 2)))
     assert_allclose(res.llf, mod.filter().llf, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "to_key", [int, np.int64, np.int32, np.array], ids=["int", "int64", "int32", "0d"]
+)
+def test_set_unset_int_like_index(to_key):
+    # A NumPy integer or a 0-d integer array selects a state, as an int does.
+    # A 0-d array raised a ValueError.
+    init = Initialization(2)
+    init.set(to_key(0), "known", constant=[1.2])
+    init.set(to_key(1), "diffuse")
+    constant, diffuse_cov, stationary_cov = init()
+    assert_allclose(constant, [1.2, 0.0], rtol=1e-15)
+    assert_allclose(diffuse_cov, np.diag([0.0, 1.0]), rtol=1e-15)
+    assert_allclose(stationary_cov, np.zeros((2, 2)), rtol=1e-15)
+
+    init.unset(to_key(1))
+    init.set(1, "known", constant=[-0.3])
+    constant, diffuse_cov, _ = init()
+    assert_allclose(constant, [1.2, -0.3], rtol=1e-15)
+    assert_allclose(diffuse_cov, np.zeros((2, 2)), rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "index", [True, np.True_, 1.0], ids=["True", "np.True_", "float"]
+)
+@pytest.mark.parametrize("method", ["set", "unset"])
+def test_set_unset_bool_float_index(index, method):
+    # A bool or a float does not select a state: True selected state 1
+    init = Initialization(2)
+    init.set(1, "diffuse")
+    with pytest.raises(ValueError, match="Invalid index"):
+        if method == "set":
+            init.set(index, "diffuse")
+        else:
+            init.unset(index)

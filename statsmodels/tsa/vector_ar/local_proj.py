@@ -15,7 +15,12 @@ from scipy import stats
 
 from statsmodels.graphics.utils import _import_mpl
 from statsmodels.regression.linear_model import OLS
-from statsmodels.tools.validation import array_like, int_like, string_like
+from statsmodels.tools.validation import (
+    array_like,
+    int_like,
+    is_int_like,
+    string_like,
+)
 
 __all__ = ["LocalProjections"]
 
@@ -235,6 +240,12 @@ class LocalProjections:
     shock_idx : int or sequence of int, optional
         Column index/indices within *endog* whose contemporaneous value
         enters as the shock.  Defaults to ``0`` (the first variable).
+
+        .. versionchanged:: 0.15.1
+
+           A 0-d integer array is a column index, as an int is. It raised a
+           TypeError. A bool raises a TypeError: True was the column index
+           1.
     lags : int, optional
         Number of lagged values of *all* endog variables to include as
         controls.  Defaults to ``1``.
@@ -325,7 +336,7 @@ class LocalProjections:
         self.endog = endog
         t, n = self.endog.shape
 
-        if isinstance(shock_idx, (int, np.integer)):
+        if is_int_like(shock_idx, strict=True):
             shock_idx_list = [int(shock_idx)]
         else:
             shock_idx_list = [int(val) for val in shock_idx]

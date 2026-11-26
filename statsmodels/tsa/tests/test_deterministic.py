@@ -1445,3 +1445,35 @@ def test_apply():
     terms = applied.in_sample()
     pd.testing.assert_index_equal(terms.index, new_index)
     np.testing.assert_allclose(terms, dp.in_sample().iloc[:12], rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "index",
+    [
+        pd.date_range("2000-01-01", periods=12, freq="MS"),
+        pd.period_range("2000-01", periods=12, freq="M"),
+    ],
+    ids=["datetime", "period"],
+)
+@pytest.mark.parametrize(
+    "to_loc", [int, np.int64, np.array], ids=["int", "int64", "0d-array"]
+)
+def test_range_date_index_int_like_locations(index, to_loc):
+    # A 0-d integer array is the location of an observation, as an int is.
+    # It raised a TypeError.
+    dp = DeterministicProcess(index, constant=True, order=1)
+    terms = dp.range(to_loc(10), to_loc(14))
+    # The trend counts the observations from 1
+    expected = np.column_stack([np.ones(5), np.arange(11.0, 16.0)])
+    np.testing.assert_allclose(np.asarray(terms), expected, rtol=1e-15)
+
+
+@pytest.mark.parametrize("value", [True, np.True_], ids=["True", "np.True_"])
+@pytest.mark.parametrize("arg", ["start", "stop"])
+def test_range_date_index_bool_location(value, arg):
+    # A bool is not the location of an observation
+    index = pd.date_range("2000-01-01", periods=12, freq="MS")
+    dp = DeterministicProcess(index, constant=True, order=1)
+    kwargs = {"start": 0, "stop": 5, arg: value}
+    with pytest.raises(TypeError):
+        dp.range(**kwargs)

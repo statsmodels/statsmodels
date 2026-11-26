@@ -29,6 +29,7 @@ from statsmodels.tools.validation import (
     bool_like,
     float_like,
     int_like,
+    is_int_like,
     string_like,
 )
 from statsmodels.tsa._lagselect import nested_lag_ols
@@ -112,13 +113,10 @@ _ARDLOrder = (
     int | _UECMOrder | Sequence[int] | dict[Hashable, int | Sequence[int] | None] | None
 )
 
-_INT_TYPES = (int, np.integer)
-
-
 def _check_order(order: int | Sequence[int] | None, causal: bool) -> bool:
     if order is None:
         return True
-    if isinstance(order, (int, np.integer)):
+    if is_int_like(order):
         if int(order) < int(causal):
             raise ValueError(
                 f"integer orders must be at least {int(causal)} when causal "
@@ -126,7 +124,7 @@ def _check_order(order: int | Sequence[int] | None, causal: bool) -> bool:
             )
         return True
     for v in order:
-        if not isinstance(v, (int, np.integer)):
+        if not is_int_like(v):
             raise TypeError("sequence orders must contain non-negative integer values")
     order = [int(v) for v in order]
     if len(set(order)) != len(order) or min(order) < 0:
@@ -163,7 +161,7 @@ def _format_order(
     elif isinstance(order, Mapping):
         # Column indices can be numpy integers
         order = {
-            int(key) if isinstance(key, np.integer) else key: value
+            int(key) if is_int_like(key, strict=True) else key: value
             for key, value in order.items()
         }
         exog_order = order
@@ -180,11 +178,7 @@ def _format_order(
         if not isinstance(exog, pd.DataFrame):
             # A float or bool key equal to a column index passes the check
             # above, but cannot select the column
-            non_int = [
-                key
-                for key in order
-                if not isinstance(key, int) or isinstance(key, bool)
-            ]
+            non_int = [key for key in order if not is_int_like(key, strict=True)]
             if non_int:
                 raise TypeError(
                     "order dictionary keys must be integer column indices when "
@@ -202,7 +196,7 @@ def _format_order(
 
         for key in exog_order:
             _check_order(exog_order[key], causal)
-    elif isinstance(order, _INT_TYPES):
+    elif is_int_like(order):
         _check_order(order, causal)
         exog_order = {k: int(order) for k in keys}
     else:
@@ -214,7 +208,7 @@ def _format_order(
         if value is None:
             continue
         assert value is not None
-        if isinstance(value, _INT_TYPES):
+        if is_int_like(value):
             final_order[key] = list(range(int(causal), int(value) + 1))
         else:
             final_order[key] = [int(lag) for lag in value]
@@ -249,7 +243,10 @@ class ARDL(AutoReg):
 
             The int values of a dict can be numpy integers. They raised a
             TypeError. If ``exog`` is not a DataFrame, the keys can be numpy
-            integers too. They raised an AssertionError.
+            integers too. They raised an AssertionError. A float with an
+            integral value, such as 2.0, is an order as an int is, also in a
+            sequence or as a value of a dict. They raised a TypeError. A
+            bool is not an order: True was an order of 1.
     fixed : array_like, optional
         Additional fixed regressors that are not lagged.
     causal : bool, optional
@@ -1168,6 +1165,14 @@ class ARDLResults(AutoRegResults):
             sample. Can also be a date string to parse or a datetime type.
             However, if the dates index does not have a fixed frequency,
             steps must be an integer. The default is 1.
+
+            .. versionchanged:: 0.15.1
+
+               A float with an integral value, such as 3.0, and a 0-d integer
+               array are a number of steps, as an int is. Before, they were
+               used as the index of the last forecast, which raised or gave
+               the wrong number of forecasts. A bool is not a number of
+               steps: True was one step.
         exog : array_like, optional
             Exogenous values to use out-of-sample. Must have same number of
             columns as original exog data and at least `steps` rows. If the
@@ -1199,8 +1204,8 @@ class ARDLResults(AutoRegResults):
             In- and out-of-sample predictions and confidence intervals
         """
         start = self.model.data.orig_endog.shape[0]
-        if isinstance(steps, (int, np.integer)):
-            end = start + steps - 1
+        if is_int_like(steps):
+            end = start + int(steps) - 1
         else:
             end = steps
         return self.predict(
@@ -2062,6 +2067,11 @@ class UECM(ARDL):
         endogenous variable. The lagged level of the endogenous variable is
         always included, so that ``None`` and 0 are equivalent to 1, and do
         not include any lagged differences.
+
+        .. versionchanged:: 0.15.1
+
+            A float with an integral value, such as 2.0, is accepted as an
+            int is. It raised a TypeError.
     exog : array_like, optional
         Exogenous variables to include in the model. Either a DataFrame or
         an 2-d array-like structure that can be converted to a NumPy array.
@@ -2089,7 +2099,10 @@ class UECM(ARDL):
         .. versionchanged:: 0.15.1
 
             If ``exog`` is not a DataFrame, the keys of a dict can be numpy
-            integers. They raised an AssertionError.
+            integers. They raised an AssertionError. A float with an
+            integral value, such as 2.0, is an order as an int is, also as a
+            value of a dict. It raised a TypeError. A bool is not an order:
+            True was an order of 1.
     fixed : array_like, optional
         Additional fixed regressors that are not lagged.
     causal : bool, optional
@@ -2258,7 +2271,7 @@ class UECM(ARDL):
         self, lags: int | Sequence[int] | None, hold_back: int | None
     ) -> tuple[list[int], int]:
         """Check lags value conforms to requirement"""
-        if not (isinstance(lags, _INT_TYPES) or lags is None):
+        if not (is_int_like(lags) or lags is None):
             raise TypeError("lags must be an integer or None")
         return super()._check_lags(lags, hold_back)
 
@@ -2266,9 +2279,9 @@ class UECM(ARDL):
         """Check order conforms to requirement"""
         if isinstance(order, Mapping):
             for v in order.values():
-                if not isinstance(v, _INT_TYPES) and v is not None:
+                if not is_int_like(v) and v is not None:
                     raise TypeError("order values must be positive integers or None")
-        elif not (isinstance(order, _INT_TYPES) or order is None):
+        elif not (is_int_like(order) or order is None):
             raise TypeError(
                 "order must be None, a positive integer, or a dict "
                 "containing positive integers or None"

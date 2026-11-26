@@ -1273,3 +1273,22 @@ def test_concat_unnamed_series():
     actual = tools.concat([first, second], axis=1)
     assert list(actual.columns) == ["y", 0]
     assert_allclose(actual.to_numpy(), [[1.0, 3.0], [2.0, 4.0]], rtol=1e-15)
+
+
+@pytest.mark.parametrize(
+    "size",
+    [3, np.int64(3), np.int32(3), np.array(3), 3.0],
+    ids=["int", "int64", "int32", "0d-array", "float"],
+)
+def test_companion_matrix_int_like_size(size):
+    # A 0-d integer array or an integral float is the size of a companion
+    # matrix with zero coefficients, as an int is. They raised a TypeError.
+    # The matrix has ones on the first superdiagonal and zeros elsewhere.
+    assert_equal(tools.companion_matrix(size), np.eye(3, k=1))
+
+
+@pytest.mark.parametrize("size", [True, np.True_], ids=["True", "np.True_"])
+def test_companion_matrix_bool_size(size):
+    # A bool is not a size: True was the size 1
+    with pytest.raises(TypeError):
+        tools.companion_matrix(size)

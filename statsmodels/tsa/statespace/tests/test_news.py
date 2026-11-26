@@ -2703,3 +2703,65 @@ def test_summary_invalid_groupby_message(method):
     with pytest.raises(ValueError) as excinfo:
         getattr(news, method)(groupby="Revision_Date")
     assert_equal(str(excinfo.value), desired)
+
+
+@pytest.mark.parametrize(
+    "start",
+    [-2, np.int64(-2), np.int32(-2), np.array(-2), 36, np.int64(36), np.array(36)],
+    ids=["int", "int64", "int32", "0d", "pos-int", "pos-int64", "pos-0d"],
+)
+def test_revisions_details_start_int_like(start):
+    # A NumPy integer or a 0-d integer array is a period, as an int is, so
+    # that a negative value is an offset from the end of the previous
+    # dataset. A NumPy integer was looked up in the index of the updated
+    # results, which has two more periods, and a 0-d array raised.
+    rng = np.random.default_rng(20261126)
+    index = pd.period_range("2000Q1", periods=40, freq="Q")
+    y = pd.Series(rng.standard_normal(40), index=index, name="y")
+    y_prev = y.iloc[:38].copy()
+    y_upd = y.copy()
+    y_upd.iloc[35] += 1.0
+    y_upd.iloc[37] += 0.5
+    res_prev = sarimax.SARIMAX(y_prev, order=(1, 0, 0)).smooth([0.5, 1.0])
+    res_upd = res_prev.apply(y_upd)
+    news = res_upd.news(
+        res_prev, comparison_type="previous", revisions_details_start=start
+    )
+    # Revisions from period 36 = 38 - 2 on have detailed impacts
+    revisions = news.data_revisions
+    revision = revisions["revised"] - revisions["observed (prev)"]
+    assert_allclose(revision, [1.0, 0.5], rtol=1e-12)
+    assert_equal(np.asarray(revisions["detailed impacts computed"]), [False, True])
+
+
+@pytest.mark.parametrize(
+    "start, detailed", [(True, [True, True]), (False, [False, False])]
+)
+def test_revisions_details_start_bool(start, detailed):
+    # A bool is a flag: all revisions are detailed or all are grouped
+    rng = np.random.default_rng(20261126)
+    index = pd.period_range("2000Q1", periods=40, freq="Q")
+    y = pd.Series(rng.standard_normal(40), index=index, name="y")
+    y_prev = y.iloc[:38].copy()
+    y_upd = y.copy()
+    y_upd.iloc[35] += 1.0
+    y_upd.iloc[37] += 0.5
+    res_prev = sarimax.SARIMAX(y_prev, order=(1, 0, 0)).smooth([0.5, 1.0])
+    res_upd = res_prev.apply(y_upd)
+    news = res_upd.news(
+        res_prev, comparison_type="previous", revisions_details_start=start
+    )
+    revisions = news.data_revisions
+    assert_equal(np.asarray(revisions["detailed impacts computed"]), detailed)
+
+
+def test_revisions_details_start_float():
+    # A float is not a period (strict), so it is taken as a date, which
+    # pandas cannot convert to a period
+    rng = np.random.default_rng(20261126)
+    index = pd.period_range("2000Q1", periods=40, freq="Q")
+    y = pd.Series(rng.standard_normal(40), index=index, name="y")
+    res_prev = sarimax.SARIMAX(y.iloc[:38], order=(1, 0, 0)).smooth([0.5, 1.0])
+    res_upd = res_prev.apply(y)
+    with pytest.raises(ValueError):
+        res_upd.news(res_prev, comparison_type="previous", revisions_details_start=36.0)

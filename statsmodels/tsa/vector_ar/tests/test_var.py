@@ -2451,3 +2451,81 @@ def test_varprocess_forecast_errors():
         process.forecast(y_last, -1)
     with pytest.raises(TypeError, match="steps must be integer_like"):
         process.forecast(y_last, 2.5)
+
+
+def _int_like_var_res():
+    y = np.random.default_rng(20261126).standard_normal((100, 3))
+    return VAR(pd.DataFrame(y, columns=["y1", "y2", "y3"])).fit(1)
+
+
+@pytest.mark.parametrize(
+    "to_key", [int, np.int64, np.int32, np.array], ids=["int", "int64", "int32", "0d"]
+)
+def test_get_eq_index_int_like(to_key):
+    # A NumPy integer or a 0-d integer array is a position, as an int is.
+    # It raised a ValueError.
+    res = _int_like_var_res()
+    idx = res.get_eq_index(to_key(2))
+    assert idx == 2
+    assert type(idx) is int
+    assert res.get_eq_index("y3") == 2
+
+
+@pytest.mark.parametrize(
+    "name", [True, np.True_, 2.0], ids=["True", "np.True_", "float"]
+)
+def test_get_eq_index_bool_float(name):
+    # A bool or a float is not a position: True was returned unchanged
+    res = _int_like_var_res()
+    with pytest.raises(ValueError, match="not in list"):
+        res.get_eq_index(name)
+
+
+@pytest.mark.thread_unsafe(reason="uses matplotlib")
+@pytest.mark.matplotlib
+@pytest.mark.parametrize(
+    "to_key", [int, np.int64, np.array], ids=["int", "int64", "0d"]
+)
+def test_irf_plot_int_like_impulse_response(close_figures, to_key):
+    # A NumPy integer or a 0-d integer array selects a variable, as an int
+    # does. A NumPy integer raised a ValueError.
+    irf = _int_like_var_res().irf(4)
+    fig = irf.plot(impulse=to_key(1), response=to_key(2), plot_stderr=False)
+    (ax,) = fig.axes
+    assert ax.get_title() == r"y2$\rightarrow$y3"
+    assert_allclose(ax.lines[0].get_ydata(), irf.irfs[:, 2, 1], rtol=1e-12)
+
+
+@pytest.mark.parametrize("to_key", [np.int64, np.array], ids=["int64", "0d"])
+def test_causality_int_like(to_key):
+    # A NumPy integer or a 0-d integer array is an index, as an int is. A 0-d
+    # array raised a TypeError. The names are the reference.
+    res = _int_like_var_res()
+    result = res.test_causality(to_key(0), [to_key(1), 2])
+    expected = res.test_causality("y1", ["y2", "y3"])
+    assert result.caused == ["y1"]
+    assert result.causing == ["y2", "y3"]
+    assert_allclose(result.test_statistic, expected.test_statistic, rtol=1e-12)
+    assert_allclose(result.pvalue, expected.pvalue, rtol=1e-12)
+    result = res.test_inst_causality(to_key(0))
+    expected = res.test_inst_causality("y1")
+    assert result.causing == ["y1"]
+    assert_allclose(result.test_statistic, expected.test_statistic, rtol=1e-12)
+
+
+@pytest.mark.parametrize(
+    "value", [True, np.True_, 1.0], ids=["True", "np.True_", "float"]
+)
+@pytest.mark.parametrize("call", ["caused", "causing", "caused-list", "inst"])
+def test_causality_bool_float(value, call):
+    # A bool or a float is not an index: True was the variable with index 1
+    res = _int_like_var_res()
+    with pytest.raises(TypeError):
+        if call == "caused":
+            res.test_causality(value)
+        elif call == "causing":
+            res.test_causality(0, value)
+        elif call == "caused-list":
+            res.test_causality([value])
+        else:
+            res.test_inst_causality(value)

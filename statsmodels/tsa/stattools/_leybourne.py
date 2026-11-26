@@ -2,7 +2,7 @@ import numpy as np
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
-from statsmodels.tools.validation import string_like
+from statsmodels.tools.validation import is_int_like, string_like
 import statsmodels.tsa._leybourne
 from statsmodels.tsa.stattools._stattools import lagmat, pacf
 
@@ -150,6 +150,13 @@ class LeybourneMcCabeStationarity:
             Number of autoregressive terms to include. If None, the number
             of lags is selected using the empirical autolag procedure.
             Default is 1.
+
+            .. versionchanged:: 0.15.1
+
+               A float with an integral value, such as 2.0, or a 0-d integer
+               array is a number of terms, as an int is. They raised a
+               ValueError. A bool raises the same ValueError. It raised a
+               TypeError from a later step.
         regression : {'c', 'ct'}, optional
             Constant and trend order to include in regression
 
@@ -235,10 +242,12 @@ class LeybourneMcCabeStationarity:
         # determine AR order if not specified
         if arlags is None:
             arlags = self._autolag(x)
-        elif not isinstance(arlags, (int, np.integer)) or arlags < 0 or arlags > int(len(x) / 2):
+        elif not is_int_like(arlags) or arlags < 0 or arlags > int(len(x) / 2):
             raise ValueError(
                 f"LM: arlags must be an integer in range [0..{int(len(x) / 2)!s}]"
             )
+        else:
+            arlags = int(arlags)
         # estimate the reduced ARIMA(p, 1, 1) model
         if method == "mle":
             if regression == "ct":
