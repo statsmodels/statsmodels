@@ -3132,3 +3132,116 @@ def test_uecm_get_prediction_pandas_index(index_kind):
                 assert isinstance(value, pd.Series)
                 assert_index_equal(value.index, index[loc])
             assert_index_equal(frame.index, index[loc])
+
+
+def _int_like_ardl_data():
+    rng = np.random.default_rng(20261126)
+    y = np.cumsum(rng.standard_normal(150))
+    x = np.cumsum(rng.standard_normal((150, 2)), axis=0)
+    return y, x
+
+
+@pytest.mark.parametrize(
+    "order",
+    [
+        np.int64(2),
+        np.int32(2),
+        np.array(2),
+        2.0,
+        [0, 1, 2.0],
+        {0: 2.0, 1: np.int16(2)},
+    ],
+    ids=["int64", "int32", "0d-array", "float", "seq-float", "dict-float"],
+)
+def test_ardl_order_int_like(order):
+    # NumPy integers, 0-d integer arrays and integral floats are orders, as
+    # an int is. The float forms raised a TypeError. The int order is the
+    # reference.
+    y, x = _int_like_ardl_data()
+    expected = ARDL(y, 1, x, 2).fit()
+    res = ARDL(y, 1, x, order).fit()
+    assert res.model.dl_lags == {0: [0, 1, 2], 1: [0, 1, 2]}
+    assert_allclose(res.params, expected.params, rtol=1e-12)
+
+
+@pytest.mark.parametrize("value", [True, np.True_], ids=["True", "np.True_"])
+@pytest.mark.parametrize("form", ["scalar", "sequence", "dict"])
+def test_ardl_order_bool(value, form):
+    # A bool is not an order: True was an order of 1, also in a sequence or
+    # as a value of a dict
+    y, x = _int_like_ardl_data()
+    order = {"scalar": value, "sequence": [0, value], "dict": {0: value, 1: 1}}
+    with pytest.raises(TypeError):
+        ARDL(y, 1, x, order[form])
+
+
+@pytest.mark.parametrize(
+    "lags, order",
+    [
+        (2.0, 2),
+        (np.int64(2), 2),
+        (2, 2.0),
+        (2, np.array(2)),
+        (2, {0: 2.0, 1: np.int32(2)}),
+    ],
+    ids=["lags-float", "lags-int64", "order-float", "order-0d-array", "dict-float"],
+)
+def test_uecm_lags_order_int_like(lags, order):
+    # Integral floats and 0-d integer arrays are lags and orders, as an int
+    # is. They raised a TypeError.
+    y, x = _contract_uecm_data()
+    res = UECM(y, lags, x, order).fit()
+    reg, dy = _uecm_design(y, x, 2)
+    expected = np.linalg.lstsq(reg, dy, rcond=None)[0]
+    assert_allclose(np.asarray(res.params), expected, rtol=1e-10)
+
+
+@pytest.mark.parametrize("value", [True, np.True_], ids=["True", "np.True_"])
+@pytest.mark.parametrize(
+    "arg, match",
+    [
+        ("lags", "lags must be an integer or None"),
+        ("order", "order must be None"),
+        ("dict", "order values must be"),
+    ],
+)
+def test_uecm_lags_order_bool(value, arg, match):
+    # A bool is neither lags nor an order: True was an order of 1
+    y, x = _contract_uecm_data()
+    lags = value if arg == "lags" else 2
+    order = {"lags": 2, "order": value, "dict": {0: value, 1: 2}}[arg]
+    with pytest.raises(TypeError, match=match):
+        UECM(y, lags, x, order)
+
+
+@pytest.mark.parametrize(
+    "steps",
+    [np.int64(3), np.int32(3), np.array(3), 3.0],
+    ids=["int64", "int32", "0d-array", "float"],
+)
+def test_ardl_forecast_int_like_steps(steps):
+    # A 0-d integer array and an integral float are a number of steps, as an
+    # int is. They were the location of the last forecast.
+    y, x = _int_like_ardl_data()
+    res = ARDL(y[:-3], 2, x[:-3], 1).fit()
+    expected = res.forecast(3, exog=x[-3:])
+    assert_allclose(res.forecast(steps, exog=x[-3:]), expected, rtol=1e-12)
+    # The forecasts by hand from the regression on const, y.L1, y.L2, x.L0
+    # and x.L1 of both columns
+    params = np.asarray(res.params)
+    path = list(y[:-3])
+    for h in range(3):
+        t = 147 + h
+        reg = np.r_[1.0, path[-1], path[-2], x[t], x[t - 1]]
+        reg = reg[[0, 1, 2, 3, 5, 4, 6]]
+        path.append(reg @ params)
+    assert_allclose(expected, path[-3:], rtol=1e-10)
+
+
+@pytest.mark.parametrize("steps", [True, np.True_], ids=["True", "np.True_"])
+def test_ardl_forecast_bool_steps(steps):
+    # A bool is not a number of steps: True was one step
+    y, x = _int_like_ardl_data()
+    res = ARDL(y[:-3], 2, x[:-3], 1).fit()
+    with pytest.raises(KeyError):
+        res.forecast(steps, exog=x[-3:])

@@ -5602,3 +5602,28 @@ def test_grangercausalitytests_maxlag_forms(gc_data, maxlag, lags):
         assert_allclose(
             res[lag][0]["ssr_ftest"], expected[lag][0]["ssr_ftest"], rtol=1e-12
         )
+
+
+@pytest.mark.parametrize(
+    "arlags",
+    [np.int64(2), np.int32(2), np.array(2), 2.0],
+    ids=["int64", "int32", "0d-array", "float"],
+)
+def test_leybourne_int_like_arlags(arlags):
+    # A 0-d integer array or an integral float is a number of AR terms, as an
+    # int is. They raised a ValueError. The int result is the reference.
+    x = np.random.default_rng(20261126).standard_normal(200).cumsum()
+    expected = leybourne(x, arlags=2)
+    res = leybourne(x, arlags=arlags)
+    assert_allclose(res[:2], expected[:2], rtol=1e-12)
+    assert res[2] == 2
+    assert type(res[2]) is int
+
+
+@pytest.mark.parametrize("arlags", [True, np.True_], ids=["True", "np.True_"])
+def test_leybourne_bool_arlags(arlags):
+    # A bool is not a number of AR terms. True raised a TypeError from a
+    # later step.
+    x = np.random.default_rng(20261126).standard_normal(200).cumsum()
+    with pytest.raises(ValueError, match="arlags must be an integer"):
+        leybourne(x, arlags=arlags)

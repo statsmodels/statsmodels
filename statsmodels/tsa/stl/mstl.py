@@ -27,6 +27,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import boxcox
 
+from statsmodels.tools.validation import is_int_like
 from statsmodels.tsa.seasonal._seasonal import DecomposeResult
 from statsmodels.tsa.stl._stl import STL
 from statsmodels.tsa.tsatools import freq_to_period
@@ -59,6 +60,13 @@ class MSTL:
         Must be an odd integer, and should normally be >= 7 (default). If None
         then default values determined using 7 + 4 * np.arange(1, n + 1, 1)
         where n is number of seasonal components.
+
+        .. versionchanged:: 0.15.1
+
+           A float with an integral value, such as 7.0, or a 0-d integer
+           array is a single period or window, as an int is, for both
+           `periods` and `windows`. They raised a TypeError. A bool raises
+           a TypeError.
     lmbda : float or "auto", optional
         The lambda parameter for the Box-Cox transform to be applied to `endog`
         prior to decomposition. If None, no transform is applied. If "auto", a
@@ -244,8 +252,8 @@ class MSTL:
     ) -> Sequence[int]:
         if periods is None:
             periods = (self._infer_period(),)
-        elif isinstance(periods, (int, np.integer)):
-            periods = (periods,)
+        elif is_int_like(periods):
+            periods = (int(periods),)
         else:
             pass
         return periods
@@ -257,8 +265,8 @@ class MSTL:
     ) -> Sequence[int]:
         if windows is None:
             windows = self._default_seasonal_windows(num_seasons)
-        elif isinstance(windows, (int, np.integer)):
-            windows = (windows,)
+        elif is_int_like(windows):
+            windows = (int(windows),)
         else:
             pass
         return windows

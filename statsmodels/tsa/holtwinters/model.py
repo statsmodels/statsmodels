@@ -31,6 +31,7 @@ from statsmodels.tools.validation import (
     dict_like,
     float_like,
     int_like,
+    is_int_like,
     string_like,
 )
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
@@ -580,7 +581,7 @@ class ExponentialSmoothing(TimeSeriesModel):
         """
         if start is None:
             freq = getattr(self._index, "freq", 1)
-            if isinstance(freq, int):
+            if is_int_like(freq):
                 start = self._index.shape[0]
             else:
                 start = self._index[-1] + freq

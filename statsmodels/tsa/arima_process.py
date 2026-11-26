@@ -29,7 +29,12 @@ from scipy import linalg, optimize, signal
 
 from statsmodels.tools.docstring import Docstring, Parameter
 from statsmodels.tools.docstring_helpers import Appender
-from statsmodels.tools.validation import array_like, int_like, string_like
+from statsmodels.tools.validation import (
+    array_like,
+    int_like,
+    is_int_like,
+    string_like,
+)
 
 __all__ = [
     "arma2ar",
@@ -464,7 +469,9 @@ def arma_periodogram(ar, ma, worN=None, whole=0, *, normalization=None):
         .. versionchanged:: 0.15.1
 
            ``worN=0`` raises a ``ValueError``. It used to return empty
-           arrays. A negative integer raises the same ``ValueError``.
+           arrays. A negative integer raises the same ``ValueError``, as
+           does a 0-d integer array that holds 0 or a negative integer. A
+           float, such as 2.0, is a frequency.
     whole : bool, optional
         An option for scipy.signal.freqz.
         Normally, frequencies are computed from 0 to pi (upper-half of
@@ -506,9 +513,11 @@ def arma_periodogram(ar, ma, worN=None, whole=0, *, normalization=None):
     somewhere.
     """
     # An integer is the number of frequencies, as in signal.freqz. A float is
-    # a frequency.
-    if isinstance(worN, (int, np.integer)) and worN < 1:
-        raise ValueError(f"worN must be a positive integer, got {worN}")
+    # a frequency (strict).
+    if is_int_like(worN, strict=True):
+        worN = int(worN)
+        if worN < 1:
+            raise ValueError(f"worN must be a positive integer, got {worN}")
     w, h = signal.freqz(ma, ar, worN=worN, whole=whole)
     # The caller is 3 frames up, as _require_1d wraps this function
     normalization = _periodogram_normalization(

@@ -2753,3 +2753,80 @@ def test_row_label_partial_date_key_with_dates_not_deprecated():
         )
     assert loc == slice(3, 5)
     assert index.equals(ROW_LABEL_DATES)
+
+
+INT_LIKE_KEY_INDEXES = {
+    "range": pd.RangeIndex(8),
+    "int": pd.Index(np.arange(8, dtype=np.int64)),
+    "datetime": pd.date_range("2000-01-01", periods=8, freq="MS"),
+    "period": pd.period_range("2000-01", periods=8, freq="M"),
+}
+
+
+@pytest.mark.parametrize("kind", list(INT_LIKE_KEY_INDEXES))
+@pytest.mark.parametrize(
+    "key, loc, length",
+    [(5, 5, 6), (10, 10, 11), (-2, 6, 7)],
+    ids=["in-sample", "out-of-sample", "negative"],
+)
+@pytest.mark.parametrize(
+    "to_key", [int, np.int64, np.int32, np.array], ids=["int", "int64", "int32", "0d"]
+)
+def test_get_index_loc_int_like_key(kind, key, loc, length, to_key):
+    # NumPy integers and 0-d integer arrays are locations, as an int is. A
+    # 0-d array raised a TypeError for a date index and a KeyError out of
+    # the sample.
+    index = INT_LIKE_KEY_INDEXES[kind]
+    result, new_index, expanded = tsa_model.get_index_loc(to_key(key), index)
+    assert result == loc
+    assert len(new_index) == length
+    assert expanded == (length > 8)
+    assert new_index[: min(length, 8)].equals(index[: min(length, 8)])
+
+
+@pytest.mark.parametrize("kind", list(INT_LIKE_KEY_INDEXES))
+@pytest.mark.parametrize(
+    "key",
+    [True, np.True_, np.timedelta64(3, "D")],
+    ids=["True", "np.True_", "timedelta64"],
+)
+def test_get_index_loc_bool_timedelta_key(kind, key):
+    # A bool or a timedelta64 is not a location. A timedelta64 was one, and
+    # True raised a ValueError for a date index. pandas cannot convert them
+    # to a date.
+    if PD_LT_2 and kind == "int" and isinstance(key, (bool, np.bool_)):
+        pytest.skip("pandas < 2 takes a bool as a location in an integer Index")
+    index = INT_LIKE_KEY_INDEXES[kind]
+    error = {"datetime": TypeError, "period": ValueError}.get(kind, KeyError)
+    with pytest.raises(error):
+        tsa_model.get_index_loc(key, index)
+
+
+@pytest.mark.parametrize("to_key", [np.int64, np.array], ids=["int64", "0d"])
+def test_predict_int_like_start_end_date_index(to_key):
+    # A 0-d integer array start or end is a location of a date index, as an
+    # int is. It raised a TypeError.
+    rng = np.random.default_rng(20261126)
+    index = pd.date_range("2000-01-01", periods=100, freq="MS")
+    y = rng.standard_normal(100)
+    res = AutoReg(pd.Series(y, index=index), 1).fit()
+    expected = res.predict(start=95, end=102)
+    pred = res.predict(start=to_key(95), end=to_key(102))
+    assert pred.index.equals(pd.date_range("2007-12-01", periods=8, freq="MS"))
+    assert_allclose(pred, expected, rtol=1e-12)
+    # In sample, the fitted values of the AR(1)
+    const, phi = np.asarray(res.params)
+    assert_allclose(pred.iloc[:5], const + phi * y[94:99], rtol=1e-10)
+
+
+def test_float_key_is_row_label():
+    # A float is not a location (keys are strict), so it is looked up in the
+    # row labels, here a float index where 15.0 is the label of location 5
+    endog = pd.Series(np.arange(20.0), index=np.arange(20.0) + 10.0)
+    with pytest.warns(ValueWarning, match="An unsupported index was provided"):
+        mod = tsa_model.TimeSeriesModel(endog)
+    row_labels = mod.data.row_labels
+    loc, _, _ = tsa_model.get_index_label_loc(15.0, mod._index, row_labels)
+    assert loc == 5
+    with pytest.raises(KeyError):
+        tsa_model.get_index_label_loc(5.0, mod._index, row_labels)
