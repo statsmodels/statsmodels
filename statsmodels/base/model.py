@@ -196,12 +196,20 @@ class Model:
         *args
             Additional positional argument that are passed to the model.
         **kwargs
-            These are passed to the model with one exception. The
-            ``eval_env`` keyword is passed to patsy. It can be either a
-            :class:`patsy:patsy.EvalEnvironment` object or an integer
-            indicating the depth of the namespace to use. For example, the
-            default ``eval_env=0`` uses the calling namespace. If you wish
-            to use a "clean" environment set ``eval_env=-1``.
+            These are passed to the model with one exception: ``eval_env``,
+            the namespace in which variables of the formula that are not in
+            ``data`` are looked up. None (the default) or 1 is the namespace
+            that calls ``from_formula``, and an integer k is the namespace k
+            stack frames above ``from_formula``. -1 is an empty namespace,
+            and a dict maps names to values.
+
+            .. versionchanged:: 0.15.1
+
+               ``eval_env`` means the same in every model. Before, an
+               integer referred to one stack frame lower in models whose
+               ``from_formula`` calls their parent's (for example GEE, PHReg
+               and MixedLM, where 2 was the calling namespace) and one frame
+               higher in ``RollingOLS`` (where 0 was).
 
         Returns
         -------
@@ -224,8 +232,8 @@ class Model:
             eval_env = 2
         elif eval_env == -1:
             eval_env = mgr.get_empty_eval_env()
-        elif isinstance(eval_env, int):
-            eval_env += 1  # we're going down the stack again
+        elif isinstance(eval_env, (int, np.integer)):
+            eval_env = int(eval_env) + 1  # we're going down the stack again
         missing = kwargs.get("missing", "drop")
         if missing == "none":  # with patsy it's drop or raise. let's raise.
             missing = "raise"

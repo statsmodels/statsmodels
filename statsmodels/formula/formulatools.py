@@ -139,14 +139,26 @@ def make_hypotheses_matrices(model_results, test_formula):
 
 def advance_eval_env(kwargs):
     """
-    Adjusts the keyword arguments for from_formula to account for the patsy
-    eval environment being passed down once on the stack. Adjustments are
-    made in place.
+    Adjust ``eval_env`` for a ``from_formula`` that calls its parent's.
+
+    Calling the parent class's ``from_formula`` adds a stack frame, so
+    ``eval_env`` is moved one frame up to keep pointing at the same
+    namespace: None (the namespace that calls ``from_formula``) becomes 2, an
+    integer k becomes k + 1, and -1 becomes an empty namespace. A dict is
+    kept. Adjustments are made in place.
 
     Parameters
     ----------
     kwargs : dict
         The dictionary of keyword arguments passed to `from_formula`.
+
+    Notes
+    -----
+    .. versionchanged:: 0.15.1
+
+       Integers other than -1 are moved up too. Before, they were kept, so
+       an integer referred to a namespace one frame lower than in the
+       parent's ``from_formula``.
     """
 
     eval_env = kwargs.get("eval_env", None)
@@ -154,3 +166,33 @@ def advance_eval_env(kwargs):
         kwargs["eval_env"] = 2
     elif eval_env == -1:
         kwargs["eval_env"] = FormulaManager().get_empty_eval_env()
+    elif isinstance(eval_env, (int, np.integer)):
+        kwargs["eval_env"] = int(eval_env) + 1
+
+
+def get_matrices_eval_env(eval_env):
+    """
+    Translate the ``eval_env`` of ``from_formula`` for ``get_matrices``.
+
+    For a formula that ``from_formula`` evaluates itself with
+    ``FormulaManager.get_matrices``, for example a second formula of the
+    model, so that it uses the same namespace as the model's formula.
+
+    Parameters
+    ----------
+    eval_env : int, dict or None
+        The ``eval_env`` passed to ``from_formula``.
+
+    Returns
+    -------
+    int or dict
+        The ``eval_env`` to pass to ``get_matrices`` when it is called in the
+        body of ``from_formula``: 1 (the namespace that calls
+        ``from_formula``) for None, an empty namespace for -1, and the value
+        itself otherwise.
+    """
+    if eval_env is None:
+        return 1
+    if eval_env == -1:
+        return FormulaManager().get_empty_eval_env()
+    return eval_env
